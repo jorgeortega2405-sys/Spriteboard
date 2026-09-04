@@ -7,6 +7,9 @@ import { createRegisterStage2View } from './views/auth/register-stage2.js';
 import { createRegisterStage3View } from './views/auth/register-stage3.js';
 import { createForgotPasswordView } from './views/auth/forgot-password.js';
 import { createErrorView } from './views/error.js';
+import { SkeletonService } from './services/skeleton.service.js';
+
+let currentNavigation = 0;
 
 export function navigate(url) {
   window.history.pushState({}, '', url);
@@ -18,34 +21,37 @@ export async function render() {
   if (!appRoot) return;
 
   const path = window.location.pathname;
-  appRoot.replaceChildren();
+  const navId = ++currentNavigation;
+
+  // Mostrar inmediatamente el skeleton correspondiente a la URL de la sección
+  const skeletonSession = SkeletonService.showSkeleton(path, appRoot);
+
+  let viewElements = [];
 
   if (path === '/login') {
     const loginView = await createLoginView();
-    appRoot.appendChild(loginView);
+    viewElements = [loginView];
   } else if (path === '/register') {
     const stage1View = await createRegisterStage1View();
-    appRoot.appendChild(stage1View);
+    viewElements = [stage1View];
   } else if (path === '/register/aditional-data') {
     const stage2View = await createRegisterStage2View();
-    appRoot.appendChild(stage2View);
+    viewElements = [stage2View];
   } else if (path === '/register/verification-account') {
     const stage3View = await createRegisterStage3View();
-    appRoot.appendChild(stage3View);
+    viewElements = [stage3View];
   } else if (path === '/forgot-password') {
     const forgotView = await createForgotPasswordView();
-    appRoot.appendChild(forgotView);
+    viewElements = [forgotView];
   } else if (path === '/trash') {
     const topBar = await createTopBar();
     const trashView = await createTrashView();
-    appRoot.appendChild(topBar);
-    appRoot.appendChild(trashView);
+    viewElements = [topBar, trashView];
   } else if (path === '/' || path === '') {
     // Vista Principal
     const topBar = await createTopBar();
     const homeView = await createHomeView();
-    appRoot.appendChild(topBar);
-    appRoot.appendChild(homeView);
+    viewElements = [topBar, homeView];
   } else {
     // Ruta no encontrada: Error 404
     const notFoundView = await createErrorView({
@@ -55,9 +61,13 @@ export async function render() {
       actionText: 'Ir a la página principal',
       actionUrl: '/',
     });
-    appRoot.appendChild(notFoundView);
+    viewElements = [notFoundView];
   }
+
+  // Transición suave hacia la vista definitiva garantizando tiempo mínimo antiflicker
+  await skeletonSession.finish(viewElements, () => navId === currentNavigation);
 }
 
 // Soporte para navegación con el historial del navegador (atrás/adelante)
 window.addEventListener('popstate', render);
+

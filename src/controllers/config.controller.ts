@@ -16,3 +16,4 @@ export function getCsrfToken(req: Request, res: Response): void {
 export function getHealth(req: Request, res: Response): void {
   res.status(200).json({ status: 'ok', uptime: process.uptime() });
 }
+
