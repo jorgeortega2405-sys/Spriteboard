@@ -1,6 +1,74 @@
 import mysql from 'mysql2/promise';
 
-export const pool = mysql.createPool({
+export interface NoSqlAdapter {
+  name: string;
+  connect(): Promise<void>;
+  disconnect(): Promise<void>;
+  isConnected(): boolean;
+  getClient<T = unknown>(): T;
+}
+
+/**
+ * Gestor Centralizado Multi-Base de Datos (MySQL, NoSQL, etc.)
+ */
+class DatabaseManager {
+  private mysqlPools = new Map<string, mysql.Pool>();
+  private nosqlAdapters = new Map<string, NoSqlAdapter>();
+
+  // Registrar un pool MySQL
+  public registerMySql(name: string, options: mysql.PoolOptions): mysql.Pool {
+    if (this.mysqlPools.has(name)) {
+      return this.mysqlPools.get(name)!;
+    }
+    const newPool = mysql.createPool(options);
+    this.mysqlPools.set(name, newPool);
+    return newPool;
+  }
+
+  // Obtener un pool MySQL por nombre (por defecto 'default')
+  public getMySql(name = 'default'): mysql.Pool {
+    const p = this.mysqlPools.get(name);
+    if (!p) {
+      throw new Error(`Pool de MySQL "${name}" no está registrado en DatabaseManager.`);
+    }
+    return p;
+  }
+
+  // Registrar un adaptador NoSQL (MongoDB, DynamoDB, Firestore, etc.)
+  public registerNoSql(name: string, adapter: NoSqlAdapter): void {
+    this.nosqlAdapters.set(name, adapter);
+  }
+
+  // Obtener un adaptador NoSQL
+  public getNoSql(name: string): NoSqlAdapter | undefined {
+    return this.nosqlAdapters.get(name);
+  }
+
+  // Listar bases de datos registradas
+  public listDatabases(): { mysql: string[]; nosql: string[] } {
+    return {
+      mysql: Array.from(this.mysqlPools.keys()),
+      nosql: Array.from(this.nosqlAdapters.keys()),
+    };
+  }
+}
+
+export const dbManager = new DatabaseManager();
+
+// 1. Registrar base de datos principal de identidad (MySQL)
+export const pool = dbManager.registerMySql('default', {
+  host: process.env.DB_HOST || 'mysql',
+  port: Number(process.env.DB_PORT) || 3306,
+  user: process.env.DB_USER || 'sprite_user',
+  password: process.env.DB_PASSWORD || 'sprite_password',
+  database: process.env.DB_NAME || 'db_identity',
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
+});
+
+// Alias semántico para la BD de identidad
+dbManager.registerMySql('identity', {
   host: process.env.DB_HOST || 'mysql',
   port: Number(process.env.DB_PORT) || 3306,
   user: process.env.DB_USER || 'sprite_user',

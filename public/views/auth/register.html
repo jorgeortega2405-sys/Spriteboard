@@ -11,8 +11,6 @@
         <p class="card__subtitle" data-ref="register-subtitle">Ingresa tu correo y contraseña para comenzar</p>
       </div>
 
-      <div class="banner banner--danger" data-ref="register-error" style="display: none;"></div>
-
       <div class="card__body" data-ref="register-form">
         <label class="field" data-ref="field-register-email">
           <input class="field__input" data-ref="register-email" type="email" placeholder=" " autocomplete="email" />
@@ -21,7 +19,7 @@
 
         <label class="field" data-ref="field-register-password">
           <input class="field__input field__input--has-action" data-ref="register-password" type="password" placeholder=" " autocomplete="new-password" />
-          <span class="field__label" data-ref="label-register-password">Contraseña (mínimo 6 caracteres)</span>
+          <span class="field__label" data-ref="label-register-password">Contraseña (mínimo 8 caracteres)</span>
           <button type="button" class="field__action" data-ref="toggle-register-password" data-tooltip="Mostrar contraseña" aria-label="Alternar visibilidad">
             <span class="material-symbols-rounded">visibility</span>
           </button>
@@ -40,6 +38,8 @@
           </svg>
           <span class="btn-text" data-ref="google-btn-text">Continuar con Google</span>
         </button>
+
+        <div class="banner banner--danger" data-ref="register-error" style="display: none;"></div>
 
         <p class="footer-note" data-ref="register-footer">
           ¿Ya tienes una cuenta? <a class="link link--primary" data-ref="btn-to-login" href="/login">Iniciar sesión</a>

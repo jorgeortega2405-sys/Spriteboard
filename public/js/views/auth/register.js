@@ -64,9 +64,36 @@ export async function createRegisterStage1View() {
       return;
     }
 
-    if (password.length < 6) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
       if (errorBanner) {
-        errorBanner.textContent = 'La contraseña debe tener al menos 6 caracteres.';
+        errorBanner.textContent = 'Ingresa un correo electrónico válido.';
+        errorBanner.style.display = 'block';
+      }
+      return;
+    }
+
+    const allowedDomains = ['gmail.com', 'outlook.com', 'icloud.com', 'hotmail.com', 'yahoo.com'];
+    const domain = email.toLowerCase().split('@')[1];
+    if (!allowedDomains.includes(domain)) {
+      if (errorBanner) {
+        errorBanner.textContent = 'Solo se permiten correos de Gmail, Outlook, iCloud, Hotmail o Yahoo.';
+        errorBanner.style.display = 'block';
+      }
+      return;
+    }
+
+    if (password.length < 8) {
+      if (errorBanner) {
+        errorBanner.textContent = 'La contraseña debe tener al menos 8 caracteres.';
+        errorBanner.style.display = 'block';
+      }
+      return;
+    }
+
+    if (password.length > 128) {
+      if (errorBanner) {
+        errorBanner.textContent = 'La contraseña no puede exceder los 128 caracteres.';
         errorBanner.style.display = 'block';
       }
       return;

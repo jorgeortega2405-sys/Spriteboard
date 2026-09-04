@@ -10,8 +10,6 @@
         <p class="card__subtitle" data-ref="login-subtitle">Ingresa tus credenciales para acceder a tu cuenta</p>
       </div>
 
-      <div class="banner banner--danger" data-ref="login-error" style="display: none;"></div>
-
       <div class="card__body" data-ref="login-form">
         <label class="field" data-ref="field-login-email">
           <input class="field__input" data-ref="login-email" type="email" placeholder=" " autocomplete="email" />
@@ -43,6 +41,8 @@
           </svg>
           <span class="btn-text" data-ref="google-btn-text">Continuar con Google</span>
         </button>
+
+        <div class="banner banner--danger" data-ref="login-error" style="display: none;"></div>
 
         <p class="footer-note" data-ref="login-footer">
           ¿No tienes una cuenta? <a class="link link--primary" data-ref="btn-to-register" href="/register">Crear cuenta</a>

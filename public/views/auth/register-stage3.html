@@ -13,9 +13,6 @@
         </p>
       </div>
 
-      <div class="banner banner--danger" data-ref="stage3-error" style="display: none;"></div>
-      <div class="banner banner--success" data-ref="stage3-success" style="display: none;"></div>
-
       <div class="card__body" data-ref="stage3-form">
         <label class="field" data-ref="field-register-code">
           <input class="field__input field__input--code" data-ref="register-code" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder=" " autocomplete="one-time-code" />
@@ -29,6 +26,9 @@
         <button type="button" class="btn btn--h40 btn--ghost btn--w-full" data-ref="btn-resend-code">
           ¿No recibiste el código? Reenviar
         </button>
+
+        <div class="banner banner--danger" data-ref="stage3-error" style="display: none;"></div>
+        <div class="banner banner--success" data-ref="stage3-success" style="display: none;"></div>
 
         <div class="link-row" data-ref="stage3-back-row" style="justify-content: center; margin-top: 8px;">
           <a class="link" data-ref="btn-restart-register" href="/register">← Iniciar registro de nuevo</a>

@@ -19,6 +19,12 @@ import {
 } from '../services/verification.service.js';
 import { sendVerificationCodeEmail } from '../services/mail.service.js';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
+import {
+  validateEmail,
+  validatePassword,
+  validateUsername,
+  validateVerificationCode,
+} from '../utils/validators.js';
 import { UserPayload } from '../types/auth.types.js';
 import type { RowDataPacket, ResultSetHeader } from 'mysql2';
 
@@ -27,23 +33,19 @@ export async function validateStage1(req: Request, res: Response): Promise<void>
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) {
-      res.status(400).json({ error: 'Ingresa correo electrónico y contraseña.' });
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.valid) {
+      res.status(400).json({ error: emailValidation.error });
+      return;
+    }
+
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+      res.status(400).json({ error: passwordValidation.error });
       return;
     }
 
     const trimmedEmail = String(email).trim().toLowerCase();
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(trimmedEmail)) {
-      res.status(400).json({ error: 'Ingresa un correo electrónico válido.' });
-      return;
-    }
-
-    if (String(password).length < 6) {
-      res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres.' });
-      return;
-    }
 
     // Verificar si el correo ya existe en MySQL
     const [existing] = await pool.query<RowDataPacket[]>(
@@ -68,23 +70,26 @@ export async function sendRegistrationCode(req: Request, res: Response): Promise
   try {
     const { email, password, username } = req.body;
 
-    if (!email || !password || !username) {
-      res.status(400).json({ error: 'Todos los campos son obligatorios.' });
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.valid) {
+      res.status(400).json({ error: emailValidation.error });
+      return;
+    }
+
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+      res.status(400).json({ error: passwordValidation.error });
+      return;
+    }
+
+    const usernameValidation = validateUsername(username);
+    if (!usernameValidation.valid) {
+      res.status(400).json({ error: usernameValidation.error });
       return;
     }
 
     const trimmedEmail = String(email).trim().toLowerCase();
     const trimmedUsername = String(username).trim();
-
-    if (trimmedUsername.length < 3) {
-      res.status(400).json({ error: 'El nombre de usuario debe tener al menos 3 caracteres.' });
-      return;
-    }
-
-    if (String(password).length < 6) {
-      res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres.' });
-      return;
-    }
 
     // Verificar disponibilidad de usuario o correo en la base de datos
     const [existing] = await pool.query<RowDataPacket[]>(
@@ -131,8 +136,15 @@ export async function verifyRegistrationCode(req: Request, res: Response): Promi
   try {
     const { email, code } = req.body;
 
-    if (!email || !code) {
-      res.status(400).json({ error: 'Por favor ingresa el código de verificación.' });
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.valid) {
+      res.status(400).json({ error: emailValidation.error });
+      return;
+    }
+
+    const codeValidation = validateVerificationCode(code);
+    if (!codeValidation.valid) {
+      res.status(400).json({ error: codeValidation.error });
       return;
     }
 
@@ -178,8 +190,9 @@ export async function resendRegistrationCode(req: Request, res: Response): Promi
   try {
     const { email } = req.body;
 
-    if (!email) {
-      res.status(400).json({ error: 'El correo electrónico es requerido.' });
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.valid) {
+      res.status(400).json({ error: emailValidation.error });
       return;
     }
 

@@ -54,9 +54,9 @@ export async function createRegisterStage3View() {
 
     const code = codeInput?.value.trim();
 
-    if (!code || code.length !== 6) {
+    if (!code || !/^\d{6}$/.test(code)) {
       if (errorBanner) {
-        errorBanner.textContent = 'Por favor ingresa los 6 dígitos del código.';
+        errorBanner.textContent = 'Por favor ingresa los 6 dígitos numéricos del código.';
         errorBanner.style.display = 'block';
       }
       return;

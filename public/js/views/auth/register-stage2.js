@@ -24,6 +24,7 @@ export async function createRegisterStage2View() {
   const state = getRegistrationState();
 
   const usernameInput = container.querySelector('[data-ref="register-username"]');
+  const randomBtn = container.querySelector('[data-ref="btn-random-username"]');
   const submitBtn = container.querySelector('[data-ref="btn-submit-stage2"]');
   const errorBanner = container.querySelector('[data-ref="stage2-error"]');
   const homeLink = container.querySelector('[data-ref="stage2-home-link"]');
@@ -32,6 +33,19 @@ export async function createRegisterStage2View() {
   if (state.username && usernameInput) {
     usernameInput.value = state.username;
   }
+
+  // Generador de nombre aleatorio con varita mágica basado en timestamp
+  randomBtn?.addEventListener('click', () => {
+    const timestamp = Date.now().toString(36);
+    const randomSuffix = Math.floor(100 + Math.random() * 900);
+    const randomName = `user_${timestamp}_${randomSuffix}`;
+    if (usernameInput) {
+      usernameInput.value = randomName;
+      usernameInput.dispatchEvent(new Event('input', { bubbles: true }));
+      usernameInput.focus();
+    }
+    if (errorBanner) errorBanner.style.display = 'none';
+  });
 
   homeLink?.addEventListener('click', (e) => {
     e.preventDefault();
@@ -58,6 +72,23 @@ export async function createRegisterStage2View() {
     if (username.length < 3) {
       if (errorBanner) {
         errorBanner.textContent = 'El nombre de usuario debe tener al menos 3 caracteres.';
+        errorBanner.style.display = 'block';
+      }
+      return;
+    }
+
+    if (username.length > 30) {
+      if (errorBanner) {
+        errorBanner.textContent = 'El nombre de usuario no puede tener más de 30 caracteres.';
+        errorBanner.style.display = 'block';
+      }
+      return;
+    }
+
+    const usernameRegex = /^[a-zA-Z0-9_.-]+$/;
+    if (!usernameRegex.test(username)) {
+      if (errorBanner) {
+        errorBanner.textContent = 'El nombre de usuario solo puede contener letras, números, puntos, guiones y guiones bajos.';
         errorBanner.style.display = 'block';
       }
       return;
