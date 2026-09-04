@@ -4,6 +4,7 @@ import { getApi, postApi } from '../../services/api.js';
 import { setupDropdown } from '../../utils/dom.js';
 import { showToast, setToastPreferences } from '../../services/toast.js';
 import { t } from '../../services/i18n.js';
+import { setTheme, initTheme, applyAccessibilityPreferences } from '../../services/theme.service.js';
 
 export async function createAccessibilityView() {
   const container = await loadTemplate('/views/settings/accessibility.html');
@@ -47,6 +48,8 @@ export async function createAccessibilityView() {
 
       if (prefs) {
         setToastPreferences(prefs);
+        applyAccessibilityPreferences(prefs);
+        initTheme(prefs);
 
         if (prefs.theme && themeIcons[prefs.theme]) {
           if (themeSelectedText) themeSelectedText.textContent = getThemeLabel(prefs.theme);
@@ -75,7 +78,7 @@ export async function createAccessibilityView() {
         try {
           if (themeSelectedText) themeSelectedText.textContent = getThemeLabel(theme);
           if (themeSelectedIcon && themeIcons[theme]) themeSelectedIcon.textContent = themeIcons[theme];
-          await postApi('/api/settings/preferences', { theme });
+          await setTheme(theme, true);
           showToast(t('toasts.theme_updated'), 'success');
         } catch (_) {}
       },
@@ -85,6 +88,7 @@ export async function createAccessibilityView() {
   // 3. Listeners para interruptores toggle
   toggleReduceMotion?.addEventListener('change', async (e) => {
     try {
+      applyAccessibilityPreferences({ reduce_motion: e.target.checked });
       await postApi('/api/settings/preferences', { reduce_motion: e.target.checked });
       showToast(t('toasts.preferences_saved'), 'success');
     } catch (_) {}
@@ -92,6 +96,7 @@ export async function createAccessibilityView() {
 
   toggleHighContrast?.addEventListener('change', async (e) => {
     try {
+      applyAccessibilityPreferences({ high_contrast: e.target.checked });
       await postApi('/api/settings/preferences', { high_contrast: e.target.checked });
       showToast(t('toasts.preferences_saved'), 'success');
     } catch (_) {}

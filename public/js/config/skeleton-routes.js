@@ -1,46 +1,82 @@
 /**
- * Vinculación y mapeo de rutas URL con los nombres de plantillas de Skeletons
+ * Vinculación y mapeo de rutas URL con los nombres de plantillas de Skeletons genéricas
  */
 
 export const SKELETON_ROUTES = {
-  '/': 'home',
-  '/trash': 'trash',
-  '/login': 'auth-card',
-  '/register': 'auth-card',
-  '/register/aditional-data': 'auth-card',
-  '/register/verification-account': 'auth-card',
-  '/forgot-password': 'auth-card',
-  '/reset-password': 'auth-card',
-  '/settings': 'home',
-  '/settings/your-account': 'home',
-  '/settings/security': 'home',
-  '/settings/login-and-security': 'home',
-  '/settings/accessibility': 'home',
-  '/settings/guest': 'home',
+  // 1. Formularios centrados (autenticación y onboarding)
+  '/login': 'centered-form',
+  '/register': 'centered-form',
+  '/register/aditional-data': 'centered-form',
+  '/register/verification-account': 'centered-form',
+  '/forgot-password': 'centered-form',
+  '/reset-password': 'centered-form',
+
+  // 2. Contenido agrupado (listas, paneles, preferencias, cuenta, dashboards)
+  '/': 'grouped-layout',
+  '/trash': 'grouped-layout',
+  '/settings': 'grouped-layout',
+  '/settings/your-account': 'grouped-layout',
+  '/settings/security': 'grouped-layout',
+  '/settings/login-and-security': 'grouped-layout',
+  '/settings/accessibility': 'grouped-layout',
+  '/settings/guest': 'grouped-layout',
 };
 
 /**
  * Resuelve el nombre de la plantilla de skeleton correspondiente a una URL
  * @param {string} pathname - Ruta actual del navegador (ej. '/login')
- * @returns {string} Nombre de la plantilla de skeleton asociada
+ * @param {boolean} [onlyBottom=false] - Si es verdadero y la ruta es de contenido agrupado, devuelve la variante bottom-only
+ * @returns {'centered-form' | 'grouped-layout' | 'grouped-layout-bottom'} Nombre de la plantilla de skeleton asociada
  */
-export function getSkeletonForUrl(pathname) {
-  // Coincidencia exacta
-  if (SKELETON_ROUTES[pathname]) {
-    return SKELETON_ROUTES[pathname];
+export function getSkeletonForUrl(pathname, onlyBottom = false) {
+  let template = 'grouped-layout';
+
+  // Coincidencias por prefijo para formularios de autenticación
+  if (
+    pathname.startsWith('/register') ||
+    pathname.startsWith('/forgot') ||
+    pathname.startsWith('/reset') ||
+    pathname.startsWith('/login')
+  ) {
+    template = 'centered-form';
+  } else if (SKELETON_ROUTES[pathname]) {
+    template = SKELETON_ROUTES[pathname];
   }
 
-  // Coincidencias por prefijo (rutas anidadas como /register/* o /settings/*)
-  if (pathname.startsWith('/register')) {
-    return 'auth-card';
+  // En navegación SPA con TopBar persistente, devolver la plantilla bottom-only
+  if (onlyBottom && template === 'grouped-layout') {
+    return 'grouped-layout-bottom';
   }
 
-  if (pathname.startsWith('/settings')) {
-    return 'home';
-  }
+  return template;
+}
 
-  // Fallback por defecto
-  return 'fallback';
+/**
+ * Determina si una ruta utiliza TopBar persistente
+ * @param {string} pathname - Ruta actual del navegador
+ * @returns {boolean} Verdadero si la ruta requiere TopBar
+ */
+export function hasPersistentTopBar(pathname) {
+  if (!pathname) return false;
+  if (
+    pathname.startsWith('/register') ||
+    pathname.startsWith('/forgot') ||
+    pathname.startsWith('/reset') ||
+    pathname.startsWith('/login')
+  ) {
+    return false;
+  }
+  if (
+    pathname === '/' ||
+    pathname === '' ||
+    pathname === '/trash' ||
+    pathname.startsWith('/settings')
+  ) {
+    return true;
+  }
+  return false;
 }
 
 export default SKELETON_ROUTES;
+
+

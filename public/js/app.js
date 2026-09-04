@@ -8,6 +8,7 @@ import { render, navigate } from './router.js';
 import { initTooltips } from './services/tooltip.js';
 import { initI18n } from './services/i18n.js';
 import { initWebVitals } from './services/telemetry.js';
+import { initTheme } from './services/theme.service.js';
 
 export { navigate };
 
@@ -36,6 +37,7 @@ function initScrollShadow() {
 }
 
 async function init() {
+  initTheme();
   initTooltips();
   initScrollShadow();
   initWebVitals();

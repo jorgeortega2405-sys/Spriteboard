@@ -13,10 +13,12 @@ import { createAccessibilityView } from './views/settings/accessibility.js';
 import { createGuestSettingsView } from './views/settings/guest.js';
 import { createErrorView } from './views/error.js';
 import { SkeletonService } from './services/skeleton.service.js';
+import { hasPersistentTopBar } from './config/skeleton-routes.js';
 import { hideTooltip } from './services/tooltip.js';
 import { currentUser } from './services/api.js';
 import { trackPageView } from './services/telemetry.js';
 
+let isInitialPageLoad = true;
 let currentNavigation = 0;
 let previousPath = '';
 
@@ -33,8 +35,22 @@ export async function render() {
   const path = window.location.pathname;
   const navId = ++currentNavigation;
 
-  // Mostrar inmediatamente el skeleton correspondiente a la URL de la sección
-  const skeletonSession = SkeletonService.showSkeleton(path, appRoot);
+  // Determinar si es una navegación SPA suave entre vistas con TopBar persistente
+  const hasExistingHeader = Boolean(appRoot.querySelector('.layout-header'));
+  const targetHasHeader = hasPersistentTopBar(path);
+  const isSoftSpaNav = !isInitialPageLoad && hasExistingHeader && targetHasHeader;
+
+  // Si el TopBar ya existe en una navegación suave, cerramos el buscador móvil si estaba abierto
+  if (isSoftSpaNav) {
+    const existingHeader = appRoot.querySelector('.layout-header');
+    existingHeader?.classList.remove('layout-header--search-active');
+  }
+
+  // Mostrar el skeleton adecuado (completo para carga inicial/F5 o solo bottom para navegación SPA)
+  const skeletonSession = SkeletonService.showSkeleton(path, appRoot, {
+    onlyBottom: isSoftSpaNav,
+    minDuration: 280,
+  });
 
   let viewElements = [];
 
@@ -57,66 +73,66 @@ export async function render() {
     const resetView = await createResetPasswordView();
     viewElements = [resetView];
   } else if (path === '/trash') {
-    const topBar = await createTopBar();
+    const topBar = isSoftSpaNav ? null : await createTopBar();
     const trashView = await createTrashView();
-    viewElements = [topBar, trashView];
+    viewElements = topBar ? [topBar, trashView] : [trashView];
   } else if (path === '/settings') {
     // Redirección contextual según estado de sesión
-    const topBar = await createTopBar();
+    const topBar = isSoftSpaNav ? null : await createTopBar();
     if (currentUser) {
       window.history.replaceState({}, '', '/settings/your-account');
       const settingsView = await createYourAccountView();
-      viewElements = [topBar, settingsView];
+      viewElements = topBar ? [topBar, settingsView] : [settingsView];
     } else {
       window.history.replaceState({}, '', '/settings/guest');
       const settingsView = await createGuestSettingsView();
-      viewElements = [topBar, settingsView];
+      viewElements = topBar ? [topBar, settingsView] : [settingsView];
     }
   } else if (path === '/settings/your-account') {
-    const topBar = await createTopBar();
+    const topBar = isSoftSpaNav ? null : await createTopBar();
     if (!currentUser) {
       window.history.replaceState({}, '', '/settings/guest');
       const settingsView = await createGuestSettingsView();
-      viewElements = [topBar, settingsView];
+      viewElements = topBar ? [topBar, settingsView] : [settingsView];
     } else {
       const settingsView = await createYourAccountView();
-      viewElements = [topBar, settingsView];
+      viewElements = topBar ? [topBar, settingsView] : [settingsView];
     }
   } else if (path === '/settings/security' || path === '/settings/login-and-security') {
-    const topBar = await createTopBar();
+    const topBar = isSoftSpaNav ? null : await createTopBar();
     if (!currentUser) {
       window.history.replaceState({}, '', '/settings/guest');
       const settingsView = await createGuestSettingsView();
-      viewElements = [topBar, settingsView];
+      viewElements = topBar ? [topBar, settingsView] : [settingsView];
     } else {
       const settingsView = await createSecurityView();
-      viewElements = [topBar, settingsView];
+      viewElements = topBar ? [topBar, settingsView] : [settingsView];
     }
   } else if (path === '/settings/accessibility') {
-    const topBar = await createTopBar();
+    const topBar = isSoftSpaNav ? null : await createTopBar();
     if (!currentUser) {
       window.history.replaceState({}, '', '/settings/guest');
       const settingsView = await createGuestSettingsView();
-      viewElements = [topBar, settingsView];
+      viewElements = topBar ? [topBar, settingsView] : [settingsView];
     } else {
       const settingsView = await createAccessibilityView();
-      viewElements = [topBar, settingsView];
+      viewElements = topBar ? [topBar, settingsView] : [settingsView];
     }
   } else if (path === '/settings/guest') {
-    const topBar = await createTopBar();
+    const topBar = isSoftSpaNav ? null : await createTopBar();
     if (currentUser) {
       window.history.replaceState({}, '', '/settings/your-account');
       const settingsView = await createYourAccountView();
-      viewElements = [topBar, settingsView];
+      viewElements = topBar ? [topBar, settingsView] : [settingsView];
     } else {
       const settingsView = await createGuestSettingsView();
-      viewElements = [topBar, settingsView];
+      viewElements = topBar ? [topBar, settingsView] : [settingsView];
     }
   } else if (path === '/' || path === '') {
     // Vista Principal
-    const topBar = await createTopBar();
+    const topBar = isSoftSpaNav ? null : await createTopBar();
     const homeView = await createHomeView();
-    viewElements = [topBar, homeView];
+    viewElements = topBar ? [topBar, homeView] : [homeView];
   } else {
     // Ruta no encontrada: Error 404
     const notFoundView = await createErrorView({
@@ -131,6 +147,7 @@ export async function render() {
 
   // Transición suave hacia la vista definitiva garantizando tiempo mínimo antiflicker
   await skeletonSession.finish(viewElements, () => navId === currentNavigation);
+  isInitialPageLoad = false;
 
   // Sincronizar sombra del layout-header con el scroll de la vista recién montada
   const activeHeader = document.querySelector('.layout-header, .general-content-top');

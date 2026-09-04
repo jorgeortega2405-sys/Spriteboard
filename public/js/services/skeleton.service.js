@@ -9,28 +9,35 @@ export class SkeletonService {
   /**
    * Crea el elemento DOM del skeleton correspondiente a una URL
    * @param {string} pathname - Ruta actual (ej. '/login', '/')
+   * @param {object} [options={}] - Opciones de generación
+   * @param {boolean} [options.onlyBottom=false] - Si es verdadero, genera únicamente el bloque inferior
    * @returns {HTMLElement} Elemento DOM del skeleton
    */
-  static createSkeleton(pathname) {
-    const templateName = getSkeletonForUrl(pathname);
+  static createSkeleton(pathname, options = {}) {
+    const { onlyBottom = false } = options;
+    const templateName = getSkeletonForUrl(pathname, onlyBottom);
     const html = getSkeletonTemplate(templateName);
 
     const template = document.createElement('template');
     template.innerHTML = html.trim();
     const element = template.content.firstElementChild?.cloneNode(true) || document.createElement('div');
-    element.classList.add('skeleton-container');
+    if (!element.classList.contains('skeleton-container')) {
+      element.classList.add('skeleton-container');
+    }
     return element;
   }
 
   /**
-   * Renderiza el skeleton y retorna un controlador para finalizar la transición suavemente
-   * evitando parpadeos bruscos cuando las vistas cargan de inmediato.
+   * Renderiza el skeleton y retorna un controlador para finalizar la transición limpiamente
+   * sin parpadeos visuales ni desmontajes innecesarios del TopBar en navegaciones SPA.
    * @param {string} pathname - Ruta actual
    * @param {HTMLElement} container - Contenedor raíz (ej. appRoot)
-   * @param {number} [minDuration=280] - Tiempo mínimo en ms para evitar parpadeos visuales
+   * @param {object|number} [options={}] - Configuración o tiempo mínimo en ms
+   * @param {boolean} [options.onlyBottom=false] - Si es verdadero y existe TopBar, solo monta el skeleton inferior
+   * @param {number} [options.minDuration=280] - Tiempo mínimo de visualización en ms para evitar parpadeos
    * @returns {{ finish: (newElements: HTMLElement[], isActiveCheck?: () => boolean) => Promise<void> }}
    */
-  static showSkeleton(pathname, container, minDuration = 280) {
+  static showSkeleton(pathname, container, options = {}) {
     if (!container) {
       return {
         finish: async (elements) => {
@@ -39,23 +46,58 @@ export class SkeletonService {
       };
     }
 
+    const config = typeof options === 'number' ? { minDuration: options } : options;
+    const { onlyBottom = false, minDuration = 280 } = config;
+
     const startTime = performance.now();
-    const skeletonElement = this.createSkeleton(pathname);
-    container.replaceChildren(skeletonElement);
+    const existingHeader = container.querySelector('.layout-header');
+    const existingContent = container.querySelector('.layout-content');
+    const isSoftNavigation = onlyBottom && Boolean(existingHeader);
+
+    const skeletonElement = this.createSkeleton(pathname, { onlyBottom: isSoftNavigation });
+
+    if (isSoftNavigation) {
+      // En navegación SPA suave, preservamos el TopBar intacto en el DOM y reemplazamos únicamente el contenido inferior
+      if (existingContent && existingContent.parentNode === container) {
+        existingContent.replaceWith(skeletonElement);
+      } else {
+        container.appendChild(skeletonElement);
+      }
+    } else {
+      // En carga inicial, recarga (F5) o cambio estructural de layout, se reemplaza el contenedor completo
+      container.replaceChildren(skeletonElement);
+    }
 
     return {
       async finish(newElements, isActiveCheck) {
         if (isActiveCheck && !isActiveCheck()) return;
 
-        // Garantizar el tiempo mínimo de visualización del skeleton para evitar parpadeos
+        // Garantizar el tiempo mínimo de visualización del skeleton para observar transiciones
         const elapsed = performance.now() - startTime;
         const remaining = minDuration - elapsed;
         if (remaining > 0) {
           await new Promise((resolve) => setTimeout(resolve, remaining));
         }
 
-        // Reemplazo inmediato e instantáneo: el skeleton se elimina de golpe sin transiciones ni animaciones de subida
-        container.replaceChildren(...newElements);
+        if (isActiveCheck && !isActiveCheck()) return;
+
+        if (isSoftNavigation) {
+          // Extraer la vista de contenido inferior
+          const newContentView =
+            newElements.find((el) => el.classList?.contains('layout-content')) ||
+            newElements[newElements.length - 1];
+
+          if (skeletonElement.parentNode === container && newContentView) {
+            skeletonElement.replaceWith(newContentView);
+          } else if (newContentView && existingHeader) {
+            container.replaceChildren(existingHeader, newContentView);
+          } else {
+            container.replaceChildren(...newElements);
+          }
+        } else {
+          // Reemplazo completo de elementos en carga inicial
+          container.replaceChildren(...newElements);
+        }
       },
     };
   }
