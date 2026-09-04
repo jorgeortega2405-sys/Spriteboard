@@ -1,0 +1,60 @@
+import { Request, Response } from 'express';
+
+// Paletas de gradientes modernos y elegantes seleccionados determinísticamente
+const GRADIENT_PALETTES = [
+  ['#1e293b', '#0f172a'], // Slate oscuro
+  ['#3b82f6', '#1d4ed8'], // Azul tech
+  ['#6366f1', '#4338ca'], // Índigo
+  ['#8b5cf6', '#6d28d9'], // Violeta
+  ['#ec4899', '#be185d'], // Rosa
+  ['#059669', '#047857'], // Esmeralda
+  ['#d97706', '#b45309'], // Ámbar
+  ['#0891b2', '#0e7490'], // Cyan
+  ['#475569', '#334155'], // Acero
+  ['#18181b', '#27272a'], // Obsidiana
+];
+
+// Hash simple para mapear un nombre a una paleta consistente
+function hashString(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 5) - hash + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
+// Extraer la inicial del nombre o username
+function getInitial(name: string): string {
+  const clean = name.trim().replace(/^[@_.-]+/, '');
+  if (!clean) return 'U';
+  return clean.charAt(0).toUpperCase();
+}
+
+export function handleAvatarRequest(req: Request, res: Response): void {
+  const name = String(req.query.name || req.query.username || 'User').trim();
+  const initial = getInitial(name);
+
+  // Seleccionar gradiente según el hash del nombre
+  const hash = hashString(name);
+  const palette = GRADIENT_PALETTES[hash % GRADIENT_PALETTES.length];
+  const [color1, color2] = palette;
+
+  const size = Math.min(Math.max(Number(req.query.size) || 80, 32), 256);
+  const fontSize = Math.round(size * 0.44);
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" width="${size}" height="${size}">
+  <defs>
+    <linearGradient id="avatar-grad-${hash}" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="${color1}" />
+      <stop offset="100%" stop-color="${color2}" />
+    </linearGradient>
+  </defs>
+  <rect width="${size}" height="${size}" rx="${size / 2}" fill="url(#avatar-grad-${hash})" />
+  <text x="50%" y="53%" text-anchor="middle" dominant-baseline="middle" font-family="'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="${fontSize}" font-weight="600" fill="#ffffff" letter-spacing="-0.5">${initial}</text>
+</svg>`;
+
+  res.setHeader('Content-Type', 'image/svg+xml; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+  res.send(svg);
+}

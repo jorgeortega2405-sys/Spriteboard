@@ -1,6 +1,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
-@import url('./buttons.css');
-@import url('./forms.css');
+
+/* ==========================================================================
+   1. RESET Y REGLAS GLOBALES
+   ========================================================================== */
 
 * {
   margin: 0;
@@ -15,6 +17,10 @@ html, body {
   background-color: #ffffff;
   color: #111827;
 }
+
+/* ==========================================================================
+   2. LAYOUT GENERAL DE LA SPA
+   ========================================================================== */
 
 /* Contenedor principal de la página */
 .page-wrapper {
@@ -35,7 +41,7 @@ html, body {
   flex: 1;
 }
 
-/* Barra superior: height auto, min-height 50px, padding 8px, borde inferior y fondo blanco */
+/* Barra superior: min-height 50px, padding 8px, borde inferior y fondo blanco */
 .general-content-top {
   height: auto;
   min-height: 50px;
@@ -47,8 +53,7 @@ html, body {
   padding: 8px;
 }
 
-
-/* Divisiones internas del top: left, center, right */
+/* Divisiones internas de la barra superior: left, center, right */
 .top-left,
 .top-center,
 .top-right {
@@ -71,7 +76,7 @@ html, body {
   justify-content: flex-end;
 }
 
-/* Área de contenido inferior: ocupa todo el resto y fondo blanco */
+/* Área de contenido inferior: posición relativa para alojar el módulo sidebar */
 .general-content-bottom {
   flex: 1;
   width: 100%;
@@ -79,5 +84,752 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: auto;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ==========================================================================
+   3. COMPONENTE BOTONES (BEM: .component-button)
+   ========================================================================== */
+
+.component-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid #00000020;
+  border-radius: 12px;
+  background-color: #ffffff;
+  color: #1a1a1a;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  text-decoration: none;
+  user-select: none;
+  padding: 0 14px;
+  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease, color 0.15s ease;
+  box-sizing: border-box;
+  white-space: nowrap;
+  outline: none;
+}
+
+/* Estados base */
+.component-button:hover {
+  background-color: #f5f5fa;
+  border-color: #00000035;
+}
+
+.component-button:active {
+  background-color: #eeeeee;
+  transform: scale(0.98);
+}
+
+.component-button.is-active {
+  background-color: #f0f0f4;
+  border-color: #00000030;
+}
+
+.component-button:focus-visible {
+  box-shadow: 0 0 0 2px #00000015, 0 0 0 4px #00000020;
+}
+
+.component-button:disabled,
+.component-button.is-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Modificador de Ancho Completo */
+.component-button--full-width {
+  width: 100%;
+}
+
+/* Modificadores de Altura (.component-button--h*) */
+.component-button--h32 {
+  height: 32px;
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: 12px;
+  gap: 6px;
+}
+
+.component-button--h34 {
+  height: 34px;
+  min-height: 34px;
+  padding: 0 12px;
+  font-size: 13px;
+  gap: 6px;
+}
+
+.component-button--h36 {
+  height: 36px;
+  min-height: 36px;
+  padding: 0 14px;
+  font-size: 14px;
+  gap: 8px;
+}
+
+.component-button--h38 {
+  height: 38px;
+  min-height: 38px;
+  padding: 0 16px;
+  font-size: 14px;
+  gap: 8px;
+}
+
+.component-button--h40 {
+  height: 40px;
+  min-height: 40px;
+  padding: 0 18px;
+  font-size: 15px;
+  gap: 8px;
+}
+
+.component-button--h55 {
+  height: 55px;
+  min-height: 55px;
+  padding: 0 24px;
+  font-size: 15px;
+  gap: 10px;
+  border-radius: 12px;
+}
+
+/* Modificador Solo Ícono (.component-button--icon-only) */
+.component-button--icon-only {
+  padding: 0;
+  width: auto;
+}
+
+.component-button--icon-only.component-button--h32 {
+  width: 32px;
+  min-width: 32px;
+}
+
+.component-button--icon-only.component-button--h34 {
+  width: 34px;
+  min-width: 34px;
+}
+
+.component-button--icon-only.component-button--h36 {
+  width: 36px;
+  min-width: 36px;
+}
+
+.component-button--icon-only.component-button--h38 {
+  width: 38px;
+  min-width: 38px;
+}
+
+.component-button--icon-only.component-button--h40 {
+  width: 40px;
+  min-width: 40px;
+}
+
+/* Modificadores de Variación / Temas */
+.component-button--black {
+  background-color: #000000;
+  color: #ffffff;
+  border-color: #000000;
+}
+
+.component-button--black:hover {
+  background-color: #222222;
+  border-color: #222222;
+}
+
+.component-button--black:active {
+  background-color: #333333;
+}
+
+.component-button--black:focus-visible {
+  box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #000000;
+}
+
+.component-button--black:disabled,
+.component-button--black.is-disabled {
+  background-color: #333333;
+  border-color: #333333;
+  color: #888888;
+}
+
+.component-button--semi-black {
+  background-color: #0000000d;
+  color: #111827;
+  border-color: #00000045;
+}
+
+.component-button--semi-black:hover {
+  background-color: #00000018;
+  border-color: #00000065;
+}
+
+.component-button--semi-black:active {
+  background-color: #00000026;
+}
+
+.component-button--semi-black:focus-visible {
+  box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #00000030;
+}
+
+.component-button--semi-black:disabled,
+.component-button--semi-black.is-disabled {
+  opacity: 0.45;
+  background-color: #00000008;
+  border-color: #00000020;
+}
+
+.component-button--border-dark {
+  border-color: #00000050;
+}
+
+.component-button--border-dark:hover {
+  border-color: #00000080;
+}
+
+.component-button--border-black {
+  border-color: #000000;
+}
+
+.component-button--border-black:hover {
+  border-color: #000000cc;
+}
+
+.component-button--dark {
+  background-color: #1f2937;
+  color: #f9fafb;
+  border-color: #1f2937;
+}
+
+.component-button--dark:hover {
+  background-color: #374151;
+  border-color: #374151;
+}
+
+.component-button--dark:active {
+  background-color: #111827;
+}
+
+.component-button--dark:focus-visible {
+  box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #1f2937;
+}
+
+.component-button--danger {
+  background-color: #fee2e2;
+  color: #b91c1c;
+  border-color: #fca5a560;
+}
+
+.component-button--danger:hover {
+  background-color: #fecaca;
+  border-color: #f8717180;
+}
+
+.component-button--danger:active {
+  background-color: #fca5a5;
+}
+
+.component-button--danger:focus-visible {
+  box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #ef4444;
+}
+
+.component-button--ghost {
+  background-color: transparent;
+  border-color: transparent;
+  color: #4b5563;
+}
+
+.component-button--ghost:hover {
+  background-color: #f5f5fa;
+  color: #111827;
+  border-color: transparent;
+}
+
+.component-button--ghost:active {
+  background-color: #00000014;
+}
+
+.component-button--ghost:focus-visible {
+  box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #00000020;
+}
+
+/* Iconos dentro de botones */
+.component-button .material-symbols-rounded {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  user-select: none;
+  font-size: 18px;
+}
+
+.component-button--h32 .material-symbols-rounded {
+  font-size: 16px;
+}
+
+.component-button--h34 .material-symbols-rounded {
+  font-size: 17px;
+}
+
+.component-button--h36 .material-symbols-rounded {
+  font-size: 18px;
+}
+
+.component-button--h38 .material-symbols-rounded {
+  font-size: 20px;
+}
+
+.component-button--h40 .material-symbols-rounded {
+  font-size: 22px;
+}
+
+/* Modificador Botón Avatar Redondo (40px) */
+.component-button--avatar {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0;
+  border-radius: 50%;
+  border: none;
+  background: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #d1d5db;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  position: relative;
+  outline: none;
+}
+
+.component-button--avatar:hover {
+  transform: scale(1.04);
+  box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #9ca3af;
+}
+
+.component-button--avatar:active {
+  transform: scale(0.97);
+}
+
+.component-button--avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+/* ==========================================================================
+   4. MENÚ DESPLEGABLE DE AVATAR
+   ========================================================================== */
+
+.avatar-dropdown-container {
+  position: relative;
+  display: inline-flex;
+}
+
+.avatar-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 265px;
+  background-color: #ffffff;
+  border: 1px solid #00000015;
+  border-radius: 14px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  padding: 6px;
+  display: none;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 1000;
+  box-sizing: border-box;
+}
+
+.avatar-menu.is-open {
+  display: flex;
+}
+
+.avatar-menu-header {
+  padding: 10px 12px 8px 12px;
+  border-bottom: 1px solid #00000010;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.avatar-menu-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.avatar-menu-email {
+  font-size: 12px;
+  color: #6b7280;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ==========================================================================
+   5. COMPONENTE ENLACES DE MENÚ (BEM: .component-menu-link)
+   ========================================================================== */
+
+.component-menu-link,
+.avatar-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 40px;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: 8px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  text-align: left;
+  text-decoration: none;
+  user-select: none;
+  box-sizing: border-box;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.component-menu-link:hover,
+.avatar-menu-item:hover,
+.component-menu-link.is-active {
+  background-color: #f5f5fa;
+  color: #111827;
+}
+
+.component-menu-link.is-active {
+  font-weight: 600;
+}
+
+/* Modificador con Borde (.component-menu-link--bordered) */
+.component-menu-link--bordered {
+  border-color: #00000020;
+}
+
+.component-menu-link--bordered:hover {
+  border-color: #00000035;
+}
+
+.component-menu-link-icon,
+.avatar-menu-item .material-symbols-rounded {
+  font-size: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.component-menu-link-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Modificador Danger */
+.component-menu-link--danger,
+.avatar-menu-item--danger {
+  color: #dc2626;
+}
+
+.component-menu-link--danger:hover,
+.avatar-menu-item--danger:hover {
+  background-color: #fef2f2;
+  color: #b91c1c;
+}
+
+/* Combinación: Modificador Bordered + Danger */
+.component-menu-link--bordered.component-menu-link--danger,
+.component-menu-link--bordered.avatar-menu-item--danger {
+  border-color: #fca5a580;
+}
+
+.component-menu-link--bordered.component-menu-link--danger:hover,
+.component-menu-link--bordered.avatar-menu-item--danger:hover {
+  border-color: #f87171;
+}
+
+/* ==========================================================================
+   6. MÓDULO SIDEBAR Y COMPONENTE MENÚ (.module-sidebar / .component-menu)
+   ========================================================================== */
+
+/* Módulo Sidebar: width auto, height 100%, position absolute a la izquierda */
+.module-sidebar {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: auto;
+  height: 100%;
+  z-index: 50;
+  padding: 8px;
+  box-sizing: border-box;
+  flex-direction: column;
+}
+
+/* Estado activo del módulo sidebar: se activa de golpe sin animación */
+.module-sidebar.is-active {
+  display: flex;
+}
+
+/* Componente Menú: fondo blanco, border 1px solid #00000020, radius 16px, width 365px, height 100% */
+.component-menu {
+  width: 365px;
+  height: 100%;
+  background-color: #ffffff;
+  border: 1px solid #00000020;
+  border-radius: 16px;
+  box-sizing: border-box;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 8px;
+}
+
+/* Secciones Top y Bottom dentro del Component Menu */
+.component-menu-top,
+.component-menu-bottom {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+/* Lista de enlaces dentro del menú: display flex, flex-direction column, gap 8px */
+.component-menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+/* ==========================================================================
+   7. FORMULARIOS Y VISTAS DE AUTENTICACIÓN (LOGIN, REGISTER, FORGOT)
+   ========================================================================== */
+
+/* Contenedor centrado del login / registro */
+.login-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+/* Logo arriba a la izquierda en autenticación */
+.login-header-logo {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.login-header-logo:hover {
+  opacity: 0.8;
+}
+
+.login-logo-img {
+  height: 38px;
+  width: auto;
+  display: block;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  box-sizing: border-box;
+}
+
+.login-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+}
+
+.login-title {
+  font-size: 26px;
+  font-weight: 700;
+  color: #111827;
+  letter-spacing: -0.5px;
+  margin: 0;
+}
+
+.login-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.form-error {
+  padding: 10px 14px;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+/* Campo con Floating Label */
+.form-field {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  margin: 0;
+}
+
+.form-input {
+  width: 100%;
+  height: 55px;
+  border: 1px solid #00000020;
+  border-radius: 12px;
+  padding: 22px 16px 6px 16px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  color: #111827;
+  background-color: #ffffff;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  margin: 0;
+}
+
+.form-input:focus {
+  border-color: #00000060;
+  box-shadow: 0 0 0 1px #00000030;
+}
+
+.form-input--with-action {
+  padding-right: 48px;
+}
+
+/* Label flotante */
+.form-label {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  color: #6b7280;
+  pointer-events: none;
+  transition: all 0.15s ease-out;
+  transform-origin: left top;
+}
+
+/* Elevación del label al hacer foco o si tiene contenido */
+.form-input:focus ~ .form-label,
+.form-input:not(:placeholder-shown) ~ .form-label {
+  top: 15px;
+  transform: translateY(-50%) scale(0.78);
+  color: #111827;
+  font-weight: 500;
+}
+
+/* Fila de enlace alineada a la derecha con 8px consistente */
+.form-link-row {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.form-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: #6b7280;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.form-link:hover {
+  color: #111827;
+  text-decoration: underline;
+}
+
+.form-link-primary {
+  color: #111827;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.form-link-primary:hover {
+  text-decoration: underline;
+}
+
+.form-footer-text {
+  font-size: 14px;
+  color: #6b7280;
+  text-align: center;
+  margin-top: 6px;
+}
+
+/* Botón transparente para alternar visibilidad de contraseña */
+.form-input-action {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  cursor: pointer;
+  outline: none;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.form-input-action:hover {
+  background-color: #f5f5fa;
+  color: #111827;
+}
+
+.form-input-action .material-symbols-rounded {
+  font-size: 20px;
 }
