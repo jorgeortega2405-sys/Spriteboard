@@ -1,10 +1,10 @@
 import crypto from 'crypto';
-import { hashPassword, verifyPassword, setSessionCookie, clearSessionCookie, } from '../services/auth.service.js';
+import { hashPassword, verifyPassword, clearSessionCookie, addAccountToSession, switchAccountInSession, removeAccountFromSession, } from '../services/auth.service.js';
 import { getGoogleAuthUrl, processGoogleAuthCallback, STATE_COOKIE_NAME, } from '../services/google.service.js';
 import { generateSixDigitCode, savePendingRegistration, getPendingRegistration, verifyAndConsumeCode, savePasswordResetToken, verifyPasswordResetToken, consumePasswordResetToken, } from '../services/verification.service.js';
 import { sendVerificationCodeEmail, sendPasswordResetEmail, } from '../services/mail.service.js';
 import { findUserByEmail, findUserDuplicates, createUser, updateUserPassword, } from '../services/user.service.js';
-import { getCurrentUser } from '../middlewares/auth.middleware.js';
+import { getCurrentUser, getLinkedAccounts } from '../middlewares/auth.middleware.js';
 import { logger } from '../services/logger.service.js';
 import { validateEmail, validatePassword, validateUsername, validateVerificationCode, } from '../utils/validators.js';
 import { sendSuccess, sendCreated, sendBadRequest, sendUnauthorized, sendNotFound, sendConflict, sendInternalError, sanitizeUser, } from '../utils/http.js';
@@ -117,12 +117,13 @@ export async function verifyRegistrationCode(req, res) {
             email: pending.email,
             passwordHash: pending.passwordHash,
         });
-        // Iniciar sesión automáticamente emitiendo la cookie de sesión
-        setSessionCookie(res, newUser);
+        // Iniciar sesión agregando la nueva cuenta a la sesión multicuentas
+        const session = addAccountToSession(res, req, newUser);
         logger.security.info('Cuenta creada y verificada exitosamente', { userId: newUser.id, email: newUser.email });
         sendCreated(res, {
             message: 'Cuenta creada y verificada exitosamente.',
             user: sanitizeUser(newUser),
+            accounts: session.accounts.map(sanitizeUser),
         });
     }
     catch (error) {
@@ -181,27 +182,63 @@ export async function login(req, res) {
             return;
         }
         const user = sanitizeUser(userRow);
-        setSessionCookie(res, user);
+        const session = addAccountToSession(res, req, user);
         logger.security.info('Inicio de sesión exitoso', { userId: user.id, email: user.email });
         sendSuccess(res, {
             message: 'Inicio de sesión exitoso.',
             user,
+            accounts: session.accounts.map(sanitizeUser),
         });
     }
     catch (error) {
         sendInternalError(res, 'Error al iniciar sesión', error, 'Error interno del servidor al iniciar sesión.');
     }
 }
-// Cierre de sesión
+// Cierre de sesión de la cuenta activa (conmuta a la siguiente si existen más)
 export function logout(req, res) {
-    clearSessionCookie(res);
-    logger.security.info('Sesión cerrada exitosamente');
-    sendSuccess(res, { message: 'Sesión cerrada exitosamente.' });
+    const result = removeAccountFromSession(res, req);
+    logger.security.info('Cierre de sesión de cuenta activa', { remainingAccounts: result.remainingCount });
+    sendSuccess(res, {
+        message: 'Sesión cerrada exitosamente.',
+        switched: result.remainingCount > 0,
+        user: result.activeUser ? sanitizeUser(result.activeUser) : null,
+        accounts: result.accounts.map(sanitizeUser),
+    });
 }
-// Usuario actual
+// Cierre de todas las sesiones simultáneas
+export function logoutAll(req, res) {
+    clearSessionCookie(res);
+    logger.security.info('Todas las sesiones fueron cerradas exitosamente');
+    sendSuccess(res, { message: 'Todas las sesiones fueron cerradas exitosamente.' });
+}
+// Conmutar entre cuentas vinculadas
+export function switchAccount(req, res) {
+    const { user_id } = req.body;
+    const targetId = Number(user_id);
+    if (!targetId || isNaN(targetId)) {
+        sendBadRequest(res, 'ID de cuenta inválido.');
+        return;
+    }
+    const result = switchAccountInSession(res, req, targetId);
+    if (!result.success || !result.activeUser) {
+        sendBadRequest(res, 'La cuenta especificada no pertenece a las cuentas vinculadas.');
+        return;
+    }
+    logger.security.info('Cambio de cuenta activa exitoso', { targetUserId: targetId });
+    sendSuccess(res, {
+        message: 'Cuenta cambiada exitosamente.',
+        user: sanitizeUser(result.activeUser),
+        accounts: result.accounts.map(sanitizeUser),
+    });
+}
+// Usuario actual y cuentas vinculadas
 export function me(req, res) {
     const user = getCurrentUser(req);
-    res.json({ user: user ? sanitizeUser(user) : null });
+    const accounts = getLinkedAccounts(req);
+    res.json({
+        user: user ? sanitizeUser(user) : null,
+        accounts: accounts.map(sanitizeUser),
+    });
 }
 // Redirección a Google OAuth
 export function redirectToGoogle(req, res) {
@@ -230,7 +267,7 @@ export async function googleCallback(req, res) {
             return;
         }
         const userPayload = await processGoogleAuthCallback(String(code));
-        setSessionCookie(res, userPayload);
+        addAccountToSession(res, req, userPayload);
         logger.security.info('Inicio de sesión exitoso con Google OAuth', { userId: userPayload.id, email: userPayload.email });
         res.redirect('/');
     }

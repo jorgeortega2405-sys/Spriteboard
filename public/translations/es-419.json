@@ -4,6 +4,13 @@
     "tagline": "Tablero y espacio de creación",
     "loading": "Cargando..."
   },
+  "modal": {
+    "close": "Cerrar ventana emergente",
+    "cancel": "Cancelar",
+    "continue": "Continuar",
+    "save": "Guardar",
+    "loading": "Procesando..."
+  },
   "nav": {
     "go_home": "Ir al inicio",
     "home": "Página principal",
@@ -18,7 +25,11 @@
     "logout": "Cerrar sesión",
     "login": "Acceder",
     "menu": "Menú",
-    "profile": "Perfil"
+    "profile": "Perfil",
+    "add_account": "Agregar otra cuenta",
+    "logout_all": "Cerrar todas las sesiones",
+    "switch_account": "Cambiar de cuenta",
+    "back_to_menu": "Volver al menú"
   },
   "topbar": {
     "search_placeholder": "Buscar...",
@@ -108,7 +119,15 @@
       "btn_delete_photo": "Eliminar",
       "btn_cancel": "Cancelar",
       "btn_save": "Guardar",
+      "btn_continue": "Continuar",
       "btn_edit": "Editar",
+      "modal_email_verify_title": "Verifica tu identidad",
+      "modal_email_verify_desc": "Hemos enviado un código de 6 dígitos a tu correo actual ({email}). Ingrésalo a continuación para continuar.",
+      "modal_email_code_placeholder": "Código de 6 dígitos",
+      "modal_email_new_title": "Cambiar correo electrónico",
+      "modal_email_new_desc": "Ingresa la nueva dirección de correo electrónico que deseas asociar a tu cuenta.",
+      "modal_email_new_placeholder": "nuevo@correo.com",
+      "email_code_sent_toast": "Código de verificación enviado a tu correo actual.",
       "username_title": "Nombre de usuario",
       "username_placeholder": "Nombre de usuario",
       "email_title": "Correo electrónico",
@@ -153,9 +172,9 @@
       "theme_title": "Tema de la interfaz",
       "theme_desc": "Selecciona la apariencia visual de la plataforma o sincronízala con la configuración de tu sistema.",
       "theme_trigger_aria": "Seleccionar tema",
-      "theme_system": "Automático (Sistema)",
-      "theme_light": "Claro",
-      "theme_dark": "Oscuro",
+      "theme_system": "Sincronizar con el sistema",
+      "theme_light": "Tema Claro",
+      "theme_dark": "Tema Oscuro",
       "group_interaction": "Opciones de interacción",
       "reduce_motion_title": "Reducir animaciones",
       "reduce_motion_desc": "Minimiza las transiciones y animaciones de movimiento para una experiencia más fluida y descansada.",
@@ -177,7 +196,7 @@
       "group_sessions": "Gestión de sesiones",
       "logout_all_title": "Cerrar sesión en todos los dispositivos",
       "logout_all_desc": "¿Iniciaste sesión en un dispositivo compartido o público? Puedes forzar el cierre de sesión en todos ellos.",
-      "btn_logout_all": "Cerrar todas las sesiones",
+      "btn_logout_all": "Cerrar sesión",
       "group_danger": "Zona de peligro",
       "delete_account_title": "Eliminar cuenta",
       "delete_account_desc": "Al eliminar tu cuenta, todos tus tableros, sprites y datos personales se borrarán de forma permanente e irrecuperable.",
@@ -214,6 +233,8 @@
     "preferences_saved": "Preferencias guardadas.",
     "session_closed": "Sesión cerrada.",
     "all_sessions_closed": "Se han cerrado todas las demás sesiones activas.",
+    "account_switched": "Has cambiado de cuenta exitosamente.",
+    "max_accounts_reached": "Has alcanzado el límite máximo de 5 cuentas vinculadas.",
     "network_error": "No se pudo conectar con el servidor. Revisa tu conexión.",
     "generic_error": "Ocurrió un error al procesar tu solicitud."
   },

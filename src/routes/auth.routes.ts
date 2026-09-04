@@ -6,6 +6,8 @@ import {
   resendRegistrationCode,
   login,
   logout,
+  logoutAll,
+  switchAccount,
   me,
   redirectToGoogle,
   googleCallback,
@@ -33,6 +35,10 @@ router.post('/register/resend-code', sendCodeLimiter, resendRegistrationCode);
 // Sesión local y Google OAuth
 router.post('/login', loginLimiter, login);
 router.post('/logout', logout);
+router.post('/logout-all', logoutAll);
+router.post('/auth/logout-all', logoutAll);
+router.post('/auth/switch-account', switchAccount);
+router.post('/switch-account', switchAccount);
 router.get('/me', me);
 
 router.get('/auth/google', redirectToGoogle);

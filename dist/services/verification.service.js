@@ -132,3 +132,95 @@ export async function consumePasswordResetToken(token) {
         return { success: false, error: 'Error al decodificar la información del token.' };
     }
 }
+/* ==========================================================================
+   GESTIÓN DE CÓDIGOS Y TOKENS DE CAMBIO DE CORREO EN REDIS
+   ========================================================================== */
+const REDIS_EMAIL_CHANGE_PREFIX = 'email_change_code:';
+const REDIS_EMAIL_CHANGE_AUTH_PREFIX = 'email_change_auth:';
+/**
+ * Guarda un código de verificación de 6 dígitos para cambio de correo en Redis
+ */
+export async function saveEmailChangeCode(userId, currentEmail, code, ttlSeconds = DEFAULT_TTL_SECONDS) {
+    const key = `${REDIS_EMAIL_CHANGE_PREFIX}${userId}`;
+    const payload = {
+        userId,
+        currentEmail: currentEmail.toLowerCase().trim(),
+        code: code.trim(),
+        createdAt: Date.now(),
+        attempts: 0,
+    };
+    await redis.setex(key, ttlSeconds, JSON.stringify(payload));
+}
+/**
+ * Valida el código de verificación para cambio de correo y genera un token de autorización temporal
+ */
+export async function verifyEmailChangeCode(userId, inputCode) {
+    const key = `${REDIS_EMAIL_CHANGE_PREFIX}${userId}`;
+    const raw = await redis.get(key);
+    if (!raw) {
+        return {
+            success: false,
+            error: 'El código de verificación ha expirado o no existe. Solicita uno nuevo.',
+        };
+    }
+    let pending;
+    try {
+        pending = JSON.parse(raw);
+    }
+    catch {
+        await redis.del(key);
+        return { success: false, error: 'Error al procesar el código de verificación.' };
+    }
+    // Protección anti fuerza bruta (máximo 5 intentos)
+    if (pending.attempts >= 5) {
+        await redis.del(key);
+        return {
+            success: false,
+            error: 'Demasiados intentos fallidos. El código ha sido invalidado. Solicita uno nuevo.',
+        };
+    }
+    const cleanInput = String(inputCode).trim();
+    if (cleanInput !== pending.code) {
+        pending.attempts += 1;
+        const remainingTtl = await redis.ttl(key);
+        if (remainingTtl > 0) {
+            await redis.setex(key, remainingTtl, JSON.stringify(pending));
+        }
+        return {
+            success: false,
+            error: `Código incorrecto. Te quedan ${5 - pending.attempts} intentos.`,
+        };
+    }
+    // Código verificado: eliminar código y activar ventana de autorización de 5 minutos (300s)
+    await redis.del(key);
+    const authKey = `${REDIS_EMAIL_CHANGE_AUTH_PREFIX}${userId}`;
+    await redis.setex(authKey, 300, '1');
+    return {
+        success: true,
+        token: 'authorized',
+    };
+}
+/**
+ * Comprueba si el usuario tiene una autorización activa para cambio de correo (ventana de 5 minutos)
+ */
+export async function isEmailChangeAuthorized(userId) {
+    const authKey = `${REDIS_EMAIL_CHANGE_AUTH_PREFIX}${userId}`;
+    const val = await redis.get(authKey);
+    return Boolean(val);
+}
+/**
+ * Valida y consume la autorización de cambio de correo tras guardar exitosamente
+ */
+export async function consumeEmailChangeAuthorization(userId) {
+    const authKey = `${REDIS_EMAIL_CHANGE_AUTH_PREFIX}${userId}`;
+    const val = await redis.get(authKey);
+    if (!val) {
+        return {
+            valid: false,
+            error: 'La autorización de 5 minutos para cambiar el correo ha expirado. Por favor verifica tu código de nuevo.',
+        };
+    }
+    // Consumir tras guardado exitoso
+    await redis.del(authKey);
+    return { valid: true };
+}

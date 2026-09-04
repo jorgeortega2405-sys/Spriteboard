@@ -6,6 +6,20 @@ export interface UserPayload {
   google_id?: string | null;
 }
 
+export interface SessionAccount {
+  id: number;
+  username: string;
+  email: string;
+  avatar_url?: string | null;
+  google_id?: string | null;
+  last_accessed?: number;
+}
+
+export interface MultiAccountSessionPayload {
+  activeId: number;
+  accounts: SessionAccount[];
+}
+
 export interface GoogleTokenResponse {
   access_token: string;
   expires_in: number;

@@ -9,6 +9,7 @@ import {
   deleteApi,
 } from '../../services/api.js';
 import { setupDropdown, withButtonLoading } from '../../utils/dom.js';
+import { openModal } from '../../components/modal.js';
 import { showToast, setToastPreferences } from '../../services/toast.js';
 import { t, setLanguage, getCurrentLanguage } from '../../services/i18n.js';
 import {
@@ -46,8 +47,6 @@ export async function createYourAccountView() {
   const btnEditUsername = container.querySelector('[data-ref="btn-edit-username"]');
   const btnCancelUsername = container.querySelector('[data-ref="btn-cancel-username"]');
   const btnSaveUsername = container.querySelector('[data-ref="btn-save-username"]');
-  const usernameErrorBanner = container.querySelector('[data-ref="username-error"]');
-
   const emailViewBox = container.querySelector('[data-ref="email-view-box"]');
   const emailEditRow = container.querySelector('[data-ref="email-edit-row"]');
   const emailViewActions = container.querySelector('[data-ref="email-view-actions"]');
@@ -326,23 +325,26 @@ export async function createYourAccountView() {
     });
   });
 
-  // 4. Edición en Línea de Correo Electrónico
-  btnEditEmail?.addEventListener('click', (e) => {
-    e.preventDefault();
+  // 4. Cambio de Correo Electrónico mediante Verificación y Edición Inline
+  const activateEmailEditMode = () => {
     if (emailErrorBanner) emailErrorBanner.style.display = 'none';
     if (inputEmail) inputEmail.value = currentUser.email || '';
     if (emailViewBox) emailViewBox.style.display = 'none';
     if (emailViewActions) emailViewActions.style.display = 'none';
     if (emailEditRow) emailEditRow.style.display = 'flex';
     inputEmail?.focus();
-  });
+  };
 
-  btnCancelEmail?.addEventListener('click', (e) => {
-    e.preventDefault();
+  const deactivateEmailEditMode = () => {
     if (emailErrorBanner) emailErrorBanner.style.display = 'none';
     if (emailEditRow) emailEditRow.style.display = 'none';
     if (emailViewBox) emailViewBox.style.display = '';
     if (emailViewActions) emailViewActions.style.display = '';
+  };
+
+  btnCancelEmail?.addEventListener('click', (e) => {
+    e.preventDefault();
+    deactivateEmailEditMode();
   });
 
   btnSaveEmail?.addEventListener('click', async (e) => {
@@ -350,9 +352,7 @@ export async function createYourAccountView() {
     const newEmail = inputEmail?.value?.trim() || '';
 
     if (newEmail.toLowerCase() === (currentUser.email || '').toLowerCase()) {
-      if (emailEditRow) emailEditRow.style.display = 'none';
-      if (emailViewBox) emailViewBox.style.display = '';
-      if (emailViewActions) emailViewActions.style.display = '';
+      deactivateEmailEditMode();
       return;
     }
 
@@ -366,9 +366,7 @@ export async function createYourAccountView() {
         if (res.ok && data.ok) {
           currentUser.email = data.email;
           if (displayEmail) displayEmail.textContent = data.email;
-          if (emailEditRow) emailEditRow.style.display = 'none';
-          if (emailViewBox) emailViewBox.style.display = '';
-          if (emailViewActions) emailViewActions.style.display = '';
+          deactivateEmailEditMode();
           showToast(t('toasts.email_updated'), 'success');
         } else {
           if (emailErrorBanner) {
@@ -381,6 +379,82 @@ export async function createYourAccountView() {
           emailErrorBanner.textContent = t('toasts.generic_error');
           emailErrorBanner.style.display = 'block';
         }
+      }
+    });
+  });
+
+  btnEditEmail?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    if (emailErrorBanner) emailErrorBanner.style.display = 'none';
+
+    await withButtonLoading(btnEditEmail, t('app.loading'), async () => {
+      try {
+        const res = await postApi('/api/settings/email/request-code');
+        const data = await res.json();
+
+        if (!res.ok || !data.ok) {
+          showToast(data.error || t('toasts.generic_error'), 'danger');
+          return;
+        }
+
+        // Si ya está autorizado dentro de la ventana de 5 minutos, activar edición directamente sin pedir código
+        if (data.alreadyAuthorized) {
+          activateEmailEditMode();
+          return;
+        }
+
+        showToast(t('settings.your_account.email_code_sent_toast'), 'info');
+
+        // Abrir Modal para ingresar código de verificación con input estilo auth
+        const modal = openModal({
+          titleKey: 'settings.your_account.modal_email_verify_title',
+          descriptionKey: 'settings.your_account.modal_email_verify_desc',
+          descriptionParams: { email: currentUser.email || '' },
+          confirmText: t('settings.your_account.btn_continue'),
+          cancelText: t('settings.your_account.btn_cancel'),
+          bodyHtml: `
+            <label class="field" data-ref="field-email-code">
+              <input class="field__input field__input--code" data-ref="modal-input-code" type="text" maxlength="6" inputmode="numeric" pattern="[0-9]*" placeholder=" " autocomplete="one-time-code" />
+              <span class="field__label" data-ref="modal-label-code">${t('settings.your_account.modal_email_code_placeholder')}</span>
+            </label>
+          `,
+          onConfirm: async (inst) => {
+            const inputCodeEl = inst.body.querySelector('[data-ref="modal-input-code"]');
+            const inputCode = inputCodeEl?.value?.trim() || '';
+
+            if (!inputCode) {
+              inst.showError(t('validation.code_required'));
+              return;
+            }
+            if (inputCode.length !== 6 || !/^\d+$/.test(inputCode)) {
+              inst.showError(t('validation.code_invalid'));
+              return;
+            }
+
+            inst.clearError();
+            inst.setConfirmLoading(true);
+
+            try {
+              const verifyRes = await postApi('/api/settings/email/verify-code', { code: inputCode });
+              const verifyData = await verifyRes.json();
+
+              if (!verifyRes.ok || !verifyData.ok) {
+                inst.setConfirmLoading(false);
+                inst.showError(verifyData.error || t('toasts.generic_error'));
+                return;
+              }
+
+              // Cerrar modal y activar edición en línea desde settings-item
+              inst.close();
+              activateEmailEditMode();
+            } catch (_) {
+              inst.setConfirmLoading(false);
+              inst.showError(t('toasts.generic_error'));
+            }
+          },
+        });
+      } catch (_) {
+        showToast(t('toasts.generic_error'), 'danger');
       }
     });
   });

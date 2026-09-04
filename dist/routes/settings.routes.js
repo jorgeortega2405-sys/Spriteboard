@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { requireAuth } from '../middlewares/auth.middleware.js';
-import { handleUpdateAvatar, handleDeleteAvatar, handleUpdateUsername, handleUpdateEmail, handleGetPreferences, handleUpdatePreferences, } from '../controllers/settings.controller.js';
+import { handleUpdateAvatar, handleDeleteAvatar, handleUpdateUsername, handleRequestEmailChangeCode, handleVerifyEmailChangeCode, handleUpdateEmail, handleGetPreferences, handleUpdatePreferences, } from '../controllers/settings.controller.js';
 const router = Router();
 // Configurar multer en memoria para validar tamaño y mimetype de forma segura
 const storage = multer.memoryStorage();
@@ -46,6 +46,8 @@ router.delete('/settings/avatar', handleDeleteAvatar);
 router.post('/settings/avatar/delete', handleDeleteAvatar);
 // Rutas de Credenciales
 router.post('/settings/username', handleUpdateUsername);
+router.post('/settings/email/request-code', handleRequestEmailChangeCode);
+router.post('/settings/email/verify-code', handleVerifyEmailChangeCode);
 router.post('/settings/email', handleUpdateEmail);
 // Rutas de Preferencias
 router.get('/settings/preferences', handleGetPreferences);

@@ -67,7 +67,7 @@ export async function createSidebar() {
     if (sidebarHeader) {
       sidebarHeader.style.display = 'flex';
       sidebarHeader.innerHTML = `
-        <button type="button" class="menu-item" data-ref="btn-nav-back-home">
+        <button type="button" class="menu-item menu-item--bordered" data-ref="btn-nav-back-home">
           <span class="material-symbols-rounded menu-item__icon">arrow_back</span>
           <span class="menu-item__text" data-i18n="nav.back_home"></span>
         </button>

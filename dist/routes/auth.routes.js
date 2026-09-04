@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { validateStage1, sendRegistrationCode, verifyRegistrationCode, resendRegistrationCode, login, logout, me, redirectToGoogle, googleCallback, forgotPassword, validateResetToken, resetPassword, } from '../controllers/auth.controller.js';
+import { validateStage1, sendRegistrationCode, verifyRegistrationCode, resendRegistrationCode, login, logout, logoutAll, switchAccount, me, redirectToGoogle, googleCallback, forgotPassword, validateResetToken, resetPassword, } from '../controllers/auth.controller.js';
 import { registerLimiter, sendCodeLimiter, verifyCodeLimiter, loginLimiter, forgotPasswordLimiter, resetPasswordLimiter, } from '../middlewares/rate-limit.middleware.js';
 const router = Router();
 // Rutas de registro multi-etapa protegidas con Rate Limiting
@@ -10,6 +10,10 @@ router.post('/register/resend-code', sendCodeLimiter, resendRegistrationCode);
 // Sesión local y Google OAuth
 router.post('/login', loginLimiter, login);
 router.post('/logout', logout);
+router.post('/logout-all', logoutAll);
+router.post('/auth/logout-all', logoutAll);
+router.post('/auth/switch-account', switchAccount);
+router.post('/switch-account', switchAccount);
 router.get('/me', me);
 router.get('/auth/google', redirectToGoogle);
 router.get('/auth/google/callback', googleCallback);

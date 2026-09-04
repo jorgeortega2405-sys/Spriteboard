@@ -129,6 +129,15 @@ export async function render() {
 
   // Transición suave hacia la vista definitiva garantizando tiempo mínimo antiflicker
   await skeletonSession.finish(viewElements, () => navId === currentNavigation);
+
+  // Sincronizar sombra del layout-header con el scroll de la vista recién montada
+  const activeHeader = document.querySelector('.layout-header, .general-content-top');
+  const activeScrollable = document.querySelector('.layout-scrollable, .layout-body--scrollable');
+  if (activeHeader) {
+    const isScrolled = activeScrollable ? activeScrollable.scrollTop > 0 : false;
+    activeHeader.classList.toggle('shadow', isScrolled);
+    activeHeader.classList.toggle('layout-header--shadow', isScrolled);
+  }
 }
 
 // Soporte para navegación con el historial del navegador (atrás/adelante)

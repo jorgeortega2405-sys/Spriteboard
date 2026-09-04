@@ -3,11 +3,22 @@
  */
 
 export let currentUser = null;
+export let linkedAccounts = [];
 export let csrfToken = '';
 export const appConfig = { appName: 'Spriteboard' };
 
 export function setCurrentUser(user) {
   currentUser = user;
+  if (user && Array.isArray(linkedAccounts)) {
+    const idx = linkedAccounts.findIndex((a) => a.id === user.id);
+    if (idx >= 0) {
+      linkedAccounts[idx] = { ...linkedAccounts[idx], ...user };
+    }
+  }
+}
+
+export function setLinkedAccounts(accounts) {
+  linkedAccounts = Array.isArray(accounts) ? accounts : [];
 }
 
 export function escapeHtml(str) {
@@ -50,20 +61,65 @@ export async function fetchCsrfToken() {
   return '';
 }
 
-// Comprobar si hay sesión activa del usuario
+// Comprobar si hay sesión activa del usuario y cargar cuentas vinculadas
 export async function checkAuthSession() {
   try {
     const res = await fetch('/api/me');
     if (res.ok) {
       const data = await res.json();
-      currentUser = data.user;
+      currentUser = data.user || null;
+      linkedAccounts = Array.isArray(data.accounts) ? data.accounts : (data.user ? [data.user] : []);
     } else {
       currentUser = null;
+      linkedAccounts = [];
     }
   } catch {
     currentUser = null;
+    linkedAccounts = [];
   }
   return currentUser;
+}
+
+// Helper para conmutar de cuenta activa
+export async function switchAccountApi(userId) {
+  const res = await postApi('/api/auth/switch-account', { user_id: userId });
+  if (res.ok) {
+    const data = await res.json();
+    if (data.user) currentUser = data.user;
+    if (data.accounts) linkedAccounts = data.accounts;
+    return { success: true, data };
+  }
+  let err = {};
+  try {
+    err = await res.json();
+  } catch (_) {}
+  return { success: false, error: err.error || err.message || '' };
+}
+
+// Helper para cerrar sesión de la cuenta activa (conmuta o desloguea)
+export async function logoutApi() {
+  const res = await postApi('/api/logout', {});
+  if (res.ok) {
+    const data = await res.json();
+    if (data.switched && data.user) {
+      currentUser = data.user;
+      linkedAccounts = Array.isArray(data.accounts) ? data.accounts : [];
+      return { success: true, switched: true, user: data.user, accounts: linkedAccounts };
+    } else {
+      currentUser = null;
+      linkedAccounts = [];
+      return { success: true, switched: false };
+    }
+  }
+  return { success: false };
+}
+
+// Helper para cerrar todas las sesiones vinculadas
+export async function logoutAllApi() {
+  const res = await postApi('/api/auth/logout-all', {});
+  currentUser = null;
+  linkedAccounts = [];
+  return res.ok;
 }
 
 // Helper para llamadas GET a la API
@@ -80,6 +136,8 @@ export async function postApi(url, body) {
     await fetchCsrfToken();
   }
 
+  const payload = body !== undefined ? JSON.stringify(body) : JSON.stringify({});
+
   let res = await fetch(url, {
     method: 'POST',
     headers: {
@@ -87,7 +145,7 @@ export async function postApi(url, body) {
       'X-CSRF-Token': csrfToken,
     },
     credentials: 'include',
-    body: JSON.stringify(body),
+    body: payload,
   });
 
   // Reintento automático si el token expiró
@@ -100,7 +158,7 @@ export async function postApi(url, body) {
         'X-CSRF-Token': csrfToken,
       },
       credentials: 'include',
-      body: JSON.stringify(body),
+      body: payload,
     });
   }
 

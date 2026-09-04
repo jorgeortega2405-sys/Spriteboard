@@ -1,5 +1,5 @@
 import { loadTemplate } from '../../services/template.js';
-import { postApi, setCurrentUser } from '../../services/api.js';
+import { postApi, setCurrentUser, setLinkedAccounts } from '../../services/api.js';
 import { navigate } from '../../router.js';
 import {
   setupPasswordToggle,
@@ -72,6 +72,7 @@ export async function createLoginView() {
         }
 
         setCurrentUser(data.user);
+        if (data.accounts) setLinkedAccounts(data.accounts);
         navigate('/');
       } catch {
         banners.showError(t('toasts.network_error'));

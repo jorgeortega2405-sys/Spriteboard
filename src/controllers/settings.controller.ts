@@ -4,11 +4,13 @@
 
 import { Request, Response } from 'express';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
-import { setSessionCookie } from '../services/auth.service.js';
+import { updateActiveAccountInSession } from '../services/auth.service.js';
 import {
   updateAvatar,
   deleteAvatar,
   updateUsername,
+  requestEmailChangeCode,
+  verifyEmailChange,
   updateEmail,
   getUserPreferences,
   updateUserPreferences,
@@ -54,7 +56,7 @@ export async function handleUpdateAvatar(req: Request, res: Response): Promise<v
 
     const updatedUser = await findUserById(currentUser.id);
     if (updatedUser) {
-      setSessionCookie(res, sanitizeUser(updatedUser));
+      updateActiveAccountInSession(res, req, sanitizeUser(updatedUser));
     }
 
     sendSuccess(res, {
@@ -91,7 +93,7 @@ export async function handleDeleteAvatar(req: Request, res: Response): Promise<v
 
     const updatedUser = await findUserById(currentUser.id);
     if (updatedUser) {
-      setSessionCookie(res, sanitizeUser(updatedUser));
+      updateActiveAccountInSession(res, req, sanitizeUser(updatedUser));
     }
 
     sendSuccess(res, {
@@ -139,7 +141,7 @@ export async function handleUpdateUsername(req: Request, res: Response): Promise
 
     const updatedUser = await findUserById(currentUser.id);
     if (updatedUser) {
-      setSessionCookie(res, sanitizeUser(updatedUser));
+      updateActiveAccountInSession(res, req, sanitizeUser(updatedUser));
     }
 
     sendSuccess(res, {
@@ -153,7 +155,73 @@ export async function handleUpdateUsername(req: Request, res: Response): Promise
 }
 
 /**
- * Actualizar correo electrónico
+ * Solicitar código de verificación para cambio de correo
+ */
+export async function handleRequestEmailChangeCode(req: Request, res: Response): Promise<void> {
+  try {
+    const currentUser = getCurrentUser(req);
+    if (!currentUser) {
+      sendUnauthorized(res, 'Sesión no válida o expirada.');
+      return;
+    }
+
+    const result = await requestEmailChangeCode(
+      currentUser.id,
+      req.ip,
+      req.headers['user-agent']
+    );
+
+    if (!result.success) {
+      sendBadRequest(res, result.error || 'No se pudo enviar el código de verificación.');
+      return;
+    }
+
+    sendSuccess(res, {
+      message: result.alreadyAuthorized
+        ? 'Ya cuentas con autorización activa para cambiar tu correo.'
+        : 'Código de verificación enviado exitosamente a tu correo actual.',
+      alreadyAuthorized: Boolean(result.alreadyAuthorized),
+    });
+  } catch (error) {
+    sendInternalError(res, 'Error al solicitar código de cambio de correo', error, 'Error al solicitar el código de verificación.');
+  }
+}
+
+/**
+ * Verificar código de cambio de correo y emitir token temporal
+ */
+export async function handleVerifyEmailChangeCode(req: Request, res: Response): Promise<void> {
+  try {
+    const currentUser = getCurrentUser(req);
+    if (!currentUser) {
+      sendUnauthorized(res, 'Sesión no válida o expirada.');
+      return;
+    }
+
+    const { code } = req.body;
+    if (!code || typeof code !== 'string') {
+      sendBadRequest(res, 'El código de verificación es obligatorio.');
+      return;
+    }
+
+    const result = await verifyEmailChange(currentUser.id, code);
+
+    if (!result.success || !result.token) {
+      sendBadRequest(res, result.error || 'Código de verificación inválido o expirado.');
+      return;
+    }
+
+    sendSuccess(res, {
+      message: 'Código verificado con éxito.',
+      token: result.token,
+    });
+  } catch (error) {
+    sendInternalError(res, 'Error al verificar código de cambio de correo', error, 'Error al verificar el código de verificación.');
+  }
+}
+
+/**
+ * Actualizar correo electrónico utilizando el token de autorización
  */
 export async function handleUpdateEmail(req: Request, res: Response): Promise<void> {
   try {
@@ -179,6 +247,8 @@ export async function handleUpdateEmail(req: Request, res: Response): Promise<vo
     if (!result.success) {
       if (result.status === 409) {
         sendConflict(res, result.error || 'El correo electrónico ya está registrado.');
+      } else if (result.status === 403) {
+        sendUnauthorized(res, result.error || 'La autorización de 5 minutos para cambiar de correo ha expirado.');
       } else {
         sendBadRequest(res, result.error || 'Correo electrónico inválido.');
       }
@@ -187,7 +257,7 @@ export async function handleUpdateEmail(req: Request, res: Response): Promise<vo
 
     const updatedUser = await findUserById(currentUser.id);
     if (updatedUser) {
-      setSessionCookie(res, sanitizeUser(updatedUser));
+      updateActiveAccountInSession(res, req, sanitizeUser(updatedUser));
     }
 
     sendSuccess(res, {

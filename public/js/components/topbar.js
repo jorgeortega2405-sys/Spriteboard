@@ -1,8 +1,16 @@
 import { loadTemplate } from '../services/template.js';
-import { currentUser, postApi, setCurrentUser, escapeHtml } from '../services/api.js';
+import {
+  currentUser,
+  linkedAccounts,
+  escapeHtml,
+  switchAccountApi,
+  logoutApi,
+  logoutAllApi,
+} from '../services/api.js';
 import { toggleSidebar, getIsSidebarOpen } from './sidebar.js';
 import { navigate, render } from '../router.js';
 import { t } from '../services/i18n.js';
+import { showToast } from '../services/toast.js';
 
 export async function createTopBar() {
   const topbar = await loadTemplate('/views/components/topbar.html');
@@ -42,8 +50,21 @@ export async function createTopBar() {
       const avatarBackdrop = avatarContainer.querySelector('[data-ref="avatar-menu-backdrop"]');
       const avatarMenu = avatarContainer.querySelector('[data-ref="avatar-menu"]');
       const dragZone = avatarContainer.querySelector('[data-ref="avatar-menu-drag-zone"]');
-      const dragHandle = avatarContainer.querySelector('[data-ref="avatar-menu-drag-handle"]');
       const btnLogout = avatarContainer.querySelector('[data-ref="btn-logout"]');
+
+      // Paneles del menú desplegable
+      const panelMain = avatarContainer.querySelector('[data-ref="panel-main-options"]');
+      const panelSwitcher = avatarContainer.querySelector('[data-ref="panel-account-switcher"]');
+      const btnSwitchAccountMenu = avatarContainer.querySelector('[data-ref="btn-switch-account-menu"]');
+      const btnBackToMainMenu = avatarContainer.querySelector('[data-ref="btn-back-to-main-menu"]');
+      const btnAddAccount = avatarContainer.querySelector('[data-ref="btn-add-account"]');
+      const btnLogoutAll = avatarContainer.querySelector('[data-ref="btn-logout-all"]');
+      const accountSwitcherList = avatarContainer.querySelector('[data-ref="account-switcher-list"]');
+
+      // Datos de la cuenta activa en el panel principal
+      const activeAvatar = avatarContainer.querySelector('[data-ref="active-account-avatar"]');
+      const activeName = avatarContainer.querySelector('[data-ref="active-account-name"]');
+      const activeEmail = avatarContainer.querySelector('[data-ref="active-account-email"]');
 
       const avatarUrl = currentUser.avatar_url || `/api/avatar?name=${encodeURIComponent(currentUser.username)}`;
 
@@ -56,10 +77,98 @@ export async function createTopBar() {
         };
       }
 
+      if (activeAvatar) {
+        activeAvatar.src = avatarUrl;
+        activeAvatar.alt = escapeHtml(currentUser.username);
+        activeAvatar.onerror = () => {
+          activeAvatar.onerror = null;
+          activeAvatar.src = `/api/avatar?name=${encodeURIComponent(currentUser.username)}`;
+        };
+      }
+
+      if (activeName) {
+        activeName.textContent = currentUser.username;
+      }
+
+      if (activeEmail) {
+        activeEmail.textContent = currentUser.email || '';
+      }
+
+      const showPanel = (panelName) => {
+        if (panelName === 'switcher') {
+          if (panelMain) panelMain.style.display = 'none';
+          if (panelSwitcher) panelSwitcher.style.display = 'flex';
+          renderAccountList();
+        } else {
+          if (panelSwitcher) panelSwitcher.style.display = 'none';
+          if (panelMain) panelMain.style.display = 'flex';
+        }
+      };
+
+      const renderAccountList = () => {
+        if (!accountSwitcherList) return;
+        accountSwitcherList.innerHTML = '';
+
+        const accounts = Array.isArray(linkedAccounts) && linkedAccounts.length > 0
+          ? linkedAccounts
+          : [currentUser];
+
+        accounts.forEach((acc) => {
+          const isActive = acc.id === currentUser.id;
+          const item = document.createElement('button');
+          item.type = 'button';
+          item.className = `menu-item menu-item--bordered account-item ${isActive ? 'account-item--active' : ''}`;
+          item.setAttribute('data-ref', `account-item-${acc.id}`);
+
+          const accAvatarUrl = acc.avatar_url || `/api/avatar?name=${encodeURIComponent(acc.username)}`;
+
+          item.innerHTML = `
+            <div class="account-item__avatar" data-ref="account-avatar-${acc.id}">
+              <img class="avatar-img" data-ref="avatar-img-${acc.id}" src="${accAvatarUrl}" alt="${escapeHtml(acc.username)}" referrerpolicy="no-referrer" />
+            </div>
+            <div class="account-item__info" data-ref="account-info-${acc.id}">
+              <span class="account-item__name" data-ref="account-name-${acc.id}">${escapeHtml(acc.username)}</span>
+              <span class="account-item__email" data-ref="account-email-${acc.id}">${escapeHtml(acc.email || '')}</span>
+            </div>
+            ${isActive ? '<span class="material-symbols-rounded account-item__check">check_circle</span>' : ''}
+          `;
+
+          const imgEl = item.querySelector('img');
+          if (imgEl) {
+            imgEl.onerror = () => {
+              imgEl.onerror = null;
+              imgEl.src = `/api/avatar?name=${encodeURIComponent(acc.username)}`;
+            };
+          }
+
+          if (!isActive) {
+            item.addEventListener('click', async (e) => {
+              e.preventDefault();
+              closeMenu();
+              const res = await switchAccountApi(acc.id);
+              if (res.success) {
+                showToast(t('toasts.account_switched') || 'Has cambiado de cuenta exitosamente.', 'success');
+                cleanupAndRender();
+              } else {
+                showToast(res.error || t('toasts.generic_error'), 'error');
+              }
+            });
+          }
+
+          accountSwitcherList.appendChild(item);
+        });
+
+        if (btnAddAccount) {
+          btnAddAccount.style.display = accounts.length >= 5 ? 'none' : 'flex';
+        }
+      };
+
       let isClosing = false;
 
       const openMenu = () => {
         if (isClosing) return;
+
+        showPanel('main');
 
         if (window.innerWidth <= 768 && avatarBackdrop && avatarMenu) {
           avatarBackdrop.style.display = 'flex';
@@ -105,6 +214,7 @@ export async function createTopBar() {
             avatarBackdrop.style.pointerEvents = '';
             avatarMenu.style.transform = '';
             avatarMenu.style.transition = '';
+            showPanel('main');
             isClosing = false;
           }, 200);
         } else {
@@ -119,6 +229,7 @@ export async function createTopBar() {
             avatarMenu.style.transform = '';
             avatarMenu.style.transition = '';
           }
+          showPanel('main');
         }
       };
 
@@ -137,6 +248,25 @@ export async function createTopBar() {
           toggleMenu();
         });
       }
+
+      // Transición al panel conmutador de cuentas
+      btnSwitchAccountMenu?.addEventListener('click', (e) => {
+        e.preventDefault();
+        showPanel('switcher');
+      });
+
+      // Retorno al panel principal
+      btnBackToMainMenu?.addEventListener('click', (e) => {
+        e.preventDefault();
+        showPanel('main');
+      });
+
+      // Agregar otra cuenta (redirección a login)
+      btnAddAccount?.addEventListener('click', (e) => {
+        e.preventDefault();
+        closeMenu();
+        navigate('/login');
+      });
 
       // Cerrar al hacer clic fuera del menu-panel (en el backdrop oscuro en móviles)
       avatarBackdrop?.addEventListener('click', (e) => {
@@ -225,6 +355,12 @@ export async function createTopBar() {
       };
       document.addEventListener('keydown', closeMenuKeydownHandler);
 
+      const cleanupAndRender = () => {
+        document.removeEventListener('click', closeMenuHandler);
+        document.removeEventListener('keydown', closeMenuKeydownHandler);
+        render();
+      };
+
       // Configuración
       const btnSettings = avatarContainer.querySelector('[data-ref="btn-menu-settings"]');
       btnSettings?.addEventListener('click', (e) => {
@@ -233,17 +369,34 @@ export async function createTopBar() {
         navigate(currentUser ? '/settings/your-account' : '/settings/guest');
       });
 
-      // Cerrar sesión
+      // Ayuda
+      const btnHelp = avatarContainer.querySelector('[data-ref="btn-menu-help"]');
+      btnHelp?.addEventListener('click', (e) => {
+        e.preventDefault();
+        closeMenu();
+        navigate('/settings/guest');
+      });
+
+      // Cerrar sesión de la cuenta activa (conmuta o desloguea)
       btnLogout?.addEventListener('click', async (e) => {
         e.preventDefault();
-        try {
-          await postApi('/api/logout', {});
-        } finally {
-          setCurrentUser(null);
-          document.removeEventListener('click', closeMenuHandler);
-          document.removeEventListener('keydown', closeMenuKeydownHandler);
-          render();
+        closeMenu();
+        const res = await logoutApi();
+        if (res.success) {
+          if (res.switched) {
+            showToast(t('toasts.account_switched') || 'Has cambiado de cuenta.', 'info');
+          }
+          cleanupAndRender();
         }
+      });
+
+      // Cerrar todas las sesiones vinculadas
+      btnLogoutAll?.addEventListener('click', async (e) => {
+        e.preventDefault();
+        closeMenu();
+        await logoutAllApi();
+        showToast(t('toasts.all_sessions_closed') || 'Se han cerrado todas las sesiones activas.', 'info');
+        cleanupAndRender();
       });
     }
   } else {

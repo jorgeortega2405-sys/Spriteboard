@@ -4,10 +4,46 @@
    1. RESET Y REGLAS GLOBALES
    ========================================================================== */
 
+:root {
+  --scrollbar-track: transparent;
+  --scrollbar-thumb: rgba(0, 0, 0, 0.2);
+}
+
+html[data-theme="dark"],
+html.dark-theme {
+  --scrollbar-track: transparent;
+  --scrollbar-thumb: rgba(255, 255, 255, 0.2);
+}
+
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb);
+  border-radius: 9999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.35);
+}
+
+html[data-theme="dark"] *::-webkit-scrollbar-thumb:hover,
+html.dark-theme *::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.35);
 }
 
 html, body {
@@ -54,6 +90,43 @@ html, body {
   align-items: center;
   justify-content: space-between;
   padding: 8px;
+  transition: border-bottom-color 0.2s ease;
+}
+
+.general-content-top::after,
+.layout-header::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  height: 16px;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.06), transparent);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+  z-index: 99;
+}
+
+.general-content-top.shadow,
+.general-content-top.layout-header--shadow,
+.layout-header.shadow,
+.layout-header.layout-header--shadow {
+  border-bottom-color: transparent;
+}
+
+.general-content-top.shadow::after,
+.general-content-top.layout-header--shadow::after,
+.layout-header.shadow::after,
+.layout-header.layout-header--shadow::after {
+  opacity: 1;
+}
+
+html[data-theme="dark"] .general-content-top::after,
+html[data-theme="dark"] .layout-header::after,
+html.dark-theme .general-content-top::after,
+html.dark-theme .layout-header::after {
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.4), transparent);
 }
 
 .top-left,
@@ -121,6 +194,8 @@ html, body {
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 }
 
 .trash-main-area,
@@ -337,15 +412,26 @@ html, body {
 
 .btn--danger,
 .component-button--danger {
-  background-color: #fee2e2;
-  color: #b91c1c;
-  border-color: #fca5a560;
+  background-color: #ffffff;
+  color: #dc2626;
+  border-color: #fca5a580;
 }
 
 .btn--danger:hover,
 .component-button--danger:hover {
-  background-color: #fecaca;
-  border-color: #f8717180;
+  background-color: #fef2f2;
+  color: #b91c1c;
+  border-color: #f87171;
+}
+
+.btn--danger:active,
+.component-button--danger:active {
+  background-color: #fee2e2;
+}
+
+.btn--danger:focus-visible,
+.component-button--danger:focus-visible {
+  box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #fca5a5;
 }
 
 .btn--ghost,
@@ -681,6 +767,120 @@ html, body {
   white-space: nowrap;
 }
 
+.menu-divider {
+  height: 1px;
+  background-color: #00000015;
+  margin: 4px 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* ==========================================================================
+   5.1 COMPONENTE DE ELEMENTO DE CUENTA (MULTICUENTAS)
+   ========================================================================== */
+
+.account-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+  text-decoration: none;
+  background: transparent;
+  width: 100%;
+  height: auto;
+  min-height: 48px;
+  text-align: left;
+  box-sizing: border-box;
+}
+
+.account-item:hover {
+  background-color: #f5f5fa;
+}
+
+.account-item--active {
+  background-color: #f1f3f5;
+  cursor: default;
+}
+
+.account-item--active:hover {
+  background-color: #f1f3f5;
+}
+
+.account-item__avatar {
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  border-radius: 50%;
+  overflow: hidden;
+  background-color: #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.account-item__avatar .avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.account-item__info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  gap: 1px;
+}
+
+.account-item__name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.account-item__email {
+  font-size: 11px;
+  font-weight: 400;
+  color: #6b7280;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.account-item__arrow {
+  font-size: 18px;
+  color: #9ca3af;
+  flex-shrink: 0;
+}
+
+.account-item__check {
+  font-size: 18px;
+  color: #111827;
+  flex-shrink: 0;
+}
+
+.account-switcher__list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  max-height: 240px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  box-sizing: border-box;
+  margin-bottom: 2px;
+}
+
 /* ==========================================================================
    6. FORMULARIOS GENÉRICOS, CAMPOS Y TARJETAS
    ========================================================================== */
@@ -808,6 +1008,12 @@ html, body {
 .text-highlight {
   color: #111827;
   font-weight: 600;
+}
+
+.text-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .card__body,
@@ -1471,25 +1677,31 @@ html, body {
 }
 
 .settings-item__title {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
   color: #111827;
   margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .settings-item__desc {
-  font-size: 13px;
+  font-size: 12px;
   color: #6b7280;
   line-height: 1.4;
   margin: 0;
 }
 
 .settings-item__value {
-  font-size: 13px;
+  font-size: 12px;
   color: #374151;
   font-weight: 500;
   margin: 0;
-  word-break: break-all;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
 }
 
 .settings-item__actions {
@@ -1497,6 +1709,16 @@ html, body {
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+}
+
+.settings-item__actions .btn {
+  min-width: 84px;
+  max-width: 150px;
+  justify-content: center;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .settings-edit-row {
@@ -1553,13 +1775,36 @@ html, body {
 
   .settings-item__actions {
     width: 100%;
-    justify-content: flex-start;
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+  }
+
+  .settings-item__actions .btn {
+    flex: 1;
+    min-width: 0;
+    max-width: none;
+    justify-content: center;
   }
 
   .settings-edit-row {
     flex-direction: column;
     align-items: stretch;
     gap: 8px;
+  }
+
+  .settings-edit-row .settings-item__actions {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+  }
+
+  .settings-edit-row .settings-item__actions .btn {
+    flex: 1;
+    min-width: 0;
+    max-width: none;
+    justify-content: center;
   }
 
   .field__input--simple {
@@ -1666,23 +1911,30 @@ html, body {
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
+  flex: 1;
 }
 
 .dropdown-trigger__icon {
   font-size: 20px;
   color: #4b5563;
+  flex-shrink: 0;
 }
 
 .dropdown-trigger__text {
   font-size: 14px;
   font-weight: 500;
   color: #111827;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .dropdown-trigger__chevron {
   font-size: 20px;
   color: #6b7280;
   transition: transform 0.2s ease;
+  flex-shrink: 0;
 }
 
 .dropdown-backdrop {
@@ -2061,6 +2313,179 @@ html, body {
     max-width: 100%;
   }
 }
+
+/* ==========================================================================
+   14. SISTEMA MODULAR DE MODALES
+   ========================================================================== */
+
+body.modal-open {
+  overflow: hidden !important;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background-color: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.2s ease;
+}
+
+.modal-backdrop.is-visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Botón de Cierre Flotante Superior Derecho Fuera del Modal */
+.modal-close-btn {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 2010;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background-color: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  outline: none;
+  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+  padding: 0;
+}
+
+.modal-close-btn .material-symbols-rounded {
+  font-size: 22px;
+  line-height: 1;
+  color: #ffffff;
+}
+
+.modal-close-btn:hover {
+  background-color: rgba(0, 0, 0, 0.7);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.modal-close-btn:active {
+  transform: scale(0.92);
+}
+
+/* Tarjeta del Modal */
+.modal-card {
+  background-color: #ffffff;
+  border: 1px solid #00000020;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 440px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  position: relative;
+  z-index: 2005;
+  transform: scale(0.94);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+}
+
+.modal-backdrop.is-visible .modal-card {
+  transform: scale(1);
+}
+
+.modal-card--sm {
+  max-width: 440px;
+}
+
+.modal-card__header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.modal-card__title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.modal-card__desc {
+  font-size: 12px;
+  color: #6b7280;
+  margin: 0;
+  line-height: 1.45;
+}
+
+.modal-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.modal-card__footer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.modal-card__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.modal-card__actions .btn {
+  min-width: 84px;
+  max-width: 150px;
+  justify-content: center;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .modal-card {
+    padding: 20px 16px;
+    border-radius: 14px;
+  }
+
+  .modal-close-btn {
+    top: 12px;
+    right: 12px;
+    width: 34px;
+    height: 34px;
+  }
+
+  .modal-close-btn .material-symbols-rounded {
+    font-size: 20px;
+  }
+
+  .modal-card__actions {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+  }
+
+  .modal-card__actions .btn {
+    flex: 1;
+    min-width: 0;
+    max-width: none;
+  }
+}
+
 
 
 

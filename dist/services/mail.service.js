@@ -58,3 +58,10 @@ export async function sendPasswordResetEmail(toEmail, username, resetUrl, expire
         expiresIn: expiresInMinutes,
     });
 }
+export async function sendEmailChangeCodeEmail(toEmail, username, code, expiresInMinutes = 15) {
+    await sendTemplateEmail('email_change_code', toEmail, {
+        username,
+        code,
+        expiresIn: expiresInMinutes,
+    });
+}

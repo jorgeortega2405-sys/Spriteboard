@@ -2,8 +2,8 @@
  * Controlador de Ajustes, Perfil, Preferencias y Auditoría
  */
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
-import { setSessionCookie } from '../services/auth.service.js';
-import { updateAvatar, deleteAvatar, updateUsername, updateEmail, getUserPreferences, updateUserPreferences, } from '../services/settings.service.js';
+import { updateActiveAccountInSession } from '../services/auth.service.js';
+import { updateAvatar, deleteAvatar, updateUsername, requestEmailChangeCode, verifyEmailChange, updateEmail, getUserPreferences, updateUserPreferences, } from '../services/settings.service.js';
 import { findUserById } from '../services/user.service.js';
 import { sendSuccess, sendBadRequest, sendUnauthorized, sendConflict, sendInternalError, sanitizeUser, } from '../utils/http.js';
 /**
@@ -27,7 +27,7 @@ export async function handleUpdateAvatar(req, res) {
         }
         const updatedUser = await findUserById(currentUser.id);
         if (updatedUser) {
-            setSessionCookie(res, sanitizeUser(updatedUser));
+            updateActiveAccountInSession(res, req, sanitizeUser(updatedUser));
         }
         sendSuccess(res, {
             message: 'Foto de perfil actualizada exitosamente.',
@@ -56,7 +56,7 @@ export async function handleDeleteAvatar(req, res) {
         }
         const updatedUser = await findUserById(currentUser.id);
         if (updatedUser) {
-            setSessionCookie(res, sanitizeUser(updatedUser));
+            updateActiveAccountInSession(res, req, sanitizeUser(updatedUser));
         }
         sendSuccess(res, {
             message: 'Foto de perfil eliminada. Se ha restaurado la foto predeterminada.',
@@ -95,7 +95,7 @@ export async function handleUpdateUsername(req, res) {
         }
         const updatedUser = await findUserById(currentUser.id);
         if (updatedUser) {
-            setSessionCookie(res, sanitizeUser(updatedUser));
+            updateActiveAccountInSession(res, req, sanitizeUser(updatedUser));
         }
         sendSuccess(res, {
             message: 'Nombre de usuario actualizado exitosamente.',
@@ -108,7 +108,62 @@ export async function handleUpdateUsername(req, res) {
     }
 }
 /**
- * Actualizar correo electrónico
+ * Solicitar código de verificación para cambio de correo
+ */
+export async function handleRequestEmailChangeCode(req, res) {
+    try {
+        const currentUser = getCurrentUser(req);
+        if (!currentUser) {
+            sendUnauthorized(res, 'Sesión no válida o expirada.');
+            return;
+        }
+        const result = await requestEmailChangeCode(currentUser.id, req.ip, req.headers['user-agent']);
+        if (!result.success) {
+            sendBadRequest(res, result.error || 'No se pudo enviar el código de verificación.');
+            return;
+        }
+        sendSuccess(res, {
+            message: result.alreadyAuthorized
+                ? 'Ya cuentas con autorización activa para cambiar tu correo.'
+                : 'Código de verificación enviado exitosamente a tu correo actual.',
+            alreadyAuthorized: Boolean(result.alreadyAuthorized),
+        });
+    }
+    catch (error) {
+        sendInternalError(res, 'Error al solicitar código de cambio de correo', error, 'Error al solicitar el código de verificación.');
+    }
+}
+/**
+ * Verificar código de cambio de correo y emitir token temporal
+ */
+export async function handleVerifyEmailChangeCode(req, res) {
+    try {
+        const currentUser = getCurrentUser(req);
+        if (!currentUser) {
+            sendUnauthorized(res, 'Sesión no válida o expirada.');
+            return;
+        }
+        const { code } = req.body;
+        if (!code || typeof code !== 'string') {
+            sendBadRequest(res, 'El código de verificación es obligatorio.');
+            return;
+        }
+        const result = await verifyEmailChange(currentUser.id, code);
+        if (!result.success || !result.token) {
+            sendBadRequest(res, result.error || 'Código de verificación inválido o expirado.');
+            return;
+        }
+        sendSuccess(res, {
+            message: 'Código verificado con éxito.',
+            token: result.token,
+        });
+    }
+    catch (error) {
+        sendInternalError(res, 'Error al verificar código de cambio de correo', error, 'Error al verificar el código de verificación.');
+    }
+}
+/**
+ * Actualizar correo electrónico utilizando el token de autorización
  */
 export async function handleUpdateEmail(req, res) {
     try {
@@ -127,6 +182,9 @@ export async function handleUpdateEmail(req, res) {
             if (result.status === 409) {
                 sendConflict(res, result.error || 'El correo electrónico ya está registrado.');
             }
+            else if (result.status === 403) {
+                sendUnauthorized(res, result.error || 'La autorización de 5 minutos para cambiar de correo ha expirado.');
+            }
             else {
                 sendBadRequest(res, result.error || 'Correo electrónico inválido.');
             }
@@ -134,7 +192,7 @@ export async function handleUpdateEmail(req, res) {
         }
         const updatedUser = await findUserById(currentUser.id);
         if (updatedUser) {
-            setSessionCookie(res, sanitizeUser(updatedUser));
+            updateActiveAccountInSession(res, req, sanitizeUser(updatedUser));
         }
         sendSuccess(res, {
             message: 'Correo electrónico actualizado exitosamente.',

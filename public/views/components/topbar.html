@@ -32,7 +32,21 @@
           <div class="menu-panel__drag-zone" data-ref="avatar-menu-drag-zone">
             <div class="menu-panel__drag-handle"></div>
           </div>
-          <div class="menu-panel__list" data-ref="avatar-menu-list">
+
+          <!-- Panel 1: Menú Principal de Opciones -->
+          <div class="menu-panel__list" data-ref="panel-main-options">
+            <button type="button" class="menu-item menu-item--bordered account-item" data-ref="btn-switch-account-menu">
+              <div class="account-item__avatar" data-ref="active-account-avatar-box">
+                <img class="avatar-img" data-ref="active-account-avatar" src="" alt="Avatar" referrerpolicy="no-referrer" />
+              </div>
+              <div class="account-item__info" data-ref="active-account-info">
+                <span class="account-item__name" data-ref="active-account-name"></span>
+                <span class="account-item__email" data-ref="active-account-email"></span>
+              </div>
+              <span class="material-symbols-rounded account-item__arrow">navigate_next</span>
+            </button>
+            <div class="menu-divider" data-ref="active-account-divider"></div>
+
             <button type="button" class="menu-item" data-ref="btn-menu-settings">
               <span class="material-symbols-rounded menu-item__icon">settings</span>
               <span class="menu-item__text" data-i18n="nav.settings"></span>
@@ -44,6 +58,28 @@
             <button type="button" class="menu-item menu-item--bordered menu-item--danger" data-ref="btn-logout">
               <span class="material-symbols-rounded menu-item__icon">logout</span>
               <span class="menu-item__text" data-i18n="nav.logout"></span>
+            </button>
+          </div>
+
+          <!-- Panel 2: Conmutador de Cuentas (Multicuentas) -->
+          <div class="menu-panel__list" data-ref="panel-account-switcher" style="display: none;">
+            <button type="button" class="menu-item menu-item--bordered" data-ref="btn-back-to-main-menu">
+              <span class="material-symbols-rounded menu-item__icon">arrow_back</span>
+              <span class="menu-item__text" data-i18n="nav.back_to_menu"></span>
+            </button>
+            <div class="menu-divider"></div>
+
+            <div class="account-switcher__list" data-ref="account-switcher-list"></div>
+
+            <button type="button" class="menu-item menu-item--bordered" data-ref="btn-add-account">
+              <span class="material-symbols-rounded menu-item__icon">add</span>
+              <span class="menu-item__text" data-i18n="nav.add_account"></span>
+            </button>
+            <div class="menu-divider"></div>
+
+            <button type="button" class="menu-item menu-item--bordered menu-item--danger" data-ref="btn-logout-all">
+              <span class="material-symbols-rounded menu-item__icon">logout</span>
+              <span class="menu-item__text" data-i18n="nav.logout_all"></span>
             </button>
           </div>
         </div>

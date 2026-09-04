@@ -1,5 +1,5 @@
 import { loadTemplate } from '../../services/template.js';
-import { postApi, setCurrentUser } from '../../services/api.js';
+import { postApi, setCurrentUser, setLinkedAccounts } from '../../services/api.js';
 import { navigate } from '../../router.js';
 import {
   getRegistrationState,
@@ -83,6 +83,7 @@ export async function createRegisterStage3View() {
 
         // Cuenta creada exitosamente e iniciada sesión
         setCurrentUser(data.user);
+        if (data.accounts) setLinkedAccounts(data.accounts);
         clearRegistrationState();
         navigate('/');
       } catch {

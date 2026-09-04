@@ -12,6 +12,8 @@ const __dirname = path.dirname(__filename);
 const AVATARS_DIR = path.join(__dirname, '../../public/uploads/avatars');
 import { isValidLanguageCode, detectLanguageFromHeader, } from '../utils/languages.js';
 import { sanitizeAvatar } from './image-sanitizer.service.js';
+import { generateSixDigitCode, saveEmailChangeCode, verifyEmailChangeCode, isEmailChangeAuthorized, consumeEmailChangeAuthorization, } from './verification.service.js';
+import { sendEmailChangeCodeEmail } from './mail.service.js';
 const DEFAULT_PREFERENCES = {
     theme: 'system',
     language: 'en-US',
@@ -249,9 +251,60 @@ export async function updateUsername(userId, newUsername, ip, ua) {
     return { success: true, username: cleanUsername };
 }
 /**
- * Actualiza el correo electrónico
+ * Solicita un código de verificación para cambio de correo electrónico y lo envía por email
+ */
+export async function requestEmailChangeCode(userId, ip, ua) {
+    // Comprobar si ya cuenta con autorización activa en la ventana de 5 minutos
+    const alreadyAuthorized = await isEmailChangeAuthorized(userId);
+    if (alreadyAuthorized) {
+        logger.security.info('Usuario ya autorizado para cambio de correo dentro de la ventana de 5 minutos', { userId });
+        return { success: true, alreadyAuthorized: true };
+    }
+    const [userRows] = await pool.query('SELECT id, username, email FROM users WHERE id = ? LIMIT 1', [userId]);
+    if (userRows.length === 0) {
+        return { success: false, error: 'Usuario no encontrado.', status: 404 };
+    }
+    const user = userRows[0];
+    if (!user.email) {
+        return { success: false, error: 'La cuenta no tiene un correo electrónico registrado.', status: 400 };
+    }
+    const code = generateSixDigitCode();
+    await saveEmailChangeCode(userId, user.email, code, 300); // 5 minutos
+    try {
+        await sendEmailChangeCodeEmail(user.email, user.username, code, 5);
+        logger.security.info('Código de cambio de correo enviado al usuario', { userId, email: user.email });
+    }
+    catch (error) {
+        logger.app.error('Error al enviar correo con código de cambio de email', error);
+        return { success: false, error: 'No se pudo enviar el correo de verificación. Intenta más tarde.', status: 500 };
+    }
+    return { success: true, alreadyAuthorized: false };
+}
+/**
+ * Valida el código de verificación para cambio de correo y activa la ventana de 5 minutos
+ */
+export async function verifyEmailChange(userId, code) {
+    if (!code || typeof code !== 'string' || !code.trim()) {
+        return { success: false, error: 'El código de verificación es obligatorio.', status: 400 };
+    }
+    const result = await verifyEmailChangeCode(userId, code.trim());
+    if (!result.success || !result.token) {
+        return { success: false, error: result.error || 'Código incorrecto o expirado.', status: 400 };
+    }
+    return { success: true, token: result.token };
+}
+/**
+ * Actualiza el correo electrónico exigiendo autorización previa activa de 5 minutos
  */
 export async function updateEmail(userId, newEmail, ip, ua) {
+    const authValidation = await consumeEmailChangeAuthorization(userId);
+    if (!authValidation.valid) {
+        return {
+            success: false,
+            error: authValidation.error || 'La autorización de 5 minutos para cambiar de correo ha expirado.',
+            status: 403,
+        };
+    }
     const validation = validateEmail(newEmail);
     if (!validation.valid) {
         return { success: false, error: validation.error, status: 400 };
