@@ -6,8 +6,15 @@ import { createRegisterStage1View } from './views/auth/register.js';
 import { createRegisterStage2View } from './views/auth/register-stage2.js';
 import { createRegisterStage3View } from './views/auth/register-stage3.js';
 import { createForgotPasswordView } from './views/auth/forgot-password.js';
+import { createResetPasswordView } from './views/auth/reset-password.js';
+import { createYourAccountView } from './views/settings/your-account.js';
+import { createSecurityView } from './views/settings/security.js';
+import { createAccessibilityView } from './views/settings/accessibility.js';
+import { createGuestSettingsView } from './views/settings/guest.js';
 import { createErrorView } from './views/error.js';
 import { SkeletonService } from './services/skeleton.service.js';
+import { hideTooltip } from './services/tooltip.js';
+import { currentUser } from './services/api.js';
 
 let currentNavigation = 0;
 
@@ -17,6 +24,7 @@ export function navigate(url) {
 }
 
 export async function render() {
+  hideTooltip();
   const appRoot = document.querySelector('[data-ref="app"]');
   if (!appRoot) return;
 
@@ -43,10 +51,65 @@ export async function render() {
   } else if (path === '/forgot-password') {
     const forgotView = await createForgotPasswordView();
     viewElements = [forgotView];
+  } else if (path === '/reset-password') {
+    const resetView = await createResetPasswordView();
+    viewElements = [resetView];
   } else if (path === '/trash') {
     const topBar = await createTopBar();
     const trashView = await createTrashView();
     viewElements = [topBar, trashView];
+  } else if (path === '/settings') {
+    // Redirección contextual según estado de sesión
+    const topBar = await createTopBar();
+    if (currentUser) {
+      window.history.replaceState({}, '', '/settings/your-account');
+      const settingsView = await createYourAccountView();
+      viewElements = [topBar, settingsView];
+    } else {
+      window.history.replaceState({}, '', '/settings/guest');
+      const settingsView = await createGuestSettingsView();
+      viewElements = [topBar, settingsView];
+    }
+  } else if (path === '/settings/your-account') {
+    const topBar = await createTopBar();
+    if (!currentUser) {
+      window.history.replaceState({}, '', '/settings/guest');
+      const settingsView = await createGuestSettingsView();
+      viewElements = [topBar, settingsView];
+    } else {
+      const settingsView = await createYourAccountView();
+      viewElements = [topBar, settingsView];
+    }
+  } else if (path === '/settings/security' || path === '/settings/login-and-security') {
+    const topBar = await createTopBar();
+    if (!currentUser) {
+      window.history.replaceState({}, '', '/settings/guest');
+      const settingsView = await createGuestSettingsView();
+      viewElements = [topBar, settingsView];
+    } else {
+      const settingsView = await createSecurityView();
+      viewElements = [topBar, settingsView];
+    }
+  } else if (path === '/settings/accessibility') {
+    const topBar = await createTopBar();
+    if (!currentUser) {
+      window.history.replaceState({}, '', '/settings/guest');
+      const settingsView = await createGuestSettingsView();
+      viewElements = [topBar, settingsView];
+    } else {
+      const settingsView = await createAccessibilityView();
+      viewElements = [topBar, settingsView];
+    }
+  } else if (path === '/settings/guest') {
+    const topBar = await createTopBar();
+    if (currentUser) {
+      window.history.replaceState({}, '', '/settings/your-account');
+      const settingsView = await createYourAccountView();
+      viewElements = [topBar, settingsView];
+    } else {
+      const settingsView = await createGuestSettingsView();
+      viewElements = [topBar, settingsView];
+    }
   } else if (path === '/' || path === '') {
     // Vista Principal
     const topBar = await createTopBar();
@@ -70,4 +133,5 @@ export async function render() {
 
 // Soporte para navegación con el historial del navegador (atrás/adelante)
 window.addEventListener('popstate', render);
+
 

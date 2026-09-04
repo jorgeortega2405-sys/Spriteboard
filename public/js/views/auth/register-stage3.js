@@ -7,15 +7,23 @@ import {
   clearRegistrationState,
 } from '../../services/registration-state.js';
 import { createErrorView } from '../error.js';
+import { validateVerificationCode } from '../../utils/validators.js';
+import {
+  createBannerManager,
+  withButtonLoading,
+  bindSubmitOnEnter,
+  bindNavigationLinks,
+} from '../../utils/dom.js';
+import { t } from '../../services/i18n.js';
 
 export async function createRegisterStage3View() {
   // Guardia de seguridad: si faltan datos de las etapas previas, mostrar vista de error
   if (!hasStage2Data()) {
     return createErrorView({
-      code: 'Faltan datos',
-      title: 'No se puede acceder a la verificación',
-      description: 'Debes completar tu correo, contraseña y nombre de usuario antes de verificar tu cuenta.',
-      actionText: 'Iniciar registro',
+      code: '400',
+      title: t('error.general_title'),
+      description: t('error.not_found_desc'),
+      actionText: t('auth.register.title'),
       actionUrl: '/register',
     });
   }
@@ -23,22 +31,23 @@ export async function createRegisterStage3View() {
   const container = await loadTemplate('/views/auth/register-stage3.html');
   const state = getRegistrationState();
 
-  const emailBadge = container.querySelector('[data-ref="verify-target-email"]');
+  const subtitleTextEl = container.querySelector('[data-ref="verify-subtitle-text"]');
   const codeInput = container.querySelector('[data-ref="register-code"]');
   const submitBtn = container.querySelector('[data-ref="btn-submit-stage3"]');
   const resendBtn = container.querySelector('[data-ref="btn-resend-code"]');
-  const errorBanner = container.querySelector('[data-ref="stage3-error"]');
-  const successBanner = container.querySelector('[data-ref="stage3-success"]');
-  const homeLink = container.querySelector('[data-ref="stage3-home-link"]');
   const restartLink = container.querySelector('[data-ref="btn-restart-register"]');
+  const banners = createBannerManager(container, {
+    errorRef: 'stage3-error',
+    successRef: 'stage3-success',
+  });
 
-  if (emailBadge) {
-    emailBadge.textContent = state.email;
+  if (subtitleTextEl) {
+    subtitleTextEl.innerHTML = t('auth.register_stage3.subtitle', { email: state.email || '' });
   }
 
-  homeLink?.addEventListener('click', (e) => {
-    e.preventDefault();
-    navigate('/');
+  // Navegación
+  bindNavigationLinks(container, {
+    'stage3-home-link': '/',
   });
 
   restartLink?.addEventListener('click', (e) => {
@@ -49,106 +58,64 @@ export async function createRegisterStage3View() {
 
   // Procesar verificación de código
   const executeVerification = async () => {
-    if (errorBanner) errorBanner.style.display = 'none';
-    if (successBanner) successBanner.style.display = 'none';
-
+    banners.hideAll();
     const code = codeInput?.value.trim();
 
-    if (!code || !/^\d{6}$/.test(code)) {
-      if (errorBanner) {
-        errorBanner.textContent = 'Por favor ingresa los 6 dígitos numéricos del código.';
-        errorBanner.style.display = 'block';
-      }
+    const codeValidation = validateVerificationCode(code);
+    if (!codeValidation.valid) {
+      banners.showError(codeValidation.error);
       return;
     }
 
-    if (submitBtn) {
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Verificando...';
-    }
+    await withButtonLoading(submitBtn, t('auth.register_stage3.loading'), async () => {
+      try {
+        const res = await postApi('/api/register/verify-code', {
+          email: state.email,
+          code,
+        });
 
-    try {
-      const res = await postApi('/api/register/verify-code', {
-        email: state.email,
-        code,
-      });
+        const data = await res.json();
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        if (errorBanner) {
-          errorBanner.textContent = data.error || 'Código incorrecto o expirado.';
-          errorBanner.style.display = 'block';
+        if (!res.ok) {
+          banners.showError(data.error || t('toasts.generic_error'));
+          return;
         }
-        return;
-      }
 
-      // Cuenta creada exitosamente e iniciada sesión
-      setCurrentUser(data.user);
-      clearRegistrationState();
-      navigate('/');
-    } catch {
-      if (errorBanner) {
-        errorBanner.textContent = 'Error de conexión con el servidor.';
-        errorBanner.style.display = 'block';
+        // Cuenta creada exitosamente e iniciada sesión
+        setCurrentUser(data.user);
+        clearRegistrationState();
+        navigate('/');
+      } catch {
+        banners.showError(t('toasts.network_error'));
       }
-    } finally {
-      if (submitBtn) {
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Verificar cuenta';
-      }
-    }
+    });
   };
 
   submitBtn?.addEventListener('click', executeVerification);
-
-  codeInput?.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      executeVerification();
-    }
-  });
+  bindSubmitOnEnter(codeInput, executeVerification);
 
   // Reenviar código
   resendBtn?.addEventListener('click', async () => {
-    if (errorBanner) errorBanner.style.display = 'none';
-    if (successBanner) successBanner.style.display = 'none';
+    banners.hideAll();
 
-    if (resendBtn) {
-      resendBtn.disabled = true;
-      resendBtn.textContent = 'Reenviando código...';
-    }
+    await withButtonLoading(resendBtn, t('auth.register_stage3.resending'), async () => {
+      try {
+        const res = await postApi('/api/register/resend-code', {
+          email: state.email,
+        });
 
-    try {
-      const res = await postApi('/api/register/resend-code', {
-        email: state.email,
-      });
+        const data = await res.json();
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        if (errorBanner) {
-          errorBanner.textContent = data.error || 'No se pudo reenviar el código.';
-          errorBanner.style.display = 'block';
+        if (!res.ok) {
+          banners.showError(data.error || t('toasts.generic_error'));
+          return;
         }
-        return;
-      }
 
-      if (successBanner) {
-        successBanner.textContent = '¡Nuevo código enviado! Revisa tu bandeja de entrada o spam.';
-        successBanner.style.display = 'block';
+        banners.showSuccess(t('auth.register_stage3.code_sent'));
+      } catch {
+        banners.showError(t('toasts.network_error'));
       }
-    } catch {
-      if (errorBanner) {
-        errorBanner.textContent = 'Error al intentar reenviar el código.';
-        errorBanner.style.display = 'block';
-      }
-    } finally {
-      if (resendBtn) {
-        resendBtn.disabled = false;
-        resendBtn.textContent = '¿No recibiste el código? Reenviar';
-      }
-    }
+    });
   });
 
   return container;

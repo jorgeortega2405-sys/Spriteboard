@@ -11,7 +11,6 @@ export const SKELETON_TEMPLATES = {
         <div class="skeleton skeleton--logo skeleton--circle" data-ref="skeleton-auth-logo"></div>
         <div class="card card--w-400 skeleton--card" data-ref="skeleton-auth-card">
           <div class="card__header" data-ref="skeleton-auth-header">
-            <div class="skeleton skeleton--badge" data-ref="skeleton-badge"></div>
             <div class="skeleton skeleton--title" data-ref="skeleton-title"></div>
             <div class="skeleton skeleton--subtitle" data-ref="skeleton-subtitle"></div>
           </div>
@@ -35,6 +34,9 @@ export const SKELETON_TEMPLATES = {
         <div class="topbar-left" data-ref="skeleton-topbar-left" style="display: flex; align-items: center; gap: 12px;">
           <div class="skeleton skeleton--btn-sm" data-ref="skeleton-menu-btn" style="width: 40px; height: 40px; border-radius: 8px;"></div>
           <div class="skeleton skeleton--title" data-ref="skeleton-brand" style="width: 130px; height: 24px; margin-bottom: 0;"></div>
+        </div>
+        <div class="topbar-center" data-ref="skeleton-topbar-center" style="display: flex; justify-content: center; flex: 1;">
+          <div class="skeleton" data-ref="skeleton-search-input" style="width: 100%; max-width: 425px; height: 40px; border-radius: 12px;"></div>
         </div>
         <div class="topbar-right" data-ref="skeleton-topbar-right" style="display: flex; align-items: center; gap: 16px;">
           <div class="skeleton skeleton--btn-sm" data-ref="skeleton-action-btn" style="width: 100px; height: 36px; border-radius: 8px;"></div>

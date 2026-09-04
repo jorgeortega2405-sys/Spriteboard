@@ -1,11 +1,12 @@
 import { loadTemplate } from '../services/template.js';
 import { navigate } from '../router.js';
+import { t } from '../services/i18n.js';
 
 export async function createErrorView({
   code = '404',
-  title = 'Página no encontrada',
-  description = 'La página que estás buscando no existe o ha sido movida.',
-  actionText = 'Ir a la página principal',
+  title = t('error.not_found_title'),
+  description = t('error.not_found_desc'),
+  actionText = t('error.not_found_action'),
   actionUrl = '/',
 } = {}) {
   const container = await loadTemplate('/views/error/error.html');

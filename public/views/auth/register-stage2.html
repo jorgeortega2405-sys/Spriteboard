@@ -1,33 +1,31 @@
 <div class="layout-content" data-ref="register-stage2-view">
   <div class="login-container" data-ref="stage2-wrapper">
-    <a class="login-header-logo" data-ref="stage2-home-link" href="/" aria-label="Ir al inicio" title="Spriteboard">
+    <a class="login-header-logo" data-ref="stage2-home-link" href="/" data-i18n-aria="nav.go_home" data-i18n-title="app.name">
       <img class="login-logo-img" data-ref="logo-img" src="/logo.svg" alt="Spriteboard" />
     </a>
 
     <div class="card card--w-400" data-ref="stage2-card">
       <div class="card__header" data-ref="stage2-header">
-        <span class="badge badge--subtle" data-ref="stage-badge">Paso 2 de 3</span>
-        <h1 class="card__title" data-ref="stage2-title">¿Cómo te llamas?</h1>
-        <p class="card__subtitle" data-ref="stage2-subtitle">Elige un nombre de usuario para tu perfil en Spriteboard</p>
+        <h1 class="card__title" data-ref="stage2-title" data-i18n="auth.register_stage2.title"></h1>
+        <p class="card__subtitle" data-ref="stage2-subtitle" data-i18n="auth.register_stage2.subtitle"></p>
       </div>
 
       <div class="card__body" data-ref="stage2-form">
         <label class="field" data-ref="field-register-username">
           <input class="field__input field__input--has-action" data-ref="register-username" type="text" placeholder=" " autocomplete="username" />
-          <span class="field__label" data-ref="label-register-username">Nombre de usuario</span>
-          <button type="button" class="field__action" data-ref="btn-random-username" data-tooltip="Generar nombre aleatorio" aria-label="Generar nombre aleatorio">
+          <span class="field__label" data-ref="label-register-username" data-i18n="auth.register_stage2.username_label"></span>
+          <button type="button" class="field__action" data-ref="btn-random-username" data-i18n-tooltip="auth.register_stage2.random_username_tooltip" data-i18n-aria="auth.register_stage2.random_username_aria">
             <span class="material-symbols-rounded">auto_fix_high</span>
           </button>
         </label>
 
-        <button type="button" class="btn btn--h55 btn--black btn--w-full" data-ref="btn-submit-stage2">
-          Continuar
+        <button type="button" class="btn btn--h55 btn--black btn--w-full" data-ref="btn-submit-stage2" data-i18n="auth.register_stage2.submit_btn">
         </button>
 
         <div class="banner banner--danger" data-ref="stage2-error" style="display: none;"></div>
 
         <div class="link-row" data-ref="stage2-back-row" style="justify-content: center; margin-top: 8px;">
-          <a class="link" data-ref="btn-back-stage1" href="/register">← Volver al paso anterior</a>
+          <a class="link" data-ref="btn-back-stage1" href="/register" data-i18n="auth.register_stage2.back_btn"></a>
         </div>
       </div>
     </div>

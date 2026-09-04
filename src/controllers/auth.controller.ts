@@ -1,5 +1,5 @@
+import crypto from 'crypto';
 import { Request, Response } from 'express';
-import { pool } from '../config/database.js';
 import {
   hashPassword,
   verifyPassword,
@@ -16,8 +16,20 @@ import {
   savePendingRegistration,
   getPendingRegistration,
   verifyAndConsumeCode,
+  savePasswordResetToken,
+  verifyPasswordResetToken,
+  consumePasswordResetToken,
 } from '../services/verification.service.js';
-import { sendVerificationCodeEmail } from '../services/mail.service.js';
+import {
+  sendVerificationCodeEmail,
+  sendPasswordResetEmail,
+} from '../services/mail.service.js';
+import {
+  findUserByEmail,
+  findUserDuplicates,
+  createUser,
+  updateUserPassword,
+} from '../services/user.service.js';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import { logger } from '../services/logger.service.js';
 import {
@@ -26,8 +38,16 @@ import {
   validateUsername,
   validateVerificationCode,
 } from '../utils/validators.js';
-import { UserPayload } from '../types/auth.types.js';
-import type { RowDataPacket, ResultSetHeader } from 'mysql2';
+import {
+  sendSuccess,
+  sendCreated,
+  sendBadRequest,
+  sendUnauthorized,
+  sendNotFound,
+  sendConflict,
+  sendInternalError,
+  sanitizeUser,
+} from '../utils/http.js';
 
 // Etapa 1: Validar correo y contraseña
 export async function validateStage1(req: Request, res: Response): Promise<void> {
@@ -36,33 +56,28 @@ export async function validateStage1(req: Request, res: Response): Promise<void>
 
     const emailValidation = validateEmail(email);
     if (!emailValidation.valid) {
-      res.status(400).json({ error: emailValidation.error });
+      sendBadRequest(res, emailValidation.error!);
       return;
     }
 
     const passwordValidation = validatePassword(password);
     if (!passwordValidation.valid) {
-      res.status(400).json({ error: passwordValidation.error });
+      sendBadRequest(res, passwordValidation.error!);
       return;
     }
 
     const trimmedEmail = String(email).trim().toLowerCase();
 
     // Verificar si el correo ya existe en MySQL
-    const [existing] = await pool.query<RowDataPacket[]>(
-      'SELECT id FROM users WHERE email = ? LIMIT 1',
-      [trimmedEmail]
-    );
-
-    if (existing.length > 0) {
-      res.status(409).json({ error: 'El correo electrónico ya está registrado.' });
+    const existing = await findUserByEmail(trimmedEmail);
+    if (existing) {
+      sendConflict(res, 'El correo electrónico ya está registrado.');
       return;
     }
 
-    res.json({ ok: true, message: 'Datos válidos para continuar a la etapa 2.' });
+    sendSuccess(res, { message: 'Datos válidos para continuar a la etapa 2.' });
   } catch (error) {
-    logger.app.error('Error al validar etapa 1 de registro', error);
-    res.status(500).json({ error: 'Error interno del servidor al validar datos.' });
+    sendInternalError(res, 'Error al validar etapa 1 de registro', error, 'Error interno del servidor al validar datos.');
   }
 }
 
@@ -73,19 +88,19 @@ export async function sendRegistrationCode(req: Request, res: Response): Promise
 
     const emailValidation = validateEmail(email);
     if (!emailValidation.valid) {
-      res.status(400).json({ error: emailValidation.error });
+      sendBadRequest(res, emailValidation.error!);
       return;
     }
 
     const passwordValidation = validatePassword(password);
     if (!passwordValidation.valid) {
-      res.status(400).json({ error: passwordValidation.error });
+      sendBadRequest(res, passwordValidation.error!);
       return;
     }
 
     const usernameValidation = validateUsername(username);
     if (!usernameValidation.valid) {
-      res.status(400).json({ error: usernameValidation.error });
+      sendBadRequest(res, usernameValidation.error!);
       return;
     }
 
@@ -93,20 +108,17 @@ export async function sendRegistrationCode(req: Request, res: Response): Promise
     const trimmedUsername = String(username).trim();
 
     // Verificar disponibilidad de usuario o correo en la base de datos
-    const [existing] = await pool.query<RowDataPacket[]>(
-      'SELECT id, username, email FROM users WHERE username = ? OR email = ? LIMIT 1',
-      [trimmedUsername, trimmedEmail]
-    );
+    const { emailExists, usernameExists } = await findUserDuplicates(trimmedEmail, trimmedUsername);
 
-    if (existing.length > 0) {
-      const match = existing[0];
-      if (match.username.toLowerCase() === trimmedUsername.toLowerCase()) {
-        logger.security.warn('Intento de registro con nombre de usuario existente', { username: trimmedUsername });
-        res.status(409).json({ error: 'El nombre de usuario ya está en uso.' });
-        return;
-      }
+    if (usernameExists) {
+      logger.security.warn('Intento de registro con nombre de usuario existente', { username: trimmedUsername });
+      sendConflict(res, 'El nombre de usuario ya está en uso.');
+      return;
+    }
+
+    if (emailExists) {
       logger.security.warn('Intento de registro con correo electrónico ya existente', { email: trimmedEmail });
-      res.status(409).json({ error: 'El correo electrónico ya está registrado.' });
+      sendConflict(res, 'El correo electrónico ya está registrado.');
       return;
     }
 
@@ -126,13 +138,11 @@ export async function sendRegistrationCode(req: Request, res: Response): Promise
 
     logger.security.info('Código de verificación enviado exitosamente', { email: trimmedEmail, username: trimmedUsername });
 
-    res.json({
-      ok: true,
+    sendSuccess(res, {
       message: `Código de verificación enviado exitosamente a ${trimmedEmail}.`,
     });
   } catch (error) {
-    logger.app.error('Error al enviar código de registro', error);
-    res.status(500).json({ error: 'No se pudo enviar el correo de verificación. Inténtalo de nuevo.' });
+    sendInternalError(res, 'Error al enviar código de registro', error, 'No se pudo enviar el correo de verificación. Inténtalo de nuevo.');
   }
 }
 
@@ -143,13 +153,13 @@ export async function verifyRegistrationCode(req: Request, res: Response): Promi
 
     const emailValidation = validateEmail(email);
     if (!emailValidation.valid) {
-      res.status(400).json({ error: emailValidation.error });
+      sendBadRequest(res, emailValidation.error!);
       return;
     }
 
     const codeValidation = validateVerificationCode(code);
     if (!codeValidation.valid) {
-      res.status(400).json({ error: codeValidation.error });
+      sendBadRequest(res, codeValidation.error!);
       return;
     }
 
@@ -160,36 +170,30 @@ export async function verifyRegistrationCode(req: Request, res: Response): Promi
 
     if (!verificationResult.success || !verificationResult.data) {
       logger.security.warn('Fallo en verificación de código de registro', { email: trimmedEmail, error: verificationResult.error });
-      res.status(400).json({ error: verificationResult.error || 'Código incorrecto o expirado.' });
+      sendBadRequest(res, verificationResult.error || 'Código incorrecto o expirado.');
       return;
     }
 
     const pending = verificationResult.data;
 
     // Crear el usuario en la base de datos MySQL
-    const [result] = await pool.query<ResultSetHeader>(
-      'INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)',
-      [pending.username, pending.email, pending.passwordHash]
-    );
-
-    const newUser: UserPayload = {
-      id: result.insertId,
+    const newUser = await createUser({
       username: pending.username,
       email: pending.email,
-    };
+      passwordHash: pending.passwordHash,
+    });
 
     // Iniciar sesión automáticamente emitiendo la cookie de sesión
     setSessionCookie(res, newUser);
 
     logger.security.info('Cuenta creada y verificada exitosamente', { userId: newUser.id, email: newUser.email });
 
-    res.status(201).json({
+    sendCreated(res, {
       message: 'Cuenta creada y verificada exitosamente.',
-      user: newUser,
+      user: sanitizeUser(newUser),
     });
   } catch (error) {
-    logger.app.error('Error al verificar código de registro', error);
-    res.status(500).json({ error: 'Error interno del servidor al crear la cuenta.' });
+    sendInternalError(res, 'Error al verificar código de registro', error, 'Error interno del servidor al crear la cuenta.');
   }
 }
 
@@ -200,7 +204,7 @@ export async function resendRegistrationCode(req: Request, res: Response): Promi
 
     const emailValidation = validateEmail(email);
     if (!emailValidation.valid) {
-      res.status(400).json({ error: emailValidation.error });
+      sendBadRequest(res, emailValidation.error!);
       return;
     }
 
@@ -209,7 +213,7 @@ export async function resendRegistrationCode(req: Request, res: Response): Promi
 
     if (!pending) {
       logger.security.warn('Intento de reenvío con sesión de registro expirada', { email: trimmedEmail });
-      res.status(400).json({ error: 'La sesión de registro ha expirado. Debes iniciar desde el principio.' });
+      sendBadRequest(res, 'La sesión de registro ha expirado. Debes iniciar desde el principio.');
       return;
     }
 
@@ -224,10 +228,9 @@ export async function resendRegistrationCode(req: Request, res: Response): Promi
 
     logger.security.info('Nuevo código de verificación enviado', { email: trimmedEmail });
 
-    res.json({ ok: true, message: 'Nuevo código enviado exitosamente.' });
+    sendSuccess(res, { message: 'Nuevo código enviado exitosamente.' });
   } catch (error) {
-    logger.app.error('Error al reenviar código', error);
-    res.status(500).json({ error: 'No se pudo reenviar el código. Inténtalo de nuevo.' });
+    sendInternalError(res, 'Error al reenviar código', error, 'No se pudo reenviar el código. Inténtalo de nuevo.');
   }
 }
 
@@ -237,51 +240,40 @@ export async function login(req: Request, res: Response): Promise<void> {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      res.status(400).json({ error: 'Ingresa correo y contraseña.' });
+      sendBadRequest(res, 'Ingresa correo y contraseña.');
       return;
     }
 
     const trimmedEmail = String(email).trim().toLowerCase();
 
-    const [rows] = await pool.query<RowDataPacket[]>(
-      'SELECT id, username, email, password_hash, avatar_url, google_id FROM users WHERE email = ? LIMIT 1',
-      [trimmedEmail]
-    );
+    const userRow = await findUserByEmail(trimmedEmail);
 
-    if (rows.length === 0) {
+    if (!userRow || !userRow.password_hash) {
       logger.security.warn('Intento de inicio de sesión fallido: correo no encontrado', { email: trimmedEmail });
-      res.status(401).json({ error: 'Credenciales inválidas.' });
+      sendUnauthorized(res, 'Credenciales inválidas.');
       return;
     }
 
-    const userRow = rows[0];
     const isMatch = await verifyPassword(String(password), userRow.password_hash);
 
     if (!isMatch) {
       logger.security.warn('Intento de inicio de sesión fallido: contraseña incorrecta', { email: trimmedEmail });
-      res.status(401).json({ error: 'Credenciales inválidas.' });
+      sendUnauthorized(res, 'Credenciales inválidas.');
       return;
     }
 
-    const user: UserPayload = {
-      id: userRow.id,
-      username: userRow.username,
-      email: userRow.email,
-      avatar_url: userRow.avatar_url,
-      google_id: userRow.google_id,
-    };
+    const user = sanitizeUser(userRow);
 
     setSessionCookie(res, user);
 
     logger.security.info('Inicio de sesión exitoso', { userId: user.id, email: user.email });
 
-    res.json({
+    sendSuccess(res, {
       message: 'Inicio de sesión exitoso.',
       user,
     });
   } catch (error) {
-    logger.app.error('Error al iniciar sesión', error);
-    res.status(500).json({ error: 'Error interno del servidor al iniciar sesión.' });
+    sendInternalError(res, 'Error al iniciar sesión', error, 'Error interno del servidor al iniciar sesión.');
   }
 }
 
@@ -289,13 +281,13 @@ export async function login(req: Request, res: Response): Promise<void> {
 export function logout(req: Request, res: Response): void {
   clearSessionCookie(res);
   logger.security.info('Sesión cerrada exitosamente');
-  res.json({ message: 'Sesión cerrada exitosamente.' });
+  sendSuccess(res, { message: 'Sesión cerrada exitosamente.' });
 }
 
 // Usuario actual
 export function me(req: Request, res: Response): void {
   const user = getCurrentUser(req);
-  res.json({ user });
+  res.json({ user: user ? sanitizeUser(user) : null });
 }
 
 // Redirección a Google OAuth
@@ -339,5 +331,137 @@ export async function googleCallback(req: Request, res: Response): Promise<void>
   } catch (err) {
     logger.app.error('Error no controlado en Google OAuth callback', err);
     res.redirect('/login?error=server_error');
+  }
+}
+
+/**
+ * Solicitud de recuperación de contraseña:
+ * Valida que el correo exista en la base de datos, genera token en Redis y despacha correo
+ */
+export async function forgotPassword(req: Request, res: Response): Promise<void> {
+  try {
+    const { email } = req.body;
+
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.valid) {
+      sendBadRequest(res, emailValidation.error!);
+      return;
+    }
+
+    const trimmedEmail = String(email).trim().toLowerCase();
+
+    // 1. Verificar si el correo existe en la base de datos
+    const user = await findUserByEmail(trimmedEmail);
+
+    if (!user) {
+      logger.security.warn('Recuperación de contraseña denegada: correo no registrado', {
+        email: trimmedEmail,
+        ip: req.ip,
+      });
+      sendNotFound(res, 'No encontramos ninguna cuenta asociada a este correo electrónico.');
+      return;
+    }
+
+    // 2. Generar token criptográfico seguro de 32 bytes (64 caracteres hex)
+    const resetToken = crypto.randomBytes(32).toString('hex');
+
+    // 3. Guardar en Redis con TTL de 15 minutos (900 seg)
+    await savePasswordResetToken(user.email, user.id, resetToken, 900);
+
+    // 4. Construir URL dinámica de restablecimiento
+    const origin = req.get('origin') || `${req.protocol}://${req.get('host')}`;
+    const resetUrl = `${origin}/reset-password?token=${resetToken}`;
+
+    // 5. Enviar correo SMTP
+    await sendPasswordResetEmail(user.email, user.username, resetUrl, 15);
+
+    logger.security.info('Enlace de recuperación de contraseña generado y enviado', {
+      userId: user.id,
+      email: user.email,
+    });
+
+    sendSuccess(res, {
+      message: 'Hemos enviado un enlace de recuperación a tu correo electrónico.',
+    });
+  } catch (error) {
+    sendInternalError(
+      res,
+      'Error al procesar solicitud de recuperación de contraseña',
+      error,
+      'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.'
+    );
+  }
+}
+
+/**
+ * Pre-validación del token de recuperación para la vista del frontend
+ */
+export async function validateResetToken(req: Request, res: Response): Promise<void> {
+  try {
+    const token = String(req.query.token || '').trim();
+    const result = await verifyPasswordResetToken(token);
+
+    if (!result.valid) {
+      sendBadRequest(res, result.error || 'Token inválido.');
+      return;
+    }
+
+    sendSuccess(res, { valid: true, email: result.email });
+  } catch (error) {
+    sendInternalError(res, 'Error al verificar token de restablecimiento', error, 'Error al verificar token de recuperación.');
+  }
+}
+
+/**
+ * Restablecimiento definitivo de la contraseña:
+ * Valida y consume el token atómicamente de Redis y actualiza el hash en MySQL
+ */
+export async function resetPassword(req: Request, res: Response): Promise<void> {
+  try {
+    const { token, password } = req.body;
+
+    if (!token || typeof token !== 'string' || !token.trim()) {
+      sendBadRequest(res, 'Token de recuperación no válido o ausente.');
+      return;
+    }
+
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+      sendBadRequest(res, passwordValidation.error!);
+      return;
+    }
+
+    // 1. Consumir atómicamente el token de Redis (evita que se use dos veces)
+    const tokenResult = await consumePasswordResetToken(token);
+    if (!tokenResult.success || !tokenResult.userId) {
+      logger.security.warn('Intento fallido de restablecimiento: token inválido o expirado');
+      sendBadRequest(
+        res,
+        tokenResult.error || 'El enlace de recuperación ha expirado o ya ha sido utilizado.'
+      );
+      return;
+    }
+
+    // 2. Hashear la nueva contraseña
+    const newHash = await hashPassword(String(password));
+
+    // 3. Actualizar la contraseña en la base de datos MySQL
+    await updateUserPassword(tokenResult.userId, newHash);
+
+    logger.security.info('Contraseña restablecida exitosamente', {
+      userId: tokenResult.userId,
+      email: tokenResult.email,
+    });
+
+    sendSuccess(res, {
+      message: 'Tu contraseña ha sido restablecida exitosamente. Ya puedes iniciar sesión.',
+    });
+  } catch (error) {
+    sendInternalError(
+      res,
+      'Error al restablecer la contraseña',
+      error,
+      'Ha ocurrido un error inesperado al actualizar tu contraseña. Por favor intenta más tarde.'
+    );
   }
 }

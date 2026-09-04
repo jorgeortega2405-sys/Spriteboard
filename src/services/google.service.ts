@@ -116,14 +116,11 @@ export async function processGoogleAuthCallback(code: string): Promise<UserPaylo
 
   if (existingGoogleUsers.length > 0) {
     const u = existingGoogleUsers[0];
-    if (avatarUrl && u.avatar_url !== avatarUrl) {
-      await pool.query('UPDATE users SET avatar_url = ? WHERE id = ?', [avatarUrl, u.id]);
-    }
     return {
       id: u.id,
       username: u.username,
       email: u.email,
-      avatar_url: avatarUrl || u.avatar_url,
+      avatar_url: u.avatar_url || null,
       google_id: googleId,
     };
   }
@@ -136,33 +133,30 @@ export async function processGoogleAuthCallback(code: string): Promise<UserPaylo
 
   if (existingEmailUsers.length > 0) {
     const u = existingEmailUsers[0];
-    await pool.query(
-      'UPDATE users SET google_id = ?, avatar_url = COALESCE(avatar_url, ?) WHERE id = ?',
-      [googleId, avatarUrl, u.id]
-    );
+    await pool.query('UPDATE users SET google_id = ? WHERE id = ?', [googleId, u.id]);
     return {
       id: u.id,
       username: u.username,
       email: u.email,
-      avatar_url: avatarUrl || u.avatar_url,
+      avatar_url: u.avatar_url || null,
       google_id: googleId,
     };
   }
 
-  // 3. Crear nuevo usuario federado
+  // 3. Crear nuevo usuario federado con avatar por defecto (NULL)
   const baseName = googleUser.name || email.split('@')[0];
   const uniqueUsername = await generateUniqueUsername(baseName);
 
   const [insertResult] = await pool.query<ResultSetHeader>(
-    'INSERT INTO users (username, email, password_hash, google_id, avatar_url) VALUES (?, ?, NULL, ?, ?)',
-    [uniqueUsername, email, googleId, avatarUrl]
+    'INSERT INTO users (username, email, password_hash, google_id, avatar_url) VALUES (?, ?, NULL, ?, NULL)',
+    [uniqueUsername, email, googleId]
   );
 
   return {
     id: insertResult.insertId,
     username: uniqueUsername,
     email: email,
-    avatar_url: avatarUrl,
+    avatar_url: null,
     google_id: googleId,
   };
 }

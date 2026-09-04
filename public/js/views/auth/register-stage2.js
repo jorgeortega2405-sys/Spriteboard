@@ -7,15 +7,23 @@ import {
   saveStage2Data,
 } from '../../services/registration-state.js';
 import { createErrorView } from '../error.js';
+import { validateUsername } from '../../utils/validators.js';
+import {
+  createBannerManager,
+  withButtonLoading,
+  bindSubmitOnEnter,
+  bindNavigationLinks,
+} from '../../utils/dom.js';
+import { t } from '../../services/i18n.js';
 
 export async function createRegisterStage2View() {
   // Guardia de seguridad: si faltan datos de la etapa 1, mostrar vista de error
   if (!hasStage1Data()) {
     return createErrorView({
-      code: 'Faltan datos',
-      title: 'No se puede acceder al paso 2',
-      description: 'Debes completar tu correo y contraseña en el paso anterior antes de ingresar tus datos adicionales.',
-      actionText: 'Comenzar registro',
+      code: '400',
+      title: t('error.general_title'),
+      description: t('error.not_found_desc'),
+      actionText: t('auth.register.title'),
       actionUrl: '/register',
     });
   }
@@ -26,9 +34,7 @@ export async function createRegisterStage2View() {
   const usernameInput = container.querySelector('[data-ref="register-username"]');
   const randomBtn = container.querySelector('[data-ref="btn-random-username"]');
   const submitBtn = container.querySelector('[data-ref="btn-submit-stage2"]');
-  const errorBanner = container.querySelector('[data-ref="stage2-error"]');
-  const homeLink = container.querySelector('[data-ref="stage2-home-link"]');
-  const backLink = container.querySelector('[data-ref="btn-back-stage1"]');
+  const banners = createBannerManager(container, { errorRef: 'stage2-error' });
 
   if (state.username && usernameInput) {
     usernameInput.value = state.username;
@@ -44,102 +50,51 @@ export async function createRegisterStage2View() {
       usernameInput.dispatchEvent(new Event('input', { bubbles: true }));
       usernameInput.focus();
     }
-    if (errorBanner) errorBanner.style.display = 'none';
+    banners.hideAll();
   });
 
-  homeLink?.addEventListener('click', (e) => {
-    e.preventDefault();
-    navigate('/');
-  });
-
-  backLink?.addEventListener('click', (e) => {
-    e.preventDefault();
-    navigate('/register');
+  // Navegación
+  bindNavigationLinks(container, {
+    'stage2-home-link': '/',
+    'btn-back-stage1': '/register',
   });
 
   const executeStage2 = async () => {
-    if (errorBanner) errorBanner.style.display = 'none';
+    banners.hideAll();
     const username = usernameInput?.value.trim();
 
-    if (!username) {
-      if (errorBanner) {
-        errorBanner.textContent = 'Por favor ingresa un nombre de usuario.';
-        errorBanner.style.display = 'block';
-      }
+    const usernameValidation = validateUsername(username);
+    if (!usernameValidation.valid) {
+      banners.showError(usernameValidation.error);
       return;
     }
 
-    if (username.length < 3) {
-      if (errorBanner) {
-        errorBanner.textContent = 'El nombre de usuario debe tener al menos 3 caracteres.';
-        errorBanner.style.display = 'block';
-      }
-      return;
-    }
+    await withButtonLoading(submitBtn, t('auth.register_stage2.loading'), async () => {
+      try {
+        const res = await postApi('/api/register/send-code', {
+          email: state.email,
+          password: state.password,
+          username,
+        });
 
-    if (username.length > 30) {
-      if (errorBanner) {
-        errorBanner.textContent = 'El nombre de usuario no puede tener más de 30 caracteres.';
-        errorBanner.style.display = 'block';
-      }
-      return;
-    }
+        const data = await res.json();
 
-    const usernameRegex = /^[a-zA-Z0-9_.-]+$/;
-    if (!usernameRegex.test(username)) {
-      if (errorBanner) {
-        errorBanner.textContent = 'El nombre de usuario solo puede contener letras, números, puntos, guiones y guiones bajos.';
-        errorBanner.style.display = 'block';
-      }
-      return;
-    }
-
-    if (submitBtn) {
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Enviando código...';
-    }
-
-    try {
-      const res = await postApi('/api/register/send-code', {
-        email: state.email,
-        password: state.password,
-        username,
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        if (errorBanner) {
-          errorBanner.textContent = data.error || 'Error al procesar la solicitud.';
-          errorBanner.style.display = 'block';
+        if (!res.ok) {
+          banners.showError(data.error || t('toasts.generic_error'));
+          return;
         }
-        return;
-      }
 
-      // Guardar nombre y avanzar a la etapa 3
-      saveStage2Data(username);
-      navigate('/register/verification-account');
-    } catch {
-      if (errorBanner) {
-        errorBanner.textContent = 'Error de conexión con el servidor.';
-        errorBanner.style.display = 'block';
+        // Guardar nombre y avanzar a la etapa 3
+        saveStage2Data(username);
+        navigate('/register/verification-account');
+      } catch {
+        banners.showError(t('toasts.network_error'));
       }
-    } finally {
-      if (submitBtn) {
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Continuar';
-      }
-    }
+    });
   };
 
   submitBtn?.addEventListener('click', executeStage2);
-
-  usernameInput?.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      executeStage2();
-    }
-  });
+  bindSubmitOnEnter(usernameInput, executeStage2);
 
   return container;
 }

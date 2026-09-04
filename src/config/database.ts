@@ -103,6 +103,39 @@ export async function runMigrations(): Promise<void> {
       await conn.query('ALTER TABLE users ADD COLUMN avatar_url VARCHAR(512) NULL AFTER google_id');
       logger.db.info('Columna avatar_url añadida a la tabla users.');
     }
+
+    // 4. Tabla user_preferences
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS user_preferences (
+        user_id INT PRIMARY KEY,
+        theme VARCHAR(20) NOT NULL DEFAULT 'system',
+        language VARCHAR(50) NOT NULL DEFAULT 'en-US',
+        open_links_new_tab BOOLEAN NOT NULL DEFAULT TRUE,
+        telemetry BOOLEAN NOT NULL DEFAULT FALSE,
+        reduce_motion BOOLEAN NOT NULL DEFAULT FALSE,
+        high_contrast BOOLEAN NOT NULL DEFAULT FALSE,
+        extended_alerts BOOLEAN NOT NULL DEFAULT FALSE,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+    await conn.query('ALTER TABLE user_preferences MODIFY COLUMN language VARCHAR(50) NOT NULL DEFAULT \'en-US\'');
+
+    // 5. Tabla user_audit_logs
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS user_audit_logs (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        action VARCHAR(50) NOT NULL,
+        old_value TEXT NULL,
+        new_value TEXT NULL,
+        ip_address VARCHAR(45) NULL,
+        user_agent VARCHAR(255) NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+    logger.db.info('Tablas user_preferences y user_audit_logs migradas exitosamente.');
   } catch (err) {
     logger.db.warn('Advertencia en migración de base de datos', err);
   } finally {

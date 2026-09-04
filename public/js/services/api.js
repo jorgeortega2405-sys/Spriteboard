@@ -66,6 +66,14 @@ export async function checkAuthSession() {
   return currentUser;
 }
 
+// Helper para llamadas GET a la API
+export async function getApi(url) {
+  return fetch(url, {
+    method: 'GET',
+    credentials: 'include',
+  });
+}
+
 // Helper para llamadas POST a la API con token CSRF y credenciales
 export async function postApi(url, body) {
   if (!csrfToken) {
@@ -98,3 +106,66 @@ export async function postApi(url, body) {
 
   return res;
 }
+
+// Helper para llamadas multipart/form-data con token CSRF y credenciales
+export async function postFormApi(url, formData) {
+  if (!csrfToken) {
+    await fetchCsrfToken();
+  }
+
+  let res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'X-CSRF-Token': csrfToken,
+    },
+    credentials: 'include',
+    body: formData,
+  });
+
+  if (res.status === 403) {
+    await fetchCsrfToken();
+    res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'X-CSRF-Token': csrfToken,
+      },
+      credentials: 'include',
+      body: formData,
+    });
+  }
+
+  return res;
+}
+
+// Helper para llamadas DELETE a la API con token CSRF y credenciales
+export async function deleteApi(url, body) {
+  if (!csrfToken) {
+    await fetchCsrfToken();
+  }
+
+  let res = await fetch(url, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': csrfToken,
+    },
+    credentials: 'include',
+    body: body ? JSON.stringify(body) : undefined,
+  });
+
+  if (res.status === 403) {
+    await fetchCsrfToken();
+    res = await fetch(url, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': csrfToken,
+      },
+      credentials: 'include',
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  }
+
+  return res;
+}
+

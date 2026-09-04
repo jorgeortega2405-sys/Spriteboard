@@ -54,21 +54,7 @@ export class SkeletonService {
           await new Promise((resolve) => setTimeout(resolve, remaining));
         }
 
-        if (isActiveCheck && !isActiveCheck()) return;
-
-        // Desvanecimiento suave del skeleton (fade-out)
-        skeletonElement.style.opacity = '0';
-        await new Promise((resolve) => setTimeout(resolve, 140));
-
-        if (isActiveCheck && !isActiveCheck()) return;
-
-        // Aplicar animación suave de entrada a los nuevos elementos (fade-in)
-        for (const el of newElements) {
-          if (el instanceof HTMLElement) {
-            el.classList.add('view-fade-in');
-          }
-        }
-
+        // Reemplazo inmediato e instantáneo: el skeleton se elimina de golpe sin transiciones ni animaciones de subida
         container.replaceChildren(...newElements);
       },
     };

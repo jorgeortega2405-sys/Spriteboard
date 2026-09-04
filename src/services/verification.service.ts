@@ -95,3 +95,90 @@ export async function deletePendingRegistration(email: string): Promise<void> {
   const key = `${REDIS_REG_PREFIX}${email.toLowerCase().trim()}`;
   await redis.del(key);
 }
+
+/* ==========================================================================
+   GESTIÓN DE TOKENS DE RECUPERACIÓN DE CONTRASEÑA EN REDIS
+   ========================================================================== */
+
+const REDIS_PWD_RESET_PREFIX = 'pwd_reset:';
+const DEFAULT_RESET_TTL_SECONDS = 900; // 15 minutos
+
+export interface PasswordResetPayload {
+  email: string;
+  userId: number;
+  createdAt: number;
+}
+
+/**
+ * Guarda un token seguro de recuperación de contraseña en Redis con TTL de 15 minutos
+ */
+export async function savePasswordResetToken(
+  email: string,
+  userId: number,
+  token: string,
+  ttlSeconds = DEFAULT_RESET_TTL_SECONDS
+): Promise<void> {
+  const key = `${REDIS_PWD_RESET_PREFIX}${token.trim()}`;
+  const payload: PasswordResetPayload = {
+    email: email.toLowerCase().trim(),
+    userId,
+    createdAt: Date.now(),
+  };
+
+  await redis.setex(key, ttlSeconds, JSON.stringify(payload));
+}
+
+/**
+ * Valida si un token de recuperación existe y es válido sin eliminarlo (para pre-chequeo)
+ */
+export async function verifyPasswordResetToken(
+  token: string
+): Promise<{ valid: boolean; email?: string; userId?: number; error?: string }> {
+  if (!token || typeof token !== 'string' || !token.trim()) {
+    return { valid: false, error: 'Token de recuperación no proporcionado o inválido.' };
+  }
+
+  const key = `${REDIS_PWD_RESET_PREFIX}${token.trim()}`;
+  const raw = await redis.get(key);
+  if (!raw) {
+    return { valid: false, error: 'El enlace de recuperación ha expirado o no es válido.' };
+  }
+
+  try {
+    const payload = JSON.parse(raw) as PasswordResetPayload;
+    return { valid: true, email: payload.email, userId: payload.userId };
+  } catch {
+    return { valid: false, error: 'Error al procesar el token de recuperación.' };
+  }
+}
+
+/**
+ * Valida y consume el token de recuperación de Redis en una sola operación atómica
+ * garantizando que un token nunca pueda ser utilizado dos veces.
+ */
+export async function consumePasswordResetToken(
+  token: string
+): Promise<{ success: boolean; email?: string; userId?: number; error?: string }> {
+  if (!token || typeof token !== 'string' || !token.trim()) {
+    return { success: false, error: 'Token de recuperación no proporcionado o inválido.' };
+  }
+
+  const key = `${REDIS_PWD_RESET_PREFIX}${token.trim()}`;
+  const raw = await redis.get(key);
+  if (!raw) {
+    return {
+      success: false,
+      error: 'El enlace de recuperación ha expirado o ya ha sido utilizado. Solicita uno nuevo.',
+    };
+  }
+
+  // Eliminar inmediatamente de Redis para prevenir reuso
+  await redis.del(key);
+
+  try {
+    const payload = JSON.parse(raw) as PasswordResetPayload;
+    return { success: true, email: payload.email, userId: payload.userId };
+  } catch {
+    return { success: false, error: 'Error al decodificar la información del token.' };
+  }
+}

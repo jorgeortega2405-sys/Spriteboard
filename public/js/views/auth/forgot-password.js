@@ -1,33 +1,63 @@
 import { loadTemplate } from '../../services/template.js';
-import { navigate } from '../../router.js';
+import { postApi } from '../../services/api.js';
+import { validateEmail } from '../../utils/validators.js';
+import {
+  createBannerManager,
+  withButtonLoading,
+  bindSubmitOnEnter,
+  bindNavigationLinks,
+} from '../../utils/dom.js';
+import { t } from '../../services/i18n.js';
 
 export async function createForgotPasswordView() {
   const container = await loadTemplate('/views/auth/forgot-password.html');
 
-  const homeLink = container.querySelector('[data-ref="forgot-home-link"]');
-  const toLoginLink = container.querySelector('[data-ref="btn-forgot-to-login"]');
   const submitBtn = container.querySelector('[data-ref="btn-submit-forgot"]');
   const emailInput = container.querySelector('[data-ref="forgot-email"]');
-
-  homeLink?.addEventListener('click', (e) => {
-    e.preventDefault();
-    navigate('/');
+  const banners = createBannerManager(container, {
+    errorRef: 'forgot-error',
+    successRef: 'forgot-success',
   });
 
-  toLoginLink?.addEventListener('click', (e) => {
-    e.preventDefault();
-    navigate('/login');
+  // Navegación
+  bindNavigationLinks(container, {
+    'forgot-home-link': '/',
+    'btn-forgot-to-login': '/login',
   });
 
-  submitBtn?.addEventListener('click', () => {
+  async function handleSubmit() {
+    banners.hideAll();
     const email = emailInput?.value.trim();
-    if (!email) {
-      alert('Por favor ingresa tu correo electrónico.');
+
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.valid) {
+      banners.showError(emailValidation.error);
+      emailInput?.focus();
       return;
     }
-    alert(`Instrucciones enviadas a: ${email}`);
-    navigate('/login');
-  });
+
+    await withButtonLoading(submitBtn, t('auth.forgot_password.loading'), async () => {
+      try {
+        const res = await postApi('/api/forgot-password', { email });
+        const data = await res.json().catch(() => ({}));
+
+        if (res.ok) {
+          banners.showSuccess(data.message || t('auth.forgot_password.success_msg'));
+          if (emailInput) {
+            emailInput.value = '';
+          }
+        } else {
+          const errorMsg = data.error || t('toasts.generic_error');
+          banners.showError(errorMsg);
+        }
+      } catch {
+        banners.showError(t('toasts.network_error'));
+      }
+    });
+  }
+
+  submitBtn?.addEventListener('click', handleSubmit);
+  bindSubmitOnEnter(emailInput, handleSubmit);
 
   return container;
 }

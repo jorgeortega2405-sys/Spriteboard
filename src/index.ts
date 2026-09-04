@@ -29,6 +29,18 @@ app.get('/health', getHealth);
 // Rutas de API
 app.use('/api', apiRouter);
 
+// Manejo seguro de errores globales (CERO exposición de detalles técnicos ni stack traces)
+app.use((err: any, req: Request, res: Response, next: express.NextFunction) => {
+  logger.app.error('Error no controlado en middleware o ruta', err);
+  if (res.headersSent) {
+    return next(err);
+  }
+  const statusCode = typeof err.status === 'number' ? err.status : 500;
+  res.status(statusCode).json({
+    error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
+  });
+});
+
 // Soporte SPA: Cualquier ruta que no sea de API sirve index.html
 app.get('*', (req: Request, res: Response) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));

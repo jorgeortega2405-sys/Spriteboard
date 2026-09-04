@@ -44,6 +44,8 @@ html, body {
 /* Barra superior genérica */
 .general-content-top,
 .layout-header {
+  position: relative;
+  z-index: 100;
   height: auto;
   min-height: 50px;
   background-color: #ffffff;
@@ -95,6 +97,33 @@ html, body {
   overflow: hidden;
 }
 
+/* Layout scrolleable independiente (exclusivo para scroll, dejando fuera al sidebar) */
+.layout-body,
+.layout-main {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.layout-body--scrollable,
+.layout-main--scrollable,
+.layout-scrollable,
+.layout-content__scrollable {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  align-self: stretch;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+.trash-main-area,
 .home-main-area {
   width: 100%;
   height: 100%;
@@ -222,7 +251,7 @@ html, body {
   padding: 0 24px;
   font-size: 15px;
   gap: 10px;
-  border-radius: 12px;
+  border-radius: 16px;
 }
 
 /* Modificador Solo Ícono */
@@ -403,11 +432,11 @@ html, body {
   border-radius: 16px;
   box-sizing: border-box;
   overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  box-shadow: none;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 8px;
+  padding: 0;
 }
 
 /* Modificadores de Ancho */
@@ -426,6 +455,8 @@ html, body {
 
 .menu-panel--w-full {
   width: 100%;
+  min-width: 100%;
+  max-width: 100%;
 }
 
 /* Modificadores de Altura */
@@ -449,6 +480,7 @@ html, body {
   padding: 8px;
   box-sizing: border-box;
   flex-direction: column;
+  box-shadow: none;
 }
 
 .menu-panel--sidebar.is-active,
@@ -456,19 +488,31 @@ html, body {
   display: flex;
 }
 
+/* Backdrop contenedor para el menú de avatar (desktop: sin alteración de layout) */
+.avatar-dropdown-backdrop {
+  display: contents;
+}
+
+/* Zona de agarre y píldora de drag and drop (ocultas por defecto en desktop) */
+.menu-panel__drag-zone,
+.menu-panel__drag-handle {
+  display: none;
+}
+
 /* Modificador de Posicionamiento: Dropdown Flotante */
 .menu-panel--dropdown,
 .avatar-menu {
   position: absolute;
-  top: calc(100% + 8px);
+  top: calc(100% + 16px);
   right: 0;
+  background-color: #ffffff;
   border: 1px solid #00000015;
   border-radius: 14px;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-  padding: 6px;
+  box-shadow: none;
+  padding: 0;
+  overflow: hidden;
   display: none;
   flex-direction: column;
-  gap: 2px;
   z-index: 1000;
   box-sizing: border-box;
 }
@@ -481,33 +525,48 @@ html, body {
 .avatar-dropdown-container {
   position: relative;
   display: inline-flex;
+  z-index: 101;
 }
 
 /* Secciones internas del panel de menú */
 .menu-panel__top,
-.component-menu-top,
+.component-menu-top {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
 .menu-panel__bottom,
 .component-menu-bottom {
   display: flex;
   flex-direction: column;
   width: 100%;
+  border-top: 1px solid #00000015;
 }
 
 .menu-panel__list,
 .component-menu-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
   width: 100%;
+  padding: 8px;
+  box-sizing: border-box;
+}
+
+.menu-panel--dropdown .menu-panel__list {
+  padding: 6px;
+  gap: 2px;
 }
 
 .menu-panel__header,
 .avatar-menu-header {
-  padding: 10px 12px 8px 12px;
-  border-bottom: 1px solid #00000010;
+  padding: 8px;
+  border-bottom: 1px solid #00000015;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .menu-panel__name,
@@ -774,7 +833,7 @@ html, body {
   width: 100%;
   height: 55px;
   border: 1px solid #00000020;
-  border-radius: 12px;
+  border-radius: 16px;
   padding: 22px 16px 6px 16px;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 14px;
@@ -840,7 +899,7 @@ html, body {
   height: 36px;
   border: none;
   background: transparent;
-  border-radius: 8px;
+  border-radius: 50%;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -947,11 +1006,6 @@ html, body {
   visibility: visible;
 }
 
-.tooltip--dark {
-  background-color: #111827;
-  color: #ffffff;
-}
-
 .tooltip__content {
   position: relative;
   z-index: 2;
@@ -1052,14 +1106,14 @@ html, body {
 .skeleton--input {
   height: 55px;
   width: 100%;
-  border-radius: 10px;
+  border-radius: 16px;
   margin-bottom: 16px;
 }
 
 .skeleton--btn {
   height: 55px;
   width: 100%;
-  border-radius: 10px;
+  border-radius: 16px;
   margin-bottom: 12px;
 }
 
@@ -1143,26 +1197,874 @@ html, body {
 .skeleton--w-25 { width: 25%; }
 .skeleton--mx-auto { margin-left: auto; margin-right: auto; }
 
-/* Transiciones suaves entre Skeletons y Vistas reales */
-@keyframes viewFadeIn {
-  from {
+/* ==========================================================================
+   8. REGLAS RESPONSIVE PARA PANTALLAS PEQUEÑAS (MÓVILES / TABLETS)
+   ========================================================================== */
+@media (max-width: 768px) {
+  /* Sidebar en pantallas pequeñas: sin padding, sin borde, sin radius y 100% de ancho */
+  .menu-panel--sidebar,
+  .module-sidebar {
+    width: 100%;
+    min-width: 100%;
+    max-width: 100%;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .menu-panel--sidebar .menu-panel,
+  .menu-panel--sidebar .menu-panel--w-285 {
+    width: 100%;
+    min-width: 100%;
+    max-width: 100%;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0;
+  }
+
+  /* Dropdown de Avatar en móviles:
+     - Padre (backdrop) al 100% de ancho y alto con fondo negro semitransparente con blur
+     - Sin padding en el padre
+     - Menú blanco alineado al bottom
+     - Sin border radius en el bottom, solo en el top
+     - Píldora superior central para drag and drop
+     - Sin shadow
+     - Animación fluida de apertura y cierre
+  */
+  .avatar-dropdown-backdrop {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    z-index: 2000;
+    padding: 0;
+    box-sizing: border-box;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: stretch;
     opacity: 0;
-    transform: translateY(3px);
   }
-  to {
-    opacity: 1;
+
+  .avatar-dropdown-backdrop.is-open {
+    display: flex;
+  }
+
+  .menu-panel--dropdown,
+  .avatar-menu {
+    position: relative;
+    top: auto;
+    left: auto;
+    right: auto;
+    bottom: 0;
+    width: 100%;
+    min-width: 100%;
+    max-width: 100%;
+    background-color: #ffffff;
+    border: none;
+    border-top: 1px solid #00000015;
+    border-radius: 20px 20px 0 0;
+    padding: 0 0 calc(8px + env(safe-area-inset-bottom, 0px)) 0;
+    box-shadow: none;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
     transform: translateY(0);
+    overflow: hidden;
+  }
+
+  /* Zona de agarre táctil ampliada y píldora drag and drop */
+  .menu-panel__drag-zone {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 0 8px 0;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .menu-panel__drag-zone:active {
+    cursor: grabbing;
+  }
+
+  .menu-panel__drag-handle {
+    display: block;
+    width: 40px;
+    height: 5px;
+    border-radius: 9999px;
+    background-color: #00000025;
+    pointer-events: none;
+    transition: background-color 0.15s ease, transform 0.15s ease;
+  }
+
+  .menu-panel__drag-zone:active .menu-panel__drag-handle {
+    background-color: #00000045;
+    transform: scale(0.96);
   }
 }
 
-.view-fade-in {
-  animation: viewFadeIn 0.2s ease-out forwards;
+/* ==========================================================================
+   16. SECCIÓN DE CONFIGURACIÓN (.settings-layout, .settings-group, .settings-item)
+   ========================================================================== */
+
+.settings-layout {
+  width: 100%;
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 32px 24px 64px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-sizing: border-box;
 }
 
-.skeleton-container {
-  transition: opacity 0.15s ease-out;
-  will-change: opacity;
+.settings-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  background-color: #ffffff;
+  border: 1px solid #00000015;
+  border-radius: 16px;
+  padding: 24px;
+  box-sizing: border-box;
 }
+
+.settings-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #111827;
+  letter-spacing: -0.3px;
+  margin: 0;
+  text-align: center;
+}
+
+.settings-subtitle {
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.5;
+  margin: 0;
+  text-align: center;
+  max-width: 540px;
+}
+
+.settings-group {
+  display: flex;
+  flex-direction: column;
+  background-color: #ffffff;
+  border: 1px solid #00000015;
+  border-radius: 16px;
+  box-sizing: border-box;
+}
+
+.settings-item {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  gap: 16px;
+  box-sizing: border-box;
+}
+
+.settings-item:first-child {
+  border-top-left-radius: 15px;
+  border-top-right-radius: 15px;
+}
+
+.settings-item:last-child {
+  border-bottom-left-radius: 15px;
+  border-bottom-right-radius: 15px;
+}
+
+.settings-item--stacked {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.settings-item__content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.settings-item__avatar {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  min-width: 56px;
+  border-radius: 50%;
+  overflow: hidden;
+  background-color: #f3f4f6;
+  border: 1px solid #00000010;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.settings-item__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.avatar-preview-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+  pointer-events: none;
+}
+
+.settings-item__avatar:hover .avatar-preview-overlay {
+  opacity: 1;
+}
+
+.avatar-preview-overlay .material-symbols-rounded {
+  font-size: 22px;
+  color: #ffffff;
+  line-height: 1;
+}
+
+.settings-item__icon-box {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  border-radius: 12px;
+  border: 1px solid #00000015;
+  background-color: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.settings-item__text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.settings-item__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+.settings-item__desc {
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.settings-item__value {
+  font-size: 13px;
+  color: #374151;
+  font-weight: 500;
+  margin: 0;
+  word-break: break-all;
+}
+
+.settings-item__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.settings-edit-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.field__input--simple {
+  height: 34px;
+  padding: 0 12px;
+  font-size: 13px;
+  border-radius: 8px;
+  border: 1px solid #00000020;
+  background-color: #f9fafb;
+  color: #111827;
+  font-family: inherit;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+  min-width: 200px;
+}
+
+.field__input--simple:focus {
+  background-color: #ffffff;
+  border-color: #111827;
+}
+
+.settings-divider {
+  border: 0;
+  border-top: 1px solid #00000010;
+  margin: 0;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .settings-layout {
+    padding: 20px 16px 48px 16px;
+    gap: 12px;
+  }
+
+  .settings-header {
+    padding: 20px 16px;
+  }
+
+  .settings-item {
+    padding: 16px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .settings-item__actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .settings-edit-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .field__input--simple {
+    width: 100%;
+    min-width: 100%;
+  }
+}
+
+/* ==========================================================================
+   17. COMPONENTE TOGGLE SWITCH (.toggle-switch)
+   ========================================================================== */
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  flex-shrink: 0;
+}
+
+.toggle-switch__input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.toggle-switch__slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #e5e7eb;
+  border-radius: 24px;
+  transition: background-color 0.25s ease, border-color 0.25s ease;
+  border: 1px solid #d1d5db;
+}
+
+.toggle-switch__slider::before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 2px;
+  bottom: 2px;
+  background-color: #ffffff;
+  border-radius: 50%;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.toggle-switch__input:checked + .toggle-switch__slider {
+  background-color: #111827;
+  border-color: #111827;
+}
+
+.toggle-switch__input:checked + .toggle-switch__slider::before {
+  transform: translateX(20px);
+}
+
+/* ==========================================================================
+   18. COMPONENTE DROPDOWN TRIGGER Y WRAPPER (.settings-dropdown-wrapper)
+   ========================================================================== */
+
+.settings-dropdown-wrapper {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+  max-width: 265px;
+}
+
+.dropdown-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 265px;
+  height: 42px;
+  padding: 0 14px;
+  background-color: #ffffff;
+  border: 1px solid #00000015;
+  border-radius: 12px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #111827;
+  cursor: pointer;
+  box-sizing: border-box;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: border-color 0.15s ease;
+}
+
+.dropdown-trigger:hover {
+  border-color: #000000;
+}
+
+.dropdown-trigger__left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dropdown-trigger__icon {
+  font-size: 20px;
+  color: #4b5563;
+}
+
+.dropdown-trigger__text {
+  font-size: 14px;
+  font-weight: 500;
+  color: #111827;
+}
+
+.dropdown-trigger__chevron {
+  font-size: 20px;
+  color: #6b7280;
+  transition: transform 0.2s ease;
+}
+
+.dropdown-backdrop {
+  display: contents;
+}
+
+@media (max-width: 768px) {
+  .settings-dropdown-wrapper {
+    max-width: 100%;
+  }
+
+  .dropdown-trigger {
+    max-width: 100%;
+  }
+
+  .dropdown-backdrop {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 9999;
+    align-items: flex-end;
+    justify-content: center;
+    box-sizing: border-box;
+  }
+
+  .dropdown-backdrop.is-open {
+    display: flex;
+  }
+
+  .settings-dropdown-wrapper .menu-panel--dropdown {
+    position: fixed;
+    bottom: 0;
+    top: auto;
+    left: 0;
+    right: 0;
+    width: 100%;
+    min-width: 100%;
+    max-width: 100%;
+    background-color: #ffffff;
+    border: none;
+    border-top: 1px solid #00000015;
+    border-radius: 20px 20px 0 0;
+    padding: 0 0 calc(8px + env(safe-area-inset-bottom, 0px)) 0;
+    box-shadow: none;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    transform: translateY(0);
+    overflow: hidden;
+  }
+}
+
+@media (min-width: 769px) {
+  .settings-dropdown-wrapper .menu-panel--dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: auto;
+    width: 100%;
+    min-width: 100%;
+    max-width: 100%;
+    background-color: #ffffff;
+    border: 1px solid #00000015;
+    border-radius: 14px;
+    padding: 0;
+    overflow: hidden;
+    display: none;
+    flex-direction: column;
+    gap: 0;
+    box-sizing: border-box;
+    box-shadow: none;
+  }
+
+  .settings-dropdown-wrapper .menu-panel--dropdown.is-open {
+    display: flex;
+  }
+
+  .settings-dropdown-wrapper .menu-panel__drag-zone {
+    display: none;
+  }
+}
+
+.menu-panel__search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 8px;
+  border-bottom: 1px solid #00000015;
+  margin-bottom: 0;
+  box-sizing: border-box;
+}
+
+.menu-panel__search-icon {
+  font-size: 18px;
+  color: #9ca3af;
+  position: absolute;
+  left: 18px;
+  pointer-events: none;
+}
+
+.menu-panel__search-input {
+  width: 100%;
+  height: 36px;
+  padding: 0 12px 0 34px;
+  font-family: inherit;
+  font-size: 13px;
+  color: #111827;
+  background-color: transparent;
+  background: transparent;
+  border: 1px solid #00000015;
+  border-radius: 8px;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.menu-panel__search-input:focus {
+  background-color: transparent;
+  background: transparent;
+  border-color: #111827;
+}
+
+.menu-panel__search-input::placeholder {
+  color: #9ca3af;
+}
+
+.menu-panel__list--scrollable {
+  max-height: 280px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  gap: 2px;
+  padding: 6px 4px 6px 6px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.menu-panel__list--scrollable::-webkit-scrollbar {
+  width: 6px;
+}
+
+.menu-panel__list--scrollable::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.menu-panel__list--scrollable::-webkit-scrollbar-thumb {
+  background: #e5e7eb;
+  border-radius: 6px;
+}
+
+.menu-panel__list--scrollable::-webkit-scrollbar-thumb:hover {
+  background: #d1d5db;
+}
+
+.menu-panel__empty {
+  padding: 16px 12px;
+  text-align: center;
+  font-size: 13px;
+  color: #6b7280;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  .menu-panel__list--scrollable {
+    max-height: 55vh;
+  }
+}
+
+/* ==========================================================================
+   20. COMPONENTE DE BÚSQUEDA (.component-search)
+   ========================================================================== */
+
+.component-search {
+  width: 425px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  border: 1px solid #00000015;
+  border-radius: 12px;
+  background-color: transparent;
+  background: transparent;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.component-search:hover {
+  border-color: #00000030;
+}
+
+.component-search:focus-within {
+  border-color: #000000;
+  box-shadow: 0 0 0 1px #00000015;
+}
+
+.component-search__icon {
+  width: 40px;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #9ca3af;
+  flex-shrink: 0;
+}
+
+.component-search__icon .material-symbols-rounded {
+  font-size: 20px;
+}
+
+.component-search__input-box {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  height: 100%;
+  min-width: 0;
+}
+
+.component-search__input {
+  width: 100%;
+  height: 100%;
+  border: none;
+  outline: none;
+  background-color: transparent;
+  background: transparent;
+  padding: 0 14px 0 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: #111827;
+  box-sizing: border-box;
+}
+
+.component-search__input::placeholder {
+  color: #9ca3af;
+  font-weight: 400;
+}
+
+.layout-header .btn-search-mobile {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .layout-header .btn-search-mobile {
+    display: inline-flex;
+  }
+
+  .layout-header__center {
+    display: none;
+  }
+
+  .layout-header.layout-header--search-active {
+    flex-wrap: wrap;
+    gap: 8px 0;
+  }
+
+  .layout-header.layout-header--search-active .layout-header__center {
+    display: flex;
+    flex: 0 0 100%;
+    order: 3;
+    width: 100%;
+    margin-top: 4px;
+    justify-content: center;
+  }
+
+  .layout-header.layout-header--search-active .layout-header__left {
+    order: 1;
+  }
+
+  .layout-header.layout-header--search-active .layout-header__right {
+    order: 2;
+  }
+
+  .layout-header.layout-header--search-active .component-search {
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
+/* ==========================================================================
+   19. COMPONENTE TOAST NOTIFICATIONS (.toast-container, .toast-item)
+   ========================================================================== */
+
+.toast-container {
+  position: fixed;
+  bottom: 24px;
+  left: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 10000;
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+.toast-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 280px;
+  max-width: 420px;
+  padding: 12px 16px;
+  background-color: #111827;
+  color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25), 0 8px 10px -6px rgba(0, 0, 0, 0.15);
+  pointer-events: auto;
+  cursor: pointer;
+  box-sizing: border-box;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(12px) scale(0.96);
+  transition: opacity 0.25s ease, visibility 0.25s ease, transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.toast-item.is-active {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1);
+}
+
+.toast-item__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.toast-item__icon .material-symbols-rounded {
+  font-size: 20px;
+  color: #ffffff;
+}
+
+.toast-item--error .toast-item__icon .material-symbols-rounded,
+.toast-item--danger .toast-item__icon .material-symbols-rounded {
+  color: #f87171;
+}
+
+.toast-item--warning .toast-item__icon .material-symbols-rounded {
+  color: #fbbf24;
+}
+
+.toast-item--info .toast-item__icon .material-symbols-rounded {
+  color: #60a5fa;
+}
+
+.toast-item__text {
+  font-size: 13px;
+  font-weight: 500;
+  color: #ffffff;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+@media (max-width: 768px) {
+  .toast-container {
+    left: 16px;
+    right: 16px;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    align-items: center;
+  }
+
+  .toast-item {
+    width: 100%;
+    min-width: 100%;
+    max-width: 100%;
+  }
+}
+
+
+
+
 
 
 

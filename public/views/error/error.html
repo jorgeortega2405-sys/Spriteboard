@@ -1,6 +1,6 @@
 <div class="layout-content" data-ref="error-view">
   <div class="login-container" data-ref="error-wrapper">
-    <a class="login-header-logo" data-ref="error-home-link" href="/" aria-label="Ir al inicio" title="Spriteboard">
+    <a class="login-header-logo" data-ref="error-home-link" href="/" data-i18n-aria="nav.go_home" data-i18n-title="app.name">
       <img class="login-logo-img" data-ref="logo-img" src="/logo.svg" alt="Spriteboard" />
     </a>
 
@@ -11,13 +11,12 @@
 
       <div class="card__header" data-ref="error-header" style="text-align: center;">
         <span class="badge badge--danger" data-ref="error-badge">404</span>
-        <h1 class="card__title" data-ref="error-title">Página no encontrada</h1>
-        <p class="card__subtitle" data-ref="error-desc">La página que estás intentando abrir no existe o ha sido movida.</p>
+        <h1 class="card__title" data-ref="error-title" data-i18n="error.not_found_title"></h1>
+        <p class="card__subtitle" data-ref="error-desc" data-i18n="error.not_found_desc"></p>
       </div>
 
       <div class="card__body" data-ref="error-body" style="width: 100%; margin-top: 12px;">
-        <button type="button" class="btn btn--h55 btn--black btn--w-full" data-ref="error-action-btn">
-          Ir a la página principal
+        <button type="button" class="btn btn--h55 btn--black btn--w-full" data-ref="error-action-btn" data-i18n="error.not_found_action">
         </button>
       </div>
     </div>

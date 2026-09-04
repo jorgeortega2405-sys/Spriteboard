@@ -1,3 +1,5 @@
+import { translateElement } from './i18n.js';
+
 const templateCache = new Map();
 
 /**
@@ -23,5 +25,6 @@ export async function loadTemplate(url) {
     throw new Error(`Plantilla vacía o inválida: ${url}`);
   }
 
-  return element.cloneNode(true);
+  const clone = element.cloneNode(true);
+  return translateElement(clone);
 }

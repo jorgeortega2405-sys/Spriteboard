@@ -1,0 +1,64 @@
+<div class="layout-content" data-ref="settings-guest-view">
+  <div class="layout-body layout-body--scrollable layout-scrollable" data-ref="settings-scrollable">
+    <div class="settings-layout" data-ref="settings-layout">
+      <div class="settings-header" data-ref="settings-header">
+        <h1 class="settings-title" data-ref="settings-title" data-i18n="settings.guest.title"></h1>
+        <p class="settings-subtitle" data-ref="settings-subtitle" data-i18n="settings.guest.subtitle"></p>
+      </div>
+
+      <!-- Grupo 1: Preferencias generales -->
+      <div class="settings-group" data-ref="group-guest-preferences">
+        <!-- Item: Idioma -->
+        <div class="settings-item settings-item--stacked" data-ref="item-guest-language">
+          <div class="settings-item__content" data-ref="item-guest-language-content">
+            <div class="settings-item__text" data-ref="item-guest-language-text">
+              <h2 class="settings-item__title" data-ref="item-guest-language-title" data-i18n="settings.guest.language_title"></h2>
+              <p class="settings-item__desc" data-ref="item-guest-language-desc" data-i18n="settings.guest.language_desc"></p>
+            </div>
+          </div>
+          <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-guest-language">
+            <button type="button" class="dropdown-trigger" data-ref="btn-trigger-guest-language" data-i18n-aria="settings.guest.language_trigger_aria">
+              <div class="dropdown-trigger__left">
+                <span class="material-symbols-rounded dropdown-trigger__icon">language</span>
+                <span class="dropdown-trigger__text" data-ref="guest-language-selected-text"></span>
+              </div>
+              <span class="material-symbols-rounded dropdown-trigger__chevron">expand_more</span>
+            </button>
+
+            <div class="dropdown-backdrop" data-ref="dropdown-backdrop-guest-language">
+              <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-guest-language">
+                <div class="menu-panel__drag-zone" data-ref="drag-zone-guest-language">
+                  <div class="menu-panel__drag-handle"></div>
+                </div>
+                <div class="menu-panel__search" data-ref="search-wrapper-guest-language">
+                  <span class="material-symbols-rounded menu-panel__search-icon">search</span>
+                  <input class="menu-panel__search-input" data-ref="input-search-guest-language" data-i18n-placeholder="settings.guest.search_language_placeholder" type="text" autocomplete="off" />
+                </div>
+                <div class="menu-panel__list menu-panel__list--scrollable" data-ref="list-guest-languages">
+                  <!-- Opciones de idiomas renderizadas dinámicamente -->
+                </div>
+                <div class="menu-panel__empty" data-ref="empty-guest-languages" data-i18n="settings.guest.no_languages_found" style="display: none;">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <hr class="settings-divider" />
+
+        <!-- Item: Acceso -->
+        <div class="settings-item" data-ref="item-guest-login">
+          <div class="settings-item__content" data-ref="item-guest-login-content">
+            <div class="settings-item__text" data-ref="item-guest-login-text">
+              <h2 class="settings-item__title" data-ref="item-guest-login-title" data-i18n="settings.guest.save_progress_title"></h2>
+              <p class="settings-item__desc" data-ref="item-guest-login-desc" data-i18n="settings.guest.save_progress_desc"></p>
+            </div>
+          </div>
+          <div class="settings-item__actions" data-ref="item-guest-login-actions">
+            <button type="button" class="btn btn--h34 btn--black" data-ref="btn-guest-to-login" data-i18n="settings.guest.btn_login"></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

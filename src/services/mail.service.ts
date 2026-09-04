@@ -82,3 +82,16 @@ export async function sendWelcomeEmail(
     username,
   });
 }
+
+export async function sendPasswordResetEmail(
+  toEmail: string,
+  username: string,
+  resetUrl: string,
+  expiresInMinutes = 15
+): Promise<void> {
+  await sendTemplateEmail('password_reset', toEmail, {
+    username,
+    resetUrl,
+    expiresIn: expiresInMinutes,
+  });
+}
