@@ -1,7 +1,6 @@
 import crypto from 'crypto';
 import { Request, Response, NextFunction } from 'express';
-
-const CSRF_SECRET = process.env.SESSION_SECRET || 'default_csrf_secret_key_spriteboard_2026';
+import { config } from '../config/env.js';
 
 export function generateCsrfToken(req: Request, res: Response): string {
   let secret = req.cookies?._csrf_secret;
@@ -10,19 +9,19 @@ export function generateCsrfToken(req: Request, res: Response): string {
     res.cookie('_csrf_secret', secret, {
       httpOnly: true,
       sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
+      secure: config.nodeEnv === 'production',
       maxAge: 24 * 60 * 60 * 1000,
     });
   }
 
   // Token generado de forma segura mediante HMAC
-  const token = crypto.createHmac('sha256', CSRF_SECRET).update(secret).digest('hex');
+  const token = crypto.createHmac('sha256', config.sessionSecret).update(secret).digest('hex');
 
   // Guardar también en cookie legible por el cliente
   res.cookie('XSRF-TOKEN', token, {
     httpOnly: false,
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    secure: config.nodeEnv === 'production',
     maxAge: 24 * 60 * 60 * 1000,
   });
 
@@ -44,7 +43,7 @@ export function validateCsrf(req: Request, res: Response, next: NextFunction): v
     return;
   }
 
-  const expectedToken = crypto.createHmac('sha256', CSRF_SECRET).update(secret).digest('hex');
+  const expectedToken = crypto.createHmac('sha256', config.sessionSecret).update(secret).digest('hex');
 
   if (
     providedToken.length !== expectedToken.length ||
