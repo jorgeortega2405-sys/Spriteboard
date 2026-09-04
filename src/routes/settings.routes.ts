@@ -49,19 +49,26 @@ function uploadAvatarMiddleware(req: Request, res: Response, next: NextFunction)
   });
 }
 
+import {
+  avatarLimiter,
+  emailCodeLimiter,
+  verifyEmailCodeLimiter,
+  updateUsernameLimiter,
+} from '../middlewares/rate-limit.middleware.js';
+
 // Todas las rutas de configuración requieren autenticación activa
-router.use(requireAuth);
+router.use('/settings', requireAuth);
 
-// Rutas de Avatar
-router.post('/settings/avatar', uploadAvatarMiddleware, handleUpdateAvatar);
-router.delete('/settings/avatar', handleDeleteAvatar);
-router.post('/settings/avatar/delete', handleDeleteAvatar);
+// Rutas de Avatar protegidas con Rate Limiting
+router.post('/settings/avatar', avatarLimiter, uploadAvatarMiddleware, handleUpdateAvatar);
+router.delete('/settings/avatar', avatarLimiter, handleDeleteAvatar);
+router.post('/settings/avatar/delete', avatarLimiter, handleDeleteAvatar);
 
-// Rutas de Credenciales
-router.post('/settings/username', handleUpdateUsername);
-router.post('/settings/email/request-code', handleRequestEmailChangeCode);
-router.post('/settings/email/verify-code', handleVerifyEmailChangeCode);
-router.post('/settings/email', handleUpdateEmail);
+// Rutas de Credenciales protegidas con Rate Limiting
+router.post('/settings/username', updateUsernameLimiter, handleUpdateUsername);
+router.post('/settings/email/request-code', emailCodeLimiter, handleRequestEmailChangeCode);
+router.post('/settings/email/verify-code', verifyEmailCodeLimiter, handleVerifyEmailChangeCode);
+router.post('/settings/email', verifyEmailCodeLimiter, handleUpdateEmail);
 
 // Rutas de Preferencias
 router.get('/settings/preferences', handleGetPreferences);

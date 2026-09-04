@@ -64,19 +64,22 @@ else
     resetIn = math.ceil(window / 1000)
   end
   if resetIn < 1 then resetIn = 1 end
+  redis.call('PEXPIRE', key, window)
   return {0, 0, resetIn}
 end
 `;
 
 /**
- * Extrae la dirección IP del cliente de forma segura considerando proxies de confianza
+ * Extrae la dirección IP del cliente de forma segura utilizando la resolución nativa de Express (trust proxy).
+ * Previene ataques de elusión de Rate Limiting por falsificación arbitraria de cabeceras X-Forwarded-For.
  */
 export function getClientIp(req: Request): string {
-  const forwarded = req.headers['x-forwarded-for'];
-  if (typeof forwarded === 'string' && forwarded.trim()) {
-    return forwarded.split(',')[0].trim();
+  let ip = req.ip || req.socket?.remoteAddress || '127.0.0.1';
+  // Normalizar direcciones IPv6 mapeadas a IPv4 (ej. ::ffff:127.0.0.1 -> 127.0.0.1)
+  if (ip.startsWith('::ffff:')) {
+    ip = ip.substring(7);
   }
-  return req.ip || req.socket.remoteAddress || '127.0.0.1';
+  return ip;
 }
 
 /**
@@ -197,3 +200,52 @@ export const verifyCodeLimiter = createRateLimiter({
   max: 5,
   message: 'Demasiados intentos de verificación. Por favor espera 10 minutos.',
 });
+
+// Actualización o eliminación de foto de perfil: máximo 10 peticiones cada 15 minutos por IP
+export const avatarLimiter = createRateLimiter({
+  prefix: 'avatar_mod',
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: 'Has realizado demasiados cambios de foto de perfil. Por favor espera 15 minutos.',
+});
+
+// Solicitud de código para cambio de correo: máximo 3 solicitudes cada 5 minutos por IP
+export const emailCodeLimiter = createRateLimiter({
+  prefix: 'email_change_code',
+  windowMs: 5 * 60 * 1000,
+  max: 3,
+  message: 'Demasiadas solicitudes de código de cambio de correo. Por favor espera 5 minutos.',
+});
+
+// Verificación de código para cambio de correo: máximo 5 intentos cada 10 minutos por IP
+export const verifyEmailCodeLimiter = createRateLimiter({
+  prefix: 'email_change_verify',
+  windowMs: 10 * 60 * 1000,
+  max: 5,
+  message: 'Demasiados intentos de verificación de código de correo. Por favor espera 10 minutos.',
+});
+
+// Actualización de nombre de usuario: máximo 5 cambios cada 15 minutos por IP
+export const updateUsernameLimiter = createRateLimiter({
+  prefix: 'update_username',
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: 'Has intentado cambiar tu nombre de usuario demasiadas veces. Por favor espera 15 minutos.',
+});
+
+// Registro de eventos de telemetría: máximo 60 eventos por minuto por IP
+export const telemetryEventLimiter = createRateLimiter({
+  prefix: 'telemetry_event',
+  windowMs: 60 * 1000,
+  max: 60,
+  message: 'Límite de eventos de telemetría excedido.',
+});
+
+// Consulta de estadísticas de telemetría: máximo 30 consultas por minuto por IP
+export const telemetryStatsLimiter = createRateLimiter({
+  prefix: 'telemetry_stats',
+  windowMs: 60 * 1000,
+  max: 30,
+  message: 'Límite de consultas de telemetría excedido.',
+});
+

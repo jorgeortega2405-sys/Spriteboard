@@ -58,15 +58,17 @@ function sanitize(obj) {
 class CategoryLogger {
     category;
     categoryDir;
+    dirEnsured = false;
     constructor(category) {
         this.category = category;
         this.categoryDir = path.join(LOGS_ROOT_DIR, category);
     }
-    ensureDirectory() {
+    async ensureDirectory() {
+        if (this.dirEnsured)
+            return;
         try {
-            if (!fs.existsSync(this.categoryDir)) {
-                fs.mkdirSync(this.categoryDir, { recursive: true });
-            }
+            await fs.promises.mkdir(this.categoryDir, { recursive: true });
+            this.dirEnsured = true;
         }
         catch {
             // Ignorar errores al crear directorios si ya existen concurrentemente
@@ -78,7 +80,7 @@ class CategoryLogger {
     }
     async writeLog(level, message, meta, errorObj) {
         try {
-            this.ensureDirectory();
+            await this.ensureDirectory();
             const timestamp = new Date().toISOString();
             let logLine = `[${timestamp}] [${level}] [${this.category.toUpperCase()}] ${message}`;
             if (errorObj) {

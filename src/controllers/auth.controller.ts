@@ -8,7 +8,11 @@ import {
   addAccountToSession,
   switchAccountInSession,
   removeAccountFromSession,
+  revokeAllUserSessions,
+  isSessionRevoked,
+  getMultiAccountSession,
 } from '../services/auth.service.js';
+import { getClientIp } from '../middlewares/rate-limit.middleware.js';
 import {
   getGoogleAuthUrl,
   processGoogleAuthCallback,
@@ -294,10 +298,14 @@ export function logout(req: Request, res: Response): void {
   });
 }
 
-// Cierre de todas las sesiones simultáneas
-export function logoutAll(req: Request, res: Response): void {
+// Cierre de todas las sesiones simultáneas con revocación en servidor
+export async function logoutAll(req: Request, res: Response): Promise<void> {
+  const user = getCurrentUser(req);
+  if (user) {
+    await revokeAllUserSessions(user.id);
+  }
   clearSessionCookie(res);
-  logger.security.info('Todas las sesiones fueron cerradas exitosamente');
+  logger.security.info('Todas las sesiones fueron cerradas exitosamente', { userId: user?.id });
   sendSuccess(res, { message: 'Todas las sesiones fueron cerradas exitosamente.' });
 }
 
@@ -325,12 +333,27 @@ export function switchAccount(req: Request, res: Response): void {
   });
 }
 
-// Usuario actual y cuentas vinculadas
-export function me(req: Request, res: Response): void {
+// Usuario actual y cuentas vinculadas comprobando validez y revocación
+export async function me(req: Request, res: Response): Promise<void> {
   const user = getCurrentUser(req);
+  if (!user) {
+    res.json({ user: null, accounts: [] });
+    return;
+  }
+
+  const session = getMultiAccountSession(req);
+  if (session && session.iat) {
+    const revoked = await isSessionRevoked(user.id, session.iat);
+    if (revoked) {
+      clearSessionCookie(res);
+      res.json({ user: null, accounts: [] });
+      return;
+    }
+  }
+
   const accounts = getLinkedAccounts(req);
   res.json({
-    user: user ? sanitizeUser(user) : null,
+    user: sanitizeUser(user),
     accounts: accounts.map(sanitizeUser),
   });
 }
@@ -398,35 +421,34 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
     // 1. Verificar si el correo existe en la base de datos
     const user = await findUserByEmail(trimmedEmail);
 
-    if (!user) {
-      logger.security.warn('Recuperación de contraseña denegada: correo no registrado', {
-        email: trimmedEmail,
-        ip: req.ip,
+    if (user) {
+      // 2. Generar token criptográfico seguro de 32 bytes (64 caracteres hex)
+      const resetToken = crypto.randomBytes(32).toString('hex');
+
+      // 3. Guardar en Redis con TTL de 15 minutos (900 seg)
+      await savePasswordResetToken(user.email, user.id, resetToken, 900);
+
+      // 4. Construir URL dinámica de restablecimiento
+      const origin = req.get('origin') || `${req.protocol}://${req.get('host')}`;
+      const resetUrl = `${origin}/reset-password?token=${resetToken}`;
+
+      // 5. Enviar correo SMTP
+      await sendPasswordResetEmail(user.email, user.username, resetUrl, 15);
+
+      logger.security.info('Enlace de recuperación de contraseña generado y enviado', {
+        userId: user.id,
+        email: user.email,
       });
-      sendNotFound(res, 'No encontramos ninguna cuenta asociada a este correo electrónico.');
-      return;
+    } else {
+      logger.security.info('Solicitud de recuperación para correo no registrado (protección anti-enumeración)', {
+        email: trimmedEmail,
+        ip: getClientIp(req),
+      });
     }
 
-    // 2. Generar token criptográfico seguro de 32 bytes (64 caracteres hex)
-    const resetToken = crypto.randomBytes(32).toString('hex');
-
-    // 3. Guardar en Redis con TTL de 15 minutos (900 seg)
-    await savePasswordResetToken(user.email, user.id, resetToken, 900);
-
-    // 4. Construir URL dinámica de restablecimiento
-    const origin = req.get('origin') || `${req.protocol}://${req.get('host')}`;
-    const resetUrl = `${origin}/reset-password?token=${resetToken}`;
-
-    // 5. Enviar correo SMTP
-    await sendPasswordResetEmail(user.email, user.username, resetUrl, 15);
-
-    logger.security.info('Enlace de recuperación de contraseña generado y enviado', {
-      userId: user.id,
-      email: user.email,
-    });
-
+    // Respuesta genérica para prevenir recolección y enumeración de usuarios (OWASP)
     sendSuccess(res, {
-      message: 'Hemos enviado un enlace de recuperación a tu correo electrónico.',
+      message: 'Si el correo electrónico está registrado, recibirás un enlace de recuperación.',
     });
   } catch (error) {
     sendInternalError(
@@ -459,7 +481,7 @@ export async function validateResetToken(req: Request, res: Response): Promise<v
 
 /**
  * Restablecimiento definitivo de la contraseña:
- * Valida y consume el token atómicamente de Redis y actualiza el hash en MySQL
+ * Valida y consume el token atómicamente de Redis, actualiza el hash en MySQL y revoca sesiones previas
  */
 export async function resetPassword(req: Request, res: Response): Promise<void> {
   try {
@@ -492,6 +514,9 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
 
     // 3. Actualizar la contraseña en la base de datos MySQL
     await updateUserPassword(tokenResult.userId, newHash);
+
+    // 4. Revocar de inmediato todas las sesiones activas del usuario en otros navegadores/dispositivos
+    await revokeAllUserSessions(tokenResult.userId);
 
     logger.security.info('Contraseña restablecida exitosamente', {
       userId: tokenResult.userId,

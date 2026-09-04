@@ -108,6 +108,14 @@ export async function updateUserPreferences(userId, updates) {
     ]);
     return next;
 }
+async function safeUnlink(filePath) {
+    try {
+        await fs.promises.unlink(filePath);
+    }
+    catch {
+        // Ignorar si ya no existe
+    }
+}
 /**
  * Actualiza el avatar personalizado del usuario
  */
@@ -117,21 +125,15 @@ export async function updateAvatar(userId, file, ip, ua) {
     }
     const maxBytes = 2 * 1024 * 1024;
     if (file.size > maxBytes) {
-        if (file.path && fs.existsSync(file.path)) {
-            try {
-                fs.unlinkSync(file.path);
-            }
-            catch (_) { }
+        if (file.path) {
+            await safeUnlink(file.path);
         }
         return { success: false, error: 'La imagen no debe superar los 2 MB.' };
     }
     const allowedMimes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
     if (!allowedMimes.includes(file.mimetype)) {
-        if (file.path && fs.existsSync(file.path)) {
-            try {
-                fs.unlinkSync(file.path);
-            }
-            catch (_) { }
+        if (file.path) {
+            await safeUnlink(file.path);
         }
         return { success: false, error: 'Formato de imagen no compatible. Usa PNG, JPG o WEBP.' };
     }
@@ -139,10 +141,10 @@ export async function updateAvatar(userId, file, ip, ua) {
     if (file.buffer) {
         imageBuffer = file.buffer;
     }
-    else if (file.path && fs.existsSync(file.path)) {
+    else if (file.path) {
         try {
-            imageBuffer = fs.readFileSync(file.path);
-            fs.unlinkSync(file.path);
+            imageBuffer = await fs.promises.readFile(file.path);
+            await safeUnlink(file.path);
         }
         catch (err) {
             logger.app.error('Error al leer archivo temporal de avatar', err);
@@ -174,22 +176,13 @@ export async function updateAvatar(userId, file, ip, ua) {
     if (oldAvatarUrl && oldAvatarUrl.startsWith('/uploads/avatars/')) {
         const oldFileName = path.basename(oldAvatarUrl);
         const oldFilePath = path.join(AVATARS_DIR, oldFileName);
-        if (fs.existsSync(oldFilePath)) {
-            try {
-                fs.unlinkSync(oldFilePath);
-            }
-            catch (err) {
-                logger.app.warn('No se pudo borrar el avatar anterior del disco', err);
-            }
-        }
+        await safeUnlink(oldFilePath);
     }
     const newFileName = `avatar_${userId}_${Date.now()}.${sanitized.extension}`;
     const targetPath = path.join(AVATARS_DIR, newFileName);
-    if (!fs.existsSync(AVATARS_DIR)) {
-        fs.mkdirSync(AVATARS_DIR, { recursive: true });
-    }
     try {
-        fs.writeFileSync(targetPath, sanitized.buffer);
+        await fs.promises.mkdir(AVATARS_DIR, { recursive: true });
+        await fs.promises.writeFile(targetPath, sanitized.buffer);
     }
     catch (err) {
         logger.app.error('Error al persistir el avatar sanitizado en disco', err);
@@ -212,14 +205,7 @@ export async function deleteAvatar(userId, ip, ua) {
     if (oldAvatarUrl && oldAvatarUrl.startsWith('/uploads/avatars/')) {
         const oldFileName = path.basename(oldAvatarUrl);
         const oldFilePath = path.join(AVATARS_DIR, oldFileName);
-        if (fs.existsSync(oldFilePath)) {
-            try {
-                fs.unlinkSync(oldFilePath);
-            }
-            catch (err) {
-                logger.app.warn('No se pudo borrar el avatar al eliminar', err);
-            }
-        }
+        await safeUnlink(oldFilePath);
     }
     await pool.query('UPDATE users SET avatar_url = NULL WHERE id = ?', [userId]);
     await logUserAudit(userId, 'delete_avatar', oldAvatarUrl, null, ip, ua);

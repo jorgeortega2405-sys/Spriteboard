@@ -6,9 +6,12 @@ import { fileURLToPath } from 'url';
 import { config } from './config/env.js';
 import { checkDbConnection } from './config/database.js';
 import { checkRedisConnection } from './config/redis.js';
+import { checkCassandraConnection } from './config/cassandra.js';
 import apiRouter from './routes/api.routes.js';
 import { getHealth } from './controllers/config.controller.js';
 import { logger } from './services/logger.service.js';
+import { telemetryMiddleware } from './middlewares/telemetry.middleware.js';
+import { telemetryService } from './services/telemetry.service.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -16,9 +19,33 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = config.port;
 
-// Middlewares globales
-app.use(express.json());
+// Deshabilitar huella de tecnología (X-Powered-By)
+app.disable('x-powered-by');
+
+// Configuración de proxies de confianza para resolución fidedigna de IP
+app.set('trust proxy', config.trustProxy);
+
+// Cabeceras HTTP de seguridad global (OWASP Best Practices)
+app.use((req: Request, res: Response, next: express.NextFunction) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  if (config.nodeEnv === 'production') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  }
+  next();
+});
+
+// Middlewares globales con límite estricto de carga para prevenir ataques DoS por agotamiento de memoria
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(cookieParser());
+
+// Middleware de telemetría HTTP no bloqueante
+app.use(telemetryMiddleware);
 
 // Servir archivos estáticos desde la carpeta public
 app.use(express.static(path.join(__dirname, '../public')));
@@ -46,14 +73,34 @@ app.get('*', (req: Request, res: Response) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
-// Inicialización de la base de datos, Redis y arranque del servidor
+// Inicialización de la base de datos, Redis, Cassandra y arranque del servidor
 async function startServer() {
   try {
+    if (config.nodeEnv === 'production' && config.sessionSecret === 'spriteboard_session_secret_key_2026') {
+      logger.security.warn('ADVERTENCIA DE SEGURIDAD: SESSION_SECRET utiliza la clave por defecto en entorno de producción. Configura una clave aleatoria en .env');
+    }
     await checkDbConnection();
     await checkRedisConnection();
-    app.listen(PORT, () => {
+
+    // Inicialización resiliente de Apache Cassandra en segundo plano (buffer activo mientras conecta)
+    void checkCassandraConnection().catch((err) => {
+      logger.db.warn('Cassandra aún no disponible; telemetría retenida en buffer.', err);
+    });
+
+    const server = app.listen(PORT, () => {
       logger.app.info(`Servidor TypeScript iniciado y escuchando en puerto ${PORT}`);
     });
+
+    // Apagado ordenado asegurando el vaciado de buffers de telemetría
+    const handleShutdown = async (signal: string) => {
+      logger.app.info(`Señal ${signal} recibida. Vaciando buffers de telemetría y cerrando...`);
+      server.close();
+      await telemetryService.flush();
+      process.exit(0);
+    };
+
+    process.on('SIGTERM', () => void handleShutdown('SIGTERM'));
+    process.on('SIGINT', () => void handleShutdown('SIGINT'));
   } catch (error) {
     logger.app.error('Error crítico al inicializar los servicios del servidor', error);
     process.exit(1);
@@ -61,3 +108,4 @@ async function startServer() {
 }
 
 startServer();
+

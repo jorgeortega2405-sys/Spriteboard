@@ -13,7 +13,7 @@ export function generateCsrfToken(req, res) {
         });
     }
     // Token generado de forma segura mediante HMAC
-    const token = crypto.createHmac('sha256', config.sessionSecret).update(secret).digest('hex');
+    const token = crypto.createHmac('sha256', config.csrfSecret).update(secret).digest('hex');
     // Guardar también en cookie legible por el cliente
     res.cookie('XSRF-TOKEN', token, {
         httpOnly: false,
@@ -39,7 +39,7 @@ export function validateCsrf(req, res, next) {
         res.status(403).json({ error: 'Token CSRF ausente o no válido' });
         return;
     }
-    const expectedToken = crypto.createHmac('sha256', config.sessionSecret).update(secret).digest('hex');
+    const expectedToken = crypto.createHmac('sha256', config.csrfSecret).update(secret).digest('hex');
     if (providedToken.length !== expectedToken.length ||
         !crypto.timingSafeEqual(Buffer.from(providedToken), Buffer.from(expectedToken))) {
         logger.security.warn('Petición bloqueada por token CSRF inválido', {

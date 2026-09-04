@@ -29,41 +29,70 @@ export async function getPendingRegistration(email) {
         return null;
     }
 }
+const VERIFY_REG_CODE_LUA = `
+local key = KEYS[1]
+local inputCode = ARGV[1]
+local maxAttempts = tonumber(ARGV[2])
+
+local raw = redis.call('GET', key)
+if not raw then
+  return {0, 'expired'}
+end
+
+local data = cjson.decode(raw)
+if tonumber(data.attempts) >= maxAttempts then
+  redis.call('DEL', key)
+  return {0, 'max_attempts_exceeded'}
+end
+
+if tostring(data.code) ~= tostring(inputCode) then
+  data.attempts = tonumber(data.attempts) + 1
+  local ttl = redis.call('TTL', key)
+  if ttl > 0 then
+    redis.call('SETEX', key, ttl, cjson.encode(data))
+  end
+  local remaining = maxAttempts - data.attempts
+  return {0, 'wrong_code', tostring(remaining)}
+end
+
+-- Código válido: consumir atómicamente para prevenir reuso concurrente
+redis.call('DEL', key)
+return {1, raw}
+`;
 export async function verifyAndConsumeCode(email, inputCode) {
     const key = `${REDIS_REG_PREFIX}${email.toLowerCase().trim()}`;
-    const pending = await getPendingRegistration(email);
-    if (!pending) {
+    const cleanInput = String(inputCode).trim();
+    // Ejecución atómica en Redis: elimina condiciones de carrera y protege contra ataques de fuerza bruta concurrentes
+    const result = (await redis.eval(VERIFY_REG_CODE_LUA, 1, key, cleanInput, 5));
+    const [status, payloadOrError, remaining] = result;
+    if (status === 1) {
+        try {
+            const data = JSON.parse(payloadOrError);
+            return { success: true, data };
+        }
+        catch {
+            return { success: false, error: 'Error al decodificar los datos del registro pendiente.' };
+        }
+    }
+    if (payloadOrError === 'expired') {
         return {
             success: false,
             error: 'El código de verificación ha expirado o no existe. Inicia el registro de nuevo.',
         };
     }
-    // Protección anti fuerza bruta (máximo 5 intentos)
-    if (pending.attempts >= 5) {
-        await redis.del(key);
+    if (payloadOrError === 'max_attempts_exceeded') {
         return {
             success: false,
             error: 'Demasiados intentos fallidos. El código ha sido invalidado. Solicita uno nuevo.',
         };
     }
-    const cleanInput = String(inputCode).trim();
-    if (cleanInput !== pending.code) {
-        pending.attempts += 1;
-        const remainingTtl = await redis.ttl(key);
-        if (remainingTtl > 0) {
-            await redis.setex(key, remainingTtl, JSON.stringify(pending));
-        }
+    if (payloadOrError === 'wrong_code') {
         return {
             success: false,
-            error: `Código incorrecto. Te quedan ${5 - pending.attempts} intentos.`,
+            error: `Código incorrecto. Te quedan ${remaining ?? 0} intentos.`,
         };
     }
-    // Código correcto: eliminar de Redis para evitar reuso
-    await redis.del(key);
-    return {
-        success: true,
-        data: pending,
-    };
+    return { success: false, error: 'No se pudo verificar el código.' };
 }
 export async function deletePendingRegistration(email) {
     const key = `${REDIS_REG_PREFIX}${email.toLowerCase().trim()}`;
@@ -106,24 +135,33 @@ export async function verifyPasswordResetToken(token) {
         return { valid: false, error: 'Error al procesar el token de recuperación.' };
     }
 }
+const CONSUME_PWD_RESET_LUA = `
+local key = KEYS[1]
+local raw = redis.call('GET', key)
+if raw then
+  redis.call('DEL', key)
+  return raw
+else
+  return nil
+end
+`;
 /**
  * Valida y consume el token de recuperación de Redis en una sola operación atómica
- * garantizando que un token nunca pueda ser utilizado dos veces.
+ * garantizando de forma estricta que un token nunca pueda ser utilizado dos veces en peticiones concurrentes.
  */
 export async function consumePasswordResetToken(token) {
     if (!token || typeof token !== 'string' || !token.trim()) {
         return { success: false, error: 'Token de recuperación no proporcionado o inválido.' };
     }
     const key = `${REDIS_PWD_RESET_PREFIX}${token.trim()}`;
-    const raw = await redis.get(key);
+    // Consumir atómicamente con Lua (GET + DEL simultáneos sin carrera)
+    const raw = (await redis.eval(CONSUME_PWD_RESET_LUA, 1, key));
     if (!raw) {
         return {
             success: false,
             error: 'El enlace de recuperación ha expirado o ya ha sido utilizado. Solicita uno nuevo.',
         };
     }
-    // Eliminar inmediatamente de Redis para prevenir reuso
-    await redis.del(key);
     try {
         const payload = JSON.parse(raw);
         return { success: true, email: payload.email, userId: payload.userId };
@@ -151,54 +189,71 @@ export async function saveEmailChangeCode(userId, currentEmail, code, ttlSeconds
     };
     await redis.setex(key, ttlSeconds, JSON.stringify(payload));
 }
+const VERIFY_EMAIL_CHANGE_LUA = `
+local codeKey = KEYS[1]
+local authKey = KEYS[2]
+local inputCode = ARGV[1]
+local maxAttempts = tonumber(ARGV[2])
+local authTtl = tonumber(ARGV[3])
+
+local raw = redis.call('GET', codeKey)
+if not raw then
+  return {0, 'expired'}
+end
+
+local data = cjson.decode(raw)
+if tonumber(data.attempts) >= maxAttempts then
+  redis.call('DEL', codeKey)
+  return {0, 'max_attempts_exceeded'}
+end
+
+if tostring(data.code) ~= tostring(inputCode) then
+  data.attempts = tonumber(data.attempts) + 1
+  local ttl = redis.call('TTL', codeKey)
+  if ttl > 0 then
+    redis.call('SETEX', codeKey, ttl, cjson.encode(data))
+  end
+  local remaining = maxAttempts - data.attempts
+  return {0, 'wrong_code', tostring(remaining)}
+end
+
+-- Código válido: eliminar código y activar autorización en un único paso atómico
+redis.call('DEL', codeKey)
+redis.call('SETEX', authKey, authTtl, '1')
+return {1, 'authorized'}
+`;
 /**
- * Valida el código de verificación para cambio de correo y genera un token de autorización temporal
+ * Valida el código de verificación para cambio de correo y genera un token de autorización temporal atómicamente
  */
 export async function verifyEmailChangeCode(userId, inputCode) {
-    const key = `${REDIS_EMAIL_CHANGE_PREFIX}${userId}`;
-    const raw = await redis.get(key);
-    if (!raw) {
+    const codeKey = `${REDIS_EMAIL_CHANGE_PREFIX}${userId}`;
+    const authKey = `${REDIS_EMAIL_CHANGE_AUTH_PREFIX}${userId}`;
+    const cleanInput = String(inputCode).trim();
+    // Validación y autorización atómica con Lua
+    const result = (await redis.eval(VERIFY_EMAIL_CHANGE_LUA, 2, codeKey, authKey, cleanInput, 5, 300));
+    const [status, payloadOrError, remaining] = result;
+    if (status === 1) {
+        return { success: true, token: 'authorized' };
+    }
+    if (payloadOrError === 'expired') {
         return {
             success: false,
             error: 'El código de verificación ha expirado o no existe. Solicita uno nuevo.',
         };
     }
-    let pending;
-    try {
-        pending = JSON.parse(raw);
-    }
-    catch {
-        await redis.del(key);
-        return { success: false, error: 'Error al procesar el código de verificación.' };
-    }
-    // Protección anti fuerza bruta (máximo 5 intentos)
-    if (pending.attempts >= 5) {
-        await redis.del(key);
+    if (payloadOrError === 'max_attempts_exceeded') {
         return {
             success: false,
             error: 'Demasiados intentos fallidos. El código ha sido invalidado. Solicita uno nuevo.',
         };
     }
-    const cleanInput = String(inputCode).trim();
-    if (cleanInput !== pending.code) {
-        pending.attempts += 1;
-        const remainingTtl = await redis.ttl(key);
-        if (remainingTtl > 0) {
-            await redis.setex(key, remainingTtl, JSON.stringify(pending));
-        }
+    if (payloadOrError === 'wrong_code') {
         return {
             success: false,
-            error: `Código incorrecto. Te quedan ${5 - pending.attempts} intentos.`,
+            error: `Código incorrecto. Te quedan ${remaining ?? 0} intentos.`,
         };
     }
-    // Código verificado: eliminar código y activar ventana de autorización de 5 minutos (300s)
-    await redis.del(key);
-    const authKey = `${REDIS_EMAIL_CHANGE_AUTH_PREFIX}${userId}`;
-    await redis.setex(authKey, 300, '1');
-    return {
-        success: true,
-        token: 'authorized',
-    };
+    return { success: false, error: 'Error al verificar el código.' };
 }
 /**
  * Comprueba si el usuario tiene una autorización activa para cambio de correo (ventana de 5 minutos)
@@ -208,19 +263,27 @@ export async function isEmailChangeAuthorized(userId) {
     const val = await redis.get(authKey);
     return Boolean(val);
 }
+const CONSUME_EMAIL_AUTH_LUA = `
+local authKey = KEYS[1]
+local val = redis.call('GET', authKey)
+if val then
+  redis.call('DEL', authKey)
+  return 1
+else
+  return 0
+end
+`;
 /**
- * Valida y consume la autorización de cambio de correo tras guardar exitosamente
+ * Valida y consume la autorización de cambio de correo tras guardar exitosamente (operación atómica)
  */
 export async function consumeEmailChangeAuthorization(userId) {
     const authKey = `${REDIS_EMAIL_CHANGE_AUTH_PREFIX}${userId}`;
-    const val = await redis.get(authKey);
-    if (!val) {
+    const consumed = (await redis.eval(CONSUME_EMAIL_AUTH_LUA, 1, authKey));
+    if (consumed !== 1) {
         return {
             valid: false,
             error: 'La autorización de 5 minutos para cambiar el correo ha expirado. Por favor verifica tu código de nuevo.',
         };
     }
-    // Consumir tras guardado exitoso
-    await redis.del(authKey);
     return { valid: true };
 }

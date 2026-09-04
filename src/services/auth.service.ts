@@ -4,8 +4,12 @@ import { Request, Response } from 'express';
 import { config } from '../config/env.js';
 import { UserPayload, SessionAccount, MultiAccountSessionPayload } from '../types/auth.types.js';
 
+import { redis } from '../config/redis.js';
+import { logger } from './logger.service.js';
+
 export const COOKIE_NAME = 'sprite_session';
 export const MAX_CONCURRENT_ACCOUNTS = 5;
+export const REVOCATION_PREFIX = 'session_revoked:';
 
 export async function hashPassword(password: string): Promise<string> {
   const salt = await bcrypt.genSalt(10);
@@ -16,9 +20,15 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
   return bcrypt.compare(password, hash);
 }
 
-// Firmar payload multicuentas de sesión
+// Firmar payload multicuentas de sesión con iat y exp integrados
 export function createMultiAccountToken(session: MultiAccountSessionPayload): string {
-  const payloadStr = JSON.stringify(session);
+  const now = Date.now();
+  const sessionWithMeta: MultiAccountSessionPayload = {
+    ...session,
+    iat: session.iat || now,
+    exp: session.exp || (now + 7 * 24 * 60 * 60 * 1000), // 7 días de vigencia estricta
+  };
+  const payloadStr = JSON.stringify(sessionWithMeta);
   const payloadBase64 = Buffer.from(payloadStr, 'utf-8').toString('base64url');
   const signature = crypto.createHmac('sha256', config.sessionSecret).update(payloadBase64).digest('base64url');
   return `${payloadBase64}.${signature}`;
@@ -41,7 +51,7 @@ export function createSessionToken(user: UserPayload): string {
   });
 }
 
-// Verificar y extraer sesión multicuentas
+// Verificar y extraer sesión multicuentas validando firma y expiración
 export function verifyMultiAccountToken(token: string): MultiAccountSessionPayload | null {
   try {
     const parts = token.split('.');
@@ -61,12 +71,19 @@ export function verifyMultiAccountToken(token: string): MultiAccountSessionPaylo
     const parsed = JSON.parse(payloadStr);
 
     if (parsed && typeof parsed === 'object') {
+      // Validar expiración criptográfica del token (previene reutilización si expiró)
+      if (parsed.exp && typeof parsed.exp === 'number' && Date.now() > parsed.exp) {
+        return null;
+      }
+
       if (Array.isArray(parsed.accounts) && typeof parsed.activeId === 'number') {
         return parsed as MultiAccountSessionPayload;
       } else if (typeof parsed.id === 'number') {
         // Sesión clásica de usuario individual migrada en caliente
         return {
           activeId: parsed.id,
+          iat: parsed.iat,
+          exp: parsed.exp,
           accounts: [
             {
               id: parsed.id,
@@ -83,6 +100,37 @@ export function verifyMultiAccountToken(token: string): MultiAccountSessionPaylo
     return null;
   } catch {
     return null;
+  }
+}
+
+/**
+ * Revoca en el servidor todas las sesiones existentes de un usuario (para logout-all o cambio de contraseña)
+ */
+export async function revokeAllUserSessions(userId: number): Promise<void> {
+  try {
+    const key = `${REVOCATION_PREFIX}${userId}`;
+    const now = Date.now();
+    await redis.setex(key, 7 * 24 * 60 * 60, String(now));
+    logger.security.info('Sesiones de usuario revocadas en el servidor', { userId, timestamp: now });
+  } catch (error) {
+    logger.db.error('Error al registrar revocación de sesiones en Redis', error);
+  }
+}
+
+/**
+ * Comprueba si la sesión ha sido revocada en el servidor comparando su iat con la fecha de revocación
+ */
+export async function isSessionRevoked(userId: number, tokenIat?: number): Promise<boolean> {
+  if (!tokenIat) return false;
+  try {
+    const key = `${REVOCATION_PREFIX}${userId}`;
+    const revokedAtStr = await redis.get(key);
+    if (!revokedAtStr) return false;
+    const revokedAt = Number(revokedAtStr);
+    return tokenIat <= revokedAt;
+  } catch (error) {
+    logger.db.error('Error al verificar revocación de sesión en Redis', error);
+    return false; // Fail-open resiliente
   }
 }
 

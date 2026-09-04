@@ -21,12 +21,26 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+export function escapeHtml(str: unknown): string {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 export function renderTemplateString(
   template: string,
-  variables: Record<string, string | number>
+  variables: Record<string, string | number>,
+  isHtml = false
 ): string {
   return template.replace(/\{\{\s*(\w+)\s*\}\}/g, (match, key) => {
-    return key in variables ? String(variables[key]) : match;
+    if (key in variables) {
+      const val = variables[key];
+      return isHtml ? escapeHtml(val) : String(val);
+    }
+    return match;
   });
 }
 
@@ -46,9 +60,9 @@ export async function sendTemplateEmail(
     ...variables,
   };
 
-  const subject = renderTemplateString(template.subject, mergedVariables);
-  const html = renderTemplateString(template.html, mergedVariables);
-  const text = renderTemplateString(template.text, mergedVariables);
+  const subject = renderTemplateString(template.subject, mergedVariables, false);
+  const html = renderTemplateString(template.html, mergedVariables, true);
+  const text = renderTemplateString(template.text, mergedVariables, false);
 
   const fromAddress = `"${config.smtp.fromName}" <${config.smtp.fromEmail}>`;
 

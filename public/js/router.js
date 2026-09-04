@@ -15,8 +15,10 @@ import { createErrorView } from './views/error.js';
 import { SkeletonService } from './services/skeleton.service.js';
 import { hideTooltip } from './services/tooltip.js';
 import { currentUser } from './services/api.js';
+import { trackPageView } from './services/telemetry.js';
 
 let currentNavigation = 0;
+let previousPath = '';
 
 export function navigate(url) {
   window.history.pushState({}, '', url);
@@ -137,6 +139,12 @@ export async function render() {
     const isScrolled = activeScrollable ? activeScrollable.scrollTop > 0 : false;
     activeHeader.classList.toggle('shadow', isScrolled);
     activeHeader.classList.toggle('layout-header--shadow', isScrolled);
+  }
+
+  // Registro de telemetría de navegación
+  if (path !== previousPath) {
+    trackPageView(path, previousPath);
+    previousPath = path;
   }
 }
 

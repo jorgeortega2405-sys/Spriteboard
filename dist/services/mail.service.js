@@ -12,9 +12,21 @@ const transporter = nodemailer.createTransport({
         pass: config.smtp.pass,
     },
 });
-export function renderTemplateString(template, variables) {
+export function escapeHtml(str) {
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+export function renderTemplateString(template, variables, isHtml = false) {
     return template.replace(/\{\{\s*(\w+)\s*\}\}/g, (match, key) => {
-        return key in variables ? String(variables[key]) : match;
+        if (key in variables) {
+            const val = variables[key];
+            return isHtml ? escapeHtml(val) : String(val);
+        }
+        return match;
     });
 }
 export async function sendTemplateEmail(templateKey, toEmail, variables = {}) {
@@ -27,9 +39,9 @@ export async function sendTemplateEmail(templateKey, toEmail, variables = {}) {
         year: new Date().getFullYear(),
         ...variables,
     };
-    const subject = renderTemplateString(template.subject, mergedVariables);
-    const html = renderTemplateString(template.html, mergedVariables);
-    const text = renderTemplateString(template.text, mergedVariables);
+    const subject = renderTemplateString(template.subject, mergedVariables, false);
+    const html = renderTemplateString(template.html, mergedVariables, true);
+    const text = renderTemplateString(template.text, mergedVariables, false);
     const fromAddress = `"${config.smtp.fromName}" <${config.smtp.fromEmail}>`;
     await transporter.sendMail({
         from: fromAddress,

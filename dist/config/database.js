@@ -15,6 +15,10 @@ class DatabaseManager {
         this.mysqlPools.set(name, newPool);
         return newPool;
     }
+    // Registrar un pool MySQL ya existente (para alias sin crear conexiones adicionales)
+    registerExistingMySql(name, pool) {
+        this.mysqlPools.set(name, pool);
+    }
     // Obtener un pool MySQL por nombre (por defecto 'default')
     getMySql(name = 'default') {
         const p = this.mysqlPools.get(name);
@@ -40,33 +44,31 @@ class DatabaseManager {
     }
 }
 export const dbManager = new DatabaseManager();
-// 1. Registrar base de datos principal de identidad (MySQL)
-export const pool = dbManager.registerMySql('default', {
+// 1. Registrar base de datos principal de identidad (MySQL) con pooling optimizado y keepAlive
+const defaultDbOptions = {
     host: process.env.DB_HOST || 'mysql',
     port: Number(process.env.DB_PORT) || 3306,
     user: process.env.DB_USER || 'sprite_user',
     password: process.env.DB_PASSWORD || 'sprite_password',
     database: process.env.DB_NAME || 'db_identity',
     waitForConnections: true,
-    connectionLimit: 10,
+    connectionLimit: 15,
     queueLimit: 0,
-});
-// Alias semántico para la BD de identidad
-dbManager.registerMySql('identity', {
-    host: process.env.DB_HOST || 'mysql',
-    port: Number(process.env.DB_PORT) || 3306,
-    user: process.env.DB_USER || 'sprite_user',
-    password: process.env.DB_PASSWORD || 'sprite_password',
-    database: process.env.DB_NAME || 'db_identity',
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0,
-});
+    enableKeepAlive: true,
+    keepAliveInitialDelay: 10000,
+};
+export const pool = dbManager.registerMySql('default', defaultDbOptions);
+// Alias semántico que reutiliza la misma instancia del pool para no duplicar conexiones de MySQL
+dbManager.registerExistingMySql('identity', pool);
 export async function runMigrations() {
     const conn = await pool.getConnection();
     try {
-        // 1. Permitir password_hash nulo para usuarios de Google
-        await conn.query('ALTER TABLE users MODIFY password_hash VARCHAR(255) NULL');
+        // 1. Permitir password_hash nulo para usuarios de Google únicamente si no lo permite aún
+        const [pwdCols] = await conn.query("SHOW COLUMNS FROM users LIKE 'password_hash'");
+        if (pwdCols.length > 0 && pwdCols[0].Null === 'NO') {
+            await conn.query('ALTER TABLE users MODIFY password_hash VARCHAR(255) NULL');
+            logger.db.info('Columna password_hash modificada a NULL en users.');
+        }
         // 2. Columna google_id
         const [cols] = await conn.query("SHOW COLUMNS FROM users LIKE 'google_id'");
         if (cols.length === 0) {
@@ -94,8 +96,7 @@ export async function runMigrations() {
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
-        await conn.query('ALTER TABLE user_preferences MODIFY COLUMN language VARCHAR(50) NOT NULL DEFAULT \'en-US\'');
-        // 5. Tabla user_audit_logs
+        // 5. Tabla user_audit_logs con índice compuesto para escalabilidad
         await conn.query(`
       CREATE TABLE IF NOT EXISTS user_audit_logs (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -106,10 +107,11 @@ export async function runMigrations() {
         ip_address VARCHAR(45) NULL,
         user_agent VARCHAR(255) NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_audit_user_created (user_id, created_at),
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
-        logger.db.info('Tablas user_preferences y user_audit_logs migradas exitosamente.');
+        logger.db.info('Tablas user_preferences y user_audit_logs verificadas exitosamente.');
     }
     catch (err) {
         logger.db.warn('Advertencia en migración de base de datos', err);

@@ -20,16 +20,24 @@ export function hashString(str) {
     }
     return Math.abs(hash);
 }
-// Extraer la inicial del nombre o username
+export function escapeXml(str) {
+    return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&apos;');
+}
+// Extraer la inicial del nombre o username de forma segura
 export function getInitial(name) {
-    const clean = name.trim().replace(/^[@_.-]+/, '');
+    const clean = String(name || '').trim().replace(/^[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ]+/, '');
     if (!clean)
         return 'U';
     return clean.charAt(0).toUpperCase();
 }
 export function generateAvatarSvg(name, sizeInput) {
-    const initial = getInitial(name);
-    const hash = hashString(name);
+    const initial = escapeXml(getInitial(name));
+    const hash = Math.floor(Math.abs(hashString(name))) || 0;
     const palette = GRADIENT_PALETTES[hash % GRADIENT_PALETTES.length];
     const [color1, color2] = palette;
     const size = Math.min(Math.max(Number(sizeInput) || 80, 32), 256);

@@ -7,6 +7,7 @@ import { fetchCsrfToken, checkAuthSession, fetchAppConfig } from './services/api
 import { render, navigate } from './router.js';
 import { initTooltips } from './services/tooltip.js';
 import { initI18n } from './services/i18n.js';
+import { initWebVitals } from './services/telemetry.js';
 
 export { navigate };
 
@@ -37,6 +38,7 @@ function initScrollShadow() {
 async function init() {
   initTooltips();
   initScrollShadow();
+  initWebVitals();
   await Promise.all([fetchCsrfToken(), checkAuthSession(), fetchAppConfig()]);
   await initI18n();
   await render();

@@ -18,6 +18,8 @@ export interface SessionAccount {
 export interface MultiAccountSessionPayload {
   activeId: number;
   accounts: SessionAccount[];
+  iat?: number;
+  exp?: number;
 }
 
 export interface GoogleTokenResponse {

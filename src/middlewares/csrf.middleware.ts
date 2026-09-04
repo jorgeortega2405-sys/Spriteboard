@@ -16,7 +16,7 @@ export function generateCsrfToken(req: Request, res: Response): string {
   }
 
   // Token generado de forma segura mediante HMAC
-  const token = crypto.createHmac('sha256', config.sessionSecret).update(secret).digest('hex');
+  const token = crypto.createHmac('sha256', config.csrfSecret).update(secret).digest('hex');
 
   // Guardar también en cookie legible por el cliente
   res.cookie('XSRF-TOKEN', token, {
@@ -48,7 +48,7 @@ export function validateCsrf(req: Request, res: Response, next: NextFunction): v
     return;
   }
 
-  const expectedToken = crypto.createHmac('sha256', config.sessionSecret).update(secret).digest('hex');
+  const expectedToken = crypto.createHmac('sha256', config.csrfSecret).update(secret).digest('hex');
 
   if (
     providedToken.length !== expectedToken.length ||
