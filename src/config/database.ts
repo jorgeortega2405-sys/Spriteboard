@@ -1,4 +1,5 @@
 import mysql from 'mysql2/promise';
+import { logger } from '../services/logger.service.js';
 
 export interface NoSqlAdapter {
   name: string;
@@ -91,7 +92,7 @@ export async function runMigrations(): Promise<void> {
     );
     if (cols.length === 0) {
       await conn.query('ALTER TABLE users ADD COLUMN google_id VARCHAR(255) NULL UNIQUE AFTER password_hash');
-      console.log('✅ Columna google_id añadida a la tabla users.');
+      logger.db.info('Columna google_id añadida a la tabla users.');
     }
 
     // 3. Columna avatar_url
@@ -100,10 +101,10 @@ export async function runMigrations(): Promise<void> {
     );
     if (avatarCols.length === 0) {
       await conn.query('ALTER TABLE users ADD COLUMN avatar_url VARCHAR(512) NULL AFTER google_id');
-      console.log('✅ Columna avatar_url añadida a la tabla users.');
+      logger.db.info('Columna avatar_url añadida a la tabla users.');
     }
   } catch (err) {
-    console.error('⚠️ Advertencia en migración de base de datos:', err);
+    logger.db.warn('Advertencia en migración de base de datos', err);
   } finally {
     conn.release();
   }
@@ -113,14 +114,14 @@ export async function checkDbConnection(retries = 15, delayMs = 2000): Promise<v
   for (let i = 1; i <= retries; i++) {
     try {
       const conn = await pool.getConnection();
-      console.log('✅ Conexión establecida exitosamente con MySQL (db_identity).');
+      logger.db.info('Conexión establecida exitosamente con MySQL (db_identity).');
       conn.release();
       await runMigrations();
       return;
     } catch (err) {
-      console.warn(`⏳ Esperando a MySQL en ${process.env.DB_HOST || 'mysql'}:3306 (intento ${i}/${retries})...`);
+      logger.db.warn(`Esperando a MySQL en ${process.env.DB_HOST || 'mysql'}:3306 (intento ${i}/${retries})...`);
       if (i === retries) {
-        console.error('❌ No se pudo conectar a la base de datos MySQL después de múltiples intentos.');
+        logger.db.error('No se pudo conectar a la base de datos MySQL después de múltiples intentos.', err);
         throw err;
       }
       await new Promise((resolve) => setTimeout(resolve, delayMs));

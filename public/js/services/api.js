@@ -30,8 +30,8 @@ export async function fetchAppConfig() {
         document.title = data.appName;
       }
     }
-  } catch (err) {
-    console.warn('No se pudo cargar la configuración de la app:', err);
+  } catch {
+    // Falla silenciosa sin llamadas console.*
   }
 }
 
@@ -44,8 +44,8 @@ export async function fetchCsrfToken() {
       csrfToken = data.csrfToken;
       return csrfToken;
     }
-  } catch (err) {
-    console.error('Error al obtener token CSRF:', err);
+  } catch {
+    // Falla silenciosa sin llamadas console.*
   }
   return '';
 }

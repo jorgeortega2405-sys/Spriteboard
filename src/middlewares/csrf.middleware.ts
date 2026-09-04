@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { Request, Response, NextFunction } from 'express';
 import { config } from '../config/env.js';
+import { logger } from '../services/logger.service.js';
 
 export function generateCsrfToken(req: Request, res: Response): string {
   let secret = req.cookies?._csrf_secret;
@@ -39,6 +40,10 @@ export function validateCsrf(req: Request, res: Response, next: NextFunction): v
   const providedToken = (req.headers['x-csrf-token'] as string) || (req.body?._csrf as string);
 
   if (!secret || !providedToken) {
+    logger.security.warn('Petición bloqueada por token CSRF ausente o no válido', {
+      method: req.method,
+      path: req.originalUrl || req.url,
+    });
     res.status(403).json({ error: 'Token CSRF ausente o no válido' });
     return;
   }
@@ -49,6 +54,10 @@ export function validateCsrf(req: Request, res: Response, next: NextFunction): v
     providedToken.length !== expectedToken.length ||
     !crypto.timingSafeEqual(Buffer.from(providedToken), Buffer.from(expectedToken))
   ) {
+    logger.security.warn('Petición bloqueada por token CSRF inválido', {
+      method: req.method,
+      path: req.originalUrl || req.url,
+    });
     res.status(403).json({ error: 'Token CSRF inválido' });
     return;
   }

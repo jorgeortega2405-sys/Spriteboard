@@ -1,5 +1,6 @@
 import { Redis } from 'ioredis';
 import { config } from './env.js';
+import { logger } from '../services/logger.service.js';
 
 export const redis = new Redis({
   host: config.redis.host,
@@ -13,7 +14,7 @@ export const redis = new Redis({
 });
 
 redis.on('error', (err) => {
-  console.warn('⚠️ Advertencia en cliente Redis:', err.message);
+  logger.db.warn('Advertencia en cliente Redis:', err);
 });
 
 export async function checkRedisConnection(retries = 10, delayMs = 1500): Promise<void> {
@@ -24,13 +25,13 @@ export async function checkRedisConnection(retries = 10, delayMs = 1500): Promis
       }
       const pong = await redis.ping();
       if (pong === 'PONG') {
-        console.log('✅ Conexión establecida exitosamente con Redis.');
+        logger.db.info('Conexión establecida exitosamente con Redis.');
         return;
       }
     } catch (err) {
-      console.warn(`⏳ Esperando a Redis en ${config.redis.host}:${config.redis.port} (intento ${i}/${retries})...`);
+      logger.db.warn(`Esperando a Redis en ${config.redis.host}:${config.redis.port} (intento ${i}/${retries})...`);
       if (i === retries) {
-        console.error('❌ No se pudo conectar a Redis después de múltiples intentos.');
+        logger.db.error('No se pudo conectar a Redis después de múltiples intentos.', err);
         throw err;
       }
       await new Promise((resolve) => setTimeout(resolve, delayMs));

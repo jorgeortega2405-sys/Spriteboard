@@ -19,6 +19,7 @@ import {
 } from '../services/verification.service.js';
 import { sendVerificationCodeEmail } from '../services/mail.service.js';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
+import { logger } from '../services/logger.service.js';
 import {
   validateEmail,
   validatePassword,
@@ -60,7 +61,7 @@ export async function validateStage1(req: Request, res: Response): Promise<void>
 
     res.json({ ok: true, message: 'Datos válidos para continuar a la etapa 2.' });
   } catch (error) {
-    console.error('Error al validar etapa 1 de registro:', error);
+    logger.app.error('Error al validar etapa 1 de registro', error);
     res.status(500).json({ error: 'Error interno del servidor al validar datos.' });
   }
 }
@@ -100,9 +101,11 @@ export async function sendRegistrationCode(req: Request, res: Response): Promise
     if (existing.length > 0) {
       const match = existing[0];
       if (match.username.toLowerCase() === trimmedUsername.toLowerCase()) {
+        logger.security.warn('Intento de registro con nombre de usuario existente', { username: trimmedUsername });
         res.status(409).json({ error: 'El nombre de usuario ya está en uso.' });
         return;
       }
+      logger.security.warn('Intento de registro con correo electrónico ya existente', { email: trimmedEmail });
       res.status(409).json({ error: 'El correo electrónico ya está registrado.' });
       return;
     }
@@ -121,12 +124,14 @@ export async function sendRegistrationCode(req: Request, res: Response): Promise
     // Enviar código por correo mediante SMTP
     await sendVerificationCodeEmail(trimmedEmail, trimmedUsername, code);
 
+    logger.security.info('Código de verificación enviado exitosamente', { email: trimmedEmail, username: trimmedUsername });
+
     res.json({
       ok: true,
       message: `Código de verificación enviado exitosamente a ${trimmedEmail}.`,
     });
   } catch (error) {
-    console.error('Error al enviar código de registro:', error);
+    logger.app.error('Error al enviar código de registro', error);
     res.status(500).json({ error: 'No se pudo enviar el correo de verificación. Inténtalo de nuevo.' });
   }
 }
@@ -154,6 +159,7 @@ export async function verifyRegistrationCode(req: Request, res: Response): Promi
     const verificationResult = await verifyAndConsumeCode(trimmedEmail, cleanCode);
 
     if (!verificationResult.success || !verificationResult.data) {
+      logger.security.warn('Fallo en verificación de código de registro', { email: trimmedEmail, error: verificationResult.error });
       res.status(400).json({ error: verificationResult.error || 'Código incorrecto o expirado.' });
       return;
     }
@@ -175,12 +181,14 @@ export async function verifyRegistrationCode(req: Request, res: Response): Promi
     // Iniciar sesión automáticamente emitiendo la cookie de sesión
     setSessionCookie(res, newUser);
 
+    logger.security.info('Cuenta creada y verificada exitosamente', { userId: newUser.id, email: newUser.email });
+
     res.status(201).json({
       message: 'Cuenta creada y verificada exitosamente.',
       user: newUser,
     });
   } catch (error) {
-    console.error('Error al verificar código de registro:', error);
+    logger.app.error('Error al verificar código de registro', error);
     res.status(500).json({ error: 'Error interno del servidor al crear la cuenta.' });
   }
 }
@@ -200,6 +208,7 @@ export async function resendRegistrationCode(req: Request, res: Response): Promi
     const pending = await getPendingRegistration(trimmedEmail);
 
     if (!pending) {
+      logger.security.warn('Intento de reenvío con sesión de registro expirada', { email: trimmedEmail });
       res.status(400).json({ error: 'La sesión de registro ha expirado. Debes iniciar desde el principio.' });
       return;
     }
@@ -213,9 +222,11 @@ export async function resendRegistrationCode(req: Request, res: Response): Promi
 
     await sendVerificationCodeEmail(trimmedEmail, pending.username, newCode);
 
+    logger.security.info('Nuevo código de verificación enviado', { email: trimmedEmail });
+
     res.json({ ok: true, message: 'Nuevo código enviado exitosamente.' });
   } catch (error) {
-    console.error('Error al reenviar código:', error);
+    logger.app.error('Error al reenviar código', error);
     res.status(500).json({ error: 'No se pudo reenviar el código. Inténtalo de nuevo.' });
   }
 }
@@ -238,6 +249,7 @@ export async function login(req: Request, res: Response): Promise<void> {
     );
 
     if (rows.length === 0) {
+      logger.security.warn('Intento de inicio de sesión fallido: correo no encontrado', { email: trimmedEmail });
       res.status(401).json({ error: 'Credenciales inválidas.' });
       return;
     }
@@ -246,6 +258,7 @@ export async function login(req: Request, res: Response): Promise<void> {
     const isMatch = await verifyPassword(String(password), userRow.password_hash);
 
     if (!isMatch) {
+      logger.security.warn('Intento de inicio de sesión fallido: contraseña incorrecta', { email: trimmedEmail });
       res.status(401).json({ error: 'Credenciales inválidas.' });
       return;
     }
@@ -260,12 +273,14 @@ export async function login(req: Request, res: Response): Promise<void> {
 
     setSessionCookie(res, user);
 
+    logger.security.info('Inicio de sesión exitoso', { userId: user.id, email: user.email });
+
     res.json({
       message: 'Inicio de sesión exitoso.',
       user,
     });
   } catch (error) {
-    console.error('Error al iniciar sesión:', error);
+    logger.app.error('Error al iniciar sesión', error);
     res.status(500).json({ error: 'Error interno del servidor al iniciar sesión.' });
   }
 }
@@ -273,6 +288,7 @@ export async function login(req: Request, res: Response): Promise<void> {
 // Cierre de sesión
 export function logout(req: Request, res: Response): void {
   clearSessionCookie(res);
+  logger.security.info('Sesión cerrada exitosamente');
   res.json({ message: 'Sesión cerrada exitosamente.' });
 }
 
@@ -294,12 +310,13 @@ export async function googleCallback(req: Request, res: Response): Promise<void>
     const { code, state, error } = req.query;
 
     if (error) {
-      console.warn('Google OAuth cancelado o con error:', error);
+      logger.security.warn('Google OAuth cancelado o con error', { error });
       res.redirect('/login?error=' + encodeURIComponent(String(error)));
       return;
     }
 
     if (!code || !state) {
+      logger.security.warn('Google OAuth faltan parámetros requeridos');
       res.redirect('/login?error=missing_oauth_parameters');
       return;
     }
@@ -308,16 +325,19 @@ export async function googleCallback(req: Request, res: Response): Promise<void>
     res.clearCookie(STATE_COOKIE_NAME);
 
     if (!storedState || storedState !== state) {
-      console.error('Invalid OAuth state parameter');
+      logger.security.warn('Parámetro state de Google OAuth inválido o ausente');
       res.redirect('/login?error=invalid_oauth_state');
       return;
     }
 
     const userPayload = await processGoogleAuthCallback(String(code));
     setSessionCookie(res, userPayload);
+
+    logger.security.info('Inicio de sesión exitoso con Google OAuth', { userId: userPayload.id, email: userPayload.email });
+
     res.redirect('/');
   } catch (err) {
-    console.error('Error no controlado en Google OAuth callback:', err);
+    logger.app.error('Error no controlado en Google OAuth callback', err);
     res.redirect('/login?error=server_error');
   }
 }

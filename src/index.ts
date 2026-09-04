@@ -8,6 +8,7 @@ import { checkDbConnection } from './config/database.js';
 import { checkRedisConnection } from './config/redis.js';
 import apiRouter from './routes/api.routes.js';
 import { getHealth } from './controllers/config.controller.js';
+import { logger } from './services/logger.service.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -39,10 +40,10 @@ async function startServer() {
     await checkDbConnection();
     await checkRedisConnection();
     app.listen(PORT, () => {
-      console.log(`🚀 Servidor TypeScript corriendo en http://localhost:${PORT}`);
+      logger.app.info(`Servidor TypeScript iniciado y escuchando en puerto ${PORT}`);
     });
   } catch (error) {
-    console.error('❌ Error crítico al inicializar los servicios del servidor:', error);
+    logger.app.error('Error crítico al inicializar los servicios del servidor', error);
     process.exit(1);
   }
 }
