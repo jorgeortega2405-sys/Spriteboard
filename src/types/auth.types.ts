@@ -12,14 +12,25 @@ export interface SessionAccount {
   email: string;
   avatar_url?: string | null;
   google_id?: string | null;
+  sessionId?: string;
   last_accessed?: number;
 }
 
 export interface MultiAccountSessionPayload {
   activeId: number;
+  sessionId?: string;
   accounts: SessionAccount[];
   iat?: number;
   exp?: number;
+}
+
+export interface ActiveSessionData {
+  sessionId: string;
+  userId: number;
+  ip?: string;
+  userAgent?: string;
+  createdAt: number;
+  lastActiveAt: number;
 }
 
 export interface GoogleTokenResponse {

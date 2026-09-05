@@ -21,6 +21,11 @@ export function setLinkedAccounts(accounts) {
   linkedAccounts = Array.isArray(accounts) ? accounts : [];
 }
 
+export function clearUserState() {
+  currentUser = null;
+  linkedAccounts = [];
+}
+
 export function escapeHtml(str) {
   return String(str)
     .replace(/&/g, '&amp;')

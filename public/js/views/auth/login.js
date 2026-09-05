@@ -1,6 +1,7 @@
 import { loadTemplate } from '../../services/template.js';
 import { postApi, setCurrentUser, setLinkedAccounts } from '../../services/api.js';
 import { navigate } from '../../router.js';
+import { initWebSocket } from '../../services/websocket.service.js';
 import {
   setupPasswordToggle,
   createBannerManager,
@@ -73,6 +74,7 @@ export async function createLoginView() {
 
         setCurrentUser(data.user);
         if (data.accounts) setLinkedAccounts(data.accounts);
+        initWebSocket();
         navigate('/');
       } catch {
         banners.showError(t('toasts.network_error'));

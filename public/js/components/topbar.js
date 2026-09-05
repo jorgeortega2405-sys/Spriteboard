@@ -12,6 +12,7 @@ import { toggleChatSidebar } from './chat-sidebar.js';
 import { navigate, render } from '../router.js';
 import { t } from '../services/i18n.js';
 import { showToast } from '../services/toast.js';
+import { initWebSocket, closeWebSocket } from '../services/websocket.service.js';
 
 export async function createTopBar() {
   const topbar = await loadTemplate('/views/components/topbar.html');
@@ -154,6 +155,8 @@ export async function createTopBar() {
               closeMenu();
               const res = await switchAccountApi(acc.id);
               if (res.success) {
+                closeWebSocket();
+                initWebSocket();
                 showToast(t('toasts.account_switched') || 'Has cambiado de cuenta exitosamente.', 'success');
                 cleanupAndRender();
               } else {
@@ -391,7 +394,11 @@ export async function createTopBar() {
         const res = await logoutApi();
         if (res.success) {
           if (res.switched) {
+            closeWebSocket();
+            initWebSocket();
             showToast(t('toasts.account_switched') || 'Has cambiado de cuenta.', 'info');
+          } else {
+            closeWebSocket();
           }
           cleanupAndRender();
         }
@@ -401,9 +408,10 @@ export async function createTopBar() {
       btnLogoutAll?.addEventListener('click', async (e) => {
         e.preventDefault();
         closeMenu();
+        closeWebSocket();
         await logoutAllApi();
         showToast(t('toasts.all_sessions_closed') || 'Se han cerrado todas las sesiones activas.', 'info');
-        cleanupAndRender();
+        navigate('/login');
       });
     }
   } else {

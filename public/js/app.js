@@ -10,6 +10,7 @@ import { initI18n } from './services/i18n.js';
 import { initWebVitals } from './services/telemetry.js';
 import { initTheme } from './services/theme.service.js';
 import { initChatSidebar } from './components/chat-sidebar.js';
+import { initWebSocket } from './services/websocket.service.js';
 
 export { navigate };
 
@@ -43,6 +44,7 @@ async function init() {
   initScrollShadow();
   initWebVitals();
   await Promise.all([fetchCsrfToken(), checkAuthSession(), fetchAppConfig()]);
+  initWebSocket();
   await initI18n();
   await initChatSidebar();
   await render();

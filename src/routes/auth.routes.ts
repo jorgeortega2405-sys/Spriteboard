@@ -10,11 +10,13 @@ import {
   switchAccount,
   me,
   redirectToGoogle,
+  redirectToGoogleVerify,
   googleCallback,
   forgotPassword,
   validateResetToken,
   resetPassword,
 } from '../controllers/auth.controller.js';
+import { requireAuth } from '../middlewares/auth.middleware.js';
 import {
   registerLimiter,
   sendCodeLimiter,
@@ -42,6 +44,7 @@ router.post('/switch-account', switchAccount);
 router.get('/me', me);
 
 router.get('/auth/google', redirectToGoogle);
+router.get('/auth/google/verify', requireAuth, redirectToGoogleVerify);
 router.get('/auth/google/callback', googleCallback);
 
 // Flujo de recuperación y restablecimiento de contraseña

@@ -31,3 +31,7 @@ lerna-debug.log*
 # Archivos generados por el sistema operativo
 .DS_Store
 Thumbs.db
+
+# Rust / Cargo
+target/
+**/target/

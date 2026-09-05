@@ -10,6 +10,9 @@ import {
   handleUpdateEmail,
   handleGetPreferences,
   handleUpdatePreferences,
+  handleGetPasswordStatus,
+  handleVerifyCurrentPassword,
+  handleUpdatePassword,
 } from '../controllers/settings.controller.js';
 
 const router = Router();
@@ -54,6 +57,8 @@ import {
   emailCodeLimiter,
   verifyEmailCodeLimiter,
   updateUsernameLimiter,
+  verifyPasswordLimiter,
+  updatePasswordLimiter,
 } from '../middlewares/rate-limit.middleware.js';
 
 // Todas las rutas de configuración requieren autenticación activa
@@ -69,6 +74,11 @@ router.post('/settings/username', updateUsernameLimiter, handleUpdateUsername);
 router.post('/settings/email/request-code', emailCodeLimiter, handleRequestEmailChangeCode);
 router.post('/settings/email/verify-code', verifyEmailCodeLimiter, handleVerifyEmailChangeCode);
 router.post('/settings/email', verifyEmailCodeLimiter, handleUpdateEmail);
+
+// Rutas de Contraseña protegidas con Rate Limiting
+router.get('/settings/password/status', handleGetPasswordStatus);
+router.post('/settings/password/verify', verifyPasswordLimiter, handleVerifyCurrentPassword);
+router.post('/settings/password', updatePasswordLimiter, handleUpdatePassword);
 
 // Rutas de Preferencias
 router.get('/settings/preferences', handleGetPreferences);

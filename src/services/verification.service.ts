@@ -391,4 +391,53 @@ export async function consumeEmailChangeAuthorization(
   return { valid: true };
 }
 
+const REDIS_PASSWORD_CHANGE_AUTH_PREFIX = 'pwd_change_auth:';
+
+/**
+ * Guarda la autorización temporal para cambio de contraseña (5 minutos por defecto)
+ */
+export async function savePasswordChangeAuth(userId: number, ttlSeconds = 300): Promise<void> {
+  const key = `${REDIS_PASSWORD_CHANGE_AUTH_PREFIX}${userId}`;
+  await redis.setex(key, ttlSeconds, 'authorized');
+}
+
+/**
+ * Comprueba si el usuario tiene una autorización activa para cambio de contraseña
+ */
+export async function isPasswordChangeAuthorized(userId: number): Promise<boolean> {
+  const key = `${REDIS_PASSWORD_CHANGE_AUTH_PREFIX}${userId}`;
+  const val = await redis.get(key);
+  return Boolean(val);
+}
+
+const CONSUME_PWD_AUTH_LUA = `
+local authKey = KEYS[1]
+local val = redis.call('GET', authKey)
+if val then
+  redis.call('DEL', authKey)
+  return 1
+else
+  return 0
+end
+`;
+
+/**
+ * Valida y consume atómicamente la autorización de cambio de contraseña
+ */
+export async function consumePasswordChangeAuth(
+  userId: number
+): Promise<{ valid: boolean; error?: string }> {
+  const authKey = `${REDIS_PASSWORD_CHANGE_AUTH_PREFIX}${userId}`;
+  const consumed = (await redis.eval(CONSUME_PWD_AUTH_LUA, 1, authKey)) as number;
+
+  if (consumed !== 1) {
+    return {
+      valid: false,
+      error: 'La autorización de 5 minutos para cambiar la contraseña ha expirado. Por favor confirma tu identidad de nuevo.',
+    };
+  }
+
+  return { valid: true };
+}
+
 

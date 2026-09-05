@@ -17,7 +17,7 @@ let activeModals = [];
  * Crea y abre un modal en pantalla
  */
 export function openModal(options = {}) {
-  const {
+  let {
     title = '',
     titleKey = '',
     description = '',
@@ -142,6 +142,24 @@ export function openModal(options = {}) {
       } else {
         confirmBtn.disabled = false;
         confirmBtn.textContent = confirmBtn.getAttribute('data-original-text') || confirmText;
+      }
+    },
+
+    setOnConfirm(fn) {
+      onConfirm = fn;
+    },
+
+    setConfirmText(newText, newKey = '') {
+      const resolved = newKey ? t(newKey) : newText;
+      confirmText = resolved;
+      if (confirmBtn) {
+        confirmBtn.textContent = resolved;
+      }
+    },
+
+    setConfirmVisible(visible) {
+      if (confirmBtn) {
+        confirmBtn.style.display = visible ? '' : 'none';
       }
     },
 

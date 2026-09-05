@@ -113,3 +113,14 @@ export async function updateUserPassword(userId: number, passwordHash: string): 
   );
   return result.affectedRows > 0;
 }
+
+/**
+ * Vincula o actualiza el google_id de un usuario
+ */
+export async function updateUserGoogleId(userId: number, googleId: string): Promise<boolean> {
+  const [result] = await pool.query<ResultSetHeader>(
+    'UPDATE users SET google_id = ? WHERE id = ?',
+    [googleId, userId]
+  );
+  return result.affectedRows > 0;
+}

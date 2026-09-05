@@ -32,6 +32,10 @@ export const config = {
     apiKey: process.env.GEMINI_API_KEY || '',
     model: process.env.GEMINI_MODEL || 'gemini-flash-latest',
   },
+  websocket: {
+    host: process.env.WEBSOCKET_HOST || 'websocket',
+    port: Number(process.env.WEBSOCKET_PORT) || 3001,
+  },
 };
 
 

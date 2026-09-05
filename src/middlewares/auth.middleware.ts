@@ -34,10 +34,12 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     return;
   }
 
-  // Comprobar si la sesión fue revocada en el servidor (ej. logout-all o cambio de contraseña)
+  // Comprobar si la sesión fue revocada en el servidor (ej. logout individual, logout-all o cambio de contraseña)
   const session = getMultiAccountSession(req);
-  if (session && session.iat) {
-    const revoked = await isSessionRevoked(user.id, session.iat);
+  if (session) {
+    const activeAccount = session.accounts.find((a) => a.id === user.id);
+    const sid = activeAccount?.sessionId || session.sessionId;
+    const revoked = await isSessionRevoked(user.id, session.iat, sid);
     if (revoked) {
       clearSessionCookie(res);
       res.status(401).json({ error: 'Sesión expirada o revocada. Inicia sesión de nuevo.' });

@@ -74,6 +74,8 @@ services:
       - CASSANDRA_PORT=9042
       - CASSANDRA_KEYSPACE=spriteboard_telemetry
       - CASSANDRA_LOCAL_DC=datacenter1
+      - WEBSOCKET_HOST=websocket
+      - WEBSOCKET_PORT=3001
     depends_on:
       mysql:
         condition: service_healthy
@@ -104,6 +106,23 @@ services:
         condition: service_healthy
     volumes:
       - ./worker:/app
+
+  websocket:
+    build: ./websocket
+    container_name: spriteboard-websocket
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    env_file:
+      - .env
+    environment:
+      - PORT=3001
+      - SESSION_SECRET=${SESSION_SECRET:-spriteboard_session_secret_key_2026}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      redis:
+        condition: service_healthy
 
 volumes:
   mysql_data:

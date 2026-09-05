@@ -14,6 +14,9 @@ import {
   updateEmail,
   getUserPreferences,
   updateUserPreferences,
+  getPasswordStatus,
+  verifyCurrentPassword,
+  updateUserPasswordFromSettings,
 } from '../services/settings.service.js';
 import { findUserById } from '../services/user.service.js';
 import {
@@ -308,3 +311,81 @@ export async function handleUpdatePreferences(req: Request, res: Response): Prom
     sendInternalError(res, 'Error al actualizar preferencias de usuario', error, 'Error al guardar preferencias.');
   }
 }
+
+/**
+ * Consultar estado de acceso y credenciales (si tiene Google y/o contraseña)
+ */
+export async function handleGetPasswordStatus(req: Request, res: Response): Promise<void> {
+  try {
+    const currentUser = getCurrentUser(req);
+    if (!currentUser) {
+      sendUnauthorized(res, 'Sesión no válida o expirada.');
+      return;
+    }
+
+    const status = await getPasswordStatus(currentUser.id);
+    sendSuccess(res, status);
+  } catch (error) {
+    sendInternalError(res, 'Error al consultar estado de contraseña', error, 'Error al consultar estado de la cuenta.');
+  }
+}
+
+/**
+ * Verificar contraseña actual del usuario
+ */
+export async function handleVerifyCurrentPassword(req: Request, res: Response): Promise<void> {
+  try {
+    const currentUser = getCurrentUser(req);
+    if (!currentUser) {
+      sendUnauthorized(res, 'Sesión no válida o expirada.');
+      return;
+    }
+
+    const { currentPassword } = req.body || {};
+    const result = await verifyCurrentPassword(currentUser.id, currentPassword);
+
+    if (!result.success) {
+      sendBadRequest(res, result.error || 'La contraseña actual es incorrecta.');
+      return;
+    }
+
+    sendSuccess(res, { message: 'Contraseña actual verificada correctamente.' });
+  } catch (error) {
+    sendInternalError(res, 'Error al verificar contraseña actual', error, 'Error al verificar contraseña.');
+  }
+}
+
+/**
+ * Actualizar contraseña del usuario
+ */
+export async function handleUpdatePassword(req: Request, res: Response): Promise<void> {
+  try {
+    const currentUser = getCurrentUser(req);
+    if (!currentUser) {
+      sendUnauthorized(res, 'Sesión no válida o expirada.');
+      return;
+    }
+
+    const { newPassword } = req.body || {};
+    const result = await updateUserPasswordFromSettings(
+      currentUser.id,
+      newPassword,
+      req.ip,
+      req.headers['user-agent']
+    );
+
+    if (!result.success) {
+      if (result.status === 403) {
+        res.status(403).json({ error: result.error || 'Autorización expirada.' });
+        return;
+      }
+      sendBadRequest(res, result.error || 'No se pudo actualizar la contraseña.');
+      return;
+    }
+
+    sendSuccess(res, { message: 'Contraseña actualizada exitosamente.' });
+  } catch (error) {
+    sendInternalError(res, 'Error al actualizar contraseña', error, 'Error al guardar la nueva contraseña.');
+  }
+}
+

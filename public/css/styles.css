@@ -969,6 +969,59 @@ html.dark-theme .layout-header::after {
   color: var(--color-error);
 }
 
+/* Opciones y Badges de Verificación de Identidad */
+.verify-options {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.verify-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: var(--sl-border-radius-pill);
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  border: 1px solid var(--border-color);
+  background-color: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background-color var(--sl-transition-fast), border-color var(--sl-transition-fast), color var(--sl-transition-fast);
+  user-select: none;
+  box-sizing: border-box;
+}
+
+.verify-badge:hover {
+  background-color: var(--bg-hover);
+  border-color: var(--border-color-hover);
+}
+
+.verify-badge.is-active {
+  background-color: var(--btn-black-bg);
+  color: var(--btn-black-text);
+  border-color: var(--btn-black-border);
+}
+
+.verify-badge__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.verify-badge__icon svg {
+  display: block;
+}
+
+.verify-badge.is-active .verify-badge__icon--text {
+  color: var(--btn-black-text);
+}
+
 /* Alertas / Banners Genéricos */
 .banner,
 .form-error {
@@ -2085,16 +2138,21 @@ html.dark-theme .layout-header::after {
   background-color: transparent;
   background: transparent;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   outline: none;
   box-sizing: border-box;
   transition: border-color var(--sl-transition-fast), box-shadow var(--sl-transition-fast);
+}
+
+.menu-panel__search-input:hover {
+  border-color: var(--border-color-hover);
 }
 
 .menu-panel__search-input:focus {
   background-color: transparent;
   background: transparent;
   border-color: var(--border-color-focus);
+  box-shadow: 0 0 0 1px var(--border-color-focus);
 }
 
 .menu-panel__search-input::placeholder {

@@ -32,6 +32,30 @@ export function getGoogleAuthUrl(req: Request, res: Response): string {
   return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 }
 
+// Generar URL para verificación de identidad con Google (cambio de contraseña)
+export function getGoogleVerifyAuthUrl(req: Request, res: Response): string {
+  const state = `verify_pwd_${crypto.randomBytes(24).toString('hex')}`;
+
+  res.cookie(STATE_COOKIE_NAME, state, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: config.nodeEnv === 'production',
+    maxAge: 10 * 60 * 1000, // 10 minutos
+  });
+
+  const params = new URLSearchParams({
+    client_id: config.google.clientId,
+    redirect_uri: config.google.callbackUrl,
+    response_type: 'code',
+    scope: 'openid email profile',
+    access_type: 'offline',
+    prompt: 'select_account',
+    state,
+  });
+
+  return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+}
+
 // Generar un nombre de usuario único y amigable
 export async function generateUniqueUsername(baseName: string): Promise<string> {
   let cleanName = baseName

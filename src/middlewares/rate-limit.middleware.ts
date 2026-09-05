@@ -249,3 +249,19 @@ export const telemetryStatsLimiter = createRateLimiter({
   message: 'Límite de consultas de telemetría excedido.',
 });
 
+// Verificación de contraseña actual: máximo 5 intentos cada 10 minutos por IP
+export const verifyPasswordLimiter = createRateLimiter({
+  prefix: 'verify_pwd_attempts',
+  windowMs: 10 * 60 * 1000,
+  max: 5,
+  message: 'Demasiados intentos de verificación de contraseña. Por favor espera 10 minutos.',
+});
+
+// Actualización de contraseña: máximo 5 cambios cada 15 minutos por IP
+export const updatePasswordLimiter = createRateLimiter({
+  prefix: 'update_pwd_attempts',
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: 'Has intentado cambiar tu contraseña demasiadas veces. Por favor espera 15 minutos.',
+});
+

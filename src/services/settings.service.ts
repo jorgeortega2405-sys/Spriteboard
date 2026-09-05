@@ -8,7 +8,8 @@ import { fileURLToPath } from 'url';
 import { pool } from '../config/database.js';
 import { logger } from './logger.service.js';
 import { UserPayload } from '../types/auth.types.js';
-import { validateEmail, validateUsername } from '../utils/validators.js';
+import { validateEmail, validateUsername, validatePassword } from '../utils/validators.js';
+import { hashPassword, verifyPassword } from './auth.service.js';
 import type { RowDataPacket, ResultSetHeader } from 'mysql2';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -27,6 +28,8 @@ import {
   verifyEmailChangeCode,
   isEmailChangeAuthorized,
   consumeEmailChangeAuthorization,
+  savePasswordChangeAuth,
+  consumePasswordChangeAuth,
 } from './verification.service.js';
 import { sendEmailChangeCodeEmail } from './mail.service.js';
 
@@ -477,4 +480,114 @@ export async function updateEmail(
   await logUserAudit(userId, 'update_email', oldEmail, cleanEmail, ip, ua);
 
   return { success: true, email: cleanEmail };
+}
+
+/**
+ * Obtiene el estado de los métodos de acceso del usuario (si tiene Google y/o contraseña)
+ */
+export async function getPasswordStatus(
+  userId: number
+): Promise<{ hasGoogle: boolean; hasPassword: boolean }> {
+  const [rows] = await pool.query<RowDataPacket[]>(
+    'SELECT google_id, password_hash FROM users WHERE id = ? LIMIT 1',
+    [userId]
+  );
+  if (rows.length === 0) {
+    return { hasGoogle: false, hasPassword: false };
+  }
+  return {
+    hasGoogle: Boolean(rows[0].google_id),
+    hasPassword: Boolean(rows[0].password_hash),
+  };
+}
+
+/**
+ * Verifica la contraseña actual del usuario y genera una autorización temporal en Redis
+ */
+export async function verifyCurrentPassword(
+  userId: number,
+  currentPassword: string
+): Promise<{ success: boolean; error?: string; status?: number }> {
+  if (!currentPassword || typeof currentPassword !== 'string' || !currentPassword.trim()) {
+    return { success: false, error: 'Por favor ingresa tu contraseña actual.', status: 400 };
+  }
+
+  const [rows] = await pool.query<RowDataPacket[]>(
+    'SELECT id, password_hash, google_id FROM users WHERE id = ? LIMIT 1',
+    [userId]
+  );
+
+  if (rows.length === 0) {
+    return { success: false, error: 'Usuario no encontrado.', status: 404 };
+  }
+
+  const user = rows[0];
+
+  if (!user.password_hash) {
+    return {
+      success: false,
+      error: 'Esta cuenta no tiene una contraseña configurada. Por favor verifica tu identidad con Google.',
+      status: 400,
+    };
+  }
+
+  const isMatch = await verifyPassword(currentPassword, user.password_hash);
+  if (!isMatch) {
+    logger.security.warn('Fallo de verificación de contraseña actual en settings', { userId });
+    return { success: false, error: 'La contraseña actual es incorrecta.', status: 400 };
+  }
+
+  await savePasswordChangeAuth(userId, 300);
+  logger.security.info('Contraseña actual verificada exitosamente para cambio de contraseña', { userId });
+
+  return { success: true };
+}
+
+/**
+ * Actualiza la contraseña del usuario tras consumir la autorización previa en Redis
+ */
+export async function updateUserPasswordFromSettings(
+  userId: number,
+  newPassword: string,
+  ip?: string | null,
+  ua?: string | null
+): Promise<{ success: boolean; error?: string; status?: number }> {
+  const authValidation = await consumePasswordChangeAuth(userId);
+  if (!authValidation.valid) {
+    return {
+      success: false,
+      error: authValidation.error || 'La autorización de 5 minutos para cambiar la contraseña ha expirado. Por favor confirma tu identidad de nuevo.',
+      status: 403,
+    };
+  }
+
+  const validation = validatePassword(newPassword);
+  if (!validation.valid) {
+    return { success: false, error: validation.error, status: 400 };
+  }
+
+  // Verificar que la nueva contraseña no sea idéntica a la actual (si existía)
+  const [userRows] = await pool.query<RowDataPacket[]>(
+    'SELECT id, password_hash FROM users WHERE id = ? LIMIT 1',
+    [userId]
+  );
+
+  if (userRows.length === 0) {
+    return { success: false, error: 'Usuario no encontrado.', status: 404 };
+  }
+
+  if (userRows[0].password_hash) {
+    const isSame = await verifyPassword(newPassword, userRows[0].password_hash);
+    if (isSame) {
+      return { success: false, error: 'La nueva contraseña no puede ser igual a la actual.', status: 400 };
+    }
+  }
+
+  const hashedPassword = await hashPassword(newPassword);
+  await pool.query('UPDATE users SET password_hash = ? WHERE id = ?', [hashedPassword, userId]);
+
+  await logUserAudit(userId, 'change_password', null, null, ip, ua);
+  logger.security.info('Contraseña actualizada exitosamente desde settings', { userId });
+
+  return { success: true };
 }

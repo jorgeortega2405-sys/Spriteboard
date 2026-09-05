@@ -15,6 +15,7 @@ import {
 import { getClientIp } from '../middlewares/rate-limit.middleware.js';
 import {
   getGoogleAuthUrl,
+  getGoogleVerifyAuthUrl,
   processGoogleAuthCallback,
   STATE_COOKIE_NAME,
 } from '../services/google.service.js';
@@ -26,6 +27,7 @@ import {
   savePasswordResetToken,
   verifyPasswordResetToken,
   consumePasswordResetToken,
+  savePasswordChangeAuth,
 } from '../services/verification.service.js';
 import {
   sendVerificationCodeEmail,
@@ -36,6 +38,7 @@ import {
   findUserDuplicates,
   createUser,
   updateUserPassword,
+  updateUserGoogleId,
 } from '../services/user.service.js';
 import { getCurrentUser, getLinkedAccounts } from '../middlewares/auth.middleware.js';
 import { logger } from '../services/logger.service.js';
@@ -191,7 +194,7 @@ export async function verifyRegistrationCode(req: Request, res: Response): Promi
     });
 
     // Iniciar sesión agregando la nueva cuenta a la sesión multicuentas
-    const session = addAccountToSession(res, req, newUser);
+    const session = await addAccountToSession(res, req, newUser);
 
     logger.security.info('Cuenta creada y verificada exitosamente', { userId: newUser.id, email: newUser.email });
 
@@ -272,7 +275,7 @@ export async function login(req: Request, res: Response): Promise<void> {
 
     const user = sanitizeUser(userRow);
 
-    const session = addAccountToSession(res, req, user);
+    const session = await addAccountToSession(res, req, user);
 
     logger.security.info('Inicio de sesión exitoso', { userId: user.id, email: user.email });
 
@@ -287,8 +290,8 @@ export async function login(req: Request, res: Response): Promise<void> {
 }
 
 // Cierre de sesión de la cuenta activa (conmuta a la siguiente si existen más)
-export function logout(req: Request, res: Response): void {
-  const result = removeAccountFromSession(res, req);
+export async function logout(req: Request, res: Response): Promise<void> {
+  const result = await removeAccountFromSession(res, req);
   logger.security.info('Cierre de sesión de cuenta activa', { remainingAccounts: result.remainingCount });
   sendSuccess(res, {
     message: 'Sesión cerrada exitosamente.',
@@ -298,11 +301,13 @@ export function logout(req: Request, res: Response): void {
   });
 }
 
-// Cierre de todas las sesiones simultáneas con revocación en servidor
+// Cierre de todas las sesiones simultáneas con revocación en servidor y en vivo por WebSocket
 export async function logoutAll(req: Request, res: Response): Promise<void> {
   const user = getCurrentUser(req);
   if (user) {
-    await revokeAllUserSessions(user.id);
+    const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip;
+    const userAgent = req.headers['user-agent'];
+    await revokeAllUserSessions(user.id, ip, userAgent);
   }
   clearSessionCookie(res);
   logger.security.info('Todas las sesiones fueron cerradas exitosamente', { userId: user?.id });
@@ -342,8 +347,10 @@ export async function me(req: Request, res: Response): Promise<void> {
   }
 
   const session = getMultiAccountSession(req);
-  if (session && session.iat) {
-    const revoked = await isSessionRevoked(user.id, session.iat);
+  if (session) {
+    const activeAccount = session.accounts.find((a) => a.id === user.id);
+    const sid = activeAccount?.sessionId || session.sessionId;
+    const revoked = await isSessionRevoked(user.id, session.iat, sid);
     if (revoked) {
       clearSessionCookie(res);
       res.json({ user: null, accounts: [] });
@@ -364,34 +371,179 @@ export function redirectToGoogle(req: Request, res: Response): void {
   res.redirect(url);
 }
 
+// Redirección a Google OAuth para verificación de identidad (cambio de contraseña)
+export function redirectToGoogleVerify(req: Request, res: Response): void {
+  const url = getGoogleVerifyAuthUrl(req, res);
+  res.redirect(url);
+}
+
 // Callback de Google OAuth
 export async function googleCallback(req: Request, res: Response): Promise<void> {
   try {
     const { code, state, error } = req.query;
+    const storedState = req.cookies[STATE_COOKIE_NAME];
+    res.clearCookie(STATE_COOKIE_NAME);
+
+    const isVerifyFlow =
+      (storedState && storedState.startsWith('verify_pwd_')) ||
+      (state && String(state).startsWith('verify_pwd_'));
 
     if (error) {
-      logger.security.warn('Google OAuth cancelado o con error', { error });
+      logger.security.warn('Google OAuth cancelado o con error', { error, isVerifyFlow });
+      if (isVerifyFlow) {
+        res.send(`<!DOCTYPE html><html><body><script>if (window.opener) { window.opener.postMessage({ type: 'GOOGLE_VERIFY_CANCELLED' }, window.location.origin); window.close(); } else { window.location.href = '/settings/security'; }</script></body></html>`);
+        return;
+      }
       res.redirect('/login?error=' + encodeURIComponent(String(error)));
       return;
     }
 
     if (!code || !state) {
       logger.security.warn('Google OAuth faltan parámetros requeridos');
+      if (isVerifyFlow) {
+        res.send(`<!DOCTYPE html><html><body><script>if (window.opener) { window.opener.postMessage({ type: 'GOOGLE_VERIFY_ERROR', error: 'Faltan parámetros de verificación.' }, window.location.origin); window.close(); } else { window.location.href = '/settings/security?error=missing_oauth_parameters'; }</script></body></html>`);
+        return;
+      }
       res.redirect('/login?error=missing_oauth_parameters');
       return;
     }
 
-    const storedState = req.cookies[STATE_COOKIE_NAME];
-    res.clearCookie(STATE_COOKIE_NAME);
-
     if (!storedState || storedState !== state) {
       logger.security.warn('Parámetro state de Google OAuth inválido o ausente');
+      if (isVerifyFlow) {
+        res.send(`<!DOCTYPE html><html><body><script>if (window.opener) { window.opener.postMessage({ type: 'GOOGLE_VERIFY_ERROR', error: 'Estado de seguridad inválido o expirado.' }, window.location.origin); window.close(); } else { window.location.href = '/settings/security?error=invalid_oauth_state'; }</script></body></html>`);
+        return;
+      }
       res.redirect('/login?error=invalid_oauth_state');
       return;
     }
 
     const userPayload = await processGoogleAuthCallback(String(code));
-    addAccountToSession(res, req, userPayload);
+
+    // Si es flujo de verificación de identidad para cambio de contraseña
+    if (isVerifyFlow) {
+      const currentUser = getCurrentUser(req);
+      const isMatch =
+        currentUser &&
+        (userPayload.id === currentUser.id ||
+          userPayload.google_id === currentUser.google_id ||
+          userPayload.email.toLowerCase() === currentUser.email.toLowerCase());
+
+      if (isMatch) {
+        if (currentUser && !currentUser.google_id && userPayload.google_id) {
+          await updateUserGoogleId(currentUser.id, userPayload.google_id);
+        }
+        await savePasswordChangeAuth(currentUser.id, 300);
+        logger.security.info('Identidad verificada exitosamente con Google para cambio de contraseña', {
+          userId: currentUser.id,
+        });
+
+        res.send(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Verificación Exitosa</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #0f172a; color: #fff; text-align: center; }
+    .box { padding: 24px; max-width: 380px; }
+    h2 { margin: 0 0 8px; font-size: 20px; font-weight: 600; color: #22c55e; }
+    p { margin: 0 0 16px; color: #94a3b8; font-size: 14px; }
+    button { background: #334155; color: #fff; border: 1px solid #475569; padding: 8px 18px; border-radius: 8px; font-size: 14px; cursor: pointer; }
+    button:hover { background: #475569; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h2>✓ Identidad verificada</h2>
+    <p>Regresando a Spriteboard...</p>
+    <button type="button" onclick="window.close()">Cerrar ventana</button>
+  </div>
+  <script>
+    const payload = { type: 'GOOGLE_VERIFY_SUCCESS' };
+
+    // 1. BroadcastChannel (comunicación segura entre pestañas/ventanas con COOP)
+    try {
+      const ch = new BroadcastChannel('google_verify_channel');
+      ch.postMessage(payload);
+      ch.close();
+    } catch (_) {}
+
+    // 2. localStorage event (comunicación inter-pestañas del mismo origen)
+    try {
+      localStorage.setItem('google_verify_event', JSON.stringify({ ...payload, ts: Date.now() }));
+    } catch (_) {}
+
+    // 3. postMessage directo a opener si no fue desconectado por el navegador
+    if (window.opener) {
+      try {
+        window.opener.postMessage(payload, window.location.origin);
+      } catch (_) {}
+    }
+
+    // Intentar cerrar automáticamente la ventana
+    setTimeout(() => {
+      window.close();
+    }, 400);
+  </script>
+</body>
+</html>`);
+        return;
+      } else {
+        logger.security.warn('Verificación con Google rechazada: la cuenta no coincide con el usuario activo', {
+          activeUserId: currentUser?.id,
+          googleEmail: userPayload.email,
+        });
+
+        res.send(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Error de Verificación</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #0f172a; color: #fff; text-align: center; }
+    .box { padding: 24px; max-width: 380px; }
+    h2 { margin: 0 0 8px; font-size: 20px; font-weight: 600; color: #ef4444; }
+    p { margin: 0 0 16px; color: #94a3b8; font-size: 14px; }
+    button { background: #334155; color: #fff; border: 1px solid #475569; padding: 8px 18px; border-radius: 8px; font-size: 14px; cursor: pointer; }
+    button:hover { background: #475569; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h2>✕ Error de verificación</h2>
+    <p>La cuenta de Google seleccionada no coincide con tu usuario activo en Spriteboard.</p>
+    <button type="button" onclick="window.close()">Cerrar ventana</button>
+  </div>
+  <script>
+    const payload = { type: 'GOOGLE_VERIFY_ERROR', error: 'La cuenta de Google seleccionada no coincide con tu usuario activo en Spriteboard.' };
+
+    try {
+      const ch = new BroadcastChannel('google_verify_channel');
+      ch.postMessage(payload);
+      ch.close();
+    } catch (_) {}
+
+    try {
+      localStorage.setItem('google_verify_event', JSON.stringify({ ...payload, ts: Date.now() }));
+    } catch (_) {}
+
+    if (window.opener) {
+      try {
+        window.opener.postMessage(payload, window.location.origin);
+      } catch (_) {}
+    }
+
+    setTimeout(() => {
+      window.close();
+    }, 2500);
+  </script>
+</body>
+</html>`);
+        return;
+      }
+    }
+
+    await addAccountToSession(res, req, userPayload);
 
     logger.security.info('Inicio de sesión exitoso con Google OAuth', { userId: userPayload.id, email: userPayload.email });
 

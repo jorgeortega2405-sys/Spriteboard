@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express, { Request, Response } from 'express';
 import cookieParser from 'cookie-parser';
 import path from 'path';
+import net from 'net';
 import { fileURLToPath } from 'url';
 import { config } from './config/env.js';
 import { checkDbConnection } from './config/database.js';
@@ -89,6 +90,37 @@ async function startServer() {
 
     const server = app.listen(PORT, () => {
       logger.app.info(`Servidor TypeScript iniciado y escuchando en puerto ${PORT}`);
+    });
+
+    // Puenteo transparente de conexiones WebSocket al microservicio en Rust
+    server.on('upgrade', (req, clientSocket, head) => {
+      const url = req.url || '';
+      if (url === '/ws' || url.startsWith('/ws?')) {
+        const proxySocket = net.connect(config.websocket.port, config.websocket.host, () => {
+          proxySocket.write(`${req.method} ${req.url} HTTP/${req.httpVersion}\r\n`);
+          for (let i = 0; i < req.rawHeaders.length; i += 2) {
+            proxySocket.write(`${req.rawHeaders[i]}: ${req.rawHeaders[i + 1]}\r\n`);
+          }
+          proxySocket.write('\r\n');
+          if (head && head.length > 0) {
+            proxySocket.write(head);
+          }
+          clientSocket.pipe(proxySocket);
+          proxySocket.pipe(clientSocket);
+        });
+
+        proxySocket.on('error', (err) => {
+          logger.app.warn('No se pudo conectar con el microservicio WebSocket en Rust', err);
+          clientSocket.write('HTTP/1.1 502 Bad Gateway\r\n\r\n');
+          clientSocket.destroy();
+        });
+
+        clientSocket.on('error', () => {
+          proxySocket.destroy();
+        });
+      } else {
+        clientSocket.destroy();
+      }
     });
 
     // Apagado ordenado asegurando el vaciado de buffers de telemetría
