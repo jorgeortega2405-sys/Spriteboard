@@ -1,6 +1,9 @@
 # Dependencias
 node_modules/
 
+# Compilación TypeScript
+dist/
+
 # Logs de depuración y ejecución
 logs
 *.log

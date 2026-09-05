@@ -34,7 +34,19 @@
   "topbar": {
     "search_placeholder": "Buscar...",
     "search_tooltip": "Buscar",
-    "user_profile_tooltip": "Perfil de usuario"
+    "user_profile_tooltip": "Perfil de usuario",
+    "help_tooltip": "Ayuda"
+  },
+  "chat": {
+    "title": "Ayuda",
+    "history": "Historial de chats",
+    "close": "Cerrar chat",
+    "empty_title": "Obtén ayuda para lo que necesites en Spriteboard",
+    "empty_desc": "Respuestas rápidas con tecnología de IA",
+    "input_placeholder": "Escribe un mensaje...",
+    "send": "Enviar mensaje",
+    "history_empty": "No hay conversaciones previas.",
+    "disclaimer": "La IA puede cometer errores, verifica que la información sea correcta."
   },
   "auth": {
     "login": {

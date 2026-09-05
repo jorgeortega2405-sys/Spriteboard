@@ -1,0 +1,38 @@
+<div class="chat-sidebar" data-ref="chat-sidebar">
+  <div class="chat-panel" data-ref="chat-panel">
+    <!-- 1. Sección Superior (Top): Historial a la izquierda y Cerrar a la derecha -->
+    <div class="chat-panel__top" data-ref="chat-panel-top">
+      <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-chat-history" data-i18n-tooltip="chat.history" aria-label="Historial de chats">
+        <span class="material-symbols-rounded">history</span>
+      </button>
+
+      <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-chat-close" data-i18n-tooltip="chat.close" aria-label="Cerrar chat">
+        <span class="material-symbols-rounded">close</span>
+      </button>
+    </div>
+
+    <!-- 2. Sección Central (Center): Mensajes del Chat -->
+    <div class="chat-panel__center layout-scrollable" data-ref="chat-panel-center">
+      <div class="chat-messages" data-ref="chat-messages">
+        <div class="chat-empty-state" data-ref="chat-empty-state">
+          <div class="chat-empty-state__icon">
+            <span class="material-symbols-rounded">support_agent</span>
+          </div>
+          <h3 class="chat-empty-state__title" data-i18n="chat.empty_title">Obtén ayuda para lo que necesites en Spriteboard</h3>
+          <p class="chat-empty-state__desc" data-i18n="chat.empty_desc">Respuestas rápidas con tecnología de IA</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Sección Inferior (Bottom): Input de Chat en forma de Píldora compacta -->
+    <div class="chat-panel__bottom" data-ref="chat-panel-bottom">
+      <div class="chat-pill-input" data-ref="chat-input-box">
+        <input class="chat-pill-input__field" data-ref="chat-input" data-i18n-placeholder="chat.input_placeholder" type="text" placeholder="Escribe un mensaje..." autocomplete="off" />
+        <button type="button" class="btn btn--icon chat-pill-input__btn" data-ref="btn-chat-send" data-i18n-tooltip="chat.send" aria-label="Enviar mensaje">
+          <span class="material-symbols-rounded">arrow_upward</span>
+        </button>
+      </div>
+      <p class="chat-disclaimer" data-i18n="chat.disclaimer">La IA puede cometer errores, verifica que la información sea correcta.</p>
+    </div>
+  </div>
+</div>

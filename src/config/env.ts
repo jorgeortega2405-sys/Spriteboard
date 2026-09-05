@@ -28,5 +28,10 @@ export const config = {
     keyspace: process.env.CASSANDRA_KEYSPACE || 'spriteboard_telemetry',
     localDataCenter: process.env.CASSANDRA_LOCAL_DC || 'datacenter1',
   },
+  gemini: {
+    apiKey: process.env.GEMINI_API_KEY || '',
+    model: process.env.GEMINI_MODEL || 'gemini-flash-latest',
+  },
 };
+
 

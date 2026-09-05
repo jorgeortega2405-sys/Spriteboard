@@ -2,6 +2,7 @@ import { loadTemplate } from '../services/template.js';
 import { navigate } from '../router.js';
 import { currentUser } from '../services/api.js';
 import { translateElement } from '../services/i18n.js';
+import { toggleChatSidebar } from './chat-sidebar.js';
 
 let isSidebarOpen = false;
 
@@ -15,6 +16,9 @@ export function toggleSidebar(forceState) {
 
   if (sidebar) {
     sidebar.classList.toggle('is-active', isSidebarOpen);
+    if (isSidebarOpen) {
+      toggleChatSidebar(false);
+    }
   }
 }
 

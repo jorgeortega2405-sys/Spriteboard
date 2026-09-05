@@ -14,6 +14,7 @@ import { createGuestSettingsView } from './views/settings/guest.js';
 import { createErrorView } from './views/error.js';
 import { SkeletonService } from './services/skeleton.service.js';
 import { hasPersistentTopBar } from './config/skeleton-routes.js';
+import { attachChatSidebarToView } from './components/chat-sidebar.js';
 import { hideTooltip } from './services/tooltip.js';
 import { currentUser } from './services/api.js';
 import { trackPageView } from './services/telemetry.js';
@@ -148,6 +149,12 @@ export async function render() {
   // Transición suave hacia la vista definitiva garantizando tiempo mínimo antiflicker
   await skeletonSession.finish(viewElements, () => navId === currentNavigation);
   isInitialPageLoad = false;
+
+  // Montar la barra lateral derecha de chat dentro de .layout-content al mismo nivel que el sidebar izquierdo
+  const activeContent = appRoot.querySelector('.layout-content');
+  if (activeContent) {
+    attachChatSidebarToView(activeContent);
+  }
 
   // Sincronizar sombra del layout-header con el scroll de la vista recién montada
   const activeHeader = document.querySelector('.layout-header, .general-content-top');

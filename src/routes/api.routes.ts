@@ -4,6 +4,7 @@ import avatarRoutes from './avatar.routes.js';
 import configRoutes from './config.routes.js';
 import settingsRoutes from './settings.routes.js';
 import telemetryRoutes from './telemetry.routes.js';
+import aiRoutes from './ai.routes.js';
 import { validateCsrf } from '../middlewares/csrf.middleware.js';
 
 const apiRouter = Router();
@@ -17,6 +18,7 @@ apiRouter.use('/', authRoutes);
 apiRouter.use('/', avatarRoutes);
 apiRouter.use('/', settingsRoutes);
 apiRouter.use('/', telemetryRoutes);
+apiRouter.use('/', aiRoutes);
 
 export default apiRouter;
 

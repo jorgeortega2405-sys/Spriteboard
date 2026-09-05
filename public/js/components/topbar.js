@@ -8,6 +8,7 @@ import {
   logoutAllApi,
 } from '../services/api.js';
 import { toggleSidebar, getIsSidebarOpen } from './sidebar.js';
+import { toggleChatSidebar } from './chat-sidebar.js';
 import { navigate, render } from '../router.js';
 import { t } from '../services/i18n.js';
 import { showToast } from '../services/toast.js';
@@ -19,6 +20,12 @@ export async function createTopBar() {
   btnToggle?.addEventListener('click', (e) => {
     e.preventDefault();
     toggleSidebar();
+  });
+
+  const btnHelpChat = topbar.querySelector('[data-ref="btn-help-chat"]');
+  btnHelpChat?.addEventListener('click', (e) => {
+    e.preventDefault();
+    toggleChatSidebar();
   });
 
   const btnMobileSearch = topbar.querySelector('[data-ref="btn-mobile-search"]');
@@ -374,7 +381,7 @@ export async function createTopBar() {
       btnHelp?.addEventListener('click', (e) => {
         e.preventDefault();
         closeMenu();
-        navigate('/settings/guest');
+        toggleChatSidebar(true);
       });
 
       // Cerrar sesión de la cuenta activa (conmuta o desloguea)

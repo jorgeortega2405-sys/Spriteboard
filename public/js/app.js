@@ -9,6 +9,7 @@ import { initTooltips } from './services/tooltip.js';
 import { initI18n } from './services/i18n.js';
 import { initWebVitals } from './services/telemetry.js';
 import { initTheme } from './services/theme.service.js';
+import { initChatSidebar } from './components/chat-sidebar.js';
 
 export { navigate };
 
@@ -43,6 +44,7 @@ async function init() {
   initWebVitals();
   await Promise.all([fetchCsrfToken(), checkAuthSession(), fetchAppConfig()]);
   await initI18n();
+  await initChatSidebar();
   await render();
 }
 
