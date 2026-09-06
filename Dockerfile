@@ -13,6 +13,9 @@ RUN npm install
 # Copiar el código fuente de la aplicación
 COPY . .
 
+# Compilar backend y frontend
+RUN npm run build
+
 # Exponer el puerto de la aplicación
 EXPOSE 3000
 

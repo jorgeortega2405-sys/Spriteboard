@@ -1,6 +1,7 @@
-import 'dotenv/config';
 import cookieParser from 'cookie-parser';
+import 'dotenv/config';
 import express, { Request, Response } from 'express';
+import http from 'http';
 import net from 'net';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -51,8 +52,6 @@ app.use(
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(cookieParser());
 app.use(telemetryMiddleware);
-app.use(express.static(path.join(__dirname, '../public')));
-
 app.get('/health', getHealth);
 app.use('/api', apiRouter);
 
@@ -67,9 +66,26 @@ app.use((err: any, req: Request, res: Response, next: express.NextFunction) => {
   });
 });
 
-app.get('*', (req: Request, res: Response) => {
-  res.sendFile(path.join(__dirname, '../public/index.html'));
-});
+async function setupClient(server: http.Server) {
+  app.use('/uploads', express.static(path.join(process.cwd(), 'public/uploads')));
+  if (config.nodeEnv !== 'production') {
+    const { createServer } = await import('vite');
+    const vite = await createServer({
+      server: {
+        middlewareMode: true,
+        ws: { server },
+      },
+      appType: 'spa',
+    });
+    app.use(vite.middlewares);
+  } else {
+    const clientDist = path.join(process.cwd(), 'dist/client');
+    app.use(express.static(clientDist));
+    app.get('*', (_req: Request, res: Response) => {
+      res.sendFile(path.join(clientDist, 'index.html'));
+    });
+  }
+}
 
 async function startServer() {
   try {
@@ -84,9 +100,8 @@ async function startServer() {
       logger.db.warn('Cassandra aún no disponible; telemetría retenida en buffer.', err);
     });
 
-    const server = app.listen(PORT, () => {
-      logger.app.info(`Servidor TypeScript iniciado y escuchando en puerto ${PORT}`);
-    });
+    const server = http.createServer(app);
+    await setupClient(server);
 
     server.on('upgrade', (req, clientSocket, head) => {
       const url = req.url || '';
@@ -113,9 +128,13 @@ async function startServer() {
         clientSocket.on('error', () => {
           proxySocket.destroy();
         });
-      } else {
+      } else if (config.nodeEnv === 'production') {
         clientSocket.destroy();
       }
+    });
+
+    server.listen(PORT, () => {
+      logger.app.info(`Servidor TypeScript iniciado y escuchando en puerto ${PORT}`);
     });
 
     const handleShutdown = async (signal: string) => {

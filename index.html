@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="no-referrer">
+  <title>Spriteboard</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" />
+  <link rel="stylesheet" href="/css/root.css">
+  <link rel="stylesheet" href="/css/styles.css">
+  <script>
+    (function() {
+      try {
+        const savedTheme = localStorage.getItem('sprite_theme') || 'system';
+        if (savedTheme === 'dark' || (savedTheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        } else {
+          document.documentElement.setAttribute('data-theme', 'light');
+        }
+      } catch (_) {}
+    })();
+  </script>
+  <script type="module" src="/client/app-main.ts"></script>
+</head>
+<body>
+  <div class="page-wrapper" data-ref="page-root">
+    <div class="general-content" data-ref="app">
+    </div>
+  </div>
+</body>
+</html>

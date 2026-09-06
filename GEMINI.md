@@ -34,5 +34,11 @@ Este archivo complementa a `AGENTS.md` y es cargado directamente por Antigravity
 8. **Estructura Estándar de Controladores / Vistas JS**:
    - Seguir el ciclo de vida: `init()` (con `AbortController`), `bindEvents()` y `destroy()`.
 
+9. **Frontend TypeScript (`client/`) y Compilación Vite**:
+   - Todo el código cliente se escribe en TypeScript estricto dentro de `client/` (vistas, componentes, servicios, tipos, utilidades).
+   - Los archivos estáticos en tiempo de ejecución (`views/`, `translations/`, `css/`, `uploads/`) residen en `public/`.
+   - En desarrollo, Vite corre como middleware Express (`npm run dev`). En producción, Vite compila a `dist/client/` (`npm run build:client`).
+   - La verificación de tipos estricta se ejecuta con `npm run typecheck`.
+
 Consulta las especificaciones completas en [docs/AI_INSTRUCTIONS.md](file:///f:/Spriteboard/docs/AI_INSTRUCTIONS.md) y [AGENTS.md](file:///f:/Spriteboard/AGENTS.md).
 

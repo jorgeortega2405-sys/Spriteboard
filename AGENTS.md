@@ -85,10 +85,20 @@ Al escribir o modificar plantillas HTML, los atributos deben ordenarse de acuerd
    - `src/types/`: Interfaces y tipos TypeScript.
    - `src/utils/`: Validadores y utilidades puras.
 
-2. **Estructura Frontend (`public/`)**:
-   - `public/views/`: Archivos `.html` puros organizados en subcarpetas temáticas (`auth/`, `components/`, `home/`, `error/`).
-   - `public/js/`: Módulos ES organizados en `views/`, `components/`, `services/` y `router.js`.
-   - `public/css/`: Hojas de estilo con metodología BEM y modificadores genéricos reutilizables (`.menu-panel--w-285`, `.btn--h55`, etc.).
+2. **Estructura Frontend TypeScript (`client/`) y Assets (`public/`)**:
+   - `client/app-main.ts`: Punto de entrada principal de la SPA frontend.
+   - `client/app-router.ts`: Enrutador cliente y ciclo de vida de navegación SPA.
+   - `client/views/`: Vistas y controladores TypeScript (`auth.view.ts`, `settings.view.ts`, `home.view.ts`, etc.).
+   - `client/components/`: Componentes modulares TypeScript (`layout.component.ts`, `modal.component.ts`).
+   - `client/services/`: Servicios cliente TypeScript (`api.service.ts`, `i18n.service.ts`, `websocket.service.ts`, etc.).
+   - `client/types/`: Interfaces y tipos TypeScript del frontend (`auth.types.ts`, `subscription.types.ts`, `common.types.ts`).
+   - `client/utils/`: Utilidades cliente (`dom.util.ts`, `validators.util.ts`, `languages.util.ts`).
+   - `client/config/`: Configuraciones de rutas y skeletons (`skeleton-routes.ts`, `skeleton-templates.ts`).
+   - `public/views/`: Archivos de plantilla `.html` puros organizados temáticamente (`auth/`, `settings/`, `home/`, `error/`).
+   - `public/translations/`: Archivos de idioma i18n (`es-419.json`, etc.).
+   - `public/css/`: Hojas de estilo con metodología BEM (`root.css`, `styles.css`).
+   - `public/uploads/`: Almacenamiento local de archivos multimedia y avatares.
+   - **Compilador / Bundler**: Vite en modo middleware Express para desarrollo (`npm run dev`) y compilación de producción a `dist/client/` (`npm run build`). Verificación de tipos con `npm run typecheck`.
 
 ---
 
