@@ -35,3 +35,9 @@ Thumbs.db
 # Rust / Cargo
 target/
 **/target/
+
+# Bases de datos binarias locales GeoIP (MMDB)
+data/geoip/*.mmdb
+data/geoip/*.tar.gz
+data/geoip/*.gz
+!data/geoip/.gitkeep

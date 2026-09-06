@@ -30,9 +30,14 @@ export function generateCsrfToken(req: Request, res: Response): string {
 }
 
 export function validateCsrf(req: Request, res: Response, next: NextFunction): void {
-  // Omitir métodos de lectura segura
+  // Omitir métodos de lectura segura y webhooks con firma criptográfica de terceros (Stripe)
   const safeMethods = ['GET', 'HEAD', 'OPTIONS'];
   if (safeMethods.includes(req.method)) {
+    return next();
+  }
+
+  const reqPath = req.originalUrl || req.url;
+  if (reqPath.includes('/subscriptions/webhook') || reqPath.includes('/webhooks/stripe')) {
     return next();
   }
 

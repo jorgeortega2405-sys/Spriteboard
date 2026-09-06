@@ -1,0 +1,132 @@
+﻿<div class="layout-content" data-ref="settings-billing-view">
+  <div class="layout-body layout-body--scrollable layout-scrollable" data-ref="settings-scrollable">
+    <div class="settings-layout" data-ref="settings-layout">
+      <div class="settings-header" data-ref="settings-header">
+        <h1 class="settings-title" data-ref="settings-title" data-i18n="settings.billing.title"></h1>
+        <p class="settings-subtitle" data-ref="settings-subtitle" data-i18n="settings.billing.subtitle"></p>
+      </div>
+
+      <!-- 1. Acordeón de Plan y Suscripción -->
+      <div class="settings-group settings-group--accordion is-active" data-ref="group-subscription-plan">
+        <div class="settings-accordion-header" data-ref="accordion-header-subscription">
+          <div class="settings-item__content" data-ref="accordion-sub-content">
+            <div class="settings-item__icon-box" data-ref="accordion-sub-icon-box">
+              <span class="material-symbols-rounded">stars</span>
+            </div>
+            <div class="settings-item__text" data-ref="accordion-sub-text">
+              <h2 class="settings-item__title" data-ref="accordion-sub-title" data-i18n="settings.billing.subscription_accordion_title"></h2>
+              <p class="settings-item__desc" data-ref="accordion-sub-desc" data-i18n="settings.billing.subscription_accordion_desc"></p>
+            </div>
+          </div>
+          <div class="settings-item__actions" data-ref="accordion-sub-actions">
+            <span class="material-symbols-rounded settings-accordion-icon" data-ref="accordion-sub-icon">expand_more</span>
+          </div>
+        </div>
+
+        <div class="settings-accordion-body" data-ref="accordion-body-subscription">
+          <div class="settings-accordion-content" data-ref="accordion-content-subscription">
+            <!-- Item 1: Estado del Plan -->
+            <div class="settings-item" data-ref="item-current-plan">
+              <div class="settings-item__content" data-ref="item-current-plan-content">
+                <div class="settings-item__icon-box" data-ref="item-current-plan-icon-box">
+                  <span class="material-symbols-rounded">workspace_premium</span>
+                </div>
+                <div class="settings-item__text" data-ref="item-current-plan-text">
+                  <div class="settings-item__title-row" data-ref="plan-title-row" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <h3 class="settings-item__title" data-ref="current-plan-name">-</h3>
+                    <span class="component-badge component-badge--sm" data-ref="current-plan-status-badge" style="display: none;"></span>
+                  </div>
+                  <p class="settings-item__desc" data-ref="current-plan-desc">-</p>
+                </div>
+              </div>
+              <div class="settings-item__actions" data-ref="item-current-plan-actions">
+                <button type="button" class="btn btn--h34 btn--black" data-ref="btn-upgrade-plan" data-i18n="settings.billing.btn_upgrade_plan"></button>
+              </div>
+            </div>
+
+            <hr class="settings-divider" data-ref="divider-auto-renewal" style="display: none;" />
+
+            <!-- Item 2: Renovación Automática -->
+            <div class="settings-item" data-ref="item-auto-renewal" style="display: none;">
+              <div class="settings-item__content" data-ref="item-auto-renewal-content">
+                <div class="settings-item__icon-box" data-ref="item-auto-renewal-icon-box">
+                  <span class="material-symbols-rounded">autorenew</span>
+                </div>
+                <div class="settings-item__text" data-ref="item-auto-renewal-text">
+                  <h3 class="settings-item__title" data-ref="item-auto-renewal-title" data-i18n="settings.billing.auto_renewal_title"></h3>
+                  <p class="settings-item__desc" data-ref="auto-renewal-desc" data-i18n="settings.billing.auto_renewal_desc"></p>
+                </div>
+              </div>
+              <div class="settings-item__actions" data-ref="item-auto-renewal-actions">
+                <button type="button" class="btn btn--h34" data-ref="btn-toggle-auto-renewal"></button>
+              </div>
+            </div>
+
+            <hr class="settings-divider" data-ref="divider-cancel-sub" style="display: none;" />
+
+            <!-- Item 3: Cancelar Suscripción Definitiva -->
+            <div class="settings-item" data-ref="item-cancel-subscription" style="display: none;">
+              <div class="settings-item__content" data-ref="item-cancel-subscription-content">
+                <div class="settings-item__icon-box" data-ref="item-cancel-subscription-icon-box">
+                  <span class="material-symbols-rounded">cancel</span>
+                </div>
+                <div class="settings-item__text" data-ref="item-cancel-subscription-text">
+                  <h3 class="settings-item__title" data-ref="item-cancel-subscription-title" data-i18n="settings.billing.cancel_sub_title"></h3>
+                  <p class="settings-item__desc" data-ref="item-cancel-subscription-desc" data-i18n="settings.billing.cancel_sub_desc"></p>
+                </div>
+              </div>
+              <div class="settings-item__actions" data-ref="item-cancel-subscription-actions">
+                <button type="button" class="btn btn--h34 btn--danger" data-ref="btn-cancel-subscription-immediate" data-i18n="settings.billing.btn_cancel_subscription"></button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Acordeón de Métodos de Pago -->
+      <div class="settings-group settings-group--accordion is-active" data-ref="group-payment-methods">
+        <div class="settings-accordion-header" data-ref="accordion-header-payment-methods">
+          <div class="settings-item__content" data-ref="accordion-pm-content">
+            <div class="settings-item__icon-box" data-ref="accordion-pm-icon-box">
+              <span class="material-symbols-rounded">credit_card</span>
+            </div>
+            <div class="settings-item__text" data-ref="accordion-pm-text">
+              <h2 class="settings-item__title" data-ref="payment-methods-title" data-i18n="settings.billing.payment_methods_title"></h2>
+              <p class="settings-item__desc" data-ref="payment-methods-desc" data-i18n="settings.billing.payment_methods_desc"></p>
+            </div>
+          </div>
+          <div class="settings-item__actions" data-ref="accordion-pm-actions">
+            <span class="material-symbols-rounded settings-accordion-icon" data-ref="accordion-pm-icon">expand_more</span>
+          </div>
+        </div>
+
+        <div class="settings-accordion-body" data-ref="accordion-body-payment-methods">
+          <div class="settings-accordion-content" data-ref="accordion-content-payment-methods">
+            <!-- Barra superior para agregar tarjeta -->
+            <div class="settings-item" data-ref="item-add-card-bar" style="padding: 16px 24px; background-color: var(--bg-hover);">
+              <div class="settings-item__content" data-ref="item-add-card-content">
+                <span class="material-symbols-rounded" data-ref="item-add-card-icon" style="font-size: 20px; color: var(--text-secondary);">add_card</span>
+                <p class="settings-item__desc" data-ref="item-add-card-desc" style="margin: 0; font-size: 13px;" data-i18n="settings.billing.add_card_prompt"></p>
+              </div>
+              <div class="settings-item__actions" data-ref="item-add-card-actions">
+                <button type="button" class="btn btn--h34 btn--black" data-ref="btn-open-add-card" style="display: inline-flex; align-items: center; gap: 6px;">
+                  <span class="material-symbols-rounded" style="font-size: 18px;">add</span>
+                  <span data-i18n="settings.billing.btn_add_payment_method"></span>
+                </button>
+              </div>
+            </div>
+
+            <hr class="settings-divider" />
+
+            <!-- Lista dinámica de tarjetas -->
+            <div class="settings-card-list" data-ref="payment-methods-list">
+              <div class="settings-item" data-ref="payment-methods-empty" style="padding: 24px; color: var(--text-muted); font-size: 14px;">
+                <span data-i18n="settings.billing.no_payment_methods"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

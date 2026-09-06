@@ -920,6 +920,18 @@ html.dark-theme .layout-header::after {
   display: block;
 }
 
+html[data-theme="dark"] .login-logo-img,
+html.dark-theme .login-logo-img,
+body[data-theme="dark"] .login-logo-img {
+  filter: brightness(0) invert(1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .login-logo-img {
+    filter: brightness(0) invert(1);
+  }
+}
+
 /* Tarjeta Genérica */
 .card,
 .login-card {
@@ -1088,6 +1100,32 @@ html.dark-theme .layout-header::after {
 .component-badge--full-width,
 .verify-badge--w-full {
   width: 100%;
+}
+
+/* Modificadores de estado y color para Badges */
+.component-badge--success {
+  background-color: var(--color-success-bg);
+  border-color: var(--color-success-border);
+  color: var(--color-success);
+}
+
+.component-badge--warning {
+  background-color: var(--color-warning-bg);
+  border-color: var(--color-warning-border);
+  color: var(--color-warning);
+}
+
+.component-badge--danger,
+.component-badge--error {
+  background-color: var(--color-error-bg);
+  border-color: var(--color-error-border);
+  color: var(--color-error);
+}
+
+.component-badge--neutral {
+  background-color: var(--bg-hover);
+  border-color: var(--border-color);
+  color: var(--text-primary);
 }
 
 /* Contenedor de opciones de verificación */
@@ -1696,6 +1734,10 @@ html.dark-theme .layout-header::after {
   box-sizing: border-box;
 }
 
+.settings-layout--wide {
+  max-width: 880px;
+}
+
 .settings-header {
   display: flex;
   flex-direction: column;
@@ -1889,6 +1931,32 @@ html.dark-theme .layout-header::after {
   white-space: nowrap;
 }
 
+.settings-item__actions .btn--icon {
+  min-width: 34px !important;
+  max-width: 34px !important;
+  width: 34px !important;
+  height: 34px !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.stripe-card-box {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 14px 16px;
+  width: 100%;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stripe-card-box--focus {
+  border-color: var(--action-primary);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
+}
+
 .settings-edit-row {
   display: flex;
   align-items: center;
@@ -1923,6 +1991,102 @@ html.dark-theme .layout-header::after {
   border-top: 1px solid var(--divider-color);
   margin: 0;
   width: 100%;
+}
+
+/* Tabla de datos de compras y transacciones */
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: var(--radius-xl);
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.data-table__head {
+  background-color: var(--bg-hover);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.data-table__th {
+  padding: 14px 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.data-table__th--right,
+.data-table__td--right {
+  text-align: right;
+}
+
+.data-table__row {
+  border-bottom: 1px solid var(--border-color);
+  transition: background-color var(--sl-transition-fast);
+}
+
+.data-table__row:last-child {
+  border-bottom: none;
+}
+
+.data-table__row:hover {
+  background-color: var(--bg-hover);
+}
+
+.data-table__td {
+  padding: 16px 20px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.data-table__date {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.data-table__plan-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.data-table__plan-icon {
+  font-size: 18px;
+  color: var(--action-primary, #6366f1);
+}
+
+.data-table__plan-name {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.data-table__period {
+  color: var(--text-secondary);
+}
+
+.data-table__amount {
+  font-weight: 700;
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.data-table__code {
+  font-family: monospace;
+  font-size: 11px;
+  background-color: var(--bg-hover);
+  padding: 3px 6px;
+  border-radius: 4px;
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
 }
 
 @media (max-width: 768px) {
@@ -3578,7 +3742,7 @@ body.modal-open {
 .component-toggle-pill {
   display: inline-grid;
   grid-template-columns: 1fr 1fr;
-  background-color: transparent;
+  background-color: var(--bg-hover-light, rgba(0, 0, 0, 0.04));
   border-radius: 9999px;
   padding: 4px;
   margin-top: 14px;
@@ -3603,8 +3767,15 @@ body.modal-open {
 }
 
 html[data-theme="dark"] .component-toggle-pill-glider,
-html.dark-theme .component-toggle-pill-glider {
-  background-color: var(--action-primary-text, #ffffff);
+html.dark-theme .component-toggle-pill-glider,
+body[data-theme="dark"] .component-toggle-pill-glider {
+  background-color: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .component-toggle-pill-glider {
+    background-color: #ffffff;
+  }
 }
 
 .component-toggle-pill[data-cycle="monthly"] .component-toggle-pill-glider {
@@ -3652,8 +3823,15 @@ html.dark-theme .component-toggle-pill-glider {
 }
 
 html[data-theme="dark"] .component-toggle-pill .component-button.active,
-html.dark-theme .component-toggle-pill .component-button.active {
-  color: #000000 !important;
+html.dark-theme .component-toggle-pill .component-button.active,
+body[data-theme="dark"] .component-toggle-pill .component-button.active {
+  color: #09090b !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .component-toggle-pill .component-button.active {
+    color: #09090b !important;
+  }
 }
 
 /* Cuadrícula de Cards de Precios */
@@ -3696,6 +3874,36 @@ html[data-theme="dark"] .component-card--popular,
 html.dark-theme .component-card--featured,
 html.dark-theme .component-card--popular {
   border-color: #ffffff;
+}
+
+/* Tarjeta del Plan Actual Activo */
+.component-card--current {
+  padding: 26px 24px;
+  border: 3px solid #22c55e !important;
+  background-color: var(--bg-surface);
+  box-shadow: 0 0 0 1px #22c55e, 0 8px 24px rgba(34, 197, 94, 0.15) !important;
+}
+
+html[data-theme="dark"] .component-card--current,
+html.dark-theme .component-card--current {
+  border-color: #22c55e !important;
+}
+
+.component-card-current-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  align-self: flex-start;
+  padding: 4px 12px;
+  border-radius: var(--sl-border-radius-pill);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background-color: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  margin-bottom: 12px;
 }
 
 .component-card-section {
@@ -3827,6 +4035,30 @@ html.dark-theme .component-card-button:hover {
   background-color: #e5e5e5 !important;
 }
 
+/* Estado: Plan Actual Contratado */
+.component-card-button--current,
+html[data-theme="dark"] .component-card-button--current,
+html.dark-theme .component-card-button--current {
+  background-color: rgba(34, 197, 94, 0.15) !important;
+  color: #22c55e !important;
+  border: 1px solid rgba(34, 197, 94, 0.35) !important;
+  opacity: 1 !important;
+  cursor: default !important;
+  pointer-events: none !important;
+}
+
+/* Estado: Plan Inferior ya Cubierto */
+.component-card-button--downgrade,
+html[data-theme="dark"] .component-card-button--downgrade,
+html.dark-theme .component-card-button--downgrade {
+  background-color: var(--surface-hover, rgba(255, 255, 255, 0.05)) !important;
+  color: var(--text-muted, #94a3b8) !important;
+  border: 1px solid var(--border-color, #334155) !important;
+  opacity: 0.65 !important;
+  cursor: default !important;
+  pointer-events: none !important;
+}
+
 /* Efecto hover-text */
 .component-button--hover-text {
   position: relative;
@@ -3954,13 +4186,14 @@ html.dark-theme .component-card-button:hover {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 16px 20px;
+  gap: 12px;
+  padding: 20px 24px;
   font-size: 13px;
   color: var(--text-secondary);
   text-align: center;
-  max-width: 720px;
-  line-height: 1.55;
+  max-width: 1173px;
+  width: 100%;
+  line-height: 1.6;
   box-sizing: border-box;
 }
 
@@ -4087,6 +4320,293 @@ html.dark-theme .component-card-button:hover {
 .btn--avatar.avatar-tier--ultra:hover {
   box-shadow: 0 0 0 2px var(--bg-surface), 0 0 0 4px var(--tier-color-ultra, #ef4444) !important;
 }
+
+/* ==========================================================================
+   26. VISTA TABULAR: COMPONENT-TOP, COMPONENT-BOTTOM Y TOOLBAR FLOTANTE
+   ========================================================================== */
+
+.component-wrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+  background-color: var(--bg-app);
+}
+
+.component-wrapper--full {
+  height: 100%;
+}
+
+.component-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border-color);
+  background-color: var(--bg-surface);
+  gap: 8px;
+  min-height: 56px;
+  position: relative;
+  flex-shrink: 0;
+  z-index: 40;
+  box-sizing: border-box;
+  transition: border-bottom-color var(--sl-transition-fast), background-color var(--sl-transition-fast);
+}
+
+.component-top-left,
+.component-top-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.component-top-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  height: 40px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 0 14px;
+  box-sizing: border-box;
+  background-color: var(--bg-surface);
+}
+
+/* Toolbar de búsqueda flotante */
+.component-search-toolbar {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  z-index: 120;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  padding: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  width: calc(100% - 32px);
+  max-width: 440px;
+  transform: translateX(-50%);
+  transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.2s, transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-sizing: border-box;
+}
+
+.component-search-toolbar.is-hidden {
+  opacity: 0;
+  visibility: hidden;
+  transform: translate(-50%, -10px);
+  pointer-events: none;
+}
+
+.component-search-toolbar.is-active {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, 0);
+  pointer-events: auto;
+}
+
+.component-search--full {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* Component Bottom */
+.component-bottom {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.component-table-wrapper {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+.component-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.component-table th {
+  padding: 14px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-color);
+  background-color: var(--bg-surface);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  white-space: nowrap;
+}
+
+.component-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-color);
+  vertical-align: middle;
+  white-space: nowrap;
+  color: var(--text-primary);
+}
+
+.component-table tr:last-child td {
+  border-bottom: none;
+}
+
+.component-table tbody tr {
+  transition: background-color var(--sl-transition-fast);
+}
+
+.component-table tbody tr:hover {
+  background-color: var(--bg-hover);
+}
+
+.text-right {
+  text-align: right !important;
+}
+
+/* Badges dentro de tablas de datos */
+.component-table td .component-badge {
+  cursor: default;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  user-select: text;
+  background-color: var(--bg-hover);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+.component-table td .component-badge .material-symbols-rounded {
+  font-size: 14px;
+  line-height: 1;
+  color: inherit;
+}
+
+.component-table td .component-badge code {
+  font-family: var(--sl-font-mono, monospace);
+  font-size: 12px;
+  font-weight: 600;
+  color: inherit;
+  background: transparent;
+  padding: 0;
+  border: none;
+}
+
+/* Component Empty State */
+.component-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 24px;
+  text-align: center;
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.component-empty-state__icon {
+  font-size: 48px;
+  color: var(--text-muted);
+}
+
+.component-empty-state__text {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0;
+  max-width: 360px;
+}
+
+/* ==========================================================================
+   27. ACORDEONES EN SETTINGS (.settings-group--accordion)
+   ========================================================================== */
+
+.settings-group--accordion {
+  overflow: hidden;
+  transition: border-color var(--sl-transition-fast), background-color var(--sl-transition-fast);
+}
+
+.settings-accordion-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px;
+  cursor: pointer;
+  user-select: none;
+  background-color: transparent;
+  transition: background-color var(--sl-transition-fast);
+}
+
+.settings-accordion-header:hover {
+  background-color: var(--bg-hover);
+}
+
+.settings-accordion-icon {
+  font-size: 22px;
+  color: var(--text-secondary);
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.settings-group--accordion.is-active .settings-accordion-icon {
+  transform: rotate(180deg);
+}
+
+.settings-accordion-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.settings-group--accordion.is-active .settings-accordion-body {
+  grid-template-rows: 1fr;
+}
+
+.settings-accordion-content {
+  min-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  border-top: 1px solid transparent;
+  transition: opacity 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), border-top-color var(--sl-transition-fast);
+}
+
+.settings-group--accordion.is-active .settings-accordion-content {
+  opacity: 1;
+  overflow: visible;
+  border-top-color: var(--border-color);
+}
+
+
 
 
 

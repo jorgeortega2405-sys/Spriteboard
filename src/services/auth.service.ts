@@ -7,6 +7,7 @@ import { UserPayload, SessionAccount, MultiAccountSessionPayload } from '../type
 import { pool } from '../config/database.config.js';
 import { redis } from '../config/redis.config.js';
 import { logger } from './logger.service.js';
+import { geoIpService } from './geoip.service.js';
 
 export const COOKIE_NAME = 'sprite_session';
 export const MAX_CONCURRENT_ACCOUNTS = 5;
@@ -120,11 +121,18 @@ export async function registerActiveSession(
 ): Promise<string> {
   const sessionId = crypto.randomUUID();
   const now = Date.now();
+  const geo = ip && ip !== 'unknown' ? geoIpService.lookup(ip) : null;
+
   const sessionData = {
     sessionId,
     userId,
     ip: ip || 'unknown',
     userAgent: userAgent || 'unknown',
+    countryCode: geo?.countryCode || null,
+    countryName: geo?.countryName || null,
+    city: geo?.city || null,
+    asn: geo?.asn || null,
+    isp: geo?.asOrg || null,
     createdAt: now,
     lastActiveAt: now,
   };
@@ -484,4 +492,45 @@ export function clearSessionCookie(res: Response): void {
     sameSite: 'lax',
     secure: config.nodeEnv === 'production',
   });
+}
+
+/**
+ * Actualiza el subscription_tier en las sesiones activas de Redis y publica evento de cambio
+ */
+export async function updateUserSubscriptionInSessions(
+  userId: number,
+  tier: string
+): Promise<void> {
+  try {
+    const userSessionsKey = `${USER_SESSIONS_PREFIX}${userId}`;
+    const sessionIds = await redis.smembers(userSessionsKey);
+
+    if (sessionIds && sessionIds.length > 0) {
+      for (const sid of sessionIds) {
+        const sessionKey = `${SESSION_PREFIX}${sid}`;
+        const dataStr = await redis.get(sessionKey);
+        if (dataStr) {
+          try {
+            const parsed = JSON.parse(dataStr);
+            parsed.subscription_tier = tier;
+            await redis.setex(sessionKey, SESSION_TTL_SECONDS, JSON.stringify(parsed));
+          } catch (_) {}
+        }
+      }
+    }
+
+    // Publicar evento en Redis Pub/Sub para que otros microservicios sincronicen
+    await redis.publish(
+      SESSION_EVENTS_CHANNEL,
+      JSON.stringify({
+        type: 'SUBSCRIPTION_UPDATED',
+        userId,
+        tier,
+        timestamp: Date.now(),
+      })
+    );
+    logger.security.info('Suscripción actualizada en sesiones de Redis', { userId, tier });
+  } catch (err) {
+    logger.db.error('Error al actualizar suscripción en sesiones de Redis', err);
+  }
 }

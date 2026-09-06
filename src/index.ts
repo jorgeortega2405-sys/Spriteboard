@@ -13,6 +13,7 @@ import { getHealth } from './controllers/config.controller.js';
 import { logger } from './services/logger.service.js';
 import { telemetryMiddleware } from './middlewares/telemetry.middleware.js';
 import { telemetryService } from './services/telemetry.service.js';
+import { geoIpService } from './services/geoip.service.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -41,7 +42,16 @@ app.use((req: Request, res: Response, next: express.NextFunction) => {
 });
 
 // Middlewares globales con límite estricto de carga para prevenir ataques DoS por agotamiento de memoria
-app.use(express.json({ limit: '1mb' }));
+app.use(
+  express.json({
+    limit: '2mb',
+    verify: (req: any, _res, buf) => {
+      if (req.originalUrl?.includes('/subscriptions/webhook')) {
+        req.rawBody = buf;
+      }
+    },
+  })
+);
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(cookieParser());
 
@@ -82,6 +92,7 @@ async function startServer() {
     }
     await checkDbConnection();
     await checkRedisConnection();
+    await geoIpService.init();
 
     // Inicialización resiliente de Apache Cassandra en segundo plano (buffer activo mientras conecta)
     void checkCassandraConnection().catch((err) => {

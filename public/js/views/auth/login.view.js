@@ -1,5 +1,5 @@
 import { loadTemplate } from '../../services/template.service.js';
-import { postApi, setCurrentUser, setLinkedAccounts } from '../../services/api.service.js';
+import { postApi, setCurrentUser, setLinkedAccounts, currentUser } from '../../services/api.service.js';
 import { navigate } from '../../app-router.js';
 import { initWebSocket } from '../../services/websocket.service.js';
 import { saveTwoFactorLoginState } from '../../services/two-factor-state.js';
@@ -20,7 +20,28 @@ export async function createLoginView() {
   const toggleBtn = container.querySelector('[data-ref="toggle-login-password"]');
   const submitBtn = container.querySelector('[data-ref="btn-submit-login"]');
   const googleBtn = container.querySelector('[data-ref="btn-google-login"]');
+  const titleEl = container.querySelector('[data-ref="login-title"]');
+  const subtitleEl = container.querySelector('[data-ref="login-subtitle"]');
   const banners = createBannerManager(container, { errorRef: 'login-error' });
+
+  // Detectar si el usuario ya tiene sesión activa o viene de agregar otra cuenta
+  const urlParams = new URLSearchParams(window.location.search);
+  const isAddingAccount = Boolean(currentUser) || urlParams.get('action') === 'add-account';
+
+  if (isAddingAccount) {
+    if (titleEl) {
+      titleEl.setAttribute('data-i18n', 'auth.login.add_account_title');
+      titleEl.textContent = t('auth.login.add_account_title') || 'Agregar otra cuenta';
+    }
+    if (subtitleEl) {
+      subtitleEl.setAttribute('data-i18n', 'auth.login.add_account_subtitle');
+      subtitleEl.textContent = t('auth.login.add_account_subtitle') || 'Ingresa las credenciales de la cuenta que deseas agregar para alternar fácilmente';
+    }
+    if (submitBtn) {
+      submitBtn.setAttribute('data-i18n', 'auth.login.add_account_btn');
+      submitBtn.textContent = t('auth.login.add_account_btn') || 'Agregar cuenta';
+    }
+  }
 
   // Navegación
   bindNavigationLinks(container, {
@@ -41,7 +62,6 @@ export async function createLoginView() {
   });
 
   // Error de OAuth redirigido
-  const urlParams = new URLSearchParams(window.location.search);
   const oauthError = urlParams.get('error');
   if (oauthError) {
     banners.showError(t('toasts.generic_error'));
@@ -63,7 +83,11 @@ export async function createLoginView() {
       return;
     }
 
-    await withButtonLoading(submitBtn, t('auth.login.loading'), async () => {
+    const loadingText = isAddingAccount
+      ? (t('auth.login.add_account_loading') || 'Agregando cuenta...')
+      : (t('auth.login.loading') || 'Iniciando sesión...');
+
+    await withButtonLoading(submitBtn, loadingText, async () => {
       try {
         const res = await postApi('/api/login', { email, password });
         const data = await res.json();

@@ -201,7 +201,89 @@ export async function runMigrations(): Promise<void> {
       logger.db.info('Columna subscription_tier añadida a la tabla users.');
     }
 
-    logger.db.info('Tablas y columnas de identidad, 2FA, cooldowns y suscripciones verificadas exitosamente.');
+    // 9. Columnas de Stripe en la tabla users
+    const [stripeCustCols] = await conn.query<mysql.RowDataPacket[]>(
+      "SHOW COLUMNS FROM users LIKE 'stripe_customer_id'"
+    );
+    if (stripeCustCols.length === 0) {
+      await conn.query('ALTER TABLE users ADD COLUMN stripe_customer_id VARCHAR(255) NULL AFTER subscription_tier');
+      logger.db.info('Columna stripe_customer_id añadida a la tabla users.');
+    }
+
+    const [stripeSubCols] = await conn.query<mysql.RowDataPacket[]>(
+      "SHOW COLUMNS FROM users LIKE 'stripe_subscription_id'"
+    );
+    if (stripeSubCols.length === 0) {
+      await conn.query('ALTER TABLE users ADD COLUMN stripe_subscription_id VARCHAR(255) NULL AFTER stripe_customer_id');
+      logger.db.info('Columna stripe_subscription_id añadida a la tabla users.');
+    }
+
+    const [subStatusCols] = await conn.query<mysql.RowDataPacket[]>(
+      "SHOW COLUMNS FROM users LIKE 'subscription_status'"
+    );
+    if (subStatusCols.length === 0) {
+      await conn.query("ALTER TABLE users ADD COLUMN subscription_status VARCHAR(50) NOT NULL DEFAULT 'active' AFTER stripe_subscription_id");
+      logger.db.info('Columna subscription_status añadida a la tabla users.');
+    }
+
+    const [periodEndCols] = await conn.query<mysql.RowDataPacket[]>(
+      "SHOW COLUMNS FROM users LIKE 'subscription_period_end'"
+    );
+    if (periodEndCols.length === 0) {
+      await conn.query('ALTER TABLE users ADD COLUMN subscription_period_end TIMESTAMP NULL AFTER subscription_status');
+      logger.db.info('Columna subscription_period_end añadida a la tabla users.');
+    }
+
+    // 10. Tabla purchases (registro general de compras y pagos)
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS purchases (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        stripe_session_id VARCHAR(255) NOT NULL UNIQUE,
+        stripe_payment_intent_id VARCHAR(255) NULL,
+        stripe_subscription_id VARCHAR(255) NULL,
+        stripe_customer_id VARCHAR(255) NULL,
+        plan_id VARCHAR(50) NOT NULL,
+        billing_period VARCHAR(20) NOT NULL,
+        amount_total DECIMAL(10, 2) NOT NULL,
+        currency VARCHAR(10) NOT NULL DEFAULT 'USD',
+        status VARCHAR(50) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_purchases_user (user_id),
+        INDEX idx_purchases_session (stripe_session_id),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    // 11. Columnas de Registro y Último Login GeoIP y ASN en users
+    const geoColumns: Array<{ name: string; type: string }> = [
+      { name: 'registration_ip', type: 'VARCHAR(45) NULL' },
+      { name: 'registration_country_code', type: 'VARCHAR(10) NULL' },
+      { name: 'registration_country_name', type: 'VARCHAR(100) NULL' },
+      { name: 'registration_region', type: 'VARCHAR(100) NULL' },
+      { name: 'registration_city', type: 'VARCHAR(100) NULL' },
+      { name: 'registration_asn', type: 'VARCHAR(50) NULL' },
+      { name: 'registration_isp', type: 'VARCHAR(255) NULL' },
+      { name: 'last_login_ip', type: 'VARCHAR(45) NULL' },
+      { name: 'last_login_country', type: 'VARCHAR(100) NULL' },
+      { name: 'last_login_city', type: 'VARCHAR(100) NULL' },
+      { name: 'last_login_asn', type: 'VARCHAR(50) NULL' },
+      { name: 'last_login_isp', type: 'VARCHAR(255) NULL' },
+      { name: 'last_login_at', type: 'TIMESTAMP NULL' },
+    ];
+
+    for (const col of geoColumns) {
+      const [exists] = await conn.query<mysql.RowDataPacket[]>(
+        `SHOW COLUMNS FROM users LIKE '${col.name}'`
+      );
+      if (exists.length === 0) {
+        await conn.query(`ALTER TABLE users ADD COLUMN ${col.name} ${col.type}`);
+        logger.db.info(`Columna ${col.name} añadida a la tabla users.`);
+      }
+    }
+
+    logger.db.info('Tablas y columnas de identidad, 2FA, suscripciones, compras y GeoIP verificadas exitosamente.');
   } catch (err) {
     logger.db.warn('Advertencia en migración de base de datos', err);
   } finally {

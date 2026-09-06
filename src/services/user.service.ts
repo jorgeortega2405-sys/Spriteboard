@@ -28,6 +28,19 @@ export interface UserRecord extends RowDataPacket {
   two_factor_enabled?: boolean | number;
   two_factor_secret?: string | null;
   two_factor_recovery_codes?: string | null;
+  registration_ip?: string | null;
+  registration_country_code?: string | null;
+  registration_country_name?: string | null;
+  registration_region?: string | null;
+  registration_city?: string | null;
+  registration_asn?: string | null;
+  registration_isp?: string | null;
+  last_login_ip?: string | null;
+  last_login_country?: string | null;
+  last_login_city?: string | null;
+  last_login_asn?: string | null;
+  last_login_isp?: string | null;
+  last_login_at?: Date | null;
   created_at?: Date;
   updated_at?: Date;
 }
@@ -48,34 +61,26 @@ export async function findUserByEmail(email: string): Promise<UserRecord | null>
  */
 export async function findUserByUsername(username: string): Promise<UserRecord | null> {
   const [rows] = await pool.query<UserRecord[]>(
-    'SELECT id, username, email, password_hash, avatar_url, google_id, subscription_tier FROM users WHERE username = ? LIMIT 1',
+    'SELECT id, username, email, avatar_url, google_id, subscription_tier, two_factor_enabled FROM users WHERE username = ? LIMIT 1',
     [username.trim()]
   );
   return rows.length > 0 ? rows[0] : null;
 }
 
 /**
- * Busca coincidencias por email o username (para detección rápida de duplicados)
+ * Verifica si un email o username ya están en uso
  */
 export async function findUserDuplicates(
   email: string,
   username: string
 ): Promise<{ emailExists: boolean; usernameExists: boolean }> {
   const [rows] = await pool.query<UserRecord[]>(
-    'SELECT id, username, email FROM users WHERE email = ? OR username = ? LIMIT 2',
+    'SELECT email, username FROM users WHERE email = ? OR username = ? LIMIT 2',
     [email.toLowerCase().trim(), username.trim()]
   );
 
-  const cleanEmail = email.toLowerCase().trim();
-  const cleanUsername = username.toLowerCase().trim();
-
-  let emailExists = false;
-  let usernameExists = false;
-
-  for (const user of rows) {
-    if (user.email.toLowerCase() === cleanEmail) emailExists = true;
-    if (user.username.toLowerCase() === cleanUsername) usernameExists = true;
-  }
+  const emailExists = rows.some((u) => u.email.toLowerCase() === email.toLowerCase().trim());
+  const usernameExists = rows.some((u) => u.username.toLowerCase() === username.toLowerCase().trim());
 
   return { emailExists, usernameExists };
 }
@@ -92,21 +97,47 @@ export async function findUserById(id: number): Promise<UserRecord | null> {
 }
 
 /**
- * Crea un nuevo usuario en la base de datos
+ * Crea un nuevo usuario en la base de datos con soporte para auditoría GeoIP y ASN
  */
 export async function createUser(data: {
   username: string;
   email: string;
   passwordHash: string;
   avatarUrl?: string;
+  registrationIp?: string | null;
+  registrationCountryCode?: string | null;
+  registrationCountryName?: string | null;
+  registrationRegion?: string | null;
+  registrationCity?: string | null;
+  registrationAsn?: string | null;
+  registrationIsp?: string | null;
 }): Promise<UserPayload> {
   const [result] = await pool.query<ResultSetHeader>(
-    'INSERT INTO users (username, email, password_hash, avatar_url) VALUES (?, ?, ?, ?)',
+    `INSERT INTO users (
+      username,
+      email,
+      password_hash,
+      avatar_url,
+      registration_ip,
+      registration_country_code,
+      registration_country_name,
+      registration_region,
+      registration_city,
+      registration_asn,
+      registration_isp
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       data.username.trim(),
       data.email.toLowerCase().trim(),
       data.passwordHash,
       data.avatarUrl || null,
+      data.registrationIp || null,
+      data.registrationCountryCode || null,
+      data.registrationCountryName || null,
+      data.registrationRegion || null,
+      data.registrationCity || null,
+      data.registrationAsn || null,
+      data.registrationIsp || null,
     ]
   );
 
@@ -116,6 +147,43 @@ export async function createUser(data: {
     email: data.email.toLowerCase().trim(),
     ...(data.avatarUrl ? { avatar_url: data.avatarUrl } : {}),
   };
+}
+
+/**
+ * Actualiza la información geográfica y proveedor ASN del último inicio de sesión
+ */
+export async function updateUserLastLoginGeo(
+  userId: number,
+  geo: {
+    ip?: string | null;
+    country?: string | null;
+    city?: string | null;
+    asn?: string | null;
+    isp?: string | null;
+  }
+): Promise<void> {
+  try {
+    await pool.query(
+      `UPDATE users SET
+         last_login_ip = ?,
+         last_login_country = ?,
+         last_login_city = ?,
+         last_login_asn = ?,
+         last_login_isp = ?,
+         last_login_at = CURRENT_TIMESTAMP
+       WHERE id = ?`,
+      [
+        geo.ip || null,
+        geo.country || null,
+        geo.city || null,
+        geo.asn || null,
+        geo.isp || null,
+        userId,
+      ]
+    );
+  } catch (err) {
+    logger.db.warn('No se pudo actualizar último login y geolocalización en users', err);
+  }
 }
 
 /**

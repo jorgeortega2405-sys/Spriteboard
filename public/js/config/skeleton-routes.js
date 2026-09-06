@@ -19,8 +19,17 @@ export const SKELETON_ROUTES = {
   '/settings/your-account': 'grouped-layout',
   '/settings/security': 'grouped-layout',
   '/settings/login-and-security': 'grouped-layout',
+  '/settings/billing': 'grouped-layout',
+  '/settings/purchases': 'grouped-layout',
   '/settings/accessibility': 'grouped-layout',
   '/settings/guest': 'grouped-layout',
+  '/help': 'grouped-layout',
+  '/help/terms': 'grouped-layout',
+  '/help/privacy': 'grouped-layout',
+  '/help/cookies': 'grouped-layout',
+  '/help/legal-notice': 'grouped-layout',
+  '/help/billing': 'grouped-layout',
+  '/help/support': 'grouped-layout',
 };
 
 /**
@@ -72,7 +81,8 @@ export function hasPersistentTopBar(pathname) {
     pathname === '' ||
     pathname === '/trash' ||
     pathname === '/upgrade' ||
-    pathname.startsWith('/settings')
+    pathname.startsWith('/settings') ||
+    pathname.startsWith('/help')
   ) {
     return true;
   }

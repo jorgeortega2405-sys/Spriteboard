@@ -10,9 +10,12 @@ import { createForgotPasswordView } from './views/auth/forgot-password.js';
 import { createResetPasswordView } from './views/auth/reset-password.js';
 import { createYourAccountView } from './views/settings/your-account.js';
 import { createSecurityView } from './views/settings/security.view.js';
+import { createBillingView } from './views/settings/billing.view.js';
+import { createPurchasesView } from './views/settings/purchases.view.js';
 import { createAccessibilityView } from './views/settings/accessibility.view.js';
 import { createGuestSettingsView } from './views/settings/guest.view.js';
 import { createUpgradeView } from './views/upgrade.view.js';
+import { createHelpView } from './views/help/help.view.js';
 import { createErrorView } from './views/error.view.js';
 import { SkeletonService } from './services/skeleton.service.js';
 import { hasPersistentTopBar } from './config/skeleton-routes.js';
@@ -20,6 +23,7 @@ import { attachChatSidebarToView } from './components/chat-sidebar.js';
 import { hideTooltip } from './services/tooltip.service.js';
 import { currentUser } from './services/api.service.js';
 import { trackPageView } from './services/telemetry.service.js';
+import { toggleSidebar } from './components/sidebar.component.js';
 
 let isInitialPageLoad = true;
 let currentNavigation = 0;
@@ -32,6 +36,7 @@ export function navigate(url) {
 
 export async function render() {
   hideTooltip();
+  toggleSidebar(false);
   const appRoot = document.querySelector('[data-ref="app"]');
   if (!appRoot) return;
 
@@ -118,6 +123,26 @@ export async function render() {
       const settingsView = await createSecurityView();
       viewElements = topBar ? [topBar, settingsView] : [settingsView];
     }
+  } else if (path === '/settings/billing') {
+    const topBar = isSoftSpaNav ? null : await createTopBar();
+    if (!currentUser) {
+      window.history.replaceState({}, '', '/settings/guest');
+      const settingsView = await createGuestSettingsView();
+      viewElements = topBar ? [topBar, settingsView] : [settingsView];
+    } else {
+      const settingsView = await createBillingView();
+      viewElements = topBar ? [topBar, settingsView] : [settingsView];
+    }
+  } else if (path === '/settings/purchases') {
+    const topBar = isSoftSpaNav ? null : await createTopBar();
+    if (!currentUser) {
+      window.history.replaceState({}, '', '/settings/guest');
+      const settingsView = await createGuestSettingsView();
+      viewElements = topBar ? [topBar, settingsView] : [settingsView];
+    } else {
+      const settingsView = await createPurchasesView();
+      viewElements = topBar ? [topBar, settingsView] : [settingsView];
+    }
   } else if (path === '/settings/accessibility') {
     const topBar = isSoftSpaNav ? null : await createTopBar();
     if (!currentUser) {
@@ -138,6 +163,35 @@ export async function render() {
       const settingsView = await createGuestSettingsView();
       viewElements = topBar ? [topBar, settingsView] : [settingsView];
     }
+  } else if (path === '/help' || path === '/legal') {
+    window.history.replaceState({}, '', '/help/terms');
+    const topBar = isSoftSpaNav ? null : await createTopBar();
+    const termsView = await createHelpView('terms');
+    viewElements = topBar ? [topBar, termsView] : [termsView];
+  } else if (path === '/help/terms' || path === '/legal/terms') {
+    const topBar = isSoftSpaNav ? null : await createTopBar();
+    const termsView = await createHelpView('terms');
+    viewElements = topBar ? [topBar, termsView] : [termsView];
+  } else if (path === '/help/privacy' || path === '/legal/privacy') {
+    const topBar = isSoftSpaNav ? null : await createTopBar();
+    const privacyView = await createHelpView('privacy');
+    viewElements = topBar ? [topBar, privacyView] : [privacyView];
+  } else if (path === '/help/cookies' || path === '/legal/cookies') {
+    const topBar = isSoftSpaNav ? null : await createTopBar();
+    const cookiesView = await createHelpView('cookies');
+    viewElements = topBar ? [topBar, cookiesView] : [cookiesView];
+  } else if (path === '/help/legal-notice' || path === '/legal/legal-notice' || path === '/help/legal') {
+    const topBar = isSoftSpaNav ? null : await createTopBar();
+    const legalView = await createHelpView('legal_notice');
+    viewElements = topBar ? [topBar, legalView] : [legalView];
+  } else if (path === '/help/billing' || path === '/legal/billing') {
+    const topBar = isSoftSpaNav ? null : await createTopBar();
+    const billingView = await createHelpView('billing');
+    viewElements = topBar ? [topBar, billingView] : [billingView];
+  } else if (path === '/help/support' || path === '/help/feedback' || path === '/help/contact') {
+    const topBar = isSoftSpaNav ? null : await createTopBar();
+    const supportView = await createHelpView('support');
+    viewElements = topBar ? [topBar, supportView] : [supportView];
   } else if (path === '/' || path === '') {
     // Vista Principal
     const topBar = isSoftSpaNav ? null : await createTopBar();

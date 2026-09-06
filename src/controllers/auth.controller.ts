@@ -33,6 +33,7 @@ import {
   sendVerificationCodeEmail,
   sendPasswordResetEmail,
 } from '../services/mail.service.js';
+import { pool } from '../config/database.config.js';
 import {
   findUserByEmail,
   findUserDuplicates,
@@ -41,7 +42,9 @@ import {
   updateUserGoogleId,
   findUserById,
   verifyAndConsumeBackupCode,
+  updateUserLastLoginGeo,
 } from '../services/user.service.js';
+import { geoIpService } from '../services/geoip.service.js';
 import {
   savePending2FALogin,
   getPending2FALogin,
@@ -193,18 +196,55 @@ export async function verifyRegistrationCode(req: Request, res: Response): Promi
     }
 
     const pending = verificationResult.data;
+    const clientIp = getClientIp(req);
+    const geo = geoIpService.lookup(clientIp);
 
-    // Crear el usuario en la base de datos MySQL
+    // Crear el usuario en la base de datos MySQL con metadatos GeoIP y ASN
     const newUser = await createUser({
       username: pending.username,
       email: pending.email,
       passwordHash: pending.passwordHash,
+      registrationIp: clientIp,
+      registrationCountryCode: geo.countryCode,
+      registrationCountryName: geo.countryName,
+      registrationRegion: geo.region,
+      registrationCity: geo.city,
+      registrationAsn: geo.asn,
+      registrationIsp: geo.asOrg,
     });
+
+    // Registrar evento de registro en la tabla de auditoría MySQL
+    try {
+      const userAgent = (req.headers['user-agent'] as string) || null;
+      await pool.query(
+        'INSERT INTO user_audit_logs (user_id, action, old_value, new_value, ip_address, user_agent) VALUES (?, ?, ?, ?, ?, ?)',
+        [
+          newUser.id,
+          'REGISTER',
+          null,
+          JSON.stringify({
+            country: geo.countryName,
+            city: geo.city,
+            asn: geo.asn,
+            isp: geo.asOrg,
+          }),
+          clientIp,
+          userAgent,
+        ]
+      );
+    } catch (_) {}
 
     // Iniciar sesión agregando la nueva cuenta a la sesión multicuentas
     const session = await addAccountToSession(res, req, newUser);
 
-    logger.security.info('Cuenta creada y verificada exitosamente', { userId: newUser.id, email: newUser.email });
+    logger.security.info('Cuenta creada y verificada exitosamente', {
+      userId: newUser.id,
+      email: newUser.email,
+      country: geo.countryCode,
+      city: geo.city,
+      asn: geo.asn,
+      isp: geo.asOrg,
+    });
 
     sendCreated(res, {
       message: 'Cuenta creada y verificada exitosamente.',
@@ -300,9 +340,25 @@ export async function login(req: Request, res: Response): Promise<void> {
 
     const user = sanitizeUser(userRow);
 
+    const clientIp = getClientIp(req);
+    const geo = geoIpService.lookup(clientIp);
+    void updateUserLastLoginGeo(user.id, {
+      ip: clientIp,
+      country: geo.countryName,
+      city: geo.city,
+      asn: geo.asn,
+      isp: geo.asOrg,
+    });
+
     const session = await addAccountToSession(res, req, user);
 
-    logger.security.info('Inicio de sesión exitoso', { userId: user.id, email: user.email });
+    logger.security.info('Inicio de sesión exitoso', {
+      userId: user.id,
+      email: user.email,
+      country: geo.countryCode,
+      city: geo.city,
+      asn: geo.asn,
+    });
 
     sendSuccess(res, {
       message: 'Inicio de sesión exitoso.',
@@ -364,6 +420,17 @@ export async function verify2FALogin(req: Request, res: Response): Promise<void>
     await consumePending2FALogin(tempToken.trim());
 
     const user = sanitizeUser(userRow);
+
+    const clientIp = getClientIp(req);
+    const geo = geoIpService.lookup(clientIp);
+    void updateUserLastLoginGeo(user.id, {
+      ip: clientIp,
+      country: geo.countryName,
+      city: geo.city,
+      asn: geo.asn,
+      isp: geo.asOrg,
+    });
+
     const session = await addAccountToSession(res, req, user);
 
     res.clearCookie('2fa_temp_token', { path: '/' });
@@ -523,7 +590,7 @@ export async function googleCallback(req: Request, res: Response): Promise<void>
       return;
     }
 
-    const userPayload = await processGoogleAuthCallback(String(code));
+    const userPayload = await processGoogleAuthCallback(String(code), getClientIp(req));
 
     // Si es flujo de verificación de identidad para cambio de contraseña
     if (isVerifyFlow) {

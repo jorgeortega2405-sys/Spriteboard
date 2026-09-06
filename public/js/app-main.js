@@ -3,7 +3,7 @@
  * Arquitectura modular nativa basada en componentes, plantillas HTML y cero IDs.
  */
 
-import { fetchCsrfToken, checkAuthSession, fetchAppConfig } from './services/api.service.js';
+import { fetchCsrfToken, checkAuthSession, fetchAppConfig, verifySubscriptionSessionApi } from './services/api.service.js';
 import { render, navigate } from './app-router.js';
 import { initTooltips } from './services/tooltip.service.js';
 import { initI18n } from './services/i18n.service.js';
@@ -43,6 +43,19 @@ async function init() {
   initTooltips();
   initScrollShadow();
   initWebVitals();
+
+  // Si retornamos desde Stripe Checkout con éxito, verificar y sincronizar de inmediato
+  // antes de cargar la sesión, para que checkAuthSession() obtenga el tier recién activado en la BD
+  const urlParams = new URLSearchParams(window.location.search);
+  const paymentStatus = urlParams.get('payment');
+  const sessionId = urlParams.get('session_id');
+
+  if (paymentStatus === 'success' && sessionId) {
+    try {
+      await verifySubscriptionSessionApi(sessionId);
+    } catch (_) {}
+  }
+
   await Promise.all([fetchCsrfToken(), checkAuthSession(), fetchAppConfig()]);
   initWebSocket();
   await initI18n();

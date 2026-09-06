@@ -5,6 +5,7 @@ import { generateCsrfToken } from '../middlewares/csrf.middleware.js';
 export function getAppConfig(req: Request, res: Response): void {
   res.json({
     appName: config.appName,
+    stripePublishableKey: config.stripe.publishableKey,
   });
 }
 

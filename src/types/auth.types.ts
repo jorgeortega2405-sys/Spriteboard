@@ -33,6 +33,11 @@ export interface ActiveSessionData {
   userId: number;
   ip?: string;
   userAgent?: string;
+  countryCode?: string | null;
+  countryName?: string | null;
+  city?: string | null;
+  asn?: string | null;
+  isp?: string | null;
   createdAt: number;
   lastActiveAt: number;
 }

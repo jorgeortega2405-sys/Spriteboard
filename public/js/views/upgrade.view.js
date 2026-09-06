@@ -9,12 +9,51 @@
 
 import { loadTemplate } from '../services/template.service.js';
 import { createSidebar } from '../components/sidebar.component.js';
-import { getSubscriptionsApi, escapeHtml } from '../services/api.service.js';
+import {
+  getSubscriptionsApi,
+  createSubscriptionCheckoutApi,
+  verifySubscriptionSessionApi,
+  currentUser,
+  checkAuthSession,
+  escapeHtml,
+} from '../services/api.service.js';
 import { showToast } from '../services/toast.service.js';
 import { t } from '../services/i18n.service.js';
+import { navigate } from '../app-router.js';
 
 export async function createUpgradeView() {
   const container = await loadTemplate('/views/upgrade/upgrade.html');
+
+  // Procesar retorno desde Stripe Checkout
+  const urlParams = new URLSearchParams(window.location.search);
+  const paymentStatus = urlParams.get('payment');
+  const sessionId = urlParams.get('session_id');
+
+  if (paymentStatus === 'success' && sessionId) {
+    try {
+      const verifyRes = await verifySubscriptionSessionApi(sessionId);
+      if (verifyRes.success) {
+        await checkAuthSession();
+        window.dispatchEvent(new CustomEvent('subscription-updated', { detail: currentUser }));
+      }
+    } catch (_) {
+      // En caso de fallo silencioso de red, el webhook de Stripe asegura la actualización asíncrona
+    } finally {
+      const activeTierName = (currentUser?.subscription_tier || 'pro').toUpperCase();
+      showToast(
+        t('upgrade.payment_success_toast', { plan: activeTierName }) ||
+          `¡Felicidades! Tu suscripción a Spriteboard ${activeTierName} ha sido activada con éxito.`,
+        'success'
+      );
+      window.history.replaceState({}, '', '/upgrade');
+    }
+  } else if (paymentStatus === 'cancelled') {
+    showToast(
+      t('upgrade.payment_cancelled_toast') || 'El proceso de pago fue cancelado. No se ha realizado ningún cobro.',
+      'info'
+    );
+    window.history.replaceState({}, '', '/upgrade');
+  }
 
   // Insertar la barra lateral (sidebar)
   const sidebar = await createSidebar();
@@ -171,8 +210,23 @@ export async function createUpgradeView() {
   if (grid) {
     grid.innerHTML = '';
 
+    const TIER_HIERARCHY = {
+      free: 0,
+      none: 0,
+      plus: 1,
+      pro: 2,
+      ultra: 3,
+    };
+
+    const userTier = currentUser?.subscription_tier || 'free';
+    const userTierLevel = TIER_HIERARCHY[userTier] ?? 0;
+
     tiers.forEach((tier, tierIdx) => {
       const isPopular = Boolean(tier.isPopular);
+      const cardTierLevel = TIER_HIERARCHY[tier.id] ?? 0;
+      const isCurrentPlan = Boolean(currentUser && userTier === tier.id);
+      const isDowngrade = Boolean(currentUser && userTierLevel > cardTierLevel && userTier !== 'free');
+
       const initialPrice = (tier.priceMonthly ?? tier.price).toFixed(2);
       const monthlyPrice = (tier.priceMonthly ?? tier.price).toFixed(2);
       const yearlyPrice = (tier.priceYearly ?? tier.price).toFixed(2);
@@ -204,14 +258,25 @@ export async function createUpgradeView() {
       });
 
       const card = document.createElement('div');
-      card.className = `component-card component-card--grouped component-card--plan ${isPopular ? 'component-card--featured' : 'component-card--standard'}`;
+      card.className = `component-card component-card--grouped component-card--plan ${
+        isCurrentPlan
+          ? 'component-card--current'
+          : (isPopular ? 'component-card--featured' : 'component-card--standard')
+      }`;
       card.setAttribute('data-ref', `plan-card-${tier.id}`);
       card.setAttribute('data-tier', tier.id);
 
       card.innerHTML = `
         <!-- Sección Encabezado -->
         <div class="component-card-section component-card-section--header" data-ref="card-header-${tier.id}">
-          ${isPopular ? `<div class="component-card-popular-badge" data-ref="popular-badge-${tier.id}">${escapeHtml(tier.badge || 'Más popular')}</div>` : ''}
+          ${isCurrentPlan ? `
+            <div class="component-card-current-badge" data-ref="current-badge-${tier.id}">
+              <span class="material-symbols-rounded" style="font-size: 14px;">check_circle</span>
+              <span>${escapeHtml(t('upgrade.current_plan') || 'Tu plan actual')}</span>
+            </div>
+          ` : (isPopular ? `
+            <div class="component-card-popular-badge" data-ref="popular-badge-${tier.id}">${escapeHtml(tier.badge || 'Más popular')}</div>
+          ` : '')}
           <h2 class="component-card-title" data-ref="card-title-${tier.id}">${escapeHtml(tier.name)}</h2>
           <p class="component-card-desc" data-ref="card-desc-${tier.id}">${escapeHtml(tier.tagline)}</p>
           <span class="component-badge component-badge--sm component-card-storage-badge" data-ref="storage-badge-${tier.id}">
@@ -233,14 +298,25 @@ export async function createUpgradeView() {
 
         <!-- Sección Botón de Acción -->
         <div class="component-card-section component-card-section--action" data-ref="card-action-${tier.id}">
-          <button type="button" class="component-button component-button--rounded-pill component-button--hover-text component-cursor-pointer component-card-button ${isPopular ? 'component-card-button--featured' : ''}" data-ref="btn-subscribe-${tier.id}" data-action="subscribe" data-tier="${tier.id}">
-            <span class="btn-default-text">
-              ${escapeHtml(tier.buttonText || `Obtén ${tier.name}`)}
-            </span>
-            <span class="btn-hover-text">
-              Mejorar plan
-            </span>
-          </button>
+          ${isCurrentPlan ? `
+            <button type="button" class="component-button component-button--rounded-pill component-card-button component-card-button--current" data-ref="btn-subscribe-${tier.id}" data-action="current-plan" disabled>
+              <span class="material-symbols-rounded" style="font-size: 18px; margin-right: 6px;">check_circle</span>
+              <span>${escapeHtml(t('upgrade.current_plan') || 'Tu plan actual')}</span>
+            </button>
+          ` : isDowngrade ? `
+            <button type="button" class="component-button component-button--rounded-pill component-card-button component-card-button--downgrade" data-ref="btn-subscribe-${tier.id}" data-action="downgrade" disabled>
+              <span>${escapeHtml(t('upgrade.included_in_plan') || 'Incluido en tu plan')}</span>
+            </button>
+          ` : `
+            <button type="button" class="component-button component-button--rounded-pill component-button--hover-text component-cursor-pointer component-card-button ${isPopular ? 'component-card-button--featured' : ''}" data-ref="btn-subscribe-${tier.id}" data-action="subscribe" data-tier="${tier.id}">
+              <span class="btn-default-text">
+                ${escapeHtml(tier.buttonText || `Obtén ${tier.name}`)}
+              </span>
+              <span class="btn-hover-text">
+                Mejorar plan
+              </span>
+            </button>
+          `}
         </div>
 
         <hr class="component-divider" />
@@ -258,16 +334,44 @@ export async function createUpgradeView() {
         </div>
       `;
 
-      // Evento del botón de suscripción
+      // Evento del botón de suscripción: Redirige a Stripe Checkout si no es el plan actual o downgrade
       const subscribeBtn = card.querySelector(`[data-ref="btn-subscribe-${tier.id}"]`);
-      subscribeBtn?.addEventListener('click', (e) => {
-        e.preventDefault();
-        showToast(
-          t('upgrade.toast_coming_soon', { plan: tier.name }) ||
-            `El plan ${tier.name} y la pasarela de pagos estarán disponibles próximamente.`,
-          'info'
-        );
+      if (subscribeBtn && !isCurrentPlan && !isDowngrade) {
+        subscribeBtn.addEventListener('click', async (e) => {
+          e.preventDefault();
+
+          if (!currentUser) {
+          showToast(
+            t('upgrade.login_required') || 'Debes iniciar sesión para contratar una suscripción.',
+            'info'
+          );
+          navigate('/login');
+          return;
+        }
+
+        const originalHtml = subscribeBtn.innerHTML;
+        subscribeBtn.disabled = true;
+        subscribeBtn.style.opacity = '0.7';
+
+        try {
+          const res = await createSubscriptionCheckoutApi(tier.id, currentBillingCycle);
+          if (res.success && res.url) {
+            window.location.href = res.url;
+          } else {
+            showToast(
+              res.error || t('toasts.generic_error') || 'Error al conectar con la pasarela de pagos.',
+              'error'
+            );
+            subscribeBtn.disabled = false;
+            subscribeBtn.style.opacity = '1';
+          }
+        } catch {
+          showToast(t('toasts.network_error') || 'Error de conexión con el servidor.', 'error');
+          subscribeBtn.disabled = false;
+          subscribeBtn.style.opacity = '1';
+        }
       });
+      }
 
       // Evento para expandir/ocultar características adicionales
       const toggleFeaturesBtn = card.querySelector(`[data-ref="toggle-btn-${tier.id}"]`);
@@ -346,6 +450,18 @@ export async function createUpgradeView() {
     if (currentBillingCycle !== 'yearly') {
       setBillingCycle('yearly');
     }
+  });
+
+  // Navegación SPA para los enlaces del aviso legal
+  const disclaimerLinks = container.querySelectorAll('.component-disclaimer a.link');
+  disclaimerLinks.forEach((link) => {
+    link.addEventListener('click', (e) => {
+      const href = link.getAttribute('href');
+      if (href && href.startsWith('/')) {
+        e.preventDefault();
+        navigate(href);
+      }
+    });
   });
 
   return container;

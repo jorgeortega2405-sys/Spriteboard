@@ -3,6 +3,8 @@ import { Request, Response } from 'express';
 import { pool } from '../config/database.config.js';
 import { config } from '../config/env.config.js';
 import { UserPayload, GoogleTokenResponse, GoogleUserInfo } from '../types/auth.types.js';
+import { updateUserLastLoginGeo } from './user.service.js';
+import { geoIpService } from './geoip.service.js';
 import type { RowDataPacket, ResultSetHeader } from 'mysql2';
 
 export const STATE_COOKIE_NAME = 'oauth_state';
@@ -93,7 +95,7 @@ export async function generateUniqueUsername(baseName: string): Promise<string> 
   }
 }
 
-export async function processGoogleAuthCallback(code: string): Promise<UserPayload> {
+export async function processGoogleAuthCallback(code: string, clientIp?: string): Promise<UserPayload> {
   const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: {
@@ -132,6 +134,8 @@ export async function processGoogleAuthCallback(code: string): Promise<UserPaylo
   const email = googleUser.email.toLowerCase();
   const avatarUrl = googleUser.picture || null;
 
+  const geo = clientIp ? geoIpService.lookup(clientIp) : null;
+
   // 1. Buscar si ya existe usuario con este google_id
   const [existingGoogleUsers] = await pool.query<RowDataPacket[]>(
     'SELECT id, username, email, avatar_url, google_id, subscription_tier, two_factor_enabled FROM users WHERE google_id = ? LIMIT 1',
@@ -140,6 +144,15 @@ export async function processGoogleAuthCallback(code: string): Promise<UserPaylo
 
   if (existingGoogleUsers.length > 0) {
     const u = existingGoogleUsers[0];
+    if (clientIp) {
+      void updateUserLastLoginGeo(u.id, {
+        ip: clientIp,
+        country: geo?.countryName,
+        city: geo?.city,
+        asn: geo?.asn,
+        isp: geo?.asOrg,
+      });
+    }
     return {
       id: u.id,
       username: u.username,
@@ -160,6 +173,15 @@ export async function processGoogleAuthCallback(code: string): Promise<UserPaylo
   if (existingEmailUsers.length > 0) {
     const u = existingEmailUsers[0];
     await pool.query('UPDATE users SET google_id = ? WHERE id = ?', [googleId, u.id]);
+    if (clientIp) {
+      void updateUserLastLoginGeo(u.id, {
+        ip: clientIp,
+        country: geo?.countryName,
+        city: geo?.city,
+        asn: geo?.asn,
+        isp: geo?.asOrg,
+      });
+    }
     return {
       id: u.id,
       username: u.username,
@@ -171,13 +193,48 @@ export async function processGoogleAuthCallback(code: string): Promise<UserPaylo
     };
   }
 
-  // 3. Crear nuevo usuario federado con avatar por defecto (NULL)
+  // 3. Crear nuevo usuario federado con metadatos de registro GeoIP y ASN
   const baseName = googleUser.name || email.split('@')[0];
   const uniqueUsername = await generateUniqueUsername(baseName);
 
   const [insertResult] = await pool.query<ResultSetHeader>(
-    'INSERT INTO users (username, email, password_hash, google_id, avatar_url) VALUES (?, ?, NULL, ?, NULL)',
-    [uniqueUsername, email, googleId]
+    `INSERT INTO users (
+      username,
+      email,
+      password_hash,
+      google_id,
+      avatar_url,
+      registration_ip,
+      registration_country_code,
+      registration_country_name,
+      registration_region,
+      registration_city,
+      registration_asn,
+      registration_isp,
+      last_login_ip,
+      last_login_country,
+      last_login_city,
+      last_login_asn,
+      last_login_isp,
+      last_login_at
+    ) VALUES (?, ?, NULL, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+    [
+      uniqueUsername,
+      email,
+      googleId,
+      clientIp || null,
+      geo?.countryCode || null,
+      geo?.countryName || null,
+      geo?.region || null,
+      geo?.city || null,
+      geo?.asn || null,
+      geo?.asOrg || null,
+      clientIp || null,
+      geo?.countryName || null,
+      geo?.city || null,
+      geo?.asn || null,
+      geo?.asOrg || null,
+    ]
   );
 
   return {

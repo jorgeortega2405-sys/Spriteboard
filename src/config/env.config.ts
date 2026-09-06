@@ -36,6 +36,16 @@ export const config = {
     host: process.env.WEBSOCKET_HOST || 'websocket',
     port: Number(process.env.WEBSOCKET_PORT) || 3001,
   },
+  baseUrl: process.env.BASE_URL || 'http://localhost:3000',
+  stripe: {
+    secretKey: process.env.STRIPE_SECRET_KEY || '',
+    publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || '',
+    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
+  },
+  geoip: {
+    cityDbPath: process.env.GEOIP_CITY_DB_PATH || '',
+    asnDbPath: process.env.GEOIP_ASN_DB_PATH || '',
+  },
 };
 
 

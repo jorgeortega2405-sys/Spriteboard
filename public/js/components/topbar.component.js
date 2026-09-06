@@ -82,16 +82,27 @@ export async function createTopBar() {
       const activeEmail = avatarContainer.querySelector('[data-ref="active-account-email"]');
 
       const userTier = currentUser.subscription_tier || 'free';
-      if (avatarBtn) {
-        avatarBtn.setAttribute('data-tier', userTier);
-        avatarBtn.classList.remove('avatar-tier--free', 'avatar-tier--plus', 'avatar-tier--pro', 'avatar-tier--ultra');
-        avatarBtn.classList.add(`avatar-tier--${userTier}`);
-      }
-      if (activeAvatarBox) {
-        activeAvatarBox.setAttribute('data-tier', userTier);
-        activeAvatarBox.classList.remove('avatar-tier--free', 'avatar-tier--plus', 'avatar-tier--pro', 'avatar-tier--ultra');
-        activeAvatarBox.classList.add(`avatar-tier--${userTier}`);
-      }
+      const updateTopBarTier = (tier) => {
+        const t = tier || (currentUser ? currentUser.subscription_tier : 'free') || 'free';
+        if (avatarBtn) {
+          avatarBtn.setAttribute('data-tier', t);
+          avatarBtn.classList.remove('avatar-tier--free', 'avatar-tier--plus', 'avatar-tier--pro', 'avatar-tier--ultra');
+          avatarBtn.classList.add(`avatar-tier--${t}`);
+        }
+        if (activeAvatarBox) {
+          activeAvatarBox.setAttribute('data-tier', t);
+          activeAvatarBox.classList.remove('avatar-tier--free', 'avatar-tier--plus', 'avatar-tier--pro', 'avatar-tier--ultra');
+          activeAvatarBox.classList.add(`avatar-tier--${t}`);
+        }
+      };
+      updateTopBarTier(userTier);
+
+      const handleSubscriptionUpdated = (e) => {
+        const tier = e.detail?.subscription_tier || (currentUser?.subscription_tier) || 'free';
+        updateTopBarTier(tier);
+        renderAccountList();
+      };
+      window.addEventListener('subscription-updated', handleSubscriptionUpdated);
 
       const avatarUrl = currentUser.avatar_url || `/api/avatar?name=${encodeURIComponent(currentUser.username)}`;
 
@@ -295,7 +306,7 @@ export async function createTopBar() {
       btnAddAccount?.addEventListener('click', (e) => {
         e.preventDefault();
         closeMenu();
-        navigate('/login');
+        navigate('/login?action=add-account');
       });
 
       // Cerrar al hacer clic fuera del menu-panel (en el backdrop oscuro en móviles)
@@ -388,6 +399,7 @@ export async function createTopBar() {
       const cleanupAndRender = () => {
         document.removeEventListener('click', closeMenuHandler);
         document.removeEventListener('keydown', closeMenuKeydownHandler);
+        window.removeEventListener('subscription-updated', handleSubscriptionUpdated);
         render();
       };
 
@@ -399,12 +411,12 @@ export async function createTopBar() {
         navigate(currentUser ? '/settings/your-account' : '/settings/guest');
       });
 
-      // Ayuda
+      // Ayuda y comentarios: redirige al centro de ayuda y legal (iniciando en términos y condiciones)
       const btnHelp = avatarContainer.querySelector('[data-ref="btn-menu-help"]');
       btnHelp?.addEventListener('click', (e) => {
         e.preventDefault();
         closeMenu();
-        toggleChatSidebar(true);
+        navigate('/help/terms');
       });
 
       // Cerrar sesión de la cuenta activa (conmuta o desloguea)

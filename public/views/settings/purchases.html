@@ -1,0 +1,58 @@
+﻿<div class="layout-content" data-ref="settings-purchases-view">
+  <div class="component-wrapper component-wrapper--full" data-ref="purchases-wrapper">
+    <!-- Component Top -->
+    <div class="component-top" data-ref="component-top">
+      <div class="component-top-left" data-ref="component-top-left">
+        <h1 class="component-top-title" data-ref="purchases-title" data-i18n="settings.purchases.title"></h1>
+      </div>
+
+      <div class="component-top-right" data-ref="component-top-right">
+        <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-toggle-search" data-tooltip="Buscar compras" aria-label="Buscar compras">
+          <span class="material-symbols-rounded">search</span>
+        </button>
+      </div>
+
+      <!-- Floating search toolbar -->
+      <div class="component-search-toolbar is-hidden" data-ref="search-toolbar">
+        <div class="component-search component-search--full" data-ref="search-box">
+          <div class="component-search__icon" data-ref="search-icon">
+            <span class="material-symbols-rounded">search</span>
+          </div>
+          <div class="component-search__input-box" data-ref="search-input-box">
+            <input class="component-search__input" data-ref="purchases-search-input" data-i18n-placeholder="settings.purchases.search_placeholder" type="text" autocomplete="off" />
+          </div>
+          <button type="button" class="btn btn--h34 btn--icon btn--clear-search" data-ref="btn-clear-search" style="display: none; margin-right: 4px;" aria-label="Limpiar búsqueda">
+            <span class="material-symbols-rounded" style="font-size: 18px;">close</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Component Bottom -->
+    <div class="component-bottom" data-ref="component-bottom">
+      <div class="component-table-wrapper" data-ref="purchases-table-wrapper">
+        <table class="component-table" data-ref="purchases-table">
+          <thead class="component-table__head" data-ref="purchases-thead">
+            <tr>
+              <th data-ref="th-date" data-i18n="settings.purchases.col_date"></th>
+              <th data-ref="th-plan" data-i18n="settings.purchases.col_plan"></th>
+              <th data-ref="th-period" data-i18n="settings.purchases.col_period"></th>
+              <th data-ref="th-amount" data-i18n="settings.purchases.col_amount"></th>
+              <th data-ref="th-status" data-i18n="settings.purchases.col_status"></th>
+              <th class="text-right" data-ref="th-reference" data-i18n="settings.purchases.col_reference"></th>
+            </tr>
+          </thead>
+          <tbody class="component-table__body" data-ref="purchases-tbody">
+            <!-- Filas inyectadas dinámicamente -->
+          </tbody>
+        </table>
+
+        <!-- Estado vacío -->
+        <div class="component-empty-state" data-ref="purchases-empty-state" style="display: none;">
+          <span class="material-symbols-rounded component-empty-state__icon" data-ref="empty-icon">receipt_long</span>
+          <p class="component-empty-state__text" data-ref="purchases-empty-text" data-i18n="settings.purchases.empty_desc"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

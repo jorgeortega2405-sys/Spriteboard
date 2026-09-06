@@ -5,7 +5,7 @@
 export let currentUser = null;
 export let linkedAccounts = [];
 export let csrfToken = '';
-export const appConfig = { appName: 'Spriteboard' };
+export const appConfig = { appName: 'Spriteboard', stripePublishableKey: '' };
 
 export function setCurrentUser(user) {
   currentUser = user;
@@ -44,6 +44,9 @@ export async function fetchAppConfig() {
       if (data.appName) {
         appConfig.appName = data.appName;
         document.title = data.appName;
+      }
+      if (data.stripePublishableKey) {
+        appConfig.stripePublishableKey = data.stripePublishableKey;
       }
     }
   } catch {
@@ -251,6 +254,143 @@ export async function getSubscriptionsApi() {
     return { success: false, subscriptions: [] };
   } catch {
     return { success: false, subscriptions: [] };
+  }
+}
+
+// Crear sesión de Stripe Checkout para suscripción
+export async function createSubscriptionCheckoutApi(planId, billingPeriod) {
+  try {
+    const res = await postApi('/api/subscriptions/checkout', {
+      planId,
+      billingPeriod,
+    });
+    const data = await res.json();
+    return { success: res.ok, ...data };
+  } catch {
+    return { success: false, error: 'Error de conexión con el servidor.' };
+  }
+}
+
+// Verificar sesión de Stripe Checkout completada
+export async function verifySubscriptionSessionApi(sessionId) {
+  try {
+    const res = await getApi(`/api/subscriptions/verify-session?session_id=${encodeURIComponent(sessionId)}`);
+    const data = await res.json();
+    if (res.ok && data.tier && currentUser) {
+      currentUser.subscription_tier = data.tier;
+      if (Array.isArray(linkedAccounts)) {
+        linkedAccounts = linkedAccounts.map((acc) => {
+          if (acc.id === currentUser.id) {
+            return { ...acc, subscription_tier: data.tier };
+          }
+          return acc;
+        });
+      }
+    }
+    return { success: res.ok, ...data };
+  } catch {
+    return { success: false, error: 'Error al verificar la sesión de pago.' };
+  }
+}
+
+
+
+// Obtener detalles de facturación y suscripción
+export async function getBillingDetailsApi() {
+  try {
+    const res = await getApi('/api/subscriptions/details');
+    const data = await res.json();
+    return { success: res.ok, ...data };
+  } catch {
+    return { success: false, error: 'Error de conexión con el servidor.' };
+  }
+}
+
+// Modificar renovación automática
+export async function updateAutoRenewalApi(cancelAtPeriodEnd) {
+  try {
+    const res = await postApi('/api/subscriptions/auto-renewal', { cancelAtPeriodEnd });
+    const data = await res.json();
+    return { success: res.ok, ...data };
+  } catch {
+    return { success: false, error: 'Error de conexión con el servidor.' };
+  }
+}
+
+// Cancelar suscripción inmediatamente
+export async function cancelSubscriptionImmediateApi() {
+  try {
+    const res = await postApi('/api/subscriptions/cancel-immediate', {});
+    const data = await res.json();
+    if (res.ok && currentUser) {
+      currentUser.subscription_tier = 'free';
+      if (Array.isArray(linkedAccounts)) {
+        linkedAccounts = linkedAccounts.map((acc) => {
+          if (acc.id === currentUser.id) {
+            return { ...acc, subscription_tier: 'free' };
+          }
+          return acc;
+        });
+      }
+    }
+    return { success: res.ok, ...data };
+  } catch {
+    return { success: false, error: 'Error de conexión con el servidor.' };
+  }
+}
+
+// Listar métodos de pago guardados
+export async function getPaymentMethodsApi() {
+  try {
+    const res = await getApi('/api/subscriptions/payment-methods');
+    const data = await res.json();
+    return { success: res.ok, paymentMethods: data.paymentMethods || [] };
+  } catch {
+    return { success: false, paymentMethods: [] };
+  }
+}
+
+// Crear SetupIntent para agregar tarjeta
+export async function createSetupIntentApi() {
+  try {
+    const res = await postApi('/api/subscriptions/setup-intent', {});
+    const data = await res.json();
+    return { success: res.ok, ...data };
+  } catch {
+    return { success: false, error: 'Error al conectar con la pasarela de pagos.' };
+  }
+}
+
+// Establecer tarjeta predeterminada
+export async function setDefaultPaymentMethodApi(pmId) {
+  try {
+    const res = await postApi(`/api/subscriptions/payment-methods/${encodeURIComponent(pmId)}/default`, {});
+    const data = await res.json();
+    return { success: res.ok, ...data };
+  } catch {
+    return { success: false, error: 'Error de conexión con el servidor.' };
+  }
+}
+
+// Eliminar método de pago
+export async function deletePaymentMethodApi(pmId) {
+  try {
+    const res = await deleteApi(`/api/subscriptions/payment-methods/${encodeURIComponent(pmId)}`);
+    const data = await res.json();
+    return { success: res.ok, ...data };
+  } catch {
+    return { success: false, error: 'Error al eliminar la tarjeta.' };
+  }
+}
+
+// Obtener historial de compras
+export async function getPurchaseHistoryApi() {
+  try {
+    const res = await getApi('/api/subscriptions/history');
+    const data = await res.json();
+    return { success: res.ok, purchases: data.purchases || [] };
+  } catch {
+    return { success: false, purchases: [] };
   }
 }
 
