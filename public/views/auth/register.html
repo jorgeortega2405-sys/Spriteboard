@@ -12,12 +12,12 @@
 
       <div class="card__body" data-ref="register-form">
         <label class="field" data-ref="field-register-email">
-          <input class="field__input" data-ref="register-email" type="email" placeholder=" " autocomplete="email" />
+          <input class="field__input" data-ref="register-email" type="email" maxlength="254" placeholder=" " autocomplete="email" />
           <span class="field__label" data-ref="label-register-email" data-i18n="auth.register.email_label"></span>
         </label>
 
         <label class="field" data-ref="field-register-password">
-          <input class="field__input field__input--has-action" data-ref="register-password" type="password" placeholder=" " autocomplete="new-password" />
+          <input class="field__input field__input--has-action" data-ref="register-password" type="password" maxlength="128" placeholder=" " autocomplete="new-password" />
           <span class="field__label" data-ref="label-register-password" data-i18n="auth.register.password_label"></span>
           <button type="button" class="field__action" data-ref="toggle-register-password" data-i18n-tooltip="auth.login.show_password" data-i18n-aria="auth.login.toggle_password">
             <span class="material-symbols-rounded">visibility</span>

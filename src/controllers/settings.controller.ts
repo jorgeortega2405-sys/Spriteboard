@@ -4,7 +4,11 @@
 
 import { Request, Response } from 'express';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
-import { updateActiveAccountInSession, removeAccountFromSession } from '../services/auth.service.js';
+import {
+  updateActiveAccountInSession,
+  removeAccountFromSession,
+  addAccountToSession,
+} from '../services/auth.service.js';
 import {
   updateAvatar,
   deleteAvatar,
@@ -396,6 +400,12 @@ export async function handleUpdatePassword(req: Request, res: Response): Promise
       }
       sendBadRequest(res, result.error || 'No se pudo actualizar la contraseña.');
       return;
+    }
+
+    // Re-emitir sesión activa válida para este dispositivo manteniendo las cuentas vinculadas
+    const updatedUser = await findUserById(currentUser.id);
+    if (updatedUser) {
+      await addAccountToSession(res, req, sanitizeUser(updatedUser));
     }
 
     sendSuccess(res, { message: 'Contraseña actualizada exitosamente.' });

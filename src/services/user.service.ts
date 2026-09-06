@@ -10,6 +10,7 @@ import { redis } from '../config/redis.config.js';
 import { UserPayload } from '../types/auth.types.js';
 import { hashBackupCode } from './two-factor.service.js';
 import { revokeAllUserSessions } from './auth.service.js';
+import { stripeService } from './stripe.service.js';
 import { logger } from './logger.service.js';
 import type { RowDataPacket, ResultSetHeader } from 'mysql2';
 
@@ -277,7 +278,14 @@ export async function deleteUserPermanently(userId: number): Promise<boolean> {
     return false;
   }
 
-  // 1. Eliminar avatar en disco si existe
+  // 1. Cancelar suscripción activa en Stripe para evitar cobros residuales
+  try {
+    await stripeService.cancelSubscriptionNow(userId);
+  } catch (stripeErr) {
+    logger.app.warn('Aviso al cancelar suscripción en Stripe durante eliminación de cuenta', { userId, stripeErr });
+  }
+
+  // 2. Eliminar avatar en disco si existe
   if (user.avatar_url && user.avatar_url.startsWith('/uploads/avatars/')) {
     try {
       const fileName = path.basename(user.avatar_url);
@@ -290,7 +298,7 @@ export async function deleteUserPermanently(userId: number): Promise<boolean> {
     }
   }
 
-  // 2. Limpiar claves en Redis (sesiones activas y 2FA)
+  // 3. Limpiar claves en Redis (sesiones activas y 2FA)
   try {
     await revokeAllUserSessions(userId);
     await redis.del(`2fa:setup:${userId}`);
@@ -298,7 +306,7 @@ export async function deleteUserPermanently(userId: number): Promise<boolean> {
     logger.db.warn('No se pudieron limpiar claves de Redis al borrar usuario', err);
   }
 
-  // 3. Purgar en base de datos relacional dentro de una transacción
+  // 4. Purgar en base de datos relacional dentro de una transacción
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();

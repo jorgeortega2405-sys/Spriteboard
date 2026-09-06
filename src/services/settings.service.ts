@@ -9,7 +9,7 @@ import { pool } from '../config/database.config.js';
 import { logger } from './logger.service.js';
 import { UserPayload } from '../types/auth.types.js';
 import { validateEmail, validateUsername, validatePassword } from '../utils/validators.util.js';
-import { hashPassword, verifyPassword } from './auth.service.js';
+import { hashPassword, verifyPassword, revokeAllUserSessions } from './auth.service.js';
 import type { RowDataPacket, ResultSetHeader } from 'mysql2';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -664,6 +664,9 @@ export async function updateUserPasswordFromSettings(
 
   const hashedPassword = await hashPassword(newPassword);
   await pool.query('UPDATE users SET password_hash = ? WHERE id = ?', [hashedPassword, userId]);
+
+  // Revocar de inmediato todas las demás sesiones activas en otros dispositivos
+  await revokeAllUserSessions(userId, ip || undefined, ua || undefined);
 
   await logUserAudit(userId, 'change_password', null, null, ip, ua);
   logger.security.info('Contraseña actualizada exitosamente desde settings', { userId });

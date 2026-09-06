@@ -169,6 +169,48 @@ export class PurchaseService {
   public async updateUserCustomerId(userId: number, customerId: string): Promise<void> {
     await pool.query('UPDATE users SET stripe_customer_id = ? WHERE id = ?', [customerId, userId]);
   }
+
+  /**
+   * Buscar usuario por stripe_customer_id
+   */
+  public async getUserByStripeCustomerId(customerId: string): Promise<{
+    id: number;
+    email: string;
+    username: string;
+    subscription_tier: string;
+    stripe_customer_id: string | null;
+    stripe_subscription_id: string | null;
+    subscription_status: string;
+    subscription_period_end: Date | null;
+  } | null> {
+    const [rows] = await pool.query<mysql.RowDataPacket[]>(
+      'SELECT id, email, username, subscription_tier, stripe_customer_id, stripe_subscription_id, subscription_status, subscription_period_end FROM users WHERE stripe_customer_id = ? LIMIT 1',
+      [customerId]
+    );
+    if (!rows.length) return null;
+    return rows[0] as any;
+  }
+
+  /**
+   * Buscar usuario por stripe_subscription_id
+   */
+  public async getUserByStripeSubscriptionId(subscriptionId: string): Promise<{
+    id: number;
+    email: string;
+    username: string;
+    subscription_tier: string;
+    stripe_customer_id: string | null;
+    stripe_subscription_id: string | null;
+    subscription_status: string;
+    subscription_period_end: Date | null;
+  } | null> {
+    const [rows] = await pool.query<mysql.RowDataPacket[]>(
+      'SELECT id, email, username, subscription_tier, stripe_customer_id, stripe_subscription_id, subscription_status, subscription_period_end FROM users WHERE stripe_subscription_id = ? LIMIT 1',
+      [subscriptionId]
+    );
+    if (!rows.length) return null;
+    return rows[0] as any;
+  }
 }
 
 export const purchaseService = PurchaseService.getInstance();

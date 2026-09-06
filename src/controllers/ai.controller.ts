@@ -6,6 +6,7 @@
 import { Request, Response } from 'express';
 import { AiService, ChatMessage } from '../services/ai.service.js';
 import { logger } from '../services/logger.service.js';
+import { getCurrentUser } from '../middlewares/auth.middleware.js';
 
 export class AiController {
   /**
@@ -46,7 +47,7 @@ export class AiController {
       }
 
       // Obtener contexto de sesión (usuario autenticado o invitado)
-      const currentUser = (req as any).user;
+      const currentUser = getCurrentUser(req);
       const userContext = {
         username: currentUser?.username,
         email: currentUser?.email,

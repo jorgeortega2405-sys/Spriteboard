@@ -305,4 +305,13 @@ export const twoFactorVerifyLimiter = createRateLimiter({
   message: 'Demasiados intentos de verificación 2FA. Por favor espera unos minutos.',
 });
 
+// Asistente de IA: máximo 20 mensajes por minuto por usuario o IP
+export const aiChatLimiter = createRateLimiter({
+  prefix: 'ai_chat',
+  windowMs: 60 * 1000, // 1 minuto
+  max: 20,
+  keyGenerator: getUserOrIpKey,
+  message: 'Has enviado demasiados mensajes al asistente de IA en poco tiempo. Por favor espera un minuto antes de enviar otro mensaje.',
+});
+
 

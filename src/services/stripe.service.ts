@@ -43,21 +43,28 @@ export class StripeService {
     const unitPrice = isYearly ? (tier.priceYearly ?? tier.price) * 12 : (tier.priceMonthly ?? tier.price);
     const amountInCents = Math.round(unitPrice * 100);
 
+    // Obtener o crear perfil de cliente en Stripe para reutilizar historial y métodos de pago
+    const customer = await this.getOrCreateCustomer(userId, email);
+    const userBilling = await purchaseService.getUserBillingInfo(userId);
+    const previousSubscriptionId = userBilling?.stripe_subscription_id || null;
+
     const session = await this.stripe.checkout.sessions.create({
       mode: 'subscription',
       payment_method_types: ['card'],
-      customer_email: email,
+      customer: customer.id,
       client_reference_id: String(userId),
       metadata: {
         userId: String(userId),
         planId: tier.id,
         billingPeriod,
+        previousSubscriptionId: previousSubscriptionId || '',
       },
       subscription_data: {
         metadata: {
           userId: String(userId),
           planId: tier.id,
           billingPeriod,
+          previousSubscriptionId: previousSubscriptionId || '',
         },
       },
       line_items: [
@@ -140,7 +147,12 @@ export class StripeService {
       }
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object as Stripe.Invoice;
-        logger.app.info('Pago de factura Stripe exitoso', { invoiceId: invoice.id });
+        await this.processInvoicePaymentSucceeded(invoice);
+        break;
+      }
+      case 'invoice.payment_failed': {
+        const invoice = event.data.object as Stripe.Invoice;
+        await this.processInvoicePaymentFailed(invoice);
         break;
       }
       default:
@@ -160,10 +172,21 @@ export class StripeService {
     const customerId = typeof session.customer === 'string' ? session.customer : (session.customer?.id ?? null);
     const subscriptionId = typeof session.subscription === 'string' ? session.subscription : (session.subscription?.id ?? null);
     const paymentIntentId = typeof session.payment_intent === 'string' ? session.payment_intent : (session.payment_intent?.id ?? null);
+    const previousSubId = session.metadata?.previousSubscriptionId;
 
     if (!userId) {
       logger.app.warn('Webhook checkout.session.completed sin userId válido', { sessionId: session.id });
       return;
+    }
+
+    // Cancelar suscripción anterior si existía para prevenir doble facturación
+    if (previousSubId && subscriptionId && previousSubId !== subscriptionId) {
+      try {
+        await this.stripe.subscriptions.cancel(previousSubId);
+        logger.app.info('Suscripción anterior cancelada tras nuevo checkout', { userId, previousSubId });
+      } catch (prevErr) {
+        logger.app.warn('Aviso al cancelar suscripción anterior en Stripe', { userId, previousSubId, prevErr });
+      }
     }
 
     // 1. Guardar o actualizar registro de compra
@@ -197,6 +220,70 @@ export class StripeService {
       planId,
       sessionId: session.id,
     });
+  }
+
+  /**
+   * Procesa pago recurrente de factura exitoso (renovación de ciclo)
+   */
+  private async processInvoicePaymentSucceeded(invoice: Stripe.Invoice): Promise<void> {
+    const customerId = typeof invoice.customer === 'string' ? invoice.customer : (invoice.customer?.id ?? null);
+    const subscriptionId = typeof invoice.subscription === 'string' ? invoice.subscription : (invoice.subscription?.id ?? null);
+
+    if (!customerId) return;
+    const user = await purchaseService.getUserByStripeCustomerId(customerId);
+    if (!user) return;
+
+    // Solo registrar en purchases si no fue ya registrado mediante checkout session
+    const existing = await purchaseService.getPurchaseBySessionId(`inv_${invoice.id}`);
+    if (existing) return;
+
+    const amountTotal = (invoice.amount_paid ?? 0) / 100;
+    const currency = invoice.currency || 'USD';
+    const lineItem = invoice.lines?.data?.[0];
+    const billingPeriod = lineItem?.price?.recurring?.interval === 'year' ? 'yearly' : 'monthly';
+    const planId = user.subscription_tier || 'plus';
+
+    await purchaseService.recordPurchase({
+      user_id: user.id,
+      stripe_session_id: `inv_${invoice.id}`,
+      stripe_payment_intent_id: typeof invoice.payment_intent === 'string' ? invoice.payment_intent : null,
+      stripe_subscription_id: subscriptionId,
+      stripe_customer_id: customerId,
+      plan_id: planId,
+      billing_period: billingPeriod,
+      amount_total: amountTotal,
+      currency: currency.toUpperCase(),
+      status: 'completed',
+    });
+
+    logger.app.info('Factura periódica de Stripe registrada en historial de compras', {
+      userId: user.id,
+      invoiceId: invoice.id,
+      amount: amountTotal,
+    });
+  }
+
+  /**
+   * Procesa fallo de pago en factura (tarjeta rechazada o expirada)
+   */
+  private async processInvoicePaymentFailed(invoice: Stripe.Invoice): Promise<void> {
+    const customerId = typeof invoice.customer === 'string' ? invoice.customer : (invoice.customer?.id ?? null);
+    if (!customerId) return;
+
+    const user = await purchaseService.getUserByStripeCustomerId(customerId);
+    if (user) {
+      await purchaseService.updateUserSubscription(
+        user.id,
+        user.subscription_tier,
+        customerId,
+        user.stripe_subscription_id,
+        'past_due'
+      );
+      logger.security.warn('Fallo de cobro en factura periódica de Stripe, estado marcado como past_due', {
+        userId: user.id,
+        invoiceId: invoice.id,
+      });
+    }
   }
 
   /**
@@ -269,6 +356,17 @@ export class StripeService {
     const customerId = typeof session.customer === 'string' ? session.customer : (session.customer?.id ?? null);
     const subscriptionId = typeof session.subscription === 'string' ? session.subscription : (session.subscription?.id ?? null);
     const paymentIntentId = typeof session.payment_intent === 'string' ? session.payment_intent : (session.payment_intent?.id ?? null);
+    const previousSubId = session.metadata?.previousSubscriptionId;
+
+    // Cancelar suscripción anterior si existía para prevenir cobro duplicado
+    if (previousSubId && subscriptionId && previousSubId !== subscriptionId) {
+      try {
+        await this.stripe.subscriptions.cancel(previousSubId);
+        logger.app.info('Suscripción anterior cancelada tras retorno de checkout', { userId, previousSubId });
+      } catch (prevErr) {
+        logger.app.warn('Aviso al cancelar suscripción anterior tras checkout', { userId, previousSubId, prevErr });
+      }
+    }
 
     // 1. Registrar compra
     await purchaseService.recordPurchase({

@@ -94,14 +94,11 @@ fn verify_session_token(token: &str, secret: &str) -> Option<AuthenticatedUser> 
     }
     let payload_b64 = parts[0];
     let signature_b64 = parts[1];
-
+    let sig_bytes = URL_SAFE_NO_PAD.decode(signature_b64).ok()?;
     let mut mac = HmacSha256::new_from_slice(secret.as_bytes()).ok()?;
     mac.update(payload_b64.as_bytes());
 
-    let expected_bytes = mac.finalize().into_bytes();
-    let expected_b64 = URL_SAFE_NO_PAD.encode(expected_bytes);
-
-    if expected_b64 != signature_b64 {
+    if mac.verify_slice(&sig_bytes).is_err() {
         return None;
     }
 

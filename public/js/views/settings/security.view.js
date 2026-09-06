@@ -277,7 +277,7 @@ function showGoogleOrPasswordStep(status, onPasswordUpdated) {
 
         <div class="verify-password-box" data-ref="verify-password-box" style="display: none; width: 100%;">
           <label class="field" data-ref="field-current-password">
-            <input class="field__input field__input--has-action" data-ref="modal-input-current-password" type="password" placeholder=" " autocomplete="current-password" />
+            <input class="field__input field__input--has-action" data-ref="modal-input-current-password" type="password" maxlength="128" placeholder=" " autocomplete="current-password" />
             <span class="field__label" data-ref="modal-label-current-password">${t('settings.security.modal_current_password_label')}</span>
             <button type="button" class="field__action" data-ref="toggle-modal-current-password" data-i18n-tooltip="auth.login.show_password" data-i18n-aria="auth.login.toggle_password">
               <span class="material-symbols-rounded">visibility</span>
@@ -482,7 +482,7 @@ function showDirectPasswordStep(onPasswordUpdated) {
     confirmText: t('modal.continue'),
     bodyHtml: `
       <label class="field" data-ref="field-current-password">
-        <input class="field__input field__input--has-action" data-ref="modal-input-current-password" type="password" placeholder=" " autocomplete="current-password" />
+        <input class="field__input field__input--has-action" data-ref="modal-input-current-password" type="password" maxlength="128" placeholder=" " autocomplete="current-password" />
         <span class="field__label" data-ref="modal-label-current-password">${t('settings.security.modal_current_password_label')}</span>
         <button type="button" class="field__action" data-ref="toggle-modal-current-password" data-i18n-tooltip="auth.login.show_password" data-i18n-aria="auth.login.toggle_password">
           <span class="material-symbols-rounded">visibility</span>
@@ -542,14 +542,14 @@ function showStep2NewPassword(modal, onPasswordUpdated) {
   modal.setBody(`
     <div class="form-group-modal" data-ref="group-new-passwords">
       <label class="field" data-ref="field-new-password">
-        <input class="field__input field__input--has-action" data-ref="modal-input-new-password" type="password" placeholder=" " autocomplete="new-password" />
+        <input class="field__input field__input--has-action" data-ref="modal-input-new-password" type="password" maxlength="128" placeholder=" " autocomplete="new-password" />
         <span class="field__label" data-ref="modal-label-new-password">${t('settings.security.modal_new_password_label')}</span>
         <button type="button" class="field__action" data-ref="toggle-modal-new-password" data-i18n-tooltip="auth.login.show_password" data-i18n-aria="auth.login.toggle_password">
           <span class="material-symbols-rounded">visibility</span>
         </button>
       </label>
       <label class="field" data-ref="field-confirm-new-password" style="margin-top: 14px;">
-        <input class="field__input field__input--has-action" data-ref="modal-input-confirm-new-password" type="password" placeholder=" " autocomplete="new-password" />
+        <input class="field__input field__input--has-action" data-ref="modal-input-confirm-new-password" type="password" maxlength="128" placeholder=" " autocomplete="new-password" />
         <span class="field__label" data-ref="modal-label-confirm-new-password">${t('settings.security.modal_confirm_new_password_label')}</span>
         <button type="button" class="field__action" data-ref="toggle-modal-confirm-new-password" data-i18n-tooltip="auth.login.show_password" data-i18n-aria="auth.login.toggle_password">
           <span class="material-symbols-rounded">visibility</span>

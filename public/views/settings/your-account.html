@@ -44,7 +44,7 @@
                 <span class="settings-item__value" data-ref="display-username">-</span>
               </div>
               <div class="settings-edit-row" data-ref="username-edit-row" style="display: none;">
-                <input class="field__input field__input--simple" data-ref="input-username" data-i18n-placeholder="settings.your_account.username_placeholder" type="text" autocomplete="username" />
+                <input class="field__input field__input--simple" data-ref="input-username" data-i18n-placeholder="settings.your_account.username_placeholder" type="text" maxlength="30" autocomplete="username" />
                 <div class="settings-item__actions">
                   <button type="button" class="btn btn--h34" data-ref="btn-cancel-username" data-i18n="settings.your_account.btn_cancel"></button>
                   <button type="button" class="btn btn--h34 btn--black" data-ref="btn-save-username" data-i18n="settings.your_account.btn_save"></button>
@@ -69,7 +69,7 @@
                 <span class="settings-item__value" data-ref="display-email">-</span>
               </div>
               <div class="settings-edit-row" data-ref="email-edit-row" style="display: none;">
-                <input class="field__input field__input--simple" data-ref="input-email" data-i18n-placeholder="settings.your_account.email_placeholder" type="email" autocomplete="email" />
+                <input class="field__input field__input--simple" data-ref="input-email" data-i18n-placeholder="settings.your_account.email_placeholder" type="email" maxlength="254" autocomplete="email" />
                 <div class="settings-item__actions">
                   <button type="button" class="btn btn--h34" data-ref="btn-cancel-email" data-i18n="settings.your_account.btn_cancel"></button>
                   <button type="button" class="btn btn--h34 btn--black" data-ref="btn-save-email" data-i18n="settings.your_account.btn_save"></button>
@@ -134,7 +134,7 @@
                 </div>
                 <div class="menu-panel__search" data-ref="search-wrapper-language">
                   <span class="material-symbols-rounded menu-panel__search-icon">search</span>
-                  <input class="menu-panel__search-input" data-ref="input-search-language" data-i18n-placeholder="settings.your_account.search_language_placeholder" type="text" autocomplete="off" />
+                  <input class="menu-panel__search-input" data-ref="input-search-language" data-i18n-placeholder="settings.your_account.search_language_placeholder" type="text" maxlength="50" autocomplete="off" />
                 </div>
                 <div class="menu-panel__list menu-panel__list--scrollable" data-ref="list-languages">
                   <!-- Opciones de idiomas renderizadas dinámicamente -->

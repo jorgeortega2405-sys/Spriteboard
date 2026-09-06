@@ -12,12 +12,12 @@
 
       <div class="card__body" data-ref="login-form">
         <label class="field" data-ref="field-login-email">
-          <input class="field__input" data-ref="login-email" type="email" placeholder=" " autocomplete="email" />
+          <input class="field__input" data-ref="login-email" type="email" maxlength="254" placeholder=" " autocomplete="email" />
           <span class="field__label" data-ref="label-login-email" data-i18n="auth.login.email_label"></span>
         </label>
 
         <label class="field" data-ref="field-login-password">
-          <input class="field__input field__input--has-action" data-ref="login-password" type="password" placeholder=" " autocomplete="current-password" />
+          <input class="field__input field__input--has-action" data-ref="login-password" type="password" maxlength="128" placeholder=" " autocomplete="current-password" />
           <span class="field__label" data-ref="label-login-password" data-i18n="auth.login.password_label"></span>
           <button type="button" class="field__action" data-ref="toggle-login-password" data-i18n-tooltip="auth.login.show_password" data-i18n-aria="auth.login.toggle_password">
             <span class="material-symbols-rounded">visibility</span>
