@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash VARCHAR(255) NULL,
     google_id VARCHAR(255) NULL UNIQUE,
     avatar_url VARCHAR(512) NULL,
+    subscription_tier VARCHAR(20) NOT NULL DEFAULT 'free',
     two_factor_enabled BOOLEAN NOT NULL DEFAULT FALSE,
     two_factor_secret VARCHAR(255) NULL,
     two_factor_recovery_codes TEXT NULL,

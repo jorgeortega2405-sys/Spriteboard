@@ -190,7 +190,18 @@ export async function runMigrations(): Promise<void> {
       logger.db.info('Columna email_changed_at añadida a la tabla users.');
     }
 
-    logger.db.info('Tablas y columnas de identidad, 2FA y cooldowns verificadas exitosamente.');
+    // 8. Columna subscription_tier en la tabla users
+    const [tierCols] = await conn.query<mysql.RowDataPacket[]>(
+      "SHOW COLUMNS FROM users LIKE 'subscription_tier'"
+    );
+    if (tierCols.length === 0) {
+      await conn.query(
+        "ALTER TABLE users ADD COLUMN subscription_tier VARCHAR(20) NOT NULL DEFAULT 'free' AFTER avatar_url"
+      );
+      logger.db.info('Columna subscription_tier añadida a la tabla users.');
+    }
+
+    logger.db.info('Tablas y columnas de identidad, 2FA, cooldowns y suscripciones verificadas exitosamente.');
   } catch (err) {
     logger.db.warn('Advertencia en migración de base de datos', err);
   } finally {

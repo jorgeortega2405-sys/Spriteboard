@@ -50,6 +50,7 @@ export function createSessionToken(user: UserPayload): string {
         email: user.email,
         avatar_url: user.avatar_url ?? null,
         google_id: user.google_id ?? null,
+        subscription_tier: user.subscription_tier || 'free',
         last_accessed: Date.now(),
       },
     ],
@@ -96,6 +97,7 @@ export function verifyMultiAccountToken(token: string): MultiAccountSessionPaylo
               email: parsed.email,
               avatar_url: parsed.avatar_url ?? null,
               google_id: parsed.google_id ?? null,
+              subscription_tier: parsed.subscription_tier || 'free',
               last_accessed: Date.now(),
             },
           ],
@@ -364,6 +366,7 @@ export async function addAccountToSession(
     email: user.email,
     avatar_url: user.avatar_url ?? null,
     google_id: user.google_id ?? null,
+    subscription_tier: user.subscription_tier || 'free',
     sessionId,
     last_accessed: now,
   };

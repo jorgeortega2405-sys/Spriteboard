@@ -116,6 +116,13 @@ export async function createYourAccountView() {
   if (displayUsername) displayUsername.textContent = currentUser.username || '-';
   if (displayEmail) displayEmail.textContent = currentUser.email || '-';
 
+  if (avatarPreviewBox) {
+    const userTier = currentUser.subscription_tier || 'free';
+    avatarPreviewBox.setAttribute('data-tier', userTier);
+    avatarPreviewBox.classList.remove('avatar-tier--free', 'avatar-tier--plus', 'avatar-tier--pro', 'avatar-tier--ultra');
+    avatarPreviewBox.classList.add(`avatar-tier--${userTier}`);
+  }
+
   const initialAvatarUrl = hasCustomAvatar() ? currentUser.avatar_url : getDefaultAvatarUrl(currentUser.username);
   refreshAvatarsInDom(initialAvatarUrl);
   updateAvatarButtonsState(hasCustomAvatar() ? 'custom' : 'default');

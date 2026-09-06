@@ -4,6 +4,7 @@ export interface UserPayload {
   email: string;
   avatar_url?: string | null;
   google_id?: string | null;
+  subscription_tier?: 'free' | 'plus' | 'pro' | 'ultra';
   two_factor_enabled?: boolean;
 }
 
@@ -13,6 +14,7 @@ export interface SessionAccount {
   email: string;
   avatar_url?: string | null;
   google_id?: string | null;
+  subscription_tier?: 'free' | 'plus' | 'pro' | 'ultra';
   two_factor_enabled?: boolean;
   sessionId?: string;
   last_accessed?: number;

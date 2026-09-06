@@ -12,6 +12,7 @@ import { createYourAccountView } from './views/settings/your-account.js';
 import { createSecurityView } from './views/settings/security.view.js';
 import { createAccessibilityView } from './views/settings/accessibility.view.js';
 import { createGuestSettingsView } from './views/settings/guest.view.js';
+import { createUpgradeView } from './views/upgrade.view.js';
 import { createErrorView } from './views/error.view.js';
 import { SkeletonService } from './services/skeleton.service.js';
 import { hasPersistentTopBar } from './config/skeleton-routes.js';
@@ -81,6 +82,10 @@ export async function render() {
     const topBar = isSoftSpaNav ? null : await createTopBar();
     const trashView = await createTrashView();
     viewElements = topBar ? [topBar, trashView] : [trashView];
+  } else if (path === '/upgrade') {
+    const topBar = isSoftSpaNav ? null : await createTopBar();
+    const upgradeView = await createUpgradeView();
+    viewElements = topBar ? [topBar, upgradeView] : [upgradeView];
   } else if (path === '/settings') {
     // Redirección contextual según estado de sesión
     const topBar = isSoftSpaNav ? null : await createTopBar();

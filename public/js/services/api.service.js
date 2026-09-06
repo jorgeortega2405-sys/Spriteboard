@@ -232,3 +232,25 @@ export async function deleteApi(url, body) {
   return res;
 }
 
+// Obtener planes de suscripción disponibles desde el backend
+export async function getSubscriptionsApi() {
+  try {
+    const res = await fetch('/api/subscriptions', {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+      },
+      credentials: 'include',
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      return { success: true, subscriptions: data.subscriptions || [] };
+    }
+
+    return { success: false, subscriptions: [] };
+  } catch {
+    return { success: false, subscriptions: [] };
+  }
+}
+

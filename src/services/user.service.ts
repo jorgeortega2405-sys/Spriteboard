@@ -24,6 +24,7 @@ export interface UserRecord extends RowDataPacket {
   password_hash?: string;
   avatar_url?: string;
   google_id?: string;
+  subscription_tier?: 'free' | 'plus' | 'pro' | 'ultra';
   two_factor_enabled?: boolean | number;
   two_factor_secret?: string | null;
   two_factor_recovery_codes?: string | null;
@@ -36,7 +37,7 @@ export interface UserRecord extends RowDataPacket {
  */
 export async function findUserByEmail(email: string): Promise<UserRecord | null> {
   const [rows] = await pool.query<UserRecord[]>(
-    'SELECT id, username, email, password_hash, avatar_url, google_id, two_factor_enabled, two_factor_secret, two_factor_recovery_codes FROM users WHERE email = ? LIMIT 1',
+    'SELECT id, username, email, password_hash, avatar_url, google_id, subscription_tier, two_factor_enabled, two_factor_secret, two_factor_recovery_codes FROM users WHERE email = ? LIMIT 1',
     [email.toLowerCase().trim()]
   );
   return rows.length > 0 ? rows[0] : null;
@@ -47,7 +48,7 @@ export async function findUserByEmail(email: string): Promise<UserRecord | null>
  */
 export async function findUserByUsername(username: string): Promise<UserRecord | null> {
   const [rows] = await pool.query<UserRecord[]>(
-    'SELECT id, username, email, password_hash, avatar_url, google_id FROM users WHERE username = ? LIMIT 1',
+    'SELECT id, username, email, password_hash, avatar_url, google_id, subscription_tier FROM users WHERE username = ? LIMIT 1',
     [username.trim()]
   );
   return rows.length > 0 ? rows[0] : null;
@@ -84,7 +85,7 @@ export async function findUserDuplicates(
  */
 export async function findUserById(id: number): Promise<UserRecord | null> {
   const [rows] = await pool.query<UserRecord[]>(
-    'SELECT id, username, email, avatar_url, google_id, two_factor_enabled, two_factor_secret, two_factor_recovery_codes FROM users WHERE id = ? LIMIT 1',
+    'SELECT id, username, email, avatar_url, google_id, subscription_tier, two_factor_enabled, two_factor_secret, two_factor_recovery_codes FROM users WHERE id = ? LIMIT 1',
     [id]
   );
   return rows.length > 0 ? rows[0] : null;

@@ -482,6 +482,12 @@
   --color-toast-success-text: var(--sl-color-green-600);
   --color-toast-error-text: var(--sl-color-red-600);
 
+  /* Suscripciones (Subscription Tier Colors) */
+  --tier-color-free: var(--sl-color-gray-400);
+  --tier-color-plus: var(--sl-color-green-500);
+  --tier-color-pro: var(--sl-color-blue-500);
+  --tier-color-ultra: var(--sl-color-red-500);
+
   /* Elevación Componentes */
   --radius-sm: var(--sl-border-radius-medium);
   --radius-md: 14px;
@@ -592,6 +598,12 @@ body.dark-theme {
   --accent-primary: #f4f4f5;
   --accent-color: #f4f4f5;
   --color-primary: #f4f4f5;
+
+  /* Suscripciones (Subscription Tier Colors - Dark Mode) */
+  --tier-color-free: hsl(240 5% 55%);
+  --tier-color-plus: #22c55e;
+  --tier-color-pro: #3b82f6;
+  --tier-color-ultra: #ef4444;
 
   --shadow-card: none;
   --shadow-dropdown: none;

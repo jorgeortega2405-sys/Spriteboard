@@ -14,6 +14,7 @@ export const SKELETON_ROUTES = {
   // 2. Contenido agrupado (listas, paneles, preferencias, cuenta, dashboards)
   '/': 'grouped-layout',
   '/trash': 'grouped-layout',
+  '/upgrade': 'grouped-layout',
   '/settings': 'grouped-layout',
   '/settings/your-account': 'grouped-layout',
   '/settings/security': 'grouped-layout',
@@ -70,6 +71,7 @@ export function hasPersistentTopBar(pathname) {
     pathname === '/' ||
     pathname === '' ||
     pathname === '/trash' ||
+    pathname === '/upgrade' ||
     pathname.startsWith('/settings')
   ) {
     return true;

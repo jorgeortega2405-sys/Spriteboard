@@ -453,10 +453,20 @@ export async function me(req: Request, res: Response): Promise<void> {
     }
   }
 
+  const freshUser = await findUserById(user.id);
+  const activeUserData = freshUser ? sanitizeUser(freshUser) : sanitizeUser(user);
+
   const accounts = getLinkedAccounts(req);
+  const updatedAccounts = accounts.map((acc) => {
+    if (acc.id === user.id && freshUser) {
+      return { ...acc, subscription_tier: freshUser.subscription_tier || 'free' };
+    }
+    return acc;
+  });
+
   res.json({
-    user: sanitizeUser(user),
-    accounts: accounts.map(sanitizeUser),
+    user: activeUserData,
+    accounts: updatedAccounts.map(sanitizeUser),
   });
 }
 

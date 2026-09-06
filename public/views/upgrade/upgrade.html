@@ -1,0 +1,39 @@
+<div class="layout-content" data-ref="upgrade-view">
+  <div class="layout-body layout-body--scrollable layout-scrollable" data-ref="upgrade-scrollable">
+    <div class="component-pricing-section" data-ref="pricing-section">
+
+      <!-- Encabezado de la sección de precios -->
+      <div class="component-pricing-header" data-ref="pricing-header">
+        <h1 class="component-pricing-title" data-ref="pricing-title" data-i18n="upgrade.title">Actualiza tu plan</h1>
+        <p class="component-pricing-desc" data-ref="pricing-desc" data-i18n="upgrade.subtitle">Desbloquea todo el potencial de Spriteboard con funciones avanzadas y mayor capacidad</p>
+        
+        <!-- Toggle Pill con deslizador (Glider) idéntico al diseño de escritorio -->
+        <div class="component-toggle-pill" data-ref="billing-toggle-pill" data-cycle="monthly">
+          <div class="component-toggle-pill-glider" data-ref="billing-glider"></div>
+          <button type="button" class="component-button component-button--rounded-pill active" data-ref="btn-cycle-monthly" data-action="setBillingCycle" data-value="monthly">
+            <span data-i18n="upgrade.billing_monthly">Mensual</span>
+          </button>
+          <button type="button" class="component-button component-button--rounded-pill" data-ref="btn-cycle-yearly" data-action="setBillingCycle" data-value="yearly">
+            <span data-i18n="upgrade.billing_yearly">Anual</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Cuadrícula de Cards de Planes (Spriteboard Plus, Spriteboard Pro, Spriteboard Ultra) -->
+      <div class="component-pricing-grid" data-ref="pricing-grid">
+        <!-- Renderizado dinámico de las tarjetas -->
+      </div>
+
+      <!-- Aviso legal y términos de suscripción -->
+      <div class="component-disclaimer" data-ref="pricing-disclaimer">
+        <p class="component-disclaimer__text" data-ref="disclaimer-text-geo">
+          La disponibilidad de funciones, ventajas premium e integraciones puede variar según tu país o región de residencia. Consulta los <a class="link" data-ref="link-disclaimer-terms" href="#">Términos del servicio</a> y las <a class="link" data-ref="link-disclaimer-availability" href="#">Restricciones por país</a>.
+        </p>
+        <p class="component-disclaimer__text" data-ref="disclaimer-text-age">
+          Debes tener al menos 18 años de edad para contratar una suscripción. Para más detalles sobre cobros y protección de datos, revisa la <a class="link" data-ref="link-disclaimer-privacy" href="#">Política de privacidad</a> y las <a class="link" data-ref="link-disclaimer-billing" href="#">Condiciones de facturación</a>.
+        </p>
+      </div>
+
+    </div>
+  </div>
+</div>

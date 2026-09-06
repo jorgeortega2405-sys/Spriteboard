@@ -134,7 +134,7 @@ export async function processGoogleAuthCallback(code: string): Promise<UserPaylo
 
   // 1. Buscar si ya existe usuario con este google_id
   const [existingGoogleUsers] = await pool.query<RowDataPacket[]>(
-    'SELECT id, username, email, avatar_url, google_id, two_factor_enabled FROM users WHERE google_id = ? LIMIT 1',
+    'SELECT id, username, email, avatar_url, google_id, subscription_tier, two_factor_enabled FROM users WHERE google_id = ? LIMIT 1',
     [googleId]
   );
 
@@ -146,13 +146,14 @@ export async function processGoogleAuthCallback(code: string): Promise<UserPaylo
       email: u.email,
       avatar_url: u.avatar_url || null,
       google_id: googleId,
+      subscription_tier: u.subscription_tier || 'free',
       two_factor_enabled: Boolean(u.two_factor_enabled),
     };
   }
 
   // 2. Buscar si ya existe usuario registrado localmente con el mismo correo
   const [existingEmailUsers] = await pool.query<RowDataPacket[]>(
-    'SELECT id, username, email, avatar_url, google_id, two_factor_enabled FROM users WHERE email = ? LIMIT 1',
+    'SELECT id, username, email, avatar_url, google_id, subscription_tier, two_factor_enabled FROM users WHERE email = ? LIMIT 1',
     [email]
   );
 
@@ -165,6 +166,7 @@ export async function processGoogleAuthCallback(code: string): Promise<UserPaylo
       email: u.email,
       avatar_url: u.avatar_url || null,
       google_id: googleId,
+      subscription_tier: u.subscription_tier || 'free',
       two_factor_enabled: Boolean(u.two_factor_enabled),
     };
   }
@@ -184,6 +186,7 @@ export async function processGoogleAuthCallback(code: string): Promise<UserPaylo
     email: email,
     avatar_url: null,
     google_id: googleId,
+    subscription_tier: 'free',
     two_factor_enabled: false,
   };
 }

@@ -26,6 +26,7 @@
     "login": "Acceder",
     "menu": "Menú",
     "profile": "Perfil",
+    "upgrade": "Mejorar plan",
     "add_account": "Agregar otra cuenta",
     "logout_all": "Cerrar todas las sesiones",
     "switch_account": "Cambiar de cuenta",
@@ -312,5 +313,13 @@
     "username_invalid": "El nombre de usuario solo puede contener letras, números, puntos y guiones bajos (3-30 caracteres).",
     "code_required": "Por favor ingresa el código de 6 dígitos.",
     "code_invalid": "El código debe contener exactamente 6 dígitos numéricos."
+  },
+  "upgrade": {
+    "title": "Actualiza tu plan",
+    "subtitle": "Desbloquea todo el potencial de Spriteboard con funciones avanzadas y mayor capacidad",
+    "billing_monthly": "Mensual",
+    "billing_yearly": "Anual",
+    "notice": "Actualmente la plataforma se encuentra en fase de lanzamiento. El sistema de facturación y pasarelas de pago estarán disponibles próximamente.",
+    "toast_coming_soon": "El plan {plan} y la pasarela de pagos estarán disponibles próximamente."
   }
 }

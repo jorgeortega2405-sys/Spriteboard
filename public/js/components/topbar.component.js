@@ -23,6 +23,12 @@ export async function createTopBar() {
     toggleSidebar();
   });
 
+  const btnUpgrade = topbar.querySelector('[data-ref="btn-upgrade"]');
+  btnUpgrade?.addEventListener('click', (e) => {
+    e.preventDefault();
+    navigate('/upgrade');
+  });
+
   const btnHelpChat = topbar.querySelector('[data-ref="btn-help-chat"]');
   btnHelpChat?.addEventListener('click', (e) => {
     e.preventDefault();
@@ -71,8 +77,21 @@ export async function createTopBar() {
 
       // Datos de la cuenta activa en el panel principal
       const activeAvatar = avatarContainer.querySelector('[data-ref="active-account-avatar"]');
+      const activeAvatarBox = avatarContainer.querySelector('[data-ref="active-account-avatar-box"]');
       const activeName = avatarContainer.querySelector('[data-ref="active-account-name"]');
       const activeEmail = avatarContainer.querySelector('[data-ref="active-account-email"]');
+
+      const userTier = currentUser.subscription_tier || 'free';
+      if (avatarBtn) {
+        avatarBtn.setAttribute('data-tier', userTier);
+        avatarBtn.classList.remove('avatar-tier--free', 'avatar-tier--plus', 'avatar-tier--pro', 'avatar-tier--ultra');
+        avatarBtn.classList.add(`avatar-tier--${userTier}`);
+      }
+      if (activeAvatarBox) {
+        activeAvatarBox.setAttribute('data-tier', userTier);
+        activeAvatarBox.classList.remove('avatar-tier--free', 'avatar-tier--plus', 'avatar-tier--pro', 'avatar-tier--ultra');
+        activeAvatarBox.classList.add(`avatar-tier--${userTier}`);
+      }
 
       const avatarUrl = currentUser.avatar_url || `/api/avatar?name=${encodeURIComponent(currentUser.username)}`;
 
@@ -128,10 +147,11 @@ export async function createTopBar() {
           item.className = `menu-item menu-item--bordered account-item ${isActive ? 'account-item--active' : ''}`;
           item.setAttribute('data-ref', `account-item-${acc.id}`);
 
+          const accTier = acc.subscription_tier || 'free';
           const accAvatarUrl = acc.avatar_url || `/api/avatar?name=${encodeURIComponent(acc.username)}`;
 
           item.innerHTML = `
-            <div class="account-item__avatar" data-ref="account-avatar-${acc.id}">
+            <div class="account-item__avatar avatar-tier--${accTier}" data-ref="account-avatar-${acc.id}" data-tier="${accTier}">
               <img class="avatar-img" data-ref="avatar-img-${acc.id}" src="${accAvatarUrl}" alt="${escapeHtml(acc.username)}" referrerpolicy="no-referrer" />
             </div>
             <div class="account-item__info" data-ref="account-info-${acc.id}">
