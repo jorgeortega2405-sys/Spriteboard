@@ -1,4 +1,5 @@
 import { navigate } from '../app-router';
+import { API_ROUTES } from '../config/api-routes';
 import { currentUser, postApi, setCurrentUser, setLinkedAccounts } from '../services/api.service';
 import { t } from '../services/i18n.service';
 import { loadTemplate } from '../services/template.service';
@@ -197,7 +198,7 @@ export async function createLoginView(startAt2FA = false): Promise<HTMLElement> 
   });
 
   googleBtn?.addEventListener('click', () => {
-    window.location.href = '/api/auth/google';
+    window.location.href = API_ROUTES.auth.google;
   });
 
   setupPasswordToggle(toggleBtn, passwordInput, {
@@ -256,7 +257,7 @@ export async function createLoginView(startAt2FA = false): Promise<HTMLElement> 
 
     await withButtonLoading(submitBtn, loadingText, async () => {
       try {
-        const res = await postApi('/api/login', { email, password });
+        const res = await postApi(API_ROUTES.auth.login, { email, password });
         const data = await res.json();
 
         if (!res.ok) {
@@ -297,7 +298,7 @@ export async function createLoginView(startAt2FA = false): Promise<HTMLElement> 
 
     await withButtonLoading(submit2FABtn, t('auth.login_2fa.loading') || 'Verificando...', async () => {
       try {
-        const res = await postApi('/api/login/verify-2fa', {
+        const res = await postApi(API_ROUTES.auth.login2fa, {
           tempToken: state.tempToken,
           code,
         });
@@ -388,7 +389,7 @@ export async function createRegisterView(targetStage = 1): Promise<HTMLElement> 
   });
 
   googleRegisterBtn?.addEventListener('click', () => {
-    window.location.href = '/api/auth/google';
+    window.location.href = API_ROUTES.auth.google;
   });
 
   setupPasswordToggle(togglePassBtn, passwordInput, {
@@ -442,7 +443,7 @@ export async function createRegisterView(targetStage = 1): Promise<HTMLElement> 
 
     await withButtonLoading(submitStage1Btn, t('auth.register.loading'), async () => {
       try {
-        const res = await postApi('/api/register/stage1-validate', { email, password });
+        const res = await postApi(API_ROUTES.auth.registerStage1, { email, password });
         const data = await res.json();
 
         if (!res.ok) {
@@ -486,7 +487,7 @@ export async function createRegisterView(targetStage = 1): Promise<HTMLElement> 
 
     await withButtonLoading(submitStage2Btn, t('auth.register_stage2.loading'), async () => {
       try {
-        const res = await postApi('/api/register/send-code', {
+        const res = await postApi(API_ROUTES.auth.registerSendCode, {
           email: currentState.email,
           password: currentState.password,
           username,
@@ -528,7 +529,7 @@ export async function createRegisterView(targetStage = 1): Promise<HTMLElement> 
 
     await withButtonLoading(submitStage3Btn, t('auth.register_stage3.loading'), async () => {
       try {
-        const res = await postApi('/api/register/verify-code', {
+        const res = await postApi(API_ROUTES.auth.registerVerifyCode, {
           email: currentState.email,
           code,
         });
@@ -559,7 +560,7 @@ export async function createRegisterView(targetStage = 1): Promise<HTMLElement> 
 
     await withButtonLoading(resendCodeBtn, t('auth.register_stage3.resending'), async () => {
       try {
-        const res = await postApi('/api/register/resend-code', {
+        const res = await postApi(API_ROUTES.auth.registerResendCode, {
           email: currentState.email,
         });
 
@@ -626,7 +627,7 @@ export async function createForgotPasswordView(): Promise<HTMLElement> {
 
     await withButtonLoading(submitBtn, t('auth.forgot_password.loading'), async () => {
       try {
-        const res = await postApi('/api/forgot-password', { email });
+        const res = await postApi(API_ROUTES.auth.forgotPassword, { email });
         const data = await res.json().catch(() => ({}));
 
         if (res.ok) {
@@ -686,7 +687,7 @@ export async function createResetPasswordView(): Promise<HTMLElement> {
     if (passwordInput) passwordInput.disabled = true;
     if (confirmInput) confirmInput.disabled = true;
   } else {
-    fetch(`/api/reset-password/validate?token=${encodeURIComponent(token)}`)
+    fetch(API_ROUTES.auth.resetPasswordValidate(token))
       .then((res) => res.json())
       .then((data) => {
         if (!data.valid) {
@@ -725,7 +726,7 @@ export async function createResetPasswordView(): Promise<HTMLElement> {
 
     await withButtonLoading(submitBtn, t('auth.reset_password.loading'), async () => {
       try {
-        const res = await postApi('/api/reset-password', { token, password });
+        const res = await postApi(API_ROUTES.auth.resetPassword, { token, password });
         const data = await res.json().catch(() => ({}));
 
         if (res.ok) {

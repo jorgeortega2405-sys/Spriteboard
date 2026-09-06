@@ -20,7 +20,8 @@ Este documento define las reglas estrictas de desarrollo, seguridad, arquitectur
 ## 2. Prohibición Total de `console.log`, `console.warn`, `console.error`
 
 1. **Cero `console.*` en Código**:
-   - Queda estrictamente prohibido utilizar `console.log`, `console.warn`, `console.error`, `console.info` o `console.debug` tanto en el backend (`src/`) como en el frontend (`public/js/`).
+   - Queda estrictamente prohibido utilizar `console.log`, `console.warn`, `console.error`, `console.info` o `console.debug` tanto en el backend (`src/`) como en el frontend (`client/`).
+   - **Excepción Única**: Exclusivamente en `client/services/websocket.service.ts` se permite el uso de `console.log`, `console.warn` y `console.error` para monitoreo y depuración en tiempo real del ciclo de vida y eventos de la conexión WebSocket.
 2. **Uso Obligatorio de `Logger`**:
    - En el backend, todos los registros deben realizarse a través del servicio centralizado `Logger` ([src/services/logger.service.ts](file:///f:/Spriteboard/src/services/logger.service.ts)), el cual escribe en archivos diarios en el directorio `logs/`.
    - Categorías disponibles:

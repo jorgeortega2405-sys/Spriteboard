@@ -1,6 +1,7 @@
 import { navigate, render } from '../app-router';
 import { createSidebar } from '../components/layout.component';
 import { open2FAModal, openModal } from '../components/modal.component';
+import { API_ROUTES } from '../config/api-routes';
 import { appConfig, cancelSubscriptionImmediateApi, checkAuthSession, clearUserState, createSetupIntentApi, currentUser, deleteApi, deletePaymentMethodApi, escapeHtml, getApi, getBillingDetailsApi, getPaymentMethodsApi, getPurchaseHistoryApi, logoutAllApi, postApi, postFormApi, setCurrentUser, setDefaultPaymentMethodApi, setLinkedAccounts, updateAutoRenewalApi } from '../services/api.service';
 import { getCurrentLanguage, setLanguage, t, translateElement } from '../services/i18n.service';
 import { loadTemplate } from '../services/template.service';
@@ -61,14 +62,14 @@ export async function createYourAccountView(): Promise<HTMLElement> {
   let selectedAvatarFile: File | null = null;
 
   const getDefaultAvatarUrl = (name?: string) => {
-    return `/api/avatar?name=${encodeURIComponent(name || currentUser?.username || 'User')}`;
+    return API_ROUTES.avatar(name || currentUser?.username || 'User');
   };
 
   const hasCustomAvatar = () => {
     return Boolean(
       currentUser?.avatar_url &&
         currentUser.avatar_url.trim() !== '' &&
-        !currentUser.avatar_url.startsWith('/api/avatar')
+        !currentUser.avatar_url.startsWith(API_ROUTES.avatarBase)
     );
   };
 
@@ -214,7 +215,7 @@ export async function createYourAccountView(): Promise<HTMLElement> {
       formData.append('avatar', selectedAvatarFile!);
 
       try {
-        const res = await postFormApi('/api/settings/avatar', formData);
+        const res = await postFormApi(API_ROUTES.settings.avatar, formData);
         const data = await res.json();
 
         if (res.ok && data.ok && currentUser) {
@@ -245,7 +246,7 @@ export async function createYourAccountView(): Promise<HTMLElement> {
       if (avatarErrorBanner) avatarErrorBanner.style.display = 'none';
 
       try {
-        const res = await deleteApi('/api/settings/avatar');
+        const res = await deleteApi(API_ROUTES.settings.avatar);
         const data = await res.json();
 
         if (res.ok && data.ok && currentUser) {
@@ -303,7 +304,7 @@ export async function createYourAccountView(): Promise<HTMLElement> {
       if (usernameErrorBanner) usernameErrorBanner.style.display = 'none';
 
       try {
-        const res = await postApi('/api/settings/username', { username: newUsername });
+        const res = await postApi(API_ROUTES.settings.username, { username: newUsername });
         const data = await res.json();
 
         if (res.ok && data.ok && currentUser) {
@@ -365,7 +366,7 @@ export async function createYourAccountView(): Promise<HTMLElement> {
       if (emailErrorBanner) emailErrorBanner.style.display = 'none';
 
       try {
-        const res = await postApi('/api/settings/email', { email: newEmail });
+        const res = await postApi(API_ROUTES.settings.email, { email: newEmail });
         const data = await res.json();
 
         if (res.ok && data.ok && currentUser) {
@@ -394,7 +395,7 @@ export async function createYourAccountView(): Promise<HTMLElement> {
 
     await withButtonLoading(btnEditEmail, t('app.loading'), async () => {
       try {
-        const res = await postApi('/api/settings/email/request-code');
+        const res = await postApi(API_ROUTES.settings.emailRequestCode);
         const data = await res.json();
 
         if (!res.ok || !data.ok) {
@@ -438,7 +439,7 @@ export async function createYourAccountView(): Promise<HTMLElement> {
             inst.setConfirmLoading(true);
 
             try {
-              const verifyRes = await postApi('/api/settings/email/verify-code', {
+              const verifyRes = await postApi(API_ROUTES.settings.emailVerifyCode, {
                 code: inputCode,
               });
               const verifyData = await verifyRes.json();
@@ -509,7 +510,7 @@ export async function createYourAccountView(): Promise<HTMLElement> {
   }
 
   try {
-    const prefRes = await getApi('/api/settings/preferences');
+    const prefRes = await getApi(API_ROUTES.settings.preferences);
     if (prefRes.ok) {
       const prefData = await prefRes.json();
       const prefs = prefData.preferences;
@@ -554,7 +555,7 @@ export async function createYourAccountView(): Promise<HTMLElement> {
 
   const saveOpenLinks = debounce(async (checked: boolean) => {
     try {
-      await postApi('/api/settings/preferences', { open_links_new_tab: checked });
+      await postApi(API_ROUTES.settings.preferences, { open_links_new_tab: checked });
       showToast(t('toasts.preferences_saved'), 'success');
     } catch (_) {}
   }, 350);
@@ -591,7 +592,7 @@ export async function createSecurityView(): Promise<HTMLElement> {
   };
 
   try {
-    getApi('/api/settings/2fa/status')
+    getApi(API_ROUTES.settings.twoFactorStatus)
       .then(async (res) => {
         if (res.ok) {
           const data = await res.json();
@@ -612,7 +613,7 @@ export async function createSecurityView(): Promise<HTMLElement> {
         onConfirm: async (inst) => {
           inst.setConfirmLoading(true);
           try {
-            const res = await postApi('/api/settings/2fa/disable');
+            const res = await postApi(API_ROUTES.settings.twoFactorDisable);
             const data = await res.json();
             if (res.ok && data.ok) {
               inst.close();
@@ -651,7 +652,7 @@ export async function createSecurityView(): Promise<HTMLElement> {
   };
 
   try {
-    const statusRes = await getApi('/api/settings/password/status');
+    const statusRes = await getApi(API_ROUTES.settings.passwordStatus);
     if (statusRes.ok) {
       const data = await statusRes.json();
       cachedStatus = {
@@ -666,7 +667,7 @@ export async function createSecurityView(): Promise<HTMLElement> {
 
   btnChangePassword?.addEventListener('click', async () => {
     try {
-      const res = await getApi('/api/settings/password/status');
+      const res = await getApi(API_ROUTES.settings.passwordStatus);
       if (res.ok) {
         const data = await res.json();
         cachedStatus = {
@@ -733,7 +734,7 @@ export async function createSecurityView(): Promise<HTMLElement> {
       onConfirm: async (inst) => {
         inst.setConfirmLoading(true);
         try {
-          const res = await postApi('/api/settings/account/delete');
+          const res = await postApi(API_ROUTES.settings.accountDelete);
           let data: any = {};
           try {
             data = await res.json();
@@ -953,7 +954,7 @@ function showGoogleOrPasswordStep(
     }, 400);
 
     popupWindow = window.open(
-      '/api/auth/google/verify',
+      API_ROUTES.auth.googleVerify,
       'google_verify_window',
       'width=500,height=650,menubar=no,toolbar=no,status=no,resizable=yes'
     );
@@ -1016,7 +1017,7 @@ function showGoogleOrPasswordStep(
     inst.setConfirmLoading(true);
 
     try {
-      const verifyRes = await postApi('/api/settings/password/verify', { currentPassword });
+      const verifyRes = await postApi(API_ROUTES.settings.passwordVerify, { currentPassword });
       const verifyData = await verifyRes.json();
 
       if (!verifyRes.ok || !verifyData.ok) {
@@ -1066,7 +1067,7 @@ function showDirectPasswordStep(onPasswordUpdated: () => void): void {
       inst.setConfirmLoading(true);
 
       try {
-        const verifyRes = await postApi('/api/settings/password/verify', { currentPassword });
+        const verifyRes = await postApi(API_ROUTES.settings.passwordVerify, { currentPassword });
         const verifyData = await verifyRes.json();
 
         if (!verifyRes.ok || !verifyData.ok) {
@@ -1167,7 +1168,7 @@ function showStep2NewPassword(modal: ModalInstance, onPasswordUpdated?: () => vo
     inst.setConfirmLoading(true);
 
     try {
-      const updateRes = await postApi('/api/settings/password', { newPassword: newPass });
+      const updateRes = await postApi(API_ROUTES.settings.password, { newPassword: newPass });
       const updateData = await updateRes.json();
 
       if (!updateRes.ok || !updateData.ok) {
@@ -1952,7 +1953,7 @@ export async function createAccessibilityView(): Promise<HTMLElement> {
   }
 
   try {
-    const prefRes = await getApi('/api/settings/preferences');
+    const prefRes = await getApi(API_ROUTES.settings.preferences);
     if (prefRes.ok) {
       const prefData = await prefRes.json();
       const prefs = prefData.preferences;
@@ -2007,21 +2008,21 @@ export async function createAccessibilityView(): Promise<HTMLElement> {
 
   const saveReduceMotion = debounce(async (checked: boolean) => {
     try {
-      await postApi('/api/settings/preferences', { reduce_motion: checked });
+      await postApi(API_ROUTES.settings.preferences, { reduce_motion: checked });
       showToast(t('toasts.preferences_saved'), 'success');
     } catch (_) {}
   }, 350);
 
   const saveHighContrast = debounce(async (checked: boolean) => {
     try {
-      await postApi('/api/settings/preferences', { high_contrast: checked });
+      await postApi(API_ROUTES.settings.preferences, { high_contrast: checked });
       showToast(t('toasts.preferences_saved'), 'success');
     } catch (_) {}
   }, 350);
 
   const saveExtendedAlerts = debounce(async (checked: boolean) => {
     try {
-      await postApi('/api/settings/preferences', { extended_alerts: checked });
+      await postApi(API_ROUTES.settings.preferences, { extended_alerts: checked });
       showToast(t('toasts.preferences_saved'), 'success');
     } catch (_) {}
   }, 350);

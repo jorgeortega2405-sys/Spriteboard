@@ -1,3 +1,4 @@
+import { API_ROUTES } from '../config/api-routes.js';
 import { detectBrowserLanguage } from '../utils/languages.util.js';
 import { currentUser, postApi } from './api.service.js';
 
@@ -70,7 +71,7 @@ export async function setLanguage(code: string): Promise<void> {
 
   if (currentUser) {
     try {
-      await postApi('/api/settings/preferences', { language: code });
+      await postApi(API_ROUTES.settings.preferences, { language: code });
     } catch (_) {}
   }
 }

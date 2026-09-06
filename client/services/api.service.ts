@@ -1,5 +1,8 @@
+import { API_ROUTES } from '../config/api-routes.js';
 import { LinkedAccount, User } from '../types/auth.types.js';
 import { BillingDetailsResponse, PaymentMethod, PurchaseRecord, SubscriptionPlan } from '../types/subscription.types.js';
+
+export { API_ROUTES };
 
 export let currentUser: User | null = null;
 export let linkedAccounts: LinkedAccount[] = [];
@@ -36,7 +39,7 @@ export function escapeHtml(str: unknown): string {
 
 export async function fetchAppConfig(): Promise<void> {
   try {
-    const res = await fetch('/api/config');
+    const res = await fetch(API_ROUTES.config);
     if (res.ok) {
       const data = await res.json();
       if (data.appName) {
@@ -52,7 +55,7 @@ export async function fetchAppConfig(): Promise<void> {
 
 export async function fetchCsrfToken(): Promise<string> {
   try {
-    const res = await fetch('/api/csrf-token');
+    const res = await fetch(API_ROUTES.csrfToken);
     if (res.ok) {
       const data = await res.json();
       csrfToken = data.csrfToken;
@@ -64,7 +67,7 @@ export async function fetchCsrfToken(): Promise<string> {
 
 export async function checkAuthSession(): Promise<User | null> {
   try {
-    const res = await fetch('/api/me');
+    const res = await fetch(API_ROUTES.auth.me);
     if (res.ok) {
       const data = await res.json();
       currentUser = data.user || null;
@@ -81,7 +84,7 @@ export async function checkAuthSession(): Promise<User | null> {
 }
 
 export async function switchAccountApi(userId: number): Promise<{ success: boolean; data?: any; error?: string }> {
-  const res = await postApi('/api/auth/switch-account', { user_id: userId });
+  const res = await postApi(API_ROUTES.auth.switchAccount, { user_id: userId });
   if (res.ok) {
     const data = await res.json();
     if (data.user) currentUser = data.user;
@@ -96,7 +99,7 @@ export async function switchAccountApi(userId: number): Promise<{ success: boole
 }
 
 export async function logoutApi(): Promise<{ success: boolean; switched?: boolean; user?: User; accounts?: LinkedAccount[] }> {
-  const res = await postApi('/api/logout', {});
+  const res = await postApi(API_ROUTES.auth.logout, {});
   if (res.ok) {
     const data = await res.json();
     if (data.switched && data.user) {
@@ -113,7 +116,7 @@ export async function logoutApi(): Promise<{ success: boolean; switched?: boolea
 }
 
 export async function logoutAllApi(): Promise<boolean> {
-  const res = await postApi('/api/auth/logout-all', {});
+  const res = await postApi(API_ROUTES.auth.logoutAll, {});
   currentUser = null;
   linkedAccounts = [];
   return res.ok;
@@ -221,7 +224,7 @@ export async function deleteApi(url: string, body?: unknown): Promise<Response> 
 
 export async function getSubscriptionsApi(): Promise<{ success: boolean; subscriptions: SubscriptionPlan[] }> {
   try {
-    const res = await fetch('/api/subscriptions', {
+    const res = await fetch(API_ROUTES.subscriptions.base, {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
@@ -242,7 +245,7 @@ export async function getSubscriptionsApi(): Promise<{ success: boolean; subscri
 
 export async function createSubscriptionCheckoutApi(planId: string, billingPeriod: string): Promise<{ success: boolean; url?: string; error?: string }> {
   try {
-    const res = await postApi('/api/subscriptions/checkout', {
+    const res = await postApi(API_ROUTES.subscriptions.checkout, {
       planId,
       billingPeriod,
     });
@@ -255,7 +258,7 @@ export async function createSubscriptionCheckoutApi(planId: string, billingPerio
 
 export async function verifySubscriptionSessionApi(sessionId: string): Promise<{ success: boolean; tier?: 'free' | 'plus' | 'pro' | 'ultra'; error?: string }> {
   try {
-    const res = await getApi(`/api/subscriptions/verify-session?session_id=${encodeURIComponent(sessionId)}`);
+    const res = await getApi(API_ROUTES.subscriptions.verifySession(sessionId));
     const data = await res.json();
     if (res.ok && data.tier && currentUser) {
       currentUser.subscription_tier = data.tier;
@@ -276,7 +279,7 @@ export async function verifySubscriptionSessionApi(sessionId: string): Promise<{
 
 export async function getBillingDetailsApi(): Promise<BillingDetailsResponse> {
   try {
-    const res = await getApi('/api/subscriptions/details');
+    const res = await getApi(API_ROUTES.subscriptions.details);
     const data = await res.json();
     return { success: res.ok, ...data };
   } catch {
@@ -286,7 +289,7 @@ export async function getBillingDetailsApi(): Promise<BillingDetailsResponse> {
 
 export async function updateAutoRenewalApi(cancelAtPeriodEnd: boolean): Promise<{ success: boolean; error?: string }> {
   try {
-    const res = await postApi('/api/subscriptions/auto-renewal', { cancelAtPeriodEnd });
+    const res = await postApi(API_ROUTES.subscriptions.autoRenewal, { cancelAtPeriodEnd });
     const data = await res.json();
     return { success: res.ok, ...data };
   } catch {
@@ -296,7 +299,7 @@ export async function updateAutoRenewalApi(cancelAtPeriodEnd: boolean): Promise<
 
 export async function cancelSubscriptionImmediateApi(): Promise<{ success: boolean; error?: string }> {
   try {
-    const res = await postApi('/api/subscriptions/cancel-immediate', {});
+    const res = await postApi(API_ROUTES.subscriptions.cancelImmediate, {});
     const data = await res.json();
     if (res.ok && currentUser) {
       currentUser.subscription_tier = 'free';
@@ -317,7 +320,7 @@ export async function cancelSubscriptionImmediateApi(): Promise<{ success: boole
 
 export async function getPaymentMethodsApi(): Promise<{ success: boolean; paymentMethods: PaymentMethod[] }> {
   try {
-    const res = await getApi('/api/subscriptions/payment-methods');
+    const res = await getApi(API_ROUTES.subscriptions.paymentMethods);
     const data = await res.json();
     return { success: res.ok, paymentMethods: data.paymentMethods || [] };
   } catch {
@@ -327,7 +330,7 @@ export async function getPaymentMethodsApi(): Promise<{ success: boolean; paymen
 
 export async function createSetupIntentApi(): Promise<{ success: boolean; clientSecret?: string; error?: string }> {
   try {
-    const res = await postApi('/api/subscriptions/setup-intent', {});
+    const res = await postApi(API_ROUTES.subscriptions.setupIntent, {});
     const data = await res.json();
     return { success: res.ok, ...data };
   } catch {
@@ -337,7 +340,7 @@ export async function createSetupIntentApi(): Promise<{ success: boolean; client
 
 export async function setDefaultPaymentMethodApi(pmId: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const res = await postApi(`/api/subscriptions/payment-methods/${encodeURIComponent(pmId)}/default`, {});
+    const res = await postApi(API_ROUTES.subscriptions.paymentMethodDefault(pmId), {});
     const data = await res.json();
     return { success: res.ok, ...data };
   } catch {
@@ -347,7 +350,7 @@ export async function setDefaultPaymentMethodApi(pmId: string): Promise<{ succes
 
 export async function deletePaymentMethodApi(pmId: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const res = await deleteApi(`/api/subscriptions/payment-methods/${encodeURIComponent(pmId)}`);
+    const res = await deleteApi(API_ROUTES.subscriptions.paymentMethodDelete(pmId));
     const data = await res.json();
     return { success: res.ok, ...data };
   } catch {
@@ -357,7 +360,7 @@ export async function deletePaymentMethodApi(pmId: string): Promise<{ success: b
 
 export async function getPurchaseHistoryApi(): Promise<{ success: boolean; purchases: PurchaseRecord[] }> {
   try {
-    const res = await getApi('/api/subscriptions/history');
+    const res = await getApi(API_ROUTES.subscriptions.history);
     const data = await res.json();
     return { success: res.ok, purchases: data.purchases || [] };
   } catch {

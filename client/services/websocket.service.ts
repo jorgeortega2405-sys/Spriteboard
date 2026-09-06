@@ -27,13 +27,17 @@ export function initWebSocket(): void {
   const wsUrl = `${protocol}//${window.location.host}/ws`;
 
   try {
+    console.log('[WebSocket] Conectando a:', wsUrl);
     ws = new WebSocket(wsUrl);
 
-    ws.onopen = () => {};
+    ws.onopen = () => {
+      console.log('[WebSocket] Conexión establecida exitosamente con el servidor.');
+    };
 
     ws.onmessage = (event: MessageEvent) => {
       try {
         const data = typeof event.data === 'string' ? JSON.parse(event.data) : null;
+        console.log('[WebSocket] Mensaje recibido:', data);
         if (data?.type === 'SESSION_REVOKED') {
           closeWebSocket();
           clearUserState();
@@ -41,21 +45,29 @@ export function initWebSocket(): void {
           showToast(msg, 'warning');
           navigate('/login');
         }
-      } catch (_) {}
+      } catch (err) {
+        console.warn('[WebSocket] Error al procesar mensaje recibido:', err);
+      }
     };
 
-    ws.onclose = () => {
+    ws.onclose = (event: CloseEvent) => {
       ws = null;
       if (!isIntentionallyClosed && currentUser) {
+        console.warn(`[WebSocket] Conexión cerrada (código: ${event.code}). Reconectando en 4 segundos...`);
         if (reconnectTimer) clearTimeout(reconnectTimer);
         reconnectTimer = setTimeout(() => {
           initWebSocket();
         }, 4000);
+      } else {
+        console.log('[WebSocket] Conexión cerrada.');
       }
     };
 
-    ws.onerror = () => {};
-  } catch (_) {
+    ws.onerror = (err: Event) => {
+      console.error('[WebSocket] Error de conexión:', err);
+    };
+  } catch (err) {
+    console.error('[WebSocket] Excepción al inicializar WebSocket:', err);
     ws = null;
   }
 }
@@ -70,6 +82,7 @@ export function closeWebSocket(): void {
   if (ws) {
     try {
       ws.close();
+      console.log('[WebSocket] Conexión cerrada voluntariamente.');
     } catch (_) {}
     ws = null;
   }

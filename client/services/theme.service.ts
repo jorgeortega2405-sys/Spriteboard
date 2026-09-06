@@ -1,3 +1,4 @@
+import { API_ROUTES } from '../config/api-routes.js';
 import { postApi } from './api.service.js';
 import { reportEvent } from './telemetry.service.js';
 
@@ -52,7 +53,7 @@ export async function setTheme(newTheme: string, syncBackend = false): Promise<v
 
   if (syncBackend) {
     try {
-      await postApi('/api/settings/preferences', { theme: newTheme });
+      await postApi(API_ROUTES.settings.preferences, { theme: newTheme });
     } catch {}
   }
 }

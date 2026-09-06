@@ -1,3 +1,4 @@
+import { API_ROUTES } from '../config/api-routes.js';
 import { postApi } from './api.service.js';
 
 function rateMetric(name: string, value: number): 'good' | 'needs_improvement' | 'poor' {
@@ -19,7 +20,7 @@ function rateMetric(name: string, value: number): 'good' | 'needs_improvement' |
 
 export async function reportEvent(eventName: string, category = 'ui', metadata: Record<string, unknown> = {}): Promise<void> {
   try {
-    await postApi('/api/telemetry/events', {
+    await postApi(API_ROUTES.telemetry.events, {
       eventName,
       event_name: eventName,
       category,
@@ -31,7 +32,7 @@ export async function reportEvent(eventName: string, category = 'ui', metadata: 
 export async function reportWebVital(name: string, value: number, rating: string | null = null): Promise<void> {
   try {
     const finalRating = rating || rateMetric(name, value);
-    await postApi('/api/telemetry/vitals', {
+    await postApi(API_ROUTES.telemetry.vitals, {
       metricName: name,
       metric_name: name,
       value: Math.round(value * 100) / 100,

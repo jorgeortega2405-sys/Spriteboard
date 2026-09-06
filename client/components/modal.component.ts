@@ -1,3 +1,4 @@
+import { API_ROUTES } from '../config/api-routes.js';
 import { postApi } from '../services/api.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { showToast } from '../services/toast.service.js';
@@ -654,7 +655,7 @@ export async function open2FAModal(options: { onClose?: () => void; onSuccess?: 
   });
 
   try {
-    const res = await postApi('/api/settings/2fa/generate');
+    const res = await postApi(API_ROUTES.settings.twoFactorGenerate);
     const data = await res.json();
 
     if (!res.ok || !data.ok) {
@@ -724,7 +725,7 @@ export async function open2FAModal(options: { onClose?: () => void; onSuccess?: 
     setButtonLoading(continueBtn, true);
 
     try {
-      const res = await postApi('/api/settings/2fa/enable', { code });
+      const res = await postApi(API_ROUTES.settings.twoFactorEnable, { code });
       const data = await res.json();
 
       if (!res.ok || !data.ok) {

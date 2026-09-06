@@ -1,4 +1,5 @@
 import { navigate, render } from '../app-router.js';
+import { API_ROUTES } from '../config/api-routes.js';
 import { currentUser, escapeHtml, linkedAccounts, logoutAllApi, logoutApi, postApi, switchAccountApi } from '../services/api.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { loadTemplate } from '../services/template.service.js';
@@ -196,14 +197,14 @@ export async function createTopBar(): Promise<HTMLElement> {
 
       const avatarUrl =
         currentUser.avatar_url ||
-        `/api/avatar?name=${encodeURIComponent(currentUser.username)}`;
+        API_ROUTES.avatar(currentUser.username);
 
       if (avatarImg) {
         avatarImg.src = avatarUrl;
         avatarImg.alt = escapeHtml(currentUser.username);
         avatarImg.onerror = () => {
           avatarImg.onerror = null;
-          avatarImg.src = `/api/avatar?name=${encodeURIComponent(currentUser?.username || '')}`;
+          avatarImg.src = API_ROUTES.avatar(currentUser?.username || '');
         };
       }
 
@@ -212,7 +213,7 @@ export async function createTopBar(): Promise<HTMLElement> {
         activeAvatar.alt = escapeHtml(currentUser.username);
         activeAvatar.onerror = () => {
           activeAvatar.onerror = null;
-          activeAvatar.src = `/api/avatar?name=${encodeURIComponent(currentUser?.username || '')}`;
+          activeAvatar.src = API_ROUTES.avatar(currentUser?.username || '');
         };
       }
 
@@ -255,7 +256,7 @@ export async function createTopBar(): Promise<HTMLElement> {
 
           const accTier = acc.subscription_tier || 'free';
           const accAvatarUrl =
-            acc.avatar_url || `/api/avatar?name=${encodeURIComponent(acc.username)}`;
+            acc.avatar_url || API_ROUTES.avatar(acc.username);
 
           item.innerHTML = `
             <div class="account-item__avatar avatar-tier--${accTier}" data-ref="account-avatar-${acc.id}" data-tier="${accTier}">
@@ -272,7 +273,7 @@ export async function createTopBar(): Promise<HTMLElement> {
           if (imgEl) {
             imgEl.onerror = () => {
               imgEl.onerror = null;
-              imgEl.src = `/api/avatar?name=${encodeURIComponent(acc.username)}`;
+              imgEl.src = API_ROUTES.avatar(acc.username);
             };
           }
 
@@ -951,7 +952,7 @@ function setupChatSidebarEvents(sidebarElement: HTMLElement): void {
     const typingIndicator = appendTypingIndicator();
 
     try {
-      const res = await postApi('/api/chat', {
+      const res = await postApi(API_ROUTES.chat, {
         message: text,
         history: conversationHistory.slice(-10),
       });

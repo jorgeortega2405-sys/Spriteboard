@@ -11,7 +11,7 @@ Este archivo complementa a `AGENTS.md` y es cargado directamente por Antigravity
 
 2. **CERO `console.log`, `console.warn`, `console.error`**:
    - Todo log en backend debe usar `logger.app.*`, `logger.db.*` o `logger.security.*`.
-   - En el frontend no deben existir llamadas `console.*`.
+   - En el frontend no deben existir llamadas `console.*` (Excepción única: `client/services/websocket.service.ts` para depuración de ciclo de vida del WebSocket).
 
 3. **CERO Atributos `id`**:
    - Usa exclusivamente `data-ref="..."` para identificar elementos.
