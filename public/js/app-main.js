@@ -9,7 +9,7 @@ import { initTooltips } from './services/tooltip.service.js';
 import { initI18n } from './services/i18n.service.js';
 import { initWebVitals } from './services/telemetry.service.js';
 import { initTheme } from './services/theme.service.js';
-import { initChatSidebar } from './components/chat-sidebar.js';
+import { initChatSidebar } from './components/layout.component.js';
 import { initWebSocket } from './services/websocket.service.js';
 
 export { navigate };

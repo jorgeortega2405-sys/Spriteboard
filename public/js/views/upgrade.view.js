@@ -8,7 +8,7 @@
  */
 
 import { loadTemplate } from '../services/template.service.js';
-import { createSidebar } from '../components/sidebar.component.js';
+import { createSidebar } from '../components/layout.component.js';
 import {
   getSubscriptionsApi,
   createSubscriptionCheckoutApi,

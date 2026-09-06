@@ -1,29 +1,31 @@
-import { createTopBar } from './components/topbar.component.js';
+import { createTopBar, toggleSidebar, attachChatSidebarToView } from './components/layout.component.js';
 import { createHomeView } from './views/home.view.js';
 import { createTrashView } from './views/trash.view.js';
-import { createLoginView } from './views/auth/login.view.js';
-import { createLogin2FAView } from './views/auth/login-2fa.js';
-import { createRegisterStage1View } from './views/auth/register.view.js';
-import { createRegisterStage2View } from './views/auth/register-stage2.js';
-import { createRegisterStage3View } from './views/auth/register-stage3.js';
-import { createForgotPasswordView } from './views/auth/forgot-password.js';
-import { createResetPasswordView } from './views/auth/reset-password.js';
-import { createYourAccountView } from './views/settings/your-account.js';
-import { createSecurityView } from './views/settings/security.view.js';
-import { createBillingView } from './views/settings/billing.view.js';
-import { createPurchasesView } from './views/settings/purchases.view.js';
-import { createAccessibilityView } from './views/settings/accessibility.view.js';
-import { createGuestSettingsView } from './views/settings/guest.view.js';
+import {
+  createLoginView,
+  createLogin2FAView,
+  createRegisterStage1View,
+  createRegisterStage2View,
+  createRegisterStage3View,
+  createForgotPasswordView,
+  createResetPasswordView,
+} from './views/auth.view.js';
+import {
+  createYourAccountView,
+  createSecurityView,
+  createBillingView,
+  createPurchasesView,
+  createAccessibilityView,
+  createGuestSettingsView,
+} from './views/settings.view.js';
 import { createUpgradeView } from './views/upgrade.view.js';
-import { createHelpView } from './views/help/help.view.js';
+import { createHelpView } from './views/help.view.js';
 import { createErrorView } from './views/error.view.js';
 import { SkeletonService } from './services/skeleton.service.js';
 import { hasPersistentTopBar } from './config/skeleton-routes.js';
-import { attachChatSidebarToView } from './components/chat-sidebar.js';
 import { hideTooltip } from './services/tooltip.service.js';
 import { currentUser } from './services/api.service.js';
 import { trackPageView } from './services/telemetry.service.js';
-import { toggleSidebar } from './components/sidebar.component.js';
 
 let isInitialPageLoad = true;
 let currentNavigation = 0;
@@ -237,5 +239,3 @@ export async function render() {
 
 // Soporte para navegación con el historial del navegador (atrás/adelante)
 window.addEventListener('popstate', render);
-
-
