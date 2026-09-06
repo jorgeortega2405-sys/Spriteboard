@@ -5,47 +5,76 @@
     </a>
 
     <div class="card card--w-400" data-ref="login-card">
-      <div class="card__header" data-ref="login-header">
-        <h1 class="card__title" data-ref="login-title" data-i18n="auth.login.title"></h1>
-        <p class="card__subtitle" data-ref="login-subtitle" data-i18n="auth.login.subtitle"></p>
-      </div>
-
-      <div class="card__body" data-ref="login-form">
-        <label class="field" data-ref="field-login-email">
-          <input class="field__input" data-ref="login-email" type="email" maxlength="254" placeholder=" " autocomplete="email" />
-          <span class="field__label" data-ref="label-login-email" data-i18n="auth.login.email_label"></span>
-        </label>
-
-        <label class="field" data-ref="field-login-password">
-          <input class="field__input field__input--has-action" data-ref="login-password" type="password" maxlength="128" placeholder=" " autocomplete="current-password" />
-          <span class="field__label" data-ref="label-login-password" data-i18n="auth.login.password_label"></span>
-          <button type="button" class="field__action" data-ref="toggle-login-password" data-i18n-tooltip="auth.login.show_password" data-i18n-aria="auth.login.toggle_password">
-            <span class="material-symbols-rounded">visibility</span>
-          </button>
-        </label>
-
-        <div class="link-row" data-ref="login-forgot-row">
-          <a class="link" data-ref="btn-forgot-password" href="/forgot-password" data-i18n="auth.login.forgot_password"></a>
+      <!-- PASO 1: Formulario de Inicio de Sesión Principal -->
+      <div class="auth-step" data-ref="login-step-main">
+        <div class="card__header" data-ref="login-header">
+          <h1 class="card__title" data-ref="login-title" data-i18n="auth.login.title"></h1>
+          <p class="card__subtitle" data-ref="login-subtitle" data-i18n="auth.login.subtitle"></p>
         </div>
 
-        <button type="button" class="btn btn--h55 btn--black btn--w-full" data-ref="btn-submit-login" data-i18n="auth.login.submit_btn">
-        </button>
+        <div class="card__body" data-ref="login-form">
+          <label class="field" data-ref="field-login-email">
+            <input class="field__input" data-ref="login-email" type="email" maxlength="254" placeholder=" " autocomplete="email" />
+            <span class="field__label" data-ref="label-login-email" data-i18n="auth.login.email_label"></span>
+          </label>
 
-        <button type="button" class="btn btn--h55 btn--w-full" data-ref="btn-google-login">
-          <svg class="google-icon" data-ref="google-icon" width="20" height="20" viewBox="0 0 24 24">
-            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-          </svg>
-          <span class="btn-text" data-ref="google-btn-text" data-i18n="auth.login.google_btn"></span>
-        </button>
+          <label class="field" data-ref="field-login-password">
+            <input class="field__input field__input--has-action" data-ref="login-password" type="password" maxlength="128" placeholder=" " autocomplete="current-password" />
+            <span class="field__label" data-ref="label-login-password" data-i18n="auth.login.password_label"></span>
+            <button type="button" class="field__action" data-ref="toggle-login-password" data-i18n-tooltip="auth.login.show_password" data-i18n-aria="auth.login.toggle_password">
+              <span class="material-symbols-rounded">visibility</span>
+            </button>
+          </label>
 
-        <div class="banner banner--danger" data-ref="login-error" style="display: none;"></div>
+          <div class="link-row" data-ref="login-forgot-row">
+            <a class="link" data-ref="btn-forgot-password" href="/forgot-password" data-i18n="auth.login.forgot_password"></a>
+          </div>
 
-        <p class="footer-note" data-ref="login-footer">
-          <span data-i18n="auth.login.no_account"></span> <a class="link link--primary" data-ref="btn-to-register" href="/register" data-i18n="auth.login.create_account"></a>
-        </p>
+          <button type="button" class="btn btn--h55 btn--black btn--w-full" data-ref="btn-submit-login" data-i18n="auth.login.submit_btn">
+          </button>
+
+          <button type="button" class="btn btn--h55 btn--w-full" data-ref="btn-google-login">
+            <svg class="google-icon" data-ref="google-icon" width="20" height="20" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+            </svg>
+            <span class="btn-text" data-ref="google-btn-text" data-i18n="auth.login.google_btn"></span>
+          </button>
+
+          <div class="banner banner--danger" data-ref="login-error" style="display: none;"></div>
+
+          <p class="footer-note" data-ref="login-footer">
+            <span data-i18n="auth.login.no_account"></span> <a class="link link--primary" data-ref="btn-to-register" href="/register" data-i18n="auth.login.create_account"></a>
+          </p>
+        </div>
+      </div>
+
+      <!-- PASO 2: Verificación Adicional 2FA (/login/verification-aditional) -->
+      <div class="auth-step" data-ref="login-step-2fa" style="display: none;">
+        <div class="card__header" data-ref="login-2fa-header">
+          <h1 class="card__title" data-ref="login-2fa-title" data-i18n="auth.login_2fa.title"></h1>
+          <p class="card__subtitle" data-ref="login-2fa-subtitle">
+            <span data-ref="verify-2fa-subtitle-text" data-i18n="auth.login_2fa.subtitle"></span>
+          </p>
+        </div>
+
+        <div class="card__body" data-ref="login-2fa-form">
+          <label class="field" data-ref="field-login-2fa-code">
+            <input class="field__input field__input--code" data-ref="input-login-2fa-code" type="text" maxlength="9" placeholder=" " autocomplete="one-time-code" />
+            <span class="field__label" data-ref="label-login-2fa-code" data-i18n="auth.login_2fa.code_label"></span>
+          </label>
+
+          <button type="button" class="btn btn--h55 btn--black btn--w-full" data-ref="btn-submit-2fa" data-i18n="auth.login_2fa.submit_btn">
+          </button>
+
+          <div class="banner banner--danger" data-ref="login-2fa-error" style="display: none;"></div>
+
+          <div class="link-row" data-ref="login-2fa-back-row" style="justify-content: center; margin-top: 14px;">
+            <a class="link" data-ref="btn-back-to-login" href="/login" data-i18n="auth.login_2fa.back_to_login"></a>
+          </div>
+        </div>
       </div>
     </div>
   </div>

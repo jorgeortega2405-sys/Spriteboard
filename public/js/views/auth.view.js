@@ -1,10 +1,10 @@
 /**
  * Módulo Centralizado de Autenticación (auth.view.js)
- * Unifica:
- * - Login y Login 2FA
- * - Registro Multi-Etapa (Etapas 1, 2 y 3)
- * - Olvido y Restablecimiento de Contraseña
- * - Persistencia de estados temporales (sessionStorage / cookies)
+ * Unifica los flujos de:
+ * - Login y Login 2FA en una sola plantilla interactiva (login.html)
+ * - Registro Multi-Etapa (Etapas 1, 2 y 3) en una sola plantilla interactiva (register.html)
+ * - Olvido y Restablecimiento de Contraseña (forgot-password.html y reset-password.html)
+ * - Cero parpadeos, transiciones instantáneas y sincronización dinámica con la URL del navegador.
  *
  * Cumple con directivas: CERO console.*, CERO IDs, orden estricto de atributos.
  */
@@ -112,7 +112,7 @@ export function getTwoFactorState() {
     }
   } catch (_) {}
 
-  // Fallback 1: Cookies temporales establecidas por redirección OAuth
+  // Fallback 1: Cookies temporales de OAuth
   const cookieToken = getCookie('2fa_temp_token');
   const cookieEmail = getCookie('2fa_temp_email');
   if (cookieToken && cookieEmail) {
@@ -163,12 +163,43 @@ export function hasTwoFactorLoginData() {
 }
 
 /* ==========================================================================
-   2. VISTA DE INICIO DE SESIÓN (/login)
+   2. VISTA UNIFICADA DE LOGIN + 2FA (/login, /login/verification-aditional)
    ========================================================================== */
 
-export async function createLoginView() {
+export async function createLoginView(startAt2FA = false) {
+  // Comprobar parámetros de consulta en caso de redirección desde Google OAuth con 2FA
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tokenParam = urlParams.get('token');
+    const emailParam = urlParams.get('email');
+    if (tokenParam && emailParam) {
+      saveTwoFactorLoginState(tokenParam, emailParam);
+      window.history.replaceState({}, document.title, window.location.pathname);
+      startAt2FA = true;
+    }
+  } catch (_) {}
+
+  const is2FARoute = startAt2FA || window.location.pathname === '/login/verification-aditional';
+
+  // Guardia de seguridad si intentan entrar directo a /login/verification-aditional sin sesión 2FA
+  if (is2FARoute && !hasTwoFactorLoginData()) {
+    return createErrorView({
+      code: '400',
+      title: t('error.general_title') || 'Solicitud inválida',
+      description:
+        t('auth.login_2fa.session_expired') || 'La sesión de verificación ha expirado o es inválida.',
+      actionText: t('auth.login.title') || 'Iniciar sesión',
+      actionUrl: '/login',
+    });
+  }
+
   const container = await loadTemplate('/views/auth/login.html');
 
+  // Pasos interactivos
+  const stepMain = container.querySelector('[data-ref="login-step-main"]');
+  const step2FA = container.querySelector('[data-ref="login-step-2fa"]');
+
+  // Elementos Paso Principal
   const emailInput = container.querySelector('[data-ref="login-email"]');
   const passwordInput = container.querySelector('[data-ref="login-password"]');
   const toggleBtn = container.querySelector('[data-ref="toggle-login-password"]');
@@ -176,9 +207,15 @@ export async function createLoginView() {
   const googleBtn = container.querySelector('[data-ref="btn-google-login"]');
   const titleEl = container.querySelector('[data-ref="login-title"]');
   const subtitleEl = container.querySelector('[data-ref="login-subtitle"]');
-  const banners = createBannerManager(container, { errorRef: 'login-error' });
+  const bannersMain = createBannerManager(container, { errorRef: 'login-error' });
 
-  // Detectar si el usuario ya tiene sesión activa o viene de agregar otra cuenta
+  // Elementos Paso 2FA
+  const code2FAInput = container.querySelector('[data-ref="input-login-2fa-code"]');
+  const submit2FABtn = container.querySelector('[data-ref="btn-submit-2fa"]');
+  const backToLoginLink = container.querySelector('[data-ref="btn-back-to-login"]');
+  const banners2FA = createBannerManager(container, { errorRef: 'login-2fa-error' });
+
+  // Detectar si agrega otra cuenta
   const urlParams = new URLSearchParams(window.location.search);
   const isAddingAccount = Boolean(currentUser) || urlParams.get('action') === 'add-account';
 
@@ -206,36 +243,60 @@ export async function createLoginView() {
     'btn-to-register': '/register',
   });
 
-  // Google OAuth
   googleBtn?.addEventListener('click', () => {
     window.location.href = '/api/auth/google';
   });
 
-  // Toggle contraseña
   setupPasswordToggle(toggleBtn, passwordInput, {
     showTooltip: t('auth.login.show_password'),
     hideTooltip: t('auth.login.hide_password'),
   });
 
-  // Error de OAuth redirigido
   const oauthError = urlParams.get('error');
   if (oauthError) {
-    banners.showError(t('toasts.generic_error'));
+    bannersMain.showError(t('toasts.generic_error'));
   }
 
-  // Ejecutar login
+  // Función para conmutar paso sin parpadeos y sincronizar URL
+  const activateStep = (stepName) => {
+    bannersMain.hideAll();
+    banners2FA.hideAll();
+
+    if (stepName === '2fa') {
+      if (stepMain) stepMain.style.display = 'none';
+      if (step2FA) step2FA.style.display = 'block';
+      window.history.pushState({}, '', '/login/verification-aditional');
+      requestAnimationFrame(() => code2FAInput?.focus());
+    } else {
+      if (step2FA) step2FA.style.display = 'none';
+      if (stepMain) stepMain.style.display = 'block';
+      window.history.pushState({}, '', '/login');
+      requestAnimationFrame(() => emailInput?.focus());
+    }
+  };
+
+  // Inicializar en el paso correspondiente
+  if (is2FARoute) {
+    if (stepMain) stepMain.style.display = 'none';
+    if (step2FA) step2FA.style.display = 'block';
+    requestAnimationFrame(() => code2FAInput?.focus());
+  } else {
+    if (step2FA) step2FA.style.display = 'none';
+    if (stepMain) stepMain.style.display = 'block';
+  }
+
+  // --- Lógica de Envío de Login Principal ---
   const executeLogin = async () => {
-    banners.hideAll();
+    bannersMain.hideAll();
     const email = emailInput?.value.trim();
     const password = passwordInput?.value;
 
     if (!email) {
-      banners.showError(t('validation.email_required'));
+      bannersMain.showError(t('validation.email_required'));
       return;
     }
-
     if (!password) {
-      banners.showError(t('validation.password_required'));
+      bannersMain.showError(t('validation.password_required'));
       return;
     }
 
@@ -249,13 +310,14 @@ export async function createLoginView() {
         const data = await res.json();
 
         if (!res.ok) {
-          banners.showError(data.error || t('toasts.generic_error'));
+          bannersMain.showError(data.error || t('toasts.generic_error'));
           return;
         }
 
+        // Si requiere 2FA, transición fluida e instantánea al paso 2FA en el mismo contenedor
         if (data.requires2FA) {
           saveTwoFactorLoginState(data.tempToken, data.email || email);
-          navigate('/login/verification-aditional');
+          activateStep('2fa');
           return;
         }
 
@@ -264,7 +326,7 @@ export async function createLoginView() {
         initWebSocket();
         navigate('/');
       } catch {
-        banners.showError(t('toasts.network_error'));
+        bannersMain.showError(t('toasts.network_error'));
       }
     });
   };
@@ -272,131 +334,116 @@ export async function createLoginView() {
   submitBtn?.addEventListener('click', executeLogin);
   bindSubmitOnEnter([emailInput, passwordInput], executeLogin);
 
-  return container;
-}
-
-/* ==========================================================================
-   3. VISTA DE VERIFICACIÓN 2FA DE LOGIN (/login/verification-aditional)
-   ========================================================================== */
-
-export async function createLogin2FAView() {
-  // Comprobar parámetros de consulta en caso de redirección desde Google OAuth
-  try {
-    const urlParams = new URLSearchParams(window.location.search);
-    const tokenParam = urlParams.get('token');
-    const emailParam = urlParams.get('email');
-    if (tokenParam && emailParam) {
-      saveTwoFactorLoginState(tokenParam, emailParam);
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-  } catch (_) {}
-
-  // Guardia de seguridad: si no hay sesión temporal de 2FA activa, redirigir a error
-  if (!hasTwoFactorLoginData()) {
-    return createErrorView({
-      code: '400',
-      title: t('error.general_title') || 'Solicitud inválida',
-      description:
-        t('auth.login_2fa.session_expired') || 'La sesión de verificación ha expirado o es inválida.',
-      actionText: t('auth.login.title') || 'Iniciar sesión',
-      actionUrl: '/login',
-    });
-  }
-
-  const container = await loadTemplate('/views/auth/login-2fa.html');
-  const state = getTwoFactorState();
-
-  const codeInput = container.querySelector('[data-ref="input-login-2fa-code"]');
-  const submitBtn = container.querySelector('[data-ref="btn-submit-2fa"]');
-  const banners = createBannerManager(container, { errorRef: 'login-2fa-error' });
-
-  // Enlaces de navegación
-  bindNavigationLinks(container, {
-    'login-2fa-home-link': '/',
-    'btn-back-to-login': '/login',
-  });
-
-  const backLink = container.querySelector('[data-ref="btn-back-to-login"]');
-  backLink?.addEventListener('click', (e) => {
-    e.preventDefault();
-    clearTwoFactorState();
-    navigate('/login');
-  });
-
+  // --- Lógica de Envío de Verificación 2FA ---
   const executeVerify2FA = async () => {
-    banners.hideAll();
-    const code = codeInput?.value.trim();
+    banners2FA.hideAll();
+    const state = getTwoFactorState();
+    const code = code2FAInput?.value.trim();
 
     if (!code) {
-      banners.showError(
-        t('auth.login_2fa.code_required') ||
-          'Ingresa el código de verificación o código de respaldo.'
+      banners2FA.showError(
+        t('auth.login_2fa.code_required') || 'Ingresa el código de verificación o código de respaldo.'
       );
       return;
     }
 
-    await withButtonLoading(
-      submitBtn,
-      t('auth.login_2fa.loading') || 'Verificando...',
-      async () => {
-        try {
-          const res = await postApi('/api/login/verify-2fa', {
-            tempToken: state.tempToken,
-            code,
-          });
+    await withButtonLoading(submit2FABtn, t('auth.login_2fa.loading') || 'Verificando...', async () => {
+      try {
+        const res = await postApi('/api/login/verify-2fa', {
+          tempToken: state.tempToken,
+          code,
+        });
 
-          const data = await res.json();
+        const data = await res.json();
 
-          if (!res.ok) {
-            banners.showError(data.error || t('toasts.generic_error'));
-            return;
-          }
-
-          // Inicio de sesión completado
-          setCurrentUser(data.user);
-          if (data.accounts) setLinkedAccounts(data.accounts);
-          clearTwoFactorState();
-          initWebSocket();
-          navigate('/');
-        } catch {
-          banners.showError(t('toasts.network_error'));
+        if (!res.ok) {
+          banners2FA.showError(data.error || t('toasts.generic_error'));
+          return;
         }
+
+        setCurrentUser(data.user);
+        if (data.accounts) setLinkedAccounts(data.accounts);
+        clearTwoFactorState();
+        initWebSocket();
+        navigate('/');
+      } catch {
+        banners2FA.showError(t('toasts.network_error'));
       }
-    );
+    });
   };
 
-  submitBtn?.addEventListener('click', executeVerify2FA);
-  bindSubmitOnEnter(codeInput, executeVerify2FA);
+  submit2FABtn?.addEventListener('click', executeVerify2FA);
+  bindSubmitOnEnter(code2FAInput, executeVerify2FA);
 
-  // Auto-focus en el input
-  requestAnimationFrame(() => {
-    codeInput?.focus();
+  backToLoginLink?.addEventListener('click', (e) => {
+    e.preventDefault();
+    clearTwoFactorState();
+    activateStep('main');
   });
 
   return container;
 }
 
+export function createLogin2FAView() {
+  return createLoginView(true);
+}
+
 /* ==========================================================================
-   4. VISTAS DE REGISTRO MULTI-ETAPA (/register, /register/*)
+   3. VISTA UNIFICADA DE REGISTRO MULTI-ETAPA (/register, /register/*)
    ========================================================================== */
 
-// --- Etapa 1: Credenciales (/register) ---
+export async function createRegisterView(targetStage = 1) {
+  // Comprobar ruta URL inicial
+  const path = window.location.pathname;
+  if (path === '/register/aditional-data') targetStage = 2;
+  else if (path === '/register/verification-account') targetStage = 3;
 
-export async function createRegisterStage1View() {
+  // Comprobar guardias de datos previos en caso de acceso directo o F5
+  if (targetStage === 2 && !hasStage1Data()) {
+    targetStage = 1;
+    window.history.replaceState({}, '', '/register');
+  } else if (targetStage === 3 && !hasStage2Data()) {
+    targetStage = 1;
+    window.history.replaceState({}, '', '/register');
+  }
+
   const container = await loadTemplate('/views/auth/register.html');
 
+  // Pasos de registro
+  const step1 = container.querySelector('[data-ref="register-step-1"]');
+  const step2 = container.querySelector('[data-ref="register-step-2"]');
+  const step3 = container.querySelector('[data-ref="register-step-3"]');
+
+  // Elementos Etapa 1
   const emailInput = container.querySelector('[data-ref="register-email"]');
   const passwordInput = container.querySelector('[data-ref="register-password"]');
-  const toggleBtn = container.querySelector('[data-ref="toggle-register-password"]');
-  const submitBtn = container.querySelector('[data-ref="btn-submit-stage1"]');
-  const googleBtn = container.querySelector('[data-ref="btn-google-register"]');
-  const banners = createBannerManager(container, { errorRef: 'register-error' });
+  const togglePassBtn = container.querySelector('[data-ref="toggle-register-password"]');
+  const submitStage1Btn = container.querySelector('[data-ref="btn-submit-stage1"]');
+  const googleRegisterBtn = container.querySelector('[data-ref="btn-google-register"]');
+  const bannersStage1 = createBannerManager(container, { errorRef: 'register-error-stage1' });
 
-  // Precargar datos si ya había ingresado
+  // Elementos Etapa 2
+  const usernameInput = container.querySelector('[data-ref="register-username"]');
+  const randomUsernameBtn = container.querySelector('[data-ref="btn-random-username"]');
+  const submitStage2Btn = container.querySelector('[data-ref="btn-submit-stage2"]');
+  const btnBackStage1 = container.querySelector('[data-ref="btn-back-stage1"]');
+  const bannersStage2 = createBannerManager(container, { errorRef: 'register-error-stage2' });
+
+  // Elementos Etapa 3
+  const subtitleTextEl = container.querySelector('[data-ref="verify-subtitle-text"]');
+  const codeInput = container.querySelector('[data-ref="register-code"]');
+  const submitStage3Btn = container.querySelector('[data-ref="btn-submit-stage3"]');
+  const resendCodeBtn = container.querySelector('[data-ref="btn-resend-code"]');
+  const restartRegisterLink = container.querySelector('[data-ref="btn-restart-register"]');
+  const bannersStage3 = createBannerManager(container, {
+    errorRef: 'register-error-stage3',
+    successRef: 'register-success-stage3',
+  });
+
+  // Precarga de valores existentes en el estado
   const state = getRegistrationState();
-  if (state.email && emailInput) {
-    emailInput.value = state.email;
-  }
+  if (state.email && emailInput) emailInput.value = state.email;
+  if (state.username && usernameInput) usernameInput.value = state.username;
 
   // Navegación
   bindNavigationLinks(container, {
@@ -404,87 +451,85 @@ export async function createRegisterStage1View() {
     'btn-to-login': '/login',
   });
 
-  // Google OAuth
-  googleBtn?.addEventListener('click', () => {
+  googleRegisterBtn?.addEventListener('click', () => {
     window.location.href = '/api/auth/google';
   });
 
-  // Toggle visibilidad de contraseña
-  setupPasswordToggle(toggleBtn, passwordInput, {
+  setupPasswordToggle(togglePassBtn, passwordInput, {
     showTooltip: t('auth.login.show_password'),
     hideTooltip: t('auth.login.hide_password'),
   });
 
-  // Procesar Etapa 1
+  // Función para activar etapa instantáneamente y sincronizar URL
+  const activateStage = (stageNum) => {
+    bannersStage1.hideAll();
+    bannersStage2.hideAll();
+    bannersStage3.hideAll();
+
+    if (step1) step1.style.display = stageNum === 1 ? 'block' : 'none';
+    if (step2) step2.style.display = stageNum === 2 ? 'block' : 'none';
+    if (step3) step3.style.display = stageNum === 3 ? 'block' : 'none';
+
+    if (stageNum === 1) {
+      window.history.pushState({}, '', '/register');
+      requestAnimationFrame(() => emailInput?.focus());
+    } else if (stageNum === 2) {
+      window.history.pushState({}, '', '/register/aditional-data');
+      requestAnimationFrame(() => usernameInput?.focus());
+    } else if (stageNum === 3) {
+      window.history.pushState({}, '', '/register/verification-account');
+      const currentState = getRegistrationState();
+      if (subtitleTextEl) {
+        subtitleTextEl.innerHTML = t('auth.register_stage3.subtitle', { email: currentState.email || '' });
+      }
+      requestAnimationFrame(() => codeInput?.focus());
+    }
+  };
+
+  // Inicializar etapa activa
+  activateStage(targetStage);
+
+  // --- Etapa 1: Credenciales ---
   const executeStage1 = async () => {
-    banners.hideAll();
+    bannersStage1.hideAll();
     const email = emailInput?.value.trim();
     const password = passwordInput?.value;
 
     const emailValidation = validateEmail(email);
     if (!emailValidation.valid) {
-      banners.showError(emailValidation.error);
+      bannersStage1.showError(emailValidation.error);
       return;
     }
 
     const passwordValidation = validatePassword(password);
     if (!passwordValidation.valid) {
-      banners.showError(passwordValidation.error);
+      bannersStage1.showError(passwordValidation.error);
       return;
     }
 
-    await withButtonLoading(submitBtn, t('auth.register.loading'), async () => {
+    await withButtonLoading(submitStage1Btn, t('auth.register.loading'), async () => {
       try {
         const res = await postApi('/api/register/stage1-validate', { email, password });
         const data = await res.json();
 
         if (!res.ok) {
-          banners.showError(data.error || t('toasts.generic_error'));
+          bannersStage1.showError(data.error || t('toasts.generic_error'));
           return;
         }
 
-        // Guardar en estado temporal y avanzar a la etapa 2
         saveStage1Data(email, password);
-        navigate('/register/aditional-data');
+        activateStage(2);
       } catch {
-        banners.showError(t('toasts.network_error'));
+        bannersStage1.showError(t('toasts.network_error'));
       }
     });
   };
 
-  submitBtn?.addEventListener('click', executeStage1);
+  submitStage1Btn?.addEventListener('click', executeStage1);
   bindSubmitOnEnter([emailInput, passwordInput], executeStage1);
 
-  return container;
-}
-
-// --- Etapa 2: Nombre de Usuario (/register/aditional-data) ---
-
-export async function createRegisterStage2View() {
-  if (!hasStage1Data()) {
-    return createErrorView({
-      code: '400',
-      title: t('error.general_title'),
-      description: t('error.not_found_desc'),
-      actionText: t('auth.register.title'),
-      actionUrl: '/register',
-    });
-  }
-
-  const container = await loadTemplate('/views/auth/register-stage2.html');
-  const state = getRegistrationState();
-
-  const usernameInput = container.querySelector('[data-ref="register-username"]');
-  const randomBtn = container.querySelector('[data-ref="btn-random-username"]');
-  const submitBtn = container.querySelector('[data-ref="btn-submit-stage2"]');
-  const banners = createBannerManager(container, { errorRef: 'stage2-error' });
-
-  if (state.username && usernameInput) {
-    usernameInput.value = state.username;
-  }
-
-  // Generador de nombre aleatorio
-  randomBtn?.addEventListener('click', () => {
+  // --- Etapa 2: Nombre de Usuario ---
+  randomUsernameBtn?.addEventListener('click', () => {
     const timestamp = Date.now().toString(36);
     const randomSuffix = Math.floor(100 + Math.random() * 900);
     const randomName = `user_${timestamp}_${randomSuffix}`;
@@ -493,166 +538,138 @@ export async function createRegisterStage2View() {
       usernameInput.dispatchEvent(new Event('input', { bubbles: true }));
       usernameInput.focus();
     }
-    banners.hideAll();
-  });
-
-  // Navegación
-  bindNavigationLinks(container, {
-    'stage2-home-link': '/',
-    'btn-back-stage1': '/register',
+    bannersStage2.hideAll();
   });
 
   const executeStage2 = async () => {
-    banners.hideAll();
+    bannersStage2.hideAll();
+    const currentState = getRegistrationState();
     const username = usernameInput?.value.trim();
 
     const usernameValidation = validateUsername(username);
     if (!usernameValidation.valid) {
-      banners.showError(usernameValidation.error);
+      bannersStage2.showError(usernameValidation.error);
       return;
     }
 
-    await withButtonLoading(submitBtn, t('auth.register_stage2.loading'), async () => {
+    await withButtonLoading(submitStage2Btn, t('auth.register_stage2.loading'), async () => {
       try {
         const res = await postApi('/api/register/send-code', {
-          email: state.email,
-          password: state.password,
+          email: currentState.email,
+          password: currentState.password,
           username,
         });
 
         const data = await res.json();
 
         if (!res.ok) {
-          banners.showError(data.error || t('toasts.generic_error'));
+          bannersStage2.showError(data.error || t('toasts.generic_error'));
           return;
         }
 
         saveStage2Data(username);
-        navigate('/register/verification-account');
+        activateStage(3);
       } catch {
-        banners.showError(t('toasts.network_error'));
+        bannersStage2.showError(t('toasts.network_error'));
       }
     });
   };
 
-  submitBtn?.addEventListener('click', executeStage2);
+  submitStage2Btn?.addEventListener('click', executeStage2);
   bindSubmitOnEnter(usernameInput, executeStage2);
 
-  return container;
-}
-
-// --- Etapa 3: Verificación de Código (/register/verification-account) ---
-
-export async function createRegisterStage3View() {
-  if (!hasStage2Data()) {
-    return createErrorView({
-      code: '400',
-      title: t('error.general_title'),
-      description: t('error.not_found_desc'),
-      actionText: t('auth.register.title'),
-      actionUrl: '/register',
-    });
-  }
-
-  const container = await loadTemplate('/views/auth/register-stage3.html');
-  const state = getRegistrationState();
-
-  const subtitleTextEl = container.querySelector('[data-ref="verify-subtitle-text"]');
-  const codeInput = container.querySelector('[data-ref="register-code"]');
-  const submitBtn = container.querySelector('[data-ref="btn-submit-stage3"]');
-  const resendBtn = container.querySelector('[data-ref="btn-resend-code"]');
-  const restartLink = container.querySelector('[data-ref="btn-restart-register"]');
-  const banners = createBannerManager(container, {
-    errorRef: 'stage3-error',
-    successRef: 'stage3-success',
-  });
-
-  if (subtitleTextEl) {
-    subtitleTextEl.innerHTML = t('auth.register_stage3.subtitle', { email: state.email || '' });
-  }
-
-  // Navegación
-  bindNavigationLinks(container, {
-    'stage3-home-link': '/',
-  });
-
-  restartLink?.addEventListener('click', (e) => {
+  btnBackStage1?.addEventListener('click', (e) => {
     e.preventDefault();
-    clearRegistrationState();
-    navigate('/register');
+    activateStage(1);
   });
 
-  // Procesar verificación de código
-  const executeVerification = async () => {
-    banners.hideAll();
+  // --- Etapa 3: Verificación por Código ---
+  const executeStage3 = async () => {
+    bannersStage3.hideAll();
+    const currentState = getRegistrationState();
     const code = codeInput?.value.trim();
 
     const codeValidation = validateVerificationCode(code);
     if (!codeValidation.valid) {
-      banners.showError(codeValidation.error);
+      bannersStage3.showError(codeValidation.error);
       return;
     }
 
-    await withButtonLoading(submitBtn, t('auth.register_stage3.loading'), async () => {
+    await withButtonLoading(submitStage3Btn, t('auth.register_stage3.loading'), async () => {
       try {
         const res = await postApi('/api/register/verify-code', {
-          email: state.email,
+          email: currentState.email,
           code,
         });
 
         const data = await res.json();
 
         if (!res.ok) {
-          banners.showError(data.error || t('toasts.generic_error'));
+          bannersStage3.showError(data.error || t('toasts.generic_error'));
           return;
         }
 
-        // Cuenta creada exitosamente e iniciada sesión
         setCurrentUser(data.user);
         if (data.accounts) setLinkedAccounts(data.accounts);
         clearRegistrationState();
         navigate('/');
       } catch {
-        banners.showError(t('toasts.network_error'));
+        bannersStage3.showError(t('toasts.network_error'));
       }
     });
   };
 
-  submitBtn?.addEventListener('click', executeVerification);
-  bindSubmitOnEnter(codeInput, executeVerification);
+  submitStage3Btn?.addEventListener('click', executeStage3);
+  bindSubmitOnEnter(codeInput, executeStage3);
 
-  // Reenviar código
-  resendBtn?.addEventListener('click', async () => {
-    banners.hideAll();
+  resendCodeBtn?.addEventListener('click', async () => {
+    bannersStage3.hideAll();
+    const currentState = getRegistrationState();
 
-    await withButtonLoading(resendBtn, t('auth.register_stage3.resending'), async () => {
+    await withButtonLoading(resendCodeBtn, t('auth.register_stage3.resending'), async () => {
       try {
         const res = await postApi('/api/register/resend-code', {
-          email: state.email,
+          email: currentState.email,
         });
 
         const data = await res.json();
 
         if (!res.ok) {
-          banners.showError(data.error || t('toasts.generic_error'));
+          bannersStage3.showError(data.error || t('toasts.generic_error'));
           return;
         }
 
-        banners.showSuccess(t('auth.register_stage3.code_sent'));
+        bannersStage3.showSuccess(t('auth.register_stage3.code_sent'));
       } catch {
-        banners.showError(t('toasts.network_error'));
+        bannersStage3.showError(t('toasts.network_error'));
       }
     });
+  });
+
+  restartRegisterLink?.addEventListener('click', (e) => {
+    e.preventDefault();
+    clearRegistrationState();
+    activateStage(1);
   });
 
   return container;
 }
 
-/* ==========================================================================
-   5. VISTAS DE RECUPERACIÓN Y RESET DE CONTRASEÑA
-   ========================================================================== */
+export function createRegisterStage1View() {
+  return createRegisterView(1);
+}
 
-// --- Olvido de Contraseña (/forgot-password) ---
+export function createRegisterStage2View() {
+  return createRegisterView(2);
+}
+
+export function createRegisterStage3View() {
+  return createRegisterView(3);
+}
+
+/* ==========================================================================
+   4. VISTAS DE RECUPERACIÓN Y RESET DE CONTRASEÑA
+   ========================================================================== */
 
 export async function createForgotPasswordView() {
   const container = await loadTemplate('/views/auth/forgot-password.html');
@@ -664,7 +681,6 @@ export async function createForgotPasswordView() {
     successRef: 'forgot-success',
   });
 
-  // Navegación
   bindNavigationLinks(container, {
     'forgot-home-link': '/',
     'btn-forgot-to-login': '/login',
@@ -707,8 +723,6 @@ export async function createForgotPasswordView() {
   return container;
 }
 
-// --- Restablecimiento de Contraseña (/reset-password) ---
-
 export async function createResetPasswordView() {
   const container = await loadTemplate('/views/auth/reset-password.html');
 
@@ -722,17 +736,14 @@ export async function createResetPasswordView() {
     successRef: 'reset-success',
   });
 
-  // Obtener el token de la URL actual
   const urlParams = new URLSearchParams(window.location.search);
   const token = (urlParams.get('token') || '').trim();
 
-  // Navegación SPA
   bindNavigationLinks(container, {
     'reset-home-link': '/',
     'btn-reset-to-login': '/login',
   });
 
-  // Alternar visibilidad de las contraseñas
   setupPasswordToggle(togglePassBtn, passwordInput, {
     showTooltip: t('auth.login.show_password'),
     hideTooltip: t('auth.login.hide_password'),
@@ -742,14 +753,12 @@ export async function createResetPasswordView() {
     hideTooltip: t('auth.login.hide_password'),
   });
 
-  // Validar presencia inicial del token
   if (!token) {
     banners.showError(t('toasts.generic_error'));
     if (submitBtn) submitBtn.disabled = true;
     if (passwordInput) passwordInput.disabled = true;
     if (confirmInput) confirmInput.disabled = true;
   } else {
-    // Pre-verificación silenciosa del token en el backend
     fetch(`/api/reset-password/validate?token=${encodeURIComponent(token)}`)
       .then((res) => res.json())
       .then((data) => {

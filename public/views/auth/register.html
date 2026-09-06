@@ -5,43 +5,103 @@
     </a>
 
     <div class="card card--w-400" data-ref="register-card">
-      <div class="card__header" data-ref="register-header">
-        <h1 class="card__title" data-ref="register-title" data-i18n="auth.register.title"></h1>
-        <p class="card__subtitle" data-ref="register-subtitle" data-i18n="auth.register.subtitle"></p>
+      <!-- ETAPA 1: Credenciales (Email y Contraseña) -->
+      <div class="auth-step" data-ref="register-step-1">
+        <div class="card__header" data-ref="register-header-1">
+          <h1 class="card__title" data-ref="register-title-1" data-i18n="auth.register.title"></h1>
+          <p class="card__subtitle" data-ref="register-subtitle-1" data-i18n="auth.register.subtitle"></p>
+        </div>
+
+        <div class="card__body" data-ref="register-form-1">
+          <label class="field" data-ref="field-register-email">
+            <input class="field__input" data-ref="register-email" type="email" maxlength="254" placeholder=" " autocomplete="email" />
+            <span class="field__label" data-ref="label-register-email" data-i18n="auth.register.email_label"></span>
+          </label>
+
+          <label class="field" data-ref="field-register-password">
+            <input class="field__input field__input--has-action" data-ref="register-password" type="password" maxlength="128" placeholder=" " autocomplete="new-password" />
+            <span class="field__label" data-ref="label-register-password" data-i18n="auth.register.password_label"></span>
+            <button type="button" class="field__action" data-ref="toggle-register-password" data-i18n-tooltip="auth.login.show_password" data-i18n-aria="auth.login.toggle_password">
+              <span class="material-symbols-rounded">visibility</span>
+            </button>
+          </label>
+
+          <button type="button" class="btn btn--h55 btn--black btn--w-full" data-ref="btn-submit-stage1" data-i18n="auth.register.submit_btn">
+          </button>
+
+          <button type="button" class="btn btn--h55 btn--w-full" data-ref="btn-google-register">
+            <svg class="google-icon" data-ref="google-icon" width="20" height="20" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+            </svg>
+            <span class="btn-text" data-ref="google-btn-text" data-i18n="auth.register.google_btn"></span>
+          </button>
+
+          <div class="banner banner--danger" data-ref="register-error-stage1" style="display: none;"></div>
+
+          <p class="footer-note" data-ref="register-footer-1">
+            <span data-i18n="auth.register.have_account"></span> <a class="link link--primary" data-ref="btn-to-login" href="/login" data-i18n="auth.register.login_link"></a>
+          </p>
+        </div>
       </div>
 
-      <div class="card__body" data-ref="register-form">
-        <label class="field" data-ref="field-register-email">
-          <input class="field__input" data-ref="register-email" type="email" maxlength="254" placeholder=" " autocomplete="email" />
-          <span class="field__label" data-ref="label-register-email" data-i18n="auth.register.email_label"></span>
-        </label>
+      <!-- ETAPA 2: Nombre de Usuario (/register/aditional-data) -->
+      <div class="auth-step" data-ref="register-step-2" style="display: none;">
+        <div class="card__header" data-ref="register-header-2">
+          <h1 class="card__title" data-ref="register-title-2" data-i18n="auth.register_stage2.title"></h1>
+          <p class="card__subtitle" data-ref="register-subtitle-2" data-i18n="auth.register_stage2.subtitle"></p>
+        </div>
 
-        <label class="field" data-ref="field-register-password">
-          <input class="field__input field__input--has-action" data-ref="register-password" type="password" maxlength="128" placeholder=" " autocomplete="new-password" />
-          <span class="field__label" data-ref="label-register-password" data-i18n="auth.register.password_label"></span>
-          <button type="button" class="field__action" data-ref="toggle-register-password" data-i18n-tooltip="auth.login.show_password" data-i18n-aria="auth.login.toggle_password">
-            <span class="material-symbols-rounded">visibility</span>
+        <div class="card__body" data-ref="register-form-2">
+          <label class="field" data-ref="field-register-username">
+            <input class="field__input field__input--has-action" data-ref="register-username" type="text" maxlength="30" placeholder=" " autocomplete="username" />
+            <span class="field__label" data-ref="label-register-username" data-i18n="auth.register_stage2.username_label"></span>
+            <button type="button" class="field__action" data-ref="btn-random-username" data-i18n-tooltip="auth.register_stage2.random_username_tooltip" data-i18n-aria="auth.register_stage2.random_username_aria">
+              <span class="material-symbols-rounded">auto_fix_high</span>
+            </button>
+          </label>
+
+          <button type="button" class="btn btn--h55 btn--black btn--w-full" data-ref="btn-submit-stage2" data-i18n="auth.register_stage2.submit_btn">
           </button>
-        </label>
 
-        <button type="button" class="btn btn--h55 btn--black btn--w-full" data-ref="btn-submit-stage1" data-i18n="auth.register.submit_btn">
-        </button>
+          <div class="banner banner--danger" data-ref="register-error-stage2" style="display: none;"></div>
 
-        <button type="button" class="btn btn--h55 btn--w-full" data-ref="btn-google-register">
-          <svg class="google-icon" data-ref="google-icon" width="20" height="20" viewBox="0 0 24 24">
-            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-          </svg>
-          <span class="btn-text" data-ref="google-btn-text" data-i18n="auth.register.google_btn"></span>
-        </button>
+          <div class="link-row" data-ref="stage2-back-row" style="justify-content: center; margin-top: 8px;">
+            <a class="link" data-ref="btn-back-stage1" href="/register" data-i18n="auth.register_stage2.back_btn"></a>
+          </div>
+        </div>
+      </div>
 
-        <div class="banner banner--danger" data-ref="register-error" style="display: none;"></div>
+      <!-- ETAPA 3: Verificación de Cuenta por Código (/register/verification-account) -->
+      <div class="auth-step" data-ref="register-step-3" style="display: none;">
+        <div class="card__header" data-ref="register-header-3">
+          <h1 class="card__title" data-ref="register-title-3" data-i18n="auth.register_stage3.title"></h1>
+          <p class="card__subtitle" data-ref="register-subtitle-3">
+            <span data-ref="verify-subtitle-text"></span>
+          </p>
+        </div>
 
-        <p class="footer-note" data-ref="register-footer">
-          <span data-i18n="auth.register.have_account"></span> <a class="link link--primary" data-ref="btn-to-login" href="/login" data-i18n="auth.register.login_link"></a>
-        </p>
+        <div class="card__body" data-ref="register-form-3">
+          <label class="field" data-ref="field-register-code">
+            <input class="field__input field__input--code" data-ref="register-code" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder=" " autocomplete="one-time-code" />
+            <span class="field__label" data-ref="label-register-code" data-i18n="auth.register_stage3.code_label"></span>
+          </label>
+
+          <button type="button" class="btn btn--h55 btn--black btn--w-full" data-ref="btn-submit-stage3" data-i18n="auth.register_stage3.submit_btn">
+          </button>
+
+          <button type="button" class="btn btn--h40 btn--ghost btn--w-full" data-ref="btn-resend-code" data-i18n="auth.register_stage3.resend_btn">
+          </button>
+
+          <div class="banner banner--danger" data-ref="register-error-stage3" style="display: none;"></div>
+          <div class="banner banner--success" data-ref="register-success-stage3" style="display: none;"></div>
+
+          <div class="link-row" data-ref="stage3-back-row" style="justify-content: center; margin-top: 8px;">
+            <a class="link" data-ref="btn-restart-register" href="/register" data-i18n="auth.register_stage3.restart_btn"></a>
+          </div>
+        </div>
       </div>
     </div>
   </div>
