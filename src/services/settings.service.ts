@@ -65,6 +65,34 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   extended_alerts: false,
 };
 
+export const USERNAME_CHANGE_COOLDOWN_MS = 12 * 24 * 60 * 60 * 1000; // 12 días
+export const EMAIL_CHANGE_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000; // 30 días
+
+/**
+ * Formatea milisegundos restantes en texto legible en español (días, horas, minutos)
+ */
+export function formatRemainingTime(msRemaining: number): string {
+  if (msRemaining <= 0) return 'unos segundos';
+  const totalSeconds = Math.ceil(msRemaining / 1000);
+  const totalMinutes = Math.ceil(totalSeconds / 60);
+  const totalHours = Math.floor(totalMinutes / 60);
+  const days = Math.floor(totalHours / 24);
+  const hours = totalHours % 24;
+  const minutes = totalMinutes % 60;
+
+  if (days > 0) {
+    return hours > 0
+      ? `${days} ${days === 1 ? 'día' : 'días'} y ${hours} ${hours === 1 ? 'hora' : 'horas'}`
+      : `${days} ${days === 1 ? 'día' : 'días'}`;
+  }
+  if (hours > 0) {
+    return minutes > 0
+      ? `${hours} ${hours === 1 ? 'hora' : 'horas'} y ${minutes} ${minutes === 1 ? 'minuto' : 'minutos'}`
+      : `${hours} ${hours === 1 ? 'hora' : 'horas'}`;
+  }
+  return `${Math.max(1, minutes)} ${minutes === 1 ? 'minuto' : 'minutos'}`;
+}
+
 /**
  * Registra una acción en la tabla de auditoría
  */
@@ -336,7 +364,7 @@ export async function updateUsername(
   const cleanUsername = newUsername.trim();
 
   const [currentUserRows] = await pool.query<RowDataPacket[]>(
-    'SELECT id, username FROM users WHERE id = ? LIMIT 1',
+    'SELECT id, username, username_changed_at FROM users WHERE id = ? LIMIT 1',
     [userId]
   );
 
@@ -349,6 +377,21 @@ export async function updateUsername(
     return { success: true, username: oldUsername };
   }
 
+  // Verificación de Cooldown: 12 días entre cambios de nombre de usuario
+  if (currentUserRows[0].username_changed_at) {
+    const lastChanged = new Date(currentUserRows[0].username_changed_at).getTime();
+    const elapsed = Date.now() - lastChanged;
+    if (elapsed < USERNAME_CHANGE_COOLDOWN_MS) {
+      const remainingMs = USERNAME_CHANGE_COOLDOWN_MS - elapsed;
+      const timeFormatted = formatRemainingTime(remainingMs);
+      return {
+        success: false,
+        error: `Solo puedes cambiar tu nombre de usuario una vez cada 12 días. Podrás cambiarlo nuevamente en ${timeFormatted}.`,
+        status: 429,
+      };
+    }
+  }
+
   const [existingRows] = await pool.query<RowDataPacket[]>(
     'SELECT id FROM users WHERE username = ? AND id != ? LIMIT 1',
     [cleanUsername, userId]
@@ -358,7 +401,10 @@ export async function updateUsername(
     return { success: false, error: 'El nombre de usuario ya está en uso.', status: 409 };
   }
 
-  await pool.query('UPDATE users SET username = ? WHERE id = ?', [cleanUsername, userId]);
+  await pool.query(
+    'UPDATE users SET username = ?, username_changed_at = NOW() WHERE id = ?',
+    [cleanUsername, userId]
+  );
 
   await logUserAudit(userId, 'update_username', oldUsername, cleanUsername, ip, ua);
 
@@ -373,15 +419,8 @@ export async function requestEmailChangeCode(
   ip?: string | null,
   ua?: string | null
 ): Promise<{ success: boolean; alreadyAuthorized?: boolean; error?: string; status?: number }> {
-  // Comprobar si ya cuenta con autorización activa en la ventana de 5 minutos
-  const alreadyAuthorized = await isEmailChangeAuthorized(userId);
-  if (alreadyAuthorized) {
-    logger.security.info('Usuario ya autorizado para cambio de correo dentro de la ventana de 5 minutos', { userId });
-    return { success: true, alreadyAuthorized: true };
-  }
-
   const [userRows] = await pool.query<RowDataPacket[]>(
-    'SELECT id, username, email FROM users WHERE id = ? LIMIT 1',
+    'SELECT id, username, email, email_changed_at FROM users WHERE id = ? LIMIT 1',
     [userId]
   );
 
@@ -392,6 +431,28 @@ export async function requestEmailChangeCode(
   const user = userRows[0];
   if (!user.email) {
     return { success: false, error: 'La cuenta no tiene un correo electrónico registrado.', status: 400 };
+  }
+
+  // Verificación de Cooldown: 30 días entre cambios de correo electrónico
+  if (user.email_changed_at) {
+    const lastChanged = new Date(user.email_changed_at).getTime();
+    const elapsed = Date.now() - lastChanged;
+    if (elapsed < EMAIL_CHANGE_COOLDOWN_MS) {
+      const remainingMs = EMAIL_CHANGE_COOLDOWN_MS - elapsed;
+      const timeFormatted = formatRemainingTime(remainingMs);
+      return {
+        success: false,
+        error: `Solo puedes cambiar tu correo electrónico una vez cada 30 días. Podrás cambiarlo nuevamente en ${timeFormatted}.`,
+        status: 429,
+      };
+    }
+  }
+
+  // Comprobar si ya cuenta con autorización activa en la ventana de 5 minutos
+  const alreadyAuthorized = await isEmailChangeAuthorized(userId);
+  if (alreadyAuthorized) {
+    logger.security.info('Usuario ya autorizado para cambio de correo dentro de la ventana de 5 minutos', { userId });
+    return { success: true, alreadyAuthorized: true };
   }
 
   const code = generateSixDigitCode();
@@ -453,7 +514,7 @@ export async function updateEmail(
   const cleanEmail = newEmail.toLowerCase().trim();
 
   const [currentUserRows] = await pool.query<RowDataPacket[]>(
-    'SELECT id, email FROM users WHERE id = ? LIMIT 1',
+    'SELECT id, email, email_changed_at FROM users WHERE id = ? LIMIT 1',
     [userId]
   );
 
@@ -466,6 +527,21 @@ export async function updateEmail(
     return { success: true, email: oldEmail };
   }
 
+  // Verificación de Cooldown: 30 días entre cambios de correo electrónico
+  if (currentUserRows[0].email_changed_at) {
+    const lastChanged = new Date(currentUserRows[0].email_changed_at).getTime();
+    const elapsed = Date.now() - lastChanged;
+    if (elapsed < EMAIL_CHANGE_COOLDOWN_MS) {
+      const remainingMs = EMAIL_CHANGE_COOLDOWN_MS - elapsed;
+      const timeFormatted = formatRemainingTime(remainingMs);
+      return {
+        success: false,
+        error: `Solo puedes cambiar tu correo electrónico una vez cada 30 días. Podrás cambiarlo nuevamente en ${timeFormatted}.`,
+        status: 429,
+      };
+    }
+  }
+
   const [existingRows] = await pool.query<RowDataPacket[]>(
     'SELECT id FROM users WHERE email = ? AND id != ? LIMIT 1',
     [cleanEmail, userId]
@@ -475,7 +551,10 @@ export async function updateEmail(
     return { success: false, error: 'El correo electrónico ya está registrado.', status: 409 };
   }
 
-  await pool.query('UPDATE users SET email = ? WHERE id = ?', [cleanEmail, userId]);
+  await pool.query(
+    'UPDATE users SET email = ?, email_changed_at = NOW() WHERE id = ?',
+    [cleanEmail, userId]
+  );
 
   await logUserAudit(userId, 'update_email', oldEmail, cleanEmail, ip, ua);
 

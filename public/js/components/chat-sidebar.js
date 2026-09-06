@@ -101,6 +101,7 @@ function setupChatSidebarEvents(sidebarElement) {
 
   // Vincular input píldora y envío de mensajes
   const chatInput = sidebarElement.querySelector('[data-ref="chat-input"]');
+  const chatInputBox = sidebarElement.querySelector('[data-ref="chat-input-box"]');
   const btnSend = sidebarElement.querySelector('[data-ref="btn-chat-send"]');
 
   /** SVG del favicon inline para usar como avatar del agente */
@@ -215,11 +216,59 @@ function setupChatSidebarEvents(sidebarElement) {
     if (btnSend) btnSend.disabled = loading;
   }
 
+  /**
+   * Ajusta dinámicamente la altura del textarea y alterna el estado multilínea (.is-multiline)
+   * permitiendo que el contenedor y el textarea se expandan hacia arriba cuando el texto
+   * excede una sola línea o contiene saltos de línea.
+   */
+  function autoResizeTextarea() {
+    if (!chatInput) return;
+    const text = chatInput.value;
+
+    if (!text || text.trim().length === 0) {
+      chatInputBox?.classList.remove('is-multiline');
+      chatInput.style.height = '';
+      return;
+    }
+
+    const scrollArea = sidebarElement.querySelector('[data-ref="chat-panel-center"]');
+
+    if (text.includes('\n')) {
+      chatInputBox?.classList.add('is-multiline');
+      chatInput.style.height = 'auto';
+      const nextH = Math.min(Math.max(chatInput.scrollHeight, 24), 120);
+      chatInput.style.height = `${nextH}px`;
+      if (scrollArea) scrollArea.scrollTop = scrollArea.scrollHeight;
+      return;
+    }
+
+    const wasMultiline = chatInputBox?.classList.contains('is-multiline');
+    if (wasMultiline) {
+      chatInputBox.classList.remove('is-multiline');
+    }
+    chatInput.style.height = 'auto';
+    const singleRowScrollH = chatInput.scrollHeight;
+
+    if (singleRowScrollH > 24) {
+      chatInputBox?.classList.add('is-multiline');
+      chatInput.style.height = 'auto';
+      const nextH = Math.min(Math.max(chatInput.scrollHeight, 24), 120);
+      chatInput.style.height = `${nextH}px`;
+      if (scrollArea) scrollArea.scrollTop = scrollArea.scrollHeight;
+    } else {
+      chatInputBox?.classList.remove('is-multiline');
+      chatInput.style.height = '';
+    }
+  }
+
   const sendMessage = async () => {
     const text = chatInput?.value?.trim();
     if (!text) return;
 
-    if (chatInput) chatInput.value = '';
+    if (chatInput) {
+      chatInput.value = '';
+      autoResizeTextarea();
+    }
     appendMessage('user', text);
     conversationHistory.push({ role: 'user', text });
 
@@ -257,8 +306,12 @@ function setupChatSidebarEvents(sidebarElement) {
     sendMessage();
   });
 
+  chatInput?.addEventListener('input', () => {
+    autoResizeTextarea();
+  });
+
   chatInput?.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
     }

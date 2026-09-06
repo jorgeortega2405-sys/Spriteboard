@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { redis } from '../config/redis.config.js';
 import { logger } from '../services/logger.service.js';
+import { getCurrentUser } from './auth.middleware.js';
 
 export interface RateLimiterOptions {
   /**
@@ -83,6 +84,14 @@ export function getClientIp(req: Request): string {
 }
 
 /**
+ * Extrae la identidad del usuario autenticado si existe, o recurre a la IP del cliente
+ */
+export function getUserOrIpKey(req: Request): string {
+  const user = (req as any).user || getCurrentUser(req);
+  return user?.id ? `user:${user.id}` : getClientIp(req);
+}
+
+/**
  * Fabrica un middleware de Rate Limit basado en Redis con algoritmo de Ventana Deslizante
  */
 export function createRateLimiter(options: RateLimiterOptions) {
@@ -132,10 +141,15 @@ export function createRateLimiter(options: RateLimiterOptions) {
       });
 
       const minutes = Math.ceil(resetInSeconds / 60);
-      const userMessage =
-        minutes > 1
-          ? `Has realizado demasiadas solicitudes. Por favor intenta de nuevo en ${minutes} minutos.`
-          : `Has realizado demasiadas solicitudes. Por favor espera ${resetInSeconds} segundos antes de intentar nuevamente.`;
+      const hours = Math.floor(minutes / 60);
+      const remainingMinutes = minutes % 60;
+      let timeText = `${resetInSeconds} segundos`;
+      if (hours > 0) {
+        timeText = remainingMinutes > 0 ? `${hours} horas y ${remainingMinutes} minutos` : `${hours} horas`;
+      } else if (minutes > 1) {
+        timeText = `${minutes} minutos`;
+      }
+      const userMessage = `Has realizado demasiadas solicitudes. Por favor espera ${timeText} antes de intentar nuevamente.`;
 
       res.status(429).json({
         error: message || userMessage,
@@ -201,12 +215,22 @@ export const verifyCodeLimiter = createRateLimiter({
   message: 'Demasiados intentos de verificación. Por favor espera 10 minutos.',
 });
 
-// Actualización o eliminación de foto de perfil: máximo 10 peticiones cada 15 minutos por IP
+// Actualización o eliminación de foto de perfil: máximo 3 peticiones cada 12 horas por usuario
 export const avatarLimiter = createRateLimiter({
   prefix: 'avatar_mod',
-  windowMs: 15 * 60 * 1000,
-  max: 10,
-  message: 'Has realizado demasiados cambios de foto de perfil. Por favor espera 15 minutos.',
+  windowMs: 12 * 60 * 60 * 1000, // 12 horas
+  max: 3,
+  keyGenerator: getUserOrIpKey,
+  message: 'Has alcanzado el límite de 3 cambios de foto de perfil cada 12 horas. Por favor espera antes de intentar nuevamente.',
+});
+
+// Actualización de preferencias generales (tema, idioma, accesibilidad): máximo 30 cambios por minuto por usuario
+export const preferencesLimiter = createRateLimiter({
+  prefix: 'preferences_mod',
+  windowMs: 60 * 1000, // 1 minuto
+  max: 30,
+  keyGenerator: getUserOrIpKey,
+  message: 'Has realizado demasiados cambios de preferencias en poco tiempo. Por favor espera un momento.',
 });
 
 // Solicitud de código para cambio de correo: máximo 3 solicitudes cada 5 minutos por IP

@@ -66,6 +66,7 @@ import {
   updatePasswordLimiter,
   twoFactorGenerateLimiter,
   twoFactorVerifyLimiter,
+  preferencesLimiter,
 } from '../middlewares/rate-limit.middleware.js';
 
 // Todas las rutas de configuración requieren autenticación activa
@@ -95,7 +96,7 @@ router.post('/settings/2fa/disable', verifyPasswordLimiter, handleDisable2FA);
 
 // Rutas de Preferencias
 router.get('/settings/preferences', handleGetPreferences);
-router.post('/settings/preferences', handleUpdatePreferences);
+router.post('/settings/preferences', preferencesLimiter, handleUpdatePreferences);
 
 // Rutas de Eliminación de Cuenta (Zona de peligro)
 router.post('/settings/account/delete', verifyPasswordLimiter, handleDeleteAccount);

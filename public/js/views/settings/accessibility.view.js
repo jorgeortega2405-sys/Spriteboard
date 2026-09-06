@@ -1,7 +1,7 @@
 import { loadTemplate } from '../../services/template.service.js';
 import { createSidebar } from '../../components/sidebar.component.js';
 import { getApi, postApi } from '../../services/api.service.js';
-import { setupDropdown } from '../../utils/dom.util.js';
+import { setupDropdown, debounce } from '../../utils/dom.util.js';
 import { showToast, setToastPreferences } from '../../services/toast.service.js';
 import { t } from '../../services/i18n.service.js';
 import { setTheme, initTheme, applyAccessibilityPreferences } from '../../services/theme.service.js';
@@ -85,29 +85,42 @@ export async function createAccessibilityView() {
     });
   }
 
-  // 3. Listeners para interruptores toggle
-  toggleReduceMotion?.addEventListener('change', async (e) => {
+  // 3. Funciones con debounce para guardar preferencias en el servidor
+  const saveReduceMotion = debounce(async (checked) => {
     try {
-      applyAccessibilityPreferences({ reduce_motion: e.target.checked });
-      await postApi('/api/settings/preferences', { reduce_motion: e.target.checked });
+      await postApi('/api/settings/preferences', { reduce_motion: checked });
       showToast(t('toasts.preferences_saved'), 'success');
     } catch (_) {}
+  }, 350);
+
+  const saveHighContrast = debounce(async (checked) => {
+    try {
+      await postApi('/api/settings/preferences', { high_contrast: checked });
+      showToast(t('toasts.preferences_saved'), 'success');
+    } catch (_) {}
+  }, 350);
+
+  const saveExtendedAlerts = debounce(async (checked) => {
+    try {
+      await postApi('/api/settings/preferences', { extended_alerts: checked });
+      showToast(t('toasts.preferences_saved'), 'success');
+    } catch (_) {}
+  }, 350);
+
+  // 4. Listeners para interruptores toggle con aplicación inmediata y guardado amortiguado
+  toggleReduceMotion?.addEventListener('change', (e) => {
+    applyAccessibilityPreferences({ reduce_motion: e.target.checked });
+    saveReduceMotion(e.target.checked);
   });
 
-  toggleHighContrast?.addEventListener('change', async (e) => {
-    try {
-      applyAccessibilityPreferences({ high_contrast: e.target.checked });
-      await postApi('/api/settings/preferences', { high_contrast: e.target.checked });
-      showToast(t('toasts.preferences_saved'), 'success');
-    } catch (_) {}
+  toggleHighContrast?.addEventListener('change', (e) => {
+    applyAccessibilityPreferences({ high_contrast: e.target.checked });
+    saveHighContrast(e.target.checked);
   });
 
-  toggleExtendedAlerts?.addEventListener('change', async (e) => {
-    try {
-      await postApi('/api/settings/preferences', { extended_alerts: e.target.checked });
-      setToastPreferences({ extended_alerts: e.target.checked });
-      showToast(t('toasts.preferences_saved'), 'success');
-    } catch (_) {}
+  toggleExtendedAlerts?.addEventListener('change', (e) => {
+    setToastPreferences({ extended_alerts: e.target.checked });
+    saveExtendedAlerts(e.target.checked);
   });
 
   return container;

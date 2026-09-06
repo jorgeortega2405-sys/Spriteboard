@@ -173,7 +173,24 @@ export async function runMigrations(): Promise<void> {
       logger.db.info('Columna two_factor_recovery_codes añadida a la tabla users.');
     }
 
-    logger.db.info('Tablas y columnas de identidad y 2FA verificadas exitosamente.');
+    // 7. Columnas de control de cooldown para nombre de usuario y correo electrónico
+    const [usernameChangedCols] = await conn.query<mysql.RowDataPacket[]>(
+      "SHOW COLUMNS FROM users LIKE 'username_changed_at'"
+    );
+    if (usernameChangedCols.length === 0) {
+      await conn.query('ALTER TABLE users ADD COLUMN username_changed_at TIMESTAMP NULL AFTER created_at');
+      logger.db.info('Columna username_changed_at añadida a la tabla users.');
+    }
+
+    const [emailChangedCols] = await conn.query<mysql.RowDataPacket[]>(
+      "SHOW COLUMNS FROM users LIKE 'email_changed_at'"
+    );
+    if (emailChangedCols.length === 0) {
+      await conn.query('ALTER TABLE users ADD COLUMN email_changed_at TIMESTAMP NULL AFTER username_changed_at');
+      logger.db.info('Columna email_changed_at añadida a la tabla users.');
+    }
+
+    logger.db.info('Tablas y columnas de identidad, 2FA y cooldowns verificadas exitosamente.');
   } catch (err) {
     logger.db.warn('Advertencia en migración de base de datos', err);
   } finally {

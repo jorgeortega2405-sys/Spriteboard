@@ -465,3 +465,19 @@ export function setupDropdown(wrapper, options = {}) {
   };
 }
 
+/**
+ * Crea una versión debounced de una función para amortiguar llamadas repetitivas
+ * @param {(...args: any[]) => void} fn
+ * @param {number} [delayMs=350]
+ * @returns {(...args: any[]) => void}
+ */
+export function debounce(fn, delayMs = 350) {
+  let timer = null;
+  return function (...args) {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => {
+      fn.apply(this, args);
+    }, delayMs);
+  };
+}
+

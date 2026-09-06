@@ -8,7 +8,7 @@ import {
   postFormApi,
   deleteApi,
 } from '../../services/api.service.js';
-import { setupDropdown, withButtonLoading } from '../../utils/dom.util.js';
+import { setupDropdown, withButtonLoading, debounce } from '../../utils/dom.util.js';
 import { openModal } from '../../components/modal-dialog.js';
 import { showToast, setToastPreferences } from '../../services/toast.service.js';
 import { t, setLanguage, getCurrentLanguage } from '../../services/i18n.service.js';
@@ -549,11 +549,15 @@ export async function createYourAccountView() {
     });
   }
 
-  toggleOpenLinks?.addEventListener('change', async (e) => {
+  const saveOpenLinks = debounce(async (checked) => {
     try {
-      await postApi('/api/settings/preferences', { open_links_new_tab: e.target.checked });
+      await postApi('/api/settings/preferences', { open_links_new_tab: checked });
       showToast(t('toasts.preferences_saved'), 'success');
     } catch (_) {}
+  }, 350);
+
+  toggleOpenLinks?.addEventListener('change', (e) => {
+    saveOpenLinks(e.target.checked);
   });
 
   return container;

@@ -602,7 +602,6 @@ html.dark-theme .layout-header::after {
   overflow: hidden;
   display: none;
   flex-direction: column;
-  z-index: 1000;
   box-sizing: border-box;
 }
 
@@ -3335,7 +3334,6 @@ body.modal-open {
 .chat-pill-input {
   display: flex;
   align-items: center;
-  height: 40px;
   min-height: 40px;
   background-color: var(--bg-app);
   border: 1px solid var(--border-color);
@@ -3343,7 +3341,7 @@ body.modal-open {
   padding: 0 4px 0 14px;
   gap: 6px;
   box-sizing: border-box;
-  transition: border-color var(--sl-transition-fast), box-shadow var(--sl-transition-fast);
+  transition: border-color var(--sl-transition-fast), box-shadow var(--sl-transition-fast), border-radius var(--sl-transition-fast), padding var(--sl-transition-fast);
 }
 
 .chat-pill-input:focus-within {
@@ -3361,24 +3359,74 @@ body.modal-open {
   border-color: rgba(255, 255, 255, 0.35);
 }
 
+/* Multiline / Expanded state: cuando el texto no cabe en 1 sola fila o contiene saltos de línea */
+.chat-pill-input.is-multiline {
+  flex-wrap: wrap;
+  border-radius: 16px;
+  padding: 8px 8px 6px 12px;
+  gap: 6px;
+}
+
 .chat-pill-input__field {
   flex: 1;
   min-width: 0;
-  height: 100%;
+  height: 20px;
+  min-height: 20px;
+  max-height: 20px;
   border: none;
   outline: none;
   background: transparent;
   font-family: inherit;
   font-size: 13px;
   color: var(--text-primary);
-  line-height: 1;
+  line-height: 20px;
   padding: 0;
+  margin: 0;
   box-sizing: border-box;
+  resize: none;
+  overflow-y: hidden;
+  word-break: break-word;
+  white-space: pre-wrap;
+  display: block;
+}
+
+.chat-pill-input.is-multiline .chat-pill-input__field {
+  order: 1;
+  width: 100%;
+  flex: 1 0 100%;
+  height: auto;
+  min-height: 24px;
+  max-height: 120px;
+  line-height: 1.4;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.chat-pill-input__field::-webkit-scrollbar {
+  width: 4px;
+}
+
+.chat-pill-input__field::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-pill-input__field::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+.chat-panel.is-empty .chat-pill-input__field::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .chat-pill-input__field::placeholder {
   color: var(--text-tertiary);
   font-size: 13px;
+  line-height: 20px;
+}
+
+.chat-pill-input.is-multiline .chat-pill-input__field::placeholder {
+  line-height: 1.4;
 }
 
 .chat-panel.is-empty .chat-pill-input__field {
@@ -3405,6 +3453,11 @@ body.modal-open {
   padding: 0;
   flex-shrink: 0;
   transition: transform var(--sl-transition-x-fast), opacity var(--sl-transition-fast);
+}
+
+.chat-pill-input.is-multiline .chat-pill-input__btn {
+  order: 2;
+  margin-left: auto;
 }
 
 .chat-panel.is-empty .chat-pill-input__btn {

@@ -103,7 +103,7 @@ export async function setLanguage(code) {
 
   if (currentUser) {
     try {
-      await postApi('/api/user/preferences', { language: code });
+      await postApi('/api/settings/preferences', { language: code });
     } catch (_) {
       // Falla silenciosa sin console.*
     }

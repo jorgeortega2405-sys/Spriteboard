@@ -11,7 +11,9 @@ CREATE TABLE IF NOT EXISTS users (
     two_factor_enabled BOOLEAN NOT NULL DEFAULT FALSE,
     two_factor_secret VARCHAR(255) NULL,
     two_factor_recovery_codes TEXT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    username_changed_at TIMESTAMP NULL,
+    email_changed_at TIMESTAMP NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS user_preferences (
