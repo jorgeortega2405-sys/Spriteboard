@@ -2,6 +2,7 @@ import { createTopBar } from './components/topbar.js';
 import { createHomeView } from './views/home.js';
 import { createTrashView } from './views/trash.js';
 import { createLoginView } from './views/auth/login.js';
+import { createLogin2FAView } from './views/auth/login-2fa.js';
 import { createRegisterStage1View } from './views/auth/register.js';
 import { createRegisterStage2View } from './views/auth/register-stage2.js';
 import { createRegisterStage3View } from './views/auth/register-stage3.js';
@@ -58,6 +59,9 @@ export async function render() {
   if (path === '/login') {
     const loginView = await createLoginView();
     viewElements = [loginView];
+  } else if (path === '/login/verification-aditional') {
+    const login2FAView = await createLogin2FAView();
+    viewElements = [login2FAView];
   } else if (path === '/register') {
     const stage1View = await createRegisterStage1View();
     viewElements = [stage1View];

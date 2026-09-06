@@ -141,7 +141,39 @@ export async function runMigrations(): Promise<void> {
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
-    logger.db.info('Tablas user_preferences y user_audit_logs verificadas exitosamente.');
+
+    // 6. Columnas de autenticación en dos factores (2FA) en la tabla users
+    const [twoFaCols] = await conn.query<mysql.RowDataPacket[]>(
+      "SHOW COLUMNS FROM users LIKE 'two_factor_enabled'"
+    );
+    if (twoFaCols.length === 0) {
+      await conn.query(
+        'ALTER TABLE users ADD COLUMN two_factor_enabled BOOLEAN NOT NULL DEFAULT FALSE AFTER avatar_url'
+      );
+      logger.db.info('Columna two_factor_enabled añadida a la tabla users.');
+    }
+
+    const [secretCols] = await conn.query<mysql.RowDataPacket[]>(
+      "SHOW COLUMNS FROM users LIKE 'two_factor_secret'"
+    );
+    if (secretCols.length === 0) {
+      await conn.query(
+        'ALTER TABLE users ADD COLUMN two_factor_secret VARCHAR(255) NULL AFTER two_factor_enabled'
+      );
+      logger.db.info('Columna two_factor_secret añadida a la tabla users.');
+    }
+
+    const [backupCols] = await conn.query<mysql.RowDataPacket[]>(
+      "SHOW COLUMNS FROM users LIKE 'two_factor_recovery_codes'"
+    );
+    if (backupCols.length === 0) {
+      await conn.query(
+        'ALTER TABLE users ADD COLUMN two_factor_recovery_codes TEXT NULL AFTER two_factor_secret'
+      );
+      logger.db.info('Columna two_factor_recovery_codes añadida a la tabla users.');
+    }
+
+    logger.db.info('Tablas y columnas de identidad y 2FA verificadas exitosamente.');
   } catch (err) {
     logger.db.warn('Advertencia en migración de base de datos', err);
   } finally {

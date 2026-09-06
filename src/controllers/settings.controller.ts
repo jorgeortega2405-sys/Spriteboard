@@ -4,7 +4,7 @@
 
 import { Request, Response } from 'express';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
-import { updateActiveAccountInSession } from '../services/auth.service.js';
+import { updateActiveAccountInSession, removeAccountFromSession } from '../services/auth.service.js';
 import {
   updateAvatar,
   deleteAvatar,
@@ -17,8 +17,23 @@ import {
   getPasswordStatus,
   verifyCurrentPassword,
   updateUserPasswordFromSettings,
+  logUserAudit,
 } from '../services/settings.service.js';
-import { findUserById } from '../services/user.service.js';
+import {
+  findUserById,
+  enableUser2FA,
+  disableUser2FA,
+  deleteUserPermanently,
+} from '../services/user.service.js';
+import {
+  generateTotpSecret,
+  generateBackupCodes,
+  getOtpAuthUrl,
+  verifyTotpCode,
+  savePending2FASetup,
+  getPending2FASetup,
+  clearPending2FASetup,
+} from '../services/two-factor.service.js';
 import {
   sendSuccess,
   sendBadRequest,
@@ -388,4 +403,226 @@ export async function handleUpdatePassword(req: Request, res: Response): Promise
     sendInternalError(res, 'Error al actualizar contraseña', error, 'Error al guardar la nueva contraseña.');
   }
 }
+
+/**
+ * Generar nuevo secreto y códigos de respaldo para configurar 2FA
+ */
+export async function handleGenerate2FA(req: Request, res: Response): Promise<void> {
+  try {
+    const currentUser = getCurrentUser(req);
+    if (!currentUser) {
+      sendUnauthorized(res, 'Sesión no válida o expirada.');
+      return;
+    }
+
+    // Reutilizar configuración pendiente existente si aún no ha expirado y no se solicita regenerar
+    const forceNew = req.query.force === 'true';
+    let pending = forceNew ? null : await getPending2FASetup(currentUser.id);
+
+    if (!pending) {
+      const secret = generateTotpSecret(20);
+      const backupCodes = generateBackupCodes(10);
+      pending = { secret, backupCodes };
+      await savePending2FASetup(currentUser.id, pending, 900);
+    }
+
+    const qrUri = getOtpAuthUrl(pending.secret, currentUser.username);
+
+    logger.security.info('Configuración de 2FA iniciada', { userId: currentUser.id });
+
+    sendSuccess(res, {
+      secret: pending.secret,
+      qrUri,
+      backupCodes: pending.backupCodes,
+    });
+  } catch (error) {
+    sendInternalError(
+      res,
+      'Error al generar configuración de 2FA',
+      error,
+      'Error al iniciar la configuración de dos pasos.'
+    );
+  }
+}
+
+/**
+ * Confirmar código de la app y activar 2FA
+ */
+export async function handleEnable2FA(req: Request, res: Response): Promise<void> {
+  try {
+    const currentUser = getCurrentUser(req);
+    if (!currentUser) {
+      sendUnauthorized(res, 'Sesión no válida o expirada.');
+      return;
+    }
+
+    const { code } = req.body || {};
+    if (!code || typeof code !== 'string') {
+      sendBadRequest(res, 'Ingresa el código de 6 dígitos de tu aplicación.');
+      return;
+    }
+
+    const pending = await getPending2FASetup(currentUser.id);
+    if (!pending) {
+      sendBadRequest(res, 'La sesión de configuración de 2FA ha expirado. Genera un nuevo código QR.');
+      return;
+    }
+
+    // Usar ventana de tolerancia de ±120s (4 pasos) durante la configuración inicial para absorber desincronizaciones de reloj
+    const isValid = verifyTotpCode(code.trim(), pending.secret, 4);
+    if (!isValid) {
+      logger.security.warn('Código TOTP incorrecto al intentar activar 2FA', { userId: currentUser.id });
+      sendBadRequest(res, 'El código ingresado es incorrecto o ha expirado.');
+      return;
+    }
+
+    // Activar en base de datos
+    await enableUser2FA(currentUser.id, pending.secret, pending.backupCodes);
+
+    // Limpiar configuración pendiente en Redis
+    await clearPending2FASetup(currentUser.id);
+
+    // Registrar en auditoría
+    await logUserAudit(
+      currentUser.id,
+      '2fa_enabled',
+      'disabled',
+      'enabled',
+      req.ip,
+      req.headers['user-agent']
+    );
+
+    // Actualizar cuenta activa en sesión
+    const updatedUser = await findUserById(currentUser.id);
+    if (updatedUser) {
+      updateActiveAccountInSession(res, req, sanitizeUser(updatedUser));
+    }
+
+    logger.security.info('2FA activado exitosamente', { userId: currentUser.id });
+
+    sendSuccess(res, {
+      message: 'Autenticación en dos pasos activada exitosamente.',
+      backupCodes: pending.backupCodes,
+    });
+  } catch (error) {
+    sendInternalError(
+      res,
+      'Error al activar autenticación en dos pasos',
+      error,
+      'Error al activar la protección de dos pasos.'
+    );
+  }
+}
+
+/**
+ * Desactivar 2FA
+ */
+export async function handleDisable2FA(req: Request, res: Response): Promise<void> {
+  try {
+    const currentUser = getCurrentUser(req);
+    if (!currentUser) {
+      sendUnauthorized(res, 'Sesión no válida o expirada.');
+      return;
+    }
+
+    await disableUser2FA(currentUser.id);
+
+    // Registrar en auditoría
+    await logUserAudit(
+      currentUser.id,
+      '2fa_disabled',
+      'enabled',
+      'disabled',
+      req.ip,
+      req.headers['user-agent']
+    );
+
+    const updatedUser = await findUserById(currentUser.id);
+    if (updatedUser) {
+      updateActiveAccountInSession(res, req, sanitizeUser(updatedUser));
+    }
+
+    logger.security.info('2FA desactivado exitosamente', { userId: currentUser.id });
+
+    sendSuccess(res, {
+      message: 'Autenticación en dos pasos desactivada exitosamente.',
+    });
+  } catch (error) {
+    sendInternalError(
+      res,
+      'Error al desactivar autenticación en dos pasos',
+      error,
+      'Error al desactivar la protección de dos pasos.'
+    );
+  }
+}
+
+/**
+ * Consultar estado de 2FA
+ */
+export async function handleGet2FAStatus(req: Request, res: Response): Promise<void> {
+  try {
+    const currentUser = getCurrentUser(req);
+    if (!currentUser) {
+      sendUnauthorized(res, 'Sesión no válida o expirada.');
+      return;
+    }
+
+    const user = await findUserById(currentUser.id);
+    sendSuccess(res, {
+      enabled: Boolean(user?.two_factor_enabled),
+    });
+  } catch (error) {
+    sendInternalError(
+      res,
+      'Error al consultar estado de 2FA',
+      error,
+      'Error al consultar el estado de seguridad.'
+    );
+  }
+}
+
+/**
+ * Eliminar la cuenta del usuario activo y purgar todos sus datos permanentemente
+ */
+export async function handleDeleteAccount(req: Request, res: Response): Promise<void> {
+  try {
+    const currentUser = getCurrentUser(req);
+    if (!currentUser) {
+      sendUnauthorized(res, 'Sesión no válida o expirada.');
+      return;
+    }
+
+    const userId = currentUser.id;
+    const deleted = await deleteUserPermanently(userId);
+    if (!deleted) {
+      sendBadRequest(res, 'No se pudo encontrar o eliminar la cuenta.');
+      return;
+    }
+
+    // Remover cuenta de la sesión multicuentas (conmuta a la siguiente o limpia cookies)
+    const sessionResult = await removeAccountFromSession(res, req, userId);
+
+    logger.security.info('Cuenta eliminada permanentemente por el usuario', {
+      userId,
+      remainingAccounts: sessionResult.remainingCount,
+    });
+
+    sendSuccess(res, {
+      message: 'Tu cuenta y todos sus datos han sido eliminados permanentemente.',
+      remainingAccounts: sessionResult.remainingCount,
+      switched: sessionResult.remainingCount > 0,
+      activeUser: sessionResult.activeUser ? sanitizeUser(sessionResult.activeUser) : null,
+      accounts: sessionResult.accounts.map(sanitizeUser),
+    });
+  } catch (error) {
+    sendInternalError(
+      res,
+      'Error al eliminar cuenta',
+      error,
+      'No se pudo eliminar tu cuenta. Por favor intenta más tarde.'
+    );
+  }
+}
+
 

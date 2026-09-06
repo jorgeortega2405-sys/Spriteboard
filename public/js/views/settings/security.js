@@ -1,7 +1,8 @@
 import { loadTemplate } from '../../services/template.js';
 import { createSidebar } from '../../components/sidebar.js';
 import { openModal } from '../../components/modal.js';
-import { getApi, postApi, logoutAllApi, currentUser } from '../../services/api.js';
+import { open2FAModal } from '../../components/modal-2fa.js';
+import { getApi, postApi, logoutAllApi, currentUser, setCurrentUser, setLinkedAccounts, clearUserState } from '../../services/api.js';
 import { t } from '../../services/i18n.js';
 import { showToast } from '../../services/toast.js';
 import { setupPasswordToggle } from '../../utils/dom.js';
@@ -17,7 +18,75 @@ export async function createSecurityView() {
   container.prepend(sidebar);
 
   const btnChangePassword = container.querySelector('[data-ref="btn-change-password"]');
+  const btnConfigure2fa = container.querySelector('[data-ref="btn-configure-2fa"]');
   const btnLogoutAllDevices = container.querySelector('[data-ref="btn-logout-all-devices"]');
+
+  // Estado y comportamiento del botón 2FA
+  let is2faEnabled = Boolean(currentUser?.two_factor_enabled);
+
+  const update2FAButtonUi = (enabled) => {
+    is2faEnabled = enabled;
+    if (!btnConfigure2fa) return;
+    if (enabled) {
+      btnConfigure2fa.textContent = t('settings.security.btn_disable_2fa') || 'Desactivar';
+      btnConfigure2fa.className = 'btn btn--h34 btn--danger';
+    } else {
+      btnConfigure2fa.textContent = t('settings.security.btn_configure_2fa') || 'Configurar';
+      btnConfigure2fa.className = 'btn btn--h34 btn--black';
+    }
+  };
+
+  // Consultar estado 2FA en el servidor
+  try {
+    getApi('/api/settings/2fa/status').then(async (res) => {
+      if (res.ok) {
+        const data = await res.json();
+        update2FAButtonUi(Boolean(data.enabled));
+      }
+    }).catch(() => {});
+  } catch (_) {}
+
+  btnConfigure2fa?.addEventListener('click', () => {
+    if (is2faEnabled) {
+      // Modal de confirmación para desactivar
+      const modal = openModal({
+        titleKey: 'settings.security.two_factor_disable_title',
+        descriptionKey: 'settings.security.two_factor_disable_confirm',
+        cancelText: t('modal.cancel'),
+        confirmText: t('settings.security.btn_disable_2fa') || 'Desactivar',
+        showConfirm: true,
+        onConfirm: async (inst) => {
+          inst.setConfirmLoading(true);
+          try {
+            const res = await postApi('/api/settings/2fa/disable');
+            const data = await res.json();
+            if (res.ok && data.ok) {
+              inst.close();
+              update2FAButtonUi(false);
+              showToast(t('settings.security.two_factor_disabled_toast') || '2FA desactivado correctamente.', 'success');
+            } else {
+              inst.setConfirmLoading(false);
+              inst.showError(data.error || t('toasts.generic_error'));
+            }
+          } catch (_) {
+            inst.setConfirmLoading(false);
+            inst.showError(t('toasts.generic_error'));
+          }
+        },
+      });
+
+      if (modal.confirmBtn) {
+        modal.confirmBtn.className = 'btn btn--h34 btn--danger';
+      }
+    } else {
+      // Abrir el nuevo modal dividido 2FA de 1024x525 px
+      open2FAModal({
+        onSuccess: () => {
+          update2FAButtonUi(true);
+        },
+      });
+    }
+  });
 
   // Comprobar estado de credenciales para actualizar la etiqueta inicial del botón si no tiene contraseña
   let cachedStatus = {
@@ -91,6 +160,51 @@ export async function createSecurityView() {
     if (modal.btnConfirm) {
       modal.btnConfirm.className = 'btn btn--h34 btn--danger';
     }
+  });
+
+  // Vincular click al botón de eliminar cuenta permanentemente
+  const btnDeleteAccount = container.querySelector('[data-ref="btn-delete-account"]');
+  btnDeleteAccount?.addEventListener('click', () => {
+    openModal({
+      size: '825x225',
+      icon: 'warning',
+      titleKey: 'settings.security.delete_account_modal_title',
+      descriptionKey: 'settings.security.delete_account_modal_desc',
+      cancelText: t('modal.cancel'),
+      confirmText: t('settings.security.btn_delete_account') || 'Eliminar cuenta',
+      confirmClass: 'btn--danger',
+      showConfirm: true,
+      onConfirm: async (inst) => {
+        inst.setConfirmLoading(true);
+        try {
+          const res = await postApi('/api/settings/account/delete');
+          let data = {};
+          try {
+            data = await res.json();
+          } catch (_) {}
+
+          if (res.ok && data.ok) {
+            inst.close();
+            closeWebSocket();
+            showToast(t('settings.security.delete_account_toast') || 'Tu cuenta y todos tus datos han sido eliminados exitosamente.', 'success');
+            if (data.switched && data.activeUser) {
+              setCurrentUser(data.activeUser);
+              setLinkedAccounts(data.accounts || []);
+              navigate('/settings/your-account');
+            } else {
+              clearUserState();
+              navigate('/login');
+            }
+          } else {
+            inst.setConfirmLoading(false);
+            inst.showError(data.error || t('toasts.generic_error'));
+          }
+        } catch (_) {
+          inst.setConfirmLoading(false);
+          inst.showError(t('toasts.generic_error'));
+        }
+      },
+    });
   });
 
   return container;

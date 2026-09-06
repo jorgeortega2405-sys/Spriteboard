@@ -1,0 +1,32 @@
+<div class="layout-content" data-ref="login-2fa-view">
+  <div class="login-container" data-ref="login-2fa-wrapper">
+    <a class="login-header-logo" data-ref="login-2fa-home-link" href="/" data-i18n-aria="nav.go_home" data-i18n-title="app.name">
+      <img class="login-logo-img" data-ref="logo-img" src="/logo.svg" alt="Spriteboard" />
+    </a>
+
+    <div class="card card--w-400" data-ref="login-2fa-card">
+      <div class="card__header" data-ref="login-2fa-header">
+        <h1 class="card__title" data-ref="login-2fa-title" data-i18n="auth.login_2fa.title"></h1>
+        <p class="card__subtitle" data-ref="login-2fa-subtitle">
+          <span data-ref="verify-2fa-subtitle-text" data-i18n="auth.login_2fa.subtitle"></span>
+        </p>
+      </div>
+
+      <div class="card__body" data-ref="login-2fa-form">
+        <label class="field" data-ref="field-login-2fa-code">
+          <input class="field__input field__input--code" data-ref="input-login-2fa-code" type="text" maxlength="9" placeholder=" " autocomplete="one-time-code" />
+          <span class="field__label" data-ref="label-login-2fa-code" data-i18n="auth.login_2fa.code_label"></span>
+        </label>
+
+        <button type="button" class="btn btn--h55 btn--black btn--w-full" data-ref="btn-submit-2fa" data-i18n="auth.login_2fa.submit_btn">
+        </button>
+
+        <div class="banner banner--danger" data-ref="login-2fa-error" style="display: none;"></div>
+
+        <div class="link-row" data-ref="login-2fa-back-row" style="justify-content: center; margin-top: 14px;">
+          <a class="link" data-ref="btn-back-to-login" href="/login" data-i18n="auth.login_2fa.back_to_login"></a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -26,6 +26,8 @@ export function openModal(options = {}) {
     bodyHtml = '',
     cancelText = t('modal.cancel'),
     confirmText = t('modal.continue'),
+    confirmClass = 'btn--black',
+    icon = '',
     showCancel = true,
     showConfirm = true,
     size = 'sm',
@@ -39,7 +41,8 @@ export function openModal(options = {}) {
   backdrop.className = 'modal-backdrop';
   backdrop.setAttribute('data-ref', 'modal-backdrop');
 
-  const renderedTitle = titleKey ? t(titleKey) : title;
+  const baseTitle = titleKey ? t(titleKey) : title;
+  const renderedTitle = icon ? `<span class="material-symbols-rounded">${icon}</span><span>${baseTitle}</span>` : baseTitle;
   const renderedDesc = descriptionKey ? t(descriptionKey, descriptionParams) : description;
 
   backdrop.innerHTML = `
@@ -55,7 +58,7 @@ export function openModal(options = {}) {
       <div class="modal-card__footer" data-ref="modal-footer">
         <div class="modal-card__actions" data-ref="modal-actions">
           ${showCancel ? `<button type="button" class="btn btn--h34" data-ref="btn-modal-cancel">${cancelText}</button>` : ''}
-          ${showConfirm ? `<button type="button" class="btn btn--h34 btn--black" data-ref="btn-modal-confirm">${confirmText}</button>` : ''}
+          ${showConfirm ? `<button type="button" class="btn btn--h34 ${confirmClass}" data-ref="btn-modal-confirm">${confirmText}</button>` : ''}
         </div>
         <div class="banner banner--danger" data-ref="modal-error" style="display: none;"></div>
       </div>
@@ -92,7 +95,9 @@ export function openModal(options = {}) {
     body: bodyContainer,
     errorBanner,
     confirmBtn,
+    btnConfirm: confirmBtn,
     cancelBtn,
+    btnCancel: cancelBtn,
     closeBtn,
 
     setTitle(newTitle, newKey = '') {

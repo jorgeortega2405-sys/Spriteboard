@@ -265,3 +265,20 @@ export const updatePasswordLimiter = createRateLimiter({
   message: 'Has intentado cambiar tu contraseña demasiadas veces. Por favor espera 15 minutos.',
 });
 
+// Generación de configuración 2FA: máximo 15 solicitudes cada 5 minutos por IP
+export const twoFactorGenerateLimiter = createRateLimiter({
+  prefix: '2fa_generate',
+  windowMs: 5 * 60 * 1000,
+  max: 15,
+  message: 'Demasiadas solicitudes de configuración 2FA. Por favor espera unos minutos.',
+});
+
+// Verificación de código 2FA: máximo 15 intentos cada 5 minutos por IP
+export const twoFactorVerifyLimiter = createRateLimiter({
+  prefix: '2fa_verify',
+  windowMs: 5 * 60 * 1000,
+  max: 15,
+  message: 'Demasiados intentos de verificación 2FA. Por favor espera unos minutos.',
+});
+
+

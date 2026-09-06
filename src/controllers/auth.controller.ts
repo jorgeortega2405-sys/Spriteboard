@@ -39,7 +39,15 @@ import {
   createUser,
   updateUserPassword,
   updateUserGoogleId,
+  findUserById,
+  verifyAndConsumeBackupCode,
 } from '../services/user.service.js';
+import {
+  savePending2FALogin,
+  getPending2FALogin,
+  consumePending2FALogin,
+  verifyTotpCode,
+} from '../services/two-factor.service.js';
 import { getCurrentUser, getLinkedAccounts } from '../middlewares/auth.middleware.js';
 import { logger } from '../services/logger.service.js';
 import {
@@ -273,6 +281,23 @@ export async function login(req: Request, res: Response): Promise<void> {
       return;
     }
 
+    // Comprobar si el usuario tiene autenticación en dos pasos (2FA) activada
+    if (userRow.two_factor_enabled) {
+      const tempToken = crypto.randomBytes(32).toString('hex');
+      await savePending2FALogin(tempToken, { userId: userRow.id, email: userRow.email }, 300);
+      logger.security.info('Inicio de sesión requiere segundo factor de autenticación', {
+        userId: userRow.id,
+        email: userRow.email,
+      });
+
+      sendSuccess(res, {
+        requires2FA: true,
+        tempToken,
+        email: userRow.email,
+      });
+      return;
+    }
+
     const user = sanitizeUser(userRow);
 
     const session = await addAccountToSession(res, req, user);
@@ -286,6 +311,76 @@ export async function login(req: Request, res: Response): Promise<void> {
     });
   } catch (error) {
     sendInternalError(res, 'Error al iniciar sesión', error, 'Error interno del servidor al iniciar sesión.');
+  }
+}
+
+// Verificación de segundo factor (2FA) durante el inicio de sesión
+export async function verify2FALogin(req: Request, res: Response): Promise<void> {
+  try {
+    const { tempToken, code } = req.body;
+
+    if (!tempToken || typeof tempToken !== 'string' || !code || typeof code !== 'string') {
+      sendBadRequest(res, 'Faltan parámetros requeridos.');
+      return;
+    }
+
+    const pending = await getPending2FALogin(tempToken.trim());
+    if (!pending) {
+      logger.security.warn('Intento de verificación 2FA con token temporal inválido o expirado');
+      sendUnauthorized(res, 'La sesión de verificación ha expirado. Inicia sesión nuevamente.');
+      return;
+    }
+
+    const userRow = await findUserById(pending.userId);
+    if (!userRow || !userRow.two_factor_enabled) {
+      sendBadRequest(res, 'El usuario no tiene 2FA habilitado o no existe.');
+      return;
+    }
+
+    const cleanCode = code.trim();
+    let verified = false;
+
+    // 1. Probar como código TOTP de 6 dígitos (con tolerancia de deriva ±60s)
+    if (/^\d{6}$/.test(cleanCode) && userRow.two_factor_secret) {
+      verified = verifyTotpCode(cleanCode, userRow.two_factor_secret, 2);
+    }
+
+    // 2. Si no fue válido como TOTP, verificar si corresponde a un código de respaldo
+    if (!verified) {
+      const consumed = await verifyAndConsumeBackupCode(userRow.id, cleanCode);
+      if (consumed) {
+        verified = true;
+        logger.security.info('Código de respaldo utilizado en login 2FA', { userId: userRow.id });
+      }
+    }
+
+    if (!verified) {
+      logger.security.warn('Código 2FA incorrecto al iniciar sesión', { userId: userRow.id });
+      sendBadRequest(res, 'El código ingresado es incorrecto o ha expirado.');
+      return;
+    }
+
+    // Consumir el token temporal en Redis para evitar reutilización
+    await consumePending2FALogin(tempToken.trim());
+
+    const user = sanitizeUser(userRow);
+    const session = await addAccountToSession(res, req, user);
+
+    res.clearCookie('2fa_temp_token', { path: '/' });
+    res.clearCookie('2fa_temp_email', { path: '/' });
+
+    sendSuccess(res, {
+      message: 'Inicio de sesión exitoso.',
+      user,
+      accounts: session.accounts.map(sanitizeUser),
+    });
+  } catch (error) {
+    sendInternalError(
+      res,
+      'Error al verificar segundo factor de autenticación',
+      error,
+      'Error al procesar la verificación.'
+    );
   }
 }
 
@@ -541,6 +636,32 @@ export async function googleCallback(req: Request, res: Response): Promise<void>
 </html>`);
         return;
       }
+    }
+
+    // Si el usuario tiene autenticación en dos pasos (2FA) activada, redirigir al flujo de verificación
+    if (userPayload.two_factor_enabled) {
+      const tempToken = crypto.randomBytes(32).toString('hex');
+      await savePending2FALogin(tempToken, { userId: userPayload.id, email: userPayload.email }, 300);
+      logger.security.info('Inicio de sesión con Google requiere segundo factor de autenticación', {
+        userId: userPayload.id,
+        email: userPayload.email,
+      });
+
+      res.cookie('2fa_temp_token', tempToken, {
+        httpOnly: false,
+        sameSite: 'lax',
+        maxAge: 300 * 1000,
+        path: '/',
+      });
+      res.cookie('2fa_temp_email', userPayload.email, {
+        httpOnly: false,
+        sameSite: 'lax',
+        maxAge: 300 * 1000,
+        path: '/',
+      });
+
+      res.redirect(`/login/verification-aditional?token=${tempToken}&email=${encodeURIComponent(userPayload.email)}`);
+      return;
     }
 
     await addAccountToSession(res, req, userPayload);

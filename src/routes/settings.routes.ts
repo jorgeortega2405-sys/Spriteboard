@@ -13,6 +13,11 @@ import {
   handleGetPasswordStatus,
   handleVerifyCurrentPassword,
   handleUpdatePassword,
+  handleGenerate2FA,
+  handleEnable2FA,
+  handleDisable2FA,
+  handleGet2FAStatus,
+  handleDeleteAccount,
 } from '../controllers/settings.controller.js';
 
 const router = Router();
@@ -59,6 +64,8 @@ import {
   updateUsernameLimiter,
   verifyPasswordLimiter,
   updatePasswordLimiter,
+  twoFactorGenerateLimiter,
+  twoFactorVerifyLimiter,
 } from '../middlewares/rate-limit.middleware.js';
 
 // Todas las rutas de configuración requieren autenticación activa
@@ -80,8 +87,19 @@ router.get('/settings/password/status', handleGetPasswordStatus);
 router.post('/settings/password/verify', verifyPasswordLimiter, handleVerifyCurrentPassword);
 router.post('/settings/password', updatePasswordLimiter, handleUpdatePassword);
 
+// Rutas de Autenticación en Dos Factores (2FA)
+router.get('/settings/2fa/status', handleGet2FAStatus);
+router.post('/settings/2fa/generate', twoFactorGenerateLimiter, handleGenerate2FA);
+router.post('/settings/2fa/enable', twoFactorVerifyLimiter, handleEnable2FA);
+router.post('/settings/2fa/disable', verifyPasswordLimiter, handleDisable2FA);
+
 // Rutas de Preferencias
 router.get('/settings/preferences', handleGetPreferences);
 router.post('/settings/preferences', handleUpdatePreferences);
 
+// Rutas de Eliminación de Cuenta (Zona de peligro)
+router.post('/settings/account/delete', verifyPasswordLimiter, handleDeleteAccount);
+router.delete('/settings/account', verifyPasswordLimiter, handleDeleteAccount);
+
 export default router;
+

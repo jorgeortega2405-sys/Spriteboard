@@ -5,6 +5,7 @@ import {
   verifyRegistrationCode,
   resendRegistrationCode,
   login,
+  verify2FALogin,
   logout,
   logoutAll,
   switchAccount,
@@ -36,6 +37,7 @@ router.post('/register/resend-code', sendCodeLimiter, resendRegistrationCode);
 
 // Sesión local y Google OAuth
 router.post('/login', loginLimiter, login);
+router.post('/login/verify-2fa', loginLimiter, verify2FALogin);
 router.post('/logout', logout);
 router.post('/logout-all', logoutAll);
 router.post('/auth/logout-all', logoutAll);

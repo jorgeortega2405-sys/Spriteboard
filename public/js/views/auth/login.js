@@ -2,6 +2,7 @@ import { loadTemplate } from '../../services/template.js';
 import { postApi, setCurrentUser, setLinkedAccounts } from '../../services/api.js';
 import { navigate } from '../../router.js';
 import { initWebSocket } from '../../services/websocket.service.js';
+import { saveTwoFactorLoginState } from '../../services/two-factor-state.js';
 import {
   setupPasswordToggle,
   createBannerManager,
@@ -69,6 +70,12 @@ export async function createLoginView() {
 
         if (!res.ok) {
           banners.showError(data.error || t('toasts.generic_error'));
+          return;
+        }
+
+        if (data.requires2FA) {
+          saveTwoFactorLoginState(data.tempToken, data.email || email);
+          navigate('/login/verification-aditional');
           return;
         }
 

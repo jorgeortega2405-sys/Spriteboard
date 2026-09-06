@@ -20,6 +20,7 @@ export function sanitizeUser(user: any): UserPayload {
     email: user.email,
     ...(user.avatar_url ? { avatar_url: user.avatar_url } : {}),
     ...(user.google_id ? { google_id: user.google_id } : {}),
+    two_factor_enabled: Boolean(user.two_factor_enabled),
   };
 }
 
