@@ -1,16 +1,10 @@
-import crypto from 'crypto';
-import cassandra from 'cassandra-driver';
 import { cassandraClient, isCassandraReady } from '../config/cassandra.config.js';
-import { redis } from '../config/redis.config.js';
 import { config } from '../config/env.config.js';
+import { redis } from '../config/redis.config.js';
+import { HttpMetricInput, SystemMetricInput, TelemetryEventInput, TelemetryStatsSummary, WebVitalInput } from '../types/telemetry.types.js';
 import { logger } from './logger.service.js';
-import {
-  HttpMetricInput,
-  TelemetryEventInput,
-  SystemMetricInput,
-  WebVitalInput,
-  TelemetryStatsSummary,
-} from '../types/telemetry.types.js';
+import cassandra from 'cassandra-driver';
+import crypto from 'crypto';
 
 function getTodayBucket(date = new Date()): string {
   return date.toISOString().split('T')[0];
@@ -41,17 +35,14 @@ class TelemetryService {
   }
 
   private startTimers(): void {
-    // Flush periódico cada 5 segundos
     this.flushTimer = setInterval(() => {
       void this.flush();
     }, this.FLUSH_INTERVAL_MS);
 
-    // Muestreo de métricas de proceso cada 60 segundos
     this.systemSampleTimer = setInterval(() => {
       this.sampleSystemMetrics();
     }, 60000);
 
-    // Evitar que los timers impidan el apagado ordenado del proceso
     if (this.flushTimer.unref) this.flushTimer.unref();
     if (this.systemSampleTimer.unref) this.systemSampleTimer.unref();
   }
@@ -68,7 +59,7 @@ class TelemetryService {
 
   public recordHttpMetric(metric: HttpMetricInput): void {
     if (this.httpBuffer.length >= this.MAX_RETAINED_BUFFER) {
-      this.httpBuffer.shift(); // Proteger contra saturación de memoria
+      this.httpBuffer.shift();
     }
     this.httpBuffer.push({
       ...metric,
@@ -229,9 +220,6 @@ class TelemetryService {
     }
   }
 
-  /**
-   * Resumen analítico de telemetría del día actual para dashboard y monitoreo
-   */
   public async getTelemetrySummary(): Promise<TelemetryStatsSummary> {
     const today = getTodayBucket();
     const keyspace = config.cassandra.keyspace;
@@ -249,7 +237,6 @@ class TelemetryService {
     }
 
     try {
-      // 1. Obtener métricas HTTP recientes del día
       const httpResult = await cassandraClient.execute(
         `SELECT id, route, method, status_code, duration_ms, created_at
          FROM ${keyspace}.http_metrics
@@ -284,7 +271,6 @@ class TelemetryService {
         timestamp: r.created_at,
       }));
 
-      // 2. Obtener eventos recientes del día
       const eventsResult = await cassandraClient.execute(
         `SELECT id, category, event_name, user_id, created_at
          FROM ${keyspace}.events
@@ -302,7 +288,6 @@ class TelemetryService {
         timestamp: r.created_at,
       }));
 
-      // 3. Obtener última métrica de sistema
       const sysResult = await cassandraClient.execute(
         `SELECT heap_used_mb, heap_total_mb, rss_mb, event_loop_lag_ms, active_requests, created_at
          FROM ${keyspace}.system_metrics

@@ -1,15 +1,8 @@
-import { Request, Response, NextFunction } from 'express';
-import {
-  verifySessionToken,
-  getMultiAccountSession,
-  clearSessionCookie,
-  isSessionRevoked,
-  COOKIE_NAME,
-} from '../services/auth.service.js';
-import { UserPayload, SessionAccount } from '../types/auth.types.js';
+import { clearSessionCookie, COOKIE_NAME, getMultiAccountSession, isSessionRevoked, verifySessionToken } from '../services/auth.service.js';
+import { SessionAccount, UserPayload } from '../types/auth.types.js';
+import { NextFunction, Request, Response } from 'express';
 
 export function getCurrentUser(req: Request): UserPayload | null {
-  // Caché a nivel de request para evitar re-análisis HMAC y de JSON en múltiples llamadas
   if ((req as any).user) {
     return (req as any).user;
   }
@@ -34,7 +27,6 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     return;
   }
 
-  // Comprobar si la sesión fue revocada en el servidor (ej. logout individual, logout-all o cambio de contraseña)
   const session = getMultiAccountSession(req);
   if (session) {
     const activeAccount = session.accounts.find((a) => a.id === user.id);
@@ -51,4 +43,3 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   res.locals.user = user;
   next();
 }
-

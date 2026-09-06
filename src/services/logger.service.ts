@@ -24,9 +24,6 @@ const SENSITIVE_KEYS = new Set([
   'smtp_pass',
 ]);
 
-/**
- * Sanitiza recursivamente objetos y metadatos para ocultar credenciales y tokens
- */
 function sanitize(obj: unknown): unknown {
   if (obj === null || obj === undefined) return obj;
 
@@ -79,13 +76,11 @@ class CategoryLogger {
     try {
       await fs.promises.mkdir(this.categoryDir, { recursive: true });
       this.dirEnsured = true;
-    } catch {
-      // Ignorar errores al crear directorios si ya existen concurrentemente
-    }
+    } catch {}
   }
 
   private getLogFilePath(): string {
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    const today = new Date().toISOString().split('T')[0];
     return path.join(this.categoryDir, `${today}.log`);
   }
 
@@ -118,9 +113,7 @@ class CategoryLogger {
 
       const filePath = this.getLogFilePath();
       await fs.promises.appendFile(filePath, logLine, 'utf8');
-    } catch {
-      // Operación silenciosa y resiliente: no crashea la aplicación
-    }
+    } catch {}
   }
 
   info(message: string, meta?: unknown): void {
@@ -140,9 +133,6 @@ class CategoryLogger {
   }
 }
 
-/**
- * Instancia centralizada del sistema de logs con 3 categorías
- */
 export const logger = {
   app: new CategoryLogger('app'),
   db: new CategoryLogger('database'),

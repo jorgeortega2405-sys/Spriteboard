@@ -1,17 +1,9 @@
-/**
- * Controlador HTTP para el Asistente de IA (ai.controller.ts)
- * Gestiona el endpoint de chat con validación de entrada y respuestas seguras.
- */
-
-import { Request, Response } from 'express';
+import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import { AiService, ChatMessage } from '../services/ai.service.js';
 import { logger } from '../services/logger.service.js';
-import { getCurrentUser } from '../middlewares/auth.middleware.js';
+import { Request, Response } from 'express';
 
 export class AiController {
-  /**
-   * Endpoint POST /api/ai/chat o /api/chat
-   */
   static async chat(req: Request, res: Response): Promise<void> {
     try {
       const { message, history } = req.body;
@@ -32,7 +24,6 @@ export class AiController {
         return;
       }
 
-      // Validar formato del historial si fue enviado
       let validHistory: ChatMessage[] = [];
       if (Array.isArray(history)) {
         validHistory = history
@@ -46,7 +37,6 @@ export class AiController {
           .slice(-10);
       }
 
-      // Obtener contexto de sesión (usuario autenticado o invitado)
       const currentUser = getCurrentUser(req);
       const userContext = {
         username: currentUser?.username,

@@ -1,47 +1,14 @@
-/**
- * Módulo Centralizado de Autenticación (auth.view.js)
- * Unifica los flujos de:
- * - Login y Login 2FA en una sola plantilla interactiva (login.html)
- * - Registro Multi-Etapa (Etapas 1, 2 y 3) en una sola plantilla interactiva (register.html)
- * - Olvido y Restablecimiento de Contraseña (forgot-password.html y reset-password.html)
- * - Cero parpadeos, transiciones instantáneas y sincronización dinámica con la URL del navegador.
- *
- * Cumple con directivas: CERO console.*, CERO IDs, orden estricto de atributos.
- */
-
-import { loadTemplate } from '../services/template.service.js';
-import {
-  postApi,
-  setCurrentUser,
-  setLinkedAccounts,
-  currentUser,
-} from '../services/api.service.js';
 import { navigate } from '../app-router.js';
-import { initWebSocket } from '../services/websocket.service.js';
-import { createErrorView } from './error.view.js';
-import {
-  setupPasswordToggle,
-  createBannerManager,
-  withButtonLoading,
-  bindSubmitOnEnter,
-  bindNavigationLinks,
-} from '../utils/dom.util.js';
-import {
-  validateEmail,
-  validatePassword,
-  validateUsername,
-  validateVerificationCode,
-} from '../utils/validators.util.js';
+import { currentUser, postApi, setCurrentUser, setLinkedAccounts } from '../services/api.service.js';
 import { t } from '../services/i18n.service.js';
-
-/* ==========================================================================
-   1. GESTIÓN DE ESTADO TEMPORAL (Registro & 2FA)
-   ========================================================================== */
+import { loadTemplate } from '../services/template.service.js';
+import { initWebSocket } from '../services/websocket.service.js';
+import { bindNavigationLinks, bindSubmitOnEnter, createBannerManager, setupPasswordToggle, withButtonLoading } from '../utils/dom.util.js';
+import { validateEmail, validatePassword, validateUsername, validateVerificationCode } from '../utils/validators.util.js';
+import { createErrorView } from './error.view.js';
 
 const REG_STORAGE_KEY = 'sprite_reg_flow';
 const TWO_FACTOR_STORAGE_KEY = 'sprite_2fa_login_flow';
-
-// --- Estado de Registro Multi-Etapa ---
 
 export function getRegistrationState() {
   try {
@@ -87,8 +54,6 @@ export function hasStage2Data() {
   return Boolean(state.email && state.password && state.username);
 }
 
-// --- Estado de Verificación Adicional 2FA para Login ---
-
 function getCookie(name) {
   try {
     if (typeof document === 'undefined' || !document.cookie) return null;
@@ -112,7 +77,6 @@ export function getTwoFactorState() {
     }
   } catch (_) {}
 
-  // Fallback 1: Cookies temporales de OAuth
   const cookieToken = getCookie('2fa_temp_token');
   const cookieEmail = getCookie('2fa_temp_email');
   if (cookieToken && cookieEmail) {
@@ -120,7 +84,6 @@ export function getTwoFactorState() {
     return { tempToken: cookieToken, email: cookieEmail };
   }
 
-  // Fallback 2: Parámetros de consulta en URL
   try {
     if (typeof window !== 'undefined' && window.location && window.location.search) {
       const params = new URLSearchParams(window.location.search);
@@ -162,12 +125,7 @@ export function hasTwoFactorLoginData() {
   return Boolean(state.tempToken && state.email);
 }
 
-/* ==========================================================================
-   2. VISTA UNIFICADA DE LOGIN + 2FA (/login, /login/verification-aditional)
-   ========================================================================== */
-
 export async function createLoginView(startAt2FA = false) {
-  // Comprobar parámetros de consulta en caso de redirección desde Google OAuth con 2FA
   try {
     const urlParams = new URLSearchParams(window.location.search);
     const tokenParam = urlParams.get('token');
@@ -181,7 +139,6 @@ export async function createLoginView(startAt2FA = false) {
 
   const is2FARoute = startAt2FA || window.location.pathname === '/login/verification-aditional';
 
-  // Guardia de seguridad si intentan entrar directo a /login/verification-aditional sin sesión 2FA
   if (is2FARoute && !hasTwoFactorLoginData()) {
     return createErrorView({
       code: '400',
@@ -195,11 +152,9 @@ export async function createLoginView(startAt2FA = false) {
 
   const container = await loadTemplate('/views/auth/login.html');
 
-  // Pasos interactivos
   const stepMain = container.querySelector('[data-ref="login-step-main"]');
   const step2FA = container.querySelector('[data-ref="login-step-2fa"]');
 
-  // Elementos Paso Principal
   const emailInput = container.querySelector('[data-ref="login-email"]');
   const passwordInput = container.querySelector('[data-ref="login-password"]');
   const toggleBtn = container.querySelector('[data-ref="toggle-login-password"]');
@@ -209,13 +164,11 @@ export async function createLoginView(startAt2FA = false) {
   const subtitleEl = container.querySelector('[data-ref="login-subtitle"]');
   const bannersMain = createBannerManager(container, { errorRef: 'login-error' });
 
-  // Elementos Paso 2FA
   const code2FAInput = container.querySelector('[data-ref="input-login-2fa-code"]');
   const submit2FABtn = container.querySelector('[data-ref="btn-submit-2fa"]');
   const backToLoginLink = container.querySelector('[data-ref="btn-back-to-login"]');
   const banners2FA = createBannerManager(container, { errorRef: 'login-2fa-error' });
 
-  // Detectar si agrega otra cuenta
   const urlParams = new URLSearchParams(window.location.search);
   const isAddingAccount = Boolean(currentUser) || urlParams.get('action') === 'add-account';
 
@@ -236,7 +189,6 @@ export async function createLoginView(startAt2FA = false) {
     }
   }
 
-  // Navegación
   bindNavigationLinks(container, {
     'login-home-link': '/',
     'btn-forgot-password': '/forgot-password',
@@ -257,7 +209,6 @@ export async function createLoginView(startAt2FA = false) {
     bannersMain.showError(t('toasts.generic_error'));
   }
 
-  // Función para conmutar paso sin parpadeos y sincronizar URL
   const activateStep = (stepName) => {
     bannersMain.hideAll();
     banners2FA.hideAll();
@@ -275,7 +226,6 @@ export async function createLoginView(startAt2FA = false) {
     }
   };
 
-  // Inicializar en el paso correspondiente
   if (is2FARoute) {
     if (stepMain) stepMain.style.display = 'none';
     if (step2FA) step2FA.style.display = 'block';
@@ -285,7 +235,6 @@ export async function createLoginView(startAt2FA = false) {
     if (stepMain) stepMain.style.display = 'block';
   }
 
-  // --- Lógica de Envío de Login Principal ---
   const executeLogin = async () => {
     bannersMain.hideAll();
     const email = emailInput?.value.trim();
@@ -314,7 +263,6 @@ export async function createLoginView(startAt2FA = false) {
           return;
         }
 
-        // Si requiere 2FA, transición fluida e instantánea al paso 2FA en el mismo contenedor
         if (data.requires2FA) {
           saveTwoFactorLoginState(data.tempToken, data.email || email);
           activateStep('2fa');
@@ -334,7 +282,6 @@ export async function createLoginView(startAt2FA = false) {
   submitBtn?.addEventListener('click', executeLogin);
   bindSubmitOnEnter([emailInput, passwordInput], executeLogin);
 
-  // --- Lógica de Envío de Verificación 2FA ---
   const executeVerify2FA = async () => {
     banners2FA.hideAll();
     const state = getTwoFactorState();
@@ -388,17 +335,11 @@ export function createLogin2FAView() {
   return createLoginView(true);
 }
 
-/* ==========================================================================
-   3. VISTA UNIFICADA DE REGISTRO MULTI-ETAPA (/register, /register/*)
-   ========================================================================== */
-
 export async function createRegisterView(targetStage = 1) {
-  // Comprobar ruta URL inicial
   const path = window.location.pathname;
   if (path === '/register/aditional-data') targetStage = 2;
   else if (path === '/register/verification-account') targetStage = 3;
 
-  // Comprobar guardias de datos previos en caso de acceso directo o F5
   if (targetStage === 2 && !hasStage1Data()) {
     targetStage = 1;
     window.history.replaceState({}, '', '/register');
@@ -409,12 +350,10 @@ export async function createRegisterView(targetStage = 1) {
 
   const container = await loadTemplate('/views/auth/register.html');
 
-  // Pasos de registro
   const step1 = container.querySelector('[data-ref="register-step-1"]');
   const step2 = container.querySelector('[data-ref="register-step-2"]');
   const step3 = container.querySelector('[data-ref="register-step-3"]');
 
-  // Elementos Etapa 1
   const emailInput = container.querySelector('[data-ref="register-email"]');
   const passwordInput = container.querySelector('[data-ref="register-password"]');
   const togglePassBtn = container.querySelector('[data-ref="toggle-register-password"]');
@@ -422,14 +361,12 @@ export async function createRegisterView(targetStage = 1) {
   const googleRegisterBtn = container.querySelector('[data-ref="btn-google-register"]');
   const bannersStage1 = createBannerManager(container, { errorRef: 'register-error-stage1' });
 
-  // Elementos Etapa 2
   const usernameInput = container.querySelector('[data-ref="register-username"]');
   const randomUsernameBtn = container.querySelector('[data-ref="btn-random-username"]');
   const submitStage2Btn = container.querySelector('[data-ref="btn-submit-stage2"]');
   const btnBackStage1 = container.querySelector('[data-ref="btn-back-stage1"]');
   const bannersStage2 = createBannerManager(container, { errorRef: 'register-error-stage2' });
 
-  // Elementos Etapa 3
   const subtitleTextEl = container.querySelector('[data-ref="verify-subtitle-text"]');
   const codeInput = container.querySelector('[data-ref="register-code"]');
   const submitStage3Btn = container.querySelector('[data-ref="btn-submit-stage3"]');
@@ -440,12 +377,10 @@ export async function createRegisterView(targetStage = 1) {
     successRef: 'register-success-stage3',
   });
 
-  // Precarga de valores existentes en el estado
   const state = getRegistrationState();
   if (state.email && emailInput) emailInput.value = state.email;
   if (state.username && usernameInput) usernameInput.value = state.username;
 
-  // Navegación
   bindNavigationLinks(container, {
     'register-home-link': '/',
     'btn-to-login': '/login',
@@ -460,7 +395,6 @@ export async function createRegisterView(targetStage = 1) {
     hideTooltip: t('auth.login.hide_password'),
   });
 
-  // Función para activar etapa instantáneamente y sincronizar URL
   const activateStage = (stageNum) => {
     bannersStage1.hideAll();
     bannersStage2.hideAll();
@@ -486,10 +420,8 @@ export async function createRegisterView(targetStage = 1) {
     }
   };
 
-  // Inicializar etapa activa
   activateStage(targetStage);
 
-  // --- Etapa 1: Credenciales ---
   const executeStage1 = async () => {
     bannersStage1.hideAll();
     const email = emailInput?.value.trim();
@@ -528,7 +460,6 @@ export async function createRegisterView(targetStage = 1) {
   submitStage1Btn?.addEventListener('click', executeStage1);
   bindSubmitOnEnter([emailInput, passwordInput], executeStage1);
 
-  // --- Etapa 2: Nombre de Usuario ---
   randomUsernameBtn?.addEventListener('click', () => {
     const timestamp = Date.now().toString(36);
     const randomSuffix = Math.floor(100 + Math.random() * 900);
@@ -583,7 +514,6 @@ export async function createRegisterView(targetStage = 1) {
     activateStage(1);
   });
 
-  // --- Etapa 3: Verificación por Código ---
   const executeStage3 = async () => {
     bannersStage3.hideAll();
     const currentState = getRegistrationState();
@@ -666,10 +596,6 @@ export function createRegisterStage2View() {
 export function createRegisterStage3View() {
   return createRegisterView(3);
 }
-
-/* ==========================================================================
-   4. VISTAS DE RECUPERACIÓN Y RESET DE CONTRASEÑA
-   ========================================================================== */
 
 export async function createForgotPasswordView() {
   const container = await loadTemplate('/views/auth/forgot-password.html');

@@ -1,7 +1,3 @@
-/**
- * Utilidades de validación para autenticación y usuarios
- */
-
 export interface ValidationResult {
   valid: boolean;
   error?: string;
@@ -17,9 +13,6 @@ export const ALLOWED_EMAIL_DOMAINS = [
 
 export type AllowedEmailDomain = typeof ALLOWED_EMAIL_DOMAINS[number];
 
-/**
- * Valida formato, longitud y dominio permitido de un correo electrónico
- */
 export function validateEmail(email: unknown): ValidationResult {
   if (!email || typeof email !== 'string') {
     return { valid: false, error: 'Ingresa un correo electrónico.' };
@@ -50,9 +43,6 @@ export function validateEmail(email: unknown): ValidationResult {
   return { valid: true };
 }
 
-/**
- * Valida longitud mínima (8) y máxima (128) de la contraseña
- */
 export function validatePassword(password: unknown): ValidationResult {
   if (!password || typeof password !== 'string') {
     return { valid: false, error: 'Ingresa una contraseña.' };
@@ -69,9 +59,6 @@ export function validatePassword(password: unknown): ValidationResult {
   return { valid: true };
 }
 
-/**
- * Valida longitud (3 a 30 caracteres) y caracteres permitidos del nombre de usuario
- */
 export function validateUsername(username: unknown): ValidationResult {
   if (!username || typeof username !== 'string') {
     return { valid: false, error: 'Ingresa un nombre de usuario.' };
@@ -98,9 +85,6 @@ export function validateUsername(username: unknown): ValidationResult {
   return { valid: true };
 }
 
-/**
- * Valida que el código de verificación tenga exactamente 6 dígitos numéricos
- */
 export function validateVerificationCode(code: unknown): ValidationResult {
   if (!code || typeof code !== 'string') {
     return { valid: false, error: 'Ingresa el código de verificación.' };

@@ -1,19 +1,19 @@
 import 'dotenv/config';
-import express, { Request, Response } from 'express';
 import cookieParser from 'cookie-parser';
-import path from 'path';
+import express, { Request, Response } from 'express';
 import net from 'net';
+import path from 'path';
 import { fileURLToPath } from 'url';
-import { config } from './config/env.config.js';
-import { checkDbConnection } from './config/database.config.js';
-import { checkRedisConnection } from './config/redis.config.js';
 import { checkCassandraConnection } from './config/cassandra.config.js';
-import apiRouter from './routes/api.routes.js';
+import { checkDbConnection } from './config/database.config.js';
+import { config } from './config/env.config.js';
+import { checkRedisConnection } from './config/redis.config.js';
 import { getHealth } from './controllers/config.controller.js';
-import { logger } from './services/logger.service.js';
 import { telemetryMiddleware } from './middlewares/telemetry.middleware.js';
-import { telemetryService } from './services/telemetry.service.js';
+import apiRouter from './routes/api.routes.js';
 import { geoIpService } from './services/geoip.service.js';
+import { logger } from './services/logger.service.js';
+import { telemetryService } from './services/telemetry.service.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -21,13 +21,10 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = config.port;
 
-// Deshabilitar huella de tecnología (X-Powered-By)
 app.disable('x-powered-by');
 
-// Configuración de proxies de confianza para resolución fidedigna de IP
 app.set('trust proxy', config.trustProxy);
 
-// Cabeceras HTTP de seguridad global (OWASP Best Practices)
 app.use((req: Request, res: Response, next: express.NextFunction) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
@@ -41,7 +38,6 @@ app.use((req: Request, res: Response, next: express.NextFunction) => {
   next();
 });
 
-// Middlewares globales con límite estricto de carga para prevenir ataques DoS por agotamiento de memoria
 app.use(
   express.json({
     limit: '2mb',
@@ -54,20 +50,12 @@ app.use(
 );
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(cookieParser());
-
-// Middleware de telemetría HTTP no bloqueante
 app.use(telemetryMiddleware);
-
-// Servir archivos estáticos desde la carpeta public
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Endpoint de salud raíz
 app.get('/health', getHealth);
-
-// Rutas de API
 app.use('/api', apiRouter);
 
-// Manejo seguro de errores globales (CERO exposición de detalles técnicos ni stack traces)
 app.use((err: any, req: Request, res: Response, next: express.NextFunction) => {
   logger.app.error('Error no controlado en middleware o ruta', err);
   if (res.headersSent) {
@@ -79,12 +67,10 @@ app.use((err: any, req: Request, res: Response, next: express.NextFunction) => {
   });
 });
 
-// Soporte SPA: Cualquier ruta que no sea de API sirve index.html
 app.get('*', (req: Request, res: Response) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
-// Inicialización de la base de datos, Redis, Cassandra y arranque del servidor
 async function startServer() {
   try {
     if (config.nodeEnv === 'production' && config.sessionSecret === 'spriteboard_session_secret_key_2026') {
@@ -94,7 +80,6 @@ async function startServer() {
     await checkRedisConnection();
     await geoIpService.init();
 
-    // Inicialización resiliente de Apache Cassandra en segundo plano (buffer activo mientras conecta)
     void checkCassandraConnection().catch((err) => {
       logger.db.warn('Cassandra aún no disponible; telemetría retenida en buffer.', err);
     });
@@ -103,7 +88,6 @@ async function startServer() {
       logger.app.info(`Servidor TypeScript iniciado y escuchando en puerto ${PORT}`);
     });
 
-    // Puenteo transparente de conexiones WebSocket al microservicio en Rust
     server.on('upgrade', (req, clientSocket, head) => {
       const url = req.url || '';
       if (url === '/ws' || url.startsWith('/ws?')) {
@@ -134,7 +118,6 @@ async function startServer() {
       }
     });
 
-    // Apagado ordenado asegurando el vaciado de buffers de telemetría
     const handleShutdown = async (signal: string) => {
       logger.app.info(`Señal ${signal} recibida. Vaciando buffers de telemetría y cerrando...`);
       server.close();
@@ -151,4 +134,3 @@ async function startServer() {
 }
 
 startServer();
-

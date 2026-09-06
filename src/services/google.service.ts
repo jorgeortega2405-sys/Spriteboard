@@ -1,24 +1,22 @@
-import crypto from 'crypto';
-import { Request, Response } from 'express';
 import { pool } from '../config/database.config.js';
 import { config } from '../config/env.config.js';
-import { UserPayload, GoogleTokenResponse, GoogleUserInfo } from '../types/auth.types.js';
-import { updateUserLastLoginGeo } from './user.service.js';
+import { GoogleTokenResponse, GoogleUserInfo, UserPayload } from '../types/auth.types.js';
 import { geoIpService } from './geoip.service.js';
-import type { RowDataPacket, ResultSetHeader } from 'mysql2';
+import { updateUserLastLoginGeo } from './user.service.js';
+import crypto from 'crypto';
+import { Request, Response } from 'express';
+import type { ResultSetHeader, RowDataPacket } from 'mysql2';
 
 export const STATE_COOKIE_NAME = 'oauth_state';
 
-// Generar URL de inicio de sesión con Google OAuth 2.0
 export function getGoogleAuthUrl(req: Request, res: Response): string {
   const state = crypto.randomBytes(24).toString('hex');
 
-  // Guardar state en cookie HttpOnly temporal para prevenir ataques CSRF
   res.cookie(STATE_COOKIE_NAME, state, {
     httpOnly: true,
     sameSite: 'lax',
     secure: config.nodeEnv === 'production',
-    maxAge: 10 * 60 * 1000, // 10 minutos
+    maxAge: 10 * 60 * 1000,
   });
 
   const params = new URLSearchParams({
@@ -34,7 +32,6 @@ export function getGoogleAuthUrl(req: Request, res: Response): string {
   return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 }
 
-// Generar URL para verificación de identidad con Google (cambio de contraseña)
 export function getGoogleVerifyAuthUrl(req: Request, res: Response): string {
   const state = `verify_pwd_${crypto.randomBytes(24).toString('hex')}`;
 
@@ -42,7 +39,7 @@ export function getGoogleVerifyAuthUrl(req: Request, res: Response): string {
     httpOnly: true,
     sameSite: 'lax',
     secure: config.nodeEnv === 'production',
-    maxAge: 10 * 60 * 1000, // 10 minutos
+    maxAge: 10 * 60 * 1000,
   });
 
   const params = new URLSearchParams({
@@ -58,7 +55,6 @@ export function getGoogleVerifyAuthUrl(req: Request, res: Response): string {
   return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 }
 
-// Generar un nombre de usuario único y amigable
 export async function generateUniqueUsername(baseName: string): Promise<string> {
   let cleanName = baseName
     .normalize('NFD')
@@ -117,7 +113,6 @@ export async function processGoogleAuthCallback(code: string, clientIp?: string)
 
   const tokenData = (await tokenRes.json()) as GoogleTokenResponse;
 
-  // Obtener información del usuario desde Google
   const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
     headers: {
       Authorization: `Bearer ${tokenData.access_token}`,
@@ -136,7 +131,6 @@ export async function processGoogleAuthCallback(code: string, clientIp?: string)
 
   const geo = clientIp ? geoIpService.lookup(clientIp) : null;
 
-  // 1. Buscar si ya existe usuario con este google_id
   const [existingGoogleUsers] = await pool.query<RowDataPacket[]>(
     'SELECT id, username, email, avatar_url, google_id, subscription_tier, two_factor_enabled FROM users WHERE google_id = ? LIMIT 1',
     [googleId]
@@ -164,7 +158,6 @@ export async function processGoogleAuthCallback(code: string, clientIp?: string)
     };
   }
 
-  // 2. Buscar si ya existe usuario registrado localmente con el mismo correo
   const [existingEmailUsers] = await pool.query<RowDataPacket[]>(
     'SELECT id, username, email, avatar_url, google_id, subscription_tier, two_factor_enabled FROM users WHERE email = ? LIMIT 1',
     [email]
@@ -193,7 +186,6 @@ export async function processGoogleAuthCallback(code: string, clientIp?: string)
     };
   }
 
-  // 3. Crear nuevo usuario federado con metadatos de registro GeoIP y ASN
   const baseName = googleUser.name || email.split('@')[0];
   const uniqueUsername = await generateUniqueUsername(baseName);
 

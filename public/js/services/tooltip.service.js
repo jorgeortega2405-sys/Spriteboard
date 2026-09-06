@@ -1,19 +1,9 @@
-/**
- * Sistema de Tooltips Dinámicos utilizando Popper.js
- * Soporta creación y destrucción dinámica en el DOM bajo demanda,
- * evitando elementos ocultos innecesarios en el HTML.
- */
-
 let tooltipEl = null;
 let tooltipText = null;
 let tooltipArrow = null;
 let currentPopperInstance = null;
 let activeTarget = null;
 
-/**
- * Crea la estructura DOM del tooltip únicamente cuando se necesita mostrarlo.
- * CERO IDs, orden estricto de atributos (class primero, data-ref después).
- */
 function createTooltipElement(text) {
   const el = document.createElement('div');
   el.className = 'tooltip';
@@ -36,9 +26,6 @@ function createTooltipElement(text) {
   return { el, content, arrow };
 }
 
-/**
- * Muestra el tooltip para el elemento objetivo, creándolo dinámicamente en el DOM.
- */
 export function showTooltip(target) {
   if (!target) return;
   const text = target.getAttribute('data-tooltip');
@@ -47,7 +34,6 @@ export function showTooltip(target) {
     return;
   }
 
-  // Si ya se está mostrando para el mismo target
   if (activeTarget === target && tooltipEl && tooltipText) {
     if (tooltipText.textContent !== text) {
       tooltipText.textContent = text;
@@ -58,10 +44,8 @@ export function showTooltip(target) {
     return;
   }
 
-  // Si había otro tooltip, destruirlo y eliminarlo del DOM
   hideTooltip();
 
-  // Generar dinámicamente en el DOM
   const elements = createTooltipElement(text);
   tooltipEl = elements.el;
   tooltipText = elements.content;
@@ -107,7 +91,6 @@ export function showTooltip(target) {
     currentPopperInstance.update();
   }
 
-  // Transición suave de entrada
   requestAnimationFrame(() => {
     if (tooltipEl && activeTarget === target) {
       tooltipEl.classList.add('is-visible');
@@ -115,9 +98,6 @@ export function showTooltip(target) {
   });
 }
 
-/**
- * Oculta y ELIMINA por completo el tooltip del DOM, garantizando que nunca quede oculto en el HTML.
- */
 export function hideTooltip() {
   activeTarget = null;
 
@@ -134,9 +114,6 @@ export function hideTooltip() {
   }
 }
 
-/**
- * Inicializa delegación de eventos globales para cualquier elemento con data-tooltip
- */
 export function initTooltips() {
   document.addEventListener('mouseover', (e) => {
     const target = e.target.closest('[data-tooltip]');
@@ -148,7 +125,6 @@ export function initTooltips() {
   document.addEventListener('mouseout', (e) => {
     const target = e.target.closest('[data-tooltip]');
     if (target && target === activeTarget) {
-      // Si el cursor aún sigue dentro de target (ej. sobre un hijo svg/span), no ocultar
       if (e.relatedTarget && target.contains(e.relatedTarget)) {
         return;
       }
@@ -176,8 +152,6 @@ export function initTooltips() {
     if (!activeTarget) return;
     const target = e.target.closest('[data-tooltip]');
     if (target && target === activeTarget) {
-      // Si se hizo clic en el elemento activo (ej. toggle de visibilidad de contraseña),
-      // actualizar el texto si cambió el atributo en su propio listener
       const newText = target.getAttribute('data-tooltip');
       if (newText && tooltipText) {
         tooltipText.textContent = newText;

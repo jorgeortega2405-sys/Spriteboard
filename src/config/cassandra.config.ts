@@ -1,11 +1,10 @@
 import cassandra from 'cassandra-driver';
+import { dbManager, NoSqlAdapter } from './database.config.js';
 import { config } from './env.config.js';
 import { logger } from '../services/logger.service.js';
-import { NoSqlAdapter, dbManager } from './database.config.js';
 
 let isConnected = false;
 
-// Cliente de Cassandra configurado con reconexión automática y balanceo de carga
 export const cassandraClient = new cassandra.Client({
   contactPoints: config.cassandra.contactPoints,
   localDataCenter: config.cassandra.localDataCenter,
@@ -24,9 +23,6 @@ export const cassandraClient = new cassandra.Client({
   },
 });
 
-/**
- * Adaptador NoSQL para Apache Cassandra compatible con DatabaseManager
- */
 export class CassandraAdapter implements NoSqlAdapter {
   name = 'cassandra';
 
@@ -56,13 +52,9 @@ export class CassandraAdapter implements NoSqlAdapter {
 export const cassandraAdapter = new CassandraAdapter();
 dbManager.registerNoSql('cassandra', cassandraAdapter);
 
-/**
- * Inicializa el Keyspace y las tablas CQL optimizadas para series de tiempo
- */
 export async function runCassandraMigrations(): Promise<void> {
   const keyspace = config.cassandra.keyspace;
 
-  // 1. Crear Keyspace si no existe
   await cassandraClient.execute(`
     CREATE KEYSPACE IF NOT EXISTS ${keyspace}
     WITH replication = {
@@ -71,7 +63,6 @@ export async function runCassandraMigrations(): Promise<void> {
     };
   `);
 
-  // 2. Tablas de métricas HTTP con particionamiento por día y ordenamiento temporal
   await cassandraClient.execute(`
     CREATE TABLE IF NOT EXISTS ${keyspace}.http_metrics (
       bucket_day text,
@@ -100,7 +91,6 @@ export async function runCassandraMigrations(): Promise<void> {
     ) WITH CLUSTERING ORDER BY (created_at DESC, id DESC);
   `);
 
-  // 3. Tablas de eventos de telemetría general y por categoría
   await cassandraClient.execute(`
     CREATE TABLE IF NOT EXISTS ${keyspace}.events (
       bucket_day text,
@@ -129,7 +119,6 @@ export async function runCassandraMigrations(): Promise<void> {
     ) WITH CLUSTERING ORDER BY (created_at DESC, id DESC);
   `);
 
-  // 4. Métricas de proceso y sistema Node.js
   await cassandraClient.execute(`
     CREATE TABLE IF NOT EXISTS ${keyspace}.system_metrics (
       bucket_day text,
@@ -144,7 +133,6 @@ export async function runCassandraMigrations(): Promise<void> {
     ) WITH CLUSTERING ORDER BY (created_at DESC, id DESC);
   `);
 
-  // 5. Métricas de rendimiento de frontend (Core Web Vitals)
   await cassandraClient.execute(`
     CREATE TABLE IF NOT EXISTS ${keyspace}.web_vitals (
       bucket_day text,
@@ -161,9 +149,6 @@ export async function runCassandraMigrations(): Promise<void> {
   logger.db.info(`Tablas CQL de telemetría verificadas en keyspace "${keyspace}".`);
 }
 
-/**
- * Conexión resiliente a Apache Cassandra con reintentos y tolerancia a inicialización lenta
- */
 export async function checkCassandraConnection(retries = 25, delayMs = 3000): Promise<void> {
   const contactPointsStr = config.cassandra.contactPoints.join(', ');
   for (let i = 1; i <= retries; i++) {

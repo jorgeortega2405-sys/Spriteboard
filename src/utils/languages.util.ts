@@ -1,7 +1,3 @@
-/**
- * Catálogo Oficial de 113 Idiomas Soportados por Spriteboard
- */
-
 export interface LanguageItem {
   code: string;
   name: string;

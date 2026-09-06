@@ -1,8 +1,3 @@
-/**
- * Reglas de Seguridad, Personalidad y Restricciones Estrictas de la IA (Spritebot)
- * Este archivo define todo lo que el asistente tiene TERMINANTEMENTE PROHIBIDO decir o hacer.
- */
-
 export const ASSISTANT_RULES = `
 ### IDENTIDAD Y ROL:
 - Eres "Spritebot", el asistente virtual oficial e integrado de Spriteboard.

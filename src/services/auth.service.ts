@@ -1,13 +1,12 @@
+import { pool } from '../config/database.config.js';
+import { config } from '../config/env.config.js';
+import { redis } from '../config/redis.config.js';
+import { MultiAccountSessionPayload, SessionAccount, UserPayload } from '../types/auth.types.js';
+import { geoIpService } from './geoip.service.js';
+import { logger } from './logger.service.js';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { Request, Response } from 'express';
-import { config } from '../config/env.config.js';
-import { UserPayload, SessionAccount, MultiAccountSessionPayload } from '../types/auth.types.js';
-
-import { pool } from '../config/database.config.js';
-import { redis } from '../config/redis.config.js';
-import { logger } from './logger.service.js';
-import { geoIpService } from './geoip.service.js';
 
 export const COOKIE_NAME = 'sprite_session';
 export const MAX_CONCURRENT_ACCOUNTS = 5;
@@ -15,7 +14,7 @@ export const REVOCATION_PREFIX = 'session_revoked:';
 export const SESSION_PREFIX = 'session:';
 export const USER_SESSIONS_PREFIX = 'user_sessions:';
 export const SESSION_EVENTS_CHANNEL = 'auth:session_events';
-export const SESSION_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 días
+export const SESSION_TTL_SECONDS = 7 * 24 * 60 * 60;
 
 export async function hashPassword(password: string): Promise<string> {
   const salt = await bcrypt.genSalt(10);
@@ -26,13 +25,12 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
   return bcrypt.compare(password, hash);
 }
 
-// Firmar payload multicuentas de sesión con iat y exp integrados
 export function createMultiAccountToken(session: MultiAccountSessionPayload): string {
   const now = Date.now();
   const sessionWithMeta: MultiAccountSessionPayload = {
     ...session,
     iat: session.iat || now,
-    exp: session.exp || (now + 7 * 24 * 60 * 60 * 1000), // 7 días de vigencia estricta
+    exp: session.exp || (now + 7 * 24 * 60 * 60 * 1000),
   };
   const payloadStr = JSON.stringify(sessionWithMeta);
   const payloadBase64 = Buffer.from(payloadStr, 'utf-8').toString('base64url');
@@ -40,7 +38,6 @@ export function createMultiAccountToken(session: MultiAccountSessionPayload): st
   return `${payloadBase64}.${signature}`;
 }
 
-// Firmar payload de sesión clásica (compatibilidad hacia atrás)
 export function createSessionToken(user: UserPayload): string {
   return createMultiAccountToken({
     activeId: user.id,
@@ -58,7 +55,6 @@ export function createSessionToken(user: UserPayload): string {
   });
 }
 
-// Verificar y extraer sesión multicuentas validando firma y expiración
 export function verifyMultiAccountToken(token: string): MultiAccountSessionPayload | null {
   try {
     const parts = token.split('.');
@@ -78,7 +74,6 @@ export function verifyMultiAccountToken(token: string): MultiAccountSessionPaylo
     const parsed = JSON.parse(payloadStr);
 
     if (parsed && typeof parsed === 'object') {
-      // Validar expiración criptográfica del token (previene reutilización si expiró)
       if (parsed.exp && typeof parsed.exp === 'number' && Date.now() > parsed.exp) {
         return null;
       }
@@ -86,7 +81,6 @@ export function verifyMultiAccountToken(token: string): MultiAccountSessionPaylo
       if (Array.isArray(parsed.accounts) && typeof parsed.activeId === 'number') {
         return parsed as MultiAccountSessionPayload;
       } else if (typeof parsed.id === 'number') {
-        // Sesión clásica de usuario individual migrada en caliente
         return {
           activeId: parsed.id,
           iat: parsed.iat,
@@ -111,9 +105,6 @@ export function verifyMultiAccountToken(token: string): MultiAccountSessionPaylo
   }
 }
 
-/**
- * Registra una nueva sesión activa en Redis con metadatos de auditoría
- */
 export async function registerActiveSession(
   userId: number,
   ip?: string,
@@ -153,9 +144,6 @@ export async function registerActiveSession(
   return sessionId;
 }
 
-/**
- * Comprueba si un sessionId específico sigue existiendo en Redis
- */
 export async function isSessionActive(sessionId: string): Promise<boolean> {
   if (!sessionId) return false;
   try {
@@ -164,13 +152,10 @@ export async function isSessionActive(sessionId: string): Promise<boolean> {
     return exists === 1;
   } catch (err) {
     logger.db.error('Error al comprobar existencia de sesión en Redis', err);
-    return true; // Fail-open para resiliencia en micro-cortes
+    return true;
   }
 }
 
-/**
- * Actualiza el TTL de la sesión activa en Redis
- */
 export async function touchSession(sessionId: string): Promise<void> {
   if (!sessionId) return;
   try {
@@ -179,9 +164,6 @@ export async function touchSession(sessionId: string): Promise<void> {
   } catch (_) {}
 }
 
-/**
- * Revoca en el servidor una sesión individual (logout de cuenta específica)
- */
 export async function revokeSession(sessionId: string, userId?: number): Promise<void> {
   if (!sessionId) return;
   try {
@@ -220,10 +202,6 @@ export async function revokeSession(sessionId: string, userId?: number): Promise
   }
 }
 
-/**
- * Revoca en el servidor todas las sesiones existentes de un usuario (para logout-all o cambio de contraseña)
- * y emite el evento Pub/Sub para que el microservicio WebSocket en Rust desconecte en vivo
- */
 export async function revokeAllUserSessions(
   userId: number,
   ip?: string,
@@ -246,7 +224,6 @@ export async function revokeAllUserSessions(
     const key = `${REVOCATION_PREFIX}${userId}`;
     await redis.setex(key, SESSION_TTL_SECONDS, String(now));
 
-    // Publicar evento en Redis Pub/Sub para desconexión en vivo inmediata por WebSocket
     await redis.publish(
       SESSION_EVENTS_CHANNEL,
       JSON.stringify({
@@ -256,7 +233,6 @@ export async function revokeAllUserSessions(
       })
     );
 
-    // Registrar en auditoría MySQL
     try {
       await pool.query(
         'INSERT INTO user_audit_logs (user_id, action, old_value, new_value, ip_address, user_agent) VALUES (?, ?, ?, ?, ?, ?)',
@@ -272,16 +248,12 @@ export async function revokeAllUserSessions(
   }
 }
 
-/**
- * Comprueba si la sesión ha sido revocada en el servidor validando sessionId activo y timestamp global
- */
 export async function isSessionRevoked(
   userId: number,
   tokenIat?: number,
   sessionId?: string
 ): Promise<boolean> {
   try {
-    // 1. Si el token contiene sessionId, verificar que siga existiendo en Redis
     if (sessionId) {
       const active = await isSessionActive(sessionId);
       if (!active) {
@@ -289,7 +261,6 @@ export async function isSessionRevoked(
       }
     }
 
-    // 2. Validar marca global de revocación masiva para este usuario
     if (tokenIat) {
       const key = `${REVOCATION_PREFIX}${userId}`;
       const revokedAtStr = await redis.get(key);
@@ -304,11 +275,10 @@ export async function isSessionRevoked(
     return false;
   } catch (error) {
     logger.db.error('Error al verificar revocación de sesión en Redis', error);
-    return false; // Fail-open resiliente
+    return false;
   }
 }
 
-// Verificar y extraer usuario activo de la sesión
 export function verifySessionToken(token: string): UserPayload | null {
   const session = verifyMultiAccountToken(token);
   if (!session) return null;
@@ -316,14 +286,12 @@ export function verifySessionToken(token: string): UserPayload | null {
   return activeAccount || session.accounts[0] || null;
 }
 
-// Obtener la sesión multicuentas desde la request HTTP
 export function getMultiAccountSession(req: Request): MultiAccountSessionPayload | null {
   const token = req.cookies?.[COOKIE_NAME];
   if (!token) return null;
   return verifyMultiAccountToken(token);
 }
 
-// Configurar cookie con el payload multicuentas
 export function setMultiAccountCookie(res: Response, session: MultiAccountSessionPayload): void {
   if (res.headersSent) return;
   const token = createMultiAccountToken(session);
@@ -331,11 +299,10 @@ export function setMultiAccountCookie(res: Response, session: MultiAccountSessio
     httpOnly: true,
     sameSite: 'lax',
     secure: config.nodeEnv === 'production',
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 días
+    maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 }
 
-// Configurar cookie de sesión simple (compatibilidad)
 export function setSessionCookie(res: Response, user: UserPayload): void {
   if (res.headersSent) return;
   const token = createSessionToken(user);
@@ -343,11 +310,10 @@ export function setSessionCookie(res: Response, user: UserPayload): void {
     httpOnly: true,
     sameSite: 'lax',
     secure: config.nodeEnv === 'production',
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 días
+    maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 }
 
-// Agregar o actualizar una cuenta en el pool de la sesión
 export async function addAccountToSession(
   res: Response,
   req: Request,
@@ -382,7 +348,6 @@ export async function addAccountToSession(
   if (existingIndex >= 0) {
     accounts[existingIndex] = sessionAcc;
   } else {
-    // Si se alcanza el límite máximo de 5 cuentas, descartar la menos recientemente accedida
     if (accounts.length >= MAX_CONCURRENT_ACCOUNTS) {
       accounts.sort((a, b) => (a.last_accessed || 0) - (b.last_accessed || 0));
       const removed = accounts.shift();
@@ -403,7 +368,6 @@ export async function addAccountToSession(
   return newSession;
 }
 
-// Cambiar la cuenta activa dentro del pool de la sesión
 export function switchAccountInSession(
   res: Response,
   req: Request,
@@ -427,7 +391,6 @@ export function switchAccountInSession(
   return { success: true, activeUser: target, accounts: session.accounts };
 }
 
-// Remover una cuenta del pool de la sesión (o la activa si no se especifica)
 export async function removeAccountFromSession(
   res: Response,
   req: Request,
@@ -452,7 +415,6 @@ export async function removeAccountFromSession(
     return { remainingCount: 0, activeUser: null, accounts: [] };
   }
 
-  // Si se removió la cuenta activa, activar la más recientemente accedida de las restantes
   if (session.activeId === idToRemove) {
     session.accounts.sort((a, b) => (b.last_accessed || 0) - (a.last_accessed || 0));
     session.activeId = session.accounts[0].id;
@@ -464,7 +426,6 @@ export async function removeAccountFromSession(
   return { remainingCount: session.accounts.length, activeUser, accounts: session.accounts };
 }
 
-// Actualizar los datos de la cuenta activa en la sesión sin perder las demás cuentas
 export function updateActiveAccountInSession(
   res: Response,
   req: Request,
@@ -484,7 +445,6 @@ export function updateActiveAccountInSession(
   }
 }
 
-// Limpiar todas las cuentas de la sesión
 export function clearSessionCookie(res: Response): void {
   if (res.headersSent) return;
   res.clearCookie(COOKIE_NAME, {
@@ -494,9 +454,6 @@ export function clearSessionCookie(res: Response): void {
   });
 }
 
-/**
- * Actualiza el subscription_tier en las sesiones activas de Redis y publica evento de cambio
- */
 export async function updateUserSubscriptionInSessions(
   userId: number,
   tier: string
@@ -519,7 +476,6 @@ export async function updateUserSubscriptionInSessions(
       }
     }
 
-    // Publicar evento en Redis Pub/Sub para que otros microservicios sincronicen
     await redis.publish(
       SESSION_EVENTS_CHANNEL,
       JSON.stringify({

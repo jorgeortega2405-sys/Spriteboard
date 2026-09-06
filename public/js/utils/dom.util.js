@@ -1,21 +1,5 @@
-/**
- * Utilidades DOM y UI para la SPA de Spriteboard
- * Centraliza operaciones repetitivas sobre elementos del DOM garantizando:
- * - CERO atributos ID (exclusivamente data-ref y selectores semánticos)
- * - CERO llamadas a console.*
- * - Gestión limpia de eventos y ciclo de vida
- */
-
 import { navigate } from '../app-router.js';
 
-/**
- * Configura la alternancia de visibilidad en campos de contraseña (toggle password)
- * @param {HTMLElement|null} toggleBtn - Botón que activa/desactiva la visibilidad
- * @param {HTMLInputElement|null} passwordInput - Campo input de tipo contraseña
- * @param {Object} [options]
- * @param {string} [options.showTooltip='Mostrar contraseña']
- * @param {string} [options.hideTooltip='Ocultar contraseña']
- */
 export function setupPasswordToggle(toggleBtn, passwordInput, options = {}) {
   if (!toggleBtn || !passwordInput) return;
 
@@ -37,14 +21,6 @@ export function setupPasswordToggle(toggleBtn, passwordInput, options = {}) {
   });
 }
 
-/**
- * Crea un controlador de banners de error y éxito para formularios
- * @param {HTMLElement} container - Contenedor raíz de la vista
- * @param {Object} options
- * @param {string} [options.errorRef] - Selector data-ref del banner de error
- * @param {string} [options.successRef] - Selector data-ref del banner de éxito
- * @returns {{ showError: (msg: string) => void, showSuccess: (msg: string) => void, hideAll: () => void, hideError: () => void, hideSuccess: () => void }}
- */
 export function createBannerManager(container, options = {}) {
   const errorBanner = options.errorRef
     ? container.querySelector(`[data-ref="${options.errorRef}"]`)
@@ -98,12 +74,6 @@ export function createBannerManager(container, options = {}) {
   };
 }
 
-/**
- * Ejecuta una acción asíncrona gestionando el estado de carga y texto en un botón
- * @param {HTMLButtonElement|null} button - Botón a desactivar
- * @param {string} loadingText - Texto mientras se procesa
- * @param {() => Promise<void>} asyncCallback - Función asíncrona a ejecutar
- */
 export async function withButtonLoading(button, loadingText, asyncCallback) {
   if (!button) {
     await asyncCallback();
@@ -122,11 +92,6 @@ export async function withButtonLoading(button, loadingText, asyncCallback) {
   }
 }
 
-/**
- * Asocia el evento Enter en uno o varios inputs para ejecutar una función de envío
- * @param {HTMLInputElement|HTMLInputElement[]|NodeList} inputs - Inputs a escuchar
- * @param {() => void} submitCallback - Callback al presionar Enter
- */
 export function bindSubmitOnEnter(inputs, submitCallback) {
   if (!inputs) return;
 
@@ -146,11 +111,6 @@ export function bindSubmitOnEnter(inputs, submitCallback) {
   });
 }
 
-/**
- * Asocia eventos de clic a múltiples enlaces o botones de navegación SPA
- * @param {HTMLElement} container - Contenedor raíz
- * @param {Record<string, string>} routesMap - Mapeo de selectores a rutas SPA
- */
 export function bindNavigationLinks(container, routesMap) {
   if (!container || !routesMap) return;
 
@@ -166,12 +126,6 @@ export function bindNavigationLinks(container, routesMap) {
   });
 }
 
-/**
- * Configura un dropdown interactivo con soporte de desktop y mobile (drawer con drag & drop)
- * @param {HTMLElement|null} wrapper - Contenedor `.settings-dropdown-wrapper`
- * @param {Object} [options]
- * @param {(value: string, itemEl: HTMLElement) => void} [options.onSelect] - Callback al seleccionar una opción
- */
 export function setupDropdown(wrapper, options = {}) {
   if (!wrapper) return { open: () => {}, close: () => {}, toggle: () => {}, update: () => {} };
 
@@ -338,7 +292,6 @@ export function setupDropdown(wrapper, options = {}) {
     }
   });
 
-  // Drag and drop en móviles
   let startY = 0;
   let currentY = 0;
   let isDragging = false;
@@ -416,7 +369,6 @@ export function setupDropdown(wrapper, options = {}) {
   };
   document.addEventListener('keydown', onDocKeydown);
 
-  // Delegación de clics para opciones del menú (funciona con elementos estáticos y dinámicos)
   menu?.addEventListener('click', (e) => {
     const item = e.target.closest('.menu-item, [data-ref*="option"]');
     if (!item || !menu.contains(item)) return;
@@ -465,12 +417,6 @@ export function setupDropdown(wrapper, options = {}) {
   };
 }
 
-/**
- * Crea una versión debounced de una función para amortiguar llamadas repetitivas
- * @param {(...args: any[]) => void} fn
- * @param {number} [delayMs=350]
- * @returns {(...args: any[]) => void}
- */
 export function debounce(fn, delayMs = 350) {
   let timer = null;
   return function (...args) {
@@ -480,4 +426,3 @@ export function debounce(fn, delayMs = 350) {
     }, delayMs);
   };
 }
-

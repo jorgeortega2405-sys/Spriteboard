@@ -1,56 +1,12 @@
-/**
- * Controlador de Ajustes, Perfil, Preferencias y Auditoría
- */
-
-import { Request, Response } from 'express';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
-import {
-  updateActiveAccountInSession,
-  removeAccountFromSession,
-  addAccountToSession,
-} from '../services/auth.service.js';
-import {
-  updateAvatar,
-  deleteAvatar,
-  updateUsername,
-  requestEmailChangeCode,
-  verifyEmailChange,
-  updateEmail,
-  getUserPreferences,
-  updateUserPreferences,
-  getPasswordStatus,
-  verifyCurrentPassword,
-  updateUserPasswordFromSettings,
-  logUserAudit,
-} from '../services/settings.service.js';
-import {
-  findUserById,
-  enableUser2FA,
-  disableUser2FA,
-  deleteUserPermanently,
-} from '../services/user.service.js';
-import {
-  generateTotpSecret,
-  generateBackupCodes,
-  getOtpAuthUrl,
-  verifyTotpCode,
-  savePending2FASetup,
-  getPending2FASetup,
-  clearPending2FASetup,
-} from '../services/two-factor.service.js';
-import {
-  sendSuccess,
-  sendBadRequest,
-  sendUnauthorized,
-  sendConflict,
-  sendInternalError,
-  sanitizeUser,
-} from '../utils/http.util.js';
+import { addAccountToSession, removeAccountFromSession, updateActiveAccountInSession } from '../services/auth.service.js';
 import { logger } from '../services/logger.service.js';
+import { deleteAvatar, getPasswordStatus, getUserPreferences, logUserAudit, requestEmailChangeCode, updateAvatar, updateEmail, updateUserPasswordFromSettings, updateUserPreferences, updateUsername, verifyCurrentPassword, verifyEmailChange } from '../services/settings.service.js';
+import { clearPending2FASetup, generateBackupCodes, generateTotpSecret, getOtpAuthUrl, getPending2FASetup, savePending2FASetup, verifyTotpCode } from '../services/two-factor.service.js';
+import { deleteUserPermanently, disableUser2FA, enableUser2FA, findUserById } from '../services/user.service.js';
+import { sanitizeUser, sendBadRequest, sendConflict, sendInternalError, sendSuccess, sendUnauthorized } from '../utils/http.util.js';
+import { Request, Response } from 'express';
 
-/**
- * Actualizar avatar del usuario
- */
 export async function handleUpdateAvatar(req: Request, res: Response): Promise<void> {
   try {
     const currentUser = getCurrentUser(req);
@@ -91,9 +47,6 @@ export async function handleUpdateAvatar(req: Request, res: Response): Promise<v
   }
 }
 
-/**
- * Eliminar avatar del usuario (restablecer a default)
- */
 export async function handleDeleteAvatar(req: Request, res: Response): Promise<void> {
   try {
     const currentUser = getCurrentUser(req);
@@ -128,9 +81,6 @@ export async function handleDeleteAvatar(req: Request, res: Response): Promise<v
   }
 }
 
-/**
- * Actualizar nombre de usuario
- */
 export async function handleUpdateUsername(req: Request, res: Response): Promise<void> {
   try {
     const currentUser = getCurrentUser(req);
@@ -176,9 +126,6 @@ export async function handleUpdateUsername(req: Request, res: Response): Promise
   }
 }
 
-/**
- * Solicitar código de verificación para cambio de correo
- */
 export async function handleRequestEmailChangeCode(req: Request, res: Response): Promise<void> {
   try {
     const currentUser = getCurrentUser(req);
@@ -209,9 +156,6 @@ export async function handleRequestEmailChangeCode(req: Request, res: Response):
   }
 }
 
-/**
- * Verificar código de cambio de correo y emitir token temporal
- */
 export async function handleVerifyEmailChangeCode(req: Request, res: Response): Promise<void> {
   try {
     const currentUser = getCurrentUser(req);
@@ -242,9 +186,6 @@ export async function handleVerifyEmailChangeCode(req: Request, res: Response): 
   }
 }
 
-/**
- * Actualizar correo electrónico utilizando el token de autorización
- */
 export async function handleUpdateEmail(req: Request, res: Response): Promise<void> {
   try {
     const currentUser = getCurrentUser(req);
@@ -292,9 +233,6 @@ export async function handleUpdateEmail(req: Request, res: Response): Promise<vo
   }
 }
 
-/**
- * Obtener preferencias del usuario
- */
 export async function handleGetPreferences(req: Request, res: Response): Promise<void> {
   try {
     const currentUser = getCurrentUser(req);
@@ -310,9 +248,6 @@ export async function handleGetPreferences(req: Request, res: Response): Promise
   }
 }
 
-/**
- * Actualizar preferencias del usuario
- */
 export async function handleUpdatePreferences(req: Request, res: Response): Promise<void> {
   try {
     const currentUser = getCurrentUser(req);
@@ -331,9 +266,6 @@ export async function handleUpdatePreferences(req: Request, res: Response): Prom
   }
 }
 
-/**
- * Consultar estado de acceso y credenciales (si tiene Google y/o contraseña)
- */
 export async function handleGetPasswordStatus(req: Request, res: Response): Promise<void> {
   try {
     const currentUser = getCurrentUser(req);
@@ -349,9 +281,6 @@ export async function handleGetPasswordStatus(req: Request, res: Response): Prom
   }
 }
 
-/**
- * Verificar contraseña actual del usuario
- */
 export async function handleVerifyCurrentPassword(req: Request, res: Response): Promise<void> {
   try {
     const currentUser = getCurrentUser(req);
@@ -374,9 +303,6 @@ export async function handleVerifyCurrentPassword(req: Request, res: Response): 
   }
 }
 
-/**
- * Actualizar contraseña del usuario
- */
 export async function handleUpdatePassword(req: Request, res: Response): Promise<void> {
   try {
     const currentUser = getCurrentUser(req);
@@ -402,7 +328,6 @@ export async function handleUpdatePassword(req: Request, res: Response): Promise
       return;
     }
 
-    // Re-emitir sesión activa válida para este dispositivo manteniendo las cuentas vinculadas
     const updatedUser = await findUserById(currentUser.id);
     if (updatedUser) {
       await addAccountToSession(res, req, sanitizeUser(updatedUser));
@@ -414,9 +339,6 @@ export async function handleUpdatePassword(req: Request, res: Response): Promise
   }
 }
 
-/**
- * Generar nuevo secreto y códigos de respaldo para configurar 2FA
- */
 export async function handleGenerate2FA(req: Request, res: Response): Promise<void> {
   try {
     const currentUser = getCurrentUser(req);
@@ -425,7 +347,6 @@ export async function handleGenerate2FA(req: Request, res: Response): Promise<vo
       return;
     }
 
-    // Reutilizar configuración pendiente existente si aún no ha expirado y no se solicita regenerar
     const forceNew = req.query.force === 'true';
     let pending = forceNew ? null : await getPending2FASetup(currentUser.id);
 
@@ -455,9 +376,6 @@ export async function handleGenerate2FA(req: Request, res: Response): Promise<vo
   }
 }
 
-/**
- * Confirmar código de la app y activar 2FA
- */
 export async function handleEnable2FA(req: Request, res: Response): Promise<void> {
   try {
     const currentUser = getCurrentUser(req);
@@ -478,7 +396,6 @@ export async function handleEnable2FA(req: Request, res: Response): Promise<void
       return;
     }
 
-    // Usar ventana de tolerancia de ±120s (4 pasos) durante la configuración inicial para absorber desincronizaciones de reloj
     const isValid = verifyTotpCode(code.trim(), pending.secret, 4);
     if (!isValid) {
       logger.security.warn('Código TOTP incorrecto al intentar activar 2FA', { userId: currentUser.id });
@@ -486,13 +403,9 @@ export async function handleEnable2FA(req: Request, res: Response): Promise<void
       return;
     }
 
-    // Activar en base de datos
     await enableUser2FA(currentUser.id, pending.secret, pending.backupCodes);
-
-    // Limpiar configuración pendiente en Redis
     await clearPending2FASetup(currentUser.id);
 
-    // Registrar en auditoría
     await logUserAudit(
       currentUser.id,
       '2fa_enabled',
@@ -502,7 +415,6 @@ export async function handleEnable2FA(req: Request, res: Response): Promise<void
       req.headers['user-agent']
     );
 
-    // Actualizar cuenta activa en sesión
     const updatedUser = await findUserById(currentUser.id);
     if (updatedUser) {
       updateActiveAccountInSession(res, req, sanitizeUser(updatedUser));
@@ -524,9 +436,6 @@ export async function handleEnable2FA(req: Request, res: Response): Promise<void
   }
 }
 
-/**
- * Desactivar 2FA
- */
 export async function handleDisable2FA(req: Request, res: Response): Promise<void> {
   try {
     const currentUser = getCurrentUser(req);
@@ -537,7 +446,6 @@ export async function handleDisable2FA(req: Request, res: Response): Promise<voi
 
     await disableUser2FA(currentUser.id);
 
-    // Registrar en auditoría
     await logUserAudit(
       currentUser.id,
       '2fa_disabled',
@@ -567,9 +475,6 @@ export async function handleDisable2FA(req: Request, res: Response): Promise<voi
   }
 }
 
-/**
- * Consultar estado de 2FA
- */
 export async function handleGet2FAStatus(req: Request, res: Response): Promise<void> {
   try {
     const currentUser = getCurrentUser(req);
@@ -592,9 +497,6 @@ export async function handleGet2FAStatus(req: Request, res: Response): Promise<v
   }
 }
 
-/**
- * Eliminar la cuenta del usuario activo y purgar todos sus datos permanentemente
- */
 export async function handleDeleteAccount(req: Request, res: Response): Promise<void> {
   try {
     const currentUser = getCurrentUser(req);
@@ -610,7 +512,6 @@ export async function handleDeleteAccount(req: Request, res: Response): Promise<
       return;
     }
 
-    // Remover cuenta de la sesión multicuentas (conmuta a la siguiente o limpia cookies)
     const sessionResult = await removeAccountFromSession(res, req, userId);
 
     logger.security.info('Cuenta eliminada permanentemente por el usuario', {
@@ -634,5 +535,3 @@ export async function handleDeleteAccount(req: Request, res: Response): Promise<
     );
   }
 }
-
-

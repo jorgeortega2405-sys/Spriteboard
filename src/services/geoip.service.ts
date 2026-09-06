@@ -1,15 +1,9 @@
-/**
- * Servicio de Geolocalización Local por IP y Detección de Proveedor ASN (ISP)
- * Utiliza bases de datos binarias locales MMDB (MaxMind GeoLite2 o DB-IP Lite)
- * 100% offline, seguro, resiliente y de alto rendimiento.
- */
-
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import maxmind, { Reader, CityResponse, AsnResponse } from 'maxmind';
 import { config } from '../config/env.config.js';
 import { logger } from './logger.service.js';
+import fs from 'fs';
+import maxmind, { AsnResponse, CityResponse, Reader } from 'maxmind';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -32,9 +26,6 @@ class GeoIpService {
   private asnReader: Reader<AsnResponse> | null = null;
   private isInitialized = false;
 
-  /**
-   * Resuelve la ruta al archivo de base de datos City/Country
-   */
   private findCityDbPath(): string | null {
     if (config.geoip.cityDbPath && fs.existsSync(config.geoip.cityDbPath)) {
       return config.geoip.cityDbPath;
@@ -53,9 +44,6 @@ class GeoIpService {
     return null;
   }
 
-  /**
-   * Resuelve la ruta al archivo de base de datos ASN/ISP
-   */
   private findAsnDbPath(): string | null {
     if (config.geoip.asnDbPath && fs.existsSync(config.geoip.asnDbPath)) {
       return config.geoip.asnDbPath;
@@ -72,9 +60,6 @@ class GeoIpService {
     return null;
   }
 
-  /**
-   * Inicializa los lectores de bases de datos MMDB en memoria
-   */
   public async init(): Promise<void> {
     try {
       const cityPath = this.findCityDbPath();
@@ -101,21 +86,16 @@ class GeoIpService {
       this.isInitialized = true;
     } catch (err) {
       logger.app.error('Error al inicializar bases de datos locales GeoIP', err);
-      // Fail-safe: No impedir que el servidor inicie en caso de error de lectura de archivo
       this.isInitialized = true;
     }
   }
 
-  /**
-   * Comprueba si una IP es de bucle invertido o rango privado RFC 1918 / RFC 4193
-   */
   public isLocalOrPrivateIp(rawIp: string): boolean {
     const ip = this.normalizeIp(rawIp);
     if (!ip || ip === 'localhost' || ip === '127.0.0.1' || ip === '::1' || ip === '0.0.0.0') {
       return true;
     }
 
-    // Rangos IPv4 privados: 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16
     if (
       /^10\./.test(ip) ||
       /^192\.168\./.test(ip) ||
@@ -125,7 +105,6 @@ class GeoIpService {
       return true;
     }
 
-    // Rangos IPv6 privados/locales: fc00::/7, fe80::/10
     if (/^f[cd][0-9a-f]{2}:/i.test(ip) || /^fe80:/i.test(ip)) {
       return true;
     }
@@ -133,9 +112,6 @@ class GeoIpService {
     return false;
   }
 
-  /**
-   * Normaliza una dirección IP (elimina prefijos ::ffff:)
-   */
   public normalizeIp(ip?: string | null): string {
     if (!ip) return '127.0.0.1';
     let clean = ip.trim();
@@ -145,9 +121,6 @@ class GeoIpService {
     return clean;
   }
 
-  /**
-   * Realiza la consulta local de ubicación e ISP para una IP dada
-   */
   public lookup(rawIp: string): GeoIpLookupResult {
     const ip = this.normalizeIp(rawIp);
     const isLocal = this.isLocalOrPrivateIp(ip);
@@ -218,9 +191,6 @@ class GeoIpService {
     };
   }
 
-  /**
-   * Recarga las bases de datos en caliente sin reiniciar el proceso
-   */
   public async reload(): Promise<void> {
     await this.init();
   }

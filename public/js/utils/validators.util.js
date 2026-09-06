@@ -1,8 +1,3 @@
-/**
- * Utilidades de validación del lado cliente para formularios de Spriteboard
- * Mantiene coherencia estricta con las reglas del backend (src/utils/validators.ts)
- */
-
 import { t } from '../services/i18n.service.js';
 
 export const ALLOWED_EMAIL_DOMAINS = [
@@ -13,11 +8,6 @@ export const ALLOWED_EMAIL_DOMAINS = [
   'yahoo.com',
 ];
 
-/**
- * Valida formato, longitud y dominio de un correo electrónico
- * @param {string} email 
- * @returns {{ valid: boolean, error?: string }}
- */
 export function validateEmail(email) {
   if (!email || typeof email !== 'string') {
     return { valid: false, error: t('validation.email_required') };
@@ -48,11 +38,6 @@ export function validateEmail(email) {
   return { valid: true };
 }
 
-/**
- * Valida longitud mínima (8) y máxima (128) de la contraseña
- * @param {string} password 
- * @returns {{ valid: boolean, error?: string }}
- */
 export function validatePassword(password) {
   if (!password || typeof password !== 'string') {
     return { valid: false, error: t('validation.password_required') };
@@ -69,11 +54,6 @@ export function validatePassword(password) {
   return { valid: true };
 }
 
-/**
- * Valida longitud (3 a 30 caracteres) y caracteres permitidos del nombre de usuario
- * @param {string} username 
- * @returns {{ valid: boolean, error?: string }}
- */
 export function validateUsername(username) {
   if (!username || typeof username !== 'string') {
     return { valid: false, error: t('validation.username_required') };
@@ -96,11 +76,6 @@ export function validateUsername(username) {
   return { valid: true };
 }
 
-/**
- * Valida el formato del código de verificación de 6 dígitos
- * @param {string} code 
- * @returns {{ valid: boolean, error?: string }}
- */
 export function validateVerificationCode(code) {
   if (!code || typeof code !== 'string') {
     return { valid: false, error: t('validation.code_required') };

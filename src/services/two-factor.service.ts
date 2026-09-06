@@ -1,16 +1,9 @@
-/**
- * Servicio de Autenticación en Dos Factores (2FA) - RFC 6238 TOTP y Códigos de Respaldo
- */
-
-import crypto from 'crypto';
 import { redis } from '../config/redis.config.js';
 import { logger } from './logger.service.js';
+import crypto from 'crypto';
 
 const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 
-/**
- * Codifica un Buffer en Base32 (RFC 4648 sin padding)
- */
 export function base32Encode(buffer: Buffer): string {
   let bits = 0;
   let value = 0;
@@ -32,9 +25,6 @@ export function base32Encode(buffer: Buffer): string {
   return output;
 }
 
-/**
- * Decodifica una cadena Base32 a un Buffer
- */
 export function base32Decode(input: string): Buffer {
   const cleanInput = input.toUpperCase().replace(/=+$/, '').replace(/\s+/g, '');
   let bits = 0;
@@ -58,17 +48,11 @@ export function base32Decode(input: string): Buffer {
   return Buffer.from(bytes);
 }
 
-/**
- * Genera un secreto criptográfico aleatorio para TOTP (Base32)
- */
 export function generateTotpSecret(numBytes = 20): string {
   const bytes = crypto.randomBytes(numBytes);
   return base32Encode(bytes);
 }
 
-/**
- * Calcula un código TOTP de 6 dígitos para un secreto y contador dados (RFC 6238)
- */
 export function calculateTotpCode(secret: string, counter: number): string {
   const key = base32Decode(secret);
   const counterBuffer = Buffer.alloc(8);
@@ -86,9 +70,6 @@ export function calculateTotpCode(secret: string, counter: number): string {
   return code;
 }
 
-/**
- * Verifica si un código de 6 dígitos coincide con el secreto TOTP (ventana configurable, por defecto ±2 períodos de 30s)
- */
 export function verifyTotpCode(code: string, secret: string, windowSteps = 2): boolean {
   if (!code || typeof code !== 'string' || !secret) {
     return false;
@@ -112,9 +93,6 @@ export function verifyTotpCode(code: string, secret: string, windowSteps = 2): b
   return false;
 }
 
-/**
- * Genera la URI otpauth:// estándar para códigos QR
- */
 export function getOtpAuthUrl(
   secret: string,
   username: string,
@@ -125,9 +103,6 @@ export function getOtpAuthUrl(
   return `otpauth://totp/${safeIssuer}:${safeAccount}?secret=${secret}&issuer=${safeIssuer}`;
 }
 
-/**
- * Genera 10 códigos de respaldo alfanuméricos únicos (formato XXXX-XXXX)
- */
 export function generateBackupCodes(count = 10): string[] {
   const codes = new Set<string>();
   while (codes.size < count) {
@@ -138,17 +113,11 @@ export function generateBackupCodes(count = 10): string[] {
   return Array.from(codes);
 }
 
-/**
- * Genera el hash criptográfico SHA-256 de un código de respaldo
- */
 export function hashBackupCode(code: string): string {
   const clean = code.toUpperCase().replace(/\s+/g, '').replace(/-/g, '');
   return crypto.createHash('sha256').update(clean).digest('hex');
 }
 
-/**
- * Claves de prefijo en Redis
- */
 const REDIS_PREFIX_SETUP = '2fa:setup:';
 const REDIS_PREFIX_LOGIN = '2fa:login:';
 
@@ -157,9 +126,6 @@ export interface Pending2FASetup {
   backupCodes: string[];
 }
 
-/**
- * Guarda en Redis la configuración 2FA pendiente de confirmación (TTL: 15 minutos)
- */
 export async function savePending2FASetup(
   userId: number,
   data: Pending2FASetup,
@@ -169,9 +135,6 @@ export async function savePending2FASetup(
   await redis.setex(key, ttlSeconds, JSON.stringify(data));
 }
 
-/**
- * Obtiene la configuración 2FA pendiente de confirmación
- */
 export async function getPending2FASetup(userId: number): Promise<Pending2FASetup | null> {
   const key = `${REDIS_PREFIX_SETUP}${userId}`;
   const raw = await redis.get(key);
@@ -183,9 +146,6 @@ export async function getPending2FASetup(userId: number): Promise<Pending2FASetu
   }
 }
 
-/**
- * Limpia la configuración 2FA pendiente de confirmación
- */
 export async function clearPending2FASetup(userId: number): Promise<void> {
   const key = `${REDIS_PREFIX_SETUP}${userId}`;
   await redis.del(key);
@@ -196,9 +156,6 @@ export interface Pending2FALogin {
   email: string;
 }
 
-/**
- * Guarda en Redis un token de login que requiere segundo factor (TTL: 5 minutos)
- */
 export async function savePending2FALogin(
   tempToken: string,
   payload: Pending2FALogin,
@@ -208,9 +165,6 @@ export async function savePending2FALogin(
   await redis.setex(key, ttlSeconds, JSON.stringify(payload));
 }
 
-/**
- * Obtiene y valida un token de login temporal
- */
 export async function getPending2FALogin(tempToken: string): Promise<Pending2FALogin | null> {
   const key = `${REDIS_PREFIX_LOGIN}${tempToken}`;
   const raw = await redis.get(key);
@@ -222,9 +176,6 @@ export async function getPending2FALogin(tempToken: string): Promise<Pending2FAL
   }
 }
 
-/**
- * Consume y elimina un token de login temporal tras validación
- */
 export async function consumePending2FALogin(tempToken: string): Promise<Pending2FALogin | null> {
   const key = `${REDIS_PREFIX_LOGIN}${tempToken}`;
   const raw = await redis.get(key);

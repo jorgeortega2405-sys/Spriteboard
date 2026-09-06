@@ -1,41 +1,15 @@
-import { Router } from 'express';
-import {
-  validateStage1,
-  sendRegistrationCode,
-  verifyRegistrationCode,
-  resendRegistrationCode,
-  login,
-  verify2FALogin,
-  logout,
-  logoutAll,
-  switchAccount,
-  me,
-  redirectToGoogle,
-  redirectToGoogleVerify,
-  googleCallback,
-  forgotPassword,
-  validateResetToken,
-  resetPassword,
-} from '../controllers/auth.controller.js';
+import { forgotPassword, googleCallback, login, logout, logoutAll, me, redirectToGoogle, redirectToGoogleVerify, resetPassword, resendRegistrationCode, sendRegistrationCode, switchAccount, validateResetToken, validateStage1, verify2FALogin, verifyRegistrationCode } from '../controllers/auth.controller.js';
 import { requireAuth } from '../middlewares/auth.middleware.js';
-import {
-  registerLimiter,
-  sendCodeLimiter,
-  verifyCodeLimiter,
-  loginLimiter,
-  forgotPasswordLimiter,
-  resetPasswordLimiter,
-} from '../middlewares/rate-limit.middleware.js';
+import { forgotPasswordLimiter, loginLimiter, registerLimiter, resetPasswordLimiter, sendCodeLimiter, verifyCodeLimiter } from '../middlewares/rate-limit.middleware.js';
+import { Router } from 'express';
 
 const router = Router();
 
-// Rutas de registro multi-etapa protegidas con Rate Limiting
 router.post('/register/stage1-validate', registerLimiter, validateStage1);
 router.post('/register/send-code', sendCodeLimiter, sendRegistrationCode);
 router.post('/register/verify-code', verifyCodeLimiter, verifyRegistrationCode);
 router.post('/register/resend-code', sendCodeLimiter, resendRegistrationCode);
 
-// Sesión local y Google OAuth
 router.post('/login', loginLimiter, login);
 router.post('/login/verify-2fa', loginLimiter, verify2FALogin);
 router.post('/logout', logout);
@@ -49,7 +23,6 @@ router.get('/auth/google', redirectToGoogle);
 router.get('/auth/google/verify', requireAuth, redirectToGoogleVerify);
 router.get('/auth/google/callback', googleCallback);
 
-// Flujo de recuperación y restablecimiento de contraseña
 router.post('/forgot-password', forgotPasswordLimiter, forgotPassword);
 router.get('/reset-password/validate', validateResetToken);
 router.post('/reset-password', resetPasswordLimiter, resetPassword);

@@ -1,30 +1,18 @@
-/**
- * Servicio de WebSocket en Tiempo Real (Microservicio Rust)
- *
- * Solo establece conexión para usuarios autenticados con sesión activa.
- * Usuarios invitados/sin sesión no establecen conexión.
- */
-
-import { currentUser, clearUserState } from './api.service.js';
-import { showToast } from './toast.service.js';
-import { t } from './i18n.service.js';
 import { navigate } from '../app-router.js';
+import { clearUserState, currentUser } from './api.service.js';
+import { t } from './i18n.service.js';
+import { showToast } from './toast.service.js';
 
 let ws = null;
 let reconnectTimer = null;
 let isIntentionallyClosed = false;
 
-/**
- * Inicializa la conexión WebSocket si hay una sesión de usuario activa
- */
 export function initWebSocket() {
-  // Si el usuario no está logueado, no se establece conexión WebSocket
   if (!currentUser) {
     closeWebSocket();
     return;
   }
 
-  // Evitar conexiones duplicadas si ya está abierta o en proceso de apertura
   if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
     return;
   }
@@ -38,9 +26,7 @@ export function initWebSocket() {
   try {
     ws = new WebSocket(wsUrl);
 
-    ws.onopen = () => {
-      // Conexión exitosa sin registrar console.* según directiva AGENTS.md
-    };
+    ws.onopen = () => {};
 
     ws.onmessage = (event) => {
       try {
@@ -57,7 +43,6 @@ export function initWebSocket() {
 
     ws.onclose = () => {
       ws = null;
-      // Reintentar conexión automática solo si la sesión sigue activa y no fue cierre intencional
       if (!isIntentionallyClosed && currentUser) {
         clearTimeout(reconnectTimer);
         reconnectTimer = setTimeout(() => {
@@ -66,17 +51,12 @@ export function initWebSocket() {
       }
     };
 
-    ws.onerror = () => {
-      // Falla silenciosa sin ensuciar la consola
-    };
+    ws.onerror = () => {};
   } catch (_) {
     ws = null;
   }
 }
 
-/**
- * Cierra la conexión WebSocket y cancela cualquier reintento (logout o cambio de cuenta)
- */
 export function closeWebSocket() {
   isIntentionallyClosed = true;
   clearTimeout(reconnectTimer);

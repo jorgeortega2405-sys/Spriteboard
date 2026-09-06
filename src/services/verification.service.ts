@@ -1,5 +1,5 @@
-import crypto from 'crypto';
 import { redis } from '../config/redis.config.js';
+import crypto from 'crypto';
 
 export interface PendingRegistration {
   email: string;
@@ -11,7 +11,7 @@ export interface PendingRegistration {
 }
 
 const REDIS_REG_PREFIX = 'reg_pending:';
-const DEFAULT_TTL_SECONDS = 900; // 15 minutos
+const DEFAULT_TTL_SECONDS = 900;
 
 export function generateSixDigitCode(): string {
   return String(crypto.randomInt(100000, 1000000));
@@ -72,7 +72,6 @@ if tostring(data.code) ~= tostring(inputCode) then
   return {0, 'wrong_code', tostring(remaining)}
 end
 
--- Código válido: consumir atómicamente para prevenir reuso concurrente
 redis.call('DEL', key)
 return {1, raw}
 `;
@@ -84,7 +83,6 @@ export async function verifyAndConsumeCode(
   const key = `${REDIS_REG_PREFIX}${email.toLowerCase().trim()}`;
   const cleanInput = String(inputCode).trim();
 
-  // Ejecución atómica en Redis: elimina condiciones de carrera y protege contra ataques de fuerza bruta concurrentes
   const result = (await redis.eval(
     VERIFY_REG_CODE_LUA,
     1,
@@ -133,12 +131,8 @@ export async function deletePendingRegistration(email: string): Promise<void> {
   await redis.del(key);
 }
 
-/* ==========================================================================
-   GESTIÓN DE TOKENS DE RECUPERACIÓN DE CONTRASEÑA EN REDIS
-   ========================================================================== */
-
 const REDIS_PWD_RESET_PREFIX = 'pwd_reset:';
-const DEFAULT_RESET_TTL_SECONDS = 900; // 15 minutos
+const DEFAULT_RESET_TTL_SECONDS = 900;
 
 export interface PasswordResetPayload {
   email: string;
@@ -146,9 +140,6 @@ export interface PasswordResetPayload {
   createdAt: number;
 }
 
-/**
- * Guarda un token seguro de recuperación de contraseña en Redis con TTL de 15 minutos
- */
 export async function savePasswordResetToken(
   email: string,
   userId: number,
@@ -165,9 +156,6 @@ export async function savePasswordResetToken(
   await redis.setex(key, ttlSeconds, JSON.stringify(payload));
 }
 
-/**
- * Valida si un token de recuperación existe y es válido sin eliminarlo (para pre-chequeo)
- */
 export async function verifyPasswordResetToken(
   token: string
 ): Promise<{ valid: boolean; email?: string; userId?: number; error?: string }> {
@@ -200,10 +188,6 @@ else
 end
 `;
 
-/**
- * Valida y consume el token de recuperación de Redis en una sola operación atómica
- * garantizando de forma estricta que un token nunca pueda ser utilizado dos veces en peticiones concurrentes.
- */
 export async function consumePasswordResetToken(
   token: string
 ): Promise<{ success: boolean; email?: string; userId?: number; error?: string }> {
@@ -213,7 +197,6 @@ export async function consumePasswordResetToken(
 
   const key = `${REDIS_PWD_RESET_PREFIX}${token.trim()}`;
 
-  // Consumir atómicamente con Lua (GET + DEL simultáneos sin carrera)
   const raw = (await redis.eval(CONSUME_PWD_RESET_LUA, 1, key)) as string | null;
   if (!raw) {
     return {
@@ -230,10 +213,6 @@ export async function consumePasswordResetToken(
   }
 }
 
-/* ==========================================================================
-   GESTIÓN DE CÓDIGOS Y TOKENS DE CAMBIO DE CORREO EN REDIS
-   ========================================================================== */
-
 const REDIS_EMAIL_CHANGE_PREFIX = 'email_change_code:';
 const REDIS_EMAIL_CHANGE_AUTH_PREFIX = 'email_change_auth:';
 
@@ -245,9 +224,6 @@ export interface EmailChangeCodePayload {
   attempts: number;
 }
 
-/**
- * Guarda un código de verificación de 6 dígitos para cambio de correo en Redis
- */
 export async function saveEmailChangeCode(
   userId: number,
   currentEmail: string,
@@ -294,15 +270,11 @@ if tostring(data.code) ~= tostring(inputCode) then
   return {0, 'wrong_code', tostring(remaining)}
 end
 
--- Código válido: eliminar código y activar autorización en un único paso atómico
 redis.call('DEL', codeKey)
 redis.call('SETEX', authKey, authTtl, '1')
 return {1, 'authorized'}
 `;
 
-/**
- * Valida el código de verificación para cambio de correo y genera un token de autorización temporal atómicamente
- */
 export async function verifyEmailChangeCode(
   userId: number,
   inputCode: string
@@ -311,7 +283,6 @@ export async function verifyEmailChangeCode(
   const authKey = `${REDIS_EMAIL_CHANGE_AUTH_PREFIX}${userId}`;
   const cleanInput = String(inputCode).trim();
 
-  // Validación y autorización atómica con Lua
   const result = (await redis.eval(
     VERIFY_EMAIL_CHANGE_LUA,
     2,
@@ -352,9 +323,6 @@ export async function verifyEmailChangeCode(
   return { success: false, error: 'Error al verificar el código.' };
 }
 
-/**
- * Comprueba si el usuario tiene una autorización activa para cambio de correo (ventana de 5 minutos)
- */
 export async function isEmailChangeAuthorized(userId: number): Promise<boolean> {
   const authKey = `${REDIS_EMAIL_CHANGE_AUTH_PREFIX}${userId}`;
   const val = await redis.get(authKey);
@@ -372,9 +340,6 @@ else
 end
 `;
 
-/**
- * Valida y consume la autorización de cambio de correo tras guardar exitosamente (operación atómica)
- */
 export async function consumeEmailChangeAuthorization(
   userId: number
 ): Promise<{ valid: boolean; error?: string }> {
@@ -393,17 +358,11 @@ export async function consumeEmailChangeAuthorization(
 
 const REDIS_PASSWORD_CHANGE_AUTH_PREFIX = 'pwd_change_auth:';
 
-/**
- * Guarda la autorización temporal para cambio de contraseña (5 minutos por defecto)
- */
 export async function savePasswordChangeAuth(userId: number, ttlSeconds = 300): Promise<void> {
   const key = `${REDIS_PASSWORD_CHANGE_AUTH_PREFIX}${userId}`;
   await redis.setex(key, ttlSeconds, 'authorized');
 }
 
-/**
- * Comprueba si el usuario tiene una autorización activa para cambio de contraseña
- */
 export async function isPasswordChangeAuthorized(userId: number): Promise<boolean> {
   const key = `${REDIS_PASSWORD_CHANGE_AUTH_PREFIX}${userId}`;
   const val = await redis.get(key);
@@ -421,9 +380,6 @@ else
 end
 `;
 
-/**
- * Valida y consume atómicamente la autorización de cambio de contraseña
- */
 export async function consumePasswordChangeAuth(
   userId: number
 ): Promise<{ valid: boolean; error?: string }> {
@@ -439,5 +395,3 @@ export async function consumePasswordChangeAuth(
 
   return { valid: true };
 }
-
-

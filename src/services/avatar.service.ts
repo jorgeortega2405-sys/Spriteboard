@@ -1,18 +1,16 @@
-// Paletas de gradientes modernos y elegantes seleccionados determinísticamente
 const GRADIENT_PALETTES = [
-  ['#1e293b', '#0f172a'], // Slate oscuro
-  ['#3b82f6', '#1d4ed8'], // Azul tech
-  ['#6366f1', '#4338ca'], // Índigo
-  ['#8b5cf6', '#6d28d9'], // Violeta
-  ['#ec4899', '#be185d'], // Rosa
-  ['#059669', '#047857'], // Esmeralda
-  ['#d97706', '#b45309'], // Ámbar
-  ['#0891b2', '#0e7490'], // Cyan
-  ['#475569', '#334155'], // Acero
-  ['#18181b', '#27272a'], // Obsidiana
+  ['#1e293b', '#0f172a'],
+  ['#3b82f6', '#1d4ed8'],
+  ['#6366f1', '#4338ca'],
+  ['#8b5cf6', '#6d28d9'],
+  ['#ec4899', '#be185d'],
+  ['#059669', '#047857'],
+  ['#d97706', '#b45309'],
+  ['#0891b2', '#0e7490'],
+  ['#475569', '#334155'],
+  ['#18181b', '#27272a'],
 ];
 
-// Hash simple para mapear un nombre a una paleta consistente
 export function hashString(str: string): number {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
@@ -31,7 +29,6 @@ export function escapeXml(str: string): string {
     .replace(/'/g, '&apos;');
 }
 
-// Extraer la inicial del nombre o username de forma segura
 export function getInitial(name: string): string {
   const clean = String(name || '').trim().replace(/^[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ]+/, '');
   if (!clean) return 'U';

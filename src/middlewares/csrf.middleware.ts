@@ -1,7 +1,7 @@
-import crypto from 'crypto';
-import { Request, Response, NextFunction } from 'express';
 import { config } from '../config/env.config.js';
 import { logger } from '../services/logger.service.js';
+import crypto from 'crypto';
+import { NextFunction, Request, Response } from 'express';
 
 export function generateCsrfToken(req: Request, res: Response): string {
   let secret = req.cookies?._csrf_secret;
@@ -15,10 +15,8 @@ export function generateCsrfToken(req: Request, res: Response): string {
     });
   }
 
-  // Token generado de forma segura mediante HMAC
   const token = crypto.createHmac('sha256', config.csrfSecret).update(secret).digest('hex');
 
-  // Guardar también en cookie legible por el cliente
   res.cookie('XSRF-TOKEN', token, {
     httpOnly: false,
     sameSite: 'lax',
@@ -30,7 +28,6 @@ export function generateCsrfToken(req: Request, res: Response): string {
 }
 
 export function validateCsrf(req: Request, res: Response, next: NextFunction): void {
-  // Omitir métodos de lectura segura y webhooks con firma criptográfica de terceros (Stripe)
   const safeMethods = ['GET', 'HEAD', 'OPTIONS'];
   if (safeMethods.includes(req.method)) {
     return next();

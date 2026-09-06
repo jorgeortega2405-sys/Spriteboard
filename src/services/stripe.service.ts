@@ -1,9 +1,9 @@
-import Stripe from 'stripe';
 import { config } from '../config/env.config.js';
-import { logger } from './logger.service.js';
-import { subscriptionService } from './subscription.service.js';
-import { purchaseService } from './purchase.service.js';
 import { updateUserSubscriptionInSessions } from './auth.service.js';
+import { logger } from './logger.service.js';
+import { purchaseService } from './purchase.service.js';
+import { subscriptionService } from './subscription.service.js';
+import Stripe from 'stripe';
 
 export class StripeService {
   private static instance: StripeService;
@@ -22,9 +22,6 @@ export class StripeService {
     return StripeService.instance;
   }
 
-  /**
-   * Crear sesión de Stripe Checkout para un plan y periodo de facturación
-   */
   public async createCheckoutSession(
     userId: number,
     email: string,
@@ -43,7 +40,6 @@ export class StripeService {
     const unitPrice = isYearly ? (tier.priceYearly ?? tier.price) * 12 : (tier.priceMonthly ?? tier.price);
     const amountInCents = Math.round(unitPrice * 100);
 
-    // Obtener o crear perfil de cliente en Stripe para reutilizar historial y métodos de pago
     const customer = await this.getOrCreateCustomer(userId, email);
     const userBilling = await purchaseService.getUserBillingInfo(userId);
     const previousSubscriptionId = userBilling?.stripe_subscription_id || null;
@@ -91,7 +87,6 @@ export class StripeService {
       throw new Error('No se pudo generar la URL de Stripe Checkout.');
     }
 
-    // Registrar intención preliminar en purchases
     await purchaseService.recordPurchase({
       user_id: userId,
       stripe_session_id: session.id,
@@ -112,9 +107,6 @@ export class StripeService {
     return { id: session.id, url: session.url };
   }
 
-  /**
-   * Construir y validar criptográficamente evento de Webhook de Stripe
-   */
   public constructWebhookEvent(rawBody: Buffer, signature: string): Stripe.Event {
     return this.stripe.webhooks.constructEvent(
       rawBody,
@@ -123,9 +115,6 @@ export class StripeService {
     );
   }
 
-  /**
-   * Procesar eventos del ciclo de vida de pagos y suscripciones
-   */
   public async handleWebhookEvent(event: Stripe.Event): Promise<void> {
     logger.app.info('Procesando evento de Stripe Webhook', { type: event.type, id: event.id });
 
@@ -160,9 +149,6 @@ export class StripeService {
     }
   }
 
-  /**
-   * Procesa checkout completado exitosamente
-   */
   private async processSuccessfulCheckout(session: Stripe.Checkout.Session): Promise<void> {
     const userId = Number(session.metadata?.userId || session.client_reference_id);
     const planId = session.metadata?.planId || 'plus';
@@ -179,7 +165,6 @@ export class StripeService {
       return;
     }
 
-    // Cancelar suscripción anterior si existía para prevenir doble facturación
     if (previousSubId && subscriptionId && previousSubId !== subscriptionId) {
       try {
         await this.stripe.subscriptions.cancel(previousSubId);
@@ -189,7 +174,6 @@ export class StripeService {
       }
     }
 
-    // 1. Guardar o actualizar registro de compra
     await purchaseService.recordPurchase({
       user_id: userId,
       stripe_session_id: session.id,
@@ -203,7 +187,6 @@ export class StripeService {
       status: 'completed',
     });
 
-    // 2. Actualizar usuario en MySQL
     await purchaseService.updateUserSubscription(
       userId,
       planId,
@@ -212,7 +195,6 @@ export class StripeService {
       'active'
     );
 
-    // 3. Sincronizar sesiones en Redis
     await updateUserSubscriptionInSessions(userId, planId);
 
     logger.app.info('Checkout procesado y cuenta mejorada con éxito', {
@@ -222,9 +204,6 @@ export class StripeService {
     });
   }
 
-  /**
-   * Procesa pago recurrente de factura exitoso (renovación de ciclo)
-   */
   private async processInvoicePaymentSucceeded(invoice: Stripe.Invoice): Promise<void> {
     const customerId = typeof invoice.customer === 'string' ? invoice.customer : (invoice.customer?.id ?? null);
     const subscriptionId = typeof invoice.subscription === 'string' ? invoice.subscription : (invoice.subscription?.id ?? null);
@@ -233,7 +212,6 @@ export class StripeService {
     const user = await purchaseService.getUserByStripeCustomerId(customerId);
     if (!user) return;
 
-    // Solo registrar en purchases si no fue ya registrado mediante checkout session
     const existing = await purchaseService.getPurchaseBySessionId(`inv_${invoice.id}`);
     if (existing) return;
 
@@ -263,9 +241,6 @@ export class StripeService {
     });
   }
 
-  /**
-   * Procesa fallo de pago en factura (tarjeta rechazada o expirada)
-   */
   private async processInvoicePaymentFailed(invoice: Stripe.Invoice): Promise<void> {
     const customerId = typeof invoice.customer === 'string' ? invoice.customer : (invoice.customer?.id ?? null);
     if (!customerId) return;
@@ -286,9 +261,6 @@ export class StripeService {
     }
   }
 
-  /**
-   * Procesa cancelación de suscripción en Stripe
-   */
   private async processSubscriptionDeleted(subscription: Stripe.Subscription): Promise<void> {
     const userId = Number(subscription.metadata?.userId);
     const customerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id;
@@ -306,9 +278,6 @@ export class StripeService {
     }
   }
 
-  /**
-   * Procesa actualización de suscripción en Stripe
-   */
   private async processSubscriptionUpdated(subscription: Stripe.Subscription): Promise<void> {
     const userId = Number(subscription.metadata?.userId);
     const planId = subscription.metadata?.planId;
@@ -330,9 +299,6 @@ export class StripeService {
     }
   }
 
-  /**
-   * Verificar y sincronizar inmediatamente una sesión de checkout completada (cuando el cliente retorna al sitio)
-   */
   public async verifyAndSyncCheckoutSession(
     sessionId: string,
     userId: number
@@ -358,7 +324,6 @@ export class StripeService {
     const paymentIntentId = typeof session.payment_intent === 'string' ? session.payment_intent : (session.payment_intent?.id ?? null);
     const previousSubId = session.metadata?.previousSubscriptionId;
 
-    // Cancelar suscripción anterior si existía para prevenir cobro duplicado
     if (previousSubId && subscriptionId && previousSubId !== subscriptionId) {
       try {
         await this.stripe.subscriptions.cancel(previousSubId);
@@ -368,7 +333,6 @@ export class StripeService {
       }
     }
 
-    // 1. Registrar compra
     await purchaseService.recordPurchase({
       user_id: userId,
       stripe_session_id: session.id,
@@ -382,7 +346,6 @@ export class StripeService {
       status: 'completed',
     });
 
-    // 2. Actualizar usuario en MySQL
     await purchaseService.updateUserSubscription(
       userId,
       planId,
@@ -391,7 +354,6 @@ export class StripeService {
       'active'
     );
 
-    // 3. Sincronizar sesiones en Redis
     await updateUserSubscriptionInSessions(userId, planId);
 
     return {
@@ -405,9 +367,6 @@ export class StripeService {
     };
   }
 
-  /**
-   * Obtener o crear cliente de Stripe para un usuario
-   */
   public async getOrCreateCustomer(
     userId: number,
     email: string,
@@ -420,9 +379,7 @@ export class StripeService {
         if (!existingCustomer.deleted) {
           return existingCustomer as Stripe.Customer;
         }
-      } catch (_) {
-        // Si el cliente no existe en Stripe, creamos uno nuevo
-      }
+      } catch (_) {}
     }
 
     const customer = await this.stripe.customers.create({
@@ -437,9 +394,6 @@ export class StripeService {
     return customer;
   }
 
-  /**
-   * Obtener detalles de la suscripción activa del usuario
-   */
   public async getSubscriptionDetails(userId: number): Promise<{
     tier: string;
     status: string;
@@ -494,9 +448,6 @@ export class StripeService {
     }
   }
 
-  /**
-   * Activar o desactivar la renovación automática de la suscripción (cancel_at_period_end)
-   */
   public async updateSubscriptionRenewal(
     userId: number,
     cancelAtPeriodEnd: boolean
@@ -523,9 +474,6 @@ export class StripeService {
     };
   }
 
-  /**
-   * Cancelar suscripción inmediatamente
-   */
   public async cancelSubscriptionNow(userId: number): Promise<{ success: boolean; tier: string }> {
     const user = await purchaseService.getUserBillingInfo(userId);
     if (!user) {
@@ -540,7 +488,6 @@ export class StripeService {
       }
     }
 
-    // 1. Actualizar MySQL
     await purchaseService.updateUserSubscription(
       userId,
       'free',
@@ -549,7 +496,6 @@ export class StripeService {
       'canceled'
     );
 
-    // 2. Sincronizar sesiones en Redis
     await updateUserSubscriptionInSessions(userId, 'free');
 
     logger.security.info('Suscripción cancelada inmediatamente por el usuario', { userId });
@@ -560,9 +506,6 @@ export class StripeService {
     };
   }
 
-  /**
-   * Listar métodos de pago (tarjetas) guardados del usuario
-   */
   public async listPaymentMethods(userId: number): Promise<Array<{
     id: string;
     brand: string;
@@ -605,9 +548,6 @@ export class StripeService {
     }
   }
 
-  /**
-   * Crear SetupIntent para agregar una nueva tarjeta de forma segura
-   */
   public async createSetupIntent(
     userId: number,
     email: string,
@@ -633,9 +573,6 @@ export class StripeService {
     };
   }
 
-  /**
-   * Establecer una tarjeta como método de pago predeterminado
-   */
   public async setDefaultPaymentMethod(
     userId: number,
     paymentMethodId: string
@@ -645,20 +582,17 @@ export class StripeService {
       throw new Error('No tienes un perfil de facturación configurado.');
     }
 
-    // Verificar que el método de pago pertenezca al cliente
     const pm = await this.stripe.paymentMethods.retrieve(paymentMethodId);
     if (pm.customer !== user.stripe_customer_id) {
       throw new Error('El método de pago no pertenece a tu cuenta.');
     }
 
-    // Actualizar default en cliente
     await this.stripe.customers.update(user.stripe_customer_id, {
       invoice_settings: {
         default_payment_method: paymentMethodId,
       },
     });
 
-    // Si tiene suscripción activa, actualizar también en la suscripción
     if (user.stripe_subscription_id) {
       try {
         await this.stripe.subscriptions.update(user.stripe_subscription_id, {
@@ -671,9 +605,6 @@ export class StripeService {
     return { success: true };
   }
 
-  /**
-   * Desvincular y eliminar un método de pago
-   */
   public async detachPaymentMethod(
     userId: number,
     paymentMethodId: string
@@ -683,7 +614,6 @@ export class StripeService {
       throw new Error('No tienes un perfil de facturación configurado.');
     }
 
-    // Verificar pertenencia
     const pm = await this.stripe.paymentMethods.retrieve(paymentMethodId);
     if (pm.customer !== user.stripe_customer_id) {
       throw new Error('El método de pago no pertenece a tu cuenta.');

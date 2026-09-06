@@ -1,5 +1,5 @@
-import { Request, Response } from 'express';
 import { generateAvatarSvg } from '../services/avatar.service.js';
+import { Request, Response } from 'express';
 
 export function handleAvatarRequest(req: Request, res: Response): void {
   const name = String(req.query.name || req.query.username || 'User').trim();

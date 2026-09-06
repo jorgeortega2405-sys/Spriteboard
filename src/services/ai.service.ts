@@ -1,13 +1,7 @@
-/**
- * Servicio de Inteligencia Artificial para Spritebot (ai.service.ts)
- * Gestiona la integración segura con Google Gemini API sin exponer credenciales al cliente.
- * Cumple con las directivas de seguridad, logging centralizado y CERO console.*.
- */
-
+import { ASSISTANT_KNOWLEDGE } from '../config/assistant-knowledge.js';
+import { ASSISTANT_RULES } from '../config/assistant-rules.js';
 import { config } from '../config/env.config.js';
 import { logger } from './logger.service.js';
-import { ASSISTANT_RULES } from '../config/assistant-rules.js';
-import { ASSISTANT_KNOWLEDGE } from '../config/assistant-knowledge.js';
 
 export interface ChatMessage {
   role: 'user' | 'model';
@@ -21,13 +15,6 @@ export interface UserContext {
 }
 
 export class AiService {
-  /**
-   * Genera una respuesta conversacional con el modelo Gemini
-   * @param message - Mensaje actual del usuario
-   * @param history - Historial de mensajes previos (opcional)
-   * @param userContext - Contexto del usuario autenticado o invitado
-   * @returns {Promise<string>} Respuesta de la IA
-   */
   static async generateReply(
     message: string,
     history: ChatMessage[] = [],
@@ -39,7 +26,6 @@ export class AiService {
       return 'El servicio de asistencia de IA no está configurado actualmente. Por favor contacta al administrador.';
     }
 
-    // Construcción del System Instruction combinando reglas estrictas y conocimiento de Spriteboard
     let systemInstruction = `${ASSISTANT_RULES}\n\n${ASSISTANT_KNOWLEDGE}`;
 
     if (userContext) {
@@ -50,7 +36,6 @@ export class AiService {
       }
     }
 
-    // Preparar el cuerpo de la conversación (hasta 10 mensajes anteriores para contexto)
     const validHistory = (history || [])
       .slice(-10)
       .filter((m) => m && typeof m.text === 'string' && (m.role === 'user' || m.role === 'model'))
@@ -59,7 +44,6 @@ export class AiService {
         parts: [{ text: m.text }],
       }));
 
-    // Agregar el mensaje actual del usuario
     validHistory.push({
       role: 'user',
       parts: [{ text: message }],
@@ -78,7 +62,6 @@ export class AiService {
 
     const modelName = config.gemini.model || 'gemini-flash-lite-latest';
 
-    // Lista de modelos de fallback en orden de preferencia (verificados como disponibles)
     const fallbackModels = [
       'gemini-flash-lite-latest',
       'gemini-flash-latest',
@@ -96,10 +79,8 @@ export class AiService {
     };
 
     try {
-      // Intentar con el modelo principal
       let response = await fetch(buildUrl(modelName), fetchOptions);
 
-      // Si falla por saturación (503) o modelo no disponible (404), probar fallbacks
       if (!response.ok && (response.status === 503 || response.status === 404)) {
         for (const fallback of fallbackModels) {
           if (fallback === modelName) continue;
@@ -126,7 +107,6 @@ export class AiService {
         return 'No pude generar una respuesta en este momento. Por favor reformula tu consulta.';
       }
 
-      // Sanitizar la respuesta para asegurar que no contenga referencias filtradas
       const sanitized = candidateText
         .replace(/gemini/gi, 'Spritebot')
         .replace(/google/gi, 'Spriteboard')

@@ -1,7 +1,3 @@
-/**
- * Servicios de API, Autenticación y Estado Global del Frontend
- */
-
 export let currentUser = null;
 export let linkedAccounts = [];
 export let csrfToken = '';
@@ -35,7 +31,6 @@ export function escapeHtml(str) {
     .replace(/'/g, '&#039;');
 }
 
-// Obtener configuración pública de la app desde el backend
 export async function fetchAppConfig() {
   try {
     const res = await fetch('/api/config');
@@ -49,12 +44,9 @@ export async function fetchAppConfig() {
         appConfig.stripePublishableKey = data.stripePublishableKey;
       }
     }
-  } catch {
-    // Falla silenciosa sin llamadas console.*
-  }
+  } catch {}
 }
 
-// Obtener o refrescar Token CSRF desde el backend
 export async function fetchCsrfToken() {
   try {
     const res = await fetch('/api/csrf-token');
@@ -63,13 +55,10 @@ export async function fetchCsrfToken() {
       csrfToken = data.csrfToken;
       return csrfToken;
     }
-  } catch {
-    // Falla silenciosa sin llamadas console.*
-  }
+  } catch {}
   return '';
 }
 
-// Comprobar si hay sesión activa del usuario y cargar cuentas vinculadas
 export async function checkAuthSession() {
   try {
     const res = await fetch('/api/me');
@@ -88,7 +77,6 @@ export async function checkAuthSession() {
   return currentUser;
 }
 
-// Helper para conmutar de cuenta activa
 export async function switchAccountApi(userId) {
   const res = await postApi('/api/auth/switch-account', { user_id: userId });
   if (res.ok) {
@@ -104,7 +92,6 @@ export async function switchAccountApi(userId) {
   return { success: false, error: err.error || err.message || '' };
 }
 
-// Helper para cerrar sesión de la cuenta activa (conmuta o desloguea)
 export async function logoutApi() {
   const res = await postApi('/api/logout', {});
   if (res.ok) {
@@ -122,7 +109,6 @@ export async function logoutApi() {
   return { success: false };
 }
 
-// Helper para cerrar todas las sesiones vinculadas
 export async function logoutAllApi() {
   const res = await postApi('/api/auth/logout-all', {});
   currentUser = null;
@@ -130,7 +116,6 @@ export async function logoutAllApi() {
   return res.ok;
 }
 
-// Helper para llamadas GET a la API
 export async function getApi(url) {
   return fetch(url, {
     method: 'GET',
@@ -138,7 +123,6 @@ export async function getApi(url) {
   });
 }
 
-// Helper para llamadas POST a la API con token CSRF y credenciales
 export async function postApi(url, body) {
   if (!csrfToken) {
     await fetchCsrfToken();
@@ -156,7 +140,6 @@ export async function postApi(url, body) {
     body: payload,
   });
 
-  // Reintento automático si el token expiró
   if (res.status === 403) {
     await fetchCsrfToken();
     res = await fetch(url, {
@@ -173,7 +156,6 @@ export async function postApi(url, body) {
   return res;
 }
 
-// Helper para llamadas multipart/form-data con token CSRF y credenciales
 export async function postFormApi(url, formData) {
   if (!csrfToken) {
     await fetchCsrfToken();
@@ -203,7 +185,6 @@ export async function postFormApi(url, formData) {
   return res;
 }
 
-// Helper para llamadas DELETE a la API con token CSRF y credenciales
 export async function deleteApi(url, body) {
   if (!csrfToken) {
     await fetchCsrfToken();
@@ -235,7 +216,6 @@ export async function deleteApi(url, body) {
   return res;
 }
 
-// Obtener planes de suscripción disponibles desde el backend
 export async function getSubscriptionsApi() {
   try {
     const res = await fetch('/api/subscriptions', {
@@ -257,7 +237,6 @@ export async function getSubscriptionsApi() {
   }
 }
 
-// Crear sesión de Stripe Checkout para suscripción
 export async function createSubscriptionCheckoutApi(planId, billingPeriod) {
   try {
     const res = await postApi('/api/subscriptions/checkout', {
@@ -271,7 +250,6 @@ export async function createSubscriptionCheckoutApi(planId, billingPeriod) {
   }
 }
 
-// Verificar sesión de Stripe Checkout completada
 export async function verifySubscriptionSessionApi(sessionId) {
   try {
     const res = await getApi(`/api/subscriptions/verify-session?session_id=${encodeURIComponent(sessionId)}`);
@@ -293,9 +271,6 @@ export async function verifySubscriptionSessionApi(sessionId) {
   }
 }
 
-
-
-// Obtener detalles de facturación y suscripción
 export async function getBillingDetailsApi() {
   try {
     const res = await getApi('/api/subscriptions/details');
@@ -306,7 +281,6 @@ export async function getBillingDetailsApi() {
   }
 }
 
-// Modificar renovación automática
 export async function updateAutoRenewalApi(cancelAtPeriodEnd) {
   try {
     const res = await postApi('/api/subscriptions/auto-renewal', { cancelAtPeriodEnd });
@@ -317,7 +291,6 @@ export async function updateAutoRenewalApi(cancelAtPeriodEnd) {
   }
 }
 
-// Cancelar suscripción inmediatamente
 export async function cancelSubscriptionImmediateApi() {
   try {
     const res = await postApi('/api/subscriptions/cancel-immediate', {});
@@ -339,7 +312,6 @@ export async function cancelSubscriptionImmediateApi() {
   }
 }
 
-// Listar métodos de pago guardados
 export async function getPaymentMethodsApi() {
   try {
     const res = await getApi('/api/subscriptions/payment-methods');
@@ -350,7 +322,6 @@ export async function getPaymentMethodsApi() {
   }
 }
 
-// Crear SetupIntent para agregar tarjeta
 export async function createSetupIntentApi() {
   try {
     const res = await postApi('/api/subscriptions/setup-intent', {});
@@ -361,7 +332,6 @@ export async function createSetupIntentApi() {
   }
 }
 
-// Establecer tarjeta predeterminada
 export async function setDefaultPaymentMethodApi(pmId) {
   try {
     const res = await postApi(`/api/subscriptions/payment-methods/${encodeURIComponent(pmId)}/default`, {});
@@ -372,7 +342,6 @@ export async function setDefaultPaymentMethodApi(pmId) {
   }
 }
 
-// Eliminar método de pago
 export async function deletePaymentMethodApi(pmId) {
   try {
     const res = await deleteApi(`/api/subscriptions/payment-methods/${encodeURIComponent(pmId)}`);
@@ -383,7 +352,6 @@ export async function deletePaymentMethodApi(pmId) {
   }
 }
 
-// Obtener historial de compras
 export async function getPurchaseHistoryApi() {
   try {
     const res = await getApi('/api/subscriptions/history');
@@ -393,4 +361,3 @@ export async function getPurchaseHistoryApi() {
     return { success: false, purchases: [] };
   }
 }
-

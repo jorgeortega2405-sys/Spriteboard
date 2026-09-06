@@ -1,18 +1,14 @@
-/**
- * Servicio de Acceso a Datos y Operaciones de Usuarios en MySQL
- */
-
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import { pool } from '../config/database.config.js';
 import { redis } from '../config/redis.config.js';
 import { UserPayload } from '../types/auth.types.js';
-import { hashBackupCode } from './two-factor.service.js';
 import { revokeAllUserSessions } from './auth.service.js';
-import { stripeService } from './stripe.service.js';
 import { logger } from './logger.service.js';
-import type { RowDataPacket, ResultSetHeader } from 'mysql2';
+import { stripeService } from './stripe.service.js';
+import { hashBackupCode } from './two-factor.service.js';
+import fs from 'fs';
+import type { ResultSetHeader, RowDataPacket } from 'mysql2';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -46,9 +42,6 @@ export interface UserRecord extends RowDataPacket {
   updated_at?: Date;
 }
 
-/**
- * Busca un usuario por su correo electrónico
- */
 export async function findUserByEmail(email: string): Promise<UserRecord | null> {
   const [rows] = await pool.query<UserRecord[]>(
     'SELECT id, username, email, password_hash, avatar_url, google_id, subscription_tier, two_factor_enabled, two_factor_secret, two_factor_recovery_codes FROM users WHERE email = ? LIMIT 1',
@@ -57,9 +50,6 @@ export async function findUserByEmail(email: string): Promise<UserRecord | null>
   return rows.length > 0 ? rows[0] : null;
 }
 
-/**
- * Busca un usuario por su nombre de usuario
- */
 export async function findUserByUsername(username: string): Promise<UserRecord | null> {
   const [rows] = await pool.query<UserRecord[]>(
     'SELECT id, username, email, avatar_url, google_id, subscription_tier, two_factor_enabled FROM users WHERE username = ? LIMIT 1',
@@ -68,9 +58,6 @@ export async function findUserByUsername(username: string): Promise<UserRecord |
   return rows.length > 0 ? rows[0] : null;
 }
 
-/**
- * Verifica si un email o username ya están en uso
- */
 export async function findUserDuplicates(
   email: string,
   username: string
@@ -86,9 +73,6 @@ export async function findUserDuplicates(
   return { emailExists, usernameExists };
 }
 
-/**
- * Busca un usuario por su ID
- */
 export async function findUserById(id: number): Promise<UserRecord | null> {
   const [rows] = await pool.query<UserRecord[]>(
     'SELECT id, username, email, avatar_url, google_id, subscription_tier, two_factor_enabled, two_factor_secret, two_factor_recovery_codes FROM users WHERE id = ? LIMIT 1',
@@ -97,9 +81,6 @@ export async function findUserById(id: number): Promise<UserRecord | null> {
   return rows.length > 0 ? rows[0] : null;
 }
 
-/**
- * Crea un nuevo usuario en la base de datos con soporte para auditoría GeoIP y ASN
- */
 export async function createUser(data: {
   username: string;
   email: string;
@@ -150,9 +131,6 @@ export async function createUser(data: {
   };
 }
 
-/**
- * Actualiza la información geográfica y proveedor ASN del último inicio de sesión
- */
 export async function updateUserLastLoginGeo(
   userId: number,
   geo: {
@@ -187,9 +165,6 @@ export async function updateUserLastLoginGeo(
   }
 }
 
-/**
- * Actualiza la contraseña hasheada de un usuario
- */
 export async function updateUserPassword(userId: number, passwordHash: string): Promise<boolean> {
   const [result] = await pool.query<ResultSetHeader>(
     'UPDATE users SET password_hash = ? WHERE id = ?',
@@ -198,9 +173,6 @@ export async function updateUserPassword(userId: number, passwordHash: string): 
   return result.affectedRows > 0;
 }
 
-/**
- * Vincula o actualiza el google_id de un usuario
- */
 export async function updateUserGoogleId(userId: number, googleId: string): Promise<boolean> {
   const [result] = await pool.query<ResultSetHeader>(
     'UPDATE users SET google_id = ? WHERE id = ?',
@@ -209,9 +181,6 @@ export async function updateUserGoogleId(userId: number, googleId: string): Prom
   return result.affectedRows > 0;
 }
 
-/**
- * Activa la autenticación en dos pasos (2FA) para un usuario con su secreto y códigos de respaldo hasheados
- */
 export async function enableUser2FA(
   userId: number,
   secret: string,
@@ -225,9 +194,6 @@ export async function enableUser2FA(
   return result.affectedRows > 0;
 }
 
-/**
- * Desactiva la autenticación en dos pasos (2FA) para un usuario
- */
 export async function disableUser2FA(userId: number): Promise<boolean> {
   const [result] = await pool.query<ResultSetHeader>(
     'UPDATE users SET two_factor_enabled = FALSE, two_factor_secret = NULL, two_factor_recovery_codes = NULL WHERE id = ?',
@@ -236,9 +202,6 @@ export async function disableUser2FA(userId: number): Promise<boolean> {
   return result.affectedRows > 0;
 }
 
-/**
- * Verifica y consume atómicamente un código de respaldo
- */
 export async function verifyAndConsumeBackupCode(userId: number, code: string): Promise<boolean> {
   const user = await findUserById(userId);
   if (!user || !user.two_factor_recovery_codes) {
@@ -258,7 +221,6 @@ export async function verifyAndConsumeBackupCode(userId: number, code: string): 
     return false;
   }
 
-  // Remover código usado
   codes.splice(codeIndex, 1);
 
   const [result] = await pool.query<ResultSetHeader>(
@@ -269,23 +231,18 @@ export async function verifyAndConsumeBackupCode(userId: number, code: string): 
   return result.affectedRows > 0;
 }
 
-/**
- * Elimina de forma permanente un usuario y todos sus datos relacionados en el sistema
- */
 export async function deleteUserPermanently(userId: number): Promise<boolean> {
   const user = await findUserById(userId);
   if (!user) {
     return false;
   }
 
-  // 1. Cancelar suscripción activa en Stripe para evitar cobros residuales
   try {
     await stripeService.cancelSubscriptionNow(userId);
   } catch (stripeErr) {
     logger.app.warn('Aviso al cancelar suscripción en Stripe durante eliminación de cuenta', { userId, stripeErr });
   }
 
-  // 2. Eliminar avatar en disco si existe
   if (user.avatar_url && user.avatar_url.startsWith('/uploads/avatars/')) {
     try {
       const fileName = path.basename(user.avatar_url);
@@ -298,7 +255,6 @@ export async function deleteUserPermanently(userId: number): Promise<boolean> {
     }
   }
 
-  // 3. Limpiar claves en Redis (sesiones activas y 2FA)
   try {
     await revokeAllUserSessions(userId);
     await redis.del(`2fa:setup:${userId}`);
@@ -306,7 +262,6 @@ export async function deleteUserPermanently(userId: number): Promise<boolean> {
     logger.db.warn('No se pudieron limpiar claves de Redis al borrar usuario', err);
   }
 
-  // 4. Purgar en base de datos relacional dentro de una transacción
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
@@ -326,4 +281,3 @@ export async function deleteUserPermanently(userId: number): Promise<boolean> {
     connection.release();
   }
 }
-

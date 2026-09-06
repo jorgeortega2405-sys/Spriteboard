@@ -1,5 +1,5 @@
-import { Router } from 'express';
 import { handleAvatarRequest } from '../controllers/avatar.controller.js';
+import { Router } from 'express';
 
 const router = Router();
 

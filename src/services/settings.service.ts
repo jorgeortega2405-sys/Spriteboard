@@ -1,37 +1,20 @@
-/**
- * Servicio de Configuración de Usuario, Preferencias y Auditoría
- */
-
+import { pool } from '../config/database.config.js';
+import { UserPayload } from '../types/auth.types.js';
+import { AVAILABLE_LANGUAGES, detectLanguageFromHeader, isValidLanguageCode } from '../utils/languages.util.js';
+import { validateEmail, validatePassword, validateUsername } from '../utils/validators.util.js';
+import { hashPassword, revokeAllUserSessions, verifyPassword } from './auth.service.js';
+import { sanitizeAvatar } from './image-sanitizer.service.js';
+import { logger } from './logger.service.js';
+import { sendEmailChangeCodeEmail } from './mail.service.js';
+import { consumeEmailChangeAuthorization, consumePasswordChangeAuth, generateSixDigitCode, isEmailChangeAuthorized, saveEmailChangeCode, savePasswordChangeAuth, verifyEmailChangeCode } from './verification.service.js';
 import fs from 'fs';
+import type { ResultSetHeader, RowDataPacket } from 'mysql2';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { pool } from '../config/database.config.js';
-import { logger } from './logger.service.js';
-import { UserPayload } from '../types/auth.types.js';
-import { validateEmail, validateUsername, validatePassword } from '../utils/validators.util.js';
-import { hashPassword, verifyPassword, revokeAllUserSessions } from './auth.service.js';
-import type { RowDataPacket, ResultSetHeader } from 'mysql2';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const AVATARS_DIR = path.join(__dirname, '../../public/uploads/avatars');
-
-import {
-  AVAILABLE_LANGUAGES,
-  isValidLanguageCode,
-  detectLanguageFromHeader,
-} from '../utils/languages.util.js';
-import { sanitizeAvatar } from './image-sanitizer.service.js';
-import {
-  generateSixDigitCode,
-  saveEmailChangeCode,
-  verifyEmailChangeCode,
-  isEmailChangeAuthorized,
-  consumeEmailChangeAuthorization,
-  savePasswordChangeAuth,
-  consumePasswordChangeAuth,
-} from './verification.service.js';
-import { sendEmailChangeCodeEmail } from './mail.service.js';
 
 export interface UserPreferencesRecord extends RowDataPacket {
   user_id: number;
@@ -65,12 +48,9 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   extended_alerts: false,
 };
 
-export const USERNAME_CHANGE_COOLDOWN_MS = 12 * 24 * 60 * 60 * 1000; // 12 días
-export const EMAIL_CHANGE_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000; // 30 días
+export const USERNAME_CHANGE_COOLDOWN_MS = 12 * 24 * 60 * 60 * 1000;
+export const EMAIL_CHANGE_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
 
-/**
- * Formatea milisegundos restantes en texto legible en español (días, horas, minutos)
- */
 export function formatRemainingTime(msRemaining: number): string {
   if (msRemaining <= 0) return 'unos segundos';
   const totalSeconds = Math.ceil(msRemaining / 1000);
@@ -93,9 +73,6 @@ export function formatRemainingTime(msRemaining: number): string {
   return `${Math.max(1, minutes)} ${minutes === 1 ? 'minuto' : 'minutos'}`;
 }
 
-/**
- * Registra una acción en la tabla de auditoría
- */
 export async function logUserAudit(
   userId: number,
   action: string,
@@ -115,9 +92,6 @@ export async function logUserAudit(
   }
 }
 
-/**
- * Obtiene las preferencias del usuario o crea las predeterminadas si no existen
- */
 export async function getUserPreferences(
   userId: number,
   acceptLanguageHeader?: string | null
@@ -159,9 +133,6 @@ export async function getUserPreferences(
   };
 }
 
-/**
- * Actualiza una o más preferencias del usuario
- */
 export async function updateUserPreferences(
   userId: number,
   updates: Partial<UserPreferences>
@@ -213,14 +184,9 @@ export async function updateUserPreferences(
 async function safeUnlink(filePath: string): Promise<void> {
   try {
     await fs.promises.unlink(filePath);
-  } catch {
-    // Ignorar si ya no existe
-  }
+  } catch {}
 }
 
-/**
- * Actualiza el avatar personalizado del usuario
- */
 export async function updateAvatar(
   userId: number,
   file: Express.Multer.File,
@@ -263,7 +229,6 @@ export async function updateAvatar(
     return { success: false, error: 'No se pudo leer el contenido de la imagen.' };
   }
 
-  // Sanitizar, reconstruir y purgar metadatos de la imagen
   let sanitized;
   try {
     sanitized = await sanitizeAvatar(imageBuffer);
@@ -309,15 +274,11 @@ export async function updateAvatar(
   const newAvatarUrl = `/uploads/avatars/${newFileName}`;
 
   await pool.query('UPDATE users SET avatar_url = ? WHERE id = ?', [newAvatarUrl, userId]);
-
   await logUserAudit(userId, 'update_avatar', oldAvatarUrl, newAvatarUrl, ip, ua);
 
   return { success: true, avatar_url: newAvatarUrl };
 }
 
-/**
- * Elimina el avatar personalizado y restablece al valor por defecto (NULL)
- */
 export async function deleteAvatar(
   userId: number,
   ip?: string | null,
@@ -341,15 +302,11 @@ export async function deleteAvatar(
   }
 
   await pool.query('UPDATE users SET avatar_url = NULL WHERE id = ?', [userId]);
-
   await logUserAudit(userId, 'delete_avatar', oldAvatarUrl, null, ip, ua);
 
   return { success: true, avatar_url: null };
 }
 
-/**
- * Actualiza el nombre de usuario
- */
 export async function updateUsername(
   userId: number,
   newUsername: string,
@@ -377,7 +334,6 @@ export async function updateUsername(
     return { success: true, username: oldUsername };
   }
 
-  // Verificación de Cooldown: 12 días entre cambios de nombre de usuario
   if (currentUserRows[0].username_changed_at) {
     const lastChanged = new Date(currentUserRows[0].username_changed_at).getTime();
     const elapsed = Date.now() - lastChanged;
@@ -411,9 +367,6 @@ export async function updateUsername(
   return { success: true, username: cleanUsername };
 }
 
-/**
- * Solicita un código de verificación para cambio de correo electrónico y lo envía por email
- */
 export async function requestEmailChangeCode(
   userId: number,
   ip?: string | null,
@@ -433,7 +386,6 @@ export async function requestEmailChangeCode(
     return { success: false, error: 'La cuenta no tiene un correo electrónico registrado.', status: 400 };
   }
 
-  // Verificación de Cooldown: 30 días entre cambios de correo electrónico
   if (user.email_changed_at) {
     const lastChanged = new Date(user.email_changed_at).getTime();
     const elapsed = Date.now() - lastChanged;
@@ -448,7 +400,6 @@ export async function requestEmailChangeCode(
     }
   }
 
-  // Comprobar si ya cuenta con autorización activa en la ventana de 5 minutos
   const alreadyAuthorized = await isEmailChangeAuthorized(userId);
   if (alreadyAuthorized) {
     logger.security.info('Usuario ya autorizado para cambio de correo dentro de la ventana de 5 minutos', { userId });
@@ -456,7 +407,7 @@ export async function requestEmailChangeCode(
   }
 
   const code = generateSixDigitCode();
-  await saveEmailChangeCode(userId, user.email, code, 300); // 5 minutos
+  await saveEmailChangeCode(userId, user.email, code, 300);
 
   try {
     await sendEmailChangeCodeEmail(user.email, user.username, code, 5);
@@ -469,9 +420,6 @@ export async function requestEmailChangeCode(
   return { success: true, alreadyAuthorized: false };
 }
 
-/**
- * Valida el código de verificación para cambio de correo y activa la ventana de 5 minutos
- */
 export async function verifyEmailChange(
   userId: number,
   code: string
@@ -488,9 +436,6 @@ export async function verifyEmailChange(
   return { success: true, token: result.token };
 }
 
-/**
- * Actualiza el correo electrónico exigiendo autorización previa activa de 5 minutos
- */
 export async function updateEmail(
   userId: number,
   newEmail: string,
@@ -527,7 +472,6 @@ export async function updateEmail(
     return { success: true, email: oldEmail };
   }
 
-  // Verificación de Cooldown: 30 días entre cambios de correo electrónico
   if (currentUserRows[0].email_changed_at) {
     const lastChanged = new Date(currentUserRows[0].email_changed_at).getTime();
     const elapsed = Date.now() - lastChanged;
@@ -561,9 +505,6 @@ export async function updateEmail(
   return { success: true, email: cleanEmail };
 }
 
-/**
- * Obtiene el estado de los métodos de acceso del usuario (si tiene Google y/o contraseña)
- */
 export async function getPasswordStatus(
   userId: number
 ): Promise<{ hasGoogle: boolean; hasPassword: boolean }> {
@@ -580,9 +521,6 @@ export async function getPasswordStatus(
   };
 }
 
-/**
- * Verifica la contraseña actual del usuario y genera una autorización temporal en Redis
- */
 export async function verifyCurrentPassword(
   userId: number,
   currentPassword: string
@@ -622,9 +560,6 @@ export async function verifyCurrentPassword(
   return { success: true };
 }
 
-/**
- * Actualiza la contraseña del usuario tras consumir la autorización previa en Redis
- */
 export async function updateUserPasswordFromSettings(
   userId: number,
   newPassword: string,
@@ -645,7 +580,6 @@ export async function updateUserPasswordFromSettings(
     return { success: false, error: validation.error, status: 400 };
   }
 
-  // Verificar que la nueva contraseña no sea idéntica a la actual (si existía)
   const [userRows] = await pool.query<RowDataPacket[]>(
     'SELECT id, password_hash FROM users WHERE id = ? LIMIT 1',
     [userId]
@@ -665,9 +599,7 @@ export async function updateUserPasswordFromSettings(
   const hashedPassword = await hashPassword(newPassword);
   await pool.query('UPDATE users SET password_hash = ? WHERE id = ?', [hashedPassword, userId]);
 
-  // Revocar de inmediato todas las demás sesiones activas en otros dispositivos
   await revokeAllUserSessions(userId, ip || undefined, ua || undefined);
-
   await logUserAudit(userId, 'change_password', null, null, ip, ua);
   logger.security.info('Contraseña actualizada exitosamente desde settings', { userId });
 

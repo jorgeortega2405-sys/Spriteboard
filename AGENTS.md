@@ -89,3 +89,50 @@ Al escribir o modificar plantillas HTML, los atributos deben ordenarse de acuerd
    - `public/views/`: Archivos `.html` puros organizados en subcarpetas temáticas (`auth/`, `components/`, `home/`, `error/`).
    - `public/js/`: Módulos ES organizados en `views/`, `components/`, `services/` y `router.js`.
    - `public/css/`: Hojas de estilo con metodología BEM y modificadores genéricos reutilizables (`.menu-panel--w-285`, `.btn--h55`, etc.).
+
+---
+
+## 7. Reglas Estrictas de Imports en JavaScript y TypeScript
+
+1. **Formato Horizontal de Imports**:
+   - Cada instrucción `import` debe declararse en **una sola línea horizontal**, sin saltos de línea entre llaves `{ ... }`.
+2. **Orden Alfabético por Ruta / Módulo**:
+   - Todas las sentencias `import` al inicio del archivo deben ordenarse **alfabéticamente** según la ruta o nombre del módulo origen.
+3. **Orden Alfabético de Miembros Nombrados**:
+   - Dentro de `{ ... }`, los elementos importados deben listarse estrictamente en **orden alfabético**.
+
+```javascript
+import { navigate } from '../app-router.js';
+import { clearUserState, currentUser, getApi, postApi, setCurrentUser } from '../services/api.service.js';
+import { getCurrentLanguage, setLanguage, t } from '../services/i18n.service.js';
+import { showToast } from '../services/toast.service.js';
+import { debounce, setupDropdown, withButtonLoading } from '../utils/dom.util.js';
+```
+
+---
+
+## 8. Cero Anotaciones y Cero Comentarios Explicativos
+
+1. **Código 100% Auto-documentado**:
+   - Queda estrictamente prohibido utilizar JSDoc (`/** ... */`), PHPDoc o anotaciones de parámetros.
+   - Queda prohibido incluir bloques de cabecera decorativos (`/* ====== SECCIÓN ====== */`) o comentarios inline que describan código evidente.
+   - Todo el código debe ser limpio, conciso y auto-explicativo.
+
+---
+
+## 9. Estructura Estándar de Archivos y Controladores JS
+
+1. **Secuencia de Estructura**:
+   - **Imports**: Horizontales y alfabéticos.
+   - **Constantes / Estado Encapsulado**: A nivel de módulo.
+   - **Clase / Controlador**:
+     - `constructor()`: Bind de handlers (`this._boundClick = this.handleClick.bind(this)`), instanciación de servicios.
+     - `init()`: AbortController, contenedor DOM (`data-ref`), `this.bindEvents()`, carga de datos.
+     - `bindEvents()`: Asocia listeners delimitados al contenedor.
+     - `destroy()`: AbortController.abort(), remueve todos los event listeners.
+     - Event Handlers (`handleClick`, `handleSubmit`).
+     - Métodos Privados / Auxiliares (`_loadData`, `_render`).
+   - **Exportaciones Limpias**: Al final del archivo.
+
+Para consultar la especificación completa y exhaustiva, revisa [docs/AI_INSTRUCTIONS.md](file:///f:/Spriteboard/docs/AI_INSTRUCTIONS.md).
+

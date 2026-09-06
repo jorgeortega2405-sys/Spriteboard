@@ -9,3 +9,8 @@ trigger: always_on
 - **Cero IDs**: Prohibido usar `id="..."`. Usa exclusivamente `data-ref="..."`.
 - **Orden de atributos**: En `<button>` va `type` primero. En otros elementos va `class` primero.
 - **Banners de error**: Ubicados debajo de los botones de acción en formularios.
+- **Imports JS/TS**: En una sola línea horizontal compacta, ordenados alfabéticamente por módulo y miembros internos en `{ ... }`.
+- **Cero Anotaciones**: Prohibido JSDoc, PHPDoc, bloques decorativos y comentarios inline de código evidente.
+- **Arquitectura JS**: Controladores con ciclo de vida `init()`, `bindEvents()`, `destroy()` y `AbortController`.
+- **Referencia**: Consulta `docs/AI_INSTRUCTIONS.md` y `AGENTS.md`.
+

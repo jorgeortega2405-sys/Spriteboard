@@ -1,14 +1,4 @@
-/**
- * Plantillas Genéricas de Skeletons con estructura semántica e idéntica a las vistas reales
- * CERO IDs - Uso exclusivo de data-ref="..." y orden estricto de atributos
- *
- * Se definen 2 plantillas genéricas:
- * 1. 'grouped-layout': Layout centrado de 700px para contenido en tarjetas agrupadas e ítems (paneles, listas, etc.).
- * 2. 'centered-form': Layout de formulario centrado de 400px para flujos de autenticación e ingreso de datos.
- */
-
 export const SKELETON_TEMPLATES = {
-  // 1. Plantilla genérica de formulario centrado (Auth, Onboarding, Recuperación)
   'centered-form': `
     <div class="layout-content" data-ref="skeleton-centered-form-view">
       <div class="login-container" data-ref="skeleton-centered-form-container">
@@ -34,10 +24,8 @@ export const SKELETON_TEMPLATES = {
     </div>
   `,
 
-  // 2. Plantilla genérica de contenido agrupado (Paneles, listas de ítems, tarjetas agrupadas de 700px)
   'grouped-layout': `
     <div class="layout-root" data-ref="skeleton-grouped-view" style="width: 100%; height: 100%; display: flex; flex-direction: column;">
-      <!-- TopBar Placeholder -->
       <header class="general-content-top layout-header" data-ref="skeleton-topbar">
         <div class="top-left layout-header__left">
           <div class="skeleton" style="width: 38px; height: 38px; border-radius: var(--radius-md); margin-right: 12px;"></div>
@@ -51,17 +39,14 @@ export const SKELETON_TEMPLATES = {
         </div>
       </header>
 
-      <!-- Contenido en formato agrupado de 700px centrado -->
       <div class="layout-content" data-ref="skeleton-content-area">
         <div class="layout-body layout-body--scrollable layout-scrollable" data-ref="skeleton-body-area">
           <div class="grouped-flow-layout" data-ref="skeleton-grouped-layout">
-            <!-- Tarjeta de Encabezado -->
             <div class="grouped-header-card" data-ref="skeleton-grouped-header">
               <div class="skeleton skeleton--title" style="width: 220px; height: 24px; margin: 0 auto;"></div>
               <div class="skeleton skeleton--subtitle" style="width: 380px; max-width: 90%; height: 14px; margin: 8px auto 0 auto;"></div>
             </div>
 
-            <!-- Grupo 1: Ítem apilado con control de selección / trigger -->
             <div class="grouped-items-card" data-ref="skeleton-grouped-card-1">
               <div class="grouped-row-item--stacked" data-ref="skeleton-grouped-item-1">
                 <div style="display: flex; flex-direction: column; gap: 6px; width: 100%;">
@@ -72,7 +57,6 @@ export const SKELETON_TEMPLATES = {
               </div>
             </div>
 
-            <!-- Grupo 2: Lista de opciones interactivas con interruptores -->
             <div class="grouped-items-card" data-ref="skeleton-grouped-card-2">
               <div class="grouped-row-item" data-ref="skeleton-grouped-item-2">
                 <div style="display: flex; flex-direction: column; gap: 6px; flex: 1;">
@@ -108,18 +92,15 @@ export const SKELETON_TEMPLATES = {
     </div>
   `,
 
-  // 3. Plantilla genérica de contenido agrupado inferior (para navegación SPA con TopBar persistente)
   'grouped-layout-bottom': `
     <div class="layout-content skeleton-container" data-ref="skeleton-content-area">
       <div class="layout-body layout-body--scrollable layout-scrollable" data-ref="skeleton-body-area">
         <div class="grouped-flow-layout" data-ref="skeleton-grouped-layout">
-          <!-- Tarjeta de Encabezado -->
           <div class="grouped-header-card" data-ref="skeleton-grouped-header">
             <div class="skeleton skeleton--title" style="width: 220px; height: 24px; margin: 0 auto;"></div>
             <div class="skeleton skeleton--subtitle" style="width: 380px; max-width: 90%; height: 14px; margin: 8px auto 0 auto;"></div>
           </div>
 
-          <!-- Grupo 1: Ítem apilado con control de selección / trigger -->
           <div class="grouped-items-card" data-ref="skeleton-grouped-card-1">
             <div class="grouped-row-item--stacked" data-ref="skeleton-grouped-item-1">
               <div style="display: flex; flex-direction: column; gap: 6px; width: 100%;">
@@ -130,7 +111,6 @@ export const SKELETON_TEMPLATES = {
             </div>
           </div>
 
-          <!-- Grupo 2: Lista de opciones interactivas con interruptores -->
           <div class="grouped-items-card" data-ref="skeleton-grouped-card-2">
             <div class="grouped-row-item" data-ref="skeleton-grouped-item-2">
               <div style="display: flex; flex-direction: column; gap: 6px; flex: 1;">
@@ -166,14 +146,8 @@ export const SKELETON_TEMPLATES = {
   `,
 };
 
-/**
- * Obtiene la plantilla HTML de un skeleton según su nombre genérico
- * @param {'centered-form' | 'grouped-layout' | 'grouped-layout-bottom'} name - Nombre de la plantilla genérica
- * @returns {string} Código HTML del skeleton
- */
 export function getSkeletonTemplate(name) {
   return SKELETON_TEMPLATES[name] || SKELETON_TEMPLATES['grouped-layout'];
 }
 
 export default SKELETON_TEMPLATES;
-

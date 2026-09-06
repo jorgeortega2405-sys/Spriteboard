@@ -1,7 +1,3 @@
-/**
- * Tipos e interfaces del dominio de suscripciones
- */
-
 export type SubscriptionTierId = 'plus' | 'pro' | 'ultra';
 
 export type BillingPeriod = 'monthly' | 'yearly';

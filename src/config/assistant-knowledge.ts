@@ -1,8 +1,3 @@
-/**
- * Base de Conocimiento Oficial de Spriteboard para el Asistente de IA
- * Contiene toda la información estructural, funcional, de navegación y diseño de la web.
- */
-
 export const ASSISTANT_KNOWLEDGE = `
 ### ¿QUÉ ES SPRITEBOARD?
 Spriteboard es una plataforma web moderna, rápida y colaborativa diseñada para la gestión de proyectos, tableros visuales, notas y organización de ideas. Está construida con una arquitectura SPA (Single Page Application) modular, nativa, sin dependencias pesadas en frontend y con un diseño enterprise altamente refinado.

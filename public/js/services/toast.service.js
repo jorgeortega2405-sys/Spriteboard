@@ -1,10 +1,3 @@
-/**
- * Servicio Centralizado de Notificaciones Toast de Spriteboard
- * - CERO IDs (utiliza exclusivamente data-ref)
- * - CERO llamadas a console.*
- * - Animaciones suaves con soporte para preferencia de alertas extendidas
- */
-
 let userPreferences = {
   extended_alerts: false,
 };
@@ -15,13 +8,6 @@ export function setToastPreferences(prefs) {
   }
 }
 
-/**
- * Muestra una notificación toast emergente
- * @param {string} message - Mensaje a mostrar
- * @param {'success'|'error'|'warning'|'info'} [type='success'] - Tipo de toast
- * @param {number|null} [customDuration=null] - Duración personalizada en ms
- * @returns {() => void} Función para cerrar el toast manualmente
- */
 export function showToast(message, type = 'success', customDuration = null) {
   if (!message) return () => {};
 

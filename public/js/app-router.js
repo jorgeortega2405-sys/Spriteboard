@@ -1,31 +1,16 @@
-import { createTopBar, toggleSidebar, attachChatSidebarToView } from './components/layout.component.js';
-import { createHomeView } from './views/home.view.js';
-import { createTrashView } from './views/trash.view.js';
-import {
-  createLoginView,
-  createLogin2FAView,
-  createRegisterStage1View,
-  createRegisterStage2View,
-  createRegisterStage3View,
-  createForgotPasswordView,
-  createResetPasswordView,
-} from './views/auth.view.js';
-import {
-  createYourAccountView,
-  createSecurityView,
-  createBillingView,
-  createPurchasesView,
-  createAccessibilityView,
-  createGuestSettingsView,
-} from './views/settings.view.js';
-import { createUpgradeView } from './views/upgrade.view.js';
-import { createHelpView } from './views/help.view.js';
-import { createErrorView } from './views/error.view.js';
-import { SkeletonService } from './services/skeleton.service.js';
+import { attachChatSidebarToView, createTopBar, toggleSidebar } from './components/layout.component.js';
 import { hasPersistentTopBar } from './config/skeleton-routes.js';
-import { hideTooltip } from './services/tooltip.service.js';
 import { currentUser } from './services/api.service.js';
+import { SkeletonService } from './services/skeleton.service.js';
 import { trackPageView } from './services/telemetry.service.js';
+import { hideTooltip } from './services/tooltip.service.js';
+import { createForgotPasswordView, createLogin2FAView, createLoginView, createRegisterStage1View, createRegisterStage2View, createRegisterStage3View, createResetPasswordView } from './views/auth.view.js';
+import { createErrorView } from './views/error.view.js';
+import { createHelpView } from './views/help.view.js';
+import { createHomeView } from './views/home.view.js';
+import { createAccessibilityView, createBillingView, createGuestSettingsView, createPurchasesView, createSecurityView, createYourAccountView } from './views/settings.view.js';
+import { createTrashView } from './views/trash.view.js';
+import { createUpgradeView } from './views/upgrade.view.js';
 
 let isInitialPageLoad = true;
 let currentNavigation = 0;
@@ -45,18 +30,15 @@ export async function render() {
   const path = window.location.pathname;
   const navId = ++currentNavigation;
 
-  // Determinar si es una navegación SPA suave entre vistas con TopBar persistente
   const hasExistingHeader = Boolean(appRoot.querySelector('.layout-header'));
   const targetHasHeader = hasPersistentTopBar(path);
   const isSoftSpaNav = !isInitialPageLoad && hasExistingHeader && targetHasHeader;
 
-  // Si el TopBar ya existe en una navegación suave, cerramos el buscador móvil si estaba abierto
   if (isSoftSpaNav) {
     const existingHeader = appRoot.querySelector('.layout-header');
     existingHeader?.classList.remove('layout-header--search-active');
   }
 
-  // Mostrar el skeleton adecuado (completo para carga inicial/F5 o solo bottom para navegación SPA)
   const skeletonSession = SkeletonService.showSkeleton(path, appRoot, {
     onlyBottom: isSoftSpaNav,
     minDuration: 280,
@@ -94,7 +76,6 @@ export async function render() {
     const upgradeView = await createUpgradeView();
     viewElements = topBar ? [topBar, upgradeView] : [upgradeView];
   } else if (path === '/settings') {
-    // Redirección contextual según estado de sesión
     const topBar = isSoftSpaNav ? null : await createTopBar();
     if (currentUser) {
       window.history.replaceState({}, '', '/settings/your-account');
@@ -195,12 +176,10 @@ export async function render() {
     const supportView = await createHelpView('support');
     viewElements = topBar ? [topBar, supportView] : [supportView];
   } else if (path === '/' || path === '') {
-    // Vista Principal
     const topBar = isSoftSpaNav ? null : await createTopBar();
     const homeView = await createHomeView();
     viewElements = topBar ? [topBar, homeView] : [homeView];
   } else {
-    // Ruta no encontrada: Error 404
     const notFoundView = await createErrorView({
       code: '404',
       title: 'Página no encontrada',
@@ -211,17 +190,14 @@ export async function render() {
     viewElements = [notFoundView];
   }
 
-  // Transición suave hacia la vista definitiva garantizando tiempo mínimo antiflicker
   await skeletonSession.finish(viewElements, () => navId === currentNavigation);
   isInitialPageLoad = false;
 
-  // Montar la barra lateral derecha de chat dentro de .layout-content al mismo nivel que el sidebar izquierdo
   const activeContent = appRoot.querySelector('.layout-content');
   if (activeContent) {
     attachChatSidebarToView(activeContent);
   }
 
-  // Sincronizar sombra del layout-header con el scroll de la vista recién montada
   const activeHeader = document.querySelector('.layout-header, .general-content-top');
   const activeScrollable = document.querySelector('.layout-scrollable, .layout-body--scrollable');
   if (activeHeader) {
@@ -230,12 +206,10 @@ export async function render() {
     activeHeader.classList.toggle('layout-header--shadow', isScrolled);
   }
 
-  // Registro de telemetría de navegación
   if (path !== previousPath) {
     trackPageView(path, previousPath);
     previousPath = path;
   }
 }
 
-// Soporte para navegación con el historial del navegador (atrás/adelante)
 window.addEventListener('popstate', render);

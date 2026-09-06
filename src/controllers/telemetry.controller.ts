@@ -1,12 +1,9 @@
-import { Request, Response } from 'express';
-import { telemetryService } from '../services/telemetry.service.js';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import { getUserPreferences } from '../services/settings.service.js';
-import { sendSuccess, sendBadRequest, sendInternalError } from '../utils/http.util.js';
+import { telemetryService } from '../services/telemetry.service.js';
+import { sendBadRequest, sendInternalError, sendSuccess } from '../utils/http.util.js';
+import { Request, Response } from 'express';
 
-/**
- * Registra eventos de interacción y ciclo de vida emitidos por el cliente
- */
 export async function handleRecordEvent(req: Request, res: Response): Promise<void> {
   try {
     const eventName = req.body?.eventName || req.body?.event_name;
@@ -21,13 +18,11 @@ export async function handleRecordEvent(req: Request, res: Response): Promise<vo
     const cleanCategory = typeof category === 'string' && category.trim() ? category.trim().toLowerCase() : 'general';
     const cleanEventName = eventName.trim();
 
-    // Comprobar consentimiento de telemetría del usuario
     const user = getCurrentUser(req);
     let userId: number | null = null;
 
     if (user) {
       const prefs = await getUserPreferences(user.id);
-      // Si el usuario desactivó telemetría, no asociamos su identidad
       if (prefs.telemetry) {
         userId = user.id;
       }
@@ -47,9 +42,6 @@ export async function handleRecordEvent(req: Request, res: Response): Promise<vo
   }
 }
 
-/**
- * Registra métricas de Core Web Vitals reportadas por el frontend
- */
 export function handleRecordWebVital(req: Request, res: Response): void {
   try {
     const metricName = req.body?.metricName || req.body?.metric_name;
@@ -75,9 +67,6 @@ export function handleRecordWebVital(req: Request, res: Response): void {
   }
 }
 
-/**
- * Devuelve el resumen analítico consolidado de métricas y telemetría de Cassandra
- */
 export async function handleGetTelemetryStats(req: Request, res: Response): Promise<void> {
   try {
     const summary = await telemetryService.getTelemetrySummary();

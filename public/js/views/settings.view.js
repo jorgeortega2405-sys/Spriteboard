@@ -1,71 +1,16 @@
-/**
- * Módulo Centralizado de Vistas de Configuración (settings.view.js)
- * Unifica:
- * - Tu Cuenta (/settings/your-account): Avatar, edición inline de usuario y correo, idioma.
- * - Seguridad (/settings/security): Cambio de contraseña, 2FA, cierre de sesiones, eliminación de cuenta.
- * - Facturación (/settings/billing): Estado del plan, renovación automática, Stripe Elements.
- * - Historial de Compras (/settings/purchases): Tabla con filtrado reactivo y toolbar flotante.
- * - Accesibilidad (/settings/accessibility): Tema (claro/oscuro/sistema), contraste y movimiento.
- * - Configuración de Invitado (/settings/guest): Preferencias para usuarios no autenticados.
- *
- * Cumple con directivas: CERO console.*, CERO IDs, orden estricto de atributos.
- */
-
-import { loadTemplate } from '../services/template.service.js';
-import { createSidebar } from '../components/layout.component.js';
-import { openModal, open2FAModal } from '../components/modal.component.js';
-import {
-  currentUser,
-  setCurrentUser,
-  setLinkedAccounts,
-  clearUserState,
-  checkAuthSession,
-  appConfig,
-  escapeHtml,
-  getApi,
-  postApi,
-  postFormApi,
-  deleteApi,
-  logoutAllApi,
-  getBillingDetailsApi,
-  updateAutoRenewalApi,
-  cancelSubscriptionImmediateApi,
-  getPaymentMethodsApi,
-  createSetupIntentApi,
-  setDefaultPaymentMethodApi,
-  deletePaymentMethodApi,
-  getPurchaseHistoryApi,
-} from '../services/api.service.js';
-import {
-  setupDropdown,
-  setupPasswordToggle,
-  withButtonLoading,
-  debounce,
-} from '../utils/dom.util.js';
-import { validatePassword } from '../utils/validators.util.js';
-import {
-  AVAILABLE_LANGUAGES,
-  getLanguageName,
-  detectBrowserLanguage,
-} from '../utils/languages.util.js';
-import { showToast, setToastPreferences } from '../services/toast.service.js';
-import {
-  t,
-  translateElement,
-  setLanguage,
-  getCurrentLanguage,
-} from '../services/i18n.service.js';
-import {
-  setTheme,
-  initTheme,
-  applyAccessibilityPreferences,
-} from '../services/theme.service.js';
-import { closeWebSocket } from '../services/websocket.service.js';
 import { navigate, render } from '../app-router.js';
+import { createSidebar } from '../components/layout.component.js';
+import { open2FAModal, openModal } from '../components/modal.component.js';
+import { appConfig, cancelSubscriptionImmediateApi, checkAuthSession, clearUserState, createSetupIntentApi, currentUser, deleteApi, deletePaymentMethodApi, escapeHtml, getApi, getBillingDetailsApi, getPaymentMethodsApi, getPurchaseHistoryApi, logoutAllApi, postApi, postFormApi, setCurrentUser, setDefaultPaymentMethodApi, setLinkedAccounts, updateAutoRenewalApi } from '../services/api.service.js';
+import { getCurrentLanguage, setLanguage, t, translateElement } from '../services/i18n.service.js';
+import { loadTemplate } from '../services/template.service.js';
+import { applyAccessibilityPreferences, initTheme, setTheme } from '../services/theme.service.js';
+import { setToastPreferences, showToast } from '../services/toast.service.js';
+import { closeWebSocket } from '../services/websocket.service.js';
+import { debounce, setupDropdown, setupPasswordToggle, withButtonLoading } from '../utils/dom.util.js';
+import { AVAILABLE_LANGUAGES, detectBrowserLanguage, getLanguageName } from '../utils/languages.util.js';
+import { validatePassword } from '../utils/validators.util.js';
 
-/* ==========================================================================
-   1. VISTA DE TU CUENTA (/settings/your-account)
-   ========================================================================== */
 
 export async function createYourAccountView() {
   const container = await loadTemplate('/views/settings/your-account.html');
@@ -623,10 +568,6 @@ export async function createYourAccountView() {
 
   return container;
 }
-
-/* ==========================================================================
-   2. VISTA DE SEGURIDAD (/settings/security)
-   ========================================================================== */
 
 export async function createSecurityView() {
   const container = await loadTemplate('/views/settings/security.html');
@@ -1244,10 +1185,6 @@ function showStep2NewPassword(modal, onPasswordUpdated) {
   });
 }
 
-/* ==========================================================================
-   3. VISTA DE FACTURACIÓN (/settings/billing)
-   ========================================================================== */
-
 let stripePromise = null;
 
 function loadStripeSdk() {
@@ -1768,10 +1705,6 @@ export async function createBillingView() {
   return container;
 }
 
-/* ==========================================================================
-   4. VISTA DE HISTORIAL DE COMPRAS (/settings/purchases)
-   ========================================================================== */
-
 export async function createPurchasesView() {
   const container = await loadTemplate('/views/settings/purchases.html');
   translateElement(container);
@@ -1984,10 +1917,6 @@ export async function createPurchasesView() {
   return container;
 }
 
-/* ==========================================================================
-   5. VISTA DE ACCESIBILIDAD (/settings/accessibility)
-   ========================================================================== */
-
 export async function createAccessibilityView() {
   const container = await loadTemplate('/views/settings/accessibility.html');
 
@@ -2117,10 +2046,6 @@ export async function createAccessibilityView() {
 
   return container;
 }
-
-/* ==========================================================================
-   6. VISTA DE CONFIGURACIÓN DE INVITADO (/settings/guest)
-   ========================================================================== */
 
 export async function createGuestSettingsView() {
   const container = await loadTemplate('/views/settings/guest.html');

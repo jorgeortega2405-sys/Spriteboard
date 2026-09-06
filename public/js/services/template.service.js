@@ -2,11 +2,6 @@ import { translateElement } from './i18n.service.js';
 
 const templateCache = new Map();
 
-/**
- * Carga un archivo HTML de vista o componente y lo retorna como elemento del DOM
- * @param {string} url - Ruta del archivo HTML (ej: '/views/auth/login.html')
- * @returns {Promise<HTMLElement>}
- */
 export async function loadTemplate(url) {
   let html = templateCache.get(url);
   if (!html) {

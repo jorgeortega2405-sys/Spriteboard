@@ -1,5 +1,5 @@
-import mysql from 'mysql2/promise';
 import { logger } from '../services/logger.service.js';
+import mysql from 'mysql2/promise';
 
 export interface NoSqlAdapter {
   name: string;
@@ -9,14 +9,10 @@ export interface NoSqlAdapter {
   getClient<T = unknown>(): T;
 }
 
-/**
- * Gestor Centralizado Multi-Base de Datos (MySQL, NoSQL, etc.)
- */
 class DatabaseManager {
   private mysqlPools = new Map<string, mysql.Pool>();
   private nosqlAdapters = new Map<string, NoSqlAdapter>();
 
-  // Registrar un pool MySQL
   public registerMySql(name: string, options: mysql.PoolOptions): mysql.Pool {
     if (this.mysqlPools.has(name)) {
       return this.mysqlPools.get(name)!;
@@ -26,12 +22,10 @@ class DatabaseManager {
     return newPool;
   }
 
-  // Registrar un pool MySQL ya existente (para alias sin crear conexiones adicionales)
   public registerExistingMySql(name: string, pool: mysql.Pool): void {
     this.mysqlPools.set(name, pool);
   }
 
-  // Obtener un pool MySQL por nombre (por defecto 'default')
   public getMySql(name = 'default'): mysql.Pool {
     const p = this.mysqlPools.get(name);
     if (!p) {
@@ -40,17 +34,14 @@ class DatabaseManager {
     return p;
   }
 
-  // Registrar un adaptador NoSQL (MongoDB, DynamoDB, Firestore, etc.)
   public registerNoSql(name: string, adapter: NoSqlAdapter): void {
     this.nosqlAdapters.set(name, adapter);
   }
 
-  // Obtener un adaptador NoSQL
   public getNoSql(name: string): NoSqlAdapter | undefined {
     return this.nosqlAdapters.get(name);
   }
 
-  // Listar bases de datos registradas
   public listDatabases(): { mysql: string[]; nosql: string[] } {
     return {
       mysql: Array.from(this.mysqlPools.keys()),
@@ -61,7 +52,6 @@ class DatabaseManager {
 
 export const dbManager = new DatabaseManager();
 
-// 1. Registrar base de datos principal de identidad (MySQL) con pooling optimizado y keepAlive
 const defaultDbOptions: mysql.PoolOptions = {
   host: process.env.DB_HOST || 'mysql',
   port: Number(process.env.DB_PORT) || 3306,
@@ -77,13 +67,11 @@ const defaultDbOptions: mysql.PoolOptions = {
 
 export const pool = dbManager.registerMySql('default', defaultDbOptions);
 
-// Alias semántico que reutiliza la misma instancia del pool para no duplicar conexiones de MySQL
 dbManager.registerExistingMySql('identity', pool);
 
 export async function runMigrations(): Promise<void> {
   const conn = await pool.getConnection();
   try {
-    // 1. Permitir password_hash nulo para usuarios de Google únicamente si no lo permite aún
     const [pwdCols] = await conn.query<mysql.RowDataPacket[]>(
       "SHOW COLUMNS FROM users LIKE 'password_hash'"
     );
@@ -92,7 +80,6 @@ export async function runMigrations(): Promise<void> {
       logger.db.info('Columna password_hash modificada a NULL en users.');
     }
 
-    // 2. Columna google_id
     const [cols] = await conn.query<mysql.RowDataPacket[]>(
       "SHOW COLUMNS FROM users LIKE 'google_id'"
     );
@@ -101,7 +88,6 @@ export async function runMigrations(): Promise<void> {
       logger.db.info('Columna google_id añadida a la tabla users.');
     }
 
-    // 3. Columna avatar_url
     const [avatarCols] = await conn.query<mysql.RowDataPacket[]>(
       "SHOW COLUMNS FROM users LIKE 'avatar_url'"
     );
@@ -110,7 +96,6 @@ export async function runMigrations(): Promise<void> {
       logger.db.info('Columna avatar_url añadida a la tabla users.');
     }
 
-    // 4. Tabla user_preferences
     await conn.query(`
       CREATE TABLE IF NOT EXISTS user_preferences (
         user_id INT PRIMARY KEY,
@@ -126,7 +111,6 @@ export async function runMigrations(): Promise<void> {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
-    // 5. Tabla user_audit_logs con índice compuesto para escalabilidad
     await conn.query(`
       CREATE TABLE IF NOT EXISTS user_audit_logs (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -142,7 +126,6 @@ export async function runMigrations(): Promise<void> {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
-    // 6. Columnas de autenticación en dos factores (2FA) en la tabla users
     const [twoFaCols] = await conn.query<mysql.RowDataPacket[]>(
       "SHOW COLUMNS FROM users LIKE 'two_factor_enabled'"
     );
@@ -173,7 +156,6 @@ export async function runMigrations(): Promise<void> {
       logger.db.info('Columna two_factor_recovery_codes añadida a la tabla users.');
     }
 
-    // 7. Columnas de control de cooldown para nombre de usuario y correo electrónico
     const [usernameChangedCols] = await conn.query<mysql.RowDataPacket[]>(
       "SHOW COLUMNS FROM users LIKE 'username_changed_at'"
     );
@@ -190,7 +172,6 @@ export async function runMigrations(): Promise<void> {
       logger.db.info('Columna email_changed_at añadida a la tabla users.');
     }
 
-    // 8. Columna subscription_tier en la tabla users
     const [tierCols] = await conn.query<mysql.RowDataPacket[]>(
       "SHOW COLUMNS FROM users LIKE 'subscription_tier'"
     );
@@ -201,7 +182,6 @@ export async function runMigrations(): Promise<void> {
       logger.db.info('Columna subscription_tier añadida a la tabla users.');
     }
 
-    // 9. Columnas de Stripe en la tabla users
     const [stripeCustCols] = await conn.query<mysql.RowDataPacket[]>(
       "SHOW COLUMNS FROM users LIKE 'stripe_customer_id'"
     );
@@ -234,7 +214,6 @@ export async function runMigrations(): Promise<void> {
       logger.db.info('Columna subscription_period_end añadida a la tabla users.');
     }
 
-    // 10. Tabla purchases (registro general de compras y pagos)
     await conn.query(`
       CREATE TABLE IF NOT EXISTS purchases (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -256,7 +235,6 @@ export async function runMigrations(): Promise<void> {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
-    // 11. Columnas de Registro y Último Login GeoIP y ASN en users
     const geoColumns: Array<{ name: string; type: string }> = [
       { name: 'registration_ip', type: 'VARCHAR(45) NULL' },
       { name: 'registration_country_code', type: 'VARCHAR(10) NULL' },

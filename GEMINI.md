@@ -24,4 +24,15 @@ Este archivo complementa a `AGENTS.md` y es cargado directamente por Antigravity
 5. **Ubicación de Banners de Error**:
    - Colocar los banners de error debajo de los botones de acción del formulario.
 
-Consulta el documento completo en [AGENTS.md](file:///f:/Spriteboard/AGENTS.md) para más detalles.
+6. **Imports Horizontales y Alfabéticos**:
+   - Escribir cada `import` en una sola línea horizontal.
+   - Ordenar las declaraciones alfabéticamente por ruta de módulo, y los miembros `{ ... }` alfabéticamente.
+
+7. **CERO Anotaciones y Comentarios Explicativos**:
+   - Prohibido JSDoc, PHPDoc, bloques decorativos y comentarios inline de código obvio. Código 100% auto-documentado.
+
+8. **Estructura Estándar de Controladores / Vistas JS**:
+   - Seguir el ciclo de vida: `init()` (con `AbortController`), `bindEvents()` y `destroy()`.
+
+Consulta las especificaciones completas en [docs/AI_INSTRUCTIONS.md](file:///f:/Spriteboard/docs/AI_INSTRUCTIONS.md) y [AGENTS.md](file:///f:/Spriteboard/AGENTS.md).
+

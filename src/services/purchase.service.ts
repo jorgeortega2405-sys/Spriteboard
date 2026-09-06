@@ -30,9 +30,6 @@ export class PurchaseService {
     return PurchaseService.instance;
   }
 
-  /**
-   * Registrar o actualizar una compra en la base de datos MySQL
-   */
   public async recordPurchase(purchase: PurchaseRecord): Promise<void> {
     const conn = await pool.getConnection();
     try {
@@ -84,9 +81,6 @@ export class PurchaseService {
     }
   }
 
-  /**
-   * Actualizar el tier y metadatos de suscripción de un usuario en MySQL
-   */
   public async updateUserSubscription(
     userId: number,
     tier: string,
@@ -119,9 +113,6 @@ export class PurchaseService {
     }
   }
 
-  /**
-   * Obtener compras asociadas a un usuario
-   */
   public async getPurchasesByUserId(userId: number): Promise<PurchaseRecord[]> {
     const [rows] = await pool.query<mysql.RowDataPacket[]>(
       'SELECT * FROM purchases WHERE user_id = ? ORDER BY created_at DESC',
@@ -130,9 +121,6 @@ export class PurchaseService {
     return rows as PurchaseRecord[];
   }
 
-  /**
-   * Buscar compra por ID de sesión de Stripe
-   */
   public async getPurchaseBySessionId(sessionId: string): Promise<PurchaseRecord | null> {
     const [rows] = await pool.query<mysql.RowDataPacket[]>(
       'SELECT * FROM purchases WHERE stripe_session_id = ? LIMIT 1',
@@ -142,9 +130,6 @@ export class PurchaseService {
     return rows[0] as PurchaseRecord;
   }
 
-  /**
-   * Obtener información de facturación y Stripe de un usuario
-   */
   public async getUserBillingInfo(userId: number): Promise<{
     id: number;
     email: string;
@@ -163,16 +148,10 @@ export class PurchaseService {
     return rows[0] as any;
   }
 
-  /**
-   * Actualizar el ID de cliente de Stripe de un usuario
-   */
   public async updateUserCustomerId(userId: number, customerId: string): Promise<void> {
     await pool.query('UPDATE users SET stripe_customer_id = ? WHERE id = ?', [customerId, userId]);
   }
 
-  /**
-   * Buscar usuario por stripe_customer_id
-   */
   public async getUserByStripeCustomerId(customerId: string): Promise<{
     id: number;
     email: string;
@@ -191,9 +170,6 @@ export class PurchaseService {
     return rows[0] as any;
   }
 
-  /**
-   * Buscar usuario por stripe_subscription_id
-   */
   public async getUserByStripeSubscriptionId(subscriptionId: string): Promise<{
     id: number;
     email: string;

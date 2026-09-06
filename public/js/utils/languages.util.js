@@ -1,7 +1,3 @@
-/**
- * Catálogo Oficial de 113 Idiomas Soportados por Spriteboard (Frontend)
- */
-
 export const AVAILABLE_LANGUAGES = [
   { code: 'pa-PK', name: 'پن٘جابی (پاکستان)' },
   { code: 'om', name: 'Afaan Oromoo' },
@@ -133,13 +129,11 @@ export function detectBrowserLanguage() {
     if (!bl) continue;
     const clean = bl.replace('_', '-');
 
-    // Búsqueda exacta
     const exact = AVAILABLE_LANGUAGES.find(
       (l) => l.code.toLowerCase() === clean.toLowerCase()
     );
     if (exact) return exact.code;
 
-    // Búsqueda por prefijo base (ej. 'es' -> 'es-ES' / 'es-419', 'en' -> 'en-US')
     const baseCode = clean.split('-')[0].toLowerCase();
     const baseMatch = AVAILABLE_LANGUAGES.find(
       (l) => l.code.split('-')[0].toLowerCase() === baseCode

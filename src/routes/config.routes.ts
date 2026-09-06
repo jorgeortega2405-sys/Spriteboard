@@ -1,5 +1,5 @@
-import { Router } from 'express';
 import { getAppConfig, getCsrfToken, getHealth } from '../controllers/config.controller.js';
+import { Router } from 'express';
 
 const router = Router();
 

@@ -1,30 +1,13 @@
-/**
- * Vista de Suscripciones y Mejoras (/upgrade)
- * Replica exactamente la arquitectura y diseño de las cards de la web del escritorio:
- * - Glider Toggle Pill (Mensual / Anual)
- * - Grid de Cards (Spriteboard Plus, Spriteboard Pro, Spriteboard Ultra)
- * - Sección de cabecera, almacenamiento en la nube, precios, botón con hover-text
- * - Separador de características ("Todo lo del plan anterior, más:") y lista detallada
- */
-
-import { loadTemplate } from '../services/template.service.js';
-import { createSidebar } from '../components/layout.component.js';
-import {
-  getSubscriptionsApi,
-  createSubscriptionCheckoutApi,
-  verifySubscriptionSessionApi,
-  currentUser,
-  checkAuthSession,
-  escapeHtml,
-} from '../services/api.service.js';
-import { showToast } from '../services/toast.service.js';
-import { t } from '../services/i18n.service.js';
 import { navigate } from '../app-router.js';
+import { createSidebar } from '../components/layout.component.js';
+import { checkAuthSession, createSubscriptionCheckoutApi, currentUser, escapeHtml, getSubscriptionsApi, verifySubscriptionSessionApi } from '../services/api.service.js';
+import { t } from '../services/i18n.service.js';
+import { loadTemplate } from '../services/template.service.js';
+import { showToast } from '../services/toast.service.js';
 
 export async function createUpgradeView() {
   const container = await loadTemplate('/views/upgrade/upgrade.html');
 
-  // Procesar retorno desde Stripe Checkout
   const urlParams = new URLSearchParams(window.location.search);
   const paymentStatus = urlParams.get('payment');
   const sessionId = urlParams.get('session_id');
@@ -37,7 +20,6 @@ export async function createUpgradeView() {
         window.dispatchEvent(new CustomEvent('subscription-updated', { detail: currentUser }));
       }
     } catch (_) {
-      // En caso de fallo silencioso de red, el webhook de Stripe asegura la actualización asíncrona
     } finally {
       const activeTierName = (currentUser?.subscription_tier || 'pro').toUpperCase();
       showToast(
@@ -55,7 +37,6 @@ export async function createUpgradeView() {
     window.history.replaceState({}, '', '/upgrade');
   }
 
-  // Insertar la barra lateral (sidebar)
   const sidebar = await createSidebar();
   container.prepend(sidebar);
 
@@ -66,7 +47,6 @@ export async function createUpgradeView() {
 
   let currentBillingCycle = 'monthly';
 
-  // Obtener planes desde el backend
   const res = await getSubscriptionsApi();
   const tiers = (res.success && Array.isArray(res.subscriptions) && res.subscriptions.length > 0)
     ? res.subscriptions
@@ -235,7 +215,6 @@ export async function createUpgradeView() {
       const featuresList = Array.isArray(tier.features) ? tier.features : [];
 
       featuresList.forEach((feat, idx) => {
-        // En Pro y Ultra se inserta el separador después de las primeras 2 ventajas
         if (tierIdx > 0 && idx === 2) {
           featuresHtml += `
             <div class="component-card-feature-divider-container" data-ref="feature-divider-${tier.id}">
@@ -267,7 +246,6 @@ export async function createUpgradeView() {
       card.setAttribute('data-tier', tier.id);
 
       card.innerHTML = `
-        <!-- Sección Encabezado -->
         <div class="component-card-section component-card-section--header" data-ref="card-header-${tier.id}">
           ${isCurrentPlan ? `
             <div class="component-card-current-badge" data-ref="current-badge-${tier.id}">
@@ -285,7 +263,6 @@ export async function createUpgradeView() {
           </span>
         </div>
 
-        <!-- Sección Precio -->
         <div class="component-card-section component-card-section--price" data-ref="card-price-${tier.id}">
           <div class="component-card-price-label">Desde</div>
           <div class="component-card-price-container">
@@ -296,7 +273,6 @@ export async function createUpgradeView() {
           </div>
         </div>
 
-        <!-- Sección Botón de Acción -->
         <div class="component-card-section component-card-section--action" data-ref="card-action-${tier.id}">
           ${isCurrentPlan ? `
             <button type="button" class="component-button component-button--rounded-pill component-card-button component-card-button--current" data-ref="btn-subscribe-${tier.id}" data-action="current-plan" disabled>
@@ -321,7 +297,6 @@ export async function createUpgradeView() {
 
         <hr class="component-divider" />
 
-        <!-- Sección Características y Límites -->
         <div class="component-card-section component-card-section--features" data-ref="card-features-${tier.id}">
           <div class="component-card-features" data-ref="features-container-${tier.id}">
             ${featuresHtml}
@@ -334,46 +309,43 @@ export async function createUpgradeView() {
         </div>
       `;
 
-      // Evento del botón de suscripción: Redirige a Stripe Checkout si no es el plan actual o downgrade
       const subscribeBtn = card.querySelector(`[data-ref="btn-subscribe-${tier.id}"]`);
       if (subscribeBtn && !isCurrentPlan && !isDowngrade) {
         subscribeBtn.addEventListener('click', async (e) => {
           e.preventDefault();
 
           if (!currentUser) {
-          showToast(
-            t('upgrade.login_required') || 'Debes iniciar sesión para contratar una suscripción.',
-            'info'
-          );
-          navigate('/login');
-          return;
-        }
-
-        const originalHtml = subscribeBtn.innerHTML;
-        subscribeBtn.disabled = true;
-        subscribeBtn.style.opacity = '0.7';
-
-        try {
-          const res = await createSubscriptionCheckoutApi(tier.id, currentBillingCycle);
-          if (res.success && res.url) {
-            window.location.href = res.url;
-          } else {
             showToast(
-              res.error || t('toasts.generic_error') || 'Error al conectar con la pasarela de pagos.',
-              'error'
+              t('upgrade.login_required') || 'Debes iniciar sesión para contratar una suscripción.',
+              'info'
             );
+            navigate('/login');
+            return;
+          }
+
+          subscribeBtn.disabled = true;
+          subscribeBtn.style.opacity = '0.7';
+
+          try {
+            const res = await createSubscriptionCheckoutApi(tier.id, currentBillingCycle);
+            if (res.success && res.url) {
+              window.location.href = res.url;
+            } else {
+              showToast(
+                res.error || t('toasts.generic_error') || 'Error al conectar con la pasarela de pagos.',
+                'error'
+              );
+              subscribeBtn.disabled = false;
+              subscribeBtn.style.opacity = '1';
+            }
+          } catch {
+            showToast(t('toasts.network_error') || 'Error de conexión con el servidor.', 'error');
             subscribeBtn.disabled = false;
             subscribeBtn.style.opacity = '1';
           }
-        } catch {
-          showToast(t('toasts.network_error') || 'Error de conexión con el servidor.', 'error');
-          subscribeBtn.disabled = false;
-          subscribeBtn.style.opacity = '1';
-        }
-      });
+        });
       }
 
-      // Evento para expandir/ocultar características adicionales
       const toggleFeaturesBtn = card.querySelector(`[data-ref="toggle-btn-${tier.id}"]`);
       if (toggleFeaturesBtn) {
         toggleFeaturesBtn.addEventListener('click', (e) => {
@@ -396,7 +368,6 @@ export async function createUpgradeView() {
     });
   }
 
-  // Conmutador interactivo de ciclo de facturación con Glider (Mensual / Anual)
   const setBillingCycle = (cycle) => {
     currentBillingCycle = cycle;
     const isYearly = cycle === 'yearly';
@@ -415,7 +386,6 @@ export async function createUpgradeView() {
       }
     }
 
-    // Actualizar precios y etiquetas en todas las tarjetas
     tiers.forEach((tier) => {
       const priceEl = container.querySelector(`[data-ref="plan-price-${tier.id}"]`);
       const periodEl = container.querySelector(`[data-ref="plan-period-${tier.id}"]`);
@@ -452,7 +422,6 @@ export async function createUpgradeView() {
     }
   });
 
-  // Navegación SPA para los enlaces del aviso legal
   const disclaimerLinks = container.querySelectorAll('.component-disclaimer a.link');
   disclaimerLinks.forEach((link) => {
     link.addEventListener('click', (e) => {

@@ -1,29 +1,11 @@
-/**
- * Módulo Centralizado de Modales (modal.component.js)
- * Unifica:
- * - Sistema General de Modales (openModal / closeAllModals)
- * - Modal Dividido de Autenticación en Dos Pasos (open2FAModal - 1024x525 px)
- *
- * Cumple con directivas: CERO console.*, CERO IDs, orden estricto de atributos.
- */
-
-import { t, translateElement } from '../services/i18n.service.js';
 import { postApi } from '../services/api.service.js';
+import { t, translateElement } from '../services/i18n.service.js';
 import { showToast } from '../services/toast.service.js';
 import QRCodeStyling from '../vendor/qr-styling.js';
 
 let activeModals = [];
 let active2FAModal = null;
 
-/* ==========================================================================
-   1. SISTEMA GENERAL DE MODALES (openModal / closeAllModals)
-   ========================================================================== */
-
-/**
- * Crea y abre un modal en pantalla
- * @param {Object} options
- * @returns {Object} modalInstance
- */
 export function openModal(options = {}) {
   let {
     title = '',
@@ -43,7 +25,6 @@ export function openModal(options = {}) {
     onClose = null,
   } = options;
 
-  // 1. Construir elemento Backdrop
   const backdrop = document.createElement('div');
   backdrop.className = 'modal-backdrop';
   backdrop.setAttribute('data-ref', 'modal-backdrop');
@@ -77,7 +58,6 @@ export function openModal(options = {}) {
     </div>
   `;
 
-  // 2. Insertar contenido del cuerpo
   const bodyContainer = backdrop.querySelector('[data-ref="modal-body"]');
   if (bodyContainer) {
     if (typeof bodyHtml === 'string') {
@@ -87,10 +67,8 @@ export function openModal(options = {}) {
     }
   }
 
-  // 3. Traducir elementos internos
   translateElement(backdrop);
 
-  // 4. Elementos de referencia
   const card = backdrop.querySelector('[data-ref="modal-card"]');
   const closeBtn = backdrop.querySelector('[data-ref="btn-modal-close"]');
   const cancelBtn = backdrop.querySelector('[data-ref="btn-modal-cancel"]');
@@ -206,7 +184,6 @@ export function openModal(options = {}) {
     },
   };
 
-  // Drag & drop en móviles
   const dragZone = backdrop.querySelector('[data-ref="modal-drag-zone"]');
   let startY = 0;
   let currentY = 0;
@@ -271,7 +248,6 @@ export function openModal(options = {}) {
   window.addEventListener('pointerup', onPointerUp);
   window.addEventListener('pointercancel', onPointerUp);
 
-  // Manejo de eventos
   const handleKeyDown = (e) => {
     if (e.key === 'Escape') {
       e.preventDefault();
@@ -315,7 +291,6 @@ export function openModal(options = {}) {
     }
   });
 
-  // Montar en el DOM
   document.body.appendChild(backdrop);
   document.body.classList.add('modal-open');
   activeModals.push(modalInstance);
@@ -331,23 +306,11 @@ export function openModal(options = {}) {
   return modalInstance;
 }
 
-/**
- * Cierra todos los modales activos
- */
 export function closeAllModals() {
   const modalsToClose = [...activeModals];
   modalsToClose.forEach((modal) => modal.close());
 }
 
-/* ==========================================================================
-   2. MODAL DIVIDIDO 2FA (open2FAModal - 1024x525 px)
-   ========================================================================== */
-
-/**
- * Abre el modal dividido de 1024x525 px para configurar y activar 2FA
- * @param {Object} options
- * @returns {Promise<Object>} modalInstance
- */
 export async function open2FAModal(options = {}) {
   const { onSuccess = null, onClose = null } = options;
 
@@ -368,9 +331,7 @@ export async function open2FAModal(options = {}) {
         <div class="modal-card__drag-zone" data-ref="modal-2fa-drag-zone">
           <div class="modal-card__drag-handle"></div>
         </div>
-        <!-- Columna izquierda: formulario, descripciones y badges -->
         <div class="modal-split__left" data-ref="modal-split-left">
-          <!-- Contenedor Etapa 1 -->
           <div class="modal-split__stage" data-ref="stage-1-container">
             <div class="modal-split__header" data-ref="stage-1-header">
               <h2 class="modal-split__title" data-ref="stage-1-title" data-i18n="settings.security.two_factor_modal_title">
@@ -411,7 +372,6 @@ export async function open2FAModal(options = {}) {
             </div>
           </div>
 
-          <!-- Contenedor Etapa 2 (Códigos de respaldo) -->
           <div class="modal-split__stage" data-ref="stage-2-container" style="display: none;">
             <div class="modal-split__header" data-ref="stage-2-header">
               <h2 class="modal-split__title" data-ref="stage-2-title" data-i18n="settings.security.two_factor_backup_title">
@@ -438,9 +398,7 @@ export async function open2FAModal(options = {}) {
           </div>
         </div>
 
-        <!-- Columna derecha: gradiente moderno y contenido visual (QR / SVG) -->
         <div class="modal-split__right" data-ref="modal-split-right">
-          <!-- Visual Etapa 1: QR con styling moderno -->
           <div class="modal-split__visual-stage" data-ref="visual-stage-1">
             <div class="modal-split__qr-wrapper" data-ref="qr-wrapper">
               <div class="modal-split__qr-canvas" data-ref="qr-container"></div>
@@ -451,7 +409,6 @@ export async function open2FAModal(options = {}) {
             </div>
           </div>
 
-          <!-- Visual Etapa 2: SVG ilustrativo sobre gradiente -->
           <div class="modal-split__visual-stage" data-ref="visual-stage-2" style="display: none;">
             <div class="modal-split__svg-wrapper" data-ref="svg-wrapper">
               <svg class="modal-split__shield-svg" data-ref="shield-svg" width="220" height="220" viewBox="0 0 220 220" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -486,7 +443,6 @@ export async function open2FAModal(options = {}) {
 
   translateElement(backdrop);
 
-  // Referencias a elementos
   const closeBtn = backdrop.querySelector('[data-ref="btn-modal-close"]');
   const stage1Container = backdrop.querySelector('[data-ref="stage-1-container"]');
   const stage2Container = backdrop.querySelector('[data-ref="stage-2-container"]');
@@ -560,7 +516,6 @@ export async function open2FAModal(options = {}) {
 
   active2FAModal = modalInstance;
 
-  // Drag & drop en móviles
   const card2fa = backdrop.querySelector('[data-ref="modal-card-2fa"]');
   const dragZone2fa = backdrop.querySelector('[data-ref="modal-2fa-drag-zone"]');
   let startY = 0;
@@ -626,7 +581,6 @@ export async function open2FAModal(options = {}) {
   window.addEventListener('pointerup', onPointerUp);
   window.addEventListener('pointercancel', onPointerUp);
 
-  // Eventos de cierre
   const handleKeyDown = (e) => {
     if (e.key === 'Escape') {
       e.preventDefault();
@@ -691,7 +645,6 @@ export async function open2FAModal(options = {}) {
     }
   });
 
-  // Montar en el DOM
   document.body.appendChild(backdrop);
   document.body.classList.add('modal-open');
 
@@ -699,7 +652,6 @@ export async function open2FAModal(options = {}) {
     backdrop.classList.add('is-visible');
   });
 
-  // Generar secreto, QR y códigos de respaldo en el backend
   try {
     const res = await postApi('/api/settings/2fa/generate');
     const data = await res.json();
@@ -716,7 +668,6 @@ export async function open2FAModal(options = {}) {
       secretValueEl.textContent = secret;
     }
 
-    // Renderizar QR con QRCodeStyling
     if (qrContainer && qrUri && QRCodeStyling) {
       qrContainer.innerHTML = '';
       const qrCode = new QRCodeStyling({

@@ -1,38 +1,13 @@
-/**
- * Módulo Centralizado de Componentes de Layout (layout.component.js)
- * Unifica:
- * - Barra Superior Persistente (TopBar) con perfil y conmutador de cuentas
- * - Barra Lateral Izquierda Adaptativa (Sidebar)
- * - Barra Lateral Derecha de Ayuda y Chat (ChatSidebar / Spritebot)
- *
- * Cumple con directivas: CERO console.*, CERO IDs, orden estricto de atributos.
- */
-
-import { loadTemplate } from '../services/template.service.js';
-import {
-  currentUser,
-  linkedAccounts,
-  escapeHtml,
-  switchAccountApi,
-  logoutApi,
-  logoutAllApi,
-} from '../services/api.service.js';
 import { navigate, render } from '../app-router.js';
+import { currentUser, escapeHtml, linkedAccounts, logoutAllApi, logoutApi, switchAccountApi } from '../services/api.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
+import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
-import { initWebSocket, closeWebSocket } from '../services/websocket.service.js';
-
-/* ==========================================================================
-   1. ESTADOS GLOBALES DE LAYOUT
-   ========================================================================== */
+import { closeWebSocket, initWebSocket } from '../services/websocket.service.js';
 
 let isSidebarOpen = false;
 let isChatOpen = false;
 let chatSidebarElement = null;
-
-/* ==========================================================================
-   2. CONTROLADORES DE APERTURA / CIERRE Y SINCRONIZACIÓN
-   ========================================================================== */
 
 export function getIsSidebarOpen() {
   return isSidebarOpen;
@@ -57,7 +32,6 @@ export function getIsChatOpen() {
 export function toggleChatSidebar(forceState) {
   isChatOpen = forceState !== undefined ? forceState : !isChatOpen;
 
-  // Asegurar que el elemento esté montado en el .layout-content activo
   const activeContent = document.querySelector('[data-ref="app"] .layout-content');
   if (activeContent && chatSidebarElement && chatSidebarElement.parentNode !== activeContent) {
     activeContent.appendChild(chatSidebarElement);
@@ -68,10 +42,7 @@ export function toggleChatSidebar(forceState) {
     updateChatEmptyState();
 
     if (isChatOpen) {
-      // Cerrar la barra lateral izquierda para evitar solapamientos
       toggleSidebar(false);
-
-      // Enfocar automáticamente el input píldora de chat
       const chatInput = chatSidebarElement.querySelector('[data-ref="chat-input"]');
       setTimeout(() => chatInput?.focus(), 80);
     }
@@ -92,7 +63,6 @@ function updateChatEmptyState() {
   chatPanel?.classList.toggle('is-empty', messages.length === 0);
 }
 
-// Cierre global por tecla Escape
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     if (isSidebarOpen) toggleSidebar(false);
@@ -100,9 +70,7 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// Cierre global por clic fuera
 document.addEventListener('click', (e) => {
-  // Sidebar izquierdo
   if (isSidebarOpen) {
     const sidebar = document.querySelector('[data-ref="sidebar"]');
     const btnToggle = document.querySelector('[data-ref="btn-toggle-menu"]');
@@ -111,7 +79,6 @@ document.addEventListener('click', (e) => {
     }
   }
 
-  // Chat derecho
   if (isChatOpen) {
     const chatSidebar = document.querySelector('[data-ref="chat-sidebar"]');
     const btnToggle = document.querySelector('[data-ref="btn-help-chat"]');
@@ -127,10 +94,6 @@ document.addEventListener('click', (e) => {
     }
   }
 });
-
-/* ==========================================================================
-   3. BARRA SUPERIOR PERSISTENTE (createTopBar)
-   ========================================================================== */
 
 export async function createTopBar() {
   const topbar = await loadTemplate('/views/components/topbar.html');
@@ -184,7 +147,6 @@ export async function createTopBar() {
       const dragZone = avatarContainer.querySelector('[data-ref="avatar-menu-drag-zone"]');
       const btnLogout = avatarContainer.querySelector('[data-ref="btn-logout"]');
 
-      // Paneles del menú desplegable
       const panelMain = avatarContainer.querySelector('[data-ref="panel-main-options"]');
       const panelSwitcher = avatarContainer.querySelector('[data-ref="panel-account-switcher"]');
       const btnSwitchAccountMenu = avatarContainer.querySelector('[data-ref="btn-switch-account-menu"]');
@@ -193,7 +155,6 @@ export async function createTopBar() {
       const btnLogoutAll = avatarContainer.querySelector('[data-ref="btn-logout-all"]');
       const accountSwitcherList = avatarContainer.querySelector('[data-ref="account-switcher-list"]');
 
-      // Datos de la cuenta activa en el panel principal
       const activeAvatar = avatarContainer.querySelector('[data-ref="active-account-avatar"]');
       const activeAvatarBox = avatarContainer.querySelector('[data-ref="active-account-avatar-box"]');
       const activeName = avatarContainer.querySelector('[data-ref="active-account-name"]');
@@ -448,7 +409,6 @@ export async function createTopBar() {
         }
       });
 
-      // Drag and drop en móviles
       let startY = 0;
       let currentY = 0;
       let isDragging = false;
@@ -533,7 +493,6 @@ export async function createTopBar() {
         render();
       };
 
-      // Configuración
       const btnSettings = avatarContainer.querySelector('[data-ref="btn-menu-settings"]');
       btnSettings?.addEventListener('click', (e) => {
         e.preventDefault();
@@ -541,7 +500,6 @@ export async function createTopBar() {
         navigate(currentUser ? '/settings/your-account' : '/settings/guest');
       });
 
-      // Ayuda y comentarios
       const btnHelp = avatarContainer.querySelector('[data-ref="btn-menu-help"]');
       btnHelp?.addEventListener('click', (e) => {
         e.preventDefault();
@@ -549,7 +507,6 @@ export async function createTopBar() {
         navigate('/help/terms');
       });
 
-      // Cerrar sesión
       btnLogout?.addEventListener('click', async (e) => {
         e.preventDefault();
         closeMenu();
@@ -566,7 +523,6 @@ export async function createTopBar() {
         }
       });
 
-      // Cerrar todas las sesiones
       btnLogoutAll?.addEventListener('click', async (e) => {
         e.preventDefault();
         closeMenu();
@@ -592,10 +548,6 @@ export async function createTopBar() {
   return topbar;
 }
 
-/* ==========================================================================
-   4. BARRA LATERAL IZQUIERDA (createSidebar)
-   ========================================================================== */
-
 export async function createSidebar() {
   const sidebar = await loadTemplate('/views/components/sidebar.html');
 
@@ -618,7 +570,6 @@ export async function createSidebar() {
   };
 
   if (currentPath.startsWith('/settings')) {
-    // Modo Configuración
     if (sidebarBottom) {
       sidebarBottom.style.display = 'none';
     }
@@ -638,7 +589,6 @@ export async function createSidebar() {
 
     if (navTop) {
       if (currentUser) {
-        // Usuario autenticado
         navTop.innerHTML = `
           <button type="button" class="menu-item" data-ref="btn-nav-settings-account">
             <span class="material-symbols-rounded menu-item__icon">person</span>
@@ -692,7 +642,6 @@ export async function createSidebar() {
         bindNavLink(btnPurchases, '/settings/purchases');
         bindNavLink(btnAccessibility, '/settings/accessibility');
       } else {
-        // Usuario invitado
         navTop.innerHTML = `
           <button type="button" class="menu-item" data-ref="btn-nav-settings-guest">
             <span class="material-symbols-rounded menu-item__icon">tune</span>
@@ -709,7 +658,6 @@ export async function createSidebar() {
       }
     }
   } else if (currentPath.startsWith('/help')) {
-    // Modo Ayuda, Legal y Documentación
     if (sidebarBottom) {
       sidebarBottom.style.display = 'none';
     }
@@ -785,7 +733,6 @@ export async function createSidebar() {
       bindNavLink(btnSupport, '/help/support');
     }
   } else {
-    // Modo Principal Normal (/ y /trash)
     if (sidebarHeader) {
       sidebarHeader.style.display = 'none';
       sidebarHeader.innerHTML = '';
@@ -830,10 +777,6 @@ export async function createSidebar() {
 
   return sidebar;
 }
-
-/* ==========================================================================
-   5. BARRA LATERAL DERECHA DE CHAT (initChatSidebar)
-   ========================================================================== */
 
 function setupChatSidebarEvents(sidebarElement) {
   const conversationHistory = [];

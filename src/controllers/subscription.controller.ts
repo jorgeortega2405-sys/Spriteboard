@@ -1,16 +1,12 @@
-import { Request, Response } from 'express';
-import { subscriptionService } from '../services/subscription.service.js';
-import { stripeService } from '../services/stripe.service.js';
-import { purchaseService } from '../services/purchase.service.js';
-import { updateActiveAccountInSession } from '../services/auth.service.js';
-import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import { config } from '../config/env.config.js';
+import { getCurrentUser } from '../middlewares/auth.middleware.js';
+import { updateActiveAccountInSession } from '../services/auth.service.js';
 import { logger } from '../services/logger.service.js';
+import { purchaseService } from '../services/purchase.service.js';
+import { stripeService } from '../services/stripe.service.js';
+import { subscriptionService } from '../services/subscription.service.js';
+import { Request, Response } from 'express';
 
-/**
- * Obtener listado de planes de suscripción disponibles
- * GET /api/subscriptions
- */
 export async function getSubscriptions(req: Request, res: Response): Promise<void> {
   try {
     const tiers = await subscriptionService.getAvailableTiers();
@@ -25,10 +21,6 @@ export async function getSubscriptions(req: Request, res: Response): Promise<voi
   }
 }
 
-/**
- * Crear sesión de Stripe Checkout para suscripción
- * POST /api/subscriptions/checkout
- */
 export async function createCheckout(req: Request, res: Response): Promise<void> {
   try {
     const user = getCurrentUser(req);
@@ -68,10 +60,6 @@ export async function createCheckout(req: Request, res: Response): Promise<void>
   }
 }
 
-/**
- * Verificar sesión de Stripe Checkout al retornar a la web
- * GET /api/subscriptions/verify-session
- */
 export async function verifySession(req: Request, res: Response): Promise<void> {
   try {
     const user = getCurrentUser(req);
@@ -88,7 +76,6 @@ export async function verifySession(req: Request, res: Response): Promise<void> 
 
     const result = await stripeService.verifyAndSyncCheckoutSession(sessionId, user.id);
 
-    // Actualizar cookie multi-cuenta con el nuevo tier de suscripción
     updateActiveAccountInSession(res, req, {
       subscription_tier: result.tier as 'free' | 'plus' | 'pro' | 'ultra',
     });
@@ -107,10 +94,6 @@ export async function verifySession(req: Request, res: Response): Promise<void> 
   }
 }
 
-/**
- * Webhook oficial de Stripe para eventos asíncronos
- * POST /api/subscriptions/webhook
- */
 export async function handleWebhook(req: Request, res: Response): Promise<void> {
   try {
     const sig = req.headers['stripe-signature'];
@@ -137,10 +120,6 @@ export async function handleWebhook(req: Request, res: Response): Promise<void> 
   }
 }
 
-/**
- * Obtener historial de compras del usuario autenticado
- * GET /api/subscriptions/history
- */
 export async function getPurchaseHistory(req: Request, res: Response): Promise<void> {
   try {
     const user = getCurrentUser(req);
@@ -159,10 +138,6 @@ export async function getPurchaseHistory(req: Request, res: Response): Promise<v
   }
 }
 
-/**
- * Obtener detalles de la suscripción activa
- * GET /api/subscriptions/details
- */
 export async function getBillingDetails(req: Request, res: Response): Promise<void> {
   try {
     const user = getCurrentUser(req);
@@ -181,10 +156,6 @@ export async function getBillingDetails(req: Request, res: Response): Promise<vo
   }
 }
 
-/**
- * Activar o desactivar renovación automática (cancel_at_period_end)
- * POST /api/subscriptions/auto-renewal
- */
 export async function updateAutoRenewal(req: Request, res: Response): Promise<void> {
   try {
     const user = getCurrentUser(req);
@@ -212,10 +183,6 @@ export async function updateAutoRenewal(req: Request, res: Response): Promise<vo
   }
 }
 
-/**
- * Cancelar suscripción inmediatamente
- * POST /api/subscriptions/cancel-immediate
- */
 export async function cancelSubscriptionImmediate(req: Request, res: Response): Promise<void> {
   try {
     const user = getCurrentUser(req);
@@ -226,7 +193,6 @@ export async function cancelSubscriptionImmediate(req: Request, res: Response): 
 
     const result = await stripeService.cancelSubscriptionNow(user.id);
 
-    // Actualizar cookie de sesión
     updateActiveAccountInSession(res, req, {
       subscription_tier: 'free',
     });
@@ -244,10 +210,6 @@ export async function cancelSubscriptionImmediate(req: Request, res: Response): 
   }
 }
 
-/**
- * Listar métodos de pago (tarjetas)
- * GET /api/subscriptions/payment-methods
- */
 export async function getPaymentMethods(req: Request, res: Response): Promise<void> {
   try {
     const user = getCurrentUser(req);
@@ -266,10 +228,6 @@ export async function getPaymentMethods(req: Request, res: Response): Promise<vo
   }
 }
 
-/**
- * Crear SetupIntent para agregar una nueva tarjeta
- * POST /api/subscriptions/setup-intent
- */
 export async function createSetupIntent(req: Request, res: Response): Promise<void> {
   try {
     const user = getCurrentUser(req);
@@ -288,10 +246,6 @@ export async function createSetupIntent(req: Request, res: Response): Promise<vo
   }
 }
 
-/**
- * Establecer tarjeta como método predeterminado
- * POST /api/subscriptions/payment-methods/:id/default
- */
 export async function setDefaultPaymentMethod(req: Request, res: Response): Promise<void> {
   try {
     const user = getCurrentUser(req);
@@ -316,10 +270,6 @@ export async function setDefaultPaymentMethod(req: Request, res: Response): Prom
   }
 }
 
-/**
- * Eliminar una tarjeta guardada
- * DELETE /api/subscriptions/payment-methods/:id
- */
 export async function deletePaymentMethod(req: Request, res: Response): Promise<void> {
   try {
     const user = getCurrentUser(req);

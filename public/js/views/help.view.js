@@ -1,13 +1,6 @@
-/**
- * Módulo de Vistas del Centro de Ayuda, Legal y Documentación (help.view.js)
- * Maneja dinámicamente las secciones: terms, privacy, cookies, legal_notice, billing, support.
- *
- * Cumple con directivas: CERO console.*, CERO IDs, orden estricto de atributos.
- */
-
-import { loadTemplate } from '../services/template.service.js';
 import { createSidebar } from '../components/layout.component.js';
 import { t, translateElement } from '../services/i18n.service.js';
+import { loadTemplate } from '../services/template.service.js';
 
 const HELP_SECTIONS_DATA = {
   terms: {

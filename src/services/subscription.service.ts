@@ -1,16 +1,8 @@
-/**
- * Servicio de Suscripciones
- * Gestiona el catálogo de planes y la lógica asociada a suscripciones
- */
-
 import { SubscriptionTier } from '../types/subscription.types.js';
 
 export class SubscriptionService {
   private static instance: SubscriptionService;
 
-  /**
-   * Catálogo de suscripciones disponibles en Spriteboard
-   */
   private readonly tiers: SubscriptionTier[] = [
     {
       id: 'plus',
@@ -157,9 +149,6 @@ export class SubscriptionService {
     return SubscriptionService.instance;
   }
 
-  /**
-   * Retorna los niveles de suscripción disponibles
-   */
   public async getAvailableTiers(): Promise<SubscriptionTier[]> {
     return this.tiers;
   }

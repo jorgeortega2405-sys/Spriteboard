@@ -1,76 +1,19 @@
+import { pool } from '../config/database.config.js';
+import { getCurrentUser, getLinkedAccounts } from '../middlewares/auth.middleware.js';
+import { getClientIp } from '../middlewares/rate-limit.middleware.js';
+import { addAccountToSession, clearSessionCookie, getMultiAccountSession, hashPassword, isSessionRevoked, removeAccountFromSession, revokeAllUserSessions, setSessionCookie, switchAccountInSession, verifyPassword } from '../services/auth.service.js';
+import { geoIpService } from '../services/geoip.service.js';
+import { getGoogleAuthUrl, getGoogleVerifyAuthUrl, processGoogleAuthCallback, STATE_COOKIE_NAME } from '../services/google.service.js';
+import { logger } from '../services/logger.service.js';
+import { sendPasswordResetEmail, sendVerificationCodeEmail } from '../services/mail.service.js';
+import { consumePending2FALogin, getPending2FALogin, savePending2FALogin, verifyTotpCode } from '../services/two-factor.service.js';
+import { createUser, findUserByEmail, findUserById, findUserDuplicates, updateUserGoogleId, updateUserLastLoginGeo, updateUserPassword, verifyAndConsumeBackupCode } from '../services/user.service.js';
+import { consumePasswordResetToken, generateSixDigitCode, getPendingRegistration, savePasswordChangeAuth, savePasswordResetToken, savePendingRegistration, verifyAndConsumeCode, verifyPasswordResetToken } from '../services/verification.service.js';
+import { sanitizeUser, sendBadRequest, sendConflict, sendCreated, sendInternalError, sendNotFound, sendSuccess, sendUnauthorized } from '../utils/http.util.js';
+import { validateEmail, validatePassword, validateUsername, validateVerificationCode } from '../utils/validators.util.js';
 import crypto from 'crypto';
 import { Request, Response } from 'express';
-import {
-  hashPassword,
-  verifyPassword,
-  setSessionCookie,
-  clearSessionCookie,
-  addAccountToSession,
-  switchAccountInSession,
-  removeAccountFromSession,
-  revokeAllUserSessions,
-  isSessionRevoked,
-  getMultiAccountSession,
-} from '../services/auth.service.js';
-import { getClientIp } from '../middlewares/rate-limit.middleware.js';
-import {
-  getGoogleAuthUrl,
-  getGoogleVerifyAuthUrl,
-  processGoogleAuthCallback,
-  STATE_COOKIE_NAME,
-} from '../services/google.service.js';
-import {
-  generateSixDigitCode,
-  savePendingRegistration,
-  getPendingRegistration,
-  verifyAndConsumeCode,
-  savePasswordResetToken,
-  verifyPasswordResetToken,
-  consumePasswordResetToken,
-  savePasswordChangeAuth,
-} from '../services/verification.service.js';
-import {
-  sendVerificationCodeEmail,
-  sendPasswordResetEmail,
-} from '../services/mail.service.js';
-import { pool } from '../config/database.config.js';
-import {
-  findUserByEmail,
-  findUserDuplicates,
-  createUser,
-  updateUserPassword,
-  updateUserGoogleId,
-  findUserById,
-  verifyAndConsumeBackupCode,
-  updateUserLastLoginGeo,
-} from '../services/user.service.js';
-import { geoIpService } from '../services/geoip.service.js';
-import {
-  savePending2FALogin,
-  getPending2FALogin,
-  consumePending2FALogin,
-  verifyTotpCode,
-} from '../services/two-factor.service.js';
-import { getCurrentUser, getLinkedAccounts } from '../middlewares/auth.middleware.js';
-import { logger } from '../services/logger.service.js';
-import {
-  validateEmail,
-  validatePassword,
-  validateUsername,
-  validateVerificationCode,
-} from '../utils/validators.util.js';
-import {
-  sendSuccess,
-  sendCreated,
-  sendBadRequest,
-  sendUnauthorized,
-  sendNotFound,
-  sendConflict,
-  sendInternalError,
-  sanitizeUser,
-} from '../utils/http.util.js';
 
-// Etapa 1: Validar correo y contraseña
 export async function validateStage1(req: Request, res: Response): Promise<void> {
   try {
     const { email, password } = req.body;
@@ -89,7 +32,6 @@ export async function validateStage1(req: Request, res: Response): Promise<void>
 
     const trimmedEmail = String(email).trim().toLowerCase();
 
-    // Verificar si el correo ya existe en MySQL
     const existing = await findUserByEmail(trimmedEmail);
     if (existing) {
       sendConflict(res, 'El correo electrónico ya está registrado.');
@@ -102,7 +44,6 @@ export async function validateStage1(req: Request, res: Response): Promise<void>
   }
 }
 
-// Etapa 2: Validar nombre de usuario, generar código de 6 dígitos, guardar en Redis y enviar correo SMTP
 export async function sendRegistrationCode(req: Request, res: Response): Promise<void> {
   try {
     const { email, password, username } = req.body;
@@ -128,7 +69,6 @@ export async function sendRegistrationCode(req: Request, res: Response): Promise
     const trimmedEmail = String(email).trim().toLowerCase();
     const trimmedUsername = String(username).trim();
 
-    // Verificar disponibilidad de usuario o correo en la base de datos
     const { emailExists, usernameExists } = await findUserDuplicates(trimmedEmail, trimmedUsername);
 
     if (usernameExists) {
@@ -143,18 +83,15 @@ export async function sendRegistrationCode(req: Request, res: Response): Promise
       return;
     }
 
-    // Generar código de 6 dígitos y hashear contraseña
     const code = generateSixDigitCode();
     const passwordHash = await hashPassword(String(password));
 
-    // Guardar temporalmente en Redis por 15 minutos (900s)
     await savePendingRegistration(trimmedEmail, {
       username: trimmedUsername,
       passwordHash,
       code,
     });
 
-    // Enviar código por correo mediante SMTP
     await sendVerificationCodeEmail(trimmedEmail, trimmedUsername, code);
 
     logger.security.info('Código de verificación enviado exitosamente', { email: trimmedEmail, username: trimmedUsername });
@@ -167,7 +104,6 @@ export async function sendRegistrationCode(req: Request, res: Response): Promise
   }
 }
 
-// Etapa 3: Verificar código de 6 dígitos en Redis y crear la cuenta en MySQL
 export async function verifyRegistrationCode(req: Request, res: Response): Promise<void> {
   try {
     const { email, code } = req.body;
@@ -199,7 +135,6 @@ export async function verifyRegistrationCode(req: Request, res: Response): Promi
     const clientIp = getClientIp(req);
     const geo = geoIpService.lookup(clientIp);
 
-    // Crear el usuario en la base de datos MySQL con metadatos GeoIP y ASN
     const newUser = await createUser({
       username: pending.username,
       email: pending.email,
@@ -213,7 +148,6 @@ export async function verifyRegistrationCode(req: Request, res: Response): Promi
       registrationIsp: geo.asOrg,
     });
 
-    // Registrar evento de registro en la tabla de auditoría MySQL
     try {
       const userAgent = (req.headers['user-agent'] as string) || null;
       await pool.query(
@@ -234,7 +168,6 @@ export async function verifyRegistrationCode(req: Request, res: Response): Promi
       );
     } catch (_) {}
 
-    // Iniciar sesión agregando la nueva cuenta a la sesión multicuentas
     const session = await addAccountToSession(res, req, newUser);
 
     logger.security.info('Cuenta creada y verificada exitosamente', {
@@ -256,7 +189,6 @@ export async function verifyRegistrationCode(req: Request, res: Response): Promi
   }
 }
 
-// Reenviar código de verificación
 export async function resendRegistrationCode(req: Request, res: Response): Promise<void> {
   try {
     const { email } = req.body;
@@ -293,7 +225,6 @@ export async function resendRegistrationCode(req: Request, res: Response): Promi
   }
 }
 
-// Inicio de sesión
 export async function login(req: Request, res: Response): Promise<void> {
   try {
     const { email, password } = req.body;
@@ -321,7 +252,6 @@ export async function login(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    // Comprobar si el usuario tiene autenticación en dos pasos (2FA) activada
     if (userRow.two_factor_enabled) {
       const tempToken = crypto.randomBytes(32).toString('hex');
       await savePending2FALogin(tempToken, { userId: userRow.id, email: userRow.email }, 300);
@@ -370,7 +300,6 @@ export async function login(req: Request, res: Response): Promise<void> {
   }
 }
 
-// Verificación de segundo factor (2FA) durante el inicio de sesión
 export async function verify2FALogin(req: Request, res: Response): Promise<void> {
   try {
     const { tempToken, code } = req.body;
@@ -396,12 +325,10 @@ export async function verify2FALogin(req: Request, res: Response): Promise<void>
     const cleanCode = code.trim();
     let verified = false;
 
-    // 1. Probar como código TOTP de 6 dígitos (con tolerancia de deriva ±60s)
     if (/^\d{6}$/.test(cleanCode) && userRow.two_factor_secret) {
       verified = verifyTotpCode(cleanCode, userRow.two_factor_secret, 2);
     }
 
-    // 2. Si no fue válido como TOTP, verificar si corresponde a un código de respaldo
     if (!verified) {
       const consumed = await verifyAndConsumeBackupCode(userRow.id, cleanCode);
       if (consumed) {
@@ -416,7 +343,6 @@ export async function verify2FALogin(req: Request, res: Response): Promise<void>
       return;
     }
 
-    // Consumir el token temporal en Redis para evitar reutilización
     await consumePending2FALogin(tempToken.trim());
 
     const user = sanitizeUser(userRow);
@@ -451,7 +377,6 @@ export async function verify2FALogin(req: Request, res: Response): Promise<void>
   }
 }
 
-// Cierre de sesión de la cuenta activa (conmuta a la siguiente si existen más)
 export async function logout(req: Request, res: Response): Promise<void> {
   const result = await removeAccountFromSession(res, req);
   logger.security.info('Cierre de sesión de cuenta activa', { remainingAccounts: result.remainingCount });
@@ -463,7 +388,6 @@ export async function logout(req: Request, res: Response): Promise<void> {
   });
 }
 
-// Cierre de todas las sesiones simultáneas con revocación en servidor y en vivo por WebSocket
 export async function logoutAll(req: Request, res: Response): Promise<void> {
   const user = getCurrentUser(req);
   if (user) {
@@ -476,7 +400,6 @@ export async function logoutAll(req: Request, res: Response): Promise<void> {
   sendSuccess(res, { message: 'Todas las sesiones fueron cerradas exitosamente.' });
 }
 
-// Conmutar entre cuentas vinculadas
 export function switchAccount(req: Request, res: Response): void {
   const { user_id } = req.body;
   const targetId = Number(user_id);
@@ -500,7 +423,6 @@ export function switchAccount(req: Request, res: Response): void {
   });
 }
 
-// Usuario actual y cuentas vinculadas comprobando validez y revocación
 export async function me(req: Request, res: Response): Promise<void> {
   const user = getCurrentUser(req);
   if (!user) {
@@ -537,19 +459,16 @@ export async function me(req: Request, res: Response): Promise<void> {
   });
 }
 
-// Redirección a Google OAuth
 export function redirectToGoogle(req: Request, res: Response): void {
   const url = getGoogleAuthUrl(req, res);
   res.redirect(url);
 }
 
-// Redirección a Google OAuth para verificación de identidad (cambio de contraseña)
 export function redirectToGoogleVerify(req: Request, res: Response): void {
   const url = getGoogleVerifyAuthUrl(req, res);
   res.redirect(url);
 }
 
-// Callback de Google OAuth
 export async function googleCallback(req: Request, res: Response): Promise<void> {
   try {
     const { code, state, error } = req.query;
@@ -592,7 +511,6 @@ export async function googleCallback(req: Request, res: Response): Promise<void>
 
     const userPayload = await processGoogleAuthCallback(String(code), getClientIp(req));
 
-    // Si es flujo de verificación de identidad para cambio de contraseña
     if (isVerifyFlow) {
       const currentUser = getCurrentUser(req);
       const isMatch =
@@ -633,26 +551,22 @@ export async function googleCallback(req: Request, res: Response): Promise<void>
   <script>
     const payload = { type: 'GOOGLE_VERIFY_SUCCESS' };
 
-    // 1. BroadcastChannel (comunicación segura entre pestañas/ventanas con COOP)
     try {
       const ch = new BroadcastChannel('google_verify_channel');
       ch.postMessage(payload);
       ch.close();
     } catch (_) {}
 
-    // 2. localStorage event (comunicación inter-pestañas del mismo origen)
     try {
       localStorage.setItem('google_verify_event', JSON.stringify({ ...payload, ts: Date.now() }));
     } catch (_) {}
 
-    // 3. postMessage directo a opener si no fue desconectado por el navegador
     if (window.opener) {
       try {
         window.opener.postMessage(payload, window.location.origin);
       } catch (_) {}
     }
 
-    // Intentar cerrar automáticamente la ventana
     setTimeout(() => {
       window.close();
     }, 400);
@@ -715,7 +629,6 @@ export async function googleCallback(req: Request, res: Response): Promise<void>
       }
     }
 
-    // Si el usuario tiene autenticación en dos pasos (2FA) activada, redirigir al flujo de verificación
     if (userPayload.two_factor_enabled) {
       const tempToken = crypto.randomBytes(32).toString('hex');
       await savePending2FALogin(tempToken, { userId: userPayload.id, email: userPayload.email }, 300);
@@ -752,10 +665,6 @@ export async function googleCallback(req: Request, res: Response): Promise<void>
   }
 }
 
-/**
- * Solicitud de recuperación de contraseña:
- * Valida que el correo exista en la base de datos, genera token en Redis y despacha correo
- */
 export async function forgotPassword(req: Request, res: Response): Promise<void> {
   try {
     const { email } = req.body;
@@ -768,21 +677,15 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
 
     const trimmedEmail = String(email).trim().toLowerCase();
 
-    // 1. Verificar si el correo existe en la base de datos
     const user = await findUserByEmail(trimmedEmail);
 
     if (user) {
-      // 2. Generar token criptográfico seguro de 32 bytes (64 caracteres hex)
       const resetToken = crypto.randomBytes(32).toString('hex');
-
-      // 3. Guardar en Redis con TTL de 15 minutos (900 seg)
       await savePasswordResetToken(user.email, user.id, resetToken, 900);
 
-      // 4. Construir URL dinámica de restablecimiento
       const origin = req.get('origin') || `${req.protocol}://${req.get('host')}`;
       const resetUrl = `${origin}/reset-password?token=${resetToken}`;
 
-      // 5. Enviar correo SMTP
       await sendPasswordResetEmail(user.email, user.username, resetUrl, 15);
 
       logger.security.info('Enlace de recuperación de contraseña generado y enviado', {
@@ -796,7 +699,6 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
       });
     }
 
-    // Respuesta genérica para prevenir recolección y enumeración de usuarios (OWASP)
     sendSuccess(res, {
       message: 'Si el correo electrónico está registrado, recibirás un enlace de recuperación.',
     });
@@ -810,9 +712,6 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
   }
 }
 
-/**
- * Pre-validación del token de recuperación para la vista del frontend
- */
 export async function validateResetToken(req: Request, res: Response): Promise<void> {
   try {
     const token = String(req.query.token || '').trim();
@@ -829,10 +728,6 @@ export async function validateResetToken(req: Request, res: Response): Promise<v
   }
 }
 
-/**
- * Restablecimiento definitivo de la contraseña:
- * Valida y consume el token atómicamente de Redis, actualiza el hash en MySQL y revoca sesiones previas
- */
 export async function resetPassword(req: Request, res: Response): Promise<void> {
   try {
     const { token, password } = req.body;
@@ -848,7 +743,6 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
       return;
     }
 
-    // 1. Consumir atómicamente el token de Redis (evita que se use dos veces)
     const tokenResult = await consumePasswordResetToken(token);
     if (!tokenResult.success || !tokenResult.userId) {
       logger.security.warn('Intento fallido de restablecimiento: token inválido o expirado');
@@ -859,13 +753,8 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
       return;
     }
 
-    // 2. Hashear la nueva contraseña
     const newHash = await hashPassword(String(password));
-
-    // 3. Actualizar la contraseña en la base de datos MySQL
     await updateUserPassword(tokenResult.userId, newHash);
-
-    // 4. Revocar de inmediato todas las sesiones activas del usuario en otros navegadores/dispositivos
     await revokeAllUserSessions(tokenResult.userId);
 
     logger.security.info('Contraseña restablecida exitosamente', {

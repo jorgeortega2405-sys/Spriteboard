@@ -1,33 +1,16 @@
-import { Router, Request, Response, NextFunction } from 'express';
-import multer from 'multer';
+import { handleDeleteAccount, handleDeleteAvatar, handleDisable2FA, handleEnable2FA, handleGenerate2FA, handleGet2FAStatus, handleGetPasswordStatus, handleGetPreferences, handleRequestEmailChangeCode, handleUpdateAvatar, handleUpdateEmail, handleUpdatePassword, handleUpdatePreferences, handleUpdateUsername, handleVerifyCurrentPassword, handleVerifyEmailChangeCode } from '../controllers/settings.controller.js';
 import { requireAuth } from '../middlewares/auth.middleware.js';
-import {
-  handleUpdateAvatar,
-  handleDeleteAvatar,
-  handleUpdateUsername,
-  handleRequestEmailChangeCode,
-  handleVerifyEmailChangeCode,
-  handleUpdateEmail,
-  handleGetPreferences,
-  handleUpdatePreferences,
-  handleGetPasswordStatus,
-  handleVerifyCurrentPassword,
-  handleUpdatePassword,
-  handleGenerate2FA,
-  handleEnable2FA,
-  handleDisable2FA,
-  handleGet2FAStatus,
-  handleDeleteAccount,
-} from '../controllers/settings.controller.js';
+import { avatarLimiter, emailCodeLimiter, preferencesLimiter, twoFactorGenerateLimiter, twoFactorVerifyLimiter, updatePasswordLimiter, updateUsernameLimiter, verifyEmailCodeLimiter, verifyPasswordLimiter } from '../middlewares/rate-limit.middleware.js';
+import { NextFunction, Request, Response, Router } from 'express';
+import multer from 'multer';
 
 const router = Router();
 
-// Configurar multer en memoria para validar tamaño y mimetype de forma segura
 const storage = multer.memoryStorage();
 const upload = multer({
   storage,
   limits: {
-    fileSize: 2 * 1024 * 1024, // 2MB máximo
+    fileSize: 2 * 1024 * 1024,
   },
   fileFilter: (req, file, cb) => {
     const allowed = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
@@ -39,7 +22,6 @@ const upload = multer({
   },
 });
 
-// Wrapper para capturar errores de multer (como archivo > 2MB)
 function uploadAvatarMiddleware(req: Request, res: Response, next: NextFunction) {
   upload.single('avatar')(req, res, (err: any) => {
     if (err instanceof multer.MulterError) {
@@ -57,50 +39,30 @@ function uploadAvatarMiddleware(req: Request, res: Response, next: NextFunction)
   });
 }
 
-import {
-  avatarLimiter,
-  emailCodeLimiter,
-  verifyEmailCodeLimiter,
-  updateUsernameLimiter,
-  verifyPasswordLimiter,
-  updatePasswordLimiter,
-  twoFactorGenerateLimiter,
-  twoFactorVerifyLimiter,
-  preferencesLimiter,
-} from '../middlewares/rate-limit.middleware.js';
-
-// Todas las rutas de configuración requieren autenticación activa
 router.use('/settings', requireAuth);
 
-// Rutas de Avatar protegidas con Rate Limiting
 router.post('/settings/avatar', avatarLimiter, uploadAvatarMiddleware, handleUpdateAvatar);
 router.delete('/settings/avatar', avatarLimiter, handleDeleteAvatar);
 router.post('/settings/avatar/delete', avatarLimiter, handleDeleteAvatar);
 
-// Rutas de Credenciales protegidas con Rate Limiting
 router.post('/settings/username', updateUsernameLimiter, handleUpdateUsername);
 router.post('/settings/email/request-code', emailCodeLimiter, handleRequestEmailChangeCode);
 router.post('/settings/email/verify-code', verifyEmailCodeLimiter, handleVerifyEmailChangeCode);
 router.post('/settings/email', verifyEmailCodeLimiter, handleUpdateEmail);
 
-// Rutas de Contraseña protegidas con Rate Limiting
 router.get('/settings/password/status', handleGetPasswordStatus);
 router.post('/settings/password/verify', verifyPasswordLimiter, handleVerifyCurrentPassword);
 router.post('/settings/password', updatePasswordLimiter, handleUpdatePassword);
 
-// Rutas de Autenticación en Dos Factores (2FA)
 router.get('/settings/2fa/status', handleGet2FAStatus);
 router.post('/settings/2fa/generate', twoFactorGenerateLimiter, handleGenerate2FA);
 router.post('/settings/2fa/enable', twoFactorVerifyLimiter, handleEnable2FA);
 router.post('/settings/2fa/disable', verifyPasswordLimiter, handleDisable2FA);
 
-// Rutas de Preferencias
 router.get('/settings/preferences', handleGetPreferences);
 router.post('/settings/preferences', preferencesLimiter, handleUpdatePreferences);
 
-// Rutas de Eliminación de Cuenta (Zona de peligro)
 router.post('/settings/account/delete', verifyPasswordLimiter, handleDeleteAccount);
 router.delete('/settings/account', verifyPasswordLimiter, handleDeleteAccount);
 
 export default router;
-
