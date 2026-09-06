@@ -1,5 +1,5 @@
-import { loadTemplate } from '../../services/template.js';
-import { createSidebar } from '../../components/sidebar.js';
+import { loadTemplate } from '../../services/template.service.js';
+import { createSidebar } from '../../components/sidebar.component.js';
 import {
   currentUser,
   escapeHtml,
@@ -7,17 +7,17 @@ import {
   postApi,
   postFormApi,
   deleteApi,
-} from '../../services/api.js';
-import { setupDropdown, withButtonLoading } from '../../utils/dom.js';
-import { openModal } from '../../components/modal.js';
-import { showToast, setToastPreferences } from '../../services/toast.js';
-import { t, setLanguage, getCurrentLanguage } from '../../services/i18n.js';
+} from '../../services/api.service.js';
+import { setupDropdown, withButtonLoading } from '../../utils/dom.util.js';
+import { openModal } from '../../components/modal-dialog.js';
+import { showToast, setToastPreferences } from '../../services/toast.service.js';
+import { t, setLanguage, getCurrentLanguage } from '../../services/i18n.service.js';
 import {
   AVAILABLE_LANGUAGES,
   getLanguageName,
   detectBrowserLanguage,
-} from '../../utils/languages.js';
-import { render } from '../../router.js';
+} from '../../utils/languages.util.js';
+import { render } from '../../app-router.js';
 
 export async function createYourAccountView() {
   const container = await loadTemplate('/views/settings/your-account.html');

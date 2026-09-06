@@ -1,20 +1,20 @@
-import { loadTemplate } from '../../services/template.js';
-import { postApi } from '../../services/api.js';
-import { navigate } from '../../router.js';
+import { loadTemplate } from '../../services/template.service.js';
+import { postApi } from '../../services/api.service.js';
+import { navigate } from '../../app-router.js';
 import {
   getRegistrationState,
   hasStage1Data,
   saveStage2Data,
 } from '../../services/registration-state.js';
-import { createErrorView } from '../error.js';
-import { validateUsername } from '../../utils/validators.js';
+import { createErrorView } from '../error.view.js';
+import { validateUsername } from '../../utils/validators.util.js';
 import {
   createBannerManager,
   withButtonLoading,
   bindSubmitOnEnter,
   bindNavigationLinks,
-} from '../../utils/dom.js';
-import { t } from '../../services/i18n.js';
+} from '../../utils/dom.util.js';
+import { t } from '../../services/i18n.service.js';
 
 export async function createRegisterStage2View() {
   // Guardia de seguridad: si faltan datos de la etapa 1, mostrar vista de error

@@ -1,7 +1,7 @@
 import cassandra from 'cassandra-driver';
-import { config } from './env.js';
+import { config } from './env.config.js';
 import { logger } from '../services/logger.service.js';
-import { NoSqlAdapter, dbManager } from './database.js';
+import { NoSqlAdapter, dbManager } from './database.config.js';
 
 let isConnected = false;
 

@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { Request, Response } from 'express';
-import { pool } from '../config/database.js';
-import { config } from '../config/env.js';
+import { pool } from '../config/database.config.js';
+import { config } from '../config/env.config.js';
 import { UserPayload, GoogleTokenResponse, GoogleUserInfo } from '../types/auth.types.js';
 import type { RowDataPacket, ResultSetHeader } from 'mysql2';
 

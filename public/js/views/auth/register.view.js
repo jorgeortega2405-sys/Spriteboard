@@ -1,16 +1,16 @@
-import { loadTemplate } from '../../services/template.js';
-import { postApi } from '../../services/api.js';
-import { navigate } from '../../router.js';
+import { loadTemplate } from '../../services/template.service.js';
+import { postApi } from '../../services/api.service.js';
+import { navigate } from '../../app-router.js';
 import { saveStage1Data, getRegistrationState } from '../../services/registration-state.js';
-import { validateEmail, validatePassword } from '../../utils/validators.js';
+import { validateEmail, validatePassword } from '../../utils/validators.util.js';
 import {
   setupPasswordToggle,
   createBannerManager,
   withButtonLoading,
   bindSubmitOnEnter,
   bindNavigationLinks,
-} from '../../utils/dom.js';
-import { t } from '../../services/i18n.js';
+} from '../../utils/dom.util.js';
+import { t } from '../../services/i18n.service.js';
 
 export async function createRegisterStage1View() {
   const container = await loadTemplate('/views/auth/register.html');

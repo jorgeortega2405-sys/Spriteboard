@@ -1,11 +1,11 @@
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { Request, Response } from 'express';
-import { config } from '../config/env.js';
+import { config } from '../config/env.config.js';
 import { UserPayload, SessionAccount, MultiAccountSessionPayload } from '../types/auth.types.js';
 
-import { pool } from '../config/database.js';
-import { redis } from '../config/redis.js';
+import { pool } from '../config/database.config.js';
+import { redis } from '../config/redis.config.js';
 import { logger } from './logger.service.js';
 
 export const COOKIE_NAME = 'sprite_session';

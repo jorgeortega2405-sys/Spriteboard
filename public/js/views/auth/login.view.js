@@ -1,6 +1,6 @@
-import { loadTemplate } from '../../services/template.js';
-import { postApi, setCurrentUser, setLinkedAccounts } from '../../services/api.js';
-import { navigate } from '../../router.js';
+import { loadTemplate } from '../../services/template.service.js';
+import { postApi, setCurrentUser, setLinkedAccounts } from '../../services/api.service.js';
+import { navigate } from '../../app-router.js';
 import { initWebSocket } from '../../services/websocket.service.js';
 import { saveTwoFactorLoginState } from '../../services/two-factor-state.js';
 import {
@@ -9,8 +9,8 @@ import {
   withButtonLoading,
   bindSubmitOnEnter,
   bindNavigationLinks,
-} from '../../utils/dom.js';
-import { t } from '../../services/i18n.js';
+} from '../../utils/dom.util.js';
+import { t } from '../../services/i18n.service.js';
 
 export async function createLoginView() {
   const container = await loadTemplate('/views/auth/login.html');

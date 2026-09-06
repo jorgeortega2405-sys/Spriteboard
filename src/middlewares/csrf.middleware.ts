@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import { Request, Response, NextFunction } from 'express';
-import { config } from '../config/env.js';
+import { config } from '../config/env.config.js';
 import { logger } from '../services/logger.service.js';
 
 export function generateCsrfToken(req: Request, res: Response): string {

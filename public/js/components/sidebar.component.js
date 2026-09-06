@@ -1,7 +1,7 @@
-import { loadTemplate } from '../services/template.js';
-import { navigate } from '../router.js';
-import { currentUser } from '../services/api.js';
-import { translateElement } from '../services/i18n.js';
+import { loadTemplate } from '../services/template.service.js';
+import { navigate } from '../app-router.js';
+import { currentUser } from '../services/api.service.js';
+import { translateElement } from '../services/i18n.service.js';
 import { toggleChatSidebar } from './chat-sidebar.js';
 
 let isSidebarOpen = false;

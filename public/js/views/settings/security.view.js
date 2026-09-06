@@ -1,14 +1,14 @@
-import { loadTemplate } from '../../services/template.js';
-import { createSidebar } from '../../components/sidebar.js';
-import { openModal } from '../../components/modal.js';
+import { loadTemplate } from '../../services/template.service.js';
+import { createSidebar } from '../../components/sidebar.component.js';
+import { openModal } from '../../components/modal-dialog.js';
 import { open2FAModal } from '../../components/modal-2fa.js';
-import { getApi, postApi, logoutAllApi, currentUser, setCurrentUser, setLinkedAccounts, clearUserState } from '../../services/api.js';
-import { t } from '../../services/i18n.js';
-import { showToast } from '../../services/toast.js';
-import { setupPasswordToggle } from '../../utils/dom.js';
-import { validatePassword } from '../../utils/validators.js';
+import { getApi, postApi, logoutAllApi, currentUser, setCurrentUser, setLinkedAccounts, clearUserState } from '../../services/api.service.js';
+import { t } from '../../services/i18n.service.js';
+import { showToast } from '../../services/toast.service.js';
+import { setupPasswordToggle } from '../../utils/dom.util.js';
+import { validatePassword } from '../../utils/validators.util.js';
 import { closeWebSocket } from '../../services/websocket.service.js';
-import { navigate } from '../../router.js';
+import { navigate } from '../../app-router.js';
 
 export async function createSecurityView() {
   const container = await loadTemplate('/views/settings/security.html');
@@ -167,7 +167,6 @@ export async function createSecurityView() {
   btnDeleteAccount?.addEventListener('click', () => {
     openModal({
       size: '825x225',
-      icon: 'warning',
       titleKey: 'settings.security.delete_account_modal_title',
       descriptionKey: 'settings.security.delete_account_modal_desc',
       cancelText: t('modal.cancel'),
@@ -269,8 +268,25 @@ function showGoogleOrPasswordStep(status, onPasswordUpdated) {
     showConfirm: true,
     bodyHtml: `
       <div class="verify-options" data-ref="verify-badge-container">
-        <button type="button" class="verify-badge is-active" data-ref="badge-verify-google">
-          <span class="verify-badge__icon">
+        <button type="button" class="component-badge component-badge--w-full component-badge--lg verify-badge" data-ref="badge-verify-password">
+          <span class="component-badge__icon verify-badge__icon verify-badge__icon--text">
+            <span class="material-symbols-rounded">lock</span>
+          </span>
+          <span class="component-badge__text" data-ref="badge-password-text">${t('settings.security.badge_verify_password')}</span>
+        </button>
+
+        <div class="verify-password-box" data-ref="verify-password-box" style="display: none; width: 100%;">
+          <label class="field" data-ref="field-current-password">
+            <input class="field__input field__input--has-action" data-ref="modal-input-current-password" type="password" placeholder=" " autocomplete="current-password" />
+            <span class="field__label" data-ref="modal-label-current-password">${t('settings.security.modal_current_password_label')}</span>
+            <button type="button" class="field__action" data-ref="toggle-modal-current-password" data-i18n-tooltip="auth.login.show_password" data-i18n-aria="auth.login.toggle_password">
+              <span class="material-symbols-rounded">visibility</span>
+            </button>
+          </label>
+        </div>
+
+        <button type="button" class="component-badge component-badge--w-full component-badge--lg verify-badge is-active" data-ref="badge-verify-google">
+          <span class="component-badge__icon verify-badge__icon">
             <svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
               <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.11-6.72-4.96H1.29v3.15C3.26 21.3 7.31 24 12 24z"/>
@@ -278,30 +294,8 @@ function showGoogleOrPasswordStep(status, onPasswordUpdated) {
               <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.61l3.99 3.15c.95-2.85 3.6-4.96 6.72-4.96z"/>
             </svg>
           </span>
-          <span data-ref="badge-google-text">${t('settings.security.badge_verify_google')}</span>
+          <span class="component-badge__text" data-ref="badge-google-text">${t('settings.security.badge_verify_google')}</span>
         </button>
-        <button type="button" class="verify-badge" data-ref="badge-verify-password">
-          <span class="verify-badge__icon verify-badge__icon--text">
-            <span class="material-symbols-rounded">lock</span>
-          </span>
-          <span data-ref="badge-password-text">${t('settings.security.badge_verify_password')}</span>
-        </button>
-      </div>
-
-      <div class="verify-google-box" data-ref="verify-google-box" style="margin-top: 12px; margin-bottom: 6px;">
-        <p style="font-size: 13px; color: var(--text-secondary); margin: 0; line-height: 1.5;">
-          ${t('settings.security.google_verify_desc')}
-        </p>
-      </div>
-
-      <div class="verify-password-box" data-ref="verify-password-box" style="display: none; margin-top: 14px;">
-        <label class="field" data-ref="field-current-password">
-          <input class="field__input field__input--has-action" data-ref="modal-input-current-password" type="password" placeholder=" " autocomplete="current-password" />
-          <span class="field__label" data-ref="modal-label-current-password">${t('settings.security.modal_current_password_label')}</span>
-          <button type="button" class="field__action" data-ref="toggle-modal-current-password" data-i18n-tooltip="auth.login.show_password" data-i18n-aria="auth.login.toggle_password">
-            <span class="material-symbols-rounded">visibility</span>
-          </button>
-        </label>
       </div>
     `,
     onClose: () => {
@@ -311,7 +305,6 @@ function showGoogleOrPasswordStep(status, onPasswordUpdated) {
 
   const badgeGoogle = modal.body.querySelector('[data-ref="badge-verify-google"]');
   const badgePassword = modal.body.querySelector('[data-ref="badge-verify-password"]');
-  const googleBox = modal.body.querySelector('[data-ref="verify-google-box"]');
   const passwordBox = modal.body.querySelector('[data-ref="verify-password-box"]');
   const currentPassInput = modal.body.querySelector('[data-ref="modal-input-current-password"]');
   const togglePassBtn = modal.body.querySelector('[data-ref="toggle-modal-current-password"]');
@@ -413,7 +406,6 @@ function showGoogleOrPasswordStep(status, onPasswordUpdated) {
     modal.clearError();
     badgeGoogle?.classList.add('is-active');
     badgePassword?.classList.remove('is-active');
-    if (googleBox) googleBox.style.display = 'block';
     if (passwordBox) passwordBox.style.display = 'none';
     modal.setConfirmVisible(true);
     modal.setConfirmText(t('settings.security.btn_continue_google'));
@@ -423,20 +415,8 @@ function showGoogleOrPasswordStep(status, onPasswordUpdated) {
   const activatePasswordMode = () => {
     activeMethod = 'password';
     modal.clearError();
-
-    if (!status.hasPassword) {
-      modal.showError(t('settings.security.no_password_set_google'));
-      modal.setConfirmVisible(false);
-      badgePassword?.classList.add('is-active');
-      badgeGoogle?.classList.remove('is-active');
-      if (googleBox) googleBox.style.display = 'none';
-      if (passwordBox) passwordBox.style.display = 'none';
-      return;
-    }
-
     badgePassword?.classList.add('is-active');
     badgeGoogle?.classList.remove('is-active');
-    if (googleBox) googleBox.style.display = 'none';
     if (passwordBox) passwordBox.style.display = 'block';
     modal.setConfirmVisible(true);
     modal.setConfirmText(t('modal.continue'));

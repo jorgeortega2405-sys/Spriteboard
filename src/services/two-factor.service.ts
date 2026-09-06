@@ -3,7 +3,7 @@
  */
 
 import crypto from 'crypto';
-import { redis } from '../config/redis.js';
+import { redis } from '../config/redis.config.js';
 import { logger } from './logger.service.js';
 
 const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';

@@ -1,8 +1,8 @@
 import crypto from 'crypto';
 import cassandra from 'cassandra-driver';
-import { cassandraClient, isCassandraReady } from '../config/cassandra.js';
-import { redis } from '../config/redis.js';
-import { config } from '../config/env.js';
+import { cassandraClient, isCassandraReady } from '../config/cassandra.config.js';
+import { redis } from '../config/redis.config.js';
+import { config } from '../config/env.config.js';
 import { logger } from './logger.service.js';
 import {
   HttpMetricInput,

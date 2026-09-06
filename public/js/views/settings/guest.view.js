@@ -1,15 +1,15 @@
-import { loadTemplate } from '../../services/template.js';
-import { createSidebar } from '../../components/sidebar.js';
-import { navigate, render } from '../../router.js';
-import { escapeHtml } from '../../services/api.js';
-import { setupDropdown } from '../../utils/dom.js';
-import { showToast } from '../../services/toast.js';
-import { t, setLanguage, getCurrentLanguage } from '../../services/i18n.js';
+import { loadTemplate } from '../../services/template.service.js';
+import { createSidebar } from '../../components/sidebar.component.js';
+import { navigate, render } from '../../app-router.js';
+import { escapeHtml } from '../../services/api.service.js';
+import { setupDropdown } from '../../utils/dom.util.js';
+import { showToast } from '../../services/toast.service.js';
+import { t, setLanguage, getCurrentLanguage } from '../../services/i18n.service.js';
 import {
   AVAILABLE_LANGUAGES,
   getLanguageName,
   detectBrowserLanguage,
-} from '../../utils/languages.js';
+} from '../../utils/languages.util.js';
 
 export async function createGuestSettingsView() {
   const container = await loadTemplate('/views/settings/guest.html');

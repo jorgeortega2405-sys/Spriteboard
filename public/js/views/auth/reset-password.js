@@ -1,15 +1,15 @@
-import { loadTemplate } from '../../services/template.js';
-import { navigate } from '../../router.js';
-import { postApi } from '../../services/api.js';
-import { validatePassword } from '../../utils/validators.js';
+import { loadTemplate } from '../../services/template.service.js';
+import { navigate } from '../../app-router.js';
+import { postApi } from '../../services/api.service.js';
+import { validatePassword } from '../../utils/validators.util.js';
 import {
   setupPasswordToggle,
   createBannerManager,
   withButtonLoading,
   bindSubmitOnEnter,
   bindNavigationLinks,
-} from '../../utils/dom.js';
-import { t } from '../../services/i18n.js';
+} from '../../utils/dom.util.js';
+import { t } from '../../services/i18n.service.js';
 
 export async function createResetPasswordView() {
   const container = await loadTemplate('/views/auth/reset-password.html');

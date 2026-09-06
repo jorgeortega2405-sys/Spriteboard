@@ -1,20 +1,20 @@
-import { loadTemplate } from '../../services/template.js';
-import { postApi, setCurrentUser, setLinkedAccounts } from '../../services/api.js';
-import { navigate } from '../../router.js';
+import { loadTemplate } from '../../services/template.service.js';
+import { postApi, setCurrentUser, setLinkedAccounts } from '../../services/api.service.js';
+import { navigate } from '../../app-router.js';
 import {
   getRegistrationState,
   hasStage2Data,
   clearRegistrationState,
 } from '../../services/registration-state.js';
-import { createErrorView } from '../error.js';
-import { validateVerificationCode } from '../../utils/validators.js';
+import { createErrorView } from '../error.view.js';
+import { validateVerificationCode } from '../../utils/validators.util.js';
 import {
   createBannerManager,
   withButtonLoading,
   bindSubmitOnEnter,
   bindNavigationLinks,
-} from '../../utils/dom.js';
-import { t } from '../../services/i18n.js';
+} from '../../utils/dom.util.js';
+import { t } from '../../services/i18n.service.js';
 
 export async function createRegisterStage3View() {
   // Guardia de seguridad: si faltan datos de las etapas previas, mostrar vista de error

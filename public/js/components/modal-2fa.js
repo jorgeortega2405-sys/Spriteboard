@@ -11,9 +11,9 @@
  */
 
 import QRCodeStyling from '../vendor/qr-styling.js';
-import { postApi } from '../services/api.js';
-import { t, translateElement } from '../services/i18n.js';
-import { showToast } from '../services/toast.js';
+import { postApi } from '../services/api.service.js';
+import { t, translateElement } from '../services/i18n.service.js';
+import { showToast } from '../services/toast.service.js';
 
 let active2FAModal = null;
 
@@ -33,12 +33,16 @@ export async function open2FAModal(options = {}) {
   backdrop.setAttribute('data-ref', 'modal-2fa-backdrop');
 
   backdrop.innerHTML = `
-    <button type="button" class="modal-close-btn" data-ref="btn-modal-close" data-i18n-aria="modal.close" aria-label="${t('modal.close')}">
-      <span class="material-symbols-rounded">close</span>
-    </button>
-    <div class="modal-card modal-card--split" data-ref="modal-card-2fa">
-      <!-- Columna izquierda: formulario, descripciones y badges -->
-      <div class="modal-split__left" data-ref="modal-split-left">
+    <div class="modal-container" data-ref="modal-2fa-container">
+      <button type="button" class="modal-close-btn" data-ref="btn-modal-close" data-i18n-aria="modal.close" aria-label="${t('modal.close')}">
+        <span class="material-symbols-rounded">close</span>
+      </button>
+      <div class="modal-card modal-card--split" data-ref="modal-card-2fa">
+        <div class="modal-card__drag-zone" data-ref="modal-2fa-drag-zone">
+          <div class="modal-card__drag-handle"></div>
+        </div>
+        <!-- Columna izquierda: formulario, descripciones y badges -->
+        <div class="modal-split__left" data-ref="modal-split-left">
         <!-- Contenedor Etapa 1 -->
         <div class="modal-split__stage" data-ref="stage-1-container">
           <div class="modal-split__header" data-ref="stage-1-header">
@@ -124,18 +128,18 @@ export async function open2FAModal(options = {}) {
         <div class="modal-split__visual-stage" data-ref="visual-stage-2" style="display: none;">
           <div class="modal-split__svg-wrapper" data-ref="svg-wrapper">
             <svg class="modal-split__shield-svg" data-ref="shield-svg" width="220" height="220" viewBox="0 0 220 220" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="110" cy="110" r="80" fill="#38bdf8" fill-opacity="0.12"/>
-              <circle cx="110" cy="110" r="75" stroke="#818cf8" stroke-width="1.5" stroke-dasharray="5 5" stroke-opacity="0.45"/>
-              <path d="M110 40L158 62V114C158 145 137 172 110 182C83 172 62 145 62 114V62L110 40Z" fill="rgba(255,255,255,0.06)" stroke="#38bdf8" stroke-width="2.5" stroke-linejoin="round"/>
-              <rect x="93" y="105" width="34" height="28" rx="6" fill="#38bdf8" fill-opacity="0.2" stroke="#38bdf8" stroke-width="2"/>
-              <path d="M101 105V96C101 91.0294 105.029 87 110 87C114.971 87 119 91.0294 119 96V105" stroke="#38bdf8" stroke-width="2" stroke-linecap="round"/>
+              <circle cx="110" cy="110" r="80" fill="#ffffff" fill-opacity="0.06"/>
+              <circle cx="110" cy="110" r="75" stroke="#ffffff" stroke-width="1.5" stroke-dasharray="5 5" stroke-opacity="0.2"/>
+              <path d="M110 40L158 62V114C158 145 137 172 110 182C83 172 62 145 62 114V62L110 40Z" fill="rgba(255,255,255,0.05)" stroke="#ffffff" stroke-width="2.5" stroke-linejoin="round"/>
+              <rect x="93" y="105" width="34" height="28" rx="6" fill="rgba(255,255,255,0.12)" stroke="#ffffff" stroke-width="2"/>
+              <path d="M101 105V96C101 91.0294 105.029 87 110 87C114.971 87 119 91.0294 119 96V105" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
               <circle cx="110" cy="117" r="2.5" fill="#ffffff"/>
               <line x1="110" y1="119.5" x2="110" y2="124" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
-              <rect x="78" y="78" width="14" height="2.5" rx="1.25" fill="#38bdf8" fill-opacity="0.6"/>
-              <rect x="128" y="78" width="14" height="2.5" rx="1.25" fill="#38bdf8" fill-opacity="0.6"/>
-              <rect x="74" y="136" width="18" height="2.5" rx="1.25" fill="#818cf8" fill-opacity="0.6"/>
-              <rect x="128" y="136" width="18" height="2.5" rx="1.25" fill="#818cf8" fill-opacity="0.6"/>
-              <circle cx="150" cy="72" r="15" fill="#22c55e" stroke="#0f172a" stroke-width="2.5"/>
+              <rect x="78" y="78" width="14" height="2.5" rx="1.25" fill="#ffffff" fill-opacity="0.4"/>
+              <rect x="128" y="78" width="14" height="2.5" rx="1.25" fill="#ffffff" fill-opacity="0.4"/>
+              <rect x="74" y="136" width="18" height="2.5" rx="1.25" fill="#ffffff" fill-opacity="0.3"/>
+              <rect x="128" y="136" width="18" height="2.5" rx="1.25" fill="#ffffff" fill-opacity="0.3"/>
+              <circle cx="150" cy="72" r="15" fill="#22c55e" stroke="#000000" stroke-width="2.5"/>
               <path d="M145 72L148.5 75.5L155.5 68.5" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </div>
@@ -150,6 +154,7 @@ export async function open2FAModal(options = {}) {
         </div>
       </div>
     </div>
+  </div>
   `;
 
   translateElement(backdrop);
@@ -209,6 +214,9 @@ export async function open2FAModal(options = {}) {
 
       backdrop.classList.remove('is-visible');
       document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', onPointerUp);
 
       setTimeout(() => {
         if (backdrop.parentNode) {
@@ -224,6 +232,72 @@ export async function open2FAModal(options = {}) {
   };
 
   active2FAModal = modalInstance;
+
+  // Soporte de Drag & Drop para cerrar modal
+  const card2fa = backdrop.querySelector('[data-ref="modal-card-2fa"]');
+  const dragZone2fa = backdrop.querySelector('[data-ref="modal-2fa-drag-zone"]');
+  let startY = 0;
+  let currentY = 0;
+  let isDragging = false;
+  let activePointerId = null;
+
+  const onPointerDown = (e) => {
+    if (isClosing || !card2fa) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+
+    isDragging = true;
+    activePointerId = e.pointerId;
+    startY = e.clientY;
+    currentY = startY;
+
+    try {
+      (dragZone2fa || card2fa).setPointerCapture(activePointerId);
+    } catch (_) {}
+
+    card2fa.style.transition = 'none';
+  };
+
+  const onPointerMove = (e) => {
+    if (!isDragging || (activePointerId !== null && e.pointerId !== activePointerId)) return;
+    currentY = e.clientY;
+    const diff = currentY - startY;
+
+    if (card2fa) {
+      if (diff > 0) {
+        card2fa.style.transform = `translateY(${diff}px)`;
+      } else {
+        card2fa.style.transform = `translateY(${diff * 0.15}px)`;
+      }
+    }
+  };
+
+  const onPointerUp = (e) => {
+    if (!isDragging || (activePointerId !== null && e.pointerId !== activePointerId)) return;
+    isDragging = false;
+
+    try {
+      if (activePointerId !== null) {
+        (dragZone2fa || card2fa).releasePointerCapture(activePointerId);
+      }
+    } catch (_) {}
+    activePointerId = null;
+
+    const diff = currentY - startY;
+
+    if (diff > 80) {
+      modalInstance.close();
+    } else {
+      if (card2fa) {
+        card2fa.style.transition = 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)';
+        card2fa.style.transform = '';
+      }
+    }
+  };
+
+  dragZone2fa?.addEventListener('pointerdown', onPointerDown);
+  window.addEventListener('pointermove', onPointerMove);
+  window.addEventListener('pointerup', onPointerUp);
+  window.addEventListener('pointercancel', onPointerUp);
 
   // Eventos de cierre
   const handleKeyDown = (e) => {
@@ -326,15 +400,15 @@ export async function open2FAModal(options = {}) {
         margin: 2,
         dotsOptions: {
           type: 'rounded',
-          color: '#090d16',
+          color: '#000000',
         },
         cornersSquareOptions: {
           type: 'extra-rounded',
-          color: '#0284c7',
+          color: '#000000',
         },
         cornersDotOptions: {
           type: 'dot',
-          color: '#0284c7',
+          color: '#000000',
         },
         backgroundOptions: {
           color: '#ffffff',

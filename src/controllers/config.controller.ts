@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { config } from '../config/env.js';
+import { config } from '../config/env.config.js';
 import { generateCsrfToken } from '../middlewares/csrf.middleware.js';
 
 export function getAppConfig(req: Request, res: Response): void {

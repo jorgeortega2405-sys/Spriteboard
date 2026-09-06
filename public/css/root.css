@@ -254,17 +254,17 @@
   /* --------------------------------------------------------------------------
      2. ALIAS SEMÁNTICOS SHOELACE / DESIGN SYSTEM
      -------------------------------------------------------------------------- */
-  --sl-color-primary-50: var(--sl-color-sky-50);
-  --sl-color-primary-100: var(--sl-color-sky-100);
-  --sl-color-primary-200: var(--sl-color-sky-200);
-  --sl-color-primary-300: var(--sl-color-sky-300);
-  --sl-color-primary-400: var(--sl-color-sky-400);
-  --sl-color-primary-500: var(--sl-color-sky-500);
-  --sl-color-primary-600: var(--sl-color-sky-600);
-  --sl-color-primary-700: var(--sl-color-sky-700);
-  --sl-color-primary-800: var(--sl-color-sky-800);
-  --sl-color-primary-900: var(--sl-color-sky-900);
-  --sl-color-primary-950: var(--sl-color-sky-950);
+  --sl-color-primary-50: var(--sl-color-neutral-50);
+  --sl-color-primary-100: var(--sl-color-neutral-100);
+  --sl-color-primary-200: var(--sl-color-neutral-200);
+  --sl-color-primary-300: var(--sl-color-neutral-300);
+  --sl-color-primary-400: var(--sl-color-neutral-400);
+  --sl-color-primary-500: var(--sl-color-neutral-500);
+  --sl-color-primary-600: var(--sl-color-neutral-600);
+  --sl-color-primary-700: var(--sl-color-neutral-700);
+  --sl-color-primary-800: var(--sl-color-neutral-800);
+  --sl-color-primary-900: var(--sl-color-neutral-900);
+  --sl-color-primary-950: var(--sl-color-neutral-950);
 
   --sl-color-success-50: var(--sl-color-green-50);
   --sl-color-success-100: var(--sl-color-green-100);
@@ -472,9 +472,9 @@
   --color-danger: var(--color-error);
   --danger-color: var(--color-error);
 
-  --accent-primary: var(--sl-color-blue-500);
-  --accent-color: var(--sl-color-blue-500);
-  --color-primary: var(--sl-color-blue-500);
+  --accent-primary: var(--sl-color-neutral-900);
+  --accent-color: var(--sl-color-neutral-900);
+  --color-primary: var(--sl-color-neutral-900);
 
   /* Toasts */
   --color-toast-info: var(--sl-color-sky-600);
@@ -487,9 +487,9 @@
   --radius-md: 14px;
   --radius-lg: 16px;
   --radius-xl: 24px;
-  --shadow-card: var(--sl-shadow-medium);
-  --shadow-dropdown: var(--sl-shadow-large);
-  --shadow-dialog: var(--sl-shadow-2x-large);
+  --shadow-card: none;
+  --shadow-dropdown: none;
+  --shadow-dialog: none;
 
   /* Editor de Código y Resaltado de Sintaxis */
   --bg-code-editor: var(--bg-surface);
@@ -517,8 +517,8 @@
   /* Skeletons Antiflicker (Gris azulado bajo / Cool Slate) */
   --sk-bg: #e6ebf2;
   --sk-shimmer: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.65) 50%, transparent 100%);
-  --skeleton-base: #e6ebf2;
-  --skeleton-highlight: #f3f6fa;
+  --skeleton-base: #ebebed;
+  --skeleton-highlight: #f7f7f8;
   --color-brand: var(--action-primary);
 }
 
@@ -526,10 +526,11 @@
    8. TEMA OSCURO (DARK MODE) - ENTERPRISE OLED/DEEP CHARCOAL
    ========================================================================== */
 
-[data-theme="dark"],
+html[data-theme="dark"],
+:root[data-theme="dark"],
 body[data-theme="dark"],
 html.dark-theme,
-.dark-theme {
+body.dark-theme {
   color-scheme: dark;
 
   --bg-app: #09090b;
@@ -588,13 +589,13 @@ html.dark-theme,
   --color-danger: var(--color-error);
   --danger-color: var(--color-error);
 
-  --accent-primary: #60a5fa;
-  --accent-color: #60a5fa;
-  --color-primary: #60a5fa;
+  --accent-primary: #f4f4f5;
+  --accent-color: #f4f4f5;
+  --color-primary: #f4f4f5;
 
-  --shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.4), 0 1px 2px -1px rgba(0, 0, 0, 0.4);
-  --shadow-dropdown: 0 10px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.6);
-  --shadow-dialog: 0 25px 50px -12px rgba(0, 0, 0, 0.85);
+  --shadow-card: none;
+  --shadow-dropdown: none;
+  --shadow-dialog: none;
 
   --bg-code-editor: #121215;
   --text-code-base: #e4e4e7;
@@ -617,11 +618,11 @@ html.dark-theme,
   --scrollbar-thumb: rgba(255, 255, 255, 0.2);
   --scrollbar-thumb-hover: rgba(255, 255, 255, 0.35);
 
-  /* Skeletons Antiflicker (Gris azulado bajo / Cool Slate Oscuro) */
-  --sk-bg: #161c26;
+  /* Skeletons Antiflicker (Monocromático #181818 / #282828) */
+  --sk-bg: #181818;
   --sk-shimmer: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.08) 50%, transparent 100%);
-  --skeleton-base: #161c26;
-  --skeleton-highlight: #232c3b;
+  --skeleton-base: #181818;
+  --skeleton-highlight: #282828;
   --color-brand: var(--action-primary);
 }
 
@@ -689,13 +690,13 @@ html.dark-theme,
     --color-danger: var(--color-error);
     --danger-color: var(--color-error);
 
-    --accent-primary: #60a5fa;
-    --accent-color: #60a5fa;
-    --color-primary: #60a5fa;
+    --accent-primary: #f4f4f5;
+    --accent-color: #f4f4f5;
+    --color-primary: #f4f4f5;
 
-    --shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.4), 0 1px 2px -1px rgba(0, 0, 0, 0.4);
-    --shadow-dropdown: 0 10px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.6);
-    --shadow-dialog: 0 25px 50px -12px rgba(0, 0, 0, 0.85);
+    --shadow-card: none;
+    --shadow-dropdown: none;
+    --shadow-dialog: none;
 
     --bg-code-editor: #121215;
     --text-code-base: #e4e4e7;
@@ -718,11 +719,11 @@ html.dark-theme,
     --scrollbar-thumb: rgba(255, 255, 255, 0.2);
     --scrollbar-thumb-hover: rgba(255, 255, 255, 0.35);
 
-    /* Skeletons Antiflicker (Gris azulado bajo / Cool Slate Oscuro) */
-    --sk-bg: #161c26;
+    /* Skeletons Antiflicker (Monocromático #181818 / #282828) */
+    --sk-bg: #181818;
     --sk-shimmer: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.08) 50%, transparent 100%);
-    --skeleton-base: #161c26;
-    --skeleton-highlight: #232c3b;
+    --skeleton-base: #181818;
+    --skeleton-highlight: #282828;
     --color-brand: var(--action-primary);
   }
 }
@@ -742,7 +743,8 @@ html.high-contrast,
   --border-dynamic: 2px solid #000000;
 }
 
-[data-theme="dark"][data-contrast="high"],
+html[data-theme="dark"][data-contrast="high"],
+:root[data-theme="dark"][data-contrast="high"],
 html.dark-theme.high-contrast {
   --border-color: #ffffff;
   --border-color-hover: #ffffff;

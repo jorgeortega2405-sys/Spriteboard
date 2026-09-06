@@ -7,8 +7,8 @@
  * - Traducción automática de atributos semánticos [data-i18n*] en el DOM
  */
 
-import { currentUser, postApi } from './api.js';
-import { detectBrowserLanguage } from '../utils/languages.js';
+import { currentUser, postApi } from './api.service.js';
+import { detectBrowserLanguage } from '../utils/languages.util.js';
 
 let currentLanguage = 'es-419';
 let currentTranslations = {};

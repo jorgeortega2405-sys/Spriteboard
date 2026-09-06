@@ -8,8 +8,8 @@
  * Cumple con las directivas de seguridad y cero console.*.
  */
 
-import { postApi } from './api.js';
-import { reportEvent } from './telemetry.js';
+import { postApi } from './api.service.js';
+import { reportEvent } from './telemetry.service.js';
 
 const STORAGE_KEY = 'sprite_theme';
 let currentThemeSetting = 'system';

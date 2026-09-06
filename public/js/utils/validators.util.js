@@ -3,7 +3,7 @@
  * Mantiene coherencia estricta con las reglas del backend (src/utils/validators.ts)
  */
 
-import { t } from '../services/i18n.js';
+import { t } from '../services/i18n.service.js';
 
 export const ALLOWED_EMAIL_DOMAINS = [
   'gmail.com',

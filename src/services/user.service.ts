@@ -5,8 +5,8 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { pool } from '../config/database.js';
-import { redis } from '../config/redis.js';
+import { pool } from '../config/database.config.js';
+import { redis } from '../config/redis.config.js';
 import { UserPayload } from '../types/auth.types.js';
 import { hashBackupCode } from './two-factor.service.js';
 import { revokeAllUserSessions } from './auth.service.js';

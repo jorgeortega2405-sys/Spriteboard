@@ -5,10 +5,10 @@
  * Usuarios invitados/sin sesión no establecen conexión.
  */
 
-import { currentUser, clearUserState } from './api.js';
-import { showToast } from './toast.js';
-import { t } from './i18n.js';
-import { navigate } from '../router.js';
+import { currentUser, clearUserState } from './api.service.js';
+import { showToast } from './toast.service.js';
+import { t } from './i18n.service.js';
+import { navigate } from '../app-router.js';
 
 let ws = null;
 let reconnectTimer = null;

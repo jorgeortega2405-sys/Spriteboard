@@ -1,20 +1,20 @@
-import { loadTemplate } from '../../services/template.js';
-import { postApi, setCurrentUser, setLinkedAccounts } from '../../services/api.js';
-import { navigate } from '../../router.js';
+import { loadTemplate } from '../../services/template.service.js';
+import { postApi, setCurrentUser, setLinkedAccounts } from '../../services/api.service.js';
+import { navigate } from '../../app-router.js';
 import { initWebSocket } from '../../services/websocket.service.js';
 import {
   getTwoFactorState,
   hasTwoFactorLoginData,
   clearTwoFactorState,
 } from '../../services/two-factor-state.js';
-import { createErrorView } from '../error.js';
+import { createErrorView } from '../error.view.js';
 import {
   createBannerManager,
   withButtonLoading,
   bindSubmitOnEnter,
   bindNavigationLinks,
-} from '../../utils/dom.js';
-import { t } from '../../services/i18n.js';
+} from '../../utils/dom.util.js';
+import { t } from '../../services/i18n.service.js';
 
 export async function createLogin2FAView() {
   // Comprobar parámetros de consulta en caso de redirección desde Google OAuth

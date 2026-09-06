@@ -1,5 +1,5 @@
-import { loadTemplate } from '../services/template.js';
-import { createSidebar } from '../components/sidebar.js';
+import { loadTemplate } from '../services/template.service.js';
+import { createSidebar } from '../components/sidebar.component.js';
 
 export async function createTrashView() {
   const container = await loadTemplate('/views/home/trash.html');

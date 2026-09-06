@@ -9,7 +9,7 @@
  * - Cero llamadas a console.*.
  */
 
-import { t, translateElement } from '../services/i18n.js';
+import { t, translateElement } from '../services/i18n.service.js';
 
 let activeModals = [];
 
@@ -42,25 +42,30 @@ export function openModal(options = {}) {
   backdrop.setAttribute('data-ref', 'modal-backdrop');
 
   const baseTitle = titleKey ? t(titleKey) : title;
-  const renderedTitle = icon ? `<span class="material-symbols-rounded">${icon}</span><span>${baseTitle}</span>` : baseTitle;
+  const renderedTitle = baseTitle;
   const renderedDesc = descriptionKey ? t(descriptionKey, descriptionParams) : description;
 
   backdrop.innerHTML = `
-    <button type="button" class="modal-close-btn" data-ref="btn-modal-close" data-i18n-aria="modal.close" aria-label="${t('modal.close')}">
-      <span class="material-symbols-rounded">close</span>
-    </button>
-    <div class="modal-card modal-card--${size}" data-ref="modal-card">
-      <div class="modal-card__header" data-ref="modal-header">
-        <h2 class="modal-card__title" data-ref="modal-title">${renderedTitle}</h2>
-        ${renderedDesc ? `<p class="modal-card__desc" data-ref="modal-desc">${renderedDesc}</p>` : ''}
-      </div>
-      <div class="modal-card__body" data-ref="modal-body"></div>
-      <div class="modal-card__footer" data-ref="modal-footer">
-        <div class="modal-card__actions" data-ref="modal-actions">
-          ${showCancel ? `<button type="button" class="btn btn--h34" data-ref="btn-modal-cancel">${cancelText}</button>` : ''}
-          ${showConfirm ? `<button type="button" class="btn btn--h34 ${confirmClass}" data-ref="btn-modal-confirm">${confirmText}</button>` : ''}
+    <div class="modal-container" data-ref="modal-container">
+      <button type="button" class="modal-close-btn" data-ref="btn-modal-close" data-i18n-aria="modal.close" aria-label="${t('modal.close')}">
+        <span class="material-symbols-rounded">close</span>
+      </button>
+      <div class="modal-card modal-card--${size}" data-ref="modal-card">
+        <div class="modal-card__drag-zone" data-ref="modal-drag-zone">
+          <div class="modal-card__drag-handle"></div>
         </div>
-        <div class="banner banner--danger" data-ref="modal-error" style="display: none;"></div>
+        <div class="modal-card__header" data-ref="modal-header">
+          <h2 class="modal-card__title" data-ref="modal-title">${renderedTitle}</h2>
+          ${renderedDesc ? `<p class="modal-card__desc" data-ref="modal-desc">${renderedDesc}</p>` : ''}
+        </div>
+        <div class="modal-card__body" data-ref="modal-body"></div>
+        <div class="modal-card__footer" data-ref="modal-footer">
+          <div class="modal-card__actions" data-ref="modal-actions">
+            ${showCancel ? `<button type="button" class="btn btn--h34" data-ref="btn-modal-cancel">${cancelText}</button>` : ''}
+            ${showConfirm ? `<button type="button" class="btn btn--h34 ${confirmClass}" data-ref="btn-modal-confirm">${confirmText}</button>` : ''}
+          </div>
+          <div class="banner banner--danger" data-ref="modal-error" style="display: none;"></div>
+        </div>
       </div>
     </div>
   `;
@@ -174,8 +179,11 @@ export function openModal(options = {}) {
 
       backdrop.classList.remove('is-visible');
 
-      // Remover listener de Escape
+      // Remover listeners
       document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', onPointerUp);
 
       setTimeout(() => {
         if (backdrop.parentNode) {
@@ -191,6 +199,71 @@ export function openModal(options = {}) {
       }, 200);
     },
   };
+
+  // Soporte de Drag & Drop para cerrar modal
+  const dragZone = backdrop.querySelector('[data-ref="modal-drag-zone"]');
+  let startY = 0;
+  let currentY = 0;
+  let isDragging = false;
+  let activePointerId = null;
+
+  const onPointerDown = (e) => {
+    if (isClosing || !card) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+
+    isDragging = true;
+    activePointerId = e.pointerId;
+    startY = e.clientY;
+    currentY = startY;
+
+    try {
+      (dragZone || card).setPointerCapture(activePointerId);
+    } catch (_) {}
+
+    card.style.transition = 'none';
+  };
+
+  const onPointerMove = (e) => {
+    if (!isDragging || (activePointerId !== null && e.pointerId !== activePointerId)) return;
+    currentY = e.clientY;
+    const diff = currentY - startY;
+
+    if (card) {
+      if (diff > 0) {
+        card.style.transform = `translateY(${diff}px)`;
+      } else {
+        card.style.transform = `translateY(${diff * 0.15}px)`;
+      }
+    }
+  };
+
+  const onPointerUp = (e) => {
+    if (!isDragging || (activePointerId !== null && e.pointerId !== activePointerId)) return;
+    isDragging = false;
+
+    try {
+      if (activePointerId !== null) {
+        (dragZone || card).releasePointerCapture(activePointerId);
+      }
+    } catch (_) {}
+    activePointerId = null;
+
+    const diff = currentY - startY;
+
+    if (diff > 80) {
+      modalInstance.close();
+    } else {
+      if (card) {
+        card.style.transition = 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)';
+        card.style.transform = '';
+      }
+    }
+  };
+
+  dragZone?.addEventListener('pointerdown', onPointerDown);
+  window.addEventListener('pointermove', onPointerMove);
+  window.addEventListener('pointerup', onPointerUp);
+  window.addEventListener('pointercancel', onPointerUp);
 
   // 5. Manejo de Eventos
   const handleKeyDown = (e) => {

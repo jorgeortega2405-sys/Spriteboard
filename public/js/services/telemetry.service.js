@@ -7,7 +7,7 @@
  * Cumple estrictamente con las directivas de seguridad y cero console.*.
  */
 
-import { postApi } from './api.js';
+import { postApi } from './api.service.js';
 
 // Calificaciones estándar de Web Vitals según umbrales de Google
 function rateMetric(name, value) {

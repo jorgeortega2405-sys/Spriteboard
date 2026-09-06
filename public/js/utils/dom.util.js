@@ -6,7 +6,7 @@
  * - Gestión limpia de eventos y ciclo de vida
  */
 
-import { navigate } from '../router.js';
+import { navigate } from '../app-router.js';
 
 /**
  * Configura la alternancia de visibilidad en campos de contraseña (toggle password)
@@ -435,7 +435,7 @@ export function setupDropdown(wrapper, options = {}) {
       selectedIconEl.textContent = itemIcon;
     }
 
-    const val = item.getAttribute('data-value') || item.getAttribute('data-lang') || item.getAttribute('data-theme') || itemText;
+    const val = item.getAttribute('data-theme-value') || item.getAttribute('data-value') || item.getAttribute('data-lang') || item.getAttribute('data-theme') || itemText;
     if (typeof options.onSelect === 'function') {
       options.onSelect(val, item);
     }

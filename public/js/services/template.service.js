@@ -1,4 +1,4 @@
-import { translateElement } from './i18n.js';
+import { translateElement } from './i18n.service.js';
 
 const templateCache = new Map();
 

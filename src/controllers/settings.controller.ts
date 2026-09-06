@@ -41,7 +41,7 @@ import {
   sendConflict,
   sendInternalError,
   sanitizeUser,
-} from '../utils/http.js';
+} from '../utils/http.util.js';
 import { logger } from '../services/logger.service.js';
 
 /**

@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { redis } from '../config/redis.js';
+import { redis } from '../config/redis.config.js';
 
 export interface PendingRegistration {
   email: string;

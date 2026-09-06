@@ -5,9 +5,9 @@
  * Cumple con las directivas de seguridad, accesibilidad y CERO console.*.
  */
 
-import { loadTemplate } from '../services/template.js';
-import { translateElement } from '../services/i18n.js';
-import { toggleSidebar } from './sidebar.js';
+import { loadTemplate } from '../services/template.service.js';
+import { translateElement } from '../services/i18n.service.js';
+import { toggleSidebar } from './sidebar.component.js';
 
 let isChatOpen = false;
 let chatSidebarElement = null;
@@ -227,7 +227,7 @@ function setupChatSidebarEvents(sidebarElement) {
     const typingIndicator = appendTypingIndicator();
 
     try {
-      const { postApi } = await import('../services/api.js');
+      const { postApi } = await import('../services/api.service.js');
       const res = await postApi('/api/chat', {
         message: text,
         history: conversationHistory.slice(-10),

@@ -4,7 +4,7 @@
  * Cumple con las directivas de seguridad, logging centralizado y CERO console.*.
  */
 
-import { config } from '../config/env.js';
+import { config } from '../config/env.config.js';
 import { logger } from './logger.service.js';
 import { ASSISTANT_RULES } from '../config/assistant-rules.js';
 import { ASSISTANT_KNOWLEDGE } from '../config/assistant-knowledge.js';

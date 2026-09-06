@@ -1,9 +1,9 @@
-import { loadTemplate } from '../../services/template.js';
-import { createSidebar } from '../../components/sidebar.js';
-import { getApi, postApi } from '../../services/api.js';
-import { setupDropdown } from '../../utils/dom.js';
-import { showToast, setToastPreferences } from '../../services/toast.js';
-import { t } from '../../services/i18n.js';
+import { loadTemplate } from '../../services/template.service.js';
+import { createSidebar } from '../../components/sidebar.component.js';
+import { getApi, postApi } from '../../services/api.service.js';
+import { setupDropdown } from '../../utils/dom.util.js';
+import { showToast, setToastPreferences } from '../../services/toast.service.js';
+import { t } from '../../services/i18n.service.js';
 import { setTheme, initTheme, applyAccessibilityPreferences } from '../../services/theme.service.js';
 
 export async function createAccessibilityView() {
@@ -56,7 +56,7 @@ export async function createAccessibilityView() {
           if (themeSelectedIcon) themeSelectedIcon.textContent = themeIcons[prefs.theme];
 
           if (themeDropdown) {
-            const activeItem = themeDropdown.querySelector(`[data-theme="${prefs.theme}"]`);
+            const activeItem = themeDropdown.querySelector(`[data-theme-value="${prefs.theme}"], [data-theme="${prefs.theme}"]`);
             if (activeItem) {
               themeDropdown.querySelectorAll('.menu-item').forEach((i) => i.classList.remove('is-active'));
               activeItem.classList.add('is-active');

@@ -1,13 +1,13 @@
-import { loadTemplate } from '../../services/template.js';
-import { postApi } from '../../services/api.js';
-import { validateEmail } from '../../utils/validators.js';
+import { loadTemplate } from '../../services/template.service.js';
+import { postApi } from '../../services/api.service.js';
+import { validateEmail } from '../../utils/validators.util.js';
 import {
   createBannerManager,
   withButtonLoading,
   bindSubmitOnEnter,
   bindNavigationLinks,
-} from '../../utils/dom.js';
-import { t } from '../../services/i18n.js';
+} from '../../utils/dom.util.js';
+import { t } from '../../services/i18n.service.js';
 
 export async function createForgotPasswordView() {
   const container = await loadTemplate('/views/auth/forgot-password.html');

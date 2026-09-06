@@ -55,7 +55,7 @@ import {
   validatePassword,
   validateUsername,
   validateVerificationCode,
-} from '../utils/validators.js';
+} from '../utils/validators.util.js';
 import {
   sendSuccess,
   sendCreated,
@@ -65,7 +65,7 @@ import {
   sendConflict,
   sendInternalError,
   sanitizeUser,
-} from '../utils/http.js';
+} from '../utils/http.util.js';
 
 // Etapa 1: Validar correo y contraseña
 export async function validateStage1(req: Request, res: Response): Promise<void> {

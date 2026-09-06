@@ -1,5 +1,5 @@
 import { Redis } from 'ioredis';
-import { config } from './env.js';
+import { config } from './env.config.js';
 import { logger } from '../services/logger.service.js';
 
 export const redis = new Redis({

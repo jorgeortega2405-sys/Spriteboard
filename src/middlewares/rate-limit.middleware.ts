@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { redis } from '../config/redis.js';
+import { redis } from '../config/redis.config.js';
 import { logger } from '../services/logger.service.js';
 
 export interface RateLimiterOptions {

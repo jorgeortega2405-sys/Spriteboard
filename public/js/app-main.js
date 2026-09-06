@@ -3,11 +3,11 @@
  * Arquitectura modular nativa basada en componentes, plantillas HTML y cero IDs.
  */
 
-import { fetchCsrfToken, checkAuthSession, fetchAppConfig } from './services/api.js';
-import { render, navigate } from './router.js';
-import { initTooltips } from './services/tooltip.js';
-import { initI18n } from './services/i18n.js';
-import { initWebVitals } from './services/telemetry.js';
+import { fetchCsrfToken, checkAuthSession, fetchAppConfig } from './services/api.service.js';
+import { render, navigate } from './app-router.js';
+import { initTooltips } from './services/tooltip.service.js';
+import { initI18n } from './services/i18n.service.js';
+import { initWebVitals } from './services/telemetry.service.js';
 import { initTheme } from './services/theme.service.js';
 import { initChatSidebar } from './components/chat-sidebar.js';
 import { initWebSocket } from './services/websocket.service.js';

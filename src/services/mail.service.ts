@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer';
 import { createRequire } from 'module';
-import { config } from '../config/env.js';
+import { config } from '../config/env.config.js';
 
 const require = createRequire(import.meta.url);
 const emailTemplates = require('../config/email-templates.json');

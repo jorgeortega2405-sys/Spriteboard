@@ -5,10 +5,10 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { pool } from '../config/database.js';
+import { pool } from '../config/database.config.js';
 import { logger } from './logger.service.js';
 import { UserPayload } from '../types/auth.types.js';
-import { validateEmail, validateUsername, validatePassword } from '../utils/validators.js';
+import { validateEmail, validateUsername, validatePassword } from '../utils/validators.util.js';
 import { hashPassword, verifyPassword } from './auth.service.js';
 import type { RowDataPacket, ResultSetHeader } from 'mysql2';
 
@@ -20,7 +20,7 @@ import {
   AVAILABLE_LANGUAGES,
   isValidLanguageCode,
   detectLanguageFromHeader,
-} from '../utils/languages.js';
+} from '../utils/languages.util.js';
 import { sanitizeAvatar } from './image-sanitizer.service.js';
 import {
   generateSixDigitCode,

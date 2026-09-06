@@ -1,4 +1,4 @@
-import { loadTemplate } from '../services/template.js';
+import { loadTemplate } from '../services/template.service.js';
 import {
   currentUser,
   linkedAccounts,
@@ -6,12 +6,12 @@ import {
   switchAccountApi,
   logoutApi,
   logoutAllApi,
-} from '../services/api.js';
-import { toggleSidebar, getIsSidebarOpen } from './sidebar.js';
+} from '../services/api.service.js';
+import { toggleSidebar, getIsSidebarOpen } from './sidebar.component.js';
 import { toggleChatSidebar } from './chat-sidebar.js';
-import { navigate, render } from '../router.js';
-import { t } from '../services/i18n.js';
-import { showToast } from '../services/toast.js';
+import { navigate, render } from '../app-router.js';
+import { t } from '../services/i18n.service.js';
+import { showToast } from '../services/toast.service.js';
 import { initWebSocket, closeWebSocket } from '../services/websocket.service.js';
 
 export async function createTopBar() {

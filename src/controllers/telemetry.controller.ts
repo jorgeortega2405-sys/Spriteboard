@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { telemetryService } from '../services/telemetry.service.js';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import { getUserPreferences } from '../services/settings.service.js';
-import { sendSuccess, sendBadRequest, sendInternalError } from '../utils/http.js';
+import { sendSuccess, sendBadRequest, sendInternalError } from '../utils/http.util.js';
 
 /**
  * Registra eventos de interacción y ciclo de vida emitidos por el cliente
