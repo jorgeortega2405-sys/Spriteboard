@@ -36,7 +36,7 @@ export function showToast(message: string, type: ToastType = 'success', customDu
 
   toastEl.innerHTML = `
     <div class="toast-item__icon" data-ref="toast-icon">
-      <span class="material-symbols-rounded">${iconName}</span>
+      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${iconName}"></use></svg>
     </div>
     <div class="toast-item__text" data-ref="toast-text">${message}</div>
   `;

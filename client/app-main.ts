@@ -2,6 +2,7 @@ import { navigate, render } from './app-router';
 import { initChatSidebar } from './components/layout.component';
 import { checkAuthSession, fetchAppConfig, fetchCsrfToken, verifySubscriptionSessionApi } from './services/api.service';
 import { initI18n } from './services/i18n.service';
+import { renderIcons } from './services/icon.service';
 import { initWebVitals } from './services/telemetry.service';
 import { initTheme } from './services/theme.service';
 import { initTooltips } from './services/tooltip.service';
@@ -52,6 +53,7 @@ async function init(): Promise<void> {
   await initI18n();
   await initChatSidebar();
   await render();
+  renderIcons();
 }
 
 if (document.readyState === 'loading') {

@@ -491,12 +491,12 @@ export async function createYourAccountView(): Promise<HTMLElement> {
       item.style.display = match ? 'flex' : 'none';
       if (match) matchesCount++;
     });
-    if (langEmptyEl) {
+      if (langEmptyEl) {
       langEmptyEl.style.display = matchesCount === 0 ? 'block' : 'none';
     }
   };
 
-  let dropdownController: { update: () => void; close: () => void } | null = null;
+  let dropdownController: { close: () => void; destroy: () => void; update: () => void } | null = null;
 
   langSearchInput?.addEventListener('input', (e: Event) => {
     filterLanguages((e.target as HTMLInputElement).value);
@@ -2095,7 +2095,7 @@ export async function createGuestSettingsView(): Promise<HTMLElement> {
     }
   };
 
-  let dropdownController: { update: () => void; close: () => void } | null = null;
+  let dropdownController: { close: () => void; destroy: () => void; update: () => void } | null = null;
 
   langSearchInput?.addEventListener('input', (e: Event) => {
     filterLanguages((e.target as HTMLInputElement).value);

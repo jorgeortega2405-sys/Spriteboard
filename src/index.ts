@@ -73,7 +73,20 @@ async function setupClient(server: http.Server) {
     const vite = await createServer({
       server: {
         middlewareMode: true,
-        watch: { usePolling: true },
+        watch: {
+          usePolling: true,
+          interval: 2000,
+          binaryInterval: 2000,
+          ignored: [
+            '**/node_modules/**',
+            '**/dist/**',
+            '**/logs/**',
+            '**/.git/**',
+            '**/data/**',
+            '**/worker/**',
+            '**/websocket/**',
+          ],
+        },
         ws: { server },
       },
       appType: 'spa',

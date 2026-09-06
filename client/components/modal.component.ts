@@ -41,7 +41,7 @@ export function openModal(options: ModalOptions = {}): ModalInstance {
         <span class="material-symbols-rounded">close</span>
       </button>
       <div class="modal-card modal-card--${size}" data-ref="modal-card">
-        <div class="modal-card__drag-zone" data-ref="modal-drag-zone">
+        <div class="modal-card__drag-zone" data-ref="modal-drag-zone" aria-hidden="true">
           <div class="modal-card__drag-handle"></div>
         </div>
         <div class="modal-card__header" data-ref="modal-header">
@@ -167,9 +167,9 @@ export function openModal(options: ModalOptions = {}): ModalInstance {
       backdrop.classList.remove('is-visible');
 
       document.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('pointermove', onPointerMove);
-      window.removeEventListener('pointerup', onPointerUp);
-      window.removeEventListener('pointercancel', onPointerUp);
+      detachPointerListeners();
+      dragZone?.removeEventListener('pointerdown', onPointerDown);
+      dragZone?.removeEventListener('lostpointercapture', onPointerUp);
 
       setTimeout(() => {
         if (backdrop.parentNode) {
@@ -189,8 +189,15 @@ export function openModal(options: ModalOptions = {}): ModalInstance {
   const dragZone = backdrop.querySelector<HTMLElement>('[data-ref="modal-drag-zone"]');
   let startY = 0;
   let currentY = 0;
+  let startTime = 0;
   let isDragging = false;
   let activePointerId: number | null = null;
+
+  const detachPointerListeners = () => {
+    window.removeEventListener('pointermove', onPointerMove);
+    window.removeEventListener('pointerup', onPointerUp);
+    window.removeEventListener('pointercancel', onPointerUp);
+  };
 
   const onPointerDown = (e: PointerEvent) => {
     if (isClosing || !card) return;
@@ -200,12 +207,18 @@ export function openModal(options: ModalOptions = {}): ModalInstance {
     activePointerId = e.pointerId;
     startY = e.clientY;
     currentY = startY;
+    startTime = performance.now();
 
     try {
       (dragZone || card).setPointerCapture(activePointerId);
     } catch (_) {}
 
     card.style.transition = 'none';
+    backdrop.style.transition = 'none';
+
+    window.addEventListener('pointermove', onPointerMove, { passive: true });
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onPointerUp);
   };
 
   const onPointerMove = (e: PointerEvent) => {
@@ -216,8 +229,11 @@ export function openModal(options: ModalOptions = {}): ModalInstance {
     if (card) {
       if (diff > 0) {
         card.style.transform = `translateY(${diff}px)`;
+        const progress = Math.min(diff / 240, 1);
+        backdrop.style.opacity = `${Math.max(0.2, 1 - progress * 0.8)}`;
       } else {
-        card.style.transform = `translateY(${diff * 0.15}px)`;
+        const rubberDiff = Math.max(diff * 0.15, -24);
+        card.style.transform = `translateY(${rubberDiff}px)`;
       }
     }
   };
@@ -225,6 +241,7 @@ export function openModal(options: ModalOptions = {}): ModalInstance {
   const onPointerUp = (e: PointerEvent) => {
     if (!isDragging || (activePointerId !== null && e.pointerId !== activePointerId)) return;
     isDragging = false;
+    detachPointerListeners();
 
     try {
       if (activePointerId !== null) {
@@ -234,10 +251,14 @@ export function openModal(options: ModalOptions = {}): ModalInstance {
     activePointerId = null;
 
     const diff = currentY - startY;
+    const elapsed = Math.max(1, performance.now() - startTime);
+    const velocity = diff / elapsed;
 
-    if (diff > 80) {
+    if (diff > 80 || (diff > 25 && velocity > 0.45)) {
       modalInstance.close();
     } else {
+      backdrop.style.transition = 'opacity 0.25s ease';
+      backdrop.style.opacity = '1';
       if (card) {
         card.style.transition = 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)';
         card.style.transform = '';
@@ -246,9 +267,7 @@ export function openModal(options: ModalOptions = {}): ModalInstance {
   };
 
   dragZone?.addEventListener('pointerdown', onPointerDown);
-  window.addEventListener('pointermove', onPointerMove);
-  window.addEventListener('pointerup', onPointerUp);
-  window.addEventListener('pointercancel', onPointerUp);
+  dragZone?.addEventListener('lostpointercapture', onPointerUp);
 
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
@@ -330,7 +349,7 @@ export async function open2FAModal(options: { onClose?: () => void; onSuccess?: 
         <span class="material-symbols-rounded">close</span>
       </button>
       <div class="modal-card modal-card--split" data-ref="modal-card-2fa">
-        <div class="modal-card__drag-zone" data-ref="modal-2fa-drag-zone">
+        <div class="modal-card__drag-zone" data-ref="modal-2fa-drag-zone" aria-hidden="true">
           <div class="modal-card__drag-handle"></div>
         </div>
         <div class="modal-split__left" data-ref="modal-split-left">
@@ -499,9 +518,9 @@ export async function open2FAModal(options: { onClose?: () => void; onSuccess?: 
 
       backdrop.classList.remove('is-visible');
       document.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('pointermove', onPointerMove);
-      window.removeEventListener('pointerup', onPointerUp);
-      window.removeEventListener('pointercancel', onPointerUp);
+      detach2FAPointerListeners();
+      dragZone2fa?.removeEventListener('pointerdown', onPointerDown);
+      dragZone2fa?.removeEventListener('lostpointercapture', onPointerUp);
 
       setTimeout(() => {
         if (backdrop.parentNode) {
@@ -522,8 +541,15 @@ export async function open2FAModal(options: { onClose?: () => void; onSuccess?: 
   const dragZone2fa = backdrop.querySelector<HTMLElement>('[data-ref="modal-2fa-drag-zone"]');
   let startY = 0;
   let currentY = 0;
+  let startTime = 0;
   let isDragging = false;
   let activePointerId: number | null = null;
+
+  const detach2FAPointerListeners = () => {
+    window.removeEventListener('pointermove', onPointerMove);
+    window.removeEventListener('pointerup', onPointerUp);
+    window.removeEventListener('pointercancel', onPointerUp);
+  };
 
   const onPointerDown = (e: PointerEvent) => {
     if (isClosing || !card2fa) return;
@@ -533,12 +559,18 @@ export async function open2FAModal(options: { onClose?: () => void; onSuccess?: 
     activePointerId = e.pointerId;
     startY = e.clientY;
     currentY = startY;
+    startTime = performance.now();
 
     try {
       (dragZone2fa || card2fa).setPointerCapture(activePointerId);
     } catch (_) {}
 
     card2fa.style.transition = 'none';
+    backdrop.style.transition = 'none';
+
+    window.addEventListener('pointermove', onPointerMove, { passive: true });
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onPointerUp);
   };
 
   const onPointerMove = (e: PointerEvent) => {
@@ -549,8 +581,11 @@ export async function open2FAModal(options: { onClose?: () => void; onSuccess?: 
     if (card2fa) {
       if (diff > 0) {
         card2fa.style.transform = `translateY(${diff}px)`;
+        const progress = Math.min(diff / 240, 1);
+        backdrop.style.opacity = `${Math.max(0.2, 1 - progress * 0.8)}`;
       } else {
-        card2fa.style.transform = `translateY(${diff * 0.15}px)`;
+        const rubberDiff = Math.max(diff * 0.15, -24);
+        card2fa.style.transform = `translateY(${rubberDiff}px)`;
       }
     }
   };
@@ -558,6 +593,7 @@ export async function open2FAModal(options: { onClose?: () => void; onSuccess?: 
   const onPointerUp = (e: PointerEvent) => {
     if (!isDragging || (activePointerId !== null && e.pointerId !== activePointerId)) return;
     isDragging = false;
+    detach2FAPointerListeners();
 
     try {
       if (activePointerId !== null) {
@@ -567,10 +603,14 @@ export async function open2FAModal(options: { onClose?: () => void; onSuccess?: 
     activePointerId = null;
 
     const diff = currentY - startY;
+    const elapsed = Math.max(1, performance.now() - startTime);
+    const velocity = diff / elapsed;
 
-    if (diff > 80) {
+    if (diff > 80 || (diff > 25 && velocity > 0.45)) {
       modalInstance.close();
     } else {
+      backdrop.style.transition = 'opacity 0.25s ease';
+      backdrop.style.opacity = '1';
       if (card2fa) {
         card2fa.style.transition = 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)';
         card2fa.style.transform = '';
@@ -579,9 +619,7 @@ export async function open2FAModal(options: { onClose?: () => void; onSuccess?: 
   };
 
   dragZone2fa?.addEventListener('pointerdown', onPointerDown);
-  window.addEventListener('pointermove', onPointerMove);
-  window.addEventListener('pointerup', onPointerUp);
-  window.addEventListener('pointercancel', onPointerUp);
+  dragZone2fa?.addEventListener('lostpointercapture', onPointerUp);
 
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {

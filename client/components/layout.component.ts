@@ -413,8 +413,15 @@ export async function createTopBar(): Promise<HTMLElement> {
 
       let startY = 0;
       let currentY = 0;
+      let startTime = 0;
       let isDragging = false;
       let activePointerId: number | null = null;
+
+      const detachAvatarPointerListeners = () => {
+        window.removeEventListener('pointermove', onPointerMove);
+        window.removeEventListener('pointerup', onPointerUp);
+        window.removeEventListener('pointercancel', onPointerUp);
+      };
 
       const onPointerDown = (e: PointerEvent) => {
         if (window.innerWidth > 768 || isClosing || !avatarMenu) return;
@@ -424,12 +431,20 @@ export async function createTopBar(): Promise<HTMLElement> {
         activePointerId = e.pointerId;
         startY = e.clientY;
         currentY = startY;
+        startTime = performance.now();
 
         try {
           dragZone?.setPointerCapture(activePointerId);
         } catch (_) {}
 
         avatarMenu.style.transition = 'none';
+        if (avatarBackdrop) {
+          avatarBackdrop.style.transition = 'none';
+        }
+
+        window.addEventListener('pointermove', onPointerMove, { passive: true });
+        window.addEventListener('pointerup', onPointerUp);
+        window.addEventListener('pointercancel', onPointerUp);
       };
 
       const onPointerMove = (e: PointerEvent) => {
@@ -440,8 +455,13 @@ export async function createTopBar(): Promise<HTMLElement> {
         if (avatarMenu) {
           if (diff > 0) {
             avatarMenu.style.transform = `translateY(${diff}px)`;
+            if (avatarBackdrop) {
+              const progress = Math.min(diff / 240, 1);
+              avatarBackdrop.style.opacity = `${Math.max(0.2, 1 - progress * 0.8)}`;
+            }
           } else {
-            avatarMenu.style.transform = `translateY(${diff * 0.15}px)`;
+            const rubberDiff = Math.max(diff * 0.15, -24);
+            avatarMenu.style.transform = `translateY(${rubberDiff}px)`;
           }
         }
       };
@@ -449,6 +469,7 @@ export async function createTopBar(): Promise<HTMLElement> {
       const onPointerUp = (e: PointerEvent) => {
         if (!isDragging || (activePointerId !== null && e.pointerId !== activePointerId)) return;
         isDragging = false;
+        detachAvatarPointerListeners();
 
         try {
           if (activePointerId !== null) {
@@ -458,10 +479,16 @@ export async function createTopBar(): Promise<HTMLElement> {
         activePointerId = null;
 
         const diff = currentY - startY;
+        const elapsed = Math.max(1, performance.now() - startTime);
+        const velocity = diff / elapsed;
 
-        if (diff > 75) {
+        if (diff > 75 || (diff > 25 && velocity > 0.45)) {
           closeMenu();
         } else {
+          if (avatarBackdrop) {
+            avatarBackdrop.style.transition = 'opacity 0.25s ease';
+            avatarBackdrop.style.opacity = '1';
+          }
           if (avatarMenu) {
             avatarMenu.style.transition = 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)';
             avatarMenu.style.transform = 'translateY(0)';
@@ -470,9 +497,7 @@ export async function createTopBar(): Promise<HTMLElement> {
       };
 
       dragZone?.addEventListener('pointerdown', onPointerDown);
-      window.addEventListener('pointermove', onPointerMove, { passive: true });
-      window.addEventListener('pointerup', onPointerUp);
-      window.addEventListener('pointercancel', onPointerUp);
+      dragZone?.addEventListener('lostpointercapture', onPointerUp);
 
       const closeMenuHandler = (e: MouseEvent) => {
         if (!avatarMenu?.contains(e.target as Node) && !avatarBtn?.contains(e.target as Node)) {
@@ -488,9 +513,29 @@ export async function createTopBar(): Promise<HTMLElement> {
       };
       document.addEventListener('keydown', closeMenuKeydownHandler);
 
+      const onWindowResize = () => {
+        if (avatarMenu?.classList.contains('is-open') && window.innerWidth > 768) {
+          if (avatarBackdrop) {
+            avatarBackdrop.style.display = '';
+            avatarBackdrop.style.opacity = '';
+            avatarBackdrop.style.transition = '';
+            avatarBackdrop.style.pointerEvents = '';
+          }
+          if (avatarMenu) {
+            avatarMenu.style.transform = '';
+            avatarMenu.style.transition = '';
+          }
+        }
+      };
+      window.addEventListener('resize', onWindowResize, { passive: true });
+
       const cleanupAndRender = () => {
+        detachAvatarPointerListeners();
+        dragZone?.removeEventListener('pointerdown', onPointerDown);
+        dragZone?.removeEventListener('lostpointercapture', onPointerUp);
         document.removeEventListener('click', closeMenuHandler);
         document.removeEventListener('keydown', closeMenuKeydownHandler);
+        window.removeEventListener('resize', onWindowResize);
         window.removeEventListener('subscription-updated', handleSubscriptionUpdated);
         render();
       };

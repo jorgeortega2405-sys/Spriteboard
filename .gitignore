@@ -41,3 +41,6 @@ data/geoip/*.mmdb
 data/geoip/*.tar.gz
 data/geoip/*.gz
 !data/geoip/.gitkeep
+
+# Cache de herramientas de administración
+admin_tool/cache/

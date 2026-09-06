@@ -1,6 +1,7 @@
 import { attachChatSidebarToView, createTopBar, toggleSidebar } from './components/layout.component';
 import { hasPersistentTopBar } from './config/skeleton-routes';
 import { currentUser } from './services/api.service';
+import { renderIcons } from './services/icon.service';
 import { SkeletonService } from './services/skeleton.service';
 import { trackPageView } from './services/telemetry.service';
 import { hideTooltip } from './services/tooltip.service';
@@ -191,6 +192,7 @@ export async function render(): Promise<void> {
   }
 
   await skeletonSession.finish(viewElements, () => navId === currentNavigation);
+  renderIcons(appRoot);
   isInitialPageLoad = false;
 
   const activeContent = appRoot.querySelector<HTMLElement>('.layout-content');

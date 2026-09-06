@@ -156,8 +156,8 @@ export function setupDropdown(
     onSelect?: (val: any, item?: HTMLElement) => void | Promise<void>;
     placement?: Placement;
   } = {}
-): { close: () => void; open: () => void; toggle: () => void; update: () => void } {
-  if (!wrapper) return { open: () => {}, close: () => {}, toggle: () => {}, update: () => {} };
+): { close: () => void; destroy: () => void; open: () => void; toggle: () => void; update: () => void } {
+  if (!wrapper) return { close: () => {}, destroy: () => {}, open: () => {}, toggle: () => {}, update: () => {} };
 
   const trigger = wrapper.querySelector<HTMLElement>('.dropdown-trigger, [data-ref*="trigger"]');
   const backdrop = wrapper.querySelector<HTMLElement>('.dropdown-backdrop, [data-ref*="backdrop"]');
@@ -324,8 +324,15 @@ export function setupDropdown(
 
   let startY = 0;
   let currentY = 0;
+  let startTime = 0;
   let isDragging = false;
   let activePointerId: number | null = null;
+
+  const detachPointerListeners = () => {
+    window.removeEventListener('pointermove', onPointerMove);
+    window.removeEventListener('pointerup', onPointerUp);
+    window.removeEventListener('pointercancel', onPointerUp);
+  };
 
   const onPointerDown = (e: PointerEvent) => {
     if (window.innerWidth > 768 || isClosing || !menu) return;
@@ -335,12 +342,20 @@ export function setupDropdown(
     activePointerId = e.pointerId;
     startY = e.clientY;
     currentY = startY;
+    startTime = performance.now();
 
     try {
       dragZone?.setPointerCapture(activePointerId);
     } catch (_) {}
 
     menu.style.transition = 'none';
+    if (backdrop) {
+      backdrop.style.transition = 'none';
+    }
+
+    window.addEventListener('pointermove', onPointerMove, { passive: true });
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onPointerUp);
   };
 
   const onPointerMove = (e: PointerEvent) => {
@@ -351,8 +366,13 @@ export function setupDropdown(
     if (menu) {
       if (diff > 0) {
         menu.style.transform = `translateY(${diff}px)`;
+        if (backdrop) {
+          const progress = Math.min(diff / 220, 1);
+          backdrop.style.opacity = `${Math.max(0.2, 1 - progress * 0.8)}`;
+        }
       } else {
-        menu.style.transform = `translateY(${diff * 0.15}px)`;
+        const rubberDiff = Math.max(diff * 0.15, -24);
+        menu.style.transform = `translateY(${rubberDiff}px)`;
       }
     }
   };
@@ -360,6 +380,7 @@ export function setupDropdown(
   const onPointerUp = (e: PointerEvent) => {
     if (!isDragging || (activePointerId !== null && e.pointerId !== activePointerId)) return;
     isDragging = false;
+    detachPointerListeners();
 
     try {
       if (activePointerId !== null) {
@@ -369,10 +390,16 @@ export function setupDropdown(
     activePointerId = null;
 
     const diff = currentY - startY;
+    const elapsed = Math.max(1, performance.now() - startTime);
+    const velocity = diff / elapsed;
 
-    if (diff > 75) {
+    if (diff > 75 || (diff > 25 && velocity > 0.45)) {
       closeDropdown();
     } else {
+      if (backdrop) {
+        backdrop.style.transition = 'opacity 0.25s ease';
+        backdrop.style.opacity = '1';
+      }
       if (menu) {
         menu.style.transition = 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)';
         menu.style.transform = 'translateY(0)';
@@ -381,9 +408,7 @@ export function setupDropdown(
   };
 
   dragZone?.addEventListener('pointerdown', onPointerDown);
-  window.addEventListener('pointermove', onPointerMove, { passive: true });
-  window.addEventListener('pointerup', onPointerUp);
-  window.addEventListener('pointercancel', onPointerUp);
+  dragZone?.addEventListener('lostpointercapture', onPointerUp);
 
   const onDocClick = (e: MouseEvent) => {
     if (!wrapper.contains(e.target as Node)) {
@@ -425,21 +450,45 @@ export function setupDropdown(
     closeDropdown();
   });
 
-  window.addEventListener('resize', () => {
+  const onResize = () => {
     if (menu?.classList.contains('is-open')) {
       if (window.innerWidth <= 768) {
         destroyPopper();
-      } else if (!popperInstance) {
-        createPopperInstance();
       } else {
-        popperInstance.update();
+        if (backdrop) {
+          backdrop.style.display = '';
+          backdrop.style.opacity = '';
+          backdrop.style.transition = '';
+          backdrop.style.pointerEvents = '';
+        }
+        if (menu) {
+          menu.style.transform = '';
+          menu.style.transition = '';
+        }
+        if (!popperInstance) {
+          createPopperInstance();
+        } else {
+          popperInstance.update();
+        }
       }
     }
-  }, { passive: true });
+  };
+  window.addEventListener('resize', onResize, { passive: true });
+
+  const destroy = () => {
+    detachPointerListeners();
+    dragZone?.removeEventListener('pointerdown', onPointerDown);
+    dragZone?.removeEventListener('lostpointercapture', onPointerUp);
+    document.removeEventListener('click', onDocClick);
+    document.removeEventListener('keydown', onDocKeydown);
+    window.removeEventListener('resize', onResize);
+    destroyPopper();
+  };
 
   return {
-    open: openDropdown,
     close: closeDropdown,
+    destroy,
+    open: openDropdown,
     toggle: toggleDropdown,
     update: () => {
       popperInstance?.update();

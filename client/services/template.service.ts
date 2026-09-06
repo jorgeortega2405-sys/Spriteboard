@@ -1,4 +1,5 @@
 import { translateElement } from './i18n.service.js';
+import { renderIcons } from './icon.service.js';
 
 const templateCache = new Map<string, string>();
 
@@ -21,5 +22,6 @@ export async function loadTemplate(url: string): Promise<HTMLElement> {
   }
 
   const clone = element.cloneNode(true) as HTMLElement;
+  renderIcons(clone);
   return translateElement(clone);
 }

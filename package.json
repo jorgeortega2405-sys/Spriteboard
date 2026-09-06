@@ -5,14 +5,15 @@
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
-    "dev": "tsx watch --exclude 'logs/**' --exclude 'dist/**' --exclude 'client/**' --exclude 'public/**' src/index.ts",
+    "dev": "tsx watch --exclude 'logs/**' --exclude 'dist/**' --exclude 'client/**' --exclude 'public/**' --exclude 'data/**' --exclude 'worker/**' --exclude 'websocket/**' src/index.ts",
     "dev:client": "vite",
     "build": "npm run build:server && npm run build:client",
     "build:server": "tsc -p tsconfig.server.json",
     "build:client": "vite build",
     "typecheck": "tsc -p tsconfig.server.json --noEmit && tsc -p tsconfig.client.json --noEmit",
     "start": "node dist/index.js",
-    "geoip:download": "tsx scripts/download-geoip.ts"
+    "geoip:download": "tsx scripts/download-geoip.ts",
+    "icons:bundle": "py admin_tool/manage_project.py"
   },
   "dependencies": {
     "@popperjs/core": "^2.11.8",

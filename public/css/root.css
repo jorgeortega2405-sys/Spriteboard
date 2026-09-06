@@ -553,10 +553,10 @@ body.dark-theme {
   --bg-selected: rgba(255, 255, 255, 0.08);
 
   --text-primary: #f4f4f5;
-  --text-secondary: #a1a1aa;
-  --text-tertiary: #71717a;
-  --text-muted: #a1a1aa;
-  --text-disabled: #52525b;
+  --text-secondary: #d4d4d8;
+  --text-tertiary: #a1a1aa;
+  --text-muted: #d4d4d8;
+  --text-disabled: #71717a;
   --text-inverse: #09090b;
 
   --border-color: rgba(255, 255, 255, 0.12);
@@ -660,10 +660,10 @@ body.dark-theme {
     --bg-selected: rgba(255, 255, 255, 0.08);
 
     --text-primary: #f4f4f5;
-    --text-secondary: #a1a1aa;
-    --text-tertiary: #71717a;
-    --text-muted: #a1a1aa;
-    --text-disabled: #52525b;
+    --text-secondary: #d4d4d8;
+    --text-tertiary: #a1a1aa;
+    --text-muted: #d4d4d8;
+    --text-disabled: #71717a;
     --text-inverse: #09090b;
 
     --border-color: rgba(255, 255, 255, 0.12);

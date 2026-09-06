@@ -7,6 +7,17 @@ export default defineConfig({
     port: 5173,
     watch: {
       usePolling: true,
+      interval: 2000,
+      binaryInterval: 2000,
+      ignored: [
+        '**/node_modules/**',
+        '**/dist/**',
+        '**/logs/**',
+        '**/.git/**',
+        '**/data/**',
+        '**/worker/**',
+        '**/websocket/**',
+      ],
     },
     proxy: {
       '/api': {
