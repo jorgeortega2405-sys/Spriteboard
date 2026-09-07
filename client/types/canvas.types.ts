@@ -8,6 +8,7 @@ export interface CanvasItem {
   unit: string;
   data?: string | null;
   preview_thumbnail?: string | null;
+  access_level?: 'private' | 'public';
   is_local?: boolean;
   created_at: string;
   updated_at?: string;
@@ -19,4 +20,23 @@ export interface CreateCanvasPayload {
   width: number;
   height: number;
   unit?: string;
+  access_level?: 'private' | 'public';
+}
+
+export interface CanvasMember {
+  id: number;
+  canvas_id: number;
+  user_id: number;
+  username: string;
+  email: string;
+  avatar_url?: string | null;
+  role: 'editor' | 'viewer';
+  created_at: string;
+}
+
+export interface SearchUserResult {
+  id: number;
+  username: string;
+  email: string;
+  avatar_url?: string | null;
 }

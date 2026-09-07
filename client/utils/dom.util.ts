@@ -151,20 +151,46 @@ export function bindNavigationLinks(container: HTMLElement | null, routesMap: Re
 export function setupDropdown(
   wrapper: HTMLElement | null,
   options: {
+    backdrop?: HTMLElement | null;
+    matchWidth?: boolean;
+    menu?: HTMLElement | null;
+    offset?: [number, number];
     onClose?: () => void;
     onOpen?: () => void;
     onSelect?: (val: any, item?: HTMLElement) => void | Promise<void>;
     placement?: Placement;
+    trigger?: HTMLElement | null;
   } = {}
 ): { close: () => void; destroy: () => void; open: () => void; toggle: () => void; update: () => void } {
   if (!wrapper) return { close: () => {}, destroy: () => {}, open: () => {}, toggle: () => {}, update: () => {} };
 
-  const trigger = wrapper.querySelector<HTMLElement>('.dropdown-trigger, [data-ref*="trigger"]');
-  const backdrop = wrapper.querySelector<HTMLElement>('.dropdown-backdrop, [data-ref*="backdrop"]');
-  const menu = wrapper.querySelector<HTMLElement>('.menu-panel--dropdown, [data-ref*="menu"]');
-  const dragZone = wrapper.querySelector<HTMLElement>('.menu-panel__drag-zone, [data-ref*="drag-zone"]');
-  const selectedTextEl = wrapper.querySelector<HTMLElement>('.dropdown-trigger__text, [data-ref*="selected-text"]');
-  const selectedIconEl = wrapper.querySelector<HTMLElement>('.dropdown-trigger__icon, [data-ref*="selected-icon"]');
+  const trigger =
+    options.trigger ||
+    (wrapper ? (Array.from(wrapper.children).find((c) =>
+      c.classList.contains('dropdown-trigger') ||
+      c.getAttribute('data-ref')?.includes('trigger') ||
+      c.tagName === 'BUTTON' ||
+      c.classList.contains('btn')
+    ) as HTMLElement) : null) ||
+    wrapper.querySelector<HTMLElement>('.dropdown-trigger, [data-ref*="trigger"]');
+  const backdrop =
+    options.backdrop ||
+    wrapper.querySelector<HTMLElement>(':scope > .dropdown-backdrop, :scope > [data-ref*="backdrop"]') ||
+    wrapper.querySelector<HTMLElement>('.dropdown-backdrop, [data-ref*="backdrop"]');
+  const menu =
+    options.menu ||
+    backdrop?.querySelector<HTMLElement>(':scope > .menu-panel--dropdown, :scope > [data-ref*="menu"]') ||
+    backdrop?.querySelector<HTMLElement>('.menu-panel--dropdown, [data-ref*="menu"]') ||
+    wrapper.querySelector<HTMLElement>('.menu-panel--dropdown, [data-ref*="menu"]');
+  const dragZone =
+    menu?.querySelector<HTMLElement>('.menu-panel__drag-zone, [data-ref*="drag-zone"]') ||
+    wrapper.querySelector<HTMLElement>('.menu-panel__drag-zone, [data-ref*="drag-zone"]');
+  const selectedTextEl =
+    trigger?.querySelector<HTMLElement>('.dropdown-trigger__text, [data-ref*="selected-text"]') ||
+    wrapper.querySelector<HTMLElement>('.dropdown-trigger__text, [data-ref*="selected-text"]');
+  const selectedIconEl =
+    trigger?.querySelector<HTMLElement>('.dropdown-trigger__icon, [data-ref*="selected-icon"]') ||
+    wrapper.querySelector<HTMLElement>('.dropdown-trigger__icon, [data-ref*="selected-icon"]');
 
   let isClosing = false;
   let popperInstance: PopperInstance | null = null;
@@ -185,7 +211,7 @@ export function setupDropdown(
           {
             name: 'offset',
             options: {
-              offset: [0, 6],
+              offset: options.offset || [0, 6],
             },
           },
           {
@@ -198,21 +224,25 @@ export function setupDropdown(
           {
             name: 'preventOverflow',
             options: {
-              padding: 8,
               boundary: 'clippingParents',
+              padding: 8,
             },
           },
           {
+            effect: ({ state }: any) => {
+              if (options.matchWidth !== false) {
+                state.elements.popper.style.width = `${state.elements.reference.offsetWidth}px`;
+              }
+            },
+            enabled: options.matchWidth !== false,
+            fn: ({ state }: any) => {
+              if (options.matchWidth !== false) {
+                state.styles.popper.width = `${state.rects.reference.width}px`;
+              }
+            },
             name: 'sameWidth',
-            enabled: true,
             phase: 'beforeWrite',
             requires: ['computeStyles'],
-            fn: ({ state }: any) => {
-              state.styles.popper.width = `${state.rects.reference.width}px`;
-            },
-            effect: ({ state }: any) => {
-              state.elements.popper.style.width = `${state.elements.reference.offsetWidth}px`;
-            },
           },
         ],
       });

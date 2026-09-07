@@ -44,3 +44,7 @@ data/geoip/*.gz
 
 # Cache de herramientas de administración
 admin_tool/cache/
+
+# Assets e iconos SVG de figuras y stickers
+public/assets/
+

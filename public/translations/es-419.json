@@ -476,6 +476,26 @@
     "create_success": "Lienzo creado exitosamente",
     "design_back": "Volver a inicio",
     "design_placeholder_title": "Espacio de trabajo del lienzo",
-    "design_placeholder_desc": "Lienzo preparado ({width} × {height} px). El editor visual y herramientas estarán disponibles próximamente."
+    "design_placeholder_desc": "Lienzo preparado ({width} × {height} px). El editor visual y herramientas estarán disponibles próximamente.",
+    "share": {
+      "btn": "Compartir",
+      "title": "Compartir lienzo",
+      "access_level_label": "Nivel de acceso",
+      "private_title": "Solo tú tienes acceso",
+      "private_desc": "Solo tú puedes ver y editar este lienzo",
+      "public_title": "Cualquier persona con el enlace",
+      "public_desc": "Cualquier persona con el enlace puede entrar y editar",
+      "copy_link": "Copiar enlace",
+      "copied_toast": "Enlace copiado al portapapeles",
+      "access_updated_toast": "Nivel de acceso actualizado",
+      "access_revoked_title": "Lienzo privado",
+      "access_revoked_desc": "El propietario ha configurado este lienzo como privado.",
+      "collaborators_count": "{count} colaboradores",
+      "onlyYou": "Solo tú tienes acceso",
+      "anyoneWithLink": "Cualquier persona con el enlace",
+      "linkCopied": "Enlace copiado al portapapeles",
+      "changedToPublic": "Lienzo público para cualquiera con el enlace",
+      "changedToPrivate": "Lienzo cambiado a privado"
+    }
   }
 }

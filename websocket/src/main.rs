@@ -3,8 +3,8 @@ use axum::{
         ws::{Message, WebSocket, WebSocketUpgrade},
         Request, State,
     },
-    http::{header, StatusCode},
-    response::{IntoResponse, Response},
+    http::header,
+    response::Response,
     routing::get,
     Router,
 };
@@ -12,9 +12,9 @@ use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::Engine;
 use futures_util::StreamExt;
 use hmac::{Hmac, Mac};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use sha2::Sha256;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::env;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -25,9 +25,20 @@ type HmacSha256 = Hmac<Sha256>;
 type ClientSender = mpsc::UnboundedSender<Message>;
 
 #[derive(Clone)]
+struct CanvasParticipant {
+    conn_id: String,
+    user_id: i64,
+    username: String,
+    color: String,
+    tx: ClientSender,
+}
+
+#[derive(Clone)]
 struct AppState {
     // user_id -> Map<conn_id, Sender>
     clients: Arc<RwLock<HashMap<i64, HashMap<String, ClientSender>>>>,
+    // canvas_uuid -> Map<conn_id, CanvasParticipant>
+    canvas_rooms: Arc<RwLock<HashMap<String, HashMap<String, CanvasParticipant>>>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -72,6 +83,16 @@ struct SessionRevokeEvent {
     #[serde(rename = "sessionId")]
     #[allow(dead_code)]
     session_id: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct ParticipantInfo {
+    #[serde(rename = "connId")]
+    conn_id: String,
+    #[serde(rename = "userId")]
+    user_id: i64,
+    username: String,
+    color: String,
 }
 
 fn extract_cookie<'a>(req: &'a Request, cookie_name: &str) -> Option<&'a str> {
@@ -151,16 +172,19 @@ async fn ws_handler(
         None => None,
     };
 
-    let user = match user {
-        Some(u) => u,
-        None => {
-            return (
-                StatusCode::UNAUTHORIZED,
-                "Unauthorized: Valid session required for WebSocket connection\n",
-            )
-                .into_response();
+    let user = user.unwrap_or_else(|| {
+        let rand_suffix = (SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis()
+            % 9000
+            + 1000) as i64;
+        AuthenticatedUser {
+            id: -rand_suffix,
+            username: format!("Invitado {}", rand_suffix),
+            session_id: None,
         }
-    };
+    });
 
     ws.on_upgrade(move |socket| handle_socket(socket, user, state))
 }
@@ -176,13 +200,14 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
     );
 
     let (tx, mut rx) = mpsc::unbounded_channel::<Message>();
+    let mut joined_rooms: HashSet<String> = HashSet::new();
 
-    {
+    if user.id > 0 {
         let mut clients = state.clients.write().await;
         clients
             .entry(user.id)
             .or_default()
-            .insert(conn_id.clone(), tx);
+            .insert(conn_id.clone(), tx.clone());
     }
 
     println!(
@@ -205,17 +230,236 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
                             break;
                         }
                     }
-                    Some(Ok(_)) => {
-                        // Mensajes cliente -> servidor reservados para futuros eventos
+                    Some(Ok(Message::Text(text))) => {
+                        if let Ok(val) = serde_json::from_str::<serde_json::Value>(&text) {
+                            let msg_type = val.get("type").and_then(|t| t.as_str()).unwrap_or("");
+                            let canvas_uuid = val.get("canvasUuid").and_then(|c| c.as_str()).unwrap_or("");
+
+                            if !canvas_uuid.is_empty() {
+                                match msg_type {
+                                    "JOIN_CANVAS" => {
+                                        let display_name = val.get("user")
+                                            .and_then(|u| u.get("username"))
+                                            .and_then(|un| un.as_str())
+                                            .unwrap_or(&user.username)
+                                            .to_string();
+
+                                        let color = val.get("user")
+                                            .and_then(|u| u.get("color"))
+                                            .and_then(|c| c.as_str())
+                                            .unwrap_or("#00E5FF")
+                                            .to_string();
+
+                                        let participant = CanvasParticipant {
+                                            conn_id: conn_id.clone(),
+                                            user_id: user.id,
+                                            username: display_name.clone(),
+                                            color: color.clone(),
+                                            tx: tx.clone(),
+                                        };
+
+                                        joined_rooms.insert(canvas_uuid.to_string());
+
+                                        let mut rooms = state.canvas_rooms.write().await;
+                                        let room = rooms.entry(canvas_uuid.to_string()).or_default();
+
+                                        let presence_users: Vec<ParticipantInfo> = room
+                                            .values()
+                                            .map(|p| ParticipantInfo {
+                                                conn_id: p.conn_id.clone(),
+                                                user_id: p.user_id,
+                                                username: p.username.clone(),
+                                                color: p.color.clone(),
+                                            })
+                                            .collect();
+
+                                        let presence_msg = serde_json::json!({
+                                            "type": "ROOM_PRESENCE",
+                                            "canvasUuid": canvas_uuid,
+                                            "users": presence_users
+                                        }).to_string();
+
+                                        let _ = tx.send(Message::Text(presence_msg));
+
+                                        let user_joined_msg = serde_json::json!({
+                                            "type": "USER_JOINED",
+                                            "canvasUuid": canvas_uuid,
+                                            "user": {
+                                                "connId": conn_id.clone(),
+                                                "userId": user.id,
+                                                "username": display_name,
+                                                "color": color
+                                            }
+                                        }).to_string();
+
+                                        for (peer_conn, peer) in room.iter() {
+                                            if peer_conn != &conn_id {
+                                                let _ = peer.tx.send(Message::Text(user_joined_msg.clone()));
+                                            }
+                                        }
+
+                                        room.insert(conn_id.clone(), participant);
+                                    }
+                                    "LEAVE_CANVAS" => {
+                                        joined_rooms.remove(canvas_uuid);
+                                        let mut rooms = state.canvas_rooms.write().await;
+                                        if let Some(room) = rooms.get_mut(canvas_uuid) {
+                                            if let Some(p) = room.remove(&conn_id) {
+                                                let user_left_msg = serde_json::json!({
+                                                    "type": "USER_LEFT",
+                                                    "canvasUuid": canvas_uuid,
+                                                    "connId": conn_id.clone(),
+                                                    "userId": p.user_id,
+                                                    "username": p.username
+                                                }).to_string();
+
+                                                for peer in room.values() {
+                                                    let _ = peer.tx.send(Message::Text(user_left_msg.clone()));
+                                                }
+                                            }
+                                            if room.is_empty() {
+                                                rooms.remove(canvas_uuid);
+                                            }
+                                        }
+                                    }
+                                    "CANVAS_CURSOR" => {
+                                        let rooms = state.canvas_rooms.read().await;
+                                        if let Some(room) = rooms.get(canvas_uuid) {
+                                            if let Some(sender_p) = room.get(&conn_id) {
+                                                let x = val.get("x").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                                                let y = val.get("y").and_then(|v| v.as_f64()).unwrap_or(0.0);
+
+                                                let cursor_msg = serde_json::json!({
+                                                    "type": "CANVAS_CURSOR",
+                                                    "canvasUuid": canvas_uuid,
+                                                    "connId": conn_id.clone(),
+                                                    "username": sender_p.username,
+                                                    "color": sender_p.color,
+                                                    "x": x,
+                                                    "y": y
+                                                }).to_string();
+
+                                                for (peer_conn, peer) in room.iter() {
+                                                    if peer_conn != &conn_id {
+                                                        let _ = peer.tx.send(Message::Text(cursor_msg.clone()));
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    "CANVAS_DRAW_STROKE" | "CANVAS_ACTION" | "CANVAS_FULL_UPDATE" => {
+                                        let rooms = state.canvas_rooms.read().await;
+                                        if let Some(room) = rooms.get(canvas_uuid) {
+                                            let mut outgoing = val.clone();
+                                            if let Some(obj) = outgoing.as_object_mut() {
+                                                obj.insert("senderConnId".to_string(), serde_json::Value::String(conn_id.clone()));
+                                            }
+                                            let forward_msg = outgoing.to_string();
+
+                                            for (peer_conn, peer) in room.iter() {
+                                                if peer_conn != &conn_id {
+                                                    let _ = peer.tx.send(Message::Text(forward_msg.clone()));
+                                                }
+                                            }
+                                        }
+                                    }
+                                    "CANVAS_ACCESS_CHANGED" => {
+                                        let rooms = state.canvas_rooms.read().await;
+                                        if let Some(room) = rooms.get(canvas_uuid) {
+                                            let access_level = val.get("accessLevel").and_then(|a| a.as_str()).unwrap_or("private");
+                                            let notice_msg = serde_json::json!({
+                                                "type": "CANVAS_ACCESS_CHANGED",
+                                                "canvasUuid": canvas_uuid,
+                                                "accessLevel": access_level,
+                                                "senderConnId": conn_id
+                                            }).to_string();
+
+                                            for (peer_conn, peer) in room.iter() {
+                                                if peer_conn != &conn_id {
+                                                    let _ = peer.tx.send(Message::Text(notice_msg.clone()));
+                                                }
+                                            }
+                                        }
+                                    }
+                                    "CANVAS_MEMBER_REMOVED" => {
+                                        let target_user_id = val.get("targetUserId").and_then(|v| v.as_i64()).unwrap_or(0);
+                                        let notice_msg = serde_json::json!({
+                                            "type": "CANVAS_MEMBER_REMOVED",
+                                            "canvasUuid": canvas_uuid,
+                                            "targetUserId": target_user_id,
+                                            "senderConnId": conn_id
+                                        }).to_string();
+
+                                        let mut rooms = state.canvas_rooms.write().await;
+                                        if let Some(room) = rooms.get_mut(canvas_uuid) {
+                                            let mut to_remove = Vec::new();
+                                            for (peer_conn, peer) in room.iter() {
+                                                if peer_conn != &conn_id {
+                                                    let _ = peer.tx.send(Message::Text(notice_msg.clone()));
+                                                }
+                                                if target_user_id > 0 && peer.user_id as i64 == target_user_id {
+                                                    to_remove.push(peer_conn.clone());
+                                                }
+                                            }
+                                            for k in to_remove {
+                                                room.remove(&k);
+                                            }
+                                        }
+                                    }
+                                    "CANVAS_MEMBER_ADDED" => {
+                                        let rooms = state.canvas_rooms.read().await;
+                                        if let Some(room) = rooms.get(canvas_uuid) {
+                                            let member = val.get("member").cloned().unwrap_or(serde_json::Value::Null);
+                                            let notice_msg = serde_json::json!({
+                                                "type": "CANVAS_MEMBER_ADDED",
+                                                "canvasUuid": canvas_uuid,
+                                                "member": member,
+                                                "senderConnId": conn_id
+                                            }).to_string();
+
+                                            for (peer_conn, peer) in room.iter() {
+                                                if peer_conn != &conn_id {
+                                                    let _ = peer.tx.send(Message::Text(notice_msg.clone()));
+                                                }
+                                            }
+                                        }
+                                    }
+                                    _ => {}
+                                }
+                            }
+                        }
                     }
+                    Some(Ok(_)) => {}
                     Some(Err(_)) => break,
                 }
             }
         }
     }
 
-    // Limpieza de conexión al desconectar
+    // Limpieza de salas de lienzo al desconectar
     {
+        let mut rooms = state.canvas_rooms.write().await;
+        for room_id in joined_rooms {
+            if let Some(room) = rooms.get_mut(&room_id) {
+                if let Some(p) = room.remove(&conn_id) {
+                    let user_left_msg = serde_json::json!({
+                        "type": "USER_LEFT",
+                        "canvasUuid": room_id,
+                        "connId": conn_id.clone(),
+                        "userId": p.user_id,
+                        "username": p.username
+                    }).to_string();
+
+                    for peer in room.values() {
+                        let _ = peer.tx.send(Message::Text(user_left_msg.clone()));
+                    }
+                }
+            }
+        }
+    }
+
+    // Limpieza de conexión de usuario al desconectar
+    if user.id > 0 {
         let mut clients = state.clients.write().await;
         if let Some(user_conns) = clients.get_mut(&user.id) {
             user_conns.remove(&conn_id);
@@ -303,6 +547,7 @@ async fn main() {
 
     let state = AppState {
         clients: Arc::new(RwLock::new(HashMap::new())),
+        canvas_rooms: Arc::new(RwLock::new(HashMap::new())),
     };
 
     // Tarea en segundo plano para escuchar eventos Pub/Sub de Redis
@@ -330,3 +575,4 @@ async fn main() {
         .await
         .expect("Error al ejecutar el servidor Axum");
 }
+

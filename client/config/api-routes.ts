@@ -5,9 +5,15 @@ export const API_ROUTES = {
   avatarBase: '/api/avatar',
   avatar: (name: string) => `/api/avatar?name=${encodeURIComponent(name)}`,
   canvases: {
+    access: (uuid: string) => `/api/canvases/${encodeURIComponent(uuid)}/access`,
     base: '/api/canvases',
-    sync: '/api/canvases/sync',
     byId: (uuid: string) => `/api/canvases/${encodeURIComponent(uuid)}`,
+    members: (uuid: string) => `/api/canvases/${encodeURIComponent(uuid)}/members`,
+    removeMember: (uuid: string, userId: number) => `/api/canvases/${encodeURIComponent(uuid)}/members/${encodeURIComponent(userId)}`,
+    sync: '/api/canvases/sync',
+  },
+  users: {
+    search: (q: string) => `/api/users/search?q=${encodeURIComponent(q)}`,
   },
   chat: '/api/chat',
   auth: {

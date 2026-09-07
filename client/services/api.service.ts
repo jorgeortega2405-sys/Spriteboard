@@ -162,6 +162,39 @@ export async function postApi(url: string, body?: unknown): Promise<Response> {
   return res;
 }
 
+export async function patchApi(url: string, body?: unknown): Promise<Response> {
+  if (!csrfToken) {
+    await fetchCsrfToken();
+  }
+
+  const payload = body !== undefined ? JSON.stringify(body) : JSON.stringify({});
+
+  let res = await fetch(url, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': csrfToken,
+    },
+    credentials: 'include',
+    body: payload,
+  });
+
+  if (res.status === 403) {
+    await fetchCsrfToken();
+    res = await fetch(url, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': csrfToken,
+      },
+      credentials: 'include',
+      body: payload,
+    });
+  }
+
+  return res;
+}
+
 export async function postFormApi(url: string, formData: FormData): Promise<Response> {
   if (!csrfToken) {
     await fetchCsrfToken();

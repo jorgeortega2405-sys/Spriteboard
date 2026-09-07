@@ -3,7 +3,7 @@ import { openCreateCanvasModal } from '../components/create-canvas-modal.compone
 import { createSidebar } from '../components/layout.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { currentUser, escapeHtml, getApi, postApi } from '../services/api.service.js';
-import { getAllLocalCanvases, markLocalCanvasAsSynced } from '../services/canvas-storage.service.js';
+import { getAllLocalCanvases, markLocalCanvasAsSynced, removeLocalCanvas } from '../services/canvas-storage.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { loadTemplate } from '../services/template.service.js';
@@ -62,6 +62,7 @@ class HomeController {
     const localCanvases = await getAllLocalCanvases();
 
     if (currentUser) {
+      const currentUserId = currentUser.id;
       try {
         const res = await getApi(API_ROUTES.canvases.base);
         let cloudCanvases: CanvasItem[] = [];
@@ -74,14 +75,27 @@ class HomeController {
 
         const cloudUuids = new Set(cloudCanvases.map((c) => c.uuid));
 
-        const unsyncedLocals = localCanvases.filter((c) => c.is_local && !cloudUuids.has(c.uuid));
+        const unsyncedLocals: CanvasItem[] = [];
+        for (const c of localCanvases) {
+          if (!c.is_local || cloudUuids.has(c.uuid)) continue;
+          if (c.id) continue;
+          if (c.user_id && c.user_id !== currentUserId) {
+            void removeLocalCanvas(c.uuid);
+            continue;
+          }
+          if (c.access_level === 'public') {
+            void removeLocalCanvas(c.uuid);
+            continue;
+          }
+          unsyncedLocals.push(c);
+        }
 
         items = [...unsyncedLocals, ...cloudCanvases];
       } catch {
-        items = localCanvases;
+        items = localCanvases.filter((c) => (!c.user_id || c.user_id === currentUserId) && c.access_level !== 'public');
       }
     } else {
-      items = localCanvases;
+      items = localCanvases.filter((c) => c.is_local && !c.user_id && !c.id && c.access_level !== 'public');
     }
 
     this.renderCanvases(items);

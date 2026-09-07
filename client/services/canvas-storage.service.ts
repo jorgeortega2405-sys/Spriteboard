@@ -53,7 +53,7 @@ function setLocalStorageCanvases(canvases: CanvasItem[]): void {
 export async function saveLocalCanvas(canvas: CanvasItem): Promise<CanvasItem> {
   const item: CanvasItem = {
     ...canvas,
-    is_local: true,
+    is_local: canvas.is_local !== undefined ? canvas.is_local : true,
     created_at: canvas.created_at || new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };

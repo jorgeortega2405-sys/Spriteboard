@@ -93,6 +93,7 @@ CREATE TABLE IF NOT EXISTS canvases (
     unit VARCHAR(20) NOT NULL DEFAULT 'px',
     data JSON NULL,
     preview_thumbnail MEDIUMTEXT NULL,
+    access_level ENUM('private', 'public') NOT NULL DEFAULT 'private',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_canvases_user (user_id),
