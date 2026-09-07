@@ -26,5 +26,6 @@ export interface SyncCanvasDto {
   width: number;
   height: number;
   unit?: string;
-  data?: string | null;
+  data?: any;
+  preview_thumbnail?: string | null;
 }

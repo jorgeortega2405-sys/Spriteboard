@@ -57,7 +57,7 @@ export async function syncCanvasHandler(req: Request, res: Response): Promise<vo
       return;
     }
 
-    const { uuid, name, width, height, unit, data } = req.body;
+    const { uuid, name, width, height, unit, data, preview_thumbnail } = req.body;
 
     if (!uuid || typeof uuid !== 'string' || uuid.trim().length === 0) {
       res.status(400).json({ error: 'Identificador único de lienzo requerido.' });
@@ -74,6 +74,7 @@ export async function syncCanvasHandler(req: Request, res: Response): Promise<vo
       height: numHeight,
       unit,
       data,
+      preview_thumbnail,
     });
 
     res.json({ success: true, canvas });

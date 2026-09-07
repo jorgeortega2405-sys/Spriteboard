@@ -81,7 +81,8 @@ export async function syncCanvas(userId: number, dto: SyncCanvasDto): Promise<Ca
   const width = Math.max(1, Math.min(16384, Math.floor(Number(dto.width) || 1920)));
   const height = Math.max(1, Math.min(16384, Math.floor(Number(dto.height) || 1080)));
   const unit = dto.unit && ['px', 'cm', 'in', 'mm'].includes(dto.unit) ? dto.unit : 'px';
-  const data = dto.data ? JSON.stringify(dto.data) : null;
+  const data = dto.data ? (typeof dto.data === 'string' ? dto.data : JSON.stringify(dto.data)) : null;
+  const previewThumbnail = dto.preview_thumbnail !== undefined ? dto.preview_thumbnail : null;
 
   try {
     const [existing] = await canvasPool.query<mysql.RowDataPacket[]>(
@@ -95,13 +96,13 @@ export async function syncCanvas(userId: number, dto: SyncCanvasDto): Promise<Ca
         throw new Error('El lienzo ya pertenece a otra cuenta.');
       }
       await canvasPool.execute(
-        'UPDATE canvases SET name = ?, width = ?, height = ?, unit = ?, data = COALESCE(?, data) WHERE uuid = ? AND user_id = ?',
-        [name, width, height, unit, data, uuid, userId]
+        'UPDATE canvases SET name = ?, width = ?, height = ?, unit = ?, data = COALESCE(?, data), preview_thumbnail = COALESCE(?, preview_thumbnail) WHERE uuid = ? AND user_id = ?',
+        [name, width, height, unit, data, previewThumbnail, uuid, userId]
       );
     } else {
       await canvasPool.execute(
-        'INSERT INTO canvases (uuid, user_id, name, width, height, unit, data) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [uuid, userId, name, width, height, unit, data]
+        'INSERT INTO canvases (uuid, user_id, name, width, height, unit, data, preview_thumbnail) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [uuid, userId, name, width, height, unit, data, previewThumbnail]
       );
     }
 
