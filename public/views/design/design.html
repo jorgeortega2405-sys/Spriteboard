@@ -10,23 +10,20 @@
           <div class="design-collaborators-list" data-ref="collaborators-list"></div>
         </div>
 
-        <div class="settings-dropdown-wrapper design-share-wrapper" data-ref="design-share-wrapper">
-          <button type="button" class="btn btn--h40 btn--primary design-share-btn dropdown-trigger" data-ref="btn-share-canvas" data-tooltip="Compartir lienzo" aria-label="Compartir lienzo">
-            <span class="component-icon">share</span>
+        <div class="design-share-wrapper" data-ref="design-share-wrapper">
+          <button type="button" class="btn btn--h40 btn--black design-share-btn" data-ref="btn-share-canvas" data-tooltip="Compartir lienzo" aria-label="Compartir lienzo">
+            <span class="material-symbols-rounded">share</span>
             <span class="design-share-btn__text" data-ref="btn-share-text">Compartir</span>
           </button>
 
           <div class="dropdown-backdrop" data-ref="dropdown-backdrop-share">
             <div class="menu-panel menu-panel--dropdown menu-panel--w-465 menu-panel--h-auto design-share-menu" data-ref="dropdown-menu-share">
-              <div class="menu-panel__drag-zone" data-ref="share-drag-zone">
-                <div class="menu-panel__pill"></div>
+              <div class="menu-panel__drag-zone" data-ref="share-drag-zone" aria-hidden="true">
+                <div class="menu-panel__drag-handle"></div>
               </div>
 
               <div class="design-share-menu__header">
                 <h2 class="design-share-menu__title">Compartir el diseño</h2>
-                <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-close-share" data-tooltip="Cerrar" aria-label="Cerrar">
-                  <span class="component-icon">close</span>
-                </button>
               </div>
 
               <div class="design-share-menu__content">
@@ -34,9 +31,13 @@
                   <span class="design-share-section__label">Personas con acceso</span>
                   
                   <div class="design-share-search-box" data-ref="share-search-box">
-                    <div class="field field--search design-share-search-field" data-ref="field-share-search">
-                      <span class="component-icon field__icon">search</span>
-                      <input class="field__input" data-ref="input-share-search-people" type="text" placeholder="Agregar personas" autocomplete="off" />
+                    <div class="component-search component-search--full" data-ref="field-share-search">
+                      <div class="component-search__icon">
+                        <span class="material-symbols-rounded">search</span>
+                      </div>
+                      <div class="component-search__input-box">
+                        <input class="component-search__input" data-ref="input-share-search-people" type="text" placeholder="Agregar personas" autocomplete="off" />
+                      </div>
                     </div>
                     
                     <div class="design-share-search-results is-hidden" data-ref="share-search-results"></div>
@@ -45,7 +46,7 @@
                   <div class="design-share-members-row" data-ref="share-members-container">
                     <div class="design-share-members-list" data-ref="share-members-list"></div>
                     <button type="button" class="design-share-add-chip-btn" data-ref="btn-share-focus-search" data-tooltip="Agregar personas" aria-label="Agregar personas">
-                      <span class="component-icon">add</span>
+                      <span class="material-symbols-rounded">add</span>
                     </button>
                   </div>
                 </div>
@@ -53,48 +54,28 @@
                 <div class="design-share-section">
                   <span class="design-share-section__label">Nivel de acceso</span>
                   
-                  <div class="settings-dropdown-wrapper design-access-dropdown" data-ref="dropdown-wrapper-access-level">
-                    <button type="button" class="design-access-trigger" data-ref="btn-trigger-access-level" aria-label="Nivel de acceso">
-                      <div class="design-access-trigger__left">
-                        <div class="design-access-trigger__icon-wrap">
-                          <span class="component-icon" data-ref="access-level-selected-icon">lock</span>
-                        </div>
-                        <div class="design-access-trigger__texts">
-                          <div class="design-access-trigger__title-row">
-                            <span class="design-access-trigger__title" data-ref="access-level-selected-text">Solo tú tienes acceso</span>
-                            <span class="component-icon design-access-trigger__chevron">expand_more</span>
-                          </div>
-                          <span class="design-access-trigger__subtitle" data-ref="access-level-selected-desc">Solo personas con acceso</span>
-                        </div>
+                  <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-access-level">
+                    <button type="button" class="dropdown-trigger" data-ref="btn-trigger-access-level" aria-label="Nivel de acceso">
+                      <div class="dropdown-trigger__left">
+                        <span class="material-symbols-rounded dropdown-trigger__icon" data-ref="access-level-selected-icon">lock</span>
+                        <span class="dropdown-trigger__text" data-ref="access-level-selected-text">Solo tú tienes acceso</span>
                       </div>
-                      <div class="design-access-trigger__right">
-                        <span class="design-access-permission-tag">Ver y editar</span>
-                      </div>
+                      <span class="material-symbols-rounded dropdown-trigger__chevron">expand_more</span>
                     </button>
 
                     <div class="dropdown-backdrop" data-ref="dropdown-backdrop-access-level">
                       <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-access-level">
-                        <div class="menu-panel__drag-zone" data-ref="access-drag-zone">
-                          <div class="menu-panel__pill"></div>
+                        <div class="menu-panel__drag-zone" data-ref="access-drag-zone" aria-hidden="true">
+                          <div class="menu-panel__drag-handle"></div>
                         </div>
-                        <div class="menu-panel__list">
-                          <button type="button" class="menu-panel__item is-active" data-ref="btn-access-private" data-value="private">
-                            <div class="design-access-item__icon-wrap">
-                              <span class="component-icon">lock</span>
-                            </div>
-                            <div class="design-access-item__info">
-                              <span class="design-access-item__title">Solo tú tienes acceso</span>
-                              <span class="design-access-item__desc">Solo las personas añadidas pueden entrar y editar</span>
-                            </div>
+                        <div class="menu-panel__list" data-ref="list-access-level">
+                          <button type="button" class="menu-item is-active" data-ref="btn-access-private" data-value="private">
+                            <span class="material-symbols-rounded menu-item__icon">lock</span>
+                            <span class="menu-item__text">Solo tú tienes acceso</span>
                           </button>
-                          <button type="button" class="menu-panel__item" data-ref="btn-access-public" data-value="public">
-                            <div class="design-access-item__icon-wrap">
-                              <span class="component-icon">language</span>
-                            </div>
-                            <div class="design-access-item__info">
-                              <span class="design-access-item__title">Cualquier persona con el enlace</span>
-                              <span class="design-access-item__desc">Accesible con un enlace para cualquier persona</span>
-                            </div>
+                          <button type="button" class="menu-item" data-ref="btn-access-public" data-value="public">
+                            <span class="material-symbols-rounded menu-item__icon">language</span>
+                            <span class="menu-item__text">Cualquier persona con el enlace</span>
                           </button>
                         </div>
                       </div>
@@ -103,8 +84,8 @@
                 </div>
 
                 <div class="design-share-link-row">
-                  <button type="button" class="btn btn--primary btn--w-full design-share-copy-btn" data-ref="btn-copy-share-link">
-                    <span class="component-icon">link</span>
+                  <button type="button" class="btn btn--h40 btn--black btn--w-full" data-ref="btn-copy-share-link">
+                    <span class="material-symbols-rounded">link</span>
                     <span>Copiar el enlace</span>
                   </button>
                 </div>
@@ -112,21 +93,21 @@
                 <div class="design-share-quick-actions">
                   <button type="button" class="design-share-quick-item" data-ref="btn-quick-download" data-tooltip="Descargar" aria-label="Descargar">
                     <div class="design-share-quick-icon">
-                      <span class="component-icon">download</span>
+                      <span class="material-symbols-rounded">download</span>
                     </div>
                     <span class="design-share-quick-label">Descargar</span>
                   </button>
 
                   <button type="button" class="design-share-quick-item" data-ref="btn-quick-view-link" data-tooltip="Enlace de visualización" aria-label="Enlace de visualización">
                     <div class="design-share-quick-icon">
-                      <span class="component-icon">visibility</span>
+                      <span class="material-symbols-rounded">visibility</span>
                     </div>
                     <span class="design-share-quick-label">Enlace de visualización</span>
                   </button>
 
                   <button type="button" class="design-share-quick-item" data-ref="btn-quick-embed-link" data-tooltip="Enlace para insertar" aria-label="Enlace para insertar">
                     <div class="design-share-quick-icon">
-                      <span class="component-icon">code</span>
+                      <span class="material-symbols-rounded">code</span>
                     </div>
                     <span class="design-share-quick-label">Enlace para insertar</span>
                   </button>
@@ -140,6 +121,9 @@
 
     <div class="component-bottom component-bottom--canvas" data-ref="component-bottom">
       <div class="design-top-toolbar-container" data-ref="design-top-toolbar-container">
+        <button type="button" class="design-toolbar__nav-btn design-toolbar__nav-btn--left is-disabled" data-ref="btn-top-toolbar-scroll-left" data-tooltip="Desplazar a la izquierda" aria-label="Desplazar a la izquierda">
+          <span class="component-icon">chevron_left</span>
+        </button>
         <div class="design-top-toolbar" data-ref="design-top-toolbar">
           <div class="design-top-toolbar__section design-top-toolbar__section--left" data-ref="top-toolbar-left">
             <button type="button" class="design-toolbar-btn" data-ref="btn-toggle-layers" data-tooltip="Capas" aria-label="Capas">
@@ -157,6 +141,9 @@
           </div>
           <div class="design-top-toolbar__section design-top-toolbar__section--right" data-ref="top-toolbar-right"></div>
         </div>
+        <button type="button" class="design-toolbar__nav-btn design-toolbar__nav-btn--right is-disabled" data-ref="btn-top-toolbar-scroll-right" data-tooltip="Desplazar a la derecha" aria-label="Desplazar a la derecha">
+          <span class="component-icon">chevron_right</span>
+        </button>
       </div>
 
       <div class="design-colors-panel is-hidden" data-ref="design-colors-panel">
@@ -304,7 +291,13 @@
 
       <div class="design-bottom-toolbar-container" data-ref="design-toolbar-container">
         <div class="design-layers-tray is-hidden" data-ref="design-layers-tray">
+          <button type="button" class="design-toolbar__nav-btn design-toolbar__nav-btn--left is-disabled" data-ref="btn-layers-tray-scroll-left" data-tooltip="Desplazar a la izquierda" aria-label="Desplazar a la izquierda">
+            <span class="component-icon">chevron_left</span>
+          </button>
           <div class="design-layers-tray__cards" data-ref="layers-cards-list"></div>
+          <button type="button" class="design-toolbar__nav-btn design-toolbar__nav-btn--right is-disabled" data-ref="btn-layers-tray-scroll-right" data-tooltip="Desplazar a la derecha" aria-label="Desplazar a la derecha">
+            <span class="component-icon">chevron_right</span>
+          </button>
         </div>
 
         <div class="design-frames-tray is-hidden" data-ref="design-frames-tray">
@@ -333,7 +326,15 @@
               <span class="component-icon">auto_awesome_motion</span>
             </button>
           </div>
-          <div class="design-frames-tray__cards" data-ref="frames-cards-list"></div>
+          <div class="design-frames-tray__cards-wrapper" data-ref="frames-cards-wrapper">
+            <button type="button" class="design-toolbar__nav-btn design-toolbar__nav-btn--left is-disabled" data-ref="btn-frames-tray-scroll-left" data-tooltip="Desplazar a la izquierda" aria-label="Desplazar a la izquierda">
+              <span class="component-icon">chevron_left</span>
+            </button>
+            <div class="design-frames-tray__cards" data-ref="frames-cards-list"></div>
+            <button type="button" class="design-toolbar__nav-btn design-toolbar__nav-btn--right is-disabled" data-ref="btn-frames-tray-scroll-right" data-tooltip="Desplazar a la derecha" aria-label="Desplazar a la derecha">
+              <span class="component-icon">chevron_right</span>
+            </button>
+          </div>
         </div>
 
         <div class="design-options-tray is-hidden" data-ref="design-options-tray">
@@ -529,70 +530,78 @@
           </button>
         </div>
 
-        <div class="design-bottom-toolbar" data-ref="design-bottom-toolbar">
-          <div class="design-bottom-toolbar__section design-bottom-toolbar__section--tools" data-ref="toolbar-tools">
-            <button type="button" class="design-toolbar-btn is-active" data-ref="tool-brush" data-tooltip="Pincel" aria-label="Pincel">
-              <span class="component-icon">brush</span>
-            </button>
-            <button type="button" class="design-toolbar-btn" data-ref="tool-eraser" data-tooltip="Borrador" aria-label="Borrador">
-              <span class="component-icon">ink_eraser</span>
-            </button>
-            <button type="button" class="design-toolbar-btn" data-ref="tool-dither" data-tooltip="Tramador / Semitonos" aria-label="Tramador">
-              <span class="component-icon">texture</span>
-            </button>
-            <button type="button" class="design-toolbar-btn" data-ref="tool-shading" data-tooltip="Sombreado e Iluminación" aria-label="Sombreado e Iluminación">
-              <span class="component-icon">tonality</span>
-            </button>
-            <button type="button" class="design-toolbar-btn" data-ref="tool-spray" data-tooltip="Spray / Aerógrafo" aria-label="Spray">
-              <span class="component-icon">blur_on</span>
-            </button>
-            <button type="button" class="design-toolbar-btn" data-ref="tool-bucket" data-tooltip="Balde de pintura" aria-label="Balde de pintura">
-              <span class="component-icon">format_color_fill</span>
-            </button>
-            <button type="button" class="design-toolbar-btn" data-ref="tool-select" data-tooltip="Área de Selección y Movimiento" aria-label="Selección">
-              <span class="component-icon">crop_free</span>
-            </button>
-            <button type="button" class="design-toolbar-btn" data-ref="tool-text" data-tooltip="Texto Pixel" aria-label="Texto Pixel">
-              <span class="component-icon">title</span>
-            </button>
-            <button type="button" class="design-toolbar-btn" data-ref="tool-mirror" data-tooltip="Modo Espejo / Simetría" aria-label="Modo Espejo">
-              <span class="component-icon">flip</span>
-            </button>
-            <button type="button" class="design-toolbar-btn" data-ref="btn-bottom-colors" data-tooltip="Paleta de colores" aria-label="Paleta de colores">
-              <span class="design-color-picker__preview" data-ref="tool-color-preview" style="background-color: #000000;"></span>
-            </button>
-            <div class="design-toolbar-divider" data-ref="toolbar-divider-1"></div>
-            <button type="button" class="design-toolbar-btn" data-ref="btn-tool-options" data-tooltip="Opciones de herramienta" aria-label="Opciones">
-              <span class="component-icon">tune</span>
-            </button>
-            <button type="button" class="design-toolbar-btn" data-ref="btn-clear-canvas" data-tooltip="Limpiar lienzo" aria-label="Limpiar lienzo">
-              <span class="component-icon">delete_outline</span>
-            </button>
-            <button type="button" class="design-toolbar-btn" data-ref="btn-bottom-layers" data-tooltip="Capas" aria-label="Capas">
-              <span class="component-icon">layers</span>
-            </button>
-            <button type="button" class="design-toolbar-btn" data-ref="btn-bottom-frames" data-tooltip="Animación / Cuadros" aria-label="Animación">
-              <span class="component-icon">animation</span>
-            </button>
-          </div>
-
-          <div class="design-bottom-toolbar__section design-bottom-toolbar__section--zoom" data-ref="toolbar-zoom">
-            <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-zoom-out" data-tooltip="Alejar" aria-label="Alejar zoom">
-              <span class="component-icon">remove</span>
-            </button>
-            <div class="design-zoom-slider-container" data-ref="zoom-slider-container">
-              <input class="design-zoom-slider" data-ref="zoom-slider" type="range" min="1" max="100" value="10" aria-label="Control de Zoom" />
+        <div class="design-bottom-toolbar-wrapper" data-ref="design-bottom-toolbar-wrapper">
+          <button type="button" class="design-toolbar__nav-btn design-toolbar__nav-btn--left is-disabled" data-ref="btn-bottom-toolbar-scroll-left" data-tooltip="Desplazar a la izquierda" aria-label="Desplazar a la izquierda">
+            <span class="component-icon">chevron_left</span>
+          </button>
+          <div class="design-bottom-toolbar" data-ref="design-bottom-toolbar">
+            <div class="design-bottom-toolbar__section design-bottom-toolbar__section--tools" data-ref="toolbar-tools">
+              <button type="button" class="design-toolbar-btn is-active" data-ref="tool-brush" data-tooltip="Pincel" aria-label="Pincel">
+                <span class="component-icon">brush</span>
+              </button>
+              <button type="button" class="design-toolbar-btn" data-ref="tool-eraser" data-tooltip="Borrador" aria-label="Borrador">
+                <span class="component-icon">ink_eraser</span>
+              </button>
+              <button type="button" class="design-toolbar-btn" data-ref="tool-dither" data-tooltip="Tramador / Semitonos" aria-label="Tramador">
+                <span class="component-icon">texture</span>
+              </button>
+              <button type="button" class="design-toolbar-btn" data-ref="tool-shading" data-tooltip="Sombreado e Iluminación" aria-label="Sombreado e Iluminación">
+                <span class="component-icon">tonality</span>
+              </button>
+              <button type="button" class="design-toolbar-btn" data-ref="tool-spray" data-tooltip="Spray / Aerógrafo" aria-label="Spray">
+                <span class="component-icon">blur_on</span>
+              </button>
+              <button type="button" class="design-toolbar-btn" data-ref="tool-bucket" data-tooltip="Balde de pintura" aria-label="Balde de pintura">
+                <span class="component-icon">format_color_fill</span>
+              </button>
+              <button type="button" class="design-toolbar-btn" data-ref="tool-select" data-tooltip="Área de Selección y Movimiento" aria-label="Selección">
+                <span class="component-icon">crop_free</span>
+              </button>
+              <button type="button" class="design-toolbar-btn" data-ref="tool-text" data-tooltip="Texto Pixel" aria-label="Texto Pixel">
+                <span class="component-icon">title</span>
+              </button>
+              <button type="button" class="design-toolbar-btn" data-ref="tool-mirror" data-tooltip="Modo Espejo / Simetría" aria-label="Modo Espejo">
+                <span class="component-icon">flip</span>
+              </button>
+              <button type="button" class="design-toolbar-btn" data-ref="btn-bottom-colors" data-tooltip="Paleta de colores" aria-label="Paleta de colores">
+                <span class="design-color-picker__preview" data-ref="tool-color-preview" style="background-color: #000000;"></span>
+              </button>
+              <div class="design-toolbar-divider" data-ref="toolbar-divider-1"></div>
+              <button type="button" class="design-toolbar-btn" data-ref="btn-tool-options" data-tooltip="Opciones de herramienta" aria-label="Opciones">
+                <span class="component-icon">tune</span>
+              </button>
+              <button type="button" class="design-toolbar-btn" data-ref="btn-clear-canvas" data-tooltip="Limpiar lienzo" aria-label="Limpiar lienzo">
+                <span class="component-icon">delete_outline</span>
+              </button>
+              <button type="button" class="design-toolbar-btn" data-ref="btn-bottom-layers" data-tooltip="Capas" aria-label="Capas">
+                <span class="component-icon">layers</span>
+              </button>
+              <button type="button" class="design-toolbar-btn" data-ref="btn-bottom-frames" data-tooltip="Animación / Cuadros" aria-label="Animación">
+                <span class="component-icon">animation</span>
+              </button>
             </div>
-            <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-zoom-in" data-tooltip="Acercar" aria-label="Acercar zoom">
-              <span class="component-icon">add</span>
-            </button>
-            <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-zoom-reset" data-tooltip="Restablecer (100%)" aria-label="Restablecer zoom">
-              <span data-ref="zoom-value-text">100%</span>
-            </button>
-            <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-zoom-fit" data-tooltip="Ajustar a pantalla" aria-label="Ajustar a pantalla">
-              <span class="component-icon">fit_screen</span>
-            </button>
+
+            <div class="design-bottom-toolbar__section design-bottom-toolbar__section--zoom" data-ref="toolbar-zoom">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-zoom-out" data-tooltip="Alejar" aria-label="Alejar zoom">
+                <span class="component-icon">remove</span>
+              </button>
+              <div class="design-zoom-slider-container" data-ref="zoom-slider-container">
+                <input class="design-zoom-slider" data-ref="zoom-slider" type="range" min="1" max="100" value="10" aria-label="Control de Zoom" />
+              </div>
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-zoom-in" data-tooltip="Acercar" aria-label="Acercar zoom">
+                <span class="component-icon">add</span>
+              </button>
+              <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-zoom-reset" data-tooltip="Restablecer (100%)" aria-label="Restablecer zoom">
+                <span data-ref="zoom-value-text">100%</span>
+              </button>
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-zoom-fit" data-tooltip="Ajustar a pantalla" aria-label="Ajustar a pantalla">
+                <span class="component-icon">fit_screen</span>
+              </button>
+            </div>
           </div>
+          <button type="button" class="design-toolbar__nav-btn design-toolbar__nav-btn--right is-disabled" data-ref="btn-bottom-toolbar-scroll-right" data-tooltip="Desplazar a la derecha" aria-label="Desplazar a la derecha">
+            <span class="component-icon">chevron_right</span>
+          </button>
         </div>
       </div>
     </div>

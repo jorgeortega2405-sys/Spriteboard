@@ -9,7 +9,7 @@ import { getEffectiveTheme } from '../services/theme.service.js';
 import { showToast } from '../services/toast.service.js';
 import { joinCanvasRoom, leaveCanvasRoom, registerWebSocketHandler, sendCanvasAccessChanged, sendCanvasAction, sendCanvasCursor, sendCanvasDrawStroke, sendCanvasFullUpdate, sendCanvasMemberRemoved } from '../services/websocket.service.js';
 import { CanvasItem, CanvasMember, SearchUserResult } from '../types/canvas.types.js';
-import { setupDropdown } from '../utils/dom.util.js';
+import { CarouselController, initCarouselScroll, setupDropdown } from '../utils/dom.util.js';
 import { PixelFontFamily, renderPixelTextCanvas } from '../utils/pixel-font.util.js';
 import { getCachedImage, PIXEL_SHAPES, PixelShape, renderShapeCanvas, renderShapeThumbnail, ShapeCategory, ShapeColorMode } from '../utils/pixel-shapes.util.js';
 import { createErrorView } from './error.view.js';
@@ -503,6 +503,11 @@ class DesignController {
   private shapeFlipVBtn: HTMLButtonElement | null = null;
   private shapeRotateBtn: HTMLButtonElement | null = null;
   private shapeCancelBtn: HTMLButtonElement | null = null;
+  private topToolbarCarouselController: CarouselController | null = null;
+  private bottomToolbarCarouselController: CarouselController | null = null;
+  private optionsTrayCarouselController: CarouselController | null = null;
+  private layersTrayCarouselController: CarouselController | null = null;
+  private framesTrayCarouselController: CarouselController | null = null;
 
   constructor(container: HTMLElement, canvasUuid: string) {
     this.container = container;
@@ -901,6 +906,7 @@ class DesignController {
     this.layersCardsListEl.appendChild(addCard);
 
     renderIcons(this.layersCardsListEl);
+    this.layersTrayCarouselController?.updateButtons();
   }
 
   private renderFramesCards(): void {
@@ -986,6 +992,7 @@ class DesignController {
     this.framesCardsListEl.appendChild(addCard);
 
     renderIcons(this.framesCardsListEl);
+    this.framesTrayCarouselController?.updateButtons();
   }
 
   private reorderLayers(sourceId: string, targetId: string, broadcast = true, customFrameId?: string): void {
@@ -2122,6 +2129,7 @@ class DesignController {
       this.optionsGroupTileGrid?.classList.remove('is-hidden');
     }
     this.updateToolbarHeights();
+    this.optionsTrayCarouselController?.updateButtons();
   }
 
   private setTileGridSize(size: number): void {
@@ -2148,6 +2156,7 @@ class DesignController {
       this.toolOptionsBtn?.classList.remove('is-active');
     }
     this.updateToolbarHeights();
+    this.optionsTrayCarouselController?.updateButtons();
   }
 
   private updateOptionsTrayGroups(): void {
@@ -3148,6 +3157,54 @@ class DesignController {
 
   private bindEvents(): void {
     const { signal } = this.abortController;
+
+    const topToolbarWrapper = this.container.querySelector<HTMLElement>('[data-ref="design-top-toolbar-container"]');
+    if (topToolbarWrapper) {
+      this.topToolbarCarouselController = initCarouselScroll(topToolbarWrapper, {
+        carouselSelector: '[data-ref="design-top-toolbar"]',
+        leftBtnSelector: '[data-ref="btn-top-toolbar-scroll-left"]',
+        rightBtnSelector: '[data-ref="btn-top-toolbar-scroll-right"]',
+        step: 220,
+      });
+    }
+
+    const bottomToolbarWrapper = this.container.querySelector<HTMLElement>('[data-ref="design-bottom-toolbar-wrapper"]');
+    if (bottomToolbarWrapper) {
+      this.bottomToolbarCarouselController = initCarouselScroll(bottomToolbarWrapper, {
+        carouselSelector: '[data-ref="design-bottom-toolbar"]',
+        leftBtnSelector: '[data-ref="btn-bottom-toolbar-scroll-left"]',
+        rightBtnSelector: '[data-ref="btn-bottom-toolbar-scroll-right"]',
+        step: 220,
+      });
+    }
+
+    const optionsTray = this.container.querySelector<HTMLElement>('[data-ref="design-options-tray"]');
+    if (optionsTray) {
+      this.optionsTrayCarouselController = initCarouselScroll(optionsTray, {
+        carouselSelector: '[data-ref="options-content"]',
+        step: 180,
+      });
+    }
+
+    const layersTray = this.container.querySelector<HTMLElement>('[data-ref="design-layers-tray"]');
+    if (layersTray) {
+      this.layersTrayCarouselController = initCarouselScroll(layersTray, {
+        carouselSelector: '[data-ref="layers-cards-list"]',
+        leftBtnSelector: '[data-ref="btn-layers-tray-scroll-left"]',
+        rightBtnSelector: '[data-ref="btn-layers-tray-scroll-right"]',
+        step: 180,
+      });
+    }
+
+    const framesCardsWrapper = this.container.querySelector<HTMLElement>('[data-ref="frames-cards-wrapper"]');
+    if (framesCardsWrapper) {
+      this.framesTrayCarouselController = initCarouselScroll(framesCardsWrapper, {
+        carouselSelector: '[data-ref="frames-cards-list"]',
+        leftBtnSelector: '[data-ref="btn-frames-tray-scroll-left"]',
+        rightBtnSelector: '[data-ref="btn-frames-tray-scroll-right"]',
+        step: 180,
+      });
+    }
 
     if (this.shareWrapperEl) {
       const shareBackdropEl = this.shareWrapperEl.querySelector<HTMLElement>('[data-ref="dropdown-backdrop-share"]');
@@ -5147,9 +5204,22 @@ class DesignController {
   }
 
   private updateAccessLevelUI(): void {
-    if (this.accessLevelSelectedIconEl) {
-      this.accessLevelSelectedIconEl.textContent = this.accessLevel === 'public' ? 'language' : 'lock';
+    const iconEl = this.container.querySelector<HTMLElement>('[data-ref="access-level-selected-icon"]') || this.accessLevelSelectedIconEl;
+    const iconName = this.accessLevel === 'public' ? 'language' : 'lock';
+
+    if (iconEl) {
+      this.accessLevelSelectedIconEl = iconEl;
+      const useEl = iconEl.querySelector('use');
+      if (useEl) {
+        useEl.setAttribute('href', `/icons.svg#${iconName}`);
+        useEl.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', `/icons.svg#${iconName}`);
+      } else if (iconEl.tagName.toLowerCase() === 'svg') {
+        iconEl.innerHTML = `<use href="/icons.svg#${iconName}" xlink:href="/icons.svg#${iconName}"></use>`;
+      } else {
+        iconEl.textContent = iconName;
+      }
     }
+
     if (this.accessLevelSelectedTextEl) {
       this.accessLevelSelectedTextEl.textContent =
         this.accessLevel === 'public'
@@ -5517,6 +5587,11 @@ class DesignController {
     this.wsUnsubscribes = [];
     this.shareDropdownController?.destroy();
     this.accessDropdownController?.destroy();
+    this.topToolbarCarouselController?.destroy();
+    this.bottomToolbarCarouselController?.destroy();
+    this.optionsTrayCarouselController?.destroy();
+    this.layersTrayCarouselController?.destroy();
+    this.framesTrayCarouselController?.destroy();
 
     if (this.rafId !== null) {
       cancelAnimationFrame(this.rafId);

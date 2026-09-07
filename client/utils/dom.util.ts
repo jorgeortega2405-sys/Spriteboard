@@ -266,6 +266,7 @@ export function setupDropdown(
 
       backdrop.classList.add('is-open');
       menu.classList.add('is-open');
+      trigger?.classList.add('is-open');
 
       backdrop.style.transition = 'opacity 0.25s ease';
       menu.style.transition = 'transform 0.28s cubic-bezier(0.16, 1, 0.3, 1)';
@@ -274,6 +275,7 @@ export function setupDropdown(
     } else {
       backdrop?.classList.add('is-open');
       menu?.classList.add('is-open');
+      trigger?.classList.add('is-open');
       createPopperInstance();
     }
 
@@ -303,6 +305,7 @@ export function setupDropdown(
       setTimeout(() => {
         backdrop.classList.remove('is-open');
         menu.classList.remove('is-open');
+        trigger?.classList.remove('is-open');
         backdrop.style.display = '';
         backdrop.style.opacity = '';
         backdrop.style.transition = '';
@@ -317,6 +320,7 @@ export function setupDropdown(
     } else {
       backdrop?.classList.remove('is-open');
       menu?.classList.remove('is-open');
+      trigger?.classList.remove('is-open');
       if (backdrop) {
         backdrop.style.display = '';
         backdrop.style.opacity = '';
@@ -463,13 +467,34 @@ export function setupDropdown(
     item.classList.add('is-active');
 
     const itemText = item.querySelector('.menu-item__text')?.textContent?.trim() || '';
-    const itemIcon = item.querySelector('.menu-item__icon')?.textContent?.trim() || '';
+    const itemIconEl = item.querySelector<HTMLElement>('.menu-item__icon');
+    const itemIconUse = itemIconEl?.querySelector('use');
+    const itemIconHref = itemIconUse?.getAttribute('href') || itemIconUse?.getAttributeNS('http://www.w3.org/1999/xlink', 'href') || '';
+    const itemIconText = itemIconEl?.textContent?.trim() || '';
 
     if (selectedTextEl && itemText) {
       selectedTextEl.textContent = itemText;
     }
-    if (selectedIconEl && itemIcon) {
-      selectedIconEl.textContent = itemIcon;
+    if (selectedIconEl) {
+      if (itemIconHref) {
+        const selectedUse = selectedIconEl.querySelector('use');
+        if (selectedUse) {
+          selectedUse.setAttribute('href', itemIconHref);
+          selectedUse.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', itemIconHref);
+        } else if (selectedIconEl.tagName.toLowerCase() === 'svg') {
+          selectedIconEl.innerHTML = `<use href="${itemIconHref}" xlink:href="${itemIconHref}"></use>`;
+        }
+      } else if (itemIconText) {
+        const selectedUse = selectedIconEl.querySelector('use');
+        if (selectedUse) {
+          selectedUse.setAttribute('href', `/icons.svg#${itemIconText}`);
+          selectedUse.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', `/icons.svg#${itemIconText}`);
+        } else if (selectedIconEl.tagName.toLowerCase() === 'svg') {
+          selectedIconEl.innerHTML = `<use href="/icons.svg#${itemIconText}" xlink:href="/icons.svg#${itemIconText}"></use>`;
+        } else {
+          selectedIconEl.textContent = itemIconText;
+        }
+      }
     }
 
     const val = item.getAttribute('data-theme-value') || item.getAttribute('data-value') || item.getAttribute('data-lang') || item.getAttribute('data-theme') || itemText;
@@ -533,5 +558,201 @@ export function debounce<T extends (...args: any[]) => void>(fn: T, delayMs = 35
     timer = setTimeout(() => {
       fn.apply(this, args);
     }, delayMs);
+  };
+}
+
+export function bindDragToScroll(carousel: HTMLElement, isVertical = false): () => void {
+  let isDown = false;
+  let startX = 0;
+  let startY = 0;
+  let scrollLeft = 0;
+  let scrollTop = 0;
+  let isDragging = false;
+
+  const onMouseDown = (e: MouseEvent) => {
+    if ((e.target as HTMLElement)?.closest('input, select, textarea, .component-range, [contenteditable="true"]')) return;
+    if (e.button !== 0) return;
+    isDown = true;
+    isDragging = false;
+    startX = e.pageX - carousel.offsetLeft;
+    startY = e.pageY - carousel.offsetTop;
+    scrollLeft = carousel.scrollLeft;
+    scrollTop = carousel.scrollTop;
+  };
+
+  const onMouseUp = () => {
+    if (!isDown) return;
+    isDown = false;
+    carousel.classList.remove('is-dragging');
+    setTimeout(() => {
+      isDragging = false;
+    }, 60);
+  };
+
+  const onMouseMove = (e: MouseEvent) => {
+    if (!isDown) return;
+    const x = e.pageX - carousel.offsetLeft;
+    const y = e.pageY - carousel.offsetTop;
+    const walkX = (x - startX) * 1.5;
+    const walkY = (y - startY) * 1.5;
+
+    if (Math.abs(walkX) > 4 || Math.abs(walkY) > 4) {
+      if (!isDragging) {
+        isDragging = true;
+        carousel.classList.add('is-dragging');
+      }
+    }
+    if (isDragging) {
+      e.preventDefault();
+      if (isVertical) {
+        carousel.scrollTop = scrollTop - walkY;
+      } else {
+        carousel.scrollLeft = scrollLeft - walkX;
+      }
+    }
+  };
+
+  const onClick = (e: MouseEvent) => {
+    if (isDragging) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+    }
+  };
+
+  carousel.addEventListener('mousedown', onMouseDown);
+  carousel.addEventListener('mouseleave', onMouseUp);
+  carousel.addEventListener('mouseup', onMouseUp);
+  window.addEventListener('mouseup', onMouseUp);
+  carousel.addEventListener('mousemove', onMouseMove);
+  carousel.addEventListener('click', onClick, { capture: true });
+
+  return () => {
+    carousel.removeEventListener('mousedown', onMouseDown);
+    carousel.removeEventListener('mouseleave', onMouseUp);
+    carousel.removeEventListener('mouseup', onMouseUp);
+    window.removeEventListener('mouseup', onMouseUp);
+    carousel.removeEventListener('mousemove', onMouseMove);
+    carousel.removeEventListener('click', onClick, { capture: true });
+  };
+}
+
+export interface CarouselController {
+  destroy: () => void;
+  updateButtons: () => void;
+}
+
+export function initCarouselScroll(
+  wrapper: HTMLElement | null,
+  options: {
+    carouselSelector?: string;
+    isVertical?: boolean;
+    leftBtnSelector?: string;
+    rightBtnSelector?: string;
+    step?: number;
+  } = {}
+): CarouselController | null {
+  if (!wrapper) return null;
+
+  const isVertical = !!options.isVertical;
+  const step = options.step || 220;
+
+  const carousel = options.carouselSelector
+    ? wrapper.querySelector<HTMLElement>(options.carouselSelector) || wrapper
+    : (wrapper.matches(
+        '.design-bottom-toolbar, .design-top-toolbar, .design-options-tray__content, .design-layers-tray__cards, .design-frames-tray__cards'
+      )
+        ? wrapper
+        : wrapper.querySelector<HTMLElement>(
+            '.design-bottom-toolbar, .design-top-toolbar, .design-options-tray__content, .design-layers-tray__cards, .design-frames-tray__cards'
+          )) || wrapper;
+
+  if (!carousel) return null;
+
+  const leftBtn = options.leftBtnSelector
+    ? wrapper.querySelector<HTMLElement>(options.leftBtnSelector)
+    : wrapper.querySelector<HTMLElement>('.design-toolbar__nav-btn--left, [data-ref*="scroll-left"]');
+
+  const rightBtn = options.rightBtnSelector
+    ? wrapper.querySelector<HTMLElement>(options.rightBtnSelector)
+    : wrapper.querySelector<HTMLElement>('.design-toolbar__nav-btn--right, [data-ref*="scroll-right"]');
+
+  const updateButtons = () => {
+    if (!carousel) return;
+    if (isVertical) {
+      const hasOverflow = carousel.scrollHeight > carousel.clientHeight + 2;
+      if (!hasOverflow) {
+        leftBtn?.classList.add('is-disabled');
+        rightBtn?.classList.add('is-disabled');
+        return;
+      }
+      leftBtn?.classList.toggle('is-disabled', carousel.scrollTop <= 5);
+      const canScrollDown = Math.ceil(carousel.scrollTop + carousel.clientHeight) < carousel.scrollHeight - 5;
+      rightBtn?.classList.toggle('is-disabled', !canScrollDown);
+    } else {
+      const hasOverflow = carousel.scrollWidth > carousel.clientWidth + 2;
+      if (!hasOverflow) {
+        leftBtn?.classList.add('is-disabled');
+        rightBtn?.classList.add('is-disabled');
+        return;
+      }
+      leftBtn?.classList.toggle('is-disabled', carousel.scrollLeft <= 5);
+      const canScrollRight = Math.ceil(carousel.scrollLeft + carousel.clientWidth) < carousel.scrollWidth - 5;
+      rightBtn?.classList.toggle('is-disabled', !canScrollRight);
+    }
+  };
+
+  const onLeftClick = (e: MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (isVertical) {
+      carousel.scrollBy({ top: -step, behavior: 'smooth' });
+    } else {
+      carousel.scrollBy({ left: -step, behavior: 'smooth' });
+    }
+    setTimeout(updateButtons, 300);
+  };
+
+  const onRightClick = (e: MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (isVertical) {
+      carousel.scrollBy({ top: step, behavior: 'smooth' });
+    } else {
+      carousel.scrollBy({ left: step, behavior: 'smooth' });
+    }
+    setTimeout(updateButtons, 300);
+  };
+
+  leftBtn?.addEventListener('click', onLeftClick);
+  rightBtn?.addEventListener('click', onRightClick);
+  carousel.addEventListener('scroll', updateButtons, { passive: true });
+  window.addEventListener('resize', updateButtons, { passive: true });
+
+  const unbindDrag = bindDragToScroll(carousel, isVertical);
+
+  let resizeObserver: ResizeObserver | null = null;
+  if (typeof ResizeObserver !== 'undefined') {
+    resizeObserver = new ResizeObserver(() => updateButtons());
+    resizeObserver.observe(carousel);
+    if (wrapper !== carousel) {
+      resizeObserver.observe(wrapper);
+    }
+  }
+
+  setTimeout(updateButtons, 80);
+
+  const destroy = () => {
+    leftBtn?.removeEventListener('click', onLeftClick);
+    rightBtn?.removeEventListener('click', onRightClick);
+    carousel.removeEventListener('scroll', updateButtons);
+    window.removeEventListener('resize', updateButtons);
+    unbindDrag();
+    resizeObserver?.disconnect();
+  };
+
+  return {
+    destroy,
+    updateButtons,
   };
 }
