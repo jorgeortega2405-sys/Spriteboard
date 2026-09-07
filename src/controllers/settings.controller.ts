@@ -1,7 +1,7 @@
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import { addAccountToSession, removeAccountFromSession, updateActiveAccountInSession } from '../services/auth.service.js';
 import { logger } from '../services/logger.service.js';
-import { deleteAvatar, getPasswordStatus, getUserPreferences, logUserAudit, requestEmailChangeCode, updateAvatar, updateEmail, updateUserPasswordFromSettings, updateUserPreferences, updateUsername, verifyCurrentPassword, verifyEmailChange } from '../services/settings.service.js';
+import { deleteAvatar, getPasswordStatus, getUserPreferences, logUserAudit, requestEmailChangeCode, unlinkGoogleAccount, updateAvatar, updateEmail, updateUserPasswordFromSettings, updateUserPreferences, updateUsername, verifyCurrentPassword, verifyEmailChange } from '../services/settings.service.js';
 import { clearPending2FASetup, generateBackupCodes, generateTotpSecret, getOtpAuthUrl, getPending2FASetup, savePending2FASetup, verifyTotpCode } from '../services/two-factor.service.js';
 import { deleteUserPermanently, disableUser2FA, enableUser2FA, findUserById } from '../services/user.service.js';
 import { sanitizeUser, sendBadRequest, sendConflict, sendInternalError, sendSuccess, sendUnauthorized } from '../utils/http.util.js';
@@ -535,3 +535,42 @@ export async function handleDeleteAccount(req: Request, res: Response): Promise<
     );
   }
 }
+
+export async function handleUnlinkGoogle(req: Request, res: Response): Promise<void> {
+  try {
+    const currentUser = getCurrentUser(req);
+    if (!currentUser) {
+      sendUnauthorized(res, 'Sesión no válida o expirada.');
+      return;
+    }
+
+    const result = await unlinkGoogleAccount(
+      currentUser.id,
+      req.ip,
+      req.headers['user-agent']
+    );
+
+    if (!result.success) {
+      sendBadRequest(res, result.error || 'No se pudo desvincular la cuenta de Google.');
+      return;
+    }
+
+    const updatedUser = await findUserById(currentUser.id);
+    if (updatedUser) {
+      updateActiveAccountInSession(res, req, sanitizeUser(updatedUser));
+    }
+
+    sendSuccess(res, {
+      message: 'Cuenta de Google desvinculada exitosamente.',
+      user: updatedUser ? sanitizeUser(updatedUser) : null,
+    });
+  } catch (error) {
+    sendInternalError(
+      res,
+      'Error al desvincular cuenta de Google',
+      error,
+      'No se pudo desvincular la cuenta de Google. Inténtalo de nuevo.'
+    );
+  }
+}
+

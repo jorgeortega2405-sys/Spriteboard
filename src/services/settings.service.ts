@@ -605,3 +605,41 @@ export async function updateUserPasswordFromSettings(
 
   return { success: true };
 }
+
+export async function unlinkGoogleAccount(
+  userId: number,
+  ip?: string | null,
+  ua?: string | null
+): Promise<{ success: boolean; error?: string; status?: number }> {
+  const [rows] = await pool.query<RowDataPacket[]>(
+    'SELECT id, google_id, password_hash FROM users WHERE id = ? LIMIT 1',
+    [userId]
+  );
+
+  if (rows.length === 0) {
+    return { success: false, error: 'Usuario no encontrado.', status: 404 };
+  }
+
+  const user = rows[0];
+
+  if (!user.google_id) {
+    return { success: false, error: 'Esta cuenta no tiene una cuenta de Google vinculada.', status: 400 };
+  }
+
+  if (!user.password_hash) {
+    return {
+      success: false,
+      error: 'Debes configurar una contraseña antes de desvincular tu cuenta de Google para no perder el acceso a tu cuenta.',
+      status: 400,
+    };
+  }
+
+  const oldGoogleId = user.google_id;
+  await pool.query('UPDATE users SET google_id = NULL WHERE id = ?', [userId]);
+
+  await logUserAudit(userId, 'unlink_google', oldGoogleId, null, ip, ua);
+  logger.security.info('Cuenta de Google desvinculada exitosamente', { userId });
+
+  return { success: true };
+}
+

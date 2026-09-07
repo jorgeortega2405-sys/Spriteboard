@@ -7,8 +7,8 @@ export function sanitizeUser(user: any): UserPayload {
     id: user.id,
     username: user.username,
     email: user.email,
-    ...(user.avatar_url ? { avatar_url: user.avatar_url } : {}),
-    ...(user.google_id ? { google_id: user.google_id } : {}),
+    avatar_url: user.avatar_url || null,
+    google_id: user.google_id || null,
     subscription_tier: user.subscription_tier || 'free',
     two_factor_enabled: Boolean(user.two_factor_enabled),
   };

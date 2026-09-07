@@ -1,4 +1,4 @@
-import { forgotPassword, googleCallback, login, logout, logoutAll, me, redirectToGoogle, redirectToGoogleVerify, resetPassword, resendRegistrationCode, sendRegistrationCode, switchAccount, validateResetToken, validateStage1, verify2FALogin, verifyRegistrationCode } from '../controllers/auth.controller.js';
+import { forgotPassword, googleCallback, login, logout, logoutAll, me, redirectToGoogle, redirectToGoogleLink, redirectToGoogleVerify, resetPassword, resendRegistrationCode, sendRegistrationCode, switchAccount, validateResetToken, validateStage1, verify2FALogin, verifyRegistrationCode } from '../controllers/auth.controller.js';
 import { requireAuth } from '../middlewares/auth.middleware.js';
 import { forgotPasswordLimiter, loginLimiter, registerLimiter, resetPasswordLimiter, sendCodeLimiter, verifyCodeLimiter } from '../middlewares/rate-limit.middleware.js';
 import { Router } from 'express';
@@ -20,6 +20,7 @@ router.post('/switch-account', switchAccount);
 router.get('/me', me);
 
 router.get('/auth/google', redirectToGoogle);
+router.get('/auth/google/link', requireAuth, redirectToGoogleLink);
 router.get('/auth/google/verify', requireAuth, redirectToGoogleVerify);
 router.get('/auth/google/callback', googleCallback);
 

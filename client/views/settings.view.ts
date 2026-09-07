@@ -129,13 +129,216 @@ export async function createYourAccountView(): Promise<HTMLElement> {
   refreshAvatarsInDom(initialAvatarUrl);
   updateAvatarButtonsState(hasCustomAvatar() ? 'custom' : 'default');
 
-  if (currentUser.google_id) {
-    if (googleStatusEl) googleStatusEl.textContent = t('settings.your_account.google_connected');
-    if (googleActionBtn) googleActionBtn.textContent = t('settings.your_account.btn_disconnect');
-  } else {
-    if (googleStatusEl) googleStatusEl.textContent = t('settings.your_account.google_not_connected');
-    if (googleActionBtn) googleActionBtn.textContent = t('settings.your_account.btn_connect');
-  }
+  const refreshGoogleStatus = () => {
+    if (!currentUser) return;
+    if (currentUser.google_id) {
+      if (googleStatusEl) googleStatusEl.textContent = t('settings.your_account.google_connected');
+      if (googleActionBtn) {
+        googleActionBtn.textContent = t('settings.your_account.btn_disconnect');
+        googleActionBtn.classList.remove('btn--black');
+      }
+    } else {
+      if (googleStatusEl) googleStatusEl.textContent = t('settings.your_account.google_not_connected');
+      if (googleActionBtn) {
+        googleActionBtn.textContent = t('settings.your_account.btn_connect');
+        googleActionBtn.classList.add('btn--black');
+      }
+    }
+  };
+  refreshGoogleStatus();
+
+  googleActionBtn?.addEventListener('click', async (e: Event) => {
+    e.preventDefault();
+    if (!currentUser) return;
+
+    if (currentUser.google_id) {
+      await withButtonLoading(googleActionBtn, t('app.loading'), async () => {
+        try {
+          const pwdStatusRes = await getApi(API_ROUTES.settings.passwordStatus);
+          const pwdStatusData = await pwdStatusRes.json();
+          const hasPassword = Boolean(pwdStatusData?.hasPassword);
+
+          if (!hasPassword) {
+            openModal({
+              titleKey: 'settings.your_account.modal_google_no_password_title',
+              descriptionKey: 'settings.your_account.modal_google_no_password_desc',
+              confirmText: t('settings.your_account.btn_go_to_security'),
+              showCancel: true,
+              cancelText: t('modal.cancel'),
+              confirmClass: 'btn--black',
+              onConfirm: (modalInst) => {
+                modalInst.close();
+                navigate('/settings/security');
+              },
+            });
+            return;
+          }
+
+          openModal({
+            titleKey: 'settings.your_account.modal_unlink_google_title',
+            descriptionKey: 'settings.your_account.modal_unlink_google_desc',
+            confirmText: t('settings.your_account.btn_unlink_confirm'),
+            cancelText: t('modal.cancel'),
+            confirmClass: 'btn--danger',
+            onConfirm: async (modalInst) => {
+              modalInst.clearError();
+              modalInst.setConfirmLoading(true);
+              try {
+                const unlinkRes = await postApi(API_ROUTES.settings.googleUnlink);
+                const unlinkData = await unlinkRes.json();
+
+                if (unlinkRes.ok && unlinkData.ok) {
+                  if (currentUser) {
+                    currentUser.google_id = null;
+                    setCurrentUser(currentUser);
+                  }
+                  refreshGoogleStatus();
+                  modalInst.close();
+                  showToast(t('settings.your_account.google_unlinked_success'), 'success');
+                } else {
+                  modalInst.setConfirmLoading(false);
+                  modalInst.showError(unlinkData.error || t('toasts.generic_error'));
+                }
+              } catch (_) {
+                modalInst.setConfirmLoading(false);
+                modalInst.showError(t('toasts.generic_error'));
+              }
+            },
+          });
+        } catch (_) {
+          showToast(t('toasts.generic_error'), 'danger');
+        }
+      });
+    } else {
+      let linkChannel: BroadcastChannel | null = null;
+      let pollInterval: ReturnType<typeof setInterval> | null = null;
+      let checkClosedInterval: ReturnType<typeof setInterval> | null = null;
+      let popupWindow: Window | null = null;
+
+      const cleanUpLinkListeners = () => {
+        try {
+          if (linkChannel) {
+            linkChannel.close();
+            linkChannel = null;
+          }
+        } catch (_) {}
+        window.removeEventListener('storage', handleStorageEvent);
+        window.removeEventListener('message', handleMessageEvent);
+        if (pollInterval) {
+          clearInterval(pollInterval);
+          pollInterval = null;
+        }
+        if (checkClosedInterval) {
+          clearInterval(checkClosedInterval);
+          checkClosedInterval = null;
+        }
+        localStorage.removeItem('google_link_event');
+      };
+
+      const onLinkSuccess = (googleId?: string) => {
+        cleanUpLinkListeners();
+        if (currentUser) {
+          currentUser.google_id = googleId || 'connected';
+          setCurrentUser(currentUser);
+          refreshGoogleStatus();
+        }
+        showToast(t('settings.your_account.google_linked_success'), 'success');
+      };
+
+      const onLinkError = (errorMsg?: string) => {
+        cleanUpLinkListeners();
+        showToast(errorMsg || t('toasts.generic_error'), 'danger');
+      };
+
+      const onLinkCancelled = () => {
+        cleanUpLinkListeners();
+        showToast(t('toasts.google_link_cancelled'), 'info');
+      };
+
+      const handleStorageEvent = (event: StorageEvent) => {
+        if (event.key === 'google_link_event' && event.newValue) {
+          try {
+            const data = JSON.parse(event.newValue);
+            if (data.type === 'GOOGLE_LINK_SUCCESS') {
+              onLinkSuccess(data.google_id);
+            } else if (data.type === 'GOOGLE_LINK_ERROR') {
+              onLinkError(data.error);
+            } else if (data.type === 'GOOGLE_LINK_CANCELLED') {
+              onLinkCancelled();
+            }
+          } catch (_) {}
+        }
+      };
+
+      const handleMessageEvent = (event: MessageEvent) => {
+        if (event.origin !== window.location.origin) return;
+        if (event.data?.type === 'GOOGLE_LINK_SUCCESS') {
+          onLinkSuccess(event.data.google_id);
+        } else if (event.data?.type === 'GOOGLE_LINK_ERROR') {
+          onLinkError(event.data.error);
+        } else if (event.data?.type === 'GOOGLE_LINK_CANCELLED') {
+          onLinkCancelled();
+        }
+      };
+
+      try {
+        if (typeof BroadcastChannel !== 'undefined') {
+          linkChannel = new BroadcastChannel('google_link_channel');
+          linkChannel.onmessage = (event) => {
+            if (event.data?.type === 'GOOGLE_LINK_SUCCESS') {
+              onLinkSuccess(event.data.google_id);
+            } else if (event.data?.type === 'GOOGLE_LINK_ERROR') {
+              onLinkError(event.data.error);
+            } else if (event.data?.type === 'GOOGLE_LINK_CANCELLED') {
+              onLinkCancelled();
+            }
+          };
+        }
+      } catch (_) {}
+
+      window.addEventListener('storage', handleStorageEvent);
+      window.addEventListener('message', handleMessageEvent);
+
+      pollInterval = setInterval(() => {
+        try {
+          const raw = localStorage.getItem('google_link_event');
+          if (raw) {
+            const data = JSON.parse(raw);
+            if (data.type === 'GOOGLE_LINK_SUCCESS') {
+              onLinkSuccess(data.google_id);
+            } else if (data.type === 'GOOGLE_LINK_ERROR') {
+              onLinkError(data.error);
+            } else if (data.type === 'GOOGLE_LINK_CANCELLED') {
+              onLinkCancelled();
+            }
+          }
+        } catch (_) {}
+      }, 400);
+
+      checkClosedInterval = setInterval(() => {
+        if (popupWindow && popupWindow.closed) {
+          if (checkClosedInterval) {
+            clearInterval(checkClosedInterval);
+            checkClosedInterval = null;
+          }
+          setTimeout(() => {
+            cleanUpLinkListeners();
+          }, 600);
+        }
+      }, 800);
+
+      popupWindow = window.open(
+        API_ROUTES.auth.googleLink,
+        'google_link_window',
+        'width=500,height=650,menubar=no,toolbar=no,status=no,resizable=yes'
+      );
+
+      if (!popupWindow || popupWindow.closed || typeof popupWindow.closed === 'undefined') {
+        cleanUpLinkListeners();
+        showToast(t('settings.security.google_popup_blocked'), 'danger');
+      }
+    }
+  });
 
   const triggerFileInput = () => {
     if (avatarErrorBanner) avatarErrorBanner.style.display = 'none';

@@ -1,9 +1,9 @@
 import { pool } from '../config/database.config.js';
 import { getCurrentUser, getLinkedAccounts } from '../middlewares/auth.middleware.js';
 import { getClientIp } from '../middlewares/rate-limit.middleware.js';
-import { addAccountToSession, clearSessionCookie, getMultiAccountSession, hashPassword, isSessionRevoked, removeAccountFromSession, revokeAllUserSessions, setSessionCookie, switchAccountInSession, verifyPassword } from '../services/auth.service.js';
+import { addAccountToSession, clearSessionCookie, getMultiAccountSession, hashPassword, isSessionRevoked, removeAccountFromSession, revokeAllUserSessions, setSessionCookie, switchAccountInSession, updateActiveAccountInSession, verifyPassword } from '../services/auth.service.js';
 import { geoIpService } from '../services/geoip.service.js';
-import { getGoogleAuthUrl, getGoogleVerifyAuthUrl, processGoogleAuthCallback, STATE_COOKIE_NAME } from '../services/google.service.js';
+import { getGoogleAuthUrl, getGoogleLinkAuthUrl, getGoogleVerifyAuthUrl, processGoogleAuthCallback, processGoogleLinkCallback, STATE_COOKIE_NAME } from '../services/google.service.js';
 import { logger } from '../services/logger.service.js';
 import { sendPasswordResetEmail, sendVerificationCodeEmail } from '../services/mail.service.js';
 import { consumePending2FALogin, getPending2FALogin, savePending2FALogin, verifyTotpCode } from '../services/two-factor.service.js';
@@ -464,6 +464,16 @@ export function redirectToGoogle(req: Request, res: Response): void {
   res.redirect(url);
 }
 
+export function redirectToGoogleLink(req: Request, res: Response): void {
+  const currentUser = getCurrentUser(req);
+  if (!currentUser) {
+    sendUnauthorized(res, 'Sesión no válida o expirada.');
+    return;
+  }
+  const url = getGoogleLinkAuthUrl(req, res, currentUser.id);
+  res.redirect(url);
+}
+
 export function redirectToGoogleVerify(req: Request, res: Response): void {
   const url = getGoogleVerifyAuthUrl(req, res);
   res.redirect(url);
@@ -475,12 +485,20 @@ export async function googleCallback(req: Request, res: Response): Promise<void>
     const storedState = req.cookies[STATE_COOKIE_NAME];
     res.clearCookie(STATE_COOKIE_NAME);
 
+    const isLinkFlow =
+      (storedState && storedState.startsWith('link_')) ||
+      (state && String(state).startsWith('link_'));
+
     const isVerifyFlow =
       (storedState && storedState.startsWith('verify_pwd_')) ||
       (state && String(state).startsWith('verify_pwd_'));
 
     if (error) {
-      logger.security.warn('Google OAuth cancelado o con error', { error, isVerifyFlow });
+      logger.security.warn('Google OAuth cancelado o con error', { error, isLinkFlow, isVerifyFlow });
+      if (isLinkFlow) {
+        res.send(`<!DOCTYPE html><html><body><script>if (window.opener) { window.opener.postMessage({ type: 'GOOGLE_LINK_CANCELLED' }, window.location.origin); window.close(); } else { window.location.href = '/settings/your-account'; }</script></body></html>`);
+        return;
+      }
       if (isVerifyFlow) {
         res.send(`<!DOCTYPE html><html><body><script>if (window.opener) { window.opener.postMessage({ type: 'GOOGLE_VERIFY_CANCELLED' }, window.location.origin); window.close(); } else { window.location.href = '/settings/security'; }</script></body></html>`);
         return;
@@ -491,6 +509,10 @@ export async function googleCallback(req: Request, res: Response): Promise<void>
 
     if (!code || !state) {
       logger.security.warn('Google OAuth faltan parámetros requeridos');
+      if (isLinkFlow) {
+        res.send(`<!DOCTYPE html><html><body><script>if (window.opener) { window.opener.postMessage({ type: 'GOOGLE_LINK_ERROR', error: 'Faltan parámetros de vinculación.' }, window.location.origin); window.close(); } else { window.location.href = '/settings/your-account?error=missing_oauth_parameters'; }</script></body></html>`);
+        return;
+      }
       if (isVerifyFlow) {
         res.send(`<!DOCTYPE html><html><body><script>if (window.opener) { window.opener.postMessage({ type: 'GOOGLE_VERIFY_ERROR', error: 'Faltan parámetros de verificación.' }, window.location.origin); window.close(); } else { window.location.href = '/settings/security?error=missing_oauth_parameters'; }</script></body></html>`);
         return;
@@ -501,11 +523,108 @@ export async function googleCallback(req: Request, res: Response): Promise<void>
 
     if (!storedState || storedState !== state) {
       logger.security.warn('Parámetro state de Google OAuth inválido o ausente');
+      if (isLinkFlow) {
+        res.send(`<!DOCTYPE html><html><body><script>if (window.opener) { window.opener.postMessage({ type: 'GOOGLE_LINK_ERROR', error: 'Estado de seguridad inválido o expirado.' }, window.location.origin); window.close(); } else { window.location.href = '/settings/your-account?error=invalid_oauth_state'; }</script></body></html>`);
+        return;
+      }
       if (isVerifyFlow) {
         res.send(`<!DOCTYPE html><html><body><script>if (window.opener) { window.opener.postMessage({ type: 'GOOGLE_VERIFY_ERROR', error: 'Estado de seguridad inválido o expirado.' }, window.location.origin); window.close(); } else { window.location.href = '/settings/security?error=invalid_oauth_state'; }</script></body></html>`);
         return;
       }
       res.redirect('/login?error=invalid_oauth_state');
+      return;
+    }
+
+    if (isLinkFlow) {
+      const currentUser = getCurrentUser(req);
+      const parts = String(state).split('_');
+      const targetUserId = parseInt(parts[1], 10);
+
+      if (!currentUser || currentUser.id !== targetUserId) {
+        logger.security.warn('Vinculación con Google rechazada: la sesión activa no coincide con el estado', {
+          activeUserId: currentUser?.id,
+          targetUserId,
+        });
+
+        res.send(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Error de Vinculación</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #0f172a; color: #fff; text-align: center; }
+    .box { padding: 24px; max-width: 380px; }
+    h2 { margin: 0 0 8px; font-size: 20px; font-weight: 600; color: #ef4444; }
+    p { margin: 0 0 16px; color: #94a3b8; font-size: 14px; }
+    button { background: #334155; color: #fff; border: 1px solid #475569; padding: 8px 18px; border-radius: 8px; font-size: 14px; cursor: pointer; }
+    button:hover { background: #475569; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h2>✕ Error de vinculación</h2>
+    <p>La sesión activa no coincide con la solicitud de vinculación.</p>
+    <button type="button" onclick="window.close()">Cerrar ventana</button>
+  </div>
+  <script>
+    const payload = { type: 'GOOGLE_LINK_ERROR', error: 'La sesión activa no coincide con la solicitud de vinculación.' };
+    try { const ch = new BroadcastChannel('google_link_channel'); ch.postMessage(payload); ch.close(); } catch (_) {}
+    try { localStorage.setItem('google_link_event', JSON.stringify({ ...payload, ts: Date.now() })); } catch (_) {}
+    if (window.opener) { try { window.opener.postMessage(payload, window.location.origin); } catch (_) {} }
+    setTimeout(() => { window.close(); }, 2500);
+  </script>
+</body>
+</html>`);
+        return;
+      }
+
+      const clientIp = getClientIp(req);
+      const userAgent = req.headers['user-agent'] as string;
+      const linkResult = await processGoogleLinkCallback(String(code), targetUserId, clientIp, userAgent);
+
+      if (!linkResult.success || !linkResult.googleId) {
+        const errorMsg = linkResult.error || 'No se pudo vincular la cuenta de Google.';
+        res.send(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Error de Vinculación</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #0f172a; color: #fff; text-align: center; }
+    .box { padding: 24px; max-width: 380px; }
+    h2 { margin: 0 0 8px; font-size: 20px; font-weight: 600; color: #ef4444; }
+    p { margin: 0 0 16px; color: #94a3b8; font-size: 14px; }
+    button { background: #334155; color: #fff; border: 1px solid #475569; padding: 8px 18px; border-radius: 8px; font-size: 14px; cursor: pointer; }
+    button:hover { background: #475569; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h2>✕ Error de vinculación</h2>
+    <p>${errorMsg}</p>
+    <button type="button" onclick="window.close()">Cerrar ventana</button>
+  </div>
+  <script>
+    const payload = { type: 'GOOGLE_LINK_ERROR', error: ${JSON.stringify(errorMsg)} };
+    try { const ch = new BroadcastChannel('google_link_channel'); ch.postMessage(payload); ch.close(); } catch (_) {}
+    try { localStorage.setItem('google_link_event', JSON.stringify({ ...payload, ts: Date.now() })); } catch (_) {}
+    if (window.opener) { try { window.opener.postMessage(payload, window.location.origin); } catch (_) {} }
+    setTimeout(() => { window.close(); }, 2500);
+  </script>
+</body>
+</html>`);
+        return;
+      }
+
+      updateActiveAccountInSession(res, req, { google_id: linkResult.googleId });
+
+      res.send(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Spriteboard</title></head><body><script>
+        const payload = { type: 'GOOGLE_LINK_SUCCESS', google_id: ${JSON.stringify(linkResult.googleId)} };
+        try { const ch = new BroadcastChannel('google_link_channel'); ch.postMessage(payload); ch.close(); } catch (_) {}
+        try { localStorage.setItem('google_link_event', JSON.stringify({ ...payload, ts: Date.now() })); } catch (_) {}
+        if (window.opener) { try { window.opener.postMessage(payload, window.location.origin); } catch (_) {} }
+        window.close();
+      </script></body></html>`);
       return;
     }
 
@@ -528,51 +647,13 @@ export async function googleCallback(req: Request, res: Response): Promise<void>
           userId: currentUser.id,
         });
 
-        res.send(`<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>Verificación Exitosa</title>
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #0f172a; color: #fff; text-align: center; }
-    .box { padding: 24px; max-width: 380px; }
-    h2 { margin: 0 0 8px; font-size: 20px; font-weight: 600; color: #22c55e; }
-    p { margin: 0 0 16px; color: #94a3b8; font-size: 14px; }
-    button { background: #334155; color: #fff; border: 1px solid #475569; padding: 8px 18px; border-radius: 8px; font-size: 14px; cursor: pointer; }
-    button:hover { background: #475569; }
-  </style>
-</head>
-<body>
-  <div class="box">
-    <h2>✓ Identidad verificada</h2>
-    <p>Regresando a Spriteboard...</p>
-    <button type="button" onclick="window.close()">Cerrar ventana</button>
-  </div>
-  <script>
-    const payload = { type: 'GOOGLE_VERIFY_SUCCESS' };
-
-    try {
-      const ch = new BroadcastChannel('google_verify_channel');
-      ch.postMessage(payload);
-      ch.close();
-    } catch (_) {}
-
-    try {
-      localStorage.setItem('google_verify_event', JSON.stringify({ ...payload, ts: Date.now() }));
-    } catch (_) {}
-
-    if (window.opener) {
-      try {
-        window.opener.postMessage(payload, window.location.origin);
-      } catch (_) {}
-    }
-
-    setTimeout(() => {
-      window.close();
-    }, 400);
-  </script>
-</body>
-</html>`);
+        res.send(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Spriteboard</title></head><body><script>
+          const payload = { type: 'GOOGLE_VERIFY_SUCCESS' };
+          try { const ch = new BroadcastChannel('google_verify_channel'); ch.postMessage(payload); ch.close(); } catch (_) {}
+          try { localStorage.setItem('google_verify_event', JSON.stringify({ ...payload, ts: Date.now() })); } catch (_) {}
+          if (window.opener) { try { window.opener.postMessage(payload, window.location.origin); } catch (_) {} }
+          window.close();
+        </script></body></html>`);
         return;
       } else {
         logger.security.warn('Verificación con Google rechazada: la cuenta no coincide con el usuario activo', {

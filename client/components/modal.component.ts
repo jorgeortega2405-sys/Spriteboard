@@ -1,5 +1,6 @@
 import { API_ROUTES } from '../config/api-routes.js';
 import { postApi } from '../services/api.service.js';
+import { renderIcons } from '../services/icon.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { showToast } from '../services/toast.service.js';
 import { ModalInstance, ModalOptions } from '../types/common.types.js';
@@ -70,6 +71,7 @@ export function openModal(options: ModalOptions = {}): ModalInstance {
   }
 
   translateElement(backdrop);
+  renderIcons(backdrop);
 
   const card = backdrop.querySelector<HTMLElement>('[data-ref="modal-card"]');
   const closeBtn = backdrop.querySelector<HTMLElement>('[data-ref="btn-modal-close"]');
@@ -114,6 +116,7 @@ export function openModal(options: ModalOptions = {}): ModalInstance {
         bodyContainer.appendChild(newBody);
       }
       translateElement(bodyContainer);
+      renderIcons(bodyContainer);
     },
 
     showError(message: string) {

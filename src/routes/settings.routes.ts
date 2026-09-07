@@ -1,4 +1,4 @@
-import { handleDeleteAccount, handleDeleteAvatar, handleDisable2FA, handleEnable2FA, handleGenerate2FA, handleGet2FAStatus, handleGetPasswordStatus, handleGetPreferences, handleRequestEmailChangeCode, handleUpdateAvatar, handleUpdateEmail, handleUpdatePassword, handleUpdatePreferences, handleUpdateUsername, handleVerifyCurrentPassword, handleVerifyEmailChangeCode } from '../controllers/settings.controller.js';
+import { handleDeleteAccount, handleDeleteAvatar, handleDisable2FA, handleEnable2FA, handleGenerate2FA, handleGet2FAStatus, handleGetPasswordStatus, handleGetPreferences, handleRequestEmailChangeCode, handleUnlinkGoogle, handleUpdateAvatar, handleUpdateEmail, handleUpdatePassword, handleUpdatePreferences, handleUpdateUsername, handleVerifyCurrentPassword, handleVerifyEmailChangeCode } from '../controllers/settings.controller.js';
 import { requireAuth } from '../middlewares/auth.middleware.js';
 import { avatarLimiter, emailCodeLimiter, preferencesLimiter, twoFactorGenerateLimiter, twoFactorVerifyLimiter, updatePasswordLimiter, updateUsernameLimiter, verifyEmailCodeLimiter, verifyPasswordLimiter } from '../middlewares/rate-limit.middleware.js';
 import { NextFunction, Request, Response, Router } from 'express';
@@ -49,6 +49,8 @@ router.post('/settings/username', updateUsernameLimiter, handleUpdateUsername);
 router.post('/settings/email/request-code', emailCodeLimiter, handleRequestEmailChangeCode);
 router.post('/settings/email/verify-code', verifyEmailCodeLimiter, handleVerifyEmailChangeCode);
 router.post('/settings/email', verifyEmailCodeLimiter, handleUpdateEmail);
+
+router.post('/settings/google/unlink', verifyPasswordLimiter, handleUnlinkGoogle);
 
 router.get('/settings/password/status', handleGetPasswordStatus);
 router.post('/settings/password/verify', verifyPasswordLimiter, handleVerifyCurrentPassword);
