@@ -3,12 +3,49 @@
     <div class="canvas-section" data-ref="canvas-section">
       <div class="canvas-grid" data-ref="canvas-grid"></div>
 
-      <div class="canvas-empty-state" data-ref="canvas-empty-state" style="display: none;">
-        <span class="material-symbols-rounded canvas-empty-state__icon">dashboard_customize</span>
-        <h2 class="canvas-empty-state__title" data-i18n="canvas.home_empty_title"></h2>
-        <p class="canvas-empty-state__desc" data-i18n="canvas.home_empty_desc"></p>
-        <button type="button" class="btn btn--h44 btn--black" data-ref="btn-home-create-canvas" data-i18n="canvas.home_empty_action">
-        </button>
+      <div class="component-empty-state" data-ref="canvas-empty-state" style="display: none;">
+        <div class="component-empty-state-graphic" data-ref="canvas-empty-graphic">
+          <svg class="component-empty-state-svg" viewBox="0 0 140 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="boardGrad" x1="30" y1="30" x2="110" y2="105" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="#52525b"></stop>
+                <stop offset="50%" stop-color="#3f3f46"></stop>
+                <stop offset="100%" stop-color="#27272a"></stop>
+              </linearGradient>
+              <linearGradient id="brushHandle" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#a1a1aa"></stop>
+                <stop offset="100%" stop-color="#52525b"></stop>
+              </linearGradient>
+            </defs>
+            <path d="M42 60 L30 124 M98 60 L110 124 M70 50 L70 124" stroke="var(--text-tertiary, #52525b)" stroke-width="4" stroke-linecap="round" opacity="0.4"></path>
+            <rect x="34" y="34" width="72" height="64" rx="10" fill="url(#boardGrad)" stroke="#52525b" stroke-width="1.5"></rect>
+            <rect x="39" y="39" width="62" height="54" rx="7" fill="var(--bg-surface, #18181b)"></rect>
+            <rect x="46" y="46" width="10" height="10" rx="2" fill="#71717a"></rect>
+            <rect x="58" y="46" width="10" height="10" rx="2" fill="#a1a1aa"></rect>
+            <rect x="70" y="46" width="10" height="10" rx="2" fill="#52525b"></rect>
+            <rect x="82" y="46" width="10" height="10" rx="2" fill="#3f3f46"></rect>
+            <rect x="46" y="58" width="10" height="10" rx="2" fill="#d4d4d8"></rect>
+            <rect x="58" y="58" width="10" height="10" rx="2" fill="#71717a"></rect>
+            <rect x="70" y="58" width="10" height="10" rx="2" fill="#e4e4e7"></rect>
+            <rect x="82" y="58" width="10" height="10" rx="2" fill="#52525b"></rect>
+            <rect x="46" y="70" width="10" height="10" rx="2" fill="#3f3f46"></rect>
+            <rect x="58" y="70" width="10" height="10" rx="2" fill="#52525b"></rect>
+            <rect x="70" y="70" width="10" height="10" rx="2" fill="#a1a1aa"></rect>
+            <rect x="82" y="70" width="10" height="10" rx="2" fill="#71717a"></rect>
+            <g transform="rotate(32 94 40)">
+              <rect x="88" y="16" width="6" height="42" rx="3" fill="url(#brushHandle)"></rect>
+              <rect x="87" y="54" width="8" height="6" rx="1.5" fill="#e4e4e7"></rect>
+              <path d="M87 60 C87 66 95 66 95 60 Z" fill="#71717a"></path>
+            </g>
+            <g>
+              <path d="M112 30 L113.5 34.5 L118 36 L113.5 37.5 L112 42 L110.5 37.5 L106 36 L110.5 34.5 Z" fill="#e4e4e7"></path>
+              <path d="M26 48 L27 51 L30 52 L27 53 L26 56 L25 53 L22 52 L25 51 Z" fill="#a1a1aa"></path>
+              <path d="M102 96 L103 98 L105 99 L103 100 L102 102 L101 100 L99 99 L101 98 Z" fill="#71717a"></path>
+            </g>
+          </svg>
+        </div>
+        <h2 class="component-empty-state-title" data-ref="canvas-empty-title" data-i18n="canvas.home_empty_title"></h2>
+        <p class="component-empty-state-desc" data-ref="canvas-empty-desc" data-i18n="canvas.home_empty_desc"></p>
       </div>
     </div>
   </div>

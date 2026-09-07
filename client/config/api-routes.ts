@@ -8,6 +8,8 @@ export const API_ROUTES = {
     access: (uuid: string) => `/api/canvases/${encodeURIComponent(uuid)}/access`,
     base: '/api/canvases',
     byId: (uuid: string) => `/api/canvases/${encodeURIComponent(uuid)}`,
+    delete: (uuid: string) => `/api/canvases/${encodeURIComponent(uuid)}`,
+    duplicate: (uuid: string) => `/api/canvases/${encodeURIComponent(uuid)}/duplicate`,
     members: (uuid: string) => `/api/canvases/${encodeURIComponent(uuid)}/members`,
     removeMember: (uuid: string, userId: number) => `/api/canvases/${encodeURIComponent(uuid)}/members/${encodeURIComponent(userId)}`,
     removeTeam: (uuid: string, teamId: number) => `/api/canvases/${encodeURIComponent(uuid)}/teams/${encodeURIComponent(teamId)}`,
@@ -19,6 +21,12 @@ export const API_ROUTES = {
     byId: (uuid: string) => `/api/teams/${encodeURIComponent(uuid)}`,
     members: (uuid: string) => `/api/teams/${encodeURIComponent(uuid)}/members`,
     removeMember: (uuid: string, userId: number) => `/api/teams/${encodeURIComponent(uuid)}/members/${encodeURIComponent(userId)}`,
+  },
+  trash: {
+    base: '/api/trash',
+    deletePermanent: (uuid: string) => `/api/trash/${encodeURIComponent(uuid)}`,
+    empty: '/api/trash/empty',
+    restore: (uuid: string) => `/api/trash/${encodeURIComponent(uuid)}/restore`,
   },
   users: {
     search: (q: string) => `/api/users/search?q=${encodeURIComponent(q)}`,

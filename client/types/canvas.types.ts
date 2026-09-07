@@ -9,6 +9,7 @@ export interface CanvasItem {
   data?: string | null;
   preview_thumbnail?: string | null;
   access_level?: 'private' | 'public';
+  deleted_at?: string | null;
   is_local?: boolean;
   created_at: string;
   updated_at?: string;

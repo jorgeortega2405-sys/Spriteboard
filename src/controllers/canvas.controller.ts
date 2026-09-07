@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
-import { addCanvasMember, addCanvasTeam, createCanvas, getCanvasByUuid, getCanvasMembers, getCanvasTeams, getUserCanvases, removeCanvasMember, removeCanvasTeam, searchUsersForSharing, syncCanvas, updateCanvasAccessLevel } from '../services/canvas.service.js';
+import { addCanvasMember, addCanvasTeam, createCanvas, deleteCanvas, duplicateCanvas, emptyTrash, getCanvasByUuid, getCanvasMembers, getCanvasTeams, getUserCanvases, getUserTrashCanvases, permanentlyDeleteCanvas, removeCanvasMember, removeCanvasTeam, restoreCanvas, searchUsersForSharing, syncCanvas, updateCanvasAccessLevel } from '../services/canvas.service.js';
 import { logger } from '../services/logger.service.js';
 
 export async function listCanvases(req: Request, res: Response): Promise<void> {
@@ -53,7 +53,7 @@ export async function createCanvasHandler(req: Request, res: Response): Promise<
 export async function syncCanvasHandler(req: Request, res: Response): Promise<void> {
   try {
     const user = getCurrentUser(req);
-    const { uuid, name, width, height, unit, data, preview_thumbnail, access_level } = req.body;
+    const { id, uuid, name, width, height, unit, data, preview_thumbnail, access_level } = req.body;
 
     if (!uuid || typeof uuid !== 'string' || uuid.trim().length === 0) {
       res.status(400).json({ error: 'Identificador único de lienzo requerido.' });
@@ -64,6 +64,7 @@ export async function syncCanvasHandler(req: Request, res: Response): Promise<vo
     const numHeight = Number(height) || 1080;
 
     const canvas = await syncCanvas(user ? user.id : null, {
+      id: id ? Number(id) : undefined,
       uuid,
       name,
       width: numWidth,
@@ -76,6 +77,10 @@ export async function syncCanvasHandler(req: Request, res: Response): Promise<vo
 
     res.json({ success: true, canvas });
   } catch (err: any) {
+    if (err?.message?.includes('eliminado')) {
+      res.status(404).json({ error: 'El lienzo ha sido eliminado.' });
+      return;
+    }
     if (err?.message?.includes('privado') || err?.message?.includes('otra cuenta')) {
       res.status(403).json({ error: 'No tienes permiso para modificar este lienzo.' });
       return;
@@ -282,6 +287,145 @@ export async function removeCanvasTeamHandler(req: Request, res: Response): Prom
   } catch (err: any) {
     logger.app.error(`Error al remover equipo del lienzo ${req.params.uuid}`, err);
     res.status(500).json({ error: 'No se pudo remover al equipo.' });
+  }
+}
+
+export async function deleteCanvasHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const user = getCurrentUser(req);
+    if (!user) {
+      res.status(401).json({ error: 'No autorizado.' });
+      return;
+    }
+
+    const { uuid } = req.params;
+    if (!uuid || typeof uuid !== 'string') {
+      res.status(400).json({ error: 'Identificador de lienzo inválido.' });
+      return;
+    }
+
+    await deleteCanvas(uuid, user.id);
+    res.json({ success: true });
+  } catch (err: any) {
+    if (err?.message?.includes('Solo el propietario')) {
+      res.status(403).json({ error: 'Solo el propietario puede eliminar este lienzo.' });
+      return;
+    }
+    logger.app.error(`Error al eliminar lienzo ${req.params.uuid}`, err);
+    res.status(500).json({ error: 'Ha ocurrido un error al eliminar el lienzo.' });
+  }
+}
+
+export async function duplicateCanvasHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const user = getCurrentUser(req);
+    if (!user) {
+      res.status(401).json({ error: 'No autorizado.' });
+      return;
+    }
+
+    const { uuid } = req.params;
+    if (!uuid || typeof uuid !== 'string') {
+      res.status(400).json({ error: 'Identificador de lienzo inválido.' });
+      return;
+    }
+
+    const canvas = await duplicateCanvas(uuid, user.id);
+    res.status(201).json({ success: true, canvas });
+  } catch (err: any) {
+    if (err?.message?.includes('No tienes acceso')) {
+      res.status(403).json({ error: 'No tienes permisos para duplicar este lienzo.' });
+      return;
+    }
+    logger.app.error(`Error al duplicar lienzo ${req.params.uuid}`, err);
+    res.status(500).json({ error: 'Ha ocurrido un error al duplicar el lienzo.' });
+  }
+}
+
+export async function listTrashCanvases(req: Request, res: Response): Promise<void> {
+  try {
+    const user = getCurrentUser(req);
+    if (!user) {
+      res.status(401).json({ error: 'No autorizado.' });
+      return;
+    }
+    const canvases = await getUserTrashCanvases(user.id);
+    res.json({ canvases });
+  } catch (err) {
+    logger.app.error('Error al listar elementos de la papelera en canvas controller', err);
+    res.status(500).json({ error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.' });
+  }
+}
+
+export async function restoreCanvasHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const user = getCurrentUser(req);
+    if (!user) {
+      res.status(401).json({ error: 'No autorizado.' });
+      return;
+    }
+
+    const { uuid } = req.params;
+    if (!uuid || typeof uuid !== 'string') {
+      res.status(400).json({ error: 'Identificador de lienzo inválido.' });
+      return;
+    }
+
+    const canvas = await restoreCanvas(uuid, user.id);
+    res.json({ success: true, canvas });
+  } catch (err: any) {
+    if (err?.message?.includes('Solo el propietario')) {
+      res.status(403).json({ error: 'Solo el propietario puede restaurar este lienzo.' });
+      return;
+    }
+    if (err?.message?.includes('no está en la papelera')) {
+      res.status(404).json({ error: 'El lienzo no está en la papelera.' });
+      return;
+    }
+    logger.app.error(`Error al restaurar lienzo ${req.params.uuid}`, err);
+    res.status(500).json({ error: 'Ha ocurrido un error al restaurar el lienzo.' });
+  }
+}
+
+export async function permanentlyDeleteCanvasHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const user = getCurrentUser(req);
+    if (!user) {
+      res.status(401).json({ error: 'No autorizado.' });
+      return;
+    }
+
+    const { uuid } = req.params;
+    if (!uuid || typeof uuid !== 'string') {
+      res.status(400).json({ error: 'Identificador de lienzo inválido.' });
+      return;
+    }
+
+    await permanentlyDeleteCanvas(uuid, user.id);
+    res.json({ success: true });
+  } catch (err: any) {
+    if (err?.message?.includes('Solo el propietario')) {
+      res.status(403).json({ error: 'Solo el propietario puede eliminar permanentemente este lienzo.' });
+      return;
+    }
+    logger.app.error(`Error al eliminar permanentemente lienzo ${req.params.uuid}`, err);
+    res.status(500).json({ error: 'Ha ocurrido un error al eliminar el lienzo.' });
+  }
+}
+
+export async function emptyTrashHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const user = getCurrentUser(req);
+    if (!user) {
+      res.status(401).json({ error: 'No autorizado.' });
+      return;
+    }
+
+    await emptyTrash(user.id);
+    res.json({ success: true });
+  } catch (err: any) {
+    logger.app.error('Error al vaciar papelera en canvas controller', err);
+    res.status(500).json({ error: 'Ha ocurrido un error al vaciar la papelera.' });
   }
 }
 

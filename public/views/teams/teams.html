@@ -13,25 +13,21 @@
           <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-toggle-search" data-tooltip="Buscar equipos" aria-label="Buscar equipos">
             <span class="material-symbols-rounded">search</span>
           </button>
-          <button type="button" class="btn btn--h40 btn--black" data-ref="btn-create-team">
+          <button type="button" class="btn btn--h40 btn--black btn--icon" data-ref="btn-create-team" data-tooltip="Crear equipo" aria-label="Crear equipo">
             <span class="material-symbols-rounded">group_add</span>
-            <span data-i18n="teams.create_btn">Crear equipo</span>
           </button>
         </div>
 
         <!-- Acciones contextuales al seleccionar items -->
         <div class="component-top-actions" data-ref="teams-selected-actions" style="display: none;">
-          <button type="button" class="btn btn--h40 btn--semi-black" data-ref="btn-action-members">
+          <button type="button" class="btn btn--h40 btn--semi-black btn--icon" data-ref="btn-action-members" data-tooltip="Miembros" aria-label="Miembros">
             <span class="material-symbols-rounded">groups</span>
-            <span data-i18n="teams.btn_members">Miembros</span>
           </button>
-          <button type="button" class="btn btn--h40 btn--semi-black" data-ref="btn-action-edit">
+          <button type="button" class="btn btn--h40 btn--semi-black btn--icon" data-ref="btn-action-edit" data-tooltip="Editar" aria-label="Editar">
             <span class="material-symbols-rounded">edit</span>
-            <span data-i18n="teams.btn_edit">Editar</span>
           </button>
-          <button type="button" class="btn btn--h40 btn--danger" data-ref="btn-action-delete">
+          <button type="button" class="btn btn--h40 btn--danger btn--icon" data-ref="btn-action-delete" data-tooltip="Eliminar" aria-label="Eliminar">
             <span class="material-symbols-rounded">delete</span>
-            <span data-i18n="teams.btn_delete">Eliminar</span>
           </button>
           <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-action-clear-selection" data-tooltip="Deseleccionar" aria-label="Deseleccionar">
             <span class="material-symbols-rounded">close</span>
@@ -56,14 +52,11 @@
     </div>
 
     <!-- Component Bottom -->
-    <div class="component-bottom" data-ref="component-bottom">
+    <div class="component-bottom component-bottom--no-padding" data-ref="component-bottom">
       <div class="component-table-wrapper" data-ref="teams-table-wrapper">
         <table class="component-table" data-ref="teams-table">
           <thead class="component-table__head" data-ref="teams-thead">
             <tr>
-              <th style="width: 44px; text-align: center;">
-                <input class="component-table__checkbox" data-ref="checkbox-select-all" type="checkbox" aria-label="Seleccionar todos" />
-              </th>
               <th data-ref="th-team" data-i18n="teams.col_team">Equipo</th>
               <th data-ref="th-desc" data-i18n="teams.col_desc">Descripción</th>
               <th data-ref="th-members" data-i18n="teams.col_members">Miembros</th>
@@ -77,12 +70,41 @@
         </table>
 
         <!-- Estado vacío -->
-        <div class="component-empty-state" data-ref="teams-empty-state" style="display: none;">
-          <span class="material-symbols-rounded component-empty-state__icon" data-ref="empty-icon">groups</span>
-          <p class="component-empty-state__text" data-ref="teams-empty-text" data-i18n="teams.empty_desc"></p>
-          <button type="button" class="btn btn--h40 btn--black" data-ref="btn-empty-create-team" data-i18n="teams.empty_action">
-            Crear tu primer equipo
-          </button>
+        <div class="component-empty-state component-empty-state--table" data-ref="teams-empty-state" style="display: none;">
+          <div class="component-empty-state-graphic" data-ref="empty-graphic">
+            <svg class="component-empty-state-svg" viewBox="0 0 140 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="userGradMain" x1="35" y1="35" x2="105" y2="105" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stop-color="#52525b"></stop>
+                  <stop offset="50%" stop-color="#3f3f46"></stop>
+                  <stop offset="100%" stop-color="#27272a"></stop>
+                </linearGradient>
+                <linearGradient id="userGradBack" x1="30" y1="20" x2="80" y2="80" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stop-color="#3f3f46"></stop>
+                  <stop offset="100%" stop-color="#18181b"></stop>
+                </linearGradient>
+              </defs>
+              <g opacity="0.6">
+                <circle cx="48" cy="46" r="14" fill="url(#userGradBack)" stroke="#52525b" stroke-width="1.5"></circle>
+                <path d="M28 84 C28 70 38 68 48 68 C58 68 68 70 68 84 Z" fill="url(#userGradBack)" stroke="#52525b" stroke-width="1.5"></path>
+              </g>
+              <g opacity="0.6">
+                <circle cx="92" cy="46" r="14" fill="url(#userGradBack)" stroke="#52525b" stroke-width="1.5"></circle>
+                <path d="M72 84 C72 70 82 68 92 68 C102 68 112 70 112 84 Z" fill="url(#userGradBack)" stroke="#52525b" stroke-width="1.5"></path>
+              </g>
+              <circle cx="70" cy="50" r="18" fill="url(#userGradMain)" stroke="#71717a" stroke-width="2"></circle>
+              <circle cx="70" cy="46" r="6" fill="#e4e4e7" opacity="0.8"></circle>
+              <path d="M44 98 C44 80 56 76 70 76 C84 76 96 80 96 98 Z" fill="url(#userGradMain)" stroke="#71717a" stroke-width="2"></path>
+              <rect x="62" y="82" width="16" height="4" rx="2" fill="#e4e4e7" opacity="0.5"></rect>
+              <g>
+                <path d="M116 28 L117.5 32.5 L122 34 L117.5 35.5 L116 40 L114.5 35.5 L110 34 L114.5 32.5 Z" fill="#e4e4e7"></path>
+                <path d="M22 46 L23 49 L26 50 L23 51 L22 54 L21 51 L18 50 L21 49 Z" fill="#a1a1aa"></path>
+                <path d="M102 96 L103 98 L105 99 L103 100 L102 102 L101 100 L99 99 L101 98 Z" fill="#71717a"></path>
+              </g>
+            </svg>
+          </div>
+          <h2 class="component-empty-state-title" data-ref="teams-empty-title" data-i18n="teams.empty_title"></h2>
+          <p class="component-empty-state-desc" data-ref="teams-empty-text" data-i18n="teams.empty_desc"></p>
         </div>
       </div>
     </div>

@@ -10,7 +10,7 @@ import { setToastPreferences, showToast } from '../services/toast.service';
 import { closeWebSocket } from '../services/websocket.service';
 import { ModalInstance } from '../types/common.types';
 import { BillingDetailsResponse, PaymentMethod, PurchaseRecord } from '../types/subscription.types';
-import { debounce, setupDropdown, setupPasswordToggle, withButtonLoading } from '../utils/dom.util';
+import { debounce, getEmptyGraphicSvg, setupDropdown, setupPasswordToggle, withButtonLoading } from '../utils/dom.util';
 import { AVAILABLE_LANGUAGES, detectBrowserLanguage, getLanguageName } from '../utils/languages.util';
 import { validatePassword } from '../utils/validators.util';
 
@@ -2020,6 +2020,10 @@ export async function createPurchasesView(): Promise<HTMLElement> {
     if (purchases.length === 0) {
       if (tableEl) tableEl.style.display = 'none';
       if (emptyState) emptyState.style.display = 'flex';
+      const emptyGraphic = container.querySelector<HTMLElement>('[data-ref="purchases-empty-graphic"]');
+      if (emptyGraphic) {
+        emptyGraphic.innerHTML = getEmptyGraphicSvg(isSearchResult ? 'search' : 'subscriptions');
+      }
       if (emptyText) {
         emptyText.textContent = isSearchResult
           ? t('settings.purchases.search_no_results') ||

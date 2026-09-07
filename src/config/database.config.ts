@@ -290,12 +290,31 @@ export async function runMigrations(): Promise<void> {
         unit VARCHAR(20) NOT NULL DEFAULT 'px',
         data JSON NULL,
         preview_thumbnail MEDIUMTEXT NULL,
+        access_level ENUM('private', 'public') NOT NULL DEFAULT 'private',
+        deleted_at TIMESTAMP NULL DEFAULT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_canvases_user (user_id),
-        INDEX idx_canvases_uuid (uuid)
+        INDEX idx_canvases_uuid (uuid),
+        INDEX idx_canvases_deleted_at (deleted_at)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
+
+    const [accessCols] = await conn.query<mysql.RowDataPacket[]>(
+      "SHOW COLUMNS FROM db_canvas.canvases LIKE 'access_level'"
+    );
+    if (accessCols.length === 0) {
+      await conn.query("ALTER TABLE db_canvas.canvases ADD COLUMN access_level ENUM('private', 'public') NOT NULL DEFAULT 'private' AFTER preview_thumbnail");
+      logger.db.info('Columna access_level añadida a db_canvas.canvases.');
+    }
+
+    const [delCols] = await conn.query<mysql.RowDataPacket[]>(
+      "SHOW COLUMNS FROM db_canvas.canvases LIKE 'deleted_at'"
+    );
+    if (delCols.length === 0) {
+      await conn.query('ALTER TABLE db_canvas.canvases ADD COLUMN deleted_at TIMESTAMP NULL DEFAULT NULL, ADD INDEX idx_canvases_deleted_at (deleted_at)');
+      logger.db.info('Columna deleted_at añadida a db_canvas.canvases.');
+    }
 
     await conn.query(`
       CREATE TABLE IF NOT EXISTS db_canvas.canvas_members (

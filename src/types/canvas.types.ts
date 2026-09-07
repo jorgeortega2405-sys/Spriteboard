@@ -9,6 +9,7 @@ export interface Canvas {
   data: string | null;
   preview_thumbnail: string | null;
   access_level: 'private' | 'public';
+  deleted_at?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -23,6 +24,7 @@ export interface CreateCanvasDto {
 }
 
 export interface SyncCanvasDto {
+  id?: number;
   uuid: string;
   name?: string;
   width: number;

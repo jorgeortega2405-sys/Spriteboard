@@ -1,12 +1,129 @@
 <div class="layout-content" data-ref="trash-view">
-  <div class="layout-body layout-body--scrollable layout-scrollable" data-ref="trash-scrollable">
-    <div class="trash-main-area" data-ref="trash-main-area">
-      <div class="trash-empty-box" data-ref="trash-empty-box" style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 10px; padding: 24px;">
-        <span class="material-symbols-rounded" data-ref="trash-icon" style="font-size: 48px; color: var(--text-muted);">delete_outline</span>
-        <h2 class="trash-empty-title" data-ref="trash-empty-title" data-i18n="trash.empty_title" style="font-size: 20px; font-weight: 600; color: var(--text-primary); margin: 0;">
-        </h2>
-        <p class="trash-empty-desc" data-ref="trash-empty-desc" data-i18n="trash.empty_desc" style="font-size: 14px; color: var(--text-secondary); margin: 0;">
-        </p>
+  <div class="component-wrapper component-wrapper--full" data-ref="trash-wrapper">
+    <!-- Component Top -->
+    <div class="component-top" data-ref="component-top">
+      <div class="component-top-left" data-ref="component-top-left">
+        <h1 class="component-top-title" data-ref="trash-title" data-i18n="trash.title">Papelera de reciclaje</h1>
+        <span class="component-selection-badge" data-ref="trash-selection-count" style="display: none;"></span>
+      </div>
+
+      <div class="component-top-right" data-ref="component-top-right">
+        <!-- Acciones por defecto -->
+        <div class="component-top-actions" data-ref="trash-default-actions">
+          <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-toggle-search" data-tooltip="Buscar en papelera" aria-label="Buscar en papelera">
+            <span class="material-symbols-rounded">search</span>
+          </button>
+          <button type="button" class="btn btn--h40 btn--danger btn--icon" data-ref="btn-empty-trash" data-tooltip="Vaciar papelera" aria-label="Vaciar papelera">
+            <span class="material-symbols-rounded">delete_sweep</span>
+          </button>
+        </div>
+
+        <!-- Acciones contextuales al seleccionar items -->
+        <div class="component-top-actions" data-ref="trash-selected-actions" style="display: none;">
+          <button type="button" class="btn btn--h40 btn--semi-black btn--icon" data-ref="btn-action-restore" data-tooltip="Restaurar" aria-label="Restaurar">
+            <span class="material-symbols-rounded">restore_from_trash</span>
+          </button>
+          <button type="button" class="btn btn--h40 btn--danger btn--icon" data-ref="btn-action-delete-forever" data-tooltip="Eliminar definitivamente" aria-label="Eliminar definitivamente">
+            <span class="material-symbols-rounded">delete_forever</span>
+          </button>
+          <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-action-clear-selection" data-tooltip="Deseleccionar" aria-label="Deseleccionar">
+            <span class="material-symbols-rounded">close</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Toolbar de búsqueda flotante -->
+      <div class="component-search-toolbar is-hidden" data-ref="search-toolbar">
+        <div class="component-search component-search--full" data-ref="search-box">
+          <div class="component-search__icon" data-ref="search-icon">
+            <span class="material-symbols-rounded">search</span>
+          </div>
+          <div class="component-search__input-box" data-ref="search-input-box">
+            <input class="component-search__input" data-ref="trash-search-input" data-i18n-placeholder="trash.search_placeholder" type="text" maxlength="100" autocomplete="off" />
+          </div>
+          <button type="button" class="btn btn--h34 btn--icon btn--clear-search" data-ref="btn-clear-search" style="display: none; margin-right: 4px;" aria-label="Limpiar búsqueda">
+            <span class="material-symbols-rounded" style="font-size: 18px;">close</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Component Bottom -->
+    <div class="component-bottom component-bottom--no-padding" data-ref="component-bottom">
+      <div class="component-table-wrapper" data-ref="trash-table-wrapper">
+        <table class="component-table" data-ref="trash-table">
+          <thead class="component-table__head" data-ref="trash-thead">
+            <tr>
+              <th data-ref="th-name" data-i18n="trash.col_name">Lienzo</th>
+              <th data-ref="th-dimensions" data-i18n="trash.col_dimensions">Dimensiones</th>
+              <th data-ref="th-deleted-date" data-i18n="trash.col_deleted_date">Fecha de eliminación</th>
+              <th data-ref="th-expires" data-i18n="trash.col_expires">Eliminación definitiva</th>
+              <th class="text-right" data-ref="th-actions" data-i18n="trash.col_actions">Acciones</th>
+            </tr>
+          </thead>
+          <tbody class="component-table__body" data-ref="trash-tbody">
+            <!-- Filas inyectadas dinámicamente -->
+          </tbody>
+        </table>
+
+        <!-- Estado vacío -->
+        <div class="component-empty-state component-empty-state--table" data-ref="trash-empty-state" style="display: none;">
+          <div class="component-empty-state-graphic" data-ref="empty-graphic">
+            <svg class="component-empty-state-svg" viewBox="0 0 140 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="trashCanGrad" x1="40" y1="56" x2="100" y2="120" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stop-color="#52525b"></stop>
+                  <stop offset="45%" stop-color="#3f3f46"></stop>
+                  <stop offset="100%" stop-color="#18181b"></stop>
+                </linearGradient>
+                <linearGradient id="trashLidGrad" x1="30" y1="20" x2="80" y2="60" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stop-color="#71717a"></stop>
+                  <stop offset="50%" stop-color="#52525b"></stop>
+                  <stop offset="100%" stop-color="#27272a"></stop>
+                </linearGradient>
+                <linearGradient id="trashHighlight" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#ffffff" stop-opacity="0.35"></stop>
+                  <stop offset="100%" stop-color="#ffffff" stop-opacity="0"></stop>
+                </linearGradient>
+                <linearGradient id="butterflyWing" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stop-color="#f4f4f5"></stop>
+                  <stop offset="100%" stop-color="#a1a1aa"></stop>
+                </linearGradient>
+                <linearGradient id="butterflyLowerWing" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stop-color="#d4d4d8"></stop>
+                  <stop offset="100%" stop-color="#71717a"></stop>
+                </linearGradient>
+              </defs>
+              <path d="M46 62 L52 116 C52.5 122 87.5 122 88 116 L94 62 Z" fill="url(#trashCanGrad)"></path>
+              <rect x="55" y="66" width="5" height="48" rx="2.5" fill="rgba(255,255,255,0.12)"></rect>
+              <rect x="67.5" y="66" width="5" height="50" rx="2.5" fill="rgba(255,255,255,0.2)"></rect>
+              <rect x="80" y="66" width="5" height="48" rx="2.5" fill="rgba(0,0,0,0.3)"></rect>
+              <ellipse cx="70" cy="62" rx="25" ry="7" fill="#27272a"></ellipse>
+              <ellipse cx="70" cy="62" rx="22" ry="5.5" fill="#18181b"></ellipse>
+              <ellipse cx="70" cy="62" rx="16" ry="3.5" fill="#3f3f46" opacity="0.6"></ellipse>
+              <g transform="rotate(-24 46 44)">
+                <ellipse cx="64" cy="46" rx="28" ry="7" fill="url(#trashLidGrad)"></ellipse>
+                <path d="M38 46 C38 36 90 36 90 46 Z" fill="url(#trashLidGrad)"></path>
+                <path d="M42 43 C46 38 82 38 86 43" stroke="url(#trashHighlight)" stroke-width="2" stroke-linecap="round" fill="none"></path>
+                <path d="M58 35 C58 30 70 30 70 35" stroke="#e4e4e7" stroke-width="3" stroke-linecap="round" fill="none"></path>
+              </g>
+              <g transform="translate(90, 36)">
+                <path d="M-1 -1 C-6 -8 -13 -6 -10 1 C-8 4 -3 2 -1 0 Z" fill="url(#butterflyWing)"></path>
+                <path d="M1 -1 C6 -8 13 -6 10 1 C8 4 3 2 1 0 Z" fill="url(#butterflyWing)"></path>
+                <path d="M-1 1 C-6 5 -10 9 -6 11 C-3 11 -1 5 -1 1 Z" fill="url(#butterflyLowerWing)"></path>
+                <path d="M1 1 C6 5 10 9 6 11 C3 11 1 5 1 1 Z" fill="url(#butterflyLowerWing)"></path>
+                <ellipse cx="0" cy="1" rx="1.5" ry="5.5" fill="#27272a"></ellipse>
+              </g>
+              <g>
+                <path d="M108 24 L109.5 28.5 L114 30 L109.5 31.5 L108 36 L106.5 31.5 L102 30 L106.5 28.5 Z" fill="#e4e4e7"></path>
+                <path d="M30 42 L31 45 L34 46 L31 47 L30 50 L29 47 L26 46 L29 45 Z" fill="#a1a1aa"></path>
+                <path d="M84 18 L85 20 L87 21 L85 22 L84 24 L83 22 L81 21 L83 20 Z" fill="#71717a"></path>
+              </g>
+            </svg>
+          </div>
+          <h2 class="component-empty-state-title" data-ref="trash-empty-title" data-i18n="trash.empty_title">Papelera de reciclaje vacía</h2>
+          <p class="component-empty-state-desc" data-ref="trash-empty-text" data-i18n="trash.empty_desc"></p>
+        </div>
       </div>
     </div>
   </div>

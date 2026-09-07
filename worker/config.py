@@ -17,6 +17,13 @@ class Config:
     CASSANDRA_KEYSPACE = os.getenv("CASSANDRA_KEYSPACE", "spriteboard_telemetry")
     CASSANDRA_LOCAL_DC = os.getenv("CASSANDRA_LOCAL_DC", "datacenter1")
 
+    # MySQL Settings
+    DB_HOST = os.getenv("DB_HOST", "mysql")
+    DB_PORT = int(os.getenv("DB_PORT", "3306"))
+    DB_USER = os.getenv("DB_USER", "sprite_user")
+    DB_PASSWORD = os.getenv("DB_PASSWORD", "sprite_password")
+    DB_CANVAS_NAME = os.getenv("DB_CANVAS_NAME", "db_canvas")
+
     # Logging
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 

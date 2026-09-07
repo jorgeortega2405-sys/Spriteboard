@@ -1398,6 +1398,9 @@ class DesignController {
     const ctx = thumbCanvas.getContext('2d');
     if (!ctx) return '';
 
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
+
     const firstFrame = this.frames[0];
     if (firstFrame) {
       for (const layer of firstFrame.layers) {
@@ -1517,6 +1520,7 @@ class DesignController {
       if (currentUser) {
         try {
           const res = await postApi(API_ROUTES.canvases.sync, {
+            id: this.canvasServerId || undefined,
             uuid: this.canvasUuid,
             name: this.canvasName,
             width: this.canvasWidth,
@@ -1538,7 +1542,7 @@ class DesignController {
                 await markLocalCanvasAsSynced(this.canvasUuid, data.canvas.id);
               }
             }
-          } else if (res.status === 403 || res.status === 401) {
+          } else if (res.status === 403 || res.status === 401 || res.status === 404) {
             this.handleAccessRevoked();
           }
         } catch {}
@@ -3277,6 +3281,7 @@ class DesignController {
       this.shareBtn.addEventListener(
         'click',
         () => {
+          if (!this.isOwner) return;
           this.loadCanvasMembers();
           this.loadCanvasTeams();
           this.loadUserTeamsForSelect();
@@ -5269,6 +5274,10 @@ class DesignController {
       this.accessLevelTriggerBtn.style.opacity = this.isOwner ? '1' : '0.7';
       this.accessLevelTriggerBtn.style.cursor = this.isOwner ? 'pointer' : 'default';
     }
+
+    if (this.shareWrapperEl) {
+      this.shareWrapperEl.style.display = this.isOwner ? '' : 'none';
+    }
   }
 
   private async loadCanvasMembers(): Promise<void> {
@@ -5810,7 +5819,7 @@ export async function createDesignView(canvasUuid: string): Promise<HTMLElement>
   const loaded = await controller.init();
   if (!loaded) {
     controller.destroy();
-    return createErrorView({ code: '404' });
+    return await createErrorView({ code: '404' });
   }
   return container;
 }

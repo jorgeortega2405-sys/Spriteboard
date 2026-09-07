@@ -1,14 +1,13 @@
-import { navigate } from '../app-router.js';
 import { createSidebar } from '../components/layout.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { currentUser, deleteApi, escapeHtml, getApi, patchApi, postApi } from '../services/api.service.js';
-import { renderIcons } from '../services/icon.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
+import { renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { SearchUserResult } from '../types/canvas.types.js';
 import { Team, TeamMember } from '../types/team.types.js';
-import { setupDropdown } from '../utils/dom.util.js';
+import { getEmptyGraphicSvg, setupDropdown } from '../utils/dom.util.js';
 
 function formatDate(iso?: string): string {
   if (!iso) return '—';
@@ -39,7 +38,6 @@ class TeamsController {
   private tbodyEl: HTMLElement | null = null;
   private emptyStateEl: HTMLElement | null = null;
   private emptyTextEl: HTMLElement | null = null;
-  private checkboxSelectAll: HTMLInputElement | null = null;
   private selectionCountBadge: HTMLElement | null = null;
 
   private defaultActions: HTMLElement | null = null;
@@ -82,7 +80,6 @@ class TeamsController {
     this.tbodyEl = this.container.querySelector<HTMLElement>('[data-ref="teams-tbody"]');
     this.emptyStateEl = this.container.querySelector<HTMLElement>('[data-ref="teams-empty-state"]');
     this.emptyTextEl = this.container.querySelector<HTMLElement>('[data-ref="teams-empty-text"]');
-    this.checkboxSelectAll = this.container.querySelector<HTMLInputElement>('[data-ref="checkbox-select-all"]');
     this.selectionCountBadge = this.container.querySelector<HTMLElement>('[data-ref="teams-selection-count"]');
 
     this.defaultActions = this.container.querySelector<HTMLElement>('[data-ref="teams-default-actions"]');
@@ -192,16 +189,6 @@ class TeamsController {
       });
 
       this.renderRows(filtered, true);
-    }, { signal });
-
-    this.checkboxSelectAll?.addEventListener('change', () => {
-      const isChecked = Boolean(this.checkboxSelectAll?.checked);
-      if (isChecked) {
-        this.visibleTeams.forEach((t) => this.selectedTeamUuids.add(t.uuid));
-      } else {
-        this.visibleTeams.forEach((t) => this.selectedTeamUuids.delete(t.uuid));
-      }
-      this.updateSelectionUi();
     }, { signal });
 
     this.btnActionClearSelection?.addEventListener('click', () => {
@@ -320,10 +307,20 @@ class TeamsController {
     if (teams.length === 0) {
       if (this.tableEl) this.tableEl.style.display = 'none';
       if (this.emptyStateEl) this.emptyStateEl.style.display = 'flex';
-      if (this.emptyTextEl) {
-        this.emptyTextEl.textContent = isSearchResult
-          ? t('teams.search_no_results') || 'No se encontraron equipos que coincidan con la búsqueda.'
-          : t('teams.empty_desc') || 'Crea un equipo de trabajo para compartir lienzos con varias personas a la vez con un solo clic.';
+      const emptyTitleEl = this.container.querySelector<HTMLElement>('[data-ref="teams-empty-title"]');
+      const emptyGraphicEl = this.container.querySelector<HTMLElement>('[data-ref="empty-graphic"]');
+      if (isSearchResult) {
+        if (emptyTitleEl) emptyTitleEl.textContent = t('teams.search_no_results_title') || 'Sin resultados';
+        if (this.emptyTextEl) {
+          this.emptyTextEl.textContent = t('teams.search_no_results') || 'No se encontraron equipos que coincidan con la búsqueda.';
+        }
+        if (emptyGraphicEl) emptyGraphicEl.innerHTML = getEmptyGraphicSvg('search');
+      } else {
+        if (emptyTitleEl) emptyTitleEl.textContent = t('teams.empty_title') || 'Aún no tienes equipos';
+        if (this.emptyTextEl) {
+          this.emptyTextEl.textContent = t('teams.empty_desc') || 'Crea un equipo de trabajo para compartir lienzos con varias personas a la vez con un solo clic.';
+        }
+        if (emptyGraphicEl) emptyGraphicEl.innerHTML = getEmptyGraphicSvg('users');
       }
       this.updateSelectionUi();
       return;
@@ -339,94 +336,43 @@ class TeamsController {
       tr.setAttribute('data-ref', `team-row-${team.uuid}`);
       tr.setAttribute('data-uuid', team.uuid);
 
-      const tdCheckbox = document.createElement('td');
-      tdCheckbox.style.width = '44px';
-      tdCheckbox.style.textAlign = 'center';
-
-      const checkbox = document.createElement('input');
-      checkbox.type = 'checkbox';
-      checkbox.className = 'component-table__checkbox';
-      checkbox.setAttribute('data-ref', 'team-checkbox');
-      checkbox.setAttribute('aria-label', `Seleccionar ${team.name}`);
-      checkbox.checked = this.selectedTeamUuids.has(team.uuid);
-
-      checkbox.addEventListener('click', (e) => {
-        e.stopPropagation();
-      });
-
-      checkbox.addEventListener('change', () => {
-        if (checkbox.checked) {
-          this.selectedTeamUuids.add(team.uuid);
-        } else {
-          this.selectedTeamUuids.delete(team.uuid);
-        }
-        this.updateSelectionUi();
-      });
-
-      tdCheckbox.appendChild(checkbox);
-
       const tdTeam = document.createElement('td');
-      const teamCell = document.createElement('div');
-      teamCell.className = 'team-cell';
-
-      const avatar = document.createElement('div');
-      avatar.className = 'team-cell__avatar';
-      avatar.style.backgroundColor = team.color || '#6366f1';
-      avatar.textContent = team.name.slice(0, 2).toUpperCase();
-
-      const name = document.createElement('span');
-      name.className = 'team-cell__name';
-      name.textContent = team.name;
-
-      teamCell.appendChild(avatar);
-      teamCell.appendChild(name);
-      tdTeam.appendChild(teamCell);
+      tdTeam.setAttribute('data-ref', `cell-team-${team.uuid}`);
+      tdTeam.innerHTML = `<span class="component-badge component-badge--sm" data-ref="badge-team-${team.uuid}">${escapeHtml(team.name)}</span>`;
 
       const tdDesc = document.createElement('td');
-      tdDesc.textContent = team.description || '—';
-      if (!team.description) {
-        tdDesc.style.color = 'var(--text-muted)';
-      }
+      tdDesc.setAttribute('data-ref', `cell-desc-${team.uuid}`);
+      tdDesc.innerHTML = `<span class="component-badge component-badge--sm" data-ref="badge-desc-${team.uuid}">${escapeHtml(team.description || '—')}</span>`;
 
       const tdMembers = document.createElement('td');
-      const membersBadge = document.createElement('span');
-      membersBadge.className = 'component-badge';
+      tdMembers.setAttribute('data-ref', `cell-members-${team.uuid}`);
       const count = Number(team.member_count) || 1;
-      membersBadge.textContent = `${count} ${count === 1 ? 'miembro' : 'miembros'}`;
-      tdMembers.appendChild(membersBadge);
+      tdMembers.innerHTML = `<span class="component-badge component-badge--sm" data-ref="badge-members-${team.uuid}">${count} ${count === 1 ? 'miembro' : 'miembros'}</span>`;
 
       const tdRole = document.createElement('td');
-      const roleBadge = document.createElement('span');
-      roleBadge.className = `team-badge team-badge--${team.user_role || 'member'}`;
-      roleBadge.textContent =
-        team.user_role === 'owner' ? 'Propietario' : team.user_role === 'admin' ? 'Admin' : 'Miembro';
-      tdRole.appendChild(roleBadge);
+      tdRole.setAttribute('data-ref', `cell-role-${team.uuid}`);
+      const roleText = team.user_role === 'owner' ? 'Propietario' : team.user_role === 'admin' ? 'Admin' : 'Miembro';
+      tdRole.innerHTML = `<span class="component-badge component-badge--sm" data-ref="badge-role-${team.uuid}">${escapeHtml(roleText)}</span>`;
 
       const tdDate = document.createElement('td');
       tdDate.className = 'text-right';
-      tdDate.textContent = formatDate(team.created_at);
+      tdDate.setAttribute('data-ref', `cell-date-${team.uuid}`);
+      tdDate.innerHTML = `<span class="component-badge component-badge--sm" data-ref="badge-date-${team.uuid}">${escapeHtml(formatDate(team.created_at))}</span>`;
 
-      tr.appendChild(tdCheckbox);
       tr.appendChild(tdTeam);
       tr.appendChild(tdDesc);
       tr.appendChild(tdMembers);
       tr.appendChild(tdRole);
       tr.appendChild(tdDate);
 
-      tr.addEventListener('click', (e) => {
-        const target = e.target as HTMLElement;
-        if (target.tagName === 'INPUT') return;
+      tr.addEventListener('click', () => {
         if (this.selectedTeamUuids.has(team.uuid)) {
           this.selectedTeamUuids.delete(team.uuid);
         } else {
           this.selectedTeamUuids.add(team.uuid);
         }
         this.updateSelectionUi();
-      });
-
-      tr.addEventListener('dblclick', () => {
-        void this.openMembersModal(team);
-      });
+      }, { signal: this.abortController.signal });
 
       this.tbodyEl.appendChild(tr);
     }
@@ -471,42 +417,18 @@ class TeamsController {
         if (this.btnActionDelete) {
           this.btnActionDelete.style.display = 'inline-flex';
           const isOwner = selectedTeam?.user_role === 'owner';
-          const deleteSpan = this.btnActionDelete.querySelector('span[data-i18n]');
-          if (deleteSpan) {
-            deleteSpan.textContent = isOwner ? 'Eliminar' : 'Salir';
-          }
+          const label = isOwner ? 'Eliminar' : 'Salir';
+          this.btnActionDelete.setAttribute('data-tooltip', label);
+          this.btnActionDelete.setAttribute('aria-label', label);
         }
       } else {
         if (this.btnActionMembers) this.btnActionMembers.style.display = 'none';
         if (this.btnActionEdit) this.btnActionEdit.style.display = 'none';
         if (this.btnActionDelete) {
           this.btnActionDelete.style.display = 'inline-flex';
-          const deleteSpan = this.btnActionDelete.querySelector('span[data-i18n]');
-          if (deleteSpan) {
-            deleteSpan.textContent = 'Eliminar';
-          }
+          this.btnActionDelete.setAttribute('data-tooltip', 'Eliminar');
+          this.btnActionDelete.setAttribute('aria-label', 'Eliminar');
         }
-      }
-    }
-
-    if (this.checkboxSelectAll) {
-      const visibleCount = this.visibleTeams.length;
-      let visibleSelectedCount = 0;
-      for (const t of this.visibleTeams) {
-        if (this.selectedTeamUuids.has(t.uuid)) {
-          visibleSelectedCount++;
-        }
-      }
-
-      if (visibleCount > 0 && visibleSelectedCount === visibleCount) {
-        this.checkboxSelectAll.checked = true;
-        this.checkboxSelectAll.indeterminate = false;
-      } else if (visibleSelectedCount > 0) {
-        this.checkboxSelectAll.checked = false;
-        this.checkboxSelectAll.indeterminate = true;
-      } else {
-        this.checkboxSelectAll.checked = false;
-        this.checkboxSelectAll.indeterminate = false;
       }
     }
 
@@ -516,8 +438,6 @@ class TeamsController {
       if (!uuid) return;
       const isSelected = this.selectedTeamUuids.has(uuid);
       row.classList.toggle('is-selected', isSelected);
-      const checkbox = row.querySelector<HTMLInputElement>('[data-ref="team-checkbox"]');
-      if (checkbox) checkbox.checked = isSelected;
     });
   }
 
@@ -860,12 +780,6 @@ class TeamsController {
 }
 
 export async function createTeamsView(): Promise<HTMLElement> {
-  if (!currentUser) {
-    navigate('/login');
-    const dummy = document.createElement('div');
-    return dummy;
-  }
-
   const container = await loadTemplate('/views/teams/teams.html');
   translateElement(container);
 

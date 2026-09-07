@@ -424,6 +424,7 @@
   --bg-hover: #f5f5fa;
   --bg-active: #ebecef;
   --bg-selected: #f1f3f5;
+  --bg-surface-elevated: #f0f1f5;
 
   --text-primary: #111827;
   --text-secondary: #4b5563;
@@ -551,6 +552,7 @@ body.dark-theme {
   --bg-hover: rgba(255, 255, 255, 0.07);
   --bg-active: rgba(255, 255, 255, 0.1);
   --bg-selected: rgba(255, 255, 255, 0.08);
+  --bg-surface-elevated: #23252c;
 
   --text-primary: #f4f4f5;
   --text-secondary: #d4d4d8;
@@ -658,6 +660,7 @@ body.dark-theme {
     --bg-hover: rgba(255, 255, 255, 0.07);
     --bg-active: rgba(255, 255, 255, 0.1);
     --bg-selected: rgba(255, 255, 255, 0.08);
+    --bg-surface-elevated: #23252c;
 
     --text-primary: #f4f4f5;
     --text-secondary: #d4d4d8;

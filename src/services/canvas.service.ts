@@ -47,7 +47,7 @@ export async function createCanvas(userId: number, dto: CreateCanvasDto): Promis
 export async function getUserCanvases(userId: number): Promise<Canvas[]> {
   try {
     const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
-      'SELECT id, uuid, user_id, name, width, height, unit, data, preview_thumbnail, access_level, created_at, updated_at FROM canvases WHERE user_id = ? ORDER BY created_at DESC',
+      'SELECT id, uuid, user_id, name, width, height, unit, data, preview_thumbnail, access_level, created_at, updated_at FROM canvases WHERE user_id = ? AND deleted_at IS NULL ORDER BY created_at DESC',
       [userId]
     );
     return rows as Canvas[];
@@ -60,7 +60,7 @@ export async function getUserCanvases(userId: number): Promise<Canvas[]> {
 export async function getCanvasByUuid(uuid: string, userId?: number): Promise<Canvas | null> {
   try {
     const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
-      'SELECT id, uuid, user_id, name, width, height, unit, data, preview_thumbnail, access_level, created_at, updated_at FROM canvases WHERE uuid = ? LIMIT 1',
+      'SELECT id, uuid, user_id, name, width, height, unit, data, preview_thumbnail, access_level, created_at, updated_at FROM canvases WHERE uuid = ? AND deleted_at IS NULL LIMIT 1',
       [uuid]
     );
 
@@ -108,7 +108,7 @@ export async function getCanvasByUuid(uuid: string, userId?: number): Promise<Ca
 export async function updateCanvasAccessLevel(uuid: string, userId: number, accessLevel: 'private' | 'public'): Promise<Canvas> {
   try {
     const [existing] = await canvasPool.query<mysql.RowDataPacket[]>(
-      'SELECT id, user_id FROM canvases WHERE uuid = ? LIMIT 1',
+      'SELECT id, user_id FROM canvases WHERE uuid = ? AND deleted_at IS NULL LIMIT 1',
       [uuid]
     );
 
@@ -151,12 +151,15 @@ export async function syncCanvas(userId: number | null, dto: SyncCanvasDto): Pro
 
   try {
     const [existing] = await canvasPool.query<mysql.RowDataPacket[]>(
-      'SELECT id, user_id, access_level FROM canvases WHERE uuid = ? LIMIT 1',
+      'SELECT id, user_id, access_level, deleted_at FROM canvases WHERE uuid = ? LIMIT 1',
       [uuid]
     );
 
     if (existing.length > 0) {
       const row = existing[0];
+      if (row.deleted_at !== null) {
+        throw new Error('El lienzo ha sido enviado a la papelera.');
+      }
       const isOwner = userId !== null && row.user_id === userId;
       const isPublic = row.access_level === 'public';
       let isMember = false;
@@ -195,6 +198,9 @@ export async function syncCanvas(userId: number | null, dto: SyncCanvasDto): Pro
         );
       }
     } else {
+      if (dto.id) {
+        throw new Error('El lienzo ha sido eliminado.');
+      }
       if (userId === null) {
         throw new Error('Debes iniciar sesión para crear un nuevo lienzo en la nube.');
       }
@@ -222,7 +228,7 @@ export async function syncCanvas(userId: number | null, dto: SyncCanvasDto): Pro
 export async function getCanvasMembers(uuid: string, currentUserId?: number): Promise<CanvasMember[]> {
   try {
     const [canvasRows] = await canvasPool.query<mysql.RowDataPacket[]>(
-      'SELECT id, user_id, access_level FROM canvases WHERE uuid = ? LIMIT 1',
+      'SELECT id, user_id, access_level FROM canvases WHERE uuid = ? AND deleted_at IS NULL LIMIT 1',
       [uuid]
     );
 
@@ -285,7 +291,7 @@ export async function addCanvasMember(
 ): Promise<CanvasMember> {
   try {
     const [canvasRows] = await canvasPool.query<mysql.RowDataPacket[]>(
-      'SELECT id, user_id FROM canvases WHERE uuid = ? LIMIT 1',
+      'SELECT id, user_id FROM canvases WHERE uuid = ? AND deleted_at IS NULL LIMIT 1',
       [uuid]
     );
 
@@ -339,7 +345,7 @@ export async function addCanvasMember(
 export async function removeCanvasMember(uuid: string, ownerUserId: number, targetUserId: number): Promise<boolean> {
   try {
     const [canvasRows] = await canvasPool.query<mysql.RowDataPacket[]>(
-      'SELECT id, user_id FROM canvases WHERE uuid = ? LIMIT 1',
+      'SELECT id, user_id FROM canvases WHERE uuid = ? AND deleted_at IS NULL LIMIT 1',
       [uuid]
     );
 
@@ -391,7 +397,7 @@ export async function searchUsersForSharing(query: string, currentUserId: number
 export async function getCanvasTeams(uuid: string, currentUserId?: number): Promise<CanvasTeam[]> {
   try {
     const [canvasRows] = await canvasPool.query<mysql.RowDataPacket[]>(
-      'SELECT id, user_id, access_level FROM canvases WHERE uuid = ? LIMIT 1',
+      'SELECT id, user_id, access_level FROM canvases WHERE uuid = ? AND deleted_at IS NULL LIMIT 1',
       [uuid]
     );
 
@@ -455,7 +461,7 @@ export async function addCanvasTeam(
 ): Promise<CanvasTeam> {
   try {
     const [canvasRows] = await canvasPool.query<mysql.RowDataPacket[]>(
-      'SELECT id, user_id FROM canvases WHERE uuid = ? LIMIT 1',
+      'SELECT id, user_id FROM canvases WHERE uuid = ? AND deleted_at IS NULL LIMIT 1',
       [uuid]
     );
 
@@ -506,7 +512,7 @@ export async function addCanvasTeam(
 export async function removeCanvasTeam(uuid: string, ownerUserId: number, teamId: number): Promise<boolean> {
   try {
     const [canvasRows] = await canvasPool.query<mysql.RowDataPacket[]>(
-      'SELECT id, user_id FROM canvases WHERE uuid = ? LIMIT 1',
+      'SELECT id, user_id FROM canvases WHERE uuid = ? AND deleted_at IS NULL LIMIT 1',
       [uuid]
     );
 
@@ -528,6 +534,169 @@ export async function removeCanvasTeam(uuid: string, ownerUserId: number, teamId
     return true;
   } catch (err: any) {
     logger.db.error(`Error al remover equipo del lienzo ${uuid}`, err);
+    throw err;
+  }
+}
+
+export async function deleteCanvas(uuid: string, userId: number): Promise<boolean> {
+  try {
+    const [canvasRows] = await canvasPool.query<mysql.RowDataPacket[]>(
+      'SELECT id, user_id, deleted_at FROM canvases WHERE uuid = ? LIMIT 1',
+      [uuid]
+    );
+
+    if (canvasRows.length === 0 || canvasRows[0].deleted_at !== null) {
+      throw new Error('El lienzo no existe.');
+    }
+
+    const canvas = canvasRows[0];
+    if (canvas.user_id !== userId) {
+      throw new Error('Solo el propietario puede eliminar este lienzo.');
+    }
+
+    await canvasPool.execute('UPDATE canvases SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?', [canvas.id]);
+    logger.db.info(`Lienzo ${uuid} movido a la papelera por el usuario ${userId}`);
+    return true;
+  } catch (err: any) {
+    logger.db.error(`Error al enviar lienzo ${uuid} a la papelera`, err);
+    throw err;
+  }
+}
+
+export async function getUserTrashCanvases(userId: number): Promise<Canvas[]> {
+  try {
+    const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
+      'SELECT id, uuid, user_id, name, width, height, unit, preview_thumbnail, access_level, deleted_at, created_at, updated_at FROM canvases WHERE user_id = ? AND deleted_at IS NOT NULL ORDER BY deleted_at DESC',
+      [userId]
+    );
+    return rows as Canvas[];
+  } catch (err) {
+    logger.db.error(`Error al listar elementos de la papelera para el usuario ${userId}`, err);
+    throw new Error('No se pudieron obtener los elementos de la papelera.');
+  }
+}
+
+export async function restoreCanvas(uuid: string, userId: number): Promise<Canvas> {
+  try {
+    const [canvasRows] = await canvasPool.query<mysql.RowDataPacket[]>(
+      'SELECT id, user_id, deleted_at FROM canvases WHERE uuid = ? LIMIT 1',
+      [uuid]
+    );
+
+    if (canvasRows.length === 0 || canvasRows[0].deleted_at === null) {
+      throw new Error('El lienzo no está en la papelera.');
+    }
+
+    const canvas = canvasRows[0];
+    if (canvas.user_id !== userId) {
+      throw new Error('Solo el propietario puede restaurar este lienzo.');
+    }
+
+    await canvasPool.execute('UPDATE canvases SET deleted_at = NULL WHERE id = ?', [canvas.id]);
+    logger.db.info(`Lienzo ${uuid} restaurado por el usuario ${userId}`);
+
+    const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
+      'SELECT * FROM canvases WHERE id = ? LIMIT 1',
+      [canvas.id]
+    );
+    return rows[0] as Canvas;
+  } catch (err: any) {
+    logger.db.error(`Error al restaurar lienzo ${uuid}`, err);
+    throw err;
+  }
+}
+
+export async function permanentlyDeleteCanvas(uuid: string, userId: number): Promise<boolean> {
+  try {
+    const [canvasRows] = await canvasPool.query<mysql.RowDataPacket[]>(
+      'SELECT id, user_id, deleted_at FROM canvases WHERE uuid = ? LIMIT 1',
+      [uuid]
+    );
+
+    if (canvasRows.length === 0) {
+      throw new Error('El lienzo no existe.');
+    }
+
+    const canvas = canvasRows[0];
+    if (canvas.user_id !== userId) {
+      throw new Error('Solo el propietario puede eliminar permanentemente este lienzo.');
+    }
+
+    await canvasPool.execute('DELETE FROM canvases WHERE id = ?', [canvas.id]);
+    logger.db.info(`Lienzo ${uuid} eliminado permanentemente por el usuario ${userId}`);
+    return true;
+  } catch (err: any) {
+    logger.db.error(`Error al eliminar permanentemente lienzo ${uuid}`, err);
+    throw err;
+  }
+}
+
+export async function emptyTrash(userId: number): Promise<boolean> {
+  try {
+    await canvasPool.execute('DELETE FROM canvases WHERE user_id = ? AND deleted_at IS NOT NULL', [userId]);
+    logger.db.info(`Papelera vaciada para el usuario ${userId}`);
+    return true;
+  } catch (err: any) {
+    logger.db.error(`Error al vaciar papelera para el usuario ${userId}`, err);
+    throw err;
+  }
+}
+
+export async function duplicateCanvas(uuid: string, userId: number): Promise<Canvas> {
+  try {
+    const [canvasRows] = await canvasPool.query<mysql.RowDataPacket[]>(
+      'SELECT id, user_id, name, width, height, unit, data, preview_thumbnail, access_level FROM canvases WHERE uuid = ? AND deleted_at IS NULL LIMIT 1',
+      [uuid]
+    );
+
+    if (canvasRows.length === 0) {
+      throw new Error('El lienzo no existe.');
+    }
+
+    const original = canvasRows[0];
+    const isOwner = original.user_id === userId;
+    const isPublic = original.access_level === 'public';
+
+    if (!isOwner && !isPublic) {
+      const [memberRows] = await canvasPool.query<mysql.RowDataPacket[]>(
+        'SELECT id FROM canvas_members WHERE canvas_id = ? AND user_id = ? LIMIT 1',
+        [original.id, userId]
+      );
+      if (memberRows.length === 0) {
+        const [teamRows] = await canvasPool.query<mysql.RowDataPacket[]>(
+          `SELECT ct.id FROM canvas_teams ct
+           INNER JOIN db_identity.team_members tm ON tm.team_id = ct.team_id
+           WHERE ct.canvas_id = ? AND tm.user_id = ? LIMIT 1`,
+          [original.id, userId]
+        );
+        if (teamRows.length === 0) {
+          throw new Error('No tienes acceso para duplicar este lienzo.');
+        }
+      }
+    }
+
+    const newUuid = crypto.randomUUID();
+    const newName = `${original.name} (Copia)`.slice(0, 255);
+    const dataStr = original.data !== null && original.data !== undefined
+      ? (typeof original.data === 'string' ? original.data : JSON.stringify(original.data))
+      : null;
+
+    const [result] = await canvasPool.execute<mysql.ResultSetHeader>(
+      `INSERT INTO canvases (uuid, user_id, name, width, height, unit, access_level, data, preview_thumbnail)
+       VALUES (?, ?, ?, ?, ?, ?, 'private', ?, ?)`,
+      [newUuid, userId, newName, original.width, original.height, original.unit, dataStr, original.preview_thumbnail]
+    );
+
+    logger.db.info(`Lienzo ${uuid} duplicado como ${newUuid} por usuario ${userId}`);
+
+    const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
+      'SELECT * FROM canvases WHERE id = ? LIMIT 1',
+      [result.insertId]
+    );
+
+    return rows[0] as Canvas;
+  } catch (err: any) {
+    logger.db.error(`Error al duplicar lienzo ${uuid}`, err);
     throw err;
   }
 }

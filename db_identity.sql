@@ -119,10 +119,12 @@ CREATE TABLE IF NOT EXISTS canvases (
     data JSON NULL,
     preview_thumbnail MEDIUMTEXT NULL,
     access_level ENUM('private', 'public') NOT NULL DEFAULT 'private',
+    deleted_at TIMESTAMP NULL DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_canvases_user (user_id),
-    INDEX idx_canvases_uuid (uuid)
+    INDEX idx_canvases_uuid (uuid),
+    INDEX idx_canvases_deleted_at (deleted_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS canvas_members (

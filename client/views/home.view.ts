@@ -1,9 +1,10 @@
 import { navigate } from '../app-router.js';
 import { openCreateCanvasModal } from '../components/create-canvas-modal.component.js';
 import { createSidebar } from '../components/layout.component.js';
+import { openModal } from '../components/modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
-import { currentUser, escapeHtml, getApi, postApi } from '../services/api.service.js';
-import { getAllLocalCanvases, markLocalCanvasAsSynced, removeLocalCanvas } from '../services/canvas-storage.service.js';
+import { currentUser, deleteApi, escapeHtml, getApi, postApi } from '../services/api.service.js';
+import { getAllLocalCanvases, getLocalCanvasByUuid, markLocalCanvasAsSynced, removeLocalCanvas, saveLocalCanvas } from '../services/canvas-storage.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { loadTemplate } from '../services/template.service.js';
@@ -15,6 +16,8 @@ class HomeController {
   private abortController: AbortController;
   private gridEl: HTMLElement | null = null;
   private emptyStateEl: HTMLElement | null = null;
+  private activeOpenDropdown: HTMLElement | null = null;
+  private activeOpenCard: HTMLElement | null = null;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -48,10 +51,35 @@ class HomeController {
       },
       { signal }
     );
+
+    document.addEventListener(
+      'click',
+      (e: MouseEvent) => {
+        const target = e.target as HTMLElement | null;
+        if (this.activeOpenDropdown && !this.activeOpenDropdown.contains(target) && !target?.closest('[data-ref="btn-card-more"]')) {
+          this.closeAllDropdowns();
+        }
+      },
+      { signal }
+    );
   }
 
   public destroy(): void {
+    this.closeAllDropdowns();
     this.abortController.abort();
+  }
+
+  private closeAllDropdowns(): void {
+    if (this.activeOpenDropdown) {
+      this.activeOpenDropdown.style.display = 'none';
+      this.activeOpenDropdown = null;
+    }
+    if (this.activeOpenCard) {
+      this.activeOpenCard.classList.remove('has-dropdown-open');
+      const wrapper = this.activeOpenCard.querySelector<HTMLElement>('[data-ref="card-actions-wrapper"]');
+      wrapper?.classList.remove('is-open');
+      this.activeOpenCard = null;
+    }
   }
 
   private async loadCanvases(): Promise<void> {
@@ -167,12 +195,100 @@ class HomeController {
         }
       </div>
 
+      <div class="canvas-card__actions-wrapper" data-ref="card-actions-wrapper">
+        <div class="canvas-card__actions" data-ref="card-actions">
+          <button type="button" class="canvas-card__action-btn" data-ref="btn-card-more" aria-label="${t('canvas.menu_open_new_tab')}" data-tooltip="Opciones">
+            <span class="material-symbols-rounded">more_vert</span>
+          </button>
+        </div>
+
+        <div class="menu-panel menu-panel--dropdown" data-ref="card-menu-dropdown" style="display: none;">
+          <div class="menu-panel__list" data-ref="card-menu-list">
+            <button type="button" class="menu-item" data-ref="action-open-new-tab">
+              <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#open_in_new"></use></svg>
+              <span class="menu-item__text" data-i18n="canvas.menu_open_new_tab">${t('canvas.menu_open_new_tab')}</span>
+            </button>
+            <button type="button" class="menu-item" data-ref="action-copy-link">
+              <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
+              <span class="menu-item__text" data-i18n="canvas.menu_copy_link">${t('canvas.menu_copy_link')}</span>
+            </button>
+            <button type="button" class="menu-item" data-ref="action-duplicate">
+              <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#filter_none"></use></svg>
+              <span class="menu-item__text" data-i18n="canvas.menu_duplicate">${t('canvas.menu_duplicate')}</span>
+            </button>
+            <div class="menu-divider"></div>
+            <button type="button" class="menu-item menu-item--bordered menu-item--danger" data-ref="action-delete">
+              <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
+              <span class="menu-item__text" data-i18n="canvas.menu_delete">${t('canvas.menu_delete')}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div class="canvas-card__bottom" data-ref="canvas-bottom">
         <h3 class="canvas-card__title" data-ref="canvas-title" title="${escapeHtml(canvas.name)}">
           ${escapeHtml(canvas.name)}
         </h3>
       </div>
     `;
+
+    const actionsWrapper = card.querySelector<HTMLElement>('[data-ref="card-actions-wrapper"]');
+    const btnMore = card.querySelector<HTMLButtonElement>('[data-ref="btn-card-more"]');
+    const menuDropdown = card.querySelector<HTMLElement>('[data-ref="card-menu-dropdown"]');
+    const actionOpenNewTab = card.querySelector<HTMLButtonElement>('[data-ref="action-open-new-tab"]');
+    const actionCopyLink = card.querySelector<HTMLButtonElement>('[data-ref="action-copy-link"]');
+    const actionDuplicate = card.querySelector<HTMLButtonElement>('[data-ref="action-duplicate"]');
+    const actionDelete = card.querySelector<HTMLButtonElement>('[data-ref="action-delete"]');
+
+    actionsWrapper?.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+
+    btnMore?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!menuDropdown) return;
+
+      const isCurrentlyOpen = menuDropdown.style.display === 'flex';
+      this.closeAllDropdowns();
+
+      if (!isCurrentlyOpen) {
+        menuDropdown.style.display = 'flex';
+        card.classList.add('has-dropdown-open');
+        actionsWrapper?.classList.add('is-open');
+        this.activeOpenDropdown = menuDropdown;
+        this.activeOpenCard = card;
+      }
+    });
+
+    actionOpenNewTab?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.closeAllDropdowns();
+      window.open(`/design/${canvas.uuid}`, '_blank');
+    });
+
+    actionCopyLink?.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      this.closeAllDropdowns();
+      const url = `${window.location.origin}/design/${canvas.uuid}`;
+      try {
+        await navigator.clipboard.writeText(url);
+        showToast(t('canvas.copy_link_success'));
+      } catch {
+        showToast(t('canvas.copy_link_error'), 'danger');
+      }
+    });
+
+    actionDuplicate?.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      this.closeAllDropdowns();
+      await this.handleDuplicateCanvas(canvas);
+    });
+
+    actionDelete?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.closeAllDropdowns();
+      this.handleDeleteCanvas(canvas);
+    });
 
     const btnSync = card.querySelector<HTMLButtonElement>('[data-ref="btn-sync-cloud"]');
     btnSync?.addEventListener('click', async (e) => {
@@ -185,6 +301,89 @@ class HomeController {
     });
 
     return card;
+  }
+
+  private async handleDuplicateCanvas(canvas: CanvasItem): Promise<void> {
+    if (canvas.is_local || !canvas.id || !currentUser) {
+      try {
+        const fullCanvas = (await getLocalCanvasByUuid(canvas.uuid)) || canvas;
+        const newUuid = crypto.randomUUID();
+        const copyItem: CanvasItem = {
+          ...fullCanvas,
+          uuid: newUuid,
+          id: undefined,
+          name: `${canvas.name} (Copia)`,
+          is_local: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        await saveLocalCanvas(copyItem);
+        showToast(t('canvas.duplicate_success'));
+        await this.loadCanvases();
+      } catch {
+        showToast(t('canvas.duplicate_error'), 'danger');
+      }
+      return;
+    }
+
+    try {
+      const res = await postApi(API_ROUTES.canvases.duplicate(canvas.uuid));
+      if (res.ok) {
+        showToast(t('canvas.duplicate_success'));
+        await this.loadCanvases();
+      } else {
+        let errMsg = t('canvas.duplicate_error');
+        try {
+          const data = await res.json();
+          if (data?.error) errMsg = data.error;
+        } catch {}
+        showToast(errMsg, 'danger');
+      }
+    } catch {
+      showToast(t('canvas.duplicate_error'), 'danger');
+    }
+  }
+
+  private handleDeleteCanvas(canvas: CanvasItem): void {
+    openModal({
+      title: t('canvas.delete_confirm_title') || 'Eliminar lienzo',
+      description: t('canvas.delete_confirm_desc') || '¿Estás seguro de que deseas eliminar este lienzo? Esta acción no se puede deshacer.',
+      confirmText: t('canvas.menu_delete') || 'Eliminar',
+      confirmClass: 'btn--danger',
+      onConfirm: async (modal) => {
+        modal.setConfirmLoading(true);
+        try {
+          if (canvas.is_local || !canvas.id || !currentUser) {
+            await removeLocalCanvas(canvas.uuid);
+            showToast(t('canvas.delete_success'));
+            modal.close();
+            await this.loadCanvases();
+          } else {
+            const res = await deleteApi(API_ROUTES.canvases.delete(canvas.uuid));
+            if (res.ok) {
+              await removeLocalCanvas(canvas.uuid);
+              showToast(t('canvas.delete_success'));
+              modal.close();
+              await this.loadCanvases();
+            } else {
+              let errMsg = t('canvas.delete_error');
+              try {
+                const data = await res.json();
+                if (data?.error) errMsg = data.error;
+              } catch {}
+              modal.showError(errMsg);
+              showToast(errMsg, 'danger');
+            }
+          }
+        } catch {
+          const errMsg = t('canvas.delete_error');
+          modal.showError(errMsg);
+          showToast(errMsg, 'danger');
+        } finally {
+          modal.setConfirmLoading(false);
+        }
+      },
+    });
   }
 
   private async handleSyncCanvas(canvas: CanvasItem, card: HTMLElement, btnSync: HTMLButtonElement): Promise<void> {
