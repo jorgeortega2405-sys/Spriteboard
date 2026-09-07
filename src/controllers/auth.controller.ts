@@ -546,35 +546,13 @@ export async function googleCallback(req: Request, res: Response): Promise<void>
           targetUserId,
         });
 
-        res.send(`<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>Error de Vinculación</title>
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #0f172a; color: #fff; text-align: center; }
-    .box { padding: 24px; max-width: 380px; }
-    h2 { margin: 0 0 8px; font-size: 20px; font-weight: 600; color: #ef4444; }
-    p { margin: 0 0 16px; color: #94a3b8; font-size: 14px; }
-    button { background: #334155; color: #fff; border: 1px solid #475569; padding: 8px 18px; border-radius: 8px; font-size: 14px; cursor: pointer; }
-    button:hover { background: #475569; }
-  </style>
-</head>
-<body>
-  <div class="box">
-    <h2>✕ Error de vinculación</h2>
-    <p>La sesión activa no coincide con la solicitud de vinculación.</p>
-    <button type="button" onclick="window.close()">Cerrar ventana</button>
-  </div>
-  <script>
-    const payload = { type: 'GOOGLE_LINK_ERROR', error: 'La sesión activa no coincide con la solicitud de vinculación.' };
-    try { const ch = new BroadcastChannel('google_link_channel'); ch.postMessage(payload); ch.close(); } catch (_) {}
-    try { localStorage.setItem('google_link_event', JSON.stringify({ ...payload, ts: Date.now() })); } catch (_) {}
-    if (window.opener) { try { window.opener.postMessage(payload, window.location.origin); } catch (_) {} }
-    setTimeout(() => { window.close(); }, 2500);
-  </script>
-</body>
-</html>`);
+        res.send(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Spriteboard</title></head><body><script>
+          const payload = { type: 'GOOGLE_LINK_ERROR', error: 'La sesión activa no coincide con la solicitud de vinculación.' };
+          try { const ch = new BroadcastChannel('google_link_channel'); ch.postMessage(payload); ch.close(); } catch (_) {}
+          try { localStorage.setItem('google_link_event', JSON.stringify({ ...payload, ts: Date.now() })); } catch (_) {}
+          if (window.opener) { try { window.opener.postMessage(payload, window.location.origin); } catch (_) {} }
+          window.close();
+        </script></body></html>`);
         return;
       }
 
@@ -584,35 +562,13 @@ export async function googleCallback(req: Request, res: Response): Promise<void>
 
       if (!linkResult.success || !linkResult.googleId) {
         const errorMsg = linkResult.error || 'No se pudo vincular la cuenta de Google.';
-        res.send(`<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>Error de Vinculación</title>
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #0f172a; color: #fff; text-align: center; }
-    .box { padding: 24px; max-width: 380px; }
-    h2 { margin: 0 0 8px; font-size: 20px; font-weight: 600; color: #ef4444; }
-    p { margin: 0 0 16px; color: #94a3b8; font-size: 14px; }
-    button { background: #334155; color: #fff; border: 1px solid #475569; padding: 8px 18px; border-radius: 8px; font-size: 14px; cursor: pointer; }
-    button:hover { background: #475569; }
-  </style>
-</head>
-<body>
-  <div class="box">
-    <h2>✕ Error de vinculación</h2>
-    <p>${errorMsg}</p>
-    <button type="button" onclick="window.close()">Cerrar ventana</button>
-  </div>
-  <script>
-    const payload = { type: 'GOOGLE_LINK_ERROR', error: ${JSON.stringify(errorMsg)} };
-    try { const ch = new BroadcastChannel('google_link_channel'); ch.postMessage(payload); ch.close(); } catch (_) {}
-    try { localStorage.setItem('google_link_event', JSON.stringify({ ...payload, ts: Date.now() })); } catch (_) {}
-    if (window.opener) { try { window.opener.postMessage(payload, window.location.origin); } catch (_) {} }
-    setTimeout(() => { window.close(); }, 2500);
-  </script>
-</body>
-</html>`);
+        res.send(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Spriteboard</title></head><body><script>
+          const payload = { type: 'GOOGLE_LINK_ERROR', error: ${JSON.stringify(errorMsg)} };
+          try { const ch = new BroadcastChannel('google_link_channel'); ch.postMessage(payload); ch.close(); } catch (_) {}
+          try { localStorage.setItem('google_link_event', JSON.stringify({ ...payload, ts: Date.now() })); } catch (_) {}
+          if (window.opener) { try { window.opener.postMessage(payload, window.location.origin); } catch (_) {} }
+          window.close();
+        </script></body></html>`);
         return;
       }
 
@@ -661,51 +617,13 @@ export async function googleCallback(req: Request, res: Response): Promise<void>
           googleEmail: userPayload.email,
         });
 
-        res.send(`<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>Error de Verificación</title>
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #0f172a; color: #fff; text-align: center; }
-    .box { padding: 24px; max-width: 380px; }
-    h2 { margin: 0 0 8px; font-size: 20px; font-weight: 600; color: #ef4444; }
-    p { margin: 0 0 16px; color: #94a3b8; font-size: 14px; }
-    button { background: #334155; color: #fff; border: 1px solid #475569; padding: 8px 18px; border-radius: 8px; font-size: 14px; cursor: pointer; }
-    button:hover { background: #475569; }
-  </style>
-</head>
-<body>
-  <div class="box">
-    <h2>✕ Error de verificación</h2>
-    <p>La cuenta de Google seleccionada no coincide con tu usuario activo en Spriteboard.</p>
-    <button type="button" onclick="window.close()">Cerrar ventana</button>
-  </div>
-  <script>
-    const payload = { type: 'GOOGLE_VERIFY_ERROR', error: 'La cuenta de Google seleccionada no coincide con tu usuario activo en Spriteboard.' };
-
-    try {
-      const ch = new BroadcastChannel('google_verify_channel');
-      ch.postMessage(payload);
-      ch.close();
-    } catch (_) {}
-
-    try {
-      localStorage.setItem('google_verify_event', JSON.stringify({ ...payload, ts: Date.now() }));
-    } catch (_) {}
-
-    if (window.opener) {
-      try {
-        window.opener.postMessage(payload, window.location.origin);
-      } catch (_) {}
-    }
-
-    setTimeout(() => {
-      window.close();
-    }, 2500);
-  </script>
-</body>
-</html>`);
+        res.send(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Spriteboard</title></head><body><script>
+          const payload = { type: 'GOOGLE_VERIFY_ERROR', error: 'La cuenta de Google seleccionada no coincide con tu usuario activo en Spriteboard.' };
+          try { const ch = new BroadcastChannel('google_verify_channel'); ch.postMessage(payload); ch.close(); } catch (_) {}
+          try { localStorage.setItem('google_verify_event', JSON.stringify({ ...payload, ts: Date.now() })); } catch (_) {}
+          if (window.opener) { try { window.opener.postMessage(payload, window.location.origin); } catch (_) {} }
+          window.close();
+        </script></body></html>`);
         return;
       }
     }

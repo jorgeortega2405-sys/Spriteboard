@@ -464,7 +464,7 @@ html.dark-theme .layout-header::after {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 0 0 2px var(--bg-surface), 0 0 0 4px var(--avatar-tier-color, var(--tier-color-free));
+  box-shadow: 0 0 0 2px var(--bg-surface);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
   position: relative;
   outline: none;
@@ -473,7 +473,7 @@ html.dark-theme .layout-header::after {
 .btn--avatar:hover,
 .component-button--avatar:hover {
   transform: scale(1.04);
-  box-shadow: 0 0 0 2px var(--bg-surface), 0 0 0 4px var(--avatar-tier-color, var(--tier-color-free));
+  box-shadow: 0 0 0 2px var(--bg-surface);
 }
 
 .btn--avatar:active,
@@ -842,23 +842,28 @@ html.dark-theme .layout-header::after {
   height: 34px;
   min-width: 34px;
   border-radius: 50%;
-  overflow: hidden;
+  overflow: visible;
+  position: relative;
   background-color: var(--bg-surface-raised);
   border: none;
-  box-shadow: 0 0 0 2px var(--bg-surface), 0 0 0 4px var(--avatar-tier-color, var(--tier-color-free));
+  box-shadow: 0 0 0 2px var(--bg-surface);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  margin: 3px;
+  margin: 4px;
   transition: box-shadow 0.15s ease;
 }
 
-.account-item__avatar .avatar-img {
+.account-item__avatar .avatar-img,
+.account-item__avatar img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
+  border-radius: 50%;
+  position: relative;
+  z-index: 2;
 }
 
 .account-item__info {
@@ -1871,16 +1876,16 @@ body[data-theme="dark"] .login-logo-img {
   height: 56px;
   min-width: 56px;
   border-radius: 50%;
-  overflow: hidden;
+  overflow: visible;
   background-color: var(--bg-hover);
   border: none;
-  box-shadow: 0 0 0 2px var(--bg-surface), 0 0 0 4px var(--avatar-tier-color, var(--tier-color-free));
+  box-shadow: 0 0 0 2px var(--bg-surface);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   user-select: none;
-  margin: 3px;
+  margin: 4px;
   transition: box-shadow 0.15s ease;
 }
 
@@ -1889,6 +1894,9 @@ body[data-theme="dark"] .login-logo-img {
   height: 100%;
   object-fit: cover;
   display: block;
+  border-radius: 50%;
+  position: relative;
+  z-index: 2;
 }
 
 .avatar-preview-overlay {
@@ -1897,6 +1905,7 @@ body[data-theme="dark"] .login-logo-img {
   left: 0;
   width: 100%;
   height: 100%;
+  border-radius: 50%;
   background-color: var(--overlay-dark);
   display: flex;
   align-items: center;
@@ -1905,6 +1914,7 @@ body[data-theme="dark"] .login-logo-img {
   opacity: 0;
   transition: opacity 0.18s ease;
   pointer-events: none;
+  z-index: 3;
 }
 
 .settings-item__avatar:hover .avatar-preview-overlay {
@@ -4346,93 +4356,122 @@ html.dark-theme .component-card-button--downgrade {
 
 /* ==========================================================================
    ANILLOS DE SUSCRIPCIÓN EN AVATARES (SUBSCRIPTION TIER AVATAR RINGS)
-   Separación de 2px con var(--bg-surface) y borde de 2px con el color del nivel:
-   - free:  Gris  (var(--tier-color-free))
-   - plus:  Verde (var(--tier-color-plus))
-   - pro:   Azul  (var(--tier-color-pro))
-   - ultra: Rojo  (var(--tier-color-ultra))
+   Separación de 2px con var(--bg-surface) y borde de 2px con el color del nivel.
+   Todos los niveles de suscripción utilizan el método ::before unificado:
+   - free:  Gris       (#9ca3af)
+   - plus:  Verde      (#22c55e)
+   - pro:   Azul       (#3b82f6)
+   - ultra: Multicolor (conic-gradient 4 colores desde 295deg)
    ========================================================================== */
 
 :root {
   --tier-color-free: #9ca3af;
   --tier-color-plus: #22c55e;
   --tier-color-pro: #3b82f6;
-  --tier-color-ultra: #ef4444;
+  --tier-color-ultra: #E92D18;
+  --tier-gradient-ultra: conic-gradient(
+    from 295deg,
+    #E92D18 0% 28%,
+    #306EE2 28% 57%,
+    #249A41 57% 85%,
+    #CD9308 85% 100%
+  );
 }
 
+/* Variables dinámicas según el tier */
 .avatar-tier--free,
 [data-tier="free"] {
+  --avatar-tier-bg: var(--tier-color-free, #9ca3af);
   --avatar-tier-color: var(--tier-color-free, #9ca3af);
 }
 
 .avatar-tier--plus,
 [data-tier="plus"] {
+  --avatar-tier-bg: var(--tier-color-plus, #22c55e);
   --avatar-tier-color: var(--tier-color-plus, #22c55e);
 }
 
 .avatar-tier--pro,
 [data-tier="pro"] {
+  --avatar-tier-bg: var(--tier-color-pro, #3b82f6);
   --avatar-tier-color: var(--tier-color-pro, #3b82f6);
 }
 
 .avatar-tier--ultra,
 [data-tier="ultra"] {
-  --avatar-tier-color: var(--tier-color-ultra, #ef4444);
+  --avatar-tier-bg: var(--tier-gradient-ultra);
+  --avatar-tier-color: #E92D18;
 }
 
-/* Reglas directas con máxima prioridad para evitar sobreescrituras */
+/* Base de los contenedores de avatar: separación de 2px con la superficie */
 .avatar-ring,
-.btn--avatar[data-tier="free"],
-.account-item__avatar[data-tier="free"],
-.settings-item__avatar[data-tier="free"],
-.avatar-tier--free {
-  box-shadow: 0 0 0 2px var(--bg-surface), 0 0 0 4px var(--tier-color-free, #9ca3af) !important;
+.btn--avatar,
+.component-button--avatar,
+.account-item__avatar,
+.settings-item__avatar {
+  position: relative;
+  overflow: visible !important;
   border: none !important;
+  background-image: none !important;
+  box-shadow: 0 0 0 2px var(--bg-surface) !important;
 }
 
-.btn--avatar[data-tier="plus"],
-.account-item__avatar[data-tier="plus"],
-.settings-item__avatar[data-tier="plus"],
-.avatar-tier--plus {
-  box-shadow: 0 0 0 2px var(--bg-surface), 0 0 0 4px var(--tier-color-plus, #22c55e) !important;
-  border: none !important;
+/* Imágenes internas protegidas con border-radius 50% y z-index superior */
+.btn--avatar img,
+.component-button--avatar img,
+.account-item__avatar img,
+.account-item__avatar .avatar-img,
+.settings-item__avatar img,
+.settings-item__avatar .avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: 50%;
+  position: relative;
+  z-index: 2;
 }
 
-.btn--avatar[data-tier="pro"],
-.account-item__avatar[data-tier="pro"],
-.settings-item__avatar[data-tier="pro"],
-.avatar-tier--pro {
-  box-shadow: 0 0 0 2px var(--bg-surface), 0 0 0 4px var(--tier-color-pro, #3b82f6) !important;
-  border: none !important;
+.avatar-preview-overlay {
+  border-radius: 50%;
+  z-index: 3;
 }
 
-.btn--avatar[data-tier="ultra"],
-.account-item__avatar[data-tier="ultra"],
-.settings-item__avatar[data-tier="ultra"],
-.avatar-tier--ultra {
-  box-shadow: 0 0 0 2px var(--bg-surface), 0 0 0 4px var(--tier-color-ultra, #ef4444) !important;
-  border: none !important;
+/* Anillo de suscripción con ::before: 2px de grosor a 2px de separación */
+.avatar-ring::before,
+.btn--avatar::before,
+.component-button--avatar::before,
+.account-item__avatar::before,
+.settings-item__avatar::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  padding: 2px;
+  background: var(--avatar-tier-bg, var(--tier-color-free, #9ca3af));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 1;
+  transition: filter 0.15s ease;
 }
 
-/* Hover en botón avatar */
-.btn--avatar[data-tier="free"]:hover,
-.btn--avatar.avatar-tier--free:hover {
-  box-shadow: 0 0 0 2px var(--bg-surface), 0 0 0 4px var(--tier-color-free, #9ca3af) !important;
+/* Hover en botones de avatar */
+.btn--avatar:hover,
+.component-button--avatar:hover {
+  transform: scale(1.04);
+  box-shadow: 0 0 0 2px var(--bg-surface) !important;
 }
 
-.btn--avatar[data-tier="plus"]:hover,
-.btn--avatar.avatar-tier--plus:hover {
-  box-shadow: 0 0 0 2px var(--bg-surface), 0 0 0 4px var(--tier-color-plus, #22c55e) !important;
+.btn--avatar:hover::before,
+.component-button--avatar:hover::before {
+  filter: brightness(1.15);
 }
 
-.btn--avatar[data-tier="pro"]:hover,
-.btn--avatar.avatar-tier--pro:hover {
-  box-shadow: 0 0 0 2px var(--bg-surface), 0 0 0 4px var(--tier-color-pro, #3b82f6) !important;
-}
-
-.btn--avatar[data-tier="ultra"]:hover,
-.btn--avatar.avatar-tier--ultra:hover {
-  box-shadow: 0 0 0 2px var(--bg-surface), 0 0 0 4px var(--tier-color-ultra, #ef4444) !important;
+.btn--avatar:active,
+.component-button--avatar:active {
+  transform: scale(0.97);
 }
 
 /* ==========================================================================
