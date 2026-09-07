@@ -5,6 +5,7 @@ import { t, translateElement } from '../services/i18n.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { closeWebSocket, initWebSocket } from '../services/websocket.service.js';
+import { openCreateCanvasModal } from './create-canvas-modal.component.js';
 
 let isSidebarOpen = false;
 let isChatOpen = false;
@@ -104,6 +105,12 @@ export async function createTopBar(): Promise<HTMLElement> {
   btnToggle?.addEventListener('click', (e) => {
     e.preventDefault();
     toggleSidebar();
+  });
+
+  const btnCreateCanvas = topbar.querySelector<HTMLElement>('[data-ref="btn-create-canvas"]');
+  btnCreateCanvas?.addEventListener('click', (e) => {
+    e.preventDefault();
+    openCreateCanvasModal();
   });
 
   const btnUpgrade = topbar.querySelector<HTMLElement>('[data-ref="btn-upgrade"]');

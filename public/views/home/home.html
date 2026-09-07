@@ -1,5 +1,15 @@
 <div class="layout-content" data-ref="home-view">
   <div class="layout-body layout-body--scrollable layout-scrollable" data-ref="home-scrollable">
-    <!-- Contenedor exclusivo para el scroll de la vista principal -->
+    <div class="canvas-section" data-ref="canvas-section">
+      <div class="canvas-grid" data-ref="canvas-grid"></div>
+
+      <div class="canvas-empty-state" data-ref="canvas-empty-state" style="display: none;">
+        <span class="material-symbols-rounded canvas-empty-state__icon">dashboard_customize</span>
+        <h2 class="canvas-empty-state__title" data-i18n="canvas.home_empty_title"></h2>
+        <p class="canvas-empty-state__desc" data-i18n="canvas.home_empty_desc"></p>
+        <button type="button" class="btn btn--h44 btn--black" data-ref="btn-home-create-canvas" data-i18n="canvas.home_empty_action">
+        </button>
+      </div>
+    </div>
   </div>
 </div>

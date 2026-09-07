@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash VARCHAR(255) NULL,
     google_id VARCHAR(255) NULL UNIQUE,
     avatar_url VARCHAR(512) NULL,
+    role ENUM('user', 'moderator', 'administrator', 'superadministrator') NOT NULL DEFAULT 'user',
     subscription_tier VARCHAR(20) NOT NULL DEFAULT 'free',
     stripe_customer_id VARCHAR(255) NULL,
     stripe_subscription_id VARCHAR(255) NULL,
@@ -77,5 +78,24 @@ CREATE TABLE IF NOT EXISTS purchases (
     INDEX idx_purchases_user (user_id),
     INDEX idx_purchases_session (stripe_session_id),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE DATABASE IF NOT EXISTS db_canvas;
+USE db_canvas;
+
+CREATE TABLE IF NOT EXISTS canvases (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    uuid VARCHAR(36) NOT NULL UNIQUE,
+    user_id INT NOT NULL,
+    name VARCHAR(255) NOT NULL DEFAULT 'Lienzo sin título',
+    width INT NOT NULL DEFAULT 1920,
+    height INT NOT NULL DEFAULT 1080,
+    unit VARCHAR(20) NOT NULL DEFAULT 'px',
+    data JSON NULL,
+    preview_thumbnail MEDIUMTEXT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_canvases_user (user_id),
+    INDEX idx_canvases_uuid (uuid)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

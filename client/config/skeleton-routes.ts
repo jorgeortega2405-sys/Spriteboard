@@ -62,7 +62,8 @@ export function hasPersistentTopBar(pathname: string): boolean {
     pathname === '/trash' ||
     pathname === '/upgrade' ||
     pathname.startsWith('/settings') ||
-    pathname.startsWith('/help')
+    pathname.startsWith('/help') ||
+    pathname.startsWith('/design')
   ) {
     return true;
   }

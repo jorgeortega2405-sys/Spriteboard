@@ -1,8 +1,15 @@
+export type UserRole = 'user' | 'moderator' | 'administrator' | 'superadministrator';
+
+export const USER_ROLES: readonly UserRole[] = ['user', 'moderator', 'administrator', 'superadministrator'] as const;
+
+export const DEFAULT_USER_ROLE: UserRole = 'user';
+
 export interface UserPayload {
   id: number;
   username: string;
   email: string;
   avatar_url?: string | null;
+  role?: UserRole;
   google_id?: string | null;
   subscription_tier?: 'free' | 'plus' | 'pro' | 'ultra';
   two_factor_enabled?: boolean;
@@ -13,6 +20,7 @@ export interface SessionAccount {
   username: string;
   email: string;
   avatar_url?: string | null;
+  role?: UserRole;
   google_id?: string | null;
   subscription_tier?: 'free' | 'plus' | 'pro' | 'ultra';
   two_factor_enabled?: boolean;

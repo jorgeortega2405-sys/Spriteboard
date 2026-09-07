@@ -6,6 +6,7 @@ import { SkeletonService } from './services/skeleton.service';
 import { trackPageView } from './services/telemetry.service';
 import { hideTooltip } from './services/tooltip.service';
 import { createForgotPasswordView, createLogin2FAView, createLoginView, createRegisterStage1View, createRegisterStage2View, createRegisterStage3View, createResetPasswordView } from './views/auth.view';
+import { createDesignView } from './views/design.view';
 import { createErrorView } from './views/error.view';
 import { createHelpView } from './views/help.view';
 import { createHomeView } from './views/home.view';
@@ -180,6 +181,11 @@ export async function render(): Promise<void> {
     const topBar = isSoftSpaNav ? null : await createTopBar();
     const homeView = await createHomeView();
     viewElements = topBar ? [topBar, homeView] : [homeView];
+  } else if (path.startsWith('/design/')) {
+    const topBar = isSoftSpaNav ? null : await createTopBar();
+    const canvasUuid = path.split('/design/')[1]?.split('/')[0] || '';
+    const designView = await createDesignView(canvasUuid);
+    viewElements = topBar ? [topBar, designView] : [designView];
   } else {
     const notFoundView = await createErrorView({
       code: '404',

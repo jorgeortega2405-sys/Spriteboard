@@ -4,6 +4,11 @@ export const API_ROUTES = {
   health: '/api/health',
   avatarBase: '/api/avatar',
   avatar: (name: string) => `/api/avatar?name=${encodeURIComponent(name)}`,
+  canvases: {
+    base: '/api/canvases',
+    sync: '/api/canvases/sync',
+    byId: (uuid: string) => `/api/canvases/${encodeURIComponent(uuid)}`,
+  },
   chat: '/api/chat',
   auth: {
     forgotPassword: '/api/forgot-password',

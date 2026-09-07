@@ -1,3 +1,5 @@
+import { USER_ROLES, UserRole } from '../types/auth.types.js';
+
 export interface ValidationResult {
   valid: boolean;
   error?: string;
@@ -96,5 +98,16 @@ export function validateVerificationCode(code: unknown): ValidationResult {
     return { valid: false, error: 'El código de verificación debe contener exactamente 6 dígitos.' };
   }
 
+  return { valid: true };
+}
+
+export function isValidRole(role: unknown): role is UserRole {
+  return typeof role === 'string' && (USER_ROLES as readonly string[]).includes(role);
+}
+
+export function validateRole(role: unknown): ValidationResult {
+  if (!isValidRole(role)) {
+    return { valid: false, error: 'El rol especificado no es válido.' };
+  }
   return { valid: true };
 }

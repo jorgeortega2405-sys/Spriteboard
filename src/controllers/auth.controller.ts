@@ -448,7 +448,11 @@ export async function me(req: Request, res: Response): Promise<void> {
   const accounts = getLinkedAccounts(req);
   const updatedAccounts = accounts.map((acc) => {
     if (acc.id === user.id && freshUser) {
-      return { ...acc, subscription_tier: freshUser.subscription_tier || 'free' };
+      return {
+        ...acc,
+        subscription_tier: freshUser.subscription_tier || 'free',
+        role: freshUser.role || 'user',
+      };
     }
     return acc;
   });

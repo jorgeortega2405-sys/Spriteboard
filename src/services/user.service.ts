@@ -1,6 +1,6 @@
 import { pool } from '../config/database.config.js';
 import { redis } from '../config/redis.config.js';
-import { UserPayload } from '../types/auth.types.js';
+import { UserPayload, UserRole } from '../types/auth.types.js';
 import { revokeAllUserSessions } from './auth.service.js';
 import { logger } from './logger.service.js';
 import { stripeService } from './stripe.service.js';
@@ -20,6 +20,7 @@ export interface UserRecord extends RowDataPacket {
   email: string;
   password_hash?: string;
   avatar_url?: string;
+  role?: UserRole;
   google_id?: string;
   subscription_tier?: 'free' | 'plus' | 'pro' | 'ultra';
   two_factor_enabled?: boolean | number;
@@ -44,7 +45,7 @@ export interface UserRecord extends RowDataPacket {
 
 export async function findUserByEmail(email: string): Promise<UserRecord | null> {
   const [rows] = await pool.query<UserRecord[]>(
-    'SELECT id, username, email, password_hash, avatar_url, google_id, subscription_tier, two_factor_enabled, two_factor_secret, two_factor_recovery_codes FROM users WHERE email = ? LIMIT 1',
+    'SELECT id, username, email, password_hash, avatar_url, role, google_id, subscription_tier, two_factor_enabled, two_factor_secret, two_factor_recovery_codes FROM users WHERE email = ? LIMIT 1',
     [email.toLowerCase().trim()]
   );
   return rows.length > 0 ? rows[0] : null;
@@ -52,7 +53,7 @@ export async function findUserByEmail(email: string): Promise<UserRecord | null>
 
 export async function findUserByUsername(username: string): Promise<UserRecord | null> {
   const [rows] = await pool.query<UserRecord[]>(
-    'SELECT id, username, email, avatar_url, google_id, subscription_tier, two_factor_enabled FROM users WHERE username = ? LIMIT 1',
+    'SELECT id, username, email, avatar_url, role, google_id, subscription_tier, two_factor_enabled FROM users WHERE username = ? LIMIT 1',
     [username.trim()]
   );
   return rows.length > 0 ? rows[0] : null;
@@ -75,7 +76,7 @@ export async function findUserDuplicates(
 
 export async function findUserById(id: number): Promise<UserRecord | null> {
   const [rows] = await pool.query<UserRecord[]>(
-    'SELECT id, username, email, avatar_url, google_id, subscription_tier, two_factor_enabled, two_factor_secret, two_factor_recovery_codes FROM users WHERE id = ? LIMIT 1',
+    'SELECT id, username, email, avatar_url, role, google_id, subscription_tier, two_factor_enabled, two_factor_secret, two_factor_recovery_codes FROM users WHERE id = ? LIMIT 1',
     [id]
   );
   return rows.length > 0 ? rows[0] : null;
@@ -86,6 +87,7 @@ export async function createUser(data: {
   email: string;
   passwordHash: string;
   avatarUrl?: string;
+  role?: UserRole;
   registrationIp?: string | null;
   registrationCountryCode?: string | null;
   registrationCountryName?: string | null;
@@ -94,12 +96,14 @@ export async function createUser(data: {
   registrationAsn?: string | null;
   registrationIsp?: string | null;
 }): Promise<UserPayload> {
+  const role = data.role || 'user';
   const [result] = await pool.query<ResultSetHeader>(
     `INSERT INTO users (
       username,
       email,
       password_hash,
       avatar_url,
+      role,
       registration_ip,
       registration_country_code,
       registration_country_name,
@@ -107,12 +111,13 @@ export async function createUser(data: {
       registration_city,
       registration_asn,
       registration_isp
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       data.username.trim(),
       data.email.toLowerCase().trim(),
       data.passwordHash,
       data.avatarUrl || null,
+      role,
       data.registrationIp || null,
       data.registrationCountryCode || null,
       data.registrationCountryName || null,
@@ -127,6 +132,7 @@ export async function createUser(data: {
     id: result.insertId,
     username: data.username.trim(),
     email: data.email.toLowerCase().trim(),
+    role,
     ...(data.avatarUrl ? { avatar_url: data.avatarUrl } : {}),
   };
 }
@@ -177,6 +183,14 @@ export async function updateUserGoogleId(userId: number, googleId: string): Prom
   const [result] = await pool.query<ResultSetHeader>(
     'UPDATE users SET google_id = ? WHERE id = ?',
     [googleId, userId]
+  );
+  return result.affectedRows > 0;
+}
+
+export async function updateUserRole(userId: number, role: UserRole): Promise<boolean> {
+  const [result] = await pool.query<ResultSetHeader>(
+    'UPDATE users SET role = ? WHERE id = ?',
+    [role, userId]
   );
   return result.affectedRows > 0;
 }

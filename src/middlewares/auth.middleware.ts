@@ -1,5 +1,5 @@
 import { clearSessionCookie, COOKIE_NAME, getMultiAccountSession, isSessionRevoked, verifySessionToken } from '../services/auth.service.js';
-import { SessionAccount, UserPayload } from '../types/auth.types.js';
+import { SessionAccount, UserPayload, UserRole } from '../types/auth.types.js';
 import { NextFunction, Request, Response } from 'express';
 
 export function getCurrentUser(req: Request): UserPayload | null {
@@ -42,4 +42,22 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   (req as any).user = user;
   res.locals.user = user;
   next();
+}
+
+export function requireRole(...allowedRoles: UserRole[]) {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const user = getCurrentUser(req);
+    if (!user) {
+      res.status(401).json({ error: 'No autorizado. Inicia sesión.' });
+      return;
+    }
+
+    const currentRole = user.role || 'user';
+    if (!allowedRoles.includes(currentRole)) {
+      res.status(403).json({ error: 'Acceso denegado. Permisos insuficientes.' });
+      return;
+    }
+
+    next();
+  };
 }

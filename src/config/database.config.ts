@@ -69,6 +69,13 @@ export const pool = dbManager.registerMySql('default', defaultDbOptions);
 
 dbManager.registerExistingMySql('identity', pool);
 
+const canvasDbOptions: mysql.PoolOptions = {
+  ...defaultDbOptions,
+  database: process.env.DB_CANVAS_NAME || 'db_canvas',
+};
+
+export const canvasPool = dbManager.registerMySql('canvas', canvasDbOptions);
+
 export async function runMigrations(): Promise<void> {
   const conn = await pool.getConnection();
   try {
@@ -94,6 +101,16 @@ export async function runMigrations(): Promise<void> {
     if (avatarCols.length === 0) {
       await conn.query('ALTER TABLE users ADD COLUMN avatar_url VARCHAR(512) NULL AFTER google_id');
       logger.db.info('Columna avatar_url añadida a la tabla users.');
+    }
+
+    const [roleCols] = await conn.query<mysql.RowDataPacket[]>(
+      "SHOW COLUMNS FROM users LIKE 'role'"
+    );
+    if (roleCols.length === 0) {
+      await conn.query(
+        "ALTER TABLE users ADD COLUMN role ENUM('user', 'moderator', 'administrator', 'superadministrator') NOT NULL DEFAULT 'user' AFTER avatar_url"
+      );
+      logger.db.info('Columna role añadida a la tabla users.');
     }
 
     await conn.query(`
@@ -261,7 +278,26 @@ export async function runMigrations(): Promise<void> {
       }
     }
 
-    logger.db.info('Tablas y columnas de identidad, 2FA, suscripciones, compras y GeoIP verificadas exitosamente.');
+    await conn.query('CREATE DATABASE IF NOT EXISTS db_canvas');
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS db_canvas.canvases (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        uuid VARCHAR(36) NOT NULL UNIQUE,
+        user_id INT NOT NULL,
+        name VARCHAR(255) NOT NULL DEFAULT 'Lienzo sin título',
+        width INT NOT NULL DEFAULT 1920,
+        height INT NOT NULL DEFAULT 1080,
+        unit VARCHAR(20) NOT NULL DEFAULT 'px',
+        data JSON NULL,
+        preview_thumbnail MEDIUMTEXT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_canvases_user (user_id),
+        INDEX idx_canvases_uuid (uuid)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    logger.db.info('Tablas y columnas de identidad, 2FA, suscripciones, compras, GeoIP y db_canvas verificadas exitosamente.');
   } catch (err) {
     logger.db.warn('Advertencia en migración de base de datos', err);
   } finally {

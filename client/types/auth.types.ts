@@ -1,8 +1,11 @@
+export type UserRole = 'user' | 'moderator' | 'administrator' | 'superadministrator';
+
 export interface User {
   id: number;
   username: string;
   email: string;
   avatar_url?: string | null;
+  role?: UserRole;
   subscription_tier?: 'free' | 'plus' | 'pro' | 'ultra';
   language?: string;
   two_factor_enabled?: boolean;

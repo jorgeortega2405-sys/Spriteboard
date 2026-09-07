@@ -8,6 +8,7 @@ export function sanitizeUser(user: any): UserPayload {
     username: user.username,
     email: user.email,
     avatar_url: user.avatar_url || null,
+    role: user.role || 'user',
     google_id: user.google_id || null,
     subscription_tier: user.subscription_tier || 'free',
     two_factor_enabled: Boolean(user.two_factor_enabled),

@@ -157,7 +157,7 @@ export async function processGoogleAuthCallback(code: string, clientIp?: string)
   const geo = clientIp ? geoIpService.lookup(clientIp) : null;
 
   const [existingGoogleUsers] = await pool.query<RowDataPacket[]>(
-    'SELECT id, username, email, avatar_url, google_id, subscription_tier, two_factor_enabled FROM users WHERE google_id = ? LIMIT 1',
+    'SELECT id, username, email, avatar_url, google_id, role, subscription_tier, two_factor_enabled FROM users WHERE google_id = ? LIMIT 1',
     [googleId]
   );
 
@@ -177,6 +177,7 @@ export async function processGoogleAuthCallback(code: string, clientIp?: string)
       username: u.username,
       email: u.email,
       avatar_url: u.avatar_url || null,
+      role: u.role || 'user',
       google_id: googleId,
       subscription_tier: u.subscription_tier || 'free',
       two_factor_enabled: Boolean(u.two_factor_enabled),
@@ -184,7 +185,7 @@ export async function processGoogleAuthCallback(code: string, clientIp?: string)
   }
 
   const [existingEmailUsers] = await pool.query<RowDataPacket[]>(
-    'SELECT id, username, email, avatar_url, google_id, subscription_tier, two_factor_enabled FROM users WHERE email = ? LIMIT 1',
+    'SELECT id, username, email, avatar_url, google_id, role, subscription_tier, two_factor_enabled FROM users WHERE email = ? LIMIT 1',
     [email]
   );
 
@@ -205,6 +206,7 @@ export async function processGoogleAuthCallback(code: string, clientIp?: string)
       username: u.username,
       email: u.email,
       avatar_url: u.avatar_url || null,
+      role: u.role || 'user',
       google_id: googleId,
       subscription_tier: u.subscription_tier || 'free',
       two_factor_enabled: Boolean(u.two_factor_enabled),
@@ -221,6 +223,7 @@ export async function processGoogleAuthCallback(code: string, clientIp?: string)
       password_hash,
       google_id,
       avatar_url,
+      role,
       registration_ip,
       registration_country_code,
       registration_country_name,
@@ -234,7 +237,7 @@ export async function processGoogleAuthCallback(code: string, clientIp?: string)
       last_login_asn,
       last_login_isp,
       last_login_at
-    ) VALUES (?, ?, NULL, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+    ) VALUES (?, ?, NULL, ?, NULL, 'user', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
     [
       uniqueUsername,
       email,
@@ -259,6 +262,7 @@ export async function processGoogleAuthCallback(code: string, clientIp?: string)
     username: uniqueUsername,
     email: email,
     avatar_url: null,
+    role: 'user',
     google_id: googleId,
     subscription_tier: 'free',
     two_factor_enabled: false,
