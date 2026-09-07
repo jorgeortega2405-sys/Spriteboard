@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
-import { addCanvasMember, createCanvas, getCanvasByUuid, getCanvasMembers, getUserCanvases, removeCanvasMember, searchUsersForSharing, syncCanvas, updateCanvasAccessLevel } from '../services/canvas.service.js';
+import { addCanvasMember, addCanvasTeam, createCanvas, getCanvasByUuid, getCanvasMembers, getCanvasTeams, getUserCanvases, removeCanvasMember, removeCanvasTeam, searchUsersForSharing, syncCanvas, updateCanvasAccessLevel } from '../services/canvas.service.js';
 import { logger } from '../services/logger.service.js';
 
 export async function listCanvases(req: Request, res: Response): Promise<void> {
@@ -218,4 +218,71 @@ export async function searchUsersHandler(req: Request, res: Response): Promise<v
     res.status(500).json({ error: 'Ha ocurrido un error al buscar usuarios.' });
   }
 }
+
+export async function getCanvasTeamsHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const { uuid } = req.params;
+    if (!uuid || typeof uuid !== 'string') {
+      res.status(400).json({ error: 'Identificador de lienzo inválido.' });
+      return;
+    }
+
+    const user = getCurrentUser(req);
+    const teams = await getCanvasTeams(uuid, user ? user.id : undefined);
+    res.json({ teams });
+  } catch (err: any) {
+    logger.app.error(`Error al obtener equipos del lienzo ${req.params.uuid}`, err);
+    res.status(500).json({ error: 'Ha ocurrido un error inesperado al obtener los equipos colaboradores.' });
+  }
+}
+
+export async function addCanvasTeamHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const user = getCurrentUser(req);
+    if (!user) {
+      res.status(401).json({ error: 'No autorizado.' });
+      return;
+    }
+
+    const { uuid } = req.params;
+    const { teamId, role } = req.body;
+    const targetTeamId = Number(teamId);
+
+    if (!uuid || typeof uuid !== 'string' || isNaN(targetTeamId) || targetTeamId <= 0) {
+      res.status(400).json({ error: 'Datos de equipo inválidos.' });
+      return;
+    }
+
+    const canvasTeam = await addCanvasTeam(uuid, user.id, targetTeamId, role === 'viewer' ? 'viewer' : 'editor');
+    res.status(201).json({ success: true, team: canvasTeam });
+  } catch (err: any) {
+    logger.app.error(`Error al añadir equipo al lienzo ${req.params.uuid}`, err);
+    res.status(500).json({ error: 'No se pudo agregar al equipo al lienzo.' });
+  }
+}
+
+export async function removeCanvasTeamHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const user = getCurrentUser(req);
+    if (!user) {
+      res.status(401).json({ error: 'No autorizado.' });
+      return;
+    }
+
+    const { uuid, teamId } = req.params;
+    const targetTeamId = Number(teamId);
+
+    if (!uuid || typeof uuid !== 'string' || isNaN(targetTeamId) || targetTeamId <= 0) {
+      res.status(400).json({ error: 'Datos de equipo inválidos.' });
+      return;
+    }
+
+    await removeCanvasTeam(uuid, user.id, targetTeamId);
+    res.json({ success: true });
+  } catch (err: any) {
+    logger.app.error(`Error al remover equipo del lienzo ${req.params.uuid}`, err);
+    res.status(500).json({ error: 'No se pudo remover al equipo.' });
+  }
+}
+
 

@@ -11,6 +11,7 @@ import { createErrorView } from './views/error.view';
 import { createHelpView } from './views/help.view';
 import { createHomeView } from './views/home.view';
 import { createAccessibilityView, createBillingView, createGuestSettingsView, createPurchasesView, createSecurityView, createYourAccountView } from './views/settings.view';
+import { createTeamsView } from './views/teams.view';
 import { createTrashView } from './views/trash.view';
 import { createUpgradeView } from './views/upgrade.view';
 
@@ -69,6 +70,10 @@ export async function render(): Promise<void> {
   } else if (path === '/reset-password') {
     const resetView = await createResetPasswordView();
     viewElements = [resetView];
+  } else if (path === '/teams') {
+    const topBar = isSoftSpaNav ? null : await createTopBar();
+    const teamsView = await createTeamsView();
+    viewElements = topBar ? [topBar, teamsView] : [teamsView];
   } else if (path === '/trash') {
     const topBar = isSoftSpaNav ? null : await createTopBar();
     const trashView = await createTrashView();

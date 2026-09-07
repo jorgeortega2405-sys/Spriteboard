@@ -52,6 +52,22 @@
                 </div>
 
                 <div class="design-share-section">
+                  <span class="design-share-section__label" data-i18n="teams.canvas_teams_label">Equipos con acceso</span>
+                  
+                  <div class="design-share-teams-selector-row" data-ref="share-teams-selector-row">
+                    <select class="field__input design-share-teams-select" data-ref="select-share-team">
+                      <option value="" disabled selected data-i18n="teams.select_team_placeholder">Seleccionar equipo...</option>
+                    </select>
+                    <button type="button" class="btn btn--h36 btn--outline" data-ref="btn-add-team-to-canvas">
+                      <span class="material-symbols-rounded">group_add</span>
+                      <span data-i18n="teams.add_team_btn">Vincular</span>
+                    </button>
+                  </div>
+
+                  <div class="design-share-teams-list" data-ref="share-teams-list"></div>
+                </div>
+
+                <div class="design-share-section">
                   <span class="design-share-section__label">Nivel de acceso</span>
                   
                   <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-access-level">

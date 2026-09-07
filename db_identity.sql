@@ -78,6 +78,31 @@ CREATE TABLE IF NOT EXISTS purchases (
     INDEX idx_purchases_user (user_id),
     INDEX idx_purchases_session (stripe_session_id),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS teams (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    uuid VARCHAR(36) NOT NULL UNIQUE,
+    owner_id INT NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    description VARCHAR(255) NULL,
+    color VARCHAR(20) NOT NULL DEFAULT '#6366f1',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_teams_owner (owner_id),
+    FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS team_members (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    team_id INT NOT NULL,
+    user_id INT NOT NULL,
+    role ENUM('admin', 'member') NOT NULL DEFAULT 'member',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_team_user (team_id, user_id),
+    INDEX idx_team_members_user (user_id),
+    FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE DATABASE IF NOT EXISTS db_canvas;
@@ -98,5 +123,27 @@ CREATE TABLE IF NOT EXISTS canvases (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_canvases_user (user_id),
     INDEX idx_canvases_uuid (uuid)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS canvas_members (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    canvas_id INT NOT NULL,
+    user_id INT NOT NULL,
+    role ENUM('editor', 'viewer') NOT NULL DEFAULT 'editor',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_canvas_member (canvas_id, user_id),
+    INDEX idx_canvas_members_user (user_id),
+    FOREIGN KEY (canvas_id) REFERENCES canvases(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS canvas_teams (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    canvas_id INT NOT NULL,
+    team_id INT NOT NULL,
+    role ENUM('editor', 'viewer') NOT NULL DEFAULT 'editor',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_canvas_team (canvas_id, team_id),
+    INDEX idx_canvas_teams_team (team_id),
+    FOREIGN KEY (canvas_id) REFERENCES canvases(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

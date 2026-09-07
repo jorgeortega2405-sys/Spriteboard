@@ -547,6 +547,13 @@ export async function createTopBar(): Promise<HTMLElement> {
         render();
       };
 
+      const btnTeams = avatarContainer.querySelector<HTMLElement>('[data-ref="btn-menu-teams"]');
+      btnTeams?.addEventListener('click', (e) => {
+        e.preventDefault();
+        closeMenu();
+        navigate('/teams');
+      });
+
       const btnSettings = avatarContainer.querySelector<HTMLElement>('[data-ref="btn-menu-settings"]');
       btnSettings?.addEventListener('click', (e) => {
         e.preventDefault();

@@ -6,6 +6,7 @@ import canvasRoutes from './canvas.routes.js';
 import configRoutes from './config.routes.js';
 import settingsRoutes from './settings.routes.js';
 import subscriptionRoutes from './subscription.routes.js';
+import teamRoutes from './team.routes.js';
 import telemetryRoutes from './telemetry.routes.js';
 import { Router } from 'express';
 
@@ -18,6 +19,7 @@ apiRouter.use('/', authRoutes);
 apiRouter.use('/', avatarRoutes);
 apiRouter.use('/', canvasRoutes);
 apiRouter.use('/', settingsRoutes);
+apiRouter.use('/', teamRoutes);
 apiRouter.use('/', telemetryRoutes);
 apiRouter.use('/', aiRoutes);
 apiRouter.use('/', subscriptionRoutes);

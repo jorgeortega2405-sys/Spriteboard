@@ -10,7 +10,15 @@ export const API_ROUTES = {
     byId: (uuid: string) => `/api/canvases/${encodeURIComponent(uuid)}`,
     members: (uuid: string) => `/api/canvases/${encodeURIComponent(uuid)}/members`,
     removeMember: (uuid: string, userId: number) => `/api/canvases/${encodeURIComponent(uuid)}/members/${encodeURIComponent(userId)}`,
+    removeTeam: (uuid: string, teamId: number) => `/api/canvases/${encodeURIComponent(uuid)}/teams/${encodeURIComponent(teamId)}`,
     sync: '/api/canvases/sync',
+    teams: (uuid: string) => `/api/canvases/${encodeURIComponent(uuid)}/teams`,
+  },
+  teams: {
+    base: '/api/teams',
+    byId: (uuid: string) => `/api/teams/${encodeURIComponent(uuid)}`,
+    members: (uuid: string) => `/api/teams/${encodeURIComponent(uuid)}/members`,
+    removeMember: (uuid: string, userId: number) => `/api/teams/${encodeURIComponent(uuid)}/members/${encodeURIComponent(userId)}`,
   },
   users: {
     search: (q: string) => `/api/users/search?q=${encodeURIComponent(q)}`,

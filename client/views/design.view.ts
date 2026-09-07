@@ -9,6 +9,7 @@ import { getEffectiveTheme } from '../services/theme.service.js';
 import { showToast } from '../services/toast.service.js';
 import { joinCanvasRoom, leaveCanvasRoom, registerWebSocketHandler, sendCanvasAccessChanged, sendCanvasAction, sendCanvasCursor, sendCanvasDrawStroke, sendCanvasFullUpdate, sendCanvasMemberRemoved } from '../services/websocket.service.js';
 import { CanvasItem, CanvasMember, SearchUserResult } from '../types/canvas.types.js';
+import { CanvasTeamItem, Team } from '../types/team.types.js';
 import { CarouselController, initCarouselScroll, setupDropdown } from '../utils/dom.util.js';
 import { PixelFontFamily, renderPixelTextCanvas } from '../utils/pixel-font.util.js';
 import { getCachedImage, PIXEL_SHAPES, PixelShape, renderShapeCanvas, renderShapeThumbnail, ShapeCategory, ShapeColorMode } from '../utils/pixel-shapes.util.js';
@@ -316,6 +317,11 @@ class DesignController {
   private shareSearchInputEl: HTMLInputElement | null = null;
   private shareSearchResultsEl: HTMLElement | null = null;
   private shareMembersListEl: HTMLElement | null = null;
+  private shareTeamsListEl: HTMLElement | null = null;
+  private selectShareTeamEl: HTMLSelectElement | null = null;
+  private btnAddTeamToCanvasEl: HTMLButtonElement | null = null;
+  private canvasTeams: CanvasTeamItem[] = [];
+  private userTeams: Team[] = [];
   private shareFocusSearchBtn: HTMLButtonElement | null = null;
   private quickDownloadBtn: HTMLButtonElement | null = null;
   private quickViewLinkBtn: HTMLButtonElement | null = null;
@@ -620,6 +626,9 @@ class DesignController {
     this.shareSearchInputEl = this.container.querySelector<HTMLInputElement>('[data-ref="input-share-search-people"]');
     this.shareSearchResultsEl = this.container.querySelector<HTMLElement>('[data-ref="share-search-results"]');
     this.shareMembersListEl = this.container.querySelector<HTMLElement>('[data-ref="share-members-list"]');
+    this.shareTeamsListEl = this.container.querySelector<HTMLElement>('[data-ref="share-teams-list"]');
+    this.selectShareTeamEl = this.container.querySelector<HTMLSelectElement>('[data-ref="select-share-team"]');
+    this.btnAddTeamToCanvasEl = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-add-team-to-canvas"]');
     this.shareFocusSearchBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-share-focus-search"]');
     this.quickDownloadBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-quick-download"]');
     this.quickViewLinkBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-quick-view-link"]');
@@ -3269,6 +3278,18 @@ class DesignController {
         'click',
         () => {
           this.loadCanvasMembers();
+          this.loadCanvasTeams();
+          this.loadUserTeamsForSelect();
+        },
+        { signal }
+      );
+    }
+
+    if (this.btnAddTeamToCanvasEl) {
+      this.btnAddTeamToCanvasEl.addEventListener(
+        'click',
+        () => {
+          void this.addSelectedTeamToCanvas();
         },
         { signal }
       );
@@ -5374,6 +5395,172 @@ class DesignController {
     }
   }
 
+  private async loadCanvasTeams(): Promise<void> {
+    try {
+      const res = await getApi(API_ROUTES.canvases.teams(this.canvasUuid));
+      if (res.ok) {
+        const data = await res.json();
+        if (data && Array.isArray(data.teams)) {
+          this.canvasTeams = data.teams;
+          this.renderShareTeams();
+        }
+      }
+    } catch {
+      //
+    }
+  }
+
+  private async loadUserTeamsForSelect(): Promise<void> {
+    if (!currentUser || !this.selectShareTeamEl) return;
+    try {
+      const res = await getApi(API_ROUTES.teams.base);
+      if (res.ok) {
+        const data = await res.json();
+        this.userTeams = Array.isArray(data.teams) ? data.teams : [];
+        this.renderSelectTeamsOptions();
+      }
+    } catch {
+      //
+    }
+  }
+
+  private renderSelectTeamsOptions(): void {
+    if (!this.selectShareTeamEl) return;
+    this.selectShareTeamEl.innerHTML = '';
+
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.disabled = true;
+    defaultOption.selected = true;
+    defaultOption.textContent = 'Seleccionar equipo...';
+    this.selectShareTeamEl.appendChild(defaultOption);
+
+    const linkedTeamIds = new Set(this.canvasTeams.map((t) => t.team_id));
+    const availableTeams = this.userTeams.filter((t) => !linkedTeamIds.has(t.id));
+
+    if (availableTeams.length === 0) {
+      defaultOption.textContent = this.userTeams.length === 0 ? 'No tienes equipos creados' : 'Todos tus equipos ya tienen acceso';
+      if (this.btnAddTeamToCanvasEl) this.btnAddTeamToCanvasEl.disabled = true;
+      return;
+    }
+
+    if (this.btnAddTeamToCanvasEl) this.btnAddTeamToCanvasEl.disabled = false;
+
+    for (const team of availableTeams) {
+      const option = document.createElement('option');
+      option.value = String(team.id);
+      option.textContent = `${team.name} (${team.member_count || 1} ${Number(team.member_count) === 1 ? 'miembro' : 'miembros'})`;
+      this.selectShareTeamEl.appendChild(option);
+    }
+  }
+
+  private renderShareTeams(): void {
+    if (!this.shareTeamsListEl) return;
+    this.shareTeamsListEl.innerHTML = '';
+
+    if (this.canvasTeams.length === 0) {
+      const empty = document.createElement('span');
+      empty.className = 'design-share-teams-empty';
+      empty.textContent = 'Ningún equipo vinculado.';
+      this.shareTeamsListEl.appendChild(empty);
+      this.renderSelectTeamsOptions();
+      return;
+    }
+
+    for (const team of this.canvasTeams) {
+      const item = document.createElement('div');
+      item.className = 'design-share-team-chip';
+
+      const icon = document.createElement('span');
+      icon.className = 'component-icon';
+      icon.textContent = 'groups';
+
+      const name = document.createElement('span');
+      name.className = 'design-share-team-chip__name';
+      name.textContent = team.team_name || 'Equipo';
+
+      const meta = document.createElement('span');
+      meta.className = 'design-share-team-chip__count';
+      meta.textContent = `(${team.member_count || 1})`;
+
+      item.appendChild(icon);
+      item.appendChild(name);
+      item.appendChild(meta);
+
+      if (this.isOwner) {
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'design-share-team-chip__remove';
+        removeBtn.setAttribute('data-tooltip', `Desvincular ${team.team_name || 'equipo'}`);
+        removeBtn.setAttribute('aria-label', `Desvincular ${team.team_name || 'equipo'}`);
+        removeBtn.innerHTML = '<span class="component-icon">close</span>';
+        removeBtn.addEventListener(
+          'click',
+          (e) => {
+            e.stopPropagation();
+            void this.removeTeamFromCanvas(team.team_id, team.team_name || 'Equipo');
+          },
+          { signal: this.abortController.signal }
+        );
+        item.appendChild(removeBtn);
+      }
+
+      this.shareTeamsListEl.appendChild(item);
+    }
+
+    renderIcons(this.shareTeamsListEl);
+    this.renderSelectTeamsOptions();
+  }
+
+  private async addSelectedTeamToCanvas(): Promise<void> {
+    if (!this.isOwner) {
+      showToast('Solo el propietario puede vincular equipos', 'warning');
+      return;
+    }
+
+    if (!this.selectShareTeamEl || !this.selectShareTeamEl.value) {
+      showToast('Por favor selecciona un equipo', 'warning');
+      return;
+    }
+
+    const teamId = Number(this.selectShareTeamEl.value);
+    if (isNaN(teamId) || teamId <= 0) return;
+
+    try {
+      const res = await postApi(API_ROUTES.canvases.teams(this.canvasUuid), {
+        role: 'editor',
+        teamId,
+      });
+
+      if (!res.ok) {
+        showToast('No se pudo vincular el equipo al lienzo', 'danger');
+        return;
+      }
+
+      showToast('Equipo vinculado exitosamente', 'success');
+      await this.loadCanvasTeams();
+    } catch {
+      showToast('Error al vincular equipo', 'danger');
+    }
+  }
+
+  private async removeTeamFromCanvas(teamId: number, teamName: string): Promise<void> {
+    if (!this.isOwner) return;
+
+    try {
+      const res = await deleteApi(API_ROUTES.canvases.removeTeam(this.canvasUuid, teamId));
+      if (!res.ok) {
+        showToast('No se pudo desvincular el equipo', 'danger');
+        return;
+      }
+
+      showToast(`Equipo "${teamName}" desvinculado`, 'info');
+      await this.loadCanvasTeams();
+    } catch {
+      showToast('Error al desvincular equipo', 'danger');
+    }
+  }
+
   private handleSearchUsers(query: string): void {
     if (this.searchDebounceTimer) {
       clearTimeout(this.searchDebounceTimer);
@@ -5557,6 +5744,7 @@ class DesignController {
 
     this.updateAccessLevelUI();
     await this.loadCanvasMembers();
+    await this.loadCanvasTeams();
 
     const parent = this.viewportCanvas?.parentElement;
     if (parent) {

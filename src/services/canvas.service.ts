@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import mysql from 'mysql2/promise';
 import { canvasPool } from '../config/database.config.js';
 import { Canvas, CanvasMember, CreateCanvasDto, SearchUserResult, SyncCanvasDto } from '../types/canvas.types.js';
+import { CanvasTeam } from '../types/team.types.js';
 import { logger } from './logger.service.js';
 
 export async function createCanvas(userId: number, dto: CreateCanvasDto): Promise<Canvas> {
@@ -85,6 +86,16 @@ export async function getCanvasByUuid(uuid: string, userId?: number): Promise<Ca
       if (memberRows.length > 0) {
         return canvas;
       }
+
+      const [teamRows] = await canvasPool.query<mysql.RowDataPacket[]>(
+        `SELECT ct.id FROM canvas_teams ct
+         INNER JOIN db_identity.team_members tm ON tm.team_id = ct.team_id
+         WHERE ct.canvas_id = ? AND tm.user_id = ? LIMIT 1`,
+        [canvas.id, userId]
+      );
+      if (teamRows.length > 0) {
+        return canvas;
+      }
     }
 
     return null;
@@ -156,6 +167,16 @@ export async function syncCanvas(userId: number | null, dto: SyncCanvasDto): Pro
           [row.id, userId]
         );
         isMember = memberRows.length > 0;
+
+        if (!isMember) {
+          const [teamRows] = await canvasPool.query<mysql.RowDataPacket[]>(
+            `SELECT ct.id FROM canvas_teams ct
+             INNER JOIN db_identity.team_members tm ON tm.team_id = ct.team_id
+             WHERE ct.canvas_id = ? AND tm.user_id = ? AND ct.role = 'editor' LIMIT 1`,
+            [row.id, userId]
+          );
+          isMember = teamRows.length > 0;
+        }
       }
 
       if (!isOwner && !isPublic && !isMember) {
@@ -217,11 +238,24 @@ export async function getCanvasMembers(uuid: string, currentUserId?: number): Pr
       if (currentUserId === undefined) {
         throw new Error('No autorizado.');
       }
+      let hasAccess = false;
       const [isMemberRows] = await canvasPool.query<mysql.RowDataPacket[]>(
         'SELECT id FROM canvas_members WHERE canvas_id = ? AND user_id = ? LIMIT 1',
         [canvas.id, currentUserId]
       );
-      if (isMemberRows.length === 0) {
+      if (isMemberRows.length > 0) {
+        hasAccess = true;
+      } else {
+        const [isTeamRows] = await canvasPool.query<mysql.RowDataPacket[]>(
+          `SELECT ct.id FROM canvas_teams ct
+           INNER JOIN db_identity.team_members tm ON tm.team_id = ct.team_id
+           WHERE ct.canvas_id = ? AND tm.user_id = ? LIMIT 1`,
+          [canvas.id, currentUserId]
+        );
+        hasAccess = isTeamRows.length > 0;
+      }
+
+      if (!hasAccess) {
         throw new Error('No autorizado.');
       }
     }
@@ -353,4 +387,149 @@ export async function searchUsersForSharing(query: string, currentUserId: number
     throw err;
   }
 }
+
+export async function getCanvasTeams(uuid: string, currentUserId?: number): Promise<CanvasTeam[]> {
+  try {
+    const [canvasRows] = await canvasPool.query<mysql.RowDataPacket[]>(
+      'SELECT id, user_id, access_level FROM canvases WHERE uuid = ? LIMIT 1',
+      [uuid]
+    );
+
+    if (canvasRows.length === 0) {
+      throw new Error('El lienzo no existe.');
+    }
+
+    const canvas = canvasRows[0];
+    const isOwner = currentUserId !== undefined && canvas.user_id === currentUserId;
+    const isPublic = canvas.access_level === 'public';
+
+    if (!isOwner && !isPublic) {
+      if (currentUserId === undefined) {
+        throw new Error('No autorizado.');
+      }
+      let hasAccess = false;
+      const [isMemberRows] = await canvasPool.query<mysql.RowDataPacket[]>(
+        'SELECT id FROM canvas_members WHERE canvas_id = ? AND user_id = ? LIMIT 1',
+        [canvas.id, currentUserId]
+      );
+      if (isMemberRows.length > 0) {
+        hasAccess = true;
+      } else {
+        const [isTeamRows] = await canvasPool.query<mysql.RowDataPacket[]>(
+          `SELECT ct.id FROM canvas_teams ct
+           INNER JOIN db_identity.team_members tm ON tm.team_id = ct.team_id
+           WHERE ct.canvas_id = ? AND tm.user_id = ? LIMIT 1`,
+          [canvas.id, currentUserId]
+        );
+        hasAccess = isTeamRows.length > 0;
+      }
+
+      if (!hasAccess) {
+        throw new Error('No autorizado.');
+      }
+    }
+
+    const [teams] = await canvasPool.query<mysql.RowDataPacket[]>(
+      `SELECT ct.id, ct.canvas_id, ct.team_id, ct.role, ct.created_at,
+              t.uuid AS team_uuid, t.name AS team_name, t.color AS team_color,
+              (SELECT COUNT(*) FROM db_identity.team_members tm WHERE tm.team_id = t.id) AS member_count
+       FROM canvas_teams ct
+       INNER JOIN db_identity.teams t ON ct.team_id = t.id
+       WHERE ct.canvas_id = ?
+       ORDER BY ct.created_at ASC`,
+      [canvas.id]
+    );
+
+    return teams as CanvasTeam[];
+  } catch (err: any) {
+    logger.db.error(`Error al obtener equipos del lienzo ${uuid}`, err);
+    throw err;
+  }
+}
+
+export async function addCanvasTeam(
+  uuid: string,
+  ownerUserId: number,
+  teamId: number,
+  role: 'editor' | 'viewer' = 'editor'
+): Promise<CanvasTeam> {
+  try {
+    const [canvasRows] = await canvasPool.query<mysql.RowDataPacket[]>(
+      'SELECT id, user_id FROM canvases WHERE uuid = ? LIMIT 1',
+      [uuid]
+    );
+
+    if (canvasRows.length === 0) {
+      throw new Error('El lienzo no existe.');
+    }
+
+    const canvas = canvasRows[0];
+    if (canvas.user_id !== ownerUserId) {
+      throw new Error('Solo el propietario puede agregar equipos con acceso.');
+    }
+
+    const [teamRows] = await canvasPool.query<mysql.RowDataPacket[]>(
+      'SELECT id, uuid, name, color FROM db_identity.teams WHERE id = ? LIMIT 1',
+      [teamId]
+    );
+
+    if (teamRows.length === 0) {
+      throw new Error('El equipo seleccionado no existe.');
+    }
+
+    await canvasPool.execute(
+      `INSERT INTO canvas_teams (canvas_id, team_id, role)
+       VALUES (?, ?, ?)
+       ON DUPLICATE KEY UPDATE role = VALUES(role)`,
+      [canvas.id, teamId, role]
+    );
+
+    logger.db.info(`Equipo ${teamId} añadido como colaborador al lienzo ${uuid} por dueño ${ownerUserId}`);
+
+    const [canvasTeamRows] = await canvasPool.query<mysql.RowDataPacket[]>(
+      `SELECT ct.id, ct.canvas_id, ct.team_id, ct.role, ct.created_at,
+              t.uuid AS team_uuid, t.name AS team_name, t.color AS team_color,
+              (SELECT COUNT(*) FROM db_identity.team_members tm WHERE tm.team_id = t.id) AS member_count
+       FROM canvas_teams ct
+       INNER JOIN db_identity.teams t ON ct.team_id = t.id
+       WHERE ct.canvas_id = ? AND ct.team_id = ? LIMIT 1`,
+      [canvas.id, teamId]
+    );
+
+    return canvasTeamRows[0] as CanvasTeam;
+  } catch (err: any) {
+    logger.db.error(`Error al añadir equipo al lienzo ${uuid}`, err);
+    throw err;
+  }
+}
+
+export async function removeCanvasTeam(uuid: string, ownerUserId: number, teamId: number): Promise<boolean> {
+  try {
+    const [canvasRows] = await canvasPool.query<mysql.RowDataPacket[]>(
+      'SELECT id, user_id FROM canvases WHERE uuid = ? LIMIT 1',
+      [uuid]
+    );
+
+    if (canvasRows.length === 0) {
+      throw new Error('El lienzo no existe.');
+    }
+
+    const canvas = canvasRows[0];
+    if (canvas.user_id !== ownerUserId) {
+      throw new Error('Solo el propietario puede remover equipos.');
+    }
+
+    await canvasPool.execute(
+      'DELETE FROM canvas_teams WHERE canvas_id = ? AND team_id = ?',
+      [canvas.id, teamId]
+    );
+
+    logger.db.info(`Equipo ${teamId} eliminado del lienzo ${uuid} por dueño ${ownerUserId}`);
+    return true;
+  } catch (err: any) {
+    logger.db.error(`Error al remover equipo del lienzo ${uuid}`, err);
+    throw err;
+  }
+}
+
 

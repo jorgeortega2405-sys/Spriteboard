@@ -1,0 +1,185 @@
+<div class="layout-content" data-ref="teams-view">
+  <div class="component-wrapper component-wrapper--full" data-ref="teams-wrapper">
+    <!-- Component Top -->
+    <div class="component-top" data-ref="component-top">
+      <div class="component-top-left" data-ref="component-top-left">
+        <h1 class="component-top-title" data-ref="teams-title" data-i18n="teams.title">Tus equipos</h1>
+        <span class="component-selection-badge" data-ref="teams-selection-count" style="display: none;"></span>
+      </div>
+
+      <div class="component-top-right" data-ref="component-top-right">
+        <!-- Acciones por defecto -->
+        <div class="component-top-actions" data-ref="teams-default-actions">
+          <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-toggle-search" data-tooltip="Buscar equipos" aria-label="Buscar equipos">
+            <span class="material-symbols-rounded">search</span>
+          </button>
+          <button type="button" class="btn btn--h40 btn--black" data-ref="btn-create-team">
+            <span class="material-symbols-rounded">group_add</span>
+            <span data-i18n="teams.create_btn">Crear equipo</span>
+          </button>
+        </div>
+
+        <!-- Acciones contextuales al seleccionar items -->
+        <div class="component-top-actions" data-ref="teams-selected-actions" style="display: none;">
+          <button type="button" class="btn btn--h40 btn--semi-black" data-ref="btn-action-members">
+            <span class="material-symbols-rounded">groups</span>
+            <span data-i18n="teams.btn_members">Miembros</span>
+          </button>
+          <button type="button" class="btn btn--h40 btn--semi-black" data-ref="btn-action-edit">
+            <span class="material-symbols-rounded">edit</span>
+            <span data-i18n="teams.btn_edit">Editar</span>
+          </button>
+          <button type="button" class="btn btn--h40 btn--danger" data-ref="btn-action-delete">
+            <span class="material-symbols-rounded">delete</span>
+            <span data-i18n="teams.btn_delete">Eliminar</span>
+          </button>
+          <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-action-clear-selection" data-tooltip="Deseleccionar" aria-label="Deseleccionar">
+            <span class="material-symbols-rounded">close</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Toolbar de búsqueda flotante -->
+      <div class="component-search-toolbar is-hidden" data-ref="search-toolbar">
+        <div class="component-search component-search--full" data-ref="search-box">
+          <div class="component-search__icon" data-ref="search-icon">
+            <span class="material-symbols-rounded">search</span>
+          </div>
+          <div class="component-search__input-box" data-ref="search-input-box">
+            <input class="component-search__input" data-ref="teams-search-input" data-i18n-placeholder="teams.search_placeholder" type="text" maxlength="100" autocomplete="off" />
+          </div>
+          <button type="button" class="btn btn--h34 btn--icon btn--clear-search" data-ref="btn-clear-search" style="display: none; margin-right: 4px;" aria-label="Limpiar búsqueda">
+            <span class="material-symbols-rounded" style="font-size: 18px;">close</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Component Bottom -->
+    <div class="component-bottom" data-ref="component-bottom">
+      <div class="component-table-wrapper" data-ref="teams-table-wrapper">
+        <table class="component-table" data-ref="teams-table">
+          <thead class="component-table__head" data-ref="teams-thead">
+            <tr>
+              <th style="width: 44px; text-align: center;">
+                <input class="component-table__checkbox" data-ref="checkbox-select-all" type="checkbox" aria-label="Seleccionar todos" />
+              </th>
+              <th data-ref="th-team" data-i18n="teams.col_team">Equipo</th>
+              <th data-ref="th-desc" data-i18n="teams.col_desc">Descripción</th>
+              <th data-ref="th-members" data-i18n="teams.col_members">Miembros</th>
+              <th data-ref="th-role" data-i18n="teams.col_role">Rol</th>
+              <th class="text-right" data-ref="th-created" data-i18n="teams.col_created">Fecha de creación</th>
+            </tr>
+          </thead>
+          <tbody class="component-table__body" data-ref="teams-tbody">
+            <!-- Filas inyectadas dinámicamente -->
+          </tbody>
+        </table>
+
+        <!-- Estado vacío -->
+        <div class="component-empty-state" data-ref="teams-empty-state" style="display: none;">
+          <span class="material-symbols-rounded component-empty-state__icon" data-ref="empty-icon">groups</span>
+          <p class="component-empty-state__text" data-ref="teams-empty-text" data-i18n="teams.empty_desc"></p>
+          <button type="button" class="btn btn--h40 btn--black" data-ref="btn-empty-create-team" data-i18n="teams.empty_action">
+            Crear tu primer equipo
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" data-ref="modal-team-backdrop">
+    <div class="modal-container" data-ref="modal-team-container">
+      <button type="button" class="modal-close-btn" data-ref="btn-close-team-modal" aria-label="Cerrar modal">
+        <span class="material-symbols-rounded">close</span>
+      </button>
+      <div class="modal-card modal-card--w-480" data-ref="modal-team-card">
+        <div class="modal-card__header">
+          <h2 class="modal-card__title" data-ref="modal-team-title" data-i18n="teams.modal_create_title">Nuevo equipo de trabajo</h2>
+        </div>
+        <form class="modal-card__body" data-ref="form-team">
+          <div class="field-group">
+            <label class="field" data-ref="field-team-name">
+              <span class="field__label" data-i18n="teams.name_label">Nombre del equipo</span>
+              <input class="field__input" data-ref="input-team-name" type="text" placeholder=" " maxlength="100" required />
+            </label>
+          </div>
+          <div class="field-group">
+            <label class="field" data-ref="field-team-desc">
+              <span class="field__label" data-i18n="teams.desc_label">Descripción (opcional)</span>
+              <input class="field__input" data-ref="input-team-desc" type="text" placeholder=" " maxlength="255" />
+            </label>
+          </div>
+          <div class="field-group">
+            <span class="field__label field__label--static" data-i18n="teams.color_label">Color distintivo</span>
+            <div class="team-color-picker" data-ref="team-color-picker">
+              <button type="button" class="team-color-dot is-active" data-ref="color-dot" data-color="#6366f1" style="background-color: #6366f1;" aria-label="Índigo"></button>
+              <button type="button" class="team-color-dot" data-ref="color-dot" data-color="#3b82f6" style="background-color: #3b82f6;" aria-label="Azul"></button>
+              <button type="button" class="team-color-dot" data-ref="color-dot" data-color="#10b981" style="background-color: #10b981;" aria-label="Verde"></button>
+              <button type="button" class="team-color-dot" data-ref="color-dot" data-color="#f59e0b" style="background-color: #f59e0b;" aria-label="Ámbar"></button>
+              <button type="button" class="team-color-dot" data-ref="color-dot" data-color="#ef4444" style="background-color: #ef4444;" aria-label="Rojo"></button>
+              <button type="button" class="team-color-dot" data-ref="color-dot" data-color="#8b5cf6" style="background-color: #8b5cf6;" aria-label="Púrpura"></button>
+              <button type="button" class="team-color-dot" data-ref="color-dot" data-color="#ec4899" style="background-color: #ec4899;" aria-label="Rosa"></button>
+            </div>
+          </div>
+
+          <div class="modal-card__actions">
+            <button type="button" class="btn btn--h40 btn--outline" data-ref="btn-cancel-team" data-i18n="modal.cancel">Cancelar</button>
+            <button type="submit" class="btn btn--h40 btn--black" data-ref="btn-submit-team" data-i18n="teams.btn_save">Guardar equipo</button>
+          </div>
+          <div class="banner banner--danger is-hidden" data-ref="banner-team-error"></div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" data-ref="modal-members-backdrop">
+    <div class="modal-container" data-ref="modal-members-container">
+      <button type="button" class="modal-close-btn" data-ref="btn-close-members-modal" aria-label="Cerrar modal">
+        <span class="material-symbols-rounded">close</span>
+      </button>
+      <div class="modal-card modal-card--w-480" data-ref="modal-members-card">
+        <div class="modal-card__header">
+          <h2 class="modal-card__title" data-ref="members-modal-title" data-i18n="teams.members_title">Integrantes del equipo</h2>
+        </div>
+        <div class="modal-card__body">
+          <div class="field-group">
+            <div style="display: flex; gap: 8px; align-items: stretch;">
+              <label class="field" data-ref="field-add-member" style="flex: 1; margin: 0;">
+                <span class="field__label" data-i18n="teams.add_member_placeholder">Buscar por nombre o correo...</span>
+                <input class="field__input" data-ref="input-add-member" type="text" placeholder=" " autocomplete="off" />
+              </label>
+              <button type="button" class="btn btn--h55 btn--black" data-ref="btn-add-member" style="white-space: nowrap; padding: 0 16px;">
+                <span class="material-symbols-rounded">person_add</span>
+                <span data-i18n="teams.btn_add_member">Agregar</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <div class="settings-dropdown-wrapper settings-dropdown-wrapper--full" data-ref="members-dropdown-wrapper">
+              <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-members">
+                <div class="dropdown-trigger__left">
+                  <span class="material-symbols-rounded dropdown-trigger__icon">groups</span>
+                  <span class="dropdown-trigger__text" data-ref="members-trigger-text">Integrantes</span>
+                </div>
+                <span class="material-symbols-rounded dropdown-trigger__chevron">expand_more</span>
+              </button>
+
+              <div class="dropdown-backdrop" data-ref="members-dropdown-backdrop">
+                <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="members-dropdown-menu">
+                  <div class="menu-panel__list menu-panel__list--scrollable" data-ref="members-dropdown-list">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-card__actions">
+            <button type="button" class="btn btn--h40 btn--black" data-ref="btn-done-members" data-i18n="modal.close">Cerrar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -310,7 +310,49 @@ export async function runMigrations(): Promise<void> {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
-    logger.db.info('Tablas y columnas de identidad, 2FA, suscripciones, compras, GeoIP y db_canvas verificadas exitosamente.');
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS teams (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        uuid VARCHAR(36) NOT NULL UNIQUE,
+        owner_id INT NOT NULL,
+        name VARCHAR(100) NOT NULL,
+        description VARCHAR(255) NULL,
+        color VARCHAR(20) NOT NULL DEFAULT '#6366f1',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_teams_owner (owner_id),
+        FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS team_members (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        team_id INT NOT NULL,
+        user_id INT NOT NULL,
+        role ENUM('admin', 'member') NOT NULL DEFAULT 'member',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_team_user (team_id, user_id),
+        INDEX idx_team_members_user (user_id),
+        FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS db_canvas.canvas_teams (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        canvas_id INT NOT NULL,
+        team_id INT NOT NULL,
+        role ENUM('editor', 'viewer') NOT NULL DEFAULT 'editor',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_canvas_team (canvas_id, team_id),
+        INDEX idx_canvas_teams_team (team_id),
+        FOREIGN KEY (canvas_id) REFERENCES db_canvas.canvases(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    logger.db.info('Tablas y columnas de identidad, 2FA, suscripciones, compras, GeoIP, db_canvas y equipos verificadas exitosamente.');
   } catch (err) {
     logger.db.warn('Advertencia en migración de base de datos', err);
   } finally {
