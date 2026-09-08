@@ -56,3 +56,32 @@ export interface SearchUserResult {
   email: string;
   avatar_url?: string | null;
 }
+
+export interface CanvasMetricViewer {
+  user_id: number | null;
+  username: string;
+  avatar_url: string | null;
+  is_registered: boolean;
+  views_count: number;
+  total_duration_seconds: number;
+  last_viewed_at: string;
+}
+
+export interface CanvasRecentView {
+  id: number;
+  user_id: number | null;
+  username: string;
+  avatar_url: string | null;
+  is_registered: boolean;
+  duration_seconds: number;
+  viewed_at: string;
+}
+
+export interface CanvasMetricsData {
+  canvas_name: string;
+  total_views: number;
+  unique_viewers: number;
+  avg_duration_seconds: number;
+  viewers: CanvasMetricViewer[];
+  recent_views: CanvasRecentView[];
+}

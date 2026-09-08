@@ -149,3 +149,20 @@ CREATE TABLE IF NOT EXISTS canvas_teams (
     FOREIGN KEY (canvas_id) REFERENCES canvases(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS canvas_views (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    canvas_id INT NOT NULL,
+    user_id INT NULL,
+    session_id VARCHAR(100) NOT NULL,
+    ip_address VARCHAR(45) NULL,
+    user_agent VARCHAR(255) NULL,
+    duration_seconds INT NOT NULL DEFAULT 0,
+    viewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_canvas_views_canvas (canvas_id),
+    INDEX idx_canvas_views_user (user_id),
+    INDEX idx_canvas_views_session (session_id),
+    INDEX idx_canvas_views_viewed_at (viewed_at),
+    FOREIGN KEY (canvas_id) REFERENCES canvases(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+

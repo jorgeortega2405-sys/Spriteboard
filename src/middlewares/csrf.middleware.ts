@@ -34,7 +34,11 @@ export function validateCsrf(req: Request, res: Response, next: NextFunction): v
   }
 
   const reqPath = req.originalUrl || req.url;
-  if (reqPath.includes('/subscriptions/webhook') || reqPath.includes('/webhooks/stripe')) {
+  if (
+    reqPath.includes('/subscriptions/webhook') ||
+    reqPath.includes('/webhooks/stripe') ||
+    (reqPath.includes('/canvases/') && (reqPath.endsWith('/views') || reqPath.endsWith('/heartbeat')))
+  ) {
     return next();
   }
 

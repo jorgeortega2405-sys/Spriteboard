@@ -408,7 +408,26 @@ export async function runMigrations(): Promise<void> {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
-    logger.db.info('Tablas y columnas de identidad, 2FA, suscripciones, compras, GeoIP, db_canvas y equipos verificadas exitosamente.');
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS db_canvas.canvas_views (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        canvas_id INT NOT NULL,
+        user_id INT NULL,
+        session_id VARCHAR(100) NOT NULL,
+        ip_address VARCHAR(45) NULL,
+        user_agent VARCHAR(255) NULL,
+        duration_seconds INT NOT NULL DEFAULT 0,
+        viewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_canvas_views_canvas (canvas_id),
+        INDEX idx_canvas_views_user (user_id),
+        INDEX idx_canvas_views_session (session_id),
+        INDEX idx_canvas_views_viewed_at (viewed_at),
+        FOREIGN KEY (canvas_id) REFERENCES db_canvas.canvases(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    logger.db.info('Tablas y columnas de identidad, 2FA, suscripciones, compras, GeoIP, db_canvas, equipos y vistas verificadas exitosamente.');
   } catch (err) {
     logger.db.warn('Advertencia en migración de base de datos', err);
   } finally {

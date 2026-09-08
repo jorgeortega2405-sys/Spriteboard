@@ -1,5 +1,5 @@
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
-import { addCanvasMember, addCanvasTeam, createCanvas, deleteCanvas, duplicateCanvas, emptyTrash, generateCanvasRoomToken, getCanvasBySlug, getCanvasByUuid, getCanvasMembers, getCanvasTeams, getCanvasUserRole, getUserCanvases, getUserTrashCanvases, permanentlyDeleteCanvas, removeCanvasMember, removeCanvasTeam, restoreCanvas, searchUsersForSharing, syncCanvas, updateCanvasAccessLevel, updateCanvasSlug } from '../services/canvas.service.js';
+import { addCanvasMember, addCanvasTeam, createCanvas, deleteCanvas, duplicateCanvas, emptyTrash, generateCanvasRoomToken, getCanvasBySlug, getCanvasByUuid, getCanvasMembers, getCanvasMetrics, getCanvasTeams, getCanvasUserRole, getUserCanvases, getUserTrashCanvases, permanentlyDeleteCanvas, recordCanvasView, removeCanvasMember, removeCanvasTeam, restoreCanvas, searchUsersForSharing, syncCanvas, updateCanvasAccessLevel, updateCanvasSlug, updateCanvasViewHeartbeat } from '../services/canvas.service.js';
 import { logger } from '../services/logger.service.js';
 import { Request, Response } from 'express';
 
@@ -524,5 +524,71 @@ export async function updateCanvasSlugHandler(req: Request, res: Response): Prom
   }
 }
 
+export async function recordCanvasViewHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const { uuid } = req.params;
+    const { sessionId } = req.body;
+    if (!uuid || typeof uuid !== 'string' || !sessionId || typeof sessionId !== 'string') {
+      res.status(400).json({ error: 'Parámetros de vista requeridos.' });
+      return;
+    }
 
+    const user = getCurrentUser(req);
+    const ip = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || null;
+    const userAgent = (req.headers['user-agent'] as string) || null;
 
+    await recordCanvasView(uuid, user ? user.id : null, sessionId, ip, userAgent);
+    res.json({ success: true });
+  } catch (err) {
+    logger.app.error('Error al registrar vista de lienzo en canvas controller', err);
+    res.status(500).json({ error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.' });
+  }
+}
+
+export async function heartbeatCanvasViewHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const { uuid } = req.params;
+    const { sessionId, durationSeconds } = req.body;
+    if (!uuid || typeof uuid !== 'string' || !sessionId || typeof sessionId !== 'string') {
+      res.status(400).json({ error: 'Parámetros de latido requeridos.' });
+      return;
+    }
+
+    await updateCanvasViewHeartbeat(uuid, sessionId, Number(durationSeconds) || 0);
+    res.json({ success: true });
+  } catch (err) {
+    logger.app.error('Error al actualizar latido de vista en canvas controller', err);
+    res.status(500).json({ error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.' });
+  }
+}
+
+export async function getCanvasMetricsHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const user = getCurrentUser(req);
+    if (!user) {
+      res.status(401).json({ error: 'No autorizado.' });
+      return;
+    }
+
+    const { uuid } = req.params;
+    if (!uuid || typeof uuid !== 'string') {
+      res.status(400).json({ error: 'Identificador de lienzo inválido.' });
+      return;
+    }
+
+    const metrics = await getCanvasMetrics(uuid, user.id);
+    if (!metrics) {
+      res.status(404).json({ error: 'Lienzo no encontrado.' });
+      return;
+    }
+
+    res.json({ metrics });
+  } catch (err: any) {
+    if (err?.message?.includes('propietario')) {
+      res.status(403).json({ error: 'Solo el propietario tiene acceso a las estadísticas de este lienzo.' });
+      return;
+    }
+    logger.app.error('Error al obtener estadísticas del lienzo en canvas controller', err);
+    res.status(500).json({ error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.' });
+  }
+}

@@ -1,6 +1,6 @@
 import { canvasPool } from '../config/database.config.js';
 import { config } from '../config/env.config.js';
-import { Canvas, CanvasMember, CreateCanvasDto, SearchUserResult, SyncCanvasDto } from '../types/canvas.types.js';
+import { Canvas, CanvasMember, CanvasMetricsData, CanvasMetricViewer, CanvasRecentView, CreateCanvasDto, SearchUserResult, SyncCanvasDto } from '../types/canvas.types.js';
 import { CanvasTeam } from '../types/team.types.js';
 import { logger } from './logger.service.js';
 import crypto from 'crypto';
@@ -879,5 +879,162 @@ export async function updateCanvasSlug(uuid: string, userId: number, rawSlug: st
   }
 }
 
+export async function recordCanvasView(
+  uuid: string,
+  userId: number | null,
+  sessionId: string,
+  ipAddress: string | null,
+  userAgent: string | null
+): Promise<void> {
+  try {
+    const [canvasRows] = await canvasPool.query<mysql.RowDataPacket[]>(
+      'SELECT id FROM canvases WHERE uuid = ? AND deleted_at IS NULL LIMIT 1',
+      [uuid]
+    );
+    if (canvasRows.length === 0) return;
+    const canvasId = canvasRows[0].id;
 
+    const [existing] = await canvasPool.query<mysql.RowDataPacket[]>(
+      'SELECT id FROM canvas_views WHERE canvas_id = ? AND session_id = ? LIMIT 1',
+      [canvasId, sessionId]
+    );
 
+    if (existing.length > 0) {
+      await canvasPool.execute(
+        'UPDATE canvas_views SET updated_at = CURRENT_TIMESTAMP, user_id = COALESCE(?, user_id) WHERE id = ?',
+        [userId, existing[0].id]
+      );
+    } else {
+      await canvasPool.execute(
+        'INSERT INTO canvas_views (canvas_id, user_id, session_id, ip_address, user_agent, duration_seconds) VALUES (?, ?, ?, ?, ?, 0)',
+        [canvasId, userId, sessionId, ipAddress ? ipAddress.slice(0, 45) : null, userAgent ? userAgent.slice(0, 255) : null]
+      );
+    }
+  } catch (err) {
+    logger.db.error(`Error al registrar vista de lienzo ${uuid}`, err);
+  }
+}
+
+export async function updateCanvasViewHeartbeat(
+  uuid: string,
+  sessionId: string,
+  durationSeconds: number
+): Promise<void> {
+  try {
+    const safeDuration = Math.max(0, Math.min(86400, Math.floor(durationSeconds || 0)));
+    await canvasPool.execute(
+      `UPDATE canvas_views cv
+       JOIN canvases c ON cv.canvas_id = c.id
+       SET cv.duration_seconds = GREATEST(cv.duration_seconds, ?), cv.updated_at = CURRENT_TIMESTAMP
+       WHERE c.uuid = ? AND cv.session_id = ?`,
+      [safeDuration, uuid, sessionId]
+    );
+  } catch (err) {
+    logger.db.error(`Error al actualizar latido de duración de lienzo ${uuid}`, err);
+  }
+}
+
+export async function getCanvasMetrics(
+  uuid: string,
+  requestingUserId: number
+): Promise<CanvasMetricsData | null> {
+  try {
+    const [canvasRows] = await canvasPool.query<mysql.RowDataPacket[]>(
+      'SELECT id, user_id, name FROM canvases WHERE uuid = ? AND deleted_at IS NULL LIMIT 1',
+      [uuid]
+    );
+    if (canvasRows.length === 0) {
+      return null;
+    }
+    const canvas = canvasRows[0];
+    if (canvas.user_id !== requestingUserId) {
+      throw new Error('Solo el propietario del lienzo puede consultar sus métricas.');
+    }
+
+    const canvasId = canvas.id;
+
+    const [summaryRows] = await canvasPool.query<mysql.RowDataPacket[]>(
+      `SELECT 
+         COUNT(*) as total_views,
+         COALESCE(ROUND(AVG(duration_seconds)), 0) as avg_duration_seconds
+       FROM canvas_views
+       WHERE canvas_id = ?`,
+      [canvasId]
+    );
+    const totalViews = Number(summaryRows[0]?.total_views || 0);
+    const avgDuration = Number(summaryRows[0]?.avg_duration_seconds || 0);
+
+    const [uniqueRows] = await canvasPool.query<mysql.RowDataPacket[]>(
+      `SELECT COUNT(DISTINCT COALESCE(CONCAT('u_', user_id), CONCAT('s_', session_id))) as unique_viewers
+       FROM canvas_views
+       WHERE canvas_id = ?`,
+      [canvasId]
+    );
+    const uniqueViewers = Number(uniqueRows[0]?.unique_viewers || 0);
+
+    const [viewerRows] = await canvasPool.query<mysql.RowDataPacket[]>(
+      `SELECT 
+         cv.user_id,
+         u.username,
+         u.avatar_url,
+         COUNT(cv.id) as views_count,
+         SUM(cv.duration_seconds) as total_duration_seconds,
+         MAX(cv.viewed_at) as last_viewed_at
+       FROM canvas_views cv
+       INNER JOIN db_identity.users u ON cv.user_id = u.id
+       WHERE cv.canvas_id = ?
+       GROUP BY cv.user_id, u.username, u.avatar_url
+       ORDER BY last_viewed_at DESC
+       LIMIT 50`,
+      [canvasId]
+    );
+
+    const viewers: CanvasMetricViewer[] = viewerRows.map((row) => ({
+      user_id: row.user_id,
+      username: row.username,
+      avatar_url: row.avatar_url,
+      is_registered: true,
+      views_count: Number(row.views_count),
+      total_duration_seconds: Number(row.total_duration_seconds || 0),
+      last_viewed_at: row.last_viewed_at,
+    }));
+
+    const [recentRows] = await canvasPool.query<mysql.RowDataPacket[]>(
+      `SELECT 
+         cv.id,
+         cv.user_id,
+         cv.duration_seconds,
+         cv.viewed_at,
+         u.username,
+         u.avatar_url
+       FROM canvas_views cv
+       LEFT JOIN db_identity.users u ON cv.user_id = u.id
+       WHERE cv.canvas_id = ?
+       ORDER BY cv.viewed_at DESC
+       LIMIT 60`,
+      [canvasId]
+    );
+
+    const recentViews: CanvasRecentView[] = recentRows.map((row) => ({
+      id: row.id,
+      user_id: row.user_id,
+      username: row.username || 'Invitado (Anónimo)',
+      avatar_url: row.avatar_url || null,
+      is_registered: Boolean(row.user_id),
+      duration_seconds: Number(row.duration_seconds || 0),
+      viewed_at: row.viewed_at,
+    }));
+
+    return {
+      canvas_name: canvas.name,
+      total_views: totalViews,
+      unique_viewers: uniqueViewers,
+      avg_duration_seconds: avgDuration,
+      viewers,
+      recent_views: recentViews,
+    };
+  } catch (err: any) {
+    logger.db.error(`Error al obtener métricas del lienzo ${uuid}`, err);
+    throw err;
+  }
+}

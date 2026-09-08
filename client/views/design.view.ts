@@ -1,3 +1,4 @@
+import { openCanvasMetricsModal } from '../components/canvas-metrics-modal.component.js';
 import { createSidebar } from '../components/layout.component.js';
 import { openModal } from '../components/modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
@@ -534,6 +535,11 @@ class DesignController {
   private collaboratorsListEl: HTMLElement | null = null;
   private shareDropdownController: { close: () => void; destroy: () => void; open: () => void; toggle: () => void; update: () => void } | null = null;
   private accessDropdownController: { close: () => void; destroy: () => void; open: () => void; toggle: () => void; update: () => void } | null = null;
+  private btnCanvasMetrics: HTMLButtonElement | null = null;
+  private viewSessionId: string | null = null;
+  private viewStartTime = 0;
+  private viewHeartbeatTimer: number | null = null;
+  private boundBeforeUnload: (() => void) | null = null;
 
   private panX = 0;
   private panY = 0;
@@ -7397,10 +7403,61 @@ class DesignController {
     this.renderAnimationTagsBar();
     this.redraw();
 
+    this.btnCanvasMetrics = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-canvas-metrics"]');
+    if (this.btnCanvasMetrics) {
+      if (this.isOwner) {
+        this.btnCanvasMetrics.style.display = 'inline-flex';
+        this.btnCanvasMetrics.addEventListener('click', () => {
+          openCanvasMetricsModal(this.canvasUuid, this.canvasName);
+        }, { signal: this.abortController.signal });
+      } else {
+        this.btnCanvasMetrics.style.display = 'none';
+      }
+    }
+
+    if (this.canvasServerId) {
+      this.viewSessionId = 'view_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+      this.viewStartTime = Date.now();
+      void postApi(API_ROUTES.canvases.recordView(this.canvasUuid), {
+        sessionId: this.viewSessionId,
+      });
+
+      this.viewHeartbeatTimer = window.setInterval(() => {
+        if (!this.viewSessionId || !this.viewStartTime) return;
+        const durationSeconds = Math.floor((Date.now() - this.viewStartTime) / 1000);
+        void postApi(API_ROUTES.canvases.heartbeatView(this.canvasUuid), {
+          sessionId: this.viewSessionId,
+          durationSeconds,
+        });
+      }, 20000);
+
+      this.boundBeforeUnload = () => {
+        if (!this.viewSessionId || !this.viewStartTime) return;
+        const durationSeconds = Math.floor((Date.now() - this.viewStartTime) / 1000);
+        try {
+          const url = API_ROUTES.canvases.heartbeatView(this.canvasUuid);
+          const payload = JSON.stringify({ sessionId: this.viewSessionId, durationSeconds });
+          if (navigator.sendBeacon) {
+            navigator.sendBeacon(url, new Blob([payload], { type: 'application/json' }));
+          }
+        } catch {}
+      };
+      window.addEventListener('beforeunload', this.boundBeforeUnload);
+    }
+
     return true;
   }
 
   public destroy(): void {
+    if (this.viewHeartbeatTimer !== null) {
+      clearInterval(this.viewHeartbeatTimer);
+      this.viewHeartbeatTimer = null;
+    }
+    if (this.boundBeforeUnload) {
+      window.removeEventListener('beforeunload', this.boundBeforeUnload);
+      this.boundBeforeUnload();
+      this.boundBeforeUnload = null;
+    }
     if (this.searchDebounceTimer) {
       clearTimeout(this.searchDebounceTimer);
       this.searchDebounceTimer = null;
