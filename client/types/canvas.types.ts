@@ -9,6 +9,7 @@ export interface CanvasItem {
   data?: string | null;
   preview_thumbnail?: string | null;
   access_level?: 'private' | 'public';
+  public_role?: 'viewer' | 'editor';
   short_code?: string | null;
   custom_slug?: string | null;
   deleted_at?: string | null;
@@ -24,6 +25,7 @@ export interface CreateCanvasPayload {
   height: number;
   unit?: string;
   access_level?: 'private' | 'public';
+  public_role?: 'viewer' | 'editor';
   data?: any;
   preview_thumbnail?: string | null;
 }

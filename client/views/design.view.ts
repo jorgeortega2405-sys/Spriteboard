@@ -3,6 +3,7 @@ import { createSidebar } from '../components/layout.component.js';
 import { openModal } from '../components/modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { currentUser, deleteApi, getApi, patchApi, postApi } from '../services/api.service.js';
+import { dispatchCanvasAction } from '../services/canvas-actions.service.js';
 import { getLocalCanvasByUuid, markLocalCanvasAsSynced, removeLocalCanvas, saveLocalCanvas } from '../services/canvas-storage.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
@@ -10,6 +11,7 @@ import { loadTemplate } from '../services/template.service.js';
 import { getEffectiveTheme } from '../services/theme.service.js';
 import { showToast } from '../services/toast.service.js';
 import { joinCanvasRoom, leaveCanvasRoom, registerWebSocketHandler, sendCanvasAccessChanged, sendCanvasAction, sendCanvasCursor, sendCanvasDrawStroke, sendCanvasFullUpdate, sendCanvasMemberRemoved } from '../services/websocket.service.js';
+import { CanvasAction, CanvasActionContext, CanvasFrame, CanvasLayer } from '../types/canvas-actions.types.js';
 import { CanvasItem, CanvasMember, SearchUserResult } from '../types/canvas.types.js';
 import { CanvasTeamItem, Team } from '../types/team.types.js';
 import { CarouselController, initCarouselScroll, setupDropdown } from '../utils/dom.util.js';
@@ -43,22 +45,6 @@ interface CanvasBackgroundConfig {
   checkColor2?: string;
 }
 
-interface CanvasLayer {
-  id: string;
-  name: string;
-  canvas: HTMLCanvasElement;
-  ctx: CanvasRenderingContext2D;
-  visible: boolean;
-  opacity: number;
-}
-
-interface CanvasFrame {
-  id: string;
-  name: string;
-  layers: CanvasLayer[];
-  activeLayerId: string;
-  durationMs?: number;
-}
 
 interface SerializedCanvasLayer {
   id: string;
@@ -500,6 +486,8 @@ class DesignController {
   private roomToken = '';
 
   private accessLevel: 'private' | 'public' = 'private';
+  private publicRole: 'viewer' | 'editor' = 'editor';
+  private role: 'owner' | 'editor' | 'viewer' = 'owner';
   private isOwner = true;
   private collaborators: Map<string, { color: string; connId: string; userId: number; username: string; x?: number; y?: number; hideCursor?: boolean }> = new Map();
   private showAllCursors = true;
@@ -519,6 +507,11 @@ class DesignController {
   private accessLevelSelectedIconEl: HTMLElement | null = null;
   private accessLevelSelectedTextEl: HTMLElement | null = null;
   private accessLevelSelectedDescEl: HTMLElement | null = null;
+  private publicRoleSectionEl: HTMLElement | null = null;
+  private publicRoleDropdownWrapperEl: HTMLElement | null = null;
+  private publicRoleTriggerBtn: HTMLButtonElement | null = null;
+  private publicRoleSelectedIconEl: HTMLElement | null = null;
+  private publicRoleSelectedTextEl: HTMLElement | null = null;
   private shareSearchInputEl: HTMLInputElement | null = null;
   private shareSearchResultsEl: HTMLElement | null = null;
   private shareMembersListEl: HTMLElement | null = null;
@@ -535,6 +528,7 @@ class DesignController {
   private collaboratorsListEl: HTMLElement | null = null;
   private shareDropdownController: { close: () => void; destroy: () => void; open: () => void; toggle: () => void; update: () => void } | null = null;
   private accessDropdownController: { close: () => void; destroy: () => void; open: () => void; toggle: () => void; update: () => void } | null = null;
+  private publicRoleDropdownController: { close: () => void; destroy: () => void; open: () => void; toggle: () => void; update: () => void } | null = null;
   private btnCanvasMetrics: HTMLButtonElement | null = null;
   private viewSessionId: string | null = null;
   private viewStartTime = 0;
@@ -896,6 +890,11 @@ class DesignController {
     this.accessLevelSelectedIconEl = this.container.querySelector<HTMLElement>('[data-ref="access-level-selected-icon"]');
     this.accessLevelSelectedTextEl = this.container.querySelector<HTMLElement>('[data-ref="access-level-selected-text"]');
     this.accessLevelSelectedDescEl = this.container.querySelector<HTMLElement>('[data-ref="access-level-selected-desc"]');
+    this.publicRoleSectionEl = this.container.querySelector<HTMLElement>('[data-ref="section-public-role"]');
+    this.publicRoleDropdownWrapperEl = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-public-role"]');
+    this.publicRoleTriggerBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-trigger-public-role"]');
+    this.publicRoleSelectedIconEl = this.container.querySelector<HTMLElement>('[data-ref="public-role-selected-icon"]');
+    this.publicRoleSelectedTextEl = this.container.querySelector<HTMLElement>('[data-ref="public-role-selected-text"]');
     this.shareSearchInputEl = this.container.querySelector<HTMLInputElement>('[data-ref="input-share-search-people"]');
     this.shareSearchResultsEl = this.container.querySelector<HTMLElement>('[data-ref="share-search-results"]');
     this.shareMembersListEl = this.container.querySelector<HTMLElement>('[data-ref="share-members-list"]');
@@ -981,6 +980,85 @@ class DesignController {
     const frame = this.getActiveFrame();
     if (!frame) return null;
     return frame.layers.find((l) => l.id === frame.activeLayerId) || frame.layers[0] || null;
+  }
+
+  private getActionContext(): CanvasActionContext {
+    return {
+      activeFrameId: this.activeFrameId,
+      activeLayerId: this.getActiveFrame()?.activeLayerId || '',
+      addFrame: (broadcast, duplicateCurrent, frameId, name, index, initialLayers) => {
+        void this.addFrame(duplicateCurrent ?? false, broadcast, frameId, name, index, initialLayers);
+      },
+      addLayer: (broadcast, layerId, name, index, frameId) => {
+        this.addLayer(broadcast, layerId, name, index, frameId);
+      },
+      applyFloodFill: (layer, x, y, color, mode) => {
+        const prevColor = this.currentColor;
+        const prevMode = this.bucketMode;
+        if (color) this.currentColor = color;
+        if (mode) this.bucketMode = mode;
+        this.applyFloodFill(layer, x, y);
+        this.currentColor = prevColor;
+        this.bucketMode = prevMode;
+      },
+      canvasHeight: this.canvasHeight,
+      canvasUuid: this.canvasUuid,
+      canvasWidth: this.canvasWidth,
+      clearSelection: () => this.clearSelection(),
+      cycleFps: (broadcast, fps) => this.cycleFps(broadcast, fps),
+      deleteFrame: (broadcast, frameId) => this.deleteFrame(broadcast, frameId),
+      deleteLayer: (broadcast, frameId, layerId) => this.deleteLayer(broadcast, frameId, layerId),
+      fitToScreen: (w, h) => this.fitToScreen(w, h),
+      frames: this.frames,
+      getActiveFrame: () => this.getActiveFrame() || undefined,
+      getActiveLayer: () => this.getActiveLayer() || undefined,
+      handleMemberAdded: (member) => {
+        if (member && !this.canvasMembers.some((m) => m.user_id === member.user_id)) {
+          this.canvasMembers.push(member);
+          this.renderShareMembers();
+        }
+      },
+      handleMemberRemoved: (targetUserId) => {
+        this.canvasMembers = this.canvasMembers.filter((m) => m.user_id !== targetUserId);
+        this.renderShareMembers();
+        const currentUserId = currentUser?.id;
+        if (currentUserId && currentUserId === targetUserId) {
+          if (!this.isOwner && this.accessLevel !== 'public') {
+            this.handleAccessRevoked();
+          }
+        }
+      },
+      mergeLayerDown: (broadcast, frameId, sourceId, targetId) => {
+        this.mergeLayerDown(broadcast, frameId, sourceId, targetId);
+      },
+      renderFramesCards: () => this.renderFramesCards(),
+      renderLayersCards: () => this.renderLayersCards(),
+      renderLayersList: () => this.renderLayersList(),
+      renderShareMembers: () => this.renderShareMembers(),
+      reorderFrames: (sourceId, targetId, broadcast) => {
+        this.reorderFrames(sourceId, targetId, broadcast ?? false);
+      },
+      reorderLayers: (sourceId, targetId, broadcast, frameId) => {
+        this.reorderLayers(sourceId, targetId, broadcast ?? false, frameId);
+      },
+      requestRedraw: () => this.requestRedraw(),
+      resetHistory: () => {
+        this.undoStack = [];
+        this.redoStack = [];
+        this.updateUndoRedoUI();
+      },
+      saveProjectImmediate: () => this.saveProjectImmediate(),
+      scheduleAutoSave: () => this.scheduleAutoSave(),
+      setDimensions: (width, height) => {
+        this.canvasWidth = width;
+        this.canvasHeight = height;
+      },
+      toggleLayerVisibility: (layerId, visible, broadcast, frameId) => {
+        this.toggleLayerVisibility(layerId, visible ?? true, broadcast ?? false, frameId);
+      },
+      updateUndoRedoUI: () => this.updateUndoRedoUI(),
+      viewportParentRect: () => this.viewportCanvas?.parentElement?.getBoundingClientRect() || null,
+    };
   }
 
   private renderLayersList(): void {
@@ -1297,9 +1375,9 @@ class DesignController {
     this.renderLayersList();
     this.renderLayersCards();
     this.requestRedraw();
-    this.scheduleAutoSave();
 
     if (broadcast) {
+      this.scheduleAutoSave();
       sendCanvasAction(this.canvasUuid, 'reorder_layers', {
         frameId: frame.id,
         sourceId,
@@ -1317,9 +1395,9 @@ class DesignController {
     this.frames.splice(targetIdx, 0, moved);
     this.renderFramesCards();
     this.requestRedraw();
-    this.scheduleAutoSave();
 
     if (broadcast) {
+      this.scheduleAutoSave();
       sendCanvasAction(this.canvasUuid, 'reorder_frames', {
         sourceId,
         targetId,
@@ -1346,9 +1424,9 @@ class DesignController {
     this.renderLayersCards();
     this.renderFramesCards();
     this.requestRedraw();
-    this.scheduleAutoSave();
 
     if (broadcast) {
+      this.scheduleAutoSave();
       sendCanvasAction(this.canvasUuid, 'add_layer', {
         frameId: frame.id,
         index: insertIdx,
@@ -1373,9 +1451,9 @@ class DesignController {
       this.renderLayersCards();
       this.renderFramesCards();
       this.requestRedraw();
-      this.scheduleAutoSave();
 
       if (broadcast) {
+        this.scheduleAutoSave();
         sendCanvasAction(this.canvasUuid, 'delete_layer', {
           frameId: frame.id,
           layerId: targetLayerId,
@@ -1431,9 +1509,9 @@ class DesignController {
     this.renderLayersCards();
     this.renderFramesCards();
     this.requestRedraw();
-    this.scheduleAutoSave();
 
     if (broadcast) {
+      this.scheduleAutoSave();
       sendCanvasAction(this.canvasUuid, 'merge_layer', {
         frameId: frame.id,
         sourceId: current.id,
@@ -1451,9 +1529,9 @@ class DesignController {
     this.renderLayersList();
     this.renderLayersCards();
     this.requestRedraw();
-    this.scheduleAutoSave();
 
     if (broadcast) {
+      this.scheduleAutoSave();
       sendCanvasAction(this.canvasUuid, 'toggle_layer_visibility', {
         frameId: frame.id,
         layerId,
@@ -1505,9 +1583,9 @@ class DesignController {
     this.renderLayersList();
     this.renderLayersCards();
     this.requestRedraw();
-    this.scheduleAutoSave();
 
     if (broadcast) {
+      this.scheduleAutoSave();
       const layersData = newFrame.layers.map((l) => ({
         data: l.canvas.toDataURL('image/png'),
         id: l.id,
@@ -1539,9 +1617,9 @@ class DesignController {
       this.renderLayersList();
       this.renderLayersCards();
       this.requestRedraw();
-      this.scheduleAutoSave();
 
       if (broadcast) {
+        this.scheduleAutoSave();
         sendCanvasAction(this.canvasUuid, 'delete_frame', {
           frameId: targetFrameId,
         });
@@ -1668,9 +1746,9 @@ class DesignController {
     if (this.isPlaying) {
       this.startPlayback();
     }
-    this.scheduleAutoSave();
 
     if (broadcast) {
+      this.scheduleAutoSave();
       sendCanvasAction(this.canvasUuid, 'change_fps', {
         fps: this.fps,
       });
@@ -1912,6 +1990,7 @@ class DesignController {
         preview_thumbnail: thumbnail,
         data: dataStr,
         access_level: this.accessLevel,
+        public_role: this.publicRole,
         is_local: !this.canvasServerId,
         created_at: this.canvasCreatedAt || new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -1935,6 +2014,7 @@ class DesignController {
             preview_thumbnail: thumbnail,
             data: dataStr,
             access_level: this.accessLevel,
+            public_role: this.publicRole,
           });
 
           if (res.ok) {
@@ -1948,8 +2028,6 @@ class DesignController {
                 await markLocalCanvasAsSynced(this.canvasUuid, data.canvas.id);
               }
             }
-          } else if (res.status === 403 || res.status === 401 || res.status === 404) {
-            this.handleAccessRevoked();
           }
         } catch {}
       }
@@ -2591,13 +2669,15 @@ class DesignController {
     const layer = frame?.layers.find((l) => l.id === step.layerId);
     if (layer) {
       layer.ctx.putImageData(step.beforeData, 0, 0);
-      sendCanvasAction(this.canvasUuid, 'update_layer_data', {
-        frameId: step.frameId,
-        layerId: step.layerId,
-        dataUrl: layer.canvas.toDataURL('image/png'),
+      dispatchCanvasAction(this.getActionContext(), {
+        payload: {
+          dataUrl: layer.canvas.toDataURL('image/png'),
+          frameId: step.frameId,
+          layerId: step.layerId,
+        },
+        type: 'update_layer_image',
       });
       this.requestRedraw();
-      this.scheduleAutoSave();
     }
     this.updateUndoRedoUI();
   }
@@ -2611,13 +2691,15 @@ class DesignController {
     const layer = frame?.layers.find((l) => l.id === step.layerId);
     if (layer) {
       layer.ctx.putImageData(step.afterData, 0, 0);
-      sendCanvasAction(this.canvasUuid, 'update_layer_data', {
-        frameId: step.frameId,
-        layerId: step.layerId,
-        dataUrl: layer.canvas.toDataURL('image/png'),
+      dispatchCanvasAction(this.getActionContext(), {
+        payload: {
+          dataUrl: layer.canvas.toDataURL('image/png'),
+          frameId: step.frameId,
+          layerId: step.layerId,
+        },
+        type: 'update_layer_image',
       });
       this.requestRedraw();
-      this.scheduleAutoSave();
     }
     this.updateUndoRedoUI();
   }
@@ -2781,114 +2863,26 @@ class DesignController {
 
   private resizeCanvas(newW: number, newH: number): void {
     if (newW <= 0 || newH <= 0 || (newW === this.canvasWidth && newH === this.canvasHeight)) return;
-
-    for (const frame of this.frames) {
-      for (const layer of frame.layers) {
-        const oldCanvas = layer.canvas;
-        const newCanvas = document.createElement('canvas');
-        newCanvas.width = newW;
-        newCanvas.height = newH;
-        const newCtx = newCanvas.getContext('2d')!;
-        newCtx.imageSmoothingEnabled = false;
-        newCtx.drawImage(oldCanvas, 0, 0);
-        layer.canvas = newCanvas;
-        layer.ctx = newCtx;
-      }
-    }
-
-    this.canvasWidth = newW;
-    this.canvasHeight = newH;
-    this.undoStack = [];
-    this.redoStack = [];
-    this.updateUndoRedoUI();
-    this.clearSelection();
-
-    const parent = this.viewportCanvas?.parentElement;
-    if (parent) {
-      const rect = parent.getBoundingClientRect();
-      this.fitToScreen(rect.width, rect.height);
-    }
-
-    this.requestRedraw();
-    this.saveProjectImmediate();
+    dispatchCanvasAction(this.getActionContext(), {
+      payload: { height: newH, width: newW },
+      type: 'resize_canvas',
+    });
     showToast(`Lienzo redimensionado a ${newW} × ${newH} px`, 'success');
   }
 
   private rotateCanvas(clockwise: boolean): void {
-    const newW = this.canvasHeight;
-    const newH = this.canvasWidth;
-
-    for (const frame of this.frames) {
-      for (const layer of frame.layers) {
-        const oldCanvas = layer.canvas;
-        const newCanvas = document.createElement('canvas');
-        newCanvas.width = newW;
-        newCanvas.height = newH;
-        const newCtx = newCanvas.getContext('2d')!;
-        newCtx.imageSmoothingEnabled = false;
-
-        if (clockwise) {
-          newCtx.translate(newW, 0);
-          newCtx.rotate(Math.PI / 2);
-        } else {
-          newCtx.translate(0, newH);
-          newCtx.rotate(-Math.PI / 2);
-        }
-
-        newCtx.drawImage(oldCanvas, 0, 0);
-        layer.canvas = newCanvas;
-        layer.ctx = newCtx;
-      }
-    }
-
-    this.canvasWidth = newW;
-    this.canvasHeight = newH;
-    this.undoStack = [];
-    this.redoStack = [];
-    this.updateUndoRedoUI();
-    this.clearSelection();
-
-    const parent = this.viewportCanvas?.parentElement;
-    if (parent) {
-      const rect = parent.getBoundingClientRect();
-      this.fitToScreen(rect.width, rect.height);
-    }
-
-    this.requestRedraw();
-    this.saveProjectImmediate();
+    dispatchCanvasAction(this.getActionContext(), {
+      payload: { clockwise },
+      type: 'rotate_canvas',
+    });
     showToast(clockwise ? 'Lienzo rotado 90° horario' : 'Lienzo rotado 90° antihorario', 'success');
   }
 
   private flipCanvas(horizontal: boolean): void {
-    for (const frame of this.frames) {
-      for (const layer of frame.layers) {
-        const oldCanvas = layer.canvas;
-        const newCanvas = document.createElement('canvas');
-        newCanvas.width = this.canvasWidth;
-        newCanvas.height = this.canvasHeight;
-        const newCtx = newCanvas.getContext('2d')!;
-        newCtx.imageSmoothingEnabled = false;
-
-        if (horizontal) {
-          newCtx.translate(this.canvasWidth, 0);
-          newCtx.scale(-1, 1);
-        } else {
-          newCtx.translate(0, this.canvasHeight);
-          newCtx.scale(1, -1);
-        }
-
-        newCtx.drawImage(oldCanvas, 0, 0);
-        layer.canvas = newCanvas;
-        layer.ctx = newCtx;
-      }
-    }
-
-    this.undoStack = [];
-    this.redoStack = [];
-    this.updateUndoRedoUI();
-    this.clearSelection();
-    this.requestRedraw();
-    this.saveProjectImmediate();
+    dispatchCanvasAction(this.getActionContext(), {
+      payload: { horizontal },
+      type: 'flip_canvas',
+    });
     showToast(horizontal ? 'Lienzo volteado horizontalmente' : 'Lienzo volteado verticalmente', 'success');
   }
 
@@ -3244,17 +3238,27 @@ class DesignController {
 
   private cutSelection(): void {
     this.copySelection();
+    const layer = this.getActiveLayer();
     if (this.floatingSelection) {
       this.floatingSelection = null;
       this.selectionMask = null;
       this.stopMarchingAntsLoop();
       this.scheduleAutoSave();
       this.requestRedraw();
+      if (layer) {
+        dispatchCanvasAction(this.getActionContext(), {
+          payload: {
+            dataUrl: layer.canvas.toDataURL('image/png'),
+            frameId: this.activeFrameId,
+            layerId: layer.id,
+          },
+          type: 'update_layer_image',
+        });
+      }
       return;
     }
 
     if (this.selectionMask) {
-      const layer = this.getActiveLayer();
       if (layer && layer.visible) {
         const layerImg = layer.ctx.getImageData(0, 0, this.canvasWidth, this.canvasHeight);
         for (let i = 0; i < this.selectionMask.length; i++) {
@@ -3268,6 +3272,14 @@ class DesignController {
         }
         layer.ctx.putImageData(layerImg, 0, 0);
         this.scheduleAutoSave();
+        dispatchCanvasAction(this.getActionContext(), {
+          payload: {
+            dataUrl: layer.canvas.toDataURL('image/png'),
+            frameId: this.activeFrameId,
+            layerId: layer.id,
+          },
+          type: 'update_layer_image',
+        });
       }
       this.selectionMask = null;
       this.stopMarchingAntsLoop();
@@ -4089,6 +4101,42 @@ class DesignController {
       );
     }
 
+    if (this.publicRoleDropdownWrapperEl) {
+      const publicRoleBackdropEl = this.publicRoleDropdownWrapperEl.querySelector<HTMLElement>('[data-ref="dropdown-backdrop-public-role"]');
+      const publicRoleMenuEl = this.publicRoleDropdownWrapperEl.querySelector<HTMLElement>('[data-ref="dropdown-menu-public-role"]');
+      this.publicRoleDropdownController = setupDropdown(this.publicRoleDropdownWrapperEl, {
+        backdrop: publicRoleBackdropEl,
+        matchWidth: true,
+        menu: publicRoleMenuEl,
+        placement: 'bottom',
+        trigger: this.publicRoleTriggerBtn,
+      });
+    }
+
+    const optRoleEditor = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-public-role-editor"]');
+    if (optRoleEditor) {
+      optRoleEditor.addEventListener(
+        'click',
+        () => {
+          this.changePublicRole('editor');
+          this.publicRoleDropdownController?.close();
+        },
+        { signal }
+      );
+    }
+
+    const optRoleViewer = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-public-role-viewer"]');
+    if (optRoleViewer) {
+      optRoleViewer.addEventListener(
+        'click',
+        () => {
+          this.changePublicRole('viewer');
+          this.publicRoleDropdownController?.close();
+        },
+        { signal }
+      );
+    }
+
     if (this.shareBtn) {
       this.shareBtn.addEventListener(
         'click',
@@ -4806,7 +4854,7 @@ class DesignController {
         'mousedown',
         (e: MouseEvent) => {
           if (this.isAccessRevoked) return;
-          if (this.isSpacePressed || e.button === 1) {
+          if (this.isSpacePressed || e.button === 1 || this.role === 'viewer') {
             e.preventDefault();
             this.isPanning = true;
             this.startX = e.clientX - this.panX;
@@ -4814,6 +4862,7 @@ class DesignController {
             this.hoveredPixel = null;
             this.viewportCanvas?.classList.add('is-panning');
             this.requestRedraw();
+            return;
           } else if (e.button === 0) {
             if (!this.viewportCanvas) return;
             const rect = this.viewportCanvas.getBoundingClientRect();
@@ -4994,6 +5043,7 @@ class DesignController {
         }
 
         if (!isInputFocused) {
+          if (this.role === 'viewer') return;
           if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
             e.preventDefault();
             if (e.shiftKey) {
@@ -5342,13 +5392,15 @@ class DesignController {
             }
             this.activeActionBeforeData = null;
 
-            sendCanvasAction(this.canvasUuid, 'update_layer_data', {
-              frameId: this.activeFrameId,
-              layerId: layer.id,
-              dataUrl: layer.canvas.toDataURL('image/png'),
+            dispatchCanvasAction(this.getActionContext(), {
+              payload: {
+                dataUrl: layer.canvas.toDataURL('image/png'),
+                frameId: this.activeFrameId,
+                layerId: layer.id,
+              },
+              type: 'update_layer_image',
             });
 
-            this.scheduleAutoSave();
             this.requestRedraw();
           }
           this.isDrawingShape = false;
@@ -6431,6 +6483,10 @@ class DesignController {
     const unsubPresence = registerWebSocketHandler('ROOM_PRESENCE', (payload: any) => {
       const roomUuid = payload.canvasUuid || payload.canvas_uuid;
       if (roomUuid !== this.canvasUuid) return;
+      if (payload.yourRole) {
+        this.role = payload.yourRole;
+        this.applyViewerMode();
+      }
       this.collaborators.clear();
       if (Array.isArray(payload.users)) {
         for (const u of payload.users) {
@@ -6538,11 +6594,29 @@ class DesignController {
       const roomUuid = payload.canvasUuid || payload.canvas_uuid;
       if (roomUuid !== this.canvasUuid) return;
       this.accessLevel = payload.accessLevel || payload.access_level || 'private';
+      if (payload.publicRole) {
+        this.publicRole = payload.publicRole;
+      }
       const currentUserId = currentUser?.id;
       const isMember = Boolean(currentUserId && this.canvasMembers.some((m) => m.user_id === currentUserId));
       if (this.accessLevel === 'private' && !this.isOwner && !isMember) {
         this.handleAccessRevoked();
+        return;
       }
+      if (!this.isOwner && !isMember && this.accessLevel === 'public') {
+        const newRole = this.publicRole === 'viewer' ? 'viewer' : 'editor';
+        if (this.role !== newRole) {
+          this.role = newRole;
+          this.applyViewerMode();
+          showToast(
+            this.role === 'viewer'
+              ? 'El propietario cambió el enlace a modo solo lectura.'
+              : 'El propietario te ha otorgado permisos de edición.',
+            'info'
+          );
+        }
+      }
+      this.updateAccessLevelUI();
     });
 
     const unsubMemberRemoved = registerWebSocketHandler('CANVAS_MEMBER_REMOVED', (payload: any) => {
@@ -6653,124 +6727,18 @@ class DesignController {
   }
 
   private applyRemoteAction(data: { action: string; params?: any; payload?: any }): void {
-    const p = data.payload || data.params;
-    if (!p && data.action !== 'clear_layer') return;
-
-    if (data.action === 'member_removed') {
-      const targetUserId = Number(p?.targetUserId);
-      this.canvasMembers = this.canvasMembers.filter((m) => m.user_id !== targetUserId);
-      this.renderShareMembers();
-      const currentUserId = currentUser?.id;
-      if (currentUserId && currentUserId === targetUserId) {
-        if (!this.isOwner && this.accessLevel !== 'public') {
-          this.handleAccessRevoked();
-        }
-      }
-      return;
-    } else if (data.action === 'member_added') {
-      if (p?.member && !this.canvasMembers.some((m) => m.user_id === p.member.user_id)) {
-        this.canvasMembers.push(p.member);
-        this.renderShareMembers();
-      }
-      return;
+    const payload = data.payload || data.params || {};
+    let actionType = data.action;
+    if (actionType === 'update_layer_data') {
+      actionType = 'update_layer_image';
+    } else if (actionType === 'text') {
+      actionType = 'inject_text';
     }
-
-    if (data.action === 'clear_layer') {
-      const targetFrame = p?.frameId ? this.frames.find((f) => f.id === p.frameId) : this.getActiveFrame();
-      const targetLayer = p?.layerId && targetFrame ? targetFrame.layers.find((l) => l.id === p.layerId) : this.getActiveLayer();
-      if (targetLayer) {
-        targetLayer.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
-      }
-    } else if (data.action === 'inject_shape') {
-      const targetFrame = p.frameId ? this.frames.find((f) => f.id === p.frameId) : this.getActiveFrame();
-      const targetLayer = p.layerId && targetFrame ? targetFrame.layers.find((l) => l.id === p.layerId) : this.getActiveLayer();
-      if (targetLayer && p.shape) {
-        const shapeCanvas = renderShapeCanvas(
-          p.shape,
-          p.w,
-          p.h,
-          p.colorMode,
-          p.color,
-          p.rotation,
-          p.flipH,
-          p.flipV
-        );
-        targetLayer.ctx.imageSmoothingEnabled = false;
-        targetLayer.ctx.drawImage(shapeCanvas, p.x, p.y);
-      }
-    } else if (data.action === 'flood_fill') {
-      const targetFrame = p.frameId ? this.frames.find((f) => f.id === p.frameId) : this.getActiveFrame();
-      const targetLayer = p.layerId && targetFrame ? targetFrame.layers.find((l) => l.id === p.layerId) : this.getActiveLayer();
-      if (targetLayer) {
-        const prevColor = this.currentColor;
-        const prevMode = this.bucketMode;
-        this.currentColor = p.color;
-        this.bucketMode = p.mode || 'contiguous';
-        this.applyFloodFill(targetLayer, p.x, p.y);
-        this.currentColor = prevColor;
-        this.bucketMode = prevMode;
-      }
-    } else if (data.action === 'text') {
-      const targetFrame = p.frameId ? this.frames.find((f) => f.id === p.frameId) : this.getActiveFrame();
-      const targetLayer = p.layerId && targetFrame ? targetFrame.layers.find((l) => l.id === p.layerId) : this.getActiveLayer();
-      if (targetLayer && p.text) {
-        const textCanvas = renderPixelTextCanvas(
-          p.text,
-          p.fontFamily,
-          p.color,
-          p.scale,
-          p.outline,
-          p.shadow
-        );
-        targetLayer.ctx.drawImage(textCanvas, p.x, p.y);
-      }
-    } else if (data.action === 'update_layer_image') {
-      const targetFrame = p.frameId ? this.frames.find((f) => f.id === p.frameId) : this.getActiveFrame();
-      const targetLayer = p.layerId && targetFrame ? targetFrame.layers.find((l) => l.id === p.layerId) : this.getActiveLayer();
-      if (targetLayer && p.dataUrl) {
-        const img = new Image();
-        img.onload = () => {
-          targetLayer.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
-          targetLayer.ctx.drawImage(img, 0, 0);
-          this.renderLayersCards();
-          this.renderFramesCards();
-          this.requestRedraw();
-        };
-        img.src = p.dataUrl;
-        return;
-      }
-    } else if (data.action === 'add_layer') {
-      this.addLayer(false, p.layerId, p.name, p.index, p.frameId);
-      return;
-    } else if (data.action === 'delete_layer') {
-      this.deleteLayer(false, p.frameId, p.layerId);
-      return;
-    } else if (data.action === 'reorder_layers') {
-      this.reorderLayers(p.sourceId, p.targetId, false, p.frameId);
-      return;
-    } else if (data.action === 'merge_layer') {
-      this.mergeLayerDown(false, p.frameId, p.sourceId, p.targetId);
-      return;
-    } else if (data.action === 'toggle_layer_visibility') {
-      this.toggleLayerVisibility(p.layerId, p.visible, false, p.frameId);
-      return;
-    } else if (data.action === 'add_frame') {
-      this.addFrame(false, false, p.frameId, p.name, p.index, p.layers);
-      return;
-    } else if (data.action === 'delete_frame') {
-      this.deleteFrame(false, p.frameId);
-      return;
-    } else if (data.action === 'reorder_frames') {
-      this.reorderFrames(p.sourceId, p.targetId, false);
-      return;
-    } else if (data.action === 'change_fps') {
-      this.cycleFps(false, p.fps);
-      return;
-    }
-
-    this.renderLayersCards();
-    this.renderFramesCards();
-    this.requestRedraw();
+    dispatchCanvasAction(
+      this.getActionContext(),
+      { payload, type: actionType as any },
+      true
+    );
   }
 
   private updateAccessLevelUI(): void {
@@ -6821,6 +6789,96 @@ class DesignController {
 
     if (this.shareWrapperEl) {
       this.shareWrapperEl.style.display = this.isOwner ? '' : 'none';
+    }
+
+    if (this.publicRoleSectionEl) {
+      this.publicRoleSectionEl.classList.toggle('is-hidden', !this.isOwner || this.accessLevel !== 'public');
+    }
+
+    const publicRoleIconEl = this.container.querySelector<HTMLElement>('[data-ref="public-role-selected-icon"]') || this.publicRoleSelectedIconEl;
+    const publicRoleIconName = this.publicRole === 'viewer' ? 'visibility' : 'edit';
+    if (publicRoleIconEl) {
+      this.publicRoleSelectedIconEl = publicRoleIconEl;
+      const useEl = publicRoleIconEl.querySelector('use');
+      if (useEl) {
+        useEl.setAttribute('href', `/icons.svg#${publicRoleIconName}`);
+        useEl.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', `/icons.svg#${publicRoleIconName}`);
+      } else if (publicRoleIconEl.tagName.toLowerCase() === 'svg') {
+        publicRoleIconEl.innerHTML = `<use href="/icons.svg#${publicRoleIconName}" xlink:href="/icons.svg#${publicRoleIconName}"></use>`;
+      } else {
+        publicRoleIconEl.textContent = publicRoleIconName;
+      }
+    }
+
+    if (this.publicRoleSelectedTextEl) {
+      this.publicRoleSelectedTextEl.textContent =
+        this.publicRole === 'viewer'
+          ? (t('canvas.share.role_viewer') || 'Solo ver')
+          : (t('canvas.share.role_editor') || 'Ver y editar');
+    }
+
+    const btnRoleEditor = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-public-role-editor"]');
+    const btnRoleViewer = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-public-role-viewer"]');
+    if (btnRoleEditor) {
+      btnRoleEditor.classList.toggle('is-active', this.publicRole !== 'viewer');
+    }
+    if (btnRoleViewer) {
+      btnRoleViewer.classList.toggle('is-active', this.publicRole === 'viewer');
+    }
+  }
+
+  private applyViewerMode(): void {
+    const isViewer = this.role === 'viewer';
+    this.container.classList.toggle('is-viewer-mode', isViewer);
+
+    if (isViewer) {
+      this.isDrawing = false;
+      this.isDrawingShape = false;
+      this.isSelecting = false;
+      this.isMovingSelection = false;
+      this.isDraggingText = false;
+      this.cancelShapePlacement();
+      this.commitFloatingSelection(false);
+      this.stopSprayLoop();
+      this.stopMarchingAntsLoop();
+      this.colorsPanelEl?.classList.add('is-hidden');
+      this.layersPanelEl?.classList.add('is-hidden');
+      this.shapesPanelEl?.classList.add('is-hidden');
+      this.optionsTrayEl?.classList.add('is-hidden');
+      this.layersTrayEl?.classList.add('is-hidden');
+      this.framesTrayEl?.classList.add('is-hidden');
+    }
+    this.requestRedraw();
+  }
+
+  private async changePublicRole(role: 'viewer' | 'editor'): Promise<void> {
+    if (!this.isOwner || this.publicRole === role) return;
+    const previousRole = this.publicRole;
+    this.publicRole = role;
+    this.updateAccessLevelUI();
+
+    try {
+      const res = await patchApi(API_ROUTES.canvases.access(this.canvasUuid), {
+        access_level: this.accessLevel,
+        public_role: role,
+      });
+
+      if (!res.ok) {
+        throw new Error('Error al actualizar');
+      }
+
+      sendCanvasAccessChanged(this.canvasUuid, this.accessLevel, role);
+      showToast(
+        role === 'viewer'
+          ? 'Enlace configurado en modo: Solo ver'
+          : 'Enlace configurado en modo: Ver y editar',
+        'success'
+      );
+      this.saveProjectImmediate();
+    } catch {
+      this.publicRole = previousRole;
+      this.updateAccessLevelUI();
+      showToast('Error al cambiar el permiso del enlace', 'danger');
     }
   }
 
@@ -7277,13 +7335,14 @@ class DesignController {
     try {
       const res = await patchApi(API_ROUTES.canvases.access(this.canvasUuid), {
         access_level: level,
+        public_role: this.publicRole,
       });
 
       if (!res.ok) {
         throw new Error('Error al actualizar');
       }
 
-      sendCanvasAccessChanged(this.canvasUuid, level);
+      sendCanvasAccessChanged(this.canvasUuid, level, this.publicRole);
       showToast(
         level === 'public'
           ? (t('canvas.share.changedToPublic') || 'Lienzo público para cualquiera con el enlace')
@@ -7309,6 +7368,12 @@ class DesignController {
           canvas = data.canvas;
           this.canvasServerId = data.canvas.id || null;
           this.canvasUserId = data.canvas.user_id || null;
+          if (data.role) {
+            this.role = data.role;
+          }
+          if (data.canvas.public_role) {
+            this.publicRole = data.canvas.public_role;
+          }
           if (data.room_token) {
             this.roomToken = data.room_token;
           }
@@ -7346,6 +7411,7 @@ class DesignController {
       this.canvasUnit = canvas.unit || 'px';
       this.canvasCreatedAt = canvas.created_at || null;
       this.accessLevel = canvas.access_level || 'private';
+      this.publicRole = canvas.public_role || 'editor';
       this.shortCode = canvas.short_code || null;
       this.customSlug = canvas.custom_slug || null;
 
@@ -7357,11 +7423,20 @@ class DesignController {
         this.isOwner = !this.canvasServerId;
       }
 
+      if (this.isOwner) {
+        this.role = 'owner';
+      } else if (!this.role || this.role === 'owner') {
+        if (this.accessLevel === 'public') {
+          this.role = this.publicRole === 'viewer' ? 'viewer' : 'editor';
+        }
+      }
+
       if (!this.isOwner) {
         await removeLocalCanvas(this.canvasUuid);
       }
 
       this.updateAccessLevelUI();
+      this.applyViewerMode();
 
       if (titleEl) {
         titleEl.textContent = this.canvasName;
@@ -7383,6 +7458,7 @@ class DesignController {
     }
 
     this.updateAccessLevelUI();
+    this.applyViewerMode();
     void this.loadCanvasMembers();
     void this.loadCanvasTeams();
 
@@ -7467,6 +7543,7 @@ class DesignController {
     this.wsUnsubscribes = [];
     this.shareDropdownController?.destroy();
     this.accessDropdownController?.destroy();
+    this.publicRoleDropdownController?.destroy();
     this.topToolbarCarouselController?.destroy();
     this.bottomToolbarCarouselController?.destroy();
     this.optionsTrayCarouselController?.destroy();

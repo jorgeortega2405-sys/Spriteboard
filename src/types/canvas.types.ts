@@ -9,6 +9,7 @@ export interface Canvas {
   data: string | null;
   preview_thumbnail: string | null;
   access_level: 'private' | 'public';
+  public_role?: 'viewer' | 'editor';
   short_code?: string | null;
   custom_slug?: string | null;
   deleted_at?: string | null;
@@ -23,6 +24,7 @@ export interface CreateCanvasDto {
   height: number;
   unit?: string;
   access_level?: 'private' | 'public';
+  public_role?: 'viewer' | 'editor';
   data?: any;
   preview_thumbnail?: string | null;
 }
@@ -37,6 +39,7 @@ export interface SyncCanvasDto {
   data?: any;
   preview_thumbnail?: string | null;
   access_level?: 'private' | 'public';
+  public_role?: 'viewer' | 'editor';
 }
 
 export interface CanvasMember {

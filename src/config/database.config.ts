@@ -292,6 +292,7 @@ export async function runMigrations(): Promise<void> {
         data JSON NULL,
         preview_thumbnail MEDIUMTEXT NULL,
         access_level ENUM('private', 'public') NOT NULL DEFAULT 'private',
+        public_role ENUM('viewer', 'editor') NOT NULL DEFAULT 'editor',
         short_code VARCHAR(32) NULL UNIQUE,
         custom_slug VARCHAR(100) NULL UNIQUE,
         deleted_at TIMESTAMP NULL DEFAULT NULL,
@@ -311,6 +312,14 @@ export async function runMigrations(): Promise<void> {
     if (accessCols.length === 0) {
       await conn.query("ALTER TABLE db_canvas.canvases ADD COLUMN access_level ENUM('private', 'public') NOT NULL DEFAULT 'private' AFTER preview_thumbnail");
       logger.db.info('Columna access_level añadida a db_canvas.canvases.');
+    }
+
+    const [publicRoleCols] = await conn.query<mysql.RowDataPacket[]>(
+      "SHOW COLUMNS FROM db_canvas.canvases LIKE 'public_role'"
+    );
+    if (publicRoleCols.length === 0) {
+      await conn.query("ALTER TABLE db_canvas.canvases ADD COLUMN public_role ENUM('viewer', 'editor') NOT NULL DEFAULT 'editor' AFTER access_level");
+      logger.db.info('Columna public_role añadida a db_canvas.canvases.');
     }
 
     const [shortCols] = await conn.query<mysql.RowDataPacket[]>(

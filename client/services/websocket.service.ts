@@ -388,11 +388,12 @@ export function sendCanvasFullUpdate(canvasUuid: string, data: any): void {
   });
 }
 
-export function sendCanvasAccessChanged(canvasUuid: string, accessLevel: 'private' | 'public'): void {
+export function sendCanvasAccessChanged(canvasUuid: string, accessLevel: 'private' | 'public', publicRole?: 'viewer' | 'editor'): void {
   sendWebSocketMessage({
-    type: 'CANVAS_ACCESS_CHANGED',
-    canvasUuid,
     accessLevel,
+    canvasUuid,
+    publicRole,
+    type: 'CANVAS_ACCESS_CHANGED',
   });
 }
 

@@ -26,7 +26,7 @@ export async function createCanvasHandler(req: Request, res: Response): Promise<
       return;
     }
 
-    const { name, width, height, unit, access_level, data, preview_thumbnail } = req.body;
+    const { name, width, height, unit, access_level, public_role, data, preview_thumbnail } = req.body;
     const numWidth = Number(width);
     const numHeight = Number(height);
 
@@ -41,6 +41,7 @@ export async function createCanvasHandler(req: Request, res: Response): Promise<
       height: numHeight,
       unit,
       access_level: access_level === 'public' ? 'public' : 'private',
+      public_role: public_role === 'viewer' ? 'viewer' : 'editor',
       data,
       preview_thumbnail: typeof preview_thumbnail === 'string' ? preview_thumbnail : null,
     });
@@ -55,7 +56,7 @@ export async function createCanvasHandler(req: Request, res: Response): Promise<
 export async function syncCanvasHandler(req: Request, res: Response): Promise<void> {
   try {
     const user = getCurrentUser(req);
-    const { id, uuid, name, width, height, unit, data, preview_thumbnail, access_level } = req.body;
+    const { id, uuid, name, width, height, unit, data, preview_thumbnail, access_level, public_role } = req.body;
 
     if (!uuid || typeof uuid !== 'string' || uuid.trim().length === 0) {
       res.status(400).json({ error: 'Identificador único de lienzo requerido.' });
@@ -75,12 +76,17 @@ export async function syncCanvasHandler(req: Request, res: Response): Promise<vo
       data,
       preview_thumbnail,
       access_level: access_level === 'public' ? 'public' : access_level === 'private' ? 'private' : undefined,
+      public_role: public_role === 'viewer' ? 'viewer' : public_role === 'editor' ? 'editor' : undefined,
     });
 
     res.json({ success: true, canvas });
   } catch (err: any) {
     if (err?.message?.includes('eliminado')) {
       res.status(404).json({ error: 'El lienzo ha sido eliminado.' });
+      return;
+    }
+    if (err?.message?.includes('papelera')) {
+      res.status(403).json({ error: 'El lienzo ha sido enviado a la papelera.' });
       return;
     }
     if (err?.message?.includes('iniciar sesión')) {
@@ -169,13 +175,21 @@ export async function updateCanvasAccessHandler(req: Request, res: Response): Pr
       return;
     }
 
-    const { access_level } = req.body;
-    if (access_level !== 'private' && access_level !== 'public') {
+    const { access_level, public_role } = req.body;
+    if (access_level !== undefined && access_level !== 'private' && access_level !== 'public') {
       res.status(400).json({ error: 'Nivel de acceso inválido. Debe ser private o public.' });
       return;
     }
+    if (public_role !== undefined && public_role !== 'viewer' && public_role !== 'editor') {
+      res.status(400).json({ error: 'Permiso del enlace inválido. Debe ser viewer o editor.' });
+      return;
+    }
+    if (access_level === undefined && public_role === undefined) {
+      res.status(400).json({ error: 'Debes especificar access_level o public_role.' });
+      return;
+    }
 
-    const canvas = await updateCanvasAccessLevel(uuid, user.id, access_level);
+    const canvas = await updateCanvasAccessLevel(uuid, user.id, access_level, public_role);
     res.json({ success: true, canvas });
   } catch (err: any) {
     logger.app.error(`Error al actualizar acceso del lienzo ${req.params.uuid}`, err);

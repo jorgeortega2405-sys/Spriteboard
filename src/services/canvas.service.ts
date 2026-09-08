@@ -51,13 +51,14 @@ export async function createCanvas(userId: number, dto: CreateCanvasDto): Promis
   const height = Math.max(1, Math.min(16384, Math.floor(Number(dto.height) || 1080)));
   const unit = dto.unit && ['px', 'cm', 'in', 'mm'].includes(dto.unit) ? dto.unit : 'px';
   const accessLevel = dto.access_level === 'public' ? 'public' : 'private';
+  const publicRole = dto.public_role === 'viewer' ? 'viewer' : 'editor';
   const shortCode = generateShortCode();
   const dataStr = dto.data ? (typeof dto.data === 'string' ? dto.data : JSON.stringify(dto.data)) : null;
   const previewThumbnail = dto.preview_thumbnail !== undefined ? dto.preview_thumbnail : null;
 
   const query = `
-    INSERT INTO canvases (uuid, user_id, name, width, height, unit, access_level, short_code, data, preview_thumbnail)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO canvases (uuid, user_id, name, width, height, unit, access_level, public_role, short_code, data, preview_thumbnail)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
   try {
@@ -69,6 +70,7 @@ export async function createCanvas(userId: number, dto: CreateCanvasDto): Promis
       height,
       unit,
       accessLevel,
+      publicRole,
       shortCode,
       dataStr,
       previewThumbnail,
@@ -92,7 +94,7 @@ export async function createCanvas(userId: number, dto: CreateCanvasDto): Promis
 export async function getUserCanvases(userId: number): Promise<Canvas[]> {
   try {
     const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
-      'SELECT id, uuid, user_id, name, width, height, unit, data, preview_thumbnail, access_level, short_code, custom_slug, created_at, updated_at FROM canvases WHERE user_id = ? AND deleted_at IS NULL ORDER BY created_at DESC',
+      'SELECT id, uuid, user_id, name, width, height, unit, data, preview_thumbnail, access_level, public_role, short_code, custom_slug, created_at, updated_at FROM canvases WHERE user_id = ? AND deleted_at IS NULL ORDER BY created_at DESC',
       [userId]
     );
     return rows as Canvas[];
@@ -105,7 +107,7 @@ export async function getUserCanvases(userId: number): Promise<Canvas[]> {
 export async function getCanvasByUuid(uuid: string, userId?: number): Promise<Canvas | null> {
   try {
     const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
-      'SELECT id, uuid, user_id, name, width, height, unit, data, preview_thumbnail, access_level, short_code, custom_slug, created_at, updated_at FROM canvases WHERE uuid = ? AND deleted_at IS NULL LIMIT 1',
+      'SELECT id, uuid, user_id, name, width, height, unit, data, preview_thumbnail, access_level, public_role, short_code, custom_slug, created_at, updated_at FROM canvases WHERE uuid = ? AND deleted_at IS NULL LIMIT 1',
       [uuid]
     );
 
@@ -166,7 +168,7 @@ export function generateCanvasRoomToken(canvasUuid: string, userId: number, role
 export async function getCanvasUserRole(uuid: string, userId?: number): Promise<{ canvas: Canvas; role: 'owner' | 'editor' | 'viewer' } | null> {
   try {
     const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
-      'SELECT id, uuid, user_id, name, width, height, unit, data, preview_thumbnail, access_level, short_code, custom_slug, created_at, updated_at FROM canvases WHERE uuid = ? AND deleted_at IS NULL LIMIT 1',
+      'SELECT id, uuid, user_id, name, width, height, unit, data, preview_thumbnail, access_level, public_role, short_code, custom_slug, created_at, updated_at FROM canvases WHERE uuid = ? AND deleted_at IS NULL LIMIT 1',
       [uuid]
     );
 
@@ -203,7 +205,8 @@ export async function getCanvasUserRole(uuid: string, userId?: number): Promise<
     }
 
     if (canvas.access_level === 'public') {
-      return { canvas, role: 'viewer' };
+      const publicRole = (canvas as any).public_role === 'viewer' ? 'viewer' : 'editor';
+      return { canvas, role: publicRole };
     }
 
     return null;
@@ -213,7 +216,12 @@ export async function getCanvasUserRole(uuid: string, userId?: number): Promise<
   }
 }
 
-export async function updateCanvasAccessLevel(uuid: string, userId: number, accessLevel: 'private' | 'public'): Promise<Canvas> {
+export async function updateCanvasAccessLevel(
+  uuid: string,
+  userId: number,
+  accessLevel?: 'private' | 'public',
+  publicRole?: 'viewer' | 'editor'
+): Promise<Canvas> {
   try {
     const [existing] = await canvasPool.query<mysql.RowDataPacket[]>(
       'SELECT id, user_id FROM canvases WHERE uuid = ? AND deleted_at IS NULL LIMIT 1',
@@ -229,11 +237,11 @@ export async function updateCanvasAccessLevel(uuid: string, userId: number, acce
     }
 
     await canvasPool.execute(
-      'UPDATE canvases SET access_level = ? WHERE uuid = ? AND user_id = ?',
-      [accessLevel, uuid, userId]
+      'UPDATE canvases SET access_level = COALESCE(?, access_level), public_role = COALESCE(?, public_role) WHERE uuid = ? AND user_id = ?',
+      [accessLevel || null, publicRole || null, uuid, userId]
     );
 
-    logger.db.info(`Nivel de acceso actualizado a '${accessLevel}' para lienzo ${uuid} por usuario ${userId}`);
+    logger.db.info(`Nivel de acceso actualizado (accessLevel: ${accessLevel}, publicRole: ${publicRole}) para lienzo ${uuid} por usuario ${userId}`);
 
     const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
       'SELECT * FROM canvases WHERE uuid = ? LIMIT 1',
@@ -259,7 +267,7 @@ export async function syncCanvas(userId: number | null, dto: SyncCanvasDto): Pro
 
   try {
     const [existing] = await canvasPool.query<mysql.RowDataPacket[]>(
-      'SELECT id, user_id, access_level, deleted_at FROM canvases WHERE uuid = ? LIMIT 1',
+      'SELECT id, user_id, access_level, public_role, deleted_at FROM canvases WHERE uuid = ? LIMIT 1',
       [uuid]
     );
 
@@ -275,20 +283,24 @@ export async function syncCanvas(userId: number | null, dto: SyncCanvasDto): Pro
       let isEditor = isOwner;
 
       if (!isOwner) {
-        const [memberRows] = await canvasPool.query<mysql.RowDataPacket[]>(
-          "SELECT id FROM canvas_members WHERE canvas_id = ? AND user_id = ? AND role = 'editor' LIMIT 1",
-          [row.id, userId]
-        );
-        isEditor = memberRows.length > 0;
-
-        if (!isEditor) {
-          const [teamRows] = await canvasPool.query<mysql.RowDataPacket[]>(
-            `SELECT ct.id FROM canvas_teams ct
-             INNER JOIN db_identity.team_members tm ON tm.team_id = ct.team_id
-             WHERE ct.canvas_id = ? AND tm.user_id = ? AND ct.role = 'editor' LIMIT 1`,
+        if (row.access_level === 'public' && row.public_role !== 'viewer') {
+          isEditor = true;
+        } else {
+          const [memberRows] = await canvasPool.query<mysql.RowDataPacket[]>(
+            "SELECT id FROM canvas_members WHERE canvas_id = ? AND user_id = ? AND role = 'editor' LIMIT 1",
             [row.id, userId]
           );
-          isEditor = teamRows.length > 0;
+          isEditor = memberRows.length > 0;
+
+          if (!isEditor) {
+            const [teamRows] = await canvasPool.query<mysql.RowDataPacket[]>(
+              `SELECT ct.id FROM canvas_teams ct
+               INNER JOIN db_identity.team_members tm ON tm.team_id = ct.team_id
+               WHERE ct.canvas_id = ? AND tm.user_id = ? AND ct.role = 'editor' LIMIT 1`,
+              [row.id, userId]
+            );
+            isEditor = teamRows.length > 0;
+          }
         }
       }
 
@@ -296,10 +308,10 @@ export async function syncCanvas(userId: number | null, dto: SyncCanvasDto): Pro
         throw new Error('No tienes permisos de edición para sincronizar este lienzo.');
       }
 
-      if (isOwner && accessLevel) {
+      if (isOwner && (accessLevel || dto.public_role)) {
         await canvasPool.execute(
-          'UPDATE canvases SET name = ?, width = ?, height = ?, unit = ?, data = COALESCE(?, data), preview_thumbnail = COALESCE(?, preview_thumbnail), access_level = ? WHERE uuid = ?',
-          [name, width, height, unit, data, previewThumbnail, accessLevel, uuid]
+          'UPDATE canvases SET name = ?, width = ?, height = ?, unit = ?, data = COALESCE(?, data), preview_thumbnail = COALESCE(?, preview_thumbnail), access_level = COALESCE(?, access_level), public_role = COALESCE(?, public_role) WHERE uuid = ?',
+          [name, width, height, unit, data, previewThumbnail, accessLevel || null, dto.public_role || null, uuid]
         );
       } else {
         await canvasPool.execute(
@@ -316,9 +328,10 @@ export async function syncCanvas(userId: number | null, dto: SyncCanvasDto): Pro
       }
 
       const shortCode = generateShortCode();
+      const publicRole = dto.public_role === 'viewer' ? 'viewer' : 'editor';
       await canvasPool.execute(
-        'INSERT INTO canvases (uuid, user_id, name, width, height, unit, access_level, short_code, data, preview_thumbnail) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [uuid, userId, name, width, height, unit, accessLevel || 'private', shortCode, data, previewThumbnail]
+        'INSERT INTO canvases (uuid, user_id, name, width, height, unit, access_level, public_role, short_code, data, preview_thumbnail) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [uuid, userId, name, width, height, unit, accessLevel || 'private', publicRole, shortCode, data, previewThumbnail]
       );
     }
 
@@ -818,7 +831,7 @@ export async function getCanvasBySlug(slug: string): Promise<Canvas | null> {
     const cleanSlug = slug.trim();
     if (!cleanSlug) return null;
     const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
-      'SELECT id, uuid, user_id, name, width, height, unit, data, preview_thumbnail, access_level, short_code, custom_slug, created_at, updated_at FROM canvases WHERE (custom_slug = ? OR short_code = ?) AND deleted_at IS NULL LIMIT 1',
+      'SELECT id, uuid, user_id, name, width, height, unit, data, preview_thumbnail, access_level, public_role, short_code, custom_slug, created_at, updated_at FROM canvases WHERE (custom_slug = ? OR short_code = ?) AND deleted_at IS NULL LIMIT 1',
       [cleanSlug, cleanSlug]
     );
     if (rows.length === 0) return null;
@@ -869,7 +882,7 @@ export async function updateCanvasSlug(uuid: string, userId: number, rawSlug: st
     logger.db.info(`Enlace personalizado para lienzo ${uuid} actualizado a '${cleanSlug}' por usuario ${userId}`);
 
     const [updatedRows] = await canvasPool.query<mysql.RowDataPacket[]>(
-      'SELECT id, uuid, user_id, name, width, height, unit, data, preview_thumbnail, access_level, short_code, custom_slug, created_at, updated_at FROM canvases WHERE uuid = ? LIMIT 1',
+      'SELECT id, uuid, user_id, name, width, height, unit, data, preview_thumbnail, access_level, public_role, short_code, custom_slug, created_at, updated_at FROM canvases WHERE uuid = ? LIMIT 1',
       [uuid]
     );
     return updatedRows[0] as Canvas;

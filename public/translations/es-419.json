@@ -557,7 +557,10 @@
       "anyoneWithLink": "Cualquier persona con el enlace",
       "linkCopied": "Enlace copiado al portapapeles",
       "changedToPublic": "Lienzo público para cualquiera con el enlace",
-      "changedToPrivate": "Lienzo cambiado a privado"
+      "changedToPrivate": "Lienzo cambiado a privado",
+      "public_role_label": "Permiso del enlace",
+      "role_editor": "Ver y editar",
+      "role_viewer": "Solo ver"
     }
   },
   "teams": {

@@ -465,13 +465,24 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
                                         }
                                     }
                                     "CANVAS_ACCESS_CHANGED" => {
-                                        let rooms = state.canvas_rooms.read().await;
-                                        if let Some(room) = rooms.get(canvas_uuid) {
+                                        let mut rooms = state.canvas_rooms.write().await;
+                                        if let Some(room) = rooms.get_mut(canvas_uuid) {
                                             let access_level = val.get("accessLevel").and_then(|a| a.as_str()).unwrap_or("private");
+                                            let public_role = val.get("publicRole").and_then(|a| a.as_str()).unwrap_or("editor");
+
+                                            if access_level == "public" {
+                                                for (peer_conn, peer) in room.iter_mut() {
+                                                    if peer_conn != &conn_id && peer.role != "owner" {
+                                                        peer.role = public_role.to_string();
+                                                    }
+                                                }
+                                            }
+
                                             let notice_msg = serde_json::json!({
                                                 "type": "CANVAS_ACCESS_CHANGED",
                                                 "canvasUuid": canvas_uuid,
                                                 "accessLevel": access_level,
+                                                "publicRole": public_role,
                                                 "senderConnId": conn_id
                                             }).to_string();
 

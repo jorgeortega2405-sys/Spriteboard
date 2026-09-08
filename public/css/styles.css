@@ -5835,6 +5835,26 @@ html.dark-theme .component-card-button--downgrade {
   cursor: grabbing;
 }
 
+.is-viewer-mode .design-top-toolbar-container,
+.is-viewer-mode .design-bottom-toolbar-container,
+.is-viewer-mode .design-colors-panel,
+.is-viewer-mode .design-layers-panel,
+.is-viewer-mode .design-shapes-panel,
+.is-viewer-mode .design-shape-minitoolbar,
+.is-viewer-mode .design-collaborators-panel,
+.is-viewer-mode .design-share-wrapper,
+.is-viewer-mode .design-coords-badge {
+  display: none !important;
+}
+
+.is-viewer-mode .design-viewport-canvas {
+  cursor: grab;
+}
+
+.is-viewer-mode .design-viewport-canvas.is-panning {
+  cursor: grabbing;
+}
+
 .design-top-toolbar-container {
   position: absolute;
   top: 0;
