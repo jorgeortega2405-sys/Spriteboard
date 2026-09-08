@@ -6,6 +6,44 @@ import { logger } from './logger.service.js';
 import crypto from 'crypto';
 import mysql from 'mysql2/promise';
 
+export const RESERVED_SLUGS = new Set([
+  'api',
+  'assets',
+  'client',
+  'design',
+  'dist',
+  'favicon.ico',
+  'forgot-password',
+  'health',
+  'help',
+  'index.html',
+  'legal',
+  'login',
+  'manifest.json',
+  'node_modules',
+  'public',
+  'register',
+  'reset-password',
+  'robots.txt',
+  'settings',
+  'src',
+  'teams',
+  'trash',
+  'upgrade',
+  'uploads',
+  'ws',
+]);
+
+export function generateShortCode(): string {
+  const chars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const bytes = crypto.randomBytes(15);
+  let result = '';
+  for (let i = 0; i < 15; i++) {
+    result += chars[bytes[i] % chars.length];
+  }
+  return result;
+}
+
 export async function createCanvas(userId: number, dto: CreateCanvasDto): Promise<Canvas> {
   const uuid = dto.uuid && dto.uuid.trim().length === 36 ? dto.uuid.trim() : crypto.randomUUID();
   const name = dto.name && dto.name.trim() ? dto.name.trim().slice(0, 255) : 'Lienzo sin título';
@@ -13,12 +51,13 @@ export async function createCanvas(userId: number, dto: CreateCanvasDto): Promis
   const height = Math.max(1, Math.min(16384, Math.floor(Number(dto.height) || 1080)));
   const unit = dto.unit && ['px', 'cm', 'in', 'mm'].includes(dto.unit) ? dto.unit : 'px';
   const accessLevel = dto.access_level === 'public' ? 'public' : 'private';
+  const shortCode = generateShortCode();
   const dataStr = dto.data ? (typeof dto.data === 'string' ? dto.data : JSON.stringify(dto.data)) : null;
   const previewThumbnail = dto.preview_thumbnail !== undefined ? dto.preview_thumbnail : null;
 
   const query = `
-    INSERT INTO canvases (uuid, user_id, name, width, height, unit, access_level, data, preview_thumbnail)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO canvases (uuid, user_id, name, width, height, unit, access_level, short_code, data, preview_thumbnail)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
   try {
@@ -30,6 +69,7 @@ export async function createCanvas(userId: number, dto: CreateCanvasDto): Promis
       height,
       unit,
       accessLevel,
+      shortCode,
       dataStr,
       previewThumbnail,
     ]);
@@ -52,7 +92,7 @@ export async function createCanvas(userId: number, dto: CreateCanvasDto): Promis
 export async function getUserCanvases(userId: number): Promise<Canvas[]> {
   try {
     const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
-      'SELECT id, uuid, user_id, name, width, height, unit, data, preview_thumbnail, access_level, created_at, updated_at FROM canvases WHERE user_id = ? AND deleted_at IS NULL ORDER BY created_at DESC',
+      'SELECT id, uuid, user_id, name, width, height, unit, data, preview_thumbnail, access_level, short_code, custom_slug, created_at, updated_at FROM canvases WHERE user_id = ? AND deleted_at IS NULL ORDER BY created_at DESC',
       [userId]
     );
     return rows as Canvas[];
@@ -65,7 +105,7 @@ export async function getUserCanvases(userId: number): Promise<Canvas[]> {
 export async function getCanvasByUuid(uuid: string, userId?: number): Promise<Canvas | null> {
   try {
     const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
-      'SELECT id, uuid, user_id, name, width, height, unit, data, preview_thumbnail, access_level, created_at, updated_at FROM canvases WHERE uuid = ? AND deleted_at IS NULL LIMIT 1',
+      'SELECT id, uuid, user_id, name, width, height, unit, data, preview_thumbnail, access_level, short_code, custom_slug, created_at, updated_at FROM canvases WHERE uuid = ? AND deleted_at IS NULL LIMIT 1',
       [uuid]
     );
 
@@ -126,7 +166,7 @@ export function generateCanvasRoomToken(canvasUuid: string, userId: number, role
 export async function getCanvasUserRole(uuid: string, userId?: number): Promise<{ canvas: Canvas; role: 'owner' | 'editor' | 'viewer' } | null> {
   try {
     const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
-      'SELECT id, uuid, user_id, name, width, height, unit, data, preview_thumbnail, access_level, created_at, updated_at FROM canvases WHERE uuid = ? AND deleted_at IS NULL LIMIT 1',
+      'SELECT id, uuid, user_id, name, width, height, unit, data, preview_thumbnail, access_level, short_code, custom_slug, created_at, updated_at FROM canvases WHERE uuid = ? AND deleted_at IS NULL LIMIT 1',
       [uuid]
     );
 
@@ -275,9 +315,10 @@ export async function syncCanvas(userId: number | null, dto: SyncCanvasDto): Pro
         throw new Error('Debes iniciar sesión para crear un nuevo lienzo en la nube.');
       }
 
+      const shortCode = generateShortCode();
       await canvasPool.execute(
-        'INSERT INTO canvases (uuid, user_id, name, width, height, unit, access_level, data, preview_thumbnail) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [uuid, userId, name, width, height, unit, accessLevel || 'private', data, previewThumbnail]
+        'INSERT INTO canvases (uuid, user_id, name, width, height, unit, access_level, short_code, data, preview_thumbnail) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [uuid, userId, name, width, height, unit, accessLevel || 'private', shortCode, data, previewThumbnail]
       );
     }
 
@@ -750,11 +791,12 @@ export async function duplicateCanvas(uuid: string, userId: number): Promise<Can
     const dataStr = original.data !== null && original.data !== undefined
       ? (typeof original.data === 'string' ? original.data : JSON.stringify(original.data))
       : null;
+    const newShortCode = generateShortCode();
 
     const [result] = await canvasPool.execute<mysql.ResultSetHeader>(
-      `INSERT INTO canvases (uuid, user_id, name, width, height, unit, access_level, data, preview_thumbnail)
-       VALUES (?, ?, ?, ?, ?, ?, 'private', ?, ?)`,
-      [newUuid, userId, newName, original.width, original.height, original.unit, dataStr, original.preview_thumbnail]
+      `INSERT INTO canvases (uuid, user_id, name, width, height, unit, access_level, short_code, data, preview_thumbnail)
+       VALUES (?, ?, ?, ?, ?, ?, 'private', ?, ?, ?)`,
+      [newUuid, userId, newName, original.width, original.height, original.unit, newShortCode, dataStr, original.preview_thumbnail]
     );
 
     logger.db.info(`Lienzo ${uuid} duplicado como ${newUuid} por usuario ${userId}`);
@@ -770,5 +812,72 @@ export async function duplicateCanvas(uuid: string, userId: number): Promise<Can
     throw err;
   }
 }
+
+export async function getCanvasBySlug(slug: string): Promise<Canvas | null> {
+  try {
+    const cleanSlug = slug.trim();
+    if (!cleanSlug) return null;
+    const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
+      'SELECT id, uuid, user_id, name, width, height, unit, data, preview_thumbnail, access_level, short_code, custom_slug, created_at, updated_at FROM canvases WHERE (custom_slug = ? OR short_code = ?) AND deleted_at IS NULL LIMIT 1',
+      [cleanSlug, cleanSlug]
+    );
+    if (rows.length === 0) return null;
+    return rows[0] as Canvas;
+  } catch (err) {
+    logger.db.error(`Error al consultar lienzo por slug o código corto: ${slug}`, err);
+    return null;
+  }
+}
+
+export async function updateCanvasSlug(uuid: string, userId: number, rawSlug: string | null): Promise<Canvas> {
+  try {
+    const [canvasRows] = await canvasPool.query<mysql.RowDataPacket[]>(
+      'SELECT id, user_id, custom_slug FROM canvases WHERE uuid = ? AND deleted_at IS NULL LIMIT 1',
+      [uuid]
+    );
+    if (canvasRows.length === 0) {
+      throw new Error('Lienzo no encontrado.');
+    }
+    const canvas = canvasRows[0];
+    if (canvas.user_id !== userId) {
+      throw new Error('Solo el propietario puede personalizar el enlace del lienzo.');
+    }
+
+    const cleanSlug = rawSlug ? rawSlug.trim() : null;
+
+    if (cleanSlug) {
+      if (!/^[a-zA-Z0-9_-]{3,50}$/.test(cleanSlug)) {
+        throw new Error('El enlace personalizado debe contener entre 3 y 50 caracteres alfanuméricos, guiones o guiones bajos.');
+      }
+      if (RESERVED_SLUGS.has(cleanSlug.toLowerCase())) {
+        throw new Error('Este nombre de enlace está reservado por el sistema.');
+      }
+      const [existing] = await canvasPool.query<mysql.RowDataPacket[]>(
+        'SELECT id FROM canvases WHERE (custom_slug = ? OR short_code = ?) AND uuid != ? AND deleted_at IS NULL LIMIT 1',
+        [cleanSlug, cleanSlug, uuid]
+      );
+      if (existing.length > 0) {
+        throw new Error('Este enlace personalizado ya está en uso por otro lienzo.');
+      }
+    }
+
+    await canvasPool.execute(
+      'UPDATE canvases SET custom_slug = ? WHERE uuid = ? AND user_id = ?',
+      [cleanSlug, uuid, userId]
+    );
+
+    logger.db.info(`Enlace personalizado para lienzo ${uuid} actualizado a '${cleanSlug}' por usuario ${userId}`);
+
+    const [updatedRows] = await canvasPool.query<mysql.RowDataPacket[]>(
+      'SELECT id, uuid, user_id, name, width, height, unit, data, preview_thumbnail, access_level, short_code, custom_slug, created_at, updated_at FROM canvases WHERE uuid = ? LIMIT 1',
+      [uuid]
+    );
+    return updatedRows[0] as Canvas;
+  } catch (err: any) {
+    logger.db.error(`Error al actualizar enlace personalizado del lienzo ${uuid}`, err);
+    throw err;
+  }
+}
+
 
 

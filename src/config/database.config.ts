@@ -1,4 +1,5 @@
 import { logger } from '../services/logger.service.js';
+import crypto from 'crypto';
 import mysql from 'mysql2/promise';
 
 export interface NoSqlAdapter {
@@ -291,11 +292,15 @@ export async function runMigrations(): Promise<void> {
         data JSON NULL,
         preview_thumbnail MEDIUMTEXT NULL,
         access_level ENUM('private', 'public') NOT NULL DEFAULT 'private',
+        short_code VARCHAR(32) NULL UNIQUE,
+        custom_slug VARCHAR(100) NULL UNIQUE,
         deleted_at TIMESTAMP NULL DEFAULT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_canvases_user (user_id),
         INDEX idx_canvases_uuid (uuid),
+        INDEX idx_canvases_short_code (short_code),
+        INDEX idx_canvases_custom_slug (custom_slug),
         INDEX idx_canvases_deleted_at (deleted_at)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
@@ -308,12 +313,44 @@ export async function runMigrations(): Promise<void> {
       logger.db.info('Columna access_level añadida a db_canvas.canvases.');
     }
 
+    const [shortCols] = await conn.query<mysql.RowDataPacket[]>(
+      "SHOW COLUMNS FROM db_canvas.canvases LIKE 'short_code'"
+    );
+    if (shortCols.length === 0) {
+      await conn.query('ALTER TABLE db_canvas.canvases ADD COLUMN short_code VARCHAR(32) NULL UNIQUE AFTER access_level');
+      logger.db.info('Columna short_code añadida a db_canvas.canvases.');
+    }
+
+    const [slugCols] = await conn.query<mysql.RowDataPacket[]>(
+      "SHOW COLUMNS FROM db_canvas.canvases LIKE 'custom_slug'"
+    );
+    if (slugCols.length === 0) {
+      await conn.query('ALTER TABLE db_canvas.canvases ADD COLUMN custom_slug VARCHAR(100) NULL UNIQUE AFTER short_code');
+      logger.db.info('Columna custom_slug añadida a db_canvas.canvases.');
+    }
+
     const [delCols] = await conn.query<mysql.RowDataPacket[]>(
       "SHOW COLUMNS FROM db_canvas.canvases LIKE 'deleted_at'"
     );
     if (delCols.length === 0) {
       await conn.query('ALTER TABLE db_canvas.canvases ADD COLUMN deleted_at TIMESTAMP NULL DEFAULT NULL, ADD INDEX idx_canvases_deleted_at (deleted_at)');
       logger.db.info('Columna deleted_at añadida a db_canvas.canvases.');
+    }
+
+    const [missingShorts] = await conn.query<mysql.RowDataPacket[]>(
+      'SELECT id FROM db_canvas.canvases WHERE short_code IS NULL'
+    );
+    if (missingShorts.length > 0) {
+      const chars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      for (const row of missingShorts) {
+        const bytes = crypto.randomBytes(15);
+        let code = '';
+        for (let i = 0; i < 15; i++) {
+          code += chars[bytes[i] % chars.length];
+        }
+        await conn.query('UPDATE db_canvas.canvases SET short_code = ? WHERE id = ?', [code, row.id]);
+      }
+      logger.db.info(`Códigos cortos generados para ${missingShorts.length} lienzos existentes.`);
     }
 
     await conn.query(`

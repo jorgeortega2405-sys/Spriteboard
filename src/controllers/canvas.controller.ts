@@ -1,5 +1,5 @@
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
-import { addCanvasMember, addCanvasTeam, createCanvas, deleteCanvas, duplicateCanvas, emptyTrash, generateCanvasRoomToken, getCanvasByUuid, getCanvasMembers, getCanvasTeams, getCanvasUserRole, getUserCanvases, getUserTrashCanvases, permanentlyDeleteCanvas, removeCanvasMember, removeCanvasTeam, restoreCanvas, searchUsersForSharing, syncCanvas, updateCanvasAccessLevel } from '../services/canvas.service.js';
+import { addCanvasMember, addCanvasTeam, createCanvas, deleteCanvas, duplicateCanvas, emptyTrash, generateCanvasRoomToken, getCanvasBySlug, getCanvasByUuid, getCanvasMembers, getCanvasTeams, getCanvasUserRole, getUserCanvases, getUserTrashCanvases, permanentlyDeleteCanvas, removeCanvasMember, removeCanvasTeam, restoreCanvas, searchUsersForSharing, syncCanvas, updateCanvasAccessLevel, updateCanvasSlug } from '../services/canvas.service.js';
 import { logger } from '../services/logger.service.js';
 import { Request, Response } from 'express';
 
@@ -470,5 +470,59 @@ export async function emptyTrashHandler(req: Request, res: Response): Promise<vo
     res.status(500).json({ error: 'Ha ocurrido un error al vaciar la papelera.' });
   }
 }
+
+export async function resolveCanvasSlugHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const { slug } = req.params;
+    if (!slug || typeof slug !== 'string') {
+      res.status(400).json({ error: 'Enlace no válido.' });
+      return;
+    }
+    const canvas = await getCanvasBySlug(slug);
+    if (!canvas) {
+      res.status(404).json({ error: 'Lienzo no encontrado.' });
+      return;
+    }
+    res.json({ uuid: canvas.uuid });
+  } catch (err) {
+    logger.app.error('Error al resolver slug de lienzo', err);
+    res.status(500).json({ error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.' });
+  }
+}
+
+export async function updateCanvasSlugHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const user = getCurrentUser(req);
+    if (!user) {
+      res.status(401).json({ error: 'No autorizado.' });
+      return;
+    }
+    const { uuid } = req.params;
+    const { slug } = req.body;
+    if (!uuid || typeof uuid !== 'string') {
+      res.status(400).json({ error: 'Identificador de lienzo inválido.' });
+      return;
+    }
+
+    const updated = await updateCanvasSlug(uuid, user.id, typeof slug === 'string' ? slug : null);
+    res.json({
+      custom_slug: updated.custom_slug,
+      short_code: updated.short_code,
+      success: true,
+    });
+  } catch (err: any) {
+    if (err?.message?.includes('propietario')) {
+      res.status(403).json({ error: err.message });
+      return;
+    }
+    if (err?.message?.includes('alfanuméricos') || err?.message?.includes('reservado') || err?.message?.includes('en uso')) {
+      res.status(400).json({ error: err.message });
+      return;
+    }
+    logger.app.error(`Error al actualizar slug de lienzo ${req.params.uuid}`, err);
+    res.status(500).json({ error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.' });
+  }
+}
+
 
 

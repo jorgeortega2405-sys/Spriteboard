@@ -1,4 +1,4 @@
-import { addCanvasMemberHandler, addCanvasTeamHandler, createCanvasHandler, deleteCanvasHandler, duplicateCanvasHandler, emptyTrashHandler, getCanvasHandler, getCanvasMembersHandler, getCanvasTeamsHandler, getCanvasTokenHandler, listCanvases, listTrashCanvases, permanentlyDeleteCanvasHandler, removeCanvasMemberHandler, removeCanvasTeamHandler, restoreCanvasHandler, searchUsersHandler, syncCanvasHandler, updateCanvasAccessHandler } from '../controllers/canvas.controller.js';
+import { addCanvasMemberHandler, addCanvasTeamHandler, createCanvasHandler, deleteCanvasHandler, duplicateCanvasHandler, emptyTrashHandler, getCanvasHandler, getCanvasMembersHandler, getCanvasTeamsHandler, getCanvasTokenHandler, listCanvases, listTrashCanvases, permanentlyDeleteCanvasHandler, removeCanvasMemberHandler, removeCanvasTeamHandler, resolveCanvasSlugHandler, restoreCanvasHandler, searchUsersHandler, syncCanvasHandler, updateCanvasAccessHandler, updateCanvasSlugHandler } from '../controllers/canvas.controller.js';
 import { requireAuth } from '../middlewares/auth.middleware.js';
 import { Router } from 'express';
 
@@ -8,6 +8,8 @@ router.get('/canvases', requireAuth, listCanvases);
 router.post('/canvases', requireAuth, createCanvasHandler);
 router.post('/canvases/sync', syncCanvasHandler);
 router.patch('/canvases/:uuid/access', requireAuth, updateCanvasAccessHandler);
+router.patch('/canvases/:uuid/slug', requireAuth, updateCanvasSlugHandler);
+router.get('/canvases/resolve-slug/:slug', resolveCanvasSlugHandler);
 router.get('/canvases/:uuid/members', getCanvasMembersHandler);
 router.post('/canvases/:uuid/members', requireAuth, addCanvasMemberHandler);
 router.delete('/canvases/:uuid/members/:userId', requireAuth, removeCanvasMemberHandler);

@@ -1,6 +1,7 @@
 import { attachChatSidebarToView, createTopBar, toggleSidebar } from './components/layout.component';
+import { API_ROUTES } from './config/api-routes';
 import { hasPersistentTopBar } from './config/skeleton-routes';
-import { currentUser } from './services/api.service';
+import { currentUser, getApi } from './services/api.service';
 import { renderIcons } from './services/icon.service';
 import { SkeletonService } from './services/skeleton.service';
 import { trackPageView } from './services/telemetry.service';
@@ -204,6 +205,34 @@ export async function render(): Promise<void> {
       const canvasUuid = path.split('/design/')[1]?.split('/')[0] || '';
       const designView = await createDesignView(canvasUuid);
       viewElements = topBar ? [topBar, designView] : [designView];
+    } else if (/^\/[a-zA-Z0-9_-]{3,50}$/.test(path)) {
+      const slug = path.slice(1);
+      let resolvedUuid: string | null = null;
+      try {
+        const res = await getApi(API_ROUTES.canvases.resolveSlug(slug));
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.uuid) {
+            resolvedUuid = data.uuid;
+          }
+        }
+      } catch {}
+
+      if (resolvedUuid) {
+        window.history.replaceState({}, '', `/design/${resolvedUuid}`);
+        const topBar = isSoftSpaNav ? null : await createTopBar();
+        const designView = await createDesignView(resolvedUuid);
+        viewElements = topBar ? [topBar, designView] : [designView];
+      } else {
+        const notFoundView = await createErrorView({
+          code: '404',
+          title: 'Página no encontrada',
+          description: `La ruta "${path}" no existe o ha sido movida.`,
+          actionText: 'Ir a la página principal',
+          actionUrl: '/',
+        });
+        viewElements = [notFoundView];
+      }
     } else {
       const notFoundView = await createErrorView({
         code: '404',

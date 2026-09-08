@@ -13,6 +13,8 @@ export const API_ROUTES = {
     members: (uuid: string) => `/api/canvases/${encodeURIComponent(uuid)}/members`,
     removeMember: (uuid: string, userId: number) => `/api/canvases/${encodeURIComponent(uuid)}/members/${encodeURIComponent(userId)}`,
     removeTeam: (uuid: string, teamId: number) => `/api/canvases/${encodeURIComponent(uuid)}/teams/${encodeURIComponent(teamId)}`,
+    resolveSlug: (slug: string) => `/api/canvases/resolve-slug/${encodeURIComponent(slug)}`,
+    slug: (uuid: string) => `/api/canvases/${encodeURIComponent(uuid)}/slug`,
     sync: '/api/canvases/sync',
     teams: (uuid: string) => `/api/canvases/${encodeURIComponent(uuid)}/teams`,
     token: (uuid: string) => `/api/canvases/${encodeURIComponent(uuid)}/token`,

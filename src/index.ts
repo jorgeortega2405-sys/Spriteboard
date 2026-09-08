@@ -12,6 +12,7 @@ import { checkRedisConnection } from './config/redis.config.js';
 import { getHealth } from './controllers/config.controller.js';
 import { telemetryMiddleware } from './middlewares/telemetry.middleware.js';
 import apiRouter from './routes/api.routes.js';
+import { getCanvasBySlug, RESERVED_SLUGS } from './services/canvas.service.js';
 import { geoIpService } from './services/geoip.service.js';
 import { logger } from './services/logger.service.js';
 import { telemetryService } from './services/telemetry.service.js';
@@ -54,6 +55,22 @@ app.use(cookieParser());
 app.use(telemetryMiddleware);
 app.get('/health', getHealth);
 app.use('/api', apiRouter);
+
+app.get('/:slug', async (req: Request, res: Response, next: express.NextFunction) => {
+  const { slug } = req.params;
+  if (!slug || slug.includes('.') || RESERVED_SLUGS.has(slug.toLowerCase())) {
+    return next();
+  }
+  try {
+    const canvas = await getCanvasBySlug(slug);
+    if (canvas) {
+      return res.redirect(302, `/design/${canvas.uuid}`);
+    }
+  } catch (err) {
+    logger.app.error('Error al resolver slug de lienzo en Express', err);
+  }
+  next();
+});
 
 app.use((err: any, req: Request, res: Response, next: express.NextFunction) => {
   logger.app.error('Error no controlado en middleware o ruta', err);

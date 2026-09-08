@@ -782,6 +782,67 @@ export function openCreateCanvasModal(): void {
                   </div>
                 </div>
 
+                <div class="settings-group" data-ref="custom-size-group-background">
+                  <div class="settings-item" data-ref="custom-size-item-background">
+                    <div class="settings-item__content" data-ref="custom-size-bg-content">
+                      <div class="settings-item__text" data-ref="custom-size-bg-text">
+                        <h2 class="settings-item__title" data-ref="custom-size-bg-title">Fondo del lienzo</h2>
+                        <p class="settings-item__desc" data-ref="custom-size-bg-desc">Elige entre fondo transparente de tablero o color sólido.</p>
+                      </div>
+                    </div>
+                    <div class="settings-item__actions" data-ref="custom-size-bg-actions">
+                      <div class="template-variants-pills" data-ref="bg-type-pills">
+                        <button type="button" class="template-variant-pill is-active" data-ref="btn-bg-transparent" data-bg="transparent">
+                          Transparente
+                        </button>
+                        <button type="button" class="template-variant-pill" data-ref="btn-bg-solid" data-bg="solid">
+                          Color Sólido
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="settings-group" data-ref="custom-size-group-bg-transparent">
+                  <div class="settings-item" data-ref="custom-size-item-bg-check">
+                    <div class="settings-item__content" data-ref="custom-size-check-content">
+                      <div class="settings-item__text" data-ref="custom-size-check-text">
+                        <h2 class="settings-item__title" data-ref="custom-size-check-title">Tamaño de cuadrícula</h2>
+                        <p class="settings-item__desc" data-ref="custom-size-check-desc">Tamaño de los cuadros del patrón transparente.</p>
+                      </div>
+                    </div>
+                    <div class="settings-item__actions" data-ref="custom-size-check-actions">
+                      <div class="template-variants-pills" data-ref="bg-checksize-pills">
+                        <button type="button" class="template-variant-pill" data-ref="btn-check-8" data-size="8">8 px</button>
+                        <button type="button" class="template-variant-pill is-active" data-ref="btn-check-16" data-size="16">16 px</button>
+                        <button type="button" class="template-variant-pill" data-ref="btn-check-32" data-size="32">32 px</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="settings-group" data-ref="custom-size-group-bg-solid" style="display: none;">
+                  <div class="settings-item" data-ref="custom-size-item-bg-color">
+                    <div class="settings-item__content" data-ref="custom-size-solid-content">
+                      <div class="settings-item__text" data-ref="custom-size-solid-text">
+                        <h2 class="settings-item__title" data-ref="custom-size-solid-title">Color de fondo</h2>
+                        <p class="settings-item__desc" data-ref="custom-size-solid-desc">Selecciona un color predeterminado o personalizado.</p>
+                      </div>
+                    </div>
+                    <div class="settings-item__actions" data-ref="custom-size-solid-actions">
+                      <div class="template-variants-pills" data-ref="bg-color-pills" style="margin-bottom: 8px;">
+                        <button type="button" class="template-variant-pill is-active" data-ref="btn-color-white" data-color="#ffffff">Blanco</button>
+                        <button type="button" class="template-variant-pill" data-ref="btn-color-black" data-color="#000000">Negro</button>
+                        <button type="button" class="template-variant-pill" data-ref="btn-color-custom" data-color="custom">Personalizado</button>
+                      </div>
+                      <div class="design-colors-custom-row" data-ref="bg-color-custom-row" style="display: none;">
+                        <input class="design-color-active-input" data-ref="input-bg-color" type="color" value="#ffffff" />
+                        <input class="design-colors-text-input" data-ref="input-bg-color-hex" type="text" value="#ffffff" maxlength="7" placeholder="#ffffff" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 <div class="modal-canvas-panel__actions" data-ref="custom-size-actions">
                   <button type="button" class="btn btn--h44 btn--black btn--w-full" data-ref="btn-submit-create-canvas">
                     ${t('canvas.btn_create')}
@@ -1075,6 +1136,75 @@ export function openCreateCanvasModal(): void {
   setupNumberStepper(inputWidth, btnWidthDecLarge, btnWidthDec, btnWidthInc, btnWidthIncLarge);
   setupNumberStepper(inputHeight, btnHeightDecLarge, btnHeightDec, btnHeightInc, btnHeightIncLarge);
 
+  let selectedBgType: 'transparent' | 'solid' = 'transparent';
+  let selectedCheckSize = 16;
+  let selectedSolidColor = '#ffffff';
+
+  const groupBgTransparent = backdrop.querySelector<HTMLElement>('[data-ref="custom-size-group-bg-transparent"]');
+  const groupBgSolid = backdrop.querySelector<HTMLElement>('[data-ref="custom-size-group-bg-solid"]');
+  const btnBgTransparent = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-bg-transparent"]');
+  const btnBgSolid = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-bg-solid"]');
+  const checkSizePills = backdrop.querySelectorAll<HTMLButtonElement>('[data-ref^="btn-check-"]');
+  const colorPresetPills = backdrop.querySelectorAll<HTMLButtonElement>('[data-ref^="btn-color-"]');
+  const customColorRow = backdrop.querySelector<HTMLElement>('[data-ref="bg-color-custom-row"]');
+  const inputBgColor = backdrop.querySelector<HTMLInputElement>('[data-ref="input-bg-color"]');
+  const inputBgColorHex = backdrop.querySelector<HTMLInputElement>('[data-ref="input-bg-color-hex"]');
+
+  btnBgTransparent?.addEventListener('click', () => {
+    selectedBgType = 'transparent';
+    btnBgTransparent.classList.add('is-active');
+    btnBgSolid?.classList.remove('is-active');
+    if (groupBgTransparent) groupBgTransparent.style.display = '';
+    if (groupBgSolid) groupBgSolid.style.display = 'none';
+  });
+
+  btnBgSolid?.addEventListener('click', () => {
+    selectedBgType = 'solid';
+    btnBgSolid.classList.add('is-active');
+    btnBgTransparent?.classList.remove('is-active');
+    if (groupBgTransparent) groupBgTransparent.style.display = 'none';
+    if (groupBgSolid) groupBgSolid.style.display = '';
+  });
+
+  checkSizePills.forEach((pill) => {
+    pill.addEventListener('click', () => {
+      checkSizePills.forEach((p) => p.classList.remove('is-active'));
+      pill.classList.add('is-active');
+      selectedCheckSize = parseInt(pill.getAttribute('data-size') || '16', 10);
+    });
+  });
+
+  colorPresetPills.forEach((pill) => {
+    pill.addEventListener('click', () => {
+      colorPresetPills.forEach((p) => p.classList.remove('is-active'));
+      pill.classList.add('is-active');
+      const col = pill.getAttribute('data-color');
+      if (col === 'custom') {
+        if (customColorRow) customColorRow.style.display = 'flex';
+        selectedSolidColor = inputBgColorHex?.value || inputBgColor?.value || '#ffffff';
+      } else {
+        if (customColorRow) customColorRow.style.display = 'none';
+        selectedSolidColor = col || '#ffffff';
+        if (inputBgColor) inputBgColor.value = selectedSolidColor;
+        if (inputBgColorHex) inputBgColorHex.value = selectedSolidColor;
+      }
+    });
+  });
+
+  inputBgColor?.addEventListener('input', () => {
+    if (inputBgColorHex) inputBgColorHex.value = inputBgColor.value;
+    selectedSolidColor = inputBgColor.value;
+  });
+
+  inputBgColorHex?.addEventListener('input', () => {
+    let val = inputBgColorHex.value.trim();
+    if (!val.startsWith('#')) val = '#' + val;
+    if (/^#[0-9a-fA-F]{6}$/.test(val)) {
+      if (inputBgColor) inputBgColor.value = val;
+      selectedSolidColor = val;
+    }
+  });
+
   backdrop.querySelectorAll<HTMLElement>('.canvas-card').forEach((card) => {
     card.addEventListener('click', () => {
       const presetId = card.getAttribute('data-preset-id');
@@ -1236,49 +1366,56 @@ export function openCreateCanvasModal(): void {
         }
       }
 
-      let initialData: string | null = null;
+      const initialProject = {
+        version: 1,
+        fps: 8,
+        onionSkin: false,
+        activeFrameId: 'frame_1',
+        background: {
+          type: selectedBgType,
+          color: selectedSolidColor,
+          checkSize: selectedCheckSize,
+          checkColor1: '#ffffff',
+          checkColor2: '#e2e8f0',
+        },
+        animationTags: [],
+        frames: [
+          {
+            id: 'frame_1',
+            name: 'Cuadro 1',
+            activeLayerId: 'layer_1',
+            layers: [
+              {
+                id: 'layer_1',
+                name: activeTemplate ? activeTemplate.name : 'Capa 1',
+                visible: true,
+                opacity: 1.0,
+                data: templateDataUrl || '',
+              },
+            ],
+          },
+        ],
+      };
+      const initialData = JSON.stringify(initialProject);
+
       let previewThumbnail: string | null = null;
+      const maxThumbDim = 320;
+      let thumbW = width;
+      let thumbH = height;
+      if (thumbW > maxThumbDim || thumbH > maxThumbDim) {
+        const ratio = Math.min(maxThumbDim / thumbW, maxThumbDim / thumbH);
+        thumbW = Math.max(1, Math.round(thumbW * ratio));
+        thumbH = Math.max(1, Math.round(thumbH * ratio));
+      }
 
-      if (templateDataUrl) {
-        const initialProject = {
-          version: 1,
-          fps: 8,
-          onionSkin: false,
-          activeFrameId: 'frame_1',
-          frames: [
-            {
-              id: 'frame_1',
-              name: 'Cuadro 1',
-              activeLayerId: 'layer_1',
-              layers: [
-                {
-                  id: 'layer_1',
-                  name: activeTemplate ? activeTemplate.name : 'Capa 1',
-                  visible: true,
-                  opacity: 1.0,
-                  data: templateDataUrl,
-                },
-              ],
-            },
-          ],
-        };
-        initialData = JSON.stringify(initialProject);
+      const thumbCanvas = document.createElement('canvas');
+      thumbCanvas.width = thumbW;
+      thumbCanvas.height = thumbH;
+      const thumbCtx = thumbCanvas.getContext('2d');
 
-        const maxThumbDim = 320;
-        let thumbW = width;
-        let thumbH = height;
-        if (thumbW > maxThumbDim || thumbH > maxThumbDim) {
-          const ratio = Math.min(maxThumbDim / thumbW, maxThumbDim / thumbH);
-          thumbW = Math.max(1, Math.round(thumbW * ratio));
-          thumbH = Math.max(1, Math.round(thumbH * ratio));
-        }
-
-        const thumbCanvas = document.createElement('canvas');
-        thumbCanvas.width = thumbW;
-        thumbCanvas.height = thumbH;
-        const thumbCtx = thumbCanvas.getContext('2d');
-        if (thumbCtx) {
-          thumbCtx.imageSmoothingEnabled = false;
+      if (thumbCtx) {
+        thumbCtx.imageSmoothingEnabled = false;
+        if (templateDataUrl) {
           const thumbImg = new Image();
           await new Promise<void>((r) => {
             thumbImg.onload = () => {
@@ -1296,14 +1433,28 @@ export function openCreateCanvasModal(): void {
               r();
             }
           });
-          try {
-            previewThumbnail = thumbCanvas.toDataURL('image/png');
-          } catch {
-            previewThumbnail = templateDataUrl;
-          }
         } else {
+          if (selectedBgType === 'solid') {
+            thumbCtx.fillStyle = selectedSolidColor;
+            thumbCtx.fillRect(0, 0, thumbW, thumbH);
+          } else {
+            const cs = Math.max(4, Math.round(selectedCheckSize * (thumbW / width)));
+            for (let y = 0; y < thumbH; y += cs) {
+              for (let x = 0; x < thumbW; x += cs) {
+                const isEven = (Math.floor(x / cs) + Math.floor(y / cs)) % 2 === 0;
+                thumbCtx.fillStyle = isEven ? '#ffffff' : '#e2e8f0';
+                thumbCtx.fillRect(x, y, cs, cs);
+              }
+            }
+          }
+        }
+        try {
+          previewThumbnail = thumbCanvas.toDataURL('image/png');
+        } catch {
           previewThumbnail = templateDataUrl;
         }
+      } else {
+        previewThumbnail = templateDataUrl;
       }
 
       if (currentUser) {

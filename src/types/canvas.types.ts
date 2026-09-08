@@ -9,6 +9,8 @@ export interface Canvas {
   data: string | null;
   preview_thumbnail: string | null;
   access_level: 'private' | 'public';
+  short_code?: string | null;
+  custom_slug?: string | null;
   deleted_at?: string | null;
   created_at: string;
   updated_at: string;

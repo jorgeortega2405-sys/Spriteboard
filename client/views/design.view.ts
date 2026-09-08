@@ -1,4 +1,5 @@
 import { createSidebar } from '../components/layout.component.js';
+import { openModal } from '../components/modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { currentUser, deleteApi, getApi, patchApi, postApi } from '../services/api.service.js';
 import { getLocalCanvasByUuid, markLocalCanvasAsSynced, removeLocalCanvas, saveLocalCanvas } from '../services/canvas-storage.service.js';
@@ -25,6 +26,22 @@ interface FloatingSelection {
   height: number;
 }
 
+interface AnimationTag {
+  id: string;
+  name: string;
+  from: number;
+  to: number;
+  color: string;
+}
+
+interface CanvasBackgroundConfig {
+  type: 'transparent' | 'solid';
+  color?: string;
+  checkSize?: number;
+  checkColor1?: string;
+  checkColor2?: string;
+}
+
 interface CanvasLayer {
   id: string;
   name: string;
@@ -39,6 +56,7 @@ interface CanvasFrame {
   name: string;
   layers: CanvasLayer[];
   activeLayerId: string;
+  durationMs?: number;
 }
 
 interface SerializedCanvasLayer {
@@ -54,6 +72,7 @@ interface SerializedCanvasFrame {
   name: string;
   activeLayerId: string;
   layers: SerializedCanvasLayer[];
+  durationMs?: number;
 }
 
 interface SerializedCanvasProject {
@@ -62,6 +81,15 @@ interface SerializedCanvasProject {
   onionSkin: boolean;
   activeFrameId: string;
   frames: SerializedCanvasFrame[];
+  background?: CanvasBackgroundConfig;
+  tags?: AnimationTag[];
+}
+
+interface UndoStep {
+  frameId: string;
+  layerId: string;
+  beforeData: ImageData;
+  afterData: ImageData;
 }
 
 const DEFAULT_CLASSIC_PALETTE: string[] = [
@@ -278,6 +306,176 @@ function getCollaboratorColor(identifier: string | number): string {
   return COLLABORATOR_COLORS[idx];
 }
 
+function getBresenhamLine(x0: number, y0: number, x1: number, y1: number): Array<{ x: number; y: number }> {
+  const points: Array<{ x: number; y: number }> = [];
+  const dx = Math.abs(x1 - x0);
+  const dy = Math.abs(y1 - y0);
+  const sx = x0 < x1 ? 1 : -1;
+  const sy = y0 < y1 ? 1 : -1;
+  let err = dx - dy;
+  let currX = x0;
+  let currY = y0;
+
+  while (true) {
+    points.push({ x: currX, y: currY });
+    if (currX === x1 && currY === y1) break;
+    const e2 = 2 * err;
+    if (e2 > -dy) {
+      err -= dy;
+      currX += sx;
+    }
+    if (e2 < dx) {
+      err += dx;
+      currY += sy;
+    }
+  }
+  return points;
+}
+
+function getRectanglePoints(x0: number, y0: number, x1: number, y1: number, filled: boolean): Array<{ x: number; y: number }> {
+  const minX = Math.min(x0, x1);
+  const maxX = Math.max(x0, x1);
+  const minY = Math.min(y0, y1);
+  const maxY = Math.max(y0, y1);
+  const pts: Array<{ x: number; y: number }> = [];
+
+  if (filled) {
+    for (let y = minY; y <= maxY; y++) {
+      for (let x = minX; x <= maxX; x++) {
+        pts.push({ x, y });
+      }
+    }
+  } else {
+    for (let x = minX; x <= maxX; x++) {
+      pts.push({ x, y: minY });
+      if (maxY !== minY) pts.push({ x, y: maxY });
+    }
+    for (let y = minY + 1; y < maxY; y++) {
+      pts.push({ x: minX, y });
+      if (maxX !== minX) pts.push({ x: maxX, y });
+    }
+  }
+  return pts;
+}
+
+function getEllipsePoints(x0: number, y0: number, x1: number, y1: number, filled: boolean): Array<{ x: number; y: number }> {
+  const minX = Math.min(x0, x1);
+  const maxX = Math.max(x0, x1);
+  const minY = Math.min(y0, y1);
+  const maxY = Math.max(y0, y1);
+  const w = maxX - minX;
+  const h = maxY - minY;
+
+  if (w === 0 && h === 0) return [{ x: minX, y: minY }];
+  if (w === 0) {
+    const pts: Array<{ x: number; y: number }> = [];
+    for (let y = minY; y <= maxY; y++) pts.push({ x: minX, y });
+    return pts;
+  }
+  if (h === 0) {
+    const pts: Array<{ x: number; y: number }> = [];
+    for (let x = minX; x <= maxX; x++) pts.push({ x, y: minY });
+    return pts;
+  }
+
+  let a = Math.abs(maxX - minX);
+  let b = Math.abs(maxY - minY);
+  let b1 = b & 1;
+  let dx = 4 * (1 - a) * b * b;
+  let dy = 4 * (b1 + 1) * a * a;
+  let err = dx + dy + b1 * a * a;
+  let e2 = 0;
+
+  let xStart = minX;
+  let yStart = minY;
+  let xEnd = maxX;
+  let yEnd = maxY;
+
+  if (xStart > xEnd) {
+    xStart = xEnd;
+    xEnd += a;
+  }
+  if (yStart > yEnd) yStart = yEnd;
+  yStart += Math.floor((b + 1) / 2);
+  yEnd = yStart - b1;
+  a = 8 * a * a;
+  b1 = 8 * b * b;
+
+  const pointsMap = new Map<number, { min: number; max: number }>();
+  const addPt = (px: number, py: number) => {
+    const cur = pointsMap.get(py);
+    if (!cur) pointsMap.set(py, { min: px, max: px });
+    else {
+      if (px < cur.min) cur.min = px;
+      if (px > cur.max) cur.max = px;
+    }
+  };
+
+  const pts: Array<{ x: number; y: number }> = [];
+  const visited = new Set<string>();
+  const pushUnique = (px: number, py: number) => {
+    const key = `${px},${py}`;
+    if (!visited.has(key)) {
+      visited.add(key);
+      pts.push({ x: px, y: py });
+    }
+  };
+
+  do {
+    addPt(xEnd, yStart);
+    addPt(xStart, yStart);
+    addPt(xStart, yEnd);
+    addPt(xEnd, yEnd);
+
+    if (!filled) {
+      pushUnique(xEnd, yStart);
+      pushUnique(xStart, yStart);
+      pushUnique(xStart, yEnd);
+      pushUnique(xEnd, yEnd);
+    }
+
+    e2 = 2 * err;
+    if (e2 <= dy) {
+      yStart++;
+      yEnd--;
+      dy += a;
+      err += dy;
+    }
+    if (e2 >= dx || 2 * err > dy) {
+      xStart++;
+      xEnd--;
+      dx += b1;
+      err += dx;
+    }
+  } while (xStart <= xEnd);
+
+  while (yStart - yEnd <= Math.abs(maxY - minY)) {
+    addPt(xStart - 1, yStart);
+    addPt(xEnd + 1, yStart);
+    addPt(xStart - 1, yEnd);
+    addPt(xEnd + 1, yEnd);
+
+    if (!filled) {
+      pushUnique(xStart - 1, yStart);
+      pushUnique(xEnd + 1, yStart);
+      pushUnique(xStart - 1, yEnd);
+      pushUnique(xEnd + 1, yEnd);
+    }
+    yStart++;
+    yEnd--;
+  }
+
+  if (filled) {
+    pointsMap.forEach((span, y) => {
+      for (let x = span.min; x <= span.max; x++) {
+        pushUnique(x, y);
+      }
+    });
+  }
+
+  return pts;
+}
+
 class DesignController {
   private container: HTMLElement;
   private canvasUuid: string;
@@ -302,7 +500,11 @@ class DesignController {
 
   private accessLevel: 'private' | 'public' = 'private';
   private isOwner = true;
-  private collaborators: Map<string, { color: string; connId: string; userId: number; username: string; x?: number; y?: number }> = new Map();
+  private collaborators: Map<string, { color: string; connId: string; userId: number; username: string; x?: number; y?: number; hideCursor?: boolean }> = new Map();
+  private showAllCursors = true;
+  private canvasBackground: CanvasBackgroundConfig = { type: 'transparent', checkSize: 16 };
+  private animationTags: AnimationTag[] = [];
+  private activeTagId: string | null = null;
   private wsUnsubscribes: Array<() => void> = [];
   private lastSentCursorTime = 0;
   private myCollaboratorColor = '#00E5FF';
@@ -319,18 +521,15 @@ class DesignController {
   private shareSearchInputEl: HTMLInputElement | null = null;
   private shareSearchResultsEl: HTMLElement | null = null;
   private shareMembersListEl: HTMLElement | null = null;
-  private shareTeamsListEl: HTMLElement | null = null;
-  private selectShareTeamEl: HTMLSelectElement | null = null;
-  private btnAddTeamToCanvasEl: HTMLButtonElement | null = null;
   private canvasTeams: CanvasTeamItem[] = [];
   private userTeams: Team[] = [];
   private shareFocusSearchBtn: HTMLButtonElement | null = null;
-  private quickDownloadBtn: HTMLButtonElement | null = null;
-  private quickViewLinkBtn: HTMLButtonElement | null = null;
-  private quickEmbedLinkBtn: HTMLButtonElement | null = null;
+  private copyShareLinkBtn: HTMLButtonElement | null = null;
+  private customizeShareLinkBtn: HTMLButtonElement | null = null;
+  private shortCode: string | null = null;
+  private customSlug: string | null = null;
   private canvasMembers: CanvasMember[] = [];
   private searchDebounceTimer: any = null;
-  private copyShareLinkBtn: HTMLButtonElement | null = null;
   private collaboratorsBarEl: HTMLElement | null = null;
   private collaboratorsListEl: HTMLElement | null = null;
   private shareDropdownController: { close: () => void; destroy: () => void; open: () => void; toggle: () => void; update: () => void } | null = null;
@@ -349,14 +548,32 @@ class DesignController {
   private hoveredPixel: { x: number; y: number } | null = null;
   private visitedStrokePixels: Set<string> = new Set();
 
-  private currentTool: 'brush' | 'eraser' | 'dither' | 'shading' | 'spray' | 'bucket' | 'select' | 'text' = 'brush';
+  private currentTool: 'brush' | 'eraser' | 'line' | 'rectangle' | 'circle' | 'recolor' | 'dither' | 'shading' | 'spray' | 'bucket' | 'select' | 'text' = 'brush';
   private currentColor = '#000000';
-  private toolSizes: Record<'brush' | 'eraser' | 'dither' | 'shading', number> = {
+  private toolSizes: Record<'brush' | 'eraser' | 'line' | 'rectangle' | 'circle' | 'recolor' | 'dither' | 'shading', number> = {
     brush: 1,
     eraser: 1,
+    line: 1,
+    rectangle: 1,
+    circle: 1,
+    recolor: 1,
     dither: 1,
     shading: 1,
   };
+  private shapeDrawMode: 'outline' | 'filled' = 'outline';
+  private pixelPerfect = false;
+  private shapeStartPos: { x: number; y: number } | null = null;
+  private shapeCurrentPos: { x: number; y: number } | null = null;
+  private isDrawingShape = false;
+  private isShiftStraightLine = false;
+  private isSpacePressed = false;
+  private recolorTargetColor32: number | null = null;
+  private rawStrokePoints: Array<{ x: number; y: number }> = [];
+
+  private undoStack: UndoStep[] = [];
+  private redoStack: UndoStep[] = [];
+  private activeActionBeforeData: ImageData | null = null;
+
   private ditherPattern: 'checker-50' | 'dots-25' | 'dots-75' | 'diag-lines' | 'h-lines' = 'checker-50';
   private shadingMode: 'shadow' | 'highlight' = 'shadow';
   private shadingRamp: 'warm-cool' | 'night' | 'organic' | 'mono' | 'palette' = 'warm-cool';
@@ -407,6 +624,10 @@ class DesignController {
 
   private brushBtn: HTMLButtonElement | null = null;
   private eraserBtn: HTMLButtonElement | null = null;
+  private lineBtn: HTMLButtonElement | null = null;
+  private rectangleBtn: HTMLButtonElement | null = null;
+  private circleBtn: HTMLButtonElement | null = null;
+  private recolorBtn: HTMLButtonElement | null = null;
   private ditherBtn: HTMLButtonElement | null = null;
   private shadingBtn: HTMLButtonElement | null = null;
   private sprayBtn: HTMLButtonElement | null = null;
@@ -414,11 +635,31 @@ class DesignController {
   private selectBtn: HTMLButtonElement | null = null;
   private textBtn: HTMLButtonElement | null = null;
   private mirrorBtn: HTMLButtonElement | null = null;
+  private undoBtn: HTMLButtonElement | null = null;
+  private redoBtn: HTMLButtonElement | null = null;
+  private resizeCanvasBtn: HTMLButtonElement | null = null;
+  private btnCanvasRotateCw: HTMLButtonElement | null = null;
+  private btnCanvasRotateCcw: HTMLButtonElement | null = null;
+  private btnCanvasFlipH: HTMLButtonElement | null = null;
+  private btnCanvasFlipV: HTMLButtonElement | null = null;
+  private btnToggleCollaborators: HTMLButtonElement | null = null;
+  private collaboratorsPanelEl: HTMLElement | null = null;
+  private btnCloseCollaborators: HTMLButtonElement | null = null;
+  private btnToggleAllCursors: HTMLButtonElement | null = null;
+  private collaboratorsPanelListEl: HTMLElement | null = null;
+  private btnAnimationTags: HTMLButtonElement | null = null;
+  private animationTagsBtnTextEl: HTMLElement | null = null;
+  private animationTagsBarEl: HTMLElement | null = null;
+  private btnFrameDuration: HTMLButtonElement | null = null;
+  private frameDurationTextEl: HTMLElement | null = null;
+  private btnHelp: HTMLButtonElement | null = null;
+  private btnPixelPerfect: HTMLButtonElement | null = null;
   private tileGridBtn: HTMLButtonElement | null = null;
   private toolOptionsBtn: HTMLButtonElement | null = null;
   private optionsTrayEl: HTMLElement | null = null;
   private closeOptionsBtn: HTMLButtonElement | null = null;
   private optionsGroupSize: HTMLElement | null = null;
+  private optionsGroupShapes: HTMLElement | null = null;
   private optionsGroupDither: HTMLElement | null = null;
   private optionsGroupShading: HTMLElement | null = null;
   private optionsGroupSpray: HTMLElement | null = null;
@@ -535,6 +776,10 @@ class DesignController {
 
     this.brushBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="tool-brush"]');
     this.eraserBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="tool-eraser"]');
+    this.lineBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="tool-line"]');
+    this.rectangleBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="tool-rectangle"]');
+    this.circleBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="tool-circle"]');
+    this.recolorBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="tool-recolor"]');
     this.ditherBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="tool-dither"]');
     this.shadingBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="tool-shading"]');
     this.sprayBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="tool-spray"]');
@@ -542,11 +787,31 @@ class DesignController {
     this.selectBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="tool-select"]');
     this.textBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="tool-text"]');
     this.mirrorBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="tool-mirror"]');
+    this.undoBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-undo"]');
+    this.redoBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-redo"]');
+    this.resizeCanvasBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-resize-canvas"]');
+    this.btnCanvasRotateCw = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-canvas-rotate-cw"]');
+    this.btnCanvasRotateCcw = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-canvas-rotate-ccw"]');
+    this.btnCanvasFlipH = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-canvas-flip-h"]');
+    this.btnCanvasFlipV = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-canvas-flip-v"]');
+    this.btnToggleCollaborators = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-collaborators"]');
+    this.collaboratorsPanelEl = this.container.querySelector<HTMLElement>('[data-ref="design-collaborators-panel"]');
+    this.btnCloseCollaborators = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-close-collaborators"]');
+    this.btnToggleAllCursors = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-all-cursors"]');
+    this.collaboratorsPanelListEl = this.container.querySelector<HTMLElement>('[data-ref="collaborators-panel-list"]');
+    this.btnAnimationTags = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-animation-tags"]');
+    this.animationTagsBtnTextEl = this.container.querySelector<HTMLElement>('[data-ref="animation-tags-btn-text"]');
+    this.animationTagsBarEl = this.container.querySelector<HTMLElement>('[data-ref="animation-tags-bar"]');
+    this.btnFrameDuration = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-frame-duration"]');
+    this.frameDurationTextEl = this.container.querySelector<HTMLElement>('[data-ref="frame-duration-text"]');
+    this.btnHelp = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-help"]');
+    this.btnPixelPerfect = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-brush-pixel-perfect"]');
     this.tileGridBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tile-grid"]');
     this.toolOptionsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tool-options"]');
     this.optionsTrayEl = this.container.querySelector<HTMLElement>('[data-ref="design-options-tray"]');
     this.closeOptionsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-close-options"]');
     this.optionsGroupSize = this.container.querySelector<HTMLElement>('[data-ref="options-group-size"]');
+    this.optionsGroupShapes = this.container.querySelector<HTMLElement>('[data-ref="options-group-shapes"]');
     this.optionsGroupDither = this.container.querySelector<HTMLElement>('[data-ref="options-group-dither"]');
     this.optionsGroupShading = this.container.querySelector<HTMLElement>('[data-ref="options-group-shading"]');
     this.optionsGroupSpray = this.container.querySelector<HTMLElement>('[data-ref="options-group-spray"]');
@@ -628,14 +893,9 @@ class DesignController {
     this.shareSearchInputEl = this.container.querySelector<HTMLInputElement>('[data-ref="input-share-search-people"]');
     this.shareSearchResultsEl = this.container.querySelector<HTMLElement>('[data-ref="share-search-results"]');
     this.shareMembersListEl = this.container.querySelector<HTMLElement>('[data-ref="share-members-list"]');
-    this.shareTeamsListEl = this.container.querySelector<HTMLElement>('[data-ref="share-teams-list"]');
-    this.selectShareTeamEl = this.container.querySelector<HTMLSelectElement>('[data-ref="select-share-team"]');
-    this.btnAddTeamToCanvasEl = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-add-team-to-canvas"]');
     this.shareFocusSearchBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-share-focus-search"]');
-    this.quickDownloadBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-quick-download"]');
-    this.quickViewLinkBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-quick-view-link"]');
-    this.quickEmbedLinkBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-quick-embed-link"]');
     this.copyShareLinkBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-copy-share-link"]');
+    this.customizeShareLinkBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-customize-share-link"]');
     this.collaboratorsBarEl = this.container.querySelector<HTMLElement>('[data-ref="design-collaborators-bar"]');
     this.collaboratorsListEl = this.container.querySelector<HTMLElement>('[data-ref="collaborators-list"]');
 
@@ -943,6 +1203,13 @@ class DesignController {
       card.appendChild(num);
       card.appendChild(sub);
 
+      if (frame.durationMs) {
+        const dur = document.createElement('span');
+        dur.className = 'design-frame-card__dur';
+        dur.textContent = `${frame.durationMs}ms`;
+        card.appendChild(dur);
+      }
+
       card.addEventListener('click', () => {
         this.selectFrame(frame.id);
       });
@@ -1002,6 +1269,11 @@ class DesignController {
 
     addCard.addEventListener('click', () => this.addFrame(false));
     this.framesCardsListEl.appendChild(addCard);
+
+    const activeFrame = this.getActiveFrame();
+    if (this.frameDurationTextEl) {
+      this.frameDurationTextEl.textContent = `${activeFrame?.durationMs || Math.round(1000 / this.fps)}ms`;
+    }
 
     renderIcons(this.framesCardsListEl);
     this.framesTrayCarouselController?.updateButtons();
@@ -1281,19 +1553,53 @@ class DesignController {
 
   private prevFrame(): void {
     const idx = this.frames.findIndex((f) => f.id === this.activeFrameId);
-    if (idx > 0) {
-      this.selectFrame(this.frames[idx - 1].id);
-    } else if (this.frames.length > 0) {
-      this.selectFrame(this.frames[this.frames.length - 1].id);
+    let targetIdx = 0;
+
+    const activeTag = this.animationTags.find((t) => t.id === this.activeTagId);
+    if (activeTag) {
+      const start = Math.max(0, activeTag.from - 1);
+      const end = Math.min(this.frames.length - 1, activeTag.to - 1);
+      if (idx <= start || idx > end) {
+        targetIdx = end;
+      } else {
+        targetIdx = idx - 1;
+      }
+    } else {
+      if (idx > 0) {
+        targetIdx = idx - 1;
+      } else if (this.frames.length > 0) {
+        targetIdx = this.frames.length - 1;
+      }
+    }
+
+    if (this.frames[targetIdx]) {
+      this.selectFrame(this.frames[targetIdx].id);
     }
   }
 
   private nextFrame(): void {
     const idx = this.frames.findIndex((f) => f.id === this.activeFrameId);
-    if (idx >= 0 && idx < this.frames.length - 1) {
-      this.selectFrame(this.frames[idx + 1].id);
-    } else if (this.frames.length > 0) {
-      this.selectFrame(this.frames[0].id);
+    let targetIdx = 0;
+
+    const activeTag = this.animationTags.find((t) => t.id === this.activeTagId);
+    if (activeTag) {
+      const start = Math.max(0, activeTag.from - 1);
+      const end = Math.min(this.frames.length - 1, activeTag.to - 1);
+      if (idx < start || idx >= end) {
+        targetIdx = start;
+      } else {
+        targetIdx = idx + 1;
+      }
+    } else {
+      if (idx >= 0 && idx < this.frames.length - 1) {
+        targetIdx = idx + 1;
+      } else if (this.frames.length > 0) {
+        targetIdx = 0;
+      }
+    }
+
+    if (this.frames[targetIdx]) {
+      this.selectFrame(this.frames[targetIdx].id);
     }
   }
 
@@ -1317,15 +1623,27 @@ class DesignController {
 
   private startPlayback(): void {
     this.stopPlayback();
-    const intervalMs = 1000 / this.fps;
-    this.playbackTimer = window.setInterval(() => {
+    this.scheduleNextPlaybackStep();
+  }
+
+  private scheduleNextPlaybackStep(): void {
+    if (!this.isPlaying) return;
+    const activeFrame = this.getActiveFrame();
+    const defaultDelay = 1000 / this.fps;
+    const delay = activeFrame && activeFrame.durationMs && activeFrame.durationMs > 0
+      ? activeFrame.durationMs
+      : defaultDelay;
+
+    this.playbackTimer = window.setTimeout(() => {
+      if (!this.isPlaying) return;
       this.nextFrame();
-    }, intervalMs);
+      this.scheduleNextPlaybackStep();
+    }, delay);
   }
 
   private stopPlayback(): void {
     if (this.playbackTimer !== null) {
-      clearInterval(this.playbackTimer);
+      window.clearTimeout(this.playbackTimer);
       this.playbackTimer = null;
     }
   }
@@ -1375,6 +1693,7 @@ class DesignController {
         name: frame.name,
         activeLayerId: frame.activeLayerId,
         layers: serializedLayers,
+        durationMs: frame.durationMs,
       };
     });
 
@@ -1384,6 +1703,8 @@ class DesignController {
       onionSkin: this.onionSkinEnabled,
       activeFrameId: this.activeFrameId,
       frames: serializedFrames,
+      background: this.canvasBackground,
+      tags: this.animationTags,
     };
   }
 
@@ -1503,6 +1824,13 @@ class DesignController {
       }
       this.frameOnionBtn?.classList.toggle('is-active', this.onionSkinEnabled);
 
+      if (project.background) {
+        this.canvasBackground = project.background;
+      }
+      if (Array.isArray(project.tags)) {
+        this.animationTags = project.tags;
+      }
+
       const loadedFrames: CanvasFrame[] = [];
       const imageLoadPromises: Promise<void>[] = [];
 
@@ -1529,6 +1857,7 @@ class DesignController {
           name: sFrame.name || `Cuadro ${fIdx + 1}`,
           layers: frameLayers.length > 0 ? frameLayers : [this.createLayer('Capa 1')],
           activeLayerId: sFrame.activeLayerId || frameLayers[0]?.id || '',
+          durationMs: sFrame.durationMs,
         });
       }
 
@@ -1539,6 +1868,7 @@ class DesignController {
         ? project.activeFrameId
         : this.frames[0].id;
 
+      this.renderAnimationTagsBar();
       this.requestRedraw();
       return true;
     } catch {
@@ -2159,7 +2489,7 @@ class DesignController {
     this.requestRedraw();
   }
 
-  private selectTool(tool: 'brush' | 'eraser' | 'dither' | 'shading' | 'spray' | 'bucket' | 'select' | 'text'): void {
+  private selectTool(tool: 'brush' | 'eraser' | 'line' | 'rectangle' | 'circle' | 'recolor' | 'dither' | 'shading' | 'spray' | 'bucket' | 'select' | 'text'): void {
     if (this.currentTool === 'text' && tool !== 'text') {
       this.commitText();
     }
@@ -2170,6 +2500,10 @@ class DesignController {
     this.currentTool = tool;
     this.brushBtn?.classList.toggle('is-active', tool === 'brush');
     this.eraserBtn?.classList.toggle('is-active', tool === 'eraser');
+    this.lineBtn?.classList.toggle('is-active', tool === 'line');
+    this.rectangleBtn?.classList.toggle('is-active', tool === 'rectangle');
+    this.circleBtn?.classList.toggle('is-active', tool === 'circle');
+    this.recolorBtn?.classList.toggle('is-active', tool === 'recolor');
     this.ditherBtn?.classList.toggle('is-active', tool === 'dither');
     this.shadingBtn?.classList.toggle('is-active', tool === 'shading');
     this.sprayBtn?.classList.toggle('is-active', tool === 'spray');
@@ -2184,6 +2518,372 @@ class DesignController {
     this.updateSizeBadges();
     this.updateOptionsTrayGroups();
     this.requestRedraw();
+  }
+
+  private togglePixelPerfect(): void {
+    this.pixelPerfect = !this.pixelPerfect;
+    if (this.btnPixelPerfect) {
+      this.btnPixelPerfect.classList.toggle('is-active', this.pixelPerfect);
+      const span = this.btnPixelPerfect.querySelector('span');
+      if (span) {
+        span.textContent = `Pixel-Perfect: ${this.pixelPerfect ? 'ON' : 'OFF'}`;
+      }
+    }
+  }
+
+  private setShapeDrawMode(mode: 'outline' | 'filled'): void {
+    this.shapeDrawMode = mode;
+    this.container.querySelectorAll<HTMLButtonElement>('[data-ref^="btn-shape-mode-"]').forEach((btn) => {
+      const elMode = btn.getAttribute('data-shape-mode');
+      btn.classList.toggle('is-active', elMode === mode);
+    });
+  }
+
+  private captureLayerSnapshot(): ImageData | null {
+    const layer = this.getActiveLayer();
+    if (!layer) return null;
+    return layer.ctx.getImageData(0, 0, this.canvasWidth, this.canvasHeight);
+  }
+
+  private pushUndoStep(beforeData: ImageData, afterData: ImageData, layerId?: string, frameId?: string): void {
+    const frame = this.getActiveFrame();
+    const layer = this.getActiveLayer();
+    const fId = frameId || frame?.id || this.activeFrameId;
+    const lId = layerId || layer?.id || '';
+    if (!fId || !lId) return;
+
+    const beforeBuf = new Uint32Array(beforeData.data.buffer);
+    const afterBuf = new Uint32Array(afterData.data.buffer);
+    let changed = false;
+    for (let i = 0; i < beforeBuf.length; i++) {
+      if (beforeBuf[i] !== afterBuf[i]) {
+        changed = true;
+        break;
+      }
+    }
+    if (!changed) return;
+
+    this.undoStack.push({
+      frameId: fId,
+      layerId: lId,
+      beforeData,
+      afterData,
+    });
+    if (this.undoStack.length > 30) {
+      this.undoStack.shift();
+    }
+    this.redoStack = [];
+    this.updateUndoRedoUI();
+  }
+
+  public undo(): void {
+    if (this.undoStack.length === 0) return;
+    const step = this.undoStack.pop()!;
+    this.redoStack.push(step);
+
+    const frame = this.frames.find((f) => f.id === step.frameId);
+    const layer = frame?.layers.find((l) => l.id === step.layerId);
+    if (layer) {
+      layer.ctx.putImageData(step.beforeData, 0, 0);
+      sendCanvasAction(this.canvasUuid, 'update_layer_data', {
+        frameId: step.frameId,
+        layerId: step.layerId,
+        dataUrl: layer.canvas.toDataURL('image/png'),
+      });
+      this.requestRedraw();
+      this.scheduleAutoSave();
+    }
+    this.updateUndoRedoUI();
+  }
+
+  public redo(): void {
+    if (this.redoStack.length === 0) return;
+    const step = this.redoStack.pop()!;
+    this.undoStack.push(step);
+
+    const frame = this.frames.find((f) => f.id === step.frameId);
+    const layer = frame?.layers.find((l) => l.id === step.layerId);
+    if (layer) {
+      layer.ctx.putImageData(step.afterData, 0, 0);
+      sendCanvasAction(this.canvasUuid, 'update_layer_data', {
+        frameId: step.frameId,
+        layerId: step.layerId,
+        dataUrl: layer.canvas.toDataURL('image/png'),
+      });
+      this.requestRedraw();
+      this.scheduleAutoSave();
+    }
+    this.updateUndoRedoUI();
+  }
+
+  private updateUndoRedoUI(): void {
+    if (this.undoBtn) {
+      const canUndo = this.undoStack.length > 0;
+      this.undoBtn.disabled = !canUndo;
+      this.undoBtn.classList.toggle('is-disabled', !canUndo);
+    }
+    if (this.redoBtn) {
+      const canRedo = this.redoStack.length > 0;
+      this.redoBtn.disabled = !canRedo;
+      this.redoBtn.classList.toggle('is-disabled', !canRedo);
+    }
+  }
+
+  private openResizeCanvasModal(): void {
+    const modal = openModal({
+      title: 'Redimensionar lienzo',
+      description: 'Ajusta el ancho y alto en píxeles de tu espacio de trabajo.',
+      bodyHtml: `
+        <div class="modal-canvas-panel__form" data-ref="form-custom-size">
+          <div class="settings-group" data-ref="custom-size-group-width">
+            <div class="settings-item" data-ref="custom-size-item-width">
+              <div class="settings-item__content" data-ref="custom-size-width-content">
+                <div class="settings-item__text" data-ref="custom-size-width-text">
+                  <h2 class="settings-item__title" data-ref="custom-size-width-title" data-i18n="canvas.canvas_width_title">Ancho del lienzo</h2>
+                  <p class="settings-item__desc" data-ref="custom-size-width-desc" data-i18n="canvas.canvas_width_desc">Define la anchura horizontal en píxeles (PX) para tu área de dibujo.</p>
+                </div>
+              </div>
+              <div class="settings-item__actions" data-ref="custom-size-width-actions">
+                <div class="component-inline-control component-inline-control--fixed" data-ref="inline-control-width">
+                  <div class="component-inline-control__group" data-ref="inline-group-width-dec">
+                    <button type="button" class="component-inline-control__btn" data-ref="btn-width-dec-large" data-tooltip="-16 px" aria-label="Disminuir 16 píxeles">
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#keyboard_double_arrow_left" xlink:href="/icons.svg#keyboard_double_arrow_left"></use></svg>
+                    </button>
+                    <button type="button" class="component-inline-control__btn" data-ref="btn-width-dec" data-tooltip="-1 px" aria-label="Disminuir 1 píxel">
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left" xlink:href="/icons.svg#chevron_left"></use></svg>
+                    </button>
+                  </div>
+                  <input class="component-inline-control__input" data-ref="input-canvas-width" type="number" min="1" max="16384" value="${this.canvasWidth}" autocomplete="off" />
+                  <div class="component-inline-control__group" data-ref="inline-group-width-inc">
+                    <button type="button" class="component-inline-control__btn" data-ref="btn-width-inc" data-tooltip="+1 px" aria-label="Aumentar 1 píxel">
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right" xlink:href="/icons.svg#chevron_right"></use></svg>
+                    </button>
+                    <button type="button" class="component-inline-control__btn" data-ref="btn-width-inc-large" data-tooltip="+16 px" aria-label="Aumentar 16 píxeles">
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#keyboard_double_arrow_right" xlink:href="/icons.svg#keyboard_double_arrow_right"></use></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-group" data-ref="custom-size-group-height">
+            <div class="settings-item" data-ref="custom-size-item-height">
+              <div class="settings-item__content" data-ref="custom-size-height-content">
+                <div class="settings-item__text" data-ref="custom-size-height-text">
+                  <h2 class="settings-item__title" data-ref="custom-size-height-title" data-i18n="canvas.canvas_height_title">Alto del lienzo</h2>
+                  <p class="settings-item__desc" data-ref="custom-size-height-desc" data-i18n="canvas.canvas_height_desc">Define la altura vertical en píxeles (PX) para tu área de dibujo.</p>
+                </div>
+              </div>
+              <div class="settings-item__actions" data-ref="custom-size-height-actions">
+                <div class="component-inline-control component-inline-control--fixed" data-ref="inline-control-height">
+                  <div class="component-inline-control__group" data-ref="inline-group-height-dec">
+                    <button type="button" class="component-inline-control__btn" data-ref="btn-height-dec-large" data-tooltip="-16 px" aria-label="Disminuir 16 píxeles">
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#keyboard_double_arrow_left" xlink:href="/icons.svg#keyboard_double_arrow_left"></use></svg>
+                    </button>
+                    <button type="button" class="component-inline-control__btn" data-ref="btn-height-dec" data-tooltip="-1 px" aria-label="Disminuir 1 píxel">
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left" xlink:href="/icons.svg#chevron_left"></use></svg>
+                    </button>
+                  </div>
+                  <input class="component-inline-control__input" data-ref="input-canvas-height" type="number" min="1" max="16384" value="${this.canvasHeight}" autocomplete="off" />
+                  <div class="component-inline-control__group" data-ref="inline-group-height-inc">
+                    <button type="button" class="component-inline-control__btn" data-ref="btn-height-inc" data-tooltip="+1 px" aria-label="Aumentar 1 píxel">
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right" xlink:href="/icons.svg#chevron_right"></use></svg>
+                    </button>
+                    <button type="button" class="component-inline-control__btn" data-ref="btn-height-inc-large" data-tooltip="+16 px" aria-label="Aumentar 16 píxeles">
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#keyboard_double_arrow_right" xlink:href="/icons.svg#keyboard_double_arrow_right"></use></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-canvas-panel__actions" data-ref="custom-size-actions">
+            <button type="button" class="btn btn--h44 btn--black btn--w-full" data-ref="btn-submit-resize-canvas">
+              Redimensionar
+            </button>
+            <div class="banner banner--danger" data-ref="resize-canvas-error" style="display: none;"></div>
+          </div>
+        </div>
+      `,
+      showCancel: false,
+      showConfirm: false,
+      size: 'sm',
+    });
+
+    const backdrop = modal.backdrop;
+    const inputW = backdrop.querySelector<HTMLInputElement>('[data-ref="input-canvas-width"]');
+    const inputH = backdrop.querySelector<HTMLInputElement>('[data-ref="input-canvas-height"]');
+    const btnWDecLarge = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-width-dec-large"]');
+    const btnWDec = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-width-dec"]');
+    const btnWInc = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-width-inc"]');
+    const btnWIncLarge = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-width-inc-large"]');
+    const btnHDecLarge = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-height-dec-large"]');
+    const btnHDec = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-height-dec"]');
+    const btnHInc = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-height-inc"]');
+    const btnHIncLarge = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-height-inc-large"]');
+    const btnSubmit = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-submit-resize-canvas"]');
+    const errorBanner = backdrop.querySelector<HTMLElement>('[data-ref="resize-canvas-error"]');
+
+    const setupStepper = (
+      inputEl: HTMLInputElement | null,
+      decL: HTMLButtonElement | null,
+      dec: HTMLButtonElement | null,
+      inc: HTMLButtonElement | null,
+      incL: HTMLButtonElement | null
+    ) => {
+      if (!inputEl) return;
+      const step = (delta: number) => {
+        const cur = parseInt(inputEl.value, 10) || 1;
+        const next = Math.max(1, Math.min(16384, cur + delta));
+        inputEl.value = String(next);
+      };
+      decL?.addEventListener('click', () => step(-16));
+      dec?.addEventListener('click', () => step(-1));
+      inc?.addEventListener('click', () => step(1));
+      incL?.addEventListener('click', () => step(16));
+    };
+
+    setupStepper(inputW, btnWDecLarge, btnWDec, btnWInc, btnWIncLarge);
+    setupStepper(inputH, btnHDecLarge, btnHDec, btnHInc, btnHIncLarge);
+
+    btnSubmit?.addEventListener('click', () => {
+      const w = parseInt(inputW?.value || '0', 10);
+      const h = parseInt(inputH?.value || '0', 10);
+
+      if (isNaN(w) || w <= 0 || isNaN(h) || h <= 0) {
+        if (errorBanner) {
+          errorBanner.textContent = 'Las dimensiones deben ser números enteros mayores a 0.';
+          errorBanner.style.display = 'block';
+        }
+        return;
+      }
+
+      if (w > 16384 || h > 16384) {
+        if (errorBanner) {
+          errorBanner.textContent = 'Las dimensiones no pueden superar los 16384 píxeles.';
+          errorBanner.style.display = 'block';
+        }
+        return;
+      }
+
+      modal.close();
+      this.resizeCanvas(w, h);
+    });
+  }
+
+  private resizeCanvas(newW: number, newH: number): void {
+    if (newW <= 0 || newH <= 0 || (newW === this.canvasWidth && newH === this.canvasHeight)) return;
+
+    for (const frame of this.frames) {
+      for (const layer of frame.layers) {
+        const oldCanvas = layer.canvas;
+        const newCanvas = document.createElement('canvas');
+        newCanvas.width = newW;
+        newCanvas.height = newH;
+        const newCtx = newCanvas.getContext('2d')!;
+        newCtx.imageSmoothingEnabled = false;
+        newCtx.drawImage(oldCanvas, 0, 0);
+        layer.canvas = newCanvas;
+        layer.ctx = newCtx;
+      }
+    }
+
+    this.canvasWidth = newW;
+    this.canvasHeight = newH;
+    this.undoStack = [];
+    this.redoStack = [];
+    this.updateUndoRedoUI();
+    this.clearSelection();
+
+    const parent = this.viewportCanvas?.parentElement;
+    if (parent) {
+      const rect = parent.getBoundingClientRect();
+      this.fitToScreen(rect.width, rect.height);
+    }
+
+    this.requestRedraw();
+    this.saveProjectImmediate();
+    showToast(`Lienzo redimensionado a ${newW} × ${newH} px`, 'success');
+  }
+
+  private rotateCanvas(clockwise: boolean): void {
+    const newW = this.canvasHeight;
+    const newH = this.canvasWidth;
+
+    for (const frame of this.frames) {
+      for (const layer of frame.layers) {
+        const oldCanvas = layer.canvas;
+        const newCanvas = document.createElement('canvas');
+        newCanvas.width = newW;
+        newCanvas.height = newH;
+        const newCtx = newCanvas.getContext('2d')!;
+        newCtx.imageSmoothingEnabled = false;
+
+        if (clockwise) {
+          newCtx.translate(newW, 0);
+          newCtx.rotate(Math.PI / 2);
+        } else {
+          newCtx.translate(0, newH);
+          newCtx.rotate(-Math.PI / 2);
+        }
+
+        newCtx.drawImage(oldCanvas, 0, 0);
+        layer.canvas = newCanvas;
+        layer.ctx = newCtx;
+      }
+    }
+
+    this.canvasWidth = newW;
+    this.canvasHeight = newH;
+    this.undoStack = [];
+    this.redoStack = [];
+    this.updateUndoRedoUI();
+    this.clearSelection();
+
+    const parent = this.viewportCanvas?.parentElement;
+    if (parent) {
+      const rect = parent.getBoundingClientRect();
+      this.fitToScreen(rect.width, rect.height);
+    }
+
+    this.requestRedraw();
+    this.saveProjectImmediate();
+    showToast(clockwise ? 'Lienzo rotado 90° horario' : 'Lienzo rotado 90° antihorario', 'success');
+  }
+
+  private flipCanvas(horizontal: boolean): void {
+    for (const frame of this.frames) {
+      for (const layer of frame.layers) {
+        const oldCanvas = layer.canvas;
+        const newCanvas = document.createElement('canvas');
+        newCanvas.width = this.canvasWidth;
+        newCanvas.height = this.canvasHeight;
+        const newCtx = newCanvas.getContext('2d')!;
+        newCtx.imageSmoothingEnabled = false;
+
+        if (horizontal) {
+          newCtx.translate(this.canvasWidth, 0);
+          newCtx.scale(-1, 1);
+        } else {
+          newCtx.translate(0, this.canvasHeight);
+          newCtx.scale(1, -1);
+        }
+
+        newCtx.drawImage(oldCanvas, 0, 0);
+        layer.canvas = newCanvas;
+        layer.ctx = newCtx;
+      }
+    }
+
+    this.undoStack = [];
+    this.redoStack = [];
+    this.updateUndoRedoUI();
+    this.clearSelection();
+    this.requestRedraw();
+    this.saveProjectImmediate();
+    showToast(horizontal ? 'Lienzo volteado horizontalmente' : 'Lienzo volteado verticalmente', 'success');
   }
 
   private toggleMirror(): void {
@@ -2203,6 +2903,7 @@ class DesignController {
     } else {
       this.optionsTrayEl.classList.remove('is-hidden');
       this.optionsGroupSize?.classList.add('is-hidden');
+      this.optionsGroupShapes?.classList.add('is-hidden');
       this.optionsGroupDither?.classList.add('is-hidden');
       this.optionsGroupShading?.classList.add('is-hidden');
       this.optionsGroupSpray?.classList.add('is-hidden');
@@ -2249,8 +2950,11 @@ class DesignController {
     const isSizeTool =
       this.currentTool === 'brush' ||
       this.currentTool === 'eraser' ||
+      this.currentTool === 'line' ||
+      this.currentTool === 'recolor' ||
       this.currentTool === 'dither' ||
       this.currentTool === 'shading';
+    const isShapes = this.currentTool === 'rectangle' || this.currentTool === 'circle';
     const isDither = this.currentTool === 'dither';
     const isShading = this.currentTool === 'shading';
     const isSpray = this.currentTool === 'spray';
@@ -2259,6 +2963,7 @@ class DesignController {
     const isText = this.currentTool === 'text';
 
     this.optionsGroupSize?.classList.toggle('is-hidden', !isSizeTool);
+    this.optionsGroupShapes?.classList.toggle('is-hidden', !isShapes);
     this.optionsGroupDither?.classList.toggle('is-hidden', !isDither);
     this.optionsGroupShading?.classList.toggle('is-hidden', !isShading);
     this.optionsGroupSpray?.classList.toggle('is-hidden', !isSpray);
@@ -2267,6 +2972,11 @@ class DesignController {
     this.optionsGroupText?.classList.toggle('is-hidden', !isText);
     this.optionsGroupTileGrid?.classList.add('is-hidden');
     this.optionsGroupMirror?.classList.toggle('is-hidden', !this.mirrorEnabled);
+
+    const pixelPerfectDivider = this.container.querySelector<HTMLElement>('[data-ref="options-pixel-perfect-divider"]');
+    const pixelPerfectBadgeWrapper = this.container.querySelector<HTMLElement>('[data-ref="options-pixel-perfect-badges"]');
+    if (pixelPerfectDivider) pixelPerfectDivider.style.display = this.currentTool === 'brush' ? '' : 'none';
+    if (pixelPerfectBadgeWrapper) pixelPerfectBadgeWrapper.style.display = this.currentTool === 'brush' ? '' : 'none';
 
     if (!this.optionsTrayEl.classList.contains('is-hidden')) {
       this.updateToolbarHeights();
@@ -2857,6 +3567,8 @@ class DesignController {
     if (
       this.currentTool === 'brush' ||
       this.currentTool === 'eraser' ||
+      this.currentTool === 'line' ||
+      this.currentTool === 'recolor' ||
       this.currentTool === 'dither' ||
       this.currentTool === 'shading'
     ) {
@@ -2869,6 +3581,8 @@ class DesignController {
     if (
       this.currentTool === 'brush' ||
       this.currentTool === 'eraser' ||
+      this.currentTool === 'line' ||
+      this.currentTool === 'recolor' ||
       this.currentTool === 'dither' ||
       this.currentTool === 'shading'
     ) {
@@ -3084,6 +3798,37 @@ class DesignController {
     layer.ctx.putImageData(imgData, 0, 0);
   }
 
+  private applyRecolorAt(layer: CanvasLayer, px: number, py: number): void {
+    if (this.recolorTargetColor32 === null) return;
+    const size = this.getToolSize();
+    const offset = Math.floor(size / 2);
+    const startX = px - offset;
+    const startY = py - offset;
+
+    const { r, g, b } = hexToRgb(this.currentColor);
+    const fillColor32 = ((255 << 24) | (b << 16) | (g << 8) | r) >>> 0;
+    if (this.recolorTargetColor32 === fillColor32) return;
+
+    for (let dy = 0; dy < size; dy++) {
+      for (let dx = 0; dx < size; dx++) {
+        const nx = startX + dx;
+        const ny = startY + dy;
+        if (nx >= 0 && nx < this.canvasWidth && ny >= 0 && ny < this.canvasHeight) {
+          const key = `${nx},${ny}`;
+          if (this.visitedStrokePixels.has(key)) continue;
+          this.visitedStrokePixels.add(key);
+
+          const img = layer.ctx.getImageData(nx, ny, 1, 1);
+          const val32 = new Uint32Array(img.data.buffer)[0];
+          if (val32 === this.recolorTargetColor32) {
+            layer.ctx.fillStyle = this.currentColor;
+            layer.ctx.fillRect(nx, ny, 1, 1);
+          }
+        }
+      }
+    }
+  }
+
   private applyToolAt(x: number, y: number, broadcast = true, customLayer?: CanvasLayer): void {
     const layer = customLayer || this.getActiveLayer();
     if (!layer || !layer.visible || x < 0 || x >= this.canvasWidth || y < 0 || y >= this.canvasHeight) return;
@@ -3093,6 +3838,10 @@ class DesignController {
     if (this.currentTool === 'brush' || this.currentTool === 'eraser') {
       for (const pt of points) {
         this.applyBrushOrEraserAt(layer, pt.x, pt.y);
+      }
+    } else if (this.currentTool === 'recolor') {
+      for (const pt of points) {
+        this.applyRecolorAt(layer, pt.x, pt.y);
       }
     } else if (this.currentTool === 'dither') {
       for (const pt of points) {
@@ -3180,6 +3929,38 @@ class DesignController {
 
     while (true) {
       this.applyToolAt(currX, currY);
+
+      if (this.currentTool === 'brush' && this.pixelPerfect && this.toolSizes.brush === 1) {
+        this.rawStrokePoints.push({ x: currX, y: currY });
+        const len = this.rawStrokePoints.length;
+        if (len >= 3) {
+          const p0 = this.rawStrokePoints[len - 3];
+          const p1 = this.rawStrokePoints[len - 2];
+          const p2 = this.rawStrokePoints[len - 1];
+          if (
+            ((p0.x === p1.x && p1.y === p2.y) || (p0.y === p1.y && p1.x === p2.x)) &&
+            Math.abs(p0.x - p2.x) === 1 &&
+            Math.abs(p0.y - p2.y) === 1
+          ) {
+            const layer = this.getActiveLayer();
+            if (layer && this.activeActionBeforeData) {
+              const idx = (p1.y * this.canvasWidth + p1.x) * 4;
+              const bData = this.activeActionBeforeData.data;
+              const r = bData[idx];
+              const g = bData[idx + 1];
+              const b = bData[idx + 2];
+              const a = bData[idx + 3];
+              layer.ctx.clearRect(p1.x, p1.y, 1, 1);
+              if (a > 0) {
+                layer.ctx.fillStyle = `rgba(${r},${g},${b},${a / 255})`;
+                layer.ctx.fillRect(p1.x, p1.y, 1, 1);
+              }
+            }
+            this.rawStrokePoints.splice(len - 2, 1);
+          }
+        }
+      }
+
       if (currX === x1 && currY === y1) break;
       const e2 = 2 * err;
       if (e2 > -dy) {
@@ -3307,19 +4088,9 @@ class DesignController {
         'click',
         () => {
           if (!this.isOwner) return;
-          this.loadCanvasMembers();
-          this.loadCanvasTeams();
-          this.loadUserTeamsForSelect();
-        },
-        { signal }
-      );
-    }
-
-    if (this.btnAddTeamToCanvasEl) {
-      this.btnAddTeamToCanvasEl.addEventListener(
-        'click',
-        () => {
-          void this.addSelectedTeamToCanvas();
+          void this.loadCanvasMembers();
+          void this.loadCanvasTeams();
+          void this.loadUserTeams();
         },
         { signal }
       );
@@ -3330,11 +4101,24 @@ class DesignController {
         'click',
         async () => {
           try {
-            await navigator.clipboard.writeText(window.location.href);
+            const shareIdentifier = this.customSlug || this.shortCode || this.canvasUuid;
+            const shareUrl = `${window.location.origin}/${shareIdentifier}`;
+            await navigator.clipboard.writeText(shareUrl);
             showToast(t('canvas.share.linkCopied') || 'Enlace copiado al portapapeles', 'success');
           } catch {
             showToast('Error al copiar el enlace', 'danger');
           }
+        },
+        { signal }
+      );
+    }
+
+    if (this.customizeShareLinkBtn) {
+      this.customizeShareLinkBtn.addEventListener(
+        'click',
+        () => {
+          if (!this.isOwner) return;
+          this.openCustomizeLinkModal();
         },
         { signal }
       );
@@ -3375,36 +4159,6 @@ class DesignController {
       },
       { signal }
     );
-
-    if (this.quickDownloadBtn) {
-      this.quickDownloadBtn.addEventListener(
-        'click',
-        () => {
-          showToast('Función de descarga disponible próximamente', 'info');
-        },
-        { signal }
-      );
-    }
-
-    if (this.quickViewLinkBtn) {
-      this.quickViewLinkBtn.addEventListener(
-        'click',
-        () => {
-          showToast('Enlace de visualización disponible próximamente', 'info');
-        },
-        { signal }
-      );
-    }
-
-    if (this.quickEmbedLinkBtn) {
-      this.quickEmbedLinkBtn.addEventListener(
-        'click',
-        () => {
-          showToast('Enlace para insertar disponible próximamente', 'info');
-        },
-        { signal }
-      );
-    }
 
     if (this.toggleLayersBtn) {
       this.toggleLayersBtn.addEventListener(
@@ -3590,6 +4344,126 @@ class DesignController {
     if (this.eraserBtn) {
       this.eraserBtn.addEventListener('click', () => this.selectTool('eraser'), { signal });
     }
+
+    if (this.lineBtn) {
+      this.lineBtn.addEventListener('click', () => this.selectTool('line'), { signal });
+    }
+
+    if (this.rectangleBtn) {
+      this.rectangleBtn.addEventListener('click', () => this.selectTool('rectangle'), { signal });
+    }
+
+    if (this.circleBtn) {
+      this.circleBtn.addEventListener('click', () => this.selectTool('circle'), { signal });
+    }
+
+    if (this.recolorBtn) {
+      this.recolorBtn.addEventListener('click', () => this.selectTool('recolor'), { signal });
+    }
+
+    if (this.undoBtn) {
+      this.undoBtn.addEventListener('click', () => this.undo(), { signal });
+    }
+
+    if (this.redoBtn) {
+      this.redoBtn.addEventListener('click', () => this.redo(), { signal });
+    }
+
+    if (this.resizeCanvasBtn) {
+      this.resizeCanvasBtn.addEventListener('click', () => this.openResizeCanvasModal(), { signal });
+    }
+
+    if (this.btnCanvasRotateCw) {
+      this.btnCanvasRotateCw.addEventListener('click', () => this.rotateCanvas(true), { signal });
+    }
+    if (this.btnCanvasRotateCcw) {
+      this.btnCanvasRotateCcw.addEventListener('click', () => this.rotateCanvas(false), { signal });
+    }
+    if (this.btnCanvasFlipH) {
+      this.btnCanvasFlipH.addEventListener('click', () => this.flipCanvas(true), { signal });
+    }
+    if (this.btnCanvasFlipV) {
+      this.btnCanvasFlipV.addEventListener('click', () => this.flipCanvas(false), { signal });
+    }
+
+    if (this.btnToggleCollaborators) {
+      this.btnToggleCollaborators.addEventListener(
+        'click',
+        () => {
+          if (!this.collaboratorsPanelEl) return;
+          const isHidden = this.collaboratorsPanelEl.classList.contains('is-hidden');
+          if (isHidden) {
+            this.layersPanelEl?.classList.add('is-hidden');
+            this.shapesPanelEl?.classList.add('is-hidden');
+            this.colorsPanelEl?.classList.add('is-hidden');
+            this.toggleLayersBtn?.classList.remove('is-active');
+            this.topToggleColorsBtn?.classList.remove('is-active');
+            this.topToggleShapesBtn?.classList.remove('is-active');
+            this.collaboratorsPanelEl.classList.remove('is-hidden');
+            this.btnToggleCollaborators?.classList.add('is-active');
+            this.renderCollaboratorsPanel();
+          } else {
+            this.collaboratorsPanelEl.classList.add('is-hidden');
+            this.btnToggleCollaborators?.classList.remove('is-active');
+          }
+        },
+        { signal }
+      );
+    }
+
+    if (this.btnCloseCollaborators) {
+      this.btnCloseCollaborators.addEventListener(
+        'click',
+        () => {
+          this.collaboratorsPanelEl?.classList.add('is-hidden');
+          this.btnToggleCollaborators?.classList.remove('is-active');
+        },
+        { signal }
+      );
+    }
+
+    if (this.btnToggleAllCursors) {
+      this.btnToggleAllCursors.addEventListener(
+        'click',
+        () => {
+          this.showAllCursors = !this.showAllCursors;
+          const iconUse = this.btnToggleAllCursors?.querySelector('use');
+          if (iconUse) {
+            iconUse.setAttribute('href', `/icons.svg#${this.showAllCursors ? 'visibility' : 'visibility_off'}`);
+          }
+          this.renderCollaboratorsPanel();
+          this.requestRedraw();
+        },
+        { signal }
+      );
+    }
+
+    if (this.btnAnimationTags) {
+      this.btnAnimationTags.addEventListener('click', () => this.openAnimationTagsModal(), { signal });
+    }
+
+    if (this.btnFrameDuration) {
+      this.btnFrameDuration.addEventListener('click', () => this.openFrameDurationModal(), { signal });
+    }
+
+    if (this.btnHelp) {
+      this.btnHelp.addEventListener('click', () => this.openHelpModal(), { signal });
+    }
+
+    if (this.btnPixelPerfect) {
+      this.btnPixelPerfect.addEventListener('click', () => this.togglePixelPerfect(), { signal });
+    }
+
+    this.container.querySelectorAll<HTMLButtonElement>('[data-ref^="btn-shape-mode-"]').forEach((btn) => {
+      btn.addEventListener(
+        'click',
+        () => {
+          const mode = btn.getAttribute('data-shape-mode') as 'outline' | 'filled' | null;
+          if (mode) this.setShapeDrawMode(mode);
+        },
+        { signal }
+      );
+    });
 
     if (this.ditherBtn) {
       this.ditherBtn.addEventListener('click', () => this.selectTool('dither'), { signal });
@@ -3926,7 +4800,7 @@ class DesignController {
         'mousedown',
         (e: MouseEvent) => {
           if (this.isAccessRevoked) return;
-          if (e.shiftKey || e.button === 1) {
+          if (this.isSpacePressed || e.button === 1) {
             e.preventDefault();
             this.isPanning = true;
             this.startX = e.clientX - this.panX;
@@ -4035,8 +4909,31 @@ class DesignController {
             }
 
             if (pixelX >= 0 && pixelX < this.canvasWidth && pixelY >= 0 && pixelY < this.canvasHeight) {
+              this.activeActionBeforeData = this.captureLayerSnapshot();
+
+              const isShapeTool = this.currentTool === 'line' || this.currentTool === 'rectangle' || this.currentTool === 'circle';
+              const isShiftStraight = this.currentTool === 'brush' && e.shiftKey;
+
+              if (isShapeTool || isShiftStraight) {
+                this.isDrawingShape = true;
+                this.isShiftStraightLine = isShiftStraight;
+                this.shapeStartPos = { x: pixelX, y: pixelY };
+                this.shapeCurrentPos = { x: pixelX, y: pixelY };
+                this.requestRedraw();
+                return;
+              }
+
+              if (this.currentTool === 'recolor') {
+                const layer = this.getActiveLayer();
+                if (layer) {
+                  const img = layer.ctx.getImageData(pixelX, pixelY, 1, 1);
+                  this.recolorTargetColor32 = new Uint32Array(img.data.buffer)[0];
+                }
+              }
+
               this.isDrawing = true;
               this.visitedStrokePixels.clear();
+              this.rawStrokePoints = [{ x: pixelX, y: pixelY }];
               this.lastPixelX = pixelX;
               this.lastPixelY = pixelY;
               this.applyToolAt(pixelX, pixelY);
@@ -4045,6 +4942,11 @@ class DesignController {
               if (this.currentTool === 'spray') {
                 this.startSprayLoop();
               } else if (this.currentTool === 'bucket') {
+                const afterData = this.captureLayerSnapshot();
+                if (this.activeActionBeforeData && afterData) {
+                  this.pushUndoStep(this.activeActionBeforeData, afterData);
+                }
+                this.activeActionBeforeData = null;
                 this.scheduleAutoSave();
               }
             }
@@ -4079,12 +4981,24 @@ class DesignController {
           document.activeElement instanceof HTMLInputElement ||
           document.activeElement instanceof HTMLTextAreaElement;
 
-        if (e.key === 'Shift') {
+        if (e.code === 'Space' && !isInputFocused && !this.isSpacePressed) {
+          this.isSpacePressed = true;
           this.viewportCanvas?.classList.add('can-pan');
+          e.preventDefault();
         }
 
         if (!isInputFocused) {
-          if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
+          if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+            e.preventDefault();
+            if (e.shiftKey) {
+              this.redo();
+            } else {
+              this.undo();
+            }
+          } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+            e.preventDefault();
+            this.redo();
+          } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
             e.preventDefault();
             this.copySelection();
           } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'x') {
@@ -4130,6 +5044,35 @@ class DesignController {
           } else if (e.key.toLowerCase() === 'v' && this.isPlacingShape) {
             e.preventDefault();
             this.flipShapeV();
+          } else if (e.key === '?' || e.key === 'F1') {
+            e.preventDefault();
+            this.openHelpModal();
+          } else if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+            if (e.key.toLowerCase() === 'b') {
+              this.selectTool('brush');
+            } else if (e.key.toLowerCase() === 'e') {
+              this.selectTool('eraser');
+            } else if (e.key.toLowerCase() === 'l') {
+              this.selectTool('line');
+            } else if (e.key.toLowerCase() === 'u') {
+              this.selectTool('rectangle');
+            } else if (e.key.toLowerCase() === 'c' && !this.isPlacingShape) {
+              this.selectTool('circle');
+            } else if (e.key.toLowerCase() === 'g') {
+              this.selectTool('bucket');
+            } else if (e.key.toLowerCase() === 'r' && !this.isPlacingShape) {
+              this.selectTool('recolor');
+            } else if (e.key.toLowerCase() === 'd' && !this.isPlacingShape) {
+              this.selectTool('dither');
+            } else if (e.key.toLowerCase() === 'm' && !this.isPlacingShape) {
+              this.selectTool('select');
+            } else if (e.key.toLowerCase() === 'o') {
+              this.toggleOnionSkin();
+            } else if (e.key === '.') {
+              this.nextFrame();
+            } else if (e.key === ',') {
+              this.prevFrame();
+            }
           }
         }
       },
@@ -4139,8 +5082,11 @@ class DesignController {
     window.addEventListener(
       'keyup',
       (e: KeyboardEvent) => {
-        if (e.key === 'Shift' && !this.isPanning) {
-          this.viewportCanvas?.classList.remove('can-pan');
+        if (e.code === 'Space') {
+          this.isSpacePressed = false;
+          if (!this.isPanning) {
+            this.viewportCanvas?.classList.remove('can-pan');
+          }
         }
       },
       { signal }
@@ -4299,6 +5245,16 @@ class DesignController {
           return;
         }
 
+        if (this.isDrawingShape && this.shapeStartPos) {
+          const clampedX = Math.max(0, Math.min(this.canvasWidth - 1, pixelX));
+          const clampedY = Math.max(0, Math.min(this.canvasHeight - 1, pixelY));
+          if (this.shapeCurrentPos?.x !== clampedX || this.shapeCurrentPos?.y !== clampedY) {
+            this.shapeCurrentPos = { x: clampedX, y: clampedY };
+            this.requestRedraw();
+          }
+          return;
+        }
+
         if (this.isDrawing) {
           const clampedX = Math.max(0, Math.min(this.canvasWidth - 1, pixelX));
           const clampedY = Math.max(0, Math.min(this.canvasHeight - 1, pixelY));
@@ -4351,10 +5307,62 @@ class DesignController {
           this.isDraggingText = false;
           this.textDragOffset = null;
         }
+        if (this.isDrawingShape && this.shapeStartPos && this.shapeCurrentPos) {
+          const layer = this.getActiveLayer();
+          if (layer && layer.visible) {
+            let pts: Array<{ x: number; y: number }> = [];
+            const isLine = this.currentTool === 'line' || this.isShiftStraightLine;
+            if (isLine) {
+              pts = getBresenhamLine(this.shapeStartPos.x, this.shapeStartPos.y, this.shapeCurrentPos.x, this.shapeCurrentPos.y);
+            } else if (this.currentTool === 'rectangle') {
+              pts = getRectanglePoints(this.shapeStartPos.x, this.shapeStartPos.y, this.shapeCurrentPos.x, this.shapeCurrentPos.y, this.shapeDrawMode === 'filled');
+            } else if (this.currentTool === 'circle') {
+              pts = getEllipsePoints(this.shapeStartPos.x, this.shapeStartPos.y, this.shapeCurrentPos.x, this.shapeCurrentPos.y, this.shapeDrawMode === 'filled');
+            }
+
+            layer.ctx.fillStyle = this.currentColor;
+            for (const pt of pts) {
+              const symPoints = this.getSymmetricPoints(pt.x, pt.y);
+              for (const sPt of symPoints) {
+                if (sPt.x >= 0 && sPt.x < this.canvasWidth && sPt.y >= 0 && sPt.y < this.canvasHeight) {
+                  layer.ctx.fillRect(sPt.x, sPt.y, 1, 1);
+                }
+              }
+            }
+
+            const afterData = this.captureLayerSnapshot();
+            if (this.activeActionBeforeData && afterData) {
+              this.pushUndoStep(this.activeActionBeforeData, afterData);
+            }
+            this.activeActionBeforeData = null;
+
+            sendCanvasAction(this.canvasUuid, 'update_layer_data', {
+              frameId: this.activeFrameId,
+              layerId: layer.id,
+              dataUrl: layer.canvas.toDataURL('image/png'),
+            });
+
+            this.scheduleAutoSave();
+            this.requestRedraw();
+          }
+          this.isDrawingShape = false;
+          this.isShiftStraightLine = false;
+          this.shapeStartPos = null;
+          this.shapeCurrentPos = null;
+        }
         if (this.isDrawing) {
           this.isDrawing = false;
           this.visitedStrokePixels.clear();
+          this.rawStrokePoints = [];
+          this.recolorTargetColor32 = null;
           this.stopSprayLoop();
+
+          const afterData = this.captureLayerSnapshot();
+          if (this.activeActionBeforeData && afterData) {
+            this.pushUndoStep(this.activeActionBeforeData, afterData);
+          }
+          this.activeActionBeforeData = null;
+
           if (this.currentStrokePoints.length > 0 && this.currentTool !== 'bucket') {
             const activeLayer = this.getActiveLayer();
             sendCanvasDrawStroke(
@@ -4380,7 +5388,7 @@ class DesignController {
         if (this.isPanning) {
           this.isPanning = false;
           this.viewportCanvas?.classList.remove('is-panning');
-          if (!e.shiftKey) {
+          if (!this.isSpacePressed) {
             this.viewportCanvas?.classList.remove('can-pan');
           }
         }
@@ -4466,8 +5474,39 @@ class DesignController {
     const drawW = drawXEnd - drawX;
     const drawH = drawYEnd - drawY;
 
-    this.ctx.fillStyle = '#ffffff';
-    this.ctx.fillRect(drawX, drawY, drawW, drawH);
+    if (this.canvasBackground?.type === 'solid') {
+      this.ctx.fillStyle = this.canvasBackground.color || '#ffffff';
+      this.ctx.fillRect(drawX, drawY, drawW, drawH);
+    } else {
+      const step = this.canvasBackground?.checkSize || 16;
+      const c1 = this.canvasBackground?.checkColor1 || '#ffffff';
+      const c2 = this.canvasBackground?.checkColor2 || '#e5e5e7';
+
+      this.ctx.save();
+      this.ctx.beginPath();
+      this.ctx.rect(drawX, drawY, drawW, drawH);
+      this.ctx.clip();
+
+      this.ctx.fillStyle = c1;
+      this.ctx.fillRect(drawX, drawY, drawW, drawH);
+
+      this.ctx.fillStyle = c2;
+      const endCol = Math.ceil(this.canvasWidth / step);
+      const endRow = Math.ceil(this.canvasHeight / step);
+
+      for (let r = 0; r < endRow; r++) {
+        for (let c = 0; c < endCol; c++) {
+          if ((r + c) % 2 === 1) {
+            const sqX = Math.round(this.panX + c * step * this.zoom);
+            const sqY = Math.round(this.panY + r * step * this.zoom);
+            const sqW = Math.round(this.panX + (c + 1) * step * this.zoom) - sqX;
+            const sqH = Math.round(this.panY + (r + 1) * step * this.zoom) - sqY;
+            this.ctx.fillRect(sqX, sqY, sqW, sqH);
+          }
+        }
+      }
+      this.ctx.restore();
+    }
 
     this.ctx.imageSmoothingEnabled = false;
 
@@ -4517,6 +5556,31 @@ class DesignController {
       const sW = Math.round(this.shapeTemplateW * this.zoom);
       const sH = Math.round(this.shapeTemplateH * this.zoom);
       this.ctx.drawImage(this.shapeCanvas, sX, sY, sW, sH);
+    }
+
+    if (this.isDrawingShape && this.shapeStartPos && this.shapeCurrentPos) {
+      let pts: Array<{ x: number; y: number }> = [];
+      const isLine = this.currentTool === 'line' || this.isShiftStraightLine;
+      if (isLine) {
+        pts = getBresenhamLine(this.shapeStartPos.x, this.shapeStartPos.y, this.shapeCurrentPos.x, this.shapeCurrentPos.y);
+      } else if (this.currentTool === 'rectangle') {
+        pts = getRectanglePoints(this.shapeStartPos.x, this.shapeStartPos.y, this.shapeCurrentPos.x, this.shapeCurrentPos.y, this.shapeDrawMode === 'filled');
+      } else if (this.currentTool === 'circle') {
+        pts = getEllipsePoints(this.shapeStartPos.x, this.shapeStartPos.y, this.shapeCurrentPos.x, this.shapeCurrentPos.y, this.shapeDrawMode === 'filled');
+      }
+
+      this.ctx.fillStyle = this.currentColor;
+      for (const pt of pts) {
+        const symPoints = this.getSymmetricPoints(pt.x, pt.y);
+        for (const sPt of symPoints) {
+          if (sPt.x >= 0 && sPt.x < this.canvasWidth && sPt.y >= 0 && sPt.y < this.canvasHeight) {
+            const px = Math.round(this.panX + sPt.x * this.zoom);
+            const py = Math.round(this.panY + sPt.y * this.zoom);
+            const ps = Math.max(1, Math.round(this.zoom));
+            this.ctx.fillRect(px, py, ps, ps);
+          }
+        }
+      }
     }
 
     if (this.zoom >= 4) {
@@ -4835,8 +5899,9 @@ class DesignController {
   }
 
   private drawCollaboratorCursors(): void {
-    if (!this.ctx) return;
+    if (!this.ctx || !this.showAllCursors) return;
     this.collaborators.forEach((collab) => {
+      if (collab.hideCursor) return;
       if (collab.x === undefined || collab.y === undefined) return;
       const screenX = Math.round(this.panX + collab.x * this.zoom);
       const screenY = Math.round(this.panY + collab.y * this.zoom);
@@ -4907,6 +5972,443 @@ class DesignController {
     });
   }
 
+  private renderCollaboratorsPanel(): void {
+    if (!this.collaboratorsPanelListEl) return;
+    this.collaboratorsPanelListEl.innerHTML = '';
+
+    if (this.collaborators.size === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'design-collaborator-empty';
+      empty.setAttribute('data-ref', 'collab-empty');
+      empty.textContent = 'No hay otros colaboradores conectados';
+      this.collaboratorsPanelListEl.appendChild(empty);
+      return;
+    }
+
+    this.collaborators.forEach((collab) => {
+      const row = document.createElement('div');
+      row.className = 'design-collaborator-row';
+      row.setAttribute('data-ref', `collab-row-${collab.connId}`);
+
+      const info = document.createElement('div');
+      info.className = 'design-collaborator-row__info';
+
+      const dot = document.createElement('span');
+      dot.className = 'design-collaborator-row__dot';
+      dot.style.backgroundColor = collab.color;
+
+      const name = document.createElement('span');
+      name.className = 'design-collaborator-row__name';
+      name.textContent = collab.username || 'Invitado';
+
+      info.appendChild(dot);
+      info.appendChild(name);
+
+      const eyeBtn = document.createElement('button');
+      eyeBtn.type = 'button';
+      eyeBtn.className = `design-collaborator-row__btn${collab.hideCursor ? ' is-hidden-cursor' : ''}`;
+      eyeBtn.setAttribute('data-ref', `btn-cursor-toggle-${collab.connId}`);
+      eyeBtn.setAttribute('data-tooltip', collab.hideCursor ? 'Mostrar cursor' : 'Ocultar cursor');
+      eyeBtn.setAttribute('aria-label', collab.hideCursor ? 'Mostrar cursor' : 'Ocultar cursor');
+      eyeBtn.innerHTML = `<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${collab.hideCursor ? 'visibility_off' : 'visibility'}"></use></svg>`;
+
+      eyeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        collab.hideCursor = !collab.hideCursor;
+        this.renderCollaboratorsPanel();
+        this.requestRedraw();
+      });
+
+      row.appendChild(info);
+      row.appendChild(eyeBtn);
+      this.collaboratorsPanelListEl!.appendChild(row);
+    });
+  }
+
+  private renderAnimationTagsBar(): void {
+    if (!this.animationTagsBarEl) return;
+    if (this.animationTags.length === 0) {
+      this.animationTagsBarEl.style.display = 'none';
+      this.animationTagsBarEl.innerHTML = '';
+      if (this.animationTagsBtnTextEl) {
+        this.animationTagsBtnTextEl.textContent = 'Secciones';
+      }
+      this.btnAnimationTags?.classList.remove('is-active');
+      return;
+    }
+
+    this.animationTagsBarEl.style.display = 'flex';
+    this.animationTagsBarEl.innerHTML = '';
+
+    const activeTag = this.animationTags.find((t) => t.id === this.activeTagId);
+    if (this.animationTagsBtnTextEl) {
+      this.animationTagsBtnTextEl.textContent = activeTag ? activeTag.name : `${this.animationTags.length} tags`;
+    }
+    this.btnAnimationTags?.classList.toggle('is-active', !!activeTag);
+
+    const allPill = document.createElement('button');
+    allPill.type = 'button';
+    allPill.className = `design-animation-tag-pill${!this.activeTagId ? ' is-active' : ''}`;
+    allPill.setAttribute('data-ref', 'tag-pill-all');
+    allPill.innerHTML = `<span>Todos</span> <span class="design-animation-tag-pill__frames">(1-${this.frames.length})</span>`;
+    allPill.addEventListener('click', () => {
+      this.activeTagId = null;
+      this.renderAnimationTagsBar();
+      this.scheduleAutoSave();
+    });
+    this.animationTagsBarEl.appendChild(allPill);
+
+    for (const tag of this.animationTags) {
+      const pill = document.createElement('button');
+      pill.type = 'button';
+      pill.className = `design-animation-tag-pill${this.activeTagId === tag.id ? ' is-active' : ''}`;
+      pill.setAttribute('data-ref', `tag-pill-${tag.id}`);
+      pill.style.setProperty('--tag-color', tag.color);
+
+      const dot = document.createElement('span');
+      dot.className = 'design-animation-tag-pill__dot';
+
+      const name = document.createElement('span');
+      name.textContent = tag.name;
+
+      const frames = document.createElement('span');
+      frames.className = 'design-animation-tag-pill__frames';
+      frames.textContent = `(${tag.from}-${tag.to})`;
+
+      pill.appendChild(dot);
+      pill.appendChild(name);
+      pill.appendChild(frames);
+
+      pill.addEventListener('click', () => {
+        if (this.activeTagId === tag.id) {
+          this.activeTagId = null;
+        } else {
+          this.activeTagId = tag.id;
+          const targetFrameIdx = Math.max(0, tag.from - 1);
+          if (this.frames[targetFrameIdx]) {
+            this.selectFrame(this.frames[targetFrameIdx].id);
+          }
+        }
+        this.renderAnimationTagsBar();
+        this.scheduleAutoSave();
+      });
+
+      this.animationTagsBarEl.appendChild(pill);
+    }
+  }
+
+  private openAnimationTagsModal(): void {
+    const body = document.createElement('div');
+    body.className = 'modal-presets-container';
+    body.setAttribute('data-ref', 'modal-animation-tags');
+
+    const renderList = () => {
+      body.innerHTML = `
+        <div class="settings-group" data-ref="group-existing-tags">
+          <div class="settings-group__header">
+            <h3 class="settings-group__title">Secciones y Etiquetas</h3>
+            <p class="settings-group__desc">Divide tu animación en bucles con nombre (ej. Caminar, Correr, Atacar).</p>
+          </div>
+          <div class="modal-nav-list" data-ref="list-animation-tags">
+            ${this.animationTags.length === 0 ? '<div class="design-collaborator-empty">No hay etiquetas creadas aún.</div>' : ''}
+            ${this.animationTags.map((tag) => `
+              <div class="design-collaborator-row" data-ref="tag-row-${tag.id}">
+                <div class="design-collaborator-row__info">
+                  <span class="design-collaborator-row__dot" style="background-color: ${tag.color};"></span>
+                  <span class="design-collaborator-row__name">${tag.name}</span>
+                  <span class="design-collaborator-row__badge">Cuadros ${tag.from} - ${tag.to}</span>
+                </div>
+                <div class="design-collaborators-panel__header-actions">
+                  <button type="button" class="btn btn--h28 btn--black" data-ref="btn-activate-tag-${tag.id}">
+                    ${this.activeTagId === tag.id ? 'Activo' : 'Seleccionar'}
+                  </button>
+                  <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-delete-tag-${tag.id}" data-tooltip="Eliminar etiqueta">
+                    <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete_outline"></use></svg>
+                  </button>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <div class="settings-group" data-ref="group-new-tag" style="margin-top: 16px;">
+          <div class="settings-group__header">
+            <h3 class="settings-group__title">Crear nueva etiqueta</h3>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <label class="field" data-ref="field-tag-name">
+              <input class="field__input" data-ref="input-tag-name" type="text" placeholder=" " autocomplete="off" />
+              <span class="field__label">Nombre (ej. Idle, Walk, Attack)</span>
+            </label>
+            <div style="display: flex; gap: 10px;">
+              <label class="field" data-ref="field-tag-from" style="flex: 1;">
+                <input class="field__input" data-ref="input-tag-from" type="number" min="1" max="${this.frames.length}" value="1" placeholder=" " />
+                <span class="field__label">Desde cuadro</span>
+              </label>
+              <label class="field" data-ref="field-tag-to" style="flex: 1;">
+                <input class="field__input" data-ref="input-tag-to" type="number" min="1" max="${this.frames.length}" value="${this.frames.length}" placeholder=" " />
+                <span class="field__label">Hasta cuadro</span>
+              </label>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <input class="design-color-active-input" data-ref="input-tag-color" type="color" value="#4a90e2" style="width: 42px; height: 42px; border-radius: 8px; border: 1px solid var(--border-color); cursor: pointer; padding: 2px;" />
+              </div>
+            </div>
+            <button type="button" class="btn btn--h40 btn--black btn--w-full" data-ref="btn-add-tag-submit" style="margin-top: 4px;">
+              <span>Agregar etiqueta</span>
+            </button>
+          </div>
+        </div>
+      `;
+
+      this.animationTags.forEach((tag) => {
+        const actBtn = body.querySelector<HTMLButtonElement>(`[data-ref="btn-activate-tag-${tag.id}"]`);
+        actBtn?.addEventListener('click', () => {
+          this.activeTagId = this.activeTagId === tag.id ? null : tag.id;
+          this.renderAnimationTagsBar();
+          this.scheduleAutoSave();
+          renderList();
+        });
+
+        const delBtn = body.querySelector<HTMLButtonElement>(`[data-ref="btn-delete-tag-${tag.id}"]`);
+        delBtn?.addEventListener('click', () => {
+          this.animationTags = this.animationTags.filter((t) => t.id !== tag.id);
+          if (this.activeTagId === tag.id) {
+            this.activeTagId = null;
+          }
+          this.renderAnimationTagsBar();
+          this.scheduleAutoSave();
+          renderList();
+        });
+      });
+
+      const addBtn = body.querySelector<HTMLButtonElement>('[data-ref="btn-add-tag-submit"]');
+      const nameInp = body.querySelector<HTMLInputElement>('[data-ref="input-tag-name"]');
+      const fromInp = body.querySelector<HTMLInputElement>('[data-ref="input-tag-from"]');
+      const toInp = body.querySelector<HTMLInputElement>('[data-ref="input-tag-to"]');
+      const colorInp = body.querySelector<HTMLInputElement>('[data-ref="input-tag-color"]');
+
+      addBtn?.addEventListener('click', () => {
+        const nameVal = nameInp?.value.trim() || 'Sección';
+        let fromVal = parseInt(fromInp?.value || '1', 10);
+        let toVal = parseInt(toInp?.value || '1', 10);
+        if (fromVal < 1) fromVal = 1;
+        if (toVal > this.frames.length) toVal = this.frames.length;
+        if (fromVal > toVal) {
+          const temp = fromVal;
+          fromVal = toVal;
+          toVal = temp;
+        }
+
+        const newTag: AnimationTag = {
+          id: `tag_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+          name: nameVal,
+          from: fromVal,
+          to: toVal,
+          color: colorInp?.value || '#4a90e2',
+        };
+
+        this.animationTags.push(newTag);
+        this.activeTagId = newTag.id;
+        this.renderAnimationTagsBar();
+        this.scheduleAutoSave();
+        renderList();
+      });
+    };
+
+    renderList();
+
+    openModal({
+      title: 'Etiquetas de Animación',
+      description: 'Organiza los cuadros en secuencias reutilizables.',
+      bodyHtml: body,
+      showConfirm: false,
+      cancelText: 'Cerrar',
+      showCancel: true,
+      size: 'md',
+    });
+  }
+
+  private openFrameDurationModal(): void {
+    const activeFrame = this.getActiveFrame();
+    if (!activeFrame) return;
+
+    const currentDuration = activeFrame.durationMs || Math.round(1000 / this.fps);
+    const presets = [50, 80, 100, 125, 200, 250, 500, 1000];
+
+    const body = document.createElement('div');
+    body.className = 'modal-presets-container';
+    body.setAttribute('data-ref', 'modal-frame-duration');
+    body.innerHTML = `
+      <div class="settings-group" data-ref="group-frame-duration">
+        <div class="settings-group__header">
+          <h3 class="settings-group__title">Duración del Cuadro Actual (${activeFrame.name})</h3>
+          <p class="settings-group__desc">Personaliza cuántos milisegundos permanece este cuadro en pantalla durante la reproducción.</p>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 14px; margin-top: 8px;">
+          <div style="display: flex; flex-wrap: wrap; gap: 6px;" data-ref="duration-presets">
+            ${presets.map((ms) => `
+              <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable${ms === currentDuration ? ' is-active' : ''}" data-ref="preset-dur-${ms}" data-ms="${ms}">
+                ${ms}ms
+              </button>
+            `).join('')}
+          </div>
+          <label class="field" data-ref="field-frame-dur">
+            <input class="field__input" data-ref="input-frame-duration" type="number" min="10" max="10000" step="10" value="${currentDuration}" placeholder=" " />
+            <span class="field__label">Duración personalizada (milisegundos)</span>
+          </label>
+        </div>
+      </div>
+    `;
+
+    const input = body.querySelector<HTMLInputElement>('[data-ref="input-frame-duration"]');
+    const presetBtns = body.querySelectorAll<HTMLButtonElement>('[data-ms]');
+    presetBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        presetBtns.forEach((b) => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        const ms = btn.getAttribute('data-ms');
+        if (ms && input) {
+          input.value = ms;
+        }
+      });
+    });
+
+    openModal({
+      title: 'Duración por Cuadro',
+      description: 'Ajusta el tiempo de exposición individual.',
+      bodyHtml: body,
+      showConfirm: true,
+      confirmText: 'Aplicar',
+      cancelText: 'Cancelar',
+      showCancel: true,
+      size: 'sm',
+      onConfirm: (modalInstance) => {
+        const val = parseInt(input?.value || '125', 10);
+        if (isNaN(val) || val < 10) {
+          modalInstance.showError('Ingresa un valor válido de al menos 10 ms.');
+          return;
+        }
+        activeFrame.durationMs = val;
+        if (this.frameDurationTextEl) {
+          this.frameDurationTextEl.textContent = `${val}ms`;
+        }
+        this.renderFramesCards();
+        this.scheduleAutoSave();
+        modalInstance.close();
+      },
+    });
+  }
+
+  private openHelpModal(): void {
+    const backdrop = document.createElement('div');
+    backdrop.className = 'modal-backdrop';
+    backdrop.setAttribute('data-ref', 'modal-help-backdrop');
+
+    backdrop.innerHTML = `
+      <div class="modal-container" data-ref="modal-help-container">
+        <button type="button" class="modal-close-btn" data-ref="btn-modal-close" aria-label="Cerrar">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+        </button>
+        <div class="modal-card modal-card--create-canvas no-padding" data-ref="modal-card-help">
+          <div class="modal-card__drag-zone" data-ref="modal-drag-zone" aria-hidden="true">
+            <div class="modal-card__drag-handle"></div>
+          </div>
+
+          <div class="modal-create-canvas__sidebar" data-ref="modal-help-sidebar">
+            <div class="modal-create-canvas__sidebar-top" data-ref="modal-help-sidebar-top">
+              <div class="component-top-left" data-ref="modal-help-sidebar-top-left">
+                <h1 class="component-top-title">Centro de Ayuda</h1>
+              </div>
+            </div>
+            <div class="modal-create-canvas__sidebar-bottom" data-ref="modal-help-sidebar-bottom">
+              <div class="menu-panel__list" data-ref="modal-help-nav-list">
+                <button type="button" class="menu-item is-active" data-ref="tab-help-shortcuts">
+                  <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#keyboard"></use></svg>
+                  <span class="menu-item__text">Atajos de teclado</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-create-canvas__body" data-ref="modal-help-body">
+            <div class="modal-create-canvas__body-top" data-ref="modal-help-body-top">
+              <div class="component-top-left" data-ref="modal-help-body-top-left">
+                <h2 class="component-top-title">Atajos de Teclado</h2>
+              </div>
+            </div>
+            <div class="modal-create-canvas__body-bottom" data-ref="modal-help-body-bottom">
+              <div class="help-shortcuts-container" data-ref="help-shortcuts-container">
+                <div class="help-shortcut-group" data-ref="help-group-drawing">
+                  <h3 class="help-shortcut-group-title">Herramientas de Dibujo</h3>
+                  <div class="help-shortcut-grid">
+                    <div class="help-shortcut-row"><span class="help-shortcut-desc">Pincel</span><div class="help-shortcut-keys"><span class="help-shortcut-kbd">B</span></div></div>
+                    <div class="help-shortcut-row"><span class="help-shortcut-desc">Borrador</span><div class="help-shortcut-keys"><span class="help-shortcut-kbd">E</span></div></div>
+                    <div class="help-shortcut-row"><span class="help-shortcut-desc">Línea Recta</span><div class="help-shortcut-keys"><span class="help-shortcut-kbd">L</span> <span style="font-size:11px;opacity:0.6;">o Shift</span></div></div>
+                    <div class="help-shortcut-row"><span class="help-shortcut-desc">Rectángulo</span><div class="help-shortcut-keys"><span class="help-shortcut-kbd">U</span></div></div>
+                    <div class="help-shortcut-row"><span class="help-shortcut-desc">Círculo / Elipse</span><div class="help-shortcut-keys"><span class="help-shortcut-kbd">C</span></div></div>
+                    <div class="help-shortcut-row"><span class="help-shortcut-desc">Balde de Pintura</span><div class="help-shortcut-keys"><span class="help-shortcut-kbd">G</span></div></div>
+                    <div class="help-shortcut-row"><span class="help-shortcut-desc">Reemplazo de Color</span><div class="help-shortcut-keys"><span class="help-shortcut-kbd">R</span></div></div>
+                    <div class="help-shortcut-row"><span class="help-shortcut-desc">Tramador / Semitonos</span><div class="help-shortcut-keys"><span class="help-shortcut-kbd">D</span></div></div>
+                    <div class="help-shortcut-row"><span class="help-shortcut-desc">Spray / Aerógrafo</span><div class="help-shortcut-keys"><span class="help-shortcut-kbd">A</span></div></div>
+                    <div class="help-shortcut-row"><span class="help-shortcut-desc">Gotero (Selector)</span><div class="help-shortcut-keys"><span class="help-shortcut-kbd">I</span> <span style="font-size:11px;opacity:0.6;">o Alt</span></div></div>
+                    <div class="help-shortcut-row"><span class="help-shortcut-desc">Área de Selección</span><div class="help-shortcut-keys"><span class="help-shortcut-kbd">M</span></div></div>
+                  </div>
+                </div>
+
+                <div class="help-shortcut-group" data-ref="help-group-edit">
+                  <h3 class="help-shortcut-group-title">Edición y Selección</h3>
+                  <div class="help-shortcut-grid">
+                    <div class="help-shortcut-row"><span class="help-shortcut-desc">Deshacer</span><div class="help-shortcut-keys"><span class="help-shortcut-kbd">Ctrl</span><span class="help-shortcut-kbd">Z</span></div></div>
+                    <div class="help-shortcut-row"><span class="help-shortcut-desc">Rehacer</span><div class="help-shortcut-keys"><span class="help-shortcut-kbd">Ctrl</span><span class="help-shortcut-kbd">Y</span></div></div>
+                    <div class="help-shortcut-row"><span class="help-shortcut-desc">Copiar Selección</span><div class="help-shortcut-keys"><span class="help-shortcut-kbd">Ctrl</span><span class="help-shortcut-kbd">C</span></div></div>
+                    <div class="help-shortcut-row"><span class="help-shortcut-desc">Cortar Selección</span><div class="help-shortcut-keys"><span class="help-shortcut-kbd">Ctrl</span><span class="help-shortcut-kbd">X</span></div></div>
+                    <div class="help-shortcut-row"><span class="help-shortcut-desc">Pegar Selección</span><div class="help-shortcut-keys"><span class="help-shortcut-kbd">Ctrl</span><span class="help-shortcut-kbd">V</span></div></div>
+                    <div class="help-shortcut-row"><span class="help-shortcut-desc">Seleccionar Todo</span><div class="help-shortcut-keys"><span class="help-shortcut-kbd">Ctrl</span><span class="help-shortcut-kbd">A</span></div></div>
+                    <div class="help-shortcut-row"><span class="help-shortcut-desc">Deseleccionar</span><div class="help-shortcut-keys"><span class="help-shortcut-kbd">Ctrl</span><span class="help-shortcut-kbd">D</span></div></div>
+                    <div class="help-shortcut-row"><span class="help-shortcut-desc">Eliminar Selección</span><div class="help-shortcut-keys"><span class="help-shortcut-kbd">Supr</span></div></div>
+                  </div>
+                </div>
+
+                <div class="help-shortcut-group" data-ref="help-group-view">
+                  <h3 class="help-shortcut-group-title">Navegación y Vista</h3>
+                  <div class="help-shortcut-grid">
+                    <div class="help-shortcut-row"><span class="help-shortcut-desc">Mover Lienzo (Pan)</span><div class="help-shortcut-keys"><span class="help-shortcut-kbd">Espacio</span> <span style="font-size:11px;opacity:0.6;">+ Arrastrar</span></div></div>
+                    <div class="help-shortcut-row"><span class="help-shortcut-desc">Zoom In / Out</span><div class="help-shortcut-keys"><span class="help-shortcut-kbd">Rueda del Ratón</span></div></div>
+                    <div class="help-shortcut-row"><span class="help-shortcut-desc">Ajustar a Pantalla</span><div class="help-shortcut-keys"><span class="help-shortcut-kbd">Shift</span><span class="help-shortcut-kbd">1</span></div></div>
+                  </div>
+                </div>
+
+                <div class="help-shortcut-group" data-ref="help-group-animation">
+                  <h3 class="help-shortcut-group-title">Animación</h3>
+                  <div class="help-shortcut-grid">
+                    <div class="help-shortcut-row"><span class="help-shortcut-desc">Reproducir / Pausar</span><div class="help-shortcut-keys"><span class="help-shortcut-kbd">Espacio</span></div></div>
+                    <div class="help-shortcut-row"><span class="help-shortcut-desc">Cuadro Siguiente</span><div class="help-shortcut-keys"><span class="help-shortcut-kbd">.</span> <span style="font-size:11px;opacity:0.6;">o Flecha Der</span></div></div>
+                    <div class="help-shortcut-row"><span class="help-shortcut-desc">Cuadro Anterior</span><div class="help-shortcut-keys"><span class="help-shortcut-kbd">,</span> <span style="font-size:11px;opacity:0.6;">o Flecha Izq</span></div></div>
+                    <div class="help-shortcut-row"><span class="help-shortcut-desc">Papel Cebolla</span><div class="help-shortcut-keys"><span class="help-shortcut-kbd">O</span></div></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const closeBtn = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-modal-close"]');
+    const closeModal = () => {
+      backdrop.classList.add('is-closing');
+      setTimeout(() => backdrop.remove(), 200);
+    };
+
+    closeBtn?.addEventListener('click', closeModal);
+    backdrop.addEventListener('click', (e) => {
+      if (e.target === backdrop) closeModal();
+    });
+
+    document.body.appendChild(backdrop);
+    requestAnimationFrame(() => backdrop.classList.add('is-active'));
+  }
+
   private setupWebSocketCollaboration(): void {
     const userId = currentUser ? currentUser.id : 0;
     const username = currentUser ? currentUser.username : 'Invitado';
@@ -4934,12 +6436,14 @@ class DesignController {
           this.collaborators.set(uConnId, {
             color: uColor,
             connId: uConnId,
+            hideCursor: false,
             userId: uUserId,
             username: uUsername,
           });
         }
       }
       this.renderCollaboratorsBar();
+      this.renderCollaboratorsPanel();
       this.requestRedraw();
     });
 
@@ -4955,10 +6459,12 @@ class DesignController {
       this.collaborators.set(uConnId, {
         color: uColor,
         connId: uConnId,
+        hideCursor: false,
         userId: uUserId,
         username: uUsername,
       });
       this.renderCollaboratorsBar();
+      this.renderCollaboratorsPanel();
       this.requestRedraw();
 
       if (this.isOwner) {
@@ -4972,22 +6478,26 @@ class DesignController {
       if (roomUuid !== this.canvasUuid || !connId) return;
       this.collaborators.delete(connId);
       this.renderCollaboratorsBar();
+      this.renderCollaboratorsPanel();
       this.requestRedraw();
     });
 
     const unsubCursor = registerWebSocketHandler('CANVAS_CURSOR', (payload: any) => {
       const roomUuid = payload.canvasUuid || payload.canvas_uuid;
       const connId = payload.connId || payload.conn_id;
-      if (roomUuid !== this.canvasUuid || !connId) return;
+      if (!connId || (roomUuid && roomUuid !== this.canvasUuid)) return;
       let collab = this.collaborators.get(connId);
       if (!collab) {
         collab = {
           color: payload.color || getCollaboratorColor(payload.userId || connId),
           connId,
+          hideCursor: false,
           userId: payload.userId || 0,
           username: payload.username || 'Invitado',
         };
         this.collaborators.set(connId, collab);
+        this.renderCollaboratorsBar();
+        this.renderCollaboratorsPanel();
       }
       collab.x = payload.x;
       collab.y = payload.y;
@@ -5372,6 +6882,47 @@ class DesignController {
       this.shareMembersListEl.appendChild(chip);
     }
 
+    for (const team of this.canvasTeams) {
+      const item = document.createElement('div');
+      item.className = 'design-share-team-chip';
+
+      const icon = document.createElement('span');
+      icon.className = 'component-icon';
+      icon.textContent = 'groups';
+
+      const name = document.createElement('span');
+      name.className = 'design-share-team-chip__name';
+      name.textContent = team.team_name || 'Equipo';
+
+      const meta = document.createElement('span');
+      meta.className = 'design-share-team-chip__count';
+      meta.textContent = `(${team.member_count || 1})`;
+
+      item.appendChild(icon);
+      item.appendChild(name);
+      item.appendChild(meta);
+
+      if (this.isOwner) {
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'design-share-team-chip__remove';
+        removeBtn.setAttribute('data-tooltip', `Desvincular ${team.team_name || 'equipo'}`);
+        removeBtn.setAttribute('aria-label', `Desvincular ${team.team_name || 'equipo'}`);
+        removeBtn.innerHTML = '<span class="component-icon">close</span>';
+        removeBtn.addEventListener(
+          'click',
+          (e) => {
+            e.stopPropagation();
+            void this.removeTeamFromCanvas(team.team_id, team.team_name || 'Equipo');
+          },
+          { signal: this.abortController.signal }
+        );
+        item.appendChild(removeBtn);
+      }
+
+      this.shareMembersListEl.appendChild(item);
+    }
+
     renderIcons(this.shareMembersListEl);
   }
 
@@ -5439,129 +6990,28 @@ class DesignController {
         const data = await res.json();
         if (data && Array.isArray(data.teams)) {
           this.canvasTeams = data.teams;
-          this.renderShareTeams();
+          this.renderShareMembers();
         }
       }
-    } catch {
-      //
-    }
+    } catch {}
   }
 
-  private async loadUserTeamsForSelect(): Promise<void> {
-    if (!currentUser || !this.selectShareTeamEl) return;
+  private async loadUserTeams(): Promise<void> {
+    if (!currentUser) return;
     try {
       const res = await getApi(API_ROUTES.teams.base);
       if (res.ok) {
         const data = await res.json();
         this.userTeams = Array.isArray(data.teams) ? data.teams : [];
-        this.renderSelectTeamsOptions();
       }
-    } catch {
-      //
-    }
+    } catch {}
   }
 
-  private renderSelectTeamsOptions(): void {
-    if (!this.selectShareTeamEl) return;
-    this.selectShareTeamEl.innerHTML = '';
-
-    const defaultOption = document.createElement('option');
-    defaultOption.value = '';
-    defaultOption.disabled = true;
-    defaultOption.selected = true;
-    defaultOption.textContent = 'Seleccionar equipo...';
-    this.selectShareTeamEl.appendChild(defaultOption);
-
-    const linkedTeamIds = new Set(this.canvasTeams.map((t) => t.team_id));
-    const availableTeams = this.userTeams.filter((t) => !linkedTeamIds.has(t.id));
-
-    if (availableTeams.length === 0) {
-      defaultOption.textContent = this.userTeams.length === 0 ? 'No tienes equipos creados' : 'Todos tus equipos ya tienen acceso';
-      if (this.btnAddTeamToCanvasEl) this.btnAddTeamToCanvasEl.disabled = true;
-      return;
-    }
-
-    if (this.btnAddTeamToCanvasEl) this.btnAddTeamToCanvasEl.disabled = false;
-
-    for (const team of availableTeams) {
-      const option = document.createElement('option');
-      option.value = String(team.id);
-      option.textContent = `${team.name} (${team.member_count || 1} ${Number(team.member_count) === 1 ? 'miembro' : 'miembros'})`;
-      this.selectShareTeamEl.appendChild(option);
-    }
-  }
-
-  private renderShareTeams(): void {
-    if (!this.shareTeamsListEl) return;
-    this.shareTeamsListEl.innerHTML = '';
-
-    if (this.canvasTeams.length === 0) {
-      const empty = document.createElement('span');
-      empty.className = 'design-share-teams-empty';
-      empty.textContent = 'Ningún equipo vinculado.';
-      this.shareTeamsListEl.appendChild(empty);
-      this.renderSelectTeamsOptions();
-      return;
-    }
-
-    for (const team of this.canvasTeams) {
-      const item = document.createElement('div');
-      item.className = 'design-share-team-chip';
-
-      const icon = document.createElement('span');
-      icon.className = 'component-icon';
-      icon.textContent = 'groups';
-
-      const name = document.createElement('span');
-      name.className = 'design-share-team-chip__name';
-      name.textContent = team.team_name || 'Equipo';
-
-      const meta = document.createElement('span');
-      meta.className = 'design-share-team-chip__count';
-      meta.textContent = `(${team.member_count || 1})`;
-
-      item.appendChild(icon);
-      item.appendChild(name);
-      item.appendChild(meta);
-
-      if (this.isOwner) {
-        const removeBtn = document.createElement('button');
-        removeBtn.type = 'button';
-        removeBtn.className = 'design-share-team-chip__remove';
-        removeBtn.setAttribute('data-tooltip', `Desvincular ${team.team_name || 'equipo'}`);
-        removeBtn.setAttribute('aria-label', `Desvincular ${team.team_name || 'equipo'}`);
-        removeBtn.innerHTML = '<span class="component-icon">close</span>';
-        removeBtn.addEventListener(
-          'click',
-          (e) => {
-            e.stopPropagation();
-            void this.removeTeamFromCanvas(team.team_id, team.team_name || 'Equipo');
-          },
-          { signal: this.abortController.signal }
-        );
-        item.appendChild(removeBtn);
-      }
-
-      this.shareTeamsListEl.appendChild(item);
-    }
-
-    renderIcons(this.shareTeamsListEl);
-    this.renderSelectTeamsOptions();
-  }
-
-  private async addSelectedTeamToCanvas(): Promise<void> {
+  private async addTeamToCanvas(teamId: number, teamName: string): Promise<void> {
     if (!this.isOwner) {
       showToast('Solo el propietario puede vincular equipos', 'warning');
       return;
     }
-
-    if (!this.selectShareTeamEl || !this.selectShareTeamEl.value) {
-      showToast('Por favor selecciona un equipo', 'warning');
-      return;
-    }
-
-    const teamId = Number(this.selectShareTeamEl.value);
-    if (isNaN(teamId) || teamId <= 0) return;
 
     try {
       const res = await postApi(API_ROUTES.canvases.teams(this.canvasUuid), {
@@ -5574,8 +7024,16 @@ class DesignController {
         return;
       }
 
-      showToast('Equipo vinculado exitosamente', 'success');
+      showToast(`Equipo "${teamName}" vinculado exitosamente`, 'success');
       await this.loadCanvasTeams();
+
+      if (this.shareSearchInputEl) {
+        this.shareSearchInputEl.value = '';
+      }
+      if (this.shareSearchResultsEl) {
+        this.shareSearchResultsEl.classList.add('is-hidden');
+        this.shareSearchResultsEl.innerHTML = '';
+      }
     } catch {
       showToast('Error al vincular equipo', 'danger');
     }
@@ -5614,20 +7072,73 @@ class DesignController {
 
     this.searchDebounceTimer = setTimeout(async () => {
       try {
-        const res = await getApi(API_ROUTES.users.search(clean));
-        if (!res.ok || !this.shareSearchResultsEl) return;
+        const [usersRes] = await Promise.all([
+          getApi(API_ROUTES.users.search(clean)),
+          this.userTeams.length === 0 ? this.loadUserTeams() : Promise.resolve(),
+        ]);
 
-        const data = await res.json();
-        const users: SearchUserResult[] = data.users || [];
+        if (!this.shareSearchResultsEl) return;
+
+        let users: SearchUserResult[] = [];
+        if (usersRes.ok) {
+          const data = await usersRes.json();
+          users = Array.isArray(data.users) ? data.users : [];
+        }
+
+        const matchingTeams = this.userTeams.filter((t) =>
+          t.name.toLowerCase().includes(clean.toLowerCase())
+        );
 
         this.shareSearchResultsEl.innerHTML = '';
 
-        if (users.length === 0) {
+        if (users.length === 0 && matchingTeams.length === 0) {
           const empty = document.createElement('div');
           empty.className = 'design-share-search-empty';
-          empty.textContent = 'No se encontraron usuarios';
+          empty.textContent = 'No se encontraron personas ni equipos';
           this.shareSearchResultsEl.appendChild(empty);
         } else {
+          for (const team of matchingTeams) {
+            const isAlreadyLinked = this.canvasTeams.some((t) => t.team_id === team.id);
+            const item = document.createElement('button');
+            item.type = 'button';
+            item.className = 'design-share-search-item';
+
+            const iconChip = document.createElement('div');
+            iconChip.className = 'design-share-team-search-icon';
+            iconChip.innerHTML = '<span class="component-icon">groups</span>';
+
+            const info = document.createElement('div');
+            info.className = 'design-share-search-item__info';
+
+            const teamName = document.createElement('span');
+            teamName.className = 'design-share-search-item__username';
+            teamName.textContent = team.name + (isAlreadyLinked ? ' (Ya vinculado)' : '');
+
+            const teamMeta = document.createElement('span');
+            teamMeta.className = 'design-share-search-item__email';
+            teamMeta.textContent = `Equipo (${team.member_count || 1} ${Number(team.member_count) === 1 ? 'miembro' : 'miembros'})`;
+
+            info.appendChild(teamName);
+            info.appendChild(teamMeta);
+            item.appendChild(iconChip);
+            item.appendChild(info);
+
+            if (!isAlreadyLinked) {
+              item.addEventListener(
+                'click',
+                () => {
+                  void this.addTeamToCanvas(team.id, team.name);
+                },
+                { signal: this.abortController.signal }
+              );
+            } else {
+              item.style.opacity = '0.5';
+              item.style.cursor = 'default';
+            }
+
+            this.shareSearchResultsEl.appendChild(item);
+          }
+
           for (const user of users) {
             const isAlreadyMember = this.canvasMembers.some((m) => m.user_id === user.id);
             const item = document.createElement('button');
@@ -5662,7 +7173,7 @@ class DesignController {
               item.addEventListener(
                 'click',
                 () => {
-                  this.addMemberToCanvas(user.id, user.username);
+                  void this.addMemberToCanvas(user.id, user.username);
                 },
                 { signal: this.abortController.signal }
               );
@@ -5675,11 +7186,80 @@ class DesignController {
           }
         }
 
+        renderIcons(this.shareSearchResultsEl);
         this.shareSearchResultsEl.classList.remove('is-hidden');
-      } catch {
-        //
-      }
+      } catch {}
     }, 250);
+  }
+
+  private openCustomizeLinkModal(): void {
+    if (!this.isOwner) return;
+
+    const origin = window.location.origin;
+    const currentSlug = this.customSlug || '';
+
+    const body = document.createElement('div');
+    body.className = 'field';
+    body.innerHTML = `
+      <div class="design-custom-slug-input-group" data-ref="custom-slug-group">
+        <span class="design-custom-slug-prefix">${origin}/</span>
+        <input class="design-custom-slug-input" data-ref="input-custom-slug" type="text" placeholder="mi-enlace-personalizado" value="${currentSlug}" maxlength="50" autocomplete="off" />
+      </div>
+      <span class="design-custom-slug-hint">Usa de 3 a 50 letras, números, guiones (-) o guiones bajos (_). Deja el campo vacío si deseas usar el código corto aleatorio.</span>
+    `;
+
+    const input = body.querySelector<HTMLInputElement>('[data-ref="input-custom-slug"]');
+
+    const modal = openModal({
+      title: 'Personaliza tu enlace',
+      description: 'Crea una dirección corta y fácil de recordar para compartir tu lienzo.',
+      bodyHtml: body,
+      confirmText: 'Guardar',
+      cancelText: 'Cancelar',
+      showConfirm: true,
+      showCancel: true,
+      onConfirm: async (m) => {
+        const val = input ? input.value.trim() : '';
+        if (val && !/^[a-zA-Z0-9_-]{3,50}$/.test(val)) {
+          m.showError('El enlace debe contener entre 3 y 50 caracteres (letras, números, - o _).');
+          return;
+        }
+
+        m.setConfirmLoading(true);
+        try {
+          const res = await patchApi(API_ROUTES.canvases.slug(this.canvasUuid), {
+            slug: val || null,
+          });
+
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            m.showError(data.error || 'No se pudo guardar el enlace personalizado.');
+            m.setConfirmLoading(false);
+            return;
+          }
+
+          const data = await res.json();
+          this.customSlug = data.custom_slug || null;
+          this.shortCode = data.short_code || this.shortCode;
+
+          showToast('Enlace personalizado guardado con éxito', 'success');
+          m.close();
+        } catch {
+          m.showError('Error al guardar el enlace personalizado.');
+          m.setConfirmLoading(false);
+        }
+      },
+    });
+
+    if (input) {
+      setTimeout(() => input.focus(), 50);
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          modal.confirmBtn?.click();
+        }
+      });
+    }
   }
 
   private async changeAccessLevel(level: 'private' | 'public'): Promise<void> {
@@ -5760,6 +7340,8 @@ class DesignController {
       this.canvasUnit = canvas.unit || 'px';
       this.canvasCreatedAt = canvas.created_at || null;
       this.accessLevel = canvas.access_level || 'private';
+      this.shortCode = canvas.short_code || null;
+      this.customSlug = canvas.custom_slug || null;
 
       if (this.canvasUserId && currentUser) {
         this.isOwner = currentUser.id === this.canvasUserId;
@@ -5812,6 +7394,7 @@ class DesignController {
     this.renderLayersList();
     this.renderLayersCards();
     this.renderFramesCards();
+    this.renderAnimationTagsBar();
     this.redraw();
 
     return true;
