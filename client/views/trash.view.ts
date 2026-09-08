@@ -50,14 +50,12 @@ class TrashController {
   private tbodyEl: HTMLElement | null = null;
   private emptyStateEl: HTMLElement | null = null;
   private emptyTextEl: HTMLElement | null = null;
-  private selectionCountBadge: HTMLElement | null = null;
 
   private defaultActions: HTMLElement | null = null;
   private selectedActions: HTMLElement | null = null;
   private btnEmptyTrash: HTMLElement | null = null;
   private btnActionRestore: HTMLElement | null = null;
   private btnActionDeleteForever: HTMLElement | null = null;
-  private btnActionClearSelection: HTMLElement | null = null;
 
   private btnToggleSearch: HTMLElement | null = null;
   private searchToolbar: HTMLElement | null = null;
@@ -74,14 +72,12 @@ class TrashController {
     this.tbodyEl = this.container.querySelector<HTMLElement>('[data-ref="trash-tbody"]');
     this.emptyStateEl = this.container.querySelector<HTMLElement>('[data-ref="trash-empty-state"]');
     this.emptyTextEl = this.container.querySelector<HTMLElement>('[data-ref="trash-empty-text"]');
-    this.selectionCountBadge = this.container.querySelector<HTMLElement>('[data-ref="trash-selection-count"]');
 
     this.defaultActions = this.container.querySelector<HTMLElement>('[data-ref="trash-default-actions"]');
     this.selectedActions = this.container.querySelector<HTMLElement>('[data-ref="trash-selected-actions"]');
     this.btnEmptyTrash = this.container.querySelector<HTMLElement>('[data-ref="btn-empty-trash"]');
     this.btnActionRestore = this.container.querySelector<HTMLElement>('[data-ref="btn-action-restore"]');
     this.btnActionDeleteForever = this.container.querySelector<HTMLElement>('[data-ref="btn-action-delete-forever"]');
-    this.btnActionClearSelection = this.container.querySelector<HTMLElement>('[data-ref="btn-action-clear-selection"]');
 
     this.btnToggleSearch = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-search"]');
     this.searchToolbar = this.container.querySelector<HTMLElement>('[data-ref="search-toolbar"]');
@@ -121,6 +117,9 @@ class TrashController {
       if (e.key === 'Escape') {
         if (this.isSearchActive) {
           this.toggleSearchToolbar(false);
+        } else if (this.selectedUuids.size > 0) {
+          this.selectedUuids.clear();
+          this.updateSelectionUi();
         }
       }
     }, { signal });
@@ -152,11 +151,6 @@ class TrashController {
       });
 
       this.renderRows(filtered, true);
-    }, { signal });
-
-    this.btnActionClearSelection?.addEventListener('click', () => {
-      this.selectedUuids.clear();
-      this.updateSelectionUi();
     }, { signal });
 
     this.btnActionRestore?.addEventListener('click', () => {
@@ -265,13 +259,12 @@ class TrashController {
       tdExpires.innerHTML = `<span class="component-badge component-badge--sm" data-ref="badge-expires-${canvas.uuid}">${escapeHtml(getRemainingDays(canvas.deleted_at))}</span>`;
 
       const tdActions = document.createElement('td');
-      tdActions.className = 'text-right';
       tdActions.setAttribute('data-ref', `cell-actions-${canvas.uuid}`);
 
       const actionsWrapper = document.createElement('div');
       actionsWrapper.style.display = 'inline-flex';
       actionsWrapper.style.gap = '6px';
-      actionsWrapper.style.justifyContent = 'flex-end';
+      actionsWrapper.style.justifyContent = 'flex-start';
 
       const btnRestore = document.createElement('button');
       btnRestore.type = 'button';
@@ -323,18 +316,6 @@ class TrashController {
 
   private updateSelectionUi(): void {
     const totalSelected = this.selectedUuids.size;
-
-    if (this.selectionCountBadge) {
-      if (totalSelected > 0) {
-        this.selectionCountBadge.style.display = 'inline-flex';
-        this.selectionCountBadge.textContent =
-          totalSelected === 1
-            ? '1 seleccionado'
-            : `${totalSelected} seleccionados`;
-      } else {
-        this.selectionCountBadge.style.display = 'none';
-      }
-    }
 
     if (totalSelected === 0) {
       if (this.defaultActions) this.defaultActions.style.display = 'flex';

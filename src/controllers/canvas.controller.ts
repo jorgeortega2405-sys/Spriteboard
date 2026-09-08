@@ -26,7 +26,7 @@ export async function createCanvasHandler(req: Request, res: Response): Promise<
       return;
     }
 
-    const { name, width, height, unit, access_level } = req.body;
+    const { name, width, height, unit, access_level, data, preview_thumbnail } = req.body;
     const numWidth = Number(width);
     const numHeight = Number(height);
 
@@ -41,6 +41,8 @@ export async function createCanvasHandler(req: Request, res: Response): Promise<
       height: numHeight,
       unit,
       access_level: access_level === 'public' ? 'public' : 'private',
+      data,
+      preview_thumbnail: typeof preview_thumbnail === 'string' ? preview_thumbnail : null,
     });
 
     res.status(201).json({ canvas });
@@ -81,8 +83,12 @@ export async function syncCanvasHandler(req: Request, res: Response): Promise<vo
       res.status(404).json({ error: 'El lienzo ha sido eliminado.' });
       return;
     }
-    if (err?.message?.includes('privado') || err?.message?.includes('otra cuenta')) {
-      res.status(403).json({ error: 'No tienes permiso para modificar este lienzo.' });
+    if (err?.message?.includes('iniciar sesión')) {
+      res.status(401).json({ error: 'Debes iniciar sesión para sincronizar cambios en este lienzo.' });
+      return;
+    }
+    if (err?.message?.includes('permisos') || err?.message?.includes('privado') || err?.message?.includes('otra cuenta')) {
+      res.status(403).json({ error: 'No tienes permisos de edición para sincronizar este lienzo.' });
       return;
     }
     logger.app.error('Error al sincronizar lienzo en canvas controller', err);

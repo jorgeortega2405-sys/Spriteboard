@@ -38,14 +38,11 @@ class TeamsController {
   private tbodyEl: HTMLElement | null = null;
   private emptyStateEl: HTMLElement | null = null;
   private emptyTextEl: HTMLElement | null = null;
-  private selectionCountBadge: HTMLElement | null = null;
-
   private defaultActions: HTMLElement | null = null;
   private selectedActions: HTMLElement | null = null;
   private btnActionMembers: HTMLElement | null = null;
   private btnActionEdit: HTMLElement | null = null;
   private btnActionDelete: HTMLElement | null = null;
-  private btnActionClearSelection: HTMLElement | null = null;
 
   private btnToggleSearch: HTMLElement | null = null;
   private searchToolbar: HTMLElement | null = null;
@@ -80,14 +77,12 @@ class TeamsController {
     this.tbodyEl = this.container.querySelector<HTMLElement>('[data-ref="teams-tbody"]');
     this.emptyStateEl = this.container.querySelector<HTMLElement>('[data-ref="teams-empty-state"]');
     this.emptyTextEl = this.container.querySelector<HTMLElement>('[data-ref="teams-empty-text"]');
-    this.selectionCountBadge = this.container.querySelector<HTMLElement>('[data-ref="teams-selection-count"]');
 
     this.defaultActions = this.container.querySelector<HTMLElement>('[data-ref="teams-default-actions"]');
     this.selectedActions = this.container.querySelector<HTMLElement>('[data-ref="teams-selected-actions"]');
     this.btnActionMembers = this.container.querySelector<HTMLElement>('[data-ref="btn-action-members"]');
     this.btnActionEdit = this.container.querySelector<HTMLElement>('[data-ref="btn-action-edit"]');
     this.btnActionDelete = this.container.querySelector<HTMLElement>('[data-ref="btn-action-delete"]');
-    this.btnActionClearSelection = this.container.querySelector<HTMLElement>('[data-ref="btn-action-clear-selection"]');
 
     this.btnToggleSearch = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-search"]');
     this.searchToolbar = this.container.querySelector<HTMLElement>('[data-ref="search-toolbar"]');
@@ -150,6 +145,9 @@ class TeamsController {
       if (e.key === 'Escape') {
         if (this.isSearchActive) {
           this.toggleSearchToolbar(false);
+        } else if (this.selectedTeamUuids.size > 0) {
+          this.selectedTeamUuids.clear();
+          this.updateSelectionUi();
         }
         if (this.modalTeamBackdrop?.classList.contains('is-visible')) {
           this.closeTeamModal();
@@ -191,11 +189,6 @@ class TeamsController {
       this.renderRows(filtered, true);
     }, { signal });
 
-    this.btnActionClearSelection?.addEventListener('click', () => {
-      this.selectedTeamUuids.clear();
-      this.updateSelectionUi();
-    }, { signal });
-
     this.btnActionMembers?.addEventListener('click', () => {
       const selectedUuid = [...this.selectedTeamUuids][0];
       const team = this.allTeams.find((t) => t.uuid === selectedUuid);
@@ -225,15 +218,6 @@ class TeamsController {
     this.modalTeamBackdrop?.addEventListener('click', (e) => {
       if (e.target === this.modalTeamBackdrop) this.closeTeamModal();
     }, { signal });
-
-    const colorDots = this.container.querySelectorAll<HTMLElement>('[data-ref="color-dot"]');
-    colorDots.forEach((dot) => {
-      dot.addEventListener('click', () => {
-        colorDots.forEach((d) => d.classList.remove('is-active'));
-        dot.classList.add('is-active');
-        this.selectedColor = dot.getAttribute('data-color') || '#6366f1';
-      }, { signal });
-    });
 
     this.formTeam?.addEventListener('submit', (e) => {
       e.preventDefault();
@@ -355,7 +339,6 @@ class TeamsController {
       tdRole.innerHTML = `<span class="component-badge component-badge--sm" data-ref="badge-role-${team.uuid}">${escapeHtml(roleText)}</span>`;
 
       const tdDate = document.createElement('td');
-      tdDate.className = 'text-right';
       tdDate.setAttribute('data-ref', `cell-date-${team.uuid}`);
       tdDate.innerHTML = `<span class="component-badge component-badge--sm" data-ref="badge-date-${team.uuid}">${escapeHtml(formatDate(team.created_at))}</span>`;
 
@@ -383,18 +366,6 @@ class TeamsController {
 
   private updateSelectionUi(): void {
     const totalSelected = this.selectedTeamUuids.size;
-
-    if (this.selectionCountBadge) {
-      if (totalSelected > 0) {
-        this.selectionCountBadge.style.display = 'inline-flex';
-        this.selectionCountBadge.textContent =
-          totalSelected === 1
-            ? '1 seleccionado'
-            : `${totalSelected} seleccionados`;
-      } else {
-        this.selectionCountBadge.style.display = 'none';
-      }
-    }
 
     if (totalSelected === 0) {
       if (this.defaultActions) this.defaultActions.style.display = 'flex';
@@ -498,11 +469,6 @@ class TeamsController {
     }
 
     this.selectedColor = teamToEdit ? teamToEdit.color : '#6366f1';
-    const colorDots = this.container.querySelectorAll<HTMLElement>('[data-ref="color-dot"]');
-    colorDots.forEach((dot) => {
-      const c = dot.getAttribute('data-color');
-      dot.classList.toggle('is-active', c === this.selectedColor);
-    });
 
     if (this.modalTeamBackdrop) {
       this.modalTeamBackdrop.classList.add('is-visible');

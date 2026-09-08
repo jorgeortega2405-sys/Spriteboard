@@ -2097,7 +2097,7 @@ export async function createPurchasesView(): Promise<HTMLElement> {
         <td data-ref="cell-status-${p.id}">
           <span class="component-badge component-badge--sm" data-ref="badge-status-${p.id}">${escapeHtml(statusText || '')}</span>
         </td>
-        <td class="text-right" data-ref="cell-ref-${p.id}">
+        <td data-ref="cell-ref-${p.id}">
           <span class="component-badge component-badge--sm" data-ref="badge-ref-${p.id}" data-tooltip="${escapeHtml(refId)}">${escapeHtml(shortRef)}</span>
         </td>
       `;

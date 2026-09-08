@@ -653,6 +653,7 @@ class DesignController {
     this.renderLayersCards();
     this.renderFramesCards();
     this.isLoaded = true;
+    this.requestRedraw();
     return true;
   }
 
@@ -1392,21 +1393,30 @@ class DesignController {
   }
 
   private generateThumbnail(): string {
+    const maxThumbDim = 320;
+    let thumbW = this.canvasWidth;
+    let thumbH = this.canvasHeight;
+    if (thumbW > maxThumbDim || thumbH > maxThumbDim) {
+      const ratio = Math.min(maxThumbDim / thumbW, maxThumbDim / thumbH);
+      thumbW = Math.max(1, Math.round(thumbW * ratio));
+      thumbH = Math.max(1, Math.round(thumbH * ratio));
+    }
+
     const thumbCanvas = document.createElement('canvas');
-    thumbCanvas.width = this.canvasWidth;
-    thumbCanvas.height = this.canvasHeight;
+    thumbCanvas.width = thumbW;
+    thumbCanvas.height = thumbH;
     const ctx = thumbCanvas.getContext('2d');
     if (!ctx) return '';
 
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
+    ctx.fillRect(0, 0, thumbW, thumbH);
 
     const firstFrame = this.frames[0];
     if (firstFrame) {
       for (const layer of firstFrame.layers) {
         if (layer.visible) {
           ctx.globalAlpha = layer.opacity;
-          ctx.drawImage(layer.canvas, 0, 0);
+          ctx.drawImage(layer.canvas, 0, 0, thumbW, thumbH);
         }
       }
     }
@@ -1441,16 +1451,31 @@ class DesignController {
           layer.visible = sLayer.visible !== false;
           layer.opacity = typeof sLayer.opacity === 'number' ? sLayer.opacity : 1.0;
 
-          if (sLayer.data && sLayer.data.startsWith('data:image')) {
+          if (sLayer.data && (sLayer.data.startsWith('data:image') || sLayer.data.startsWith('/') || sLayer.data.startsWith('http'))) {
             await new Promise<void>((resolve) => {
               const img = new Image();
-              img.onload = () => {
+              let done = false;
+              const finish = () => {
+                if (done) return;
+                done = true;
+                layer.ctx.imageSmoothingEnabled = false;
                 layer.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
-                layer.ctx.drawImage(img, 0, 0);
+                try {
+                  layer.ctx.drawImage(img, 0, 0, this.canvasWidth, this.canvasHeight);
+                } catch {}
                 resolve();
               };
-              img.onerror = () => resolve();
+              img.onload = finish;
+              img.onerror = () => {
+                if (!done) {
+                  done = true;
+                  resolve();
+                }
+              };
               img.src = sLayer.data;
+              if (img.complete && img.naturalWidth > 0) {
+                finish();
+              }
             });
           }
 
@@ -1470,6 +1495,7 @@ class DesignController {
         ? project.activeFrameId
         : this.frames[0].id;
 
+      this.requestRedraw();
       return true;
     } catch {
       return false;
@@ -1642,6 +1668,7 @@ class DesignController {
     this.panY = Math.round((viewportH - this.canvasHeight * this.zoom) / 2);
 
     this.updateZoomUI();
+    this.requestRedraw();
   }
 
   private setZoom(newZoom: number, centerX?: number, centerY?: number): void {

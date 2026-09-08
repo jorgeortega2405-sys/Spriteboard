@@ -4,7 +4,6 @@
     <div class="component-top" data-ref="component-top">
       <div class="component-top-left" data-ref="component-top-left">
         <h1 class="component-top-title" data-ref="teams-title" data-i18n="teams.title">Tus equipos</h1>
-        <span class="component-selection-badge" data-ref="teams-selection-count" style="display: none;"></span>
       </div>
 
       <div class="component-top-right" data-ref="component-top-right">
@@ -13,24 +12,21 @@
           <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-toggle-search" data-tooltip="Buscar equipos" aria-label="Buscar equipos">
             <span class="material-symbols-rounded">search</span>
           </button>
-          <button type="button" class="btn btn--h40 btn--black btn--icon" data-ref="btn-create-team" data-tooltip="Crear equipo" aria-label="Crear equipo">
+          <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-create-team" data-tooltip="Crear equipo" aria-label="Crear equipo">
             <span class="material-symbols-rounded">group_add</span>
           </button>
         </div>
 
         <!-- Acciones contextuales al seleccionar items -->
         <div class="component-top-actions" data-ref="teams-selected-actions" style="display: none;">
-          <button type="button" class="btn btn--h40 btn--semi-black btn--icon" data-ref="btn-action-members" data-tooltip="Miembros" aria-label="Miembros">
+          <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-action-members" data-tooltip="Miembros" aria-label="Miembros">
             <span class="material-symbols-rounded">groups</span>
           </button>
-          <button type="button" class="btn btn--h40 btn--semi-black btn--icon" data-ref="btn-action-edit" data-tooltip="Editar" aria-label="Editar">
+          <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-action-edit" data-tooltip="Editar" aria-label="Editar">
             <span class="material-symbols-rounded">edit</span>
           </button>
           <button type="button" class="btn btn--h40 btn--danger btn--icon" data-ref="btn-action-delete" data-tooltip="Eliminar" aria-label="Eliminar">
             <span class="material-symbols-rounded">delete</span>
-          </button>
-          <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-action-clear-selection" data-tooltip="Deseleccionar" aria-label="Deseleccionar">
-            <span class="material-symbols-rounded">close</span>
           </button>
         </div>
       </div>
@@ -61,7 +57,7 @@
               <th data-ref="th-desc" data-i18n="teams.col_desc">Descripción</th>
               <th data-ref="th-members" data-i18n="teams.col_members">Miembros</th>
               <th data-ref="th-role" data-i18n="teams.col_role">Rol</th>
-              <th class="text-right" data-ref="th-created" data-i18n="teams.col_created">Fecha de creación</th>
+              <th data-ref="th-created" data-i18n="teams.col_created">Fecha de creación</th>
             </tr>
           </thead>
           <tbody class="component-table__body" data-ref="teams-tbody">
@@ -115,35 +111,19 @@
       <button type="button" class="modal-close-btn" data-ref="btn-close-team-modal" aria-label="Cerrar modal">
         <span class="material-symbols-rounded">close</span>
       </button>
-      <div class="modal-card modal-card--w-480" data-ref="modal-team-card">
+      <div class="modal-card modal-card--w-520" data-ref="modal-team-card">
         <div class="modal-card__header">
           <h2 class="modal-card__title" data-ref="modal-team-title" data-i18n="teams.modal_create_title">Nuevo equipo de trabajo</h2>
         </div>
         <form class="modal-card__body" data-ref="form-team">
-          <div class="field-group">
-            <label class="field" data-ref="field-team-name">
-              <span class="field__label" data-i18n="teams.name_label">Nombre del equipo</span>
-              <input class="field__input" data-ref="input-team-name" type="text" placeholder=" " maxlength="100" required />
-            </label>
-          </div>
-          <div class="field-group">
-            <label class="field" data-ref="field-team-desc">
-              <span class="field__label" data-i18n="teams.desc_label">Descripción (opcional)</span>
-              <input class="field__input" data-ref="input-team-desc" type="text" placeholder=" " maxlength="255" />
-            </label>
-          </div>
-          <div class="field-group">
-            <span class="field__label field__label--static" data-i18n="teams.color_label">Color distintivo</span>
-            <div class="team-color-picker" data-ref="team-color-picker">
-              <button type="button" class="team-color-dot is-active" data-ref="color-dot" data-color="#6366f1" style="background-color: #6366f1;" aria-label="Índigo"></button>
-              <button type="button" class="team-color-dot" data-ref="color-dot" data-color="#3b82f6" style="background-color: #3b82f6;" aria-label="Azul"></button>
-              <button type="button" class="team-color-dot" data-ref="color-dot" data-color="#10b981" style="background-color: #10b981;" aria-label="Verde"></button>
-              <button type="button" class="team-color-dot" data-ref="color-dot" data-color="#f59e0b" style="background-color: #f59e0b;" aria-label="Ámbar"></button>
-              <button type="button" class="team-color-dot" data-ref="color-dot" data-color="#ef4444" style="background-color: #ef4444;" aria-label="Rojo"></button>
-              <button type="button" class="team-color-dot" data-ref="color-dot" data-color="#8b5cf6" style="background-color: #8b5cf6;" aria-label="Púrpura"></button>
-              <button type="button" class="team-color-dot" data-ref="color-dot" data-color="#ec4899" style="background-color: #ec4899;" aria-label="Rosa"></button>
-            </div>
-          </div>
+          <label class="field" data-ref="field-team-name">
+            <input class="field__input" data-ref="input-team-name" type="text" placeholder=" " maxlength="100" autocomplete="off" required />
+            <span class="field__label" data-ref="label-team-name" data-i18n="teams.name_label">Nombre del equipo</span>
+          </label>
+          <label class="field" data-ref="field-team-desc">
+            <input class="field__input" data-ref="input-team-desc" type="text" placeholder=" " maxlength="255" autocomplete="off" />
+            <span class="field__label" data-ref="label-team-desc" data-i18n="teams.desc_label">Descripción (opcional)</span>
+          </label>
 
           <div class="modal-card__actions">
             <button type="button" class="btn btn--h40 btn--outline" data-ref="btn-cancel-team" data-i18n="modal.cancel">Cancelar</button>
@@ -160,7 +140,7 @@
       <button type="button" class="modal-close-btn" data-ref="btn-close-members-modal" aria-label="Cerrar modal">
         <span class="material-symbols-rounded">close</span>
       </button>
-      <div class="modal-card modal-card--w-480" data-ref="modal-members-card">
+      <div class="modal-card modal-card--w-520" data-ref="modal-members-card">
         <div class="modal-card__header">
           <h2 class="modal-card__title" data-ref="members-modal-title" data-i18n="teams.members_title">Integrantes del equipo</h2>
         </div>
@@ -168,8 +148,8 @@
           <div class="field-group">
             <div style="display: flex; gap: 8px; align-items: stretch;">
               <label class="field" data-ref="field-add-member" style="flex: 1; margin: 0;">
-                <span class="field__label" data-i18n="teams.add_member_placeholder">Buscar por nombre o correo...</span>
                 <input class="field__input" data-ref="input-add-member" type="text" placeholder=" " autocomplete="off" />
+                <span class="field__label" data-ref="label-add-member" data-i18n="teams.add_member_placeholder">Buscar por nombre o correo...</span>
               </label>
               <button type="button" class="btn btn--h55 btn--black" data-ref="btn-add-member" style="white-space: nowrap; padding: 0 16px;">
                 <span class="material-symbols-rounded">person_add</span>

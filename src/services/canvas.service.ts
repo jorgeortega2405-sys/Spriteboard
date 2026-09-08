@@ -12,10 +12,12 @@ export async function createCanvas(userId: number, dto: CreateCanvasDto): Promis
   const height = Math.max(1, Math.min(16384, Math.floor(Number(dto.height) || 1080)));
   const unit = dto.unit && ['px', 'cm', 'in', 'mm'].includes(dto.unit) ? dto.unit : 'px';
   const accessLevel = dto.access_level === 'public' ? 'public' : 'private';
+  const dataStr = dto.data ? (typeof dto.data === 'string' ? dto.data : JSON.stringify(dto.data)) : null;
+  const previewThumbnail = dto.preview_thumbnail !== undefined ? dto.preview_thumbnail : null;
 
   const query = `
-    INSERT INTO canvases (uuid, user_id, name, width, height, unit, access_level, data)
-    VALUES (?, ?, ?, ?, ?, ?, ?, NULL)
+    INSERT INTO canvases (uuid, user_id, name, width, height, unit, access_level, data, preview_thumbnail)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
   try {
@@ -27,6 +29,8 @@ export async function createCanvas(userId: number, dto: CreateCanvasDto): Promis
       height,
       unit,
       accessLevel,
+      dataStr,
+      previewThumbnail,
     ]);
 
     const insertedId = result.insertId;
@@ -160,30 +164,32 @@ export async function syncCanvas(userId: number | null, dto: SyncCanvasDto): Pro
       if (row.deleted_at !== null) {
         throw new Error('El lienzo ha sido enviado a la papelera.');
       }
-      const isOwner = userId !== null && row.user_id === userId;
-      const isPublic = row.access_level === 'public';
-      let isMember = false;
+      if (userId === null) {
+        throw new Error('Debes iniciar sesión para sincronizar cambios en este lienzo.');
+      }
+      const isOwner = row.user_id === userId;
+      let isEditor = isOwner;
 
-      if (!isOwner && !isPublic && userId !== null) {
+      if (!isOwner) {
         const [memberRows] = await canvasPool.query<mysql.RowDataPacket[]>(
-          'SELECT id FROM canvas_members WHERE canvas_id = ? AND user_id = ? LIMIT 1',
+          "SELECT id FROM canvas_members WHERE canvas_id = ? AND user_id = ? AND role = 'editor' LIMIT 1",
           [row.id, userId]
         );
-        isMember = memberRows.length > 0;
+        isEditor = memberRows.length > 0;
 
-        if (!isMember) {
+        if (!isEditor) {
           const [teamRows] = await canvasPool.query<mysql.RowDataPacket[]>(
             `SELECT ct.id FROM canvas_teams ct
              INNER JOIN db_identity.team_members tm ON tm.team_id = ct.team_id
              WHERE ct.canvas_id = ? AND tm.user_id = ? AND ct.role = 'editor' LIMIT 1`,
             [row.id, userId]
           );
-          isMember = teamRows.length > 0;
+          isEditor = teamRows.length > 0;
         }
       }
 
-      if (!isOwner && !isPublic && !isMember) {
-        throw new Error('El lienzo ya pertenece a otra cuenta y es privado.');
+      if (!isEditor) {
+        throw new Error('No tienes permisos de edición para sincronizar este lienzo.');
       }
 
       if (isOwner && accessLevel) {

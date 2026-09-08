@@ -9,288 +9,521 @@ import { getEmptyGraphicSvg, initCarouselScroll } from '../utils/dom.util.js';
 
 let activeCreateCanvasModal: { close: () => void } | null = null;
 
+interface PresetVariant {
+  label: string;
+  width: number;
+  height: number;
+  imagePath?: string;
+}
+
 interface PresetItem {
   id: string;
   name: string;
   width: number;
   height: number;
-  category: 'most-used' | 'popular' | 'try-something-new';
-  svgIcon: string;
+  svgIcon?: string;
+  imagePath?: string;
+  isTemplate?: boolean;
+  categoryName?: string;
+  variants?: PresetVariant[];
 }
 
-const PRESETS: PresetItem[] = [
-  {
-    id: 'presentation',
-    name: 'Presentación',
-    width: 1920,
-    height: 1080,
-    category: 'most-used',
-    svgIcon: `
-      <svg viewBox="0 0 120 75" width="108" height="68" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="10" y="8" width="100" height="59" rx="6" fill="#ffffff" filter="drop-shadow(0 2px 8px rgba(0,0,0,0.3))"/>
-        <rect x="18" y="16" width="30" height="4" rx="2" fill="#E2E8F0"/>
-        <rect x="18" y="24" width="18" height="3" rx="1.5" fill="#CBD5E1"/>
-        <path d="M18 54L38 48L54 53L76 36L92 42L102 32V60H18V54Z" fill="url(#orange_grad_pres)"/>
-        <path d="M18 54L38 48L54 53L76 36L92 42L102 32" stroke="#FF5400" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-        <defs>
-          <linearGradient id="orange_grad_pres" x1="60" y1="32" x2="60" y2="60" gradientUnits="userSpaceOnUse">
-            <stop stop-color="#FF6B00"/>
-            <stop offset="1" stop-color="#FF9E00" stop-opacity="0.2"/>
-          </linearGradient>
-        </defs>
-      </svg>
-    `,
-  },
-  {
-    id: 'whiteboard',
-    name: 'Pizarrón online',
-    width: 48,
-    height: 48,
-    category: 'most-used',
-    svgIcon: `
-      <svg viewBox="0 0 120 75" width="108" height="68" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="10" y="8" width="100" height="59" rx="6" fill="#ffffff" filter="drop-shadow(0 2px 8px rgba(0,0,0,0.3))"/>
-        <path d="M10 14C10 10.6863 12.6863 8 16 8H104C107.314 8 110 10.6863 110 14V20H10V14Z" fill="#00C48C"/>
-        <rect x="22" y="28" width="28" height="28" rx="4" fill="#BBF7D0"/>
-        <rect x="26" y="32" width="6" height="6" rx="1" fill="#16A34A"/>
-        <path d="M26 44H42" stroke="#16A34A" stroke-width="2" stroke-linecap="round"/>
-        <path d="M26 49H36" stroke="#16A34A" stroke-width="2" stroke-linecap="round"/>
-        <g transform="translate(68, 28)">
-          <path d="M12 2C12 2 4 10 4 18C4 22 7 26 12 26C17 26 20 22 20 18C20 10 12 2 12 2Z" fill="#059669"/>
-          <path d="M12 4V24" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round"/>
-          <path d="M6 14C8 16 12 16 12 16" stroke="#ffffff" stroke-width="1.2" stroke-linecap="round"/>
-          <path d="M18 14C16 16 12 16 12 16" stroke="#ffffff" stroke-width="1.2" stroke-linecap="round"/>
-        </g>
-      </svg>
-    `,
-  },
-  {
-    id: 'logo',
-    name: 'Logo',
-    width: 16,
-    height: 16,
-    category: 'most-used',
-    svgIcon: `
-      <svg viewBox="0 0 120 75" width="108" height="68" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="28" y="8" width="64" height="59" rx="6" fill="#ffffff" filter="drop-shadow(0 2px 8px rgba(0,0,0,0.3))"/>
-        <path d="M68 20C62 20 54 24 50 30L44 42C42 46 45 50 50 50H70C76 50 80 44 78 38C76 32 74 20 68 20Z" stroke="#6366F1" stroke-width="3" stroke-linejoin="round" fill="none"/>
-        <path d="M50 36C56 36 64 34 68 30" stroke="#6366F1" stroke-width="2.5" stroke-linecap="round"/>
-        <circle cx="68" cy="26" r="2" fill="#6366F1"/>
-        <rect x="42" y="56" width="36" height="3" rx="1.5" fill="#A5B4FC"/>
-      </svg>
-    `,
-  },
-  {
-    id: 'character',
-    name: 'Sprite estándar',
-    width: 32,
-    height: 32,
-    category: 'most-used',
-    svgIcon: `
-      <svg viewBox="0 0 120 75" width="108" height="68" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="24" y="8" width="72" height="59" rx="6" fill="#1E293B" filter="drop-shadow(0 2px 8px rgba(0,0,0,0.3))"/>
-        <rect x="44" y="16" width="32" height="26" rx="6" fill="#3B82F6"/>
-        <rect x="48" y="24" width="24" height="8" rx="3" fill="#38BDF8"/>
-        <circle cx="54" cy="28" r="2" fill="#ffffff"/>
-        <circle cx="66" cy="28" r="2" fill="#ffffff"/>
-        <path d="M40 50C40 44 48 44 60 44C72 44 80 44 80 50V58H40V50Z" fill="#2563EB"/>
-        <circle cx="60" cy="50" r="3" fill="#FBBF24"/>
-      </svg>
-    `,
-  },
-  {
-    id: 'document-a4',
-    name: 'Documento (A4, vertical)',
-    width: 64,
-    height: 128,
-    category: 'popular',
-    svgIcon: `
-      <svg viewBox="0 0 120 75" width="108" height="68" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M38 6H76L88 18V68C88 70.2091 86.2091 72 84 72H38C35.7909 72 34 70.2091 34 68V10C34 7.79086 35.7909 6 38 6Z" fill="#7C3AED" filter="drop-shadow(0 2px 8px rgba(0,0,0,0.3))"/>
-        <path d="M76 6V16C76 17.1046 76.8954 18 78 18H88L76 6Z" fill="#A78BFA"/>
-        <g transform="translate(61, 40)">
-          <path d="M0 -14C4 -8 4 -4 0 0C-4 -4 -4 -8 0 -14Z" fill="#C4B5FD"/>
-          <path d="M12 -8C10 -2 7 0 0 0C2 -5 6 -8 12 -8Z" fill="#DDD6FE"/>
-          <path d="M-12 -8C-10 -2 -7 0 0 0C-2 -5 -6 -8 -12 -8Z" fill="#DDD6FE"/>
-          <path d="M10 6C6 6 3 3 0 0C4 -1 8 1 10 6Z" fill="#C4B5FD"/>
-          <path d="M-10 6C-6 6 -3 3 0 0C-4 -1 -8 1 -10 6Z" fill="#C4B5FD"/>
-          <circle cx="0" cy="0" r="3" fill="#ffffff"/>
-        </g>
-        <rect x="44" y="58" width="32" height="3" rx="1.5" fill="#DDD6FE"/>
-        <rect x="50" y="64" width="20" height="2" rx="1" fill="#C4B5FD"/>
-      </svg>
-    `,
-  },
-  {
-    id: 'post-instagram',
-    name: 'Post para Instagram (4:5)',
-    width: 400,
-    height: 150,
-    category: 'popular',
-    svgIcon: `
-      <svg viewBox="0 0 120 75" width="108" height="68" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="42" y="6" width="36" height="66" rx="8" fill="#ffffff" stroke="#E2E8F0" stroke-width="1.5" filter="drop-shadow(0 2px 8px rgba(0,0,0,0.3))"/>
-        <circle cx="60" cy="11" r="1.5" fill="#94A3B8"/>
-        <rect x="46" y="16" width="28" height="34" rx="3" fill="#F87171"/>
-        <circle cx="56" cy="26" r="4" fill="#FEF08A"/>
-        <path d="M46 42L54 34L64 44L70 38L74 44V50H46V42Z" fill="#B91C1C"/>
-        <rect x="46" y="54" width="20" height="3" rx="1.5" fill="#F59E0B"/>
-        <rect x="46" y="59" width="14" height="2" rx="1" fill="#CBD5E1"/>
-      </svg>
-    `,
-  },
-  {
-    id: 'poster',
-    name: 'Póster (vertical 3:4)',
-    width: 128,
-    height: 128,
-    category: 'popular',
-    svgIcon: `
-      <svg viewBox="0 0 120 75" width="108" height="68" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="36" y="6" width="48" height="64" rx="4" fill="#8B5CF6" filter="drop-shadow(0 2px 8px rgba(0,0,0,0.3))"/>
-        <circle cx="60" cy="24" r="10" fill="#C4B5FD" fill-opacity="0.8"/>
-        <rect x="44" y="38" width="14" height="14" rx="2" fill="#DDD6FE"/>
-        <path d="M62 38H76V52C68.268 52 62 45.732 62 38Z" fill="#EDE9FE"/>
-        <rect x="44" y="56" width="32" height="3" rx="1.5" fill="#ffffff"/>
-        <rect x="44" y="61" width="22" height="2" rx="1" fill="#DDD6FE"/>
-      </svg>
-    `,
-  },
-  {
-    id: 'doc-digital',
-    name: 'Doc (Digital)',
-    width: 256,
-    height: 256,
-    category: 'popular',
-    svgIcon: `
-      <svg viewBox="0 0 120 75" width="108" height="68" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="22" y="8" width="60" height="58" rx="4" fill="#ffffff" filter="drop-shadow(0 2px 8px rgba(0,0,0,0.3))"/>
-        <path d="M22 12C22 9.79086 23.7909 8 26 8H78C80.2091 8 82 9.79086 82 12V20H22V12Z" fill="#0D9488"/>
-        <circle cx="28" cy="14" r="2" fill="#ffffff"/>
-        <path d="M22 50L36 44L48 52L62 38L74 44L82 36V66H22V50Z" fill="#99F6E4"/>
-        <path d="M22 50L36 44L48 52L62 38L74 44L82 36" stroke="#0D9488" stroke-width="2" stroke-linecap="round"/>
-        <rect x="68" y="24" width="28" height="46" rx="6" fill="#ffffff" stroke="#CBD5E1" stroke-width="1.2" filter="drop-shadow(0 2px 6px rgba(0,0,0,0.25))"/>
-        <rect x="72" y="30" width="20" height="12" rx="2" fill="#F0FDFA"/>
-        <path d="M72 54L80 48L88 52L92 46V64H72V54Z" fill="#2DD4BF"/>
-        <circle cx="82" cy="27" r="1" fill="#94A3B8"/>
-      </svg>
-    `,
-  },
-  {
-    id: 'game-banner',
-    name: 'Game banner',
-    width: 320,
-    height: 180,
-    category: 'popular',
-    svgIcon: `
-      <svg viewBox="0 0 120 75" width="108" height="68" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="12" y="10" width="96" height="54" rx="6" fill="#0F172A" filter="drop-shadow(0 2px 8px rgba(0,0,0,0.3))"/>
-        <circle cx="60" cy="30" r="12" fill="#F59E0B"/>
-        <polygon points="12,64 36,40 60,64" fill="#3B82F6"/>
-        <polygon points="48,64 74,32 100,64" fill="#1D4ED8"/>
-        <polygon points="80,64 96,46 108,64" fill="#1E40AF"/>
-        <rect x="12" y="58" width="96" height="6" rx="2" fill="#059669"/>
-      </svg>
-    `,
-  },
-  {
-    id: 'hd-art',
-    name: 'Ilustración HD',
+interface PresetSection {
+  id: string;
+  titleKey: string;
+  items: PresetItem[];
+}
+
+interface PresetCategoryTab {
+  id: 'for-you' | 'formats' | 'nature' | 'cities' | 'fantasy' | 'scifi' | 'characters' | 'items';
+  tabRef: string;
+  titleKey: string;
+  iconName: string;
+  sections: PresetSection[];
+}
+
+function makeTemplateItem(
+  id: string,
+  name: string,
+  category: string,
+  fileBase: string,
+  categoryLabel: string,
+  isWide = false
+): PresetItem {
+  if (isWide) {
+    return {
+      id,
+      name,
+      width: 1920,
+      height: 1080,
+      imagePath: `/assets/templates/${category}/${fileBase}_1920x1080.png`,
+      isTemplate: true,
+      categoryName: categoryLabel,
+      variants: [
+        { label: '1920 × 1080 px', width: 1920, height: 1080, imagePath: `/assets/templates/${category}/${fileBase}_1920x1080.png` },
+        { label: '1024 × 1024 px', width: 1024, height: 1024, imagePath: `/assets/templates/${category}/${fileBase}_1024x1024.png` },
+        { label: '512 × 512 px', width: 512, height: 512, imagePath: `/assets/templates/${category}/${fileBase}_512x512.png` },
+      ],
+    };
+  }
+
+  return {
+    id,
+    name,
     width: 512,
     height: 512,
-    category: 'popular',
-    svgIcon: `
-      <svg viewBox="0 0 120 75" width="108" height="68" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="24" y="8" width="72" height="58" rx="6" fill="#18181B" filter="drop-shadow(0 2px 8px rgba(0,0,0,0.3))"/>
-        <circle cx="60" cy="34" r="18" fill="url(#hd_grad)"/>
-        <circle cx="52" cy="28" r="3" fill="#ffffff"/>
-        <circle cx="68" cy="28" r="3" fill="#FDE047"/>
-        <circle cx="54" cy="40" r="3" fill="#38BDF8"/>
-        <circle cx="66" cy="40" r="3" fill="#4ADE80"/>
-        <path d="M36 56C48 50 72 50 84 56" stroke="#EC4899" stroke-width="3" stroke-linecap="round"/>
-        <defs>
-          <linearGradient id="hd_grad" x1="42" y1="16" x2="78" y2="52" gradientUnits="userSpaceOnUse">
-            <stop stop-color="#8B5CF6"/>
-            <stop offset="1" stop-color="#EC4899"/>
-          </linearGradient>
-        </defs>
-      </svg>
-    `,
+    imagePath: `/assets/templates/${category}/${fileBase}_512x512.png`,
+    isTemplate: true,
+    categoryName: categoryLabel,
+    variants: [
+      { label: '512 × 512 px', width: 512, height: 512, imagePath: `/assets/templates/${category}/${fileBase}_512x512.png` },
+      { label: '768 × 768 px', width: 768, height: 768, imagePath: `/assets/templates/${category}/${fileBase}_768x768.png` },
+      { label: '1024 × 1024 px', width: 1024, height: 1024, imagePath: `/assets/templates/${category}/${fileBase}_1024x1024.png` },
+    ],
+  };
+}
+
+const PRESET_SVGS: Record<string, string> = {
+  formatSquareCharacter: `
+    <svg viewBox="0 0 120 75" width="108" height="68" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="31" y="8" width="58" height="59" rx="6" fill="#ffffff" filter="drop-shadow(0 2px 8px rgba(0,0,0,0.25))"/>
+      <path d="M31 14C31 10.6863 33.6863 8 37 8H83C86.3137 8 89 10.6863 89 14V22H31V14Z" fill="#3B82F6"/>
+      <rect x="42" y="30" width="36" height="24" rx="4" fill="#EFF6FF"/>
+      <rect x="46" y="35" width="16" height="4" rx="2" fill="#93C5FD"/>
+      <rect x="46" y="42" width="28" height="3" rx="1.5" fill="#BFDBFE"/>
+      <circle cx="72" cy="37" r="3" fill="#60A5FA"/>
+    </svg>
+  `,
+  formatSquareBoss: `
+    <svg viewBox="0 0 120 75" width="108" height="68" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="28" y="8" width="64" height="59" rx="6" fill="#ffffff" filter="drop-shadow(0 2px 8px rgba(0,0,0,0.25))"/>
+      <path d="M28 14C28 10.6863 30.6863 8 34 8H86C89.3137 8 92 10.6863 92 14V22H28V14Z" fill="#7C3AED"/>
+      <rect x="38" y="30" width="44" height="26" rx="4" fill="#F5F3FF"/>
+      <circle cx="60" cy="40" r="7" fill="#A78BFA"/>
+      <rect x="44" y="50" width="32" height="3" rx="1.5" fill="#DDD6FE"/>
+    </svg>
+  `,
+  formatIconSmall: `
+    <svg viewBox="0 0 120 75" width="108" height="68" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="33" y="8" width="54" height="59" rx="6" fill="#ffffff" filter="drop-shadow(0 2px 8px rgba(0,0,0,0.25))"/>
+      <rect x="43" y="18" width="34" height="34" rx="6" fill="#FEF2F2"/>
+      <rect x="52" y="27" width="16" height="16" rx="3" fill="#EF4444"/>
+      <rect x="46" y="56" width="28" height="3" rx="1.5" fill="#E2E8F0"/>
+    </svg>
+  `,
+  formatDialogueBox: `
+    <svg viewBox="0 0 120 75" width="108" height="68" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="18" y="11" width="84" height="53" rx="6" fill="#ffffff" filter="drop-shadow(0 2px 8px rgba(0,0,0,0.25))"/>
+      <rect x="24" y="18" width="22" height="22" rx="4" fill="#6366F1"/>
+      <circle cx="35" cy="27" r="5" fill="#C7D2FE"/>
+      <rect x="52" y="19" width="38" height="4" rx="2" fill="#94A3B8"/>
+      <rect x="52" y="27" width="44" height="3" rx="1.5" fill="#CBD5E1"/>
+      <rect x="52" y="34" width="30" height="3" rx="1.5" fill="#E2E8F0"/>
+      <rect x="24" y="47" width="72" height="10" rx="3" fill="#F1F5F9"/>
+    </svg>
+  `,
+  formatSquareGrid: `
+    <svg viewBox="0 0 120 75" width="108" height="68" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="31" y="8" width="58" height="59" rx="6" fill="#ffffff" filter="drop-shadow(0 2px 8px rgba(0,0,0,0.25))"/>
+      <path d="M31 14C31 10.6863 33.6863 8 37 8H83C86.3137 8 89 10.6863 89 14V20H31V14Z" fill="#10B981"/>
+      <g transform="translate(37, 26)">
+        <rect x="0" y="0" width="10" height="10" rx="2" fill="#A7F3D0"/>
+        <rect x="12" y="0" width="10" height="10" rx="2" fill="#F1F5F9"/>
+        <rect x="24" y="0" width="10" height="10" rx="2" fill="#F1F5F9"/>
+        <rect x="36" y="0" width="10" height="10" rx="2" fill="#F1F5F9"/>
+        <rect x="0" y="12" width="10" height="10" rx="2" fill="#F1F5F9"/>
+        <rect x="12" y="12" width="10" height="10" rx="2" fill="#34D399"/>
+        <rect x="24" y="12" width="10" height="10" rx="2" fill="#F1F5F9"/>
+        <rect x="36" y="12" width="10" height="10" rx="2" fill="#F1F5F9"/>
+        <rect x="0" y="24" width="10" height="10" rx="2" fill="#F1F5F9"/>
+        <rect x="12" y="24" width="10" height="10" rx="2" fill="#F1F5F9"/>
+        <rect x="24" y="24" width="10" height="10" rx="2" fill="#059669"/>
+        <rect x="36" y="24" width="10" height="10" rx="2" fill="#F1F5F9"/>
+      </g>
+    </svg>
+  `,
+  formatIsometric: `
+    <svg viewBox="0 0 120 75" width="108" height="68" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="28" y="8" width="64" height="59" rx="6" fill="#ffffff" filter="drop-shadow(0 2px 8px rgba(0,0,0,0.25))"/>
+      <polygon points="60,18 84,29 60,40 36,29" fill="#38BDF8"/>
+      <polygon points="36,29 60,40 60,56 36,45" fill="#0284C7"/>
+      <polygon points="60,40 84,29 84,45 60,56" fill="#0369A1"/>
+      <line x1="60" y1="40" x2="60" y2="56" stroke="#BAE6FD" stroke-width="1.2"/>
+    </svg>
+  `,
+  formatStrip4f: `
+    <svg viewBox="0 0 120 75" width="108" height="68" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="11" y="18" width="98" height="39" rx="6" fill="#ffffff" filter="drop-shadow(0 2px 8px rgba(0,0,0,0.25))"/>
+      <line x1="35" y1="18" x2="35" y2="57" stroke="#E2E8F0" stroke-width="1.5"/>
+      <line x1="60" y1="18" x2="60" y2="57" stroke="#E2E8F0" stroke-width="1.5"/>
+      <line x1="84" y1="18" x2="84" y2="57" stroke="#E2E8F0" stroke-width="1.5"/>
+      <circle cx="23" cy="42" r="5" fill="#3B82F6"/>
+      <circle cx="47" cy="34" r="5" fill="#3B82F6"/>
+      <circle cx="72" cy="38" r="5" fill="#3B82F6"/>
+      <circle cx="96" cy="30" r="5" fill="#3B82F6"/>
+    </svg>
+  `,
+  formatRetroGameboy: `
+    <svg viewBox="0 0 120 75" width="108" height="68" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="36" y="6" width="48" height="63" rx="6" fill="#E2E8F0" filter="drop-shadow(0 2px 8px rgba(0,0,0,0.25))"/>
+      <rect x="42" y="12" width="36" height="28" rx="3" fill="#8B956D"/>
+      <rect x="47" y="17" width="12" height="12" rx="1" fill="#4B5320"/>
+      <circle cx="49" cy="50" r="3.5" fill="#475569"/>
+      <circle cx="70" cy="48" r="2.5" fill="#991B1B"/>
+      <circle cx="76" cy="52" r="2.5" fill="#991B1B"/>
+    </svg>
+  `,
+  formatRetroPico8: `
+    <svg viewBox="0 0 120 75" width="108" height="68" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="31" y="8" width="58" height="59" rx="6" fill="#ffffff" filter="drop-shadow(0 2px 8px rgba(0,0,0,0.25))"/>
+      <rect x="38" y="16" width="44" height="34" rx="4" fill="#000000"/>
+      <circle cx="60" cy="31" r="7" fill="#FF004D"/>
+      <circle cx="60" cy="31" r="3" fill="#FFEC27"/>
+      <rect x="38" y="54" width="11" height="4" fill="#00E436"/>
+      <rect x="49" y="54" width="11" height="4" fill="#29ADFF"/>
+      <rect x="60" y="54" width="11" height="4" fill="#83769C"/>
+      <rect x="71" y="54" width="11" height="4" fill="#FF77A8"/>
+    </svg>
+  `,
+  formatRetroConsole: `
+    <svg viewBox="0 0 120 75" width="108" height="68" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="22" y="12" width="76" height="51" rx="8" fill="#ffffff" filter="drop-shadow(0 2px 8px rgba(0,0,0,0.25))"/>
+      <rect x="22" y="12" width="76" height="14" rx="6" fill="#CBD5E1"/>
+      <circle cx="36" cy="38" r="6" fill="#64748B"/>
+      <circle cx="76" cy="33" r="3" fill="#3B82F6"/>
+      <circle cx="83" cy="33" r="3" fill="#EAB308"/>
+      <circle cx="76" cy="43" r="3" fill="#22C55E"/>
+      <circle cx="83" cy="43" r="3" fill="#EF4444"/>
+    </svg>
+  `,
+  formatLandscapeParallax: `
+    <svg viewBox="0 0 120 75" width="108" height="68" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="10" y="15" width="100" height="45" rx="6" fill="#ffffff" filter="drop-shadow(0 2px 8px rgba(0,0,0,0.25))"/>
+      <rect x="14" y="19" width="92" height="37" rx="4" fill="#F0F9FF"/>
+      <path d="M14 42L36 29L58 45L78 33L106 52V56H14V42Z" fill="#BAE6FD"/>
+      <path d="M14 47L40 37L66 49L88 41L106 54V56H14V47Z" fill="#38BDF8"/>
+      <circle cx="88" cy="26" r="4" fill="#FDE047"/>
+    </svg>
+  `,
+  formatVerticalMobile: `
+    <svg viewBox="0 0 120 75" width="108" height="68" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="42" y="5" width="36" height="65" rx="6" fill="#ffffff" filter="drop-shadow(0 2px 8px rgba(0,0,0,0.25))"/>
+      <rect x="46" y="10" width="28" height="48" rx="4" fill="#F8FAFC"/>
+      <rect x="50" y="16" width="20" height="12" rx="2" fill="#E0E7FF"/>
+      <circle cx="60" cy="63" r="2" fill="#94A3B8"/>
+    </svg>
+  `,
+};
+
+const CATEGORY_TABS: PresetCategoryTab[] = [
+  {
+    id: 'for-you',
+    tabRef: 'tab-for-you',
+    titleKey: 'canvas.tab_for_you',
+    iconName: 'recommend',
+    sections: [
+      {
+        id: 'most-used',
+        titleKey: 'canvas.section_most_used',
+        items: [
+          { id: 'fmt-sprite-32', name: 'Sprite estándar', width: 32, height: 32, svgIcon: PRESET_SVGS.formatSquareCharacter },
+          makeTemplateItem('tmpl-nat-forest', 'Bosque Mágico', 'nature', 'forest', 'Naturaleza', true),
+          { id: 'fmt-gb-classic', name: 'Game Boy Clásica', width: 160, height: 144, svgIcon: PRESET_SVGS.formatRetroGameboy },
+          makeTemplateItem('tmpl-ct-cyber', 'Callejón Cyberpunk', 'cities', 'cyber_alley', 'Ciudades'),
+          { id: 'fmt-pico8', name: 'PICO-8 Fantasy', width: 128, height: 128, svgIcon: PRESET_SVGS.formatRetroPico8 },
+          makeTemplateItem('tmpl-fn-dungeon', 'Mazmorra Oscura', 'fantasy', 'dark_dungeon', 'Fantasía'),
+        ],
+      },
+      {
+        id: 'popular',
+        titleKey: 'canvas.section_popular',
+        items: [
+          makeTemplateItem('tmpl-sci-station', 'Estación Orbital', 'scifi', 'orbital_station', 'Espacio', true),
+          makeTemplateItem('tmpl-ch-humanoid', 'Base Humanoide', 'characters', 'humanoid_base', 'Personajes'),
+          makeTemplateItem('tmpl-it-sword', 'Espada de Cristal', 'items', 'crystal_sword', 'Objetos'),
+          { id: 'fmt-snes', name: 'SNES 4:3', width: 256, height: 224, svgIcon: PRESET_SVGS.formatRetroConsole },
+          makeTemplateItem('tmpl-it-potion', 'Poción de Maná', 'items', 'mana_potion', 'Objetos'),
+          makeTemplateItem('tmpl-ch-chibi', 'Retrato Chibi', 'characters', 'chibi_portrait', 'Personajes'),
+        ],
+      },
+      {
+        id: 'try-new',
+        titleKey: 'canvas.section_try_new',
+        items: [
+          makeTemplateItem('tmpl-nat-crystals', 'Cueva de Cristales', 'nature', 'crystal_cave', 'Naturaleza'),
+          makeTemplateItem('tmpl-ct-metropolis', 'Metrópolis Nocturna', 'cities', 'night_metropolis', 'Ciudades', true),
+          makeTemplateItem('tmpl-fn-portal', 'Portal Místico', 'fantasy', 'mystic_portal', 'Fantasía'),
+          makeTemplateItem('tmpl-sci-planet', 'Planeta con Anillos', 'scifi', 'ringed_planet', 'Espacio'),
+          makeTemplateItem('tmpl-ch-slime', 'Criatura Slime', 'characters', 'slime_creature', 'Personajes'),
+          makeTemplateItem('tmpl-fn-chest', 'Cofre Legendario', 'fantasy', 'treasure_chest', 'Fantasía'),
+        ],
+      },
+    ],
   },
   {
-    id: 'isometric',
-    name: 'Sprite isométrico',
-    width: 64,
-    height: 32,
-    category: 'try-something-new',
-    svgIcon: `
-      <svg viewBox="0 0 120 75" width="108" height="68" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="20" y="8" width="80" height="58" rx="6" fill="#09090B" filter="drop-shadow(0 2px 8px rgba(0,0,0,0.3))"/>
-        <polygon points="60,18 86,30 60,42 34,30" fill="#38BDF8"/>
-        <polygon points="34,30 60,42 60,60 34,48" fill="#0284C7"/>
-        <polygon points="60,42 86,30 86,48 60,60" fill="#0369A1"/>
-        <polygon points="60,24 74,30 60,36 46,30" fill="#BAE6FD"/>
-      </svg>
-    `,
+    id: 'formats',
+    tabRef: 'tab-formats',
+    titleKey: 'canvas.tab_formats',
+    iconName: 'straighten',
+    sections: [
+      {
+        id: 'fmt-sprites',
+        titleKey: 'canvas.section_classic_sprites',
+        items: [
+          { id: 'fmt-sp-16', name: 'Micro Sprite 16×16', width: 16, height: 16, svgIcon: PRESET_SVGS.formatIconSmall },
+          { id: 'fmt-sp-32', name: 'Sprite Estándar 32×32', width: 32, height: 32, svgIcon: PRESET_SVGS.formatSquareCharacter },
+          { id: 'fmt-sp-48', name: 'Sprite Grande 48×48', width: 48, height: 48, svgIcon: PRESET_SVGS.formatSquareCharacter },
+          { id: 'fmt-sp-64', name: 'Sprite Detallado 64×64', width: 64, height: 64, svgIcon: PRESET_SVGS.formatSquareBoss },
+          { id: 'fmt-sp-128', name: 'Gran Lienzo 128×128', width: 128, height: 128, svgIcon: PRESET_SVGS.formatSquareBoss },
+        ],
+      },
+      {
+        id: 'fmt-retro',
+        titleKey: 'canvas.section_retro_consoles',
+        items: [
+          { id: 'fmt-rc-gb', name: 'Game Boy (160×144)', width: 160, height: 144, svgIcon: PRESET_SVGS.formatRetroGameboy },
+          { id: 'fmt-rc-nes', name: 'NES (256×240)', width: 256, height: 240, svgIcon: PRESET_SVGS.formatRetroConsole },
+          { id: 'fmt-rc-snes', name: 'SNES (256×224)', width: 256, height: 224, svgIcon: PRESET_SVGS.formatRetroConsole },
+          { id: 'fmt-rc-gba', name: 'GBA (240×160)', width: 240, height: 160, svgIcon: PRESET_SVGS.formatRetroConsole },
+          { id: 'fmt-rc-genesis', name: 'Mega Drive (320×224)', width: 320, height: 224, svgIcon: PRESET_SVGS.formatRetroConsole },
+          { id: 'fmt-rc-pico8', name: 'PICO-8 (128×128)', width: 128, height: 128, svgIcon: PRESET_SVGS.formatRetroPico8 },
+        ],
+      },
+      {
+        id: 'fmt-screens',
+        titleKey: 'canvas.section_screens_parallax',
+        items: [
+          { id: 'fmt-sc-144p', name: 'Pixel 144p (256×144)', width: 256, height: 144, svgIcon: PRESET_SVGS.formatLandscapeParallax },
+          { id: 'fmt-sc-180p', name: 'Pixel 180p (320×180)', width: 320, height: 180, svgIcon: PRESET_SVGS.formatLandscapeParallax },
+          { id: 'fmt-sc-270p', name: 'Pixel 270p (480×270)', width: 480, height: 270, svgIcon: PRESET_SVGS.formatLandscapeParallax },
+          { id: 'fmt-sc-360p', name: 'Pixel 360p (640×360)', width: 640, height: 360, svgIcon: PRESET_SVGS.formatLandscapeParallax },
+          { id: 'fmt-sc-vertical', name: 'Pantalla vertical (64×128)', width: 64, height: 128, svgIcon: PRESET_SVGS.formatVerticalMobile },
+        ],
+      },
+      {
+        id: 'fmt-tilesets',
+        titleKey: 'canvas.section_tilesets_maps',
+        items: [
+          { id: 'fmt-tl-16', name: 'Tileset 16×16 estándar', width: 256, height: 256, svgIcon: PRESET_SVGS.formatSquareGrid },
+          { id: 'fmt-tl-32', name: 'Tileset 32×32 HD', width: 512, height: 512, svgIcon: PRESET_SVGS.formatSquareGrid },
+          { id: 'fmt-tl-iso', name: 'Arte isométrico 2:1', width: 128, height: 128, svgIcon: PRESET_SVGS.formatIsometric },
+          { id: 'fmt-tl-strip', name: 'Tira de 4 cuadros', width: 128, height: 32, svgIcon: PRESET_SVGS.formatStrip4f },
+        ],
+      },
+    ],
   },
   {
-    id: 'widescreen',
-    name: 'Cinemática panorámica',
-    width: 640,
-    height: 360,
-    category: 'try-something-new',
-    svgIcon: `
-      <svg viewBox="0 0 120 75" width="108" height="68" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="10" y="10" width="100" height="54" rx="6" fill="#09090B" filter="drop-shadow(0 2px 8px rgba(0,0,0,0.3))"/>
-        <circle cx="60" cy="32" r="14" fill="#F43F5E"/>
-        <rect x="10" y="38" width="100" height="26" rx="2" fill="#18181B"/>
-        <line x1="10" y1="44" x2="110" y2="44" stroke="#A855F7" stroke-width="1.2"/>
-        <line x1="10" y1="52" x2="110" y2="52" stroke="#A855F7" stroke-width="1.2"/>
-        <line x1="60" y1="38" x2="60" y2="64" stroke="#06B6D4" stroke-width="1.2"/>
-        <line x1="60" y1="38" x2="25" y2="64" stroke="#06B6D4" stroke-width="1.2"/>
-        <line x1="60" y1="38" x2="95" y2="64" stroke="#06B6D4" stroke-width="1.2"/>
-      </svg>
-    `,
+    id: 'nature',
+    tabRef: 'tab-nature',
+    titleKey: 'canvas.tab_nature',
+    iconName: 'eco',
+    sections: [
+      {
+        id: 'nat-forests',
+        titleKey: 'canvas.section_forests_islands',
+        items: [
+          makeTemplateItem('tmpl-nat-forest', 'Bosque de Pinos', 'nature', 'forest', 'Naturaleza', true),
+          makeTemplateItem('tmpl-nat-beach', 'Playa Tropical', 'nature', 'beach', 'Naturaleza', true),
+          makeTemplateItem('tmpl-nat-waterfall', 'Cascada Mística', 'nature', 'waterfall', 'Naturaleza', true),
+          makeTemplateItem('tmpl-nat-swamp', 'Pantano Misterioso', 'nature', 'swamp', 'Naturaleza', true),
+          makeTemplateItem('tmpl-nat-flower', 'Campo de Flores', 'nature', 'flower_field', 'Naturaleza', true),
+        ],
+      },
+      {
+        id: 'nat-mountains',
+        titleKey: 'canvas.section_mountains_caves',
+        items: [
+          makeTemplateItem('tmpl-nat-mountain', 'Montaña Nevada', 'nature', 'mountain', 'Naturaleza', true),
+          makeTemplateItem('tmpl-nat-desert', 'Desierto al Atardecer', 'nature', 'sunset_desert', 'Naturaleza', true),
+          makeTemplateItem('tmpl-nat-crystals', 'Cueva de Cristales', 'nature', 'crystal_cave', 'Naturaleza'),
+          makeTemplateItem('tmpl-nat-volcano', 'Volcán Ardiente', 'nature', 'volcano', 'Naturaleza', true),
+          makeTemplateItem('tmpl-nat-coral', 'Arrecife de Coral', 'nature', 'coral_reef', 'Naturaleza', true),
+        ],
+      },
+    ],
   },
   {
-    id: 'fhd',
-    name: 'Fondo pantalla FHD',
-    width: 1920,
-    height: 1080,
-    category: 'try-something-new',
-    svgIcon: `
-      <svg viewBox="0 0 120 75" width="108" height="68" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="16" y="8" width="88" height="50" rx="4" fill="#18181B" stroke="#3F3F46" stroke-width="1.5" filter="drop-shadow(0 2px 8px rgba(0,0,0,0.3))"/>
-        <rect x="20" y="12" width="80" height="42" fill="#1E1B4B"/>
-        <circle cx="78" cy="22" r="6" fill="#FDE047"/>
-        <polygon points="20,54 44,34 68,54" fill="#4338CA"/>
-        <polygon points="52,54 76,28 100,54" fill="#6366F1"/>
-        <rect x="54" y="58" width="12" height="6" fill="#71717A"/>
-        <rect x="44" y="64" width="32" height="3" rx="1" fill="#52525B"/>
-      </svg>
-    `,
+    id: 'cities',
+    tabRef: 'tab-cities',
+    titleKey: 'canvas.tab_cities',
+    iconName: 'apartment',
+    sections: [
+      {
+        id: 'ct-cyberpunk',
+        titleKey: 'canvas.section_cyberpunk_neon',
+        items: [
+          makeTemplateItem('tmpl-ct-metropolis', 'Metrópolis Nocturna', 'cities', 'night_metropolis', 'Ciudades', true),
+          makeTemplateItem('tmpl-ct-cyber', 'Callejón Cyberpunk', 'cities', 'cyber_alley', 'Ciudades'),
+          makeTemplateItem('tmpl-ct-tokyo', 'Calles de Tokio', 'cities', 'tokyo_street', 'Ciudades', true),
+          makeTemplateItem('tmpl-ct-rooftop', 'Techo Urbano', 'cities', 'city_rooftop', 'Ciudades', true),
+          makeTemplateItem('tmpl-ct-suburb', 'Suburbio Otoñal', 'cities', 'autumn_suburb', 'Ciudades', true),
+        ],
+      },
+      {
+        id: 'ct-urban',
+        titleKey: 'canvas.section_urban_streets',
+        items: [
+          makeTemplateItem('tmpl-ct-medieval', 'Pueblo Medieval', 'cities', 'medieval_town', 'Ciudades', true),
+          makeTemplateItem('tmpl-ct-seaport', 'Puerto Marítimo', 'cities', 'seaport', 'Ciudades', true),
+          makeTemplateItem('tmpl-ct-castle', 'Castillo en la Colina', 'cities', 'hill_castle', 'Ciudades', true),
+          makeTemplateItem('tmpl-ct-train', 'Estación de Tren', 'cities', 'train_station', 'Ciudades', true),
+          makeTemplateItem('tmpl-ct-market', 'Mercado Antiguo', 'cities', 'ancient_market', 'Ciudades', true),
+        ],
+      },
+    ],
+  },
+  {
+    id: 'fantasy',
+    tabRef: 'tab-fantasy',
+    titleKey: 'canvas.tab_fantasy',
+    iconName: 'shield',
+    sections: [
+      {
+        id: 'fn-dungeons',
+        titleKey: 'canvas.section_dungeons_castles',
+        items: [
+          makeTemplateItem('tmpl-fn-dungeon', 'Mazmorra Oscura', 'fantasy', 'dark_dungeon', 'Fantasía'),
+          makeTemplateItem('tmpl-fn-throne', 'Sala del Trono', 'fantasy', 'throne_room', 'Fantasía', true),
+          makeTemplateItem('tmpl-fn-portal', 'Portal Místico', 'fantasy', 'mystic_portal', 'Fantasía'),
+          makeTemplateItem('tmpl-fn-chest', 'Cofre Legendario', 'fantasy', 'treasure_chest', 'Fantasía'),
+          makeTemplateItem('tmpl-fn-ruins', 'Ruinas Élficas', 'fantasy', 'elven_ruins', 'Fantasía', true),
+        ],
+      },
+      {
+        id: 'fn-taverns',
+        titleKey: 'canvas.section_taverns_altars',
+        items: [
+          makeTemplateItem('tmpl-fn-potions', 'Tienda de Pociones', 'fantasy', 'potion_shop', 'Fantasía'),
+          makeTemplateItem('tmpl-fn-forge', 'Forja Enana', 'fantasy', 'dwarven_forge', 'Fantasía'),
+          makeTemplateItem('tmpl-fn-wizard', 'Torre del Mago', 'fantasy', 'wizard_tower', 'Fantasía'),
+          makeTemplateItem('tmpl-fn-dragon', 'Puente del Dragón', 'fantasy', 'dragon_bridge', 'Fantasía', true),
+          makeTemplateItem('tmpl-fn-altar', 'Altar Arcano', 'fantasy', 'arcane_altar', 'Fantasía'),
+        ],
+      },
+    ],
+  },
+  {
+    id: 'scifi',
+    tabRef: 'tab-scifi',
+    titleKey: 'canvas.tab_scifi',
+    iconName: 'stars',
+    sections: [
+      {
+        id: 'sci-cosmos',
+        titleKey: 'canvas.section_galaxies_cosmos',
+        items: [
+          makeTemplateItem('tmpl-sci-station', 'Estación Orbital', 'scifi', 'orbital_station', 'Espacio', true),
+          makeTemplateItem('tmpl-sci-nebula', 'Nebulosa Cósmica', 'scifi', 'cosmic_nebula', 'Espacio', true),
+          makeTemplateItem('tmpl-sci-planet', 'Planeta con Anillos', 'scifi', 'ringed_planet', 'Espacio'),
+          makeTemplateItem('tmpl-sci-lunar', 'Superficie Lunar', 'scifi', 'lunar_surface', 'Espacio', true),
+          makeTemplateItem('tmpl-sci-cockpit', 'Cabina de Nave', 'scifi', 'cockpit', 'Espacio', true),
+        ],
+      },
+      {
+        id: 'sci-stations',
+        titleKey: 'canvas.section_stations_hangars',
+        items: [
+          makeTemplateItem('tmpl-sci-asteroid', 'Asteroide Minero', 'scifi', 'mining_asteroid', 'Espacio'),
+          makeTemplateItem('tmpl-sci-floating', 'Ciudad Flotante', 'scifi', 'floating_city', 'Espacio', true),
+          makeTemplateItem('tmpl-sci-lab', 'Laboratorio Alienígena', 'scifi', 'alien_lab', 'Espacio'),
+          makeTemplateItem('tmpl-sci-wormhole', 'Agujero de Gusano', 'scifi', 'wormhole', 'Espacio'),
+          makeTemplateItem('tmpl-sci-satellite', 'Satélite Solar', 'scifi', 'solar_satellite', 'Espacio', true),
+        ],
+      },
+    ],
+  },
+  {
+    id: 'characters',
+    tabRef: 'tab-characters',
+    titleKey: 'canvas.tab_characters',
+    iconName: 'person',
+    sections: [
+      {
+        id: 'ch-mannequins',
+        titleKey: 'canvas.section_mannequins_chibi',
+        items: [
+          makeTemplateItem('tmpl-ch-humanoid', 'Base Humanoide Frente', 'characters', 'humanoid_base', 'Personajes'),
+          makeTemplateItem('tmpl-ch-warrior', 'Base Guerrero Perfil', 'characters', 'warrior_side', 'Personajes'),
+          makeTemplateItem('tmpl-ch-mannequin-f', 'Maniquí Femenino', 'characters', 'mannequin_f', 'Personajes'),
+          makeTemplateItem('tmpl-ch-mannequin-m', 'Maniquí Masculino', 'characters', 'mannequin_m', 'Personajes'),
+          makeTemplateItem('tmpl-ch-spritesheet', 'Hoja 4 Direcciones', 'characters', 'sprite_sheet_4way', 'Personajes'),
+        ],
+      },
+      {
+        id: 'ch-portraits',
+        titleKey: 'canvas.section_portraits_busts',
+        items: [
+          makeTemplateItem('tmpl-ch-chibi', 'Retrato Chibi', 'characters', 'chibi_portrait', 'Personajes'),
+          makeTemplateItem('tmpl-ch-mage', 'Mago con Túnica', 'characters', 'mage_robe', 'Personajes'),
+          makeTemplateItem('tmpl-ch-knight', 'Caballero con Armadura', 'characters', 'armored_knight', 'Personajes'),
+          makeTemplateItem('tmpl-ch-slime', 'Criatura Slime', 'characters', 'slime_creature', 'Personajes'),
+          makeTemplateItem('tmpl-ch-skull', 'Monstruo Calavera', 'characters', 'skull_monster', 'Personajes'),
+        ],
+      },
+    ],
+  },
+  {
+    id: 'items',
+    tabRef: 'tab-items',
+    titleKey: 'canvas.tab_items',
+    iconName: 'category',
+    sections: [
+      {
+        id: 'it-weapons',
+        titleKey: 'canvas.section_weapons_equipment',
+        items: [
+          makeTemplateItem('tmpl-it-sword', 'Espada de Cristal', 'items', 'crystal_sword', 'Objetos'),
+          makeTemplateItem('tmpl-it-shield', 'Escudo Heráldico', 'items', 'heraldic_shield', 'Objetos'),
+          makeTemplateItem('tmpl-it-helmet', 'Casco de Guerrero', 'items', 'warrior_helmet', 'Objetos'),
+          makeTemplateItem('tmpl-it-bow', 'Arco Élfico', 'items', 'elven_bow', 'Objetos'),
+          makeTemplateItem('tmpl-it-gold', 'Lingote de Oro', 'items', 'gold_ingot', 'Objetos'),
+        ],
+      },
+      {
+        id: 'it-relics',
+        titleKey: 'canvas.section_potions_relics',
+        items: [
+          makeTemplateItem('tmpl-it-potion', 'Poción de Maná', 'items', 'mana_potion', 'Objetos'),
+          makeTemplateItem('tmpl-it-spellbook', 'Libro de Hechizos', 'items', 'spellbook', 'Objetos'),
+          makeTemplateItem('tmpl-it-gem', 'Gema Preciosa', 'items', 'gemstone', 'Objetos'),
+          makeTemplateItem('tmpl-it-key', 'Llave Dorada', 'items', 'golden_key', 'Objetos'),
+          makeTemplateItem('tmpl-it-skull', 'Calavera de Cristal', 'items', 'crystal_skull', 'Objetos'),
+        ],
+      },
+    ],
   },
 ];
 
-const CATEGORIES: Array<{ id: 'most-used' | 'popular' | 'try-something-new'; titleKey: string }> = [
-  { id: 'most-used', titleKey: 'canvas.category_most_used' },
-  { id: 'popular', titleKey: 'canvas.category_popular' },
-  { id: 'try-something-new', titleKey: 'canvas.category_try_something_new' },
-];
+const ALL_PRESETS_MAP = new Map<string, PresetItem>();
+CATEGORY_TABS.forEach((cat) => {
+  cat.sections.forEach((sec) => {
+    sec.items.forEach((item) => {
+      if (!ALL_PRESETS_MAP.has(item.id)) {
+        ALL_PRESETS_MAP.set(item.id, item);
+      }
+    });
+  });
+});
+const ALL_PRESETS = Array.from(ALL_PRESETS_MAP.values());
 
 function buildPresetCardHtml(item: PresetItem): string {
+  const badgeText = `${item.width} × ${item.height} px`;
+  const previewContent = item.imagePath
+    ? `<img class="canvas-card__image" data-ref="preset-card-img-${item.id}" src="${item.imagePath}" alt="${item.name}" loading="lazy" />`
+    : (item.svgIcon || '');
+
   return `
     <div class="canvas-card" data-ref="preset-card-${item.id}" data-preset-id="${item.id}" data-width="${item.width}" data-height="${item.height}" data-name="${item.name}">
-      <div class="canvas-card__preview">
-        ${item.svgIcon}
+      <div class="canvas-card__preview" data-ref="preset-card-preview-${item.id}">
+        ${previewContent}
       </div>
-      <div class="canvas-card__badges-tl">
-        <div class="canvas-card__badge canvas-card__badge--glass">
-          <span>${item.width} × ${item.height} px</span>
+      <div class="canvas-card__badges-tl" data-ref="preset-card-badge-container-${item.id}">
+        <div class="canvas-card__badge canvas-card__badge--glass" data-ref="preset-card-badge-${item.id}">
+          <span>${badgeText}</span>
         </div>
       </div>
-      <div class="canvas-card__bottom">
-        <h3 class="canvas-card__title" title="${item.name}">
+      <div class="canvas-card__bottom" data-ref="preset-card-bottom-${item.id}">
+        <h3 class="canvas-card__title" data-ref="preset-card-title-${item.id}" title="${item.name}">
           ${item.name}
         </h3>
       </div>
@@ -298,24 +531,35 @@ function buildPresetCardHtml(item: PresetItem): string {
   `;
 }
 
-function buildCategorySectionHtml(catId: 'most-used' | 'popular' | 'try-something-new', titleKey: string): string {
-  const items = PRESETS.filter((p) => p.category === catId);
-  const cardsHtml = items.map(buildPresetCardHtml).join('');
+function buildCategorySectionHtml(catId: string, sec: PresetSection): string {
+  const cardsHtml = sec.items.map(buildPresetCardHtml).join('');
+  const uniqueSecId = `${catId}-${sec.id}`;
 
   return `
-    <div class="preset-category" data-ref="preset-category-${catId}">
-      <h4 class="preset-category__title" data-i18n="${titleKey}">${t(titleKey)}</h4>
-      <div class="preset-category__carousel-container" data-ref="carousel-container-${catId}">
-        <button type="button" class="preset-carousel__nav-btn preset-carousel__nav-btn--left is-disabled" data-ref="btn-carousel-left-${catId}" data-tooltip="Desplazar a la izquierda" aria-label="Desplazar a la izquierda">
+    <div class="preset-category" data-ref="preset-category-${uniqueSecId}">
+      <h4 class="preset-category__title" data-ref="preset-title-${uniqueSecId}" data-i18n="${sec.titleKey}">
+        ${t(sec.titleKey)}
+      </h4>
+      <div class="preset-category__carousel-container" data-ref="carousel-container-${uniqueSecId}">
+        <button type="button" class="preset-carousel__nav-btn preset-carousel__nav-btn--left is-disabled" data-ref="btn-carousel-left-${uniqueSecId}" data-tooltip="Desplazar a la izquierda" aria-label="Desplazar a la izquierda">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
         </button>
-        <div class="preset-category__track" data-ref="preset-track-${catId}">
+        <div class="preset-category__track" data-ref="preset-track-${uniqueSecId}">
           ${cardsHtml}
         </div>
-        <button type="button" class="preset-carousel__nav-btn preset-carousel__nav-btn--right" data-ref="btn-carousel-right-${catId}" data-tooltip="Desplazar a la derecha" aria-label="Desplazar a la derecha">
+        <button type="button" class="preset-carousel__nav-btn preset-carousel__nav-btn--right" data-ref="btn-carousel-right-${uniqueSecId}" data-tooltip="Desplazar a la derecha" aria-label="Desplazar a la derecha">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
         </button>
       </div>
+    </div>
+  `;
+}
+
+function buildCategoryPanelHtml(cat: PresetCategoryTab): string {
+  const sectionsHtml = cat.sections.map((sec) => buildCategorySectionHtml(cat.id, sec)).join('');
+  return `
+    <div class="modal-presets-category-panel" data-ref="panel-category-${cat.id}" style="${cat.id === 'for-you' ? 'display: flex;' : 'display: none;'}">
+      ${sectionsHtml}
     </div>
   `;
 }
@@ -329,7 +573,7 @@ export function openCreateCanvasModal(): void {
   backdrop.className = 'modal-backdrop';
   backdrop.setAttribute('data-ref', 'modal-create-canvas-backdrop');
 
-  const categoriesHtml = CATEGORIES.map((c) => buildCategorySectionHtml(c.id, c.titleKey)).join('');
+  const categoryPanelsHtml = CATEGORY_TABS.map(buildCategoryPanelHtml).join('');
 
   backdrop.innerHTML = `
     <div class="modal-container" data-ref="modal-create-canvas-container">
@@ -353,6 +597,40 @@ export function openCreateCanvasModal(): void {
                 <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#recommend"></use></svg>
                 <span class="menu-item__text" data-i18n="canvas.tab_for_you">${t('canvas.tab_for_you')}</span>
               </button>
+              <button type="button" class="menu-item" data-ref="tab-formats">
+                <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#straighten"></use></svg>
+                <span class="menu-item__text" data-i18n="canvas.tab_formats">${t('canvas.tab_formats')}</span>
+              </button>
+
+              <div class="menu-divider" data-ref="modal-nav-divider-templates"></div>
+
+              <button type="button" class="menu-item" data-ref="tab-nature">
+                <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#eco"></use></svg>
+                <span class="menu-item__text" data-i18n="canvas.tab_nature">${t('canvas.tab_nature')}</span>
+              </button>
+              <button type="button" class="menu-item" data-ref="tab-cities">
+                <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#apartment"></use></svg>
+                <span class="menu-item__text" data-i18n="canvas.tab_cities">${t('canvas.tab_cities')}</span>
+              </button>
+              <button type="button" class="menu-item" data-ref="tab-fantasy">
+                <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#shield"></use></svg>
+                <span class="menu-item__text" data-i18n="canvas.tab_fantasy">${t('canvas.tab_fantasy')}</span>
+              </button>
+              <button type="button" class="menu-item" data-ref="tab-scifi">
+                <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#stars"></use></svg>
+                <span class="menu-item__text" data-i18n="canvas.tab_scifi">${t('canvas.tab_scifi')}</span>
+              </button>
+              <button type="button" class="menu-item" data-ref="tab-characters">
+                <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#person"></use></svg>
+                <span class="menu-item__text" data-i18n="canvas.tab_characters">${t('canvas.tab_characters')}</span>
+              </button>
+              <button type="button" class="menu-item" data-ref="tab-items">
+                <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#category"></use></svg>
+                <span class="menu-item__text" data-i18n="canvas.tab_items">${t('canvas.tab_items')}</span>
+              </button>
+
+              <div class="menu-divider" data-ref="modal-nav-divider-custom"></div>
+
               <button type="button" class="menu-item" data-ref="tab-custom-size">
                 <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#aspect_ratio"></use></svg>
                 <span class="menu-item__text" data-i18n="canvas.tab_custom_size">${t('canvas.tab_custom_size')}</span>
@@ -378,52 +656,138 @@ export function openCreateCanvasModal(): void {
           </div>
 
           <div class="modal-create-canvas__body-bottom" data-ref="modal-body-bottom">
-            <div class="modal-canvas-panel" data-ref="panel-for-you">
-              <div class="modal-presets-container" data-ref="modal-presets-container">
-                ${categoriesHtml}
+            ${categoryPanelsHtml}
+
+            <div class="modal-search-results-container" data-ref="modal-search-results" style="display: none;">
+              <h4 class="preset-category__title" data-i18n="canvas.search_results_title">${t('canvas.search_results_title')}</h4>
+              <div class="modal-search-results-grid" data-ref="modal-search-results-grid"></div>
+            </div>
+
+            <div class="component-empty-state" data-ref="presets-empty-search" style="display: none;">
+              <div class="component-empty-state-graphic" data-ref="modal-empty-search-graphic">
+                ${getEmptyGraphicSvg('search')}
               </div>
-              <div class="component-empty-state" data-ref="presets-empty-search" style="display: none;">
-                <div class="component-empty-state-graphic" data-ref="modal-empty-search-graphic">
-                  ${getEmptyGraphicSvg('search')}
-                </div>
-                <h2 class="component-empty-state-title">Sin plantillas encontradas</h2>
-                <p class="component-empty-state-desc">No se encontraron tamaños o plantillas que coincidan con la búsqueda.</p>
-              </div>
+              <h2 class="component-empty-state-title" data-i18n="canvas.home_search_no_results_title">${t('canvas.home_search_no_results_title')}</h2>
+              <p class="component-empty-state-desc" data-i18n="canvas.search_no_results">${t('canvas.search_no_results')}</p>
             </div>
 
             <div class="modal-canvas-panel" data-ref="panel-custom-size" style="display: none;">
-              <div class="modal-canvas-panel__header" data-ref="panel-custom-size-header">
-                <h3 class="modal-canvas-panel__title" data-i18n="canvas.custom_size_title">
-                  ${t('canvas.custom_size_title')}
-                </h3>
-                <p class="modal-canvas-panel__desc" data-i18n="canvas.custom_size_desc">
-                  ${t('canvas.custom_size_desc')}
-                </p>
-              </div>
-
               <div class="modal-canvas-panel__form" data-ref="form-custom-size">
-                <label class="field" data-ref="field-canvas-name">
-                  <input class="field__input" data-ref="input-canvas-name" type="text" placeholder=" " value="${t('canvas.input_name_placeholder')}" maxlength="100" autocomplete="off" />
-                  <span class="field__label" data-i18n="canvas.input_name_label">${t('canvas.input_name_label')}</span>
-                </label>
-
-                <div class="modal-canvas-panel__dimensions" data-ref="modal-dimensions-box">
-                  <label class="field" data-ref="field-canvas-width">
-                    <input class="field__input" data-ref="input-canvas-width" type="number" min="1" max="16384" value="64" placeholder=" " />
-                    <span class="field__label" data-i18n="canvas.input_width_label">${t('canvas.input_width_label')}</span>
-                  </label>
-
-                  <label class="field" data-ref="field-canvas-height">
-                    <input class="field__input" data-ref="input-canvas-height" type="number" min="1" max="16384" value="64" placeholder=" " />
-                    <span class="field__label" data-i18n="canvas.input_height_label">${t('canvas.input_height_label')}</span>
-                  </label>
+                <div class="settings-group" data-ref="custom-size-group-template-banner" style="display: none;">
+                  <div class="template-info-banner" data-ref="template-info-banner">
+                    <div class="template-info-banner__left" data-ref="template-info-left">
+                      <div class="template-info-banner__icon" data-ref="template-info-icon">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
+                      </div>
+                      <div class="template-info-banner__text" data-ref="template-info-text">
+                        <span class="template-info-banner__title" data-ref="template-info-name">Plantilla</span>
+                        <span class="template-info-banner__desc" data-i18n="canvas.template_locked_dims_desc">${t('canvas.template_locked_dims_desc')}</span>
+                      </div>
+                    </div>
+                    <button type="button" class="template-info-banner__btn" data-ref="btn-clear-template" data-tooltip="${t('canvas.template_clear_tooltip')}" aria-label="${t('canvas.template_clear_tooltip')}">
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+                    </button>
+                  </div>
                 </div>
 
-                <button type="button" class="btn btn--h44 btn--black btn--w-full" data-ref="btn-submit-create-canvas">
-                  ${t('canvas.btn_create')}
-                </button>
+                <div class="settings-group" data-ref="custom-size-group-variants" style="display: none;">
+                  <div class="settings-item" data-ref="custom-size-item-variants">
+                    <div class="settings-item__content" data-ref="custom-size-variants-content">
+                      <div class="settings-item__text" data-ref="custom-size-variants-text">
+                        <h2 class="settings-item__title" data-ref="custom-size-variants-title" data-i18n="canvas.template_variants_title">${t('canvas.template_variants_title')}</h2>
+                        <p class="settings-item__desc" data-ref="custom-size-variants-desc" data-i18n="canvas.template_variants_desc">${t('canvas.template_variants_desc')}</p>
+                      </div>
+                    </div>
+                    <div class="settings-item__actions" data-ref="custom-size-variants-actions">
+                      <div class="template-variants-pills" data-ref="template-variants-pills"></div>
+                    </div>
+                  </div>
+                </div>
 
-                <div class="banner banner--danger" data-ref="create-canvas-error" style="display: none;"></div>
+                <div class="settings-group" data-ref="custom-size-group-name">
+                  <div class="settings-item" data-ref="custom-size-item-name">
+                    <div class="settings-item__content" data-ref="custom-size-name-content">
+                      <div class="settings-item__text" data-ref="custom-size-name-text">
+                        <h2 class="settings-item__title" data-ref="custom-size-name-title" data-i18n="canvas.canvas_name_title">${t('canvas.canvas_name_title')}</h2>
+                        <p class="settings-item__desc" data-ref="custom-size-name-desc" data-i18n="canvas.canvas_name_desc">${t('canvas.canvas_name_desc')}</p>
+                      </div>
+                    </div>
+                    <div class="settings-item__actions" data-ref="custom-size-name-actions">
+                      <input class="modal-canvas-panel__name-input" data-ref="input-canvas-name" type="text" placeholder="${t('canvas.input_name_placeholder')}" value="${t('canvas.input_name_placeholder')}" maxlength="100" autocomplete="off" />
+                    </div>
+                  </div>
+                </div>
+
+                <div class="settings-group" data-ref="custom-size-group-width">
+                  <div class="settings-item" data-ref="custom-size-item-width">
+                    <div class="settings-item__content" data-ref="custom-size-width-content">
+                      <div class="settings-item__text" data-ref="custom-size-width-text">
+                        <h2 class="settings-item__title" data-ref="custom-size-width-title" data-i18n="canvas.canvas_width_title">${t('canvas.canvas_width_title')}</h2>
+                        <p class="settings-item__desc" data-ref="custom-size-width-desc" data-i18n="canvas.canvas_width_desc">${t('canvas.canvas_width_desc')}</p>
+                      </div>
+                    </div>
+                    <div class="settings-item__actions" data-ref="custom-size-width-actions">
+                      <div class="component-inline-control component-inline-control--fixed" data-ref="inline-control-width">
+                        <div class="component-inline-control__group" data-ref="inline-group-width-dec">
+                          <button type="button" class="component-inline-control__btn" data-ref="btn-width-dec-large" data-tooltip="-16 px" aria-label="Disminuir 16 píxeles">
+                            <span class="material-symbols-rounded">keyboard_double_arrow_left</span>
+                          </button>
+                          <button type="button" class="component-inline-control__btn" data-ref="btn-width-dec" data-tooltip="-1 px" aria-label="Disminuir 1 píxel">
+                            <span class="material-symbols-rounded">chevron_left</span>
+                          </button>
+                        </div>
+                        <input class="component-inline-control__input" data-ref="input-canvas-width" type="number" min="1" max="16384" value="64" autocomplete="off" />
+                        <div class="component-inline-control__group" data-ref="inline-group-width-inc">
+                          <button type="button" class="component-inline-control__btn" data-ref="btn-width-inc" data-tooltip="+1 px" aria-label="Aumentar 1 píxel">
+                            <span class="material-symbols-rounded">chevron_right</span>
+                          </button>
+                          <button type="button" class="component-inline-control__btn" data-ref="btn-width-inc-large" data-tooltip="+16 px" aria-label="Aumentar 16 píxeles">
+                            <span class="material-symbols-rounded">keyboard_double_arrow_right</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="settings-group" data-ref="custom-size-group-height">
+                  <div class="settings-item" data-ref="custom-size-item-height">
+                    <div class="settings-item__content" data-ref="custom-size-height-content">
+                      <div class="settings-item__text" data-ref="custom-size-height-text">
+                        <h2 class="settings-item__title" data-ref="custom-size-height-title" data-i18n="canvas.canvas_height_title">${t('canvas.canvas_height_title')}</h2>
+                        <p class="settings-item__desc" data-ref="custom-size-height-desc" data-i18n="canvas.canvas_height_desc">${t('canvas.canvas_height_desc')}</p>
+                      </div>
+                    </div>
+                    <div class="settings-item__actions" data-ref="custom-size-height-actions">
+                      <div class="component-inline-control component-inline-control--fixed" data-ref="inline-control-height">
+                        <div class="component-inline-control__group" data-ref="inline-group-height-dec">
+                          <button type="button" class="component-inline-control__btn" data-ref="btn-height-dec-large" data-tooltip="-16 px" aria-label="Disminuir 16 píxeles">
+                            <span class="material-symbols-rounded">keyboard_double_arrow_left</span>
+                          </button>
+                          <button type="button" class="component-inline-control__btn" data-ref="btn-height-dec" data-tooltip="-1 px" aria-label="Disminuir 1 píxel">
+                            <span class="material-symbols-rounded">chevron_left</span>
+                          </button>
+                        </div>
+                        <input class="component-inline-control__input" data-ref="input-canvas-height" type="number" min="1" max="16384" value="64" autocomplete="off" />
+                        <div class="component-inline-control__group" data-ref="inline-group-height-inc">
+                          <button type="button" class="component-inline-control__btn" data-ref="btn-height-inc" data-tooltip="+1 px" aria-label="Aumentar 1 píxel">
+                            <span class="material-symbols-rounded">chevron_right</span>
+                          </button>
+                          <button type="button" class="component-inline-control__btn" data-ref="btn-height-inc-large" data-tooltip="+16 px" aria-label="Aumentar 16 píxeles">
+                            <span class="material-symbols-rounded">keyboard_double_arrow_right</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="modal-canvas-panel__actions" data-ref="custom-size-actions">
+                  <button type="button" class="btn btn--h44 btn--black btn--w-full" data-ref="btn-submit-create-canvas">
+                    ${t('canvas.btn_create')}
+                  </button>
+                  <div class="banner banner--danger" data-ref="create-canvas-error" style="display: none;"></div>
+                </div>
               </div>
             </div>
 
@@ -442,118 +806,374 @@ export function openCreateCanvasModal(): void {
     </div>
   `;
 
+  document.body.appendChild(backdrop);
+  document.body.style.overflow = 'hidden';
+
   translateElement(backdrop);
   renderIcons(backdrop);
 
-  const tabForYou = backdrop.querySelector<HTMLElement>('[data-ref="tab-for-you"]');
-  const tabCustomSize = backdrop.querySelector<HTMLElement>('[data-ref="tab-custom-size"]');
-  const tabUpload = backdrop.querySelector<HTMLElement>('[data-ref="tab-upload"]');
+  type TabType = 'for-you' | 'formats' | 'nature' | 'cities' | 'fantasy' | 'scifi' | 'characters' | 'items' | 'custom-size' | 'upload';
 
-  const panelForYou = backdrop.querySelector<HTMLElement>('[data-ref="panel-for-you"]');
+  const tabButtons = new Map<TabType, HTMLElement | null>([
+    ['for-you', backdrop.querySelector<HTMLElement>('[data-ref="tab-for-you"]')],
+    ['formats', backdrop.querySelector<HTMLElement>('[data-ref="tab-formats"]')],
+    ['nature', backdrop.querySelector<HTMLElement>('[data-ref="tab-nature"]')],
+    ['cities', backdrop.querySelector<HTMLElement>('[data-ref="tab-cities"]')],
+    ['fantasy', backdrop.querySelector<HTMLElement>('[data-ref="tab-fantasy"]')],
+    ['scifi', backdrop.querySelector<HTMLElement>('[data-ref="tab-scifi"]')],
+    ['characters', backdrop.querySelector<HTMLElement>('[data-ref="tab-characters"]')],
+    ['items', backdrop.querySelector<HTMLElement>('[data-ref="tab-items"]')],
+    ['custom-size', backdrop.querySelector<HTMLElement>('[data-ref="tab-custom-size"]')],
+    ['upload', backdrop.querySelector<HTMLElement>('[data-ref="tab-upload"]')],
+  ]);
+
+  const categoryPanels = new Map<string, HTMLElement | null>();
+  CATEGORY_TABS.forEach((cat) => {
+    categoryPanels.set(cat.id, backdrop.querySelector<HTMLElement>(`[data-ref="panel-category-${cat.id}"]`));
+  });
+
   const panelCustomSize = backdrop.querySelector<HTMLElement>('[data-ref="panel-custom-size"]');
   const panelUpload = backdrop.querySelector<HTMLElement>('[data-ref="panel-upload"]');
 
   const searchInput = backdrop.querySelector<HTMLInputElement>('[data-ref="modal-search-input"]');
-  const presetsContainer = backdrop.querySelector<HTMLElement>('[data-ref="modal-presets-container"]');
+  const searchResultsContainer = backdrop.querySelector<HTMLElement>('[data-ref="modal-search-results"]');
+  const searchResultsGrid = backdrop.querySelector<HTMLElement>('[data-ref="modal-search-results-grid"]');
   const presetsEmptySearch = backdrop.querySelector<HTMLElement>('[data-ref="presets-empty-search"]');
 
-  const carouselControllers: Array<{ destroy: () => void; updateButtons: () => void }> = [];
+  const templateBannerGroup = backdrop.querySelector<HTMLElement>('[data-ref="custom-size-group-template-banner"]');
+  const templateInfoName = backdrop.querySelector<HTMLElement>('[data-ref="template-info-name"]');
+  const templateVariantsGroup = backdrop.querySelector<HTMLElement>('[data-ref="custom-size-group-variants"]');
+  const templateVariantsPills = backdrop.querySelector<HTMLElement>('[data-ref="template-variants-pills"]');
+  const btnClearTemplate = backdrop.querySelector<HTMLElement>('[data-ref="btn-clear-template"]');
 
-  CATEGORIES.forEach((cat) => {
-    const wrapper = backdrop.querySelector<HTMLElement>(`[data-ref="carousel-container-${cat.id}"]`);
-    if (wrapper) {
-      const ctrl = initCarouselScroll(wrapper, {
-        carouselSelector: `[data-ref="preset-track-${cat.id}"]`,
-        leftBtnSelector: `[data-ref="btn-carousel-left-${cat.id}"]`,
-        rightBtnSelector: `[data-ref="btn-carousel-right-${cat.id}"]`,
-        step: 220,
-      });
-      if (ctrl) {
-        carouselControllers.push(ctrl);
+  const carouselControllers: Array<{ catId: string; destroy: () => void; updateButtons: () => void }> = [];
+
+  CATEGORY_TABS.forEach((cat) => {
+    cat.sections.forEach((sec) => {
+      const uniqueSecId = `${cat.id}-${sec.id}`;
+      const wrapper = backdrop.querySelector<HTMLElement>(`[data-ref="carousel-container-${uniqueSecId}"]`);
+      if (wrapper) {
+        const ctrl = initCarouselScroll(wrapper, {
+          carouselSelector: `[data-ref="preset-track-${uniqueSecId}"]`,
+          leftBtnSelector: `[data-ref="btn-carousel-left-${uniqueSecId}"]`,
+          rightBtnSelector: `[data-ref="btn-carousel-right-${uniqueSecId}"]`,
+          step: 220,
+        });
+        if (ctrl) {
+          carouselControllers.push({ catId: cat.id, destroy: ctrl.destroy, updateButtons: ctrl.updateButtons });
+        }
       }
-    }
+    });
   });
 
-  const switchTab = (activeTab: 'for-you' | 'custom-size' | 'upload') => {
-    tabForYou?.classList.toggle('is-active', activeTab === 'for-you');
-    tabCustomSize?.classList.toggle('is-active', activeTab === 'custom-size');
-    tabUpload?.classList.toggle('is-active', activeTab === 'upload');
+  let currentTab: TabType = 'for-you';
+  let activeTemplate: PresetItem | null = null;
+  let activeVariantIndex = 0;
 
-    if (panelForYou) panelForYou.style.display = activeTab === 'for-you' ? 'flex' : 'none';
+  const updateCarouselsForCategory = (catId: string) => {
+    requestAnimationFrame(() => {
+      carouselControllers
+        .filter((c) => c.catId === catId)
+        .forEach((c) => c.updateButtons());
+    });
+  };
+
+  const switchTab = (activeTab: TabType) => {
+    currentTab = activeTab;
+
+    tabButtons.forEach((btn, key) => {
+      btn?.classList.toggle('is-active', key === activeTab);
+    });
+
+    categoryPanels.forEach((panel, catId) => {
+      if (panel) {
+        panel.style.display = activeTab === catId ? 'flex' : 'none';
+      }
+    });
+
     if (panelCustomSize) panelCustomSize.style.display = activeTab === 'custom-size' ? 'flex' : 'none';
     if (panelUpload) panelUpload.style.display = activeTab === 'upload' ? 'flex' : 'none';
 
-    if (activeTab === 'for-you') {
-      setTimeout(() => {
-        carouselControllers.forEach((c) => c.updateButtons());
-      }, 50);
+    if (searchResultsContainer) searchResultsContainer.style.display = 'none';
+    if (presetsEmptySearch) presetsEmptySearch.style.display = 'none';
+
+    if (activeTab !== 'custom-size' && activeTab !== 'upload') {
+      updateCarouselsForCategory(activeTab);
     }
   };
 
-  switchTab('for-you');
+  tabButtons.forEach((btn, tabKey) => {
+    btn?.addEventListener('click', () => {
+      if (searchInput && searchInput.value.trim()) {
+        searchInput.value = '';
+      }
+      switchTab(tabKey);
+    });
+  });
 
-  tabForYou?.addEventListener('click', () => switchTab('for-you'));
-  tabCustomSize?.addEventListener('click', () => switchTab('custom-size'));
-  tabUpload?.addEventListener('click', () => switchTab('upload'));
-
-  const closeBtn = backdrop.querySelector<HTMLElement>('[data-ref="btn-modal-close"]');
-  const errorBanner = backdrop.querySelector<HTMLElement>('[data-ref="create-canvas-error"]');
-  const btnSubmit = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-submit-create-canvas"]');
   const inputName = backdrop.querySelector<HTMLInputElement>('[data-ref="input-canvas-name"]');
   const inputWidth = backdrop.querySelector<HTMLInputElement>('[data-ref="input-canvas-width"]');
   const inputHeight = backdrop.querySelector<HTMLInputElement>('[data-ref="input-canvas-height"]');
+  const btnSubmit = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-submit-create-canvas"]');
+  const errorBox = backdrop.querySelector<HTMLElement>('[data-ref="create-canvas-error"]');
 
-  let isClosing = false;
+  const btnWidthDecLarge = backdrop.querySelector<HTMLElement>('[data-ref="btn-width-dec-large"]');
+  const btnWidthDec = backdrop.querySelector<HTMLElement>('[data-ref="btn-width-dec"]');
+  const btnWidthInc = backdrop.querySelector<HTMLElement>('[data-ref="btn-width-inc"]');
+  const btnWidthIncLarge = backdrop.querySelector<HTMLElement>('[data-ref="btn-width-inc-large"]');
 
-  const closeModal = () => {
-    if (isClosing) return;
-    isClosing = true;
-    carouselControllers.forEach((c) => c.destroy());
-    backdrop.classList.remove('is-visible');
-    document.removeEventListener('keydown', handleKeyDown);
+  const btnHeightDecLarge = backdrop.querySelector<HTMLElement>('[data-ref="btn-height-dec-large"]');
+  const btnHeightDec = backdrop.querySelector<HTMLElement>('[data-ref="btn-height-dec"]');
+  const btnHeightInc = backdrop.querySelector<HTMLElement>('[data-ref="btn-height-inc"]');
+  const btnHeightIncLarge = backdrop.querySelector<HTMLElement>('[data-ref="btn-height-inc-large"]');
+
+  const stepperButtons = [
+    btnWidthDecLarge as HTMLButtonElement | null,
+    btnWidthDec as HTMLButtonElement | null,
+    btnWidthInc as HTMLButtonElement | null,
+    btnWidthIncLarge as HTMLButtonElement | null,
+    btnHeightDecLarge as HTMLButtonElement | null,
+    btnHeightDec as HTMLButtonElement | null,
+    btnHeightInc as HTMLButtonElement | null,
+    btnHeightIncLarge as HTMLButtonElement | null,
+  ];
+
+  const setDimensions = (w: number, h: number) => {
+    if (inputWidth) {
+      inputWidth.value = String(w);
+      inputWidth.dispatchEvent(new Event('input', { bubbles: true }));
+      inputWidth.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    if (inputHeight) {
+      inputHeight.value = String(h);
+      inputHeight.dispatchEvent(new Event('input', { bubbles: true }));
+      inputHeight.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  };
+
+  const clearActiveTemplate = () => {
+    activeTemplate = null;
+    activeVariantIndex = 0;
+    if (templateBannerGroup) templateBannerGroup.style.display = 'none';
+    if (templateVariantsGroup) templateVariantsGroup.style.display = 'none';
+    if (templateVariantsPills) templateVariantsPills.innerHTML = '';
+    if (inputWidth) inputWidth.readOnly = false;
+    if (inputHeight) inputHeight.readOnly = false;
+    stepperButtons.forEach((b) => {
+      if (b) b.disabled = false;
+    });
+  };
+
+  const renderVariantPills = (variants: PresetVariant[]) => {
+    if (!templateVariantsPills) return;
+    templateVariantsPills.innerHTML = variants
+      .map(
+        (v, idx) => `
+        <button type="button" class="template-variant-pill ${idx === activeVariantIndex ? 'is-active' : ''}" data-ref="btn-variant-${idx}" data-variant-index="${idx}">
+          ${v.label}
+        </button>
+      `
+      )
+      .join('');
+
+    templateVariantsPills.querySelectorAll<HTMLElement>('.template-variant-pill').forEach((pill) => {
+      pill.addEventListener('click', () => {
+        const idx = parseInt(pill.getAttribute('data-variant-index') || '0', 10);
+        activeVariantIndex = idx;
+        templateVariantsPills
+          .querySelectorAll('.template-variant-pill')
+          .forEach((p, i) => p.classList.toggle('is-active', i === idx));
+        const chosen = variants[idx];
+        if (chosen) {
+          setDimensions(chosen.width, chosen.height);
+        }
+      });
+    });
+  };
+
+  const applyTemplateOrFormat = (item: PresetItem) => {
+    if (item.isTemplate && item.variants && item.variants.length > 0) {
+      activeTemplate = item;
+      activeVariantIndex = 0;
+
+      if (templateBannerGroup) templateBannerGroup.style.display = 'block';
+      if (templateInfoName) templateInfoName.textContent = item.name;
+      if (templateVariantsGroup) templateVariantsGroup.style.display = 'block';
+
+      renderVariantPills(item.variants);
+
+      const initialVariant = item.variants[0];
+      setDimensions(initialVariant.width, initialVariant.height);
+
+      if (inputWidth) inputWidth.readOnly = true;
+      if (inputHeight) inputHeight.readOnly = true;
+      stepperButtons.forEach((b) => {
+        if (b) b.disabled = true;
+      });
+    } else {
+      clearActiveTemplate();
+      setDimensions(item.width, item.height);
+    }
+
+    if (inputName) {
+      inputName.value = item.name;
+      inputName.dispatchEvent(new Event('input', { bubbles: true }));
+      inputName.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    if (searchInput) searchInput.value = '';
+    switchTab('custom-size');
     setTimeout(() => {
-      if (backdrop.parentNode) {
-        backdrop.parentNode.removeChild(backdrop);
-      }
-      if (activeCreateCanvasModal?.close === closeModal) {
-        activeCreateCanvasModal = null;
-      }
-    }, 200);
+      inputName?.focus();
+      inputName?.select();
+    }, 80);
   };
 
-  const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      closeModal();
-    }
-  };
-
-  closeBtn?.addEventListener('click', closeModal);
-  backdrop.addEventListener('click', (e) => {
-    if (e.target === backdrop) {
-      closeModal();
-    }
+  btnClearTemplate?.addEventListener('click', () => {
+    clearActiveTemplate();
   });
-  document.addEventListener('keydown', handleKeyDown);
+
+  const setupNumberStepper = (
+    inputEl: HTMLInputElement | null,
+    btnDecLarge: HTMLElement | null,
+    btnDec: HTMLElement | null,
+    btnInc: HTMLElement | null,
+    btnIncLarge: HTMLElement | null,
+    minVal = 1,
+    maxVal = 16384
+  ) => {
+    if (!inputEl) return;
+
+    const adjust = (delta: number) => {
+      if (activeTemplate) return;
+      const current = parseInt(inputEl.value, 10) || minVal;
+      const next = Math.max(minVal, Math.min(maxVal, current + delta));
+      inputEl.value = String(next);
+      inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+      inputEl.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+
+    btnDecLarge?.addEventListener('click', () => adjust(-16));
+    btnDec?.addEventListener('click', () => adjust(-1));
+    btnInc?.addEventListener('click', () => adjust(1));
+    btnIncLarge?.addEventListener('click', () => adjust(16));
+
+    inputEl.addEventListener('change', () => {
+      const val = parseInt(inputEl.value, 10);
+      if (isNaN(val) || val < minVal) {
+        inputEl.value = String(minVal);
+      } else if (val > maxVal) {
+        inputEl.value = String(maxVal);
+      }
+    });
+  };
+
+  setupNumberStepper(inputWidth, btnWidthDecLarge, btnWidthDec, btnWidthInc, btnWidthIncLarge);
+  setupNumberStepper(inputHeight, btnHeightDecLarge, btnHeightDec, btnHeightInc, btnHeightIncLarge);
+
+  backdrop.querySelectorAll<HTMLElement>('.canvas-card').forEach((card) => {
+    card.addEventListener('click', () => {
+      const presetId = card.getAttribute('data-preset-id');
+      if (presetId) {
+        const item = ALL_PRESETS_MAP.get(presetId);
+        if (item) {
+          applyTemplateOrFormat(item);
+          return;
+        }
+      }
+      const w = parseInt(card.getAttribute('data-width') || '64', 10);
+      const h = parseInt(card.getAttribute('data-height') || '64', 10);
+      const name = card.getAttribute('data-name') || t('canvas.input_name_placeholder');
+      applyTemplateOrFormat({ id: 'custom', name, width: w, height: h, svgIcon: '' });
+    });
+  });
+
+  const performSearch = (query: string) => {
+    const q = query.trim().toLowerCase();
+
+    if (!q) {
+      if (searchResultsContainer) searchResultsContainer.style.display = 'none';
+      if (presetsEmptySearch) presetsEmptySearch.style.display = 'none';
+      switchTab(currentTab);
+      return;
+    }
+
+    tabButtons.forEach((btn) => btn?.classList.remove('is-active'));
+    categoryPanels.forEach((panel) => {
+      if (panel) panel.style.display = 'none';
+    });
+    if (panelCustomSize) panelCustomSize.style.display = 'none';
+    if (panelUpload) panelUpload.style.display = 'none';
+
+    const matches = ALL_PRESETS.filter((item) => {
+      const nameMatch = item.name.toLowerCase().includes(q);
+      const catMatch = item.categoryName ? item.categoryName.toLowerCase().includes(q) : false;
+      const dimMatch = `${item.width}x${item.height}`.includes(q) || `${item.width} x ${item.height}`.includes(q);
+      return nameMatch || catMatch || dimMatch;
+    });
+
+    if (matches.length === 0) {
+      if (searchResultsContainer) searchResultsContainer.style.display = 'none';
+      if (presetsEmptySearch) presetsEmptySearch.style.display = 'flex';
+      return;
+    }
+
+    if (presetsEmptySearch) presetsEmptySearch.style.display = 'none';
+    if (searchResultsContainer) searchResultsContainer.style.display = 'block';
+
+    if (searchResultsGrid) {
+      searchResultsGrid.innerHTML = matches.map(buildPresetCardHtml).join('');
+      searchResultsGrid.querySelectorAll<HTMLElement>('.canvas-card').forEach((card) => {
+        card.addEventListener('click', () => {
+          const presetId = card.getAttribute('data-preset-id');
+          if (presetId) {
+            const item = ALL_PRESETS_MAP.get(presetId);
+            if (item) {
+              applyTemplateOrFormat(item);
+              return;
+            }
+          }
+          const w = parseInt(card.getAttribute('data-width') || '64', 10);
+          const h = parseInt(card.getAttribute('data-height') || '64', 10);
+          const name = card.getAttribute('data-name') || t('canvas.input_name_placeholder');
+          applyTemplateOrFormat({ id: 'custom', name, width: w, height: h, svgIcon: '' });
+        });
+      });
+    }
+  };
+
+  searchInput?.addEventListener('input', () => {
+    performSearch(searchInput.value);
+  });
 
   const showError = (msg: string) => {
-    if (errorBanner) {
-      errorBanner.textContent = msg;
-      errorBanner.style.display = 'block';
+    if (errorBox) {
+      errorBox.textContent = msg;
+      errorBox.style.display = 'block';
     }
   };
 
-  const clearError = () => {
-    if (errorBanner) {
-      errorBanner.textContent = '';
-      errorBanner.style.display = 'none';
+  const hideError = () => {
+    if (errorBox) {
+      errorBox.textContent = '';
+      errorBox.style.display = 'none';
     }
   };
 
-  const executeCreateCanvas = async (name: string, width: number, height: number): Promise<void> => {
-    clearError();
+  const handleCreateCanvas = async () => {
+    const name = inputName?.value.trim() || t('canvas.input_name_placeholder');
+    const width = parseInt(inputWidth?.value || '0', 10);
+    const height = parseInt(inputHeight?.value || '0', 10);
+
+    hideError();
 
     if (isNaN(width) || width <= 0 || isNaN(height) || height <= 0) {
-      showError('Las medidas deben ser números positivos mayores a 0.');
+      showError('Las dimensiones deben ser mayores a 0.');
+      return;
+    }
+
+    if (width > 16384 || height > 16384) {
+      showError('Las dimensiones no pueden superar los 16384 píxeles.');
       return;
     }
 
@@ -563,12 +1183,133 @@ export function openCreateCanvasModal(): void {
     }
 
     try {
+      let templateDataUrl: string | null = null;
+
+      if (activeTemplate) {
+        const variant = activeTemplate.variants?.[activeVariantIndex];
+        const imageSrc = variant?.imagePath || activeTemplate.imagePath;
+
+        if (imageSrc) {
+          try {
+            const offscreen = document.createElement('canvas');
+            offscreen.width = width;
+            offscreen.height = height;
+            const ctx = offscreen.getContext('2d');
+            if (ctx) {
+              ctx.imageSmoothingEnabled = false;
+              const img = new Image();
+              await new Promise<void>((resolve) => {
+                let resolved = false;
+                const done = () => {
+                  if (resolved) return;
+                  resolved = true;
+                  try {
+                    ctx.drawImage(img, 0, 0, width, height);
+                  } catch {}
+                  resolve();
+                };
+                img.onload = done;
+                img.onerror = () => {
+                  if (!resolved) {
+                    resolved = true;
+                    resolve();
+                  }
+                };
+                img.src = imageSrc;
+                if (img.complete && img.naturalWidth > 0) {
+                  done();
+                }
+              });
+              try {
+                templateDataUrl = offscreen.toDataURL('image/png');
+              } catch {}
+            }
+          } catch {}
+
+          if (!templateDataUrl) {
+            templateDataUrl = imageSrc;
+          }
+        }
+      }
+
+      let initialData: string | null = null;
+      let previewThumbnail: string | null = null;
+
+      if (templateDataUrl) {
+        const initialProject = {
+          version: 1,
+          fps: 8,
+          onionSkin: false,
+          activeFrameId: 'frame_1',
+          frames: [
+            {
+              id: 'frame_1',
+              name: 'Cuadro 1',
+              activeLayerId: 'layer_1',
+              layers: [
+                {
+                  id: 'layer_1',
+                  name: activeTemplate ? activeTemplate.name : 'Capa 1',
+                  visible: true,
+                  opacity: 1.0,
+                  data: templateDataUrl,
+                },
+              ],
+            },
+          ],
+        };
+        initialData = JSON.stringify(initialProject);
+
+        const maxThumbDim = 320;
+        let thumbW = width;
+        let thumbH = height;
+        if (thumbW > maxThumbDim || thumbH > maxThumbDim) {
+          const ratio = Math.min(maxThumbDim / thumbW, maxThumbDim / thumbH);
+          thumbW = Math.max(1, Math.round(thumbW * ratio));
+          thumbH = Math.max(1, Math.round(thumbH * ratio));
+        }
+
+        const thumbCanvas = document.createElement('canvas');
+        thumbCanvas.width = thumbW;
+        thumbCanvas.height = thumbH;
+        const thumbCtx = thumbCanvas.getContext('2d');
+        if (thumbCtx) {
+          thumbCtx.imageSmoothingEnabled = false;
+          const thumbImg = new Image();
+          await new Promise<void>((r) => {
+            thumbImg.onload = () => {
+              try {
+                thumbCtx.drawImage(thumbImg, 0, 0, thumbW, thumbH);
+              } catch {}
+              r();
+            };
+            thumbImg.onerror = () => r();
+            thumbImg.src = templateDataUrl;
+            if (thumbImg.complete && thumbImg.naturalWidth > 0) {
+              try {
+                thumbCtx.drawImage(thumbImg, 0, 0, thumbW, thumbH);
+              } catch {}
+              r();
+            }
+          });
+          try {
+            previewThumbnail = thumbCanvas.toDataURL('image/png');
+          } catch {
+            previewThumbnail = templateDataUrl;
+          }
+        } else {
+          previewThumbnail = templateDataUrl;
+        }
+      }
+
       if (currentUser) {
         const res = await postApi(API_ROUTES.canvases.base, {
           name,
           width,
           height,
           unit: 'px',
+          data: initialData,
+          preview_thumbnail: previewThumbnail,
         });
 
         if (res.ok) {
@@ -577,7 +1318,9 @@ export function openCreateCanvasModal(): void {
             showToast(t('canvas.create_success'));
             closeModal();
             window.dispatchEvent(new CustomEvent('canvas-created', { detail: data.canvas }));
-            if (window.location.pathname !== '/') {
+            if (data.canvas.uuid) {
+              navigate('/design/' + data.canvas.uuid);
+            } else if (window.location.pathname !== '/') {
               navigate('/');
             }
             return;
@@ -598,6 +1341,8 @@ export function openCreateCanvasModal(): void {
           width,
           height,
           unit: 'px',
+          data: initialData,
+          preview_thumbnail: previewThumbnail,
           is_local: true,
           created_at: new Date().toISOString(),
         });
@@ -605,7 +1350,9 @@ export function openCreateCanvasModal(): void {
         showToast(t('canvas.create_success'));
         closeModal();
         window.dispatchEvent(new CustomEvent('canvas-created', { detail: localCanvas }));
-        if (window.location.pathname !== '/') {
+        if (localCanvas && localCanvas.uuid) {
+          navigate('/design/' + localCanvas.uuid);
+        } else if (window.location.pathname !== '/') {
           navigate('/');
         }
         return;
@@ -620,66 +1367,31 @@ export function openCreateCanvasModal(): void {
     }
   };
 
-  btnSubmit?.addEventListener('click', async () => {
-    const name = inputName?.value.trim() || t('canvas.input_name_placeholder');
-    const width = parseInt(inputWidth?.value || '0', 10);
-    const height = parseInt(inputHeight?.value || '0', 10);
-    await executeCreateCanvas(name, width, height);
-  });
+  btnSubmit?.addEventListener('click', handleCreateCanvas);
 
-  const presetCards = backdrop.querySelectorAll<HTMLElement>('.canvas-card[data-preset-id]');
-  presetCards.forEach((card) => {
-    card.addEventListener('click', () => {
-      const name = card.getAttribute('data-name') || t('canvas.input_name_placeholder');
-      const width = parseInt(card.getAttribute('data-width') || '0', 10);
-      const height = parseInt(card.getAttribute('data-height') || '0', 10);
-      if (width > 0 && height > 0) {
-        void executeCreateCanvas(name, width, height);
-      }
-    });
-  });
-
-  searchInput?.addEventListener('input', () => {
-    const query = (searchInput.value || '').trim().toLowerCase();
-    let totalVisible = 0;
-
-    CATEGORIES.forEach((cat) => {
-      const catEl = backdrop.querySelector<HTMLElement>(`[data-ref="preset-category-${cat.id}"]`);
-      if (!catEl) return;
-
-      const cards = catEl.querySelectorAll<HTMLElement>('.canvas-card[data-preset-id]');
-      let catVisible = 0;
-
-      cards.forEach((card) => {
-        const name = (card.getAttribute('data-name') || '').toLowerCase();
-        const w = card.getAttribute('data-width') || '';
-        const h = card.getAttribute('data-height') || '';
-        const matches = !query || name.includes(query) || `${w}x${h}`.includes(query) || `${w} × ${h}`.includes(query);
-
-        card.style.display = matches ? 'block' : 'none';
-        if (matches) catVisible++;
-      });
-
-      catEl.style.display = catVisible > 0 ? 'flex' : 'none';
-      totalVisible += catVisible;
-    });
-
-    if (presetsContainer) {
-      presetsContainer.style.display = totalVisible > 0 ? 'flex' : 'none';
-    }
-    if (presetsEmptySearch) {
-      presetsEmptySearch.style.display = totalVisible === 0 ? 'flex' : 'none';
-    }
-
-    carouselControllers.forEach((c) => c.updateButtons());
-  });
-
-  document.body.appendChild(backdrop);
-  requestAnimationFrame(() => {
-    backdrop.classList.add('is-visible');
-    searchInput?.focus();
-    carouselControllers.forEach((c) => c.updateButtons());
-  });
+  const closeModal = () => {
+    carouselControllers.forEach((c) => c.destroy());
+    backdrop.remove();
+    document.body.style.overflow = '';
+    activeCreateCanvasModal = null;
+  };
 
   activeCreateCanvasModal = { close: closeModal };
+
+  const closeBtn = backdrop.querySelector<HTMLElement>('[data-ref="btn-modal-close"]');
+  closeBtn?.addEventListener('click', closeModal);
+
+  backdrop.addEventListener('click', (e) => {
+    if (e.target === backdrop) {
+      closeModal();
+    }
+  });
+
+  const onKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      closeModal();
+      document.removeEventListener('keydown', onKeyDown);
+    }
+  };
+  document.addEventListener('keydown', onKeyDown);
 }

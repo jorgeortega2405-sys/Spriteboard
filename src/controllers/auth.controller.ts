@@ -1,3 +1,5 @@
+import crypto from 'crypto';
+import { Request, Response } from 'express';
 import { pool } from '../config/database.config.js';
 import { getCurrentUser, getLinkedAccounts } from '../middlewares/auth.middleware.js';
 import { getClientIp } from '../middlewares/rate-limit.middleware.js';
@@ -11,8 +13,6 @@ import { createUser, findUserByEmail, findUserById, findUserDuplicates, updateUs
 import { consumePasswordResetToken, generateSixDigitCode, getPendingRegistration, savePasswordChangeAuth, savePasswordResetToken, savePendingRegistration, verifyAndConsumeCode, verifyPasswordResetToken } from '../services/verification.service.js';
 import { sanitizeUser, sendBadRequest, sendConflict, sendCreated, sendInternalError, sendNotFound, sendSuccess, sendUnauthorized } from '../utils/http.util.js';
 import { validateEmail, validatePassword, validateUsername, validateVerificationCode } from '../utils/validators.util.js';
-import crypto from 'crypto';
-import { Request, Response } from 'express';
 
 export async function validateStage1(req: Request, res: Response): Promise<void> {
   try {

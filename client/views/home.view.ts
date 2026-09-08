@@ -10,14 +10,24 @@ import { t, translateElement } from '../services/i18n.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { CanvasItem } from '../types/canvas.types.js';
+import { getEmptyGraphicSvg } from '../utils/dom.util.js';
 
 class HomeController {
   private container: HTMLElement;
   private abortController: AbortController;
+  private allCanvases: CanvasItem[] = [];
   private gridEl: HTMLElement | null = null;
   private emptyStateEl: HTMLElement | null = null;
   private activeOpenDropdown: HTMLElement | null = null;
   private activeOpenCard: HTMLElement | null = null;
+
+  private isSearchActive = false;
+  private btnToggleSearch: HTMLElement | null = null;
+  private searchToolbar: HTMLElement | null = null;
+  private searchInput: HTMLInputElement | null = null;
+  private btnClearSearch: HTMLElement | null = null;
+  private btnHomeCreateCanvasTop: HTMLElement | null = null;
+  private btnEmptyCreate: HTMLElement | null = null;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -28,6 +38,13 @@ class HomeController {
     this.gridEl = this.container.querySelector<HTMLElement>('[data-ref="canvas-grid"]');
     this.emptyStateEl = this.container.querySelector<HTMLElement>('[data-ref="canvas-empty-state"]');
 
+    this.btnToggleSearch = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-search"]');
+    this.searchToolbar = this.container.querySelector<HTMLElement>('[data-ref="search-toolbar"]');
+    this.searchInput = this.container.querySelector<HTMLInputElement>('[data-ref="home-search-input"]');
+    this.btnClearSearch = this.container.querySelector<HTMLElement>('[data-ref="btn-clear-search"]');
+    this.btnHomeCreateCanvasTop = this.container.querySelector<HTMLElement>('[data-ref="btn-home-create-canvas-top"]');
+    this.btnEmptyCreate = this.container.querySelector<HTMLElement>('[data-ref="btn-home-create-canvas"]');
+
     this.bindEvents();
     await this.loadCanvases();
   }
@@ -35,11 +52,48 @@ class HomeController {
   private bindEvents(): void {
     const { signal } = this.abortController;
 
-    const btnEmptyCreate = this.container.querySelector<HTMLElement>('[data-ref="btn-home-create-canvas"]');
-    btnEmptyCreate?.addEventListener(
+    this.btnEmptyCreate?.addEventListener(
       'click',
       () => {
         openCreateCanvasModal();
+      },
+      { signal }
+    );
+
+    this.btnHomeCreateCanvasTop?.addEventListener(
+      'click',
+      () => {
+        openCreateCanvasModal();
+      },
+      { signal }
+    );
+
+    this.btnToggleSearch?.addEventListener(
+      'click',
+      (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.toggleSearchToolbar();
+      },
+      { signal }
+    );
+
+    this.searchInput?.addEventListener(
+      'input',
+      () => {
+        this.handleSearchInput();
+      },
+      { signal }
+    );
+
+    this.btnClearSearch?.addEventListener(
+      'click',
+      () => {
+        if (this.searchInput) {
+          this.searchInput.value = '';
+          this.handleSearchInput();
+          this.searchInput.focus();
+        }
       },
       { signal }
     );
@@ -56,8 +110,30 @@ class HomeController {
       'click',
       (e: MouseEvent) => {
         const target = e.target as HTMLElement | null;
+        if (this.isSearchActive) {
+          if (
+            this.searchToolbar &&
+            !this.searchToolbar.contains(target) &&
+            this.btnToggleSearch &&
+            !this.btnToggleSearch.contains(target)
+          ) {
+            this.toggleSearchToolbar(false);
+          }
+        }
         if (this.activeOpenDropdown && !this.activeOpenDropdown.contains(target) && !target?.closest('[data-ref="btn-card-more"]')) {
           this.closeAllDropdowns();
+        }
+      },
+      { signal }
+    );
+
+    document.addEventListener(
+      'keydown',
+      (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          if (this.isSearchActive) {
+            this.toggleSearchToolbar(false);
+          }
         }
       },
       { signal }
@@ -67,6 +143,41 @@ class HomeController {
   public destroy(): void {
     this.closeAllDropdowns();
     this.abortController.abort();
+  }
+
+  private toggleSearchToolbar(force?: boolean): void {
+    this.isSearchActive = force !== undefined ? force : !this.isSearchActive;
+    if (!this.searchToolbar) return;
+
+    if (this.isSearchActive) {
+      this.searchToolbar.classList.remove('is-hidden');
+      this.searchToolbar.classList.add('is-active');
+      setTimeout(() => this.searchInput?.focus(), 80);
+    } else {
+      this.searchToolbar.classList.remove('is-active');
+      this.searchToolbar.classList.add('is-hidden');
+      if (this.searchInput) {
+        this.searchInput.value = '';
+      }
+      if (this.btnClearSearch) {
+        this.btnClearSearch.style.display = 'none';
+      }
+      this.renderCanvases(this.allCanvases);
+    }
+  }
+
+  private handleSearchInput(): void {
+    if (!this.searchInput) return;
+    const query = this.searchInput.value.trim().toLowerCase();
+    if (this.btnClearSearch) {
+      this.btnClearSearch.style.display = query ? 'inline-flex' : 'none';
+    }
+    if (!query) {
+      this.renderCanvases(this.allCanvases);
+      return;
+    }
+    const filtered = this.allCanvases.filter((c) => c.name.toLowerCase().includes(query));
+    this.renderCanvases(filtered, true);
   }
 
   private closeAllDropdowns(): void {
@@ -126,16 +237,36 @@ class HomeController {
       items = localCanvases.filter((c) => c.is_local && !c.user_id && !c.id && c.access_level !== 'public');
     }
 
-    this.renderCanvases(items);
+    this.allCanvases = items;
+    if (this.searchInput && this.searchInput.value.trim()) {
+      this.handleSearchInput();
+    } else {
+      this.renderCanvases(items);
+    }
   }
 
-  private renderCanvases(canvases: CanvasItem[]): void {
+  private renderCanvases(canvases: CanvasItem[], isSearchResult = false): void {
     if (!this.gridEl || !this.emptyStateEl) return;
 
     if (canvases.length === 0) {
       this.gridEl.innerHTML = '';
       this.gridEl.style.display = 'none';
       this.emptyStateEl.style.display = 'flex';
+      const emptyTitleEl = this.container.querySelector<HTMLElement>('[data-ref="canvas-empty-title"]');
+      const emptyDescEl = this.container.querySelector<HTMLElement>('[data-ref="canvas-empty-desc"]');
+      const emptyActionsEl = this.container.querySelector<HTMLElement>('[data-ref="canvas-empty-actions"]');
+      const emptyGraphicEl = this.container.querySelector<HTMLElement>('[data-ref="canvas-empty-graphic"]');
+      if (isSearchResult) {
+        if (emptyTitleEl) emptyTitleEl.textContent = t('canvas.home_search_no_results_title') || 'Sin resultados';
+        if (emptyDescEl) emptyDescEl.textContent = t('canvas.home_search_no_results') || 'No se encontraron lienzos que coincidan con la búsqueda.';
+        if (emptyActionsEl) emptyActionsEl.style.display = 'none';
+        if (emptyGraphicEl) emptyGraphicEl.innerHTML = getEmptyGraphicSvg('search');
+      } else {
+        if (emptyTitleEl) emptyTitleEl.textContent = t('canvas.home_empty_title') || 'Aún no tienes lienzos creados';
+        if (emptyDescEl) emptyDescEl.textContent = t('canvas.home_empty_desc') || 'Empieza creando un centro de trabajo personalizado con las dimensiones que necesites.';
+        if (emptyActionsEl) emptyActionsEl.style.display = 'flex';
+        if (emptyGraphicEl) emptyGraphicEl.innerHTML = getEmptyGraphicSvg('canvas');
+      }
       return;
     }
 
@@ -391,13 +522,16 @@ class HomeController {
     btnSync.textContent = t('canvas.syncing');
 
     try {
+      const fullCanvas = (await getLocalCanvasByUuid(canvas.uuid)) || canvas;
+
       const res = await postApi(API_ROUTES.canvases.sync, {
-        uuid: canvas.uuid,
-        name: canvas.name,
-        width: canvas.width,
-        height: canvas.height,
-        unit: canvas.unit || 'px',
-        data: canvas.data || null,
+        uuid: fullCanvas.uuid,
+        name: fullCanvas.name,
+        width: fullCanvas.width,
+        height: fullCanvas.height,
+        unit: fullCanvas.unit || 'px',
+        data: fullCanvas.data || null,
+        preview_thumbnail: fullCanvas.preview_thumbnail || null,
       });
 
       if (res.ok) {
@@ -422,11 +556,13 @@ class HomeController {
         }
       }
 
-      showToast(t('canvas.sync_error'));
+      const errData = await res.json().catch(() => null);
+      const errMsg = errData?.error || t('canvas.sync_error');
+      showToast(errMsg, 'danger');
       btnSync.disabled = false;
       btnSync.textContent = t('canvas.btn_sync');
     } catch {
-      showToast(t('canvas.sync_error'));
+      showToast(t('canvas.sync_error'), 'danger');
       btnSync.disabled = false;
       btnSync.textContent = t('canvas.btn_sync');
     }
@@ -435,6 +571,8 @@ class HomeController {
 
 export async function createHomeView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/home/home.html');
+  translateElement(container);
+
   const sidebar = await createSidebar();
   container.prepend(sidebar);
 

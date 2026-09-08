@@ -22,6 +22,8 @@ export interface CreateCanvasPayload {
   height: number;
   unit?: string;
   access_level?: 'private' | 'public';
+  data?: any;
+  preview_thumbnail?: string | null;
 }
 
 export interface CanvasMember {

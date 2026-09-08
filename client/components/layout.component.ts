@@ -256,9 +256,7 @@ export async function createTopBar(): Promise<HTMLElement> {
           const isActive = acc.id === currentUser?.id;
           const item = document.createElement('button');
           item.type = 'button';
-          item.className = `menu-item menu-item--bordered account-item ${
-            isActive ? 'account-item--active' : ''
-          }`;
+          item.className = 'menu-item menu-item--bordered account-item';
           item.setAttribute('data-ref', `account-item-${acc.id}`);
 
           const accTier = acc.subscription_tier || 'free';
