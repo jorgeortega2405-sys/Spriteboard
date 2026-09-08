@@ -13,6 +13,7 @@ import { CanvasTeamItem, Team } from '../types/team.types.js';
 import { CarouselController, initCarouselScroll, setupDropdown } from '../utils/dom.util.js';
 import { PixelFontFamily, renderPixelTextCanvas } from '../utils/pixel-font.util.js';
 import { getCachedImage, PIXEL_SHAPES, PixelShape, renderShapeCanvas, renderShapeThumbnail, ShapeCategory, ShapeColorMode } from '../utils/pixel-shapes.util.js';
+import { globalColorReplace, scanlineFloodFill } from '../utils/scanline-fill.util.js';
 import { createErrorView } from './error.view.js';
 
 interface FloatingSelection {
@@ -297,6 +298,7 @@ class DesignController {
   private isSaving = false;
   private isLoaded = false;
   private isAccessRevoked = false;
+  private roomToken = '';
 
   private accessLevel: 'private' | 'public' = 'private';
   private isOwner = true;
@@ -1199,25 +1201,18 @@ class DesignController {
     }
     if (initialLayers && initialLayers.length > 0) {
       const loadedLayers: CanvasLayer[] = [];
+      const loadPromises: Promise<void>[] = [];
       for (const sLayer of initialLayers) {
         const lyr = this.createLayer(sLayer.name);
         lyr.id = sLayer.id;
         lyr.visible = sLayer.visible !== false;
         lyr.opacity = typeof sLayer.opacity === 'number' ? sLayer.opacity : 1.0;
-        if (sLayer.data && sLayer.data.startsWith('data:image')) {
-          await new Promise<void>((resolve) => {
-            const img = new Image();
-            img.onload = () => {
-              lyr.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
-              lyr.ctx.drawImage(img, 0, 0);
-              resolve();
-            };
-            img.onerror = () => resolve();
-            img.src = sLayer.data!;
-          });
+        if (sLayer.data) {
+          loadPromises.push(this.loadLayerImage(lyr, sLayer.data));
         }
         loadedLayers.push(lyr);
       }
+      await Promise.all(loadPromises);
       newFrame.layers = loadedLayers;
       newFrame.activeLayerId = loadedLayers[0]?.id || '';
     }
@@ -1424,6 +1419,76 @@ class DesignController {
     return thumbCanvas.toDataURL('image/png');
   }
 
+  private async loadLayerImage(layer: CanvasLayer, dataUrl: string): Promise<void> {
+    if (!dataUrl || (!dataUrl.startsWith('data:image') && !dataUrl.startsWith('/') && !dataUrl.startsWith('http'))) {
+      return;
+    }
+
+    try {
+      const img = new Image();
+      img.src = dataUrl;
+
+      if (typeof img.decode === 'function') {
+        try {
+          await Promise.race([
+            img.decode(),
+            new Promise<void>((_, reject) => setTimeout(() => reject(new Error('timeout')), 2500)),
+          ]);
+        } catch {
+          await new Promise<void>((resolve) => {
+            let settled = false;
+            const timer = setTimeout(() => {
+              if (!settled) {
+                settled = true;
+                resolve();
+              }
+            }, 1000);
+            const done = () => {
+              if (!settled) {
+                settled = true;
+                clearTimeout(timer);
+                resolve();
+              }
+            };
+            img.onload = done;
+            img.onerror = done;
+            if (img.complete) {
+              done();
+            }
+          });
+        }
+      } else {
+        await new Promise<void>((resolve) => {
+          let settled = false;
+          const timer = setTimeout(() => {
+            if (!settled) {
+              settled = true;
+              resolve();
+            }
+          }, 2500);
+          const done = () => {
+            if (!settled) {
+              settled = true;
+              clearTimeout(timer);
+              resolve();
+            }
+          };
+          img.onload = done;
+          img.onerror = done;
+          if (img.complete) {
+            done();
+          }
+        });
+      }
+
+      layer.ctx.imageSmoothingEnabled = false;
+      layer.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
+      try {
+        layer.ctx.drawImage(img, 0, 0, this.canvasWidth, this.canvasHeight);
+      } catch {}
+    } catch {}
+  }
+
   private async deserializeProject(data: SerializedCanvasProject | string): Promise<boolean> {
     try {
       const project: SerializedCanvasProject = typeof data === 'string' ? JSON.parse(data) : data;
@@ -1439,6 +1504,7 @@ class DesignController {
       this.frameOnionBtn?.classList.toggle('is-active', this.onionSkinEnabled);
 
       const loadedFrames: CanvasFrame[] = [];
+      const imageLoadPromises: Promise<void>[] = [];
 
       for (let fIdx = 0; fIdx < project.frames.length; fIdx++) {
         const sFrame = project.frames[fIdx];
@@ -1451,32 +1517,8 @@ class DesignController {
           layer.visible = sLayer.visible !== false;
           layer.opacity = typeof sLayer.opacity === 'number' ? sLayer.opacity : 1.0;
 
-          if (sLayer.data && (sLayer.data.startsWith('data:image') || sLayer.data.startsWith('/') || sLayer.data.startsWith('http'))) {
-            await new Promise<void>((resolve) => {
-              const img = new Image();
-              let done = false;
-              const finish = () => {
-                if (done) return;
-                done = true;
-                layer.ctx.imageSmoothingEnabled = false;
-                layer.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
-                try {
-                  layer.ctx.drawImage(img, 0, 0, this.canvasWidth, this.canvasHeight);
-                } catch {}
-                resolve();
-              };
-              img.onload = finish;
-              img.onerror = () => {
-                if (!done) {
-                  done = true;
-                  resolve();
-                }
-              };
-              img.src = sLayer.data;
-              if (img.complete && img.naturalWidth > 0) {
-                finish();
-              }
-            });
+          if (sLayer.data) {
+            imageLoadPromises.push(this.loadLayerImage(layer, sLayer.data));
           }
 
           frameLayers.push(layer);
@@ -1489,6 +1531,8 @@ class DesignController {
           activeLayerId: sFrame.activeLayerId || frameLayers[0]?.id || '',
         });
       }
+
+      await Promise.all(imageLoadPromises);
 
       this.frames = loadedFrames;
       this.activeFrameId = project.activeFrameId && this.frames.some((f) => f.id === project.activeFrameId)
@@ -3032,55 +3076,9 @@ class DesignController {
     if (targetColor32 === fillColor32) return;
 
     if (this.bucketMode === 'global') {
-      for (let i = 0; i < data32.length; i++) {
-        if (data32[i] === targetColor32) {
-          data32[i] = fillColor32;
-        }
-      }
+      globalColorReplace(data32, targetColor32, fillColor32);
     } else {
-      const queue: number[] = [startIndex];
-      const width = this.canvasWidth;
-      const height = this.canvasHeight;
-      const totalPixels = width * height;
-      const visited = new Uint8Array(totalPixels);
-      visited[startIndex] = 1;
-
-      while (queue.length > 0) {
-        const index = queue.pop()!;
-        data32[index] = fillColor32;
-
-        const x = index % width;
-        const y = Math.floor(index / width);
-
-        if (x + 1 < width) {
-          const right = index + 1;
-          if (!visited[right] && data32[right] === targetColor32) {
-            visited[right] = 1;
-            queue.push(right);
-          }
-        }
-        if (x - 1 >= 0) {
-          const left = index - 1;
-          if (!visited[left] && data32[left] === targetColor32) {
-            visited[left] = 1;
-            queue.push(left);
-          }
-        }
-        if (y + 1 < height) {
-          const down = index + width;
-          if (!visited[down] && data32[down] === targetColor32) {
-            visited[down] = 1;
-            queue.push(down);
-          }
-        }
-        if (y - 1 >= 0) {
-          const up = index - width;
-          if (!visited[up] && data32[up] === targetColor32) {
-            visited[up] = 1;
-            queue.push(up);
-          }
-        }
-      }
+      scanlineFloodFill(data32, this.canvasWidth, this.canvasHeight, startX, startY, fillColor32);
     }
 
     layer.ctx.putImageData(imgData, 0, 0);
@@ -4914,7 +4912,13 @@ class DesignController {
     const username = currentUser ? currentUser.username : 'Invitado';
     this.myCollaboratorColor = getCollaboratorColor(userId ? userId : Math.random().toString());
 
-    joinCanvasRoom(this.canvasUuid, userId, username);
+    joinCanvasRoom(this.canvasUuid, userId, username, this.myCollaboratorColor, this.roomToken);
+
+    const unsubJoinError = registerWebSocketHandler('CANVAS_JOIN_ERROR', (payload: any) => {
+      const roomUuid = payload.canvasUuid || payload.canvas_uuid;
+      if (roomUuid !== this.canvasUuid) return;
+      this.handleAccessRevoked();
+    });
 
     const unsubPresence = registerWebSocketHandler('ROOM_PRESENCE', (payload: any) => {
       const roomUuid = payload.canvasUuid || payload.canvas_uuid;
@@ -5040,7 +5044,7 @@ class DesignController {
       }
     });
 
-    this.wsUnsubscribes.push(unsubPresence, unsubJoined, unsubLeft, unsubCursor, unsubStroke, unsubAction, unsubFullUpdate, unsubAccess, unsubMemberRemoved);
+    this.wsUnsubscribes.push(unsubPresence, unsubJoined, unsubLeft, unsubCursor, unsubStroke, unsubAction, unsubFullUpdate, unsubAccess, unsubMemberRemoved, unsubJoinError);
   }
 
   private handleAccessRevoked(): void {
@@ -5130,7 +5134,6 @@ class DesignController {
     this.renderLayersCards();
     this.renderFramesCards();
     this.requestRedraw();
-    this.scheduleAutoSave();
   }
 
   private applyRemoteAction(data: { action: string; params?: any; payload?: any }): void {
@@ -5216,7 +5219,6 @@ class DesignController {
           this.renderLayersCards();
           this.renderFramesCards();
           this.requestRedraw();
-          this.scheduleAutoSave();
         };
         img.src = p.dataUrl;
         return;
@@ -5253,7 +5255,6 @@ class DesignController {
     this.renderLayersCards();
     this.renderFramesCards();
     this.requestRedraw();
-    this.scheduleAutoSave();
   }
 
   private updateAccessLevelUI(): void {
@@ -5722,10 +5723,25 @@ class DesignController {
           canvas = data.canvas;
           this.canvasServerId = data.canvas.id || null;
           this.canvasUserId = data.canvas.user_id || null;
+          if (data.room_token) {
+            this.roomToken = data.room_token;
+          }
         }
-      } else if (res.status === 404 || res.status === 403) {
+      } else if (res.status === 404 || res.status === 403 || res.status === 401) {
         await removeLocalCanvas(this.canvasUuid);
         return false;
+      }
+
+      if (!this.roomToken) {
+        try {
+          const tokenRes = await getApi(API_ROUTES.canvases.token(this.canvasUuid));
+          if (tokenRes.ok) {
+            const tokenData = await tokenRes.json();
+            if (tokenData?.room_token) {
+              this.roomToken = tokenData.room_token;
+            }
+          }
+        } catch {}
       }
     } catch {
       if (!canvas || canvas.id) {
@@ -5779,8 +5795,8 @@ class DesignController {
     }
 
     this.updateAccessLevelUI();
-    await this.loadCanvasMembers();
-    await this.loadCanvasTeams();
+    void this.loadCanvasMembers();
+    void this.loadCanvasTeams();
 
     const parent = this.viewportCanvas?.parentElement;
     if (parent) {
@@ -5843,7 +5859,16 @@ export async function createDesignView(canvasUuid: string): Promise<HTMLElement>
   container.prepend(sidebar);
 
   const controller = new DesignController(container, canvasUuid);
-  const loaded = await controller.init();
+  let loaded = false;
+  try {
+    loaded = await Promise.race([
+      controller.init(),
+      new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 10000)),
+    ]);
+  } catch {
+    loaded = false;
+  }
+
   if (!loaded) {
     controller.destroy();
     return await createErrorView({ code: '404' });

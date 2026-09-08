@@ -15,6 +15,7 @@ export const API_ROUTES = {
     removeTeam: (uuid: string, teamId: number) => `/api/canvases/${encodeURIComponent(uuid)}/teams/${encodeURIComponent(teamId)}`,
     sync: '/api/canvases/sync',
     teams: (uuid: string) => `/api/canvases/${encodeURIComponent(uuid)}/teams`,
+    token: (uuid: string) => `/api/canvases/${encodeURIComponent(uuid)}/token`,
   },
   teams: {
     base: '/api/teams',

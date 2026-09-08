@@ -1,7 +1,7 @@
-import { Request, Response } from 'express';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
-import { addCanvasMember, addCanvasTeam, createCanvas, deleteCanvas, duplicateCanvas, emptyTrash, getCanvasByUuid, getCanvasMembers, getCanvasTeams, getUserCanvases, getUserTrashCanvases, permanentlyDeleteCanvas, removeCanvasMember, removeCanvasTeam, restoreCanvas, searchUsersForSharing, syncCanvas, updateCanvasAccessLevel } from '../services/canvas.service.js';
+import { addCanvasMember, addCanvasTeam, createCanvas, deleteCanvas, duplicateCanvas, emptyTrash, generateCanvasRoomToken, getCanvasByUuid, getCanvasMembers, getCanvasTeams, getCanvasUserRole, getUserCanvases, getUserTrashCanvases, permanentlyDeleteCanvas, removeCanvasMember, removeCanvasTeam, restoreCanvas, searchUsersForSharing, syncCanvas, updateCanvasAccessLevel } from '../services/canvas.service.js';
 import { logger } from '../services/logger.service.js';
+import { Request, Response } from 'express';
 
 export async function listCanvases(req: Request, res: Response): Promise<void> {
   try {
@@ -105,16 +105,52 @@ export async function getCanvasHandler(req: Request, res: Response): Promise<voi
     }
 
     const user = getCurrentUser(req);
-    const canvas = await getCanvasByUuid(uuid, user ? user.id : undefined);
+    const userRoleResult = await getCanvasUserRole(uuid, user ? user.id : undefined);
 
-    if (!canvas) {
+    if (!userRoleResult) {
       res.status(404).json({ error: 'Lienzo no encontrado.' });
       return;
     }
 
-    res.json({ canvas });
+    const tokenUserId = user ? user.id : -Math.floor(1000 + Math.random() * 9000);
+    const roomToken = generateCanvasRoomToken(uuid, tokenUserId, userRoleResult.role);
+
+    res.json({
+      canvas: userRoleResult.canvas,
+      role: userRoleResult.role,
+      room_token: roomToken,
+    });
   } catch (err) {
     logger.app.error(`Error al consultar lienzo ${req.params.uuid}`, err);
+    res.status(500).json({ error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.' });
+  }
+}
+
+export async function getCanvasTokenHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const { uuid } = req.params;
+    if (!uuid || typeof uuid !== 'string') {
+      res.status(400).json({ error: 'Identificador de lienzo inválido.' });
+      return;
+    }
+
+    const user = getCurrentUser(req);
+    const userRoleResult = await getCanvasUserRole(uuid, user ? user.id : undefined);
+
+    if (!userRoleResult) {
+      res.status(404).json({ error: 'Lienzo no encontrado o sin permisos de acceso.' });
+      return;
+    }
+
+    const tokenUserId = user ? user.id : -Math.floor(1000 + Math.random() * 9000);
+    const roomToken = generateCanvasRoomToken(uuid, tokenUserId, userRoleResult.role);
+
+    res.json({
+      role: userRoleResult.role,
+      room_token: roomToken,
+    });
+  } catch (err) {
+    logger.app.error(`Error al generar token de lienzo ${req.params.uuid}`, err);
     res.status(500).json({ error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.' });
   }
 }

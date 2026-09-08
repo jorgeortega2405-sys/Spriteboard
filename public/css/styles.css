@@ -793,6 +793,22 @@ html.dark-theme .layout-header::after {
   border-color: var(--action-danger);
 }
 
+.menu-item--danger .menu-item__icon,
+.menu-item--danger .component-icon,
+.component-menu-link--danger .component-menu-link-icon,
+.avatar-menu-item--danger .component-icon,
+.avatar-menu-item--danger .material-symbols-rounded {
+  color: var(--action-danger);
+}
+
+.menu-item--danger:hover .menu-item__icon,
+.menu-item--danger:hover .component-icon,
+.component-menu-link--danger:hover .component-menu-link-icon,
+.avatar-menu-item--danger:hover .component-icon,
+.avatar-menu-item--danger:hover .material-symbols-rounded {
+  color: var(--action-danger-hover);
+}
+
 .menu-item__icon,
 .component-menu-link-icon,
 .avatar-menu-item .component-icon,
@@ -804,7 +820,7 @@ html.dark-theme .layout-header::after {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  color: var(--text-primary);
+  color: currentColor;
 }
 
 .menu-item__text,
@@ -5419,7 +5435,7 @@ html.dark-theme .component-card-button--downgrade {
 
 .canvas-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(265px, 1fr));
   gap: 16px;
   width: 100%;
 }
@@ -5557,7 +5573,7 @@ html.dark-theme .component-card-button--downgrade {
 
 .canvas-card__actions {
   background-color: var(--bg-surface);
-  border-radius: 8px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -5596,9 +5612,9 @@ html.dark-theme .component-card-button--downgrade {
 
 .canvas-card .menu-panel--dropdown {
   position: absolute;
-  width: 200px;
-  min-width: 200px;
-  max-width: 200px;
+  width: 265px;
+  min-width: 265px;
+  max-width: 265px;
   top: calc(100% + 4px);
   right: 0;
   z-index: 100;
@@ -5606,14 +5622,14 @@ html.dark-theme .component-card-button--downgrade {
   border: 1px solid var(--border-color);
   background-color: var(--bg-surface);
   border-radius: var(--radius-lg);
-  padding: 4px;
+  padding: 0;
 }
 
 .canvas-card .menu-panel__list {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 0;
+  gap: 8px;
+  padding: 8px;
 }
 
 .canvas-card .menu-divider {

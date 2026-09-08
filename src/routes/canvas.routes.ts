@@ -1,4 +1,4 @@
-import { addCanvasMemberHandler, addCanvasTeamHandler, createCanvasHandler, deleteCanvasHandler, duplicateCanvasHandler, emptyTrashHandler, getCanvasHandler, getCanvasMembersHandler, getCanvasTeamsHandler, listCanvases, listTrashCanvases, permanentlyDeleteCanvasHandler, removeCanvasMemberHandler, removeCanvasTeamHandler, restoreCanvasHandler, searchUsersHandler, syncCanvasHandler, updateCanvasAccessHandler } from '../controllers/canvas.controller.js';
+import { addCanvasMemberHandler, addCanvasTeamHandler, createCanvasHandler, deleteCanvasHandler, duplicateCanvasHandler, emptyTrashHandler, getCanvasHandler, getCanvasMembersHandler, getCanvasTeamsHandler, getCanvasTokenHandler, listCanvases, listTrashCanvases, permanentlyDeleteCanvasHandler, removeCanvasMemberHandler, removeCanvasTeamHandler, restoreCanvasHandler, searchUsersHandler, syncCanvasHandler, updateCanvasAccessHandler } from '../controllers/canvas.controller.js';
 import { requireAuth } from '../middlewares/auth.middleware.js';
 import { Router } from 'express';
 
@@ -21,6 +21,7 @@ router.get('/trash', requireAuth, listTrashCanvases);
 router.post('/trash/:uuid/restore', requireAuth, restoreCanvasHandler);
 router.delete('/trash/empty', requireAuth, emptyTrashHandler);
 router.delete('/trash/:uuid', requireAuth, permanentlyDeleteCanvasHandler);
+router.get('/canvases/:uuid/token', getCanvasTokenHandler);
 router.get('/canvases/:uuid', getCanvasHandler);
 
 export default router;

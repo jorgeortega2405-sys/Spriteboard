@@ -310,10 +310,16 @@ class HomeController {
       </div>
 
       <div class="canvas-card__badges-tr" data-ref="badges-tr">
-        <div class="canvas-card__badge canvas-card__badge--glass ${isLocal ? 'canvas-card__badge--local' : ''}">
-          <span class="material-symbols-rounded">${badgeIcon}</span>
-          <span data-ref="badge-status-text">${badgeText}</span>
-        </div>
+        ${
+          isLocal
+            ? `
+          <div class="canvas-card__badge canvas-card__badge--glass canvas-card__badge--local">
+            <span class="material-symbols-rounded">devices</span>
+            <span data-ref="badge-status-text">${badgeText}</span>
+          </div>
+        `
+            : ''
+        }
         ${
           canSync
             ? `
@@ -328,12 +334,18 @@ class HomeController {
 
       <div class="canvas-card__actions-wrapper" data-ref="card-actions-wrapper">
         <div class="canvas-card__actions" data-ref="card-actions">
-          <button type="button" class="canvas-card__action-btn" data-ref="btn-card-more" aria-label="${t('canvas.menu_open_new_tab')}" data-tooltip="Opciones">
+          <button type="button" class="canvas-card__action-btn" data-ref="btn-card-bookmark" data-tooltip="Guardar" aria-label="Guardar">
+            <span class="material-symbols-rounded">bookmark</span>
+          </button>
+          <button type="button" class="canvas-card__action-btn" data-ref="btn-card-more" data-tooltip="Opciones" aria-label="${t('canvas.menu_open_new_tab')}">
             <span class="material-symbols-rounded">more_vert</span>
           </button>
         </div>
 
-        <div class="menu-panel menu-panel--dropdown" data-ref="card-menu-dropdown" style="display: none;">
+        <div class="menu-panel menu-panel--dropdown menu-panel--w-265 menu-panel--h-auto" data-ref="card-menu-dropdown" style="display: none;">
+          <div class="menu-panel__drag-zone" data-ref="card-menu-drag-zone" aria-hidden="true">
+            <div class="menu-panel__drag-handle"></div>
+          </div>
           <div class="menu-panel__list" data-ref="card-menu-list">
             <button type="button" class="menu-item" data-ref="action-open-new-tab">
               <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#open_in_new"></use></svg>
@@ -364,12 +376,17 @@ class HomeController {
     `;
 
     const actionsWrapper = card.querySelector<HTMLElement>('[data-ref="card-actions-wrapper"]');
+    const btnBookmark = card.querySelector<HTMLButtonElement>('[data-ref="btn-card-bookmark"]');
     const btnMore = card.querySelector<HTMLButtonElement>('[data-ref="btn-card-more"]');
     const menuDropdown = card.querySelector<HTMLElement>('[data-ref="card-menu-dropdown"]');
     const actionOpenNewTab = card.querySelector<HTMLButtonElement>('[data-ref="action-open-new-tab"]');
     const actionCopyLink = card.querySelector<HTMLButtonElement>('[data-ref="action-copy-link"]');
     const actionDuplicate = card.querySelector<HTMLButtonElement>('[data-ref="action-duplicate"]');
     const actionDelete = card.querySelector<HTMLButtonElement>('[data-ref="action-delete"]');
+
+    btnBookmark?.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
 
     actionsWrapper?.addEventListener('click', (e) => {
       e.stopPropagation();

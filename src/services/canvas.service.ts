@@ -1,9 +1,10 @@
-import crypto from 'crypto';
-import mysql from 'mysql2/promise';
 import { canvasPool } from '../config/database.config.js';
+import { config } from '../config/env.config.js';
 import { Canvas, CanvasMember, CreateCanvasDto, SearchUserResult, SyncCanvasDto } from '../types/canvas.types.js';
 import { CanvasTeam } from '../types/team.types.js';
 import { logger } from './logger.service.js';
+import crypto from 'crypto';
+import mysql from 'mysql2/promise';
 
 export async function createCanvas(userId: number, dto: CreateCanvasDto): Promise<Canvas> {
   const uuid = dto.uuid && dto.uuid.trim().length === 36 ? dto.uuid.trim() : crypto.randomUUID();
@@ -106,6 +107,69 @@ export async function getCanvasByUuid(uuid: string, userId?: number): Promise<Ca
   } catch (err) {
     logger.db.error(`Error al consultar lienzo con UUID ${uuid}`, err);
     throw new Error('No se pudo cargar la información del lienzo.');
+  }
+}
+
+export function generateCanvasRoomToken(canvasUuid: string, userId: number, role: 'owner' | 'editor' | 'viewer'): string {
+  const exp = Date.now() + 24 * 60 * 60 * 1000;
+  const payload = {
+    canvasUuid,
+    exp,
+    role,
+    userId,
+  };
+  const payloadBase64 = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  const signature = crypto.createHmac('sha256', config.sessionSecret).update(payloadBase64).digest('base64url');
+  return `${payloadBase64}.${signature}`;
+}
+
+export async function getCanvasUserRole(uuid: string, userId?: number): Promise<{ canvas: Canvas; role: 'owner' | 'editor' | 'viewer' } | null> {
+  try {
+    const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
+      'SELECT id, uuid, user_id, name, width, height, unit, data, preview_thumbnail, access_level, created_at, updated_at FROM canvases WHERE uuid = ? AND deleted_at IS NULL LIMIT 1',
+      [uuid]
+    );
+
+    if (rows.length === 0) {
+      return null;
+    }
+
+    const canvas = rows[0] as Canvas;
+
+    if (userId !== undefined && canvas.user_id === userId) {
+      return { canvas, role: 'owner' };
+    }
+
+    if (userId !== undefined) {
+      const [memberRows] = await canvasPool.query<mysql.RowDataPacket[]>(
+        'SELECT role FROM canvas_members WHERE canvas_id = ? AND user_id = ? LIMIT 1',
+        [canvas.id, userId]
+      );
+      if (memberRows.length > 0) {
+        const role = memberRows[0].role === 'editor' ? 'editor' : 'viewer';
+        return { canvas, role };
+      }
+
+      const [teamRows] = await canvasPool.query<mysql.RowDataPacket[]>(
+        `SELECT ct.role FROM canvas_teams ct
+         INNER JOIN db_identity.team_members tm ON tm.team_id = ct.team_id
+         WHERE ct.canvas_id = ? AND tm.user_id = ? LIMIT 1`,
+        [canvas.id, userId]
+      );
+      if (teamRows.length > 0) {
+        const role = teamRows[0].role === 'editor' ? 'editor' : 'viewer';
+        return { canvas, role };
+      }
+    }
+
+    if (canvas.access_level === 'public') {
+      return { canvas, role: 'viewer' };
+    }
+
+    return null;
+  } catch (err) {
+    logger.db.error(`Error al verificar rol de usuario para el lienzo ${uuid}`, err);
+    throw new Error('No se pudo verificar la autorización del lienzo.');
   }
 }
 

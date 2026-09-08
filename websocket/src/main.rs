@@ -30,6 +30,7 @@ struct CanvasParticipant {
     user_id: i64,
     username: String,
     color: String,
+    role: String,
     tx: ClientSender,
 }
 
@@ -39,6 +40,7 @@ struct AppState {
     clients: Arc<RwLock<HashMap<i64, HashMap<String, ClientSender>>>>,
     // canvas_uuid -> Map<conn_id, CanvasParticipant>
     canvas_rooms: Arc<RwLock<HashMap<String, HashMap<String, CanvasParticipant>>>>,
+    session_secret: Arc<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -93,6 +95,7 @@ struct ParticipantInfo {
     user_id: i64,
     username: String,
     color: String,
+    role: String,
 }
 
 fn extract_cookie<'a>(req: &'a Request, cookie_name: &str) -> Option<&'a str> {
@@ -159,13 +162,83 @@ fn verify_session_token(token: &str, secret: &str) -> Option<AuthenticatedUser> 
     None
 }
 
+#[derive(Debug, Deserialize)]
+struct RoomTokenPayload {
+    #[serde(rename = "canvasUuid")]
+    canvas_uuid: String,
+    #[serde(rename = "userId")]
+    user_id: i64,
+    role: String,
+    exp: u64,
+}
+
+fn parse_hex_color(hex: &str) -> [u8; 3] {
+    let s = hex.trim_start_matches('#');
+    if s.len() == 6 {
+        if let (Ok(r), Ok(g), Ok(b)) = (
+            u8::from_str_radix(&s[0..2], 16),
+            u8::from_str_radix(&s[2..4], 16),
+            u8::from_str_radix(&s[4..6], 16),
+        ) {
+            return [r, g, b];
+        }
+    }
+    [0, 229, 255]
+}
+
+fn verify_room_token(
+    token: &str,
+    secret: &str,
+    expected_canvas_uuid: &str,
+    user_id: i64,
+) -> Option<String> {
+    if token.is_empty() {
+        return None;
+    }
+    let parts: Vec<&str> = token.split('.').collect();
+    if parts.len() != 2 {
+        return None;
+    }
+    let payload_b64 = parts[0];
+    let signature_b64 = parts[1];
+    let sig_bytes = URL_SAFE_NO_PAD.decode(signature_b64).ok()?;
+    let mut mac = HmacSha256::new_from_slice(secret.as_bytes()).ok()?;
+    mac.update(payload_b64.as_bytes());
+
+    if mac.verify_slice(&sig_bytes).is_err() {
+        return None;
+    }
+
+    let payload_bytes = URL_SAFE_NO_PAD.decode(payload_b64).ok()?;
+    let payload_str = std::str::from_utf8(&payload_bytes).ok()?;
+    let parsed: RoomTokenPayload = serde_json::from_str(payload_str).ok()?;
+
+    let now_ms = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .ok()?
+        .as_millis() as u64;
+
+    if now_ms > parsed.exp {
+        return None;
+    }
+
+    if parsed.canvas_uuid != expected_canvas_uuid {
+        return None;
+    }
+
+    if user_id > 0 && parsed.user_id != user_id {
+        return None;
+    }
+
+    Some(parsed.role)
+}
+
 async fn ws_handler(
     State(state): State<AppState>,
     ws: WebSocketUpgrade,
     req: Request,
 ) -> Response {
-    let session_secret = env::var("SESSION_SECRET")
-        .unwrap_or_else(|_| "spriteboard_session_secret_key_2026".to_string());
+    let session_secret = state.session_secret.clone();
 
     let user = match extract_cookie(&req, "sprite_session") {
         Some(token) => verify_session_token(token, &session_secret),
@@ -190,6 +263,7 @@ async fn ws_handler(
 }
 
 async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: AppState) {
+    let session_secret = state.session_secret.clone();
     let conn_id = format!(
         "{}_{}",
         user.id,
@@ -238,6 +312,25 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
                             if !canvas_uuid.is_empty() {
                                 match msg_type {
                                     "JOIN_CANVAS" => {
+                                        let room_token = val.get("roomToken")
+                                            .or_else(|| val.get("room_token"))
+                                            .and_then(|t| t.as_str())
+                                            .unwrap_or("");
+
+                                        let role = match verify_room_token(room_token, &session_secret, canvas_uuid, user.id) {
+                                            Some(r) => r,
+                                            None => {
+                                                let err_msg = serde_json::json!({
+                                                    "type": "CANVAS_JOIN_ERROR",
+                                                    "canvasUuid": canvas_uuid,
+                                                    "code": "UNAUTHORIZED_ROOM",
+                                                    "message": "No tienes autorización para unirte a este lienzo."
+                                                }).to_string();
+                                                let _ = tx.send(Message::Text(err_msg));
+                                                continue;
+                                            }
+                                        };
+
                                         let display_name = val.get("user")
                                             .and_then(|u| u.get("username"))
                                             .and_then(|un| un.as_str())
@@ -255,6 +348,7 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
                                             user_id: user.id,
                                             username: display_name.clone(),
                                             color: color.clone(),
+                                            role: role.clone(),
                                             tx: tx.clone(),
                                         };
 
@@ -270,13 +364,15 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
                                                 user_id: p.user_id,
                                                 username: p.username.clone(),
                                                 color: p.color.clone(),
+                                                role: p.role.clone(),
                                             })
                                             .collect();
 
                                         let presence_msg = serde_json::json!({
                                             "type": "ROOM_PRESENCE",
                                             "canvasUuid": canvas_uuid,
-                                            "users": presence_users
+                                            "users": presence_users,
+                                            "yourRole": role
                                         }).to_string();
 
                                         let _ = tx.send(Message::Text(presence_msg));
@@ -288,7 +384,8 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
                                                 "connId": conn_id.clone(),
                                                 "userId": user.id,
                                                 "username": display_name,
-                                                "color": color
+                                                "color": color,
+                                                "role": role
                                             }
                                         }).to_string();
 
@@ -350,15 +447,19 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
                                     "CANVAS_DRAW_STROKE" | "CANVAS_ACTION" | "CANVAS_FULL_UPDATE" => {
                                         let rooms = state.canvas_rooms.read().await;
                                         if let Some(room) = rooms.get(canvas_uuid) {
-                                            let mut outgoing = val.clone();
-                                            if let Some(obj) = outgoing.as_object_mut() {
-                                                obj.insert("senderConnId".to_string(), serde_json::Value::String(conn_id.clone()));
-                                            }
-                                            let forward_msg = outgoing.to_string();
+                                            if let Some(sender_p) = room.get(&conn_id) {
+                                                if sender_p.role != "viewer" {
+                                                    let mut outgoing = val.clone();
+                                                    if let Some(obj) = outgoing.as_object_mut() {
+                                                        obj.insert("senderConnId".to_string(), serde_json::Value::String(conn_id.clone()));
+                                                    }
+                                                    let forward_msg = outgoing.to_string();
 
-                                            for (peer_conn, peer) in room.iter() {
-                                                if peer_conn != &conn_id {
-                                                    let _ = peer.tx.send(Message::Text(forward_msg.clone()));
+                                                    for (peer_conn, peer) in room.iter() {
+                                                        if peer_conn != &conn_id {
+                                                            let _ = peer.tx.send(Message::Text(forward_msg.clone()));
+                                                        }
+                                                    }
                                                 }
                                             }
                                         }
@@ -426,6 +527,80 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
                                     }
                                     _ => {}
                                 }
+                            }
+                        }
+                    }
+                    Some(Ok(Message::Binary(bin))) => {
+                        if !bin.is_empty() {
+                            let opcode = bin[0];
+                            match opcode {
+                                1 => {
+                                    if bin.len() >= 10 {
+                                        let uuid_len = bin[1] as usize;
+                                        if bin.len() >= 2 + uuid_len + 8 {
+                                            if let Ok(canvas_uuid) = std::str::from_utf8(&bin[2..2 + uuid_len]) {
+                                                let rooms = state.canvas_rooms.read().await;
+                                                if let Some(room) = rooms.get(canvas_uuid) {
+                                                    if let Some(sender_p) = room.get(&conn_id) {
+                                                        let x_bytes: [u8; 4] = bin[2 + uuid_len..2 + uuid_len + 4].try_into().unwrap_or_default();
+                                                        let y_bytes: [u8; 4] = bin[2 + uuid_len + 4..2 + uuid_len + 8].try_into().unwrap_or_default();
+                                                        let color_rgb = parse_hex_color(&sender_p.color);
+
+                                                        let conn_bytes = conn_id.as_bytes();
+                                                        let conn_len = conn_bytes.len().min(255) as u8;
+                                                        let mut out = Vec::with_capacity(1 + 1 + conn_len as usize + 3 + 8);
+                                                        out.push(1);
+                                                        out.push(conn_len);
+                                                        out.extend_from_slice(&conn_bytes[..conn_len as usize]);
+                                                        out.extend_from_slice(&color_rgb);
+                                                        out.extend_from_slice(&x_bytes);
+                                                        out.extend_from_slice(&y_bytes);
+
+                                                        let out_msg = Message::Binary(out);
+                                                        for (peer_conn, peer) in room.iter() {
+                                                            if peer_conn != &conn_id {
+                                                                let _ = peer.tx.send(out_msg.clone());
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                2 => {
+                                    if bin.len() >= 4 {
+                                        let uuid_len = bin[1] as usize;
+                                        if bin.len() > 2 + uuid_len {
+                                            if let Ok(canvas_uuid) = std::str::from_utf8(&bin[2..2 + uuid_len]) {
+                                                let rooms = state.canvas_rooms.read().await;
+                                                if let Some(room) = rooms.get(canvas_uuid) {
+                                                    if let Some(sender_p) = room.get(&conn_id) {
+                                                        if sender_p.role != "viewer" {
+                                                            let stroke_payload = &bin[2 + uuid_len..];
+                                                            let conn_bytes = conn_id.as_bytes();
+                                                            let conn_len = conn_bytes.len().min(255) as u8;
+
+                                                            let mut out = Vec::with_capacity(1 + 1 + conn_len as usize + stroke_payload.len());
+                                                            out.push(2);
+                                                            out.push(conn_len);
+                                                            out.extend_from_slice(&conn_bytes[..conn_len as usize]);
+                                                            out.extend_from_slice(stroke_payload);
+
+                                                            let out_msg = Message::Binary(out);
+                                                            for (peer_conn, peer) in room.iter() {
+                                                                if peer_conn != &conn_id {
+                                                                    let _ = peer.tx.send(out_msg.clone());
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                _ => {}
                             }
                         }
                     }
@@ -545,9 +720,13 @@ async fn main() {
         .parse::<u16>()
         .unwrap_or(3001);
 
+    let session_secret = env::var("SESSION_SECRET")
+        .unwrap_or_else(|_| "spriteboard_session_secret_key_2026".to_string());
+
     let state = AppState {
         clients: Arc::new(RwLock::new(HashMap::new())),
         canvas_rooms: Arc::new(RwLock::new(HashMap::new())),
+        session_secret: Arc::new(session_secret),
     };
 
     // Tarea en segundo plano para escuchar eventos Pub/Sub de Redis

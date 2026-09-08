@@ -807,10 +807,14 @@ export function openCreateCanvasModal(): void {
   `;
 
   document.body.appendChild(backdrop);
-  document.body.style.overflow = 'hidden';
+  document.body.classList.add('modal-open');
 
   translateElement(backdrop);
   renderIcons(backdrop);
+
+  requestAnimationFrame(() => {
+    backdrop.classList.add('is-visible');
+  });
 
   type TabType = 'for-you' | 'formats' | 'nature' | 'cities' | 'fantasy' | 'scifi' | 'characters' | 'items' | 'custom-size' | 'upload';
 
@@ -1369,28 +1373,133 @@ export function openCreateCanvasModal(): void {
 
   btnSubmit?.addEventListener('click', handleCreateCanvas);
 
-  const closeModal = () => {
-    carouselControllers.forEach((c) => c.destroy());
-    backdrop.remove();
-    document.body.style.overflow = '';
-    activeCreateCanvasModal = null;
+  const card = backdrop.querySelector<HTMLElement>('[data-ref="modal-card-create-canvas"]');
+  const dragZone = backdrop.querySelector<HTMLElement>('[data-ref="modal-drag-zone"]');
+  let startY = 0;
+  let currentY = 0;
+  let startTime = 0;
+  let isDragging = false;
+  let activePointerId: number | null = null;
+  let isClosing = false;
+
+  const detachPointerListeners = () => {
+    window.removeEventListener('pointermove', onPointerMove);
+    window.removeEventListener('pointerup', onPointerUp);
+    window.removeEventListener('pointercancel', onPointerUp);
   };
 
-  activeCreateCanvasModal = { close: closeModal };
+  const onPointerDown = (e: PointerEvent) => {
+    if (isClosing || !card) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+
+    isDragging = true;
+    activePointerId = e.pointerId;
+    startY = e.clientY;
+    currentY = startY;
+    startTime = performance.now();
+
+    try {
+      (dragZone || card).setPointerCapture(activePointerId);
+    } catch (_) {}
+
+    card.style.transition = 'none';
+    backdrop.style.transition = 'none';
+
+    window.addEventListener('pointermove', onPointerMove, { passive: true });
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onPointerUp);
+  };
+
+  const onPointerMove = (e: PointerEvent) => {
+    if (!isDragging || (activePointerId !== null && e.pointerId !== activePointerId)) return;
+    currentY = e.clientY;
+    const diff = currentY - startY;
+
+    if (card) {
+      if (diff > 0) {
+        card.style.transform = `translateY(${diff}px)`;
+        const progress = Math.min(diff / 240, 1);
+        backdrop.style.opacity = `${Math.max(0.2, 1 - progress * 0.8)}`;
+      } else {
+        const rubberDiff = Math.max(diff * 0.15, -24);
+        card.style.transform = `translateY(${rubberDiff}px)`;
+      }
+    }
+  };
+
+  const onPointerUp = (e: PointerEvent) => {
+    if (!isDragging || (activePointerId !== null && e.pointerId !== activePointerId)) return;
+    isDragging = false;
+    detachPointerListeners();
+
+    try {
+      if (activePointerId !== null) {
+        (dragZone || card)?.releasePointerCapture(activePointerId);
+      }
+    } catch (_) {}
+    activePointerId = null;
+
+    const diff = currentY - startY;
+    const elapsed = Math.max(1, performance.now() - startTime);
+    const velocity = diff / elapsed;
+
+    if (diff > 80 || (diff > 25 && velocity > 0.45)) {
+      closeModal();
+    } else {
+      backdrop.style.transition = 'opacity 0.25s ease';
+      backdrop.style.opacity = '1';
+      if (card) {
+        card.style.transition = 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)';
+        card.style.transform = '';
+      }
+    }
+  };
+
+  dragZone?.addEventListener('pointerdown', onPointerDown);
+  dragZone?.addEventListener('lostpointercapture', onPointerUp);
+
+  const closeModal = () => {
+    if (isClosing) return;
+    isClosing = true;
+
+    backdrop.classList.remove('is-visible');
+    document.removeEventListener('keydown', onKeyDown);
+    detachPointerListeners();
+    dragZone?.removeEventListener('pointerdown', onPointerDown);
+    dragZone?.removeEventListener('lostpointercapture', onPointerUp);
+
+    setTimeout(() => {
+      carouselControllers.forEach((c) => c.destroy());
+      if (backdrop.parentNode) {
+        backdrop.parentNode.removeChild(backdrop);
+      }
+      document.body.classList.remove('modal-open');
+      if (activeCreateCanvasModal === modalInstance) {
+        activeCreateCanvasModal = null;
+      }
+    }, 200);
+  };
+
+  const modalInstance = { close: closeModal };
+  activeCreateCanvasModal = modalInstance;
 
   const closeBtn = backdrop.querySelector<HTMLElement>('[data-ref="btn-modal-close"]');
-  closeBtn?.addEventListener('click', closeModal);
+  closeBtn?.addEventListener('click', (e) => {
+    e.preventDefault();
+    closeModal();
+  });
 
   backdrop.addEventListener('click', (e) => {
     if (e.target === backdrop) {
+      e.preventDefault();
       closeModal();
     }
   });
 
   const onKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
+      e.preventDefault();
       closeModal();
-      document.removeEventListener('keydown', onKeyDown);
     }
   };
   document.addEventListener('keydown', onKeyDown);

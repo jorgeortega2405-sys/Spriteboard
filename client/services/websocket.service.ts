@@ -28,6 +28,7 @@ export function initWebSocket(): void {
   try {
     console.log('[WebSocket] Conectando a:', wsUrl);
     ws = new WebSocket(wsUrl);
+    ws.binaryType = 'arraybuffer';
 
     ws.onopen = () => {
       console.log('[WebSocket] Conexión establecida exitosamente con el servidor.');
@@ -41,6 +42,81 @@ export function initWebSocket(): void {
 
     ws.onmessage = (event: MessageEvent) => {
       try {
+        if (event.data instanceof ArrayBuffer) {
+          const view = new DataView(event.data);
+          if (view.byteLength < 2) return;
+          const opcode = view.getUint8(0);
+
+          if (opcode === 1) {
+            const connLen = view.getUint8(1);
+            if (view.byteLength >= 2 + connLen + 11) {
+              const connIdBytes = new Uint8Array(event.data, 2, connLen);
+              const connId = new TextDecoder().decode(connIdBytes);
+              const r = view.getUint8(2 + connLen);
+              const g = view.getUint8(2 + connLen + 1);
+              const b = view.getUint8(2 + connLen + 2);
+              const x = view.getFloat32(2 + connLen + 3);
+              const y = view.getFloat32(2 + connLen + 7);
+              const color = '#' + [r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('');
+
+              const handlers = messageHandlers.get('CANVAS_CURSOR');
+              if (handlers) {
+                handlers.forEach((h) => {
+                  try {
+                    h({ color, connId, type: 'CANVAS_CURSOR', x, y });
+                  } catch (err) {
+                    console.warn('[WebSocket] Error en manejador binario de cursor:', err);
+                  }
+                });
+              }
+            }
+            return;
+          }
+
+          if (opcode === 2) {
+            const connLen = view.getUint8(1);
+            if (view.byteLength >= 2 + connLen + 7) {
+              const connIdBytes = new Uint8Array(event.data, 2, connLen);
+              const connId = new TextDecoder().decode(connIdBytes);
+              let offset = 2 + connLen;
+              const toolId = view.getUint8(offset);
+              offset += 1;
+              const r = view.getUint8(offset);
+              const g = view.getUint8(offset + 1);
+              const b = view.getUint8(offset + 2);
+              offset += 3;
+              const color = '#' + [r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('');
+              const size = view.getUint8(offset);
+              offset += 1;
+              const pointCount = view.getUint16(offset);
+              offset += 2;
+              const points: Array<{ x: number; y: number }> = [];
+              for (let i = 0; i < pointCount && offset + 4 <= view.byteLength; i++) {
+                const px = view.getInt16(offset);
+                const py = view.getInt16(offset + 2);
+                points.push({ x: px, y: py });
+                offset += 4;
+              }
+              const toolNames = ['brush', 'eraser', 'dither', 'shading', 'spray', 'bucket'];
+              const tool = toolNames[toolId] || 'brush';
+
+              const handlers = messageHandlers.get('CANVAS_DRAW_STROKE');
+              if (handlers) {
+                handlers.forEach((h) => {
+                  try {
+                    h({ color, points, senderConnId: connId, size, tool, type: 'CANVAS_DRAW_STROKE' });
+                  } catch (err) {
+                    console.warn('[WebSocket] Error en manejador binario de trazo:', err);
+                  }
+                });
+              }
+            }
+            return;
+          }
+
+          return;
+        }
+
         const data = typeof event.data === 'string' ? JSON.parse(event.data) : null;
         if (!data || !data.type) return;
 
@@ -142,7 +218,8 @@ export function joinCanvasRoom(
   canvasUuid: string,
   user?: number | { color?: string; id?: number; username?: string },
   username?: string,
-  color?: string
+  color?: string,
+  roomToken?: string
 ): void {
   const userObj = {
     color: '#00E5FF',
@@ -162,6 +239,7 @@ export function joinCanvasRoom(
 
   sendWebSocketMessage({
     canvasUuid,
+    roomToken,
     type: 'JOIN_CANVAS',
     user: userObj,
   });
@@ -175,12 +253,93 @@ export function leaveCanvasRoom(canvasUuid: string): void {
 }
 
 export function sendCanvasCursor(canvasUuid: string, x: number, y: number): void {
-  sendWebSocketMessage({
-    canvasUuid,
-    type: 'CANVAS_CURSOR',
-    x,
-    y,
-  });
+  sendCanvasBinaryCursor(canvasUuid, x, y);
+}
+
+export function sendCanvasBinaryCursor(canvasUuid: string, x: number, y: number): void {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    const enc = new TextEncoder();
+    const uuidBytes = enc.encode(canvasUuid);
+    const buf = new ArrayBuffer(2 + uuidBytes.length + 8);
+    const view = new DataView(buf);
+    view.setUint8(0, 1);
+    view.setUint8(1, uuidBytes.length);
+    new Uint8Array(buf, 2, uuidBytes.length).set(uuidBytes);
+    const offset = 2 + uuidBytes.length;
+    view.setFloat32(offset, x);
+    view.setFloat32(offset + 4, y);
+    try {
+      ws.send(buf);
+    } catch (_) {}
+  } else {
+    sendWebSocketMessage({
+      canvasUuid,
+      type: 'CANVAS_CURSOR',
+      x,
+      y,
+    });
+  }
+}
+
+export function sendCanvasBinaryStroke(
+  canvasUuid: string,
+  tool: string,
+  color: string,
+  size: number,
+  points: Array<{ x: number; y: number }>
+): void {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    const enc = new TextEncoder();
+    const uuidBytes = enc.encode(canvasUuid);
+    const toolMap: Record<string, number> = {
+      brush: 0,
+      eraser: 1,
+      dither: 2,
+      shading: 3,
+      spray: 4,
+      bucket: 5,
+    };
+    const toolId = toolMap[tool] !== undefined ? toolMap[tool] : 0;
+    let hex = color.replace('#', '');
+    if (hex.length === 3) {
+      hex = hex.split('').map((c) => c + c).join('');
+    }
+    const r = parseInt(hex.slice(0, 2), 16) || 0;
+    const g = parseInt(hex.slice(2, 4), 16) || 0;
+    const b = parseInt(hex.slice(4, 6), 16) || 0;
+    const clampedSize = Math.max(1, Math.min(255, size || 1));
+    const safePoints = points.slice(0, 65535);
+
+    const buf = new ArrayBuffer(2 + uuidBytes.length + 7 + safePoints.length * 4);
+    const view = new DataView(buf);
+    view.setUint8(0, 2);
+    view.setUint8(1, uuidBytes.length);
+    new Uint8Array(buf, 2, uuidBytes.length).set(uuidBytes);
+
+    let offset = 2 + uuidBytes.length;
+    view.setUint8(offset, toolId);
+    offset += 1;
+    view.setUint8(offset, r);
+    view.setUint8(offset + 1, g);
+    view.setUint8(offset + 2, b);
+    offset += 3;
+    view.setUint8(offset, clampedSize);
+    offset += 1;
+    view.setUint16(offset, safePoints.length);
+    offset += 2;
+
+    for (let i = 0; i < safePoints.length; i++) {
+      view.setInt16(offset, Math.round(safePoints[i].x));
+      view.setInt16(offset + 2, Math.round(safePoints[i].y));
+      offset += 4;
+    }
+
+    try {
+      ws.send(buf);
+    } catch (_) {}
+  } else {
+    sendCanvasDrawStroke(canvasUuid, tool, color, size, points);
+  }
 }
 
 export function sendCanvasDrawStroke(
