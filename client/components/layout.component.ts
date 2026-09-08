@@ -207,21 +207,39 @@ export async function createTopBar(): Promise<HTMLElement> {
         API_ROUTES.avatar(currentUser.username);
 
       if (avatarImg) {
+        avatarImg.classList.add('image-lazy-fade');
+        avatarImg.classList.remove('image-loaded');
         avatarImg.src = avatarUrl;
         avatarImg.alt = escapeHtml(currentUser.username);
+        avatarImg.onload = () => {
+          avatarImg.classList.add('image-loaded');
+        };
         avatarImg.onerror = () => {
           avatarImg.onerror = null;
           avatarImg.src = API_ROUTES.avatar(currentUser?.username || '');
+          avatarImg.classList.add('image-loaded');
         };
+        if (avatarImg.complete && avatarImg.naturalWidth > 0) {
+          avatarImg.classList.add('image-loaded');
+        }
       }
 
       if (activeAvatar) {
+        activeAvatar.classList.add('image-lazy-fade');
+        activeAvatar.classList.remove('image-loaded');
         activeAvatar.src = avatarUrl;
         activeAvatar.alt = escapeHtml(currentUser.username);
+        activeAvatar.onload = () => {
+          activeAvatar.classList.add('image-loaded');
+        };
         activeAvatar.onerror = () => {
           activeAvatar.onerror = null;
           activeAvatar.src = API_ROUTES.avatar(currentUser?.username || '');
+          activeAvatar.classList.add('image-loaded');
         };
+        if (activeAvatar.complete && activeAvatar.naturalWidth > 0) {
+          activeAvatar.classList.add('image-loaded');
+        }
       }
 
       if (activeName) {
@@ -265,7 +283,7 @@ export async function createTopBar(): Promise<HTMLElement> {
 
           item.innerHTML = `
             <div class="account-item__avatar avatar-tier--${accTier}" data-ref="account-avatar-${acc.id}" data-tier="${accTier}">
-              <img class="avatar-img" data-ref="avatar-img-${acc.id}" src="${accAvatarUrl}" alt="${escapeHtml(acc.username)}" referrerpolicy="no-referrer" />
+              <img class="avatar-img image-lazy-fade" data-ref="avatar-img-${acc.id}" src="${accAvatarUrl}" alt="${escapeHtml(acc.username)}" referrerpolicy="no-referrer" onload="this.classList.add('image-loaded')" onerror="this.classList.add('image-loaded')" />
             </div>
             <div class="account-item__info" data-ref="account-info-${acc.id}">
               <span class="account-item__name" data-ref="account-name-${acc.id}">${escapeHtml(acc.username)}</span>
@@ -274,12 +292,16 @@ export async function createTopBar(): Promise<HTMLElement> {
             ${isActive ? '<span class="material-symbols-rounded account-item__check">check_circle</span>' : ''}
           `;
 
-          const imgEl = item.querySelector('img');
+          const imgEl = item.querySelector<HTMLImageElement>('img');
           if (imgEl) {
             imgEl.onerror = () => {
               imgEl.onerror = null;
               imgEl.src = API_ROUTES.avatar(acc.username);
+              imgEl.classList.add('image-loaded');
             };
+            if (imgEl.complete && imgEl.naturalWidth > 0) {
+              imgEl.classList.add('image-loaded');
+            }
           }
 
           if (!isActive) {

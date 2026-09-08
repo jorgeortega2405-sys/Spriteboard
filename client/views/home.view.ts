@@ -10,7 +10,7 @@ import { t, translateElement } from '../services/i18n.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { CanvasItem } from '../types/canvas.types.js';
-import { getEmptyGraphicSvg } from '../utils/dom.util.js';
+import { getEmptyGraphicSvg, setupLazyImages } from '../utils/dom.util.js';
 
 class HomeController {
   private container: HTMLElement;
@@ -281,6 +281,7 @@ class HomeController {
 
     translateElement(this.gridEl);
     renderIcons(this.gridEl);
+    setupLazyImages(this.gridEl);
   }
 
   private createCardElement(canvas: CanvasItem): HTMLElement {
@@ -296,7 +297,7 @@ class HomeController {
     const badgeIcon = isLocal ? 'devices' : 'cloud_done';
 
     const thumbnailHtml = canvas.preview_thumbnail
-      ? `<img class="canvas-card__image" src="${escapeHtml(canvas.preview_thumbnail)}" alt="${escapeHtml(canvas.name)}" loading="lazy" />`
+      ? `<img class="canvas-card__image image-lazy-fade" src="${escapeHtml(canvas.preview_thumbnail)}" alt="${escapeHtml(canvas.name)}" loading="lazy" decoding="async" onload="this.classList.add('image-loaded')" onerror="this.onerror=null; this.classList.add('image-loaded');" />`
       : `<div class="canvas-card__canvas-placeholder"></div>`;
 
     card.innerHTML = `

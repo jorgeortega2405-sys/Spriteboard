@@ -610,7 +610,7 @@ class TeamsController {
       avatar.className = 'account-item__avatar';
       avatar.style.backgroundColor = teamColor;
       if (member.avatar_url) {
-        avatar.innerHTML = `<img class="avatar-img" src="${escapeHtml(member.avatar_url)}" alt="${escapeHtml(member.username)}" referrerpolicy="no-referrer" />`;
+        avatar.innerHTML = `<img class="avatar-img image-lazy-fade" src="${escapeHtml(member.avatar_url)}" alt="${escapeHtml(member.username)}" referrerpolicy="no-referrer" onload="this.classList.add('image-loaded')" onerror="this.classList.add('image-loaded')" />`;
       } else {
         avatar.textContent = (member.username || 'U').slice(0, 2).toUpperCase();
       }

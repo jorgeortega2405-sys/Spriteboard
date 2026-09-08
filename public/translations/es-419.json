@@ -561,6 +561,20 @@
       "public_role_label": "Permiso del enlace",
       "role_editor": "Ver y editar",
       "role_viewer": "Solo ver"
+    },
+    "download": {
+      "bg_solid": "Color del lienzo",
+      "bg_transparent": "Transparente",
+      "btn_action": "Descargar {type}",
+      "btn_open": "Descargar diseño",
+      "error_toast": "Error al generar la descarga",
+      "scale_label": "Resolución y escala",
+      "stage_title": "Descargar diseño",
+      "success_toast": "Archivo descargado con éxito",
+      "type_label": "Tipo de archivo",
+      "type_png_current": "PNG (Fotograma actual)",
+      "type_project_json": "Proyecto Spriteboard (.json)",
+      "type_spritesheet": "PNG (Hoja de sprites)"
     }
   },
   "teams": {

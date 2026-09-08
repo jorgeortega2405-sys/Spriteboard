@@ -1,5 +1,6 @@
 import { canvasPool } from '../config/database.config.js';
 import { config } from '../config/env.config.js';
+import { redis } from '../config/redis.config.js';
 import { Canvas, CanvasMember, CanvasMetricsData, CanvasMetricViewer, CanvasRecentView, CreateCanvasDto, SearchUserResult, SyncCanvasDto } from '../types/canvas.types.js';
 import { CanvasTeam } from '../types/team.types.js';
 import { logger } from './logger.service.js';
@@ -106,16 +107,31 @@ export async function getUserCanvases(userId: number): Promise<Canvas[]> {
 
 export async function getCanvasByUuid(uuid: string, userId?: number): Promise<Canvas | null> {
   try {
-    const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
-      'SELECT id, uuid, user_id, name, width, height, unit, data, preview_thumbnail, access_level, public_role, short_code, custom_slug, created_at, updated_at FROM canvases WHERE uuid = ? AND deleted_at IS NULL LIMIT 1',
-      [uuid]
-    );
+    let canvas: Canvas | null = null;
+    const cacheKey = `canvas:snapshot:${uuid}`;
 
-    if (rows.length === 0) {
-      return null;
+    try {
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        canvas = JSON.parse(cached) as Canvas;
+      }
+    } catch {}
+
+    if (!canvas) {
+      const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
+        'SELECT id, uuid, user_id, name, width, height, unit, data, preview_thumbnail, access_level, public_role, short_code, custom_slug, created_at, updated_at FROM canvases WHERE uuid = ? AND deleted_at IS NULL LIMIT 1',
+        [uuid]
+      );
+
+      if (rows.length === 0) {
+        return null;
+      }
+
+      canvas = rows[0] as Canvas;
+      try {
+        await redis.setex(cacheKey, 86400, JSON.stringify(canvas));
+      } catch {}
     }
-
-    const canvas = rows[0] as Canvas;
 
     if (canvas.access_level === 'public') {
       return canvas;
@@ -167,16 +183,31 @@ export function generateCanvasRoomToken(canvasUuid: string, userId: number, role
 
 export async function getCanvasUserRole(uuid: string, userId?: number): Promise<{ canvas: Canvas; role: 'owner' | 'editor' | 'viewer' } | null> {
   try {
-    const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
-      'SELECT id, uuid, user_id, name, width, height, unit, data, preview_thumbnail, access_level, public_role, short_code, custom_slug, created_at, updated_at FROM canvases WHERE uuid = ? AND deleted_at IS NULL LIMIT 1',
-      [uuid]
-    );
+    let canvas: Canvas | null = null;
+    const cacheKey = `canvas:snapshot:${uuid}`;
 
-    if (rows.length === 0) {
-      return null;
+    try {
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        canvas = JSON.parse(cached) as Canvas;
+      }
+    } catch {}
+
+    if (!canvas) {
+      const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
+        'SELECT id, uuid, user_id, name, width, height, unit, data, preview_thumbnail, access_level, public_role, short_code, custom_slug, created_at, updated_at FROM canvases WHERE uuid = ? AND deleted_at IS NULL LIMIT 1',
+        [uuid]
+      );
+
+      if (rows.length === 0) {
+        return null;
+      }
+
+      canvas = rows[0] as Canvas;
+      try {
+        await redis.setex(cacheKey, 86400, JSON.stringify(canvas));
+      } catch {}
     }
-
-    const canvas = rows[0] as Canvas;
 
     if (userId !== undefined && canvas.user_id === userId) {
       return { canvas, role: 'owner' };
@@ -248,7 +279,12 @@ export async function updateCanvasAccessLevel(
       [uuid]
     );
 
-    return rows[0] as Canvas;
+    const updated = rows[0] as Canvas;
+    try {
+      await redis.setex(`canvas:snapshot:${uuid}`, 86400, JSON.stringify(updated));
+    } catch {}
+
+    return updated;
   } catch (err: any) {
     logger.db.error(`Error al actualizar nivel de acceso del lienzo ${uuid}`, err);
     throw err;
@@ -342,7 +378,12 @@ export async function syncCanvas(userId: number | null, dto: SyncCanvasDto): Pro
       [uuid]
     );
 
-    return rows[0] as Canvas;
+    const syncedCanvas = rows[0] as Canvas;
+    try {
+      await redis.setex(`canvas:snapshot:${uuid}`, 86400, JSON.stringify(syncedCanvas));
+    } catch {}
+
+    return syncedCanvas;
   } catch (err: any) {
     logger.db.error(`Error al sincronizar lienzo ${uuid}`, err);
     throw err;
@@ -679,6 +720,9 @@ export async function deleteCanvas(uuid: string, userId: number): Promise<boolea
     }
 
     await canvasPool.execute('UPDATE canvases SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?', [canvas.id]);
+    try {
+      await redis.del(`canvas:snapshot:${uuid}`);
+    } catch {}
     logger.db.info(`Lienzo ${uuid} movido a la papelera por el usuario ${userId}`);
     return true;
   } catch (err: any) {
@@ -717,6 +761,9 @@ export async function restoreCanvas(uuid: string, userId: number): Promise<Canva
     }
 
     await canvasPool.execute('UPDATE canvases SET deleted_at = NULL WHERE id = ?', [canvas.id]);
+    try {
+      await redis.del(`canvas:snapshot:${uuid}`);
+    } catch {}
     logger.db.info(`Lienzo ${uuid} restaurado por el usuario ${userId}`);
 
     const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
@@ -747,6 +794,9 @@ export async function permanentlyDeleteCanvas(uuid: string, userId: number): Pro
     }
 
     await canvasPool.execute('DELETE FROM canvases WHERE id = ?', [canvas.id]);
+    try {
+      await redis.del(`canvas:snapshot:${uuid}`);
+    } catch {}
     logger.db.info(`Lienzo ${uuid} eliminado permanentemente por el usuario ${userId}`);
     return true;
   } catch (err: any) {
@@ -885,7 +935,11 @@ export async function updateCanvasSlug(uuid: string, userId: number, rawSlug: st
       'SELECT id, uuid, user_id, name, width, height, unit, data, preview_thumbnail, access_level, public_role, short_code, custom_slug, created_at, updated_at FROM canvases WHERE uuid = ? LIMIT 1',
       [uuid]
     );
-    return updatedRows[0] as Canvas;
+    const updated = updatedRows[0] as Canvas;
+    try {
+      await redis.setex(`canvas:snapshot:${uuid}`, 86400, JSON.stringify(updated));
+    } catch {}
+    return updated;
   } catch (err: any) {
     logger.db.error(`Error al actualizar enlace personalizado del lienzo ${uuid}`, err);
     throw err;

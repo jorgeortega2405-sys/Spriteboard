@@ -12,7 +12,7 @@
         <div class="settings-item" data-ref="item-avatar">
           <div class="settings-item__content" data-ref="item-avatar-content">
             <div class="settings-item__avatar" data-ref="avatar-preview-box" data-i18n-tooltip="settings.your_account.avatar_change_tooltip">
-              <img class="avatar-preview-img" data-ref="profile-avatar-img" src="" alt="Avatar" referrerpolicy="no-referrer" />
+              <img class="avatar-preview-img image-lazy-fade" data-ref="profile-avatar-img" src="" alt="Avatar" referrerpolicy="no-referrer" onload="this.classList.add('image-loaded')" onerror="this.classList.add('image-loaded')" />
               <div class="avatar-preview-overlay" data-ref="avatar-preview-overlay">
                 <span class="material-symbols-rounded">photo_camera</span>
               </div>

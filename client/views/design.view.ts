@@ -529,6 +529,31 @@ class DesignController {
   private shareDropdownController: { close: () => void; destroy: () => void; open: () => void; toggle: () => void; update: () => void } | null = null;
   private accessDropdownController: { close: () => void; destroy: () => void; open: () => void; toggle: () => void; update: () => void } | null = null;
   private publicRoleDropdownController: { close: () => void; destroy: () => void; open: () => void; toggle: () => void; update: () => void } | null = null;
+  private shareStageMainEl: HTMLElement | null = null;
+  private shareStageDownloadEl: HTMLElement | null = null;
+  private btnOpenDownloadStage: HTMLButtonElement | null = null;
+  private btnBackToShare: HTMLButtonElement | null = null;
+  private downloadTypeDropdownWrapperEl: HTMLElement | null = null;
+  private downloadTypeTriggerBtn: HTMLButtonElement | null = null;
+  private downloadTypeSelectedIconEl: HTMLElement | null = null;
+  private downloadTypeSelectedTextEl: HTMLElement | null = null;
+  private downloadTypeDropdownController: { close: () => void; destroy: () => void; open: () => void; toggle: () => void; update: () => void } | null = null;
+  private downloadScaleSectionEl: HTMLElement | null = null;
+  private downloadScaleDropdownWrapperEl: HTMLElement | null = null;
+  private downloadScaleTriggerBtn: HTMLButtonElement | null = null;
+  private downloadScaleSelectedTextEl: HTMLElement | null = null;
+  private downloadScaleDropdownController: { close: () => void; destroy: () => void; open: () => void; toggle: () => void; update: () => void } | null = null;
+  private downloadBgSectionEl: HTMLElement | null = null;
+  private downloadBgDropdownWrapperEl: HTMLElement | null = null;
+  private downloadBgTriggerBtn: HTMLButtonElement | null = null;
+  private downloadBgSelectedIconEl: HTMLElement | null = null;
+  private downloadBgSelectedTextEl: HTMLElement | null = null;
+  private downloadBgDropdownController: { close: () => void; destroy: () => void; open: () => void; toggle: () => void; update: () => void } | null = null;
+  private btnConfirmDownload: HTMLButtonElement | null = null;
+  private btnConfirmDownloadText: HTMLElement | null = null;
+  private selectedDownloadType: 'png-current' | 'spritesheet' | 'project-json' = 'png-current';
+  private selectedDownloadScale = 1;
+  private selectedDownloadBg: 'transparent' | 'solid' = 'transparent';
   private btnCanvasMetrics: HTMLButtonElement | null = null;
   private viewSessionId: string | null = null;
   private viewStartTime = 0;
@@ -903,6 +928,25 @@ class DesignController {
     this.customizeShareLinkBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-customize-share-link"]');
     this.collaboratorsBarEl = this.container.querySelector<HTMLElement>('[data-ref="design-collaborators-bar"]');
     this.collaboratorsListEl = this.container.querySelector<HTMLElement>('[data-ref="collaborators-list"]');
+    this.shareStageMainEl = this.container.querySelector<HTMLElement>('[data-ref="share-stage-main"]');
+    this.shareStageDownloadEl = this.container.querySelector<HTMLElement>('[data-ref="share-stage-download"]');
+    this.btnOpenDownloadStage = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-open-download-stage"]');
+    this.btnBackToShare = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-back-to-share"]');
+    this.downloadTypeDropdownWrapperEl = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-download-type"]');
+    this.downloadTypeTriggerBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-trigger-download-type"]');
+    this.downloadTypeSelectedIconEl = this.container.querySelector<HTMLElement>('[data-ref="download-type-selected-icon"]');
+    this.downloadTypeSelectedTextEl = this.container.querySelector<HTMLElement>('[data-ref="download-type-selected-text"]');
+    this.downloadScaleSectionEl = this.container.querySelector<HTMLElement>('[data-ref="section-download-scale"]');
+    this.downloadScaleDropdownWrapperEl = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-download-scale"]');
+    this.downloadScaleTriggerBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-trigger-download-scale"]');
+    this.downloadScaleSelectedTextEl = this.container.querySelector<HTMLElement>('[data-ref="download-scale-selected-text"]');
+    this.downloadBgSectionEl = this.container.querySelector<HTMLElement>('[data-ref="section-download-bg"]');
+    this.downloadBgDropdownWrapperEl = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-download-bg"]');
+    this.downloadBgTriggerBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-trigger-download-bg"]');
+    this.downloadBgSelectedIconEl = this.container.querySelector<HTMLElement>('[data-ref="download-bg-selected-icon"]');
+    this.downloadBgSelectedTextEl = this.container.querySelector<HTMLElement>('[data-ref="download-bg-selected-text"]');
+    this.btnConfirmDownload = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-confirm-download"]');
+    this.btnConfirmDownloadText = this.container.querySelector<HTMLElement>('[data-ref="btn-confirm-download-text"]');
 
     this.loadRecentColors();
     this.initColorsUI();
@@ -4050,6 +4094,9 @@ class DesignController {
         backdrop: shareBackdropEl,
         matchWidth: false,
         menu: shareMenuEl,
+        onClose: () => {
+          this.switchShareStage('main');
+        },
         placement: 'bottom-end',
         trigger: this.shareBtn,
       });
@@ -4110,6 +4157,42 @@ class DesignController {
         menu: publicRoleMenuEl,
         placement: 'bottom',
         trigger: this.publicRoleTriggerBtn,
+      });
+    }
+
+    if (this.downloadTypeDropdownWrapperEl) {
+      const downloadTypeBackdropEl = this.downloadTypeDropdownWrapperEl.querySelector<HTMLElement>('[data-ref="dropdown-backdrop-download-type"]');
+      const downloadTypeMenuEl = this.downloadTypeDropdownWrapperEl.querySelector<HTMLElement>('[data-ref="dropdown-menu-download-type"]');
+      this.downloadTypeDropdownController = setupDropdown(this.downloadTypeDropdownWrapperEl, {
+        backdrop: downloadTypeBackdropEl,
+        matchWidth: true,
+        menu: downloadTypeMenuEl,
+        placement: 'bottom',
+        trigger: this.downloadTypeTriggerBtn,
+      });
+    }
+
+    if (this.downloadScaleDropdownWrapperEl) {
+      const downloadScaleBackdropEl = this.downloadScaleDropdownWrapperEl.querySelector<HTMLElement>('[data-ref="dropdown-backdrop-download-scale"]');
+      const downloadScaleMenuEl = this.downloadScaleDropdownWrapperEl.querySelector<HTMLElement>('[data-ref="dropdown-menu-download-scale"]');
+      this.downloadScaleDropdownController = setupDropdown(this.downloadScaleDropdownWrapperEl, {
+        backdrop: downloadScaleBackdropEl,
+        matchWidth: true,
+        menu: downloadScaleMenuEl,
+        placement: 'bottom',
+        trigger: this.downloadScaleTriggerBtn,
+      });
+    }
+
+    if (this.downloadBgDropdownWrapperEl) {
+      const downloadBgBackdropEl = this.downloadBgDropdownWrapperEl.querySelector<HTMLElement>('[data-ref="dropdown-backdrop-download-bg"]');
+      const downloadBgMenuEl = this.downloadBgDropdownWrapperEl.querySelector<HTMLElement>('[data-ref="dropdown-menu-download-bg"]');
+      this.downloadBgDropdownController = setupDropdown(this.downloadBgDropdownWrapperEl, {
+        backdrop: downloadBgBackdropEl,
+        matchWidth: true,
+        menu: downloadBgMenuEl,
+        placement: 'bottom',
+        trigger: this.downloadBgTriggerBtn,
       });
     }
 
@@ -4213,6 +4296,109 @@ class DesignController {
       },
       { signal }
     );
+
+    if (this.btnOpenDownloadStage) {
+      this.btnOpenDownloadStage.addEventListener(
+        'click',
+        () => {
+          this.switchShareStage('download');
+        },
+        { signal }
+      );
+    }
+
+    if (this.btnBackToShare) {
+      this.btnBackToShare.addEventListener(
+        'click',
+        () => {
+          this.switchShareStage('main');
+        },
+        { signal }
+      );
+    }
+
+    const optDownloadPng = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-download-type-png"]');
+    if (optDownloadPng) {
+      optDownloadPng.addEventListener(
+        'click',
+        () => {
+          this.changeDownloadType('png-current');
+          this.downloadTypeDropdownController?.close();
+        },
+        { signal }
+      );
+    }
+
+    const optDownloadSpritesheet = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-download-type-spritesheet"]');
+    if (optDownloadSpritesheet) {
+      optDownloadSpritesheet.addEventListener(
+        'click',
+        () => {
+          this.changeDownloadType('spritesheet');
+          this.downloadTypeDropdownController?.close();
+        },
+        { signal }
+      );
+    }
+
+    const optDownloadProject = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-download-type-project"]');
+    if (optDownloadProject) {
+      optDownloadProject.addEventListener(
+        'click',
+        () => {
+          this.changeDownloadType('project-json');
+          this.downloadTypeDropdownController?.close();
+        },
+        { signal }
+      );
+    }
+
+    const scaleBtns = this.container.querySelectorAll<HTMLButtonElement>('[data-ref^="btn-scale-"]');
+    scaleBtns.forEach((btn) => {
+      btn.addEventListener(
+        'click',
+        () => {
+          const val = parseInt(btn.getAttribute('data-value') || '1', 10);
+          this.changeDownloadScale(val);
+          this.downloadScaleDropdownController?.close();
+        },
+        { signal }
+      );
+    });
+
+    const optDownloadBgTransparent = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-download-bg-transparent"]');
+    if (optDownloadBgTransparent) {
+      optDownloadBgTransparent.addEventListener(
+        'click',
+        () => {
+          this.changeDownloadBg('transparent');
+          this.downloadBgDropdownController?.close();
+        },
+        { signal }
+      );
+    }
+
+    const optDownloadBgSolid = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-download-bg-solid"]');
+    if (optDownloadBgSolid) {
+      optDownloadBgSolid.addEventListener(
+        'click',
+        () => {
+          this.changeDownloadBg('solid');
+          this.downloadBgDropdownController?.close();
+        },
+        { signal }
+      );
+    }
+
+    if (this.btnConfirmDownload) {
+      this.btnConfirmDownload.addEventListener(
+        'click',
+        () => {
+          void this.executeDownload();
+        },
+        { signal }
+      );
+    }
 
     if (this.toggleLayersBtn) {
       this.toggleLayersBtn.addEventListener(
@@ -7326,6 +7512,235 @@ class DesignController {
     }
   }
 
+  private switchShareStage(stage: 'main' | 'download'): void {
+    if (stage === 'download') {
+      this.shareStageMainEl?.classList.add('is-hidden');
+      this.shareStageDownloadEl?.classList.remove('is-hidden');
+      this.updateDownloadOptionsUI();
+    } else {
+      this.shareStageDownloadEl?.classList.add('is-hidden');
+      this.shareStageMainEl?.classList.remove('is-hidden');
+    }
+    this.shareDropdownController?.update();
+  }
+
+  private changeDownloadType(type: 'png-current' | 'spritesheet' | 'project-json'): void {
+    this.selectedDownloadType = type;
+    const items = this.container.querySelectorAll<HTMLButtonElement>('[data-ref^="btn-download-type-"]');
+    items.forEach((item) => {
+      item.classList.toggle('is-active', item.getAttribute('data-value') === type);
+    });
+
+    if (type === 'png-current') {
+      if (this.downloadTypeSelectedIconEl) this.downloadTypeSelectedIconEl.textContent = 'image';
+      if (this.downloadTypeSelectedTextEl) this.downloadTypeSelectedTextEl.textContent = 'PNG (Fotograma actual)';
+      this.downloadScaleSectionEl?.classList.remove('is-hidden');
+      this.downloadBgSectionEl?.classList.remove('is-hidden');
+    } else if (type === 'spritesheet') {
+      if (this.downloadTypeSelectedIconEl) this.downloadTypeSelectedIconEl.textContent = 'grid_view';
+      if (this.downloadTypeSelectedTextEl) this.downloadTypeSelectedTextEl.textContent = 'PNG (Hoja de sprites)';
+      this.downloadScaleSectionEl?.classList.remove('is-hidden');
+      this.downloadBgSectionEl?.classList.remove('is-hidden');
+    } else {
+      if (this.downloadTypeSelectedIconEl) this.downloadTypeSelectedIconEl.textContent = 'data_object';
+      if (this.downloadTypeSelectedTextEl) this.downloadTypeSelectedTextEl.textContent = 'Proyecto Spriteboard (.json)';
+      this.downloadScaleSectionEl?.classList.add('is-hidden');
+      this.downloadBgSectionEl?.classList.add('is-hidden');
+    }
+
+    this.updateDownloadOptionsUI();
+    this.shareDropdownController?.update();
+  }
+
+  private changeDownloadScale(scale: number): void {
+    this.selectedDownloadScale = scale;
+    const items = this.container.querySelectorAll<HTMLButtonElement>('[data-ref^="btn-scale-"]');
+    items.forEach((item) => {
+      item.classList.toggle('is-active', parseInt(item.getAttribute('data-value') || '1', 10) === scale);
+    });
+
+    if (this.downloadScaleSelectedTextEl) {
+      const w = this.canvasWidth * scale;
+      const h = this.canvasHeight * scale;
+      this.downloadScaleSelectedTextEl.textContent = `${scale}x (${w} × ${h} px)`;
+    }
+
+    this.updateDownloadOptionsUI();
+  }
+
+  private changeDownloadBg(bg: 'transparent' | 'solid'): void {
+    this.selectedDownloadBg = bg;
+    const items = this.container.querySelectorAll<HTMLButtonElement>('[data-ref^="btn-download-bg-"]');
+    items.forEach((item) => {
+      item.classList.toggle('is-active', item.getAttribute('data-value') === bg);
+    });
+
+    if (this.downloadBgSelectedIconEl) {
+      this.downloadBgSelectedIconEl.textContent = bg === 'transparent' ? 'opacity' : 'format_color_fill';
+    }
+    if (this.downloadBgSelectedTextEl) {
+      this.downloadBgSelectedTextEl.textContent = bg === 'transparent' ? 'Transparente' : 'Color del lienzo';
+    }
+  }
+
+  private updateDownloadOptionsUI(): void {
+    const scales = [1, 2, 4, 8, 16];
+    scales.forEach((s) => {
+      const el = this.container.querySelector<HTMLElement>(`[data-ref="scale-item-text-${s}"]`);
+      if (el) {
+        const w = this.canvasWidth * s;
+        const h = this.canvasHeight * s;
+        el.textContent = s === 1 ? `1x (Original - ${w} × ${h} px)` : `${s}x (${w} × ${h} px)`;
+      }
+    });
+
+    if (this.downloadScaleSelectedTextEl) {
+      const currentW = this.canvasWidth * this.selectedDownloadScale;
+      const currentH = this.canvasHeight * this.selectedDownloadScale;
+      this.downloadScaleSelectedTextEl.textContent = `${this.selectedDownloadScale}x (${currentW} × ${currentH} px)`;
+    }
+
+    if (this.btnConfirmDownloadText) {
+      if (this.selectedDownloadType === 'png-current') {
+        const w = this.canvasWidth * this.selectedDownloadScale;
+        const h = this.canvasHeight * this.selectedDownloadScale;
+        this.btnConfirmDownloadText.textContent = `Descargar PNG (${w} × ${h} px)`;
+      } else if (this.selectedDownloadType === 'spritesheet') {
+        const framesCount = Math.max(1, this.frames.length);
+        const totalW = this.canvasWidth * this.selectedDownloadScale * framesCount;
+        const h = this.canvasHeight * this.selectedDownloadScale;
+        this.btnConfirmDownloadText.textContent = `Descargar Spritesheet (${totalW} × ${h} px)`;
+      } else {
+        this.btnConfirmDownloadText.textContent = 'Descargar Proyecto (.json)';
+      }
+    }
+  }
+
+  private renderCompositedFrame(frame: CanvasFrame, scale: number, transparent: boolean): HTMLCanvasElement {
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = this.canvasWidth;
+    tempCanvas.height = this.canvasHeight;
+    const ctx = tempCanvas.getContext('2d');
+    if (!ctx) return tempCanvas;
+
+    if (!transparent) {
+      if (this.canvasBackground.type === 'solid' && this.canvasBackground.color) {
+        ctx.fillStyle = this.canvasBackground.color;
+        ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
+      } else {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
+      }
+    }
+
+    for (const layer of frame.layers) {
+      if (layer.visible) {
+        ctx.globalAlpha = layer.opacity;
+        ctx.drawImage(layer.canvas, 0, 0);
+      }
+    }
+
+    if (scale <= 1) {
+      return tempCanvas;
+    }
+
+    const scaledCanvas = document.createElement('canvas');
+    scaledCanvas.width = this.canvasWidth * scale;
+    scaledCanvas.height = this.canvasHeight * scale;
+    const scaledCtx = scaledCanvas.getContext('2d');
+    if (!scaledCtx) return tempCanvas;
+
+    scaledCtx.imageSmoothingEnabled = false;
+    scaledCtx.drawImage(tempCanvas, 0, 0, scaledCanvas.width, scaledCanvas.height);
+    return scaledCanvas;
+  }
+
+  private renderSpritesheet(scale: number, transparent: boolean): HTMLCanvasElement {
+    const framesCount = Math.max(1, this.frames.length);
+    const frameW = this.canvasWidth * scale;
+    const frameH = this.canvasHeight * scale;
+
+    const sheetCanvas = document.createElement('canvas');
+    sheetCanvas.width = frameW * framesCount;
+    sheetCanvas.height = frameH;
+    const ctx = sheetCanvas.getContext('2d');
+    if (!ctx) return sheetCanvas;
+
+    ctx.imageSmoothingEnabled = false;
+
+    for (let i = 0; i < framesCount; i++) {
+      const frame = this.frames[i];
+      if (frame) {
+        const frameCanvas = this.renderCompositedFrame(frame, scale, transparent);
+        ctx.drawImage(frameCanvas, i * frameW, 0);
+      }
+    }
+
+    return sheetCanvas;
+  }
+
+  private async executeDownload(): Promise<void> {
+    try {
+      const cleanName = (this.canvasName || 'canvas')
+        .toLowerCase()
+        .replace(/[^a-z0-9_\-\s]/g, '')
+        .trim()
+        .replace(/\s+/g, '_') || 'canvas';
+
+      const transparent = this.selectedDownloadBg === 'transparent';
+      const scale = this.selectedDownloadScale;
+
+      if (this.selectedDownloadType === 'png-current') {
+        const activeFrame = this.frames.find((f) => f.id === this.activeFrameId) || this.frames[0];
+        if (!activeFrame) {
+          showToast('No hay fotograma para exportar', 'danger');
+          return;
+        }
+
+        const canvas = this.renderCompositedFrame(activeFrame, scale, transparent);
+        const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
+        if (!blob) {
+          throw new Error('Canvas toBlob failed');
+        }
+        this.triggerBlobDownload(blob, `${cleanName}_${scale}x.png`);
+      } else if (this.selectedDownloadType === 'spritesheet') {
+        if (this.frames.length === 0) {
+          showToast('No hay fotogramas para exportar', 'danger');
+          return;
+        }
+
+        const canvas = this.renderSpritesheet(scale, transparent);
+        const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
+        if (!blob) {
+          throw new Error('Canvas toBlob failed');
+        }
+        this.triggerBlobDownload(blob, `${cleanName}_spritesheet_${scale}x.png`);
+      } else if (this.selectedDownloadType === 'project-json') {
+        const projectData = this.serializeProject();
+        const jsonStr = JSON.stringify(projectData, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8' });
+        this.triggerBlobDownload(blob, `${cleanName}_project.json`);
+      }
+
+      showToast(t('canvas.download.success_toast') || 'Archivo descargado con éxito', 'success');
+    } catch {
+      showToast(t('canvas.download.error_toast') || 'Error al generar la descarga', 'danger');
+    }
+  }
+
+  private triggerBlobDownload(blob: Blob, filename: string): void {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => {
+      URL.revokeObjectURL(url);
+    }, 1000);
+  }
+
   private async changeAccessLevel(level: 'private' | 'public'): Promise<void> {
     if (!this.isOwner || this.accessLevel === level) return;
     const previousLevel = this.accessLevel;
@@ -7544,6 +7959,9 @@ class DesignController {
     this.shareDropdownController?.destroy();
     this.accessDropdownController?.destroy();
     this.publicRoleDropdownController?.destroy();
+    this.downloadTypeDropdownController?.destroy();
+    this.downloadScaleDropdownController?.destroy();
+    this.downloadBgDropdownController?.destroy();
     this.topToolbarCarouselController?.destroy();
     this.bottomToolbarCarouselController?.destroy();
     this.optionsTrayCarouselController?.destroy();

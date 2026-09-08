@@ -213,7 +213,7 @@ export function openCanvasMetricsModal(canvasUuid: string, canvasName: string): 
             <div class="settings-item" data-ref="viewer-item-${v.user_id}">
               <div class="settings-item__content">
                 <div class="settings-item__avatar">
-                  <img class="avatar-preview-img" src="${v.avatar_url || '/assets/img/default-avatar.svg'}" alt="${escapeHtml(v.username)}" referrerpolicy="no-referrer" />
+                  <img class="avatar-preview-img image-lazy-fade" src="${v.avatar_url || '/assets/img/default-avatar.svg'}" alt="${escapeHtml(v.username)}" referrerpolicy="no-referrer" onload="this.classList.add('image-loaded')" onerror="this.classList.add('image-loaded')" />
                 </div>
                 <div class="settings-item__text">
                   <h4 class="settings-item__title">${escapeHtml(v.username)}</h4>
@@ -249,7 +249,7 @@ export function openCanvasMetricsModal(canvasUuid: string, canvasName: string): 
                 <div class="settings-item__icon-box">
                   ${
                     view.is_registered && view.avatar_url
-                      ? `<img class="avatar-preview-img" src="${view.avatar_url}" alt="${escapeHtml(view.username)}" referrerpolicy="no-referrer" />`
+                      ? `<img class="avatar-preview-img image-lazy-fade" src="${view.avatar_url}" alt="${escapeHtml(view.username)}" referrerpolicy="no-referrer" onload="this.classList.add('image-loaded')" onerror="this.classList.add('image-loaded')" />`
                       : view.is_registered
                         ? `<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#person"></use></svg>`
                         : `<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#devices"></use></svg>`

@@ -34,6 +34,36 @@ struct CanvasParticipant {
     tx: ClientSender,
 }
 
+#[derive(Debug)]
+enum RedisOutboundCmd {
+    Publish {
+        channel: String,
+        payload: String,
+    },
+    SetPresence {
+        canvas_uuid: String,
+        conn_id: String,
+        user_json: String,
+    },
+    RemovePresence {
+        canvas_uuid: String,
+        conn_id: String,
+    },
+    CacheSnapshot {
+        canvas_uuid: String,
+        data_json: String,
+    },
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct RedisCanvasEnvelope {
+    origin_instance: String,
+    canvas_uuid: String,
+    sender_conn_id: String,
+    is_binary: bool,
+    payload: String,
+}
+
 #[derive(Clone)]
 struct AppState {
     // user_id -> Map<conn_id, Sender>
@@ -41,6 +71,34 @@ struct AppState {
     // canvas_uuid -> Map<conn_id, CanvasParticipant>
     canvas_rooms: Arc<RwLock<HashMap<String, HashMap<String, CanvasParticipant>>>>,
     session_secret: Arc<String>,
+    instance_id: Arc<String>,
+    redis_cmd_tx: mpsc::UnboundedSender<RedisOutboundCmd>,
+    redis_client: Arc<redis::Client>,
+}
+
+impl AppState {
+    fn publish_canvas_event(
+        &self,
+        canvas_uuid: &str,
+        sender_conn_id: &str,
+        payload: String,
+        is_binary: bool,
+    ) {
+        let envelope = RedisCanvasEnvelope {
+            origin_instance: (*self.instance_id).clone(),
+            canvas_uuid: canvas_uuid.to_string(),
+            sender_conn_id: sender_conn_id.to_string(),
+            is_binary,
+            payload,
+        };
+        if let Ok(serialized) = serde_json::to_string(&envelope) {
+            let channel = format!("canvas:events:{}", canvas_uuid);
+            let _ = self.redis_cmd_tx.send(RedisOutboundCmd::Publish {
+                channel,
+                payload: serialized,
+            });
+        }
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -226,7 +284,7 @@ fn verify_room_token(
         return None;
     }
 
-    if user_id > 0 && parsed.user_id != user_id {
+    if parsed.user_id != user_id && user_id > 0 {
         return None;
     }
 
@@ -234,18 +292,16 @@ fn verify_room_token(
 }
 
 async fn ws_handler(
-    State(state): State<AppState>,
     ws: WebSocketUpgrade,
+    State(state): State<AppState>,
     req: Request,
 ) -> Response {
     let session_secret = state.session_secret.clone();
+    let auth_user = extract_cookie(&req, "auth_session")
+        .or_else(|| extract_cookie(&req, "sb_session"))
+        .and_then(|token| verify_session_token(token, &session_secret));
 
-    let user = match extract_cookie(&req, "sprite_session") {
-        Some(token) => verify_session_token(token, &session_secret),
-        None => None,
-    };
-
-    let user = user.unwrap_or_else(|| {
+    let user = auth_user.unwrap_or_else(|| {
         let rand_suffix = (SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()
@@ -357,16 +413,51 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
                                         let mut rooms = state.canvas_rooms.write().await;
                                         let room = rooms.entry(canvas_uuid.to_string()).or_default();
 
-                                        let presence_users: Vec<ParticipantInfo> = room
-                                            .values()
-                                            .map(|p| ParticipantInfo {
-                                                conn_id: p.conn_id.clone(),
-                                                user_id: p.user_id,
-                                                username: p.username.clone(),
-                                                color: p.color.clone(),
-                                                role: p.role.clone(),
-                                            })
-                                            .collect();
+                                        let mut presence_map: HashMap<String, ParticipantInfo> = HashMap::new();
+
+                                        // 1. Cargar presencia global desde Redis
+                                        let presence_key = format!("canvas:{}:presence", canvas_uuid);
+                                        if let Ok(mut rconn) = state.redis_client.get_async_connection().await {
+                                            let remote_presence: Result<HashMap<String, String>, _> = redis::cmd("HGETALL")
+                                                .arg(&presence_key)
+                                                .query_async(&mut rconn)
+                                                .await;
+                                            if let Ok(entries) = remote_presence {
+                                                for (_c_id, info_json) in entries {
+                                                    if let Ok(info) = serde_json::from_str::<ParticipantInfo>(&info_json) {
+                                                        presence_map.insert(info.conn_id.clone(), info);
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        // 2. Combinar con participantes locales
+                                        for p in room.values() {
+                                            presence_map.insert(
+                                                p.conn_id.clone(),
+                                                ParticipantInfo {
+                                                    conn_id: p.conn_id.clone(),
+                                                    user_id: p.user_id,
+                                                    username: p.username.clone(),
+                                                    color: p.color.clone(),
+                                                    role: p.role.clone(),
+                                                },
+                                            );
+                                        }
+
+                                        // 3. Incluir al usuario actual
+                                        presence_map.insert(
+                                            conn_id.clone(),
+                                            ParticipantInfo {
+                                                conn_id: conn_id.clone(),
+                                                user_id: user.id,
+                                                username: display_name.clone(),
+                                                color: color.clone(),
+                                                role: role.clone(),
+                                            },
+                                        );
+
+                                        let presence_users: Vec<ParticipantInfo> = presence_map.into_values().collect();
 
                                         let presence_msg = serde_json::json!({
                                             "type": "ROOM_PRESENCE",
@@ -396,6 +487,23 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
                                         }
 
                                         room.insert(conn_id.clone(), participant);
+
+                                        // Notificar a otras réplicas mediante Redis Pub/Sub
+                                        state.publish_canvas_event(canvas_uuid, &conn_id, user_joined_msg, false);
+
+                                        // Guardar presencia en Redis Hash con expiración
+                                        let user_info_json = serde_json::json!({
+                                            "connId": conn_id.clone(),
+                                            "userId": user.id,
+                                            "username": display_name,
+                                            "color": color,
+                                            "role": role
+                                        }).to_string();
+                                        let _ = state.redis_cmd_tx.send(RedisOutboundCmd::SetPresence {
+                                            canvas_uuid: canvas_uuid.to_string(),
+                                            conn_id: conn_id.clone(),
+                                            user_json: user_info_json,
+                                        });
                                     }
                                     "LEAVE_CANVAS" => {
                                         joined_rooms.remove(canvas_uuid);
@@ -413,6 +521,12 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
                                                 for peer in room.values() {
                                                     let _ = peer.tx.send(Message::Text(user_left_msg.clone()));
                                                 }
+
+                                                state.publish_canvas_event(canvas_uuid, &conn_id, user_left_msg, false);
+                                                let _ = state.redis_cmd_tx.send(RedisOutboundCmd::RemovePresence {
+                                                    canvas_uuid: canvas_uuid.to_string(),
+                                                    conn_id: conn_id.clone(),
+                                                });
                                             }
                                             if room.is_empty() {
                                                 rooms.remove(canvas_uuid);
@@ -441,6 +555,8 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
                                                         let _ = peer.tx.send(Message::Text(cursor_msg.clone()));
                                                     }
                                                 }
+
+                                                state.publish_canvas_event(canvas_uuid, &conn_id, cursor_msg, false);
                                             }
                                         }
                                     }
@@ -458,6 +574,17 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
                                                     for (peer_conn, peer) in room.iter() {
                                                         if peer_conn != &conn_id {
                                                             let _ = peer.tx.send(Message::Text(forward_msg.clone()));
+                                                        }
+                                                    }
+
+                                                    state.publish_canvas_event(canvas_uuid, &conn_id, forward_msg.clone(), false);
+
+                                                    if msg_type == "CANVAS_FULL_UPDATE" {
+                                                        if let Some(canvas_data) = val.get("data") {
+                                                            let _ = state.redis_cmd_tx.send(RedisOutboundCmd::CacheSnapshot {
+                                                                canvas_uuid: canvas_uuid.to_string(),
+                                                                data_json: canvas_data.to_string(),
+                                                            });
                                                         }
                                                     }
                                                 }
@@ -491,6 +618,8 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
                                                     let _ = peer.tx.send(Message::Text(notice_msg.clone()));
                                                 }
                                             }
+
+                                            state.publish_canvas_event(canvas_uuid, &conn_id, notice_msg, false);
                                         }
                                     }
                                     "CANVAS_MEMBER_REMOVED" => {
@@ -517,6 +646,8 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
                                                 room.remove(&k);
                                             }
                                         }
+
+                                        state.publish_canvas_event(canvas_uuid, &conn_id, notice_msg, false);
                                     }
                                     "CANVAS_MEMBER_ADDED" => {
                                         let rooms = state.canvas_rooms.read().await;
@@ -534,6 +665,8 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
                                                     let _ = peer.tx.send(Message::Text(notice_msg.clone()));
                                                 }
                                             }
+
+                                            state.publish_canvas_event(canvas_uuid, &conn_id, notice_msg, false);
                                         }
                                     }
                                     _ => {}
@@ -567,12 +700,15 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
                                                         out.extend_from_slice(&x_bytes);
                                                         out.extend_from_slice(&y_bytes);
 
-                                                        let out_msg = Message::Binary(out);
+                                                        let out_msg = Message::Binary(out.clone());
                                                         for (peer_conn, peer) in room.iter() {
                                                             if peer_conn != &conn_id {
                                                                 let _ = peer.tx.send(out_msg.clone());
                                                             }
                                                         }
+
+                                                        let b64 = URL_SAFE_NO_PAD.encode(&out);
+                                                        state.publish_canvas_event(canvas_uuid, &conn_id, b64, true);
                                                     }
                                                 }
                                             }
@@ -598,12 +734,15 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
                                                             out.extend_from_slice(&conn_bytes[..conn_len as usize]);
                                                             out.extend_from_slice(stroke_payload);
 
-                                                            let out_msg = Message::Binary(out);
+                                                            let out_msg = Message::Binary(out.clone());
                                                             for (peer_conn, peer) in room.iter() {
                                                                 if peer_conn != &conn_id {
                                                                     let _ = peer.tx.send(out_msg.clone());
                                                                 }
                                                             }
+
+                                                            let b64 = URL_SAFE_NO_PAD.encode(&out);
+                                                            state.publish_canvas_event(canvas_uuid, &conn_id, b64, true);
                                                         }
                                                     }
                                                 }
@@ -639,6 +778,12 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
                     for peer in room.values() {
                         let _ = peer.tx.send(Message::Text(user_left_msg.clone()));
                     }
+
+                    state.publish_canvas_event(&room_id, &conn_id, user_left_msg, false);
+                    let _ = state.redis_cmd_tx.send(RedisOutboundCmd::RemovePresence {
+                        canvas_uuid: room_id.clone(),
+                        conn_id: conn_id.clone(),
+                    });
                 }
             }
         }
@@ -677,12 +822,23 @@ async fn run_redis_pubsub(state: AppState) {
                         tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
                         continue;
                     }
+                    if let Err(e) = pubsub.psubscribe("canvas:events:*").await {
+                        eprintln!("[WebSocket] Error al suscribirse a 'canvas:events:*': {}", e);
+                        tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
+                        continue;
+                    }
 
-                    println!("[WebSocket] Suscrito exitosamente a 'auth:session_events' en Redis");
+                    println!("[WebSocket] Suscrito exitosamente a 'auth:session_events' y 'canvas:events:*' en Redis");
                     let mut stream = pubsub.into_on_message();
 
                     while let Some(msg) = stream.next().await {
-                        if let Ok(payload) = msg.get_payload::<String>() {
+                        let channel_name = msg.get_channel_name().to_string();
+                        let payload = match msg.get_payload::<String>() {
+                            Ok(p) => p,
+                            Err(_) => continue,
+                        };
+
+                        if channel_name == "auth:session_events" {
                             if let Ok(event) = serde_json::from_str::<SessionRevokeEvent>(&payload) {
                                 if event.event_type == "LOGOUT_ALL" || event.event_type == "LOGOUT" {
                                     println!(
@@ -705,6 +861,32 @@ async fn run_redis_pubsub(state: AppState) {
                                     }
                                 }
                             }
+                        } else if channel_name.starts_with("canvas:events:") {
+                            if let Ok(env) = serde_json::from_str::<RedisCanvasEnvelope>(&payload) {
+                                // Descartar si proviene de esta misma réplica
+                                if env.origin_instance == *state.instance_id {
+                                    continue;
+                                }
+
+                                let rooms = state.canvas_rooms.read().await;
+                                if let Some(room) = rooms.get(&env.canvas_uuid) {
+                                    if !env.is_binary {
+                                        let outgoing = Message::Text(env.payload);
+                                        for (peer_conn, peer) in room.iter() {
+                                            if peer_conn != &env.sender_conn_id {
+                                                let _ = peer.tx.send(outgoing.clone());
+                                            }
+                                        }
+                                    } else if let Ok(bytes) = URL_SAFE_NO_PAD.decode(&env.payload) {
+                                        let outgoing = Message::Binary(bytes);
+                                        for (peer_conn, peer) in room.iter() {
+                                            if peer_conn != &env.sender_conn_id {
+                                                let _ = peer.tx.send(outgoing.clone());
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -717,6 +899,69 @@ async fn run_redis_pubsub(state: AppState) {
             }
         }
         tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
+    }
+}
+
+async fn run_redis_publisher(
+    redis_client: Arc<redis::Client>,
+    mut rx: mpsc::UnboundedReceiver<RedisOutboundCmd>,
+) {
+    loop {
+        match redis_client.get_async_connection().await {
+            Ok(mut conn) => {
+                println!("[WebSocket] Conexión de comandos Redis lista.");
+                while let Some(cmd) = rx.recv().await {
+                    match cmd {
+                        RedisOutboundCmd::Publish { channel, payload } => {
+                            let res: Result<(), redis::RedisError> = redis::cmd("PUBLISH")
+                                .arg(&channel)
+                                .arg(&payload)
+                                .query_async(&mut conn)
+                                .await;
+                            if let Err(e) = res {
+                                eprintln!("[WebSocket] Error al publicar en canal {}: {}", channel, e);
+                            }
+                        }
+                        RedisOutboundCmd::SetPresence { canvas_uuid, conn_id, user_json } => {
+                            let key = format!("canvas:{}:presence", canvas_uuid);
+                            let _: Result<(), redis::RedisError> = redis::cmd("HSET")
+                                .arg(&key)
+                                .arg(&conn_id)
+                                .arg(&user_json)
+                                .query_async(&mut conn)
+                                .await;
+                            let _: Result<(), redis::RedisError> = redis::cmd("EXPIRE")
+                                .arg(&key)
+                                .arg(7200)
+                                .query_async(&mut conn)
+                                .await;
+                        }
+                        RedisOutboundCmd::RemovePresence { canvas_uuid, conn_id } => {
+                            let key = format!("canvas:{}:presence", canvas_uuid);
+                            let _: Result<(), redis::RedisError> = redis::cmd("HDEL")
+                                .arg(&key)
+                                .arg(&conn_id)
+                                .query_async(&mut conn)
+                                .await;
+                        }
+                        RedisOutboundCmd::CacheSnapshot { canvas_uuid, data_json } => {
+                            let key = format!("canvas:snapshot:{}", canvas_uuid);
+                            let _: Result<(), redis::RedisError> = redis::cmd("SETEX")
+                                .arg(&key)
+                                .arg(86400)
+                                .arg(&data_json)
+                                .query_async(&mut conn)
+                                .await;
+                        }
+                    }
+                }
+                break;
+            }
+            Err(e) => {
+                eprintln!("[WebSocket] Error al obtener conexión asíncrona de comandos Redis: {}", e);
+                tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
+            }
+        }
     }
 }
 
@@ -734,11 +979,42 @@ async fn main() {
     let session_secret = env::var("SESSION_SECRET")
         .unwrap_or_else(|_| "spriteboard_session_secret_key_2026".to_string());
 
+    let redis_host = env::var("REDIS_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+    let redis_port = env::var("REDIS_PORT").unwrap_or_else(|_| "6379".to_string());
+    let redis_url = format!("redis://{}:{}/", redis_host, redis_port);
+
+    let redis_client = Arc::new(
+        redis::Client::open(redis_url.clone())
+            .expect("No se pudo configurar cliente Redis")
+    );
+
+    let (redis_cmd_tx, redis_cmd_rx) = mpsc::unbounded_channel::<RedisOutboundCmd>();
+
+    let instance_id = format!(
+        "ws-{:x}-{:x}",
+        SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_millis(),
+        std::process::id()
+    );
+
     let state = AppState {
         clients: Arc::new(RwLock::new(HashMap::new())),
         canvas_rooms: Arc::new(RwLock::new(HashMap::new())),
         session_secret: Arc::new(session_secret),
+        instance_id: Arc::new(instance_id.clone()),
+        redis_cmd_tx,
+        redis_client: redis_client.clone(),
     };
+
+    println!(
+        "[WebSocket Server] Instancia inicializada con ID: {}",
+        instance_id
+    );
+
+    // Tarea para despachar comandos hacia Redis (Publicación, Presencia, Snapshot)
+    let publisher_client = redis_client.clone();
+    tokio::spawn(async move {
+        run_redis_publisher(publisher_client, redis_cmd_rx).await;
+    });
 
     // Tarea en segundo plano para escuchar eventos Pub/Sub de Redis
     let state_for_redis = state.clone();
@@ -765,4 +1041,3 @@ async fn main() {
         .await
         .expect("Error al ejecutar el servidor Axum");
 }
-

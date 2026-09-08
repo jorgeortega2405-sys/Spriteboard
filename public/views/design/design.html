@@ -26,108 +26,241 @@
                 <div class="menu-panel__drag-handle"></div>
               </div>
 
-              <div class="design-share-menu__header">
-                <h2 class="design-share-menu__title">Compartir el diseño</h2>
+              <!-- ETAPA 1: COMPARTIR -->
+              <div class="design-share-stage" data-ref="share-stage-main">
+                <div class="design-share-menu__header">
+                  <h2 class="design-share-menu__title">Compartir el diseño</h2>
+                </div>
+
+                <div class="design-share-menu__content">
+                  <div class="design-share-section">
+                    <span class="design-share-section__label">Personas y equipos con acceso</span>
+                    
+                    <div class="design-share-search-box" data-ref="share-search-box">
+                      <div class="component-search component-search--full" data-ref="field-share-search">
+                        <div class="component-search__icon">
+                          <span class="material-symbols-rounded">search</span>
+                        </div>
+                        <div class="component-search__input-box">
+                          <input class="component-search__input" data-ref="input-share-search-people" type="text" placeholder="Agregar personas o equipos" autocomplete="off" />
+                        </div>
+                      </div>
+                      
+                      <div class="design-share-search-results is-hidden" data-ref="share-search-results"></div>
+                    </div>
+
+                    <div class="design-share-members-row" data-ref="share-members-container">
+                      <div class="design-share-members-list" data-ref="share-members-list"></div>
+                      <button type="button" class="design-share-add-chip-btn" data-ref="btn-share-focus-search" data-tooltip="Agregar personas o equipos" aria-label="Agregar personas o equipos">
+                        <span class="material-symbols-rounded">add</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="design-share-section">
+                    <span class="design-share-section__label">Nivel de acceso</span>
+                    
+                    <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-access-level">
+                      <button type="button" class="dropdown-trigger" data-ref="btn-trigger-access-level" aria-label="Nivel de acceso">
+                        <div class="dropdown-trigger__left">
+                          <span class="material-symbols-rounded dropdown-trigger__icon" data-ref="access-level-selected-icon">lock</span>
+                          <span class="dropdown-trigger__text" data-ref="access-level-selected-text">Solo tú tienes acceso</span>
+                        </div>
+                        <span class="material-symbols-rounded dropdown-trigger__chevron">expand_more</span>
+                      </button>
+
+                      <div class="dropdown-backdrop" data-ref="dropdown-backdrop-access-level">
+                        <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-access-level">
+                          <div class="menu-panel__drag-zone" data-ref="access-drag-zone" aria-hidden="true">
+                            <div class="menu-panel__drag-handle"></div>
+                          </div>
+                          <div class="menu-panel__list" data-ref="list-access-level">
+                            <button type="button" class="menu-item is-active" data-ref="btn-access-private" data-value="private">
+                              <span class="material-symbols-rounded menu-item__icon">lock</span>
+                              <span class="menu-item__text">Solo tú tienes acceso</span>
+                            </button>
+                            <button type="button" class="menu-item" data-ref="btn-access-public" data-value="public">
+                              <span class="material-symbols-rounded menu-item__icon">language</span>
+                              <span class="menu-item__text">Cualquier persona con el enlace</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="design-share-section is-hidden" data-ref="section-public-role">
+                    <span class="design-share-section__label">Permiso del enlace</span>
+                    
+                    <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-public-role">
+                      <button type="button" class="dropdown-trigger" data-ref="btn-trigger-public-role" aria-label="Permiso del enlace">
+                        <div class="dropdown-trigger__left">
+                          <span class="material-symbols-rounded dropdown-trigger__icon" data-ref="public-role-selected-icon">edit</span>
+                          <span class="dropdown-trigger__text" data-ref="public-role-selected-text">Ver y editar</span>
+                        </div>
+                        <span class="material-symbols-rounded dropdown-trigger__chevron">expand_more</span>
+                      </button>
+
+                      <div class="dropdown-backdrop" data-ref="dropdown-backdrop-public-role">
+                        <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-public-role">
+                          <div class="menu-panel__drag-zone" data-ref="public-role-drag-zone" aria-hidden="true">
+                            <div class="menu-panel__drag-handle"></div>
+                          </div>
+                          <div class="menu-panel__list" data-ref="list-public-role">
+                            <button type="button" class="menu-item is-active" data-ref="btn-public-role-editor" data-value="editor">
+                              <span class="material-symbols-rounded menu-item__icon">edit</span>
+                              <span class="menu-item__text">Ver y editar</span>
+                            </button>
+                            <button type="button" class="menu-item" data-ref="btn-public-role-viewer" data-value="viewer">
+                              <span class="material-symbols-rounded menu-item__icon">visibility</span>
+                              <span class="menu-item__text">Solo ver</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="design-share-link-row">
+                    <button type="button" class="btn btn--h40 btn--black btn--w-full" data-ref="btn-copy-share-link">
+                      <span class="material-symbols-rounded">link</span>
+                      <span>Copiar el enlace</span>
+                    </button>
+                    <button type="button" class="btn btn--h40 btn--outline btn--w-full" data-ref="btn-customize-share-link">
+                      <span class="material-symbols-rounded">edit</span>
+                      <span>Personaliza tu enlace</span>
+                    </button>
+                    <button type="button" class="btn btn--h40 btn--outline btn--w-full" data-ref="btn-open-download-stage">
+                      <span class="material-symbols-rounded">download</span>
+                      <span>Descargar diseño</span>
+                    </button>
+                  </div>
+                </div>
               </div>
 
-              <div class="design-share-menu__content">
-                <div class="design-share-section">
-                  <span class="design-share-section__label">Personas y equipos con acceso</span>
-                  
-                  <div class="design-share-search-box" data-ref="share-search-box">
-                    <div class="component-search component-search--full" data-ref="field-share-search">
-                      <div class="component-search__icon">
-                        <span class="material-symbols-rounded">search</span>
-                      </div>
-                      <div class="component-search__input-box">
-                        <input class="component-search__input" data-ref="input-share-search-people" type="text" placeholder="Agregar personas o equipos" autocomplete="off" />
-                      </div>
-                    </div>
+              <!-- ETAPA 2: DESCARGAR -->
+              <div class="design-share-stage is-hidden" data-ref="share-stage-download">
+                <div class="design-share-menu__header design-share-menu__header--with-back">
+                  <button type="button" class="btn btn--h32 btn--icon design-share-back-btn" data-ref="btn-back-to-share" data-tooltip="Volver" aria-label="Volver">
+                    <span class="material-symbols-rounded">arrow_back</span>
+                  </button>
+                  <h2 class="design-share-menu__title">Descargar diseño</h2>
+                </div>
+
+                <div class="design-share-menu__content">
+                  <div class="design-share-section">
+                    <span class="design-share-section__label">Tipo de archivo</span>
                     
-                    <div class="design-share-search-results is-hidden" data-ref="share-search-results"></div>
-                  </div>
-
-                  <div class="design-share-members-row" data-ref="share-members-container">
-                    <div class="design-share-members-list" data-ref="share-members-list"></div>
-                    <button type="button" class="design-share-add-chip-btn" data-ref="btn-share-focus-search" data-tooltip="Agregar personas o equipos" aria-label="Agregar personas o equipos">
-                      <span class="material-symbols-rounded">add</span>
-                    </button>
-                  </div>
-                </div>
-
-                <div class="design-share-section">
-                  <span class="design-share-section__label">Nivel de acceso</span>
-                  
-                  <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-access-level">
-                    <button type="button" class="dropdown-trigger" data-ref="btn-trigger-access-level" aria-label="Nivel de acceso">
-                      <div class="dropdown-trigger__left">
-                        <span class="material-symbols-rounded dropdown-trigger__icon" data-ref="access-level-selected-icon">lock</span>
-                        <span class="dropdown-trigger__text" data-ref="access-level-selected-text">Solo tú tienes acceso</span>
-                      </div>
-                      <span class="material-symbols-rounded dropdown-trigger__chevron">expand_more</span>
-                    </button>
-
-                    <div class="dropdown-backdrop" data-ref="dropdown-backdrop-access-level">
-                      <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-access-level">
-                        <div class="menu-panel__drag-zone" data-ref="access-drag-zone" aria-hidden="true">
-                          <div class="menu-panel__drag-handle"></div>
+                    <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-download-type">
+                      <button type="button" class="dropdown-trigger" data-ref="btn-trigger-download-type" aria-label="Tipo de archivo">
+                        <div class="dropdown-trigger__left">
+                          <span class="material-symbols-rounded dropdown-trigger__icon" data-ref="download-type-selected-icon">image</span>
+                          <span class="dropdown-trigger__text" data-ref="download-type-selected-text">PNG (Fotograma actual)</span>
                         </div>
-                        <div class="menu-panel__list" data-ref="list-access-level">
-                          <button type="button" class="menu-item is-active" data-ref="btn-access-private" data-value="private">
-                            <span class="material-symbols-rounded menu-item__icon">lock</span>
-                            <span class="menu-item__text">Solo tú tienes acceso</span>
-                          </button>
-                          <button type="button" class="menu-item" data-ref="btn-access-public" data-value="public">
-                            <span class="material-symbols-rounded menu-item__icon">language</span>
-                            <span class="menu-item__text">Cualquier persona con el enlace</span>
-                          </button>
+                        <span class="material-symbols-rounded dropdown-trigger__chevron">expand_more</span>
+                      </button>
+
+                      <div class="dropdown-backdrop" data-ref="dropdown-backdrop-download-type">
+                        <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-download-type">
+                          <div class="menu-panel__drag-zone" data-ref="download-type-drag-zone" aria-hidden="true">
+                            <div class="menu-panel__drag-handle"></div>
+                          </div>
+                          <div class="menu-panel__list" data-ref="list-download-type">
+                            <button type="button" class="menu-item is-active" data-ref="btn-download-type-png" data-value="png-current">
+                              <span class="material-symbols-rounded menu-item__icon">image</span>
+                              <span class="menu-item__text">PNG (Fotograma actual)</span>
+                            </button>
+                            <button type="button" class="menu-item" data-ref="btn-download-type-spritesheet" data-value="spritesheet">
+                              <span class="material-symbols-rounded menu-item__icon">grid_view</span>
+                              <span class="menu-item__text">PNG (Hoja de sprites)</span>
+                            </button>
+                            <button type="button" class="menu-item" data-ref="btn-download-type-project" data-value="project-json">
+                              <span class="material-symbols-rounded menu-item__icon">data_object</span>
+                              <span class="menu-item__text">Proyecto Spriteboard (.json)</span>
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
 
-                <div class="design-share-section is-hidden" data-ref="section-public-role">
-                  <span class="design-share-section__label">Permiso del enlace</span>
-                  
-                  <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-public-role">
-                    <button type="button" class="dropdown-trigger" data-ref="btn-trigger-public-role" aria-label="Permiso del enlace">
-                      <div class="dropdown-trigger__left">
-                        <span class="material-symbols-rounded dropdown-trigger__icon" data-ref="public-role-selected-icon">edit</span>
-                        <span class="dropdown-trigger__text" data-ref="public-role-selected-text">Ver y editar</span>
-                      </div>
-                      <span class="material-symbols-rounded dropdown-trigger__chevron">expand_more</span>
-                    </button>
-
-                    <div class="dropdown-backdrop" data-ref="dropdown-backdrop-public-role">
-                      <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-public-role">
-                        <div class="menu-panel__drag-zone" data-ref="public-role-drag-zone" aria-hidden="true">
-                          <div class="menu-panel__drag-handle"></div>
+                  <div class="design-share-section" data-ref="section-download-scale">
+                    <span class="design-share-section__label">Resolución y escala</span>
+                    
+                    <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-download-scale">
+                      <button type="button" class="dropdown-trigger" data-ref="btn-trigger-download-scale" aria-label="Resolución y escala">
+                        <div class="dropdown-trigger__left">
+                          <span class="material-symbols-rounded dropdown-trigger__icon">aspect_ratio</span>
+                          <span class="dropdown-trigger__text" data-ref="download-scale-selected-text">1x (Original)</span>
                         </div>
-                        <div class="menu-panel__list" data-ref="list-public-role">
-                          <button type="button" class="menu-item is-active" data-ref="btn-public-role-editor" data-value="editor">
-                            <span class="material-symbols-rounded menu-item__icon">edit</span>
-                            <span class="menu-item__text">Ver y editar</span>
-                          </button>
-                          <button type="button" class="menu-item" data-ref="btn-public-role-viewer" data-value="viewer">
-                            <span class="material-symbols-rounded menu-item__icon">visibility</span>
-                            <span class="menu-item__text">Solo ver</span>
-                          </button>
+                        <span class="material-symbols-rounded dropdown-trigger__chevron">expand_more</span>
+                      </button>
+
+                      <div class="dropdown-backdrop" data-ref="dropdown-backdrop-download-scale">
+                        <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-download-scale">
+                          <div class="menu-panel__drag-zone" data-ref="download-scale-drag-zone" aria-hidden="true">
+                            <div class="menu-panel__drag-handle"></div>
+                          </div>
+                          <div class="menu-panel__list" data-ref="list-download-scale">
+                            <button type="button" class="menu-item is-active" data-ref="btn-scale-1" data-value="1">
+                              <span class="menu-item__text" data-ref="scale-item-text-1">1x (Original)</span>
+                            </button>
+                            <button type="button" class="menu-item" data-ref="btn-scale-2" data-value="2">
+                              <span class="menu-item__text" data-ref="scale-item-text-2">2x</span>
+                            </button>
+                            <button type="button" class="menu-item" data-ref="btn-scale-4" data-value="4">
+                              <span class="menu-item__text" data-ref="scale-item-text-4">4x</span>
+                            </button>
+                            <button type="button" class="menu-item" data-ref="btn-scale-8" data-value="8">
+                              <span class="menu-item__text" data-ref="scale-item-text-8">8x</span>
+                            </button>
+                            <button type="button" class="menu-item" data-ref="btn-scale-16" data-value="16">
+                              <span class="menu-item__text" data-ref="scale-item-text-16">16x</span>
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
 
-                <div class="design-share-link-row">
-                  <button type="button" class="btn btn--h40 btn--black btn--w-full" data-ref="btn-copy-share-link">
-                    <span class="material-symbols-rounded">link</span>
-                    <span>Copiar el enlace</span>
-                  </button>
-                  <button type="button" class="btn btn--h40 btn--outline btn--w-full" data-ref="btn-customize-share-link">
-                    <span class="material-symbols-rounded">edit</span>
-                    <span>Personaliza tu enlace</span>
-                  </button>
+                  <div class="design-share-section" data-ref="section-download-bg">
+                    <span class="design-share-section__label">Fondo</span>
+
+                    <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-download-bg">
+                      <button type="button" class="dropdown-trigger" data-ref="btn-trigger-download-bg" aria-label="Fondo">
+                        <div class="dropdown-trigger__left">
+                          <span class="material-symbols-rounded dropdown-trigger__icon" data-ref="download-bg-selected-icon">opacity</span>
+                          <span class="dropdown-trigger__text" data-ref="download-bg-selected-text">Transparente</span>
+                        </div>
+                        <span class="material-symbols-rounded dropdown-trigger__chevron">expand_more</span>
+                      </button>
+
+                      <div class="dropdown-backdrop" data-ref="dropdown-backdrop-download-bg">
+                        <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-download-bg">
+                          <div class="menu-panel__drag-zone" data-ref="download-bg-drag-zone" aria-hidden="true">
+                            <div class="menu-panel__drag-handle"></div>
+                          </div>
+                          <div class="menu-panel__list" data-ref="list-download-bg">
+                            <button type="button" class="menu-item is-active" data-ref="btn-download-bg-transparent" data-value="transparent">
+                              <span class="material-symbols-rounded menu-item__icon">opacity</span>
+                              <span class="menu-item__text">Transparente</span>
+                            </button>
+                            <button type="button" class="menu-item" data-ref="btn-download-bg-solid" data-value="solid">
+                              <span class="material-symbols-rounded menu-item__icon">format_color_fill</span>
+                              <span class="menu-item__text">Color del lienzo</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="design-share-link-row">
+                    <button type="button" class="btn btn--h40 btn--black btn--w-full" data-ref="btn-confirm-download">
+                      <span class="material-symbols-rounded">download</span>
+                      <span data-ref="btn-confirm-download-text">Descargar PNG</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

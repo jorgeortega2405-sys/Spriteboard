@@ -5,7 +5,7 @@ import { saveLocalCanvas } from '../services/canvas-storage.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { showToast } from '../services/toast.service.js';
-import { getEmptyGraphicSvg, initCarouselScroll } from '../utils/dom.util.js';
+import { getEmptyGraphicSvg, initCarouselScroll, setupLazyImages } from '../utils/dom.util.js';
 
 let activeCreateCanvasModal: { close: () => void } | null = null;
 
@@ -509,7 +509,7 @@ const ALL_PRESETS = Array.from(ALL_PRESETS_MAP.values());
 function buildPresetCardHtml(item: PresetItem): string {
   const badgeText = `${item.width} × ${item.height} px`;
   const previewContent = item.imagePath
-    ? `<img class="canvas-card__image" data-ref="preset-card-img-${item.id}" src="${item.imagePath}" alt="${item.name}" loading="lazy" />`
+    ? `<img class="canvas-card__image image-lazy-fade" data-ref="preset-card-img-${item.id}" src="${item.imagePath}" alt="${item.name}" loading="lazy" decoding="async" onload="this.classList.add('image-loaded')" onerror="this.classList.add('image-loaded')" />`
     : (item.svgIcon || '');
 
   return `
@@ -872,6 +872,7 @@ export function openCreateCanvasModal(): void {
 
   translateElement(backdrop);
   renderIcons(backdrop);
+  setupLazyImages(backdrop);
 
   requestAnimationFrame(() => {
     backdrop.classList.add('is-visible');
@@ -1257,6 +1258,7 @@ export function openCreateCanvasModal(): void {
 
     if (searchResultsGrid) {
       searchResultsGrid.innerHTML = matches.map(buildPresetCardHtml).join('');
+      setupLazyImages(searchResultsGrid);
       searchResultsGrid.querySelectorAll<HTMLElement>('.canvas-card').forEach((card) => {
         card.addEventListener('click', () => {
           const presetId = card.getAttribute('data-preset-id');

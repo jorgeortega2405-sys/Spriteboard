@@ -98,13 +98,40 @@ export async function createYourAccountView(): Promise<HTMLElement> {
   const refreshAvatarsInDom = (url: string | null) => {
     const finalUrl = url || getDefaultAvatarUrl(currentUser?.username);
     if (avatarImg) {
+      avatarImg.classList.add('image-lazy-fade');
+      avatarImg.classList.remove('image-loaded');
       avatarImg.src = finalUrl;
+      avatarImg.onload = () => avatarImg.classList.add('image-loaded');
+      avatarImg.onerror = () => avatarImg.classList.add('image-loaded');
+      if (avatarImg.complete && avatarImg.naturalWidth > 0) {
+        avatarImg.classList.add('image-loaded');
+      }
     }
     const topBarAvatar = document.querySelector<HTMLImageElement>(
-      '[data-ref="topbar-avatar-img"], [data-ref="btn-avatar-toggle"] img'
+      '[data-ref="avatar-img"], [data-ref="topbar-avatar-img"], [data-ref="btn-avatar-toggle"] img'
     );
     if (topBarAvatar) {
+      topBarAvatar.classList.add('image-lazy-fade');
+      topBarAvatar.classList.remove('image-loaded');
       topBarAvatar.src = finalUrl;
+      topBarAvatar.onload = () => topBarAvatar.classList.add('image-loaded');
+      topBarAvatar.onerror = () => topBarAvatar.classList.add('image-loaded');
+      if (topBarAvatar.complete && topBarAvatar.naturalWidth > 0) {
+        topBarAvatar.classList.add('image-loaded');
+      }
+    }
+    const activeAccountAvatar = document.querySelector<HTMLImageElement>(
+      '[data-ref="active-account-avatar"]'
+    );
+    if (activeAccountAvatar) {
+      activeAccountAvatar.classList.add('image-lazy-fade');
+      activeAccountAvatar.classList.remove('image-loaded');
+      activeAccountAvatar.src = finalUrl;
+      activeAccountAvatar.onload = () => activeAccountAvatar.classList.add('image-loaded');
+      activeAccountAvatar.onerror = () => activeAccountAvatar.classList.add('image-loaded');
+      if (activeAccountAvatar.complete && activeAccountAvatar.naturalWidth > 0) {
+        activeAccountAvatar.classList.add('image-loaded');
+      }
     }
   };
 
@@ -391,7 +418,11 @@ export async function createYourAccountView(): Promise<HTMLElement> {
     const reader = new FileReader();
     reader.onload = (ev) => {
       if (avatarImg && ev.target?.result) {
+        avatarImg.classList.add('image-lazy-fade');
+        avatarImg.classList.remove('image-loaded');
         avatarImg.src = String(ev.target.result);
+        avatarImg.onload = () => avatarImg.classList.add('image-loaded');
+        if (avatarImg.complete) avatarImg.classList.add('image-loaded');
       }
       updateAvatarButtonsState('preview');
     };

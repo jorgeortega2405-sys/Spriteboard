@@ -758,6 +758,18 @@ export function initCarouselScroll(
   };
 }
 
+export function setupLazyImages(root: HTMLElement | Document = document): void {
+  const images = root.querySelectorAll<HTMLImageElement>('img.image-lazy-fade:not(.image-loaded)');
+  images.forEach((img) => {
+    if (img.complete && img.naturalWidth > 0) {
+      img.classList.add('image-loaded');
+    } else {
+      img.addEventListener('load', () => img.classList.add('image-loaded'), { once: true });
+      img.addEventListener('error', () => img.classList.add('image-loaded'), { once: true });
+    }
+  });
+}
+
 export function getEmptyGraphicSvg(type: string | EmptyIllustrationKey): string {
   return getEmptyIllustration(type);
 }

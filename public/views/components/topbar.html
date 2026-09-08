@@ -36,7 +36,7 @@
     <!-- Contenido dinámico inyectado por TopBar JS (botón login o avatar dropdown) -->
     <div class="avatar-dropdown-container" data-ref="avatar-container" style="display: none;">
       <button type="button" class="btn--avatar" data-ref="btn-avatar" data-i18n-tooltip="topbar.user_profile_tooltip" data-i18n-aria="topbar.user_profile_tooltip">
-        <img class="avatar-img" data-ref="avatar-img" src="" alt="Avatar" referrerpolicy="no-referrer" />
+        <img class="avatar-img image-lazy-fade" data-ref="avatar-img" src="" alt="Avatar" referrerpolicy="no-referrer" onload="this.classList.add('image-loaded')" onerror="this.classList.add('image-loaded')" />
       </button>
 
       <div class="avatar-dropdown-backdrop" data-ref="avatar-menu-backdrop">
@@ -49,7 +49,7 @@
           <div class="menu-panel__list" data-ref="panel-main-options">
             <button type="button" class="menu-item menu-item--bordered account-item" data-ref="btn-switch-account-menu">
               <div class="account-item__avatar" data-ref="active-account-avatar-box">
-                <img class="avatar-img" data-ref="active-account-avatar" src="" alt="Avatar" referrerpolicy="no-referrer" />
+                <img class="avatar-img image-lazy-fade" data-ref="active-account-avatar" src="" alt="Avatar" referrerpolicy="no-referrer" onload="this.classList.add('image-loaded')" onerror="this.classList.add('image-loaded')" />
               </div>
               <div class="account-item__info" data-ref="active-account-info">
                 <span class="account-item__name" data-ref="active-account-name"></span>
