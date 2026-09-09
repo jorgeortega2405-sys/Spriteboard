@@ -48,3 +48,8 @@ admin_tool/cache/
 # Assets e iconos SVG de figuras y stickers
 public/assets/
 
+# Blobs de lienzos comprimidos
+data/canvases/*
+!data/canvases/.gitkeep
+
+

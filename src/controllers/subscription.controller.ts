@@ -116,7 +116,7 @@ export async function handleWebhook(req: Request, res: Response): Promise<void> 
     res.json({ received: true });
   } catch (error: any) {
     logger.security.error('Firma o procesamiento inválido en Webhook de Stripe', error);
-    res.status(400).send(`Webhook Error: ${error.message || 'Verification failed'}`);
+    res.status(400).send('Webhook Error: Fallo de verificación de firma o procesamiento.');
   }
 }
 

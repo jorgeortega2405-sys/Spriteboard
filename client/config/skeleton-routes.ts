@@ -7,6 +7,7 @@ export const SKELETON_ROUTES: Record<string, string> = {
   '/reset-password': 'centered-form',
   '/': 'grouped-layout',
   '/teams': 'grouped-layout',
+  '/templates': 'grouped-layout',
   '/trash': 'grouped-layout',
   '/upgrade': 'grouped-layout',
   '/settings': 'grouped-layout',

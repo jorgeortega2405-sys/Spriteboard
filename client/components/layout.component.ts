@@ -829,6 +829,10 @@ export async function createSidebar(): Promise<HTMLElement> {
           <span class="material-symbols-rounded menu-item__icon">home</span>
           <span class="menu-item__text" data-i18n="nav.home"></span>
         </button>
+        <button type="button" class="menu-item" data-ref="btn-nav-templates">
+          <span class="material-symbols-rounded menu-item__icon">space_dashboard</span>
+          <span class="menu-item__text" data-i18n="nav.templates"></span>
+        </button>
       `;
       translateElement(navTop);
 
@@ -837,6 +841,12 @@ export async function createSidebar(): Promise<HTMLElement> {
         btnHome?.classList.add('is-active');
       }
       bindNavLink(btnHome, '/');
+
+      const btnTemplates = navTop.querySelector<HTMLElement>('[data-ref="btn-nav-templates"]');
+      if (currentPath === '/templates') {
+        btnTemplates?.classList.add('is-active');
+      }
+      bindNavLink(btnTemplates, '/templates');
     }
 
     if (navBottom) {

@@ -1,4 +1,6 @@
 import { navigate } from '../app-router.js';
+import { openCanvasDownloadModal } from '../components/canvas-download-modal.component.js';
+import { openCanvasShareModal } from '../components/canvas-share-modal.component.js';
 import { openCreateCanvasModal } from '../components/create-canvas-modal.component.js';
 import { createSidebar } from '../components/layout.component.js';
 import { openModal } from '../components/modal.component.js';
@@ -292,6 +294,7 @@ class HomeController {
 
     const isLocal = Boolean(canvas.is_local);
     const canSync = isLocal && Boolean(currentUser);
+    const isFavorite = Boolean(canvas.is_favorite);
 
     const badgeText = isLocal ? t('canvas.status_local') : t('canvas.status_cloud');
     const badgeIcon = isLocal ? 'devices' : 'cloud_done';
@@ -335,8 +338,8 @@ class HomeController {
 
       <div class="canvas-card__actions-wrapper" data-ref="card-actions-wrapper">
         <div class="canvas-card__actions" data-ref="card-actions">
-          <button type="button" class="canvas-card__action-btn" data-ref="btn-card-bookmark" data-tooltip="Guardar" aria-label="Guardar">
-            <span class="material-symbols-rounded">bookmark</span>
+          <button type="button" class="canvas-card__action-btn${isFavorite ? ' is-active' : ''}" data-ref="btn-card-bookmark" data-tooltip="${isFavorite ? t('canvas.bookmark_remove') : t('canvas.bookmark_save')}" aria-label="${isFavorite ? t('canvas.bookmark_remove') : t('canvas.bookmark_save')}">
+            <span class="material-symbols-rounded">${isFavorite ? 'star_fill' : 'star'}</span>
           </button>
           <button type="button" class="canvas-card__action-btn" data-ref="btn-card-more" data-tooltip="Opciones" aria-label="${t('canvas.menu_open_new_tab')}">
             <span class="material-symbols-rounded">more_vert</span>
@@ -352,18 +355,26 @@ class HomeController {
               <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#open_in_new"></use></svg>
               <span class="menu-item__text" data-i18n="canvas.menu_open_new_tab">${t('canvas.menu_open_new_tab')}</span>
             </button>
-            <button type="button" class="menu-item" data-ref="action-copy-link">
-              <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
-              <span class="menu-item__text" data-i18n="canvas.menu_copy_link">${t('canvas.menu_copy_link')}</span>
-            </button>
             <button type="button" class="menu-item" data-ref="action-duplicate">
               <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#filter_none"></use></svg>
               <span class="menu-item__text" data-i18n="canvas.menu_duplicate">${t('canvas.menu_duplicate')}</span>
             </button>
+            <button type="button" class="menu-item" data-ref="action-download">
+              <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
+              <span class="menu-item__text" data-i18n="canvas.menu_download">${t('canvas.menu_download')}</span>
+            </button>
+            <button type="button" class="menu-item" data-ref="action-share">
+              <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#share"></use></svg>
+              <span class="menu-item__text" data-i18n="canvas.menu_share">${t('canvas.menu_share')}</span>
+            </button>
+            <button type="button" class="menu-item" data-ref="action-copy-link">
+              <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#link"></use></svg>
+              <span class="menu-item__text" data-i18n="canvas.menu_copy_link">${t('canvas.menu_copy_link')}</span>
+            </button>
             <div class="menu-divider"></div>
             <button type="button" class="menu-item menu-item--bordered menu-item--danger" data-ref="action-delete">
               <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
-              <span class="menu-item__text" data-i18n="canvas.menu_delete">${t('canvas.menu_delete')}</span>
+              <span class="menu-item__text" data-i18n="canvas.menu_move_to_trash">${t('canvas.menu_move_to_trash')}</span>
             </button>
           </div>
         </div>
@@ -381,12 +392,67 @@ class HomeController {
     const btnMore = card.querySelector<HTMLButtonElement>('[data-ref="btn-card-more"]');
     const menuDropdown = card.querySelector<HTMLElement>('[data-ref="card-menu-dropdown"]');
     const actionOpenNewTab = card.querySelector<HTMLButtonElement>('[data-ref="action-open-new-tab"]');
-    const actionCopyLink = card.querySelector<HTMLButtonElement>('[data-ref="action-copy-link"]');
     const actionDuplicate = card.querySelector<HTMLButtonElement>('[data-ref="action-duplicate"]');
+    const actionDownload = card.querySelector<HTMLButtonElement>('[data-ref="action-download"]');
+    const actionShare = card.querySelector<HTMLButtonElement>('[data-ref="action-share"]');
+    const actionCopyLink = card.querySelector<HTMLButtonElement>('[data-ref="action-copy-link"]');
     const actionDelete = card.querySelector<HTMLButtonElement>('[data-ref="action-delete"]');
 
-    btnBookmark?.addEventListener('click', (e) => {
+    btnBookmark?.addEventListener('click', async (e) => {
       e.stopPropagation();
+      if (!currentUser) {
+        showToast(t('canvas.bookmark_login_required'), 'info');
+        return;
+      }
+
+      const prevFavorite = Boolean(canvas.is_favorite);
+      const nextFavorite = !prevFavorite;
+      canvas.is_favorite = nextFavorite;
+      btnBookmark.classList.toggle('is-active', nextFavorite);
+
+      const tooltipText = nextFavorite ? t('canvas.bookmark_remove') : t('canvas.bookmark_save');
+      btnBookmark.setAttribute('data-tooltip', tooltipText);
+      btnBookmark.setAttribute('aria-label', tooltipText);
+      btnBookmark.innerHTML = `<span class="material-symbols-rounded">${nextFavorite ? 'star_fill' : 'star'}</span>`;
+      renderIcons(btnBookmark);
+
+      try {
+        const res = await postApi(API_ROUTES.favorites.toggle, {
+          itemId: canvas.uuid,
+          itemType: 'canvas',
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const serverFavorite = Boolean(data?.isFavorite);
+          canvas.is_favorite = serverFavorite;
+          btnBookmark.classList.toggle('is-active', serverFavorite);
+          const finalTooltip = serverFavorite ? t('canvas.bookmark_remove') : t('canvas.bookmark_save');
+          btnBookmark.setAttribute('data-tooltip', finalTooltip);
+          btnBookmark.setAttribute('aria-label', finalTooltip);
+          btnBookmark.innerHTML = `<span class="material-symbols-rounded">${serverFavorite ? 'star_fill' : 'star'}</span>`;
+          renderIcons(btnBookmark);
+          showToast(serverFavorite ? t('canvas.bookmark_saved') : t('canvas.bookmark_removed'), 'success');
+        } else {
+          canvas.is_favorite = prevFavorite;
+          btnBookmark.classList.toggle('is-active', prevFavorite);
+          const rollbackTooltip = prevFavorite ? t('canvas.bookmark_remove') : t('canvas.bookmark_save');
+          btnBookmark.setAttribute('data-tooltip', rollbackTooltip);
+          btnBookmark.setAttribute('aria-label', rollbackTooltip);
+          btnBookmark.innerHTML = `<span class="material-symbols-rounded">${prevFavorite ? 'star_fill' : 'star'}</span>`;
+          renderIcons(btnBookmark);
+          showToast(t('toasts.generic_error'), 'danger');
+        }
+      } catch {
+        canvas.is_favorite = prevFavorite;
+        btnBookmark.classList.toggle('is-active', prevFavorite);
+        const rollbackTooltip = prevFavorite ? t('canvas.bookmark_remove') : t('canvas.bookmark_save');
+        btnBookmark.setAttribute('data-tooltip', rollbackTooltip);
+        btnBookmark.setAttribute('aria-label', rollbackTooltip);
+        btnBookmark.innerHTML = `<span class="material-symbols-rounded">${prevFavorite ? 'star_fill' : 'star'}</span>`;
+        renderIcons(btnBookmark);
+        showToast(t('toasts.generic_error'), 'danger');
+      }
     });
 
     actionsWrapper?.addEventListener('click', (e) => {
@@ -415,6 +481,24 @@ class HomeController {
       window.open(`/design/${canvas.uuid}`, '_blank');
     });
 
+    actionDuplicate?.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      this.closeAllDropdowns();
+      await this.handleDuplicateCanvas(canvas);
+    });
+
+    actionDownload?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.closeAllDropdowns();
+      openCanvasDownloadModal(canvas);
+    });
+
+    actionShare?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.closeAllDropdowns();
+      openCanvasShareModal(canvas);
+    });
+
     actionCopyLink?.addEventListener('click', async (e) => {
       e.stopPropagation();
       this.closeAllDropdowns();
@@ -425,12 +509,6 @@ class HomeController {
       } catch {
         showToast(t('canvas.copy_link_error'), 'danger');
       }
-    });
-
-    actionDuplicate?.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      this.closeAllDropdowns();
-      await this.handleDuplicateCanvas(canvas);
     });
 
     actionDelete?.addEventListener('click', (e) => {
@@ -495,27 +573,27 @@ class HomeController {
 
   private handleDeleteCanvas(canvas: CanvasItem): void {
     openModal({
-      title: t('canvas.delete_confirm_title') || 'Eliminar lienzo',
-      description: t('canvas.delete_confirm_desc') || '¿Estás seguro de que deseas eliminar este lienzo? Esta acción no se puede deshacer.',
-      confirmText: t('canvas.menu_delete') || 'Eliminar',
+      title: t('canvas.trash_confirm_title') || 'Mover a la papelera',
+      description: t('canvas.trash_confirm_desc') || '¿Estás seguro de que deseas mover este lienzo a la papelera?',
+      confirmText: t('canvas.menu_move_to_trash') || 'Mover a la papelera',
       confirmClass: 'btn--danger',
       onConfirm: async (modal) => {
         modal.setConfirmLoading(true);
         try {
           if (canvas.is_local || !canvas.id || !currentUser) {
             await removeLocalCanvas(canvas.uuid);
-            showToast(t('canvas.delete_success'));
+            showToast(t('canvas.trash_success'));
             modal.close();
             await this.loadCanvases();
           } else {
             const res = await deleteApi(API_ROUTES.canvases.delete(canvas.uuid));
             if (res.ok) {
               await removeLocalCanvas(canvas.uuid);
-              showToast(t('canvas.delete_success'));
+              showToast(t('canvas.trash_success'));
               modal.close();
               await this.loadCanvases();
             } else {
-              let errMsg = t('canvas.delete_error');
+              let errMsg = t('canvas.trash_error');
               try {
                 const data = await res.json();
                 if (data?.error) errMsg = data.error;
@@ -525,7 +603,7 @@ class HomeController {
             }
           }
         } catch {
-          const errMsg = t('canvas.delete_error');
+          const errMsg = t('canvas.trash_error');
           modal.showError(errMsg);
           showToast(errMsg, 'danger');
         } finally {

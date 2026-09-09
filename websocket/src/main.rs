@@ -49,10 +49,6 @@ enum RedisOutboundCmd {
         canvas_uuid: String,
         conn_id: String,
     },
-    CacheSnapshot {
-        canvas_uuid: String,
-        data_json: String,
-    },
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -578,15 +574,6 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
                                                     }
 
                                                     state.publish_canvas_event(canvas_uuid, &conn_id, forward_msg.clone(), false);
-
-                                                    if msg_type == "CANVAS_FULL_UPDATE" {
-                                                        if let Some(canvas_data) = val.get("data") {
-                                                            let _ = state.redis_cmd_tx.send(RedisOutboundCmd::CacheSnapshot {
-                                                                canvas_uuid: canvas_uuid.to_string(),
-                                                                data_json: canvas_data.to_string(),
-                                                            });
-                                                        }
-                                                    }
                                                 }
                                             }
                                         }
@@ -941,15 +928,6 @@ async fn run_redis_publisher(
                             let _: Result<(), redis::RedisError> = redis::cmd("HDEL")
                                 .arg(&key)
                                 .arg(&conn_id)
-                                .query_async(&mut conn)
-                                .await;
-                        }
-                        RedisOutboundCmd::CacheSnapshot { canvas_uuid, data_json } => {
-                            let key = format!("canvas:snapshot:{}", canvas_uuid);
-                            let _: Result<(), redis::RedisError> = redis::cmd("SETEX")
-                                .arg(&key)
-                                .arg(86400)
-                                .arg(&data_json)
                                 .query_async(&mut conn)
                                 .await;
                         }

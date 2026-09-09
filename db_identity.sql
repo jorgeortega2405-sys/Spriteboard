@@ -61,6 +61,17 @@ CREATE TABLE IF NOT EXISTS user_audit_logs (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS user_favorites (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    item_type ENUM('canvas', 'template') NOT NULL,
+    item_id VARCHAR(64) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_user_favorite (user_id, item_type, item_id),
+    INDEX idx_user_fav_lookup (user_id, item_type),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS purchases (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
@@ -119,12 +130,18 @@ CREATE TABLE IF NOT EXISTS canvases (
     data JSON NULL,
     preview_thumbnail MEDIUMTEXT NULL,
     access_level ENUM('private', 'public') NOT NULL DEFAULT 'private',
+    public_role ENUM('viewer', 'editor') NOT NULL DEFAULT 'editor',
+    short_code VARCHAR(32) NULL UNIQUE,
+    custom_slug VARCHAR(100) NULL UNIQUE,
     deleted_at TIMESTAMP NULL DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_canvases_user (user_id),
     INDEX idx_canvases_uuid (uuid),
-    INDEX idx_canvases_deleted_at (deleted_at)
+    INDEX idx_canvases_short_code (short_code),
+    INDEX idx_canvases_custom_slug (custom_slug),
+    INDEX idx_canvases_deleted_at (deleted_at),
+    INDEX idx_canvases_user_deleted (user_id, deleted_at, updated_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS canvas_members (

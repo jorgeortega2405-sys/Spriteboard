@@ -1,0 +1,60 @@
+<div class="layout-content" data-ref="templates-view">
+  <div class="component-wrapper component-wrapper--full" data-ref="templates-wrapper">
+    <div class="component-top" data-ref="component-top">
+      <div class="component-top-left component-top-left--full" data-ref="component-top-left">
+        <div class="component-tags-carousel-wrapper" data-ref="templates-tags-carousel-wrapper">
+          <button type="button" class="component-tag-nav-btn component-tag-nav-left is-disabled" data-ref="btn-tags-scroll-left" aria-label="Desplazar categorías a la izquierda">
+            <span class="material-symbols-rounded">chevron_left</span>
+          </button>
+
+          <div class="component-tags-carousel" data-ref="templates-categories-badges"></div>
+
+          <button type="button" class="component-tag-nav-btn component-tag-nav-right is-disabled" data-ref="btn-tags-scroll-right" aria-label="Desplazar categorías a la derecha">
+            <span class="material-symbols-rounded">chevron_right</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="component-top-right" data-ref="component-top-right">
+        <div class="component-top-actions" data-ref="templates-default-actions">
+          <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-toggle-search" data-tooltip="Buscar plantillas" aria-label="Buscar plantillas">
+            <span class="material-symbols-rounded">search</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="component-search-toolbar is-hidden" data-ref="search-toolbar">
+        <div class="component-search component-search--full" data-ref="search-box">
+          <div class="component-search__icon" data-ref="search-icon">
+            <span class="material-symbols-rounded">search</span>
+          </div>
+          <div class="component-search__input-box" data-ref="search-input-box">
+            <input class="component-search__input" data-ref="templates-search-input" data-i18n-placeholder="templates.search_placeholder" type="text" maxlength="100" autocomplete="off" placeholder="Buscar plantillas por nombre o tamaño..." />
+          </div>
+          <button type="button" class="btn btn--h34 btn--icon btn--clear-search" data-ref="btn-clear-search" style="display: none; margin-right: 4px;" aria-label="Limpiar búsqueda">
+            <span class="material-symbols-rounded" style="font-size: 18px;">close</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="component-bottom component-bottom--no-padding" data-ref="component-bottom">
+      <div class="layout-body layout-body--scrollable layout-scrollable" data-ref="templates-scrollable">
+        <div class="templates-section" data-ref="templates-section">
+          <div class="templates-grid" data-ref="templates-grid"></div>
+
+          <div class="component-empty-state" data-ref="templates-empty-state" style="display: none;">
+            <div class="component-empty-state-graphic" data-ref="templates-empty-graphic"></div>
+            <h2 class="component-empty-state-title" data-ref="templates-empty-title" data-i18n="templates.empty_title">No se encontraron plantillas</h2>
+            <p class="component-empty-state-desc" data-ref="templates-empty-desc" data-i18n="templates.empty_desc">Intenta con otro término de búsqueda o selecciona otra categoría.</p>
+            <div class="component-empty-state-actions" data-ref="templates-empty-actions">
+              <button type="button" class="btn btn--h40 btn--black" data-ref="btn-reset-filters">
+                Ver todas las plantillas
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,8 +1,9 @@
-import { canvasPool } from '../config/database.config.js';
+import { canvasPool, pool } from '../config/database.config.js';
 import { config } from '../config/env.config.js';
 import { redis } from '../config/redis.config.js';
 import { Canvas, CanvasMember, CanvasMetricsData, CanvasMetricViewer, CanvasRecentView, CreateCanvasDto, SearchUserResult, SyncCanvasDto } from '../types/canvas.types.js';
 import { CanvasTeam } from '../types/team.types.js';
+import { deleteCanvasBlob, hasCanvasBlob, readCanvasBlobDecompressed, saveCanvasBlob } from './canvas-storage-blob.service.js';
 import { logger } from './logger.service.js';
 import crypto from 'crypto';
 import mysql from 'mysql2/promise';
@@ -57,6 +58,18 @@ export async function createCanvas(userId: number, dto: CreateCanvasDto): Promis
   const dataStr = dto.data ? (typeof dto.data === 'string' ? dto.data : JSON.stringify(dto.data)) : null;
   const previewThumbnail = dto.preview_thumbnail !== undefined ? dto.preview_thumbnail : null;
 
+  if (dataStr) {
+    try {
+      await saveCanvasBlob(uuid, dataStr);
+    } catch (blobErr) {
+      logger.db.error(`Error al persistir blob inicial para ${uuid}`, blobErr);
+    }
+  }
+
+  const dbData = dataStr && dataStr.length > 65536
+    ? JSON.stringify({ storage: 'blob', version: 2 })
+    : dataStr;
+
   const query = `
     INSERT INTO canvases (uuid, user_id, name, width, height, unit, access_level, public_role, short_code, data, preview_thumbnail)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -73,7 +86,7 @@ export async function createCanvas(userId: number, dto: CreateCanvasDto): Promis
       accessLevel,
       publicRole,
       shortCode,
-      dataStr,
+      dbData,
       previewThumbnail,
     ]);
 
@@ -85,7 +98,11 @@ export async function createCanvas(userId: number, dto: CreateCanvasDto): Promis
       [insertedId]
     );
 
-    return rows[0] as Canvas;
+    const createdCanvas = rows[0] as Canvas;
+    if (dataStr) {
+      createdCanvas.data = dataStr;
+    }
+    return createdCanvas;
   } catch (err) {
     logger.db.error('Error al insertar registro en la base de datos de lienzos', err);
     throw new Error('No se pudo guardar el lienzo en la base de datos.');
@@ -95,10 +112,21 @@ export async function createCanvas(userId: number, dto: CreateCanvasDto): Promis
 export async function getUserCanvases(userId: number): Promise<Canvas[]> {
   try {
     const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
-      'SELECT id, uuid, user_id, name, width, height, unit, data, preview_thumbnail, access_level, public_role, short_code, custom_slug, created_at, updated_at FROM canvases WHERE user_id = ? AND deleted_at IS NULL ORDER BY created_at DESC',
-      [userId]
+      `SELECT c.id, c.uuid, c.user_id, c.name, c.width, c.height, c.unit, c.preview_thumbnail,
+              c.access_level, c.public_role, c.short_code, c.custom_slug, c.created_at, c.updated_at,
+              EXISTS (
+                SELECT 1 FROM db_identity.user_favorites uf
+                WHERE uf.user_id = ? AND uf.item_type = 'canvas' AND uf.item_id = c.uuid
+              ) AS is_favorite
+       FROM canvases c
+       WHERE c.user_id = ? AND c.deleted_at IS NULL
+       ORDER BY c.created_at DESC`,
+      [userId, userId]
     );
-    return rows as Canvas[];
+    return rows.map((r) => ({
+      ...r,
+      is_favorite: Boolean(r.is_favorite),
+    })) as Canvas[];
   } catch (err) {
     logger.db.error(`Error al listar lienzos para el usuario ${userId}`, err);
     throw new Error('No se pudieron obtener los lienzos.');
@@ -108,29 +136,33 @@ export async function getUserCanvases(userId: number): Promise<Canvas[]> {
 export async function getCanvasByUuid(uuid: string, userId?: number): Promise<Canvas | null> {
   try {
     let canvas: Canvas | null = null;
-    const cacheKey = `canvas:snapshot:${uuid}`;
 
     try {
-      const cached = await redis.get(cacheKey);
-      if (cached) {
-        canvas = JSON.parse(cached) as Canvas;
-      }
+      await redis.del(`canvas:snapshot:${uuid}`);
     } catch {}
 
-    if (!canvas) {
-      const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
-        'SELECT id, uuid, user_id, name, width, height, unit, data, preview_thumbnail, access_level, public_role, short_code, custom_slug, created_at, updated_at FROM canvases WHERE uuid = ? AND deleted_at IS NULL LIMIT 1',
-        [uuid]
-      );
+    const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
+      'SELECT id, uuid, user_id, name, width, height, unit, data, preview_thumbnail, access_level, public_role, short_code, custom_slug, created_at, updated_at FROM canvases WHERE uuid = ? AND deleted_at IS NULL LIMIT 1',
+      [uuid]
+    );
 
-      if (rows.length === 0) {
-        return null;
+    if (rows.length === 0) {
+      return null;
+    }
+
+    canvas = rows[0] as Canvas;
+
+    try {
+      if (await hasCanvasBlob(uuid)) {
+        const decompressed = await readCanvasBlobDecompressed(uuid);
+        if (decompressed) {
+          canvas.data = decompressed;
+        }
+      } else if (canvas.data && typeof canvas.data === 'string' && canvas.data.length > 10) {
+        void saveCanvasBlob(uuid, canvas.data);
       }
-
-      canvas = rows[0] as Canvas;
-      try {
-        await redis.setex(cacheKey, 86400, JSON.stringify(canvas));
-      } catch {}
+    } catch (err) {
+      logger.db.error(`Error al cargar datos blob para lienzo ${uuid}`, err);
     }
 
     if (canvas.access_level === 'public') {
@@ -184,29 +216,33 @@ export function generateCanvasRoomToken(canvasUuid: string, userId: number, role
 export async function getCanvasUserRole(uuid: string, userId?: number): Promise<{ canvas: Canvas; role: 'owner' | 'editor' | 'viewer' } | null> {
   try {
     let canvas: Canvas | null = null;
-    const cacheKey = `canvas:snapshot:${uuid}`;
 
     try {
-      const cached = await redis.get(cacheKey);
-      if (cached) {
-        canvas = JSON.parse(cached) as Canvas;
-      }
+      await redis.del(`canvas:snapshot:${uuid}`);
     } catch {}
 
-    if (!canvas) {
-      const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
-        'SELECT id, uuid, user_id, name, width, height, unit, data, preview_thumbnail, access_level, public_role, short_code, custom_slug, created_at, updated_at FROM canvases WHERE uuid = ? AND deleted_at IS NULL LIMIT 1',
-        [uuid]
-      );
+    const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
+      'SELECT id, uuid, user_id, name, width, height, unit, data, preview_thumbnail, access_level, public_role, short_code, custom_slug, created_at, updated_at FROM canvases WHERE uuid = ? AND deleted_at IS NULL LIMIT 1',
+      [uuid]
+    );
 
-      if (rows.length === 0) {
-        return null;
+    if (rows.length === 0) {
+      return null;
+    }
+
+    canvas = rows[0] as Canvas;
+
+    try {
+      if (await hasCanvasBlob(uuid)) {
+        const decompressed = await readCanvasBlobDecompressed(uuid);
+        if (decompressed) {
+          canvas.data = decompressed;
+        }
+      } else if (canvas.data && typeof canvas.data === 'string' && canvas.data.length > 10) {
+        void saveCanvasBlob(uuid, canvas.data);
       }
-
-      canvas = rows[0] as Canvas;
-      try {
-        await redis.setex(cacheKey, 86400, JSON.stringify(canvas));
-      } catch {}
+    } catch (err) {
+      logger.db.error(`Error al cargar datos blob para lienzo ${uuid}`, err);
     }
 
     if (userId !== undefined && canvas.user_id === userId) {
@@ -281,7 +317,18 @@ export async function updateCanvasAccessLevel(
 
     const updated = rows[0] as Canvas;
     try {
-      await redis.setex(`canvas:snapshot:${uuid}`, 86400, JSON.stringify(updated));
+      await redis.del(`canvas:snapshot:${uuid}`);
+      await redis.setex(
+        `canvas:meta:${uuid}`,
+        86400,
+        JSON.stringify({
+          id: updated.id,
+          uuid: updated.uuid,
+          user_id: updated.user_id,
+          access_level: updated.access_level,
+          public_role: updated.public_role,
+        })
+      );
     } catch {}
 
     return updated;
@@ -302,6 +349,18 @@ export async function syncCanvas(userId: number | null, dto: SyncCanvasDto): Pro
   const accessLevel = dto.access_level;
 
   try {
+    if (data) {
+      try {
+        await saveCanvasBlob(uuid, data);
+      } catch (blobErr) {
+        logger.db.error(`Error al persistir blob para ${uuid}`, blobErr);
+      }
+    }
+
+    const dbData = data && data.length > 65536
+      ? JSON.stringify({ storage: 'blob', version: 2 })
+      : data;
+
     const [existing] = await canvasPool.query<mysql.RowDataPacket[]>(
       'SELECT id, user_id, access_level, public_role, deleted_at FROM canvases WHERE uuid = ? LIMIT 1',
       [uuid]
@@ -347,12 +406,12 @@ export async function syncCanvas(userId: number | null, dto: SyncCanvasDto): Pro
       if (isOwner && (accessLevel || dto.public_role)) {
         await canvasPool.execute(
           'UPDATE canvases SET name = ?, width = ?, height = ?, unit = ?, data = COALESCE(?, data), preview_thumbnail = COALESCE(?, preview_thumbnail), access_level = COALESCE(?, access_level), public_role = COALESCE(?, public_role) WHERE uuid = ?',
-          [name, width, height, unit, data, previewThumbnail, accessLevel || null, dto.public_role || null, uuid]
+          [name, width, height, unit, dbData, previewThumbnail, accessLevel || null, dto.public_role || null, uuid]
         );
       } else {
         await canvasPool.execute(
           'UPDATE canvases SET name = ?, width = ?, height = ?, unit = ?, data = COALESCE(?, data), preview_thumbnail = COALESCE(?, preview_thumbnail) WHERE uuid = ?',
-          [name, width, height, unit, data, previewThumbnail, uuid]
+          [name, width, height, unit, dbData, previewThumbnail, uuid]
         );
       }
     } else {
@@ -367,7 +426,7 @@ export async function syncCanvas(userId: number | null, dto: SyncCanvasDto): Pro
       const publicRole = dto.public_role === 'viewer' ? 'viewer' : 'editor';
       await canvasPool.execute(
         'INSERT INTO canvases (uuid, user_id, name, width, height, unit, access_level, public_role, short_code, data, preview_thumbnail) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [uuid, userId, name, width, height, unit, accessLevel || 'private', publicRole, shortCode, data, previewThumbnail]
+        [uuid, userId, name, width, height, unit, accessLevel || 'private', publicRole, shortCode, dbData, previewThumbnail]
       );
     }
 
@@ -380,8 +439,23 @@ export async function syncCanvas(userId: number | null, dto: SyncCanvasDto): Pro
 
     const syncedCanvas = rows[0] as Canvas;
     try {
-      await redis.setex(`canvas:snapshot:${uuid}`, 86400, JSON.stringify(syncedCanvas));
+      await redis.del(`canvas:snapshot:${uuid}`);
+      await redis.setex(
+        `canvas:meta:${uuid}`,
+        86400,
+        JSON.stringify({
+          id: syncedCanvas.id,
+          uuid: syncedCanvas.uuid,
+          user_id: syncedCanvas.user_id,
+          access_level: syncedCanvas.access_level,
+          public_role: syncedCanvas.public_role,
+        })
+      );
     } catch {}
+
+    if (data) {
+      syncedCanvas.data = data;
+    }
 
     return syncedCanvas;
   } catch (err: any) {
@@ -722,6 +796,7 @@ export async function deleteCanvas(uuid: string, userId: number): Promise<boolea
     await canvasPool.execute('UPDATE canvases SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?', [canvas.id]);
     try {
       await redis.del(`canvas:snapshot:${uuid}`);
+      await redis.del(`canvas:meta:${uuid}`);
     } catch {}
     logger.db.info(`Lienzo ${uuid} movido a la papelera por el usuario ${userId}`);
     return true;
@@ -763,6 +838,7 @@ export async function restoreCanvas(uuid: string, userId: number): Promise<Canva
     await canvasPool.execute('UPDATE canvases SET deleted_at = NULL WHERE id = ?', [canvas.id]);
     try {
       await redis.del(`canvas:snapshot:${uuid}`);
+      await redis.del(`canvas:meta:${uuid}`);
     } catch {}
     logger.db.info(`Lienzo ${uuid} restaurado por el usuario ${userId}`);
 
@@ -796,6 +872,9 @@ export async function permanentlyDeleteCanvas(uuid: string, userId: number): Pro
     await canvasPool.execute('DELETE FROM canvases WHERE id = ?', [canvas.id]);
     try {
       await redis.del(`canvas:snapshot:${uuid}`);
+      await redis.del(`canvas:meta:${uuid}`);
+      await deleteCanvasBlob(uuid);
+      await pool.execute("DELETE FROM user_favorites WHERE item_type = 'canvas' AND item_id = ?", [uuid]);
     } catch {}
     logger.db.info(`Lienzo ${uuid} eliminado permanentemente por el usuario ${userId}`);
     return true;
@@ -807,7 +886,19 @@ export async function permanentlyDeleteCanvas(uuid: string, userId: number): Pro
 
 export async function emptyTrash(userId: number): Promise<boolean> {
   try {
+    const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
+      'SELECT uuid FROM canvases WHERE user_id = ? AND deleted_at IS NOT NULL',
+      [userId]
+    );
     await canvasPool.execute('DELETE FROM canvases WHERE user_id = ? AND deleted_at IS NOT NULL', [userId]);
+    for (const r of rows) {
+      const u = r.uuid;
+      try {
+        await redis.del(`canvas:snapshot:${u}`);
+        await redis.del(`canvas:meta:${u}`);
+        await deleteCanvasBlob(u);
+      } catch {}
+    }
     logger.db.info(`Papelera vaciada para el usuario ${userId}`);
     return true;
   } catch (err: any) {
@@ -819,7 +910,7 @@ export async function emptyTrash(userId: number): Promise<boolean> {
 export async function duplicateCanvas(uuid: string, userId: number): Promise<Canvas> {
   try {
     const [canvasRows] = await canvasPool.query<mysql.RowDataPacket[]>(
-      'SELECT id, user_id, name, width, height, unit, data, preview_thumbnail, access_level FROM canvases WHERE uuid = ? AND deleted_at IS NULL LIMIT 1',
+      'SELECT id, uuid, user_id, name, width, height, unit, data, preview_thumbnail, access_level FROM canvases WHERE uuid = ? AND deleted_at IS NULL LIMIT 1',
       [uuid]
     );
 
@@ -851,15 +942,31 @@ export async function duplicateCanvas(uuid: string, userId: number): Promise<Can
 
     const newUuid = crypto.randomUUID();
     const newName = `${original.name} (Copia)`.slice(0, 255);
-    const dataStr = original.data !== null && original.data !== undefined
-      ? (typeof original.data === 'string' ? original.data : JSON.stringify(original.data))
-      : null;
     const newShortCode = generateShortCode();
+
+    let fullData: string | null = null;
+    if (await hasCanvasBlob(uuid)) {
+      fullData = await readCanvasBlobDecompressed(uuid);
+    } else if (original.data) {
+      fullData = typeof original.data === 'string' ? original.data : JSON.stringify(original.data);
+    }
+
+    if (fullData) {
+      try {
+        await saveCanvasBlob(newUuid, fullData);
+      } catch (blobErr) {
+        logger.db.error(`Error al duplicar blob para ${newUuid}`, blobErr);
+      }
+    }
+
+    const dbData = fullData && fullData.length > 65536
+      ? JSON.stringify({ storage: 'blob', version: 2 })
+      : fullData;
 
     const [result] = await canvasPool.execute<mysql.ResultSetHeader>(
       `INSERT INTO canvases (uuid, user_id, name, width, height, unit, access_level, short_code, data, preview_thumbnail)
        VALUES (?, ?, ?, ?, ?, ?, 'private', ?, ?, ?)`,
-      [newUuid, userId, newName, original.width, original.height, original.unit, newShortCode, dataStr, original.preview_thumbnail]
+      [newUuid, userId, newName, original.width, original.height, original.unit, newShortCode, dbData, original.preview_thumbnail]
     );
 
     logger.db.info(`Lienzo ${uuid} duplicado como ${newUuid} por usuario ${userId}`);
@@ -869,7 +976,11 @@ export async function duplicateCanvas(uuid: string, userId: number): Promise<Can
       [result.insertId]
     );
 
-    return rows[0] as Canvas;
+    const newCanvas = rows[0] as Canvas;
+    if (fullData) {
+      newCanvas.data = fullData;
+    }
+    return newCanvas;
   } catch (err: any) {
     logger.db.error(`Error al duplicar lienzo ${uuid}`, err);
     throw err;

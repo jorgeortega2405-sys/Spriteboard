@@ -1,585 +1,56 @@
-import { navigate } from '../app-router.js';
-import { API_ROUTES } from '../config/api-routes.js';
-import { currentUser, postApi } from '../services/api.service.js';
-import { saveLocalCanvas } from '../services/canvas-storage.service.js';
+import { PresetVariant } from '../config/templates.config.js';
+import { createAndOpenCanvas } from '../services/canvas-creator.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
-import { showToast } from '../services/toast.service.js';
-import { getEmptyGraphicSvg, initCarouselScroll, setupLazyImages } from '../utils/dom.util.js';
+import { setupDropdown } from '../utils/dom.util.js';
 
 let activeCreateCanvasModal: { close: () => void } | null = null;
 
-interface PresetVariant {
-  label: string;
-  width: number;
-  height: number;
-  imagePath?: string;
+export interface OpenCreateCanvasModalOptions {
+  height?: number;
+  name?: string;
+  templateImage?: string | null;
+  templateName?: string | null;
+  variants?: PresetVariant[] | null;
+  width?: number;
 }
 
-interface PresetItem {
-  id: string;
-  name: string;
-  width: number;
-  height: number;
-  svgIcon?: string;
-  imagePath?: string;
-  isTemplate?: boolean;
-  categoryName?: string;
-  variants?: PresetVariant[];
-}
-
-interface PresetSection {
-  id: string;
-  titleKey: string;
-  items: PresetItem[];
-}
-
-interface PresetCategoryTab {
-  id: 'for-you' | 'formats' | 'nature' | 'cities' | 'fantasy' | 'scifi' | 'characters' | 'items';
-  tabRef: string;
-  titleKey: string;
-  iconName: string;
-  sections: PresetSection[];
-}
-
-function makeTemplateItem(
-  id: string,
-  name: string,
-  category: string,
-  fileBase: string,
-  categoryLabel: string,
-  isWide = false
-): PresetItem {
-  if (isWide) {
-    return {
-      id,
-      name,
-      width: 1920,
-      height: 1080,
-      imagePath: `/assets/templates/${category}/${fileBase}_1920x1080.png`,
-      isTemplate: true,
-      categoryName: categoryLabel,
-      variants: [
-        { label: '1920 × 1080 px', width: 1920, height: 1080, imagePath: `/assets/templates/${category}/${fileBase}_1920x1080.png` },
-        { label: '1024 × 1024 px', width: 1024, height: 1024, imagePath: `/assets/templates/${category}/${fileBase}_1024x1024.png` },
-        { label: '512 × 512 px', width: 512, height: 512, imagePath: `/assets/templates/${category}/${fileBase}_512x512.png` },
-      ],
-    };
-  }
-
-  return {
-    id,
-    name,
-    width: 512,
-    height: 512,
-    imagePath: `/assets/templates/${category}/${fileBase}_512x512.png`,
-    isTemplate: true,
-    categoryName: categoryLabel,
-    variants: [
-      { label: '512 × 512 px', width: 512, height: 512, imagePath: `/assets/templates/${category}/${fileBase}_512x512.png` },
-      { label: '768 × 768 px', width: 768, height: 768, imagePath: `/assets/templates/${category}/${fileBase}_768x768.png` },
-      { label: '1024 × 1024 px', width: 1024, height: 1024, imagePath: `/assets/templates/${category}/${fileBase}_1024x1024.png` },
-    ],
-  };
-}
-
-const PRESET_SVGS: Record<string, string> = {
-  formatSquareCharacter: `
-    <svg viewBox="0 0 120 75" width="108" height="68" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="31" y="8" width="58" height="59" rx="6" fill="#ffffff" filter="drop-shadow(0 2px 8px rgba(0,0,0,0.25))"/>
-      <path d="M31 14C31 10.6863 33.6863 8 37 8H83C86.3137 8 89 10.6863 89 14V22H31V14Z" fill="#3B82F6"/>
-      <rect x="42" y="30" width="36" height="24" rx="4" fill="#EFF6FF"/>
-      <rect x="46" y="35" width="16" height="4" rx="2" fill="#93C5FD"/>
-      <rect x="46" y="42" width="28" height="3" rx="1.5" fill="#BFDBFE"/>
-      <circle cx="72" cy="37" r="3" fill="#60A5FA"/>
-    </svg>
-  `,
-  formatSquareBoss: `
-    <svg viewBox="0 0 120 75" width="108" height="68" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="28" y="8" width="64" height="59" rx="6" fill="#ffffff" filter="drop-shadow(0 2px 8px rgba(0,0,0,0.25))"/>
-      <path d="M28 14C28 10.6863 30.6863 8 34 8H86C89.3137 8 92 10.6863 92 14V22H28V14Z" fill="#7C3AED"/>
-      <rect x="38" y="30" width="44" height="26" rx="4" fill="#F5F3FF"/>
-      <circle cx="60" cy="40" r="7" fill="#A78BFA"/>
-      <rect x="44" y="50" width="32" height="3" rx="1.5" fill="#DDD6FE"/>
-    </svg>
-  `,
-  formatIconSmall: `
-    <svg viewBox="0 0 120 75" width="108" height="68" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="33" y="8" width="54" height="59" rx="6" fill="#ffffff" filter="drop-shadow(0 2px 8px rgba(0,0,0,0.25))"/>
-      <rect x="43" y="18" width="34" height="34" rx="6" fill="#FEF2F2"/>
-      <rect x="52" y="27" width="16" height="16" rx="3" fill="#EF4444"/>
-      <rect x="46" y="56" width="28" height="3" rx="1.5" fill="#E2E8F0"/>
-    </svg>
-  `,
-  formatDialogueBox: `
-    <svg viewBox="0 0 120 75" width="108" height="68" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="18" y="11" width="84" height="53" rx="6" fill="#ffffff" filter="drop-shadow(0 2px 8px rgba(0,0,0,0.25))"/>
-      <rect x="24" y="18" width="22" height="22" rx="4" fill="#6366F1"/>
-      <circle cx="35" cy="27" r="5" fill="#C7D2FE"/>
-      <rect x="52" y="19" width="38" height="4" rx="2" fill="#94A3B8"/>
-      <rect x="52" y="27" width="44" height="3" rx="1.5" fill="#CBD5E1"/>
-      <rect x="52" y="34" width="30" height="3" rx="1.5" fill="#E2E8F0"/>
-      <rect x="24" y="47" width="72" height="10" rx="3" fill="#F1F5F9"/>
-    </svg>
-  `,
-  formatSquareGrid: `
-    <svg viewBox="0 0 120 75" width="108" height="68" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="31" y="8" width="58" height="59" rx="6" fill="#ffffff" filter="drop-shadow(0 2px 8px rgba(0,0,0,0.25))"/>
-      <path d="M31 14C31 10.6863 33.6863 8 37 8H83C86.3137 8 89 10.6863 89 14V20H31V14Z" fill="#10B981"/>
-      <g transform="translate(37, 26)">
-        <rect x="0" y="0" width="10" height="10" rx="2" fill="#A7F3D0"/>
-        <rect x="12" y="0" width="10" height="10" rx="2" fill="#F1F5F9"/>
-        <rect x="24" y="0" width="10" height="10" rx="2" fill="#F1F5F9"/>
-        <rect x="36" y="0" width="10" height="10" rx="2" fill="#F1F5F9"/>
-        <rect x="0" y="12" width="10" height="10" rx="2" fill="#F1F5F9"/>
-        <rect x="12" y="12" width="10" height="10" rx="2" fill="#34D399"/>
-        <rect x="24" y="12" width="10" height="10" rx="2" fill="#F1F5F9"/>
-        <rect x="36" y="12" width="10" height="10" rx="2" fill="#F1F5F9"/>
-        <rect x="0" y="24" width="10" height="10" rx="2" fill="#F1F5F9"/>
-        <rect x="12" y="24" width="10" height="10" rx="2" fill="#F1F5F9"/>
-        <rect x="24" y="24" width="10" height="10" rx="2" fill="#059669"/>
-        <rect x="36" y="24" width="10" height="10" rx="2" fill="#F1F5F9"/>
-      </g>
-    </svg>
-  `,
-  formatIsometric: `
-    <svg viewBox="0 0 120 75" width="108" height="68" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="28" y="8" width="64" height="59" rx="6" fill="#ffffff" filter="drop-shadow(0 2px 8px rgba(0,0,0,0.25))"/>
-      <polygon points="60,18 84,29 60,40 36,29" fill="#38BDF8"/>
-      <polygon points="36,29 60,40 60,56 36,45" fill="#0284C7"/>
-      <polygon points="60,40 84,29 84,45 60,56" fill="#0369A1"/>
-      <line x1="60" y1="40" x2="60" y2="56" stroke="#BAE6FD" stroke-width="1.2"/>
-    </svg>
-  `,
-  formatStrip4f: `
-    <svg viewBox="0 0 120 75" width="108" height="68" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="11" y="18" width="98" height="39" rx="6" fill="#ffffff" filter="drop-shadow(0 2px 8px rgba(0,0,0,0.25))"/>
-      <line x1="35" y1="18" x2="35" y2="57" stroke="#E2E8F0" stroke-width="1.5"/>
-      <line x1="60" y1="18" x2="60" y2="57" stroke="#E2E8F0" stroke-width="1.5"/>
-      <line x1="84" y1="18" x2="84" y2="57" stroke="#E2E8F0" stroke-width="1.5"/>
-      <circle cx="23" cy="42" r="5" fill="#3B82F6"/>
-      <circle cx="47" cy="34" r="5" fill="#3B82F6"/>
-      <circle cx="72" cy="38" r="5" fill="#3B82F6"/>
-      <circle cx="96" cy="30" r="5" fill="#3B82F6"/>
-    </svg>
-  `,
-  formatRetroGameboy: `
-    <svg viewBox="0 0 120 75" width="108" height="68" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="36" y="6" width="48" height="63" rx="6" fill="#E2E8F0" filter="drop-shadow(0 2px 8px rgba(0,0,0,0.25))"/>
-      <rect x="42" y="12" width="36" height="28" rx="3" fill="#8B956D"/>
-      <rect x="47" y="17" width="12" height="12" rx="1" fill="#4B5320"/>
-      <circle cx="49" cy="50" r="3.5" fill="#475569"/>
-      <circle cx="70" cy="48" r="2.5" fill="#991B1B"/>
-      <circle cx="76" cy="52" r="2.5" fill="#991B1B"/>
-    </svg>
-  `,
-  formatRetroPico8: `
-    <svg viewBox="0 0 120 75" width="108" height="68" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="31" y="8" width="58" height="59" rx="6" fill="#ffffff" filter="drop-shadow(0 2px 8px rgba(0,0,0,0.25))"/>
-      <rect x="38" y="16" width="44" height="34" rx="4" fill="#000000"/>
-      <circle cx="60" cy="31" r="7" fill="#FF004D"/>
-      <circle cx="60" cy="31" r="3" fill="#FFEC27"/>
-      <rect x="38" y="54" width="11" height="4" fill="#00E436"/>
-      <rect x="49" y="54" width="11" height="4" fill="#29ADFF"/>
-      <rect x="60" y="54" width="11" height="4" fill="#83769C"/>
-      <rect x="71" y="54" width="11" height="4" fill="#FF77A8"/>
-    </svg>
-  `,
-  formatRetroConsole: `
-    <svg viewBox="0 0 120 75" width="108" height="68" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="22" y="12" width="76" height="51" rx="8" fill="#ffffff" filter="drop-shadow(0 2px 8px rgba(0,0,0,0.25))"/>
-      <rect x="22" y="12" width="76" height="14" rx="6" fill="#CBD5E1"/>
-      <circle cx="36" cy="38" r="6" fill="#64748B"/>
-      <circle cx="76" cy="33" r="3" fill="#3B82F6"/>
-      <circle cx="83" cy="33" r="3" fill="#EAB308"/>
-      <circle cx="76" cy="43" r="3" fill="#22C55E"/>
-      <circle cx="83" cy="43" r="3" fill="#EF4444"/>
-    </svg>
-  `,
-  formatLandscapeParallax: `
-    <svg viewBox="0 0 120 75" width="108" height="68" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="10" y="15" width="100" height="45" rx="6" fill="#ffffff" filter="drop-shadow(0 2px 8px rgba(0,0,0,0.25))"/>
-      <rect x="14" y="19" width="92" height="37" rx="4" fill="#F0F9FF"/>
-      <path d="M14 42L36 29L58 45L78 33L106 52V56H14V42Z" fill="#BAE6FD"/>
-      <path d="M14 47L40 37L66 49L88 41L106 54V56H14V47Z" fill="#38BDF8"/>
-      <circle cx="88" cy="26" r="4" fill="#FDE047"/>
-    </svg>
-  `,
-  formatVerticalMobile: `
-    <svg viewBox="0 0 120 75" width="108" height="68" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="42" y="5" width="36" height="65" rx="6" fill="#ffffff" filter="drop-shadow(0 2px 8px rgba(0,0,0,0.25))"/>
-      <rect x="46" y="10" width="28" height="48" rx="4" fill="#F8FAFC"/>
-      <rect x="50" y="16" width="20" height="12" rx="2" fill="#E0E7FF"/>
-      <circle cx="60" cy="63" r="2" fill="#94A3B8"/>
-    </svg>
-  `,
-};
-
-const CATEGORY_TABS: PresetCategoryTab[] = [
-  {
-    id: 'for-you',
-    tabRef: 'tab-for-you',
-    titleKey: 'canvas.tab_for_you',
-    iconName: 'recommend',
-    sections: [
-      {
-        id: 'most-used',
-        titleKey: 'canvas.section_most_used',
-        items: [
-          { id: 'fmt-sprite-32', name: 'Sprite estándar', width: 32, height: 32, svgIcon: PRESET_SVGS.formatSquareCharacter },
-          makeTemplateItem('tmpl-nat-forest', 'Bosque Mágico', 'nature', 'forest', 'Naturaleza', true),
-          { id: 'fmt-gb-classic', name: 'Game Boy Clásica', width: 160, height: 144, svgIcon: PRESET_SVGS.formatRetroGameboy },
-          makeTemplateItem('tmpl-ct-cyber', 'Callejón Cyberpunk', 'cities', 'cyber_alley', 'Ciudades'),
-          { id: 'fmt-pico8', name: 'PICO-8 Fantasy', width: 128, height: 128, svgIcon: PRESET_SVGS.formatRetroPico8 },
-          makeTemplateItem('tmpl-fn-dungeon', 'Mazmorra Oscura', 'fantasy', 'dark_dungeon', 'Fantasía'),
-        ],
-      },
-      {
-        id: 'popular',
-        titleKey: 'canvas.section_popular',
-        items: [
-          makeTemplateItem('tmpl-sci-station', 'Estación Orbital', 'scifi', 'orbital_station', 'Espacio', true),
-          makeTemplateItem('tmpl-ch-humanoid', 'Base Humanoide', 'characters', 'humanoid_base', 'Personajes'),
-          makeTemplateItem('tmpl-it-sword', 'Espada de Cristal', 'items', 'crystal_sword', 'Objetos'),
-          { id: 'fmt-snes', name: 'SNES 4:3', width: 256, height: 224, svgIcon: PRESET_SVGS.formatRetroConsole },
-          makeTemplateItem('tmpl-it-potion', 'Poción de Maná', 'items', 'mana_potion', 'Objetos'),
-          makeTemplateItem('tmpl-ch-chibi', 'Retrato Chibi', 'characters', 'chibi_portrait', 'Personajes'),
-        ],
-      },
-      {
-        id: 'try-new',
-        titleKey: 'canvas.section_try_new',
-        items: [
-          makeTemplateItem('tmpl-nat-crystals', 'Cueva de Cristales', 'nature', 'crystal_cave', 'Naturaleza'),
-          makeTemplateItem('tmpl-ct-metropolis', 'Metrópolis Nocturna', 'cities', 'night_metropolis', 'Ciudades', true),
-          makeTemplateItem('tmpl-fn-portal', 'Portal Místico', 'fantasy', 'mystic_portal', 'Fantasía'),
-          makeTemplateItem('tmpl-sci-planet', 'Planeta con Anillos', 'scifi', 'ringed_planet', 'Espacio'),
-          makeTemplateItem('tmpl-ch-slime', 'Criatura Slime', 'characters', 'slime_creature', 'Personajes'),
-          makeTemplateItem('tmpl-fn-chest', 'Cofre Legendario', 'fantasy', 'treasure_chest', 'Fantasía'),
-        ],
-      },
-    ],
-  },
-  {
-    id: 'formats',
-    tabRef: 'tab-formats',
-    titleKey: 'canvas.tab_formats',
-    iconName: 'straighten',
-    sections: [
-      {
-        id: 'fmt-sprites',
-        titleKey: 'canvas.section_classic_sprites',
-        items: [
-          { id: 'fmt-sp-16', name: 'Micro Sprite 16×16', width: 16, height: 16, svgIcon: PRESET_SVGS.formatIconSmall },
-          { id: 'fmt-sp-32', name: 'Sprite Estándar 32×32', width: 32, height: 32, svgIcon: PRESET_SVGS.formatSquareCharacter },
-          { id: 'fmt-sp-48', name: 'Sprite Grande 48×48', width: 48, height: 48, svgIcon: PRESET_SVGS.formatSquareCharacter },
-          { id: 'fmt-sp-64', name: 'Sprite Detallado 64×64', width: 64, height: 64, svgIcon: PRESET_SVGS.formatSquareBoss },
-          { id: 'fmt-sp-128', name: 'Gran Lienzo 128×128', width: 128, height: 128, svgIcon: PRESET_SVGS.formatSquareBoss },
-        ],
-      },
-      {
-        id: 'fmt-retro',
-        titleKey: 'canvas.section_retro_consoles',
-        items: [
-          { id: 'fmt-rc-gb', name: 'Game Boy (160×144)', width: 160, height: 144, svgIcon: PRESET_SVGS.formatRetroGameboy },
-          { id: 'fmt-rc-nes', name: 'NES (256×240)', width: 256, height: 240, svgIcon: PRESET_SVGS.formatRetroConsole },
-          { id: 'fmt-rc-snes', name: 'SNES (256×224)', width: 256, height: 224, svgIcon: PRESET_SVGS.formatRetroConsole },
-          { id: 'fmt-rc-gba', name: 'GBA (240×160)', width: 240, height: 160, svgIcon: PRESET_SVGS.formatRetroConsole },
-          { id: 'fmt-rc-genesis', name: 'Mega Drive (320×224)', width: 320, height: 224, svgIcon: PRESET_SVGS.formatRetroConsole },
-          { id: 'fmt-rc-pico8', name: 'PICO-8 (128×128)', width: 128, height: 128, svgIcon: PRESET_SVGS.formatRetroPico8 },
-        ],
-      },
-      {
-        id: 'fmt-screens',
-        titleKey: 'canvas.section_screens_parallax',
-        items: [
-          { id: 'fmt-sc-144p', name: 'Pixel 144p (256×144)', width: 256, height: 144, svgIcon: PRESET_SVGS.formatLandscapeParallax },
-          { id: 'fmt-sc-180p', name: 'Pixel 180p (320×180)', width: 320, height: 180, svgIcon: PRESET_SVGS.formatLandscapeParallax },
-          { id: 'fmt-sc-270p', name: 'Pixel 270p (480×270)', width: 480, height: 270, svgIcon: PRESET_SVGS.formatLandscapeParallax },
-          { id: 'fmt-sc-360p', name: 'Pixel 360p (640×360)', width: 640, height: 360, svgIcon: PRESET_SVGS.formatLandscapeParallax },
-          { id: 'fmt-sc-vertical', name: 'Pantalla vertical (64×128)', width: 64, height: 128, svgIcon: PRESET_SVGS.formatVerticalMobile },
-        ],
-      },
-      {
-        id: 'fmt-tilesets',
-        titleKey: 'canvas.section_tilesets_maps',
-        items: [
-          { id: 'fmt-tl-16', name: 'Tileset 16×16 estándar', width: 256, height: 256, svgIcon: PRESET_SVGS.formatSquareGrid },
-          { id: 'fmt-tl-32', name: 'Tileset 32×32 HD', width: 512, height: 512, svgIcon: PRESET_SVGS.formatSquareGrid },
-          { id: 'fmt-tl-iso', name: 'Arte isométrico 2:1', width: 128, height: 128, svgIcon: PRESET_SVGS.formatIsometric },
-          { id: 'fmt-tl-strip', name: 'Tira de 4 cuadros', width: 128, height: 32, svgIcon: PRESET_SVGS.formatStrip4f },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'nature',
-    tabRef: 'tab-nature',
-    titleKey: 'canvas.tab_nature',
-    iconName: 'eco',
-    sections: [
-      {
-        id: 'nat-forests',
-        titleKey: 'canvas.section_forests_islands',
-        items: [
-          makeTemplateItem('tmpl-nat-forest', 'Bosque de Pinos', 'nature', 'forest', 'Naturaleza', true),
-          makeTemplateItem('tmpl-nat-beach', 'Playa Tropical', 'nature', 'beach', 'Naturaleza', true),
-          makeTemplateItem('tmpl-nat-waterfall', 'Cascada Mística', 'nature', 'waterfall', 'Naturaleza', true),
-          makeTemplateItem('tmpl-nat-swamp', 'Pantano Misterioso', 'nature', 'swamp', 'Naturaleza', true),
-          makeTemplateItem('tmpl-nat-flower', 'Campo de Flores', 'nature', 'flower_field', 'Naturaleza', true),
-        ],
-      },
-      {
-        id: 'nat-mountains',
-        titleKey: 'canvas.section_mountains_caves',
-        items: [
-          makeTemplateItem('tmpl-nat-mountain', 'Montaña Nevada', 'nature', 'mountain', 'Naturaleza', true),
-          makeTemplateItem('tmpl-nat-desert', 'Desierto al Atardecer', 'nature', 'sunset_desert', 'Naturaleza', true),
-          makeTemplateItem('tmpl-nat-crystals', 'Cueva de Cristales', 'nature', 'crystal_cave', 'Naturaleza'),
-          makeTemplateItem('tmpl-nat-volcano', 'Volcán Ardiente', 'nature', 'volcano', 'Naturaleza', true),
-          makeTemplateItem('tmpl-nat-coral', 'Arrecife de Coral', 'nature', 'coral_reef', 'Naturaleza', true),
-        ],
-      },
-    ],
-  },
-  {
-    id: 'cities',
-    tabRef: 'tab-cities',
-    titleKey: 'canvas.tab_cities',
-    iconName: 'apartment',
-    sections: [
-      {
-        id: 'ct-cyberpunk',
-        titleKey: 'canvas.section_cyberpunk_neon',
-        items: [
-          makeTemplateItem('tmpl-ct-metropolis', 'Metrópolis Nocturna', 'cities', 'night_metropolis', 'Ciudades', true),
-          makeTemplateItem('tmpl-ct-cyber', 'Callejón Cyberpunk', 'cities', 'cyber_alley', 'Ciudades'),
-          makeTemplateItem('tmpl-ct-tokyo', 'Calles de Tokio', 'cities', 'tokyo_street', 'Ciudades', true),
-          makeTemplateItem('tmpl-ct-rooftop', 'Techo Urbano', 'cities', 'city_rooftop', 'Ciudades', true),
-          makeTemplateItem('tmpl-ct-suburb', 'Suburbio Otoñal', 'cities', 'autumn_suburb', 'Ciudades', true),
-        ],
-      },
-      {
-        id: 'ct-urban',
-        titleKey: 'canvas.section_urban_streets',
-        items: [
-          makeTemplateItem('tmpl-ct-medieval', 'Pueblo Medieval', 'cities', 'medieval_town', 'Ciudades', true),
-          makeTemplateItem('tmpl-ct-seaport', 'Puerto Marítimo', 'cities', 'seaport', 'Ciudades', true),
-          makeTemplateItem('tmpl-ct-castle', 'Castillo en la Colina', 'cities', 'hill_castle', 'Ciudades', true),
-          makeTemplateItem('tmpl-ct-train', 'Estación de Tren', 'cities', 'train_station', 'Ciudades', true),
-          makeTemplateItem('tmpl-ct-market', 'Mercado Antiguo', 'cities', 'ancient_market', 'Ciudades', true),
-        ],
-      },
-    ],
-  },
-  {
-    id: 'fantasy',
-    tabRef: 'tab-fantasy',
-    titleKey: 'canvas.tab_fantasy',
-    iconName: 'shield',
-    sections: [
-      {
-        id: 'fn-dungeons',
-        titleKey: 'canvas.section_dungeons_castles',
-        items: [
-          makeTemplateItem('tmpl-fn-dungeon', 'Mazmorra Oscura', 'fantasy', 'dark_dungeon', 'Fantasía'),
-          makeTemplateItem('tmpl-fn-throne', 'Sala del Trono', 'fantasy', 'throne_room', 'Fantasía', true),
-          makeTemplateItem('tmpl-fn-portal', 'Portal Místico', 'fantasy', 'mystic_portal', 'Fantasía'),
-          makeTemplateItem('tmpl-fn-chest', 'Cofre Legendario', 'fantasy', 'treasure_chest', 'Fantasía'),
-          makeTemplateItem('tmpl-fn-ruins', 'Ruinas Élficas', 'fantasy', 'elven_ruins', 'Fantasía', true),
-        ],
-      },
-      {
-        id: 'fn-taverns',
-        titleKey: 'canvas.section_taverns_altars',
-        items: [
-          makeTemplateItem('tmpl-fn-potions', 'Tienda de Pociones', 'fantasy', 'potion_shop', 'Fantasía'),
-          makeTemplateItem('tmpl-fn-forge', 'Forja Enana', 'fantasy', 'dwarven_forge', 'Fantasía'),
-          makeTemplateItem('tmpl-fn-wizard', 'Torre del Mago', 'fantasy', 'wizard_tower', 'Fantasía'),
-          makeTemplateItem('tmpl-fn-dragon', 'Puente del Dragón', 'fantasy', 'dragon_bridge', 'Fantasía', true),
-          makeTemplateItem('tmpl-fn-altar', 'Altar Arcano', 'fantasy', 'arcane_altar', 'Fantasía'),
-        ],
-      },
-    ],
-  },
-  {
-    id: 'scifi',
-    tabRef: 'tab-scifi',
-    titleKey: 'canvas.tab_scifi',
-    iconName: 'stars',
-    sections: [
-      {
-        id: 'sci-cosmos',
-        titleKey: 'canvas.section_galaxies_cosmos',
-        items: [
-          makeTemplateItem('tmpl-sci-station', 'Estación Orbital', 'scifi', 'orbital_station', 'Espacio', true),
-          makeTemplateItem('tmpl-sci-nebula', 'Nebulosa Cósmica', 'scifi', 'cosmic_nebula', 'Espacio', true),
-          makeTemplateItem('tmpl-sci-planet', 'Planeta con Anillos', 'scifi', 'ringed_planet', 'Espacio'),
-          makeTemplateItem('tmpl-sci-lunar', 'Superficie Lunar', 'scifi', 'lunar_surface', 'Espacio', true),
-          makeTemplateItem('tmpl-sci-cockpit', 'Cabina de Nave', 'scifi', 'cockpit', 'Espacio', true),
-        ],
-      },
-      {
-        id: 'sci-stations',
-        titleKey: 'canvas.section_stations_hangars',
-        items: [
-          makeTemplateItem('tmpl-sci-asteroid', 'Asteroide Minero', 'scifi', 'mining_asteroid', 'Espacio'),
-          makeTemplateItem('tmpl-sci-floating', 'Ciudad Flotante', 'scifi', 'floating_city', 'Espacio', true),
-          makeTemplateItem('tmpl-sci-lab', 'Laboratorio Alienígena', 'scifi', 'alien_lab', 'Espacio'),
-          makeTemplateItem('tmpl-sci-wormhole', 'Agujero de Gusano', 'scifi', 'wormhole', 'Espacio'),
-          makeTemplateItem('tmpl-sci-satellite', 'Satélite Solar', 'scifi', 'solar_satellite', 'Espacio', true),
-        ],
-      },
-    ],
-  },
-  {
-    id: 'characters',
-    tabRef: 'tab-characters',
-    titleKey: 'canvas.tab_characters',
-    iconName: 'person',
-    sections: [
-      {
-        id: 'ch-mannequins',
-        titleKey: 'canvas.section_mannequins_chibi',
-        items: [
-          makeTemplateItem('tmpl-ch-humanoid', 'Base Humanoide Frente', 'characters', 'humanoid_base', 'Personajes'),
-          makeTemplateItem('tmpl-ch-warrior', 'Base Guerrero Perfil', 'characters', 'warrior_side', 'Personajes'),
-          makeTemplateItem('tmpl-ch-mannequin-f', 'Maniquí Femenino', 'characters', 'mannequin_f', 'Personajes'),
-          makeTemplateItem('tmpl-ch-mannequin-m', 'Maniquí Masculino', 'characters', 'mannequin_m', 'Personajes'),
-          makeTemplateItem('tmpl-ch-spritesheet', 'Hoja 4 Direcciones', 'characters', 'sprite_sheet_4way', 'Personajes'),
-        ],
-      },
-      {
-        id: 'ch-portraits',
-        titleKey: 'canvas.section_portraits_busts',
-        items: [
-          makeTemplateItem('tmpl-ch-chibi', 'Retrato Chibi', 'characters', 'chibi_portrait', 'Personajes'),
-          makeTemplateItem('tmpl-ch-mage', 'Mago con Túnica', 'characters', 'mage_robe', 'Personajes'),
-          makeTemplateItem('tmpl-ch-knight', 'Caballero con Armadura', 'characters', 'armored_knight', 'Personajes'),
-          makeTemplateItem('tmpl-ch-slime', 'Criatura Slime', 'characters', 'slime_creature', 'Personajes'),
-          makeTemplateItem('tmpl-ch-skull', 'Monstruo Calavera', 'characters', 'skull_monster', 'Personajes'),
-        ],
-      },
-    ],
-  },
-  {
-    id: 'items',
-    tabRef: 'tab-items',
-    titleKey: 'canvas.tab_items',
-    iconName: 'category',
-    sections: [
-      {
-        id: 'it-weapons',
-        titleKey: 'canvas.section_weapons_equipment',
-        items: [
-          makeTemplateItem('tmpl-it-sword', 'Espada de Cristal', 'items', 'crystal_sword', 'Objetos'),
-          makeTemplateItem('tmpl-it-shield', 'Escudo Heráldico', 'items', 'heraldic_shield', 'Objetos'),
-          makeTemplateItem('tmpl-it-helmet', 'Casco de Guerrero', 'items', 'warrior_helmet', 'Objetos'),
-          makeTemplateItem('tmpl-it-bow', 'Arco Élfico', 'items', 'elven_bow', 'Objetos'),
-          makeTemplateItem('tmpl-it-gold', 'Lingote de Oro', 'items', 'gold_ingot', 'Objetos'),
-        ],
-      },
-      {
-        id: 'it-relics',
-        titleKey: 'canvas.section_potions_relics',
-        items: [
-          makeTemplateItem('tmpl-it-potion', 'Poción de Maná', 'items', 'mana_potion', 'Objetos'),
-          makeTemplateItem('tmpl-it-spellbook', 'Libro de Hechizos', 'items', 'spellbook', 'Objetos'),
-          makeTemplateItem('tmpl-it-gem', 'Gema Preciosa', 'items', 'gemstone', 'Objetos'),
-          makeTemplateItem('tmpl-it-key', 'Llave Dorada', 'items', 'golden_key', 'Objetos'),
-          makeTemplateItem('tmpl-it-skull', 'Calavera de Cristal', 'items', 'crystal_skull', 'Objetos'),
-        ],
-      },
-    ],
-  },
-];
-
-const ALL_PRESETS_MAP = new Map<string, PresetItem>();
-CATEGORY_TABS.forEach((cat) => {
-  cat.sections.forEach((sec) => {
-    sec.items.forEach((item) => {
-      if (!ALL_PRESETS_MAP.has(item.id)) {
-        ALL_PRESETS_MAP.set(item.id, item);
-      }
-    });
-  });
-});
-const ALL_PRESETS = Array.from(ALL_PRESETS_MAP.values());
-
-function buildPresetCardHtml(item: PresetItem): string {
-  const badgeText = `${item.width} × ${item.height} px`;
-  const previewContent = item.imagePath
-    ? `<img class="canvas-card__image image-lazy-fade" data-ref="preset-card-img-${item.id}" src="${item.imagePath}" alt="${item.name}" loading="lazy" decoding="async" onload="this.classList.add('image-loaded')" onerror="this.classList.add('image-loaded')" />`
-    : (item.svgIcon || '');
-
-  return `
-    <div class="canvas-card" data-ref="preset-card-${item.id}" data-preset-id="${item.id}" data-width="${item.width}" data-height="${item.height}" data-name="${item.name}">
-      <div class="canvas-card__preview" data-ref="preset-card-preview-${item.id}">
-        ${previewContent}
-      </div>
-      <div class="canvas-card__badges-tl" data-ref="preset-card-badge-container-${item.id}">
-        <div class="canvas-card__badge canvas-card__badge--glass" data-ref="preset-card-badge-${item.id}">
-          <span>${badgeText}</span>
-        </div>
-      </div>
-      <div class="canvas-card__bottom" data-ref="preset-card-bottom-${item.id}">
-        <h3 class="canvas-card__title" data-ref="preset-card-title-${item.id}" title="${item.name}">
-          ${item.name}
-        </h3>
-      </div>
-    </div>
-  `;
-}
-
-function buildCategorySectionHtml(catId: string, sec: PresetSection): string {
-  const cardsHtml = sec.items.map(buildPresetCardHtml).join('');
-  const uniqueSecId = `${catId}-${sec.id}`;
-
-  return `
-    <div class="preset-category" data-ref="preset-category-${uniqueSecId}">
-      <h4 class="preset-category__title" data-ref="preset-title-${uniqueSecId}" data-i18n="${sec.titleKey}">
-        ${t(sec.titleKey)}
-      </h4>
-      <div class="preset-category__carousel-container" data-ref="carousel-container-${uniqueSecId}">
-        <button type="button" class="preset-carousel__nav-btn preset-carousel__nav-btn--left is-disabled" data-ref="btn-carousel-left-${uniqueSecId}" data-tooltip="Desplazar a la izquierda" aria-label="Desplazar a la izquierda">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
-        </button>
-        <div class="preset-category__track" data-ref="preset-track-${uniqueSecId}">
-          ${cardsHtml}
-        </div>
-        <button type="button" class="preset-carousel__nav-btn preset-carousel__nav-btn--right" data-ref="btn-carousel-right-${uniqueSecId}" data-tooltip="Desplazar a la derecha" aria-label="Desplazar a la derecha">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
-        </button>
-      </div>
-    </div>
-  `;
-}
-
-function buildCategoryPanelHtml(cat: PresetCategoryTab): string {
-  const sectionsHtml = cat.sections.map((sec) => buildCategorySectionHtml(cat.id, sec)).join('');
-  return `
-    <div class="modal-presets-category-panel" data-ref="panel-category-${cat.id}" style="${cat.id === 'for-you' ? 'display: flex;' : 'display: none;'}">
-      ${sectionsHtml}
-    </div>
-  `;
-}
-
-export function openCreateCanvasModal(): void {
+export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): void {
   if (activeCreateCanvasModal) {
     activeCreateCanvasModal.close();
   }
 
+  const initialName = options?.name || options?.templateName || '';
+  const templateVariants = options?.variants && options.variants.length > 0 ? options.variants : null;
+  const isTemplateMode = Boolean(templateVariants || options?.templateName);
+  const templateName = options?.templateName || null;
+
+  let currentWidth = options?.width || templateVariants?.[0]?.width || 64;
+  let currentHeight = options?.height || templateVariants?.[0]?.height || 64;
+  let currentTemplateImage = options?.templateImage || templateVariants?.[0]?.imagePath || null;
+
+  const initialVariant = templateVariants
+    ? templateVariants.find((v) => v.width === currentWidth && v.height === currentHeight) || templateVariants[0]
+    : null;
+  if (initialVariant) {
+    currentWidth = initialVariant.width;
+    currentHeight = initialVariant.height;
+    if (initialVariant.imagePath) {
+      currentTemplateImage = initialVariant.imagePath;
+    }
+  }
+  const initialVariantLabel = initialVariant ? initialVariant.label : `${currentWidth} × ${currentHeight} px`;
+
   const backdrop = document.createElement('div');
   backdrop.className = 'modal-backdrop';
   backdrop.setAttribute('data-ref', 'modal-create-canvas-backdrop');
-
-  const categoryPanelsHtml = CATEGORY_TABS.map(buildCategoryPanelHtml).join('');
 
   backdrop.innerHTML = `
     <div class="modal-container" data-ref="modal-create-canvas-container">
       <button type="button" class="modal-close-btn" data-ref="btn-modal-close" data-i18n-aria="modal.close" aria-label="${t('modal.close')}">
         <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
       </button>
+
       <div class="modal-card modal-card--create-canvas no-padding" data-ref="modal-card-create-canvas">
         <div class="modal-card__drag-zone" data-ref="modal-drag-zone" aria-hidden="true">
           <div class="modal-card__drag-handle"></div>
@@ -588,56 +59,22 @@ export function openCreateCanvasModal(): void {
         <div class="modal-create-canvas__sidebar" data-ref="modal-create-canvas-sidebar">
           <div class="modal-create-canvas__sidebar-top" data-ref="modal-sidebar-top">
             <div class="component-top-left" data-ref="modal-sidebar-top-left">
-              <h1 class="component-top-title" data-i18n="canvas.modal_title">${t('canvas.modal_title')}</h1>
+              <h1 class="component-top-title">${templateName ? 'Crear desde plantilla' : t('canvas.modal_title')}</h1>
             </div>
           </div>
           <div class="modal-create-canvas__sidebar-bottom" data-ref="modal-sidebar-bottom">
             <div class="menu-panel__list" data-ref="modal-nav-list">
-              <button type="button" class="menu-item is-active" data-ref="tab-for-you">
-                <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#recommend"></use></svg>
-                <span class="menu-item__text" data-i18n="canvas.tab_for_you">${t('canvas.tab_for_you')}</span>
-              </button>
-              <button type="button" class="menu-item" data-ref="tab-formats">
-                <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#straighten"></use></svg>
-                <span class="menu-item__text" data-i18n="canvas.tab_formats">${t('canvas.tab_formats')}</span>
-              </button>
-
-              <div class="menu-divider" data-ref="modal-nav-divider-templates"></div>
-
-              <button type="button" class="menu-item" data-ref="tab-nature">
-                <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#eco"></use></svg>
-                <span class="menu-item__text" data-i18n="canvas.tab_nature">${t('canvas.tab_nature')}</span>
-              </button>
-              <button type="button" class="menu-item" data-ref="tab-cities">
-                <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#apartment"></use></svg>
-                <span class="menu-item__text" data-i18n="canvas.tab_cities">${t('canvas.tab_cities')}</span>
-              </button>
-              <button type="button" class="menu-item" data-ref="tab-fantasy">
-                <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#shield"></use></svg>
-                <span class="menu-item__text" data-i18n="canvas.tab_fantasy">${t('canvas.tab_fantasy')}</span>
-              </button>
-              <button type="button" class="menu-item" data-ref="tab-scifi">
-                <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#stars"></use></svg>
-                <span class="menu-item__text" data-i18n="canvas.tab_scifi">${t('canvas.tab_scifi')}</span>
-              </button>
-              <button type="button" class="menu-item" data-ref="tab-characters">
-                <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#person"></use></svg>
-                <span class="menu-item__text" data-i18n="canvas.tab_characters">${t('canvas.tab_characters')}</span>
-              </button>
-              <button type="button" class="menu-item" data-ref="tab-items">
-                <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#category"></use></svg>
-                <span class="menu-item__text" data-i18n="canvas.tab_items">${t('canvas.tab_items')}</span>
-              </button>
-
-              <div class="menu-divider" data-ref="modal-nav-divider-custom"></div>
-
-              <button type="button" class="menu-item" data-ref="tab-custom-size">
+              <button type="button" class="menu-item is-active" data-ref="tab-stage-dimensions" data-stage="dimensions">
                 <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#aspect_ratio"></use></svg>
-                <span class="menu-item__text" data-i18n="canvas.tab_custom_size">${t('canvas.tab_custom_size')}</span>
+                <span class="menu-item__text" data-i18n="canvas.stage_dimensions">${t('canvas.stage_dimensions')}</span>
               </button>
-              <button type="button" class="menu-item" data-ref="tab-upload">
-                <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#cloud_upload"></use></svg>
-                <span class="menu-item__text" data-i18n="canvas.tab_upload">${t('canvas.tab_upload')}</span>
+              <button type="button" class="menu-item" data-ref="tab-stage-background" data-stage="background">
+                <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#palette"></use></svg>
+                <span class="menu-item__text" data-i18n="canvas.stage_background">${t('canvas.stage_background')}</span>
+              </button>
+              <button type="button" class="menu-item" data-ref="tab-stage-animation" data-stage="animation">
+                <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#animation"></use></svg>
+                <span class="menu-item__text" data-i18n="canvas.stage_animation">${t('canvas.stage_animation')}</span>
               </button>
             </div>
           </div>
@@ -645,65 +82,14 @@ export function openCreateCanvasModal(): void {
 
         <div class="modal-create-canvas__body" data-ref="modal-create-canvas-body">
           <div class="modal-create-canvas__body-top" data-ref="modal-body-top">
-            <div class="component-search component-search--full" data-ref="modal-search-box">
-              <div class="component-search__icon" data-ref="modal-search-icon">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
-              </div>
-              <div class="component-search__input-box" data-ref="modal-search-input-box">
-                <input class="component-search__input" data-ref="modal-search-input" data-i18n-placeholder="canvas.search_placeholder" type="text" maxlength="100" autocomplete="off" placeholder="${t('canvas.search_placeholder')}" />
-              </div>
+            <div class="component-top-left" data-ref="modal-body-top-left">
+              <h2 class="component-top-title" data-ref="modal-stage-title" data-i18n="canvas.stage_dimensions">${t('canvas.stage_dimensions')}</h2>
             </div>
           </div>
 
           <div class="modal-create-canvas__body-bottom" data-ref="modal-body-bottom">
-            ${categoryPanelsHtml}
-
-            <div class="modal-search-results-container" data-ref="modal-search-results" style="display: none;">
-              <h4 class="preset-category__title" data-i18n="canvas.search_results_title">${t('canvas.search_results_title')}</h4>
-              <div class="modal-search-results-grid" data-ref="modal-search-results-grid"></div>
-            </div>
-
-            <div class="component-empty-state" data-ref="presets-empty-search" style="display: none;">
-              <div class="component-empty-state-graphic" data-ref="modal-empty-search-graphic">
-                ${getEmptyGraphicSvg('search')}
-              </div>
-              <h2 class="component-empty-state-title" data-i18n="canvas.home_search_no_results_title">${t('canvas.home_search_no_results_title')}</h2>
-              <p class="component-empty-state-desc" data-i18n="canvas.search_no_results">${t('canvas.search_no_results')}</p>
-            </div>
-
-            <div class="modal-canvas-panel" data-ref="panel-custom-size" style="display: none;">
-              <div class="modal-canvas-panel__form" data-ref="form-custom-size">
-                <div class="settings-group" data-ref="custom-size-group-template-banner" style="display: none;">
-                  <div class="template-info-banner" data-ref="template-info-banner">
-                    <div class="template-info-banner__left" data-ref="template-info-left">
-                      <div class="template-info-banner__icon" data-ref="template-info-icon">
-                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
-                      </div>
-                      <div class="template-info-banner__text" data-ref="template-info-text">
-                        <span class="template-info-banner__title" data-ref="template-info-name">Plantilla</span>
-                        <span class="template-info-banner__desc" data-i18n="canvas.template_locked_dims_desc">${t('canvas.template_locked_dims_desc')}</span>
-                      </div>
-                    </div>
-                    <button type="button" class="template-info-banner__btn" data-ref="btn-clear-template" data-tooltip="${t('canvas.template_clear_tooltip')}" aria-label="${t('canvas.template_clear_tooltip')}">
-                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
-                    </button>
-                  </div>
-                </div>
-
-                <div class="settings-group" data-ref="custom-size-group-variants" style="display: none;">
-                  <div class="settings-item" data-ref="custom-size-item-variants">
-                    <div class="settings-item__content" data-ref="custom-size-variants-content">
-                      <div class="settings-item__text" data-ref="custom-size-variants-text">
-                        <h2 class="settings-item__title" data-ref="custom-size-variants-title" data-i18n="canvas.template_variants_title">${t('canvas.template_variants_title')}</h2>
-                        <p class="settings-item__desc" data-ref="custom-size-variants-desc" data-i18n="canvas.template_variants_desc">${t('canvas.template_variants_desc')}</p>
-                      </div>
-                    </div>
-                    <div class="settings-item__actions" data-ref="custom-size-variants-actions">
-                      <div class="template-variants-pills" data-ref="template-variants-pills"></div>
-                    </div>
-                  </div>
-                </div>
-
+            <div class="modal-canvas-panel" data-ref="panel-stage-dimensions">
+              <div class="modal-canvas-panel__form" data-ref="form-stage-dimensions">
                 <div class="settings-group" data-ref="custom-size-group-name">
                   <div class="settings-item" data-ref="custom-size-item-name">
                     <div class="settings-item__content" data-ref="custom-size-name-content">
@@ -713,11 +99,54 @@ export function openCreateCanvasModal(): void {
                       </div>
                     </div>
                     <div class="settings-item__actions" data-ref="custom-size-name-actions">
-                      <input class="modal-canvas-panel__name-input" data-ref="input-canvas-name" type="text" placeholder="${t('canvas.input_name_placeholder')}" value="${t('canvas.input_name_placeholder')}" maxlength="100" autocomplete="off" />
+                      <input class="modal-canvas-panel__name-input" data-ref="input-canvas-name" type="text" placeholder="${t('canvas.input_name_placeholder')}" value="${initialName || t('canvas.input_name_placeholder')}" maxlength="100" autocomplete="off" />
                     </div>
                   </div>
                 </div>
 
+                ${templateVariants ? `
+                <div class="settings-group" data-ref="custom-size-group-template-sizes">
+                  <div class="settings-item" data-ref="custom-size-item-template-size">
+                    <div class="settings-item__content" data-ref="custom-size-template-size-content">
+                      <div class="settings-item__text" data-ref="custom-size-template-size-text">
+                        <h2 class="settings-item__title" data-ref="custom-size-template-size-title">Tamaño de la plantilla</h2>
+                        <p class="settings-item__desc" data-ref="custom-size-template-size-desc">Selecciona una de las resoluciones optimizadas disponibles.</p>
+                      </div>
+                    </div>
+                    <div class="settings-item__actions" data-ref="custom-size-template-size-actions">
+                      <div class="settings-dropdown-wrapper settings-dropdown-wrapper--w-320" data-ref="dropdown-wrapper-template-size">
+                        <button type="button" class="dropdown-trigger" data-ref="btn-trigger-template-size" aria-label="Seleccionar tamaño de plantilla">
+                          <div class="dropdown-trigger__left" data-ref="template-size-trigger-left">
+                            <span class="material-symbols-rounded dropdown-trigger__icon" data-ref="template-size-selected-icon">aspect_ratio</span>
+                            <span class="dropdown-trigger__text" data-ref="template-size-selected-text">${initialVariantLabel}</span>
+                          </div>
+                          <span class="material-symbols-rounded dropdown-trigger__chevron" data-ref="template-size-chevron">expand_more</span>
+                        </button>
+                        <div class="dropdown-backdrop" data-ref="dropdown-backdrop-template-size">
+                          <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-template-size">
+                            <div class="menu-panel__drag-zone" data-ref="drag-zone-template-size" aria-hidden="true">
+                              <div class="menu-panel__drag-handle"></div>
+                            </div>
+                            <div class="menu-panel__list" data-ref="list-template-sizes" style="max-height: 280px; overflow-y: auto;">
+                              ${templateVariants.map((v) => {
+                                const isSel = v.width === currentWidth && v.height === currentHeight;
+                                return `
+                                  <button type="button" class="menu-item${isSel ? ' is-active' : ''}" data-ref="option-template-size-${v.width}x${v.height}" data-w="${v.width}" data-h="${v.height}" data-img="${v.imagePath || ''}" data-label="${v.label}">
+                                    <span class="material-symbols-rounded menu-item__icon">aspect_ratio</span>
+                                    <span class="menu-item__text">${v.label}</span>
+                                  </button>
+                                `;
+                              }).join('')}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <input class="hidden" data-ref="input-canvas-width" type="hidden" value="${currentWidth}" />
+                <input class="hidden" data-ref="input-canvas-height" type="hidden" value="${currentHeight}" />
+                ` : `
                 <div class="settings-group" data-ref="custom-size-group-width">
                   <div class="settings-item" data-ref="custom-size-item-width">
                     <div class="settings-item__content" data-ref="custom-size-width-content">
@@ -736,7 +165,7 @@ export function openCreateCanvasModal(): void {
                             <span class="material-symbols-rounded">chevron_left</span>
                           </button>
                         </div>
-                        <input class="component-inline-control__input" data-ref="input-canvas-width" type="number" min="1" max="16384" value="64" autocomplete="off" />
+                        <input class="component-inline-control__input" data-ref="input-canvas-width" type="number" min="1" max="16384" value="${currentWidth}" autocomplete="off" />
                         <div class="component-inline-control__group" data-ref="inline-group-width-inc">
                           <button type="button" class="component-inline-control__btn" data-ref="btn-width-inc" data-tooltip="+1 px" aria-label="Aumentar 1 píxel">
                             <span class="material-symbols-rounded">chevron_right</span>
@@ -768,7 +197,7 @@ export function openCreateCanvasModal(): void {
                             <span class="material-symbols-rounded">chevron_left</span>
                           </button>
                         </div>
-                        <input class="component-inline-control__input" data-ref="input-canvas-height" type="number" min="1" max="16384" value="64" autocomplete="off" />
+                        <input class="component-inline-control__input" data-ref="input-canvas-height" type="number" min="1" max="16384" value="${currentHeight}" autocomplete="off" />
                         <div class="component-inline-control__group" data-ref="inline-group-height-inc">
                           <button type="button" class="component-inline-control__btn" data-ref="btn-height-inc" data-tooltip="+1 px" aria-label="Aumentar 1 píxel">
                             <span class="material-symbols-rounded">chevron_right</span>
@@ -782,11 +211,64 @@ export function openCreateCanvasModal(): void {
                   </div>
                 </div>
 
+                <div class="settings-group" data-ref="custom-size-group-quick-presets">
+                  <div class="settings-item" data-ref="custom-size-item-presets">
+                    <div class="settings-item__content" data-ref="custom-size-presets-content">
+                      <div class="settings-item__text" data-ref="custom-size-presets-text">
+                        <h2 class="settings-item__title" data-ref="custom-size-presets-title">Tamaños rápidos</h2>
+                        <p class="settings-item__desc" data-ref="custom-size-presets-desc">Establece una resolución estándar con un clic.</p>
+                      </div>
+                    </div>
+                    <div class="settings-item__actions" data-ref="custom-size-presets-actions">
+                      <div class="template-variants-pills" data-ref="quick-preset-pills">
+                        <button type="button" class="template-variant-pill" data-ref="btn-preset-16" data-w="16" data-h="16">16 × 16</button>
+                        <button type="button" class="template-variant-pill" data-ref="btn-preset-32" data-w="32" data-h="32">32 × 32</button>
+                        <button type="button" class="template-variant-pill is-active" data-ref="btn-preset-64" data-w="64" data-h="64">64 × 64</button>
+                        <button type="button" class="template-variant-pill" data-ref="btn-preset-128" data-w="128" data-h="128">128 × 128</button>
+                        <button type="button" class="template-variant-pill" data-ref="btn-preset-256" data-w="256" data-h="256">256 × 256</button>
+                        <button type="button" class="template-variant-pill" data-ref="btn-preset-512" data-w="512" data-h="512">512 × 512</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                `}
+
+                <div class="modal-canvas-panel__actions" data-ref="stage1-actions">
+                  <div class="modal-canvas-panel__actions-row" data-ref="stage1-actions-row">
+                    <div></div>
+                    <button type="button" class="btn btn--h44 btn--black" data-ref="btn-stage1-next">
+                      <span>${t('canvas.btn_next')}</span>
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+                    </button>
+                  </div>
+                  <div class="banner banner--danger" data-ref="create-canvas-error-stage1" style="display: none;"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="modal-canvas-panel" data-ref="panel-stage-background" style="display: none;">
+              <div class="modal-canvas-panel__form" data-ref="form-stage-background">
+                <div class="settings-group" data-ref="custom-size-group-preview">
+                  <div class="settings-item" data-ref="custom-size-item-preview">
+                    <div class="settings-item__content" data-ref="custom-size-preview-content">
+                      <div class="settings-item__text" data-ref="custom-size-preview-text">
+                        <h2 class="settings-item__title" data-ref="custom-size-preview-title">Previsualización del fondo</h2>
+                        <p class="settings-item__desc" data-ref="custom-size-preview-desc">Vista previa en tiempo real de la base de dibujo.</p>
+                      </div>
+                    </div>
+                    <div class="settings-item__actions" data-ref="custom-size-preview-actions" style="width: 220px;">
+                      <div class="bg-live-preview is-check-16" data-ref="bg-live-preview">
+                        <span class="bg-live-preview__label" data-ref="bg-live-preview-label">Transparente (16px)</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 <div class="settings-group" data-ref="custom-size-group-background">
                   <div class="settings-item" data-ref="custom-size-item-background">
                     <div class="settings-item__content" data-ref="custom-size-bg-content">
                       <div class="settings-item__text" data-ref="custom-size-bg-text">
-                        <h2 class="settings-item__title" data-ref="custom-size-bg-title">Fondo del lienzo</h2>
+                        <h2 class="settings-item__title" data-ref="custom-size-bg-title">Tipo de fondo</h2>
                         <p class="settings-item__desc" data-ref="custom-size-bg-desc">Elige entre fondo transparente de tablero o color sólido.</p>
                       </div>
                     </div>
@@ -843,22 +325,98 @@ export function openCreateCanvasModal(): void {
                   </div>
                 </div>
 
-                <div class="modal-canvas-panel__actions" data-ref="custom-size-actions">
-                  <button type="button" class="btn btn--h44 btn--black btn--w-full" data-ref="btn-submit-create-canvas">
-                    ${t('canvas.btn_create')}
-                  </button>
-                  <div class="banner banner--danger" data-ref="create-canvas-error" style="display: none;"></div>
+                <div class="modal-canvas-panel__actions" data-ref="stage2-actions">
+                  <div class="modal-canvas-panel__actions-row" data-ref="stage2-actions-row">
+                    <button type="button" class="btn btn--h44 btn--outline" data-ref="btn-stage2-prev">
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+                      <span>${t('canvas.btn_back')}</span>
+                    </button>
+                    <button type="button" class="btn btn--h44 btn--black" data-ref="btn-stage2-next">
+                      <span>${t('canvas.btn_next')}</span>
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div class="modal-canvas-panel" data-ref="panel-upload" style="display: none;">
-              <div class="component-empty-state" data-ref="panel-upload-empty">
-                <div class="component-empty-state-graphic" data-ref="modal-upload-empty-graphic">
-                  ${getEmptyGraphicSvg('upload')}
+            <div class="modal-canvas-panel" data-ref="panel-stage-animation" style="display: none;">
+              <div class="modal-canvas-panel__form" data-ref="form-stage-animation">
+                <div class="settings-group" data-ref="custom-size-group-fps">
+                  <div class="settings-item" data-ref="custom-size-item-fps">
+                    <div class="settings-item__content" data-ref="custom-size-fps-content">
+                      <div class="settings-item__text" data-ref="custom-size-fps-text">
+                        <h2 class="settings-item__title" data-ref="custom-size-fps-title">Velocidad de animación (FPS)</h2>
+                        <p class="settings-item__desc" data-ref="custom-size-fps-desc">Fotogramas por segundo predeterminados para la línea de tiempo.</p>
+                      </div>
+                    </div>
+                    <div class="settings-item__actions" data-ref="custom-size-fps-actions">
+                      <div class="template-variants-pills" data-ref="fps-pills">
+                        <button type="button" class="template-variant-pill is-active" data-ref="btn-fps-8" data-fps="8">8 FPS (Retro)</button>
+                        <button type="button" class="template-variant-pill" data-ref="btn-fps-12" data-fps="12">12 FPS</button>
+                        <button type="button" class="template-variant-pill" data-ref="btn-fps-16" data-fps="16">16 FPS</button>
+                        <button type="button" class="template-variant-pill" data-ref="btn-fps-24" data-fps="24">24 FPS (Fluido)</button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <h2 class="component-empty-state-title" data-i18n="canvas.upload_title">${t('canvas.upload_title')}</h2>
-                <p class="component-empty-state-desc" data-i18n="canvas.upload_desc">${t('canvas.upload_desc')}</p>
+
+                <div class="settings-group" data-ref="custom-size-group-onion">
+                  <div class="settings-item" data-ref="custom-size-item-onion">
+                    <div class="settings-item__content" data-ref="custom-size-onion-content">
+                      <div class="settings-item__text" data-ref="custom-size-onion-text">
+                        <h2 class="settings-item__title" data-ref="custom-size-onion-title">Papel de cebolla (Onion Skin)</h2>
+                        <p class="settings-item__desc" data-ref="custom-size-onion-desc">Previsualiza los fotogramas vecinos mientras dibujas animaciones.</p>
+                      </div>
+                    </div>
+                    <div class="settings-item__actions" data-ref="custom-size-onion-actions">
+                      <div class="template-variants-pills" data-ref="onion-pills">
+                        <button type="button" class="template-variant-pill is-active" data-ref="btn-onion-off" data-onion="false">Desactivado</button>
+                        <button type="button" class="template-variant-pill" data-ref="btn-onion-on" data-onion="true">Activado</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="settings-group" data-ref="custom-size-group-summary">
+                  <div class="modal-create-canvas-summary" data-ref="project-summary-box">
+                    ${templateName || currentTemplateImage ? `
+                    <div class="modal-create-canvas-summary__row" data-ref="summary-row-tmpl">
+                      <span class="modal-create-canvas-summary__label">Plantilla:</span>
+                      <span class="modal-create-canvas-summary__value" data-ref="summary-val-tmpl">${templateName || 'Plantilla de naturaleza'}</span>
+                    </div>
+                    ` : ''}
+                    <div class="modal-create-canvas-summary__row" data-ref="summary-row-name">
+                      <span class="modal-create-canvas-summary__label">Nombre:</span>
+                      <span class="modal-create-canvas-summary__value" data-ref="summary-val-name">-</span>
+                    </div>
+                    <div class="modal-create-canvas-summary__row" data-ref="summary-row-dims">
+                      <span class="modal-create-canvas-summary__label">Dimensiones:</span>
+                      <span class="modal-create-canvas-summary__value" data-ref="summary-val-dims">64 × 64 px</span>
+                    </div>
+                    <div class="modal-create-canvas-summary__row" data-ref="summary-row-bg">
+                      <span class="modal-create-canvas-summary__label">Fondo:</span>
+                      <span class="modal-create-canvas-summary__value" data-ref="summary-val-bg">Transparente (16px)</span>
+                    </div>
+                    <div class="modal-create-canvas-summary__row" data-ref="summary-row-fps">
+                      <span class="modal-create-canvas-summary__label">Animación:</span>
+                      <span class="modal-create-canvas-summary__value" data-ref="summary-val-fps">8 FPS</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="modal-canvas-panel__actions" data-ref="stage3-actions">
+                  <div class="modal-canvas-panel__actions-row" data-ref="stage3-actions-row">
+                    <button type="button" class="btn btn--h44 btn--outline" data-ref="btn-stage3-prev">
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+                      <span>${t('canvas.btn_back')}</span>
+                    </button>
+                    <button type="button" class="btn btn--h44 btn--black" data-ref="btn-submit-create-canvas">
+                      ${t('canvas.btn_create')}
+                    </button>
+                  </div>
+                  <div class="banner banner--danger" data-ref="create-canvas-error" style="display: none;"></div>
+                </div>
               </div>
             </div>
           </div>
@@ -872,116 +430,35 @@ export function openCreateCanvasModal(): void {
 
   translateElement(backdrop);
   renderIcons(backdrop);
-  setupLazyImages(backdrop);
 
   requestAnimationFrame(() => {
     backdrop.classList.add('is-visible');
   });
 
-  type TabType = 'for-you' | 'formats' | 'nature' | 'cities' | 'fantasy' | 'scifi' | 'characters' | 'items' | 'custom-size' | 'upload';
+  type Stage = 'dimensions' | 'background' | 'animation';
+  let currentStage: Stage = 'dimensions';
 
-  const tabButtons = new Map<TabType, HTMLElement | null>([
-    ['for-you', backdrop.querySelector<HTMLElement>('[data-ref="tab-for-you"]')],
-    ['formats', backdrop.querySelector<HTMLElement>('[data-ref="tab-formats"]')],
-    ['nature', backdrop.querySelector<HTMLElement>('[data-ref="tab-nature"]')],
-    ['cities', backdrop.querySelector<HTMLElement>('[data-ref="tab-cities"]')],
-    ['fantasy', backdrop.querySelector<HTMLElement>('[data-ref="tab-fantasy"]')],
-    ['scifi', backdrop.querySelector<HTMLElement>('[data-ref="tab-scifi"]')],
-    ['characters', backdrop.querySelector<HTMLElement>('[data-ref="tab-characters"]')],
-    ['items', backdrop.querySelector<HTMLElement>('[data-ref="tab-items"]')],
-    ['custom-size', backdrop.querySelector<HTMLElement>('[data-ref="tab-custom-size"]')],
-    ['upload', backdrop.querySelector<HTMLElement>('[data-ref="tab-upload"]')],
-  ]);
+  const tabStageDimensions = backdrop.querySelector<HTMLElement>('[data-ref="tab-stage-dimensions"]');
+  const tabStageBackground = backdrop.querySelector<HTMLElement>('[data-ref="tab-stage-background"]');
+  const tabStageAnimation = backdrop.querySelector<HTMLElement>('[data-ref="tab-stage-animation"]');
 
-  const categoryPanels = new Map<string, HTMLElement | null>();
-  CATEGORY_TABS.forEach((cat) => {
-    categoryPanels.set(cat.id, backdrop.querySelector<HTMLElement>(`[data-ref="panel-category-${cat.id}"]`));
-  });
+  const panelStageDimensions = backdrop.querySelector<HTMLElement>('[data-ref="panel-stage-dimensions"]');
+  const panelStageBackground = backdrop.querySelector<HTMLElement>('[data-ref="panel-stage-background"]');
+  const panelStageAnimation = backdrop.querySelector<HTMLElement>('[data-ref="panel-stage-animation"]');
+  const modalStageTitle = backdrop.querySelector<HTMLElement>('[data-ref="modal-stage-title"]');
 
-  const panelCustomSize = backdrop.querySelector<HTMLElement>('[data-ref="panel-custom-size"]');
-  const panelUpload = backdrop.querySelector<HTMLElement>('[data-ref="panel-upload"]');
-
-  const searchInput = backdrop.querySelector<HTMLInputElement>('[data-ref="modal-search-input"]');
-  const searchResultsContainer = backdrop.querySelector<HTMLElement>('[data-ref="modal-search-results"]');
-  const searchResultsGrid = backdrop.querySelector<HTMLElement>('[data-ref="modal-search-results-grid"]');
-  const presetsEmptySearch = backdrop.querySelector<HTMLElement>('[data-ref="presets-empty-search"]');
-
-  const templateBannerGroup = backdrop.querySelector<HTMLElement>('[data-ref="custom-size-group-template-banner"]');
-  const templateInfoName = backdrop.querySelector<HTMLElement>('[data-ref="template-info-name"]');
-  const templateVariantsGroup = backdrop.querySelector<HTMLElement>('[data-ref="custom-size-group-variants"]');
-  const templateVariantsPills = backdrop.querySelector<HTMLElement>('[data-ref="template-variants-pills"]');
-  const btnClearTemplate = backdrop.querySelector<HTMLElement>('[data-ref="btn-clear-template"]');
-
-  const carouselControllers: Array<{ catId: string; destroy: () => void; updateButtons: () => void }> = [];
-
-  CATEGORY_TABS.forEach((cat) => {
-    cat.sections.forEach((sec) => {
-      const uniqueSecId = `${cat.id}-${sec.id}`;
-      const wrapper = backdrop.querySelector<HTMLElement>(`[data-ref="carousel-container-${uniqueSecId}"]`);
-      if (wrapper) {
-        const ctrl = initCarouselScroll(wrapper, {
-          carouselSelector: `[data-ref="preset-track-${uniqueSecId}"]`,
-          leftBtnSelector: `[data-ref="btn-carousel-left-${uniqueSecId}"]`,
-          rightBtnSelector: `[data-ref="btn-carousel-right-${uniqueSecId}"]`,
-          step: 220,
-        });
-        if (ctrl) {
-          carouselControllers.push({ catId: cat.id, destroy: ctrl.destroy, updateButtons: ctrl.updateButtons });
-        }
-      }
-    });
-  });
-
-  let currentTab: TabType = 'for-you';
-  let activeTemplate: PresetItem | null = null;
-  let activeVariantIndex = 0;
-
-  const updateCarouselsForCategory = (catId: string) => {
-    requestAnimationFrame(() => {
-      carouselControllers
-        .filter((c) => c.catId === catId)
-        .forEach((c) => c.updateButtons());
-    });
-  };
-
-  const switchTab = (activeTab: TabType) => {
-    currentTab = activeTab;
-
-    tabButtons.forEach((btn, key) => {
-      btn?.classList.toggle('is-active', key === activeTab);
-    });
-
-    categoryPanels.forEach((panel, catId) => {
-      if (panel) {
-        panel.style.display = activeTab === catId ? 'flex' : 'none';
-      }
-    });
-
-    if (panelCustomSize) panelCustomSize.style.display = activeTab === 'custom-size' ? 'flex' : 'none';
-    if (panelUpload) panelUpload.style.display = activeTab === 'upload' ? 'flex' : 'none';
-
-    if (searchResultsContainer) searchResultsContainer.style.display = 'none';
-    if (presetsEmptySearch) presetsEmptySearch.style.display = 'none';
-
-    if (activeTab !== 'custom-size' && activeTab !== 'upload') {
-      updateCarouselsForCategory(activeTab);
-    }
-  };
-
-  tabButtons.forEach((btn, tabKey) => {
-    btn?.addEventListener('click', () => {
-      if (searchInput && searchInput.value.trim()) {
-        searchInput.value = '';
-      }
-      switchTab(tabKey);
-    });
-  });
-
+  const btnClose = backdrop.querySelector<HTMLElement>('[data-ref="btn-modal-close"]');
   const inputName = backdrop.querySelector<HTMLInputElement>('[data-ref="input-canvas-name"]');
   const inputWidth = backdrop.querySelector<HTMLInputElement>('[data-ref="input-canvas-width"]');
   const inputHeight = backdrop.querySelector<HTMLInputElement>('[data-ref="input-canvas-height"]');
   const btnSubmit = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-submit-create-canvas"]');
-  const errorBox = backdrop.querySelector<HTMLElement>('[data-ref="create-canvas-error"]');
+  const errorBoxStage1 = backdrop.querySelector<HTMLElement>('[data-ref="create-canvas-error-stage1"]');
+  const errorBoxStage3 = backdrop.querySelector<HTMLElement>('[data-ref="create-canvas-error"]');
+
+  const btnStage1Next = backdrop.querySelector<HTMLElement>('[data-ref="btn-stage1-next"]');
+  const btnStage2Prev = backdrop.querySelector<HTMLElement>('[data-ref="btn-stage2-prev"]');
+  const btnStage2Next = backdrop.querySelector<HTMLElement>('[data-ref="btn-stage2-next"]');
+  const btnStage3Prev = backdrop.querySelector<HTMLElement>('[data-ref="btn-stage3-prev"]');
 
   const btnWidthDecLarge = backdrop.querySelector<HTMLElement>('[data-ref="btn-width-dec-large"]');
   const btnWidthDec = backdrop.querySelector<HTMLElement>('[data-ref="btn-width-dec"]');
@@ -993,111 +470,160 @@ export function openCreateCanvasModal(): void {
   const btnHeightInc = backdrop.querySelector<HTMLElement>('[data-ref="btn-height-inc"]');
   const btnHeightIncLarge = backdrop.querySelector<HTMLElement>('[data-ref="btn-height-inc-large"]');
 
-  const stepperButtons = [
-    btnWidthDecLarge as HTMLButtonElement | null,
-    btnWidthDec as HTMLButtonElement | null,
-    btnWidthInc as HTMLButtonElement | null,
-    btnWidthIncLarge as HTMLButtonElement | null,
-    btnHeightDecLarge as HTMLButtonElement | null,
-    btnHeightDec as HTMLButtonElement | null,
-    btnHeightInc as HTMLButtonElement | null,
-    btnHeightIncLarge as HTMLButtonElement | null,
-  ];
+  const quickPresetPills = backdrop.querySelectorAll<HTMLElement>('[data-ref^="btn-preset-"]');
 
-  const setDimensions = (w: number, h: number) => {
-    if (inputWidth) {
-      inputWidth.value = String(w);
-      inputWidth.dispatchEvent(new Event('input', { bubbles: true }));
-      inputWidth.dispatchEvent(new Event('change', { bubbles: true }));
-    }
-    if (inputHeight) {
-      inputHeight.value = String(h);
-      inputHeight.dispatchEvent(new Event('input', { bubbles: true }));
-      inputHeight.dispatchEvent(new Event('change', { bubbles: true }));
-    }
-  };
+  let selectedBgType: 'transparent' | 'solid' = 'transparent';
+  let selectedCheckSize = 16;
+  let selectedSolidColor = '#ffffff';
+  let selectedFps = 8;
+  let selectedOnionSkin = false;
 
-  const clearActiveTemplate = () => {
-    activeTemplate = null;
-    activeVariantIndex = 0;
-    if (templateBannerGroup) templateBannerGroup.style.display = 'none';
-    if (templateVariantsGroup) templateVariantsGroup.style.display = 'none';
-    if (templateVariantsPills) templateVariantsPills.innerHTML = '';
-    if (inputWidth) inputWidth.readOnly = false;
-    if (inputHeight) inputHeight.readOnly = false;
-    stepperButtons.forEach((b) => {
-      if (b) b.disabled = false;
-    });
-  };
+  const btnBgTransparent = backdrop.querySelector<HTMLElement>('[data-ref="btn-bg-transparent"]');
+  const btnBgSolid = backdrop.querySelector<HTMLElement>('[data-ref="btn-bg-solid"]');
+  const groupBgTransparent = backdrop.querySelector<HTMLElement>('[data-ref="custom-size-group-bg-transparent"]');
+  const groupBgSolid = backdrop.querySelector<HTMLElement>('[data-ref="custom-size-group-bg-solid"]');
+  const checkSizePills = backdrop.querySelectorAll<HTMLElement>('[data-ref^="btn-check-"]');
+  const colorPresetPills = backdrop.querySelectorAll<HTMLElement>('[data-ref^="btn-color-"]');
+  const customColorRow = backdrop.querySelector<HTMLElement>('[data-ref="bg-color-custom-row"]');
+  const inputBgColor = backdrop.querySelector<HTMLInputElement>('[data-ref="input-bg-color"]');
+  const inputBgColorHex = backdrop.querySelector<HTMLInputElement>('[data-ref="input-bg-color-hex"]');
 
-  const renderVariantPills = (variants: PresetVariant[]) => {
-    if (!templateVariantsPills) return;
-    templateVariantsPills.innerHTML = variants
-      .map(
-        (v, idx) => `
-        <button type="button" class="template-variant-pill ${idx === activeVariantIndex ? 'is-active' : ''}" data-ref="btn-variant-${idx}" data-variant-index="${idx}">
-          ${v.label}
-        </button>
-      `
-      )
-      .join('');
+  const bgLivePreview = backdrop.querySelector<HTMLElement>('[data-ref="bg-live-preview"]');
+  const bgLivePreviewLabel = backdrop.querySelector<HTMLElement>('[data-ref="bg-live-preview-label"]');
 
-    templateVariantsPills.querySelectorAll<HTMLElement>('.template-variant-pill').forEach((pill) => {
-      pill.addEventListener('click', () => {
-        const idx = parseInt(pill.getAttribute('data-variant-index') || '0', 10);
-        activeVariantIndex = idx;
-        templateVariantsPills
-          .querySelectorAll('.template-variant-pill')
-          .forEach((p, i) => p.classList.toggle('is-active', i === idx));
-        const chosen = variants[idx];
-        if (chosen) {
-          setDimensions(chosen.width, chosen.height);
+  const fpsPills = backdrop.querySelectorAll<HTMLElement>('[data-ref^="btn-fps-"]');
+  const onionPills = backdrop.querySelectorAll<HTMLElement>('[data-ref^="btn-onion-"]');
+
+  const summaryValName = backdrop.querySelector<HTMLElement>('[data-ref="summary-val-name"]');
+  const summaryValDims = backdrop.querySelector<HTMLElement>('[data-ref="summary-val-dims"]');
+  const summaryValBg = backdrop.querySelector<HTMLElement>('[data-ref="summary-val-bg"]');
+  const summaryValFps = backdrop.querySelector<HTMLElement>('[data-ref="summary-val-fps"]');
+
+  const updateLivePreview = () => {
+    if (!bgLivePreview) return;
+
+    if (currentTemplateImage) {
+      bgLivePreview.style.backgroundImage = `url("${currentTemplateImage}")`;
+      bgLivePreview.style.backgroundSize = 'cover';
+      bgLivePreview.style.backgroundPosition = 'center';
+      if (selectedBgType === 'solid') {
+        bgLivePreview.style.backgroundColor = selectedSolidColor;
+        if (bgLivePreviewLabel) {
+          bgLivePreviewLabel.textContent = `Plantilla sobre color sólido (${selectedSolidColor.toUpperCase()})`;
         }
-      });
-    });
-  };
+      } else {
+        bgLivePreview.style.backgroundColor = '';
+        if (bgLivePreviewLabel) {
+          bgLivePreviewLabel.textContent = `Plantilla sobre cuadrícula (${selectedCheckSize} px)`;
+        }
+      }
+      return;
+    }
 
-  const applyTemplateOrFormat = (item: PresetItem) => {
-    if (item.isTemplate && item.variants && item.variants.length > 0) {
-      activeTemplate = item;
-      activeVariantIndex = 0;
-
-      if (templateBannerGroup) templateBannerGroup.style.display = 'block';
-      if (templateInfoName) templateInfoName.textContent = item.name;
-      if (templateVariantsGroup) templateVariantsGroup.style.display = 'block';
-
-      renderVariantPills(item.variants);
-
-      const initialVariant = item.variants[0];
-      setDimensions(initialVariant.width, initialVariant.height);
-
-      if (inputWidth) inputWidth.readOnly = true;
-      if (inputHeight) inputHeight.readOnly = true;
-      stepperButtons.forEach((b) => {
-        if (b) b.disabled = true;
-      });
+    if (selectedBgType === 'solid') {
+      bgLivePreview.className = 'bg-live-preview';
+      bgLivePreview.style.backgroundImage = 'none';
+      bgLivePreview.style.backgroundColor = selectedSolidColor;
+      if (bgLivePreviewLabel) {
+        bgLivePreviewLabel.textContent = `Color sólido (${selectedSolidColor.toUpperCase()})`;
+      }
     } else {
-      clearActiveTemplate();
-      setDimensions(item.width, item.height);
+      bgLivePreview.style.backgroundColor = '';
+      bgLivePreview.className = `bg-live-preview is-check-${selectedCheckSize}`;
+      if (bgLivePreviewLabel) {
+        bgLivePreviewLabel.textContent = `Cuadrícula transparente (${selectedCheckSize} px)`;
+      }
     }
-
-    if (inputName) {
-      inputName.value = item.name;
-      inputName.dispatchEvent(new Event('input', { bubbles: true }));
-      inputName.dispatchEvent(new Event('change', { bubbles: true }));
-    }
-
-    if (searchInput) searchInput.value = '';
-    switchTab('custom-size');
-    setTimeout(() => {
-      inputName?.focus();
-      inputName?.select();
-    }, 80);
   };
 
-  btnClearTemplate?.addEventListener('click', () => {
-    clearActiveTemplate();
+  const updateSummary = () => {
+    const name = inputName?.value.trim() || t('canvas.input_name_placeholder');
+    const width = parseInt(inputWidth?.value || '0', 10);
+    const height = parseInt(inputHeight?.value || '0', 10);
+
+    if (summaryValName) summaryValName.textContent = name;
+    if (summaryValDims) summaryValDims.textContent = `${width} × ${height} px`;
+    if (summaryValBg) {
+      summaryValBg.textContent =
+        selectedBgType === 'solid'
+          ? `Sólido (${selectedSolidColor.toUpperCase()})`
+          : `Transparente (${selectedCheckSize} px)`;
+    }
+    if (summaryValFps) {
+      const onionLabel = selectedOnionSkin ? 'Onion Skin: Activado' : 'Onion Skin: Desactivado';
+      summaryValFps.textContent = `${selectedFps} FPS (${onionLabel})`;
+    }
+  };
+
+  const switchStage = (stage: Stage) => {
+    currentStage = stage;
+
+    tabStageDimensions?.classList.toggle('is-active', stage === 'dimensions');
+    tabStageBackground?.classList.toggle('is-active', stage === 'background');
+    tabStageAnimation?.classList.toggle('is-active', stage === 'animation');
+
+    if (panelStageDimensions) panelStageDimensions.style.display = stage === 'dimensions' ? 'block' : 'none';
+    if (panelStageBackground) panelStageBackground.style.display = stage === 'background' ? 'block' : 'none';
+    if (panelStageAnimation) panelStageAnimation.style.display = stage === 'animation' ? 'block' : 'none';
+
+    if (modalStageTitle) {
+      if (stage === 'dimensions') {
+        modalStageTitle.textContent = t('canvas.stage_dimensions');
+      } else if (stage === 'background') {
+        modalStageTitle.textContent = t('canvas.stage_background');
+      } else {
+        modalStageTitle.textContent = t('canvas.stage_animation');
+      }
+    }
+
+    if (stage === 'background') {
+      updateLivePreview();
+    }
+
+    if (stage === 'animation') {
+      updateSummary();
+    }
+  };
+
+  tabStageDimensions?.addEventListener('click', () => switchStage('dimensions'));
+  tabStageBackground?.addEventListener('click', () => switchStage('background'));
+  tabStageAnimation?.addEventListener('click', () => switchStage('animation'));
+
+  const validateDimensions = (): boolean => {
+    const width = parseInt(inputWidth?.value || '0', 10);
+    const height = parseInt(inputHeight?.value || '0', 10);
+
+    if (errorBoxStage1) errorBoxStage1.style.display = 'none';
+    if (errorBoxStage3) errorBoxStage3.style.display = 'none';
+
+    if (isNaN(width) || width <= 0 || isNaN(height) || height <= 0) {
+      if (errorBoxStage1) {
+        errorBoxStage1.textContent = 'Las dimensiones deben ser mayores a 0.';
+        errorBoxStage1.style.display = 'block';
+      }
+      return false;
+    }
+
+    if (width > 16384 || height > 16384) {
+      if (errorBoxStage1) {
+        errorBoxStage1.textContent = 'Las dimensiones no pueden superar los 16384 píxeles.';
+        errorBoxStage1.style.display = 'block';
+      }
+      return false;
+    }
+
+    return true;
+  };
+
+  btnStage1Next?.addEventListener('click', () => {
+    if (validateDimensions()) {
+      switchStage('background');
+    }
   });
+
+  btnStage2Prev?.addEventListener('click', () => switchStage('dimensions'));
+  btnStage2Next?.addEventListener('click', () => switchStage('animation'));
+  btnStage3Prev?.addEventListener('click', () => switchStage('background'));
 
   const setupNumberStepper = (
     inputEl: HTMLInputElement | null,
@@ -1111,12 +637,12 @@ export function openCreateCanvasModal(): void {
     if (!inputEl) return;
 
     const adjust = (delta: number) => {
-      if (activeTemplate) return;
       const current = parseInt(inputEl.value, 10) || minVal;
       const next = Math.max(minVal, Math.min(maxVal, current + delta));
       inputEl.value = String(next);
       inputEl.dispatchEvent(new Event('input', { bubbles: true }));
       inputEl.dispatchEvent(new Event('change', { bubbles: true }));
+      updatePresetPillsState();
     };
 
     btnDecLarge?.addEventListener('click', () => adjust(-16));
@@ -1125,31 +651,77 @@ export function openCreateCanvasModal(): void {
     btnIncLarge?.addEventListener('click', () => adjust(16));
 
     inputEl.addEventListener('change', () => {
-      const val = parseInt(inputEl.value, 10);
-      if (isNaN(val) || val < minVal) {
-        inputEl.value = String(minVal);
-      } else if (val > maxVal) {
-        inputEl.value = String(maxVal);
-      }
+      let val = parseInt(inputEl.value, 10);
+      if (isNaN(val) || val < minVal) val = minVal;
+      if (val > maxVal) val = maxVal;
+      inputEl.value = String(val);
+      updatePresetPillsState();
     });
   };
 
-  setupNumberStepper(inputWidth, btnWidthDecLarge, btnWidthDec, btnWidthInc, btnWidthIncLarge);
-  setupNumberStepper(inputHeight, btnHeightDecLarge, btnHeightDec, btnHeightInc, btnHeightIncLarge);
+  const updatePresetPillsState = () => {
+    const currentW = parseInt(inputWidth?.value || '0', 10);
+    const currentH = parseInt(inputHeight?.value || '0', 10);
+    quickPresetPills.forEach((pill) => {
+      const pw = parseInt(pill.getAttribute('data-w') || '0', 10);
+      const ph = parseInt(pill.getAttribute('data-h') || '0', 10);
+      pill.classList.toggle('is-active', pw === currentW && ph === currentH);
+    });
+  };
 
-  let selectedBgType: 'transparent' | 'solid' = 'transparent';
-  let selectedCheckSize = 16;
-  let selectedSolidColor = '#ffffff';
+  let templateSizeDropdownController: ReturnType<typeof setupDropdown> | null = null;
 
-  const groupBgTransparent = backdrop.querySelector<HTMLElement>('[data-ref="custom-size-group-bg-transparent"]');
-  const groupBgSolid = backdrop.querySelector<HTMLElement>('[data-ref="custom-size-group-bg-solid"]');
-  const btnBgTransparent = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-bg-transparent"]');
-  const btnBgSolid = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-bg-solid"]');
-  const checkSizePills = backdrop.querySelectorAll<HTMLButtonElement>('[data-ref^="btn-check-"]');
-  const colorPresetPills = backdrop.querySelectorAll<HTMLButtonElement>('[data-ref^="btn-color-"]');
-  const customColorRow = backdrop.querySelector<HTMLElement>('[data-ref="bg-color-custom-row"]');
-  const inputBgColor = backdrop.querySelector<HTMLInputElement>('[data-ref="input-bg-color"]');
-  const inputBgColorHex = backdrop.querySelector<HTMLInputElement>('[data-ref="input-bg-color-hex"]');
+  if (templateVariants) {
+    const templateSizeDropdown = backdrop.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-template-size"]');
+    const templateSizeSelectedText = backdrop.querySelector<HTMLElement>('[data-ref="template-size-selected-text"]');
+
+    if (templateSizeDropdown) {
+      templateSizeDropdownController = setupDropdown(templateSizeDropdown, {
+        matchWidth: true,
+        onSelect: (_val: unknown, item?: HTMLElement) => {
+          if (!item) return;
+          const wStr = item.getAttribute('data-w');
+          const hStr = item.getAttribute('data-h');
+          const img = item.getAttribute('data-img');
+          const label = item.getAttribute('data-label') || item.querySelector('.menu-item__text')?.textContent?.trim() || '';
+
+          const newW = parseInt(wStr || '0', 10);
+          const newH = parseInt(hStr || '0', 10);
+
+          if (newW > 0 && newH > 0) {
+            currentWidth = newW;
+            currentHeight = newH;
+            if (inputWidth) inputWidth.value = String(newW);
+            if (inputHeight) inputHeight.value = String(newH);
+            if (img) currentTemplateImage = img;
+            if (templateSizeSelectedText) templateSizeSelectedText.textContent = label;
+            updateLivePreview();
+            updateSummary();
+          }
+        },
+      });
+    }
+  } else {
+    setupNumberStepper(inputWidth, btnWidthDecLarge, btnWidthDec, btnWidthInc, btnWidthIncLarge);
+    setupNumberStepper(inputHeight, btnHeightDecLarge, btnHeightDec, btnHeightInc, btnHeightIncLarge);
+    updatePresetPillsState();
+
+    quickPresetPills.forEach((pill) => {
+      pill.addEventListener('click', () => {
+        const w = pill.getAttribute('data-w');
+        const h = pill.getAttribute('data-h');
+        if (w && inputWidth) {
+          inputWidth.value = w;
+          inputWidth.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        if (h && inputHeight) {
+          inputHeight.value = h;
+          inputHeight.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        updatePresetPillsState();
+      });
+    });
+  }
 
   btnBgTransparent?.addEventListener('click', () => {
     selectedBgType = 'transparent';
@@ -1157,6 +729,7 @@ export function openCreateCanvasModal(): void {
     btnBgSolid?.classList.remove('is-active');
     if (groupBgTransparent) groupBgTransparent.style.display = '';
     if (groupBgSolid) groupBgSolid.style.display = 'none';
+    updateLivePreview();
   });
 
   btnBgSolid?.addEventListener('click', () => {
@@ -1165,6 +738,7 @@ export function openCreateCanvasModal(): void {
     btnBgTransparent?.classList.remove('is-active');
     if (groupBgTransparent) groupBgTransparent.style.display = 'none';
     if (groupBgSolid) groupBgSolid.style.display = '';
+    updateLivePreview();
   });
 
   checkSizePills.forEach((pill) => {
@@ -1172,6 +746,7 @@ export function openCreateCanvasModal(): void {
       checkSizePills.forEach((p) => p.classList.remove('is-active'));
       pill.classList.add('is-active');
       selectedCheckSize = parseInt(pill.getAttribute('data-size') || '16', 10);
+      updateLivePreview();
     });
   });
 
@@ -1189,12 +764,14 @@ export function openCreateCanvasModal(): void {
         if (inputBgColor) inputBgColor.value = selectedSolidColor;
         if (inputBgColorHex) inputBgColorHex.value = selectedSolidColor;
       }
+      updateLivePreview();
     });
   });
 
   inputBgColor?.addEventListener('input', () => {
     if (inputBgColorHex) inputBgColorHex.value = inputBgColor.value;
     selectedSolidColor = inputBgColor.value;
+    updateLivePreview();
   });
 
   inputBgColorHex?.addEventListener('input', () => {
@@ -1203,115 +780,44 @@ export function openCreateCanvasModal(): void {
     if (/^#[0-9a-fA-F]{6}$/.test(val)) {
       if (inputBgColor) inputBgColor.value = val;
       selectedSolidColor = val;
+      updateLivePreview();
     }
   });
 
-  backdrop.querySelectorAll<HTMLElement>('.canvas-card').forEach((card) => {
-    card.addEventListener('click', () => {
-      const presetId = card.getAttribute('data-preset-id');
-      if (presetId) {
-        const item = ALL_PRESETS_MAP.get(presetId);
-        if (item) {
-          applyTemplateOrFormat(item);
-          return;
-        }
-      }
-      const w = parseInt(card.getAttribute('data-width') || '64', 10);
-      const h = parseInt(card.getAttribute('data-height') || '64', 10);
-      const name = card.getAttribute('data-name') || t('canvas.input_name_placeholder');
-      applyTemplateOrFormat({ id: 'custom', name, width: w, height: h, svgIcon: '' });
+  fpsPills.forEach((pill) => {
+    pill.addEventListener('click', () => {
+      fpsPills.forEach((p) => p.classList.remove('is-active'));
+      pill.classList.add('is-active');
+      selectedFps = parseInt(pill.getAttribute('data-fps') || '8', 10);
+      updateSummary();
     });
   });
 
-  const performSearch = (query: string) => {
-    const q = query.trim().toLowerCase();
-
-    if (!q) {
-      if (searchResultsContainer) searchResultsContainer.style.display = 'none';
-      if (presetsEmptySearch) presetsEmptySearch.style.display = 'none';
-      switchTab(currentTab);
-      return;
-    }
-
-    tabButtons.forEach((btn) => btn?.classList.remove('is-active'));
-    categoryPanels.forEach((panel) => {
-      if (panel) panel.style.display = 'none';
+  onionPills.forEach((pill) => {
+    pill.addEventListener('click', () => {
+      onionPills.forEach((p) => p.classList.remove('is-active'));
+      pill.classList.add('is-active');
+      selectedOnionSkin = pill.getAttribute('data-onion') === 'true';
+      updateSummary();
     });
-    if (panelCustomSize) panelCustomSize.style.display = 'none';
-    if (panelUpload) panelUpload.style.display = 'none';
-
-    const matches = ALL_PRESETS.filter((item) => {
-      const nameMatch = item.name.toLowerCase().includes(q);
-      const catMatch = item.categoryName ? item.categoryName.toLowerCase().includes(q) : false;
-      const dimMatch = `${item.width}x${item.height}`.includes(q) || `${item.width} x ${item.height}`.includes(q);
-      return nameMatch || catMatch || dimMatch;
-    });
-
-    if (matches.length === 0) {
-      if (searchResultsContainer) searchResultsContainer.style.display = 'none';
-      if (presetsEmptySearch) presetsEmptySearch.style.display = 'flex';
-      return;
-    }
-
-    if (presetsEmptySearch) presetsEmptySearch.style.display = 'none';
-    if (searchResultsContainer) searchResultsContainer.style.display = 'block';
-
-    if (searchResultsGrid) {
-      searchResultsGrid.innerHTML = matches.map(buildPresetCardHtml).join('');
-      setupLazyImages(searchResultsGrid);
-      searchResultsGrid.querySelectorAll<HTMLElement>('.canvas-card').forEach((card) => {
-        card.addEventListener('click', () => {
-          const presetId = card.getAttribute('data-preset-id');
-          if (presetId) {
-            const item = ALL_PRESETS_MAP.get(presetId);
-            if (item) {
-              applyTemplateOrFormat(item);
-              return;
-            }
-          }
-          const w = parseInt(card.getAttribute('data-width') || '64', 10);
-          const h = parseInt(card.getAttribute('data-height') || '64', 10);
-          const name = card.getAttribute('data-name') || t('canvas.input_name_placeholder');
-          applyTemplateOrFormat({ id: 'custom', name, width: w, height: h, svgIcon: '' });
-        });
-      });
-    }
-  };
-
-  searchInput?.addEventListener('input', () => {
-    performSearch(searchInput.value);
   });
 
   const showError = (msg: string) => {
-    if (errorBox) {
-      errorBox.textContent = msg;
-      errorBox.style.display = 'block';
-    }
-  };
-
-  const hideError = () => {
-    if (errorBox) {
-      errorBox.textContent = '';
-      errorBox.style.display = 'none';
+    if (errorBoxStage3) {
+      errorBoxStage3.textContent = msg;
+      errorBoxStage3.style.display = 'block';
     }
   };
 
   const handleCreateCanvas = async () => {
+    if (!validateDimensions()) {
+      switchStage('dimensions');
+      return;
+    }
+
     const name = inputName?.value.trim() || t('canvas.input_name_placeholder');
     const width = parseInt(inputWidth?.value || '0', 10);
     const height = parseInt(inputHeight?.value || '0', 10);
-
-    hideError();
-
-    if (isNaN(width) || width <= 0 || isNaN(height) || height <= 0) {
-      showError('Las dimensiones deben ser mayores a 0.');
-      return;
-    }
-
-    if (width > 16384 || height > 16384) {
-      showError('Las dimensiones no pueden superar los 16384 píxeles.');
-      return;
-    }
 
     if (btnSubmit) {
       btnSubmit.disabled = true;
@@ -1319,204 +825,21 @@ export function openCreateCanvasModal(): void {
     }
 
     try {
-      let templateDataUrl: string | null = null;
-
-      if (activeTemplate) {
-        const variant = activeTemplate.variants?.[activeVariantIndex];
-        const imageSrc = variant?.imagePath || activeTemplate.imagePath;
-
-        if (imageSrc) {
-          try {
-            const offscreen = document.createElement('canvas');
-            offscreen.width = width;
-            offscreen.height = height;
-            const ctx = offscreen.getContext('2d');
-            if (ctx) {
-              ctx.imageSmoothingEnabled = false;
-              const img = new Image();
-              await new Promise<void>((resolve) => {
-                let resolved = false;
-                const done = () => {
-                  if (resolved) return;
-                  resolved = true;
-                  try {
-                    ctx.drawImage(img, 0, 0, width, height);
-                  } catch {}
-                  resolve();
-                };
-                img.onload = done;
-                img.onerror = () => {
-                  if (!resolved) {
-                    resolved = true;
-                    resolve();
-                  }
-                };
-                img.src = imageSrc;
-                if (img.complete && img.naturalWidth > 0) {
-                  done();
-                }
-              });
-              try {
-                templateDataUrl = offscreen.toDataURL('image/png');
-              } catch {}
-            }
-          } catch {}
-
-          if (!templateDataUrl) {
-            templateDataUrl = imageSrc;
-          }
-        }
-      }
-
-      const initialProject = {
-        version: 1,
-        fps: 8,
-        onionSkin: false,
-        activeFrameId: 'frame_1',
-        background: {
-          type: selectedBgType,
-          color: selectedSolidColor,
-          checkSize: selectedCheckSize,
-          checkColor1: '#ffffff',
-          checkColor2: '#e2e8f0',
-        },
-        animationTags: [],
-        frames: [
-          {
-            id: 'frame_1',
-            name: 'Cuadro 1',
-            activeLayerId: 'layer_1',
-            layers: [
-              {
-                id: 'layer_1',
-                name: activeTemplate ? activeTemplate.name : 'Capa 1',
-                visible: true,
-                opacity: 1.0,
-                data: templateDataUrl || '',
-              },
-            ],
-          },
-        ],
-      };
-      const initialData = JSON.stringify(initialProject);
-
-      let previewThumbnail: string | null = null;
-      const maxThumbDim = 320;
-      let thumbW = width;
-      let thumbH = height;
-      if (thumbW > maxThumbDim || thumbH > maxThumbDim) {
-        const ratio = Math.min(maxThumbDim / thumbW, maxThumbDim / thumbH);
-        thumbW = Math.max(1, Math.round(thumbW * ratio));
-        thumbH = Math.max(1, Math.round(thumbH * ratio));
-      }
-
-      const thumbCanvas = document.createElement('canvas');
-      thumbCanvas.width = thumbW;
-      thumbCanvas.height = thumbH;
-      const thumbCtx = thumbCanvas.getContext('2d');
-
-      if (thumbCtx) {
-        thumbCtx.imageSmoothingEnabled = false;
-        if (templateDataUrl) {
-          const thumbImg = new Image();
-          await new Promise<void>((r) => {
-            thumbImg.onload = () => {
-              try {
-                thumbCtx.drawImage(thumbImg, 0, 0, thumbW, thumbH);
-              } catch {}
-              r();
-            };
-            thumbImg.onerror = () => r();
-            thumbImg.src = templateDataUrl;
-            if (thumbImg.complete && thumbImg.naturalWidth > 0) {
-              try {
-                thumbCtx.drawImage(thumbImg, 0, 0, thumbW, thumbH);
-              } catch {}
-              r();
-            }
-          });
-        } else {
-          if (selectedBgType === 'solid') {
-            thumbCtx.fillStyle = selectedSolidColor;
-            thumbCtx.fillRect(0, 0, thumbW, thumbH);
-          } else {
-            const cs = Math.max(4, Math.round(selectedCheckSize * (thumbW / width)));
-            for (let y = 0; y < thumbH; y += cs) {
-              for (let x = 0; x < thumbW; x += cs) {
-                const isEven = (Math.floor(x / cs) + Math.floor(y / cs)) % 2 === 0;
-                thumbCtx.fillStyle = isEven ? '#ffffff' : '#e2e8f0';
-                thumbCtx.fillRect(x, y, cs, cs);
-              }
-            }
-          }
-        }
-        try {
-          previewThumbnail = thumbCanvas.toDataURL('image/png');
-        } catch {
-          previewThumbnail = templateDataUrl;
-        }
-      } else {
-        previewThumbnail = templateDataUrl;
-      }
-
-      if (currentUser) {
-        const res = await postApi(API_ROUTES.canvases.base, {
-          name,
-          width,
-          height,
-          unit: 'px',
-          data: initialData,
-          preview_thumbnail: previewThumbnail,
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.canvas) {
-            showToast(t('canvas.create_success'));
-            closeModal();
-            window.dispatchEvent(new CustomEvent('canvas-created', { detail: data.canvas }));
-            if (data.canvas.uuid) {
-              navigate('/design/' + data.canvas.uuid);
-            } else if (window.location.pathname !== '/') {
-              navigate('/');
-            }
-            return;
-          }
-        }
-
-        let errMsg = 'No se pudo crear el lienzo.';
-        try {
-          const errData = await res.json();
-          if (errData && errData.error) errMsg = errData.error;
-        } catch {}
-        showError(errMsg);
-      } else {
-        const localUuid = crypto.randomUUID();
-        const localCanvas = await saveLocalCanvas({
-          uuid: localUuid,
-          name,
-          width,
-          height,
-          unit: 'px',
-          data: initialData,
-          preview_thumbnail: previewThumbnail,
-          is_local: true,
-          created_at: new Date().toISOString(),
-        });
-
-        showToast(t('canvas.create_success'));
-        closeModal();
-        window.dispatchEvent(new CustomEvent('canvas-created', { detail: localCanvas }));
-        if (localCanvas && localCanvas.uuid) {
-          navigate('/design/' + localCanvas.uuid);
-        } else if (window.location.pathname !== '/') {
-          navigate('/');
-        }
-        return;
-      }
-    } catch {
-      showError('Error al crear el lienzo. Intenta de nuevo.');
-    } finally {
+      await createAndOpenCanvas({
+        name,
+        width,
+        height,
+        templateImage: currentTemplateImage,
+        bgType: selectedBgType,
+        solidColor: selectedSolidColor,
+        checkSize: selectedCheckSize,
+        fps: selectedFps,
+        onionSkin: selectedOnionSkin,
+      });
+      closeModal();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : t('canvas.error_save');
+      showError(msg);
       if (btnSubmit) {
         btnSubmit.disabled = false;
         btnSubmit.textContent = t('canvas.btn_create');
@@ -1526,134 +849,47 @@ export function openCreateCanvasModal(): void {
 
   btnSubmit?.addEventListener('click', handleCreateCanvas);
 
-  const card = backdrop.querySelector<HTMLElement>('[data-ref="modal-card-create-canvas"]');
-  const dragZone = backdrop.querySelector<HTMLElement>('[data-ref="modal-drag-zone"]');
-  let startY = 0;
-  let currentY = 0;
-  let startTime = 0;
-  let isDragging = false;
-  let activePointerId: number | null = null;
-  let isClosing = false;
-
-  const detachPointerListeners = () => {
-    window.removeEventListener('pointermove', onPointerMove);
-    window.removeEventListener('pointerup', onPointerUp);
-    window.removeEventListener('pointercancel', onPointerUp);
-  };
-
-  const onPointerDown = (e: PointerEvent) => {
-    if (isClosing || !card) return;
-    if (e.pointerType === 'mouse' && e.button !== 0) return;
-
-    isDragging = true;
-    activePointerId = e.pointerId;
-    startY = e.clientY;
-    currentY = startY;
-    startTime = performance.now();
-
-    try {
-      (dragZone || card).setPointerCapture(activePointerId);
-    } catch (_) {}
-
-    card.style.transition = 'none';
-    backdrop.style.transition = 'none';
-
-    window.addEventListener('pointermove', onPointerMove, { passive: true });
-    window.addEventListener('pointerup', onPointerUp);
-    window.addEventListener('pointercancel', onPointerUp);
-  };
-
-  const onPointerMove = (e: PointerEvent) => {
-    if (!isDragging || (activePointerId !== null && e.pointerId !== activePointerId)) return;
-    currentY = e.clientY;
-    const diff = currentY - startY;
-
-    if (card) {
-      if (diff > 0) {
-        card.style.transform = `translateY(${diff}px)`;
-        const progress = Math.min(diff / 240, 1);
-        backdrop.style.opacity = `${Math.max(0.2, 1 - progress * 0.8)}`;
-      } else {
-        const rubberDiff = Math.max(diff * 0.15, -24);
-        card.style.transform = `translateY(${rubberDiff}px)`;
-      }
-    }
-  };
-
-  const onPointerUp = (e: PointerEvent) => {
-    if (!isDragging || (activePointerId !== null && e.pointerId !== activePointerId)) return;
-    isDragging = false;
-    detachPointerListeners();
-
-    try {
-      if (activePointerId !== null) {
-        (dragZone || card)?.releasePointerCapture(activePointerId);
-      }
-    } catch (_) {}
-    activePointerId = null;
-
-    const diff = currentY - startY;
-    const elapsed = Math.max(1, performance.now() - startTime);
-    const velocity = diff / elapsed;
-
-    if (diff > 80 || (diff > 25 && velocity > 0.45)) {
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
       closeModal();
-    } else {
-      backdrop.style.transition = 'opacity 0.25s ease';
-      backdrop.style.opacity = '1';
-      if (card) {
-        card.style.transition = 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)';
-        card.style.transform = '';
+    } else if (e.key === 'Enter' && e.target === inputName) {
+      if (validateDimensions()) {
+        switchStage('background');
       }
     }
   };
 
-  dragZone?.addEventListener('pointerdown', onPointerDown);
-  dragZone?.addEventListener('lostpointercapture', onPointerUp);
+  const handleBackdropClick = (e: MouseEvent) => {
+    if (e.target === backdrop) {
+      closeModal();
+    }
+  };
 
   const closeModal = () => {
-    if (isClosing) return;
-    isClosing = true;
-
+    window.removeEventListener('keydown', handleKeyDown);
+    backdrop.removeEventListener('click', handleBackdropClick);
     backdrop.classList.remove('is-visible');
-    document.removeEventListener('keydown', onKeyDown);
-    detachPointerListeners();
-    dragZone?.removeEventListener('pointerdown', onPointerDown);
-    dragZone?.removeEventListener('lostpointercapture', onPointerUp);
-
+    document.body.classList.remove('modal-open');
+    if (templateSizeDropdownController) {
+      templateSizeDropdownController.destroy();
+      templateSizeDropdownController = null;
+    }
     setTimeout(() => {
-      carouselControllers.forEach((c) => c.destroy());
-      if (backdrop.parentNode) {
-        backdrop.parentNode.removeChild(backdrop);
-      }
-      document.body.classList.remove('modal-open');
-      if (activeCreateCanvasModal === modalInstance) {
+      backdrop.remove();
+      if (activeCreateCanvasModal && activeCreateCanvasModal.close === closeModal) {
         activeCreateCanvasModal = null;
       }
     }, 200);
   };
 
-  const modalInstance = { close: closeModal };
-  activeCreateCanvasModal = modalInstance;
+  btnClose?.addEventListener('click', closeModal);
+  backdrop.addEventListener('click', handleBackdropClick);
+  window.addEventListener('keydown', handleKeyDown);
 
-  const closeBtn = backdrop.querySelector<HTMLElement>('[data-ref="btn-modal-close"]');
-  closeBtn?.addEventListener('click', (e) => {
-    e.preventDefault();
-    closeModal();
-  });
+  activeCreateCanvasModal = { close: closeModal };
 
-  backdrop.addEventListener('click', (e) => {
-    if (e.target === backdrop) {
-      e.preventDefault();
-      closeModal();
-    }
-  });
-
-  const onKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      closeModal();
-    }
-  };
-  document.addEventListener('keydown', onKeyDown);
+  setTimeout(() => {
+    inputName?.focus();
+    inputName?.select();
+  }, 100);
 }

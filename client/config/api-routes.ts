@@ -22,6 +22,11 @@ export const API_ROUTES = {
     teams: (uuid: string) => `/api/canvases/${encodeURIComponent(uuid)}/teams`,
     token: (uuid: string) => `/api/canvases/${encodeURIComponent(uuid)}/token`,
   },
+  favorites: {
+    base: '/api/favorites',
+    byType: (type: string) => `/api/favorites?type=${encodeURIComponent(type)}`,
+    toggle: '/api/favorites/toggle',
+  },
   teams: {
     base: '/api/teams',
     byId: (uuid: string) => `/api/teams/${encodeURIComponent(uuid)}`,

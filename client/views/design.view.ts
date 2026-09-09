@@ -15,8 +15,10 @@ import { CanvasAction, CanvasActionContext, CanvasFrame, CanvasLayer } from '../
 import { CanvasItem, CanvasMember, SearchUserResult } from '../types/canvas.types.js';
 import { CanvasTeamItem, Team } from '../types/team.types.js';
 import { CarouselController, initCarouselScroll, setupDropdown } from '../utils/dom.util.js';
+import { applyOutlineDirectToLayer, generatePixelOutline } from '../utils/pixel-effects.util.js';
 import { PixelFontFamily, renderPixelTextCanvas } from '../utils/pixel-font.util.js';
 import { getCachedImage, PIXEL_SHAPES, PixelShape, renderShapeCanvas, renderShapeThumbnail, ShapeCategory, ShapeColorMode } from '../utils/pixel-shapes.util.js';
+import { DetectedSpriteRect, detectSpriteIslands, extractSpriteCanvas, sliceByGrid } from '../utils/pixel-slicer.util.js';
 import { globalColorReplace, scanlineFloodFill } from '../utils/scanline-fill.util.js';
 import { createErrorView } from './error.view.js';
 
@@ -75,6 +77,8 @@ interface SerializedCanvasProject {
 interface UndoStep {
   frameId: string;
   layerId: string;
+  x: number;
+  y: number;
   beforeData: ImageData;
   afterData: ImageData;
 }
@@ -663,6 +667,8 @@ class DesignController {
   private undoBtn: HTMLButtonElement | null = null;
   private redoBtn: HTMLButtonElement | null = null;
   private resizeCanvasBtn: HTMLButtonElement | null = null;
+  private btnOpenSlicer: HTMLButtonElement | null = null;
+  private shapeOutlineBtn: HTMLButtonElement | null = null;
   private btnCanvasRotateCw: HTMLButtonElement | null = null;
   private btnCanvasRotateCcw: HTMLButtonElement | null = null;
   private btnCanvasFlipH: HTMLButtonElement | null = null;
@@ -815,6 +821,7 @@ class DesignController {
     this.undoBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-undo"]');
     this.redoBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-redo"]');
     this.resizeCanvasBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-resize-canvas"]');
+    this.btnOpenSlicer = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-open-slicer"]');
     this.btnCanvasRotateCw = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-canvas-rotate-cw"]');
     this.btnCanvasRotateCcw = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-canvas-rotate-ccw"]');
     this.btnCanvasFlipH = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-canvas-flip-h"]');
@@ -902,6 +909,7 @@ class DesignController {
     this.shapesGridEl = this.container.querySelector<HTMLElement>('[data-ref="shapes-grid"]');
     this.shapeMiniToolbarEl = this.container.querySelector<HTMLElement>('[data-ref="design-shape-minitoolbar"]');
     this.shapeInjectBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-shape-inject"]');
+    this.shapeOutlineBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-shape-outline"]');
     this.shapeFlipHBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-shape-flip-h"]');
     this.shapeFlipVBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-shape-flip-v"]');
     this.shapeRotateBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-shape-rotate"]');
@@ -2680,22 +2688,63 @@ class DesignController {
     const lId = layerId || layer?.id || '';
     if (!fId || !lId) return;
 
+    const w = beforeData.width;
+    const h = beforeData.height;
     const beforeBuf = new Uint32Array(beforeData.data.buffer);
     const afterBuf = new Uint32Array(afterData.data.buffer);
-    let changed = false;
-    for (let i = 0; i < beforeBuf.length; i++) {
-      if (beforeBuf[i] !== afterBuf[i]) {
-        changed = true;
-        break;
+
+    let minX = w;
+    let minY = h;
+    let maxX = -1;
+    let maxY = -1;
+
+    for (let y = 0; y < h; y++) {
+      const rowOffset = y * w;
+      for (let x = 0; x < w; x++) {
+        if (beforeBuf[rowOffset + x] !== afterBuf[rowOffset + x]) {
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+        }
       }
     }
-    if (!changed) return;
+
+    if (maxX === -1) return;
+
+    const boxW = maxX - minX + 1;
+    const boxH = maxY - minY + 1;
+
+    let subBefore: ImageData;
+    let subAfter: ImageData;
+
+    if (boxW === w && boxH === h && minX === 0 && minY === 0) {
+      subBefore = beforeData;
+      subAfter = afterData;
+    } else {
+      subBefore = new ImageData(boxW, boxH);
+      subAfter = new ImageData(boxW, boxH);
+
+      const subBeforeBuf = new Uint32Array(subBefore.data.buffer);
+      const subAfterBuf = new Uint32Array(subAfter.data.buffer);
+
+      for (let by = 0; by < boxH; by++) {
+        const srcRowOffset = (minY + by) * w;
+        const dstRowOffset = by * boxW;
+        for (let bx = 0; bx < boxW; bx++) {
+          subBeforeBuf[dstRowOffset + bx] = beforeBuf[srcRowOffset + (minX + bx)];
+          subAfterBuf[dstRowOffset + bx] = afterBuf[srcRowOffset + (minX + bx)];
+        }
+      }
+    }
 
     this.undoStack.push({
+      afterData: subAfter,
+      beforeData: subBefore,
       frameId: fId,
       layerId: lId,
-      beforeData,
-      afterData,
+      x: minX,
+      y: minY,
     });
     if (this.undoStack.length > 30) {
       this.undoStack.shift();
@@ -2712,7 +2761,7 @@ class DesignController {
     const frame = this.frames.find((f) => f.id === step.frameId);
     const layer = frame?.layers.find((l) => l.id === step.layerId);
     if (layer) {
-      layer.ctx.putImageData(step.beforeData, 0, 0);
+      layer.ctx.putImageData(step.beforeData, step.x ?? 0, step.y ?? 0);
       dispatchCanvasAction(this.getActionContext(), {
         payload: {
           dataUrl: layer.canvas.toDataURL('image/png'),
@@ -2734,7 +2783,7 @@ class DesignController {
     const frame = this.frames.find((f) => f.id === step.frameId);
     const layer = frame?.layers.find((l) => l.id === step.layerId);
     if (layer) {
-      layer.ctx.putImageData(step.afterData, 0, 0);
+      layer.ctx.putImageData(step.afterData, step.x ?? 0, step.y ?? 0);
       dispatchCanvasAction(this.getActionContext(), {
         payload: {
           dataUrl: layer.canvas.toDataURL('image/png'),
@@ -2761,124 +2810,579 @@ class DesignController {
     }
   }
 
-  private openResizeCanvasModal(): void {
+  private applyShapeOutline(): void {
+    if (!this.isPlacingShape || !this.shapeCanvas) return;
+    const result = generatePixelOutline(this.shapeCanvas, '#000000', 1);
+    this.shapeCanvas = result.canvas;
+    this.shapeTemplateW = result.canvas.width;
+    this.shapeTemplateH = result.canvas.height;
+    this.shapeTemplateX += result.offsetX;
+    this.shapeTemplateY += result.offsetY;
+    this.requestRedraw();
+    this.positionShapeMiniToolbar();
+    showToast('Contorno de 1px aplicado a la figura', 'info');
+  }
+
+  private applySelectionOutline(outlineColor: string): void {
+    if (!this.floatingSelection && this.selectionMask) {
+      this.liftSelectionToFloating();
+    }
+
+    if (this.floatingSelection) {
+      const result = generatePixelOutline(this.floatingSelection.canvas, outlineColor, 1);
+      this.floatingSelection.canvas = result.canvas;
+      this.floatingSelection.ctx = result.canvas.getContext('2d')!;
+      this.floatingSelection.x += result.offsetX;
+      this.floatingSelection.y += result.offsetY;
+      this.floatingSelection.width = result.canvas.width;
+      this.floatingSelection.height = result.canvas.height;
+      this.requestRedraw();
+      showToast(`Contorno de 1px (${outlineColor}) aplicado a la selección`, 'info');
+      return;
+    }
+
+    const layer = this.getActiveLayer();
+    if (!layer || !layer.visible) return;
+
+    const beforeData = layer.ctx.getImageData(0, 0, this.canvasWidth, this.canvasHeight);
+    const changed = applyOutlineDirectToLayer(layer.ctx, this.canvasWidth, this.canvasHeight, outlineColor);
+    if (changed) {
+      const afterData = layer.ctx.getImageData(0, 0, this.canvasWidth, this.canvasHeight);
+      this.pushUndoStep(beforeData, afterData, layer.id, this.activeFrameId);
+      this.scheduleAutoSave();
+      sendCanvasAction(this.canvasUuid, 'update_layer_image', {
+        dataUrl: layer.canvas.toDataURL('image/png'),
+        frameId: this.activeFrameId,
+        layerId: layer.id,
+      });
+      this.renderLayersCards();
+      this.requestRedraw();
+      showToast(`Contorno de 1px (${outlineColor}) aplicado a la capa activa`, 'success');
+    }
+  }
+
+  private openSpriteSlicerModal(): void {
+    let loadedImage: HTMLImageElement | null = null;
+    let sourceCanvas: HTMLCanvasElement | null = null;
+    let detectedRects: DetectedSpriteRect[] = [];
+    let slicerMode: 'auto' | 'grid' = 'auto';
+    let gridTileSize = 16;
+
     const modal = openModal({
-      title: 'Redimensionar lienzo',
-      description: 'Ajusta el ancho y alto en píxeles de tu espacio de trabajo.',
       bodyHtml: `
-        <div class="modal-canvas-panel__form" data-ref="form-custom-size">
-          <div class="settings-group" data-ref="custom-size-group-width">
-            <div class="settings-item" data-ref="custom-size-item-width">
-              <div class="settings-item__content" data-ref="custom-size-width-content">
-                <div class="settings-item__text" data-ref="custom-size-width-text">
-                  <h2 class="settings-item__title" data-ref="custom-size-width-title" data-i18n="canvas.canvas_width_title">Ancho del lienzo</h2>
-                  <p class="settings-item__desc" data-ref="custom-size-width-desc" data-i18n="canvas.canvas_width_desc">Define la anchura horizontal en píxeles (PX) para tu área de dibujo.</p>
-                </div>
-              </div>
-              <div class="settings-item__actions" data-ref="custom-size-width-actions">
-                <div class="component-inline-control component-inline-control--fixed" data-ref="inline-control-width">
-                  <div class="component-inline-control__group" data-ref="inline-group-width-dec">
-                    <button type="button" class="component-inline-control__btn" data-ref="btn-width-dec-large" data-tooltip="-16 px" aria-label="Disminuir 16 píxeles">
-                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#keyboard_double_arrow_left" xlink:href="/icons.svg#keyboard_double_arrow_left"></use></svg>
-                    </button>
-                    <button type="button" class="component-inline-control__btn" data-ref="btn-width-dec" data-tooltip="-1 px" aria-label="Disminuir 1 píxel">
-                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left" xlink:href="/icons.svg#chevron_left"></use></svg>
-                    </button>
-                  </div>
-                  <input class="component-inline-control__input" data-ref="input-canvas-width" type="number" min="1" max="16384" value="${this.canvasWidth}" autocomplete="off" />
-                  <div class="component-inline-control__group" data-ref="inline-group-width-inc">
-                    <button type="button" class="component-inline-control__btn" data-ref="btn-width-inc" data-tooltip="+1 px" aria-label="Aumentar 1 píxel">
-                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right" xlink:href="/icons.svg#chevron_right"></use></svg>
-                    </button>
-                    <button type="button" class="component-inline-control__btn" data-ref="btn-width-inc-large" data-tooltip="+16 px" aria-label="Aumentar 16 píxeles">
-                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#keyboard_double_arrow_right" xlink:href="/icons.svg#keyboard_double_arrow_right"></use></svg>
-                    </button>
-                  </div>
-                </div>
-              </div>
+        <div class="modal-canvas-panel__form" data-ref="form-slicer">
+          <input class="slicer-file-input" data-ref="slicer-file-input" type="file" accept="image/png, image/webp, image/jpeg" style="display: none;" />
+
+          <div class="slicer-drop-zone" data-ref="slicer-drop-zone">
+            <span class="component-icon" style="font-size: 38px; color: var(--color-primary, #6366f1);">grid_view</span>
+            <div style="font-weight: 600; font-size: 15px;">Arrastra una hoja de sprites aquí</div>
+            <div style="font-size: 12.5px; color: var(--text-secondary);">Soporta imágenes transparentes (PNG, WebP) o fondos sólidos</div>
+            <div style="display: flex; gap: 8px; margin-top: 6px;">
+              <button type="button" class="btn btn--h34 btn--black" data-ref="btn-slicer-browse">Seleccionar archivo</button>
+              <button type="button" class="btn btn--h34 btn--outline" data-ref="btn-slicer-paste">Pegar del portapapeles</button>
             </div>
           </div>
 
-          <div class="settings-group" data-ref="custom-size-group-height">
-            <div class="settings-item" data-ref="custom-size-item-height">
-              <div class="settings-item__content" data-ref="custom-size-height-content">
-                <div class="settings-item__text" data-ref="custom-size-height-text">
-                  <h2 class="settings-item__title" data-ref="custom-size-height-title" data-i18n="canvas.canvas_height_title">Alto del lienzo</h2>
-                  <p class="settings-item__desc" data-ref="custom-size-height-desc" data-i18n="canvas.canvas_height_desc">Define la altura vertical en píxeles (PX) para tu área de dibujo.</p>
-                </div>
+          <div class="slicer-workspace" data-ref="slicer-workspace" style="display: none; flex-direction: column; gap: 14px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+              <div class="design-options-tray__badges" style="display: flex; gap: 6px;">
+                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable is-active" data-ref="btn-slicer-mode-auto">
+                  <span class="component-icon">auto_fix_high</span>
+                  <span>Islas de transparencia</span>
+                </button>
+                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-slicer-mode-grid">
+                  <span class="component-icon">grid_on</span>
+                  <span>Cuadrícula (Grid)</span>
+                </button>
               </div>
-              <div class="settings-item__actions" data-ref="custom-size-height-actions">
-                <div class="component-inline-control component-inline-control--fixed" data-ref="inline-control-height">
-                  <div class="component-inline-control__group" data-ref="inline-group-height-dec">
-                    <button type="button" class="component-inline-control__btn" data-ref="btn-height-dec-large" data-tooltip="-16 px" aria-label="Disminuir 16 píxeles">
-                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#keyboard_double_arrow_left" xlink:href="/icons.svg#keyboard_double_arrow_left"></use></svg>
-                    </button>
-                    <button type="button" class="component-inline-control__btn" data-ref="btn-height-dec" data-tooltip="-1 px" aria-label="Disminuir 1 píxel">
-                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left" xlink:href="/icons.svg#chevron_left"></use></svg>
-                    </button>
-                  </div>
-                  <input class="component-inline-control__input" data-ref="input-canvas-height" type="number" min="1" max="16384" value="${this.canvasHeight}" autocomplete="off" />
-                  <div class="component-inline-control__group" data-ref="inline-group-height-inc">
-                    <button type="button" class="component-inline-control__btn" data-ref="btn-height-inc" data-tooltip="+1 px" aria-label="Aumentar 1 píxel">
-                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right" xlink:href="/icons.svg#chevron_right"></use></svg>
-                    </button>
-                    <button type="button" class="component-inline-control__btn" data-ref="btn-height-inc-large" data-tooltip="+16 px" aria-label="Aumentar 16 píxeles">
-                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#keyboard_double_arrow_right" xlink:href="/icons.svg#keyboard_double_arrow_right"></use></svg>
-                    </button>
-                  </div>
-                </div>
+
+              <div class="design-toolbar-badge" data-ref="slicer-count-badge" style="font-weight: 600;">
+                0 sprites detectados
               </div>
+            </div>
+
+            <div class="slicer-grid-controls" data-ref="slicer-grid-controls" style="display: none; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <span style="font-size: 12px; color: var(--text-secondary);">Tamaño de celda:</span>
+              <div class="design-options-tray__badges" style="display: flex; gap: 4px;">
+                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable is-active" data-ref="btn-slicer-tile-16" data-tile="16">16×16</button>
+                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-slicer-tile-24" data-tile="24">24×24</button>
+                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-slicer-tile-32" data-tile="32">32×32</button>
+                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-slicer-tile-48" data-tile="48">48×48</button>
+                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-slicer-tile-64" data-tile="64">64×64</button>
+              </div>
+            </div>
+
+            <div class="slicer-preview-wrap">
+              <canvas class="slicer-preview-canvas" data-ref="slicer-preview-canvas"></canvas>
+            </div>
+
+            <div class="slicer-gallery-wrap">
+              <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 6px;">Sprites detectados (clic en uno para inyectarlo):</div>
+              <div class="slicer-cards-grid" data-ref="slicer-cards-grid"></div>
+            </div>
+
+            <div class="modal-canvas-panel__actions" style="margin-top: 4px;">
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button type="button" class="btn btn--h40 btn--black" data-ref="btn-slicer-import-frames" style="flex: 1;">
+                  <span class="component-icon">animation</span>
+                  <span>Importar como fotogramas</span>
+                </button>
+                <button type="button" class="btn btn--h40 btn--outline" data-ref="btn-slicer-import-layers" style="flex: 1;">
+                  <span class="component-icon">layers</span>
+                  <span>Importar como capas</span>
+                </button>
+              </div>
+              <button type="button" class="btn btn--h34 btn--outline" data-ref="btn-slicer-reset">
+                <span class="component-icon">restart_alt</span>
+                <span>Cargar otra imagen</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="banner banner--danger" data-ref="slicer-error" style="display: none;"></div>
+        </div>
+      `,
+      description: 'Sube una hoja de sprites para detectar automáticamente cada elemento o cortarla en cuadrícula.',
+      showCancel: false,
+      showConfirm: false,
+      size: 'lg',
+      title: 'Separador de sprites (Auto-Slicer)',
+    });
+
+    const backdrop = modal.backdrop;
+    const fileInput = backdrop.querySelector<HTMLInputElement>('[data-ref="slicer-file-input"]');
+    const dropZone = backdrop.querySelector<HTMLElement>('[data-ref="slicer-drop-zone"]');
+    const workspaceEl = backdrop.querySelector<HTMLElement>('[data-ref="slicer-workspace"]');
+    const btnBrowse = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-slicer-browse"]');
+    const btnPaste = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-slicer-paste"]');
+    const btnModeAuto = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-slicer-mode-auto"]');
+    const btnModeGrid = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-slicer-mode-grid"]');
+    const gridControlsEl = backdrop.querySelector<HTMLElement>('[data-ref="slicer-grid-controls"]');
+    const countBadgeEl = backdrop.querySelector<HTMLElement>('[data-ref="slicer-count-badge"]');
+    const previewCanvas = backdrop.querySelector<HTMLCanvasElement>('[data-ref="slicer-preview-canvas"]');
+    const cardsGridEl = backdrop.querySelector<HTMLElement>('[data-ref="slicer-cards-grid"]');
+    const btnImportFrames = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-slicer-import-frames"]');
+    const btnImportLayers = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-slicer-import-layers"]');
+    const btnReset = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-slicer-reset"]');
+    const errorBanner = backdrop.querySelector<HTMLElement>('[data-ref="slicer-error"]');
+
+    const updateSlicing = () => {
+      if (!sourceCanvas) return;
+
+      if (slicerMode === 'auto') {
+        detectedRects = detectSpriteIslands(sourceCanvas, 10, 1);
+      } else {
+        detectedRects = sliceByGrid(sourceCanvas, gridTileSize, gridTileSize, 0);
+      }
+
+      if (countBadgeEl) {
+        countBadgeEl.textContent = `${detectedRects.length} sprites detectados`;
+      }
+
+      renderSlicerPreview();
+      renderSlicerCards();
+    };
+
+    const renderSlicerPreview = () => {
+      if (!previewCanvas || !sourceCanvas) return;
+      const w = sourceCanvas.width;
+      const h = sourceCanvas.height;
+      previewCanvas.width = w;
+      previewCanvas.height = h;
+
+      const pCtx = previewCanvas.getContext('2d')!;
+      pCtx.imageSmoothingEnabled = false;
+      pCtx.drawImage(sourceCanvas, 0, 0);
+
+      detectedRects.forEach((rect, idx) => {
+        pCtx.fillStyle = 'rgba(34, 197, 94, 0.18)';
+        pCtx.fillRect(rect.x, rect.y, rect.width, rect.height);
+        pCtx.strokeStyle = '#22c55e';
+        pCtx.lineWidth = 1;
+        pCtx.strokeRect(rect.x + 0.5, rect.y + 0.5, rect.width - 1, rect.height - 1);
+
+        pCtx.fillStyle = '#22c55e';
+        pCtx.font = '9px monospace';
+        pCtx.fillText(`${idx + 1}`, rect.x + 2, rect.y + 9);
+      });
+    };
+
+    const renderSlicerCards = () => {
+      if (!cardsGridEl || !sourceCanvas) return;
+      cardsGridEl.innerHTML = '';
+
+      detectedRects.forEach((rect, idx) => {
+        const spriteCanvas = extractSpriteCanvas(sourceCanvas!, rect);
+        const card = document.createElement('div');
+        card.className = 'slicer-card';
+
+        const thumb = document.createElement('div');
+        thumb.className = 'slicer-card__thumb';
+        thumb.appendChild(spriteCanvas);
+
+        const sizeLabel = document.createElement('span');
+        sizeLabel.className = 'slicer-card__size';
+        sizeLabel.textContent = `${rect.width}×${rect.height}`;
+
+        card.appendChild(thumb);
+        card.appendChild(sizeLabel);
+
+        card.style.cursor = 'pointer';
+        card.title = `Sprite #${idx + 1} (${rect.width}×${rect.height}px) - Clic para inyectar en lienzo`;
+        card.addEventListener('click', () => {
+          this.commitFloatingSelection();
+          const targetCanvas = extractSpriteCanvas(sourceCanvas!, rect);
+          this.floatingSelection = {
+            canvas: targetCanvas,
+            ctx: targetCanvas.getContext('2d')!,
+            height: targetCanvas.height,
+            width: targetCanvas.width,
+            x: Math.max(0, Math.floor((this.canvasWidth - targetCanvas.width) / 2)),
+            y: Math.max(0, Math.floor((this.canvasHeight - targetCanvas.height) / 2)),
+          };
+          this.startMarchingAntsLoop();
+          this.requestRedraw();
+          modal.close();
+          showToast(`Sprite #${idx + 1} colocado como selección flotante`, 'info');
+        });
+
+        cardsGridEl.appendChild(card);
+      });
+    };
+
+    const handleImageLoaded = (img: HTMLImageElement) => {
+      loadedImage = img;
+      sourceCanvas = document.createElement('canvas');
+      sourceCanvas.width = img.naturalWidth || img.width;
+      sourceCanvas.height = img.naturalHeight || img.height;
+      const sCtx = sourceCanvas.getContext('2d')!;
+      sCtx.drawImage(img, 0, 0);
+
+      if (dropZone) dropZone.style.display = 'none';
+      if (workspaceEl) workspaceEl.style.display = 'flex';
+      updateSlicing();
+    };
+
+    const processFile = (file: File) => {
+      if (!file.type.startsWith('image/')) {
+        if (errorBanner) {
+          errorBanner.textContent = 'Por favor selecciona un archivo de imagen válido (PNG, WebP, JPG).';
+          errorBanner.style.display = 'block';
+        }
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => handleImageLoaded(img);
+        img.src = reader.result as string;
+      };
+      reader.readAsDataURL(file);
+    };
+
+    btnBrowse?.addEventListener('click', () => fileInput?.click());
+    fileInput?.addEventListener('change', () => {
+      const file = fileInput.files?.[0];
+      if (file) processFile(file);
+    });
+
+    btnPaste?.addEventListener('click', async () => {
+      try {
+        const items = await navigator.clipboard.read();
+        for (const item of items) {
+          for (const type of item.types) {
+            if (type.startsWith('image/')) {
+              const blob = await item.getType(type);
+              const img = new Image();
+              img.onload = () => handleImageLoaded(img);
+              img.src = URL.createObjectURL(blob);
+              return;
+            }
+          }
+        }
+        showToast('No se encontró ninguna imagen en el portapapeles', 'info');
+      } catch {
+        showToast('Usa Ctrl+V o selecciona un archivo para cargar la imagen', 'info');
+      }
+    });
+
+    dropZone?.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('is-dragover');
+    });
+    dropZone?.addEventListener('dragleave', () => dropZone.classList.remove('is-dragover'));
+    dropZone?.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('is-dragover');
+      const file = e.dataTransfer?.files?.[0];
+      if (file) processFile(file);
+    });
+
+    btnModeAuto?.addEventListener('click', () => {
+      slicerMode = 'auto';
+      btnModeAuto.classList.add('is-active');
+      btnModeGrid?.classList.remove('is-active');
+      if (gridControlsEl) gridControlsEl.style.display = 'none';
+      updateSlicing();
+    });
+
+    btnModeGrid?.addEventListener('click', () => {
+      slicerMode = 'grid';
+      btnModeGrid.classList.add('is-active');
+      btnModeAuto?.classList.remove('is-active');
+      if (gridControlsEl) gridControlsEl.style.display = 'flex';
+      updateSlicing();
+    });
+
+    backdrop.querySelectorAll<HTMLButtonElement>('[data-ref^="btn-slicer-tile-"]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        backdrop.querySelectorAll('[data-ref^="btn-slicer-tile-"]').forEach((b) => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        gridTileSize = parseInt(btn.getAttribute('data-tile') || '16', 10);
+        updateSlicing();
+      });
+    });
+
+    btnReset?.addEventListener('click', () => {
+      loadedImage = null;
+      sourceCanvas = null;
+      detectedRects = [];
+      if (fileInput) fileInput.value = '';
+      if (workspaceEl) workspaceEl.style.display = 'none';
+      if (dropZone) dropZone.style.display = 'flex';
+    });
+
+    btnImportFrames?.addEventListener('click', () => {
+      if (!sourceCanvas || detectedRects.length === 0) return;
+
+      const firstRect = detectedRects[0];
+      const firstCanvas = extractSpriteCanvas(sourceCanvas, firstRect);
+      const activeLayer = this.getActiveLayer();
+      if (activeLayer) {
+        const destX = Math.max(0, Math.floor((this.canvasWidth - firstCanvas.width) / 2));
+        const destY = Math.max(0, Math.floor((this.canvasHeight - firstCanvas.height) / 2));
+        activeLayer.ctx.drawImage(firstCanvas, destX, destY);
+      }
+
+      for (let i = 1; i < detectedRects.length; i++) {
+        const r = detectedRects[i];
+        const sCanvas = extractSpriteCanvas(sourceCanvas, r);
+        this.addFrame(true, false, undefined, `Cuadro ${i + 1}`);
+        const currentLayer = this.getActiveLayer();
+        if (currentLayer) {
+          const destX = Math.max(0, Math.floor((this.canvasWidth - sCanvas.width) / 2));
+          const destY = Math.max(0, Math.floor((this.canvasHeight - sCanvas.height) / 2));
+          currentLayer.ctx.drawImage(sCanvas, destX, destY);
+        }
+      }
+
+      this.scheduleAutoSave();
+      this.renderFramesCards();
+      this.renderLayersCards();
+      this.requestRedraw();
+      modal.close();
+      showToast(`${detectedRects.length} sprites importados como fotogramas de animación`, 'success');
+    });
+
+    btnImportLayers?.addEventListener('click', () => {
+      if (!sourceCanvas || detectedRects.length === 0) return;
+
+      detectedRects.forEach((rect, idx) => {
+        const sCanvas = extractSpriteCanvas(sourceCanvas!, rect);
+        this.addLayer(true, undefined, `Sprite ${idx + 1}`);
+        const newLayer = this.getActiveLayer();
+        if (newLayer) {
+          newLayer.ctx.drawImage(sCanvas, rect.x, rect.y);
+        }
+      });
+
+      this.scheduleAutoSave();
+      this.renderLayersCards();
+      this.requestRedraw();
+      modal.close();
+      showToast(`${detectedRects.length} sprites importados como capas independientes`, 'success');
+    });
+  }
+
+  private openResizeCanvasModal(): void {
+    let currentMode: 'scale' | 'anchor' = 'scale';
+    let currentAnchor: 'top-left' | 'top-center' | 'top-right' | 'center-left' | 'center' | 'center-right' | 'bottom-left' | 'bottom-center' | 'bottom-right' = 'center';
+    let currentScaleFit: 'fit' | 'stretch' = 'fit';
+    let isAspectLocked = true;
+    const initialW = this.canvasWidth;
+    const initialH = this.canvasHeight;
+    let currentAspect = initialW / initialH;
+
+    const modal = openModal({
+      bodyHtml: `
+        <div class="modal-canvas-panel__form" data-ref="form-custom-size">
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Presets rápidos estilo Canva:</span>
+            <div class="design-options-tray__badges" style="display: flex; flex-wrap: wrap; gap: 6px;">
+              <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-preset-instagram" data-w="1080" data-h="1080">1080×1080 (Instagram)</button>
+              <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-preset-reels" data-w="1080" data-h="1920">1080×1920 (Reels/TikTok)</button>
+              <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-preset-twitter" data-w="1500" data-h="500">1500×500 (Twitter)</button>
+              <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-preset-steam" data-w="616" data-h="353">616×353 (Steam)</button>
+              <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-preset-twitch" data-w="112" data-h="112">112×112 (Twitch)</button>
+              <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-preset-2x" data-w="${this.canvasWidth * 2}" data-h="${this.canvasHeight * 2}">2× (${this.canvasWidth * 2}×${this.canvasHeight * 2})</button>
+              <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-preset-4x" data-w="${this.canvasWidth * 4}" data-h="${this.canvasHeight * 4}">4× (${this.canvasWidth * 4}×${this.canvasHeight * 4})</button>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px; border-radius: 10px; background: var(--bg-surface-elevated, rgba(125, 125, 125, 0.06)); border: 1px solid var(--border-color);">
+            <div style="flex: 1;">
+              <span style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px;">Ancho (px)</span>
+              <input class="component-inline-control__input" data-ref="input-canvas-width" type="number" min="1" max="16384" value="${this.canvasWidth}" style="width: 100%; height: 38px; border-radius: 6px; border: 1px solid var(--border-color); text-align: center; font-weight: 600;" />
+            </div>
+
+            <button type="button" class="design-toolbar-btn is-active" data-ref="btn-lock-aspect" data-tooltip="Mantener proporción de aspecto" style="margin-top: 16px;">
+              <span class="component-icon" data-ref="lock-aspect-icon">lock</span>
+            </button>
+
+            <div style="flex: 1;">
+              <span style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px;">Alto (px)</span>
+              <input class="component-inline-control__input" data-ref="input-canvas-height" type="number" min="1" max="16384" value="${this.canvasHeight}" style="width: 100%; height: 38px; border-radius: 6px; border: 1px solid var(--border-color); text-align: center; font-weight: 600;" />
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Estrategia de redimensión:</span>
+            <div class="design-options-tray__badges" style="display: flex; gap: 6px;">
+              <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable is-active" data-ref="btn-strategy-scale">
+                <span class="component-icon">aspect_ratio</span>
+                <span>Escalar Píxeles (Nearest Neighbor)</span>
+              </button>
+              <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-strategy-anchor">
+                <span class="component-icon">crop_free</span>
+                <span>Expandir / Recortar (Anclaje)</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="resize-scale-options" data-ref="resize-scale-options" style="display: flex; flex-direction: column; gap: 6px; padding: 12px; border-radius: 8px; background: var(--bg-surface-elevated, rgba(125,125,125,0.04)); border: 1px solid var(--border-color);">
+            <span style="font-size: 12px; color: var(--text-secondary);">Ajuste proporcional:</span>
+            <div class="design-options-tray__badges" style="display: flex; gap: 6px;">
+              <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable is-active" data-ref="btn-scale-fit">Ajustar proporción (Fit)</button>
+              <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-scale-stretch">Estirar contenido (Stretch)</button>
+            </div>
+          </div>
+
+          <div class="resize-anchor-options" data-ref="resize-anchor-options" style="display: none; flex-direction: column; align-items: center; gap: 8px; padding: 12px; border-radius: 8px; background: var(--bg-surface-elevated, rgba(125,125,125,0.04)); border: 1px solid var(--border-color);">
+            <span style="font-size: 12px; color: var(--text-secondary);">Punto de anclaje del contenido existente:</span>
+            <div class="anchor-grid" data-ref="anchor-grid">
+              <button type="button" class="anchor-grid__cell" data-ref="anchor-top-left" data-anchor="top-left" title="Arriba Izquierda">↖</button>
+              <button type="button" class="anchor-grid__cell" data-ref="anchor-top-center" data-anchor="top-center" title="Arriba Centro">↑</button>
+              <button type="button" class="anchor-grid__cell" data-ref="anchor-top-right" data-anchor="top-right" title="Arriba Derecha">↗</button>
+              <button type="button" class="anchor-grid__cell" data-ref="anchor-center-left" data-anchor="center-left" title="Centro Izquierda">←</button>
+              <button type="button" class="anchor-grid__cell is-active" data-ref="anchor-center" data-anchor="center" title="Centro">●</button>
+              <button type="button" class="anchor-grid__cell" data-ref="anchor-center-right" data-anchor="center-right" title="Centro Derecha">→</button>
+              <button type="button" class="anchor-grid__cell" data-ref="anchor-bottom-left" data-anchor="bottom-left" title="Abajo Izquierda">↙</button>
+              <button type="button" class="anchor-grid__cell" data-ref="anchor-bottom-center" data-anchor="bottom-center" title="Abajo Centro">↓</button>
+              <button type="button" class="anchor-grid__cell" data-ref="anchor-bottom-right" data-anchor="bottom-right" title="Abajo Derecha">↘</button>
             </div>
           </div>
 
           <div class="modal-canvas-panel__actions" data-ref="custom-size-actions">
             <button type="button" class="btn btn--h44 btn--black btn--w-full" data-ref="btn-submit-resize-canvas">
-              Redimensionar
+              Redimensionar lienzo
             </button>
             <div class="banner banner--danger" data-ref="resize-canvas-error" style="display: none;"></div>
           </div>
         </div>
       `,
+      description: 'Ajusta las dimensiones del lienzo o adapta tu obra a formatos de redes sociales.',
       showCancel: false,
       showConfirm: false,
-      size: 'sm',
+      size: 'md',
+      title: 'Magic Resize Adaptativo',
     });
 
     const backdrop = modal.backdrop;
     const inputW = backdrop.querySelector<HTMLInputElement>('[data-ref="input-canvas-width"]');
     const inputH = backdrop.querySelector<HTMLInputElement>('[data-ref="input-canvas-height"]');
-    const btnWDecLarge = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-width-dec-large"]');
-    const btnWDec = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-width-dec"]');
-    const btnWInc = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-width-inc"]');
-    const btnWIncLarge = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-width-inc-large"]');
-    const btnHDecLarge = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-height-dec-large"]');
-    const btnHDec = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-height-dec"]');
-    const btnHInc = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-height-inc"]');
-    const btnHIncLarge = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-height-inc-large"]');
+    const btnLockAspect = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-lock-aspect"]');
+    const lockIcon = backdrop.querySelector<HTMLElement>('[data-ref="lock-aspect-icon"]');
+    const btnStrategyScale = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-strategy-scale"]');
+    const btnStrategyAnchor = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-strategy-anchor"]');
+    const scaleOptionsEl = backdrop.querySelector<HTMLElement>('[data-ref="resize-scale-options"]');
+    const anchorOptionsEl = backdrop.querySelector<HTMLElement>('[data-ref="resize-anchor-options"]');
+    const btnScaleFit = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-scale-fit"]');
+    const btnScaleStretch = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-scale-stretch"]');
     const btnSubmit = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-submit-resize-canvas"]');
     const errorBanner = backdrop.querySelector<HTMLElement>('[data-ref="resize-canvas-error"]');
 
-    const setupStepper = (
-      inputEl: HTMLInputElement | null,
-      decL: HTMLButtonElement | null,
-      dec: HTMLButtonElement | null,
-      inc: HTMLButtonElement | null,
-      incL: HTMLButtonElement | null
-    ) => {
-      if (!inputEl) return;
-      const step = (delta: number) => {
-        const cur = parseInt(inputEl.value, 10) || 1;
-        const next = Math.max(1, Math.min(16384, cur + delta));
-        inputEl.value = String(next);
-      };
-      decL?.addEventListener('click', () => step(-16));
-      dec?.addEventListener('click', () => step(-1));
-      inc?.addEventListener('click', () => step(1));
-      incL?.addEventListener('click', () => step(16));
-    };
+    btnLockAspect?.addEventListener('click', () => {
+      isAspectLocked = !isAspectLocked;
+      btnLockAspect.classList.toggle('is-active', isAspectLocked);
+      if (lockIcon) lockIcon.textContent = isAspectLocked ? 'lock' : 'lock_open';
+      if (isAspectLocked) {
+        const curW = parseInt(inputW?.value || '1', 10);
+        const curH = parseInt(inputH?.value || '1', 10);
+        currentAspect = curW / curH;
+      }
+    });
 
-    setupStepper(inputW, btnWDecLarge, btnWDec, btnWInc, btnWIncLarge);
-    setupStepper(inputH, btnHDecLarge, btnHDec, btnHInc, btnHIncLarge);
+    inputW?.addEventListener('input', () => {
+      if (isAspectLocked && inputH) {
+        const val = parseInt(inputW.value || '1', 10);
+        inputH.value = String(Math.max(1, Math.round(val / currentAspect)));
+      }
+    });
+
+    inputH?.addEventListener('input', () => {
+      if (isAspectLocked && inputW) {
+        const val = parseInt(inputH.value || '1', 10);
+        inputW.value = String(Math.max(1, Math.round(val * currentAspect)));
+      }
+    });
+
+    backdrop.querySelectorAll<HTMLButtonElement>('[data-ref^="btn-preset-"]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const w = parseInt(btn.getAttribute('data-w') || '0', 10);
+        const h = parseInt(btn.getAttribute('data-h') || '0', 10);
+        if (w > 0 && h > 0) {
+          if (inputW) inputW.value = String(w);
+          if (inputH) inputH.value = String(h);
+          currentAspect = w / h;
+        }
+      });
+    });
+
+    btnStrategyScale?.addEventListener('click', () => {
+      currentMode = 'scale';
+      btnStrategyScale.classList.add('is-active');
+      btnStrategyAnchor?.classList.remove('is-active');
+      if (scaleOptionsEl) scaleOptionsEl.style.display = 'flex';
+      if (anchorOptionsEl) anchorOptionsEl.style.display = 'none';
+    });
+
+    btnStrategyAnchor?.addEventListener('click', () => {
+      currentMode = 'anchor';
+      btnStrategyAnchor.classList.add('is-active');
+      btnStrategyScale?.classList.remove('is-active');
+      if (anchorOptionsEl) anchorOptionsEl.style.display = 'flex';
+      if (scaleOptionsEl) scaleOptionsEl.style.display = 'none';
+    });
+
+    btnScaleFit?.addEventListener('click', () => {
+      currentScaleFit = 'fit';
+      btnScaleFit.classList.add('is-active');
+      btnScaleStretch?.classList.remove('is-active');
+    });
+
+    btnScaleStretch?.addEventListener('click', () => {
+      currentScaleFit = 'stretch';
+      btnScaleStretch.classList.add('is-active');
+      btnScaleFit?.classList.remove('is-active');
+    });
+
+    backdrop.querySelectorAll<HTMLButtonElement>('[data-ref^="anchor-"]').forEach((cell) => {
+      cell.addEventListener('click', () => {
+        backdrop.querySelectorAll('[data-ref^="anchor-"]').forEach((c) => c.classList.remove('is-active'));
+        cell.classList.add('is-active');
+        currentAnchor = (cell.getAttribute('data-anchor') || 'center') as any;
+      });
+    });
 
     btnSubmit?.addEventListener('click', () => {
       const w = parseInt(inputW?.value || '0', 10);
@@ -2901,17 +3405,23 @@ class DesignController {
       }
 
       modal.close();
-      this.resizeCanvas(w, h);
+      this.resizeCanvas(w, h, currentMode, currentAnchor, currentScaleFit);
     });
   }
 
-  private resizeCanvas(newW: number, newH: number): void {
+  private resizeCanvas(
+    newW: number,
+    newH: number,
+    mode: 'scale' | 'anchor' = 'anchor',
+    anchor: 'top-left' | 'top-center' | 'top-right' | 'center-left' | 'center' | 'center-right' | 'bottom-left' | 'bottom-center' | 'bottom-right' = 'center',
+    scaleFit: 'fit' | 'stretch' = 'fit'
+  ): void {
     if (newW <= 0 || newH <= 0 || (newW === this.canvasWidth && newH === this.canvasHeight)) return;
     dispatchCanvasAction(this.getActionContext(), {
-      payload: { height: newH, width: newW },
+      payload: { anchor, height: newH, mode, scaleFit, width: newW },
       type: 'resize_canvas',
     });
-    showToast(`Lienzo redimensionado a ${newW} × ${newH} px`, 'success');
+    showToast(`Lienzo redimensionado a ${newW} × ${newH} px (${mode === 'scale' ? 'Escalado Nearest Neighbor' : 'Anclaje'})`, 'success');
   }
 
   private rotateCanvas(clockwise: boolean): void {
@@ -4471,6 +4981,10 @@ class DesignController {
       this.shapeInjectBtn.addEventListener('click', () => this.injectShapeToActiveLayer(), { signal });
     }
 
+    if (this.shapeOutlineBtn) {
+      this.shapeOutlineBtn.addEventListener('click', () => this.applyShapeOutline(), { signal });
+    }
+
 
 
     if (this.shapeFlipHBtn) {
@@ -4611,6 +5125,10 @@ class DesignController {
 
     if (this.resizeCanvasBtn) {
       this.resizeCanvasBtn.addEventListener('click', () => this.openResizeCanvasModal(), { signal });
+    }
+
+    if (this.btnOpenSlicer) {
+      this.btnOpenSlicer.addEventListener('click', () => this.openSpriteSlicerModal(), { signal });
     }
 
     if (this.btnCanvasRotateCw) {
@@ -4760,6 +5278,9 @@ class DesignController {
           else if (ref === 'btn-select-rotate-90') this.rotateSelection90();
           else if (ref === 'btn-select-commit') this.commitFloatingSelection();
           else if (ref === 'btn-select-deselect') this.clearSelection();
+          else if (ref === 'btn-select-outline-black') this.applySelectionOutline('#000000');
+          else if (ref === 'btn-select-outline-white') this.applySelectionOutline('#FFFFFF');
+          else if (ref === 'btn-select-outline-color') this.applySelectionOutline(this.currentColor);
         },
         { signal }
       );

@@ -1,6 +1,6 @@
-import { logger } from '../services/logger.service.js';
 import crypto from 'crypto';
 import mysql from 'mysql2/promise';
+import { logger } from '../services/logger.service.js';
 
 export interface NoSqlAdapter {
   name: string;
@@ -140,6 +140,19 @@ export async function runMigrations(): Promise<void> {
         user_agent VARCHAR(255) NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         INDEX idx_audit_user_created (user_id, created_at),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS user_favorites (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        item_type ENUM('canvas', 'template') NOT NULL,
+        item_id VARCHAR(64) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_user_favorite (user_id, item_type, item_id),
+        INDEX idx_user_fav_lookup (user_id, item_type),
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
@@ -344,6 +357,14 @@ export async function runMigrations(): Promise<void> {
     if (delCols.length === 0) {
       await conn.query('ALTER TABLE db_canvas.canvases ADD COLUMN deleted_at TIMESTAMP NULL DEFAULT NULL, ADD INDEX idx_canvases_deleted_at (deleted_at)');
       logger.db.info('Columna deleted_at añadida a db_canvas.canvases.');
+    }
+
+    const [userDelIndices] = await conn.query<mysql.RowDataPacket[]>(
+      "SHOW INDEX FROM db_canvas.canvases WHERE Key_name = 'idx_canvases_user_deleted'"
+    );
+    if (userDelIndices.length === 0) {
+      await conn.query('ALTER TABLE db_canvas.canvases ADD INDEX idx_canvases_user_deleted (user_id, deleted_at, updated_at)');
+      logger.db.info('Índice idx_canvases_user_deleted añadido a db_canvas.canvases.');
     }
 
     const [missingShorts] = await conn.query<mysql.RowDataPacket[]>(

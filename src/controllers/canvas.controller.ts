@@ -526,11 +526,11 @@ export async function updateCanvasSlugHandler(req: Request, res: Response): Prom
     });
   } catch (err: any) {
     if (err?.message?.includes('propietario')) {
-      res.status(403).json({ error: err.message });
+      res.status(403).json({ error: 'Solo el propietario del lienzo puede modificar su enlace personalizado.' });
       return;
     }
     if (err?.message?.includes('alfanuméricos') || err?.message?.includes('reservado') || err?.message?.includes('en uso')) {
-      res.status(400).json({ error: err.message });
+      res.status(400).json({ error: 'El enlace personalizado contiene caracteres inválidos, palabras reservadas o ya está en uso.' });
       return;
     }
     logger.app.error(`Error al actualizar slug de lienzo ${req.params.uuid}`, err);

@@ -13,6 +13,7 @@ export interface Canvas {
   short_code?: string | null;
   custom_slug?: string | null;
   deleted_at?: string | null;
+  is_favorite?: boolean;
   created_at: string;
   updated_at: string;
 }

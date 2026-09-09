@@ -18,7 +18,7 @@ export interface CanvasFrame {
 export type CanvasAction =
   | { type: 'rotate_canvas'; payload: { clockwise: boolean } }
   | { type: 'flip_canvas'; payload: { horizontal: boolean } }
-  | { type: 'resize_canvas'; payload: { height: number; width: number } }
+  | { type: 'resize_canvas'; payload: { anchor?: 'top-left' | 'top-center' | 'top-right' | 'center-left' | 'center' | 'center-right' | 'bottom-left' | 'bottom-center' | 'bottom-right'; height: number; mode?: 'scale' | 'anchor'; scaleFit?: 'fit' | 'stretch'; width: number } }
   | { type: 'update_layer_image'; payload: { dataUrl: string; frameId?: string; layerId?: string } }
   | { type: 'clear_layer'; payload: { frameId?: string; layerId?: string } }
   | { type: 'flood_fill'; payload: { color: string; frameId?: string; layerId?: string; mode?: 'contiguous' | 'global'; x: number; y: number } }

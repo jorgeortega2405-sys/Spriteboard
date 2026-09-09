@@ -288,6 +288,9 @@
             <button type="button" class="design-toolbar-btn" data-ref="btn-top-toggle-shapes" data-tooltip="Figuras y Plantillas" aria-label="Figuras">
               <span class="component-icon">category</span>
             </button>
+            <button type="button" class="design-toolbar-btn" data-ref="btn-open-slicer" data-tooltip="Separador de sprites (Auto-Slicer)" aria-label="Auto-Slicer">
+              <span class="component-icon">grid_view</span>
+            </button>
             <div class="design-toolbar-divider" data-ref="top-toolbar-divider-undo"></div>
             <button type="button" class="design-toolbar-btn is-disabled" data-ref="btn-undo" data-tooltip="Deshacer (Ctrl+Z)" aria-label="Deshacer" disabled>
               <span class="component-icon">undo</span>
@@ -470,6 +473,9 @@
           <span class="component-icon">check</span>
         </button>
         <div class="design-toolbar-divider" data-ref="shape-minitoolbar-divider-1"></div>
+        <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-shape-outline" data-tooltip="Contorno 1px" aria-label="Contorno">
+          <span class="component-icon">crop_free</span>
+        </button>
         <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-shape-flip-h" data-tooltip="Voltear Horizontal (H)" aria-label="Voltear Horizontal">
           <span class="component-icon">swap_horiz</span>
         </button>
@@ -679,6 +685,22 @@
                 <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-select-rotate-90" data-tooltip="Rotar 90° Horario">
                   <span class="component-icon">rotate_right</span>
                   <span>Rotar 90°</span>
+                </button>
+              </div>
+              <div class="design-toolbar-divider" data-ref="options-select-divider-outline"></div>
+              <span class="design-options-tray__label" data-ref="options-label-select-outline">Contorno:</span>
+              <div class="design-options-tray__badges" data-ref="options-select-outline-badges">
+                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-select-outline-black" data-tooltip="Contorno exterior 1px (Negro)">
+                  <span class="component-icon">contrast</span>
+                  <span>Borde Negro</span>
+                </button>
+                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-select-outline-white" data-tooltip="Contorno exterior 1px (Blanco)">
+                  <span class="component-icon">light_mode</span>
+                  <span>Borde Blanco</span>
+                </button>
+                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-select-outline-color" data-tooltip="Contorno exterior 1px (Color activo)">
+                  <span class="component-icon">palette</span>
+                  <span>Borde Color</span>
                 </button>
               </div>
               <div class="design-toolbar-divider" data-ref="options-select-divider-2"></div>

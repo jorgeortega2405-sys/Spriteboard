@@ -23,6 +23,7 @@ class Config:
     DB_USER = os.getenv("DB_USER", "sprite_user")
     DB_PASSWORD = os.getenv("DB_PASSWORD", "sprite_password")
     DB_CANVAS_NAME = os.getenv("DB_CANVAS_NAME", "db_canvas")
+    CANVAS_STORAGE_DIR = os.getenv("CANVAS_STORAGE_DIR", "/data/canvases")
 
     # Logging
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()

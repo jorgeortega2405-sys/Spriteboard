@@ -8,6 +8,13 @@ type WebSocketHandler = (payload: any) => void;
 let ws: WebSocket | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let isIntentionallyClosed = false;
+let currentActiveCanvasRoom: {
+  canvasUuid: string;
+  user?: number | { color?: string; id?: number; username?: string };
+  username?: string;
+  color?: string;
+  roomToken?: string;
+} | null = null;
 const messageHandlers: Map<string, Set<WebSocketHandler>> = new Map();
 const pendingMessages: any[] = [];
 
@@ -37,6 +44,16 @@ export function initWebSocket(): void {
         try {
           ws.send(typeof msg === 'string' ? msg : JSON.stringify(msg));
         } catch (_) {}
+      }
+      if (currentActiveCanvasRoom) {
+        console.log('[WebSocket] Reuniéndose automáticamente a la sala activa tras reconexión:', currentActiveCanvasRoom.canvasUuid);
+        joinCanvasRoom(
+          currentActiveCanvasRoom.canvasUuid,
+          currentActiveCanvasRoom.user,
+          currentActiveCanvasRoom.username,
+          currentActiveCanvasRoom.color,
+          currentActiveCanvasRoom.roomToken
+        );
       }
     };
 
@@ -170,6 +187,7 @@ export function initWebSocket(): void {
 
 export function closeWebSocket(): void {
   isIntentionallyClosed = true;
+  currentActiveCanvasRoom = null;
   if (reconnectTimer) {
     clearTimeout(reconnectTimer);
     reconnectTimer = null;
@@ -221,6 +239,7 @@ export function joinCanvasRoom(
   color?: string,
   roomToken?: string
 ): void {
+  currentActiveCanvasRoom = { canvasUuid, color, roomToken, user, username };
   const userObj = {
     color: '#00E5FF',
     id: currentUser?.id ?? 0,
@@ -246,6 +265,9 @@ export function joinCanvasRoom(
 }
 
 export function leaveCanvasRoom(canvasUuid: string): void {
+  if (currentActiveCanvasRoom?.canvasUuid === canvasUuid) {
+    currentActiveCanvasRoom = null;
+  }
   sendWebSocketMessage({
     canvasUuid,
     type: 'LEAVE_CANVAS',

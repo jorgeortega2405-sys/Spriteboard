@@ -75,9 +75,82 @@ function applyFlipCanvas(context: CanvasActionContext, horizontal: boolean): voi
   context.requestRedraw();
 }
 
-function applyResizeCanvas(context: CanvasActionContext, newW: number, newH: number): void {
+function applyResizeCanvas(
+  context: CanvasActionContext,
+  newW: number,
+  newH: number,
+  mode: 'scale' | 'anchor' = 'anchor',
+  anchor = 'center',
+  scaleFit: 'fit' | 'stretch' = 'fit'
+): void {
   if (newW <= 0 || newH <= 0 || (newW === context.canvasWidth && newH === context.canvasHeight)) {
     return;
+  }
+
+  const oldW = context.canvasWidth;
+  const oldH = context.canvasHeight;
+
+  let offsetX = 0;
+  let offsetY = 0;
+  let drawW = oldW;
+  let drawH = oldH;
+
+  if (mode === 'scale') {
+    if (scaleFit === 'stretch') {
+      offsetX = 0;
+      offsetY = 0;
+      drawW = newW;
+      drawH = newH;
+    } else {
+      const scale = Math.min(newW / oldW, newH / oldH);
+      drawW = Math.max(1, Math.round(oldW * scale));
+      drawH = Math.max(1, Math.round(oldH * scale));
+      offsetX = Math.floor((newW - drawW) / 2);
+      offsetY = Math.floor((newH - drawH) / 2);
+    }
+  } else {
+    const diffX = newW - oldW;
+    const diffY = newH - oldH;
+
+    switch (anchor) {
+      case 'top-left':
+        offsetX = 0;
+        offsetY = 0;
+        break;
+      case 'top-center':
+        offsetX = Math.floor(diffX / 2);
+        offsetY = 0;
+        break;
+      case 'top-right':
+        offsetX = diffX;
+        offsetY = 0;
+        break;
+      case 'center-left':
+        offsetX = 0;
+        offsetY = Math.floor(diffY / 2);
+        break;
+      case 'center-right':
+        offsetX = diffX;
+        offsetY = Math.floor(diffY / 2);
+        break;
+      case 'bottom-left':
+        offsetX = 0;
+        offsetY = diffY;
+        break;
+      case 'bottom-center':
+        offsetX = Math.floor(diffX / 2);
+        offsetY = diffY;
+        break;
+      case 'bottom-right':
+        offsetX = diffX;
+        offsetY = diffY;
+        break;
+      case 'center':
+      default:
+        offsetX = Math.floor(diffX / 2);
+        offsetY = Math.floor(diffY / 2);
+        break;
+    }
   }
 
   for (const frame of context.frames) {
@@ -88,7 +161,7 @@ function applyResizeCanvas(context: CanvasActionContext, newW: number, newH: num
       newCanvas.height = newH;
       const newCtx = newCanvas.getContext('2d')!;
       newCtx.imageSmoothingEnabled = false;
-      newCtx.drawImage(oldCanvas, 0, 0);
+      newCtx.drawImage(oldCanvas, 0, 0, oldW, oldH, offsetX, offsetY, drawW, drawH);
       layer.canvas = newCanvas;
       layer.ctx = newCtx;
     }
@@ -240,7 +313,14 @@ function executeMutation(context: CanvasActionContext, action: CanvasAction): vo
       applyFlipCanvas(context, action.payload.horizontal);
       break;
     case 'resize_canvas':
-      applyResizeCanvas(context, action.payload.width, action.payload.height);
+      applyResizeCanvas(
+        context,
+        action.payload.width,
+        action.payload.height,
+        action.payload.mode,
+        action.payload.anchor,
+        action.payload.scaleFit
+      );
       break;
     case 'update_layer_image':
       applyUpdateLayerImage(context, action.payload);
