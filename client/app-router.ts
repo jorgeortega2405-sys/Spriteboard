@@ -87,6 +87,11 @@ export async function render(): Promise<void> {
       const { createTemplatesView } = await import('./views/templates.view.js');
       const templatesView = await createTemplatesView();
       viewElements = topBar ? [topBar, templatesView] : [templatesView];
+    } else if (path === '/search') {
+      const topBar = isSoftSpaNav ? null : await createTopBar();
+      const { createSearchView } = await import('./views/search.view.js');
+      const searchView = await createSearchView();
+      viewElements = topBar ? [topBar, searchView] : [searchView];
     } else if (path === '/trash') {
       const topBar = isSoftSpaNav ? null : await createTopBar();
       if (!currentUser) {

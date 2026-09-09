@@ -39,6 +39,7 @@ export const API_ROUTES = {
     empty: '/api/trash/empty',
     restore: (uuid: string) => `/api/trash/${encodeURIComponent(uuid)}/restore`,
   },
+  search: (q: string) => `/api/search?q=${encodeURIComponent(q)}`,
   users: {
     search: (q: string) => `/api/users/search?q=${encodeURIComponent(q)}`,
   },

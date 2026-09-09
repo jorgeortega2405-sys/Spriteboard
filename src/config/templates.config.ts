@@ -20,23 +20,6 @@ export interface PresetItem {
   variants?: PresetVariant[];
 }
 
-export interface TemplateCategory {
-  id: string;
-  nameKey: string;
-  defaultName: string;
-  iconName: string;
-}
-
-export const TEMPLATE_CATEGORIES: TemplateCategory[] = [
-  { id: 'all', nameKey: 'templates.all_categories', defaultName: 'Todas las categorías', iconName: 'grid_view' },
-  { id: 'nature', nameKey: 'canvas.tab_nature', defaultName: 'Naturaleza', iconName: 'eco' },
-  { id: 'cities', nameKey: 'canvas.tab_cities', defaultName: 'Ciudades', iconName: 'apartment' },
-  { id: 'fantasy', nameKey: 'canvas.tab_fantasy', defaultName: 'Fantasía', iconName: 'shield' },
-  { id: 'scifi', nameKey: 'canvas.tab_scifi', defaultName: 'Espacio', iconName: 'stars' },
-  { id: 'characters', nameKey: 'canvas.tab_characters', defaultName: 'Personajes', iconName: 'person' },
-  { id: 'items', nameKey: 'canvas.tab_items', defaultName: 'Objetos', iconName: 'category' },
-];
-
 export const NATURE_RESOLUTIONS: { width: number; height: number; label: string }[] = [
   { width: 256, height: 128, label: '256 × 128 px (Retro 8-bit)' },
   { width: 320, height: 160, label: '320 × 160 px (Retro 16-bit)' },

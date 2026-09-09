@@ -127,6 +127,33 @@ export async function createTopBar(): Promise<HTMLElement> {
 
   const btnMobileSearch = topbar.querySelector<HTMLElement>('[data-ref="btn-mobile-search"]');
   const searchInput = topbar.querySelector<HTMLInputElement>('[data-ref="topbar-search-input"]');
+  const searchIcon = topbar.querySelector<HTMLElement>('[data-ref="topbar-search-icon"]');
+
+  if (window.location.pathname === '/search' && searchInput) {
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialQ = urlParams.get('q');
+    if (initialQ) {
+      searchInput.value = initialQ;
+    }
+  }
+
+  const triggerSearch = () => {
+    const q = (searchInput?.value || '').trim();
+    if (!q) return;
+    navigate(`/search?q=${encodeURIComponent(q)}`);
+    topbar.classList.remove('layout-header--search-active');
+  };
+
+  searchInput?.addEventListener('keydown', (e: KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      triggerSearch();
+    }
+  });
+
+  searchIcon?.addEventListener('click', () => {
+    triggerSearch();
+  });
 
   btnMobileSearch?.addEventListener('click', (e) => {
     e.preventDefault();

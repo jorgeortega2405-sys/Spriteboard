@@ -1,0 +1,75 @@
+<div class="layout-content" data-ref="search-view">
+  <div class="component-wrapper component-wrapper--full" data-ref="search-wrapper">
+    <div class="component-top" data-ref="search-top">
+      <div class="component-top-left component-top-left--full" data-ref="search-top-left">
+        <div class="search-header-box" data-ref="search-header-box">
+          <div class="search-header-info" data-ref="search-header-info">
+            <h1 class="search-header-title" data-ref="search-header-title"></h1>
+            <div class="search-semantic-badge" data-ref="search-semantic-badge" style="display: none;">
+              <span class="material-symbols-rounded">auto_awesome</span>
+              <span class="search-semantic-text" data-ref="search-semantic-text"></span>
+            </div>
+          </div>
+          <div class="search-filter-tabs" data-ref="search-filter-tabs">
+            <button type="button" class="component-badge component-badge--interactive is-active" data-ref="tab-all" data-filter="all">
+              <span class="material-symbols-rounded">select_all</span>
+              <span>Todos</span>
+            </button>
+            <button type="button" class="component-badge component-badge--interactive" data-ref="tab-canvases" data-filter="canvases">
+              <span class="material-symbols-rounded">brush</span>
+              <span data-ref="tab-canvases-label">Tus Lienzos</span>
+            </button>
+            <button type="button" class="component-badge component-badge--interactive" data-ref="tab-templates" data-filter="templates">
+              <span class="material-symbols-rounded">dashboard_customize</span>
+              <span data-ref="tab-templates-label">Plantillas</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="component-bottom component-bottom--no-padding" data-ref="search-bottom">
+      <div class="layout-body layout-body--scrollable layout-scrollable" data-ref="search-scrollable">
+        <div class="search-content-wrapper" data-ref="search-content">
+
+          <!-- Sección: Tus Lienzos -->
+          <div class="search-section" data-ref="section-canvases">
+            <div class="search-section-header" data-ref="section-canvases-header">
+              <div class="search-section-title-wrap">
+                <span class="material-symbols-rounded">brush</span>
+                <h2 class="search-section-title">Tus Lienzos</h2>
+              </div>
+              <span class="search-section-counter" data-ref="canvases-counter"></span>
+            </div>
+            <div class="canvas-grid" data-ref="search-canvases-grid"></div>
+          </div>
+
+          <!-- Sección: Plantillas -->
+          <div class="search-section" data-ref="section-templates">
+            <div class="search-section-header" data-ref="section-templates-header">
+              <div class="search-section-title-wrap">
+                <span class="material-symbols-rounded">dashboard_customize</span>
+                <h2 class="search-section-title">Plantillas Recomendadas</h2>
+              </div>
+              <span class="search-section-counter" data-ref="templates-counter"></span>
+            </div>
+            <div class="templates-grid" data-ref="search-templates-grid"></div>
+          </div>
+
+          <!-- Estado Vacío Global -->
+          <div class="component-empty-state" data-ref="search-empty-state" style="display: none;">
+            <div class="component-empty-state-graphic" data-ref="search-empty-graphic"></div>
+            <h2 class="component-empty-state-title" data-ref="search-empty-title">Sin resultados encontrados</h2>
+            <p class="component-empty-state-desc" data-ref="search-empty-desc">No encontramos lienzos ni plantillas que coincidan con tu búsqueda. Intenta con otros términos o explora la galería completa.</p>
+            <div class="component-empty-state-actions" data-ref="search-empty-actions">
+              <button type="button" class="btn btn--h40 btn--black" data-ref="btn-browse-templates">
+                Explorar plantillas
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
