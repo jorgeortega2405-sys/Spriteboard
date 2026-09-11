@@ -8,9 +8,9 @@ import { openMoveCanvasModal } from '../components/move-canvas-modal.component.j
 import { API_ROUTES } from '../config/api-routes.js';
 import { currentUser, deleteApi, escapeHtml, getApi, postApi } from '../services/api.service.js';
 import { getAllLocalCanvases, getLocalCanvasByUuid, markLocalCanvasAsSynced, removeLocalCanvas, saveLocalCanvas } from '../services/canvas-storage.service.js';
+import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { SkeletonService } from '../services/skeleton.service.js';
-import { t, translateElement } from '../services/i18n.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { CanvasItem, FolderItem } from '../types/canvas.types.js';
@@ -52,6 +52,23 @@ class HomeController {
   private btnFolderRename: HTMLElement | null = null;
   private btnFolderDelete: HTMLElement | null = null;
 
+  private selectedUuids = new Set<string>();
+  private selectionToolbar: HTMLElement | null = null;
+  private selectionCountEl: HTMLElement | null = null;
+  private btnSelectionClose: HTMLElement | null = null;
+  private btnSelectionDownload: HTMLElement | null = null;
+  private btnSelectionMove: HTMLElement | null = null;
+  private btnSelectionDuplicate: HTMLElement | null = null;
+  private btnSelectionDelete: HTMLElement | null = null;
+
+  private marqueeEl: HTMLElement | null = null;
+  private isMarqueeDragging = false;
+  private dragStartX = 0;
+  private dragStartY = 0;
+  private dragInitialSelection = new Set<string>();
+  private isShiftDrag = false;
+  private didDrag = false;
+
   constructor(container: HTMLElement) {
     this.container = container;
     this.abortController = new AbortController();
@@ -78,6 +95,22 @@ class HomeController {
     this.folderContextActions = this.container.querySelector<HTMLElement>('[data-ref="folder-context-actions"]');
     this.btnFolderRename = this.container.querySelector<HTMLElement>('[data-ref="btn-folder-rename"]');
     this.btnFolderDelete = this.container.querySelector<HTMLElement>('[data-ref="btn-folder-delete"]');
+
+    this.selectionToolbar = this.container.querySelector<HTMLElement>('[data-ref="selection-toolbar"]');
+    this.selectionCountEl = this.container.querySelector<HTMLElement>('[data-ref="selection-count"]');
+    this.btnSelectionClose = this.container.querySelector<HTMLElement>('[data-ref="btn-selection-close"]');
+    this.btnSelectionDownload = this.container.querySelector<HTMLElement>('[data-ref="btn-selection-download"]');
+    this.btnSelectionMove = this.container.querySelector<HTMLElement>('[data-ref="btn-selection-move"]');
+    this.btnSelectionDuplicate = this.container.querySelector<HTMLElement>('[data-ref="btn-selection-duplicate"]');
+    this.btnSelectionDelete = this.container.querySelector<HTMLElement>('[data-ref="btn-selection-delete"]');
+
+    if (this.selectionToolbar) {
+      renderIcons(this.selectionToolbar);
+    }
+
+    this.marqueeEl = document.createElement('div');
+    this.marqueeEl.className = 'selection-marquee';
+    document.body.appendChild(this.marqueeEl);
 
     this.bindEvents();
 
@@ -250,10 +283,78 @@ class HomeController {
       { signal }
     );
 
+    this.btnSelectionClose?.addEventListener(
+      'click',
+      () => {
+        this.clearSelection();
+      },
+      { signal }
+    );
+
+    this.btnSelectionDownload?.addEventListener(
+      'click',
+      () => {
+        void this.handleBulkDownload();
+      },
+      { signal }
+    );
+
+    this.btnSelectionMove?.addEventListener(
+      'click',
+      () => {
+        this.handleBulkMove();
+      },
+      { signal }
+    );
+
+    this.btnSelectionDuplicate?.addEventListener(
+      'click',
+      () => {
+        void this.handleBulkDuplicate();
+      },
+      { signal }
+    );
+
+    this.btnSelectionDelete?.addEventListener(
+      'click',
+      () => {
+        this.handleBulkDelete();
+      },
+      { signal }
+    );
+
+    this.scrollableEl?.addEventListener(
+      'pointerdown',
+      (e: PointerEvent) => {
+        this.handlePointerDown(e);
+      },
+      { signal }
+    );
+
+    window.addEventListener(
+      'pointermove',
+      (e: PointerEvent) => {
+        this.handlePointerMove(e);
+      },
+      { signal }
+    );
+
+    window.addEventListener(
+      'pointerup',
+      (e: PointerEvent) => {
+        this.handlePointerUp(e);
+      },
+      { signal }
+    );
+
     document.addEventListener(
       'keydown',
       (e: KeyboardEvent) => {
         if (e.key === 'Escape') {
+          if (this.selectedUuids.size > 0) {
+            this.clearSelection();
+            return;
+          }
           if (this.isSearchActive) {
             this.toggleSearchToolbar(false);
           }
@@ -268,11 +369,16 @@ class HomeController {
       this.scrollObserver.disconnect();
       this.scrollObserver = null;
     }
+    if (this.marqueeEl) {
+      this.marqueeEl.remove();
+      this.marqueeEl = null;
+    }
     this.closeAllDropdowns();
     this.abortController.abort();
   }
 
   private toggleSearchToolbar(force?: boolean): void {
+    this.clearSelection();
     this.isSearchActive = force !== undefined ? force : !this.isSearchActive;
     if (!this.searchToolbar) return;
 
@@ -295,6 +401,7 @@ class HomeController {
   }
 
   private handleSearchInput(): void {
+    this.clearSelection();
     if (!this.searchInput) return;
     const query = this.searchInput.value.trim().toLowerCase();
     if (this.btnClearSearch) {
@@ -566,6 +673,10 @@ class HomeController {
     card.innerHTML = `
       ${thumbnailHtml}
 
+      <button type="button" class="canvas-card__checkbox" data-ref="card-checkbox" aria-label="Seleccionar">
+        <span class="material-symbols-rounded">check</span>
+      </button>
+
       <div class="canvas-card__badges-tl" data-ref="badges-tl">
         <div class="canvas-card__badge canvas-card__badge--glass">
           <span class="material-symbols-rounded">straighten</span>
@@ -664,6 +775,16 @@ class HomeController {
     const actionCopyLink = card.querySelector<HTMLButtonElement>('[data-ref="action-copy-link"]');
     const actionMove = card.querySelector<HTMLButtonElement>('[data-ref="action-move"]');
     const actionDelete = card.querySelector<HTMLButtonElement>('[data-ref="action-delete"]');
+    const checkbox = card.querySelector<HTMLButtonElement>('[data-ref="card-checkbox"]');
+
+    if (this.selectedUuids.has(canvas.uuid)) {
+      card.classList.add('is-selected');
+    }
+
+    checkbox?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.toggleCardSelection(canvas.uuid);
+    });
 
     actionMove?.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -809,6 +930,11 @@ class HomeController {
     });
 
     card.addEventListener('click', () => {
+      if (this.didDrag) return;
+      if (this.selectedUuids.size > 0) {
+        this.toggleCardSelection(canvas.uuid);
+        return;
+      }
       navigate(`/design/${canvas.uuid}`);
     });
 
@@ -816,41 +942,10 @@ class HomeController {
   }
 
   private async handleDuplicateCanvas(canvas: CanvasItem): Promise<void> {
-    if (canvas.is_local || !canvas.id || !currentUser) {
-      try {
-        const fullCanvas = (await getLocalCanvasByUuid(canvas.uuid)) || canvas;
-        const newUuid = crypto.randomUUID();
-        const copyItem: CanvasItem = {
-          ...fullCanvas,
-          uuid: newUuid,
-          id: undefined,
-          name: `${canvas.name} (Copia)`,
-          is_local: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        };
-        await saveLocalCanvas(copyItem);
-        showToast(t('canvas.duplicate_success'));
-        await this.loadCanvases();
-      } catch {
-        showToast(t('canvas.duplicate_error'), 'danger');
-      }
-      return;
-    }
-
     try {
-      const res = await postApi(API_ROUTES.canvases.duplicate(canvas.uuid));
-      if (res.ok) {
-        showToast(t('canvas.duplicate_success'));
-        await this.loadCanvases();
-      } else {
-        let errMsg = t('canvas.duplicate_error');
-        try {
-          const data = await res.json();
-          if (data?.error) errMsg = data.error;
-        } catch {}
-        showToast(errMsg, 'danger');
-      }
+      await this.duplicateCanvasItem(canvas);
+      showToast(t('canvas.duplicate_success'));
+      await this.loadCanvases();
     } catch {
       showToast(t('canvas.duplicate_error'), 'danger');
     }
@@ -1029,6 +1124,7 @@ class HomeController {
     });
 
     card.addEventListener('click', () => {
+      if (this.didDrag) return;
       this.closeAllDropdowns();
       void this.openFolder(folder.uuid);
     });
@@ -1072,6 +1168,7 @@ class HomeController {
   }
 
   public async openFolder(folderUuid: string, pushState = true): Promise<void> {
+    this.clearSelection();
     this.currentFolderUuid = folderUuid;
     if (pushState) {
       window.history.pushState({}, '', `/folder/${folderUuid}`);
@@ -1110,6 +1207,7 @@ class HomeController {
   }
 
   public async exitFolder(pushState = true): Promise<void> {
+    this.clearSelection();
     this.currentFolderUuid = null;
     this.currentFolder = null;
     if (pushState) {
@@ -1154,6 +1252,379 @@ class HomeController {
           inst.showError(t('canvas.folder_delete_error'));
           inst.setConfirmLoading(false);
           return false;
+        }
+      },
+    });
+  }
+
+  private toggleCardSelection(uuid: string): void {
+    if (this.selectedUuids.has(uuid)) {
+      this.selectedUuids.delete(uuid);
+    } else {
+      this.selectedUuids.add(uuid);
+    }
+    this.updateSelectionUi();
+  }
+
+  private updateSelectionUi(): void {
+    const count = this.selectedUuids.size;
+    const isSelecting = count > 0;
+
+    this.scrollableEl?.classList.toggle('is-selecting', isSelecting);
+
+    if (this.selectionToolbar) {
+      if (isSelecting) {
+        this.selectionToolbar.classList.remove('is-hidden');
+        requestAnimationFrame(() => {
+          this.selectionToolbar?.classList.add('is-active');
+        });
+      } else {
+        this.selectionToolbar.classList.remove('is-active');
+        setTimeout(() => {
+          if (this.selectedUuids.size === 0) {
+            this.selectionToolbar?.classList.add('is-hidden');
+          }
+        }, 220);
+      }
+    }
+
+    if (this.selectionCountEl) {
+      const text = count === 1
+        ? (t('canvas.selection_count_one') || '1 seleccionado')
+        : (t('canvas.selection_count_many', { count }) || `${count} seleccionados`);
+      this.selectionCountEl.textContent = text;
+    }
+
+    const cards = this.gridEl?.querySelectorAll<HTMLElement>('.canvas-card:not(.canvas-card--folder)') || [];
+    cards.forEach((card) => {
+      const uuid = card.getAttribute('data-uuid');
+      if (!uuid) return;
+      const isSelected = this.selectedUuids.has(uuid);
+      card.classList.toggle('is-selected', isSelected);
+    });
+  }
+
+  private clearSelection(): void {
+    this.selectedUuids.clear();
+    this.updateSelectionUi();
+  }
+
+  private handlePointerDown(e: PointerEvent): void {
+    if (e.button !== 0) return;
+
+    const target = e.target as HTMLElement | null;
+    if (
+      target?.closest(
+        'button, a, input, [data-ref="card-menu-dropdown"], [data-ref="folder-menu-dropdown"], [data-ref="selection-toolbar"], [data-ref="search-toolbar"], [data-ref="component-top"]'
+      )
+    ) {
+      return;
+    }
+
+    this.dragStartX = e.clientX;
+    this.dragStartY = e.clientY;
+    this.isShiftDrag = e.shiftKey || e.ctrlKey || e.metaKey;
+    this.dragInitialSelection = new Set(this.selectedUuids);
+    this.didDrag = false;
+    this.isMarqueeDragging = true;
+  }
+
+  private handlePointerMove(e: PointerEvent): void {
+    if (!this.isMarqueeDragging) return;
+
+    const dist = Math.hypot(e.clientX - this.dragStartX, e.clientY - this.dragStartY);
+    if (!this.didDrag) {
+      if (dist < 6) return;
+      this.didDrag = true;
+      if (this.marqueeEl) {
+        this.marqueeEl.style.display = 'block';
+      }
+    }
+
+    const left = Math.min(this.dragStartX, e.clientX);
+    const top = Math.min(this.dragStartY, e.clientY);
+    const width = Math.abs(e.clientX - this.dragStartX);
+    const height = Math.abs(e.clientY - this.dragStartY);
+    const right = left + width;
+    const bottom = top + height;
+
+    if (this.marqueeEl) {
+      this.marqueeEl.style.left = `${left}px`;
+      this.marqueeEl.style.top = `${top}px`;
+      this.marqueeEl.style.width = `${width}px`;
+      this.marqueeEl.style.height = `${height}px`;
+    }
+
+    const cards = this.gridEl?.querySelectorAll<HTMLElement>('.canvas-card:not(.canvas-card--folder)') || [];
+    const nextSelection = new Set(this.isShiftDrag ? this.dragInitialSelection : []);
+
+    cards.forEach((card) => {
+      const uuid = card.getAttribute('data-uuid');
+      if (!uuid) return;
+      const r = card.getBoundingClientRect();
+      const intersects = !(right < r.left || left > r.right || bottom < r.top || top > r.bottom);
+
+      if (this.isShiftDrag) {
+        if (intersects) {
+          if (this.dragInitialSelection.has(uuid)) {
+            nextSelection.delete(uuid);
+          } else {
+            nextSelection.add(uuid);
+          }
+        }
+      } else {
+        if (intersects) {
+          nextSelection.add(uuid);
+        }
+      }
+    });
+
+    this.selectedUuids = nextSelection;
+    this.updateSelectionUi();
+  }
+
+  private handlePointerUp(e: PointerEvent): void {
+    if (!this.isMarqueeDragging) return;
+    this.isMarqueeDragging = false;
+
+    if (this.marqueeEl) {
+      this.marqueeEl.style.display = 'none';
+    }
+
+    if (!this.didDrag) {
+      const target = e.target as HTMLElement | null;
+      const card = target?.closest<HTMLElement>('.canvas-card:not(.canvas-card--folder)');
+      if (!card && this.selectedUuids.size > 0) {
+        this.clearSelection();
+      }
+    } else {
+      setTimeout(() => {
+        this.didDrag = false;
+      }, 50);
+    }
+  }
+
+  private async handleBulkDownload(): Promise<void> {
+    const selectedCanvases = this.allCanvases.filter((c) => this.selectedUuids.has(c.uuid));
+    if (selectedCanvases.length === 0) {
+      showToast('Selecciona al menos un lienzo para descargar', 'info');
+      return;
+    }
+
+    if (selectedCanvases.length === 1 && selectedCanvases[0]) {
+      openCanvasDownloadModal(selectedCanvases[0]);
+      return;
+    }
+
+    showToast(t('canvas.selection_download_multi', { count: selectedCanvases.length }) || `Descargando ${selectedCanvases.length} lienzos...`);
+
+    for (let i = 0; i < selectedCanvases.length; i++) {
+      const c = selectedCanvases[i];
+      if (c) {
+        await this.downloadSingleCanvas(c);
+      }
+      if (i < selectedCanvases.length - 1) {
+        await new Promise((r) => setTimeout(r, 250));
+      }
+    }
+
+    showToast(t('canvas.download_success') || 'Descarga completada', 'success');
+  }
+
+  private async downloadSingleCanvas(canvas: CanvasItem): Promise<void> {
+    const cleanName = (canvas.name || 'lienzo')
+      .trim()
+      .replace(/[/\\?%*:|"<>]/g, '_')
+      .replace(/\s+/g, '_');
+
+    try {
+      let fullCanvas: CanvasItem | null = null;
+      if (canvas.is_local) {
+        fullCanvas = await getLocalCanvasByUuid(canvas.uuid);
+      } else {
+        const res = await getApi(API_ROUTES.canvases.byId(canvas.uuid));
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.canvas) fullCanvas = data.canvas;
+        }
+      }
+      if (!fullCanvas) fullCanvas = canvas;
+
+      const baseW = fullCanvas.width || 800;
+      const baseH = fullCanvas.height || 600;
+
+      let parsedData: any = null;
+      if (fullCanvas.data) {
+        try {
+          parsedData = typeof fullCanvas.data === 'string' ? JSON.parse(fullCanvas.data) : fullCanvas.data;
+        } catch {}
+      }
+
+      const frames = Array.isArray(parsedData?.frames) && parsedData.frames.length > 0 ? parsedData.frames : null;
+      const outCanvas = document.createElement('canvas');
+      outCanvas.width = baseW;
+      outCanvas.height = baseH;
+      const outCtx = outCanvas.getContext('2d');
+      if (!outCtx) return;
+
+      outCtx.imageSmoothingEnabled = false;
+
+      let renderedFromLayers = false;
+      if (frames && frames[0] && Array.isArray(frames[0].layers)) {
+        const fCanvas = document.createElement('canvas');
+        fCanvas.width = baseW;
+        fCanvas.height = baseH;
+        const fCtx = fCanvas.getContext('2d');
+        if (fCtx) {
+          for (const layer of frames[0].layers) {
+            if (layer.visible !== false && layer.data) {
+              const img = new Image();
+              await new Promise<void>((r) => {
+                img.onload = () => r();
+                img.onerror = () => r();
+                img.src = layer.data;
+              });
+              fCtx.globalAlpha = typeof layer.opacity === 'number' ? layer.opacity : 1;
+              fCtx.drawImage(img, 0, 0);
+            }
+          }
+          outCtx.drawImage(fCanvas, 0, 0, outCanvas.width, outCanvas.height);
+          renderedFromLayers = true;
+        }
+      }
+
+      if (!renderedFromLayers) {
+        const thumb = fullCanvas.preview_thumbnail || canvas.preview_thumbnail;
+        if (thumb) {
+          const img = new Image();
+          await new Promise<void>((r) => {
+            img.onload = () => r();
+            img.onerror = () => r();
+            img.src = thumb;
+          });
+          outCtx.drawImage(img, 0, 0, outCanvas.width, outCanvas.height);
+        }
+      }
+
+      const blob = await new Promise<Blob | null>((resolve) => outCanvas.toBlob(resolve, 'image/png'));
+      if (blob) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${cleanName}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+    } catch {}
+  }
+
+  private handleBulkMove(): void {
+    const selectedCanvases = this.allCanvases.filter((c) => this.selectedUuids.has(c.uuid));
+    if (selectedCanvases.length === 0) {
+      showToast('Selecciona al menos un lienzo para mover', 'info');
+      return;
+    }
+    if (!currentUser) {
+      showToast(t('canvas.bookmark_login_required'), 'info');
+      return;
+    }
+
+    openMoveCanvasModal(selectedCanvases, {
+      onMoved: () => {
+        this.clearSelection();
+        if (this.currentFolderUuid) {
+          void this.openFolder(this.currentFolderUuid, false);
+        } else {
+          void this.loadAll();
+        }
+      },
+    });
+  }
+
+  private async handleBulkDuplicate(): Promise<void> {
+    const selectedCanvases = this.allCanvases.filter((c) => this.selectedUuids.has(c.uuid));
+    if (selectedCanvases.length === 0) {
+      showToast('Selecciona al menos un lienzo para duplicar', 'info');
+      return;
+    }
+
+    try {
+      await Promise.all(selectedCanvases.map((c) => this.duplicateCanvasItem(c)));
+      showToast(t('canvas.selection_duplicate_success') || 'Lienzos duplicados exitosamente', 'success');
+      this.clearSelection();
+      await this.loadCanvases();
+    } catch {
+      showToast(t('canvas.selection_duplicate_error') || 'Error al duplicar lienzos', 'danger');
+    }
+  }
+
+  private async duplicateCanvasItem(canvas: CanvasItem): Promise<void> {
+    if (canvas.is_local || !canvas.id || !currentUser) {
+      const fullCanvas = (await getLocalCanvasByUuid(canvas.uuid)) || canvas;
+      const newUuid = crypto.randomUUID();
+      const copyItem: CanvasItem = {
+        ...fullCanvas,
+        uuid: newUuid,
+        id: undefined,
+        name: `${canvas.name} (Copia)`,
+        is_local: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      await saveLocalCanvas(copyItem);
+      return;
+    }
+
+    const res = await postApi(API_ROUTES.canvases.duplicate(canvas.uuid));
+    if (!res.ok) {
+      let errMsg = t('canvas.duplicate_error');
+      try {
+        const data = await res.json();
+        if (data?.error) errMsg = data.error;
+      } catch {}
+      throw new Error(errMsg);
+    }
+  }
+
+  private handleBulkDelete(): void {
+    const count = this.selectedUuids.size;
+    if (count === 0) return;
+
+    openModal({
+      title: t('canvas.selection_delete_confirm_title') || 'Mover a la papelera',
+      description: t('canvas.selection_delete_confirm_desc', { count }) || `¿Estás seguro de que deseas mover los ${count} lienzos seleccionados a la papelera?`,
+      confirmText: t('canvas.selection_delete_submit') || 'Mover a la papelera',
+      confirmClass: 'btn--danger',
+      onConfirm: async (modal) => {
+        modal.setConfirmLoading(true);
+        try {
+          const selectedCanvases = this.allCanvases.filter((c) => this.selectedUuids.has(c.uuid));
+
+          await Promise.all([
+            ...selectedCanvases.map(async (c) => {
+              if (c.is_local || !c.id || !currentUser) {
+                await removeLocalCanvas(c.uuid);
+              } else {
+                await deleteApi(API_ROUTES.canvases.delete(c.uuid));
+                await removeLocalCanvas(c.uuid);
+              }
+            }),
+          ]);
+
+          showToast(t('canvas.selection_delete_success') || 'Lienzos movidos a la papelera', 'success');
+          modal.close();
+          this.clearSelection();
+          if (this.currentFolderUuid) {
+            await this.openFolder(this.currentFolderUuid, false);
+          } else {
+            await this.loadAll();
+          }
+        } catch {
+          modal.showError(t('canvas.trash_error') || 'Error al eliminar lienzos');
+        } finally {
+          modal.setConfirmLoading(false);
         }
       },
     });

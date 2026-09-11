@@ -7,8 +7,11 @@ import { t } from '../services/i18n.service.js';
 import { showToast } from '../services/toast.service.js';
 import { CanvasItem, FolderItem } from '../types/canvas.types.js';
 
-export function openMoveCanvasModal(canvas: CanvasItem, options?: { onMoved?: () => void }): void {
-  const currentFolderUuid = canvas.folder_uuid || '';
+export function openMoveCanvasModal(canvasOrCanvases: CanvasItem | CanvasItem[], options?: { onMoved?: () => void }): void {
+  const canvases = Array.isArray(canvasOrCanvases) ? canvasOrCanvases : [canvasOrCanvases];
+  if (canvases.length === 0) return;
+  const isMultiple = canvases.length > 1;
+  const currentFolderUuid = isMultiple ? '' : (canvases[0]?.folder_uuid || '');
   let selectedFolderUuid: string | null = null;
   let allFolders: FolderItem[] = [];
 
@@ -30,19 +33,23 @@ export function openMoveCanvasModal(canvas: CanvasItem, options?: { onMoved?: ()
     </div>
   `;
 
+  const descriptionText = isMultiple
+    ? (t('canvas.selection_move_many_desc', { count: canvases.length }) || `Mover ${canvases.length} lienzos a una carpeta:`)
+    : `${t('canvas.folder_move_desc')}: <strong>${escapeHtml(canvases[0]?.name || '')}</strong>`;
+
   const modal = openModal({
     bodyHtml: initialBodyHtml,
     cancelText: t('modal.cancel'),
     confirmClass: 'btn--black',
     confirmText: t('canvas.folder_move_submit'),
-    description: `${t('canvas.folder_move_desc')}: <strong>${escapeHtml(canvas.name)}</strong>`,
+    description: descriptionText,
     size: 'sm',
     titleKey: 'canvas.folder_move_title',
     onConfirm: async (inst) => {
       if (selectedFolderUuid === null) {
         return false;
       }
-      if (selectedFolderUuid === currentFolderUuid) {
+      if (!isMultiple && selectedFolderUuid === currentFolderUuid) {
         return false;
       }
 
@@ -50,19 +57,23 @@ export function openMoveCanvasModal(canvas: CanvasItem, options?: { onMoved?: ()
       inst.setConfirmLoading(true);
 
       try {
-        const res = await putApi(API_ROUTES.canvases.move(canvas.uuid), {
-          folder_uuid: selectedFolderUuid || null,
-        });
+        const results = await Promise.all(
+          canvases.map((c) =>
+            putApi(API_ROUTES.canvases.move(c.uuid), {
+              folder_uuid: selectedFolderUuid || null,
+            })
+          )
+        );
 
-        if (!res.ok) {
-          const errData = await res.json().catch(() => null);
-          inst.showError(errData?.error || t('canvas.folder_move_error'));
+        const failed = results.some((r) => !r.ok);
+        if (failed) {
+          inst.showError(t('canvas.folder_move_error'));
           inst.setConfirmLoading(false);
           return false;
         }
 
         inst.close();
-        showToast(t('canvas.folder_move_success'), 'success');
+        showToast(isMultiple ? (t('canvas.selection_move_many_success') || 'Lienzos movidos exitosamente') : t('canvas.folder_move_success'), 'success');
         if (options?.onMoved) {
           options.onMoved();
         }

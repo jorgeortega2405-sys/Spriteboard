@@ -7,6 +7,7 @@ import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { closeWebSocket, initWebSocket } from '../services/websocket.service.js';
 import { openCreateCanvasModal } from './create-canvas-modal.component.js';
+import { openUpgradeModal } from './upgrade-modal.component.js';
 
 let isSidebarOpen = false;
 let isChatOpen = false;
@@ -117,7 +118,7 @@ export async function createTopBar(): Promise<HTMLElement> {
   const btnUpgrade = topbar.querySelector<HTMLElement>('[data-ref="btn-upgrade"]');
   btnUpgrade?.addEventListener('click', (e) => {
     e.preventDefault();
-    navigate('/upgrade');
+    openUpgradeModal();
   });
 
   const btnHelpChat = topbar.querySelector<HTMLElement>('[data-ref="btn-help-chat"]');
