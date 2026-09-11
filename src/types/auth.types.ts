@@ -11,7 +11,7 @@ export interface UserPayload {
   avatar_url?: string | null;
   role?: UserRole;
   google_id?: string | null;
-  subscription_tier?: 'free' | 'plus' | 'pro' | 'ultra';
+  subscription_tier?: 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios';
   two_factor_enabled?: boolean;
 }
 
@@ -22,7 +22,7 @@ export interface SessionAccount {
   avatar_url?: string | null;
   role?: UserRole;
   google_id?: string | null;
-  subscription_tier?: 'free' | 'plus' | 'pro' | 'ultra';
+  subscription_tier?: 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios';
   two_factor_enabled?: boolean;
   sessionId?: string;
   last_accessed?: number;

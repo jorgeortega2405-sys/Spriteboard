@@ -488,6 +488,8 @@
   --tier-color-plus: var(--sl-color-green-500);
   --tier-color-pro: var(--sl-color-blue-500);
   --tier-color-ultra: var(--sl-color-red-500);
+  --tier-color-business: #8b5cf6;
+  --tier-color-negocios: #8b5cf6;
 
   /* Elevación Componentes */
   --radius-sm: var(--sl-border-radius-medium);
@@ -606,6 +608,8 @@ body.dark-theme {
   --tier-color-plus: #22c55e;
   --tier-color-pro: #3b82f6;
   --tier-color-ultra: #ef4444;
+  --tier-color-business: #a855f7;
+  --tier-color-negocios: #a855f7;
 
   --shadow-card: none;
   --shadow-dropdown: none;

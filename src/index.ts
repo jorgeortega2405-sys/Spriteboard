@@ -36,7 +36,7 @@ app.use((_req: Request, res: Response, next: express.NextFunction) => {
   next();
 });
 
-app.use('/api/canvas/canvases/sync', express.json({ limit: '50mb' }));
+app.use(['/api/canvases/sync', '/api/canvas/canvases/sync'], express.json({ limit: '50mb' }));
 app.use(
   express.json({
     limit: '2mb',
@@ -134,7 +134,12 @@ async function startServer() {
     server.on('upgrade', (req, clientSocket, head) => {
       const url = req.url || '';
       if (url === '/ws' || url.startsWith('/ws?')) {
+        clientSocket.pause();
         const proxySocket = net.connect(config.websocket.port, config.websocket.host, () => {
+          if (clientSocket instanceof net.Socket) {
+            clientSocket.setNoDelay(true);
+          }
+          proxySocket.setNoDelay(true);
           proxySocket.write(`${req.method} ${req.url} HTTP/${req.httpVersion}\r\n`);
           for (let i = 0; i < req.rawHeaders.length; i += 2) {
             proxySocket.write(`${req.rawHeaders[i]}: ${req.rawHeaders[i + 1]}\r\n`);
@@ -145,6 +150,7 @@ async function startServer() {
           }
           clientSocket.pipe(proxySocket);
           proxySocket.pipe(clientSocket);
+          clientSocket.resume();
         });
 
         proxySocket.on('error', (err) => {
@@ -155,6 +161,14 @@ async function startServer() {
 
         clientSocket.on('error', () => {
           proxySocket.destroy();
+        });
+
+        clientSocket.on('close', () => {
+          proxySocket.destroy();
+        });
+
+        proxySocket.on('close', () => {
+          clientSocket.destroy();
         });
       } else if (config.nodeEnv === 'production') {
         clientSocket.destroy();

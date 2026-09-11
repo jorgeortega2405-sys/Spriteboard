@@ -31,7 +31,7 @@ export async function createCheckout(req: Request, res: Response): Promise<void>
 
     const { planId, billingPeriod } = req.body;
 
-    if (!planId || !['plus', 'pro', 'ultra'].includes(planId)) {
+    if (!planId || !['pro', 'business', 'negocios'].includes(planId)) {
       res.status(400).json({ error: 'El plan seleccionado no es válido.' });
       return;
     }

@@ -322,7 +322,7 @@ export async function createSubscriptionCheckoutApi(planId: string, billingPerio
   }
 }
 
-export async function verifySubscriptionSessionApi(sessionId: string): Promise<{ success: boolean; tier?: 'free' | 'plus' | 'pro' | 'ultra'; error?: string }> {
+export async function verifySubscriptionSessionApi(sessionId: string): Promise<{ success: boolean; tier?: 'free' | 'pro' | 'business' | 'negocios'; error?: string }> {
   try {
     const res = await getApi(API_ROUTES.subscriptions.verifySession(sessionId));
     const data = await res.json();

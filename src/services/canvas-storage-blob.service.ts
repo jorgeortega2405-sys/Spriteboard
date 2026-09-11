@@ -90,3 +90,75 @@ export async function deleteCanvasBlob(uuid: string): Promise<void> {
     await fs.promises.unlink(filePath);
   } catch {}
 }
+
+export function getCanvasSnapshotBlobPath(canvasUuid: string, snapshotUuid: string): string {
+  const safeCanvasUuid = canvasUuid.replace(/[^a-zA-Z0-9_-]/g, '');
+  const safeSnapshotUuid = snapshotUuid.replace(/[^a-zA-Z0-9_-]/g, '');
+  return path.join(CANVAS_STORAGE_DIR, 'snapshots', safeCanvasUuid, `${safeSnapshotUuid}.sb.gz`);
+}
+
+export async function ensureCanvasSnapshotStorageDir(canvasUuid: string): Promise<string> {
+  const safeCanvasUuid = canvasUuid.replace(/[^a-zA-Z0-9_-]/g, '');
+  const targetDir = path.join(CANVAS_STORAGE_DIR, 'snapshots', safeCanvasUuid);
+  await fs.promises.mkdir(targetDir, { recursive: true });
+  return targetDir;
+}
+
+export async function saveCanvasSnapshotBlob(
+  canvasUuid: string,
+  snapshotUuid: string,
+  data: string | object
+): Promise<{ sizeBytes: number; compressedBytes: number }> {
+  await ensureCanvasSnapshotStorageDir(canvasUuid);
+
+  const rawString = typeof data === 'string' ? data : JSON.stringify(data);
+  const rawBuffer = Buffer.from(rawString, 'utf-8');
+  const sizeBytes = rawBuffer.length;
+
+  const compressedBuffer = await gzipAsync(rawBuffer, { level: 6 });
+  const compressedBytes = compressedBuffer.length;
+
+  const finalPath = getCanvasSnapshotBlobPath(canvasUuid, snapshotUuid);
+  const tempPath = path.join(
+    path.dirname(finalPath),
+    `${snapshotUuid}.${Date.now()}.${Math.random().toString(36).slice(2, 8)}.tmp`
+  );
+
+  await fs.promises.writeFile(tempPath, compressedBuffer);
+  await fs.promises.rename(tempPath, finalPath);
+
+  return { sizeBytes, compressedBytes };
+}
+
+export async function readCanvasSnapshotBlob(
+  canvasUuid: string,
+  snapshotUuid: string
+): Promise<string | null> {
+  try {
+    const filePath = getCanvasSnapshotBlobPath(canvasUuid, snapshotUuid);
+    const buffer = await fs.promises.readFile(filePath);
+    const decompressed = await gunzipAsync(buffer);
+    return decompressed.toString('utf-8');
+  } catch (err) {
+    logger.db.error(`Error al leer blob de snapshot ${snapshotUuid} del lienzo ${canvasUuid}`, err);
+    return null;
+  }
+}
+
+export async function deleteCanvasSnapshotBlob(
+  canvasUuid: string,
+  snapshotUuid: string
+): Promise<void> {
+  try {
+    const filePath = getCanvasSnapshotBlobPath(canvasUuid, snapshotUuid);
+    await fs.promises.unlink(filePath);
+  } catch {}
+}
+
+export async function deleteCanvasAllSnapshotsBlobs(canvasUuid: string): Promise<void> {
+  try {
+    const safeCanvasUuid = canvasUuid.replace(/[^a-zA-Z0-9_-]/g, '');
+    const targetDir = path.join(CANVAS_STORAGE_DIR, 'snapshots', safeCanvasUuid);
+    await fs.promises.rm(targetDir, { force: true, recursive: true });
+  } catch {}
+}

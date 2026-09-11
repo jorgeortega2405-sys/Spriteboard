@@ -1,4 +1,5 @@
-import { addCanvasMemberHandler, addCanvasTeamHandler, createCanvasHandler, deleteCanvasHandler, duplicateCanvasHandler, emptyTrashHandler, getCanvasHandler, getCanvasMembersHandler, getCanvasMetricsHandler, getCanvasTeamsHandler, getCanvasTokenHandler, heartbeatCanvasViewHandler, listCanvases, listTrashCanvases, permanentlyDeleteCanvasHandler, recordCanvasViewHandler, removeCanvasMemberHandler, removeCanvasTeamHandler, resolveCanvasSlugHandler, restoreCanvasHandler, searchUsersHandler, syncCanvasHandler, updateCanvasAccessHandler, updateCanvasSlugHandler } from '../controllers/canvas.controller.js';
+import { createSnapshotHandler, deleteSnapshotHandler, forkSnapshotHandler, getSnapshotDataHandler, listSnapshotsHandler, restoreSnapshotHandler, updateSnapshotHandler } from '../controllers/canvas-snapshot.controller.js';
+import { addCanvasMemberHandler, addCanvasTeamHandler, createCanvasHandler, deleteCanvasHandler, duplicateCanvasHandler, emptyTrashHandler, getCanvasHandler, getCanvasMembersHandler, getCanvasMetricsHandler, getCanvasTeamsHandler, getCanvasTokenHandler, heartbeatCanvasViewHandler, listCanvases, listSharedCanvases, listTrashCanvases, permanentlyDeleteCanvasHandler, recordCanvasViewHandler, removeCanvasMemberHandler, removeCanvasTeamHandler, resolveCanvasSlugHandler, restoreCanvasHandler, searchUsersHandler, syncCanvasHandler, updateCanvasAccessHandler, updateCanvasSlugHandler } from '../controllers/canvas.controller.js';
 import { requireAuth } from '../middlewares/auth.middleware.js';
 import { canvasHeartbeatLimiter, canvasViewLimiter } from '../middlewares/rate-limit.middleware.js';
 import { Router } from 'express';
@@ -6,6 +7,7 @@ import { Router } from 'express';
 const router = Router();
 
 router.get('/canvases', requireAuth, listCanvases);
+router.get('/canvases/shared', requireAuth, listSharedCanvases);
 router.post('/canvases', requireAuth, createCanvasHandler);
 router.post('/canvases/sync', syncCanvasHandler);
 router.patch('/canvases/:uuid/access', requireAuth, updateCanvasAccessHandler);
@@ -28,6 +30,13 @@ router.get('/canvases/:uuid/metrics', requireAuth, getCanvasMetricsHandler);
 router.post('/canvases/:uuid/views', canvasViewLimiter, recordCanvasViewHandler);
 router.post('/canvases/:uuid/views/heartbeat', canvasHeartbeatLimiter, heartbeatCanvasViewHandler);
 router.get('/canvases/:uuid/token', getCanvasTokenHandler);
+router.get('/canvases/:uuid/snapshots', listSnapshotsHandler);
+router.post('/canvases/:uuid/snapshots', createSnapshotHandler);
+router.get('/canvases/:uuid/snapshots/:snapshotUuid', getSnapshotDataHandler);
+router.post('/canvases/:uuid/snapshots/:snapshotUuid/restore', requireAuth, restoreSnapshotHandler);
+router.post('/canvases/:uuid/snapshots/:snapshotUuid/fork', requireAuth, forkSnapshotHandler);
+router.patch('/canvases/:uuid/snapshots/:snapshotUuid', requireAuth, updateSnapshotHandler);
+router.delete('/canvases/:uuid/snapshots/:snapshotUuid', requireAuth, deleteSnapshotHandler);
 router.get('/canvases/:uuid', getCanvasHandler);
 
 export default router;

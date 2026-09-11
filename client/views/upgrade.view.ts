@@ -21,7 +21,8 @@ export async function createUpgradeView(): Promise<HTMLElement> {
       }
     } catch (_) {
     } finally {
-      const activeTierName = (currentUser?.subscription_tier || 'pro').toUpperCase();
+      const rawTier = currentUser?.subscription_tier || 'pro';
+      const activeTierName = (rawTier === 'business' ? 'negocios' : rawTier).toUpperCase();
       showToast(
         t('upgrade.payment_success_toast', { plan: activeTierName }) ||
           `¡Felicidades! Tu suscripción a Spriteboard ${activeTierName} ha sido activada con éxito.`,
@@ -52,42 +53,42 @@ export async function createUpgradeView(): Promise<HTMLElement> {
     ? res.subscriptions
     : [
         {
-          id: 'plus',
-          name: 'Spriteboard Plus',
-          tagline: 'Ideal para creadores y usuarios que buscan potenciar su productividad diaria.',
-          storage: '1 GB de almacenamiento',
-          price: 4.99,
-          priceMonthly: 4.99,
-          priceYearly: 3.99,
+          id: 'free',
+          name: 'Spriteboard Gratis',
+          tagline: 'Ideal para comenzar a explorar, crear bocetos y diseñar sin costo.',
+          storage: '500 MB de almacenamiento',
+          price: 0,
+          priceMonthly: 0,
+          priceYearly: 0,
           currency: 'USD',
           billingPeriod: 'monthly',
-          icon: 'bolt',
-          buttonText: 'Obtén Spriteboard Plus',
+          icon: 'brush',
+          buttonText: 'Comenzar gratis',
           features: [
             {
-              title: '1 GB de almacenamiento en la nube',
-              desc: 'Guarda tus tableros, recursos y configuraciones de forma segura',
+              title: '500 MB de almacenamiento en la nube',
+              desc: 'Guarda tus proyectos y lienzos básicos de forma segura',
               icon: 'cloud',
             },
             {
-              title: 'Historial de versiones de 30 días',
-              desc: 'Restaura versiones previas de tus tableros y lienzos en cualquier momento',
+              title: 'Tableros de diseño estándar',
+              desc: 'Crea lienzos de trabajo con herramientas esenciales de dibujo',
+              icon: 'dashboard',
+            },
+            {
+              title: 'Exportación en formato estándar',
+              desc: 'Descarga tus tableros en formatos PNG y JPG de alta fidelidad',
+              icon: 'image',
+            },
+            {
+              title: 'Historial de versiones de 7 días',
+              desc: 'Restaura versiones previas de tus lienzos recientes',
               icon: 'history',
             },
             {
-              title: 'Herramientas de dibujo ampliadas',
-              desc: 'Pinceles avanzados, capas adicionales y paletas de color personalizadas',
-              icon: 'brush',
-            },
-            {
-              title: 'Exportación de alta velocidad',
-              desc: 'Descarga tus tableros en formatos PNG, SVG y JPG sin límites de velocidad',
-              icon: 'speed',
-            },
-            {
-              title: 'Soporte estándar por correo',
-              desc: 'Atención personalizada en menos de 48 horas laborales',
-              icon: 'mail',
+              title: 'Herramientas de dibujo esenciales',
+              desc: 'Pinceles estándar, paleta de colores y capas esenciales',
+              icon: 'palette',
             },
           ],
         },
@@ -139,34 +140,39 @@ export async function createUpgradeView(): Promise<HTMLElement> {
           ],
         },
         {
-          id: 'ultra',
-          name: 'Spriteboard Ultra',
-          tagline: 'Máxima potencia, rendimiento sin límites y acceso anticipado a novedades.',
+          id: 'business',
+          name: 'Spriteboard Negocios',
+          tagline: 'Máxima potencia, colaboración avanzada para equipos y soporte prioritario.',
           storage: 'Almacenamiento ilimitado',
           price: 19.99,
           priceMonthly: 19.99,
           priceYearly: 15.99,
           currency: 'USD',
           billingPeriod: 'monthly',
-          icon: 'diamond',
-          badge: 'Máximo Rendimiento',
+          icon: 'business_center',
+          badge: 'Para Empresas',
           isPopular: false,
-          buttonText: 'Obtén Spriteboard Ultra',
+          buttonText: 'Obtén Spriteboard Negocios',
           features: [
             {
               title: 'Almacenamiento ilimitado en la nube',
-              desc: 'Guarda todo tu contenido sin preocuparte por límites de cuota',
+              desc: 'Guarda todo tu contenido y el de tu organización sin límites de cuota',
               icon: 'cloud',
             },
             {
-              title: 'Máxima potencia de cómputo',
-              desc: 'Renderizado acelerado por GPU y procesamiento ultra rápido',
+              title: 'Espacios de trabajo y equipos ilimitados',
+              desc: 'Gestión centralizada de miembros, permisos y roles avanzados',
+              icon: 'domain',
+            },
+            {
+              title: 'Máxima potencia de cómputo GPU',
+              desc: 'Renderizado acelerado por hardware y procesamiento ultra rápido',
               icon: 'memory',
             },
             {
-              title: 'Acceso anticipado a funciones beta',
-              desc: 'Sé el primero en probar nuevas herramientas, IA y mejoras del sistema',
-              icon: 'science',
+              title: 'Historial de versiones ilimitado',
+              desc: 'Auditoría completa y recuperación histórica sin restricciones de tiempo',
+              icon: 'manage_history',
             },
             {
               title: 'API dedicada e integraciones',
@@ -175,13 +181,8 @@ export async function createUpgradeView(): Promise<HTMLElement> {
             },
             {
               title: 'Atención personalizada 1 a 1',
-              desc: 'Gestor de cuenta dedicado y asesoría técnica directa',
+              desc: 'Gestor de cuenta dedicado, SLA de 99.9% y asesoría técnica directa',
               icon: 'person_pin',
-            },
-            {
-              title: 'SLA de disponibilidad garantizada',
-              desc: 'Compromiso de 99.9% de actividad sin interrupciones de servicio',
-              icon: 'verified',
             },
           ],
         },
@@ -193,9 +194,9 @@ export async function createUpgradeView(): Promise<HTMLElement> {
     const TIER_HIERARCHY: Record<string, number> = {
       free: 0,
       none: 0,
-      plus: 1,
-      pro: 2,
-      ultra: 3,
+      pro: 1,
+      business: 2,
+      negocios: 2,
     };
 
     const userTier = currentUser?.subscription_tier || 'free';
@@ -203,13 +204,14 @@ export async function createUpgradeView(): Promise<HTMLElement> {
 
     tiers.forEach((tier, tierIdx) => {
       const isPopular = Boolean(tier.isPopular);
+      const isFree = tier.id === 'free';
       const cardTierLevel = TIER_HIERARCHY[tier.id] ?? 0;
       const isCurrentPlan = Boolean(currentUser && userTier === tier.id);
       const isDowngrade = Boolean(currentUser && userTierLevel > cardTierLevel && userTier !== 'free');
 
-      const initialPrice = Number(tier.priceMonthly ?? tier.price).toFixed(2);
-      const monthlyPrice = Number(tier.priceMonthly ?? tier.price).toFixed(2);
-      const yearlyPrice = Number(tier.priceYearly ?? tier.price).toFixed(2);
+      const initialPrice = isFree ? '0.00' : Number(tier.priceMonthly ?? tier.price).toFixed(2);
+      const monthlyPrice = isFree ? '0.00' : Number(tier.priceMonthly ?? tier.price).toFixed(2);
+      const yearlyPrice = isFree ? '0.00' : Number(tier.priceYearly ?? tier.price).toFixed(2);
 
       let featuresHtml = '';
       const featuresList = Array.isArray(tier.features) ? tier.features : [];
@@ -264,12 +266,12 @@ export async function createUpgradeView(): Promise<HTMLElement> {
         </div>
 
         <div class="component-card-section component-card-section--price" data-ref="card-price-${tier.id}">
-          <div class="component-card-price-label">Desde</div>
+          <div class="component-card-price-label">${isFree ? 'Para siempre' : 'Desde'}</div>
           <div class="component-card-price-container">
             <span class="component-card-price">
               USD $<span data-ref="plan-price-${tier.id}" data-monthly="${monthlyPrice}" data-yearly="${yearlyPrice}">${initialPrice}</span>
             </span>
-            <span class="component-card-period" data-ref="plan-period-${tier.id}" data-period-monthly="/ mes" data-period-yearly="/ mes facturado anualmente">/ mes</span>
+            <span class="component-card-period" data-ref="plan-period-${tier.id}" data-period-monthly="/ mes" data-period-yearly="${isFree ? '/ mes' : '/ mes facturado anualmente'}">/ mes</span>
           </div>
         </div>
 
@@ -282,6 +284,15 @@ export async function createUpgradeView(): Promise<HTMLElement> {
           ` : isDowngrade ? `
             <button type="button" class="component-button component-button--rounded-pill component-card-button component-card-button--downgrade" data-ref="btn-subscribe-${tier.id}" data-action="downgrade" disabled>
               <span>${escapeHtml(t('upgrade.included_in_plan') || 'Incluido en tu plan')}</span>
+            </button>
+          ` : isFree ? `
+            <button type="button" class="component-button component-button--rounded-pill component-button--hover-text component-cursor-pointer component-card-button" data-ref="btn-subscribe-${tier.id}" data-action="register" data-tier="${tier.id}">
+              <span class="btn-default-text">
+                Comenzar gratis
+              </span>
+              <span class="btn-hover-text">
+                Crear cuenta
+              </span>
             </button>
           ` : `
             <button type="button" class="component-button component-button--rounded-pill component-button--hover-text component-cursor-pointer component-card-button ${isPopular ? 'component-card-button--featured' : ''}" data-ref="btn-subscribe-${tier.id}" data-action="subscribe" data-tier="${tier.id}">
@@ -313,6 +324,13 @@ export async function createUpgradeView(): Promise<HTMLElement> {
       if (subscribeBtn && !isCurrentPlan && !isDowngrade) {
         subscribeBtn.addEventListener('click', async (e) => {
           e.preventDefault();
+
+          if (tier.id === 'free') {
+            if (!currentUser) {
+              navigate('/register');
+            }
+            return;
+          }
 
           if (!currentUser) {
             showToast(
@@ -432,6 +450,17 @@ export async function createUpgradeView(): Promise<HTMLElement> {
       }
     });
   });
+
+  const requestedPlan = urlParams.get('plan');
+  if (requestedPlan) {
+    const targetId = requestedPlan === 'negocios' ? 'business' : requestedPlan;
+    setTimeout(() => {
+      const card = container.querySelector<HTMLElement>(`[data-ref="plan-card-${targetId}"]`);
+      if (card) {
+        card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }, 150);
+  }
 
   return container;
 }

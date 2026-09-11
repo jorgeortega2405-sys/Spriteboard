@@ -6,6 +6,7 @@ import { t, translateElement } from '../services/i18n.service.js';
 import { showToast } from '../services/toast.service.js';
 import { CanvasItem } from '../types/canvas.types.js';
 import { setupDropdown } from '../utils/dom.util.js';
+import { encodeFramesToGif } from '../utils/gif-encoder.util.js';
 
 function setIconUse(el: HTMLElement | null, iconName: string): void {
   if (!el) return;
@@ -25,7 +26,7 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
     activeDownloadModal.close();
   }
 
-  let selectedType: 'png-current' | 'spritesheet' | 'project-json' = 'png-current';
+  let selectedType: 'png-current' | 'spritesheet' | 'spritesheet-atlas' | 'gif' | 'project-json' = 'png-current';
   let selectedScale = 1;
   let selectedBg: 'transparent' | 'solid' = 'transparent';
 
@@ -74,6 +75,14 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
                       <button type="button" class="menu-item" data-ref="btn-download-type-spritesheet" data-value="spritesheet">
                         <span class="material-symbols-rounded menu-item__icon">grid_view</span>
                         <span class="menu-item__text">PNG (Hoja de sprites)</span>
+                      </button>
+                      <button type="button" class="menu-item" data-ref="btn-download-type-atlas" data-value="spritesheet-atlas">
+                        <span class="material-symbols-rounded menu-item__icon">sports_esports</span>
+                        <span class="menu-item__text">Hoja de sprites + JSON (Game Atlas)</span>
+                      </button>
+                      <button type="button" class="menu-item" data-ref="btn-download-type-gif" data-value="gif">
+                        <span class="material-symbols-rounded menu-item__icon">gif</span>
+                        <span class="menu-item__text">GIF animado (.gif)</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="btn-download-type-project" data-value="project-json">
                         <span class="material-symbols-rounded menu-item__icon">data_object</span>
@@ -227,14 +236,16 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
 
   const updateUI = () => {
     if (btnConfirmText) {
+      const w = baseW * selectedScale;
+      const h = baseH * selectedScale;
       if (selectedType === 'png-current') {
-        const w = baseW * selectedScale;
-        const h = baseH * selectedScale;
         btnConfirmText.textContent = `Descargar PNG (${w} × ${h} px)`;
       } else if (selectedType === 'spritesheet') {
-        const w = baseW * selectedScale;
-        const h = baseH * selectedScale;
         btnConfirmText.textContent = `Descargar Hoja de sprites (${w} × ${h} px)`;
+      } else if (selectedType === 'spritesheet-atlas') {
+        btnConfirmText.textContent = `Descargar Atlas (PNG + JSON)`;
+      } else if (selectedType === 'gif') {
+        btnConfirmText.textContent = `Descargar GIF animado (${w} × ${h} px)`;
       } else {
         btnConfirmText.textContent = 'Descargar Proyecto (.json)';
       }
@@ -258,11 +269,24 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
       typeButtons.forEach((b) => b.classList.toggle('is-active', b === btn));
 
       if (typeSelectedIcon) {
-        setIconUse(typeSelectedIcon, val === 'png-current' ? 'image' : val === 'spritesheet' ? 'grid_view' : 'data_object');
+        const iconMap: Record<string, string> = {
+          'png-current': 'image',
+          'spritesheet': 'grid_view',
+          'spritesheet-atlas': 'sports_esports',
+          'gif': 'gif',
+          'project-json': 'data_object',
+        };
+        setIconUse(typeSelectedIcon, iconMap[val] || 'image');
       }
       if (typeSelectedText) {
-        typeSelectedText.textContent =
-          val === 'png-current' ? 'PNG (Fotograma actual)' : val === 'spritesheet' ? 'PNG (Hoja de sprites)' : 'Proyecto Spriteboard (.json)';
+        const textMap: Record<string, string> = {
+          'png-current': 'PNG (Fotograma actual)',
+          'spritesheet': 'PNG (Hoja de sprites)',
+          'spritesheet-atlas': 'Hoja de sprites + JSON (Game Atlas)',
+          'gif': 'GIF animado (.gif)',
+          'project-json': 'Proyecto Spriteboard (.json)',
+        };
+        typeSelectedText.textContent = textMap[val] || 'PNG (Fotograma actual)';
       }
 
       updateUI();
@@ -374,7 +398,7 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
       const targetScale = selectedScale;
       const isTransparent = selectedBg === 'transparent';
 
-      if (selectedType === 'spritesheet' && frames && frames.length > 1) {
+      if ((selectedType === 'spritesheet' || selectedType === 'spritesheet-atlas') && frames && frames.length > 0) {
         const framesCount = frames.length;
         const frameW = baseW * targetScale;
         const frameH = baseH * targetScale;
@@ -389,6 +413,10 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
             sheetCtx.fillStyle = '#ffffff';
             sheetCtx.fillRect(0, 0, sheetCanvas.width, sheetCanvas.height);
           }
+
+          const atlasFrames: any[] = [];
+          const defaultFps = parsedData?.fps || 8;
+          const defaultDelay = Math.round(1000 / defaultFps);
 
           for (let i = 0; i < framesCount; i++) {
             const frame = frames[i];
@@ -411,16 +439,103 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
               }
             }
             sheetCtx.drawImage(fCanvas, i * frameW, 0, frameW, frameH);
+
+            if (selectedType === 'spritesheet-atlas') {
+              atlasFrames.push({
+                duration: frame.durationMs || defaultDelay,
+                filename: `frame_${i}.png`,
+                frame: { h: frameH, w: frameW, x: i * frameW, y: 0 },
+                rotated: false,
+                sourceSize: { h: frameH, w: frameW },
+                spriteSourceSize: { h: frameH, w: frameW, x: 0, y: 0 },
+                trimmed: false,
+              });
+            }
           }
 
           const blob = await new Promise<Blob | null>((resolve) => sheetCanvas.toBlob(resolve, 'image/png'));
           if (blob) {
             triggerBlobDownload(blob, `${cleanName}_spritesheet_${targetScale}x.png`);
+
+            if (selectedType === 'spritesheet-atlas') {
+              const atlasJson = {
+                frames: atlasFrames,
+                meta: {
+                  app: 'Spriteboard',
+                  format: 'RGBA8888',
+                  image: `${cleanName}_spritesheet_${targetScale}x.png`,
+                  scale: `${targetScale}`,
+                  size: { h: frameH, w: frameW * framesCount },
+                  version: '1.0',
+                },
+              };
+              const jsonBlob = new Blob([JSON.stringify(atlasJson, null, 2)], { type: 'application/json;charset=utf-8' });
+              triggerBlobDownload(jsonBlob, `${cleanName}_atlas_${targetScale}x.json`);
+            }
+
             showToast(t('canvas.download_success'));
             closeModal();
             return;
           }
         }
+      }
+
+      if (selectedType === 'gif') {
+        const activeFrames = frames && frames.length > 0 ? frames : [{ layers: frames?.[0]?.layers || [] }];
+        const framesCount = activeFrames.length;
+        const frameW = baseW * targetScale;
+        const frameH = baseH * targetScale;
+        const gifFrames: Array<{ canvas: HTMLCanvasElement; delayMs: number }> = [];
+        const defaultFps = parsedData?.fps || 8;
+        const defaultDelay = Math.round(1000 / defaultFps);
+
+        for (let i = 0; i < framesCount; i++) {
+          const frame = activeFrames[i];
+          const fCanvas = document.createElement('canvas');
+          fCanvas.width = frameW;
+          fCanvas.height = frameH;
+          const fCtx = fCanvas.getContext('2d');
+          if (fCtx) {
+            fCtx.imageSmoothingEnabled = false;
+            if (!isTransparent) {
+              fCtx.fillStyle = '#ffffff';
+              fCtx.fillRect(0, 0, frameW, frameH);
+            }
+            if (Array.isArray(frame.layers)) {
+              for (const layer of frame.layers) {
+                if (layer.visible !== false && layer.data) {
+                  const img = new Image();
+                  await new Promise<void>((r) => {
+                    img.onload = () => r();
+                    img.onerror = () => r();
+                    img.src = layer.data;
+                  });
+                  fCtx.globalAlpha = typeof layer.opacity === 'number' ? layer.opacity : 1;
+                  fCtx.drawImage(img, 0, 0, frameW, frameH);
+                }
+              }
+            } else if (fullCanvas.preview_thumbnail) {
+              const img = new Image();
+              await new Promise<void>((r) => {
+                img.onload = () => r();
+                img.onerror = () => r();
+                img.src = fullCanvas.preview_thumbnail!;
+              });
+              fCtx.drawImage(img, 0, 0, frameW, frameH);
+            }
+          }
+
+          gifFrames.push({
+            canvas: fCanvas,
+            delayMs: (frame as any).durationMs || defaultDelay,
+          });
+        }
+
+        const gifBlob = await encodeFramesToGif(gifFrames);
+        triggerBlobDownload(gifBlob, `${cleanName}_${targetScale}x.gif`);
+        showToast(t('canvas.download_success'));
+        closeModal();
+        return;
       }
 
       const outCanvas = document.createElement('canvas');

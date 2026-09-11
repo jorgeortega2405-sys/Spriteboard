@@ -32,6 +32,8 @@ struct CanvasParticipant {
     username: String,
     color: String,
     role: String,
+    avatar_url: Option<String>,
+    subscription_tier: Option<String>,
     tx: ClientSender,
 }
 
@@ -173,6 +175,10 @@ struct ParticipantInfo {
     username: String,
     color: String,
     role: String,
+    #[serde(rename = "avatarUrl", default, skip_serializing_if = "Option::is_none")]
+    avatar_url: Option<String>,
+    #[serde(rename = "subscriptionTier", default, skip_serializing_if = "Option::is_none")]
+    subscription_tier: Option<String>,
 }
 
 fn extract_cookie<'a>(req: &'a Request, cookie_name: &str) -> Option<&'a str> {
@@ -354,8 +360,8 @@ async fn ws_handler(
         }
     });
 
-    ws.max_frame_size(65_536)
-        .max_message_size(262_144)
+    ws.max_frame_size(16 * 1024 * 1024)
+        .max_message_size(32 * 1024 * 1024)
         .on_upgrade(move |socket| handle_socket(socket, user, state))
 }
 
@@ -397,7 +403,7 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
                     msg_rate_counter = 0;
                 }
                 msg_rate_counter += 1;
-                if msg_rate_counter > 100 {
+                if msg_rate_counter > 600 {
                     continue;
                 }
 
@@ -447,12 +453,26 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
                                             .unwrap_or("#00E5FF")
                                             .to_string();
 
+                                        let avatar_url = val.get("user")
+                                            .and_then(|u| u.get("avatar_url").or_else(|| u.get("avatarUrl")))
+                                            .and_then(|a| a.as_str())
+                                            .filter(|s| !s.is_empty())
+                                            .map(|s| s.to_string());
+
+                                        let subscription_tier = val.get("user")
+                                            .and_then(|u| u.get("subscription_tier").or_else(|| u.get("subscriptionTier")))
+                                            .and_then(|s| s.as_str())
+                                            .filter(|s| !s.is_empty())
+                                            .map(|s| s.to_string());
+
                                         let participant = CanvasParticipant {
                                             conn_id: conn_id.clone(),
                                             user_id: user.id,
                                             username: display_name.clone(),
                                             color: color.clone(),
                                             role: role.clone(),
+                                            avatar_url: avatar_url.clone(),
+                                            subscription_tier: subscription_tier.clone(),
                                             tx: tx.clone(),
                                         };
 
@@ -487,6 +507,8 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
                                                     username: p.username.clone(),
                                                     color: p.color.clone(),
                                                     role: p.role.clone(),
+                                                    avatar_url: p.avatar_url.clone(),
+                                                    subscription_tier: p.subscription_tier.clone(),
                                                 },
                                             );
                                         }
@@ -499,6 +521,8 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
                                                 username: display_name.clone(),
                                                 color: color.clone(),
                                                 role: role.clone(),
+                                                avatar_url: avatar_url.clone(),
+                                                subscription_tier: subscription_tier.clone(),
                                             },
                                         );
 
@@ -521,7 +545,9 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
                                                 "userId": user.id,
                                                 "username": display_name,
                                                 "color": color,
-                                                "role": role
+                                                "role": role,
+                                                "avatarUrl": avatar_url,
+                                                "subscriptionTier": subscription_tier
                                             }
                                         }).to_string();
 
@@ -541,7 +567,9 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
                                             "userId": user.id,
                                             "username": display_name,
                                             "color": color,
-                                            "role": role
+                                            "role": role,
+                                            "avatarUrl": avatar_url,
+                                            "subscriptionTier": subscription_tier
                                         }).to_string();
                                         let _ = state.redis_cmd_tx.try_send(RedisOutboundCmd::SetPresence {
                                             canvas_uuid: canvas_uuid.to_string(),

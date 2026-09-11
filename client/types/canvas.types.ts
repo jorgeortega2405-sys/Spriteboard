@@ -18,6 +18,9 @@ export interface CanvasItem {
   deleted_at?: string | null;
   is_local?: boolean;
   is_favorite?: boolean;
+  owner_name?: string | null;
+  owner_avatar?: string | null;
+  owner_tier?: 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios' | null;
   created_at: string;
   updated_at?: string;
 }
@@ -66,6 +69,7 @@ export interface CanvasMember {
   username: string;
   email?: string | null;
   avatar_url?: string | null;
+  subscription_tier?: 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios';
   role: 'editor' | 'viewer';
   created_at: string;
 }
@@ -105,3 +109,11 @@ export interface CanvasMetricsData {
   viewers: CanvasMetricViewer[];
   recent_views: CanvasRecentView[];
 }
+
+export interface SharedCanvasItem extends CanvasItem {
+  owner_name?: string;
+  owner_avatar?: string | null;
+  member_role?: 'editor' | 'viewer';
+  team_name?: string | null;
+}
+

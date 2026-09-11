@@ -9,17 +9,19 @@ let ws: WebSocket | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let isIntentionallyClosed = false;
 let currentActiveCanvasRoom: {
+  avatarUrl?: string;
   canvasUuid: string;
-  user?: number | { color?: string; id?: number; username?: string };
-  username?: string;
   color?: string;
   roomToken?: string;
+  subscriptionTier?: string;
+  user?: number | { avatar_url?: string; color?: string; id?: number; subscription_tier?: string; username?: string };
+  username?: string;
 } | null = null;
 const messageHandlers: Map<string, Set<WebSocketHandler>> = new Map();
 const pendingMessages: any[] = [];
 
 export function initWebSocket(): void {
-  if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+  if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.CLOSING)) {
     return;
   }
 
@@ -163,8 +165,11 @@ export function initWebSocket(): void {
       }
     };
 
+    const currentWs = ws;
     ws.onclose = (event: CloseEvent) => {
-      ws = null;
+      if (ws === currentWs) {
+        ws = null;
+      }
       if (!isIntentionallyClosed) {
         console.warn(`[WebSocket] Conexión cerrada (código: ${event.code}). Reconectando en 4 segundos...`);
         if (reconnectTimer) clearTimeout(reconnectTimer);
@@ -188,17 +193,19 @@ export function initWebSocket(): void {
 export function closeWebSocket(): void {
   isIntentionallyClosed = true;
   currentActiveCanvasRoom = null;
+  pendingMessages.length = 0;
   if (reconnectTimer) {
     clearTimeout(reconnectTimer);
     reconnectTimer = null;
   }
 
   if (ws) {
+    const activeWs = ws;
+    ws = null;
     try {
-      ws.close();
+      activeWs.close();
       console.log('[WebSocket] Conexión cerrada voluntariamente.');
     } catch (_) {}
-    ws = null;
   }
 }
 
@@ -210,7 +217,11 @@ export function sendWebSocketMessage(msg: any): void {
       console.warn('[WebSocket] Error al enviar mensaje:', err);
     }
   } else {
-    pendingMessages.push(msg);
+    if (msg && msg.type !== 'CANVAS_CURSOR') {
+      if (pendingMessages.length < 50) {
+        pendingMessages.push(msg);
+      }
+    }
     initWebSocket();
   }
 }
@@ -234,15 +245,25 @@ export function registerWebSocketHandler(type: string, handler: WebSocketHandler
 
 export function joinCanvasRoom(
   canvasUuid: string,
-  user?: number | { color?: string; id?: number; username?: string },
+  user?: number | { avatar_url?: string; color?: string; id?: number; subscription_tier?: string; username?: string },
   username?: string,
   color?: string,
-  roomToken?: string
+  roomToken?: string,
+  avatarUrl?: string,
+  subscriptionTier?: string
 ): void {
-  currentActiveCanvasRoom = { canvasUuid, color, roomToken, user, username };
-  const userObj = {
+  currentActiveCanvasRoom = { avatarUrl, canvasUuid, color, roomToken, subscriptionTier, user, username };
+  const userObj: {
+    avatar_url?: string;
+    color: string;
+    id: number;
+    subscription_tier?: string;
+    username: string;
+  } = {
+    avatar_url: avatarUrl || currentUser?.avatar_url || '',
     color: '#00E5FF',
     id: currentUser?.id ?? 0,
+    subscription_tier: subscriptionTier || currentUser?.subscription_tier || 'free',
     username: currentUser?.username ?? 'Invitado',
   };
 
@@ -250,10 +271,14 @@ export function joinCanvasRoom(
     userObj.id = user;
     if (username) userObj.username = username;
     if (color) userObj.color = color;
+    if (avatarUrl) userObj.avatar_url = avatarUrl;
+    if (subscriptionTier) userObj.subscription_tier = subscriptionTier;
   } else if (user && typeof user === 'object') {
     if (user.id !== undefined) userObj.id = user.id;
     if (user.username) userObj.username = user.username;
     if (user.color) userObj.color = user.color;
+    if (user.avatar_url) userObj.avatar_url = user.avatar_url;
+    if (user.subscription_tier) userObj.subscription_tier = user.subscription_tier;
   }
 
   sendWebSocketMessage({
@@ -293,13 +318,6 @@ export function sendCanvasBinaryCursor(canvasUuid: string, x: number, y: number)
     try {
       ws.send(buf);
     } catch (_) {}
-  } else {
-    sendWebSocketMessage({
-      canvasUuid,
-      type: 'CANVAS_CURSOR',
-      x,
-      y,
-    });
   }
 }
 

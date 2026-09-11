@@ -213,6 +213,22 @@ export async function runMigrations(): Promise<void> {
       logger.db.info('Columna subscription_tier añadida a la tabla users.');
     }
 
+    const [plusRows] = await conn.query<mysql.RowDataPacket[]>(
+      "SELECT COUNT(*) as count FROM users WHERE subscription_tier = 'plus'"
+    );
+    if ((plusRows[0] as any)?.count > 0) {
+      await conn.query("UPDATE users SET subscription_tier = 'pro' WHERE subscription_tier = 'plus'");
+      logger.db.info('Migración completada: usuarios con tier plus actualizados a pro.');
+    }
+
+    const [ultraRows] = await conn.query<mysql.RowDataPacket[]>(
+      "SELECT COUNT(*) as count FROM users WHERE subscription_tier = 'ultra'"
+    );
+    if ((ultraRows[0] as any)?.count > 0) {
+      await conn.query("UPDATE users SET subscription_tier = 'business' WHERE subscription_tier = 'ultra'");
+      logger.db.info('Migración completada: usuarios con tier ultra actualizados a business.');
+    }
+
     const [stripeCustCols] = await conn.query<mysql.RowDataPacket[]>(
       "SHOW COLUMNS FROM users LIKE 'stripe_customer_id'"
     );
@@ -496,7 +512,42 @@ export async function runMigrations(): Promise<void> {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
-    logger.db.info('Tablas y columnas de identidad, 2FA, suscripciones, compras, GeoIP, db_canvas, equipos, vistas y feedback IA verificadas exitosamente.');
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS db_canvas.canvas_snapshots (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        uuid VARCHAR(36) NOT NULL UNIQUE,
+        canvas_id INT NOT NULL,
+        user_id INT NULL,
+        name VARCHAR(255) NULL,
+        description TEXT NULL,
+        is_manual BOOLEAN NOT NULL DEFAULT FALSE,
+        preview_thumbnail MEDIUMTEXT NULL,
+        size_bytes INT NOT NULL DEFAULT 0,
+        compressed_bytes INT NOT NULL DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_snapshots_canvas_created (canvas_id, created_at DESC),
+        INDEX idx_snapshots_user (user_id),
+        FOREIGN KEY (canvas_id) REFERENCES db_canvas.canvases(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS notifications (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        type VARCHAR(50) NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        message TEXT NOT NULL,
+        link_url VARCHAR(512) NULL,
+        is_read BOOLEAN NOT NULL DEFAULT FALSE,
+        read_at TIMESTAMP NULL DEFAULT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_notif_user_read (user_id, is_read, created_at DESC),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    logger.db.info('Tablas y columnas de identidad, 2FA, suscripciones, compras, GeoIP, db_canvas, equipos, vistas, feedback IA, snapshots y notificaciones verificadas exitosamente.');
   } catch (err) {
     logger.db.warn('Advertencia en migración de base de datos', err);
   } finally {

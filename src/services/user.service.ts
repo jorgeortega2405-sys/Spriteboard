@@ -23,7 +23,7 @@ export interface UserRecord extends RowDataPacket {
   avatar_url?: string;
   role?: UserRole;
   google_id?: string;
-  subscription_tier?: 'free' | 'plus' | 'pro' | 'ultra';
+  subscription_tier?: 'free' | 'pro' | 'business' | 'negocios';
   two_factor_enabled?: boolean | number;
   two_factor_secret?: string | null;
   two_factor_recovery_codes?: string | null;

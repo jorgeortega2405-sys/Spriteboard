@@ -63,6 +63,7 @@ services:
       - .env
     environment:
       - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=true
       - DB_HOST=mysql
       - DB_PORT=3306
       - DB_USER=sprite_user

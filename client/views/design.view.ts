@@ -1,3 +1,4 @@
+import { navigate } from '../app-router.js';
 import { openCanvasMetricsModal } from '../components/canvas-metrics-modal.component.js';
 import { createSidebar } from '../components/layout.component.js';
 import { openModal } from '../components/modal.component.js';
@@ -12,9 +13,11 @@ import { getEffectiveTheme } from '../services/theme.service.js';
 import { showToast } from '../services/toast.service.js';
 import { joinCanvasRoom, leaveCanvasRoom, registerWebSocketHandler, sendCanvasAccessChanged, sendCanvasAction, sendCanvasCursor, sendCanvasDrawStroke, sendCanvasFullUpdate, sendCanvasMemberRemoved } from '../services/websocket.service.js';
 import { CanvasActionContext, CanvasFrame, CanvasLayer } from '../types/canvas-actions.types.js';
+import { CanvasSnapshotItem } from '../types/canvas-snapshot.types.js';
 import { CanvasItem, CanvasMember, SearchUserResult } from '../types/canvas.types.js';
 import { CanvasTeamItem, Team } from '../types/team.types.js';
 import { CarouselController, initCarouselScroll, setupDropdown } from '../utils/dom.util.js';
+import { encodeFramesToGif } from '../utils/gif-encoder.util.js';
 import { applyOutlineDirectToLayer, generatePixelOutline } from '../utils/pixel-effects.util.js';
 import { PixelFontFamily, renderPixelTextCanvas } from '../utils/pixel-font.util.js';
 import { getCachedImage, PIXEL_SHAPES, PixelShape, renderShapeCanvas, renderShapeThumbnail, ShapeCategory, ShapeColorMode } from '../utils/pixel-shapes.util.js';
@@ -493,7 +496,8 @@ class DesignController {
   private publicRole: 'viewer' | 'editor' = 'editor';
   private role: 'owner' | 'editor' | 'viewer' = 'owner';
   private isOwner = true;
-  private collaborators: Map<string, { color: string; connId: string; userId: number; username: string; x?: number; y?: number; hideCursor?: boolean }> = new Map();
+  private ownerInfo: { avatarUrl?: string | null; id?: number | null; subscriptionTier?: 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios'; username: string } | null = null;
+  private collaborators: Map<string, { avatarUrl?: string | null; color: string; connId: string; hideCursor?: boolean; role?: string; subscriptionTier?: 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios'; userId: number; username: string; x?: number; y?: number }> = new Map();
   private showAllCursors = true;
   private canvasBackground: CanvasBackgroundConfig = { type: 'transparent', checkSize: 16 };
   private animationTags: AnimationTag[] = [];
@@ -555,7 +559,7 @@ class DesignController {
   private downloadBgDropdownController: { close: () => void; destroy: () => void; open: () => void; toggle: () => void; update: () => void } | null = null;
   private btnConfirmDownload: HTMLButtonElement | null = null;
   private btnConfirmDownloadText: HTMLElement | null = null;
-  private selectedDownloadType: 'png-current' | 'spritesheet' | 'project-json' = 'png-current';
+  private selectedDownloadType: 'png-current' | 'spritesheet' | 'spritesheet-atlas' | 'gif' | 'project-json' = 'png-current';
   private selectedDownloadScale = 1;
   private selectedDownloadBg: 'transparent' | 'solid' = 'transparent';
   private btnCanvasMetrics: HTMLButtonElement | null = null;
@@ -789,6 +793,36 @@ class DesignController {
   private layersTrayCarouselController: CarouselController | null = null;
   private framesTrayCarouselController: CarouselController | null = null;
 
+  private btnHistory: HTMLButtonElement | null = null;
+  private historyDrawerEl: HTMLElement | null = null;
+  private btnCloseHistoryDrawer: HTMLButtonElement | null = null;
+  private btnToggleCreateSnapshot: HTMLButtonElement | null = null;
+  private historyCreateFormEl: HTMLElement | null = null;
+  private inputSnapshotNameEl: HTMLInputElement | null = null;
+  private inputSnapshotDescEl: HTMLTextAreaElement | null = null;
+  private btnSubmitCreateSnapshot: HTMLButtonElement | null = null;
+  private btnCancelCreateSnapshot: HTMLButtonElement | null = null;
+  private historyCreateErrorEl: HTMLElement | null = null;
+  private btnHistoryTabAll: HTMLButtonElement | null = null;
+  private btnHistoryTabManual: HTMLButtonElement | null = null;
+  private historySnapshotsListEl: HTMLElement | null = null;
+  private historyDrawerLoaderEl: HTMLElement | null = null;
+  private historyDrawerEmptyEl: HTMLElement | null = null;
+  private previewBannerEl: HTMLElement | null = null;
+  private previewBannerTextEl: HTMLElement | null = null;
+  private btnPreviewRestore: HTMLButtonElement | null = null;
+  private btnPreviewExit: HTMLButtonElement | null = null;
+
+  private isHistoryDrawerOpen = false;
+  private historyFilter: 'all' | 'manual' = 'all';
+  private snapshots: CanvasSnapshotItem[] = [];
+  private isPreviewingSnapshot = false;
+  private prePreviewProjectData: SerializedCanvasProject | null = null;
+  private activePreviewSnapshotUuid: string | null = null;
+  private lastAutoSnapshotTime = Date.now();
+  private hasUnsavedSnapshotChanges = false;
+  private autoSnapshotCheckTimer: number | null = null;
+
   constructor(container: HTMLElement, canvasUuid: string) {
     this.container = container;
     this.canvasUuid = canvasUuid;
@@ -956,6 +990,30 @@ class DesignController {
     this.btnConfirmDownload = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-confirm-download"]');
     this.btnConfirmDownloadText = this.container.querySelector<HTMLElement>('[data-ref="btn-confirm-download-text"]');
 
+    this.btnHistory = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-canvas-history"]');
+    this.historyDrawerEl = this.container.querySelector<HTMLElement>('[data-ref="design-history-drawer"]');
+    this.btnCloseHistoryDrawer = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-close-history-drawer"]');
+    this.btnToggleCreateSnapshot = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-create-snapshot"]');
+    this.historyCreateFormEl = this.container.querySelector<HTMLElement>('[data-ref="history-create-form"]');
+    this.inputSnapshotNameEl = this.container.querySelector<HTMLInputElement>('[data-ref="input-snapshot-name"]');
+    this.inputSnapshotDescEl = this.container.querySelector<HTMLTextAreaElement>('[data-ref="input-snapshot-description"]');
+    this.btnSubmitCreateSnapshot = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-submit-create-snapshot"]');
+    this.btnCancelCreateSnapshot = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-cancel-create-snapshot"]');
+    this.historyCreateErrorEl = this.container.querySelector<HTMLElement>('[data-ref="history-create-error"]');
+    this.btnHistoryTabAll = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-history-tab-all"]');
+    this.btnHistoryTabManual = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-history-tab-manual"]');
+    this.historySnapshotsListEl = this.container.querySelector<HTMLElement>('[data-ref="history-snapshots-list"]');
+    this.historyDrawerLoaderEl = this.container.querySelector<HTMLElement>('[data-ref="history-drawer-loader"]');
+    this.historyDrawerEmptyEl = this.container.querySelector<HTMLElement>('[data-ref="history-drawer-empty"]');
+    this.previewBannerEl = this.container.querySelector<HTMLElement>('[data-ref="design-history-preview-banner"]');
+    this.previewBannerTextEl = this.container.querySelector<HTMLElement>('[data-ref="preview-banner-text"]');
+    this.btnPreviewRestore = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-preview-restore"]');
+    this.btnPreviewExit = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-preview-exit"]');
+
+    this.autoSnapshotCheckTimer = window.setInterval(() => {
+      void this.triggerAutoSnapshot();
+    }, 60 * 1000);
+
     this.loadRecentColors();
     this.initColorsUI();
     this.renderShapesGrid();
@@ -980,7 +1038,7 @@ class DesignController {
     const canvas = document.createElement('canvas');
     canvas.width = this.canvasWidth;
     canvas.height = this.canvasHeight;
-    const ctx = canvas.getContext('2d')!;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
     return {
       id: `layer-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       name,
@@ -2018,8 +2076,9 @@ class DesignController {
   }
 
   public async saveProject(): Promise<void> {
-    if (this.isSaving || !this.isLoaded || this.isAccessRevoked) return;
+    if (this.isSaving || !this.isLoaded || this.isAccessRevoked || this.isPreviewingSnapshot) return;
     this.isSaving = true;
+    this.hasUnsavedSnapshotChanges = true;
 
     try {
       const serialized = this.serializeProject();
@@ -4843,6 +4902,30 @@ class DesignController {
       );
     }
 
+    const optDownloadAtlas = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-download-type-atlas"]');
+    if (optDownloadAtlas) {
+      optDownloadAtlas.addEventListener(
+        'click',
+        () => {
+          this.changeDownloadType('spritesheet-atlas');
+          this.downloadTypeDropdownController?.close();
+        },
+        { signal }
+      );
+    }
+
+    const optDownloadGif = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-download-type-gif"]');
+    if (optDownloadGif) {
+      optDownloadGif.addEventListener(
+        'click',
+        () => {
+          this.changeDownloadType('gif');
+          this.downloadTypeDropdownController?.close();
+        },
+        { signal }
+      );
+    }
+
     const optDownloadProject = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-download-type-project"]');
     if (optDownloadProject) {
       optDownloadProject.addEventListener(
@@ -5140,22 +5223,7 @@ class DesignController {
       this.btnToggleCollaborators.addEventListener(
         'click',
         () => {
-          if (!this.collaboratorsPanelEl) return;
-          const isHidden = this.collaboratorsPanelEl.classList.contains('is-hidden');
-          if (isHidden) {
-            this.layersPanelEl?.classList.add('is-hidden');
-            this.shapesPanelEl?.classList.add('is-hidden');
-            this.colorsPanelEl?.classList.add('is-hidden');
-            this.toggleLayersBtn?.classList.remove('is-active');
-            this.topToggleColorsBtn?.classList.remove('is-active');
-            this.topToggleShapesBtn?.classList.remove('is-active');
-            this.collaboratorsPanelEl.classList.remove('is-hidden');
-            this.btnToggleCollaborators?.classList.add('is-active');
-            this.renderCollaboratorsPanel();
-          } else {
-            this.collaboratorsPanelEl.classList.add('is-hidden');
-            this.btnToggleCollaborators?.classList.remove('is-active');
-          }
+          this.toggleCollaboratorsPanel();
         },
         { signal }
       );
@@ -5167,6 +5235,145 @@ class DesignController {
         () => {
           this.collaboratorsPanelEl?.classList.add('is-hidden');
           this.btnToggleCollaborators?.classList.remove('is-active');
+        },
+        { signal }
+      );
+    }
+
+    if (this.btnHistory) {
+      this.btnHistory.addEventListener(
+        'click',
+        () => {
+          if (this.isHistoryDrawerOpen) {
+            this.closeHistoryDrawer();
+          } else {
+            this.openHistoryDrawer();
+          }
+        },
+        { signal }
+      );
+    }
+
+    if (this.btnCloseHistoryDrawer) {
+      this.btnCloseHistoryDrawer.addEventListener(
+        'click',
+        () => {
+          this.closeHistoryDrawer();
+        },
+        { signal }
+      );
+    }
+
+    if (this.btnToggleCreateSnapshot) {
+      this.btnToggleCreateSnapshot.addEventListener(
+        'click',
+        () => {
+          if (!this.historyCreateFormEl) return;
+          const isHidden = this.historyCreateFormEl.classList.contains('is-hidden');
+          if (isHidden) {
+            this.historyCreateFormEl.classList.remove('is-hidden');
+            this.inputSnapshotNameEl?.focus();
+          } else {
+            this.historyCreateFormEl.classList.add('is-hidden');
+          }
+        },
+        { signal }
+      );
+    }
+
+    if (this.btnCancelCreateSnapshot) {
+      this.btnCancelCreateSnapshot.addEventListener(
+        'click',
+        () => {
+          this.historyCreateFormEl?.classList.add('is-hidden');
+          if (this.inputSnapshotNameEl) this.inputSnapshotNameEl.value = '';
+          if (this.inputSnapshotDescEl) this.inputSnapshotDescEl.value = '';
+          if (this.historyCreateErrorEl) {
+            this.historyCreateErrorEl.classList.add('is-hidden');
+            this.historyCreateErrorEl.textContent = '';
+          }
+        },
+        { signal }
+      );
+    }
+
+    if (this.btnSubmitCreateSnapshot) {
+      this.btnSubmitCreateSnapshot.addEventListener(
+        'click',
+        () => {
+          void this.handleCreateManualSnapshot();
+        },
+        { signal }
+      );
+    }
+
+    if (this.btnHistoryTabAll) {
+      this.btnHistoryTabAll.addEventListener(
+        'click',
+        () => {
+          this.historyFilter = 'all';
+          this.btnHistoryTabAll?.classList.add('is-active');
+          this.btnHistoryTabManual?.classList.remove('is-active');
+          this.renderHistorySnapshots();
+        },
+        { signal }
+      );
+    }
+
+    if (this.btnHistoryTabManual) {
+      this.btnHistoryTabManual.addEventListener(
+        'click',
+        () => {
+          this.historyFilter = 'manual';
+          this.btnHistoryTabManual?.classList.add('is-active');
+          this.btnHistoryTabAll?.classList.remove('is-active');
+          this.renderHistorySnapshots();
+        },
+        { signal }
+      );
+    }
+
+    if (this.historySnapshotsListEl) {
+      this.historySnapshotsListEl.addEventListener(
+        'click',
+        (e) => {
+          const target = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-action]');
+          if (!target) return;
+          const action = target.getAttribute('data-action');
+          const snapUuid = target.getAttribute('data-snap-uuid');
+          if (!action || !snapUuid) return;
+
+          if (action === 'preview') {
+            void this.previewSnapshot(snapUuid);
+          } else if (action === 'restore') {
+            void this.restoreSnapshot(snapUuid);
+          } else if (action === 'fork') {
+            void this.forkSnapshot(snapUuid);
+          } else if (action === 'delete') {
+            void this.deleteSnapshot(snapUuid);
+          }
+        },
+        { signal }
+      );
+    }
+
+    if (this.btnPreviewExit) {
+      this.btnPreviewExit.addEventListener(
+        'click',
+        () => {
+          void this.exitSnapshotPreview();
+        },
+        { signal }
+      );
+    }
+
+    if (this.btnPreviewRestore) {
+      this.btnPreviewRestore.addEventListener(
+        'click',
+        () => {
+          if (this.activePreviewSnapshotUuid) {
+            void this.restoreSnapshot(this.activePreviewSnapshotUuid);
+          }
         },
         { signal }
       );
@@ -6702,30 +6909,151 @@ class DesignController {
     });
   }
 
+  private toggleCollaboratorsPanel(): void {
+    if (!this.collaboratorsPanelEl) return;
+    const isHidden = this.collaboratorsPanelEl.classList.contains('is-hidden');
+    if (isHidden) {
+      this.layersPanelEl?.classList.add('is-hidden');
+      this.shapesPanelEl?.classList.add('is-hidden');
+      this.colorsPanelEl?.classList.add('is-hidden');
+      this.toggleLayersBtn?.classList.remove('is-active');
+      this.topToggleColorsBtn?.classList.remove('is-active');
+      this.topToggleShapesBtn?.classList.remove('is-active');
+      this.collaboratorsPanelEl.classList.remove('is-hidden');
+      this.btnToggleCollaborators?.classList.add('is-active');
+      this.renderCollaboratorsPanel();
+    } else {
+      this.collaboratorsPanelEl.classList.add('is-hidden');
+      this.btnToggleCollaborators?.classList.remove('is-active');
+    }
+  }
+
   private renderCollaboratorsBar(): void {
     if (!this.collaboratorsBarEl || !this.collaboratorsListEl) return;
-
-    if (this.collaborators.size === 0) {
-      this.collaboratorsBarEl.classList.add('is-hidden');
-      this.collaboratorsListEl.innerHTML = '';
-      return;
-    }
 
     this.collaboratorsBarEl.classList.remove('is-hidden');
     this.collaboratorsListEl.innerHTML = '';
 
+    const stackItems: Array<{
+      avatarUrl: string;
+      isOwner: boolean;
+      tier: string;
+      tooltip: string;
+      username: string;
+    }> = [];
+
+    const ownerData = this.ownerInfo || (this.isOwner && currentUser
+      ? {
+          avatarUrl: currentUser.avatar_url || null,
+          id: currentUser.id,
+          subscriptionTier: currentUser.subscription_tier || 'free',
+          username: currentUser.username,
+        }
+      : {
+          avatarUrl: null,
+          id: null,
+          subscriptionTier: 'free',
+          username: 'Propietario',
+        });
+
+    const isOwnerOnline = this.isOwner || Array.from(this.collaborators.values()).some(
+      (c) => (c.userId && ownerData.id && c.userId === ownerData.id) || (c.username && c.username === ownerData.username)
+    );
+
+    const ownerAvatar = ownerData.avatarUrl || API_ROUTES.avatar(ownerData.username);
+    const ownerTier = ownerData.subscriptionTier || 'free';
+    const ownerStatusText = isOwnerOnline ? ' • En línea' : '';
+    const ownerRoleText = this.isOwner ? ' (Dueño • Tú)' : ` (Dueño${ownerStatusText})`;
+
+    stackItems.push({
+      avatarUrl: ownerAvatar,
+      isOwner: true,
+      tier: ownerTier,
+      tooltip: `${ownerData.username}${ownerRoleText}`,
+      username: ownerData.username,
+    });
+
+    if (!this.isOwner && currentUser) {
+      const myAvatar = currentUser.avatar_url || API_ROUTES.avatar(currentUser.username);
+      const myTier = currentUser.subscription_tier || 'free';
+      const myRole = this.role === 'viewer' ? 'Lector' : 'Editor';
+      stackItems.push({
+        avatarUrl: myAvatar,
+        isOwner: false,
+        tier: myTier,
+        tooltip: `${currentUser.username} (${myRole} • En línea • Tú)`,
+        username: currentUser.username,
+      });
+    }
+
+    const seenUserIds = new Set<number>();
+    const seenUsernames = new Set<string>();
+    if (ownerData.id) seenUserIds.add(ownerData.id);
+    seenUsernames.add(ownerData.username);
+    if (!this.isOwner && currentUser) {
+      seenUserIds.add(currentUser.id);
+      seenUsernames.add(currentUser.username);
+    }
+
     this.collaborators.forEach((collab) => {
-      const chip = document.createElement('div');
-      chip.className = 'design-collaborator-chip';
-      chip.setAttribute('data-tooltip', collab.username || 'Invitado');
-      chip.style.backgroundColor = collab.color;
+      if (collab.userId && seenUserIds.has(collab.userId)) return;
+      if (collab.username && seenUsernames.has(collab.username)) return;
+      if (collab.userId) seenUserIds.add(collab.userId);
+      if (collab.username) seenUsernames.add(collab.username);
 
-      const initial = document.createElement('span');
-      initial.className = 'design-collaborator-chip__initial';
-      initial.textContent = (collab.username || 'I').charAt(0).toUpperCase();
-      chip.appendChild(initial);
+      const matchedMember = this.canvasMembers.find(
+        (m) => (collab.userId && m.user_id === collab.userId) || (collab.username && m.username === collab.username)
+      );
 
-      this.collaboratorsListEl!.appendChild(chip);
+      const avatarUrl = collab.avatarUrl || matchedMember?.avatar_url || API_ROUTES.avatar(collab.username || 'Invitado');
+      const tier = collab.subscriptionTier || matchedMember?.subscription_tier || 'free';
+      const roleText = collab.role === 'viewer' ? 'Lector' : 'Editor';
+
+      stackItems.push({
+        avatarUrl,
+        isOwner: false,
+        tier,
+        tooltip: `${collab.username || 'Invitado'} (${roleText} • En línea)`,
+        username: collab.username || 'Invitado',
+      });
+    });
+
+    stackItems.forEach((item, index) => {
+      const avatarEl = document.createElement('div');
+      const rawTier = (item.tier || 'free').toLowerCase();
+      const mappedTier = rawTier === 'business' || rawTier === 'negocios' ? 'pro' : rawTier;
+      avatarEl.className = `design-collaborator-avatar avatar-ring avatar-tier--${mappedTier}`;
+      avatarEl.setAttribute('data-tier', mappedTier);
+      avatarEl.setAttribute('data-tooltip', item.tooltip);
+      avatarEl.setAttribute('aria-label', item.tooltip);
+      avatarEl.style.zIndex = `${index + 1}`;
+
+      const img = document.createElement('img');
+      img.className = 'avatar-preview-img image-lazy-fade';
+      img.src = item.avatarUrl;
+      img.alt = item.username;
+      img.referrerPolicy = 'no-referrer';
+      img.onload = () => img.classList.add('image-loaded');
+      img.onerror = () => {
+        img.onerror = null;
+        img.src = API_ROUTES.avatar(item.username);
+        img.classList.add('image-loaded');
+      };
+      avatarEl.appendChild(img);
+
+      if (item.isOwner) {
+        const badge = document.createElement('span');
+        badge.className = 'design-collaborator-avatar__badge';
+        badge.innerHTML = '<span class="material-symbols-rounded">star</span>';
+        avatarEl.appendChild(badge);
+      }
+
+      avatarEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.toggleCollaboratorsPanel();
+      });
+
+      this.collaboratorsListEl!.appendChild(avatarEl);
     });
   }
 
@@ -7169,9 +7497,11 @@ class DesignController {
   private setupWebSocketCollaboration(): void {
     const userId = currentUser ? currentUser.id : 0;
     const username = currentUser ? currentUser.username : 'Invitado';
+    const avatarUrl = currentUser?.avatar_url || '';
+    const subscriptionTier = currentUser?.subscription_tier || 'free';
     this.myCollaboratorColor = getCollaboratorColor(userId ? userId : Math.random().toString());
 
-    joinCanvasRoom(this.canvasUuid, userId, username, this.myCollaboratorColor, this.roomToken);
+    joinCanvasRoom(this.canvasUuid, userId, username, this.myCollaboratorColor, this.roomToken, avatarUrl, subscriptionTier);
 
     const unsubJoinError = registerWebSocketHandler('CANVAS_JOIN_ERROR', (payload: any) => {
       const roomUuid = payload.canvasUuid || payload.canvas_uuid;
@@ -7193,11 +7523,17 @@ class DesignController {
           const uUserId = u.userId !== undefined ? u.userId : u.user_id;
           const uUsername = u.username || 'Invitado';
           const uColor = u.color || getCollaboratorColor(uUserId || uConnId);
+          const uRole = u.role || 'editor';
+          const uAvatar = u.avatarUrl || u.avatar_url || null;
+          const uTier = (u.subscriptionTier || u.subscription_tier || 'free') as 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios';
           if (uUserId && uUserId === userId && uUsername === username) continue;
           this.collaborators.set(uConnId, {
+            avatarUrl: uAvatar,
             color: uColor,
             connId: uConnId,
             hideCursor: false,
+            role: uRole,
+            subscriptionTier: uTier,
             userId: uUserId,
             username: uUsername,
           });
@@ -7216,11 +7552,17 @@ class DesignController {
       const uUserId = u.userId !== undefined ? u.userId : u.user_id;
       const uUsername = u.username || 'Invitado';
       const uColor = u.color || getCollaboratorColor(uUserId || uConnId);
+      const uRole = u.role || 'editor';
+      const uAvatar = u.avatarUrl || u.avatar_url || null;
+      const uTier = (u.subscriptionTier || u.subscription_tier || 'free') as 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios';
       if (uUserId && uUserId === userId && uUsername === username) return;
       this.collaborators.set(uConnId, {
+        avatarUrl: uAvatar,
         color: uColor,
         connId: uConnId,
         hideCursor: false,
+        role: uRole,
+        subscriptionTier: uTier,
         userId: uUserId,
         username: uUsername,
       });
@@ -7250,9 +7592,12 @@ class DesignController {
       let collab = this.collaborators.get(connId);
       if (!collab) {
         collab = {
+          avatarUrl: payload.avatarUrl || payload.avatar_url || null,
           color: payload.color || getCollaboratorColor(payload.userId || connId),
           connId,
           hideCursor: false,
+          role: payload.role || 'editor',
+          subscriptionTier: payload.subscriptionTier || payload.subscription_tier || 'free',
           userId: payload.userId || 0,
           username: payload.username || 'Invitado',
         };
@@ -7589,6 +7934,7 @@ class DesignController {
         if (data && Array.isArray(data.members)) {
           this.canvasMembers = data.members;
           this.renderShareMembers();
+          this.renderCollaboratorsBar();
         }
       }
     } catch {
@@ -8037,7 +8383,7 @@ class DesignController {
     this.shareDropdownController?.update();
   }
 
-  private changeDownloadType(type: 'png-current' | 'spritesheet' | 'project-json'): void {
+  private changeDownloadType(type: 'png-current' | 'spritesheet' | 'spritesheet-atlas' | 'gif' | 'project-json'): void {
     this.selectedDownloadType = type;
     const items = this.container.querySelectorAll<HTMLButtonElement>('[data-ref^="btn-download-type-"]');
     items.forEach((item) => {
@@ -8052,6 +8398,16 @@ class DesignController {
     } else if (type === 'spritesheet') {
       if (this.downloadTypeSelectedIconEl) this.downloadTypeSelectedIconEl.textContent = 'grid_view';
       if (this.downloadTypeSelectedTextEl) this.downloadTypeSelectedTextEl.textContent = 'PNG (Hoja de sprites)';
+      this.downloadScaleSectionEl?.classList.remove('is-hidden');
+      this.downloadBgSectionEl?.classList.remove('is-hidden');
+    } else if (type === 'spritesheet-atlas') {
+      if (this.downloadTypeSelectedIconEl) this.downloadTypeSelectedIconEl.textContent = 'sports_esports';
+      if (this.downloadTypeSelectedTextEl) this.downloadTypeSelectedTextEl.textContent = 'Hoja de sprites + JSON (Game Atlas)';
+      this.downloadScaleSectionEl?.classList.remove('is-hidden');
+      this.downloadBgSectionEl?.classList.remove('is-hidden');
+    } else if (type === 'gif') {
+      if (this.downloadTypeSelectedIconEl) this.downloadTypeSelectedIconEl.textContent = 'gif';
+      if (this.downloadTypeSelectedTextEl) this.downloadTypeSelectedTextEl.textContent = 'GIF animado (.gif)';
       this.downloadScaleSectionEl?.classList.remove('is-hidden');
       this.downloadBgSectionEl?.classList.remove('is-hidden');
     } else {
@@ -8123,6 +8479,12 @@ class DesignController {
         const totalW = this.canvasWidth * this.selectedDownloadScale * framesCount;
         const h = this.canvasHeight * this.selectedDownloadScale;
         this.btnConfirmDownloadText.textContent = `Descargar Spritesheet (${totalW} × ${h} px)`;
+      } else if (this.selectedDownloadType === 'spritesheet-atlas') {
+        this.btnConfirmDownloadText.textContent = 'Descargar Atlas (PNG + JSON)';
+      } else if (this.selectedDownloadType === 'gif') {
+        const w = this.canvasWidth * this.selectedDownloadScale;
+        const h = this.canvasHeight * this.selectedDownloadScale;
+        this.btnConfirmDownloadText.textContent = `Descargar GIF animado (${w} × ${h} px)`;
       } else {
         this.btnConfirmDownloadText.textContent = 'Descargar Proyecto (.json)';
       }
@@ -8216,7 +8578,7 @@ class DesignController {
           throw new Error('Canvas toBlob failed');
         }
         this.triggerBlobDownload(blob, `${cleanName}_${scale}x.png`);
-      } else if (this.selectedDownloadType === 'spritesheet') {
+      } else if (this.selectedDownloadType === 'spritesheet' || this.selectedDownloadType === 'spritesheet-atlas') {
         if (this.frames.length === 0) {
           showToast('No hay fotogramas para exportar', 'danger');
           return;
@@ -8228,6 +8590,56 @@ class DesignController {
           throw new Error('Canvas toBlob failed');
         }
         this.triggerBlobDownload(blob, `${cleanName}_spritesheet_${scale}x.png`);
+
+        if (this.selectedDownloadType === 'spritesheet-atlas') {
+          const frameW = this.canvasWidth * scale;
+          const frameH = this.canvasHeight * scale;
+          const framesCount = this.frames.length;
+          const defaultDelay = Math.round(1000 / (this.fps || 8));
+
+          const atlasFrames = this.frames.map((frame, idx) => ({
+            duration: frame.durationMs || defaultDelay,
+            filename: `frame_${idx}.png`,
+            frame: { h: frameH, w: frameW, x: idx * frameW, y: 0 },
+            rotated: false,
+            sourceSize: { h: frameH, w: frameW },
+            spriteSourceSize: { h: frameH, w: frameW, x: 0, y: 0 },
+            trimmed: false,
+          }));
+
+          const atlasJson = {
+            frames: atlasFrames,
+            meta: {
+              app: 'Spriteboard',
+              format: 'RGBA8888',
+              image: `${cleanName}_spritesheet_${scale}x.png`,
+              scale: `${scale}`,
+              size: { h: frameH, w: frameW * framesCount },
+              version: '1.0',
+            },
+          };
+          const jsonBlob = new Blob([JSON.stringify(atlasJson, null, 2)], { type: 'application/json;charset=utf-8' });
+          this.triggerBlobDownload(jsonBlob, `${cleanName}_atlas_${scale}x.json`);
+        }
+      } else if (this.selectedDownloadType === 'gif') {
+        if (this.frames.length === 0) {
+          showToast('No hay fotogramas para exportar', 'danger');
+          return;
+        }
+
+        const gifFrames: Array<{ canvas: HTMLCanvasElement; delayMs: number }> = [];
+        const defaultDelay = Math.round(1000 / (this.fps || 8));
+
+        for (const frame of this.frames) {
+          const frameCanvas = this.renderCompositedFrame(frame, scale, transparent);
+          gifFrames.push({
+            canvas: frameCanvas,
+            delayMs: frame.durationMs || defaultDelay,
+          });
+        }
+
+        const gifBlob = await encodeFramesToGif(gifFrames);
+        this.triggerBlobDownload(gifBlob, `${cleanName}_${scale}x.gif`);
       } else if (this.selectedDownloadType === 'project-json') {
         const projectData = this.serializeProject();
         const jsonStr = JSON.stringify(projectData, null, 2);
@@ -8359,6 +8771,36 @@ class DesignController {
         }
       }
 
+      if (this.isOwner && currentUser) {
+        this.ownerInfo = {
+          avatarUrl: currentUser.avatar_url || null,
+          id: currentUser.id,
+          subscriptionTier: currentUser.subscription_tier || 'free',
+          username: currentUser.username,
+        };
+      } else if (canvas.owner_name) {
+        this.ownerInfo = {
+          avatarUrl: canvas.owner_avatar || null,
+          id: canvas.user_id || null,
+          subscriptionTier: canvas.owner_tier || 'free',
+          username: canvas.owner_name,
+        };
+      } else if (currentUser) {
+        this.ownerInfo = {
+          avatarUrl: currentUser.avatar_url || null,
+          id: currentUser.id,
+          subscriptionTier: currentUser.subscription_tier || 'free',
+          username: currentUser.username,
+        };
+      } else {
+        this.ownerInfo = {
+          avatarUrl: null,
+          id: null,
+          subscriptionTier: 'free',
+          username: 'Invitado',
+        };
+      }
+
       if (!this.isOwner) {
         await removeLocalCanvas(this.canvasUuid);
       }
@@ -8387,6 +8829,7 @@ class DesignController {
 
     this.updateAccessLevelUI();
     this.applyViewerMode();
+    this.renderCollaboratorsBar();
     void this.loadCanvasMembers();
     void this.loadCanvasTeams();
 
@@ -8452,10 +8895,394 @@ class DesignController {
     return true;
   }
 
+  private openHistoryDrawer(): void {
+    if (!this.historyDrawerEl) return;
+    this.isHistoryDrawerOpen = true;
+    this.historyDrawerEl.classList.remove('is-hidden');
+    this.btnHistory?.classList.add('is-active');
+
+    this.collaboratorsPanelEl?.classList.add('is-hidden');
+    this.btnToggleCollaborators?.classList.remove('is-active');
+    this.layersPanelEl?.classList.add('is-hidden');
+    this.toggleLayersBtn?.classList.remove('is-active');
+    this.shapesPanelEl?.classList.add('is-hidden');
+    this.topToggleShapesBtn?.classList.remove('is-active');
+    this.colorsPanelEl?.classList.add('is-hidden');
+    this.topToggleColorsBtn?.classList.remove('is-active');
+
+    void this.loadHistorySnapshots();
+  }
+
+  private closeHistoryDrawer(): void {
+    if (!this.historyDrawerEl) return;
+    this.isHistoryDrawerOpen = false;
+    this.historyDrawerEl.classList.add('is-hidden');
+    this.btnHistory?.classList.remove('is-active');
+    this.historyCreateFormEl?.classList.add('is-hidden');
+    if (this.historyCreateErrorEl) {
+      this.historyCreateErrorEl.classList.add('is-hidden');
+      this.historyCreateErrorEl.textContent = '';
+    }
+  }
+
+  private async loadHistorySnapshots(): Promise<void> {
+    if (!this.historySnapshotsListEl) return;
+
+    this.historyDrawerLoaderEl?.classList.remove('is-hidden');
+    this.historyDrawerEmptyEl?.classList.add('is-hidden');
+    this.historySnapshotsListEl.innerHTML = '';
+
+    try {
+      const res = await getApi(API_ROUTES.canvases.snapshots(this.canvasUuid));
+      if (res.ok) {
+        const data = await res.json();
+        this.snapshots = Array.isArray(data.snapshots) ? data.snapshots : [];
+      } else {
+        this.snapshots = [];
+      }
+    } catch {
+      this.snapshots = [];
+    } finally {
+      this.historyDrawerLoaderEl?.classList.add('is-hidden');
+      this.renderHistorySnapshots();
+    }
+  }
+
+  private renderHistorySnapshots(): void {
+    if (!this.historySnapshotsListEl) return;
+
+    const filtered = this.snapshots.filter((s) => {
+      if (this.historyFilter === 'manual') return s.is_manual;
+      return true;
+    });
+
+    if (filtered.length === 0) {
+      this.historyDrawerEmptyEl?.classList.remove('is-hidden');
+      this.historySnapshotsListEl.innerHTML = '';
+      return;
+    }
+
+    this.historyDrawerEmptyEl?.classList.add('is-hidden');
+
+    const escape = (str: string): string =>
+      str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+
+    const formatDate = (iso: string): string => {
+      try {
+        const d = new Date(iso);
+        const now = new Date();
+        const diffMs = now.getTime() - d.getTime();
+        const diffMins = Math.floor(diffMs / 60000);
+        if (diffMins < 1) return 'Hace un momento';
+        if (diffMins < 60) return `Hace ${diffMins} min`;
+        const diffHours = Math.floor(diffMins / 60);
+        if (diffHours < 24) return `Hace ${diffHours} h`;
+        return d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+      } catch {
+        return iso;
+      }
+    };
+
+    this.historySnapshotsListEl.innerHTML = filtered
+      .map((s) => {
+        const isPreviewing = this.activePreviewSnapshotUuid === s.uuid;
+        const cardClass = `design-history-card${isPreviewing ? ' is-active-preview' : ''}`;
+        const badgeClass = s.is_manual ? 'design-history-card__badge--manual' : 'design-history-card__badge--auto';
+        const badgeText = s.is_manual ? 'Hito' : 'Auto';
+        const displayName = s.name ? escape(s.name) : s.is_manual ? 'Hito manual' : 'Guardado automático';
+        const dateText = formatDate(s.created_at);
+
+        const thumbHtml = s.preview_thumbnail
+          ? `<img class="design-history-card__thumb" src="${s.preview_thumbnail}" alt="${displayName}" />`
+          : `<div class="design-history-card__thumb-placeholder"><span class="component-icon">image</span></div>`;
+
+        const authorHtml = s.user_name
+          ? `<div class="design-history-card__author">
+              ${s.user_avatar ? `<img class="design-history-card__author-avatar" src="${s.user_avatar}" alt="${escape(s.user_name)}" />` : '<span class="component-icon">person</span>'}
+              <span>${escape(s.user_name)}</span>
+            </div>`
+          : '';
+
+        const descHtml = s.description
+          ? `<div class="design-history-card__desc">${escape(s.description)}</div>`
+          : '';
+
+        const deleteBtnHtml = this.isOwner
+          ? `<button type="button" class="btn btn--h28 btn--icon" data-action="delete" data-snap-uuid="${s.uuid}" data-tooltip="Eliminar versión" aria-label="Eliminar versión">
+              <span class="component-icon">delete_outline</span>
+            </button>`
+          : '';
+
+        return `
+          <div class="${cardClass}" data-snap-uuid="${s.uuid}">
+            <div class="design-history-card__top">
+              ${thumbHtml}
+              <div class="design-history-card__meta">
+                <div class="design-history-card__header-row">
+                  <span class="design-history-card__name" title="${displayName}">${displayName}</span>
+                  <span class="design-history-card__badge ${badgeClass}">${badgeText}</span>
+                </div>
+                <span class="design-history-card__date">${dateText}</span>
+                ${authorHtml}
+              </div>
+            </div>
+            ${descHtml}
+            <div class="design-history-card__actions">
+              <button type="button" class="btn btn--h28 btn--outline btn--icon" data-action="preview" data-snap-uuid="${s.uuid}" data-tooltip="Previsualizar versión" aria-label="Previsualizar">
+                <span class="component-icon">visibility</span>
+              </button>
+              <button type="button" class="btn btn--h28 btn--black" data-action="restore" data-snap-uuid="${s.uuid}">
+                <span class="component-icon">restore</span>
+                <span>Restaurar</span>
+              </button>
+              <button type="button" class="btn btn--h28 btn--outline btn--icon" data-action="fork" data-snap-uuid="${s.uuid}" data-tooltip="Crear copia como nuevo lienzo" aria-label="Crear copia">
+                <span class="component-icon">content_copy</span>
+              </button>
+              ${deleteBtnHtml}
+            </div>
+          </div>
+        `;
+      })
+      .join('');
+
+    renderIcons(this.historySnapshotsListEl);
+  }
+
+  private async handleCreateManualSnapshot(): Promise<void> {
+    if (!currentUser) {
+      showToast('Debes iniciar sesión para crear versiones.', 'error');
+      return;
+    }
+
+    const name = this.inputSnapshotNameEl?.value.trim() || 'Hito manual';
+    const description = this.inputSnapshotDescEl?.value.trim() || undefined;
+
+    if (this.historyCreateErrorEl) {
+      this.historyCreateErrorEl.classList.add('is-hidden');
+      this.historyCreateErrorEl.textContent = '';
+    }
+
+    if (this.btnSubmitCreateSnapshot) {
+      this.btnSubmitCreateSnapshot.disabled = true;
+    }
+
+    try {
+      const serialized = this.serializeProject();
+      const thumbnail = this.generateThumbnail();
+
+      const res = await postApi(API_ROUTES.canvases.snapshots(this.canvasUuid), {
+        name,
+        description,
+        is_manual: true,
+        preview_thumbnail: thumbnail,
+        data: serialized,
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Error al guardar la versión.');
+      }
+
+      if (this.inputSnapshotNameEl) this.inputSnapshotNameEl.value = '';
+      if (this.inputSnapshotDescEl) this.inputSnapshotDescEl.value = '';
+      this.historyCreateFormEl?.classList.add('is-hidden');
+      this.hasUnsavedSnapshotChanges = false;
+      this.lastAutoSnapshotTime = Date.now();
+
+      showToast('Punto de control guardado correctamente.', 'success');
+      await this.loadHistorySnapshots();
+    } catch (err: any) {
+      if (this.historyCreateErrorEl) {
+        this.historyCreateErrorEl.textContent = err.message || 'No se pudo guardar la versión.';
+        this.historyCreateErrorEl.classList.remove('is-hidden');
+      } else {
+        showToast(err.message || 'No se pudo guardar la versión.', 'error');
+      }
+    } finally {
+      if (this.btnSubmitCreateSnapshot) {
+        this.btnSubmitCreateSnapshot.disabled = false;
+      }
+    }
+  }
+
+  private async triggerAutoSnapshot(): Promise<void> {
+    if (!this.hasUnsavedSnapshotChanges || !this.isLoaded || this.isPreviewingSnapshot || !currentUser) return;
+    const now = Date.now();
+    if (now - this.lastAutoSnapshotTime < 10 * 60 * 1000) return;
+
+    try {
+      const serialized = this.serializeProject();
+      const thumbnail = this.generateThumbnail();
+
+      const res = await postApi(API_ROUTES.canvases.snapshots(this.canvasUuid), {
+        is_manual: false,
+        name: 'Guardado automático',
+        preview_thumbnail: thumbnail,
+        data: serialized,
+      });
+
+      if (res.ok) {
+        this.lastAutoSnapshotTime = now;
+        this.hasUnsavedSnapshotChanges = false;
+        if (this.isHistoryDrawerOpen) {
+          void this.loadHistorySnapshots();
+        }
+      }
+    } catch {}
+  }
+
+  private async previewSnapshot(snapshotUuid: string): Promise<void> {
+    if (this.activePreviewSnapshotUuid === snapshotUuid) return;
+
+    try {
+      const res = await getApi(API_ROUTES.canvases.snapshotById(this.canvasUuid, snapshotUuid));
+      if (!res.ok) {
+        showToast('No se pudo cargar la versión para previsualizar.', 'error');
+        return;
+      }
+
+      const data = await res.json();
+      if (!data.data) {
+        showToast('La versión no contiene datos válidos.', 'error');
+        return;
+      }
+
+      if (!this.isPreviewingSnapshot) {
+        this.prePreviewProjectData = this.serializeProject();
+      }
+
+      this.isPreviewingSnapshot = true;
+      this.activePreviewSnapshotUuid = snapshotUuid;
+
+      await this.deserializeProject(data.data);
+
+      if (this.previewBannerEl) {
+        this.previewBannerEl.classList.remove('is-hidden');
+      }
+      if (this.previewBannerTextEl) {
+        const title = data.snapshot?.name || 'Versión';
+        this.previewBannerTextEl.textContent = `Previsualizando: "${title}" (Modo solo lectura)`;
+      }
+
+      this.renderHistorySnapshots();
+      showToast('Estás en modo previsualización (solo lectura).', 'info');
+    } catch {
+      showToast('Error al previsualizar la versión.', 'error');
+    }
+  }
+
+  private async exitSnapshotPreview(): Promise<void> {
+    if (!this.isPreviewingSnapshot) return;
+
+    if (this.prePreviewProjectData) {
+      await this.deserializeProject(this.prePreviewProjectData);
+      this.prePreviewProjectData = null;
+    }
+
+    this.isPreviewingSnapshot = false;
+    this.activePreviewSnapshotUuid = null;
+
+    if (this.previewBannerEl) {
+      this.previewBannerEl.classList.add('is-hidden');
+    }
+
+    this.renderHistorySnapshots();
+    showToast('Has vuelto a tu versión de trabajo activa.', 'info');
+  }
+
+  private async restoreSnapshot(snapshotUuid: string): Promise<void> {
+    if (!currentUser) {
+      showToast('Debes iniciar sesión para restaurar versiones.', 'error');
+      return;
+    }
+
+    try {
+      const res = await postApi(API_ROUTES.canvases.snapshotRestore(this.canvasUuid, snapshotUuid), {});
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Error al restaurar la versión.');
+      }
+
+      const data = await res.json();
+
+      this.isPreviewingSnapshot = false;
+      this.prePreviewProjectData = null;
+      this.activePreviewSnapshotUuid = null;
+      this.previewBannerEl?.classList.add('is-hidden');
+
+      await this.deserializeProject(data.restoredData);
+      sendCanvasFullUpdate(this.canvasUuid, data.restoredData);
+
+      showToast('Versión restaurada correctamente. Se creó un respaldo automático previo.', 'success');
+      await this.loadHistorySnapshots();
+    } catch (err: any) {
+      showToast(err.message || 'No se pudo restaurar la versión.', 'error');
+    }
+  }
+
+  private async forkSnapshot(snapshotUuid: string): Promise<void> {
+    if (!currentUser) {
+      showToast('Debes iniciar sesión para duplicar versiones.', 'error');
+      return;
+    }
+
+    try {
+      const res = await postApi(API_ROUTES.canvases.snapshotFork(this.canvasUuid, snapshotUuid), {});
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Error al crear la copia del lienzo.');
+      }
+
+      const data = await res.json();
+      showToast('Lienzo creado a partir de la versión seleccionada.', 'success');
+      if (data.canvas?.uuid) {
+        navigate(`/design/${data.canvas.uuid}`);
+      }
+    } catch (err: any) {
+      showToast(err.message || 'No se pudo duplicar la versión.', 'error');
+    }
+  }
+
+  private async deleteSnapshot(snapshotUuid: string): Promise<void> {
+    if (!this.isOwner) {
+      showToast('Solo el propietario puede eliminar versiones.', 'error');
+      return;
+    }
+
+    try {
+      const res = await deleteApi(`${API_ROUTES.canvases.snapshots(this.canvasUuid)}/${snapshotUuid}`);
+      if (!res.ok) {
+        throw new Error('Error al eliminar la versión.');
+      }
+
+      if (this.activePreviewSnapshotUuid === snapshotUuid) {
+        await this.exitSnapshotPreview();
+      }
+
+      this.snapshots = this.snapshots.filter((s) => s.uuid !== snapshotUuid);
+      this.renderHistorySnapshots();
+      showToast('Versión eliminada correctamente.', 'success');
+    } catch (err: any) {
+      showToast(err.message || 'No se pudo eliminar la versión.', 'error');
+    }
+  }
+
   public destroy(): void {
     if (this.viewHeartbeatTimer !== null) {
       clearInterval(this.viewHeartbeatTimer);
       this.viewHeartbeatTimer = null;
+    }
+    if (this.autoSnapshotCheckTimer !== null) {
+      clearInterval(this.autoSnapshotCheckTimer);
+      this.autoSnapshotCheckTimer = null;
+    }
+    if (this.isPreviewingSnapshot) {
+      void this.exitSnapshotPreview();
     }
     if (this.boundBeforeUnload) {
       window.removeEventListener('beforeunload', this.boundBeforeUnload);

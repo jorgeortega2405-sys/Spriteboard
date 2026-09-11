@@ -17,6 +17,9 @@ export interface Canvas {
   custom_slug?: string | null;
   deleted_at?: string | null;
   is_favorite?: boolean;
+  owner_name?: string | null;
+  owner_avatar?: string | null;
+  owner_tier?: 'free' | 'pro' | 'business' | 'negocios' | null;
   created_at: string;
   updated_at: string;
 }
@@ -85,6 +88,7 @@ export interface CanvasMember {
   username: string;
   email?: string | null;
   avatar_url?: string | null;
+  subscription_tier?: 'free' | 'pro' | 'business' | 'negocios';
   role: 'editor' | 'viewer';
   created_at: string;
 }

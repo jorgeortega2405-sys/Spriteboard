@@ -6,7 +6,7 @@ export interface User {
   email: string;
   avatar_url?: string | null;
   role?: UserRole;
-  subscription_tier?: 'free' | 'plus' | 'pro' | 'ultra';
+  subscription_tier?: 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios';
   language?: string;
   two_factor_enabled?: boolean;
   google_id?: string | null;

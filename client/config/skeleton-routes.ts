@@ -9,6 +9,7 @@ export const SKELETON_ROUTES: Record<string, string> = {
   '/teams': 'grouped-layout',
   '/templates': 'templates-layout',
   '/search': 'search-layout',
+  '/shared': 'cards-layout',
   '/trash': 'trash-layout',
   '/upgrade': 'grouped-layout',
   '/settings': 'grouped-layout',
@@ -67,6 +68,7 @@ export function hasPersistentTopBar(pathname: string): boolean {
     pathname === '/' ||
     pathname === '' ||
     pathname === '/search' ||
+    pathname === '/shared' ||
     pathname === '/templates' ||
     pathname === '/teams' ||
     pathname.startsWith('/teams') ||

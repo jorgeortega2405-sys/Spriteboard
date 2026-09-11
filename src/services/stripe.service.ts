@@ -152,7 +152,7 @@ export class StripeService {
 
   private async processSuccessfulCheckout(session: Stripe.Checkout.Session): Promise<void> {
     const userId = Number(session.metadata?.userId || session.client_reference_id);
-    const planId = session.metadata?.planId || 'plus';
+    const planId = session.metadata?.planId || 'pro';
     const billingPeriod = (session.metadata?.billingPeriod as 'monthly' | 'yearly') || 'monthly';
     const amountTotal = (session.amount_total ?? 0) / 100;
     const currency = session.currency || 'USD';
@@ -240,7 +240,7 @@ export class StripeService {
       } catch (_) {}
     }
     if (!planId) {
-      planId = user.subscription_tier || 'plus';
+      planId = user.subscription_tier || 'pro';
     }
 
     await purchaseService.recordPurchase({
@@ -348,7 +348,7 @@ export class StripeService {
       throw new Error('El pago aún no ha sido completado por Stripe.');
     }
 
-    const planId = session.metadata?.planId || 'plus';
+    const planId = session.metadata?.planId || 'pro';
     const billingPeriod = (session.metadata?.billingPeriod as 'monthly' | 'yearly') || 'monthly';
     const amountTotal = (session.amount_total ?? 0) / 100;
     const customerId = typeof session.customer === 'string' ? session.customer : (session.customer?.id ?? null);

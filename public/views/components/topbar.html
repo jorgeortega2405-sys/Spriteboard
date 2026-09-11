@@ -36,6 +36,7 @@
     <div class="notifications-dropdown-container" data-ref="notifications-container">
       <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-notifications" data-i18n-tooltip="topbar.notifications_tooltip" data-i18n-aria="topbar.notifications_tooltip">
         <span class="material-symbols-rounded">notifications</span>
+        <span class="notifications-badge is-hidden" data-ref="notifications-badge"></span>
       </button>
 
       <div class="notifications-dropdown-backdrop" data-ref="notifications-backdrop">
@@ -54,6 +55,7 @@
           </div>
 
           <div class="notifications-panel__bottom" data-ref="notifications-bottom">
+            <div class="notifications-list" data-ref="notifications-list" style="display: none;"></div>
             <div class="notifications-empty" data-ref="notifications-empty">
               <div class="notifications-empty__icon" data-ref="notifications-empty-icon">
                 <svg class="notifications-empty__svg" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">

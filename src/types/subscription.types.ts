@@ -1,4 +1,4 @@
-export type SubscriptionTierId = 'plus' | 'pro' | 'ultra';
+export type SubscriptionTierId = 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios';
 
 export type BillingPeriod = 'monthly' | 'yearly';
 

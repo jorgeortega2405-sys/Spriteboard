@@ -6,6 +6,7 @@ import { CanvasTeam } from '../types/team.types.js';
 import { deleteCanvasBlob, hasCanvasBlob, readCanvasBlobDecompressed, saveCanvasBlob } from './canvas-storage-blob.service.js';
 import { ensureDefaultFolder } from './folder.service.js';
 import { logger } from './logger.service.js';
+import { createNotification } from './notification.service.js';
 import crypto from 'crypto';
 import mysql from 'mysql2/promise';
 
@@ -161,74 +162,117 @@ export async function getUserCanvases(userId: number): Promise<Canvas[]> {
   }
 }
 
+export async function getSharedCanvases(userId: number): Promise<any[]> {
+  try {
+    const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
+      `SELECT c.id, c.uuid, c.user_id, c.folder_id, c.name, c.width, c.height, c.unit, c.preview_thumbnail,
+              c.access_level, c.public_role, c.short_code, c.custom_slug, c.created_at, c.updated_at,
+              u.username AS owner_name, u.avatar_url AS owner_avatar,
+              acc.member_role,
+              (uf.id IS NOT NULL) AS is_favorite
+       FROM canvases c
+       INNER JOIN db_identity.users u ON u.id = c.user_id
+       INNER JOIN (
+         SELECT cm.canvas_id, cm.role AS member_role
+         FROM canvas_members cm
+         WHERE cm.user_id = ?
+         UNION
+         SELECT ct.canvas_id, ct.role AS member_role
+         FROM canvas_teams ct
+         INNER JOIN db_identity.team_members tm ON tm.team_id = ct.team_id AND tm.user_id = ?
+         WHERE ct.canvas_id NOT IN (
+           SELECT canvas_id FROM canvas_members WHERE user_id = ?
+         )
+       ) acc ON acc.canvas_id = c.id
+       LEFT JOIN db_identity.user_favorites uf
+         ON uf.user_id = ? AND uf.item_type = 'canvas' AND uf.item_id = c.uuid
+       WHERE c.user_id != ?
+         AND c.deleted_at IS NULL
+       ORDER BY c.updated_at DESC`,
+      [userId, userId, userId, userId, userId]
+    );
+    return rows.map((r) => ({
+      ...r,
+      is_favorite: Boolean(r.is_favorite),
+    }));
+  } catch (err) {
+    logger.db.error(`Error al listar lienzos compartidos para el usuario ${userId}`, err);
+    throw new Error('No se pudieron obtener los lienzos compartidos.');
+  }
+}
+
+export async function populateCanvasData(canvas: Canvas): Promise<void> {
+  try {
+    if (await hasCanvasBlob(canvas.uuid)) {
+      const decompressed = await readCanvasBlobDecompressed(canvas.uuid);
+      if (decompressed) {
+        canvas.data = decompressed;
+        return;
+      }
+    }
+  } catch (blobErr) {
+    logger.db.error(`Error al cargar datos blob para lienzo ${canvas.uuid}`, blobErr);
+  }
+
+  if (canvas.data) {
+    if (typeof canvas.data === 'object') {
+      if ((canvas.data as any).storage === 'blob') {
+        canvas.data = null;
+      } else {
+        canvas.data = JSON.stringify(canvas.data);
+      }
+    } else if (typeof canvas.data === 'string' && canvas.data.includes('"storage":"blob"')) {
+      canvas.data = null;
+    }
+  } else {
+    canvas.data = null;
+  }
+}
+
 export async function getCanvasByUuid(uuid: string, userId?: number): Promise<Canvas | null> {
   try {
-    let canvas: Canvas | null = null;
+    const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
+      'SELECT id, uuid, user_id, name, width, height, unit, data, preview_thumbnail, access_level, public_role, short_code, custom_slug, created_at, updated_at FROM canvases WHERE uuid = ? AND deleted_at IS NULL LIMIT 1',
+      [uuid]
+    );
 
-    try {
-      const cached = await redis.get(`canvas:meta:${uuid}`);
-      if (cached) {
-        canvas = JSON.parse(cached) as Canvas;
-      }
-    } catch {}
-
-    if (!canvas) {
-      const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
-        'SELECT id, uuid, user_id, name, width, height, unit, access_level, public_role, short_code, custom_slug, created_at, updated_at FROM canvases WHERE uuid = ? AND deleted_at IS NULL LIMIT 1',
-        [uuid]
-      );
-
-      if (rows.length === 0) {
-        return null;
-      }
-
-      canvas = rows[0] as Canvas;
-
-      try {
-        await redis.setex(`canvas:meta:${uuid}`, 3600, JSON.stringify(canvas));
-      } catch {}
+    if (rows.length === 0) {
+      return null;
     }
 
-    try {
-      if (await hasCanvasBlob(uuid)) {
-        const decompressed = await readCanvasBlobDecompressed(uuid);
-        if (decompressed) {
-          canvas.data = decompressed;
-        }
-      }
-    } catch (err) {
-      logger.db.error(`Error al cargar datos blob para lienzo ${uuid}`, err);
-    }
+    const canvas = rows[0] as Canvas;
 
+    let hasAccess = false;
     if (canvas.access_level === 'public') {
-      return canvas;
-    }
-
-    if (userId !== undefined && canvas.user_id === userId) {
-      return canvas;
-    }
-
-    if (userId !== undefined) {
+      hasAccess = true;
+    } else if (userId !== undefined && canvas.user_id === userId) {
+      hasAccess = true;
+    } else if (userId !== undefined) {
       const [memberRows] = await canvasPool.query<mysql.RowDataPacket[]>(
         'SELECT id FROM canvas_members WHERE canvas_id = ? AND user_id = ? LIMIT 1',
         [canvas.id, userId]
       );
       if (memberRows.length > 0) {
-        return canvas;
-      }
-
-      const [teamRows] = await canvasPool.query<mysql.RowDataPacket[]>(
-        `SELECT ct.id FROM canvas_teams ct
-         INNER JOIN db_identity.team_members tm ON tm.team_id = ct.team_id
-         WHERE ct.canvas_id = ? AND tm.user_id = ? LIMIT 1`,
-        [canvas.id, userId]
-      );
-      if (teamRows.length > 0) {
-        return canvas;
+        hasAccess = true;
+      } else {
+        const [teamRows] = await canvasPool.query<mysql.RowDataPacket[]>(
+          `SELECT ct.id FROM canvas_teams ct
+           INNER JOIN db_identity.team_members tm ON tm.team_id = ct.team_id
+           WHERE ct.canvas_id = ? AND tm.user_id = ? LIMIT 1`,
+          [canvas.id, userId]
+        );
+        if (teamRows.length > 0) {
+          hasAccess = true;
+        }
       }
     }
 
-    return null;
+    if (!hasAccess) {
+      return null;
+    }
+
+    await populateCanvasData(canvas);
+    return canvas;
   } catch (err) {
     logger.db.error(`Error al consultar lienzo con UUID ${uuid}`, err);
     throw new Error('No se pudo cargar la información del lienzo.');
@@ -248,10 +292,19 @@ export function generateCanvasRoomToken(canvasUuid: string, userId: number, role
   return `${payloadBase64}.${signature}`;
 }
 
-export async function getCanvasUserRole(uuid: string, userId?: number): Promise<{ canvas: Canvas; role: 'owner' | 'editor' | 'viewer' } | null> {
+export async function getCanvasUserRole(
+  uuid: string,
+  userId?: number,
+  includeData = true
+): Promise<{ canvas: Canvas; role: 'owner' | 'editor' | 'viewer' } | null> {
   try {
     const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
-      'SELECT id, uuid, user_id, name, width, height, unit, preview_thumbnail, access_level, public_role, short_code, custom_slug, created_at, updated_at FROM canvases WHERE uuid = ? AND deleted_at IS NULL LIMIT 1',
+      `SELECT c.id, c.uuid, c.user_id, c.name, c.width, c.height, c.unit, c.data, c.preview_thumbnail,
+              c.access_level, c.public_role, c.short_code, c.custom_slug, c.created_at, c.updated_at,
+              u.username AS owner_name, u.avatar_url AS owner_avatar, u.subscription_tier AS owner_tier
+       FROM canvases c
+       LEFT JOIN db_identity.users u ON u.id = c.user_id
+       WHERE c.uuid = ? AND c.deleted_at IS NULL LIMIT 1`,
       [uuid]
     );
 
@@ -260,39 +313,43 @@ export async function getCanvasUserRole(uuid: string, userId?: number): Promise<
     }
 
     const canvas = rows[0] as Canvas;
+    let role: 'owner' | 'editor' | 'viewer' | null = null;
 
     if (userId !== undefined && canvas.user_id === userId) {
-      return { canvas, role: 'owner' };
-    }
-
-    if (userId !== undefined) {
+      role = 'owner';
+    } else if (userId !== undefined) {
       const [memberRows] = await canvasPool.query<mysql.RowDataPacket[]>(
         'SELECT role FROM canvas_members WHERE canvas_id = ? AND user_id = ? LIMIT 1',
         [canvas.id, userId]
       );
       if (memberRows.length > 0) {
-        const role = memberRows[0].role === 'editor' ? 'editor' : 'viewer';
-        return { canvas, role };
-      }
-
-      const [teamRows] = await canvasPool.query<mysql.RowDataPacket[]>(
-        `SELECT ct.role FROM canvas_teams ct
-         INNER JOIN db_identity.team_members tm ON tm.team_id = ct.team_id
-         WHERE ct.canvas_id = ? AND tm.user_id = ? LIMIT 1`,
-        [canvas.id, userId]
-      );
-      if (teamRows.length > 0) {
-        const role = teamRows[0].role === 'editor' ? 'editor' : 'viewer';
-        return { canvas, role };
+        role = memberRows[0].role === 'editor' ? 'editor' : 'viewer';
+      } else {
+        const [teamRows] = await canvasPool.query<mysql.RowDataPacket[]>(
+          `SELECT ct.role FROM canvas_teams ct
+           INNER JOIN db_identity.team_members tm ON tm.team_id = ct.team_id
+           WHERE ct.canvas_id = ? AND tm.user_id = ? LIMIT 1`,
+          [canvas.id, userId]
+        );
+        if (teamRows.length > 0) {
+          role = teamRows[0].role === 'editor' ? 'editor' : 'viewer';
+        }
       }
     }
 
-    if (canvas.access_level === 'public') {
-      const publicRole = (canvas as any).public_role === 'viewer' ? 'viewer' : 'editor';
-      return { canvas, role: publicRole };
+    if (!role && canvas.access_level === 'public') {
+      role = (canvas as any).public_role === 'viewer' ? 'viewer' : 'editor';
     }
 
-    return null;
+    if (!role) {
+      return null;
+    }
+
+    if (includeData) {
+      await populateCanvasData(canvas);
+    }
+
+    return { canvas, role };
   } catch (err) {
     logger.db.error(`Error al verificar rol de usuario para el lienzo ${uuid}`, err);
     throw new Error('No se pudo verificar la autorización del lienzo.');
@@ -458,7 +515,12 @@ export async function syncCanvas(userId: number | null, dto: SyncCanvasDto): Pro
     logger.db.info(`Lienzo sincronizado con la nube exitosamente: ${uuid} por ${userId ? `usuario ${userId}` : 'colaborador'}`);
 
     const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
-      'SELECT id, uuid, user_id, name, width, height, unit, access_level, public_role, short_code, custom_slug, created_at, updated_at FROM canvases WHERE uuid = ? LIMIT 1',
+      `SELECT c.id, c.uuid, c.user_id, c.name, c.width, c.height, c.unit, c.access_level, c.public_role,
+              c.short_code, c.custom_slug, c.created_at, c.updated_at,
+              u.username AS owner_name, u.avatar_url AS owner_avatar, u.subscription_tier AS owner_tier
+       FROM canvases c
+       LEFT JOIN db_identity.users u ON u.id = c.user_id
+       WHERE c.uuid = ? LIMIT 1`,
       [uuid]
     );
 
@@ -535,7 +597,7 @@ export async function getCanvasMembers(uuid: string, currentUserId?: number): Pr
 
     const [members] = await canvasPool.query<mysql.RowDataPacket[]>(
       `SELECT m.id, m.canvas_id, m.user_id, m.role, m.created_at,
-              u.username, ${isOwner ? 'u.email' : 'NULL as email'}, u.avatar_url
+              u.username, ${isOwner ? 'u.email' : 'NULL as email'}, u.avatar_url, u.subscription_tier
        FROM canvas_members m
        JOIN db_identity.users u ON m.user_id = u.id
        WHERE m.canvas_id = ?
@@ -558,7 +620,7 @@ export async function addCanvasMember(
 ): Promise<CanvasMember> {
   try {
     const [canvasRows] = await canvasPool.query<mysql.RowDataPacket[]>(
-      'SELECT id, user_id FROM canvases WHERE uuid = ? AND deleted_at IS NULL LIMIT 1',
+      'SELECT id, user_id, name FROM canvases WHERE uuid = ? AND deleted_at IS NULL LIMIT 1',
       [uuid]
     );
 
@@ -593,6 +655,24 @@ export async function addCanvasMember(
 
     logger.db.info(`Usuario ${targetUserId} añadido como miembro al lienzo ${uuid} por dueño ${ownerUserId}`);
 
+    try {
+      const [ownerRows] = await canvasPool.query<mysql.RowDataPacket[]>(
+        'SELECT username FROM db_identity.users WHERE id = ? LIMIT 1',
+        [ownerUserId]
+      );
+      const ownerName = ownerRows[0]?.username || 'Un usuario';
+      const roleText = role === 'editor' ? 'Editor' : 'Lector';
+      await createNotification({
+        userId: targetUserId,
+        type: 'canvas_invite',
+        title: 'Invitación a colaborar',
+        message: `${ownerName} te ha invitado a colaborar en el lienzo "${canvas.name}" como ${roleText}.`,
+        linkUrl: `/design/${uuid}`,
+      });
+    } catch (notifErr) {
+      logger.app.warn('Error al enviar notificación de invitación al lienzo', notifErr);
+    }
+
     const [memberRows] = await canvasPool.query<mysql.RowDataPacket[]>(
       `SELECT m.id, m.canvas_id, m.user_id, m.role, m.created_at,
               u.username, u.email, u.avatar_url
@@ -621,8 +701,8 @@ export async function removeCanvasMember(uuid: string, ownerUserId: number, targ
     }
 
     const canvas = canvasRows[0];
-    if (canvas.user_id !== ownerUserId) {
-      throw new Error('Solo el propietario puede remover miembros.');
+    if (canvas.user_id !== ownerUserId && ownerUserId !== targetUserId) {
+      throw new Error('Solo el propietario o el propio miembro pueden remover el acceso.');
     }
 
     await canvasPool.execute(
@@ -738,7 +818,7 @@ export async function addCanvasTeam(
 ): Promise<CanvasTeam> {
   try {
     const [canvasRows] = await canvasPool.query<mysql.RowDataPacket[]>(
-      'SELECT id, user_id FROM canvases WHERE uuid = ? AND deleted_at IS NULL LIMIT 1',
+      'SELECT id, user_id, name FROM canvases WHERE uuid = ? AND deleted_at IS NULL LIMIT 1',
       [uuid]
     );
 
@@ -768,6 +848,30 @@ export async function addCanvasTeam(
     );
 
     logger.db.info(`Equipo ${teamId} añadido como colaborador al lienzo ${uuid} por dueño ${ownerUserId}`);
+
+    try {
+      const [ownerRows] = await canvasPool.query<mysql.RowDataPacket[]>(
+        'SELECT username FROM db_identity.users WHERE id = ? LIMIT 1',
+        [ownerUserId]
+      );
+      const ownerName = ownerRows[0]?.username || 'Un usuario';
+      const [members] = await canvasPool.query<mysql.RowDataPacket[]>(
+        'SELECT user_id FROM db_identity.team_members WHERE team_id = ? AND user_id != ?',
+        [teamId, ownerUserId]
+      );
+      const roleText = role === 'editor' ? 'Editor' : 'Lector';
+      for (const m of members) {
+        await createNotification({
+          userId: m.user_id,
+          type: 'canvas_invite',
+          title: 'Lienzo compartido con tu equipo',
+          message: `${ownerName} ha compartido el lienzo "${canvas.name}" con tu equipo "${teamRows[0]?.name}" con rol de ${roleText}.`,
+          linkUrl: `/design/${uuid}`,
+        });
+      }
+    } catch (notifErr) {
+      logger.app.warn('Error al enviar notificaciones de equipo al lienzo', notifErr);
+    }
 
     const [canvasTeamRows] = await canvasPool.query<mysql.RowDataPacket[]>(
       `SELECT ct.id, ct.canvas_id, ct.team_id, ct.role, ct.created_at,

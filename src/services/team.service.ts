@@ -3,6 +3,7 @@ import mysql from 'mysql2/promise';
 import { canvasPool, pool } from '../config/database.config.js';
 import { CreateTeamDto, Team, TeamMember, UpdateTeamDto } from '../types/team.types.js';
 import { logger } from './logger.service.js';
+import { createNotification } from './notification.service.js';
 
 export async function createTeam(ownerId: number, dto: CreateTeamDto): Promise<Team> {
   const uuid = crypto.randomUUID();
@@ -203,7 +204,7 @@ export async function addTeamMember(
 ): Promise<TeamMember> {
   try {
     const [teamRows] = await pool.query<mysql.RowDataPacket[]>(
-      'SELECT id, owner_id FROM teams WHERE uuid = ? LIMIT 1',
+      'SELECT id, owner_id, name FROM teams WHERE uuid = ? LIMIT 1',
       [uuid]
     );
 
@@ -239,6 +240,24 @@ export async function addTeamMember(
     );
 
     logger.db.info(`Usuario ${targetUserId} añadido al equipo ${uuid} con rol ${role}`);
+
+    try {
+      const [inviterRows] = await pool.query<mysql.RowDataPacket[]>(
+        'SELECT username FROM users WHERE id = ? LIMIT 1',
+        [currentUserId]
+      );
+      const inviterName = inviterRows[0]?.username || 'Un usuario';
+      const roleText = role === 'admin' ? 'Administrador' : 'Miembro';
+      await createNotification({
+        userId: targetUserId,
+        type: 'team_invite',
+        title: 'Nuevo equipo',
+        message: `${inviterName} te ha añadido al equipo "${team.name}" como ${roleText}.`,
+        linkUrl: '/teams',
+      });
+    } catch (notifErr) {
+      logger.app.warn('Error al enviar notificación de equipo', notifErr);
+    }
 
     const [memberRows] = await pool.query<mysql.RowDataPacket[]>(
       `SELECT tm.id, tm.team_id, tm.user_id, tm.role, tm.created_at,

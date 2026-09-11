@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS users (
     google_id VARCHAR(255) NULL UNIQUE,
     avatar_url VARCHAR(512) NULL,
     role ENUM('user', 'moderator', 'administrator', 'superadministrator') NOT NULL DEFAULT 'user',
-    subscription_tier VARCHAR(20) NOT NULL DEFAULT 'free',
+    subscription_tier VARCHAR(20) NOT NULL DEFAULT 'free', -- 'free', 'pro', 'business'
     stripe_customer_id VARCHAR(255) NULL,
     stripe_subscription_id VARCHAR(255) NULL,
     subscription_status VARCHAR(50) NOT NULL DEFAULT 'active',
@@ -113,6 +113,20 @@ CREATE TABLE IF NOT EXISTS team_members (
     UNIQUE KEY uq_team_user (team_id, user_id),
     INDEX idx_team_members_user (user_id),
     FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS notifications (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    link_url VARCHAR(512) NULL,
+    is_read BOOLEAN NOT NULL DEFAULT FALSE,
+    read_at TIMESTAMP NULL DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_notif_user_read (user_id, is_read, created_at DESC),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

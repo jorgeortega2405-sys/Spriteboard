@@ -1,6 +1,6 @@
 import { navigate, render } from '../app-router.js';
 import { API_ROUTES } from '../config/api-routes.js';
-import { currentUser, escapeHtml, linkedAccounts, logoutAllApi, logoutApi, postApi, switchAccountApi } from '../services/api.service.js';
+import { currentUser, deleteApi, escapeHtml, getApi, linkedAccounts, logoutAllApi, logoutApi, patchApi, postApi, switchAccountApi } from '../services/api.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { loadTemplate } from '../services/template.service.js';
@@ -100,6 +100,24 @@ document.addEventListener('click', (e: MouseEvent) => {
   }
 });
 
+function formatNotificationTime(iso?: string | null): string {
+  if (!iso) return '';
+  try {
+    const d = new Date(iso);
+    const diffSec = Math.floor((Date.now() - d.getTime()) / 1000);
+    if (diffSec < 60) return 'Hace un momento';
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `Hace ${diffMin} min`;
+    const diffHours = Math.floor(diffMin / 60);
+    if (diffHours < 24) return `Hace ${diffHours} h`;
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays < 7) return `Hace ${diffDays} d`;
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  } catch {
+    return '';
+  }
+}
+
 export async function createTopBar(): Promise<HTMLElement> {
   const topbar = await loadTemplate('/views/components/topbar.html');
 
@@ -172,17 +190,133 @@ export async function createTopBar(): Promise<HTMLElement> {
   });
 
   const btnNotifications = topbar.querySelector<HTMLElement>('[data-ref="btn-notifications"]');
+  const notificationsBadge = topbar.querySelector<HTMLElement>('[data-ref="notifications-badge"]');
   const notificationsBackdrop = topbar.querySelector<HTMLElement>('[data-ref="notifications-backdrop"]');
   const notificationsPanel = topbar.querySelector<HTMLElement>('[data-ref="notifications-panel"]');
   const notificationsDragZone = topbar.querySelector<HTMLElement>('[data-ref="notifications-drag-zone"]');
   const btnMarkAllRead = topbar.querySelector<HTMLElement>('[data-ref="btn-mark-all-read"]');
+  const notificationsList = topbar.querySelector<HTMLElement>('[data-ref="notifications-list"]');
+  const notificationsEmpty = topbar.querySelector<HTMLElement>('[data-ref="notifications-empty"]');
 
   let closeAvatarMenu = () => {};
   let isNotificationsClosing = false;
+  let currentUnreadCount = 0;
+
+  const updateBadge = (count: number) => {
+    currentUnreadCount = count;
+    if (!notificationsBadge) return;
+    if (count > 0) {
+      notificationsBadge.textContent = count > 9 ? '9+' : String(count);
+      notificationsBadge.classList.remove('is-hidden');
+    } else {
+      notificationsBadge.textContent = '';
+      notificationsBadge.classList.add('is-hidden');
+    }
+  };
+
+  const renderNotifications = (notifications: any[]) => {
+    if (!notificationsList || !notificationsEmpty) return;
+
+    if (!notifications || notifications.length === 0) {
+      notificationsList.style.display = 'none';
+      notificationsList.innerHTML = '';
+      notificationsEmpty.style.display = 'flex';
+      return;
+    }
+
+    notificationsEmpty.style.display = 'none';
+    notificationsList.style.display = 'flex';
+    notificationsList.innerHTML = '';
+
+    notifications.forEach((notif) => {
+      const item = document.createElement('div');
+      item.className = `notification-item${notif.is_read ? '' : ' is-unread'}`;
+      item.setAttribute('data-ref', `notification-item-${notif.id}`);
+
+      let iconName = 'notifications';
+      if (notif.type === 'canvas_invite') iconName = 'palette';
+      else if (notif.type === 'team_invite') iconName = 'groups';
+
+      const timeText = formatNotificationTime(notif.created_at);
+
+      item.innerHTML = `
+        <div class="notification-item__icon" data-ref="notification-icon-${notif.id}">
+          <span class="material-symbols-rounded">${iconName}</span>
+        </div>
+        <div class="notification-item__content" data-ref="notification-content-${notif.id}">
+          <span class="notification-item__title" data-ref="notification-title-${notif.id}">${escapeHtml(notif.title)}</span>
+          <span class="notification-item__message" data-ref="notification-msg-${notif.id}">${escapeHtml(notif.message)}</span>
+          ${timeText ? `<span class="notification-item__time" data-ref="notification-time-${notif.id}">${escapeHtml(timeText)}</span>` : ''}
+        </div>
+        <button type="button" class="notification-item__delete" data-ref="btn-delete-notif-${notif.id}" aria-label="Eliminar notificación">
+          <span class="material-symbols-rounded" style="font-size: 18px;">close</span>
+        </button>
+      `;
+
+      item.addEventListener('click', async (e) => {
+        const target = e.target as HTMLElement | null;
+        if (target?.closest('[data-ref^="btn-delete-notif-"]')) return;
+
+        if (!notif.is_read) {
+          notif.is_read = true;
+          item.classList.remove('is-unread');
+          updateBadge(Math.max(0, currentUnreadCount - 1));
+          void patchApi(API_ROUTES.notifications.markRead(notif.id));
+        }
+
+        closeNotifications();
+
+        if (notif.link_url) {
+          navigate(notif.link_url);
+        }
+      });
+
+      const btnDelete = item.querySelector<HTMLElement>('[data-ref^="btn-delete-notif-"]');
+      btnDelete?.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        item.remove();
+        if (!notif.is_read) {
+          updateBadge(Math.max(0, currentUnreadCount - 1));
+        }
+        if (notificationsList.children.length === 0) {
+          notificationsList.style.display = 'none';
+          notificationsEmpty.style.display = 'flex';
+        }
+        await deleteApi(API_ROUTES.notifications.delete(notif.id));
+      });
+
+      notificationsList.appendChild(item);
+    });
+
+    renderIcons(notificationsList);
+  };
+
+  const loadNotifications = async () => {
+    if (!currentUser) {
+      updateBadge(0);
+      renderNotifications([]);
+      return;
+    }
+    try {
+      const res = await getApi(API_ROUTES.notifications.base);
+      if (res.ok) {
+        const data = await res.json();
+        updateBadge(Number(data.unreadCount || 0));
+        renderNotifications(data.notifications || []);
+      }
+    } catch {
+      // Ignorar fallo de red silenciosamente en background
+    }
+  };
 
   const openNotifications = () => {
+    if (!currentUser) {
+      navigate('/login');
+      return;
+    }
     if (isNotificationsClosing) return;
     closeAvatarMenu();
+    void loadNotifications();
 
     if (window.innerWidth <= 768 && notificationsBackdrop && notificationsPanel) {
       notificationsBackdrop.style.display = 'flex';
@@ -257,8 +391,20 @@ export async function createTopBar(): Promise<HTMLElement> {
     toggleNotifications();
   });
 
-  btnMarkAllRead?.addEventListener('click', (e) => {
+  btnMarkAllRead?.addEventListener('click', async (e) => {
     e.preventDefault();
+    if (currentUnreadCount === 0) return;
+    try {
+      const res = await postApi(API_ROUTES.notifications.markAllRead);
+      if (res.ok) {
+        updateBadge(0);
+        const unreadItems = notificationsList?.querySelectorAll('.notification-item.is-unread');
+        unreadItems?.forEach((el) => el.classList.remove('is-unread'));
+        showToast(t('notifications.mark_all_read_success') || 'Todas las notificaciones marcadas como leídas.', 'success');
+      }
+    } catch {
+      showToast(t('error.general_desc') || 'Error al actualizar notificaciones.', 'danger');
+    }
   });
 
   notificationsBackdrop?.addEventListener('click', (e) => {
@@ -421,7 +567,9 @@ export async function createTopBar(): Promise<HTMLElement> {
             'avatar-tier--free',
             'avatar-tier--plus',
             'avatar-tier--pro',
-            'avatar-tier--ultra'
+            'avatar-tier--ultra',
+            'avatar-tier--business',
+            'avatar-tier--negocios'
           );
           avatarBtn.classList.add(`avatar-tier--${tVal}`);
         }
@@ -431,7 +579,9 @@ export async function createTopBar(): Promise<HTMLElement> {
             'avatar-tier--free',
             'avatar-tier--plus',
             'avatar-tier--pro',
-            'avatar-tier--ultra'
+            'avatar-tier--ultra',
+            'avatar-tier--business',
+            'avatar-tier--negocios'
           );
           activeAvatarBox.classList.add(`avatar-tier--${tVal}`);
         }
@@ -877,6 +1027,17 @@ export async function createTopBar(): Promise<HTMLElement> {
     }
   }
 
+  if (currentUser) {
+    void loadNotifications();
+    const notifInterval = setInterval(() => {
+      if (document.body.contains(topbar)) {
+        void loadNotifications();
+      } else {
+        clearInterval(notifInterval);
+      }
+    }, 35000);
+  }
+
   return topbar;
 }
 
@@ -1098,6 +1259,10 @@ export async function createSidebar(): Promise<HTMLElement> {
           <span class="material-symbols-rounded menu-item__icon">space_dashboard</span>
           <span class="menu-item__text" data-i18n="nav.templates"></span>
         </button>
+        <button type="button" class="menu-item" data-ref="btn-nav-shared">
+          <span class="material-symbols-rounded menu-item__icon">folder_shared</span>
+          <span class="menu-item__text" data-i18n="nav.shared"></span>
+        </button>
       `;
       translateElement(navTop);
 
@@ -1112,6 +1277,12 @@ export async function createSidebar(): Promise<HTMLElement> {
         btnTemplates?.classList.add('is-active');
       }
       bindNavLink(btnTemplates, '/templates');
+
+      const btnShared = navTop.querySelector<HTMLElement>('[data-ref="btn-nav-shared"]');
+      if (currentPath === '/shared') {
+        btnShared?.classList.add('is-active');
+      }
+      bindNavLink(btnShared, '/shared');
     }
 
     if (navBottom) {

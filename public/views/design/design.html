@@ -14,6 +14,10 @@
           <span class="material-symbols-rounded">bar_chart</span>
         </button>
 
+        <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-canvas-history" data-tooltip="Historial de versiones" aria-label="Historial de versiones">
+          <span class="material-symbols-rounded">history</span>
+        </button>
+
         <div class="design-share-wrapper" data-ref="design-share-wrapper">
           <button type="button" class="btn btn--h40 btn--black design-share-btn" data-ref="btn-share-canvas" data-tooltip="Compartir lienzo" aria-label="Compartir lienzo">
             <span class="material-symbols-rounded">share</span>
@@ -173,6 +177,14 @@
                             <button type="button" class="menu-item" data-ref="btn-download-type-spritesheet" data-value="spritesheet">
                               <span class="material-symbols-rounded menu-item__icon">grid_view</span>
                               <span class="menu-item__text">PNG (Hoja de sprites)</span>
+                            </button>
+                            <button type="button" class="menu-item" data-ref="btn-download-type-atlas" data-value="spritesheet-atlas">
+                              <span class="material-symbols-rounded menu-item__icon">sports_esports</span>
+                              <span class="menu-item__text">Hoja de sprites + JSON (Game Atlas)</span>
+                            </button>
+                            <button type="button" class="menu-item" data-ref="btn-download-type-gif" data-value="gif">
+                              <span class="material-symbols-rounded menu-item__icon">gif</span>
+                              <span class="menu-item__text">GIF animado (.gif)</span>
                             </button>
                             <button type="button" class="menu-item" data-ref="btn-download-type-project" data-value="project-json">
                               <span class="material-symbols-rounded menu-item__icon">data_object</span>
@@ -462,6 +474,78 @@
           </div>
         </div>
         <div class="design-collaborators-panel__list" data-ref="collaborators-panel-list"></div>
+      </div>
+
+      <div class="design-history-preview-banner is-hidden" data-ref="design-history-preview-banner">
+        <div class="design-history-preview-banner__content">
+          <span class="component-icon">visibility</span>
+          <span class="design-history-preview-banner__text" data-ref="preview-banner-text">Modo vista previa</span>
+        </div>
+        <div class="design-history-preview-banner__actions">
+          <button type="button" class="btn btn--h32 btn--black" data-ref="btn-preview-restore">
+            <span class="component-icon">restore</span>
+            <span>Restaurar esta versión</span>
+          </button>
+          <button type="button" class="btn btn--h32 btn--outline" data-ref="btn-preview-exit">
+            <span>Salir de la vista previa</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="design-colors-panel design-history-panel is-hidden" data-ref="design-history-drawer">
+        <div class="design-colors-panel__header" data-ref="history-header">
+          <div class="design-colors-panel__title-box">
+            <span class="component-icon">history</span>
+            <span class="design-colors-panel__title" data-ref="history-title">Historial de versiones</span>
+          </div>
+          <div class="design-colors-panel__header-actions" data-ref="history-header-actions">
+            <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-toggle-create-snapshot" data-tooltip="Nueva versión" aria-label="Nueva versión">
+              <span class="component-icon">add</span>
+            </button>
+            <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-close-history-drawer" data-tooltip="Cerrar" aria-label="Cerrar historial">
+              <span class="component-icon">close</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="design-history-create-form is-hidden" data-ref="history-create-form">
+          <div class="design-history-create-box">
+            <span class="design-history-create-box__title">Crear punto de control</span>
+            <label class="field" data-ref="field-snapshot-name">
+              <input class="field__input" data-ref="input-snapshot-name" type="text" placeholder=" " maxlength="255" autocomplete="off" />
+              <span class="field__label">Nombre del hito (ej. Boceto inicial)</span>
+            </label>
+            <label class="field" data-ref="field-snapshot-description">
+              <textarea class="field__input field__textarea" data-ref="input-snapshot-description" placeholder=" " rows="2"></textarea>
+              <span class="field__label">Nota opcional</span>
+            </label>
+            <div class="design-history-create-box__actions">
+              <button type="button" class="btn btn--h32 btn--black" data-ref="btn-submit-create-snapshot">
+                <span>Guardar versión</span>
+              </button>
+              <button type="button" class="btn btn--h32 btn--outline" data-ref="btn-cancel-create-snapshot">
+                <span>Cancelar</span>
+              </button>
+            </div>
+            <div class="banner banner--danger is-hidden" data-ref="history-create-error"></div>
+          </div>
+        </div>
+
+        <div class="design-colors-panel__tabs" data-ref="history-tabs">
+          <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable is-active" data-ref="btn-history-tab-all" data-tab="all">Todas</button>
+          <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-history-tab-manual" data-tab="manual">Hitos</button>
+        </div>
+
+        <div class="design-colors-panel__body" data-ref="history-snapshots-container">
+          <div class="design-history-loader is-hidden" data-ref="history-drawer-loader">
+            <div class="spinner"></div>
+          </div>
+          <div class="design-history-empty is-hidden" data-ref="history-drawer-empty">
+            <span class="component-icon">history_toggle_off</span>
+            <span class="design-history-empty-text">No hay versiones registradas aún</span>
+          </div>
+          <div class="design-history-list" data-ref="history-snapshots-list"></div>
+        </div>
       </div>
 
       <div class="design-coords-badge" data-ref="toolbar-coords">X: - , Y: -</div>

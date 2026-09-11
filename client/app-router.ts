@@ -92,6 +92,18 @@ export async function render(): Promise<void> {
       const { createSearchView } = await import('./views/search.view.js');
       const searchView = await createSearchView();
       viewElements = topBar ? [topBar, searchView] : [searchView];
+    } else if (path === '/shared') {
+      const topBar = isSoftSpaNav ? null : await createTopBar();
+      if (!currentUser) {
+        window.history.replaceState({}, '', '/login');
+        const { createLoginView } = await import('./views/auth.view.js');
+        const loginView = await createLoginView();
+        viewElements = [loginView];
+      } else {
+        const { createSharedView } = await import('./views/shared.view.js');
+        const sharedView = await createSharedView();
+        viewElements = topBar ? [topBar, sharedView] : [sharedView];
+      }
     } else if (path === '/trash') {
       const topBar = isSoftSpaNav ? null : await createTopBar();
       if (!currentUser) {

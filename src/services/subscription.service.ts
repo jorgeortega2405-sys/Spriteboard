@@ -5,42 +5,42 @@ export class SubscriptionService {
 
   private readonly tiers: SubscriptionTier[] = [
     {
-      id: 'plus',
-      name: 'Spriteboard Plus',
-      tagline: 'Ideal para creadores y usuarios que buscan potenciar su productividad diaria.',
-      storage: '1 GB de almacenamiento',
-      price: 4.99,
-      priceMonthly: 4.99,
-      priceYearly: 3.99,
+      id: 'free',
+      name: 'Spriteboard Gratis',
+      tagline: 'Ideal para comenzar a explorar, crear bocetos y diseñar sin costo.',
+      storage: '500 MB de almacenamiento',
+      price: 0,
+      priceMonthly: 0,
+      priceYearly: 0,
       currency: 'USD',
       billingPeriod: 'monthly',
-      icon: 'bolt',
-      buttonText: 'Obtén Spriteboard Plus',
+      icon: 'brush',
+      buttonText: 'Plan actual',
       features: [
         {
-          title: '1 GB de almacenamiento en la nube',
-          desc: 'Guarda tus tableros, recursos y configuraciones de forma segura',
+          title: '500 MB de almacenamiento en la nube',
+          desc: 'Guarda tus proyectos y lienzos básicos de forma segura',
           icon: 'cloud',
         },
         {
-          title: 'Historial de versiones de 30 días',
-          desc: 'Restaura versiones previas de tus tableros y lienzos en cualquier momento',
+          title: 'Tableros de diseño estándar',
+          desc: 'Crea lienzos de trabajo con herramientas esenciales de dibujo',
+          icon: 'dashboard',
+        },
+        {
+          title: 'Exportación en formato estándar',
+          desc: 'Descarga tus tableros en formatos PNG y JPG de alta fidelidad',
+          icon: 'image',
+        },
+        {
+          title: 'Historial de versiones de 7 días',
+          desc: 'Restaura versiones previas de tus lienzos recientes',
           icon: 'history',
         },
         {
-          title: 'Herramientas de dibujo ampliadas',
-          desc: 'Pinceles avanzados, capas adicionales y paletas de color personalizadas',
-          icon: 'brush',
-        },
-        {
-          title: 'Exportación de alta velocidad',
-          desc: 'Descarga tus tableros en formatos PNG, SVG y JPG sin límites de velocidad',
-          icon: 'speed',
-        },
-        {
-          title: 'Soporte estándar por correo',
-          desc: 'Atención personalizada en menos de 48 horas laborales',
-          icon: 'mail',
+          title: 'Herramientas de dibujo esenciales',
+          desc: 'Pinceles estándar, paleta de colores y capas esenciales',
+          icon: 'palette',
         },
       ],
     },
@@ -92,34 +92,39 @@ export class SubscriptionService {
       ],
     },
     {
-      id: 'ultra',
-      name: 'Spriteboard Ultra',
-      tagline: 'Máxima potencia, rendimiento sin límites y acceso anticipado a novedades.',
+      id: 'business',
+      name: 'Spriteboard Negocios',
+      tagline: 'Máxima potencia, colaboración avanzada para equipos y soporte prioritario.',
       storage: 'Almacenamiento ilimitado',
       price: 19.99,
       priceMonthly: 19.99,
       priceYearly: 15.99,
       currency: 'USD',
       billingPeriod: 'monthly',
-      icon: 'diamond',
-      badge: 'Máximo Rendimiento',
+      icon: 'business_center',
+      badge: 'Para Empresas',
       isPopular: false,
-      buttonText: 'Obtén Spriteboard Ultra',
+      buttonText: 'Obtén Spriteboard Negocios',
       features: [
         {
           title: 'Almacenamiento ilimitado en la nube',
-          desc: 'Guarda todo tu contenido sin preocuparte por límites de cuota',
+          desc: 'Guarda todo tu contenido y el de tu organización sin límites de cuota',
           icon: 'cloud',
         },
         {
-          title: 'Máxima potencia de cómputo',
-          desc: 'Renderizado acelerado por GPU y procesamiento ultra rápido',
+          title: 'Espacios de trabajo y equipos ilimitados',
+          desc: 'Gestión centralizada de miembros, permisos y roles avanzados',
+          icon: 'domain',
+        },
+        {
+          title: 'Máxima potencia de cómputo GPU',
+          desc: 'Renderizado acelerado por hardware y procesamiento ultra rápido',
           icon: 'memory',
         },
         {
-          title: 'Acceso anticipado a funciones beta',
-          desc: 'Sé el primero en probar nuevas herramientas, IA y mejoras del sistema',
-          icon: 'science',
+          title: 'Historial de versiones ilimitado',
+          desc: 'Auditoría completa y recuperación histórica sin restricciones de tiempo',
+          icon: 'manage_history',
         },
         {
           title: 'API dedicada e integraciones',
@@ -128,13 +133,8 @@ export class SubscriptionService {
         },
         {
           title: 'Atención personalizada 1 a 1',
-          desc: 'Gestor de cuenta dedicado y asesoría técnica directa',
+          desc: 'Gestor de cuenta dedicado, SLA de 99.9% y asesoría técnica directa',
           icon: 'person_pin',
-        },
-        {
-          title: 'SLA de disponibilidad garantizada',
-          desc: 'Compromiso de 99.9% de actividad sin interrupciones de servicio',
-          icon: 'verified',
         },
       ],
     },
@@ -151,6 +151,11 @@ export class SubscriptionService {
 
   public async getAvailableTiers(): Promise<SubscriptionTier[]> {
     return this.tiers;
+  }
+
+  public async getTierById(tierId: string): Promise<SubscriptionTier | undefined> {
+    const normalized = tierId === 'negocios' ? 'business' : tierId;
+    return this.tiers.find((t) => t.id === normalized);
   }
 }
 

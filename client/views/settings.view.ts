@@ -145,7 +145,9 @@ export async function createYourAccountView(): Promise<HTMLElement> {
       'avatar-tier--free',
       'avatar-tier--plus',
       'avatar-tier--pro',
-      'avatar-tier--ultra'
+      'avatar-tier--ultra',
+      'avatar-tier--business',
+      'avatar-tier--negocios'
     );
     avatarPreviewBox.classList.add(`avatar-tier--${userTier}`);
   }
