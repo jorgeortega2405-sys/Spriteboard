@@ -1,15 +1,17 @@
 import { navigate } from '../app-router.js';
 import { openCreateCanvasModal } from '../components/create-canvas-modal.component.js';
+import { createSidebar } from '../components/layout.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { ALL_PRESETS, PresetItem } from '../config/templates.config.js';
 import { currentUser, escapeHtml, getApi, postApi } from '../services/api.service.js';
 import { getAllLocalCanvases } from '../services/canvas-storage.service.js';
 import { renderIcons } from '../services/icon.service.js';
+import { SkeletonService } from '../services/skeleton.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { CanvasItem } from '../types/canvas.types.js';
-import { getEmptyGraphicSvg, setupLazyImages } from '../utils/dom.util.js';
+import { removeEmptyState, renderEmptyState, setupLazyImages } from '../utils/dom.util.js';
 
 interface SearchApiResponse {
   canvases: CanvasItem[];
@@ -29,20 +31,16 @@ export class SearchController {
   private canvasesCounterEl: HTMLElement | null = null;
   private canvasesGridEl: HTMLElement | null = null;
   private container: HTMLElement;
-  private emptyGraphicEl: HTMLElement | null = null;
-  private emptyStateEl: HTMLElement | null = null;
   private favoritedTemplateIds = new Set<string>();
   private query = '';
+  private searchContentEl: HTMLElement | null = null;
   private sectionCanvasesEl: HTMLElement | null = null;
   private sectionTemplatesEl: HTMLElement | null = null;
-  private semanticBadgeEl: HTMLElement | null = null;
-  private semanticTextEl: HTMLElement | null = null;
   private tabCanvasesLabelEl: HTMLElement | null = null;
   private tabTemplatesLabelEl: HTMLElement | null = null;
   private templates: PresetItem[] = [];
   private templatesCounterEl: HTMLElement | null = null;
   private templatesGridEl: HTMLElement | null = null;
-  private titleEl: HTMLElement | null = null;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -52,10 +50,6 @@ export class SearchController {
   public async init(): Promise<void> {
     const urlParams = new URLSearchParams(window.location.search);
     this.query = (urlParams.get('q') || '').trim();
-
-    this.titleEl = this.container.querySelector<HTMLElement>('[data-ref="search-header-title"]');
-    this.semanticBadgeEl = this.container.querySelector<HTMLElement>('[data-ref="search-semantic-badge"]');
-    this.semanticTextEl = this.container.querySelector<HTMLElement>('[data-ref="search-semantic-text"]');
 
     this.tabCanvasesLabelEl = this.container.querySelector<HTMLElement>('[data-ref="tab-canvases-label"]');
     this.tabTemplatesLabelEl = this.container.querySelector<HTMLElement>('[data-ref="tab-templates-label"]');
@@ -69,16 +63,7 @@ export class SearchController {
     this.canvasesGridEl = this.container.querySelector<HTMLElement>('[data-ref="search-canvases-grid"]');
     this.templatesGridEl = this.container.querySelector<HTMLElement>('[data-ref="search-templates-grid"]');
 
-    this.emptyStateEl = this.container.querySelector<HTMLElement>('[data-ref="search-empty-state"]');
-    this.emptyGraphicEl = this.container.querySelector<HTMLElement>('[data-ref="search-empty-graphic"]');
-
-    if (this.emptyGraphicEl) {
-      this.emptyGraphicEl.innerHTML = getEmptyGraphicSvg('search');
-    }
-
-    if (this.titleEl) {
-      this.titleEl.textContent = this.query ? `Resultados para "${this.query}"` : 'Búsqueda';
-    }
+    this.searchContentEl = this.container.querySelector<HTMLElement>('[data-ref="search-content"]');
 
     if (currentUser) {
       await this.loadFavoriteTemplates();
@@ -98,6 +83,13 @@ export class SearchController {
       return;
     }
 
+    if (this.canvasesGridEl) {
+      SkeletonService.renderGridCardSkeletons(this.canvasesGridEl, 4, 'canvas');
+    }
+    if (this.templatesGridEl) {
+      SkeletonService.renderGridCardSkeletons(this.templatesGridEl, 4, 'template');
+    }
+
     try {
       const res = await getApi(API_ROUTES.search(this.query));
       let cloudCanvases: CanvasItem[] = [];
@@ -107,14 +99,6 @@ export class SearchController {
         const data = (await res.json()) as SearchApiResponse;
         cloudCanvases = data.canvases || [];
         templatesResult = data.templates || [];
-
-        if (data.semantic && data.semantic.keywords && data.semantic.keywords.length > 0) {
-          const mainTerms = data.semantic.keywords.slice(0, 4).join(', ');
-          if (this.semanticBadgeEl && this.semanticTextEl) {
-            this.semanticBadgeEl.style.display = 'inline-flex';
-            this.semanticTextEl.textContent = `Búsqueda inteligente: ${mainTerms}`;
-          }
-        }
       }
 
       const localCanvases = await getAllLocalCanvases();
@@ -162,11 +146,21 @@ export class SearchController {
     if (totalCount === 0) {
       if (this.sectionCanvasesEl) this.sectionCanvasesEl.style.display = 'none';
       if (this.sectionTemplatesEl) this.sectionTemplatesEl.style.display = 'none';
-      if (this.emptyStateEl) this.emptyStateEl.style.display = 'flex';
+      if (this.searchContentEl) {
+        renderEmptyState({
+          container: this.searchContentEl,
+          dataRef: 'search-empty-state',
+          desc: 'No encontramos lienzos ni plantillas que coincidan con tu búsqueda. Intenta con otros términos o explora la galería completa.',
+          graphicType: 'search',
+          title: 'Sin resultados encontrados',
+        });
+      }
       return;
     }
 
-    if (this.emptyStateEl) this.emptyStateEl.style.display = 'none';
+    if (this.searchContentEl) {
+      removeEmptyState(this.searchContentEl, 'search-empty-state');
+    }
 
     this.applyTabFilter();
     this.renderCanvasesGrid();
@@ -209,9 +203,11 @@ export class SearchController {
           </div>
         </div>
         <div class="canvas-card__bottom" data-ref="card-bottom-${canvas.uuid}">
-          <h3 class="canvas-card__title" data-ref="card-title-${canvas.uuid}" title="${escapeHtml(canvas.name)}">
-            ${escapeHtml(canvas.name)}
-          </h3>
+          <div class="canvas-card__badge canvas-card__badge--glass canvas-card__badge--title" data-ref="canvas-title-badge-${canvas.uuid}">
+            <span class="canvas-card__title" data-ref="card-title-${canvas.uuid}" title="${escapeHtml(canvas.name)}">
+              ${escapeHtml(canvas.name)}
+            </span>
+          </div>
         </div>
       `;
 
@@ -258,9 +254,11 @@ export class SearchController {
           </div>
         </div>
         <div class="canvas-card__bottom" data-ref="template-card-bottom-${item.id}">
-          <h3 class="canvas-card__title" data-ref="template-card-title-${item.id}" title="${item.name}">
-            ${item.name}
-          </h3>
+          <div class="canvas-card__badge canvas-card__badge--glass canvas-card__badge--title" data-ref="template-card-title-badge-${item.id}">
+            <span class="canvas-card__title" data-ref="template-card-title-${item.id}" title="${item.name}">
+              ${item.name}
+            </span>
+          </div>
         </div>
       `;
 
@@ -321,16 +319,6 @@ export class SearchController {
           variants: preset.variants,
           width: preset.width,
         });
-      },
-      { signal }
-    );
-
-    const btnBrowseTemplates = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-browse-templates"]');
-    btnBrowseTemplates?.addEventListener(
-      'click',
-      (e) => {
-        e.preventDefault();
-        navigate('/templates');
       },
       { signal }
     );
@@ -405,6 +393,13 @@ export class SearchController {
 
 export async function createSearchView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/search/search.html');
+  translateElement(container);
+
+  const sidebar = await createSidebar();
+  container.prepend(sidebar);
+
+  renderIcons(container);
+
   const controller = new SearchController(container);
   await controller.init();
 

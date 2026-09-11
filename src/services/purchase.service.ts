@@ -1,4 +1,5 @@
 import pool from '../config/database.config.js';
+import { redis } from '../config/redis.config.js';
 import { logger } from './logger.service.js';
 import mysql from 'mysql2/promise';
 
@@ -91,19 +92,31 @@ export class PurchaseService {
   ): Promise<void> {
     const conn = await pool.getConnection();
     try {
+      const shouldUpdateSubId = subscriptionId !== undefined;
+      const shouldUpdatePeriodEnd = periodEnd !== undefined;
+
+      const params: unknown[] = [tier, customerId || null];
+      if (shouldUpdateSubId) params.push(subscriptionId);
+      params.push(status);
+      if (shouldUpdatePeriodEnd) params.push(periodEnd);
+      params.push(userId);
+
       await conn.query(
         `
         UPDATE users
         SET
           subscription_tier = ?,
           stripe_customer_id = COALESCE(?, stripe_customer_id),
-          stripe_subscription_id = COALESCE(?, stripe_subscription_id),
+          stripe_subscription_id = ${shouldUpdateSubId ? '?' : 'stripe_subscription_id'},
           subscription_status = ?,
-          subscription_period_end = COALESCE(?, subscription_period_end)
+          subscription_period_end = ${shouldUpdatePeriodEnd ? '?' : 'subscription_period_end'}
         WHERE id = ?
         `,
-        [tier, customerId || null, subscriptionId || null, status, periodEnd || null, userId]
+        params
       );
+      try {
+        await redis.del(`user:profile:${userId}`);
+      } catch {}
       logger.db.info('Suscripción de usuario actualizada en MySQL', { userId, tier, status });
     } catch (error) {
       logger.db.error('Error al actualizar suscripción de usuario en MySQL', error);

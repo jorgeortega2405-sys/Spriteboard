@@ -11,7 +11,7 @@ import { loadTemplate } from '../services/template.service.js';
 import { getEffectiveTheme } from '../services/theme.service.js';
 import { showToast } from '../services/toast.service.js';
 import { joinCanvasRoom, leaveCanvasRoom, registerWebSocketHandler, sendCanvasAccessChanged, sendCanvasAction, sendCanvasCursor, sendCanvasDrawStroke, sendCanvasFullUpdate, sendCanvasMemberRemoved } from '../services/websocket.service.js';
-import { CanvasAction, CanvasActionContext, CanvasFrame, CanvasLayer } from '../types/canvas-actions.types.js';
+import { CanvasActionContext, CanvasFrame, CanvasLayer } from '../types/canvas-actions.types.js';
 import { CanvasItem, CanvasMember, SearchUserResult } from '../types/canvas.types.js';
 import { CanvasTeamItem, Team } from '../types/team.types.js';
 import { CarouselController, initCarouselScroll, setupDropdown } from '../utils/dom.util.js';
@@ -1021,11 +1021,6 @@ class DesignController {
 
   private getActiveFrame(): CanvasFrame | null {
     return this.frames.find((f) => f.id === this.activeFrameId) || this.frames[0] || null;
-  }
-
-  private getActiveLayers(): CanvasLayer[] {
-    const frame = this.getActiveFrame();
-    return frame ? frame.layers : [];
   }
 
   private getActiveLayer(): CanvasLayer | null {
@@ -2862,7 +2857,6 @@ class DesignController {
   }
 
   private openSpriteSlicerModal(): void {
-    let loadedImage: HTMLImageElement | null = null;
     let sourceCanvas: HTMLCanvasElement | null = null;
     let detectedRects: DetectedSpriteRect[] = [];
     let slicerMode: 'auto' | 'grid' = 'auto';
@@ -3051,7 +3045,6 @@ class DesignController {
     };
 
     const handleImageLoaded = (img: HTMLImageElement) => {
-      loadedImage = img;
       sourceCanvas = document.createElement('canvas');
       sourceCanvas.width = img.naturalWidth || img.width;
       sourceCanvas.height = img.naturalHeight || img.height;
@@ -3144,7 +3137,6 @@ class DesignController {
     });
 
     btnReset?.addEventListener('click', () => {
-      loadedImage = null;
       sourceCanvas = null;
       detectedRects = [];
       if (fileInput) fileInput.value = '';
@@ -6048,7 +6040,7 @@ class DesignController {
 
     window.addEventListener(
       'mouseup',
-      (e: MouseEvent) => {
+      () => {
         if (this.isAccessRevoked) return;
         if (this.shapeInteraction) {
           this.shapeInteraction = null;
@@ -7933,7 +7925,7 @@ class DesignController {
 
             const uEmail = document.createElement('span');
             uEmail.className = 'design-share-search-item__email';
-            uEmail.textContent = user.email;
+            uEmail.textContent = user.email || '';
 
             info.appendChild(uName);
             info.appendChild(uEmail);

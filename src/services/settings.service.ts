@@ -1,6 +1,6 @@
 import { pool } from '../config/database.config.js';
-import { UserPayload } from '../types/auth.types.js';
-import { AVAILABLE_LANGUAGES, detectLanguageFromHeader, isValidLanguageCode } from '../utils/languages.util.js';
+import { redis } from '../config/redis.config.js';
+import { detectLanguageFromHeader, isValidLanguageCode } from '../utils/languages.util.js';
 import { validateEmail, validatePassword, validateUsername } from '../utils/validators.util.js';
 import { hashPassword, revokeAllUserSessions, verifyPassword } from './auth.service.js';
 import { sanitizeAvatar } from './image-sanitizer.service.js';
@@ -96,6 +96,14 @@ export async function getUserPreferences(
   userId: number,
   acceptLanguageHeader?: string | null
 ): Promise<UserPreferences> {
+  const cacheKey = `user:prefs:${userId}`;
+  try {
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      return JSON.parse(cached) as UserPreferences;
+    }
+  } catch {}
+
   const [rows] = await pool.query<UserPreferencesRecord[]>(
     'SELECT user_id, theme, language, open_links_new_tab, telemetry, reduce_motion, high_contrast, extended_alerts FROM user_preferences WHERE user_id = ? LIMIT 1',
     [userId]
@@ -118,11 +126,15 @@ export async function getUserPreferences(
         DEFAULT_PREFERENCES.extended_alerts ? 1 : 0,
       ]
     );
-    return { ...DEFAULT_PREFERENCES, language: defaultLang };
+    const result = { ...DEFAULT_PREFERENCES, language: defaultLang };
+    try {
+      await redis.setex(cacheKey, 86400, JSON.stringify(result));
+    } catch {}
+    return result;
   }
 
   const r = rows[0];
-  return {
+  const prefs: UserPreferences = {
     theme: r.theme || DEFAULT_PREFERENCES.theme,
     language: r.language || DEFAULT_PREFERENCES.language,
     open_links_new_tab: Boolean(r.open_links_new_tab),
@@ -131,6 +143,12 @@ export async function getUserPreferences(
     high_contrast: Boolean(r.high_contrast),
     extended_alerts: Boolean(r.extended_alerts),
   };
+
+  try {
+    await redis.setex(cacheKey, 86400, JSON.stringify(prefs));
+  } catch {}
+
+  return prefs;
 }
 
 export async function updateUserPreferences(
@@ -177,6 +195,10 @@ export async function updateUserPreferences(
       next.extended_alerts ? 1 : 0,
     ]
   );
+
+  try {
+    await redis.del(`user:prefs:${userId}`);
+  } catch {}
 
   return next;
 }
@@ -274,6 +296,9 @@ export async function updateAvatar(
   const newAvatarUrl = `/uploads/avatars/${newFileName}`;
 
   await pool.query('UPDATE users SET avatar_url = ? WHERE id = ?', [newAvatarUrl, userId]);
+  try {
+    await redis.del(`user:profile:${userId}`);
+  } catch {}
   await logUserAudit(userId, 'update_avatar', oldAvatarUrl, newAvatarUrl, ip, ua);
 
   return { success: true, avatar_url: newAvatarUrl };
@@ -302,6 +327,9 @@ export async function deleteAvatar(
   }
 
   await pool.query('UPDATE users SET avatar_url = NULL WHERE id = ?', [userId]);
+  try {
+    await redis.del(`user:profile:${userId}`);
+  } catch {}
   await logUserAudit(userId, 'delete_avatar', oldAvatarUrl, null, ip, ua);
 
   return { success: true, avatar_url: null };
@@ -361,6 +389,9 @@ export async function updateUsername(
     'UPDATE users SET username = ?, username_changed_at = NOW() WHERE id = ?',
     [cleanUsername, userId]
   );
+  try {
+    await redis.del(`user:profile:${userId}`);
+  } catch {}
 
   await logUserAudit(userId, 'update_username', oldUsername, cleanUsername, ip, ua);
 
@@ -369,8 +400,8 @@ export async function updateUsername(
 
 export async function requestEmailChangeCode(
   userId: number,
-  ip?: string | null,
-  ua?: string | null
+  _ip?: string | null,
+  _ua?: string | null
 ): Promise<{ success: boolean; alreadyAuthorized?: boolean; error?: string; status?: number }> {
   const [userRows] = await pool.query<RowDataPacket[]>(
     'SELECT id, username, email, email_changed_at FROM users WHERE id = ? LIMIT 1',

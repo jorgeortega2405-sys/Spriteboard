@@ -7,7 +7,7 @@ import { stripeService } from '../services/stripe.service.js';
 import { subscriptionService } from '../services/subscription.service.js';
 import { Request, Response } from 'express';
 
-export async function getSubscriptions(req: Request, res: Response): Promise<void> {
+export async function getSubscriptions(_req: Request, res: Response): Promise<void> {
   try {
     const tiers = await subscriptionService.getAvailableTiers();
     res.json({
@@ -103,9 +103,9 @@ export async function handleWebhook(req: Request, res: Response): Promise<void> 
       return;
     }
 
-    const rawBody = (req as any).rawBody || req.body;
+    const rawBody = (req as any).rawBody || (typeof req.body === 'string' || Buffer.isBuffer(req.body) ? req.body : null);
     if (!rawBody) {
-      logger.security.warn('Webhook de Stripe sin cuerpo sin procesar (rawBody)');
+      logger.security.warn('Webhook de Stripe sin cuerpo binario o sin procesar (rawBody)');
       res.status(400).send('Webhook Error: Missing raw body');
       return;
     }
@@ -191,7 +191,7 @@ export async function cancelSubscriptionImmediate(req: Request, res: Response): 
       return;
     }
 
-    const result = await stripeService.cancelSubscriptionNow(user.id);
+    await stripeService.cancelSubscriptionNow(user.id);
 
     updateActiveAccountInSession(res, req, {
       subscription_tier: 'free',

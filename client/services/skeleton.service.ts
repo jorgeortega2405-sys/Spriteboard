@@ -17,6 +17,59 @@ export class SkeletonService {
     return element;
   }
 
+  static createSkeletonCard(type: 'canvas' | 'template' = 'canvas', index = 0, isWide = false): HTMLElement {
+    const card = document.createElement('div');
+    const wideClass = isWide ? ' skeleton-card--template-wide' : '';
+    const typeClass = type === 'template' ? 'skeleton-card--template' : 'skeleton-card--canvas';
+    card.className = `skeleton-card ${typeClass}${wideClass}`;
+    card.setAttribute('data-ref', 'skeleton-card');
+    card.style.setProperty('--card-index', String(index));
+    const badgeWidth = type === 'template' ? '60px' : '76px';
+    card.innerHTML = `
+      <div class="skeleton-card__header" data-ref="skeleton-card-header">
+        <div class="skeleton-card__badge-pill" data-ref="skeleton-card-badge" style="width: ${badgeWidth};"></div>
+        <div class="skeleton-card__badge-pill" data-ref="skeleton-card-badge" style="width: 36px;"></div>
+      </div>
+      <div class="skeleton-card__footer" data-ref="skeleton-card-footer">
+        <div class="skeleton-card__line skeleton-card__line--title" data-ref="skeleton-card-title"></div>
+        <div class="skeleton-card__line skeleton-card__line--subtitle" data-ref="skeleton-card-subtitle"></div>
+      </div>
+    `;
+    return card;
+  }
+
+  static renderGridCardSkeletons(container: HTMLElement | null, count = 8, type: 'canvas' | 'template' = 'canvas'): void {
+    if (!container) return;
+    container.innerHTML = '';
+    const fragment = document.createDocumentFragment();
+    for (let i = 0; i < count; i++) {
+      const isWide = type === 'template' && (i === 1 || i === 5);
+      fragment.appendChild(this.createSkeletonCard(type, i, isWide));
+    }
+    container.appendChild(fragment);
+  }
+
+  static renderTableSkeletons(tbody: HTMLElement | null, count = 5): void {
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    const fragment = document.createDocumentFragment();
+    for (let i = 0; i < count; i++) {
+      const tr = document.createElement('tr');
+      tr.className = 'skeleton-table-row';
+      tr.setAttribute('data-ref', 'skeleton-trash-row');
+      tr.style.setProperty('--row-index', String(i));
+      tr.innerHTML = `
+        <td><div class="skeleton-cell" data-ref="skeleton-trash-cell" style="width: 65%;"></div></td>
+        <td><div class="skeleton-cell" data-ref="skeleton-trash-cell" style="width: 50%;"></div></td>
+        <td><div class="skeleton-cell" data-ref="skeleton-trash-cell" style="width: 55%;"></div></td>
+        <td><div class="skeleton-cell" data-ref="skeleton-trash-cell" style="width: 45%;"></div></td>
+        <td><div class="skeleton-cell" data-ref="skeleton-trash-cell" style="width: 40px;"></div></td>
+      `;
+      fragment.appendChild(tr);
+    }
+    tbody.appendChild(fragment);
+  }
+
   static showSkeleton(
     pathname: string,
     container: HTMLElement | null,

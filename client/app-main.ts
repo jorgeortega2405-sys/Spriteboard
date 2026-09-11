@@ -18,13 +18,29 @@ function initScrollShadow(): void {
       if (
         target.classList.contains('layout-scrollable') ||
         target.classList.contains('layout-body--scrollable') ||
-        target.classList.contains('layout-content__scrollable')
+        target.classList.contains('layout-content__scrollable') ||
+        target.classList.contains('component-table-wrapper')
       ) {
-        const header = document.querySelector<HTMLElement>('.layout-header, .general-content-top');
-        if (header) {
-          const isScrolled = target.scrollTop > 0;
-          header.classList.toggle('shadow', isScrolled);
-          header.classList.toggle('layout-header--shadow', isScrolled);
+        const isScrolled = target.scrollTop > 0;
+        const componentWrapper = target.closest('.component-wrapper');
+        const componentTop = componentWrapper
+          ? componentWrapper.querySelector<HTMLElement>('.component-top')
+          : target.closest('.layout-content')?.querySelector<HTMLElement>('.component-top');
+
+        if (componentTop) {
+          componentTop.classList.toggle('shadow', isScrolled);
+          componentTop.classList.toggle('component-top--shadow', isScrolled);
+
+          const header = document.querySelector<HTMLElement>('.layout-header, .general-content-top');
+          if (header) {
+            header.classList.remove('shadow', 'layout-header--shadow');
+          }
+        } else {
+          const header = document.querySelector<HTMLElement>('.layout-header, .general-content-top');
+          if (header) {
+            header.classList.toggle('shadow', isScrolled);
+            header.classList.toggle('layout-header--shadow', isScrolled);
+          }
         }
       }
     },

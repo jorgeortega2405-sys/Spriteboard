@@ -1,7 +1,7 @@
-import { ALL_PRESETS, PresetItem } from '../config/templates.config.js';
-import { AiSearchService, SemanticQueryResult } from '../services/ai-search.service.js';
 import { canvasPool } from '../config/database.config.js';
+import { ALL_PRESETS, PresetItem } from '../config/templates.config.js';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
+import { AiSearchService, SemanticQueryResult } from '../services/ai-search.service.js';
 import { logger } from '../services/logger.service.js';
 import { Request, Response } from 'express';
 import mysql from 'mysql2/promise';
@@ -32,17 +32,21 @@ export async function searchHandler(req: Request, res: Response): Promise<void> 
     const user = getCurrentUser(req);
 
     if (user) {
+      const terms = searchTerms.slice(0, 5);
+      const conditions = terms.map(() => 'c.name LIKE ?').join(' OR ');
+      const likeParams = terms.map((term) => `%${term}%`);
+
       const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
         `SELECT c.id, c.uuid, c.user_id, c.name, c.width, c.height, c.unit, c.preview_thumbnail,
                 c.access_level, c.public_role, c.short_code, c.custom_slug, c.created_at, c.updated_at,
-                EXISTS (
-                  SELECT 1 FROM db_identity.user_favorites uf
-                  WHERE uf.user_id = ? AND uf.item_type = 'canvas' AND uf.item_id = c.uuid
-                ) AS is_favorite
+                (uf.id IS NOT NULL) AS is_favorite
          FROM canvases c
-         WHERE c.user_id = ? AND c.deleted_at IS NULL
-         ORDER BY c.updated_at DESC`,
-        [user.id, user.id]
+         LEFT JOIN db_identity.user_favorites uf
+           ON uf.user_id = ? AND uf.item_type = 'canvas' AND uf.item_id = c.uuid
+         WHERE c.user_id = ? AND c.deleted_at IS NULL AND (${conditions})
+         ORDER BY c.updated_at DESC
+         LIMIT 24`,
+        [user.id, user.id, ...likeParams]
       );
 
       matchedCanvases = (rows || [])

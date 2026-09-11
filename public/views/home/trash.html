@@ -61,65 +61,6 @@
             <!-- Filas inyectadas dinámicamente -->
           </tbody>
         </table>
-
-        <!-- Estado vacío -->
-        <div class="component-empty-state component-empty-state--table" data-ref="trash-empty-state" style="display: none;">
-          <div class="component-empty-state-graphic" data-ref="empty-graphic">
-            <svg class="component-empty-state-svg" viewBox="0 0 140 140" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <defs>
-                <linearGradient id="trashCanGrad" x1="40" y1="56" x2="100" y2="120" gradientUnits="userSpaceOnUse">
-                  <stop offset="0%" stop-color="#52525b"></stop>
-                  <stop offset="45%" stop-color="#3f3f46"></stop>
-                  <stop offset="100%" stop-color="#18181b"></stop>
-                </linearGradient>
-                <linearGradient id="trashLidGrad" x1="30" y1="20" x2="80" y2="60" gradientUnits="userSpaceOnUse">
-                  <stop offset="0%" stop-color="#71717a"></stop>
-                  <stop offset="50%" stop-color="#52525b"></stop>
-                  <stop offset="100%" stop-color="#27272a"></stop>
-                </linearGradient>
-                <linearGradient id="trashHighlight" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stop-color="#ffffff" stop-opacity="0.35"></stop>
-                  <stop offset="100%" stop-color="#ffffff" stop-opacity="0"></stop>
-                </linearGradient>
-                <linearGradient id="butterflyWing" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0%" stop-color="#f4f4f5"></stop>
-                  <stop offset="100%" stop-color="#a1a1aa"></stop>
-                </linearGradient>
-                <linearGradient id="butterflyLowerWing" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0%" stop-color="#d4d4d8"></stop>
-                  <stop offset="100%" stop-color="#71717a"></stop>
-                </linearGradient>
-              </defs>
-              <path d="M46 62 L52 116 C52.5 122 87.5 122 88 116 L94 62 Z" fill="url(#trashCanGrad)"></path>
-              <rect x="55" y="66" width="5" height="48" rx="2.5" fill="rgba(255,255,255,0.12)"></rect>
-              <rect x="67.5" y="66" width="5" height="50" rx="2.5" fill="rgba(255,255,255,0.2)"></rect>
-              <rect x="80" y="66" width="5" height="48" rx="2.5" fill="rgba(0,0,0,0.3)"></rect>
-              <ellipse cx="70" cy="62" rx="25" ry="7" fill="#27272a"></ellipse>
-              <ellipse cx="70" cy="62" rx="22" ry="5.5" fill="#18181b"></ellipse>
-              <ellipse cx="70" cy="62" rx="16" ry="3.5" fill="#3f3f46" opacity="0.6"></ellipse>
-              <g transform="rotate(-24 46 44)">
-                <ellipse cx="64" cy="46" rx="28" ry="7" fill="url(#trashLidGrad)"></ellipse>
-                <path d="M38 46 C38 36 90 36 90 46 Z" fill="url(#trashLidGrad)"></path>
-                <path d="M42 43 C46 38 82 38 86 43" stroke="url(#trashHighlight)" stroke-width="2" stroke-linecap="round" fill="none"></path>
-                <path d="M58 35 C58 30 70 30 70 35" stroke="#e4e4e7" stroke-width="3" stroke-linecap="round" fill="none"></path>
-              </g>
-              <g transform="translate(90, 36)">
-                <path d="M-1 -1 C-6 -8 -13 -6 -10 1 C-8 4 -3 2 -1 0 Z" fill="url(#butterflyWing)"></path>
-                <path d="M1 -1 C6 -8 13 -6 10 1 C8 4 3 2 1 0 Z" fill="url(#butterflyWing)"></path>
-                <path d="M-1 1 C-6 5 -10 9 -6 11 C-3 11 -1 5 -1 1 Z" fill="url(#butterflyLowerWing)"></path>
-                <path d="M1 1 C6 5 10 9 6 11 C3 11 1 5 1 1 Z" fill="url(#butterflyLowerWing)"></path>
-                <ellipse cx="0" cy="1" rx="1.5" ry="5.5" fill="#27272a"></ellipse>
-              </g>
-              <g>
-                <path d="M108 24 L109.5 28.5 L114 30 L109.5 31.5 L108 36 L106.5 31.5 L102 30 L106.5 28.5 Z" fill="#e4e4e7"></path>
-                <path d="M30 42 L31 45 L34 46 L31 47 L30 50 L29 47 L26 46 L29 45 Z" fill="#a1a1aa"></path>
-                <path d="M84 18 L85 20 L87 21 L85 22 L84 24 L83 22 L81 21 L83 20 Z" fill="#71717a"></path>
-              </g>
-            </svg>
-          </div>
-          <h2 class="component-empty-state-title" data-ref="trash-empty-title" data-i18n="trash.empty_title">Papelera de reciclaje vacía</h2>
-          <p class="component-empty-state-desc" data-ref="trash-empty-text" data-i18n="trash.empty_desc"></p>
-        </div>
       </div>
     </div>
   </div>

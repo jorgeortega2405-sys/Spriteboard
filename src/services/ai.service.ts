@@ -1,5 +1,6 @@
 import { ASSISTANT_KNOWLEDGE } from '../config/assistant-knowledge.js';
 import { ASSISTANT_RULES } from '../config/assistant-rules.js';
+import { pool } from '../config/database.config.js';
 import { config } from '../config/env.config.js';
 import { logger } from './logger.service.js';
 
@@ -118,6 +119,24 @@ export class AiService {
         error: err instanceof Error ? err.message : String(err),
       });
       return 'Ha ocurrido un problema de conexión con el asistente. Por favor verifica tu red e intenta nuevamente.';
+    }
+  }
+
+  static async saveFeedback(
+    userId: number | null,
+    messageText: string,
+    rating: 'like' | 'dislike'
+  ): Promise<boolean> {
+    try {
+      await pool.execute(
+        'INSERT INTO ai_chat_feedback (user_id, message_text, rating) VALUES (?, ?, ?)',
+        [userId, messageText, rating]
+      );
+      logger.db.info(`Feedback de IA registrado exitosamente: usuario=${userId}, rating=${rating}`);
+      return true;
+    } catch (err) {
+      logger.db.error('AiService: Error al registrar feedback en base de datos', err);
+      return false;
     }
   }
 }

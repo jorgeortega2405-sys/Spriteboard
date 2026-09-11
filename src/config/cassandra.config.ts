@@ -75,7 +75,8 @@ export async function runCassandraMigrations(): Promise<void> {
       ip_hash text,
       user_agent_category text,
       PRIMARY KEY ((bucket_day), created_at, id)
-    ) WITH CLUSTERING ORDER BY (created_at DESC, id DESC);
+    ) WITH CLUSTERING ORDER BY (created_at DESC, id DESC)
+      AND default_time_to_live = 2592000;
   `);
 
   await cassandraClient.execute(`
@@ -88,7 +89,8 @@ export async function runCassandraMigrations(): Promise<void> {
       status_code int,
       duration_ms int,
       PRIMARY KEY ((route, bucket_day), created_at, id)
-    ) WITH CLUSTERING ORDER BY (created_at DESC, id DESC);
+    ) WITH CLUSTERING ORDER BY (created_at DESC, id DESC)
+      AND default_time_to_live = 2592000;
   `);
 
   await cassandraClient.execute(`
@@ -102,7 +104,8 @@ export async function runCassandraMigrations(): Promise<void> {
       session_id text,
       metadata text,
       PRIMARY KEY ((bucket_day), created_at, id)
-    ) WITH CLUSTERING ORDER BY (created_at DESC, id DESC);
+    ) WITH CLUSTERING ORDER BY (created_at DESC, id DESC)
+      AND default_time_to_live = 2592000;
   `);
 
   await cassandraClient.execute(`
@@ -116,7 +119,8 @@ export async function runCassandraMigrations(): Promise<void> {
       session_id text,
       metadata text,
       PRIMARY KEY ((category, bucket_day), created_at, id)
-    ) WITH CLUSTERING ORDER BY (created_at DESC, id DESC);
+    ) WITH CLUSTERING ORDER BY (created_at DESC, id DESC)
+      AND default_time_to_live = 2592000;
   `);
 
   await cassandraClient.execute(`
@@ -130,7 +134,8 @@ export async function runCassandraMigrations(): Promise<void> {
       event_loop_lag_ms double,
       active_requests int,
       PRIMARY KEY ((bucket_day), created_at, id)
-    ) WITH CLUSTERING ORDER BY (created_at DESC, id DESC);
+    ) WITH CLUSTERING ORDER BY (created_at DESC, id DESC)
+      AND default_time_to_live = 2592000;
   `);
 
   await cassandraClient.execute(`
@@ -143,10 +148,25 @@ export async function runCassandraMigrations(): Promise<void> {
       rating text,
       page_path text,
       PRIMARY KEY ((bucket_day), created_at, id)
-    ) WITH CLUSTERING ORDER BY (created_at DESC, id DESC);
+    ) WITH CLUSTERING ORDER BY (created_at DESC, id DESC)
+      AND default_time_to_live = 2592000;
   `);
 
-  logger.db.info(`Tablas CQL de telemetría verificadas en keyspace "${keyspace}".`);
+  const telemetryTables = [
+    'http_metrics',
+    'http_metrics_by_route',
+    'events',
+    'events_by_category',
+    'system_metrics',
+    'web_vitals',
+  ];
+  for (const t of telemetryTables) {
+    try {
+      await cassandraClient.execute(`ALTER TABLE ${keyspace}.${t} WITH default_time_to_live = 2592000;`);
+    } catch {}
+  }
+
+  logger.db.info(`Tablas CQL de telemetría verificadas con TTL de 30 días en keyspace "${keyspace}".`);
 }
 
 export async function checkCassandraConnection(retries = 25, delayMs = 3000): Promise<void> {

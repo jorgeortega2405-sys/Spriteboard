@@ -1,4 +1,5 @@
 import { config } from '../config/env.config.js';
+import { redis } from '../config/redis.config.js';
 import { updateUserSubscriptionInSessions } from './auth.service.js';
 import { logger } from './logger.service.js';
 import { purchaseService } from './purchase.service.js';
@@ -165,6 +166,18 @@ export class StripeService {
       return;
     }
 
+    const lockKey = `lock:checkout_sync:${session.id}`;
+    const acquired = await redis.set(lockKey, 'locked', 'EX', 60, 'NX');
+    if (!acquired) {
+      logger.app.info('Checkout session ya procesándose o procesada', { sessionId: session.id });
+      return;
+    }
+
+    const existing = await purchaseService.getPurchaseBySessionId(session.id);
+    if (existing) {
+      return;
+    }
+
     if (previousSubId && subscriptionId && previousSubId !== subscriptionId) {
       try {
         await this.stripe.subscriptions.cancel(previousSubId);
@@ -219,7 +232,16 @@ export class StripeService {
     const currency = invoice.currency || 'USD';
     const lineItem = invoice.lines?.data?.[0];
     const billingPeriod = lineItem?.price?.recurring?.interval === 'year' ? 'yearly' : 'monthly';
-    const planId = user.subscription_tier || 'plus';
+    let planId = invoice.subscription_details?.metadata?.planId || (lineItem as any)?.price?.metadata?.planId;
+    if (!planId && subscriptionId) {
+      try {
+        const sub = await this.stripe.subscriptions.retrieve(subscriptionId);
+        planId = sub.metadata?.planId;
+      } catch (_) {}
+    }
+    if (!planId) {
+      planId = user.subscription_tier || 'plus';
+    }
 
     await purchaseService.recordPurchase({
       user_id: user.id,
@@ -233,6 +255,16 @@ export class StripeService {
       currency: currency.toUpperCase(),
       status: 'completed',
     });
+
+    await purchaseService.updateUserSubscription(
+      user.id,
+      planId,
+      customerId,
+      subscriptionId,
+      'active'
+    );
+
+    await updateUserSubscriptionInSessions(user.id, planId);
 
     logger.app.info('Factura periódica de Stripe registrada en historial de compras', {
       userId: user.id,
@@ -312,7 +344,7 @@ export class StripeService {
       throw new Error('La sesión de pago no coincide con el usuario autenticado.');
     }
 
-    if (session.payment_status !== 'paid' && session.status !== 'complete') {
+    if (session.status !== 'complete' || session.payment_status !== 'paid') {
       throw new Error('El pago aún no ha sido completado por Stripe.');
     }
 
@@ -323,6 +355,33 @@ export class StripeService {
     const subscriptionId = typeof session.subscription === 'string' ? session.subscription : (session.subscription?.id ?? null);
     const paymentIntentId = typeof session.payment_intent === 'string' ? session.payment_intent : (session.payment_intent?.id ?? null);
     const previousSubId = session.metadata?.previousSubscriptionId;
+
+    const lockKey = `lock:checkout_sync:${session.id}`;
+    const acquired = await redis.set(lockKey, 'locked', 'EX', 60, 'NX');
+    if (!acquired) {
+      return {
+        success: true,
+        tier: planId,
+        purchase: {
+          planId,
+          billingPeriod,
+          amountTotal,
+        },
+      };
+    }
+
+    const existing = await purchaseService.getPurchaseBySessionId(session.id);
+    if (existing) {
+      return {
+        success: true,
+        tier: existing.plan_id || planId,
+        purchase: {
+          planId: existing.plan_id || planId,
+          billingPeriod: existing.billing_period || billingPeriod,
+          amountTotal: existing.amount_total || amountTotal,
+        },
+      };
+    }
 
     if (previousSubId && subscriptionId && previousSubId !== subscriptionId) {
       try {

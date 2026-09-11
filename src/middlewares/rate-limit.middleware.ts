@@ -251,3 +251,17 @@ export const aiChatLimiter = createRateLimiter({
   keyGenerator: getUserOrIpKey,
   message: 'Has enviado demasiados mensajes al asistente de IA en poco tiempo. Por favor espera un minuto antes de enviar otro mensaje.',
 });
+
+export const canvasViewLimiter = createRateLimiter({
+  prefix: 'canvas_view',
+  windowMs: 60 * 1000,
+  max: 60,
+  message: 'Demasiadas solicitudes de visualización. Por favor espera un momento.',
+});
+
+export const canvasHeartbeatLimiter = createRateLimiter({
+  prefix: 'canvas_heartbeat',
+  windowMs: 60 * 1000,
+  max: 60,
+  message: 'Demasiadas solicitudes de actividad en el lienzo. Por favor espera un momento.',
+});

@@ -67,7 +67,7 @@ export function handleRecordWebVital(req: Request, res: Response): void {
   }
 }
 
-export async function handleGetTelemetryStats(req: Request, res: Response): Promise<void> {
+export async function handleGetTelemetryStats(_req: Request, res: Response): Promise<void> {
   try {
     const summary = await telemetryService.getTelemetrySummary();
     sendSuccess(res, { summary });

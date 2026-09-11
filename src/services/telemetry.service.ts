@@ -3,7 +3,6 @@ import { config } from '../config/env.config.js';
 import { redis } from '../config/redis.config.js';
 import { HttpMetricInput, SystemMetricInput, TelemetryEventInput, TelemetryStatsSummary, WebVitalInput } from '../types/telemetry.types.js';
 import { logger } from './logger.service.js';
-import cassandra from 'cassandra-driver';
 import crypto from 'crypto';
 
 function getTodayBucket(date = new Date()): string {

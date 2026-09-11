@@ -22,7 +22,6 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
 
   const initialName = options?.name || options?.templateName || '';
   const templateVariants = options?.variants && options.variants.length > 0 ? options.variants : null;
-  const isTemplateMode = Boolean(templateVariants || options?.templateName);
   const templateName = options?.templateName || null;
 
   let currentWidth = options?.width || templateVariants?.[0]?.width || 64;
@@ -435,9 +434,6 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
     backdrop.classList.add('is-visible');
   });
 
-  type Stage = 'dimensions' | 'background' | 'animation';
-  let currentStage: Stage = 'dimensions';
-
   const tabStageDimensions = backdrop.querySelector<HTMLElement>('[data-ref="tab-stage-dimensions"]');
   const tabStageBackground = backdrop.querySelector<HTMLElement>('[data-ref="tab-stage-background"]');
   const tabStageAnimation = backdrop.querySelector<HTMLElement>('[data-ref="tab-stage-animation"]');
@@ -555,9 +551,7 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
     }
   };
 
-  const switchStage = (stage: Stage) => {
-    currentStage = stage;
-
+  const switchStage = (stage: 'dimensions' | 'background' | 'animation') => {
     tabStageDimensions?.classList.toggle('is-active', stage === 'dimensions');
     tabStageBackground?.classList.toggle('is-active', stage === 'background');
     tabStageAnimation?.classList.toggle('is-active', stage === 'animation');

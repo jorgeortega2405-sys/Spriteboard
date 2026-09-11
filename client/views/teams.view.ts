@@ -7,7 +7,7 @@ import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { SearchUserResult } from '../types/canvas.types.js';
 import { Team, TeamMember } from '../types/team.types.js';
-import { getEmptyGraphicSvg, setupDropdown } from '../utils/dom.util.js';
+import { removeEmptyState, renderEmptyState, setupDropdown } from '../utils/dom.util.js';
 
 function formatDate(iso?: string): string {
   if (!iso) return '—';
@@ -27,7 +27,6 @@ class TeamsController {
   private container: HTMLElement;
   private abortController: AbortController;
   private allTeams: Team[] = [];
-  private visibleTeams: Team[] = [];
   private selectedTeamUuids = new Set<string>();
   private currentTeam: Team | null = null;
   private currentMembers: TeamMember[] = [];
@@ -36,8 +35,7 @@ class TeamsController {
 
   private tableEl: HTMLElement | null = null;
   private tbodyEl: HTMLElement | null = null;
-  private emptyStateEl: HTMLElement | null = null;
-  private emptyTextEl: HTMLElement | null = null;
+  private tableWrapperEl: HTMLElement | null = null;
   private defaultActions: HTMLElement | null = null;
   private selectedActions: HTMLElement | null = null;
   private btnActionMembers: HTMLElement | null = null;
@@ -49,7 +47,6 @@ class TeamsController {
   private searchInput: HTMLInputElement | null = null;
   private btnClearSearch: HTMLElement | null = null;
   private btnCreateTeam: HTMLElement | null = null;
-  private btnEmptyCreateTeam: HTMLElement | null = null;
 
   private modalTeamBackdrop: HTMLElement | null = null;
   private modalTeamTitle: HTMLElement | null = null;
@@ -75,8 +72,7 @@ class TeamsController {
   public async init(): Promise<void> {
     this.tableEl = this.container.querySelector<HTMLElement>('[data-ref="teams-table"]');
     this.tbodyEl = this.container.querySelector<HTMLElement>('[data-ref="teams-tbody"]');
-    this.emptyStateEl = this.container.querySelector<HTMLElement>('[data-ref="teams-empty-state"]');
-    this.emptyTextEl = this.container.querySelector<HTMLElement>('[data-ref="teams-empty-text"]');
+    this.tableWrapperEl = this.container.querySelector<HTMLElement>('[data-ref="teams-table-wrapper"]');
 
     this.defaultActions = this.container.querySelector<HTMLElement>('[data-ref="teams-default-actions"]');
     this.selectedActions = this.container.querySelector<HTMLElement>('[data-ref="teams-selected-actions"]');
@@ -89,7 +85,6 @@ class TeamsController {
     this.searchInput = this.container.querySelector<HTMLInputElement>('[data-ref="teams-search-input"]');
     this.btnClearSearch = this.container.querySelector<HTMLElement>('[data-ref="btn-clear-search"]');
     this.btnCreateTeam = this.container.querySelector<HTMLElement>('[data-ref="btn-create-team"]');
-    this.btnEmptyCreateTeam = this.container.querySelector<HTMLElement>('[data-ref="btn-empty-create-team"]');
 
     this.modalTeamBackdrop = this.container.querySelector<HTMLElement>('[data-ref="modal-team-backdrop"]');
     this.modalTeamTitle = this.container.querySelector<HTMLElement>('[data-ref="modal-team-title"]');
@@ -121,7 +116,6 @@ class TeamsController {
     const { signal } = this.abortController;
 
     this.btnCreateTeam?.addEventListener('click', () => this.openTeamModal(), { signal });
-    this.btnEmptyCreateTeam?.addEventListener('click', () => this.openTeamModal(), { signal });
 
     this.btnToggleSearch?.addEventListener('click', (e) => {
       e.preventDefault();
@@ -285,32 +279,31 @@ class TeamsController {
   }
 
   private renderRows(teams: Team[], isSearchResult = false): void {
-    this.visibleTeams = teams;
     if (!this.tbodyEl) return;
 
     if (teams.length === 0) {
       if (this.tableEl) this.tableEl.style.display = 'none';
-      if (this.emptyStateEl) this.emptyStateEl.style.display = 'flex';
-      const emptyTitleEl = this.container.querySelector<HTMLElement>('[data-ref="teams-empty-title"]');
-      const emptyGraphicEl = this.container.querySelector<HTMLElement>('[data-ref="empty-graphic"]');
-      if (isSearchResult) {
-        if (emptyTitleEl) emptyTitleEl.textContent = t('teams.search_no_results_title') || 'Sin resultados';
-        if (this.emptyTextEl) {
-          this.emptyTextEl.textContent = t('teams.search_no_results') || 'No se encontraron equipos que coincidan con la búsqueda.';
-        }
-        if (emptyGraphicEl) emptyGraphicEl.innerHTML = getEmptyGraphicSvg('search');
-      } else {
-        if (emptyTitleEl) emptyTitleEl.textContent = t('teams.empty_title') || 'Aún no tienes equipos';
-        if (this.emptyTextEl) {
-          this.emptyTextEl.textContent = t('teams.empty_desc') || 'Crea un equipo de trabajo para compartir lienzos con varias personas a la vez con un solo clic.';
-        }
-        if (emptyGraphicEl) emptyGraphicEl.innerHTML = getEmptyGraphicSvg('users');
+      if (this.tableWrapperEl) {
+        renderEmptyState({
+          container: this.tableWrapperEl,
+          dataRef: 'teams-empty-state',
+          desc: isSearchResult
+            ? t('teams.search_no_results') || 'No se encontraron equipos que coincidan con la búsqueda.'
+            : t('teams.empty_desc') || 'Crea un equipo de trabajo para compartir lienzos con varias personas a la vez con un solo clic.',
+          graphicType: isSearchResult ? 'search' : 'users',
+          isTable: true,
+          title: isSearchResult
+            ? t('teams.search_no_results_title') || 'Sin resultados'
+            : t('teams.empty_title') || 'Aún no tienes equipos',
+        });
       }
       this.updateSelectionUi();
       return;
     }
 
-    if (this.emptyStateEl) this.emptyStateEl.style.display = 'none';
+    if (this.tableWrapperEl) {
+      removeEmptyState(this.tableWrapperEl, 'teams-empty-state');
+    }
     if (this.tableEl) this.tableEl.style.display = 'table';
     this.tbodyEl.innerHTML = '';
 
@@ -678,7 +671,7 @@ class TeamsController {
       }
 
       const targetUser = users.find(
-        (u) => u.username.toLowerCase() === query.toLowerCase() || u.email.toLowerCase() === query.toLowerCase()
+        (u) => u.username.toLowerCase() === query.toLowerCase() || (Boolean(u.email) && u.email?.toLowerCase() === query.toLowerCase())
       ) || users[0];
 
       const alreadyMember = this.currentMembers.some((m) => m.user_id === targetUser.id);
@@ -721,26 +714,6 @@ class TeamsController {
       await this.loadTeams();
     } catch {
       showToast('Error al remover integrante', 'danger');
-    }
-  }
-
-  private async handleDeleteCurrentTeam(): Promise<void> {
-    if (!this.currentTeam) return;
-    const teamName = this.currentTeam.name;
-
-    try {
-      const res = await deleteApi(API_ROUTES.teams.byId(this.currentTeam.uuid));
-      if (!res.ok) {
-        showToast('No se pudo eliminar el equipo', 'danger');
-        return;
-      }
-
-      showToast(`Equipo "${teamName}" eliminado`, 'info');
-      this.closeMembersModal();
-      this.selectedTeamUuids.delete(this.currentTeam.uuid);
-      await this.loadTeams();
-    } catch {
-      showToast('Error al eliminar equipo', 'danger');
     }
   }
 }

@@ -61,6 +61,59 @@ export class AiController {
       });
     }
   }
+
+  static async feedback(req: Request, res: Response): Promise<void> {
+    try {
+      const { message, rating } = req.body;
+
+      if (!rating || (rating !== 'like' && rating !== 'dislike')) {
+        res.status(400).json({
+          success: false,
+          error: 'Calificación no válida.',
+        });
+        return;
+      }
+
+      if (!message || typeof message !== 'string' || !message.trim()) {
+        res.status(400).json({
+          success: false,
+          error: 'El mensaje no puede estar vacío.',
+        });
+        return;
+      }
+
+      const currentUser = getCurrentUser(req);
+      const userId = currentUser?.id ?? null;
+
+      const success = await AiService.saveFeedback(
+        userId,
+        message.trim().slice(0, 5000),
+        rating
+      );
+
+      if (!success) {
+        res.status(500).json({
+          success: false,
+          error: 'Ha ocurrido un error inesperado al procesar tu solicitud.',
+        });
+        return;
+      }
+
+      res.status(200).json({
+        success: true,
+        message: 'Feedback registrado correctamente.',
+      });
+    } catch (error) {
+      logger.app.error('AiController: Error al guardar feedback de chat', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+
+      res.status(500).json({
+        success: false,
+        error: 'Ha ocurrido un error inesperado al procesar tu solicitud.',
+      });
+    }
+  }
 }
 
 export default AiController;

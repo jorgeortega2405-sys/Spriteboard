@@ -4,10 +4,13 @@ import { API_ROUTES } from '../config/api-routes.js';
 import { ALL_PRESETS, PresetItem, TEMPLATE_CATEGORIES } from '../config/templates.config.js';
 import { currentUser, getApi, postApi } from '../services/api.service.js';
 import { renderIcons } from '../services/icon.service.js';
+import { SkeletonService } from '../services/skeleton.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
-import { bindDragToScroll, CarouselController, getEmptyGraphicSvg, initCarouselScroll, setupLazyImages } from '../utils/dom.util.js';
+import { bindDragToScroll, CarouselController, initCarouselScroll, removeEmptyState, renderEmptyState, setupLazyImages } from '../utils/dom.util.js';
+
+const BATCH_SIZE = 20;
 
 class TemplatesController {
   private container: HTMLElement;
@@ -19,15 +22,14 @@ class TemplatesController {
 
   private badgesContainer: HTMLElement | null = null;
   private gridEl: HTMLElement | null = null;
-  private emptyStateEl: HTMLElement | null = null;
-  private emptyGraphicEl: HTMLElement | null = null;
-  private btnResetFilters: HTMLElement | null = null;
+  private templatesSection: HTMLElement | null = null;
 
-  private isSearchActive = false;
-  private btnToggleSearch: HTMLElement | null = null;
-  private searchToolbar: HTMLElement | null = null;
-  private searchInput: HTMLInputElement | null = null;
-  private btnClearSearch: HTMLElement | null = null;
+  private scrollableEl: HTMLElement | null = null;
+  private sentinelEl: HTMLElement | null = null;
+  private scrollObserver: IntersectionObserver | null = null;
+  private currentTemplates: PresetItem[] = [];
+  private renderedCount = 0;
+  private isRenderingBatch = false;
 
   private activeCategory = 'all';
   private searchQuery = '';
@@ -39,24 +41,20 @@ class TemplatesController {
   }
 
   public async init(): Promise<void> {
+    this.gridEl = this.container.querySelector<HTMLElement>('[data-ref="templates-grid"]');
+    if (this.gridEl) {
+      SkeletonService.renderGridCardSkeletons(this.gridEl, 8, 'template');
+    }
+
     if (currentUser) {
       await this.loadFavoriteTemplates();
     }
     this.carouselWrapper = this.container.querySelector<HTMLElement>('[data-ref="templates-tags-carousel-wrapper"]');
     this.badgesContainer = this.container.querySelector<HTMLElement>('[data-ref="templates-categories-badges"]');
-    this.gridEl = this.container.querySelector<HTMLElement>('[data-ref="templates-grid"]');
-    this.emptyStateEl = this.container.querySelector<HTMLElement>('[data-ref="templates-empty-state"]');
-    this.emptyGraphicEl = this.container.querySelector<HTMLElement>('[data-ref="templates-empty-graphic"]');
-    this.btnResetFilters = this.container.querySelector<HTMLElement>('[data-ref="btn-reset-filters"]');
+    this.templatesSection = this.container.querySelector<HTMLElement>('[data-ref="templates-section"]');
 
-    this.btnToggleSearch = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-search"]');
-    this.searchToolbar = this.container.querySelector<HTMLElement>('[data-ref="search-toolbar"]');
-    this.searchInput = this.container.querySelector<HTMLInputElement>('[data-ref="templates-search-input"]');
-    this.btnClearSearch = this.container.querySelector<HTMLElement>('[data-ref="btn-clear-search"]');
-
-    if (this.emptyGraphicEl) {
-      this.emptyGraphicEl.innerHTML = getEmptyGraphicSvg('search');
-    }
+    this.scrollableEl = this.container.querySelector<HTMLElement>('[data-ref="templates-scrollable"]');
+    this.sentinelEl = this.container.querySelector<HTMLElement>('[data-ref="templates-sentinel"]');
 
     this.renderCategoryBadges();
     this.initCarousel();
@@ -96,6 +94,14 @@ class TemplatesController {
   private bindEvents(): void {
     const { signal } = this.abortController;
 
+    this.scrollableEl?.addEventListener(
+      'scroll',
+      () => {
+        this.handleScroll();
+      },
+      { passive: true, signal }
+    );
+
     this.badgesContainer?.addEventListener(
       'click',
       (e) => {
@@ -109,63 +115,6 @@ class TemplatesController {
           });
           this.renderTemplates();
         }
-      },
-      { signal }
-    );
-
-    this.btnToggleSearch?.addEventListener(
-      'click',
-      (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        this.toggleSearchToolbar();
-      },
-      { signal }
-    );
-
-    this.searchInput?.addEventListener(
-      'input',
-      () => {
-        this.searchQuery = this.searchInput?.value.trim().toLowerCase() || '';
-        if (this.btnClearSearch) {
-          this.btnClearSearch.style.display = this.searchQuery ? 'inline-flex' : 'none';
-        }
-        this.renderTemplates();
-      },
-      { signal }
-    );
-
-    this.btnClearSearch?.addEventListener(
-      'click',
-      () => {
-        if (this.searchInput) {
-          this.searchInput.value = '';
-          this.searchQuery = '';
-          if (this.btnClearSearch) {
-            this.btnClearSearch.style.display = 'none';
-          }
-          this.renderTemplates();
-          this.searchInput.focus();
-        }
-      },
-      { signal }
-    );
-
-    this.btnResetFilters?.addEventListener(
-      'click',
-      () => {
-        this.activeCategory = 'all';
-        this.searchQuery = '';
-        if (this.searchInput) {
-          this.searchInput.value = '';
-        }
-        if (this.btnClearSearch) {
-          this.btnClearSearch.style.display = 'none';
-        }
-        this.badgesContainer?.querySelectorAll<HTMLElement>('.component-badge').forEach((badge) => {
-          badge.classList.toggle('is-active', badge.getAttribute('data-category') === 'all');
-        });
-        this.renderTemplates();
       },
       { signal }
     );
@@ -197,61 +146,10 @@ class TemplatesController {
       },
       { signal }
     );
-
-    document.addEventListener(
-      'click',
-      (e) => {
-        if (this.isSearchActive) {
-          const target = e.target as Node | null;
-          if (
-            this.searchToolbar &&
-            !this.searchToolbar.contains(target) &&
-            this.btnToggleSearch &&
-            !this.btnToggleSearch.contains(target)
-          ) {
-            this.closeSearchToolbar();
-          }
-        }
-      },
-      { signal }
-    );
-
-    window.addEventListener(
-      'keydown',
-      (e) => {
-        if (e.key === 'Escape' && this.isSearchActive) {
-          this.closeSearchToolbar();
-        }
-      },
-      { signal }
-    );
-  }
-
-  private toggleSearchToolbar(): void {
-    if (this.isSearchActive) {
-      this.closeSearchToolbar();
-    } else {
-      this.openSearchToolbar();
-    }
-  }
-
-  private openSearchToolbar(): void {
-    this.isSearchActive = true;
-    this.searchToolbar?.classList.remove('is-hidden');
-    this.btnToggleSearch?.classList.add('is-active');
-    setTimeout(() => {
-      this.searchInput?.focus();
-    }, 60);
-  }
-
-  private closeSearchToolbar(): void {
-    this.isSearchActive = false;
-    this.searchToolbar?.classList.add('is-hidden');
-    this.btnToggleSearch?.classList.remove('is-active');
   }
 
   private renderTemplates(): void {
-    if (!this.gridEl || !this.emptyStateEl) return;
+    if (!this.gridEl) return;
 
     let filtered = ALL_PRESETS;
 
@@ -269,19 +167,116 @@ class TemplatesController {
       });
     }
 
+    this.currentTemplates = filtered;
+    this.renderedCount = 0;
+
     if (filtered.length === 0) {
+      if (this.scrollObserver) {
+        this.scrollObserver.disconnect();
+        this.scrollObserver = null;
+      }
+      if (this.sentinelEl) {
+        this.sentinelEl.style.display = 'none';
+      }
       this.gridEl.innerHTML = '';
       this.gridEl.style.display = 'none';
-      this.emptyStateEl.style.display = 'flex';
+
+      if (this.templatesSection) {
+        renderEmptyState({
+          container: this.templatesSection,
+          dataRef: 'templates-empty-state',
+          desc: t('templates.empty_desc') || 'Intenta con otro término de búsqueda o selecciona otra categoría.',
+          graphicType: 'search',
+          title: t('templates.empty_title') || 'No se encontraron plantillas',
+        });
+      }
       return;
     }
 
-    this.emptyStateEl.style.display = 'none';
+    if (this.templatesSection) {
+      removeEmptyState(this.templatesSection, 'templates-empty-state');
+    }
     this.gridEl.style.display = 'grid';
+    this.gridEl.innerHTML = '';
+    if (this.sentinelEl) {
+      this.sentinelEl.style.display = 'block';
+    }
 
-    this.gridEl.innerHTML = filtered.map((item, index) => this.buildCardHtml(item, index)).join('');
+    this.renderNextBatch();
+    this.initScrollObserver();
+  }
+
+  private renderNextBatch(): void {
+    if (!this.gridEl || this.isRenderingBatch) return;
+    if (this.renderedCount >= this.currentTemplates.length) {
+      if (this.scrollObserver) {
+        this.scrollObserver.disconnect();
+        this.scrollObserver = null;
+      }
+      if (this.sentinelEl) {
+        this.sentinelEl.style.display = 'none';
+      }
+      return;
+    }
+
+    this.isRenderingBatch = true;
+    const batch = this.currentTemplates.slice(this.renderedCount, this.renderedCount + BATCH_SIZE);
+    const html = batch.map((item, index) => this.buildCardHtml(item, this.renderedCount + index)).join('');
+    this.gridEl.insertAdjacentHTML('beforeend', html);
+    this.renderedCount += batch.length;
+
     setupLazyImages(this.gridEl);
     renderIcons(this.gridEl);
+
+    this.isRenderingBatch = false;
+
+    if (this.renderedCount >= this.currentTemplates.length) {
+      if (this.scrollObserver) {
+        this.scrollObserver.disconnect();
+        this.scrollObserver = null;
+      }
+      if (this.sentinelEl) {
+        this.sentinelEl.style.display = 'none';
+      }
+    }
+  }
+
+  private handleScroll(): void {
+    if (!this.scrollableEl || this.isRenderingBatch) return;
+    if (this.renderedCount >= this.currentTemplates.length) return;
+
+    const { clientHeight, scrollHeight, scrollTop } = this.scrollableEl;
+    if (scrollTop + clientHeight >= scrollHeight - 200) {
+      this.renderNextBatch();
+    }
+  }
+
+  private initScrollObserver(): void {
+    if (this.scrollObserver) {
+      this.scrollObserver.disconnect();
+      this.scrollObserver = null;
+    }
+    if (!this.sentinelEl) return;
+
+    this.scrollObserver = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (!entry) return;
+
+        if (entry.isIntersecting) {
+          if (this.scrollableEl && this.scrollableEl.scrollTop === 0 && this.scrollableEl.scrollHeight > this.scrollableEl.clientHeight) {
+            return;
+          }
+          this.renderNextBatch();
+        }
+      },
+      {
+        root: this.scrollableEl,
+        rootMargin: '40px',
+      }
+    );
+
+    this.scrollObserver.observe(this.sentinelEl);
   }
 
   private getCardAspectClass(item: PresetItem, index: number): string {
@@ -334,9 +329,11 @@ class TemplatesController {
           </div>
         </div>
         <div class="canvas-card__bottom" data-ref="template-card-bottom-${item.id}">
-          <h3 class="canvas-card__title" data-ref="template-card-title-${item.id}" title="${item.name}">
-            ${item.name}
-          </h3>
+          <div class="canvas-card__badge canvas-card__badge--glass canvas-card__badge--title" data-ref="template-card-title-badge-${item.id}">
+            <span class="canvas-card__title" data-ref="template-card-title-${item.id}" title="${item.name}">
+              ${item.name}
+            </span>
+          </div>
         </div>
       </div>
     `;
@@ -445,6 +442,10 @@ class TemplatesController {
   }
 
   public destroy(): void {
+    if (this.scrollObserver) {
+      this.scrollObserver.disconnect();
+      this.scrollObserver = null;
+    }
     this.abortController.abort();
     this.carouselController?.destroy();
     this.carouselController = null;

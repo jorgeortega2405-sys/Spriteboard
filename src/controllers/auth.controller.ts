@@ -1,9 +1,8 @@
-import crypto from 'crypto';
-import { Request, Response } from 'express';
 import { pool } from '../config/database.config.js';
+import { config } from '../config/env.config.js';
 import { getCurrentUser, getLinkedAccounts } from '../middlewares/auth.middleware.js';
 import { getClientIp } from '../middlewares/rate-limit.middleware.js';
-import { addAccountToSession, clearSessionCookie, getMultiAccountSession, hashPassword, isSessionRevoked, removeAccountFromSession, revokeAllUserSessions, setSessionCookie, switchAccountInSession, updateActiveAccountInSession, verifyPassword } from '../services/auth.service.js';
+import { addAccountToSession, clearSessionCookie, getMultiAccountSession, hashPassword, isSessionRevoked, removeAccountFromSession, revokeAllUserSessions, switchAccountInSession, updateActiveAccountInSession, verifyPassword } from '../services/auth.service.js';
 import { geoIpService } from '../services/geoip.service.js';
 import { getGoogleAuthUrl, getGoogleLinkAuthUrl, getGoogleVerifyAuthUrl, processGoogleAuthCallback, processGoogleLinkCallback, STATE_COOKIE_NAME } from '../services/google.service.js';
 import { logger } from '../services/logger.service.js';
@@ -11,8 +10,10 @@ import { sendPasswordResetEmail, sendVerificationCodeEmail } from '../services/m
 import { consumePending2FALogin, getPending2FALogin, savePending2FALogin, verifyTotpCode } from '../services/two-factor.service.js';
 import { createUser, findUserByEmail, findUserById, findUserDuplicates, updateUserGoogleId, updateUserLastLoginGeo, updateUserPassword, verifyAndConsumeBackupCode } from '../services/user.service.js';
 import { consumePasswordResetToken, generateSixDigitCode, getPendingRegistration, savePasswordChangeAuth, savePasswordResetToken, savePendingRegistration, verifyAndConsumeCode, verifyPasswordResetToken } from '../services/verification.service.js';
-import { sanitizeUser, sendBadRequest, sendConflict, sendCreated, sendInternalError, sendNotFound, sendSuccess, sendUnauthorized } from '../utils/http.util.js';
+import { sanitizeUser, sendBadRequest, sendConflict, sendCreated, sendInternalError, sendSuccess, sendUnauthorized } from '../utils/http.util.js';
 import { validateEmail, validatePassword, validateUsername, validateVerificationCode } from '../utils/validators.util.js';
+import crypto from 'crypto';
+import { Request, Response } from 'express';
 
 export async function validateStage1(req: Request, res: Response): Promise<void> {
   try {
@@ -642,12 +643,14 @@ export async function googleCallback(req: Request, res: Response): Promise<void>
 
       res.cookie('2fa_temp_token', tempToken, {
         httpOnly: false,
+        secure: config.nodeEnv === 'production',
         sameSite: 'lax',
         maxAge: 300 * 1000,
         path: '/',
       });
       res.cookie('2fa_temp_email', userPayload.email, {
         httpOnly: false,
+        secure: config.nodeEnv === 'production',
         sameSite: 'lax',
         maxAge: 300 * 1000,
         path: '/',

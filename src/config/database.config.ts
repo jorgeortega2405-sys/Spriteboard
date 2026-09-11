@@ -60,8 +60,8 @@ const defaultDbOptions: mysql.PoolOptions = {
   password: process.env.DB_PASSWORD || 'sprite_password',
   database: process.env.DB_NAME || 'db_identity',
   waitForConnections: true,
-  connectionLimit: 15,
-  queueLimit: 0,
+  connectionLimit: 30,
+  queueLimit: 150,
   enableKeepAlive: true,
   keepAliveInitialDelay: 10000,
 };
@@ -457,7 +457,46 @@ export async function runMigrations(): Promise<void> {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
-    logger.db.info('Tablas y columnas de identidad, 2FA, suscripciones, compras, GeoIP, db_canvas, equipos y vistas verificadas exitosamente.');
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS db_canvas.folders (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        uuid VARCHAR(36) NOT NULL UNIQUE,
+        user_id INT NOT NULL,
+        name VARCHAR(100) NOT NULL,
+        color VARCHAR(20) NULL DEFAULT '#6366f1',
+        is_default BOOLEAN NOT NULL DEFAULT FALSE,
+        deleted_at TIMESTAMP NULL DEFAULT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_folders_user (user_id),
+        INDEX idx_folders_uuid (uuid),
+        INDEX idx_folders_deleted_at (deleted_at)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    const [folderCols] = await conn.query<mysql.RowDataPacket[]>(
+      "SHOW COLUMNS FROM db_canvas.canvases LIKE 'folder_id'"
+    );
+    if (folderCols.length === 0) {
+      await conn.query('ALTER TABLE db_canvas.canvases ADD COLUMN folder_id INT NULL DEFAULT NULL AFTER user_id, ADD INDEX idx_canvases_folder (folder_id)');
+      logger.db.info('Columna folder_id añadida a db_canvas.canvases.');
+    }
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS ai_chat_feedback (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NULL,
+        message_text TEXT NOT NULL,
+        rating ENUM('like', 'dislike') NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_ai_feedback_user (user_id),
+        INDEX idx_ai_feedback_rating (rating),
+        INDEX idx_ai_feedback_created_at (created_at),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    logger.db.info('Tablas y columnas de identidad, 2FA, suscripciones, compras, GeoIP, db_canvas, equipos, vistas y feedback IA verificadas exitosamente.');
   } catch (err) {
     logger.db.warn('Advertencia en migración de base de datos', err);
   } finally {

@@ -1,6 +1,7 @@
 import { navigate, render } from '../app-router.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { currentUser, escapeHtml, linkedAccounts, logoutAllApi, logoutApi, postApi, switchAccountApi } from '../services/api.service.js';
+import { renderIcons } from '../services/icon.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
@@ -678,10 +679,6 @@ export async function createSidebar(): Promise<HTMLElement> {
   };
 
   if (currentPath.startsWith('/settings')) {
-    if (sidebarBottom) {
-      sidebarBottom.style.display = 'none';
-    }
-
     if (sidebarHeader) {
       sidebarHeader.style.display = 'flex';
       sidebarHeader.innerHTML = `
@@ -695,8 +692,12 @@ export async function createSidebar(): Promise<HTMLElement> {
       bindNavLink(btnBackHome, '/');
     }
 
-    if (navTop) {
-      if (currentUser) {
+    if (currentUser) {
+      if (sidebarBottom) {
+        sidebarBottom.style.display = '';
+      }
+
+      if (navTop) {
         navTop.innerHTML = `
           <button type="button" class="menu-item" data-ref="btn-nav-settings-account">
             <span class="material-symbols-rounded menu-item__icon">person</span>
@@ -705,14 +706,6 @@ export async function createSidebar(): Promise<HTMLElement> {
           <button type="button" class="menu-item" data-ref="btn-nav-settings-security">
             <span class="material-symbols-rounded menu-item__icon">lock</span>
             <span class="menu-item__text" data-i18n="nav.security"></span>
-          </button>
-          <button type="button" class="menu-item" data-ref="btn-nav-settings-billing">
-            <span class="material-symbols-rounded menu-item__icon">credit_card</span>
-            <span class="menu-item__text" data-i18n="nav.billing"></span>
-          </button>
-          <button type="button" class="menu-item" data-ref="btn-nav-settings-purchases">
-            <span class="material-symbols-rounded menu-item__icon">receipt_long</span>
-            <span class="menu-item__text" data-i18n="nav.purchases"></span>
           </button>
           <button type="button" class="menu-item" data-ref="btn-nav-settings-accessibility">
             <span class="material-symbols-rounded menu-item__icon">accessibility_new</span>
@@ -723,11 +716,7 @@ export async function createSidebar(): Promise<HTMLElement> {
 
         const btnAccount = navTop.querySelector<HTMLElement>('[data-ref="btn-nav-settings-account"]');
         const btnSecurity = navTop.querySelector<HTMLElement>('[data-ref="btn-nav-settings-security"]');
-        const btnBilling = navTop.querySelector<HTMLElement>('[data-ref="btn-nav-settings-billing"]');
-        const btnPurchases = navTop.querySelector<HTMLElement>('[data-ref="btn-nav-settings-purchases"]');
-        const btnAccessibility = navTop.querySelector<HTMLElement>(
-          '[data-ref="btn-nav-settings-accessibility"]'
-        );
+        const btnAccessibility = navTop.querySelector<HTMLElement>('[data-ref="btn-nav-settings-accessibility"]');
 
         if (currentPath === '/settings' || currentPath === '/settings/your-account') {
           btnAccount?.classList.add('is-active');
@@ -736,20 +725,46 @@ export async function createSidebar(): Promise<HTMLElement> {
           currentPath === '/settings/login-and-security'
         ) {
           btnSecurity?.classList.add('is-active');
-        } else if (currentPath === '/settings/billing') {
-          btnBilling?.classList.add('is-active');
-        } else if (currentPath === '/settings/purchases') {
-          btnPurchases?.classList.add('is-active');
         } else if (currentPath === '/settings/accessibility') {
           btnAccessibility?.classList.add('is-active');
         }
 
         bindNavLink(btnAccount, '/settings/your-account');
         bindNavLink(btnSecurity, '/settings/security');
+        bindNavLink(btnAccessibility, '/settings/accessibility');
+      }
+
+      if (navBottom) {
+        navBottom.innerHTML = `
+          <button type="button" class="menu-item" data-ref="btn-nav-settings-billing">
+            <span class="material-symbols-rounded menu-item__icon">credit_card</span>
+            <span class="menu-item__text" data-i18n="nav.billing"></span>
+          </button>
+          <button type="button" class="menu-item" data-ref="btn-nav-settings-purchases">
+            <span class="material-symbols-rounded menu-item__icon">receipt_long</span>
+            <span class="menu-item__text" data-i18n="nav.purchases"></span>
+          </button>
+        `;
+        translateElement(navBottom);
+
+        const btnBilling = navBottom.querySelector<HTMLElement>('[data-ref="btn-nav-settings-billing"]');
+        const btnPurchases = navBottom.querySelector<HTMLElement>('[data-ref="btn-nav-settings-purchases"]');
+
+        if (currentPath === '/settings/billing') {
+          btnBilling?.classList.add('is-active');
+        } else if (currentPath === '/settings/purchases') {
+          btnPurchases?.classList.add('is-active');
+        }
+
         bindNavLink(btnBilling, '/settings/billing');
         bindNavLink(btnPurchases, '/settings/purchases');
-        bindNavLink(btnAccessibility, '/settings/accessibility');
-      } else {
+      }
+    } else {
+      if (sidebarBottom) {
+        sidebarBottom.style.display = 'none';
+      }
+
+      if (navTop) {
         navTop.innerHTML = `
           <button type="button" class="menu-item" data-ref="btn-nav-settings-guest">
             <span class="material-symbols-rounded menu-item__icon">tune</span>
@@ -971,6 +986,74 @@ function setupChatSidebarEvents(sidebarElement: HTMLElement): void {
       bubble.className = 'chat-agent-bubble';
       bubble.textContent = text;
       wrapper.appendChild(bubble);
+
+      const actions = document.createElement('div');
+      actions.className = 'chat-agent-actions';
+      actions.setAttribute('data-ref', 'chat-agent-actions');
+
+      const btnLike = document.createElement('button');
+      btnLike.type = 'button';
+      btnLike.className = 'btn btn--icon chat-feedback-btn chat-feedback-btn--like';
+      btnLike.setAttribute('data-ref', 'btn-chat-like');
+      btnLike.setAttribute('data-tooltip', 'Buena respuesta');
+      btnLike.setAttribute('aria-label', 'Buena respuesta');
+      btnLike.innerHTML = '<span class="material-symbols-rounded">thumb_up</span>';
+
+      const btnDislike = document.createElement('button');
+      btnDislike.type = 'button';
+      btnDislike.className = 'btn btn--icon chat-feedback-btn chat-feedback-btn--dislike';
+      btnDislike.setAttribute('data-ref', 'btn-chat-dislike');
+      btnDislike.setAttribute('data-tooltip', 'Mala respuesta');
+      btnDislike.setAttribute('aria-label', 'Mala respuesta');
+      btnDislike.innerHTML = '<span class="material-symbols-rounded">thumb_down</span>';
+
+      const btnCopy = document.createElement('button');
+      btnCopy.type = 'button';
+      btnCopy.className = 'btn btn--icon chat-feedback-btn chat-feedback-btn--copy';
+      btnCopy.setAttribute('data-ref', 'btn-chat-copy');
+      btnCopy.setAttribute('data-tooltip', 'Copiar respuesta');
+      btnCopy.setAttribute('aria-label', 'Copiar respuesta');
+      btnCopy.innerHTML = '<span class="material-symbols-rounded">content_copy</span>';
+
+      btnLike.addEventListener('click', () => {
+        const isLiked = btnLike.classList.toggle('is-active');
+        if (isLiked) {
+          btnDislike.classList.remove('is-active');
+          showToast('¡Gracias por tus comentarios!', 'success');
+          postApi(API_ROUTES.chatFeedback, {
+            message: text,
+            rating: 'like',
+          }).catch(() => {});
+        }
+      });
+
+      btnDislike.addEventListener('click', () => {
+        const isDisliked = btnDislike.classList.toggle('is-active');
+        if (isDisliked) {
+          btnLike.classList.remove('is-active');
+          showToast('Gracias, trabajaremos para mejorar las respuestas.', 'info');
+          postApi(API_ROUTES.chatFeedback, {
+            message: text,
+            rating: 'dislike',
+          }).catch(() => {});
+        }
+      });
+
+      btnCopy.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(text);
+          btnCopy.classList.add('is-copied');
+          showToast('Copiado al portapapeles', 'info');
+          setTimeout(() => btnCopy.classList.remove('is-copied'), 1500);
+        } catch (_) {}
+      });
+
+      actions.appendChild(btnLike);
+      actions.appendChild(btnDislike);
+      actions.appendChild(btnCopy);
+      wrapper.appendChild(actions);
+
+      renderIcons(actions);
     } else {
       wrapper.textContent = text;
     }
@@ -1008,8 +1091,10 @@ function setupChatSidebarEvents(sidebarElement: HTMLElement): void {
     return wrapper;
   }
 
+  let isProcessing = false;
+
   function setLoading(loading: boolean): void {
-    if (chatInput) chatInput.disabled = loading;
+    isProcessing = loading;
     if (btnSend) btnSend.disabled = loading;
   }
 
@@ -1054,6 +1139,7 @@ function setupChatSidebarEvents(sidebarElement: HTMLElement): void {
   }
 
   const sendMessage = async () => {
+    if (isProcessing) return;
     const text = chatInput?.value?.trim();
     if (!text) return;
 
@@ -1100,7 +1186,9 @@ function setupChatSidebarEvents(sidebarElement: HTMLElement): void {
 
   btnSend?.addEventListener('click', (e) => {
     e.preventDefault();
-    sendMessage();
+    if (!isProcessing) {
+      sendMessage();
+    }
   });
 
   chatInput?.addEventListener('input', () => {
@@ -1110,7 +1198,9 @@ function setupChatSidebarEvents(sidebarElement: HTMLElement): void {
   chatInput?.addEventListener('keydown', (e: KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      sendMessage();
+      if (!isProcessing) {
+        sendMessage();
+      }
     }
   });
 }

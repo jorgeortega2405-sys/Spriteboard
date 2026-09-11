@@ -33,11 +33,11 @@ export function validateCsrf(req: Request, res: Response, next: NextFunction): v
     return next();
   }
 
-  const reqPath = req.originalUrl || req.url;
+  const cleanPath = req.path;
   if (
-    reqPath.includes('/subscriptions/webhook') ||
-    reqPath.includes('/webhooks/stripe') ||
-    (reqPath.includes('/canvases/') && (reqPath.endsWith('/views') || reqPath.endsWith('/heartbeat')))
+    cleanPath === '/subscriptions/webhook' ||
+    cleanPath === '/webhooks/stripe' ||
+    /^\/canvases\/[a-zA-Z0-9_-]+\/views(\/heartbeat)?$/.test(cleanPath)
   ) {
     return next();
   }

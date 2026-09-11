@@ -584,7 +584,7 @@ export function openCanvasShareModal(canvas: CanvasItem): void {
 
             const uEmail = document.createElement('span');
             uEmail.className = 'design-share-search-item__email';
-            uEmail.textContent = user.email;
+            uEmail.textContent = user.email || '';
 
             info.appendChild(uName);
             info.appendChild(uEmail);

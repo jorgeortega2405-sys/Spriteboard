@@ -304,7 +304,14 @@ export function openModal(options: ModalOptions = {}): ModalInstance {
   confirmBtn?.addEventListener('click', async (e: MouseEvent) => {
     e.preventDefault();
     if (onConfirm) {
-      await onConfirm(modalInstance);
+      try {
+        const result = await onConfirm(modalInstance);
+        if (result === true) {
+          modalInstance.close();
+        }
+      } catch {
+        modalInstance.setConfirmLoading(false);
+      }
     }
   });
 

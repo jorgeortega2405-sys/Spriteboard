@@ -18,11 +18,12 @@ use std::collections::{HashMap, HashSet};
 use std::env;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use tokio::sync::{mpsc, RwLock};
 
 type HmacSha256 = Hmac<Sha256>;
-type ClientSender = mpsc::UnboundedSender<Message>;
+type ClientSender = mpsc::Sender<Message>;
+type RoomParticipants = Arc<RwLock<HashMap<String, CanvasParticipant>>>;
 
 #[derive(Clone)]
 struct CanvasParticipant {
@@ -62,13 +63,11 @@ struct RedisCanvasEnvelope {
 
 #[derive(Clone)]
 struct AppState {
-    // user_id -> Map<conn_id, Sender>
     clients: Arc<RwLock<HashMap<i64, HashMap<String, ClientSender>>>>,
-    // canvas_uuid -> Map<conn_id, CanvasParticipant>
-    canvas_rooms: Arc<RwLock<HashMap<String, HashMap<String, CanvasParticipant>>>>,
+    canvas_rooms: Arc<RwLock<HashMap<String, RoomParticipants>>>,
     session_secret: Arc<String>,
     instance_id: Arc<String>,
-    redis_cmd_tx: mpsc::UnboundedSender<RedisOutboundCmd>,
+    redis_cmd_tx: mpsc::Sender<RedisOutboundCmd>,
     redis_client: Arc<redis::Client>,
 }
 
@@ -89,10 +88,34 @@ impl AppState {
         };
         if let Ok(serialized) = serde_json::to_string(&envelope) {
             let channel = format!("canvas:events:{}", canvas_uuid);
-            let _ = self.redis_cmd_tx.send(RedisOutboundCmd::Publish {
+            let _ = self.redis_cmd_tx.try_send(RedisOutboundCmd::Publish {
                 channel,
                 payload: serialized,
             });
+        }
+    }
+
+    async fn get_room(&self, canvas_uuid: &str) -> Option<RoomParticipants> {
+        let rooms = self.canvas_rooms.read().await;
+        rooms.get(canvas_uuid).cloned()
+    }
+
+    async fn get_or_create_room(&self, canvas_uuid: &str) -> RoomParticipants {
+        let mut rooms = self.canvas_rooms.write().await;
+        rooms
+            .entry(canvas_uuid.to_string())
+            .or_insert_with(|| Arc::new(RwLock::new(HashMap::new())))
+            .clone()
+    }
+
+    async fn cleanup_empty_room(&self, canvas_uuid: &str) {
+        let mut rooms = self.canvas_rooms.write().await;
+        if let Some(room_arc) = rooms.get(canvas_uuid) {
+            let room = room_arc.read().await;
+            if room.is_empty() {
+                drop(room);
+                rooms.remove(canvas_uuid);
+            }
         }
     }
 }
@@ -280,7 +303,11 @@ fn verify_room_token(
         return None;
     }
 
-    if parsed.user_id != user_id && user_id > 0 {
+    if parsed.user_id > 0 && parsed.user_id != user_id {
+        return None;
+    }
+
+    if user_id > 0 && parsed.user_id <= 0 {
         return None;
     }
 
@@ -292,8 +319,24 @@ async fn ws_handler(
     State(state): State<AppState>,
     req: Request,
 ) -> Response {
+    if let Some(origin) = req.headers().get(header::ORIGIN).and_then(|o| o.to_str().ok()) {
+        let is_allowed = origin.starts_with("http://localhost")
+            || origin.starts_with("https://localhost")
+            || origin.starts_with("http://127.0.0.1")
+            || origin.starts_with("https://127.0.0.1")
+            || env::var("ALLOWED_ORIGIN").map(|ao| origin == ao).unwrap_or(false);
+
+        if !is_allowed && env::var("NODE_ENV").unwrap_or_default() == "production" {
+            return axum::response::IntoResponse::into_response((
+                axum::http::StatusCode::FORBIDDEN,
+                "Origin not allowed",
+            ));
+        }
+    }
+
     let session_secret = state.session_secret.clone();
-    let auth_user = extract_cookie(&req, "auth_session")
+    let auth_user = extract_cookie(&req, "sprite_session")
+        .or_else(|| extract_cookie(&req, "auth_session"))
         .or_else(|| extract_cookie(&req, "sb_session"))
         .and_then(|token| verify_session_token(token, &session_secret));
 
@@ -311,7 +354,9 @@ async fn ws_handler(
         }
     });
 
-    ws.on_upgrade(move |socket| handle_socket(socket, user, state))
+    ws.max_frame_size(65_536)
+        .max_message_size(262_144)
+        .on_upgrade(move |socket| handle_socket(socket, user, state))
 }
 
 async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: AppState) {
@@ -325,7 +370,7 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
             .as_nanos()
     );
 
-    let (tx, mut rx) = mpsc::unbounded_channel::<Message>();
+    let (tx, mut rx) = mpsc::channel::<Message>(128);
     let mut joined_rooms: HashSet<String> = HashSet::new();
 
     if user.id > 0 {
@@ -336,10 +381,8 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
             .insert(conn_id.clone(), tx.clone());
     }
 
-    println!(
-        "[WebSocket] Conexión establecida con usuario: {} (ID: {}, Conn: {})",
-        user.username, user.id, conn_id
-    );
+    let mut msg_rate_counter = 0u32;
+    let mut rate_window_start = Instant::now();
 
     loop {
         tokio::select! {
@@ -349,6 +392,15 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
                 }
             }
             res = socket.recv() => {
+                if rate_window_start.elapsed().as_secs() >= 1 {
+                    rate_window_start = Instant::now();
+                    msg_rate_counter = 0;
+                }
+                msg_rate_counter += 1;
+                if msg_rate_counter > 100 {
+                    continue;
+                }
+
                 match res {
                     Some(Ok(Message::Close(_))) | None => break,
                     Some(Ok(Message::Ping(payload))) => {
@@ -378,7 +430,7 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
                                                     "code": "UNAUTHORIZED_ROOM",
                                                     "message": "No tienes autorización para unirte a este lienzo."
                                                 }).to_string();
-                                                let _ = tx.send(Message::Text(err_msg));
+                                                let _ = tx.try_send(Message::Text(err_msg));
                                                 continue;
                                             }
                                         };
@@ -406,12 +458,11 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
 
                                         joined_rooms.insert(canvas_uuid.to_string());
 
-                                        let mut rooms = state.canvas_rooms.write().await;
-                                        let room = rooms.entry(canvas_uuid.to_string()).or_default();
+                                        let room_arc = state.get_or_create_room(canvas_uuid).await;
+                                        let mut room = room_arc.write().await;
 
                                         let mut presence_map: HashMap<String, ParticipantInfo> = HashMap::new();
 
-                                        // 1. Cargar presencia global desde Redis
                                         let presence_key = format!("canvas:{}:presence", canvas_uuid);
                                         if let Ok(mut rconn) = state.redis_client.get_async_connection().await {
                                             let remote_presence: Result<HashMap<String, String>, _> = redis::cmd("HGETALL")
@@ -427,7 +478,6 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
                                             }
                                         }
 
-                                        // 2. Combinar con participantes locales
                                         for p in room.values() {
                                             presence_map.insert(
                                                 p.conn_id.clone(),
@@ -441,7 +491,6 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
                                             );
                                         }
 
-                                        // 3. Incluir al usuario actual
                                         presence_map.insert(
                                             conn_id.clone(),
                                             ParticipantInfo {
@@ -462,7 +511,7 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
                                             "yourRole": role
                                         }).to_string();
 
-                                        let _ = tx.send(Message::Text(presence_msg));
+                                        let _ = tx.try_send(Message::Text(presence_msg));
 
                                         let user_joined_msg = serde_json::json!({
                                             "type": "USER_JOINED",
@@ -478,16 +527,15 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
 
                                         for (peer_conn, peer) in room.iter() {
                                             if peer_conn != &conn_id {
-                                                let _ = peer.tx.send(Message::Text(user_joined_msg.clone()));
+                                                let _ = peer.tx.try_send(Message::Text(user_joined_msg.clone()));
                                             }
                                         }
 
                                         room.insert(conn_id.clone(), participant);
+                                        drop(room);
 
-                                        // Notificar a otras réplicas mediante Redis Pub/Sub
                                         state.publish_canvas_event(canvas_uuid, &conn_id, user_joined_msg, false);
 
-                                        // Guardar presencia en Redis Hash con expiración
                                         let user_info_json = serde_json::json!({
                                             "connId": conn_id.clone(),
                                             "userId": user.id,
@@ -495,7 +543,7 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
                                             "color": color,
                                             "role": role
                                         }).to_string();
-                                        let _ = state.redis_cmd_tx.send(RedisOutboundCmd::SetPresence {
+                                        let _ = state.redis_cmd_tx.try_send(RedisOutboundCmd::SetPresence {
                                             canvas_uuid: canvas_uuid.to_string(),
                                             conn_id: conn_id.clone(),
                                             user_json: user_info_json,
@@ -503,8 +551,8 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
                                     }
                                     "LEAVE_CANVAS" => {
                                         joined_rooms.remove(canvas_uuid);
-                                        let mut rooms = state.canvas_rooms.write().await;
-                                        if let Some(room) = rooms.get_mut(canvas_uuid) {
+                                        if let Some(room_arc) = state.get_room(canvas_uuid).await {
+                                            let mut room = room_arc.write().await;
                                             if let Some(p) = room.remove(&conn_id) {
                                                 let user_left_msg = serde_json::json!({
                                                     "type": "USER_LEFT",
@@ -515,23 +563,22 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
                                                 }).to_string();
 
                                                 for peer in room.values() {
-                                                    let _ = peer.tx.send(Message::Text(user_left_msg.clone()));
+                                                    let _ = peer.tx.try_send(Message::Text(user_left_msg.clone()));
                                                 }
 
+                                                drop(room);
                                                 state.publish_canvas_event(canvas_uuid, &conn_id, user_left_msg, false);
-                                                let _ = state.redis_cmd_tx.send(RedisOutboundCmd::RemovePresence {
+                                                let _ = state.redis_cmd_tx.try_send(RedisOutboundCmd::RemovePresence {
                                                     canvas_uuid: canvas_uuid.to_string(),
                                                     conn_id: conn_id.clone(),
                                                 });
                                             }
-                                            if room.is_empty() {
-                                                rooms.remove(canvas_uuid);
-                                            }
                                         }
+                                        state.cleanup_empty_room(canvas_uuid).await;
                                     }
                                     "CANVAS_CURSOR" => {
-                                        let rooms = state.canvas_rooms.read().await;
-                                        if let Some(room) = rooms.get(canvas_uuid) {
+                                        if let Some(room_arc) = state.get_room(canvas_uuid).await {
+                                            let room = room_arc.read().await;
                                             if let Some(sender_p) = room.get(&conn_id) {
                                                 let x = val.get("x").and_then(|v| v.as_f64()).unwrap_or(0.0);
                                                 let y = val.get("y").and_then(|v| v.as_f64()).unwrap_or(0.0);
@@ -548,17 +595,18 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
 
                                                 for (peer_conn, peer) in room.iter() {
                                                     if peer_conn != &conn_id {
-                                                        let _ = peer.tx.send(Message::Text(cursor_msg.clone()));
+                                                        let _ = peer.tx.try_send(Message::Text(cursor_msg.clone()));
                                                     }
                                                 }
 
+                                                drop(room);
                                                 state.publish_canvas_event(canvas_uuid, &conn_id, cursor_msg, false);
                                             }
                                         }
                                     }
                                     "CANVAS_DRAW_STROKE" | "CANVAS_ACTION" | "CANVAS_FULL_UPDATE" => {
-                                        let rooms = state.canvas_rooms.read().await;
-                                        if let Some(room) = rooms.get(canvas_uuid) {
+                                        if let Some(room_arc) = state.get_room(canvas_uuid).await {
+                                            let room = room_arc.read().await;
                                             if let Some(sender_p) = room.get(&conn_id) {
                                                 if sender_p.role != "viewer" {
                                                     let mut outgoing = val.clone();
@@ -569,91 +617,80 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
 
                                                     for (peer_conn, peer) in room.iter() {
                                                         if peer_conn != &conn_id {
-                                                            let _ = peer.tx.send(Message::Text(forward_msg.clone()));
+                                                            let _ = peer.tx.try_send(Message::Text(forward_msg.clone()));
                                                         }
                                                     }
 
-                                                    state.publish_canvas_event(canvas_uuid, &conn_id, forward_msg.clone(), false);
+                                                    drop(room);
+                                                    state.publish_canvas_event(canvas_uuid, &conn_id, forward_msg, false);
                                                 }
                                             }
                                         }
                                     }
                                     "CANVAS_ACCESS_CHANGED" => {
-                                        let mut rooms = state.canvas_rooms.write().await;
-                                        if let Some(room) = rooms.get_mut(canvas_uuid) {
-                                            let access_level = val.get("accessLevel").and_then(|a| a.as_str()).unwrap_or("private");
-                                            let public_role = val.get("publicRole").and_then(|a| a.as_str()).unwrap_or("editor");
+                                        if let Some(room_arc) = state.get_room(canvas_uuid).await {
+                                            let mut room = room_arc.write().await;
+                                            let is_owner = room.get(&conn_id).map(|p| p.role == "owner").unwrap_or(false);
+                                            if is_owner {
+                                                let access_level = val.get("accessLevel").and_then(|a| a.as_str()).unwrap_or("private");
+                                                let public_role = val.get("publicRole").and_then(|a| a.as_str()).unwrap_or("editor");
 
-                                            if access_level == "public" {
-                                                for (peer_conn, peer) in room.iter_mut() {
-                                                    if peer_conn != &conn_id && peer.role != "owner" {
-                                                        peer.role = public_role.to_string();
+                                                if access_level == "public" {
+                                                    for (peer_conn, peer) in room.iter_mut() {
+                                                        if peer_conn != &conn_id && peer.role != "owner" {
+                                                            peer.role = public_role.to_string();
+                                                        }
                                                     }
                                                 }
-                                            }
 
-                                            let notice_msg = serde_json::json!({
-                                                "type": "CANVAS_ACCESS_CHANGED",
-                                                "canvasUuid": canvas_uuid,
-                                                "accessLevel": access_level,
-                                                "publicRole": public_role,
-                                                "senderConnId": conn_id
-                                            }).to_string();
+                                                let notice_msg = serde_json::json!({
+                                                    "type": "CANVAS_ACCESS_CHANGED",
+                                                    "canvasUuid": canvas_uuid,
+                                                    "accessLevel": access_level,
+                                                    "publicRole": public_role,
+                                                    "senderConnId": conn_id
+                                                }).to_string();
 
-                                            for (peer_conn, peer) in room.iter() {
-                                                if peer_conn != &conn_id {
-                                                    let _ = peer.tx.send(Message::Text(notice_msg.clone()));
+                                                for (peer_conn, peer) in room.iter() {
+                                                    if peer_conn != &conn_id {
+                                                        let _ = peer.tx.try_send(Message::Text(notice_msg.clone()));
+                                                    }
                                                 }
-                                            }
 
-                                            state.publish_canvas_event(canvas_uuid, &conn_id, notice_msg, false);
+                                                drop(room);
+                                                state.publish_canvas_event(canvas_uuid, &conn_id, notice_msg, false);
+                                            }
                                         }
                                     }
                                     "CANVAS_MEMBER_REMOVED" => {
                                         let target_user_id = val.get("targetUserId").and_then(|v| v.as_i64()).unwrap_or(0);
-                                        let notice_msg = serde_json::json!({
-                                            "type": "CANVAS_MEMBER_REMOVED",
-                                            "canvasUuid": canvas_uuid,
-                                            "targetUserId": target_user_id,
-                                            "senderConnId": conn_id
-                                        }).to_string();
+                                        if let Some(room_arc) = state.get_room(canvas_uuid).await {
+                                            let mut room = room_arc.write().await;
+                                            let is_owner = room.get(&conn_id).map(|p| p.role == "owner").unwrap_or(false);
+                                            if is_owner {
+                                                let notice_msg = serde_json::json!({
+                                                    "type": "CANVAS_MEMBER_REMOVED",
+                                                    "canvasUuid": canvas_uuid,
+                                                    "targetUserId": target_user_id,
+                                                    "senderConnId": conn_id
+                                                }).to_string();
 
-                                        let mut rooms = state.canvas_rooms.write().await;
-                                        if let Some(room) = rooms.get_mut(canvas_uuid) {
-                                            let mut to_remove = Vec::new();
-                                            for (peer_conn, peer) in room.iter() {
-                                                if peer_conn != &conn_id {
-                                                    let _ = peer.tx.send(Message::Text(notice_msg.clone()));
+                                                let mut to_remove = Vec::new();
+                                                for (peer_conn, peer) in room.iter() {
+                                                    if peer_conn != &conn_id {
+                                                        let _ = peer.tx.try_send(Message::Text(notice_msg.clone()));
+                                                    }
+                                                    if target_user_id > 0 && peer.user_id == target_user_id {
+                                                        to_remove.push(peer_conn.clone());
+                                                    }
                                                 }
-                                                if target_user_id > 0 && peer.user_id as i64 == target_user_id {
-                                                    to_remove.push(peer_conn.clone());
+                                                for k in to_remove {
+                                                    room.remove(&k);
                                                 }
-                                            }
-                                            for k in to_remove {
-                                                room.remove(&k);
-                                            }
-                                        }
 
-                                        state.publish_canvas_event(canvas_uuid, &conn_id, notice_msg, false);
-                                    }
-                                    "CANVAS_MEMBER_ADDED" => {
-                                        let rooms = state.canvas_rooms.read().await;
-                                        if let Some(room) = rooms.get(canvas_uuid) {
-                                            let member = val.get("member").cloned().unwrap_or(serde_json::Value::Null);
-                                            let notice_msg = serde_json::json!({
-                                                "type": "CANVAS_MEMBER_ADDED",
-                                                "canvasUuid": canvas_uuid,
-                                                "member": member,
-                                                "senderConnId": conn_id
-                                            }).to_string();
-
-                                            for (peer_conn, peer) in room.iter() {
-                                                if peer_conn != &conn_id {
-                                                    let _ = peer.tx.send(Message::Text(notice_msg.clone()));
-                                                }
+                                                drop(room);
+                                                state.publish_canvas_event(canvas_uuid, &conn_id, notice_msg, false);
                                             }
-
-                                            state.publish_canvas_event(canvas_uuid, &conn_id, notice_msg, false);
                                         }
                                     }
                                     _ => {}
@@ -670,8 +707,8 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
                                         let uuid_len = bin[1] as usize;
                                         if bin.len() >= 2 + uuid_len + 8 {
                                             if let Ok(canvas_uuid) = std::str::from_utf8(&bin[2..2 + uuid_len]) {
-                                                let rooms = state.canvas_rooms.read().await;
-                                                if let Some(room) = rooms.get(canvas_uuid) {
+                                                if let Some(room_arc) = state.get_room(canvas_uuid).await {
+                                                    let room = room_arc.read().await;
                                                     if let Some(sender_p) = room.get(&conn_id) {
                                                         let x_bytes: [u8; 4] = bin[2 + uuid_len..2 + uuid_len + 4].try_into().unwrap_or_default();
                                                         let y_bytes: [u8; 4] = bin[2 + uuid_len + 4..2 + uuid_len + 8].try_into().unwrap_or_default();
@@ -690,10 +727,11 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
                                                         let out_msg = Message::Binary(out.clone());
                                                         for (peer_conn, peer) in room.iter() {
                                                             if peer_conn != &conn_id {
-                                                                let _ = peer.tx.send(out_msg.clone());
+                                                                let _ = peer.tx.try_send(out_msg.clone());
                                                             }
                                                         }
 
+                                                        drop(room);
                                                         let b64 = URL_SAFE_NO_PAD.encode(&out);
                                                         state.publish_canvas_event(canvas_uuid, &conn_id, b64, true);
                                                     }
@@ -707,8 +745,8 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
                                         let uuid_len = bin[1] as usize;
                                         if bin.len() > 2 + uuid_len {
                                             if let Ok(canvas_uuid) = std::str::from_utf8(&bin[2..2 + uuid_len]) {
-                                                let rooms = state.canvas_rooms.read().await;
-                                                if let Some(room) = rooms.get(canvas_uuid) {
+                                                if let Some(room_arc) = state.get_room(canvas_uuid).await {
+                                                    let room = room_arc.read().await;
                                                     if let Some(sender_p) = room.get(&conn_id) {
                                                         if sender_p.role != "viewer" {
                                                             let stroke_payload = &bin[2 + uuid_len..];
@@ -724,10 +762,11 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
                                                             let out_msg = Message::Binary(out.clone());
                                                             for (peer_conn, peer) in room.iter() {
                                                                 if peer_conn != &conn_id {
-                                                                    let _ = peer.tx.send(out_msg.clone());
+                                                                    let _ = peer.tx.try_send(out_msg.clone());
                                                                 }
                                                             }
 
+                                                            drop(room);
                                                             let b64 = URL_SAFE_NO_PAD.encode(&out);
                                                             state.publish_canvas_event(canvas_uuid, &conn_id, b64, true);
                                                         }
@@ -748,35 +787,33 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
         }
     }
 
-    // Limpieza de salas de lienzo al desconectar
-    {
-        let mut rooms = state.canvas_rooms.write().await;
-        for room_id in joined_rooms {
-            if let Some(room) = rooms.get_mut(&room_id) {
-                if let Some(p) = room.remove(&conn_id) {
-                    let user_left_msg = serde_json::json!({
-                        "type": "USER_LEFT",
-                        "canvasUuid": room_id,
-                        "connId": conn_id.clone(),
-                        "userId": p.user_id,
-                        "username": p.username
-                    }).to_string();
+    for room_id in joined_rooms {
+        if let Some(room_arc) = state.get_room(&room_id).await {
+            let mut room = room_arc.write().await;
+            if let Some(p) = room.remove(&conn_id) {
+                let user_left_msg = serde_json::json!({
+                    "type": "USER_LEFT",
+                    "canvasUuid": room_id,
+                    "connId": conn_id.clone(),
+                    "userId": p.user_id,
+                    "username": p.username
+                }).to_string();
 
-                    for peer in room.values() {
-                        let _ = peer.tx.send(Message::Text(user_left_msg.clone()));
-                    }
-
-                    state.publish_canvas_event(&room_id, &conn_id, user_left_msg, false);
-                    let _ = state.redis_cmd_tx.send(RedisOutboundCmd::RemovePresence {
-                        canvas_uuid: room_id.clone(),
-                        conn_id: conn_id.clone(),
-                    });
+                for peer in room.values() {
+                    let _ = peer.tx.try_send(Message::Text(user_left_msg.clone()));
                 }
+
+                drop(room);
+                state.publish_canvas_event(&room_id, &conn_id, user_left_msg, false);
+                let _ = state.redis_cmd_tx.try_send(RedisOutboundCmd::RemovePresence {
+                    canvas_uuid: room_id.clone(),
+                    conn_id: conn_id.clone(),
+                });
             }
         }
+        state.cleanup_empty_room(&room_id).await;
     }
 
-    // Limpieza de conexión de usuario al desconectar
     if user.id > 0 {
         let mut clients = state.clients.write().await;
         if let Some(user_conns) = clients.get_mut(&user.id) {
@@ -786,11 +823,6 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
             }
         }
     }
-
-    println!(
-        "[WebSocket] Cliente desconectado: {} (ID: {}, Conn: {})",
-        user.username, user.id, conn_id
-    );
 }
 
 async fn run_redis_pubsub(state: AppState) {
@@ -799,23 +831,23 @@ async fn run_redis_pubsub(state: AppState) {
     let redis_url = format!("redis://{}:{}/", redis_host, redis_port);
 
     loop {
-        println!("[WebSocket] Intentando conectar a Redis Pub/Sub en {}...", redis_url);
         match redis::Client::open(redis_url.clone()) {
             Ok(client) => match client.get_async_connection().await {
                 Ok(conn) => {
                     let mut pubsub = conn.into_pubsub();
-                    if let Err(e) = pubsub.subscribe("auth:session_events").await {
-                        eprintln!("[WebSocket] Error al suscribirse a 'auth:session_events': {}", e);
+                    if let Err(_) = pubsub.subscribe("auth:session_events").await {
                         tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
                         continue;
                     }
-                    if let Err(e) = pubsub.psubscribe("canvas:events:*").await {
-                        eprintln!("[WebSocket] Error al suscribirse a 'canvas:events:*': {}", e);
+                    if let Err(_) = pubsub.subscribe("canvas:admin_events").await {
+                        tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
+                        continue;
+                    }
+                    if let Err(_) = pubsub.psubscribe("canvas:events:*").await {
                         tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
                         continue;
                     }
 
-                    println!("[WebSocket] Suscrito exitosamente a 'auth:session_events' y 'canvas:events:*' en Redis");
                     let mut stream = pubsub.into_on_message();
 
                     while let Some(msg) = stream.next().await {
@@ -828,11 +860,6 @@ async fn run_redis_pubsub(state: AppState) {
                         if channel_name == "auth:session_events" {
                             if let Ok(event) = serde_json::from_str::<SessionRevokeEvent>(&payload) {
                                 if event.event_type == "LOGOUT_ALL" || event.event_type == "LOGOUT" {
-                                    println!(
-                                        "[WebSocket] Evento {} recibido para usuario {}",
-                                        event.event_type, event.user_id
-                                    );
-
                                     let clients = state.clients.read().await;
                                     if let Some(user_conns) = clients.get(&event.user_id) {
                                         let disconnect_msg = serde_json::json!({
@@ -842,34 +869,75 @@ async fn run_redis_pubsub(state: AppState) {
                                         }).to_string();
 
                                         for tx in user_conns.values() {
-                                            let _ = tx.send(Message::Text(disconnect_msg.clone()));
-                                            let _ = tx.send(Message::Close(None));
+                                            let _ = tx.try_send(Message::Text(disconnect_msg.clone()));
+                                            let _ = tx.try_send(Message::Close(None));
                                         }
                                     }
                                 }
                             }
+                        } else if channel_name == "canvas:admin_events" {
+                            if let Ok(event) = serde_json::from_str::<serde_json::Value>(&payload) {
+                                let event_type = event.get("type").and_then(|t| t.as_str()).unwrap_or("");
+                                let canvas_uuid = event.get("canvasUuid").and_then(|c| c.as_str()).unwrap_or("");
+                                if event_type == "MEMBER_REMOVED" {
+                                    let target_user_id = event.get("targetUserId").and_then(|u| u.as_i64()).unwrap_or(0);
+                                    if target_user_id > 0 && !canvas_uuid.is_empty() {
+                                        if let Some(room_arc) = state.get_room(canvas_uuid).await {
+                                            let mut room = room_arc.write().await;
+                                            let mut ejected_conns = Vec::new();
+                                            for (c_id, p) in room.iter() {
+                                                if p.user_id == target_user_id {
+                                                    let kick_msg = serde_json::json!({
+                                                        "type": "CANVAS_MEMBER_REMOVED",
+                                                        "canvasUuid": canvas_uuid,
+                                                        "targetUserId": target_user_id,
+                                                        "message": "Has sido removido de este lienzo."
+                                                    }).to_string();
+                                                    let _ = p.tx.try_send(Message::Text(kick_msg));
+                                                    ejected_conns.push(c_id.clone());
+                                                }
+                                            }
+                                            for c_id in ejected_conns {
+                                                room.remove(&c_id);
+                                                let _ = state.redis_cmd_tx.try_send(RedisOutboundCmd::RemovePresence {
+                                                    canvas_uuid: canvas_uuid.to_string(),
+                                                    conn_id: c_id,
+                                                });
+                                            }
+                                        }
+                                        state.cleanup_empty_room(canvas_uuid).await;
+                                    }
+                                }
+                            }
                         } else if channel_name.starts_with("canvas:events:") {
+                            let canvas_uuid = match channel_name.strip_prefix("canvas:events:") {
+                                Some(u) => u,
+                                None => continue,
+                            };
+
+                            let room_arc = match state.get_room(canvas_uuid).await {
+                                Some(r) => r,
+                                None => continue,
+                            };
+
                             if let Ok(env) = serde_json::from_str::<RedisCanvasEnvelope>(&payload) {
-                                // Descartar si proviene de esta misma réplica
                                 if env.origin_instance == *state.instance_id {
                                     continue;
                                 }
 
-                                let rooms = state.canvas_rooms.read().await;
-                                if let Some(room) = rooms.get(&env.canvas_uuid) {
-                                    if !env.is_binary {
-                                        let outgoing = Message::Text(env.payload);
-                                        for (peer_conn, peer) in room.iter() {
-                                            if peer_conn != &env.sender_conn_id {
-                                                let _ = peer.tx.send(outgoing.clone());
-                                            }
+                                let room = room_arc.read().await;
+                                if !env.is_binary {
+                                    let outgoing = Message::Text(env.payload);
+                                    for (peer_conn, peer) in room.iter() {
+                                        if peer_conn != &env.sender_conn_id {
+                                            let _ = peer.tx.try_send(outgoing.clone());
                                         }
-                                    } else if let Ok(bytes) = URL_SAFE_NO_PAD.decode(&env.payload) {
-                                        let outgoing = Message::Binary(bytes);
-                                        for (peer_conn, peer) in room.iter() {
-                                            if peer_conn != &env.sender_conn_id {
-                                                let _ = peer.tx.send(outgoing.clone());
-                                            }
+                                    }
+                                } else if let Ok(bytes) = URL_SAFE_NO_PAD.decode(&env.payload) {
+                                    let outgoing = Message::Binary(bytes);
+                                    for (peer_conn, peer) in room.iter() {
+                                        if peer_conn != &env.sender_conn_id {
+                                            let _ = peer.tx.try_send(outgoing.clone());
                                         }
                                     }
                                 }
@@ -877,13 +945,9 @@ async fn run_redis_pubsub(state: AppState) {
                         }
                     }
                 }
-                Err(e) => {
-                    eprintln!("[WebSocket] Error al conectar a Redis Pub/Sub: {}", e);
-                }
+                Err(_) => {}
             },
-            Err(e) => {
-                eprintln!("[WebSocket] Error al crear cliente Redis: {}", e);
-            }
+            Err(_) => {}
         }
         tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
     }
@@ -891,23 +955,19 @@ async fn run_redis_pubsub(state: AppState) {
 
 async fn run_redis_publisher(
     redis_client: Arc<redis::Client>,
-    mut rx: mpsc::UnboundedReceiver<RedisOutboundCmd>,
+    mut rx: mpsc::Receiver<RedisOutboundCmd>,
 ) {
     loop {
         match redis_client.get_async_connection().await {
             Ok(mut conn) => {
-                println!("[WebSocket] Conexión de comandos Redis lista.");
                 while let Some(cmd) = rx.recv().await {
-                    match cmd {
+                    let res: Result<(), redis::RedisError> = match cmd {
                         RedisOutboundCmd::Publish { channel, payload } => {
-                            let res: Result<(), redis::RedisError> = redis::cmd("PUBLISH")
+                            redis::cmd("PUBLISH")
                                 .arg(&channel)
                                 .arg(&payload)
                                 .query_async(&mut conn)
-                                .await;
-                            if let Err(e) = res {
-                                eprintln!("[WebSocket] Error al publicar en canal {}: {}", channel, e);
-                            }
+                                .await
                         }
                         RedisOutboundCmd::SetPresence { canvas_uuid, conn_id, user_json } => {
                             let key = format!("canvas:{}:presence", canvas_uuid);
@@ -917,26 +977,28 @@ async fn run_redis_publisher(
                                 .arg(&user_json)
                                 .query_async(&mut conn)
                                 .await;
-                            let _: Result<(), redis::RedisError> = redis::cmd("EXPIRE")
+                            redis::cmd("EXPIRE")
                                 .arg(&key)
                                 .arg(7200)
                                 .query_async(&mut conn)
-                                .await;
+                                .await
                         }
                         RedisOutboundCmd::RemovePresence { canvas_uuid, conn_id } => {
                             let key = format!("canvas:{}:presence", canvas_uuid);
-                            let _: Result<(), redis::RedisError> = redis::cmd("HDEL")
+                            redis::cmd("HDEL")
                                 .arg(&key)
                                 .arg(&conn_id)
                                 .query_async(&mut conn)
-                                .await;
+                                .await
                         }
+                    };
+
+                    if let Err(_) = res {
+                        break;
                     }
                 }
-                break;
             }
-            Err(e) => {
-                eprintln!("[WebSocket] Error al obtener conexión asíncrona de comandos Redis: {}", e);
+            Err(_) => {
                 tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
             }
         }
@@ -966,7 +1028,7 @@ async fn main() {
             .expect("No se pudo configurar cliente Redis")
     );
 
-    let (redis_cmd_tx, redis_cmd_rx) = mpsc::unbounded_channel::<RedisOutboundCmd>();
+    let (redis_cmd_tx, redis_cmd_rx) = mpsc::channel::<RedisOutboundCmd>(1024);
 
     let instance_id = format!(
         "ws-{:x}-{:x}",
@@ -978,23 +1040,16 @@ async fn main() {
         clients: Arc::new(RwLock::new(HashMap::new())),
         canvas_rooms: Arc::new(RwLock::new(HashMap::new())),
         session_secret: Arc::new(session_secret),
-        instance_id: Arc::new(instance_id.clone()),
+        instance_id: Arc::new(instance_id),
         redis_cmd_tx,
         redis_client: redis_client.clone(),
     };
 
-    println!(
-        "[WebSocket Server] Instancia inicializada con ID: {}",
-        instance_id
-    );
-
-    // Tarea para despachar comandos hacia Redis (Publicación, Presencia, Snapshot)
     let publisher_client = redis_client.clone();
     tokio::spawn(async move {
         run_redis_publisher(publisher_client, redis_cmd_rx).await;
     });
 
-    // Tarea en segundo plano para escuchar eventos Pub/Sub de Redis
     let state_for_redis = state.clone();
     tokio::spawn(async move {
         run_redis_pubsub(state_for_redis).await;
@@ -1006,11 +1061,6 @@ async fn main() {
         .with_state(state);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
-    println!(
-        "[WebSocket Server] Servidor Rust iniciado y escuchando en ws://0.0.0.0:{}",
-        port
-    );
-
     let listener = tokio::net::TcpListener::bind(addr)
         .await
         .expect("No se pudo iniciar el listener TCP");

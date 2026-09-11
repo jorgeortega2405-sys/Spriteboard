@@ -2,6 +2,9 @@ export interface CanvasItem {
   id?: number;
   uuid: string;
   user_id?: number;
+  folder_id?: number | null;
+  folder_uuid?: string | null;
+  folder_name?: string | null;
   name: string;
   width: number;
   height: number;
@@ -19,8 +22,33 @@ export interface CanvasItem {
   updated_at?: string;
 }
 
+export interface FolderItem {
+  id: number;
+  uuid: string;
+  user_id?: number;
+  name: string;
+  color?: string | null;
+  is_default: boolean;
+  items_count?: number;
+  deleted_at?: string | null;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface CreateFolderPayload {
+  name: string;
+  color?: string;
+}
+
+export interface UpdateFolderPayload {
+  name?: string;
+  color?: string;
+}
+
 export interface CreateCanvasPayload {
   uuid?: string;
+  folder_id?: number | null;
+  folder_uuid?: string | null;
   name?: string;
   width: number;
   height: number;
@@ -36,7 +64,7 @@ export interface CanvasMember {
   canvas_id: number;
   user_id: number;
   username: string;
-  email: string;
+  email?: string | null;
   avatar_url?: string | null;
   role: 'editor' | 'viewer';
   created_at: string;
@@ -45,7 +73,7 @@ export interface CanvasMember {
 export interface SearchUserResult {
   id: number;
   username: string;
-  email: string;
+  email?: string | null;
   avatar_url?: string | null;
 }
 

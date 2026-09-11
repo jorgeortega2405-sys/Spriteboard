@@ -6,5 +6,7 @@ const aiRouter = Router();
 
 aiRouter.post('/chat', aiChatLimiter, AiController.chat);
 aiRouter.post('/ai/chat', aiChatLimiter, AiController.chat);
+aiRouter.post('/chat/feedback', aiChatLimiter, AiController.feedback);
+aiRouter.post('/ai/chat/feedback', aiChatLimiter, AiController.feedback);
 
 export default aiRouter;

@@ -4,10 +4,11 @@ import { API_ROUTES } from '../config/api-routes.js';
 import { currentUser, deleteApi, escapeHtml, getApi, postApi } from '../services/api.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
+import { SkeletonService } from '../services/skeleton.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { CanvasItem } from '../types/canvas.types.js';
-import { getEmptyGraphicSvg } from '../utils/dom.util.js';
+import { removeEmptyState, renderEmptyState } from '../utils/dom.util.js';
 
 function formatDate(iso?: string | null): string {
   if (!iso) return '—';
@@ -42,14 +43,12 @@ class TrashController {
   private container: HTMLElement;
   private abortController: AbortController;
   private allCanvases: CanvasItem[] = [];
-  private visibleCanvases: CanvasItem[] = [];
   private selectedUuids = new Set<string>();
   private isSearchActive = false;
 
   private tableEl: HTMLElement | null = null;
   private tbodyEl: HTMLElement | null = null;
-  private emptyStateEl: HTMLElement | null = null;
-  private emptyTextEl: HTMLElement | null = null;
+  private tableWrapperEl: HTMLElement | null = null;
 
   private defaultActions: HTMLElement | null = null;
   private selectedActions: HTMLElement | null = null;
@@ -70,8 +69,7 @@ class TrashController {
   public async init(): Promise<void> {
     this.tableEl = this.container.querySelector<HTMLElement>('[data-ref="trash-table"]');
     this.tbodyEl = this.container.querySelector<HTMLElement>('[data-ref="trash-tbody"]');
-    this.emptyStateEl = this.container.querySelector<HTMLElement>('[data-ref="trash-empty-state"]');
-    this.emptyTextEl = this.container.querySelector<HTMLElement>('[data-ref="trash-empty-text"]');
+    this.tableWrapperEl = this.container.querySelector<HTMLElement>('[data-ref="trash-table-wrapper"]');
 
     this.defaultActions = this.container.querySelector<HTMLElement>('[data-ref="trash-default-actions"]');
     this.selectedActions = this.container.querySelector<HTMLElement>('[data-ref="trash-selected-actions"]');
@@ -190,6 +188,10 @@ class TrashController {
       this.renderRows([]);
       return;
     }
+    if (this.tbodyEl && this.allCanvases.length === 0) {
+      if (this.tableEl) this.tableEl.style.display = 'table';
+      SkeletonService.renderTableSkeletons(this.tbodyEl, 5);
+    }
     try {
       const res = await getApi(API_ROUTES.trash.base);
       if (res.ok) {
@@ -207,32 +209,31 @@ class TrashController {
   }
 
   private renderRows(canvases: CanvasItem[], isSearchResult = false): void {
-    this.visibleCanvases = canvases;
     if (!this.tbodyEl) return;
 
     if (canvases.length === 0) {
       if (this.tableEl) this.tableEl.style.display = 'none';
-      if (this.emptyStateEl) this.emptyStateEl.style.display = 'flex';
-      const emptyTitleEl = this.container.querySelector<HTMLElement>('[data-ref="trash-empty-title"]');
-      const emptyGraphicEl = this.container.querySelector<HTMLElement>('[data-ref="empty-graphic"]');
-      if (isSearchResult) {
-        if (emptyTitleEl) emptyTitleEl.textContent = t('trash.search_no_results_title') || 'Sin resultados';
-        if (this.emptyTextEl) {
-          this.emptyTextEl.textContent = t('trash.search_no_results') || 'No se encontraron lienzos en la papelera que coincidan con la búsqueda.';
-        }
-        if (emptyGraphicEl) emptyGraphicEl.innerHTML = getEmptyGraphicSvg('search');
-      } else {
-        if (emptyTitleEl) emptyTitleEl.textContent = t('trash.empty_title') || 'Papelera de reciclaje vacía';
-        if (this.emptyTextEl) {
-          this.emptyTextEl.textContent = t('trash.empty_desc') || 'No hay elementos en la papelera de reciclaje.';
-        }
-        if (emptyGraphicEl) emptyGraphicEl.innerHTML = getEmptyGraphicSvg('trash');
+      if (this.tableWrapperEl) {
+        renderEmptyState({
+          container: this.tableWrapperEl,
+          dataRef: 'trash-empty-state',
+          desc: isSearchResult
+            ? t('trash.search_no_results') || 'No se encontraron lienzos en la papelera que coincidan con la búsqueda.'
+            : t('trash.empty_desc') || 'No hay elementos en la papelera de reciclaje.',
+          graphicType: isSearchResult ? 'search' : 'trash',
+          isTable: true,
+          title: isSearchResult
+            ? t('trash.search_no_results_title') || 'Sin resultados'
+            : t('trash.empty_title') || 'Papelera de reciclaje vacía',
+        });
       }
       this.updateSelectionUi();
       return;
     }
 
-    if (this.emptyStateEl) this.emptyStateEl.style.display = 'none';
+    if (this.tableWrapperEl) {
+      removeEmptyState(this.tableWrapperEl, 'trash-empty-state');
+    }
     if (this.tableEl) this.tableEl.style.display = 'table';
     this.tbodyEl.innerHTML = '';
 

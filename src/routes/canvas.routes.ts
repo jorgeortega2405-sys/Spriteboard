@@ -1,5 +1,6 @@
 import { addCanvasMemberHandler, addCanvasTeamHandler, createCanvasHandler, deleteCanvasHandler, duplicateCanvasHandler, emptyTrashHandler, getCanvasHandler, getCanvasMembersHandler, getCanvasMetricsHandler, getCanvasTeamsHandler, getCanvasTokenHandler, heartbeatCanvasViewHandler, listCanvases, listTrashCanvases, permanentlyDeleteCanvasHandler, recordCanvasViewHandler, removeCanvasMemberHandler, removeCanvasTeamHandler, resolveCanvasSlugHandler, restoreCanvasHandler, searchUsersHandler, syncCanvasHandler, updateCanvasAccessHandler, updateCanvasSlugHandler } from '../controllers/canvas.controller.js';
 import { requireAuth } from '../middlewares/auth.middleware.js';
+import { canvasHeartbeatLimiter, canvasViewLimiter } from '../middlewares/rate-limit.middleware.js';
 import { Router } from 'express';
 
 const router = Router();
@@ -24,8 +25,8 @@ router.post('/trash/:uuid/restore', requireAuth, restoreCanvasHandler);
 router.delete('/trash/empty', requireAuth, emptyTrashHandler);
 router.delete('/trash/:uuid', requireAuth, permanentlyDeleteCanvasHandler);
 router.get('/canvases/:uuid/metrics', requireAuth, getCanvasMetricsHandler);
-router.post('/canvases/:uuid/views', recordCanvasViewHandler);
-router.post('/canvases/:uuid/views/heartbeat', heartbeatCanvasViewHandler);
+router.post('/canvases/:uuid/views', canvasViewLimiter, recordCanvasViewHandler);
+router.post('/canvases/:uuid/views/heartbeat', canvasHeartbeatLimiter, heartbeatCanvasViewHandler);
 router.get('/canvases/:uuid/token', getCanvasTokenHandler);
 router.get('/canvases/:uuid', getCanvasHandler);
 

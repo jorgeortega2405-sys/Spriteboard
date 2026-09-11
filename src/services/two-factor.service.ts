@@ -1,5 +1,4 @@
 import { redis } from '../config/redis.config.js';
-import { logger } from './logger.service.js';
 import crypto from 'crypto';
 
 const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';

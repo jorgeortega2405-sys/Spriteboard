@@ -4,16 +4,34 @@
     <div class="component-top" data-ref="component-top">
       <div class="component-top-left" data-ref="component-top-left">
         <h1 class="component-top-title" data-ref="home-title" data-i18n="canvas.home_title">Tus centros de trabajo</h1>
+        <div class="breadcrumbs" data-ref="home-breadcrumbs" style="display: none;">
+          <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-back-home" data-tooltip="Volver a inicio" aria-label="Volver a inicio" style="margin-right: 4px;">
+            <span class="material-symbols-rounded">arrow_back</span>
+          </button>
+          <span class="breadcrumb-link" data-ref="breadcrumb-root" data-i18n="canvas.home_title">Tus centros de trabajo</span>
+          <span class="material-symbols-rounded breadcrumb-separator">navigate_next</span>
+          <span class="breadcrumb-current" data-ref="breadcrumb-folder-name"></span>
+        </div>
       </div>
 
       <div class="component-top-right" data-ref="component-top-right">
         <!-- Acciones por defecto -->
         <div class="component-top-actions" data-ref="home-default-actions">
+          <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-create-folder" data-tooltip="Crear carpeta" aria-label="Crear carpeta">
+            <span class="material-symbols-rounded">create_new_folder</span>
+          </button>
           <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-toggle-search" data-tooltip="Buscar lienzos" aria-label="Buscar lienzos">
             <span class="material-symbols-rounded">search</span>
           </button>
-          <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-home-create-canvas-top" data-tooltip="Crear lienzo" aria-label="Crear lienzo">
-            <span class="material-symbols-rounded">add</span>
+        </div>
+
+        <!-- Acciones contextuales dentro de carpeta -->
+        <div class="component-top-actions" data-ref="folder-context-actions" style="display: none;">
+          <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-folder-rename" data-tooltip="Renombrar carpeta" aria-label="Renombrar carpeta">
+            <span class="material-symbols-rounded">edit</span>
+          </button>
+          <button type="button" class="btn btn--h40 btn--danger btn--icon" data-ref="btn-folder-delete" data-tooltip="Eliminar carpeta" aria-label="Eliminar carpeta">
+            <span class="material-symbols-rounded">delete</span>
           </button>
         </div>
       </div>
@@ -39,57 +57,31 @@
       <div class="layout-body layout-body--scrollable layout-scrollable" data-ref="home-scrollable">
         <div class="canvas-section" data-ref="canvas-section">
           <div class="canvas-grid" data-ref="canvas-grid"></div>
-
-          <div class="component-empty-state" data-ref="canvas-empty-state" style="display: none;">
-            <div class="component-empty-state-graphic" data-ref="canvas-empty-graphic">
-              <svg class="component-empty-state-svg" viewBox="0 0 140 140" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                  <linearGradient id="boardGrad" x1="30" y1="30" x2="110" y2="105" gradientUnits="userSpaceOnUse">
-                    <stop offset="0%" stop-color="#52525b"></stop>
-                    <stop offset="50%" stop-color="#3f3f46"></stop>
-                    <stop offset="100%" stop-color="#27272a"></stop>
-                  </linearGradient>
-                  <linearGradient id="brushHandle" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0%" stop-color="#a1a1aa"></stop>
-                    <stop offset="100%" stop-color="#52525b"></stop>
-                  </linearGradient>
-                </defs>
-                <path d="M42 60 L30 124 M98 60 L110 124 M70 50 L70 124" stroke="var(--text-tertiary, #52525b)" stroke-width="4" stroke-linecap="round" opacity="0.4"></path>
-                <rect x="34" y="34" width="72" height="64" rx="10" fill="url(#boardGrad)" stroke="#52525b" stroke-width="1.5"></rect>
-                <rect x="39" y="39" width="62" height="54" rx="7" fill="var(--bg-surface, #18181b)"></rect>
-                <rect x="46" y="46" width="10" height="10" rx="2" fill="#71717a"></rect>
-                <rect x="58" y="46" width="10" height="10" rx="2" fill="#a1a1aa"></rect>
-                <rect x="70" y="46" width="10" height="10" rx="2" fill="#52525b"></rect>
-                <rect x="82" y="46" width="10" height="10" rx="2" fill="#3f3f46"></rect>
-                <rect x="46" y="58" width="10" height="10" rx="2" fill="#d4d4d8"></rect>
-                <rect x="58" y="58" width="10" height="10" rx="2" fill="#71717a"></rect>
-                <rect x="70" y="58" width="10" height="10" rx="2" fill="#e4e4e7"></rect>
-                <rect x="82" y="58" width="10" height="10" rx="2" fill="#52525b"></rect>
-                <rect x="46" y="70" width="10" height="10" rx="2" fill="#3f3f46"></rect>
-                <rect x="58" y="70" width="10" height="10" rx="2" fill="#52525b"></rect>
-                <rect x="70" y="70" width="10" height="10" rx="2" fill="#a1a1aa"></rect>
-                <rect x="82" y="70" width="10" height="10" rx="2" fill="#71717a"></rect>
-                <g transform="rotate(32 94 40)">
-                  <rect x="88" y="16" width="6" height="42" rx="3" fill="url(#brushHandle)"></rect>
-                  <rect x="87" y="54" width="8" height="6" rx="1.5" fill="#e4e4e7"></rect>
-                  <path d="M87 60 C87 66 95 66 95 60 Z" fill="#71717a"></path>
-                </g>
-                <g>
-                  <path d="M112 30 L113.5 34.5 L118 36 L113.5 37.5 L112 42 L110.5 37.5 L106 36 L110.5 34.5 Z" fill="#e4e4e7"></path>
-                  <path d="M26 48 L27 51 L30 52 L27 53 L26 56 L25 53 L22 52 L25 51 Z" fill="#a1a1aa"></path>
-                  <path d="M102 96 L103 98 L105 99 L103 100 L102 102 L101 100 L99 99 L101 98 Z" fill="#71717a"></path>
-                </g>
-              </svg>
-            </div>
-            <h2 class="component-empty-state-title" data-ref="canvas-empty-title" data-i18n="canvas.home_empty_title"></h2>
-            <p class="component-empty-state-desc" data-ref="canvas-empty-desc" data-i18n="canvas.home_empty_desc"></p>
-            <div class="component-empty-state-actions" data-ref="canvas-empty-actions">
-              <button type="button" class="btn btn--h40 btn--black" data-ref="btn-home-create-canvas" data-i18n="canvas.home_empty_action">
-                Crear lienzo
-              </button>
-            </div>
-          </div>
+          <div class="infinite-scroll-sentinel" data-ref="canvas-sentinel" style="display: none;"></div>
         </div>
+      </div>
+    <!-- Floating selection toolbar -->
+    <div class="selection-toolbar is-hidden" data-ref="selection-toolbar">
+      <div class="selection-toolbar__left" data-ref="selection-toolbar-left">
+        <button type="button" class="btn btn--icon btn--h34 selection-toolbar__btn selection-toolbar__btn--close" data-ref="btn-selection-close" data-tooltip="Cancelar selección" aria-label="Cancelar selección">
+          <span class="material-symbols-rounded">close</span>
+        </button>
+        <span class="selection-toolbar__count" data-ref="selection-count">0 seleccionados</span>
+      </div>
+      <div class="selection-toolbar__divider" data-ref="selection-toolbar-divider"></div>
+      <div class="selection-toolbar__actions" data-ref="selection-toolbar-actions">
+        <button type="button" class="btn btn--icon btn--h34 selection-toolbar__btn" data-ref="btn-selection-download" data-tooltip="Descargar" aria-label="Descargar">
+          <span class="material-symbols-rounded">download</span>
+        </button>
+        <button type="button" class="btn btn--icon btn--h34 selection-toolbar__btn" data-ref="btn-selection-move" data-tooltip="Mover a carpeta" aria-label="Mover a carpeta">
+          <span class="material-symbols-rounded">drive_file_move</span>
+        </button>
+        <button type="button" class="btn btn--icon btn--h34 selection-toolbar__btn" data-ref="btn-selection-duplicate" data-tooltip="Duplicar" aria-label="Duplicar">
+          <span class="material-symbols-rounded">filter_none</span>
+        </button>
+        <button type="button" class="btn btn--icon btn--h34 btn--danger-hover selection-toolbar__btn" data-ref="btn-selection-delete" data-tooltip="Mover a la papelera" aria-label="Mover a la papelera">
+          <span class="material-symbols-rounded">delete</span>
+        </button>
       </div>
     </div>
   </div>

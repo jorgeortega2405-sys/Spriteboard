@@ -118,16 +118,13 @@ class TelemetryJob(BaseJob):
     def run_cycle(self) -> float:
         """Extrae un lote de eventos de Redis y los vuelca en Cassandra."""
         try:
-            # Drenar hasta MAX_BATCH_SIZE elementos de la cola
-            pipe = self.redis_client.pipeline()
-            pipe.lrange(QUEUE_KEY, 0, MAX_BATCH_SIZE - 1)
-            pipe.ltrim(QUEUE_KEY, MAX_BATCH_SIZE, -1)
-            raw_items, _ = pipe.execute()
+            raw_items = self.redis_client.lrange(QUEUE_KEY, 0, MAX_BATCH_SIZE - 1)
 
             if not raw_items:
                 return 1.0  # Si la cola está vacía, descansar 1 segundo
 
             self._process_batch(raw_items)
+            self.redis_client.ltrim(QUEUE_KEY, len(raw_items), -1)
 
             # Si leímos un lote completo, no descansar para drenar rápidamente
             return 0.0 if len(raw_items) >= MAX_BATCH_SIZE else 0.5

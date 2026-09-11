@@ -1,7 +1,8 @@
-import { pool } from '../config/database.config.js';
+import { canvasPool, pool } from '../config/database.config.js';
 import { redis } from '../config/redis.config.js';
 import { UserPayload, UserRole } from '../types/auth.types.js';
 import { revokeAllUserSessions } from './auth.service.js';
+import { deleteCanvasBlob } from './canvas-storage-blob.service.js';
 import { logger } from './logger.service.js';
 import { stripeService } from './stripe.service.js';
 import { hashBackupCode } from './two-factor.service.js';
@@ -74,12 +75,31 @@ export async function findUserDuplicates(
   return { emailExists, usernameExists };
 }
 
+export async function invalidateUserProfileCache(userId: number): Promise<void> {
+  try {
+    await redis.del(`user:profile:${userId}`);
+  } catch {}
+}
+
 export async function findUserById(id: number): Promise<UserRecord | null> {
+  const cacheKey = `user:profile:${id}`;
+  try {
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      return JSON.parse(cached) as UserRecord;
+    }
+  } catch {}
+
   const [rows] = await pool.query<UserRecord[]>(
     'SELECT id, username, email, avatar_url, role, google_id, subscription_tier, two_factor_enabled, two_factor_secret, two_factor_recovery_codes FROM users WHERE id = ? LIMIT 1',
     [id]
   );
-  return rows.length > 0 ? rows[0] : null;
+  if (rows.length === 0) return null;
+  const user = rows[0];
+  try {
+    await redis.setex(cacheKey, 300, JSON.stringify(user));
+  } catch {}
+  return user;
 }
 
 export async function createUser(data: {
@@ -176,6 +196,7 @@ export async function updateUserPassword(userId: number, passwordHash: string): 
     'UPDATE users SET password_hash = ? WHERE id = ?',
     [passwordHash, userId]
   );
+  await invalidateUserProfileCache(userId);
   return result.affectedRows > 0;
 }
 
@@ -184,6 +205,7 @@ export async function updateUserGoogleId(userId: number, googleId: string): Prom
     'UPDATE users SET google_id = ? WHERE id = ?',
     [googleId, userId]
   );
+  await invalidateUserProfileCache(userId);
   return result.affectedRows > 0;
 }
 
@@ -192,6 +214,7 @@ export async function updateUserRole(userId: number, role: UserRole): Promise<bo
     'UPDATE users SET role = ? WHERE id = ?',
     [role, userId]
   );
+  await invalidateUserProfileCache(userId);
   return result.affectedRows > 0;
 }
 
@@ -205,6 +228,7 @@ export async function enableUser2FA(
     'UPDATE users SET two_factor_enabled = TRUE, two_factor_secret = ?, two_factor_recovery_codes = ? WHERE id = ?',
     [secret, JSON.stringify(hashedCodes), userId]
   );
+  await invalidateUserProfileCache(userId);
   return result.affectedRows > 0;
 }
 
@@ -213,6 +237,7 @@ export async function disableUser2FA(userId: number): Promise<boolean> {
     'UPDATE users SET two_factor_enabled = FALSE, two_factor_secret = NULL, two_factor_recovery_codes = NULL WHERE id = ?',
     [userId]
   );
+  await invalidateUserProfileCache(userId);
   return result.affectedRows > 0;
 }
 
@@ -241,7 +266,7 @@ export async function verifyAndConsumeBackupCode(userId: number, code: string): 
     'UPDATE users SET two_factor_recovery_codes = ? WHERE id = ?',
     [JSON.stringify(codes), userId]
   );
-
+  await invalidateUserProfileCache(userId);
   return result.affectedRows > 0;
 }
 
@@ -272,20 +297,58 @@ export async function deleteUserPermanently(userId: number): Promise<boolean> {
   try {
     await revokeAllUserSessions(userId);
     await redis.del(`2fa:setup:${userId}`);
+    await redis.del(`user:profile:${userId}`);
+    await redis.del(`user:prefs:${userId}`);
   } catch (err) {
     logger.db.warn('No se pudieron limpiar claves de Redis al borrar usuario', err);
+  }
+
+  try {
+    const [canvases] = await canvasPool.query<RowDataPacket[]>(
+      'SELECT id, uuid FROM canvases WHERE user_id = ?',
+      [userId]
+    );
+
+    for (const c of canvases) {
+      try {
+        await redis.del(`canvas:snapshot:${c.uuid}`);
+        await redis.del(`canvas:meta:${c.uuid}`);
+        await deleteCanvasBlob(c.uuid);
+      } catch {}
+    }
+
+    await canvasPool.execute('DELETE FROM canvas_members WHERE user_id = ?', [userId]);
+
+    if (canvases.length > 0) {
+      const canvasIds = canvases.map((c) => c.id);
+      const idPlaceholders = canvasIds.map(() => '?').join(',');
+      await canvasPool.query(`DELETE FROM canvas_members WHERE canvas_id IN (${idPlaceholders})`, canvasIds);
+      await canvasPool.query(`DELETE FROM canvas_teams WHERE canvas_id IN (${idPlaceholders})`, canvasIds);
+      await canvasPool.query(`DELETE FROM canvas_views WHERE canvas_id IN (${idPlaceholders})`, canvasIds);
+
+      const canvasUuids = canvases.map((c) => c.uuid);
+      const uuidPlaceholders = canvasUuids.map(() => '?').join(',');
+      await pool.query(`DELETE FROM user_favorites WHERE item_type = 'canvas' AND item_id IN (${uuidPlaceholders})`, canvasUuids);
+    }
+
+    await canvasPool.execute('DELETE FROM canvases WHERE user_id = ?', [userId]);
+  } catch (canvasErr) {
+    logger.db.error('Error al eliminar lienzos asociados al borrar usuario permanentemente', canvasErr);
   }
 
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
 
+    await connection.query('DELETE FROM user_favorites WHERE user_id = ?', [userId]);
+    await connection.query('DELETE FROM team_members WHERE user_id = ?', [userId]);
     await connection.query('DELETE FROM user_preferences WHERE user_id = ?', [userId]);
     await connection.query('DELETE FROM user_audit_logs WHERE user_id = ?', [userId]);
+    await connection.query('DELETE FROM purchases WHERE user_id = ?', [userId]);
     const [result] = await connection.query<ResultSetHeader>('DELETE FROM users WHERE id = ?', [userId]);
 
     await connection.commit();
-    logger.security.info('Usuario eliminado permanentemente de la base de datos', { userId });
+    logger.security.info('Usuario eliminado permanentemente de la base de datos con todos sus lienzos y datos', { userId });
     return result.affectedRows > 0;
   } catch (err) {
     await connection.rollback();

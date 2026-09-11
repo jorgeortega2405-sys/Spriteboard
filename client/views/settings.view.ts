@@ -10,7 +10,7 @@ import { setToastPreferences, showToast } from '../services/toast.service';
 import { closeWebSocket } from '../services/websocket.service';
 import { ModalInstance } from '../types/common.types';
 import { BillingDetailsResponse, PaymentMethod, PurchaseRecord } from '../types/subscription.types';
-import { debounce, getEmptyGraphicSvg, setupDropdown, setupPasswordToggle, withButtonLoading } from '../utils/dom.util';
+import { debounce, removeEmptyState, renderEmptyState, setupDropdown, setupPasswordToggle, withButtonLoading } from '../utils/dom.util';
 import { AVAILABLE_LANGUAGES, detectBrowserLanguage, getLanguageName } from '../utils/languages.util';
 import { validatePassword } from '../utils/validators.util';
 
@@ -957,6 +957,7 @@ export async function createSecurityView(): Promise<HTMLElement> {
 
   const btnDeleteAccount = container.querySelector<HTMLButtonElement>('[data-ref="btn-delete-account"]');
   btnDeleteAccount?.addEventListener('click', () => {
+    const hasPassword = Boolean(cachedStatus.hasPassword);
     openModal({
       size: '825x225',
       titleKey: 'settings.security.delete_account_modal_title',
@@ -965,10 +966,27 @@ export async function createSecurityView(): Promise<HTMLElement> {
       confirmText: t('settings.security.btn_delete_account') || 'Eliminar cuenta',
       confirmClass: 'btn--danger',
       showConfirm: true,
+      bodyHtml: hasPassword
+        ? `
+          <label class="field" data-ref="field-delete-password" style="margin-top: 1rem;">
+            <input class="field__input" data-ref="input-delete-password" type="password" placeholder=" " autocomplete="current-password" />
+            <span class="field__label" data-ref="label-delete-password">${t('settings.security.modal_current_password_label') || 'Contraseña actual'}</span>
+          </label>
+        `
+        : '',
       onConfirm: async (inst) => {
+        let password = '';
+        if (hasPassword) {
+          const inputPwd = inst.body?.querySelector<HTMLInputElement>('[data-ref="input-delete-password"]');
+          password = inputPwd?.value?.trim() || '';
+          if (!password) {
+            inst.showError(t('settings.security.modal_current_password_error') || 'Por favor ingresa tu contraseña actual para confirmar.');
+            return;
+          }
+        }
         inst.setConfirmLoading(true);
         try {
-          const res = await postApi(API_ROUTES.settings.accountDelete);
+          const res = await postApi(API_ROUTES.settings.accountDelete, { password });
           let data: any = {};
           try {
             data = await res.json();
@@ -1484,8 +1502,6 @@ export async function createBillingView(): Promise<HTMLElement> {
     groupPm?.classList.toggle('is-active');
   });
 
-  let billingInfo: BillingDetailsResponse | null = null;
-
   const renderSubscriptionPlan = (info: BillingDetailsResponse) => {
     const planNameEl = container.querySelector<HTMLElement>('[data-ref="current-plan-name"]');
     const planStatusBadge = container.querySelector<HTMLElement>(
@@ -1627,7 +1643,6 @@ export async function createBillingView(): Promise<HTMLElement> {
     try {
       const res = await getBillingDetailsApi();
       if (res.success) {
-        billingInfo = res;
         renderSubscriptionPlan(res);
       } else {
         renderSubscriptionPlan({ success: false, hasSubscription: false });
@@ -1647,17 +1662,25 @@ export async function createBillingView(): Promise<HTMLElement> {
           t('settings.billing.btn_confirm_cancel_renewal') || 'Confirmar cancelación',
         confirmClass: 'btn--black',
         cancelText: t('modal.cancel') || 'Volver',
-        onConfirm: async () => {
-          const res = await updateAutoRenewalApi(true);
-          if (res.success) {
-            showToast(
-              t('settings.billing.toast_renewal_paused') ||
-                'Renovación automática cancelada.',
-              'info'
-            );
-            await loadBillingData();
-          } else {
-            showToast(res.error || t('toasts.generic_error'), 'danger');
+        onConfirm: async (inst) => {
+          inst.setConfirmLoading(true);
+          try {
+            const res = await updateAutoRenewalApi(true);
+            if (res.success) {
+              inst.close();
+              showToast(
+                t('settings.billing.toast_renewal_paused') ||
+                  'Renovación automática cancelada.',
+                'info'
+              );
+              await loadBillingData();
+            } else {
+              inst.setConfirmLoading(false);
+              showToast(res.error || t('toasts.generic_error'), 'danger');
+            }
+          } catch {
+            inst.setConfirmLoading(false);
+            showToast(t('toasts.generic_error'), 'danger');
           }
         },
       });
@@ -1691,21 +1714,29 @@ export async function createBillingView(): Promise<HTMLElement> {
         'Cancelar suscripción ahora',
       confirmClass: 'btn--danger',
       cancelText: t('modal.cancel') || 'Mantener mi plan',
-      onConfirm: async () => {
-        const res = await cancelSubscriptionImmediateApi();
-        if (res.success) {
-          await checkAuthSession();
-          window.dispatchEvent(
-            new CustomEvent('subscription-updated', { detail: currentUser })
-          );
-          showToast(
-            t('settings.billing.toast_subscription_cancelled') ||
-              'Tu suscripción ha sido cancelada.',
-            'info'
-          );
-          await loadBillingData();
-        } else {
-          showToast(res.error || t('toasts.generic_error'), 'danger');
+      onConfirm: async (inst) => {
+        inst.setConfirmLoading(true);
+        try {
+          const res = await cancelSubscriptionImmediateApi();
+          if (res.success) {
+            await checkAuthSession();
+            window.dispatchEvent(
+              new CustomEvent('subscription-updated', { detail: currentUser })
+            );
+            inst.close();
+            showToast(
+              t('settings.billing.toast_subscription_cancelled') ||
+                'Tu suscripción ha sido cancelada.',
+              'info'
+            );
+            await loadBillingData();
+          } else {
+            inst.setConfirmLoading(false);
+            showToast(res.error || t('toasts.generic_error'), 'danger');
+          }
+        } catch {
+          inst.setConfirmLoading(false);
+          showToast(t('toasts.generic_error'), 'danger');
         }
       },
     });
@@ -1792,17 +1823,25 @@ export async function createBillingView(): Promise<HTMLElement> {
           confirmText: t('modal.delete') || 'Eliminar',
           confirmClass: 'btn--danger',
           cancelText: t('modal.cancel') || 'Cancelar',
-          onConfirm: async () => {
-            const delRes = await deletePaymentMethodApi(pm.id);
-            if (delRes.success) {
-              showToast(
-                t('settings.billing.toast_card_deleted') ||
-                  'Tarjeta eliminada exitosamente.',
-                'success'
-              );
-              await loadPaymentMethods();
-            } else {
-              showToast(delRes.error || t('toasts.generic_error'), 'danger');
+          onConfirm: async (inst) => {
+            inst.setConfirmLoading(true);
+            try {
+              const delRes = await deletePaymentMethodApi(pm.id);
+              if (delRes.success) {
+                inst.close();
+                showToast(
+                  t('settings.billing.toast_card_deleted') ||
+                    'Tarjeta eliminada exitosamente.',
+                  'success'
+                );
+                await loadPaymentMethods();
+              } else {
+                inst.setConfirmLoading(false);
+                showToast(delRes.error || t('toasts.generic_error'), 'danger');
+              }
+            } catch {
+              inst.setConfirmLoading(false);
+              showToast(t('toasts.generic_error'), 'danger');
             }
           },
         });
@@ -1870,7 +1909,8 @@ export async function createBillingView(): Promise<HTMLElement> {
         confirmText: t('settings.billing.btn_save_card') || 'Guardar tarjeta',
         confirmClass: 'btn--black',
         cancelText: t('modal.cancel') || 'Cancelar',
-        onConfirm: async () => {
+        onConfirm: async (inst) => {
+          inst.setConfirmLoading(true);
           const errorBanner = document.querySelector<HTMLElement>('[data-ref="stripe-card-error"]');
           if (errorBanner) errorBanner.style.display = 'none';
 
@@ -1881,6 +1921,7 @@ export async function createBillingView(): Promise<HTMLElement> {
           });
 
           if (error) {
+            inst.setConfirmLoading(false);
             if (errorBanner) {
               errorBanner.textContent = error.message || 'Error al validar tarjeta.';
               errorBanner.style.display = 'block';
@@ -1888,6 +1929,7 @@ export async function createBillingView(): Promise<HTMLElement> {
             return false;
           }
 
+          inst.close();
           showToast(
             t('settings.billing.toast_card_added') || 'Tarjeta agregada exitosamente.',
             'success'
@@ -1945,8 +1987,7 @@ export async function createPurchasesView(): Promise<HTMLElement> {
 
   const tbody = container.querySelector<HTMLElement>('[data-ref="purchases-tbody"]');
   const tableEl = container.querySelector<HTMLElement>('[data-ref="purchases-table"]');
-  const emptyState = container.querySelector<HTMLElement>('[data-ref="purchases-empty-state"]');
-  const emptyText = container.querySelector<HTMLElement>('[data-ref="purchases-empty-text"]');
+  const tableWrapper = container.querySelector<HTMLElement>('[data-ref="purchases-table-wrapper"]');
 
   const btnToggleSearch = container.querySelector<HTMLElement>('[data-ref="btn-toggle-search"]');
   const searchToolbar = container.querySelector<HTMLElement>('[data-ref="search-toolbar"]');
@@ -2050,23 +2091,27 @@ export async function createPurchasesView(): Promise<HTMLElement> {
 
     if (purchases.length === 0) {
       if (tableEl) tableEl.style.display = 'none';
-      if (emptyState) emptyState.style.display = 'flex';
-      const emptyGraphic = container.querySelector<HTMLElement>('[data-ref="purchases-empty-graphic"]');
-      if (emptyGraphic) {
-        emptyGraphic.innerHTML = getEmptyGraphicSvg(isSearchResult ? 'search' : 'subscriptions');
-      }
-      if (emptyText) {
-        emptyText.textContent = isSearchResult
-          ? t('settings.purchases.search_no_results') ||
-            'No se encontraron compras que coincidan con la búsqueda.'
-          : t('settings.purchases.empty_desc') ||
-            'Aún no has realizado ninguna compra o suscripción en Spriteboard.';
+      if (tableWrapper) {
+        renderEmptyState({
+          container: tableWrapper,
+          dataRef: 'purchases-empty-state',
+          desc: isSearchResult
+            ? t('settings.purchases.search_no_results') || 'No se encontraron compras que coincidan con la búsqueda.'
+            : t('settings.purchases.empty_desc') || 'Aún no has realizado ninguna compra o suscripción en Spriteboard.',
+          graphicType: isSearchResult ? 'search' : 'subscriptions',
+          isTable: true,
+          title: isSearchResult
+            ? t('trash.search_no_results_title') || 'Sin resultados'
+            : t('settings.purchases.empty_title') || 'No hay compras registradas',
+        });
       }
       return;
     }
 
     if (tableEl) tableEl.style.display = 'table';
-    if (emptyState) emptyState.style.display = 'none';
+    if (tableWrapper) {
+      removeEmptyState(tableWrapper, 'purchases-empty-state');
+    }
 
     tbody.innerHTML = '';
     purchases.forEach((p) => {

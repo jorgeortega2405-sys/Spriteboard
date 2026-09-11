@@ -5,11 +5,11 @@ export const SKELETON_ROUTES: Record<string, string> = {
   '/register/verification-account': 'centered-form',
   '/forgot-password': 'centered-form',
   '/reset-password': 'centered-form',
-  '/': 'grouped-layout',
+  '/': 'cards-layout',
   '/teams': 'grouped-layout',
-  '/templates': 'grouped-layout',
-  '/search': 'grouped-layout',
-  '/trash': 'grouped-layout',
+  '/templates': 'templates-layout',
+  '/search': 'search-layout',
+  '/trash': 'trash-layout',
   '/upgrade': 'grouped-layout',
   '/settings': 'grouped-layout',
   '/settings/your-account': 'grouped-layout',
@@ -29,7 +29,7 @@ export const SKELETON_ROUTES: Record<string, string> = {
 };
 
 export function getSkeletonForUrl(pathname: string, onlyBottom = false): string {
-  let template = 'grouped-layout';
+  let template = 'cards-layout';
 
   if (
     pathname.startsWith('/register') ||
@@ -42,8 +42,12 @@ export function getSkeletonForUrl(pathname: string, onlyBottom = false): string 
     template = SKELETON_ROUTES[pathname];
   }
 
-  if (onlyBottom && template === 'grouped-layout') {
-    return 'grouped-layout-bottom';
+  if (onlyBottom) {
+    if (template === 'cards-layout') return 'cards-layout-bottom';
+    if (template === 'templates-layout') return 'templates-layout-bottom';
+    if (template === 'search-layout') return 'search-layout-bottom';
+    if (template === 'trash-layout') return 'trash-layout-bottom';
+    if (template === 'grouped-layout') return 'grouped-layout-bottom';
   }
 
   return template;
@@ -68,6 +72,7 @@ export function hasPersistentTopBar(pathname: string): boolean {
     pathname.startsWith('/teams') ||
     pathname === '/trash' ||
     pathname === '/upgrade' ||
+    pathname.startsWith('/folder') ||
     pathname.startsWith('/settings') ||
     pathname.startsWith('/help') ||
     pathname.startsWith('/design')

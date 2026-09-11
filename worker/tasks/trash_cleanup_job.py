@@ -73,6 +73,10 @@ class TrashCleanupJob(BaseJob):
                     placeholders = ', '.join(['%s'] * len(uuids_to_purge))
                     cursor.execute(f"DELETE FROM canvases WHERE uuid IN ({placeholders})", tuple(uuids_to_purge))
                     deleted_count = cursor.rowcount
+                    try:
+                        cursor.execute(f"DELETE FROM db_identity.user_favorites WHERE item_type = 'canvas' AND item_id IN ({placeholders})", tuple(uuids_to_purge))
+                    except Exception as fav_err:
+                        self.logger.warning(f"Error al limpiar favoritos en purga de papelera: {fav_err}")
 
             self.last_run_timestamp = time.time()
             if deleted_count > 0:

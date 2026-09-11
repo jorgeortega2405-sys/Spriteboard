@@ -4,7 +4,6 @@ import express, { Request, Response } from 'express';
 import http from 'http';
 import net from 'net';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { checkCassandraConnection } from './config/cassandra.config.js';
 import { checkDbConnection } from './config/database.config.js';
 import { config } from './config/env.config.js';
@@ -17,9 +16,6 @@ import { geoIpService } from './services/geoip.service.js';
 import { logger } from './services/logger.service.js';
 import { telemetryService } from './services/telemetry.service.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 const app = express();
 const PORT = config.port;
 
@@ -27,7 +23,7 @@ app.disable('x-powered-by');
 
 app.set('trust proxy', config.trustProxy);
 
-app.use((req: Request, res: Response, next: express.NextFunction) => {
+app.use((_req: Request, res: Response, next: express.NextFunction) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('X-XSS-Protection', '1; mode=block');
@@ -40,9 +36,10 @@ app.use((req: Request, res: Response, next: express.NextFunction) => {
   next();
 });
 
+app.use('/api/canvas/canvases/sync', express.json({ limit: '50mb' }));
 app.use(
   express.json({
-    limit: '50mb',
+    limit: '2mb',
     verify: (req: any, _res, buf) => {
       if (req.originalUrl?.includes('/subscriptions/webhook')) {
         req.rawBody = buf;
@@ -50,7 +47,7 @@ app.use(
     },
   })
 );
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 app.use(cookieParser());
 app.use(telemetryMiddleware);
 app.get('/health', getHealth);
@@ -72,7 +69,7 @@ app.get('/:slug', async (req: Request, res: Response, next: express.NextFunction
   next();
 });
 
-app.use((err: any, req: Request, res: Response, next: express.NextFunction) => {
+app.use((err: any, _req: Request, res: Response, next: express.NextFunction) => {
   logger.app.error('Error no controlado en middleware o ruta', err);
   if (res.headersSent) {
     return next(err);

@@ -4,6 +4,7 @@ import { logger } from '../services/logger.service.js';
 import { deleteAvatar, getPasswordStatus, getUserPreferences, logUserAudit, requestEmailChangeCode, unlinkGoogleAccount, updateAvatar, updateEmail, updateUserPasswordFromSettings, updateUserPreferences, updateUsername, verifyCurrentPassword, verifyEmailChange } from '../services/settings.service.js';
 import { clearPending2FASetup, generateBackupCodes, generateTotpSecret, getOtpAuthUrl, getPending2FASetup, savePending2FASetup, verifyTotpCode } from '../services/two-factor.service.js';
 import { deleteUserPermanently, disableUser2FA, enableUser2FA, findUserById } from '../services/user.service.js';
+import { consumePasswordChangeAuth } from '../services/verification.service.js';
 import { sanitizeUser, sendBadRequest, sendConflict, sendInternalError, sendSuccess, sendUnauthorized } from '../utils/http.util.js';
 import { Request, Response } from 'express';
 
@@ -506,6 +507,32 @@ export async function handleDeleteAccount(req: Request, res: Response): Promise<
     }
 
     const userId = currentUser.id;
+    const { password } = req.body || {};
+
+    const pwdStatus = await getPasswordStatus(userId);
+    if (pwdStatus.hasPassword) {
+      let isAuthorized = false;
+      if (password && typeof password === 'string') {
+        const verifyRes = await verifyCurrentPassword(userId, password);
+        if (verifyRes.success) {
+          isAuthorized = true;
+        } else {
+          sendBadRequest(res, verifyRes.error || 'La contraseña es incorrecta.');
+          return;
+        }
+      } else {
+        const authCheck = await consumePasswordChangeAuth(userId);
+        if (authCheck.valid) {
+          isAuthorized = true;
+        }
+      }
+
+      if (!isAuthorized) {
+        sendBadRequest(res, 'Debes ingresar tu contraseña para confirmar la eliminación de la cuenta.');
+        return;
+      }
+    }
+
     const deleted = await deleteUserPermanently(userId);
     if (!deleted) {
       sendBadRequest(res, 'No se pudo encontrar o eliminar la cuenta.');

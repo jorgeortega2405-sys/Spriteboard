@@ -228,6 +228,12 @@ export async function render(): Promise<void> {
       const { createHomeView } = await import('./views/home.view.js');
       const homeView = await createHomeView();
       viewElements = topBar ? [topBar, homeView] : [homeView];
+    } else if (path.startsWith('/folder/')) {
+      const topBar = isSoftSpaNav ? null : await createTopBar();
+      const folderUuid = path.split('/folder/')[1]?.split('/')[0] || '';
+      const { createHomeView } = await import('./views/home.view.js');
+      const folderView = await createHomeView(folderUuid);
+      viewElements = topBar ? [topBar, folderView] : [folderView];
     } else if (path.startsWith('/design/')) {
       const topBar = isSoftSpaNav ? null : await createTopBar();
       const canvasUuid = path.split('/design/')[1]?.split('/')[0] || '';
@@ -296,10 +302,20 @@ export async function render(): Promise<void> {
     attachChatSidebarToView(activeContent);
   }
 
+  const activeComponentTop = appRoot.querySelector<HTMLElement>('.component-wrapper .component-top');
   const activeHeader = document.querySelector<HTMLElement>('.layout-header, .general-content-top');
-  const activeScrollable = document.querySelector<HTMLElement>('.layout-scrollable, .layout-body--scrollable');
-  if (activeHeader) {
-    const isScrolled = activeScrollable ? activeScrollable.scrollTop > 0 : false;
+  const activeScrollable = document.querySelector<HTMLElement>(
+    '.layout-scrollable, .layout-body--scrollable, .layout-content__scrollable, .component-table-wrapper'
+  );
+  const isScrolled = activeScrollable ? activeScrollable.scrollTop > 0 : false;
+
+  if (activeComponentTop) {
+    activeComponentTop.classList.toggle('shadow', isScrolled);
+    activeComponentTop.classList.toggle('component-top--shadow', isScrolled);
+    if (activeHeader) {
+      activeHeader.classList.remove('shadow', 'layout-header--shadow');
+    }
+  } else if (activeHeader) {
     activeHeader.classList.toggle('shadow', isScrolled);
     activeHeader.classList.toggle('layout-header--shadow', isScrolled);
   }

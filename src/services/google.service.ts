@@ -11,7 +11,7 @@ import type { ResultSetHeader, RowDataPacket } from 'mysql2';
 
 export const STATE_COOKIE_NAME = 'oauth_state';
 
-export function getGoogleAuthUrl(req: Request, res: Response): string {
+export function getGoogleAuthUrl(_req: Request, res: Response): string {
   const state = crypto.randomBytes(24).toString('hex');
 
   res.cookie(STATE_COOKIE_NAME, state, {
@@ -34,7 +34,7 @@ export function getGoogleAuthUrl(req: Request, res: Response): string {
   return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 }
 
-export function getGoogleVerifyAuthUrl(req: Request, res: Response): string {
+export function getGoogleVerifyAuthUrl(_req: Request, res: Response): string {
   const state = `verify_pwd_${crypto.randomBytes(24).toString('hex')}`;
 
   res.cookie(STATE_COOKIE_NAME, state, {
@@ -57,7 +57,7 @@ export function getGoogleVerifyAuthUrl(req: Request, res: Response): string {
   return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 }
 
-export function getGoogleLinkAuthUrl(req: Request, res: Response, userId: number): string {
+export function getGoogleLinkAuthUrl(_req: Request, res: Response, userId: number): string {
   const state = `link_${userId}_${crypto.randomBytes(24).toString('hex')}`;
 
   res.cookie(STATE_COOKIE_NAME, state, {
@@ -152,7 +152,6 @@ export async function processGoogleAuthCallback(code: string, clientIp?: string)
   const googleUser = (await userInfoRes.json()) as GoogleUserInfo;
   const googleId = googleUser.id;
   const email = googleUser.email.toLowerCase();
-  const avatarUrl = googleUser.picture || null;
 
   const geo = clientIp ? geoIpService.lookup(clientIp) : null;
 

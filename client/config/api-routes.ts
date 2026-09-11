@@ -13,6 +13,7 @@ export const API_ROUTES = {
     heartbeatView: (uuid: string) => `/api/canvases/${encodeURIComponent(uuid)}/views/heartbeat`,
     members: (uuid: string) => `/api/canvases/${encodeURIComponent(uuid)}/members`,
     metrics: (uuid: string) => `/api/canvases/${encodeURIComponent(uuid)}/metrics`,
+    move: (uuid: string) => `/api/canvases/${encodeURIComponent(uuid)}/move`,
     recordView: (uuid: string) => `/api/canvases/${encodeURIComponent(uuid)}/views`,
     removeMember: (uuid: string, userId: number) => `/api/canvases/${encodeURIComponent(uuid)}/members/${encodeURIComponent(userId)}`,
     removeTeam: (uuid: string, teamId: number) => `/api/canvases/${encodeURIComponent(uuid)}/teams/${encodeURIComponent(teamId)}`,
@@ -21,6 +22,11 @@ export const API_ROUTES = {
     sync: '/api/canvases/sync',
     teams: (uuid: string) => `/api/canvases/${encodeURIComponent(uuid)}/teams`,
     token: (uuid: string) => `/api/canvases/${encodeURIComponent(uuid)}/token`,
+  },
+  folders: {
+    base: '/api/folders',
+    byId: (uuid: string) => `/api/folders/${encodeURIComponent(uuid)}`,
+    canvases: (uuid: string) => `/api/folders/${encodeURIComponent(uuid)}/canvases`,
   },
   favorites: {
     base: '/api/favorites',
@@ -44,6 +50,7 @@ export const API_ROUTES = {
     search: (q: string) => `/api/users/search?q=${encodeURIComponent(q)}`,
   },
   chat: '/api/chat',
+  chatFeedback: '/api/chat/feedback',
   auth: {
     forgotPassword: '/api/forgot-password',
     google: '/api/auth/google',
