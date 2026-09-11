@@ -33,6 +33,43 @@
       <span class="material-symbols-rounded">help</span>
     </button>
 
+    <div class="notifications-dropdown-container" data-ref="notifications-container">
+      <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-notifications" data-i18n-tooltip="topbar.notifications_tooltip" data-i18n-aria="topbar.notifications_tooltip">
+        <span class="material-symbols-rounded">notifications</span>
+      </button>
+
+      <div class="notifications-dropdown-backdrop" data-ref="notifications-backdrop">
+        <div class="menu-panel menu-panel--dropdown menu-panel--w-425 menu-panel--h-625 notifications-panel" data-ref="notifications-panel">
+          <div class="menu-panel__drag-zone" data-ref="notifications-drag-zone" aria-hidden="true">
+            <div class="menu-panel__drag-handle"></div>
+          </div>
+
+          <div class="notifications-panel__top" data-ref="notifications-top">
+            <div class="notifications-panel__top-left" data-ref="notifications-top-left">
+              <span class="notifications-panel__title" data-ref="notifications-title" data-i18n="notifications.title">Notificaciones</span>
+            </div>
+            <div class="notifications-panel__top-right" data-ref="notifications-top-right">
+              <button type="button" class="link notifications-panel__mark-read" data-ref="btn-mark-all-read" data-i18n="notifications.mark_all_read">Marcar todas como leídas</button>
+            </div>
+          </div>
+
+          <div class="notifications-panel__bottom" data-ref="notifications-bottom">
+            <div class="notifications-empty" data-ref="notifications-empty">
+              <div class="notifications-empty__icon" data-ref="notifications-empty-icon">
+                <svg class="notifications-empty__svg" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="40" cy="40" r="36" fill="var(--bg-card-subtle)" stroke="var(--border-color)" stroke-width="1.5" />
+                  <path d="M40 22C35.58 22 32 25.58 32 30V32.29C28.46 34.1 26 37.77 26 42V48L22 52V54H58V52L54 48V42C54 37.77 51.54 34.1 48 32.29V30C48 25.58 44.42 22 40 22Z" fill="var(--text-tertiary)" />
+                  <path d="M40 58C41.66 58 43 56.66 43 55H37C37 56.66 38.34 58 40 58Z" fill="var(--text-tertiary)" />
+                  <circle cx="51" cy="29" r="4" fill="var(--color-brand)" />
+                </svg>
+              </div>
+              <span class="notifications-empty__title" data-ref="notifications-empty-title" data-i18n="notifications.empty_title">Aquí aparecerán tus notificaciones</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Contenido dinámico inyectado por TopBar JS (botón login o avatar dropdown) -->
     <div class="avatar-dropdown-container" data-ref="avatar-container" style="display: none;">
       <button type="button" class="btn--avatar" data-ref="btn-avatar" data-i18n-tooltip="topbar.user_profile_tooltip" data-i18n-aria="topbar.user_profile_tooltip">

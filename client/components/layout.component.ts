@@ -171,6 +171,220 @@ export async function createTopBar(): Promise<HTMLElement> {
     }
   });
 
+  const btnNotifications = topbar.querySelector<HTMLElement>('[data-ref="btn-notifications"]');
+  const notificationsBackdrop = topbar.querySelector<HTMLElement>('[data-ref="notifications-backdrop"]');
+  const notificationsPanel = topbar.querySelector<HTMLElement>('[data-ref="notifications-panel"]');
+  const notificationsDragZone = topbar.querySelector<HTMLElement>('[data-ref="notifications-drag-zone"]');
+  const btnMarkAllRead = topbar.querySelector<HTMLElement>('[data-ref="btn-mark-all-read"]');
+
+  let closeAvatarMenu = () => {};
+  let isNotificationsClosing = false;
+
+  const openNotifications = () => {
+    if (isNotificationsClosing) return;
+    closeAvatarMenu();
+
+    if (window.innerWidth <= 768 && notificationsBackdrop && notificationsPanel) {
+      notificationsBackdrop.style.display = 'flex';
+      notificationsBackdrop.style.opacity = '0';
+      notificationsBackdrop.style.pointerEvents = 'auto';
+      notificationsPanel.style.transform = 'translateY(100%)';
+      notificationsPanel.style.transition = 'none';
+      notificationsBackdrop.style.transition = 'none';
+
+      void notificationsPanel.offsetHeight;
+
+      notificationsBackdrop.classList.add('is-open');
+      notificationsPanel.classList.add('is-open');
+
+      notificationsBackdrop.style.transition = 'opacity 0.25s ease';
+      notificationsPanel.style.transition = 'transform 0.28s cubic-bezier(0.16, 1, 0.3, 1)';
+      notificationsBackdrop.style.opacity = '1';
+      notificationsPanel.style.transform = 'translateY(0)';
+    } else {
+      notificationsBackdrop?.classList.add('is-open');
+      notificationsPanel?.classList.add('is-open');
+    }
+  };
+
+  const closeNotifications = () => {
+    if (isNotificationsClosing || !notificationsPanel?.classList.contains('is-open')) return;
+
+    if (window.innerWidth <= 768 && notificationsBackdrop && notificationsPanel) {
+      isNotificationsClosing = true;
+      notificationsBackdrop.style.pointerEvents = 'none';
+      notificationsBackdrop.style.transition = 'opacity 0.2s ease';
+      notificationsPanel.style.transition = 'transform 0.2s cubic-bezier(0.4, 0, 1, 1)';
+      notificationsBackdrop.style.opacity = '0';
+      notificationsPanel.style.transform = 'translateY(100%)';
+
+      setTimeout(() => {
+        notificationsBackdrop.classList.remove('is-open');
+        notificationsPanel.classList.remove('is-open');
+        notificationsBackdrop.style.display = '';
+        notificationsBackdrop.style.opacity = '';
+        notificationsBackdrop.style.transition = '';
+        notificationsBackdrop.style.pointerEvents = '';
+        notificationsPanel.style.transform = '';
+        notificationsPanel.style.transition = '';
+        isNotificationsClosing = false;
+      }, 200);
+    } else {
+      notificationsBackdrop?.classList.remove('is-open');
+      notificationsPanel?.classList.remove('is-open');
+      if (notificationsBackdrop) {
+        notificationsBackdrop.style.display = '';
+        notificationsBackdrop.style.opacity = '';
+        notificationsBackdrop.style.transition = '';
+      }
+      if (notificationsPanel) {
+        notificationsPanel.style.transform = '';
+        notificationsPanel.style.transition = '';
+      }
+    }
+  };
+
+  const toggleNotifications = () => {
+    if (notificationsPanel?.classList.contains('is-open') && !isNotificationsClosing) {
+      closeNotifications();
+    } else {
+      openNotifications();
+    }
+  };
+
+  btnNotifications?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleNotifications();
+  });
+
+  btnMarkAllRead?.addEventListener('click', (e) => {
+    e.preventDefault();
+  });
+
+  notificationsBackdrop?.addEventListener('click', (e) => {
+    if (!notificationsPanel?.contains(e.target as Node)) {
+      closeNotifications();
+    }
+  });
+
+  let notifStartY = 0;
+  let notifCurrentY = 0;
+  let notifStartTime = 0;
+  let notifIsDragging = false;
+  let notifActivePointerId: number | null = null;
+
+  const detachNotifPointerListeners = () => {
+    window.removeEventListener('pointermove', onNotifPointerMove);
+    window.removeEventListener('pointerup', onNotifPointerUp);
+    window.removeEventListener('pointercancel', onNotifPointerUp);
+  };
+
+  const onNotifPointerDown = (e: PointerEvent) => {
+    if (window.innerWidth > 768 || isNotificationsClosing || !notificationsPanel) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+
+    notifIsDragging = true;
+    notifActivePointerId = e.pointerId;
+    notifStartY = e.clientY;
+    notifCurrentY = notifStartY;
+    notifStartTime = performance.now();
+
+    try {
+      notificationsDragZone?.setPointerCapture(notifActivePointerId);
+    } catch (_) {}
+
+    notificationsPanel.style.transition = 'none';
+    if (notificationsBackdrop) {
+      notificationsBackdrop.style.transition = 'none';
+    }
+
+    window.addEventListener('pointermove', onNotifPointerMove, { passive: true });
+    window.addEventListener('pointerup', onNotifPointerUp);
+    window.addEventListener('pointercancel', onNotifPointerUp);
+  };
+
+  const onNotifPointerMove = (e: PointerEvent) => {
+    if (!notifIsDragging || (notifActivePointerId !== null && e.pointerId !== notifActivePointerId)) return;
+    notifCurrentY = e.clientY;
+    const diff = notifCurrentY - notifStartY;
+
+    if (notificationsPanel) {
+      if (diff > 0) {
+        notificationsPanel.style.transform = `translateY(${diff}px)`;
+        if (notificationsBackdrop) {
+          const progress = Math.min(diff / 240, 1);
+          notificationsBackdrop.style.opacity = `${Math.max(0.2, 1 - progress * 0.8)}`;
+        }
+      } else {
+        const rubberDiff = Math.max(diff * 0.15, -24);
+        notificationsPanel.style.transform = `translateY(${rubberDiff}px)`;
+      }
+    }
+  };
+
+  const onNotifPointerUp = (e: PointerEvent) => {
+    if (!notifIsDragging || (notifActivePointerId !== null && e.pointerId !== notifActivePointerId)) return;
+    notifIsDragging = false;
+    detachNotifPointerListeners();
+
+    try {
+      if (notifActivePointerId !== null) {
+        notificationsDragZone?.releasePointerCapture(notifActivePointerId);
+      }
+    } catch (_) {}
+    notifActivePointerId = null;
+
+    const diff = notifCurrentY - notifStartY;
+    const elapsed = Math.max(1, performance.now() - notifStartTime);
+    const velocity = diff / elapsed;
+
+    if (diff > 75 || (diff > 25 && velocity > 0.45)) {
+      closeNotifications();
+    } else {
+      if (notificationsBackdrop) {
+        notificationsBackdrop.style.transition = 'opacity 0.25s ease';
+        notificationsBackdrop.style.opacity = '1';
+      }
+      if (notificationsPanel) {
+        notificationsPanel.style.transition = 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)';
+        notificationsPanel.style.transform = 'translateY(0)';
+      }
+    }
+  };
+
+  notificationsDragZone?.addEventListener('pointerdown', onNotifPointerDown);
+  notificationsDragZone?.addEventListener('lostpointercapture', onNotifPointerUp);
+
+  const closeNotificationsHandler = (e: MouseEvent) => {
+    if (!notificationsPanel?.contains(e.target as Node) && !btnNotifications?.contains(e.target as Node)) {
+      closeNotifications();
+    }
+  };
+  document.addEventListener('click', closeNotificationsHandler);
+
+  const closeNotificationsKeydownHandler = (e: KeyboardEvent) => {
+    if (e.key === 'Escape' && notificationsPanel?.classList.contains('is-open')) {
+      closeNotifications();
+    }
+  };
+  document.addEventListener('keydown', closeNotificationsKeydownHandler);
+
+  const onNotifWindowResize = () => {
+    if (notificationsPanel?.classList.contains('is-open') && window.innerWidth > 768) {
+      if (notificationsBackdrop) {
+        notificationsBackdrop.style.display = '';
+        notificationsBackdrop.style.opacity = '';
+        notificationsBackdrop.style.transition = '';
+        notificationsBackdrop.style.pointerEvents = '';
+      }
+      if (notificationsPanel) {
+        notificationsPanel.style.transform = '';
+        notificationsPanel.style.transition = '';
+      }
+    }
+  };
+  window.addEventListener('resize', onNotifWindowResize, { passive: true });
+
   const avatarContainer = topbar.querySelector<HTMLElement>('[data-ref="avatar-container"]');
   const btnLogin = topbar.querySelector<HTMLElement>('[data-ref="btn-login"]');
 
@@ -364,6 +578,7 @@ export async function createTopBar(): Promise<HTMLElement> {
 
       const openMenu = () => {
         if (isClosing) return;
+        closeNotifications();
 
         showPanel('main');
 
@@ -428,6 +643,7 @@ export async function createTopBar(): Promise<HTMLElement> {
           showPanel('main');
         }
       };
+      closeAvatarMenu = closeMenu;
 
       const toggleMenu = () => {
         if (avatarMenu?.classList.contains('is-open') && !isClosing) {
@@ -587,11 +803,17 @@ export async function createTopBar(): Promise<HTMLElement> {
 
       const cleanupAndRender = () => {
         detachAvatarPointerListeners();
+        detachNotifPointerListeners();
         dragZone?.removeEventListener('pointerdown', onPointerDown);
         dragZone?.removeEventListener('lostpointercapture', onPointerUp);
+        notificationsDragZone?.removeEventListener('pointerdown', onNotifPointerDown);
+        notificationsDragZone?.removeEventListener('lostpointercapture', onNotifPointerUp);
         document.removeEventListener('click', closeMenuHandler);
+        document.removeEventListener('click', closeNotificationsHandler);
         document.removeEventListener('keydown', closeMenuKeydownHandler);
+        document.removeEventListener('keydown', closeNotificationsKeydownHandler);
         window.removeEventListener('resize', onWindowResize);
+        window.removeEventListener('resize', onNotifWindowResize);
         window.removeEventListener('subscription-updated', handleSubscriptionUpdated);
         render();
       };

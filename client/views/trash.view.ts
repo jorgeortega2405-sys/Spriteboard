@@ -46,20 +46,29 @@ class TrashController {
   private selectedUuids = new Set<string>();
   private isSearchActive = false;
 
-  private tableEl: HTMLElement | null = null;
-  private tbodyEl: HTMLElement | null = null;
-  private tableWrapperEl: HTMLElement | null = null;
+  private scrollableEl: HTMLElement | null = null;
+  private sectionEl: HTMLElement | null = null;
+  private gridEl: HTMLElement | null = null;
 
-  private defaultActions: HTMLElement | null = null;
-  private selectedActions: HTMLElement | null = null;
   private btnEmptyTrash: HTMLElement | null = null;
-  private btnActionRestore: HTMLElement | null = null;
-  private btnActionDeleteForever: HTMLElement | null = null;
-
   private btnToggleSearch: HTMLElement | null = null;
   private searchToolbar: HTMLElement | null = null;
   private searchInput: HTMLInputElement | null = null;
   private btnClearSearch: HTMLElement | null = null;
+
+  private selectionToolbar: HTMLElement | null = null;
+  private selectionCount: HTMLElement | null = null;
+  private btnSelectionClose: HTMLElement | null = null;
+  private btnSelectionRestore: HTMLElement | null = null;
+  private btnSelectionDeleteForever: HTMLElement | null = null;
+
+  private marqueeEl: HTMLElement | null = null;
+  private isMarqueeDragging = false;
+  private dragStartX = 0;
+  private dragStartY = 0;
+  private isShiftDrag = false;
+  private dragInitialSelection = new Set<string>();
+  private didDrag = false;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -67,20 +76,29 @@ class TrashController {
   }
 
   public async init(): Promise<void> {
-    this.tableEl = this.container.querySelector<HTMLElement>('[data-ref="trash-table"]');
-    this.tbodyEl = this.container.querySelector<HTMLElement>('[data-ref="trash-tbody"]');
-    this.tableWrapperEl = this.container.querySelector<HTMLElement>('[data-ref="trash-table-wrapper"]');
+    this.scrollableEl = this.container.querySelector<HTMLElement>('[data-ref="trash-scrollable"]');
+    this.sectionEl = this.container.querySelector<HTMLElement>('[data-ref="canvas-section"]');
+    this.gridEl = this.container.querySelector<HTMLElement>('[data-ref="trash-grid"]');
 
-    this.defaultActions = this.container.querySelector<HTMLElement>('[data-ref="trash-default-actions"]');
-    this.selectedActions = this.container.querySelector<HTMLElement>('[data-ref="trash-selected-actions"]');
     this.btnEmptyTrash = this.container.querySelector<HTMLElement>('[data-ref="btn-empty-trash"]');
-    this.btnActionRestore = this.container.querySelector<HTMLElement>('[data-ref="btn-action-restore"]');
-    this.btnActionDeleteForever = this.container.querySelector<HTMLElement>('[data-ref="btn-action-delete-forever"]');
-
     this.btnToggleSearch = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-search"]');
     this.searchToolbar = this.container.querySelector<HTMLElement>('[data-ref="search-toolbar"]');
     this.searchInput = this.container.querySelector<HTMLInputElement>('[data-ref="trash-search-input"]');
     this.btnClearSearch = this.container.querySelector<HTMLElement>('[data-ref="btn-clear-search"]');
+
+    this.selectionToolbar = this.container.querySelector<HTMLElement>('[data-ref="selection-toolbar"]');
+    this.selectionCount = this.container.querySelector<HTMLElement>('[data-ref="selection-count"]');
+    this.btnSelectionClose = this.container.querySelector<HTMLElement>('[data-ref="btn-selection-close"]');
+    this.btnSelectionRestore = this.container.querySelector<HTMLElement>('[data-ref="btn-selection-restore"]');
+    this.btnSelectionDeleteForever = this.container.querySelector<HTMLElement>('[data-ref="btn-selection-delete-forever"]');
+
+    if (this.selectionToolbar) {
+      renderIcons(this.selectionToolbar);
+    }
+
+    this.marqueeEl = document.createElement('div');
+    this.marqueeEl.className = 'selection-marquee';
+    document.body.appendChild(this.marqueeEl);
 
     this.bindEvents();
     await this.loadTrash();
@@ -113,11 +131,12 @@ class TrashController {
 
     document.addEventListener('keydown', (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        if (this.selectedUuids.size > 0) {
+          this.clearSelection();
+          return;
+        }
         if (this.isSearchActive) {
           this.toggleSearchToolbar(false);
-        } else if (this.selectedUuids.size > 0) {
-          this.selectedUuids.clear();
-          this.updateSelectionUi();
         }
       }
     }, { signal });
@@ -127,19 +146,20 @@ class TrashController {
       if (this.searchInput) {
         this.searchInput.value = '';
         if (this.btnClearSearch) this.btnClearSearch.style.display = 'none';
-        this.renderRows(this.allCanvases);
+        this.renderGrid(this.allCanvases);
         this.searchInput.focus();
       }
     }, { signal });
 
     this.searchInput?.addEventListener('input', () => {
+      this.clearSelection();
       const query = (this.searchInput?.value || '').trim().toLowerCase();
       if (this.btnClearSearch) {
         this.btnClearSearch.style.display = query.length > 0 ? 'inline-flex' : 'none';
       }
 
       if (!query) {
-        this.renderRows(this.allCanvases);
+        this.renderGrid(this.allCanvases);
         return;
       }
 
@@ -148,23 +168,44 @@ class TrashController {
         return name.includes(query);
       });
 
-      this.renderRows(filtered, true);
+      this.renderGrid(filtered, true);
     }, { signal });
 
-    this.btnActionRestore?.addEventListener('click', () => {
+    this.btnSelectionClose?.addEventListener('click', () => {
+      this.clearSelection();
+    }, { signal });
+
+    this.btnSelectionRestore?.addEventListener('click', () => {
       void this.handleRestoreSelected();
     }, { signal });
 
-    this.btnActionDeleteForever?.addEventListener('click', () => {
+    this.btnSelectionDeleteForever?.addEventListener('click', () => {
       void this.handleDeleteForeverSelected();
+    }, { signal });
+
+    this.scrollableEl?.addEventListener('pointerdown', (e: PointerEvent) => {
+      this.handlePointerDown(e);
+    }, { signal });
+
+    window.addEventListener('pointermove', (e: PointerEvent) => {
+      this.handlePointerMove(e);
+    }, { signal });
+
+    window.addEventListener('pointerup', (e: PointerEvent) => {
+      this.handlePointerUp(e);
     }, { signal });
   }
 
   public destroy(): void {
+    if (this.marqueeEl) {
+      this.marqueeEl.remove();
+      this.marqueeEl = null;
+    }
     this.abortController.abort();
   }
 
   private toggleSearchToolbar(forceState?: boolean): void {
+    this.clearSelection();
     this.isSearchActive = forceState !== undefined ? forceState : !this.isSearchActive;
 
     if (this.searchToolbar) {
@@ -183,156 +224,297 @@ class TrashController {
     }
   }
 
-  private async loadTrash(): Promise<void> {
-    if (!currentUser) {
-      this.renderRows([]);
+  private clearSelection(): void {
+    this.selectedUuids.clear();
+    this.updateSelectionUi();
+  }
+
+  private toggleCardSelection(uuid: string): void {
+    if (this.selectedUuids.has(uuid)) {
+      this.selectedUuids.delete(uuid);
+    } else {
+      this.selectedUuids.add(uuid);
+    }
+    this.updateSelectionUi();
+  }
+
+  private updateSelectionUi(): void {
+    const count = this.selectedUuids.size;
+    const isSelecting = count > 0;
+
+    this.scrollableEl?.classList.toggle('is-selecting', isSelecting);
+
+    if (this.selectionToolbar) {
+      if (isSelecting) {
+        this.selectionToolbar.classList.remove('is-hidden');
+        requestAnimationFrame(() => {
+          this.selectionToolbar?.classList.add('is-active');
+        });
+      } else {
+        this.selectionToolbar.classList.remove('is-active');
+        setTimeout(() => {
+          if (this.selectedUuids.size === 0) {
+            this.selectionToolbar?.classList.add('is-hidden');
+          }
+        }, 220);
+      }
+    }
+
+    if (this.selectionCount) {
+      const text = count === 1
+        ? (t('canvas.selection_count_one') || '1 seleccionado')
+        : (t('canvas.selection_count_many', { count }) || `${count} seleccionados`);
+      this.selectionCount.textContent = text;
+    }
+
+    const cards = this.gridEl?.querySelectorAll<HTMLElement>('.canvas-card') || [];
+    cards.forEach((card) => {
+      const uuid = card.getAttribute('data-uuid');
+      if (!uuid) return;
+      const isSelected = this.selectedUuids.has(uuid);
+      card.classList.toggle('is-selected', isSelected);
+    });
+  }
+
+  private handlePointerDown(e: PointerEvent): void {
+    if (e.button !== 0) return;
+
+    const target = e.target as HTMLElement | null;
+    if (
+      target?.closest(
+        '.canvas-card, button, a, input, [data-ref="selection-toolbar"], [data-ref="search-toolbar"], [data-ref="component-top"]'
+      )
+    ) {
       return;
     }
-    if (this.tbodyEl && this.allCanvases.length === 0) {
-      if (this.tableEl) this.tableEl.style.display = 'table';
-      SkeletonService.renderTableSkeletons(this.tbodyEl, 5);
+
+    this.dragStartX = e.clientX;
+    this.dragStartY = e.clientY;
+    this.isShiftDrag = e.shiftKey || e.ctrlKey || e.metaKey;
+    this.dragInitialSelection = new Set(this.selectedUuids);
+    this.didDrag = false;
+    this.isMarqueeDragging = true;
+  }
+
+  private handlePointerMove(e: PointerEvent): void {
+    if (!this.isMarqueeDragging) return;
+
+    const dist = Math.hypot(e.clientX - this.dragStartX, e.clientY - this.dragStartY);
+    if (!this.didDrag) {
+      if (dist < 6) return;
+      this.didDrag = true;
+      if (this.marqueeEl) {
+        this.marqueeEl.style.display = 'block';
+      }
+    }
+
+    const left = Math.min(this.dragStartX, e.clientX);
+    const top = Math.min(this.dragStartY, e.clientY);
+    const width = Math.abs(e.clientX - this.dragStartX);
+    const height = Math.abs(e.clientY - this.dragStartY);
+    const right = left + width;
+    const bottom = top + height;
+
+    if (this.marqueeEl) {
+      this.marqueeEl.style.left = `${left}px`;
+      this.marqueeEl.style.top = `${top}px`;
+      this.marqueeEl.style.width = `${width}px`;
+      this.marqueeEl.style.height = `${height}px`;
+    }
+
+    const cards = this.gridEl?.querySelectorAll<HTMLElement>('.canvas-card') || [];
+    const nextSelection = new Set(this.isShiftDrag ? this.dragInitialSelection : []);
+
+    cards.forEach((card) => {
+      const uuid = card.getAttribute('data-uuid');
+      if (!uuid) return;
+      const r = card.getBoundingClientRect();
+      const intersects = !(right < r.left || left > r.right || bottom < r.top || top > r.bottom);
+
+      if (this.isShiftDrag) {
+        if (intersects) {
+          if (this.dragInitialSelection.has(uuid)) {
+            nextSelection.delete(uuid);
+          } else {
+            nextSelection.add(uuid);
+          }
+        }
+      } else {
+        if (intersects) {
+          nextSelection.add(uuid);
+        }
+      }
+    });
+
+    this.selectedUuids = nextSelection;
+    this.updateSelectionUi();
+  }
+
+  private handlePointerUp(e: PointerEvent): void {
+    if (!this.isMarqueeDragging) return;
+    this.isMarqueeDragging = false;
+
+    if (this.marqueeEl) {
+      this.marqueeEl.style.display = 'none';
+    }
+
+    if (!this.didDrag) {
+      const target = e.target as HTMLElement | null;
+      const card = target?.closest<HTMLElement>('.canvas-card');
+      if (!card && this.selectedUuids.size > 0) {
+        this.clearSelection();
+      }
+    } else {
+      setTimeout(() => {
+        this.didDrag = false;
+      }, 50);
+    }
+  }
+
+  private async loadTrash(): Promise<void> {
+    if (!currentUser) {
+      this.renderGrid([]);
+      return;
+    }
+    if (this.gridEl && this.allCanvases.length === 0) {
+      if (this.sectionEl) this.sectionEl.style.display = '';
+      SkeletonService.renderGridCardSkeletons(this.gridEl, 6, 'canvas');
     }
     try {
       const res = await getApi(API_ROUTES.trash.base);
       if (res.ok) {
         const data = await res.json();
         this.allCanvases = Array.isArray(data.canvases) ? data.canvases : [];
-        this.renderRows(this.allCanvases);
+        this.renderGrid(this.allCanvases);
       } else {
-        this.renderRows([]);
+        this.renderGrid([]);
         showToast(t('trash.empty_desc') || 'Error al cargar la papelera', 'danger');
       }
     } catch {
-      this.renderRows([]);
+      this.renderGrid([]);
       showToast(t('trash.empty_desc') || 'Error al cargar la papelera', 'danger');
     }
   }
 
-  private renderRows(canvases: CanvasItem[], isSearchResult = false): void {
-    if (!this.tbodyEl) return;
+  private renderGrid(canvases: CanvasItem[], isSearchResult = false): void {
+    if (!this.gridEl || !this.sectionEl || !this.scrollableEl) return;
 
     if (canvases.length === 0) {
-      if (this.tableEl) this.tableEl.style.display = 'none';
-      if (this.tableWrapperEl) {
-        renderEmptyState({
-          container: this.tableWrapperEl,
-          dataRef: 'trash-empty-state',
-          desc: isSearchResult
-            ? t('trash.search_no_results') || 'No se encontraron lienzos en la papelera que coincidan con la búsqueda.'
-            : t('trash.empty_desc') || 'No hay elementos en la papelera de reciclaje.',
-          graphicType: isSearchResult ? 'search' : 'trash',
-          isTable: true,
-          title: isSearchResult
-            ? t('trash.search_no_results_title') || 'Sin resultados'
-            : t('trash.empty_title') || 'Papelera de reciclaje vacía',
-        });
-      }
+      this.sectionEl.style.display = 'none';
+      this.gridEl.innerHTML = '';
+      renderEmptyState({
+        container: this.scrollableEl,
+        dataRef: 'trash-empty-state',
+        desc: isSearchResult
+          ? t('trash.search_no_results') || 'No se encontraron lienzos en la papelera que coincidan con la búsqueda.'
+          : t('trash.empty_desc') || 'No hay elementos en la papelera de reciclaje.',
+        graphicType: isSearchResult ? 'search' : 'trash',
+        isTable: false,
+        title: isSearchResult
+          ? t('trash.search_no_results_title') || 'Sin resultados'
+          : t('trash.empty_title') || 'Papelera de reciclaje vacía',
+      });
       this.updateSelectionUi();
       return;
     }
 
-    if (this.tableWrapperEl) {
-      removeEmptyState(this.tableWrapperEl, 'trash-empty-state');
-    }
-    if (this.tableEl) this.tableEl.style.display = 'table';
-    this.tbodyEl.innerHTML = '';
+    removeEmptyState(this.scrollableEl, 'trash-empty-state');
+    this.sectionEl.style.display = '';
+    this.gridEl.innerHTML = '';
 
     for (const canvas of canvases) {
-      const tr = document.createElement('tr');
-      tr.className = 'is-selectable';
-      tr.setAttribute('data-ref', `trash-row-${canvas.uuid}`);
-      tr.setAttribute('data-uuid', canvas.uuid);
-
-      const tdName = document.createElement('td');
-      tdName.setAttribute('data-ref', `cell-name-${canvas.uuid}`);
-      tdName.innerHTML = `<span class="component-badge component-badge--sm" data-ref="badge-name-${canvas.uuid}">${escapeHtml(canvas.name)}</span>`;
-
-      const tdDimensions = document.createElement('td');
-      tdDimensions.setAttribute('data-ref', `cell-dimensions-${canvas.uuid}`);
-      tdDimensions.innerHTML = `<span class="component-badge component-badge--sm" data-ref="badge-dimensions-${canvas.uuid}">${canvas.width} × ${canvas.height} px</span>`;
-
-      const tdDeletedDate = document.createElement('td');
-      tdDeletedDate.setAttribute('data-ref', `cell-deleted-date-${canvas.uuid}`);
-      tdDeletedDate.innerHTML = `<span class="component-badge component-badge--sm" data-ref="badge-deleted-date-${canvas.uuid}">${escapeHtml(formatDate(canvas.deleted_at))}</span>`;
-
-      const tdExpires = document.createElement('td');
-      tdExpires.setAttribute('data-ref', `cell-expires-${canvas.uuid}`);
-      tdExpires.innerHTML = `<span class="component-badge component-badge--sm" data-ref="badge-expires-${canvas.uuid}">${escapeHtml(getRemainingDays(canvas.deleted_at))}</span>`;
-
-      const tdActions = document.createElement('td');
-      tdActions.setAttribute('data-ref', `cell-actions-${canvas.uuid}`);
-
-      const actionsWrapper = document.createElement('div');
-      actionsWrapper.style.display = 'inline-flex';
-      actionsWrapper.style.gap = '6px';
-      actionsWrapper.style.justifyContent = 'flex-start';
-
-      const btnRestore = document.createElement('button');
-      btnRestore.type = 'button';
-      btnRestore.className = 'btn btn--h34 btn--icon';
-      btnRestore.setAttribute('data-tooltip', t('trash.btn_restore') || 'Restaurar');
-      btnRestore.setAttribute('aria-label', t('trash.btn_restore') || 'Restaurar');
-      btnRestore.innerHTML = '<span class="material-symbols-rounded">restore_from_trash</span>';
-      btnRestore.addEventListener('click', (e) => {
-        e.stopPropagation();
-        void this.handleRestoreSingle(canvas);
-      }, { signal: this.abortController.signal });
-
-      const btnDeletePermanent = document.createElement('button');
-      btnDeletePermanent.type = 'button';
-      btnDeletePermanent.className = 'btn btn--h34 btn--danger btn--icon';
-      btnDeletePermanent.setAttribute('data-tooltip', t('trash.btn_delete_forever') || 'Eliminar definitivamente');
-      btnDeletePermanent.setAttribute('aria-label', t('trash.btn_delete_forever') || 'Eliminar definitivamente');
-      btnDeletePermanent.innerHTML = '<span class="material-symbols-rounded">delete_forever</span>';
-      btnDeletePermanent.addEventListener('click', (e) => {
-        e.stopPropagation();
-        void this.handleDeleteForeverSingle(canvas);
-      }, { signal: this.abortController.signal });
-
-      actionsWrapper.appendChild(btnRestore);
-      actionsWrapper.appendChild(btnDeletePermanent);
-      tdActions.appendChild(actionsWrapper);
-
-      tr.appendChild(tdName);
-      tr.appendChild(tdDimensions);
-      tr.appendChild(tdDeletedDate);
-      tr.appendChild(tdExpires);
-      tr.appendChild(tdActions);
-
-      tr.addEventListener('click', () => {
-        if (this.selectedUuids.has(canvas.uuid)) {
-          this.selectedUuids.delete(canvas.uuid);
-        } else {
-          this.selectedUuids.add(canvas.uuid);
-        }
-        this.updateSelectionUi();
-      }, { signal: this.abortController.signal });
-
-      this.tbodyEl.appendChild(tr);
+      const cardEl = this.createCardElement(canvas);
+      this.gridEl.appendChild(cardEl);
     }
 
     this.updateSelectionUi();
     renderIcons(this.container);
   }
 
-  private updateSelectionUi(): void {
-    const totalSelected = this.selectedUuids.size;
+  private createCardElement(canvas: CanvasItem): HTMLElement {
+    const card = document.createElement('div');
+    card.className = 'canvas-card';
+    card.setAttribute('data-ref', `canvas-card-${canvas.uuid}`);
+    card.setAttribute('data-uuid', canvas.uuid);
 
-    if (totalSelected === 0) {
-      if (this.defaultActions) this.defaultActions.style.display = 'flex';
-      if (this.selectedActions) this.selectedActions.style.display = 'none';
-    } else {
-      if (this.defaultActions) this.defaultActions.style.display = 'none';
-      if (this.selectedActions) this.selectedActions.style.display = 'flex';
+    const remainingDays = getRemainingDays(canvas.deleted_at);
+    const thumbnailHtml = canvas.preview_thumbnail
+      ? `<img class="canvas-card__image image-lazy-fade" src="${escapeHtml(canvas.preview_thumbnail)}" alt="${escapeHtml(canvas.name)}" loading="lazy" decoding="async" onload="this.classList.add('image-loaded')" onerror="this.onerror=null; this.classList.add('image-loaded');" />`
+      : `<div class="canvas-card__canvas-placeholder"></div>`;
+
+    card.innerHTML = `
+      ${thumbnailHtml}
+
+      <button type="button" class="canvas-card__checkbox" data-ref="card-checkbox" aria-label="Seleccionar">
+        <span class="material-symbols-rounded">check</span>
+      </button>
+
+      <div class="canvas-card__badges-tl" data-ref="badges-tl">
+        <div class="canvas-card__badge canvas-card__badge--glass">
+          <span class="material-symbols-rounded">straighten</span>
+          <span>${canvas.width} × ${canvas.height} px</span>
+        </div>
+      </div>
+
+      <div class="canvas-card__badges-tr" data-ref="badges-tr">
+        <div class="canvas-card__badge canvas-card__badge--glass" data-tooltip="Eliminado el: ${escapeHtml(formatDate(canvas.deleted_at))}" aria-label="${remainingDays}">
+          <span class="material-symbols-rounded">auto_delete</span>
+          <span>${escapeHtml(remainingDays)}</span>
+        </div>
+      </div>
+
+      <div class="canvas-card__actions-wrapper" data-ref="card-actions-wrapper">
+        <div class="canvas-card__actions" data-ref="card-actions">
+          <button type="button" class="canvas-card__action-btn" data-ref="btn-card-restore" data-tooltip="${t('trash.btn_restore') || 'Restaurar'}" aria-label="${t('trash.btn_restore') || 'Restaurar'}">
+            <span class="material-symbols-rounded">restore_from_trash</span>
+          </button>
+          <button type="button" class="canvas-card__action-btn canvas-card__action-btn--danger" data-ref="btn-card-delete-forever" data-tooltip="${t('trash.btn_delete_forever') || 'Eliminar definitivamente'}" aria-label="${t('trash.btn_delete_forever') || 'Eliminar definitivamente'}">
+            <span class="material-symbols-rounded">delete_forever</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="canvas-card__bottom" data-ref="canvas-bottom">
+        <div class="canvas-card__badge canvas-card__badge--glass canvas-card__badge--title" data-ref="canvas-title-badge">
+          <span class="canvas-card__title" data-ref="canvas-title" title="${escapeHtml(canvas.name)}">
+            ${escapeHtml(canvas.name)}
+          </span>
+        </div>
+      </div>
+    `;
+
+    if (this.selectedUuids.has(canvas.uuid)) {
+      card.classList.add('is-selected');
     }
 
-    const rows = this.tbodyEl?.querySelectorAll<HTMLTableRowElement>('tr[data-uuid]');
-    rows?.forEach((row) => {
-      const uuid = row.getAttribute('data-uuid');
-      if (!uuid) return;
-      const isSelected = this.selectedUuids.has(uuid);
-      row.classList.toggle('is-selected', isSelected);
-    });
+    const checkbox = card.querySelector<HTMLButtonElement>('[data-ref="card-checkbox"]');
+    checkbox?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.toggleCardSelection(canvas.uuid);
+    }, { signal: this.abortController.signal });
+
+    const btnRestore = card.querySelector<HTMLButtonElement>('[data-ref="btn-card-restore"]');
+    btnRestore?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      void this.handleRestoreSingle(canvas);
+    }, { signal: this.abortController.signal });
+
+    const btnDeleteForever = card.querySelector<HTMLButtonElement>('[data-ref="btn-card-delete-forever"]');
+    btnDeleteForever?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.handleDeleteForeverSingle(canvas);
+    }, { signal: this.abortController.signal });
+
+    card.addEventListener('click', (e) => {
+      if (this.didDrag) return;
+      const target = e.target as HTMLElement | null;
+      if (target?.closest('button, [data-ref="card-actions-wrapper"]')) {
+        return;
+      }
+      this.toggleCardSelection(canvas.uuid);
+    }, { signal: this.abortController.signal });
+
+    return card;
   }
 
   private async handleRestoreSingle(canvas: CanvasItem): Promise<void> {

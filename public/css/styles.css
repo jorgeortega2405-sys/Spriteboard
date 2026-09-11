@@ -574,6 +574,20 @@ html.dark-theme .component-top::after {
   max-width: 265px;
 }
 
+.menu-panel--w-425 {
+  width: 425px;
+  min-width: 425px;
+  max-width: 425px;
+}
+
+@media (max-width: 489px) {
+  .menu-panel--w-425 {
+    width: calc(100vw - 24px);
+    min-width: calc(100vw - 24px);
+    max-width: calc(100vw - 24px);
+  }
+}
+
 .menu-panel--w-465,
 .settings-dropdown-wrapper .menu-panel--dropdown.menu-panel--w-465 {
   width: 465px;
@@ -605,6 +619,21 @@ html.dark-theme .component-top::after {
   height: auto;
 }
 
+.menu-panel--h-625 {
+  height: 625px;
+  min-height: 625px;
+  max-height: 625px;
+}
+
+@media (max-height: 700px), (max-width: 768px) {
+  .menu-panel--h-625 {
+    height: auto;
+    min-height: 320px;
+    max-height: calc(100vh - 56px);
+    max-height: calc(100dvh - env(safe-area-inset-top, 0px) - 56px);
+  }
+}
+
 /* Modificador de Posicionamiento: Sidebar */
 .menu-panel--sidebar,
 .module-sidebar {
@@ -627,7 +656,8 @@ html.dark-theme .component-top::after {
 
 /* Backdrop contenedor para el menú de avatar (desktop: sin alteración de layout) */
 .avatar-dropdown-backdrop,
-.dropdown-backdrop {
+.dropdown-backdrop,
+.notifications-dropdown-backdrop {
   display: contents;
 }
 
@@ -659,7 +689,8 @@ html.dark-theme .component-top::after {
   display: flex;
 }
 
-.avatar-dropdown-container {
+.avatar-dropdown-container,
+.notifications-dropdown-container {
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -724,6 +755,92 @@ html.dark-theme .component-top::after {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Panel de Notificaciones */
+.notifications-panel {
+  display: none;
+  flex-direction: column;
+}
+
+.notifications-panel.is-open {
+  display: flex;
+}
+
+.notifications-panel__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px;
+  border-bottom: 1px solid var(--divider-color);
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 48px;
+}
+
+.notifications-panel__top-left {
+  display: flex;
+  align-items: center;
+  padding-left: 4px;
+}
+
+.notifications-panel__title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.notifications-panel__top-right {
+  display: flex;
+  align-items: center;
+  padding-right: 4px;
+}
+
+.notifications-panel__mark-read {
+  font-size: 13px;
+  padding: 4px 6px;
+}
+
+.notifications-panel__bottom {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 24px 16px;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.notifications-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 16px;
+  user-select: none;
+}
+
+.notifications-empty__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notifications-empty__svg {
+  width: 80px;
+  height: 80px;
+}
+
+.notifications-empty__title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  max-width: 280px;
 }
 
 /* ==========================================================================
@@ -1885,7 +2002,8 @@ body[data-theme="dark"] .login-logo-img {
      - Animación fluida de apertura y cierre
   */
   .avatar-dropdown-backdrop,
-  .dropdown-backdrop {
+  .dropdown-backdrop,
+  .notifications-dropdown-backdrop {
     display: none;
     position: fixed;
     top: 0;
@@ -1906,7 +2024,8 @@ body[data-theme="dark"] .login-logo-img {
   }
 
   .avatar-dropdown-backdrop.is-open,
-  .dropdown-backdrop.is-open {
+  .dropdown-backdrop.is-open,
+  .notifications-dropdown-backdrop.is-open {
     display: flex;
   }
 
@@ -5875,6 +5994,12 @@ html.dark-theme .component-card-button--downgrade {
   outline: 2px solid #000000;
 }
 
+.canvas-card.is-dragging {
+  opacity: 0.45;
+  transform: scale(0.97);
+  cursor: grabbing;
+}
+
 .canvas-card__checkbox {
   position: absolute;
   top: 10px;
@@ -5886,9 +6011,7 @@ html.dark-theme .component-card-button--downgrade {
   margin: 0;
   border-radius: 6px;
   border: 2px solid rgba(255, 255, 255, 0.6);
-  background-color: rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  background-color: rgba(18, 18, 22, 0.65);
   display: none;
   align-items: center;
   justify-content: center;
@@ -6077,6 +6200,11 @@ html.dark-theme .component-card-button--downgrade {
   height: 18px;
 }
 
+.canvas-card__action-btn--danger:hover {
+  background-color: var(--danger-subtle) !important;
+  color: var(--color-danger) !important;
+}
+
 .canvas-card .menu-panel--dropdown {
   position: absolute;
   width: 265px;
@@ -6119,9 +6247,7 @@ html.dark-theme .component-card-button--downgrade {
 }
 
 .canvas-card__badge--glass {
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(18, 18, 22, 0.78);
   border: 1px solid rgba(255, 255, 255, 0.15);
   color: #ffffff;
 }
@@ -6144,15 +6270,13 @@ html.dark-theme .component-card-button--downgrade {
 }
 
 .canvas-card__btn-sync {
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   font-size: 11px;
   font-weight: 600;
   gap: 4px;
   padding: 0 10px;
   border-radius: 20px;
   height: 26px;
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.95);
   color: #000000;
   border: none;
   cursor: pointer;
@@ -9543,6 +9667,70 @@ html[data-theme="dark"] .design-share-search-results,
   transition: color 0.2s ease;
 }
 
+/* Estado Drag & Drop para carpetas destino */
+.canvas-card--folder.is-drop-target {
+  outline: 2px dashed var(--color-brand) !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25) !important;
+  transform: translateY(-4px) scale(1.02);
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), outline 0.18s ease;
+}
+
+.canvas-card--folder.is-drop-target .folder-card__back {
+  transform: translateY(-8px);
+  color: var(--color-brand);
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), color 0.18s ease;
+}
+
+.canvas-card--folder.is-drop-target .folder-card__front {
+  background-color: var(--bg-surface-elevated);
+}
+
+.canvas-card--folder.is-drop-target .folder-card__icon-box {
+  color: var(--color-brand);
+  transform: scale(1.12);
+  transition: transform 0.18s ease, color 0.18s ease;
+}
+
+/* Drag Ghost badge para arrastre de cards */
+.canvas-drag-ghost {
+  position: fixed;
+  top: -9999px;
+  left: -9999px;
+  background-color: var(--text-primary);
+  color: var(--bg-surface);
+  border-radius: var(--radius-md);
+  padding: 6px 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--sl-font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+  z-index: 99999;
+}
+
+.canvas-drag-ghost .material-symbols-rounded {
+  font-size: 18px;
+}
+
+/* Feedback de Drop en migas de pan y botón volver */
+.breadcrumb-link.is-drop-target {
+  color: var(--color-brand) !important;
+  text-decoration: underline !important;
+  transform: scale(1.05);
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+
+.btn-back-home.is-drop-target {
+  background-color: var(--bg-surface-hover) !important;
+  outline: 2px dashed var(--color-brand) !important;
+  outline-offset: 1px !important;
+  transform: scale(1.05);
+  transition: transform 0.15s ease;
+}
 
 .move-folders-container {
   display: flex;
@@ -9664,7 +9852,7 @@ html[data-theme="dark"] .design-share-search-results,
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 18px;
+  font-size: 13px;
   font-weight: 600;
 }
 
@@ -9682,11 +9870,33 @@ html[data-theme="dark"] .design-share-search-results,
 
 .breadcrumb-separator {
   color: var(--text-secondary);
-  font-size: 18px;
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .breadcrumb-current {
   color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 320px;
+}
+
+.folder-title-prefix {
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  margin-right: 6px;
+}
+
+.folder-title-name {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

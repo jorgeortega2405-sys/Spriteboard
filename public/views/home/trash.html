@@ -16,16 +16,6 @@
             <span class="material-symbols-rounded">delete_sweep</span>
           </button>
         </div>
-
-        <!-- Acciones contextuales al seleccionar items -->
-        <div class="component-top-actions" data-ref="trash-selected-actions" style="display: none;">
-          <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-action-restore" data-tooltip="Restaurar" aria-label="Restaurar">
-            <span class="material-symbols-rounded">restore_from_trash</span>
-          </button>
-          <button type="button" class="btn btn--h40 btn--danger btn--icon" data-ref="btn-action-delete-forever" data-tooltip="Eliminar definitivamente" aria-label="Eliminar definitivamente">
-            <span class="material-symbols-rounded">delete_forever</span>
-          </button>
-        </div>
       </div>
 
       <!-- Toolbar de búsqueda flotante -->
@@ -46,21 +36,28 @@
 
     <!-- Component Bottom -->
     <div class="component-bottom component-bottom--no-padding" data-ref="component-bottom">
-      <div class="component-table-wrapper" data-ref="trash-table-wrapper">
-        <table class="component-table" data-ref="trash-table">
-          <thead class="component-table__head" data-ref="trash-thead">
-            <tr>
-              <th data-ref="th-name" data-i18n="trash.col_name">Lienzo</th>
-              <th data-ref="th-dimensions" data-i18n="trash.col_dimensions">Dimensiones</th>
-              <th data-ref="th-deleted-date" data-i18n="trash.col_deleted_date">Fecha de eliminación</th>
-              <th data-ref="th-expires" data-i18n="trash.col_expires">Eliminación definitiva</th>
-              <th data-ref="th-actions" data-i18n="trash.col_actions">Acciones</th>
-            </tr>
-          </thead>
-          <tbody class="component-table__body" data-ref="trash-tbody">
-            <!-- Filas inyectadas dinámicamente -->
-          </tbody>
-        </table>
+      <div class="layout-body layout-body--scrollable layout-scrollable" data-ref="trash-scrollable">
+        <div class="canvas-section" data-ref="canvas-section">
+          <div class="canvas-grid" data-ref="trash-grid"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="selection-toolbar is-hidden" data-ref="selection-toolbar">
+      <div class="selection-toolbar__left" data-ref="selection-toolbar-left">
+        <button type="button" class="btn btn--icon btn--h34 selection-toolbar__btn selection-toolbar__btn--close" data-ref="btn-selection-close" data-tooltip="Cancelar selección" aria-label="Cancelar selección">
+          <span class="material-symbols-rounded">close</span>
+        </button>
+        <span class="selection-toolbar__count" data-ref="selection-count">0 seleccionados</span>
+      </div>
+      <div class="selection-toolbar__divider" data-ref="selection-toolbar-divider"></div>
+      <div class="selection-toolbar__actions" data-ref="selection-toolbar-actions">
+        <button type="button" class="btn btn--icon btn--h34 selection-toolbar__btn" data-ref="btn-selection-restore" data-tooltip="Restaurar" aria-label="Restaurar">
+          <span class="material-symbols-rounded">restore_from_trash</span>
+        </button>
+        <button type="button" class="btn btn--icon btn--h34 btn--danger-hover selection-toolbar__btn" data-ref="btn-selection-delete-forever" data-tooltip="Eliminar definitivamente" aria-label="Eliminar definitivamente">
+          <span class="material-symbols-rounded">delete_forever</span>
+        </button>
       </div>
     </div>
   </div>

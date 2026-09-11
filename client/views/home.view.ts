@@ -6,7 +6,7 @@ import { createSidebar } from '../components/layout.component.js';
 import { openModal } from '../components/modal.component.js';
 import { openMoveCanvasModal } from '../components/move-canvas-modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
-import { currentUser, deleteApi, escapeHtml, getApi, postApi } from '../services/api.service.js';
+import { currentUser, deleteApi, escapeHtml, getApi, postApi, putApi } from '../services/api.service.js';
 import { getAllLocalCanvases, getLocalCanvasByUuid, markLocalCanvasAsSynced, removeLocalCanvas, saveLocalCanvas } from '../services/canvas-storage.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
@@ -44,10 +44,8 @@ class HomeController {
   private folders: FolderItem[] = [];
   private btnCreateFolder: HTMLElement | null = null;
   private homeTitle: HTMLElement | null = null;
-  private homeBreadcrumbs: HTMLElement | null = null;
-  private btnBackHome: HTMLElement | null = null;
-  private breadcrumbRoot: HTMLElement | null = null;
-  private breadcrumbFolderName: HTMLElement | null = null;
+  private folderTitleContainer: HTMLElement | null = null;
+  private folderTitleName: HTMLElement | null = null;
   private folderContextActions: HTMLElement | null = null;
   private btnFolderRename: HTMLElement | null = null;
   private btnFolderDelete: HTMLElement | null = null;
@@ -68,6 +66,7 @@ class HomeController {
   private dragInitialSelection = new Set<string>();
   private isShiftDrag = false;
   private didDrag = false;
+  private currentDraggedUuids: string[] = [];
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -88,10 +87,8 @@ class HomeController {
     this.btnCreateFolder = this.container.querySelector<HTMLElement>('[data-ref="btn-create-folder"]');
 
     this.homeTitle = this.container.querySelector<HTMLElement>('[data-ref="home-title"]');
-    this.homeBreadcrumbs = this.container.querySelector<HTMLElement>('[data-ref="home-breadcrumbs"]');
-    this.btnBackHome = this.container.querySelector<HTMLElement>('[data-ref="btn-back-home"]');
-    this.breadcrumbRoot = this.container.querySelector<HTMLElement>('[data-ref="breadcrumb-root"]');
-    this.breadcrumbFolderName = this.container.querySelector<HTMLElement>('[data-ref="breadcrumb-folder-name"]');
+    this.folderTitleContainer = this.container.querySelector<HTMLElement>('[data-ref="folder-title-container"]');
+    this.folderTitleName = this.container.querySelector<HTMLElement>('[data-ref="folder-title-name"]');
     this.folderContextActions = this.container.querySelector<HTMLElement>('[data-ref="folder-context-actions"]');
     this.btnFolderRename = this.container.querySelector<HTMLElement>('[data-ref="btn-folder-rename"]');
     this.btnFolderDelete = this.container.querySelector<HTMLElement>('[data-ref="btn-folder-delete"]');
@@ -113,6 +110,7 @@ class HomeController {
     document.body.appendChild(this.marqueeEl);
 
     this.bindEvents();
+    this.setupNavDropTargets();
 
     if (initialFolderUuid) {
       await this.openFolder(initialFolderUuid, false);
@@ -179,23 +177,6 @@ class HomeController {
       { signal }
     );
 
-    this.btnBackHome?.addEventListener(
-      'click',
-      (e) => {
-        e.preventDefault();
-        void this.exitFolder();
-      },
-      { signal }
-    );
-
-    this.breadcrumbRoot?.addEventListener(
-      'click',
-      (e) => {
-        e.preventDefault();
-        void this.exitFolder();
-      },
-      { signal }
-    );
 
     this.btnFolderRename?.addEventListener(
       'click',
@@ -204,8 +185,8 @@ class HomeController {
           openRenameFolderModal(this.currentFolder, {
             onSuccess: (updated) => {
               this.currentFolder = updated;
-              if (this.breadcrumbFolderName) {
-                this.breadcrumbFolderName.textContent = updated.name;
+              if (this.folderTitleName) {
+                this.folderTitleName.textContent = updated.name;
               }
               const idx = this.folders.findIndex((f) => f.uuid === updated.uuid);
               if (idx !== -1) {
@@ -929,6 +910,66 @@ class HomeController {
       await this.handleSyncCanvas(canvas, card, btnSync);
     });
 
+    card.setAttribute('draggable', 'true');
+
+    card.addEventListener('dragstart', (e) => {
+      const target = e.target as HTMLElement | null;
+      if (target?.closest('button, [data-ref="card-actions-wrapper"]')) {
+        e.preventDefault();
+        return;
+      }
+
+      if (!this.selectedUuids.has(canvas.uuid)) {
+        this.selectedUuids = new Set([canvas.uuid]);
+        this.updateSelectionUi();
+      }
+
+      this.currentDraggedUuids = Array.from(this.selectedUuids);
+
+      if (e.dataTransfer) {
+        e.dataTransfer.setData('text/plain', JSON.stringify(this.currentDraggedUuids));
+        e.dataTransfer.effectAllowed = 'move';
+
+        const ghost = document.createElement('div');
+        ghost.className = 'canvas-drag-ghost';
+        const count = this.currentDraggedUuids.length;
+        const label =
+          count === 1
+            ? t('canvas.drag_ghost_one') || 'Mover lienzo'
+            : t('canvas.drag_ghost_many', { count }) || `Mover ${count} lienzos`;
+        ghost.innerHTML = `<span class="material-symbols-rounded">layers</span><span>${label}</span>`;
+        document.body.appendChild(ghost);
+        e.dataTransfer.setDragImage(ghost, 20, 20);
+        requestAnimationFrame(() => {
+          ghost.remove();
+        });
+      }
+
+      requestAnimationFrame(() => {
+        this.currentDraggedUuids.forEach((uuid) => {
+          const cEl = this.gridEl?.querySelector<HTMLElement>(`[data-ref="canvas-card-${uuid}"]`);
+          cEl?.classList.add('is-dragging');
+        });
+      });
+    });
+
+    card.addEventListener('dragend', () => {
+      this.currentDraggedUuids = [];
+      this.didDrag = true;
+      setTimeout(() => {
+        this.didDrag = false;
+      }, 100);
+
+      this.gridEl?.querySelectorAll('.canvas-card.is-dragging').forEach((el) => {
+        el.classList.remove('is-dragging');
+      });
+      this.gridEl?.querySelectorAll('.canvas-card--folder.is-drop-target').forEach((el) => {
+        el.classList.remove('is-drop-target');
+      });
+      const navHome = this.container.querySelector<HTMLElement>('[data-ref="btn-nav-home"]');
+      navHome?.classList.remove('is-drop-target');
+    });
+
     card.addEventListener('click', () => {
       if (this.didDrag) return;
       if (this.selectedUuids.size > 0) {
@@ -1123,6 +1164,49 @@ class HomeController {
       e.stopPropagation();
     });
 
+    card.addEventListener('dragenter', (e) => {
+      e.preventDefault();
+      if (this.currentDraggedUuids.length > 0) {
+        card.classList.add('is-drop-target');
+      }
+    });
+
+    card.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      if (this.currentDraggedUuids.length > 0 && e.dataTransfer) {
+        e.dataTransfer.dropEffect = 'move';
+        if (!card.classList.contains('is-drop-target')) {
+          card.classList.add('is-drop-target');
+        }
+      }
+    });
+
+    card.addEventListener('dragleave', (e) => {
+      const related = e.relatedTarget as Node | null;
+      if (!card.contains(related)) {
+        card.classList.remove('is-drop-target');
+      }
+    });
+
+    card.addEventListener('drop', (e) => {
+      e.preventDefault();
+      this.didDrag = true;
+      setTimeout(() => {
+        this.didDrag = false;
+      }, 150);
+      card.classList.remove('is-drop-target');
+      let uuids = this.currentDraggedUuids;
+      if (!uuids || uuids.length === 0) {
+        try {
+          const raw = e.dataTransfer?.getData('text/plain');
+          if (raw) uuids = JSON.parse(raw);
+        } catch {}
+      }
+      if (uuids && uuids.length > 0) {
+        void this.moveCanvasesToFolder(uuids, folder);
+      }
+    });
+
     card.addEventListener('click', () => {
       if (this.didDrag) return;
       this.closeAllDropdowns();
@@ -1175,7 +1259,8 @@ class HomeController {
     }
 
     if (this.homeTitle) this.homeTitle.style.display = 'none';
-    if (this.homeBreadcrumbs) this.homeBreadcrumbs.style.display = 'flex';
+    if (this.folderTitleContainer) this.folderTitleContainer.style.display = 'flex';
+    if (this.btnCreateFolder) this.btnCreateFolder.style.display = 'none';
     if (this.folderContextActions) this.folderContextActions.style.display = 'flex';
 
     if (this.gridEl) {
@@ -1193,8 +1278,8 @@ class HomeController {
 
       const data = await res.json();
       this.currentFolder = data.folder;
-      if (this.breadcrumbFolderName) {
-        this.breadcrumbFolderName.textContent = data.folder.name;
+      if (this.folderTitleName) {
+        this.folderTitleName.textContent = data.folder.name;
       }
 
       this.allCanvases = Array.isArray(data.canvases) ? data.canvases : [];
@@ -1214,8 +1299,9 @@ class HomeController {
       window.history.pushState({}, '', '/');
     }
 
-    if (this.homeTitle) this.homeTitle.style.display = 'block';
-    if (this.homeBreadcrumbs) this.homeBreadcrumbs.style.display = 'none';
+    if (this.homeTitle) this.homeTitle.style.display = '';
+    if (this.folderTitleContainer) this.folderTitleContainer.style.display = 'none';
+    if (this.btnCreateFolder) this.btnCreateFolder.style.display = '';
     if (this.folderContextActions) this.folderContextActions.style.display = 'none';
 
     await this.loadAll();
@@ -1315,7 +1401,7 @@ class HomeController {
     const target = e.target as HTMLElement | null;
     if (
       target?.closest(
-        'button, a, input, [data-ref="card-menu-dropdown"], [data-ref="folder-menu-dropdown"], [data-ref="selection-toolbar"], [data-ref="search-toolbar"], [data-ref="component-top"]'
+        '.canvas-card, button, a, input, [data-ref="card-menu-dropdown"], [data-ref="folder-menu-dropdown"], [data-ref="selection-toolbar"], [data-ref="search-toolbar"], [data-ref="component-top"]'
       )
     ) {
       return;
@@ -1541,6 +1627,155 @@ class HomeController {
         }
       },
     });
+  }
+
+  private setupNavDropTargets(): void {
+    const setupTarget = (el: HTMLElement | null) => {
+      if (!el) return;
+      const { signal } = this.abortController;
+
+      el.addEventListener(
+        'dragenter',
+        (e) => {
+          e.preventDefault();
+          if (this.currentFolderUuid && this.currentDraggedUuids.length > 0) {
+            el.classList.add('is-drop-target');
+          }
+        },
+        { signal }
+      );
+
+      el.addEventListener(
+        'dragover',
+        (e) => {
+          e.preventDefault();
+          if (this.currentFolderUuid && this.currentDraggedUuids.length > 0 && e.dataTransfer) {
+            e.dataTransfer.dropEffect = 'move';
+            if (!el.classList.contains('is-drop-target')) {
+              el.classList.add('is-drop-target');
+            }
+          }
+        },
+        { signal }
+      );
+
+      el.addEventListener(
+        'dragleave',
+        (e) => {
+          const related = e.relatedTarget as Node | null;
+          if (!el.contains(related)) {
+            el.classList.remove('is-drop-target');
+          }
+        },
+        { signal }
+      );
+
+      el.addEventListener(
+        'drop',
+        (e) => {
+          e.preventDefault();
+          this.didDrag = true;
+          setTimeout(() => {
+            this.didDrag = false;
+          }, 150);
+          el.classList.remove('is-drop-target');
+          if (!this.currentFolderUuid) return;
+
+          let uuids = this.currentDraggedUuids;
+          if (!uuids || uuids.length === 0) {
+            try {
+              const raw = e.dataTransfer?.getData('text/plain');
+              if (raw) uuids = JSON.parse(raw);
+            } catch {}
+          }
+          if (uuids && uuids.length > 0) {
+            void this.moveCanvasesToFolder(uuids, null);
+          }
+        },
+        { signal }
+      );
+    };
+
+    const navHome = this.container.querySelector<HTMLElement>('[data-ref="btn-nav-home"]');
+    setupTarget(navHome);
+  }
+
+  private async moveCanvasesToFolder(canvasUuids: string[], targetFolder: FolderItem | null): Promise<void> {
+    if (!currentUser) {
+      showToast(t('canvas.bookmark_login_required'), 'info');
+      return;
+    }
+
+    const canvasesToMove = this.allCanvases.filter((c) => canvasUuids.includes(c.uuid));
+    if (canvasesToMove.length === 0) return;
+
+    const targetFolderUuid = targetFolder?.uuid || null;
+    const filteredCanvases = canvasesToMove.filter((c) => (c.folder_uuid || null) !== targetFolderUuid);
+    if (filteredCanvases.length === 0) return;
+
+    try {
+      await Promise.all(
+        filteredCanvases.map(async (c) => {
+          if (c.is_local || !c.id) {
+            const fullCanvas = (await getLocalCanvasByUuid(c.uuid)) || c;
+            const syncRes = await postApi(API_ROUTES.canvases.sync, {
+              uuid: fullCanvas.uuid,
+              name: fullCanvas.name,
+              width: fullCanvas.width,
+              height: fullCanvas.height,
+              unit: fullCanvas.unit || 'px',
+              data: fullCanvas.data || null,
+              preview_thumbnail: fullCanvas.preview_thumbnail || null,
+            });
+            if (syncRes.ok) {
+              const data = await syncRes.json();
+              if (data?.canvas?.id) {
+                await markLocalCanvasAsSynced(c.uuid, data.canvas.id);
+                c.is_local = false;
+                c.id = data.canvas.id;
+              }
+            }
+          }
+
+          const res = await putApi(API_ROUTES.canvases.move(c.uuid), {
+            folder_uuid: targetFolderUuid,
+          });
+          if (!res.ok) {
+            let errMsg = t('canvas.folder_move_error');
+            try {
+              const data = await res.json();
+              if (data?.error) errMsg = data.error;
+            } catch {}
+            throw new Error(errMsg);
+          }
+        })
+      );
+
+      const count = filteredCanvases.length;
+      if (targetFolder) {
+        const msg =
+          count === 1
+            ? t('canvas.drag_drop_move_one', { name: targetFolder.name }) || `Lienzo movido a "${targetFolder.name}"`
+            : t('canvas.drag_drop_move_many', { count, name: targetFolder.name }) || `${count} lienzos movidos a "${targetFolder.name}"`;
+        showToast(msg, 'success');
+      } else {
+        const msg =
+          count === 1
+            ? t('canvas.drag_drop_move_root_one') || 'Lienzo movido a Mis proyectos'
+            : t('canvas.drag_drop_move_root_many', { count }) || `${count} lienzos movidos a Mis proyectos`;
+        showToast(msg, 'success');
+      }
+
+      this.clearSelection();
+
+      if (this.currentFolderUuid) {
+        await this.openFolder(this.currentFolderUuid, false);
+      } else {
+        await this.loadAll();
+      }
+    } catch {
+      showToast(t('canvas.folder_move_error') || 'Error al mover lienzos', 'danger');
+    }
   }
 
   private async handleBulkDuplicate(): Promise<void> {

@@ -41,7 +41,13 @@
     "search_placeholder": "Buscar lienzos, plantillas...",
     "search_tooltip": "Buscar",
     "user_profile_tooltip": "Perfil de usuario",
-    "help_tooltip": "Ayuda"
+    "help_tooltip": "Ayuda",
+    "notifications_tooltip": "Notificaciones"
+  },
+  "notifications": {
+    "title": "Notificaciones",
+    "mark_all_read": "Marcar todas como leídas",
+    "empty_title": "Aquí aparecerán tus notificaciones"
   },
   "chat": {
     "title": "Ayuda",
@@ -580,6 +586,7 @@
     "folder_move_current": "Ubicación actual",
     "folder_move_new_folder": "Crear nueva carpeta",
     "folder_back_home": "Volver a inicio",
+    "folder_viewing_prefix": "Consultando carpeta:",
     "bookmark_save": "Guardar en favoritos",
     "bookmark_remove": "Quitar de favoritos",
     "bookmark_saved": "Guardado en favoritos",
@@ -613,6 +620,12 @@
     "selection_delete_confirm_desc": "¿Estás seguro de que deseas mover los {count} lienzos seleccionados a la papelera?",
     "selection_delete_submit": "Mover a la papelera",
     "selection_delete_success": "Lienzos movidos a la papelera",
+    "drag_drop_move_one": "Lienzo movido a \"{name}\"",
+    "drag_drop_move_many": "{count} lienzos movidos a \"{name}\"",
+    "drag_drop_move_root_one": "Lienzo movido a Mis proyectos",
+    "drag_drop_move_root_many": "{count} lienzos movidos a Mis proyectos",
+    "drag_ghost_one": "Mover lienzo",
+    "drag_ghost_many": "Mover {count} lienzos",
     "copy_link_success": "Enlace copiado al portapapeles",
     "copy_link_error": "No se pudo copiar el enlace",
     "design_back": "Volver a inicio",
