@@ -4,12 +4,33 @@ import { canvasPool, pool } from '../config/database.config.js';
 import { CreateTeamDto, Team, TeamMember, UpdateTeamDto } from '../types/team.types.js';
 import { logger } from './logger.service.js';
 import { createNotification } from './notification.service.js';
+import { getTierLimits } from './subscription.service.js';
 
 export async function createTeam(ownerId: number, dto: CreateTeamDto): Promise<Team> {
   const uuid = crypto.randomUUID();
   const name = dto.name.trim().slice(0, 100);
   const description = dto.description && dto.description.trim() ? dto.description.trim().slice(0, 255) : null;
   const color = dto.color && dto.color.trim() ? dto.color.trim().slice(0, 20) : '#6366f1';
+
+  const [uRows] = await pool.query<mysql.RowDataPacket[]>(
+    'SELECT subscription_tier FROM users WHERE id = ? LIMIT 1',
+    [ownerId]
+  );
+  const userTier = uRows[0]?.subscription_tier || 'free';
+  const tierLimits = getTierLimits(userTier);
+
+  if (tierLimits.maxTeams <= 0) {
+    throw new Error('La creación de equipos requiere una suscripción Pro o Negocios.');
+  }
+
+  const [existingTeams] = await pool.query<mysql.RowDataPacket[]>(
+    'SELECT COUNT(id) AS total FROM teams WHERE owner_id = ?',
+    [ownerId]
+  );
+  const ownedCount = Number(existingTeams[0]?.total || 0);
+  if (ownedCount >= tierLimits.maxTeams) {
+    throw new Error(`El plan Pro permite un máximo de ${tierLimits.maxTeams} equipo. Mejora a Negocios para crear equipos ilimitados.`);
+  }
 
   try {
     const [result] = await pool.execute<mysql.ResultSetHeader>(
@@ -221,6 +242,27 @@ export async function addTeamMember(
 
     if (team.owner_id !== currentUserId && adminRows.length === 0) {
       throw new Error('Solo administradores pueden invitar miembros al equipo.');
+    }
+
+    const [ownerRows] = await pool.query<mysql.RowDataPacket[]>(
+      'SELECT subscription_tier FROM users WHERE id = ? LIMIT 1',
+      [team.owner_id]
+    );
+    const ownerTier = ownerRows[0]?.subscription_tier || 'free';
+    const tierLimits = getTierLimits(ownerTier);
+
+    const [memberCountRows] = await pool.query<mysql.RowDataPacket[]>(
+      'SELECT COUNT(id) AS total FROM team_members WHERE team_id = ?',
+      [team.id]
+    );
+    const memberCount = Number(memberCountRows[0]?.total || 0);
+
+    const [alreadyMember] = await pool.query<mysql.RowDataPacket[]>(
+      'SELECT id FROM team_members WHERE team_id = ? AND user_id = ? LIMIT 1',
+      [team.id, targetUserId]
+    );
+    if (alreadyMember.length === 0 && memberCount >= tierLimits.maxTeamMembers) {
+      throw new Error(`El plan Pro permite un máximo de ${tierLimits.maxTeamMembers} miembros por equipo. Mejora a Negocios para miembros ilimitados.`);
     }
 
     const [userRows] = await pool.query<mysql.RowDataPacket[]>(

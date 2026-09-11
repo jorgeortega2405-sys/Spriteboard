@@ -3,8 +3,9 @@ import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import { updateActiveAccountInSession } from '../services/auth.service.js';
 import { logger } from '../services/logger.service.js';
 import { purchaseService } from '../services/purchase.service.js';
+import { getUserStorageUsage } from '../services/storage.service.js';
 import { stripeService } from '../services/stripe.service.js';
-import { subscriptionService } from '../services/subscription.service.js';
+import { getTierLimits, subscriptionService } from '../services/subscription.service.js';
 import { Request, Response } from 'express';
 
 export async function getSubscriptions(_req: Request, res: Response): Promise<void> {
@@ -147,11 +148,49 @@ export async function getBillingDetails(req: Request, res: Response): Promise<vo
     }
 
     const details = await stripeService.getSubscriptionDetails(user.id);
-    res.json({ success: true, ...details });
+    const storage = await getUserStorageUsage(user.id);
+    const limits = getTierLimits(user.subscription_tier);
+    res.json({ success: true, ...details, storage, limits });
   } catch (error) {
     logger.app.error('Error al obtener detalles de facturación', error);
     res.status(500).json({
       error: 'Ha ocurrido un error inesperado al consultar los detalles de facturación.',
+    });
+  }
+}
+
+export async function getSubscriptionLimits(req: Request, res: Response): Promise<void> {
+  try {
+    const user = getCurrentUser(req);
+    if (!user) {
+      res.status(401).json({ error: 'No autorizado.' });
+      return;
+    }
+
+    const limits = getTierLimits(user.subscription_tier);
+    res.json({ success: true, tier: user.subscription_tier, limits });
+  } catch (error) {
+    logger.app.error('Error al consultar límites de suscripción del usuario', error);
+    res.status(500).json({
+      error: 'Ha ocurrido un error inesperado al consultar los límites de suscripción.',
+    });
+  }
+}
+
+export async function getStorageUsage(req: Request, res: Response): Promise<void> {
+  try {
+    const user = getCurrentUser(req);
+    if (!user) {
+      res.status(401).json({ error: 'No autorizado.' });
+      return;
+    }
+
+    const storage = await getUserStorageUsage(user.id);
+    res.json({ success: true, storage });
+  } catch (error) {
+    logger.app.error('Error al consultar almacenamiento del usuario', error);
+    res.status(500).json({
+      error: 'Ha ocurrido un error inesperado al consultar el almacenamiento.',
     });
   }
 }

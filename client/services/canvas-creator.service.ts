@@ -1,4 +1,5 @@
 import { navigate } from '../app-router.js';
+import { openUpgradeModal } from '../components/upgrade-modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { currentUser, postApi } from './api.service.js';
 import { saveLocalCanvas } from './canvas-storage.service.js';
@@ -18,9 +19,19 @@ export interface CreateCanvasOptions {
 }
 
 export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise<void> {
-  const name = options.name.trim() || t('canvas.input_name_placeholder');
   const width = options.width;
   const height = options.height;
+
+  const userTier = (currentUser?.subscription_tier || 'free').toLowerCase();
+  const maxDim = userTier === 'business' || userTier === 'negocios' ? 4096 : (userTier === 'pro' ? 2048 : 1024);
+  if (width > maxDim || height > maxDim) {
+    const tierName = userTier === 'free' ? 'Gratis' : (userTier === 'pro' ? 'Pro' : 'Negocios');
+    showToast(`El tamaño (${width}×${height} px) supera el límite de tu plan ${tierName} (${maxDim}×${maxDim} px).`, 'warning');
+    openUpgradeModal(userTier === 'free' ? 'pro' : 'business');
+    return;
+  }
+
+  const name = options.name.trim() || t('canvas.input_name_placeholder');
   const bgType = options.bgType || 'transparent';
   const solidColor = options.solidColor || '#ffffff';
   const checkSize = options.checkSize || 16;

@@ -1,4 +1,4 @@
-import { cancelSubscriptionImmediate, createCheckout, createSetupIntent, deletePaymentMethod, getBillingDetails, getPaymentMethods, getPurchaseHistory, getSubscriptions, handleWebhook, setDefaultPaymentMethod, updateAutoRenewal, verifySession } from '../controllers/subscription.controller.js';
+import { cancelSubscriptionImmediate, createCheckout, createSetupIntent, deletePaymentMethod, getBillingDetails, getPaymentMethods, getPurchaseHistory, getStorageUsage, getSubscriptionLimits, getSubscriptions, handleWebhook, setDefaultPaymentMethod, updateAutoRenewal, verifySession } from '../controllers/subscription.controller.js';
 import { requireAuth } from '../middlewares/auth.middleware.js';
 import { Router } from 'express';
 
@@ -11,6 +11,8 @@ router.get('/subscriptions/verify-session', requireAuth, verifySession);
 router.get('/subscriptions/history', requireAuth, getPurchaseHistory);
 
 router.get('/subscriptions/details', requireAuth, getBillingDetails);
+router.get('/subscriptions/limits', requireAuth, getSubscriptionLimits);
+router.get('/subscriptions/storage', requireAuth, getStorageUsage);
 router.post('/subscriptions/auto-renewal', requireAuth, updateAutoRenewal);
 router.post('/subscriptions/cancel-immediate', requireAuth, cancelSubscriptionImmediate);
 

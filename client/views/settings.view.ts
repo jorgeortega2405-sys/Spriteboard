@@ -2,14 +2,14 @@ import { navigate, render } from '../app-router';
 import { createSidebar } from '../components/layout.component';
 import { open2FAModal, openModal } from '../components/modal.component';
 import { API_ROUTES } from '../config/api-routes';
-import { appConfig, cancelSubscriptionImmediateApi, checkAuthSession, clearUserState, createSetupIntentApi, currentUser, deleteApi, deletePaymentMethodApi, escapeHtml, getApi, getBillingDetailsApi, getPaymentMethodsApi, getPurchaseHistoryApi, logoutAllApi, postApi, postFormApi, setCurrentUser, setDefaultPaymentMethodApi, setLinkedAccounts, updateAutoRenewalApi } from '../services/api.service';
+import { appConfig, cancelSubscriptionImmediateApi, checkAuthSession, clearUserState, createSetupIntentApi, currentUser, deleteApi, deletePaymentMethodApi, escapeHtml, getApi, getBillingDetailsApi, getPaymentMethodsApi, getPurchaseHistoryApi, getStorageUsageApi, logoutAllApi, postApi, postFormApi, setCurrentUser, setDefaultPaymentMethodApi, setLinkedAccounts, updateAutoRenewalApi } from '../services/api.service';
 import { getCurrentLanguage, setLanguage, t, translateElement } from '../services/i18n.service';
 import { loadTemplate } from '../services/template.service';
 import { applyAccessibilityPreferences, initTheme, setTheme } from '../services/theme.service';
 import { setToastPreferences, showToast } from '../services/toast.service';
 import { closeWebSocket } from '../services/websocket.service';
 import { ModalInstance } from '../types/common.types';
-import { BillingDetailsResponse, PaymentMethod, PurchaseRecord } from '../types/subscription.types';
+import { BillingDetailsResponse, PaymentMethod, PurchaseRecord, StorageUsageInfo } from '../types/subscription.types';
 import { debounce, removeEmptyState, renderEmptyState, setupDropdown, setupPasswordToggle, withButtonLoading } from '../utils/dom.util';
 import { AVAILABLE_LANGUAGES, detectBrowserLanguage, getLanguageName } from '../utils/languages.util';
 import { validatePassword } from '../utils/validators.util';
@@ -1504,6 +1504,15 @@ export async function createBillingView(): Promise<HTMLElement> {
     groupPm?.classList.toggle('is-active');
   });
 
+  const accordionHeaderStorage = container.querySelector<HTMLElement>(
+    '[data-ref="accordion-header-storage"]'
+  );
+  const groupStorage = container.querySelector<HTMLElement>('[data-ref="group-storage-usage"]');
+  accordionHeaderStorage?.addEventListener('click', (e) => {
+    e.preventDefault();
+    groupStorage?.classList.toggle('is-active');
+  });
+
   const renderSubscriptionPlan = (info: BillingDetailsResponse) => {
     const planNameEl = container.querySelector<HTMLElement>('[data-ref="current-plan-name"]');
     const planStatusBadge = container.querySelector<HTMLElement>(
@@ -1641,16 +1650,128 @@ export async function createBillingView(): Promise<HTMLElement> {
     }
   };
 
+  const renderStorageUsage = (storage?: StorageUsageInfo) => {
+    if (!storage) return;
+
+    const usedLabel = container.querySelector<HTMLElement>('[data-ref="storage-used-label"]');
+    const limitLabel = container.querySelector<HTMLElement>('[data-ref="storage-limit-label"]');
+    const percentBadge = container.querySelector<HTMLElement>('[data-ref="storage-percent-badge"]');
+    const meterFill = container.querySelector<HTMLElement>('[data-ref="storage-meter-fill"]');
+    const meterTrack = container.querySelector<HTMLElement>('[data-ref="storage-meter-track"]');
+    const remainingText = container.querySelector<HTMLElement>('[data-ref="storage-remaining-text"]');
+    const btnStorageUpgrade = container.querySelector<HTMLElement>('[data-ref="btn-storage-upgrade"]');
+
+    if (usedLabel) usedLabel.textContent = storage.usedFormatted;
+    if (limitLabel) limitLabel.textContent = storage.limitFormatted;
+
+    if (percentBadge) {
+      percentBadge.textContent = `${storage.percentage}% en uso`;
+      if (storage.isOverLimit) {
+        percentBadge.className = 'component-badge component-badge--sm component-badge--danger';
+      } else if (storage.isNearLimit) {
+        percentBadge.className = 'component-badge component-badge--sm component-badge--warning';
+      } else {
+        percentBadge.className = 'component-badge component-badge--sm';
+      }
+    }
+
+    if (meterFill) {
+      meterFill.style.width = `${Math.min(100, Math.max(storage.percentage, storage.usedBytes > 0 ? 0.5 : 0))}%`;
+      meterFill.classList.remove('storage-meter__fill--warning', 'storage-meter__fill--danger');
+      if (storage.isOverLimit) {
+        meterFill.classList.add('storage-meter__fill--danger');
+      } else if (storage.isNearLimit) {
+        meterFill.classList.add('storage-meter__fill--warning');
+      }
+    }
+
+    if (meterTrack) {
+      meterTrack.setAttribute('aria-valuenow', String(storage.percentage));
+    }
+
+    if (remainingText) {
+      if (storage.isOverLimit) {
+        remainingText.textContent = t('settings.billing.storage_over_limit') || 'Has alcanzado el límite de almacenamiento de tu plan.';
+      } else {
+        remainingText.textContent = t('settings.billing.storage_remaining_label', { amount: storage.remainingFormatted }) || `Te quedan ${storage.remainingFormatted} de espacio disponible`;
+      }
+    }
+
+    if (btnStorageUpgrade) {
+      if (storage.tier === 'business') {
+        btnStorageUpgrade.textContent = t('settings.billing.tier_business_badge') || 'Plan Negocios (1 TB)';
+        btnStorageUpgrade.onclick = (e) => {
+          e.preventDefault();
+          navigate('/upgrade');
+        };
+      } else {
+        btnStorageUpgrade.textContent = t('settings.billing.btn_increase_storage') || 'Aumentar almacenamiento';
+        btnStorageUpgrade.onclick = (e) => {
+          e.preventDefault();
+          navigate('/upgrade');
+        };
+      }
+    }
+
+    const canvasesSizeEl = container.querySelector<HTMLElement>('[data-ref="storage-canvases-size"]');
+    const canvasesCountEl = container.querySelector<HTMLElement>('[data-ref="storage-canvases-count"]');
+    if (canvasesSizeEl) canvasesSizeEl.textContent = storage.breakdown.canvases.formatted;
+    if (canvasesCountEl) {
+      const count = storage.breakdown.canvases.count || 0;
+      canvasesCountEl.textContent = `${count} ${count === 1 ? 'proyecto' : 'proyectos'}`;
+    }
+
+    const snapshotsSizeEl = container.querySelector<HTMLElement>('[data-ref="storage-snapshots-size"]');
+    const snapshotsCountEl = container.querySelector<HTMLElement>('[data-ref="storage-snapshots-count"]');
+    if (snapshotsSizeEl) snapshotsSizeEl.textContent = storage.breakdown.snapshots.formatted;
+    if (snapshotsCountEl) {
+      const count = storage.breakdown.snapshots.count || 0;
+      snapshotsCountEl.textContent = `${count} ${count === 1 ? 'versión' : 'versiones'}`;
+    }
+
+    const trashSizeEl = container.querySelector<HTMLElement>('[data-ref="storage-trash-size"]');
+    const trashCountEl = container.querySelector<HTMLElement>('[data-ref="storage-trash-count"]');
+    if (trashSizeEl) trashSizeEl.textContent = storage.breakdown.trash.formatted;
+    if (trashCountEl) {
+      const count = storage.breakdown.trash.count || 0;
+      trashCountEl.textContent = `${count} ${count === 1 ? 'elemento' : 'elementos'}`;
+    }
+
+    const uploadsSizeEl = container.querySelector<HTMLElement>('[data-ref="storage-uploads-size"]');
+    const uploadsCountEl = container.querySelector<HTMLElement>('[data-ref="storage-uploads-count"]');
+    if (uploadsSizeEl) uploadsSizeEl.textContent = storage.breakdown.uploads.formatted;
+    if (uploadsCountEl) {
+      const count = storage.breakdown.uploads.count || 0;
+      uploadsCountEl.textContent = `${count} ${count === 1 ? 'archivo' : 'archivos'}`;
+    }
+  };
+
   const loadBillingData = async () => {
     try {
       const res = await getBillingDetailsApi();
       if (res.success) {
         renderSubscriptionPlan(res);
+        if (res.storage) {
+          renderStorageUsage(res.storage);
+        } else {
+          const storageRes = await getStorageUsageApi();
+          if (storageRes.success && storageRes.storage) {
+            renderStorageUsage(storageRes.storage);
+          }
+        }
       } else {
         renderSubscriptionPlan({ success: false, hasSubscription: false });
+        const storageRes = await getStorageUsageApi();
+        if (storageRes.success && storageRes.storage) {
+          renderStorageUsage(storageRes.storage);
+        }
       }
     } catch {
       renderSubscriptionPlan({ success: false, hasSubscription: false });
+      const storageRes = await getStorageUsageApi();
+      if (storageRes.success && storageRes.storage) {
+        renderStorageUsage(storageRes.storage);
+      }
     }
   };
 

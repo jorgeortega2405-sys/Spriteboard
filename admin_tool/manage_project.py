@@ -77,6 +77,23 @@ KNOWN_DYNAMIC_ICONS = {
     "expand_more",
     "person",
     "home",
+    "star_fill",
+    "chat_bubble_outline",
+    "add_comment",
+    "add_reaction",
+    "alternate_email",
+    "sticky_note_2",
+    "add_photo_alternate",
+    "format_bold",
+    "schedule",
+    "mood",
+    "pets",
+    "restaurant",
+    "directions_car",
+    "sports_soccer",
+    "lightbulb",
+    "favorite",
+    "flag",
 }
 
 ICON_PATTERNS = [
@@ -144,10 +161,15 @@ def download_icon_svg(icon_name: str, cache_dir: Path, force: bool = False) -> T
         except Exception:
             pass
 
-    urls = [
+    urls = []
+    if icon_name.endswith("_fill"):
+        base_name = icon_name[:-5]
+        urls.append(f"https://fonts.gstatic.com/s/i/short-term/release/materialsymbolsrounded/{base_name}/fill1/24px.svg")
+
+    urls.extend([
         GOOGLE_FONTS_SVG_URL.format(icon=icon_name),
         GITHUB_RAW_SVG_URL.format(icon=icon_name),
-    ]
+    ])
 
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) SpriteboardIconManager/1.0",

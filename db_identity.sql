@@ -141,6 +141,8 @@ CREATE TABLE IF NOT EXISTS canvases (
     width INT NOT NULL DEFAULT 1920,
     height INT NOT NULL DEFAULT 1080,
     unit VARCHAR(20) NOT NULL DEFAULT 'px',
+    size_bytes INT NOT NULL DEFAULT 0,
+    compressed_bytes INT NOT NULL DEFAULT 0,
     data JSON NULL,
     preview_thumbnail MEDIUMTEXT NULL,
     access_level ENUM('private', 'public') NOT NULL DEFAULT 'private',

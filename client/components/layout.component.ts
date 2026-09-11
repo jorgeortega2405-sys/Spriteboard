@@ -1,7 +1,7 @@
 import { navigate, render } from '../app-router.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { currentUser, deleteApi, escapeHtml, getApi, linkedAccounts, logoutAllApi, logoutApi, patchApi, postApi, switchAccountApi } from '../services/api.service.js';
-import { renderIcons } from '../services/icon.service.js';
+import { createIconSvg, renderIcons } from '../services/icon.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
@@ -682,7 +682,7 @@ export async function createTopBar(): Promise<HTMLElement> {
               <span class="account-item__name" data-ref="account-name-${acc.id}">${escapeHtml(acc.username)}</span>
               <span class="account-item__email" data-ref="account-email-${acc.id}">${escapeHtml(acc.email || '')}</span>
             </div>
-            ${isActive ? '<span class="material-symbols-rounded account-item__check">check_circle</span>' : ''}
+            ${isActive ? createIconSvg('check_circle', 'account-item__check') : ''}
           `;
 
           const imgEl = item.querySelector<HTMLImageElement>('img');
@@ -718,6 +718,8 @@ export async function createTopBar(): Promise<HTMLElement> {
 
           accountSwitcherList.appendChild(item);
         });
+
+        renderIcons(accountSwitcherList);
 
         if (btnAddAccount) {
           btnAddAccount.style.display = accounts.length >= 5 ? 'none' : 'flex';

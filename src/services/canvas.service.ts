@@ -3,10 +3,12 @@ import { config } from '../config/env.config.js';
 import { redis } from '../config/redis.config.js';
 import { Canvas, CanvasMember, CanvasMetricsData, CanvasMetricViewer, CanvasRecentView, CreateCanvasDto, SearchUserResult, SyncCanvasDto } from '../types/canvas.types.js';
 import { CanvasTeam } from '../types/team.types.js';
-import { deleteCanvasBlob, hasCanvasBlob, readCanvasBlobDecompressed, saveCanvasBlob } from './canvas-storage-blob.service.js';
+import { deleteCanvasAllSnapshotsBlobs, deleteCanvasBlob, hasCanvasBlob, readCanvasBlobDecompressed, saveCanvasBlob } from './canvas-storage-blob.service.js';
 import { ensureDefaultFolder } from './folder.service.js';
 import { logger } from './logger.service.js';
 import { createNotification } from './notification.service.js';
+import { checkUserStorageQuota } from './storage.service.js';
+import { getTierLimits } from './subscription.service.js';
 import crypto from 'crypto';
 import mysql from 'mysql2/promise';
 
@@ -62,9 +64,29 @@ export async function createCanvas(userId: number, dto: CreateCanvasDto): Promis
   const dataStr = dto.data ? (typeof dto.data === 'string' ? dto.data : JSON.stringify(dto.data)) : null;
   const previewThumbnail = dto.preview_thumbnail !== undefined ? dto.preview_thumbnail : null;
 
+  const [uRows] = await pool.query<mysql.RowDataPacket[]>(
+    'SELECT subscription_tier FROM users WHERE id = ? LIMIT 1',
+    [userId]
+  );
+  const userTier = uRows[0]?.subscription_tier || 'free';
+  const tierLimits = getTierLimits(userTier);
+  if (width > tierLimits.maxCanvasDimension || height > tierLimits.maxCanvasDimension) {
+    throw new Error(`Las dimensiones del lienzo (${width}×${height} px) superan el límite permitido para tu plan (${tierLimits.maxCanvasDimension}×${tierLimits.maxCanvasDimension} px).`);
+  }
+
+  const approxBytes = dataStr ? Buffer.byteLength(dataStr, 'utf-8') : 1024;
+  const quota = await checkUserStorageQuota(userId, approxBytes);
+  if (!quota.allowed) {
+    throw new Error(`Has alcanzado el límite de almacenamiento de tu plan (${quota.limitFormatted}). Libera espacio o actualiza tu plan en Mejorar plan.`);
+  }
+
+  let sizeBytes = 0;
+  let compressedBytes = 0;
   if (dataStr) {
     try {
-      await saveCanvasBlob(uuid, dataStr);
+      const blobResult = await saveCanvasBlob(uuid, dataStr);
+      sizeBytes = blobResult.sizeBytes;
+      compressedBytes = blobResult.compressedBytes;
     } catch (blobErr) {
       logger.db.error(`Error al persistir blob inicial para ${uuid}`, blobErr);
     }
@@ -95,8 +117,8 @@ export async function createCanvas(userId: number, dto: CreateCanvasDto): Promis
   }
 
   const query = `
-    INSERT INTO canvases (uuid, user_id, folder_id, name, width, height, unit, access_level, public_role, short_code, data, preview_thumbnail)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO canvases (uuid, user_id, folder_id, name, width, height, unit, size_bytes, compressed_bytes, access_level, public_role, short_code, data, preview_thumbnail)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
   try {
@@ -108,6 +130,8 @@ export async function createCanvas(userId: number, dto: CreateCanvasDto): Promis
       width,
       height,
       unit,
+      sizeBytes,
+      compressedBytes,
       accessLevel,
       publicRole,
       shortCode,
@@ -431,9 +455,14 @@ export async function syncCanvas(userId: number | null, dto: SyncCanvasDto): Pro
   const accessLevel = dto.access_level;
 
   try {
+    let compressedBytes: number | null = null;
+    let sizeBytes: number | null = null;
+
     if (data) {
       try {
-        await saveCanvasBlob(uuid, data);
+        const blobResult = await saveCanvasBlob(uuid, data);
+        compressedBytes = blobResult.compressedBytes;
+        sizeBytes = blobResult.sizeBytes;
       } catch (blobErr) {
         logger.db.error(`Error al persistir blob para ${uuid}`, blobErr);
       }
@@ -487,13 +516,13 @@ export async function syncCanvas(userId: number | null, dto: SyncCanvasDto): Pro
 
       if (isOwner && (accessLevel || dto.public_role)) {
         await canvasPool.execute(
-          'UPDATE canvases SET name = ?, width = ?, height = ?, unit = ?, data = COALESCE(?, data), preview_thumbnail = COALESCE(?, preview_thumbnail), access_level = COALESCE(?, access_level), public_role = COALESCE(?, public_role) WHERE uuid = ?',
-          [name, width, height, unit, dbData, previewThumbnail, accessLevel || null, dto.public_role || null, uuid]
+          'UPDATE canvases SET name = ?, width = ?, height = ?, unit = ?, size_bytes = COALESCE(?, size_bytes), compressed_bytes = COALESCE(?, compressed_bytes), data = COALESCE(?, data), preview_thumbnail = COALESCE(?, preview_thumbnail), access_level = COALESCE(?, access_level), public_role = COALESCE(?, public_role) WHERE uuid = ?',
+          [name, width, height, unit, sizeBytes, compressedBytes, dbData, previewThumbnail, accessLevel || null, dto.public_role || null, uuid]
         );
       } else {
         await canvasPool.execute(
-          'UPDATE canvases SET name = ?, width = ?, height = ?, unit = ?, data = COALESCE(?, data), preview_thumbnail = COALESCE(?, preview_thumbnail) WHERE uuid = ?',
-          [name, width, height, unit, dbData, previewThumbnail, uuid]
+          'UPDATE canvases SET name = ?, width = ?, height = ?, unit = ?, size_bytes = COALESCE(?, size_bytes), compressed_bytes = COALESCE(?, compressed_bytes), data = COALESCE(?, data), preview_thumbnail = COALESCE(?, preview_thumbnail) WHERE uuid = ?',
+          [name, width, height, unit, sizeBytes, compressedBytes, dbData, previewThumbnail, uuid]
         );
       }
     } else {
@@ -504,11 +533,16 @@ export async function syncCanvas(userId: number | null, dto: SyncCanvasDto): Pro
         throw new Error('Debes iniciar sesión para crear un nuevo lienzo en la nube.');
       }
 
+      const quota = await checkUserStorageQuota(userId, compressedBytes || 1024);
+      if (!quota.allowed) {
+        throw new Error(`Has alcanzado el límite de almacenamiento de tu plan (${quota.limitFormatted}). Libera espacio o actualiza tu plan en Mejorar plan.`);
+      }
+
       const shortCode = generateShortCode();
       const publicRole = dto.public_role === 'viewer' ? 'viewer' : 'editor';
       await canvasPool.execute(
-        'INSERT INTO canvases (uuid, user_id, name, width, height, unit, access_level, public_role, short_code, data, preview_thumbnail) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [uuid, userId, name, width, height, unit, accessLevel || 'private', publicRole, shortCode, dbData, previewThumbnail]
+        'INSERT INTO canvases (uuid, user_id, name, width, height, unit, size_bytes, compressed_bytes, access_level, public_role, short_code, data, preview_thumbnail) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [uuid, userId, name, width, height, unit, sizeBytes || 0, compressedBytes || 0, accessLevel || 'private', publicRole, shortCode, dbData, previewThumbnail]
       );
     }
 
@@ -1016,6 +1050,7 @@ export async function permanentlyDeleteCanvas(uuid: string, userId: number): Pro
       await redis.del(`canvas:snapshot:${uuid}`);
       await redis.del(`canvas:meta:${uuid}`);
       await deleteCanvasBlob(uuid);
+      await deleteCanvasAllSnapshotsBlobs(uuid);
       await pool.execute("DELETE FROM user_favorites WHERE item_type = 'canvas' AND item_id = ?", [uuid]);
     } catch {}
     logger.db.info(`Lienzo ${uuid} eliminado permanentemente por el usuario ${userId}`);
@@ -1039,6 +1074,7 @@ export async function emptyTrash(userId: number): Promise<boolean> {
         await redis.del(`canvas:snapshot:${u}`);
         await redis.del(`canvas:meta:${u}`);
         await deleteCanvasBlob(u);
+        await deleteCanvasAllSnapshotsBlobs(u);
       } catch {}
     }
     logger.db.info(`Papelera vaciada para el usuario ${userId}`);
@@ -1093,9 +1129,19 @@ export async function duplicateCanvas(uuid: string, userId: number): Promise<Can
       fullData = typeof original.data === 'string' ? original.data : JSON.stringify(original.data);
     }
 
+    const approxBytes = fullData ? Buffer.byteLength(fullData, 'utf-8') : 1024;
+    const quota = await checkUserStorageQuota(userId, approxBytes);
+    if (!quota.allowed) {
+      throw new Error(`Has alcanzado el límite de almacenamiento de tu plan (${quota.limitFormatted}). Libera espacio o actualiza tu plan en Mejorar plan.`);
+    }
+
+    let sizeBytes = 0;
+    let compressedBytes = 0;
     if (fullData) {
       try {
-        await saveCanvasBlob(newUuid, fullData);
+        const blobResult = await saveCanvasBlob(newUuid, fullData);
+        sizeBytes = blobResult.sizeBytes;
+        compressedBytes = blobResult.compressedBytes;
       } catch (blobErr) {
         logger.db.error(`Error al duplicar blob para ${newUuid}`, blobErr);
       }
@@ -1106,9 +1152,9 @@ export async function duplicateCanvas(uuid: string, userId: number): Promise<Can
       : fullData;
 
     const [result] = await canvasPool.execute<mysql.ResultSetHeader>(
-      `INSERT INTO canvases (uuid, user_id, name, width, height, unit, access_level, short_code, data, preview_thumbnail)
-       VALUES (?, ?, ?, ?, ?, ?, 'private', ?, ?, ?)`,
-      [newUuid, userId, newName, original.width, original.height, original.unit, newShortCode, dbData, original.preview_thumbnail]
+      `INSERT INTO canvases (uuid, user_id, name, width, height, unit, size_bytes, compressed_bytes, access_level, short_code, data, preview_thumbnail)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'private', ?, ?, ?)`,
+      [newUuid, userId, newName, original.width, original.height, original.unit, sizeBytes, compressedBytes, newShortCode, dbData, original.preview_thumbnail]
     );
 
     logger.db.info(`Lienzo ${uuid} duplicado como ${newUuid} por usuario ${userId}`);

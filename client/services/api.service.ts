@@ -1,6 +1,6 @@
 import { API_ROUTES } from '../config/api-routes.js';
 import { LinkedAccount, User } from '../types/auth.types.js';
-import { BillingDetailsResponse, PaymentMethod, PurchaseRecord, SubscriptionPlan } from '../types/subscription.types.js';
+import { BillingDetailsResponse, PaymentMethod, PurchaseRecord, StorageUsageInfo, SubscriptionPlan } from '../types/subscription.types.js';
 
 export { API_ROUTES };
 
@@ -346,6 +346,16 @@ export async function verifySubscriptionSessionApi(sessionId: string): Promise<{
 export async function getBillingDetailsApi(): Promise<BillingDetailsResponse> {
   try {
     const res = await getApi(API_ROUTES.subscriptions.details);
+    const data = await res.json();
+    return { success: res.ok, ...data };
+  } catch {
+    return { success: false, error: 'Error de conexión con el servidor.' };
+  }
+}
+
+export async function getStorageUsageApi(): Promise<{ success: boolean; storage?: StorageUsageInfo; error?: string }> {
+  try {
+    const res = await getApi(API_ROUTES.subscriptions.storage);
     const data = await res.json();
     return { success: res.ok, ...data };
   } catch {

@@ -1,5 +1,5 @@
 import { API_ROUTES } from '../config/api-routes.js';
-import { escapeHtml, getApi } from '../services/api.service.js';
+import { currentUser, escapeHtml, getApi } from '../services/api.service.js';
 import { getLocalCanvasByUuid } from '../services/canvas-storage.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
@@ -7,6 +7,7 @@ import { showToast } from '../services/toast.service.js';
 import { CanvasItem } from '../types/canvas.types.js';
 import { setupDropdown } from '../utils/dom.util.js';
 import { encodeFramesToGif } from '../utils/gif-encoder.util.js';
+import { openUpgradeModal } from './upgrade-modal.component.js';
 
 function setIconUse(el: HTMLElement | null, iconName: string): void {
   if (!el) return;
@@ -29,6 +30,10 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
   let selectedType: 'png-current' | 'spritesheet' | 'spritesheet-atlas' | 'gif' | 'project-json' = 'png-current';
   let selectedScale = 1;
   let selectedBg: 'transparent' | 'solid' = 'transparent';
+
+  const userTier = (currentUser?.subscription_tier || 'free').toLowerCase();
+  const isProOrBusiness = userTier === 'pro' || userTier === 'business' || userTier === 'negocios';
+  const isBusiness = userTier === 'business' || userTier === 'negocios';
 
   const baseW = canvas.width || 800;
   const baseH = canvas.height || 600;
@@ -72,17 +77,20 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
                         <span class="material-symbols-rounded menu-item__icon">image</span>
                         <span class="menu-item__text">PNG (Fotograma actual)</span>
                       </button>
-                      <button type="button" class="menu-item" data-ref="btn-download-type-spritesheet" data-value="spritesheet">
+                      <button type="button" class="menu-item" data-ref="btn-download-type-spritesheet" data-value="spritesheet" data-required-tier="pro">
                         <span class="material-symbols-rounded menu-item__icon">grid_view</span>
                         <span class="menu-item__text">PNG (Hoja de sprites)</span>
+                        ${!isProOrBusiness ? '<span class="component-badge component-badge--xs component-badge--primary">PRO</span>' : ''}
                       </button>
-                      <button type="button" class="menu-item" data-ref="btn-download-type-atlas" data-value="spritesheet-atlas">
+                      <button type="button" class="menu-item" data-ref="btn-download-type-atlas" data-value="spritesheet-atlas" data-required-tier="business">
                         <span class="material-symbols-rounded menu-item__icon">sports_esports</span>
                         <span class="menu-item__text">Hoja de sprites + JSON (Game Atlas)</span>
+                        ${!isBusiness ? '<span class="component-badge component-badge--xs component-badge--warning">NEGOCIOS</span>' : ''}
                       </button>
-                      <button type="button" class="menu-item" data-ref="btn-download-type-gif" data-value="gif">
+                      <button type="button" class="menu-item" data-ref="btn-download-type-gif" data-value="gif" data-required-tier="pro">
                         <span class="material-symbols-rounded menu-item__icon">gif</span>
                         <span class="menu-item__text">GIF animado (.gif)</span>
+                        ${!isProOrBusiness ? '<span class="component-badge component-badge--xs component-badge--primary">PRO</span>' : ''}
                       </button>
                       <button type="button" class="menu-item" data-ref="btn-download-type-project" data-value="project-json">
                         <span class="material-symbols-rounded menu-item__icon">data_object</span>
@@ -116,14 +124,17 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
                       <button type="button" class="menu-item" data-ref="btn-scale-2" data-value="2">
                         <span class="menu-item__text">2x (${baseW * 2} × ${baseH * 2} px)</span>
                       </button>
-                      <button type="button" class="menu-item" data-ref="btn-scale-4" data-value="4">
+                      <button type="button" class="menu-item" data-ref="btn-scale-4" data-value="4" data-required-tier="pro">
                         <span class="menu-item__text">4x (${baseW * 4} × ${baseH * 4} px)</span>
+                        ${!isProOrBusiness ? '<span class="component-badge component-badge--xs component-badge--primary">PRO</span>' : ''}
                       </button>
-                      <button type="button" class="menu-item" data-ref="btn-scale-8" data-value="8">
+                      <button type="button" class="menu-item" data-ref="btn-scale-8" data-value="8" data-required-tier="pro">
                         <span class="menu-item__text">8x (${baseW * 8} × ${baseH * 8} px)</span>
+                        ${!isProOrBusiness ? '<span class="component-badge component-badge--xs component-badge--primary">PRO</span>' : ''}
                       </button>
-                      <button type="button" class="menu-item" data-ref="btn-scale-16" data-value="16">
+                      <button type="button" class="menu-item" data-ref="btn-scale-16" data-value="16" data-required-tier="business">
                         <span class="menu-item__text">16x (${baseW * 16} × ${baseH * 16} px)</span>
+                        ${!isBusiness ? '<span class="component-badge component-badge--xs component-badge--warning">NEGOCIOS</span>' : ''}
                       </button>
                     </div>
                   </div>
@@ -263,6 +274,20 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
   const typeButtons = backdrop.querySelectorAll<HTMLButtonElement>('[data-ref^="btn-download-type-"]');
   typeButtons.forEach((btn) => {
     btn.addEventListener('click', () => {
+      const requiredTier = btn.getAttribute('data-required-tier');
+      if (requiredTier === 'business' && !isBusiness) {
+        showToast('La exportación Game Atlas requiere el plan Negocios.', 'info');
+        openUpgradeModal('business');
+        typeCtrl.close();
+        return;
+      }
+      if (requiredTier === 'pro' && !isProOrBusiness) {
+        showToast('Esta opción de exportación requiere el plan Pro o Negocios.', 'info');
+        openUpgradeModal('pro');
+        typeCtrl.close();
+        return;
+      }
+
       const val = btn.getAttribute('data-value') as typeof selectedType;
       if (!val) return;
       selectedType = val;
@@ -297,6 +322,20 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
   const scaleButtons = backdrop.querySelectorAll<HTMLButtonElement>('[data-ref^="btn-scale-"]');
   scaleButtons.forEach((btn) => {
     btn.addEventListener('click', () => {
+      const requiredTier = btn.getAttribute('data-required-tier');
+      if (requiredTier === 'business' && !isBusiness) {
+        showToast('El escalado 16x (Ultra 4K) requiere el plan Negocios.', 'info');
+        openUpgradeModal('business');
+        scaleCtrl.close();
+        return;
+      }
+      if (requiredTier === 'pro' && !isProOrBusiness) {
+        showToast('El escalado en alta resolución requiere el plan Pro o Negocios.', 'info');
+        openUpgradeModal('pro');
+        scaleCtrl.close();
+        return;
+      }
+
       const val = parseInt(btn.getAttribute('data-value') || '1', 10);
       selectedScale = val;
       scaleButtons.forEach((b) => b.classList.toggle('is-active', b === btn));

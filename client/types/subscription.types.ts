@@ -33,6 +33,32 @@ export interface PurchaseRecord {
   stripe_customer_id?: string;
 }
 
+export interface StorageBreakdownItem {
+  bytes: number;
+  formatted: string;
+  count?: number;
+}
+
+export interface StorageUsageInfo {
+  tier: string;
+  tierName: string;
+  usedBytes: number;
+  limitBytes: number;
+  usedFormatted: string;
+  limitFormatted: string;
+  remainingBytes: number;
+  remainingFormatted: string;
+  percentage: number;
+  isNearLimit: boolean;
+  isOverLimit: boolean;
+  breakdown: {
+    canvases: StorageBreakdownItem;
+    snapshots: StorageBreakdownItem;
+    trash: StorageBreakdownItem;
+    uploads: StorageBreakdownItem;
+  };
+}
+
 export interface BillingDetailsResponse {
   success: boolean;
   tier?: string;
@@ -44,6 +70,7 @@ export interface BillingDetailsResponse {
   amount?: number;
   currency?: string;
   subscription_id?: string | null;
+  storage?: StorageUsageInfo;
   error?: string;
 }
 

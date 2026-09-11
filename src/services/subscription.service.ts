@@ -1,5 +1,63 @@
 import { SubscriptionTier } from '../types/subscription.types.js';
 
+export interface TierLimits {
+  storageBytes: number;
+  maxCanvasDimension: number;
+  maxLiveCollaborators: number;
+  maxTeams: number;
+  maxTeamMembers: number;
+  maxLayers: number;
+  maxSnapshots: number;
+  snapshotRetentionDays: number;
+  maxExportScale: number;
+  allowedExportTypes: string[];
+}
+
+export const TIER_LIMITS: Record<string, TierLimits> = {
+  free: {
+    storageBytes: 1024 * 1024 * 1024,
+    maxCanvasDimension: 1024,
+    maxLiveCollaborators: 3,
+    maxTeams: 0,
+    maxTeamMembers: 0,
+    maxLayers: 5,
+    maxSnapshots: 3,
+    snapshotRetentionDays: 7,
+    maxExportScale: 2,
+    allowedExportTypes: ['png-current', 'project-json'],
+  },
+  pro: {
+    storageBytes: 10 * 1024 * 1024 * 1024,
+    maxCanvasDimension: 2048,
+    maxLiveCollaborators: 6,
+    maxTeams: 1,
+    maxTeamMembers: 3,
+    maxLayers: 999999,
+    maxSnapshots: 30,
+    snapshotRetentionDays: 30,
+    maxExportScale: 8,
+    allowedExportTypes: ['png-current', 'project-json', 'spritesheet', 'gif'],
+  },
+  business: {
+    storageBytes: 1024 * 1024 * 1024 * 1024,
+    maxCanvasDimension: 4096,
+    maxLiveCollaborators: 50,
+    maxTeams: 999999,
+    maxTeamMembers: 999999,
+    maxLayers: 999999,
+    maxSnapshots: 999999,
+    snapshotRetentionDays: 999999,
+    maxExportScale: 16,
+    allowedExportTypes: ['png-current', 'project-json', 'spritesheet', 'gif', 'spritesheet-atlas'],
+  },
+};
+
+export function getTierLimits(tier?: string): TierLimits {
+  const normalized = (tier || 'free').toLowerCase();
+  const key = normalized === 'negocios' ? 'business' : normalized;
+  return TIER_LIMITS[key] || TIER_LIMITS.free;
+}
+
 export class SubscriptionService {
   private static instance: SubscriptionService;
 
@@ -8,7 +66,7 @@ export class SubscriptionService {
       id: 'free',
       name: 'Spriteboard Gratis',
       tagline: 'Ideal para comenzar a explorar, crear bocetos y diseñar sin costo.',
-      storage: '500 MB de almacenamiento',
+      storage: '1 GB de almacenamiento',
       price: 0,
       priceMonthly: 0,
       priceYearly: 0,
@@ -18,36 +76,41 @@ export class SubscriptionService {
       buttonText: 'Plan actual',
       features: [
         {
-          title: '500 MB de almacenamiento en la nube',
-          desc: 'Guarda tus proyectos y lienzos básicos de forma segura',
+          title: '1 GB de almacenamiento en la nube',
+          desc: 'Guarda tus proyectos y lienzos de forma segura',
           icon: 'cloud',
         },
         {
-          title: 'Tableros de diseño estándar',
-          desc: 'Crea lienzos de trabajo con herramientas esenciales de dibujo',
-          icon: 'dashboard',
+          title: 'Lienzos de hasta 1024 × 1024 px',
+          desc: 'Resolución ideal para sprites, avatares e iconos retro',
+          icon: 'aspect_ratio',
         },
         {
-          title: 'Exportación en formato estándar',
-          desc: 'Descarga tus tableros en formatos PNG y JPG de alta fidelidad',
+          title: 'Colaboración en vivo (Tú + 2)',
+          desc: 'Hasta 3 personas editando simultáneamente con cursores activos',
+          icon: 'group',
+        },
+        {
+          title: 'Hasta 5 capas por lienzo',
+          desc: 'Herramientas esenciales para separar línea, color y sombras',
+          icon: 'layers',
+        },
+        {
+          title: 'Exportación PNG y Proyecto JSON',
+          desc: 'Descargas en resolución nativa 1x y escalado 2x',
           icon: 'image',
         },
         {
-          title: 'Historial de versiones de 7 días',
-          desc: 'Restaura versiones previas de tus lienzos recientes',
+          title: 'Historial de 3 snapshots',
+          desc: 'Guarda hasta 3 versiones de respaldo por lienzo',
           icon: 'history',
-        },
-        {
-          title: 'Herramientas de dibujo esenciales',
-          desc: 'Pinceles estándar, paleta de colores y capas esenciales',
-          icon: 'palette',
         },
       ],
     },
     {
       id: 'pro',
       name: 'Spriteboard Pro',
-      tagline: 'El plan más equilibrado para profesionales y creadores exigentes.',
+      tagline: 'El plan más equilibrado para profesionales y creadores independientes.',
       storage: '10 GB de almacenamiento',
       price: 9.99,
       priceMonthly: 9.99,
@@ -61,41 +124,46 @@ export class SubscriptionService {
       features: [
         {
           title: '10 GB de almacenamiento en la nube',
-          desc: 'Espacio ampliado para proyectos de alta demanda y archivos pesados',
+          desc: '10x más espacio para proyectos de alta demanda y archivos pesados',
           icon: 'cloud',
         },
         {
-          title: 'Tableros y proyectos ilimitados',
-          desc: 'Crea sin restricciones de cantidad ni límites de espacio de trabajo',
-          icon: 'all_inclusive',
+          title: 'Lienzos de hasta 2048 × 2048 px',
+          desc: 'Dimensiones ampliadas para tilemaps e ilustraciones detalladas',
+          icon: 'aspect_ratio',
         },
         {
-          title: 'Exportación en ultra resolución 4K',
-          desc: 'Calidad profesional para impresión, medios digitales y exhibición',
-          icon: 'hd',
-        },
-        {
-          title: 'Personalización avanzada',
-          desc: 'Temas visuales exclusivos y controles avanzados de interfaz',
-          icon: 'tune',
-        },
-        {
-          title: 'Colaboración en tiempo real',
-          desc: 'Trabaja simultáneamente con miembros de tu equipo con presencia activa',
+          title: 'Colaboración en vivo (Tú + 5)',
+          desc: 'Hasta 6 personas trabajando en tiempo real en el mismo lienzo',
           icon: 'groups',
         },
         {
-          title: 'Soporte prioritario 24/7',
-          desc: 'Respuesta rápida garantizada en menos de 4 horas por nuestro equipo',
-          icon: 'support_agent',
+          title: '1 equipo de trabajo (hasta 3 miembros)',
+          desc: 'Crea tu equipo con proyectos compartidos y roles de acceso',
+          icon: 'diversity_3',
+        },
+        {
+          title: 'Capas ilimitadas por lienzo',
+          desc: 'Composiciones complejas sin restricciones de capas',
+          icon: 'layers',
+        },
+        {
+          title: 'Exportación GIF animado y Hoja de sprites',
+          desc: 'Exporta animaciones fluidas y spritesheets con escala hasta 8x',
+          icon: 'gif',
+        },
+        {
+          title: 'Historial de 30 snapshots',
+          desc: 'Control de versiones extendido durante 30 días',
+          icon: 'history_toggle_off',
         },
       ],
     },
     {
       id: 'business',
       name: 'Spriteboard Negocios',
-      tagline: 'Máxima potencia, colaboración avanzada para equipos y soporte prioritario.',
-      storage: 'Almacenamiento ilimitado',
+      tagline: 'Máxima potencia, colaboración avanzada para equipos y estudios de desarrollo.',
+      storage: '1 TB de almacenamiento',
       price: 19.99,
       priceMonthly: 19.99,
       priceYearly: 15.99,
@@ -107,34 +175,39 @@ export class SubscriptionService {
       buttonText: 'Obtén Spriteboard Negocios',
       features: [
         {
-          title: 'Almacenamiento ilimitado en la nube',
-          desc: 'Guarda todo tu contenido y el de tu organización sin límites de cuota',
+          title: '1 TB de almacenamiento masivo',
+          desc: 'Capacidad para proyectos a gran escala y archivo histórico de estudio',
           icon: 'cloud',
         },
         {
-          title: 'Espacios de trabajo y equipos ilimitados',
-          desc: 'Gestión centralizada de miembros, permisos y roles avanzados',
+          title: 'Lienzos de hasta 4096 × 4096 px',
+          desc: 'Resolución ultra masiva para mundos completos y cinemáticas',
+          icon: 'aspect_ratio',
+        },
+        {
+          title: 'Colaboración masiva (hasta 50 en vivo)',
+          desc: 'Salas de lienzo masivas para todo tu equipo de artistas y animadores',
+          icon: 'groups_3',
+        },
+        {
+          title: 'Equipos y miembros ilimitados',
+          desc: 'Múltiples equipos, roles de administración y lienzos centralizados',
           icon: 'domain',
         },
         {
-          title: 'Máxima potencia de cómputo GPU',
-          desc: 'Renderizado acelerado por hardware y procesamiento ultra rápido',
-          icon: 'memory',
+          title: 'Capas y snapshots ilimitados',
+          desc: 'Flujo de trabajo sin límites y auditoría histórica permanente',
+          icon: 'all_inclusive',
         },
         {
-          title: 'Historial de versiones ilimitado',
-          desc: 'Auditoría completa y recuperación histórica sin restricciones de tiempo',
-          icon: 'manage_history',
+          title: 'Exportación Game Atlas (Spritesheet + JSON)',
+          desc: 'Atlas de texturas listos para Unity, Godot, Phaser y Unreal Engine',
+          icon: 'sports_esports',
         },
         {
-          title: 'API dedicada e integraciones',
-          desc: 'Conecta Spriteboard con tus herramientas y flujos de trabajo externos',
-          icon: 'api',
-        },
-        {
-          title: 'Atención personalizada 1 a 1',
-          desc: 'Gestor de cuenta dedicado, SLA de 99.9% y asesoría técnica directa',
-          icon: 'person_pin',
+          title: 'Exportación Ultra 4K (hasta 16x)',
+          desc: 'Máximo escalado pixel-perfect para impresión comercial y cartelería',
+          icon: 'hd',
         },
       ],
     },

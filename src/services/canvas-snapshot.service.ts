@@ -1,9 +1,11 @@
-import { canvasPool } from '../config/database.config.js';
+import { canvasPool, pool } from '../config/database.config.js';
 import { CanvasSnapshotItem, CreateCanvasSnapshotDto, UpdateCanvasSnapshotDto } from '../types/canvas-snapshot.types.js';
 import { Canvas } from '../types/canvas.types.js';
 import { deleteCanvasSnapshotBlob, readCanvasBlobDecompressed, readCanvasSnapshotBlob, saveCanvasBlob, saveCanvasSnapshotBlob } from './canvas-storage-blob.service.js';
 import { createCanvas, getCanvasUserRole } from './canvas.service.js';
 import { logger } from './logger.service.js';
+import { checkUserStorageQuota } from './storage.service.js';
+import { getTierLimits } from './subscription.service.js';
 import crypto from 'crypto';
 import mysql from 'mysql2/promise';
 
@@ -84,7 +86,33 @@ export async function createCanvasSnapshot(
     throw new Error('No hay contenido para generar la versión.');
   }
 
+  if (canvas.user_id) {
+    const approxBytes = Buffer.byteLength(dataStr, 'utf-8');
+    const quota = await checkUserStorageQuota(canvas.user_id, approxBytes);
+    if (!quota.allowed) {
+      throw new Error(`Has alcanzado el límite de almacenamiento de tu plan (${quota.limitFormatted}). Libera espacio o actualiza tu plan en Mejorar plan.`);
+    }
+  }
+
   const isManual = dto.is_manual === true;
+
+  if (canvas.user_id && isManual) {
+    const [uRows] = await pool.query<mysql.RowDataPacket[]>(
+      'SELECT subscription_tier FROM users WHERE id = ? LIMIT 1',
+      [canvas.user_id]
+    );
+    const userTier = uRows[0]?.subscription_tier || 'free';
+    const tierLimits = getTierLimits(userTier);
+    const [snapCountRows] = await canvasPool.query<mysql.RowDataPacket[]>(
+      'SELECT COUNT(id) AS total FROM db_canvas.canvas_snapshots WHERE canvas_id = ? AND is_manual = 1',
+      [canvas.id]
+    );
+    const manualCount = Number(snapCountRows[0]?.total || 0);
+    if (manualCount >= tierLimits.maxSnapshots) {
+      throw new Error(`Has alcanzado el límite de ${tierLimits.maxSnapshots} versiones manuales para tu plan (${userTier === 'free' ? 'Gratis' : 'Pro'}). Mejora tu plan para guardar más versiones.`);
+    }
+  }
+
   const name = dto.name && dto.name.trim()
     ? dto.name.trim().slice(0, 255)
     : isManual

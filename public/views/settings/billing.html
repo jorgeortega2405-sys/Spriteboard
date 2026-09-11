@@ -1,4 +1,4 @@
-﻿<div class="layout-content" data-ref="settings-billing-view">
+<div class="layout-content" data-ref="settings-billing-view">
   <div class="layout-body layout-body--scrollable layout-scrollable" data-ref="settings-scrollable">
     <div class="settings-layout" data-ref="settings-layout">
       <div class="settings-header" data-ref="settings-header">
@@ -83,7 +83,108 @@
         </div>
       </div>
 
-      <!-- 2. Acordeón de Métodos de Pago -->
+      <!-- 2. Acordeón de Almacenamiento en la Nube -->
+      <div class="settings-group settings-group--accordion is-active" data-ref="group-storage-usage">
+        <div class="settings-accordion-header" data-ref="accordion-header-storage">
+          <div class="settings-item__content" data-ref="accordion-storage-content">
+            <div class="settings-item__icon-box" data-ref="accordion-storage-icon-box">
+              <span class="material-symbols-rounded">cloud</span>
+            </div>
+            <div class="settings-item__text" data-ref="accordion-storage-text">
+              <h2 class="settings-item__title" data-ref="accordion-storage-title" data-i18n="settings.billing.storage_accordion_title">Almacenamiento en la nube</h2>
+              <p class="settings-item__desc" data-ref="accordion-storage-desc" data-i18n="settings.billing.storage_accordion_desc">Control de espacio utilizado por tus lienzos, versiones y archivos multimedia.</p>
+            </div>
+          </div>
+          <div class="settings-item__actions" data-ref="accordion-storage-actions">
+            <span class="material-symbols-rounded settings-accordion-icon" data-ref="accordion-storage-icon">expand_more</span>
+          </div>
+        </div>
+
+        <div class="settings-accordion-body" data-ref="accordion-body-storage">
+          <div class="settings-accordion-content" data-ref="accordion-content-storage">
+            <!-- Barra de progreso general y resumen de cuota -->
+            <div class="settings-item settings-item--stacked" data-ref="item-storage-meter">
+              <div class="storage-meter" data-ref="storage-meter-box">
+                <div class="storage-meter__header" data-ref="storage-meter-header">
+                  <div class="storage-meter__info" data-ref="storage-meter-info">
+                    <span class="storage-meter__used" data-ref="storage-used-label">0 B</span>
+                    <span class="storage-meter__separator" data-ref="storage-separator">/</span>
+                    <span class="storage-meter__limit" data-ref="storage-limit-label">1 GB</span>
+                    <span class="component-badge component-badge--sm" data-ref="storage-percent-badge">0% en uso</span>
+                  </div>
+                  <div class="storage-meter__actions" data-ref="storage-meter-actions">
+                    <button type="button" class="btn btn--h30 btn--outline" data-ref="btn-storage-upgrade" data-i18n="settings.billing.btn_increase_storage">Aumentar almacenamiento</button>
+                  </div>
+                </div>
+
+                <div class="storage-meter__track" data-ref="storage-meter-track" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                  <div class="storage-meter__fill" data-ref="storage-meter-fill" style="width: 0%;"></div>
+                </div>
+
+                <div class="storage-meter__footer" data-ref="storage-meter-footer">
+                  <span class="storage-meter__remaining-text" data-ref="storage-remaining-text">Calculando espacio disponible...</span>
+                </div>
+              </div>
+            </div>
+
+            <hr class="settings-divider" />
+
+            <!-- Desglose de consumo detallado -->
+            <div class="storage-breakdown" data-ref="storage-breakdown-grid">
+              <!-- Canvases -->
+              <div class="storage-breakdown-card" data-ref="card-storage-canvases">
+                <div class="storage-breakdown-card__icon-box" data-ref="card-canvases-icon-box">
+                  <span class="material-symbols-rounded">dashboard</span>
+                </div>
+                <div class="storage-breakdown-card__body" data-ref="card-canvases-body">
+                  <span class="storage-breakdown-card__title" data-i18n="settings.billing.storage_canvases_title">Lienzos activos</span>
+                  <span class="storage-breakdown-card__size" data-ref="storage-canvases-size">0 B</span>
+                  <span class="storage-breakdown-card__count" data-ref="storage-canvases-count">0 proyectos</span>
+                </div>
+              </div>
+
+              <!-- Snapshots -->
+              <div class="storage-breakdown-card" data-ref="card-storage-snapshots">
+                <div class="storage-breakdown-card__icon-box" data-ref="card-snapshots-icon-box">
+                  <span class="material-symbols-rounded">history</span>
+                </div>
+                <div class="storage-breakdown-card__body" data-ref="card-snapshots-body">
+                  <span class="storage-breakdown-card__title" data-i18n="settings.billing.storage_snapshots_title">Versiones y snapshots</span>
+                  <span class="storage-breakdown-card__size" data-ref="storage-snapshots-size">0 B</span>
+                  <span class="storage-breakdown-card__count" data-ref="storage-snapshots-count">0 versiones</span>
+                </div>
+              </div>
+
+              <!-- Trash -->
+              <div class="storage-breakdown-card" data-ref="card-storage-trash">
+                <div class="storage-breakdown-card__icon-box" data-ref="card-trash-icon-box">
+                  <span class="material-symbols-rounded">delete</span>
+                </div>
+                <div class="storage-breakdown-card__body" data-ref="card-trash-body">
+                  <span class="storage-breakdown-card__title" data-i18n="settings.billing.storage_trash_title">Papelera de reciclaje</span>
+                  <span class="storage-breakdown-card__size" data-ref="storage-trash-size">0 B</span>
+                  <span class="storage-breakdown-card__count" data-ref="storage-trash-count">0 elementos</span>
+                </div>
+              </div>
+
+              <!-- Uploads / Avatars -->
+              <div class="storage-breakdown-card" data-ref="card-storage-uploads">
+                <div class="storage-breakdown-card__icon-box" data-ref="card-uploads-icon-box">
+                  <span class="material-symbols-rounded">perm_media</span>
+                </div>
+                <div class="storage-breakdown-card__body" data-ref="card-uploads-body">
+                  <span class="storage-breakdown-card__title" data-i18n="settings.billing.storage_uploads_title">Archivos multimedia</span>
+                  <span class="storage-breakdown-card__size" data-ref="storage-uploads-size">0 B</span>
+                  <span class="storage-breakdown-card__count" data-ref="storage-uploads-count">Avatar y recursos</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Acordeón de Métodos de Pago -->
       <div class="settings-group settings-group--accordion is-active" data-ref="group-payment-methods">
         <div class="settings-accordion-header" data-ref="accordion-header-payment-methods">
           <div class="settings-item__content" data-ref="accordion-pm-content">

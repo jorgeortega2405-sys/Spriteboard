@@ -1,5 +1,7 @@
 import crypto from 'crypto';
+import fs from 'fs';
 import mysql from 'mysql2/promise';
+import path from 'path';
 import { logger } from '../services/logger.service.js';
 
 export interface NoSqlAdapter {
@@ -474,6 +476,30 @@ export async function runMigrations(): Promise<void> {
     `);
 
     await conn.query(`
+      CREATE TABLE IF NOT EXISTS db_canvas.canvas_comments (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        uuid VARCHAR(36) NOT NULL UNIQUE,
+        canvas_id INT NOT NULL,
+        user_id INT NOT NULL,
+        parent_id INT NULL,
+        pos_x FLOAT NULL,
+        pos_y FLOAT NULL,
+        frame_index INT NOT NULL DEFAULT 0,
+        content TEXT NOT NULL,
+        status ENUM('open', 'resolved') NOT NULL DEFAULT 'open',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_comments_canvas (canvas_id),
+        INDEX idx_comments_user (user_id),
+        INDEX idx_comments_parent (parent_id),
+        INDEX idx_comments_status (status),
+        INDEX idx_comments_frame (canvas_id, frame_index),
+        FOREIGN KEY (canvas_id) REFERENCES db_canvas.canvases(id) ON DELETE CASCADE,
+        FOREIGN KEY (parent_id) REFERENCES db_canvas.canvas_comments(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await conn.query(`
       CREATE TABLE IF NOT EXISTS db_canvas.folders (
         id INT AUTO_INCREMENT PRIMARY KEY,
         uuid VARCHAR(36) NOT NULL UNIQUE,
@@ -497,6 +523,42 @@ export async function runMigrations(): Promise<void> {
       await conn.query('ALTER TABLE db_canvas.canvases ADD COLUMN folder_id INT NULL DEFAULT NULL AFTER user_id, ADD INDEX idx_canvases_folder (folder_id)');
       logger.db.info('Columna folder_id añadida a db_canvas.canvases.');
     }
+
+    const [sizeCols] = await conn.query<mysql.RowDataPacket[]>(
+      "SHOW COLUMNS FROM db_canvas.canvases LIKE 'size_bytes'"
+    );
+    if (sizeCols.length === 0) {
+      await conn.query('ALTER TABLE db_canvas.canvases ADD COLUMN size_bytes INT NOT NULL DEFAULT 0 AFTER unit, ADD COLUMN compressed_bytes INT NOT NULL DEFAULT 0 AFTER size_bytes');
+      logger.db.info('Columnas size_bytes y compressed_bytes añadidas a db_canvas.canvases.');
+    }
+
+    try {
+      const [pendingCanvases] = await conn.query<mysql.RowDataPacket[]>(
+        'SELECT id, uuid, data FROM db_canvas.canvases WHERE compressed_bytes = 0'
+      );
+      const canvasDir = path.join(process.cwd(), 'data', 'canvases');
+      for (const row of pendingCanvases) {
+        let compSize = 0;
+        let rawSize = 0;
+        const blobPath = path.join(canvasDir, `${row.uuid}.sb.gz`);
+        try {
+          const stat = await fs.promises.stat(blobPath);
+          compSize = stat.size;
+        } catch {}
+        if (row.data) {
+          rawSize = typeof row.data === 'string' ? Buffer.byteLength(row.data, 'utf-8') : Buffer.byteLength(JSON.stringify(row.data), 'utf-8');
+        }
+        if (compSize === 0 && rawSize > 0) {
+          compSize = rawSize;
+        }
+        if (rawSize === 0 && compSize > 0) {
+          rawSize = compSize;
+        }
+        if (compSize > 0 || rawSize > 0) {
+          await conn.query('UPDATE db_canvas.canvases SET size_bytes = ?, compressed_bytes = ? WHERE id = ?', [rawSize, compSize, row.id]);
+        }
+      }
+    } catch {}
 
     await conn.query(`
       CREATE TABLE IF NOT EXISTS ai_chat_feedback (

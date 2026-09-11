@@ -18,6 +18,10 @@
           <span class="material-symbols-rounded">history</span>
         </button>
 
+        <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-canvas-comments" data-tooltip="Comentarios" aria-label="Comentarios">
+          <span class="material-symbols-rounded">chat_bubble_outline</span>
+        </button>
+
         <div class="design-share-wrapper" data-ref="design-share-wrapper">
           <button type="button" class="btn btn--h40 btn--black design-share-btn" data-ref="btn-share-canvas" data-tooltip="Compartir lienzo" aria-label="Compartir lienzo">
             <span class="material-symbols-rounded">share</span>
@@ -551,6 +555,207 @@
       <div class="design-coords-badge" data-ref="toolbar-coords">X: - , Y: -</div>
 
       <canvas class="design-viewport-canvas" data-ref="design-viewport-canvas"></canvas>
+
+      <div class="canvas-comments-layer" data-ref="canvas-comments-layer"></div>
+
+      <div class="canvas-comments-panel is-hidden" data-ref="canvas-comments-panel">
+        <div class="canvas-comments-panel__header">
+          <div class="canvas-comments-filter-dropdown" data-ref="comments-filter-dropdown">
+            <button type="button" class="canvas-comments-filter-btn" data-ref="btn-comments-filter" aria-label="Filtrar comentarios">
+              <span class="material-symbols-rounded">tune</span>
+              <span class="canvas-comments-filter-text" data-ref="comments-filter-text">Página actual</span>
+              <span class="material-symbols-rounded">expand_more</span>
+            </button>
+            <div class="canvas-comments-filter-menu is-hidden" data-ref="comments-filter-menu">
+              <button type="button" class="canvas-comments-filter-item is-active" data-ref="btn-filter-current-page" data-filter="current_page">
+                <span>Página actual</span>
+              </button>
+              <button type="button" class="canvas-comments-filter-item" data-ref="btn-filter-all" data-filter="all">
+                <span>Todos los comentarios</span>
+              </button>
+            </div>
+          </div>
+          <button type="button" class="canvas-comments-close-btn" data-ref="btn-close-comments-panel" aria-label="Cerrar comentarios">
+            <span class="material-symbols-rounded">close</span>
+          </button>
+        </div>
+
+        <div class="canvas-comments-panel__body" data-ref="comments-panel-body">
+          <div class="canvas-comments-empty" data-ref="comments-empty-state">
+            <p class="canvas-comments-empty__text" data-ref="comments-empty-text">No hay comentarios en esta página.</p>
+          </div>
+          <div class="canvas-comments-list is-hidden" data-ref="comments-list"></div>
+        </div>
+
+        <div class="canvas-comments-panel__footer">
+          <button type="button" class="btn btn--h40 btn--black btn--w-full" data-ref="btn-panel-add-comment">
+            <span class="material-symbols-rounded">add_comment</span>
+            <span>Comentar</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="canvas-comment-composer is-hidden" data-ref="canvas-comment-composer">
+        <div class="canvas-comment-composer__header">
+          <span class="canvas-comment-composer__title" data-ref="composer-title">Nuevo comentario</span>
+          <button type="button" class="canvas-comment-composer__close" data-ref="btn-close-composer" aria-label="Cerrar compositor">
+            <span class="material-symbols-rounded">close</span>
+          </button>
+        </div>
+        <div class="canvas-comment-composer__body">
+          <textarea class="canvas-comment-composer__input" data-ref="input-comment-content" placeholder="Agrega un comentario o @menciona a alguien" rows="2"></textarea>
+          <div class="canvas-mentions-popup is-hidden" data-ref="comment-mentions-popup"></div>
+        </div>
+        <div class="canvas-comment-composer__toolbar">
+          <div class="canvas-comment-composer__actions">
+            <button type="button" class="canvas-composer-btn" data-ref="btn-composer-mention" data-tooltip="Mencionar" aria-label="Mencionar">
+              <span class="material-symbols-rounded">alternate_email</span>
+            </button>
+            <button type="button" class="canvas-composer-btn" data-ref="btn-composer-emoji" data-tooltip="Insertar emoji" aria-label="Insertar emoji">
+              <span class="material-symbols-rounded">add_reaction</span>
+            </button>
+            <button type="button" class="canvas-composer-btn" data-ref="btn-composer-sticker" data-tooltip="Stickers" aria-label="Stickers">
+              <span class="material-symbols-rounded">sticky_note_2</span>
+            </button>
+            <button type="button" class="canvas-composer-btn" data-ref="btn-composer-image" data-tooltip="Subir imagen" aria-label="Subir imagen">
+              <span class="material-symbols-rounded">add_photo_alternate</span>
+            </button>
+            <input class="is-hidden" data-ref="input-composer-image-file" type="file" accept="image/*" />
+            <button type="button" class="canvas-composer-btn" data-ref="btn-composer-bold" data-tooltip="Negrita" aria-label="Negrita">
+              <span class="material-symbols-rounded">format_bold</span>
+            </button>
+          </div>
+          <button type="button" class="canvas-composer-send-btn is-disabled" data-ref="btn-composer-send" data-tooltip="Enviar comentario" aria-label="Enviar comentario">
+            <span class="material-symbols-rounded">arrow_upward</span>
+          </button>
+        </div>
+
+        <div class="canvas-emoji-picker is-hidden" data-ref="canvas-emoji-picker">
+          <div class="canvas-emoji-picker__search">
+            <span class="material-symbols-rounded">search</span>
+            <input class="canvas-emoji-picker__input" data-ref="input-emoji-search" type="text" placeholder="Buscar emojis" autocomplete="off" />
+          </div>
+
+          <div class="canvas-emoji-picker__tabs" data-ref="emoji-picker-tabs">
+            <button type="button" class="canvas-emoji-tab is-active" data-ref="tab-emoji-recent" data-category="recent" data-tooltip="Más usados">
+              <span class="material-symbols-rounded">schedule</span>
+            </button>
+            <button type="button" class="canvas-emoji-tab" data-ref="tab-emoji-smileys" data-category="smileys" data-tooltip="Emojis y personas">
+              <span class="material-symbols-rounded">mood</span>
+            </button>
+            <button type="button" class="canvas-emoji-tab" data-ref="tab-emoji-animals" data-category="animals" data-tooltip="Animales y naturaleza">
+              <span class="material-symbols-rounded">pets</span>
+            </button>
+            <button type="button" class="canvas-emoji-tab" data-ref="tab-emoji-food" data-category="food" data-tooltip="Comida y bebida">
+              <span class="material-symbols-rounded">restaurant</span>
+            </button>
+            <button type="button" class="canvas-emoji-tab" data-ref="tab-emoji-travel" data-category="travel" data-tooltip="Viajes y lugares">
+              <span class="material-symbols-rounded">directions_car</span>
+            </button>
+            <button type="button" class="canvas-emoji-tab" data-ref="tab-emoji-activities" data-category="activities" data-tooltip="Actividades">
+              <span class="material-symbols-rounded">sports_soccer</span>
+            </button>
+            <button type="button" class="canvas-emoji-tab" data-ref="tab-emoji-objects" data-category="objects" data-tooltip="Objetos">
+              <span class="material-symbols-rounded">lightbulb</span>
+            </button>
+            <button type="button" class="canvas-emoji-tab" data-ref="tab-emoji-symbols" data-category="symbols" data-tooltip="Símbolos">
+              <span class="material-symbols-rounded">favorite</span>
+            </button>
+            <button type="button" class="canvas-emoji-tab" data-ref="tab-emoji-flags" data-category="flags" data-tooltip="Banderas">
+              <span class="material-symbols-rounded">flag</span>
+            </button>
+          </div>
+
+          <div class="canvas-emoji-picker__content" data-ref="emoji-picker-content"></div>
+
+          <div class="canvas-emoji-picker__footer">
+            <div class="canvas-emoji-skintone-wrapper" data-ref="emoji-skintone-wrapper">
+              <button type="button" class="canvas-emoji-skintone-btn" data-ref="btn-emoji-skintone">
+                <span class="canvas-emoji-skintone-hand" data-ref="emoji-skintone-current-hand">✋</span>
+                <span>Tono de piel</span>
+              </button>
+              <div class="canvas-emoji-skintone-menu is-hidden" data-ref="emoji-skintone-menu">
+                <button type="button" class="canvas-skintone-option" data-ref="tone-default" data-tone="">✋</button>
+                <button type="button" class="canvas-skintone-option" data-ref="tone-light" data-tone="🏻">✋🏻</button>
+                <button type="button" class="canvas-skintone-option" data-ref="tone-med-light" data-tone="🏼">✋🏼</button>
+                <button type="button" class="canvas-skintone-option" data-ref="tone-med" data-tone="🏽">✋🏽</button>
+                <button type="button" class="canvas-skintone-option" data-ref="tone-med-dark" data-tone="🏾">✋🏾</button>
+                <button type="button" class="canvas-skintone-option" data-ref="tone-dark" data-tone="🏿">✋🏿</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="canvas-comment-thread is-hidden" data-ref="canvas-comment-thread">
+        <div class="canvas-comment-thread__header">
+          <button type="button" class="canvas-thread-nav-btn" data-ref="btn-thread-back" data-tooltip="Volver a comentarios" aria-label="Volver">
+            <span class="material-symbols-rounded">arrow_back</span>
+          </button>
+          <div class="canvas-thread-pager">
+            <button type="button" class="canvas-thread-pager__btn" data-ref="btn-thread-prev" aria-label="Comentario anterior">
+              <span class="material-symbols-rounded">chevron_left</span>
+            </button>
+            <span class="canvas-thread-pager__text" data-ref="thread-pager-text">1/1</span>
+            <button type="button" class="canvas-thread-pager__btn" data-ref="btn-thread-next" aria-label="Siguiente comentario">
+              <span class="material-symbols-rounded">chevron_right</span>
+            </button>
+          </div>
+          <div class="canvas-thread-header-actions">
+            <button type="button" class="canvas-thread-nav-btn" data-ref="btn-thread-options" data-tooltip="Opciones" aria-label="Opciones">
+              <span class="material-symbols-rounded">more_vert</span>
+            </button>
+            <div class="canvas-thread-options-menu is-hidden" data-ref="thread-options-menu">
+              <button type="button" class="canvas-thread-option-item" data-ref="btn-thread-resolve">
+                <span class="material-symbols-rounded">check_circle</span>
+                <span data-ref="thread-resolve-text">Resolver comentario</span>
+              </button>
+              <button type="button" class="canvas-thread-option-item canvas-thread-option-item--danger" data-ref="btn-thread-delete">
+                <span class="material-symbols-rounded">delete_outline</span>
+                <span>Eliminar comentario</span>
+              </button>
+            </div>
+            <button type="button" class="canvas-thread-nav-btn" data-ref="btn-close-thread" aria-label="Cerrar">
+              <span class="material-symbols-rounded">close</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="canvas-comment-thread__body" data-ref="thread-body">
+          <div class="canvas-comment-item" data-ref="thread-main-comment"></div>
+          <div class="canvas-comment-replies" data-ref="thread-replies-list"></div>
+        </div>
+
+        <div class="canvas-comment-thread__footer">
+          <div class="canvas-comment-reply-composer">
+            <textarea class="canvas-comment-composer__input canvas-comment-composer__input--reply" data-ref="input-reply-content" placeholder="Responder.." rows="1"></textarea>
+            <div class="canvas-mentions-popup is-hidden" data-ref="reply-mentions-popup"></div>
+            <div class="canvas-comment-composer__toolbar">
+              <div class="canvas-comment-composer__actions">
+                <button type="button" class="canvas-composer-btn" data-ref="btn-reply-mention" data-tooltip="Mencionar" aria-label="Mencionar">
+                  <span class="material-symbols-rounded">alternate_email</span>
+                </button>
+                <button type="button" class="canvas-composer-btn" data-ref="btn-reply-emoji" data-tooltip="Insertar emoji" aria-label="Insertar emoji">
+                  <span class="material-symbols-rounded">add_reaction</span>
+                </button>
+                <button type="button" class="canvas-composer-btn" data-ref="btn-reply-sticker" data-tooltip="Stickers" aria-label="Stickers">
+                  <span class="material-symbols-rounded">sticky_note_2</span>
+                </button>
+                <button type="button" class="canvas-composer-btn" data-ref="btn-reply-image" data-tooltip="Subir imagen" aria-label="Subir imagen">
+                  <span class="material-symbols-rounded">add_photo_alternate</span>
+                </button>
+                <input class="is-hidden" data-ref="input-reply-image-file" type="file" accept="image/*" />
+                <button type="button" class="canvas-composer-btn" data-ref="btn-reply-bold" data-tooltip="Negrita" aria-label="Negrita">
+                  <span class="material-symbols-rounded">format_bold</span>
+                </button>
+              </div>
+              <button type="button" class="canvas-composer-send-btn is-disabled" data-ref="btn-reply-send" data-tooltip="Enviar respuesta" aria-label="Enviar respuesta">
+                <span class="material-symbols-rounded">arrow_upward</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div class="design-shape-minitoolbar is-hidden" data-ref="design-shape-minitoolbar">
         <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-shape-inject" data-tooltip="Inyectar en capa activa (Enter)" aria-label="Inyectar">

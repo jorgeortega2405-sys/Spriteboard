@@ -1,7 +1,9 @@
 import { navigate } from '../app-router.js';
+import { CanvasCommentsController } from '../components/canvas-comments.component.js';
 import { openCanvasMetricsModal } from '../components/canvas-metrics-modal.component.js';
 import { createSidebar } from '../components/layout.component.js';
 import { openModal } from '../components/modal.component.js';
+import { openUpgradeModal } from '../components/upgrade-modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { currentUser, deleteApi, getApi, patchApi, postApi } from '../services/api.service.js';
 import { dispatchCanvasAction } from '../services/canvas-actions.service.js';
@@ -792,6 +794,7 @@ class DesignController {
   private optionsTrayCarouselController: CarouselController | null = null;
   private layersTrayCarouselController: CarouselController | null = null;
   private framesTrayCarouselController: CarouselController | null = null;
+  private commentsController: CanvasCommentsController | null = null;
 
   private btnHistory: HTMLButtonElement | null = null;
   private historyDrawerEl: HTMLElement | null = null;
@@ -1026,6 +1029,23 @@ class DesignController {
     this.setupWebSocketCollaboration();
     this.setupResizeObserver();
     this.bindEvents();
+    this.commentsController = new CanvasCommentsController({
+      canvasUuid: this.canvasUuid,
+      container: this.container,
+      getCanvasTransform: () => ({
+        height: this.canvasHeight,
+        panX: this.panX,
+        panY: this.panY,
+        width: this.canvasWidth,
+        zoom: this.zoom
+      }),
+      getCurrentFrameIndex: () => {
+        const idx = this.frames.findIndex((f) => f.id === this.activeFrameId);
+        return idx >= 0 ? idx : 0;
+      },
+      onRequestRedraw: () => this.requestRedraw()
+    });
+    await this.commentsController.init();
     this.renderLayersList();
     this.renderLayersCards();
     this.renderFramesCards();
@@ -1513,6 +1533,16 @@ class DesignController {
   private addLayer(broadcast = true, customLayerId?: string, customName?: string, customIndex?: number, customFrameId?: string): void {
     const frame = customFrameId ? this.frames.find((f) => f.id === customFrameId) : this.getActiveFrame();
     if (!frame) return;
+
+    if (broadcast) {
+      const userTier = (currentUser?.subscription_tier || 'free').toLowerCase();
+      if (userTier === 'free' && frame.layers.length >= 5) {
+        showToast(t('design.layers_free_limit') || 'El plan Gratis permite hasta 5 capas por lienzo. Mejora a Pro para capas ilimitadas.', 'warning');
+        openUpgradeModal('pro');
+        return;
+      }
+    }
+
     this.nextLayerNum++;
     const layerName = customName || `Capa ${this.nextLayerNum}`;
     const newLayer = this.createLayer(layerName);
@@ -2426,6 +2456,7 @@ class DesignController {
   private toggleColorsPanel(): void {
     const isHidden = this.colorsPanelEl?.classList.contains('is-hidden');
     if (isHidden) {
+      this.closeHistoryDrawer();
       this.colorsPanelEl?.classList.remove('is-hidden');
       this.topToggleColorsBtn?.classList.add('is-active');
       this.bottomColorsBtn?.classList.add('is-active');
@@ -2450,6 +2481,7 @@ class DesignController {
   }
 
   private openShapesPanel(): void {
+    this.closeHistoryDrawer();
     this.shapesPanelEl?.classList.remove('is-hidden');
     this.topToggleShapesBtn?.classList.add('is-active');
     this.colorsPanelEl?.classList.add('is-hidden');
@@ -4993,6 +5025,7 @@ class DesignController {
           const isVisible = !this.layersPanelEl?.classList.contains('is-hidden');
           this.toggleLayersBtn?.classList.toggle('is-active', isVisible);
           if (isVisible) {
+            this.closeHistoryDrawer();
             this.colorsPanelEl?.classList.add('is-hidden');
             this.topToggleColorsBtn?.classList.remove('is-active');
             this.bottomColorsBtn?.classList.remove('is-active');
@@ -5779,6 +5812,10 @@ class DesignController {
             const pixelX = Math.floor(exactX);
             const pixelY = Math.floor(exactY);
 
+            if (this.commentsController?.onCanvasPointerDown(exactX, exactY, e.clientX, e.clientY)) {
+              return;
+            }
+
             if (this.isPlacingShape && this.activeShapeTemplate) {
               const handle = this.checkShapeHandleHit(exactX, exactY);
               if (handle) {
@@ -6072,6 +6109,9 @@ class DesignController {
         const mouseY = e.clientY - rect.top;
 
         const isInsideViewport = mouseX >= 0 && mouseX <= rect.width && mouseY >= 0 && mouseY <= rect.height;
+        if (isInsideViewport) {
+          this.commentsController?.onCanvasPointerMove(e.clientX, e.clientY);
+        }
 
         const exactX = (mouseX - this.panX) / this.zoom;
         const exactY = (mouseY - this.panY) / this.zoom;
@@ -6579,6 +6619,7 @@ class DesignController {
     this.drawCollaboratorCursors();
 
     this.ctx.restore();
+    this.commentsController?.updatePinPositions(this.panX, this.panY, this.zoom);
   }
 
   private drawTileGrid(drawX: number, drawY: number, drawXEnd: number, drawYEnd: number): void {
@@ -6913,6 +6954,7 @@ class DesignController {
     if (!this.collaboratorsPanelEl) return;
     const isHidden = this.collaboratorsPanelEl.classList.contains('is-hidden');
     if (isHidden) {
+      this.closeHistoryDrawer();
       this.layersPanelEl?.classList.add('is-hidden');
       this.shapesPanelEl?.classList.add('is-hidden');
       this.colorsPanelEl?.classList.add('is-hidden');
@@ -7772,6 +7814,10 @@ class DesignController {
 
   private applyRemoteAction(data: { action: string; params?: any; payload?: any }): void {
     const payload = data.payload || data.params || {};
+    if (data.action.startsWith('comment_')) {
+      this.commentsController?.handleRemoteCommentAction(data.action, payload);
+      return;
+    }
     let actionType = data.action;
     if (actionType === 'update_layer_data') {
       actionType = 'update_layer_image';
@@ -9307,6 +9353,7 @@ class DesignController {
     this.optionsTrayCarouselController?.destroy();
     this.layersTrayCarouselController?.destroy();
     this.framesTrayCarouselController?.destroy();
+    this.commentsController?.destroy();
 
     if (this.rafId !== null) {
       cancelAnimationFrame(this.rafId);

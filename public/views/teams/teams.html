@@ -50,6 +50,41 @@
     <!-- Component Bottom -->
     <div class="component-bottom component-bottom--no-padding" data-ref="component-bottom">
       <div class="component-table-wrapper" data-ref="teams-table-wrapper">
+        <div class="component-locked-state is-hidden" data-ref="teams-locked-state">
+          <div class="component-locked-state__card" data-ref="teams-locked-card">
+            <div class="component-locked-state__icon-box" data-ref="teams-locked-icon">
+              <span class="material-symbols-rounded">workspace_premium</span>
+            </div>
+            <span class="component-locked-state__badge" data-ref="teams-locked-badge">
+              <span class="material-symbols-rounded">lock</span>
+              <span data-i18n="teams.locked_badge">Función Pro y Negocios</span>
+            </span>
+            <h2 class="component-locked-state__title" data-ref="teams-locked-title" data-i18n="teams.locked_title">Desbloquea la gestión de equipos</h2>
+            <p class="component-locked-state__desc" data-ref="teams-locked-desc" data-i18n="teams.locked_desc">Crea y administra equipos de trabajo para colaborar en tiempo real, asignar roles de administración y compartir lienzos centralizados con tus colegas.</p>
+            <div class="component-locked-state__benefits" data-ref="teams-locked-benefits">
+              <div class="component-locked-state__benefit-item">
+                <span class="material-symbols-rounded">check_circle</span>
+                <span data-i18n="teams.locked_benefit_1">Equipos de trabajo centralizados para tus proyectos</span>
+              </div>
+              <div class="component-locked-state__benefit-item">
+                <span class="material-symbols-rounded">check_circle</span>
+                <span data-i18n="teams.locked_benefit_2">Colaboración en tiempo real y asignación de permisos</span>
+              </div>
+              <div class="component-locked-state__benefit-item">
+                <span class="material-symbols-rounded">check_circle</span>
+                <span data-i18n="teams.locked_benefit_3">Acceso simplificado a lienzos compartidos para todos los miembros</span>
+              </div>
+            </div>
+            <div class="component-locked-state__actions" data-ref="teams-locked-actions">
+              <button type="button" class="btn btn--h40 btn--black" data-ref="btn-locked-upgrade">
+                <span class="material-symbols-rounded">workspace_premium</span>
+                <span data-i18n="teams.locked_btn_upgrade">Mejorar a Pro</span>
+              </button>
+              <button type="button" class="btn btn--h40 btn--outline" data-ref="btn-locked-home" data-i18n="teams.locked_btn_home">Ir al inicio</button>
+            </div>
+          </div>
+        </div>
+
         <table class="component-table" data-ref="teams-table">
           <thead class="component-table__head" data-ref="teams-thead">
             <tr>

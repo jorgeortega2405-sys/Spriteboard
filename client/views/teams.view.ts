@@ -1,4 +1,6 @@
+import { navigate } from '../app-router.js';
 import { createSidebar } from '../components/layout.component.js';
+import { openUpgradeModal } from '../components/upgrade-modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { currentUser, deleteApi, escapeHtml, getApi, patchApi, postApi } from '../services/api.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
@@ -64,6 +66,10 @@ class TeamsController {
   private membersDropdownList: HTMLElement | null = null;
   private membersDropdownController: ReturnType<typeof setupDropdown> | null = null;
 
+  private lockedStateEl: HTMLElement | null = null;
+  private btnLockedUpgrade: HTMLElement | null = null;
+  private btnLockedHome: HTMLElement | null = null;
+
   constructor(container: HTMLElement) {
     this.container = container;
     this.abortController = new AbortController();
@@ -73,6 +79,10 @@ class TeamsController {
     this.tableEl = this.container.querySelector<HTMLElement>('[data-ref="teams-table"]');
     this.tbodyEl = this.container.querySelector<HTMLElement>('[data-ref="teams-tbody"]');
     this.tableWrapperEl = this.container.querySelector<HTMLElement>('[data-ref="teams-table-wrapper"]');
+
+    this.lockedStateEl = this.container.querySelector<HTMLElement>('[data-ref="teams-locked-state"]');
+    this.btnLockedUpgrade = this.container.querySelector<HTMLElement>('[data-ref="btn-locked-upgrade"]');
+    this.btnLockedHome = this.container.querySelector<HTMLElement>('[data-ref="btn-locked-home"]');
 
     this.defaultActions = this.container.querySelector<HTMLElement>('[data-ref="teams-default-actions"]');
     this.selectedActions = this.container.querySelector<HTMLElement>('[data-ref="teams-selected-actions"]');
@@ -114,6 +124,18 @@ class TeamsController {
 
   private bindEvents(): void {
     const { signal } = this.abortController;
+
+    this.btnLockedUpgrade?.addEventListener('click', () => {
+      openUpgradeModal('pro');
+    }, { signal });
+
+    this.btnLockedHome?.addEventListener('click', () => {
+      navigate('/');
+    }, { signal });
+
+    window.addEventListener('subscription-updated', () => {
+      void this.loadTeams();
+    }, { signal });
 
     this.btnCreateTeam?.addEventListener('click', () => this.openTeamModal(), { signal });
 
@@ -266,6 +288,30 @@ class TeamsController {
 
   private async loadTeams(): Promise<void> {
     if (!currentUser) return;
+
+    const userTier = (currentUser.subscription_tier || 'free').toLowerCase();
+    if (userTier === 'free') {
+      if (this.lockedStateEl) {
+        this.lockedStateEl.classList.remove('is-hidden');
+        renderIcons(this.lockedStateEl);
+      }
+      if (this.tableEl) this.tableEl.style.display = 'none';
+      if (this.defaultActions) this.defaultActions.style.display = 'none';
+      if (this.selectedActions) this.selectedActions.style.display = 'none';
+      if (this.searchToolbar) this.searchToolbar.classList.add('is-hidden');
+      if (this.tableWrapperEl) {
+        removeEmptyState(this.tableWrapperEl, 'teams-empty-state');
+      }
+      return;
+    }
+
+    if (this.lockedStateEl) {
+      this.lockedStateEl.classList.add('is-hidden');
+    }
+    if (this.defaultActions) {
+      this.defaultActions.style.display = 'flex';
+    }
+
     try {
       const res = await getApi(API_ROUTES.teams.base);
       if (res.ok) {
@@ -443,6 +489,21 @@ class TeamsController {
   }
 
   private openTeamModal(teamToEdit?: Team): void {
+    if (!teamToEdit) {
+      const userTier = (currentUser?.subscription_tier || 'free').toLowerCase();
+      if (userTier === 'free') {
+        showToast(t('teams.toast_upgrade_required') || 'La creación de equipos requiere una suscripción Pro o Negocios.', 'warning');
+        openUpgradeModal('pro');
+        return;
+      }
+      const ownedTeams = this.allTeams.filter((t) => t.user_role === 'owner');
+      if (userTier === 'pro' && ownedTeams.length >= 1) {
+        showToast(t('teams.toast_pro_teams_limit') || 'El plan Pro permite 1 equipo. Mejora a Negocios para equipos ilimitados.', 'warning');
+        openUpgradeModal('business');
+        return;
+      }
+    }
+
     this.currentTeam = teamToEdit || null;
     if (this.bannerTeamError) {
       this.bannerTeamError.classList.add('is-hidden');
@@ -677,6 +738,13 @@ class TeamsController {
       const alreadyMember = this.currentMembers.some((m) => m.user_id === targetUser.id);
       if (alreadyMember) {
         showToast('Este usuario ya es integrante del equipo.', 'info');
+        return;
+      }
+
+      const userTier = (currentUser?.subscription_tier || 'free').toLowerCase();
+      if (userTier === 'pro' && this.currentMembers.length >= 3) {
+        showToast(t('teams.toast_pro_members_limit') || 'El plan Pro permite un máximo de 3 miembros por equipo. Mejora a Negocios para miembros ilimitados.', 'warning');
+        openUpgradeModal('business');
         return;
       }
 

@@ -1,3 +1,4 @@
+import { createCommentHandler, deleteCommentHandler, listCommentsHandler, updateCommentHandler } from '../controllers/canvas-comment.controller.js';
 import { createSnapshotHandler, deleteSnapshotHandler, forkSnapshotHandler, getSnapshotDataHandler, listSnapshotsHandler, restoreSnapshotHandler, updateSnapshotHandler } from '../controllers/canvas-snapshot.controller.js';
 import { addCanvasMemberHandler, addCanvasTeamHandler, createCanvasHandler, deleteCanvasHandler, duplicateCanvasHandler, emptyTrashHandler, getCanvasHandler, getCanvasMembersHandler, getCanvasMetricsHandler, getCanvasTeamsHandler, getCanvasTokenHandler, heartbeatCanvasViewHandler, listCanvases, listSharedCanvases, listTrashCanvases, permanentlyDeleteCanvasHandler, recordCanvasViewHandler, removeCanvasMemberHandler, removeCanvasTeamHandler, resolveCanvasSlugHandler, restoreCanvasHandler, searchUsersHandler, syncCanvasHandler, updateCanvasAccessHandler, updateCanvasSlugHandler } from '../controllers/canvas.controller.js';
 import { requireAuth } from '../middlewares/auth.middleware.js';
@@ -37,7 +38,12 @@ router.post('/canvases/:uuid/snapshots/:snapshotUuid/restore', requireAuth, rest
 router.post('/canvases/:uuid/snapshots/:snapshotUuid/fork', requireAuth, forkSnapshotHandler);
 router.patch('/canvases/:uuid/snapshots/:snapshotUuid', requireAuth, updateSnapshotHandler);
 router.delete('/canvases/:uuid/snapshots/:snapshotUuid', requireAuth, deleteSnapshotHandler);
+router.get('/canvases/:uuid/comments', listCommentsHandler);
+router.post('/canvases/:uuid/comments', requireAuth, createCommentHandler);
+router.patch('/canvases/:uuid/comments/:commentUuid', requireAuth, updateCommentHandler);
+router.delete('/canvases/:uuid/comments/:commentUuid', requireAuth, deleteCommentHandler);
 router.get('/canvases/:uuid', getCanvasHandler);
 
 export default router;
+
 

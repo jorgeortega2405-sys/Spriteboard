@@ -8,6 +8,8 @@ export const API_ROUTES = {
     access: (uuid: string) => `/api/canvases/${encodeURIComponent(uuid)}/access`,
     base: '/api/canvases',
     byId: (uuid: string) => `/api/canvases/${encodeURIComponent(uuid)}`,
+    commentById: (uuid: string, commentUuid: string) => `/api/canvases/${encodeURIComponent(uuid)}/comments/${encodeURIComponent(commentUuid)}`,
+    comments: (uuid: string, frameIndex?: number) => frameIndex !== undefined ? `/api/canvases/${encodeURIComponent(uuid)}/comments?frameIndex=${encodeURIComponent(frameIndex)}` : `/api/canvases/${encodeURIComponent(uuid)}/comments`,
     delete: (uuid: string) => `/api/canvases/${encodeURIComponent(uuid)}`,
     duplicate: (uuid: string) => `/api/canvases/${encodeURIComponent(uuid)}/duplicate`,
     heartbeatView: (uuid: string) => `/api/canvases/${encodeURIComponent(uuid)}/views/heartbeat`,
@@ -109,6 +111,7 @@ export const API_ROUTES = {
     paymentMethodDelete: (pmId: string) => `/api/subscriptions/payment-methods/${encodeURIComponent(pmId)}`,
     paymentMethods: '/api/subscriptions/payment-methods',
     setupIntent: '/api/subscriptions/setup-intent',
+    storage: '/api/subscriptions/storage',
     verifySession: (sessionId: string) => `/api/subscriptions/verify-session?session_id=${encodeURIComponent(sessionId)}`,
   },
   telemetry: {
