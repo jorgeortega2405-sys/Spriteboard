@@ -16,18 +16,22 @@ export interface CreateCanvasOptions {
   checkSize?: number;
   fps?: number;
   onionSkin?: boolean;
+  teamUuid?: string | null;
+  effectiveTier?: string | null;
 }
 
 export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise<void> {
   const width = options.width;
   const height = options.height;
 
-  const userTier = (currentUser?.subscription_tier || 'free').toLowerCase();
-  const maxDim = userTier === 'business' || userTier === 'negocios' ? 4096 : (userTier === 'pro' ? 2048 : 1024);
+  const effectiveTier = (options.effectiveTier || currentUser?.subscription_tier || 'free').toLowerCase();
+  const maxDim = effectiveTier === 'business' || effectiveTier === 'negocios' ? 4096 : (effectiveTier === 'pro' ? 2048 : 1024);
   if (width > maxDim || height > maxDim) {
-    const tierName = userTier === 'free' ? 'Gratis' : (userTier === 'pro' ? 'Pro' : 'Negocios');
-    showToast(`El tamaño (${width}×${height} px) supera el límite de tu plan ${tierName} (${maxDim}×${maxDim} px).`, 'warning');
-    openUpgradeModal(userTier === 'free' ? 'pro' : 'business');
+    const tierName = effectiveTier === 'free' ? 'Gratis' : (effectiveTier === 'pro' ? 'Pro' : 'Negocios');
+    showToast(`El tamaño (${width}×${height} px) supera el límite permitido (${maxDim}×${maxDim} px).`, 'warning');
+    if (!options.teamUuid) {
+      openUpgradeModal(effectiveTier === 'free' ? 'pro' : 'business');
+    }
     return;
   }
 
@@ -182,6 +186,7 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
       unit: 'px',
       data: initialData,
       preview_thumbnail: previewThumbnail,
+      team_uuid: options.teamUuid || undefined,
     });
 
     if (res.ok) {

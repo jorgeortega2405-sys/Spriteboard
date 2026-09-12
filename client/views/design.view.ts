@@ -498,6 +498,7 @@ class DesignController {
   private publicRole: 'viewer' | 'editor' = 'editor';
   private role: 'owner' | 'editor' | 'viewer' = 'owner';
   private isOwner = true;
+  private effectiveTier: 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios' = 'free';
   private ownerInfo: { avatarUrl?: string | null; id?: number | null; subscriptionTier?: 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios'; username: string } | null = null;
   private collaborators: Map<string, { avatarUrl?: string | null; color: string; connId: string; hideCursor?: boolean; role?: string; subscriptionTier?: 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios'; userId: number; username: string; x?: number; y?: number }> = new Map();
   private showAllCursors = true;
@@ -1535,8 +1536,9 @@ class DesignController {
     if (!frame) return;
 
     if (broadcast) {
-      const userTier = (currentUser?.subscription_tier || 'free').toLowerCase();
-      if (userTier === 'free' && frame.layers.length >= 5) {
+      const effTier = (this.effectiveTier || currentUser?.subscription_tier || 'free').toLowerCase();
+      const isProOrBusiness = effTier === 'pro' || effTier === 'ultra' || effTier === 'business' || effTier === 'negocios';
+      if (!isProOrBusiness && frame.layers.length >= 5) {
         showToast(t('design.layers_free_limit') || 'El plan Gratis permite hasta 5 capas por lienzo. Mejora a Pro para capas ilimitadas.', 'warning');
         openUpgradeModal('pro');
         return;
@@ -8700,6 +8702,8 @@ class DesignController {
           this.role = this.publicRole === 'viewer' ? 'viewer' : 'editor';
         }
       }
+
+      this.effectiveTier = (canvas.effective_tier || canvas.owner_tier || currentUser?.subscription_tier || 'free').toLowerCase() as any;
 
       if (this.isOwner && currentUser) {
         this.ownerInfo = {

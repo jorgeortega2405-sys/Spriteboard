@@ -21,6 +21,10 @@ export interface CanvasItem {
   owner_name?: string | null;
   owner_avatar?: string | null;
   owner_tier?: 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios' | null;
+  effective_tier?: 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios' | null;
+  team_id?: number | null;
+  team_uuid?: string | null;
+  team_info?: { id: number; uuid: string; name: string; color?: string } | null;
   created_at: string;
   updated_at?: string;
 }
@@ -52,6 +56,8 @@ export interface CreateCanvasPayload {
   uuid?: string;
   folder_id?: number | null;
   folder_uuid?: string | null;
+  team_id?: number | null;
+  team_uuid?: string | null;
   name?: string;
   width: number;
   height: number;

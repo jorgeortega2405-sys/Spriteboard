@@ -43,6 +43,7 @@ export const API_ROUTES = {
   teams: {
     base: '/api/teams',
     byId: (uuid: string) => `/api/teams/${encodeURIComponent(uuid)}`,
+    canvases: (uuid: string) => `/api/teams/${encodeURIComponent(uuid)}/canvases`,
     members: (uuid: string) => `/api/teams/${encodeURIComponent(uuid)}/members`,
     removeMember: (uuid: string, userId: number) => `/api/teams/${encodeURIComponent(uuid)}/members/${encodeURIComponent(userId)}`,
   },

@@ -1,10 +1,11 @@
 import crypto from 'crypto';
 import mysql from 'mysql2/promise';
 import { canvasPool, pool } from '../config/database.config.js';
+import { Canvas } from '../types/canvas.types.js';
 import { CreateTeamDto, Team, TeamMember, UpdateTeamDto } from '../types/team.types.js';
 import { logger } from './logger.service.js';
 import { createNotification } from './notification.service.js';
-import { getTierLimits } from './subscription.service.js';
+import { getEffectiveTierForCanvas, getTierLimits } from './subscription.service.js';
 
 export async function createTeam(ownerId: number, dto: CreateTeamDto): Promise<Team> {
   const uuid = crypto.randomUUID();
@@ -353,6 +354,57 @@ export async function removeTeamMember(uuid: string, currentUserId: number, targ
     return true;
   } catch (err: any) {
     logger.db.error(`Error al remover miembro del equipo ${uuid}`, err);
+    throw err;
+  }
+}
+
+export async function getTeamCanvases(uuid: string, currentUserId: number): Promise<Canvas[]> {
+  try {
+    const [teamRows] = await pool.query<mysql.RowDataPacket[]>(
+      'SELECT id, owner_id FROM teams WHERE uuid = ? LIMIT 1',
+      [uuid]
+    );
+
+    if (teamRows.length === 0) {
+      throw new Error('El equipo no existe.');
+    }
+
+    const team = teamRows[0];
+
+    const [isMember] = await pool.query<mysql.RowDataPacket[]>(
+      'SELECT id FROM team_members WHERE team_id = ? AND user_id = ? LIMIT 1',
+      [team.id, currentUserId]
+    );
+
+    if (team.owner_id !== currentUserId && isMember.length === 0) {
+      throw new Error('No tienes acceso a este equipo.');
+    }
+
+    const [canvasRows] = await canvasPool.query<mysql.RowDataPacket[]>(
+      `SELECT c.id, c.uuid, c.user_id, c.folder_id, c.name, c.width, c.height, c.unit, c.preview_thumbnail,
+              c.access_level, c.public_role, c.short_code, c.custom_slug, c.created_at, c.updated_at,
+              u.username AS owner_name, u.avatar_url AS owner_avatar, u.subscription_tier AS owner_tier,
+              ct.role AS member_role,
+              (uf.id IS NOT NULL) AS is_favorite
+       FROM db_canvas.canvases c
+       INNER JOIN db_canvas.canvas_teams ct ON ct.canvas_id = c.id
+       LEFT JOIN db_identity.users u ON u.id = c.user_id
+       LEFT JOIN db_identity.user_favorites uf
+         ON uf.user_id = ? AND uf.item_type = 'canvas' AND uf.item_id = c.uuid
+       WHERE ct.team_id = ? AND c.deleted_at IS NULL
+       ORDER BY c.updated_at DESC`,
+      [currentUserId, team.id]
+    );
+
+    return Promise.all(
+      canvasRows.map(async (r) => ({
+        ...r,
+        effective_tier: await getEffectiveTierForCanvas(r.id),
+        is_favorite: Boolean(r.is_favorite),
+      }))
+    ) as Promise<Canvas[]>;
+  } catch (err: any) {
+    logger.db.error(`Error al listar lienzos del equipo ${uuid}`, err);
     throw err;
   }
 }

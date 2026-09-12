@@ -9,6 +9,8 @@ let activeCreateCanvasModal: { close: () => void } | null = null;
 export interface OpenCreateCanvasModalOptions {
   height?: number;
   name?: string;
+  teamName?: string | null;
+  teamUuid?: string | null;
   templateImage?: string | null;
   templateName?: string | null;
   variants?: PresetVariant[] | null;
@@ -58,7 +60,7 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
         <div class="modal-create-canvas__sidebar" data-ref="modal-create-canvas-sidebar">
           <div class="modal-create-canvas__sidebar-top" data-ref="modal-sidebar-top">
             <div class="component-top-left" data-ref="modal-sidebar-top-left">
-              <h1 class="component-top-title">${templateName ? 'Crear desde plantilla' : t('canvas.modal_title')}</h1>
+              <h1 class="component-top-title">${templateName ? 'Crear desde plantilla' : (options?.teamName ? `Lienzo para ${options.teamName}` : t('canvas.modal_title'))}</h1>
             </div>
           </div>
           <div class="modal-create-canvas__sidebar-bottom" data-ref="modal-sidebar-bottom">
@@ -829,6 +831,8 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
         checkSize: selectedCheckSize,
         fps: selectedFps,
         onionSkin: selectedOnionSkin,
+        teamUuid: options?.teamUuid || null,
+        effectiveTier: options?.teamUuid ? 'business' : null,
       });
       closeModal();
     } catch (err: unknown) {

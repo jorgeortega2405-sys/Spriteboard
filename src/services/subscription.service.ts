@@ -1,4 +1,6 @@
-import { SubscriptionTier } from '../types/subscription.types.js';
+import { canvasPool } from '../config/database.config.js';
+import { SubscriptionTier, SubscriptionTierId } from '../types/subscription.types.js';
+import mysql from 'mysql2/promise';
 
 export interface TierLimits {
   storageBytes: number;
@@ -56,6 +58,61 @@ export function getTierLimits(tier?: string): TierLimits {
   const normalized = (tier || 'free').toLowerCase();
   const key = normalized === 'negocios' ? 'business' : normalized;
   return TIER_LIMITS[key] || TIER_LIMITS.free;
+}
+
+export function resolveHigherTier(tier1?: string, tier2?: string): SubscriptionTierId {
+  const rank: Record<string, number> = {
+    business: 3,
+    negocios: 3,
+    ultra: 2,
+    pro: 2,
+    plus: 1,
+    free: 0,
+  };
+  const norm1 = (tier1 || 'free').toLowerCase();
+  const norm2 = (tier2 || 'free').toLowerCase();
+  const r1 = rank[norm1] ?? 0;
+  const r2 = rank[norm2] ?? 0;
+  if (r2 > r1) {
+    return (norm2 === 'negocios' ? 'business' : norm2) as SubscriptionTierId;
+  }
+  return (norm1 === 'negocios' ? 'business' : norm1) as SubscriptionTierId;
+}
+
+export async function getEffectiveTierForCanvas(canvasId: number): Promise<SubscriptionTierId> {
+  try {
+    const [canvasRows] = await canvasPool.query<mysql.RowDataPacket[]>(
+      `SELECT c.user_id, u.subscription_tier AS owner_tier
+       FROM db_canvas.canvases c
+       LEFT JOIN db_identity.users u ON u.id = c.user_id
+       WHERE c.id = ? LIMIT 1`,
+      [canvasId]
+    );
+    if (canvasRows.length === 0) {
+      return 'free';
+    }
+
+    let highestTier: SubscriptionTierId = (canvasRows[0].owner_tier || 'free').toLowerCase() as SubscriptionTierId;
+
+    const [teamRows] = await canvasPool.query<mysql.RowDataPacket[]>(
+      `SELECT u.subscription_tier AS team_owner_tier
+       FROM db_canvas.canvas_teams ct
+       INNER JOIN db_identity.teams t ON t.id = ct.team_id
+       INNER JOIN db_identity.users u ON u.id = t.owner_id
+       WHERE ct.canvas_id = ?`,
+      [canvasId]
+    );
+
+    for (const row of teamRows) {
+      if (row.team_owner_tier) {
+        highestTier = resolveHigherTier(highestTier, row.team_owner_tier);
+      }
+    }
+
+    return highestTier;
+  } catch {
+    return 'free';
+  }
 }
 
 export class SubscriptionService {

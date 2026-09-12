@@ -1270,6 +1270,10 @@ export async function createSidebar(): Promise<HTMLElement> {
           <span class="material-symbols-rounded menu-item__icon">folder_shared</span>
           <span class="menu-item__text" data-i18n="nav.shared"></span>
         </button>
+        <button type="button" class="menu-item" data-ref="btn-nav-teams">
+          <span class="material-symbols-rounded menu-item__icon">groups</span>
+          <span class="menu-item__text" data-i18n="nav.teams"></span>
+        </button>
       `;
       translateElement(navTop);
 
@@ -1290,6 +1294,12 @@ export async function createSidebar(): Promise<HTMLElement> {
         btnShared?.classList.add('is-active');
       }
       bindNavLink(btnShared, '/shared');
+
+      const btnTeams = navTop.querySelector<HTMLElement>('[data-ref="btn-nav-teams"]');
+      if (currentPath === '/teams') {
+        btnTeams?.classList.add('is-active');
+      }
+      bindNavLink(btnTeams, '/teams');
     }
 
     if (navBottom) {

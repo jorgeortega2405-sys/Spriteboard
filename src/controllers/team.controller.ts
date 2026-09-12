@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import { logger } from '../services/logger.service.js';
-import { addTeamMember, createTeam, deleteTeam, getTeamByUuid, getUserTeams, removeTeamMember, updateTeam } from '../services/team.service.js';
+import { addTeamMember, createTeam, deleteTeam, getTeamByUuid, getTeamCanvases, getUserTeams, removeTeamMember, updateTeam } from '../services/team.service.js';
 
 export async function listTeamsHandler(req: Request, res: Response): Promise<void> {
   try {
@@ -195,5 +195,31 @@ export async function removeTeamMemberHandler(req: Request, res: Response): Prom
     }
     logger.app.error(`Error al remover miembro de equipo ${req.params.uuid}`, err);
     res.status(500).json({ error: 'No se pudo remover al miembro del equipo.' });
+  }
+}
+
+export async function getTeamCanvasesHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const user = getCurrentUser(req);
+    if (!user) {
+      res.status(401).json({ error: 'No autorizado.' });
+      return;
+    }
+
+    const { uuid } = req.params;
+    if (!uuid || typeof uuid !== 'string') {
+      res.status(400).json({ error: 'Identificador de equipo inválido.' });
+      return;
+    }
+
+    const canvases = await getTeamCanvases(uuid, user.id);
+    res.json({ success: true, canvases });
+  } catch (err: any) {
+    if (err?.message?.includes('No tienes acceso')) {
+      res.status(403).json({ error: 'No tienes acceso a este equipo.' });
+      return;
+    }
+    logger.app.error(`Error al consultar lienzos del equipo ${req.params.uuid}`, err);
+    res.status(500).json({ error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.' });
   }
 }

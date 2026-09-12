@@ -8,7 +8,7 @@ import { ensureDefaultFolder } from './folder.service.js';
 import { logger } from './logger.service.js';
 import { createNotification } from './notification.service.js';
 import { checkUserStorageQuota } from './storage.service.js';
-import { getTierLimits } from './subscription.service.js';
+import { getEffectiveTierForCanvas, getTierLimits, resolveHigherTier } from './subscription.service.js';
 import crypto from 'crypto';
 import mysql from 'mysql2/promise';
 
@@ -64,18 +64,48 @@ export async function createCanvas(userId: number, dto: CreateCanvasDto): Promis
   const dataStr = dto.data ? (typeof dto.data === 'string' ? dto.data : JSON.stringify(dto.data)) : null;
   const previewThumbnail = dto.preview_thumbnail !== undefined ? dto.preview_thumbnail : null;
 
+  let targetTeam: { id: number; owner_id: number; name: string } | null = null;
+  if (dto.team_uuid || dto.team_id) {
+    const [tRows] = await pool.query<mysql.RowDataPacket[]>(
+      `SELECT t.id, t.owner_id, t.name
+       FROM teams t
+       LEFT JOIN team_members tm ON tm.team_id = t.id AND tm.user_id = ?
+       WHERE (t.uuid = ? OR t.id = ?) AND (t.owner_id = ? OR tm.user_id = ?) LIMIT 1`,
+      [userId, dto.team_uuid || '', dto.team_id || 0, userId, userId]
+    );
+    if (tRows.length > 0) {
+      targetTeam = tRows[0] as { id: number; owner_id: number; name: string };
+    } else {
+      throw new Error('No tienes acceso al equipo seleccionado o el equipo no existe.');
+    }
+  }
+
   const [uRows] = await pool.query<mysql.RowDataPacket[]>(
     'SELECT subscription_tier FROM users WHERE id = ? LIMIT 1',
     [userId]
   );
   const userTier = uRows[0]?.subscription_tier || 'free';
-  const tierLimits = getTierLimits(userTier);
+
+  let effectiveTier = userTier;
+  let storageCheckUserId = userId;
+
+  if (targetTeam) {
+    const [ownerSubRows] = await pool.query<mysql.RowDataPacket[]>(
+      'SELECT subscription_tier FROM users WHERE id = ? LIMIT 1',
+      [targetTeam.owner_id]
+    );
+    const teamOwnerTier = ownerSubRows[0]?.subscription_tier || 'free';
+    effectiveTier = resolveHigherTier(userTier, teamOwnerTier);
+    storageCheckUserId = targetTeam.owner_id;
+  }
+
+  const tierLimits = getTierLimits(effectiveTier);
   if (width > tierLimits.maxCanvasDimension || height > tierLimits.maxCanvasDimension) {
     throw new Error(`Las dimensiones del lienzo (${width}×${height} px) superan el límite permitido para tu plan (${tierLimits.maxCanvasDimension}×${tierLimits.maxCanvasDimension} px).`);
   }
 
   const approxBytes = dataStr ? Buffer.byteLength(dataStr, 'utf-8') : 1024;
-  const quota = await checkUserStorageQuota(userId, approxBytes);
+  const quota = await checkUserStorageQuota(storageCheckUserId, approxBytes);
   if (!quota.allowed) {
     throw new Error(`Has alcanzado el límite de almacenamiento de tu plan (${quota.limitFormatted}). Libera espacio o actualiza tu plan en Mejorar plan.`);
   }
@@ -142,12 +172,29 @@ export async function createCanvas(userId: number, dto: CreateCanvasDto): Promis
     const insertedId = result.insertId;
     logger.db.info(`Lienzo creado exitosamente con UUID ${uuid} para el usuario ${userId}`);
 
+    if (targetTeam) {
+      await canvasPool.execute(
+        `INSERT INTO canvas_teams (canvas_id, team_id, role)
+         VALUES (?, ?, 'editor')
+         ON DUPLICATE KEY UPDATE role = VALUES(role)`,
+        [insertedId, targetTeam.id]
+      );
+    }
+
     const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
       'SELECT id, uuid, user_id, folder_id, name, width, height, unit, access_level, public_role, short_code, custom_slug, created_at, updated_at FROM canvases WHERE id = ? LIMIT 1',
       [insertedId]
     );
 
     const createdCanvas = rows[0] as Canvas;
+    createdCanvas.effective_tier = effectiveTier as any;
+    if (targetTeam) {
+      createdCanvas.team_info = {
+        id: targetTeam.id,
+        uuid: dto.team_uuid || '',
+        name: targetTeam.name,
+      };
+    }
     if (dataStr) {
       createdCanvas.data = dataStr;
     }
@@ -191,7 +238,7 @@ export async function getSharedCanvases(userId: number): Promise<any[]> {
     const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
       `SELECT c.id, c.uuid, c.user_id, c.folder_id, c.name, c.width, c.height, c.unit, c.preview_thumbnail,
               c.access_level, c.public_role, c.short_code, c.custom_slug, c.created_at, c.updated_at,
-              u.username AS owner_name, u.avatar_url AS owner_avatar,
+              u.username AS owner_name, u.avatar_url AS owner_avatar, u.subscription_tier AS owner_tier,
               acc.member_role,
               (uf.id IS NOT NULL) AS is_favorite
        FROM canvases c
@@ -215,10 +262,13 @@ export async function getSharedCanvases(userId: number): Promise<any[]> {
        ORDER BY c.updated_at DESC`,
       [userId, userId, userId, userId, userId]
     );
-    return rows.map((r) => ({
-      ...r,
-      is_favorite: Boolean(r.is_favorite),
-    }));
+    return Promise.all(
+      rows.map(async (r) => ({
+        ...r,
+        effective_tier: await getEffectiveTierForCanvas(r.id),
+        is_favorite: Boolean(r.is_favorite),
+      }))
+    );
   } catch (err) {
     logger.db.error(`Error al listar lienzos compartidos para el usuario ${userId}`, err);
     throw new Error('No se pudieron obtener los lienzos compartidos.');
@@ -295,6 +345,7 @@ export async function getCanvasByUuid(uuid: string, userId?: number): Promise<Ca
       return null;
     }
 
+    canvas.effective_tier = await getEffectiveTierForCanvas(canvas.id);
     await populateCanvasData(canvas);
     return canvas;
   } catch (err) {
@@ -368,6 +419,8 @@ export async function getCanvasUserRole(
     if (!role) {
       return null;
     }
+
+    canvas.effective_tier = await getEffectiveTierForCanvas(canvas.id);
 
     if (includeData) {
       await populateCanvasData(canvas);
@@ -559,6 +612,7 @@ export async function syncCanvas(userId: number | null, dto: SyncCanvasDto): Pro
     );
 
     const syncedCanvas = rows[0] as Canvas;
+    syncedCanvas.effective_tier = await getEffectiveTierForCanvas(syncedCanvas.id);
     if (previewThumbnail) {
       syncedCanvas.preview_thumbnail = previewThumbnail;
     }

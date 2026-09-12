@@ -1,4 +1,5 @@
 import { navigate } from '../app-router.js';
+import { openCreateCanvasModal } from '../components/create-canvas-modal.component.js';
 import { createSidebar } from '../components/layout.component.js';
 import { openUpgradeModal } from '../components/upgrade-modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
@@ -40,6 +41,7 @@ class TeamsController {
   private tableWrapperEl: HTMLElement | null = null;
   private defaultActions: HTMLElement | null = null;
   private selectedActions: HTMLElement | null = null;
+  private btnActionCreateCanvas: HTMLElement | null = null;
   private btnActionMembers: HTMLElement | null = null;
   private btnActionEdit: HTMLElement | null = null;
   private btnActionDelete: HTMLElement | null = null;
@@ -86,6 +88,7 @@ class TeamsController {
 
     this.defaultActions = this.container.querySelector<HTMLElement>('[data-ref="teams-default-actions"]');
     this.selectedActions = this.container.querySelector<HTMLElement>('[data-ref="teams-selected-actions"]');
+    this.btnActionCreateCanvas = this.container.querySelector<HTMLElement>('[data-ref="btn-action-create-canvas"]');
     this.btnActionMembers = this.container.querySelector<HTMLElement>('[data-ref="btn-action-members"]');
     this.btnActionEdit = this.container.querySelector<HTMLElement>('[data-ref="btn-action-edit"]');
     this.btnActionDelete = this.container.querySelector<HTMLElement>('[data-ref="btn-action-delete"]');
@@ -206,6 +209,17 @@ class TeamsController {
       this.renderRows(filtered, true);
     }, { signal });
 
+    this.btnActionCreateCanvas?.addEventListener('click', () => {
+      const selectedUuid = [...this.selectedTeamUuids][0];
+      const team = this.allTeams.find((t) => t.uuid === selectedUuid);
+      if (team) {
+        openCreateCanvasModal({
+          teamUuid: team.uuid,
+          teamName: team.name,
+        });
+      }
+    }, { signal });
+
     this.btnActionMembers?.addEventListener('click', () => {
       const selectedUuid = [...this.selectedTeamUuids][0];
       const team = this.allTeams.find((t) => t.uuid === selectedUuid);
@@ -290,8 +304,23 @@ class TeamsController {
   private async loadTeams(): Promise<void> {
     if (!currentUser) return;
 
+    try {
+      const res = await getApi(API_ROUTES.teams.base);
+      if (res.ok) {
+        const data = await res.json();
+        this.allTeams = Array.isArray(data.teams) ? data.teams : [];
+      } else {
+        this.allTeams = [];
+      }
+    } catch {
+      this.allTeams = [];
+      showToast(t('teams.load_error') || 'Error al cargar equipos', 'danger');
+    }
+
     const userTier = (currentUser.subscription_tier || 'free').toLowerCase();
-    if (userTier === 'free') {
+    const hasTeams = this.allTeams.length > 0;
+
+    if (userTier === 'free' && !hasTeams) {
       if (this.lockedStateEl) {
         this.lockedStateEl.classList.remove('is-hidden');
         renderIcons(this.lockedStateEl);
@@ -313,16 +342,7 @@ class TeamsController {
       this.defaultActions.style.display = 'flex';
     }
 
-    try {
-      const res = await getApi(API_ROUTES.teams.base);
-      if (res.ok) {
-        const data = await res.json();
-        this.allTeams = Array.isArray(data.teams) ? data.teams : [];
-        this.renderRows(this.allTeams);
-      }
-    } catch {
-      showToast(t('teams.load_error') || 'Error al cargar equipos', 'danger');
-    }
+    this.renderRows(this.allTeams);
   }
 
   private renderRows(teams: Team[], isSearchResult = false): void {
@@ -418,6 +438,7 @@ class TeamsController {
         const selectedUuid = [...this.selectedTeamUuids][0];
         const selectedTeam = this.allTeams.find((t) => t.uuid === selectedUuid);
 
+        if (this.btnActionCreateCanvas) this.btnActionCreateCanvas.style.display = 'inline-flex';
         if (this.btnActionMembers) this.btnActionMembers.style.display = 'inline-flex';
 
         if (this.btnActionEdit) {
@@ -433,6 +454,7 @@ class TeamsController {
           this.btnActionDelete.setAttribute('aria-label', label);
         }
       } else {
+        if (this.btnActionCreateCanvas) this.btnActionCreateCanvas.style.display = 'none';
         if (this.btnActionMembers) this.btnActionMembers.style.display = 'none';
         if (this.btnActionEdit) this.btnActionEdit.style.display = 'none';
         if (this.btnActionDelete) {
@@ -605,6 +627,12 @@ class TeamsController {
       this.membersTriggerText.textContent = `${t('teams.col_members') || 'Integrantes'} (${team.member_count || 1})`;
     }
 
+    const canManageMembers = team.user_role === 'owner' || team.user_role === 'admin';
+    const addMemberGroup = this.container.querySelector<HTMLElement>('[data-ref="field-add-member"]')?.closest('.field-group') as HTMLElement | null;
+    if (addMemberGroup) {
+      addMemberGroup.style.display = canManageMembers ? 'block' : 'none';
+    }
+
     if (this.modalMembersBackdrop) {
       this.modalMembersBackdrop.classList.add('is-visible');
       document.body.classList.add('modal-open');
@@ -743,7 +771,7 @@ class TeamsController {
       }
 
       const userTier = (currentUser?.subscription_tier || 'free').toLowerCase();
-      if (userTier === 'pro' && this.currentMembers.length >= 3) {
+      if (this.currentTeam.user_role === 'owner' && userTier === 'pro' && this.currentMembers.length >= 3) {
         showToast(t('teams.toast_pro_members_limit') || 'El plan Pro permite un máximo de 3 miembros por equipo. Mejora a Negocios para miembros ilimitados.', 'warning');
         openUpgradeModal('business');
         return;

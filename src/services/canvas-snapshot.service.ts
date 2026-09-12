@@ -5,7 +5,7 @@ import { deleteCanvasSnapshotBlob, readCanvasBlobDecompressed, readCanvasSnapsho
 import { createCanvas, getCanvasUserRole } from './canvas.service.js';
 import { logger } from './logger.service.js';
 import { checkUserStorageQuota } from './storage.service.js';
-import { getTierLimits } from './subscription.service.js';
+import { getEffectiveTierForCanvas, getTierLimits } from './subscription.service.js';
 import crypto from 'crypto';
 import mysql from 'mysql2/promise';
 
@@ -97,19 +97,16 @@ export async function createCanvasSnapshot(
   const isManual = dto.is_manual === true;
 
   if (canvas.user_id && isManual) {
-    const [uRows] = await pool.query<mysql.RowDataPacket[]>(
-      'SELECT subscription_tier FROM users WHERE id = ? LIMIT 1',
-      [canvas.user_id]
-    );
-    const userTier = uRows[0]?.subscription_tier || 'free';
-    const tierLimits = getTierLimits(userTier);
+    const effectiveTier = await getEffectiveTierForCanvas(canvas.id);
+    const tierLimits = getTierLimits(effectiveTier);
     const [snapCountRows] = await canvasPool.query<mysql.RowDataPacket[]>(
       'SELECT COUNT(id) AS total FROM db_canvas.canvas_snapshots WHERE canvas_id = ? AND is_manual = 1',
       [canvas.id]
     );
     const manualCount = Number(snapCountRows[0]?.total || 0);
     if (manualCount >= tierLimits.maxSnapshots) {
-      throw new Error(`Has alcanzado el límite de ${tierLimits.maxSnapshots} versiones manuales para tu plan (${userTier === 'free' ? 'Gratis' : 'Pro'}). Mejora tu plan para guardar más versiones.`);
+      const tierName = effectiveTier === 'free' ? 'Gratis' : (effectiveTier === 'pro' ? 'Pro' : 'Negocios');
+      throw new Error(`Has alcanzado el límite de ${tierLimits.maxSnapshots} versiones manuales para tu plan (${tierName}). Mejora tu plan para guardar más versiones.`);
     }
   }
 

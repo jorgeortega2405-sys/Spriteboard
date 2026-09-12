@@ -31,8 +31,8 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
   let selectedScale = 1;
   let selectedBg: 'transparent' | 'solid' = 'transparent';
 
-  const userTier = (currentUser?.subscription_tier || 'free').toLowerCase();
-  const isProOrBusiness = userTier === 'pro' || userTier === 'business' || userTier === 'negocios';
+  const userTier = (canvas.effective_tier || canvas.owner_tier || currentUser?.subscription_tier || 'free').toLowerCase();
+  const isProOrBusiness = userTier === 'pro' || userTier === 'ultra' || userTier === 'business' || userTier === 'negocios';
   const isBusiness = userTier === 'business' || userTier === 'negocios';
 
   const baseW = canvas.width || 800;

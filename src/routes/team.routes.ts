@@ -1,4 +1,4 @@
-import { addTeamMemberHandler, createTeamHandler, deleteTeamHandler, getTeamHandler, listTeamsHandler, removeTeamMemberHandler, updateTeamHandler } from '../controllers/team.controller.js';
+import { addTeamMemberHandler, createTeamHandler, deleteTeamHandler, getTeamCanvasesHandler, getTeamHandler, listTeamsHandler, removeTeamMemberHandler, updateTeamHandler } from '../controllers/team.controller.js';
 import { requireAuth } from '../middlewares/auth.middleware.js';
 import { Router } from 'express';
 
@@ -7,6 +7,7 @@ const router = Router();
 router.get('/teams', requireAuth, listTeamsHandler);
 router.post('/teams', requireAuth, createTeamHandler);
 router.get('/teams/:uuid', requireAuth, getTeamHandler);
+router.get('/teams/:uuid/canvases', requireAuth, getTeamCanvasesHandler);
 router.patch('/teams/:uuid', requireAuth, updateTeamHandler);
 router.delete('/teams/:uuid', requireAuth, deleteTeamHandler);
 router.post('/teams/:uuid/members', requireAuth, addTeamMemberHandler);
