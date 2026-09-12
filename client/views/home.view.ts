@@ -105,10 +105,6 @@ class HomeController {
       renderIcons(this.selectionToolbar);
     }
 
-    this.marqueeEl = document.createElement('div');
-    this.marqueeEl.className = 'selection-marquee';
-    document.body.appendChild(this.marqueeEl);
-
     this.bindEvents();
     this.setupNavDropTargets();
 
@@ -408,6 +404,12 @@ class HomeController {
       wrapper?.classList.remove('is-open');
       this.activeOpenCard = null;
     }
+    this.container.querySelectorAll<HTMLElement>('.canvas-card.has-dropdown-open').forEach((c) => {
+      c.classList.remove('has-dropdown-open');
+    });
+    this.container.querySelectorAll<HTMLElement>('.canvas-card__actions-wrapper.is-open').forEach((w) => {
+      w.classList.remove('is-open');
+    });
   }
 
   private async loadAll(): Promise<void> {
@@ -1422,8 +1424,10 @@ class HomeController {
     if (!this.didDrag) {
       if (dist < 6) return;
       this.didDrag = true;
-      if (this.marqueeEl) {
-        this.marqueeEl.style.display = 'block';
+      if (!this.marqueeEl) {
+        this.marqueeEl = document.createElement('div');
+        this.marqueeEl.className = 'selection-marquee';
+        document.body.appendChild(this.marqueeEl);
       }
     }
 
@@ -1474,7 +1478,8 @@ class HomeController {
     this.isMarqueeDragging = false;
 
     if (this.marqueeEl) {
-      this.marqueeEl.style.display = 'none';
+      this.marqueeEl.remove();
+      this.marqueeEl = null;
     }
 
     if (!this.didDrag) {

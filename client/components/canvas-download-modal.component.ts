@@ -212,10 +212,17 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
   const bgSelectedIcon = backdrop.querySelector<HTMLElement>('[data-ref="download-bg-selected-icon"]');
   const bgSelectedText = backdrop.querySelector<HTMLElement>('[data-ref="download-bg-selected-text"]');
 
+  let typeCtrl: ReturnType<typeof setupDropdown> | null = null;
+  let scaleCtrl: ReturnType<typeof setupDropdown> | null = null;
+  let bgCtrl: ReturnType<typeof setupDropdown> | null = null;
+
   let isClosing = false;
   const closeModal = () => {
     if (isClosing) return;
     isClosing = true;
+    typeCtrl?.destroy();
+    scaleCtrl?.destroy();
+    bgCtrl?.destroy();
     backdrop.classList.remove('is-visible');
     document.removeEventListener('keydown', onKeyDown);
     setTimeout(() => {
@@ -267,107 +274,52 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
     if (sectionBg) sectionBg.classList.toggle('is-hidden', isJson);
   };
 
-  const typeCtrl = setupDropdown(dropdownWrapperType, {});
-  const scaleCtrl = setupDropdown(dropdownWrapperScale, {});
-  const bgCtrl = setupDropdown(dropdownWrapperBg, {});
-
-  const typeButtons = backdrop.querySelectorAll<HTMLButtonElement>('[data-ref^="btn-download-type-"]');
-  typeButtons.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const requiredTier = btn.getAttribute('data-required-tier');
+  typeCtrl = setupDropdown(dropdownWrapperType, {
+    onSelect: (val, item) => {
+      const requiredTier = item?.getAttribute('data-required-tier');
       if (requiredTier === 'business' && !isBusiness) {
         showToast('La exportación Game Atlas requiere el plan Negocios.', 'info');
         openUpgradeModal('business');
-        typeCtrl.close();
-        return;
+        typeCtrl?.close();
+        return false;
       }
       if (requiredTier === 'pro' && !isProOrBusiness) {
         showToast('Esta opción de exportación requiere el plan Pro o Negocios.', 'info');
         openUpgradeModal('pro');
-        typeCtrl.close();
-        return;
+        typeCtrl?.close();
+        return false;
       }
 
-      const val = btn.getAttribute('data-value') as typeof selectedType;
-      if (!val) return;
-      selectedType = val;
-      typeButtons.forEach((b) => b.classList.toggle('is-active', b === btn));
-
-      if (typeSelectedIcon) {
-        const iconMap: Record<string, string> = {
-          'png-current': 'image',
-          'spritesheet': 'grid_view',
-          'spritesheet-atlas': 'sports_esports',
-          'gif': 'gif',
-          'project-json': 'data_object',
-        };
-        setIconUse(typeSelectedIcon, iconMap[val] || 'image');
-      }
-      if (typeSelectedText) {
-        const textMap: Record<string, string> = {
-          'png-current': 'PNG (Fotograma actual)',
-          'spritesheet': 'PNG (Hoja de sprites)',
-          'spritesheet-atlas': 'Hoja de sprites + JSON (Game Atlas)',
-          'gif': 'GIF animado (.gif)',
-          'project-json': 'Proyecto Spriteboard (.json)',
-        };
-        typeSelectedText.textContent = textMap[val] || 'PNG (Fotograma actual)';
-      }
-
+      selectedType = val as typeof selectedType;
       updateUI();
-      typeCtrl.close();
-    });
+    },
   });
 
-  const scaleButtons = backdrop.querySelectorAll<HTMLButtonElement>('[data-ref^="btn-scale-"]');
-  scaleButtons.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const requiredTier = btn.getAttribute('data-required-tier');
+  scaleCtrl = setupDropdown(dropdownWrapperScale, {
+    onSelect: (val, item) => {
+      const requiredTier = item?.getAttribute('data-required-tier');
       if (requiredTier === 'business' && !isBusiness) {
         showToast('El escalado 16x (Ultra 4K) requiere el plan Negocios.', 'info');
         openUpgradeModal('business');
-        scaleCtrl.close();
-        return;
+        scaleCtrl?.close();
+        return false;
       }
       if (requiredTier === 'pro' && !isProOrBusiness) {
         showToast('El escalado en alta resolución requiere el plan Pro o Negocios.', 'info');
         openUpgradeModal('pro');
-        scaleCtrl.close();
-        return;
+        scaleCtrl?.close();
+        return false;
       }
 
-      const val = parseInt(btn.getAttribute('data-value') || '1', 10);
-      selectedScale = val;
-      scaleButtons.forEach((b) => b.classList.toggle('is-active', b === btn));
-
-      if (scaleSelectedText) {
-        const w = baseW * val;
-        const h = baseH * val;
-        scaleSelectedText.textContent = val === 1 ? `1x (Original - ${w} × ${h} px)` : `${val}x (${w} × ${h} px)`;
-      }
-
+      selectedScale = parseInt(val || '1', 10);
       updateUI();
-      scaleCtrl.close();
-    });
+    },
   });
 
-  const bgButtons = backdrop.querySelectorAll<HTMLButtonElement>('[data-ref^="btn-download-bg-"]');
-  bgButtons.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const val = btn.getAttribute('data-value') as typeof selectedBg;
-      if (!val) return;
-      selectedBg = val;
-      bgButtons.forEach((b) => b.classList.toggle('is-active', b === btn));
-
-      if (bgSelectedIcon) {
-        setIconUse(bgSelectedIcon, val === 'transparent' ? 'opacity' : 'format_color_fill');
-      }
-      if (bgSelectedText) {
-        bgSelectedText.textContent = val === 'transparent' ? 'Transparente' : 'Color del lienzo';
-      }
-
-      bgCtrl.close();
-    });
+  bgCtrl = setupDropdown(dropdownWrapperBg, {
+    onSelect: (val) => {
+      selectedBg = val as typeof selectedBg;
+    },
   });
 
   const triggerBlobDownload = (blob: Blob, filename: string) => {

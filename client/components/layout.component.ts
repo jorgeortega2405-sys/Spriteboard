@@ -12,6 +12,7 @@ import { openUpgradeModal } from './upgrade-modal.component.js';
 let isSidebarOpen = false;
 let isChatOpen = false;
 let chatSidebarElement: HTMLElement | null = null;
+let chatSidebarInitPromise: Promise<HTMLElement> | null = null;
 
 export function getIsSidebarOpen(): boolean {
   return isSidebarOpen;
@@ -33,28 +34,32 @@ export function getIsChatOpen(): boolean {
   return isChatOpen;
 }
 
-export function toggleChatSidebar(forceState?: boolean): void {
-  isChatOpen = forceState !== undefined ? forceState : !isChatOpen;
+export async function toggleChatSidebar(forceState?: boolean): Promise<void> {
+  const nextOpen = forceState !== undefined ? forceState : !isChatOpen;
+  isChatOpen = nextOpen;
 
-  const activeContent = document.querySelector<HTMLElement>('[data-ref="app"] .layout-content');
-  if (activeContent && chatSidebarElement && chatSidebarElement.parentNode !== activeContent) {
-    activeContent.appendChild(chatSidebarElement);
-  }
-
-  if (chatSidebarElement) {
-    chatSidebarElement.classList.toggle('is-active', isChatOpen);
+  if (isChatOpen) {
+    const chatEl = await initChatSidebar();
+    if (!isChatOpen) return;
+    const activeContent = document.querySelector<HTMLElement>('[data-ref="app"] .layout-content');
+    if (activeContent && chatEl.parentNode !== activeContent) {
+      activeContent.appendChild(chatEl);
+    }
+    chatEl.classList.add('is-active');
     updateChatEmptyState();
-
-    if (isChatOpen) {
-      toggleSidebar(false);
-      const chatInput = chatSidebarElement.querySelector<HTMLInputElement>('[data-ref="chat-input"]');
-      setTimeout(() => chatInput?.focus(), 80);
+    toggleSidebar(false);
+    const chatInput = chatEl.querySelector<HTMLInputElement>('[data-ref="chat-input"]');
+    setTimeout(() => chatInput?.focus(), 80);
+  } else {
+    if (chatSidebarElement) {
+      chatSidebarElement.classList.remove('is-active');
+      chatSidebarElement.remove();
     }
   }
 }
 
 export function attachChatSidebarToView(contentElement: HTMLElement | null): void {
-  if (!contentElement || !chatSidebarElement) return;
+  if (!contentElement || !chatSidebarElement || !isChatOpen) return;
   if (chatSidebarElement.parentNode !== contentElement) {
     contentElement.appendChild(chatSidebarElement);
   }
@@ -1603,13 +1608,19 @@ function setupChatSidebarEvents(sidebarElement: HTMLElement): void {
 
 export async function initChatSidebar(): Promise<HTMLElement> {
   if (chatSidebarElement) return chatSidebarElement;
+  if (chatSidebarInitPromise) return chatSidebarInitPromise;
 
-  chatSidebarElement = await loadTemplate('/views/components/chat-sidebar.html');
-  translateElement(chatSidebarElement);
-  setupChatSidebarEvents(chatSidebarElement);
+  chatSidebarInitPromise = (async () => {
+    const el = await loadTemplate('/views/components/chat-sidebar.html');
+    translateElement(el);
+    setupChatSidebarEvents(el);
 
-  const chatPanel = chatSidebarElement.querySelector<HTMLElement>('[data-ref="chat-panel"]');
-  chatPanel?.classList.add('is-empty');
+    const chatPanel = el.querySelector<HTMLElement>('[data-ref="chat-panel"]');
+    chatPanel?.classList.add('is-empty');
 
-  return chatSidebarElement;
+    chatSidebarElement = el;
+    return el;
+  })();
+
+  return chatSidebarInitPromise;
 }

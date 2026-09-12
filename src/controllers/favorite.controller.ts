@@ -12,7 +12,8 @@ export async function toggleFavoriteHandler(req: Request, res: Response): Promis
       return;
     }
 
-    const { itemId, itemType } = req.body;
+    const itemId = req.body.itemId || req.body.item_id;
+    const itemType = req.body.itemType || req.body.item_type;
     if (!itemType || (itemType !== 'canvas' && itemType !== 'template')) {
       res.status(400).json({ error: 'Tipo de elemento no válido.' });
       return;

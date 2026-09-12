@@ -153,12 +153,13 @@ export function setupDropdown(
   wrapper: HTMLElement | null,
   options: {
     backdrop?: HTMLElement | null;
+    isSelect?: boolean;
     matchWidth?: boolean;
     menu?: HTMLElement | null;
     offset?: [number, number];
     onClose?: () => void;
     onOpen?: () => void;
-    onSelect?: (val: any, item?: HTMLElement) => void | Promise<void>;
+    onSelect?: (val: any, item?: HTMLElement) => boolean | void | Promise<boolean | void>;
     placement?: Placement;
     trigger?: HTMLElement | null;
   } = {}
@@ -186,12 +187,9 @@ export function setupDropdown(
   const dragZone =
     menu?.querySelector<HTMLElement>('.menu-panel__drag-zone, [data-ref*="drag-zone"]') ||
     wrapper.querySelector<HTMLElement>('.menu-panel__drag-zone, [data-ref*="drag-zone"]');
-  const selectedTextEl =
-    trigger?.querySelector<HTMLElement>('.dropdown-trigger__text, [data-ref*="selected-text"]') ||
-    wrapper.querySelector<HTMLElement>('.dropdown-trigger__text, [data-ref*="selected-text"]');
-  const selectedIconEl =
-    trigger?.querySelector<HTMLElement>('.dropdown-trigger__icon, [data-ref*="selected-icon"]') ||
-    wrapper.querySelector<HTMLElement>('.dropdown-trigger__icon, [data-ref*="selected-icon"]');
+  const selectedTextEl = trigger?.querySelector<HTMLElement>('.dropdown-trigger__text, [data-ref*="selected-text"]') || null;
+  const selectedIconEl = trigger?.querySelector<HTMLElement>('.dropdown-trigger__icon, [data-ref*="selected-icon"]') || null;
+  const isSelect = typeof options.isSelect === 'boolean' ? options.isSelect : Boolean(selectedTextEl || options.onSelect);
 
   let isClosing = false;
   let popperInstance: PopperInstance | null = null;
@@ -345,17 +343,19 @@ export function setupDropdown(
     }
   };
 
-  trigger?.addEventListener('click', (e: MouseEvent) => {
+  const onTriggerClick = (e: MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     toggleDropdown();
-  });
+  };
+  trigger?.addEventListener('click', onTriggerClick);
 
-  backdrop?.addEventListener('click', (e: MouseEvent) => {
+  const onBackdropClick = (e: MouseEvent) => {
     if (!menu?.contains(e.target as Node)) {
       closeDropdown();
     }
-  });
+  };
+  backdrop?.addEventListener('click', onBackdropClick);
 
   let startY = 0;
   let currentY = 0;
@@ -459,12 +459,43 @@ export function setupDropdown(
   };
   document.addEventListener('keydown', onDocKeydown);
 
-  menu?.addEventListener('click', (e: MouseEvent) => {
+  const onMenuClick = async (e: MouseEvent) => {
+    const activeMenu = menu;
+    if (!activeMenu) return;
     const item = (e.target as HTMLElement | null)?.closest<HTMLElement>('.menu-item, [data-ref*="option"]');
-    if (!item || !menu.contains(item)) return;
+    if (!item || !activeMenu.contains(item)) return;
+
+    const closestMenu = item.closest<HTMLElement>('.menu-panel--dropdown, .menu-panel, [data-ref*="menu"]');
+    if (closestMenu !== activeMenu) return;
 
     e.preventDefault();
-    menu.querySelectorAll('.menu-item, [data-ref*="option"]').forEach((i) => i.classList.remove('is-active'));
+    e.stopPropagation();
+
+    const val =
+      item.getAttribute('data-theme-value') ||
+      item.getAttribute('data-value') ||
+      item.getAttribute('data-lang') ||
+      item.getAttribute('data-theme') ||
+      item.querySelector('.menu-item__text')?.textContent?.trim() ||
+      '';
+
+    if (!isSelect) {
+      if (typeof options.onSelect === 'function') {
+        await options.onSelect(val, item);
+      }
+      return;
+    }
+
+    if (typeof options.onSelect === 'function') {
+      const proceed = await options.onSelect(val, item);
+      if (proceed === false) return;
+    }
+
+    activeMenu.querySelectorAll<HTMLElement>('.menu-item, [data-ref*="option"]').forEach((i) => {
+      if (i.closest<HTMLElement>('.menu-panel--dropdown, .menu-panel, [data-ref*="menu"]') === activeMenu) {
+        i.classList.remove('is-active');
+      }
+    });
     item.classList.add('is-active');
 
     const itemText = item.querySelector('.menu-item__text')?.textContent?.trim() || '';
@@ -498,13 +529,9 @@ export function setupDropdown(
       }
     }
 
-    const val = item.getAttribute('data-theme-value') || item.getAttribute('data-value') || item.getAttribute('data-lang') || item.getAttribute('data-theme') || itemText;
-    if (typeof options.onSelect === 'function') {
-      options.onSelect(val, item);
-    }
-
     closeDropdown();
-  });
+  };
+  menu?.addEventListener('click', onMenuClick);
 
   const onResize = () => {
     if (menu?.classList.contains('is-open')) {
@@ -535,6 +562,9 @@ export function setupDropdown(
     detachPointerListeners();
     dragZone?.removeEventListener('pointerdown', onPointerDown);
     dragZone?.removeEventListener('lostpointercapture', onPointerUp);
+    trigger?.removeEventListener('click', onTriggerClick);
+    backdrop?.removeEventListener('click', onBackdropClick);
+    menu?.removeEventListener('click', onMenuClick);
     document.removeEventListener('click', onDocClick);
     document.removeEventListener('keydown', onDocKeydown);
     window.removeEventListener('resize', onResize);

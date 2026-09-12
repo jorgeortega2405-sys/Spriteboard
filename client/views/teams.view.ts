@@ -113,6 +113,7 @@ class TeamsController {
 
     if (this.membersDropdownWrapper) {
       this.membersDropdownController = setupDropdown(this.membersDropdownWrapper, {
+        isSelect: false,
         matchWidth: true,
         placement: 'bottom-start',
       });

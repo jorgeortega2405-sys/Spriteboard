@@ -19,6 +19,7 @@ class SharedController {
   private isSearchActive = false;
   private searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   private activeDropdown: HTMLElement | null = null;
+  private activeOpenCard: HTMLElement | null = null;
 
   private scrollableEl: HTMLElement | null = null;
   private sectionEl: HTMLElement | null = null;
@@ -276,6 +277,7 @@ class SharedController {
       navigate(`/design/${canvas.uuid}`);
     });
 
+    const actionsWrapper = card.querySelector<HTMLElement>('[data-ref="card-actions-wrapper"]');
     const btnBookmark = card.querySelector<HTMLButtonElement>('[data-ref="btn-card-bookmark"]');
     const btnMore = card.querySelector<HTMLButtonElement>('[data-ref="btn-card-more"]');
     const menuDropdown = card.querySelector<HTMLElement>('[data-ref="card-menu-dropdown"]');
@@ -295,8 +297,8 @@ class SharedController {
       }
       try {
         await postApi(API_ROUTES.favorites.toggle, {
-          item_id: canvas.uuid,
-          item_type: 'canvas',
+          itemId: canvas.uuid,
+          itemType: 'canvas',
         });
       } catch {
         canvas.is_favorite = !newFavState;
@@ -312,7 +314,10 @@ class SharedController {
         this.closeAllDropdowns();
         if (!isVisible) {
           menuDropdown.style.display = 'block';
+          card.classList.add('has-dropdown-open');
+          actionsWrapper?.classList.add('is-open');
           this.activeDropdown = menuDropdown;
+          this.activeOpenCard = card;
         }
       }
     });
@@ -358,9 +363,21 @@ class SharedController {
       this.activeDropdown.style.display = 'none';
       this.activeDropdown = null;
     }
+    if (this.activeOpenCard) {
+      this.activeOpenCard.classList.remove('has-dropdown-open');
+      const wrapper = this.activeOpenCard.querySelector<HTMLElement>('[data-ref="card-actions-wrapper"]');
+      wrapper?.classList.remove('is-open');
+      this.activeOpenCard = null;
+    }
     const openMenus = this.container.querySelectorAll<HTMLElement>('[data-ref="card-menu-dropdown"]');
     openMenus.forEach((m) => {
       m.style.display = 'none';
+    });
+    this.container.querySelectorAll<HTMLElement>('.canvas-card.has-dropdown-open').forEach((c) => {
+      c.classList.remove('has-dropdown-open');
+    });
+    this.container.querySelectorAll<HTMLElement>('.canvas-card__actions-wrapper.is-open').forEach((w) => {
+      w.classList.remove('is-open');
     });
   }
 

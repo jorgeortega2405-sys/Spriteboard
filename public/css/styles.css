@@ -3341,7 +3341,7 @@ body.modal-open {
 .modal-card {
   background-color: var(--bg-surface);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
+  border-radius: 24px;
   width: 100%;
   max-width: 440px;
   padding: 24px;
@@ -5691,7 +5691,7 @@ html.dark-theme .component-card-button--downgrade {
   display: grid;
   grid-template-columns: 260px 1fr;
   overflow: hidden;
-  border-radius: 20px;
+  border-radius: 24px;
   box-shadow: 0 20px 48px rgba(0, 0, 0, 0.28);
   background-color: var(--bg-surface);
 }
@@ -10447,7 +10447,6 @@ html[data-theme="dark"] .design-share-search-results,
   background-color: rgba(0, 0, 0, 0.08);
   border-radius: 4px;
   box-sizing: border-box;
-  display: none;
 }
 
 .selection-toolbar {
@@ -10547,7 +10546,7 @@ html[data-theme="dark"] .design-share-search-results,
   max-height: calc(100vh - 32px);
   padding: 0;
   overflow: hidden;
-  border-radius: var(--sl-border-radius-x-large, 20px);
+  border-radius: 24px;
   background-color: var(--bg-surface);
   border: 1px solid var(--border-color);
   box-shadow: var(--sl-shadow-2x-large, 0 20px 48px rgba(0, 0, 0, 0.2));
@@ -10747,7 +10746,6 @@ html[data-theme="dark"] .design-share-search-results,
   display: flex;
   flex-direction: column;
   background-color: var(--bg-surface);
-  border-left: 1px solid var(--border-color);
   box-sizing: border-box;
   overflow: hidden;
   height: 100%;
@@ -10823,12 +10821,17 @@ html[data-theme="dark"] .design-share-search-results,
 }
 
 .upgrade-modal__table th {
+  padding-top: 12px;
   padding-bottom: 12px;
   font-size: 13px;
   font-weight: 600;
   color: var(--text-primary);
   border-bottom: 1px solid var(--border-color);
   user-select: none;
+}
+
+.upgrade-modal__table th.col-plan {
+  padding-top: 12px;
 }
 
 .upgrade-modal__table td {
@@ -10866,6 +10869,7 @@ html[data-theme="dark"] .design-share-search-results,
   width: 18%;
   text-align: center;
   color: var(--text-secondary);
+  white-space: nowrap;
   transition: color var(--sl-transition-fast);
 }
 

@@ -12,12 +12,14 @@ services:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./db_identity.sql:/docker-entrypoint-initdb.d/db_identity.sql:ro
+      - ./db_identity.sql:/docker-entrypoint-initdb.d/01_db_identity.sql:ro
+      - ./db_canvas.sql:/docker-entrypoint-initdb.d/02_db_canvas.sql:ro
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootsecret"]
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 30
+      start_period: 40s
 
   redis:
     image: redis:7-alpine
@@ -47,11 +49,14 @@ services:
       - HEAP_NEWSIZE=128M
     volumes:
       - cassandra_data:/var/lib/cassandra
+      - ./db_cassandra.cql:/init.cql:ro
+      - ./db_cassandra.cql:/docker-entrypoint-initdb.d/db_cassandra.cql:ro
     healthcheck:
       test: ["CMD-SHELL", "cqlsh -e 'DESCRIBE KEYSPACES' || exit 1"]
       interval: 10s
       timeout: 10s
       retries: 20
+      start_period: 60s
 
   app:
     build: .

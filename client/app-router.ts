@@ -11,7 +11,64 @@ let isInitialPageLoad = true;
 let currentNavigation = 0;
 let previousPath = '';
 
-export function navigate(url: string): void {
+function normalizePath(rawPath: string): string {
+  if (!rawPath || rawPath === '/' || rawPath === '') return '/';
+  const clean = rawPath.replace(/\/+$/, '');
+  if (clean === '/settings') {
+    return currentUser ? '/settings/your-account' : '/settings/guest';
+  }
+  if (clean === '/settings/login-and-security') {
+    return '/settings/security';
+  }
+  if (clean === '/help' || clean === '/legal' || clean === '/legal/terms') {
+    return '/help/terms';
+  }
+  if (clean === '/help/legal' || clean === '/legal/legal-notice') {
+    return '/help/legal-notice';
+  }
+  if (clean === '/legal/privacy') {
+    return '/help/privacy';
+  }
+  if (clean === '/legal/cookies') {
+    return '/help/cookies';
+  }
+  if (clean === '/legal/billing') {
+    return '/help/billing';
+  }
+  return clean;
+}
+
+export function navigate(url: string, options: { force?: boolean } = {}): void {
+  const targetUrl = new URL(url, window.location.origin);
+  const currentUrl = new URL(window.location.href);
+
+  const targetPath = normalizePath(targetUrl.pathname);
+  const currentPath = normalizePath(currentUrl.pathname);
+
+  const isSamePath = targetPath === currentPath;
+  const isSameSearch = targetUrl.search === currentUrl.search;
+  const isSameHash = targetUrl.hash === currentUrl.hash;
+
+  if (!options.force && isSamePath && isSameSearch) {
+    if (!isSameHash && targetUrl.hash) {
+      window.history.pushState({}, '', url);
+      const targetEl = document.querySelector(targetUrl.hash) || document.querySelector(`[data-ref="${targetUrl.hash.slice(1)}"]`);
+      targetEl?.scrollIntoView({ behavior: 'smooth' });
+      return;
+    }
+
+    toggleSidebar(false);
+    hideTooltip();
+
+    const scrollable = document.querySelector<HTMLElement>(
+      '.layout-scrollable, .layout-body--scrollable, .layout-content__scrollable, .component-table-wrapper'
+    );
+    if (scrollable) {
+      scrollable.scrollTo({ behavior: 'smooth', top: 0 });
+    }
+    return;
+  }
+
   window.history.pushState({}, '', url);
   render();
 }

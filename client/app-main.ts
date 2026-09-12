@@ -1,5 +1,4 @@
 import { navigate, render } from './app-router';
-import { initChatSidebar } from './components/layout.component';
 import { checkAuthSession, fetchAppConfig, fetchCsrfToken, verifySubscriptionSessionApi } from './services/api.service';
 import { initI18n } from './services/i18n.service';
 import { renderIcons } from './services/icon.service';
@@ -48,10 +47,25 @@ function initScrollShadow(): void {
   );
 }
 
+function initLinkInterception(): void {
+  document.addEventListener('click', (e: MouseEvent) => {
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    const anchor = (e.target as HTMLElement | null)?.closest<HTMLAnchorElement>('a[href]');
+    if (!anchor) return;
+    const href = anchor.getAttribute('href');
+    if (!href || href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('tel:') || anchor.getAttribute('target') === '_blank' || anchor.hasAttribute('download')) return;
+    if (anchor.origin === window.location.origin) {
+      e.preventDefault();
+      navigate(href);
+    }
+  });
+}
+
 async function init(): Promise<void> {
   initTheme();
   initTooltips();
   initScrollShadow();
+  initLinkInterception();
   initWebVitals();
 
   const urlParams = new URLSearchParams(window.location.search);
@@ -67,7 +81,6 @@ async function init(): Promise<void> {
   await Promise.all([fetchCsrfToken(), checkAuthSession(), fetchAppConfig()]);
   initWebSocket();
   await initI18n();
-  await initChatSidebar();
   await render();
   renderIcons();
 }

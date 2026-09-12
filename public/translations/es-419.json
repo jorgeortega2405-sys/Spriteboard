@@ -78,6 +78,8 @@
       "forgot_password": "¿Olvidaste la contraseña?",
       "submit_btn": "Continuar",
       "google_btn": "Continuar con Google",
+      "sso_btn": "Continuar con SSO",
+      "sso_btn_team": "Continuar con SSO ({team})",
       "no_account": "¿No tienes una cuenta?",
       "create_account": "Crear cuenta",
       "loading": "Iniciando sesión..."
@@ -761,7 +763,26 @@
     "locked_benefit_2": "Colaboración en tiempo real y asignación de permisos",
     "locked_benefit_3": "Acceso simplificado a lienzos compartidos para todos los miembros",
     "locked_btn_upgrade": "Mejorar a Pro",
-    "locked_btn_home": "Ir al inicio"
+    "locked_btn_home": "Ir al inicio",
+    "action_sso": "Inicio de sesión único (SSO)",
+    "sso_modal_title": "Inicio de sesión único (SSO)",
+    "sso_upgrade_badge": "Función Negocios",
+    "sso_upgrade_title": "SSO exclusivo para el plan Negocios",
+    "sso_upgrade_desc": "Vincula el dominio corporativo de tu empresa para que tus empleados inicien sesión con un solo clic y se unan automáticamente a este equipo.",
+    "sso_upgrade_btn": "Mejorar a Negocios",
+    "sso_form_desc": "Configura el dominio corporativo (ej. tuempresa.com). Los usuarios que inicien sesión con dicho correo pertenecerán automáticamente a este equipo.",
+    "sso_domain_label": "Dominio corporativo",
+    "sso_domain_placeholder": "empresa.com",
+    "sso_status_label": "Estado del SSO",
+    "sso_status_active": "Activo",
+    "sso_status_inactive": "Inactivo",
+    "sso_enable_checkbox": "Habilitar SSO para este dominio",
+    "sso_btn_save": "Guardar configuración",
+    "sso_btn_delete": "Eliminar SSO",
+    "sso_delete_confirm": "¿Estás seguro de que deseas eliminar la configuración de SSO para este equipo?",
+    "sso_toast_saved": "Configuración de SSO guardada exitosamente.",
+    "sso_toast_deleted": "Configuración de SSO eliminada exitosamente.",
+    "sso_invalid_domain": "Por favor ingresa un dominio corporativo válido (ej. empresa.com)."
   },
   "design": {
     "layers_free_limit": "El plan Gratis permite hasta 5 capas por lienzo. Mejora a Pro para capas ilimitadas."
@@ -787,14 +808,15 @@
     "plan_business_desc": "Máxima potencia, colaboración y herramientas para estudios.",
     "plan_business_price": "$19.99/mes",
     "benefit_storage": "Almacenamiento en la nube",
-    "benefit_canvas_size": "Tamaño máx. de lienzo",
-    "benefit_collab": "Colaboración en tiempo real",
-    "benefit_teams": "Creación de equipos",
+    "benefit_canvas_size": "Lienzo máximo",
+    "benefit_collab": "Colaboración en vivo",
+    "benefit_teams": "Equipos de trabajo",
     "benefit_export_formats": "Formatos de exportación",
-    "benefit_export_scale": "Escala de resolución",
+    "benefit_export_scale": "Escala máxima",
     "benefit_layers": "Capas por lienzo",
-    "benefit_history": "Historial de snapshots",
-    "benefit_trash": "Retención en papelera"
+    "benefit_history": "Historial de versiones",
+    "benefit_trash": "Retención en papelera",
+    "benefit_sso": "Inicio de sesión único (SSO)"
   },
   "comments": {
     "title": "Comentarios",

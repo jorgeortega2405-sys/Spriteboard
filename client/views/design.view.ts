@@ -4685,6 +4685,7 @@ class DesignController {
       const shareMenuEl = this.shareWrapperEl.querySelector<HTMLElement>('[data-ref="dropdown-menu-share"]');
       this.shareDropdownController = setupDropdown(this.shareWrapperEl, {
         backdrop: shareBackdropEl,
+        isSelect: false,
         matchWidth: false,
         menu: shareMenuEl,
         onClose: () => {
@@ -4702,6 +4703,11 @@ class DesignController {
         backdrop: accessBackdropEl,
         matchWidth: true,
         menu: accessMenuEl,
+        onSelect: (val) => {
+          if (val === 'private' || val === 'public') {
+            this.changeAccessLevel(val);
+          }
+        },
         placement: 'bottom',
         trigger: this.accessLevelTriggerBtn,
       });
@@ -4717,30 +4723,6 @@ class DesignController {
       );
     }
 
-    const optPrivate = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-access-private"]');
-    if (optPrivate) {
-      optPrivate.addEventListener(
-        'click',
-        () => {
-          this.changeAccessLevel('private');
-          this.accessDropdownController?.close();
-        },
-        { signal }
-      );
-    }
-
-    const optPublic = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-access-public"]');
-    if (optPublic) {
-      optPublic.addEventListener(
-        'click',
-        () => {
-          this.changeAccessLevel('public');
-          this.accessDropdownController?.close();
-        },
-        { signal }
-      );
-    }
-
     if (this.publicRoleDropdownWrapperEl) {
       const publicRoleBackdropEl = this.publicRoleDropdownWrapperEl.querySelector<HTMLElement>('[data-ref="dropdown-backdrop-public-role"]');
       const publicRoleMenuEl = this.publicRoleDropdownWrapperEl.querySelector<HTMLElement>('[data-ref="dropdown-menu-public-role"]');
@@ -4748,6 +4730,11 @@ class DesignController {
         backdrop: publicRoleBackdropEl,
         matchWidth: true,
         menu: publicRoleMenuEl,
+        onSelect: (val) => {
+          if (val === 'editor' || val === 'viewer') {
+            this.changePublicRole(val);
+          }
+        },
         placement: 'bottom',
         trigger: this.publicRoleTriggerBtn,
       });
@@ -4760,6 +4747,11 @@ class DesignController {
         backdrop: downloadTypeBackdropEl,
         matchWidth: true,
         menu: downloadTypeMenuEl,
+        onSelect: (val) => {
+          if (val) {
+            this.changeDownloadType(val);
+          }
+        },
         placement: 'bottom',
         trigger: this.downloadTypeTriggerBtn,
       });
@@ -4772,6 +4764,12 @@ class DesignController {
         backdrop: downloadScaleBackdropEl,
         matchWidth: true,
         menu: downloadScaleMenuEl,
+        onSelect: (val) => {
+          const num = parseInt(val, 10);
+          if (!isNaN(num)) {
+            this.changeDownloadScale(num);
+          }
+        },
         placement: 'bottom',
         trigger: this.downloadScaleTriggerBtn,
       });
@@ -4784,33 +4782,14 @@ class DesignController {
         backdrop: downloadBgBackdropEl,
         matchWidth: true,
         menu: downloadBgMenuEl,
+        onSelect: (val) => {
+          if (val === 'transparent' || val === 'solid') {
+            this.changeDownloadBg(val);
+          }
+        },
         placement: 'bottom',
         trigger: this.downloadBgTriggerBtn,
       });
-    }
-
-    const optRoleEditor = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-public-role-editor"]');
-    if (optRoleEditor) {
-      optRoleEditor.addEventListener(
-        'click',
-        () => {
-          this.changePublicRole('editor');
-          this.publicRoleDropdownController?.close();
-        },
-        { signal }
-      );
-    }
-
-    const optRoleViewer = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-public-role-viewer"]');
-    if (optRoleViewer) {
-      optRoleViewer.addEventListener(
-        'click',
-        () => {
-          this.changePublicRole('viewer');
-          this.publicRoleDropdownController?.close();
-        },
-        { signal }
-      );
     }
 
     if (this.shareBtn) {
@@ -4910,102 +4889,7 @@ class DesignController {
       );
     }
 
-    const optDownloadPng = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-download-type-png"]');
-    if (optDownloadPng) {
-      optDownloadPng.addEventListener(
-        'click',
-        () => {
-          this.changeDownloadType('png-current');
-          this.downloadTypeDropdownController?.close();
-        },
-        { signal }
-      );
-    }
 
-    const optDownloadSpritesheet = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-download-type-spritesheet"]');
-    if (optDownloadSpritesheet) {
-      optDownloadSpritesheet.addEventListener(
-        'click',
-        () => {
-          this.changeDownloadType('spritesheet');
-          this.downloadTypeDropdownController?.close();
-        },
-        { signal }
-      );
-    }
-
-    const optDownloadAtlas = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-download-type-atlas"]');
-    if (optDownloadAtlas) {
-      optDownloadAtlas.addEventListener(
-        'click',
-        () => {
-          this.changeDownloadType('spritesheet-atlas');
-          this.downloadTypeDropdownController?.close();
-        },
-        { signal }
-      );
-    }
-
-    const optDownloadGif = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-download-type-gif"]');
-    if (optDownloadGif) {
-      optDownloadGif.addEventListener(
-        'click',
-        () => {
-          this.changeDownloadType('gif');
-          this.downloadTypeDropdownController?.close();
-        },
-        { signal }
-      );
-    }
-
-    const optDownloadProject = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-download-type-project"]');
-    if (optDownloadProject) {
-      optDownloadProject.addEventListener(
-        'click',
-        () => {
-          this.changeDownloadType('project-json');
-          this.downloadTypeDropdownController?.close();
-        },
-        { signal }
-      );
-    }
-
-    const scaleBtns = this.container.querySelectorAll<HTMLButtonElement>('[data-ref^="btn-scale-"]');
-    scaleBtns.forEach((btn) => {
-      btn.addEventListener(
-        'click',
-        () => {
-          const val = parseInt(btn.getAttribute('data-value') || '1', 10);
-          this.changeDownloadScale(val);
-          this.downloadScaleDropdownController?.close();
-        },
-        { signal }
-      );
-    });
-
-    const optDownloadBgTransparent = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-download-bg-transparent"]');
-    if (optDownloadBgTransparent) {
-      optDownloadBgTransparent.addEventListener(
-        'click',
-        () => {
-          this.changeDownloadBg('transparent');
-          this.downloadBgDropdownController?.close();
-        },
-        { signal }
-      );
-    }
-
-    const optDownloadBgSolid = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-download-bg-solid"]');
-    if (optDownloadBgSolid) {
-      optDownloadBgSolid.addEventListener(
-        'click',
-        () => {
-          this.changeDownloadBg('solid');
-          this.downloadBgDropdownController?.close();
-        },
-        { signal }
-      );
-    }
 
     if (this.btnConfirmDownload) {
       this.btnConfirmDownload.addEventListener(

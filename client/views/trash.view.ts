@@ -96,10 +96,6 @@ class TrashController {
       renderIcons(this.selectionToolbar);
     }
 
-    this.marqueeEl = document.createElement('div');
-    this.marqueeEl.className = 'selection-marquee';
-    document.body.appendChild(this.marqueeEl);
-
     this.bindEvents();
     await this.loadTrash();
   }
@@ -303,8 +299,10 @@ class TrashController {
     if (!this.didDrag) {
       if (dist < 6) return;
       this.didDrag = true;
-      if (this.marqueeEl) {
-        this.marqueeEl.style.display = 'block';
+      if (!this.marqueeEl) {
+        this.marqueeEl = document.createElement('div');
+        this.marqueeEl.className = 'selection-marquee';
+        document.body.appendChild(this.marqueeEl);
       }
     }
 
@@ -355,7 +353,8 @@ class TrashController {
     this.isMarqueeDragging = false;
 
     if (this.marqueeEl) {
-      this.marqueeEl.style.display = 'none';
+      this.marqueeEl.remove();
+      this.marqueeEl = null;
     }
 
     if (!this.didDrag) {

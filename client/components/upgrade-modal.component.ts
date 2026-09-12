@@ -129,59 +129,59 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
                   </tr>
                   <tr>
                     <td class="col-feature">
-                      <span>${t('upgrade_modal.benefit_canvas_size') || 'Tamaño máx. de lienzo'}</span>
+                      <span>${t('upgrade_modal.benefit_canvas_size') || 'Lienzo máximo'}</span>
                     </td>
-                    <td class="col-plan col-plan--free${selectedPlan === 'free' ? ' is-active' : ''}">1024 × 1024 px</td>
-                    <td class="col-plan col-plan--pro${selectedPlan === 'pro' ? ' is-active' : ''}">2048 × 2048 px</td>
-                    <td class="col-plan col-plan--business${selectedPlan === 'business' || selectedPlan === 'negocios' ? ' is-active' : ''}">4096 × 4096 px</td>
+                    <td class="col-plan col-plan--free${selectedPlan === 'free' ? ' is-active' : ''}">1024 px</td>
+                    <td class="col-plan col-plan--pro${selectedPlan === 'pro' ? ' is-active' : ''}">2048 px</td>
+                    <td class="col-plan col-plan--business${selectedPlan === 'business' || selectedPlan === 'negocios' ? ' is-active' : ''}">4096 px</td>
                   </tr>
                   <tr>
                     <td class="col-feature">
-                      <span>${t('upgrade_modal.benefit_collab') || 'Colaboración en tiempo real'}</span>
+                      <span>${t('upgrade_modal.benefit_collab') || 'Colaboración en vivo'}</span>
                     </td>
-                    <td class="col-plan col-plan--free${selectedPlan === 'free' ? ' is-active' : ''}">Tú + 2 (3 en total)</td>
-                    <td class="col-plan col-plan--pro${selectedPlan === 'pro' ? ' is-active' : ''}">Tú + 5 (6 en total)</td>
-                    <td class="col-plan col-plan--business${selectedPlan === 'business' || selectedPlan === 'negocios' ? ' is-active' : ''}">Hasta 50 en vivo</td>
+                    <td class="col-plan col-plan--free${selectedPlan === 'free' ? ' is-active' : ''}">3</td>
+                    <td class="col-plan col-plan--pro${selectedPlan === 'pro' ? ' is-active' : ''}">6</td>
+                    <td class="col-plan col-plan--business${selectedPlan === 'business' || selectedPlan === 'negocios' ? ' is-active' : ''}">50</td>
                   </tr>
                   <tr>
                     <td class="col-feature">
-                      <span>${t('upgrade_modal.benefit_teams') || 'Creación de equipos'}</span>
+                      <span>${t('upgrade_modal.benefit_teams') || 'Equipos de trabajo'}</span>
                     </td>
                     <td class="col-plan col-plan--free${selectedPlan === 'free' ? ' is-active' : ''}">—</td>
-                    <td class="col-plan col-plan--pro${selectedPlan === 'pro' ? ' is-active' : ''}">1 equipo (máx. 3)</td>
+                    <td class="col-plan col-plan--pro${selectedPlan === 'pro' ? ' is-active' : ''}">1</td>
                     <td class="col-plan col-plan--business${selectedPlan === 'business' || selectedPlan === 'negocios' ? ' is-active' : ''}">Ilimitados</td>
                   </tr>
                   <tr>
                     <td class="col-feature">
                       <span>${t('upgrade_modal.benefit_export_formats') || 'Formatos de exportación'}</span>
                     </td>
-                    <td class="col-plan col-plan--free${selectedPlan === 'free' ? ' is-active' : ''}">PNG y JSON</td>
-                    <td class="col-plan col-plan--pro${selectedPlan === 'pro' ? ' is-active' : ''}">PNG, GIF, Spritesheet</td>
-                    <td class="col-plan col-plan--business${selectedPlan === 'business' || selectedPlan === 'negocios' ? ' is-active' : ''}">Game Atlas + Todo</td>
+                    <td class="col-plan col-plan--free${selectedPlan === 'free' ? ' is-active' : ''}">PNG, JSON</td>
+                    <td class="col-plan col-plan--pro${selectedPlan === 'pro' ? ' is-active' : ''}">GIF, Atlas</td>
+                    <td class="col-plan col-plan--business${selectedPlan === 'business' || selectedPlan === 'negocios' ? ' is-active' : ''}">Todos</td>
                   </tr>
                   <tr>
                     <td class="col-feature">
-                      <span>${t('upgrade_modal.benefit_export_scale') || 'Escala de resolución'}</span>
+                      <span>${t('upgrade_modal.benefit_export_scale') || 'Escala máxima'}</span>
                     </td>
-                    <td class="col-plan col-plan--free${selectedPlan === 'free' ? ' is-active' : ''}">Hasta 2x</td>
-                    <td class="col-plan col-plan--pro${selectedPlan === 'pro' ? ' is-active' : ''}">Hasta 8x</td>
-                    <td class="col-plan col-plan--business${selectedPlan === 'business' || selectedPlan === 'negocios' ? ' is-active' : ''}">Hasta 16x (Ultra 4K)</td>
+                    <td class="col-plan col-plan--free${selectedPlan === 'free' ? ' is-active' : ''}">2x</td>
+                    <td class="col-plan col-plan--pro${selectedPlan === 'pro' ? ' is-active' : ''}">8x</td>
+                    <td class="col-plan col-plan--business${selectedPlan === 'business' || selectedPlan === 'negocios' ? ' is-active' : ''}">16x</td>
                   </tr>
                   <tr>
                     <td class="col-feature">
                       <span>${t('upgrade_modal.benefit_layers') || 'Capas por lienzo'}</span>
                     </td>
-                    <td class="col-plan col-plan--free${selectedPlan === 'free' ? ' is-active' : ''}">Hasta 5 capas</td>
+                    <td class="col-plan col-plan--free${selectedPlan === 'free' ? ' is-active' : ''}">5</td>
                     <td class="col-plan col-plan--pro${selectedPlan === 'pro' ? ' is-active' : ''}">Ilimitadas</td>
                     <td class="col-plan col-plan--business${selectedPlan === 'business' || selectedPlan === 'negocios' ? ' is-active' : ''}">Ilimitadas</td>
                   </tr>
                   <tr>
                     <td class="col-feature">
-                      <span>${t('upgrade_modal.benefit_history') || 'Historial de snapshots'}</span>
+                      <span>${t('upgrade_modal.benefit_history') || 'Historial de versiones'}</span>
                     </td>
-                    <td class="col-plan col-plan--free${selectedPlan === 'free' ? ' is-active' : ''}">3 versiones (7 días)</td>
-                    <td class="col-plan col-plan--pro${selectedPlan === 'pro' ? ' is-active' : ''}">30 versiones (30 días)</td>
-                    <td class="col-plan col-plan--business${selectedPlan === 'business' || selectedPlan === 'negocios' ? ' is-active' : ''}">Ilimitado permanente</td>
+                    <td class="col-plan col-plan--free${selectedPlan === 'free' ? ' is-active' : ''}">7 días</td>
+                    <td class="col-plan col-plan--pro${selectedPlan === 'pro' ? ' is-active' : ''}">30 días</td>
+                    <td class="col-plan col-plan--business${selectedPlan === 'business' || selectedPlan === 'negocios' ? ' is-active' : ''}">Ilimitado</td>
                   </tr>
                   <tr>
                     <td class="col-feature">
