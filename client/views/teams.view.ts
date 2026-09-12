@@ -10,7 +10,6 @@ import { renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { SearchUserResult } from '../types/canvas.types.js';
-import { ClassroomAssignment } from '../types/education.types.js';
 import { Team, TeamMember } from '../types/team.types.js';
 import { removeEmptyState, renderEmptyState, setupDropdown } from '../utils/dom.util.js';
 
@@ -44,7 +43,6 @@ class TeamsController {
   private defaultActions: HTMLElement | null = null;
   private selectedActions: HTMLElement | null = null;
   private btnActionCopyCode: HTMLElement | null = null;
-  private btnActionAssignments: HTMLElement | null = null;
   private btnActionCreateCanvas: HTMLElement | null = null;
   private btnActionMembers: HTMLElement | null = null;
   private btnActionEdit: HTMLElement | null = null;
@@ -98,7 +96,6 @@ class TeamsController {
     this.defaultActions = this.container.querySelector<HTMLElement>('[data-ref="teams-default-actions"]');
     this.selectedActions = this.container.querySelector<HTMLElement>('[data-ref="teams-selected-actions"]');
     this.btnActionCopyCode = this.container.querySelector<HTMLElement>('[data-ref="btn-action-copy-code"]');
-    this.btnActionAssignments = this.container.querySelector<HTMLElement>('[data-ref="btn-action-assignments"]');
     this.btnActionCreateCanvas = this.container.querySelector<HTMLElement>('[data-ref="btn-action-create-canvas"]');
     this.btnActionMembers = this.container.querySelector<HTMLElement>('[data-ref="btn-action-members"]');
     this.btnActionEdit = this.container.querySelector<HTMLElement>('[data-ref="btn-action-edit"]');
@@ -241,14 +238,6 @@ class TeamsController {
         } catch {
           showToast(`Código de aula: ${team.join_code}`, 'info');
         }
-      }
-    }, { signal });
-
-    this.btnActionAssignments?.addEventListener('click', () => {
-      const selectedUuid = [...this.selectedTeamUuids][0];
-      const team = this.allTeams.find((t) => t.uuid === selectedUuid);
-      if (team) {
-        void this.openAssignmentsModal(team);
       }
     }, { signal });
 
@@ -483,7 +472,6 @@ class TeamsController {
       if (this.defaultActions) this.defaultActions.style.display = 'flex';
       if (this.selectedActions) this.selectedActions.style.display = 'none';
       if (this.btnActionCopyCode) this.btnActionCopyCode.style.display = 'none';
-      if (this.btnActionAssignments) this.btnActionAssignments.style.display = 'none';
     } else {
       if (this.defaultActions) this.defaultActions.style.display = 'none';
       if (this.selectedActions) this.selectedActions.style.display = 'flex';
@@ -496,10 +484,6 @@ class TeamsController {
         if (this.btnActionCopyCode) {
           const canCopy = isClassroom && Boolean(selectedTeam?.join_code);
           this.btnActionCopyCode.style.display = canCopy ? 'inline-flex' : 'none';
-        }
-
-        if (this.btnActionAssignments) {
-          this.btnActionAssignments.style.display = isClassroom ? 'inline-flex' : 'none';
         }
 
         if (this.btnActionCreateCanvas) this.btnActionCreateCanvas.style.display = 'inline-flex';
@@ -519,7 +503,6 @@ class TeamsController {
         }
       } else {
         if (this.btnActionCopyCode) this.btnActionCopyCode.style.display = 'none';
-        if (this.btnActionAssignments) this.btnActionAssignments.style.display = 'none';
         if (this.btnActionCreateCanvas) this.btnActionCreateCanvas.style.display = 'none';
         if (this.btnActionMembers) this.btnActionMembers.style.display = 'none';
         if (this.btnActionEdit) this.btnActionEdit.style.display = 'none';
@@ -731,223 +714,6 @@ class TeamsController {
     });
   }
 
-  private async openAssignmentsModal(team: Team): Promise<void> {
-    const isTeacher = team.user_role === 'owner' || team.user_role === 'admin';
-    const modal = openModal({
-      title: `Tareas: ${team.name}`,
-      description: isTeacher
-        ? 'Gestiona las tareas y actividades asignadas a los estudiantes de esta aula.'
-        : 'Consulta y entrega tus actividades asignadas en esta aula.',
-      showConfirm: false,
-      cancelText: 'Cerrar',
-      size: 'md',
-      bodyHtml: `
-        <div data-ref="assignments-content" style="display: flex; flex-direction: column; gap: 16px;">
-          ${isTeacher ? `
-            <div style="border: 1px solid var(--border-color); border-radius: 8px; padding: 14px; background: var(--bg-surface);">
-              <h4 style="margin: 0 0 10px 0; font-size: 14px; font-weight: 600;">Asignar nueva tarea</h4>
-              <form data-ref="form-create-assignment" style="display: flex; flex-direction: column; gap: 10px;">
-                <label class="field" data-ref="field-assign-title">
-                  <input class="field__input" data-ref="input-assign-title" type="text" placeholder=" " maxlength="150" required />
-                  <span class="field__label">Título de la tarea</span>
-                </label>
-                <label class="field" data-ref="field-assign-desc">
-                  <input class="field__input" data-ref="input-assign-desc" type="text" placeholder=" " maxlength="255" />
-                  <span class="field__label">Instrucciones o descripción (opcional)</span>
-                </label>
-                <label class="field" data-ref="field-assign-due">
-                  <input class="field__input" data-ref="input-assign-due" type="date" placeholder=" " />
-                  <span class="field__label">Fecha límite de entrega (opcional)</span>
-                </label>
-                <button type="submit" class="btn btn--h34 btn--black" data-ref="btn-submit-assignment" style="align-self: flex-end;">
-                  <span class="material-symbols-rounded" style="font-size: 16px;">add_task</span>
-                  <span>Publicar tarea</span>
-                </button>
-              </form>
-            </div>
-          ` : ''}
-          <div data-ref="assignments-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 320px; overflow-y: auto;">
-            <p style="color: var(--text-secondary); font-size: 13px; text-align: center; margin: 20px 0;">Cargando tareas...</p>
-          </div>
-        </div>
-      `,
-    });
-
-    const listContainer = modal.body.querySelector<HTMLElement>('[data-ref="assignments-list"]');
-    const formCreate = modal.body.querySelector<HTMLFormElement>('[data-ref="form-create-assignment"]');
-
-    const renderList = async () => {
-      if (!listContainer) return;
-      try {
-        const res = await getApi(API_ROUTES.education.assignments(team.uuid));
-        if (!res.ok) {
-          listContainer.innerHTML = '<p style="color: var(--text-secondary); font-size: 13px; text-align: center;">No se pudieron cargar las tareas.</p>';
-          return;
-        }
-        const data = await res.json();
-        const assignments: ClassroomAssignment[] = Array.isArray(data.assignments) ? data.assignments : [];
-
-        if (assignments.length === 0) {
-          listContainer.innerHTML = '<p style="color: var(--text-secondary); font-size: 13px; text-align: center; margin: 20px 0;">No hay tareas publicadas en esta aula aún.</p>';
-          return;
-        }
-
-        listContainer.innerHTML = '';
-        for (const assign of assignments) {
-          const item = document.createElement('div');
-          item.className = 'menu-item';
-          item.style.cursor = 'default';
-          item.style.padding = '12px';
-          item.style.display = 'flex';
-          item.style.justifyContent = 'space-between';
-          item.style.alignItems = 'center';
-          item.style.border = '1px solid var(--border-color)';
-          item.style.borderRadius = '8px';
-          item.style.marginBottom = '6px';
-
-          const left = document.createElement('div');
-          left.style.display = 'flex';
-          left.style.flexDirection = 'column';
-          left.style.gap = '4px';
-
-          const titleEl = document.createElement('span');
-          titleEl.style.fontWeight = '600';
-          titleEl.style.fontSize = '14px';
-          titleEl.textContent = assign.title;
-
-          const descEl = document.createElement('span');
-          descEl.style.fontSize = '12px';
-          descEl.style.color = 'var(--text-secondary)';
-          descEl.textContent = assign.description || 'Sin instrucciones adicionales.';
-
-          const metaEl = document.createElement('span');
-          metaEl.style.fontSize = '11px';
-          metaEl.style.color = 'var(--text-secondary)';
-          const dueText = assign.due_date ? `Vence: ${formatDate(assign.due_date)}` : 'Sin fecha límite';
-          metaEl.textContent = `${dueText} • ${assign.submission_count || 0} entregas`;
-
-          left.appendChild(titleEl);
-          left.appendChild(descEl);
-          left.appendChild(metaEl);
-
-          const right = document.createElement('div');
-          right.style.display = 'flex';
-          right.style.gap = '8px';
-          right.style.alignItems = 'center';
-
-          if (!isTeacher) {
-            if (!assign.my_submission) {
-              const btnStart = document.createElement('button');
-              btnStart.type = 'button';
-              btnStart.className = 'btn btn--h34 btn--black';
-              btnStart.innerHTML = '<span class="material-symbols-rounded" style="font-size: 16px;">play_arrow</span><span>Comenzar</span>';
-              btnStart.addEventListener('click', async () => {
-                btnStart.disabled = true;
-                try {
-                  const startRes = await postApi(API_ROUTES.education.startAssignment(assign.uuid));
-                  const startData = await startRes.json();
-                  if (startRes.ok && startData.submission?.canvas_uuid) {
-                    modal.close();
-                    navigate(`/design/${startData.submission.canvas_uuid}`);
-                  } else {
-                    showToast(startData.error || 'No se pudo iniciar la tarea.', 'danger');
-                    btnStart.disabled = false;
-                  }
-                } catch {
-                  showToast('Error al iniciar la tarea', 'danger');
-                  btnStart.disabled = false;
-                }
-              });
-              right.appendChild(btnStart);
-            } else {
-              const btnOpen = document.createElement('button');
-              btnOpen.type = 'button';
-              btnOpen.className = 'btn btn--h34 btn--outline';
-              btnOpen.innerHTML = '<span class="material-symbols-rounded" style="font-size: 16px;">brush</span><span>Abrir lienzo</span>';
-              btnOpen.addEventListener('click', () => {
-                modal.close();
-                navigate(`/design/${assign.my_submission!.canvas_uuid}`);
-              });
-              right.appendChild(btnOpen);
-
-              if (assign.my_submission.status === 'draft') {
-                const btnSubmit = document.createElement('button');
-                btnSubmit.type = 'button';
-                btnSubmit.className = 'btn btn--h34 btn--black';
-                btnSubmit.innerHTML = '<span class="material-symbols-rounded" style="font-size: 16px;">send</span><span>Entregar</span>';
-                btnSubmit.addEventListener('click', async () => {
-                  btnSubmit.disabled = true;
-                  try {
-                    const subRes = await postApi(API_ROUTES.education.submitAssignment(assign.uuid));
-                    if (subRes.ok) {
-                      showToast('Tarea entregada con éxito', 'success');
-                      void renderList();
-                    } else {
-                      showToast('No se pudo entregar la tarea', 'danger');
-                      btnSubmit.disabled = false;
-                    }
-                  } catch {
-                    showToast('Error al entregar la tarea', 'danger');
-                    btnSubmit.disabled = false;
-                  }
-                });
-                right.appendChild(btnSubmit);
-              } else {
-                const statusBadge = document.createElement('span');
-                statusBadge.className = 'component-badge component-badge--sm';
-                statusBadge.textContent = assign.my_submission.status === 'reviewed' ? 'Revisada' : 'Entregada';
-                right.appendChild(statusBadge);
-              }
-            }
-          }
-
-          item.appendChild(left);
-          item.appendChild(right);
-          listContainer.appendChild(item);
-        }
-        renderIcons(listContainer);
-      } catch {
-        listContainer.innerHTML = '<p style="color: var(--text-secondary); font-size: 13px; text-align: center;">Error al cargar las tareas.</p>';
-      }
-    };
-
-    formCreate?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const titleInput = formCreate.querySelector<HTMLInputElement>('[data-ref="input-assign-title"]');
-      const descInput = formCreate.querySelector<HTMLInputElement>('[data-ref="input-assign-desc"]');
-      const dueInput = formCreate.querySelector<HTMLInputElement>('[data-ref="input-assign-due"]');
-      const submitBtn = formCreate.querySelector<HTMLButtonElement>('[data-ref="btn-submit-assignment"]');
-
-      const title = (titleInput?.value || '').trim();
-      if (!title) return;
-
-      if (submitBtn) submitBtn.disabled = true;
-      try {
-        const createRes = await postApi(API_ROUTES.education.assignments(team.uuid), {
-          title,
-          description: descInput?.value.trim() || undefined,
-          dueDate: dueInput?.value ? new Date(dueInput.value).toISOString() : undefined,
-        });
-
-        if (createRes.ok) {
-          showToast('Tarea publicada exitosamente', 'success');
-          if (titleInput) titleInput.value = '';
-          if (descInput) descInput.value = '';
-          if (dueInput) dueInput.value = '';
-          await renderList();
-        } else {
-          const err = await createRes.json().catch(() => ({}));
-          showToast(err.error || 'No se pudo publicar la tarea', 'danger');
-        }
-      } catch {
-        showToast('Error de red al publicar la tarea', 'danger');
-      } finally {
-        if (submitBtn) submitBtn.disabled = false;
-      }
-    });
-
-    await renderList();
-  }
 
   private showTeamError(msg: string): void {
     if (!this.bannerTeamError) return;

@@ -49,13 +49,10 @@ export const API_ROUTES = {
   },
   education: {
     addTeacher: '/api/education/school/teachers',
-    assignments: (uuid: string) => `/api/education/classrooms/${encodeURIComponent(uuid)}/assignments`,
     classrooms: '/api/education/classrooms',
     join: '/api/education/join',
     regenerateCode: (uuid: string) => `/api/education/classrooms/${encodeURIComponent(uuid)}/code`,
     school: '/api/education/school',
-    startAssignment: (uuid: string) => `/api/education/assignments/${encodeURIComponent(uuid)}/start`,
-    submitAssignment: (uuid: string) => `/api/education/assignments/${encodeURIComponent(uuid)}/submit`,
   },
   trash: {
     base: '/api/trash',

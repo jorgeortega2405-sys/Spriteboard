@@ -497,41 +497,6 @@ export async function runMigrations(): Promise<void> {
     `);
 
     await conn.query(`
-      CREATE TABLE IF NOT EXISTS db_canvas.classroom_assignments (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        uuid VARCHAR(36) NOT NULL UNIQUE,
-        classroom_id INT NOT NULL,
-        teacher_id INT NOT NULL,
-        canvas_template_id INT NULL,
-        title VARCHAR(150) NOT NULL,
-        description TEXT NULL,
-        due_date TIMESTAMP NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        INDEX idx_classroom_assign (classroom_id),
-        INDEX idx_classroom_template (canvas_template_id)
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-    `);
-
-    await conn.query(`
-      CREATE TABLE IF NOT EXISTS db_canvas.classroom_submissions (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        assignment_id INT NOT NULL,
-        student_id INT NOT NULL,
-        canvas_id INT NOT NULL,
-        status ENUM('draft', 'submitted', 'reviewed') NOT NULL DEFAULT 'draft',
-        feedback TEXT NULL,
-        grade VARCHAR(10) NULL,
-        submitted_at TIMESTAMP NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE KEY uq_assign_student (assignment_id, student_id),
-        INDEX idx_submissions_assign (assignment_id),
-        INDEX idx_submissions_student (student_id),
-        INDEX idx_submissions_canvas (canvas_id)
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-    `);
-
-    await conn.query(`
       CREATE TABLE IF NOT EXISTS db_canvas.canvas_teams (
         id INT AUTO_INCREMENT PRIMARY KEY,
         canvas_id INT NOT NULL,

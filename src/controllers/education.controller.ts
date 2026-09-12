@@ -1,4 +1,4 @@
-import { addSchoolTeacher, createAssignment, createClassroom, getClassroomAssignments, getSchoolOrganization, getUserClassrooms, joinClassroomByCode, regenerateClassroomCode, startAssignmentSubmission, submitAssignment } from '../services/education.service.js';
+import { addSchoolTeacher, createClassroom, getSchoolOrganization, getUserClassrooms, joinClassroomByCode, regenerateClassroomCode } from '../services/education.service.js';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import { logger } from '../services/logger.service.js';
 import { Request, Response } from 'express';
@@ -90,95 +90,6 @@ export async function listClassroomsHandler(req: Request, res: Response): Promis
     logger.app.error('Error al listar aulas del usuario', err);
     res.status(500).json({
       error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
-    });
-  }
-}
-
-export async function createAssignmentHandler(req: Request, res: Response): Promise<void> {
-  try {
-    const user = getCurrentUser(req);
-    if (!user) {
-      res.status(401).json({ error: 'No autorizado.' });
-      return;
-    }
-
-    const { uuid } = req.params;
-    const { title, description, templateUuid, dueDate } = req.body;
-
-    if (!title || typeof title !== 'string' || !title.trim()) {
-      res.status(400).json({ error: 'El título de la tarea es obligatorio.' });
-      return;
-    }
-
-    const assignment = await createAssignment(user.id, uuid, {
-      title: title.trim(),
-      description,
-      templateUuid,
-      dueDate,
-    });
-
-    res.status(201).json({ ok: true, assignment });
-  } catch (err: any) {
-    logger.app.error('Error al crear tarea de aula', err);
-    res.status(400).json({
-      error: err.message || 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
-    });
-  }
-}
-
-export async function listAssignmentsHandler(req: Request, res: Response): Promise<void> {
-  try {
-    const user = getCurrentUser(req);
-    if (!user) {
-      res.status(401).json({ error: 'No autorizado.' });
-      return;
-    }
-
-    const { uuid } = req.params;
-    const assignments = await getClassroomAssignments(user.id, uuid);
-    res.json({ ok: true, assignments });
-  } catch (err: any) {
-    logger.app.error('Error al listar tareas de aula', err);
-    res.status(400).json({
-      error: err.message || 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
-    });
-  }
-}
-
-export async function startAssignmentHandler(req: Request, res: Response): Promise<void> {
-  try {
-    const user = getCurrentUser(req);
-    if (!user) {
-      res.status(401).json({ error: 'No autorizado.' });
-      return;
-    }
-
-    const { uuid } = req.params;
-    const submission = await startAssignmentSubmission(user.id, uuid);
-    res.json({ ok: true, submission });
-  } catch (err: any) {
-    logger.app.error('Error al iniciar entrega de tarea', err);
-    res.status(400).json({
-      error: err.message || 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
-    });
-  }
-}
-
-export async function submitAssignmentHandler(req: Request, res: Response): Promise<void> {
-  try {
-    const user = getCurrentUser(req);
-    if (!user) {
-      res.status(401).json({ error: 'No autorizado.' });
-      return;
-    }
-
-    const { uuid } = req.params;
-    await submitAssignment(user.id, uuid);
-    res.json({ ok: true, success: true });
-  } catch (err: any) {
-    logger.app.error('Error al entregar tarea', err);
-    res.status(400).json({
-      error: err.message || 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
     });
   }
 }

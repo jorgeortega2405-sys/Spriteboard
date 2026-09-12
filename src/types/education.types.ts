@@ -25,50 +25,6 @@ export interface CreateClassroomDto {
   schoolId?: number;
 }
 
-export interface ClassroomAssignment {
-  id: number;
-  uuid: string;
-  classroom_id: number;
-  classroom_uuid?: string;
-  teacher_id: number;
-  teacher_username?: string;
-  canvas_template_id?: number | null;
-  template_uuid?: string | null;
-  template_name?: string | null;
-  title: string;
-  description?: string | null;
-  due_date?: string | null;
-  created_at: string;
-  updated_at: string;
-  submission_count?: number;
-  my_submission?: ClassroomSubmission | null;
-}
-
-export interface CreateAssignmentDto {
-  title: string;
-  description?: string;
-  templateUuid?: string;
-  dueDate?: string;
-}
-
-export interface ClassroomSubmission {
-  id: number;
-  assignment_id: number;
-  assignment_uuid?: string;
-  assignment_title?: string;
-  student_id: number;
-  student_username?: string;
-  student_avatar?: string | null;
-  canvas_id: number;
-  canvas_uuid?: string;
-  canvas_name?: string;
-  canvas_thumbnail?: string | null;
-  status: 'draft' | 'submitted' | 'reviewed';
-  feedback?: string | null;
-  grade?: string | null;
-  submitted_at?: string | null;
-  created_at: string;
-}
 
 export interface SchoolOrganization {
   id: number;
