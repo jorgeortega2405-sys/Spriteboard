@@ -42,10 +42,11 @@ export async function createCanvasHandler(req: Request, res: Response): Promise<
     }
 
     const { name, width, height, unit, access_level, public_role, data, preview_thumbnail } = req.body;
-    const numWidth = Number(width);
-    const numHeight = Number(height);
+    const isInfinite = unit === 'infinite' || (Number(width) === 0 && Number(height) === 0);
+    const numWidth = isInfinite ? 0 : Number(width);
+    const numHeight = isInfinite ? 0 : Number(height);
 
-    if (isNaN(numWidth) || numWidth <= 0 || isNaN(numHeight) || numHeight <= 0) {
+    if (!isInfinite && (isNaN(numWidth) || numWidth <= 0 || isNaN(numHeight) || numHeight <= 0)) {
       res.status(400).json({ error: 'Las dimensiones del lienzo deben ser valores numéricos positivos.' });
       return;
     }
@@ -54,7 +55,7 @@ export async function createCanvasHandler(req: Request, res: Response): Promise<
       name,
       width: numWidth,
       height: numHeight,
-      unit,
+      unit: isInfinite ? 'infinite' : unit,
       access_level: access_level === 'public' ? 'public' : 'private',
       public_role: public_role === 'viewer' ? 'viewer' : 'editor',
       data,
@@ -78,8 +79,9 @@ export async function syncCanvasHandler(req: Request, res: Response): Promise<vo
       return;
     }
 
-    const numWidth = Number(width) || 1920;
-    const numHeight = Number(height) || 1080;
+    const isInfinite = unit === 'infinite' || (Number(width) === 0 && Number(height) === 0);
+    const numWidth = isInfinite ? 0 : (Number(width) || 1920);
+    const numHeight = isInfinite ? 0 : (Number(height) || 1080);
 
     const canvas = await syncCanvas(user ? user.id : null, {
       id: id ? Number(id) : undefined,

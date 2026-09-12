@@ -79,8 +79,8 @@ export async function createUpgradeView(): Promise<HTMLElement> {
         icon: 'cloud',
       },
       {
-        title: 'Lienzos de hasta 1024 × 1024 px',
-        desc: 'Resolución ideal para sprites, avatares e iconos retro',
+        title: 'Lienzos sin límites de tamaño',
+        desc: 'Crea en cualquier resolución hasta 16K, condicionado a tu almacenamiento',
         icon: 'aspect_ratio',
       },
       {
@@ -127,8 +127,8 @@ export async function createUpgradeView(): Promise<HTMLElement> {
         icon: 'cloud',
       },
       {
-        title: 'Lienzos de hasta 2048 × 2048 px',
-        desc: 'Dimensiones ampliadas para tilemaps e ilustraciones detalladas',
+        title: 'Lienzos sin límites de tamaño',
+        desc: 'Crea en cualquier resolución masiva con 10 GB de almacenamiento',
         icon: 'aspect_ratio',
       },
       {
@@ -180,8 +180,8 @@ export async function createUpgradeView(): Promise<HTMLElement> {
         icon: 'cloud',
       },
       {
-        title: 'Lienzos de hasta 4096 × 4096 px',
-        desc: 'Resolución ultra masiva para mundos completos y cinemáticas',
+        title: 'Lienzos sin límites de tamaño',
+        desc: 'Crea en cualquier resolución masiva con 1 TB de almacenamiento masivo',
         icon: 'aspect_ratio',
       },
       {
@@ -239,8 +239,8 @@ export async function createUpgradeView(): Promise<HTMLElement> {
         icon: 'cloud',
       },
       {
-        title: 'Lienzos de hasta 4096 × 4096 px',
-        desc: 'Resolución ultra alta para proyectos detallados e ilustraciones de clase',
+        title: 'Lienzos sin límites de tamaño',
+        desc: 'Crea en cualquier resolución masiva con 1 TB de almacenamiento educativo',
         icon: 'aspect_ratio',
       },
       {

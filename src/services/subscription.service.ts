@@ -18,7 +18,7 @@ export interface TierLimits {
 export const TIER_LIMITS: Record<string, TierLimits> = {
   free: {
     storageBytes: 1024 * 1024 * 1024,
-    maxCanvasDimension: 1024,
+    maxCanvasDimension: 16384,
     maxLiveCollaborators: 3,
     maxTeams: 0,
     maxTeamMembers: 0,
@@ -30,7 +30,7 @@ export const TIER_LIMITS: Record<string, TierLimits> = {
   },
   pro: {
     storageBytes: 10 * 1024 * 1024 * 1024,
-    maxCanvasDimension: 2048,
+    maxCanvasDimension: 16384,
     maxLiveCollaborators: 6,
     maxTeams: 1,
     maxTeamMembers: 3,
@@ -42,7 +42,7 @@ export const TIER_LIMITS: Record<string, TierLimits> = {
   },
   business: {
     storageBytes: 1024 * 1024 * 1024 * 1024,
-    maxCanvasDimension: 4096,
+    maxCanvasDimension: 16384,
     maxLiveCollaborators: 50,
     maxTeams: 999999,
     maxTeamMembers: 999999,
@@ -145,8 +145,8 @@ export class SubscriptionService {
           icon: 'cloud',
         },
         {
-          title: 'Lienzos de hasta 1024 × 1024 px',
-          desc: 'Resolución ideal para sprites, avatares e iconos retro',
+          title: 'Lienzos sin límites de tamaño',
+          desc: 'Crea en cualquier resolución hasta 16K, condicionado a tu almacenamiento',
           icon: 'aspect_ratio',
         },
         {
@@ -192,8 +192,8 @@ export class SubscriptionService {
           icon: 'cloud',
         },
         {
-          title: 'Lienzos de hasta 2048 × 2048 px',
-          desc: 'Dimensiones ampliadas para tilemaps e ilustraciones detalladas',
+          title: 'Lienzos sin límites de tamaño',
+          desc: 'Crea en cualquier resolución masiva con 10 GB de almacenamiento',
           icon: 'aspect_ratio',
         },
         {
@@ -244,8 +244,8 @@ export class SubscriptionService {
           icon: 'cloud',
         },
         {
-          title: 'Lienzos de hasta 4096 × 4096 px',
-          desc: 'Resolución ultra masiva para mundos completos y cinemáticas',
+          title: 'Lienzos sin límites de tamaño',
+          desc: 'Crea en cualquier resolución masiva con 1 TB de almacenamiento masivo',
           icon: 'aspect_ratio',
         },
         {

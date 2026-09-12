@@ -131,9 +131,9 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
                     <td class="col-feature">
                       <span>${t('upgrade_modal.benefit_canvas_size') || 'Lienzo máximo'}</span>
                     </td>
-                    <td class="col-plan col-plan--free${selectedPlan === 'free' ? ' is-active' : ''}">1024 px</td>
-                    <td class="col-plan col-plan--pro${selectedPlan === 'pro' ? ' is-active' : ''}">2048 px</td>
-                    <td class="col-plan col-plan--business${selectedPlan === 'business' || selectedPlan === 'negocios' ? ' is-active' : ''}">4096 px</td>
+                    <td class="col-plan col-plan--free${selectedPlan === 'free' ? ' is-active' : ''}">Cualquier tamaño</td>
+                    <td class="col-plan col-plan--pro${selectedPlan === 'pro' ? ' is-active' : ''}">Cualquier tamaño</td>
+                    <td class="col-plan col-plan--business${selectedPlan === 'business' || selectedPlan === 'negocios' ? ' is-active' : ''}">Cualquier tamaño</td>
                   </tr>
                   <tr>
                     <td class="col-feature">

@@ -1,5 +1,4 @@
 import { navigate } from '../app-router.js';
-import { openUpgradeModal } from '../components/upgrade-modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { currentUser, postApi } from './api.service.js';
 import { saveLocalCanvas } from './canvas-storage.service.js';
@@ -18,20 +17,17 @@ export interface CreateCanvasOptions {
   onionSkin?: boolean;
   teamUuid?: string | null;
   effectiveTier?: string | null;
+  isInfinite?: boolean;
 }
 
 export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise<void> {
-  const width = options.width;
-  const height = options.height;
+  const isInfinite = options.isInfinite ?? false;
+  const width = isInfinite ? 0 : options.width;
+  const height = isInfinite ? 0 : options.height;
 
-  const effectiveTier = (options.effectiveTier || currentUser?.subscription_tier || 'free').toLowerCase();
-  const maxDim = effectiveTier === 'business' || effectiveTier === 'negocios' ? 4096 : (effectiveTier === 'pro' ? 2048 : 1024);
-  if (width > maxDim || height > maxDim) {
-    const tierName = effectiveTier === 'free' ? 'Gratis' : (effectiveTier === 'pro' ? 'Pro' : 'Negocios');
-    showToast(`El tamaño (${width}×${height} px) supera el límite permitido (${maxDim}×${maxDim} px).`, 'warning');
-    if (!options.teamUuid) {
-      openUpgradeModal(effectiveTier === 'free' ? 'pro' : 'business');
-    }
+  const MAX_CANVAS_DIMENSION = 16384;
+  if (!isInfinite && (width > MAX_CANVAS_DIMENSION || height > MAX_CANVAS_DIMENSION || width <= 0 || height <= 0)) {
+    showToast(`El tamaño (${width}×${height} px) debe ser mayor a 0 y no superar los ${MAX_CANVAS_DIMENSION}×${MAX_CANVAS_DIMENSION} px.`, 'warning');
     return;
   }
 
@@ -90,6 +86,7 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
     version: 1,
     fps,
     onionSkin,
+    isInfinite,
     activeFrameId: 'frame_1',
     background: {
       type: bgType,
@@ -111,6 +108,7 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
             visible: true,
             opacity: 1.0,
             data: templateDataUrl || '',
+            chunks: {},
           },
         ],
       },
@@ -121,8 +119,8 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
 
   let previewThumbnail: string | null = null;
   const maxThumbDim = 320;
-  let thumbW = width;
-  let thumbH = height;
+  let thumbW = isInfinite ? 256 : width;
+  let thumbH = isInfinite ? 256 : height;
   if (thumbW > maxThumbDim || thumbH > maxThumbDim) {
     const ratio = Math.min(maxThumbDim / thumbW, maxThumbDim / thumbH);
     thumbW = Math.max(1, Math.round(thumbW * ratio));
@@ -159,10 +157,10 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
         thumbCtx.fillStyle = solidColor;
         thumbCtx.fillRect(0, 0, thumbW, thumbH);
       } else {
-        const cs = Math.max(4, Math.round(checkSize * (thumbW / width)));
+        const cs = Math.max(4, Math.round(checkSize * (thumbW / (width || 256))));
         for (let y = 0; y < thumbH; y += cs) {
           for (let x = 0; x < thumbW; x += cs) {
-            const isEven = (Math.floor(x / cs) + Math.floor(y / cs)) % 2 === 0;
+            const isEven = ((x / cs) + (y / cs)) % 2 === 0;
             thumbCtx.fillStyle = isEven ? '#ffffff' : '#e2e8f0';
             thumbCtx.fillRect(x, y, cs, cs);
           }
@@ -178,12 +176,13 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
     previewThumbnail = templateDataUrl;
   }
 
+  const unit = isInfinite ? 'infinite' : 'px';
   if (currentUser) {
     const res = await postApi(API_ROUTES.canvases.base, {
       name,
       width,
       height,
-      unit: 'px',
+      unit,
       data: initialData,
       preview_thumbnail: previewThumbnail,
       team_uuid: options.teamUuid || undefined,
@@ -198,7 +197,7 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
     }
 
     const err = await res.json().catch(() => null);
-    throw new Error(err?.message || t('canvas.error_save'));
+    throw new Error(err?.error || err?.message || t('canvas.error_save') || 'Error al guardar el lienzo');
   }
 
   const localUuid = crypto.randomUUID();
@@ -208,7 +207,7 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
     name,
     width,
     height,
-    unit: 'px',
+    unit,
     data: initialData,
     preview_thumbnail: previewThumbnail || undefined,
     created_at: now,

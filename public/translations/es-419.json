@@ -854,5 +854,50 @@
     "thread_delete_confirm": "¿Estás seguro de que deseas eliminar este comentario?",
     "thread_resolve": "Resolver",
     "thread_reopen": "Reabrir"
+  },
+  "canvas": {
+    "toast_created": "Lienzo creado con éxito",
+    "error_save": "Error al guardar el lienzo. Por favor intenta más tarde.",
+    "input_name_placeholder": "Lienzo sin título",
+    "selection_count_one": "1 seleccionado",
+    "selection_count_many": "{count} seleccionados",
+    "selection_move_many_desc": "Mover {count} lienzos a una carpeta:",
+    "selection_move_many_success": "Lienzos movidos exitosamente",
+    "folder_default_name": "Todos los lienzos",
+    "folder_default_badge": "Predeterminada",
+    "folder_move_desc": "Mover lienzo",
+    "folder_move_submit": "Mover a esta carpeta",
+    "folder_move_current": "Carpeta actual",
+    "folder_move_error": "Error al mover el lienzo",
+    "folder_move_success": "Lienzo movido con éxito",
+    "folder_items_count_one": "1 lienzo",
+    "folder_items_count_many": "{count} lienzos",
+    "folder_create_name_label": "Nombre de la carpeta",
+    "folder_create_submit": "Crear carpeta",
+    "folder_create_error": "Error al crear la carpeta",
+    "folder_create_success": "Carpeta creada exitosamente",
+    "folder_rename_submit": "Renombrar carpeta",
+    "folder_rename_error": "Error al renombrar la carpeta",
+    "folder_rename_success": "Carpeta renombrada exitosamente",
+    "bookmark_save": "Guardar en favoritos",
+    "bookmark_remove": "Quitar de favoritos",
+    "bookmark_saved": "Guardado en favoritos",
+    "bookmark_removed": "Eliminado de favoritos",
+    "bookmark_login_required": "Inicia sesión para guardar favoritos",
+    "menu_open_new_tab": "Abrir en nueva pestaña",
+    "menu_download": "Descargar",
+    "share": {
+      "linkCopied": "Enlace copiado al portapapeles",
+      "anyoneWithLink": "Cualquier persona con el enlace",
+      "onlyYou": "Solo tú tienes acceso",
+      "role_viewer": "Solo ver",
+      "role_editor": "Ver y editar",
+      "changedToPublic": "Lienzo público para cualquiera con el enlace",
+      "changedToPrivate": "Lienzo cambiado a privado"
+    },
+    "download": {
+      "success_toast": "Archivo descargado con éxito",
+      "error_toast": "Error al generar la descarga"
+    }
   }
 }

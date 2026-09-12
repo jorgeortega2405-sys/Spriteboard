@@ -148,6 +148,40 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
                 <input class="hidden" data-ref="input-canvas-width" type="hidden" value="${currentWidth}" />
                 <input class="hidden" data-ref="input-canvas-height" type="hidden" value="${currentHeight}" />
                 ` : `
+                <div class="settings-group" data-ref="group-canvas-mode">
+                  <div class="settings-item" data-ref="item-canvas-mode">
+                    <div class="settings-item__content" data-ref="content-canvas-mode">
+                      <div class="settings-item__text" data-ref="text-canvas-mode">
+                        <h2 class="settings-item__title" data-ref="title-canvas-mode">Tipo de lienzo</h2>
+                        <p class="settings-item__desc" data-ref="desc-canvas-mode">Elige entre dimensiones fijas tradicionales o un espacio libre infinito.</p>
+                      </div>
+                    </div>
+                    <div class="settings-item__actions" data-ref="actions-canvas-mode">
+                      <div class="template-variants-pills" data-ref="canvas-mode-pills">
+                        <button type="button" class="template-variant-pill is-active" data-ref="btn-mode-fixed" data-mode="fixed">
+                          <span class="material-symbols-rounded" style="font-size: 16px; margin-right: 4px;">crop_free</span>
+                          <span>Dimensiones fijas</span>
+                        </button>
+                        <button type="button" class="template-variant-pill" data-ref="btn-mode-infinite" data-mode="infinite">
+                          <span class="material-symbols-rounded" style="font-size: 16px; margin-right: 4px;">all_inclusive</span>
+                          <span>Lienzo Infinito</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="settings-group" data-ref="group-infinite-info" style="display: none;">
+                  <div class="settings-item" data-ref="item-infinite-info">
+                    <div class="settings-item__content" data-ref="content-infinite-info">
+                      <div class="settings-item__text" data-ref="text-infinite-info">
+                        <h2 class="settings-item__title" data-ref="title-infinite-info">Espacio Infinito Dinámico</h2>
+                        <p class="settings-item__desc" data-ref="desc-infinite-info">Sin límites de bordes ni resolución máxima. El lienzo se expande automáticamente mediante chunks de 256×256 px en cualquier dirección.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 <div class="settings-group" data-ref="custom-size-group-width">
                   <div class="settings-item" data-ref="custom-size-item-width">
                     <div class="settings-item__content" data-ref="custom-size-width-content">
@@ -228,6 +262,9 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
                         <button type="button" class="template-variant-pill" data-ref="btn-preset-128" data-w="128" data-h="128">128 × 128</button>
                         <button type="button" class="template-variant-pill" data-ref="btn-preset-256" data-w="256" data-h="256">256 × 256</button>
                         <button type="button" class="template-variant-pill" data-ref="btn-preset-512" data-w="512" data-h="512">512 × 512</button>
+                        <button type="button" class="template-variant-pill" data-ref="btn-preset-1024" data-w="1024" data-h="1024">1024 × 1024</button>
+                        <button type="button" class="template-variant-pill" data-ref="btn-preset-2048" data-w="2048" data-h="2048">2048 × 2048</button>
+                        <button type="button" class="template-variant-pill" data-ref="btn-preset-4096" data-w="4096" data-h="4096">4096 × 4096</button>
                       </div>
                     </div>
                   </div>
@@ -243,6 +280,7 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
                     </button>
                   </div>
                   <div class="banner banner--danger" data-ref="create-canvas-error-stage1" style="display: none;"></div>
+                  <div class="banner banner--warning" data-ref="huge-canvas-warning" style="display: none; margin-top: 10px;"></div>
                 </div>
               </div>
             </div>
@@ -451,6 +489,7 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
   const inputHeight = backdrop.querySelector<HTMLInputElement>('[data-ref="input-canvas-height"]');
   const btnSubmit = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-submit-create-canvas"]');
   const errorBoxStage1 = backdrop.querySelector<HTMLElement>('[data-ref="create-canvas-error-stage1"]');
+  const hugeCanvasWarning = backdrop.querySelector<HTMLElement>('[data-ref="huge-canvas-warning"]');
   const errorBoxStage3 = backdrop.querySelector<HTMLElement>('[data-ref="create-canvas-error"]');
 
   const btnStage1Next = backdrop.querySelector<HTMLElement>('[data-ref="btn-stage1-next"]');
@@ -469,6 +508,14 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
   const btnHeightIncLarge = backdrop.querySelector<HTMLElement>('[data-ref="btn-height-inc-large"]');
 
   const quickPresetPills = backdrop.querySelectorAll<HTMLElement>('[data-ref^="btn-preset-"]');
+
+  let selectedCanvasMode: 'fixed' | 'infinite' = 'fixed';
+  const btnModeFixed = backdrop.querySelector<HTMLElement>('[data-ref="btn-mode-fixed"]');
+  const btnModeInfinite = backdrop.querySelector<HTMLElement>('[data-ref="btn-mode-infinite"]');
+  const groupCanvasWidth = backdrop.querySelector<HTMLElement>('[data-ref="custom-size-group-width"]');
+  const groupCanvasHeight = backdrop.querySelector<HTMLElement>('[data-ref="custom-size-group-height"]');
+  const groupCanvasPresets = backdrop.querySelector<HTMLElement>('[data-ref="custom-size-group-quick-presets"]');
+  const groupInfiniteInfo = backdrop.querySelector<HTMLElement>('[data-ref="group-infinite-info"]');
 
   let selectedBgType: 'transparent' | 'solid' = 'transparent';
   let selectedCheckSize = 16;
@@ -540,7 +587,9 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
     const height = parseInt(inputHeight?.value || '0', 10);
 
     if (summaryValName) summaryValName.textContent = name;
-    if (summaryValDims) summaryValDims.textContent = `${width} × ${height} px`;
+    if (summaryValDims) {
+      summaryValDims.textContent = selectedCanvasMode === 'infinite' ? 'Infinito (Sin bordes fijos)' : `${width} × ${height} px`;
+    }
     if (summaryValBg) {
       summaryValBg.textContent =
         selectedBgType === 'solid'
@@ -586,11 +635,16 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
   tabStageAnimation?.addEventListener('click', () => switchStage('animation'));
 
   const validateDimensions = (): boolean => {
-    const width = parseInt(inputWidth?.value || '0', 10);
-    const height = parseInt(inputHeight?.value || '0', 10);
-
     if (errorBoxStage1) errorBoxStage1.style.display = 'none';
     if (errorBoxStage3) errorBoxStage3.style.display = 'none';
+    if (hugeCanvasWarning) hugeCanvasWarning.style.display = 'none';
+
+    if (selectedCanvasMode === 'infinite') {
+      return true;
+    }
+
+    const width = parseInt(inputWidth?.value || '0', 10);
+    const height = parseInt(inputHeight?.value || '0', 10);
 
     if (isNaN(width) || width <= 0 || isNaN(height) || height <= 0) {
       if (errorBoxStage1) {
@@ -606,6 +660,13 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
         errorBoxStage1.style.display = 'block';
       }
       return false;
+    }
+
+    if (width > 4096 || height > 4096) {
+      if (hugeCanvasWarning) {
+        hugeCanvasWarning.textContent = `Lienzo de resolución masiva (${width} × ${height} px). Consumirá más memoria y cuota de almacenamiento.`;
+        hugeCanvasWarning.style.display = 'block';
+      }
     }
 
     return true;
@@ -702,6 +763,16 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
     setupNumberStepper(inputHeight, btnHeightDecLarge, btnHeightDec, btnHeightInc, btnHeightIncLarge);
     updatePresetPillsState();
 
+    inputWidth?.addEventListener('input', () => {
+      validateDimensions();
+      updatePresetPillsState();
+    });
+
+    inputHeight?.addEventListener('input', () => {
+      validateDimensions();
+      updatePresetPillsState();
+    });
+
     quickPresetPills.forEach((pill) => {
       pill.addEventListener('click', () => {
         const w = pill.getAttribute('data-w');
@@ -714,8 +785,34 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
           inputHeight.value = h;
           inputHeight.dispatchEvent(new Event('input', { bubbles: true }));
         }
+        validateDimensions();
         updatePresetPillsState();
       });
+    });
+
+    btnModeFixed?.addEventListener('click', () => {
+      selectedCanvasMode = 'fixed';
+      btnModeFixed.classList.add('is-active');
+      btnModeInfinite?.classList.remove('is-active');
+      if (groupCanvasWidth) groupCanvasWidth.style.display = '';
+      if (groupCanvasHeight) groupCanvasHeight.style.display = '';
+      if (groupCanvasPresets) groupCanvasPresets.style.display = '';
+      if (groupInfiniteInfo) groupInfiniteInfo.style.display = 'none';
+      validateDimensions();
+      updateSummary();
+    });
+
+    btnModeInfinite?.addEventListener('click', () => {
+      selectedCanvasMode = 'infinite';
+      btnModeInfinite.classList.add('is-active');
+      btnModeFixed?.classList.remove('is-active');
+      if (groupCanvasWidth) groupCanvasWidth.style.display = 'none';
+      if (groupCanvasHeight) groupCanvasHeight.style.display = 'none';
+      if (groupCanvasPresets) groupCanvasPresets.style.display = 'none';
+      if (groupInfiniteInfo) groupInfiniteInfo.style.display = '';
+      if (errorBoxStage1) errorBoxStage1.style.display = 'none';
+      if (hugeCanvasWarning) hugeCanvasWarning.style.display = 'none';
+      updateSummary();
     });
   }
 
@@ -750,32 +847,30 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
     pill.addEventListener('click', () => {
       colorPresetPills.forEach((p) => p.classList.remove('is-active'));
       pill.classList.add('is-active');
-      const col = pill.getAttribute('data-color');
-      if (col === 'custom') {
+      const colorVal = pill.getAttribute('data-color');
+      if (colorVal === 'custom') {
         if (customColorRow) customColorRow.style.display = 'flex';
         selectedSolidColor = inputBgColorHex?.value || inputBgColor?.value || '#ffffff';
       } else {
         if (customColorRow) customColorRow.style.display = 'none';
-        selectedSolidColor = col || '#ffffff';
-        if (inputBgColor) inputBgColor.value = selectedSolidColor;
-        if (inputBgColorHex) inputBgColorHex.value = selectedSolidColor;
+        selectedSolidColor = colorVal || '#ffffff';
       }
       updateLivePreview();
     });
   });
 
   inputBgColor?.addEventListener('input', () => {
-    if (inputBgColorHex) inputBgColorHex.value = inputBgColor.value;
     selectedSolidColor = inputBgColor.value;
+    if (inputBgColorHex) inputBgColorHex.value = inputBgColor.value;
     updateLivePreview();
   });
 
   inputBgColorHex?.addEventListener('input', () => {
-    let val = inputBgColorHex.value.trim();
-    if (!val.startsWith('#')) val = '#' + val;
-    if (/^#[0-9a-fA-F]{6}$/.test(val)) {
-      if (inputBgColor) inputBgColor.value = val;
-      selectedSolidColor = val;
+    let hex = inputBgColorHex.value.trim();
+    if (!hex.startsWith('#')) hex = '#' + hex;
+    if (/^#[0-9A-Fa-f]{6}$/.test(hex)) {
+      selectedSolidColor = hex;
+      if (inputBgColor) inputBgColor.value = hex;
       updateLivePreview();
     }
   });
@@ -798,6 +893,8 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
     });
   });
 
+  btnStage3Prev?.addEventListener('click', () => switchStage('background'));
+
   const showError = (msg: string) => {
     if (errorBoxStage3) {
       errorBoxStage3.textContent = msg;
@@ -811,9 +908,10 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
       return;
     }
 
+    const isInfinite = selectedCanvasMode === 'infinite';
     const name = inputName?.value.trim() || t('canvas.input_name_placeholder');
-    const width = parseInt(inputWidth?.value || '0', 10);
-    const height = parseInt(inputHeight?.value || '0', 10);
+    const width = isInfinite ? 0 : parseInt(inputWidth?.value || '0', 10);
+    const height = isInfinite ? 0 : parseInt(inputHeight?.value || '0', 10);
 
     if (btnSubmit) {
       btnSubmit.disabled = true;
@@ -825,6 +923,7 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
         name,
         width,
         height,
+        isInfinite,
         templateImage: currentTemplateImage,
         bgType: selectedBgType,
         solidColor: selectedSolidColor,

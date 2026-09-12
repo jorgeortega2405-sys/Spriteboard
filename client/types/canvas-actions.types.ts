@@ -5,6 +5,7 @@ export interface CanvasLayer {
   ctx: CanvasRenderingContext2D;
   visible: boolean;
   opacity: number;
+  chunkGrid?: any;
 }
 
 export interface CanvasFrame {

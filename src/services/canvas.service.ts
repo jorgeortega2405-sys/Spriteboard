@@ -55,9 +55,10 @@ export function generateShortCode(): string {
 export async function createCanvas(userId: number, dto: CreateCanvasDto): Promise<Canvas> {
   const uuid = dto.uuid && dto.uuid.trim().length === 36 ? dto.uuid.trim() : crypto.randomUUID();
   const name = dto.name && dto.name.trim() ? dto.name.trim().slice(0, 255) : 'Lienzo sin título';
-  const width = Math.max(1, Math.min(16384, Math.floor(Number(dto.width) || 1920)));
-  const height = Math.max(1, Math.min(16384, Math.floor(Number(dto.height) || 1080)));
-  const unit = dto.unit && ['px', 'cm', 'in', 'mm'].includes(dto.unit) ? dto.unit : 'px';
+  const isInfinite = dto.unit === 'infinite' || (Number(dto.width) === 0 && Number(dto.height) === 0);
+  const width = isInfinite ? 0 : Math.max(1, Math.min(16384, Math.floor(Number(dto.width) || 1920)));
+  const height = isInfinite ? 0 : Math.max(1, Math.min(16384, Math.floor(Number(dto.height) || 1080)));
+  const unit = isInfinite ? 'infinite' : (dto.unit && ['px', 'cm', 'in', 'mm'].includes(dto.unit) ? dto.unit : 'px');
   const accessLevel = dto.access_level === 'public' ? 'public' : 'private';
   const publicRole = dto.public_role === 'viewer' ? 'viewer' : 'editor';
   const shortCode = generateShortCode();
@@ -99,12 +100,13 @@ export async function createCanvas(userId: number, dto: CreateCanvasDto): Promis
     storageCheckUserId = targetTeam.owner_id;
   }
 
-  const tierLimits = getTierLimits(effectiveTier);
-  if (width > tierLimits.maxCanvasDimension || height > tierLimits.maxCanvasDimension) {
-    throw new Error(`Las dimensiones del lienzo (${width}×${height} px) superan el límite permitido para tu plan (${tierLimits.maxCanvasDimension}×${tierLimits.maxCanvasDimension} px).`);
+  const MAX_CANVAS_DIMENSION = 16384;
+  if (!isInfinite && (width > MAX_CANVAS_DIMENSION || height > MAX_CANVAS_DIMENSION || width <= 0 || height <= 0)) {
+    throw new Error(`Las dimensiones del lienzo (${width}×${height} px) deben ser mayores a 0 y no superar el límite técnico de ${MAX_CANVAS_DIMENSION}×${MAX_CANVAS_DIMENSION} px.`);
   }
 
-  const approxBytes = dataStr ? Buffer.byteLength(dataStr, 'utf-8') : 1024;
+  const estimatedBytes = isInfinite ? 4096 : Math.max(1024, Math.round(width * height * 0.5));
+  const approxBytes = dataStr ? Buffer.byteLength(dataStr, 'utf-8') : estimatedBytes;
   const quota = await checkUserStorageQuota(storageCheckUserId, approxBytes);
   if (!quota.allowed) {
     throw new Error(`Has alcanzado el límite de almacenamiento de tu plan (${quota.limitFormatted}). Libera espacio o actualiza tu plan en Mejorar plan.`);
@@ -500,9 +502,10 @@ export async function updateCanvasAccessLevel(
 export async function syncCanvas(userId: number | null, dto: SyncCanvasDto): Promise<Canvas> {
   const uuid = dto.uuid.trim();
   const name = dto.name && dto.name.trim() ? dto.name.trim().slice(0, 255) : 'Lienzo sin título';
-  const width = Math.max(1, Math.min(16384, Math.floor(Number(dto.width) || 1920)));
-  const height = Math.max(1, Math.min(16384, Math.floor(Number(dto.height) || 1080)));
-  const unit = dto.unit && ['px', 'cm', 'in', 'mm'].includes(dto.unit) ? dto.unit : 'px';
+  const isInfinite = dto.unit === 'infinite' || (Number(dto.width) === 0 && Number(dto.height) === 0);
+  const width = isInfinite ? 0 : Math.max(1, Math.min(16384, Math.floor(Number(dto.width) || 1920)));
+  const height = isInfinite ? 0 : Math.max(1, Math.min(16384, Math.floor(Number(dto.height) || 1080)));
+  const unit = isInfinite ? 'infinite' : (dto.unit && ['px', 'cm', 'in', 'mm'].includes(dto.unit) ? dto.unit : 'px');
   const data = dto.data ? (typeof dto.data === 'string' ? dto.data : JSON.stringify(dto.data)) : null;
   const previewThumbnail = dto.preview_thumbnail !== undefined ? dto.preview_thumbnail : null;
   const accessLevel = dto.access_level;

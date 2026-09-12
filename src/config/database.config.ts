@@ -320,6 +320,7 @@ export async function runMigrations(): Promise<void> {
         width INT NOT NULL DEFAULT 1920,
         height INT NOT NULL DEFAULT 1080,
         unit VARCHAR(20) NOT NULL DEFAULT 'px',
+        canvas_type ENUM('pixel', 'board') NOT NULL DEFAULT 'pixel',
         data JSON NULL,
         preview_thumbnail MEDIUMTEXT NULL,
         access_level ENUM('private', 'public') NOT NULL DEFAULT 'private',
@@ -336,6 +337,14 @@ export async function runMigrations(): Promise<void> {
         INDEX idx_canvases_deleted_at (deleted_at)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
+
+    const [canvasTypeCols] = await conn.query<mysql.RowDataPacket[]>(
+      "SHOW COLUMNS FROM db_canvas.canvases LIKE 'canvas_type'"
+    );
+    if (canvasTypeCols.length === 0) {
+      await conn.query("ALTER TABLE db_canvas.canvases ADD COLUMN canvas_type ENUM('pixel', 'board') NOT NULL DEFAULT 'pixel' AFTER unit");
+      logger.db.info('Columna canvas_type añadida a db_canvas.canvases.');
+    }
 
     const [accessCols] = await conn.query<mysql.RowDataPacket[]>(
       "SHOW COLUMNS FROM db_canvas.canvases LIKE 'access_level'"

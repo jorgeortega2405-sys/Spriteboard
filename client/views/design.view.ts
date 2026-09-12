@@ -18,6 +18,7 @@ import { CanvasActionContext, CanvasFrame, CanvasLayer } from '../types/canvas-a
 import { CanvasSnapshotItem } from '../types/canvas-snapshot.types.js';
 import { CanvasItem, CanvasMember, SearchUserResult } from '../types/canvas.types.js';
 import { CanvasTeamItem, Team } from '../types/team.types.js';
+import { ChunkGrid } from '../utils/chunk-grid.util.js';
 import { CarouselController, initCarouselScroll, setupDropdown } from '../utils/dom.util.js';
 import { encodeFramesToGif } from '../utils/gif-encoder.util.js';
 import { applyOutlineDirectToLayer, generatePixelOutline } from '../utils/pixel-effects.util.js';
@@ -59,6 +60,7 @@ interface SerializedCanvasLayer {
   visible: boolean;
   opacity: number;
   data: string;
+  chunks?: Record<string, string>;
 }
 
 interface SerializedCanvasFrame {
@@ -77,6 +79,7 @@ interface SerializedCanvasProject {
   frames: SerializedCanvasFrame[];
   background?: CanvasBackgroundConfig;
   tags?: AnimationTag[];
+  isInfinite?: boolean;
 }
 
 interface UndoStep {
@@ -485,6 +488,7 @@ class DesignController {
   private canvasWidth = 64;
   private canvasHeight = 64;
   private canvasUnit = 'px';
+  private isInfinite = false;
   private canvasCreatedAt: string | null = null;
   private canvasServerId: number | null = null;
   private canvasUserId: number | null = null;
@@ -1057,9 +1061,10 @@ class DesignController {
 
   private createLayer(name: string): CanvasLayer {
     const canvas = document.createElement('canvas');
-    canvas.width = this.canvasWidth;
-    canvas.height = this.canvasHeight;
+    canvas.width = Math.max(1, this.canvasWidth || 256);
+    canvas.height = Math.max(1, this.canvasHeight || 256);
     const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
+    const chunkGrid = new ChunkGrid(256);
     return {
       id: `layer-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       name,
@@ -1067,6 +1072,7 @@ class DesignController {
       ctx,
       visible: true,
       opacity: 1.0,
+      chunkGrid,
     };
   }
 
@@ -1079,6 +1085,9 @@ class DesignController {
       layers = copyFrom.layers.map((l) => {
         const copyLayer = this.createLayer(l.name);
         copyLayer.ctx.drawImage(l.canvas, 0, 0);
+        if (l.chunkGrid) {
+          copyLayer.chunkGrid = l.chunkGrid.clone();
+        }
         copyLayer.visible = l.visible;
         copyLayer.opacity = l.opacity;
         return copyLayer;
@@ -1901,13 +1910,17 @@ class DesignController {
 
   private serializeProject(): SerializedCanvasProject {
     const serializedFrames: SerializedCanvasFrame[] = this.frames.map((frame) => {
-      const serializedLayers: SerializedCanvasLayer[] = frame.layers.map((layer) => ({
-        id: layer.id,
-        name: layer.name,
-        visible: layer.visible,
-        opacity: layer.opacity,
-        data: layer.canvas.toDataURL('image/png'),
-      }));
+      const serializedLayers: SerializedCanvasLayer[] = frame.layers.map((layer) => {
+        const chunks = (layer as any).chunkGrid?.hasChunks() ? (layer as any).chunkGrid.serialize() : undefined;
+        return {
+          id: layer.id,
+          name: layer.name,
+          visible: layer.visible,
+          opacity: layer.opacity,
+          data: this.isInfinite ? '' : layer.canvas.toDataURL('image/png'),
+          chunks,
+        };
+      });
 
       return {
         id: frame.id,
@@ -1922,6 +1935,7 @@ class DesignController {
       version: 1,
       fps: this.fps,
       onionSkin: this.onionSkinEnabled,
+      isInfinite: this.isInfinite,
       activeFrameId: this.activeFrameId,
       frames: serializedFrames,
       background: this.canvasBackground,
@@ -1931,8 +1945,44 @@ class DesignController {
 
   private generateThumbnail(): string {
     const maxThumbDim = 320;
-    let thumbW = this.canvasWidth;
-    let thumbH = this.canvasHeight;
+    let thumbW = this.canvasWidth || 256;
+    let thumbH = this.canvasHeight || 256;
+
+    if (this.isInfinite) {
+      const firstFrame = this.frames[0];
+      let foundBox = false;
+      let box = { height: 256, minX: 0, minY: 0, width: 256 };
+      if (firstFrame) {
+        for (const layer of firstFrame.layers) {
+          const lBox = (layer as any).chunkGrid?.getBoundingBox();
+          if (lBox && lBox.hasPixels) {
+            box = lBox;
+            foundBox = true;
+            break;
+          }
+        }
+      }
+      thumbW = Math.min(320, Math.max(64, box.width));
+      thumbH = Math.min(320, Math.max(64, box.height));
+      const thumbCanvas = document.createElement('canvas');
+      thumbCanvas.width = thumbW;
+      thumbCanvas.height = thumbH;
+      const ctx = thumbCanvas.getContext('2d');
+      if (!ctx) return '';
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, thumbW, thumbH);
+      if (firstFrame && foundBox) {
+        for (const layer of firstFrame.layers) {
+          if (layer.visible && (layer as any).chunkGrid) {
+            const exp = (layer as any).chunkGrid.exportToCanvas({ x: box.minX, y: box.minY, width: box.width, height: box.height });
+            ctx.globalAlpha = layer.opacity;
+            ctx.drawImage(exp, 0, 0, thumbW, thumbH);
+          }
+        }
+      }
+      return thumbCanvas.toDataURL('image/png');
+    }
+
     if (thumbW > maxThumbDim || thumbH > maxThumbDim) {
       const ratio = Math.min(maxThumbDim / thumbW, maxThumbDim / thumbH);
       thumbW = Math.max(1, Math.round(thumbW * ratio));
@@ -2027,6 +2077,7 @@ class DesignController {
       layer.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
       try {
         layer.ctx.drawImage(img, 0, 0, this.canvasWidth, this.canvasHeight);
+        (layer as any).chunkGrid?.populateFromCanvas(layer.canvas);
       } catch {}
     } catch {}
   }
@@ -2036,6 +2087,10 @@ class DesignController {
       const project: SerializedCanvasProject = typeof data === 'string' ? JSON.parse(data) : data;
       if (!project || !Array.isArray(project.frames) || project.frames.length === 0) {
         return false;
+      }
+
+      if (project.isInfinite !== undefined) {
+        this.isInfinite = !!project.isInfinite;
       }
 
       this.fps = project.fps || 8;
@@ -2066,7 +2121,17 @@ class DesignController {
           layer.visible = sLayer.visible !== false;
           layer.opacity = typeof sLayer.opacity === 'number' ? sLayer.opacity : 1.0;
 
-          if (sLayer.data) {
+          if (sLayer.chunks && Object.keys(sLayer.chunks).length > 0) {
+            imageLoadPromises.push(
+              (layer as any).chunkGrid.deserialize(sLayer.chunks).then(() => {
+                if (!this.isInfinite) {
+                  const exp = (layer as any).chunkGrid.exportToCanvas({ x: 0, y: 0, width: this.canvasWidth, height: this.canvasHeight });
+                  layer.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
+                  layer.ctx.drawImage(exp, 0, 0);
+                }
+              })
+            );
+          } else if (sLayer.data) {
             imageLoadPromises.push(this.loadLayerImage(layer, sLayer.data));
           }
 
@@ -2241,7 +2306,20 @@ class DesignController {
   }
 
   private fitToScreen(viewportW: number, viewportH: number): void {
-    if (viewportW <= 0 || viewportH <= 0 || this.canvasWidth <= 0 || this.canvasHeight <= 0) {
+    if (viewportW <= 0 || viewportH <= 0) {
+      return;
+    }
+
+    if (this.isInfinite) {
+      this.zoom = 1;
+      this.panX = Math.round(viewportW / 2);
+      this.panY = Math.round(viewportH / 2);
+      this.updateZoomUI();
+      this.requestRedraw();
+      return;
+    }
+
+    if (this.canvasWidth <= 0 || this.canvasHeight <= 0) {
       return;
     }
 
@@ -2766,7 +2844,9 @@ class DesignController {
   private captureLayerSnapshot(): ImageData | null {
     const layer = this.getActiveLayer();
     if (!layer) return null;
-    return layer.ctx.getImageData(0, 0, this.canvasWidth, this.canvasHeight);
+    const w = Math.max(1, this.canvasWidth || 256);
+    const h = Math.max(1, this.canvasHeight || 256);
+    return layer.ctx.getImageData(0, 0, w, h);
   }
 
   private pushUndoStep(beforeData: ImageData, afterData: ImageData, layerId?: string, frameId?: string): void {
@@ -4349,12 +4429,18 @@ class DesignController {
       for (let dx = 0; dx < size; dx++) {
         const nx = startX + dx;
         const ny = startY + dy;
-        if (nx >= 0 && nx < this.canvasWidth && ny >= 0 && ny < this.canvasHeight) {
+        if (this.isInfinite || (nx >= 0 && nx < this.canvasWidth && ny >= 0 && ny < this.canvasHeight)) {
           if (this.currentTool === 'brush') {
-            layer.ctx.fillStyle = this.currentColor;
-            layer.ctx.fillRect(nx, ny, 1, 1);
+            if (!this.isInfinite) {
+              layer.ctx.fillStyle = this.currentColor;
+              layer.ctx.fillRect(nx, ny, 1, 1);
+            }
+            (layer as any).chunkGrid?.setPixel(nx, ny, this.currentColor);
           } else if (this.currentTool === 'eraser') {
-            layer.ctx.clearRect(nx, ny, 1, 1);
+            if (!this.isInfinite) {
+              layer.ctx.clearRect(nx, ny, 1, 1);
+            }
+            (layer as any).chunkGrid?.clearPixel(nx, ny);
           }
         }
       }
@@ -4371,10 +4457,13 @@ class DesignController {
       for (let dx = 0; dx < size; dx++) {
         const nx = startX + dx;
         const ny = startY + dy;
-        if (nx >= 0 && nx < this.canvasWidth && ny >= 0 && ny < this.canvasHeight) {
+        if (this.isInfinite || (nx >= 0 && nx < this.canvasWidth && ny >= 0 && ny < this.canvasHeight)) {
           if (isDitherPixel(nx, ny, this.ditherPattern)) {
-            layer.ctx.fillStyle = this.currentColor;
-            layer.ctx.fillRect(nx, ny, 1, 1);
+            if (!this.isInfinite) {
+              layer.ctx.fillStyle = this.currentColor;
+              layer.ctx.fillRect(nx, ny, 1, 1);
+            }
+            (layer as any).chunkGrid?.setPixel(nx, ny, this.currentColor);
           }
         }
       }
@@ -4409,6 +4498,7 @@ class DesignController {
             );
             layer.ctx.fillStyle = rgbToHex(shaded.r, shaded.g, shaded.b);
             layer.ctx.fillRect(nx, ny, 1, 1);
+            (layer as any).chunkGrid?.setPixel(nx, ny, rgbToHex(shaded.r, shaded.g, shaded.b));
           }
         }
       }
@@ -4425,9 +4515,12 @@ class DesignController {
       const px = Math.floor(centerX + r * Math.cos(angle));
       const py = Math.floor(centerY + r * Math.sin(angle));
 
-      if (px >= 0 && px < this.canvasWidth && py >= 0 && py < this.canvasHeight) {
-        layer.ctx.fillStyle = this.currentColor;
-        layer.ctx.fillRect(px, py, 1, 1);
+      if (this.isInfinite || (px >= 0 && px < this.canvasWidth && py >= 0 && py < this.canvasHeight)) {
+        if (!this.isInfinite) {
+          layer.ctx.fillStyle = this.currentColor;
+          layer.ctx.fillRect(px, py, 1, 1);
+        }
+        (layer as any).chunkGrid?.setPixel(px, py, this.currentColor);
       }
     }
   }
@@ -4488,7 +4581,7 @@ class DesignController {
 
   private applyToolAt(x: number, y: number, broadcast = true, customLayer?: CanvasLayer): void {
     const layer = customLayer || this.getActiveLayer();
-    if (!layer || !layer.visible || x < 0 || x >= this.canvasWidth || y < 0 || y >= this.canvasHeight) return;
+    if (!layer || !layer.visible || (!this.isInfinite && (x < 0 || x >= this.canvasWidth || y < 0 || y >= this.canvasHeight))) return;
 
     const points = this.getSymmetricPoints(x, y);
 
@@ -4561,7 +4654,7 @@ class DesignController {
         this.stopSprayLoop();
         return;
       }
-      if (this.lastPixelX >= 0 && this.lastPixelX < this.canvasWidth && this.lastPixelY >= 0 && this.lastPixelY < this.canvasHeight) {
+      if (this.isInfinite || (this.lastPixelX >= 0 && this.lastPixelX < this.canvasWidth && this.lastPixelY >= 0 && this.lastPixelY < this.canvasHeight)) {
         this.applyToolAt(this.lastPixelX, this.lastPixelY);
         this.requestRedraw();
       }
@@ -4600,17 +4693,21 @@ class DesignController {
             Math.abs(p0.y - p2.y) === 1
           ) {
             const layer = this.getActiveLayer();
-            if (layer && this.activeActionBeforeData) {
-              const idx = (p1.y * this.canvasWidth + p1.x) * 4;
-              const bData = this.activeActionBeforeData.data;
-              const r = bData[idx];
-              const g = bData[idx + 1];
-              const b = bData[idx + 2];
-              const a = bData[idx + 3];
-              layer.ctx.clearRect(p1.x, p1.y, 1, 1);
-              if (a > 0) {
-                layer.ctx.fillStyle = `rgba(${r},${g},${b},${a / 255})`;
-                layer.ctx.fillRect(p1.x, p1.y, 1, 1);
+            if (layer) {
+              if (this.isInfinite) {
+                (layer as any).chunkGrid?.clearPixel(p1.x, p1.y);
+              } else if (this.activeActionBeforeData) {
+                const idx = (p1.y * this.canvasWidth + p1.x) * 4;
+                const bData = this.activeActionBeforeData.data;
+                const r = bData[idx];
+                const g = bData[idx + 1];
+                const b = bData[idx + 2];
+                const a = bData[idx + 3];
+                layer.ctx.clearRect(p1.x, p1.y, 1, 1);
+                if (a > 0) {
+                  layer.ctx.fillStyle = `rgba(${r},${g},${b},${a / 255})`;
+                  layer.ctx.fillRect(p1.x, p1.y, 1, 1);
+                }
               }
             }
             this.rawStrokePoints.splice(len - 2, 1);
@@ -5638,8 +5735,8 @@ class DesignController {
           if (parent) {
             const rect = parent.getBoundingClientRect();
             this.zoom = 1.0;
-            this.panX = Math.round((rect.width - this.canvasWidth * this.zoom) / 2);
-            this.panY = Math.round((rect.height - this.canvasHeight * this.zoom) / 2);
+            this.panX = this.isInfinite ? Math.round(rect.width / 2) : Math.round((rect.width - this.canvasWidth * this.zoom) / 2);
+            this.panY = this.isInfinite ? Math.round(rect.height / 2) : Math.round((rect.height - this.canvasHeight * this.zoom) / 2);
             this.updateZoomUI();
             this.requestRedraw();
           } else {
@@ -5783,8 +5880,8 @@ class DesignController {
                 this.isDraggingText = true;
                 this.textDragOffset = { x: pixelX - this.textX, y: pixelY - this.textY };
               } else {
-                this.textX = Math.max(0, Math.min(this.canvasWidth - 1, pixelX));
-                this.textY = Math.max(0, Math.min(this.canvasHeight - 1, pixelY));
+                this.textX = this.isInfinite ? pixelX : Math.max(0, Math.min(this.canvasWidth - 1, pixelX));
+                this.textY = this.isInfinite ? pixelY : Math.max(0, Math.min(this.canvasHeight - 1, pixelY));
                 this.isDraggingText = true;
                 this.textDragOffset = { x: 0, y: 0 };
               }
@@ -5792,7 +5889,7 @@ class DesignController {
               return;
             }
 
-            if (pixelX >= 0 && pixelX < this.canvasWidth && pixelY >= 0 && pixelY < this.canvasHeight) {
+            if (this.isInfinite || (pixelX >= 0 && pixelX < this.canvasWidth && pixelY >= 0 && pixelY < this.canvasHeight)) {
               this.activeActionBeforeData = this.captureLayerSnapshot();
 
               const isShapeTool = this.currentTool === 'line' || this.currentTool === 'rectangle' || this.currentTool === 'circle';
@@ -5810,8 +5907,13 @@ class DesignController {
               if (this.currentTool === 'recolor') {
                 const layer = this.getActiveLayer();
                 if (layer) {
-                  const img = layer.ctx.getImageData(pixelX, pixelY, 1, 1);
-                  this.recolorTargetColor32 = new Uint32Array(img.data.buffer)[0];
+                  if (this.isInfinite) {
+                    const p = (layer as any).chunkGrid?.getPixel(pixelX, pixelY);
+                    this.recolorTargetColor32 = p ? ((p.a << 24) | (p.b << 16) | (p.g << 8) | p.r) >>> 0 : 0;
+                  } else {
+                    const img = layer.ctx.getImageData(pixelX, pixelY, 1, 1);
+                    this.recolorTargetColor32 = new Uint32Array(img.data.buffer)[0];
+                  }
                 }
               }
 
@@ -6003,7 +6105,7 @@ class DesignController {
         const exactY = (mouseY - this.panY) / this.zoom;
         const pixelX = Math.floor(exactX);
         const pixelY = Math.floor(exactY);
-        const isInsideCanvas = pixelX >= 0 && pixelX < this.canvasWidth && pixelY >= 0 && pixelY < this.canvasHeight;
+        const isInsideCanvas = this.isInfinite || (pixelX >= 0 && pixelX < this.canvasWidth && pixelY >= 0 && pixelY < this.canvasHeight);
 
         if (isInsideCanvas) {
           const now = Date.now();
@@ -6134,8 +6236,8 @@ class DesignController {
         }
 
         if (this.isDrawingShape && this.shapeStartPos) {
-          const clampedX = Math.max(0, Math.min(this.canvasWidth - 1, pixelX));
-          const clampedY = Math.max(0, Math.min(this.canvasHeight - 1, pixelY));
+          const clampedX = this.isInfinite ? pixelX : Math.max(0, Math.min(this.canvasWidth - 1, pixelX));
+          const clampedY = this.isInfinite ? pixelY : Math.max(0, Math.min(this.canvasHeight - 1, pixelY));
           if (this.shapeCurrentPos?.x !== clampedX || this.shapeCurrentPos?.y !== clampedY) {
             this.shapeCurrentPos = { x: clampedX, y: clampedY };
             this.requestRedraw();
@@ -6144,8 +6246,8 @@ class DesignController {
         }
 
         if (this.isDrawing) {
-          const clampedX = Math.max(0, Math.min(this.canvasWidth - 1, pixelX));
-          const clampedY = Math.max(0, Math.min(this.canvasHeight - 1, pixelY));
+          const clampedX = this.isInfinite ? pixelX : Math.max(0, Math.min(this.canvasWidth - 1, pixelX));
+          const clampedY = this.isInfinite ? pixelY : Math.max(0, Math.min(this.canvasHeight - 1, pixelY));
           if (clampedX !== this.lastPixelX || clampedY !== this.lastPixelY) {
             this.drawLine(this.lastPixelX, this.lastPixelY, clampedX, clampedY);
             this.lastPixelX = clampedX;
@@ -6212,8 +6314,11 @@ class DesignController {
             for (const pt of pts) {
               const symPoints = this.getSymmetricPoints(pt.x, pt.y);
               for (const sPt of symPoints) {
-                if (sPt.x >= 0 && sPt.x < this.canvasWidth && sPt.y >= 0 && sPt.y < this.canvasHeight) {
-                  layer.ctx.fillRect(sPt.x, sPt.y, 1, 1);
+                if (this.isInfinite || (sPt.x >= 0 && sPt.x < this.canvasWidth && sPt.y >= 0 && sPt.y < this.canvasHeight)) {
+                  if (!this.isInfinite) {
+                    layer.ctx.fillRect(sPt.x, sPt.y, 1, 1);
+                  }
+                  (layer as any).chunkGrid?.setPixel(sPt.x, sPt.y, this.currentColor);
                 }
               }
             }
@@ -6226,7 +6331,7 @@ class DesignController {
 
             dispatchCanvasAction(this.getActionContext(), {
               payload: {
-                dataUrl: layer.canvas.toDataURL('image/png'),
+                dataUrl: this.isInfinite ? '' : layer.canvas.toDataURL('image/png'),
                 frameId: this.activeFrameId,
                 layerId: layer.id,
               },
@@ -6323,10 +6428,11 @@ class DesignController {
     const pixelX = Math.floor((mouseX - this.panX) / this.zoom);
     const pixelY = Math.floor((mouseY - this.panY) / this.zoom);
     if (
-      pixelX >= 0 &&
-      pixelX < this.canvasWidth &&
-      pixelY >= 0 &&
-      pixelY < this.canvasHeight
+      this.isInfinite ||
+      (pixelX >= 0 &&
+        pixelX < this.canvasWidth &&
+        pixelY >= 0 &&
+        pixelY < this.canvasHeight)
     ) {
       this.hoveredPixel = { x: pixelX, y: pixelY };
     } else {
@@ -6364,38 +6470,80 @@ class DesignController {
     const drawW = drawXEnd - drawX;
     const drawH = drawYEnd - drawY;
 
-    if (this.canvasBackground?.type === 'solid') {
-      this.ctx.fillStyle = this.canvasBackground.color || '#ffffff';
-      this.ctx.fillRect(drawX, drawY, drawW, drawH);
-    } else {
-      const step = this.canvasBackground?.checkSize || 16;
-      const c1 = this.canvasBackground?.checkColor1 || '#ffffff';
-      const c2 = this.canvasBackground?.checkColor2 || '#e5e5e7';
+    if (this.isInfinite) {
+      if (this.canvasBackground?.type === 'solid') {
+        this.ctx.fillStyle = this.canvasBackground.color || '#ffffff';
+        this.ctx.fillRect(0, 0, w, h);
+      } else {
+        const step = (this.canvasBackground?.checkSize || 16) * this.zoom;
+        const c1 = this.canvasBackground?.checkColor1 || '#ffffff';
+        const c2 = this.canvasBackground?.checkColor2 || '#f0f0f3';
 
-      this.ctx.save();
-      this.ctx.beginPath();
-      this.ctx.rect(drawX, drawY, drawW, drawH);
-      this.ctx.clip();
+        this.ctx.fillStyle = c1;
+        this.ctx.fillRect(0, 0, w, h);
 
-      this.ctx.fillStyle = c1;
-      this.ctx.fillRect(drawX, drawY, drawW, drawH);
+        this.ctx.fillStyle = c2;
+        const startX = Math.floor(-this.panX / step) * step + this.panX;
+        const startY = Math.floor(-this.panY / step) * step + this.panY;
+        const cols = Math.ceil((w - startX) / step);
+        const rows = Math.ceil((h - startY) / step);
 
-      this.ctx.fillStyle = c2;
-      const endCol = Math.ceil(this.canvasWidth / step);
-      const endRow = Math.ceil(this.canvasHeight / step);
-
-      for (let r = 0; r < endRow; r++) {
-        for (let c = 0; c < endCol; c++) {
-          if ((r + c) % 2 === 1) {
-            const sqX = Math.round(this.panX + c * step * this.zoom);
-            const sqY = Math.round(this.panY + r * step * this.zoom);
-            const sqW = Math.round(this.panX + (c + 1) * step * this.zoom) - sqX;
-            const sqH = Math.round(this.panY + (r + 1) * step * this.zoom) - sqY;
-            this.ctx.fillRect(sqX, sqY, sqW, sqH);
+        for (let r = 0; r <= rows; r++) {
+          for (let c = 0; c <= cols; c++) {
+            const worldCol = Math.round((startX + c * step - this.panX) / step);
+            const worldRow = Math.round((startY + r * step - this.panY) / step);
+            if (((worldCol + worldRow) % 2 + 2) % 2 === 1) {
+              this.ctx.fillRect(startX + c * step, startY + r * step, step, step);
+            }
           }
         }
       }
+
+      this.ctx.save();
+      this.ctx.strokeStyle = 'rgba(0, 229, 255, 0.35)';
+      this.ctx.lineWidth = 1;
+      this.ctx.setLineDash([4, 4]);
+      this.ctx.beginPath();
+      this.ctx.moveTo(this.panX - 0.5, 0);
+      this.ctx.lineTo(this.panX - 0.5, h);
+      this.ctx.moveTo(0, this.panY - 0.5);
+      this.ctx.lineTo(w, this.panY - 0.5);
+      this.ctx.stroke();
       this.ctx.restore();
+    } else {
+      if (this.canvasBackground?.type === 'solid') {
+        this.ctx.fillStyle = this.canvasBackground.color || '#ffffff';
+        this.ctx.fillRect(drawX, drawY, drawW, drawH);
+      } else {
+        const step = this.canvasBackground?.checkSize || 16;
+        const c1 = this.canvasBackground?.checkColor1 || '#ffffff';
+        const c2 = this.canvasBackground?.checkColor2 || '#e5e5e7';
+
+        this.ctx.save();
+        this.ctx.beginPath();
+        this.ctx.rect(drawX, drawY, drawW, drawH);
+        this.ctx.clip();
+
+        this.ctx.fillStyle = c1;
+        this.ctx.fillRect(drawX, drawY, drawW, drawH);
+
+        this.ctx.fillStyle = c2;
+        const endCol = Math.ceil(this.canvasWidth / step);
+        const endRow = Math.ceil(this.canvasHeight / step);
+
+        for (let r = 0; r < endRow; r++) {
+          for (let c = 0; c < endCol; c++) {
+            if ((r + c) % 2 === 1) {
+              const sqX = Math.round(this.panX + c * step * this.zoom);
+              const sqY = Math.round(this.panY + r * step * this.zoom);
+              const sqW = Math.round(this.panX + (c + 1) * step * this.zoom) - sqX;
+              const sqH = Math.round(this.panY + (r + 1) * step * this.zoom) - sqY;
+              this.ctx.fillRect(sqX, sqY, sqW, sqH);
+            }
+          }
+        }
+        this.ctx.restore();
+      }
     }
 
     this.ctx.imageSmoothingEnabled = false;
@@ -6406,8 +6554,12 @@ class DesignController {
         const prevFrame = this.frames[activeIdx - 1];
         for (const layer of prevFrame.layers) {
           if (layer.visible) {
-            this.ctx.globalAlpha = 0.25 * layer.opacity;
-            this.ctx.drawImage(layer.canvas, drawX, drawY, drawW, drawH);
+            if (this.isInfinite || (layer as any).chunkGrid?.hasChunks()) {
+              (layer as any).chunkGrid?.renderViewport(this.ctx, this.panX, this.panY, this.zoom, w, h, 0.25 * layer.opacity);
+            } else {
+              this.ctx.globalAlpha = 0.25 * layer.opacity;
+              this.ctx.drawImage(layer.canvas, drawX, drawY, drawW, drawH);
+            }
           }
         }
       }
@@ -6417,8 +6569,12 @@ class DesignController {
     if (activeFrame) {
       for (const layer of activeFrame.layers) {
         if (layer.visible) {
-          this.ctx.globalAlpha = layer.opacity;
-          this.ctx.drawImage(layer.canvas, drawX, drawY, drawW, drawH);
+          if (this.isInfinite || (layer as any).chunkGrid?.hasChunks()) {
+            (layer as any).chunkGrid?.renderViewport(this.ctx, this.panX, this.panY, this.zoom, w, h, layer.opacity);
+          } else {
+            this.ctx.globalAlpha = layer.opacity;
+            this.ctx.drawImage(layer.canvas, drawX, drawY, drawW, drawH);
+          }
         }
       }
     }
@@ -6463,7 +6619,7 @@ class DesignController {
       for (const pt of pts) {
         const symPoints = this.getSymmetricPoints(pt.x, pt.y);
         for (const sPt of symPoints) {
-          if (sPt.x >= 0 && sPt.x < this.canvasWidth && sPt.y >= 0 && sPt.y < this.canvasHeight) {
+          if (this.isInfinite || (sPt.x >= 0 && sPt.x < this.canvasWidth && sPt.y >= 0 && sPt.y < this.canvasHeight)) {
             const px = Math.round(this.panX + sPt.x * this.zoom);
             const py = Math.round(this.panY + sPt.y * this.zoom);
             const ps = Math.max(1, Math.round(this.zoom));
@@ -6481,10 +6637,12 @@ class DesignController {
       this.drawTileGrid(drawX, drawY, drawXEnd, drawYEnd);
     }
 
-    const isDark = getEffectiveTheme() === 'dark';
-    this.ctx.strokeStyle = isDark ? '#ffffff20' : '#00000020';
-    this.ctx.lineWidth = 1;
-    this.ctx.strokeRect(drawX - 0.5, drawY - 0.5, drawW, drawH);
+    if (!this.isInfinite) {
+      const isDark = getEffectiveTheme() === 'dark';
+      this.ctx.strokeStyle = isDark ? '#ffffff20' : '#00000020';
+      this.ctx.lineWidth = 1;
+      this.ctx.strokeRect(drawX - 0.5, drawY - 0.5, drawW, drawH);
+    }
 
     if (this.mirrorEnabled) {
       this.drawSymmetryGuide(drawX, drawY, drawW, drawH);
@@ -6706,10 +6864,15 @@ class DesignController {
   private drawPixelGrid(drawX: number, drawY: number, drawXEnd: number, drawYEnd: number, viewportW: number, viewportH: number): void {
     if (!this.ctx) return;
 
-    const startCol = Math.max(0, Math.floor((0 - this.panX) / this.zoom));
-    const endCol = Math.min(this.canvasWidth, Math.ceil((viewportW - this.panX) / this.zoom));
-    const startRow = Math.max(0, Math.floor((0 - this.panY) / this.zoom));
-    const endRow = Math.min(this.canvasHeight, Math.ceil((viewportH - this.panY) / this.zoom));
+    const startCol = this.isInfinite ? Math.floor(-this.panX / this.zoom) : Math.max(0, Math.floor((0 - this.panX) / this.zoom));
+    const endCol = this.isInfinite ? Math.ceil((viewportW - this.panX) / this.zoom) : Math.min(this.canvasWidth, Math.ceil((viewportW - this.panX) / this.zoom));
+    const startRow = this.isInfinite ? Math.floor(-this.panY / this.zoom) : Math.max(0, Math.floor((0 - this.panY) / this.zoom));
+    const endRow = this.isInfinite ? Math.ceil((viewportH - this.panY) / this.zoom) : Math.min(this.canvasHeight, Math.ceil((viewportH - this.panY) / this.zoom));
+
+    const gridDrawY = this.isInfinite ? 0 : drawY;
+    const gridDrawYEnd = this.isInfinite ? viewportH : drawYEnd;
+    const gridDrawX = this.isInfinite ? 0 : drawX;
+    const gridDrawXEnd = this.isInfinite ? viewportW : drawXEnd;
 
     this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.12)';
     this.ctx.lineWidth = 1;
@@ -6717,14 +6880,14 @@ class DesignController {
 
     for (let col = startCol; col <= endCol; col++) {
       const px = Math.round(this.panX + col * this.zoom) - 0.5;
-      this.ctx.moveTo(px, drawY);
-      this.ctx.lineTo(px, drawYEnd);
+      this.ctx.moveTo(px, gridDrawY);
+      this.ctx.lineTo(px, gridDrawYEnd);
     }
 
     for (let row = startRow; row <= endRow; row++) {
       const py = Math.round(this.panY + row * this.zoom) - 0.5;
-      this.ctx.moveTo(drawX, py);
-      this.ctx.lineTo(drawXEnd, py);
+      this.ctx.moveTo(gridDrawX, py);
+      this.ctx.lineTo(gridDrawXEnd, py);
     }
 
     this.ctx.stroke();
@@ -6734,7 +6897,7 @@ class DesignController {
     if (!this.ctx || !this.hoveredPixel || this.isPanning) return;
 
     const { x, y } = this.hoveredPixel;
-    if (x < 0 || x >= this.canvasWidth || y < 0 || y >= this.canvasHeight) return;
+    if (!this.isInfinite && (x < 0 || x >= this.canvasWidth || y < 0 || y >= this.canvasHeight)) return;
 
     const points = this.getSymmetricPoints(x, y);
     const size = this.getToolSize();
@@ -8361,9 +8524,13 @@ class DesignController {
     });
 
     if (this.downloadScaleSelectedTextEl) {
-      const w = this.canvasWidth * scale;
-      const h = this.canvasHeight * scale;
-      this.downloadScaleSelectedTextEl.textContent = `${scale}x (${w} × ${h} px)`;
+      if (this.isInfinite) {
+        this.downloadScaleSelectedTextEl.textContent = `${scale}x (Auto-ajuste al contenido)`;
+      } else {
+        const w = this.canvasWidth * scale;
+        const h = this.canvasHeight * scale;
+        this.downloadScaleSelectedTextEl.textContent = `${scale}x (${w} × ${h} px)`;
+      }
     }
 
     this.updateDownloadOptionsUI();
@@ -8389,61 +8556,125 @@ class DesignController {
     scales.forEach((s) => {
       const el = this.container.querySelector<HTMLElement>(`[data-ref="scale-item-text-${s}"]`);
       if (el) {
-        const w = this.canvasWidth * s;
-        const h = this.canvasHeight * s;
-        el.textContent = s === 1 ? `1x (Original - ${w} × ${h} px)` : `${s}x (${w} × ${h} px)`;
+        if (this.isInfinite) {
+          el.textContent = s === 1 ? '1x (Original - auto)' : `${s}x (Escalado)`;
+        } else {
+          const w = this.canvasWidth * s;
+          const h = this.canvasHeight * s;
+          el.textContent = s === 1 ? `1x (Original - ${w} × ${h} px)` : `${s}x (${w} × ${h} px)`;
+        }
       }
     });
 
     if (this.downloadScaleSelectedTextEl) {
-      const currentW = this.canvasWidth * this.selectedDownloadScale;
-      const currentH = this.canvasHeight * this.selectedDownloadScale;
-      this.downloadScaleSelectedTextEl.textContent = `${this.selectedDownloadScale}x (${currentW} × ${currentH} px)`;
+      if (this.isInfinite) {
+        this.downloadScaleSelectedTextEl.textContent = `${this.selectedDownloadScale}x (Auto-ajuste al contenido)`;
+      } else {
+        const currentW = this.canvasWidth * this.selectedDownloadScale;
+        const currentH = this.canvasHeight * this.selectedDownloadScale;
+        this.downloadScaleSelectedTextEl.textContent = `${this.selectedDownloadScale}x (${currentW} × ${currentH} px)`;
+      }
     }
 
     if (this.btnConfirmDownloadText) {
       if (this.selectedDownloadType === 'png-current') {
         const w = this.canvasWidth * this.selectedDownloadScale;
         const h = this.canvasHeight * this.selectedDownloadScale;
-        this.btnConfirmDownloadText.textContent = `Descargar PNG (${w} × ${h} px)`;
+        this.btnConfirmDownloadText.textContent = this.isInfinite
+          ? `Descargar PNG (${this.selectedDownloadScale}x)`
+          : `Descargar PNG (${w} × ${h} px)`;
       } else if (this.selectedDownloadType === 'spritesheet') {
         const framesCount = Math.max(1, this.frames.length);
         const totalW = this.canvasWidth * this.selectedDownloadScale * framesCount;
         const h = this.canvasHeight * this.selectedDownloadScale;
-        this.btnConfirmDownloadText.textContent = `Descargar Spritesheet (${totalW} × ${h} px)`;
+        this.btnConfirmDownloadText.textContent = this.isInfinite
+          ? `Descargar Spritesheet (${this.selectedDownloadScale}x)`
+          : `Descargar Spritesheet (${totalW} × ${h} px)`;
       } else if (this.selectedDownloadType === 'spritesheet-atlas') {
         this.btnConfirmDownloadText.textContent = 'Descargar Atlas (PNG + JSON)';
       } else if (this.selectedDownloadType === 'gif') {
         const w = this.canvasWidth * this.selectedDownloadScale;
         const h = this.canvasHeight * this.selectedDownloadScale;
-        this.btnConfirmDownloadText.textContent = `Descargar GIF animado (${w} × ${h} px)`;
+        this.btnConfirmDownloadText.textContent = this.isInfinite
+          ? `Descargar GIF animado (${this.selectedDownloadScale}x)`
+          : `Descargar GIF animado (${w} × ${h} px)`;
       } else {
         this.btnConfirmDownloadText.textContent = 'Descargar Proyecto (.json)';
       }
     }
   }
 
-  private renderCompositedFrame(frame: CanvasFrame, scale: number, transparent: boolean): HTMLCanvasElement {
+  private renderCompositedFrame(
+    frame: CanvasFrame,
+    scale: number,
+    transparent: boolean,
+    cropRect?: { height: number; width: number; x: number; y: number }
+  ): HTMLCanvasElement {
+    let exportW = this.canvasWidth;
+    let exportH = this.canvasHeight;
+    let cropBox = cropRect;
+
+    if (this.isInfinite) {
+      if (!cropBox) {
+        let minX = Infinity;
+        let minY = Infinity;
+        let maxX = -Infinity;
+        let maxY = -Infinity;
+        let foundPixel = false;
+
+        for (const layer of frame.layers) {
+          const box = (layer as any).chunkGrid?.getBoundingBox();
+          if (box && box.hasPixels) {
+            foundPixel = true;
+            if (box.minX < minX) minX = box.minX;
+            if (box.minY < minY) minY = box.minY;
+            if (box.maxX > maxX) maxX = box.maxX;
+            if (box.maxY > maxY) maxY = box.maxY;
+          }
+        }
+
+        if (foundPixel) {
+          cropBox = {
+            height: maxY - minY + 1,
+            width: maxX - minX + 1,
+            x: minX,
+            y: minY,
+          };
+        } else {
+          cropBox = { height: 256, width: 256, x: 0, y: 0 };
+        }
+      }
+      exportW = cropBox.width;
+      exportH = cropBox.height;
+    }
+
     const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = this.canvasWidth;
-    tempCanvas.height = this.canvasHeight;
+    tempCanvas.width = Math.max(1, exportW);
+    tempCanvas.height = Math.max(1, exportH);
     const ctx = tempCanvas.getContext('2d');
     if (!ctx) return tempCanvas;
 
     if (!transparent) {
       if (this.canvasBackground.type === 'solid' && this.canvasBackground.color) {
         ctx.fillStyle = this.canvasBackground.color;
-        ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
+        ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
       } else {
         ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
+        ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
       }
     }
 
     for (const layer of frame.layers) {
       if (layer.visible) {
         ctx.globalAlpha = layer.opacity;
-        ctx.drawImage(layer.canvas, 0, 0);
+        if (this.isInfinite || (layer as any).chunkGrid?.hasChunks()) {
+          const chunkExp = (layer as any).chunkGrid?.exportToCanvas(cropBox || { height: exportH, width: exportW, x: 0, y: 0 });
+          if (chunkExp) {
+            ctx.drawImage(chunkExp, 0, 0);
+          }
+        } else {
+          ctx.drawImage(layer.canvas, 0, 0);
+        }
       }
     }
 
@@ -8452,8 +8683,8 @@ class DesignController {
     }
 
     const scaledCanvas = document.createElement('canvas');
-    scaledCanvas.width = this.canvasWidth * scale;
-    scaledCanvas.height = this.canvasHeight * scale;
+    scaledCanvas.width = tempCanvas.width * scale;
+    scaledCanvas.height = tempCanvas.height * scale;
     const scaledCtx = scaledCanvas.getContext('2d');
     if (!scaledCtx) return tempCanvas;
 
@@ -8464,8 +8695,44 @@ class DesignController {
 
   private renderSpritesheet(scale: number, transparent: boolean): HTMLCanvasElement {
     const framesCount = Math.max(1, this.frames.length);
-    const frameW = this.canvasWidth * scale;
-    const frameH = this.canvasHeight * scale;
+
+    let uniformCropBox: { height: number; width: number; x: number; y: number } | undefined;
+    if (this.isInfinite) {
+      let minX = Infinity;
+      let minY = Infinity;
+      let maxX = -Infinity;
+      let maxY = -Infinity;
+      let foundPixel = false;
+
+      for (const frame of this.frames) {
+        for (const layer of frame.layers) {
+          const box = (layer as any).chunkGrid?.getBoundingBox();
+          if (box && box.hasPixels) {
+            foundPixel = true;
+            if (box.minX < minX) minX = box.minX;
+            if (box.minY < minY) minY = box.minY;
+            if (box.maxX > maxX) maxX = box.maxX;
+            if (box.maxY > maxY) maxY = box.maxY;
+          }
+        }
+      }
+
+      if (foundPixel) {
+        uniformCropBox = {
+          height: maxY - minY + 1,
+          width: maxX - minX + 1,
+          x: minX,
+          y: minY,
+        };
+      } else {
+        uniformCropBox = { height: 256, width: 256, x: 0, y: 0 };
+      }
+    }
+
+    const baseW = this.isInfinite && uniformCropBox ? uniformCropBox.width : this.canvasWidth;
+    const baseH = this.isInfinite && uniformCropBox ? uniformCropBox.height : this.canvasHeight;
+    const frameW = baseW * scale;
+    const frameH = baseH * scale;
 
     const sheetCanvas = document.createElement('canvas');
     sheetCanvas.width = frameW * framesCount;
@@ -8478,7 +8745,7 @@ class DesignController {
     for (let i = 0; i < framesCount; i++) {
       const frame = this.frames[i];
       if (frame) {
-        const frameCanvas = this.renderCompositedFrame(frame, scale, transparent);
+        const frameCanvas = this.renderCompositedFrame(frame, scale, transparent, uniformCropBox);
         ctx.drawImage(frameCanvas, i * frameW, 0);
       }
     }
@@ -8681,6 +8948,7 @@ class DesignController {
       this.canvasWidth = canvas.width || 64;
       this.canvasHeight = canvas.height || 64;
       this.canvasUnit = canvas.unit || 'px';
+      this.isInfinite = this.canvasUnit === 'infinite' || (canvas.width === 0 && canvas.height === 0);
       this.canvasCreatedAt = canvas.created_at || null;
       this.accessLevel = canvas.access_level || 'private';
       this.publicRole = canvas.public_role || 'editor';
