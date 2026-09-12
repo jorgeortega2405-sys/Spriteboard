@@ -1,5 +1,6 @@
 import { navigate } from '../app-router.js';
 import { createSidebar } from '../components/layout.component.js';
+import { openModal } from '../components/modal.component.js';
 import { checkAuthSession, createSubscriptionCheckoutApi, currentUser, escapeHtml, getSubscriptionsApi, verifySubscriptionSessionApi } from '../services/api.service.js';
 import { t } from '../services/i18n.service.js';
 import { loadTemplate } from '../services/template.service.js';
@@ -42,189 +43,332 @@ export async function createUpgradeView(): Promise<HTMLElement> {
   container.prepend(sidebar);
 
   const grid = container.querySelector<HTMLElement>('[data-ref="pricing-grid"]');
-  const togglePill = container.querySelector<HTMLElement>('[data-ref="billing-toggle-pill"]');
+  const categoryPill = container.querySelector<HTMLElement>('[data-ref="category-toggle-pill"]');
+  const btnCatPersonal = container.querySelector<HTMLElement>('[data-ref="btn-cat-personal"]');
+  const btnCatTeams = container.querySelector<HTMLElement>('[data-ref="btn-cat-teams"]');
+  const btnCatEducation = container.querySelector<HTMLElement>('[data-ref="btn-cat-education"]');
+
+  const billingTogglePill = container.querySelector<HTMLElement>('[data-ref="billing-toggle-pill"]');
   const btnMonthly = container.querySelector<HTMLElement>('[data-ref="btn-cycle-monthly"]');
   const btnYearly = container.querySelector<HTMLElement>('[data-ref="btn-cycle-yearly"]');
 
+  let currentCategory: 'personal' | 'teams' | 'education' = 'personal';
   let currentBillingCycle = 'monthly';
 
   const res = await getSubscriptionsApi();
-  const tiers: any[] = (res.success && Array.isArray(res.subscriptions) && res.subscriptions.length > 0)
+  const rawTiers: any[] = (res.success && Array.isArray(res.subscriptions) && res.subscriptions.length > 0)
     ? res.subscriptions
-    : [
-        {
-          id: 'free',
-          name: 'Spriteboard Gratis',
-          tagline: 'Ideal para comenzar a explorar, crear bocetos y diseñar sin costo.',
-          storage: '1 GB de almacenamiento',
-          price: 0,
-          priceMonthly: 0,
-          priceYearly: 0,
-          currency: 'USD',
-          billingPeriod: 'monthly',
-          icon: 'brush',
-          buttonText: 'Plan actual',
-          features: [
-            {
-              title: '1 GB de almacenamiento en la nube',
-              desc: 'Guarda tus proyectos y lienzos de forma segura',
-              icon: 'cloud',
-            },
-            {
-              title: 'Lienzos de hasta 1024 × 1024 px',
-              desc: 'Resolución ideal para sprites, avatares e iconos retro',
-              icon: 'aspect_ratio',
-            },
-            {
-              title: 'Colaboración en vivo (Tú + 2)',
-              desc: 'Hasta 3 personas editando simultáneamente con cursores activos',
-              icon: 'group',
-            },
-            {
-              title: 'Hasta 5 capas por lienzo',
-              desc: 'Herramientas esenciales para separar línea, color y sombras',
-              icon: 'layers',
-            },
-            {
-              title: 'Exportación PNG y Proyecto JSON',
-              desc: 'Descargas en resolución nativa 1x y escalado 2x',
-              icon: 'image',
-            },
-            {
-              title: 'Historial de 3 snapshots',
-              desc: 'Guarda hasta 3 versiones de respaldo por lienzo',
-              icon: 'history',
-            },
-          ],
-        },
-        {
-          id: 'pro',
-          name: 'Spriteboard Pro',
-          tagline: 'El plan más equilibrado para profesionales y creadores independientes.',
-          storage: '10 GB de almacenamiento',
-          price: 9.99,
-          priceMonthly: 9.99,
-          priceYearly: 7.99,
-          currency: 'USD',
-          billingPeriod: 'monthly',
-          icon: 'auto_awesome',
-          badge: 'Más Popular',
-          isPopular: true,
-          buttonText: 'Obtén Spriteboard Pro',
-          features: [
-            {
-              title: '10 GB de almacenamiento en la nube',
-              desc: '10x más espacio para proyectos de alta demanda y archivos pesados',
-              icon: 'cloud',
-            },
-            {
-              title: 'Lienzos de hasta 2048 × 2048 px',
-              desc: 'Dimensiones ampliadas para tilemaps e ilustraciones detalladas',
-              icon: 'aspect_ratio',
-            },
-            {
-              title: 'Colaboración en vivo (Tú + 5)',
-              desc: 'Hasta 6 personas trabajando en tiempo real en el mismo lienzo',
-              icon: 'groups',
-            },
-            {
-              title: '1 equipo de trabajo (hasta 3 miembros)',
-              desc: 'Crea tu equipo con proyectos compartidos y roles de acceso',
-              icon: 'diversity_3',
-            },
-            {
-              title: 'Capas ilimitadas por lienzo',
-              desc: 'Composiciones complejas sin restricciones de capas',
-              icon: 'layers',
-            },
-            {
-              title: 'Exportación GIF animado y Hoja de sprites',
-              desc: 'Exporta animaciones fluidas y spritesheets con escala hasta 8x',
-              icon: 'gif',
-            },
-            {
-              title: 'Historial de 30 snapshots',
-              desc: 'Control de versiones extendido durante 30 días',
-              icon: 'history_toggle_off',
-            },
-          ],
-        },
-        {
-          id: 'business',
-          name: 'Spriteboard Negocios',
-          tagline: 'Máxima potencia, colaboración avanzada para equipos y estudios de desarrollo.',
-          storage: '1 TB de almacenamiento',
-          price: 19.99,
-          priceMonthly: 19.99,
-          priceYearly: 15.99,
-          currency: 'USD',
-          billingPeriod: 'monthly',
-          icon: 'business_center',
-          badge: 'Para Empresas',
-          isPopular: false,
-          buttonText: 'Obtén Spriteboard Negocios',
-          features: [
-            {
-              title: '1 TB de almacenamiento masivo',
-              desc: 'Capacidad para proyectos a gran escala y archivo histórico de estudio',
-              icon: 'cloud',
-            },
-            {
-              title: 'Lienzos de hasta 4096 × 4096 px',
-              desc: 'Resolución ultra masiva para mundos completos y cinemáticas',
-              icon: 'aspect_ratio',
-            },
-            {
-              title: 'Colaboración masiva (hasta 50 en vivo)',
-              desc: 'Salas de lienzo masivas para todo tu equipo de artistas y animadores',
-              icon: 'groups_3',
-            },
-            {
-              title: 'Equipos y miembros ilimitados',
-              desc: 'Múltiples equipos, roles de administración y lienzos centralizados',
-              icon: 'domain',
-            },
-            {
-              title: 'Capas y snapshots ilimitados',
-              desc: 'Flujo de trabajo sin límites y auditoría histórica permanente',
-              icon: 'all_inclusive',
-            },
-            {
-              title: 'Exportación Game Atlas (Spritesheet + JSON)',
-              desc: 'Atlas de texturas listos para Unity, Godot, Phaser y Unreal Engine',
-              icon: 'sports_esports',
-            },
-            {
-              title: 'Exportación Ultra 4K (hasta 16x)',
-              desc: 'Máximo escalado pixel-perfect para impresión comercial y cartelería',
-              icon: 'hd',
-            },
-          ],
-        },
-      ];
+    : [];
 
-  if (grid) {
+  const freeTier = rawTiers.find((tier) => tier.id === 'free') || {
+    id: 'free',
+    name: 'Spriteboard Gratis',
+    tagline: 'Ideal para comenzar a explorar, crear bocetos y diseñar sin costo.',
+    storage: '1 GB de almacenamiento',
+    price: 0,
+    priceMonthly: 0,
+    priceYearly: 0,
+    currency: 'USD',
+    billingPeriod: 'monthly',
+    icon: 'brush',
+    buttonText: 'Plan actual',
+    features: [
+      {
+        title: '1 GB de almacenamiento en la nube',
+        desc: 'Guarda tus proyectos y lienzos de forma segura',
+        icon: 'cloud',
+      },
+      {
+        title: 'Lienzos de hasta 1024 × 1024 px',
+        desc: 'Resolución ideal para sprites, avatares e iconos retro',
+        icon: 'aspect_ratio',
+      },
+      {
+        title: 'Colaboración en vivo (Tú + 2)',
+        desc: 'Hasta 3 personas editando simultáneamente con cursores activos',
+        icon: 'group',
+      },
+      {
+        title: 'Hasta 5 capas por lienzo',
+        desc: 'Herramientas esenciales para separar línea, color y sombras',
+        icon: 'layers',
+      },
+      {
+        title: 'Exportación PNG y Proyecto JSON',
+        desc: 'Descargas en resolución nativa 1x y escalado 2x',
+        icon: 'image',
+      },
+      {
+        title: 'Historial de 3 snapshots',
+        desc: 'Guarda hasta 3 versiones de respaldo por lienzo',
+        icon: 'history',
+      },
+    ],
+  };
+
+  const proTier = rawTiers.find((tier) => tier.id === 'pro') || {
+    id: 'pro',
+    name: 'Spriteboard Pro',
+    tagline: 'El plan más equilibrado para profesionales y creadores independientes.',
+    storage: '10 GB de almacenamiento',
+    price: 9.99,
+    priceMonthly: 9.99,
+    priceYearly: 7.99,
+    currency: 'USD',
+    billingPeriod: 'monthly',
+    icon: 'auto_awesome',
+    badge: 'Más Popular',
+    isPopular: true,
+    buttonText: 'Obtén Spriteboard Pro',
+    features: [
+      {
+        title: '10 GB de almacenamiento en la nube',
+        desc: '10x más espacio para proyectos de alta demanda y archivos pesados',
+        icon: 'cloud',
+      },
+      {
+        title: 'Lienzos de hasta 2048 × 2048 px',
+        desc: 'Dimensiones ampliadas para tilemaps e ilustraciones detalladas',
+        icon: 'aspect_ratio',
+      },
+      {
+        title: 'Colaboración en vivo (Tú + 5)',
+        desc: 'Hasta 6 personas trabajando en tiempo real en el mismo lienzo',
+        icon: 'groups',
+      },
+      {
+        title: '1 equipo de trabajo (hasta 3 miembros)',
+        desc: 'Crea tu equipo con proyectos compartidos y roles de acceso',
+        icon: 'diversity_3',
+      },
+      {
+        title: 'Capas ilimitadas por lienzo',
+        desc: 'Composiciones complejas sin restricciones de capas',
+        icon: 'layers',
+      },
+      {
+        title: 'Exportación GIF animado y Hoja de sprites',
+        desc: 'Exporta animaciones fluidas y spritesheets con escala hasta 8x',
+        icon: 'gif',
+      },
+      {
+        title: 'Historial de 30 snapshots',
+        desc: 'Control de versiones extendido durante 30 días',
+        icon: 'history_toggle_off',
+      },
+    ],
+  };
+
+  const businessTier = rawTiers.find((tier) => tier.id === 'business' || tier.id === 'negocios') || {
+    id: 'business',
+    name: 'Spriteboard Negocios',
+    tagline: 'Máxima potencia, colaboración avanzada para equipos y estudios de desarrollo.',
+    storage: '1 TB de almacenamiento',
+    price: 19.99,
+    priceMonthly: 19.99,
+    priceYearly: 15.99,
+    currency: 'USD',
+    billingPeriod: 'monthly',
+    icon: 'business_center',
+    badge: 'Para Equipos',
+    isPopular: true,
+    buttonText: 'Obtén Spriteboard Negocios',
+    features: [
+      {
+        title: '1 TB de almacenamiento masivo',
+        desc: 'Capacidad para proyectos a gran escala y archivo histórico de estudio',
+        icon: 'cloud',
+      },
+      {
+        title: 'Lienzos de hasta 4096 × 4096 px',
+        desc: 'Resolución ultra masiva para mundos completos y cinemáticas',
+        icon: 'aspect_ratio',
+      },
+      {
+        title: 'Colaboración masiva (hasta 50 en vivo)',
+        desc: 'Salas de lienzo masivas para todo tu equipo de artistas y animadores',
+        icon: 'groups_3',
+      },
+      {
+        title: 'Equipos y miembros ilimitados',
+        desc: 'Múltiples equipos, roles de administración y lienzos centralizados',
+        icon: 'domain',
+      },
+      {
+        title: 'Capas y snapshots ilimitados',
+        desc: 'Flujo de trabajo sin límites y auditoría histórica permanente',
+        icon: 'all_inclusive',
+      },
+      {
+        title: 'Exportación Game Atlas (Spritesheet + JSON)',
+        desc: 'Atlas de texturas listos para Unity, Godot, Phaser y Unreal Engine',
+        icon: 'sports_esports',
+      },
+      {
+        title: 'Exportación Ultra 4K (hasta 16x)',
+        desc: 'Máximo escalado pixel-perfect para impresión comercial y cartelería',
+        icon: 'hd',
+      },
+      {
+        title: 'Herencia de ventajas para tu equipo',
+        desc: 'Tus invitados disfrutan de las ventajas al colaborar en tus lienzos',
+        icon: 'military_tech',
+      },
+    ],
+  };
+
+  const docentesTier = {
+    id: 'docentes',
+    name: 'Spriteboard Docentes',
+    tagline: 'Herramientas de nivel profesional para profesores, educadores y creadores de cursos.',
+    storage: '1 TB de almacenamiento educativo',
+    price: 0,
+    priceMonthly: 0,
+    priceYearly: 0,
+    currency: 'USD',
+    billingPeriod: 'monthly',
+    icon: 'school',
+    badge: '100% Gratuito',
+    isPopular: true,
+    buttonText: t('upgrade.btn_verify_teacher') || 'Completar verificación',
+    isVerification: true,
+    features: [
+      {
+        title: '1 TB de almacenamiento masivo',
+        desc: 'Espacio de sobra para todos los proyectos y ejercicios de tus cursos',
+        icon: 'cloud',
+      },
+      {
+        title: 'Lienzos de hasta 4096 × 4096 px',
+        desc: 'Resolución ultra alta para proyectos detallados e ilustraciones de clase',
+        icon: 'aspect_ratio',
+      },
+      {
+        title: 'Aulas y salones ilimitados',
+        desc: 'Organiza a tus estudiantes en equipos de clase con acceso centralizado',
+        icon: 'school',
+      },
+      {
+        title: 'Colaboración masiva en vivo (hasta 50 en simultáneo)',
+        desc: 'Toda tu clase trabajando en tiempo real en proyectos de lienzo compartidos',
+        icon: 'groups_3',
+      },
+      {
+        title: 'Capas y snapshots históricos ilimitados',
+        desc: 'Monitorea el proceso de los alumnos y restaura versiones anteriores en un clic',
+        icon: 'all_inclusive',
+      },
+      {
+        title: 'Exportación Game Atlas (Spritesheet + JSON)',
+        desc: 'Exportación directa para proyectos de videojuegos en Unity, Godot y Phaser',
+        icon: 'sports_esports',
+      },
+      {
+        title: 'Exportación Ultra 4K (hasta 16x)',
+        desc: 'Escalado en máxima fidelidad para exposiciones escolares y pósteres',
+        icon: 'hd',
+      },
+      {
+        title: 'Herencia de ventajas en el aula',
+        desc: 'Tus alumnos disfrutan de las ventajas de Negocios al trabajar en tus lienzos',
+        icon: 'military_tech',
+      },
+    ],
+  };
+
+  const schoolsTier = {
+    id: 'schools',
+    name: 'Escuelas e Instituciones',
+    tagline: 'Infraestructura creativa centralizada para colegios, academias y universidades.',
+    storage: 'Almacenamiento institucional a medida',
+    price: 0,
+    priceMonthly: 0,
+    priceYearly: 0,
+    isCustomPrice: true,
+    currency: 'USD',
+    billingPeriod: 'yearly',
+    icon: 'account_balance',
+    badge: 'Institucional',
+    isPopular: false,
+    buttonText: t('upgrade.btn_contact_education') || 'Contactar asesor educativo',
+    isContact: true,
+    features: [
+      {
+        title: 'Todo lo del plan Docentes incluido',
+        desc: 'Ventajas de Negocios para toda la planta docente de tu institución',
+        icon: 'verified',
+      },
+      {
+        title: 'Panel de administración escolar',
+        desc: 'Gestión centralizada de licencias, profesores y departamentos educativos',
+        icon: 'admin_panel_settings',
+      },
+      {
+        title: 'Aprovisionamiento masivo de profesores',
+        desc: 'Asigna, transfiere y reasigna licencias docentes con un solo clic',
+        icon: 'group_add',
+      },
+      {
+        title: 'Supervisión global de aulas y materias',
+        desc: 'Monitoreo transversal de salones, materias y proyectos de los estudiantes',
+        icon: 'menu_book',
+      },
+      {
+        title: 'Privacidad escolar y cumplimiento COPPA/FERPA',
+        desc: 'Entorno cerrado y seguro para estudiantes sin exposición pública de datos',
+        icon: 'security',
+      },
+      {
+        title: 'Biblioteca de recursos institucional',
+        desc: 'Paletas oficiales, plantillas y assets compartidos por la institución',
+        icon: 'palette',
+      },
+      {
+        title: 'Integración SSO y Google Workspace',
+        desc: 'Inicio de sesión con cuentas escolares y sincronización con Google Classroom',
+        icon: 'badge',
+      },
+      {
+        title: 'Soporte prioritario y capacitación',
+        desc: 'Acompañamiento pedagógico y asistencia técnica dedicada para profesores',
+        icon: 'support_agent',
+      },
+    ],
+  };
+
+  const categoryTiers: Record<'personal' | 'teams' | 'education', any[]> = {
+    personal: [freeTier, proTier],
+    teams: [businessTier],
+    education: [docentesTier, schoolsTier],
+  };
+
+  const TIER_HIERARCHY: Record<string, number> = {
+    free: 0,
+    none: 0,
+    pro: 1,
+    business: 2,
+    negocios: 2,
+    docentes: 2,
+    escuelas: 3,
+  };
+
+  const renderCards = (category: 'personal' | 'teams' | 'education'): void => {
+    if (!grid) return;
     grid.innerHTML = '';
 
-    const TIER_HIERARCHY: Record<string, number> = {
-      free: 0,
-      none: 0,
-      pro: 1,
-      business: 2,
-      negocios: 2,
-    };
-
-    const userTier = currentUser?.subscription_tier || 'free';
+    const tiersToRender = categoryTiers[category] || [];
+    const userTier = (currentUser?.subscription_tier || 'free').toLowerCase();
     const userTierLevel = TIER_HIERARCHY[userTier] ?? 0;
 
-    tiers.forEach((tier, tierIdx) => {
+    tiersToRender.forEach((tier, tierIdx) => {
       const isPopular = Boolean(tier.isPopular);
       const isFree = tier.id === 'free';
       const cardTierLevel = TIER_HIERARCHY[tier.id] ?? 0;
-      const isCurrentPlan = Boolean(currentUser && userTier === tier.id);
-      const isDowngrade = Boolean(currentUser && userTierLevel > cardTierLevel && userTier !== 'free');
+      const isCurrentPlan = Boolean(currentUser && (userTier === tier.id || (tier.id === 'business' && userTier === 'negocios')));
+      const isDowngrade = Boolean(currentUser && userTierLevel > cardTierLevel && userTier !== 'free' && !tier.isVerification && !tier.isContact);
 
-      const initialPrice = isFree ? '0.00' : Number(tier.priceMonthly ?? tier.price).toFixed(2);
+      const isYearly = currentBillingCycle === 'yearly';
+      const initialPrice = isFree ? '0.00' : Number(isYearly ? (tier.priceYearly ?? tier.price) : (tier.priceMonthly ?? tier.price)).toFixed(2);
       const monthlyPrice = isFree ? '0.00' : Number(tier.priceMonthly ?? tier.price).toFixed(2);
       const yearlyPrice = isFree ? '0.00' : Number(tier.priceYearly ?? tier.price).toFixed(2);
 
@@ -232,7 +376,7 @@ export async function createUpgradeView(): Promise<HTMLElement> {
       const featuresList = Array.isArray(tier.features) ? tier.features : [];
 
       featuresList.forEach((feat: any, idx: number) => {
-        if (tierIdx > 0 && idx === 2) {
+        if (tierIdx > 0 && idx === 2 && category === 'personal') {
           featuresHtml += `
             <div class="component-card-feature-divider-container" data-ref="feature-divider-${tier.id}">
               <hr class="component-divider component-card-feature-divider" />
@@ -269,8 +413,8 @@ export async function createUpgradeView(): Promise<HTMLElement> {
               <span class="material-symbols-rounded" style="font-size: 14px;">check_circle</span>
               <span>${escapeHtml(t('upgrade.current_plan') || 'Tu plan actual')}</span>
             </div>
-          ` : (isPopular ? `
-            <div class="component-card-popular-badge" data-ref="popular-badge-${tier.id}">${escapeHtml(tier.badge || 'Más popular')}</div>
+          ` : (tier.badge ? `
+            <div class="component-card-popular-badge" data-ref="popular-badge-${tier.id}">${escapeHtml(tier.badge)}</div>
           ` : '')}
           <h2 class="component-card-title" data-ref="card-title-${tier.id}">${escapeHtml(tier.name)}</h2>
           <p class="component-card-desc" data-ref="card-desc-${tier.id}">${escapeHtml(tier.tagline)}</p>
@@ -281,12 +425,17 @@ export async function createUpgradeView(): Promise<HTMLElement> {
         </div>
 
         <div class="component-card-section component-card-section--price" data-ref="card-price-${tier.id}">
-          <div class="component-card-price-label">${isFree ? 'Para siempre' : 'Desde'}</div>
+          <div class="component-card-price-label">${tier.isCustomPrice ? 'Presupuesto' : isFree ? 'Para siempre' : tier.isVerification ? 'Gratis con verificación' : 'Desde'}</div>
           <div class="component-card-price-container">
-            <span class="component-card-price">
-              USD $<span data-ref="plan-price-${tier.id}" data-monthly="${monthlyPrice}" data-yearly="${yearlyPrice}">${initialPrice}</span>
-            </span>
-            <span class="component-card-period" data-ref="plan-period-${tier.id}" data-period-monthly="/ mes" data-period-yearly="${isFree ? '/ mes' : '/ mes facturado anualmente'}">/ mes</span>
+            ${tier.isCustomPrice ? `
+              <span class="component-card-price" style="font-size: 26px;">A medida</span>
+              <span class="component-card-period">/ institucional</span>
+            ` : `
+              <span class="component-card-price">
+                USD $<span data-ref="plan-price-${tier.id}" data-monthly="${monthlyPrice}" data-yearly="${yearlyPrice}">${initialPrice}</span>
+              </span>
+              <span class="component-card-period" data-ref="plan-period-${tier.id}" data-period-monthly="/ mes" data-period-yearly="${isFree ? '/ mes' : '/ mes facturado anualmente'}">${tier.isVerification ? '/ gratis' : isFree ? '/ mes' : isYearly ? '/ mes facturado anualmente' : '/ mes'}</span>
+            `}
           </div>
         </div>
 
@@ -299,6 +448,24 @@ export async function createUpgradeView(): Promise<HTMLElement> {
           ` : isDowngrade ? `
             <button type="button" class="component-button component-button--rounded-pill component-card-button component-card-button--downgrade" data-ref="btn-subscribe-${tier.id}" data-action="downgrade" disabled>
               <span>${escapeHtml(t('upgrade.included_in_plan') || 'Incluido en tu plan')}</span>
+            </button>
+          ` : tier.isVerification ? `
+            <button type="button" class="component-button component-button--rounded-pill component-button--hover-text component-cursor-pointer component-card-button ${isPopular ? 'component-card-button--featured' : ''}" data-ref="btn-subscribe-${tier.id}" data-action="verify-docente">
+              <span class="btn-default-text">
+                ${escapeHtml(tier.buttonText || 'Completar verificación')}
+              </span>
+              <span class="btn-hover-text">
+                Verificar cuenta
+              </span>
+            </button>
+          ` : tier.isContact ? `
+            <button type="button" class="component-button component-button--rounded-pill component-button--hover-text component-cursor-pointer component-card-button" data-ref="btn-subscribe-${tier.id}" data-action="contact-schools">
+              <span class="btn-default-text">
+                ${escapeHtml(tier.buttonText || 'Contactar asesor')}
+              </span>
+              <span class="btn-hover-text">
+                Escribirnos
+              </span>
             </button>
           ` : isFree ? `
             <button type="button" class="component-button component-button--rounded-pill component-button--hover-text component-cursor-pointer component-card-button" data-ref="btn-subscribe-${tier.id}" data-action="register" data-tier="${tier.id}">
@@ -339,6 +506,66 @@ export async function createUpgradeView(): Promise<HTMLElement> {
       if (subscribeBtn && !isCurrentPlan && !isDowngrade) {
         subscribeBtn.addEventListener('click', async (e) => {
           e.preventDefault();
+
+          if (tier.isVerification) {
+            if (!currentUser) {
+              showToast(t('upgrade.login_required') || 'Debes iniciar sesión para solicitar la verificación docente.', 'info');
+              navigate('/login');
+              return;
+            }
+            openModal({
+              title: 'Verificación para Docentes y Educadores',
+              description: 'El Plan Docentes es 100% gratuito e incluye todas las ventajas de Spriteboard Negocios para tus clases.',
+              bodyHtml: `
+                <div style="font-size: 14px; line-height: 1.6; color: var(--text-secondary); display: flex; flex-direction: column; gap: 12px;">
+                  <p>Actualmente la activación del Plan Docentes se realiza de forma asistida. Para verificar tu condición docente, necesitamos confirmar tu vinculación con una institución educativa.</p>
+                  <div style="background: var(--bg-hover-light, rgba(0,0,0,0.03)); padding: 14px; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+                    <strong style="color: var(--text-primary); display: block; margin-bottom: 6px;">Requisitos de verificación:</strong>
+                    <ul style="margin: 0; padding-left: 20px;">
+                      <li>Correo electrónico institucional (.edu o dominio escolar oficial)</li>
+                      <li>O credencial / carnet docente vigente</li>
+                      <li>Nombre de tu colegio, instituto o universidad</li>
+                    </ul>
+                  </div>
+                  <p>Envíanos un correo a <a class="link" href="mailto:soporte@spriteboard.com?subject=Solicitud%20de%20Verificaci%C3%B3n%20Docente%20-%20Spriteboard">soporte@spriteboard.com</a> y nuestro equipo activará tu plan educativo en menos de 24 horas.</p>
+                </div>
+              `,
+              confirmText: 'Enviar correo de verificación',
+              cancelText: 'Cerrar',
+              onConfirm: () => {
+                window.location.href = 'mailto:soporte@spriteboard.com?subject=Solicitud%20de%20Verificaci%C3%B3n%20Docente%20-%20Spriteboard';
+              },
+            });
+            return;
+          }
+
+          if (tier.isContact) {
+            openModal({
+              title: 'Plan Escuelas y Sistemas Educativos',
+              description: 'Infraestructura creativa centralizada para colegios, universidades y distritos escolares.',
+              bodyHtml: `
+                <div style="font-size: 14px; line-height: 1.6; color: var(--text-secondary); display: flex; flex-direction: column; gap: 12px;">
+                  <p>Diseñamos propuestas a medida con despliegue multi-profesor, panel de control administrativo, acuerdos de privacidad de datos (COPPA/FERPA) e integración con plataformas educativas.</p>
+                  <div style="background: var(--bg-hover-light, rgba(0,0,0,0.03)); padding: 14px; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+                    <strong style="color: var(--text-primary); display: block; margin-bottom: 6px;">¿Qué incluye una propuesta institucional?</strong>
+                    <ul style="margin: 0; padding-left: 20px;">
+                      <li>Gestión centralizada de licencias docentes</li>
+                      <li>Aulas y alumnos ilimitados con almacenamiento a medida</li>
+                      <li>Capacitación técnica y pedagógica para tus profesores</li>
+                      <li>Facturación anual por orden de compra o transferencia</li>
+                    </ul>
+                  </div>
+                  <p>Contáctanos directamente en <a class="link" href="mailto:soporte@spriteboard.com?subject=Consulta%20Plan%20Escuelas%20e%20Instituciones%20-%20Spriteboard">soporte@spriteboard.com</a> para coordinar una reunión con nuestro equipo educativo.</p>
+                </div>
+              `,
+              confirmText: 'Contactar asesor',
+              cancelText: 'Cerrar',
+              onConfirm: () => {
+                window.location.href = 'mailto:soporte@spriteboard.com?subject=Consulta%20Plan%20Escuelas%20e%20Instituciones%20-%20Spriteboard';
+              },
+            });
+            return;
+          }
 
           if (tier.id === 'free') {
             if (!currentUser) {
@@ -399,14 +626,47 @@ export async function createUpgradeView(): Promise<HTMLElement> {
 
       grid.appendChild(card);
     });
-  }
+  };
 
-  const setBillingCycle = (cycle: string) => {
+  const switchCategory = (category: 'personal' | 'teams' | 'education'): void => {
+    currentCategory = category;
+
+    if (categoryPill) {
+      categoryPill.setAttribute('data-category', category);
+    }
+
+    btnCatPersonal?.classList.toggle('active', category === 'personal');
+    btnCatTeams?.classList.toggle('active', category === 'teams');
+    btnCatEducation?.classList.toggle('active', category === 'education');
+
+    if (billingTogglePill) {
+      billingTogglePill.style.display = category === 'education' ? 'none' : 'inline-grid';
+    }
+
+    renderCards(category);
+  };
+
+  btnCatPersonal?.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (currentCategory !== 'personal') switchCategory('personal');
+  });
+
+  btnCatTeams?.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (currentCategory !== 'teams') switchCategory('teams');
+  });
+
+  btnCatEducation?.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (currentCategory !== 'education') switchCategory('education');
+  });
+
+  const setBillingCycle = (cycle: string): void => {
     currentBillingCycle = cycle;
     const isYearly = cycle === 'yearly';
 
-    if (togglePill) {
-      togglePill.setAttribute('data-cycle', cycle);
+    if (billingTogglePill) {
+      billingTogglePill.setAttribute('data-cycle', cycle);
     }
 
     if (btnMonthly && btnYearly) {
@@ -419,7 +679,9 @@ export async function createUpgradeView(): Promise<HTMLElement> {
       }
     }
 
-    tiers.forEach((tier) => {
+    const currentTiers = categoryTiers[currentCategory] || [];
+    currentTiers.forEach((tier) => {
+      if (tier.isCustomPrice) return;
       const priceEl = container.querySelector<HTMLElement>(`[data-ref="plan-price-${tier.id}"]`);
       const periodEl = container.querySelector<HTMLElement>(`[data-ref="plan-period-${tier.id}"]`);
 
@@ -431,7 +693,9 @@ export async function createUpgradeView(): Promise<HTMLElement> {
           priceEl.textContent = isYearly
             ? priceEl.getAttribute('data-yearly')
             : priceEl.getAttribute('data-monthly');
-          periodEl.textContent = isYearly
+          periodEl.textContent = tier.isVerification
+            ? '/ gratis'
+            : isYearly
             ? priceEl.getAttribute('data-period-yearly') || '/ mes facturado anualmente'
             : priceEl.getAttribute('data-period-monthly') || '/ mes';
           priceEl.style.opacity = '1';
@@ -466,7 +730,17 @@ export async function createUpgradeView(): Promise<HTMLElement> {
     });
   });
 
-  const requestedPlan = urlParams.get('plan');
+  const requestedPlan = (urlParams.get('plan') || '').toLowerCase();
+  const requestedCategory = (urlParams.get('category') || '').toLowerCase();
+
+  if (requestedCategory === 'education' || requestedPlan === 'docentes' || requestedPlan === 'schools') {
+    switchCategory('education');
+  } else if (requestedCategory === 'teams' || requestedPlan === 'business' || requestedPlan === 'negocios') {
+    switchCategory('teams');
+  } else {
+    switchCategory('personal');
+  }
+
   if (requestedPlan) {
     const targetId = requestedPlan === 'negocios' ? 'business' : requestedPlan;
     setTimeout(() => {

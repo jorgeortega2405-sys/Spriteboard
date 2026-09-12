@@ -20,8 +20,8 @@ export interface CanvasItem {
   is_favorite?: boolean;
   owner_name?: string | null;
   owner_avatar?: string | null;
-  owner_tier?: 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios' | null;
-  effective_tier?: 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios' | null;
+  owner_tier?: 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios' | 'docentes' | 'escuelas' | 'education' | null;
+  effective_tier?: 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios' | 'docentes' | 'escuelas' | 'education' | null;
   team_id?: number | null;
   team_uuid?: string | null;
   team_info?: { id: number; uuid: string; name: string; color?: string } | null;

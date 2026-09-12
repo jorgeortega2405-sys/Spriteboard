@@ -9,6 +9,9 @@ export interface Team {
   updated_at: string;
   member_count?: number;
   user_role?: 'owner' | 'admin' | 'member';
+  team_type?: 'team' | 'classroom';
+  join_code?: string | null;
+  school_id?: number | null;
 }
 
 export interface TeamMember {

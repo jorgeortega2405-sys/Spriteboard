@@ -443,6 +443,94 @@ export async function runMigrations(): Promise<void> {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
+    const [teamTypeCols] = await conn.query<mysql.RowDataPacket[]>(
+      "SHOW COLUMNS FROM teams LIKE 'team_type'"
+    );
+    if (teamTypeCols.length === 0) {
+      await conn.query("ALTER TABLE teams ADD COLUMN team_type ENUM('team', 'classroom') NOT NULL DEFAULT 'team' AFTER description");
+      logger.db.info('Columna team_type añadida a la tabla teams.');
+    }
+
+    const [joinCodeCols] = await conn.query<mysql.RowDataPacket[]>(
+      "SHOW COLUMNS FROM teams LIKE 'join_code'"
+    );
+    if (joinCodeCols.length === 0) {
+      await conn.query('ALTER TABLE teams ADD COLUMN join_code VARCHAR(16) NULL UNIQUE AFTER team_type');
+      logger.db.info('Columna join_code añadida a la tabla teams.');
+    }
+
+    const [schoolIdCols] = await conn.query<mysql.RowDataPacket[]>(
+      "SHOW COLUMNS FROM teams LIKE 'school_id'"
+    );
+    if (schoolIdCols.length === 0) {
+      await conn.query('ALTER TABLE teams ADD COLUMN school_id INT NULL AFTER join_code');
+      logger.db.info('Columna school_id añadida a la tabla teams.');
+    }
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS school_organizations (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        uuid VARCHAR(36) NOT NULL UNIQUE,
+        admin_id INT NOT NULL,
+        name VARCHAR(150) NOT NULL,
+        domain VARCHAR(100) NULL,
+        max_teachers INT NOT NULL DEFAULT 5,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_school_admin (admin_id),
+        FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS school_teachers (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        school_id INT NOT NULL,
+        user_id INT NOT NULL,
+        status ENUM('invited', 'active', 'revoked') NOT NULL DEFAULT 'active',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_school_teacher (school_id, user_id),
+        INDEX idx_school_teachers_user (user_id),
+        FOREIGN KEY (school_id) REFERENCES school_organizations(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS db_canvas.classroom_assignments (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        uuid VARCHAR(36) NOT NULL UNIQUE,
+        classroom_id INT NOT NULL,
+        teacher_id INT NOT NULL,
+        canvas_template_id INT NULL,
+        title VARCHAR(150) NOT NULL,
+        description TEXT NULL,
+        due_date TIMESTAMP NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_classroom_assign (classroom_id),
+        INDEX idx_classroom_template (canvas_template_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS db_canvas.classroom_submissions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        assignment_id INT NOT NULL,
+        student_id INT NOT NULL,
+        canvas_id INT NOT NULL,
+        status ENUM('draft', 'submitted', 'reviewed') NOT NULL DEFAULT 'draft',
+        feedback TEXT NULL,
+        grade VARCHAR(10) NULL,
+        submitted_at TIMESTAMP NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_assign_student (assignment_id, student_id),
+        INDEX idx_submissions_assign (assignment_id),
+        INDEX idx_submissions_student (student_id),
+        INDEX idx_submissions_canvas (canvas_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
     await conn.query(`
       CREATE TABLE IF NOT EXISTS db_canvas.canvas_teams (
         id INT AUTO_INCREMENT PRIMARY KEY,

@@ -47,6 +47,16 @@ export const API_ROUTES = {
     members: (uuid: string) => `/api/teams/${encodeURIComponent(uuid)}/members`,
     removeMember: (uuid: string, userId: number) => `/api/teams/${encodeURIComponent(uuid)}/members/${encodeURIComponent(userId)}`,
   },
+  education: {
+    addTeacher: '/api/education/school/teachers',
+    assignments: (uuid: string) => `/api/education/classrooms/${encodeURIComponent(uuid)}/assignments`,
+    classrooms: '/api/education/classrooms',
+    join: '/api/education/join',
+    regenerateCode: (uuid: string) => `/api/education/classrooms/${encodeURIComponent(uuid)}/code`,
+    school: '/api/education/school',
+    startAssignment: (uuid: string) => `/api/education/assignments/${encodeURIComponent(uuid)}/start`,
+    submitAssignment: (uuid: string) => `/api/education/assignments/${encodeURIComponent(uuid)}/submit`,
+  },
   trash: {
     base: '/api/trash',
     deletePermanent: (uuid: string) => `/api/trash/${encodeURIComponent(uuid)}`,

@@ -49,7 +49,7 @@ export async function createTeam(ownerId: number, dto: CreateTeamDto): Promise<T
     logger.db.info(`Equipo "${name}" (${uuid}) creado exitosamente por usuario ${ownerId}`);
 
     const [rows] = await pool.query<mysql.RowDataPacket[]>(
-      `SELECT t.id, t.uuid, t.owner_id, t.name, t.description, t.color, t.created_at, t.updated_at,
+      `SELECT t.id, t.uuid, t.owner_id, t.name, t.description, t.color, t.team_type, t.join_code, t.school_id, t.created_at, t.updated_at,
               1 AS member_count, 'owner' AS user_role
        FROM teams t
        WHERE t.id = ? LIMIT 1`,
@@ -66,7 +66,7 @@ export async function createTeam(ownerId: number, dto: CreateTeamDto): Promise<T
 export async function getUserTeams(userId: number): Promise<Team[]> {
   try {
     const [rows] = await pool.query<mysql.RowDataPacket[]>(
-      `SELECT DISTINCT t.id, t.uuid, t.owner_id, t.name, t.description, t.color, t.created_at, t.updated_at,
+      `SELECT DISTINCT t.id, t.uuid, t.owner_id, t.name, t.description, t.color, t.team_type, t.join_code, t.school_id, t.created_at, t.updated_at,
               (SELECT COUNT(*) FROM team_members WHERE team_id = t.id) AS member_count,
               CASE WHEN t.owner_id = ? THEN 'owner' ELSE tm.role END AS user_role
        FROM teams t
@@ -86,7 +86,7 @@ export async function getUserTeams(userId: number): Promise<Team[]> {
 export async function getTeamByUuid(uuid: string, currentUserId: number): Promise<{ team: Team; members: TeamMember[] } | null> {
   try {
     const [teamRows] = await pool.query<mysql.RowDataPacket[]>(
-      `SELECT t.id, t.uuid, t.owner_id, t.name, t.description, t.color, t.created_at, t.updated_at,
+      `SELECT t.id, t.uuid, t.owner_id, t.name, t.description, t.color, t.team_type, t.join_code, t.school_id, t.created_at, t.updated_at,
               (SELECT COUNT(*) FROM team_members WHERE team_id = t.id) AS member_count,
               CASE WHEN t.owner_id = ? THEN 'owner' ELSE tm.role END AS user_role
        FROM teams t
@@ -177,7 +177,7 @@ export async function updateTeam(uuid: string, currentUserId: number, dto: Updat
     }
 
     const [updated] = await pool.query<mysql.RowDataPacket[]>(
-      `SELECT t.id, t.uuid, t.owner_id, t.name, t.description, t.color, t.created_at, t.updated_at,
+      `SELECT t.id, t.uuid, t.owner_id, t.name, t.description, t.color, t.team_type, t.join_code, t.school_id, t.created_at, t.updated_at,
               (SELECT COUNT(*) FROM team_members WHERE team_id = t.id) AS member_count,
               CASE WHEN t.owner_id = ? THEN 'owner' ELSE 'admin' END AS user_role
        FROM teams t WHERE t.uuid = ? LIMIT 1`,

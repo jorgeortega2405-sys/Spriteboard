@@ -56,12 +56,19 @@ export const TIER_LIMITS: Record<string, TierLimits> = {
 
 export function getTierLimits(tier?: string): TierLimits {
   const normalized = (tier || 'free').toLowerCase();
-  const key = normalized === 'negocios' ? 'business' : normalized;
+  let key = normalized === 'negocios' ? 'business' : normalized;
+  if (key === 'docentes' || key === 'escuelas' || key === 'education' || key === 'educacion') {
+    key = 'business';
+  }
   return TIER_LIMITS[key] || TIER_LIMITS.free;
 }
 
 export function resolveHigherTier(tier1?: string, tier2?: string): SubscriptionTierId {
   const rank: Record<string, number> = {
+    escuelas: 3,
+    docentes: 3,
+    education: 3,
+    educacion: 3,
     business: 3,
     negocios: 3,
     ultra: 2,

@@ -19,8 +19,8 @@ export interface Canvas {
   is_favorite?: boolean;
   owner_name?: string | null;
   owner_avatar?: string | null;
-  owner_tier?: 'free' | 'pro' | 'business' | 'negocios' | null;
-  effective_tier?: 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios' | null;
+  owner_tier?: 'free' | 'pro' | 'business' | 'negocios' | 'docentes' | 'escuelas' | 'education' | null;
+  effective_tier?: 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios' | 'docentes' | 'escuelas' | 'education' | null;
   team_info?: { id: number; uuid: string; name: string; color?: string } | null;
   created_at: string;
   updated_at: string;
@@ -92,7 +92,7 @@ export interface CanvasMember {
   username: string;
   email?: string | null;
   avatar_url?: string | null;
-  subscription_tier?: 'free' | 'pro' | 'business' | 'negocios';
+  subscription_tier?: 'free' | 'pro' | 'business' | 'negocios' | 'docentes' | 'escuelas' | 'education';
   role: 'editor' | 'viewer';
   created_at: string;
 }

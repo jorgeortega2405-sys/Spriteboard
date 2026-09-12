@@ -498,9 +498,9 @@ class DesignController {
   private publicRole: 'viewer' | 'editor' = 'editor';
   private role: 'owner' | 'editor' | 'viewer' = 'owner';
   private isOwner = true;
-  private effectiveTier: 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios' = 'free';
-  private ownerInfo: { avatarUrl?: string | null; id?: number | null; subscriptionTier?: 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios'; username: string } | null = null;
-  private collaborators: Map<string, { avatarUrl?: string | null; color: string; connId: string; hideCursor?: boolean; role?: string; subscriptionTier?: 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios'; userId: number; username: string; x?: number; y?: number }> = new Map();
+  private effectiveTier: 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios' | 'docentes' | 'escuelas' | 'education' = 'free';
+  private ownerInfo: { avatarUrl?: string | null; id?: number | null; subscriptionTier?: 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios' | 'docentes' | 'escuelas' | 'education'; username: string } | null = null;
+  private collaborators: Map<string, { avatarUrl?: string | null; color: string; connId: string; hideCursor?: boolean; role?: string; subscriptionTier?: 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios' | 'docentes' | 'escuelas' | 'education'; userId: number; username: string; x?: number; y?: number }> = new Map();
   private showAllCursors = true;
   private canvasBackground: CanvasBackgroundConfig = { type: 'transparent', checkSize: 16 };
   private animationTags: AnimationTag[] = [];
@@ -1537,7 +1537,7 @@ class DesignController {
 
     if (broadcast) {
       const effTier = (this.effectiveTier || currentUser?.subscription_tier || 'free').toLowerCase();
-      const isProOrBusiness = effTier === 'pro' || effTier === 'ultra' || effTier === 'business' || effTier === 'negocios';
+      const isProOrBusiness = effTier === 'pro' || effTier === 'ultra' || effTier === 'business' || effTier === 'negocios' || effTier === 'docentes' || effTier === 'escuelas' || effTier === 'education';
       if (!isProOrBusiness && frame.layers.length >= 5) {
         showToast(t('design.layers_free_limit') || 'El plan Gratis permite hasta 5 capas por lienzo. Mejora a Pro para capas ilimitadas.', 'warning');
         openUpgradeModal('pro');

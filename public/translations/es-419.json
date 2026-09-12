@@ -482,7 +482,12 @@
     "payment_success_toast": "¡Felicidades! Tu suscripción a Spriteboard {plan} ha sido activada con éxito.",
     "payment_cancelled_toast": "El proceso de pago fue cancelado. No se ha realizado ningún cobro.",
     "notice": "Actualmente la plataforma se encuentra en fase de lanzamiento. El sistema de facturación y pasarelas de pago estarán disponibles próximamente.",
-    "toast_coming_soon": "El plan {plan} y la pasarela de pagos estarán disponibles próximamente."
+    "toast_coming_soon": "El plan {plan} y la pasarela de pagos estarán disponibles próximamente.",
+    "tab_personal": "Personales",
+    "tab_teams": "Equipos",
+    "tab_education": "Educación",
+    "btn_verify_teacher": "Completar verificación",
+    "btn_contact_education": "Contactar asesor educativo"
   },
   "help_center": {
     "terms_title": "Términos y condiciones",

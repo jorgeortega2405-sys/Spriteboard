@@ -12,13 +12,19 @@
           <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-toggle-search" data-tooltip="Buscar equipos" aria-label="Buscar equipos">
             <span class="material-symbols-rounded">search</span>
           </button>
-          <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-create-team" data-tooltip="Crear equipo" aria-label="Crear equipo">
+          <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-join-classroom" data-tooltip="Unirse a un aula con código" aria-label="Unirse a un aula con código">
+            <span class="material-symbols-rounded">meeting_room</span>
+          </button>
+          <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-create-team" data-tooltip="Crear equipo o aula" aria-label="Crear equipo o aula">
             <span class="material-symbols-rounded">group_add</span>
           </button>
         </div>
 
         <!-- Acciones contextuales al seleccionar items -->
         <div class="component-top-actions" data-ref="teams-selected-actions" style="display: none;">
+          <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-action-copy-code" data-tooltip="Copiar código de aula" aria-label="Copiar código de aula" style="display: none;">
+            <span class="material-symbols-rounded">key</span>
+          </button>
           <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-action-create-canvas" data-tooltip="Crear lienzo en este equipo" aria-label="Crear lienzo en este equipo">
             <span class="material-symbols-rounded">brush</span>
           </button>
@@ -83,6 +89,10 @@
                 <span class="material-symbols-rounded">workspace_premium</span>
                 <span data-i18n="teams.locked_btn_upgrade">Mejorar a Pro</span>
               </button>
+              <button type="button" class="btn btn--h40 btn--outline" data-ref="btn-locked-join-classroom">
+                <span class="material-symbols-rounded">meeting_room</span>
+                <span>Unirse a un aula con código</span>
+              </button>
               <button type="button" class="btn btn--h40 btn--outline" data-ref="btn-locked-home" data-i18n="teams.locked_btn_home">Ir al inicio</button>
             </div>
           </div>
@@ -124,6 +134,10 @@
             <input class="field__input" data-ref="input-team-desc" type="text" placeholder=" " maxlength="255" autocomplete="off" />
             <span class="field__label" data-ref="label-team-desc" data-i18n="teams.desc_label">Descripción (opcional)</span>
           </label>
+          <div class="field" data-ref="field-is-classroom" style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 6px 0;">
+            <input data-ref="checkbox-is-classroom" type="checkbox" style="width: 18px; height: 18px; accent-color: var(--action-primary); cursor: pointer;" />
+            <span style="font-size: 14px; color: var(--text-primary); cursor: pointer;">Crear como Aula escolar (genera código de acceso para alumnos)</span>
+          </div>
 
           <div class="modal-card__actions">
             <button type="button" class="btn btn--h40 btn--outline" data-ref="btn-cancel-team" data-i18n="modal.cancel">Cancelar</button>

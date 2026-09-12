@@ -4517,6 +4517,108 @@ body[data-theme="dark"] .component-toggle-pill .component-button.active {
   }
 }
 
+/* Conmutador de píldora de categorías (Personales / Equipos / Educación) */
+.component-category-pill {
+  display: inline-grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  background-color: var(--bg-hover-light, rgba(0, 0, 0, 0.04));
+  border-radius: 9999px;
+  padding: 4px;
+  margin-top: 14px;
+  border: 1px solid var(--border-color);
+  position: relative;
+  user-select: none;
+  isolation: isolate;
+  max-width: 440px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.component-category-pill-glider {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc(33.333% - 2.66px);
+  background-color: var(--action-primary);
+  border-radius: 9999px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+  z-index: 1;
+  pointer-events: none;
+}
+
+html[data-theme="dark"] .component-category-pill-glider,
+html.dark-theme .component-category-pill-glider,
+body[data-theme="dark"] .component-category-pill-glider {
+  background-color: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .component-category-pill-glider {
+    background-color: #ffffff;
+  }
+}
+
+.component-category-pill[data-category="personal"] .component-category-pill-glider {
+  transform: translateX(0);
+}
+
+.component-category-pill[data-category="teams"] .component-category-pill-glider {
+  transform: translateX(100%);
+}
+
+.component-category-pill[data-category="education"] .component-category-pill-glider {
+  transform: translateX(200%);
+}
+
+.component-category-pill .component-button {
+  position: relative;
+  z-index: 2;
+  background-color: transparent !important;
+  border: none !important;
+  border-radius: 9999px;
+  padding: 8px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  box-shadow: none !important;
+  height: auto;
+  line-height: normal;
+  transition: color 0.25s ease;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.component-category-pill .component-button:hover {
+  background-color: transparent !important;
+  border-color: transparent !important;
+  color: var(--text-primary);
+}
+
+.component-category-pill .component-button.active {
+  background-color: transparent !important;
+  color: var(--action-primary-text, #ffffff) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="dark"] .component-category-pill .component-button.active,
+html.dark-theme .component-category-pill .component-button.active,
+body[data-theme="dark"] .component-category-pill .component-button.active {
+  color: #09090b !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .component-category-pill .component-button.active {
+    color: #09090b !important;
+  }
+}
+
 /* Cuadrícula de Cards de Precios */
 .component-pricing-grid {
   display: flex;
