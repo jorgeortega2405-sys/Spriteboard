@@ -23,6 +23,7 @@ class HomeController {
   private abortController: AbortController;
   private allCanvases: CanvasItem[] = [];
   private currentCanvases: CanvasItem[] = [];
+  private currentTypeFilter: 'all' | 'board' | 'pixel' = 'all';
   private renderedCount = 0;
   private isRenderingBatch = false;
   private gridEl: HTMLElement | null = null;
@@ -339,6 +340,18 @@ class HomeController {
       },
       { signal }
     );
+
+    const filterPills = this.container.querySelectorAll<HTMLButtonElement>('.home-filter-pill');
+    filterPills.forEach((pill) => {
+      pill.addEventListener(
+        'click',
+        () => {
+          const filter = (pill.getAttribute('data-filter') as 'all' | 'board' | 'pixel') || 'all';
+          this.setTypeFilter(filter);
+        },
+        { signal }
+      );
+    });
   }
 
   public destroy(): void {
@@ -372,9 +385,34 @@ class HomeController {
       if (this.btnClearSearch) {
         this.btnClearSearch.style.display = 'none';
       }
-      this.currentCanvases = this.allCanvases;
-      this.renderGrid(false);
+      this.applyFilters();
     }
+  }
+
+  private setTypeFilter(filter: 'all' | 'board' | 'pixel'): void {
+    this.currentTypeFilter = filter;
+    this.container.querySelectorAll<HTMLButtonElement>('.home-filter-pill').forEach((btn) => {
+      btn.classList.toggle('is-active', btn.getAttribute('data-filter') === filter);
+    });
+    this.applyFilters();
+  }
+
+  private applyFilters(): void {
+    const query = this.searchInput?.value.trim().toLowerCase() || '';
+    let filtered = this.allCanvases;
+
+    if (this.currentTypeFilter === 'board') {
+      filtered = filtered.filter((c) => c.canvas_type === 'board' || c.unit === 'board');
+    } else if (this.currentTypeFilter === 'pixel') {
+      filtered = filtered.filter((c) => c.canvas_type !== 'board' && c.unit !== 'board');
+    }
+
+    if (query) {
+      filtered = filtered.filter((c) => c.name.toLowerCase().includes(query));
+    }
+
+    this.currentCanvases = filtered;
+    this.renderGrid(Boolean(query || this.currentTypeFilter !== 'all'));
   }
 
   private handleSearchInput(): void {
@@ -384,13 +422,7 @@ class HomeController {
     if (this.btnClearSearch) {
       this.btnClearSearch.style.display = query ? 'inline-flex' : 'none';
     }
-    if (!query) {
-      this.currentCanvases = this.allCanvases;
-      this.renderGrid(false);
-      return;
-    }
-    this.currentCanvases = this.allCanvases.filter((c) => c.name.toLowerCase().includes(query));
-    this.renderGrid(true);
+    this.applyFilters();
   }
 
   private closeAllDropdowns(): void {
@@ -468,12 +500,7 @@ class HomeController {
     }
 
     this.allCanvases = items;
-    this.currentCanvases = items;
-    if (this.searchInput && this.searchInput.value.trim()) {
-      this.handleSearchInput();
-    } else {
-      this.renderGrid(false);
-    }
+    this.applyFilters();
   }
 
   private renderGrid(isSearchResult = false): void {
@@ -646,6 +673,8 @@ class HomeController {
     const isLocal = Boolean(canvas.is_local);
     const canSync = isLocal && Boolean(currentUser);
     const isFavorite = Boolean(canvas.is_favorite);
+    const isBoard = canvas.canvas_type === 'board' || canvas.unit === 'board';
+    const targetUrl = isBoard ? `/board/${canvas.uuid}` : `/design/${canvas.uuid}`;
 
     const badgeText = isLocal ? t('canvas.status_local') : t('canvas.status_cloud');
 
@@ -662,8 +691,8 @@ class HomeController {
 
       <div class="canvas-card__badges-tl" data-ref="badges-tl">
         <div class="canvas-card__badge canvas-card__badge--glass">
-          <span class="material-symbols-rounded">straighten</span>
-          <span>${canvas.width} × ${canvas.height} px</span>
+          <span class="material-symbols-rounded">${isBoard ? 'space_dashboard' : 'straighten'}</span>
+          <span>${isBoard ? 'Pizarrón' : `${canvas.width} × ${canvas.height} px`}</span>
         </div>
       </div>
 
@@ -867,7 +896,7 @@ class HomeController {
     actionOpenNewTab?.addEventListener('click', (e) => {
       e.stopPropagation();
       this.closeAllDropdowns();
-      window.open(`/design/${canvas.uuid}`, '_blank');
+      window.open(targetUrl, '_blank');
     });
 
     actionDuplicate?.addEventListener('click', async (e) => {
@@ -891,7 +920,7 @@ class HomeController {
     actionCopyLink?.addEventListener('click', async (e) => {
       e.stopPropagation();
       this.closeAllDropdowns();
-      const url = `${window.location.origin}/design/${canvas.uuid}`;
+      const url = `${window.location.origin}${targetUrl}`;
       try {
         await navigator.clipboard.writeText(url);
         showToast(t('canvas.copy_link_success'));
@@ -978,7 +1007,7 @@ class HomeController {
         this.toggleCardSelection(canvas.uuid);
         return;
       }
-      navigate(`/design/${canvas.uuid}`);
+      navigate(targetUrl);
     });
 
     return card;
@@ -1285,8 +1314,7 @@ class HomeController {
       }
 
       this.allCanvases = Array.isArray(data.canvases) ? data.canvases : [];
-      this.currentCanvases = this.allCanvases;
-      this.renderGrid();
+      this.applyFilters();
     } catch {
       showToast(t('canvas.folder_move_error'), 'danger');
       void this.exitFolder();

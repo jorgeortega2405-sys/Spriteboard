@@ -6,24 +6,26 @@ import { t } from './i18n.service.js';
 import { showToast } from './toast.service.js';
 
 export interface CreateCanvasOptions {
-  name: string;
-  width: number;
-  height: number;
-  templateImage?: string | null;
-  bgType?: 'transparent' | 'solid';
-  solidColor?: string;
+  bgType?: 'transparent' | 'solid' | 'dots' | 'grid' | 'blank' | 'dark';
+  canvasType?: 'pixel' | 'board';
   checkSize?: number;
-  fps?: number;
-  onionSkin?: boolean;
-  teamUuid?: string | null;
   effectiveTier?: string | null;
+  fps?: number;
+  height?: number;
   isInfinite?: boolean;
+  name: string;
+  onionSkin?: boolean;
+  solidColor?: string;
+  teamUuid?: string | null;
+  templateImage?: string | null;
+  width?: number;
 }
 
 export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise<void> {
-  const isInfinite = options.isInfinite ?? false;
-  const width = isInfinite ? 0 : options.width;
-  const height = isInfinite ? 0 : options.height;
+  const isBoard = options.canvasType === 'board';
+  const isInfinite = isBoard || (options.isInfinite ?? false);
+  const width = isInfinite ? 0 : (options.width || 64);
+  const height = isInfinite ? 0 : (options.height || 64);
 
   const MAX_CANVAS_DIMENSION = 16384;
   if (!isInfinite && (width > MAX_CANVAS_DIMENSION || height > MAX_CANVAS_DIMENSION || width <= 0 || height <= 0)) {
@@ -31,7 +33,7 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
     return;
   }
 
-  const name = options.name.trim() || t('canvas.input_name_placeholder');
+  const name = options.name.trim() || (isBoard ? 'Pizarrón sin título' : t('canvas.input_name_placeholder'));
   const bgType = options.bgType || 'transparent';
   const solidColor = options.solidColor || '#ffffff';
   const checkSize = options.checkSize || 16;
@@ -82,45 +84,56 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
     }
   }
 
-  const initialProject = {
-    version: 1,
-    fps,
-    onionSkin,
-    isInfinite,
-    activeFrameId: 'frame_1',
-    background: {
-      type: bgType,
-      color: solidColor,
-      checkSize: checkSize,
-      checkColor1: '#ffffff',
-      checkColor2: '#e2e8f0',
-    },
-    animationTags: [],
-    frames: [
-      {
-        id: 'frame_1',
-        name: 'Cuadro 1',
-        activeLayerId: 'layer_1',
-        layers: [
+  const initialProject = isBoard
+    ? {
+        version: 1,
+        type: 'board',
+        background: {
+          type: options.bgType || 'dots',
+          color: solidColor || '#ffffff',
+        },
+        camera: { x: 0, y: 0, zoom: 1 },
+        elements: [],
+      }
+    : {
+        version: 1,
+        fps,
+        onionSkin,
+        isInfinite,
+        activeFrameId: 'frame_1',
+        background: {
+          type: bgType,
+          color: solidColor,
+          checkSize: checkSize,
+          checkColor1: '#ffffff',
+          checkColor2: '#e2e8f0',
+        },
+        animationTags: [],
+        frames: [
           {
-            id: 'layer_1',
-            name: options.templateImage ? name : 'Capa 1',
-            visible: true,
-            opacity: 1.0,
-            data: templateDataUrl || '',
-            chunks: {},
+            id: 'frame_1',
+            name: 'Cuadro 1',
+            activeLayerId: 'layer_1',
+            layers: [
+              {
+                id: 'layer_1',
+                name: options.templateImage ? name : 'Capa 1',
+                visible: true,
+                opacity: 1.0,
+                data: templateDataUrl || '',
+                chunks: {},
+              },
+            ],
           },
         ],
-      },
-    ],
-  };
+      };
 
   const initialData = JSON.stringify(initialProject);
 
   let previewThumbnail: string | null = null;
   const maxThumbDim = 320;
-  let thumbW = isInfinite ? 256 : width;
-  let thumbH = isInfinite ? 256 : height;
+  let thumbW = isInfinite ? (isBoard ? 320 : 256) : width;
+  let thumbH = isInfinite ? (isBoard ? 180 : 256) : height;
   if (thumbW > maxThumbDim || thumbH > maxThumbDim) {
     const ratio = Math.min(maxThumbDim / thumbW, maxThumbDim / thumbH);
     thumbW = Math.max(1, Math.round(thumbW * ratio));
@@ -133,36 +146,53 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
   const thumbCtx = thumbCanvas.getContext('2d');
 
   if (thumbCtx) {
-    thumbCtx.imageSmoothingEnabled = false;
-    if (templateDataUrl) {
-      const thumbImg = new Image();
-      await new Promise<void>((r) => {
-        thumbImg.onload = () => {
-          try {
-            thumbCtx.drawImage(thumbImg, 0, 0, thumbW, thumbH);
-          } catch {}
-          r();
-        };
-        thumbImg.onerror = () => r();
-        thumbImg.src = templateDataUrl!;
-        if (thumbImg.complete && thumbImg.naturalWidth > 0) {
-          try {
-            thumbCtx.drawImage(thumbImg, 0, 0, thumbW, thumbH);
-          } catch {}
-          r();
+    if (isBoard) {
+      const isDark = options.bgType === 'dark';
+      thumbCtx.fillStyle = isDark ? '#18181b' : (solidColor || '#ffffff');
+      thumbCtx.fillRect(0, 0, thumbW, thumbH);
+
+      const dotColor = isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.15)';
+      thumbCtx.fillStyle = dotColor;
+      const step = 16;
+      for (let y = 8; y < thumbH; y += step) {
+        for (let x = 8; x < thumbW; x += step) {
+          thumbCtx.beginPath();
+          thumbCtx.arc(x, y, 1.2, 0, Math.PI * 2);
+          thumbCtx.fill();
         }
-      });
+      }
     } else {
-      if (bgType === 'solid') {
-        thumbCtx.fillStyle = solidColor;
-        thumbCtx.fillRect(0, 0, thumbW, thumbH);
+      thumbCtx.imageSmoothingEnabled = false;
+      if (templateDataUrl) {
+        const thumbImg = new Image();
+        await new Promise<void>((r) => {
+          thumbImg.onload = () => {
+            try {
+              thumbCtx.drawImage(thumbImg, 0, 0, thumbW, thumbH);
+            } catch {}
+            r();
+          };
+          thumbImg.onerror = () => r();
+          thumbImg.src = templateDataUrl!;
+          if (thumbImg.complete && thumbImg.naturalWidth > 0) {
+            try {
+              thumbCtx.drawImage(thumbImg, 0, 0, thumbW, thumbH);
+            } catch {}
+            r();
+          }
+        });
       } else {
-        const cs = Math.max(4, Math.round(checkSize * (thumbW / (width || 256))));
-        for (let y = 0; y < thumbH; y += cs) {
-          for (let x = 0; x < thumbW; x += cs) {
-            const isEven = ((x / cs) + (y / cs)) % 2 === 0;
-            thumbCtx.fillStyle = isEven ? '#ffffff' : '#e2e8f0';
-            thumbCtx.fillRect(x, y, cs, cs);
+        if (bgType === 'solid') {
+          thumbCtx.fillStyle = solidColor;
+          thumbCtx.fillRect(0, 0, thumbW, thumbH);
+        } else {
+          const cs = Math.max(4, Math.round(checkSize * (thumbW / (width || 256))));
+          for (let y = 0; y < thumbH; y += cs) {
+            for (let x = 0; x < thumbW; x += cs) {
+              const isEven = ((x / cs) + (y / cs)) % 2 === 0;
+              thumbCtx.fillStyle = isEven ? '#ffffff' : '#e2e8f0';
+              thumbCtx.fillRect(x, y, cs, cs);
+            }
           }
         }
       }
@@ -176,23 +206,25 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
     previewThumbnail = templateDataUrl;
   }
 
-  const unit = isInfinite ? 'infinite' : 'px';
+  const unit = isBoard ? 'board' : (isInfinite ? 'infinite' : 'px');
+  const canvasType = isBoard ? 'board' : 'pixel';
   if (currentUser) {
     const res = await postApi(API_ROUTES.canvases.base, {
-      name,
-      width,
-      height,
-      unit,
+      canvas_type: canvasType,
       data: initialData,
+      height,
+      name,
       preview_thumbnail: previewThumbnail,
       team_uuid: options.teamUuid || undefined,
+      unit,
+      width,
     });
 
     if (res.ok) {
       const created = await res.json();
       const canvasUuid = created?.canvas?.uuid || created?.uuid;
       showToast(t('canvas.toast_created'), 'success');
-      navigate(`/design/${canvasUuid}`);
+      navigate(isBoard ? `/board/${canvasUuid}` : `/design/${canvasUuid}`);
       return;
     }
 
@@ -203,18 +235,19 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
   const localUuid = crypto.randomUUID();
   const now = new Date().toISOString();
   await saveLocalCanvas({
-    uuid: localUuid,
-    name,
-    width,
-    height,
-    unit,
-    data: initialData,
-    preview_thumbnail: previewThumbnail || undefined,
+    canvas_type: canvasType,
     created_at: now,
-    updated_at: now,
+    data: initialData,
+    height,
     is_local: true,
+    name,
+    preview_thumbnail: previewThumbnail || undefined,
+    unit,
+    updated_at: now,
+    uuid: localUuid,
+    width,
   });
 
   showToast(t('canvas.toast_created_guest'), 'success');
-  navigate(`/design/${localUuid}`);
+  navigate(isBoard ? `/board/${localUuid}` : `/design/${localUuid}`);
 }

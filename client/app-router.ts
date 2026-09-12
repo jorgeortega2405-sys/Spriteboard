@@ -309,25 +309,40 @@ export async function render(): Promise<void> {
       const { createDesignView } = await import('./views/design.view.js');
       const designView = await createDesignView(canvasUuid);
       viewElements = topBar ? [topBar, designView] : [designView];
+    } else if (path.startsWith('/board/')) {
+      const topBar = isSoftSpaNav ? null : await createTopBar();
+      const canvasUuid = path.split('/board/')[1]?.split('/')[0] || '';
+      const { createBoardView } = await import('./views/board.view.js');
+      const boardView = await createBoardView(canvasUuid);
+      viewElements = topBar ? [topBar, boardView] : [boardView];
     } else if (/^\/[a-zA-Z0-9_-]{3,50}$/.test(path)) {
       const slug = path.slice(1);
       let resolvedUuid: string | null = null;
+      let resolvedType: string = 'pixel';
       try {
         const res = await getApi(API_ROUTES.canvases.resolveSlug(slug));
         if (res.ok) {
           const data = await res.json();
           if (data?.uuid) {
             resolvedUuid = data.uuid;
+            resolvedType = data.canvas_type || (data.unit === 'board' ? 'board' : 'pixel');
           }
         }
       } catch {}
 
       if (resolvedUuid) {
-        window.history.replaceState({}, '', `/design/${resolvedUuid}`);
+        const targetPath = resolvedType === 'board' ? `/board/${resolvedUuid}` : `/design/${resolvedUuid}`;
+        window.history.replaceState({}, '', targetPath);
         const topBar = isSoftSpaNav ? null : await createTopBar();
-        const { createDesignView } = await import('./views/design.view.js');
-        const designView = await createDesignView(resolvedUuid);
-        viewElements = topBar ? [topBar, designView] : [designView];
+        if (resolvedType === 'board') {
+          const { createBoardView } = await import('./views/board.view.js');
+          const boardView = await createBoardView(resolvedUuid);
+          viewElements = topBar ? [topBar, boardView] : [boardView];
+        } else {
+          const { createDesignView } = await import('./views/design.view.js');
+          const designView = await createDesignView(resolvedUuid);
+          viewElements = topBar ? [topBar, designView] : [designView];
+        }
       } else {
         const { createErrorView } = await import('./views/error.view.js');
         const notFoundView = await createErrorView({

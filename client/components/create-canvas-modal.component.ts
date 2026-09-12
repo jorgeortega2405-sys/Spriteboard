@@ -8,6 +8,7 @@ let activeCreateCanvasModal: { close: () => void } | null = null;
 
 export interface OpenCreateCanvasModalOptions {
   height?: number;
+  initialType?: 'pixel' | 'board';
   name?: string;
   teamName?: string | null;
   teamUuid?: string | null;
@@ -25,6 +26,8 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
   const initialName = options?.name || options?.templateName || '';
   const templateVariants = options?.variants && options.variants.length > 0 ? options.variants : null;
   const templateName = options?.templateName || null;
+  let selectedCreationType: 'pixel' | 'board' = templateVariants ? 'pixel' : (options?.initialType || 'board');
+  let selectedBoardBg: 'dots' | 'grid' | 'blank' | 'dark' = 'dots';
 
   let currentWidth = options?.width || templateVariants?.[0]?.width || 64;
   let currentHeight = options?.height || templateVariants?.[0]?.height || 64;
@@ -148,7 +151,61 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
                 <input class="hidden" data-ref="input-canvas-width" type="hidden" value="${currentWidth}" />
                 <input class="hidden" data-ref="input-canvas-height" type="hidden" value="${currentHeight}" />
                 ` : `
-                <div class="settings-group" data-ref="group-canvas-mode">
+                <div class="settings-group" data-ref="group-canvas-creation-type">
+                  <div class="settings-item" data-ref="item-canvas-creation-type">
+                    <div class="settings-item__content" data-ref="content-canvas-creation-type">
+                      <div class="settings-item__text" data-ref="text-canvas-creation-type">
+                        <h2 class="settings-item__title" data-ref="title-canvas-creation-type">Tipo de espacio</h2>
+                        <p class="settings-item__desc" data-ref="desc-canvas-creation-type">Elige entre un pizarrón virtual infinito para dibujo libre o un lienzo para pixelart.</p>
+                      </div>
+                    </div>
+                    <div class="settings-item__actions" data-ref="actions-canvas-creation-type">
+                      <div class="template-variants-pills" data-ref="canvas-creation-type-pills">
+                        <button type="button" class="template-variant-pill${selectedCreationType === 'board' ? ' is-active' : ''}" data-ref="btn-creation-board" data-type="board">
+                          <span class="material-symbols-rounded" style="font-size: 16px; margin-right: 4px;">space_dashboard</span>
+                          <span>Pizarrón virtual</span>
+                        </button>
+                        <button type="button" class="template-variant-pill${selectedCreationType === 'pixel' ? ' is-active' : ''}" data-ref="btn-creation-pixel" data-type="pixel">
+                          <span class="material-symbols-rounded" style="font-size: 16px; margin-right: 4px;">grid_on</span>
+                          <span>Lienzo [Pixelart]</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="settings-group" data-ref="group-board-bg-style" style="${selectedCreationType === 'board' ? '' : 'display: none;'}">
+                  <div class="settings-item" data-ref="item-board-bg-style">
+                    <div class="settings-item__content" data-ref="content-board-bg-style">
+                      <div class="settings-item__text" data-ref="text-board-bg-style">
+                        <h2 class="settings-item__title" data-ref="title-board-bg-style">Estilo de fondo del pizarrón</h2>
+                        <p class="settings-item__desc" data-ref="desc-board-bg-style">Selecciona el patrón inicial de tu espacio infinito.</p>
+                      </div>
+                    </div>
+                    <div class="settings-item__actions" data-ref="actions-board-bg-style">
+                      <div class="template-variants-pills" data-ref="board-bg-pills">
+                        <button type="button" class="template-variant-pill is-active" data-ref="btn-board-bg-dots" data-bg="dots">
+                          <span class="material-symbols-rounded" style="font-size: 16px; margin-right: 4px;">grain</span>
+                          <span>Puntos</span>
+                        </button>
+                        <button type="button" class="template-variant-pill" data-ref="btn-board-bg-grid" data-bg="grid">
+                          <span class="material-symbols-rounded" style="font-size: 16px; margin-right: 4px;">grid_4x4</span>
+                          <span>Cuadrícula</span>
+                        </button>
+                        <button type="button" class="template-variant-pill" data-ref="btn-board-bg-blank" data-bg="blank">
+                          <span class="material-symbols-rounded" style="font-size: 16px; margin-right: 4px;">check_box_outline_blank</span>
+                          <span>Liso</span>
+                        </button>
+                        <button type="button" class="template-variant-pill" data-ref="btn-board-bg-dark" data-bg="dark">
+                          <span class="material-symbols-rounded" style="font-size: 16px; margin-right: 4px;">dark_mode</span>
+                          <span>Oscuro</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="settings-group" data-ref="group-canvas-mode" style="${selectedCreationType === 'board' ? 'display: none;' : ''}">
                   <div class="settings-item" data-ref="item-canvas-mode">
                     <div class="settings-item__content" data-ref="content-canvas-mode">
                       <div class="settings-item__text" data-ref="text-canvas-mode">
@@ -182,7 +239,7 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
                   </div>
                 </div>
 
-                <div class="settings-group" data-ref="custom-size-group-width">
+                <div class="settings-group" data-ref="custom-size-group-width" style="${selectedCreationType === 'board' ? 'display: none;' : ''}">
                   <div class="settings-item" data-ref="custom-size-item-width">
                     <div class="settings-item__content" data-ref="custom-size-width-content">
                       <div class="settings-item__text" data-ref="custom-size-width-text">
@@ -214,7 +271,7 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
                   </div>
                 </div>
 
-                <div class="settings-group" data-ref="custom-size-group-height">
+                <div class="settings-group" data-ref="custom-size-group-height" style="${selectedCreationType === 'board' ? 'display: none;' : ''}">
                   <div class="settings-item" data-ref="custom-size-item-height">
                     <div class="settings-item__content" data-ref="custom-size-height-content">
                       <div class="settings-item__text" data-ref="custom-size-height-text">
@@ -246,7 +303,7 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
                   </div>
                 </div>
 
-                <div class="settings-group" data-ref="custom-size-group-quick-presets">
+                <div class="settings-group" data-ref="custom-size-group-quick-presets" style="${selectedCreationType === 'board' ? 'display: none;' : ''}">
                   <div class="settings-item" data-ref="custom-size-item-presets">
                     <div class="settings-item__content" data-ref="custom-size-presets-content">
                       <div class="settings-item__text" data-ref="custom-size-presets-text">
@@ -274,7 +331,11 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
                 <div class="modal-canvas-panel__actions" data-ref="stage1-actions">
                   <div class="modal-canvas-panel__actions-row" data-ref="stage1-actions-row">
                     <div></div>
-                    <button type="button" class="btn btn--h44 btn--black" data-ref="btn-stage1-next">
+                    <button type="button" class="btn btn--h44 btn--black" data-ref="btn-stage1-create-board" style="${selectedCreationType === 'board' ? '' : 'display: none;'}">
+                      <span class="material-symbols-rounded" style="margin-right: 6px;">space_dashboard</span>
+                      <span>Crear pizarrón</span>
+                    </button>
+                    <button type="button" class="btn btn--h44 btn--black" data-ref="btn-stage1-next" style="${selectedCreationType === 'board' ? 'display: none;' : ''}">
                       <span>${t('canvas.btn_next')}</span>
                       <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
                     </button>
@@ -508,6 +569,26 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
   const btnHeightIncLarge = backdrop.querySelector<HTMLElement>('[data-ref="btn-height-inc-large"]');
 
   const quickPresetPills = backdrop.querySelectorAll<HTMLElement>('[data-ref^="btn-preset-"]');
+
+  const btnCreationBoard = backdrop.querySelector<HTMLElement>('[data-ref="btn-creation-board"]');
+  const btnCreationPixel = backdrop.querySelector<HTMLElement>('[data-ref="btn-creation-pixel"]');
+  const groupBoardBgStyle = backdrop.querySelector<HTMLElement>('[data-ref="group-board-bg-style"]');
+  const groupCanvasMode = backdrop.querySelector<HTMLElement>('[data-ref="group-canvas-mode"]');
+  const boardBgPills = backdrop.querySelectorAll<HTMLElement>('[data-ref^="btn-board-bg-"]');
+  const btnStage1CreateBoard = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-stage1-create-board"]');
+  const navTabBg = backdrop.querySelector<HTMLElement>('[data-ref="tab-stage-background"]');
+  const navTabAnim = backdrop.querySelector<HTMLElement>('[data-ref="tab-stage-animation"]');
+
+  if (selectedCreationType === 'board') {
+    if (navTabBg) {
+      navTabBg.style.opacity = '0.35';
+      navTabBg.style.pointerEvents = 'none';
+    }
+    if (navTabAnim) {
+      navTabAnim.style.opacity = '0.35';
+      navTabAnim.style.pointerEvents = 'none';
+    }
+  }
 
   let selectedCanvasMode: 'fixed' | 'infinite' = 'fixed';
   const btnModeFixed = backdrop.querySelector<HTMLElement>('[data-ref="btn-mode-fixed"]');
@@ -813,6 +894,95 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
       if (errorBoxStage1) errorBoxStage1.style.display = 'none';
       if (hugeCanvasWarning) hugeCanvasWarning.style.display = 'none';
       updateSummary();
+    });
+
+    btnCreationBoard?.addEventListener('click', () => {
+      selectedCreationType = 'board';
+      btnCreationBoard.classList.add('is-active');
+      btnCreationPixel?.classList.remove('is-active');
+      if (groupBoardBgStyle) groupBoardBgStyle.style.display = '';
+      if (groupCanvasMode) groupCanvasMode.style.display = 'none';
+      if (groupInfiniteInfo) groupInfiniteInfo.style.display = 'none';
+      if (groupCanvasWidth) groupCanvasWidth.style.display = 'none';
+      if (groupCanvasHeight) groupCanvasHeight.style.display = 'none';
+      if (groupCanvasPresets) groupCanvasPresets.style.display = 'none';
+      if (btnStage1CreateBoard) btnStage1CreateBoard.style.display = '';
+      if (btnStage1Next) btnStage1Next.style.display = 'none';
+      if (navTabBg) {
+        navTabBg.style.opacity = '0.35';
+        navTabBg.style.pointerEvents = 'none';
+      }
+      if (navTabAnim) {
+        navTabAnim.style.opacity = '0.35';
+        navTabAnim.style.pointerEvents = 'none';
+      }
+    });
+
+    btnCreationPixel?.addEventListener('click', () => {
+      selectedCreationType = 'pixel';
+      btnCreationPixel.classList.add('is-active');
+      btnCreationBoard?.classList.remove('is-active');
+      if (groupBoardBgStyle) groupBoardBgStyle.style.display = 'none';
+      if (groupCanvasMode) groupCanvasMode.style.display = '';
+      if (selectedCanvasMode === 'infinite') {
+        if (groupInfiniteInfo) groupInfiniteInfo.style.display = '';
+        if (groupCanvasWidth) groupCanvasWidth.style.display = 'none';
+        if (groupCanvasHeight) groupCanvasHeight.style.display = 'none';
+        if (groupCanvasPresets) groupCanvasPresets.style.display = 'none';
+      } else {
+        if (groupInfiniteInfo) groupInfiniteInfo.style.display = 'none';
+        if (groupCanvasWidth) groupCanvasWidth.style.display = '';
+        if (groupCanvasHeight) groupCanvasHeight.style.display = '';
+        if (groupCanvasPresets) groupCanvasPresets.style.display = '';
+      }
+      if (btnStage1CreateBoard) btnStage1CreateBoard.style.display = 'none';
+      if (btnStage1Next) btnStage1Next.style.display = '';
+      if (navTabBg) {
+        navTabBg.style.opacity = '';
+        navTabBg.style.pointerEvents = '';
+      }
+      if (navTabAnim) {
+        navTabAnim.style.opacity = '';
+        navTabAnim.style.pointerEvents = '';
+      }
+    });
+
+    boardBgPills.forEach((pill) => {
+      pill.addEventListener('click', () => {
+        boardBgPills.forEach((p) => p.classList.remove('is-active'));
+        pill.classList.add('is-active');
+        selectedBoardBg = (pill.getAttribute('data-bg') as any) || 'dots';
+      });
+    });
+
+    btnStage1CreateBoard?.addEventListener('click', async () => {
+      const name = inputName?.value.trim() || 'Pizarrón sin título';
+      if (btnStage1CreateBoard) {
+        btnStage1CreateBoard.disabled = true;
+        btnStage1CreateBoard.textContent = t('modal.loading');
+      }
+
+      try {
+        await createAndOpenCanvas({
+          name,
+          canvasType: 'board',
+          bgType: selectedBoardBg === 'dark' ? 'solid' : 'transparent',
+          solidColor: selectedBoardBg === 'dark' ? '#0f172a' : '#f8fafc',
+          teamUuid: options?.teamUuid || null,
+          effectiveTier: options?.teamUuid ? 'business' : null,
+        });
+        closeModal();
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : t('canvas.error_save');
+        if (errorBoxStage1) {
+          errorBoxStage1.textContent = msg;
+          errorBoxStage1.style.display = 'block';
+        }
+        if (btnStage1CreateBoard) {
+          btnStage1CreateBoard.disabled = false;
+          btnStage1CreateBoard.textContent = 'Crear pizarrón';
+        }
+      }
     });
   }
 

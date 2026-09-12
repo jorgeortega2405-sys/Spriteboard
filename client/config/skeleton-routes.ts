@@ -77,7 +77,8 @@ export function hasPersistentTopBar(pathname: string): boolean {
     pathname.startsWith('/folder') ||
     pathname.startsWith('/settings') ||
     pathname.startsWith('/help') ||
-    pathname.startsWith('/design')
+    pathname.startsWith('/design') ||
+    pathname.startsWith('/board')
   ) {
     return true;
   }

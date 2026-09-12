@@ -265,6 +265,7 @@ export async function moveCanvasToFolder(canvasUuid: string, userId: number, tar
 
     const [updatedRows] = await canvasPool.query<mysql.RowDataPacket[]>(
       `SELECT c.id, c.uuid, c.user_id, c.folder_id, c.name, c.width, c.height, c.unit,
+              COALESCE(c.canvas_type, CASE WHEN c.unit = 'board' THEN 'board' ELSE 'pixel' END) AS canvas_type,
               c.preview_thumbnail, c.access_level, c.public_role, c.short_code, c.custom_slug,
               c.created_at, c.updated_at, f.uuid AS folder_uuid, f.name AS folder_name
        FROM canvases c
@@ -289,6 +290,7 @@ export async function getFolderCanvases(folderUuid: string, userId: number): Pro
 
     const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
       `SELECT c.id, c.uuid, c.user_id, c.folder_id, c.name, c.width, c.height, c.unit,
+              COALESCE(c.canvas_type, CASE WHEN c.unit = 'board' THEN 'board' ELSE 'pixel' END) AS canvas_type,
               c.preview_thumbnail, c.access_level, c.public_role, c.short_code, c.custom_slug,
               c.created_at, c.updated_at, f.uuid AS folder_uuid, f.name AS folder_name,
               (uf.id IS NOT NULL) AS is_favorite
