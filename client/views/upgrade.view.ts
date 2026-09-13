@@ -406,37 +406,37 @@ export async function createUpgradeView(): Promise<HTMLElement> {
             </button>
           ` : tier.isVerification ? `
             <button type="button" class="component-button component-button--rounded-pill component-button--hover-text component-cursor-pointer component-card-button ${isPopular ? 'component-card-button--featured' : ''}" data-ref="btn-subscribe-${tier.id}" data-action="verify-docente">
-              <span class="btn-default-text">
+              <span class="component-button__default-text">
                 ${escapeHtml(tier.buttonText || 'Completar verificación')}
               </span>
-              <span class="btn-hover-text">
+              <span class="component-button__hover-text">
                 Verificar cuenta
               </span>
             </button>
           ` : tier.isContact ? `
             <button type="button" class="component-button component-button--rounded-pill component-button--hover-text component-cursor-pointer component-card-button" data-ref="btn-subscribe-${tier.id}" data-action="contact-schools">
-              <span class="btn-default-text">
+              <span class="component-button__default-text">
                 ${escapeHtml(tier.buttonText || 'Contactar asesor')}
               </span>
-              <span class="btn-hover-text">
+              <span class="component-button__hover-text">
                 Escribirnos
               </span>
             </button>
           ` : isFree ? `
             <button type="button" class="component-button component-button--rounded-pill component-button--hover-text component-cursor-pointer component-card-button" data-ref="btn-subscribe-${tier.id}" data-action="register" data-tier="${tier.id}">
-              <span class="btn-default-text">
+              <span class="component-button__default-text">
                 Comenzar gratis
               </span>
-              <span class="btn-hover-text">
+              <span class="component-button__hover-text">
                 Crear cuenta
               </span>
             </button>
           ` : `
             <button type="button" class="component-button component-button--rounded-pill component-button--hover-text component-cursor-pointer component-card-button ${isPopular ? 'component-card-button--featured' : ''}" data-ref="btn-subscribe-${tier.id}" data-action="subscribe" data-tier="${tier.id}">
-              <span class="btn-default-text">
+              <span class="component-button__default-text">
                 ${escapeHtml(tier.buttonText || `Obtén ${tier.name}`)}
               </span>
-              <span class="btn-hover-text">
+              <span class="component-button__hover-text">
                 Mejorar plan
               </span>
             </button>

@@ -331,11 +331,11 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
                 <div class="modal-canvas-panel__actions" data-ref="stage1-actions">
                   <div class="modal-canvas-panel__actions-row" data-ref="stage1-actions-row">
                     <div></div>
-                    <button type="button" class="btn btn--h44 btn--black" data-ref="btn-stage1-create-board" style="${selectedCreationType === 'board' ? '' : 'display: none;'}">
+                    <button type="button" class="component-button component-button--h44 component-button--black" data-ref="btn-stage1-create-board" style="${selectedCreationType === 'board' ? '' : 'display: none;'}">
                       <span class="material-symbols-rounded" style="margin-right: 6px;">space_dashboard</span>
                       <span>Crear pizarrón</span>
                     </button>
-                    <button type="button" class="btn btn--h44 btn--black" data-ref="btn-stage1-next" style="${selectedCreationType === 'board' ? 'display: none;' : ''}">
+                    <button type="button" class="component-button component-button--h44 component-button--black" data-ref="btn-stage1-next" style="${selectedCreationType === 'board' ? 'display: none;' : ''}">
                       <span>${t('canvas.btn_next')}</span>
                       <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
                     </button>
@@ -427,11 +427,11 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
 
                 <div class="modal-canvas-panel__actions" data-ref="stage2-actions">
                   <div class="modal-canvas-panel__actions-row" data-ref="stage2-actions-row">
-                    <button type="button" class="btn btn--h44 btn--outline" data-ref="btn-stage2-prev">
+                    <button type="button" class="component-button component-button--h44 component-button--outline" data-ref="btn-stage2-prev">
                       <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
                       <span>${t('canvas.btn_back')}</span>
                     </button>
-                    <button type="button" class="btn btn--h44 btn--black" data-ref="btn-stage2-next">
+                    <button type="button" class="component-button component-button--h44 component-button--black" data-ref="btn-stage2-next">
                       <span>${t('canvas.btn_next')}</span>
                       <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
                     </button>
@@ -507,11 +507,11 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
 
                 <div class="modal-canvas-panel__actions" data-ref="stage3-actions">
                   <div class="modal-canvas-panel__actions-row" data-ref="stage3-actions-row">
-                    <button type="button" class="btn btn--h44 btn--outline" data-ref="btn-stage3-prev">
+                    <button type="button" class="component-button component-button--h44 component-button--outline" data-ref="btn-stage3-prev">
                       <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
                       <span>${t('canvas.btn_back')}</span>
                     </button>
-                    <button type="button" class="btn btn--h44 btn--black" data-ref="btn-submit-create-canvas">
+                    <button type="button" class="component-button component-button--h44 component-button--black" data-ref="btn-submit-create-canvas">
                       ${t('canvas.btn_create')}
                     </button>
                   </div>

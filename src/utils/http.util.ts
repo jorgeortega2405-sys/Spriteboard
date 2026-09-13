@@ -1,8 +1,10 @@
 import { logger } from '../services/logger.service.js';
+import { getTierBorderColor } from '../services/subscription.service.js';
 import { UserPayload } from '../types/auth.types.js';
 import { Response } from 'express';
 
 export function sanitizeUser(user: any): UserPayload {
+  const tier = user.subscription_tier || 'free';
   return {
     id: user.id,
     username: user.username,
@@ -10,7 +12,8 @@ export function sanitizeUser(user: any): UserPayload {
     avatar_url: user.avatar_url || null,
     role: user.role || 'user',
     google_id: user.google_id || null,
-    subscription_tier: user.subscription_tier || 'free',
+    subscription_tier: tier,
+    subscription_tier_color: getTierBorderColor(tier),
     two_factor_enabled: Boolean(user.two_factor_enabled),
   };
 }

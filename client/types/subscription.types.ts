@@ -7,6 +7,8 @@ export interface SubscriptionPlan {
   priceMonthly: number;
   priceYearly: number;
   features: string[];
+  borderColor?: string;
+  ringBg?: string;
 }
 
 export interface PaymentMethod {

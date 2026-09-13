@@ -85,7 +85,7 @@ export function openInsertPixelGridModal(options: InsertPixelGridModalOptions): 
             </div>
           </div>
           <div class="settings-item__actions" data-ref="actions-grid-height">
-            <button type="button" class="btn btn--h34 btn--icon is-active" data-ref="btn-toggle-aspect-link" data-tooltip="Vincular proporciones 1:1" aria-label="Vincular proporciones 1:1" style="margin-right: 8px;">
+            <button type="button" class="component-button component-button--h34 component-button--icon-only is-active" data-ref="btn-toggle-aspect-link" data-tooltip="Vincular proporciones 1:1" aria-label="Vincular proporciones 1:1" style="margin-right: 8px;">
               <span class="material-symbols-rounded" data-ref="icon-aspect-link">link</span>
             </button>
             <div class="component-inline-control component-inline-control--fixed" data-ref="inline-ctrl-height">
@@ -163,7 +163,7 @@ export function openInsertPixelGridModal(options: InsertPixelGridModalOptions): 
   const modal = openModal({
     bodyHtml,
     cancelText: 'Cancelar',
-    confirmClass: 'btn--black',
+    confirmClass: 'component-button--black',
     confirmText: 'Insertar cuadrícula',
     description: 'Inserta una cuadrícula editable de píxeles con un tamaño de hasta 4096×4096 px.',
     onConfirm: () => {

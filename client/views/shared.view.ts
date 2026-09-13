@@ -398,7 +398,7 @@ class SharedController {
   private confirmLeaveCanvas(canvas: SharedCanvasItem): void {
     if (!currentUser) return;
     const modal = openModal({
-      confirmClass: 'btn--danger',
+      confirmClass: 'component-button--danger',
       confirmText: t('shared.btn_leave') || 'Dejar lienzo',
       description: t('shared.leave_confirm_desc') || '¿Estás seguro de que deseas salir de este lienzo compartido? Ya no tendrás acceso a menos que te vuelvan a invitar.',
       title: t('shared.leave_confirm_title') || '¿Dejar este lienzo?',

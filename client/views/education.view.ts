@@ -641,7 +641,7 @@ class EducationController {
       if (this.school?.is_admin && teacher.user_id !== currentUser?.id) {
         const btnRemove = document.createElement('button');
         btnRemove.type = 'button';
-        btnRemove.className = 'btn btn--h32 btn--danger btn--icon';
+        btnRemove.className = 'component-button component-button--h32 component-button--danger component-button--icon-only';
         btnRemove.setAttribute('data-ref', `btn-remove-teacher-${teacher.user_id}`);
         btnRemove.setAttribute('data-tooltip', 'Desvincular docente');
         btnRemove.setAttribute('aria-label', 'Desvincular docente');
@@ -690,7 +690,7 @@ class EducationController {
 
   private confirmRegenerateCode(classroom: Classroom): void {
     openModal({
-      confirmClass: 'btn--primary',
+      confirmClass: 'component-button--black',
       confirmText: 'Regenerar código',
       description: t('education.regen_code_confirm') || '¿Deseas generar un nuevo código de clase? El código anterior dejará de funcionar para nuevos alumnos.',
       onConfirm: async () => {
@@ -872,7 +872,7 @@ class EducationController {
 
   private confirmRemoveTeacher(userId: number, username: string): void {
     openModal({
-      confirmClass: 'btn--danger',
+      confirmClass: 'component-button--danger',
       confirmText: 'Desvincular docente',
       description: `¿Estás seguro de que deseas desvincular a "${username}" de la institución? El docente perderá la licencia educativa institucional.`,
       onConfirm: async () => {
@@ -948,7 +948,7 @@ class EducationController {
 
   private async handleRegenerateCode(uuid: string): Promise<void> {
     openModal({
-      confirmClass: 'btn--danger',
+      confirmClass: 'component-button--danger',
       confirmText: 'Regenerar código',
       description: t('education.regen_code_confirm') || '¿Deseas generar un nuevo código de clase? El código anterior dejará de funcionar para nuevos alumnos.',
       onConfirm: async () => {
@@ -1063,7 +1063,7 @@ class EducationController {
       if (canManage && !isOwner && member.user_id !== currentUser?.id) {
         const removeBtn = document.createElement('button');
         removeBtn.type = 'button';
-        removeBtn.className = 'btn-icon-soft';
+        removeBtn.className = 'component-button component-button--icon-only component-button--ghost component-button--h28';
         removeBtn.setAttribute('data-tooltip', `Remover a ${member.username}`);
         removeBtn.setAttribute('aria-label', `Remover a ${member.username}`);
         removeBtn.innerHTML = '<svg class="component-icon" aria-hidden="true" style="width: 18px; height: 18px;"><use href="/icons.svg#person_remove"></use></svg>';
@@ -1140,7 +1140,7 @@ class EducationController {
 
   private confirmDeleteClassroom(classroom: Classroom): void {
     openModal({
-      confirmClass: 'btn--danger',
+      confirmClass: 'component-button--danger',
       confirmText: 'Eliminar aula',
       description: `¿Estás seguro de que deseas eliminar el aula "${classroom.name}"? Los estudiantes perderán el acceso a los proyectos compartidos.`,
       onConfirm: async () => {

@@ -21,6 +21,7 @@ import { applyOutlineDirectToLayer, generatePixelOutline } from '../../utils/pix
 import { PixelFontFamily } from '../../utils/pixel-font.util.js';
 import { getCachedImage, PIXEL_SHAPES, PixelShape, renderShapeCanvas, renderShapeThumbnail, ShapeCategory, ShapeColorMode } from '../../utils/pixel-shapes.util.js';
 import { DetectedSpriteRect, detectSpriteIslands, extractSpriteCanvas, sliceByGrid } from '../../utils/pixel-slicer.util.js';
+import { applyAvatarTier } from '../../utils/tier.util.js';
 import { DesignCollaborationManager } from './design-collaboration.manager.js';
 import { DEFAULT_CLASSIC_PALETTE, generateShadingRamp, getCollaboratorColor, hexToRgb, isDitherPixel, rgbToHex, rgbToHsl } from './design-color.util.js';
 import { exportGif, exportPngCurrentFrame, exportProjectJson, exportSpritesheetWithAtlas, generateThumbnail, renderCompositedFrame, renderSpritesheet, triggerBlobDownload } from './design-export.service.js';
@@ -29,7 +30,7 @@ import { DesignHistoryManager } from './design-history.manager.js';
 import { DesignLayersManager } from './design-layers.manager.js';
 import { DesignToolsManager } from './design-tools.manager.js';
 import { DesignViewportManager } from './design-viewport.manager.js';
-import { AnimationTag, CanvasBackgroundConfig, CollaboratorState, FloatingSelection, SerializedCanvasFrame, SerializedCanvasLayer, SerializedCanvasProject, UndoStep } from './design.types.js';
+import { AnimationTag, CanvasBackgroundConfig, CollaboratorState, FloatingSelection, OwnerInfo, SerializedCanvasFrame, SerializedCanvasLayer, SerializedCanvasProject, UndoStep } from './design.types.js';
 
 export class DesignController {
   private container: HTMLElement;
@@ -106,7 +107,7 @@ export class DesignController {
     this.collaborationManager.isOwner = val;
   }
   private effectiveTier: 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios' | 'docentes' | 'escuelas' | 'education' = 'free';
-  private ownerInfo: { avatarUrl?: string | null; id?: number | null; subscriptionTier?: 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios' | 'docentes' | 'escuelas' | 'education'; username: string } | null = null;
+  private ownerInfo: OwnerInfo | null = null;
   private get collaborators(): Map<string, CollaboratorState> {
     return this.collaborationManager.collaborators;
   }
@@ -2660,8 +2661,8 @@ export class DesignController {
             <div style="font-weight: 600; font-size: 15px;">Arrastra una hoja de sprites aquí</div>
             <div style="font-size: 12.5px; color: var(--text-secondary);">Soporta imágenes transparentes (PNG, WebP) o fondos sólidos</div>
             <div style="display: flex; gap: 8px; margin-top: 6px;">
-              <button type="button" class="btn btn--h34 btn--black" data-ref="btn-slicer-browse">Seleccionar archivo</button>
-              <button type="button" class="btn btn--h34 btn--outline" data-ref="btn-slicer-paste">Pegar del portapapeles</button>
+              <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-slicer-browse">Seleccionar archivo</button>
+              <button type="button" class="component-button component-button--h34 component-button--outline" data-ref="btn-slicer-paste">Pegar del portapapeles</button>
             </div>
           </div>
 
@@ -2705,16 +2706,16 @@ export class DesignController {
 
             <div class="modal-canvas-panel__actions" style="margin-top: 4px;">
               <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                <button type="button" class="btn btn--h40 btn--black" data-ref="btn-slicer-import-frames" style="flex: 1;">
+                <button type="button" class="component-button component-button--h40 component-button--black" data-ref="btn-slicer-import-frames" style="flex: 1;">
                   <span class="component-icon">animation</span>
                   <span>Importar como fotogramas</span>
                 </button>
-                <button type="button" class="btn btn--h40 btn--outline" data-ref="btn-slicer-import-layers" style="flex: 1;">
+                <button type="button" class="component-button component-button--h40 component-button--outline" data-ref="btn-slicer-import-layers" style="flex: 1;">
                   <span class="component-icon">layers</span>
                   <span>Importar como capas</span>
                 </button>
               </div>
-              <button type="button" class="btn btn--h34 btn--outline" data-ref="btn-slicer-reset">
+              <button type="button" class="component-button component-button--h34 component-button--outline" data-ref="btn-slicer-reset">
                 <span class="component-icon">restart_alt</span>
                 <span>Cargar otra imagen</span>
               </button>
@@ -3070,7 +3071,7 @@ export class DesignController {
           </div>
 
           <div class="modal-canvas-panel__actions" data-ref="custom-size-actions">
-            <button type="button" class="btn btn--h44 btn--black btn--w-full" data-ref="btn-submit-resize-canvas">
+            <button type="button" class="component-button component-button--h44 component-button--black component-button--w-full" data-ref="btn-submit-resize-canvas">
               Redimensionar lienzo
             </button>
             <div class="banner banner--danger" data-ref="resize-canvas-error" style="display: none;"></div>
@@ -6171,6 +6172,7 @@ export class DesignController {
       avatarUrl: string;
       isOwner: boolean;
       tier: string;
+      tierColor?: string;
       tooltip: string;
       username: string;
     }> = [];
@@ -6180,6 +6182,7 @@ export class DesignController {
           avatarUrl: currentUser.avatar_url || null,
           id: currentUser.id,
           subscriptionTier: currentUser.subscription_tier || 'free',
+          subscriptionTierColor: currentUser.subscription_tier_color,
           username: currentUser.username,
         }
       : {
@@ -6202,6 +6205,7 @@ export class DesignController {
       avatarUrl: ownerAvatar,
       isOwner: true,
       tier: ownerTier,
+      tierColor: ownerData.subscriptionTierColor,
       tooltip: `${ownerData.username}${ownerRoleText}`,
       username: ownerData.username,
     });
@@ -6214,6 +6218,7 @@ export class DesignController {
         avatarUrl: myAvatar,
         isOwner: false,
         tier: myTier,
+        tierColor: currentUser.subscription_tier_color,
         tooltip: `${currentUser.username} (${myRole} • En línea • Tú)`,
         username: currentUser.username,
       });
@@ -6240,12 +6245,14 @@ export class DesignController {
 
       const avatarUrl = collab.avatarUrl || matchedMember?.avatar_url || API_ROUTES.avatar(collab.username || 'Invitado');
       const tier = collab.subscriptionTier || matchedMember?.subscription_tier || 'free';
+      const tierColor = collab.subscriptionTierColor || matchedMember?.subscription_tier_color;
       const roleText = collab.role === 'viewer' ? 'Lector' : 'Editor';
 
       stackItems.push({
         avatarUrl,
         isOwner: false,
         tier,
+        tierColor,
         tooltip: `${collab.username || 'Invitado'} (${roleText} • En línea)`,
         username: collab.username || 'Invitado',
       });
@@ -6254,9 +6261,8 @@ export class DesignController {
     stackItems.forEach((item, index) => {
       const avatarEl = document.createElement('div');
       const rawTier = (item.tier || 'free').toLowerCase();
-      const mappedTier = rawTier === 'business' || rawTier === 'negocios' ? 'pro' : rawTier;
-      avatarEl.className = `design-collaborator-avatar avatar-ring avatar-tier--${mappedTier}`;
-      avatarEl.setAttribute('data-tier', mappedTier);
+      avatarEl.className = 'design-collaborator-avatar avatar-ring';
+      applyAvatarTier(avatarEl, rawTier, item.tierColor);
       avatarEl.setAttribute('data-tooltip', item.tooltip);
       avatarEl.setAttribute('aria-label', item.tooltip);
       avatarEl.style.zIndex = `${index + 1}`;
@@ -6437,7 +6443,7 @@ export class DesignController {
                   <span class="design-collaborator-row__badge">Cuadros ${tag.from} - ${tag.to}</span>
                 </div>
                 <div class="design-collaborators-panel__header-actions">
-                  <button type="button" class="btn btn--h28 btn--black" data-ref="btn-activate-tag-${tag.id}">
+                  <button type="button" class="component-button component-button--h28 component-button--black" data-ref="btn-activate-tag-${tag.id}">
                     ${this.activeTagId === tag.id ? 'Activo' : 'Seleccionar'}
                   </button>
                   <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-delete-tag-${tag.id}" data-tooltip="Eliminar etiqueta">
@@ -6471,7 +6477,7 @@ export class DesignController {
                 <input class="design-color-active-input" data-ref="input-tag-color" type="color" value="#4a90e2" style="width: 42px; height: 42px; border-radius: 8px; border: 1px solid var(--border-color); cursor: pointer; padding: 2px;" />
               </div>
             </div>
-            <button type="button" class="btn btn--h40 btn--black btn--w-full" data-ref="btn-add-tag-submit" style="margin-top: 4px;">
+            <button type="button" class="component-button component-button--h40 component-button--black component-button--w-full" data-ref="btn-add-tag-submit" style="margin-top: 4px;">
               <span>Agregar etiqueta</span>
             </button>
           </div>
@@ -8055,7 +8061,7 @@ export class DesignController {
           : '';
 
         const deleteBtnHtml = this.isOwner
-          ? `<button type="button" class="btn btn--h28 btn--icon" data-action="delete" data-snap-uuid="${s.uuid}" data-tooltip="Eliminar versión" aria-label="Eliminar versión">
+          ? `<button type="button" class="component-button component-button--h28 component-button--icon-only" data-action="delete" data-snap-uuid="${s.uuid}" data-tooltip="Eliminar versión" aria-label="Eliminar versión">
               <span class="component-icon">delete_outline</span>
             </button>`
           : '';
@@ -8075,14 +8081,14 @@ export class DesignController {
             </div>
             ${descHtml}
             <div class="design-history-card__actions">
-              <button type="button" class="btn btn--h28 btn--outline btn--icon" data-action="preview" data-snap-uuid="${s.uuid}" data-tooltip="Previsualizar versión" aria-label="Previsualizar">
+              <button type="button" class="component-button component-button--h28 component-button--outline component-button--icon-only" data-action="preview" data-snap-uuid="${s.uuid}" data-tooltip="Previsualizar versión" aria-label="Previsualizar">
                 <span class="component-icon">visibility</span>
               </button>
-              <button type="button" class="btn btn--h28 btn--black" data-action="restore" data-snap-uuid="${s.uuid}">
+              <button type="button" class="component-button component-button--h28 component-button--black" data-action="restore" data-snap-uuid="${s.uuid}">
                 <span class="component-icon">restore</span>
                 <span>Restaurar</span>
               </button>
-              <button type="button" class="btn btn--h28 btn--outline btn--icon" data-action="fork" data-snap-uuid="${s.uuid}" data-tooltip="Crear copia como nuevo lienzo" aria-label="Crear copia">
+              <button type="button" class="component-button component-button--h28 component-button--outline component-button--icon-only" data-action="fork" data-snap-uuid="${s.uuid}" data-tooltip="Crear copia como nuevo lienzo" aria-label="Crear copia">
                 <span class="component-icon">content_copy</span>
               </button>
               ${deleteBtnHtml}

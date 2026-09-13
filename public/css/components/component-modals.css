@@ -947,7 +947,7 @@
   flex-shrink: 0;
 }
 
-.settings-item__actions .btn {
+.settings-item__actions .component-button {
   min-width: 84px;
   max-width: 150px;
   justify-content: center;
@@ -957,7 +957,8 @@
   white-space: nowrap;
 }
 
-.settings-item__actions .btn--icon {
+.settings-item__actions .component-button--icon,
+.settings-item__actions .component-button--icon-only {
   min-width: 34px !important;
   max-width: 34px !important;
   width: 34px !important;
@@ -1138,7 +1139,7 @@
     gap: 8px;
   }
 
-  .settings-item__actions .btn {
+  .settings-item__actions .component-button {
     flex: 1;
     min-width: 0;
     max-width: none;
@@ -1158,7 +1159,7 @@
     gap: 8px;
   }
 
-  .settings-edit-row .settings-item__actions .btn {
+  .settings-edit-row .settings-item__actions .component-button {
     flex: 1;
     min-width: 0;
     max-width: none;
@@ -1409,7 +1410,7 @@ body.modal-open {
   gap: 10px;
 }
 
-.modal-card__actions .btn {
+.modal-card__actions .component-button {
   min-width: 84px;
   max-width: 150px;
   justify-content: center;
@@ -1446,7 +1447,7 @@ body.modal-open {
     gap: 8px;
   }
 
-  .modal-card__actions .btn {
+  .modal-card__actions .component-button {
     flex: 1;
     min-width: 0;
     max-width: none;
@@ -1633,7 +1634,7 @@ body.modal-open {
   gap: 10px;
 }
 
-.modal-split__backup-actions .btn {
+.modal-split__backup-actions .component-button {
   min-width: 110px;
   display: inline-flex;
   align-items: center;
@@ -1852,7 +1853,7 @@ html.dark-theme .chat-gradient-backdrop {
   flex-shrink: 0;
 }
 
-.chat-panel__top .btn {
+.chat-panel__top .component-button {
   background-color: rgba(255, 255, 255, 0.65);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -1862,20 +1863,20 @@ html.dark-theme .chat-gradient-backdrop {
   transition: all var(--sl-transition-fast);
 }
 
-.chat-panel__top .btn:hover {
+.chat-panel__top .component-button:hover {
   background-color: rgba(255, 255, 255, 0.85);
   border-color: rgba(255, 255, 255, 0.8);
 }
 
-html[data-theme="dark"] .chat-panel__top .btn,
-html.dark-theme .chat-panel__top .btn {
+html[data-theme="dark"] .chat-panel__top .component-button,
+html.dark-theme .chat-panel__top .component-button {
   background-color: rgba(255, 255, 255, 0.08);
   border-color: rgba(255, 255, 255, 0.14);
   color: #ffffff;
 }
 
-html[data-theme="dark"] .chat-panel__top .btn:hover,
-html.dark-theme .chat-panel__top .btn:hover {
+html[data-theme="dark"] .chat-panel__top .component-button:hover,
+html.dark-theme .chat-panel__top .component-button:hover {
   background-color: rgba(255, 255, 255, 0.14);
   border-color: rgba(255, 255, 255, 0.24);
 }
@@ -2312,12 +2313,12 @@ html.dark-theme .chat-empty-state__icon {
    19. SECCIÓN DE SUSCRIPCIONES Y MEJORAS (/upgrade)
    ========================================================================== */
 
-.btn-upgrade {
+.component-button--upgrade {
   color: var(--text-primary);
   transition: color var(--sl-transition-fast), background-color var(--sl-transition-fast);
 }
 
-.btn-upgrade:hover {
+.component-button--upgrade:hover {
   color: var(--action-primary);
 }
 
@@ -2788,27 +2789,27 @@ html.dark-theme .component-card-button--downgrade {
   justify-content: center;
 }
 
-.component-button--hover-text .btn-default-text,
-.component-button--hover-text .btn-hover-text {
+.component-button--hover-text .component-button__default-text,
+.component-button--hover-text .component-button__hover-text {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   transition: opacity 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.component-button--hover-text .btn-hover-text {
+.component-button--hover-text .component-button__hover-text {
   position: absolute;
   opacity: 0;
   transform: translateY(10px);
   pointer-events: none;
 }
 
-.component-button--hover-text:hover .btn-default-text {
+.component-button--hover-text:hover .component-button__default-text {
   opacity: 0;
   transform: translateY(-10px);
 }
 
-.component-button--hover-text:hover .btn-hover-text {
+.component-button--hover-text:hover .component-button__hover-text {
   opacity: 1;
   transform: translateY(0);
   pointer-events: auto;
@@ -7247,7 +7248,8 @@ html[data-theme="dark"] .design-share-search-results,
   transition: transform 0.15s ease, color 0.15s ease;
 }
 
-.btn-back-home.is-drop-target {
+.component-button--back-home.is-drop-target,
+.view-breadcrumb__back.is-drop-target {
   background-color: var(--bg-surface-hover) !important;
   outline: 2px dashed var(--color-brand) !important;
   outline-offset: 1px !important;
@@ -7549,14 +7551,14 @@ html[data-theme="dark"] .design-share-search-results,
   color: #ffffff;
 }
 
-.selection-toolbar__btn.btn--danger-hover:hover {
+.selection-toolbar__btn.component-button--danger-hover:hover {
   background: rgba(239, 68, 68, 0.2) !important;
   border-color: rgba(239, 68, 68, 0.4) !important;
   box-shadow: inset 0 1px 0 rgba(239, 68, 68, 0.3) !important;
   color: #ef4444 !important;
 }
 
-.selection-toolbar__btn.btn--danger-hover:active {
+.selection-toolbar__btn.component-button--danger-hover:active {
   transform: scale(0.94);
   background: rgba(239, 68, 68, 0.3) !important;
 }
@@ -7838,18 +7840,6 @@ html[data-theme="dark"] .design-share-search-results,
   box-sizing: border-box;
   z-index: 2;
   transition: left var(--sl-transition-fast), width var(--sl-transition-fast);
-}
-
-.upgrade-modal__table-wrapper[data-plan="pro"] .upgrade-modal__active-indicator {
-  left: 50%;
-  width: 25%;
-}
-
-.upgrade-modal__table-wrapper[data-plan="business"] .upgrade-modal__active-indicator,
-.upgrade-modal__table-wrapper[data-plan="negocios"] .upgrade-modal__active-indicator,
-.upgrade-modal__table-wrapper[data-plan="ultra"] .upgrade-modal__active-indicator {
-  left: 75%;
-  width: 25%;
 }
 
 .upgrade-modal__table {
@@ -9351,14 +9341,14 @@ html.dark-theme .home-floating-btn:hover {
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
 }
 
-.btn--upgrade-pill {
-  height: 40px;
-  border-radius: 9999px;
-  padding: 0 16px 0 12px;
+.component-button--upgrade-pill {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  background: rgba(255, 255, 255, 0.55);
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.65);
@@ -9371,19 +9361,19 @@ html.dark-theme .home-floating-btn:hover {
   white-space: nowrap;
 }
 
-.btn--upgrade-pill:hover {
+.component-button--upgrade-pill:hover {
   background: rgba(255, 255, 255, 0.85);
   border-color: rgba(255, 255, 255, 0.95);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.09);
   transform: translateY(-1px);
 }
 
-.btn--upgrade-pill:active {
+.component-button--upgrade-pill:active {
   transform: scale(0.97);
 }
 
-html[data-theme="dark"] .btn--upgrade-pill,
-html.dark-theme .btn--upgrade-pill {
+html[data-theme="dark"] .component-button--upgrade-pill,
+html.dark-theme .component-button--upgrade-pill {
   background: rgba(24, 24, 27, 0.5);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -9392,21 +9382,21 @@ html.dark-theme .btn--upgrade-pill {
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
 }
 
-html[data-theme="dark"] .btn--upgrade-pill:hover,
-html.dark-theme .btn--upgrade-pill:hover {
+html[data-theme="dark"] .component-button--upgrade-pill:hover,
+html.dark-theme .component-button--upgrade-pill:hover {
   background: rgba(24, 24, 27, 0.8);
   border-color: rgba(255, 255, 255, 0.3);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
 }
 
-.btn--upgrade-pill__icon {
+.component-button--upgrade-pill__icon {
   font-size: 18px;
   color: #d97706;
   line-height: 1;
 }
 
-html[data-theme="dark"] .btn--upgrade-pill__icon,
-html.dark-theme .btn--upgrade-pill__icon {
+html[data-theme="dark"] .component-button--upgrade-pill__icon,
+html.dark-theme .component-button--upgrade-pill__icon {
   color: #fbbf24;
 }
 
@@ -9917,8 +9907,10 @@ html.dark-theme .templates-hero .component-badge {
   z-index: 70;
 }
 
-.canvas-section__controls .btn--icon,
-.home-section-controls .btn--icon {
+.canvas-section__controls .component-button--icon,
+.canvas-section__controls .component-button--icon-only,
+.home-section-controls .component-button--icon,
+.home-section-controls .component-button--icon-only {
   background-color: var(--bg-surface);
   border: 1px solid var(--border-color);
   color: var(--text-primary);
@@ -9926,14 +9918,18 @@ html.dark-theme .templates-hero .component-badge {
   transition: all var(--sl-transition-fast);
 }
 
-.canvas-section__controls .btn--icon:hover,
-.home-section-controls .btn--icon:hover {
+.canvas-section__controls .component-button--icon:hover,
+.canvas-section__controls .component-button--icon-only:hover,
+.home-section-controls .component-button--icon:hover,
+.home-section-controls .component-button--icon-only:hover {
   background-color: var(--bg-surface-elevated);
   border-color: var(--text-primary);
 }
 
-.canvas-section__controls .btn--icon.is-active,
-.home-section-controls .btn--icon.is-active {
+.canvas-section__controls .component-button--icon.is-active,
+.canvas-section__controls .component-button--icon-only.is-active,
+.home-section-controls .component-button--icon.is-active,
+.home-section-controls .component-button--icon-only.is-active {
   background-color: var(--bg-surface-elevated);
   border-color: var(--text-primary);
 }

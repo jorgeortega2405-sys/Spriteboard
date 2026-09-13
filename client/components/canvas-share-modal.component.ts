@@ -68,7 +68,7 @@ export function openCanvasShareModal(canvas: CanvasItem): void {
                 ? `
               <div class="design-share-section" data-ref="section-share-local-sync">
                 <p class="settings-item__desc">Este lienzo está guardado únicamente de forma local. Sincronízalo con la nube para poder compartirlo con personas y equipos.</p>
-                <button type="button" class="btn btn--h40 btn--black btn--w-full" data-ref="btn-modal-sync-cloud">
+                <button type="button" class="component-button component-button--h40 component-button--black component-button--w-full" data-ref="btn-modal-sync-cloud">
                   <span class="material-symbols-rounded">cloud_upload</span>
                   <span>Sincronizar a la nube</span>
                 </button>
@@ -158,7 +158,7 @@ export function openCanvasShareModal(canvas: CanvasItem): void {
             </div>
 
             <div class="design-share-link-row">
-              <button type="button" class="btn btn--h40 btn--black btn--w-full" data-ref="btn-copy-share-link">
+              <button type="button" class="component-button component-button--h40 component-button--black component-button--w-full" data-ref="btn-copy-share-link">
                 <span class="material-symbols-rounded">link</span>
                 <span>Copiar el enlace</span>
               </button>

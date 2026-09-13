@@ -172,7 +172,7 @@ export function setupDropdown(
       c.classList.contains('dropdown-trigger') ||
       c.getAttribute('data-ref')?.includes('trigger') ||
       c.tagName === 'BUTTON' ||
-      c.classList.contains('btn')
+      c.classList.contains('component-button')
     ) as HTMLElement) : null) ||
     wrapper.querySelector<HTMLElement>('.dropdown-trigger, [data-ref*="trigger"]');
   const backdrop =
@@ -194,7 +194,7 @@ export function setupDropdown(
   const hasExplicitWidthClass = Boolean(
     menu && Array.from(menu.classList).some((c) => c.startsWith('menu-panel--w-') && c !== 'menu-panel--w-full')
   );
-  const isIconButton = Boolean(trigger?.classList.contains('btn--icon'));
+  const isIconButton = Boolean(trigger?.classList.contains('component-button--icon-only'));
   const shouldMatchWidth = options.matchWidth !== undefined
     ? options.matchWidth
     : (!hasExplicitWidthClass && !isIconButton && (isSelect || Boolean(menu?.classList.contains('menu-panel--w-full'))));

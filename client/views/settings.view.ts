@@ -12,6 +12,7 @@ import { ModalInstance } from '../types/common.types';
 import { BillingDetailsResponse, PaymentMethod, PurchaseRecord, StorageUsageInfo } from '../types/subscription.types';
 import { debounce, removeEmptyState, renderEmptyState, setupDropdown, setupPasswordToggle, withButtonLoading } from '../utils/dom.util';
 import { AVAILABLE_LANGUAGES, detectBrowserLanguage, getLanguageName } from '../utils/languages.util';
+import { applyAvatarTier } from '../utils/tier.util';
 import { validatePassword } from '../utils/validators.util';
 
 export async function createYourAccountView(): Promise<HTMLElement> {
@@ -140,16 +141,7 @@ export async function createYourAccountView(): Promise<HTMLElement> {
 
   if (avatarPreviewBox) {
     const userTier = currentUser.subscription_tier || 'free';
-    avatarPreviewBox.setAttribute('data-tier', userTier);
-    avatarPreviewBox.classList.remove(
-      'avatar-tier--free',
-      'avatar-tier--plus',
-      'avatar-tier--pro',
-      'avatar-tier--ultra',
-      'avatar-tier--business',
-      'avatar-tier--negocios'
-    );
-    avatarPreviewBox.classList.add(`avatar-tier--${userTier}`);
+    applyAvatarTier(avatarPreviewBox, userTier, currentUser.subscription_tier_color);
   }
 
   const initialAvatarUrl = hasCustomAvatar()
@@ -164,13 +156,13 @@ export async function createYourAccountView(): Promise<HTMLElement> {
       if (googleStatusEl) googleStatusEl.textContent = t('settings.your_account.google_connected');
       if (googleActionBtn) {
         googleActionBtn.textContent = t('settings.your_account.btn_disconnect');
-        googleActionBtn.classList.remove('btn--black');
+        googleActionBtn.classList.remove('component-button--black');
       }
     } else {
       if (googleStatusEl) googleStatusEl.textContent = t('settings.your_account.google_not_connected');
       if (googleActionBtn) {
         googleActionBtn.textContent = t('settings.your_account.btn_connect');
-        googleActionBtn.classList.add('btn--black');
+        googleActionBtn.classList.add('component-button--black');
       }
     }
   };
@@ -194,7 +186,7 @@ export async function createYourAccountView(): Promise<HTMLElement> {
               confirmText: t('settings.your_account.btn_go_to_security'),
               showCancel: true,
               cancelText: t('modal.cancel'),
-              confirmClass: 'btn--black',
+              confirmClass: 'component-button--black',
               onConfirm: (modalInst) => {
                 modalInst.close();
                 navigate('/settings/security');
@@ -208,7 +200,7 @@ export async function createYourAccountView(): Promise<HTMLElement> {
             descriptionKey: 'settings.your_account.modal_unlink_google_desc',
             confirmText: t('settings.your_account.btn_unlink_confirm'),
             cancelText: t('modal.cancel'),
-            confirmClass: 'btn--danger',
+            confirmClass: 'component-button--danger',
             onConfirm: async (modalInst) => {
               modalInst.clearError();
               modalInst.setConfirmLoading(true);
@@ -820,10 +812,10 @@ export async function createSecurityView(): Promise<HTMLElement> {
     if (!btnConfigure2fa) return;
     if (enabled) {
       btnConfigure2fa.textContent = t('settings.security.btn_disable_2fa') || 'Desactivar';
-      btnConfigure2fa.className = 'btn btn--h34 btn--danger';
+      btnConfigure2fa.className = 'component-button component-button--h34 component-button--danger';
     } else {
       btnConfigure2fa.textContent = t('settings.security.btn_configure_2fa') || 'Configurar';
-      btnConfigure2fa.className = 'btn btn--h34 btn--black';
+      btnConfigure2fa.className = 'component-button component-button--h34 component-button--black';
     }
   };
 
@@ -871,7 +863,7 @@ export async function createSecurityView(): Promise<HTMLElement> {
       });
 
       if (modal.confirmBtn) {
-        modal.confirmBtn.className = 'btn btn--h34 btn--danger';
+        modal.confirmBtn.className = 'component-button component-button--h34 component-button--danger';
       }
     } else {
       open2FAModal({
@@ -953,7 +945,7 @@ export async function createSecurityView(): Promise<HTMLElement> {
     });
 
     if (modal.confirmBtn) {
-      modal.confirmBtn.className = 'btn btn--h34 btn--danger';
+      modal.confirmBtn.className = 'component-button component-button--h34 component-button--danger';
     }
   });
 
@@ -966,7 +958,7 @@ export async function createSecurityView(): Promise<HTMLElement> {
       descriptionKey: 'settings.security.delete_account_modal_desc',
       cancelText: t('modal.cancel'),
       confirmText: t('settings.security.btn_delete_account') || 'Eliminar cuenta',
-      confirmClass: 'btn--danger',
+      confirmClass: 'component-button--danger',
       showConfirm: true,
       bodyHtml: hasPassword
         ? `
@@ -1606,7 +1598,7 @@ export async function createBillingView(): Promise<HTMLElement> {
             'La renovación automática está pausada. Tu suscripción no se cobrará nuevamente.';
           btnToggleRenewal.textContent =
             t('settings.billing.btn_reactivate_renewal') || 'Reactivar renovación';
-          btnToggleRenewal.className = 'btn btn--h34 btn--black';
+          btnToggleRenewal.className = 'component-button component-button--h34 component-button--black';
           btnToggleRenewal.onclick = (e) => {
             e.preventDefault();
             handleToggleAutoRenewal(false);
@@ -1617,7 +1609,7 @@ export async function createBillingView(): Promise<HTMLElement> {
             `Tu suscripción se renovará automáticamente el ${dateFormatted}.`;
           btnToggleRenewal.textContent =
             t('settings.billing.btn_cancel_renewal') || 'Cancelar renovación';
-          btnToggleRenewal.className = 'btn btn--h34';
+          btnToggleRenewal.className = 'component-button component-button--h34';
           btnToggleRenewal.onclick = (e) => {
             e.preventDefault();
             handleToggleAutoRenewal(true, dateFormatted);
@@ -1783,7 +1775,7 @@ export async function createBillingView(): Promise<HTMLElement> {
         descriptionParams: { date: dateFormatted },
         confirmText:
           t('settings.billing.btn_confirm_cancel_renewal') || 'Confirmar cancelación',
-        confirmClass: 'btn--black',
+        confirmClass: 'component-button--black',
         cancelText: t('modal.cancel') || 'Volver',
         onConfirm: async (inst) => {
           inst.setConfirmLoading(true);
@@ -1835,7 +1827,7 @@ export async function createBillingView(): Promise<HTMLElement> {
       confirmText:
         t('settings.billing.btn_confirm_cancel_immediate') ||
         'Cancelar suscripción ahora',
-      confirmClass: 'btn--danger',
+      confirmClass: 'component-button--danger',
       cancelText: t('modal.cancel') || 'Mantener mi plan',
       onConfirm: async (inst) => {
         inst.setConfirmLoading(true);
@@ -1905,11 +1897,11 @@ export async function createBillingView(): Promise<HTMLElement> {
         </div>
         <div class="settings-item__actions" data-ref="payment-method-actions-${pm.id}">
           ${!pm.is_default ? `
-            <button type="button" class="btn btn--h34" data-ref="btn-set-default-${pm.id}">
+            <button type="button" class="component-button component-button--h34" data-ref="btn-set-default-${pm.id}">
               ${escapeHtml(t('settings.billing.btn_set_default') || 'Hacer predeterminada')}
             </button>
           ` : ''}
-          <button type="button" class="btn btn--h34 btn--icon" data-ref="btn-delete-pm-${pm.id}" data-tooltip="${escapeHtml(t('settings.billing.btn_delete_card') || 'Eliminar tarjeta')}" aria-label="${escapeHtml(t('settings.billing.btn_delete_card') || 'Eliminar tarjeta')}">
+          <button type="button" class="component-button component-button--h34 component-button--icon-only" data-ref="btn-delete-pm-${pm.id}" data-tooltip="${escapeHtml(t('settings.billing.btn_delete_card') || 'Eliminar tarjeta')}" aria-label="${escapeHtml(t('settings.billing.btn_delete_card') || 'Eliminar tarjeta')}">
             <span class="material-symbols-rounded" style="font-size: 18px;">delete</span>
           </button>
         </div>
@@ -1944,7 +1936,7 @@ export async function createBillingView(): Promise<HTMLElement> {
             last4: pm.last4,
           },
           confirmText: t('modal.delete') || 'Eliminar',
-          confirmClass: 'btn--danger',
+          confirmClass: 'component-button--danger',
           cancelText: t('modal.cancel') || 'Cancelar',
           onConfirm: async (inst) => {
             inst.setConfirmLoading(true);
@@ -2030,7 +2022,7 @@ export async function createBillingView(): Promise<HTMLElement> {
         titleKey: 'settings.billing.modal_add_card_title',
         bodyHtml,
         confirmText: t('settings.billing.btn_save_card') || 'Guardar tarjeta',
-        confirmClass: 'btn--black',
+        confirmClass: 'component-button--black',
         cancelText: t('modal.cancel') || 'Cancelar',
         onConfirm: async (inst) => {
           inst.setConfirmLoading(true);

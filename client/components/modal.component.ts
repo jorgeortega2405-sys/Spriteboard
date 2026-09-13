@@ -19,7 +19,7 @@ export function openModal(options: ModalOptions = {}): ModalInstance {
     bodyHtml = '',
     cancelText = t('modal.cancel'),
     confirmText = t('modal.continue'),
-    confirmClass = 'btn--black',
+    confirmClass = 'component-button--black',
     showCancel = true,
     showConfirm = true,
     size = 'sm',
@@ -52,8 +52,8 @@ export function openModal(options: ModalOptions = {}): ModalInstance {
         <div class="modal-card__body" data-ref="modal-body"></div>
         <div class="modal-card__footer" data-ref="modal-footer">
           <div class="modal-card__actions" data-ref="modal-actions">
-            ${showCancel ? `<button type="button" class="btn btn--h34" data-ref="btn-modal-cancel">${cancelText}</button>` : ''}
-            ${showConfirm ? `<button type="button" class="btn btn--h34 ${confirmClass}" data-ref="btn-modal-confirm">${confirmText}</button>` : ''}
+            ${showCancel ? `<button type="button" class="component-button component-button--h34" data-ref="btn-modal-cancel">${cancelText}</button>` : ''}
+            ${showConfirm ? `<button type="button" class="component-button component-button--h34 ${confirmClass}" data-ref="btn-modal-confirm">${confirmText}</button>` : ''}
           </div>
           <div class="banner banner--danger" data-ref="modal-error" style="display: none;"></div>
         </div>
@@ -395,7 +395,7 @@ export async function open2FAModal(options: { onClose?: () => void; onSuccess?: 
                 </button>
               </div>
 
-              <button type="button" class="btn btn--h44 btn--black btn--w-full" data-ref="btn-continue-2fa">
+              <button type="button" class="component-button component-button--h44 component-button--black component-button--w-full" data-ref="btn-continue-2fa">
                 ${t('modal.continue')}
               </button>
 
@@ -417,11 +417,11 @@ export async function open2FAModal(options: { onClose?: () => void; onSuccess?: 
               <div class="backup-codes-grid" data-ref="backup-codes-grid"></div>
 
               <div class="modal-split__backup-actions" data-ref="stage-2-actions">
-                <button type="button" class="btn btn--h38" data-ref="btn-copy-backup-codes">
+                <button type="button" class="component-button component-button--h38" data-ref="btn-copy-backup-codes">
                   <span class="material-symbols-rounded">content_copy</span>
                   <span data-ref="btn-copy-text">${t('settings.security.two_factor_copy_all')}</span>
                 </button>
-                <button type="button" class="btn btn--h38 btn--black" data-ref="btn-finish-2fa">
+                <button type="button" class="component-button component-button--h38 component-button--black" data-ref="btn-finish-2fa">
                   ${t('settings.security.two_factor_finish')}
                 </button>
               </div>

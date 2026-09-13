@@ -187,7 +187,7 @@ export { SettingsController };
 1. **Para botones (`<button>`)**:
    - El atributo `type` **debe ser siempre el primero**, seguido de `class`, luego `data-ref` (o `data-*`), y finalmente los demás atributos (`data-tooltip`, `aria-label`, etc.).
    ```html
-   <button type="button" class="btn btn--h55 btn--black btn--w-full" data-ref="btn-submit-stage1">
+   <button type="button" class="component-button component-button--h55 component-button--black component-button--w-full" data-ref="btn-submit-stage1">
    <button type="button" class="field__action" data-ref="btn-random-username" data-tooltip="Generar nombre aleatorio" aria-label="Generar nombre aleatorio">
    ```
 2. **Para cualquier otro elemento (`<div>`, `<a>`, `<label>`, `<input>`, `<span>`, etc.)**:

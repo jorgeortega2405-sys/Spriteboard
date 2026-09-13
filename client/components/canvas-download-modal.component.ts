@@ -173,7 +173,7 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
             </div>
 
             <div class="design-share-link-row">
-              <button type="button" class="btn btn--h40 btn--black btn--w-full" data-ref="btn-confirm-download">
+              <button type="button" class="component-button component-button--h40 component-button--black component-button--w-full" data-ref="btn-confirm-download">
                 <span class="material-symbols-rounded">download</span>
                 <span data-ref="btn-confirm-download-text">Descargar PNG (${baseW} × ${baseH} px)</span>
               </button>

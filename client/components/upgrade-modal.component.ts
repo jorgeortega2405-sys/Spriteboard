@@ -84,12 +84,12 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
                 </div>
               </div>
 
-              <button type="button" class="btn btn--h40 btn--black btn--w-full upgrade-modal__btn-cta" data-ref="btn-upgrade-cta">
+              <button type="button" class="component-button component-button--h40 component-button--black component-button--w-full upgrade-modal__btn-cta" data-ref="btn-upgrade-cta">
                 <span class="upgrade-modal__btn-text" data-ref="upgrade-cta-text">${getCtaLabel(selectedPlan)}</span>
               </button>
             </div>
 
-            <button type="button" class="btn btn--h40 btn--w-full upgrade-modal__btn-view-all" data-ref="btn-upgrade-view-all">
+            <button type="button" class="component-button component-button--h40 component-button--w-full upgrade-modal__btn-view-all" data-ref="btn-upgrade-view-all">
               <span>${t('upgrade_modal.view_all_link') || 'Ver todos los planes y características'}</span>
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_forward"></use></svg>
             </button>

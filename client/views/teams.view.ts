@@ -753,7 +753,7 @@ class TeamsController {
       if (canManage && !isOwner && member.user_id !== currentUser?.id) {
         const removeBtn = document.createElement('button');
         removeBtn.type = 'button';
-        removeBtn.className = 'btn-icon-soft';
+        removeBtn.className = 'component-button component-button--icon-only component-button--ghost component-button--h28';
         removeBtn.setAttribute('data-tooltip', `Remover a ${member.username}`);
         removeBtn.setAttribute('aria-label', `Remover a ${member.username}`);
         removeBtn.innerHTML = '<svg class="component-icon" aria-hidden="true" style="width: 18px; height: 18px;"><use href="/icons.svg#person_remove"></use></svg>';

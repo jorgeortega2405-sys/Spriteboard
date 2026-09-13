@@ -81,6 +81,7 @@ export interface CollaboratorState {
   hideCursor?: boolean;
   role?: string;
   subscriptionTier?: SubscriptionTierType;
+  subscriptionTierColor?: string;
   userId: number;
   username: string;
   x?: number;
@@ -91,5 +92,6 @@ export interface OwnerInfo {
   avatarUrl?: string | null;
   id?: number | null;
   subscriptionTier?: SubscriptionTierType;
+  subscriptionTierColor?: string;
   username: string;
 }

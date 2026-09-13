@@ -18,7 +18,7 @@ export function openMoveCanvasModal(canvasOrCanvases: CanvasItem | CanvasItem[],
   const initialBodyHtml = `
     <div class="move-folders-container" data-ref="move-folders-container">
       <div class="move-folders-header-action" data-ref="move-folders-header-action">
-        <button type="button" class="btn btn--h34 btn--w-full btn--bordered move-btn-new-folder" data-ref="btn-modal-new-folder">
+        <button type="button" class="component-button component-button--h34 component-button--w-full component-button--bordered move-btn-new-folder" data-ref="btn-modal-new-folder">
           <span class="material-symbols-rounded">create_new_folder</span>
           <span data-i18n="canvas.folder_move_new_folder">${t('canvas.folder_move_new_folder')}</span>
         </button>
@@ -40,7 +40,7 @@ export function openMoveCanvasModal(canvasOrCanvases: CanvasItem | CanvasItem[],
   const modal = openModal({
     bodyHtml: initialBodyHtml,
     cancelText: t('modal.cancel'),
-    confirmClass: 'btn--black',
+    confirmClass: 'component-button--black',
     confirmText: t('canvas.folder_move_submit'),
     description: descriptionText,
     size: 'sm',

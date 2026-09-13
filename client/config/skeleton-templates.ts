@@ -141,8 +141,8 @@ export const SKELETON_TEMPLATES: Record<string, string> = {
           <div class="card__body" data-ref="skeleton-centered-form-body">
             <div class="skeleton skeleton--input" style="height: 55px; border-radius: var(--radius-md); margin: 0;"></div>
             <div class="skeleton skeleton--input" style="height: 55px; border-radius: var(--radius-md); margin: 0;"></div>
-            <div class="skeleton skeleton--btn" style="height: 55px; border-radius: var(--radius-md); margin: 0;"></div>
-            <div class="skeleton skeleton--btn" style="height: 55px; border-radius: var(--radius-md); margin: 0;"></div>
+            <div class="skeleton skeleton--button" style="height: 55px; border-radius: var(--radius-md); margin: 0;"></div>
+            <div class="skeleton skeleton--button" style="height: 55px; border-radius: var(--radius-md); margin: 0;"></div>
             <div class="skeleton skeleton--text skeleton--w-50 skeleton--mx-auto" style="height: 14px; margin: 4px auto 0 auto;"></div>
           </div>
         </div>

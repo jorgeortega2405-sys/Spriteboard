@@ -54,6 +54,23 @@ export const TIER_LIMITS: Record<string, TierLimits> = {
   },
 };
 
+export const TIER_BORDER_COLORS: Record<string, string> = {
+  free: '#9ca3af',
+  plus: '#22c55e',
+  pro: '#3b82f6',
+  ultra: 'conic-gradient(from 295deg, #E92D18 0% 28%, #306EE2 28% 57%, #249A41 57% 85%, #CD9308 85% 100%)',
+  business: 'conic-gradient(from 295deg, #8b5cf6 0% 28%, #ec4899 28% 57%, #3b82f6 57% 85%, #6366f1 85% 100%)',
+  negocios: 'conic-gradient(from 295deg, #8b5cf6 0% 28%, #ec4899 28% 57%, #3b82f6 57% 85%, #6366f1 85% 100%)',
+  escuelas: 'conic-gradient(from 295deg, #8b5cf6 0% 28%, #ec4899 28% 57%, #3b82f6 57% 85%, #6366f1 85% 100%)',
+  docentes: 'conic-gradient(from 295deg, #8b5cf6 0% 28%, #ec4899 28% 57%, #3b82f6 57% 85%, #6366f1 85% 100%)',
+  education: 'conic-gradient(from 295deg, #8b5cf6 0% 28%, #ec4899 28% 57%, #3b82f6 57% 85%, #6366f1 85% 100%)',
+};
+
+export function getTierBorderColor(tier?: string): string {
+  const normalized = (tier || 'free').toLowerCase();
+  return TIER_BORDER_COLORS[normalized] || TIER_BORDER_COLORS.free;
+}
+
 export function getTierLimits(tier?: string): TierLimits {
   const normalized = (tier || 'free').toLowerCase();
   let key = normalized === 'negocios' ? 'business' : normalized;
@@ -179,6 +196,8 @@ export class SubscriptionService {
       billingPeriod: 'monthly',
       icon: 'brush',
       buttonText: 'Plan actual',
+      borderColor: '#9ca3af',
+      ringBg: '#9ca3af',
       features: [
         {
           title: '1 GB de almacenamiento en la nube',
@@ -226,6 +245,8 @@ export class SubscriptionService {
       badge: 'Más Popular',
       isPopular: true,
       buttonText: 'Obtén Spriteboard Pro',
+      borderColor: '#3b82f6',
+      ringBg: '#3b82f6',
       features: [
         {
           title: '10 GB de almacenamiento en la nube',
@@ -278,6 +299,8 @@ export class SubscriptionService {
       badge: 'Para Empresas',
       isPopular: false,
       buttonText: 'Obtén Spriteboard Negocios',
+      borderColor: '#8b5cf6',
+      ringBg: 'conic-gradient(from 295deg, #8b5cf6 0% 28%, #ec4899 28% 57%, #3b82f6 57% 85%, #6366f1 85% 100%)',
       features: [
         {
           title: '1 TB de almacenamiento masivo',

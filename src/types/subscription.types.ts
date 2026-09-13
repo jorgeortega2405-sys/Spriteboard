@@ -23,6 +23,8 @@ export interface SubscriptionTier {
   isPopular?: boolean;
   buttonText: string;
   features: SubscriptionFeature[];
+  borderColor?: string;
+  ringBg?: string;
 }
 
 export interface SubscriptionsResponse {

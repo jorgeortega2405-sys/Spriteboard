@@ -970,7 +970,7 @@ class HomeController {
         ${
           canSync
             ? `
-          <button type="button" class="btn btn--h28 btn--white canvas-card__btn-sync" data-ref="btn-sync-cloud">
+          <button type="button" class="component-button component-button--h28 component-button--white canvas-card__btn-sync" data-ref="btn-sync-cloud">
             <span class="material-symbols-rounded">cloud_upload</span>
             <span>${t('canvas.btn_sync')}</span>
           </button>
@@ -1291,7 +1291,7 @@ class HomeController {
       title: t('canvas.trash_confirm_title') || 'Mover a la papelera',
       description: t('canvas.trash_confirm_desc') || '¿Estás seguro de que deseas mover este lienzo a la papelera?',
       confirmText: t('canvas.menu_move_to_trash') || 'Mover a la papelera',
-      confirmClass: 'btn--danger',
+      confirmClass: 'component-button--danger',
       onConfirm: async (modal) => {
         modal.setConfirmLoading(true);
         try {
@@ -1598,7 +1598,7 @@ class HomeController {
 
   private confirmDeleteFolder(folder: FolderItem): void {
     openModal({
-      confirmClass: 'btn--danger',
+      confirmClass: 'component-button--danger',
       confirmText: t('canvas.folder_delete_submit'),
       description: t('canvas.folder_delete_desc'),
       size: 'sm',
@@ -1648,23 +1648,23 @@ class HomeController {
     toolbar.setAttribute('data-ref', 'selection-toolbar');
     toolbar.innerHTML = `
       <div class="selection-toolbar__left" data-ref="selection-toolbar-left">
-        <button type="button" class="btn btn--icon btn--h34 selection-toolbar__btn selection-toolbar__btn--close" data-ref="btn-selection-close" data-tooltip="Cancelar selección" aria-label="Cancelar selección">
+        <button type="button" class="component-button component-button--icon-only component-button--h34 selection-toolbar__btn selection-toolbar__btn--close" data-ref="btn-selection-close" data-tooltip="Cancelar selección" aria-label="Cancelar selección">
           ${createIconSvg('close')}
         </button>
         <span class="selection-toolbar__count" data-ref="selection-count">0 seleccionados</span>
       </div>
       <div class="selection-toolbar__divider" data-ref="selection-toolbar-divider"></div>
       <div class="selection-toolbar__actions" data-ref="selection-toolbar-actions">
-        <button type="button" class="btn btn--icon btn--h34 selection-toolbar__btn" data-ref="btn-selection-download" data-tooltip="Descargar" aria-label="Descargar">
+        <button type="button" class="component-button component-button--icon-only component-button--h34 selection-toolbar__btn" data-ref="btn-selection-download" data-tooltip="Descargar" aria-label="Descargar">
           ${createIconSvg('download')}
         </button>
-        <button type="button" class="btn btn--icon btn--h34 selection-toolbar__btn" data-ref="btn-selection-move" data-tooltip="Mover a carpeta" aria-label="Mover a carpeta">
+        <button type="button" class="component-button component-button--icon-only component-button--h34 selection-toolbar__btn" data-ref="btn-selection-move" data-tooltip="Mover a carpeta" aria-label="Mover a carpeta">
           ${createIconSvg('drive_file_move')}
         </button>
-        <button type="button" class="btn btn--icon btn--h34 selection-toolbar__btn" data-ref="btn-selection-duplicate" data-tooltip="Duplicar" aria-label="Duplicar">
+        <button type="button" class="component-button component-button--icon-only component-button--h34 selection-toolbar__btn" data-ref="btn-selection-duplicate" data-tooltip="Duplicar" aria-label="Duplicar">
           ${createIconSvg('filter_none')}
         </button>
-        <button type="button" class="btn btn--icon btn--h34 btn--danger-hover selection-toolbar__btn" data-ref="btn-selection-delete" data-tooltip="Mover a la papelera" aria-label="Mover a la papelera">
+        <button type="button" class="component-button component-button--icon-only component-button--h34 component-button--danger-hover selection-toolbar__btn" data-ref="btn-selection-delete" data-tooltip="Mover a la papelera" aria-label="Mover a la papelera">
           ${createIconSvg('delete')}
         </button>
       </div>
@@ -2198,7 +2198,7 @@ class HomeController {
       title: t('canvas.selection_delete_confirm_title') || 'Mover a la papelera',
       description: t('canvas.selection_delete_confirm_desc', { count }) || `¿Estás seguro de que deseas mover los ${count} lienzos seleccionados a la papelera?`,
       confirmText: t('canvas.selection_delete_submit') || 'Mover a la papelera',
-      confirmClass: 'btn--danger',
+      confirmClass: 'component-button--danger',
       onConfirm: async (modal) => {
         modal.setConfirmLoading(true);
         try {

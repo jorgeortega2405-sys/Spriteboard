@@ -220,17 +220,17 @@ class TrashController {
     toolbar.setAttribute('data-ref', 'selection-toolbar');
     toolbar.innerHTML = `
       <div class="selection-toolbar__left" data-ref="selection-toolbar-left">
-        <button type="button" class="btn btn--icon btn--h34 selection-toolbar__btn selection-toolbar__btn--close" data-ref="btn-selection-close" data-tooltip="${t('canvas.cancel_selection') || 'Cancelar selección'}" aria-label="${t('canvas.cancel_selection') || 'Cancelar selección'}">
+        <button type="button" class="component-button component-button--icon-only component-button--h34 selection-toolbar__btn selection-toolbar__btn--close" data-ref="btn-selection-close" data-tooltip="${t('canvas.cancel_selection') || 'Cancelar selección'}" aria-label="${t('canvas.cancel_selection') || 'Cancelar selección'}">
           ${createIconSvg('close')}
         </button>
         <span class="selection-toolbar__count" data-ref="selection-count">0 seleccionados</span>
       </div>
       <div class="selection-toolbar__divider" data-ref="selection-toolbar-divider"></div>
       <div class="selection-toolbar__actions" data-ref="selection-toolbar-actions">
-        <button type="button" class="btn btn--icon btn--h34 selection-toolbar__btn" data-ref="btn-selection-restore" data-tooltip="${t('trash.btn_restore') || 'Restaurar'}" aria-label="${t('trash.btn_restore') || 'Restaurar'}">
+        <button type="button" class="component-button component-button--icon-only component-button--h34 selection-toolbar__btn" data-ref="btn-selection-restore" data-tooltip="${t('trash.btn_restore') || 'Restaurar'}" aria-label="${t('trash.btn_restore') || 'Restaurar'}">
           ${createIconSvg('restore_from_trash')}
         </button>
-        <button type="button" class="btn btn--icon btn--h34 btn--danger-hover selection-toolbar__btn" data-ref="btn-selection-delete-forever" data-tooltip="${t('trash.btn_delete_forever') || 'Eliminar definitivamente'}" aria-label="${t('trash.btn_delete_forever') || 'Eliminar definitivamente'}">
+        <button type="button" class="component-button component-button--icon-only component-button--h34 component-button--danger-hover selection-toolbar__btn" data-ref="btn-selection-delete-forever" data-tooltip="${t('trash.btn_delete_forever') || 'Eliminar definitivamente'}" aria-label="${t('trash.btn_delete_forever') || 'Eliminar definitivamente'}">
           ${createIconSvg('delete_forever')}
         </button>
       </div>
@@ -570,7 +570,7 @@ class TrashController {
       title: t('trash.delete_forever_confirm_title') || 'Eliminar definitivamente',
       description: t('trash.delete_forever_confirm_desc') || '¿Estás seguro de que deseas eliminar permanentemente este lienzo? Esta acción no se puede deshacer.',
       confirmText: t('trash.btn_delete_forever') || 'Eliminar definitivamente',
-      confirmClass: 'btn--danger',
+      confirmClass: 'component-button--danger',
       onConfirm: async (modal) => {
         modal.setConfirmLoading(true);
         try {
@@ -616,7 +616,7 @@ class TrashController {
       title: t('trash.delete_forever_confirm_title') || 'Eliminar definitivamente',
       description: `¿Estás seguro de que deseas eliminar permanentemente los ${list.length} lienzos seleccionados? Esta acción no se puede deshacer.`,
       confirmText: t('trash.btn_delete_forever') || 'Eliminar definitivamente',
-      confirmClass: 'btn--danger',
+      confirmClass: 'component-button--danger',
       onConfirm: async (modal) => {
         modal.setConfirmLoading(true);
         try {
@@ -643,7 +643,7 @@ class TrashController {
       title: t('trash.empty_confirm_title') || 'Vaciar papelera',
       description: t('trash.empty_confirm_desc') || '¿Estás seguro de que deseas eliminar definitivamente todos los elementos de la papelera? Esta acción no se puede deshacer.',
       confirmText: t('trash.btn_empty_trash') || 'Vaciar papelera',
-      confirmClass: 'btn--danger',
+      confirmClass: 'component-button--danger',
       onConfirm: async (modal) => {
         modal.setConfirmLoading(true);
         try {

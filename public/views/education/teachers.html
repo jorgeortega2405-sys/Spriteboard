@@ -7,16 +7,16 @@
 
       <div class="home-floating-top__right" data-ref="component-top-right">
         <div class="home-floating-actions" data-ref="teachers-top-actions">
-          <button type="button" class="btn btn--h40 btn--icon home-floating-btn" data-ref="btn-toggle-search" data-tooltip="Buscar docentes" aria-label="Buscar docentes">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-toggle-search" data-tooltip="Buscar docentes" aria-label="Buscar docentes">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
           </button>
-          <button type="button" class="btn btn--h40 btn--icon home-floating-btn" data-ref="btn-add-teacher" data-tooltip="Vincular docente" aria-label="Vincular docente">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-add-teacher" data-tooltip="Vincular docente" aria-label="Vincular docente">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#person_add"></use></svg>
           </button>
         </div>
 
         <div class="canvas-section__dropdown-wrapper home-filter-dropdown-wrapper" data-ref="education-tab-filter-wrapper">
-          <button type="button" class="btn btn--h40 btn--icon home-floating-btn" data-ref="btn-trigger-education-filter" data-tooltip="Filtrar vista" aria-label="Filtrar vista">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-trigger-education-filter" data-tooltip="Filtrar vista" aria-label="Filtrar vista">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
           </button>
           <div class="dropdown-backdrop" data-ref="dropdown-backdrop-education-filter">
@@ -51,7 +51,7 @@
           <div class="component-search__input-box" data-ref="search-input-box">
             <input class="component-search__input" data-ref="education-search-input" data-i18n-placeholder="education.search_teachers_placeholder" type="text" maxlength="100" autocomplete="off" />
           </div>
-          <button type="button" class="btn btn--h34 btn--icon btn--clear-search" data-ref="btn-clear-search" style="display: none; margin-right: 4px;" aria-label="Limpiar búsqueda">
+          <button type="button" class="component-button component-button--h34 component-button--icon-only" data-ref="btn-clear-search" style="display: none; margin-right: 4px;" aria-label="Limpiar búsqueda">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
           </button>
         </div>
@@ -94,8 +94,8 @@
             <span class="field__label" data-ref="label-teacher-query" data-i18n="education.add_teacher_input_label">Nombre de usuario o correo</span>
           </label>
           <div class="modal-card__actions">
-            <button type="button" class="btn btn--h40 btn--outline" data-ref="btn-cancel-teacher" data-i18n="modal.cancel">Cancelar</button>
-            <button type="submit" class="btn btn--h40 btn--black" data-ref="btn-submit-teacher" data-i18n="education.add_teacher_submit">Vincular docente</button>
+            <button type="button" class="component-button component-button--h40 component-button--outline" data-ref="btn-cancel-teacher" data-i18n="modal.cancel">Cancelar</button>
+            <button type="submit" class="component-button component-button--h40 component-button--black" data-ref="btn-submit-teacher" data-i18n="education.add_teacher_submit">Vincular docente</button>
           </div>
           <div class="banner banner--danger is-hidden" data-ref="banner-teacher-error"></div>
         </form>

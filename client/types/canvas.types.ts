@@ -78,6 +78,7 @@ export interface CanvasMember {
   email?: string | null;
   avatar_url?: string | null;
   subscription_tier?: 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios' | 'escuelas' | 'docentes' | 'education';
+  subscription_tier_color?: string;
   role: 'editor' | 'viewer';
   created_at: string;
 }

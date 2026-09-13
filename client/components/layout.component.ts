@@ -8,6 +8,7 @@ import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { closeWebSocket, initWebSocket } from '../services/websocket.service.js';
 import { CanvasItem } from '../types/canvas.types.js';
+import { applyAvatarTier, getFallbackTierColor } from '../utils/tier.util.js';
 import { openCreateCanvasModal } from './create-canvas-modal.component.js';
 import { openUpgradeModal } from './upgrade-modal.component.js';
 
@@ -1041,35 +1042,12 @@ function setupRailUserControls(sidebar: HTMLElement): void {
       const userTier = currentUser.subscription_tier || 'free';
       const updateTopBarTier = (tier: string) => {
         const tVal = tier || (currentUser ? currentUser.subscription_tier : 'free') || 'free';
+        const color = currentUser?.subscription_tier_color;
         if (avatarBtn) {
-          avatarBtn.setAttribute('data-tier', tVal);
-          avatarBtn.classList.remove(
-            'avatar-tier--free',
-            'avatar-tier--plus',
-            'avatar-tier--pro',
-            'avatar-tier--ultra',
-            'avatar-tier--business',
-            'avatar-tier--negocios',
-            'avatar-tier--escuelas',
-            'avatar-tier--docentes',
-            'avatar-tier--education'
-          );
-          avatarBtn.classList.add(`avatar-tier--${tVal}`);
+          applyAvatarTier(avatarBtn, tVal, color);
         }
         if (activeAvatarBox) {
-          activeAvatarBox.setAttribute('data-tier', tVal);
-          activeAvatarBox.classList.remove(
-            'avatar-tier--free',
-            'avatar-tier--plus',
-            'avatar-tier--pro',
-            'avatar-tier--ultra',
-            'avatar-tier--business',
-            'avatar-tier--negocios',
-            'avatar-tier--escuelas',
-            'avatar-tier--docentes',
-            'avatar-tier--education'
-          );
-          activeAvatarBox.classList.add(`avatar-tier--${tVal}`);
+          applyAvatarTier(activeAvatarBox, tVal, color);
         }
       };
       updateTopBarTier(userTier);
@@ -1172,7 +1150,7 @@ function setupRailUserControls(sidebar: HTMLElement): void {
             acc.avatar_url || API_ROUTES.avatar(acc.username);
 
           item.innerHTML = `
-            <div class="account-item__avatar avatar-tier--${accTier}" data-ref="account-avatar-${acc.id}" data-tier="${accTier}">
+            <div class="account-item__avatar" data-ref="account-avatar-${acc.id}" data-tier="${accTier}" style="--avatar-tier-bg: ${acc.subscription_tier_color || getFallbackTierColor(accTier)};">
               <img class="avatar-img image-lazy-fade" data-ref="avatar-img-${acc.id}" src="${accAvatarUrl}" alt="${escapeHtml(acc.username)}" referrerpolicy="no-referrer" onload="this.classList.add('image-loaded')" onerror="this.classList.add('image-loaded')" />
             </div>
             <div class="account-item__info" data-ref="account-info-${acc.id}">
@@ -1647,7 +1625,7 @@ function setupChatSidebarEvents(sidebarElement: HTMLElement): void {
 
       const btnLike = document.createElement('button');
       btnLike.type = 'button';
-      btnLike.className = 'btn btn--icon chat-feedback-btn chat-feedback-btn--like';
+      btnLike.className = 'component-button component-button--icon-only chat-feedback-btn chat-feedback-btn--like';
       btnLike.setAttribute('data-ref', 'btn-chat-like');
       btnLike.setAttribute('data-tooltip', 'Buena respuesta');
       btnLike.setAttribute('aria-label', 'Buena respuesta');
@@ -1655,7 +1633,7 @@ function setupChatSidebarEvents(sidebarElement: HTMLElement): void {
 
       const btnDislike = document.createElement('button');
       btnDislike.type = 'button';
-      btnDislike.className = 'btn btn--icon chat-feedback-btn chat-feedback-btn--dislike';
+      btnDislike.className = 'component-button component-button--icon-only chat-feedback-btn chat-feedback-btn--dislike';
       btnDislike.setAttribute('data-ref', 'btn-chat-dislike');
       btnDislike.setAttribute('data-tooltip', 'Mala respuesta');
       btnDislike.setAttribute('aria-label', 'Mala respuesta');
@@ -1663,7 +1641,7 @@ function setupChatSidebarEvents(sidebarElement: HTMLElement): void {
 
       const btnCopy = document.createElement('button');
       btnCopy.type = 'button';
-      btnCopy.className = 'btn btn--icon chat-feedback-btn chat-feedback-btn--copy';
+      btnCopy.className = 'component-button component-button--icon-only chat-feedback-btn chat-feedback-btn--copy';
       btnCopy.setAttribute('data-ref', 'btn-chat-copy');
       btnCopy.setAttribute('data-tooltip', 'Copiar respuesta');
       btnCopy.setAttribute('aria-label', 'Copiar respuesta');

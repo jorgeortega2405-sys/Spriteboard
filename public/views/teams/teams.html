@@ -8,28 +8,28 @@
 
         <div class="home-floating-top__right" data-ref="component-top-right">
           <div class="home-floating-actions" data-ref="teams-default-actions">
-            <button type="button" class="btn btn--h40 btn--icon home-floating-btn" data-ref="btn-toggle-search" data-tooltip="Buscar equipos" aria-label="Buscar equipos">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-toggle-search" data-tooltip="Buscar equipos" aria-label="Buscar equipos">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
             </button>
-            <button type="button" class="btn btn--h40 btn--icon home-floating-btn" data-ref="btn-create-team" data-tooltip="Crear equipo" aria-label="Crear equipo">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-create-team" data-tooltip="Crear equipo" aria-label="Crear equipo">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#group_add"></use></svg>
             </button>
           </div>
 
           <div class="home-floating-actions" data-ref="teams-selected-actions" style="display: none;">
-            <button type="button" class="btn btn--h40 btn--icon home-floating-btn" data-ref="btn-action-deselect" data-tooltip="Cancelar selección" aria-label="Cancelar selección">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-action-deselect" data-tooltip="Cancelar selección" aria-label="Cancelar selección">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
             </button>
-            <button type="button" class="btn btn--h40 btn--icon home-floating-btn" data-ref="btn-action-create-canvas" data-tooltip="Crear lienzo en este equipo" aria-label="Crear lienzo en este equipo">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-action-create-canvas" data-tooltip="Crear lienzo en este equipo" aria-label="Crear lienzo en este equipo">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#brush"></use></svg>
             </button>
-            <button type="button" class="btn btn--h40 btn--icon home-floating-btn" data-ref="btn-action-members" data-tooltip="Miembros" aria-label="Miembros">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-action-members" data-tooltip="Miembros" aria-label="Miembros">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
             </button>
-            <button type="button" class="btn btn--h40 btn--icon home-floating-btn" data-ref="btn-action-edit" data-tooltip="Editar" aria-label="Editar">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-action-edit" data-tooltip="Editar" aria-label="Editar">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
             </button>
-            <button type="button" class="btn btn--h40 btn--danger btn--icon home-floating-btn" data-ref="btn-action-delete" data-tooltip="Eliminar" aria-label="Eliminar">
+            <button type="button" class="component-button component-button--h40 component-button--danger component-button--icon-only home-floating-btn" data-ref="btn-action-delete" data-tooltip="Eliminar" aria-label="Eliminar">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
             </button>
           </div>
@@ -43,7 +43,7 @@
             <div class="component-search__input-box" data-ref="search-input-box">
               <input class="component-search__input" data-ref="teams-search-input" data-i18n-placeholder="teams.search_placeholder" type="text" maxlength="100" autocomplete="off" />
             </div>
-            <button type="button" class="btn btn--h34 btn--icon btn--clear-search" data-ref="btn-clear-search" style="display: none; margin-right: 4px;" aria-label="Limpiar búsqueda">
+            <button type="button" class="component-button component-button--h34 component-button--icon-only" data-ref="btn-clear-search" style="display: none; margin-right: 4px;" aria-label="Limpiar búsqueda">
               <svg class="component-icon" aria-hidden="true" style="font-size: 18px;"><use href="/icons.svg#close"></use></svg>
             </button>
           </div>
@@ -77,11 +77,11 @@
               </div>
             </div>
             <div class="component-locked-state__actions" data-ref="teams-locked-actions">
-              <button type="button" class="btn btn--h40 btn--black" data-ref="btn-locked-upgrade">
+              <button type="button" class="component-button component-button--h40 component-button--black" data-ref="btn-locked-upgrade">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#workspace_premium"></use></svg>
                 <span data-i18n="teams.locked_btn_upgrade">Mejorar a Pro</span>
               </button>
-              <button type="button" class="btn btn--h40 btn--outline" data-ref="btn-locked-home" data-i18n="teams.locked_btn_home">Ir al inicio</button>
+              <button type="button" class="component-button component-button--h40 component-button--outline" data-ref="btn-locked-home" data-i18n="teams.locked_btn_home">Ir al inicio</button>
             </div>
           </div>
         </div>
@@ -124,8 +124,8 @@
           </label>
 
           <div class="modal-card__actions">
-            <button type="button" class="btn btn--h40 btn--outline" data-ref="btn-cancel-team" data-i18n="modal.cancel">Cancelar</button>
-            <button type="submit" class="btn btn--h40 btn--black" data-ref="btn-submit-team" data-i18n="teams.btn_save">Guardar equipo</button>
+            <button type="button" class="component-button component-button--h40 component-button--outline" data-ref="btn-cancel-team" data-i18n="modal.cancel">Cancelar</button>
+            <button type="submit" class="component-button component-button--h40 component-button--black" data-ref="btn-submit-team" data-i18n="teams.btn_save">Guardar equipo</button>
           </div>
           <div class="banner banner--danger is-hidden" data-ref="banner-team-error"></div>
         </form>
@@ -149,7 +149,7 @@
                 <input class="field__input" data-ref="input-add-member" type="text" placeholder=" " autocomplete="off" />
                 <span class="field__label" data-ref="label-add-member" data-i18n="teams.add_member_placeholder">Buscar por nombre o correo...</span>
               </label>
-              <button type="button" class="btn btn--h55 btn--black" data-ref="btn-add-member" style="white-space: nowrap; padding: 0 16px;">
+              <button type="button" class="component-button component-button--h55 component-button--black" data-ref="btn-add-member" style="white-space: nowrap; padding: 0 16px;">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#person_add"></use></svg>
                 <span data-i18n="teams.btn_add_member">Agregar</span>
               </button>
@@ -176,7 +176,7 @@
           </div>
 
           <div class="modal-card__actions">
-            <button type="button" class="btn btn--h40 btn--black" data-ref="btn-done-members" data-i18n="modal.close">Cerrar</button>
+            <button type="button" class="component-button component-button--h40 component-button--black" data-ref="btn-done-members" data-i18n="modal.close">Cerrar</button>
           </div>
         </div>
       </div>

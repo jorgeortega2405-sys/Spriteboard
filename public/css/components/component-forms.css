@@ -457,12 +457,12 @@ body[data-theme="dark"] .login-logo-img {
   font-weight: 400;
 }
 
-.layout-header .btn-search-mobile {
+.layout-header .component-button--search-mobile {
   display: none;
 }
 
 @media (max-width: 768px) {
-  .layout-header .btn-search-mobile {
+  .layout-header .component-button--search-mobile {
     display: inline-flex;
   }
 

@@ -80,7 +80,7 @@ export function openCanvasMetricsModal(canvasUuid: string, canvasName: string): 
               <h2 class="component-top-title" data-ref="metrics-canvas-name">${escapeHtml(canvasName)}</h2>
             </div>
             <div class="component-top-right">
-              <button type="button" class="btn btn--h34 btn--icon" data-ref="btn-metrics-refresh" data-tooltip="Actualizar datos" aria-label="Actualizar datos">
+              <button type="button" class="component-button component-button--h34 component-button--icon-only" data-ref="btn-metrics-refresh" data-tooltip="Actualizar datos" aria-label="Actualizar datos">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#refresh"></use></svg>
               </button>
             </div>

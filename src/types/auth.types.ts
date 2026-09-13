@@ -12,6 +12,7 @@ export interface UserPayload {
   role?: UserRole;
   google_id?: string | null;
   subscription_tier?: 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios' | 'escuelas' | 'docentes' | 'education';
+  subscription_tier_color?: string;
   two_factor_enabled?: boolean;
 }
 
@@ -23,6 +24,7 @@ export interface SessionAccount {
   role?: UserRole;
   google_id?: string | null;
   subscription_tier?: 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios' | 'escuelas' | 'docentes' | 'education';
+  subscription_tier_color?: string;
   two_factor_enabled?: boolean;
   sessionId?: string;
   last_accessed?: number;
