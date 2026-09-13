@@ -246,6 +246,7 @@ export class DesignController {
   private lastPixelX = -1;
   private lastPixelY = -1;
   private hoveredPixel: { x: number; y: number } | null = null;
+  private selectionBeforeData: ImageData | null = null;
   private get visitedStrokePixels(): Set<string> {
     return this.toolsManager.visitedStrokePixels;
   }
@@ -1055,6 +1056,7 @@ export class DesignController {
       setDimensions: (width, height) => {
         this.canvasWidth = width;
         this.canvasHeight = height;
+        this.updateCanvasModeRestrictions();
       },
       toggleLayerVisibility: (layerId, visible, broadcast, frameId) => {
         this.toggleLayerVisibility(layerId, visible ?? true, broadcast ?? false, frameId);
@@ -2365,6 +2367,7 @@ export class DesignController {
     const layer = this.getActiveLayer();
     if (!layer || !layer.visible) return;
 
+    const beforeData = layer.ctx.getImageData(0, 0, this.canvasWidth, this.canvasHeight);
     layer.ctx.imageSmoothingEnabled = false;
     if (this.isInfinite && layer.chunkGrid) {
       let sourceCanvas: HTMLCanvasElement = this.shapeCanvas;
@@ -2383,6 +2386,8 @@ export class DesignController {
     } else {
       layer.ctx.drawImage(this.shapeCanvas, this.shapeTemplateX, this.shapeTemplateY, this.shapeTemplateW, this.shapeTemplateH);
     }
+    const afterData = layer.ctx.getImageData(0, 0, this.canvasWidth, this.canvasHeight);
+    this.pushUndoStep(beforeData, afterData, layer.id, this.activeFrameId);
 
     if (broadcast) {
       this.collaborationManager.sendAction('inject_shape', {
@@ -2514,9 +2519,49 @@ export class DesignController {
     const step = this.historyManager.undo();
     if (!step) return;
 
+    if (step.type === 'canvas_transform') {
+      if (step.canvasWidthBefore && step.canvasHeightBefore) {
+        this.canvasWidth = step.canvasWidthBefore;
+        this.canvasHeight = step.canvasHeightBefore;
+        const parent = this.viewportCanvas?.parentElement;
+        if (parent) {
+          const rect = parent.getBoundingClientRect();
+          this.panX = Math.round((rect.width - this.canvasWidth * this.zoom) / 2);
+          this.panY = Math.round((rect.height - this.canvasHeight * this.zoom) / 2);
+        }
+      }
+      if (step.layersSnapshotBefore) {
+        for (const snap of step.layersSnapshotBefore) {
+          const frame = this.frames.find((f) => f.id === snap.frameId);
+          const layer = frame?.layers.find((l) => l.id === snap.layerId);
+          if (layer) {
+            layer.canvas.width = this.canvasWidth;
+            layer.canvas.height = this.canvasHeight;
+            if (snap.imageData) {
+              layer.ctx.putImageData(snap.imageData, 0, 0);
+            } else if (snap.dataUrl) {
+              const img = new Image();
+              img.onload = () => {
+                layer.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
+                layer.ctx.drawImage(img, 0, 0);
+                this.requestRedraw();
+              };
+              img.src = snap.dataUrl;
+            }
+          }
+        }
+      }
+      this.renderLayersCards();
+      this.requestRedraw();
+      this.scheduleAutoSave();
+      this.updateCanvasModeRestrictions();
+      this.updateUndoRedoUI();
+      return;
+    }
+
     const frame = this.frames.find((f) => f.id === step.frameId);
     const layer = frame?.layers.find((l) => l.id === step.layerId);
-    if (layer) {
+    if (layer && step.beforeData) {
       layer.ctx.putImageData(step.beforeData, step.x ?? 0, step.y ?? 0);
       if (this.isInfinite && layer.chunkGrid) {
         const tCanvas = document.createElement('canvas');
@@ -2531,8 +2576,8 @@ export class DesignController {
       dispatchCanvasAction(this.getActionContext(), {
         payload: {
           dataUrl: this.isInfinite ? '' : layer.canvas.toDataURL('image/png'),
-          frameId: step.frameId,
-          layerId: step.layerId,
+          frameId: step.frameId || '',
+          layerId: step.layerId || '',
         },
         type: 'update_layer_image',
       });
@@ -2545,9 +2590,49 @@ export class DesignController {
     const step = this.historyManager.redo();
     if (!step) return;
 
+    if (step.type === 'canvas_transform') {
+      if (step.canvasWidthAfter && step.canvasHeightAfter) {
+        this.canvasWidth = step.canvasWidthAfter;
+        this.canvasHeight = step.canvasHeightAfter;
+        const parent = this.viewportCanvas?.parentElement;
+        if (parent) {
+          const rect = parent.getBoundingClientRect();
+          this.panX = Math.round((rect.width - this.canvasWidth * this.zoom) / 2);
+          this.panY = Math.round((rect.height - this.canvasHeight * this.zoom) / 2);
+        }
+      }
+      if (step.layersSnapshotAfter) {
+        for (const snap of step.layersSnapshotAfter) {
+          const frame = this.frames.find((f) => f.id === snap.frameId);
+          const layer = frame?.layers.find((l) => l.id === snap.layerId);
+          if (layer) {
+            layer.canvas.width = this.canvasWidth;
+            layer.canvas.height = this.canvasHeight;
+            if (snap.imageData) {
+              layer.ctx.putImageData(snap.imageData, 0, 0);
+            } else if (snap.dataUrl) {
+              const img = new Image();
+              img.onload = () => {
+                layer.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
+                layer.ctx.drawImage(img, 0, 0);
+                this.requestRedraw();
+              };
+              img.src = snap.dataUrl;
+            }
+          }
+        }
+      }
+      this.renderLayersCards();
+      this.requestRedraw();
+      this.scheduleAutoSave();
+      this.updateCanvasModeRestrictions();
+      this.updateUndoRedoUI();
+      return;
+    }
+
     const frame = this.frames.find((f) => f.id === step.frameId);
     const layer = frame?.layers.find((l) => l.id === step.layerId);
-    if (layer) {
+    if (layer && step.afterData) {
       layer.ctx.putImageData(step.afterData, step.x ?? 0, step.y ?? 0);
       if (this.isInfinite && layer.chunkGrid) {
         const tCanvas = document.createElement('canvas');
@@ -2562,8 +2647,8 @@ export class DesignController {
       dispatchCanvasAction(this.getActionContext(), {
         payload: {
           dataUrl: this.isInfinite ? '' : layer.canvas.toDataURL('image/png'),
-          frameId: step.frameId,
-          layerId: step.layerId,
+          frameId: step.frameId || '',
+          layerId: step.layerId || '',
         },
         type: 'update_layer_image',
       });
@@ -2646,6 +2731,14 @@ export class DesignController {
   }
 
   private openSpriteSlicerModal(): void {
+    if (this.isInfinite) {
+      showToast('El separador de sprites requiere un lienzo delimitado', 'warning');
+      return;
+    }
+    if (this.canvasWidth > 2048 || this.canvasHeight > 2048) {
+      showToast('El separador de sprites no está disponible para lienzos mayores a 2048px por rendimiento', 'warning');
+      return;
+    }
     let sourceCanvas: HTMLCanvasElement | null = null;
     let detectedRects: DetectedSpriteRect[] = [];
     let slicerMode: 'auto' | 'grid' = 'auto';
@@ -2993,8 +3086,12 @@ export class DesignController {
   }
 
   private openResizeCanvasModal(): void {
-    let currentMode: 'scale' | 'anchor' = 'scale';
-    let currentAnchor: 'top-left' | 'top-center' | 'top-right' | 'center-left' | 'center' | 'center-right' | 'bottom-left' | 'bottom-center' | 'bottom-right' = 'center';
+    if (this.isInfinite) {
+      showToast('Los lienzos infinitos tienen un tamaño dinámico y no admiten redimensión fija', 'warning');
+      return;
+    }
+    let currentMode: 'scale' | 'anchor' = 'anchor';
+    let currentAnchor: 'top-left' | 'top-center' | 'top-right' | 'center-left' | 'center' | 'center-right' | 'bottom-left' | 'bottom-center' | 'bottom-right' = 'top-left';
     let currentScaleFit: 'fit' | 'stretch' = 'fit';
     let isAspectLocked = true;
     const initialW = this.canvasWidth;
@@ -3020,7 +3117,7 @@ export class DesignController {
           <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px; border-radius: 10px; background: var(--bg-surface-elevated, rgba(125, 125, 125, 0.06)); border: 1px solid var(--border-color);">
             <div style="flex: 1;">
               <span style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px;">Ancho (px)</span>
-              <input class="component-inline-control__input" data-ref="input-canvas-width" type="number" min="1" max="16384" value="${this.canvasWidth}" style="width: 100%; height: 38px; border-radius: 6px; border: 1px solid var(--border-color); text-align: center; font-weight: 600;" />
+              <input class="component-inline-control__input" data-ref="input-canvas-width" type="number" min="1" max="4096" value="${this.canvasWidth}" style="width: 100%; height: 38px; border-radius: 6px; border: 1px solid var(--border-color); text-align: center; font-weight: 600;" />
             </div>
 
             <button type="button" class="design-toolbar-btn is-active" data-ref="btn-lock-aspect" data-tooltip="Mantener proporción de aspecto" style="margin-top: 16px;">
@@ -3029,44 +3126,47 @@ export class DesignController {
 
             <div style="flex: 1;">
               <span style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px;">Alto (px)</span>
-              <input class="component-inline-control__input" data-ref="input-canvas-height" type="number" min="1" max="16384" value="${this.canvasHeight}" style="width: 100%; height: 38px; border-radius: 6px; border: 1px solid var(--border-color); text-align: center; font-weight: 600;" />
+              <input class="component-inline-control__input" data-ref="input-canvas-height" type="number" min="1" max="4096" value="${this.canvasHeight}" style="width: 100%; height: 38px; border-radius: 6px; border: 1px solid var(--border-color); text-align: center; font-weight: 600;" />
             </div>
           </div>
 
           <div style="display: flex; flex-direction: column; gap: 8px;">
             <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Estrategia de redimensión:</span>
             <div class="design-options-tray__badges" style="display: flex; gap: 6px;">
-              <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable is-active" data-ref="btn-strategy-scale">
-                <span class="component-icon">aspect_ratio</span>
-                <span>Escalar Píxeles (Nearest Neighbor)</span>
-              </button>
-              <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-strategy-anchor">
+              <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable is-active" data-ref="btn-strategy-anchor">
                 <span class="component-icon">crop_free</span>
                 <span>Expandir / Recortar (Anclaje)</span>
               </button>
+              <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-strategy-scale">
+                <span class="component-icon">aspect_ratio</span>
+                <span>Escalar Píxeles (Nearest Neighbor)</span>
+              </button>
             </div>
+            <span class="resize-strategy-hint" data-ref="resize-strategy-hint" style="font-size: 11px; color: var(--text-secondary);">
+              Modifica el tamaño del lienzo manteniendo los píxeles existentes en tamaño 1:1.
+            </span>
           </div>
 
-          <div class="resize-scale-options" data-ref="resize-scale-options" style="display: flex; flex-direction: column; gap: 6px; padding: 12px; border-radius: 8px; background: var(--bg-surface-elevated, rgba(125,125,125,0.04)); border: 1px solid var(--border-color);">
-            <span style="font-size: 12px; color: var(--text-secondary);">Ajuste proporcional:</span>
-            <div class="design-options-tray__badges" style="display: flex; gap: 6px;">
-              <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable is-active" data-ref="btn-scale-fit">Ajustar proporción (Fit)</button>
-              <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-scale-stretch">Estirar contenido (Stretch)</button>
-            </div>
-          </div>
-
-          <div class="resize-anchor-options" data-ref="resize-anchor-options" style="display: none; flex-direction: column; align-items: center; gap: 8px; padding: 12px; border-radius: 8px; background: var(--bg-surface-elevated, rgba(125,125,125,0.04)); border: 1px solid var(--border-color);">
+          <div class="resize-anchor-options" data-ref="resize-anchor-options" style="display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px; border-radius: 8px; background: var(--bg-surface-elevated, rgba(125,125,125,0.04)); border: 1px solid var(--border-color);">
             <span style="font-size: 12px; color: var(--text-secondary);">Punto de anclaje del contenido existente:</span>
             <div class="anchor-grid" data-ref="anchor-grid">
-              <button type="button" class="anchor-grid__cell" data-ref="anchor-top-left" data-anchor="top-left" title="Arriba Izquierda">↖</button>
+              <button type="button" class="anchor-grid__cell is-active" data-ref="anchor-top-left" data-anchor="top-left" title="Arriba Izquierda">↖</button>
               <button type="button" class="anchor-grid__cell" data-ref="anchor-top-center" data-anchor="top-center" title="Arriba Centro">↑</button>
               <button type="button" class="anchor-grid__cell" data-ref="anchor-top-right" data-anchor="top-right" title="Arriba Derecha">↗</button>
               <button type="button" class="anchor-grid__cell" data-ref="anchor-center-left" data-anchor="center-left" title="Centro Izquierda">←</button>
-              <button type="button" class="anchor-grid__cell is-active" data-ref="anchor-center" data-anchor="center" title="Centro">●</button>
+              <button type="button" class="anchor-grid__cell" data-ref="anchor-center" data-anchor="center" title="Centro">●</button>
               <button type="button" class="anchor-grid__cell" data-ref="anchor-center-right" data-anchor="center-right" title="Centro Derecha">→</button>
               <button type="button" class="anchor-grid__cell" data-ref="anchor-bottom-left" data-anchor="bottom-left" title="Abajo Izquierda">↙</button>
               <button type="button" class="anchor-grid__cell" data-ref="anchor-bottom-center" data-anchor="bottom-center" title="Abajo Centro">↓</button>
               <button type="button" class="anchor-grid__cell" data-ref="anchor-bottom-right" data-anchor="bottom-right" title="Abajo Derecha">↘</button>
+            </div>
+          </div>
+
+          <div class="resize-scale-options" data-ref="resize-scale-options" style="display: none; flex-direction: column; gap: 6px; padding: 12px; border-radius: 8px; background: var(--bg-surface-elevated, rgba(125,125,125,0.04)); border: 1px solid var(--border-color);">
+            <span style="font-size: 12px; color: var(--text-secondary);">Ajuste proporcional:</span>
+            <div class="design-options-tray__badges" style="display: flex; gap: 6px;">
+              <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable is-active" data-ref="btn-scale-fit">Ajustar proporción (Fit)</button>
+              <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-scale-stretch">Estirar contenido (Stretch)</button>
             </div>
           </div>
 
@@ -3136,12 +3236,15 @@ export class DesignController {
       });
     });
 
+    const hintEl = backdrop.querySelector<HTMLElement>('[data-ref="resize-strategy-hint"]');
+
     btnStrategyScale?.addEventListener('click', () => {
       currentMode = 'scale';
       btnStrategyScale.classList.add('is-active');
       btnStrategyAnchor?.classList.remove('is-active');
       if (scaleOptionsEl) scaleOptionsEl.style.display = 'flex';
       if (anchorOptionsEl) anchorOptionsEl.style.display = 'none';
+      if (hintEl) hintEl.textContent = 'Multiplica o reduce los píxeles para ajustar el dibujo al nuevo tamaño.';
     });
 
     btnStrategyAnchor?.addEventListener('click', () => {
@@ -3150,6 +3253,7 @@ export class DesignController {
       btnStrategyScale?.classList.remove('is-active');
       if (anchorOptionsEl) anchorOptionsEl.style.display = 'flex';
       if (scaleOptionsEl) scaleOptionsEl.style.display = 'none';
+      if (hintEl) hintEl.textContent = 'Modifica el tamaño del lienzo manteniendo los píxeles existentes en tamaño 1:1.';
     });
 
     btnScaleFit?.addEventListener('click', () => {
@@ -3168,7 +3272,7 @@ export class DesignController {
       cell.addEventListener('click', () => {
         backdrop.querySelectorAll('[data-ref^="anchor-"]').forEach((c) => c.classList.remove('is-active'));
         cell.classList.add('is-active');
-        currentAnchor = (cell.getAttribute('data-anchor') || 'center') as any;
+        currentAnchor = (cell.getAttribute('data-anchor') || 'top-left') as any;
       });
     });
 
@@ -3184,9 +3288,9 @@ export class DesignController {
         return;
       }
 
-      if (w > 16384 || h > 16384) {
+      if (w > 4096 || h > 4096) {
         if (errorBanner) {
-          errorBanner.textContent = 'Las dimensiones no pueden superar los 16384 píxeles.';
+          errorBanner.textContent = 'Las dimensiones no pueden superar los 4096 píxeles.';
           errorBanner.style.display = 'block';
         }
         return;
@@ -3197,34 +3301,127 @@ export class DesignController {
     });
   }
 
+  private captureCanvasTransformSnapshot(): {
+    canvasHeight: number;
+    canvasWidth: number;
+    layers: Array<{ dataUrl: string; frameId: string; imageData: ImageData; layerId: string }>;
+  } {
+    const layers: Array<{ dataUrl: string; frameId: string; imageData: ImageData; layerId: string }> = [];
+    for (const frame of this.frames) {
+      for (const layer of frame.layers) {
+        layers.push({
+          dataUrl: this.isInfinite || layer.canvas.width > 1024 || layer.canvas.height > 1024 ? '' : layer.canvas.toDataURL('image/png'),
+          frameId: frame.id,
+          imageData: layer.ctx.getImageData(0, 0, layer.canvas.width, layer.canvas.height),
+          layerId: layer.id,
+        });
+      }
+    }
+    return {
+      canvasHeight: this.canvasHeight,
+      canvasWidth: this.canvasWidth,
+      layers,
+    };
+  }
+
   private resizeCanvas(
     newW: number,
     newH: number,
     mode: 'scale' | 'anchor' = 'anchor',
-    anchor: 'top-left' | 'top-center' | 'top-right' | 'center-left' | 'center' | 'center-right' | 'bottom-left' | 'bottom-center' | 'bottom-right' = 'center',
+    anchor: 'top-left' | 'top-center' | 'top-right' | 'center-left' | 'center' | 'center-right' | 'bottom-left' | 'bottom-center' | 'bottom-right' = 'top-left',
     scaleFit: 'fit' | 'stretch' = 'fit'
   ): void {
     if (newW <= 0 || newH <= 0 || (newW === this.canvasWidth && newH === this.canvasHeight)) return;
+    const before = this.captureCanvasTransformSnapshot();
     dispatchCanvasAction(this.getActionContext(), {
       payload: { anchor, height: newH, mode, scaleFit, width: newW },
       type: 'resize_canvas',
     });
+    const after = this.captureCanvasTransformSnapshot();
+    const dummy = new ImageData(1, 1);
+    this.historyManager.pushUndo({
+      afterData: dummy,
+      beforeData: dummy,
+      canvasHeightAfter: after.canvasHeight,
+      canvasHeightBefore: before.canvasHeight,
+      canvasWidthAfter: after.canvasWidth,
+      canvasWidthBefore: before.canvasWidth,
+      frameId: this.activeFrameId,
+      layerId: this.getActiveLayer()?.id || '',
+      layersSnapshotAfter: after.layers,
+      layersSnapshotBefore: before.layers,
+      type: 'canvas_transform',
+    });
+    this.updateCanvasModeRestrictions();
+    this.updateUndoRedoUI();
     showToast(`Lienzo redimensionado a ${newW} × ${newH} px (${mode === 'scale' ? 'Escalado Nearest Neighbor' : 'Anclaje'})`, 'success');
   }
 
   private rotateCanvas(clockwise: boolean): void {
+    if (this.isInfinite) {
+      showToast('La rotación no está disponible en lienzos infinitos', 'warning');
+      return;
+    }
+    if (this.canvasWidth > 2048 || this.canvasHeight > 2048) {
+      showToast('La rotación no está disponible para lienzos mayores a 2048px por rendimiento', 'warning');
+      return;
+    }
+    const before = this.captureCanvasTransformSnapshot();
     dispatchCanvasAction(this.getActionContext(), {
       payload: { clockwise },
       type: 'rotate_canvas',
     });
+    const after = this.captureCanvasTransformSnapshot();
+    const dummy = new ImageData(1, 1);
+    this.historyManager.pushUndo({
+      afterData: dummy,
+      beforeData: dummy,
+      canvasHeightAfter: after.canvasHeight,
+      canvasHeightBefore: before.canvasHeight,
+      canvasWidthAfter: after.canvasWidth,
+      canvasWidthBefore: before.canvasWidth,
+      frameId: this.activeFrameId,
+      layerId: this.getActiveLayer()?.id || '',
+      layersSnapshotAfter: after.layers,
+      layersSnapshotBefore: before.layers,
+      type: 'canvas_transform',
+    });
+    this.updateCanvasModeRestrictions();
+    this.updateUndoRedoUI();
     showToast(clockwise ? 'Lienzo rotado 90° horario' : 'Lienzo rotado 90° antihorario', 'success');
   }
 
   private flipCanvas(horizontal: boolean): void {
+    if (this.isInfinite) {
+      showToast('El volteo no está disponible en lienzos infinitos', 'warning');
+      return;
+    }
+    if (this.canvasWidth > 2048 || this.canvasHeight > 2048) {
+      showToast('El volteo no está disponible para lienzos mayores a 2048px por rendimiento', 'warning');
+      return;
+    }
+    const before = this.captureCanvasTransformSnapshot();
     dispatchCanvasAction(this.getActionContext(), {
       payload: { horizontal },
       type: 'flip_canvas',
     });
+    const after = this.captureCanvasTransformSnapshot();
+    const dummy = new ImageData(1, 1);
+    this.historyManager.pushUndo({
+      afterData: dummy,
+      beforeData: dummy,
+      canvasHeightAfter: after.canvasHeight,
+      canvasHeightBefore: before.canvasHeight,
+      canvasWidthAfter: after.canvasWidth,
+      canvasWidthBefore: before.canvasWidth,
+      frameId: this.activeFrameId,
+      layerId: this.getActiveLayer()?.id || '',
+      layersSnapshotAfter: after.layers,
+      layersSnapshotBefore: before.layers,
+      type: 'canvas_transform',
+    });
+    this.updateCanvasModeRestrictions();
+    this.updateUndoRedoUI();
     showToast(horizontal ? 'Lienzo volteado horizontalmente' : 'Lienzo volteado verticalmente', 'success');
   }
 
@@ -3236,6 +3433,10 @@ export class DesignController {
   }
 
   private toggleTileGridOptions(): void {
+    if (this.isInfinite) {
+      showToast('La rejilla de tiles requiere un lienzo delimitado', 'warning');
+      return;
+    }
     if (!this.optionsTrayEl) return;
     const isOptionsOpen = !this.optionsTrayEl.classList.contains('is-hidden');
     const isTileGridVisible = !this.optionsGroupTileGrid?.classList.contains('is-hidden');
@@ -3343,6 +3544,7 @@ export class DesignController {
     if (this.floatingSelection || !this.selectionMask) return;
     const layer = this.getActiveLayer();
     if (!layer || !layer.visible) return;
+    this.selectionBeforeData = layer.ctx.getImageData(0, 0, this.canvasWidth, this.canvasHeight);
     this.toolsManager.liftSelectionToFloating(layer, this.canvasWidth, this.canvasHeight);
     this.startMarchingAntsLoop();
     this.requestRedraw();
@@ -3352,7 +3554,11 @@ export class DesignController {
     if (!this.floatingSelection) return;
     const layer = this.getActiveLayer();
     if (layer && layer.visible) {
+      const beforeData = this.selectionBeforeData || layer.ctx.getImageData(0, 0, this.canvasWidth, this.canvasHeight);
       this.toolsManager.commitFloatingSelection(layer, this.isInfinite);
+      const afterData = layer.ctx.getImageData(0, 0, this.canvasWidth, this.canvasHeight);
+      this.pushUndoStep(beforeData, afterData, layer.id, this.activeFrameId);
+      this.selectionBeforeData = null;
       this.scheduleAutoSave();
 
       if (broadcast && !this.isInfinite) {
@@ -3418,7 +3624,12 @@ export class DesignController {
   private cutSelection(): void {
     const layer = this.getActiveLayer();
     if (!layer || !layer.visible) return;
+    const beforeData = this.selectionBeforeData || layer.ctx.getImageData(0, 0, this.canvasWidth, this.canvasHeight);
     this.toolsManager.cutSelection(layer, this.canvasWidth, this.canvasHeight);
+    this.floatingSelection = null;
+    const afterData = layer.ctx.getImageData(0, 0, this.canvasWidth, this.canvasHeight);
+    this.pushUndoStep(beforeData, afterData, layer.id, this.activeFrameId);
+    this.selectionBeforeData = null;
     this.stopMarchingAntsLoop();
     this.scheduleAutoSave();
     this.requestRedraw();
@@ -3431,6 +3642,10 @@ export class DesignController {
 
   private pasteClipboard(): void {
     this.commitFloatingSelection();
+    const layer = this.getActiveLayer();
+    if (layer && layer.visible) {
+      this.selectionBeforeData = layer.ctx.getImageData(0, 0, this.canvasWidth, this.canvasHeight);
+    }
     if (this.toolsManager.pasteClipboard(this.canvasWidth, this.canvasHeight)) {
       this.selectTool('select');
       this.startMarchingAntsLoop();
@@ -3441,7 +3656,12 @@ export class DesignController {
   private deleteSelection(broadcast = true): void {
     const layer = this.getActiveLayer();
     if (!layer || !layer.visible) return;
+    const beforeData = this.selectionBeforeData || layer.ctx.getImageData(0, 0, this.canvasWidth, this.canvasHeight);
     this.toolsManager.deleteSelection(layer, this.canvasWidth, this.canvasHeight);
+    this.floatingSelection = null;
+    const afterData = layer.ctx.getImageData(0, 0, this.canvasWidth, this.canvasHeight);
+    this.pushUndoStep(beforeData, afterData, layer.id, this.activeFrameId);
+    this.selectionBeforeData = null;
     this.stopMarchingAntsLoop();
     this.scheduleAutoSave();
     this.requestRedraw();
@@ -3628,6 +3848,7 @@ export class DesignController {
     if (!this.textCanvas) return;
     const layer = this.getActiveLayer();
     if (layer && layer.visible) {
+      const beforeData = layer.ctx.getImageData(0, 0, this.canvasWidth, this.canvasHeight);
       const textVal = this.textValue;
       const textFontVal = this.textFont;
       const textScaleVal = this.textScale;
@@ -3637,6 +3858,8 @@ export class DesignController {
       const ty = this.textY;
 
       if (this.toolsManager.stampTextToLayer(layer, this.isInfinite)) {
+        const afterData = layer.ctx.getImageData(0, 0, this.canvasWidth, this.canvasHeight);
+        this.pushUndoStep(beforeData, afterData, layer.id, this.activeFrameId);
         if (broadcast) {
           this.collaborationManager.sendAction('text', {
             color: this.currentColor,
@@ -3652,6 +3875,7 @@ export class DesignController {
           });
         }
         this.scheduleAutoSave();
+        this.renderLayersCards();
       }
     }
     this.textCanvas = null;
@@ -4881,13 +5105,27 @@ export class DesignController {
         () => {
           const layer = this.getActiveLayer();
           if (!layer || !layer.visible) return;
+          const beforeData = layer.ctx.getImageData(0, 0, this.canvasWidth, this.canvasHeight);
           layer.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
+          if (this.isInfinite && (layer as any).chunkGrid) {
+            (layer as any).chunkGrid.clear();
+          }
+          if (this.floatingSelection) {
+            this.floatingSelection = null;
+          }
+          if (this.selectionMask) {
+            this.selectionMask = null;
+          }
+          const afterData = layer.ctx.getImageData(0, 0, this.canvasWidth, this.canvasHeight);
+          this.pushUndoStep(beforeData, afterData, layer.id, this.activeFrameId);
           this.collaborationManager.sendAction('clear_layer', {
             frameId: this.activeFrameId,
             layerId: layer.id,
           });
+          this.renderLayersCards();
           this.requestRedraw();
           this.scheduleAutoSave();
+          showToast('Lienzo limpiado', 'info');
         },
         { signal }
       );
@@ -4973,13 +5211,7 @@ export class DesignController {
             return;
           } else if (e.button === 0) {
             if (!this.viewportCanvas) return;
-            const rect = this.viewportCanvas.getBoundingClientRect();
-            const mouseX = e.clientX - rect.left;
-            const mouseY = e.clientY - rect.top;
-            const exactX = (mouseX - this.panX) / this.zoom;
-            const exactY = (mouseY - this.panY) / this.zoom;
-            const pixelX = Math.floor(exactX);
-            const pixelY = Math.floor(exactY);
+            const { exactX, exactY, x: pixelX, y: pixelY } = this.viewportManager.screenToCanvas(e.clientX, e.clientY, this.viewportCanvas);
 
             if (this.commentsController?.onCanvasPointerDown(exactX, exactY, e.clientX, e.clientY)) {
               return;
@@ -5307,10 +5539,7 @@ export class DesignController {
           this.commentsController?.onCanvasPointerMove(e.clientX, e.clientY);
         }
 
-        const exactX = (mouseX - this.panX) / this.zoom;
-        const exactY = (mouseY - this.panY) / this.zoom;
-        const pixelX = Math.floor(exactX);
-        const pixelY = Math.floor(exactY);
+        const { exactX, exactY, x: pixelX, y: pixelY } = this.viewportManager.screenToCanvas(e.clientX, e.clientY, this.viewportCanvas);
         const isInsideCanvas = this.isInfinite || (pixelX >= 0 && pixelX < this.canvasWidth && pixelY >= 0 && pixelY < this.canvasHeight);
 
         if (isInsideCanvas) {
@@ -5527,10 +5756,11 @@ export class DesignController {
               const symPoints = this.getSymmetricPoints(pt.x, pt.y);
               for (const sPt of symPoints) {
                 if (this.isInfinite || (sPt.x >= 0 && sPt.x < this.canvasWidth && sPt.y >= 0 && sPt.y < this.canvasHeight)) {
-                  if (!this.isInfinite) {
+                  if (this.isInfinite) {
+                    (layer as any).chunkGrid?.setPixel(sPt.x, sPt.y, this.currentColor);
+                  } else {
                     layer.ctx.fillRect(sPt.x, sPt.y, 1, 1);
                   }
-                  (layer as any).chunkGrid?.setPixel(sPt.x, sPt.y, this.currentColor);
                 }
               }
             }
@@ -5674,18 +5904,18 @@ export class DesignController {
     const w = this.viewportCanvas.width / dpr;
     const h = this.viewportCanvas.height / dpr;
 
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     this.ctx.save();
-    this.ctx.scale(dpr, dpr);
 
     this.ctx.fillStyle = '#ffffff';
     this.ctx.fillRect(0, 0, w, h);
 
-    const drawX = Math.round(this.panX);
-    const drawY = Math.round(this.panY);
-    const drawXEnd = Math.round(this.panX + this.canvasWidth * this.zoom);
-    const drawYEnd = Math.round(this.panY + this.canvasHeight * this.zoom);
-    const drawW = drawXEnd - drawX;
-    const drawH = drawYEnd - drawY;
+    const drawX = this.panX;
+    const drawY = this.panY;
+    const drawW = this.canvasWidth * this.zoom;
+    const drawH = this.canvasHeight * this.zoom;
+    const drawXEnd = drawX + drawW;
+    const drawYEnd = drawY + drawH;
 
     if (this.isInfinite) {
       if (this.canvasBackground?.type === 'solid') {
@@ -5758,10 +5988,10 @@ export class DesignController {
         for (let r = 0; r < endRow; r++) {
           for (let c = 0; c < endCol; c++) {
             if ((r + c) % 2 === 1) {
-              const sqX = Math.round(this.panX + c * step * this.zoom);
-              const sqY = Math.round(this.panY + r * step * this.zoom);
-              const sqW = Math.round(this.panX + (c + 1) * step * this.zoom) - sqX;
-              const sqH = Math.round(this.panY + (r + 1) * step * this.zoom) - sqY;
+              const sqX = this.panX + c * step * this.zoom;
+              const sqY = this.panY + r * step * this.zoom;
+              const sqW = Math.min(step * this.zoom, drawXEnd - sqX);
+              const sqH = Math.min(step * this.zoom, drawYEnd - sqY);
               this.ctx.fillRect(sqX, sqY, sqW, sqH);
             }
           }
@@ -5778,11 +6008,15 @@ export class DesignController {
         const prevFrame = this.frames[activeIdx - 1];
         for (const layer of prevFrame.layers) {
           if (layer.visible) {
-            if (this.isInfinite || (layer as any).chunkGrid?.hasChunks()) {
+            if (this.isInfinite) {
               (layer as any).chunkGrid?.renderViewport(this.ctx, this.panX, this.panY, this.zoom, w, h, 0.25 * layer.opacity);
             } else {
+              this.ctx.save();
+              this.ctx.translate(this.panX, this.panY);
+              this.ctx.scale(this.zoom, this.zoom);
               this.ctx.globalAlpha = 0.25 * layer.opacity;
-              this.ctx.drawImage(layer.canvas, drawX, drawY, drawW, drawH);
+              this.ctx.drawImage(layer.canvas, 0, 0);
+              this.ctx.restore();
             }
           }
         }
@@ -5793,11 +6027,15 @@ export class DesignController {
     if (activeFrame) {
       for (const layer of activeFrame.layers) {
         if (layer.visible) {
-          if (this.isInfinite || (layer as any).chunkGrid?.hasChunks()) {
+          if (this.isInfinite) {
             (layer as any).chunkGrid?.renderViewport(this.ctx, this.panX, this.panY, this.zoom, w, h, layer.opacity);
           } else {
+            this.ctx.save();
+            this.ctx.translate(this.panX, this.panY);
+            this.ctx.scale(this.zoom, this.zoom);
             this.ctx.globalAlpha = layer.opacity;
-            this.ctx.drawImage(layer.canvas, drawX, drawY, drawW, drawH);
+            this.ctx.drawImage(layer.canvas, 0, 0);
+            this.ctx.restore();
           }
         }
       }
@@ -5805,27 +6043,27 @@ export class DesignController {
     this.ctx.globalAlpha = 1.0;
 
     if (this.floatingSelection) {
-      const fX = Math.round(this.panX + this.floatingSelection.x * this.zoom);
-      const fY = Math.round(this.panY + this.floatingSelection.y * this.zoom);
-      const fW = Math.round(this.floatingSelection.width * this.zoom);
-      const fH = Math.round(this.floatingSelection.height * this.zoom);
-      this.ctx.drawImage(this.floatingSelection.canvas, fX, fY, fW, fH);
+      this.ctx.save();
+      this.ctx.translate(this.panX, this.panY);
+      this.ctx.scale(this.zoom, this.zoom);
+      this.ctx.drawImage(this.floatingSelection.canvas, this.floatingSelection.x, this.floatingSelection.y);
+      this.ctx.restore();
     }
 
     if (this.currentTool === 'text' && this.textCanvas) {
-      const tX = Math.round(this.panX + this.textX * this.zoom);
-      const tY = Math.round(this.panY + this.textY * this.zoom);
-      const tW = Math.round(this.textCanvas.width * this.zoom);
-      const tH = Math.round(this.textCanvas.height * this.zoom);
-      this.ctx.drawImage(this.textCanvas, tX, tY, tW, tH);
+      this.ctx.save();
+      this.ctx.translate(this.panX, this.panY);
+      this.ctx.scale(this.zoom, this.zoom);
+      this.ctx.drawImage(this.textCanvas, this.textX, this.textY);
+      this.ctx.restore();
     }
 
     if (this.isPlacingShape && this.shapeCanvas) {
-      const sX = Math.round(this.panX + this.shapeTemplateX * this.zoom);
-      const sY = Math.round(this.panY + this.shapeTemplateY * this.zoom);
-      const sW = Math.round(this.shapeTemplateW * this.zoom);
-      const sH = Math.round(this.shapeTemplateH * this.zoom);
-      this.ctx.drawImage(this.shapeCanvas, sX, sY, sW, sH);
+      this.ctx.save();
+      this.ctx.translate(this.panX, this.panY);
+      this.ctx.scale(this.zoom, this.zoom);
+      this.ctx.drawImage(this.shapeCanvas, this.shapeTemplateX, this.shapeTemplateY, this.shapeTemplateW, this.shapeTemplateH);
+      this.ctx.restore();
     }
 
     if (this.isDrawingShape && this.shapeStartPos && this.shapeCurrentPos) {
@@ -5839,18 +6077,19 @@ export class DesignController {
         pts = getEllipsePoints(this.shapeStartPos.x, this.shapeStartPos.y, this.shapeCurrentPos.x, this.shapeCurrentPos.y, this.shapeDrawMode === 'filled');
       }
 
+      this.ctx.save();
+      this.ctx.translate(this.panX, this.panY);
+      this.ctx.scale(this.zoom, this.zoom);
       this.ctx.fillStyle = this.currentColor;
       for (const pt of pts) {
         const symPoints = this.getSymmetricPoints(pt.x, pt.y);
         for (const sPt of symPoints) {
           if (this.isInfinite || (sPt.x >= 0 && sPt.x < this.canvasWidth && sPt.y >= 0 && sPt.y < this.canvasHeight)) {
-            const px = Math.round(this.panX + sPt.x * this.zoom);
-            const py = Math.round(this.panY + sPt.y * this.zoom);
-            const ps = Math.max(1, Math.round(this.zoom));
-            this.ctx.fillRect(px, py, ps, ps);
+            this.ctx.fillRect(sPt.x, sPt.y, 1, 1);
           }
         }
       }
+      this.ctx.restore();
     }
 
     if (this.zoom >= 4) {
@@ -5865,7 +6104,7 @@ export class DesignController {
       const isDark = getEffectiveTheme() === 'dark';
       this.ctx.strokeStyle = isDark ? '#ffffff20' : '#00000020';
       this.ctx.lineWidth = 1;
-      this.ctx.strokeRect(drawX - 0.5, drawY - 0.5, drawW, drawH);
+      this.ctx.strokeRect(Math.round(drawX) - 0.5, Math.round(drawY) - 0.5, Math.round(drawW), Math.round(drawH));
     }
 
     if (this.mirrorEnabled) {
@@ -7030,6 +7269,38 @@ export class DesignController {
     this.requestRedraw();
   }
 
+  private updateCanvasModeRestrictions(): void {
+    const isLarge = !this.isInfinite && (this.canvasWidth > 2048 || this.canvasHeight > 2048);
+    const disableTransform = this.isInfinite || isLarge;
+
+    const transformReason = this.isInfinite
+      ? 'No disponible en lienzos infinitos'
+      : 'Deshabilitado en lienzos mayores a 2048px por rendimiento';
+
+    const applyBtnState = (btn: HTMLButtonElement | null, disabled: boolean, reason: string, defaultTooltip: string) => {
+      if (!btn) return;
+      btn.disabled = disabled;
+      btn.classList.toggle('is-disabled', disabled);
+      btn.setAttribute('data-tooltip', disabled ? reason : defaultTooltip);
+      btn.setAttribute('aria-label', disabled ? reason : defaultTooltip);
+      btn.setAttribute('aria-disabled', disabled ? 'true' : 'false');
+    };
+
+    applyBtnState(this.btnCanvasRotateCw, disableTransform, transformReason, 'Rotar lienzo 90° horario');
+    applyBtnState(this.btnCanvasRotateCcw, disableTransform, transformReason, 'Rotar lienzo 90° antihorario');
+    applyBtnState(this.btnCanvasFlipH, disableTransform, transformReason, 'Voltear lienzo horizontalmente');
+    applyBtnState(this.btnCanvasFlipV, disableTransform, transformReason, 'Voltear lienzo verticalmente');
+
+    applyBtnState(this.resizeCanvasBtn, this.isInfinite, 'Redimensión no disponible en lienzos infinitos', 'Redimensionar lienzo');
+    applyBtnState(
+      this.btnOpenSlicer,
+      disableTransform,
+      this.isInfinite ? 'El separador de sprites requiere un lienzo delimitado' : 'No disponible en lienzos mayores a 2048px por rendimiento',
+      'Separador de sprites (Auto-Slicer)'
+    );
+    applyBtnState(this.tileGridBtn, this.isInfinite, 'Rejilla de tiles no disponible en lienzos infinitos', 'Rejilla de Tiles');
+  }
+
   private async changePublicRole(role: 'viewer' | 'editor'): Promise<void> {
     if (!this.isOwner || this.publicRole === role) return;
     const previousRole = this.publicRole;
@@ -7861,6 +8132,7 @@ export class DesignController {
 
       this.updateAccessLevelUI();
       this.applyViewerMode();
+      this.updateCanvasModeRestrictions();
 
       if (titleEl) {
         titleEl.textContent = this.canvasName;
@@ -7883,6 +8155,7 @@ export class DesignController {
 
     this.updateAccessLevelUI();
     this.applyViewerMode();
+    this.updateCanvasModeRestrictions();
     this.renderCollaboratorsBar();
     void this.loadCanvasMembers();
     void this.loadCanvasTeams();

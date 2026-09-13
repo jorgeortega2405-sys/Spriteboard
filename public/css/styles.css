@@ -207,7 +207,6 @@ html.dark-theme .layout-content:has(.layout-nav) {
 
 .layout-content:has(.layout-nav) .layout-nav {
   position: sticky !important;
-  top: -6px !important;
   align-self: flex-start !important;
   height: 100vh !important;
   height: 100dvh !important;
@@ -357,7 +356,7 @@ html.dark-theme .layout-content:has(.layout-nav) {
   background-color: transparent;
   border-right: none;
   box-sizing: border-box;
-  padding: 8px 6px 20px 6px;
+  padding: 12px 6px 12px 6px;
   gap: 12px;
   z-index: 52;
   flex-shrink: 0;

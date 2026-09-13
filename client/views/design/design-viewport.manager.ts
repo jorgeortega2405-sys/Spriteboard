@@ -23,13 +23,22 @@ export class DesignViewportManager {
     this.isInfinite = isInfinite;
   }
 
-  public screenToCanvas(clientX: number, clientY: number, canvasEl: HTMLCanvasElement): { x: number; y: number } {
+  public setDimensions(width: number, height: number): void {
+    this.canvasWidth = width;
+    this.canvasHeight = height;
+  }
+
+  public screenToCanvas(clientX: number, clientY: number, canvasEl: HTMLCanvasElement): { exactX: number; exactY: number; x: number; y: number } {
     const rect = canvasEl.getBoundingClientRect();
     const sx = clientX - rect.left;
     const sy = clientY - rect.top;
+    const exactX = (sx - this.panX) / this.zoom;
+    const exactY = (sy - this.panY) / this.zoom;
     return {
-      x: Math.floor((sx - this.panX) / this.zoom),
-      y: Math.floor((sy - this.panY) / this.zoom),
+      exactX,
+      exactY,
+      x: Math.floor(exactX),
+      y: Math.floor(exactY),
     };
   }
 

@@ -16,6 +16,17 @@ export class DesignHistoryManager {
     if (this.undoStack.length > 50) {
       this.undoStack.shift();
     }
+    if (step.type === 'canvas_transform') {
+      let transformCount = 0;
+      for (let i = this.undoStack.length - 1; i >= 0; i--) {
+        if (this.undoStack[i].type === 'canvas_transform') {
+          transformCount++;
+          if (transformCount > 3) {
+            this.undoStack.splice(i, 1);
+          }
+        }
+      }
+    }
     this.redoStack = [];
   }
 
@@ -24,8 +35,8 @@ export class DesignHistoryManager {
 
     const w = beforeData.width;
     const h = beforeData.height;
-    const beforeBuf = new Uint32Array(beforeData.data.buffer);
-    const afterBuf = new Uint32Array(afterData.data.buffer);
+    const beforeBuf = new Uint32Array(beforeData.data.buffer, beforeData.data.byteOffset, beforeData.data.byteLength / 4);
+    const afterBuf = new Uint32Array(afterData.data.buffer, afterData.data.byteOffset, afterData.data.byteLength / 4);
 
     let minX = w;
     let minY = h;
@@ -59,8 +70,8 @@ export class DesignHistoryManager {
       subBefore = new ImageData(boxW, boxH);
       subAfter = new ImageData(boxW, boxH);
 
-      const subBeforeBuf = new Uint32Array(subBefore.data.buffer);
-      const subAfterBuf = new Uint32Array(subAfter.data.buffer);
+      const subBeforeBuf = new Uint32Array(subBefore.data.buffer, subBefore.data.byteOffset, subBefore.data.byteLength / 4);
+      const subAfterBuf = new Uint32Array(subAfter.data.buffer, subAfter.data.byteOffset, subAfter.data.byteLength / 4);
 
       for (let by = 0; by < boxH; by++) {
         const srcRowOffset = (minY + by) * w;
@@ -77,6 +88,7 @@ export class DesignHistoryManager {
       beforeData: subBefore,
       frameId,
       layerId,
+      type: 'diff',
       x: minX,
       y: minY,
     };

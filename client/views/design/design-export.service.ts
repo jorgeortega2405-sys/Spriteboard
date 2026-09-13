@@ -81,7 +81,7 @@ export function renderCompositedFrame(
   for (const layer of frame.layers) {
     if (layer.visible) {
       ctx.globalAlpha = layer.opacity;
-      if (isInfinite || (layer as any).chunkGrid?.hasChunks()) {
+      if (isInfinite) {
         const chunkExp = (layer as any).chunkGrid?.exportToCanvas(cropBox || { height: exportH, width: exportW, x: 0, y: 0 });
         if (chunkExp) {
           ctx.drawImage(chunkExp, 0, 0);
@@ -96,9 +96,15 @@ export function renderCompositedFrame(
     return tempCanvas;
   }
 
+  const scaledW = tempCanvas.width * scale;
+  const scaledH = tempCanvas.height * scale;
+  if (scaledW > 16384 || scaledH > 16384) {
+    throw new Error('Las dimensiones de exportación superan el límite de 16384 px. Reduce la escala.');
+  }
+
   const scaledCanvas = document.createElement('canvas');
-  scaledCanvas.width = tempCanvas.width * scale;
-  scaledCanvas.height = tempCanvas.height * scale;
+  scaledCanvas.width = scaledW;
+  scaledCanvas.height = scaledH;
   const scaledCtx = scaledCanvas.getContext('2d');
   if (!scaledCtx) return tempCanvas;
 
@@ -156,9 +162,15 @@ export function renderSpritesheet(
   const frameW = baseW * scale;
   const frameH = baseH * scale;
 
+  const totalW = frameW * framesCount;
+  const totalH = frameH;
+  if (totalW > 16384 || totalH > 16384) {
+    throw new Error('Las dimensiones de la hoja de sprites superan el límite de 16384 px. Reduce la escala de exportación.');
+  }
+
   const sheetCanvas = document.createElement('canvas');
-  sheetCanvas.width = frameW * framesCount;
-  sheetCanvas.height = frameH;
+  sheetCanvas.width = totalW;
+  sheetCanvas.height = totalH;
   const ctx = sheetCanvas.getContext('2d');
   if (!ctx) return sheetCanvas;
 

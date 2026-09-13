@@ -5211,6 +5211,24 @@ html.dark-theme .component-bottom--canvas {
   color: #ffffff;
 }
 
+.design-toolbar-btn:disabled,
+.design-toolbar-btn.is-disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  background: rgba(255, 255, 255, 0.02);
+  border-color: rgba(255, 255, 255, 0.05);
+  box-shadow: none;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.design-toolbar-btn:disabled:hover,
+.design-toolbar-btn.is-disabled:hover {
+  background: rgba(255, 255, 255, 0.02);
+  border-color: rgba(255, 255, 255, 0.05);
+  box-shadow: none;
+  color: rgba(255, 255, 255, 0.3);
+}
+
 .design-toolbar-btn:active {
   transform: scale(0.94);
   background: rgba(255, 255, 255, 0.2);

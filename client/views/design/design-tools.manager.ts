@@ -95,16 +95,18 @@ export class DesignToolsManager {
         const ny = startY + dy;
         if (isInfinite || (nx >= 0 && nx < canvasWidth && ny >= 0 && ny < canvasHeight)) {
           if (this.currentTool === 'brush') {
-            if (!isInfinite) {
+            if (isInfinite) {
+              (layer as any).chunkGrid?.setPixel(nx, ny, this.currentColor);
+            } else {
               layer.ctx.fillStyle = this.currentColor;
               layer.ctx.fillRect(nx, ny, 1, 1);
             }
-            (layer as any).chunkGrid?.setPixel(nx, ny, this.currentColor);
           } else if (this.currentTool === 'eraser') {
-            if (!isInfinite) {
+            if (isInfinite) {
+              (layer as any).chunkGrid?.clearPixel(nx, ny);
+            } else {
               layer.ctx.clearRect(nx, ny, 1, 1);
             }
-            (layer as any).chunkGrid?.clearPixel(nx, ny);
           }
         }
       }
@@ -123,11 +125,12 @@ export class DesignToolsManager {
         const ny = startY + dy;
         if (isInfinite || (nx >= 0 && nx < canvasWidth && ny >= 0 && ny < canvasHeight)) {
           if (isDitherPixel(nx, ny, this.ditherPattern)) {
-            if (!isInfinite) {
+            if (isInfinite) {
+              (layer as any).chunkGrid?.setPixel(nx, ny, this.currentColor);
+            } else {
               layer.ctx.fillStyle = this.currentColor;
               layer.ctx.fillRect(nx, ny, 1, 1);
             }
-            (layer as any).chunkGrid?.setPixel(nx, ny, this.currentColor);
           }
         }
       }
@@ -160,9 +163,12 @@ export class DesignToolsManager {
               this.shadingRamp,
               this.currentColor
             );
-            layer.ctx.fillStyle = rgbToHex(shaded.r, shaded.g, shaded.b);
-            layer.ctx.fillRect(nx, ny, 1, 1);
-            (layer as any).chunkGrid?.setPixel(nx, ny, rgbToHex(shaded.r, shaded.g, shaded.b));
+            if (isInfinite) {
+              (layer as any).chunkGrid?.setPixel(nx, ny, rgbToHex(shaded.r, shaded.g, shaded.b));
+            } else {
+              layer.ctx.fillStyle = rgbToHex(shaded.r, shaded.g, shaded.b);
+              layer.ctx.fillRect(nx, ny, 1, 1);
+            }
           }
         }
       }
@@ -180,11 +186,12 @@ export class DesignToolsManager {
       const py = Math.floor(centerY + r * Math.sin(angle));
 
       if (isInfinite || (px >= 0 && px < canvasWidth && py >= 0 && py < canvasHeight)) {
-        if (!isInfinite) {
+        if (isInfinite) {
+          (layer as any).chunkGrid?.setPixel(px, py, this.currentColor);
+        } else {
           layer.ctx.fillStyle = this.currentColor;
           layer.ctx.fillRect(px, py, 1, 1);
         }
-        (layer as any).chunkGrid?.setPixel(px, py, this.currentColor);
       }
     }
   }
@@ -618,10 +625,16 @@ export class DesignToolsManager {
 
   public rotateSelection90(): void {
     if (!this.floatingSelection) return;
+    const oldW = this.floatingSelection.width;
+    const oldH = this.floatingSelection.height;
+    const centerX = this.floatingSelection.x + oldW / 2;
+    const centerY = this.floatingSelection.y + oldH / 2;
+
     const temp = document.createElement('canvas');
-    temp.width = this.floatingSelection.height;
-    temp.height = this.floatingSelection.width;
+    temp.width = oldH;
+    temp.height = oldW;
     const tCtx = temp.getContext('2d')!;
+    tCtx.imageSmoothingEnabled = false;
     tCtx.translate(temp.width, 0);
     tCtx.rotate(Math.PI / 2);
     tCtx.drawImage(this.floatingSelection.canvas, 0, 0);
@@ -630,6 +643,28 @@ export class DesignToolsManager {
     this.floatingSelection.ctx = tCtx;
     this.floatingSelection.width = temp.width;
     this.floatingSelection.height = temp.height;
+    this.floatingSelection.x = Math.round(centerX - temp.width / 2);
+    this.floatingSelection.y = Math.round(centerY - temp.height / 2);
+  }
+
+  public syncSelectionMaskWithFloating(canvasWidth: number, canvasHeight: number): void {
+    if (!this.floatingSelection) return;
+    this.selectionMask = new Uint8Array(canvasWidth * canvasHeight);
+    const fx = this.floatingSelection.x;
+    const fy = this.floatingSelection.y;
+    const fw = this.floatingSelection.width;
+    const fh = this.floatingSelection.height;
+    for (let y = 0; y < fh; y++) {
+      const ny = fy + y;
+      if (ny < 0 || ny >= canvasHeight) continue;
+      const rowOffset = ny * canvasWidth;
+      for (let x = 0; x < fw; x++) {
+        const nx = fx + x;
+        if (nx >= 0 && nx < canvasWidth) {
+          this.selectionMask[rowOffset + nx] = 1;
+        }
+      }
+    }
   }
 
   public renderTextPreview(): void {

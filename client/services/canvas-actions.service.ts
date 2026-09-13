@@ -3,7 +3,7 @@ import { renderPixelTextCanvas } from '../utils/pixel-font.util.js';
 import { PIXEL_SHAPES, renderShapeCanvas, ShapeColorMode } from '../utils/pixel-shapes.util.js';
 import { sendCanvasAction } from './websocket.service.js';
 
-function applyRotateCanvas(context: CanvasActionContext, clockwise: boolean): void {
+export function applyRotateCanvas(context: CanvasActionContext, clockwise: boolean): void {
   if (context.canvasWidth <= 0 || context.canvasHeight <= 0) {
     return;
   }
@@ -37,7 +37,6 @@ function applyRotateCanvas(context: CanvasActionContext, clockwise: boolean): vo
   }
 
   context.setDimensions(newW, newH);
-  context.resetHistory();
   context.clearSelection();
 
   const rect = context.viewportParentRect();
@@ -50,7 +49,7 @@ function applyRotateCanvas(context: CanvasActionContext, clockwise: boolean): vo
   context.requestRedraw();
 }
 
-function applyFlipCanvas(context: CanvasActionContext, horizontal: boolean): void {
+export function applyFlipCanvas(context: CanvasActionContext, horizontal: boolean): void {
   if (context.canvasWidth <= 0 || context.canvasHeight <= 0) {
     return;
   }
@@ -80,22 +79,21 @@ function applyFlipCanvas(context: CanvasActionContext, horizontal: boolean): voi
     }
   }
 
-  context.resetHistory();
   context.clearSelection();
   context.renderLayersCards();
   context.renderFramesCards();
   context.requestRedraw();
 }
 
-function applyResizeCanvas(
+export function applyResizeCanvas(
   context: CanvasActionContext,
   newW: number,
   newH: number,
   mode: 'scale' | 'anchor' = 'anchor',
-  anchor = 'center',
+  anchor = 'top-left',
   scaleFit: 'fit' | 'stretch' = 'fit'
 ): void {
-  if (newW <= 0 || newH <= 0 || (newW === context.canvasWidth && newH === context.canvasHeight)) {
+  if (newW <= 0 || newH <= 0 || newW > 4096 || newH > 4096 || (newW === context.canvasWidth && newH === context.canvasHeight)) {
     return;
   }
 
@@ -171,16 +169,17 @@ function applyResizeCanvas(
       const newCanvas = document.createElement('canvas');
       newCanvas.width = newW;
       newCanvas.height = newH;
-      const newCtx = newCanvas.getContext('2d')!;
+      const newCtx = newCanvas.getContext('2d', { willReadFrequently: true })!;
       newCtx.imageSmoothingEnabled = false;
       newCtx.drawImage(oldCanvas, 0, 0, oldW, oldH, offsetX, offsetY, drawW, drawH);
+      oldCanvas.width = 0;
+      oldCanvas.height = 0;
       layer.canvas = newCanvas;
       layer.ctx = newCtx;
     }
   }
 
   context.setDimensions(newW, newH);
-  context.resetHistory();
   context.clearSelection();
 
   const rect = context.viewportParentRect();

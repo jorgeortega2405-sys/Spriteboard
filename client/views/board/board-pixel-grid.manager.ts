@@ -45,9 +45,12 @@ export class BoardPixelGridManager {
           onLoaded?.();
         };
         img.src = el.data;
-      } else if (el.backgroundColor !== 'transparent') {
-        ctx.fillStyle = el.backgroundColor;
-        ctx.fillRect(0, 0, el.gridWidth, el.gridHeight);
+      } else {
+        if (el.backgroundColor !== 'transparent') {
+          ctx.fillStyle = el.backgroundColor;
+          ctx.fillRect(0, 0, el.gridWidth, el.gridHeight);
+        }
+        onLoaded?.();
       }
       entry = { canvas, ctx };
       this.pixelCanvasMap.set(el.id, entry);
@@ -77,10 +80,15 @@ export class BoardPixelGridManager {
               onLoaded?.();
             };
             img.src = el.data;
-          } else if (el.backgroundColor !== 'transparent') {
-            entry.ctx.fillStyle = el.backgroundColor;
-            entry.ctx.fillRect(0, 0, el.gridWidth, el.gridHeight);
+          } else {
+            if (el.backgroundColor !== 'transparent') {
+              entry.ctx.fillStyle = el.backgroundColor;
+              entry.ctx.fillRect(0, 0, el.gridWidth, el.gridHeight);
+            }
+            onLoaded?.();
           }
+        } else {
+          this.getOrCreatePixelGridCanvas(el, onLoaded);
         }
       }
     }

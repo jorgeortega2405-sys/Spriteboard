@@ -453,17 +453,26 @@ export function renderShapeCanvas(
   targetWidth?: number,
   targetHeight?: number
 ): HTMLCanvasElement {
-  const w = targetWidth && targetWidth > 0 ? targetWidth : shape.width || 32;
-  const h = targetHeight && targetHeight > 0 ? targetHeight : shape.height || 32;
+  const isRotated90or270 = rotation === 90 || rotation === 270;
+  const rawW = isRotated90or270 && targetHeight && targetHeight > 0
+    ? targetHeight
+    : targetWidth && targetWidth > 0
+    ? targetWidth
+    : shape.width || 32;
+  const rawH = isRotated90or270 && targetWidth && targetWidth > 0
+    ? targetWidth
+    : targetHeight && targetHeight > 0
+    ? targetHeight
+    : shape.height || 32;
 
   const rawCanvas = document.createElement('canvas');
-  rawCanvas.width = w;
-  rawCanvas.height = h;
+  rawCanvas.width = rawW;
+  rawCanvas.height = rawH;
   const rawCtx = rawCanvas.getContext('2d', { willReadFrequently: true })!;
   rawCtx.imageSmoothingEnabled = false;
 
   if (shape.type === 'vector' && shape.pathD) {
-    const points = rasterizeSvgPathToPixels(shape.pathD, w, h, true);
+    const points = rasterizeSvgPathToPixels(shape.pathD, rawW, rawH, true);
     rawCtx.fillStyle = colorMode === 'primary' ? primaryColor : primaryColor || '#000000';
     for (let i = 0; i < points.length; i++) {
       rawCtx.fillRect(points[i].x, points[i].y, 1, 1);
@@ -472,9 +481,9 @@ export function renderShapeCanvas(
     const imgUrl = `/assets/img/stickers/${shape.file}`;
     const cachedImg = imageCache.get(imgUrl);
     if (cachedImg && cachedImg.complete && cachedImg.naturalWidth > 0) {
-      rawCtx.drawImage(cachedImg, 0, 0, w, h);
+      rawCtx.drawImage(cachedImg, 0, 0, rawW, rawH);
       if (colorMode === 'primary') {
-        const imgData = rawCtx.getImageData(0, 0, w, h);
+        const imgData = rawCtx.getImageData(0, 0, rawW, rawH);
         const data = imgData.data;
         const rgb = hexToRgb(primaryColor);
         for (let i = 0; i < data.length; i += 4) {
@@ -496,9 +505,8 @@ export function renderShapeCanvas(
     }
   }
 
-  const isRotated90or270 = rotation === 90 || rotation === 270;
-  const outW = isRotated90or270 ? h : w;
-  const outH = isRotated90or270 ? w : h;
+  const outW = targetWidth && targetWidth > 0 ? targetWidth : (isRotated90or270 ? rawH : rawW);
+  const outH = targetHeight && targetHeight > 0 ? targetHeight : (isRotated90or270 ? rawW : rawH);
 
   const finalCanvas = document.createElement('canvas');
   finalCanvas.width = outW;
@@ -510,7 +518,7 @@ export function renderShapeCanvas(
   finalCtx.translate(outW / 2, outH / 2);
   finalCtx.rotate((rotation * Math.PI) / 180);
   finalCtx.scale(flipH ? -1 : 1, flipV ? -1 : 1);
-  finalCtx.drawImage(rawCanvas, -w / 2, -h / 2);
+  finalCtx.drawImage(rawCanvas, -rawW / 2, -rawH / 2);
   finalCtx.restore();
 
   return finalCanvas;

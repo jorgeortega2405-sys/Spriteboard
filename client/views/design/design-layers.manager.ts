@@ -114,7 +114,9 @@ export class DesignLayersManager {
       layer.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
       try {
         layer.ctx.drawImage(img, 0, 0, this.canvasWidth, this.canvasHeight);
-        (layer as any).chunkGrid?.populateFromCanvas(layer.canvas);
+        if (this.isInfinite) {
+          (layer as any).chunkGrid?.populateFromCanvas(layer.canvas);
+        }
       } catch {}
     } catch {
       // Ignored

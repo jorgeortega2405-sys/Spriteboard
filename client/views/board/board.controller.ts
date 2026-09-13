@@ -49,6 +49,7 @@ export class BoardController {
   private exportDropdownController: { close: () => void; destroy: () => void; open: () => void; toggle: () => void; update: () => void } | null = null;
   private hasErasedInCurrentStroke = false;
   private history = new BoardHistoryManager();
+  private hoveredPixelGridCell: { gridId: string; px: number; py: number } | null = null;
   private isDrawing = false;
   private isInteractingSelection = false;
   private isLoaded = false;
@@ -1283,6 +1284,17 @@ export class BoardController {
     );
 
     this.canvasElement.addEventListener(
+      'pointerleave',
+      () => {
+        if (this.hoveredPixelGridCell) {
+          this.hoveredPixelGridCell = null;
+          this.requestRedraw();
+        }
+      },
+      { signal }
+    );
+
+    this.canvasElement.addEventListener(
       'wheel',
       (e: WheelEvent) => {
         e.preventDefault();
@@ -1544,6 +1556,33 @@ export class BoardController {
           this.requestRedraw();
         }
       }
+    }
+
+    if (this.currentTool === 'pixel') {
+      const grid =
+        (this.selectedElementId ? (this.elements.find((item) => item.id === this.selectedElementId) as BoardPixelGridElement) : null) ||
+        (this.elements.find((item) => item.type === 'pixel-grid' && worldPos.x >= item.x && worldPos.x <= item.x + item.width && worldPos.y >= item.y && worldPos.y <= item.y + item.height) as BoardPixelGridElement);
+      if (grid && grid.type === 'pixel-grid') {
+        const cellW = grid.width / grid.gridWidth;
+        const cellH = grid.height / grid.gridHeight;
+        const px = Math.floor((worldPos.x - grid.x) / cellW);
+        const py = Math.floor((worldPos.y - grid.y) / cellH);
+        if (px >= 0 && px < grid.gridWidth && py >= 0 && py < grid.gridHeight) {
+          if (this.hoveredPixelGridCell?.gridId !== grid.id || this.hoveredPixelGridCell?.px !== px || this.hoveredPixelGridCell?.py !== py) {
+            this.hoveredPixelGridCell = { gridId: grid.id, px, py };
+            this.requestRedraw();
+          }
+        } else if (this.hoveredPixelGridCell) {
+          this.hoveredPixelGridCell = null;
+          this.requestRedraw();
+        }
+      } else if (this.hoveredPixelGridCell) {
+        this.hoveredPixelGridCell = null;
+        this.requestRedraw();
+      }
+    } else if (this.hoveredPixelGridCell) {
+      this.hoveredPixelGridCell = null;
+      this.requestRedraw();
     }
   }
 
@@ -1853,8 +1892,9 @@ export class BoardController {
   private draw(): void {
     if (!this.ctx || !this.canvasElement) return;
     const dpr = window.devicePixelRatio || 1;
-    const w = this.canvasElement.width / dpr;
-    const h = this.canvasElement.height / dpr;
+    const rect = this.canvasElement.getBoundingClientRect();
+    const w = rect.width || this.canvasElement.width / dpr;
+    const h = rect.height || this.canvasElement.height / dpr;
 
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     this.ctx.clearRect(0, 0, w, h);
@@ -1945,6 +1985,16 @@ export class BoardController {
 
     if (el.showGrid && this.camera.zoom * (el.width / el.gridWidth) >= 4) {
       drawPixelGridLines(ctx, el, this.camera, this.canvasElement, (sx, sy) => screenToWorld(sx, sy, this.canvasElement, this.camera));
+    }
+
+    if (this.currentTool === 'pixel' && this.hoveredPixelGridCell?.gridId === el.id) {
+      const cellW = el.width / el.gridWidth;
+      const cellH = el.height / el.gridHeight;
+      const cellX = el.x + this.hoveredPixelGridCell.px * cellW;
+      const cellY = el.y + this.hoveredPixelGridCell.py * cellH;
+      ctx.strokeStyle = '#00e5ff';
+      ctx.lineWidth = 1.5 / this.camera.zoom;
+      ctx.strokeRect(cellX, cellY, cellW, cellH);
     }
 
     ctx.restore();

@@ -171,18 +171,14 @@ export class ChunkGrid {
     ctx.save();
     ctx.globalAlpha = opacity;
     ctx.imageSmoothingEnabled = false;
+    ctx.translate(panX, panY);
+    ctx.scale(zoom, zoom);
 
     for (let cy = minChunkY; cy <= maxChunkY; cy++) {
       for (let cx = minChunkX; cx <= maxChunkX; cx++) {
         const chunk = this.getChunk(cx, cy);
         if (!chunk) continue;
-
-        const screenX = Math.round(panX + cx * this.chunkSize * zoom);
-        const screenY = Math.round(panY + cy * this.chunkSize * zoom);
-        const screenW = Math.round(panX + (cx + 1) * this.chunkSize * zoom) - screenX;
-        const screenH = Math.round(panY + (cy + 1) * this.chunkSize * zoom) - screenY;
-
-        ctx.drawImage(chunk.canvas, screenX, screenY, screenW, screenH);
+        ctx.drawImage(chunk.canvas, cx * this.chunkSize, cy * this.chunkSize);
       }
     }
 

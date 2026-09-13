@@ -54,12 +54,19 @@ export interface SerializedCanvasProject {
 }
 
 export interface UndoStep {
-  afterData: ImageData;
-  beforeData: ImageData;
-  frameId: string;
-  layerId: string;
-  x: number;
-  y: number;
+  afterData?: ImageData;
+  beforeData?: ImageData;
+  canvasHeightAfter?: number;
+  canvasHeightBefore?: number;
+  canvasWidthAfter?: number;
+  canvasWidthBefore?: number;
+  frameId?: string;
+  layerId?: string;
+  layersSnapshotAfter?: Array<{ dataUrl: string; frameId: string; imageData?: ImageData; layerId: string }>;
+  layersSnapshotBefore?: Array<{ dataUrl: string; frameId: string; imageData?: ImageData; layerId: string }>;
+  type?: 'diff' | 'canvas_transform';
+  x?: number;
+  y?: number;
 }
 
 export type DesignTool = 'brush' | 'eraser' | 'line' | 'rectangle' | 'circle' | 'recolor' | 'dither' | 'shading' | 'spray' | 'bucket' | 'select' | 'text';
