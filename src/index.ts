@@ -1,9 +1,3 @@
-import cookieParser from 'cookie-parser';
-import 'dotenv/config';
-import express, { Request, Response } from 'express';
-import http from 'http';
-import net from 'net';
-import path from 'path';
 import { checkCassandraConnection } from './config/cassandra.config.js';
 import { checkDbConnection } from './config/database.config.js';
 import { config } from './config/env.config.js';
@@ -11,10 +5,18 @@ import { checkRedisConnection } from './config/redis.config.js';
 import { getHealth } from './controllers/config.controller.js';
 import { telemetryMiddleware } from './middlewares/telemetry.middleware.js';
 import apiRouter from './routes/api.routes.js';
+import uploadRouter from './routes/upload.routes.js';
 import { getCanvasBySlug, RESERVED_SLUGS } from './services/canvas.service.js';
 import { geoIpService } from './services/geoip.service.js';
 import { logger } from './services/logger.service.js';
+import { ensureBucketExists } from './services/s3.service.js';
 import { telemetryService } from './services/telemetry.service.js';
+import cookieParser from 'cookie-parser';
+import 'dotenv/config';
+import express, { Request, Response } from 'express';
+import http from 'http';
+import net from 'net';
+import path from 'path';
 
 const app = express();
 const PORT = config.port;
@@ -52,6 +54,7 @@ app.use(cookieParser());
 app.use(telemetryMiddleware);
 app.get('/health', getHealth);
 app.use('/api', apiRouter);
+app.use(uploadRouter);
 
 app.get('/:slug', async (req: Request, res: Response, next: express.NextFunction) => {
   const { slug } = req.params;
@@ -81,7 +84,6 @@ app.use((err: any, _req: Request, res: Response, next: express.NextFunction) => 
 });
 
 async function setupClient(server: http.Server) {
-  app.use('/uploads', express.static(path.join(process.cwd(), 'public/uploads')));
   if (config.nodeEnv !== 'production') {
     const { createServer } = await import('vite');
     const vite = await createServer({
@@ -122,6 +124,7 @@ async function startServer() {
     }
     await checkDbConnection();
     await checkRedisConnection();
+    await ensureBucketExists();
     await geoIpService.init();
 
     void checkCassandraConnection().catch((err) => {

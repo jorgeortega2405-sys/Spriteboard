@@ -46,6 +46,15 @@ export const config = {
     cityDbPath: process.env.GEOIP_CITY_DB_PATH || '',
     asnDbPath: process.env.GEOIP_ASN_DB_PATH || '',
   },
+  aws: {
+    region: process.env.AWS_REGION || 'us-east-1',
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+    s3Bucket: process.env.AWS_S3_BUCKET || 'spriteboard-storage',
+    s3Endpoint: process.env.AWS_S3_ENDPOINT || '',
+    s3ForcePathStyle: process.env.AWS_S3_FORCE_PATH_STYLE === 'true',
+    s3PublicUrl: process.env.AWS_S3_PUBLIC_URL || '',
+  },
 };
 
 

@@ -6,6 +6,7 @@ import { hashPassword, revokeAllUserSessions, verifyPassword } from './auth.serv
 import { sanitizeAvatar } from './image-sanitizer.service.js';
 import { logger } from './logger.service.js';
 import { sendEmailChangeCodeEmail } from './mail.service.js';
+import { deleteObject, getPublicUrl, putObject } from './s3.service.js';
 import { consumeEmailChangeAuthorization, consumePasswordChangeAuth, generateSixDigitCode, isEmailChangeAuthorized, saveEmailChangeCode, savePasswordChangeAuth, verifyEmailChangeCode } from './verification.service.js';
 import fs from 'fs';
 import type { ResultSetHeader, RowDataPacket } from 'mysql2';
@@ -278,22 +279,23 @@ export async function updateAvatar(
 
   if (oldAvatarUrl && oldAvatarUrl.startsWith('/uploads/avatars/')) {
     const oldFileName = path.basename(oldAvatarUrl);
+    const oldS3Key = `uploads/avatars/${oldFileName}`;
+    await deleteObject(oldS3Key);
     const oldFilePath = path.join(AVATARS_DIR, oldFileName);
     await safeUnlink(oldFilePath);
   }
 
   const newFileName = `avatar_${userId}_${Date.now()}.${sanitized.extension}`;
-  const targetPath = path.join(AVATARS_DIR, newFileName);
+  const s3Key = `uploads/avatars/${newFileName}`;
 
   try {
-    await fs.promises.mkdir(AVATARS_DIR, { recursive: true });
-    await fs.promises.writeFile(targetPath, sanitized.buffer);
+    await putObject(s3Key, sanitized.buffer, sanitized.mimeType);
   } catch (err) {
-    logger.app.error('Error al persistir el avatar sanitizado en disco', err);
+    logger.app.error('Error al persistir el avatar sanitizado en almacenamiento S3', err);
     return { success: false, error: 'Error al guardar la imagen en el servidor.' };
   }
 
-  const newAvatarUrl = `/uploads/avatars/${newFileName}`;
+  const newAvatarUrl = getPublicUrl(s3Key);
 
   await pool.query('UPDATE users SET avatar_url = ? WHERE id = ?', [newAvatarUrl, userId]);
   try {
@@ -322,6 +324,8 @@ export async function deleteAvatar(
 
   if (oldAvatarUrl && oldAvatarUrl.startsWith('/uploads/avatars/')) {
     const oldFileName = path.basename(oldAvatarUrl);
+    const oldS3Key = `uploads/avatars/${oldFileName}`;
+    await deleteObject(oldS3Key);
     const oldFilePath = path.join(AVATARS_DIR, oldFileName);
     await safeUnlink(oldFilePath);
   }

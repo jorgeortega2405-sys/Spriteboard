@@ -58,6 +58,26 @@ services:
       retries: 20
       start_period: 60s
 
+  minio:
+    image: quay.io/minio/minio:latest
+    container_name: spriteboard-minio
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${AWS_ACCESS_KEY_ID:-spriteboard_admin}
+      MINIO_ROOT_PASSWORD: ${AWS_SECRET_ACCESS_KEY:-spriteboard_secret_key}
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD-SHELL", "(echo > /dev/tcp/127.0.0.1/9000) >/dev/null 2>&1 || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
+
   app:
     build: .
     container_name: spriteboard-app
@@ -82,10 +102,18 @@ services:
       - CASSANDRA_LOCAL_DC=datacenter1
       - WEBSOCKET_HOST=websocket
       - WEBSOCKET_PORT=3001
+      - AWS_REGION=us-east-1
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-spriteboard_admin}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-spriteboard_secret_key}
+      - AWS_S3_BUCKET=${AWS_S3_BUCKET:-spriteboard-storage}
+      - AWS_S3_ENDPOINT=http://minio:9000
+      - AWS_S3_FORCE_PATH_STYLE=true
     depends_on:
       mysql:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      minio:
         condition: service_healthy
     volumes:
       - ./:/app
@@ -105,10 +133,18 @@ services:
       - CASSANDRA_PORT=9042
       - CASSANDRA_KEYSPACE=spriteboard_telemetry
       - CASSANDRA_LOCAL_DC=datacenter1
+      - AWS_REGION=us-east-1
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-spriteboard_admin}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-spriteboard_secret_key}
+      - AWS_S3_BUCKET=${AWS_S3_BUCKET:-spriteboard-storage}
+      - AWS_S3_ENDPOINT=http://minio:9000
+      - AWS_S3_FORCE_PATH_STYLE=true
     depends_on:
       redis:
         condition: service_healthy
       cassandra:
+        condition: service_healthy
+      minio:
         condition: service_healthy
     volumes:
       - ./worker:/app
@@ -135,4 +171,5 @@ volumes:
   mysql_data:
   redis_data:
   cassandra_data:
+  minio_data:
 

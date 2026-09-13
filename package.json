@@ -16,6 +16,7 @@
     "icons:bundle": "py admin_tool/manage_project.py"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1131.0",
     "@popperjs/core": "^2.11.8",
     "bcryptjs": "^2.4.3",
     "cassandra-driver": "^4.7.2",

@@ -4,6 +4,7 @@ import { UserPayload, UserRole } from '../types/auth.types.js';
 import { revokeAllUserSessions } from './auth.service.js';
 import { deleteCanvasBlob } from './canvas-storage-blob.service.js';
 import { logger } from './logger.service.js';
+import { deleteObject } from './s3.service.js';
 import { stripeService } from './stripe.service.js';
 import { hashBackupCode } from './two-factor.service.js';
 import fs from 'fs';
@@ -285,6 +286,8 @@ export async function deleteUserPermanently(userId: number): Promise<boolean> {
   if (user.avatar_url && user.avatar_url.startsWith('/uploads/avatars/')) {
     try {
       const fileName = path.basename(user.avatar_url);
+      const s3Key = `uploads/avatars/${fileName}`;
+      await deleteObject(s3Key);
       const filePath = path.join(AVATARS_DIR, fileName);
       if (fs.existsSync(filePath)) {
         await fs.promises.unlink(filePath);

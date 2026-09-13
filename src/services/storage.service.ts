@@ -1,5 +1,6 @@
 import { canvasPool, pool } from '../config/database.config.js';
 import { logger } from './logger.service.js';
+import { headObject } from './s3.service.js';
 import fs from 'fs';
 import mysql from 'mysql2/promise';
 import path from 'path';
@@ -98,13 +99,20 @@ export async function getUserStorageUsage(userId: number): Promise<UserStorageUs
   let uploadsBytes = 0;
   let uploadsCount = 0;
   const avatarUrl = userRows[0]?.avatar_url;
-  if (avatarUrl && typeof avatarUrl === 'string' && avatarUrl.startsWith('/uploads/avatars/')) {
+  if (avatarUrl && typeof avatarUrl === 'string' && avatarUrl.includes('/uploads/avatars/')) {
     const avatarFilename = path.basename(avatarUrl);
-    const avatarPath = path.join(process.cwd(), 'public', 'uploads', 'avatars', avatarFilename);
+    const s3Key = `uploads/avatars/${avatarFilename}`;
     try {
-      const stat = await fs.promises.stat(avatarPath);
-      uploadsBytes = stat.size;
-      uploadsCount = 1;
+      const s3Meta = await headObject(s3Key);
+      if (s3Meta && s3Meta.contentLength) {
+        uploadsBytes = s3Meta.contentLength;
+        uploadsCount = 1;
+      } else {
+        const avatarPath = path.join(process.cwd(), 'public', 'uploads', 'avatars', avatarFilename);
+        const stat = await fs.promises.stat(avatarPath);
+        uploadsBytes = stat.size;
+        uploadsCount = 1;
+      }
     } catch {}
   }
 
