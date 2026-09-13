@@ -41,20 +41,26 @@ export function initWebSocket(): void {
 
     ws.onopen = () => {
       console.log('[WebSocket] Conexión establecida exitosamente con el servidor.');
+      let didSendJoin = false;
       while (pendingMessages.length > 0 && ws?.readyState === WebSocket.OPEN) {
         const msg = pendingMessages.shift();
+        if (msg?.type === 'JOIN_CANVAS') {
+          didSendJoin = true;
+        }
         try {
           ws.send(typeof msg === 'string' ? msg : JSON.stringify(msg));
         } catch (_) {}
       }
-      if (currentActiveCanvasRoom) {
+      if (!didSendJoin && currentActiveCanvasRoom) {
         console.log('[WebSocket] Reuniéndose automáticamente a la sala activa tras reconexión:', currentActiveCanvasRoom.canvasUuid);
         joinCanvasRoom(
           currentActiveCanvasRoom.canvasUuid,
           currentActiveCanvasRoom.user,
           currentActiveCanvasRoom.username,
           currentActiveCanvasRoom.color,
-          currentActiveCanvasRoom.roomToken
+          currentActiveCanvasRoom.roomToken,
+          currentActiveCanvasRoom.avatarUrl,
+          currentActiveCanvasRoom.subscriptionTier
         );
       }
     };
@@ -82,7 +88,7 @@ export function initWebSocket(): void {
               if (handlers) {
                 handlers.forEach((h) => {
                   try {
-                    h({ canvasUuid: currentActiveCanvasRoom, color, connId, type: 'CANVAS_CURSOR', x, y });
+                    h({ canvasUuid: currentActiveCanvasRoom?.canvasUuid, color, connId, type: 'CANVAS_CURSOR', x, y });
                   } catch (err) {
                     console.warn('[WebSocket] Error en manejador binario de cursor:', err);
                   }
@@ -123,7 +129,7 @@ export function initWebSocket(): void {
               if (handlers) {
                 handlers.forEach((h) => {
                   try {
-                    h({ canvasUuid: currentActiveCanvasRoom, color, points, senderConnId: connId, size, tool, type: 'CANVAS_DRAW_STROKE' });
+                    h({ canvasUuid: currentActiveCanvasRoom?.canvasUuid, color, points, senderConnId: connId, size, tool, type: 'CANVAS_DRAW_STROKE' });
                   } catch (err) {
                     console.warn('[WebSocket] Error en manejador binario de trazo:', err);
                   }
@@ -219,7 +225,16 @@ export function sendWebSocketMessage(msg: any): void {
   } else {
     if (msg && msg.type !== 'CANVAS_CURSOR') {
       if (pendingMessages.length < 50) {
-        pendingMessages.push(msg);
+        if (msg.type === 'JOIN_CANVAS') {
+          const idx = pendingMessages.findIndex((m) => m?.type === 'JOIN_CANVAS' && m?.canvasUuid === msg.canvasUuid);
+          if (idx >= 0) {
+            pendingMessages[idx] = msg;
+          } else {
+            pendingMessages.push(msg);
+          }
+        } else {
+          pendingMessages.push(msg);
+        }
       }
     }
     initWebSocket();

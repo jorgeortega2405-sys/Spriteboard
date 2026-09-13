@@ -1,10 +1,11 @@
-import { attachChatSidebarToView, toggleSidebar } from './components/layout.component';
-import { API_ROUTES } from './config/api-routes';
-import { currentUser, getApi } from './services/api.service';
-import { renderIcons } from './services/icon.service';
-import { SkeletonService } from './services/skeleton.service';
-import { trackPageView } from './services/telemetry.service';
-import { hideTooltip } from './services/tooltip.service';
+import { attachChatSidebarToView, getIsSidebarOpen, hasDesignatedMenuItems, toggleDrawer, toggleSidebar, updateDynamicDrawer, updateSidebarActiveState } from './components/layout.component.js';
+import { API_ROUTES } from './config/api-routes.js';
+import { hasPersistentTopBar } from './config/skeleton-routes.js';
+import { currentUser, getApi } from './services/api.service.js';
+import { renderIcons } from './services/icon.service.js';
+import { SkeletonService } from './services/skeleton.service.js';
+import { trackPageView } from './services/telemetry.service.js';
+import { hideTooltip } from './services/tooltip.service.js';
 
 let isInitialPageLoad = true;
 let currentNavigation = 0;
@@ -56,7 +57,9 @@ export function navigate(url: string, options: { force?: boolean } = {}): void {
       return;
     }
 
-    toggleSidebar(false);
+    if (window.innerWidth <= 768) {
+      toggleSidebar(false);
+    }
     hideTooltip();
 
     const scrollable = document.querySelector<HTMLElement>(
@@ -74,16 +77,26 @@ export function navigate(url: string, options: { force?: boolean } = {}): void {
 
 export async function render(): Promise<void> {
   hideTooltip();
-  toggleSidebar(false);
   const appRoot = document.querySelector<HTMLElement>('[data-ref="app"]');
   if (!appRoot) return;
 
   const path = window.location.pathname;
   const navId = ++currentNavigation;
 
+  const existingSidebar = appRoot.querySelector<HTMLElement>('[data-ref="sidebar"], .layout-nav');
+  const isIntraAppNavigation = !isInitialPageLoad && Boolean(existingSidebar) && hasPersistentTopBar(path);
+
+  if (existingSidebar) {
+    updateSidebarActiveState(existingSidebar, path);
+  }
+
+  if (window.innerWidth <= 768) {
+    toggleSidebar(false);
+  }
+
   const skeletonSession = SkeletonService.showSkeleton(path, appRoot, {
-    onlyBottom: false,
     minDuration: 180,
+    onlyBottom: isIntraAppNavigation,
   });
 
   let viewElements: HTMLElement[] = [];
@@ -386,6 +399,18 @@ export async function render(): Promise<void> {
   const activeContent = appRoot.querySelector<HTMLElement>('.layout-content');
   if (activeContent) {
     attachChatSidebarToView(activeContent);
+  }
+
+  const currentSidebar = appRoot.querySelector<HTMLElement>('[data-ref="sidebar"], .layout-nav');
+  if (currentSidebar) {
+    updateSidebarActiveState(currentSidebar, path);
+    if (hasDesignatedMenuItems(path)) {
+      if (window.innerWidth > 768) {
+        toggleDrawer(true);
+      }
+    } else if (getIsSidebarOpen()) {
+      void updateDynamicDrawer(currentSidebar);
+    }
   }
 
   const activeComponentTop = appRoot.querySelector<HTMLElement>('.component-wrapper .component-top');

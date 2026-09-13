@@ -40,12 +40,15 @@ export function getSkeletonForUrl(pathname: string, onlyBottom = false): string 
     pathname.startsWith('/login')
   ) {
     template = 'centered-form';
+  } else if (pathname.startsWith('/design') || pathname.startsWith('/board')) {
+    template = 'canvas-layout';
   } else if (SKELETON_ROUTES[pathname]) {
     template = SKELETON_ROUTES[pathname];
   }
 
   if (onlyBottom) {
     if (template === 'cards-layout') return 'cards-layout-bottom';
+    if (template === 'canvas-layout') return 'canvas-layout-bottom';
     if (template === 'templates-layout') return 'templates-layout-bottom';
     if (template === 'search-layout') return 'search-layout-bottom';
     if (template === 'trash-layout') return 'trash-layout-bottom';

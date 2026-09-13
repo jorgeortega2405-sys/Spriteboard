@@ -93,6 +93,46 @@ export function toggleSidebar(forceState?: boolean): void {
   toggleDrawer(forceState);
 }
 
+export function hasDesignatedMenuItems(pathname: string): boolean {
+  if (!pathname) return false;
+  return (
+    pathname.startsWith('/settings') ||
+    pathname.startsWith('/help') ||
+    pathname.startsWith('/education') ||
+    pathname === '/institution'
+  );
+}
+
+export function updateSidebarActiveState(sidebar: HTMLElement, path = window.location.pathname): void {
+  const isHome = path === '/' || path === '' || path.startsWith('/folder/');
+  const isTemplates = path === '/templates';
+  const isShared = path === '/shared';
+  const isTeams = path === '/teams';
+  const isEducation = path.startsWith('/education') || path === '/institution';
+
+  const updateItem = (itemRef: string, btnRef: string, isActive: boolean) => {
+    const item = sidebar.querySelector<HTMLElement>(`[data-ref="${itemRef}"]`);
+    const btn = sidebar.querySelector<HTMLElement>(`[data-ref="${btnRef}"]`);
+    item?.classList.toggle('is-active', isActive);
+    btn?.classList.toggle('is-active', isActive);
+  };
+
+  updateItem('rail-item-home', 'btn-rail-home', isHome);
+  updateItem('rail-item-templates', 'btn-rail-templates', isTemplates);
+  updateItem('rail-item-shared', 'btn-rail-shared', isShared);
+  updateItem('rail-item-teams', 'btn-rail-teams', isTeams);
+  updateItem('rail-item-education', 'btn-rail-education', isEducation);
+}
+
+export async function updateDynamicDrawer(sidebar?: HTMLElement): Promise<void> {
+  const sb = sidebar || document.querySelector<HTMLElement>('[data-ref="sidebar"]');
+  if (!sb) return;
+  const drawer = sb.querySelector<HTMLElement>('[data-ref="layout-drawer"]');
+  if (drawer && isDrawerOpen) {
+    await populateDrawerContent(drawer);
+  }
+}
+
 export function getIsChatOpen(): boolean {
   return isChatOpen;
 }
@@ -599,27 +639,8 @@ async function populateDrawerContent(drawer: HTMLElement): Promise<void> {
       const tab = document.querySelector<HTMLElement>('[data-tab="institution"]');
       tab?.click();
     });
-  } else if (isHome) {
-    await renderHomeDrawerContent(drawerBody);
   } else {
-    let sectionTitle = t('nav.home') || 'Inicio';
-    if (currentPath === '/templates') sectionTitle = t('nav.templates') || 'Plantillas';
-    else if (currentPath === '/shared') sectionTitle = t('nav.shared') || 'Compartidos';
-    else if (currentPath === '/teams') sectionTitle = t('nav.teams') || 'Tus equipos';
-    else if (currentPath === '/trash') sectionTitle = t('nav.trash') || 'Papelera';
-
-    drawerBody.innerHTML = `
-      <div class="drawer-section__header" style="padding: 8px 8px 4px 8px;">
-        <span class="drawer-section__title" style="font-size: 13px; font-weight: 600; color: var(--text-primary);">${sectionTitle}</span>
-      </div>
-      <div class="drawer-empty-state" data-ref="drawer-empty-state">
-        <div class="drawer-empty-state__icon">
-          <span class="material-symbols-rounded">upcoming</span>
-        </div>
-        <span class="drawer-empty-state__title">Próximamente</span>
-        <p class="drawer-empty-state__description">Más opciones y accesos directos para esta sección estarán disponibles aquí.</p>
-      </div>
-    `;
+    await renderHomeDrawerContent(drawerBody);
   }
 }
 

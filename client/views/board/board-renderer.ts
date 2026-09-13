@@ -1,5 +1,5 @@
 import { getElementBoundingBox } from './board-elements.manager.js';
-import { BackgroundType, BoardElement, BoardPixelGridElement, BoardPoint, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTextElement } from './board.types.js';
+import { BackgroundType, BoardCollaboratorState, BoardElement, BoardPixelGridElement, BoardPoint, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTextElement } from './board.types.js';
 
 export function screenToWorld(sx: number, sy: number, canvas: HTMLCanvasElement | null, camera: { x: number; y: number; zoom: number }): BoardPoint {
   const w = canvas?.width ? canvas.width / (window.devicePixelRatio || 1) : 800;
@@ -349,4 +349,52 @@ export function drawPixelGridLines(
 
   ctx.stroke();
   ctx.restore();
+}
+
+export function drawBoardCollaboratorCursors(
+  ctx: CanvasRenderingContext2D,
+  collaborators: Map<string, BoardCollaboratorState>,
+  camera: { x: number; y: number; zoom: number },
+  canvas: HTMLCanvasElement | null
+): void {
+  collaborators.forEach((collab) => {
+    if (collab.x === undefined || collab.y === undefined) return;
+    const screen = worldToScreen(collab.x, collab.y, canvas, camera);
+
+    ctx.save();
+    ctx.fillStyle = collab.color;
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 1;
+
+    ctx.beginPath();
+    ctx.moveTo(screen.x, screen.y);
+    ctx.lineTo(screen.x, screen.y + 14);
+    ctx.lineTo(screen.x + 4, screen.y + 10);
+    ctx.lineTo(screen.x + 9, screen.y + 12);
+    ctx.lineTo(screen.x + 11, screen.y + 8);
+    ctx.lineTo(screen.x + 6, screen.y + 6);
+    ctx.lineTo(screen.x + 10, screen.y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    const name = collab.username || 'Invitado';
+    ctx.font = 'bold 11px system-ui, -apple-system, sans-serif';
+    const textWidth = ctx.measureText(name).width;
+    const badgeW = textWidth + 12;
+    const badgeH = 18;
+    const badgeX = screen.x + 8;
+    const badgeY = screen.y + 14;
+
+    ctx.fillStyle = collab.color;
+    ctx.beginPath();
+    ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 4);
+    ctx.fill();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(name, badgeX + 6, badgeY + badgeH / 2);
+
+    ctx.restore();
+  });
 }

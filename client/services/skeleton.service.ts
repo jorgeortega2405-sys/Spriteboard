@@ -85,18 +85,22 @@ export class SkeletonService {
     const { onlyBottom = false, minDuration = 280 } = config;
 
     const startTime = performance.now();
-    const existingHeader = container.querySelector<HTMLElement>('.layout-header');
     const existingContent = container.querySelector<HTMLElement>('.layout-content');
-    const isSoftNavigation = onlyBottom && Boolean(existingHeader);
+    const existingSidebar = existingContent?.querySelector<HTMLElement>('[data-ref="sidebar"], .layout-nav') ||
+      container.querySelector<HTMLElement>('[data-ref="sidebar"], .layout-nav') ||
+      document.querySelector<HTMLElement>('[data-ref="sidebar"], .layout-nav');
+    const existingWrapper = existingContent?.querySelector<HTMLElement>('.component-wrapper, .view-wrapper');
+    const isSoftNavigation = onlyBottom && Boolean(existingSidebar && existingWrapper && existingContent);
 
     const skeletonElement = this.createSkeleton(pathname, { onlyBottom: isSoftNavigation });
+    let skeletonWrapper: HTMLElement | null = null;
 
-    if (isSoftNavigation) {
-      if (existingContent && existingContent.parentNode === container) {
-        existingContent.replaceWith(skeletonElement);
-      } else {
-        container.appendChild(skeletonElement);
+    if (isSoftNavigation && existingWrapper) {
+      skeletonWrapper = skeletonElement.querySelector<HTMLElement>('.component-wrapper, .view-wrapper, .layout-body') || skeletonElement;
+      if (!skeletonWrapper.classList.contains('view-wrapper')) {
+        skeletonWrapper.classList.add('view-wrapper');
       }
+      existingWrapper.replaceWith(skeletonWrapper);
     } else {
       container.replaceChildren(skeletonElement);
     }
@@ -113,18 +117,18 @@ export class SkeletonService {
 
         if (isActiveCheck && !isActiveCheck()) return;
 
-        if (isSoftNavigation) {
+        if (isSoftNavigation && existingSidebar) {
           const newContentView =
             newElements.find((el) => el.classList?.contains('layout-content')) ||
-            newElements[newElements.length - 1];
+            newElements[0];
 
-          if (skeletonElement.parentNode === container && newContentView) {
-            skeletonElement.replaceWith(newContentView);
-          } else if (newContentView && existingHeader) {
-            container.replaceChildren(existingHeader, newContentView);
-          } else {
-            container.replaceChildren(...newElements);
+          if (newContentView) {
+            const newSidebar = newContentView.querySelector<HTMLElement>('[data-ref="sidebar"], .layout-nav');
+            if (newSidebar && existingSidebar) {
+              newSidebar.replaceWith(existingSidebar);
+            }
           }
+          container.replaceChildren(...newElements);
         } else {
           container.replaceChildren(...newElements);
         }

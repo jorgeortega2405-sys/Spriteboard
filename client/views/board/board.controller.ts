@@ -8,15 +8,18 @@ import { renderIcons } from '../../services/icon.service.js';
 import { showToast } from '../../services/toast.service.js';
 import { CanvasItem } from '../../types/canvas.types.js';
 import { setupDropdown } from '../../utils/dom.util.js';
+import { getCollaboratorColor } from '../design/design-color.util.js';
+import { BoardCollaborationManager } from './board-collaboration.manager.js';
 import { computeElementsBoundingBox, getElementBoundingBox, hitTestElement, hitTestResizeHandle, moveElementByDrag, resizeElementByHandle } from './board-elements.manager.js';
 import { exportJson, exportPng, exportSvg, generateThumbnail } from './board-export.service.js';
 import { BoardHistoryManager } from './board-history.manager.js';
 import { BoardPixelGridManager } from './board-pixel-grid.manager.js';
-import { drawBackground, drawCheckerboard, drawPixelGridLines, drawSelectionBox, drawShape, drawSticky, drawStroke, drawText, screenToWorld, worldToScreen } from './board-renderer.js';
-import { BackgroundType, BoardElement, BoardPixelGridElement, BoardPoint, BoardProject, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTextElement, BoardTool, DEFAULT_CLASSIC_PALETTE, GAMEBOY_PALETTE, PICO8_PALETTE, PixelSubtool, ShapeType } from './board.types.js';
+import { drawBackground, drawBoardCollaboratorCursors, drawCheckerboard, drawPixelGridLines, drawSelectionBox, drawShape, drawSticky, drawStroke, drawText, screenToWorld, worldToScreen } from './board-renderer.js';
+import { BackgroundType, BoardCollaboratorState, BoardElement, BoardPixelGridElement, BoardPoint, BoardProject, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTextElement, BoardTool, DEFAULT_CLASSIC_PALETTE, GAMEBOY_PALETTE, PICO8_PALETTE, PixelSubtool, ShapeType } from './board.types.js';
 
 export class BoardController {
   private abortController: AbortController;
+  private accessLevel: 'private' | 'public' = 'private';
   private activeInlineEditor: HTMLTextAreaElement | null = null;
   private activeOpenDropdown: { close: () => void } | null = null;
   private activeTrayGroup: 'shapes' | 'sticky' | 'width' | 'pixel' | null = null;
@@ -29,6 +32,9 @@ export class BoardController {
   private canvasServerId: number | null = null;
   private canvasUserId: number | null = null;
   private canvasUuid: string;
+  private collaborationManager: BoardCollaborationManager;
+  private collaboratorsBarEl: HTMLElement | null = null;
+  private collaboratorsListEl: HTMLElement | null = null;
   private colorPanelTarget: 'stroke' | 'fill' = 'stroke';
   private container: HTMLElement;
   private ctx: CanvasRenderingContext2D | null = null;
@@ -52,12 +58,16 @@ export class BoardController {
   private isSpacePressed = false;
   private lastMousePos: BoardPoint = { x: 0, y: 0 };
   private liveDraftElement: BoardElement | null = null;
+  private ownerInfo: { avatarUrl: string | null; id: number | null; subscriptionTier: string; username: string } | null = null;
   private panStartCamera: BoardPoint = { x: 0, y: 0 };
   private panStartMouse: BoardPoint = { x: 0, y: 0 };
   private pixelGrid = new BoardPixelGridManager();
+  private publicRole: 'editor' | 'viewer' = 'editor';
   private rafId: number | null = null;
   private resizeHandleType: 'tl' | 'tr' | 'bl' | 'br' | null = null;
   private resizeObserver: ResizeObserver | null = null;
+  private role: 'editor' | 'owner' | 'viewer' = 'owner';
+  private roomToken = '';
   private selectedElementId: string | null = null;
   private selectionDragOffset: BoardPoint = { x: 0, y: 0 };
   private selectionStartRect = { height: 0, width: 0, x: 0, y: 0 };
@@ -67,6 +77,7 @@ export class BoardController {
     this.container = container;
     this.canvasUuid = canvasUuid;
     this.abortController = new AbortController();
+    this.collaborationManager = new BoardCollaborationManager(canvasUuid);
   }
 
   public async init(): Promise<boolean> {
@@ -79,6 +90,10 @@ export class BoardController {
     if (!loaded) {
       return false;
     }
+
+    this.collaboratorsBarEl = this.container.querySelector<HTMLElement>('[data-ref="board-collaborators-bar"]');
+    this.collaboratorsListEl = this.container.querySelector<HTMLElement>('[data-ref="board-collaborators-list"]');
+    this.setupCollaboration();
 
     this.setupDropdowns();
     this.setupResizeObserver();
@@ -109,6 +124,7 @@ export class BoardController {
     if (this.isLoaded && this.isOwner) {
       void this.saveImmediate();
     }
+    this.collaborationManager.destroy();
     this.exportDropdownController?.destroy();
     this.resizeObserver?.disconnect();
     for (const { canvas } of this.pixelGrid.pixelCanvasMap.values()) {
@@ -134,12 +150,33 @@ export class BoardController {
           canvas = data.canvas;
           this.canvasServerId = data.canvas.id || null;
           this.canvasUserId = data.canvas.user_id || null;
+          if (data.role) {
+            this.role = data.role;
+          }
+          if (data.canvas.public_role) {
+            this.publicRole = data.canvas.public_role;
+          }
+          if (data.room_token) {
+            this.roomToken = data.room_token;
+          }
         }
       } else if (res.status === 404 && canvas?.id) {
         await removeLocalCanvas(this.canvasUuid);
         return false;
       } else if (res.status === 401 || res.status === 403) {
         return false;
+      }
+
+      if (!this.roomToken) {
+        try {
+          const tokenRes = await getApi(API_ROUTES.canvases.token(this.canvasUuid));
+          if (tokenRes.ok) {
+            const tokenData = await tokenRes.json();
+            if (tokenData?.room_token) {
+              this.roomToken = tokenData.room_token;
+            }
+          }
+        } catch {}
       }
     } catch {
       if (!canvas || canvas.id) {
@@ -165,6 +202,27 @@ export class BoardController {
         this.isOwner = false;
       } else {
         this.isOwner = !this.canvasServerId;
+      }
+
+      this.accessLevel = canvas.access_level || 'private';
+      if (canvas.public_role) {
+        this.publicRole = canvas.public_role;
+      }
+      const rawOwner = (canvas as any).owner;
+      if (rawOwner) {
+        this.ownerInfo = {
+          avatarUrl: rawOwner.avatar_url || null,
+          id: rawOwner.id || null,
+          subscriptionTier: rawOwner.subscription_tier || 'free',
+          username: rawOwner.username || 'Propietario',
+        };
+      } else if (canvas.owner_name || canvas.user_id) {
+        this.ownerInfo = {
+          avatarUrl: canvas.owner_avatar || null,
+          id: canvas.user_id || null,
+          subscriptionTier: (canvas.owner_tier as any) || 'free',
+          username: canvas.owner_name || 'Propietario',
+        };
       }
 
       const titleEl = this.container.querySelector<HTMLElement>('[data-ref="board-title"]');
@@ -212,6 +270,210 @@ export class BoardController {
     }
 
     return false;
+  }
+
+  private setupCollaboration(): void {
+    const userId = currentUser ? currentUser.id : null;
+    const username = currentUser ? currentUser.username : 'Invitado';
+    const avatarUrl = currentUser?.avatar_url || null;
+    const tier = (currentUser?.subscription_tier || 'free') as 'business' | 'free' | 'negocios' | 'plus' | 'pro' | 'ultra';
+
+    this.collaborationManager.roomToken = this.roomToken;
+    this.collaborationManager.isOwner = this.isOwner;
+    this.collaborationManager.role = this.role;
+    this.collaborationManager.publicRole = this.publicRole;
+    this.collaborationManager.accessLevel = this.accessLevel;
+
+    this.collaborationManager.init(userId, username, avatarUrl, tier, {
+      onAccessChanged: (accessLevel, publicRole) => {
+        this.accessLevel = accessLevel;
+        if (publicRole) this.publicRole = publicRole;
+        if (this.accessLevel === 'private' && !this.isOwner) {
+          this.handleAccessRevoked();
+        }
+      },
+      onAccessRevoked: () => {
+        this.handleAccessRevoked();
+      },
+      onCollaboratorsChanged: () => {
+        this.renderCollaboratorsBar();
+        this.requestRedraw();
+      },
+      onCursor: () => {
+        this.requestRedraw();
+      },
+      onRemoteAddElement: (element) => {
+        const existingIdx = this.elements.findIndex((el) => el.id === element.id);
+        if (existingIdx >= 0) {
+          this.elements[existingIdx] = element;
+        } else {
+          this.elements.push(element);
+        }
+        this.requestRedraw();
+      },
+      onRemoteClear: () => {
+        this.elements = [];
+        this.selectedElementId = null;
+        this.updateSelectionToolbar();
+        this.requestRedraw();
+      },
+      onRemoteDeleteElement: (elementId) => {
+        this.elements = this.elements.filter((el) => el.id !== elementId);
+        if (this.selectedElementId === elementId) {
+          this.selectedElementId = null;
+          this.updateSelectionToolbar();
+        }
+        this.requestRedraw();
+      },
+      onRemoteFullUpdate: (data) => {
+        if (data.elements && Array.isArray(data.elements)) {
+          this.elements = data.elements;
+        }
+        if (data.background) {
+          this.boardBackground = data.background;
+        }
+        this.requestRedraw();
+      },
+      onRemoteReorderElements: (elements) => {
+        this.elements = elements;
+        this.requestRedraw();
+      },
+      onRemoteUpdateBackground: (background) => {
+        this.boardBackground = background;
+        this.requestRedraw();
+      },
+      onRemoteUpdateElement: (element) => {
+        const existingIdx = this.elements.findIndex((el) => el.id === element.id);
+        if (existingIdx >= 0) {
+          this.elements[existingIdx] = element;
+          this.requestRedraw();
+        }
+      },
+      onRequestFullState: (targetConnId) => {
+        this.collaborationManager.broadcastFullUpdate({
+          background: this.boardBackground,
+          elements: this.elements,
+        }, targetConnId);
+      },
+    });
+    this.renderCollaboratorsBar();
+  }
+
+  private handleAccessRevoked(): void {
+    if (this.canvasElement) {
+      this.canvasElement.style.pointerEvents = 'none';
+      this.canvasElement.style.filter = 'grayscale(100%)';
+      this.canvasElement.style.opacity = '0.4';
+    }
+    if (this.container) {
+      this.container.style.pointerEvents = 'none';
+    }
+    this.collaborationManager.destroy();
+    void removeLocalCanvas(this.canvasUuid);
+    showToast('Tu acceso a este pizarrón ha sido revocado', 'danger');
+    setTimeout(() => {
+      window.location.href = '/';
+    }, 1500);
+  }
+
+  private renderCollaboratorsBar(): void {
+    if (!this.collaboratorsBarEl || !this.collaboratorsListEl) return;
+    this.collaboratorsBarEl.classList.remove('is-hidden');
+    this.collaboratorsListEl.innerHTML = '';
+
+    const stackItems: Array<{
+      avatarUrl: string;
+      isOwner: boolean;
+      tier: string;
+      tooltip: string;
+      username: string;
+    }> = [];
+
+    const ownerData = this.ownerInfo || (this.isOwner && currentUser
+      ? {
+          avatarUrl: currentUser.avatar_url || null,
+          id: currentUser.id,
+          subscriptionTier: currentUser.subscription_tier || 'free',
+          username: currentUser.username,
+        }
+      : {
+          avatarUrl: null,
+          id: null,
+          subscriptionTier: 'free',
+          username: 'Propietario',
+        });
+
+    const isOwnerOnline = this.isOwner || Array.from(this.collaborationManager.collaborators.values()).some(
+      (c) => (c.userId && ownerData.id && c.userId === ownerData.id) || (c.username && c.username === ownerData.username)
+    );
+
+    const ownerAvatar = ownerData.avatarUrl || API_ROUTES.avatar(ownerData.username);
+    const ownerTier = ownerData.subscriptionTier || 'free';
+    const ownerStatusText = isOwnerOnline ? ' • En línea' : '';
+    const ownerRoleText = this.isOwner ? ' (Dueño • Tú)' : ` (Dueño${ownerStatusText})`;
+
+    stackItems.push({
+      avatarUrl: ownerAvatar,
+      isOwner: true,
+      tier: ownerTier,
+      tooltip: `${ownerData.username}${ownerRoleText}`,
+      username: ownerData.username,
+    });
+
+    if (!this.isOwner && currentUser) {
+      const myAvatar = currentUser.avatar_url || API_ROUTES.avatar(currentUser.username);
+      const myTier = currentUser.subscription_tier || 'free';
+      const myRole = this.role === 'viewer' ? 'Lector' : 'Editor';
+      stackItems.push({
+        avatarUrl: myAvatar,
+        isOwner: false,
+        tier: myTier,
+        tooltip: `${currentUser.username} (${myRole} • En línea • Tú)`,
+        username: currentUser.username,
+      });
+    }
+
+    const seenUserIds = new Set<number>();
+    if (currentUser?.id) seenUserIds.add(currentUser.id);
+    if (ownerData.id) seenUserIds.add(ownerData.id);
+
+    this.collaborationManager.collaborators.forEach((collab) => {
+      if (collab.userId && seenUserIds.has(collab.userId)) return;
+      if (collab.userId) seenUserIds.add(collab.userId);
+
+      const avatar = collab.avatarUrl || API_ROUTES.avatar(collab.username);
+      const roleText = collab.role === 'owner' ? 'Dueño' : collab.role === 'viewer' ? 'Lector' : 'Editor';
+      stackItems.push({
+        avatarUrl: avatar,
+        isOwner: collab.role === 'owner',
+        tier: collab.subscriptionTier || 'free',
+        tooltip: `${collab.username} (${roleText} • En línea)`,
+        username: collab.username,
+      });
+    });
+
+    for (const item of stackItems) {
+      const avatarBtn = document.createElement('div');
+      avatarBtn.className = 'design-collaborator-avatar';
+      avatarBtn.setAttribute('data-tooltip', item.tooltip);
+      avatarBtn.setAttribute('aria-label', item.tooltip);
+
+      const img = document.createElement('img');
+      img.src = item.avatarUrl;
+      img.alt = item.username;
+      img.className = 'avatar-preview-img';
+      img.onerror = () => {
+        img.remove();
+        const fallback = document.createElement('div');
+        fallback.className = 'design-collaborator-avatar__fallback';
+        fallback.style.backgroundColor = getCollaboratorColor(item.username);
+        fallback.textContent = (item.username[0] || '?').toUpperCase();
+        avatarBtn.appendChild(fallback);
+      };
+
+      avatarBtn.appendChild(img);
+      this.collaboratorsListEl.appendChild(avatarBtn);
+    }
   }
 
   private setupResizeObserver(): void {
@@ -271,6 +533,7 @@ export class BoardController {
         this.pixelGrid.pixelCanvasMap.clear();
         this.elements = [];
         this.selectedElementId = null;
+        this.collaborationManager.broadcastClear();
         this.updateSelectionToolbar();
         this.requestRedraw();
         this.scheduleAutoSave();
@@ -716,6 +979,7 @@ export class BoardController {
         if (el.type === 'stroke') el.color = color;
         if (el.type === 'shape') el.strokeColor = color;
         if (el.type === 'text') el.color = color;
+        this.collaborationManager.broadcastUpdateElement(el);
         this.requestRedraw();
         this.scheduleAutoSave();
       }
@@ -737,6 +1001,7 @@ export class BoardController {
       if (el && el.type === 'shape') {
         this.pushHistoryState();
         el.fillColor = color;
+        this.collaborationManager.broadcastUpdateElement(el);
         this.requestRedraw();
         this.scheduleAutoSave();
       }
@@ -762,6 +1027,7 @@ export class BoardController {
         this.pushHistoryState();
         if (el.type === 'stroke') el.size = w;
         if (el.type === 'shape') el.strokeWidth = w;
+        this.collaborationManager.broadcastUpdateElement(el);
         this.requestRedraw();
         this.scheduleAutoSave();
       }
@@ -861,6 +1127,7 @@ export class BoardController {
         if (el && el.type === 'pixel-grid') {
           this.pushHistoryState();
           el.showGrid = !el.showGrid;
+          this.collaborationManager.broadcastUpdateElement(el);
           this.requestRedraw();
           this.scheduleAutoSave();
         }
@@ -945,6 +1212,7 @@ export class BoardController {
     }
 
     this.elements.push(cloned);
+    this.collaborationManager.broadcastAddElement(cloned);
     this.selectedElementId = cloned.id;
     this.updateSelectionToolbar();
     this.requestRedraw();
@@ -963,6 +1231,7 @@ export class BoardController {
       this.pixelGrid.pixelCanvasMap.delete(removedId);
     }
     this.elements = this.elements.filter((item) => item.id !== removedId);
+    this.collaborationManager.broadcastDeleteElement(removedId);
     this.selectedElementId = null;
     this.updateSelectionToolbar();
     this.requestRedraw();
@@ -981,6 +1250,7 @@ export class BoardController {
     } else {
       this.elements.unshift(el);
     }
+    this.collaborationManager.broadcastReorderElements(this.elements);
     this.requestRedraw();
     this.scheduleAutoSave();
   }
@@ -1178,6 +1448,7 @@ export class BoardController {
         y: Math.round(worldPos.y - 90),
       };
       this.elements.push(stickyEl);
+      this.collaborationManager.broadcastAddElement(stickyEl);
       this.selectedElementId = stickyEl.id;
       this.setTool('select');
       this.updateSelectionToolbar();
@@ -1200,6 +1471,7 @@ export class BoardController {
         y: Math.round(worldPos.y),
       };
       this.elements.push(textEl);
+      this.collaborationManager.broadcastAddElement(textEl);
       this.selectedElementId = textEl.id;
       this.setTool('select');
       this.openInlineEditor(textEl);
@@ -1224,6 +1496,7 @@ export class BoardController {
     const rect = this.canvasElement.getBoundingClientRect();
     const screenPos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
     const worldPos = screenToWorld(screenPos.x, screenPos.y, this.canvasElement, this.camera);
+    this.collaborationManager.sendCursor(worldPos.x, worldPos.y);
 
     if (this.isInteractingSelection && this.selectedElementId) {
       const el = this.elements.find((item) => item.id === this.selectedElementId);
@@ -1295,6 +1568,7 @@ export class BoardController {
       const el = this.elements.find((item) => item.id === this.selectedElementId);
       if (el && el.type === 'pixel-grid') {
         this.pixelGrid.finishPixelPainting(el);
+        this.collaborationManager.broadcastUpdateElement(el);
         this.scheduleAutoSave();
       }
       return;
@@ -1303,6 +1577,12 @@ export class BoardController {
     if (this.isInteractingSelection) {
       this.isInteractingSelection = false;
       this.resizeHandleType = null;
+      if (this.selectedElementId) {
+        const el = this.elements.find((item) => item.id === this.selectedElementId);
+        if (el) {
+          this.collaborationManager.broadcastUpdateElement(el);
+        }
+      }
       this.scheduleAutoSave();
       return;
     }
@@ -1323,6 +1603,7 @@ export class BoardController {
           }
         }
         this.elements.push(this.liveDraftElement);
+        this.collaborationManager.broadcastAddElement(this.liveDraftElement);
         this.selectedElementId = this.liveDraftElement.id;
         this.liveDraftElement = null;
         this.updateSelectionToolbar();
@@ -1396,6 +1677,7 @@ export class BoardController {
       if (el && (el.type === 'sticky' || el.type === 'text')) {
         this.pushHistoryState();
         el.text = text || (el.type === 'sticky' ? 'Nota' : 'Texto');
+        this.collaborationManager.broadcastUpdateElement(el);
         this.scheduleAutoSave();
       }
     }
@@ -1435,6 +1717,7 @@ export class BoardController {
           cached.canvas.height = 0;
           this.pixelGrid.pixelCanvasMap.delete(id);
         }
+        this.collaborationManager.broadcastDeleteElement(id);
       }
       this.selectedElementId = null;
       this.updateSelectionToolbar();
@@ -1623,6 +1906,8 @@ export class BoardController {
     }
 
     this.ctx.restore();
+
+    drawBoardCollaboratorCursors(this.ctx, this.collaborationManager.collaborators, this.camera, this.canvasElement);
   }
 
   private drawElement(el: BoardElement): void {
@@ -1873,6 +2158,7 @@ export class BoardController {
     };
 
     this.elements.push(gridEl);
+    this.collaborationManager.broadcastAddElement(gridEl);
     this.selectedElementId = gridEl.id;
     this.setTool('pixel');
     this.updateSelectionToolbar();

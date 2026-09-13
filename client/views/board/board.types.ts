@@ -109,3 +109,15 @@ export interface BoardProject {
   type: 'board';
   version: 1;
 }
+
+export interface BoardCollaboratorState {
+  avatarUrl: string | null;
+  color: string;
+  connId: string;
+  role: 'editor' | 'owner' | 'viewer';
+  subscriptionTier: 'business' | 'free' | 'negocios' | 'plus' | 'pro' | 'ultra';
+  userId: number;
+  username: string;
+  x?: number;
+  y?: number;
+}
