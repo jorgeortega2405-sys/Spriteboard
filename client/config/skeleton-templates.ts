@@ -41,37 +41,56 @@ function renderTableRowsHtml(count = 6): string {
   return rows.join('');
 }
 
-const SKELETON_TOPBAR_HTML = `
-  <header class="general-content-top layout-header" data-ref="skeleton-topbar">
-    <div class="top-left layout-header__left">
-      <div class="skeleton" style="width: 38px; height: 38px; border-radius: var(--radius-md); margin-right: 12px;"></div>
-      <div class="skeleton skeleton--title" style="width: 120px; height: 24px; margin: 0;"></div>
+const SKELETON_RAIL_HTML = `
+  <div class="layout-rail" data-ref="skeleton-rail" style="width: auto; min-width: 68px; max-width: 76px; height: 100%; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 8px 6px 20px 6px; gap: 12px; box-sizing: border-box; flex-shrink: 0;">
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%;">
+      <div class="skeleton" style="width: 40px; height: 40px; border-radius: 12px;"></div>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 3px;">
+        <div class="skeleton" style="width: 40px; height: 40px; border-radius: 12px;"></div>
+        <div class="skeleton" style="width: 28px; height: 8px; border-radius: 4px;"></div>
+      </div>
     </div>
-    <div class="top-center layout-header__center">
-      <div class="skeleton" style="width: 425px; max-width: 100%; height: 40px; border-radius: var(--radius-md);"></div>
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%;">
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 3px;">
+        <div class="skeleton" style="width: 40px; height: 40px; border-radius: 12px;"></div>
+        <div class="skeleton" style="width: 26px; height: 8px; border-radius: 4px;"></div>
+      </div>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 3px;">
+        <div class="skeleton" style="width: 40px; height: 40px; border-radius: 12px;"></div>
+        <div class="skeleton" style="width: 38px; height: 8px; border-radius: 4px;"></div>
+      </div>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 3px;">
+        <div class="skeleton" style="width: 40px; height: 40px; border-radius: 12px;"></div>
+        <div class="skeleton" style="width: 44px; height: 8px; border-radius: 4px;"></div>
+      </div>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 3px;">
+        <div class="skeleton" style="width: 40px; height: 40px; border-radius: 12px;"></div>
+        <div class="skeleton" style="width: 40px; height: 8px; border-radius: 4px;"></div>
+      </div>
     </div>
-    <div class="top-right layout-header__right">
-      <div class="skeleton skeleton--avatar" style="width: 40px; height: 40px; border-radius: 50%;"></div>
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%; margin-top: auto; padding-bottom: 4px;">
+      <div class="skeleton" style="width: 40px; height: 40px; border-radius: 12px;"></div>
+      <div class="skeleton skeleton--avatar" style="width: 36px; height: 36px; border-radius: 50%;"></div>
     </div>
-  </header>
+  </div>
 `;
 
 export const SKELETON_TEMPLATES: Record<string, string> = {
   'cards-layout': `
-    <div class="layout-root" data-ref="skeleton-cards-root" style="width: 100%; height: 100%; display: flex; flex-direction: column;">
-      ${SKELETON_TOPBAR_HTML}
+    <div class="layout-root" data-ref="skeleton-cards-root" style="width: 100%; height: 100%; display: flex; flex-direction: row; overflow: hidden;">
+      ${SKELETON_RAIL_HTML}
       <div class="layout-content skeleton-container" data-ref="skeleton-home-view">
-        <div class="component-wrapper component-wrapper--full" data-ref="skeleton-home-wrapper">
-          <div class="component-top" data-ref="skeleton-component-top">
-            <div class="component-top-left" data-ref="skeleton-component-top-left">
-              <div class="skeleton skeleton--title" style="width: 220px; height: 26px; margin: 0;"></div>
-            </div>
-            <div class="component-top-right" data-ref="skeleton-component-top-right">
-              <div class="skeleton" style="width: 40px; height: 40px; border-radius: var(--radius-md);"></div>
+        <div class="component-wrapper component-wrapper--full home-wrapper" data-ref="skeleton-home-wrapper">
+          <div class="home-floating-top" data-ref="skeleton-floating-top">
+            <div></div>
+            <div style="display: flex; gap: 8px;">
+              <div class="skeleton" style="width: 40px; height: 40px; border-radius: 12px;"></div>
+              <div class="skeleton" style="width: 40px; height: 40px; border-radius: 12px;"></div>
             </div>
           </div>
-          <div class="component-bottom component-bottom--no-padding" data-ref="skeleton-component-bottom">
-            <div class="layout-body layout-body--scrollable layout-scrollable" data-ref="skeleton-home-scrollable">
+          <div class="layout-body layout-body--scrollable layout-scrollable home-scrollable" data-ref="skeleton-home-scrollable">
+            <div class="home-container">
+              <div class="skeleton" style="margin: 14px 18px 6px 18px; height: 210px; border-radius: 20px;"></div>
               <div class="canvas-section" data-ref="skeleton-canvas-section">
                 <div class="canvas-grid" data-ref="skeleton-canvas-grid">
                   ${renderGridCardsHtml(8, 'canvas')}
@@ -134,8 +153,8 @@ export const SKELETON_TEMPLATES: Record<string, string> = {
   `,
 
   'grouped-layout': `
-    <div class="layout-root" data-ref="skeleton-grouped-view" style="width: 100%; height: 100%; display: flex; flex-direction: column;">
-      ${SKELETON_TOPBAR_HTML}
+    <div class="layout-root" data-ref="skeleton-grouped-view" style="width: 100%; height: 100%; display: flex; flex-direction: row; overflow: hidden;">
+      ${SKELETON_RAIL_HTML}
 
       <div class="layout-content" data-ref="skeleton-content-area">
         <div class="layout-body layout-body--scrollable layout-scrollable" data-ref="skeleton-body-area">
@@ -244,8 +263,8 @@ export const SKELETON_TEMPLATES: Record<string, string> = {
   `,
 
   'search-layout': `
-    <div class="layout-root" data-ref="skeleton-search-root" style="width: 100%; height: 100%; display: flex; flex-direction: column;">
-      ${SKELETON_TOPBAR_HTML}
+    <div class="layout-root" data-ref="skeleton-search-root" style="width: 100%; height: 100%; display: flex; flex-direction: row; overflow: hidden;">
+      ${SKELETON_RAIL_HTML}
       <div class="layout-content skeleton-container" data-ref="skeleton-search-view">
         <div class="component-wrapper component-wrapper--full" data-ref="skeleton-search-wrapper">
           <div class="component-top" data-ref="skeleton-search-top">
@@ -327,8 +346,8 @@ export const SKELETON_TEMPLATES: Record<string, string> = {
   `,
 
   'templates-layout': `
-    <div class="layout-root" data-ref="skeleton-templates-root" style="width: 100%; height: 100%; display: flex; flex-direction: column;">
-      ${SKELETON_TOPBAR_HTML}
+    <div class="layout-root" data-ref="skeleton-templates-root" style="width: 100%; height: 100%; display: flex; flex-direction: row; overflow: hidden;">
+      ${SKELETON_RAIL_HTML}
       <div class="layout-content skeleton-container" data-ref="skeleton-templates-view">
         <div class="component-wrapper component-wrapper--full" data-ref="skeleton-templates-wrapper">
           <div class="component-top" data-ref="skeleton-templates-top">
@@ -386,8 +405,8 @@ export const SKELETON_TEMPLATES: Record<string, string> = {
   `,
 
   'trash-layout': `
-    <div class="layout-root" data-ref="skeleton-trash-root" style="width: 100%; height: 100%; display: flex; flex-direction: column;">
-      ${SKELETON_TOPBAR_HTML}
+    <div class="layout-root" data-ref="skeleton-trash-root" style="width: 100%; height: 100%; display: flex; flex-direction: row; overflow: hidden;">
+      ${SKELETON_RAIL_HTML}
       <div class="layout-content skeleton-container" data-ref="skeleton-trash-view">
         <div class="component-wrapper component-wrapper--full" data-ref="skeleton-trash-wrapper">
           <div class="component-top" data-ref="skeleton-trash-top">

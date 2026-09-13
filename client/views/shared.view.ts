@@ -12,6 +12,25 @@ import { showToast } from '../services/toast.service.js';
 import { SharedCanvasItem } from '../types/canvas.types.js';
 import { removeEmptyState, renderEmptyState } from '../utils/dom.util.js';
 
+function formatEditedTime(dateStr?: string | null): string {
+  if (!dateStr) return 'hace un momento';
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffSec = Math.floor((now.getTime() - date.getTime()) / 1000);
+  if (isNaN(diffSec) || diffSec < 60) return 'hace un momento';
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return diffMin === 1 ? 'hace 1 minuto' : `hace ${diffMin} minutos`;
+  const diffHours = Math.floor(diffMin / 60);
+  if (diffHours < 24) return diffHours === 1 ? 'hace 1 hora' : `hace ${diffHours} horas`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 7) return diffDays === 1 ? 'hace 1 día' : `hace ${diffDays} días`;
+  const diffWeeks = Math.floor(diffDays / 7);
+  if (diffWeeks < 4) return diffWeeks === 1 ? 'hace 1 semana' : `hace ${diffWeeks} semanas`;
+  const diffMonths = Math.floor(diffDays / 30);
+  if (diffMonths < 12) return diffMonths === 1 ? 'hace 1 mes' : `hace ${diffMonths} meses`;
+  return diffDays > 365 ? 'hace más de 1 año' : date.toLocaleDateString();
+}
+
 class SharedController {
   private container: HTMLElement;
   private abortController: AbortController;
@@ -206,65 +225,60 @@ class SharedController {
       ? `<img class="canvas-card__image image-lazy-fade" src="${escapeHtml(canvas.preview_thumbnail)}" alt="${escapeHtml(canvas.name)}" loading="lazy" decoding="async" onload="this.classList.add('image-loaded')" onerror="this.onerror=null; this.classList.add('image-loaded');" />`
       : `<div class="canvas-card__canvas-placeholder"></div>`;
 
+    const isBoard = canvas.canvas_type === 'board' || canvas.unit === 'board';
+    const typeIcon = isBoard ? 'draw' : 'grid_4x4';
+    const typeLabel = isBoard ? 'Pizarrón' : `Lienzo ${canvas.width}×${canvas.height}`;
+    const editedTime = formatEditedTime(canvas.updated_at || canvas.created_at);
+
     card.innerHTML = `
-      ${thumbnailHtml}
+      <div class="canvas-card__thumbnail" data-ref="card-thumbnail">
+        ${thumbnailHtml}
 
-      <div class="canvas-card__badges-tl" data-ref="badges-tl">
-        <div class="canvas-card__badge canvas-card__badge--glass">
-          <span class="material-symbols-rounded">straighten</span>
-          <span>${canvas.width} × ${canvas.height} px</span>
-        </div>
-      </div>
+        <div class="canvas-card__actions-wrapper" data-ref="card-actions-wrapper">
+          <div class="canvas-card__actions" data-ref="card-actions">
+            <button type="button" class="canvas-card__action-btn${isFavorite ? ' is-active' : ''}" data-ref="btn-card-bookmark" data-tooltip="${isFavorite ? t('canvas.bookmark_remove') : t('canvas.bookmark_save')}" aria-label="${isFavorite ? t('canvas.bookmark_remove') : t('canvas.bookmark_save')}">
+              <span class="material-symbols-rounded">${isFavorite ? 'star_fill' : 'star'}</span>
+            </button>
+            <button type="button" class="canvas-card__action-btn" data-ref="btn-card-more" data-tooltip="Opciones" aria-label="Opciones">
+              <span class="material-symbols-rounded">more_vert</span>
+            </button>
+          </div>
 
-      <div class="canvas-card__badges-tr" data-ref="badges-tr">
-        <div class="canvas-card__badge canvas-card__badge--glass" data-tooltip="${t('shared.owner') || 'Propietario'}: ${escapeHtml(ownerName)}" aria-label="${escapeHtml(ownerName)}">
-          <img class="avatar-img image-lazy-fade" style="width: 14px; height: 14px; border-radius: 50%; object-fit: cover;" src="${escapeHtml(ownerAvatarUrl)}" alt="${escapeHtml(ownerName)}" onload="this.classList.add('image-loaded')" onerror="this.onerror=null; this.classList.add('image-loaded');" />
-          <span>${escapeHtml(ownerName)}</span>
-        </div>
-        <div class="canvas-card__badge canvas-card__badge--glass canvas-card__badge--accent">
-          <span class="material-symbols-rounded">${isEditor ? 'edit' : 'visibility'}</span>
-          <span>${escapeHtml(roleLabel)}</span>
-        </div>
-      </div>
-
-      <div class="canvas-card__actions-wrapper" data-ref="card-actions-wrapper">
-        <div class="canvas-card__actions" data-ref="card-actions">
-          <button type="button" class="canvas-card__action-btn${isFavorite ? ' is-active' : ''}" data-ref="btn-card-bookmark" data-tooltip="${isFavorite ? t('canvas.bookmark_remove') : t('canvas.bookmark_save')}" aria-label="${isFavorite ? t('canvas.bookmark_remove') : t('canvas.bookmark_save')}">
-            <span class="material-symbols-rounded">${isFavorite ? 'star_fill' : 'star'}</span>
-          </button>
-          <button type="button" class="canvas-card__action-btn" data-ref="btn-card-more" data-tooltip="Opciones" aria-label="Opciones">
-            <span class="material-symbols-rounded">more_vert</span>
-          </button>
-        </div>
-
-        <div class="menu-panel menu-panel--dropdown menu-panel--w-265 menu-panel--h-auto" data-ref="card-menu-dropdown" style="display: none;">
-          <div class="menu-panel__list" data-ref="card-menu-list">
-            <button type="button" class="menu-item" data-ref="action-open-new-tab">
-              <span class="material-symbols-rounded menu-item__icon">open_in_new</span>
-              <span class="menu-item__text">${t('canvas.menu_open_new_tab') || 'Abrir en nueva pestaña'}</span>
-            </button>
-            <button type="button" class="menu-item" data-ref="action-duplicate">
-              <span class="material-symbols-rounded menu-item__icon">filter_none</span>
-              <span class="menu-item__text">${t('shared.btn_duplicate') || 'Crear una copia'}</span>
-            </button>
-            <button type="button" class="menu-item" data-ref="action-download">
-              <span class="material-symbols-rounded menu-item__icon">download</span>
-              <span class="menu-item__text">${t('canvas.menu_download') || 'Descargar'}</span>
-            </button>
-            <div class="menu-divider"></div>
-            <button type="button" class="menu-item menu-item--bordered menu-item--danger" data-ref="action-leave">
-              <span class="material-symbols-rounded menu-item__icon">logout</span>
-              <span class="menu-item__text">${t('shared.btn_leave') || 'Dejar de compartir'}</span>
-            </button>
+          <div class="menu-panel menu-panel--dropdown menu-panel--w-265 menu-panel--h-auto" data-ref="card-menu-dropdown" style="display: none;">
+            <div class="menu-panel__list" data-ref="card-menu-list">
+              <button type="button" class="menu-item" data-ref="action-open-new-tab">
+                <span class="material-symbols-rounded menu-item__icon">open_in_new</span>
+                <span class="menu-item__text">${t('canvas.menu_open_new_tab') || 'Abrir en nueva pestaña'}</span>
+              </button>
+              <button type="button" class="menu-item" data-ref="action-duplicate">
+                <span class="material-symbols-rounded menu-item__icon">filter_none</span>
+                <span class="menu-item__text">${t('shared.btn_duplicate') || 'Crear una copia'}</span>
+              </button>
+              <button type="button" class="menu-item" data-ref="action-download">
+                <span class="material-symbols-rounded menu-item__icon">download</span>
+                <span class="menu-item__text">${t('canvas.menu_download') || 'Descargar'}</span>
+              </button>
+              <div class="menu-divider"></div>
+              <button type="button" class="menu-item menu-item--bordered menu-item--danger" data-ref="action-leave">
+                <span class="material-symbols-rounded menu-item__icon">logout</span>
+                <span class="menu-item__text">${t('shared.btn_leave') || 'Dejar de compartir'}</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="canvas-card__bottom" data-ref="canvas-bottom">
-        <div class="canvas-card__badge canvas-card__badge--glass canvas-card__badge--title" data-ref="canvas-title-badge">
-          <span class="canvas-card__title" data-ref="canvas-title" title="${escapeHtml(canvas.name)}">
-            ${escapeHtml(canvas.name)}
-          </span>
+      <div class="canvas-card__info" data-ref="canvas-info">
+        <span class="canvas-card__name" data-ref="canvas-title" title="${escapeHtml(canvas.name)}">
+          ${escapeHtml(canvas.name)}
+        </span>
+        <div class="canvas-card__meta" data-ref="canvas-meta">
+          <span class="material-symbols-rounded canvas-card__meta-icon">${typeIcon}</span>
+          <span>${typeLabel}</span>
+          <span class="canvas-card__meta-dot">·</span>
+          <span>${escapeHtml(ownerName)}</span>
+          <span class="canvas-card__meta-dot">·</span>
+          <span>Editado ${editedTime}</span>
         </div>
       </div>
     `;

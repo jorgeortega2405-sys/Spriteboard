@@ -1,33 +1,96 @@
 import { navigate, render } from '../app-router.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { currentUser, deleteApi, escapeHtml, getApi, linkedAccounts, logoutAllApi, logoutApi, patchApi, postApi, switchAccountApi } from '../services/api.service.js';
+import { getAllLocalCanvases } from '../services/canvas-storage.service.js';
 import { createIconSvg, renderIcons } from '../services/icon.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { closeWebSocket, initWebSocket } from '../services/websocket.service.js';
+import { CanvasItem } from '../types/canvas.types.js';
 import { openCreateCanvasModal } from './create-canvas-modal.component.js';
 import { openUpgradeModal } from './upgrade-modal.component.js';
 
-let isSidebarOpen = false;
+let isDrawerOpen = false;
 let isChatOpen = false;
 let chatSidebarElement: HTMLElement | null = null;
 let chatSidebarInitPromise: Promise<HTMLElement> | null = null;
 
+let drawerRemovalTimer: ReturnType<typeof setTimeout> | null = null;
+
+function createDrawerElement(): HTMLElement {
+  const drawer = document.createElement('aside');
+  drawer.className = 'layout-drawer';
+  drawer.setAttribute('data-ref', 'layout-drawer');
+
+  const drawerBody = document.createElement('div');
+  drawerBody.className = 'layout-drawer__body';
+  drawerBody.setAttribute('data-ref', 'drawer-body');
+  drawer.appendChild(drawerBody);
+
+  const drawerFooter = document.createElement('div');
+  drawerFooter.className = 'layout-drawer__footer';
+  drawerFooter.setAttribute('data-ref', 'drawer-footer');
+
+  const btnTrash = document.createElement('button');
+  btnTrash.type = 'button';
+  btnTrash.className = 'drawer-footer-item';
+  btnTrash.setAttribute('data-ref', 'drawer-btn-trash');
+  btnTrash.setAttribute('data-tooltip', 'Papelera');
+  btnTrash.setAttribute('aria-label', 'Papelera');
+  btnTrash.innerHTML = `
+    <span class="material-symbols-rounded drawer-footer-item__icon">delete</span>
+    <span class="drawer-footer-item__text">${t('nav.trash') || 'Papelera'}</span>
+  `;
+
+  btnTrash.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (window.innerWidth <= 768) {
+      toggleDrawer(false);
+    }
+    navigate('/trash');
+  });
+
+  if (window.location.pathname === '/trash') {
+    btnTrash.classList.add('is-active');
+  }
+
+  drawerFooter.appendChild(btnTrash);
+  drawer.appendChild(drawerFooter);
+
+  return drawer;
+}
+
 export function getIsSidebarOpen(): boolean {
-  return isSidebarOpen;
+  return isDrawerOpen;
+}
+
+export function toggleDrawer(forceState?: boolean): void {
+  const sidebar = document.querySelector<HTMLElement>('[data-ref="sidebar"]');
+  const btnToggle = sidebar?.querySelector<HTMLElement>('[data-ref="btn-toggle-drawer"]') || document.querySelector<HTMLElement>('[data-ref="btn-toggle-drawer"]');
+  const currentlyOpen = isDrawerOpen;
+  const nextOpen = forceState !== undefined ? forceState : !currentlyOpen;
+
+  isDrawerOpen = nextOpen;
+  btnToggle?.classList.toggle('is-active', isDrawerOpen);
+  localStorage.setItem('sprite_drawer_open', isDrawerOpen ? 'true' : 'false');
+
+  if (isDrawerOpen) {
+    if (drawerRemovalTimer) {
+      clearTimeout(drawerRemovalTimer);
+      drawerRemovalTimer = null;
+    }
+    if (sidebar) {
+      void openDynamicDrawer(sidebar);
+    }
+    toggleChatSidebar(false);
+  } else {
+    closeDynamicDrawer();
+  }
 }
 
 export function toggleSidebar(forceState?: boolean): void {
-  isSidebarOpen = forceState !== undefined ? forceState : !isSidebarOpen;
-  const sidebar = document.querySelector<HTMLElement>('[data-ref="sidebar"]');
-
-  if (sidebar) {
-    sidebar.classList.toggle('is-active', isSidebarOpen);
-    if (isSidebarOpen) {
-      toggleChatSidebar(false);
-    }
-  }
+  toggleDrawer(forceState);
 }
 
 export function getIsChatOpen(): boolean {
@@ -37,6 +100,9 @@ export function getIsChatOpen(): boolean {
 export async function toggleChatSidebar(forceState?: boolean): Promise<void> {
   const nextOpen = forceState !== undefined ? forceState : !isChatOpen;
   isChatOpen = nextOpen;
+
+  const btnRailHelp = document.querySelector<HTMLElement>('[data-ref="btn-rail-help"]');
+  btnRailHelp?.classList.toggle('is-active', isChatOpen);
 
   if (isChatOpen) {
     const chatEl = await initChatSidebar();
@@ -74,29 +140,29 @@ function updateChatEmptyState(): void {
 
 document.addEventListener('keydown', (e: KeyboardEvent) => {
   if (e.key === 'Escape') {
-    if (isSidebarOpen) toggleSidebar(false);
+    if (window.innerWidth <= 768 && isDrawerOpen) toggleDrawer(false);
     if (isChatOpen) toggleChatSidebar(false);
   }
 });
 
 document.addEventListener('click', (e: MouseEvent) => {
   const target = e.target as Node | null;
-  if (isSidebarOpen) {
-    const sidebar = document.querySelector<HTMLElement>('[data-ref="sidebar"]');
-    const btnToggle = document.querySelector<HTMLElement>('[data-ref="btn-toggle-menu"]');
-    if (sidebar && target && !sidebar.contains(target) && (!btnToggle || !btnToggle.contains(target))) {
-      toggleSidebar(false);
+  if (window.innerWidth <= 768 && isDrawerOpen) {
+    const drawer = document.querySelector<HTMLElement>('[data-ref="layout-drawer"]');
+    const btnToggle = document.querySelector<HTMLElement>('[data-ref="btn-toggle-drawer"]');
+    if (drawer && target && !drawer.contains(target) && (!btnToggle || !btnToggle.contains(target))) {
+      toggleDrawer(false);
     }
   }
 
   if (isChatOpen) {
     const chatSidebar = document.querySelector<HTMLElement>('[data-ref="chat-sidebar"]');
-    const btnToggle = document.querySelector<HTMLElement>('[data-ref="btn-help-chat"]');
+    const btnRailHelp = document.querySelector<HTMLElement>('[data-ref="btn-rail-help"]');
     const btnMenuHelp = document.querySelector<HTMLElement>('[data-ref="btn-menu-help"]');
 
     const isClickInside =
       (chatSidebar && target && chatSidebar.contains(target)) ||
-      (btnToggle && target && btnToggle.contains(target)) ||
+      (btnRailHelp && target && btnRailHelp.contains(target)) ||
       (btnMenuHelp && target && btnMenuHelp.contains(target));
 
     if (!isClickInside) {
@@ -124,84 +190,478 @@ function formatNotificationTime(iso?: string | null): string {
 }
 
 export async function createTopBar(): Promise<HTMLElement> {
-  const topbar = await loadTemplate('/views/components/topbar.html');
+  const dummy = document.createElement('div');
+  dummy.className = 'layout-header-placeholder';
+  dummy.style.display = 'none';
+  return dummy;
+}
 
-  const btnToggle = topbar.querySelector<HTMLElement>('[data-ref="btn-toggle-menu"]');
-  btnToggle?.addEventListener('click', (e) => {
+function setupRailNavigation(sidebar: HTMLElement): void {
+  const currentPath = window.location.pathname;
+
+  const bindNav = (itemRef: string, btnRef: string, path: string, isActive: boolean) => {
+    const item = sidebar.querySelector<HTMLElement>(`[data-ref="${itemRef}"]`);
+    const btn = sidebar.querySelector<HTMLElement>(`[data-ref="${btnRef}"]`);
+    const handler = (e: Event) => {
+      e.preventDefault();
+      navigate(path);
+    };
+    btn?.addEventListener('click', handler);
+    item?.addEventListener('click', (e) => {
+      if (e.target !== btn && !btn?.contains(e.target as Node)) {
+        handler(e);
+      }
+    });
+
+    if (isActive) {
+      btn?.classList.add('is-active');
+      item?.classList.add('is-active');
+    }
+  };
+
+  const isHome = currentPath === '/' || currentPath === '' || currentPath.startsWith('/folder/');
+  bindNav('rail-item-home', 'btn-rail-home', '/', isHome);
+  bindNav('rail-item-templates', 'btn-rail-templates', '/templates', currentPath === '/templates');
+  bindNav('rail-item-shared', 'btn-rail-shared', '/shared', currentPath === '/shared');
+  bindNav('rail-item-teams', 'btn-rail-teams', '/teams', currentPath === '/teams');
+  bindNav('rail-item-education', 'btn-rail-education', '/education', currentPath.startsWith('/education') || currentPath === '/institution');
+
+  const btnCreate = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-create"]');
+  const itemCreate = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-create"]');
+  const createHandler = (e: Event) => {
     e.preventDefault();
-    toggleSidebar();
+    openCreateCanvasModal();
+  };
+  btnCreate?.addEventListener('click', createHandler);
+  itemCreate?.addEventListener('click', (e) => {
+    if (e.target !== btnCreate && !btnCreate?.contains(e.target as Node)) {
+      createHandler(e);
+    }
   });
 
-  const btnCreateCanvas = topbar.querySelector<HTMLElement>('[data-ref="btn-create-canvas"]');
-  btnCreateCanvas?.addEventListener('click', (e) => {
+  const userTier = (currentUser?.subscription_tier || 'free').toLowerCase();
+  const isEducation = ['escuelas', 'docentes', 'schools', 'education'].includes(userTier);
+
+  const itemTeams = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-teams"]');
+  const itemEducation = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-education"]');
+
+  if (itemTeams && itemEducation) {
+    if (isEducation) {
+      itemTeams.style.display = 'none';
+      itemEducation.style.display = 'flex';
+    } else {
+      itemTeams.style.display = 'flex';
+      itemEducation.style.display = 'none';
+    }
+  }
+}
+
+function createDrawerCanvasRow(canvas: CanvasItem): HTMLElement {
+  const item = document.createElement('button');
+  item.type = 'button';
+  item.className = 'drawer-canvas-item';
+  item.setAttribute('data-ref', `drawer-canvas-${canvas.uuid}`);
+
+  const isBoard = canvas.canvas_type === 'board';
+  const iconName = isBoard ? 'dashboard' : 'grid_view';
+
+  const thumbHtml = canvas.preview_thumbnail
+    ? `<img class="drawer-canvas-item__thumb-img" src="${canvas.preview_thumbnail}" alt="" />`
+    : `<span class="material-symbols-rounded drawer-canvas-item__thumb-icon">${iconName}</span>`;
+
+  item.innerHTML = `
+    <div class="drawer-canvas-item__thumb">
+      ${thumbHtml}
+    </div>
+    <span class="drawer-canvas-item__title">${escapeHtml(canvas.name || 'Diseño sin título')}</span>
+  `;
+
+  item.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (window.innerWidth <= 768) {
+      toggleDrawer(false);
+    }
+    navigate(isBoard ? `/board/${canvas.uuid}` : `/design/${canvas.uuid}`);
+  });
+
+  return item;
+}
+
+async function renderHomeDrawerContent(drawerBody: HTMLElement): Promise<void> {
+  drawerBody.innerHTML = `
+    <div class="drawer-section" data-ref="drawer-section-favorites">
+      <div class="drawer-section__header" data-ref="drawer-header-favorites">
+        <span class="drawer-section__title">Favoritos</span>
+        <button type="button" class="drawer-section__action" data-ref="btn-drawer-add-favorite" data-tooltip="Crear diseño" aria-label="Crear diseño">
+          <span class="material-symbols-rounded">add</span>
+        </button>
+      </div>
+      <div class="drawer-items-list" data-ref="drawer-favorites-list">
+        <div class="drawer-empty-hint">Cargando...</div>
+      </div>
+    </div>
+
+    <div class="drawer-section" data-ref="drawer-section-recents">
+      <div class="drawer-section__header" data-ref="drawer-header-recents">
+        <span class="drawer-section__title">Diseños recientes</span>
+      </div>
+      <div class="drawer-items-list" data-ref="drawer-recents-list">
+        <div class="drawer-empty-hint">Cargando...</div>
+      </div>
+      <button type="button" class="drawer-link-btn" data-ref="btn-drawer-view-all">Ver todo</button>
+    </div>
+  `;
+
+  const favoritesList = drawerBody.querySelector<HTMLElement>('[data-ref="drawer-favorites-list"]');
+  const recentsList = drawerBody.querySelector<HTMLElement>('[data-ref="drawer-recents-list"]');
+  const btnAddFav = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-add-favorite"]');
+  const btnViewAll = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-view-all"]');
+
+  btnAddFav?.addEventListener('click', (e) => {
     e.preventDefault();
     openCreateCanvasModal();
   });
 
-  const btnUpgrade = topbar.querySelector<HTMLElement>('[data-ref="btn-upgrade"]');
-  btnUpgrade?.addEventListener('click', (e) => {
+  btnViewAll?.addEventListener('click', (e) => {
     e.preventDefault();
-    openUpgradeModal();
-  });
-
-  const btnHelpChat = topbar.querySelector<HTMLElement>('[data-ref="btn-help-chat"]');
-  btnHelpChat?.addEventListener('click', (e) => {
-    e.preventDefault();
-    toggleChatSidebar();
-  });
-
-  const btnMobileSearch = topbar.querySelector<HTMLElement>('[data-ref="btn-mobile-search"]');
-  const searchInput = topbar.querySelector<HTMLInputElement>('[data-ref="topbar-search-input"]');
-  const searchIcon = topbar.querySelector<HTMLElement>('[data-ref="topbar-search-icon"]');
-
-  if (window.location.pathname === '/search' && searchInput) {
-    const urlParams = new URLSearchParams(window.location.search);
-    const initialQ = urlParams.get('q');
-    if (initialQ) {
-      searchInput.value = initialQ;
+    if (window.location.pathname === '/' || window.location.pathname === '') {
+      const recentHeading = document.querySelector<HTMLElement>('.home-section');
+      recentHeading?.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      navigate('/');
     }
+  });
+
+  try {
+    let items: CanvasItem[] = [];
+    const localCanvases = await getAllLocalCanvases();
+
+    if (currentUser) {
+      try {
+        const res = await getApi(API_ROUTES.canvases.base);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && Array.isArray(data.canvases)) {
+            const cloudUuids = new Set(data.canvases.map((c: CanvasItem) => c.uuid));
+            const unsynced = localCanvases.filter((c) => c.is_local && !cloudUuids.has(c.uuid) && !c.id && (!c.user_id || c.user_id === currentUser?.id));
+            items = [...unsynced, ...data.canvases];
+          } else {
+            items = localCanvases;
+          }
+        } else {
+          items = localCanvases;
+        }
+      } catch {
+        items = localCanvases;
+      }
+    } else {
+      items = localCanvases.filter((c) => c.is_local && !c.user_id && !c.id);
+    }
+
+    const nonDeleted = items.filter((c) => !c.deleted_at);
+
+    const favorites = nonDeleted.filter((c) => c.is_favorite);
+    if (favoritesList) {
+      if (favorites.length === 0) {
+        favoritesList.innerHTML = `<div class="drawer-empty-hint">Sin favoritos aún</div>`;
+      } else {
+        favoritesList.innerHTML = '';
+        favorites.slice(0, 6).forEach((c) => {
+          favoritesList.appendChild(createDrawerCanvasRow(c));
+        });
+      }
+    }
+
+    const sortedRecents = [...nonDeleted].sort((a, b) => {
+      const timeA = new Date(a.updated_at || a.created_at).getTime();
+      const timeB = new Date(b.updated_at || b.created_at).getTime();
+      return timeB - timeA;
+    });
+
+    if (recentsList) {
+      if (sortedRecents.length === 0) {
+        recentsList.innerHTML = `<div class="drawer-empty-hint">No hay diseños recientes</div>`;
+      } else {
+        recentsList.innerHTML = '';
+        sortedRecents.slice(0, 7).forEach((c) => {
+          recentsList.appendChild(createDrawerCanvasRow(c));
+        });
+      }
+    }
+  } catch {
+    if (favoritesList) favoritesList.innerHTML = `<div class="drawer-empty-hint">Sin favoritos</div>`;
+    if (recentsList) recentsList.innerHTML = `<div class="drawer-empty-hint">No hay diseños recientes</div>`;
+  }
+}
+
+async function openDynamicDrawer(sidebar: HTMLElement): Promise<void> {
+  let drawer = sidebar.querySelector<HTMLElement>('[data-ref="layout-drawer"]');
+  if (!drawer) {
+    drawer = createDrawerElement();
+    sidebar.appendChild(drawer);
+    renderIcons(drawer);
   }
 
-  const triggerSearch = () => {
-    const q = (searchInput?.value || '').trim();
-    if (!q) return;
-    navigate(`/search?q=${encodeURIComponent(q)}`);
-    topbar.classList.remove('layout-header--search-active');
+  await populateDrawerContent(drawer);
+
+  void drawer.offsetWidth;
+  drawer.classList.add('is-expanded');
+}
+
+function closeDynamicDrawer(): void {
+  const drawer = document.querySelector<HTMLElement>('[data-ref="layout-drawer"]');
+  if (drawer) {
+    drawer.classList.remove('is-expanded');
+    if (drawerRemovalTimer) {
+      clearTimeout(drawerRemovalTimer);
+    }
+    drawerRemovalTimer = setTimeout(() => {
+      if (!isDrawerOpen && drawer.parentNode) {
+        drawer.remove();
+      }
+      drawerRemovalTimer = null;
+    }, 230);
+  }
+}
+
+async function populateDrawerContent(drawer: HTMLElement): Promise<void> {
+  const drawerBody = drawer.querySelector<HTMLElement>('[data-ref="drawer-body"]');
+  if (!drawerBody) return;
+
+  const currentPath = window.location.pathname;
+
+  const bindNavLink = (btn: HTMLElement | null, path: string) => {
+    btn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (window.innerWidth <= 768) {
+        toggleDrawer(false);
+      }
+      navigate(path);
+    });
   };
 
-  searchInput?.addEventListener('keydown', (e: KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      triggerSearch();
+  const isHome = currentPath === '/' || currentPath === '' || currentPath.startsWith('/folder/');
+
+  if (currentPath.startsWith('/settings')) {
+    if (currentUser) {
+      drawerBody.innerHTML = `
+        <div class="drawer-section__header" style="padding: 8px 8px 4px 8px;">
+          <span class="drawer-section__title" style="font-size: 13px; font-weight: 600; color: var(--text-primary);" data-i18n="nav.settings">${t('nav.settings') || 'Configuración'}</span>
+        </div>
+        <button type="button" class="menu-item" data-ref="btn-nav-settings-account">
+          <span class="material-symbols-rounded menu-item__icon">person</span>
+          <span class="menu-item__text" data-i18n="nav.your_account">Tu cuenta</span>
+        </button>
+        <button type="button" class="menu-item" data-ref="btn-nav-settings-security">
+          <span class="material-symbols-rounded menu-item__icon">lock</span>
+          <span class="menu-item__text" data-i18n="nav.security">Seguridad</span>
+        </button>
+        <button type="button" class="menu-item" data-ref="btn-nav-settings-accessibility">
+          <span class="material-symbols-rounded menu-item__icon">accessibility_new</span>
+          <span class="menu-item__text" data-i18n="nav.accessibility">Accesibilidad</span>
+        </button>
+        <button type="button" class="menu-item" data-ref="btn-nav-settings-billing">
+          <span class="material-symbols-rounded menu-item__icon">credit_card</span>
+          <span class="menu-item__text" data-i18n="nav.billing">Facturación</span>
+        </button>
+        <button type="button" class="menu-item" data-ref="btn-nav-settings-purchases">
+          <span class="material-symbols-rounded menu-item__icon">receipt_long</span>
+          <span class="menu-item__text" data-i18n="nav.purchases">Compras</span>
+        </button>
+      `;
+      translateElement(drawerBody);
+
+      const btnAccount = drawerBody.querySelector<HTMLElement>('[data-ref="btn-nav-settings-account"]');
+      const btnSecurity = drawerBody.querySelector<HTMLElement>('[data-ref="btn-nav-settings-security"]');
+      const btnAccessibility = drawerBody.querySelector<HTMLElement>('[data-ref="btn-nav-settings-accessibility"]');
+      const btnBilling = drawerBody.querySelector<HTMLElement>('[data-ref="btn-nav-settings-billing"]');
+      const btnPurchases = drawerBody.querySelector<HTMLElement>('[data-ref="btn-nav-settings-purchases"]');
+
+      if (currentPath === '/settings' || currentPath === '/settings/your-account') {
+        btnAccount?.classList.add('is-active');
+      } else if (currentPath === '/settings/security' || currentPath === '/settings/login-and-security') {
+        btnSecurity?.classList.add('is-active');
+      } else if (currentPath === '/settings/accessibility') {
+        btnAccessibility?.classList.add('is-active');
+      } else if (currentPath === '/settings/billing') {
+        btnBilling?.classList.add('is-active');
+      } else if (currentPath === '/settings/purchases') {
+        btnPurchases?.classList.add('is-active');
+      }
+
+      bindNavLink(btnAccount, '/settings/your-account');
+      bindNavLink(btnSecurity, '/settings/security');
+      bindNavLink(btnAccessibility, '/settings/accessibility');
+      bindNavLink(btnBilling, '/settings/billing');
+      bindNavLink(btnPurchases, '/settings/purchases');
+    } else {
+      drawerBody.innerHTML = `
+        <button type="button" class="menu-item" data-ref="btn-nav-settings-guest">
+          <span class="material-symbols-rounded menu-item__icon">tune</span>
+          <span class="menu-item__text" data-i18n="nav.guest_settings">Configuración</span>
+        </button>
+      `;
+      translateElement(drawerBody);
+      const btnGuest = drawerBody.querySelector<HTMLElement>('[data-ref="btn-nav-settings-guest"]');
+      btnGuest?.classList.add('is-active');
+      bindNavLink(btnGuest, '/settings/guest');
     }
-  });
+  } else if (currentPath.startsWith('/help')) {
+    drawerBody.innerHTML = `
+      <div class="drawer-section__header" style="padding: 8px 8px 4px 8px;">
+        <span class="drawer-section__title" style="font-size: 13px; font-weight: 600; color: var(--text-primary);" data-i18n="nav.help">${t('nav.help') || 'Centro de ayuda'}</span>
+      </div>
+      <button type="button" class="menu-item" data-ref="btn-nav-help-terms">
+        <span class="material-symbols-rounded menu-item__icon">gavel</span>
+        <span class="menu-item__text" data-i18n="help_center.terms_title">Términos</span>
+      </button>
+      <button type="button" class="menu-item" data-ref="btn-nav-help-privacy">
+        <span class="material-symbols-rounded menu-item__icon">shield</span>
+        <span class="menu-item__text" data-i18n="help_center.privacy_title">Privacidad</span>
+      </button>
+      <button type="button" class="menu-item" data-ref="btn-nav-help-cookies">
+        <span class="material-symbols-rounded menu-item__icon">cookie</span>
+        <span class="menu-item__text" data-i18n="help_center.cookies_title">Cookies</span>
+      </button>
+      <button type="button" class="menu-item" data-ref="btn-nav-help-legal">
+        <span class="material-symbols-rounded menu-item__icon">balance</span>
+        <span class="menu-item__text" data-i18n="help_center.legal_title">Aviso legal</span>
+      </button>
+      <button type="button" class="menu-item" data-ref="btn-nav-help-billing">
+        <span class="material-symbols-rounded menu-item__icon">payments</span>
+        <span class="menu-item__text" data-i18n="help_center.billing_title">Facturación</span>
+      </button>
+      <button type="button" class="menu-item" data-ref="btn-nav-help-support">
+        <span class="material-symbols-rounded menu-item__icon">help</span>
+        <span class="menu-item__text" data-i18n="help_center.support_title">Soporte</span>
+      </button>
+    `;
+    translateElement(drawerBody);
 
-  searchIcon?.addEventListener('click', () => {
-    triggerSearch();
-  });
+    const btnTerms = drawerBody.querySelector<HTMLElement>('[data-ref="btn-nav-help-terms"]');
+    const btnPrivacy = drawerBody.querySelector<HTMLElement>('[data-ref="btn-nav-help-privacy"]');
+    const btnCookies = drawerBody.querySelector<HTMLElement>('[data-ref="btn-nav-help-cookies"]');
+    const btnLegal = drawerBody.querySelector<HTMLElement>('[data-ref="btn-nav-help-legal"]');
+    const btnBilling = drawerBody.querySelector<HTMLElement>('[data-ref="btn-nav-help-billing"]');
+    const btnSupport = drawerBody.querySelector<HTMLElement>('[data-ref="btn-nav-help-support"]');
 
-  btnMobileSearch?.addEventListener('click', (e) => {
+    if (currentPath === '/help' || currentPath === '/help/terms') {
+      btnTerms?.classList.add('is-active');
+    } else if (currentPath === '/help/privacy') {
+      btnPrivacy?.classList.add('is-active');
+    } else if (currentPath === '/help/cookies') {
+      btnCookies?.classList.add('is-active');
+    } else if (currentPath === '/help/legal-notice' || currentPath === '/help/legal') {
+      btnLegal?.classList.add('is-active');
+    } else if (currentPath === '/help/billing') {
+      btnBilling?.classList.add('is-active');
+    } else if (currentPath === '/help/support' || currentPath === '/help/feedback') {
+      btnSupport?.classList.add('is-active');
+    }
+
+    bindNavLink(btnTerms, '/help/terms');
+    bindNavLink(btnPrivacy, '/help/privacy');
+    bindNavLink(btnCookies, '/help/cookies');
+    bindNavLink(btnLegal, '/help/legal-notice');
+    bindNavLink(btnBilling, '/help/billing');
+    bindNavLink(btnSupport, '/help/support');
+  } else if (currentPath.startsWith('/education')) {
+    drawerBody.innerHTML = `
+      <div class="drawer-section__header" style="padding: 8px 8px 4px 8px;">
+        <span class="drawer-section__title" style="font-size: 13px; font-weight: 600; color: var(--text-primary);" data-i18n="nav.education">Educación</span>
+      </div>
+      <button type="button" class="menu-item" data-ref="btn-drawer-edu-classrooms">
+        <span class="material-symbols-rounded menu-item__icon">meeting_room</span>
+        <span class="menu-item__text">Salones y aulas</span>
+      </button>
+      <button type="button" class="menu-item" data-ref="btn-drawer-edu-teachers">
+        <span class="material-symbols-rounded menu-item__icon">school</span>
+        <span class="menu-item__text">Docentes</span>
+      </button>
+      <button type="button" class="menu-item" data-ref="btn-drawer-edu-institution">
+        <span class="material-symbols-rounded menu-item__icon">apartment</span>
+        <span class="menu-item__text">Institución</span>
+      </button>
+    `;
+    const btnClassrooms = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-edu-classrooms"]');
+    const btnTeachers = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-edu-teachers"]');
+    const btnInstitution = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-edu-institution"]');
+
+    btnClassrooms?.addEventListener('click', () => {
+      const tab = document.querySelector<HTMLElement>('[data-tab="classrooms"]');
+      tab?.click();
+    });
+    btnTeachers?.addEventListener('click', () => {
+      const tab = document.querySelector<HTMLElement>('[data-tab="teachers"]');
+      tab?.click();
+    });
+    btnInstitution?.addEventListener('click', () => {
+      const tab = document.querySelector<HTMLElement>('[data-tab="institution"]');
+      tab?.click();
+    });
+  } else if (isHome) {
+    await renderHomeDrawerContent(drawerBody);
+  } else {
+    let sectionTitle = t('nav.home') || 'Inicio';
+    if (currentPath === '/templates') sectionTitle = t('nav.templates') || 'Plantillas';
+    else if (currentPath === '/shared') sectionTitle = t('nav.shared') || 'Compartidos';
+    else if (currentPath === '/teams') sectionTitle = t('nav.teams') || 'Tus equipos';
+    else if (currentPath === '/trash') sectionTitle = t('nav.trash') || 'Papelera';
+
+    drawerBody.innerHTML = `
+      <div class="drawer-section__header" style="padding: 8px 8px 4px 8px;">
+        <span class="drawer-section__title" style="font-size: 13px; font-weight: 600; color: var(--text-primary);">${sectionTitle}</span>
+      </div>
+      <div class="drawer-empty-state" data-ref="drawer-empty-state">
+        <div class="drawer-empty-state__icon">
+          <span class="material-symbols-rounded">upcoming</span>
+        </div>
+        <span class="drawer-empty-state__title">Próximamente</span>
+        <p class="drawer-empty-state__description">Más opciones y accesos directos para esta sección estarán disponibles aquí.</p>
+      </div>
+    `;
+  }
+}
+
+function setupDrawerContent(sidebar: HTMLElement): void {
+  const btnToggle = sidebar.querySelector<HTMLElement>('[data-ref="btn-toggle-drawer"]');
+  btnToggle?.addEventListener('click', (e) => {
     e.preventDefault();
-    const isActive = topbar.classList.toggle('layout-header--search-active');
-    if (isActive) {
-      setTimeout(() => searchInput?.focus(), 60);
-    }
+    toggleDrawer();
   });
 
-  document.addEventListener('keydown', (e: KeyboardEvent) => {
-    if (e.key === 'Escape' && topbar.classList.contains('layout-header--search-active')) {
-      topbar.classList.remove('layout-header--search-active');
-    }
-  });
+  const savedDrawer = localStorage.getItem('sprite_drawer_open');
+  if (savedDrawer === 'true' && window.innerWidth > 768) {
+    isDrawerOpen = true;
+    btnToggle?.classList.add('is-active');
+    void openDynamicDrawer(sidebar);
+  } else {
+    isDrawerOpen = false;
+    btnToggle?.classList.remove('is-active');
+    const existingDrawer = sidebar.querySelector<HTMLElement>('[data-ref="layout-drawer"]');
+    existingDrawer?.remove();
+  }
+}
 
-  const btnNotifications = topbar.querySelector<HTMLElement>('[data-ref="btn-notifications"]');
-  const notificationsBadge = topbar.querySelector<HTMLElement>('[data-ref="notifications-badge"]');
-  const notificationsBackdrop = topbar.querySelector<HTMLElement>('[data-ref="notifications-backdrop"]');
-  const notificationsPanel = topbar.querySelector<HTMLElement>('[data-ref="notifications-panel"]');
-  const notificationsDragZone = topbar.querySelector<HTMLElement>('[data-ref="notifications-drag-zone"]');
-  const btnMarkAllRead = topbar.querySelector<HTMLElement>('[data-ref="btn-mark-all-read"]');
-  const notificationsList = topbar.querySelector<HTMLElement>('[data-ref="notifications-list"]');
-  const notificationsEmpty = topbar.querySelector<HTMLElement>('[data-ref="notifications-empty"]');
+
+function setupRailUserControls(sidebar: HTMLElement): void {
+  const btnRailHelp = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-help"]');
+  btnRailHelp?.addEventListener('click', (e) => {
+    e.preventDefault();
+    void toggleChatSidebar();
+  });
+  if (isChatOpen) {
+    btnRailHelp?.classList.add('is-active');
+  }
+
+  const btnNotifications = sidebar.querySelector<HTMLElement>('[data-ref="btn-notifications"]');
+  const notificationsBadge = sidebar.querySelector<HTMLElement>('[data-ref="notifications-badge"]');
+  const notificationsBackdrop = sidebar.querySelector<HTMLElement>('[data-ref="notifications-backdrop"]');
+  const notificationsPanel = sidebar.querySelector<HTMLElement>('[data-ref="notifications-panel"]');
+  const notificationsDragZone = sidebar.querySelector<HTMLElement>('[data-ref="notifications-drag-zone"]');
+  const btnMarkAllRead = sidebar.querySelector<HTMLElement>('[data-ref="btn-mark-all-read"]');
+  const notificationsList = sidebar.querySelector<HTMLElement>('[data-ref="notifications-list"]');
+  const notificationsEmpty = sidebar.querySelector<HTMLElement>('[data-ref="notifications-empty"]');
 
   let closeAvatarMenu = () => {};
   let isNotificationsClosing = false;
@@ -309,9 +769,7 @@ export async function createTopBar(): Promise<HTMLElement> {
         updateBadge(Number(data.unreadCount || 0));
         renderNotifications(data.notifications || []);
       }
-    } catch {
-      // Ignorar fallo de red silenciosamente en background
-    }
+    } catch {}
   };
 
   const openNotifications = () => {
@@ -536,8 +994,8 @@ export async function createTopBar(): Promise<HTMLElement> {
   };
   window.addEventListener('resize', onNotifWindowResize, { passive: true });
 
-  const avatarContainer = topbar.querySelector<HTMLElement>('[data-ref="avatar-container"]');
-  const btnLogin = topbar.querySelector<HTMLElement>('[data-ref="btn-login"]');
+  const avatarContainer = sidebar.querySelector<HTMLElement>('[data-ref="avatar-container"]');
+  const btnLogin = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-login"], [data-ref="btn-login"]');
 
   if (currentUser) {
     if (avatarContainer) {
@@ -1043,307 +1501,25 @@ export async function createTopBar(): Promise<HTMLElement> {
   if (currentUser) {
     void loadNotifications();
     const notifInterval = setInterval(() => {
-      if (document.body.contains(topbar)) {
+      if (document.body.contains(sidebar)) {
         void loadNotifications();
       } else {
         clearInterval(notifInterval);
       }
     }, 35000);
   }
-
-  return topbar;
 }
 
 export async function createSidebar(): Promise<HTMLElement> {
+  document.querySelector('[data-ref="btn-help-chat"]')?.remove();
   const sidebar = await loadTemplate('/views/components/sidebar.html');
+  translateElement(sidebar);
 
-  if (isSidebarOpen) {
-    sidebar.classList.add('is-active');
-  }
+  setupRailNavigation(sidebar);
+  setupDrawerContent(sidebar);
+  setupRailUserControls(sidebar);
 
-  const currentPath = window.location.pathname;
-  const sidebarHeader = sidebar.querySelector<HTMLElement>('[data-ref="sidebar-header"]');
-  const navTop = sidebar.querySelector<HTMLElement>('[data-ref="sidebar-nav-top"]');
-  const navBottom = sidebar.querySelector<HTMLElement>('[data-ref="sidebar-nav-bottom"]');
-  const sidebarBottom = sidebar.querySelector<HTMLElement>('[data-ref="sidebar-bottom"]');
-
-  const bindNavLink = (btn: HTMLElement | null, path: string) => {
-    btn?.addEventListener('click', (e) => {
-      e.preventDefault();
-      toggleSidebar(false);
-      navigate(path);
-    });
-  };
-
-  if (currentPath.startsWith('/settings')) {
-    if (sidebarHeader) {
-      sidebarHeader.style.display = 'flex';
-      sidebarHeader.innerHTML = `
-        <button type="button" class="menu-item menu-item--bordered" data-ref="btn-nav-back-home">
-          <span class="material-symbols-rounded menu-item__icon">arrow_back</span>
-          <span class="menu-item__text" data-i18n="nav.back_home"></span>
-        </button>
-      `;
-      translateElement(sidebarHeader);
-      const btnBackHome = sidebarHeader.querySelector<HTMLElement>('[data-ref="btn-nav-back-home"]');
-      bindNavLink(btnBackHome, '/');
-    }
-
-    if (currentUser) {
-      if (sidebarBottom) {
-        sidebarBottom.style.display = '';
-      }
-
-      if (navTop) {
-        navTop.innerHTML = `
-          <button type="button" class="menu-item" data-ref="btn-nav-settings-account">
-            <span class="material-symbols-rounded menu-item__icon">person</span>
-            <span class="menu-item__text" data-i18n="nav.your_account"></span>
-          </button>
-          <button type="button" class="menu-item" data-ref="btn-nav-settings-security">
-            <span class="material-symbols-rounded menu-item__icon">lock</span>
-            <span class="menu-item__text" data-i18n="nav.security"></span>
-          </button>
-          <button type="button" class="menu-item" data-ref="btn-nav-settings-accessibility">
-            <span class="material-symbols-rounded menu-item__icon">accessibility_new</span>
-            <span class="menu-item__text" data-i18n="nav.accessibility"></span>
-          </button>
-        `;
-        translateElement(navTop);
-
-        const btnAccount = navTop.querySelector<HTMLElement>('[data-ref="btn-nav-settings-account"]');
-        const btnSecurity = navTop.querySelector<HTMLElement>('[data-ref="btn-nav-settings-security"]');
-        const btnAccessibility = navTop.querySelector<HTMLElement>('[data-ref="btn-nav-settings-accessibility"]');
-
-        if (currentPath === '/settings' || currentPath === '/settings/your-account') {
-          btnAccount?.classList.add('is-active');
-        } else if (
-          currentPath === '/settings/security' ||
-          currentPath === '/settings/login-and-security'
-        ) {
-          btnSecurity?.classList.add('is-active');
-        } else if (currentPath === '/settings/accessibility') {
-          btnAccessibility?.classList.add('is-active');
-        }
-
-        bindNavLink(btnAccount, '/settings/your-account');
-        bindNavLink(btnSecurity, '/settings/security');
-        bindNavLink(btnAccessibility, '/settings/accessibility');
-      }
-
-      if (navBottom) {
-        navBottom.innerHTML = `
-          <button type="button" class="menu-item" data-ref="btn-nav-settings-billing">
-            <span class="material-symbols-rounded menu-item__icon">credit_card</span>
-            <span class="menu-item__text" data-i18n="nav.billing"></span>
-          </button>
-          <button type="button" class="menu-item" data-ref="btn-nav-settings-purchases">
-            <span class="material-symbols-rounded menu-item__icon">receipt_long</span>
-            <span class="menu-item__text" data-i18n="nav.purchases"></span>
-          </button>
-        `;
-        translateElement(navBottom);
-
-        const btnBilling = navBottom.querySelector<HTMLElement>('[data-ref="btn-nav-settings-billing"]');
-        const btnPurchases = navBottom.querySelector<HTMLElement>('[data-ref="btn-nav-settings-purchases"]');
-
-        if (currentPath === '/settings/billing') {
-          btnBilling?.classList.add('is-active');
-        } else if (currentPath === '/settings/purchases') {
-          btnPurchases?.classList.add('is-active');
-        }
-
-        bindNavLink(btnBilling, '/settings/billing');
-        bindNavLink(btnPurchases, '/settings/purchases');
-      }
-    } else {
-      if (sidebarBottom) {
-        sidebarBottom.style.display = 'none';
-      }
-
-      if (navTop) {
-        navTop.innerHTML = `
-          <button type="button" class="menu-item" data-ref="btn-nav-settings-guest">
-            <span class="material-symbols-rounded menu-item__icon">tune</span>
-            <span class="menu-item__text" data-i18n="nav.guest_settings"></span>
-          </button>
-        `;
-        translateElement(navTop);
-
-        const btnGuest = navTop.querySelector<HTMLElement>('[data-ref="btn-nav-settings-guest"]');
-        if (currentPath === '/settings' || currentPath === '/settings/guest') {
-          btnGuest?.classList.add('is-active');
-        }
-        bindNavLink(btnGuest, '/settings/guest');
-      }
-    }
-  } else if (currentPath.startsWith('/help')) {
-    if (sidebarBottom) {
-      sidebarBottom.style.display = 'none';
-    }
-
-    if (sidebarHeader) {
-      sidebarHeader.style.display = 'flex';
-      sidebarHeader.innerHTML = `
-        <button type="button" class="menu-item menu-item--bordered" data-ref="btn-nav-back-home">
-          <span class="material-symbols-rounded menu-item__icon">arrow_back</span>
-          <span class="menu-item__text" data-i18n="nav.back_home"></span>
-        </button>
-      `;
-      translateElement(sidebarHeader);
-      const btnBackHome = sidebarHeader.querySelector<HTMLElement>('[data-ref="btn-nav-back-home"]');
-      bindNavLink(btnBackHome, '/');
-    }
-
-    if (navTop) {
-      navTop.innerHTML = `
-        <button type="button" class="menu-item" data-ref="btn-nav-help-terms">
-          <span class="material-symbols-rounded menu-item__icon">gavel</span>
-          <span class="menu-item__text" data-i18n="help_center.terms_title"></span>
-        </button>
-        <button type="button" class="menu-item" data-ref="btn-nav-help-privacy">
-          <span class="material-symbols-rounded menu-item__icon">shield</span>
-          <span class="menu-item__text" data-i18n="help_center.privacy_title"></span>
-        </button>
-        <button type="button" class="menu-item" data-ref="btn-nav-help-cookies">
-          <span class="material-symbols-rounded menu-item__icon">cookie</span>
-          <span class="menu-item__text" data-i18n="help_center.cookies_title"></span>
-        </button>
-        <button type="button" class="menu-item" data-ref="btn-nav-help-legal">
-          <span class="material-symbols-rounded menu-item__icon">balance</span>
-          <span class="menu-item__text" data-i18n="help_center.legal_title"></span>
-        </button>
-        <button type="button" class="menu-item" data-ref="btn-nav-help-billing">
-          <span class="material-symbols-rounded menu-item__icon">payments</span>
-          <span class="menu-item__text" data-i18n="help_center.billing_title"></span>
-        </button>
-        <button type="button" class="menu-item" data-ref="btn-nav-help-support">
-          <span class="material-symbols-rounded menu-item__icon">help</span>
-          <span class="menu-item__text" data-i18n="help_center.support_title"></span>
-        </button>
-      `;
-      translateElement(navTop);
-
-      const btnTerms = navTop.querySelector<HTMLElement>('[data-ref="btn-nav-help-terms"]');
-      const btnPrivacy = navTop.querySelector<HTMLElement>('[data-ref="btn-nav-help-privacy"]');
-      const btnCookies = navTop.querySelector<HTMLElement>('[data-ref="btn-nav-help-cookies"]');
-      const btnLegal = navTop.querySelector<HTMLElement>('[data-ref="btn-nav-help-legal"]');
-      const btnBilling = navTop.querySelector<HTMLElement>('[data-ref="btn-nav-help-billing"]');
-      const btnSupport = navTop.querySelector<HTMLElement>('[data-ref="btn-nav-help-support"]');
-
-      if (currentPath === '/help' || currentPath === '/help/terms') {
-        btnTerms?.classList.add('is-active');
-      } else if (currentPath === '/help/privacy') {
-        btnPrivacy?.classList.add('is-active');
-      } else if (currentPath === '/help/cookies') {
-        btnCookies?.classList.add('is-active');
-      } else if (currentPath === '/help/legal-notice' || currentPath === '/help/legal') {
-        btnLegal?.classList.add('is-active');
-      } else if (currentPath === '/help/billing') {
-        btnBilling?.classList.add('is-active');
-      } else if (currentPath === '/help/support' || currentPath === '/help/feedback') {
-        btnSupport?.classList.add('is-active');
-      }
-
-      bindNavLink(btnTerms, '/help/terms');
-      bindNavLink(btnPrivacy, '/help/privacy');
-      bindNavLink(btnCookies, '/help/cookies');
-      bindNavLink(btnLegal, '/help/legal-notice');
-      bindNavLink(btnBilling, '/help/billing');
-      bindNavLink(btnSupport, '/help/support');
-    }
-  } else {
-    if (sidebarHeader) {
-      sidebarHeader.style.display = 'none';
-      sidebarHeader.innerHTML = '';
-    }
-
-    if (sidebarBottom) {
-      sidebarBottom.style.display = '';
-    }
-
-    if (navTop) {
-      navTop.innerHTML = `
-        <button type="button" class="menu-item" data-ref="btn-nav-home">
-          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#home"></use></svg>
-          <span class="menu-item__text" data-i18n="nav.home"></span>
-        </button>
-        <button type="button" class="menu-item" data-ref="btn-nav-templates">
-          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#space_dashboard"></use></svg>
-          <span class="menu-item__text" data-i18n="nav.templates"></span>
-        </button>
-        <button type="button" class="menu-item" data-ref="btn-nav-shared">
-          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#folder_shared"></use></svg>
-          <span class="menu-item__text" data-i18n="nav.shared"></span>
-        </button>
-        <button type="button" class="menu-item" data-ref="btn-nav-teams">
-          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
-          <span class="menu-item__text" data-i18n="nav.teams"></span>
-        </button>
-        <button type="button" class="menu-item" data-ref="btn-nav-education">
-          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#school"></use></svg>
-          <span class="menu-item__text" data-i18n="nav.education"></span>
-        </button>
-      `;
-      translateElement(navTop);
-
-      const btnHome = navTop.querySelector<HTMLElement>('[data-ref="btn-nav-home"]');
-      if (currentPath === '/' || currentPath === '') {
-        btnHome?.classList.add('is-active');
-      }
-      bindNavLink(btnHome, '/');
-
-      const btnTemplates = navTop.querySelector<HTMLElement>('[data-ref="btn-nav-templates"]');
-      if (currentPath === '/templates') {
-        btnTemplates?.classList.add('is-active');
-      }
-      bindNavLink(btnTemplates, '/templates');
-
-      const btnShared = navTop.querySelector<HTMLElement>('[data-ref="btn-nav-shared"]');
-      if (currentPath === '/shared') {
-        btnShared?.classList.add('is-active');
-      }
-      bindNavLink(btnShared, '/shared');
-
-      const userTier = (currentUser?.subscription_tier || 'free').toLowerCase();
-      const isEducation = ['escuelas', 'docentes', 'schools', 'education'].includes(userTier);
-
-      const btnTeams = navTop.querySelector<HTMLElement>('[data-ref="btn-nav-teams"]');
-      if (btnTeams) {
-        if (isEducation) {
-          btnTeams.style.display = 'none';
-        } else {
-          if (currentPath === '/teams') {
-            btnTeams.classList.add('is-active');
-          }
-          bindNavLink(btnTeams, '/teams');
-        }
-      }
-
-      const btnEducation = navTop.querySelector<HTMLElement>('[data-ref="btn-nav-education"]');
-      if (currentPath === '/education') {
-        btnEducation?.classList.add('is-active');
-      }
-      bindNavLink(btnEducation, '/education');
-    }
-
-    if (navBottom) {
-      navBottom.innerHTML = `
-        <button type="button" class="menu-item" data-ref="btn-nav-trash">
-          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
-          <span class="menu-item__text" data-i18n="nav.trash"></span>
-        </button>
-      `;
-      translateElement(navBottom);
-
-      const btnTrash = navBottom.querySelector<HTMLElement>('[data-ref="btn-nav-trash"]');
-      if (currentPath === '/trash') {
-        btnTrash?.classList.add('is-active');
-      }
-      bindNavLink(btnTrash, '/trash');
-    }
-  }
-
+  renderIcons(sidebar);
   return sidebar;
 }
 

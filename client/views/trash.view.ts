@@ -441,43 +441,39 @@ class TrashController {
       ? `<img class="canvas-card__image image-lazy-fade" src="${escapeHtml(canvas.preview_thumbnail)}" alt="${escapeHtml(canvas.name)}" loading="lazy" decoding="async" onload="this.classList.add('image-loaded')" onerror="this.onerror=null; this.classList.add('image-loaded');" />`
       : `<div class="canvas-card__canvas-placeholder"></div>`;
 
+    const isBoard = canvas.canvas_type === 'board' || canvas.unit === 'board';
+    const typeIcon = isBoard ? 'draw' : 'grid_4x4';
+    const typeLabel = isBoard ? 'Pizarrón' : `Lienzo ${canvas.width}×${canvas.height}`;
+
     card.innerHTML = `
-      ${thumbnailHtml}
+      <div class="canvas-card__thumbnail" data-ref="card-thumbnail">
+        ${thumbnailHtml}
 
-      <button type="button" class="canvas-card__checkbox" data-ref="card-checkbox" aria-label="Seleccionar">
-        <span class="material-symbols-rounded">check</span>
-      </button>
+        <button type="button" class="canvas-card__checkbox" data-ref="card-checkbox" aria-label="Seleccionar">
+          <span class="material-symbols-rounded">check</span>
+        </button>
 
-      <div class="canvas-card__badges-tl" data-ref="badges-tl">
-        <div class="canvas-card__badge canvas-card__badge--glass">
-          <span class="material-symbols-rounded">straighten</span>
-          <span>${canvas.width} × ${canvas.height} px</span>
+        <div class="canvas-card__actions-wrapper" data-ref="card-actions-wrapper">
+          <div class="canvas-card__actions" data-ref="card-actions">
+            <button type="button" class="canvas-card__action-btn" data-ref="btn-card-restore" data-tooltip="${t('trash.btn_restore') || 'Restaurar'}" aria-label="${t('trash.btn_restore') || 'Restaurar'}">
+              <span class="material-symbols-rounded">restore_from_trash</span>
+            </button>
+            <button type="button" class="canvas-card__action-btn canvas-card__action-btn--danger" data-ref="btn-card-delete-forever" data-tooltip="${t('trash.btn_delete_forever') || 'Eliminar definitivamente'}" aria-label="${t('trash.btn_delete_forever') || 'Eliminar definitivamente'}">
+              <span class="material-symbols-rounded">delete_forever</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      <div class="canvas-card__badges-tr" data-ref="badges-tr">
-        <div class="canvas-card__badge canvas-card__badge--glass" data-tooltip="Eliminado el: ${escapeHtml(formatDate(canvas.deleted_at))}" aria-label="${remainingDays}">
-          <span class="material-symbols-rounded">auto_delete</span>
+      <div class="canvas-card__info" data-ref="canvas-info">
+        <span class="canvas-card__name" data-ref="canvas-title" title="${escapeHtml(canvas.name)}">
+          ${escapeHtml(canvas.name)}
+        </span>
+        <div class="canvas-card__meta" data-ref="canvas-meta">
+          <span class="material-symbols-rounded canvas-card__meta-icon">${typeIcon}</span>
+          <span>${typeLabel}</span>
+          <span class="canvas-card__meta-dot">·</span>
           <span>${escapeHtml(remainingDays)}</span>
-        </div>
-      </div>
-
-      <div class="canvas-card__actions-wrapper" data-ref="card-actions-wrapper">
-        <div class="canvas-card__actions" data-ref="card-actions">
-          <button type="button" class="canvas-card__action-btn" data-ref="btn-card-restore" data-tooltip="${t('trash.btn_restore') || 'Restaurar'}" aria-label="${t('trash.btn_restore') || 'Restaurar'}">
-            <span class="material-symbols-rounded">restore_from_trash</span>
-          </button>
-          <button type="button" class="canvas-card__action-btn canvas-card__action-btn--danger" data-ref="btn-card-delete-forever" data-tooltip="${t('trash.btn_delete_forever') || 'Eliminar definitivamente'}" aria-label="${t('trash.btn_delete_forever') || 'Eliminar definitivamente'}">
-            <span class="material-symbols-rounded">delete_forever</span>
-          </button>
-        </div>
-      </div>
-
-      <div class="canvas-card__bottom" data-ref="canvas-bottom">
-        <div class="canvas-card__badge canvas-card__badge--glass canvas-card__badge--title" data-ref="canvas-title-badge">
-          <span class="canvas-card__title" data-ref="canvas-title" title="${escapeHtml(canvas.name)}">
-            ${escapeHtml(canvas.name)}
-          </span>
         </div>
       </div>
     `;

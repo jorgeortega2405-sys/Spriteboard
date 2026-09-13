@@ -1,57 +1,52 @@
 <div class="layout-content" data-ref="teams-view">
-  <div class="component-wrapper component-wrapper--full" data-ref="teams-wrapper">
-    <!-- Component Top -->
-    <div class="component-top" data-ref="component-top">
-      <div class="component-top-left" data-ref="component-top-left">
-        <h1 class="component-top-title" data-ref="teams-title" data-i18n="teams.title">Tus equipos</h1>
-      </div>
-
-      <div class="component-top-right" data-ref="component-top-right">
-        <!-- Acciones por defecto -->
-        <div class="component-top-actions" data-ref="teams-default-actions">
-          <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-toggle-search" data-tooltip="Buscar equipos" aria-label="Buscar equipos">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
-          </button>
-          <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-create-team" data-tooltip="Crear equipo" aria-label="Crear equipo">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#group_add"></use></svg>
-          </button>
-        </div>
-
-        <!-- Acciones contextuales al seleccionar items -->
-        <div class="component-top-actions" data-ref="teams-selected-actions" style="display: none;">
-          <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-action-create-canvas" data-tooltip="Crear lienzo en este equipo" aria-label="Crear lienzo en este equipo">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#brush"></use></svg>
-          </button>
-          <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-action-members" data-tooltip="Miembros" aria-label="Miembros">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
-          </button>
-          <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-action-edit" data-tooltip="Editar" aria-label="Editar">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
-          </button>
-          <button type="button" class="btn btn--h40 btn--danger btn--icon" data-ref="btn-action-delete" data-tooltip="Eliminar" aria-label="Eliminar">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
-          </button>
-        </div>
-      </div>
-
-      <!-- Toolbar de búsqueda flotante -->
-      <div class="component-search-toolbar is-hidden" data-ref="search-toolbar">
-        <div class="component-search component-search--full" data-ref="search-box">
-          <div class="component-search__icon" data-ref="search-icon">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
-          </div>
-          <div class="component-search__input-box" data-ref="search-input-box">
-            <input class="component-search__input" data-ref="teams-search-input" data-i18n-placeholder="teams.search_placeholder" type="text" maxlength="100" autocomplete="off" />
-          </div>
-          <button type="button" class="btn btn--h34 btn--icon btn--clear-search" data-ref="btn-clear-search" style="display: none; margin-right: 4px;" aria-label="Limpiar búsqueda">
-            <svg class="component-icon" aria-hidden="true" style="font-size: 18px;"><use href="/icons.svg#close"></use></svg>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Component Bottom -->
+  <div class="component-wrapper component-wrapper--full home-wrapper" data-ref="teams-wrapper">
     <div class="component-bottom component-bottom--no-padding" data-ref="component-bottom">
+      <div class="home-floating-top" data-ref="component-top">
+        <div class="home-floating-top__left" data-ref="component-top-left">
+          <h1 class="section-floating-title" data-ref="teams-title" data-i18n="teams.title">Tus equipos</h1>
+        </div>
+
+        <div class="home-floating-top__right" data-ref="component-top-right">
+          <div class="home-floating-actions" data-ref="teams-default-actions">
+            <button type="button" class="btn btn--h40 btn--icon home-floating-btn" data-ref="btn-toggle-search" data-tooltip="Buscar equipos" aria-label="Buscar equipos">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+            </button>
+            <button type="button" class="btn btn--h40 btn--icon home-floating-btn" data-ref="btn-create-team" data-tooltip="Crear equipo" aria-label="Crear equipo">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#group_add"></use></svg>
+            </button>
+          </div>
+
+          <div class="home-floating-actions" data-ref="teams-selected-actions" style="display: none;">
+            <button type="button" class="btn btn--h40 btn--icon home-floating-btn" data-ref="btn-action-create-canvas" data-tooltip="Crear lienzo en este equipo" aria-label="Crear lienzo en este equipo">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#brush"></use></svg>
+            </button>
+            <button type="button" class="btn btn--h40 btn--icon home-floating-btn" data-ref="btn-action-members" data-tooltip="Miembros" aria-label="Miembros">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
+            </button>
+            <button type="button" class="btn btn--h40 btn--icon home-floating-btn" data-ref="btn-action-edit" data-tooltip="Editar" aria-label="Editar">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
+            </button>
+            <button type="button" class="btn btn--h40 btn--danger btn--icon home-floating-btn" data-ref="btn-action-delete" data-tooltip="Eliminar" aria-label="Eliminar">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="component-search-toolbar is-hidden" data-ref="search-toolbar">
+          <div class="component-search component-search--full" data-ref="search-box">
+            <div class="component-search__icon" data-ref="search-icon">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+            </div>
+            <div class="component-search__input-box" data-ref="search-input-box">
+              <input class="component-search__input" data-ref="teams-search-input" data-i18n-placeholder="teams.search_placeholder" type="text" maxlength="100" autocomplete="off" />
+            </div>
+            <button type="button" class="btn btn--h34 btn--icon btn--clear-search" data-ref="btn-clear-search" style="display: none; margin-right: 4px;" aria-label="Limpiar búsqueda">
+              <svg class="component-icon" aria-hidden="true" style="font-size: 18px;"><use href="/icons.svg#close"></use></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div class="component-table-wrapper" data-ref="teams-table-wrapper">
         <div class="component-locked-state is-hidden" data-ref="teams-locked-state">
           <div class="component-locked-state__card" data-ref="teams-locked-card">

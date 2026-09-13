@@ -1,68 +1,165 @@
 <div class="layout-content" data-ref="home-view">
-  <div class="component-wrapper component-wrapper--full" data-ref="home-wrapper">
-    <!-- Component Top -->
-    <div class="component-top" data-ref="component-top">
-      <div class="component-top-left" data-ref="component-top-left">
-        <h1 class="component-top-title" data-ref="home-title" data-i18n="canvas.home_title">Tus centros de trabajo</h1>
-        <div class="component-top-title" data-ref="folder-title-container" style="display: none;">
-          <span class="folder-title-prefix" data-i18n="canvas.folder_viewing_prefix">Consultando carpeta:</span>
-          <span class="folder-title-name" data-ref="folder-title-name"></span>
-        </div>
-        <div class="home-type-filters" data-ref="home-type-filters">
-          <button type="button" class="home-filter-pill is-active" data-ref="btn-filter-all" data-filter="all">Todos</button>
-          <button type="button" class="home-filter-pill" data-ref="btn-filter-boards" data-filter="board">Pizarrones</button>
-          <button type="button" class="home-filter-pill" data-ref="btn-filter-pixels" data-filter="pixel">Lienzos [Pixelart]</button>
-        </div>
-      </div>
-
-      <div class="component-top-right" data-ref="component-top-right">
-        <!-- Acciones por defecto -->
-        <div class="component-top-actions" data-ref="home-default-actions">
-          <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-create-folder" data-tooltip="Crear carpeta" aria-label="Crear carpeta">
-            <span class="material-symbols-rounded">create_new_folder</span>
-          </button>
-          <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-toggle-search" data-tooltip="Buscar lienzos" aria-label="Buscar lienzos">
-            <span class="material-symbols-rounded">search</span>
-          </button>
-        </div>
-
-        <!-- Acciones contextuales dentro de carpeta -->
-        <div class="component-top-actions" data-ref="folder-context-actions" style="display: none;">
-          <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-folder-rename" data-tooltip="Renombrar carpeta" aria-label="Renombrar carpeta">
-            <span class="material-symbols-rounded">edit</span>
-          </button>
-          <button type="button" class="btn btn--h40 btn--danger btn--icon" data-ref="btn-folder-delete" data-tooltip="Eliminar carpeta" aria-label="Eliminar carpeta">
-            <span class="material-symbols-rounded">delete</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Toolbar de búsqueda flotante -->
-      <div class="component-search-toolbar is-hidden" data-ref="search-toolbar">
-        <div class="component-search component-search--full" data-ref="search-box">
-          <div class="component-search__icon" data-ref="search-icon">
-            <span class="material-symbols-rounded">search</span>
+  <div class="component-wrapper component-wrapper--full home-wrapper" data-ref="home-wrapper">
+    <!-- Main scrollable body -->
+    <div class="layout-body layout-body--scrollable layout-scrollable home-scrollable" data-ref="home-scrollable">
+      <div class="home-container" data-ref="home-container">
+        <div class="home-gradient-backdrop" data-ref="home-gradient-backdrop"></div>
+        <!-- Top bar for actions & breadcrumbs inside scrollable content -->
+        <div class="home-floating-top" data-ref="home-floating-top">
+          <div class="home-floating-top__left" data-ref="home-floating-left">
+            <h1 class="home-floating-title" data-ref="home-title" data-i18n="canvas.home_title" style="display: none;">Tus centros de trabajo</h1>
+            <div class="home-breadcrumb" data-ref="folder-title-container" style="display: none;">
+              <button type="button" class="btn btn--h34 btn--icon home-breadcrumb__back" data-ref="btn-folder-back" data-tooltip="Volver al inicio" aria-label="Volver al inicio">
+                <span class="material-symbols-rounded">arrow_back</span>
+              </button>
+              <div class="home-breadcrumb__info" data-ref="folder-breadcrumb-info">
+                <span class="home-breadcrumb__prefix" data-i18n="canvas.folder_viewing_prefix">Carpeta:</span>
+                <span class="home-breadcrumb__name" data-ref="folder-title-name"></span>
+              </div>
+            </div>
           </div>
-          <div class="component-search__input-box" data-ref="search-input-box">
-            <input class="component-search__input" data-ref="home-search-input" data-i18n-placeholder="canvas.home_search_placeholder" type="text" maxlength="100" autocomplete="off" />
-          </div>
-          <button type="button" class="btn btn--h34 btn--icon btn--clear-search" data-ref="btn-clear-search" style="display: none; margin-right: 4px;" aria-label="Limpiar búsqueda">
-            <span class="material-symbols-rounded" style="font-size: 18px;">close</span>
-          </button>
-        </div>
-      </div>
-    </div>
 
-    <!-- Component Bottom -->
-    <div class="component-bottom component-bottom--no-padding" data-ref="component-bottom">
-      <div class="layout-body layout-body--scrollable layout-scrollable" data-ref="home-scrollable">
-        <div class="canvas-section" data-ref="canvas-section">
+          <div class="home-floating-top__right" data-ref="home-floating-right">
+            <!-- Acciones por defecto -->
+            <div class="home-floating-actions" data-ref="home-default-actions">
+              <button type="button" class="btn btn--h40 btn--icon home-floating-btn" data-ref="btn-home-upgrade" data-tooltip="Mejorar plan" aria-label="Mejorar plan">
+                <span class="material-symbols-rounded">workspace_premium</span>
+              </button>
+              <button type="button" class="btn btn--h40 btn--icon home-floating-btn" data-ref="btn-create-folder" data-tooltip="Crear carpeta" aria-label="Crear carpeta">
+                <span class="material-symbols-rounded">create_new_folder</span>
+              </button>
+              <button type="button" class="btn btn--h40 btn--icon home-floating-btn" data-ref="btn-toggle-search" data-tooltip="Buscar lienzos" aria-label="Buscar lienzos">
+                <span class="material-symbols-rounded">search</span>
+              </button>
+            </div>
+
+            <!-- Acciones contextuales dentro de carpeta -->
+            <div class="home-floating-actions" data-ref="folder-context-actions" style="display: none;">
+              <button type="button" class="btn btn--h40 btn--icon home-floating-btn" data-ref="btn-folder-rename" data-tooltip="Renombrar carpeta" aria-label="Renombrar carpeta">
+                <span class="material-symbols-rounded">edit</span>
+              </button>
+              <button type="button" class="btn btn--h40 btn--danger btn--icon home-floating-btn" data-ref="btn-folder-delete" data-tooltip="Eliminar carpeta" aria-label="Eliminar carpeta">
+                <span class="material-symbols-rounded">delete</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Toolbar de búsqueda flotante contextual -->
+          <div class="component-search-toolbar is-hidden" data-ref="search-toolbar">
+            <div class="component-search component-search--full" data-ref="search-box">
+              <div class="component-search__icon" data-ref="search-icon">
+                <span class="material-symbols-rounded">search</span>
+              </div>
+              <div class="component-search__input-box" data-ref="search-input-box">
+                <input class="component-search__input" data-ref="home-search-input" data-i18n-placeholder="canvas.home_search_placeholder" type="text" maxlength="100" autocomplete="off" />
+              </div>
+              <button type="button" class="btn btn--h34 btn--icon btn--clear-search" data-ref="btn-clear-search" style="display: none; margin-right: 4px;" aria-label="Limpiar búsqueda">
+                <span class="material-symbols-rounded" style="font-size: 18px;">close</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <section class="home-hero" data-ref="home-hero">
+          <div class="home-hero__content">
+            <h1 class="home-hero__title" data-ref="hero-title">¿Qué te gustaría crear hoy?</h1>
+
+            <!-- Canva-style Search Input Pill -->
+            <div class="home-search-pill" data-ref="hero-search-box">
+              <span class="material-symbols-rounded home-search-pill__icon">search</span>
+              <input class="home-search-pill__input" data-ref="hero-search-input" type="text" placeholder="Busca lo que quieras" autocomplete="off" />
+              <button type="button" class="btn btn--h32 btn--icon home-search-pill__clear" data-ref="btn-hero-clear-search" style="display: none;" aria-label="Limpiar búsqueda">
+                <span class="material-symbols-rounded" style="font-size: 18px;">close</span>
+              </button>
+            </div>
+
+            <!-- Badges -->
+            <div class="component-tags-carousel-wrapper home-tags-wrapper" data-ref="home-categories-carousel-wrapper">
+              <div class="component-tags-carousel" data-ref="home-categories-row">
+                <button type="button" class="component-badge component-badge--interactive is-active" data-ref="cat-badge-all" data-category="all">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome" xlink:href="/icons.svg#auto_awesome"></use></svg>
+                  <span>Para ti</span>
+                </button>
+                <button type="button" class="component-badge component-badge--interactive" data-ref="cat-badge-board" data-category="board">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#dashboard" xlink:href="/icons.svg#dashboard"></use></svg>
+                  <span>Pizarrón</span>
+                </button>
+                <button type="button" class="component-badge component-badge--interactive" data-ref="cat-badge-pixel" data-category="pixel">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#brush" xlink:href="/icons.svg#brush"></use></svg>
+                  <span>Pixel Art</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Section for Canvases & Folders ("Recientes") -->
+        <section class="canvas-section" data-ref="canvas-section">
+          <div class="canvas-section__header" data-ref="canvas-section-header">
+            <h2 class="canvas-section__title" data-ref="canvas-section-title">Recientes</h2>
+            <div class="home-section-controls" data-ref="home-section-controls">
+              <div class="home-filter-dropdown-wrapper" data-ref="home-dropdown-wrapper-type">
+                <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-trigger-filter-type" data-tooltip="Filtrar" aria-label="Filtrar">
+                  <span class="material-symbols-rounded">filter_list</span>
+                </button>
+                <div class="dropdown-backdrop" data-ref="dropdown-backdrop-filter-type">
+                  <div class="menu-panel menu-panel--dropdown menu-panel--w-180 menu-panel--h-auto" data-ref="dropdown-menu-filter-type">
+                    <div class="menu-panel__drag-zone" data-ref="drag-zone-filter-type" aria-hidden="true">
+                      <div class="menu-panel__drag-handle"></div>
+                    </div>
+                    <div class="menu-panel__list">
+                      <button type="button" class="menu-item is-active" data-ref="menu-filter-type-all" data-value="all">
+                        <span class="material-symbols-rounded menu-item__icon">dashboard</span>
+                        <span class="menu-item__text">Cualquiera</span>
+                      </button>
+                      <button type="button" class="menu-item" data-ref="menu-filter-type-designs" data-value="designs">
+                        <span class="material-symbols-rounded menu-item__icon">draw</span>
+                        <span class="menu-item__text">Diseños</span>
+                      </button>
+                      <button type="button" class="menu-item" data-ref="menu-filter-type-folders" data-value="folders">
+                        <span class="material-symbols-rounded menu-item__icon">folder</span>
+                        <span class="menu-item__text">Carpetas</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="home-filter-dropdown-wrapper" data-ref="home-dropdown-wrapper-sort">
+                <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-trigger-sort" data-tooltip="Ordenar" aria-label="Ordenar">
+                  <span class="material-symbols-rounded">swap_vert</span>
+                </button>
+                <div class="dropdown-backdrop" data-ref="dropdown-backdrop-sort">
+                  <div class="menu-panel menu-panel--dropdown menu-panel--w-220 menu-panel--h-auto" data-ref="dropdown-menu-sort">
+                    <div class="menu-panel__drag-zone" data-ref="drag-zone-sort" aria-hidden="true">
+                      <div class="menu-panel__drag-handle"></div>
+                    </div>
+                    <div class="menu-panel__list">
+                      <button type="button" class="menu-item is-active" data-ref="menu-sort-activity" data-value="activity">
+                        <span class="material-symbols-rounded menu-item__icon">schedule</span>
+                        <span class="menu-item__text">Última actividad</span>
+                      </button>
+                      <button type="button" class="menu-item" data-ref="menu-sort-alpha-asc" data-value="alpha-asc">
+                        <span class="material-symbols-rounded menu-item__icon">sort_by_alpha</span>
+                        <span class="menu-item__text">Orden alfabético (A-Z)</span>
+                      </button>
+                      <button type="button" class="menu-item" data-ref="menu-sort-alpha-desc" data-value="alpha-desc">
+                        <span class="material-symbols-rounded menu-item__icon">sort_by_alpha</span>
+                        <span class="menu-item__text">Orden alfabético (Z-A)</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
           <div class="canvas-grid" data-ref="canvas-grid"></div>
           <div class="infinite-scroll-sentinel" data-ref="canvas-sentinel" style="display: none;"></div>
-        </div>
+        </section>
       </div>
     </div>
 
+    <!-- Selection toolbar for batch actions -->
     <div class="selection-toolbar is-hidden" data-ref="selection-toolbar">
       <div class="selection-toolbar__left" data-ref="selection-toolbar-left">
         <button type="button" class="btn btn--icon btn--h34 selection-toolbar__btn selection-toolbar__btn--close" data-ref="btn-selection-close" data-tooltip="Cancelar selección" aria-label="Cancelar selección">

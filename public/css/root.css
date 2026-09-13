@@ -412,7 +412,7 @@
   /* --------------------------------------------------------------------------
      7. TOKENS SEMÁNTICOS DE APLICACIÓN: TEMA CLARO (LIGHT) POR DEFECTO
      -------------------------------------------------------------------------- */
-  --bg-app: #ffffff;
+  --bg-app: #f4f4f5;
   --bg-surface: #ffffff;
   --bg-surface-raised: #ffffff;
   --bg-surface-alt: #ffffff;
@@ -425,6 +425,10 @@
   --bg-active: #ebecef;
   --bg-selected: #f1f3f5;
   --bg-surface-elevated: #f0f1f5;
+
+  --rail-btn-icon: #52525b;
+  --rail-btn-text: #71717a;
+  --rail-btn-active-bg: #e4e4e7;
 
   --text-primary: #111827;
   --text-secondary: #4b5563;
@@ -523,11 +527,11 @@
   --scrollbar-thumb: rgba(0, 0, 0, 0.2);
   --scrollbar-thumb-hover: rgba(0, 0, 0, 0.4);
 
-  /* Skeletons Antiflicker (Gris azulado bajo / Cool Slate) */
-  --sk-bg: #e6ebf2;
+  /* Skeletons Antiflicker (Gris neutro moderno) */
+  --sk-bg: #e4e4e7;
   --sk-shimmer: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.65) 50%, transparent 100%);
-  --skeleton-base: #ebebed;
-  --skeleton-highlight: #f7f7f8;
+  --skeleton-base: #e4e4e7;
+  --skeleton-highlight: rgba(255, 255, 255, 0.7);
   --color-brand: var(--action-primary);
 }
 
@@ -555,6 +559,10 @@ body.dark-theme {
   --bg-active: rgba(255, 255, 255, 0.1);
   --bg-selected: rgba(255, 255, 255, 0.08);
   --bg-surface-elevated: #23252c;
+
+  --rail-btn-icon: #a1a1aa;
+  --rail-btn-text: #a1a1aa;
+  --rail-btn-active-bg: rgba(255, 255, 255, 0.1);
 
   --text-primary: #f4f4f5;
   --text-secondary: #d4d4d8;
@@ -636,11 +644,11 @@ body.dark-theme {
   --scrollbar-thumb: rgba(255, 255, 255, 0.2);
   --scrollbar-thumb-hover: rgba(255, 255, 255, 0.35);
 
-  /* Skeletons Antiflicker (Monocromático #181818 / #282828) */
-  --sk-bg: #181818;
-  --sk-shimmer: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.08) 50%, transparent 100%);
-  --skeleton-base: #181818;
-  --skeleton-highlight: #282828;
+  /* Skeletons Antiflicker (Monocromático Deep Neutral) */
+  --sk-bg: #1f1f23;
+  --sk-shimmer: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.12) 50%, transparent 100%);
+  --skeleton-base: #1f1f23;
+  --skeleton-highlight: rgba(255, 255, 255, 0.12);
   --color-brand: var(--action-primary);
 }
 
@@ -665,6 +673,10 @@ body.dark-theme {
     --bg-active: rgba(255, 255, 255, 0.1);
     --bg-selected: rgba(255, 255, 255, 0.08);
     --bg-surface-elevated: #23252c;
+
+    --rail-btn-icon: #a1a1aa;
+    --rail-btn-text: #a1a1aa;
+    --rail-btn-active-bg: rgba(255, 255, 255, 0.1);
 
     --text-primary: #f4f4f5;
     --text-secondary: #d4d4d8;
@@ -738,11 +750,11 @@ body.dark-theme {
     --scrollbar-thumb: rgba(255, 255, 255, 0.2);
     --scrollbar-thumb-hover: rgba(255, 255, 255, 0.35);
 
-    /* Skeletons Antiflicker (Monocromático #181818 / #282828) */
-    --sk-bg: #181818;
-    --sk-shimmer: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.08) 50%, transparent 100%);
-    --skeleton-base: #181818;
-    --skeleton-highlight: #282828;
+    /* Skeletons Antiflicker (Monocromático Deep Neutral) */
+    --sk-bg: #1f1f23;
+    --sk-shimmer: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.12) 50%, transparent 100%);
+    --skeleton-base: #1f1f23;
+    --skeleton-highlight: rgba(255, 255, 255, 0.12);
     --color-brand: var(--action-primary);
   }
 }

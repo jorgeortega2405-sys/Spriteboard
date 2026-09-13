@@ -2,7 +2,7 @@ import { openCreateCanvasModal } from '../components/create-canvas-modal.compone
 import { createSidebar } from '../components/layout.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { ALL_PRESETS, PresetItem, TEMPLATE_CATEGORIES } from '../config/templates.config.js';
-import { currentUser, getApi, postApi } from '../services/api.service.js';
+import { currentUser, escapeHtml, getApi, postApi } from '../services/api.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { SkeletonService } from '../services/skeleton.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
@@ -93,6 +93,35 @@ class TemplatesController {
 
   private bindEvents(): void {
     const { signal } = this.abortController;
+
+    const searchInput = this.container.querySelector<HTMLInputElement>('[data-ref="templates-search-input"]');
+    const clearBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-templates-clear-search"]');
+
+    searchInput?.addEventListener(
+      'input',
+      () => {
+        this.searchQuery = searchInput.value.trim().toLowerCase();
+        if (clearBtn) {
+          clearBtn.style.display = this.searchQuery ? 'inline-flex' : 'none';
+        }
+        this.renderTemplates();
+      },
+      { signal }
+    );
+
+    clearBtn?.addEventListener(
+      'click',
+      () => {
+        if (searchInput) {
+          searchInput.value = '';
+          this.searchQuery = '';
+          clearBtn.style.display = 'none';
+          searchInput.focus();
+          this.renderTemplates();
+        }
+      },
+      { signal }
+    );
 
     this.scrollableEl?.addEventListener(
       'scroll',
@@ -300,39 +329,20 @@ class TemplatesController {
   }
 
   private buildCardHtml(item: PresetItem, index: number): string {
-    const dimBadge = `${item.width} × ${item.height} px`;
-    const catBadge = item.categoryName || 'Plantilla';
     const isFavorite = this.favoritedTemplateIds.has(item.id);
-
     const aspectClass = this.getCardAspectClass(item, index);
-
-    const previewContent = `<img class="canvas-card__image image-lazy-fade" data-ref="template-card-img-${item.id}" src="${item.imagePath}" alt="${item.name}" loading="lazy" decoding="async" onload="this.classList.add('image-loaded')" onerror="this.classList.add('image-loaded')" />`;
+    const previewContent = `<img class="canvas-card__image image-lazy-fade" data-ref="template-card-img-${item.id}" src="${item.imagePath}" alt="${escapeHtml(item.name)}" loading="lazy" decoding="async" onload="this.classList.add('image-loaded')" onerror="this.classList.add('image-loaded')" />`;
 
     return `
-      <div class="canvas-card ${aspectClass}" data-ref="template-card-${item.id}" data-preset-id="${item.id}">
-        <div class="canvas-card__preview" data-ref="template-card-preview-${item.id}">
+      <div class="canvas-card ${aspectClass} template-card" data-ref="template-card-${item.id}" data-preset-id="${item.id}">
+        <div class="canvas-card__thumbnail template-card__thumbnail" data-ref="template-card-thumb-${item.id}">
           ${previewContent}
-        </div>
-        <div class="canvas-card__badges-tl" data-ref="template-card-badge-container-${item.id}">
-          <div class="canvas-card__badge canvas-card__badge--glass" data-ref="template-card-dim-${item.id}">
-            <span>${dimBadge}</span>
-          </div>
-          <div class="canvas-card__badge canvas-card__badge--glass" data-ref="template-card-cat-${item.id}">
-            <span>${catBadge}</span>
-          </div>
-        </div>
-        <div class="canvas-card__actions-wrapper" data-ref="card-actions-wrapper-${item.id}">
-          <div class="canvas-card__actions" data-ref="card-actions-${item.id}">
-            <button type="button" class="canvas-card__action-btn${isFavorite ? ' is-active' : ''}" data-ref="btn-template-bookmark-${item.id}" data-bookmark-preset="${item.id}" data-tooltip="${isFavorite ? t('canvas.bookmark_remove') : t('canvas.bookmark_save')}" aria-label="${isFavorite ? t('canvas.bookmark_remove') : t('canvas.bookmark_save')}">
-              <span class="material-symbols-rounded">${isFavorite ? 'star_fill' : 'star'}</span>
-            </button>
-          </div>
-        </div>
-        <div class="canvas-card__bottom" data-ref="template-card-bottom-${item.id}">
-          <div class="canvas-card__badge canvas-card__badge--glass canvas-card__badge--title" data-ref="template-card-title-badge-${item.id}">
-            <span class="canvas-card__title" data-ref="template-card-title-${item.id}" title="${item.name}">
-              ${item.name}
-            </span>
+          <div class="canvas-card__actions-wrapper" data-ref="card-actions-wrapper-${item.id}">
+            <div class="canvas-card__actions" data-ref="card-actions-${item.id}">
+              <button type="button" class="canvas-card__action-btn${isFavorite ? ' is-active' : ''}" data-ref="btn-template-bookmark-${item.id}" data-bookmark-preset="${item.id}" data-tooltip="${isFavorite ? t('canvas.bookmark_remove') : t('canvas.bookmark_save')}" aria-label="${isFavorite ? t('canvas.bookmark_remove') : t('canvas.bookmark_save')}">
+                <span class="material-symbols-rounded">${isFavorite ? 'star_fill' : 'star'}</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>

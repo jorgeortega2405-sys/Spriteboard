@@ -1,6 +1,5 @@
-import { attachChatSidebarToView, createTopBar, toggleSidebar } from './components/layout.component';
+import { attachChatSidebarToView, toggleSidebar } from './components/layout.component';
 import { API_ROUTES } from './config/api-routes';
-import { hasPersistentTopBar } from './config/skeleton-routes';
 import { currentUser, getApi } from './services/api.service';
 import { renderIcons } from './services/icon.service';
 import { SkeletonService } from './services/skeleton.service';
@@ -82,18 +81,9 @@ export async function render(): Promise<void> {
   const path = window.location.pathname;
   const navId = ++currentNavigation;
 
-  const hasExistingHeader = Boolean(appRoot.querySelector('.layout-header'));
-  const targetHasHeader = hasPersistentTopBar(path);
-  const isSoftSpaNav = !isInitialPageLoad && hasExistingHeader && targetHasHeader;
-
-  if (isSoftSpaNav) {
-    const existingHeader = appRoot.querySelector('.layout-header');
-    existingHeader?.classList.remove('layout-header--search-active');
-  }
-
   const skeletonSession = SkeletonService.showSkeleton(path, appRoot, {
-    onlyBottom: isSoftSpaNav,
-    minDuration: 280,
+    onlyBottom: false,
+    minDuration: 180,
   });
 
   let viewElements: HTMLElement[] = [];
@@ -128,7 +118,6 @@ export async function render(): Promise<void> {
       const resetView = await createResetPasswordView();
       viewElements = [resetView];
     } else if (path === '/teams') {
-      const topBar = isSoftSpaNav ? null : await createTopBar();
       if (!currentUser) {
         window.history.replaceState({}, '', '/login');
         const { createLoginView } = await import('./views/auth.view.js');
@@ -137,10 +126,9 @@ export async function render(): Promise<void> {
       } else {
         const { createTeamsView } = await import('./views/teams.view.js');
         const teamsView = await createTeamsView();
-        viewElements = topBar ? [topBar, teamsView] : [teamsView];
+        viewElements = [teamsView];
       }
     } else if (path === '/education') {
-      const topBar = isSoftSpaNav ? null : await createTopBar();
       if (!currentUser) {
         window.history.replaceState({}, '', '/login');
         const { createLoginView } = await import('./views/auth.view.js');
@@ -149,11 +137,10 @@ export async function render(): Promise<void> {
       } else {
         const { createEducationView } = await import('./views/education.view.js');
         const educationView = await createEducationView();
-        viewElements = topBar ? [topBar, educationView] : [educationView];
+        viewElements = [educationView];
       }
     } else if (path === '/institution') {
       window.history.replaceState({}, '', '/education');
-      const topBar = isSoftSpaNav ? null : await createTopBar();
       if (!currentUser) {
         window.history.replaceState({}, '', '/login');
         const { createLoginView } = await import('./views/auth.view.js');
@@ -162,20 +149,17 @@ export async function render(): Promise<void> {
       } else {
         const { createEducationView } = await import('./views/education.view.js');
         const educationView = await createEducationView();
-        viewElements = topBar ? [topBar, educationView] : [educationView];
+        viewElements = [educationView];
       }
     } else if (path === '/templates') {
-      const topBar = isSoftSpaNav ? null : await createTopBar();
       const { createTemplatesView } = await import('./views/templates.view.js');
       const templatesView = await createTemplatesView();
-      viewElements = topBar ? [topBar, templatesView] : [templatesView];
+      viewElements = [templatesView];
     } else if (path === '/search') {
-      const topBar = isSoftSpaNav ? null : await createTopBar();
       const { createSearchView } = await import('./views/search.view.js');
       const searchView = await createSearchView();
-      viewElements = topBar ? [topBar, searchView] : [searchView];
+      viewElements = [searchView];
     } else if (path === '/shared') {
-      const topBar = isSoftSpaNav ? null : await createTopBar();
       if (!currentUser) {
         window.history.replaceState({}, '', '/login');
         const { createLoginView } = await import('./views/auth.view.js');
@@ -184,10 +168,9 @@ export async function render(): Promise<void> {
       } else {
         const { createSharedView } = await import('./views/shared.view.js');
         const sharedView = await createSharedView();
-        viewElements = topBar ? [topBar, sharedView] : [sharedView];
+        viewElements = [sharedView];
       }
     } else if (path === '/trash') {
-      const topBar = isSoftSpaNav ? null : await createTopBar();
       if (!currentUser) {
         window.history.replaceState({}, '', '/login');
         const { createLoginView } = await import('./views/auth.view.js');
@@ -196,150 +179,131 @@ export async function render(): Promise<void> {
       } else {
         const { createTrashView } = await import('./views/trash.view.js');
         const trashView = await createTrashView();
-        viewElements = topBar ? [topBar, trashView] : [trashView];
+        viewElements = [trashView];
       }
     } else if (path === '/upgrade') {
-      const topBar = isSoftSpaNav ? null : await createTopBar();
       const { createUpgradeView } = await import('./views/upgrade.view.js');
       const upgradeView = await createUpgradeView();
-      viewElements = topBar ? [topBar, upgradeView] : [upgradeView];
+      viewElements = [upgradeView];
     } else if (path === '/settings') {
-      const topBar = isSoftSpaNav ? null : await createTopBar();
       const { createGuestSettingsView, createYourAccountView } = await import('./views/settings.view.js');
       if (currentUser) {
         window.history.replaceState({}, '', '/settings/your-account');
         const settingsView = await createYourAccountView();
-        viewElements = topBar ? [topBar, settingsView] : [settingsView];
+        viewElements = [settingsView];
       } else {
         window.history.replaceState({}, '', '/settings/guest');
         const settingsView = await createGuestSettingsView();
-        viewElements = topBar ? [topBar, settingsView] : [settingsView];
+        viewElements = [settingsView];
       }
     } else if (path === '/settings/your-account') {
-      const topBar = isSoftSpaNav ? null : await createTopBar();
       const { createGuestSettingsView, createYourAccountView } = await import('./views/settings.view.js');
       if (!currentUser) {
         window.history.replaceState({}, '', '/settings/guest');
         const settingsView = await createGuestSettingsView();
-        viewElements = topBar ? [topBar, settingsView] : [settingsView];
+        viewElements = [settingsView];
       } else {
         const settingsView = await createYourAccountView();
-        viewElements = topBar ? [topBar, settingsView] : [settingsView];
+        viewElements = [settingsView];
       }
     } else if (path === '/settings/security' || path === '/settings/login-and-security') {
-      const topBar = isSoftSpaNav ? null : await createTopBar();
       const { createGuestSettingsView, createSecurityView } = await import('./views/settings.view.js');
       if (!currentUser) {
         window.history.replaceState({}, '', '/settings/guest');
         const settingsView = await createGuestSettingsView();
-        viewElements = topBar ? [topBar, settingsView] : [settingsView];
+        viewElements = [settingsView];
       } else {
         const settingsView = await createSecurityView();
-        viewElements = topBar ? [topBar, settingsView] : [settingsView];
+        viewElements = [settingsView];
       }
     } else if (path === '/settings/billing') {
-      const topBar = isSoftSpaNav ? null : await createTopBar();
       const { createBillingView, createGuestSettingsView } = await import('./views/settings.view.js');
       if (!currentUser) {
         window.history.replaceState({}, '', '/settings/guest');
         const settingsView = await createGuestSettingsView();
-        viewElements = topBar ? [topBar, settingsView] : [settingsView];
+        viewElements = [settingsView];
       } else {
         const settingsView = await createBillingView();
-        viewElements = topBar ? [topBar, settingsView] : [settingsView];
+        viewElements = [settingsView];
       }
     } else if (path === '/settings/purchases') {
-      const topBar = isSoftSpaNav ? null : await createTopBar();
       const { createGuestSettingsView, createPurchasesView } = await import('./views/settings.view.js');
       if (!currentUser) {
         window.history.replaceState({}, '', '/settings/guest');
         const settingsView = await createGuestSettingsView();
-        viewElements = topBar ? [topBar, settingsView] : [settingsView];
+        viewElements = [settingsView];
       } else {
         const settingsView = await createPurchasesView();
-        viewElements = topBar ? [topBar, settingsView] : [settingsView];
+        viewElements = [settingsView];
       }
     } else if (path === '/settings/accessibility') {
-      const topBar = isSoftSpaNav ? null : await createTopBar();
       const { createAccessibilityView, createGuestSettingsView } = await import('./views/settings.view.js');
       if (!currentUser) {
         window.history.replaceState({}, '', '/settings/guest');
         const settingsView = await createGuestSettingsView();
-        viewElements = topBar ? [topBar, settingsView] : [settingsView];
+        viewElements = [settingsView];
       } else {
         const settingsView = await createAccessibilityView();
-        viewElements = topBar ? [topBar, settingsView] : [settingsView];
+        viewElements = [settingsView];
       }
     } else if (path === '/settings/guest') {
-      const topBar = isSoftSpaNav ? null : await createTopBar();
       const { createGuestSettingsView, createYourAccountView } = await import('./views/settings.view.js');
       if (currentUser) {
         window.history.replaceState({}, '', '/settings/your-account');
         const settingsView = await createYourAccountView();
-        viewElements = topBar ? [topBar, settingsView] : [settingsView];
+        viewElements = [settingsView];
       } else {
         const settingsView = await createGuestSettingsView();
-        viewElements = topBar ? [topBar, settingsView] : [settingsView];
+        viewElements = [settingsView];
       }
     } else if (path === '/help' || path === '/legal') {
       window.history.replaceState({}, '', '/help/terms');
-      const topBar = isSoftSpaNav ? null : await createTopBar();
       const { createHelpView } = await import('./views/help.view.js');
       const termsView = await createHelpView('terms');
-      viewElements = topBar ? [topBar, termsView] : [termsView];
+      viewElements = [termsView];
     } else if (path === '/help/terms' || path === '/legal/terms') {
-      const topBar = isSoftSpaNav ? null : await createTopBar();
       const { createHelpView } = await import('./views/help.view.js');
       const termsView = await createHelpView('terms');
-      viewElements = topBar ? [topBar, termsView] : [termsView];
+      viewElements = [termsView];
     } else if (path === '/help/privacy' || path === '/legal/privacy') {
-      const topBar = isSoftSpaNav ? null : await createTopBar();
       const { createHelpView } = await import('./views/help.view.js');
       const privacyView = await createHelpView('privacy');
-      viewElements = topBar ? [topBar, privacyView] : [privacyView];
+      viewElements = [privacyView];
     } else if (path === '/help/cookies' || path === '/legal/cookies') {
-      const topBar = isSoftSpaNav ? null : await createTopBar();
       const { createHelpView } = await import('./views/help.view.js');
       const cookiesView = await createHelpView('cookies');
-      viewElements = topBar ? [topBar, cookiesView] : [cookiesView];
+      viewElements = [cookiesView];
     } else if (path === '/help/legal-notice' || path === '/legal/legal-notice' || path === '/help/legal') {
-      const topBar = isSoftSpaNav ? null : await createTopBar();
       const { createHelpView } = await import('./views/help.view.js');
       const legalView = await createHelpView('legal_notice');
-      viewElements = topBar ? [topBar, legalView] : [legalView];
+      viewElements = [legalView];
     } else if (path === '/help/billing' || path === '/legal/billing') {
-      const topBar = isSoftSpaNav ? null : await createTopBar();
       const { createHelpView } = await import('./views/help.view.js');
       const billingView = await createHelpView('billing');
-      viewElements = topBar ? [topBar, billingView] : [billingView];
+      viewElements = [billingView];
     } else if (path === '/help/support' || path === '/help/feedback' || path === '/help/contact') {
-      const topBar = isSoftSpaNav ? null : await createTopBar();
       const { createHelpView } = await import('./views/help.view.js');
       const supportView = await createHelpView('support');
-      viewElements = topBar ? [topBar, supportView] : [supportView];
+      viewElements = [supportView];
     } else if (path === '/' || path === '') {
-      const topBar = isSoftSpaNav ? null : await createTopBar();
       const { createHomeView } = await import('./views/home.view.js');
       const homeView = await createHomeView();
-      viewElements = topBar ? [topBar, homeView] : [homeView];
+      viewElements = [homeView];
     } else if (path.startsWith('/folder/')) {
-      const topBar = isSoftSpaNav ? null : await createTopBar();
       const folderUuid = path.split('/folder/')[1]?.split('/')[0] || '';
       const { createHomeView } = await import('./views/home.view.js');
       const folderView = await createHomeView(folderUuid);
-      viewElements = topBar ? [topBar, folderView] : [folderView];
+      viewElements = [folderView];
     } else if (path.startsWith('/design/')) {
-      const topBar = isSoftSpaNav ? null : await createTopBar();
       const canvasUuid = path.split('/design/')[1]?.split('/')[0] || '';
       const { createDesignView } = await import('./views/design.view.js');
       const designView = await createDesignView(canvasUuid);
-      viewElements = topBar ? [topBar, designView] : [designView];
+      viewElements = [designView];
     } else if (path.startsWith('/board/')) {
-      const topBar = isSoftSpaNav ? null : await createTopBar();
       const canvasUuid = path.split('/board/')[1]?.split('/')[0] || '';
       const { createBoardView } = await import('./views/board.view.js');
       const boardView = await createBoardView(canvasUuid);
-      viewElements = topBar ? [topBar, boardView] : [boardView];
+      viewElements = [boardView];
     } else if (/^\/[a-zA-Z0-9_-]{3,50}$/.test(path)) {
       const slug = path.slice(1);
       let resolvedUuid: string | null = null;
@@ -358,15 +322,14 @@ export async function render(): Promise<void> {
       if (resolvedUuid) {
         const targetPath = resolvedType === 'board' ? `/board/${resolvedUuid}` : `/design/${resolvedUuid}`;
         window.history.replaceState({}, '', targetPath);
-        const topBar = isSoftSpaNav ? null : await createTopBar();
         if (resolvedType === 'board') {
           const { createBoardView } = await import('./views/board.view.js');
           const boardView = await createBoardView(resolvedUuid);
-          viewElements = topBar ? [topBar, boardView] : [boardView];
+          viewElements = [boardView];
         } else {
           const { createDesignView } = await import('./views/design.view.js');
           const designView = await createDesignView(resolvedUuid);
-          viewElements = topBar ? [topBar, designView] : [designView];
+          viewElements = [designView];
         }
       } else {
         const { createErrorView } = await import('./views/error.view.js');

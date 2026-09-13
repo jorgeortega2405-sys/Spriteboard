@@ -1,38 +1,168 @@
-<div class="menu-panel--sidebar" data-ref="sidebar">
-  <div class="menu-panel menu-panel--w-285 menu-panel--h-full" data-ref="main-menu">
-    <div class="menu-panel__top" data-ref="sidebar-top">
-      <div class="menu-panel__header" data-ref="sidebar-header" style="display: none;"></div>
-      <div class="menu-panel__list" data-ref="sidebar-nav-top">
-        <button type="button" class="menu-item" data-ref="btn-nav-home">
-          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#home"></use></svg>
-          <span class="menu-item__text" data-i18n="nav.home"></span>
+<nav class="layout-nav" data-ref="sidebar">
+  <aside class="layout-rail" data-ref="layout-rail">
+    <div class="layout-rail__top" data-ref="rail-top">
+      <button type="button" class="btn btn--h40 btn--icon rail-btn rail-btn--toggle" data-ref="btn-toggle-drawer" data-tooltip="Alternar menú lateral" aria-label="Alternar menú lateral">
+        <span class="material-symbols-rounded rail-btn__icon">dock_to_right</span>
+      </button>
+      <div class="rail-nav-item" data-ref="rail-item-create">
+        <button type="button" class="btn btn--h40 btn--icon rail-btn rail-btn--create" data-ref="btn-rail-create" data-tooltip="Crear diseño" aria-label="Crear diseño">
+          <span class="material-symbols-rounded rail-btn__icon">add</span>
         </button>
-        <button type="button" class="menu-item" data-ref="btn-nav-templates">
-          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#space_dashboard"></use></svg>
-          <span class="menu-item__text" data-i18n="nav.templates"></span>
-        </button>
-        <button type="button" class="menu-item" data-ref="btn-nav-shared">
-          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#folder_shared"></use></svg>
-          <span class="menu-item__text" data-i18n="nav.shared"></span>
-        </button>
-        <button type="button" class="menu-item" data-ref="btn-nav-teams">
-          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
-          <span class="menu-item__text" data-i18n="nav.teams"></span>
-        </button>
-        <button type="button" class="menu-item" data-ref="btn-nav-education">
-          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#school"></use></svg>
-          <span class="menu-item__text" data-i18n="nav.education">Educación</span>
-        </button>
+        <span class="rail-nav-item__label" data-i18n="canvas.create">Crear</span>
       </div>
     </div>
 
-    <div class="menu-panel__bottom" data-ref="sidebar-bottom">
-      <div class="menu-panel__list" data-ref="sidebar-nav-bottom">
-        <button type="button" class="menu-item" data-ref="btn-nav-trash">
-          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
-          <span class="menu-item__text" data-i18n="nav.trash"></span>
+    <div class="layout-rail__center" data-ref="rail-center">
+      <div class="rail-nav-item" data-ref="rail-item-home">
+        <button type="button" class="btn btn--h40 btn--icon rail-btn" data-ref="btn-rail-home" data-tooltip="Inicio" aria-label="Inicio">
+          <span class="material-symbols-rounded rail-btn__icon">home</span>
         </button>
+        <span class="rail-nav-item__label" data-i18n="nav.home">Inicio</span>
+      </div>
+      <div class="rail-nav-item" data-ref="rail-item-templates">
+        <button type="button" class="btn btn--h40 btn--icon rail-btn" data-ref="btn-rail-templates" data-tooltip="Plantillas" aria-label="Plantillas">
+          <span class="material-symbols-rounded rail-btn__icon">space_dashboard</span>
+        </button>
+        <span class="rail-nav-item__label" data-i18n="nav.templates">Plantillas</span>
+      </div>
+      <div class="rail-nav-item" data-ref="rail-item-shared">
+        <button type="button" class="btn btn--h40 btn--icon rail-btn" data-ref="btn-rail-shared" data-tooltip="Compartidos" aria-label="Compartidos">
+          <span class="material-symbols-rounded rail-btn__icon">folder_shared</span>
+        </button>
+        <span class="rail-nav-item__label" data-i18n="nav.shared">Compartidos</span>
+      </div>
+      <div class="rail-nav-item" data-ref="rail-item-teams">
+        <button type="button" class="btn btn--h40 btn--icon rail-btn" data-ref="btn-rail-teams" data-tooltip="Tus equipos" aria-label="Tus equipos">
+          <span class="material-symbols-rounded rail-btn__icon">groups</span>
+        </button>
+        <span class="rail-nav-item__label" data-i18n="nav.teams">Tus equipos</span>
+      </div>
+      <div class="rail-nav-item" data-ref="rail-item-education">
+        <button type="button" class="btn btn--h40 btn--icon rail-btn" data-ref="btn-rail-education" data-tooltip="Educación" aria-label="Educación">
+          <span class="material-symbols-rounded rail-btn__icon">school</span>
+        </button>
+        <span class="rail-nav-item__label" data-i18n="nav.education">Educación</span>
       </div>
     </div>
-  </div>
-</div>
+
+    <div class="layout-rail__bottom" data-ref="rail-bottom">
+      <div class="rail-item-container" data-ref="help-chat-container">
+        <button type="button" class="btn btn--h40 btn--icon rail-btn rail-btn--help" data-ref="btn-rail-help" data-tooltip="Ayuda y Chatbot" aria-label="Ayuda y Chatbot">
+          <span class="material-symbols-rounded rail-btn__icon">help</span>
+        </button>
+      </div>
+
+      <div class="rail-item-container" data-ref="notifications-container">
+        <button type="button" class="btn btn--h40 btn--icon rail-btn rail-btn--notifications" data-ref="btn-notifications" data-tooltip="Notificaciones" aria-label="Notificaciones">
+          <span class="material-symbols-rounded rail-btn__icon">notifications</span>
+          <span class="notifications-badge is-hidden" data-ref="notifications-badge"></span>
+        </button>
+
+        <div class="notifications-dropdown-backdrop" data-ref="notifications-backdrop">
+          <div class="menu-panel menu-panel--dropdown menu-panel--w-425 menu-panel--h-625 notifications-panel rail-floating-panel" data-ref="notifications-panel">
+            <div class="menu-panel__drag-zone" data-ref="notifications-drag-zone" aria-hidden="true">
+              <div class="menu-panel__drag-handle"></div>
+            </div>
+
+            <div class="notifications-panel__top" data-ref="notifications-top">
+              <div class="notifications-panel__top-left" data-ref="notifications-top-left">
+                <span class="notifications-panel__title" data-ref="notifications-title" data-i18n="notifications.title">Notificaciones</span>
+              </div>
+              <div class="notifications-panel__top-right" data-ref="notifications-top-right">
+                <button type="button" class="link notifications-panel__mark-read" data-ref="btn-mark-all-read" data-i18n="notifications.mark_all_read">Marcar todas como leídas</button>
+              </div>
+            </div>
+
+            <div class="notifications-panel__bottom" data-ref="notifications-bottom">
+              <div class="notifications-list" data-ref="notifications-list" style="display: none;"></div>
+              <div class="notifications-empty" data-ref="notifications-empty">
+                <div class="notifications-empty__icon" data-ref="notifications-empty-icon">
+                  <svg class="notifications-empty__svg" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="40" cy="40" r="36" fill="var(--bg-card-subtle)" stroke="var(--border-color)" stroke-width="1.5" />
+                    <path d="M40 22C35.58 22 32 25.58 32 30V32.29C28.46 34.1 26 37.77 26 42V48L22 52V54H58V52L54 48V42C54 37.77 51.54 34.1 48 32.29V30C48 25.58 44.42 22 40 22Z" fill="var(--text-tertiary)" />
+                    <path d="M40 58C41.66 58 43 56.66 43 55H37C37 56.66 38.34 58 40 58Z" fill="var(--text-tertiary)" />
+                    <circle cx="51" cy="29" r="4" fill="var(--color-brand)" />
+                  </svg>
+                </div>
+                <span class="notifications-empty__title" data-ref="notifications-empty-title" data-i18n="notifications.empty_title">Aquí aparecerán tus notificaciones</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="rail-item-container" data-ref="avatar-container" style="display: none;">
+        <button type="button" class="btn--avatar rail-avatar-btn" data-ref="btn-avatar" data-tooltip="Perfil" aria-label="Perfil">
+          <img class="avatar-img image-lazy-fade" data-ref="avatar-img" src="" alt="Avatar" referrerpolicy="no-referrer" onload="this.classList.add('image-loaded')" onerror="this.classList.add('image-loaded')" />
+        </button>
+
+        <div class="avatar-dropdown-backdrop" data-ref="avatar-menu-backdrop">
+          <div class="menu-panel menu-panel--dropdown menu-panel--w-265 menu-panel--h-auto avatar-panel rail-floating-panel" data-ref="avatar-menu">
+            <div class="menu-panel__drag-zone" data-ref="avatar-menu-drag-zone" aria-hidden="true">
+              <div class="menu-panel__drag-handle"></div>
+            </div>
+
+            <div class="menu-panel__list" data-ref="panel-main-options">
+              <button type="button" class="menu-item menu-item--bordered account-item" data-ref="btn-switch-account-menu">
+                <div class="account-item__avatar" data-ref="active-account-avatar-box">
+                  <img class="avatar-img image-lazy-fade" data-ref="active-account-avatar" src="" alt="Avatar" referrerpolicy="no-referrer" onload="this.classList.add('image-loaded')" onerror="this.classList.add('image-loaded')" />
+                </div>
+                <div class="account-item__info" data-ref="active-account-info">
+                  <span class="account-item__name" data-ref="active-account-name"></span>
+                  <span class="account-item__email" data-ref="active-account-email"></span>
+                </div>
+                <span class="material-symbols-rounded account-item__arrow">navigate_next</span>
+              </button>
+              <div class="menu-divider" data-ref="active-account-divider"></div>
+
+              <button type="button" class="menu-item" data-ref="btn-menu-teams">
+                <span class="material-symbols-rounded menu-item__icon">groups</span>
+                <span class="menu-item__text" data-i18n="nav.manage_teams"></span>
+                <span class="menu-item__badge menu-item__badge--pro" data-ref="badge-menu-teams">
+                  <span class="material-symbols-rounded">workspace_premium</span>
+                </span>
+              </button>
+              <button type="button" class="menu-item" data-ref="btn-menu-settings">
+                <span class="material-symbols-rounded menu-item__icon">settings</span>
+                <span class="menu-item__text" data-i18n="nav.settings"></span>
+              </button>
+              <button type="button" class="menu-item" data-ref="btn-menu-help">
+                <span class="material-symbols-rounded menu-item__icon">help</span>
+                <span class="menu-item__text" data-i18n="nav.help"></span>
+              </button>
+              <button type="button" class="menu-item menu-item--bordered menu-item--danger" data-ref="btn-logout">
+                <span class="material-symbols-rounded menu-item__icon">logout</span>
+                <span class="menu-item__text" data-i18n="nav.logout"></span>
+              </button>
+            </div>
+
+            <div class="menu-panel__list" data-ref="panel-account-switcher" style="display: none;">
+              <button type="button" class="menu-item menu-item--bordered" data-ref="btn-back-to-main-menu">
+                <span class="material-symbols-rounded menu-item__icon">arrow_back</span>
+                <span class="menu-item__text">Volver</span>
+              </button>
+              <div class="menu-divider"></div>
+
+              <div class="account-switcher__list" data-ref="account-switcher-list"></div>
+
+              <button type="button" class="menu-item menu-item--bordered" data-ref="btn-add-account">
+                <span class="material-symbols-rounded menu-item__icon">add</span>
+                <span class="menu-item__text" data-i18n="nav.add_account"></span>
+              </button>
+              <div class="menu-divider"></div>
+
+              <button type="button" class="menu-item menu-item--bordered menu-item--danger" data-ref="btn-logout-all">
+                <span class="material-symbols-rounded menu-item__icon">logout</span>
+                <span class="menu-item__text" data-i18n="nav.logout_all"></span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button type="button" class="btn btn--h40 btn--icon rail-btn rail-btn--login" data-ref="btn-rail-login" data-tooltip="Iniciar sesión" aria-label="Iniciar sesión" style="display: none;">
+        <span class="material-symbols-rounded rail-btn__icon">login</span>
+      </button>
+    </div>
+  </aside>
+</nav>
