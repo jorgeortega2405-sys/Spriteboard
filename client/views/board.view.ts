@@ -15,7 +15,7 @@ import { createErrorView } from './error.view.js';
 
 type BoardTool = 'select' | 'hand' | 'pen' | 'marker' | 'highlighter' | 'eraser' | 'shapes' | 'sticky' | 'text' | 'pixel';
 type ShapeType = 'rect' | 'round-rect' | 'circle' | 'line' | 'arrow' | 'triangle' | 'star' | 'diamond';
-type BackgroundType = 'dots';
+type BackgroundType = 'dots' | 'blank' | 'dark' | 'solid';
 type PixelSubtool = 'pencil' | 'eraser' | 'bucket' | 'eyedropper';
 
 const DEFAULT_CLASSIC_PALETTE: string[] = [
@@ -131,7 +131,7 @@ class BoardController {
   private activePixelSubtool: PixelSubtool = 'pencil';
   private activeTrayGroup: 'shapes' | 'sticky' | 'width' | 'pixel' | null = null;
   private autoSaveTimer: number | null = null;
-  private readonly boardBackground = { color: '#ffffff', dotColor: '#cbd5e1', type: 'dots' as const };
+  private boardBackground: { color: string; dotColor?: string; type: BackgroundType } = { color: '#ffffff', dotColor: '#cbd5e1', type: 'dots' };
   private boardName = 'Pizarrón sin título';
   private camera = { x: 0, y: 0, zoom: 1 };
   private canvasCreatedAt: string | null = null;
@@ -203,6 +203,9 @@ class BoardController {
     renderIcons(this.container);
     this.isLoaded = true;
     this.requestRedraw();
+    requestAnimationFrame(() => {
+      this.handleResize();
+    });
     return true;
   }
 
@@ -298,8 +301,23 @@ class BoardController {
                 zoom: Math.max(0.1, Math.min(5, project.camera.zoom || 1)),
               };
             }
+            if (project.background) {
+              const bgType = project.background.type || 'dots';
+              const isDark = project.background.color === '#0f172a' || project.background.color === '#18181b' || bgType === 'dark';
+              this.boardBackground = {
+                color: project.background.color || (isDark ? '#0f172a' : '#ffffff'),
+                dotColor: project.background.dotColor || (isDark ? 'rgba(255, 255, 255, 0.15)' : '#cbd5e1'),
+                type: (bgType as BackgroundType) || 'dots',
+              };
+            }
           }
         } catch {}
+      }
+
+      const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark' || document.documentElement.classList.contains('dark-theme');
+      if (isDarkMode && this.boardBackground.color === '#ffffff') {
+        this.boardBackground.color = '#0f172a';
+        this.boardBackground.dotColor = 'rgba(255, 255, 255, 0.15)';
       }
 
       this.pushHistoryState();
@@ -310,28 +328,29 @@ class BoardController {
   }
 
   private setupResizeObserver(): void {
-    if (!this.canvasElement?.parentElement) return;
+    const parent = this.canvasElement?.parentElement;
+    if (!parent) return;
     this.resizeObserver = new ResizeObserver(() => {
       this.handleResize();
     });
-    this.resizeObserver.observe(this.canvasElement.parentElement);
-    this.handleResize();
+    this.resizeObserver.observe(parent);
+    window.addEventListener('resize', () => this.handleResize(), { signal: this.abortController.signal });
   }
 
   private handleResize(): void {
     if (!this.canvasElement || !this.canvasElement.parentElement) return;
     const rect = this.canvasElement.parentElement.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
-    const displayWidth = Math.max(1, Math.floor(rect.width));
-    const displayHeight = Math.max(1, Math.floor(rect.height));
+    if (rect.width <= 0 || rect.height <= 0) return;
 
-    if (this.canvasElement.width !== displayWidth * dpr || this.canvasElement.height !== displayHeight * dpr) {
-      this.canvasElement.width = displayWidth * dpr;
-      this.canvasElement.height = displayHeight * dpr;
-      this.canvasElement.style.width = `${displayWidth}px`;
-      this.canvasElement.style.height = `${displayHeight}px`;
+    const dpr = window.devicePixelRatio || 1;
+    const targetWidth = Math.round(rect.width * dpr);
+    const targetHeight = Math.round(rect.height * dpr);
+
+    if (this.canvasElement.width !== targetWidth || this.canvasElement.height !== targetHeight) {
+      this.canvasElement.width = targetWidth;
+      this.canvasElement.height = targetHeight;
+      this.requestRedraw();
     }
-    this.requestRedraw();
   }
 
   private setupDropdowns(): void {

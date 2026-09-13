@@ -5897,8 +5897,8 @@ html.dark-theme .component-wrapper {
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
 }
 
-.board-view .board-wrapper,
-.design-view .design-wrapper {
+.board-wrapper,
+.design-wrapper {
   border-radius: 0;
   border: none;
   box-shadow: none;
@@ -7906,9 +7906,14 @@ html.dark-theme .component-badge.active:hover {
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
-  background-color: #ffffff;
+  background-color: var(--bg-surface, #ffffff);
   contain: layout size paint;
   isolation: isolate;
+}
+
+html[data-theme="dark"] .component-bottom--canvas,
+html.dark-theme .component-bottom--canvas {
+  background-color: var(--bg-surface, #0f172a);
 }
 
 .design-viewport-canvas {
@@ -13721,19 +13726,14 @@ html.dark-theme .templates-hero .component-badge {
   border-color: var(--text-primary);
 }
 
-.board-view {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  width: 100%;
-  overflow: hidden;
-}
-
 .board-wrapper {
   display: flex;
   flex-direction: column;
   height: 100%;
   width: 100%;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
 }
 
 .board-sync-badge {

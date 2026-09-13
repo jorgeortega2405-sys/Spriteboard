@@ -294,16 +294,30 @@ export async function render(): Promise<void> {
       const { createHomeView } = await import('./views/home.view.js');
       const folderView = await createHomeView(folderUuid);
       viewElements = [folderView];
-    } else if (path.startsWith('/design/')) {
-      const canvasUuid = path.split('/design/')[1]?.split('/')[0] || '';
-      const { createDesignView } = await import('./views/design.view.js');
-      const designView = await createDesignView(canvasUuid);
-      viewElements = [designView];
-    } else if (path.startsWith('/board/')) {
-      const canvasUuid = path.split('/board/')[1]?.split('/')[0] || '';
-      const { createBoardView } = await import('./views/board.view.js');
-      const boardView = await createBoardView(canvasUuid);
-      viewElements = [boardView];
+    } else if (path === '/design' || path === '/design/' || path.startsWith('/design/')) {
+      const canvasUuid = path.startsWith('/design/') ? (path.split('/design/')[1]?.split('/')[0] || '') : '';
+      if (!canvasUuid) {
+        window.history.replaceState({}, '', '/');
+        const { createHomeView } = await import('./views/home.view.js');
+        const homeView = await createHomeView();
+        viewElements = [homeView];
+      } else {
+        const { createDesignView } = await import('./views/design.view.js');
+        const designView = await createDesignView(canvasUuid);
+        viewElements = [designView];
+      }
+    } else if (path === '/board' || path === '/board/' || path.startsWith('/board/')) {
+      const canvasUuid = path.startsWith('/board/') ? (path.split('/board/')[1]?.split('/')[0] || '') : '';
+      if (!canvasUuid) {
+        window.history.replaceState({}, '', '/');
+        const { createHomeView } = await import('./views/home.view.js');
+        const homeView = await createHomeView();
+        viewElements = [homeView];
+      } else {
+        const { createBoardView } = await import('./views/board.view.js');
+        const boardView = await createBoardView(canvasUuid);
+        viewElements = [boardView];
+      }
     } else if (/^\/[a-zA-Z0-9_-]{3,50}$/.test(path)) {
       const slug = path.slice(1);
       let resolvedUuid: string | null = null;
