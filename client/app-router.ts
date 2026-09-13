@@ -63,7 +63,7 @@ export function navigate(url: string, options: { force?: boolean } = {}): void {
     hideTooltip();
 
     const scrollable = document.querySelector<HTMLElement>(
-      '.layout-content, .layout-scrollable, .layout-body--scrollable, .layout-content__scrollable, .component-table-wrapper'
+      '.layout-content, .component-wrapper, .view-wrapper, .home-wrapper, .view-scrollable, .home-scrollable, .layout-scrollable, .layout-body--scrollable, .layout-content__scrollable, .component-table-wrapper'
     );
     if (scrollable) {
       scrollable.scrollTo({ behavior: 'smooth', top: 0 });
@@ -429,7 +429,7 @@ export async function render(): Promise<void> {
   const activeComponentTop = appRoot.querySelector<HTMLElement>('.component-wrapper .component-top, .component-wrapper .view-header, .component-wrapper .home-floating-top');
   const activeHeader = document.querySelector<HTMLElement>('.layout-header, .general-content-top');
   const activeScrollable = document.querySelector<HTMLElement>(
-    '.layout-content, .layout-scrollable, .layout-body--scrollable, .layout-content__scrollable, .component-table-wrapper'
+    '.layout-content, .component-wrapper, .view-wrapper, .home-wrapper, .view-scrollable, .home-scrollable, .layout-scrollable, .layout-body--scrollable, .layout-content__scrollable, .component-table-wrapper'
   );
   const isScrolled = activeScrollable ? activeScrollable.scrollTop > 0 : false;
 

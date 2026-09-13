@@ -190,31 +190,52 @@ html.dark-theme .layout-content:has(.layout-nav) {
 
 .layout-content:has(.layout-nav):has(.no-padding) {
   overflow: hidden;
+  padding: 0;
+}
+
+.layout-content:has(.layout-nav)::after {
+  content: '';
+  display: block;
+  width: 0;
+  height: var(--layout-scroll-height, 0);
+  flex-shrink: 0;
+  pointer-events: none;
 }
 
 .layout-content:has(.layout-nav) .layout-nav {
-  position: sticky;
-  top: 0;
-  align-self: flex-start;
-  height: 100vh;
-  height: 100dvh;
+  position: sticky !important;
+  top: -6px !important;
+  align-self: flex-start !important;
+  height: 100vh !important;
+  height: 100dvh !important;
   margin-top: -6px;
-  flex-shrink: 0;
+  flex-shrink: 0 !important;
+  z-index: 50;
+  box-sizing: border-box;
 }
 
 .layout-content:has(.layout-nav) .view-wrapper,
 .layout-content:has(.layout-nav) .home-wrapper,
 .layout-content:has(.layout-nav) .component-wrapper:not(.no-padding) {
-  height: auto !important;
-  min-height: calc(100vh - 6px) !important;
-  min-height: calc(100dvh - 6px) !important;
-  overflow: visible !important;
+  position: sticky !important;
+  top: 0 !important;
+  height: calc(100vh - 6px) !important;
+  height: calc(100dvh - 6px) !important;
+  max-height: calc(100vh - 6px) !important;
+  max-height: calc(100dvh - 6px) !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  flex: 1 1 auto;
+  align-self: flex-start;
+  box-sizing: border-box;
+  touch-action: pan-y;
 }
 
 .layout-content:has(.layout-nav) .component-wrapper--full:not(.no-padding) {
-  height: auto !important;
-  min-height: calc(100vh - 6px) !important;
-  min-height: calc(100dvh - 6px) !important;
+  height: calc(100vh - 6px) !important;
+  height: calc(100dvh - 6px) !important;
+  max-height: calc(100vh - 6px) !important;
+  max-height: calc(100dvh - 6px) !important;
 }
 
 .layout-content:has(.layout-nav) .view-wrapper .layout-body--scrollable,
@@ -228,33 +249,45 @@ html.dark-theme .layout-content:has(.layout-nav) {
 .layout-content:has(.layout-nav) .component-wrapper:not(.no-padding) .layout-body--scrollable,
 .layout-content:has(.layout-nav) .component-wrapper:not(.no-padding) .layout-scrollable,
 .layout-content:has(.layout-nav) .component-wrapper:not(.no-padding) .view-scrollable {
-  overflow-y: visible !important;
-  height: auto !important;
+  overflow-y: hidden !important;
+  overflow-x: hidden;
+  height: 100% !important;
   flex: 1 1 auto;
+  min-height: 0;
+  touch-action: pan-y;
 }
 
 .layout-content:has(.layout-nav) .view-wrapper .component-bottom,
 .layout-content:has(.layout-nav) .home-wrapper .component-bottom,
 .layout-content:has(.layout-nav) .component-wrapper:not(.no-padding) .component-bottom {
-  overflow: visible !important;
-  height: auto !important;
+  overflow: hidden !important;
+  height: 100% !important;
   flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .layout-content:has(.layout-nav) .view-wrapper .component-table-wrapper,
 .layout-content:has(.layout-nav) .home-wrapper .component-table-wrapper,
 .layout-content:has(.layout-nav) .component-wrapper:not(.no-padding) .component-table-wrapper {
-  overflow-y: visible !important;
+  overflow-y: hidden !important;
   overflow-x: auto;
-  height: auto !important;
+  height: 100% !important;
   flex: 1 1 auto;
+  min-height: 0;
+  touch-action: pan-y;
 }
 
 .layout-content:has(.layout-nav) .view-wrapper > .component-top,
 .layout-content:has(.layout-nav) .home-wrapper > .component-top,
-.layout-content:has(.layout-nav) .view-wrapper > .home-floating-top {
+.layout-content:has(.layout-nav) .view-wrapper > .home-floating-top,
+.layout-content:has(.layout-nav) .component-wrapper:not(.no-padding) > .component-top,
+.layout-content:has(.layout-nav) .component-wrapper:not(.no-padding) > .home-floating-top {
+  position: relative;
   border-top-left-radius: 15px;
   border-top-right-radius: 15px;
+  z-index: 25;
 }
 
 /* Layout scrolleable independiente (exclusivo para scroll, dejando fuera al sidebar) */
@@ -13247,21 +13280,22 @@ html[data-theme="dark"] .design-share-search-results,
 .view-wrapper,
 .home-wrapper {
   position: relative;
+  flex: 1 1 auto;
   width: 100%;
-  min-height: calc(100vh - 6px);
-  min-height: calc(100dvh - 6px);
-  height: auto;
-  overflow: visible;
+  min-height: 0;
+  height: calc(100vh - 6px);
+  height: calc(100dvh - 6px);
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   background-color: var(--bg-surface);
-  border: 1px solid rgba(0, 0, 0, 0.125) !important;
-  border-bottom: none !important;
-  border-top-left-radius: 16px !important;
-  border-top-right-radius: 16px !important;
+  border: 1px solid rgba(0, 0, 0, 0.125);
+  border-bottom: none;
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
   border-bottom-left-radius: 0;
   border-bottom-right-radius: 0;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
   box-sizing: border-box;
 }
 
@@ -13269,13 +13303,14 @@ html[data-theme="dark"] .view-wrapper,
 html[data-theme="dark"] .home-wrapper,
 html.dark-theme .view-wrapper,
 html.dark-theme .home-wrapper {
-  border-color: rgba(255, 255, 255, 0.125) !important;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35) !important;
+  border-color: rgba(255, 255, 255, 0.125);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
 }
 
 .view-header,
 .home-floating-top {
-  position: relative;
+  position: sticky;
+  top: 0;
   width: 100%;
   height: 56px;
   min-height: 56px;
@@ -13509,9 +13544,31 @@ html.dark-theme .btn--upgrade-pill__icon {
   flex: 1 1 auto;
   min-height: 0;
   width: 100%;
-  overflow: visible;
+  height: 100%;
+  overflow: hidden;
   box-sizing: border-box;
-  border-radius: 16px 16px 0 0;
+  position: relative;
+  z-index: 1;
+  touch-action: pan-y;
+}
+
+.component-wrapper .layout-body--scrollable,
+.component-wrapper .layout-scrollable,
+.component-wrapper .view-scrollable,
+.component-wrapper .home-scrollable,
+.view-wrapper .layout-body--scrollable,
+.view-wrapper .layout-scrollable,
+.view-wrapper .view-scrollable,
+.view-wrapper .home-scrollable,
+.home-wrapper .layout-body--scrollable,
+.home-wrapper .layout-scrollable,
+.home-wrapper .view-scrollable,
+.home-wrapper .home-scrollable {
+  overflow-y: hidden !important;
+  height: 100% !important;
+  min-height: 0;
+  flex: 1 1 auto;
+  touch-action: pan-y;
 }
 
 .view-body,
@@ -13521,7 +13578,7 @@ html.dark-theme .btn--upgrade-pill__icon {
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-  background-color: var(--bg-surface);
+  background-color: transparent;
 }
 
 .view-backdrop,
@@ -13533,7 +13590,7 @@ html.dark-theme .btn--upgrade-pill__icon {
   height: 235px;
   pointer-events: none;
   z-index: 0;
-  border-radius: 16px 16px 0 0;
+  border-radius: 15px 15px 0 0;
   background: linear-gradient(315deg, #f3f6e5 0%, #f8ece7 20%, #fcd9db 40%, #ffbccb 60%, #ff98c0 80%, #ff6bc2 100%);
   -webkit-mask-image: linear-gradient(
     180deg,
