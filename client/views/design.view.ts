@@ -605,7 +605,7 @@ class DesignController {
   private shapeStartPos: { x: number; y: number } | null = null;
   private shapeCurrentPos: { x: number; y: number } | null = null;
   private isDrawingShape = false;
-  private isShiftStraightLine = false;
+  private isShiftPressed = false;
   private isSpacePressed = false;
   private recolorTargetColor32: number | null = null;
   private rawStrokePoints: Array<{ x: number; y: number }> = [];
@@ -5776,7 +5776,7 @@ class DesignController {
         'mousedown',
         (e: MouseEvent) => {
           if (this.isAccessRevoked) return;
-          if (this.isSpacePressed || e.button === 1 || this.role === 'viewer') {
+          if (this.isSpacePressed || this.isShiftPressed || e.shiftKey || e.button === 1 || this.role === 'viewer') {
             e.preventDefault();
             this.isPanning = true;
             this.startX = e.clientX - this.panX;
@@ -5893,11 +5893,9 @@ class DesignController {
               this.activeActionBeforeData = this.captureLayerSnapshot();
 
               const isShapeTool = this.currentTool === 'line' || this.currentTool === 'rectangle' || this.currentTool === 'circle';
-              const isShiftStraight = this.currentTool === 'brush' && e.shiftKey;
 
-              if (isShapeTool || isShiftStraight) {
+              if (isShapeTool) {
                 this.isDrawingShape = true;
-                this.isShiftStraightLine = isShiftStraight;
                 this.shapeStartPos = { x: pixelX, y: pixelY };
                 this.shapeCurrentPos = { x: pixelX, y: pixelY };
                 this.requestRedraw();
@@ -5971,6 +5969,11 @@ class DesignController {
           this.isSpacePressed = true;
           this.viewportCanvas?.classList.add('can-pan');
           e.preventDefault();
+        }
+
+        if (e.key === 'Shift' && !e.ctrlKey && !e.metaKey && !e.altKey && !isInputFocused && !this.isShiftPressed) {
+          this.isShiftPressed = true;
+          this.viewportCanvas?.classList.add('can-pan');
         }
 
         if (!isInputFocused) {
@@ -6071,10 +6074,27 @@ class DesignController {
       (e: KeyboardEvent) => {
         if (e.code === 'Space') {
           this.isSpacePressed = false;
-          if (!this.isPanning) {
-            this.viewportCanvas?.classList.remove('can-pan');
-          }
         }
+        if (e.key === 'Shift') {
+          this.isShiftPressed = false;
+        }
+        if (!this.isSpacePressed && !this.isShiftPressed && !this.isPanning) {
+          this.viewportCanvas?.classList.remove('can-pan');
+        }
+      },
+      { signal }
+    );
+
+    window.addEventListener(
+      'blur',
+      () => {
+        this.isSpacePressed = false;
+        this.isShiftPressed = false;
+        if (this.isPanning) {
+          this.isPanning = false;
+          this.viewportCanvas?.classList.remove('is-panning');
+        }
+        this.viewportCanvas?.classList.remove('can-pan');
       },
       { signal }
     );
@@ -6275,7 +6295,7 @@ class DesignController {
 
     window.addEventListener(
       'mouseup',
-      () => {
+      (e: MouseEvent) => {
         if (this.isAccessRevoked) return;
         if (this.shapeInteraction) {
           this.shapeInteraction = null;
@@ -6301,7 +6321,7 @@ class DesignController {
           const layer = this.getActiveLayer();
           if (layer && layer.visible) {
             let pts: Array<{ x: number; y: number }> = [];
-            const isLine = this.currentTool === 'line' || this.isShiftStraightLine;
+            const isLine = this.currentTool === 'line';
             if (isLine) {
               pts = getBresenhamLine(this.shapeStartPos.x, this.shapeStartPos.y, this.shapeCurrentPos.x, this.shapeCurrentPos.y);
             } else if (this.currentTool === 'rectangle') {
@@ -6341,7 +6361,6 @@ class DesignController {
             this.requestRedraw();
           }
           this.isDrawingShape = false;
-          this.isShiftStraightLine = false;
           this.shapeStartPos = null;
           this.shapeCurrentPos = null;
         }
@@ -6383,7 +6402,7 @@ class DesignController {
         if (this.isPanning) {
           this.isPanning = false;
           this.viewportCanvas?.classList.remove('is-panning');
-          if (!this.isSpacePressed) {
+          if (!this.isSpacePressed && !this.isShiftPressed && !e.shiftKey) {
             this.viewportCanvas?.classList.remove('can-pan');
           }
         }
@@ -6606,7 +6625,7 @@ class DesignController {
 
     if (this.isDrawingShape && this.shapeStartPos && this.shapeCurrentPos) {
       let pts: Array<{ x: number; y: number }> = [];
-      const isLine = this.currentTool === 'line' || this.isShiftStraightLine;
+      const isLine = this.currentTool === 'line';
       if (isLine) {
         pts = getBresenhamLine(this.shapeStartPos.x, this.shapeStartPos.y, this.shapeCurrentPos.x, this.shapeCurrentPos.y);
       } else if (this.currentTool === 'rectangle') {

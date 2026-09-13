@@ -15,7 +15,7 @@ import { createErrorView } from './error.view.js';
 
 type BoardTool = 'select' | 'hand' | 'pen' | 'marker' | 'highlighter' | 'eraser' | 'shapes' | 'sticky' | 'text' | 'pixel';
 type ShapeType = 'rect' | 'round-rect' | 'circle' | 'line' | 'arrow' | 'triangle' | 'star' | 'diamond';
-type BackgroundType = 'dots' | 'grid' | 'blank' | 'dark';
+type BackgroundType = 'dots';
 type PixelSubtool = 'pencil' | 'eraser' | 'bucket' | 'eyedropper';
 
 const DEFAULT_CLASSIC_PALETTE: string[] = [
@@ -110,7 +110,6 @@ interface BoardProject {
   background: {
     color: string;
     dotColor?: string;
-    gridColor?: string;
     type: BackgroundType;
   };
   camera: {
@@ -132,8 +131,7 @@ class BoardController {
   private activePixelSubtool: PixelSubtool = 'pencil';
   private activeTrayGroup: 'shapes' | 'sticky' | 'width' | 'pixel' | null = null;
   private autoSaveTimer: number | null = null;
-  private bgDropdownController: { close: () => void; destroy: () => void; open: () => void; toggle: () => void; update: () => void } | null = null;
-  private boardBackground: { color: string; dotColor?: string; gridColor?: string; type: BackgroundType } = { color: '#f8fafc', dotColor: '#cbd5e1', gridColor: '#e2e8f0', type: 'dots' };
+  private readonly boardBackground = { color: '#ffffff', dotColor: '#cbd5e1', type: 'dots' as const };
   private boardName = 'Pizarrón sin título';
   private camera = { x: 0, y: 0, zoom: 1 };
   private canvasCreatedAt: string | null = null;
@@ -161,6 +159,7 @@ class BoardController {
   private isOwner = true;
   private isPanning = false;
   private isPixelPainting = false;
+  private isShiftPressed = false;
   private isSpacePressed = false;
   private lastMousePos: BoardPoint = { x: 0, y: 0 };
   private lastPaintedPixel: { px: number; py: number } | null = null;
@@ -219,7 +218,6 @@ class BoardController {
     if (this.isLoaded && this.isOwner) {
       void this.saveImmediate();
     }
-    this.bgDropdownController?.destroy();
     this.exportDropdownController?.destroy();
     this.resizeObserver?.disconnect();
     this.abortController.abort();
@@ -288,13 +286,6 @@ class BoardController {
                 zoom: Math.max(0.1, Math.min(5, project.camera.zoom || 1)),
               };
             }
-            if (project.background) {
-              this.boardBackground = {
-                ...this.boardBackground,
-                ...project.background,
-              };
-              this.applyBackgroundTypeUI(this.boardBackground.type);
-            }
           }
         } catch {}
       }
@@ -332,13 +323,6 @@ class BoardController {
   }
 
   private setupDropdowns(): void {
-    const bgWrapper = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-bg"]');
-    if (bgWrapper) {
-      this.bgDropdownController = setupDropdown(bgWrapper, {
-        placement: 'bottom-end',
-      });
-    }
-
     const exportWrapper = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-export"]');
     if (exportWrapper) {
       this.exportDropdownController = setupDropdown(exportWrapper, {
@@ -396,7 +380,6 @@ class BoardController {
       { signal }
     );
 
-    this.bindBackgroundButtons(signal);
     this.bindExportButtons(signal);
     this.bindToolbarTools(signal);
     this.bindPropertiesControls(signal);
@@ -418,46 +401,6 @@ class BoardController {
       },
       { signal }
     );
-  }
-
-  private bindBackgroundButtons(signal: AbortSignal): void {
-    const bgButtons = this.container.querySelectorAll<HTMLButtonElement>('[data-ref^="btn-bg-"]');
-    bgButtons.forEach((btn) => {
-      btn.addEventListener(
-        'click',
-        () => {
-          const bgType = btn.getAttribute('data-bg') as BackgroundType;
-          if (bgType) {
-            this.setBackgroundType(bgType);
-            this.bgDropdownController?.close();
-          }
-        },
-        { signal }
-      );
-    });
-  }
-
-  private setBackgroundType(type: BackgroundType): void {
-    this.boardBackground.type = type;
-    if (type === 'dark') {
-      this.boardBackground.color = '#0f172a';
-      this.boardBackground.dotColor = '#334155';
-      this.boardBackground.gridColor = '#1e293b';
-    } else {
-      this.boardBackground.color = '#f8fafc';
-      this.boardBackground.dotColor = '#cbd5e1';
-      this.boardBackground.gridColor = '#e2e8f0';
-    }
-    this.applyBackgroundTypeUI(type);
-    this.requestRedraw();
-    this.scheduleAutoSave();
-  }
-
-  private applyBackgroundTypeUI(type: BackgroundType): void {
-    const bgButtons = this.container.querySelectorAll<HTMLButtonElement>('[data-ref^="btn-bg-"]');
-    bgButtons.forEach((btn) => {
-      btn.classList.toggle('is-active', btn.getAttribute('data-bg') === type);
-    });
   }
 
   private bindExportButtons(signal: AbortSignal): void {
@@ -556,18 +499,21 @@ class BoardController {
       btn.classList.toggle('is-active', btn.getAttribute('data-tool') === this.currentTool);
     });
 
-    if (this.canvasElement) {
-      if (this.currentTool === 'hand' || this.isSpacePressed) {
-        this.canvasElement.style.cursor = 'grab';
-      } else if (this.currentTool === 'select') {
-        this.canvasElement.style.cursor = 'default';
-      } else if (this.currentTool === 'text') {
-        this.canvasElement.style.cursor = 'text';
-      } else if (this.currentTool === 'pixel') {
-        this.canvasElement.style.cursor = 'crosshair';
-      } else {
-        this.canvasElement.style.cursor = 'crosshair';
-      }
+    this.updateCanvasCursor();
+  }
+
+  private updateCanvasCursor(): void {
+    if (!this.canvasElement) return;
+    if (this.currentTool === 'hand' || this.isSpacePressed || this.isShiftPressed) {
+      this.canvasElement.style.cursor = 'grab';
+    } else if (this.currentTool === 'select') {
+      this.canvasElement.style.cursor = 'default';
+    } else if (this.currentTool === 'text') {
+      this.canvasElement.style.cursor = 'text';
+    } else if (this.currentTool === 'pixel') {
+      this.canvasElement.style.cursor = 'crosshair';
+    } else {
+      this.canvasElement.style.cursor = 'crosshair';
     }
   }
 
@@ -1159,12 +1105,15 @@ class BoardController {
   }
 
   private handlePointerDown(e: PointerEvent): void {
-    if (e.button === 1 || this.currentTool === 'hand' || this.isSpacePressed) {
+    if (e.button === 1 || this.currentTool === 'hand' || this.isSpacePressed || this.isShiftPressed || e.shiftKey) {
       this.isPanning = true;
       this.didPan = false;
       this.panStartMouse = { x: e.clientX, y: e.clientY };
       this.panStartCamera = { x: this.camera.x, y: this.camera.y };
-      if (this.canvasElement) this.canvasElement.style.cursor = 'grabbing';
+      if (this.canvasElement) {
+        this.canvasElement.classList.add('is-panning');
+        this.canvasElement.style.cursor = 'grabbing';
+      }
       return;
     }
 
@@ -1380,7 +1329,14 @@ class BoardController {
     if (this.isPanning) {
       this.isPanning = false;
       if (this.canvasElement) {
-        this.canvasElement.style.cursor = this.currentTool === 'hand' || this.isSpacePressed ? 'grab' : 'default';
+        this.canvasElement.classList.remove('is-panning');
+        if (this.currentTool === 'hand' || this.isSpacePressed || this.isShiftPressed || _e.shiftKey) {
+          this.canvasElement.classList.add('can-pan');
+          this.canvasElement.style.cursor = 'grab';
+        } else {
+          this.canvasElement.classList.remove('can-pan');
+          this.updateCanvasCursor();
+        }
       }
       this.scheduleAutoSave();
       return;
@@ -1566,7 +1522,18 @@ class BoardController {
 
         if (e.code === 'Space' && !this.isSpacePressed) {
           this.isSpacePressed = true;
-          if (this.canvasElement) this.canvasElement.style.cursor = 'grab';
+          if (this.canvasElement && !this.isPanning) {
+            this.canvasElement.classList.add('can-pan');
+            this.canvasElement.style.cursor = 'grab';
+          }
+        }
+
+        if (e.key === 'Shift' && !e.ctrlKey && !e.metaKey && !e.altKey && !this.isShiftPressed) {
+          this.isShiftPressed = true;
+          if (this.canvasElement && !this.isPanning) {
+            this.canvasElement.classList.add('can-pan');
+            this.canvasElement.style.cursor = 'grab';
+          }
         }
 
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
@@ -1630,9 +1597,31 @@ class BoardController {
       (e: KeyboardEvent) => {
         if (e.code === 'Space') {
           this.isSpacePressed = false;
+        }
+        if (e.key === 'Shift') {
+          this.isShiftPressed = false;
+        }
+        if (!this.isSpacePressed && !this.isShiftPressed && !this.isPanning) {
           if (this.canvasElement) {
-            this.canvasElement.style.cursor = this.currentTool === 'hand' ? 'grab' : 'default';
+            this.canvasElement.classList.remove('can-pan');
+            this.updateCanvasCursor();
           }
+        }
+      },
+      { signal }
+    );
+
+    window.addEventListener(
+      'blur',
+      () => {
+        this.isSpacePressed = false;
+        this.isShiftPressed = false;
+        if (this.isPanning) {
+          this.isPanning = false;
+        }
+        if (this.canvasElement) {
+          this.canvasElement.classList.remove('can-pan', 'is-panning');
+          this.updateCanvasCursor();
         }
       },
       { signal }
@@ -1794,8 +1783,6 @@ class BoardController {
     this.ctx.fillStyle = this.boardBackground.color;
     this.ctx.fillRect(0, 0, w, h);
 
-    if (this.boardBackground.type === 'blank') return;
-
     const topLeft = this.screenToWorld(0, 0);
     const bottomRight = this.screenToWorld(w, h);
     const spacing = 32;
@@ -1805,37 +1792,16 @@ class BoardController {
     const startY = Math.floor(topLeft.y / spacing) * spacing;
     const endY = Math.ceil(bottomRight.y / spacing) * spacing;
 
-    if (this.boardBackground.type === 'dots') {
-      this.ctx.fillStyle = this.boardBackground.dotColor || '#cbd5e1';
-      const dotRadius = Math.max(1, 1.2 * Math.min(1.5, this.camera.zoom));
+    this.ctx.fillStyle = this.boardBackground.dotColor || '#cbd5e1';
+    const dotRadius = Math.max(1, 1.2 * Math.min(1.5, this.camera.zoom));
 
-      for (let x = startX; x <= endX; x += spacing) {
-        for (let y = startY; y <= endY; y += spacing) {
-          const screenPt = this.worldToScreen(x, y);
-          this.ctx.beginPath();
-          this.ctx.arc(screenPt.x, screenPt.y, dotRadius, 0, Math.PI * 2);
-          this.ctx.fill();
-        }
-      }
-    } else if (this.boardBackground.type === 'grid' || this.boardBackground.type === 'dark') {
-      this.ctx.strokeStyle = this.boardBackground.gridColor || '#e2e8f0';
-      this.ctx.lineWidth = 1;
-      this.ctx.beginPath();
-
-      for (let x = startX; x <= endX; x += spacing) {
-        const p1 = this.worldToScreen(x, startY);
-        const p2 = this.worldToScreen(x, endY);
-        this.ctx.moveTo(p1.x, p1.y);
-        this.ctx.lineTo(p2.x, p2.y);
-      }
-
+    for (let x = startX; x <= endX; x += spacing) {
       for (let y = startY; y <= endY; y += spacing) {
-        const p1 = this.worldToScreen(startX, y);
-        const p2 = this.worldToScreen(endX, y);
-        this.ctx.moveTo(p1.x, p1.y);
-        this.ctx.lineTo(p2.x, p2.y);
+        const screenPt = this.worldToScreen(x, y);
+        this.ctx.beginPath();
+        this.ctx.arc(screenPt.x, screenPt.y, dotRadius, 0, Math.PI * 2);
+        this.ctx.fill();
       }
-      this.ctx.stroke();
     }
   }
 
@@ -2126,14 +2092,6 @@ class BoardController {
     if (this.autoSaveTimer !== null) {
       clearTimeout(this.autoSaveTimer);
     }
-    const syncBadge = this.container.querySelector<HTMLElement>('[data-ref="board-sync-badge"]');
-    const syncText = this.container.querySelector<HTMLElement>('[data-ref="board-sync-text"]');
-    const syncIcon = this.container.querySelector<HTMLElement>('[data-ref="board-sync-icon"]');
-
-    if (syncText) syncText.textContent = 'Guardando...';
-    if (syncIcon) syncIcon.textContent = 'sync';
-    syncBadge?.classList.add('is-saving');
-
     this.autoSaveTimer = window.setTimeout(() => {
       this.autoSaveTimer = null;
       void this.saveImmediate();
@@ -2185,14 +2143,6 @@ class BoardController {
         });
       } catch {}
     }
-
-    const syncBadge = this.container.querySelector<HTMLElement>('[data-ref="board-sync-badge"]');
-    const syncText = this.container.querySelector<HTMLElement>('[data-ref="board-sync-text"]');
-    const syncIcon = this.container.querySelector<HTMLElement>('[data-ref="board-sync-icon"]');
-
-    if (syncText) syncText.textContent = 'Guardado';
-    if (syncIcon) syncIcon.textContent = 'cloud_done';
-    syncBadge?.classList.remove('is-saving');
   }
 
   private generateThumbnail(): string {
