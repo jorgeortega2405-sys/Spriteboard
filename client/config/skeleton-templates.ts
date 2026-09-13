@@ -155,7 +155,64 @@ export const SKELETON_TEMPLATES: Record<string, string> = {
       ${SKELETON_RAIL_HTML}
 
       <div class="layout-content" data-ref="skeleton-content-area">
-        <div class="layout-body layout-body--scrollable layout-scrollable" data-ref="skeleton-body-area">
+        <div class="component-wrapper component-wrapper--full home-wrapper view-wrapper" data-ref="skeleton-grouped-wrapper">
+          <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="skeleton-body-area">
+            <div class="grouped-flow-layout" data-ref="skeleton-grouped-layout">
+              <div class="grouped-header-card" data-ref="skeleton-grouped-header">
+                <div class="skeleton skeleton--title" style="width: 220px; height: 24px; margin: 0 auto;"></div>
+                <div class="skeleton skeleton--subtitle" style="width: 380px; max-width: 90%; height: 14px; margin: 8px auto 0 auto;"></div>
+              </div>
+
+              <div class="grouped-items-card" data-ref="skeleton-grouped-card-1">
+                <div class="grouped-row-item--stacked" data-ref="skeleton-grouped-item-1">
+                  <div style="display: flex; flex-direction: column; gap: 6px; width: 100%;">
+                    <div class="skeleton skeleton--title" style="width: 160px; height: 18px; margin: 0;"></div>
+                    <div class="skeleton skeleton--text" style="width: 320px; max-width: 90%; height: 13px; margin: 0;"></div>
+                  </div>
+                  <div class="skeleton" style="width: 100%; max-width: 265px; height: 42px; border-radius: var(--radius-md); margin-top: 4px;"></div>
+                </div>
+              </div>
+
+              <div class="grouped-items-card" data-ref="skeleton-grouped-card-2">
+                <div class="grouped-row-item" data-ref="skeleton-grouped-item-2">
+                  <div style="display: flex; flex-direction: column; gap: 6px; flex: 1;">
+                    <div class="skeleton skeleton--title" style="width: 180px; height: 18px; margin: 0;"></div>
+                    <div class="skeleton skeleton--text" style="width: 300px; max-width: 90%; height: 13px; margin: 0;"></div>
+                  </div>
+                  <div class="skeleton" style="width: 44px; height: 24px; border-radius: 24px; flex-shrink: 0;"></div>
+                </div>
+
+                <div class="menu-divider"></div>
+
+                <div class="grouped-row-item" data-ref="skeleton-grouped-item-3">
+                  <div style="display: flex; flex-direction: column; gap: 6px; flex: 1;">
+                    <div class="skeleton skeleton--title" style="width: 150px; height: 18px; margin: 0;"></div>
+                    <div class="skeleton skeleton--text" style="width: 280px; max-width: 90%; height: 13px; margin: 0;"></div>
+                  </div>
+                  <div class="skeleton" style="width: 44px; height: 24px; border-radius: 24px; flex-shrink: 0;"></div>
+                </div>
+
+                <div class="menu-divider"></div>
+
+                <div class="grouped-row-item" data-ref="skeleton-grouped-item-4">
+                  <div style="display: flex; flex-direction: column; gap: 6px; flex: 1;">
+                    <div class="skeleton skeleton--title" style="width: 190px; height: 18px; margin: 0;"></div>
+                    <div class="skeleton skeleton--text" style="width: 260px; max-width: 90%; height: 13px; margin: 0;"></div>
+                  </div>
+                  <div class="skeleton" style="width: 44px; height: 24px; border-radius: 24px; flex-shrink: 0;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `,
+
+  'grouped-layout-bottom': `
+    <div class="layout-content skeleton-container" data-ref="skeleton-content-area">
+      <div class="component-wrapper component-wrapper--full home-wrapper view-wrapper" data-ref="skeleton-grouped-wrapper">
+        <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="skeleton-body-area">
           <div class="grouped-flow-layout" data-ref="skeleton-grouped-layout">
             <div class="grouped-header-card" data-ref="skeleton-grouped-header">
               <div class="skeleton skeleton--title" style="width: 220px; height: 24px; margin: 0 auto;"></div>
@@ -200,59 +257,6 @@ export const SKELETON_TEMPLATES: Record<string, string> = {
                 </div>
                 <div class="skeleton" style="width: 44px; height: 24px; border-radius: 24px; flex-shrink: 0;"></div>
               </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  `,
-
-  'grouped-layout-bottom': `
-    <div class="layout-content skeleton-container" data-ref="skeleton-content-area">
-      <div class="layout-body layout-body--scrollable layout-scrollable" data-ref="skeleton-body-area">
-        <div class="grouped-flow-layout" data-ref="skeleton-grouped-layout">
-          <div class="grouped-header-card" data-ref="skeleton-grouped-header">
-            <div class="skeleton skeleton--title" style="width: 220px; height: 24px; margin: 0 auto;"></div>
-            <div class="skeleton skeleton--subtitle" style="width: 380px; max-width: 90%; height: 14px; margin: 8px auto 0 auto;"></div>
-          </div>
-
-          <div class="grouped-items-card" data-ref="skeleton-grouped-card-1">
-            <div class="grouped-row-item--stacked" data-ref="skeleton-grouped-item-1">
-              <div style="display: flex; flex-direction: column; gap: 6px; width: 100%;">
-                <div class="skeleton skeleton--title" style="width: 160px; height: 18px; margin: 0;"></div>
-                <div class="skeleton skeleton--text" style="width: 320px; max-width: 90%; height: 13px; margin: 0;"></div>
-              </div>
-              <div class="skeleton" style="width: 100%; max-width: 265px; height: 42px; border-radius: var(--radius-md); margin-top: 4px;"></div>
-            </div>
-          </div>
-
-          <div class="grouped-items-card" data-ref="skeleton-grouped-card-2">
-            <div class="grouped-row-item" data-ref="skeleton-grouped-item-2">
-              <div style="display: flex; flex-direction: column; gap: 6px; flex: 1;">
-                <div class="skeleton skeleton--title" style="width: 180px; height: 18px; margin: 0;"></div>
-                <div class="skeleton skeleton--text" style="width: 300px; max-width: 90%; height: 13px; margin: 0;"></div>
-              </div>
-              <div class="skeleton" style="width: 44px; height: 24px; border-radius: 24px; flex-shrink: 0;"></div>
-            </div>
-
-            <div class="menu-divider"></div>
-
-            <div class="grouped-row-item" data-ref="skeleton-grouped-item-3">
-              <div style="display: flex; flex-direction: column; gap: 6px; flex: 1;">
-                <div class="skeleton skeleton--title" style="width: 150px; height: 18px; margin: 0;"></div>
-                <div class="skeleton skeleton--text" style="width: 280px; max-width: 90%; height: 13px; margin: 0;"></div>
-              </div>
-              <div class="skeleton" style="width: 44px; height: 24px; border-radius: 24px; flex-shrink: 0;"></div>
-            </div>
-
-            <div class="menu-divider"></div>
-
-            <div class="grouped-row-item" data-ref="skeleton-grouped-item-4">
-              <div style="display: flex; flex-direction: column; gap: 6px; flex: 1;">
-                <div class="skeleton skeleton--title" style="width: 190px; height: 18px; margin: 0;"></div>
-                <div class="skeleton skeleton--text" style="width: 260px; max-width: 90%; height: 13px; margin: 0;"></div>
-              </div>
-              <div class="skeleton" style="width: 44px; height: 24px; border-radius: 24px; flex-shrink: 0;"></div>
             </div>
           </div>
         </div>

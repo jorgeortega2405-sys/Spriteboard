@@ -241,6 +241,20 @@ class TeamsController {
       void this.handleDeleteSelectedTeams();
     }, { signal });
 
+    const btnActionDeselect = this.container.querySelector<HTMLElement>('[data-ref="btn-action-deselect"]');
+    btnActionDeselect?.addEventListener('click', () => {
+      this.selectedTeamUuids.clear();
+      this.updateSelectionUi();
+    }, { signal });
+
+    this.tableWrapperEl?.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('tr[data-uuid]') && this.selectedTeamUuids.size > 0) {
+        this.selectedTeamUuids.clear();
+        this.updateSelectionUi();
+      }
+    }, { signal });
+
     const btnCloseTeamModal = this.container.querySelector<HTMLElement>('[data-ref="btn-close-team-modal"]');
     btnCloseTeamModal?.addEventListener('click', () => this.closeTeamModal(), { signal });
 

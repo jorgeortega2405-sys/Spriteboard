@@ -16,20 +16,17 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
     activeUpgradeModal.close();
   }
 
-  let selectedPlan: PlanTier = initialPlan;
+  let selectedPlan: PlanTier = initialPlan === 'free' ? 'pro' : initialPlan;
 
-  const freeTitle = t('upgrade_modal.plan_free_name') || 'Spriteboard Gratis';
   const proTitle = t('upgrade_modal.plan_pro_name') || 'Spriteboard Pro';
   const businessTitle = t('upgrade_modal.plan_business_name') || 'Spriteboard Negocios';
 
   const getPlanName = (p: PlanTier): string => {
-    if (p === 'free') return freeTitle;
     if (p === 'business' || p === 'negocios') return businessTitle;
     return proTitle;
   };
 
   const getCtaLabel = (p: PlanTier): string => {
-    if (p === 'free') return 'Comenzar gratis';
     return `${t('upgrade_modal.cta_prefix') || 'Sube de categoría a'} ${getPlanName(p)}`;
   };
 
@@ -53,26 +50,13 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
             <div class="upgrade-modal__left-top" data-ref="upgrade-modal-left-top">
               <div class="upgrade-modal__heading" data-ref="upgrade-modal-heading">
                 <h2 class="upgrade-modal__title">
-                  <span class="upgrade-modal__title-prefix">${selectedPlan === 'free' ? 'Elige' : (t('upgrade_modal.title_prefix') || 'Sube de categoría a')}</span>
+                  <span class="upgrade-modal__title-prefix">${t('upgrade_modal.title_prefix') || 'Sube de categoría a'}</span>
                   <span class="upgrade-modal__title-plan" data-ref="plan-title-highlight">${getPlanName(selectedPlan)}</span>
                 </h2>
                 <p class="upgrade-modal__subtitle">${t('upgrade_modal.choose_plan') || 'Elige tu plan.'}</p>
               </div>
 
               <div class="upgrade-modal__plans" data-ref="upgrade-modal-plans">
-                <div class="upgrade-plan-card${selectedPlan === 'free' ? ' is-selected' : ''}" data-ref="card-plan-free" data-plan="free">
-                  <div class="upgrade-plan-card__radio" data-ref="radio-plan-free">
-                    <span class="upgrade-plan-card__dot"></span>
-                  </div>
-                  <div class="upgrade-plan-card__info">
-                    <div class="upgrade-plan-card__header-row">
-                      <span class="upgrade-plan-card__name">${freeTitle}</span>
-                      <span class="upgrade-plan-card__price">${t('upgrade_modal.plan_free_price') || 'Gratis'}</span>
-                    </div>
-                    <span class="upgrade-plan-card__desc">${t('upgrade_modal.plan_free_desc') || 'Funciones esenciales para comenzar a crear.'}</span>
-                  </div>
-                </div>
-
                 <div class="upgrade-plan-card${selectedPlan === 'pro' ? ' is-selected' : ''}" data-ref="card-plan-pro" data-plan="pro">
                   <div class="upgrade-plan-card__radio" data-ref="radio-plan-pro">
                     <span class="upgrade-plan-card__dot"></span>
@@ -118,7 +102,6 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
                 <thead>
                   <tr>
                     <th class="col-feature">${t('upgrade_modal.col_benefits') || 'Beneficios'}</th>
-                    <th class="col-plan col-plan--free${selectedPlan === 'free' ? ' is-active' : ''}" data-ref="th-plan-free">${t('upgrade_modal.col_free') || 'Gratis'}</th>
                     <th class="col-plan col-plan--pro${selectedPlan === 'pro' ? ' is-active' : ''}" data-ref="th-plan-pro">${t('upgrade_modal.col_pro') || 'Pro'}</th>
                     <th class="col-plan col-plan--business${selectedPlan === 'business' || selectedPlan === 'negocios' ? ' is-active' : ''}" data-ref="th-plan-business">${t('upgrade_modal.col_business') || 'Negocios'}</th>
                   </tr>
@@ -128,7 +111,6 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
                     <td class="col-feature">
                       <span>${t('upgrade_modal.benefit_storage') || 'Almacenamiento en la nube'}</span>
                     </td>
-                    <td class="col-plan col-plan--free${selectedPlan === 'free' ? ' is-active' : ''}">1 GB</td>
                     <td class="col-plan col-plan--pro${selectedPlan === 'pro' ? ' is-active' : ''}">10 GB</td>
                     <td class="col-plan col-plan--business${selectedPlan === 'business' || selectedPlan === 'negocios' ? ' is-active' : ''}">1 TB</td>
                   </tr>
@@ -136,7 +118,6 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
                     <td class="col-feature">
                       <span>${t('upgrade_modal.benefit_canvas_size') || 'Lienzo máximo'}</span>
                     </td>
-                    <td class="col-plan col-plan--free${selectedPlan === 'free' ? ' is-active' : ''}">Cualquier tamaño</td>
                     <td class="col-plan col-plan--pro${selectedPlan === 'pro' ? ' is-active' : ''}">Cualquier tamaño</td>
                     <td class="col-plan col-plan--business${selectedPlan === 'business' || selectedPlan === 'negocios' ? ' is-active' : ''}">Cualquier tamaño</td>
                   </tr>
@@ -144,7 +125,6 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
                     <td class="col-feature">
                       <span>${t('upgrade_modal.benefit_collab') || 'Colaboración en vivo'}</span>
                     </td>
-                    <td class="col-plan col-plan--free${selectedPlan === 'free' ? ' is-active' : ''}">3</td>
                     <td class="col-plan col-plan--pro${selectedPlan === 'pro' ? ' is-active' : ''}">6</td>
                     <td class="col-plan col-plan--business${selectedPlan === 'business' || selectedPlan === 'negocios' ? ' is-active' : ''}">50</td>
                   </tr>
@@ -152,7 +132,6 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
                     <td class="col-feature">
                       <span>${t('upgrade_modal.benefit_teams') || 'Equipos de trabajo'}</span>
                     </td>
-                    <td class="col-plan col-plan--free${selectedPlan === 'free' ? ' is-active' : ''}">—</td>
                     <td class="col-plan col-plan--pro${selectedPlan === 'pro' ? ' is-active' : ''}">1</td>
                     <td class="col-plan col-plan--business${selectedPlan === 'business' || selectedPlan === 'negocios' ? ' is-active' : ''}">Ilimitados</td>
                   </tr>
@@ -160,7 +139,6 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
                     <td class="col-feature">
                       <span>${t('upgrade_modal.benefit_export_formats') || 'Formatos de exportación'}</span>
                     </td>
-                    <td class="col-plan col-plan--free${selectedPlan === 'free' ? ' is-active' : ''}">PNG, JSON</td>
                     <td class="col-plan col-plan--pro${selectedPlan === 'pro' ? ' is-active' : ''}">GIF, Atlas</td>
                     <td class="col-plan col-plan--business${selectedPlan === 'business' || selectedPlan === 'negocios' ? ' is-active' : ''}">Todos</td>
                   </tr>
@@ -168,7 +146,6 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
                     <td class="col-feature">
                       <span>${t('upgrade_modal.benefit_export_scale') || 'Escala máxima'}</span>
                     </td>
-                    <td class="col-plan col-plan--free${selectedPlan === 'free' ? ' is-active' : ''}">2x</td>
                     <td class="col-plan col-plan--pro${selectedPlan === 'pro' ? ' is-active' : ''}">8x</td>
                     <td class="col-plan col-plan--business${selectedPlan === 'business' || selectedPlan === 'negocios' ? ' is-active' : ''}">16x</td>
                   </tr>
@@ -176,7 +153,6 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
                     <td class="col-feature">
                       <span>${t('upgrade_modal.benefit_layers') || 'Capas por lienzo'}</span>
                     </td>
-                    <td class="col-plan col-plan--free${selectedPlan === 'free' ? ' is-active' : ''}">5</td>
                     <td class="col-plan col-plan--pro${selectedPlan === 'pro' ? ' is-active' : ''}">Ilimitadas</td>
                     <td class="col-plan col-plan--business${selectedPlan === 'business' || selectedPlan === 'negocios' ? ' is-active' : ''}">Ilimitadas</td>
                   </tr>
@@ -184,7 +160,6 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
                     <td class="col-feature">
                       <span>${t('upgrade_modal.benefit_history') || 'Historial de versiones'}</span>
                     </td>
-                    <td class="col-plan col-plan--free${selectedPlan === 'free' ? ' is-active' : ''}">7 días</td>
                     <td class="col-plan col-plan--pro${selectedPlan === 'pro' ? ' is-active' : ''}">30 días</td>
                     <td class="col-plan col-plan--business${selectedPlan === 'business' || selectedPlan === 'negocios' ? ' is-active' : ''}">Ilimitado</td>
                   </tr>
@@ -192,7 +167,6 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
                     <td class="col-feature">
                       <span>${t('upgrade_modal.benefit_trash') || 'Retención en papelera'}</span>
                     </td>
-                    <td class="col-plan col-plan--free${selectedPlan === 'free' ? ' is-active' : ''}">30 días</td>
                     <td class="col-plan col-plan--pro${selectedPlan === 'pro' ? ' is-active' : ''}">30 días</td>
                     <td class="col-plan col-plan--business${selectedPlan === 'business' || selectedPlan === 'negocios' ? ' is-active' : ''}">30 días</td>
                   </tr>
@@ -210,7 +184,6 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
   document.body.appendChild(backdrop);
   document.body.classList.add('modal-open');
 
-  const cardFree = backdrop.querySelector<HTMLElement>('[data-ref="card-plan-free"]');
   const cardPro = backdrop.querySelector<HTMLElement>('[data-ref="card-plan-pro"]');
   const cardBusiness = backdrop.querySelector<HTMLElement>('[data-ref="card-plan-business"]');
   const highlightTitle = backdrop.querySelector<HTMLElement>('[data-ref="plan-title-highlight"]');
@@ -236,7 +209,6 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
   const updateSelectedPlan = (plan: PlanTier) => {
     selectedPlan = plan;
     const normalized = plan === 'negocios' ? 'business' : plan;
-    cardFree?.classList.toggle('is-selected', normalized === 'free');
     cardPro?.classList.toggle('is-selected', normalized === 'pro');
     cardBusiness?.classList.toggle('is-selected', normalized === 'business');
 
@@ -247,11 +219,9 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
       ctaTextEl.textContent = getCtaLabel(plan);
     }
 
-    const freeCols = backdrop.querySelectorAll<HTMLElement>('.col-plan--free');
     const proCols = backdrop.querySelectorAll<HTMLElement>('.col-plan--pro');
     const businessCols = backdrop.querySelectorAll<HTMLElement>('.col-plan--business');
 
-    freeCols.forEach((el) => el.classList.toggle('is-active', normalized === 'free'));
     proCols.forEach((el) => el.classList.toggle('is-active', normalized === 'pro'));
     businessCols.forEach((el) => el.classList.toggle('is-active', normalized === 'business'));
 
@@ -265,10 +235,6 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
   };
 
   window.addEventListener('resize', handleResize);
-
-  cardFree?.addEventListener('click', () => {
-    updateSelectedPlan('free');
-  });
 
   cardPro?.addEventListener('click', () => {
     updateSelectedPlan('pro');

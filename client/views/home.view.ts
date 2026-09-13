@@ -137,6 +137,7 @@ class HomeController {
     const typeDropdownWrapper = this.container.querySelector<HTMLElement>('[data-ref="home-dropdown-wrapper-type"]');
     if (typeDropdownWrapper) {
       this.typeDropdownController = setupDropdown(typeDropdownWrapper, {
+        matchWidth: false,
         onSelect: (val: string) => {
           this.currentEntityFilter = (val as 'all' | 'designs' | 'folders') || 'all';
           const typeMenu = this.container.querySelector<HTMLElement>('[data-ref="dropdown-menu-filter-type"]');
@@ -145,12 +146,14 @@ class HomeController {
           });
           this.applyFilters();
         },
+        placement: 'bottom-end',
       });
     }
 
     const sortDropdownWrapper = this.container.querySelector<HTMLElement>('[data-ref="home-dropdown-wrapper-sort"]');
     if (sortDropdownWrapper) {
       this.sortDropdownController = setupDropdown(sortDropdownWrapper, {
+        matchWidth: false,
         onSelect: (val: string) => {
           this.currentSort = (val as 'activity' | 'alpha-asc' | 'alpha-desc') || 'activity';
           const sortMenu = this.container.querySelector<HTMLElement>('[data-ref="dropdown-menu-sort"]');
@@ -159,6 +162,7 @@ class HomeController {
           });
           this.applyFilters();
         },
+        placement: 'bottom-end',
       });
     }
 

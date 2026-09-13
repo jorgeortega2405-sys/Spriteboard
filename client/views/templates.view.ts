@@ -81,10 +81,11 @@ class TemplatesController {
 
     this.badgesContainer.innerHTML = TEMPLATE_CATEGORIES.map((cat) => {
       const isActive = cat.id === this.activeCategory;
-      const label = t(cat.nameKey) || cat.defaultName;
+      const translated = t(cat.nameKey);
+      const label = translated && translated !== cat.nameKey ? translated : cat.defaultName;
       return `
         <button type="button" class="component-badge component-badge--interactive${isActive ? ' is-active' : ''}" data-ref="badge-cat-${cat.id}" data-category="${cat.id}">
-          <span class="material-symbols-rounded">${cat.iconName}</span>
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${cat.iconName}"></use></svg>
           <span>${label}</span>
         </button>
       `;
@@ -340,7 +341,7 @@ class TemplatesController {
           <div class="canvas-card__actions-wrapper" data-ref="card-actions-wrapper-${item.id}">
             <div class="canvas-card__actions" data-ref="card-actions-${item.id}">
               <button type="button" class="canvas-card__action-btn${isFavorite ? ' is-active' : ''}" data-ref="btn-template-bookmark-${item.id}" data-bookmark-preset="${item.id}" data-tooltip="${isFavorite ? t('canvas.bookmark_remove') : t('canvas.bookmark_save')}" aria-label="${isFavorite ? t('canvas.bookmark_remove') : t('canvas.bookmark_save')}">
-                <span class="material-symbols-rounded">${isFavorite ? 'star_fill' : 'star'}</span>
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${isFavorite ? 'star_fill' : 'star'}"></use></svg>
               </button>
             </div>
           </div>
@@ -386,8 +387,7 @@ class TemplatesController {
     const tooltipText = nextFavorite ? t('canvas.bookmark_remove') : t('canvas.bookmark_save');
     btn.setAttribute('data-tooltip', tooltipText);
     btn.setAttribute('aria-label', tooltipText);
-    btn.innerHTML = `<span class="material-symbols-rounded">${nextFavorite ? 'star_fill' : 'star'}</span>`;
-    renderIcons(btn);
+    btn.innerHTML = `<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${nextFavorite ? 'star_fill' : 'star'}"></use></svg>`;
 
     try {
       const res = await postApi(API_ROUTES.favorites.toggle, {
@@ -407,8 +407,7 @@ class TemplatesController {
         const finalTooltip = serverFavorite ? t('canvas.bookmark_remove') : t('canvas.bookmark_save');
         btn.setAttribute('data-tooltip', finalTooltip);
         btn.setAttribute('aria-label', finalTooltip);
-        btn.innerHTML = `<span class="material-symbols-rounded">${serverFavorite ? 'star_fill' : 'star'}</span>`;
-        renderIcons(btn);
+        btn.innerHTML = `<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${serverFavorite ? 'star_fill' : 'star'}"></use></svg>`;
         showToast(serverFavorite ? t('canvas.bookmark_saved') : t('canvas.bookmark_removed'), 'success');
       } else {
         if (prevFavorite) {
@@ -420,8 +419,7 @@ class TemplatesController {
         const rollbackTooltip = prevFavorite ? t('canvas.bookmark_remove') : t('canvas.bookmark_save');
         btn.setAttribute('data-tooltip', rollbackTooltip);
         btn.setAttribute('aria-label', rollbackTooltip);
-        btn.innerHTML = `<span class="material-symbols-rounded">${prevFavorite ? 'star_fill' : 'star'}</span>`;
-        renderIcons(btn);
+        btn.innerHTML = `<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${prevFavorite ? 'star_fill' : 'star'}"></use></svg>`;
         showToast(t('toasts.generic_error'), 'danger');
       }
     } catch {
@@ -434,8 +432,7 @@ class TemplatesController {
       const rollbackTooltip = prevFavorite ? t('canvas.bookmark_remove') : t('canvas.bookmark_save');
       btn.setAttribute('data-tooltip', rollbackTooltip);
       btn.setAttribute('aria-label', rollbackTooltip);
-      btn.innerHTML = `<span class="material-symbols-rounded">${prevFavorite ? 'star_fill' : 'star'}</span>`;
-      renderIcons(btn);
+      btn.innerHTML = `<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${prevFavorite ? 'star_fill' : 'star'}"></use></svg>`;
       showToast(t('toasts.generic_error'), 'danger');
     }
   }

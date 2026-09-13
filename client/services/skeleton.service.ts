@@ -89,14 +89,14 @@ export class SkeletonService {
     const existingSidebar = existingContent?.querySelector<HTMLElement>('[data-ref="sidebar"], .layout-nav') ||
       container.querySelector<HTMLElement>('[data-ref="sidebar"], .layout-nav') ||
       document.querySelector<HTMLElement>('[data-ref="sidebar"], .layout-nav');
-    const existingWrapper = existingContent?.querySelector<HTMLElement>('.component-wrapper, .view-wrapper');
+    const existingWrapper = existingContent?.querySelector<HTMLElement>('.component-wrapper, .view-wrapper, .home-wrapper');
     const isSoftNavigation = onlyBottom && Boolean(existingSidebar && existingWrapper && existingContent);
 
     const skeletonElement = this.createSkeleton(pathname, { onlyBottom: isSoftNavigation });
     let skeletonWrapper: HTMLElement | null = null;
 
     if (isSoftNavigation && existingWrapper) {
-      skeletonWrapper = skeletonElement.querySelector<HTMLElement>('.component-wrapper, .view-wrapper, .layout-body') || skeletonElement;
+      skeletonWrapper = skeletonElement.querySelector<HTMLElement>('.component-wrapper, .view-wrapper, .home-wrapper, .layout-body') || skeletonElement;
       if (!skeletonWrapper.classList.contains('view-wrapper')) {
         skeletonWrapper.classList.add('view-wrapper');
       }

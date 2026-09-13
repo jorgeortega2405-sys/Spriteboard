@@ -191,6 +191,15 @@ export function setupDropdown(
   const selectedIconEl = trigger?.querySelector<HTMLElement>('.dropdown-trigger__icon, [data-ref*="selected-icon"]') || null;
   const isSelect = typeof options.isSelect === 'boolean' ? options.isSelect : Boolean(selectedTextEl || options.onSelect);
 
+  const hasExplicitWidthClass = Boolean(
+    menu && Array.from(menu.classList).some((c) => c.startsWith('menu-panel--w-') && c !== 'menu-panel--w-full')
+  );
+  const isIconButton = Boolean(trigger?.classList.contains('btn--icon'));
+  const shouldMatchWidth = options.matchWidth !== undefined
+    ? options.matchWidth
+    : (!hasExplicitWidthClass && !isIconButton && (isSelect || Boolean(menu?.classList.contains('menu-panel--w-full'))));
+  const defaultPlacement: Placement = isIconButton ? 'bottom-end' : 'bottom-start';
+
   let isClosing = false;
   let popperInstance: PopperInstance | null = null;
 
@@ -198,14 +207,20 @@ export function setupDropdown(
     if (popperInstance) {
       popperInstance.destroy();
       popperInstance = null;
+      if (!shouldMatchWidth && menu) {
+        menu.style.width = '';
+      }
     }
   };
 
   const createPopperInstance = () => {
     if (window.innerWidth > 768 && trigger && menu) {
       destroyPopper();
+      if (!shouldMatchWidth) {
+        menu.style.width = '';
+      }
       popperInstance = createPopper(trigger, menu, {
-        placement: options.placement || 'bottom-start',
+        placement: options.placement || defaultPlacement,
         modifiers: [
           {
             name: 'offset',
@@ -229,13 +244,13 @@ export function setupDropdown(
           },
           {
             effect: ({ state }: any) => {
-              if (options.matchWidth !== false) {
+              if (shouldMatchWidth) {
                 state.elements.popper.style.width = `${state.elements.reference.offsetWidth}px`;
               }
             },
-            enabled: options.matchWidth !== false,
+            enabled: shouldMatchWidth,
             fn: ({ state }: any) => {
-              if (options.matchWidth !== false) {
+              if (shouldMatchWidth) {
                 state.styles.popper.width = `${state.rects.reference.width}px`;
               }
             },
@@ -266,6 +281,7 @@ export function setupDropdown(
       backdrop.classList.add('is-open');
       menu.classList.add('is-open');
       trigger?.classList.add('is-open');
+      wrapper?.classList.add('is-open');
 
       backdrop.style.transition = 'opacity 0.25s ease';
       menu.style.transition = 'transform 0.28s cubic-bezier(0.16, 1, 0.3, 1)';
@@ -275,6 +291,7 @@ export function setupDropdown(
       backdrop?.classList.add('is-open');
       menu?.classList.add('is-open');
       trigger?.classList.add('is-open');
+      wrapper?.classList.add('is-open');
       createPopperInstance();
     }
 
@@ -305,6 +322,7 @@ export function setupDropdown(
         backdrop.classList.remove('is-open');
         menu.classList.remove('is-open');
         trigger?.classList.remove('is-open');
+        wrapper?.classList.remove('is-open');
         backdrop.style.display = '';
         backdrop.style.opacity = '';
         backdrop.style.transition = '';
@@ -320,6 +338,7 @@ export function setupDropdown(
       backdrop?.classList.remove('is-open');
       menu?.classList.remove('is-open');
       trigger?.classList.remove('is-open');
+      wrapper?.classList.remove('is-open');
       if (backdrop) {
         backdrop.style.display = '';
         backdrop.style.opacity = '';
@@ -328,6 +347,9 @@ export function setupDropdown(
       if (menu) {
         menu.style.transform = '';
         menu.style.transition = '';
+        if (!shouldMatchWidth) {
+          menu.style.width = '';
+        }
       }
       if (typeof options.onClose === 'function') {
         options.onClose();

@@ -66,6 +66,8 @@ KNOWN_DYNAMIC_ICONS = {
     "payments",
     "devices",
     "receipt_long",
+    "shopping_cart",
+    "business_center",
     "content_copy",
     "key",
     "qr_code_scanner",

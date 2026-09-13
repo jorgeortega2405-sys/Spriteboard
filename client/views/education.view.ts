@@ -37,6 +37,8 @@ class EducationController {
   private activeTab: 'classrooms' | 'teachers' | 'school' = 'classrooms';
   private school: SchoolOrganization | null = null;
   private membersDropdownController: ReturnType<typeof setupDropdown> | null = null;
+  private tabFilterDropdownWrapper: HTMLElement | null = null;
+  private tabFilterDropdownController: ReturnType<typeof setupDropdown> | null = null;
 
   private educationTitle: HTMLElement | null = null;
   private tabBtnClassrooms: HTMLElement | null = null;
@@ -109,18 +111,23 @@ class EducationController {
   private inputSchoolDomain: HTMLInputElement | null = null;
   private bannerSchoolError: HTMLElement | null = null;
 
-  constructor(container: HTMLElement) {
+  constructor(container: HTMLElement, activeTab: 'classrooms' | 'teachers' | 'school' = 'classrooms') {
     this.container = container;
+    this.activeTab = activeTab;
   }
 
   public async init(): Promise<void> {
     this.queryDOMElements();
     this.setupDropdowns();
     this.bindEvents();
-    await Promise.all([
-      this.loadClassrooms(),
-      this.loadSchool(),
-    ]);
+    if (this.activeTab === 'classrooms') {
+      await Promise.all([
+        this.loadClassrooms(),
+        this.loadSchool(),
+      ]);
+    } else {
+      await this.loadSchool();
+    }
   }
 
   public destroy(): void {
@@ -131,6 +138,7 @@ class EducationController {
 
   private queryDOMElements(): void {
     this.educationTitle = this.container.querySelector<HTMLElement>('[data-ref="education-title"]');
+    this.tabFilterDropdownWrapper = this.container.querySelector<HTMLElement>('[data-ref="education-tab-filter-wrapper"]');
     this.tabBtnClassrooms = this.container.querySelector<HTMLElement>('[data-ref="tab-btn-classrooms"]');
     this.tabBtnTeachers = this.container.querySelector<HTMLElement>('[data-ref="tab-btn-teachers"]');
     this.tabBtnSchool = this.container.querySelector<HTMLElement>('[data-ref="tab-btn-school"]');
@@ -203,23 +211,46 @@ class EducationController {
   }
 
   private setupDropdowns(): void {
-    if (!this.membersDropdownWrapper) return;
-    this.membersDropdownController = setupDropdown(this.membersDropdownWrapper);
+    if (this.membersDropdownWrapper) {
+      this.membersDropdownController = setupDropdown(this.membersDropdownWrapper);
+    }
+    if (this.tabFilterDropdownWrapper) {
+      this.tabFilterDropdownController = setupDropdown(this.tabFilterDropdownWrapper, {
+        matchWidth: false,
+        placement: 'bottom-end',
+      });
+    }
   }
 
   private bindEvents(): void {
     const signal = this.abortController.signal;
 
-    this.tabBtnClassrooms?.addEventListener('click', () => this.switchTab('classrooms'), { signal });
-    this.tabBtnTeachers?.addEventListener('click', () => this.switchTab('teachers'), { signal });
-    this.tabBtnSchool?.addEventListener('click', () => this.switchTab('school'), { signal });
+    this.tabBtnClassrooms?.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.tabFilterDropdownController?.close();
+      navigate('/education');
+    }, { signal });
+    this.tabBtnTeachers?.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.tabFilterDropdownController?.close();
+      navigate('/education/teachers');
+    }, { signal });
+    this.tabBtnSchool?.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.tabFilterDropdownController?.close();
+      navigate('/education/institution');
+    }, { signal });
 
     this.btnToggleSearch?.addEventListener('click', () => this.toggleSearchToolbar(), { signal });
     this.btnClearSearch?.addEventListener('click', () => {
       if (this.searchInput) this.searchInput.value = '';
       this.searchQuery = '';
       this.btnClearSearch?.style.setProperty('display', 'none');
-      this.renderClassrooms();
+      if (this.activeTab === 'teachers') {
+        this.renderTeachersTable();
+      } else {
+        this.renderClassrooms();
+      }
     }, { signal });
 
     this.searchInput?.addEventListener('input', () => {
@@ -227,7 +258,11 @@ class EducationController {
       if (this.btnClearSearch) {
         this.btnClearSearch.style.display = this.searchQuery ? 'inline-flex' : 'none';
       }
-      this.renderClassrooms();
+      if (this.activeTab === 'teachers') {
+        this.renderTeachersTable();
+      } else {
+        this.renderClassrooms();
+      }
     }, { signal });
 
     this.btnJoinClassroom?.addEventListener('click', () => this.openJoinModal(), { signal });
@@ -263,6 +298,30 @@ class EducationController {
     this.btnActionDelete?.addEventListener('click', () => {
       if (this.selectedClassroom) {
         this.confirmDeleteClassroom(this.selectedClassroom);
+      }
+    }, { signal });
+
+    const btnActionDeselect = this.container.querySelector<HTMLElement>('[data-ref="btn-action-deselect"]');
+    btnActionDeselect?.addEventListener('click', () => {
+      this.selectedClassroom = null;
+      this.tableBody?.querySelectorAll('.component-table__row').forEach((r) => r.classList.remove('is-selected'));
+      this.updateActionButtons();
+    }, { signal });
+
+    this.tableWrapper?.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.component-table__row') && this.selectedClassroom) {
+        this.selectedClassroom = null;
+        this.tableBody?.querySelectorAll('.component-table__row').forEach((r) => r.classList.remove('is-selected'));
+        this.updateActionButtons();
+      }
+    }, { signal });
+
+    document.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && this.selectedClassroom) {
+        this.selectedClassroom = null;
+        this.tableBody?.querySelectorAll('.component-table__row').forEach((r) => r.classList.remove('is-selected'));
+        this.updateActionButtons();
       }
     }, { signal });
 
@@ -334,47 +393,6 @@ class EducationController {
     }, { signal });
   }
 
-  private switchTab(tab: 'classrooms' | 'teachers' | 'school'): void {
-    this.activeTab = tab;
-
-    if (this.tabBtnClassrooms) {
-      this.tabBtnClassrooms.classList.toggle('btn--black', tab === 'classrooms');
-    }
-    if (this.tabBtnTeachers) {
-      this.tabBtnTeachers.classList.toggle('btn--black', tab === 'teachers');
-    }
-    if (this.tabBtnSchool) {
-      this.tabBtnSchool.classList.toggle('btn--black', tab === 'school');
-    }
-
-    if (this.tabPaneClassrooms) {
-      this.tabPaneClassrooms.style.display = tab === 'classrooms' ? 'block' : 'none';
-    }
-    if (this.tabPaneTeachers) {
-      this.tabPaneTeachers.style.display = tab === 'teachers' ? 'block' : 'none';
-    }
-    if (this.tabPaneSchool) {
-      this.tabPaneSchool.style.display = tab === 'school' ? 'block' : 'none';
-    }
-
-    if (this.defaultActions) {
-      this.defaultActions.style.display = tab === 'classrooms' && !this.selectedClassroom ? 'inline-flex' : 'none';
-    }
-    if (this.selectedActions) {
-      this.selectedActions.style.display = tab === 'classrooms' && Boolean(this.selectedClassroom) ? 'inline-flex' : 'none';
-    }
-    if (this.teachersTopActions) {
-      this.teachersTopActions.style.display = tab === 'teachers' && Boolean(this.school?.is_admin) ? 'inline-flex' : 'none';
-    }
-    if (this.schoolTopActions) {
-      this.schoolTopActions.style.display = tab === 'school' && Boolean(this.school?.is_admin) ? 'inline-flex' : 'none';
-    }
-
-    if (this.searchToolbar && tab !== 'classrooms') {
-      this.searchToolbar.classList.add('is-hidden');
-    }
-  }
-
   private toggleSearchToolbar(): void {
     if (!this.searchToolbar) return;
     const isHidden = this.searchToolbar.classList.contains('is-hidden');
@@ -386,7 +404,11 @@ class EducationController {
       if (this.searchInput) this.searchInput.value = '';
       this.searchQuery = '';
       if (this.btnClearSearch) this.btnClearSearch.style.display = 'none';
-      this.renderClassrooms();
+      if (this.activeTab === 'teachers') {
+        this.renderTeachersTable();
+      } else {
+        this.renderClassrooms();
+      }
     }
   }
 
@@ -422,15 +444,22 @@ class EducationController {
   private renderSchoolUi(): void {
     if (!this.school) return;
 
-    if (this.school.name && this.educationTitle) {
+    if (this.school.name && this.educationTitle && this.activeTab === 'classrooms') {
       this.educationTitle.textContent = this.school.name;
     }
 
     if (this.tabBtnTeachers) {
-      this.tabBtnTeachers.style.display = 'inline-flex';
+      this.tabBtnTeachers.style.display = 'flex';
     }
-    if (this.school.is_admin && this.tabBtnSchool) {
-      this.tabBtnSchool.style.display = 'inline-flex';
+    if (this.tabBtnSchool) {
+      this.tabBtnSchool.style.display = this.school.is_admin ? 'flex' : 'none';
+    }
+
+    if (this.teachersTopActions) {
+      this.teachersTopActions.style.display = this.school.is_admin ? 'inline-flex' : 'none';
+    }
+    if (this.schoolTopActions) {
+      this.schoolTopActions.style.display = this.school.is_admin ? 'inline-flex' : 'none';
     }
 
     if (this.statSchoolName) this.statSchoolName.textContent = this.school.name || 'Centro Educativo';
@@ -485,57 +514,43 @@ class EducationController {
 
     for (const classroom of filtered) {
       const tr = document.createElement('tr');
-      tr.className = 'component-table__row';
+      tr.className = 'component-table__row is-selectable';
       tr.setAttribute('data-ref', `row-classroom-${classroom.uuid}`);
 
       const tdName = document.createElement('td');
       tdName.className = 'component-table__cell';
-      tdName.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 12px;">
-          <div style="width: 32px; height: 32px; border-radius: 8px; background-color: ${escapeHtml(classroom.color || '#4f46e5')}; display: flex; align-items: center; justify-content: center; color: white;">
-            <svg class="component-icon" aria-hidden="true" style="font-size: 18px;"><use href="/icons.svg#school"></use></svg>
-          </div>
-          <span style="font-weight: 600; color: var(--text-primary);">${escapeHtml(classroom.name)}</span>
-        </div>
-      `;
+      tdName.setAttribute('data-ref', `cell-name-${classroom.uuid}`);
+      tdName.innerHTML = `<span class="component-badge component-badge--sm" data-ref="badge-name-${classroom.uuid}">${escapeHtml(classroom.name)}</span>`;
 
       const tdDesc = document.createElement('td');
       tdDesc.className = 'component-table__cell';
-      tdDesc.style.color = 'var(--text-secondary)';
-      tdDesc.textContent = classroom.description || '—';
+      tdDesc.setAttribute('data-ref', `cell-desc-${classroom.uuid}`);
+      const descText = classroom.description || '—';
+      tdDesc.innerHTML = `<span class="component-badge component-badge--sm" data-ref="badge-desc-${classroom.uuid}">${escapeHtml(descText)}</span>`;
 
       const tdCode = document.createElement('td');
       tdCode.className = 'component-table__cell';
-      if (classroom.join_code) {
-        tdCode.innerHTML = `
-          <div style="display: inline-flex; align-items: center; gap: 8px;">
-            <span style="font-family: monospace; font-weight: 700; background: var(--bg-hover); padding: 2px 8px; border-radius: 4px; letter-spacing: 1px;">
-              ${escapeHtml(classroom.join_code)}
-            </span>
-          </div>
-        `;
-      } else {
-        tdCode.innerHTML = '<span style="color: var(--text-secondary);">—</span>';
-      }
+      tdCode.setAttribute('data-ref', `cell-code-${classroom.uuid}`);
+      const codeText = classroom.join_code || '—';
+      tdCode.innerHTML = `<span class="component-badge component-badge--sm" data-ref="badge-code-${classroom.uuid}">${escapeHtml(codeText)}</span>`;
 
       const tdMembers = document.createElement('td');
       tdMembers.className = 'component-table__cell';
-      tdMembers.style.color = 'var(--text-secondary)';
-      tdMembers.textContent = `${classroom.member_count || 1} integrantes`;
+      tdMembers.setAttribute('data-ref', `cell-members-${classroom.uuid}`);
+      const memberCount = Number(classroom.member_count) || 1;
+      const memberLabel = memberCount === 1 ? '1 integrante' : `${memberCount} integrantes`;
+      tdMembers.innerHTML = `<span class="component-badge component-badge--sm" data-ref="badge-members-${classroom.uuid}">${escapeHtml(memberLabel)}</span>`;
 
       const tdRole = document.createElement('td');
       tdRole.className = 'component-table__cell';
+      tdRole.setAttribute('data-ref', `cell-role-${classroom.uuid}`);
       const roleText = classroom.user_role === 'owner' ? 'Docente titular' : (classroom.user_role === 'admin' ? 'Profesor adjunto' : 'Estudiante');
-      tdRole.innerHTML = `
-        <span class="badge ${classroom.user_role === 'owner' ? 'badge--primary' : 'badge--neutral'}" style="font-size: 12px; padding: 2px 8px; border-radius: 9999px;">
-          ${escapeHtml(roleText)}
-        </span>
-      `;
+      tdRole.innerHTML = `<span class="component-badge component-badge--sm" data-ref="badge-role-${classroom.uuid}">${escapeHtml(roleText)}</span>`;
 
       const tdCreated = document.createElement('td');
       tdCreated.className = 'component-table__cell';
-      tdCreated.style.color = 'var(--text-secondary)';
-      tdCreated.textContent = formatDate(classroom.created_at);
+      tdCreated.setAttribute('data-ref', `cell-date-${classroom.uuid}`);
+      tdCreated.innerHTML = `<span class="component-badge component-badge--sm" data-ref="badge-date-${classroom.uuid}">${escapeHtml(formatDate(classroom.created_at))}</span>`;
 
       tr.appendChild(tdName);
       tr.appendChild(tdDesc);
@@ -545,10 +560,15 @@ class EducationController {
       tr.appendChild(tdCreated);
 
       tr.addEventListener('click', () => {
+        const isAlreadySelected = this.selectedClassroom?.uuid === classroom.uuid;
         const rows = this.tableBody?.querySelectorAll('.component-table__row');
         rows?.forEach((r) => r.classList.remove('is-selected'));
-        tr.classList.add('is-selected');
-        this.selectedClassroom = classroom;
+        if (isAlreadySelected) {
+          this.selectedClassroom = null;
+        } else {
+          tr.classList.add('is-selected');
+          this.selectedClassroom = classroom;
+        }
         this.updateActionButtons();
       }, { signal: this.abortController.signal });
 
@@ -560,7 +580,13 @@ class EducationController {
     if (!this.teachersTableBody) return;
     this.teachersTableBody.innerHTML = '';
 
-    const teachers = Array.isArray(this.school?.teachers) ? this.school!.teachers : [];
+    let teachers = Array.isArray(this.school?.teachers) ? this.school!.teachers : [];
+    if (this.searchQuery) {
+      teachers = teachers.filter((t) =>
+        (t.username || '').toLowerCase().includes(this.searchQuery) ||
+        (t.email || '').toLowerCase().includes(this.searchQuery)
+      );
+    }
     const wrapper = this.teachersTableWrapper;
 
     if (teachers.length === 0) {
@@ -588,33 +614,25 @@ class EducationController {
 
       const tdTeacher = document.createElement('td');
       tdTeacher.className = 'component-table__cell';
-      tdTeacher.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 12px;">
-          <div class="account-item__avatar" style="background-color: #0284c7; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 13px; overflow: hidden;">
-            ${teacher.avatar_url ? `<img src="${escapeHtml(teacher.avatar_url)}" alt="${escapeHtml(teacher.username || '')}" style="width: 100%; height: 100%; object-fit: cover;" />` : escapeHtml((teacher.username || 'D')[0].toUpperCase())}
-          </div>
-          <span style="font-weight: 600; color: var(--text-primary);">${escapeHtml(teacher.username || 'Docente')}</span>
-        </div>
-      `;
+      tdTeacher.setAttribute('data-ref', `cell-teacher-${teacher.user_id}`);
+      tdTeacher.innerHTML = `<span class="component-badge component-badge--sm" data-ref="badge-teacher-${teacher.user_id}">${escapeHtml(teacher.username || 'Docente')}</span>`;
 
       const tdEmail = document.createElement('td');
       tdEmail.className = 'component-table__cell';
-      tdEmail.style.color = 'var(--text-secondary)';
-      tdEmail.textContent = teacher.email || '—';
+      tdEmail.setAttribute('data-ref', `cell-email-${teacher.user_id}`);
+      const emailText = teacher.email || '—';
+      tdEmail.innerHTML = `<span class="component-badge component-badge--sm" data-ref="badge-email-${teacher.user_id}">${escapeHtml(emailText)}</span>`;
 
       const tdStatus = document.createElement('td');
       tdStatus.className = 'component-table__cell';
+      tdStatus.setAttribute('data-ref', `cell-status-${teacher.user_id}`);
       const isActive = teacher.status === 'active';
-      tdStatus.innerHTML = `
-        <span class="badge ${isActive ? 'badge--success' : 'badge--neutral'}" style="font-size: 12px; padding: 2px 8px; border-radius: 9999px; font-weight: 500;">
-          ${isActive ? 'Activo' : teacher.status}
-        </span>
-      `;
+      tdStatus.innerHTML = `<span class="component-badge component-badge--sm" data-ref="badge-status-${teacher.user_id}">${escapeHtml(isActive ? 'Activo' : teacher.status)}</span>`;
 
       const tdJoined = document.createElement('td');
       tdJoined.className = 'component-table__cell';
-      tdJoined.style.color = 'var(--text-secondary)';
-      tdJoined.textContent = formatDate(teacher.created_at);
+      tdJoined.setAttribute('data-ref', `cell-date-${teacher.user_id}`);
+      tdJoined.innerHTML = `<span class="component-badge component-badge--sm" data-ref="badge-date-${teacher.user_id}">${escapeHtml(formatDate(teacher.created_at))}</span>`;
 
       const tdActions = document.createElement('td');
       tdActions.className = 'component-table__cell';
@@ -1143,15 +1161,43 @@ class EducationController {
   }
 }
 
-export async function createEducationView(): Promise<HTMLElement> {
-  const container = await loadTemplate('/views/education/education.html');
+export async function createEducationClassroomsView(): Promise<HTMLElement> {
+  const container = await loadTemplate('/views/education/classrooms.html');
   translateElement(container);
 
   const sidebar = await createSidebar();
   container.prepend(sidebar);
 
-  const controller = new EducationController(container);
+  const controller = new EducationController(container, 'classrooms');
   await controller.init();
 
   return container;
 }
+
+export async function createEducationTeachersView(): Promise<HTMLElement> {
+  const container = await loadTemplate('/views/education/teachers.html');
+  translateElement(container);
+
+  const sidebar = await createSidebar();
+  container.prepend(sidebar);
+
+  const controller = new EducationController(container, 'teachers');
+  await controller.init();
+
+  return container;
+}
+
+export async function createEducationInstitutionView(): Promise<HTMLElement> {
+  const container = await loadTemplate('/views/education/institution.html');
+  translateElement(container);
+
+  const sidebar = await createSidebar();
+  container.prepend(sidebar);
+
+  const controller = new EducationController(container, 'school');
+  await controller.init();
+
+  return container;
+}
+
+export const createEducationView = createEducationClassroomsView;

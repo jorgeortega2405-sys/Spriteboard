@@ -307,7 +307,7 @@ function createDrawerCanvasRow(canvas: CanvasItem): HTMLElement {
 
   const thumbHtml = canvas.preview_thumbnail
     ? `<img class="drawer-canvas-item__thumb-img" src="${canvas.preview_thumbnail}" alt="" />`
-    : `<span class="material-symbols-rounded drawer-canvas-item__thumb-icon">${iconName}</span>`;
+    : `<svg class="component-icon drawer-canvas-item__thumb-icon" aria-hidden="true"><use href="/icons.svg#${iconName}"></use></svg>`;
 
   item.innerHTML = `
     <div class="drawer-canvas-item__thumb">
@@ -333,7 +333,7 @@ async function renderHomeDrawerContent(drawerBody: HTMLElement): Promise<void> {
       <div class="drawer-section__header" data-ref="drawer-header-favorites">
         <span class="drawer-section__title">Favoritos</span>
         <button type="button" class="drawer-section__action" data-ref="btn-drawer-add-favorite" data-tooltip="Crear diseño" aria-label="Crear diseño">
-          <span class="material-symbols-rounded">add</span>
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
         </button>
       </div>
       <div class="drawer-items-list" data-ref="drawer-favorites-list">
@@ -489,23 +489,23 @@ async function populateDrawerContent(drawer: HTMLElement): Promise<void> {
           <span class="drawer-section__title" style="font-size: 13px; font-weight: 600; color: var(--text-primary);" data-i18n="nav.settings">${t('nav.settings') || 'Configuración'}</span>
         </div>
         <button type="button" class="menu-item" data-ref="btn-nav-settings-account">
-          <span class="material-symbols-rounded menu-item__icon">person</span>
+          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#person"></use></svg>
           <span class="menu-item__text" data-i18n="nav.your_account">Tu cuenta</span>
         </button>
         <button type="button" class="menu-item" data-ref="btn-nav-settings-security">
-          <span class="material-symbols-rounded menu-item__icon">lock</span>
+          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#lock"></use></svg>
           <span class="menu-item__text" data-i18n="nav.security">Seguridad</span>
         </button>
         <button type="button" class="menu-item" data-ref="btn-nav-settings-accessibility">
-          <span class="material-symbols-rounded menu-item__icon">accessibility_new</span>
+          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#accessibility_new"></use></svg>
           <span class="menu-item__text" data-i18n="nav.accessibility">Accesibilidad</span>
         </button>
         <button type="button" class="menu-item" data-ref="btn-nav-settings-billing">
-          <span class="material-symbols-rounded menu-item__icon">credit_card</span>
+          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#credit_card"></use></svg>
           <span class="menu-item__text" data-i18n="nav.billing">Facturación</span>
         </button>
         <button type="button" class="menu-item" data-ref="btn-nav-settings-purchases">
-          <span class="material-symbols-rounded menu-item__icon">receipt_long</span>
+          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#receipt_long"></use></svg>
           <span class="menu-item__text" data-i18n="nav.purchases">Compras</span>
         </button>
       `;
@@ -537,7 +537,7 @@ async function populateDrawerContent(drawer: HTMLElement): Promise<void> {
     } else {
       drawerBody.innerHTML = `
         <button type="button" class="menu-item" data-ref="btn-nav-settings-guest">
-          <span class="material-symbols-rounded menu-item__icon">tune</span>
+          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
           <span class="menu-item__text" data-i18n="nav.guest_settings">Configuración</span>
         </button>
       `;
@@ -552,27 +552,27 @@ async function populateDrawerContent(drawer: HTMLElement): Promise<void> {
         <span class="drawer-section__title" style="font-size: 13px; font-weight: 600; color: var(--text-primary);" data-i18n="nav.help">${t('nav.help') || 'Centro de ayuda'}</span>
       </div>
       <button type="button" class="menu-item" data-ref="btn-nav-help-terms">
-        <span class="material-symbols-rounded menu-item__icon">gavel</span>
+        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#gavel"></use></svg>
         <span class="menu-item__text" data-i18n="help_center.terms_title">Términos</span>
       </button>
       <button type="button" class="menu-item" data-ref="btn-nav-help-privacy">
-        <span class="material-symbols-rounded menu-item__icon">shield</span>
+        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#shield"></use></svg>
         <span class="menu-item__text" data-i18n="help_center.privacy_title">Privacidad</span>
       </button>
       <button type="button" class="menu-item" data-ref="btn-nav-help-cookies">
-        <span class="material-symbols-rounded menu-item__icon">cookie</span>
+        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#cookie"></use></svg>
         <span class="menu-item__text" data-i18n="help_center.cookies_title">Cookies</span>
       </button>
       <button type="button" class="menu-item" data-ref="btn-nav-help-legal">
-        <span class="material-symbols-rounded menu-item__icon">balance</span>
+        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#balance"></use></svg>
         <span class="menu-item__text" data-i18n="help_center.legal_title">Aviso legal</span>
       </button>
       <button type="button" class="menu-item" data-ref="btn-nav-help-billing">
-        <span class="material-symbols-rounded menu-item__icon">payments</span>
+        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#payments"></use></svg>
         <span class="menu-item__text" data-i18n="help_center.billing_title">Facturación</span>
       </button>
       <button type="button" class="menu-item" data-ref="btn-nav-help-support">
-        <span class="material-symbols-rounded menu-item__icon">help</span>
+        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#help"></use></svg>
         <span class="menu-item__text" data-i18n="help_center.support_title">Soporte</span>
       </button>
     `;
@@ -605,21 +605,25 @@ async function populateDrawerContent(drawer: HTMLElement): Promise<void> {
     bindNavLink(btnLegal, '/help/legal-notice');
     bindNavLink(btnBilling, '/help/billing');
     bindNavLink(btnSupport, '/help/support');
-  } else if (currentPath.startsWith('/education')) {
+  } else if (currentPath.startsWith('/education') || currentPath === '/institution') {
+    const isTeachers = currentPath === '/education/teachers';
+    const isInstitution = currentPath === '/education/institution' || currentPath === '/institution';
+    const isClassrooms = !isTeachers && !isInstitution;
+
     drawerBody.innerHTML = `
       <div class="drawer-section__header" style="padding: 8px 8px 4px 8px;">
         <span class="drawer-section__title" style="font-size: 13px; font-weight: 600; color: var(--text-primary);" data-i18n="nav.education">Educación</span>
       </div>
-      <button type="button" class="menu-item" data-ref="btn-drawer-edu-classrooms">
-        <span class="material-symbols-rounded menu-item__icon">meeting_room</span>
+      <button type="button" class="menu-item${isClassrooms ? ' is-active' : ''}" data-ref="btn-drawer-edu-classrooms">
+        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#meeting_room"></use></svg>
         <span class="menu-item__text">Salones y aulas</span>
       </button>
-      <button type="button" class="menu-item" data-ref="btn-drawer-edu-teachers">
-        <span class="material-symbols-rounded menu-item__icon">school</span>
+      <button type="button" class="menu-item${isTeachers ? ' is-active' : ''}" data-ref="btn-drawer-edu-teachers">
+        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#school"></use></svg>
         <span class="menu-item__text">Docentes</span>
       </button>
-      <button type="button" class="menu-item" data-ref="btn-drawer-edu-institution">
-        <span class="material-symbols-rounded menu-item__icon">apartment</span>
+      <button type="button" class="menu-item${isInstitution ? ' is-active' : ''}" data-ref="btn-drawer-edu-institution">
+        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#apartment"></use></svg>
         <span class="menu-item__text">Institución</span>
       </button>
     `;
@@ -627,21 +631,13 @@ async function populateDrawerContent(drawer: HTMLElement): Promise<void> {
     const btnTeachers = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-edu-teachers"]');
     const btnInstitution = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-edu-institution"]');
 
-    btnClassrooms?.addEventListener('click', () => {
-      const tab = document.querySelector<HTMLElement>('[data-tab="classrooms"]');
-      tab?.click();
-    });
-    btnTeachers?.addEventListener('click', () => {
-      const tab = document.querySelector<HTMLElement>('[data-tab="teachers"]');
-      tab?.click();
-    });
-    btnInstitution?.addEventListener('click', () => {
-      const tab = document.querySelector<HTMLElement>('[data-tab="institution"]');
-      tab?.click();
-    });
+    bindNavLink(btnClassrooms, '/education');
+    bindNavLink(btnTeachers, '/education/teachers');
+    bindNavLink(btnInstitution, '/education/institution');
   } else {
     await renderHomeDrawerContent(drawerBody);
   }
+  renderIcons(drawerBody);
 }
 
 function setupDrawerContent(sidebar: HTMLElement): void {
@@ -1078,9 +1074,20 @@ function setupRailUserControls(sidebar: HTMLElement): void {
       };
       updateTopBarTier(userTier);
 
+      const groupMenuTeams = avatarContainer.querySelector<HTMLElement>('[data-ref="group-menu-teams"]');
+      const updateTeamsVisibility = (tier: string) => {
+        const tVal = (tier || (currentUser ? currentUser.subscription_tier : 'free') || 'free').toLowerCase();
+        const isBusiness = tVal === 'business' || tVal === 'negocios';
+        if (groupMenuTeams) {
+          groupMenuTeams.style.display = isBusiness ? 'block' : 'none';
+        }
+      };
+      updateTeamsVisibility(userTier);
+
       const handleSubscriptionUpdated = (e: any) => {
         const tier = e.detail?.subscription_tier || currentUser?.subscription_tier || 'free';
         updateTopBarTier(tier);
+        updateTeamsVisibility(tier);
         renderAccountList();
       };
       window.addEventListener('subscription-updated', handleSubscriptionUpdated);
@@ -1479,6 +1486,20 @@ function setupRailUserControls(sidebar: HTMLElement): void {
         e.preventDefault();
         closeMenu();
         navigate('/help/terms');
+      });
+
+      const btnPlans = avatarContainer.querySelector<HTMLElement>('[data-ref="btn-menu-plans"]');
+      btnPlans?.addEventListener('click', (e) => {
+        e.preventDefault();
+        closeMenu();
+        navigate('/upgrade');
+      });
+
+      const btnPurchases = avatarContainer.querySelector<HTMLElement>('[data-ref="btn-menu-purchases"]');
+      btnPurchases?.addEventListener('click', (e) => {
+        e.preventDefault();
+        closeMenu();
+        navigate('/settings/purchases');
       });
 
       btnLogout?.addEventListener('click', async (e) => {

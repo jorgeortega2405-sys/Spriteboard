@@ -7,6 +7,10 @@ export const SKELETON_ROUTES: Record<string, string> = {
   '/reset-password': 'centered-form',
   '/': 'cards-layout',
   '/education': 'grouped-layout',
+  '/education/classrooms': 'grouped-layout',
+  '/education/teachers': 'grouped-layout',
+  '/education/institution': 'grouped-layout',
+  '/institution': 'grouped-layout',
   '/teams': 'grouped-layout',
   '/templates': 'templates-layout',
   '/search': 'search-layout',
@@ -76,6 +80,7 @@ export function hasPersistentTopBar(pathname: string): boolean {
     pathname === '/templates' ||
     pathname === '/education' ||
     pathname.startsWith('/education') ||
+    pathname === '/institution' ||
     pathname === '/teams' ||
     pathname.startsWith('/teams') ||
     pathname === '/trash' ||

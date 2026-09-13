@@ -141,28 +141,41 @@ export async function render(): Promise<void> {
         const teamsView = await createTeamsView();
         viewElements = [teamsView];
       }
-    } else if (path === '/education') {
+    } else if (path === '/education' || path === '/education/classrooms') {
       if (!currentUser) {
         window.history.replaceState({}, '', '/login');
         const { createLoginView } = await import('./views/auth.view.js');
         const loginView = await createLoginView();
         viewElements = [loginView];
       } else {
-        const { createEducationView } = await import('./views/education.view.js');
-        const educationView = await createEducationView();
+        const { createEducationClassroomsView } = await import('./views/education.view.js');
+        const educationView = await createEducationClassroomsView();
         viewElements = [educationView];
       }
-    } else if (path === '/institution') {
-      window.history.replaceState({}, '', '/education');
+    } else if (path === '/education/teachers') {
       if (!currentUser) {
         window.history.replaceState({}, '', '/login');
         const { createLoginView } = await import('./views/auth.view.js');
         const loginView = await createLoginView();
         viewElements = [loginView];
       } else {
-        const { createEducationView } = await import('./views/education.view.js');
-        const educationView = await createEducationView();
-        viewElements = [educationView];
+        const { createEducationTeachersView } = await import('./views/education.view.js');
+        const teachersView = await createEducationTeachersView();
+        viewElements = [teachersView];
+      }
+    } else if (path === '/education/institution' || path === '/institution') {
+      if (path === '/institution') {
+        window.history.replaceState({}, '', '/education/institution');
+      }
+      if (!currentUser) {
+        window.history.replaceState({}, '', '/login');
+        const { createLoginView } = await import('./views/auth.view.js');
+        const loginView = await createLoginView();
+        viewElements = [loginView];
+      } else {
+        const { createEducationInstitutionView } = await import('./views/education.view.js');
+        const institutionView = await createEducationInstitutionView();
+        viewElements = [institutionView];
       }
     } else if (path === '/templates') {
       const { createTemplatesView } = await import('./views/templates.view.js');

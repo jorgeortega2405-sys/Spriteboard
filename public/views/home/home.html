@@ -8,7 +8,7 @@
             <h1 class="view-header__title" data-ref="home-title" data-i18n="canvas.home_title" style="display: none;">Tus centros de trabajo</h1>
             <div class="view-breadcrumb" data-ref="folder-title-container" style="display: none;">
               <button type="button" class="btn btn--h34 btn--icon view-breadcrumb__back" data-ref="btn-folder-back" data-tooltip="Volver al inicio" aria-label="Volver al inicio">
-                <span class="material-symbols-rounded">arrow_back</span>
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
               </button>
               <div class="view-breadcrumb__info" data-ref="folder-breadcrumb-info">
                 <span class="view-breadcrumb__prefix" data-i18n="canvas.folder_viewing_prefix">Carpeta:</span>
@@ -20,22 +20,19 @@
           <div class="view-header__right" data-ref="home-floating-right">
             <div class="view-header__actions" data-ref="home-default-actions">
               <button type="button" class="btn btn--h40 btn--icon view-header__btn" data-ref="btn-home-upgrade" data-tooltip="Mejorar plan" aria-label="Mejorar plan">
-                <span class="material-symbols-rounded">workspace_premium</span>
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#workspace_premium"></use></svg>
               </button>
               <button type="button" class="btn btn--h40 btn--icon view-header__btn" data-ref="btn-create-folder" data-tooltip="Crear carpeta" aria-label="Crear carpeta">
-                <span class="material-symbols-rounded">create_new_folder</span>
-              </button>
-              <button type="button" class="btn btn--h40 btn--icon view-header__btn" data-ref="btn-toggle-search" data-tooltip="Buscar lienzos" aria-label="Buscar lienzos">
-                <span class="material-symbols-rounded">search</span>
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#create_new_folder"></use></svg>
               </button>
             </div>
 
             <div class="view-header__actions" data-ref="folder-context-actions" style="display: none;">
               <button type="button" class="btn btn--h40 btn--icon view-header__btn" data-ref="btn-folder-rename" data-tooltip="Renombrar carpeta" aria-label="Renombrar carpeta">
-                <span class="material-symbols-rounded">edit</span>
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
               </button>
               <button type="button" class="btn btn--h40 btn--danger btn--icon view-header__btn" data-ref="btn-folder-delete" data-tooltip="Eliminar carpeta" aria-label="Eliminar carpeta">
-                <span class="material-symbols-rounded">delete</span>
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
               </button>
             </div>
           </div>
@@ -43,13 +40,13 @@
           <div class="component-search-toolbar is-hidden" data-ref="search-toolbar">
             <div class="component-search component-search--full" data-ref="search-box">
               <div class="component-search__icon" data-ref="search-icon">
-                <span class="material-symbols-rounded">search</span>
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
               </div>
               <div class="component-search__input-box" data-ref="search-input-box">
                 <input class="component-search__input" data-ref="home-search-input" data-i18n-placeholder="canvas.home_search_placeholder" type="text" maxlength="100" autocomplete="off" />
               </div>
               <button type="button" class="btn btn--h34 btn--icon btn--clear-search" data-ref="btn-clear-search" style="display: none; margin-right: 4px;" aria-label="Limpiar búsqueda">
-                <span class="material-symbols-rounded" style="font-size: 18px;">close</span>
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
               </button>
             </div>
           </div>
@@ -60,10 +57,10 @@
             <h1 class="view-hero__title" data-ref="hero-title">¿Qué te gustaría crear hoy?</h1>
 
             <div class="view-search-pill" data-ref="hero-search-box">
-              <span class="material-symbols-rounded view-search-pill__icon">search</span>
+              <svg class="component-icon view-search-pill__icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
               <input class="view-search-pill__input" data-ref="hero-search-input" type="text" placeholder="Busca lo que quieras" autocomplete="off" />
               <button type="button" class="btn btn--h32 btn--icon view-search-pill__clear" data-ref="btn-hero-clear-search" style="display: none;" aria-label="Limpiar búsqueda">
-                <span class="material-symbols-rounded" style="font-size: 18px;">close</span>
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
               </button>
             </div>
 
@@ -89,10 +86,10 @@
         <div class="canvas-section" data-ref="canvas-section">
           <div class="canvas-section__header" data-ref="canvas-section-header">
             <h2 class="canvas-section__title" data-ref="canvas-section-title">Recientes</h2>
-            <div class="canvas-section__controls" data-ref="home-section-controls">
-              <div class="canvas-section__dropdown-wrapper" data-ref="home-dropdown-wrapper-type">
+            <div class="canvas-section__controls home-section-controls" data-ref="home-section-controls">
+              <div class="canvas-section__dropdown-wrapper home-filter-dropdown-wrapper" data-ref="home-dropdown-wrapper-type">
                 <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-trigger-filter-type" data-tooltip="Filtrar" aria-label="Filtrar">
-                  <span class="material-symbols-rounded">filter_list</span>
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
                 </button>
                 <div class="dropdown-backdrop" data-ref="dropdown-backdrop-filter-type">
                   <div class="menu-panel menu-panel--dropdown menu-panel--w-180 menu-panel--h-auto" data-ref="dropdown-menu-filter-type">
@@ -101,15 +98,15 @@
                     </div>
                     <div class="menu-panel__list">
                       <button type="button" class="menu-item is-active" data-ref="menu-filter-type-all" data-value="all">
-                        <span class="material-symbols-rounded menu-item__icon">dashboard</span>
+                        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#dashboard"></use></svg>
                         <span class="menu-item__text">Cualquiera</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="menu-filter-type-designs" data-value="designs">
-                        <span class="material-symbols-rounded menu-item__icon">draw</span>
+                        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#draw"></use></svg>
                         <span class="menu-item__text">Diseños</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="menu-filter-type-folders" data-value="folders">
-                        <span class="material-symbols-rounded menu-item__icon">folder</span>
+                        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
                         <span class="menu-item__text">Carpetas</span>
                       </button>
                     </div>
@@ -117,9 +114,9 @@
                 </div>
               </div>
 
-              <div class="canvas-section__dropdown-wrapper" data-ref="home-dropdown-wrapper-sort">
+              <div class="canvas-section__dropdown-wrapper home-filter-dropdown-wrapper" data-ref="home-dropdown-wrapper-sort">
                 <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-trigger-sort" data-tooltip="Ordenar" aria-label="Ordenar">
-                  <span class="material-symbols-rounded">swap_vert</span>
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#swap_vert"></use></svg>
                 </button>
                 <div class="dropdown-backdrop" data-ref="dropdown-backdrop-sort">
                   <div class="menu-panel menu-panel--dropdown menu-panel--w-220 menu-panel--h-auto" data-ref="dropdown-menu-sort">
@@ -128,15 +125,15 @@
                     </div>
                     <div class="menu-panel__list">
                       <button type="button" class="menu-item is-active" data-ref="menu-sort-activity" data-value="activity">
-                        <span class="material-symbols-rounded menu-item__icon">schedule</span>
+                        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#schedule"></use></svg>
                         <span class="menu-item__text">Última actividad</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="menu-sort-alpha-asc" data-value="alpha-asc">
-                        <span class="material-symbols-rounded menu-item__icon">sort_by_alpha</span>
+                        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#sort_by_alpha"></use></svg>
                         <span class="menu-item__text">Orden alfabético (A-Z)</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="menu-sort-alpha-desc" data-value="alpha-desc">
-                        <span class="material-symbols-rounded menu-item__icon">sort_by_alpha</span>
+                        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#sort_by_alpha"></use></svg>
                         <span class="menu-item__text">Orden alfabético (Z-A)</span>
                       </button>
                     </div>

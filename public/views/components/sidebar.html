@@ -98,12 +98,15 @@
         </button>
 
         <div class="avatar-dropdown-backdrop" data-ref="avatar-menu-backdrop">
-          <div class="menu-panel menu-panel--dropdown menu-panel--w-265 menu-panel--h-auto avatar-panel rail-floating-panel" data-ref="avatar-menu">
+          <div class="menu-panel menu-panel--dropdown menu-panel--w-325 menu-panel--h-auto avatar-panel rail-floating-panel" data-ref="avatar-menu">
             <div class="menu-panel__drag-zone" data-ref="avatar-menu-drag-zone" aria-hidden="true">
               <div class="menu-panel__drag-handle"></div>
             </div>
 
             <div class="menu-panel__list" data-ref="panel-main-options">
+              <div class="avatar-menu__section-header" data-ref="section-header-accounts">
+                <span class="drawer-section__title" data-i18n="nav.accounts">Cuentas</span>
+              </div>
               <button type="button" class="menu-item menu-item--bordered account-item" data-ref="btn-switch-account-menu">
                 <div class="account-item__avatar" data-ref="active-account-avatar-box">
                   <img class="avatar-img image-lazy-fade" data-ref="active-account-avatar" src="" alt="Avatar" referrerpolicy="no-referrer" onload="this.classList.add('image-loaded')" onerror="this.classList.add('image-loaded')" />
@@ -112,34 +115,48 @@
                   <span class="account-item__name" data-ref="active-account-name"></span>
                   <span class="account-item__email" data-ref="active-account-email"></span>
                 </div>
-                <span class="material-symbols-rounded account-item__arrow">navigate_next</span>
+                <svg class="component-icon account-item__arrow" aria-hidden="true"><use href="/icons.svg#navigate_next"></use></svg>
               </button>
+
+              <div class="avatar-menu__teams-group" data-ref="group-menu-teams" style="display: none;">
+                <div class="menu-divider" data-ref="teams-divider-top"></div>
+                <div class="avatar-menu__section-header" data-ref="section-header-teams">
+                  <span class="drawer-section__title" data-i18n="nav.teams_section">Equipos</span>
+                </div>
+                <button type="button" class="menu-item menu-item--bordered menu-item--center" data-ref="btn-menu-teams">
+                  <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#domain"></use></svg>
+                  <span class="menu-item__text" data-i18n="nav.create_team">Crear equipo</span>
+                </button>
+              </div>
+
               <div class="menu-divider" data-ref="active-account-divider"></div>
 
-              <button type="button" class="menu-item" data-ref="btn-menu-teams">
-                <span class="material-symbols-rounded menu-item__icon">groups</span>
-                <span class="menu-item__text" data-i18n="nav.manage_teams"></span>
-                <span class="menu-item__badge menu-item__badge--pro" data-ref="badge-menu-teams">
-                  <span class="material-symbols-rounded">workspace_premium</span>
-                </span>
-              </button>
               <button type="button" class="menu-item" data-ref="btn-menu-settings">
-                <span class="material-symbols-rounded menu-item__icon">settings</span>
-                <span class="menu-item__text" data-i18n="nav.settings"></span>
+                <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#settings"></use></svg>
+                <span class="menu-item__text" data-i18n="nav.settings">Configuración</span>
               </button>
               <button type="button" class="menu-item" data-ref="btn-menu-help">
-                <span class="material-symbols-rounded menu-item__icon">help</span>
-                <span class="menu-item__text" data-i18n="nav.help"></span>
+                <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#help"></use></svg>
+                <span class="menu-item__text" data-i18n="nav.help">Ayuda y comentarios</span>
               </button>
+              <button type="button" class="menu-item" data-ref="btn-menu-plans">
+                <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#business_center"></use></svg>
+                <span class="menu-item__text" data-i18n="nav.plans_and_pricing">Planes y precios</span>
+              </button>
+              <button type="button" class="menu-item" data-ref="btn-menu-purchases">
+                <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#shopping_cart"></use></svg>
+                <span class="menu-item__text" data-i18n="nav.purchase_history">Historial de compra</span>
+              </button>
+              <div class="menu-divider"></div>
               <button type="button" class="menu-item menu-item--bordered menu-item--danger" data-ref="btn-logout">
-                <span class="material-symbols-rounded menu-item__icon">logout</span>
-                <span class="menu-item__text" data-i18n="nav.logout"></span>
+                <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#logout"></use></svg>
+                <span class="menu-item__text" data-i18n="nav.logout">Cerrar sesión</span>
               </button>
             </div>
 
             <div class="menu-panel__list" data-ref="panel-account-switcher" style="display: none;">
               <button type="button" class="menu-item menu-item--bordered" data-ref="btn-back-to-main-menu">
-                <span class="material-symbols-rounded menu-item__icon">arrow_back</span>
+                <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
                 <span class="menu-item__text">Volver</span>
               </button>
               <div class="menu-divider"></div>
@@ -147,14 +164,14 @@
               <div class="account-switcher__list" data-ref="account-switcher-list"></div>
 
               <button type="button" class="menu-item menu-item--bordered" data-ref="btn-add-account">
-                <span class="material-symbols-rounded menu-item__icon">add</span>
-                <span class="menu-item__text" data-i18n="nav.add_account"></span>
+                <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+                <span class="menu-item__text" data-i18n="nav.add_account">Agregar otra cuenta</span>
               </button>
               <div class="menu-divider"></div>
 
               <button type="button" class="menu-item menu-item--bordered menu-item--danger" data-ref="btn-logout-all">
-                <span class="material-symbols-rounded menu-item__icon">logout</span>
-                <span class="menu-item__text" data-i18n="nav.logout_all"></span>
+                <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#logout"></use></svg>
+                <span class="menu-item__text" data-i18n="nav.logout_all">Cerrar todas las sesiones</span>
               </button>
             </div>
           </div>
