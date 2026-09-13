@@ -11,7 +11,7 @@ import { API_ROUTES } from '../config/api-routes.js';
 import { currentUser, deleteApi, escapeHtml, getApi, postApi, putApi } from '../services/api.service.js';
 import { getAllLocalCanvases, getLocalCanvasByUuid, markLocalCanvasAsSynced, removeLocalCanvas, saveLocalCanvas } from '../services/canvas-storage.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
-import { renderIcons } from '../services/icon.service.js';
+import { createIconSvg, renderIcons } from '../services/icon.service.js';
 import { SkeletonService } from '../services/skeleton.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
@@ -89,11 +89,6 @@ class HomeController {
   private selectedUuids = new Set<string>();
   private selectionToolbar: HTMLElement | null = null;
   private selectionCountEl: HTMLElement | null = null;
-  private btnSelectionClose: HTMLElement | null = null;
-  private btnSelectionDownload: HTMLElement | null = null;
-  private btnSelectionMove: HTMLElement | null = null;
-  private btnSelectionDuplicate: HTMLElement | null = null;
-  private btnSelectionDelete: HTMLElement | null = null;
 
   private marqueeEl: HTMLElement | null = null;
   private isMarqueeDragging = false;
@@ -135,18 +130,6 @@ class HomeController {
     this.folderContextActions = this.container.querySelector<HTMLElement>('[data-ref="folder-context-actions"]');
     this.btnFolderRename = this.container.querySelector<HTMLElement>('[data-ref="btn-folder-rename"]');
     this.btnFolderDelete = this.container.querySelector<HTMLElement>('[data-ref="btn-folder-delete"]');
-
-    this.selectionToolbar = this.container.querySelector<HTMLElement>('[data-ref="selection-toolbar"]');
-    this.selectionCountEl = this.container.querySelector<HTMLElement>('[data-ref="selection-count"]');
-    this.btnSelectionClose = this.container.querySelector<HTMLElement>('[data-ref="btn-selection-close"]');
-    this.btnSelectionDownload = this.container.querySelector<HTMLElement>('[data-ref="btn-selection-download"]');
-    this.btnSelectionMove = this.container.querySelector<HTMLElement>('[data-ref="btn-selection-move"]');
-    this.btnSelectionDuplicate = this.container.querySelector<HTMLElement>('[data-ref="btn-selection-duplicate"]');
-    this.btnSelectionDelete = this.container.querySelector<HTMLElement>('[data-ref="btn-selection-delete"]');
-
-    if (this.selectionToolbar) {
-      renderIcons(this.selectionToolbar);
-    }
 
     this.bindEvents();
     this.setupNavDropTargets();
@@ -417,46 +400,6 @@ class HomeController {
       { signal }
     );
 
-    this.btnSelectionClose?.addEventListener(
-      'click',
-      () => {
-        this.clearSelection();
-      },
-      { signal }
-    );
-
-    this.btnSelectionDownload?.addEventListener(
-      'click',
-      () => {
-        void this.handleBulkDownload();
-      },
-      { signal }
-    );
-
-    this.btnSelectionMove?.addEventListener(
-      'click',
-      () => {
-        this.handleBulkMove();
-      },
-      { signal }
-    );
-
-    this.btnSelectionDuplicate?.addEventListener(
-      'click',
-      () => {
-        void this.handleBulkDuplicate();
-      },
-      { signal }
-    );
-
-    this.btnSelectionDelete?.addEventListener(
-      'click',
-      () => {
-        this.handleBulkDelete();
-      },
-      { signal }
-    );
-
     this.scrollableEl?.addEventListener(
       'pointerdown',
       (e: PointerEvent) => {
@@ -515,7 +458,11 @@ class HomeController {
     this.categoriesCarouselController?.destroy();
     this.categoriesCarouselController = null;
     this.cleanupCategoriesDrag?.();
-    this.cleanupCategoriesDrag = null;
+    if (this.selectionToolbar) {
+      this.selectionToolbar.remove();
+      this.selectionToolbar = null;
+      this.selectionCountEl = null;
+    }
     this.closeAllDropdowns();
     this.abortController.abort();
   }
@@ -1557,26 +1504,100 @@ class HomeController {
     this.updateSelectionUi();
   }
 
+  private createSelectionToolbar(): HTMLElement {
+    const toolbar = document.createElement('div');
+    toolbar.className = 'selection-toolbar is-hidden';
+    toolbar.setAttribute('data-ref', 'selection-toolbar');
+    toolbar.innerHTML = `
+      <div class="selection-toolbar__left" data-ref="selection-toolbar-left">
+        <button type="button" class="btn btn--icon btn--h34 selection-toolbar__btn selection-toolbar__btn--close" data-ref="btn-selection-close" data-tooltip="Cancelar selección" aria-label="Cancelar selección">
+          ${createIconSvg('close')}
+        </button>
+        <span class="selection-toolbar__count" data-ref="selection-count">0 seleccionados</span>
+      </div>
+      <div class="selection-toolbar__divider" data-ref="selection-toolbar-divider"></div>
+      <div class="selection-toolbar__actions" data-ref="selection-toolbar-actions">
+        <button type="button" class="btn btn--icon btn--h34 selection-toolbar__btn" data-ref="btn-selection-download" data-tooltip="Descargar" aria-label="Descargar">
+          ${createIconSvg('download')}
+        </button>
+        <button type="button" class="btn btn--icon btn--h34 selection-toolbar__btn" data-ref="btn-selection-move" data-tooltip="Mover a carpeta" aria-label="Mover a carpeta">
+          ${createIconSvg('drive_file_move')}
+        </button>
+        <button type="button" class="btn btn--icon btn--h34 selection-toolbar__btn" data-ref="btn-selection-duplicate" data-tooltip="Duplicar" aria-label="Duplicar">
+          ${createIconSvg('filter_none')}
+        </button>
+        <button type="button" class="btn btn--icon btn--h34 btn--danger-hover selection-toolbar__btn" data-ref="btn-selection-delete" data-tooltip="Mover a la papelera" aria-label="Mover a la papelera">
+          ${createIconSvg('delete')}
+        </button>
+      </div>
+    `;
+
+    const btnClose = toolbar.querySelector<HTMLElement>('[data-ref="btn-selection-close"]');
+    const btnDownload = toolbar.querySelector<HTMLElement>('[data-ref="btn-selection-download"]');
+    const btnMove = toolbar.querySelector<HTMLElement>('[data-ref="btn-selection-move"]');
+    const btnDuplicate = toolbar.querySelector<HTMLElement>('[data-ref="btn-selection-duplicate"]');
+    const btnDelete = toolbar.querySelector<HTMLElement>('[data-ref="btn-selection-delete"]');
+
+    btnClose?.addEventListener('click', () => {
+      this.clearSelection();
+    });
+
+    btnDownload?.addEventListener('click', () => {
+      void this.handleBulkDownload();
+    });
+
+    btnMove?.addEventListener('click', () => {
+      this.handleBulkMove();
+    });
+
+    btnDuplicate?.addEventListener('click', () => {
+      void this.handleBulkDuplicate();
+    });
+
+    btnDelete?.addEventListener('click', () => {
+      this.handleBulkDelete();
+    });
+
+    const wrapper = this.container.querySelector<HTMLElement>('[data-ref="home-wrapper"]') || this.container;
+    wrapper.appendChild(toolbar);
+
+    this.selectionToolbar = toolbar;
+    this.selectionCountEl = toolbar.querySelector<HTMLElement>('[data-ref="selection-count"]');
+
+    return toolbar;
+  }
+
+  private removeSelectionToolbar(): void {
+    if (!this.selectionToolbar) return;
+    const toolbar = this.selectionToolbar;
+    toolbar.classList.remove('is-active');
+    setTimeout(() => {
+      if (this.selectedUuids.size === 0 && toolbar.parentNode) {
+        toolbar.remove();
+        if (this.selectionToolbar === toolbar) {
+          this.selectionToolbar = null;
+          this.selectionCountEl = null;
+        }
+      }
+    }, 220);
+  }
+
   private updateSelectionUi(): void {
     const count = this.selectedUuids.size;
     const isSelecting = count > 0;
 
     this.scrollableEl?.classList.toggle('is-selecting', isSelecting);
 
-    if (this.selectionToolbar) {
-      if (isSelecting) {
-        this.selectionToolbar.classList.remove('is-hidden');
-        requestAnimationFrame(() => {
-          this.selectionToolbar?.classList.add('is-active');
-        });
-      } else {
-        this.selectionToolbar.classList.remove('is-active');
-        setTimeout(() => {
-          if (this.selectedUuids.size === 0) {
-            this.selectionToolbar?.classList.add('is-hidden');
-          }
-        }, 220);
+    if (isSelecting) {
+      if (!this.selectionToolbar) {
+        this.createSelectionToolbar();
       }
+      this.selectionToolbar?.classList.remove('is-hidden');
+      requestAnimationFrame(() => {
+        this.selectionToolbar?.classList.add('is-active');
+      });
+    } else {
+      this.removeSelectionToolbar();
     }
 
     if (this.selectionCountEl) {

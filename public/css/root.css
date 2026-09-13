@@ -480,6 +480,10 @@
   --accent-primary: var(--sl-color-neutral-900);
   --accent-color: var(--sl-color-neutral-900);
   --color-primary: var(--sl-color-neutral-900);
+  --accent-pink: #db2777;
+  --accent-pink-subtle: rgba(255, 107, 194, 0.14);
+  --accent-pink-hover: rgba(255, 107, 194, 0.22);
+  --accent-pink-border: rgba(219, 39, 119, 0.35);
 
   /* Toasts */
   --color-toast-info: var(--sl-color-sky-600);
@@ -610,6 +614,10 @@ body.dark-theme {
   --accent-primary: #f4f4f5;
   --accent-color: #f4f4f5;
   --color-primary: #f4f4f5;
+  --accent-pink: #ff80bf;
+  --accent-pink-subtle: rgba(255, 107, 194, 0.18);
+  --accent-pink-hover: rgba(255, 107, 194, 0.26);
+  --accent-pink-border: rgba(255, 128, 191, 0.35);
 
   /* Suscripciones (Subscription Tier Colors - Dark Mode) */
   --tier-color-free: hsl(240 5% 55%);
@@ -724,6 +732,10 @@ body.dark-theme {
     --accent-primary: #f4f4f5;
     --accent-color: #f4f4f5;
     --color-primary: #f4f4f5;
+    --accent-pink: #ff80bf;
+    --accent-pink-subtle: rgba(255, 107, 194, 0.18);
+    --accent-pink-hover: rgba(255, 107, 194, 0.26);
+    --accent-pink-border: rgba(255, 128, 191, 0.35);
 
     --shadow-card: none;
     --shadow-dropdown: none;

@@ -19,7 +19,7 @@ let chatSidebarInitPromise: Promise<HTMLElement> | null = null;
 let drawerRemovalTimer: ReturnType<typeof setTimeout> | null = null;
 
 function createDrawerElement(): HTMLElement {
-  const drawer = document.createElement('aside');
+  const drawer = document.createElement('div');
   drawer.className = 'layout-drawer';
   drawer.setAttribute('data-ref', 'layout-drawer');
 

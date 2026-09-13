@@ -1,7 +1,6 @@
 <div class="chat-sidebar" data-ref="chat-sidebar">
   <div class="chat-panel" data-ref="chat-panel">
     <div class="chat-gradient-backdrop" data-ref="chat-gradient-backdrop"></div>
-    <!-- 1. Sección Superior (Top): Historial a la izquierda y Cerrar a la derecha -->
     <div class="chat-panel__top" data-ref="chat-panel-top">
       <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-chat-history" data-i18n-tooltip="chat.history" aria-label="Historial de chats">
         <span class="material-symbols-rounded">history</span>
@@ -12,7 +11,6 @@
       </button>
     </div>
 
-    <!-- 2. Sección Central (Center): Mensajes del Chat -->
     <div class="chat-panel__center layout-scrollable" data-ref="chat-panel-center">
       <div class="chat-messages" data-ref="chat-messages">
         <div class="chat-empty-state" data-ref="chat-empty-state">
@@ -25,7 +23,6 @@
       </div>
     </div>
 
-    <!-- 3. Sección Inferior (Bottom): Input de Chat en forma de Píldora compacta -->
     <div class="chat-panel__bottom" data-ref="chat-panel-bottom">
       <div class="chat-pill-input" data-ref="chat-input-box">
         <textarea class="chat-pill-input__field" data-ref="chat-input" data-i18n-placeholder="chat.input_placeholder" placeholder="Escribe un mensaje..." rows="1" maxlength="2000"></textarea>

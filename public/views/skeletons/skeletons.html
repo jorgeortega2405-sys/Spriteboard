@@ -1,6 +1,3 @@
-<!-- Plantillas de Skeletons de Spriteboard (CERO IDs - data-ref exclusivamente) -->
-
-<!-- 1. Plantilla de Autenticación (Login, Registro Etapas 1, 2, 3, Forgot Password) -->
 <template data-skeleton="auth-card">
   <div class="layout-content" data-ref="skeleton-auth-view">
     <div class="login-container" data-ref="skeleton-auth-wrapper">
@@ -23,10 +20,9 @@
   </div>
 </template>
 
-<!-- 2. Plantilla de Vista Principal (Home) -->
 <template data-skeleton="home">
   <div class="skeleton-view" data-ref="skeleton-home-view">
-    <header class="skeleton-topbar" data-ref="skeleton-topbar">
+    <div class="skeleton-topbar" data-ref="skeleton-topbar">
       <div class="topbar-left" data-ref="skeleton-topbar-left" style="display: flex; align-items: center; gap: 12px;">
         <div class="skeleton skeleton--btn-sm" data-ref="skeleton-menu-btn" style="width: 40px; height: 40px; border-radius: 8px;"></div>
         <div class="skeleton skeleton--title" data-ref="skeleton-brand" style="width: 130px; height: 24px; margin-bottom: 0;"></div>
@@ -38,9 +34,9 @@
         <div class="skeleton skeleton--btn-sm" data-ref="skeleton-action-btn" style="width: 100px; height: 36px; border-radius: 8px;"></div>
         <div class="skeleton skeleton--avatar" data-ref="skeleton-avatar"></div>
       </div>
-    </header>
+    </div>
 
-    <main class="main-layout" data-ref="skeleton-main-layout" style="padding: 32px 40px;">
+    <div class="main-layout" data-ref="skeleton-main-layout" style="padding: 32px 40px;">
       <div class="section-header" data-ref="skeleton-section-header" style="margin-bottom: 28px;">
         <div class="skeleton skeleton--title" data-ref="skeleton-page-title" style="width: 220px; height: 32px;"></div>
         <div class="skeleton skeleton--subtitle" data-ref="skeleton-page-subtitle" style="width: 380px;"></div>
@@ -78,14 +74,13 @@
           </div>
         </div>
       </div>
-    </main>
+    </div>
   </div>
 </template>
 
-<!-- 3. Plantilla de Papelera (Trash) -->
 <template data-skeleton="trash">
   <div class="skeleton-view" data-ref="skeleton-trash-view">
-    <header class="skeleton-topbar" data-ref="skeleton-trash-topbar">
+    <div class="skeleton-topbar" data-ref="skeleton-trash-topbar">
       <div class="topbar-left" style="display: flex; align-items: center; gap: 12px;">
         <div class="skeleton skeleton--btn-sm" style="width: 40px; height: 40px; border-radius: 8px;"></div>
         <div class="skeleton skeleton--title" style="width: 130px; height: 24px; margin-bottom: 0;"></div>
@@ -93,9 +88,9 @@
       <div class="topbar-right" style="display: flex; align-items: center; gap: 16px;">
         <div class="skeleton skeleton--avatar"></div>
       </div>
-    </header>
+    </div>
 
-    <main class="main-layout" data-ref="skeleton-trash-layout" style="padding: 32px 40px;">
+    <div class="main-layout" data-ref="skeleton-trash-layout" style="padding: 32px 40px;">
       <div class="section-header" style="margin-bottom: 28px;">
         <div class="skeleton skeleton--title" style="width: 180px; height: 32px;"></div>
         <div class="skeleton skeleton--subtitle" style="width: 320px;"></div>
@@ -122,11 +117,10 @@
           </div>
         </div>
       </div>
-    </main>
+    </div>
   </div>
 </template>
 
-<!-- 4. Plantilla de Respaldo / Fallback -->
 <template data-skeleton="fallback">
   <div class="layout-content" data-ref="skeleton-fallback-view" style="padding: 40px; display: flex; justify-content: center; align-items: center; min-height: 80vh;">
     <div class="card card--w-400 skeleton--card" data-ref="skeleton-fallback-card">

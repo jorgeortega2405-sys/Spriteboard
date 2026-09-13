@@ -1,17 +1,17 @@
 <div class="layout-content" data-ref="trash-view">
-  <div class="component-wrapper component-wrapper--full home-wrapper" data-ref="trash-wrapper">
-    <div class="layout-body layout-body--scrollable layout-scrollable home-scrollable" data-ref="trash-scrollable">
-      <div class="home-floating-top" data-ref="home-floating-top">
-        <div class="home-floating-top__left" data-ref="trash-floating-left">
-          <h1 class="section-floating-title" data-ref="trash-title" data-i18n="trash.title">Papelera de reciclaje</h1>
+  <div class="component-wrapper component-wrapper--full view-wrapper" data-ref="trash-wrapper">
+    <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="trash-scrollable">
+      <div class="view-header" data-ref="trash-floating-top">
+        <div class="view-header__left" data-ref="trash-floating-left">
+          <h1 class="view-header__title" data-ref="trash-title" data-i18n="trash.title">Papelera de reciclaje</h1>
         </div>
 
-        <div class="home-floating-top__right" data-ref="trash-floating-right">
-          <div class="home-floating-actions" data-ref="trash-default-actions">
-            <button type="button" class="btn btn--h40 btn--icon home-floating-btn" data-ref="btn-toggle-search" data-tooltip="Buscar en papelera" aria-label="Buscar en papelera">
+        <div class="view-header__right" data-ref="trash-floating-right">
+          <div class="view-header__actions" data-ref="trash-default-actions">
+            <button type="button" class="btn btn--h40 btn--icon view-header__btn" data-ref="btn-toggle-search" data-tooltip="Buscar en papelera" aria-label="Buscar en papelera">
               <span class="material-symbols-rounded">search</span>
             </button>
-            <button type="button" class="btn btn--h40 btn--danger btn--icon home-floating-btn" data-ref="btn-empty-trash" data-tooltip="Vaciar papelera" aria-label="Vaciar papelera">
+            <button type="button" class="btn btn--h40 btn--danger btn--icon view-header__btn" data-ref="btn-empty-trash" data-tooltip="Vaciar papelera" aria-label="Vaciar papelera">
               <span class="material-symbols-rounded">delete_sweep</span>
             </button>
           </div>
@@ -34,24 +34,6 @@
 
       <div class="canvas-section" data-ref="canvas-section">
         <div class="canvas-grid" data-ref="trash-grid"></div>
-      </div>
-    </div>
-
-    <div class="selection-toolbar is-hidden" data-ref="selection-toolbar">
-      <div class="selection-toolbar__left" data-ref="selection-toolbar-left">
-        <button type="button" class="btn btn--icon btn--h34 selection-toolbar__btn selection-toolbar__btn--close" data-ref="btn-selection-close" data-tooltip="Cancelar selección" aria-label="Cancelar selección">
-          <span class="material-symbols-rounded">close</span>
-        </button>
-        <span class="selection-toolbar__count" data-ref="selection-count">0 seleccionados</span>
-      </div>
-      <div class="selection-toolbar__divider" data-ref="selection-toolbar-divider"></div>
-      <div class="selection-toolbar__actions" data-ref="selection-toolbar-actions">
-        <button type="button" class="btn btn--icon btn--h34 selection-toolbar__btn" data-ref="btn-selection-restore" data-tooltip="Restaurar" aria-label="Restaurar">
-          <span class="material-symbols-rounded">restore_from_trash</span>
-        </button>
-        <button type="button" class="btn btn--icon btn--h34 btn--danger-hover selection-toolbar__btn" data-ref="btn-selection-delete-forever" data-tooltip="Eliminar definitivamente" aria-label="Eliminar definitivamente">
-          <span class="material-symbols-rounded">delete_forever</span>
-        </button>
       </div>
     </div>
   </div>

@@ -3,7 +3,7 @@ import { openModal } from '../components/modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { currentUser, deleteApi, escapeHtml, getApi, postApi } from '../services/api.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
-import { renderIcons } from '../services/icon.service.js';
+import { createIconSvg, renderIcons } from '../services/icon.service.js';
 import { SkeletonService } from '../services/skeleton.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
@@ -58,9 +58,6 @@ class TrashController {
 
   private selectionToolbar: HTMLElement | null = null;
   private selectionCount: HTMLElement | null = null;
-  private btnSelectionClose: HTMLElement | null = null;
-  private btnSelectionRestore: HTMLElement | null = null;
-  private btnSelectionDeleteForever: HTMLElement | null = null;
 
   private marqueeEl: HTMLElement | null = null;
   private isMarqueeDragging = false;
@@ -85,16 +82,6 @@ class TrashController {
     this.searchToolbar = this.container.querySelector<HTMLElement>('[data-ref="search-toolbar"]');
     this.searchInput = this.container.querySelector<HTMLInputElement>('[data-ref="trash-search-input"]');
     this.btnClearSearch = this.container.querySelector<HTMLElement>('[data-ref="btn-clear-search"]');
-
-    this.selectionToolbar = this.container.querySelector<HTMLElement>('[data-ref="selection-toolbar"]');
-    this.selectionCount = this.container.querySelector<HTMLElement>('[data-ref="selection-count"]');
-    this.btnSelectionClose = this.container.querySelector<HTMLElement>('[data-ref="btn-selection-close"]');
-    this.btnSelectionRestore = this.container.querySelector<HTMLElement>('[data-ref="btn-selection-restore"]');
-    this.btnSelectionDeleteForever = this.container.querySelector<HTMLElement>('[data-ref="btn-selection-delete-forever"]');
-
-    if (this.selectionToolbar) {
-      renderIcons(this.selectionToolbar);
-    }
 
     this.bindEvents();
     await this.loadTrash();
@@ -167,18 +154,6 @@ class TrashController {
       this.renderGrid(filtered, true);
     }, { signal });
 
-    this.btnSelectionClose?.addEventListener('click', () => {
-      this.clearSelection();
-    }, { signal });
-
-    this.btnSelectionRestore?.addEventListener('click', () => {
-      void this.handleRestoreSelected();
-    }, { signal });
-
-    this.btnSelectionDeleteForever?.addEventListener('click', () => {
-      void this.handleDeleteForeverSelected();
-    }, { signal });
-
     this.scrollableEl?.addEventListener('pointerdown', (e: PointerEvent) => {
       this.handlePointerDown(e);
     }, { signal });
@@ -196,6 +171,11 @@ class TrashController {
     if (this.marqueeEl) {
       this.marqueeEl.remove();
       this.marqueeEl = null;
+    }
+    if (this.selectionToolbar) {
+      this.selectionToolbar.remove();
+      this.selectionToolbar = null;
+      this.selectionCount = null;
     }
     this.abortController.abort();
   }
@@ -234,26 +214,84 @@ class TrashController {
     this.updateSelectionUi();
   }
 
+  private createSelectionToolbar(): HTMLElement {
+    const toolbar = document.createElement('div');
+    toolbar.className = 'selection-toolbar is-hidden';
+    toolbar.setAttribute('data-ref', 'selection-toolbar');
+    toolbar.innerHTML = `
+      <div class="selection-toolbar__left" data-ref="selection-toolbar-left">
+        <button type="button" class="btn btn--icon btn--h34 selection-toolbar__btn selection-toolbar__btn--close" data-ref="btn-selection-close" data-tooltip="${t('canvas.cancel_selection') || 'Cancelar selección'}" aria-label="${t('canvas.cancel_selection') || 'Cancelar selección'}">
+          ${createIconSvg('close')}
+        </button>
+        <span class="selection-toolbar__count" data-ref="selection-count">0 seleccionados</span>
+      </div>
+      <div class="selection-toolbar__divider" data-ref="selection-toolbar-divider"></div>
+      <div class="selection-toolbar__actions" data-ref="selection-toolbar-actions">
+        <button type="button" class="btn btn--icon btn--h34 selection-toolbar__btn" data-ref="btn-selection-restore" data-tooltip="${t('trash.btn_restore') || 'Restaurar'}" aria-label="${t('trash.btn_restore') || 'Restaurar'}">
+          ${createIconSvg('restore_from_trash')}
+        </button>
+        <button type="button" class="btn btn--icon btn--h34 btn--danger-hover selection-toolbar__btn" data-ref="btn-selection-delete-forever" data-tooltip="${t('trash.btn_delete_forever') || 'Eliminar definitivamente'}" aria-label="${t('trash.btn_delete_forever') || 'Eliminar definitivamente'}">
+          ${createIconSvg('delete_forever')}
+        </button>
+      </div>
+    `;
+
+    const btnClose = toolbar.querySelector<HTMLElement>('[data-ref="btn-selection-close"]');
+    const btnRestore = toolbar.querySelector<HTMLElement>('[data-ref="btn-selection-restore"]');
+    const btnDeleteForever = toolbar.querySelector<HTMLElement>('[data-ref="btn-selection-delete-forever"]');
+
+    btnClose?.addEventListener('click', () => {
+      this.clearSelection();
+    });
+
+    btnRestore?.addEventListener('click', () => {
+      void this.handleRestoreSelected();
+    });
+
+    btnDeleteForever?.addEventListener('click', () => {
+      void this.handleDeleteForeverSelected();
+    });
+
+    const wrapper = this.container.querySelector<HTMLElement>('[data-ref="trash-wrapper"]') || this.container;
+    wrapper.appendChild(toolbar);
+
+    this.selectionToolbar = toolbar;
+    this.selectionCount = toolbar.querySelector<HTMLElement>('[data-ref="selection-count"]');
+
+    return toolbar;
+  }
+
+  private removeSelectionToolbar(): void {
+    if (!this.selectionToolbar) return;
+    const toolbar = this.selectionToolbar;
+    toolbar.classList.remove('is-active');
+    setTimeout(() => {
+      if (this.selectedUuids.size === 0 && toolbar.parentNode) {
+        toolbar.remove();
+        if (this.selectionToolbar === toolbar) {
+          this.selectionToolbar = null;
+          this.selectionCount = null;
+        }
+      }
+    }, 220);
+  }
+
   private updateSelectionUi(): void {
     const count = this.selectedUuids.size;
     const isSelecting = count > 0;
 
     this.scrollableEl?.classList.toggle('is-selecting', isSelecting);
 
-    if (this.selectionToolbar) {
-      if (isSelecting) {
-        this.selectionToolbar.classList.remove('is-hidden');
-        requestAnimationFrame(() => {
-          this.selectionToolbar?.classList.add('is-active');
-        });
-      } else {
-        this.selectionToolbar.classList.remove('is-active');
-        setTimeout(() => {
-          if (this.selectedUuids.size === 0) {
-            this.selectionToolbar?.classList.add('is-hidden');
-          }
-        }, 220);
+    if (isSelecting) {
+      if (!this.selectionToolbar) {
+        this.createSelectionToolbar();
       }
+      this.selectionToolbar?.classList.remove('is-hidden');
+      requestAnimationFrame(() => {
+        this.selectionToolbar?.classList.add('is-active');
+      });
+    } else {
+      this.removeSelectionToolbar();
     }
 
     if (this.selectionCount) {

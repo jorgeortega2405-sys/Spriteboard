@@ -45,11 +45,9 @@ const SKELETON_RAIL_HTML = `
   <div class="layout-rail" data-ref="skeleton-rail" style="width: auto; min-width: 68px; max-width: 76px; height: 100%; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 8px 6px 20px 6px; gap: 12px; box-sizing: border-box; flex-shrink: 0;">
     <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%;">
       <div class="skeleton" style="width: 40px; height: 40px; border-radius: 12px;"></div>
-      <div style="display: flex; flex-direction: column; align-items: center; gap: 3px;">
-        <div class="skeleton" style="width: 40px; height: 40px; border-radius: 12px;"></div>
-        <div class="skeleton" style="width: 28px; height: 8px; border-radius: 4px;"></div>
-      </div>
+      <div class="skeleton" style="width: 40px; height: 40px; border-radius: 12px;"></div>
     </div>
+    <div class="rail-divider" style="width: 32px; height: 1px; background: var(--border-color); margin: 2px 0;"></div>
     <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%;">
       <div style="display: flex; flex-direction: column; align-items: center; gap: 3px;">
         <div class="skeleton" style="width: 40px; height: 40px; border-radius: 12px;"></div>
@@ -80,16 +78,16 @@ export const SKELETON_TEMPLATES: Record<string, string> = {
     <div class="layout-root" data-ref="skeleton-cards-root" style="width: 100%; height: 100%; display: flex; flex-direction: row; overflow: hidden;">
       ${SKELETON_RAIL_HTML}
       <div class="layout-content skeleton-container" data-ref="skeleton-home-view">
-        <div class="component-wrapper component-wrapper--full home-wrapper" data-ref="skeleton-home-wrapper">
-          <div class="home-floating-top" data-ref="skeleton-floating-top">
+        <div class="component-wrapper component-wrapper--full view-wrapper" data-ref="skeleton-home-wrapper">
+          <div class="view-header" data-ref="skeleton-floating-top">
             <div></div>
             <div style="display: flex; gap: 8px;">
               <div class="skeleton" style="width: 40px; height: 40px; border-radius: 12px;"></div>
               <div class="skeleton" style="width: 40px; height: 40px; border-radius: 12px;"></div>
             </div>
           </div>
-          <div class="layout-body layout-body--scrollable layout-scrollable home-scrollable" data-ref="skeleton-home-scrollable">
-            <div class="home-container">
+          <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="skeleton-home-scrollable">
+            <div class="view-body">
               <div class="skeleton" style="margin: 14px 18px 6px 18px; height: 210px; border-radius: 20px;"></div>
               <div class="canvas-section" data-ref="skeleton-canvas-section">
                 <div class="canvas-grid" data-ref="skeleton-canvas-grid">

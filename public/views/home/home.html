@@ -1,50 +1,45 @@
 <div class="layout-content" data-ref="home-view">
-  <div class="component-wrapper component-wrapper--full home-wrapper" data-ref="home-wrapper">
-    <!-- Main scrollable body -->
-    <div class="layout-body layout-body--scrollable layout-scrollable home-scrollable" data-ref="home-scrollable">
-      <div class="home-container" data-ref="home-container">
-        <div class="home-gradient-backdrop" data-ref="home-gradient-backdrop"></div>
-        <!-- Top bar for actions & breadcrumbs inside scrollable content -->
-        <div class="home-floating-top" data-ref="home-floating-top">
-          <div class="home-floating-top__left" data-ref="home-floating-left">
-            <h1 class="home-floating-title" data-ref="home-title" data-i18n="canvas.home_title" style="display: none;">Tus centros de trabajo</h1>
-            <div class="home-breadcrumb" data-ref="folder-title-container" style="display: none;">
-              <button type="button" class="btn btn--h34 btn--icon home-breadcrumb__back" data-ref="btn-folder-back" data-tooltip="Volver al inicio" aria-label="Volver al inicio">
+  <div class="component-wrapper component-wrapper--full view-wrapper" data-ref="home-wrapper">
+    <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="home-scrollable">
+      <div class="view-body" data-ref="home-container">
+        <div class="view-backdrop" data-ref="home-gradient-backdrop"></div>
+        <div class="view-header" data-ref="home-floating-top">
+          <div class="view-header__left" data-ref="home-floating-left">
+            <h1 class="view-header__title" data-ref="home-title" data-i18n="canvas.home_title" style="display: none;">Tus centros de trabajo</h1>
+            <div class="view-breadcrumb" data-ref="folder-title-container" style="display: none;">
+              <button type="button" class="btn btn--h34 btn--icon view-breadcrumb__back" data-ref="btn-folder-back" data-tooltip="Volver al inicio" aria-label="Volver al inicio">
                 <span class="material-symbols-rounded">arrow_back</span>
               </button>
-              <div class="home-breadcrumb__info" data-ref="folder-breadcrumb-info">
-                <span class="home-breadcrumb__prefix" data-i18n="canvas.folder_viewing_prefix">Carpeta:</span>
-                <span class="home-breadcrumb__name" data-ref="folder-title-name"></span>
+              <div class="view-breadcrumb__info" data-ref="folder-breadcrumb-info">
+                <span class="view-breadcrumb__prefix" data-i18n="canvas.folder_viewing_prefix">Carpeta:</span>
+                <span class="view-breadcrumb__name" data-ref="folder-title-name"></span>
               </div>
             </div>
           </div>
 
-          <div class="home-floating-top__right" data-ref="home-floating-right">
-            <!-- Acciones por defecto -->
-            <div class="home-floating-actions" data-ref="home-default-actions">
-              <button type="button" class="btn btn--h40 btn--icon home-floating-btn" data-ref="btn-home-upgrade" data-tooltip="Mejorar plan" aria-label="Mejorar plan">
+          <div class="view-header__right" data-ref="home-floating-right">
+            <div class="view-header__actions" data-ref="home-default-actions">
+              <button type="button" class="btn btn--h40 btn--icon view-header__btn" data-ref="btn-home-upgrade" data-tooltip="Mejorar plan" aria-label="Mejorar plan">
                 <span class="material-symbols-rounded">workspace_premium</span>
               </button>
-              <button type="button" class="btn btn--h40 btn--icon home-floating-btn" data-ref="btn-create-folder" data-tooltip="Crear carpeta" aria-label="Crear carpeta">
+              <button type="button" class="btn btn--h40 btn--icon view-header__btn" data-ref="btn-create-folder" data-tooltip="Crear carpeta" aria-label="Crear carpeta">
                 <span class="material-symbols-rounded">create_new_folder</span>
               </button>
-              <button type="button" class="btn btn--h40 btn--icon home-floating-btn" data-ref="btn-toggle-search" data-tooltip="Buscar lienzos" aria-label="Buscar lienzos">
+              <button type="button" class="btn btn--h40 btn--icon view-header__btn" data-ref="btn-toggle-search" data-tooltip="Buscar lienzos" aria-label="Buscar lienzos">
                 <span class="material-symbols-rounded">search</span>
               </button>
             </div>
 
-            <!-- Acciones contextuales dentro de carpeta -->
-            <div class="home-floating-actions" data-ref="folder-context-actions" style="display: none;">
-              <button type="button" class="btn btn--h40 btn--icon home-floating-btn" data-ref="btn-folder-rename" data-tooltip="Renombrar carpeta" aria-label="Renombrar carpeta">
+            <div class="view-header__actions" data-ref="folder-context-actions" style="display: none;">
+              <button type="button" class="btn btn--h40 btn--icon view-header__btn" data-ref="btn-folder-rename" data-tooltip="Renombrar carpeta" aria-label="Renombrar carpeta">
                 <span class="material-symbols-rounded">edit</span>
               </button>
-              <button type="button" class="btn btn--h40 btn--danger btn--icon home-floating-btn" data-ref="btn-folder-delete" data-tooltip="Eliminar carpeta" aria-label="Eliminar carpeta">
+              <button type="button" class="btn btn--h40 btn--danger btn--icon view-header__btn" data-ref="btn-folder-delete" data-tooltip="Eliminar carpeta" aria-label="Eliminar carpeta">
                 <span class="material-symbols-rounded">delete</span>
               </button>
             </div>
           </div>
 
-          <!-- Toolbar de búsqueda flotante contextual -->
           <div class="component-search-toolbar is-hidden" data-ref="search-toolbar">
             <div class="component-search component-search--full" data-ref="search-box">
               <div class="component-search__icon" data-ref="search-icon">
@@ -60,21 +55,19 @@
           </div>
         </div>
 
-        <section class="home-hero" data-ref="home-hero">
-          <div class="home-hero__content">
-            <h1 class="home-hero__title" data-ref="hero-title">¿Qué te gustaría crear hoy?</h1>
+        <div class="view-hero" data-ref="home-hero">
+          <div class="view-hero__content">
+            <h1 class="view-hero__title" data-ref="hero-title">¿Qué te gustaría crear hoy?</h1>
 
-            <!-- Canva-style Search Input Pill -->
-            <div class="home-search-pill" data-ref="hero-search-box">
-              <span class="material-symbols-rounded home-search-pill__icon">search</span>
-              <input class="home-search-pill__input" data-ref="hero-search-input" type="text" placeholder="Busca lo que quieras" autocomplete="off" />
-              <button type="button" class="btn btn--h32 btn--icon home-search-pill__clear" data-ref="btn-hero-clear-search" style="display: none;" aria-label="Limpiar búsqueda">
+            <div class="view-search-pill" data-ref="hero-search-box">
+              <span class="material-symbols-rounded view-search-pill__icon">search</span>
+              <input class="view-search-pill__input" data-ref="hero-search-input" type="text" placeholder="Busca lo que quieras" autocomplete="off" />
+              <button type="button" class="btn btn--h32 btn--icon view-search-pill__clear" data-ref="btn-hero-clear-search" style="display: none;" aria-label="Limpiar búsqueda">
                 <span class="material-symbols-rounded" style="font-size: 18px;">close</span>
               </button>
             </div>
 
-            <!-- Badges -->
-            <div class="component-tags-carousel-wrapper home-tags-wrapper" data-ref="home-categories-carousel-wrapper">
+            <div class="component-tags-carousel-wrapper view-tags-wrapper" data-ref="home-categories-carousel-wrapper">
               <div class="component-tags-carousel" data-ref="home-categories-row">
                 <button type="button" class="component-badge component-badge--interactive is-active" data-ref="cat-badge-all" data-category="all">
                   <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome" xlink:href="/icons.svg#auto_awesome"></use></svg>
@@ -91,14 +84,13 @@
               </div>
             </div>
           </div>
-        </section>
+        </div>
 
-        <!-- Section for Canvases & Folders ("Recientes") -->
-        <section class="canvas-section" data-ref="canvas-section">
+        <div class="canvas-section" data-ref="canvas-section">
           <div class="canvas-section__header" data-ref="canvas-section-header">
             <h2 class="canvas-section__title" data-ref="canvas-section-title">Recientes</h2>
-            <div class="home-section-controls" data-ref="home-section-controls">
-              <div class="home-filter-dropdown-wrapper" data-ref="home-dropdown-wrapper-type">
+            <div class="canvas-section__controls" data-ref="home-section-controls">
+              <div class="canvas-section__dropdown-wrapper" data-ref="home-dropdown-wrapper-type">
                 <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-trigger-filter-type" data-tooltip="Filtrar" aria-label="Filtrar">
                   <span class="material-symbols-rounded">filter_list</span>
                 </button>
@@ -125,7 +117,7 @@
                 </div>
               </div>
 
-              <div class="home-filter-dropdown-wrapper" data-ref="home-dropdown-wrapper-sort">
+              <div class="canvas-section__dropdown-wrapper" data-ref="home-dropdown-wrapper-sort">
                 <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-trigger-sort" data-tooltip="Ordenar" aria-label="Ordenar">
                   <span class="material-symbols-rounded">swap_vert</span>
                 </button>
@@ -155,32 +147,7 @@
           </div>
           <div class="canvas-grid" data-ref="canvas-grid"></div>
           <div class="infinite-scroll-sentinel" data-ref="canvas-sentinel" style="display: none;"></div>
-        </section>
-      </div>
-    </div>
-
-    <!-- Selection toolbar for batch actions -->
-    <div class="selection-toolbar is-hidden" data-ref="selection-toolbar">
-      <div class="selection-toolbar__left" data-ref="selection-toolbar-left">
-        <button type="button" class="btn btn--icon btn--h34 selection-toolbar__btn selection-toolbar__btn--close" data-ref="btn-selection-close" data-tooltip="Cancelar selección" aria-label="Cancelar selección">
-          <span class="material-symbols-rounded">close</span>
-        </button>
-        <span class="selection-toolbar__count" data-ref="selection-count">0 seleccionados</span>
-      </div>
-      <div class="selection-toolbar__divider" data-ref="selection-toolbar-divider"></div>
-      <div class="selection-toolbar__actions" data-ref="selection-toolbar-actions">
-        <button type="button" class="btn btn--icon btn--h34 selection-toolbar__btn" data-ref="btn-selection-download" data-tooltip="Descargar" aria-label="Descargar">
-          <span class="material-symbols-rounded">download</span>
-        </button>
-        <button type="button" class="btn btn--icon btn--h34 selection-toolbar__btn" data-ref="btn-selection-move" data-tooltip="Mover a carpeta" aria-label="Mover a carpeta">
-          <span class="material-symbols-rounded">drive_file_move</span>
-        </button>
-        <button type="button" class="btn btn--icon btn--h34 selection-toolbar__btn" data-ref="btn-selection-duplicate" data-tooltip="Duplicar" aria-label="Duplicar">
-          <span class="material-symbols-rounded">filter_none</span>
-        </button>
-        <button type="button" class="btn btn--icon btn--h34 btn--danger-hover selection-toolbar__btn" data-ref="btn-selection-delete" data-tooltip="Mover a la papelera" aria-label="Mover a la papelera">
-          <span class="material-symbols-rounded">delete</span>
-        </button>
+        </div>
       </div>
     </div>
   </div>

@@ -1,5 +1,5 @@
-<nav class="layout-nav" data-ref="sidebar">
-  <aside class="layout-rail" data-ref="layout-rail">
+<div class="layout-nav" data-ref="sidebar">
+  <div class="layout-rail" data-ref="layout-rail">
     <div class="layout-rail__top" data-ref="rail-top">
       <button type="button" class="btn btn--h40 btn--icon rail-btn rail-btn--toggle" data-ref="btn-toggle-drawer" data-tooltip="Alternar menú lateral" aria-label="Alternar menú lateral">
         <span class="material-symbols-rounded rail-btn__icon">dock_to_right</span>
@@ -8,9 +8,10 @@
         <button type="button" class="btn btn--h40 btn--icon rail-btn rail-btn--create" data-ref="btn-rail-create" data-tooltip="Crear diseño" aria-label="Crear diseño">
           <span class="material-symbols-rounded rail-btn__icon">add</span>
         </button>
-        <span class="rail-nav-item__label" data-i18n="canvas.create">Crear</span>
       </div>
     </div>
+
+    <hr class="rail-divider" data-ref="rail-divider" />
 
     <div class="layout-rail__center" data-ref="rail-center">
       <div class="rail-nav-item" data-ref="rail-item-home">
@@ -164,5 +165,5 @@
         <span class="material-symbols-rounded rail-btn__icon">login</span>
       </button>
     </div>
-  </aside>
-</nav>
+  </div>
+</div>
