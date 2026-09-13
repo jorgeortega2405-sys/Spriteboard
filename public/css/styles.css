@@ -4520,7 +4520,7 @@ body[data-theme="dark"] .component-toggle-pill .component-button.active {
 /* Conmutador de píldora de categorías (Personales / Equipos / Educación) */
 .component-category-pill {
   display: inline-grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr;
   background-color: var(--bg-hover-light, rgba(0, 0, 0, 0.04));
   border-radius: 9999px;
   padding: 4px;
@@ -4529,7 +4529,7 @@ body[data-theme="dark"] .component-toggle-pill .component-button.active {
   position: relative;
   user-select: none;
   isolation: isolate;
-  max-width: 440px;
+  max-width: 360px;
   width: 100%;
   box-sizing: border-box;
 }
@@ -4539,7 +4539,7 @@ body[data-theme="dark"] .component-toggle-pill .component-button.active {
   top: 4px;
   bottom: 4px;
   left: 4px;
-  width: calc(33.333% - 2.66px);
+  width: calc(50% - 4px);
   background-color: var(--action-primary);
   border-radius: 9999px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
@@ -4560,16 +4560,12 @@ body[data-theme="dark"] .component-category-pill-glider {
   }
 }
 
-.component-category-pill[data-category="personal"] .component-category-pill-glider {
+.component-category-pill[data-category="personal_teams"] .component-category-pill-glider {
   transform: translateX(0);
 }
 
-.component-category-pill[data-category="teams"] .component-category-pill-glider {
-  transform: translateX(100%);
-}
-
 .component-category-pill[data-category="education"] .component-category-pill-glider {
-  transform: translateX(200%);
+  transform: translateX(100%);
 }
 
 .component-category-pill .component-button {
@@ -5077,8 +5073,14 @@ html.dark-theme .component-card-button--downgrade {
 
 .avatar-tier--business,
 .avatar-tier--negocios,
+.avatar-tier--escuelas,
+.avatar-tier--docentes,
+.avatar-tier--education,
 [data-tier="business"],
-[data-tier="negocios"] {
+[data-tier="negocios"],
+[data-tier="escuelas"],
+[data-tier="docentes"],
+[data-tier="education"] {
   --avatar-tier-bg: var(--tier-gradient-business, var(--tier-color-business, #8b5cf6));
   --avatar-tier-color: #8b5cf6;
 }

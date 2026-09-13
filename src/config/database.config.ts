@@ -505,6 +505,28 @@ export async function runMigrations(): Promise<void> {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
+    const [docentesRows] = await conn.query<mysql.RowDataPacket[]>(
+      "SELECT COUNT(*) as count FROM users WHERE subscription_tier = 'docentes'"
+    );
+    if ((docentesRows[0] as any)?.count > 0) {
+      await conn.query("UPDATE users SET subscription_tier = 'escuelas' WHERE subscription_tier = 'docentes'");
+      logger.db.info('Migración completada: usuarios con tier docentes actualizados a escuelas.');
+    }
+
+    await conn.query(`
+      UPDATE teams t
+      JOIN school_organizations s ON s.admin_id = t.owner_id
+      SET t.school_id = s.id
+      WHERE t.team_type = 'classroom' AND t.school_id IS NULL
+    `);
+
+    await conn.query(`
+      UPDATE teams t
+      JOIN school_teachers st ON st.user_id = t.owner_id AND st.status = 'active'
+      SET t.school_id = st.school_id
+      WHERE t.team_type = 'classroom' AND t.school_id IS NULL
+    `);
+
     await conn.query(`
       CREATE TABLE IF NOT EXISTS db_canvas.canvas_teams (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -671,7 +693,31 @@ export async function runMigrations(): Promise<void> {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
-    logger.db.info('Tablas y columnas de identidad, 2FA, suscripciones, compras, GeoIP, db_canvas, equipos, vistas, feedback IA, snapshots y notificaciones verificadas exitosamente.');
+    const [viewsIndices] = await conn.query<mysql.RowDataPacket[]>(
+      "SHOW INDEX FROM db_canvas.canvas_views WHERE Key_name = 'idx_views_canvas_session'"
+    );
+    if (viewsIndices.length === 0) {
+      await conn.query('ALTER TABLE db_canvas.canvas_views ADD INDEX idx_views_canvas_session (canvas_id, session_id)');
+      logger.db.info('Índice idx_views_canvas_session añadido a db_canvas.canvas_views.');
+    }
+
+    const [notifIndices] = await conn.query<mysql.RowDataPacket[]>(
+      "SHOW INDEX FROM notifications WHERE Key_name = 'idx_notifications_user_created'"
+    );
+    if (notifIndices.length === 0) {
+      await conn.query('ALTER TABLE notifications ADD INDEX idx_notifications_user_created (user_id, created_at DESC)');
+      logger.db.info('Índice idx_notifications_user_created añadido a notifications.');
+    }
+
+    const [canvasNameIndices] = await conn.query<mysql.RowDataPacket[]>(
+      "SHOW INDEX FROM db_canvas.canvases WHERE Key_name = 'idx_canvases_user_name'"
+    );
+    if (canvasNameIndices.length === 0) {
+      await conn.query('ALTER TABLE db_canvas.canvases ADD INDEX idx_canvases_user_name (user_id, name)');
+      logger.db.info('Índice idx_canvases_user_name añadido a db_canvas.canvases.');
+    }
+
+    logger.db.info('Tablas, columnas e índices de identidad, 2FA, suscripciones, compras, GeoIP, db_canvas, equipos, vistas, feedback IA, snapshots y notificaciones verificadas exitosamente.');
   } catch (err) {
     logger.db.warn('Advertencia en migración de base de datos', err);
   } finally {

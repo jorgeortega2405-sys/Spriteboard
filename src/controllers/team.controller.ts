@@ -40,9 +40,12 @@ export async function createTeamHandler(req: Request, res: Response): Promise<vo
     });
 
     res.status(201).json({ success: true, team });
-  } catch (err) {
+  } catch (err: any) {
     logger.app.error('Error al crear equipo en team controller', err);
-    res.status(500).json({ error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.' });
+    const msg = err?.message && typeof err.message === 'string' && !err.message.includes('SQL') && !err.message.includes('at ')
+      ? err.message
+      : 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.';
+    res.status(400).json({ error: msg });
   }
 }
 

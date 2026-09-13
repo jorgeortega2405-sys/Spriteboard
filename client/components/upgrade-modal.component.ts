@@ -2,11 +2,16 @@ import { navigate } from '../app-router.js';
 import { renderIcons } from '../services/icon.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 
-type PlanTier = 'free' | 'pro' | 'business' | 'negocios';
+type PlanTier = 'free' | 'pro' | 'business' | 'negocios' | 'docentes' | 'escuelas' | 'teachers' | 'schools';
 
 let activeUpgradeModal: { close: () => void } | null = null;
 
 export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => void } {
+  if (initialPlan === 'teachers' || initialPlan === 'docentes' || initialPlan === 'schools' || initialPlan === 'escuelas') {
+    navigate('/upgrade');
+    return { close: () => {} };
+  }
+
   if (activeUpgradeModal) {
     activeUpgradeModal.close();
   }
@@ -35,7 +40,7 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
   backdrop.innerHTML = `
     <div class="modal-container" data-ref="modal-upgrade-container">
       <button type="button" class="modal-close-btn" data-ref="btn-upgrade-modal-close" data-i18n-aria="modal.close" aria-label="${t('modal.close')}">
-        <span class="material-symbols-rounded">close</span>
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
       </button>
 
       <div class="modal-card modal-card--875x525" data-ref="modal-card-upgrade">
@@ -102,7 +107,7 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
 
             <button type="button" class="btn btn--h40 btn--w-full upgrade-modal__btn-view-all" data-ref="btn-upgrade-view-all">
               <span>${t('upgrade_modal.view_all_link') || 'Ver todos los planes y características'}</span>
-              <span class="material-symbols-rounded">arrow_forward</span>
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_forward"></use></svg>
             </button>
           </div>
 

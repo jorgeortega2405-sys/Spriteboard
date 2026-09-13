@@ -86,20 +86,61 @@ export function resolveHigherTier(tier1?: string, tier2?: string): SubscriptionT
   return (norm1 === 'negocios' ? 'business' : norm1) as SubscriptionTierId;
 }
 
-export async function getEffectiveTierForCanvas(canvasId: number): Promise<SubscriptionTierId> {
-  try {
-    const [canvasRows] = await canvasPool.query<mysql.RowDataPacket[]>(
-      `SELECT c.user_id, u.subscription_tier AS owner_tier
-       FROM db_canvas.canvases c
-       LEFT JOIN db_identity.users u ON u.id = c.user_id
-       WHERE c.id = ? LIMIT 1`,
-      [canvasId]
-    );
-    if (canvasRows.length === 0) {
-      return 'free';
-    }
+export async function getEffectiveTiersForCanvases(
+  canvases: Array<{ id: number; owner_tier?: string }>
+): Promise<Map<number, SubscriptionTierId>> {
+  const tierMap = new Map<number, SubscriptionTierId>();
+  if (!canvases || canvases.length === 0) {
+    return tierMap;
+  }
 
-    let highestTier: SubscriptionTierId = (canvasRows[0].owner_tier || 'free').toLowerCase() as SubscriptionTierId;
+  for (const c of canvases) {
+    tierMap.set(c.id, (c.owner_tier || 'free').toLowerCase() as SubscriptionTierId);
+  }
+
+  try {
+    const canvasIds = canvases.map((c) => c.id);
+    const placeholders = canvasIds.map(() => '?').join(',');
+    const [teamRows] = await canvasPool.query<mysql.RowDataPacket[]>(
+      `SELECT ct.canvas_id, u.subscription_tier AS team_owner_tier
+       FROM db_canvas.canvas_teams ct
+       INNER JOIN db_identity.teams t ON t.id = ct.team_id
+       INNER JOIN db_identity.users u ON u.id = t.owner_id
+       WHERE ct.canvas_id IN (${placeholders})`,
+      canvasIds
+    );
+
+    for (const row of teamRows) {
+      const current = tierMap.get(row.canvas_id) || 'free';
+      if (row.team_owner_tier) {
+        tierMap.set(row.canvas_id, resolveHigherTier(current, row.team_owner_tier));
+      }
+    }
+  } catch {}
+
+  return tierMap;
+}
+
+export async function getEffectiveTierForCanvas(
+  canvasId: number,
+  knownOwnerTier?: string
+): Promise<SubscriptionTierId> {
+  try {
+    let highestTier: SubscriptionTierId = (knownOwnerTier || 'free').toLowerCase() as SubscriptionTierId;
+
+    if (!knownOwnerTier) {
+      const [canvasRows] = await canvasPool.query<mysql.RowDataPacket[]>(
+        `SELECT c.user_id, u.subscription_tier AS owner_tier
+         FROM db_canvas.canvases c
+         LEFT JOIN db_identity.users u ON u.id = c.user_id
+         WHERE c.id = ? LIMIT 1`,
+        [canvasId]
+      );
+      if (canvasRows.length === 0) {
+        return 'free';
+      }
+      highestTier = (canvasRows[0].owner_tier || 'free').toLowerCase() as SubscriptionTierId;
+    }
 
     const [teamRows] = await canvasPool.query<mysql.RowDataPacket[]>(
       `SELECT u.subscription_tier AS team_owner_tier

@@ -52,6 +52,7 @@ export const API_ROUTES = {
     classrooms: '/api/education/classrooms',
     join: '/api/education/join',
     regenerateCode: (uuid: string) => `/api/education/classrooms/${encodeURIComponent(uuid)}/code`,
+    removeTeacher: (userId: number) => `/api/education/school/teachers/${encodeURIComponent(userId)}`,
     school: '/api/education/school',
   },
   trash: {

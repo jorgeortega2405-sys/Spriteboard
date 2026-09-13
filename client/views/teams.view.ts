@@ -42,7 +42,6 @@ class TeamsController {
   private tableWrapperEl: HTMLElement | null = null;
   private defaultActions: HTMLElement | null = null;
   private selectedActions: HTMLElement | null = null;
-  private btnActionCopyCode: HTMLElement | null = null;
   private btnActionCreateCanvas: HTMLElement | null = null;
   private btnActionMembers: HTMLElement | null = null;
   private btnActionEdit: HTMLElement | null = null;
@@ -52,7 +51,6 @@ class TeamsController {
   private searchToolbar: HTMLElement | null = null;
   private searchInput: HTMLInputElement | null = null;
   private btnClearSearch: HTMLElement | null = null;
-  private btnJoinClassroom: HTMLElement | null = null;
   private btnCreateTeam: HTMLElement | null = null;
 
   private modalTeamBackdrop: HTMLElement | null = null;
@@ -60,8 +58,6 @@ class TeamsController {
   private formTeam: HTMLFormElement | null = null;
   private inputTeamName: HTMLInputElement | null = null;
   private inputTeamDesc: HTMLInputElement | null = null;
-  private fieldIsClassroom: HTMLElement | null = null;
-  private checkboxIsClassroom: HTMLInputElement | null = null;
   private bannerTeamError: HTMLElement | null = null;
 
   private modalMembersBackdrop: HTMLElement | null = null;
@@ -75,7 +71,6 @@ class TeamsController {
 
   private lockedStateEl: HTMLElement | null = null;
   private btnLockedUpgrade: HTMLElement | null = null;
-  private btnLockedJoinClassroom: HTMLElement | null = null;
   private btnLockedHome: HTMLElement | null = null;
 
   constructor(container: HTMLElement) {
@@ -90,12 +85,10 @@ class TeamsController {
 
     this.lockedStateEl = this.container.querySelector<HTMLElement>('[data-ref="teams-locked-state"]');
     this.btnLockedUpgrade = this.container.querySelector<HTMLElement>('[data-ref="btn-locked-upgrade"]');
-    this.btnLockedJoinClassroom = this.container.querySelector<HTMLElement>('[data-ref="btn-locked-join-classroom"]');
     this.btnLockedHome = this.container.querySelector<HTMLElement>('[data-ref="btn-locked-home"]');
 
     this.defaultActions = this.container.querySelector<HTMLElement>('[data-ref="teams-default-actions"]');
     this.selectedActions = this.container.querySelector<HTMLElement>('[data-ref="teams-selected-actions"]');
-    this.btnActionCopyCode = this.container.querySelector<HTMLElement>('[data-ref="btn-action-copy-code"]');
     this.btnActionCreateCanvas = this.container.querySelector<HTMLElement>('[data-ref="btn-action-create-canvas"]');
     this.btnActionMembers = this.container.querySelector<HTMLElement>('[data-ref="btn-action-members"]');
     this.btnActionEdit = this.container.querySelector<HTMLElement>('[data-ref="btn-action-edit"]');
@@ -105,7 +98,6 @@ class TeamsController {
     this.searchToolbar = this.container.querySelector<HTMLElement>('[data-ref="search-toolbar"]');
     this.searchInput = this.container.querySelector<HTMLInputElement>('[data-ref="teams-search-input"]');
     this.btnClearSearch = this.container.querySelector<HTMLElement>('[data-ref="btn-clear-search"]');
-    this.btnJoinClassroom = this.container.querySelector<HTMLElement>('[data-ref="btn-join-classroom"]');
     this.btnCreateTeam = this.container.querySelector<HTMLElement>('[data-ref="btn-create-team"]');
 
     this.modalTeamBackdrop = this.container.querySelector<HTMLElement>('[data-ref="modal-team-backdrop"]');
@@ -113,8 +105,6 @@ class TeamsController {
     this.formTeam = this.container.querySelector<HTMLFormElement>('[data-ref="form-team"]');
     this.inputTeamName = this.container.querySelector<HTMLInputElement>('[data-ref="input-team-name"]');
     this.inputTeamDesc = this.container.querySelector<HTMLInputElement>('[data-ref="input-team-desc"]');
-    this.fieldIsClassroom = this.container.querySelector<HTMLElement>('[data-ref="field-is-classroom"]');
-    this.checkboxIsClassroom = this.container.querySelector<HTMLInputElement>('[data-ref="checkbox-is-classroom"]');
     this.bannerTeamError = this.container.querySelector<HTMLElement>('[data-ref="banner-team-error"]');
 
     this.modalMembersBackdrop = this.container.querySelector<HTMLElement>('[data-ref="modal-members-backdrop"]');
@@ -144,20 +134,12 @@ class TeamsController {
       openUpgradeModal('pro');
     }, { signal });
 
-    this.btnLockedJoinClassroom?.addEventListener('click', () => {
-      this.openJoinClassroomModal();
-    }, { signal });
-
     this.btnLockedHome?.addEventListener('click', () => {
       navigate('/');
     }, { signal });
 
     window.addEventListener('subscription-updated', () => {
       void this.loadTeams();
-    }, { signal });
-
-    this.btnJoinClassroom?.addEventListener('click', () => {
-      this.openJoinClassroomModal();
     }, { signal });
 
     this.btnCreateTeam?.addEventListener('click', () => this.openTeamModal(), { signal });
@@ -226,19 +208,6 @@ class TeamsController {
       });
 
       this.renderRows(filtered, true);
-    }, { signal });
-
-    this.btnActionCopyCode?.addEventListener('click', async () => {
-      const selectedUuid = [...this.selectedTeamUuids][0];
-      const team = this.allTeams.find((t) => t.uuid === selectedUuid);
-      if (team && team.join_code) {
-        try {
-          await navigator.clipboard.writeText(team.join_code);
-          showToast(`Código de aula copiado: ${team.join_code}`, 'success');
-        } catch {
-          showToast(`Código de aula: ${team.join_code}`, 'info');
-        }
-      }
     }, { signal });
 
     this.btnActionCreateCanvas?.addEventListener('click', () => {
@@ -340,7 +309,7 @@ class TeamsController {
       const res = await getApi(API_ROUTES.teams.base);
       if (res.ok) {
         const data = await res.json();
-        this.allTeams = Array.isArray(data.teams) ? data.teams : [];
+        this.allTeams = (Array.isArray(data.teams) ? data.teams : []).filter((t: any) => t.team_type !== 'classroom');
       } else {
         this.allTeams = [];
       }
@@ -349,8 +318,14 @@ class TeamsController {
       showToast(t('teams.load_error') || 'Error al cargar equipos', 'danger');
     }
 
-    const userTier = (currentUser.subscription_tier || 'free').toLowerCase();
+    const userTier = (currentUser?.subscription_tier || 'free').toLowerCase();
+    const isEducation = ['escuelas', 'docentes', 'schools', 'education'].includes(userTier);
     const hasTeams = this.allTeams.length > 0;
+
+    if (isEducation && !hasTeams) {
+      navigate('/education');
+      return;
+    }
 
     if (userTier === 'free' && !hasTeams) {
       if (this.lockedStateEl) {
@@ -407,7 +382,6 @@ class TeamsController {
     this.tbodyEl.innerHTML = '';
 
     for (const team of teams) {
-      const isClassroom = team.team_type === 'classroom';
       const tr = document.createElement('tr');
       tr.className = 'is-selectable';
       tr.setAttribute('data-ref', `team-row-${team.uuid}`);
@@ -415,28 +389,22 @@ class TeamsController {
 
       const tdTeam = document.createElement('td');
       tdTeam.setAttribute('data-ref', `cell-team-${team.uuid}`);
-      const classroomBadge = isClassroom
-        ? `<span class="component-badge component-badge--sm" style="margin-right: 6px;"><span class="material-symbols-rounded" style="font-size: 13px; margin-right: 4px;">school</span>Aula</span>`
-        : '';
-      tdTeam.innerHTML = `${classroomBadge}<span class="component-badge component-badge--sm" data-ref="badge-team-${team.uuid}">${escapeHtml(team.name)}</span>`;
+      tdTeam.innerHTML = `<span class="component-badge component-badge--sm" data-ref="badge-team-${team.uuid}">${escapeHtml(team.name)}</span>`;
 
       const tdDesc = document.createElement('td');
       tdDesc.setAttribute('data-ref', `cell-desc-${team.uuid}`);
-      const descText = team.description || (isClassroom && team.join_code ? `Código: ${team.join_code}` : '—');
+      const descText = team.description || '—';
       tdDesc.innerHTML = `<span class="component-badge component-badge--sm" data-ref="badge-desc-${team.uuid}">${escapeHtml(descText)}</span>`;
 
       const tdMembers = document.createElement('td');
       tdMembers.setAttribute('data-ref', `cell-members-${team.uuid}`);
       const count = Number(team.member_count) || 1;
-      const countLabel = isClassroom ? (count === 1 ? 'estudiante / docente' : 'estudiantes / docentes') : (count === 1 ? 'miembro' : 'miembros');
+      const countLabel = count === 1 ? 'miembro' : 'miembros';
       tdMembers.innerHTML = `<span class="component-badge component-badge--sm" data-ref="badge-members-${team.uuid}">${count} ${countLabel}</span>`;
 
       const tdRole = document.createElement('td');
       tdRole.setAttribute('data-ref', `cell-role-${team.uuid}`);
-      let roleText = team.user_role === 'owner' ? 'Propietario' : team.user_role === 'admin' ? 'Admin' : 'Miembro';
-      if (isClassroom) {
-        roleText = team.user_role === 'owner' ? 'Docente Titular' : team.user_role === 'admin' ? 'Docente Auxiliar' : 'Estudiante';
-      }
+      const roleText = team.user_role === 'owner' ? 'Propietario' : team.user_role === 'admin' ? 'Admin' : 'Miembro';
       tdRole.innerHTML = `<span class="component-badge component-badge--sm" data-ref="badge-role-${team.uuid}">${escapeHtml(roleText)}</span>`;
 
       const tdDate = document.createElement('td');
@@ -471,7 +439,6 @@ class TeamsController {
     if (totalSelected === 0) {
       if (this.defaultActions) this.defaultActions.style.display = 'flex';
       if (this.selectedActions) this.selectedActions.style.display = 'none';
-      if (this.btnActionCopyCode) this.btnActionCopyCode.style.display = 'none';
     } else {
       if (this.defaultActions) this.defaultActions.style.display = 'none';
       if (this.selectedActions) this.selectedActions.style.display = 'flex';
@@ -479,12 +446,6 @@ class TeamsController {
       if (totalSelected === 1) {
         const selectedUuid = [...this.selectedTeamUuids][0];
         const selectedTeam = this.allTeams.find((t) => t.uuid === selectedUuid);
-        const isClassroom = selectedTeam?.team_type === 'classroom';
-
-        if (this.btnActionCopyCode) {
-          const canCopy = isClassroom && Boolean(selectedTeam?.join_code);
-          this.btnActionCopyCode.style.display = canCopy ? 'inline-flex' : 'none';
-        }
 
         if (this.btnActionCreateCanvas) this.btnActionCreateCanvas.style.display = 'inline-flex';
         if (this.btnActionMembers) this.btnActionMembers.style.display = 'inline-flex';
@@ -502,7 +463,6 @@ class TeamsController {
           this.btnActionDelete.setAttribute('aria-label', label);
         }
       } else {
-        if (this.btnActionCopyCode) this.btnActionCopyCode.style.display = 'none';
         if (this.btnActionCreateCanvas) this.btnActionCreateCanvas.style.display = 'none';
         if (this.btnActionMembers) this.btnActionMembers.style.display = 'none';
         if (this.btnActionEdit) this.btnActionEdit.style.display = 'none';
@@ -563,14 +523,19 @@ class TeamsController {
   private openTeamModal(teamToEdit?: Team): void {
     const userTier = (currentUser?.subscription_tier || 'free').toLowerCase();
     if (!teamToEdit) {
+      if (['escuelas', 'docentes', 'schools', 'education'].includes(userTier)) {
+        showToast('Las cuentas de Educación gestionan sus aulas y salones desde la sección Educación.', 'info');
+        navigate('/education');
+        return;
+      }
       if (userTier === 'free') {
-        showToast(t('teams.toast_upgrade_required') || 'La creación de equipos y aulas requiere una suscripción Pro, Negocios o Docentes.', 'warning');
+        showToast(t('teams.toast_upgrade_required') || 'La creación de equipos requiere una suscripción Pro o Negocios.', 'warning');
         openUpgradeModal('pro');
         return;
       }
       const ownedTeams = this.allTeams.filter((t) => t.user_role === 'owner');
       if (userTier === 'pro' && ownedTeams.length >= 1) {
-        showToast(t('teams.toast_pro_teams_limit') || 'El plan Pro permite 1 equipo. Mejora a Negocios o Docentes para aulas y equipos ilimitados.', 'warning');
+        showToast(t('teams.toast_pro_teams_limit') || 'El plan Pro permite 1 equipo. Mejora a Negocios para equipos ilimitados.', 'warning');
         openUpgradeModal('business');
         return;
       }
@@ -592,18 +557,6 @@ class TeamsController {
 
     if (this.inputTeamDesc) {
       this.inputTeamDesc.value = teamToEdit && teamToEdit.description ? teamToEdit.description : '';
-    }
-
-    if (this.fieldIsClassroom) {
-      if (teamToEdit) {
-        this.fieldIsClassroom.style.display = 'none';
-      } else {
-        this.fieldIsClassroom.style.display = 'flex';
-        if (this.checkboxIsClassroom) {
-          const isEduTier = userTier === 'docentes' || userTier === 'escuelas' || userTier === 'education';
-          this.checkboxIsClassroom.checked = isEduTier;
-        }
-      }
     }
 
     this.selectedColor = teamToEdit ? teamToEdit.color : '#6366f1';
@@ -645,9 +598,7 @@ class TeamsController {
 
         showToast('Equipo actualizado correctamente', 'success');
       } else {
-        const isClassroom = Boolean(this.checkboxIsClassroom?.checked);
-        const endpoint = isClassroom ? API_ROUTES.education.classrooms : API_ROUTES.teams.base;
-        const res = await postApi(endpoint, {
+        const res = await postApi(API_ROUTES.teams.base, {
           name,
           description,
           color: this.selectedColor,
@@ -655,11 +606,11 @@ class TeamsController {
 
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
-          this.showTeamError(errData.error || (isClassroom ? 'No se pudo crear el aula escolar.' : 'No se pudo crear el equipo.'));
+          this.showTeamError(errData.error || 'No se pudo crear el equipo.');
           return;
         }
 
-        showToast(isClassroom ? 'Aula escolar creada exitosamente con código de acceso' : 'Equipo creado exitosamente', 'success');
+        showToast('Equipo creado exitosamente', 'success');
       }
 
       this.closeTeamModal();
@@ -667,51 +618,6 @@ class TeamsController {
     } catch {
       this.showTeamError('Ha ocurrido un error inesperado al guardar el equipo.');
     }
-  }
-
-  private openJoinClassroomModal(): void {
-    openModal({
-      title: 'Unirse a un aula escolar',
-      description: 'Ingresa el código proporcionado por tu docente (ej. SP-8492) para unirte a la clase.',
-      confirmText: 'Unirse al aula',
-      bodyHtml: `
-        <label class="field" data-ref="field-join-code">
-          <input class="field__input" data-ref="input-join-code" type="text" placeholder=" " maxlength="10" autocomplete="off" style="text-transform: uppercase; font-weight: 600; letter-spacing: 1px;" required />
-          <span class="field__label" data-ref="label-join-code">Código de aula</span>
-        </label>
-      `,
-      onConfirm: async (inst) => {
-        const input = inst.body.querySelector<HTMLInputElement>('[data-ref="input-join-code"]');
-        const code = (input?.value || '').trim().toUpperCase();
-        if (!code) {
-          inst.showError('Por favor ingresa un código de aula válido.');
-          return false;
-        }
-
-        inst.setConfirmLoading(true);
-        try {
-          const res = await postApi(API_ROUTES.education.join, { code });
-          const data = await res.json().catch(() => ({}));
-          if (!res.ok) {
-            inst.showError(data.error || 'No se pudo unir al aula. Verifica el código e intenta nuevamente.');
-            inst.setConfirmLoading(false);
-            return false;
-          }
-
-          if (data.isNewMember === false) {
-            showToast(`Ya eres parte del aula "${data.classroom?.name || 'escolar'}"`, 'info');
-          } else {
-            showToast(`Te has unido exitosamente al aula "${data.classroom?.name || 'escolar'}"`, 'success');
-          }
-          await this.loadTeams();
-          return true;
-        } catch {
-          inst.showError('Error de conexión al intentar unirse al aula.');
-          inst.setConfirmLoading(false);
-          return false;
-        }
-      },
-    });
   }
 
 
@@ -836,7 +742,7 @@ class TeamsController {
         removeBtn.className = 'btn-icon-soft';
         removeBtn.setAttribute('data-tooltip', `Remover a ${member.username}`);
         removeBtn.setAttribute('aria-label', `Remover a ${member.username}`);
-        removeBtn.innerHTML = '<span class="material-symbols-rounded" style="font-size: 18px;">person_remove</span>';
+        removeBtn.innerHTML = '<svg class="component-icon" aria-hidden="true" style="width: 18px; height: 18px;"><use href="/icons.svg#person_remove"></use></svg>';
         removeBtn.addEventListener('click', (e) => {
           e.stopPropagation();
           void this.handleRemoveMember(member.user_id, member.username || 'usuario');

@@ -10,32 +10,26 @@
         <!-- Acciones por defecto -->
         <div class="component-top-actions" data-ref="teams-default-actions">
           <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-toggle-search" data-tooltip="Buscar equipos" aria-label="Buscar equipos">
-            <span class="material-symbols-rounded">search</span>
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
           </button>
-          <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-join-classroom" data-tooltip="Unirse a un aula con código" aria-label="Unirse a un aula con código">
-            <span class="material-symbols-rounded">meeting_room</span>
-          </button>
-          <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-create-team" data-tooltip="Crear equipo o aula" aria-label="Crear equipo o aula">
-            <span class="material-symbols-rounded">group_add</span>
+          <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-create-team" data-tooltip="Crear equipo" aria-label="Crear equipo">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#group_add"></use></svg>
           </button>
         </div>
 
         <!-- Acciones contextuales al seleccionar items -->
         <div class="component-top-actions" data-ref="teams-selected-actions" style="display: none;">
-          <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-action-copy-code" data-tooltip="Copiar código de aula" aria-label="Copiar código de aula" style="display: none;">
-            <span class="material-symbols-rounded">key</span>
-          </button>
           <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-action-create-canvas" data-tooltip="Crear lienzo en este equipo" aria-label="Crear lienzo en este equipo">
-            <span class="material-symbols-rounded">brush</span>
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#brush"></use></svg>
           </button>
           <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-action-members" data-tooltip="Miembros" aria-label="Miembros">
-            <span class="material-symbols-rounded">groups</span>
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
           </button>
           <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-action-edit" data-tooltip="Editar" aria-label="Editar">
-            <span class="material-symbols-rounded">edit</span>
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
           </button>
           <button type="button" class="btn btn--h40 btn--danger btn--icon" data-ref="btn-action-delete" data-tooltip="Eliminar" aria-label="Eliminar">
-            <span class="material-symbols-rounded">delete</span>
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
           </button>
         </div>
       </div>
@@ -44,13 +38,13 @@
       <div class="component-search-toolbar is-hidden" data-ref="search-toolbar">
         <div class="component-search component-search--full" data-ref="search-box">
           <div class="component-search__icon" data-ref="search-icon">
-            <span class="material-symbols-rounded">search</span>
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
           </div>
           <div class="component-search__input-box" data-ref="search-input-box">
             <input class="component-search__input" data-ref="teams-search-input" data-i18n-placeholder="teams.search_placeholder" type="text" maxlength="100" autocomplete="off" />
           </div>
           <button type="button" class="btn btn--h34 btn--icon btn--clear-search" data-ref="btn-clear-search" style="display: none; margin-right: 4px;" aria-label="Limpiar búsqueda">
-            <span class="material-symbols-rounded" style="font-size: 18px;">close</span>
+            <svg class="component-icon" aria-hidden="true" style="font-size: 18px;"><use href="/icons.svg#close"></use></svg>
           </button>
         </div>
       </div>
@@ -62,36 +56,32 @@
         <div class="component-locked-state is-hidden" data-ref="teams-locked-state">
           <div class="component-locked-state__card" data-ref="teams-locked-card">
             <div class="component-locked-state__icon-box" data-ref="teams-locked-icon">
-              <span class="material-symbols-rounded">workspace_premium</span>
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#workspace_premium"></use></svg>
             </div>
             <span class="component-locked-state__badge" data-ref="teams-locked-badge">
-              <span class="material-symbols-rounded">lock</span>
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#lock"></use></svg>
               <span data-i18n="teams.locked_badge">Función Pro y Negocios</span>
             </span>
             <h2 class="component-locked-state__title" data-ref="teams-locked-title" data-i18n="teams.locked_title">Desbloquea la gestión de equipos</h2>
             <p class="component-locked-state__desc" data-ref="teams-locked-desc" data-i18n="teams.locked_desc">Crea y administra equipos de trabajo para colaborar en tiempo real, asignar roles de administración y compartir lienzos centralizados con tus colegas.</p>
             <div class="component-locked-state__benefits" data-ref="teams-locked-benefits">
               <div class="component-locked-state__benefit-item">
-                <span class="material-symbols-rounded">check_circle</span>
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
                 <span data-i18n="teams.locked_benefit_1">Equipos de trabajo centralizados para tus proyectos</span>
               </div>
               <div class="component-locked-state__benefit-item">
-                <span class="material-symbols-rounded">check_circle</span>
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
                 <span data-i18n="teams.locked_benefit_2">Colaboración en tiempo real y asignación de permisos</span>
               </div>
               <div class="component-locked-state__benefit-item">
-                <span class="material-symbols-rounded">check_circle</span>
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
                 <span data-i18n="teams.locked_benefit_3">Acceso simplificado a lienzos compartidos para todos los miembros</span>
               </div>
             </div>
             <div class="component-locked-state__actions" data-ref="teams-locked-actions">
               <button type="button" class="btn btn--h40 btn--black" data-ref="btn-locked-upgrade">
-                <span class="material-symbols-rounded">workspace_premium</span>
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#workspace_premium"></use></svg>
                 <span data-i18n="teams.locked_btn_upgrade">Mejorar a Pro</span>
-              </button>
-              <button type="button" class="btn btn--h40 btn--outline" data-ref="btn-locked-join-classroom">
-                <span class="material-symbols-rounded">meeting_room</span>
-                <span>Unirse a un aula con código</span>
               </button>
               <button type="button" class="btn btn--h40 btn--outline" data-ref="btn-locked-home" data-i18n="teams.locked_btn_home">Ir al inicio</button>
             </div>
@@ -119,7 +109,7 @@
   <div class="modal-backdrop" data-ref="modal-team-backdrop">
     <div class="modal-container" data-ref="modal-team-container">
       <button type="button" class="modal-close-btn" data-ref="btn-close-team-modal" aria-label="Cerrar modal">
-        <span class="material-symbols-rounded">close</span>
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
       </button>
       <div class="modal-card modal-card--w-520" data-ref="modal-team-card">
         <div class="modal-card__header">
@@ -134,10 +124,6 @@
             <input class="field__input" data-ref="input-team-desc" type="text" placeholder=" " maxlength="255" autocomplete="off" />
             <span class="field__label" data-ref="label-team-desc" data-i18n="teams.desc_label">Descripción (opcional)</span>
           </label>
-          <div class="field" data-ref="field-is-classroom" style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 6px 0;">
-            <input data-ref="checkbox-is-classroom" type="checkbox" style="width: 18px; height: 18px; accent-color: var(--action-primary); cursor: pointer;" />
-            <span style="font-size: 14px; color: var(--text-primary); cursor: pointer;">Crear como Aula escolar (genera código de acceso para alumnos)</span>
-          </div>
 
           <div class="modal-card__actions">
             <button type="button" class="btn btn--h40 btn--outline" data-ref="btn-cancel-team" data-i18n="modal.cancel">Cancelar</button>
@@ -152,7 +138,7 @@
   <div class="modal-backdrop" data-ref="modal-members-backdrop">
     <div class="modal-container" data-ref="modal-members-container">
       <button type="button" class="modal-close-btn" data-ref="btn-close-members-modal" aria-label="Cerrar modal">
-        <span class="material-symbols-rounded">close</span>
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
       </button>
       <div class="modal-card modal-card--w-520" data-ref="modal-members-card">
         <div class="modal-card__header">
@@ -166,7 +152,7 @@
                 <span class="field__label" data-ref="label-add-member" data-i18n="teams.add_member_placeholder">Buscar por nombre o correo...</span>
               </label>
               <button type="button" class="btn btn--h55 btn--black" data-ref="btn-add-member" style="white-space: nowrap; padding: 0 16px;">
-                <span class="material-symbols-rounded">person_add</span>
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#person_add"></use></svg>
                 <span data-i18n="teams.btn_add_member">Agregar</span>
               </button>
             </div>
@@ -176,10 +162,10 @@
             <div class="settings-dropdown-wrapper settings-dropdown-wrapper--full" data-ref="members-dropdown-wrapper">
               <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-members">
                 <div class="dropdown-trigger__left">
-                  <span class="material-symbols-rounded dropdown-trigger__icon">groups</span>
+                  <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
                   <span class="dropdown-trigger__text" data-ref="members-trigger-text">Integrantes</span>
                 </div>
-                <span class="material-symbols-rounded dropdown-trigger__chevron">expand_more</span>
+                <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
               </button>
 
               <div class="dropdown-backdrop" data-ref="members-dropdown-backdrop">

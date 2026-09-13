@@ -4,7 +4,7 @@ import { Canvas } from '../types/canvas.types.js';
 import { deleteCanvasSnapshotBlob, readCanvasBlobDecompressed, readCanvasSnapshotBlob, saveCanvasBlob, saveCanvasSnapshotBlob } from './canvas-storage-blob.service.js';
 import { createCanvas, getCanvasUserRole } from './canvas.service.js';
 import { logger } from './logger.service.js';
-import { checkUserStorageQuota } from './storage.service.js';
+import { checkUserStorageQuota, invalidateUserStorageCache } from './storage.service.js';
 import { getEffectiveTierForCanvas, getTierLimits } from './subscription.service.js';
 import crypto from 'crypto';
 import mysql from 'mysql2/promise';
@@ -15,7 +15,7 @@ export async function listCanvasSnapshots(
   canvasUuid: string,
   userId?: number
 ): Promise<CanvasSnapshotItem[]> {
-  const roleInfo = await getCanvasUserRole(canvasUuid, userId);
+  const roleInfo = await getCanvasUserRole(canvasUuid, userId, false);
   if (!roleInfo) {
     throw new Error('No tienes permiso para ver este lienzo.');
   }
@@ -185,6 +185,10 @@ export async function createCanvasSnapshot(
       userName = uRows[0].username;
       userAvatar = uRows[0].avatar_url;
     }
+  }
+
+  if (canvas.user_id) {
+    await invalidateUserStorageCache(canvas.user_id);
   }
 
   return {
@@ -405,7 +409,7 @@ export async function deleteCanvasSnapshot(
   snapshotUuid: string,
   userId: number
 ): Promise<void> {
-  const roleInfo = await getCanvasUserRole(canvasUuid, userId);
+  const roleInfo = await getCanvasUserRole(canvasUuid, userId, false);
   if (!roleInfo || roleInfo.role !== 'owner') {
     throw new Error('Solo el propietario del lienzo puede eliminar versiones.');
   }
@@ -419,4 +423,5 @@ export async function deleteCanvasSnapshot(
   `;
 
   await canvasPool.execute(query, [canvasUuid, snapshotUuid]);
+  await invalidateUserStorageCache(userId);
 }

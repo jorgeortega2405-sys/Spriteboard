@@ -38,6 +38,10 @@ target/
 
 # Bases de datos binarias locales GeoIP (MMDB)
 data/geoip/*.mmdb
+
+# Python
+__pycache__/
+*.pyc
 data/geoip/*.tar.gz
 data/geoip/*.gz
 !data/geoip/.gitkeep

@@ -1,11 +1,11 @@
-import crypto from 'crypto';
-import mysql from 'mysql2/promise';
 import { canvasPool, pool } from '../config/database.config.js';
 import { Canvas } from '../types/canvas.types.js';
 import { CreateTeamDto, Team, TeamMember, UpdateTeamDto } from '../types/team.types.js';
 import { logger } from './logger.service.js';
 import { createNotification } from './notification.service.js';
-import { getEffectiveTierForCanvas, getTierLimits } from './subscription.service.js';
+import { getEffectiveTiersForCanvases, getTierLimits } from './subscription.service.js';
+import crypto from 'crypto';
+import mysql from 'mysql2/promise';
 
 export async function createTeam(ownerId: number, dto: CreateTeamDto): Promise<Team> {
   const uuid = crypto.randomUUID();
@@ -17,7 +17,12 @@ export async function createTeam(ownerId: number, dto: CreateTeamDto): Promise<T
     'SELECT subscription_tier FROM users WHERE id = ? LIMIT 1',
     [ownerId]
   );
-  const userTier = uRows[0]?.subscription_tier || 'free';
+  const userTier = (uRows[0]?.subscription_tier || 'free').toLowerCase();
+
+  if (['escuelas', 'docentes', 'schools', 'education'].includes(userTier)) {
+    throw new Error('Las cuentas de Educación gestionan sus aulas y salones desde la sección Educación.');
+  }
+
   const tierLimits = getTierLimits(userTier);
 
   if (tierLimits.maxTeams <= 0) {
@@ -66,14 +71,16 @@ export async function createTeam(ownerId: number, dto: CreateTeamDto): Promise<T
 export async function getUserTeams(userId: number): Promise<Team[]> {
   try {
     const [rows] = await pool.query<mysql.RowDataPacket[]>(
-      `SELECT DISTINCT t.id, t.uuid, t.owner_id, t.name, t.description, t.color, t.team_type, t.join_code, t.school_id, t.created_at, t.updated_at,
-              (SELECT COUNT(*) FROM team_members WHERE team_id = t.id) AS member_count,
+      `SELECT t.id, t.uuid, t.owner_id, t.name, t.description, t.color, t.team_type, t.join_code, t.school_id, t.created_at, t.updated_at,
+              COUNT(DISTINCT all_tm.id) AS member_count,
               CASE WHEN t.owner_id = ? THEN 'owner' ELSE tm.role END AS user_role
        FROM teams t
-       INNER JOIN team_members tm ON tm.team_id = t.id
+       INNER JOIN team_members tm ON tm.team_id = t.id AND (tm.user_id = ? OR t.owner_id = ?)
+       LEFT JOIN team_members all_tm ON all_tm.team_id = t.id
        WHERE tm.user_id = ? OR t.owner_id = ?
+       GROUP BY t.id, t.uuid, t.owner_id, t.name, t.description, t.color, t.team_type, t.join_code, t.school_id, t.created_at, t.updated_at, user_role
        ORDER BY t.updated_at DESC`,
-      [userId, userId, userId]
+      [userId, userId, userId, userId, userId]
     );
 
     return rows as Team[];
@@ -87,11 +94,14 @@ export async function getTeamByUuid(uuid: string, currentUserId: number): Promis
   try {
     const [teamRows] = await pool.query<mysql.RowDataPacket[]>(
       `SELECT t.id, t.uuid, t.owner_id, t.name, t.description, t.color, t.team_type, t.join_code, t.school_id, t.created_at, t.updated_at,
-              (SELECT COUNT(*) FROM team_members WHERE team_id = t.id) AS member_count,
+              COUNT(DISTINCT all_tm.id) AS member_count,
               CASE WHEN t.owner_id = ? THEN 'owner' ELSE tm.role END AS user_role
        FROM teams t
        LEFT JOIN team_members tm ON tm.team_id = t.id AND tm.user_id = ?
-       WHERE t.uuid = ? LIMIT 1`,
+       LEFT JOIN team_members all_tm ON all_tm.team_id = t.id
+       WHERE t.uuid = ?
+       GROUP BY t.id, t.uuid, t.owner_id, t.name, t.description, t.color, t.team_type, t.join_code, t.school_id, t.created_at, t.updated_at, user_role
+       LIMIT 1`,
       [currentUserId, currentUserId, uuid]
     );
 
@@ -398,13 +408,13 @@ export async function getTeamCanvases(uuid: string, currentUserId: number): Prom
       [currentUserId, team.id]
     );
 
-    return Promise.all(
-      canvasRows.map(async (r) => ({
-        ...r,
-        effective_tier: await getEffectiveTierForCanvas(r.id),
-        is_favorite: Boolean(r.is_favorite),
-      }))
-    ) as Promise<Canvas[]>;
+    const tierMap = await getEffectiveTiersForCanvases(canvasRows as any);
+
+    return canvasRows.map((r) => ({
+      ...r,
+      effective_tier: tierMap.get(r.id) || (r.owner_tier || 'free').toLowerCase(),
+      is_favorite: Boolean(r.is_favorite),
+    })) as Canvas[];
   } catch (err: any) {
     logger.db.error(`Error al listar lienzos del equipo ${uuid}`, err);
     throw err;

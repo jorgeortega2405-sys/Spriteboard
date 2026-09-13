@@ -50,10 +50,23 @@ export async function ensureDefaultFolder(userId: number): Promise<FolderItem> {
   }
 }
 
-export async function getUserFolders(userId: number, includeDefault = false): Promise<FolderItem[]> {
+export async function invalidateUserFoldersCache(userId: number): Promise<void> {
   try {
-    await ensureDefaultFolder(userId);
+    await redis.del(`user:folders:${userId}:all`);
+    await redis.del(`user:folders:${userId}:custom`);
+  } catch {}
+}
 
+export async function getUserFolders(userId: number, includeDefault = false): Promise<FolderItem[]> {
+  const cacheKey = `user:folders:${userId}:${includeDefault ? 'all' : 'custom'}`;
+  try {
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      return JSON.parse(cached) as FolderItem[];
+    }
+  } catch {}
+
+  try {
     const filterClause = includeDefault ? '' : 'AND f.is_default = FALSE';
     const query = `
       SELECT f.id, f.uuid, f.user_id, f.name, f.color, f.is_default, f.created_at, f.updated_at,
@@ -65,12 +78,24 @@ export async function getUserFolders(userId: number, includeDefault = false): Pr
       ORDER BY f.is_default DESC, f.created_at DESC
     `;
 
-    const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(query, [userId]);
-    return rows.map((r) => ({
+    let [rows] = await canvasPool.query<mysql.RowDataPacket[]>(query, [userId]);
+
+    if (rows.length === 0 && includeDefault) {
+      await ensureDefaultFolder(userId);
+      [rows] = await canvasPool.query<mysql.RowDataPacket[]>(query, [userId]);
+    }
+
+    const result = rows.map((r) => ({
       ...r,
       is_default: Boolean(r.is_default),
       items_count: Number(r.items_count) || 0,
     })) as FolderItem[];
+
+    try {
+      await redis.setex(cacheKey, 120, JSON.stringify(result));
+    } catch {}
+
+    return result;
   } catch (err) {
     logger.db.error(`Error al listar carpetas para el usuario ${userId}`, err);
     throw new Error('No se pudieron obtener las carpetas.');
@@ -122,6 +147,7 @@ export async function createFolder(userId: number, dto: CreateFolderDto): Promis
     );
 
     const insertedId = result.insertId;
+    await invalidateUserFoldersCache(userId);
     const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
       'SELECT id, uuid, user_id, name, color, is_default, created_at, updated_at FROM folders WHERE id = ? LIMIT 1',
       [insertedId]
@@ -176,6 +202,7 @@ export async function updateFolder(uuid: string, userId: number, dto: UpdateFold
       params
     );
 
+    await invalidateUserFoldersCache(userId);
     return getFolderByUuid(uuid, userId);
   } catch (err) {
     logger.db.error(`Error al actualizar carpeta ${uuid} para el usuario ${userId}`, err);
@@ -210,6 +237,11 @@ export async function deleteFolder(uuid: string, userId: number): Promise<boolea
       'UPDATE folders SET deleted_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?',
       [folder.id, userId]
     );
+
+    await invalidateUserFoldersCache(userId);
+    try {
+      await redis.del(`user:canvases:${userId}`);
+    } catch {}
 
     logger.db.info(`Carpeta ${uuid} eliminada por usuario ${userId}. Lienzos movidos a carpeta predeterminada.`);
     return true;
@@ -259,8 +291,10 @@ export async function moveCanvasToFolder(canvasUuid: string, userId: number, tar
       [destinationFolderId, canvas.id]
     );
 
+    await invalidateUserFoldersCache(userId);
     try {
       await redis.del(`canvas:meta:${canvasUuid}`);
+      await redis.del(`user:canvases:${userId}`);
     } catch {}
 
     const [updatedRows] = await canvasPool.query<mysql.RowDataPacket[]>(

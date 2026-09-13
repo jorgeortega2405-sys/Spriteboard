@@ -1,7 +1,7 @@
-import { addSchoolTeacher, createClassroom, getSchoolOrganization, getUserClassrooms, joinClassroomByCode, regenerateClassroomCode } from '../services/education.service.js';
-import { getCurrentUser } from '../middlewares/auth.middleware.js';
-import { logger } from '../services/logger.service.js';
 import { Request, Response } from 'express';
+import { getCurrentUser } from '../middlewares/auth.middleware.js';
+import { addSchoolTeacher, createClassroom, getSchoolOrganization, getUserClassrooms, joinClassroomByCode, regenerateClassroomCode, removeSchoolTeacher, updateSchoolOrganization } from '../services/education.service.js';
+import { logger } from '../services/logger.service.js';
 
 export async function createClassroomHandler(req: Request, res: Response): Promise<void> {
   try {
@@ -112,6 +112,34 @@ export async function getSchoolHandler(req: Request, res: Response): Promise<voi
   }
 }
 
+export async function updateSchoolHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const user = getCurrentUser(req);
+    if (!user) {
+      res.status(401).json({ error: 'No autorizado.' });
+      return;
+    }
+
+    const { name, domain } = req.body;
+    if (!name || typeof name !== 'string' || !name.trim()) {
+      res.status(400).json({ error: 'El nombre de la institución es obligatorio.' });
+      return;
+    }
+
+    const school = await updateSchoolOrganization(user.id, {
+      name: name.trim(),
+      domain: typeof domain === 'string' ? domain.trim() : undefined,
+    });
+
+    res.json({ ok: true, school });
+  } catch (err: any) {
+    logger.app.error('Error al actualizar organización escolar', err);
+    res.status(400).json({
+      error: err.message || 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
+    });
+  }
+}
+
 export async function addSchoolTeacherHandler(req: Request, res: Response): Promise<void> {
   try {
     const user = getCurrentUser(req);
@@ -130,6 +158,31 @@ export async function addSchoolTeacherHandler(req: Request, res: Response): Prom
     res.status(201).json({ ok: true, teacher });
   } catch (err: any) {
     logger.app.error('Error al agregar docente a la escuela', err);
+    res.status(400).json({
+      error: err.message || 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
+    });
+  }
+}
+
+export async function removeSchoolTeacherHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const user = getCurrentUser(req);
+    if (!user) {
+      res.status(401).json({ error: 'No autorizado.' });
+      return;
+    }
+
+    const { targetUserId } = req.params;
+    const uid = Number(targetUserId);
+    if (!uid || isNaN(uid)) {
+      res.status(400).json({ error: 'Identificador de docente inválido.' });
+      return;
+    }
+
+    await removeSchoolTeacher(user.id, uid);
+    res.json({ ok: true });
+  } catch (err: any) {
+    logger.app.error('Error al revocar docente de la escuela', err);
     res.status(400).json({
       error: err.message || 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
     });

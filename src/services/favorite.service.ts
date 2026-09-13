@@ -1,4 +1,5 @@
 import { pool } from '../config/database.config.js';
+import { redis } from '../config/redis.config.js';
 import { FavoriteItemType, UserFavorite } from '../types/favorite.types.js';
 import { logger } from './logger.service.js';
 import mysql from 'mysql2/promise';
@@ -15,21 +16,32 @@ export async function toggleFavorite(
       [userId, itemType, trimmedId]
     );
 
+    let isFav = false;
+
     if (existing.length > 0) {
       await pool.execute(
         'DELETE FROM user_favorites WHERE user_id = ? AND item_type = ? AND item_id = ?',
         [userId, itemType, trimmedId]
       );
       logger.db.info(`Favorito removido: usuario=${userId}, tipo=${itemType}, item=${trimmedId}`);
-      return { isFavorite: false };
+      isFav = false;
+    } else {
+      await pool.execute(
+        'INSERT INTO user_favorites (user_id, item_type, item_id) VALUES (?, ?, ?)',
+        [userId, itemType, trimmedId]
+      );
+      logger.db.info(`Favorito agregado: usuario=${userId}, tipo=${itemType}, item=${trimmedId}`);
+      isFav = true;
     }
 
-    await pool.execute(
-      'INSERT INTO user_favorites (user_id, item_type, item_id) VALUES (?, ?, ?)',
-      [userId, itemType, trimmedId]
-    );
-    logger.db.info(`Favorito agregado: usuario=${userId}, tipo=${itemType}, item=${trimmedId}`);
-    return { isFavorite: true };
+    if (itemType === 'canvas') {
+      try {
+        await redis.del(`user:canvases:${userId}`);
+        await redis.del(`user:shared_canvases:${userId}`);
+      } catch {}
+    }
+
+    return { isFavorite: isFav };
   } catch (err) {
     logger.db.error(`Error al alternar favorito para el usuario ${userId}`, err);
     throw new Error('No se pudo actualizar el estado de favorito.');

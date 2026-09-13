@@ -1,4 +1,5 @@
 import { pool } from '../config/database.config.js';
+import { redis } from '../config/redis.config.js';
 import { CreateNotificationDto, NotificationItem } from '../types/notification.types.js';
 import { logger } from './logger.service.js';
 import mysql from 'mysql2/promise';
@@ -10,6 +11,9 @@ export async function createNotification(dto: CreateNotificationDto): Promise<nu
        VALUES (?, ?, ?, ?, ?)`,
       [dto.userId, dto.type, dto.title, dto.message, dto.linkUrl || null]
     );
+    try {
+      await redis.del(`user:unread_notifs:${dto.userId}`);
+    } catch {}
     logger.app.info(`Notificación creada para usuario ${dto.userId} (tipo: ${dto.type})`);
     return result.insertId;
   } catch (err) {
@@ -33,12 +37,27 @@ export async function getUserNotifications(
       [userId, Number(limit), Number(offset)]
     );
 
-    const [countRows] = await pool.query<mysql.RowDataPacket[]>(
-      `SELECT COUNT(*) AS unread_count
-       FROM notifications
-       WHERE user_id = ? AND is_read = FALSE`,
-      [userId]
-    );
+    const unreadCacheKey = `user:unread_notifs:${userId}`;
+    let unreadCount: number | null = null;
+    try {
+      const cachedCount = await redis.get(unreadCacheKey);
+      if (cachedCount !== null) {
+        unreadCount = Number(cachedCount);
+      }
+    } catch {}
+
+    if (unreadCount === null) {
+      const [countRows] = await pool.query<mysql.RowDataPacket[]>(
+        `SELECT COUNT(*) AS unread_count
+         FROM notifications
+         WHERE user_id = ? AND is_read = FALSE`,
+        [userId]
+      );
+      unreadCount = Number(countRows[0]?.unread_count || 0);
+      try {
+        await redis.setex(unreadCacheKey, 300, String(unreadCount));
+      } catch {}
+    }
 
     const notifications: NotificationItem[] = rows.map((r) => ({
       id: r.id,
@@ -51,8 +70,6 @@ export async function getUserNotifications(
       read_at: r.read_at,
       created_at: r.created_at,
     }));
-
-    const unreadCount = Number(countRows[0]?.unread_count || 0);
 
     return { notifications, unreadCount };
   } catch (err) {
@@ -69,6 +86,9 @@ export async function markNotificationAsRead(id: number, userId: number): Promis
        WHERE id = ? AND user_id = ?`,
       [id, userId]
     );
+    try {
+      await redis.del(`user:unread_notifs:${userId}`);
+    } catch {}
     return res.affectedRows > 0;
   } catch (err) {
     logger.db.error(`Error al marcar notificación ${id} como leída para usuario ${userId}`, err);
@@ -84,6 +104,9 @@ export async function markAllNotificationsAsRead(userId: number): Promise<boolea
        WHERE user_id = ? AND is_read = FALSE`,
       [userId]
     );
+    try {
+      await redis.setex(`user:unread_notifs:${userId}`, 300, '0');
+    } catch {}
     return res.affectedRows > 0;
   } catch (err) {
     logger.db.error(`Error al marcar todas las notificaciones como leídas para usuario ${userId}`, err);
@@ -98,6 +121,9 @@ export async function deleteNotification(id: number, userId: number): Promise<bo
        WHERE id = ? AND user_id = ?`,
       [id, userId]
     );
+    try {
+      await redis.del(`user:unread_notifs:${userId}`);
+    } catch {}
     return res.affectedRows > 0;
   } catch (err) {
     logger.db.error(`Error al eliminar notificación ${id} para usuario ${userId}`, err);

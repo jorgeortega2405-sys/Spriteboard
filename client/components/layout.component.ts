@@ -574,7 +574,10 @@ export async function createTopBar(): Promise<HTMLElement> {
             'avatar-tier--pro',
             'avatar-tier--ultra',
             'avatar-tier--business',
-            'avatar-tier--negocios'
+            'avatar-tier--negocios',
+            'avatar-tier--escuelas',
+            'avatar-tier--docentes',
+            'avatar-tier--education'
           );
           avatarBtn.classList.add(`avatar-tier--${tVal}`);
         }
@@ -586,7 +589,10 @@ export async function createTopBar(): Promise<HTMLElement> {
             'avatar-tier--pro',
             'avatar-tier--ultra',
             'avatar-tier--business',
-            'avatar-tier--negocios'
+            'avatar-tier--negocios',
+            'avatar-tier--escuelas',
+            'avatar-tier--docentes',
+            'avatar-tier--education'
           );
           activeAvatarBox.classList.add(`avatar-tier--${tVal}`);
         }
@@ -1259,20 +1265,24 @@ export async function createSidebar(): Promise<HTMLElement> {
     if (navTop) {
       navTop.innerHTML = `
         <button type="button" class="menu-item" data-ref="btn-nav-home">
-          <span class="material-symbols-rounded menu-item__icon">home</span>
+          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#home"></use></svg>
           <span class="menu-item__text" data-i18n="nav.home"></span>
         </button>
         <button type="button" class="menu-item" data-ref="btn-nav-templates">
-          <span class="material-symbols-rounded menu-item__icon">space_dashboard</span>
+          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#space_dashboard"></use></svg>
           <span class="menu-item__text" data-i18n="nav.templates"></span>
         </button>
         <button type="button" class="menu-item" data-ref="btn-nav-shared">
-          <span class="material-symbols-rounded menu-item__icon">folder_shared</span>
+          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#folder_shared"></use></svg>
           <span class="menu-item__text" data-i18n="nav.shared"></span>
         </button>
         <button type="button" class="menu-item" data-ref="btn-nav-teams">
-          <span class="material-symbols-rounded menu-item__icon">groups</span>
+          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
           <span class="menu-item__text" data-i18n="nav.teams"></span>
+        </button>
+        <button type="button" class="menu-item" data-ref="btn-nav-education">
+          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#school"></use></svg>
+          <span class="menu-item__text" data-i18n="nav.education"></span>
         </button>
       `;
       translateElement(navTop);
@@ -1295,17 +1305,32 @@ export async function createSidebar(): Promise<HTMLElement> {
       }
       bindNavLink(btnShared, '/shared');
 
+      const userTier = (currentUser?.subscription_tier || 'free').toLowerCase();
+      const isEducation = ['escuelas', 'docentes', 'schools', 'education'].includes(userTier);
+
       const btnTeams = navTop.querySelector<HTMLElement>('[data-ref="btn-nav-teams"]');
-      if (currentPath === '/teams') {
-        btnTeams?.classList.add('is-active');
+      if (btnTeams) {
+        if (isEducation) {
+          btnTeams.style.display = 'none';
+        } else {
+          if (currentPath === '/teams') {
+            btnTeams.classList.add('is-active');
+          }
+          bindNavLink(btnTeams, '/teams');
+        }
       }
-      bindNavLink(btnTeams, '/teams');
+
+      const btnEducation = navTop.querySelector<HTMLElement>('[data-ref="btn-nav-education"]');
+      if (currentPath === '/education') {
+        btnEducation?.classList.add('is-active');
+      }
+      bindNavLink(btnEducation, '/education');
     }
 
     if (navBottom) {
       navBottom.innerHTML = `
         <button type="button" class="menu-item" data-ref="btn-nav-trash">
-          <span class="material-symbols-rounded menu-item__icon">delete</span>
+          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
           <span class="menu-item__text" data-i18n="nav.trash"></span>
         </button>
       `;

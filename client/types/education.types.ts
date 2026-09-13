@@ -37,6 +37,8 @@ export interface SchoolOrganization {
   updated_at: string;
   teachers_count?: number;
   classrooms_count?: number;
+  teachers?: SchoolTeacher[];
+  is_admin?: boolean;
 }
 
 export interface SchoolTeacher {

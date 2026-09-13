@@ -139,6 +139,31 @@ export async function render(): Promise<void> {
         const teamsView = await createTeamsView();
         viewElements = topBar ? [topBar, teamsView] : [teamsView];
       }
+    } else if (path === '/education') {
+      const topBar = isSoftSpaNav ? null : await createTopBar();
+      if (!currentUser) {
+        window.history.replaceState({}, '', '/login');
+        const { createLoginView } = await import('./views/auth.view.js');
+        const loginView = await createLoginView();
+        viewElements = [loginView];
+      } else {
+        const { createEducationView } = await import('./views/education.view.js');
+        const educationView = await createEducationView();
+        viewElements = topBar ? [topBar, educationView] : [educationView];
+      }
+    } else if (path === '/institution') {
+      window.history.replaceState({}, '', '/education');
+      const topBar = isSoftSpaNav ? null : await createTopBar();
+      if (!currentUser) {
+        window.history.replaceState({}, '', '/login');
+        const { createLoginView } = await import('./views/auth.view.js');
+        const loginView = await createLoginView();
+        viewElements = [loginView];
+      } else {
+        const { createEducationView } = await import('./views/education.view.js');
+        const educationView = await createEducationView();
+        viewElements = topBar ? [topBar, educationView] : [educationView];
+      }
     } else if (path === '/templates') {
       const topBar = isSoftSpaNav ? null : await createTopBar();
       const { createTemplatesView } = await import('./views/templates.view.js');

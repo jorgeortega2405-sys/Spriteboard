@@ -97,11 +97,41 @@ CREATE TABLE IF NOT EXISTS teams (
     owner_id INT NOT NULL,
     name VARCHAR(100) NOT NULL,
     description VARCHAR(255) NULL,
+    team_type ENUM('team', 'classroom') NOT NULL DEFAULT 'team',
+    join_code VARCHAR(16) NULL UNIQUE,
+    school_id INT NULL,
     color VARCHAR(20) NOT NULL DEFAULT '#6366f1',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_teams_owner (owner_id),
+    INDEX idx_teams_school (school_id),
+    INDEX idx_teams_type (team_type),
     FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS school_organizations (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    uuid VARCHAR(36) NOT NULL UNIQUE,
+    admin_id INT NOT NULL,
+    name VARCHAR(150) NOT NULL,
+    domain VARCHAR(100) NULL,
+    max_teachers INT NOT NULL DEFAULT 50,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_school_admin (admin_id),
+    FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS school_teachers (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    school_id INT NOT NULL,
+    user_id INT NOT NULL,
+    status ENUM('invited', 'active', 'revoked') NOT NULL DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_school_teacher (school_id, user_id),
+    INDEX idx_school_teachers_user (user_id),
+    FOREIGN KEY (school_id) REFERENCES school_organizations(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS team_members (

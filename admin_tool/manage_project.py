@@ -121,6 +121,7 @@ ICON_PATTERNS = [
     re.compile(r'feat\.icon\s*\|\|\s*[\'"]([a-zA-Z0-9_]+)[\'"]'),
     re.compile(r'data-icon=[\'"]([a-zA-Z0-9_]+)[\'"]'),
     re.compile(r'createIconSvg\([\'"]([a-zA-Z0-9_]+)[\'"]'),
+    re.compile(r'\bicon:\s*[\'"]([a-zA-Z0-9_]+)[\'"]'),
 ]
 
 

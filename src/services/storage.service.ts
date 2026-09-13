@@ -1,4 +1,5 @@
 import { canvasPool, pool } from '../config/database.config.js';
+import { redis } from '../config/redis.config.js';
 import { logger } from './logger.service.js';
 import { headObject } from './s3.service.js';
 import fs from 'fs';
@@ -61,7 +62,21 @@ export function formatStorageBytes(bytes: number): string {
   return `${formatted} ${units[i]}`;
 }
 
+export async function invalidateUserStorageCache(userId: number): Promise<void> {
+  try {
+    await redis.del(`user:storage:${userId}`);
+  } catch {}
+}
+
 export async function getUserStorageUsage(userId: number): Promise<UserStorageUsage> {
+  const cacheKey = `user:storage:${userId}`;
+  try {
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      return JSON.parse(cached) as UserStorageUsage;
+    }
+  } catch {}
+
   const [userRows] = await pool.query<mysql.RowDataPacket[]>(
     'SELECT subscription_tier, avatar_url FROM users WHERE id = ? LIMIT 1',
     [userId]
@@ -121,7 +136,7 @@ export async function getUserStorageUsage(userId: number): Promise<UserStorageUs
   const percentage = Math.min(100, Math.round(rawPercentage * 100) / 100);
   const remainingBytes = Math.max(0, limitBytes - usedBytes);
 
-  return {
+  const result: UserStorageUsage = {
     tier: normalizedTier,
     tierName,
     usedBytes,
@@ -156,6 +171,12 @@ export async function getUserStorageUsage(userId: number): Promise<UserStorageUs
       },
     },
   };
+
+  try {
+    await redis.setex(cacheKey, 300, JSON.stringify(result));
+  } catch {}
+
+  return result;
 }
 
 export async function checkUserStorageQuota(

@@ -44,15 +44,14 @@ export async function createUpgradeView(): Promise<HTMLElement> {
 
   const grid = container.querySelector<HTMLElement>('[data-ref="pricing-grid"]');
   const categoryPill = container.querySelector<HTMLElement>('[data-ref="category-toggle-pill"]');
-  const btnCatPersonal = container.querySelector<HTMLElement>('[data-ref="btn-cat-personal"]');
-  const btnCatTeams = container.querySelector<HTMLElement>('[data-ref="btn-cat-teams"]');
+  const btnCatPersonalTeams = container.querySelector<HTMLElement>('[data-ref="btn-cat-personal-teams"]');
   const btnCatEducation = container.querySelector<HTMLElement>('[data-ref="btn-cat-education"]');
 
   const billingTogglePill = container.querySelector<HTMLElement>('[data-ref="billing-toggle-pill"]');
   const btnMonthly = container.querySelector<HTMLElement>('[data-ref="btn-cycle-monthly"]');
   const btnYearly = container.querySelector<HTMLElement>('[data-ref="btn-cycle-yearly"]');
 
-  let currentCategory: 'personal' | 'teams' | 'education' = 'personal';
+  let currentCategory: 'personal_teams' | 'education' = 'personal_teams';
   let currentBillingCycle = 'monthly';
 
   const res = await getSubscriptionsApi();
@@ -217,40 +216,41 @@ export async function createUpgradeView(): Promise<HTMLElement> {
     ],
   };
 
-  const docentesTier = {
-    id: 'docentes',
-    name: 'Spriteboard Docentes',
-    tagline: 'Herramientas de nivel profesional para profesores, educadores y creadores de cursos.',
-    storage: '1 TB de almacenamiento educativo',
+  const educationTier = {
+    id: 'schools',
+    name: 'Spriteboard Educación',
+    tagline: 'Infraestructura creativa centralizada para colegios, academias, universidades y docentes.',
+    storage: '1 TB+ de almacenamiento institucional',
     price: 0,
     priceMonthly: 0,
     priceYearly: 0,
+    isCustomPrice: true,
     currency: 'USD',
-    billingPeriod: 'monthly',
+    billingPeriod: 'yearly',
     icon: 'school',
-    badge: '100% Gratuito',
+    badge: 'Escuelas e Instituciones',
     isPopular: true,
-    buttonText: t('upgrade.btn_verify_teacher') || 'Completar verificación',
-    isVerification: true,
+    buttonText: t('upgrade.btn_contact_education') || 'Contactar asesor educativo',
+    isContact: true,
     features: [
       {
-        title: '1 TB de almacenamiento masivo',
-        desc: 'Espacio de sobra para todos los proyectos y ejercicios de tus cursos',
-        icon: 'cloud',
-      },
-      {
-        title: 'Lienzos sin límites de tamaño',
-        desc: 'Crea en cualquier resolución masiva con 1 TB de almacenamiento educativo',
-        icon: 'aspect_ratio',
-      },
-      {
-        title: 'Aulas y salones ilimitados',
-        desc: 'Organiza a tus estudiantes en equipos de clase con acceso centralizado',
+        title: 'Panel escolar y salones de clase',
+        desc: 'Gestión centralizada de aulas, códigos de unión (SP-XXXXXX) y docentes',
         icon: 'school',
       },
       {
-        title: 'Colaboración masiva en vivo (hasta 50 en simultáneo)',
-        desc: 'Toda tu clase trabajando en tiempo real en proyectos de lienzo compartidos',
+        title: 'Directorio de docentes y licencias',
+        desc: 'Aprovisionamiento centralizado de profesores con permisos escolares',
+        icon: 'group_add',
+      },
+      {
+        title: 'Aulas, proyectos y alumnos ilimitados',
+        desc: 'Organiza todos tus cursos y materias con acceso estructurado y seguro',
+        icon: 'menu_book',
+      },
+      {
+        title: 'Colaboración masiva en vivo (hasta 50 alumnos)',
+        desc: 'Toda la clase trabajando en tiempo real en proyectos de lienzo compartidos',
         icon: 'groups_3',
       },
       {
@@ -273,73 +273,22 @@ export async function createUpgradeView(): Promise<HTMLElement> {
         desc: 'Tus alumnos disfrutan de las ventajas de Negocios al trabajar en tus lienzos',
         icon: 'military_tech',
       },
-    ],
-  };
-
-  const schoolsTier = {
-    id: 'schools',
-    name: 'Escuelas e Instituciones',
-    tagline: 'Infraestructura creativa centralizada para colegios, academias y universidades.',
-    storage: 'Almacenamiento institucional a medida',
-    price: 0,
-    priceMonthly: 0,
-    priceYearly: 0,
-    isCustomPrice: true,
-    currency: 'USD',
-    billingPeriod: 'yearly',
-    icon: 'account_balance',
-    badge: 'Institucional',
-    isPopular: false,
-    buttonText: t('upgrade.btn_contact_education') || 'Contactar asesor educativo',
-    isContact: true,
-    features: [
-      {
-        title: 'Todo lo del plan Docentes incluido',
-        desc: 'Ventajas de Negocios para toda la planta docente de tu institución',
-        icon: 'verified',
-      },
-      {
-        title: 'Panel de administración escolar',
-        desc: 'Gestión centralizada de licencias, profesores y departamentos educativos',
-        icon: 'admin_panel_settings',
-      },
-      {
-        title: 'Aprovisionamiento masivo de profesores',
-        desc: 'Asigna, transfiere y reasigna licencias docentes con un solo clic',
-        icon: 'group_add',
-      },
-      {
-        title: 'Supervisión global de aulas y materias',
-        desc: 'Monitoreo transversal de salones, materias y proyectos de los estudiantes',
-        icon: 'menu_book',
-      },
       {
         title: 'Privacidad escolar y cumplimiento COPPA/FERPA',
         desc: 'Entorno cerrado y seguro para estudiantes sin exposición pública de datos',
         icon: 'security',
       },
       {
-        title: 'Biblioteca de recursos institucional',
-        desc: 'Paletas oficiales, plantillas y assets compartidos por la institución',
-        icon: 'palette',
-      },
-      {
-        title: 'Integración SSO y Google Workspace',
-        desc: 'Inicio de sesión con cuentas escolares y sincronización con Google Classroom',
-        icon: 'badge',
-      },
-      {
-        title: 'Soporte prioritario y capacitación',
-        desc: 'Acompañamiento pedagógico y asistencia técnica dedicada para profesores',
+        title: 'Acompañamiento pedagógico y soporte dedicado',
+        desc: 'Capacitación técnica y asistencia continua para el equipo educativo',
         icon: 'support_agent',
       },
     ],
   };
 
-  const categoryTiers: Record<'personal' | 'teams' | 'education', any[]> = {
-    personal: [freeTier, proTier],
-    teams: [businessTier],
-    education: [docentesTier, schoolsTier],
+  const categoryTiers: Record<'personal_teams' | 'education', any[]> = {
+    personal_teams: [freeTier, proTier, businessTier],
+    education: [educationTier],
   };
 
   const TIER_HIERARCHY: Record<string, number> = {
@@ -352,7 +301,7 @@ export async function createUpgradeView(): Promise<HTMLElement> {
     escuelas: 3,
   };
 
-  const renderCards = (category: 'personal' | 'teams' | 'education'): void => {
+  const renderCards = (category: 'personal_teams' | 'education'): void => {
     if (!grid) return;
     grid.innerHTML = '';
 
@@ -363,8 +312,14 @@ export async function createUpgradeView(): Promise<HTMLElement> {
     tiersToRender.forEach((tier, tierIdx) => {
       const isPopular = Boolean(tier.isPopular);
       const isFree = tier.id === 'free';
+      const isCurrentPlan = Boolean(
+        currentUser && (
+          userTier === tier.id ||
+          (tier.id === 'business' && userTier === 'negocios') ||
+          (tier.id === 'schools' && ['schools', 'escuelas', 'docentes', 'education'].includes(userTier))
+        )
+      );
       const cardTierLevel = TIER_HIERARCHY[tier.id] ?? 0;
-      const isCurrentPlan = Boolean(currentUser && (userTier === tier.id || (tier.id === 'business' && userTier === 'negocios')));
       const isDowngrade = Boolean(currentUser && userTierLevel > cardTierLevel && userTier !== 'free' && !tier.isVerification && !tier.isContact);
 
       const isYearly = currentBillingCycle === 'yearly';
@@ -376,7 +331,7 @@ export async function createUpgradeView(): Promise<HTMLElement> {
       const featuresList = Array.isArray(tier.features) ? tier.features : [];
 
       featuresList.forEach((feat: any, idx: number) => {
-        if (tierIdx > 0 && idx === 2 && category === 'personal') {
+        if (tierIdx > 0 && idx === 2 && category === 'personal_teams') {
           featuresHtml += `
             <div class="component-card-feature-divider-container" data-ref="feature-divider-${tier.id}">
               <hr class="component-divider component-card-feature-divider" />
@@ -388,7 +343,7 @@ export async function createUpgradeView(): Promise<HTMLElement> {
         const isHidden = idx > 4;
         featuresHtml += `
           <div class="component-card-feature-item ${isHidden ? 'component-card-feature-item--hidden' : ''}" data-ref="feature-item-${tier.id}" data-hidden="${isHidden ? 'true' : 'false'}">
-            <span class="material-symbols-rounded component-card-feature-icon">${escapeHtml(feat.icon || 'check_circle')}</span>
+            <svg class="component-icon component-card-feature-icon" aria-hidden="true"><use href="/icons.svg#${escapeHtml(feat.icon || 'check_circle')}"></use></svg>
             <div class="component-card-feature-text-container">
               <span class="component-card-feature-title">${escapeHtml(feat.title || feat.label || '')}</span>
               <span class="component-card-feature-desc">${escapeHtml(feat.desc || '')}</span>
@@ -410,7 +365,7 @@ export async function createUpgradeView(): Promise<HTMLElement> {
         <div class="component-card-section component-card-section--header" data-ref="card-header-${tier.id}">
           ${isCurrentPlan ? `
             <div class="component-card-current-badge" data-ref="current-badge-${tier.id}">
-              <span class="material-symbols-rounded" style="font-size: 14px;">check_circle</span>
+              <svg class="component-icon" aria-hidden="true" style="font-size: 14px;"><use href="/icons.svg#check_circle"></use></svg>
               <span>${escapeHtml(t('upgrade.current_plan') || 'Tu plan actual')}</span>
             </div>
           ` : (tier.badge ? `
@@ -419,7 +374,7 @@ export async function createUpgradeView(): Promise<HTMLElement> {
           <h2 class="component-card-title" data-ref="card-title-${tier.id}">${escapeHtml(tier.name)}</h2>
           <p class="component-card-desc" data-ref="card-desc-${tier.id}">${escapeHtml(tier.tagline)}</p>
           <span class="component-badge component-badge--sm component-card-storage-badge" data-ref="storage-badge-${tier.id}">
-            <span class="material-symbols-rounded">cloud</span>
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cloud"></use></svg>
             <span>${escapeHtml(tier.storage || 'Almacenamiento en la nube')}</span>
           </span>
         </div>
@@ -442,7 +397,7 @@ export async function createUpgradeView(): Promise<HTMLElement> {
         <div class="component-card-section component-card-section--action" data-ref="card-action-${tier.id}">
           ${isCurrentPlan ? `
             <button type="button" class="component-button component-button--rounded-pill component-card-button component-card-button--current" data-ref="btn-subscribe-${tier.id}" data-action="current-plan" disabled>
-              <span class="material-symbols-rounded" style="font-size: 18px; margin-right: 6px;">check_circle</span>
+              <svg class="component-icon" aria-hidden="true" style="font-size: 18px; margin-right: 6px;"><use href="/icons.svg#check_circle"></use></svg>
               <span>${escapeHtml(t('upgrade.current_plan') || 'Tu plan actual')}</span>
             </button>
           ` : isDowngrade ? `
@@ -628,15 +583,14 @@ export async function createUpgradeView(): Promise<HTMLElement> {
     });
   };
 
-  const switchCategory = (category: 'personal' | 'teams' | 'education'): void => {
+  const switchCategory = (category: 'personal_teams' | 'education'): void => {
     currentCategory = category;
 
     if (categoryPill) {
       categoryPill.setAttribute('data-category', category);
     }
 
-    btnCatPersonal?.classList.toggle('active', category === 'personal');
-    btnCatTeams?.classList.toggle('active', category === 'teams');
+    btnCatPersonalTeams?.classList.toggle('active', category === 'personal_teams');
     btnCatEducation?.classList.toggle('active', category === 'education');
 
     if (billingTogglePill) {
@@ -646,14 +600,9 @@ export async function createUpgradeView(): Promise<HTMLElement> {
     renderCards(category);
   };
 
-  btnCatPersonal?.addEventListener('click', (e) => {
+  btnCatPersonalTeams?.addEventListener('click', (e) => {
     e.preventDefault();
-    if (currentCategory !== 'personal') switchCategory('personal');
-  });
-
-  btnCatTeams?.addEventListener('click', (e) => {
-    e.preventDefault();
-    if (currentCategory !== 'teams') switchCategory('teams');
+    if (currentCategory !== 'personal_teams') switchCategory('personal_teams');
   });
 
   btnCatEducation?.addEventListener('click', (e) => {
@@ -735,10 +684,8 @@ export async function createUpgradeView(): Promise<HTMLElement> {
 
   if (requestedCategory === 'education' || requestedPlan === 'docentes' || requestedPlan === 'schools') {
     switchCategory('education');
-  } else if (requestedCategory === 'teams' || requestedPlan === 'business' || requestedPlan === 'negocios') {
-    switchCategory('teams');
   } else {
-    switchCategory('personal');
+    switchCategory('personal_teams');
   }
 
   if (requestedPlan) {

@@ -1,0 +1,370 @@
+<div class="layout-content" data-ref="education-view">
+  <div class="component-wrapper component-wrapper--full" data-ref="education-wrapper">
+    <div class="component-top" data-ref="component-top">
+      <div class="component-top-left" data-ref="component-top-left">
+        <h1 class="component-top-title" data-ref="education-title" data-i18n="education.title">Educación</h1>
+        <div class="component-nav-pills" data-ref="education-nav-tabs" style="display: inline-flex; align-items: center; gap: 4px; background: var(--bg-hover); padding: 4px; border-radius: 9999px; margin-left: 16px;">
+          <button type="button" class="btn btn--h32 btn--pill btn--black" data-ref="tab-btn-classrooms" data-tab="classrooms">
+            <svg class="component-icon" aria-hidden="true" style="font-size: 16px;"><use href="/icons.svg#school"></use></svg>
+            <span data-i18n="education.tab_classrooms">Salones y aulas</span>
+          </button>
+          <button type="button" class="btn btn--h32 btn--pill" data-ref="tab-btn-teachers" data-tab="teachers" style="display: none;">
+            <svg class="component-icon" aria-hidden="true" style="font-size: 16px;"><use href="/icons.svg#groups"></use></svg>
+            <span data-i18n="education.tab_teachers">Docentes</span>
+          </button>
+          <button type="button" class="btn btn--h32 btn--pill" data-ref="tab-btn-school" data-tab="school" style="display: none;">
+            <svg class="component-icon" aria-hidden="true" style="font-size: 16px;"><use href="/icons.svg#account_balance"></use></svg>
+            <span data-i18n="education.tab_school">Institución</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="component-top-right" data-ref="component-top-right">
+        <!-- Acciones pestaña Salones (Default) -->
+        <div class="component-top-actions" data-ref="education-default-actions">
+          <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-toggle-search" data-tooltip="Buscar aulas" aria-label="Buscar aulas">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+          </button>
+          <button type="button" class="btn btn--h40 btn--outline" data-ref="btn-join-classroom">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#key"></use></svg>
+            <span data-i18n="education.btn_join">Unirse con código</span>
+          </button>
+          <button type="button" class="btn btn--h40 btn--black" data-ref="btn-create-classroom">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+            <span data-i18n="education.btn_create">Nueva aula</span>
+          </button>
+        </div>
+
+        <!-- Acciones contextuales cuando se selecciona un salón -->
+        <div class="component-top-actions" data-ref="education-selected-actions" style="display: none;">
+          <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-action-create-canvas" data-tooltip="Crear lienzo en esta aula" aria-label="Crear lienzo en esta aula">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#brush"></use></svg>
+          </button>
+          <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-action-copy-code" data-tooltip="Copiar código de clase" aria-label="Copiar código de clase">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
+          </button>
+          <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-action-regen-code" data-tooltip="Regenerar código de clase" aria-label="Regenerar código de clase">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#refresh"></use></svg>
+          </button>
+          <button type="button" class="btn btn--h40 btn--icon" data-ref="btn-action-members" data-tooltip="Estudiantes y miembros" aria-label="Estudiantes y miembros">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
+          </button>
+          <button type="button" class="btn btn--h40 btn--danger btn--icon" data-ref="btn-action-delete" data-tooltip="Eliminar aula" aria-label="Eliminar aula">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
+          </button>
+        </div>
+
+        <!-- Acciones pestaña Docentes -->
+        <div class="component-top-actions" data-ref="teachers-top-actions" style="display: none;">
+          <button type="button" class="btn btn--h40 btn--black" data-ref="btn-add-teacher">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#person_add"></use></svg>
+            <span data-i18n="education.btn_add_teacher">Vincular docente</span>
+          </button>
+        </div>
+
+        <!-- Acciones pestaña Institución -->
+        <div class="component-top-actions" data-ref="school-top-actions" style="display: none;">
+          <button type="button" class="btn btn--h40 btn--outline" data-ref="btn-edit-school">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
+            <span data-i18n="education.school_edit_btn">Editar institución</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Barra de búsqueda en Salones -->
+      <div class="component-search-toolbar is-hidden" data-ref="search-toolbar">
+        <div class="component-search component-search--full" data-ref="search-box">
+          <div class="component-search__icon" data-ref="search-icon">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+          </div>
+          <div class="component-search__input-box" data-ref="search-input-box">
+            <input class="component-search__input" data-ref="education-search-input" data-i18n-placeholder="education.search_placeholder" type="text" maxlength="100" autocomplete="off" />
+          </div>
+          <button type="button" class="btn btn--h34 btn--icon btn--clear-search" data-ref="btn-clear-search" style="display: none; margin-right: 4px;" aria-label="Limpiar búsqueda">
+            <svg class="component-icon" aria-hidden="true" style="font-size: 18px;"><use href="/icons.svg#close"></use></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="component-bottom component-bottom--no-padding" data-ref="component-bottom">
+      <!-- PANE 1: Salones y Aulas -->
+      <div class="component-tab-pane" data-ref="tab-pane-classrooms">
+        <div class="component-table-wrapper" data-ref="education-table-wrapper">
+          <div class="component-locked-state is-hidden" data-ref="education-locked-state">
+            <div class="component-locked-state__card" data-ref="education-locked-card">
+              <div class="component-locked-state__icon-box" data-ref="education-locked-icon">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#school"></use></svg>
+              </div>
+              <span class="component-locked-state__badge" data-ref="education-locked-badge">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#lock"></use></svg>
+                <span data-i18n="education.locked_badge">Plan Escuelas e Instituciones</span>
+              </span>
+              <h2 class="component-locked-state__title" data-ref="education-locked-title" data-i18n="education.locked_title">Infraestructura Creativa Escolar</h2>
+              <p class="component-locked-state__desc" data-ref="education-locked-desc" data-i18n="education.locked_desc">Administra tu centro educativo, gestiona a tus profesores con licencias centralizadas y crea aulas interactivas para tus estudiantes con códigos de acceso simplificados.</p>
+              <div class="component-locked-state__benefits" data-ref="education-locked-benefits">
+                <div class="component-locked-state__benefit-item">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+                  <span data-i18n="education.locked_benefit_1">Directorio y asignación centralizada de licencias docentes</span>
+                </div>
+                <div class="component-locked-state__benefit-item">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+                  <span data-i18n="education.locked_benefit_2">Aulas escolares ilimitadas con códigos de acceso SP-XXXXXX</span>
+                </div>
+                <div class="component-locked-state__benefit-item">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+                  <span data-i18n="education.locked_benefit_3">Lienzos colaborativos de clase con roles, moderación y hasta 50 alumnos en simultáneo</span>
+                </div>
+              </div>
+              <div class="component-locked-state__actions" data-ref="education-locked-actions">
+                <button type="button" class="btn btn--h40 btn--black" data-ref="btn-locked-upgrade">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#school"></use></svg>
+                  <span data-i18n="education.locked_btn_upgrade">Mejorar a Educación</span>
+                </button>
+                <button type="button" class="btn btn--h40 btn--outline" data-ref="btn-locked-home" data-i18n="nav.go_home">Ir al inicio</button>
+              </div>
+            </div>
+          </div>
+
+          <table class="component-table" data-ref="education-table">
+            <thead class="component-table__head" data-ref="education-thead">
+              <tr>
+                <th data-ref="th-classroom" data-i18n="education.col_classroom">Aula escolar</th>
+                <th data-ref="th-desc" data-i18n="education.col_desc">Materia / Descripción</th>
+                <th data-ref="th-code" data-i18n="education.col_code">Código de clase</th>
+                <th data-ref="th-members" data-i18n="education.col_members">Integrantes</th>
+                <th data-ref="th-role" data-i18n="education.col_role">Rol</th>
+                <th data-ref="th-created" data-i18n="education.col_created">Fecha de creación</th>
+              </tr>
+            </thead>
+            <tbody class="component-table__body" data-ref="education-tbody">
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- PANE 2: Docentes de la Institución -->
+      <div class="component-tab-pane is-hidden" data-ref="tab-pane-teachers" style="display: none;">
+        <div class="component-table-wrapper" data-ref="teachers-table-wrapper">
+          <table class="component-table" data-ref="teachers-table">
+            <thead class="component-table__head" data-ref="teachers-thead">
+              <tr>
+                <th data-ref="th-faculty-teacher" data-i18n="education.col_teacher">Docente</th>
+                <th data-ref="th-faculty-email" data-i18n="education.col_email">Correo institucional</th>
+                <th data-ref="th-faculty-status" data-i18n="education.col_status">Estado</th>
+                <th data-ref="th-faculty-joined" data-i18n="education.col_joined">Fecha de alta</th>
+                <th data-ref="th-faculty-actions" style="text-align: right;" data-i18n="education.col_actions">Acciones</th>
+              </tr>
+            </thead>
+            <tbody class="component-table__body" data-ref="teachers-tbody">
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- PANE 3: Datos de la Institución -->
+      <div class="component-tab-pane is-hidden" data-ref="tab-pane-school" style="display: none; padding: 24px;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px;">
+          <div class="card card--padded" style="border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; background: var(--bg-surface);">
+            <div style="font-size: 12px; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;" data-i18n="education.card_school_name">Institución</div>
+            <div style="font-size: 18px; font-weight: 700; color: var(--text-primary); margin-top: 4px;" data-ref="stat-school-name">—</div>
+          </div>
+          <div class="card card--padded" style="border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; background: var(--bg-surface);">
+            <div style="font-size: 12px; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;" data-i18n="education.card_domain">Dominio escolar</div>
+            <div style="font-size: 18px; font-weight: 700; color: var(--text-primary); margin-top: 4px;" data-ref="stat-school-domain">—</div>
+          </div>
+          <div class="card card--padded" style="border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; background: var(--bg-surface);">
+            <div style="font-size: 12px; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;" data-i18n="education.card_teachers">Plantilla docente</div>
+            <div style="font-size: 18px; font-weight: 700; color: var(--text-primary); margin-top: 4px;" data-ref="stat-school-teachers">0 / 50</div>
+          </div>
+          <div class="card card--padded" style="border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; background: var(--bg-surface);">
+            <div style="font-size: 12px; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;" data-i18n="education.card_classrooms">Aulas activas</div>
+            <div style="font-size: 18px; font-weight: 700; color: var(--text-primary); margin-top: 4px;" data-ref="stat-school-classrooms">0</div>
+          </div>
+        </div>
+
+        <div class="card card--padded" style="border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; background: var(--bg-surface); max-width: 640px;">
+          <h2 style="font-size: 18px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px;" data-i18n="education.school_title">Configuración Institucional</h2>
+          <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 20px;" data-i18n="education.school_modal_desc">Configura el nombre oficial de tu colegio o universidad y el dominio de correo escolar.</p>
+          <button type="button" class="btn btn--h40 btn--black" data-ref="btn-open-school-edit">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
+            <span data-i18n="education.school_edit_btn">Editar datos de la institución</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal para unirse con código -->
+  <div class="modal-backdrop" data-ref="modal-join-backdrop">
+    <div class="modal-container" data-ref="modal-join-container">
+      <button type="button" class="modal-close-btn" data-ref="btn-close-join-modal" aria-label="Cerrar modal">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+      </button>
+      <div class="modal-card modal-card--w-520" data-ref="modal-join-card">
+        <div class="modal-card__header">
+          <h2 class="modal-card__title" data-ref="modal-join-title" data-i18n="education.join_modal_title">Unirse a un aula escolar</h2>
+        </div>
+        <form class="modal-card__body" data-ref="form-join">
+          <p class="component-disclaimer__text" style="margin-bottom: 16px;" data-i18n="education.join_modal_desc">Ingresa el código de 6 caracteres que te proporcionó tu docente (ej. SP-A3B9K2).</p>
+          <label class="field" data-ref="field-join-code">
+            <input class="field__input" data-ref="input-join-code" type="text" placeholder=" " maxlength="10" autocomplete="off" style="text-transform: uppercase; font-weight: 600; letter-spacing: 2px;" required />
+            <span class="field__label" data-ref="label-join-code" data-i18n="education.join_code_label">Código de clase</span>
+          </label>
+          <div class="modal-card__actions">
+            <button type="button" class="btn btn--h40 btn--outline" data-ref="btn-cancel-join" data-i18n="modal.cancel">Cancelar</button>
+            <button type="submit" class="btn btn--h40 btn--black" data-ref="btn-submit-join" data-i18n="education.join_btn">Unirse al aula</button>
+          </div>
+          <div class="banner banner--danger is-hidden" data-ref="banner-join-error"></div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal para crear aula escolar -->
+  <div class="modal-backdrop" data-ref="modal-classroom-backdrop">
+    <div class="modal-container" data-ref="modal-classroom-container">
+      <button type="button" class="modal-close-btn" data-ref="btn-close-classroom-modal" aria-label="Cerrar modal">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+      </button>
+      <div class="modal-card modal-card--w-520" data-ref="modal-classroom-card">
+        <div class="modal-card__header">
+          <h2 class="modal-card__title" data-ref="modal-classroom-title" data-i18n="education.create_modal_title">Nueva aula escolar</h2>
+        </div>
+        <form class="modal-card__body" data-ref="form-classroom">
+          <label class="field" data-ref="field-classroom-name">
+            <input class="field__input" data-ref="input-classroom-name" type="text" placeholder=" " maxlength="100" autocomplete="off" required />
+            <span class="field__label" data-ref="label-classroom-name" data-i18n="education.create_name_label">Nombre del aula escolar</span>
+          </label>
+          <label class="field" data-ref="field-classroom-desc">
+            <input class="field__input" data-ref="input-classroom-desc" type="text" placeholder=" " maxlength="255" autocomplete="off" />
+            <span class="field__label" data-ref="label-classroom-desc" data-i18n="education.create_desc_label">Materia o descripción (opcional)</span>
+          </label>
+          <div class="modal-card__actions">
+            <button type="button" class="btn btn--h40 btn--outline" data-ref="btn-cancel-classroom" data-i18n="modal.cancel">Cancelar</button>
+            <button type="submit" class="btn btn--h40 btn--black" data-ref="btn-submit-classroom" data-i18n="education.create_btn">Crear aula</button>
+          </div>
+          <div class="banner banner--danger is-hidden" data-ref="banner-classroom-error"></div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de integrantes del aula y código -->
+  <div class="modal-backdrop" data-ref="modal-members-backdrop">
+    <div class="modal-container" data-ref="modal-members-container">
+      <button type="button" class="modal-close-btn" data-ref="btn-close-members-modal" aria-label="Cerrar modal">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+      </button>
+      <div class="modal-card modal-card--w-520" data-ref="modal-members-card">
+        <div class="modal-card__header">
+          <h2 class="modal-card__title" data-ref="members-modal-title" data-i18n="education.members_title">Estudiantes e integrantes</h2>
+        </div>
+        <div class="modal-card__body">
+          <div class="field-group" data-ref="classroom-code-box" style="margin-bottom: 16px; padding: 14px; background: var(--bg-hover); border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
+            <div>
+              <div style="font-size: 12px; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;" data-i18n="education.col_code">Código de clase</div>
+              <div style="font-size: 18px; font-weight: 700; letter-spacing: 2px; color: var(--text-primary);" data-ref="display-classroom-code">SP-XXXXXX</div>
+            </div>
+            <button type="button" class="btn btn--h34 btn--outline" data-ref="btn-copy-modal-code">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
+              <span data-i18n="education.copy_code">Copiar</span>
+            </button>
+          </div>
+
+          <div class="field-group">
+            <div style="display: flex; gap: 8px; align-items: stretch;">
+              <label class="field" data-ref="field-add-member" style="flex: 1; margin: 0;">
+                <input class="field__input" data-ref="input-add-member" type="text" placeholder=" " autocomplete="off" />
+                <span class="field__label" data-ref="label-add-member" data-i18n="teams.add_member_placeholder">Buscar por nombre o correo...</span>
+              </label>
+              <button type="button" class="btn btn--h55 btn--black" data-ref="btn-add-member" style="white-space: nowrap; padding: 0 16px;">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#person_add"></use></svg>
+                <span data-i18n="teams.btn_add_member">Agregar</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <div class="settings-dropdown-wrapper settings-dropdown-wrapper--full" data-ref="members-dropdown-wrapper">
+              <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-members">
+                <div class="dropdown-trigger__left">
+                  <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
+                  <span class="dropdown-trigger__text" data-ref="members-trigger-text">Alumnos inscritos</span>
+                </div>
+                <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+              </button>
+
+              <div class="dropdown-backdrop" data-ref="members-dropdown-backdrop">
+                <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="members-dropdown-menu">
+                  <div class="menu-panel__list menu-panel__list--scrollable" data-ref="members-dropdown-list">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-card__actions">
+            <button type="button" class="btn btn--h40 btn--black" data-ref="btn-done-members" data-i18n="modal.close">Cerrar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal para vincular docente a la institución -->
+  <div class="modal-backdrop" data-ref="modal-teacher-backdrop">
+    <div class="modal-container" data-ref="modal-teacher-container">
+      <button type="button" class="modal-close-btn" data-ref="btn-close-teacher-modal" aria-label="Cerrar modal">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+      </button>
+      <div class="modal-card modal-card--w-520" data-ref="modal-teacher-card">
+        <div class="modal-card__header">
+          <h2 class="modal-card__title" data-ref="modal-teacher-title" data-i18n="education.add_teacher_title">Vincular nuevo docente</h2>
+        </div>
+        <form class="modal-card__body" data-ref="form-teacher">
+          <p class="component-disclaimer__text" style="margin-bottom: 16px;" data-i18n="education.add_teacher_desc">Ingresa el nombre de usuario o correo de la cuenta de Spriteboard que deseas registrar como docente de tu institución educativa.</p>
+          <label class="field" data-ref="field-teacher-query">
+            <input class="field__input" data-ref="input-teacher-query" type="text" placeholder=" " maxlength="150" autocomplete="off" required />
+            <span class="field__label" data-ref="label-teacher-query" data-i18n="education.add_teacher_input_label">Nombre de usuario o correo</span>
+          </label>
+          <div class="modal-card__actions">
+            <button type="button" class="btn btn--h40 btn--outline" data-ref="btn-cancel-teacher" data-i18n="modal.cancel">Cancelar</button>
+            <button type="submit" class="btn btn--h40 btn--black" data-ref="btn-submit-teacher" data-i18n="education.add_teacher_submit">Vincular docente</button>
+          </div>
+          <div class="banner banner--danger is-hidden" data-ref="banner-teacher-error"></div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal para editar datos de la institución -->
+  <div class="modal-backdrop" data-ref="modal-school-backdrop">
+    <div class="modal-container" data-ref="modal-school-container">
+      <button type="button" class="modal-close-btn" data-ref="btn-close-school-modal" aria-label="Cerrar modal">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+      </button>
+      <div class="modal-card modal-card--w-520" data-ref="modal-school-card">
+        <div class="modal-card__header">
+          <h2 class="modal-card__title" data-ref="modal-school-title" data-i18n="education.school_modal_title">Datos de la institución</h2>
+        </div>
+        <form class="modal-card__body" data-ref="form-school">
+          <p class="component-disclaimer__text" style="margin-bottom: 16px;" data-i18n="education.school_modal_desc">Configura el nombre oficial de tu colegio o universidad y el dominio de correo escolar.</p>
+          <label class="field" data-ref="field-school-name">
+            <input class="field__input" data-ref="input-school-name" type="text" placeholder=" " maxlength="150" autocomplete="off" required />
+            <span class="field__label" data-ref="label-school-name" data-i18n="education.school_name_label">Nombre de la institución</span>
+          </label>
+          <label class="field" data-ref="field-school-domain">
+            <input class="field__input" data-ref="input-school-domain" type="text" placeholder=" " maxlength="100" autocomplete="off" />
+            <span class="field__label" data-ref="label-school-domain" data-i18n="education.school_domain_label">Dominio escolar (ej. colegio.edu)</span>
+          </label>
+          <div class="modal-card__actions">
+            <button type="button" class="btn btn--h40 btn--outline" data-ref="btn-cancel-school" data-i18n="modal.cancel">Cancelar</button>
+            <button type="submit" class="btn btn--h40 btn--black" data-ref="btn-submit-school" data-i18n="education.school_save_btn">Guardar cambios</button>
+          </div>
+          <div class="banner banner--danger is-hidden" data-ref="banner-school-error"></div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

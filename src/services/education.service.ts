@@ -51,7 +51,25 @@ export async function createClassroom(
     const name = (dto.name || 'Nueva aula escolar').trim();
     const description = (dto.description || '').trim() || null;
     const color = dto.color || '#4f46e5';
-    const schoolId = dto.schoolId || null;
+    let schoolId = dto.schoolId || null;
+
+    if (!schoolId) {
+      const [adminOrg] = await pool.query<mysql.RowDataPacket[]>(
+        'SELECT id FROM school_organizations WHERE admin_id = ? LIMIT 1',
+        [teacherId]
+      );
+      if (adminOrg.length > 0) {
+        schoolId = adminOrg[0].id;
+      } else {
+        const [teacherOrg] = await pool.query<mysql.RowDataPacket[]>(
+          "SELECT school_id FROM school_teachers WHERE user_id = ? AND status = 'active' LIMIT 1",
+          [teacherId]
+        );
+        if (teacherOrg.length > 0) {
+          schoolId = teacherOrg[0].school_id;
+        }
+      }
+    }
 
     const [result] = await pool.execute<mysql.ResultSetHeader>(
       `INSERT INTO teams (uuid, owner_id, name, description, color, team_type, join_code, school_id)
@@ -256,37 +274,169 @@ export async function getUserClassrooms(userId: number): Promise<Classroom[]> {
   }
 }
 
-export async function getSchoolOrganization(adminId: number): Promise<SchoolOrganization | null> {
+export async function getSchoolOrganization(userId: number): Promise<SchoolOrganization | null> {
   try {
-    const [rows] = await pool.query<mysql.RowDataPacket[]>(
+    let [rows] = await pool.query<mysql.RowDataPacket[]>(
       `SELECT s.*,
               (SELECT COUNT(id) FROM school_teachers WHERE school_id = s.id AND status = 'active') AS teachers_count,
               (SELECT COUNT(id) FROM teams WHERE school_id = s.id AND team_type = 'classroom') AS classrooms_count
        FROM school_organizations s
        WHERE s.admin_id = ? LIMIT 1`,
-      [adminId]
+      [userId]
     );
 
-    if (rows.length === 0) {
-      return null;
+    let orgRecord: any = rows[0];
+
+    if (!orgRecord) {
+      const [teacherOrg] = await pool.query<mysql.RowDataPacket[]>(
+        "SELECT school_id FROM school_teachers WHERE user_id = ? AND status = 'active' LIMIT 1",
+        [userId]
+      );
+      if (teacherOrg.length > 0) {
+        const [sRows] = await pool.query<mysql.RowDataPacket[]>(
+          `SELECT s.*,
+                  (SELECT COUNT(id) FROM school_teachers WHERE school_id = s.id AND status = 'active') AS teachers_count,
+                  (SELECT COUNT(id) FROM teams WHERE school_id = s.id AND team_type = 'classroom') AS classrooms_count
+           FROM school_organizations s
+           WHERE s.id = ? LIMIT 1`,
+          [teacherOrg[0].school_id]
+        );
+        orgRecord = sRows[0];
+      }
     }
 
-    const r = rows[0];
+    if (!orgRecord) {
+      const [uRows] = await pool.query<mysql.RowDataPacket[]>(
+        'SELECT username, subscription_tier FROM users WHERE id = ? LIMIT 1',
+        [userId]
+      );
+      const tier = (uRows[0]?.subscription_tier || '').toLowerCase();
+      if (['escuelas', 'instituciones', 'education_institution', 'schools', 'docentes'].includes(tier)) {
+        const uuid = crypto.randomUUID();
+        const defaultName = `Institución de ${uRows[0]?.username || 'Educación'}`;
+        const [insertRes] = await pool.execute<mysql.ResultSetHeader>(
+          'INSERT INTO school_organizations (uuid, admin_id, name, max_teachers) VALUES (?, ?, ?, 50)',
+          [uuid, userId, defaultName]
+        );
+        orgRecord = {
+          id: insertRes.insertId,
+          uuid,
+          admin_id: userId,
+          name: defaultName,
+          domain: null,
+          max_teachers: 50,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          teachers_count: 0,
+          classrooms_count: 0,
+        };
+      } else {
+        return null;
+      }
+    }
+
+    const [teacherRows] = await pool.query<mysql.RowDataPacket[]>(
+      `SELECT st.id, st.school_id, st.user_id, st.status, st.created_at, u.username, u.email, u.avatar_url
+       FROM school_teachers st
+       INNER JOIN users u ON u.id = st.user_id
+       WHERE st.school_id = ? AND st.status = 'active'
+       ORDER BY st.created_at DESC`,
+      [orgRecord.id]
+    );
+
+    const teachers: SchoolTeacher[] = teacherRows.map((t) => ({
+      id: t.id,
+      school_id: t.school_id,
+      user_id: t.user_id,
+      status: t.status,
+      created_at: t.created_at,
+      username: t.username,
+      email: t.email,
+      avatar_url: t.avatar_url,
+    }));
+
     return {
-      id: r.id,
-      uuid: r.uuid,
-      admin_id: r.admin_id,
-      name: r.name,
-      domain: r.domain,
-      max_teachers: r.max_teachers,
-      created_at: r.created_at,
-      updated_at: r.updated_at,
-      teachers_count: Number(r.teachers_count) || 0,
-      classrooms_count: Number(r.classrooms_count) || 0,
+      id: orgRecord.id,
+      uuid: orgRecord.uuid,
+      admin_id: orgRecord.admin_id,
+      name: orgRecord.name,
+      domain: orgRecord.domain,
+      max_teachers: orgRecord.max_teachers,
+      created_at: orgRecord.created_at,
+      updated_at: orgRecord.updated_at,
+      teachers_count: Number(orgRecord.teachers_count) || teachers.length,
+      classrooms_count: Number(orgRecord.classrooms_count) || 0,
+      teachers,
+      is_admin: orgRecord.admin_id === userId,
     };
   } catch (err: any) {
-    logger.db.error(`Error al consultar organización escolar para usuario ${adminId}`, err);
+    logger.db.error(`Error al consultar organización escolar para usuario ${userId}`, err);
     throw new Error('No se pudo obtener la organización escolar.');
+  }
+}
+
+export async function updateSchoolOrganization(
+  adminId: number,
+  dto: { name?: string; domain?: string }
+): Promise<SchoolOrganization> {
+  try {
+    const school = await getSchoolOrganization(adminId);
+    if (!school) {
+      throw new Error('No posees una organización escolar activa.');
+    }
+    if (!school.is_admin) {
+      throw new Error('Solo el administrador escolar puede modificar los datos de la institución.');
+    }
+
+    const cleanName = (dto.name || '').trim();
+    if (!cleanName) {
+      throw new Error('El nombre de la institución no puede estar vacío.');
+    }
+
+    let cleanDomain = (dto.domain || '').trim().toLowerCase();
+    if (cleanDomain) {
+      cleanDomain = cleanDomain.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/^@/, '');
+    }
+
+    await pool.execute(
+      'UPDATE school_organizations SET name = ?, domain = ? WHERE id = ?',
+      [cleanName, cleanDomain || null, school.id]
+    );
+
+    logger.db.info(`Organización escolar ${school.id} actualizada por admin ${adminId}: ${cleanName}`);
+    const updated = await getSchoolOrganization(adminId);
+    return updated!;
+  } catch (err: any) {
+    logger.db.error(`Error al actualizar organización escolar para admin ${adminId}`, err);
+    throw err;
+  }
+}
+
+export async function removeSchoolTeacher(
+  adminId: number,
+  targetUserId: number
+): Promise<boolean> {
+  try {
+    const school = await getSchoolOrganization(adminId);
+    if (!school) {
+      throw new Error('No posees una organización escolar activa.');
+    }
+
+    await pool.execute(
+      "UPDATE school_teachers SET status = 'revoked' WHERE school_id = ? AND user_id = ?",
+      [school.id, targetUserId]
+    );
+
+    await pool.execute(
+      "UPDATE users SET subscription_tier = 'free' WHERE id = ? AND subscription_tier IN ('docentes', 'escuelas')",
+      [targetUserId]
+    );
+
+    logger.db.info(`Docente ${targetUserId} revocado de la escuela ${school.uuid} por admin ${adminId}`);
+    return true;
+  } catch (err: any) {
+    logger.db.error(`Error al revocar docente ${targetUserId} de la escuela por admin ${adminId}`, err);
+    throw err;
   }
 }
 
@@ -334,7 +484,7 @@ export async function addSchoolTeacher(
     }
 
     await pool.execute(
-      "UPDATE users SET subscription_tier = 'docentes' WHERE id = ? AND subscription_tier = 'free'",
+      "UPDATE users SET subscription_tier = 'escuelas' WHERE id = ? AND subscription_tier = 'free'",
       [targetUser.id]
     );
 
