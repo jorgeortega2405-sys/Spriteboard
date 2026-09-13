@@ -53,7 +53,7 @@ class TemplatesController {
     this.badgesContainer = this.container.querySelector<HTMLElement>('[data-ref="templates-categories-badges"]');
     this.templatesSection = this.container.querySelector<HTMLElement>('[data-ref="templates-section"]');
 
-    this.scrollableEl = this.container.querySelector<HTMLElement>('[data-ref="templates-scrollable"]');
+    this.scrollableEl = this.container;
     this.sentinelEl = this.container.querySelector<HTMLElement>('[data-ref="templates-sentinel"]');
 
     this.renderCategoryBadges();

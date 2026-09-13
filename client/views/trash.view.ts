@@ -316,7 +316,7 @@ class TrashController {
     const target = e.target as HTMLElement | null;
     if (
       target?.closest(
-        '.canvas-card, button, a, input, [data-ref="selection-toolbar"], [data-ref="search-toolbar"], [data-ref="component-top"]'
+        '.layout-nav, .canvas-card, button, a, input, [data-ref="selection-toolbar"], [data-ref="search-toolbar"], [data-ref="component-top"]'
       )
     ) {
       return;

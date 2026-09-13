@@ -176,6 +176,85 @@ html.dark-theme .layout-content {
 .layout-content:has(.layout-nav) {
   padding: 6px 6px 0 0;
   gap: 0;
+  background-color: #ffffff;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+html[data-theme="dark"] .layout-content:has(.layout-nav),
+html.dark-theme .layout-content:has(.layout-nav) {
+  background-color: #09090b;
+}
+
+.layout-content:has(.layout-nav):has(.no-padding) {
+  overflow: hidden;
+}
+
+.layout-content:has(.layout-nav) .layout-nav {
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  height: 100vh;
+  height: 100dvh;
+  margin-top: -6px;
+  flex-shrink: 0;
+}
+
+.layout-content:has(.layout-nav) .view-wrapper,
+.layout-content:has(.layout-nav) .home-wrapper,
+.layout-content:has(.layout-nav) .component-wrapper:not(.no-padding) {
+  height: auto !important;
+  min-height: calc(100vh - 6px) !important;
+  min-height: calc(100dvh - 6px) !important;
+  overflow: visible !important;
+}
+
+.layout-content:has(.layout-nav) .component-wrapper--full:not(.no-padding) {
+  height: auto !important;
+  min-height: calc(100vh - 6px) !important;
+  min-height: calc(100dvh - 6px) !important;
+}
+
+.layout-content:has(.layout-nav) .view-wrapper .layout-body--scrollable,
+.layout-content:has(.layout-nav) .view-wrapper .layout-main--scrollable,
+.layout-content:has(.layout-nav) .view-wrapper .layout-scrollable,
+.layout-content:has(.layout-nav) .view-wrapper .view-scrollable,
+.layout-content:has(.layout-nav) .home-wrapper .layout-body--scrollable,
+.layout-content:has(.layout-nav) .home-wrapper .layout-main--scrollable,
+.layout-content:has(.layout-nav) .home-wrapper .layout-scrollable,
+.layout-content:has(.layout-nav) .home-wrapper .home-scrollable,
+.layout-content:has(.layout-nav) .component-wrapper:not(.no-padding) .layout-body--scrollable,
+.layout-content:has(.layout-nav) .component-wrapper:not(.no-padding) .layout-scrollable,
+.layout-content:has(.layout-nav) .component-wrapper:not(.no-padding) .view-scrollable {
+  overflow-y: visible !important;
+  height: auto !important;
+  flex: 1 1 auto;
+}
+
+.layout-content:has(.layout-nav) .view-wrapper .component-bottom,
+.layout-content:has(.layout-nav) .home-wrapper .component-bottom,
+.layout-content:has(.layout-nav) .component-wrapper:not(.no-padding) .component-bottom {
+  overflow: visible !important;
+  height: auto !important;
+  flex: 1 1 auto;
+}
+
+.layout-content:has(.layout-nav) .view-wrapper .component-table-wrapper,
+.layout-content:has(.layout-nav) .home-wrapper .component-table-wrapper,
+.layout-content:has(.layout-nav) .component-wrapper:not(.no-padding) .component-table-wrapper {
+  overflow-y: visible !important;
+  overflow-x: auto;
+  height: auto !important;
+  flex: 1 1 auto;
+}
+
+.layout-content:has(.layout-nav) .view-wrapper > .component-top,
+.layout-content:has(.layout-nav) .home-wrapper > .component-top,
+.layout-content:has(.layout-nav) .view-wrapper > .home-floating-top {
+  border-top-left-radius: 15px;
+  border-top-right-radius: 15px;
 }
 
 /* Layout scrolleable independiente (exclusivo para scroll, dejando fuera al sidebar) */
@@ -4579,10 +4658,11 @@ body.modal-open {
 
 .chat-sidebar {
   display: none;
-  position: absolute;
+  position: fixed;
   right: 0;
   top: 0;
-  height: 100%;
+  height: 100vh;
+  height: 100dvh;
   z-index: 50;
   padding: 8px;
   box-sizing: border-box;
@@ -13168,8 +13248,10 @@ html[data-theme="dark"] .design-share-search-results,
 .home-wrapper {
   position: relative;
   width: 100%;
-  height: 100%;
-  overflow: hidden;
+  min-height: calc(100vh - 6px);
+  min-height: calc(100dvh - 6px);
+  height: auto;
+  overflow: visible;
   display: flex;
   flex-direction: column;
   background-color: var(--bg-surface);
@@ -13427,8 +13509,7 @@ html.dark-theme .btn--upgrade-pill__icon {
   flex: 1 1 auto;
   min-height: 0;
   width: 100%;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: visible;
   box-sizing: border-box;
   border-radius: 16px 16px 0 0;
 }

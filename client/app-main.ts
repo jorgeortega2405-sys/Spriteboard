@@ -15,16 +15,17 @@ function initScrollShadow(): void {
       if (!target || target.nodeType !== 1) return;
 
       if (
+        target.classList.contains('layout-content') ||
         target.classList.contains('layout-scrollable') ||
         target.classList.contains('layout-body--scrollable') ||
         target.classList.contains('layout-content__scrollable') ||
         target.classList.contains('component-table-wrapper')
       ) {
         const isScrolled = target.scrollTop > 0;
-        const componentWrapper = target.closest('.component-wrapper');
+        const componentWrapper = target.closest('.component-wrapper') || target.querySelector<HTMLElement>('.component-wrapper');
         const componentTop = componentWrapper
-          ? componentWrapper.querySelector<HTMLElement>('.component-top')
-          : target.closest('.layout-content')?.querySelector<HTMLElement>('.component-top');
+          ? componentWrapper.querySelector<HTMLElement>('.component-top, .view-header, .home-floating-top')
+          : target.closest('.layout-content')?.querySelector<HTMLElement>('.component-top, .view-header, .home-floating-top');
 
         if (componentTop) {
           componentTop.classList.toggle('shadow', isScrolled);

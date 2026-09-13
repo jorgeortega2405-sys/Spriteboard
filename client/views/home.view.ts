@@ -107,7 +107,7 @@ class HomeController {
   public async init(initialFolderUuid?: string | null): Promise<void> {
     this.gridEl = this.container.querySelector<HTMLElement>('[data-ref="canvas-grid"]');
     this.canvasSection = this.container.querySelector<HTMLElement>('[data-ref="canvas-section"]');
-    this.scrollableEl = this.container.querySelector<HTMLElement>('[data-ref="home-scrollable"]');
+    this.scrollableEl = this.container;
     this.sentinelEl = this.container.querySelector<HTMLElement>('[data-ref="canvas-sentinel"]');
 
     this.btnToggleSearch = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-search"]');
@@ -1631,7 +1631,7 @@ class HomeController {
     const target = e.target as HTMLElement | null;
     if (
       target?.closest(
-        '.canvas-card, button, a, input, [data-ref="card-menu-dropdown"], [data-ref="folder-menu-dropdown"], [data-ref="selection-toolbar"], [data-ref="search-toolbar"], [data-ref="home-floating-top"], [data-ref="home-hero"], [data-ref="component-top"]'
+        '.layout-nav, .canvas-card, button, a, input, [data-ref="card-menu-dropdown"], [data-ref="folder-menu-dropdown"], [data-ref="selection-toolbar"], [data-ref="search-toolbar"], [data-ref="home-floating-top"], [data-ref="home-hero"], [data-ref="component-top"]'
       )
     ) {
       return;
