@@ -1170,6 +1170,7 @@ export async function createEducationClassroomsView(): Promise<HTMLElement> {
 
   const controller = new EducationController(container, 'classrooms');
   await controller.init();
+  (container as any).__controller = controller;
 
   return container;
 }
@@ -1183,6 +1184,7 @@ export async function createEducationTeachersView(): Promise<HTMLElement> {
 
   const controller = new EducationController(container, 'teachers');
   await controller.init();
+  (container as any).__controller = controller;
 
   return container;
 }
@@ -1196,6 +1198,7 @@ export async function createEducationInstitutionView(): Promise<HTMLElement> {
 
   const controller = new EducationController(container, 'school');
   await controller.init();
+  (container as any).__controller = controller;
 
   return container;
 }

@@ -1,6 +1,6 @@
 import { navigate } from '../app-router.js';
-import { renderIcons } from '../services/icon.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
+import { renderIcons } from '../services/icon.service.js';
 
 type PlanTier = 'free' | 'pro' | 'business' | 'negocios' | 'docentes' | 'escuelas' | 'teachers' | 'schools';
 

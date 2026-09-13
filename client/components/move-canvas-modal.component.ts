@@ -1,11 +1,11 @@
-import { openCreateFolderModal } from './folder-modal.component.js';
-import { openModal } from './modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { escapeHtml, getApi, putApi } from '../services/api.service.js';
-import { renderIcons } from '../services/icon.service.js';
 import { t } from '../services/i18n.service.js';
+import { renderIcons } from '../services/icon.service.js';
 import { showToast } from '../services/toast.service.js';
 import { CanvasItem, FolderItem } from '../types/canvas.types.js';
+import { openCreateFolderModal } from './folder-modal.component.js';
+import { openModal } from './modal.component.js';
 
 export function openMoveCanvasModal(canvasOrCanvases: CanvasItem | CanvasItem[], options?: { onMoved?: () => void }): void {
   const canvases = Array.isArray(canvasOrCanvases) ? canvasOrCanvases : [canvasOrCanvases];

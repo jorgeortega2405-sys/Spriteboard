@@ -853,6 +853,7 @@ export async function createTeamsView(): Promise<HTMLElement> {
 
   const controller = new TeamsController(container);
   await controller.init();
+  (container as any).__controller = controller;
 
   return container;
 }

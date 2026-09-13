@@ -97,7 +97,7 @@ Al escribir o modificar plantillas HTML, los atributos deben ordenarse de acuerd
    - `client/config/`: Configuraciones de rutas y skeletons (`skeleton-routes.ts`, `skeleton-templates.ts`).
    - `public/views/`: Archivos de plantilla `.html` puros organizados temáticamente (`auth/`, `settings/`, `home/`, `error/`).
    - `public/translations/`: Archivos de idioma i18n (`es-419.json`, etc.).
-   - `public/css/`: Hojas de estilo con metodología BEM (`root.css`, `styles.css`).
+   - `public/css/`: Hojas de estilo modulares con metodología BEM (`root.css`, `styles.css` para layout general, y carpeta `components/` con `component-buttons.css`, `component-forms.css`, `component-modals.css`).
    - `public/uploads/`: Almacenamiento local de archivos multimedia y avatares.
    - **Compilador / Bundler**: Vite en modo middleware Express para desarrollo (`npm run dev`) y compilación de producción a `dist/client/` (`npm run build`). Verificación de tipos con `npm run typecheck`.
 

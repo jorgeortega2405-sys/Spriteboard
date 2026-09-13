@@ -92,7 +92,7 @@ export async function findUserById(id: number): Promise<UserRecord | null> {
   } catch {}
 
   const [rows] = await pool.query<UserRecord[]>(
-    'SELECT id, username, email, avatar_url, role, google_id, subscription_tier, two_factor_enabled, two_factor_secret, two_factor_recovery_codes FROM users WHERE id = ? LIMIT 1',
+    'SELECT id, username, email, avatar_url, role, google_id, subscription_tier, two_factor_enabled FROM users WHERE id = ? LIMIT 1',
     [id]
   );
   if (rows.length === 0) return null;
@@ -101,6 +101,15 @@ export async function findUserById(id: number): Promise<UserRecord | null> {
     await redis.setex(cacheKey, 300, JSON.stringify(user));
   } catch {}
   return user;
+}
+
+export async function getUser2FASecret(userId: number): Promise<{ two_factor_secret: string | null; two_factor_recovery_codes: string | null } | null> {
+  const [rows] = await pool.query<RowDataPacket[]>(
+    'SELECT two_factor_secret, two_factor_recovery_codes FROM users WHERE id = ? LIMIT 1',
+    [userId]
+  );
+  if (rows.length === 0) return null;
+  return rows[0] as { two_factor_secret: string | null; two_factor_recovery_codes: string | null };
 }
 
 export async function createUser(data: {
@@ -243,14 +252,14 @@ export async function disableUser2FA(userId: number): Promise<boolean> {
 }
 
 export async function verifyAndConsumeBackupCode(userId: number, code: string): Promise<boolean> {
-  const user = await findUserById(userId);
-  if (!user || !user.two_factor_recovery_codes) {
+  const twoFactorData = await getUser2FASecret(userId);
+  if (!twoFactorData || !twoFactorData.two_factor_recovery_codes) {
     return false;
   }
 
   let codes: string[] = [];
   try {
-    codes = JSON.parse(user.two_factor_recovery_codes) as string[];
+    codes = JSON.parse(twoFactorData.two_factor_recovery_codes) as string[];
   } catch {
     return false;
   }

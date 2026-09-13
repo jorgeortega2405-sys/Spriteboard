@@ -1,8 +1,8 @@
 import { API_ROUTES } from '../config/api-routes.js';
 import { currentUser, deleteApi, escapeHtml, getApi, patchApi, postApi } from '../services/api.service.js';
 import { getLocalCanvasByUuid, markLocalCanvasAsSynced } from '../services/canvas-storage.service.js';
-import { renderIcons } from '../services/icon.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
+import { renderIcons } from '../services/icon.service.js';
 import { showToast } from '../services/toast.service.js';
 import { CanvasItem, CanvasMember, SearchUserResult } from '../types/canvas.types.js';
 import { CanvasTeamItem, Team } from '../types/team.types.js';

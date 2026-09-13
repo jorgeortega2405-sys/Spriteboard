@@ -1,4 +1,4 @@
-import { forgotPassword, googleCallback, login, logout, logoutAll, me, redirectToGoogle, redirectToGoogleLink, redirectToGoogleVerify, resetPassword, resendRegistrationCode, sendRegistrationCode, switchAccount, validateResetToken, validateStage1, verify2FALogin, verifyRegistrationCode } from '../controllers/auth.controller.js';
+import { forgotPassword, googleCallback, login, logout, logoutAll, me, redirectToGoogle, redirectToGoogleLink, redirectToGoogleVerify, resendRegistrationCode, resetPassword, sendRegistrationCode, switchAccount, validateResetToken, validateStage1, verify2FALogin, verifyRegistrationCode } from '../controllers/auth.controller.js';
 import { requireAuth } from '../middlewares/auth.middleware.js';
 import { forgotPasswordLimiter, loginLimiter, registerLimiter, resetPasswordLimiter, sendCodeLimiter, verifyCodeLimiter } from '../middlewares/rate-limit.middleware.js';
 import { Router } from 'express';

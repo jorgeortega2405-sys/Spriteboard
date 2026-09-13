@@ -1,7 +1,7 @@
-import { Request, Response } from 'express';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import { addSchoolTeacher, createClassroom, getSchoolOrganization, getUserClassrooms, joinClassroomByCode, regenerateClassroomCode, removeSchoolTeacher, updateSchoolOrganization } from '../services/education.service.js';
 import { logger } from '../services/logger.service.js';
+import { Request, Response } from 'express';
 
 export async function createClassroomHandler(req: Request, res: Response): Promise<void> {
   try {
@@ -28,7 +28,7 @@ export async function createClassroomHandler(req: Request, res: Response): Promi
   } catch (err: any) {
     logger.app.error('Error al crear aula escolar', err);
     res.status(400).json({
-      error: err.message || 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
+      error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
     });
   }
 }
@@ -52,7 +52,7 @@ export async function joinClassroomHandler(req: Request, res: Response): Promise
   } catch (err: any) {
     logger.app.error('Error al unirse al aula por código', err);
     res.status(400).json({
-      error: err.message || 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
+      error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
     });
   }
 }
@@ -71,7 +71,7 @@ export async function regenerateClassroomCodeHandler(req: Request, res: Response
   } catch (err: any) {
     logger.app.error('Error al regenerar código de aula', err);
     res.status(400).json({
-      error: err.message || 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
+      error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
     });
   }
 }
@@ -135,7 +135,7 @@ export async function updateSchoolHandler(req: Request, res: Response): Promise<
   } catch (err: any) {
     logger.app.error('Error al actualizar organización escolar', err);
     res.status(400).json({
-      error: err.message || 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
+      error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
     });
   }
 }
@@ -159,7 +159,7 @@ export async function addSchoolTeacherHandler(req: Request, res: Response): Prom
   } catch (err: any) {
     logger.app.error('Error al agregar docente a la escuela', err);
     res.status(400).json({
-      error: err.message || 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
+      error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
     });
   }
 }
@@ -184,7 +184,7 @@ export async function removeSchoolTeacherHandler(req: Request, res: Response): P
   } catch (err: any) {
     logger.app.error('Error al revocar docente de la escuela', err);
     res.status(400).json({
-      error: err.message || 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
+      error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
     });
   }
 }

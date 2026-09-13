@@ -5,9 +5,9 @@ import { API_ROUTES } from '../config/api-routes.js';
 import { ALL_PRESETS, PresetItem } from '../config/templates.config.js';
 import { currentUser, escapeHtml, getApi, postApi } from '../services/api.service.js';
 import { getAllLocalCanvases } from '../services/canvas-storage.service.js';
+import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { SkeletonService } from '../services/skeleton.service.js';
-import { t, translateElement } from '../services/i18n.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { CanvasItem } from '../types/canvas.types.js';
@@ -404,5 +404,6 @@ export async function createSearchView(): Promise<HTMLElement> {
   await controller.init();
 
   (container as any)._searchController = controller;
+  (container as any).__controller = controller;
   return container;
 }

@@ -1,7 +1,7 @@
-import { Request, Response } from 'express';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import { logger } from '../services/logger.service.js';
 import { addTeamMember, createTeam, deleteTeam, getTeamByUuid, getTeamCanvases, getUserTeams, removeTeamMember, updateTeam } from '../services/team.service.js';
+import { Request, Response } from 'express';
 
 export async function listTeamsHandler(req: Request, res: Response): Promise<void> {
   try {
@@ -42,10 +42,7 @@ export async function createTeamHandler(req: Request, res: Response): Promise<vo
     res.status(201).json({ success: true, team });
   } catch (err: any) {
     logger.app.error('Error al crear equipo en team controller', err);
-    const msg = err?.message && typeof err.message === 'string' && !err.message.includes('SQL') && !err.message.includes('at ')
-      ? err.message
-      : 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.';
-    res.status(400).json({ error: msg });
+    res.status(400).json({ error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.' });
   }
 }
 

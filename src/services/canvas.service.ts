@@ -219,7 +219,18 @@ export async function createCanvas(userId: number, dto: CreateCanvasDto): Promis
 
 export async function invalidateUserCanvasesCache(userId: number): Promise<void> {
   try {
-    const keys = await redis.keys(`user:canvases:${userId}*`);
+    const stream = redis.scanStream({
+      match: `user:canvases:${userId}*`,
+      count: 100,
+    });
+    const keys: string[] = [];
+    await new Promise<void>((resolve) => {
+      stream.on('data', (resultKeys: string[]) => {
+        keys.push(...resultKeys);
+      });
+      stream.on('end', () => resolve());
+      stream.on('error', () => resolve());
+    });
     if (keys.length > 0) {
       await redis.del(...keys);
     } else {

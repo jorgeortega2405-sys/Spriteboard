@@ -675,6 +675,7 @@ export async function createTrashView(): Promise<HTMLElement> {
 
   const controller = new TrashController(container);
   await controller.init();
+  (container as any).__controller = controller;
 
   return container;
 }

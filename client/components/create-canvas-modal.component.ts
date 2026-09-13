@@ -1,7 +1,7 @@
 import { PresetVariant } from '../config/templates.config.js';
 import { createAndOpenCanvas } from '../services/canvas-creator.service.js';
-import { renderIcons } from '../services/icon.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
+import { renderIcons } from '../services/icon.service.js';
 import { setupDropdown } from '../utils/dom.util.js';
 
 let activeCreateCanvasModal: { close: () => void } | null = null;

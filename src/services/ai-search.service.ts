@@ -1,6 +1,6 @@
 import { config } from '../config/env.config.js';
-import { logger } from './logger.service.js';
 import { redis } from '../config/redis.config.js';
+import { logger } from './logger.service.js';
 
 export interface SemanticQueryResult {
   category: string;

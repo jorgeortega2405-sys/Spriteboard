@@ -217,7 +217,7 @@ export async function updateAutoRenewal(req: Request, res: Response): Promise<vo
   } catch (error: any) {
     logger.app.error('Error al modificar renovación automática', error);
     res.status(400).json({
-      error: error.message || 'No se pudo actualizar la renovación automática.',
+      error: 'No se pudo actualizar la renovación automática.',
     });
   }
 }
@@ -244,7 +244,7 @@ export async function cancelSubscriptionImmediate(req: Request, res: Response): 
   } catch (error: any) {
     logger.app.error('Error al cancelar suscripción inmediatamente', error);
     res.status(400).json({
-      error: error.message || 'No se pudo cancelar la suscripción.',
+      error: 'No se pudo cancelar la suscripción.',
     });
   }
 }
@@ -280,7 +280,7 @@ export async function createSetupIntent(req: Request, res: Response): Promise<vo
   } catch (error: any) {
     logger.app.error('Error al crear SetupIntent', error);
     res.status(500).json({
-      error: error.message || 'No se pudo iniciar el proceso para agregar tarjeta.',
+      error: 'No se pudo iniciar el proceso para agregar tarjeta.',
     });
   }
 }
@@ -304,7 +304,7 @@ export async function setDefaultPaymentMethod(req: Request, res: Response): Prom
   } catch (error: any) {
     logger.app.error('Error al establecer método de pago predeterminado', error);
     res.status(400).json({
-      error: error.message || 'No se pudo establecer como método predeterminado.',
+      error: 'No se pudo establecer como método predeterminado.',
     });
   }
 }
@@ -328,7 +328,7 @@ export async function deletePaymentMethod(req: Request, res: Response): Promise<
   } catch (error: any) {
     logger.app.error('Error al desvincular tarjeta', error);
     res.status(400).json({
-      error: error.message || 'No se pudo eliminar la tarjeta.',
+      error: 'No se pudo eliminar la tarjeta.',
     });
   }
 }

@@ -11,22 +11,25 @@ import { t, translateElement } from '../../services/i18n.service.js';
 import { renderIcons } from '../../services/icon.service.js';
 import { getEffectiveTheme } from '../../services/theme.service.js';
 import { showToast } from '../../services/toast.service.js';
-import { joinCanvasRoom, leaveCanvasRoom, registerWebSocketHandler, sendCanvasAccessChanged, sendCanvasAction, sendCanvasBinaryStroke, sendCanvasCursor, sendCanvasDrawStroke, sendCanvasFullUpdate, sendCanvasMemberRemoved } from '../../services/websocket.service.js';
 import { CanvasActionContext, CanvasFrame, CanvasLayer } from '../../types/canvas-actions.types.js';
 import { CanvasSnapshotItem } from '../../types/canvas-snapshot.types.js';
 import { CanvasItem, CanvasMember, SearchUserResult } from '../../types/canvas.types.js';
 import { CanvasTeamItem, Team } from '../../types/team.types.js';
 import { ChunkGrid } from '../../utils/chunk-grid.util.js';
 import { CarouselController, initCarouselScroll, setupDropdown } from '../../utils/dom.util.js';
-import { encodeFramesToGif } from '../../utils/gif-encoder.util.js';
 import { applyOutlineDirectToLayer, generatePixelOutline } from '../../utils/pixel-effects.util.js';
-import { PixelFontFamily, renderPixelTextCanvas } from '../../utils/pixel-font.util.js';
-import { PIXEL_SHAPES, PixelShape, ShapeCategory, ShapeColorMode, getCachedImage, renderShapeCanvas, renderShapeThumbnail } from '../../utils/pixel-shapes.util.js';
+import { PixelFontFamily } from '../../utils/pixel-font.util.js';
+import { getCachedImage, PIXEL_SHAPES, PixelShape, renderShapeCanvas, renderShapeThumbnail, ShapeCategory, ShapeColorMode } from '../../utils/pixel-shapes.util.js';
 import { DetectedSpriteRect, detectSpriteIslands, extractSpriteCanvas, sliceByGrid } from '../../utils/pixel-slicer.util.js';
-import { globalColorReplace, scanlineFloodFill } from '../../utils/scanline-fill.util.js';
-import { DEFAULT_CLASSIC_PALETTE, applyShadingToPixel, generateShadingRamp, getCollaboratorColor, hexToRgb, isDitherPixel, rgbToHex, rgbToHsl } from './design-color.util.js';
+import { DesignCollaborationManager } from './design-collaboration.manager.js';
+import { DEFAULT_CLASSIC_PALETTE, generateShadingRamp, getCollaboratorColor, hexToRgb, isDitherPixel, rgbToHex, rgbToHsl } from './design-color.util.js';
+import { exportGif, exportPngCurrentFrame, exportProjectJson, exportSpritesheetWithAtlas, generateThumbnail, renderCompositedFrame, renderSpritesheet, triggerBlobDownload } from './design-export.service.js';
 import { getBresenhamLine, getEllipsePoints, getRectanglePoints } from './design-geometry.util.js';
-import { AnimationTag, CanvasBackgroundConfig, FloatingSelection, SerializedCanvasFrame, SerializedCanvasLayer, SerializedCanvasProject, UndoStep } from './design.types.js';
+import { DesignHistoryManager } from './design-history.manager.js';
+import { DesignLayersManager } from './design-layers.manager.js';
+import { DesignToolsManager } from './design-tools.manager.js';
+import { DesignViewportManager } from './design-viewport.manager.js';
+import { AnimationTag, CanvasBackgroundConfig, CollaboratorState, FloatingSelection, SerializedCanvasFrame, SerializedCanvasLayer, SerializedCanvasProject, UndoStep } from './design.types.js';
 
 export class DesignController {
   private container: HTMLElement;
@@ -37,11 +40,32 @@ export class DesignController {
   private resizeObserver: ResizeObserver | null = null;
   private rafId: number | null = null;
 
+  private viewportManager = new DesignViewportManager(64, 64, false);
+  private layersManager = new DesignLayersManager(64, 64, false);
+  private toolsManager = new DesignToolsManager();
   private canvasName = 'Lienzo sin título';
-  private canvasWidth = 64;
-  private canvasHeight = 64;
+  private get canvasWidth(): number {
+    return this.viewportManager.canvasWidth;
+  }
+  private set canvasWidth(val: number) {
+    this.viewportManager.canvasWidth = val;
+    this.layersManager.canvasWidth = val;
+  }
+  private get canvasHeight(): number {
+    return this.viewportManager.canvasHeight;
+  }
+  private set canvasHeight(val: number) {
+    this.viewportManager.canvasHeight = val;
+    this.layersManager.canvasHeight = val;
+  }
   private canvasUnit = 'px';
-  private isInfinite = false;
+  private get isInfinite(): boolean {
+    return this.viewportManager.isInfinite;
+  }
+  private set isInfinite(val: boolean) {
+    this.viewportManager.isInfinite = val;
+    this.layersManager.isInfinite = val;
+  }
   private canvasCreatedAt: string | null = null;
   private canvasServerId: number | null = null;
   private canvasUserId: number | null = null;
@@ -49,22 +73,79 @@ export class DesignController {
   private isSaving = false;
   private isLoaded = false;
   private isAccessRevoked = false;
-  private roomToken = '';
+  private collaborationManager: DesignCollaborationManager;
+  private get roomToken(): string {
+    return this.collaborationManager.roomToken;
+  }
+  private set roomToken(val: string) {
+    this.collaborationManager.roomToken = val;
+  }
 
-  private accessLevel: 'private' | 'public' = 'private';
-  private publicRole: 'viewer' | 'editor' = 'editor';
-  private role: 'owner' | 'editor' | 'viewer' = 'owner';
-  private isOwner = true;
+  private get accessLevel(): 'private' | 'public' {
+    return this.collaborationManager.accessLevel;
+  }
+  private set accessLevel(val: 'private' | 'public') {
+    this.collaborationManager.accessLevel = val;
+  }
+  private get publicRole(): 'viewer' | 'editor' {
+    return this.collaborationManager.publicRole;
+  }
+  private set publicRole(val: 'viewer' | 'editor') {
+    this.collaborationManager.publicRole = val;
+  }
+  private get role(): 'owner' | 'editor' | 'viewer' {
+    return this.collaborationManager.role;
+  }
+  private set role(val: 'owner' | 'editor' | 'viewer') {
+    this.collaborationManager.role = val;
+  }
+  private get isOwner(): boolean {
+    return this.collaborationManager.isOwner;
+  }
+  private set isOwner(val: boolean) {
+    this.collaborationManager.isOwner = val;
+  }
   private effectiveTier: 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios' | 'docentes' | 'escuelas' | 'education' = 'free';
   private ownerInfo: { avatarUrl?: string | null; id?: number | null; subscriptionTier?: 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios' | 'docentes' | 'escuelas' | 'education'; username: string } | null = null;
-  private collaborators: Map<string, { avatarUrl?: string | null; color: string; connId: string; hideCursor?: boolean; role?: string; subscriptionTier?: 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios' | 'docentes' | 'escuelas' | 'education'; userId: number; username: string; x?: number; y?: number }> = new Map();
-  private showAllCursors = true;
-  private canvasBackground: CanvasBackgroundConfig = { type: 'transparent', checkSize: 16 };
-  private animationTags: AnimationTag[] = [];
-  private activeTagId: string | null = null;
-  private wsUnsubscribes: Array<() => void> = [];
-  private lastSentCursorTime = 0;
-  private myCollaboratorColor = '#00E5FF';
+  private get collaborators(): Map<string, CollaboratorState> {
+    return this.collaborationManager.collaborators;
+  }
+  private get showAllCursors(): boolean {
+    return this.viewportManager.showAllCursors;
+  }
+  private set showAllCursors(val: boolean) {
+    this.viewportManager.showAllCursors = val;
+  }
+  private get canvasBackground(): CanvasBackgroundConfig {
+    return this.viewportManager.canvasBackground;
+  }
+  private set canvasBackground(val: CanvasBackgroundConfig) {
+    this.viewportManager.canvasBackground = val;
+  }
+  private get animationTags(): AnimationTag[] {
+    return this.layersManager.animationTags;
+  }
+  private set animationTags(val: AnimationTag[]) {
+    this.layersManager.animationTags = val;
+  }
+  private get activeTagId(): string | null {
+    return this.layersManager.activeTagId;
+  }
+  private set activeTagId(val: string | null) {
+    this.layersManager.activeTagId = val;
+  }
+  private get lastSentCursorTime(): number {
+    return this.collaborationManager.lastSentCursorTime;
+  }
+  private set lastSentCursorTime(val: number) {
+    this.collaborationManager.lastSentCursorTime = val;
+  }
+  private get myCollaboratorColor(): string {
+    return this.collaborationManager.myCollaboratorColor;
+  }
+  private set myCollaboratorColor(val: string) {
+    this.collaborationManager.myCollaboratorColor = val;
+  }
 
   private currentStrokePoints: Array<{ x: number; y: number }> = [];
   private shareWrapperEl: HTMLElement | null = null;
@@ -128,90 +209,349 @@ export class DesignController {
   private viewHeartbeatTimer: number | null = null;
   private boundBeforeUnload: (() => void) | null = null;
 
-  private panX = 0;
-  private panY = 0;
-  private zoom = 0;
-  private hasInitialFit = false;
-  private isPanning = false;
+  private get panX(): number {
+    return this.viewportManager.panX;
+  }
+  private set panX(val: number) {
+    this.viewportManager.panX = val;
+  }
+  private get panY(): number {
+    return this.viewportManager.panY;
+  }
+  private set panY(val: number) {
+    this.viewportManager.panY = val;
+  }
+  private get zoom(): number {
+    return this.viewportManager.zoom;
+  }
+  private set zoom(val: number) {
+    this.viewportManager.zoom = val;
+  }
+  private get hasInitialFit(): boolean {
+    return this.viewportManager.hasInitialFit;
+  }
+  private set hasInitialFit(val: boolean) {
+    this.viewportManager.hasInitialFit = val;
+  }
+  private get isPanning(): boolean {
+    return this.viewportManager.isPanning;
+  }
+  private set isPanning(val: boolean) {
+    this.viewportManager.isPanning = val;
+  }
   private isDrawing = false;
   private startX = 0;
   private startY = 0;
   private lastPixelX = -1;
   private lastPixelY = -1;
   private hoveredPixel: { x: number; y: number } | null = null;
-  private visitedStrokePixels: Set<string> = new Set();
+  private get visitedStrokePixels(): Set<string> {
+    return this.toolsManager.visitedStrokePixels;
+  }
+  private set visitedStrokePixels(val: Set<string>) {
+    this.toolsManager.visitedStrokePixels = val;
+  }
 
-  private currentTool: 'brush' | 'eraser' | 'line' | 'rectangle' | 'circle' | 'recolor' | 'dither' | 'shading' | 'spray' | 'bucket' | 'select' | 'text' = 'brush';
-  private currentColor = '#000000';
-  private toolSizes: Record<'brush' | 'eraser' | 'line' | 'rectangle' | 'circle' | 'recolor' | 'dither' | 'shading', number> = {
-    brush: 1,
-    eraser: 1,
-    line: 1,
-    rectangle: 1,
-    circle: 1,
-    recolor: 1,
-    dither: 1,
-    shading: 1,
-  };
-  private shapeDrawMode: 'outline' | 'filled' = 'outline';
-  private pixelPerfect = false;
-  private shapeStartPos: { x: number; y: number } | null = null;
-  private shapeCurrentPos: { x: number; y: number } | null = null;
-  private isDrawingShape = false;
+  private get currentTool(): 'brush' | 'eraser' | 'line' | 'rectangle' | 'circle' | 'recolor' | 'dither' | 'shading' | 'spray' | 'bucket' | 'select' | 'text' {
+    return this.toolsManager.currentTool;
+  }
+  private set currentTool(val: 'brush' | 'eraser' | 'line' | 'rectangle' | 'circle' | 'recolor' | 'dither' | 'shading' | 'spray' | 'bucket' | 'select' | 'text') {
+    this.toolsManager.currentTool = val;
+  }
+  private get currentColor(): string {
+    return this.toolsManager.currentColor;
+  }
+  private set currentColor(val: string) {
+    this.toolsManager.currentColor = val;
+  }
+  private get toolSizes(): Record<'brush' | 'eraser' | 'line' | 'rectangle' | 'circle' | 'recolor' | 'dither' | 'shading', number> {
+    return this.toolsManager.toolSizes;
+  }
+  private set toolSizes(val: Record<'brush' | 'eraser' | 'line' | 'rectangle' | 'circle' | 'recolor' | 'dither' | 'shading', number>) {
+    this.toolsManager.toolSizes = val;
+  }
+  private get shapeDrawMode(): 'outline' | 'filled' {
+    return this.toolsManager.shapeDrawMode;
+  }
+  private set shapeDrawMode(val: 'outline' | 'filled') {
+    this.toolsManager.shapeDrawMode = val;
+  }
+  private get pixelPerfect(): boolean {
+    return this.toolsManager.pixelPerfect;
+  }
+  private set pixelPerfect(val: boolean) {
+    this.toolsManager.pixelPerfect = val;
+  }
+  private get shapeStartPos(): { x: number; y: number } | null {
+    return this.toolsManager.shapeStartPos;
+  }
+  private set shapeStartPos(val: { x: number; y: number } | null) {
+    this.toolsManager.shapeStartPos = val;
+  }
+  private get shapeCurrentPos(): { x: number; y: number } | null {
+    return this.toolsManager.shapeCurrentPos;
+  }
+  private set shapeCurrentPos(val: { x: number; y: number } | null) {
+    this.toolsManager.shapeCurrentPos = val;
+  }
+  private get isDrawingShape(): boolean {
+    return this.toolsManager.isDrawingShape;
+  }
+  private set isDrawingShape(val: boolean) {
+    this.toolsManager.isDrawingShape = val;
+  }
   private isShiftPressed = false;
   private isSpacePressed = false;
-  private recolorTargetColor32: number | null = null;
+  private get recolorTargetColor32(): number | null {
+    return this.toolsManager.recolorTargetColor32;
+  }
+  private set recolorTargetColor32(val: number | null) {
+    this.toolsManager.recolorTargetColor32 = val;
+  }
   private rawStrokePoints: Array<{ x: number; y: number }> = [];
 
-  private undoStack: UndoStep[] = [];
-  private redoStack: UndoStep[] = [];
-  private activeActionBeforeData: ImageData | null = null;
+  private historyManager = new DesignHistoryManager();
+  private get undoStack(): UndoStep[] {
+    return this.historyManager.undoStack;
+  }
+  private set undoStack(val: UndoStep[]) {
+    this.historyManager.undoStack = val;
+  }
+  private get redoStack(): UndoStep[] {
+    return this.historyManager.redoStack;
+  }
+  private set redoStack(val: UndoStep[]) {
+    this.historyManager.redoStack = val;
+  }
+  private get activeActionBeforeData(): ImageData | null {
+    return this.historyManager.activeActionBeforeData;
+  }
+  private set activeActionBeforeData(val: ImageData | null) {
+    this.historyManager.activeActionBeforeData = val;
+  }
 
-  private ditherPattern: 'checker-50' | 'dots-25' | 'dots-75' | 'diag-lines' | 'h-lines' = 'checker-50';
-  private shadingMode: 'shadow' | 'highlight' = 'shadow';
-  private shadingRamp: 'warm-cool' | 'night' | 'organic' | 'mono' | 'palette' = 'warm-cool';
-  private sprayRadius = 5;
-  private sprayDensity: 'low' | 'med' | 'high' = 'med';
-  private bucketMode: 'contiguous' | 'global' = 'contiguous';
-  private mirrorEnabled = false;
-  private mirrorAxis: 'vertical' | 'horizontal' | 'both' = 'vertical';
+  private get ditherPattern(): 'checker-50' | 'dots-25' | 'dots-75' | 'diag-lines' | 'h-lines' {
+    return this.toolsManager.ditherPattern;
+  }
+  private set ditherPattern(val: 'checker-50' | 'dots-25' | 'dots-75' | 'diag-lines' | 'h-lines') {
+    this.toolsManager.ditherPattern = val;
+  }
+  private get shadingMode(): 'shadow' | 'highlight' {
+    return this.toolsManager.shadingMode;
+  }
+  private set shadingMode(val: 'shadow' | 'highlight') {
+    this.toolsManager.shadingMode = val;
+  }
+  private get shadingRamp(): 'warm-cool' | 'night' | 'organic' | 'mono' | 'palette' {
+    return this.toolsManager.shadingRamp;
+  }
+  private set shadingRamp(val: 'warm-cool' | 'night' | 'organic' | 'mono' | 'palette') {
+    this.toolsManager.shadingRamp = val;
+  }
+  private get sprayRadius(): number {
+    return this.toolsManager.sprayRadius;
+  }
+  private set sprayRadius(val: number) {
+    this.toolsManager.sprayRadius = val;
+  }
+  private get sprayDensity(): 'low' | 'med' | 'high' {
+    return this.toolsManager.sprayDensity;
+  }
+  private set sprayDensity(val: 'low' | 'med' | 'high') {
+    this.toolsManager.sprayDensity = val;
+  }
+  private get bucketMode(): 'contiguous' | 'global' {
+    return this.toolsManager.bucketMode;
+  }
+  private set bucketMode(val: 'contiguous' | 'global') {
+    this.toolsManager.bucketMode = val;
+  }
+  private get mirrorEnabled(): boolean {
+    return this.toolsManager.mirrorEnabled;
+  }
+  private set mirrorEnabled(val: boolean) {
+    this.toolsManager.mirrorEnabled = val;
+  }
+  private get mirrorAxis(): 'vertical' | 'horizontal' | 'both' {
+    return this.toolsManager.mirrorAxis;
+  }
+  private set mirrorAxis(val: 'vertical' | 'horizontal' | 'both') {
+    this.toolsManager.mirrorAxis = val;
+  }
   private sprayTimer: number | null = null;
 
-  private selectionMode: 'box' | 'lasso' | 'wand' = 'box';
-  private selectionMask: Uint8Array | null = null;
-  private floatingSelection: FloatingSelection | null = null;
-  private clipboard: { canvas: HTMLCanvasElement; width: number; height: number } | null = null;
-  private isSelecting = false;
-  private isMovingSelection = false;
-  private selectionStartPos: { x: number; y: number } | null = null;
-  private lassoPoints: Array<{ x: number; y: number }> = [];
-  private selectionDragOffset: { x: number; y: number } | null = null;
-  private marchingAntsOffset = 0;
+  private get selectionMode(): 'box' | 'lasso' | 'wand' {
+    return this.toolsManager.selectionMode;
+  }
+  private set selectionMode(val: 'box' | 'lasso' | 'wand') {
+    this.toolsManager.selectionMode = val;
+  }
+  private get selectionMask(): Uint8Array | null {
+    return this.toolsManager.selectionMask;
+  }
+  private set selectionMask(val: Uint8Array | null) {
+    this.toolsManager.selectionMask = val;
+  }
+  private get floatingSelection(): FloatingSelection | null {
+    return this.toolsManager.floatingSelection;
+  }
+  private set floatingSelection(val: FloatingSelection | null) {
+    this.toolsManager.floatingSelection = val;
+  }
+  private get clipboard(): { canvas: HTMLCanvasElement; height: number; width: number } | null {
+    return this.toolsManager.clipboard;
+  }
+  private set clipboard(val: { canvas: HTMLCanvasElement; height: number; width: number } | null) {
+    this.toolsManager.clipboard = val;
+  }
+  private get isSelecting(): boolean {
+    return this.toolsManager.isSelecting;
+  }
+  private set isSelecting(val: boolean) {
+    this.toolsManager.isSelecting = val;
+  }
+  private get isMovingSelection(): boolean {
+    return this.toolsManager.isMovingSelection;
+  }
+  private set isMovingSelection(val: boolean) {
+    this.toolsManager.isMovingSelection = val;
+  }
+  private get selectionStartPos(): { x: number; y: number } | null {
+    return this.toolsManager.selectionStartPos;
+  }
+  private set selectionStartPos(val: { x: number; y: number } | null) {
+    this.toolsManager.selectionStartPos = val;
+  }
+  private get lassoPoints(): Array<{ x: number; y: number }> {
+    return this.toolsManager.lassoPoints;
+  }
+  private set lassoPoints(val: Array<{ x: number; y: number }>) {
+    this.toolsManager.lassoPoints = val;
+  }
+  private get selectionDragOffset(): { x: number; y: number } | null {
+    return this.toolsManager.selectionDragOffset;
+  }
+  private set selectionDragOffset(val: { x: number; y: number } | null) {
+    this.toolsManager.selectionDragOffset = val;
+  }
+  private get marchingAntsOffset(): number {
+    return this.toolsManager.marchingAntsOffset;
+  }
+  private set marchingAntsOffset(val: number) {
+    this.toolsManager.marchingAntsOffset = val;
+  }
   private marchingAntsTimer: number | null = null;
 
   private tileGridSize = 0;
 
-  private textValue = 'PIXEL';
-  private textFont: PixelFontFamily = 'classic';
-  private textScale = 1;
-  private textOutline = false;
-  private textShadow = false;
-  private textCanvas: HTMLCanvasElement | null = null;
-  private textX = 0;
-  private textY = 0;
-  private isDraggingText = false;
-  private textDragOffset: { x: number; y: number } | null = null;
+  private get textValue(): string {
+    return this.toolsManager.textValue;
+  }
+  private set textValue(val: string) {
+    this.toolsManager.textValue = val;
+  }
+  private get textFont(): PixelFontFamily {
+    return this.toolsManager.textFont;
+  }
+  private set textFont(val: PixelFontFamily) {
+    this.toolsManager.textFont = val;
+  }
+  private get textScale(): number {
+    return this.toolsManager.textScale;
+  }
+  private set textScale(val: number) {
+    this.toolsManager.textScale = val;
+  }
+  private get textOutline(): boolean {
+    return this.toolsManager.textOutline;
+  }
+  private set textOutline(val: boolean) {
+    this.toolsManager.textOutline = val;
+  }
+  private get textShadow(): boolean {
+    return this.toolsManager.textShadow;
+  }
+  private set textShadow(val: boolean) {
+    this.toolsManager.textShadow = val;
+  }
+  private get textCanvas(): HTMLCanvasElement | null {
+    return this.toolsManager.textCanvas;
+  }
+  private set textCanvas(val: HTMLCanvasElement | null) {
+    this.toolsManager.textCanvas = val;
+  }
+  private get textX(): number {
+    return this.toolsManager.textX;
+  }
+  private set textX(val: number) {
+    this.toolsManager.textX = val;
+  }
+  private get textY(): number {
+    return this.toolsManager.textY;
+  }
+  private set textY(val: number) {
+    this.toolsManager.textY = val;
+  }
+  private get isDraggingText(): boolean {
+    return this.toolsManager.isDraggingText;
+  }
+  private set isDraggingText(val: boolean) {
+    this.toolsManager.isDraggingText = val;
+  }
+  private get textDragOffset(): { x: number; y: number } | null {
+    return this.toolsManager.textDragOffset;
+  }
+  private set textDragOffset(val: { x: number; y: number } | null) {
+    this.toolsManager.textDragOffset = val;
+  }
 
-  private frames: CanvasFrame[] = [];
-  private activeFrameId = '';
-  private nextFrameNum = 1;
-  private nextLayerNum = 1;
+  private get frames(): CanvasFrame[] {
+    return this.layersManager.frames;
+  }
+  private set frames(val: CanvasFrame[]) {
+    this.layersManager.frames = val;
+  }
+  private get activeFrameId(): string {
+    return this.layersManager.activeFrameId;
+  }
+  private set activeFrameId(val: string) {
+    this.layersManager.activeFrameId = val;
+  }
+  private get nextFrameNum(): number {
+    return this.layersManager.nextFrameNum;
+  }
+  private set nextFrameNum(val: number) {
+    this.layersManager.nextFrameNum = val;
+  }
+  private get nextLayerNum(): number {
+    return this.layersManager.nextLayerNum;
+  }
+  private set nextLayerNum(val: number) {
+    this.layersManager.nextLayerNum = val;
+  }
 
-  private isPlaying = false;
-  private fps = 8;
-  private fpsOptions = [1, 2, 4, 8, 12, 16, 24];
+  private get isPlaying(): boolean {
+    return this.layersManager.isPlaying;
+  }
+  private set isPlaying(val: boolean) {
+    this.layersManager.isPlaying = val;
+  }
+  private get fps(): number {
+    return this.layersManager.fps;
+  }
+  private set fps(val: number) {
+    this.layersManager.fps = val;
+  }
+  private get fpsOptions(): number[] {
+    return this.layersManager.fpsOptions;
+  }
   private playbackTimer: number | null = null;
-  private onionSkinEnabled = false;
+  private get onionSkinEnabled(): boolean {
+    return this.layersManager.onionSkinEnabled;
+  }
+  private set onionSkinEnabled(val: boolean) {
+    this.layersManager.onionSkinEnabled = val;
+  }
   private draggedFrameId: string | null = null;
   private draggedLayerId: string | null = null;
 
@@ -375,11 +715,26 @@ export class DesignController {
   private btnPreviewExit: HTMLButtonElement | null = null;
 
   private isHistoryDrawerOpen = false;
-  private historyFilter: 'all' | 'manual' = 'all';
-  private snapshots: CanvasSnapshotItem[] = [];
+  private get historyFilter(): 'all' | 'manual' {
+    return this.historyManager.historyFilter;
+  }
+  private set historyFilter(val: 'all' | 'manual') {
+    this.historyManager.historyFilter = val;
+  }
+  private get snapshots(): CanvasSnapshotItem[] {
+    return this.historyManager.snapshots;
+  }
+  private set snapshots(val: CanvasSnapshotItem[]) {
+    this.historyManager.snapshots = val;
+  }
   private isPreviewingSnapshot = false;
   private prePreviewProjectData: SerializedCanvasProject | null = null;
-  private activePreviewSnapshotUuid: string | null = null;
+  private get activePreviewSnapshotUuid(): string | null {
+    return this.historyManager.activePreviewSnapshotUuid;
+  }
+  private set activePreviewSnapshotUuid(val: string | null) {
+    this.historyManager.activePreviewSnapshotUuid = val;
+  }
   private lastAutoSnapshotTime = Date.now();
   private hasUnsavedSnapshotChanges = false;
   private autoSnapshotCheckTimer: number | null = null;
@@ -388,6 +743,7 @@ export class DesignController {
     this.container = container;
     this.canvasUuid = canvasUuid;
     this.abortController = new AbortController();
+    this.collaborationManager = new DesignCollaborationManager(canvasUuid);
 
     const initialFrame = this.createFrame('Cuadro 1');
     this.frames = [initialFrame];
@@ -613,61 +969,19 @@ export class DesignController {
   }
 
   private createLayer(name: string): CanvasLayer {
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.max(1, this.canvasWidth || 256);
-    canvas.height = Math.max(1, this.canvasHeight || 256);
-    const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
-    const chunkGrid = new ChunkGrid(256);
-    return {
-      id: `layer-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-      name,
-      canvas,
-      ctx,
-      visible: true,
-      opacity: 1.0,
-      chunkGrid,
-    };
+    return this.layersManager.createLayer(name);
   }
 
   private createFrame(name: string, copyFrom?: CanvasFrame): CanvasFrame {
-    const frameId = `frame-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-    let layers: CanvasLayer[] = [];
-    let activeLayerId = '';
-
-    if (copyFrom) {
-      layers = copyFrom.layers.map((l) => {
-        const copyLayer = this.createLayer(l.name);
-        copyLayer.ctx.drawImage(l.canvas, 0, 0);
-        if (l.chunkGrid) {
-          copyLayer.chunkGrid = l.chunkGrid.clone();
-        }
-        copyLayer.visible = l.visible;
-        copyLayer.opacity = l.opacity;
-        return copyLayer;
-      });
-      activeLayerId = layers[0]?.id || '';
-    } else {
-      const initialLayer = this.createLayer('Capa 1');
-      layers = [initialLayer];
-      activeLayerId = initialLayer.id;
-    }
-
-    return {
-      id: frameId,
-      name,
-      layers,
-      activeLayerId,
-    };
+    return this.layersManager.createFrame(name, copyFrom);
   }
 
   private getActiveFrame(): CanvasFrame | null {
-    return this.frames.find((f) => f.id === this.activeFrameId) || this.frames[0] || null;
+    return this.layersManager.getActiveFrame() || null;
   }
 
   private getActiveLayer(): CanvasLayer | null {
-    const frame = this.getActiveFrame();
-    if (!frame) return null;
-    return frame.layers.find((l) => l.id === frame.activeLayerId) || frame.layers[0] || null;
+    return this.layersManager.getActiveLayer() || null;
   }
 
   private getActionContext(): CanvasActionContext {
@@ -1054,19 +1368,15 @@ export class DesignController {
   private reorderLayers(sourceId: string, targetId: string, broadcast = true, customFrameId?: string): void {
     const frame = customFrameId ? this.frames.find((f) => f.id === customFrameId) : this.getActiveFrame();
     if (!frame) return;
-    const sourceIdx = frame.layers.findIndex((l) => l.id === sourceId);
-    const targetIdx = frame.layers.findIndex((l) => l.id === targetId);
-    if (sourceIdx < 0 || targetIdx < 0 || sourceIdx === targetIdx) return;
+    if (!this.layersManager.reorderLayers(sourceId, targetId, customFrameId)) return;
 
-    const [moved] = frame.layers.splice(sourceIdx, 1);
-    frame.layers.splice(targetIdx, 0, moved);
     this.renderLayersList();
     this.renderLayersCards();
     this.requestRedraw();
 
     if (broadcast) {
       this.scheduleAutoSave();
-      sendCanvasAction(this.canvasUuid, 'reorder_layers', {
+      this.collaborationManager.sendAction('reorder_layers', {
         frameId: frame.id,
         sourceId,
         targetId,
@@ -1075,18 +1385,13 @@ export class DesignController {
   }
 
   private reorderFrames(sourceId: string, targetId: string, broadcast = true): void {
-    const sourceIdx = this.frames.findIndex((f) => f.id === sourceId);
-    const targetIdx = this.frames.findIndex((f) => f.id === targetId);
-    if (sourceIdx < 0 || targetIdx < 0 || sourceIdx === targetIdx) return;
-
-    const [moved] = this.frames.splice(sourceIdx, 1);
-    this.frames.splice(targetIdx, 0, moved);
+    if (!this.layersManager.reorderFrames(sourceId, targetId)) return;
     this.renderFramesCards();
     this.requestRedraw();
 
     if (broadcast) {
       this.scheduleAutoSave();
-      sendCanvasAction(this.canvasUuid, 'reorder_frames', {
+      this.collaborationManager.sendAction('reorder_frames', {
         sourceId,
         targetId,
       });
@@ -1107,18 +1412,9 @@ export class DesignController {
       }
     }
 
-    this.nextLayerNum++;
-    const layerName = customName || `Capa ${this.nextLayerNum}`;
-    const newLayer = this.createLayer(layerName);
-    if (customLayerId) {
-      newLayer.id = customLayerId;
-    }
-    const activeIdx = frame.layers.findIndex((l) => l.id === frame.activeLayerId);
-    const insertIdx = customIndex !== undefined ? customIndex : (activeIdx >= 0 ? activeIdx + 1 : frame.layers.length);
-    frame.layers.splice(insertIdx, 0, newLayer);
-    if (!customFrameId || frame.id === this.activeFrameId) {
-      frame.activeLayerId = newLayer.id;
-    }
+    const newLayer = this.layersManager.addLayer(customName, customLayerId, customIndex, customFrameId);
+    if (!newLayer) return;
+
     this.renderLayersList();
     this.renderLayersCards();
     this.renderFramesCards();
@@ -1126,9 +1422,10 @@ export class DesignController {
 
     if (broadcast) {
       this.scheduleAutoSave();
-      sendCanvasAction(this.canvasUuid, 'add_layer', {
+      const insertIdx = frame.layers.findIndex((l) => l.id === newLayer.id);
+      this.collaborationManager.sendAction('add_layer', {
         frameId: frame.id,
-        index: insertIdx,
+        index: insertIdx >= 0 ? insertIdx : 0,
         layerId: newLayer.id,
         name: newLayer.name,
       });
@@ -1139,13 +1436,8 @@ export class DesignController {
     const frame = customFrameId ? this.frames.find((f) => f.id === customFrameId) : this.getActiveFrame();
     if (!frame || frame.layers.length <= 1) return;
     const targetLayerId = customLayerId || frame.activeLayerId;
-    const activeIdx = frame.layers.findIndex((l) => l.id === targetLayerId);
-    if (activeIdx >= 0) {
-      frame.layers.splice(activeIdx, 1);
-      const newActive = frame.layers[Math.max(0, activeIdx - 1)];
-      if (!customFrameId || frame.id === this.activeFrameId) {
-        frame.activeLayerId = newActive ? newActive.id : frame.layers[0].id;
-      }
+    const deletedId = this.layersManager.deleteLayer(customFrameId, customLayerId);
+    if (deletedId) {
       this.renderLayersList();
       this.renderLayersCards();
       this.renderFramesCards();
@@ -1153,7 +1445,7 @@ export class DesignController {
 
       if (broadcast) {
         this.scheduleAutoSave();
-        sendCanvasAction(this.canvasUuid, 'delete_layer', {
+        this.collaborationManager.sendAction('delete_layer', {
           frameId: frame.id,
           layerId: targetLayerId,
         });
@@ -1182,28 +1474,12 @@ export class DesignController {
   private mergeLayerDown(broadcast = true, customFrameId?: string, customSourceId?: string, customTargetId?: string): void {
     const frame = customFrameId ? this.frames.find((f) => f.id === customFrameId) : this.getActiveFrame();
     if (!frame) return;
-    let current: CanvasLayer | undefined;
-    let target: CanvasLayer | undefined;
-    let idx = -1;
+    const sourceId = customSourceId || frame.activeLayerId;
+    const idx = frame.layers.findIndex((l) => l.id === sourceId);
+    const targetId = customTargetId || (idx > 0 ? frame.layers[idx - 1].id : '');
 
-    if (customSourceId && customTargetId) {
-      idx = frame.layers.findIndex((l) => l.id === customSourceId);
-      current = frame.layers[idx];
-      target = frame.layers.find((l) => l.id === customTargetId);
-    } else {
-      idx = frame.layers.findIndex((l) => l.id === frame.activeLayerId);
-      if (idx > 0) {
-        current = frame.layers[idx];
-        target = frame.layers[idx - 1];
-      }
-    }
+    if (!this.layersManager.mergeLayerDown(customFrameId, customSourceId, customTargetId)) return;
 
-    if (!current || !target || idx <= 0) return;
-    target.ctx.drawImage(current.canvas, 0, 0);
-    frame.layers.splice(idx, 1);
-    if (!customFrameId || frame.id === this.activeFrameId) {
-      frame.activeLayerId = target.id;
-    }
     this.renderLayersList();
     this.renderLayersCards();
     this.renderFramesCards();
@@ -1211,10 +1487,10 @@ export class DesignController {
 
     if (broadcast) {
       this.scheduleAutoSave();
-      sendCanvasAction(this.canvasUuid, 'merge_layer', {
+      this.collaborationManager.sendAction('merge_layer', {
         frameId: frame.id,
-        sourceId: current.id,
-        targetId: target.id,
+        sourceId,
+        targetId,
       });
     }
   }
@@ -1222,16 +1498,15 @@ export class DesignController {
   private toggleLayerVisibility(layerId: string, visible: boolean, broadcast = true, customFrameId?: string): void {
     const frame = customFrameId ? this.frames.find((f) => f.id === customFrameId) : this.getActiveFrame();
     if (!frame) return;
-    const layer = frame.layers.find((l) => l.id === layerId);
-    if (!layer) return;
-    layer.visible = visible;
+    if (!this.layersManager.toggleLayerVisibility(layerId, visible, customFrameId)) return;
+
     this.renderLayersList();
     this.renderLayersCards();
     this.requestRedraw();
 
     if (broadcast) {
       this.scheduleAutoSave();
-      sendCanvasAction(this.canvasUuid, 'toggle_layer_visibility', {
+      this.collaborationManager.sendAction('toggle_layer_visibility', {
         frameId: frame.id,
         layerId,
         visible,
@@ -1247,37 +1522,12 @@ export class DesignController {
     customIndex?: number,
     initialLayers?: Array<{ id: string; name: string; opacity?: number; visible?: boolean; data?: string }>
   ): Promise<void> {
-    this.nextFrameNum++;
-    const current = this.getActiveFrame();
-    const frameName = customName || `Cuadro ${this.nextFrameNum}`;
-    const newFrame = this.createFrame(frameName, duplicate && current ? current : undefined);
-    if (customFrameId) {
-      newFrame.id = customFrameId;
-    }
-    if (initialLayers && initialLayers.length > 0) {
-      const loadedLayers: CanvasLayer[] = [];
-      const loadPromises: Promise<void>[] = [];
-      for (const sLayer of initialLayers) {
-        const lyr = this.createLayer(sLayer.name);
-        lyr.id = sLayer.id;
-        lyr.visible = sLayer.visible !== false;
-        lyr.opacity = typeof sLayer.opacity === 'number' ? sLayer.opacity : 1.0;
-        if (sLayer.data) {
-          loadPromises.push(this.loadLayerImage(lyr, sLayer.data));
-        }
-        loadedLayers.push(lyr);
-      }
-      await Promise.all(loadPromises);
-      newFrame.layers = loadedLayers;
-      newFrame.activeLayerId = loadedLayers[0]?.id || '';
+    const prevActiveId = this.activeFrameId;
+    const newFrame = await this.layersManager.addFrame(duplicate, customFrameId, customName, customIndex, initialLayers);
+    if (!broadcast) {
+      this.activeFrameId = prevActiveId;
     }
 
-    const activeIdx = this.frames.findIndex((f) => f.id === this.activeFrameId);
-    const insertIdx = customIndex !== undefined ? customIndex : (activeIdx >= 0 ? activeIdx + 1 : this.frames.length);
-    this.frames.splice(insertIdx, 0, newFrame);
-    if (broadcast) {
-      this.activeFrameId = newFrame.id;
-    }
     this.renderFramesCards();
     this.renderLayersList();
     this.renderLayersCards();
@@ -1285,6 +1535,7 @@ export class DesignController {
 
     if (broadcast) {
       this.scheduleAutoSave();
+      const insertIdx = this.frames.findIndex((f) => f.id === newFrame.id);
       const layersData = newFrame.layers.map((l) => ({
         data: l.canvas.toDataURL('image/png'),
         id: l.id,
@@ -1292,10 +1543,10 @@ export class DesignController {
         opacity: l.opacity,
         visible: l.visible,
       }));
-      sendCanvasAction(this.canvasUuid, 'add_frame', {
+      this.collaborationManager.sendAction('add_frame', {
         duplicate,
         frameId: newFrame.id,
-        index: insertIdx,
+        index: insertIdx >= 0 ? insertIdx : 0,
         layers: layersData,
         name: newFrame.name,
       });
@@ -1305,13 +1556,8 @@ export class DesignController {
   private deleteFrame(broadcast = true, customFrameId?: string): void {
     if (this.frames.length <= 1) return;
     const targetFrameId = customFrameId || this.activeFrameId;
-    const activeIdx = this.frames.findIndex((f) => f.id === targetFrameId);
-    if (activeIdx >= 0) {
-      this.frames.splice(activeIdx, 1);
-      const newActive = this.frames[Math.max(0, activeIdx - 1)];
-      if (!customFrameId || this.activeFrameId === targetFrameId) {
-        this.activeFrameId = newActive ? newActive.id : this.frames[0].id;
-      }
+    const deletedId = this.layersManager.deleteFrame(customFrameId);
+    if (deletedId) {
       this.renderFramesCards();
       this.renderLayersList();
       this.renderLayersCards();
@@ -1319,7 +1565,7 @@ export class DesignController {
 
       if (broadcast) {
         this.scheduleAutoSave();
-        sendCanvasAction(this.canvasUuid, 'delete_frame', {
+        this.collaborationManager.sendAction('delete_frame', {
           frameId: targetFrameId,
         });
       }
@@ -1327,108 +1573,58 @@ export class DesignController {
   }
 
   private selectFrame(frameId: string): void {
-    this.activeFrameId = frameId;
+    if (this.layersManager.selectFrame(frameId)) {
+      this.renderFramesCards();
+      this.renderLayersList();
+      this.renderLayersCards();
+      this.requestRedraw();
+    }
+  }
+
+  private prevFrame(): void {
+    this.layersManager.prevFrame();
     this.renderFramesCards();
     this.renderLayersList();
     this.renderLayersCards();
     this.requestRedraw();
   }
 
-  private prevFrame(): void {
-    const idx = this.frames.findIndex((f) => f.id === this.activeFrameId);
-    let targetIdx = 0;
-
-    const activeTag = this.animationTags.find((t) => t.id === this.activeTagId);
-    if (activeTag) {
-      const start = Math.max(0, activeTag.from - 1);
-      const end = Math.min(this.frames.length - 1, activeTag.to - 1);
-      if (idx <= start || idx > end) {
-        targetIdx = end;
-      } else {
-        targetIdx = idx - 1;
-      }
-    } else {
-      if (idx > 0) {
-        targetIdx = idx - 1;
-      } else if (this.frames.length > 0) {
-        targetIdx = this.frames.length - 1;
-      }
-    }
-
-    if (this.frames[targetIdx]) {
-      this.selectFrame(this.frames[targetIdx].id);
-    }
-  }
-
   private nextFrame(): void {
-    const idx = this.frames.findIndex((f) => f.id === this.activeFrameId);
-    let targetIdx = 0;
-
-    const activeTag = this.animationTags.find((t) => t.id === this.activeTagId);
-    if (activeTag) {
-      const start = Math.max(0, activeTag.from - 1);
-      const end = Math.min(this.frames.length - 1, activeTag.to - 1);
-      if (idx < start || idx >= end) {
-        targetIdx = start;
-      } else {
-        targetIdx = idx + 1;
-      }
-    } else {
-      if (idx >= 0 && idx < this.frames.length - 1) {
-        targetIdx = idx + 1;
-      } else if (this.frames.length > 0) {
-        targetIdx = 0;
-      }
-    }
-
-    if (this.frames[targetIdx]) {
-      this.selectFrame(this.frames[targetIdx].id);
-    }
+    this.layersManager.nextFrame();
+    this.renderFramesCards();
+    this.renderLayersList();
+    this.renderLayersCards();
+    this.requestRedraw();
   }
 
   private togglePlay(): void {
-    this.isPlaying = !this.isPlaying;
+    const isPlaying = this.layersManager.togglePlayback(() => {
+      this.renderFramesCards();
+      this.renderLayersList();
+      this.renderLayersCards();
+      this.requestRedraw();
+    });
     if (this.framePlayBtn) {
       const icon = this.framePlayBtn.querySelector('.component-icon');
       if (icon) {
-        icon.textContent = this.isPlaying ? 'pause' : 'play_arrow';
+        icon.textContent = isPlaying ? 'pause' : 'play_arrow';
       }
-      this.framePlayBtn.classList.toggle('is-active', this.isPlaying);
-      this.framePlayBtn.setAttribute('data-tooltip', this.isPlaying ? 'Pausar' : 'Reproducir');
-    }
-
-    if (this.isPlaying) {
-      this.startPlayback();
-    } else {
-      this.stopPlayback();
+      this.framePlayBtn.classList.toggle('is-active', isPlaying);
+      this.framePlayBtn.setAttribute('data-tooltip', isPlaying ? 'Pausar' : 'Reproducir');
     }
   }
 
   private startPlayback(): void {
-    this.stopPlayback();
-    this.scheduleNextPlaybackStep();
-  }
-
-  private scheduleNextPlaybackStep(): void {
-    if (!this.isPlaying) return;
-    const activeFrame = this.getActiveFrame();
-    const defaultDelay = 1000 / this.fps;
-    const delay = activeFrame && activeFrame.durationMs && activeFrame.durationMs > 0
-      ? activeFrame.durationMs
-      : defaultDelay;
-
-    this.playbackTimer = window.setTimeout(() => {
-      if (!this.isPlaying) return;
-      this.nextFrame();
-      this.scheduleNextPlaybackStep();
-    }, delay);
+    this.layersManager.startPlayback(() => {
+      this.renderFramesCards();
+      this.renderLayersList();
+      this.renderLayersCards();
+      this.requestRedraw();
+    });
   }
 
   private stopPlayback(): void {
-    if (this.playbackTimer !== null) {
-      window.clearTimeout(this.playbackTimer);
-      this.playbackTimer = null;
-    }
+    this.layersManager.stopPlayback();
   }
 
   private cycleFps(broadcast = true, newFps?: number): void {
@@ -1448,7 +1644,7 @@ export class DesignController {
 
     if (broadcast) {
       this.scheduleAutoSave();
-      sendCanvasAction(this.canvasUuid, 'change_fps', {
+      this.collaborationManager.sendAction('change_fps', {
         fps: this.fps,
       });
     }
@@ -1497,142 +1693,11 @@ export class DesignController {
   }
 
   private generateThumbnail(): string {
-    const maxThumbDim = 320;
-    let thumbW = this.canvasWidth || 256;
-    let thumbH = this.canvasHeight || 256;
-
-    if (this.isInfinite) {
-      const firstFrame = this.frames[0];
-      let foundBox = false;
-      let box = { height: 256, minX: 0, minY: 0, width: 256 };
-      if (firstFrame) {
-        for (const layer of firstFrame.layers) {
-          const lBox = (layer as any).chunkGrid?.getBoundingBox();
-          if (lBox && lBox.hasPixels) {
-            box = lBox;
-            foundBox = true;
-            break;
-          }
-        }
-      }
-      thumbW = Math.min(320, Math.max(64, box.width));
-      thumbH = Math.min(320, Math.max(64, box.height));
-      const thumbCanvas = document.createElement('canvas');
-      thumbCanvas.width = thumbW;
-      thumbCanvas.height = thumbH;
-      const ctx = thumbCanvas.getContext('2d');
-      if (!ctx) return '';
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, thumbW, thumbH);
-      if (firstFrame && foundBox) {
-        for (const layer of firstFrame.layers) {
-          if (layer.visible && (layer as any).chunkGrid) {
-            const exp = (layer as any).chunkGrid.exportToCanvas({ x: box.minX, y: box.minY, width: box.width, height: box.height });
-            ctx.globalAlpha = layer.opacity;
-            ctx.drawImage(exp, 0, 0, thumbW, thumbH);
-          }
-        }
-      }
-      return thumbCanvas.toDataURL('image/png');
-    }
-
-    if (thumbW > maxThumbDim || thumbH > maxThumbDim) {
-      const ratio = Math.min(maxThumbDim / thumbW, maxThumbDim / thumbH);
-      thumbW = Math.max(1, Math.round(thumbW * ratio));
-      thumbH = Math.max(1, Math.round(thumbH * ratio));
-    }
-
-    const thumbCanvas = document.createElement('canvas');
-    thumbCanvas.width = thumbW;
-    thumbCanvas.height = thumbH;
-    const ctx = thumbCanvas.getContext('2d');
-    if (!ctx) return '';
-
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, thumbW, thumbH);
-
-    const firstFrame = this.frames[0];
-    if (firstFrame) {
-      for (const layer of firstFrame.layers) {
-        if (layer.visible) {
-          ctx.globalAlpha = layer.opacity;
-          ctx.drawImage(layer.canvas, 0, 0, thumbW, thumbH);
-        }
-      }
-    }
-
-    return thumbCanvas.toDataURL('image/png');
+    return generateThumbnail(this.frames, this.canvasWidth, this.canvasHeight, this.isInfinite, this.canvasBackground);
   }
 
   private async loadLayerImage(layer: CanvasLayer, dataUrl: string): Promise<void> {
-    if (!dataUrl || (!dataUrl.startsWith('data:image') && !dataUrl.startsWith('/') && !dataUrl.startsWith('http'))) {
-      return;
-    }
-
-    try {
-      const img = new Image();
-      img.src = dataUrl;
-
-      if (typeof img.decode === 'function') {
-        try {
-          await Promise.race([
-            img.decode(),
-            new Promise<void>((_, reject) => setTimeout(() => reject(new Error('timeout')), 2500)),
-          ]);
-        } catch {
-          await new Promise<void>((resolve) => {
-            let settled = false;
-            const timer = setTimeout(() => {
-              if (!settled) {
-                settled = true;
-                resolve();
-              }
-            }, 1000);
-            const done = () => {
-              if (!settled) {
-                settled = true;
-                clearTimeout(timer);
-                resolve();
-              }
-            };
-            img.onload = done;
-            img.onerror = done;
-            if (img.complete) {
-              done();
-            }
-          });
-        }
-      } else {
-        await new Promise<void>((resolve) => {
-          let settled = false;
-          const timer = setTimeout(() => {
-            if (!settled) {
-              settled = true;
-              resolve();
-            }
-          }, 2500);
-          const done = () => {
-            if (!settled) {
-              settled = true;
-              clearTimeout(timer);
-              resolve();
-            }
-          };
-          img.onload = done;
-          img.onerror = done;
-          if (img.complete) {
-            done();
-          }
-        });
-      }
-
-      layer.ctx.imageSmoothingEnabled = false;
-      layer.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
-      try {
-        layer.ctx.drawImage(img, 0, 0, this.canvasWidth, this.canvasHeight);
-        (layer as any).chunkGrid?.populateFromCanvas(layer.canvas);
-      } catch {}
-    } catch {}
+    return this.layersManager.loadLayerImage(layer, dataUrl);
   }
 
   private async deserializeProject(data: SerializedCanvasProject | string): Promise<boolean> {
@@ -2319,7 +2384,7 @@ export class DesignController {
     }
 
     if (broadcast) {
-      sendCanvasAction(this.canvasUuid, 'inject_shape', {
+      this.collaborationManager.sendAction('inject_shape', {
         color: this.currentColor,
         colorMode: this.shapeColorMode,
         flipH: this.shapeFlipH,
@@ -2437,75 +2502,16 @@ export class DesignController {
     const lId = layerId || layer?.id || '';
     if (!fId || !lId) return;
 
-    const w = beforeData.width;
-    const h = beforeData.height;
-    const beforeBuf = new Uint32Array(beforeData.data.buffer);
-    const afterBuf = new Uint32Array(afterData.data.buffer);
-
-    let minX = w;
-    let minY = h;
-    let maxX = -1;
-    let maxY = -1;
-
-    for (let y = 0; y < h; y++) {
-      const rowOffset = y * w;
-      for (let x = 0; x < w; x++) {
-        if (beforeBuf[rowOffset + x] !== afterBuf[rowOffset + x]) {
-          if (x < minX) minX = x;
-          if (x > maxX) maxX = x;
-          if (y < minY) minY = y;
-          if (y > maxY) maxY = y;
-        }
-      }
+    const step = this.historyManager.computeDiffStep(beforeData, afterData, fId, lId);
+    if (step) {
+      this.historyManager.pushUndo(step);
+      this.updateUndoRedoUI();
     }
-
-    if (maxX === -1) return;
-
-    const boxW = maxX - minX + 1;
-    const boxH = maxY - minY + 1;
-
-    let subBefore: ImageData;
-    let subAfter: ImageData;
-
-    if (boxW === w && boxH === h && minX === 0 && minY === 0) {
-      subBefore = beforeData;
-      subAfter = afterData;
-    } else {
-      subBefore = new ImageData(boxW, boxH);
-      subAfter = new ImageData(boxW, boxH);
-
-      const subBeforeBuf = new Uint32Array(subBefore.data.buffer);
-      const subAfterBuf = new Uint32Array(subAfter.data.buffer);
-
-      for (let by = 0; by < boxH; by++) {
-        const srcRowOffset = (minY + by) * w;
-        const dstRowOffset = by * boxW;
-        for (let bx = 0; bx < boxW; bx++) {
-          subBeforeBuf[dstRowOffset + bx] = beforeBuf[srcRowOffset + (minX + bx)];
-          subAfterBuf[dstRowOffset + bx] = afterBuf[srcRowOffset + (minX + bx)];
-        }
-      }
-    }
-
-    this.undoStack.push({
-      afterData: subAfter,
-      beforeData: subBefore,
-      frameId: fId,
-      layerId: lId,
-      x: minX,
-      y: minY,
-    });
-    if (this.undoStack.length > 30) {
-      this.undoStack.shift();
-    }
-    this.redoStack = [];
-    this.updateUndoRedoUI();
   }
 
   public undo(): void {
-    if (this.undoStack.length === 0) return;
-    const step = this.undoStack.pop()!;
-    this.redoStack.push(step);
+    const step = this.historyManager.undo();
+    if (!step) return;
 
     const frame = this.frames.find((f) => f.id === step.frameId);
     const layer = frame?.layers.find((l) => l.id === step.layerId);
@@ -2535,9 +2541,8 @@ export class DesignController {
   }
 
   public redo(): void {
-    if (this.redoStack.length === 0) return;
-    const step = this.redoStack.pop()!;
-    this.undoStack.push(step);
+    const step = this.historyManager.redo();
+    if (!step) return;
 
     const frame = this.frames.find((f) => f.id === step.frameId);
     const layer = frame?.layers.find((l) => l.id === step.layerId);
@@ -2628,7 +2633,7 @@ export class DesignController {
       const afterData = layer.ctx.getImageData(0, 0, this.canvasWidth, this.canvasHeight);
       this.pushUndoStep(beforeData, afterData, layer.id, this.activeFrameId);
       this.scheduleAutoSave();
-      sendCanvasAction(this.canvasUuid, 'update_layer_image', {
+      this.collaborationManager.sendAction('update_layer_image', {
         dataUrl: layer.canvas.toDataURL('image/png'),
         frameId: this.activeFrameId,
         layerId: layer.id,
@@ -3330,88 +3335,14 @@ export class DesignController {
   }
 
   private isPixelInSelection(x: number, y: number): boolean {
-    if (this.floatingSelection) {
-      return (
-        x >= this.floatingSelection.x &&
-        x < this.floatingSelection.x + this.floatingSelection.width &&
-        y >= this.floatingSelection.y &&
-        y < this.floatingSelection.y + this.floatingSelection.height
-      );
-    }
-    if (this.selectionMask) {
-      if (x < 0 || x >= this.canvasWidth || y < 0 || y >= this.canvasHeight) return false;
-      return this.selectionMask[y * this.canvasWidth + x] === 1;
-    }
-    return false;
+    return this.toolsManager.isPixelSelected(x, y, this.canvasWidth, this.canvasHeight);
   }
 
   private liftSelectionToFloating(): void {
     if (this.floatingSelection || !this.selectionMask) return;
     const layer = this.getActiveLayer();
     if (!layer || !layer.visible) return;
-
-    let minX = this.canvasWidth;
-    let minY = this.canvasHeight;
-    let maxX = -1;
-    let maxY = -1;
-
-    for (let y = 0; y < this.canvasHeight; y++) {
-      for (let x = 0; x < this.canvasWidth; x++) {
-        if (this.selectionMask[y * this.canvasWidth + x] === 1) {
-          if (x < minX) minX = x;
-          if (x > maxX) maxX = x;
-          if (y < minY) minY = y;
-          if (y > maxY) maxY = y;
-        }
-      }
-    }
-
-    if (maxX < minX || maxY < minY) return;
-
-    const w = maxX - minX + 1;
-    const h = maxY - minY + 1;
-
-    const floatCanvas = document.createElement('canvas');
-    floatCanvas.width = w;
-    floatCanvas.height = h;
-    const floatCtx = floatCanvas.getContext('2d')!;
-
-    const layerImg = layer.ctx.getImageData(0, 0, this.canvasWidth, this.canvasHeight);
-    const floatImg = floatCtx.createImageData(w, h);
-
-    const layerData = layerImg.data;
-    const floatData = floatImg.data;
-
-    for (let y = minY; y <= maxY; y++) {
-      for (let x = minX; x <= maxX; x++) {
-        if (this.selectionMask[y * this.canvasWidth + x] === 1) {
-          const lIdx = (y * this.canvasWidth + x) * 4;
-          const fIdx = ((y - minY) * w + (x - minX)) * 4;
-          floatData[fIdx] = layerData[lIdx];
-          floatData[fIdx + 1] = layerData[lIdx + 1];
-          floatData[fIdx + 2] = layerData[lIdx + 2];
-          floatData[fIdx + 3] = layerData[lIdx + 3];
-
-          layerData[lIdx] = 0;
-          layerData[lIdx + 1] = 0;
-          layerData[lIdx + 2] = 0;
-          layerData[lIdx + 3] = 0;
-        }
-      }
-    }
-
-    floatCtx.putImageData(floatImg, 0, 0);
-    layer.ctx.putImageData(layerImg, 0, 0);
-
-    this.floatingSelection = {
-      canvas: floatCanvas,
-      ctx: floatCtx,
-      x: minX,
-      y: minY,
-      width: w,
-      height: h,
-    };
-
+    this.toolsManager.liftSelectionToFloating(layer, this.canvasWidth, this.canvasHeight);
     this.startMarchingAntsLoop();
     this.requestRedraw();
   }
@@ -3420,15 +3351,11 @@ export class DesignController {
     if (!this.floatingSelection) return;
     const layer = this.getActiveLayer();
     if (layer && layer.visible) {
-      if (this.isInfinite && layer.chunkGrid) {
-        layer.chunkGrid.populateFromCanvas(this.floatingSelection.canvas, this.floatingSelection.x, this.floatingSelection.y);
-      } else {
-        layer.ctx.drawImage(this.floatingSelection.canvas, this.floatingSelection.x, this.floatingSelection.y);
-      }
+      this.toolsManager.commitFloatingSelection(layer, this.isInfinite);
       this.scheduleAutoSave();
 
       if (broadcast && !this.isInfinite) {
-        sendCanvasAction(this.canvasUuid, 'update_layer_image', {
+        this.collaborationManager.sendAction('update_layer_image', {
           dataUrl: layer.canvas.toDataURL('image/png'),
           frameId: this.activeFrameId,
           layerId: layer.id,
@@ -3441,7 +3368,7 @@ export class DesignController {
 
   private clearSelection(): void {
     this.commitFloatingSelection();
-    this.selectionMask = null;
+    this.toolsManager.clearSelection();
     this.stopMarchingAntsLoop();
     this.requestRedraw();
   }
@@ -3449,7 +3376,7 @@ export class DesignController {
   private selectAll(): void {
     if (this.isInfinite) return;
     this.commitFloatingSelection();
-    this.selectionMask = new Uint8Array(this.canvasWidth * this.canvasHeight).fill(1);
+    this.toolsManager.selectAll(this.canvasWidth, this.canvasHeight, this.isInfinite);
     this.startMarchingAntsLoop();
     this.requestRedraw();
   }
@@ -3459,17 +3386,7 @@ export class DesignController {
       this.liftSelectionToFloating();
     }
     if (!this.floatingSelection) return;
-
-    const temp = document.createElement('canvas');
-    temp.width = this.floatingSelection.width;
-    temp.height = this.floatingSelection.height;
-    const tCtx = temp.getContext('2d')!;
-    tCtx.translate(temp.width, 0);
-    tCtx.scale(-1, 1);
-    tCtx.drawImage(this.floatingSelection.canvas, 0, 0);
-
-    this.floatingSelection.canvas = temp;
-    this.floatingSelection.ctx = tCtx;
+    this.toolsManager.flipSelectionHorizontal();
     this.requestRedraw();
   }
 
@@ -3478,17 +3395,7 @@ export class DesignController {
       this.liftSelectionToFloating();
     }
     if (!this.floatingSelection) return;
-
-    const temp = document.createElement('canvas');
-    temp.width = this.floatingSelection.width;
-    temp.height = this.floatingSelection.height;
-    const tCtx = temp.getContext('2d')!;
-    tCtx.translate(0, temp.height);
-    tCtx.scale(1, -1);
-    tCtx.drawImage(this.floatingSelection.canvas, 0, 0);
-
-    this.floatingSelection.canvas = temp;
-    this.floatingSelection.ctx = tCtx;
+    this.toolsManager.flipSelectionVertical();
     this.requestRedraw();
   }
 
@@ -3497,220 +3404,53 @@ export class DesignController {
       this.liftSelectionToFloating();
     }
     if (!this.floatingSelection) return;
-
-    const temp = document.createElement('canvas');
-    temp.width = this.floatingSelection.height;
-    temp.height = this.floatingSelection.width;
-    const tCtx = temp.getContext('2d')!;
-    tCtx.translate(temp.width, 0);
-    tCtx.rotate(Math.PI / 2);
-    tCtx.drawImage(this.floatingSelection.canvas, 0, 0);
-
-    this.floatingSelection.canvas = temp;
-    this.floatingSelection.ctx = tCtx;
-    this.floatingSelection.width = temp.width;
-    this.floatingSelection.height = temp.height;
+    this.toolsManager.rotateSelection90();
     this.requestRedraw();
   }
 
   private copySelection(): void {
-    if (this.floatingSelection) {
-      const copyCanvas = document.createElement('canvas');
-      copyCanvas.width = this.floatingSelection.width;
-      copyCanvas.height = this.floatingSelection.height;
-      copyCanvas.getContext('2d')!.drawImage(this.floatingSelection.canvas, 0, 0);
-      this.clipboard = {
-        canvas: copyCanvas,
-        width: this.floatingSelection.width,
-        height: this.floatingSelection.height,
-      };
-      return;
-    }
-
-    if (!this.selectionMask) return;
     const layer = this.getActiveLayer();
     if (!layer || !layer.visible) return;
-
-    let minX = this.canvasWidth;
-    let minY = this.canvasHeight;
-    let maxX = -1;
-    let maxY = -1;
-
-    for (let y = 0; y < this.canvasHeight; y++) {
-      for (let x = 0; x < this.canvasWidth; x++) {
-        if (this.selectionMask[y * this.canvasWidth + x] === 1) {
-          if (x < minX) minX = x;
-          if (x > maxX) maxX = x;
-          if (y < minY) minY = y;
-          if (y > maxY) maxY = y;
-        }
-      }
-    }
-
-    if (maxX < minX || maxY < minY) return;
-
-    const w = maxX - minX + 1;
-    const h = maxY - minY + 1;
-
-    const copyCanvas = document.createElement('canvas');
-    copyCanvas.width = w;
-    copyCanvas.height = h;
-    const copyCtx = copyCanvas.getContext('2d')!;
-
-    const layerImg = layer.ctx.getImageData(0, 0, this.canvasWidth, this.canvasHeight);
-    const copyImg = copyCtx.createImageData(w, h);
-
-    for (let y = minY; y <= maxY; y++) {
-      for (let x = minX; x <= maxX; x++) {
-        if (this.selectionMask[y * this.canvasWidth + x] === 1) {
-          const lIdx = (y * this.canvasWidth + x) * 4;
-          const cIdx = ((y - minY) * w + (x - minX)) * 4;
-          copyImg.data[cIdx] = layerImg.data[lIdx];
-          copyImg.data[cIdx + 1] = layerImg.data[lIdx + 1];
-          copyImg.data[cIdx + 2] = layerImg.data[lIdx + 2];
-          copyImg.data[cIdx + 3] = layerImg.data[lIdx + 3];
-        }
-      }
-    }
-
-    copyCtx.putImageData(copyImg, 0, 0);
-    this.clipboard = { canvas: copyCanvas, width: w, height: h };
+    this.toolsManager.copySelection(layer, this.canvasWidth, this.canvasHeight);
   }
 
   private cutSelection(): void {
-    this.copySelection();
     const layer = this.getActiveLayer();
-    if (this.floatingSelection) {
-      this.floatingSelection = null;
-      this.selectionMask = null;
-      this.stopMarchingAntsLoop();
-      this.scheduleAutoSave();
-      this.requestRedraw();
-      if (layer) {
-        dispatchCanvasAction(this.getActionContext(), {
-          payload: {
-            dataUrl: layer.canvas.toDataURL('image/png'),
-            frameId: this.activeFrameId,
-            layerId: layer.id,
-          },
-          type: 'update_layer_image',
-        });
-      }
-      return;
-    }
-
-    if (this.selectionMask) {
-      if (layer && layer.visible) {
-        const layerImg = layer.ctx.getImageData(0, 0, this.canvasWidth, this.canvasHeight);
-        for (let i = 0; i < this.selectionMask.length; i++) {
-          if (this.selectionMask[i] === 1) {
-            const idx = i * 4;
-            layerImg.data[idx] = 0;
-            layerImg.data[idx + 1] = 0;
-            layerImg.data[idx + 2] = 0;
-            layerImg.data[idx + 3] = 0;
-          }
-        }
-        layer.ctx.putImageData(layerImg, 0, 0);
-        this.scheduleAutoSave();
-        dispatchCanvasAction(this.getActionContext(), {
-          payload: {
-            dataUrl: layer.canvas.toDataURL('image/png'),
-            frameId: this.activeFrameId,
-            layerId: layer.id,
-          },
-          type: 'update_layer_image',
-        });
-      }
-      this.selectionMask = null;
-      this.stopMarchingAntsLoop();
-      this.requestRedraw();
-    }
+    if (!layer || !layer.visible) return;
+    this.toolsManager.cutSelection(layer, this.canvasWidth, this.canvasHeight);
+    this.stopMarchingAntsLoop();
+    this.scheduleAutoSave();
+    this.requestRedraw();
+    this.collaborationManager.sendAction('update_layer_image', {
+      dataUrl: layer.canvas.toDataURL('image/png'),
+      frameId: this.activeFrameId,
+      layerId: layer.id,
+    });
   }
 
   private pasteClipboard(): void {
-    if (!this.clipboard) return;
     this.commitFloatingSelection();
-
-    const floatCanvas = document.createElement('canvas');
-    floatCanvas.width = this.clipboard.width;
-    floatCanvas.height = this.clipboard.height;
-    const floatCtx = floatCanvas.getContext('2d')!;
-    floatCtx.drawImage(this.clipboard.canvas, 0, 0);
-
-    const pasteX = Math.max(0, Math.floor((this.canvasWidth - this.clipboard.width) / 2));
-    const pasteY = Math.max(0, Math.floor((this.canvasHeight - this.clipboard.height) / 2));
-
-    this.floatingSelection = {
-      canvas: floatCanvas,
-      ctx: floatCtx,
-      x: pasteX,
-      y: pasteY,
-      width: this.clipboard.width,
-      height: this.clipboard.height,
-    };
-
-    this.selectionMask = new Uint8Array(this.canvasWidth * this.canvasHeight);
-    for (let y = 0; y < this.clipboard.height; y++) {
-      for (let x = 0; x < this.clipboard.width; x++) {
-        const nx = pasteX + x;
-        const ny = pasteY + y;
-        if (nx >= 0 && nx < this.canvasWidth && ny >= 0 && ny < this.canvasHeight) {
-          this.selectionMask[ny * this.canvasWidth + nx] = 1;
-        }
-      }
+    if (this.toolsManager.pasteClipboard(this.canvasWidth, this.canvasHeight)) {
+      this.selectTool('select');
+      this.startMarchingAntsLoop();
+      this.requestRedraw();
     }
-
-    this.selectTool('select');
-    this.startMarchingAntsLoop();
-    this.requestRedraw();
   }
 
   private deleteSelection(broadcast = true): void {
     const layer = this.getActiveLayer();
-    if (this.floatingSelection) {
-      this.floatingSelection = null;
-      this.selectionMask = null;
-      this.stopMarchingAntsLoop();
-      this.scheduleAutoSave();
-      this.requestRedraw();
+    if (!layer || !layer.visible) return;
+    this.toolsManager.deleteSelection(layer, this.canvasWidth, this.canvasHeight);
+    this.stopMarchingAntsLoop();
+    this.scheduleAutoSave();
+    this.requestRedraw();
 
-      if (broadcast && layer) {
-        sendCanvasAction(this.canvasUuid, 'update_layer_image', {
-          dataUrl: layer.canvas.toDataURL('image/png'),
-          frameId: this.activeFrameId,
-          layerId: layer.id,
-        });
-      }
-      return;
-    }
-
-    if (this.selectionMask) {
-      if (layer && layer.visible) {
-        const layerImg = layer.ctx.getImageData(0, 0, this.canvasWidth, this.canvasHeight);
-        for (let i = 0; i < this.selectionMask.length; i++) {
-          if (this.selectionMask[i] === 1) {
-            const idx = i * 4;
-            layerImg.data[idx] = 0;
-            layerImg.data[idx + 1] = 0;
-            layerImg.data[idx + 2] = 0;
-            layerImg.data[idx + 3] = 0;
-          }
-        }
-        layer.ctx.putImageData(layerImg, 0, 0);
-        this.scheduleAutoSave();
-
-        if (broadcast) {
-          sendCanvasAction(this.canvasUuid, 'update_layer_image', {
-            dataUrl: layer.canvas.toDataURL('image/png'),
-            frameId: this.activeFrameId,
-            layerId: layer.id,
-          });
-        }
-      }
-      this.selectionMask = null;
-      this.stopMarchingAntsLoop();
-      this.requestRedraw();
+    if (broadcast) {
+      this.collaborationManager.sendAction('update_layer_image', {
+        dataUrl: layer.canvas.toDataURL('image/png'),
+        frameId: this.activeFrameId,
+        layerId: layer.id,
+      });
     }
   }
 
@@ -3849,14 +3589,7 @@ export class DesignController {
   }
 
   private updateTextCanvas(): void {
-    this.textCanvas = renderPixelTextCanvas(
-      this.textValue,
-      this.textFont,
-      this.currentColor,
-      this.textScale,
-      this.textOutline,
-      this.textShadow
-    );
+    this.toolsManager.renderTextPreview();
     this.requestRedraw();
   }
 
@@ -3894,26 +3627,31 @@ export class DesignController {
     if (!this.textCanvas) return;
     const layer = this.getActiveLayer();
     if (layer && layer.visible) {
-      if (this.isInfinite && layer.chunkGrid) {
-        layer.chunkGrid.populateFromCanvas(this.textCanvas, this.textX, this.textY);
-      } else {
-        layer.ctx.drawImage(this.textCanvas, this.textX, this.textY);
+      const textVal = this.textValue;
+      const textFontVal = this.textFont;
+      const textScaleVal = this.textScale;
+      const textOutlineVal = this.textOutline;
+      const textShadowVal = this.textShadow;
+      const tx = this.textX;
+      const ty = this.textY;
+
+      if (this.toolsManager.stampTextToLayer(layer, this.isInfinite)) {
+        if (broadcast) {
+          this.collaborationManager.sendAction('text', {
+            color: this.currentColor,
+            fontFamily: textFontVal,
+            frameId: this.activeFrameId,
+            layerId: layer.id,
+            outline: textOutlineVal,
+            scale: textScaleVal,
+            shadow: textShadowVal,
+            text: textVal,
+            x: tx,
+            y: ty,
+          });
+        }
+        this.scheduleAutoSave();
       }
-      if (broadcast) {
-        sendCanvasAction(this.canvasUuid, 'text', {
-          color: this.currentColor,
-          fontFamily: this.textFont,
-          frameId: this.activeFrameId,
-          layerId: layer.id,
-          outline: this.textOutline,
-          scale: this.textScale,
-          shadow: this.textShadow,
-          text: this.textValue,
-          x: this.textX,
-          y: this.textY,
-        });
-      }
-      this.scheduleAutoSave();
     }
     this.textCanvas = null;
     this.selectTool('brush');
@@ -3927,17 +3665,7 @@ export class DesignController {
   }
 
   private getToolSize(): number {
-    if (
-      this.currentTool === 'brush' ||
-      this.currentTool === 'eraser' ||
-      this.currentTool === 'line' ||
-      this.currentTool === 'recolor' ||
-      this.currentTool === 'dither' ||
-      this.currentTool === 'shading'
-    ) {
-      return this.toolSizes[this.currentTool] || 1;
-    }
-    return 1;
+    return this.toolsManager.getToolSize();
   }
 
   private setToolSize(size: number): void {
@@ -4026,267 +3754,48 @@ export class DesignController {
   }
 
   private getSymmetricPoints(x: number, y: number): Array<{ x: number; y: number }> {
-    const points: Array<{ x: number; y: number }> = [{ x, y }];
-    if (!this.mirrorEnabled) return points;
-
-    const symX = this.canvasWidth - 1 - x;
-    const symY = this.canvasHeight - 1 - y;
-
-    if (this.mirrorAxis === 'vertical' || this.mirrorAxis === 'both') {
-      if (symX !== x) points.push({ x: symX, y });
-    }
-    if (this.mirrorAxis === 'horizontal' || this.mirrorAxis === 'both') {
-      if (symY !== y) points.push({ x, y: symY });
-    }
-    if (this.mirrorAxis === 'both') {
-      if (symX !== x && symY !== y) points.push({ x: symX, y: symY });
-    }
-
-    return points;
+    return this.toolsManager.getSymmetricPoints(x, y, this.canvasWidth, this.canvasHeight);
   }
 
   private applyBrushOrEraserAt(layer: CanvasLayer, px: number, py: number): void {
-    const size = this.getToolSize();
-    const offset = Math.floor(size / 2);
-    const startX = px - offset;
-    const startY = py - offset;
-
-    for (let dy = 0; dy < size; dy++) {
-      for (let dx = 0; dx < size; dx++) {
-        const nx = startX + dx;
-        const ny = startY + dy;
-        if (this.isInfinite || (nx >= 0 && nx < this.canvasWidth && ny >= 0 && ny < this.canvasHeight)) {
-          if (this.currentTool === 'brush') {
-            if (!this.isInfinite) {
-              layer.ctx.fillStyle = this.currentColor;
-              layer.ctx.fillRect(nx, ny, 1, 1);
-            }
-            (layer as any).chunkGrid?.setPixel(nx, ny, this.currentColor);
-          } else if (this.currentTool === 'eraser') {
-            if (!this.isInfinite) {
-              layer.ctx.clearRect(nx, ny, 1, 1);
-            }
-            (layer as any).chunkGrid?.clearPixel(nx, ny);
-          }
-        }
-      }
-    }
+    this.toolsManager.applyBrushOrEraserAt(layer, px, py, this.canvasWidth, this.canvasHeight, this.isInfinite);
   }
 
   private applyDitherAt(layer: CanvasLayer, px: number, py: number): void {
-    const size = this.getToolSize();
-    const offset = Math.floor(size / 2);
-    const startX = px - offset;
-    const startY = py - offset;
-
-    for (let dy = 0; dy < size; dy++) {
-      for (let dx = 0; dx < size; dx++) {
-        const nx = startX + dx;
-        const ny = startY + dy;
-        if (this.isInfinite || (nx >= 0 && nx < this.canvasWidth && ny >= 0 && ny < this.canvasHeight)) {
-          if (isDitherPixel(nx, ny, this.ditherPattern)) {
-            if (!this.isInfinite) {
-              layer.ctx.fillStyle = this.currentColor;
-              layer.ctx.fillRect(nx, ny, 1, 1);
-            }
-            (layer as any).chunkGrid?.setPixel(nx, ny, this.currentColor);
-          }
-        }
-      }
-    }
+    this.toolsManager.applyDitherAt(layer, px, py, this.canvasWidth, this.canvasHeight, this.isInfinite);
   }
 
   private applyShadingAt(layer: CanvasLayer, px: number, py: number): void {
-    const size = this.getToolSize();
-    const offset = Math.floor(size / 2);
-    const startX = px - offset;
-    const startY = py - offset;
-
-    for (let dy = 0; dy < size; dy++) {
-      for (let dx = 0; dx < size; dx++) {
-        const nx = startX + dx;
-        const ny = startY + dy;
-        if (nx >= 0 && nx < this.canvasWidth && ny >= 0 && ny < this.canvasHeight) {
-          const key = `${nx},${ny}`;
-          if (this.visitedStrokePixels.has(key)) continue;
-          this.visitedStrokePixels.add(key);
-
-          const imgData = layer.ctx.getImageData(nx, ny, 1, 1);
-          const data = imgData.data;
-          if (data[3] > 0) {
-            const shaded = applyShadingToPixel(
-              data[0],
-              data[1],
-              data[2],
-              this.shadingMode,
-              this.shadingRamp,
-              this.currentColor
-            );
-            layer.ctx.fillStyle = rgbToHex(shaded.r, shaded.g, shaded.b);
-            layer.ctx.fillRect(nx, ny, 1, 1);
-            (layer as any).chunkGrid?.setPixel(nx, ny, rgbToHex(shaded.r, shaded.g, shaded.b));
-          }
-        }
-      }
-    }
+    this.toolsManager.applyShadingAt(layer, px, py, this.canvasWidth, this.canvasHeight, this.isInfinite);
   }
 
   private applySprayAt(layer: CanvasLayer, centerX: number, centerY: number): void {
-    const radius = this.sprayRadius;
-    const count = this.sprayDensity === 'low' ? 3 : this.sprayDensity === 'med' ? 6 : 14;
-
-    for (let i = 0; i < count; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const r = Math.random() * radius;
-      const px = Math.floor(centerX + r * Math.cos(angle));
-      const py = Math.floor(centerY + r * Math.sin(angle));
-
-      if (this.isInfinite || (px >= 0 && px < this.canvasWidth && py >= 0 && py < this.canvasHeight)) {
-        if (!this.isInfinite) {
-          layer.ctx.fillStyle = this.currentColor;
-          layer.ctx.fillRect(px, py, 1, 1);
-        }
-        (layer as any).chunkGrid?.setPixel(px, py, this.currentColor);
-      }
-    }
+    this.toolsManager.applySprayAt(layer, centerX, centerY, this.canvasWidth, this.canvasHeight, this.isInfinite);
   }
 
   private applyFloodFill(layer: CanvasLayer, startX: number, startY: number): void {
-    if (this.isInfinite) {
-      const grid = layer.chunkGrid;
-      if (!grid) return;
-      const targetPixel = grid.getPixel(startX, startY);
-      const targetColor32 = ((targetPixel.a << 24) | (targetPixel.b << 16) | (targetPixel.g << 8) | targetPixel.r) >>> 0;
-      const { r, g, b } = hexToRgb(this.currentColor);
-      const fillColor32 = ((255 << 24) | (b << 16) | (g << 8) | r) >>> 0;
-      if (targetColor32 === fillColor32) return;
-
-      const maxFillPixels = 65536;
-      let filledCount = 0;
-      const queue: [number, number][] = [[startX, startY]];
-      const visited = new Set<string>();
-      visited.add(`${startX},${startY}`);
-
-      while (queue.length > 0 && filledCount < maxFillPixels) {
-        const [cx, cy] = queue.pop()!;
-        grid.setPixel(cx, cy, this.currentColor);
-        filledCount++;
-
-        const neighbors: [number, number][] = [
-          [cx + 1, cy],
-          [cx - 1, cy],
-          [cx, cy + 1],
-          [cx, cy - 1],
-        ];
-
-        for (const [nx, ny] of neighbors) {
-          const key = `${nx},${ny}`;
-          if (!visited.has(key)) {
-            visited.add(key);
-            const p = grid.getPixel(nx, ny);
-            const p32 = ((p.a << 24) | (p.b << 16) | (p.g << 8) | p.r) >>> 0;
-            if (p32 === targetColor32) {
-              queue.push([nx, ny]);
-            }
-          }
-        }
-      }
-      return;
-    }
-
-    if (startX < 0 || startX >= this.canvasWidth || startY < 0 || startY >= this.canvasHeight) return;
-
-    const imgData = layer.ctx.getImageData(0, 0, this.canvasWidth, this.canvasHeight);
-    const data32 = new Uint32Array(imgData.data.buffer);
-
-    const { r, g, b } = hexToRgb(this.currentColor);
-    const fillColor32 = ((255 << 24) | (b << 16) | (g << 8) | r) >>> 0;
-
-    const startIndex = startY * this.canvasWidth + startX;
-    const targetColor32 = data32[startIndex];
-
-    if (targetColor32 === fillColor32) return;
-
-    if (this.bucketMode === 'global') {
-      globalColorReplace(data32, targetColor32, fillColor32);
-    } else {
-      scanlineFloodFill(data32, this.canvasWidth, this.canvasHeight, startX, startY, fillColor32);
-    }
-
-    layer.ctx.putImageData(imgData, 0, 0);
+    this.toolsManager.applyFloodFill(layer, startX, startY, this.canvasWidth, this.canvasHeight, this.isInfinite);
   }
 
   private applyRecolorAt(layer: CanvasLayer, px: number, py: number): void {
-    if (this.recolorTargetColor32 === null) return;
-    const size = this.getToolSize();
-    const offset = Math.floor(size / 2);
-    const startX = px - offset;
-    const startY = py - offset;
-
-    const { r, g, b } = hexToRgb(this.currentColor);
-    const fillColor32 = ((255 << 24) | (b << 16) | (g << 8) | r) >>> 0;
-    if (this.recolorTargetColor32 === fillColor32) return;
-
-    for (let dy = 0; dy < size; dy++) {
-      for (let dx = 0; dx < size; dx++) {
-        const nx = startX + dx;
-        const ny = startY + dy;
-        if (nx >= 0 && nx < this.canvasWidth && ny >= 0 && ny < this.canvasHeight) {
-          const key = `${nx},${ny}`;
-          if (this.visitedStrokePixels.has(key)) continue;
-          this.visitedStrokePixels.add(key);
-
-          const img = layer.ctx.getImageData(nx, ny, 1, 1);
-          const val32 = new Uint32Array(img.data.buffer)[0];
-          if (val32 === this.recolorTargetColor32) {
-            layer.ctx.fillStyle = this.currentColor;
-            layer.ctx.fillRect(nx, ny, 1, 1);
-          }
-        }
-      }
-    }
+    this.toolsManager.applyRecolorAt(layer, px, py, this.canvasWidth, this.canvasHeight);
   }
 
   private applyToolAt(x: number, y: number, broadcast = true, customLayer?: CanvasLayer, ignoreSymmetry = false): void {
     const layer = customLayer || this.getActiveLayer();
     if (!layer || !layer.visible || (!this.isInfinite && (x < 0 || x >= this.canvasWidth || y < 0 || y >= this.canvasHeight))) return;
 
-    const points = ignoreSymmetry ? [{ x, y }] : this.getSymmetricPoints(x, y);
+    const points = this.toolsManager.applyToolAt(layer, x, y, this.canvasWidth, this.canvasHeight, this.isInfinite, ignoreSymmetry);
 
-    if (this.currentTool === 'brush' || this.currentTool === 'eraser') {
-      for (const pt of points) {
-        this.applyBrushOrEraserAt(layer, pt.x, pt.y);
-      }
-    } else if (this.currentTool === 'recolor') {
-      for (const pt of points) {
-        this.applyRecolorAt(layer, pt.x, pt.y);
-      }
-    } else if (this.currentTool === 'dither') {
-      for (const pt of points) {
-        this.applyDitherAt(layer, pt.x, pt.y);
-      }
-    } else if (this.currentTool === 'shading') {
-      for (const pt of points) {
-        this.applyShadingAt(layer, pt.x, pt.y);
-      }
-    } else if (this.currentTool === 'spray') {
-      for (const pt of points) {
-        this.applySprayAt(layer, pt.x, pt.y);
-      }
-    } else if (this.currentTool === 'bucket') {
-      for (const pt of points) {
-        this.applyFloodFill(layer, pt.x, pt.y);
-      }
-      if (broadcast) {
-        sendCanvasAction(this.canvasUuid, 'flood_fill', {
-          color: this.currentColor,
-          frameId: this.activeFrameId,
-          layerId: layer.id,
-          mode: this.bucketMode,
-          x,
-          y,
-        });
-      }
+    if (broadcast && this.currentTool === 'bucket') {
+      this.collaborationManager.sendAction('flood_fill', {
+        color: this.currentColor,
+        frameId: this.activeFrameId,
+        layerId: layer.id,
+        mode: this.bucketMode,
+        x,
+        y,
+      });
     }
 
     if (broadcast && this.currentTool !== 'bucket') {
@@ -4295,16 +3804,14 @@ export class DesignController {
       }
       if (this.currentStrokePoints.length >= 8) {
         if (this.currentTool === 'brush' || this.currentTool === 'eraser') {
-          sendCanvasBinaryStroke(
-            this.canvasUuid,
+          this.collaborationManager.sendBinaryStroke(
             this.currentTool,
             this.currentColor,
             this.toolSizes[this.currentTool as keyof typeof this.toolSizes] || 1,
             [...this.currentStrokePoints]
           );
         } else {
-          sendCanvasDrawStroke(
-            this.canvasUuid,
+          this.collaborationManager.sendDrawStroke(
             this.currentTool,
             this.currentColor,
             this.toolSizes[this.currentTool as keyof typeof this.toolSizes] || 1,
@@ -5374,7 +4881,7 @@ export class DesignController {
           const layer = this.getActiveLayer();
           if (!layer || !layer.visible) return;
           layer.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
-          sendCanvasAction(this.canvasUuid, 'clear_layer', {
+          this.collaborationManager.sendAction('clear_layer', {
             frameId: this.activeFrameId,
             layerId: layer.id,
           });
@@ -5808,7 +5315,7 @@ export class DesignController {
         if (isInsideCanvas) {
           const now = Date.now();
           if (now - this.lastSentCursorTime > 40) {
-            sendCanvasCursor(this.canvasUuid, pixelX, pixelY);
+            this.collaborationManager.sendCursor(pixelX, pixelY);
             this.lastSentCursorTime = now;
           }
         }
@@ -6064,17 +5571,13 @@ export class DesignController {
           if (this.currentStrokePoints.length > 0 && this.currentTool !== 'bucket') {
             const activeLayer = this.getActiveLayer();
             if (this.currentTool === 'brush' || this.currentTool === 'eraser') {
-              sendCanvasBinaryStroke(
-                this.canvasUuid,
-                this.currentTool,
+              this.collaborationManager.sendBinaryStroke(this.currentTool,
                 this.currentColor,
                 this.toolSizes[this.currentTool as keyof typeof this.toolSizes] || 1,
                 [...this.currentStrokePoints]
               );
             } else {
-              sendCanvasDrawStroke(
-                this.canvasUuid,
-                this.currentTool,
+              this.collaborationManager.sendDrawStroke(this.currentTool,
                 this.currentColor,
                 this.toolSizes[this.currentTool as keyof typeof this.toolSizes] || 1,
                 [...this.currentStrokePoints],
@@ -6388,25 +5891,7 @@ export class DesignController {
 
   private drawTileGrid(drawX: number, drawY: number, drawXEnd: number, drawYEnd: number): void {
     if (!this.ctx || this.tileGridSize <= 0) return;
-    this.ctx.save();
-    this.ctx.strokeStyle = 'rgba(0, 210, 255, 0.5)';
-    this.ctx.lineWidth = 1;
-    this.ctx.beginPath();
-
-    for (let col = 0; col <= this.canvasWidth; col += this.tileGridSize) {
-      const px = Math.round(this.panX + col * this.zoom) - 0.5;
-      this.ctx.moveTo(px, drawY);
-      this.ctx.lineTo(px, drawYEnd);
-    }
-
-    for (let row = 0; row <= this.canvasHeight; row += this.tileGridSize) {
-      const py = Math.round(this.panY + row * this.zoom) - 0.5;
-      this.ctx.moveTo(drawX, py);
-      this.ctx.lineTo(drawXEnd, py);
-    }
-
-    this.ctx.stroke();
-    this.ctx.restore();
+    this.viewportManager.renderTileGrid(this.ctx, drawX, drawY, drawXEnd - drawX, drawYEnd - drawY);
   }
 
   private drawMarchingAnts(): void {
@@ -6557,28 +6042,7 @@ export class DesignController {
 
   private drawSymmetryGuide(drawX: number, drawY: number, drawW: number, drawH: number): void {
     if (!this.ctx) return;
-    this.ctx.save();
-    this.ctx.strokeStyle = 'rgba(0, 220, 255, 0.75)';
-    this.ctx.lineWidth = 1.5;
-    this.ctx.setLineDash([4, 4]);
-
-    if (this.mirrorAxis === 'vertical' || this.mirrorAxis === 'both') {
-      const midX = Math.round(this.panX + (this.canvasWidth / 2) * this.zoom) - 0.5;
-      this.ctx.beginPath();
-      this.ctx.moveTo(midX, drawY);
-      this.ctx.lineTo(midX, drawY + drawH);
-      this.ctx.stroke();
-    }
-
-    if (this.mirrorAxis === 'horizontal' || this.mirrorAxis === 'both') {
-      const midY = Math.round(this.panY + (this.canvasHeight / 2) * this.zoom) - 0.5;
-      this.ctx.beginPath();
-      this.ctx.moveTo(drawX, midY);
-      this.ctx.lineTo(drawX + drawW, midY);
-      this.ctx.stroke();
-    }
-
-    this.ctx.restore();
+    this.viewportManager.renderSymmetryGuide(this.ctx, drawY, drawH, drawX, drawW, this.mirrorAxis);
   }
 
   private drawPixelGrid(drawX: number, drawY: number, drawXEnd: number, drawYEnd: number, viewportW: number, viewportH: number): void {
@@ -6674,49 +6138,7 @@ export class DesignController {
 
   private drawCollaboratorCursors(): void {
     if (!this.ctx || !this.showAllCursors) return;
-    this.collaborators.forEach((collab) => {
-      if (collab.hideCursor) return;
-      if (collab.x === undefined || collab.y === undefined) return;
-      const screenX = Math.round(this.panX + collab.x * this.zoom);
-      const screenY = Math.round(this.panY + collab.y * this.zoom);
-
-      this.ctx!.save();
-
-      this.ctx!.fillStyle = collab.color;
-      this.ctx!.strokeStyle = '#000000';
-      this.ctx!.lineWidth = 1;
-
-      this.ctx!.beginPath();
-      this.ctx!.moveTo(screenX, screenY);
-      this.ctx!.lineTo(screenX, screenY + 14);
-      this.ctx!.lineTo(screenX + 4, screenY + 10);
-      this.ctx!.lineTo(screenX + 9, screenY + 12);
-      this.ctx!.lineTo(screenX + 11, screenY + 8);
-      this.ctx!.lineTo(screenX + 6, screenY + 6);
-      this.ctx!.lineTo(screenX + 10, screenY);
-      this.ctx!.closePath();
-      this.ctx!.fill();
-      this.ctx!.stroke();
-
-      const name = collab.username || 'Invitado';
-      this.ctx!.font = 'bold 11px system-ui, -apple-system, sans-serif';
-      const textWidth = this.ctx!.measureText(name).width;
-      const badgeW = textWidth + 12;
-      const badgeH = 18;
-      const badgeX = screenX + 8;
-      const badgeY = screenY + 14;
-
-      this.ctx!.fillStyle = collab.color;
-      this.ctx!.beginPath();
-      this.ctx!.roundRect(badgeX, badgeY, badgeW, badgeH, 4);
-      this.ctx!.fill();
-
-      this.ctx!.fillStyle = '#ffffff';
-      this.ctx!.textBaseline = 'middle';
-      this.ctx!.fillText(name, badgeX + 6, badgeY + badgeH / 2);
-
-      this.ctx!.restore();
-    });
+    this.viewportManager.renderCollaboratorCursors(this.ctx, this.collaborators);
   }
 
   private toggleCollaboratorsPanel(): void {
@@ -7309,187 +6731,79 @@ export class DesignController {
     const userId = currentUser ? currentUser.id : 0;
     const username = currentUser ? currentUser.username : 'Invitado';
     const avatarUrl = currentUser?.avatar_url || '';
-    const subscriptionTier = currentUser?.subscription_tier || 'free';
-    this.myCollaboratorColor = getCollaboratorColor(userId ? userId : Math.random().toString());
+    const subscriptionTier = (currentUser?.subscription_tier || 'free') as any;
 
-    joinCanvasRoom(this.canvasUuid, userId, username, this.myCollaboratorColor, this.roomToken, avatarUrl, subscriptionTier);
-
-    const unsubJoinError = registerWebSocketHandler('CANVAS_JOIN_ERROR', (payload: any) => {
-      const roomUuid = payload.canvasUuid || payload.canvas_uuid;
-      if (roomUuid !== this.canvasUuid) return;
-      this.handleAccessRevoked();
-    });
-
-    const unsubPresence = registerWebSocketHandler('ROOM_PRESENCE', (payload: any) => {
-      const roomUuid = payload.canvasUuid || payload.canvas_uuid;
-      if (roomUuid !== this.canvasUuid) return;
-      if (payload.yourRole) {
-        this.role = payload.yourRole;
-        this.applyViewerMode();
-      }
-      this.collaborators.clear();
-      if (Array.isArray(payload.users)) {
-        for (const u of payload.users) {
-          const uConnId = u.connId || u.conn_id;
-          const uUserId = u.userId !== undefined ? u.userId : u.user_id;
-          const uUsername = u.username || 'Invitado';
-          const uColor = u.color || getCollaboratorColor(uUserId || uConnId);
-          const uRole = u.role || 'editor';
-          const uAvatar = u.avatarUrl || u.avatar_url || null;
-          const uTier = (u.subscriptionTier || u.subscription_tier || 'free') as 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios';
-          if (uUserId && uUserId === userId && uUsername === username) continue;
-          this.collaborators.set(uConnId, {
-            avatarUrl: uAvatar,
-            color: uColor,
-            connId: uConnId,
-            hideCursor: false,
-            role: uRole,
-            subscriptionTier: uTier,
-            userId: uUserId,
-            username: uUsername,
-          });
+    this.collaborationManager.init(userId, username, avatarUrl, subscriptionTier, {
+      onAccessChanged: (accessLevel, publicRole) => {
+        const currentUserId = currentUser?.id;
+        const isMember = Boolean(currentUserId && this.canvasMembers.some((m) => m.user_id === currentUserId));
+        if (accessLevel === 'private' && !this.isOwner && !isMember) {
+          this.handleAccessRevoked();
+          return;
         }
-      }
-      this.renderCollaboratorsBar();
-      this.renderCollaboratorsPanel();
-      this.requestRedraw();
-    });
-
-    const unsubJoined = registerWebSocketHandler('USER_JOINED', (payload: any) => {
-      const roomUuid = payload.canvasUuid || payload.canvas_uuid;
-      if (roomUuid !== this.canvasUuid || !payload.user) return;
-      const u = payload.user;
-      const uConnId = u.connId || u.conn_id;
-      const uUserId = u.userId !== undefined ? u.userId : u.user_id;
-      const uUsername = u.username || 'Invitado';
-      const uColor = u.color || getCollaboratorColor(uUserId || uConnId);
-      const uRole = u.role || 'editor';
-      const uAvatar = u.avatarUrl || u.avatar_url || null;
-      const uTier = (u.subscriptionTier || u.subscription_tier || 'free') as 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios';
-      if (uUserId && uUserId === userId && uUsername === username) return;
-      this.collaborators.set(uConnId, {
-        avatarUrl: uAvatar,
-        color: uColor,
-        connId: uConnId,
-        hideCursor: false,
-        role: uRole,
-        subscriptionTier: uTier,
-        userId: uUserId,
-        username: uUsername,
-      });
-      this.renderCollaboratorsBar();
-      this.renderCollaboratorsPanel();
-      this.requestRedraw();
-
-      if (this.isOwner) {
-        sendCanvasFullUpdate(this.canvasUuid, this.serializeProject(), uConnId);
-      }
-    });
-
-    const unsubLeft = registerWebSocketHandler('USER_LEFT', (payload: any) => {
-      const roomUuid = payload.canvasUuid || payload.canvas_uuid;
-      const connId = payload.connId || payload.conn_id;
-      if (roomUuid !== this.canvasUuid || !connId) return;
-      this.collaborators.delete(connId);
-      this.renderCollaboratorsBar();
-      this.renderCollaboratorsPanel();
-      this.requestRedraw();
-    });
-
-    const unsubCursor = registerWebSocketHandler('CANVAS_CURSOR', (payload: any) => {
-      const roomUuid = payload.canvasUuid || payload.canvas_uuid;
-      const connId = payload.connId || payload.conn_id;
-      if (!connId || (roomUuid && roomUuid !== this.canvasUuid)) return;
-      let collab = this.collaborators.get(connId);
-      if (!collab) {
-        collab = {
-          avatarUrl: payload.avatarUrl || payload.avatar_url || null,
-          color: payload.color || getCollaboratorColor(payload.userId || connId),
-          connId,
-          hideCursor: false,
-          role: payload.role || 'editor',
-          subscriptionTier: payload.subscriptionTier || payload.subscription_tier || 'free',
-          userId: payload.userId || 0,
-          username: payload.username || 'Invitado',
-        };
-        this.collaborators.set(connId, collab);
+        if (!this.isOwner && !isMember && accessLevel === 'public') {
+          const newRole = publicRole === 'viewer' ? 'viewer' : 'editor';
+          if (this.role !== newRole) {
+            this.role = newRole;
+            this.applyViewerMode();
+            showToast(
+              this.role === 'viewer'
+                ? 'El propietario cambió el enlace a modo solo lectura.'
+                : 'El propietario te ha otorgado permisos de edición.',
+              'info'
+            );
+          }
+        }
+        this.updateAccessLevelUI();
+      },
+      onAccessRevoked: () => {
+        this.handleAccessRevoked();
+      },
+      onAction: (payload) => {
+        this.applyRemoteAction(payload);
+      },
+      onCollaboratorsChanged: () => {
         this.renderCollaboratorsBar();
         this.renderCollaboratorsPanel();
-      }
-      collab.x = payload.x;
-      collab.y = payload.y;
-      this.requestRedraw();
-    });
-
-    const unsubStroke = registerWebSocketHandler('CANVAS_DRAW_STROKE', (payload: any) => {
-      const roomUuid = payload.canvasUuid || payload.canvas_uuid;
-      if (roomUuid && roomUuid !== this.canvasUuid) return;
-      this.applyRemoteStroke(payload);
-    });
-
-    const unsubAction = registerWebSocketHandler('CANVAS_ACTION', (payload: any) => {
-      const roomUuid = payload.canvasUuid || payload.canvas_uuid;
-      if (roomUuid !== this.canvasUuid) return;
-      this.applyRemoteAction(payload);
-    });
-
-    const unsubFullUpdate = registerWebSocketHandler('CANVAS_FULL_UPDATE', (payload: any) => {
-      const roomUuid = payload.canvasUuid || payload.canvas_uuid;
-      const projectData = payload.data || payload.project;
-      if (roomUuid !== this.canvasUuid || !projectData) return;
-      this.deserializeProject(projectData).then(() => {
-        this.renderLayersList();
-        this.renderLayersCards();
-        this.renderFramesCards();
         this.requestRedraw();
-      });
-    });
+      },
+      onCursor: () => {
+        this.requestRedraw();
+      },
+      onFullUpdate: (projectData) => {
+        this.deserializeProject(projectData).then(() => {
+          this.renderLayersList();
+          this.renderLayersCards();
+          this.renderFramesCards();
+          this.requestRedraw();
+        });
+      },
+      onMemberRemoved: (targetUserId) => {
+        this.canvasMembers = this.canvasMembers.filter((m) => m.user_id !== targetUserId);
+        this.renderShareMembers();
 
-    const unsubAccess = registerWebSocketHandler('CANVAS_ACCESS_CHANGED', (payload: any) => {
-      const roomUuid = payload.canvasUuid || payload.canvas_uuid;
-      if (roomUuid !== this.canvasUuid) return;
-      this.accessLevel = payload.accessLevel || payload.access_level || 'private';
-      if (payload.publicRole) {
-        this.publicRole = payload.publicRole;
-      }
-      const currentUserId = currentUser?.id;
-      const isMember = Boolean(currentUserId && this.canvasMembers.some((m) => m.user_id === currentUserId));
-      if (this.accessLevel === 'private' && !this.isOwner && !isMember) {
-        this.handleAccessRevoked();
-        return;
-      }
-      if (!this.isOwner && !isMember && this.accessLevel === 'public') {
-        const newRole = this.publicRole === 'viewer' ? 'viewer' : 'editor';
-        if (this.role !== newRole) {
-          this.role = newRole;
-          this.applyViewerMode();
-          showToast(
-            this.role === 'viewer'
-              ? 'El propietario cambió el enlace a modo solo lectura.'
-              : 'El propietario te ha otorgado permisos de edición.',
-            'info'
-          );
+        const currentUserId = currentUser?.id;
+        if (currentUserId && currentUserId === targetUserId) {
+          if (!this.isOwner && this.accessLevel !== 'public') {
+            this.handleAccessRevoked();
+          }
         }
-      }
-      this.updateAccessLevelUI();
-    });
-
-    const unsubMemberRemoved = registerWebSocketHandler('CANVAS_MEMBER_REMOVED', (payload: any) => {
-      const roomUuid = payload.canvasUuid || payload.canvas_uuid;
-      if (roomUuid !== this.canvasUuid) return;
-      const targetUserId = Number(payload.targetUserId || payload.target_user_id);
-      this.canvasMembers = this.canvasMembers.filter((m) => m.user_id !== targetUserId);
-      this.renderShareMembers();
-
-      const currentUserId = currentUser?.id;
-      if (currentUserId && currentUserId === targetUserId) {
-        if (!this.isOwner && this.accessLevel !== 'public') {
-          this.handleAccessRevoked();
+      },
+      onPresence: () => {
+        this.applyViewerMode();
+        this.renderCollaboratorsBar();
+        this.renderCollaboratorsPanel();
+        this.requestRedraw();
+      },
+      onStroke: (payload) => {
+        this.applyRemoteStroke(payload);
+      },
+      onUserJoined: (connId) => {
+        if (this.isOwner) {
+          this.collaborationManager.sendFullUpdate(this.serializeProject(), connId);
         }
-      }
+      },
     });
-
-    this.wsUnsubscribes.push(unsubPresence, unsubJoined, unsubLeft, unsubCursor, unsubStroke, unsubAction, unsubFullUpdate, unsubAccess, unsubMemberRemoved, unsubJoinError);
   }
 
   private handleAccessRevoked(): void {
@@ -7515,7 +6829,7 @@ export class DesignController {
     this.commitText();
     this.cancelShapePlacement();
 
-    leaveCanvasRoom(this.canvasUuid);
+    this.collaborationManager.cleanup();
     void removeLocalCanvas(this.canvasUuid);
 
     showToast('Tu acceso a este lienzo ha sido revocado por el propietario', 'danger');
@@ -7726,7 +7040,7 @@ export class DesignController {
         throw new Error('Error al actualizar');
       }
 
-      sendCanvasAccessChanged(this.canvasUuid, this.accessLevel, role);
+      this.collaborationManager.sendAccessChanged(this.accessLevel, role);
       showToast(
         role === 'viewer'
           ? 'Enlace configurado en modo: Solo ver'
@@ -7871,7 +7185,7 @@ export class DesignController {
       if (data && data.member) {
         this.canvasMembers.push(data.member);
         this.renderShareMembers();
-        sendCanvasAction(this.canvasUuid, 'member_added', { member: data.member });
+        this.collaborationManager.sendAction('member_added', { member: data.member });
         showToast(`Acceso concedido a ${username}`, 'success');
       }
 
@@ -7899,8 +7213,8 @@ export class DesignController {
 
       this.canvasMembers = this.canvasMembers.filter((m) => m.user_id !== userId);
       this.renderShareMembers();
-      sendCanvasMemberRemoved(this.canvasUuid, userId);
-      sendCanvasAction(this.canvasUuid, 'member_removed', { targetUserId: userId });
+      this.collaborationManager.sendMemberRemoved(userId);
+      this.collaborationManager.sendAction('member_removed', { targetUserId: userId });
       showToast(`Acceso revocado a ${username}`, 'info');
     } catch {
       showToast('Error al remover acceso', 'danger');
@@ -8330,147 +7644,11 @@ export class DesignController {
     transparent: boolean,
     cropRect?: { height: number; width: number; x: number; y: number }
   ): HTMLCanvasElement {
-    let exportW = this.canvasWidth;
-    let exportH = this.canvasHeight;
-    let cropBox = cropRect;
-
-    if (this.isInfinite) {
-      if (!cropBox) {
-        let minX = Infinity;
-        let minY = Infinity;
-        let maxX = -Infinity;
-        let maxY = -Infinity;
-        let foundPixel = false;
-
-        for (const layer of frame.layers) {
-          const box = (layer as any).chunkGrid?.getBoundingBox();
-          if (box && box.hasPixels) {
-            foundPixel = true;
-            if (box.minX < minX) minX = box.minX;
-            if (box.minY < minY) minY = box.minY;
-            if (box.maxX > maxX) maxX = box.maxX;
-            if (box.maxY > maxY) maxY = box.maxY;
-          }
-        }
-
-        if (foundPixel) {
-          cropBox = {
-            height: maxY - minY + 1,
-            width: maxX - minX + 1,
-            x: minX,
-            y: minY,
-          };
-        } else {
-          cropBox = { height: 256, width: 256, x: 0, y: 0 };
-        }
-      }
-      exportW = cropBox.width;
-      exportH = cropBox.height;
-    }
-
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = Math.max(1, exportW);
-    tempCanvas.height = Math.max(1, exportH);
-    const ctx = tempCanvas.getContext('2d');
-    if (!ctx) return tempCanvas;
-
-    if (!transparent) {
-      if (this.canvasBackground.type === 'solid' && this.canvasBackground.color) {
-        ctx.fillStyle = this.canvasBackground.color;
-        ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-      } else {
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-      }
-    }
-
-    for (const layer of frame.layers) {
-      if (layer.visible) {
-        ctx.globalAlpha = layer.opacity;
-        if (this.isInfinite || (layer as any).chunkGrid?.hasChunks()) {
-          const chunkExp = (layer as any).chunkGrid?.exportToCanvas(cropBox || { height: exportH, width: exportW, x: 0, y: 0 });
-          if (chunkExp) {
-            ctx.drawImage(chunkExp, 0, 0);
-          }
-        } else {
-          ctx.drawImage(layer.canvas, 0, 0);
-        }
-      }
-    }
-
-    if (scale <= 1) {
-      return tempCanvas;
-    }
-
-    const scaledCanvas = document.createElement('canvas');
-    scaledCanvas.width = tempCanvas.width * scale;
-    scaledCanvas.height = tempCanvas.height * scale;
-    const scaledCtx = scaledCanvas.getContext('2d');
-    if (!scaledCtx) return tempCanvas;
-
-    scaledCtx.imageSmoothingEnabled = false;
-    scaledCtx.drawImage(tempCanvas, 0, 0, scaledCanvas.width, scaledCanvas.height);
-    return scaledCanvas;
+    return renderCompositedFrame(frame, scale, transparent, this.canvasWidth, this.canvasHeight, this.isInfinite, this.canvasBackground, cropRect);
   }
 
   private renderSpritesheet(scale: number, transparent: boolean): HTMLCanvasElement {
-    const framesCount = Math.max(1, this.frames.length);
-
-    let uniformCropBox: { height: number; width: number; x: number; y: number } | undefined;
-    if (this.isInfinite) {
-      let minX = Infinity;
-      let minY = Infinity;
-      let maxX = -Infinity;
-      let maxY = -Infinity;
-      let foundPixel = false;
-
-      for (const frame of this.frames) {
-        for (const layer of frame.layers) {
-          const box = (layer as any).chunkGrid?.getBoundingBox();
-          if (box && box.hasPixels) {
-            foundPixel = true;
-            if (box.minX < minX) minX = box.minX;
-            if (box.minY < minY) minY = box.minY;
-            if (box.maxX > maxX) maxX = box.maxX;
-            if (box.maxY > maxY) maxY = box.maxY;
-          }
-        }
-      }
-
-      if (foundPixel) {
-        uniformCropBox = {
-          height: maxY - minY + 1,
-          width: maxX - minX + 1,
-          x: minX,
-          y: minY,
-        };
-      } else {
-        uniformCropBox = { height: 256, width: 256, x: 0, y: 0 };
-      }
-    }
-
-    const baseW = this.isInfinite && uniformCropBox ? uniformCropBox.width : this.canvasWidth;
-    const baseH = this.isInfinite && uniformCropBox ? uniformCropBox.height : this.canvasHeight;
-    const frameW = baseW * scale;
-    const frameH = baseH * scale;
-
-    const sheetCanvas = document.createElement('canvas');
-    sheetCanvas.width = frameW * framesCount;
-    sheetCanvas.height = frameH;
-    const ctx = sheetCanvas.getContext('2d');
-    if (!ctx) return sheetCanvas;
-
-    ctx.imageSmoothingEnabled = false;
-
-    for (let i = 0; i < framesCount; i++) {
-      const frame = this.frames[i];
-      if (frame) {
-        const frameCanvas = this.renderCompositedFrame(frame, scale, transparent, uniformCropBox);
-        ctx.drawImage(frameCanvas, i * frameW, 0);
-      }
-    }
-
-    return sheetCanvas;
+    return renderSpritesheet(this.frames, scale, transparent, this.canvasWidth, this.canvasHeight, this.isInfinite, this.canvasBackground);
   }
 
   private async executeDownload(): Promise<void> {
@@ -8490,80 +7668,33 @@ export class DesignController {
           showToast('No hay fotograma para exportar', 'danger');
           return;
         }
-
-        const canvas = this.renderCompositedFrame(activeFrame, scale, transparent);
-        const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
-        if (!blob) {
-          throw new Error('Canvas toBlob failed');
-        }
-        this.triggerBlobDownload(blob, `${cleanName}_${scale}x.png`);
+        await exportPngCurrentFrame(activeFrame, scale, transparent, cleanName, this.canvasWidth, this.canvasHeight, this.isInfinite, this.canvasBackground);
       } else if (this.selectedDownloadType === 'spritesheet' || this.selectedDownloadType === 'spritesheet-atlas') {
         if (this.frames.length === 0) {
           showToast('No hay fotogramas para exportar', 'danger');
           return;
         }
-
-        const canvas = this.renderSpritesheet(scale, transparent);
-        const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
-        if (!blob) {
-          throw new Error('Canvas toBlob failed');
-        }
-        this.triggerBlobDownload(blob, `${cleanName}_spritesheet_${scale}x.png`);
-
-        if (this.selectedDownloadType === 'spritesheet-atlas') {
-          const frameW = this.canvasWidth * scale;
-          const frameH = this.canvasHeight * scale;
-          const framesCount = this.frames.length;
-          const defaultDelay = Math.round(1000 / (this.fps || 8));
-
-          const atlasFrames = this.frames.map((frame, idx) => ({
-            duration: frame.durationMs || defaultDelay,
-            filename: `frame_${idx}.png`,
-            frame: { h: frameH, w: frameW, x: idx * frameW, y: 0 },
-            rotated: false,
-            sourceSize: { h: frameH, w: frameW },
-            spriteSourceSize: { h: frameH, w: frameW, x: 0, y: 0 },
-            trimmed: false,
-          }));
-
-          const atlasJson = {
-            frames: atlasFrames,
-            meta: {
-              app: 'Spriteboard',
-              format: 'RGBA8888',
-              image: `${cleanName}_spritesheet_${scale}x.png`,
-              scale: `${scale}`,
-              size: { h: frameH, w: frameW * framesCount },
-              version: '1.0',
-            },
-          };
-          const jsonBlob = new Blob([JSON.stringify(atlasJson, null, 2)], { type: 'application/json;charset=utf-8' });
-          this.triggerBlobDownload(jsonBlob, `${cleanName}_atlas_${scale}x.json`);
-        }
+        await exportSpritesheetWithAtlas(
+          this.frames,
+          scale,
+          transparent,
+          cleanName,
+          this.canvasWidth,
+          this.canvasHeight,
+          this.isInfinite,
+          this.canvasBackground,
+          this.selectedDownloadType === 'spritesheet-atlas',
+          this.fps
+        );
       } else if (this.selectedDownloadType === 'gif') {
         if (this.frames.length === 0) {
           showToast('No hay fotogramas para exportar', 'danger');
           return;
         }
-
-        const gifFrames: Array<{ canvas: HTMLCanvasElement; delayMs: number }> = [];
-        const defaultDelay = Math.round(1000 / (this.fps || 8));
-
-        for (const frame of this.frames) {
-          const frameCanvas = this.renderCompositedFrame(frame, scale, transparent);
-          gifFrames.push({
-            canvas: frameCanvas,
-            delayMs: frame.durationMs || defaultDelay,
-          });
-        }
-
-        const gifBlob = await encodeFramesToGif(gifFrames);
-        this.triggerBlobDownload(gifBlob, `${cleanName}_${scale}x.gif`);
+        await exportGif(this.frames, scale, transparent, cleanName, this.canvasWidth, this.canvasHeight, this.isInfinite, this.canvasBackground, this.fps);
       } else if (this.selectedDownloadType === 'project-json') {
         const projectData = this.serializeProject();
-        const jsonStr = JSON.stringify(projectData, null, 2);
-        const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8' });
-        this.triggerBlobDownload(blob, `${cleanName}_project.json`);
+        exportProjectJson(cleanName, projectData);
       }
 
       showToast(t('canvas.download.success_toast') || 'Archivo descargado con éxito', 'success');
@@ -8573,16 +7704,7 @@ export class DesignController {
   }
 
   private triggerBlobDownload(blob: Blob, filename: string): void {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => {
-      URL.revokeObjectURL(url);
-    }, 1000);
+    triggerBlobDownload(blob, filename);
   }
 
   private async changeAccessLevel(level: 'private' | 'public'): Promise<void> {
@@ -8601,7 +7723,7 @@ export class DesignController {
         throw new Error('Error al actualizar');
       }
 
-      sendCanvasAccessChanged(this.canvasUuid, level, this.publicRole);
+      this.collaborationManager.sendAccessChanged(level, this.publicRole);
       showToast(
         level === 'public'
           ? (t('canvas.share.changedToPublic') || 'Lienzo público para cualquiera con el enlace')
@@ -8859,13 +7981,7 @@ export class DesignController {
     this.historySnapshotsListEl.innerHTML = '';
 
     try {
-      const res = await getApi(API_ROUTES.canvases.snapshots(this.canvasUuid));
-      if (res.ok) {
-        const data = await res.json();
-        this.snapshots = Array.isArray(data.snapshots) ? data.snapshots : [];
-      } else {
-        this.snapshots = [];
-      }
+      await this.historyManager.fetchSnapshots(this.canvasUuid);
     } catch {
       this.snapshots = [];
     } finally {
@@ -9001,18 +8117,7 @@ export class DesignController {
       const serialized = this.serializeProject();
       const thumbnail = this.generateThumbnail();
 
-      const res = await postApi(API_ROUTES.canvases.snapshots(this.canvasUuid), {
-        name,
-        description,
-        is_manual: true,
-        preview_thumbnail: thumbnail,
-        data: serialized,
-      });
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || 'Error al guardar la versión.');
-      }
+      await this.historyManager.createSnapshot(this.canvasUuid, name, description, serialized, thumbnail);
 
       if (this.inputSnapshotNameEl) this.inputSnapshotNameEl.value = '';
       if (this.inputSnapshotDescEl) this.inputSnapshotDescEl.value = '';
@@ -9045,14 +8150,8 @@ export class DesignController {
       const serialized = this.serializeProject();
       const thumbnail = this.generateThumbnail();
 
-      const res = await postApi(API_ROUTES.canvases.snapshots(this.canvasUuid), {
-        is_manual: false,
-        name: 'Guardado automático',
-        preview_thumbnail: thumbnail,
-        data: serialized,
-      });
-
-      if (res.ok) {
+      const snap = await this.historyManager.createAutoSnapshot(this.canvasUuid, serialized, thumbnail);
+      if (snap) {
         this.lastAutoSnapshotTime = now;
         this.hasUnsavedSnapshotChanges = false;
         if (this.isHistoryDrawerOpen) {
@@ -9066,13 +8165,12 @@ export class DesignController {
     if (this.activePreviewSnapshotUuid === snapshotUuid) return;
 
     try {
-      const res = await getApi(API_ROUTES.canvases.snapshotById(this.canvasUuid, snapshotUuid));
-      if (!res.ok) {
+      const data = await this.historyManager.getSnapshotData(this.canvasUuid, snapshotUuid);
+      if (!data) {
         showToast('No se pudo cargar la versión para previsualizar.', 'error');
         return;
       }
 
-      const data = await res.json();
       if (!data.data) {
         showToast('La versión no contiene datos válidos.', 'error');
         return;
@@ -9128,21 +8226,18 @@ export class DesignController {
     }
 
     try {
-      const res = await postApi(API_ROUTES.canvases.snapshotRestore(this.canvasUuid, snapshotUuid), {});
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || 'Error al restaurar la versión.');
+      const res = await this.historyManager.restoreSnapshot(this.canvasUuid, snapshotUuid);
+      if (!res.ok || !res.restoredData) {
+        throw new Error(res.error || 'Error al restaurar la versión.');
       }
-
-      const data = await res.json();
 
       this.isPreviewingSnapshot = false;
       this.prePreviewProjectData = null;
       this.activePreviewSnapshotUuid = null;
       this.previewBannerEl?.classList.add('is-hidden');
 
-      await this.deserializeProject(data.restoredData);
-      sendCanvasFullUpdate(this.canvasUuid, data.restoredData);
+      await this.deserializeProject(res.restoredData);
+      this.collaborationManager.sendFullUpdate(res.restoredData);
 
       showToast('Versión restaurada correctamente. Se creó un respaldo automático previo.', 'success');
       await this.loadHistorySnapshots();
@@ -9158,17 +8253,13 @@ export class DesignController {
     }
 
     try {
-      const res = await postApi(API_ROUTES.canvases.snapshotFork(this.canvasUuid, snapshotUuid), {});
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || 'Error al crear la copia del lienzo.');
+      const forkedUuid = await this.historyManager.forkSnapshot(this.canvasUuid, snapshotUuid);
+      if (!forkedUuid) {
+        throw new Error('Error al crear la copia del lienzo.');
       }
 
-      const data = await res.json();
       showToast('Lienzo creado a partir de la versión seleccionada.', 'success');
-      if (data.canvas?.uuid) {
-        navigate(`/design/${data.canvas.uuid}`);
-      }
+      navigate(`/design/${forkedUuid}`);
     } catch (err: any) {
       showToast(err.message || 'No se pudo duplicar la versión.', 'error');
     }
@@ -9181,8 +8272,8 @@ export class DesignController {
     }
 
     try {
-      const res = await deleteApi(`${API_ROUTES.canvases.snapshots(this.canvasUuid)}/${snapshotUuid}`);
-      if (!res.ok) {
+      const ok = await this.historyManager.deleteSnapshot(this.canvasUuid, snapshotUuid);
+      if (!ok) {
         throw new Error('Error al eliminar la versión.');
       }
 
@@ -9190,7 +8281,6 @@ export class DesignController {
         await this.exitSnapshotPreview();
       }
 
-      this.snapshots = this.snapshots.filter((s) => s.uuid !== snapshotUuid);
       this.renderHistorySnapshots();
       showToast('Versión eliminada correctamente.', 'success');
     } catch (err: any) {
@@ -9219,9 +8309,7 @@ export class DesignController {
       clearTimeout(this.searchDebounceTimer);
       this.searchDebounceTimer = null;
     }
-    leaveCanvasRoom(this.canvasUuid);
-    this.wsUnsubscribes.forEach((unsub) => unsub());
-    this.wsUnsubscribes = [];
+    this.collaborationManager.cleanup();
     this.shareDropdownController?.destroy();
     this.accessDropdownController?.destroy();
     this.publicRoleDropdownController?.destroy();

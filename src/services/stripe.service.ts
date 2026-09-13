@@ -243,11 +243,13 @@ export class StripeService {
       planId = user.subscription_tier || 'pro';
     }
 
+    const effectiveSubscriptionId = subscriptionId || user.stripe_subscription_id;
+
     await purchaseService.recordPurchase({
       user_id: user.id,
       stripe_session_id: `inv_${invoice.id}`,
       stripe_payment_intent_id: typeof invoice.payment_intent === 'string' ? invoice.payment_intent : null,
-      stripe_subscription_id: subscriptionId,
+      stripe_subscription_id: effectiveSubscriptionId,
       stripe_customer_id: customerId,
       plan_id: planId,
       billing_period: billingPeriod,
@@ -260,7 +262,7 @@ export class StripeService {
       user.id,
       planId,
       customerId,
-      subscriptionId,
+      effectiveSubscriptionId,
       'active'
     );
 
@@ -294,7 +296,11 @@ export class StripeService {
   }
 
   private async processSubscriptionDeleted(subscription: Stripe.Subscription): Promise<void> {
-    const userId = Number(subscription.metadata?.userId);
+    let userId = Number(subscription.metadata?.userId);
+    if (!userId || isNaN(userId)) {
+      const user = await purchaseService.getUserByStripeSubscriptionId(subscription.id);
+      if (user) userId = user.id;
+    }
     const customerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id;
 
     if (userId) {
@@ -311,10 +317,15 @@ export class StripeService {
   }
 
   private async processSubscriptionUpdated(subscription: Stripe.Subscription): Promise<void> {
-    const userId = Number(subscription.metadata?.userId);
+    let userId = Number(subscription.metadata?.userId);
+    if (!userId || isNaN(userId)) {
+      const user = await purchaseService.getUserByStripeSubscriptionId(subscription.id);
+      if (user) userId = user.id;
+    }
     const planId = subscription.metadata?.planId;
     const status = subscription.status === 'active' ? 'active' : subscription.status;
-    const periodEnd = (subscription as any).current_period_end ? new Date((subscription as any).current_period_end * 1000) : null;
+    const rawPeriodEnd = (subscription as any).current_period_end;
+    const periodEnd = typeof rawPeriodEnd === 'number' && !isNaN(rawPeriodEnd) && rawPeriodEnd > 0 ? new Date(rawPeriodEnd * 1000) : null;
     const customerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id;
 
     if (userId && planId) {
@@ -357,8 +368,71 @@ export class StripeService {
     const previousSubId = session.metadata?.previousSubscriptionId;
 
     const lockKey = `lock:checkout_sync:${session.id}`;
-    const acquired = await redis.set(lockKey, 'locked', 'EX', 60, 'NX');
+    let acquired = false;
+    try {
+      acquired = Boolean(await redis.set(lockKey, 'locked', 'EX', 60, 'NX'));
+    } catch {}
+
     if (!acquired) {
+      await new Promise((r) => setTimeout(r, 500));
+      const existing = await purchaseService.getPurchaseBySessionId(session.id);
+      return {
+        success: true,
+        tier: existing?.plan_id || planId,
+        purchase: {
+          planId: existing?.plan_id || planId,
+          billingPeriod: existing?.billing_period || billingPeriod,
+          amountTotal: existing?.amount_total || amountTotal,
+        },
+      };
+    }
+
+    try {
+      const existing = await purchaseService.getPurchaseBySessionId(session.id);
+      if (existing) {
+        return {
+          success: true,
+          tier: existing.plan_id || planId,
+          purchase: {
+            planId: existing.plan_id || planId,
+            billingPeriod: existing.billing_period || billingPeriod,
+            amountTotal: existing.amount_total || amountTotal,
+          },
+        };
+      }
+
+      if (previousSubId && subscriptionId && previousSubId !== subscriptionId) {
+        try {
+          await this.stripe.subscriptions.cancel(previousSubId);
+          logger.app.info('Suscripción anterior cancelada tras retorno de checkout', { userId, previousSubId });
+        } catch (prevErr) {
+          logger.app.warn('Aviso al cancelar suscripción anterior tras checkout', { userId, previousSubId, prevErr });
+        }
+      }
+
+      await purchaseService.recordPurchase({
+        user_id: userId,
+        stripe_session_id: session.id,
+        stripe_payment_intent_id: paymentIntentId,
+        stripe_subscription_id: subscriptionId,
+        stripe_customer_id: customerId,
+        plan_id: planId,
+        billing_period: billingPeriod,
+        amount_total: amountTotal,
+        currency: session.currency || 'USD',
+        status: 'completed',
+      });
+
+      await purchaseService.updateUserSubscription(
+        userId,
+        planId,
+        customerId,
+        subscriptionId,
+        'active'
+      );
+
+      await updateUserSubscriptionInSessions(userId, planId);
+
       return {
         success: true,
         tier: planId,
@@ -368,62 +442,11 @@ export class StripeService {
           amountTotal,
         },
       };
-    }
-
-    const existing = await purchaseService.getPurchaseBySessionId(session.id);
-    if (existing) {
-      return {
-        success: true,
-        tier: existing.plan_id || planId,
-        purchase: {
-          planId: existing.plan_id || planId,
-          billingPeriod: existing.billing_period || billingPeriod,
-          amountTotal: existing.amount_total || amountTotal,
-        },
-      };
-    }
-
-    if (previousSubId && subscriptionId && previousSubId !== subscriptionId) {
+    } finally {
       try {
-        await this.stripe.subscriptions.cancel(previousSubId);
-        logger.app.info('Suscripción anterior cancelada tras retorno de checkout', { userId, previousSubId });
-      } catch (prevErr) {
-        logger.app.warn('Aviso al cancelar suscripción anterior tras checkout', { userId, previousSubId, prevErr });
-      }
+        await redis.del(lockKey);
+      } catch {}
     }
-
-    await purchaseService.recordPurchase({
-      user_id: userId,
-      stripe_session_id: session.id,
-      stripe_payment_intent_id: paymentIntentId,
-      stripe_subscription_id: subscriptionId,
-      stripe_customer_id: customerId,
-      plan_id: planId,
-      billing_period: billingPeriod,
-      amount_total: amountTotal,
-      currency: session.currency || 'USD',
-      status: 'completed',
-    });
-
-    await purchaseService.updateUserSubscription(
-      userId,
-      planId,
-      customerId,
-      subscriptionId,
-      'active'
-    );
-
-    await updateUserSubscriptionInSessions(userId, planId);
-
-    return {
-      success: true,
-      tier: planId,
-      purchase: {
-        planId,
-        billingPeriod,
-        amountTotal,
-      },
-    };
   }
 
   public async getOrCreateCustomer(

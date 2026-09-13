@@ -1,7 +1,7 @@
-import { createPopper, Instance as PopperInstance, Placement } from '@popperjs/core';
 import { navigate } from '../app-router.js';
 import { EmptyIllustrationKey, getEmptyIllustration } from '../config/empty-illustrations.config.js';
 import { BannerManager } from '../types/common.types.js';
+import { createPopper, Instance as PopperInstance, Placement } from '@popperjs/core';
 
 export function setupPasswordToggle(
   toggleBtn: HTMLElement | null,

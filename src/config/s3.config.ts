@@ -1,5 +1,5 @@
-import { S3Client, S3ClientConfig } from '@aws-sdk/client-s3';
 import { config } from './env.config.js';
+import { S3Client, S3ClientConfig } from '@aws-sdk/client-s3';
 
 const s3ClientConfig: S3ClientConfig = {
   region: config.aws.region,

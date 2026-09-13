@@ -1,7 +1,7 @@
 import { API_ROUTES } from '../config/api-routes.js';
 import { postApi } from '../services/api.service.js';
-import { renderIcons } from '../services/icon.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
+import { renderIcons } from '../services/icon.service.js';
 import { showToast } from '../services/toast.service.js';
 import { ModalInstance, ModalOptions } from '../types/common.types.js';
 import QRCodeStyling from 'qr-code-styling';

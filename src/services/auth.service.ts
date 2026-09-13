@@ -305,17 +305,6 @@ export function setMultiAccountCookie(res: Response, session: MultiAccountSessio
   });
 }
 
-export function setSessionCookie(res: Response, user: UserPayload): void {
-  if (res.headersSent) return;
-  const token = createSessionToken(user);
-  res.cookie(COOKIE_NAME, token, {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: config.nodeEnv === 'production',
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-  });
-}
-
 export async function addAccountToSession(
   res: Response,
   req: Request,

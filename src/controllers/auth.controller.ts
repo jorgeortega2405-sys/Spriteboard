@@ -8,7 +8,7 @@ import { getGoogleAuthUrl, getGoogleLinkAuthUrl, getGoogleVerifyAuthUrl, process
 import { logger } from '../services/logger.service.js';
 import { sendPasswordResetEmail, sendVerificationCodeEmail } from '../services/mail.service.js';
 import { consumePending2FALogin, getPending2FALogin, savePending2FALogin, verifyTotpCode } from '../services/two-factor.service.js';
-import { createUser, findUserByEmail, findUserById, findUserDuplicates, updateUserGoogleId, updateUserLastLoginGeo, updateUserPassword, verifyAndConsumeBackupCode } from '../services/user.service.js';
+import { createUser, findUserByEmail, findUserById, findUserDuplicates, getUser2FASecret, updateUserGoogleId, updateUserLastLoginGeo, updateUserPassword, verifyAndConsumeBackupCode } from '../services/user.service.js';
 import { consumePasswordResetToken, generateSixDigitCode, getPendingRegistration, savePasswordChangeAuth, savePasswordResetToken, savePendingRegistration, verifyAndConsumeCode, verifyPasswordResetToken } from '../services/verification.service.js';
 import { sanitizeUser, sendBadRequest, sendConflict, sendCreated, sendInternalError, sendSuccess, sendUnauthorized } from '../utils/http.util.js';
 import { validateEmail, validatePassword, validateUsername, validateVerificationCode } from '../utils/validators.util.js';
@@ -323,11 +323,12 @@ export async function verify2FALogin(req: Request, res: Response): Promise<void>
       return;
     }
 
+    const twoFactorData = await getUser2FASecret(pending.userId);
     const cleanCode = code.trim();
     let verified = false;
 
-    if (/^\d{6}$/.test(cleanCode) && userRow.two_factor_secret) {
-      verified = verifyTotpCode(cleanCode, userRow.two_factor_secret, 2);
+    if (/^\d{6}$/.test(cleanCode) && twoFactorData?.two_factor_secret) {
+      verified = verifyTotpCode(cleanCode, twoFactorData.two_factor_secret, 2);
     }
 
     if (!verified) {
@@ -445,6 +446,13 @@ export async function me(req: Request, res: Response): Promise<void> {
 
   const freshUser = await findUserById(user.id);
   const activeUserData = freshUser ? sanitizeUser(freshUser) : sanitizeUser(user);
+
+  if (freshUser && (freshUser.subscription_tier !== user.subscription_tier || freshUser.role !== user.role)) {
+    updateActiveAccountInSession(res, req, {
+      subscription_tier: freshUser.subscription_tier || 'free',
+      role: freshUser.role || 'user',
+    });
+  }
 
   const accounts = getLinkedAccounts(req);
   const updatedAccounts = accounts.map((acc) => {

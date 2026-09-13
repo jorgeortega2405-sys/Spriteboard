@@ -1,10 +1,10 @@
-import crypto from 'crypto';
-import mysql from 'mysql2/promise';
 import { canvasPool, pool } from '../config/database.config.js';
 import { CanvasComment, CanvasCommentAuthor, CanvasCommentReply, CreateCommentDto, UpdateCommentDto } from '../types/canvas-comment.types.js';
 import { getCanvasUserRole } from './canvas.service.js';
 import { logger } from './logger.service.js';
 import { createNotification } from './notification.service.js';
+import crypto from 'crypto';
+import mysql from 'mysql2/promise';
 
 function getInitials(name: string): string {
   if (!name) return '??';

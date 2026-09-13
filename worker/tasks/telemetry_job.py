@@ -141,106 +141,110 @@ class TelemetryJob(BaseJob):
             except Exception:
                 continue
 
-            item_type = item.get("type")
-            payload = item.get("payload", {})
-            created_at = datetime.now(timezone.utc)
-            bucket_day = created_at.strftime("%Y-%m-%d")
-            time_uuid = uuid_from_time(time.time())
+            try:
+                item_type = item.get("type")
+                payload = item.get("payload", {})
+                created_at = datetime.now(timezone.utc)
+                bucket_day = created_at.strftime("%Y-%m-%d")
+                time_uuid = uuid_from_time(time.time())
 
-            if item_type == "http":
-                # Inserción en http_metrics y http_metrics_by_route
-                f1 = self.cassandra_session.execute_async(
-                    self.stmt_http_metrics,
-                    (
-                        bucket_day,
-                        created_at,
-                        time_uuid,
-                        payload.get("route", "/"),
-                        payload.get("method", "GET"),
-                        int(payload.get("statusCode", 200)),
-                        int(payload.get("durationMs", 0)),
-                        payload.get("ipHash", "unknown"),
-                        payload.get("userAgentCategory", "desktop"),
-                    ),
-                )
-                f2 = self.cassandra_session.execute_async(
-                    self.stmt_http_by_route,
-                    (
-                        payload.get("route", "/"),
-                        bucket_day,
-                        created_at,
-                        time_uuid,
-                        payload.get("method", "GET"),
-                        int(payload.get("statusCode", 200)),
-                        int(payload.get("durationMs", 0)),
-                    ),
-                )
-                futures.extend([f1, f2])
+                if item_type == "http":
+                    # Inserción en http_metrics y http_metrics_by_route
+                    f1 = self.cassandra_session.execute_async(
+                        self.stmt_http_metrics,
+                        (
+                            bucket_day,
+                            created_at,
+                            time_uuid,
+                            payload.get("route", "/"),
+                            payload.get("method", "GET"),
+                            int(payload.get("statusCode", 200)),
+                            int(payload.get("durationMs", 0)),
+                            payload.get("ipHash", "unknown"),
+                            payload.get("userAgentCategory", "desktop"),
+                        ),
+                    )
+                    f2 = self.cassandra_session.execute_async(
+                        self.stmt_http_by_route,
+                        (
+                            payload.get("route", "/"),
+                            bucket_day,
+                            created_at,
+                            time_uuid,
+                            payload.get("method", "GET"),
+                            int(payload.get("statusCode", 200)),
+                            int(payload.get("durationMs", 0)),
+                        ),
+                    )
+                    futures.extend([f1, f2])
 
-            elif item_type == "event":
-                meta = payload.get("metadata")
-                meta_str = json.dumps(meta) if meta and isinstance(meta, (dict, list)) else None
-                user_id = payload.get("userId")
-                cat = payload.get("category", "general")
+                elif item_type == "event":
+                    meta = payload.get("metadata")
+                    meta_str = json.dumps(meta) if meta and isinstance(meta, (dict, list)) else None
+                    user_id = payload.get("userId")
+                    cat = payload.get("category", "general")
 
-                f1 = self.cassandra_session.execute_async(
-                    self.stmt_events,
-                    (
-                        bucket_day,
-                        created_at,
-                        time_uuid,
-                        cat,
-                        payload.get("eventName", "unnamed"),
-                        int(user_id) if user_id is not None else None,
-                        payload.get("sessionId"),
-                        meta_str,
-                    ),
-                )
-                f2 = self.cassandra_session.execute_async(
-                    self.stmt_events_by_category,
-                    (
-                        cat,
-                        bucket_day,
-                        created_at,
-                        time_uuid,
-                        payload.get("eventName", "unnamed"),
-                        int(user_id) if user_id is not None else None,
-                        payload.get("sessionId"),
-                        meta_str,
-                    ),
-                )
-                futures.extend([f1, f2])
+                    f1 = self.cassandra_session.execute_async(
+                        self.stmt_events,
+                        (
+                            bucket_day,
+                            created_at,
+                            time_uuid,
+                            cat,
+                            payload.get("eventName", "unnamed"),
+                            int(user_id) if user_id is not None else None,
+                            payload.get("sessionId"),
+                            meta_str,
+                        ),
+                    )
+                    f2 = self.cassandra_session.execute_async(
+                        self.stmt_events_by_category,
+                        (
+                            cat,
+                            bucket_day,
+                            created_at,
+                            time_uuid,
+                            payload.get("eventName", "unnamed"),
+                            int(user_id) if user_id is not None else None,
+                            payload.get("sessionId"),
+                            meta_str,
+                        ),
+                    )
+                    futures.extend([f1, f2])
 
-            elif item_type == "system":
-                f1 = self.cassandra_session.execute_async(
-                    self.stmt_system,
-                    (
-                        bucket_day,
-                        created_at,
-                        time_uuid,
-                        float(payload.get("heapUsedMb", 0)),
-                        float(payload.get("heapTotalMb", 0)),
-                        float(payload.get("rssMb", 0)),
-                        float(payload.get("eventLoopLagMs", 0)),
-                        int(payload.get("activeRequests", 0)),
-                    ),
-                )
-                futures.append(f1)
+                elif item_type == "system":
+                    f1 = self.cassandra_session.execute_async(
+                        self.stmt_system,
+                        (
+                            bucket_day,
+                            created_at,
+                            time_uuid,
+                            float(payload.get("heapUsedMb", 0)),
+                            float(payload.get("heapTotalMb", 0)),
+                            float(payload.get("rssMb", 0)),
+                            float(payload.get("eventLoopLagMs", 0)),
+                            int(payload.get("activeRequests", 0)),
+                        ),
+                    )
+                    futures.append(f1)
 
-            elif item_type == "vital":
-                f1 = self.cassandra_session.execute_async(
-                    self.stmt_vitals,
-                    (
-                        bucket_day,
-                        created_at,
-                        time_uuid,
-                        str(payload.get("metricName", "UNKNOWN")),
-                        float(payload.get("value", 0)),
-                        str(payload.get("rating", "unknown")),
-                        str(payload.get("pagePath", "/")),
-                    ),
-                )
-                futures.append(f1)
+                elif item_type == "vital":
+                    f1 = self.cassandra_session.execute_async(
+                        self.stmt_vitals,
+                        (
+                            bucket_day,
+                            created_at,
+                            time_uuid,
+                            str(payload.get("metricName", "UNKNOWN")),
+                            float(payload.get("value", 0)),
+                            str(payload.get("rating", "unknown")),
+                            str(payload.get("pagePath", "/")),
+                        ),
+                    )
+                    futures.append(f1)
+            except Exception as item_err:
+                self.logger.warning(f"Elemento de telemetría corrupto o con tipos incompatibles omitido: {item_err}")
+                continue
 
         # Esperar a que todas las escrituras asíncronas finalicen
         for f in futures:

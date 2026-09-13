@@ -43,7 +43,7 @@ app.use(
   express.json({
     limit: '2mb',
     verify: (req: any, _res, buf) => {
-      if (req.originalUrl?.includes('/subscriptions/webhook')) {
+      if (req.originalUrl?.includes('/subscriptions/webhook') || req.originalUrl?.includes('/webhooks/stripe')) {
         req.rawBody = buf;
       }
     },

@@ -1,4 +1,4 @@
-import { joinCanvasRoom, leaveCanvasRoom, registerWebSocketHandler, sendCanvasAccessChanged, sendCanvasAction, sendCanvasBinaryStroke, sendCanvasCursor, sendCanvasDrawStroke, sendCanvasFullUpdate } from '../../services/websocket.service.js';
+import { joinCanvasRoom, leaveCanvasRoom, registerWebSocketHandler, sendCanvasAccessChanged, sendCanvasAction, sendCanvasBinaryStroke, sendCanvasCursor, sendCanvasDrawStroke, sendCanvasFullUpdate, sendCanvasMemberRemoved } from '../../services/websocket.service.js';
 import { getCollaboratorColor } from './design-color.util.js';
 import { CollaboratorState, SubscriptionTierType } from './design.types.js';
 
@@ -12,6 +12,7 @@ export interface CollaborationCallbacks {
   onMemberRemoved: (targetUserId: number) => void;
   onPresence: () => void;
   onStroke: (payload: any) => void;
+  onUserJoined?: (connId: string) => void;
 }
 
 export class DesignCollaborationManager {
@@ -103,6 +104,7 @@ export class DesignCollaborationManager {
         username: uUsername,
       });
       callbacks.onCollaboratorsChanged();
+      callbacks.onUserJoined?.(uConnId);
     });
 
     const unsubLeft = registerWebSocketHandler('USER_LEFT', (payload: any) => {
@@ -219,6 +221,10 @@ export class DesignCollaborationManager {
 
   public sendFullUpdate(project: any, targetConnId?: string): void {
     sendCanvasFullUpdate(this.canvasUuid, project, targetConnId);
+  }
+
+  public sendMemberRemoved(targetUserId: number): void {
+    sendCanvasMemberRemoved(this.canvasUuid, targetUserId);
   }
 
   public cleanup(): void {

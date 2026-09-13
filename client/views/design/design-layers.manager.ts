@@ -25,19 +25,19 @@ export class DesignLayersManager {
   }
 
   public getActiveFrame(): CanvasFrame | undefined {
-    return this.frames.find((f) => f.id === this.activeFrameId);
+    return this.frames.find((f) => f.id === this.activeFrameId) || this.frames[0];
   }
 
   public getActiveLayer(): CanvasLayer | undefined {
     const frame = this.getActiveFrame();
     if (!frame) return undefined;
-    return frame.layers.find((l) => l.id === frame.activeLayerId);
+    return frame.layers.find((l) => l.id === frame.activeLayerId) || frame.layers[0];
   }
 
   public createLayer(name: string): CanvasLayer {
     const canvas = document.createElement('canvas');
-    canvas.width = this.canvasWidth;
-    canvas.height = this.canvasHeight;
+    canvas.width = Math.max(1, this.canvasWidth || 256);
+    canvas.height = Math.max(1, this.canvasHeight || 256);
     const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
     ctx.imageSmoothingEnabled = false;
 
@@ -48,11 +48,8 @@ export class DesignLayersManager {
       name,
       opacity: 1,
       visible: true,
+      chunkGrid: new ChunkGrid(256),
     };
-
-    if (this.isInfinite) {
-      (layer as any).chunkGrid = new ChunkGrid();
-    }
 
     return layer;
   }
@@ -66,11 +63,10 @@ export class DesignLayersManager {
         const cloned = this.createLayer(srcLayer.name);
         cloned.visible = srcLayer.visible;
         cloned.opacity = srcLayer.opacity;
-        if (this.isInfinite && (srcLayer as any).chunkGrid) {
+        if ((srcLayer as any).chunkGrid) {
           (cloned as any).chunkGrid = (srcLayer as any).chunkGrid.clone();
-        } else {
-          cloned.ctx.drawImage(srcLayer.canvas, 0, 0);
         }
+        cloned.ctx.drawImage(srcLayer.canvas, 0, 0);
         layers.push(cloned);
       }
     } else {
@@ -87,16 +83,42 @@ export class DesignLayersManager {
   }
 
   public async loadLayerImage(layer: CanvasLayer, dataUrl: string): Promise<void> {
-    return new Promise((resolve) => {
+    if (!dataUrl || (!dataUrl.startsWith('data:image') && !dataUrl.startsWith('/') && !dataUrl.startsWith('http'))) {
+      return;
+    }
+
+    try {
       const img = new Image();
-      img.onload = () => {
-        layer.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
-        layer.ctx.drawImage(img, 0, 0);
-        resolve();
-      };
-      img.onerror = () => resolve();
       img.src = dataUrl;
-    });
+
+      if (typeof img.decode === 'function') {
+        try {
+          await Promise.race([
+            img.decode(),
+            new Promise<void>((_, reject) => setTimeout(() => reject(new Error('timeout')), 2500)),
+          ]);
+        } catch {
+          await new Promise<void>((resolve) => {
+            img.onload = () => resolve();
+            img.onerror = () => resolve();
+          });
+        }
+      } else {
+        await new Promise<void>((resolve) => {
+          img.onload = () => resolve();
+          img.onerror = () => resolve();
+        });
+      }
+
+      layer.ctx.imageSmoothingEnabled = false;
+      layer.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
+      try {
+        layer.ctx.drawImage(img, 0, 0, this.canvasWidth, this.canvasHeight);
+        (layer as any).chunkGrid?.populateFromCanvas(layer.canvas);
+      } catch {}
+    } catch {
+      // Ignored
+    }
   }
 
   public addLayer(name?: string, customLayerId?: string, customIndex?: number, customFrameId?: string): CanvasLayer | null {
@@ -162,6 +184,28 @@ export class DesignLayersManager {
       return true;
     }
     return false;
+  }
+
+  public reorderLayers(sourceId: string, targetId: string, customFrameId?: string): boolean {
+    const frame = customFrameId ? this.frames.find((f) => f.id === customFrameId) : this.getActiveFrame();
+    if (!frame) return false;
+    const sourceIdx = frame.layers.findIndex((l) => l.id === sourceId);
+    const targetIdx = frame.layers.findIndex((l) => l.id === targetId);
+    if (sourceIdx < 0 || targetIdx < 0 || sourceIdx === targetIdx) return false;
+
+    const [moved] = frame.layers.splice(sourceIdx, 1);
+    frame.layers.splice(targetIdx, 0, moved);
+    return true;
+  }
+
+  public reorderFrames(sourceId: string, targetId: string): boolean {
+    const sourceIdx = this.frames.findIndex((f) => f.id === sourceId);
+    const targetIdx = this.frames.findIndex((f) => f.id === targetId);
+    if (sourceIdx < 0 || targetIdx < 0 || sourceIdx === targetIdx) return false;
+
+    const [moved] = this.frames.splice(sourceIdx, 1);
+    this.frames.splice(targetIdx, 0, moved);
+    return true;
   }
 
   public mergeLayerDown(customFrameId?: string, customSourceId?: string, customTargetId?: string): boolean {
@@ -323,16 +367,54 @@ export class DesignLayersManager {
   }
 
   public nextFrame(): void {
-    const curIdx = this.frames.findIndex((f) => f.id === this.activeFrameId);
-    if (curIdx < this.frames.length - 1) {
-      this.activeFrameId = this.frames[curIdx + 1].id;
+    const idx = this.frames.findIndex((f) => f.id === this.activeFrameId);
+    let targetIdx = 0;
+
+    const activeTag = this.animationTags.find((t) => t.id === this.activeTagId);
+    if (activeTag) {
+      const start = Math.max(0, activeTag.from - 1);
+      const end = Math.min(this.frames.length - 1, activeTag.to - 1);
+      if (idx < start || idx >= end) {
+        targetIdx = start;
+      } else {
+        targetIdx = idx + 1;
+      }
+    } else {
+      if (idx >= 0 && idx < this.frames.length - 1) {
+        targetIdx = idx + 1;
+      } else if (this.frames.length > 0) {
+        targetIdx = 0;
+      }
+    }
+
+    if (this.frames[targetIdx]) {
+      this.activeFrameId = this.frames[targetIdx].id;
     }
   }
 
   public prevFrame(): void {
-    const curIdx = this.frames.findIndex((f) => f.id === this.activeFrameId);
-    if (curIdx > 0) {
-      this.activeFrameId = this.frames[curIdx - 1].id;
+    const idx = this.frames.findIndex((f) => f.id === this.activeFrameId);
+    let targetIdx = 0;
+
+    const activeTag = this.animationTags.find((t) => t.id === this.activeTagId);
+    if (activeTag) {
+      const start = Math.max(0, activeTag.from - 1);
+      const end = Math.min(this.frames.length - 1, activeTag.to - 1);
+      if (idx <= start || idx > end) {
+        targetIdx = end;
+      } else {
+        targetIdx = idx - 1;
+      }
+    } else {
+      if (idx > 0) {
+        targetIdx = idx - 1;
+      } else if (this.frames.length > 0) {
+        targetIdx = this.frames.length - 1;
+      }
+    }
+
+    if (this.frames[targetIdx]) {
+      this.activeFrameId = this.frames[targetIdx].id;
     }
   }
 

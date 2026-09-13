@@ -1,7 +1,7 @@
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import { addAccountToSession, removeAccountFromSession, updateActiveAccountInSession } from '../services/auth.service.js';
 import { logger } from '../services/logger.service.js';
-import { deleteAvatar, getPasswordStatus, getUserPreferences, logUserAudit, requestEmailChangeCode, unlinkGoogleAccount, updateAvatar, updateEmail, updateUserPasswordFromSettings, updateUserPreferences, updateUsername, verifyCurrentPassword, verifyEmailChange } from '../services/settings.service.js';
+import { deleteAvatar, getPasswordStatus, getUserPreferences, logUserAudit, requestEmailChangeCode, unlinkGoogleAccount, updateAvatar, updateEmail, updateUsername, updateUserPasswordFromSettings, updateUserPreferences, verifyCurrentPassword, verifyEmailChange } from '../services/settings.service.js';
 import { clearPending2FASetup, generateBackupCodes, generateTotpSecret, getOtpAuthUrl, getPending2FASetup, savePending2FASetup, verifyTotpCode } from '../services/two-factor.service.js';
 import { deleteUserPermanently, disableUser2FA, enableUser2FA, findUserById } from '../services/user.service.js';
 import { consumePasswordChangeAuth } from '../services/verification.service.js';

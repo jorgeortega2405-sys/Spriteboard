@@ -58,3 +58,8 @@ export interface Language {
   code: string;
   name: string;
 }
+
+export interface ViewController {
+  init?: (...args: any[]) => Promise<any> | any;
+  destroy: () => void;
+}

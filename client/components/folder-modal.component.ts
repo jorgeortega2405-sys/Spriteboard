@@ -1,9 +1,9 @@
-import { openModal } from './modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { escapeHtml, patchApi, postApi } from '../services/api.service.js';
 import { t } from '../services/i18n.service.js';
 import { showToast } from '../services/toast.service.js';
 import { FolderItem } from '../types/canvas.types.js';
+import { openModal } from './modal.component.js';
 
 export function openCreateFolderModal(options?: { onSuccess?: (folder: FolderItem) => void }): void {
   const bodyHtml = `

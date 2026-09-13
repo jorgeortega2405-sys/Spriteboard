@@ -1,7 +1,7 @@
-import { Request, Response } from 'express';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import { createCanvasComment, deleteCanvasComment, listCanvasComments, updateCanvasComment } from '../services/canvas-comment.service.js';
 import { logger } from '../services/logger.service.js';
+import { Request, Response } from 'express';
 
 export async function listCommentsHandler(req: Request, res: Response): Promise<void> {
   try {

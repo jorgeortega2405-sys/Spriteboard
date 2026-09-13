@@ -2242,6 +2242,7 @@ export async function createHomeView(folderUuid?: string): Promise<HTMLElement> 
 
   const controller = new HomeController(container);
   await controller.init(folderUuid);
+  (container as any).__controller = controller;
 
   return container;
 }

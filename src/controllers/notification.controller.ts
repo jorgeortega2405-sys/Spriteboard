@@ -1,7 +1,7 @@
-import { Request, Response } from 'express';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import { logger } from '../services/logger.service.js';
 import { deleteNotification, getUserNotifications, markAllNotificationsAsRead, markNotificationAsRead } from '../services/notification.service.js';
+import { Request, Response } from 'express';
 
 export async function listNotificationsHandler(req: Request, res: Response): Promise<void> {
   try {

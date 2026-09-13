@@ -23,5 +23,6 @@ export async function createDesignView(canvasUuid: string): Promise<HTMLElement>
     controller.destroy();
     return await createErrorView({ code: '404' });
   }
+  (container as any).__controller = controller;
   return container;
 }

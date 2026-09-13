@@ -432,6 +432,7 @@ export async function createSharedView(): Promise<HTMLElement> {
 
   const controller = new SharedController(container);
   await controller.init();
+  (container as any).__controller = controller;
 
   return container;
 }

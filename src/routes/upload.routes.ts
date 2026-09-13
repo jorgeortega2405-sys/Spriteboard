@@ -7,8 +7,16 @@ const router = Router();
 
 router.get('/uploads/*', async (req: Request, res: Response): Promise<void> => {
   const rawSubpath = req.params[0] || '';
-  const sanitizedSubpath = rawSubpath.replace(/\.\./g, '').replace(/^\/+/, '');
-  const s3Key = `uploads/${sanitizedSubpath}`;
+  const uploadsDir = path.resolve(process.cwd(), 'public', 'uploads');
+  const safePath = path.resolve(uploadsDir, rawSubpath);
+
+  if (!safePath.startsWith(uploadsDir + path.sep)) {
+    res.status(403).json({ error: 'Acceso denegado.' });
+    return;
+  }
+
+  const relativeSubpath = path.relative(uploadsDir, safePath).replace(/\\/g, '/');
+  const s3Key = `uploads/${relativeSubpath}`;
 
   try {
     const s3Obj = await getObject(s3Key);
@@ -31,9 +39,8 @@ router.get('/uploads/*', async (req: Request, res: Response): Promise<void> => {
     }
   } catch {}
 
-  const localPath = path.join(process.cwd(), 'public', 'uploads', sanitizedSubpath);
-  if (fs.existsSync(localPath) && fs.statSync(localPath).isFile()) {
-    res.sendFile(localPath);
+  if (fs.existsSync(safePath) && fs.statSync(safePath).isFile()) {
+    res.sendFile(safePath);
     return;
   }
 

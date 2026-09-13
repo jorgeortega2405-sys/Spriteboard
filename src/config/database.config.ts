@@ -1,8 +1,8 @@
+import { logger } from '../services/logger.service.js';
 import crypto from 'crypto';
 import fs from 'fs';
 import mysql from 'mysql2/promise';
 import path from 'path';
-import { logger } from '../services/logger.service.js';
 
 export interface NoSqlAdapter {
   name: string;

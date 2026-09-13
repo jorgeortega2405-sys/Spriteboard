@@ -33,7 +33,7 @@ export function validateCsrf(req: Request, res: Response, next: NextFunction): v
     return next();
   }
 
-  const cleanPath = req.path;
+  const cleanPath = req.path.replace(/\/+$/, '') || '/';
   if (
     cleanPath === '/subscriptions/webhook' ||
     cleanPath === '/webhooks/stripe' ||

@@ -1,5 +1,5 @@
-import { getClientIp } from './rate-limit.middleware.js';
 import { telemetryService } from '../services/telemetry.service.js';
+import { getClientIp } from './rate-limit.middleware.js';
 import { NextFunction, Request, Response } from 'express';
 
 export function telemetryMiddleware(req: Request, res: Response, next: NextFunction): void {

@@ -1,7 +1,7 @@
 import { API_ROUTES } from '../../config/api-routes.js';
 import { deleteApi, getApi, postApi } from '../../services/api.service.js';
 import { CanvasSnapshotItem } from '../../types/canvas-snapshot.types.js';
-import { UndoStep } from './design.types.js';
+import { SerializedCanvasProject, UndoStep } from './design.types.js';
 
 export class DesignHistoryManager {
   public activeActionBeforeData: ImageData | null = null;
@@ -17,6 +17,69 @@ export class DesignHistoryManager {
       this.undoStack.shift();
     }
     this.redoStack = [];
+  }
+
+  public computeDiffStep(beforeData: ImageData, afterData: ImageData, frameId: string, layerId: string): UndoStep | null {
+    if (!frameId || !layerId) return null;
+
+    const w = beforeData.width;
+    const h = beforeData.height;
+    const beforeBuf = new Uint32Array(beforeData.data.buffer);
+    const afterBuf = new Uint32Array(afterData.data.buffer);
+
+    let minX = w;
+    let minY = h;
+    let maxX = -1;
+    let maxY = -1;
+
+    for (let y = 0; y < h; y++) {
+      const rowOffset = y * w;
+      for (let x = 0; x < w; x++) {
+        if (beforeBuf[rowOffset + x] !== afterBuf[rowOffset + x]) {
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+        }
+      }
+    }
+
+    if (maxX === -1) return null;
+
+    const boxW = maxX - minX + 1;
+    const boxH = maxY - minY + 1;
+
+    let subBefore: ImageData;
+    let subAfter: ImageData;
+
+    if (boxW === w && boxH === h && minX === 0 && minY === 0) {
+      subBefore = beforeData;
+      subAfter = afterData;
+    } else {
+      subBefore = new ImageData(boxW, boxH);
+      subAfter = new ImageData(boxW, boxH);
+
+      const subBeforeBuf = new Uint32Array(subBefore.data.buffer);
+      const subAfterBuf = new Uint32Array(subAfter.data.buffer);
+
+      for (let by = 0; by < boxH; by++) {
+        const srcRowOffset = (minY + by) * w;
+        const dstRowOffset = by * boxW;
+        for (let bx = 0; bx < boxW; bx++) {
+          subBeforeBuf[dstRowOffset + bx] = beforeBuf[srcRowOffset + (minX + bx)];
+          subAfterBuf[dstRowOffset + bx] = afterBuf[srcRowOffset + (minX + bx)];
+        }
+      }
+    }
+
+    return {
+      afterData: subAfter,
+      beforeData: subBefore,
+      frameId,
+      layerId,
+      x: minX,
+      y: minY,
+    };
   }
 
   public undo(): UndoStep | null {
@@ -65,46 +128,46 @@ export class DesignHistoryManager {
   public async createSnapshot(
     canvasUuid: string,
     name: string,
-    description: string,
-    dataStr: string,
+    description: string | undefined,
+    data: string | SerializedCanvasProject,
     previewThumbnail: string
   ): Promise<CanvasSnapshotItem | null> {
-    try {
-      const res = await postApi(API_ROUTES.canvases.snapshots(canvasUuid), {
-        data: dataStr,
-        description: description || undefined,
-        is_manual: true,
-        name,
-        preview_thumbnail: previewThumbnail,
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.snapshot) {
-          this.snapshots.unshift(data.snapshot);
-          return data.snapshot;
-        }
-      }
-    } catch {}
+    const res = await postApi(API_ROUTES.canvases.snapshots(canvasUuid), {
+      data,
+      description: description || undefined,
+      is_manual: true,
+      name,
+      preview_thumbnail: previewThumbnail,
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || 'Error al guardar la versión.');
+    }
+    const resData = await res.json();
+    if (resData.snapshot) {
+      this.snapshots.unshift(resData.snapshot);
+      return resData.snapshot;
+    }
     return null;
   }
 
   public async createAutoSnapshot(
     canvasUuid: string,
-    dataStr: string,
+    data: string | SerializedCanvasProject,
     previewThumbnail: string
   ): Promise<CanvasSnapshotItem | null> {
     try {
       const res = await postApi(API_ROUTES.canvases.snapshots(canvasUuid), {
-        data: dataStr,
+        data,
         is_manual: false,
-        name: `Autoguardado ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+        name: 'Guardado automático',
         preview_thumbnail: previewThumbnail,
       });
       if (res.ok) {
-        const data = await res.json();
-        if (data.snapshot) {
-          this.snapshots.unshift(data.snapshot);
-          return data.snapshot;
+        const resData = await res.json();
+        if (resData.snapshot) {
+          this.snapshots.unshift(resData.snapshot);
+          return resData.snapshot;
         }
       }
     } catch {}
@@ -115,19 +178,23 @@ export class DesignHistoryManager {
     try {
       const res = await getApi(API_ROUTES.canvases.snapshotById(canvasUuid, snapshotUuid));
       if (res.ok) {
-        const data = await res.json();
-        return data.snapshot || null;
+        return await res.json();
       }
     } catch {}
     return null;
   }
 
-  public async restoreSnapshot(canvasUuid: string, snapshotUuid: string): Promise<boolean> {
+  public async restoreSnapshot(canvasUuid: string, snapshotUuid: string): Promise<{ ok: boolean; restoredData?: any; error?: string }> {
     try {
       const res = await postApi(API_ROUTES.canvases.snapshotRestore(canvasUuid, snapshotUuid), {});
-      return res.ok;
+      if (res.ok) {
+        const data = await res.json();
+        return { ok: true, restoredData: data.restoredData };
+      }
+      const errData = await res.json().catch(() => ({}));
+      return { ok: false, error: errData.error || 'Error al restaurar la versión.' };
     } catch {
-      return false;
+      return { ok: false, error: 'Error al restaurar la versión.' };
     }
   }
 

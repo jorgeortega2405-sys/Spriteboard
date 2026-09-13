@@ -6,10 +6,12 @@ import { renderIcons } from './services/icon.service.js';
 import { SkeletonService } from './services/skeleton.service.js';
 import { trackPageView } from './services/telemetry.service.js';
 import { hideTooltip } from './services/tooltip.service.js';
+import { ViewController } from './types/common.types.js';
 
 let isInitialPageLoad = true;
 let currentNavigation = 0;
 let previousPath = '';
+let activeControllers: ViewController[] = [];
 
 function normalizePath(rawPath: string): string {
   if (!rawPath || rawPath === '/' || rawPath === '') return '/';
@@ -405,7 +407,26 @@ export async function render(): Promise<void> {
     viewElements = [errorView];
   }
 
+  if (navId === currentNavigation) {
+    for (const controller of activeControllers) {
+      try {
+        controller.destroy();
+      } catch {}
+    }
+    activeControllers = [];
+  }
+
   await skeletonSession.finish(viewElements, () => navId === currentNavigation);
+
+  if (navId === currentNavigation) {
+    for (const el of viewElements) {
+      const c = (el as any)?.__controller;
+      if (c && typeof c.destroy === 'function') {
+        activeControllers.push(c);
+      }
+    }
+  }
+
   renderIcons(appRoot);
   isInitialPageLoad = false;
 

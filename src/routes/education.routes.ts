@@ -1,6 +1,6 @@
-import { Router } from 'express';
 import { addSchoolTeacherHandler, createClassroomHandler, getSchoolHandler, joinClassroomHandler, listClassroomsHandler, regenerateClassroomCodeHandler, removeSchoolTeacherHandler, updateSchoolHandler } from '../controllers/education.controller.js';
 import { requireAuth } from '../middlewares/auth.middleware.js';
+import { Router } from 'express';
 
 const router = Router();
 

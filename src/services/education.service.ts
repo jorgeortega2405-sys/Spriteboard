@@ -1,8 +1,8 @@
-import crypto from 'crypto';
-import mysql from 'mysql2/promise';
 import { pool } from '../config/database.config.js';
 import { Classroom, CreateClassroomDto, SchoolOrganization, SchoolTeacher } from '../types/education.types.js';
 import { logger } from './logger.service.js';
+import crypto from 'crypto';
+import mysql from 'mysql2/promise';
 
 function generateRandomClassCode(): string {
   const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';

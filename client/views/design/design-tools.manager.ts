@@ -524,8 +524,7 @@ export class DesignToolsManager {
     this.clipboard = { canvas: copyCanvas, height: h, width: w };
   }
 
-  public cutSelection(layer: CanvasLayer, canvasWidth: number, canvasHeight: number): void {
-    this.copySelection(layer, canvasWidth, canvasHeight);
+  public deleteSelection(layer: CanvasLayer, canvasWidth: number, canvasHeight: number): void {
     if (this.floatingSelection) {
       this.floatingSelection = null;
       this.selectionMask = null;
@@ -546,6 +545,11 @@ export class DesignToolsManager {
       layer.ctx.putImageData(layerImg, 0, 0);
       this.selectionMask = null;
     }
+  }
+
+  public cutSelection(layer: CanvasLayer, canvasWidth: number, canvasHeight: number): void {
+    this.copySelection(layer, canvasWidth, canvasHeight);
+    this.deleteSelection(layer, canvasWidth, canvasHeight);
   }
 
   public pasteClipboard(canvasWidth: number, canvasHeight: number): boolean {
