@@ -376,7 +376,7 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
             .as_nanos()
     );
 
-    let (tx, mut rx) = mpsc::channel::<Message>(128);
+    let (tx, mut rx) = mpsc::channel::<Message>(1024);
     let mut joined_rooms: HashSet<String> = HashSet::new();
 
     if user.id > 0 {
@@ -643,9 +643,16 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
                                                     }
                                                     let forward_msg = outgoing.to_string();
 
-                                                    for (peer_conn, peer) in room.iter() {
-                                                        if peer_conn != &conn_id {
+                                                    let target_conn = val.get("targetConnId").and_then(|t| t.as_str());
+                                                    if let Some(target) = target_conn {
+                                                        if let Some(peer) = room.get(target) {
                                                             let _ = peer.tx.try_send(Message::Text(forward_msg.clone()));
+                                                        }
+                                                    } else {
+                                                        for (peer_conn, peer) in room.iter() {
+                                                            if peer_conn != &conn_id {
+                                                                let _ = peer.tx.try_send(Message::Text(forward_msg.clone()));
+                                                            }
                                                         }
                                                     }
 

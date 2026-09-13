@@ -151,6 +151,7 @@ class BoardController {
   private didPan = false;
   private elements: BoardElement[] = [];
   private exportDropdownController: { close: () => void; destroy: () => void; open: () => void; toggle: () => void; update: () => void } | null = null;
+  private hasErasedInCurrentStroke = false;
   private historyRedoStack: string[] = [];
   private historyUndoStack: string[] = [];
   private isDrawing = false;
@@ -220,6 +221,15 @@ class BoardController {
     }
     this.exportDropdownController?.destroy();
     this.resizeObserver?.disconnect();
+    for (const { canvas } of this.pixelCanvasMap.values()) {
+      canvas.width = 0;
+      canvas.height = 0;
+    }
+    this.pixelCanvasMap.clear();
+    if (this.canvasElement) {
+      this.canvasElement.width = 0;
+      this.canvasElement.height = 0;
+    }
     this.abortController.abort();
   }
 
@@ -235,8 +245,10 @@ class BoardController {
           this.canvasServerId = data.canvas.id || null;
           this.canvasUserId = data.canvas.user_id || null;
         }
-      } else if (res.status === 404 || res.status === 403 || res.status === 401) {
+      } else if (res.status === 404 && canvas?.id) {
         await removeLocalCanvas(this.canvasUuid);
+        return false;
+      } else if (res.status === 401 || res.status === 403) {
         return false;
       }
     } catch {
@@ -346,6 +358,11 @@ class BoardController {
       () => {
         if (this.elements.length === 0) return;
         this.pushHistoryState();
+        for (const { canvas } of this.pixelCanvasMap.values()) {
+          canvas.width = 0;
+          canvas.height = 0;
+        }
+        this.pixelCanvasMap.clear();
         this.elements = [];
         this.selectedElementId = null;
         this.updateSelectionToolbar();
@@ -1032,7 +1049,14 @@ class BoardController {
   private deleteSelected(): void {
     if (!this.selectedElementId) return;
     this.pushHistoryState();
-    this.elements = this.elements.filter((item) => item.id !== this.selectedElementId);
+    const removedId = this.selectedElementId;
+    const cached = this.pixelCanvasMap.get(removedId);
+    if (cached) {
+      cached.canvas.width = 0;
+      cached.canvas.height = 0;
+      this.pixelCanvasMap.delete(removedId);
+    }
+    this.elements = this.elements.filter((item) => item.id !== removedId);
     this.selectedElementId = null;
     this.updateSelectionToolbar();
     this.requestRedraw();
@@ -1186,6 +1210,7 @@ class BoardController {
 
     if (this.currentTool === 'eraser') {
       this.isDrawing = true;
+      this.hasErasedInCurrentStroke = false;
       this.eraseAtPoint(worldPos.x, worldPos.y);
       return;
     }
@@ -1314,8 +1339,13 @@ class BoardController {
 
       if (this.liveDraftElement) {
         if (this.liveDraftElement.type === 'stroke') {
-          this.liveDraftElement.points.push(worldPos);
-          this.requestRedraw();
+          const pts = this.liveDraftElement.points;
+          const lastPt = pts[pts.length - 1];
+          const minDistance = Math.max(1, 1.5 / this.camera.zoom);
+          if (!lastPt || Math.hypot(worldPos.x - lastPt.x, worldPos.y - lastPt.y) >= minDistance) {
+            pts.push(worldPos);
+            this.requestRedraw();
+          }
         } else if (this.liveDraftElement.type === 'shape') {
           this.liveDraftElement.width = worldPos.x - this.liveDraftElement.x;
           this.liveDraftElement.height = worldPos.y - this.liveDraftElement.y;
@@ -1356,6 +1386,7 @@ class BoardController {
 
     if (this.isDrawing) {
       this.isDrawing = false;
+      this.hasErasedInCurrentStroke = false;
       if (this.liveDraftElement) {
         this.pushHistoryState();
         if (this.liveDraftElement.type === 'shape') {
@@ -1453,16 +1484,35 @@ class BoardController {
   private eraseAtPoint(x: number, y: number): void {
     const threshold = 18 / this.camera.zoom;
     const initialLen = this.elements.length;
+    const toRemoveIds: string[] = [];
     this.elements = this.elements.filter((el) => {
+      let remove = false;
       if (el.type === 'stroke') {
-        return !el.points.some((p) => Math.hypot(p.x - x, p.y - y) <= Math.max(threshold, el.size));
+        remove = el.points.some((p) => Math.hypot(p.x - x, p.y - y) <= Math.max(threshold, el.size));
+      } else {
+        const bbox = this.getElementBoundingBox(el);
+        remove = x >= bbox.x && x <= bbox.x + bbox.width && y >= bbox.y && y <= bbox.y + bbox.height;
       }
-      const bbox = this.getElementBoundingBox(el);
-      return !(x >= bbox.x && x <= bbox.x + bbox.width && y >= bbox.y && y <= bbox.y + bbox.height);
+      if (remove) {
+        toRemoveIds.push(el.id);
+        return false;
+      }
+      return true;
     });
 
     if (this.elements.length !== initialLen) {
-      this.pushHistoryState();
+      if (!this.hasErasedInCurrentStroke) {
+        this.pushHistoryState();
+        this.hasErasedInCurrentStroke = true;
+      }
+      for (const id of toRemoveIds) {
+        const cached = this.pixelCanvasMap.get(id);
+        if (cached) {
+          cached.canvas.width = 0;
+          cached.canvas.height = 0;
+          this.pixelCanvasMap.delete(id);
+        }
+      }
       this.selectedElementId = null;
       this.updateSelectionToolbar();
       this.requestRedraw();
@@ -1760,7 +1810,23 @@ class BoardController {
     this.ctx.scale(this.camera.zoom, this.camera.zoom);
     this.ctx.translate(-this.camera.x, -this.camera.y);
 
+    const topLeft = this.screenToWorld(0, 0);
+    const botRight = this.screenToWorld(w, h);
+    const viewMinX = Math.min(topLeft.x, botRight.x);
+    const viewMaxX = Math.max(topLeft.x, botRight.x);
+    const viewMinY = Math.min(topLeft.y, botRight.y);
+    const viewMaxY = Math.max(topLeft.y, botRight.y);
+
     for (const el of this.elements) {
+      const bbox = this.getElementBoundingBox(el);
+      if (
+        bbox.x + bbox.width < viewMinX ||
+        bbox.x > viewMaxX ||
+        bbox.y + bbox.height < viewMinY ||
+        bbox.y > viewMaxY
+      ) {
+        continue;
+      }
       this.drawElement(el);
     }
 
@@ -1785,7 +1851,10 @@ class BoardController {
 
     const topLeft = this.screenToWorld(0, 0);
     const bottomRight = this.screenToWorld(w, h);
-    const spacing = 32;
+    let spacing = 32;
+    while (spacing * this.camera.zoom < 24) {
+      spacing *= 2;
+    }
 
     const startX = Math.floor(topLeft.x / spacing) * spacing;
     const endX = Math.ceil(bottomRight.x / spacing) * spacing;
@@ -1795,14 +1864,15 @@ class BoardController {
     this.ctx.fillStyle = this.boardBackground.dotColor || '#cbd5e1';
     const dotRadius = Math.max(1, 1.2 * Math.min(1.5, this.camera.zoom));
 
+    this.ctx.beginPath();
     for (let x = startX; x <= endX; x += spacing) {
       for (let y = startY; y <= endY; y += spacing) {
         const screenPt = this.worldToScreen(x, y);
-        this.ctx.beginPath();
+        this.ctx.moveTo(screenPt.x + dotRadius, screenPt.y);
         this.ctx.arc(screenPt.x, screenPt.y, dotRadius, 0, Math.PI * 2);
-        this.ctx.fill();
       }
     }
+    this.ctx.fill();
   }
 
   private drawElement(el: BoardElement): void {
@@ -2059,6 +2129,7 @@ class BoardController {
     const previous = this.historyUndoStack.pop();
     if (previous) {
       this.elements = JSON.parse(previous);
+      this.syncPixelGridCanvasesFromElements();
       this.selectedElementId = null;
       this.updateSelectionToolbar();
       this.updateUndoRedoUI();
@@ -2073,11 +2144,43 @@ class BoardController {
     const next = this.historyRedoStack.pop();
     if (next) {
       this.elements = JSON.parse(next);
+      this.syncPixelGridCanvasesFromElements();
       this.selectedElementId = null;
       this.updateSelectionToolbar();
       this.updateUndoRedoUI();
       this.requestRedraw();
       this.scheduleAutoSave();
+    }
+  }
+
+  private syncPixelGridCanvasesFromElements(): void {
+    const currentIds = new Set(this.elements.map((el) => el.id));
+    for (const [id, entry] of this.pixelCanvasMap.entries()) {
+      if (!currentIds.has(id)) {
+        entry.canvas.width = 0;
+        entry.canvas.height = 0;
+        this.pixelCanvasMap.delete(id);
+      }
+    }
+    for (const el of this.elements) {
+      if (el.type === 'pixel-grid') {
+        const entry = this.pixelCanvasMap.get(el.id);
+        if (entry) {
+          entry.ctx.clearRect(0, 0, el.gridWidth, el.gridHeight);
+          if (el.data) {
+            const img = new Image();
+            img.onload = () => {
+              entry.ctx.clearRect(0, 0, el.gridWidth, el.gridHeight);
+              entry.ctx.drawImage(img, 0, 0);
+              this.requestRedraw();
+            };
+            img.src = el.data;
+          } else if (el.backgroundColor !== 'transparent') {
+            entry.ctx.fillStyle = el.backgroundColor;
+            entry.ctx.fillRect(0, 0, el.gridWidth, el.gridHeight);
+          }
+        }
+      }
     }
   }
 
@@ -2208,8 +2311,15 @@ class BoardController {
     }
 
     const pad = 60;
-    const exportW = Math.ceil(bbox.width + pad * 2);
-    const exportH = Math.ceil(bbox.height + pad * 2);
+    let exportW = Math.ceil(bbox.width + pad * 2);
+    let exportH = Math.ceil(bbox.height + pad * 2);
+    const maxDim = 8192;
+    let exportScale = 1;
+    if (exportW > maxDim || exportH > maxDim) {
+      exportScale = Math.min(maxDim / exportW, maxDim / exportH);
+      exportW = Math.max(1, Math.round(exportW * exportScale));
+      exportH = Math.max(1, Math.round(exportH * exportScale));
+    }
 
     const exportCanvas = document.createElement('canvas');
     exportCanvas.width = exportW;
@@ -2221,6 +2331,9 @@ class BoardController {
     ectx.fillRect(0, 0, exportW, exportH);
 
     ectx.save();
+    if (exportScale !== 1) {
+      ectx.scale(exportScale, exportScale);
+    }
     ectx.translate(pad - bbox.x, pad - bbox.y);
 
     const prevCtx = this.ctx;
@@ -2237,6 +2350,8 @@ class BoardController {
     link.href = exportCanvas.toDataURL('image/png');
     link.click();
     showToast('Imagen PNG exportada con éxito');
+    exportCanvas.width = 0;
+    exportCanvas.height = 0;
   }
 
   private exportSvg(): void {
@@ -2246,6 +2361,14 @@ class BoardController {
       return;
     }
 
+    const escAttr = (val: string | number): string =>
+      String(val)
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&apos;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
     const pad = 40;
     const w = Math.ceil(bbox.width + pad * 2);
     const h = Math.ceil(bbox.height + pad * 2);
@@ -2253,7 +2376,7 @@ class BoardController {
     const oy = bbox.y - pad;
 
     let svgContent = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${ox} ${oy} ${w} ${h}" width="${w}" height="${h}">\n`;
-    svgContent += `  <rect x="${ox}" y="${oy}" width="${w}" height="${h}" fill="${this.boardBackground.color}" />\n`;
+    svgContent += `  <rect x="${ox}" y="${oy}" width="${w}" height="${h}" fill="${escAttr(this.boardBackground.color)}" />\n`;
 
     for (const el of this.elements) {
       if (el.type === 'stroke' && el.points.length > 0) {
@@ -2267,24 +2390,64 @@ class BoardController {
           const last = el.points[el.points.length - 1];
           d += ` L ${last.x} ${last.y}`;
         }
-        svgContent += `  <path d="${d}" fill="none" stroke="${el.color}" stroke-width="${el.size}" stroke-linecap="round" stroke-linejoin="round" opacity="${el.opacity || 1}" />\n`;
+        svgContent += `  <path d="${d}" fill="none" stroke="${escAttr(el.color)}" stroke-width="${escAttr(el.size)}" stroke-linecap="round" stroke-linejoin="round" opacity="${escAttr(el.opacity || 1)}" />\n`;
       } else if (el.type === 'shape') {
+        const fill = escAttr(el.fillColor);
+        const stroke = escAttr(el.strokeColor);
+        const sw = escAttr(el.strokeWidth);
+
         if (el.shapeType === 'rect') {
-          svgContent += `  <rect x="${el.x}" y="${el.y}" width="${el.width}" height="${el.height}" fill="${el.fillColor}" stroke="${el.strokeColor}" stroke-width="${el.strokeWidth}" />\n`;
+          svgContent += `  <rect x="${el.x}" y="${el.y}" width="${el.width}" height="${el.height}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" />\n`;
         } else if (el.shapeType === 'round-rect') {
-          svgContent += `  <rect x="${el.x}" y="${el.y}" width="${el.width}" height="${el.height}" rx="12" fill="${el.fillColor}" stroke="${el.strokeColor}" stroke-width="${el.strokeWidth}" />\n`;
+          svgContent += `  <rect x="${el.x}" y="${el.y}" width="${el.width}" height="${el.height}" rx="12" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" />\n`;
         } else if (el.shapeType === 'circle') {
-          svgContent += `  <ellipse cx="${el.x + el.width / 2}" cy="${el.y + el.height / 2}" rx="${Math.abs(el.width) / 2}" ry="${Math.abs(el.height) / 2}" fill="${el.fillColor}" stroke="${el.strokeColor}" stroke-width="${el.strokeWidth}" />\n`;
+          svgContent += `  <ellipse cx="${el.x + el.width / 2}" cy="${el.y + el.height / 2}" rx="${Math.abs(el.width) / 2}" ry="${Math.abs(el.height) / 2}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" />\n`;
         } else if (el.shapeType === 'line') {
-          svgContent += `  <line x1="${el.x}" y1="${el.y}" x2="${el.x + el.width}" y2="${el.y + el.height}" stroke="${el.strokeColor}" stroke-width="${el.strokeWidth}" stroke-linecap="round" />\n`;
+          svgContent += `  <line x1="${el.x}" y1="${el.y}" x2="${el.x + el.width}" y2="${el.y + el.height}" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" />\n`;
+        } else if (el.shapeType === 'arrow') {
+          const angle = Math.atan2(el.height, el.width);
+          const headLen = Math.max(12, el.strokeWidth * 3);
+          const x2 = el.x + el.width;
+          const y2 = el.y + el.height;
+          const hx1 = x2 - headLen * Math.cos(angle - Math.PI / 6);
+          const hy1 = y2 - headLen * Math.sin(angle - Math.PI / 6);
+          const hx2 = x2 - headLen * Math.cos(angle + Math.PI / 6);
+          const hy2 = y2 - headLen * Math.sin(angle + Math.PI / 6);
+          svgContent += `  <path d="M ${el.x} ${el.y} L ${x2} ${y2} M ${x2} ${y2} L ${hx1} ${hy1} M ${x2} ${y2} L ${hx2} ${hy2}" fill="none" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" />\n`;
+        } else if (el.shapeType === 'triangle') {
+          const p1 = `${el.x + el.width / 2},${el.y}`;
+          const p2 = `${el.x + el.width},${el.y + el.height}`;
+          const p3 = `${el.x},${el.y + el.height}`;
+          svgContent += `  <polygon points="${p1} ${p2} ${p3}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" stroke-linejoin="round" />\n`;
+        } else if (el.shapeType === 'diamond') {
+          const d1 = `${el.x + el.width / 2},${el.y}`;
+          const d2 = `${el.x + el.width},${el.y + el.height / 2}`;
+          const d3 = `${el.x + el.width / 2},${el.y + el.height}`;
+          const d4 = `${el.x},${el.y + el.height / 2}`;
+          svgContent += `  <polygon points="${d1} ${d2} ${d3} ${d4}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" stroke-linejoin="round" />\n`;
+        } else if (el.shapeType === 'star') {
+          const cx = el.x + el.width / 2;
+          const cy = el.y + el.height / 2;
+          const outerR = Math.min(Math.abs(el.width), Math.abs(el.height)) / 2;
+          const innerR = outerR / 2.2;
+          let rot = (Math.PI / 2) * 3;
+          const step = Math.PI / 5;
+          const pts: string[] = [];
+          for (let s = 0; s < 5; s++) {
+            pts.push(`${cx + Math.cos(rot) * outerR},${cy + Math.sin(rot) * outerR}`);
+            rot += step;
+            pts.push(`${cx + Math.cos(rot) * innerR},${cy + Math.sin(rot) * innerR}`);
+            rot += step;
+          }
+          svgContent += `  <polygon points="${pts.join(' ')}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" stroke-linejoin="round" />\n`;
         }
       } else if (el.type === 'sticky') {
         svgContent += `  <g>\n`;
-        svgContent += `    <rect x="${el.x}" y="${el.y}" width="${el.width}" height="${el.height}" rx="8" fill="${el.color}" filter="drop-shadow(0px 4px 8px rgba(0,0,0,0.15))" />\n`;
-        svgContent += `    <text x="${el.x + 16}" y="${el.y + 24}" fill="${el.textColor}" font-size="${el.fontSize}" font-family="sans-serif">${el.text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</text>\n`;
+        svgContent += `    <rect x="${el.x}" y="${el.y}" width="${el.width}" height="${el.height}" rx="8" fill="${escAttr(el.color)}" filter="drop-shadow(0px 4px 8px rgba(0,0,0,0.15))" />\n`;
+        svgContent += `    <text x="${el.x + 16}" y="${el.y + 24}" fill="${escAttr(el.textColor)}" font-size="${escAttr(el.fontSize)}" font-family="sans-serif">${escAttr(el.text)}</text>\n`;
         svgContent += `  </g>\n`;
       } else if (el.type === 'text') {
-        svgContent += `  <text x="${el.x}" y="${el.y + el.fontSize}" fill="${el.color}" font-size="${el.fontSize}" font-family="sans-serif" font-weight="600">${el.text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</text>\n`;
+        svgContent += `  <text x="${el.x}" y="${el.y + el.fontSize}" fill="${escAttr(el.color)}" font-size="${escAttr(el.fontSize)}" font-family="sans-serif" font-weight="600">${escAttr(el.text)}</text>\n`;
       } else if (el.type === 'pixel-grid') {
         const { canvas } = this.getOrCreatePixelGridCanvas(el);
         const dataUrl = canvas.toDataURL('image/png');
@@ -2295,10 +2458,14 @@ class BoardController {
     svgContent += `</svg>`;
 
     const blob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.download = `${this.boardName.replace(/[^a-zA-Z0-9_-]/g, '_')}.svg`;
-    link.href = URL.createObjectURL(blob);
+    link.href = url;
     link.click();
+    setTimeout(() => {
+      URL.revokeObjectURL(url);
+    }, 1000);
     showToast('Archivo vectorial SVG exportado');
   }
 
@@ -2312,10 +2479,14 @@ class BoardController {
     };
     const jsonStr = JSON.stringify(project, null, 2);
     const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.download = `${this.boardName.replace(/[^a-zA-Z0-9_-]/g, '_')}.json`;
-    link.href = URL.createObjectURL(blob);
+    link.href = url;
     link.click();
+    setTimeout(() => {
+      URL.revokeObjectURL(url);
+    }, 1000);
     showToast('Archivo del proyecto descargado');
   }
 
@@ -2739,11 +2910,12 @@ class BoardController {
     const cellW = el.width / el.gridWidth;
     const cellH = el.height / el.gridHeight;
 
+    const dpr = window.devicePixelRatio || 1;
+    const screenW = this.canvasElement ? this.canvasElement.width / dpr : 2000;
+    const screenH = this.canvasElement ? this.canvasElement.height / dpr : 2000;
+
     const topLeft = this.screenToWorld(0, 0);
-    const botRight = this.screenToWorld(
-      this.canvasElement ? this.canvasElement.width : 2000,
-      this.canvasElement ? this.canvasElement.height : 2000
-    );
+    const botRight = this.screenToWorld(screenW, screenH);
 
     const startCol = Math.max(0, Math.floor((topLeft.x - el.x) / cellW));
     const endCol = Math.min(el.gridWidth, Math.ceil((botRight.x - el.x) / cellW));

@@ -13,7 +13,7 @@ import { renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { getEffectiveTheme } from '../services/theme.service.js';
 import { showToast } from '../services/toast.service.js';
-import { joinCanvasRoom, leaveCanvasRoom, registerWebSocketHandler, sendCanvasAccessChanged, sendCanvasAction, sendCanvasCursor, sendCanvasDrawStroke, sendCanvasFullUpdate, sendCanvasMemberRemoved } from '../services/websocket.service.js';
+import { joinCanvasRoom, leaveCanvasRoom, registerWebSocketHandler, sendCanvasAccessChanged, sendCanvasAction, sendCanvasBinaryStroke, sendCanvasCursor, sendCanvasDrawStroke, sendCanvasFullUpdate, sendCanvasMemberRemoved } from '../services/websocket.service.js';
 import { CanvasActionContext, CanvasFrame, CanvasLayer } from '../types/canvas-actions.types.js';
 import { CanvasSnapshotItem } from '../types/canvas-snapshot.types.js';
 import { CanvasItem, CanvasMember, SearchUserResult } from '../types/canvas.types.js';
@@ -2201,8 +2201,6 @@ class DesignController {
 
       if (this.isOwner && !this.canvasServerId) {
         await saveLocalCanvas(canvasItem);
-      } else if (!this.isOwner) {
-        await removeLocalCanvas(this.canvasUuid);
       }
 
       if (currentUser) {
@@ -2749,7 +2747,23 @@ class DesignController {
     if (!layer || !layer.visible) return;
 
     layer.ctx.imageSmoothingEnabled = false;
-    layer.ctx.drawImage(this.shapeCanvas, this.shapeTemplateX, this.shapeTemplateY, this.shapeTemplateW, this.shapeTemplateH);
+    if (this.isInfinite && layer.chunkGrid) {
+      let sourceCanvas: HTMLCanvasElement = this.shapeCanvas;
+      if (this.shapeTemplateW !== this.shapeCanvas.width || this.shapeTemplateH !== this.shapeCanvas.height) {
+        const temp = document.createElement('canvas');
+        temp.width = this.shapeTemplateW;
+        temp.height = this.shapeTemplateH;
+        const tCtx = temp.getContext('2d');
+        if (tCtx) {
+          tCtx.imageSmoothingEnabled = false;
+          tCtx.drawImage(this.shapeCanvas, 0, 0, this.shapeTemplateW, this.shapeTemplateH);
+          sourceCanvas = temp;
+        }
+      }
+      layer.chunkGrid.populateFromCanvas(sourceCanvas, this.shapeTemplateX, this.shapeTemplateY);
+    } else {
+      layer.ctx.drawImage(this.shapeCanvas, this.shapeTemplateX, this.shapeTemplateY, this.shapeTemplateW, this.shapeTemplateH);
+    }
 
     if (broadcast) {
       sendCanvasAction(this.canvasUuid, 'inject_shape', {
@@ -2844,6 +2858,20 @@ class DesignController {
   private captureLayerSnapshot(): ImageData | null {
     const layer = this.getActiveLayer();
     if (!layer) return null;
+    if (this.isInfinite && layer.chunkGrid) {
+      const box = layer.chunkGrid.getBoundingBox();
+      if (!box.hasPixels) {
+        return layer.ctx.createImageData(1, 1);
+      }
+      const exportCanvas = layer.chunkGrid.exportToCanvas({
+        height: box.height,
+        width: box.width,
+        x: box.minX,
+        y: box.minY,
+      });
+      const ctx = exportCanvas.getContext('2d');
+      return ctx ? ctx.getImageData(0, 0, exportCanvas.width, exportCanvas.height) : null;
+    }
     const w = Math.max(1, this.canvasWidth || 256);
     const h = Math.max(1, this.canvasHeight || 256);
     return layer.ctx.getImageData(0, 0, w, h);
@@ -2930,9 +2958,19 @@ class DesignController {
     const layer = frame?.layers.find((l) => l.id === step.layerId);
     if (layer) {
       layer.ctx.putImageData(step.beforeData, step.x ?? 0, step.y ?? 0);
+      if (this.isInfinite && layer.chunkGrid) {
+        const tCanvas = document.createElement('canvas');
+        tCanvas.width = step.beforeData.width;
+        tCanvas.height = step.beforeData.height;
+        const tCtx = tCanvas.getContext('2d');
+        if (tCtx) {
+          tCtx.putImageData(step.beforeData, 0, 0);
+          layer.chunkGrid.populateFromCanvas(tCanvas, step.x ?? 0, step.y ?? 0);
+        }
+      }
       dispatchCanvasAction(this.getActionContext(), {
         payload: {
-          dataUrl: layer.canvas.toDataURL('image/png'),
+          dataUrl: this.isInfinite ? '' : layer.canvas.toDataURL('image/png'),
           frameId: step.frameId,
           layerId: step.layerId,
         },
@@ -2952,9 +2990,19 @@ class DesignController {
     const layer = frame?.layers.find((l) => l.id === step.layerId);
     if (layer) {
       layer.ctx.putImageData(step.afterData, step.x ?? 0, step.y ?? 0);
+      if (this.isInfinite && layer.chunkGrid) {
+        const tCanvas = document.createElement('canvas');
+        tCanvas.width = step.afterData.width;
+        tCanvas.height = step.afterData.height;
+        const tCtx = tCanvas.getContext('2d');
+        if (tCtx) {
+          tCtx.putImageData(step.afterData, 0, 0);
+          layer.chunkGrid.populateFromCanvas(tCanvas, step.x ?? 0, step.y ?? 0);
+        }
+      }
       dispatchCanvasAction(this.getActionContext(), {
         payload: {
-          dataUrl: layer.canvas.toDataURL('image/png'),
+          dataUrl: this.isInfinite ? '' : layer.canvas.toDataURL('image/png'),
           frameId: step.frameId,
           layerId: step.layerId,
         },
@@ -3006,6 +3054,15 @@ class DesignController {
       this.floatingSelection.height = result.canvas.height;
       this.requestRedraw();
       showToast(`Contorno de 1px (${outlineColor}) aplicado a la selección`, 'info');
+      return;
+    }
+
+    this.applyOutline(outlineColor);
+  }
+
+  private applyOutline(outlineColor: string): void {
+    if (this.isInfinite || this.canvasWidth <= 0 || this.canvasHeight <= 0) {
+      showToast('Los efectos de contorno no están disponibles en modo lienzo infinito', 'info');
       return;
     }
 
@@ -3260,8 +3317,15 @@ class DesignController {
             if (type.startsWith('image/')) {
               const blob = await item.getType(type);
               const img = new Image();
-              img.onload = () => handleImageLoaded(img);
-              img.src = URL.createObjectURL(blob);
+              const objectUrl = URL.createObjectURL(blob);
+              img.onload = () => {
+                URL.revokeObjectURL(objectUrl);
+                handleImageLoaded(img);
+              };
+              img.onerror = () => {
+                URL.revokeObjectURL(objectUrl);
+              };
+              img.src = objectUrl;
               return;
             }
           }
@@ -3803,10 +3867,14 @@ class DesignController {
     if (!this.floatingSelection) return;
     const layer = this.getActiveLayer();
     if (layer && layer.visible) {
-      layer.ctx.drawImage(this.floatingSelection.canvas, this.floatingSelection.x, this.floatingSelection.y);
+      if (this.isInfinite && layer.chunkGrid) {
+        layer.chunkGrid.populateFromCanvas(this.floatingSelection.canvas, this.floatingSelection.x, this.floatingSelection.y);
+      } else {
+        layer.ctx.drawImage(this.floatingSelection.canvas, this.floatingSelection.x, this.floatingSelection.y);
+      }
       this.scheduleAutoSave();
 
-      if (broadcast) {
+      if (broadcast && !this.isInfinite) {
         sendCanvasAction(this.canvasUuid, 'update_layer_image', {
           dataUrl: layer.canvas.toDataURL('image/png'),
           frameId: this.activeFrameId,
@@ -3826,6 +3894,7 @@ class DesignController {
   }
 
   private selectAll(): void {
+    if (this.isInfinite) return;
     this.commitFloatingSelection();
     this.selectionMask = new Uint8Array(this.canvasWidth * this.canvasHeight).fill(1);
     this.startMarchingAntsLoop();
@@ -4272,7 +4341,11 @@ class DesignController {
     if (!this.textCanvas) return;
     const layer = this.getActiveLayer();
     if (layer && layer.visible) {
-      layer.ctx.drawImage(this.textCanvas, this.textX, this.textY);
+      if (this.isInfinite && layer.chunkGrid) {
+        layer.chunkGrid.populateFromCanvas(this.textCanvas, this.textX, this.textY);
+      } else {
+        layer.ctx.drawImage(this.textCanvas, this.textX, this.textY);
+      }
       if (broadcast) {
         sendCanvasAction(this.canvasUuid, 'text', {
           color: this.currentColor,
@@ -4526,6 +4599,48 @@ class DesignController {
   }
 
   private applyFloodFill(layer: CanvasLayer, startX: number, startY: number): void {
+    if (this.isInfinite) {
+      const grid = layer.chunkGrid;
+      if (!grid) return;
+      const targetPixel = grid.getPixel(startX, startY);
+      const targetColor32 = ((targetPixel.a << 24) | (targetPixel.b << 16) | (targetPixel.g << 8) | targetPixel.r) >>> 0;
+      const { r, g, b } = hexToRgb(this.currentColor);
+      const fillColor32 = ((255 << 24) | (b << 16) | (g << 8) | r) >>> 0;
+      if (targetColor32 === fillColor32) return;
+
+      const maxFillPixels = 65536;
+      let filledCount = 0;
+      const queue: [number, number][] = [[startX, startY]];
+      const visited = new Set<string>();
+      visited.add(`${startX},${startY}`);
+
+      while (queue.length > 0 && filledCount < maxFillPixels) {
+        const [cx, cy] = queue.pop()!;
+        grid.setPixel(cx, cy, this.currentColor);
+        filledCount++;
+
+        const neighbors: [number, number][] = [
+          [cx + 1, cy],
+          [cx - 1, cy],
+          [cx, cy + 1],
+          [cx, cy - 1],
+        ];
+
+        for (const [nx, ny] of neighbors) {
+          const key = `${nx},${ny}`;
+          if (!visited.has(key)) {
+            visited.add(key);
+            const p = grid.getPixel(nx, ny);
+            const p32 = ((p.a << 24) | (p.b << 16) | (p.g << 8) | p.r) >>> 0;
+            if (p32 === targetColor32) {
+              queue.push([nx, ny]);
+            }
+          }
+        }
+      }
+      return;
+    }
+
     if (startX < 0 || startX >= this.canvasWidth || startY < 0 || startY >= this.canvasHeight) return;
 
     const imgData = layer.ctx.getImageData(0, 0, this.canvasWidth, this.canvasHeight);
@@ -4579,11 +4694,11 @@ class DesignController {
     }
   }
 
-  private applyToolAt(x: number, y: number, broadcast = true, customLayer?: CanvasLayer): void {
+  private applyToolAt(x: number, y: number, broadcast = true, customLayer?: CanvasLayer, ignoreSymmetry = false): void {
     const layer = customLayer || this.getActiveLayer();
     if (!layer || !layer.visible || (!this.isInfinite && (x < 0 || x >= this.canvasWidth || y < 0 || y >= this.canvasHeight))) return;
 
-    const points = this.getSymmetricPoints(x, y);
+    const points = ignoreSymmetry ? [{ x, y }] : this.getSymmetricPoints(x, y);
 
     if (this.currentTool === 'brush' || this.currentTool === 'eraser') {
       for (const pt of points) {
@@ -4626,22 +4741,32 @@ class DesignController {
         this.currentStrokePoints.push({ x: pt.x, y: pt.y });
       }
       if (this.currentStrokePoints.length >= 8) {
-        sendCanvasDrawStroke(
-          this.canvasUuid,
-          this.currentTool,
-          this.currentColor,
-          this.toolSizes[this.currentTool as keyof typeof this.toolSizes] || 1,
-          [...this.currentStrokePoints],
-          {
-            ditherPattern: this.ditherPattern,
-            frameId: this.activeFrameId,
-            layerId: layer.id,
-            shadingMode: this.shadingMode,
-            shadingRamp: this.shadingRamp,
-            sprayDensity: this.sprayDensity,
-            sprayRadius: this.sprayRadius,
-          }
-        );
+        if (this.currentTool === 'brush' || this.currentTool === 'eraser') {
+          sendCanvasBinaryStroke(
+            this.canvasUuid,
+            this.currentTool,
+            this.currentColor,
+            this.toolSizes[this.currentTool as keyof typeof this.toolSizes] || 1,
+            [...this.currentStrokePoints]
+          );
+        } else {
+          sendCanvasDrawStroke(
+            this.canvasUuid,
+            this.currentTool,
+            this.currentColor,
+            this.toolSizes[this.currentTool as keyof typeof this.toolSizes] || 1,
+            [...this.currentStrokePoints],
+            {
+              ditherPattern: this.ditherPattern,
+              frameId: this.activeFrameId,
+              layerId: layer.id,
+              shadingMode: this.shadingMode,
+              shadingRamp: this.shadingRamp,
+              sprayDensity: this.sprayDensity,
+              sprayRadius: this.sprayRadius,
+            }
+          );
+        }
         this.currentStrokePoints = [];
       }
     }
@@ -6229,13 +6354,19 @@ class DesignController {
             const minY = Math.max(0, Math.min(this.canvasHeight - 1, Math.min(this.selectionStartPos.y, pixelY)));
             const maxY = Math.max(0, Math.min(this.canvasHeight - 1, Math.max(this.selectionStartPos.y, pixelY)));
 
-            const mask = new Uint8Array(this.canvasWidth * this.canvasHeight);
+            const totalPixels = this.canvasWidth * this.canvasHeight;
+            if (!this.selectionMask || this.selectionMask.length !== totalPixels) {
+              this.selectionMask = new Uint8Array(totalPixels);
+            } else {
+              this.selectionMask.fill(0);
+            }
+            const mask = this.selectionMask;
             for (let y = minY; y <= maxY; y++) {
+              const rowOffset = y * this.canvasWidth;
               for (let x = minX; x <= maxX; x++) {
-                mask[y * this.canvasWidth + x] = 1;
+                mask[rowOffset + x] = 1;
               }
             }
-            this.selectionMask = mask;
             this.startMarchingAntsLoop();
             this.requestRedraw();
           } else if (this.selectionMode === 'lasso') {
@@ -6379,22 +6510,32 @@ class DesignController {
 
           if (this.currentStrokePoints.length > 0 && this.currentTool !== 'bucket') {
             const activeLayer = this.getActiveLayer();
-            sendCanvasDrawStroke(
-              this.canvasUuid,
-              this.currentTool,
-              this.currentColor,
-              this.toolSizes[this.currentTool as keyof typeof this.toolSizes] || 1,
-              [...this.currentStrokePoints],
-              {
-                ditherPattern: this.ditherPattern,
-                frameId: this.activeFrameId,
-                layerId: activeLayer ? activeLayer.id : undefined,
-                shadingMode: this.shadingMode,
-                shadingRamp: this.shadingRamp,
-                sprayDensity: this.sprayDensity,
-                sprayRadius: this.sprayRadius,
-              }
-            );
+            if (this.currentTool === 'brush' || this.currentTool === 'eraser') {
+              sendCanvasBinaryStroke(
+                this.canvasUuid,
+                this.currentTool,
+                this.currentColor,
+                this.toolSizes[this.currentTool as keyof typeof this.toolSizes] || 1,
+                [...this.currentStrokePoints]
+              );
+            } else {
+              sendCanvasDrawStroke(
+                this.canvasUuid,
+                this.currentTool,
+                this.currentColor,
+                this.toolSizes[this.currentTool as keyof typeof this.toolSizes] || 1,
+                [...this.currentStrokePoints],
+                {
+                  ditherPattern: this.ditherPattern,
+                  frameId: this.activeFrameId,
+                  layerId: activeLayer ? activeLayer.id : undefined,
+                  shadingMode: this.shadingMode,
+                  shadingRamp: this.shadingRamp,
+                  sprayDensity: this.sprayDensity,
+                  sprayRadius: this.sprayRadius,
+                }
+              );
+            }
             this.currentStrokePoints = [];
           }
           this.scheduleAutoSave();
@@ -6501,18 +6642,25 @@ class DesignController {
         this.ctx.fillStyle = c1;
         this.ctx.fillRect(0, 0, w, h);
 
-        this.ctx.fillStyle = c2;
-        const startX = Math.floor(-this.panX / step) * step + this.panX;
-        const startY = Math.floor(-this.panY / step) * step + this.panY;
-        const cols = Math.ceil((w - startX) / step);
-        const rows = Math.ceil((h - startY) / step);
+        if (step < 6) {
+          this.ctx.fillStyle = c2;
+          this.ctx.globalAlpha = 0.5;
+          this.ctx.fillRect(0, 0, w, h);
+          this.ctx.globalAlpha = 1;
+        } else {
+          this.ctx.fillStyle = c2;
+          const startX = Math.floor(-this.panX / step) * step + this.panX;
+          const startY = Math.floor(-this.panY / step) * step + this.panY;
+          const cols = Math.ceil((w - startX) / step);
+          const rows = Math.ceil((h - startY) / step);
 
-        for (let r = 0; r <= rows; r++) {
-          for (let c = 0; c <= cols; c++) {
-            const worldCol = Math.round((startX + c * step - this.panX) / step);
-            const worldRow = Math.round((startY + r * step - this.panY) / step);
-            if (((worldCol + worldRow) % 2 + 2) % 2 === 1) {
-              this.ctx.fillRect(startX + c * step, startY + r * step, step, step);
+          for (let r = 0; r <= rows; r++) {
+            for (let c = 0; c <= cols; c++) {
+              const worldCol = Math.round((startX + c * step - this.panX) / step);
+              const worldRow = Math.round((startY + r * step - this.panY) / step);
+              if (((worldCol + worldRow) % 2 + 2) % 2 === 1) {
+                this.ctx.fillRect(startX + c * step, startY + r * step, step, step);
+              }
             }
           }
         }
@@ -7681,7 +7829,7 @@ class DesignController {
       this.requestRedraw();
 
       if (this.isOwner) {
-        sendCanvasFullUpdate(this.canvasUuid, this.serializeProject());
+        sendCanvasFullUpdate(this.canvasUuid, this.serializeProject(), uConnId);
       }
     });
 
@@ -7722,7 +7870,7 @@ class DesignController {
 
     const unsubStroke = registerWebSocketHandler('CANVAS_DRAW_STROKE', (payload: any) => {
       const roomUuid = payload.canvasUuid || payload.canvas_uuid;
-      if (roomUuid !== this.canvasUuid) return;
+      if (roomUuid && roomUuid !== this.canvasUuid) return;
       this.applyRemoteStroke(payload);
     });
 
@@ -7861,7 +8009,7 @@ class DesignController {
     this.currentTool = data.tool as any;
 
     for (const pt of data.points) {
-      this.applyToolAt(pt.x, pt.y, false, layer);
+      this.applyToolAt(pt.x, pt.y, false, layer, true);
     }
 
     this.currentTool = prevTool;
@@ -8936,8 +9084,10 @@ class DesignController {
             this.roomToken = data.room_token;
           }
         }
-      } else if (res.status === 404 || res.status === 403 || res.status === 401) {
+      } else if (res.status === 404 && canvas?.id) {
         await removeLocalCanvas(this.canvasUuid);
+        return false;
+      } else if (res.status === 401 || res.status === 403) {
         return false;
       }
 
@@ -9027,9 +9177,6 @@ class DesignController {
         };
       }
 
-      if (!this.isOwner) {
-        await removeLocalCanvas(this.canvasUuid);
-      }
 
       this.updateAccessLevelUI();
       this.applyViewerMode();
@@ -9546,11 +9693,29 @@ class DesignController {
     this.cancelShapePlacement();
     if (this.isLoaded && this.isOwner) {
       this.saveProjectImmediate();
-    } else {
-      void removeLocalCanvas(this.canvasUuid);
     }
     this.stopPlayback();
     this.resizeObserver?.disconnect();
+    if (this.viewportCanvas) {
+      this.viewportCanvas.width = 0;
+      this.viewportCanvas.height = 0;
+    }
+    if (this.shapeCanvas) {
+      this.shapeCanvas.width = 0;
+      this.shapeCanvas.height = 0;
+      this.shapeCanvas = null;
+    }
+    if (this.textCanvas) {
+      this.textCanvas.width = 0;
+      this.textCanvas.height = 0;
+      this.textCanvas = null;
+    }
+    for (const frame of this.frames) {
+      for (const layer of frame.layers) {
+        layer.canvas.width = 0;
+        layer.canvas.height = 0;
+      }
+    }
     this.abortController.abort();
   }
 }

@@ -38,16 +38,12 @@ function getLocalStorageCanvases(): CanvasItem[] {
 
 function setLocalStorageCanvases(canvases: CanvasItem[]): void {
   try {
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(canvases));
-  } catch {
-    try {
-      const lightweight = canvases.map((c) => ({
-        ...c,
-        data: null,
-      }));
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(lightweight));
-    } catch {}
-  }
+    const lightweight = canvases.map((c) => ({
+      ...c,
+      data: null,
+    }));
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(lightweight));
+  } catch {}
 }
 
 export async function saveLocalCanvas(canvas: CanvasItem): Promise<CanvasItem> {

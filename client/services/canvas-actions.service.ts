@@ -4,6 +4,10 @@ import { PIXEL_SHAPES, renderShapeCanvas, ShapeColorMode } from '../utils/pixel-
 import { sendCanvasAction } from './websocket.service.js';
 
 function applyRotateCanvas(context: CanvasActionContext, clockwise: boolean): void {
+  if (context.canvasWidth <= 0 || context.canvasHeight <= 0) {
+    return;
+  }
+
   const newW = context.canvasHeight;
   const newH = context.canvasWidth;
 
@@ -25,6 +29,8 @@ function applyRotateCanvas(context: CanvasActionContext, clockwise: boolean): vo
       }
 
       newCtx.drawImage(oldCanvas, 0, 0);
+      oldCanvas.width = 0;
+      oldCanvas.height = 0;
       layer.canvas = newCanvas;
       layer.ctx = newCtx;
     }
@@ -45,6 +51,10 @@ function applyRotateCanvas(context: CanvasActionContext, clockwise: boolean): vo
 }
 
 function applyFlipCanvas(context: CanvasActionContext, horizontal: boolean): void {
+  if (context.canvasWidth <= 0 || context.canvasHeight <= 0) {
+    return;
+  }
+
   for (const frame of context.frames) {
     for (const layer of frame.layers) {
       const oldCanvas = layer.canvas;
@@ -63,6 +73,8 @@ function applyFlipCanvas(context: CanvasActionContext, horizontal: boolean): voi
       }
 
       newCtx.drawImage(oldCanvas, 0, 0);
+      oldCanvas.width = 0;
+      oldCanvas.height = 0;
       layer.canvas = newCanvas;
       layer.ctx = newCtx;
     }

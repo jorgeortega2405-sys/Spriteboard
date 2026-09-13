@@ -1,5 +1,6 @@
 import os
 import re
+import shutil
 import time
 from pathlib import Path
 from typing import List, Optional
@@ -108,6 +109,7 @@ class TrashCleanupJob(BaseJob):
             return
 
         purged_files = 0
+        snapshots_dir = blob_dir / "snapshots"
         for u in uuids:
             safe_uuid = re.sub(r"[^a-zA-Z0-9_-]", "", str(u))
             blob_path = blob_dir / f"{safe_uuid}.sb.gz"
@@ -118,8 +120,15 @@ class TrashCleanupJob(BaseJob):
             except Exception as e:
                 self.logger.warning(f"No se pudo eliminar el archivo blob {blob_path}: {e}")
 
+            snapshot_canvas_dir = snapshots_dir / safe_uuid
+            try:
+                if snapshot_canvas_dir.is_dir():
+                    shutil.rmtree(snapshot_canvas_dir, ignore_errors=True)
+            except Exception as e:
+                self.logger.warning(f"No se pudo eliminar el directorio de snapshots {snapshot_canvas_dir}: {e}")
+
         if purged_files > 0:
-            self.logger.info(f"Se eliminaron físicamente {purged_files} archivos .sb.gz de lienzos expirados.")
+            self.logger.info(f"Se eliminaron físicamente {purged_files} archivos .sb.gz y sus snapshots de lienzos expirados.")
 
     def shutdown(self) -> None:
         self.logger.info("Cerrando conexión de base de datos para 'trash_cleanup'...")

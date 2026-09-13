@@ -18,8 +18,16 @@ export async function ensureCanvasStorageDir(): Promise<void> {
   }
 }
 
+export function sanitizeUuid(uuid: string): string {
+  const safe = uuid.replace(/[^a-zA-Z0-9_-]/g, '');
+  if (!safe || safe.length > 64) {
+    throw new Error('Identificador UUID de lienzo inválido.');
+  }
+  return safe;
+}
+
 export function getCanvasBlobPath(uuid: string): string {
-  const safeUuid = uuid.replace(/[^a-zA-Z0-9_-]/g, '');
+  const safeUuid = sanitizeUuid(uuid);
   return path.join(CANVAS_STORAGE_DIR, `${safeUuid}.sb.gz`);
 }
 
@@ -38,6 +46,7 @@ export async function saveCanvasBlob(
   data: string | object
 ): Promise<{ sizeBytes: number; compressedBytes: number; etag: string }> {
   await ensureCanvasStorageDir();
+  const safeUuid = sanitizeUuid(uuid);
 
   const rawString = typeof data === 'string' ? data : JSON.stringify(data);
   const rawBuffer = Buffer.from(rawString, 'utf-8');
@@ -47,14 +56,14 @@ export async function saveCanvasBlob(
   const compressedBytes = compressedBuffer.length;
   const etag = `"${crypto.createHash('md5').update(compressedBuffer).digest('hex')}"`;
 
-  const finalPath = getCanvasBlobPath(uuid);
-  const tempPath = path.join(CANVAS_STORAGE_DIR, `${uuid}.${Date.now()}.${Math.random().toString(36).slice(2, 8)}.tmp`);
+  const finalPath = getCanvasBlobPath(safeUuid);
+  const tempPath = path.join(CANVAS_STORAGE_DIR, `.${safeUuid}.${Date.now()}.${Math.random().toString(36).slice(2, 8)}.tmp`);
 
   await fs.promises.writeFile(tempPath, compressedBuffer);
   await fs.promises.rename(tempPath, finalPath);
 
   const ratio = ((1 - compressedBytes / sizeBytes) * 100).toFixed(1);
-  logger.db.info(`Lienzo ${uuid} persistido en blob comprimido: ${sizeBytes}B -> ${compressedBytes}B (${ratio}% reducción)`);
+  logger.db.info(`Lienzo ${safeUuid} persistido en blob comprimido: ${sizeBytes}B -> ${compressedBytes}B (${ratio}% reducción)`);
 
   return { sizeBytes, compressedBytes, etag };
 }
@@ -92,13 +101,13 @@ export async function deleteCanvasBlob(uuid: string): Promise<void> {
 }
 
 export function getCanvasSnapshotBlobPath(canvasUuid: string, snapshotUuid: string): string {
-  const safeCanvasUuid = canvasUuid.replace(/[^a-zA-Z0-9_-]/g, '');
-  const safeSnapshotUuid = snapshotUuid.replace(/[^a-zA-Z0-9_-]/g, '');
+  const safeCanvasUuid = sanitizeUuid(canvasUuid);
+  const safeSnapshotUuid = sanitizeUuid(snapshotUuid);
   return path.join(CANVAS_STORAGE_DIR, 'snapshots', safeCanvasUuid, `${safeSnapshotUuid}.sb.gz`);
 }
 
 export async function ensureCanvasSnapshotStorageDir(canvasUuid: string): Promise<string> {
-  const safeCanvasUuid = canvasUuid.replace(/[^a-zA-Z0-9_-]/g, '');
+  const safeCanvasUuid = sanitizeUuid(canvasUuid);
   const targetDir = path.join(CANVAS_STORAGE_DIR, 'snapshots', safeCanvasUuid);
   await fs.promises.mkdir(targetDir, { recursive: true });
   return targetDir;
@@ -110,6 +119,7 @@ export async function saveCanvasSnapshotBlob(
   data: string | object
 ): Promise<{ sizeBytes: number; compressedBytes: number }> {
   await ensureCanvasSnapshotStorageDir(canvasUuid);
+  const safeSnapshotUuid = sanitizeUuid(snapshotUuid);
 
   const rawString = typeof data === 'string' ? data : JSON.stringify(data);
   const rawBuffer = Buffer.from(rawString, 'utf-8');
@@ -118,10 +128,10 @@ export async function saveCanvasSnapshotBlob(
   const compressedBuffer = await gzipAsync(rawBuffer, { level: 6 });
   const compressedBytes = compressedBuffer.length;
 
-  const finalPath = getCanvasSnapshotBlobPath(canvasUuid, snapshotUuid);
+  const finalPath = getCanvasSnapshotBlobPath(canvasUuid, safeSnapshotUuid);
   const tempPath = path.join(
     path.dirname(finalPath),
-    `${snapshotUuid}.${Date.now()}.${Math.random().toString(36).slice(2, 8)}.tmp`
+    `.${safeSnapshotUuid}.${Date.now()}.${Math.random().toString(36).slice(2, 8)}.tmp`
   );
 
   await fs.promises.writeFile(tempPath, compressedBuffer);

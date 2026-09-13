@@ -234,6 +234,7 @@ function buildFramePalette(rgba: Uint8ClampedArray): {
             bestIdx = j;
           }
         }
+        colorMap.set(rgb, bestIdx);
         indexedPixels[p] = bestIdx;
       }
     }
@@ -249,6 +250,9 @@ export async function encodeFramesToGif(frames: GifFrameInput[]): Promise<Blob> 
 
   const width = frames[0].canvas.width;
   const height = frames[0].canvas.height;
+  if (width <= 0 || height <= 0) {
+    throw new Error('Las dimensiones del lienzo deben ser mayores a 0 para exportar GIF.');
+  }
   const stream = new ByteStream();
 
   stream.writeString('GIF89a');

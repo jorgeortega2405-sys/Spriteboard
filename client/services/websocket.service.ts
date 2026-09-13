@@ -82,7 +82,7 @@ export function initWebSocket(): void {
               if (handlers) {
                 handlers.forEach((h) => {
                   try {
-                    h({ color, connId, type: 'CANVAS_CURSOR', x, y });
+                    h({ canvasUuid: currentActiveCanvasRoom, color, connId, type: 'CANVAS_CURSOR', x, y });
                   } catch (err) {
                     console.warn('[WebSocket] Error en manejador binario de cursor:', err);
                   }
@@ -123,7 +123,7 @@ export function initWebSocket(): void {
               if (handlers) {
                 handlers.forEach((h) => {
                   try {
-                    h({ color, points, senderConnId: connId, size, tool, type: 'CANVAS_DRAW_STROKE' });
+                    h({ canvasUuid: currentActiveCanvasRoom, color, points, senderConnId: connId, size, tool, type: 'CANVAS_DRAW_STROKE' });
                   } catch (err) {
                     console.warn('[WebSocket] Error en manejador binario de trazo:', err);
                   }
@@ -420,11 +420,12 @@ export function sendCanvasAction(canvasUuid: string, action: string, payload: an
   });
 }
 
-export function sendCanvasFullUpdate(canvasUuid: string, data: any): void {
+export function sendCanvasFullUpdate(canvasUuid: string, data: any, targetConnId?: string): void {
   sendWebSocketMessage({
-    type: 'CANVAS_FULL_UPDATE',
-    canvasUuid,
     data,
+    canvasUuid,
+    targetConnId,
+    type: 'CANVAS_FULL_UPDATE',
   });
 }
 

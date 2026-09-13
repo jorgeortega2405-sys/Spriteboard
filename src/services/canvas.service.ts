@@ -525,20 +525,6 @@ export async function syncCanvas(userId: number | null, dto: SyncCanvasDto): Pro
     let compressedBytes: number | null = null;
     let sizeBytes: number | null = null;
 
-    if (data) {
-      try {
-        const blobResult = await saveCanvasBlob(uuid, data);
-        compressedBytes = blobResult.compressedBytes;
-        sizeBytes = blobResult.sizeBytes;
-      } catch (blobErr) {
-        logger.db.error(`Error al persistir blob para ${uuid}`, blobErr);
-      }
-    }
-
-    const dbData = data && data.length > 65536
-      ? JSON.stringify({ storage: 'blob', version: 2 })
-      : data;
-
     const [existing] = await canvasPool.query<mysql.RowDataPacket[]>(
       'SELECT id, user_id, access_level, public_role, deleted_at FROM canvases WHERE uuid = ? LIMIT 1',
       [uuid]
@@ -581,6 +567,20 @@ export async function syncCanvas(userId: number | null, dto: SyncCanvasDto): Pro
         throw new Error('No tienes permisos de edición para sincronizar este lienzo.');
       }
 
+      if (data) {
+        try {
+          const blobResult = await saveCanvasBlob(uuid, data);
+          compressedBytes = blobResult.compressedBytes;
+          sizeBytes = blobResult.sizeBytes;
+        } catch (blobErr) {
+          logger.db.error(`Error al persistir blob para ${uuid}`, blobErr);
+        }
+      }
+
+      const dbData = data && data.length > 65536
+        ? JSON.stringify({ storage: 'blob', version: 2 })
+        : data;
+
       if (isOwner && (accessLevel || dto.public_role)) {
         await canvasPool.execute(
           'UPDATE canvases SET name = ?, width = ?, height = ?, unit = ?, canvas_type = COALESCE(?, canvas_type), size_bytes = COALESCE(?, size_bytes), compressed_bytes = COALESCE(?, compressed_bytes), data = COALESCE(?, data), preview_thumbnail = COALESCE(?, preview_thumbnail), access_level = COALESCE(?, access_level), public_role = COALESCE(?, public_role) WHERE uuid = ?',
@@ -599,6 +599,20 @@ export async function syncCanvas(userId: number | null, dto: SyncCanvasDto): Pro
       if (userId === null) {
         throw new Error('Debes iniciar sesión para crear un nuevo lienzo en la nube.');
       }
+
+      if (data) {
+        try {
+          const blobResult = await saveCanvasBlob(uuid, data);
+          compressedBytes = blobResult.compressedBytes;
+          sizeBytes = blobResult.sizeBytes;
+        } catch (blobErr) {
+          logger.db.error(`Error al persistir blob para ${uuid}`, blobErr);
+        }
+      }
+
+      const dbData = data && data.length > 65536
+        ? JSON.stringify({ storage: 'blob', version: 2 })
+        : data;
 
       const quota = await checkUserStorageQuota(userId, compressedBytes || 1024);
       if (!quota.allowed) {

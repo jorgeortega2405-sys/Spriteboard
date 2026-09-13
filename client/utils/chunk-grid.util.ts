@@ -21,6 +21,7 @@ export interface BoundingBox {
 
 export class ChunkGrid {
   private chunks: Map<string, Chunk> = new Map();
+  private cachedBounds: BoundingBox | null = null;
   public readonly chunkSize: number;
 
   constructor(chunkSize: number = CHUNK_SIZE) {
@@ -59,6 +60,7 @@ export class ChunkGrid {
 
   public deleteChunk(cx: number, cy: number): void {
     this.chunks.delete(this.getChunkKey(cx, cy));
+    this.cachedBounds = null;
   }
 
   public setPixel(x: number, y: number, color: string): void {
@@ -72,6 +74,25 @@ export class ChunkGrid {
     chunk.ctx.fillRect(localX, localY, 1, 1);
     chunk.dirty = true;
     chunk.pixelCount++;
+
+    if (!this.cachedBounds || !this.cachedBounds.hasPixels) {
+      this.cachedBounds = {
+        hasPixels: true,
+        height: 1,
+        maxX: x,
+        maxY: y,
+        minX: x,
+        minY: y,
+        width: 1,
+      };
+    } else {
+      if (x < this.cachedBounds.minX) this.cachedBounds.minX = x;
+      if (x > this.cachedBounds.maxX) this.cachedBounds.maxX = x;
+      if (y < this.cachedBounds.minY) this.cachedBounds.minY = y;
+      if (y > this.cachedBounds.maxY) this.cachedBounds.maxY = y;
+      this.cachedBounds.width = this.cachedBounds.maxX - this.cachedBounds.minX + 1;
+      this.cachedBounds.height = this.cachedBounds.maxY - this.cachedBounds.minY + 1;
+    }
   }
 
   public clearPixel(x: number, y: number): void {
@@ -168,9 +189,13 @@ export class ChunkGrid {
     ctx.restore();
   }
 
-  public getBoundingBox(): BoundingBox {
+  public getBoundingBox(force = false): BoundingBox {
+    if (!force && this.cachedBounds) {
+      return this.cachedBounds;
+    }
+
     if (this.chunks.size === 0) {
-      return {
+      this.cachedBounds = {
         hasPixels: false,
         height: 0,
         maxX: 0,
@@ -179,6 +204,7 @@ export class ChunkGrid {
         minY: 0,
         width: 0,
       };
+      return this.cachedBounds;
     }
 
     let minX = Infinity;
@@ -208,7 +234,7 @@ export class ChunkGrid {
     }
 
     if (!foundPixel) {
-      return {
+      this.cachedBounds = {
         hasPixels: false,
         height: 0,
         maxX: 0,
@@ -217,9 +243,10 @@ export class ChunkGrid {
         minY: 0,
         width: 0,
       };
+      return this.cachedBounds;
     }
 
-    return {
+    this.cachedBounds = {
       hasPixels: true,
       height: maxY - minY + 1,
       maxX,
@@ -228,6 +255,7 @@ export class ChunkGrid {
       minY,
       width: maxX - minX + 1,
     };
+    return this.cachedBounds;
   }
 
   public exportToCanvas(cropRect?: { x: number; y: number; width: number; height: number }): HTMLCanvasElement {
@@ -300,6 +328,7 @@ export class ChunkGrid {
         chunk.dirty = true;
       }
     }
+    this.cachedBounds = null;
   }
 
   public serialize(): Record<string, string> {
@@ -322,6 +351,7 @@ export class ChunkGrid {
 
   public async deserialize(data: Record<string, string>): Promise<void> {
     this.chunks.clear();
+    this.cachedBounds = null;
     const entries = Object.entries(data);
 
     await Promise.all(
@@ -363,6 +393,7 @@ export class ChunkGrid {
 
   public clear(): void {
     this.chunks.clear();
+    this.cachedBounds = null;
   }
 
   public getAllChunks(): Chunk[] {

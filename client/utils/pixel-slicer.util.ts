@@ -88,35 +88,65 @@ export function detectSpriteIslands(
   }
 
   let mergedRects = rawRects.map((r) => ({ ...r }));
-  if (minGap > 0 && mergedRects.length > 1) {
-    let hasMerged = true;
-    while (hasMerged) {
-      hasMerged = false;
-      for (let i = 0; i < mergedRects.length; i++) {
-        for (let j = i + 1; j < mergedRects.length; j++) {
-          const a = mergedRects[i];
-          const b = mergedRects[j];
+  if (minGap > 0 && rawRects.length > 1) {
+    const n = rawRects.length;
+    const parent = new Int32Array(n);
+    for (let i = 0; i < n; i++) parent[i] = i;
 
-          const overlapsOrClose =
-            a.minX - minGap <= b.maxX &&
-            a.maxX + minGap >= b.minX &&
-            a.minY - minGap <= b.maxY &&
-            a.maxY + minGap >= b.minY;
+    const find = (i: number): number => {
+      let root = i;
+      while (root !== parent[root]) root = parent[root];
+      let curr = i;
+      while (curr !== root) {
+        const next = parent[curr];
+        parent[curr] = root;
+        curr = next;
+      }
+      return root;
+    };
 
-          if (overlapsOrClose) {
-            a.minX = Math.min(a.minX, b.minX);
-            a.maxX = Math.max(a.maxX, b.maxX);
-            a.minY = Math.min(a.minY, b.minY);
-            a.maxY = Math.max(a.maxY, b.maxY);
-            a.pixelCount += b.pixelCount;
-            mergedRects.splice(j, 1);
-            hasMerged = true;
-            break;
-          }
+    const union = (i: number, j: number): void => {
+      const rootI = find(i);
+      const rootJ = find(j);
+      if (rootI !== rootJ) parent[rootJ] = rootI;
+    };
+
+    const sortedIndices = Array.from({ length: n }, (_, i) => i).sort(
+      (a, b) => rawRects[a].minX - rawRects[b].minX
+    );
+
+    for (let idx = 0; idx < n; idx++) {
+      const i = sortedIndices[idx];
+      const a = rawRects[i];
+      const limitX = a.maxX + minGap;
+
+      for (let jdx = idx + 1; jdx < n; jdx++) {
+        const j = sortedIndices[jdx];
+        const b = rawRects[j];
+        if (b.minX > limitX) break;
+
+        if (a.minY - minGap <= b.maxY && a.maxY + minGap >= b.minY) {
+          union(i, j);
         }
-        if (hasMerged) break;
       }
     }
+
+    const groups = new Map<number, { minX: number; maxX: number; minY: number; maxY: number; pixelCount: number }>();
+    for (let i = 0; i < n; i++) {
+      const root = find(i);
+      const r = rawRects[i];
+      const group = groups.get(root);
+      if (!group) {
+        groups.set(root, { ...r });
+      } else {
+        group.minX = Math.min(group.minX, r.minX);
+        group.maxX = Math.max(group.maxX, r.maxX);
+        group.minY = Math.min(group.minY, r.minY);
+        group.maxY = Math.max(group.maxY, r.maxY);
+        group.pixelCount += r.pixelCount;
+      }
+    }
+    mergedRects = Array.from(groups.values());
   }
 
   mergedRects.sort((a, b) => {
