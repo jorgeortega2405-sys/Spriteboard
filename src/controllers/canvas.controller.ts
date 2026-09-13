@@ -1,5 +1,5 @@
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
-import { addCanvasMember, addCanvasTeam, createCanvas, deleteCanvas, duplicateCanvas, emptyTrash, generateCanvasRoomToken, getCanvasBySlug, getCanvasMembers, getCanvasMetrics, getCanvasTeams, getCanvasUserRole, getSharedCanvases, getUserCanvases, getUserTrashCanvases, permanentlyDeleteCanvas, recordCanvasView, removeCanvasMember, removeCanvasTeam, restoreCanvas, searchUsersForSharing, syncCanvas, updateCanvasAccessLevel, updateCanvasSlug, updateCanvasViewHeartbeat } from '../services/canvas.service.js';
+import { addCanvasMember, addCanvasTeam, createCanvas, deleteCanvas, duplicateCanvas, emptyTrash, generateCanvasRoomToken, getCanvasBySlug, getCanvasMembers, getCanvasMetrics, getCanvasTeams, getCanvasUserRole, getSharedCanvases, getUserCanvases, getUserCanvasesPaginated, getUserTrashCanvases, permanentlyDeleteCanvas, recordCanvasView, removeCanvasMember, removeCanvasTeam, restoreCanvas, searchUsersForSharing, syncCanvas, updateCanvasAccessLevel, updateCanvasSlug, updateCanvasViewHeartbeat } from '../services/canvas.service.js';
 import { logger } from '../services/logger.service.js';
 import { Request, Response } from 'express';
 
@@ -10,6 +10,25 @@ export async function listCanvases(req: Request, res: Response): Promise<void> {
       res.status(401).json({ error: 'No autorizado.' });
       return;
     }
+
+    const pageParam = req.query.page !== undefined ? parseInt(req.query.page as string, 10) : undefined;
+    if (pageParam !== undefined) {
+      const limitParam = req.query.limit ? parseInt(req.query.limit as string, 10) : 20;
+      const type = req.query.type as 'all' | 'board' | 'pixel' | undefined;
+      const sort = req.query.sort as 'activity' | 'alpha-asc' | 'alpha-desc' | undefined;
+      const search = req.query.search as string | undefined;
+
+      const result = await getUserCanvasesPaginated(user.id, {
+        page: pageParam,
+        limit: limitParam,
+        type,
+        sort,
+        search,
+      });
+      res.json(result);
+      return;
+    }
+
     const canvases = await getUserCanvases(user.id);
     res.json({ canvases });
   } catch (err) {

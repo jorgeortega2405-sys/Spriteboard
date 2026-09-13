@@ -50,8 +50,12 @@ class HomeController {
   private currentFolders: FolderItem[] = [];
   private typeDropdownController: ReturnType<typeof setupDropdown> | null = null;
   private sortDropdownController: ReturnType<typeof setupDropdown> | null = null;
-  private renderedCount = 0;
-  private isRenderingBatch = false;
+  private currentPage = 1;
+  private totalPages = 1;
+  private hasMore = false;
+  private isLoadingBatch = false;
+  private searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  private searchQuery = '';
   private gridEl: HTMLElement | null = null;
   private canvasSection: HTMLElement | null = null;
   private scrollableEl: HTMLElement | null = null;
@@ -144,7 +148,7 @@ class HomeController {
           typeMenu?.querySelectorAll<HTMLButtonElement>('.menu-item').forEach((item) => {
             item.classList.toggle('is-active', item.getAttribute('data-value') === this.currentEntityFilter);
           });
-          this.applyFilters();
+          void this.onFiltersChanged();
         },
         placement: 'bottom-end',
       });
@@ -160,7 +164,7 @@ class HomeController {
           sortMenu?.querySelectorAll<HTMLButtonElement>('.menu-item').forEach((item) => {
             item.classList.toggle('is-active', item.getAttribute('data-value') === this.currentSort);
           });
-          this.applyFilters();
+          void this.onFiltersChanged();
         },
         placement: 'bottom-end',
       });
@@ -177,6 +181,15 @@ class HomeController {
     const { signal } = this.abortController;
 
     this.scrollableEl?.addEventListener(
+      'scroll',
+      () => {
+        this.handleScroll();
+      },
+      { passive: true, signal }
+    );
+
+    const innerScrollable = this.container.querySelector<HTMLElement>('[data-ref="home-scrollable"]');
+    innerScrollable?.addEventListener(
       'scroll',
       () => {
         this.handleScroll();
@@ -210,6 +223,9 @@ class HomeController {
     this.searchInput?.addEventListener(
       'input',
       () => {
+        if (this.heroSearchInput) {
+          this.heroSearchInput.value = this.searchInput?.value || '';
+        }
         this.handleSearchInput();
       },
       { signal }
@@ -218,11 +234,8 @@ class HomeController {
     this.btnClearSearch?.addEventListener(
       'click',
       () => {
-        if (this.searchInput) {
-          this.searchInput.value = '';
-          this.handleSearchInput();
-          this.searchInput.focus();
-        }
+        this.handleClearSearch();
+        this.searchInput?.focus();
       },
       { signal }
     );
@@ -230,14 +243,10 @@ class HomeController {
     this.heroSearchInput?.addEventListener(
       'input',
       () => {
-        const val = this.heroSearchInput?.value || '';
         if (this.searchInput) {
-          this.searchInput.value = val;
+          this.searchInput.value = this.heroSearchInput?.value || '';
         }
-        if (this.btnHeroClearSearch) {
-          this.btnHeroClearSearch.style.display = val.length > 0 ? '' : 'none';
-        }
-        this.applyFilters();
+        this.handleSearchInput();
       },
       { signal }
     );
@@ -245,13 +254,8 @@ class HomeController {
     this.btnHeroClearSearch?.addEventListener(
       'click',
       () => {
-        if (this.heroSearchInput) {
-          this.heroSearchInput.value = '';
-          if (this.searchInput) this.searchInput.value = '';
-          if (this.btnHeroClearSearch) this.btnHeroClearSearch.style.display = 'none';
-          this.applyFilters();
-          this.heroSearchInput.focus();
-        }
+        this.handleClearSearch();
+        this.heroSearchInput?.focus();
       },
       { signal }
     );
@@ -276,15 +280,15 @@ class HomeController {
 
     bindCat('cat-badge-all', () => {
       this.currentTypeFilter = 'all';
-      this.applyFilters();
+      void this.onFiltersChanged();
     });
     bindCat('cat-badge-board', () => {
       this.currentTypeFilter = 'board';
-      this.applyFilters();
+      void this.onFiltersChanged();
     });
     bindCat('cat-badge-pixel', () => {
       this.currentTypeFilter = 'pixel';
-      this.applyFilters();
+      void this.onFiltersChanged();
     });
 
     this.categoriesCarouselWrapper = this.container.querySelector<HTMLElement>('[data-ref="home-categories-carousel-wrapper"]');
@@ -310,6 +314,7 @@ class HomeController {
         openCreateFolderModal({
           onSuccess: (newFolder) => {
             this.folders.unshift(newFolder);
+            this.filterFolders();
             this.renderGrid();
           },
         });
@@ -332,6 +337,7 @@ class HomeController {
               if (idx !== -1) {
                 this.folders[idx] = updated;
               }
+              this.filterFolders();
               this.renderGrid();
             },
           });
@@ -447,6 +453,10 @@ class HomeController {
   }
 
   public destroy(): void {
+    if (this.searchDebounceTimer) {
+      clearTimeout(this.searchDebounceTimer);
+      this.searchDebounceTimer = null;
+    }
     if (this.scrollObserver) {
       this.scrollObserver.disconnect();
       this.scrollObserver = null;
@@ -483,45 +493,68 @@ class HomeController {
     } else {
       this.searchToolbar.classList.remove('is-active');
       this.searchToolbar.classList.add('is-hidden');
-      if (this.searchInput) {
-        this.searchInput.value = '';
-      }
-      if (this.btnClearSearch) {
-        this.btnClearSearch.style.display = 'none';
-      }
-      this.applyFilters();
+      this.handleClearSearch();
     }
   }
 
-  private applyFilters(): void {
-    const query = (this.heroSearchInput?.value || this.searchInput?.value || '').trim().toLowerCase();
-
-    let filteredCanvases: CanvasItem[] = [];
-    if (this.currentEntityFilter !== 'folders') {
-      filteredCanvases = this.allCanvases;
-      if (this.currentTypeFilter === 'board') {
-        filteredCanvases = filteredCanvases.filter((c) => c.canvas_type === 'board' || c.unit === 'board');
-      } else if (this.currentTypeFilter === 'pixel') {
-        filteredCanvases = filteredCanvases.filter((c) => c.canvas_type !== 'board' && c.unit !== 'board');
-      }
-      if (query) {
-        filteredCanvases = filteredCanvases.filter((c) => c.name.toLowerCase().includes(query));
-      }
-      if (this.currentSort === 'alpha-asc') {
-        filteredCanvases = [...filteredCanvases].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
-      } else if (this.currentSort === 'alpha-desc') {
-        filteredCanvases = [...filteredCanvases].sort((a, b) => b.name.localeCompare(a.name, undefined, { sensitivity: 'base' }));
-      } else {
-        filteredCanvases = [...filteredCanvases].sort((a, b) => new Date(b.updated_at || b.created_at || 0).getTime() - new Date(a.updated_at || a.created_at || 0).getTime());
-      }
+  private handleSearchInput(): void {
+    this.clearSelection();
+    const query = (this.heroSearchInput?.value || this.searchInput?.value || '').trim();
+    if (this.btnClearSearch) {
+      this.btnClearSearch.style.display = query ? 'inline-flex' : 'none';
     }
-    this.currentCanvases = filteredCanvases;
+    if (this.btnHeroClearSearch) {
+      this.btnHeroClearSearch.style.display = query ? 'inline-flex' : 'none';
+    }
+    if (this.searchInput && this.heroSearchInput && this.searchInput.value !== this.heroSearchInput.value) {
+      this.searchInput.value = this.heroSearchInput.value;
+    }
 
+    if (this.searchDebounceTimer) {
+      clearTimeout(this.searchDebounceTimer);
+    }
+
+    this.searchDebounceTimer = setTimeout(() => {
+      this.searchQuery = query.toLowerCase();
+      void this.onFiltersChanged();
+    }, 280);
+  }
+
+  private handleClearSearch(): void {
+    this.clearSelection();
+    if (this.searchDebounceTimer) {
+      clearTimeout(this.searchDebounceTimer);
+      this.searchDebounceTimer = null;
+    }
+    if (this.searchInput) {
+      this.searchInput.value = '';
+    }
+    if (this.heroSearchInput) {
+      this.heroSearchInput.value = '';
+    }
+    if (this.btnClearSearch) {
+      this.btnClearSearch.style.display = 'none';
+    }
+    if (this.btnHeroClearSearch) {
+      this.btnHeroClearSearch.style.display = 'none';
+    }
+    if (this.searchQuery !== '') {
+      this.searchQuery = '';
+      void this.onFiltersChanged();
+    }
+  }
+
+  private async onFiltersChanged(): Promise<void> {
+    this.filterFolders();
+    await this.loadCanvases(true);
+  }
+
+  private filterFolders(): void {
     let filteredFolders: FolderItem[] = [];
     if (!this.currentFolderUuid && this.currentEntityFilter !== 'designs' && this.currentTypeFilter === 'all') {
       filteredFolders = this.folders;
-      if (query) {
-        filteredFolders = filteredFolders.filter((f) => f.name.toLowerCase().includes(query));
+      if (this.searchQuery) {
+        filteredFolders = filteredFolders.filter((f) => f.name.toLowerCase().includes(this.searchQuery));
       }
       if (this.currentSort === 'alpha-asc') {
         filteredFolders = [...filteredFolders].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
@@ -532,24 +565,6 @@ class HomeController {
       }
     }
     this.currentFolders = filteredFolders;
-
-    this.renderGrid(Boolean(query || this.currentEntityFilter !== 'all' || this.currentTypeFilter !== 'all' || this.currentSort !== 'activity'));
-  }
-
-  private handleSearchInput(): void {
-    this.clearSelection();
-    if (!this.searchInput) return;
-    const query = this.searchInput.value.trim().toLowerCase();
-    if (this.btnClearSearch) {
-      this.btnClearSearch.style.display = query ? 'inline-flex' : 'none';
-    }
-    if (this.heroSearchInput && this.heroSearchInput.value !== this.searchInput.value) {
-      this.heroSearchInput.value = this.searchInput.value;
-    }
-    if (this.btnHeroClearSearch) {
-      this.btnHeroClearSearch.style.display = query ? 'inline-flex' : 'none';
-    }
-    this.applyFilters();
   }
 
   private closeAllDropdowns(): void {
@@ -579,62 +594,144 @@ class HomeController {
       SkeletonService.renderGridCardSkeletons(this.gridEl, 8, 'canvas');
     }
 
-    await Promise.all([this.loadFolders(), this.loadCanvases()]);
+    await this.loadFolders();
+    this.filterFolders();
+    await this.loadCanvases(false);
   }
 
-  private async loadCanvases(): Promise<void> {
+  private async loadCanvases(showInitialSkeletons = true): Promise<void> {
     if (!this.gridEl) return;
+
+    if (showInitialSkeletons) {
+      this.gridEl.style.display = 'grid';
+      SkeletonService.renderGridCardSkeletons(this.gridEl, 6, 'canvas');
+    }
+
+    if (this.currentEntityFilter === 'folders') {
+      this.currentCanvases = [];
+      this.allCanvases = [];
+      this.currentPage = 1;
+      this.totalPages = 1;
+      this.hasMore = false;
+      this.renderGrid(Boolean(this.searchQuery));
+      return;
+    }
 
     let items: CanvasItem[] = [];
 
-    const localCanvases = await getAllLocalCanvases();
-
     if (currentUser) {
       const currentUserId = currentUser.id;
+      const params = new URLSearchParams();
+      params.set('page', '1');
+      params.set('limit', String(BATCH_SIZE));
+      if (this.currentTypeFilter !== 'all') {
+        params.set('type', this.currentTypeFilter);
+      }
+      if (this.currentSort) {
+        params.set('sort', this.currentSort);
+      }
+      if (this.searchQuery) {
+        params.set('search', this.searchQuery);
+      }
+
+      const endpoint = this.currentFolderUuid
+        ? API_ROUTES.folders.canvases(this.currentFolderUuid)
+        : API_ROUTES.canvases.base;
+
       try {
-        const res = await getApi(API_ROUTES.canvases.base);
+        const res = await getApi(`${endpoint}?${params.toString()}`);
         let cloudCanvases: CanvasItem[] = [];
         if (res.ok) {
           const data = await res.json();
-          if (data && Array.isArray(data.canvases)) {
-            cloudCanvases = data.canvases;
+          cloudCanvases = Array.isArray(data.canvases) ? data.canvases : [];
+          this.currentPage = data.pagination?.page || 1;
+          this.totalPages = data.pagination?.totalPages || 1;
+          this.hasMore = Boolean(data.pagination?.hasMore);
+          if (this.currentFolderUuid && data.folder) {
+            this.currentFolder = data.folder;
+            if (this.folderTitleName) {
+              this.folderTitleName.textContent = data.folder.name;
+            }
           }
+        } else {
+          if (this.currentFolderUuid && res.status === 404) {
+            showToast(t('canvas.folder_empty_title'), 'info');
+            void this.exitFolder();
+            return;
+          }
+          this.currentPage = 1;
+          this.totalPages = 1;
+          this.hasMore = false;
         }
 
-        const cloudUuids = new Set(cloudCanvases.map((c) => c.uuid));
-
-        const unsyncedLocals: CanvasItem[] = [];
-        for (const c of localCanvases) {
-          if (!c.is_local || cloudUuids.has(c.uuid)) continue;
-          if (c.id) continue;
-          if (c.user_id && c.user_id !== currentUserId) {
-            void removeLocalCanvas(c.uuid);
-            continue;
+        if (!this.currentFolderUuid) {
+          const localCanvases = await getAllLocalCanvases();
+          const cloudUuids = new Set(cloudCanvases.map((c) => c.uuid));
+          let unsyncedLocals = localCanvases.filter((c) => {
+            if (!c.is_local || cloudUuids.has(c.uuid) || c.id) return false;
+            if (c.user_id && c.user_id !== currentUserId) return false;
+            if (c.access_level === 'public') return false;
+            return true;
+          });
+          if (this.currentTypeFilter === 'board') {
+            unsyncedLocals = unsyncedLocals.filter((c) => c.canvas_type === 'board' || c.unit === 'board');
+          } else if (this.currentTypeFilter === 'pixel') {
+            unsyncedLocals = unsyncedLocals.filter((c) => c.canvas_type !== 'board' && c.unit !== 'board');
           }
-          if (c.access_level === 'public') {
-            void removeLocalCanvas(c.uuid);
-            continue;
+          if (this.searchQuery) {
+            unsyncedLocals = unsyncedLocals.filter((c) => c.name.toLowerCase().includes(this.searchQuery));
           }
-          unsyncedLocals.push(c);
+          items = [...unsyncedLocals, ...cloudCanvases];
+        } else {
+          items = cloudCanvases;
         }
-
-        items = [...unsyncedLocals, ...cloudCanvases];
       } catch {
-        items = localCanvases.filter((c) => (!c.user_id || c.user_id === currentUserId) && c.access_level !== 'public');
+        if (!this.currentFolderUuid) {
+          const localCanvases = await getAllLocalCanvases();
+          items = localCanvases.filter((c) => (!c.user_id || c.user_id === currentUserId) && c.access_level !== 'public');
+        } else {
+          items = [];
+        }
+        this.currentPage = 1;
+        this.totalPages = 1;
+        this.hasMore = false;
       }
     } else {
-      items = localCanvases.filter((c) => c.is_local && !c.user_id && !c.id && c.access_level !== 'public');
+      const localCanvases = await getAllLocalCanvases();
+      let filtered = localCanvases.filter((c) => c.is_local && !c.user_id && !c.id && c.access_level !== 'public');
+      if (this.currentTypeFilter === 'board') {
+        filtered = filtered.filter((c) => c.canvas_type === 'board' || c.unit === 'board');
+      } else if (this.currentTypeFilter === 'pixel') {
+        filtered = filtered.filter((c) => c.canvas_type !== 'board' && c.unit !== 'board');
+      }
+      if (this.searchQuery) {
+        filtered = filtered.filter((c) => c.name.toLowerCase().includes(this.searchQuery));
+      }
+      if (this.currentSort === 'alpha-asc') {
+        filtered.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+      } else if (this.currentSort === 'alpha-desc') {
+        filtered.sort((a, b) => b.name.localeCompare(a.name, undefined, { sensitivity: 'base' }));
+      } else {
+        filtered.sort((a, b) => new Date(b.updated_at || b.created_at || 0).getTime() - new Date(a.updated_at || a.created_at || 0).getTime());
+      }
+      this.currentPage = 1;
+      this.totalPages = Math.ceil(filtered.length / BATCH_SIZE) || 1;
+      this.hasMore = filtered.length > BATCH_SIZE;
+      items = filtered.slice(0, BATCH_SIZE);
+      this.allCanvases = filtered;
     }
 
-    this.allCanvases = items;
-    this.applyFilters();
+    this.currentCanvases = items;
+    if (currentUser) {
+      this.allCanvases = [...items];
+    }
+    this.renderGrid(Boolean(this.searchQuery));
   }
 
   private renderGrid(isSearchResult = false): void {
     if (!this.gridEl) return;
 
     const displayedFolders = this.currentFolders;
-
     const totalItems = displayedFolders.length + this.currentCanvases.length;
 
     if (totalItems === 0) {
@@ -679,7 +776,6 @@ class HomeController {
     }
     this.gridEl.style.display = 'grid';
     this.gridEl.innerHTML = '';
-    this.renderedCount = 0;
 
     if (displayedFolders.length > 0) {
       const folderFragment = document.createDocumentFragment();
@@ -690,15 +786,26 @@ class HomeController {
     }
 
     if (this.currentCanvases.length > 0) {
+      const canvasFragment = document.createDocumentFragment();
+      this.currentCanvases.forEach((canvas) => {
+        canvasFragment.appendChild(this.createCardElement(canvas));
+      });
+      this.gridEl.appendChild(canvasFragment);
+    }
+
+    if (this.hasMore) {
       if (this.sentinelEl) {
         this.sentinelEl.style.display = 'block';
       }
-      this.renderNextBatch();
       this.initScrollObserver();
     } else {
       if (this.sentinelEl) {
         this.sentinelEl.style.display = 'none';
       }
+      if (this.scrollObserver) {
+        this.scrollObserver.disconnect();
+        this.scrollObserver = null;
+      }
     }
 
     translateElement(this.gridEl);
@@ -706,55 +813,104 @@ class HomeController {
     setupLazyImages(this.gridEl);
   }
 
-  private renderNextBatch(): void {
-    if (!this.gridEl || this.isRenderingBatch) return;
-    if (this.renderedCount >= this.currentCanvases.length) {
+  private async loadNextBatch(): Promise<void> {
+    if (!this.gridEl || this.isLoadingBatch || !this.hasMore) return;
+    this.isLoadingBatch = true;
+
+    const skeletonFragment = document.createDocumentFragment();
+    for (let i = 0; i < 6; i++) {
+      skeletonFragment.appendChild(SkeletonService.createSkeletonCard('canvas', i));
+    }
+    this.gridEl.appendChild(skeletonFragment);
+
+    const nextPage = this.currentPage + 1;
+    let newCanvases: CanvasItem[] = [];
+    let hasMorePages = false;
+
+    try {
+      if (currentUser) {
+        const params = new URLSearchParams();
+        params.set('page', String(nextPage));
+        params.set('limit', String(BATCH_SIZE));
+        if (this.currentTypeFilter !== 'all') {
+          params.set('type', this.currentTypeFilter);
+        }
+        if (this.currentSort) {
+          params.set('sort', this.currentSort);
+        }
+        if (this.searchQuery) {
+          params.set('search', this.searchQuery);
+        }
+
+        const endpoint = this.currentFolderUuid
+          ? API_ROUTES.folders.canvases(this.currentFolderUuid)
+          : API_ROUTES.canvases.base;
+
+        const [res] = await Promise.all([
+          getApi(`${endpoint}?${params.toString()}`),
+          new Promise((r) => setTimeout(r, 250)),
+        ]);
+
+        if (res.ok) {
+          const data = await res.json();
+          newCanvases = Array.isArray(data.canvases) ? data.canvases : [];
+          this.currentPage = data.pagination?.page || nextPage;
+          this.totalPages = data.pagination?.totalPages || this.totalPages;
+          hasMorePages = Boolean(data.pagination?.hasMore);
+        }
+      } else {
+        await new Promise((r) => setTimeout(r, 250));
+        const start = (nextPage - 1) * BATCH_SIZE;
+        const end = start + BATCH_SIZE;
+        newCanvases = this.allCanvases.slice(start, end);
+        this.currentPage = nextPage;
+        hasMorePages = end < this.allCanvases.length;
+      }
+    } catch {
+      hasMorePages = false;
+    } finally {
+      if (this.gridEl) {
+        const skeletons = this.gridEl.querySelectorAll('[data-ref="skeleton-card"]');
+        skeletons.forEach((s) => s.remove());
+      }
+    }
+
+    if (this.abortController.signal.aborted || !this.gridEl) return;
+
+    if (newCanvases.length > 0) {
+      const fragment = document.createDocumentFragment();
+      newCanvases.forEach((canvas) => {
+        this.currentCanvases.push(canvas);
+        if (currentUser) {
+          this.allCanvases.push(canvas);
+        }
+        fragment.appendChild(this.createCardElement(canvas));
+      });
+      this.gridEl.appendChild(fragment);
+      translateElement(this.gridEl);
+      renderIcons(this.gridEl);
+      setupLazyImages(this.gridEl);
+    }
+
+    this.hasMore = hasMorePages;
+    if (!this.hasMore) {
+      if (this.sentinelEl) {
+        this.sentinelEl.style.display = 'none';
+      }
       if (this.scrollObserver) {
         this.scrollObserver.disconnect();
         this.scrollObserver = null;
       }
-      if (this.sentinelEl) {
-        this.sentinelEl.style.display = 'none';
-      }
-      return;
     }
 
-    this.isRenderingBatch = true;
-    const batch = this.currentCanvases.slice(this.renderedCount, this.renderedCount + BATCH_SIZE);
-
-    const fragment = document.createDocumentFragment();
-    batch.forEach((canvas) => {
-      const card = this.createCardElement(canvas);
-      fragment.appendChild(card);
-    });
-
-    this.gridEl.appendChild(fragment);
-    this.renderedCount += batch.length;
-
-    translateElement(this.gridEl);
-    renderIcons(this.gridEl);
-    setupLazyImages(this.gridEl);
-
-    this.isRenderingBatch = false;
-
-    if (this.renderedCount >= this.currentCanvases.length) {
-      if (this.scrollObserver) {
-        this.scrollObserver.disconnect();
-        this.scrollObserver = null;
-      }
-      if (this.sentinelEl) {
-        this.sentinelEl.style.display = 'none';
-      }
-    }
+    this.isLoadingBatch = false;
   }
 
   private handleScroll(): void {
-    if (!this.scrollableEl || this.isRenderingBatch) return;
-    if (this.renderedCount >= this.currentCanvases.length) return;
-
+    if (!this.scrollableEl || this.isLoadingBatch || !this.hasMore) return;
     const { clientHeight, scrollHeight, scrollTop } = this.scrollableEl;
-    if (scrollTop + clientHeight >= scrollHeight - 200) {
-      this.renderNextBatch();
+    if (scrollTop + clientHeight >= scrollHeight - 300) {
+      void this.loadNextBatch();
     }
   }
 
@@ -770,16 +926,13 @@ class HomeController {
         const entry = entries[0];
         if (!entry) return;
 
-        if (entry.isIntersecting) {
-          if (this.scrollableEl && this.scrollableEl.scrollTop === 0 && this.scrollableEl.scrollHeight > this.scrollableEl.clientHeight) {
-            return;
-          }
-          this.renderNextBatch();
+        if (entry.isIntersecting && !this.isLoadingBatch && this.hasMore) {
+          void this.loadNextBatch();
         }
       },
       {
-        root: this.scrollableEl,
-        rootMargin: '40px',
+        root: null,
+        rootMargin: '200px',
       }
     );
 
@@ -1417,31 +1570,11 @@ class HomeController {
     if (this.btnCreateFolder) this.btnCreateFolder.style.display = 'none';
     if (this.folderContextActions) this.folderContextActions.style.display = 'flex';
 
-    if (this.gridEl) {
-      this.gridEl.style.display = 'grid';
-      SkeletonService.renderGridCardSkeletons(this.gridEl, 6, 'canvas');
-    }
-
-    try {
-      const res = await getApi(API_ROUTES.folders.canvases(folderUuid));
-      if (!res.ok) {
-        showToast(t('canvas.folder_empty_title'), 'info');
-        void this.exitFolder();
-        return;
-      }
-
-      const data = await res.json();
-      this.currentFolder = data.folder;
-      if (this.folderTitleName) {
-        this.folderTitleName.textContent = data.folder.name;
-      }
-
-      this.allCanvases = Array.isArray(data.canvases) ? data.canvases : [];
-      this.applyFilters();
-    } catch {
-      showToast(t('canvas.folder_move_error'), 'danger');
-      void this.exitFolder();
-    }
+    this.currentFolders = [];
+    this.currentPage = 1;
+    this.totalPages = 1;
+    this.hasMore = false;
+    await this.loadCanvases(true);
   }
 
   public async exitFolder(pushState = true): Promise<void> {
@@ -1487,6 +1620,7 @@ class HomeController {
           if (this.currentFolderUuid === folder.uuid) {
             void this.exitFolder();
           } else {
+            this.filterFolders();
             this.renderGrid();
           }
           return true;

@@ -1,7 +1,7 @@
 import { canvasPool, pool } from '../config/database.config.js';
 import { config } from '../config/env.config.js';
 import { redis } from '../config/redis.config.js';
-import { Canvas, CanvasMember, CanvasMetricsData, CanvasMetricViewer, CanvasRecentView, CreateCanvasDto, SearchUserResult, SyncCanvasDto } from '../types/canvas.types.js';
+import { Canvas, CanvasMember, CanvasMetricsData, CanvasMetricViewer, CanvasRecentView, CreateCanvasDto, GetUserCanvasesOptions, PaginatedCanvasesResult, SearchUserResult, SyncCanvasDto } from '../types/canvas.types.js';
 import { CanvasTeam } from '../types/team.types.js';
 import { deleteCanvasAllSnapshotsBlobs, deleteCanvasBlob, hasCanvasBlob, readCanvasBlobDecompressed, saveCanvasBlob } from './canvas-storage-blob.service.js';
 import { ensureDefaultFolder } from './folder.service.js';
@@ -219,7 +219,12 @@ export async function createCanvas(userId: number, dto: CreateCanvasDto): Promis
 
 export async function invalidateUserCanvasesCache(userId: number): Promise<void> {
   try {
-    await redis.del(`user:canvases:${userId}`);
+    const keys = await redis.keys(`user:canvases:${userId}*`);
+    if (keys.length > 0) {
+      await redis.del(...keys);
+    } else {
+      await redis.del(`user:canvases:${userId}`);
+    }
     await redis.del(`user:shared_canvases:${userId}`);
   } catch {}
 }
@@ -262,6 +267,113 @@ export async function getUserCanvases(userId: number): Promise<Canvas[]> {
   } catch (err) {
     logger.db.error(`Error al listar lienzos para el usuario ${userId}`, err);
     throw new Error('No se pudieron obtener los lienzos.');
+  }
+}
+
+export async function getUserCanvasesPaginated(
+  userId: number,
+  options: GetUserCanvasesOptions = {}
+): Promise<PaginatedCanvasesResult> {
+  const page = Math.max(Number(options.page) || 1, 1);
+  const limit = Math.min(Math.max(Number(options.limit) || 20, 1), 50);
+  const offset = (page - 1) * limit;
+  const sort = options.sort || 'activity';
+  const type = options.type || 'all';
+  const search = options.search ? options.search.trim() : '';
+  const folderId = options.folderId;
+
+  const searchHash = search ? Buffer.from(search).toString('base64url') : 'none';
+  const cacheKey = `user:canvases:${userId}:p${page}:l${limit}:s${sort}:t${type}:f${folderId ?? 'all'}:q${searchHash}`;
+  try {
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      return JSON.parse(cached) as PaginatedCanvasesResult;
+    }
+  } catch {}
+
+  try {
+    const conditions: string[] = ['c.user_id = ?', 'c.deleted_at IS NULL'];
+    const params: any[] = [userId];
+
+    if (type === 'board') {
+      conditions.push("(c.canvas_type = 'board' OR c.unit = 'board')");
+    } else if (type === 'pixel') {
+      conditions.push("((c.canvas_type = 'pixel' OR c.canvas_type IS NULL) AND c.unit != 'board')");
+    }
+
+    if (folderId !== undefined) {
+      if (folderId === null) {
+        conditions.push('c.folder_id IS NULL');
+      } else {
+        conditions.push('c.folder_id = ?');
+        params.push(folderId);
+      }
+    }
+
+    if (search) {
+      conditions.push('c.name LIKE ?');
+      params.push(`%${search}%`);
+    }
+
+    const whereClause = conditions.join(' AND ');
+
+    const [countRows] = await canvasPool.query<mysql.RowDataPacket[]>(
+      `SELECT COUNT(*) AS total FROM canvases c WHERE ${whereClause}`,
+      params
+    );
+    const total = Number(countRows[0]?.total || 0);
+    const totalPages = Math.ceil(total / limit) || 1;
+    const hasMore = page < totalPages;
+
+    let orderByClause = 'c.updated_at DESC, c.created_at DESC';
+    if (sort === 'alpha-asc') {
+      orderByClause = 'c.name ASC, c.created_at DESC';
+    } else if (sort === 'alpha-desc') {
+      orderByClause = 'c.name DESC, c.created_at DESC';
+    }
+
+    const queryParams = [userId, ...params, limit, offset];
+    const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
+      `SELECT c.id, c.uuid, c.user_id, c.folder_id, c.name, c.width, c.height, c.unit,
+              COALESCE(c.canvas_type, CASE WHEN c.unit = 'board' THEN 'board' ELSE 'pixel' END) AS canvas_type,
+              c.preview_thumbnail,
+              c.access_level, c.public_role, c.short_code, c.custom_slug, c.created_at, c.updated_at,
+              f.uuid AS folder_uuid, f.name AS folder_name,
+              (uf.id IS NOT NULL) AS is_favorite
+       FROM canvases c
+       LEFT JOIN folders f ON f.id = c.folder_id
+       LEFT JOIN db_identity.user_favorites uf
+         ON uf.user_id = ? AND uf.item_type = 'canvas' AND uf.item_id = c.uuid
+       WHERE ${whereClause}
+       ORDER BY ${orderByClause}
+       LIMIT ? OFFSET ?`,
+      queryParams
+    );
+
+    const canvases = rows.map((r) => ({
+      ...r,
+      is_favorite: Boolean(r.is_favorite),
+    })) as Canvas[];
+
+    const result: PaginatedCanvasesResult = {
+      canvases,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasMore,
+      },
+    };
+
+    try {
+      await redis.setex(cacheKey, 60, JSON.stringify(result));
+    } catch {}
+
+    return result;
+  } catch (err) {
+    logger.db.error(`Error al listar lienzos paginados para el usuario ${userId}`, err);
+    throw new Error('No se pudieron obtener los lienzos paginados.');
   }
 }
 

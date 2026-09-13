@@ -154,7 +154,19 @@ export async function listFolderCanvasesHandler(req: Request, res: Response): Pr
     }
 
     const { uuid } = req.params;
-    const result = await getFolderCanvases(uuid, user.id);
+    const pageParam = req.query.page !== undefined ? parseInt(req.query.page as string, 10) : undefined;
+    const limitParam = req.query.limit ? parseInt(req.query.limit as string, 10) : 20;
+    const type = req.query.type as string | undefined;
+    const sort = req.query.sort as string | undefined;
+    const search = req.query.search as string | undefined;
+
+    const result = await getFolderCanvases(uuid, user.id, {
+      page: pageParam,
+      limit: limitParam,
+      type,
+      sort,
+      search,
+    });
     res.json(result);
   } catch (err: any) {
     logger.app.error(`Error al listar lienzos de la carpeta ${req.params.uuid} en folder controller`, err);

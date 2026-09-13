@@ -135,3 +135,23 @@ export interface CanvasMetricsData {
   viewers: CanvasMetricViewer[];
   recent_views: CanvasRecentView[];
 }
+
+export interface GetUserCanvasesOptions {
+  page?: number;
+  limit?: number;
+  type?: 'all' | 'board' | 'pixel';
+  sort?: 'activity' | 'alpha-asc' | 'alpha-desc';
+  search?: string;
+  folderId?: number | null;
+}
+
+export interface PaginatedCanvasesResult {
+  canvases: Canvas[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasMore: boolean;
+  };
+}
