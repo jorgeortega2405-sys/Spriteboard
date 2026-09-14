@@ -165,6 +165,17 @@ export async function render(): Promise<void> {
         const teachersView = await createEducationTeachersView();
         viewElements = [teachersView];
       }
+    } else if (path === '/education/students') {
+      if (!currentUser) {
+        window.history.replaceState({}, '', '/login');
+        const { createLoginView } = await import('./views/auth.view.js');
+        const loginView = await createLoginView();
+        viewElements = [loginView];
+      } else {
+        const { createEducationStudentsView } = await import('./views/education.view.js');
+        const studentsView = await createEducationStudentsView();
+        viewElements = [studentsView];
+      }
     } else if (path === '/education/institution' || path === '/institution') {
       if (path === '/institution') {
         window.history.replaceState({}, '', '/education/institution');

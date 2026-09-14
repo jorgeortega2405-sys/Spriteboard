@@ -10,7 +10,7 @@ import { t, translateElement } from '../services/i18n.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { SearchUserResult } from '../types/canvas.types.js';
-import { Classroom, SchoolOrganization, SchoolTeacher } from '../types/education.types.js';
+import { Classroom, SchoolOrganization, SchoolStudent, SchoolTeacher } from '../types/education.types.js';
 import { TeamMember } from '../types/team.types.js';
 import { removeEmptyState, renderEmptyState, setupDropdown } from '../utils/dom.util.js';
 
@@ -35,8 +35,9 @@ class EducationController {
   private selectedClassroom: Classroom | null = null;
   private currentMembers: TeamMember[] = [];
   private searchQuery = '';
-  private activeTab: 'classrooms' | 'teachers' | 'school' = 'classrooms';
+  private activeTab: 'classrooms' | 'teachers' | 'students' | 'school' = 'classrooms';
   private school: SchoolOrganization | null = null;
+  private students: SchoolStudent[] = [];
   private membersDropdownController: ReturnType<typeof setupDropdown> | null = null;
   private tabFilterDropdownWrapper: HTMLElement | null = null;
   private tabFilterDropdownController: ReturnType<typeof setupDropdown> | null = null;
@@ -44,14 +45,17 @@ class EducationController {
   private educationTitle: HTMLElement | null = null;
   private tabBtnClassrooms: HTMLElement | null = null;
   private tabBtnTeachers: HTMLElement | null = null;
+  private tabBtnStudents: HTMLElement | null = null;
   private tabBtnSchool: HTMLElement | null = null;
   private tabPaneClassrooms: HTMLElement | null = null;
   private tabPaneTeachers: HTMLElement | null = null;
+  private tabPaneStudents: HTMLElement | null = null;
   private tabPaneSchool: HTMLElement | null = null;
 
   private defaultActions: HTMLElement | null = null;
   private selectedActions: HTMLElement | null = null;
   private teachersTopActions: HTMLElement | null = null;
+  private studentsTopActions: HTMLElement | null = null;
   private schoolTopActions: HTMLElement | null = null;
 
   private tableWrapper: HTMLElement | null = null;
@@ -74,10 +78,16 @@ class EducationController {
   private teachersTableBody: HTMLElement | null = null;
   private btnAddTeacher: HTMLElement | null = null;
 
+  private studentsTableWrapper: HTMLElement | null = null;
+  private studentsTableBody: HTMLElement | null = null;
+
   private statSchoolName: HTMLElement | null = null;
   private statSchoolDomain: HTMLElement | null = null;
   private statSchoolTeachers: HTMLElement | null = null;
   private statSchoolClassrooms: HTMLElement | null = null;
+  private statSchoolStudents: HTMLElement | null = null;
+  private cardStatStudents: HTMLElement | null = null;
+  private btnViewStudents: HTMLElement | null = null;
   private btnEditSchool: HTMLElement | null = null;
   private btnOpenSchoolEdit: HTMLElement | null = null;
   private btnOpenEducationSso: HTMLElement | null = null;
@@ -113,7 +123,7 @@ class EducationController {
   private inputSchoolDomain: HTMLInputElement | null = null;
   private bannerSchoolError: HTMLElement | null = null;
 
-  constructor(container: HTMLElement, activeTab: 'classrooms' | 'teachers' | 'school' = 'classrooms') {
+  constructor(container: HTMLElement, activeTab: 'classrooms' | 'teachers' | 'students' | 'school' = 'classrooms') {
     this.container = container;
     this.activeTab = activeTab;
   }
@@ -127,6 +137,15 @@ class EducationController {
         this.loadClassrooms(),
         this.loadSchool(),
       ]);
+    } else if (this.activeTab === 'students') {
+      await Promise.all([
+        this.loadSchool(),
+        this.loadStudents(),
+      ]);
+      if (!this.school) {
+        navigate('/education');
+        return;
+      }
     } else {
       await this.loadSchool();
       if (!this.school || (this.activeTab === 'school' && !this.school.is_admin)) {
@@ -139,6 +158,7 @@ class EducationController {
   public destroy(): void {
     this.abortController.abort();
     this.membersDropdownController?.destroy();
+    this.tabFilterDropdownController?.destroy();
     document.body.classList.remove('modal-open');
   }
 
@@ -147,14 +167,17 @@ class EducationController {
     this.tabFilterDropdownWrapper = this.container.querySelector<HTMLElement>('[data-ref="education-tab-filter-wrapper"]');
     this.tabBtnClassrooms = this.container.querySelector<HTMLElement>('[data-ref="tab-btn-classrooms"]');
     this.tabBtnTeachers = this.container.querySelector<HTMLElement>('[data-ref="tab-btn-teachers"]');
+    this.tabBtnStudents = this.container.querySelector<HTMLElement>('[data-ref="tab-btn-students"]');
     this.tabBtnSchool = this.container.querySelector<HTMLElement>('[data-ref="tab-btn-school"]');
     this.tabPaneClassrooms = this.container.querySelector<HTMLElement>('[data-ref="tab-pane-classrooms"]');
     this.tabPaneTeachers = this.container.querySelector<HTMLElement>('[data-ref="tab-pane-teachers"]');
+    this.tabPaneStudents = this.container.querySelector<HTMLElement>('[data-ref="tab-pane-students"]');
     this.tabPaneSchool = this.container.querySelector<HTMLElement>('[data-ref="tab-pane-school"]');
 
     this.defaultActions = this.container.querySelector<HTMLElement>('[data-ref="education-default-actions"]');
     this.selectedActions = this.container.querySelector<HTMLElement>('[data-ref="education-selected-actions"]');
     this.teachersTopActions = this.container.querySelector<HTMLElement>('[data-ref="teachers-top-actions"]');
+    this.studentsTopActions = this.container.querySelector<HTMLElement>('[data-ref="students-top-actions"]');
     this.schoolTopActions = this.container.querySelector<HTMLElement>('[data-ref="school-top-actions"]');
 
     this.tableWrapper = this.container.querySelector<HTMLElement>('[data-ref="education-table-wrapper"]');
@@ -177,10 +200,16 @@ class EducationController {
     this.teachersTableBody = this.container.querySelector<HTMLElement>('[data-ref="teachers-tbody"]');
     this.btnAddTeacher = this.container.querySelector<HTMLElement>('[data-ref="btn-add-teacher"]');
 
+    this.studentsTableWrapper = this.container.querySelector<HTMLElement>('[data-ref="students-table-wrapper"]');
+    this.studentsTableBody = this.container.querySelector<HTMLElement>('[data-ref="students-tbody"]');
+
     this.statSchoolName = this.container.querySelector<HTMLElement>('[data-ref="stat-school-name"]');
     this.statSchoolDomain = this.container.querySelector<HTMLElement>('[data-ref="stat-school-domain"]');
     this.statSchoolTeachers = this.container.querySelector<HTMLElement>('[data-ref="stat-school-teachers"]');
     this.statSchoolClassrooms = this.container.querySelector<HTMLElement>('[data-ref="stat-school-classrooms"]');
+    this.statSchoolStudents = this.container.querySelector<HTMLElement>('[data-ref="stat-school-students"]');
+    this.cardStatStudents = this.container.querySelector<HTMLElement>('[data-ref="card-stat-students"]');
+    this.btnViewStudents = this.container.querySelector<HTMLElement>('[data-ref="btn-view-students"]');
     this.btnEditSchool = this.container.querySelector<HTMLElement>('[data-ref="btn-edit-school"]');
     this.btnOpenSchoolEdit = this.container.querySelector<HTMLElement>('[data-ref="btn-open-school-edit"]');
     this.btnOpenEducationSso = this.container.querySelector<HTMLElement>('[data-ref="btn-open-education-sso"]');
@@ -242,10 +271,22 @@ class EducationController {
       this.tabFilterDropdownController?.close();
       navigate('/education/teachers');
     }, { signal });
+    this.tabBtnStudents?.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.tabFilterDropdownController?.close();
+      navigate('/education/students');
+    }, { signal });
     this.tabBtnSchool?.addEventListener('click', (e) => {
       e.preventDefault();
       this.tabFilterDropdownController?.close();
       navigate('/education/institution');
+    }, { signal });
+
+    this.cardStatStudents?.addEventListener('click', () => {
+      navigate('/education/students');
+    }, { signal });
+    this.btnViewStudents?.addEventListener('click', () => {
+      navigate('/education/students');
     }, { signal });
 
     this.btnToggleSearch?.addEventListener('click', () => this.toggleSearchToolbar(), { signal });
@@ -255,6 +296,8 @@ class EducationController {
       this.btnClearSearch?.style.setProperty('display', 'none');
       if (this.activeTab === 'teachers') {
         this.renderTeachersTable();
+      } else if (this.activeTab === 'students') {
+        this.renderStudentsTable();
       } else {
         this.renderClassrooms();
       }
@@ -267,6 +310,8 @@ class EducationController {
       }
       if (this.activeTab === 'teachers') {
         this.renderTeachersTable();
+      } else if (this.activeTab === 'students') {
+        this.renderStudentsTable();
       } else {
         this.renderClassrooms();
       }
@@ -416,6 +461,8 @@ class EducationController {
       if (this.btnClearSearch) this.btnClearSearch.style.display = 'none';
       if (this.activeTab === 'teachers') {
         this.renderTeachersTable();
+      } else if (this.activeTab === 'students') {
+        this.renderStudentsTable();
       } else {
         this.renderClassrooms();
       }
@@ -467,11 +514,17 @@ class EducationController {
       if (this.tabBtnTeachers) {
         this.tabBtnTeachers.style.display = 'none';
       }
+      if (this.tabBtnStudents) {
+        this.tabBtnStudents.style.display = 'none';
+      }
       if (this.tabBtnSchool) {
         this.tabBtnSchool.style.display = 'none';
       }
       if (this.teachersTopActions) {
         this.teachersTopActions.style.display = 'none';
+      }
+      if (this.studentsTopActions) {
+        this.studentsTopActions.style.display = 'none';
       }
       if (this.schoolTopActions) {
         this.schoolTopActions.style.display = 'none';
@@ -489,6 +542,9 @@ class EducationController {
 
     if (this.tabBtnTeachers) {
       this.tabBtnTeachers.style.display = 'flex';
+    }
+    if (this.tabBtnStudents) {
+      this.tabBtnStudents.style.display = 'flex';
     }
     if (this.tabBtnSchool) {
       this.tabBtnSchool.style.display = this.school.is_admin ? 'flex' : 'none';
@@ -509,8 +565,12 @@ class EducationController {
     if (this.statSchoolClassrooms) {
       this.statSchoolClassrooms.textContent = String(this.school.classrooms_count || this.classrooms.length);
     }
+    if (this.statSchoolStudents) {
+      this.statSchoolStudents.textContent = String(this.school.students_count || 0);
+    }
 
     this.renderTeachersTable();
+    this.renderStudentsTable();
   }
 
   private renderClassrooms(): void {
@@ -699,6 +759,110 @@ class EducationController {
       tr.appendChild(tdActions);
 
       this.teachersTableBody.appendChild(tr);
+    }
+  }
+
+  private async loadStudents(): Promise<void> {
+    try {
+      const res = await getApi(API_ROUTES.education.students);
+      if (!res.ok) {
+        this.students = [];
+        this.renderStudentsTable();
+        return;
+      }
+      const data = await res.json();
+      this.students = Array.isArray(data.students) ? data.students : [];
+      this.renderStudentsTable();
+    } catch {
+      this.students = [];
+      this.renderStudentsTable();
+    }
+  }
+
+  private renderStudentsTable(): void {
+    if (!this.studentsTableBody) return;
+    this.studentsTableBody.innerHTML = '';
+
+    let students = this.students;
+    if (this.searchQuery) {
+      students = students.filter((s) =>
+        (s.username || '').toLowerCase().includes(this.searchQuery) ||
+        (s.email || '').toLowerCase().includes(this.searchQuery) ||
+        (s.source_label || '').toLowerCase().includes(this.searchQuery)
+      );
+    }
+    const wrapper = this.studentsTableWrapper;
+
+    if (students.length === 0) {
+      if (wrapper) {
+        renderEmptyState({
+          container: wrapper,
+          dataRef: 'students-empty-state',
+          desc: this.searchQuery
+            ? t('teams.search_no_results') || 'No se encontraron estudiantes con ese término.'
+            : t('education.empty_students_desc') || 'Aún no hay estudiantes registrados con el dominio institucional, inscritos en aulas escolares o sincronizados mediante SSO/SCIM.',
+          graphicType: this.searchQuery ? 'search' : 'users',
+          isTable: true,
+          title: this.searchQuery
+            ? t('teams.search_no_results_title') || 'Sin resultados'
+            : t('education.empty_students_title') || 'Sin estudiantes registrados',
+        });
+      }
+      return;
+    }
+
+    if (wrapper) {
+      removeEmptyState(wrapper, 'students-empty-state');
+    }
+
+    for (const student of students) {
+      const tr = document.createElement('tr');
+      tr.className = 'component-table__row';
+      tr.setAttribute('data-ref', `row-student-${student.id}`);
+
+      const tdStudent = document.createElement('td');
+      tdStudent.className = 'component-table__cell';
+      tdStudent.setAttribute('data-ref', `cell-student-${student.id}`);
+      tdStudent.innerHTML = `<span class="component-badge component-badge--sm" data-ref="badge-student-${student.id}">${escapeHtml(student.username || 'Estudiante')}</span>`;
+
+      const tdEmail = document.createElement('td');
+      tdEmail.className = 'component-table__cell';
+      tdEmail.setAttribute('data-ref', `cell-email-${student.id}`);
+      const emailText = student.email || '—';
+      tdEmail.innerHTML = `<span class="component-badge component-badge--sm" data-ref="badge-email-${student.id}">${escapeHtml(emailText)}</span>`;
+
+      const tdSource = document.createElement('td');
+      tdSource.className = 'component-table__cell';
+      tdSource.setAttribute('data-ref', `cell-source-${student.id}`);
+      const sourceBadgeClass = student.source === 'sso_scim' ? 'component-badge--primary' : '';
+      tdSource.innerHTML = `<span class="component-badge component-badge--sm ${sourceBadgeClass}" data-ref="badge-source-${student.id}">${escapeHtml(student.source_label)}</span>`;
+
+      const tdClassrooms = document.createElement('td');
+      tdClassrooms.className = 'component-table__cell';
+      tdClassrooms.setAttribute('data-ref', `cell-classrooms-${student.id}`);
+      const classroomsLabel = student.classrooms_count === 1 ? '1 aula' : `${student.classrooms_count} aulas`;
+      tdClassrooms.innerHTML = `<span class="component-badge component-badge--sm" data-ref="badge-classrooms-${student.id}">${escapeHtml(classroomsLabel)}</span>`;
+
+      const tdJoined = document.createElement('td');
+      tdJoined.className = 'component-table__cell';
+      tdJoined.setAttribute('data-ref', `cell-date-${student.id}`);
+      tdJoined.innerHTML = `<span class="component-badge component-badge--sm" data-ref="badge-date-${student.id}">${escapeHtml(formatDate(student.created_at))}</span>`;
+
+      const tdStatus = document.createElement('td');
+      tdStatus.className = 'component-table__cell';
+      tdStatus.style.textAlign = 'right';
+      tdStatus.setAttribute('data-ref', `cell-status-${student.id}`);
+      const isActive = student.status === 'active';
+      tdStatus.innerHTML = `<span class="component-badge component-badge--sm" data-ref="badge-status-${student.id}">${escapeHtml(isActive ? (t('common.status_active') || 'Activo') : student.status)}</span>`;
+
+      tr.appendChild(tdStudent);
+      tr.appendChild(tdEmail);
+      tr.appendChild(tdSource);
+      tr.appendChild(tdClassrooms);
+      tr.appendChild(tdJoined);
+      tr.appendChild(tdStatus);
+
+      this.studentsTableBody.appendChild(tr);
     }
   }
 
@@ -1236,6 +1400,20 @@ export async function createEducationInstitutionView(): Promise<HTMLElement> {
   container.prepend(sidebar);
 
   const controller = new EducationController(container, 'school');
+  await controller.init();
+  (container as any).__controller = controller;
+
+  return container;
+}
+
+export async function createEducationStudentsView(): Promise<HTMLElement> {
+  const container = await loadTemplate('/views/education/students.html');
+  translateElement(container);
+
+  const sidebar = await createSidebar();
+  container.prepend(sidebar);
+
+  const controller = new EducationController(container, 'students');
   await controller.init();
   (container as any).__controller = controller;
 
