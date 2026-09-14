@@ -249,7 +249,7 @@ export class SearchController {
         <div class="canvas-card__actions-wrapper" data-ref="card-actions-wrapper-${item.id}">
           <div class="canvas-card__actions" data-ref="card-actions-${item.id}">
             <button type="button" class="canvas-card__action-btn${isFavorite ? ' is-active' : ''}" data-ref="btn-template-bookmark-${item.id}" data-bookmark-preset="${item.id}" data-tooltip="${isFavorite ? t('canvas.bookmark_remove') : t('canvas.bookmark_save')}" aria-label="${isFavorite ? t('canvas.bookmark_remove') : t('canvas.bookmark_save')}">
-              <span class="material-symbols-rounded">${isFavorite ? 'star_fill' : 'star'}</span>
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${isFavorite ? 'star_fill' : 'star'}"></use></svg>
             </button>
           </div>
         </div>

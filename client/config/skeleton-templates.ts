@@ -1,11 +1,19 @@
-function renderCardHtml(type: 'canvas' | 'template' = 'canvas', index = 0, isWide = false): string {
-  const wideClass = isWide ? ' skeleton-card--template-wide' : '';
+function renderCardHtml(type: 'canvas' | 'template' = 'canvas', index = 0): string {
   const typeClass = type === 'template' ? 'skeleton-card--template' : 'skeleton-card--canvas';
-  const badgeWidth = type === 'template' ? '60px' : '76px';
+  if (type === 'template') {
+    return `
+      <div class="skeleton-card ${typeClass}" data-ref="skeleton-card" style="--card-index: ${index};">
+        <div class="skeleton-card__header" data-ref="skeleton-card-header">
+          <div></div>
+          <div class="skeleton-card__badge-pill" data-ref="skeleton-card-badge" style="width: 28px; height: 28px; border-radius: 8px; opacity: 0.4;"></div>
+        </div>
+      </div>
+    `;
+  }
   return `
-    <div class="skeleton-card ${typeClass}${wideClass}" data-ref="skeleton-card" style="--card-index: ${index};">
+    <div class="skeleton-card ${typeClass}" data-ref="skeleton-card" style="--card-index: ${index};">
       <div class="skeleton-card__header" data-ref="skeleton-card-header">
-        <div class="skeleton-card__badge-pill" data-ref="skeleton-card-badge" style="width: ${badgeWidth};"></div>
+        <div class="skeleton-card__badge-pill" data-ref="skeleton-card-badge" style="width: 76px;"></div>
         <div class="skeleton-card__badge-pill" data-ref="skeleton-card-badge" style="width: 36px;"></div>
       </div>
       <div class="skeleton-card__footer" data-ref="skeleton-card-footer">
@@ -19,8 +27,7 @@ function renderCardHtml(type: 'canvas' | 'template' = 'canvas', index = 0, isWid
 function renderGridCardsHtml(count = 8, type: 'canvas' | 'template' = 'canvas'): string {
   const cards: string[] = [];
   for (let i = 0; i < count; i++) {
-    const isWide = type === 'template' && (i === 1 || i === 5);
-    cards.push(renderCardHtml(type, i, isWide));
+    cards.push(renderCardHtml(type, i));
   }
   return cards.join('');
 }
@@ -351,23 +358,13 @@ export const SKELETON_TEMPLATES: Record<string, string> = {
     <div class="layout-root" data-ref="skeleton-templates-root" style="width: 100%; height: 100%; display: flex; flex-direction: row; overflow: hidden;">
       ${SKELETON_RAIL_HTML}
       <div class="layout-content skeleton-container" data-ref="skeleton-templates-view">
-        <div class="component-wrapper component-wrapper--full" data-ref="skeleton-templates-wrapper">
-          <div class="component-top" data-ref="skeleton-templates-top">
-            <div class="component-top-left component-top-left--full" data-ref="skeleton-templates-top-left">
-              <div class="component-tags-carousel-wrapper" data-ref="skeleton-tags-carousel" style="display: flex; gap: 8px; align-items: center; overflow: hidden; width: 100%;">
-                <div class="skeleton" style="width: 80px; height: 32px; border-radius: 20px; flex-shrink: 0;"></div>
-                <div class="skeleton" style="width: 105px; height: 32px; border-radius: 20px; flex-shrink: 0;"></div>
-                <div class="skeleton" style="width: 95px; height: 32px; border-radius: 20px; flex-shrink: 0;"></div>
-                <div class="skeleton" style="width: 115px; height: 32px; border-radius: 20px; flex-shrink: 0;"></div>
-                <div class="skeleton" style="width: 90px; height: 32px; border-radius: 20px; flex-shrink: 0;"></div>
-                <div class="skeleton" style="width: 100px; height: 32px; border-radius: 20px; flex-shrink: 0;"></div>
-              </div>
-            </div>
-          </div>
-          <div class="component-bottom component-bottom--no-padding" data-ref="skeleton-templates-bottom">
-            <div class="layout-body layout-body--scrollable layout-scrollable" data-ref="skeleton-templates-scrollable">
+        <div class="component-wrapper component-wrapper--full view-wrapper" data-ref="skeleton-templates-wrapper">
+          <div class="view-header" data-ref="skeleton-floating-top"></div>
+          <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="skeleton-templates-scrollable">
+            <div class="view-body">
+              <div class="skeleton" style="margin: 14px 18px 6px 18px; height: 210px; border-radius: 20px;"></div>
               <div class="canvas-section" data-ref="skeleton-templates-section">
-                <div class="templates-grid" data-ref="skeleton-templates-grid">
+                <div class="canvas-grid templates-grid" data-ref="skeleton-templates-grid">
                   ${renderGridCardsHtml(8, 'template')}
                 </div>
               </div>
@@ -380,23 +377,13 @@ export const SKELETON_TEMPLATES: Record<string, string> = {
 
   'templates-layout-bottom': `
     <div class="layout-content skeleton-container" data-ref="skeleton-templates-view">
-      <div class="component-wrapper component-wrapper--full" data-ref="skeleton-templates-wrapper">
-        <div class="component-top" data-ref="skeleton-templates-top">
-          <div class="component-top-left component-top-left--full" data-ref="skeleton-templates-top-left">
-            <div class="component-tags-carousel-wrapper" data-ref="skeleton-tags-carousel" style="display: flex; gap: 8px; align-items: center; overflow: hidden; width: 100%;">
-              <div class="skeleton" style="width: 80px; height: 32px; border-radius: 20px; flex-shrink: 0;"></div>
-              <div class="skeleton" style="width: 105px; height: 32px; border-radius: 20px; flex-shrink: 0;"></div>
-              <div class="skeleton" style="width: 95px; height: 32px; border-radius: 20px; flex-shrink: 0;"></div>
-              <div class="skeleton" style="width: 115px; height: 32px; border-radius: 20px; flex-shrink: 0;"></div>
-              <div class="skeleton" style="width: 90px; height: 32px; border-radius: 20px; flex-shrink: 0;"></div>
-              <div class="skeleton" style="width: 100px; height: 32px; border-radius: 20px; flex-shrink: 0;"></div>
-            </div>
-          </div>
-        </div>
-        <div class="component-bottom component-bottom--no-padding" data-ref="skeleton-templates-bottom">
-          <div class="layout-body layout-body--scrollable layout-scrollable" data-ref="skeleton-templates-scrollable">
+      <div class="component-wrapper component-wrapper--full view-wrapper" data-ref="skeleton-templates-wrapper">
+        <div class="view-header" data-ref="skeleton-floating-top"></div>
+        <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="skeleton-templates-scrollable">
+          <div class="view-body">
+            <div class="skeleton" style="margin: 14px 18px 6px 18px; height: 210px; border-radius: 20px;"></div>
             <div class="canvas-section" data-ref="skeleton-templates-section">
-              <div class="templates-grid" data-ref="skeleton-templates-grid">
+              <div class="canvas-grid templates-grid" data-ref="skeleton-templates-grid">
                 ${renderGridCardsHtml(8, 'template')}
               </div>
             </div>

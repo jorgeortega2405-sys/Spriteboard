@@ -8,7 +8,7 @@ import { renderIcons } from '../services/icon.service.js';
 import { SkeletonService } from '../services/skeleton.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
-import { bindDragToScroll, CarouselController, initCarouselScroll, removeEmptyState, renderEmptyState, setupLazyImages } from '../utils/dom.util.js';
+import { bindDragToScroll, CarouselController, initCarouselScroll, removeEmptyState, renderEmptyState, setupDropdown, setupLazyImages } from '../utils/dom.util.js';
 
 const BATCH_SIZE = 20;
 
@@ -19,6 +19,9 @@ class TemplatesController {
   private carouselWrapper: HTMLElement | null = null;
   private carouselController: CarouselController | null = null;
   private cleanupDrag: (() => void) | null = null;
+
+  private typeDropdownController: ReturnType<typeof setupDropdown> | null = null;
+  private sortDropdownController: ReturnType<typeof setupDropdown> | null = null;
 
   private badgesContainer: HTMLElement | null = null;
   private gridEl: HTMLElement | null = null;
@@ -32,6 +35,8 @@ class TemplatesController {
   private isRenderingBatch = false;
 
   private activeCategory = 'all';
+  private currentTypeFilter: 'all' | 'favorites' | 'pixel' | 'board' = 'all';
+  private currentSort: 'default' | 'alpha-asc' | 'alpha-desc' | 'size-desc' | 'size-asc' = 'default';
   private searchQuery = '';
   private favoritedTemplateIds = new Set<string>();
 
@@ -55,6 +60,38 @@ class TemplatesController {
 
     this.scrollableEl = this.container;
     this.sentinelEl = this.container.querySelector<HTMLElement>('[data-ref="templates-sentinel"]');
+
+    const typeDropdownWrapper = this.container.querySelector<HTMLElement>('[data-ref="templates-dropdown-wrapper-type"]');
+    if (typeDropdownWrapper) {
+      this.typeDropdownController = setupDropdown(typeDropdownWrapper, {
+        matchWidth: false,
+        onSelect: (val: string) => {
+          this.currentTypeFilter = (val as 'all' | 'favorites' | 'pixel' | 'board') || 'all';
+          const typeMenu = this.container.querySelector<HTMLElement>('[data-ref="dropdown-menu-filter-type"]');
+          typeMenu?.querySelectorAll<HTMLButtonElement>('.menu-item').forEach((item) => {
+            item.classList.toggle('is-active', item.getAttribute('data-value') === this.currentTypeFilter);
+          });
+          this.renderTemplates();
+        },
+        placement: 'bottom-end',
+      });
+    }
+
+    const sortDropdownWrapper = this.container.querySelector<HTMLElement>('[data-ref="templates-dropdown-wrapper-sort"]');
+    if (sortDropdownWrapper) {
+      this.sortDropdownController = setupDropdown(sortDropdownWrapper, {
+        matchWidth: false,
+        onSelect: (val: string) => {
+          this.currentSort = (val as 'default' | 'alpha-asc' | 'alpha-desc' | 'size-desc' | 'size-asc') || 'default';
+          const sortMenu = this.container.querySelector<HTMLElement>('[data-ref="dropdown-menu-sort"]');
+          sortMenu?.querySelectorAll<HTMLButtonElement>('.menu-item').forEach((item) => {
+            item.classList.toggle('is-active', item.getAttribute('data-value') === this.currentSort);
+          });
+          this.renderTemplates();
+        },
+        placement: 'bottom-end',
+      });
+    }
 
     this.renderCategoryBadges();
     this.initCarousel();
@@ -181,10 +218,18 @@ class TemplatesController {
   private renderTemplates(): void {
     if (!this.gridEl) return;
 
-    let filtered = ALL_PRESETS;
+    let filtered = [...ALL_PRESETS];
 
     if (this.activeCategory !== 'all') {
       filtered = filtered.filter((item) => item.categoryKey === this.activeCategory);
+    }
+
+    if (this.currentTypeFilter === 'favorites') {
+      filtered = filtered.filter((item) => this.favoritedTemplateIds.has(item.id));
+    } else if (this.currentTypeFilter === 'pixel') {
+      filtered = filtered.filter((item) => item.categoryKey === 'pixel');
+    } else if (this.currentTypeFilter === 'board') {
+      filtered = filtered.filter((item) => item.categoryKey === 'board');
     }
 
     if (this.searchQuery) {
@@ -195,6 +240,16 @@ class TemplatesController {
         const dimMatch = `${item.width}x${item.height}`.includes(q) || `${item.width} x ${item.height}`.includes(q);
         return nameMatch || catMatch || dimMatch;
       });
+    }
+
+    if (this.currentSort === 'alpha-asc') {
+      filtered.sort((a, b) => a.name.localeCompare(b.name));
+    } else if (this.currentSort === 'alpha-desc') {
+      filtered.sort((a, b) => b.name.localeCompare(a.name));
+    } else if (this.currentSort === 'size-desc') {
+      filtered.sort((a, b) => (b.width * b.height) - (a.width * a.height));
+    } else if (this.currentSort === 'size-asc') {
+      filtered.sort((a, b) => (a.width * a.height) - (b.width * b.height));
     }
 
     this.currentTemplates = filtered;
@@ -251,7 +306,7 @@ class TemplatesController {
 
     this.isRenderingBatch = true;
     const batch = this.currentTemplates.slice(this.renderedCount, this.renderedCount + BATCH_SIZE);
-    const html = batch.map((item, index) => this.buildCardHtml(item, this.renderedCount + index)).join('');
+    const html = batch.map((item) => this.buildCardHtml(item)).join('');
     this.gridEl.insertAdjacentHTML('beforeend', html);
     this.renderedCount += batch.length;
 
@@ -309,33 +364,12 @@ class TemplatesController {
     this.scrollObserver.observe(this.sentinelEl);
   }
 
-  private getCardAspectClass(item: PresetItem, index: number): string {
-    const type = item.aspectType || this.getRandomAspectType(item.id, index);
-    return type === 'wide' || type === 'large' ? 'template-card--wide' : 'template-card--standard';
-  }
-
-  private getRandomAspectType(id: string, index: number): 'wide' | 'standard' {
-    const pattern: Array<'wide' | 'standard' | 'wide' | 'standard' | 'standard'> = [
-      'wide',
-      'standard',
-      'wide',
-      'standard',
-      'standard',
-    ];
-    let hash = index;
-    for (let i = 0; i < id.length; i++) {
-      hash = (hash * 31 + id.charCodeAt(i)) | 0;
-    }
-    return pattern[Math.abs(hash) % pattern.length];
-  }
-
-  private buildCardHtml(item: PresetItem, index: number): string {
+  private buildCardHtml(item: PresetItem): string {
     const isFavorite = this.favoritedTemplateIds.has(item.id);
-    const aspectClass = this.getCardAspectClass(item, index);
     const previewContent = `<img class="canvas-card__image image-lazy-fade" data-ref="template-card-img-${item.id}" src="${item.imagePath}" alt="${escapeHtml(item.name)}" loading="lazy" decoding="async" onload="this.classList.add('image-loaded')" onerror="this.classList.add('image-loaded')" />`;
 
     return `
-      <div class="canvas-card ${aspectClass} template-card" data-ref="template-card-${item.id}" data-preset-id="${item.id}">
+      <div class="canvas-card template-card" data-ref="template-card-${item.id}" data-preset-id="${item.id}">
         <div class="canvas-card__thumbnail template-card__thumbnail" data-ref="template-card-thumb-${item.id}">
           ${previewContent}
           <div class="canvas-card__actions-wrapper" data-ref="card-actions-wrapper-${item.id}">
@@ -453,6 +487,10 @@ class TemplatesController {
       this.scrollObserver.disconnect();
       this.scrollObserver = null;
     }
+    this.typeDropdownController?.destroy();
+    this.typeDropdownController = null;
+    this.sortDropdownController?.destroy();
+    this.sortDropdownController = null;
     this.abortController.abort();
     this.carouselController?.destroy();
     this.carouselController = null;

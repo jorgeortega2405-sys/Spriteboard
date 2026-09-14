@@ -887,7 +887,7 @@ html.dark-theme .component-badge--active .component-icon {
   opacity: 1;
 }
 
-.canvas-card:not(.has-placeholder):has(.image-lazy-fade:not(.image-loaded)),
+.canvas-card__thumbnail:has(.image-lazy-fade:not(.image-loaded)),
 .canvas-card__preview:has(.image-lazy-fade:not(.image-loaded)),
 .component-button--avatar:has(.image-lazy-fade:not(.image-loaded)),
 .account-item__avatar:has(.image-lazy-fade:not(.image-loaded)),
@@ -899,7 +899,7 @@ html.dark-theme .component-badge--active .component-icon {
   background-color: var(--skeleton-base) !important;
 }
 
-.canvas-card:not(.has-placeholder):has(.image-lazy-fade:not(.image-loaded))::after,
+.canvas-card__thumbnail:has(.image-lazy-fade:not(.image-loaded))::after,
 .canvas-card__preview:has(.image-lazy-fade:not(.image-loaded))::after,
 .component-button--avatar:has(.image-lazy-fade:not(.image-loaded))::after,
 .account-item__avatar:has(.image-lazy-fade:not(.image-loaded))::after,
@@ -1052,12 +1052,12 @@ html.dark-theme .component-badge--active .component-icon {
 }
 
 .skeleton-card--template {
-  height: 200px;
+  height: 165px;
+  border-radius: 12px;
 }
 
 .skeleton-card--template-wide {
-  grid-column: span 2;
-  height: 200px;
+  height: 165px;
 }
 
 .skeleton-card__header {

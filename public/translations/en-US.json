@@ -383,12 +383,22 @@
     "welcome": "Bienvenido a Spriteboard"
   },
   "templates": {
-    "title": "Explorar plantillas",
-    "all_categories": "Todas las categorías",
-    "search_placeholder": "Buscar plantillas por nombre o tamaño...",
-    "use_template": "Usar plantilla",
-    "empty_title": "No se encontraron plantillas",
-    "empty_desc": "Intenta con otro término de búsqueda o selecciona otra categoría."
+    "title": "Templates",
+    "section_title": "Explore templates",
+    "filter_all": "All",
+    "filter_favorites": "Favorites",
+    "filter_pixel": "Pixel Art",
+    "filter_board": "Board",
+    "sort_recommended": "Recommended",
+    "sort_alpha_asc": "Alphabetical (A-Z)",
+    "sort_alpha_desc": "Alphabetical (Z-A)",
+    "sort_size_desc": "Largest size",
+    "sort_size_asc": "Smallest size",
+    "all_categories": "All categories",
+    "search_placeholder": "Search templates by name or size...",
+    "use_template": "Use template",
+    "empty_title": "No templates found",
+    "empty_desc": "Try another search term or select a different category."
   },
   "trash": {
     "title": "Papelera de reciclaje",

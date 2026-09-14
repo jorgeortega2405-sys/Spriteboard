@@ -383,7 +383,17 @@
     "welcome": "Bienvenido a Spriteboard"
   },
   "templates": {
-    "title": "Explorar plantillas",
+    "title": "Plantillas",
+    "section_title": "Explorar plantillas",
+    "filter_all": "Todas",
+    "filter_favorites": "Favoritas",
+    "filter_pixel": "Pixel Art",
+    "filter_board": "Pizarrón",
+    "sort_recommended": "Recomendadas",
+    "sort_alpha_asc": "Orden alfabético (A-Z)",
+    "sort_alpha_desc": "Orden alfabético (Z-A)",
+    "sort_size_desc": "Mayor tamaño",
+    "sort_size_asc": "Menor tamaño",
     "all_categories": "Todas las categorías",
     "search_placeholder": "Buscar plantillas por nombre o tamaño...",
     "use_template": "Usar plantilla",

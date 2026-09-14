@@ -17,24 +17,31 @@ export class SkeletonService {
     return element;
   }
 
-  static createSkeletonCard(type: 'canvas' | 'template' = 'canvas', index = 0, isWide = false): HTMLElement {
+  static createSkeletonCard(type: 'canvas' | 'template' = 'canvas', index = 0): HTMLElement {
     const card = document.createElement('div');
-    const wideClass = isWide ? ' skeleton-card--template-wide' : '';
     const typeClass = type === 'template' ? 'skeleton-card--template' : 'skeleton-card--canvas';
-    card.className = `skeleton-card ${typeClass}${wideClass}`;
+    card.className = `skeleton-card ${typeClass}`;
     card.setAttribute('data-ref', 'skeleton-card');
     card.style.setProperty('--card-index', String(index));
-    const badgeWidth = type === 'template' ? '60px' : '76px';
-    card.innerHTML = `
-      <div class="skeleton-card__header" data-ref="skeleton-card-header">
-        <div class="skeleton-card__badge-pill" data-ref="skeleton-card-badge" style="width: ${badgeWidth};"></div>
-        <div class="skeleton-card__badge-pill" data-ref="skeleton-card-badge" style="width: 36px;"></div>
-      </div>
-      <div class="skeleton-card__footer" data-ref="skeleton-card-footer">
-        <div class="skeleton-card__line skeleton-card__line--title" data-ref="skeleton-card-title"></div>
-        <div class="skeleton-card__line skeleton-card__line--subtitle" data-ref="skeleton-card-subtitle"></div>
-      </div>
-    `;
+    if (type === 'template') {
+      card.innerHTML = `
+        <div class="skeleton-card__header" data-ref="skeleton-card-header">
+          <div></div>
+          <div class="skeleton-card__badge-pill" data-ref="skeleton-card-badge" style="width: 28px; height: 28px; border-radius: 8px; opacity: 0.4;"></div>
+        </div>
+      `;
+    } else {
+      card.innerHTML = `
+        <div class="skeleton-card__header" data-ref="skeleton-card-header">
+          <div class="skeleton-card__badge-pill" data-ref="skeleton-card-badge" style="width: 76px;"></div>
+          <div class="skeleton-card__badge-pill" data-ref="skeleton-card-badge" style="width: 36px;"></div>
+        </div>
+        <div class="skeleton-card__footer" data-ref="skeleton-card-footer">
+          <div class="skeleton-card__line skeleton-card__line--title" data-ref="skeleton-card-title"></div>
+          <div class="skeleton-card__line skeleton-card__line--subtitle" data-ref="skeleton-card-subtitle"></div>
+        </div>
+      `;
+    }
     return card;
   }
 
@@ -43,8 +50,7 @@ export class SkeletonService {
     container.innerHTML = '';
     const fragment = document.createDocumentFragment();
     for (let i = 0; i < count; i++) {
-      const isWide = type === 'template' && (i === 1 || i === 5);
-      fragment.appendChild(this.createSkeletonCard(type, i, isWide));
+      fragment.appendChild(this.createSkeletonCard(type, i));
     }
     container.appendChild(fragment);
   }
