@@ -1,6 +1,6 @@
+import mysql from 'mysql2/promise';
 import { canvasPool } from '../config/database.config.js';
 import { SubscriptionTier, SubscriptionTierId } from '../types/subscription.types.js';
-import mysql from 'mysql2/promise';
 
 export interface TierLimits {
   storageBytes: number;
@@ -32,8 +32,8 @@ export const TIER_LIMITS: Record<string, TierLimits> = {
     storageBytes: 10 * 1024 * 1024 * 1024,
     maxCanvasDimension: 16384,
     maxLiveCollaborators: 6,
-    maxTeams: 1,
-    maxTeamMembers: 3,
+    maxTeams: 0,
+    maxTeamMembers: 0,
     maxLayers: 999999,
     maxSnapshots: 30,
     snapshotRetentionDays: 30,
@@ -42,6 +42,42 @@ export const TIER_LIMITS: Record<string, TierLimits> = {
   },
   business: {
     storageBytes: 1024 * 1024 * 1024 * 1024,
+    maxCanvasDimension: 16384,
+    maxLiveCollaborators: 50,
+    maxTeams: 999999,
+    maxTeamMembers: 999999,
+    maxLayers: 999999,
+    maxSnapshots: 999999,
+    snapshotRetentionDays: 999999,
+    maxExportScale: 16,
+    allowedExportTypes: ['png-current', 'project-json', 'spritesheet', 'gif', 'spritesheet-atlas'],
+  },
+  teachers: {
+    storageBytes: 50 * 1024 * 1024 * 1024,
+    maxCanvasDimension: 16384,
+    maxLiveCollaborators: 50,
+    maxTeams: 1,
+    maxTeamMembers: 50,
+    maxLayers: 999999,
+    maxSnapshots: 999999,
+    snapshotRetentionDays: 999999,
+    maxExportScale: 8,
+    allowedExportTypes: ['png-current', 'project-json', 'spritesheet', 'gif', 'spritesheet-atlas'],
+  },
+  schools: {
+    storageBytes: 1024 * 1024 * 1024 * 1024,
+    maxCanvasDimension: 16384,
+    maxLiveCollaborators: 50,
+    maxTeams: 999999,
+    maxTeamMembers: 999999,
+    maxLayers: 999999,
+    maxSnapshots: 999999,
+    snapshotRetentionDays: 999999,
+    maxExportScale: 16,
+    allowedExportTypes: ['png-current', 'project-json', 'spritesheet', 'gif', 'spritesheet-atlas'],
+  },
+  universities: {
+    storageBytes: 100 * 1024 * 1024 * 1024 * 1024,
     maxCanvasDimension: 16384,
     maxLiveCollaborators: 50,
     maxTeams: 999999,
@@ -62,6 +98,18 @@ export const TIER_LIMITS: Record<string, TierLimits> = {
     maxSnapshots: 999999,
     snapshotRetentionDays: 999999,
     maxExportScale: 8,
+    allowedExportTypes: ['png-current', 'project-json', 'spritesheet', 'gif', 'spritesheet-atlas'],
+  },
+  escuelas: {
+    storageBytes: 1024 * 1024 * 1024 * 1024,
+    maxCanvasDimension: 16384,
+    maxLiveCollaborators: 50,
+    maxTeams: 999999,
+    maxTeamMembers: 999999,
+    maxLayers: 999999,
+    maxSnapshots: 999999,
+    snapshotRetentionDays: 999999,
+    maxExportScale: 16,
     allowedExportTypes: ['png-current', 'project-json', 'spritesheet', 'gif', 'spritesheet-atlas'],
   },
   universidades: {
@@ -85,13 +133,13 @@ export const TIER_BORDER_COLORS: Record<string, string> = {
   ultra: 'conic-gradient(from 295deg, #E92D18 0% 28%, #306EE2 28% 57%, #249A41 57% 85%, #CD9308 85% 100%)',
   business: 'conic-gradient(from 295deg, #8b5cf6 0% 28%, #ec4899 28% 57%, #3b82f6 57% 85%, #6366f1 85% 100%)',
   negocios: 'conic-gradient(from 295deg, #8b5cf6 0% 28%, #ec4899 28% 57%, #3b82f6 57% 85%, #6366f1 85% 100%)',
-  escuelas: 'conic-gradient(from 295deg, #8b5cf6 0% 28%, #ec4899 28% 57%, #3b82f6 57% 85%, #6366f1 85% 100%)',
-  schools: 'conic-gradient(from 295deg, #8b5cf6 0% 28%, #ec4899 28% 57%, #3b82f6 57% 85%, #6366f1 85% 100%)',
-  docentes: 'conic-gradient(from 295deg, #8b5cf6 0% 28%, #ec4899 28% 57%, #3b82f6 57% 85%, #6366f1 85% 100%)',
   teachers: 'conic-gradient(from 295deg, #8b5cf6 0% 28%, #ec4899 28% 57%, #3b82f6 57% 85%, #6366f1 85% 100%)',
+  docentes: 'conic-gradient(from 295deg, #8b5cf6 0% 28%, #ec4899 28% 57%, #3b82f6 57% 85%, #6366f1 85% 100%)',
+  schools: 'conic-gradient(from 295deg, #8b5cf6 0% 28%, #ec4899 28% 57%, #3b82f6 57% 85%, #6366f1 85% 100%)',
+  escuelas: 'conic-gradient(from 295deg, #8b5cf6 0% 28%, #ec4899 28% 57%, #3b82f6 57% 85%, #6366f1 85% 100%)',
   education: 'conic-gradient(from 295deg, #8b5cf6 0% 28%, #ec4899 28% 57%, #3b82f6 57% 85%, #6366f1 85% 100%)',
-  universidades: 'conic-gradient(from 295deg, #f59e0b 0% 28%, #d97706 28% 57%, #8b5cf6 57% 85%, #fbbf24 85% 100%)',
   universities: 'conic-gradient(from 295deg, #f59e0b 0% 28%, #d97706 28% 57%, #8b5cf6 57% 85%, #fbbf24 85% 100%)',
+  universidades: 'conic-gradient(from 295deg, #f59e0b 0% 28%, #d97706 28% 57%, #8b5cf6 57% 85%, #fbbf24 85% 100%)',
 };
 
 export function getTierBorderColor(tier?: string): string {
@@ -103,22 +151,22 @@ export function getTierLimits(tier?: string): TierLimits {
   const normalized = (tier || 'free').toLowerCase();
   let key = normalized;
   if (key === 'negocios') key = 'business';
-  else if (key === 'teachers') key = 'docentes';
-  else if (key === 'schools' || key === 'education' || key === 'educacion' || key === 'escuelas') key = 'business';
-  else if (key === 'universities') key = 'universidades';
+  else if (key === 'docentes') key = 'teachers';
+  else if (key === 'escuelas' || key === 'education' || key === 'educacion') key = 'schools';
+  else if (key === 'universidades') key = 'universities';
   return TIER_LIMITS[key] || TIER_LIMITS.free;
 }
 
 export function resolveHigherTier(tier1?: string, tier2?: string): SubscriptionTierId {
   const rank: Record<string, number> = {
-    universidades: 4,
     universities: 4,
-    escuelas: 3,
+    universidades: 4,
     schools: 3,
-    docentes: 3,
-    teachers: 3,
+    escuelas: 3,
     education: 3,
     educacion: 3,
+    teachers: 3,
+    docentes: 3,
     business: 3,
     negocios: 3,
     ultra: 2,
@@ -132,9 +180,9 @@ export function resolveHigherTier(tier1?: string, tier2?: string): SubscriptionT
   const r2 = rank[norm2] ?? 0;
   const chosen = r2 > r1 ? norm2 : norm1;
   if (chosen === 'negocios') return 'business';
-  if (chosen === 'schools' || chosen === 'educacion' || chosen === 'education') return 'escuelas';
-  if (chosen === 'teachers') return 'docentes';
-  if (chosen === 'universities') return 'universidades';
+  if (chosen === 'schools' || chosen === 'escuelas' || chosen === 'educacion' || chosen === 'education') return 'schools';
+  if (chosen === 'teachers' || chosen === 'docentes') return 'teachers';
+  if (chosen === 'universities' || chosen === 'universidades') return 'universities';
   return chosen as SubscriptionTierId;
 }
 
@@ -299,9 +347,9 @@ export class SubscriptionService {
           icon: 'groups',
         },
         {
-          title: '1 equipo de trabajo (hasta 3 miembros)',
-          desc: 'Crea tu equipo con proyectos compartidos y roles de acceso',
-          icon: 'diversity_3',
+          title: 'Control avanzado de privacidad',
+          desc: 'Protege tus lienzos y gestiona enlaces de acceso directo con permisos de edición',
+          icon: 'lock_open',
         },
         {
           title: 'Capas ilimitadas por lienzo',
@@ -374,6 +422,123 @@ export class SubscriptionService {
         },
       ],
     },
+    {
+      id: 'teachers',
+      name: 'Spriteboard Docentes',
+      tagline: 'Plataforma de aprendizaje creativo para docentes y sus clases.',
+      storage: '50 GB de almacenamiento',
+      price: 0,
+      priceMonthly: 0,
+      priceYearly: 0,
+      currency: 'USD',
+      billingPeriod: 'yearly',
+      icon: 'local_library',
+      badge: 'Para Educadores',
+      isPopular: false,
+      buttonText: 'Completar verificación',
+      borderColor: '#8b5cf6',
+      ringBg: '#8b5cf6',
+      features: [
+        {
+          title: 'Aulas escolares y códigos de clase',
+          desc: 'Crea salones interactivos con códigos de unión rápida para tus alumnos',
+          icon: 'meeting_room',
+        },
+        {
+          title: 'Colaboración masiva en vivo (hasta 50 alumnos)',
+          desc: 'Toda tu clase trabajando en simultáneo en lienzos compartidos con cursores activos',
+          icon: 'groups_3',
+        },
+        {
+          title: 'Capas y snapshots de clase ilimitados',
+          desc: 'Supervisa el progreso paso a paso y recupera versiones de trabajo',
+          icon: 'all_inclusive',
+        },
+        {
+          title: 'Exportación Spritesheet, GIF y Game Atlas',
+          desc: 'Exporta animaciones y atlas listos para Unity y Godot',
+          icon: 'sports_esports',
+        },
+      ],
+    },
+    {
+      id: 'schools',
+      name: 'Spriteboard Escuelas',
+      tagline: 'Infraestructura creativa centralizada para escuelas, colegios y sistemas educativos.',
+      storage: '1 TB+ de almacenamiento institucional',
+      price: 0,
+      priceMonthly: 0,
+      priceYearly: 0,
+      currency: 'USD',
+      billingPeriod: 'yearly',
+      icon: 'school',
+      badge: 'Escuelas e Instituciones',
+      isPopular: true,
+      buttonText: 'Contactar asesor educativo',
+      borderColor: '#8b5cf6',
+      ringBg: 'conic-gradient(from 295deg, #8b5cf6 0% 28%, #ec4899 28% 57%, #3b82f6 57% 85%, #6366f1 85% 100%)',
+      features: [
+        {
+          title: 'Panel escolar y salones de clase',
+          desc: 'Gestión centralizada de aulas, códigos de unión y docentes',
+          icon: 'school',
+        },
+        {
+          title: 'Directorio de docentes y licencias',
+          desc: 'Aprovisionamiento centralizado de profesores con permisos escolares',
+          icon: 'group_add',
+        },
+        {
+          title: 'Aulas, proyectos y alumnos ilimitados',
+          desc: 'Organiza todos tus cursos y materias con acceso estructurado y seguro',
+          icon: 'menu_book',
+        },
+        {
+          title: 'Exportación Game Atlas y Ultra 4K',
+          desc: 'Atlas de texturas y máxima resolución para tus proyectos',
+          icon: 'hd',
+        },
+      ],
+    },
+    {
+      id: 'universities',
+      name: 'Spriteboard Universidades',
+      tagline: 'Educación superior para campus, facultades y estudiantes.',
+      storage: '100 TB de almacenamiento institucional compartido',
+      price: 0,
+      priceMonthly: 0,
+      priceYearly: 0,
+      currency: 'USD',
+      billingPeriod: 'yearly',
+      icon: 'military_tech',
+      badge: 'Educación Superior',
+      isPopular: false,
+      buttonText: 'Solicitar propuesta institucional',
+      borderColor: '#f59e0b',
+      ringBg: 'conic-gradient(from 295deg, #f59e0b 0% 28%, #d97706 28% 57%, #8b5cf6 57% 85%, #fbbf24 85% 100%)',
+      features: [
+        {
+          title: 'Sedes, campus y facultades independientes',
+          desc: 'Estructura universitaria multisede con administradores de campus y directores',
+          icon: 'apartment',
+        },
+        {
+          title: 'Comunidad universitaria masiva',
+          desc: 'Catedráticos, docentes adjuntos, ayudantes de cátedra y alumnos',
+          icon: 'groups',
+        },
+        {
+          title: 'Lienzos de investigación sin límites',
+          desc: 'Hasta 16K por lienzo con almacenamiento de 100 TB para laboratorios',
+          icon: 'all_inclusive',
+        },
+        {
+          title: 'Federación SSO (SAML/OIDC) y SCIM 2.0',
+          desc: 'Integración con Microsoft Entra ID, Okta y Google Workspace',
+          icon: 'vpn_key',
+        },
+      ],
+    },
   ];
 
   private constructor() {}
@@ -390,7 +555,11 @@ export class SubscriptionService {
   }
 
   public async getTierById(tierId: string): Promise<SubscriptionTier | undefined> {
-    const normalized = tierId === 'negocios' ? 'business' : tierId;
+    let normalized = (tierId || '').toLowerCase();
+    if (normalized === 'negocios') normalized = 'business';
+    else if (normalized === 'docentes') normalized = 'teachers';
+    else if (normalized === 'escuelas' || normalized === 'education') normalized = 'schools';
+    else if (normalized === 'universidades') normalized = 'universities';
     return this.tiers.find((t) => t.id === normalized);
   }
 }

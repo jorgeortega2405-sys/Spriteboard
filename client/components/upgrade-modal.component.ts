@@ -8,7 +8,7 @@ let activeUpgradeModal: { close: () => void } | null = null;
 
 export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => void } {
   if (initialPlan === 'teachers' || initialPlan === 'docentes' || initialPlan === 'schools' || initialPlan === 'escuelas' || initialPlan === 'universidades' || initialPlan === 'universities') {
-    navigate('/upgrade');
+    navigate(`/upgrade?category=education&plan=${initialPlan}`);
     return { close: () => {} };
   }
 
@@ -142,7 +142,7 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
                     <td class="col-feature">
                       <span>${t('upgrade_modal.benefit_teams') || 'Equipos de trabajo'}</span>
                     </td>
-                    <td class="col-plan col-plan--pro${selectedPlan === 'pro' ? ' is-active' : ''}">1</td>
+                    <td class="col-plan col-plan--pro${selectedPlan === 'pro' ? ' is-active' : ''}">—</td>
                     <td class="col-plan col-plan--business${selectedPlan === 'business' || selectedPlan === 'negocios' ? ' is-active' : ''}">Ilimitados</td>
                   </tr>
                   <tr>
@@ -266,7 +266,7 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
   btnInstitution?.addEventListener('click', (e: MouseEvent) => {
     e.preventDefault();
     closeModal();
-    navigate('/education/institution');
+    navigate('/upgrade?category=education&plan=schools');
   });
 
   const handleKeyDown = (e: KeyboardEvent) => {

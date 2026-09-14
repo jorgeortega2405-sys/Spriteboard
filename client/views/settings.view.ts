@@ -1616,6 +1616,51 @@ export async function createBillingView(): Promise<HTMLElement> {
           };
         }
       }
+    } else if (
+      info.tier &&
+      ['docentes', 'teachers', 'escuelas', 'schools', 'education', 'universidades', 'universities', 'business', 'negocios', 'pro'].includes(info.tier.toLowerCase()) &&
+      info.tier.toLowerCase() !== 'free' &&
+      info.tier.toLowerCase() !== 'none'
+    ) {
+      const activeTier = info.tier.toLowerCase();
+      let displayName = t('upgrade_modal.plan_pro_name') || 'Spriteboard Pro';
+      let descText = t('upgrade_modal.plan_pro_desc') || 'Para profesionales y creadores independientes.';
+      if (['docentes', 'teachers'].includes(activeTier)) {
+        displayName = t('upgrade_modal.plan_teachers_name') || 'Spriteboard Docentes';
+        descText = t('upgrade_modal.plan_teachers_desc') || 'Plan educativo verificado para docentes y aulas escolares.';
+      } else if (['escuelas', 'schools', 'education'].includes(activeTier)) {
+        displayName = t('upgrade_modal.plan_schools_name') || 'Spriteboard Escuelas';
+        descText = t('upgrade_modal.plan_schools_desc') || 'Plan institucional escolar para docentes, aulas y alumnos.';
+      } else if (['universidades', 'universities'].includes(activeTier)) {
+        displayName = t('upgrade_modal.plan_universities_name') || 'Spriteboard Universidades';
+        descText = t('upgrade_modal.plan_universities_desc') || 'Plan de educación superior para campus, facultades y estudiantes.';
+      } else if (['business', 'negocios'].includes(activeTier)) {
+        displayName = t('upgrade_modal.plan_business_name') || 'Spriteboard Negocios';
+        descText = t('upgrade_modal.plan_business_desc') || 'Plan para equipos de desarrollo y estudios creativos.';
+      }
+
+      if (planNameEl) planNameEl.textContent = displayName;
+      if (planStatusBadge) {
+        planStatusBadge.style.display = 'inline-flex';
+        planStatusBadge.className = 'component-badge component-badge--sm component-badge--success';
+        planStatusBadge.textContent = t('settings.billing.status_active') || 'Activo';
+      }
+      if (planDescEl) {
+        planDescEl.textContent = descText;
+      }
+
+      if (btnUpgrade) {
+        btnUpgrade.textContent = t('settings.billing.btn_change_plan') || 'Cambiar de plan';
+        btnUpgrade.onclick = (e) => {
+          e.preventDefault();
+          navigate('/upgrade');
+        };
+      }
+
+      if (itemAutoRenewal) itemAutoRenewal.style.display = 'none';
+      if (dividerAutoRenewal) dividerAutoRenewal.style.display = 'none';
+      if (itemCancelSub) itemCancelSub.style.display = 'none';
+      if (dividerCancelSub) dividerCancelSub.style.display = 'none';
     } else {
       if (planNameEl)
         planNameEl.textContent = t('settings.billing.free_plan_title') || 'Plan Gratuito';

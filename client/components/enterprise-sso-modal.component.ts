@@ -10,9 +10,10 @@ import { openUpgradeModal } from './upgrade-modal.component.js';
 let activeSsoModal: any = null;
 
 export async function openEnterpriseSsoModal(options: {
-  tenantType?: EnterpriseTenantType;
+  defaultDomain?: string;
   targetTeamId?: number | null;
   targetTeamName?: string;
+  tenantType?: EnterpriseTenantType;
 } = {}): Promise<void> {
   if (activeSsoModal) {
     activeSsoModal.close();
@@ -49,7 +50,7 @@ export async function openEnterpriseSsoModal(options: {
   const renderContent = () => {
     const isSsoActive = Boolean(currentTenant?.sso_enabled);
     const isScimActive = Boolean(currentTenant?.scim_enabled);
-    const domainVal = currentTenant?.domain || '';
+    const domainVal = currentTenant?.domain || options.defaultDomain || '';
     const idpSsoVal = currentTenant?.idp_sso_url || '';
     const idpEntityVal = currentTenant?.idp_entity_id || '';
     const idpCertVal = currentTenant?.idp_certificate || '';
@@ -63,7 +64,12 @@ export async function openEnterpriseSsoModal(options: {
         </button>
         <div class="modal-card modal-card--w-640" data-ref="modal-enterprise-sso-card">
           <div class="modal-card__header">
-            <h2 class="modal-card__title" data-ref="modal-sso-title">${t('teams.sso_modal_title') || 'Inicio de sesión único (SSO) y SCIM'}</h2>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+              <h2 class="modal-card__title" data-ref="modal-sso-title" style="margin: 0;">${t('teams.sso_modal_title') || 'Inicio de sesión único (SSO) y SCIM'}</h2>
+              <span class="component-badge component-badge--sm ${isSsoActive ? 'component-badge--success' : 'component-badge--neutral'}" data-ref="badge-modal-sso-status">
+                ${isSsoActive ? 'SSO Activo' : 'Sin configurar'}
+              </span>
+            </div>
             <p class="modal-card__desc">${t('teams.sso_form_desc') || 'Vincula el dominio de tu organización para autenticar usuarios vía SAML/OIDC y aprovisionarlos automáticamente con SCIM 2.0.'}</p>
           </div>
 
@@ -83,12 +89,12 @@ export async function openEnterpriseSsoModal(options: {
               <form data-ref="form-sso-settings" style="display: flex; flex-direction: column; gap: 14px;">
                 <label class="field" data-ref="field-sso-domain">
                   <input class="field__input" data-ref="input-sso-domain" type="text" placeholder=" " value="${escapeHtml(domainVal)}" maxlength="100" required autocomplete="off" />
-                  <span class="field__label">${t('teams.sso_domain_label') || 'Dominio corporativo / académico'} (ej. empresa.com)</span>
+                  <span class="field__label">${t('teams.sso_domain_label') || 'Dominio corporativo / académico'} (ej. institucion.edu)</span>
                 </label>
 
                 <div style="display: flex; align-items: center; gap: 10px; margin: 2px 0;">
-                  <input type="checkbox" data-ref="chk-sso-enabled" ${isSsoActive ? 'checked' : ''} style="width: 18px; height: 18px; cursor: pointer;" />
-                  <label data-ref="lbl-sso-enabled" style="font-size: 14px; font-weight: 500; cursor: pointer; color: var(--text-primary);">
+                  <input class="checkbox-input" data-ref="chk-sso-enabled" type="checkbox" ${isSsoActive ? 'checked' : ''} style="width: 18px; height: 18px; cursor: pointer;" />
+                  <label class="checkbox-label" data-ref="lbl-sso-enabled" style="font-size: 14px; font-weight: 500; cursor: pointer; color: var(--text-primary);">
                     ${t('teams.sso_enable_checkbox') || 'Habilitar inicio de sesión único (SSO) para este dominio'}
                   </label>
                 </div>
@@ -283,6 +289,7 @@ export async function openEnterpriseSsoModal(options: {
         const data = await res.json();
         currentTenant = data.tenant;
         showToast(t('teams.sso_toast_saved') || 'Configuración de SSO guardada exitosamente.', 'success');
+        window.dispatchEvent(new CustomEvent('enterprise-sso-updated'));
         renderContent();
       } catch {
         if (bannerError) {
@@ -301,8 +308,8 @@ export async function openEnterpriseSsoModal(options: {
 
       try {
         const res = await postApi(API_ROUTES.enterprise.generateScimToken, {
-          type,
           tenantId: currentTenant.id,
+          type,
         });
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
@@ -327,6 +334,7 @@ export async function openEnterpriseSsoModal(options: {
 
         if (currentTenant) currentTenant.scim_enabled = true;
         showToast('Nuevo token SCIM generado exitosamente.', 'success');
+        window.dispatchEvent(new CustomEvent('enterprise-sso-updated'));
       } catch {
         showToast('Error al conectar con el servidor.', 'danger');
       }
@@ -344,6 +352,7 @@ export async function openEnterpriseSsoModal(options: {
 
         if (currentTenant) currentTenant.scim_enabled = false;
         showToast('Token SCIM revocado.', 'info');
+        window.dispatchEvent(new CustomEvent('enterprise-sso-updated'));
         renderContent();
       } catch {
         showToast('Error de conexión.', 'danger');

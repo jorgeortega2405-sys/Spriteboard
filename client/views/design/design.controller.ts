@@ -30,7 +30,7 @@ import { DesignHistoryManager } from './design-history.manager.js';
 import { DesignLayersManager } from './design-layers.manager.js';
 import { DesignToolsManager } from './design-tools.manager.js';
 import { DesignViewportManager } from './design-viewport.manager.js';
-import { AnimationTag, CanvasBackgroundConfig, CollaboratorState, FloatingSelection, OwnerInfo, SerializedCanvasFrame, SerializedCanvasLayer, SerializedCanvasProject, UndoStep } from './design.types.js';
+import { AnimationTag, CanvasBackgroundConfig, CollaboratorState, FloatingSelection, OwnerInfo, SerializedCanvasFrame, SerializedCanvasLayer, SerializedCanvasProject, SubscriptionTierType, UndoStep } from './design.types.js';
 
 export class DesignController {
   private container: HTMLElement;
@@ -106,7 +106,7 @@ export class DesignController {
   private set isOwner(val: boolean) {
     this.collaborationManager.isOwner = val;
   }
-  private effectiveTier: 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios' | 'docentes' | 'escuelas' | 'education' | 'universidades' | 'universities' = 'free';
+  private effectiveTier: SubscriptionTierType = 'free';
   private ownerInfo: OwnerInfo | null = null;
   private get collaborators(): Map<string, CollaboratorState> {
     return this.collaborationManager.collaborators;
@@ -1407,7 +1407,7 @@ export class DesignController {
 
     if (broadcast) {
       const effTier = (this.effectiveTier || currentUser?.subscription_tier || 'free').toLowerCase();
-      const isProOrBusiness = effTier === 'pro' || effTier === 'ultra' || effTier === 'business' || effTier === 'negocios' || effTier === 'docentes' || effTier === 'escuelas' || effTier === 'education' || effTier === 'universidades' || effTier === 'universities';
+      const isProOrBusiness = ['pro', 'ultra', 'business', 'negocios', 'docentes', 'teachers', 'escuelas', 'schools', 'education', 'universidades', 'universities'].includes(effTier);
       if (!isProOrBusiness && frame.layers.length >= 5) {
         showToast(t('design.layers_free_limit') || 'El plan Gratis permite hasta 5 capas por lienzo. Mejora a Pro para capas ilimitadas.', 'warning');
         openUpgradeModal('pro');

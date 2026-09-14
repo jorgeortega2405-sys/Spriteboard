@@ -1,16 +1,17 @@
+import fs from 'fs';
+import type { ResultSetHeader, RowDataPacket } from 'mysql2';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { canvasPool, pool } from '../config/database.config.js';
 import { redis } from '../config/redis.config.js';
 import { UserPayload, UserRole } from '../types/auth.types.js';
+import { SubscriptionTierId } from '../types/subscription.types.js';
 import { revokeAllUserSessions } from './auth.service.js';
 import { deleteCanvasBlob } from './canvas-storage-blob.service.js';
 import { logger } from './logger.service.js';
 import { deleteObject } from './s3.service.js';
 import { stripeService } from './stripe.service.js';
 import { hashBackupCode } from './two-factor.service.js';
-import fs from 'fs';
-import type { ResultSetHeader, RowDataPacket } from 'mysql2';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -24,7 +25,7 @@ export interface UserRecord extends RowDataPacket {
   avatar_url?: string;
   role?: UserRole;
   google_id?: string;
-  subscription_tier?: 'free' | 'pro' | 'business' | 'negocios' | 'escuelas' | 'docentes' | 'education';
+  subscription_tier?: SubscriptionTierId;
   two_factor_enabled?: boolean | number;
   two_factor_secret?: string | null;
   two_factor_recovery_codes?: string | null;

@@ -136,9 +136,9 @@ export async function createUpgradeView(): Promise<HTMLElement> {
         icon: 'groups',
       },
       {
-        title: '1 equipo de trabajo (hasta 3 miembros)',
-        desc: 'Crea tu equipo con proyectos compartidos y roles de acceso',
-        icon: 'diversity_3',
+        title: 'Control avanzado de privacidad',
+        desc: 'Protege tus lienzos y gestiona enlaces de acceso directo con permisos de edición',
+        icon: 'lock_open',
       },
       {
         title: 'Capas ilimitadas por lienzo',
@@ -217,7 +217,7 @@ export async function createUpgradeView(): Promise<HTMLElement> {
   };
 
   const teachersTier = {
-    id: 'docentes',
+    id: 'teachers',
     name: 'Spriteboard Docentes',
     tagline: 'Plataforma de aprendizaje creativo 100% gratuita para docentes y sus clases.',
     storage: '50 GB de almacenamiento',
@@ -346,7 +346,7 @@ export async function createUpgradeView(): Promise<HTMLElement> {
   };
 
   const universityTier = {
-    id: 'universidades',
+    id: 'universities',
     name: 'Spriteboard Universidades',
     tagline: 'Facilita el trabajo en equipo, la comunicación y la creatividad para todas las personas de tu universidad.',
     storage: '100 TB de almacenamiento institucional compartido',
@@ -416,11 +416,13 @@ export async function createUpgradeView(): Promise<HTMLElement> {
     pro: 1,
     business: 2,
     negocios: 2,
+    teachers: 2,
     docentes: 2,
-    escuelas: 3,
     schools: 3,
-    universidades: 4,
+    escuelas: 3,
+    education: 3,
     universities: 4,
+    universidades: 4,
   };
 
   const renderCards = (category: 'personal_teams' | 'education'): void => {
@@ -439,8 +441,8 @@ export async function createUpgradeView(): Promise<HTMLElement> {
           userTier === tier.id ||
           (tier.id === 'business' && userTier === 'negocios') ||
           (tier.id === 'schools' && ['schools', 'escuelas', 'education'].includes(userTier)) ||
-          (tier.id === 'docentes' && ['docentes', 'teachers'].includes(userTier)) ||
-          (tier.id === 'universidades' && ['universidades', 'universities'].includes(userTier))
+          (tier.id === 'teachers' && ['teachers', 'docentes'].includes(userTier)) ||
+          (tier.id === 'universities' && ['universities', 'universidades'].includes(userTier))
         )
       );
       const cardTierLevel = TIER_HIERARCHY[tier.id] ?? 0;
@@ -841,15 +843,20 @@ export async function createUpgradeView(): Promise<HTMLElement> {
 
   const requestedPlan = (urlParams.get('plan') || '').toLowerCase();
   const requestedCategory = (urlParams.get('category') || '').toLowerCase();
+  const isEducationPlan = ['docentes', 'teachers', 'schools', 'escuelas', 'education', 'universidades', 'universities'].includes(requestedPlan);
 
-  if (requestedCategory === 'education' || requestedPlan === 'docentes' || requestedPlan === 'schools') {
+  if (requestedCategory === 'education' || isEducationPlan) {
     switchCategory('education');
   } else {
     switchCategory('personal_teams');
   }
 
   if (requestedPlan) {
-    const targetId = requestedPlan === 'negocios' ? 'business' : requestedPlan;
+    let targetId = requestedPlan;
+    if (targetId === 'negocios') targetId = 'business';
+    else if (targetId === 'escuelas' || targetId === 'education') targetId = 'schools';
+    else if (targetId === 'docentes') targetId = 'teachers';
+    else if (targetId === 'universidades') targetId = 'universities';
     setTimeout(() => {
       const card = container.querySelector<HTMLElement>(`[data-ref="plan-card-${targetId}"]`);
       if (card) {

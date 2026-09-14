@@ -7,8 +7,21 @@
 
       <div class="home-floating-top__right" data-ref="component-top-right">
         <div class="home-floating-actions" data-ref="school-top-actions">
-          <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-edit-school" data-tooltip="Editar institución" aria-label="Editar institución">
+          <button type="button" class="component-button component-button--h40 home-floating-btn" data-ref="btn-open-school-edit" data-tooltip="Editar institución" aria-label="Editar institución">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
+            <span data-i18n="education.school_edit_btn">Editar institución</span>
+          </button>
+          <button type="button" class="component-button component-button--h40 home-floating-btn" data-ref="btn-view-students" data-tooltip="Ver estudiantes" aria-label="Ver estudiantes">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
+            <span data-i18n="education.btn_view_students">Estudiantes</span>
+          </button>
+          <button type="button" class="component-button component-button--h40 home-floating-btn is-hidden" data-ref="btn-open-university-campuses" data-tooltip="Sedes y Facultades" aria-label="Sedes y Facultades">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#apartment"></use></svg>
+            <span data-i18n="education.btn_campuses_faculties">Sedes y Facultades</span>
+          </button>
+          <button type="button" class="component-button component-button--h40 component-button--black home-floating-btn" data-ref="btn-open-education-sso" data-tooltip="Configurar SSO y SCIM" aria-label="Configurar SSO y SCIM">
+            <span class="material-symbols-rounded" style="font-size: 18px; margin-right: 4px;">vpn_key</span>
+            <span>SSO y SCIM</span>
           </button>
         </div>
 
@@ -47,56 +60,153 @@
 
     <div class="component-bottom component-bottom--no-padding" data-ref="component-bottom">
       <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="education-scrollable" style="padding: 24px;">
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px;">
-          <div class="card card--padded" style="border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; background: var(--bg-surface);">
-            <div style="font-size: 12px; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;" data-i18n="education.card_school_name">Institución</div>
-            <div style="font-size: 18px; font-weight: 700; color: var(--text-primary); margin-top: 4px;" data-ref="stat-school-name">—</div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 24px;">
+          <div class="card card--padded" style="border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; background: var(--bg-surface); display: flex; align-items: center; gap: 14px;">
+            <div style="width: 44px; height: 44px; border: 1px solid var(--border-color); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: var(--bg-card);">
+              <svg class="component-icon" aria-hidden="true" style="font-size: 22px;"><use href="/icons.svg#apartment"></use></svg>
+            </div>
+            <div style="display: flex; flex-direction: column; min-width: 0;">
+              <div style="font-size: 16px; font-weight: 700; color: var(--text-primary); line-height: 1.2; word-break: break-word;" data-ref="stat-school-name">—</div>
+              <div style="font-size: 13px; color: var(--text-secondary); margin-top: 3px;" data-i18n="education.card_school_name">Institución</div>
+            </div>
           </div>
-          <div class="card card--padded" style="border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; background: var(--bg-surface);">
-            <div style="font-size: 12px; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;" data-i18n="education.card_domain">Dominio escolar</div>
-            <div style="font-size: 18px; font-weight: 700; color: var(--text-primary); margin-top: 4px;" data-ref="stat-school-domain">—</div>
+          <div class="card card--padded" style="border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; background: var(--bg-surface); display: flex; align-items: center; gap: 14px;">
+            <div style="width: 44px; height: 44px; border: 1px solid var(--border-color); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: var(--bg-card);">
+              <span class="material-symbols-rounded" style="font-size: 22px; color: var(--text-primary);">domain</span>
+            </div>
+            <div style="display: flex; flex-direction: column; min-width: 0;">
+              <div style="font-size: 16px; font-weight: 700; color: var(--text-primary); line-height: 1.2; word-break: break-word;" data-ref="stat-school-domain">—</div>
+              <div style="font-size: 13px; color: var(--text-secondary); margin-top: 3px;" data-i18n="education.card_domain">Dominio escolar</div>
+            </div>
           </div>
-          <div class="card card--padded" style="border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; background: var(--bg-surface);">
-            <div style="font-size: 12px; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;" data-i18n="education.card_teachers">Plantilla docente</div>
-            <div style="font-size: 18px; font-weight: 700; color: var(--text-primary); margin-top: 4px;" data-ref="stat-school-teachers">0 / 50</div>
+          <div class="card card--padded" style="border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; background: var(--bg-surface); display: flex; align-items: center; gap: 14px;">
+            <div style="width: 44px; height: 44px; border: 1px solid var(--border-color); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: var(--bg-card);">
+              <svg class="component-icon" aria-hidden="true" style="font-size: 22px;"><use href="/icons.svg#school"></use></svg>
+            </div>
+            <div style="display: flex; flex-direction: column; min-width: 0;">
+              <div style="font-size: 16px; font-weight: 700; color: var(--text-primary); line-height: 1.2; word-break: break-word;" data-ref="stat-school-teachers">0 / 50</div>
+              <div style="font-size: 13px; color: var(--text-secondary); margin-top: 3px;" data-i18n="education.card_teachers">Plantilla docente</div>
+            </div>
           </div>
-          <div class="card card--padded" style="border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; background: var(--bg-surface);">
-            <div style="font-size: 12px; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;" data-i18n="education.card_classrooms">Aulas activas</div>
-            <div style="font-size: 18px; font-weight: 700; color: var(--text-primary); margin-top: 4px;" data-ref="stat-school-classrooms">0</div>
+          <div class="card card--padded" style="border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; background: var(--bg-surface); display: flex; align-items: center; gap: 14px;">
+            <div style="width: 44px; height: 44px; border: 1px solid var(--border-color); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: var(--bg-card);">
+              <svg class="component-icon" aria-hidden="true" style="font-size: 22px;"><use href="/icons.svg#meeting_room"></use></svg>
+            </div>
+            <div style="display: flex; flex-direction: column; min-width: 0;">
+              <div style="font-size: 16px; font-weight: 700; color: var(--text-primary); line-height: 1.2; word-break: break-word;" data-ref="stat-school-classrooms">0</div>
+              <div style="font-size: 13px; color: var(--text-secondary); margin-top: 3px;" data-i18n="education.card_classrooms">Aulas activas</div>
+            </div>
           </div>
-          <div class="card card--padded" data-ref="card-stat-students" style="border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; background: var(--bg-surface); cursor: pointer;">
-            <div style="font-size: 12px; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;" data-i18n="education.card_students">Estudiantes activos</div>
-            <div style="font-size: 18px; font-weight: 700; color: var(--text-primary); margin-top: 4px;" data-ref="stat-school-students">0</div>
+          <div class="card card--padded" data-ref="card-stat-students" style="border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; background: var(--bg-surface); display: flex; align-items: center; gap: 14px; cursor: pointer;">
+            <div style="width: 44px; height: 44px; border: 1px solid var(--border-color); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: var(--bg-card);">
+              <svg class="component-icon" aria-hidden="true" style="font-size: 22px;"><use href="/icons.svg#groups"></use></svg>
+            </div>
+            <div style="display: flex; flex-direction: column; min-width: 0;">
+              <div style="font-size: 16px; font-weight: 700; color: var(--text-primary); line-height: 1.2; word-break: break-word;" data-ref="stat-school-students">0</div>
+              <div style="font-size: 13px; color: var(--text-secondary); margin-top: 3px;" data-i18n="education.card_students">Estudiantes activos</div>
+            </div>
           </div>
-          <div class="card card--padded is-hidden" data-ref="card-stat-campuses" style="border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; background: var(--bg-surface);">
-            <div style="font-size: 12px; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;" data-i18n="education.stat_campuses">Sedes y Campus</div>
-            <div style="font-size: 18px; font-weight: 700; color: var(--text-primary); margin-top: 4px;" data-ref="stat-school-campuses">0</div>
+          <div class="card card--padded is-hidden" data-ref="card-stat-campuses" style="border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; background: var(--bg-surface); display: flex; align-items: center; gap: 14px;">
+            <div style="width: 44px; height: 44px; border: 1px solid var(--border-color); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: var(--bg-card);">
+              <span class="material-symbols-rounded" style="font-size: 22px; color: var(--text-primary);">location_city</span>
+            </div>
+            <div style="display: flex; flex-direction: column; min-width: 0;">
+              <div style="font-size: 16px; font-weight: 700; color: var(--text-primary); line-height: 1.2; word-break: break-word;" data-ref="stat-school-campuses">0</div>
+              <div style="font-size: 13px; color: var(--text-secondary); margin-top: 3px;" data-i18n="education.stat_campuses">Sedes y Campus</div>
+            </div>
           </div>
-          <div class="card card--padded is-hidden" data-ref="card-stat-faculties" style="border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; background: var(--bg-surface);">
-            <div style="font-size: 12px; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;" data-i18n="education.stat_faculties">Facultades y Escuelas</div>
-            <div style="font-size: 18px; font-weight: 700; color: var(--text-primary); margin-top: 4px;" data-ref="stat-school-faculties">0</div>
+          <div class="card card--padded is-hidden" data-ref="card-stat-faculties" style="border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; background: var(--bg-surface); display: flex; align-items: center; gap: 14px;">
+            <div style="width: 44px; height: 44px; border: 1px solid var(--border-color); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: var(--bg-card);">
+              <span class="material-symbols-rounded" style="font-size: 22px; color: var(--text-primary);">account_balance</span>
+            </div>
+            <div style="display: flex; flex-direction: column; min-width: 0;">
+              <div style="font-size: 16px; font-weight: 700; color: var(--text-primary); line-height: 1.2; word-break: break-word;" data-ref="stat-school-faculties">0</div>
+              <div style="font-size: 13px; color: var(--text-secondary); margin-top: 3px;" data-i18n="education.stat_faculties">Facultades y Escuelas</div>
+            </div>
           </div>
         </div>
 
-        <div class="card card--padded" style="border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; background: var(--bg-surface); max-width: 640px;">
-          <h2 style="font-size: 18px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px;" data-i18n="education.school_title">Configuración Institucional</h2>
-          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-            <button type="button" class="component-button component-button--h40 component-button--black" data-ref="btn-open-school-edit">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
-              <span data-i18n="education.school_edit_btn">Editar datos de la institución</span>
+        <div class="card card--padded" data-ref="card-institution-sso" style="border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; background: var(--bg-surface); max-width: 800px;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 20px; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 14px;">
+              <div style="width: 46px; height: 46px; border: 1px solid var(--border-color); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: var(--bg-card);">
+                <span class="material-symbols-rounded" style="font-size: 22px; color: var(--text-primary);">vpn_key</span>
+              </div>
+              <div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <h2 style="font-size: 17px; font-weight: 700; color: var(--text-primary); margin: 0;">Inicio de sesión único (SSO) y SCIM 2.0</h2>
+                  <span class="component-badge component-badge--sm component-badge--neutral" data-ref="sso-status-badge">No configurado</span>
+                </div>
+                <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px; margin-bottom: 0;">Federación SAML 2.0 y aprovisionamiento automático de usuarios para tu institución.</p>
+              </div>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button type="button" class="component-button component-button--h34 component-button--outline" data-ref="btn-card-edit-sso">
+                <span class="material-symbols-rounded" style="font-size: 16px; margin-right: 4px;">tune</span>
+                <span>Configuración</span>
+              </button>
+            </div>
+          </div>
+
+          <div data-ref="sso-inactive-box" style="padding: 24px; background: var(--bg-hover); border-radius: 8px; border: 1px dashed var(--border-color); text-align: center;">
+            <p style="font-size: 14px; color: var(--text-secondary); margin: 0 0 16px 0;">El inicio de sesión único y SCIM aún no han sido activados para esta institución.</p>
+            <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-card-activate-sso">
+              <span class="material-symbols-rounded" style="font-size: 18px; margin-right: 4px;">lock_open</span>
+              <span>Activar SSO y SCIM</span>
             </button>
-            <button type="button" class="component-button component-button--h40 component-button--outline" data-ref="btn-view-students">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
-              <span data-i18n="education.btn_view_students">Ver estudiantes</span>
-            </button>
-            <button type="button" class="component-button component-button--h40 component-button--outline is-hidden" data-ref="btn-open-university-campuses">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#apartment"></use></svg>
-              <span data-i18n="education.btn_campuses_faculties">Sedes y Facultades</span>
-            </button>
-            <button type="button" class="component-button component-button--h40 component-button--outline" data-ref="btn-open-education-sso">
-              <span class="material-symbols-rounded" style="font-size: 20px; margin-right: 6px;">vpn_key</span>
-              <span>Inicio de sesión único (SSO) y SCIM</span>
-            </button>
+          </div>
+
+          <div class="is-hidden" data-ref="sso-active-box" style="display: flex; flex-direction: column; gap: 14px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: var(--bg-hover); border-radius: 8px;">
+              <span style="font-size: 13px; color: var(--text-secondary);">Dominio institucional vinculado:</span>
+              <strong style="font-size: 14px; color: var(--text-primary); font-family: monospace;" data-ref="sso-active-domain">—</strong>
+            </div>
+
+            <div style="background: var(--bg-hover); padding: 14px; border-radius: 8px; display: flex; flex-direction: column; gap: 8px;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);">URL de ACS (Callback para tu IdP):</span>
+                <button type="button" class="component-button component-button--h30 component-button--outline" data-ref="btn-copy-card-acs">
+                  <span class="material-symbols-rounded" style="font-size: 15px; margin-right: 4px;">content_copy</span> Copiar
+                </button>
+              </div>
+              <code style="word-break: break-all; font-size: 12px; color: var(--text-primary);" data-ref="sso-card-acs-url">—</code>
+            </div>
+
+            <div style="background: var(--bg-hover); padding: 14px; border-radius: 8px; display: flex; flex-direction: column; gap: 8px;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);">Endpoint base de SCIM 2.0:</span>
+                <button type="button" class="component-button component-button--h30 component-button--outline" data-ref="btn-copy-card-scim">
+                  <span class="material-symbols-rounded" style="font-size: 15px; margin-right: 4px;">content_copy</span> Copiar
+                </button>
+              </div>
+              <code style="word-break: break-all; font-size: 12px; color: var(--text-primary);" data-ref="sso-card-scim-url">—</code>
+            </div>
+
+            <div style="background: var(--bg-hover); padding: 14px; border-radius: 8px; display: flex; flex-direction: column; gap: 10px;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <span style="font-size: 13px; font-weight: 600; color: var(--text-primary); display: block;">Token Secreto SCIM (Bearer Token):</span>
+                  <span style="font-size: 12px; color: var(--text-secondary);" data-ref="sso-card-token-status">Token activo para sincronización</span>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                  <button type="button" class="component-button component-button--h34 component-button--outline" data-ref="btn-card-regen-scim">
+                    <span class="material-symbols-rounded" style="font-size: 16px; margin-right: 4px;">refresh</span>
+                    <span>Regenerar</span>
+                  </button>
+                </div>
+              </div>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <div style="position: relative; flex: 1;">
+                  <input class="field__input" data-ref="input-card-scim-token" type="password" readonly value="••••••••••••••••••••••••••••••••" style="font-family: monospace; font-size: 12px; width: 100%; padding-right: 40px;" />
+                  <button type="button" class="component-button component-button--h34 component-button--icon-only" data-ref="btn-toggle-card-token-visibility" style="position: absolute; right: 4px; top: 50%; transform: translateY(-50%); border: none; background: transparent;" aria-label="Mostrar u ocultar token">
+                    <span class="material-symbols-rounded" data-ref="icon-card-token-eye" style="font-size: 18px;">visibility</span>
+                  </button>
+                </div>
+                <button type="button" class="component-button component-button--h34 component-button--outline" data-ref="btn-copy-card-scim-token">
+                  <span class="material-symbols-rounded" style="font-size: 16px; margin-right: 4px;">content_copy</span> Copiar
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>

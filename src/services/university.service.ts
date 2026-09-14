@@ -518,9 +518,9 @@ export async function assignUniversityMember(
     }
 
     const currentTier = (uRows[0].subscription_tier || 'free').toLowerCase();
-    let assignedTier = (dto.academicRole === 'student' || dto.academicRole === 'ta') ? 'pro' : 'universidades';
+    let assignedTier = (dto.academicRole === 'student' || dto.academicRole === 'ta') ? 'pro' : 'universities';
     if (['ultra', 'business', 'negocios'].includes(currentTier)) {
-      assignedTier = currentTier;
+      assignedTier = 'business';
     }
 
     await pool.execute(
@@ -620,11 +620,27 @@ export async function removeUniversityMember(adminId: number, memberId: number):
       [targetUserId]
     );
 
-    if (billingRows.length === 0) {
-      await pool.execute(
-        "UPDATE users SET subscription_tier = 'free' WHERE id = ? AND subscription_tier IN ('pro', 'universidades')",
-        [targetUserId]
-      );
+    const [schoolRows] = await pool.query<mysql.RowDataPacket[]>(
+      "SELECT id FROM school_teachers WHERE user_id = ? AND status = 'active' LIMIT 1",
+      [targetUserId]
+    );
+    const [otherUniRows] = await pool.query<mysql.RowDataPacket[]>(
+      "SELECT id FROM university_members WHERE user_id = ? AND status = 'active' LIMIT 1",
+      [targetUserId]
+    );
+
+    if (billingRows.length === 0 && otherUniRows.length === 0) {
+      if (schoolRows.length > 0) {
+        await pool.execute(
+          "UPDATE users SET subscription_tier = 'schools' WHERE id = ? AND subscription_tier IN ('pro', 'universities', 'universidades')",
+          [targetUserId]
+        );
+      } else {
+        await pool.execute(
+          "UPDATE users SET subscription_tier = 'free' WHERE id = ? AND subscription_tier IN ('pro', 'universities', 'universidades')",
+          [targetUserId]
+        );
+      }
     }
 
     logger.db.info(`Miembro universitario ${memberId} (usuario ${targetUserId}) removido por admin ${adminId}`);

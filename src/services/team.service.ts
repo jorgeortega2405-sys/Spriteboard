@@ -1,11 +1,11 @@
+import crypto from 'crypto';
+import mysql from 'mysql2/promise';
 import { canvasPool, pool } from '../config/database.config.js';
 import { Canvas } from '../types/canvas.types.js';
 import { CreateTeamDto, Team, TeamMember, UpdateTeamDto } from '../types/team.types.js';
 import { logger } from './logger.service.js';
 import { createNotification } from './notification.service.js';
 import { getEffectiveTiersForCanvases, getTierLimits } from './subscription.service.js';
-import crypto from 'crypto';
-import mysql from 'mysql2/promise';
 
 export async function createTeam(ownerId: number, dto: CreateTeamDto): Promise<Team> {
   const uuid = crypto.randomUUID();
@@ -23,19 +23,23 @@ export async function createTeam(ownerId: number, dto: CreateTeamDto): Promise<T
     throw new Error('Las cuentas de Educación gestionan sus aulas y salones desde la sección Educación.');
   }
 
+  if (!['business', 'negocios'].includes(userTier)) {
+    throw new Error('La creación de equipos de trabajo es exclusiva del plan Spriteboard Negocios.');
+  }
+
   const tierLimits = getTierLimits(userTier);
 
   if (tierLimits.maxTeams <= 0) {
-    throw new Error('La creación de equipos requiere una suscripción Pro o Negocios.');
+    throw new Error('La creación de equipos de trabajo es exclusiva del plan Spriteboard Negocios.');
   }
 
   const [existingTeams] = await pool.query<mysql.RowDataPacket[]>(
-    'SELECT COUNT(id) AS total FROM teams WHERE owner_id = ?',
+    "SELECT COUNT(id) AS total FROM teams WHERE owner_id = ? AND team_type = 'team'",
     [ownerId]
   );
   const ownedCount = Number(existingTeams[0]?.total || 0);
   if (ownedCount >= tierLimits.maxTeams) {
-    throw new Error(`El plan Pro permite un máximo de ${tierLimits.maxTeams} equipo. Mejora a Negocios para crear equipos ilimitados.`);
+    throw new Error(`Has alcanzado el límite de equipos permitidos (${tierLimits.maxTeams}). Mejora tu plan para continuar.`);
   }
 
   try {
@@ -77,7 +81,7 @@ export async function getUserTeams(userId: number): Promise<Team[]> {
        FROM teams t
        INNER JOIN team_members tm ON tm.team_id = t.id AND (tm.user_id = ? OR t.owner_id = ?)
        LEFT JOIN team_members all_tm ON all_tm.team_id = t.id
-       WHERE tm.user_id = ? OR t.owner_id = ?
+       WHERE (tm.user_id = ? OR t.owner_id = ?) AND t.team_type = 'team'
        GROUP BY t.id, t.uuid, t.owner_id, t.name, t.description, t.color, t.team_type, t.join_code, t.school_id, t.created_at, t.updated_at, user_role
        ORDER BY t.updated_at DESC`,
       [userId, userId, userId, userId, userId]
@@ -273,7 +277,7 @@ export async function addTeamMember(
       [team.id, targetUserId]
     );
     if (alreadyMember.length === 0 && memberCount >= tierLimits.maxTeamMembers) {
-      throw new Error(`El plan Pro permite un máximo de ${tierLimits.maxTeamMembers} miembros por equipo. Mejora a Negocios para miembros ilimitados.`);
+      throw new Error(`Has alcanzado el límite de miembros permitidos para este equipo (${tierLimits.maxTeamMembers}). Mejora a Negocios para miembros ilimitados.`);
     }
 
     const [userRows] = await pool.query<mysql.RowDataPacket[]>(

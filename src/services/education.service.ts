@@ -25,7 +25,7 @@ export async function createClassroom(
     );
 
     const rawTier = (userRows[0]?.subscription_tier || 'free').toLowerCase();
-    const canCreate = ['docentes', 'escuelas', 'education', 'business', 'negocios', 'pro', 'universidades', 'universities'].includes(rawTier);
+    const canCreate = ['docentes', 'teachers', 'escuelas', 'schools', 'education', 'business', 'negocios', 'pro', 'universidades', 'universities'].includes(rawTier);
 
     if (!canCreate) {
       throw new Error('La creación de aulas requiere una suscripción de Docente, Institución o Negocios.');
@@ -476,7 +476,7 @@ export async function removeSchoolTeacher(
 
     if (otherSchools.length === 0 && billingRows.length === 0) {
       await pool.execute(
-        "UPDATE users SET subscription_tier = 'free' WHERE id = ? AND subscription_tier = 'escuelas'",
+        "UPDATE users SET subscription_tier = 'free' WHERE id = ? AND subscription_tier IN ('schools', 'escuelas')",
         [targetUserId]
       );
     }
@@ -542,7 +542,7 @@ export async function addSchoolTeacher(
     }
 
     await pool.execute(
-      "UPDATE users SET subscription_tier = 'escuelas' WHERE id = ? AND subscription_tier = 'free'",
+      "UPDATE users SET subscription_tier = 'schools' WHERE id = ? AND subscription_tier = 'free'",
       [targetUser.id]
     );
 

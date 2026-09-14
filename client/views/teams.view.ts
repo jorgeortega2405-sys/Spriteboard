@@ -132,7 +132,7 @@ class TeamsController {
     const { signal } = this.abortController;
 
     this.btnLockedUpgrade?.addEventListener('click', () => {
-      openUpgradeModal('pro');
+      openUpgradeModal('business');
     }, { signal });
 
     this.btnLockedHome?.addEventListener('click', () => {
@@ -360,7 +360,8 @@ class TeamsController {
       return;
     }
 
-    if (userTier === 'free' && !hasTeams) {
+    const canCreateTeams = ['business', 'negocios'].includes(userTier);
+    if (!canCreateTeams && !hasTeams) {
       if (this.lockedStateEl) {
         this.lockedStateEl.classList.remove('is-hidden');
         renderIcons(this.lockedStateEl);
@@ -561,14 +562,8 @@ class TeamsController {
         navigate('/education');
         return;
       }
-      if (userTier === 'free') {
-        showToast(t('teams.toast_upgrade_required') || 'La creación de equipos requiere una suscripción Pro o Negocios.', 'warning');
-        openUpgradeModal('pro');
-        return;
-      }
-      const ownedTeams = this.allTeams.filter((t) => t.user_role === 'owner');
-      if (userTier === 'pro' && ownedTeams.length >= 1) {
-        showToast(t('teams.toast_pro_teams_limit') || 'El plan Pro permite 1 equipo. Mejora a Negocios para equipos ilimitados.', 'warning');
+      if (!['business', 'negocios'].includes(userTier)) {
+        showToast(t('teams.toast_upgrade_required') || 'La creación de equipos requiere una suscripción a Spriteboard Negocios.', 'warning');
         openUpgradeModal('business');
         return;
       }

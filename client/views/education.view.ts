@@ -148,6 +148,26 @@ class EducationController {
   private bannerFacultyError: HTMLElement | null = null;
   private cachedCampuses: any[] = [];
 
+  private cardInstitutionSso: HTMLElement | null = null;
+  private ssoStatusBadge: HTMLElement | null = null;
+  private btnCardEditSso: HTMLElement | null = null;
+  private ssoInactiveBox: HTMLElement | null = null;
+  private btnCardActivateSso: HTMLElement | null = null;
+  private ssoActiveBox: HTMLElement | null = null;
+  private ssoActiveDomain: HTMLElement | null = null;
+  private ssoCardAcsUrl: HTMLElement | null = null;
+  private btnCopyCardAcs: HTMLElement | null = null;
+  private ssoCardScimUrl: HTMLElement | null = null;
+  private btnCopyCardScim: HTMLElement | null = null;
+  private ssoCardTokenStatus: HTMLElement | null = null;
+  private btnCardRegenScim: HTMLElement | null = null;
+  private inputCardScimToken: HTMLInputElement | null = null;
+  private btnToggleCardTokenVisibility: HTMLElement | null = null;
+  private iconCardTokenEye: HTMLElement | null = null;
+  private btnCopyCardScimToken: HTMLElement | null = null;
+  private rawScimToken: string | null = null;
+  private ssoTenant: any = null;
+
   constructor(container: HTMLElement, activeTab: 'classrooms' | 'teachers' | 'students' | 'school' = 'classrooms') {
     this.container = container;
     this.activeTab = activeTab;
@@ -294,6 +314,24 @@ class EducationController {
     this.inputNewFacultyCode = this.container.querySelector<HTMLInputElement>('[data-ref="input-new-faculty-code"]');
     this.facultiesListContainer = this.container.querySelector<HTMLElement>('[data-ref="faculties-list-container"]');
     this.bannerFacultyError = this.container.querySelector<HTMLElement>('[data-ref="banner-faculty-error"]');
+
+    this.cardInstitutionSso = this.container.querySelector<HTMLElement>('[data-ref="card-institution-sso"]');
+    this.ssoStatusBadge = this.container.querySelector<HTMLElement>('[data-ref="sso-status-badge"]');
+    this.btnCardEditSso = this.container.querySelector<HTMLElement>('[data-ref="btn-card-edit-sso"]');
+    this.ssoInactiveBox = this.container.querySelector<HTMLElement>('[data-ref="sso-inactive-box"]');
+    this.btnCardActivateSso = this.container.querySelector<HTMLElement>('[data-ref="btn-card-activate-sso"]');
+    this.ssoActiveBox = this.container.querySelector<HTMLElement>('[data-ref="sso-active-box"]');
+    this.ssoActiveDomain = this.container.querySelector<HTMLElement>('[data-ref="sso-active-domain"]');
+    this.ssoCardAcsUrl = this.container.querySelector<HTMLElement>('[data-ref="sso-card-acs-url"]');
+    this.btnCopyCardAcs = this.container.querySelector<HTMLElement>('[data-ref="btn-copy-card-acs"]');
+    this.ssoCardScimUrl = this.container.querySelector<HTMLElement>('[data-ref="sso-card-scim-url"]');
+    this.btnCopyCardScim = this.container.querySelector<HTMLElement>('[data-ref="btn-copy-card-scim"]');
+    this.ssoCardTokenStatus = this.container.querySelector<HTMLElement>('[data-ref="sso-card-token-status"]');
+    this.btnCardRegenScim = this.container.querySelector<HTMLElement>('[data-ref="btn-card-regen-scim"]');
+    this.inputCardScimToken = this.container.querySelector<HTMLInputElement>('[data-ref="input-card-scim-token"]');
+    this.btnToggleCardTokenVisibility = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-card-token-visibility"]');
+    this.iconCardTokenEye = this.container.querySelector<HTMLElement>('[data-ref="icon-card-token-eye"]');
+    this.btnCopyCardScimToken = this.container.querySelector<HTMLElement>('[data-ref="btn-copy-card-scim-token"]');
   }
 
   private setupDropdowns(): void {
@@ -476,10 +514,112 @@ class EducationController {
     this.btnEditSchool?.addEventListener('click', () => this.openSchoolModal(), { signal });
     this.btnOpenSchoolEdit?.addEventListener('click', () => this.openSchoolModal(), { signal });
     this.btnOpenUniversityCampuses?.addEventListener('click', () => this.openCampusesModal(), { signal });
-    this.btnOpenEducationSso?.addEventListener('click', () => {
-      const userTier = (currentUser as any)?.subscription_tier;
+    const getTenantType = () => {
+      const userTier = ((currentUser as any)?.subscription_tier || '').toLowerCase();
       const isUniv = userTier === 'universidades' || userTier === 'universities';
-      void openEnterpriseSsoModal({ tenantType: isUniv ? 'university' : 'school' });
+      return isUniv ? 'university' : 'school';
+    };
+
+    const handleOpenSsoConfig = () => {
+      void openEnterpriseSsoModal({
+        defaultDomain: this.school?.domain || undefined,
+        tenantType: getTenantType(),
+      });
+    };
+
+    this.btnOpenEducationSso?.addEventListener('click', () => {
+      const tenantType = getTenantType();
+      if (this.ssoTenant && this.ssoTenant.sso_enabled) {
+        handleOpenSsoConfig();
+      } else {
+        openModal({
+          confirmText: 'Configurar y Activar',
+          description: 'El inicio de sesión único (SSO) y SCIM 2.0 permiten vincular el dominio institucional para autenticar a docentes y alumnos mediante Google Workspace, Microsoft Entra ID u Okta, y aprovisionar cuentas de forma automática.\n\n¿Deseas activar y configurar SSO y SCIM para tu institución?',
+          onConfirm: () => {
+            handleOpenSsoConfig();
+          },
+          title: 'Activar Inicio de Sesión Único (SSO) y SCIM',
+        });
+      }
+    }, { signal });
+
+    this.btnCardEditSso?.addEventListener('click', () => handleOpenSsoConfig(), { signal });
+    this.btnCardActivateSso?.addEventListener('click', () => handleOpenSsoConfig(), { signal });
+
+    this.btnCopyCardAcs?.addEventListener('click', () => {
+      const text = this.ssoCardAcsUrl?.textContent || `${window.location.origin}/api/auth/sso/saml/callback`;
+      void navigator.clipboard.writeText(text);
+      showToast('URL de ACS copiada al portapapeles', 'success');
+    }, { signal });
+
+    this.btnCopyCardScim?.addEventListener('click', () => {
+      const text = this.ssoCardScimUrl?.textContent || `${window.location.origin}/api/scim/v2`;
+      void navigator.clipboard.writeText(text);
+      showToast('Endpoint base de SCIM copiado al portapapeles', 'success');
+    }, { signal });
+
+    this.btnToggleCardTokenVisibility?.addEventListener('click', () => {
+      if (!this.inputCardScimToken) return;
+      const isPassword = this.inputCardScimToken.type === 'password';
+      this.inputCardScimToken.type = isPassword ? 'text' : 'password';
+      if (this.iconCardTokenEye) {
+        this.iconCardTokenEye.textContent = isPassword ? 'visibility_off' : 'visibility';
+      }
+      if (this.rawScimToken) {
+        this.inputCardScimToken.value = this.rawScimToken;
+      }
+    }, { signal });
+
+    this.btnCopyCardScimToken?.addEventListener('click', () => {
+      if (this.rawScimToken) {
+        void navigator.clipboard.writeText(this.rawScimToken);
+        showToast('Token SCIM copiado al portapapeles', 'success');
+      } else {
+        showToast('Por motivos de seguridad, regenera el token para poder copiarlo por completo.', 'warning');
+      }
+    }, { signal });
+
+    this.btnCardRegenScim?.addEventListener('click', () => {
+      openModal({
+        confirmClass: 'component-button--danger',
+        confirmText: 'Regenerar Token',
+        description: '¿Estás seguro de que deseas regenerar el token SCIM? Las conexiones activas que usen el token anterior dejarán de sincronizar hasta que actualices la clave en tu proveedor de identidad.',
+        onConfirm: async () => {
+          const type = getTenantType();
+          try {
+            const res = await postApi(API_ROUTES.enterprise.generateScimToken, {
+              tenantId: this.ssoTenant?.id || null,
+              type,
+            });
+            if (!res.ok) {
+              const err = await res.json().catch(() => ({}));
+              showToast(err?.error || 'Error al regenerar token SCIM', 'danger');
+              return;
+            }
+            const data = await res.json();
+            this.rawScimToken = data.token;
+            if (this.inputCardScimToken) {
+              this.inputCardScimToken.value = data.token;
+              this.inputCardScimToken.type = 'text';
+            }
+            if (this.iconCardTokenEye) {
+              this.iconCardTokenEye.textContent = 'visibility_off';
+            }
+            if (this.ssoCardTokenStatus) {
+              this.ssoCardTokenStatus.textContent = 'Token activo para sincronización';
+            }
+            showToast('Nuevo token SCIM generado exitosamente. ¡Cópialo ahora!', 'success');
+            void this.loadSchoolSsoConfig();
+          } catch {
+            showToast('Error de conexión al regenerar token SCIM', 'danger');
+          }
+        },
+        title: 'Regenerar token SCIM 2.0',
+      });
+    }, { signal });
+
+    window.addEventListener('enterprise-sso-updated', () => {
+      void this.loadSchoolSsoConfig();
     }, { signal });
     const btnCloseSchool = this.container.querySelector<HTMLElement>('[data-ref="btn-close-school-modal"]');
     const btnCancelSchool = this.container.querySelector<HTMLElement>('[data-ref="btn-cancel-school"]');
@@ -659,6 +799,7 @@ class EducationController {
     }
 
     void this.loadUniversityStats();
+    void this.loadSchoolSsoConfig();
     this.renderTeachersTable();
     this.renderStudentsTable();
   }
@@ -676,6 +817,70 @@ class EducationController {
       if (this.statSchoolFaculties) this.statSchoolFaculties.textContent = String(data.total_faculties || 0);
       if (this.btnOpenUniversityCampuses) this.btnOpenUniversityCampuses.classList.remove('is-hidden');
     } catch {}
+  }
+
+  private async loadSchoolSsoConfig(): Promise<void> {
+    if (!this.cardInstitutionSso) return;
+
+    const userTier = ((currentUser as any)?.subscription_tier || '').toLowerCase();
+    const isUniv = userTier === 'universidades' || userTier === 'universities';
+    const tenantType = isUniv ? 'university' : 'school';
+
+    const origin = window.location.origin;
+    const acsUrl = `${origin}/api/auth/sso/saml/callback`;
+    const scimUrl = `${origin}/api/scim/v2`;
+
+    if (this.ssoCardAcsUrl) this.ssoCardAcsUrl.textContent = acsUrl;
+    if (this.ssoCardScimUrl) this.ssoCardScimUrl.textContent = scimUrl;
+
+    try {
+      const res = await getApi(API_ROUTES.enterprise.config(tenantType));
+      if (!res.ok) {
+        this.ssoTenant = null;
+        this.renderSchoolSsoUi();
+        return;
+      }
+
+      const data = await res.json();
+      this.ssoTenant = data.tenant || null;
+      this.renderSchoolSsoUi();
+    } catch {
+      this.ssoTenant = null;
+      this.renderSchoolSsoUi();
+    }
+  }
+
+  private renderSchoolSsoUi(): void {
+    const isConfigured = Boolean(this.ssoTenant && this.ssoTenant.sso_enabled);
+
+    if (this.ssoStatusBadge) {
+      if (isConfigured) {
+        this.ssoStatusBadge.className = 'component-badge component-badge--sm component-badge--success';
+        this.ssoStatusBadge.textContent = 'Activo';
+      } else {
+        this.ssoStatusBadge.className = 'component-badge component-badge--sm component-badge--neutral';
+        this.ssoStatusBadge.textContent = 'No configurado';
+      }
+    }
+
+    if (isConfigured) {
+      this.ssoInactiveBox?.classList.add('is-hidden');
+      this.ssoActiveBox?.classList.remove('is-hidden');
+      if (this.ssoActiveDomain) {
+        this.ssoActiveDomain.textContent = this.ssoTenant.domain || '—';
+      }
+      if (this.ssoCardTokenStatus) {
+        this.ssoCardTokenStatus.textContent = this.ssoTenant.scim_enabled
+          ? 'Token activo para sincronización'
+          : 'Sin token SCIM activo';
+      }
+      if (this.inputCardScimToken && !this.rawScimToken) {
+        this.inputCardScimToken.value = '••••••••••••••••••••••••••••••••';
+      }
+    } else {
+      this.ssoInactiveBox?.classList.remove('is-hidden');
+      this.ssoActiveBox?.classList.add('is-hidden');
+    }
   }
 
   private openCampusesModal(): void {
@@ -1380,7 +1585,7 @@ class EducationController {
 
   private openCreateModal(): void {
     const rawTier = (currentUser?.subscription_tier || 'free').toLowerCase();
-    const canCreate = ['docentes', 'escuelas', 'education', 'business', 'negocios', 'pro', 'universidades', 'universities'].includes(rawTier);
+    const canCreate = ['docentes', 'teachers', 'escuelas', 'schools', 'education', 'business', 'negocios', 'pro', 'universidades', 'universities'].includes(rawTier);
 
     if (!canCreate) {
       showToast('La creación de aulas escolares requiere el plan Docentes o Escuelas e Instituciones.', 'warning');

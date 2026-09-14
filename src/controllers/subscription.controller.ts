@@ -1,3 +1,4 @@
+import { Request, Response } from 'express';
 import { config } from '../config/env.config.js';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import { updateActiveAccountInSession } from '../services/auth.service.js';
@@ -6,7 +7,7 @@ import { purchaseService } from '../services/purchase.service.js';
 import { getUserStorageUsage } from '../services/storage.service.js';
 import { stripeService } from '../services/stripe.service.js';
 import { getTierLimits, subscriptionService } from '../services/subscription.service.js';
-import { Request, Response } from 'express';
+import { SubscriptionTierId } from '../types/subscription.types.js';
 
 export async function getSubscriptions(_req: Request, res: Response): Promise<void> {
   try {
@@ -78,7 +79,7 @@ export async function verifySession(req: Request, res: Response): Promise<void> 
     const result = await stripeService.verifyAndSyncCheckoutSession(sessionId, user.id);
 
     updateActiveAccountInSession(res, req, {
-      subscription_tier: result.tier as 'free' | 'plus' | 'pro' | 'ultra',
+      subscription_tier: result.tier as SubscriptionTierId,
     });
 
     res.json({

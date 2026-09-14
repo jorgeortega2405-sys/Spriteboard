@@ -21,8 +21,8 @@ export interface CanvasItem {
   is_favorite?: boolean;
   owner_name?: string | null;
   owner_avatar?: string | null;
-  owner_tier?: 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios' | 'docentes' | 'escuelas' | 'education' | 'universidades' | 'universities' | null;
-  effective_tier?: 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios' | 'docentes' | 'escuelas' | 'education' | 'universidades' | 'universities' | null;
+  owner_tier?: 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios' | 'docentes' | 'teachers' | 'escuelas' | 'schools' | 'education' | 'universidades' | 'universities' | null;
+  effective_tier?: 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios' | 'docentes' | 'teachers' | 'escuelas' | 'schools' | 'education' | 'universidades' | 'universities' | null;
   team_id?: number | null;
   team_uuid?: string | null;
   team_info?: { id: number; uuid: string; name: string; color?: string } | null;
@@ -77,7 +77,7 @@ export interface CanvasMember {
   username: string;
   email?: string | null;
   avatar_url?: string | null;
-  subscription_tier?: 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios' | 'escuelas' | 'docentes' | 'education' | 'universidades' | 'universities';
+  subscription_tier?: 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios' | 'escuelas' | 'schools' | 'docentes' | 'teachers' | 'education' | 'universidades' | 'universities';
   subscription_tier_color?: string;
   role: 'editor' | 'viewer';
   created_at: string;
