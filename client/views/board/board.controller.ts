@@ -8,7 +8,7 @@ import { renderIcons } from '../../services/icon.service.js';
 import { showToast } from '../../services/toast.service.js';
 import { CanvasItem } from '../../types/canvas.types.js';
 import { setupDropdown } from '../../utils/dom.util.js';
-import { getCollaboratorColor } from '../design/design-color.util.js';
+import { generateShadingRamp, getCollaboratorColor } from '../design/design-color.util.js';
 import { BoardCollaborationManager } from './board-collaboration.manager.js';
 import { computeElementsBoundingBox, getElementBoundingBox, hitTestElement, hitTestResizeHandle, moveElementByDrag, resizeElementByHandle } from './board-elements.manager.js';
 import { exportJson, exportPng, exportSvg, generateThumbnail } from './board-export.service.js';
@@ -36,6 +36,15 @@ export class BoardController {
   private collaboratorsBarEl: HTMLElement | null = null;
   private collaboratorsListEl: HTMLElement | null = null;
   private colorPanelTarget: 'stroke' | 'fill' = 'stroke';
+  private colorsActiveSwatchEl: HTMLElement | null = null;
+  private colorsCustomInputEl: HTMLInputElement | null = null;
+  private colorsHexInputEl: HTMLInputElement | null = null;
+  private colorsHexTextEl: HTMLElement | null = null;
+  private colorsPaletteGridEl: HTMLElement | null = null;
+  private colorsPanelEl: HTMLElement | null = null;
+  private colorsRampGridEl: HTMLElement | null = null;
+  private colorsRecentGridEl: HTMLElement | null = null;
+  private colorsTitleEl: HTMLElement | null = null;
   private container: HTMLElement;
   private ctx: CanvasRenderingContext2D | null = null;
   private currentCanvasItem: CanvasItem | null = null;
@@ -65,6 +74,7 @@ export class BoardController {
   private pixelGrid = new BoardPixelGridManager();
   private publicRole: 'editor' | 'viewer' = 'editor';
   private rafId: number | null = null;
+  private recentColors: string[] = ['#000000', '#FFFFFF', '#FF0000', '#00FF00', '#0000FF', '#FFFF00'];
   private resizeHandleType: 'tl' | 'tr' | 'bl' | 'br' | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private role: 'editor' | 'owner' | 'viewer' = 'owner';
@@ -73,6 +83,7 @@ export class BoardController {
   private selectionDragOffset: BoardPoint = { x: 0, y: 0 };
   private selectionStartRect = { height: 0, width: 0, x: 0, y: 0 };
   private stickyDefaultColor = '#fef08a';
+  private topToggleColorsBtn: HTMLButtonElement | null = null;
 
   constructor(container: HTMLElement, canvasUuid: string) {
     this.container = container;
@@ -99,6 +110,7 @@ export class BoardController {
     this.setupDropdowns();
     this.setupResizeObserver();
     this.bindEvents();
+    this.initColorsUI();
     this.renderPixelPaletteSwatches();
     this.updateUndoRedoUI();
     this.updateZoomUI();
@@ -249,21 +261,16 @@ export class BoardController {
             }
             if (project.background) {
               const bgType = project.background.type || 'dots';
-              const isDark = project.background.color === '#0f172a' || project.background.color === '#18181b' || bgType === 'dark';
+              const rawColor = project.background.color;
+              const isBlueOrDark = rawColor === '#0f172a' || rawColor === '#18181b' || bgType === 'dark';
               this.boardBackground = {
-                color: project.background.color || (isDark ? '#0f172a' : '#ffffff'),
-                dotColor: project.background.dotColor || (isDark ? 'rgba(255, 255, 255, 0.15)' : '#cbd5e1'),
-                type: (bgType as BackgroundType) || 'dots',
+                color: isBlueOrDark ? '#ffffff' : (rawColor || '#ffffff'),
+                dotColor: isBlueOrDark ? '#cbd5e1' : (project.background.dotColor || '#cbd5e1'),
+                type: (bgType === 'dark' ? 'dots' : bgType) as BackgroundType,
               };
             }
           }
         } catch {}
-      }
-
-      const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark' || document.documentElement.classList.contains('dark-theme');
-      if (isDarkMode && this.boardBackground.color === '#ffffff') {
-        this.boardBackground.color = '#0f172a';
-        this.boardBackground.dotColor = 'rgba(255, 255, 255, 0.15)';
       }
 
       this.history.pushState(this.elements);
@@ -739,59 +746,38 @@ export class BoardController {
       { signal }
     );
 
+    this.topToggleColorsBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-top-toggle-colors"]');
+    this.topToggleColorsBtn?.addEventListener(
+      'click',
+      (e) => {
+        e.stopPropagation();
+        this.toggleColorsPanel('stroke');
+      },
+      { signal }
+    );
+
     const btnCloseColors = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-close-board-colors"]');
     btnCloseColors?.addEventListener('click', () => this.hideColorsPanel(), { signal });
 
     const btnCloseOptions = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-close-board-options"]');
     btnCloseOptions?.addEventListener('click', () => this.hideOptionsTray(), { signal });
 
-    const colorSwatches = this.container.querySelectorAll<HTMLButtonElement>('.board-color-swatch');
-    colorSwatches.forEach((swatch) => {
-      swatch.addEventListener(
-        'click',
-        () => {
-          const color = swatch.getAttribute('data-color') || '#000000';
-          if (this.colorPanelTarget === 'fill') {
-            this.setFill(color);
-          } else {
-            this.setColor(color);
-          }
-          this.updateColorPanelUI(color);
-        },
-        { signal }
-      );
-    });
-
-    const customColorInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-custom-color"]');
-    const customHexInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-custom-hex"]');
-    customColorInput?.addEventListener(
+    this.colorsCustomInputEl?.addEventListener(
       'input',
       () => {
-        const color = customColorInput.value;
-        if (customHexInput) customHexInput.value = color;
-        if (this.colorPanelTarget === 'fill') {
-          this.setFill(color);
-        } else {
-          this.setColor(color);
-        }
-        this.updateColorPanelUI(color);
+        const color = this.colorsCustomInputEl?.value || '#000000';
+        this.handleColorPicked(color);
       },
       { signal }
     );
 
-    customHexInput?.addEventListener(
+    this.colorsHexInputEl?.addEventListener(
       'input',
       () => {
-        let hex = customHexInput.value.trim();
-        if (!hex.startsWith('#')) hex = '#' + hex;
+        let hex = this.colorsHexInputEl?.value.trim() || '';
+        if (!hex.startsWith('#') && hex.length > 0) hex = '#' + hex;
         if (/^#[0-9A-Fa-f]{6}$/.test(hex)) {
-          if (customColorInput) customColorInput.value = hex;
-          if (this.colorPanelTarget === 'fill') {
-            this.setFill(hex);
-          } else {
-            this.setColor(hex);
-          }
-          this.updateColorPanelUI(hex);
+          this.handleColorPicked(hex);
         }
       },
       { signal }
@@ -839,7 +825,7 @@ export class BoardController {
       'click',
       (e: MouseEvent) => {
         const target = e.target as HTMLElement | null;
-        if (!target?.closest('[data-ref="board-colors-panel"], [data-ref="btn-color-prop"], [data-ref="btn-fill-prop"]')) {
+        if (!target?.closest('[data-ref="board-colors-panel"], [data-ref="btn-color-prop"], [data-ref="btn-fill-prop"], [data-ref="btn-top-toggle-colors"]')) {
           this.hideColorsPanel();
         }
       },
@@ -880,55 +866,201 @@ export class BoardController {
     this.activeTrayGroup = null;
   }
 
+  private loadRecentColors(): void {
+    try {
+      const stored = localStorage.getItem('spriteboard_recent_colors');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          this.recentColors = parsed.filter((c: unknown): c is string => typeof c === 'string' && /^#[0-9A-Fa-f]{6}$/.test(c)).slice(0, 12);
+        }
+      }
+    } catch {}
+
+    if (this.recentColors.length === 0) {
+      this.recentColors = ['#000000', '#FFFFFF', '#FF0000', '#00FF00', '#0000FF', '#FFFF00'];
+    }
+  }
+
+  private saveRecentColors(): void {
+    try {
+      localStorage.setItem('spriteboard_recent_colors', JSON.stringify(this.recentColors.slice(0, 12)));
+    } catch {}
+  }
+
+  private initColorsUI(): void {
+    this.colorsPanelEl = this.container.querySelector<HTMLElement>('[data-ref="board-colors-panel"]');
+    this.colorsTitleEl = this.container.querySelector<HTMLElement>('[data-ref="board-colors-title"]');
+    this.colorsPaletteGridEl = this.container.querySelector<HTMLElement>('[data-ref="board-palette-grid"]');
+    this.colorsRecentGridEl = this.container.querySelector<HTMLElement>('[data-ref="board-colors-recent-grid"]');
+    this.colorsRampGridEl = this.container.querySelector<HTMLElement>('[data-ref="board-colors-ramp-grid"]');
+    this.colorsHexTextEl = this.container.querySelector<HTMLElement>('[data-ref="board-colors-hex-text"]');
+    this.colorsHexInputEl = this.container.querySelector<HTMLInputElement>('[data-ref="input-custom-hex"]');
+    this.colorsCustomInputEl = this.container.querySelector<HTMLInputElement>('[data-ref="input-custom-color"]');
+    this.colorsActiveSwatchEl = this.container.querySelector<HTMLElement>('[data-ref="board-color-active-swatch"]');
+
+    this.loadRecentColors();
+    this.renderDefaultPalette();
+    this.renderRecentColors();
+    this.updateColorPanelUI(this.currentColor);
+  }
+
+  private renderDefaultPalette(): void {
+    if (!this.colorsPaletteGridEl) return;
+    this.colorsPaletteGridEl.innerHTML = '';
+
+    const currentActiveColor = (this.colorPanelTarget === 'fill' ? this.currentFillColor : this.currentColor).toUpperCase();
+
+    const transparentSwatch = document.createElement('button');
+    transparentSwatch.type = 'button';
+    transparentSwatch.className = `design-color-swatch-btn is-transparent ${currentActiveColor === 'TRANSPARENT' ? 'is-active' : ''}`;
+    transparentSwatch.setAttribute('data-ref', 'color-swatch-transparent');
+    transparentSwatch.setAttribute('data-color', 'transparent');
+    transparentSwatch.setAttribute('data-tooltip', 'Transparente / Sin relleno');
+    transparentSwatch.setAttribute('aria-label', 'Transparente');
+    transparentSwatch.addEventListener('click', () => {
+      this.handleColorPicked('transparent');
+    });
+    this.colorsPaletteGridEl.appendChild(transparentSwatch);
+
+    for (const color of DEFAULT_CLASSIC_PALETTE) {
+      const swatch = document.createElement('button');
+      swatch.type = 'button';
+      swatch.className = `design-color-swatch-btn ${color.toUpperCase() === currentActiveColor ? 'is-active' : ''}`;
+      swatch.setAttribute('data-ref', `color-swatch-${color.replace('#', '')}`);
+      swatch.setAttribute('data-color', color);
+      swatch.setAttribute('data-tooltip', color);
+      swatch.setAttribute('aria-label', `Color ${color}`);
+      swatch.style.backgroundColor = color;
+
+      swatch.addEventListener('click', () => {
+        this.handleColorPicked(color);
+      });
+
+      this.colorsPaletteGridEl.appendChild(swatch);
+    }
+  }
+
+  private renderShadingRamps(): void {
+    if (!this.colorsRampGridEl) return;
+    this.colorsRampGridEl.innerHTML = '';
+
+    const currentVal = this.colorPanelTarget === 'fill' ? this.currentFillColor : this.currentColor;
+    if (currentVal === 'transparent' || !/^#[0-9A-Fa-f]{6}$/.test(currentVal)) {
+      return;
+    }
+
+    const ramp = generateShadingRamp(currentVal);
+    const labels = ['Sombra profunda', 'Sombra', 'Base', 'Brillo', 'Brillo intenso'];
+
+    ramp.forEach((color, idx) => {
+      const swatch = document.createElement('button');
+      swatch.type = 'button';
+      swatch.className = `design-color-swatch-btn ${idx === 2 ? 'is-base' : ''} ${color.toUpperCase() === currentVal.toUpperCase() ? 'is-active' : ''}`;
+      swatch.setAttribute('data-ref', `color-ramp-${idx}`);
+      swatch.setAttribute('data-color', color);
+      swatch.setAttribute('data-tooltip', `${labels[idx]} (${color})`);
+      swatch.setAttribute('aria-label', `${labels[idx]} ${color}`);
+      swatch.style.backgroundColor = color;
+
+      swatch.addEventListener('click', () => {
+        this.handleColorPicked(color);
+      });
+
+      this.colorsRampGridEl?.appendChild(swatch);
+    });
+  }
+
+  private renderRecentColors(): void {
+    if (!this.colorsRecentGridEl) return;
+    this.colorsRecentGridEl.innerHTML = '';
+
+    const currentVal = (this.colorPanelTarget === 'fill' ? this.currentFillColor : this.currentColor).toUpperCase();
+
+    for (const color of this.recentColors) {
+      const swatch = document.createElement('button');
+      swatch.type = 'button';
+      swatch.className = `design-color-swatch-btn ${color.toUpperCase() === currentVal ? 'is-active' : ''}`;
+      swatch.setAttribute('data-ref', `color-recent-${color.replace('#', '')}`);
+      swatch.setAttribute('data-color', color);
+      swatch.setAttribute('data-tooltip', color);
+      swatch.setAttribute('aria-label', `Color reciente ${color}`);
+      swatch.style.backgroundColor = color;
+
+      swatch.addEventListener('click', () => {
+        this.handleColorPicked(color);
+      });
+
+      this.colorsRecentGridEl.appendChild(swatch);
+    }
+  }
+
+  private handleColorPicked(color: string): void {
+    if (this.colorPanelTarget === 'fill') {
+      this.setFill(color, true);
+    } else {
+      this.setColor(color, true);
+    }
+    this.updateColorPanelUI(color);
+  }
+
   private toggleColorsPanel(target: 'stroke' | 'fill'): void {
-    const panel = this.container.querySelector<HTMLElement>('[data-ref="board-colors-panel"]');
-    if (!panel) return;
-    const isHidden = panel.classList.contains('is-hidden');
+    if (!this.colorsPanelEl) return;
+    const isHidden = this.colorsPanelEl.classList.contains('is-hidden');
     if (!isHidden && this.colorPanelTarget === target) {
-      panel.classList.add('is-hidden');
+      this.colorsPanelEl.classList.add('is-hidden');
       return;
     }
 
     this.colorPanelTarget = target;
-    const title = this.container.querySelector<HTMLElement>('[data-ref="board-colors-title"]');
-    if (title) {
-      title.textContent = target === 'stroke' ? 'Color de trazo' : 'Color de relleno';
+    if (this.colorsTitleEl) {
+      this.colorsTitleEl.textContent = target === 'stroke' ? 'Color de trazo' : 'Color de relleno';
     }
 
+    this.renderDefaultPalette();
+    this.renderRecentColors();
     const currentVal = target === 'stroke' ? this.currentColor : this.currentFillColor;
     this.updateColorPanelUI(currentVal);
-    panel.classList.remove('is-hidden');
+    this.colorsPanelEl.classList.remove('is-hidden');
   }
 
   private hideColorsPanel(): void {
-    const panel = this.container.querySelector<HTMLElement>('[data-ref="board-colors-panel"]');
-    if (panel) panel.classList.add('is-hidden');
+    if (this.colorsPanelEl) this.colorsPanelEl.classList.add('is-hidden');
   }
 
   private updateColorPanelUI(color: string): void {
-    const hexText = this.container.querySelector<HTMLElement>('[data-ref="board-colors-hex-text"]');
-    const customHex = this.container.querySelector<HTMLInputElement>('[data-ref="input-custom-hex"]');
-    const customInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-custom-color"]');
-    const activeSwatch = this.container.querySelector<HTMLElement>('[data-ref="board-color-active-swatch"]');
+    const normalized = color.toLowerCase() === 'transparent' ? 'transparent' : color.toUpperCase();
+    const displayColor = normalized === 'transparent' ? 'TRANSPARENTE' : normalized;
 
-    const displayColor = color === 'transparent' ? 'TRANSPARENTE' : color.toUpperCase();
-    if (hexText) hexText.textContent = displayColor;
-    if (customHex && color !== 'transparent') customHex.value = color.toUpperCase();
-    if (customInput && color !== 'transparent' && /^#[0-9A-Fa-f]{6}$/.test(color)) {
-      customInput.value = color;
+    if (this.colorsHexTextEl) {
+      this.colorsHexTextEl.textContent = displayColor;
     }
-    if (activeSwatch) {
-      if (color === 'transparent') {
-        activeSwatch.style.background = 'linear-gradient(45deg, #ef4444 45%, transparent 45%, transparent 55%, #ef4444 55%)';
+    if (this.colorsHexInputEl) {
+      this.colorsHexInputEl.value = normalized === 'transparent' ? '' : normalized;
+    }
+    if (this.colorsCustomInputEl) {
+      if (normalized !== 'transparent' && /^#[0-9A-Fa-f]{6}$/.test(normalized)) {
+        this.colorsCustomInputEl.value = normalized;
+      }
+    }
+    if (this.colorsActiveSwatchEl) {
+      if (normalized === 'transparent') {
+        this.colorsActiveSwatchEl.style.background = 'linear-gradient(45deg, #ef4444 45%, transparent 45%, transparent 55%, #ef4444 55%)';
       } else {
-        activeSwatch.style.background = color;
+        this.colorsActiveSwatchEl.style.background = normalized;
       }
     }
 
-    const swatches = this.container.querySelectorAll<HTMLButtonElement>('.board-color-swatch');
-    swatches.forEach((sw) => {
-      const swColor = sw.getAttribute('data-color');
-      sw.classList.toggle('is-active', swColor === color);
+    this.renderShadingRamps();
+    this.updateActiveColorSwatches(normalized);
+  }
+
+  private updateActiveColorSwatches(activeColor: string): void {
+    const active = activeColor.toUpperCase();
+    if (!this.colorsPanelEl) return;
+    this.colorsPanelEl.querySelectorAll<HTMLButtonElement>('.design-color-swatch-btn').forEach((btn) => {
+      const color = btn.getAttribute('data-color')?.toUpperCase();
+      btn.classList.toggle('is-active', color === active);
     });
   }
 
@@ -967,19 +1099,29 @@ export class BoardController {
     updateScrollButtons();
   }
 
-  private setColor(color: string): void {
-    this.currentColor = color;
+  private setColor(color: string, recordRecent = true): void {
+    const normalized = color.toLowerCase() === 'transparent' ? 'transparent' : color.toUpperCase();
+    this.currentColor = normalized;
     const swatchCircle = this.container.querySelector<HTMLElement>('[data-ref="color-swatch-circle"]');
     if (swatchCircle) {
-      swatchCircle.style.backgroundColor = color;
+      if (normalized === 'transparent') {
+        swatchCircle.style.background = 'linear-gradient(45deg, #ef4444 45%, transparent 45%, transparent 55%, #ef4444 55%)';
+      } else {
+        swatchCircle.style.background = normalized;
+      }
+    }
+    if (recordRecent && normalized !== 'transparent' && /^#[0-9A-Fa-f]{6}$/.test(normalized)) {
+      this.recentColors = [normalized, ...this.recentColors.filter((c) => c.toUpperCase() !== normalized)].slice(0, 12);
+      this.saveRecentColors();
+      this.renderRecentColors();
     }
     if (this.selectedElementId) {
       const el = this.elements.find((item) => item.id === this.selectedElementId);
       if (el) {
         this.pushHistoryState();
-        if (el.type === 'stroke') el.color = color;
-        if (el.type === 'shape') el.strokeColor = color;
-        if (el.type === 'text') el.color = color;
+        if (el.type === 'stroke') el.color = normalized;
+        if (el.type === 'shape') el.strokeColor = normalized;
+        if (el.type === 'text') el.color = normalized;
         this.collaborationManager.broadcastUpdateElement(el);
         this.requestRedraw();
         this.scheduleAutoSave();
@@ -987,21 +1129,27 @@ export class BoardController {
     }
   }
 
-  private setFill(color: string): void {
-    this.currentFillColor = color;
+  private setFill(color: string, recordRecent = true): void {
+    const normalized = color.toLowerCase() === 'transparent' ? 'transparent' : color.toUpperCase();
+    this.currentFillColor = normalized;
     const swatchCircle = this.container.querySelector<HTMLElement>('[data-ref="fill-swatch-circle"]');
     if (swatchCircle) {
-      if (color === 'transparent') {
+      if (normalized === 'transparent') {
         swatchCircle.style.background = 'linear-gradient(45deg, #ef4444 45%, transparent 45%, transparent 55%, #ef4444 55%)';
       } else {
-        swatchCircle.style.background = color;
+        swatchCircle.style.background = normalized;
       }
+    }
+    if (recordRecent && normalized !== 'transparent' && /^#[0-9A-Fa-f]{6}$/.test(normalized)) {
+      this.recentColors = [normalized, ...this.recentColors.filter((c) => c.toUpperCase() !== normalized)].slice(0, 12);
+      this.saveRecentColors();
+      this.renderRecentColors();
     }
     if (this.selectedElementId) {
       const el = this.elements.find((item) => item.id === this.selectedElementId);
       if (el && el.type === 'shape') {
         this.pushHistoryState();
-        el.fillColor = color;
+        el.fillColor = normalized;
         this.collaborationManager.broadcastUpdateElement(el);
         this.requestRedraw();
         this.scheduleAutoSave();

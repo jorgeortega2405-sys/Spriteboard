@@ -311,7 +311,7 @@ export async function getSchoolOrganization(userId: number): Promise<SchoolOrgan
         [userId]
       );
       const tier = (uRows[0]?.subscription_tier || '').toLowerCase();
-      if (['escuelas', 'instituciones', 'education_institution', 'schools', 'docentes'].includes(tier)) {
+      if (['escuelas', 'instituciones', 'education_institution', 'schools'].includes(tier)) {
         const uuid = crypto.randomUUID();
         const defaultName = `Institución de ${uRows[0]?.username || 'Educación'}`;
         const [insertRes] = await pool.execute<mysql.ResultSetHeader>(

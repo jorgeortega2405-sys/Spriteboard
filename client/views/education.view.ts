@@ -127,6 +127,10 @@ class EducationController {
       ]);
     } else {
       await this.loadSchool();
+      if (!this.school || (this.activeTab === 'school' && !this.school.is_admin)) {
+        navigate('/education');
+        return;
+      }
     }
   }
 
@@ -431,18 +435,47 @@ class EducationController {
   private async loadSchool(): Promise<void> {
     try {
       const res = await getApi(API_ROUTES.education.school);
-      if (!res.ok) return;
+      if (!res.ok) {
+        this.school = null;
+        this.renderSchoolUi();
+        return;
+      }
 
       const data = await res.json();
-      if (!data.school) return;
-
-      this.school = data.school;
+      this.school = data.school || null;
       this.renderSchoolUi();
-    } catch {}
+    } catch {
+      this.school = null;
+      this.renderSchoolUi();
+    }
   }
 
   private renderSchoolUi(): void {
-    if (!this.school) return;
+    if (!this.school) {
+      if (this.educationTitle && this.activeTab === 'classrooms') {
+        this.educationTitle.textContent = t('education.my_classrooms_title') || 'Aulas escolares';
+      }
+      if (this.tabFilterDropdownWrapper) {
+        this.tabFilterDropdownWrapper.style.display = 'none';
+      }
+      if (this.tabBtnTeachers) {
+        this.tabBtnTeachers.style.display = 'none';
+      }
+      if (this.tabBtnSchool) {
+        this.tabBtnSchool.style.display = 'none';
+      }
+      if (this.teachersTopActions) {
+        this.teachersTopActions.style.display = 'none';
+      }
+      if (this.schoolTopActions) {
+        this.schoolTopActions.style.display = 'none';
+      }
+      return;
+    }
+
+    if (this.tabFilterDropdownWrapper) {
+      this.tabFilterDropdownWrapper.style.display = '';
+    }
 
     if (this.school.name && this.educationTitle && this.activeTab === 'classrooms') {
       this.educationTitle.textContent = this.school.name;

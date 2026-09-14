@@ -7,76 +7,12 @@ import { initTheme } from './services/theme.service';
 import { initTooltips } from './services/tooltip.service';
 import { initWebSocket } from './services/websocket.service';
 
-let activeResizeObserver: ResizeObserver | null = null;
-
-function setupLayoutScrollSync(): void {
-  const layoutContent = document.querySelector<HTMLElement>('.layout-content:has(.layout-nav)');
-  if (activeResizeObserver) {
-    activeResizeObserver.disconnect();
-    activeResizeObserver = null;
-  }
-  if (!layoutContent) return;
-
-  const scrollableBody = layoutContent.querySelector<HTMLElement>(
-    '.view-scrollable, .home-scrollable, .layout-body--scrollable, .layout-scrollable, .component-table-wrapper'
-  );
-  if (!scrollableBody) {
-    layoutContent.style.removeProperty('--layout-scroll-height');
-    return;
-  }
-
-  const updateScrollHeight = () => {
-    const scrollHeight = scrollableBody.scrollHeight;
-    layoutContent.style.setProperty('--layout-scroll-height', `${scrollHeight}px`);
-  };
-
-  updateScrollHeight();
-
-  activeResizeObserver = new ResizeObserver(() => {
-    updateScrollHeight();
-  });
-
-  activeResizeObserver.observe(scrollableBody);
-  const firstChild = scrollableBody.firstElementChild;
-  if (firstChild) {
-    activeResizeObserver.observe(firstChild);
-  }
-}
-
 function initScrollShadow(): void {
-  setupLayoutScrollSync();
-
-  const appRoot = document.querySelector<HTMLElement>('[data-ref="app"]') || document.body;
-  const routeObserver = new MutationObserver(() => {
-    setupLayoutScrollSync();
-  });
-  routeObserver.observe(appRoot, { childList: true });
-
   document.addEventListener(
     'scroll',
     (e: Event) => {
       const target = e.target as HTMLElement | null;
       if (!target || target.nodeType !== 1) return;
-
-      if (target.classList.contains('layout-content')) {
-        const scrollableBody = target.querySelector<HTMLElement>(
-          '.view-scrollable, .home-scrollable, .layout-body--scrollable, .layout-scrollable, .component-table-wrapper'
-        );
-        if (scrollableBody && scrollableBody.scrollTop !== target.scrollTop) {
-          scrollableBody.scrollTop = target.scrollTop;
-        }
-      } else if (
-        target.classList.contains('view-scrollable') ||
-        target.classList.contains('home-scrollable') ||
-        target.classList.contains('layout-scrollable') ||
-        target.classList.contains('layout-body--scrollable') ||
-        target.classList.contains('component-table-wrapper')
-      ) {
-        const layoutContent = target.closest<HTMLElement>('.layout-content:has(.layout-nav)');
-        if (layoutContent && layoutContent.scrollTop !== target.scrollTop) {
-          layoutContent.scrollTop = target.scrollTop;
-        }
-      }
 
       if (
         target.classList.contains('layout-content') ||

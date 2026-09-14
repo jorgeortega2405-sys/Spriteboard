@@ -1,3 +1,4 @@
+import { createPopper, Instance as PopperInstance } from '@popperjs/core';
 import { navigate } from '../app-router.js';
 import { openCanvasDownloadModal } from '../components/canvas-download-modal.component.js';
 import { createSidebar } from '../components/layout.component.js';
@@ -39,6 +40,7 @@ class SharedController {
   private searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   private activeDropdown: HTMLElement | null = null;
   private activeOpenCard: HTMLElement | null = null;
+  private activePopperInstance: PopperInstance | null = null;
 
   private scrollableEl: HTMLElement | null = null;
   private sectionEl: HTMLElement | null = null;
@@ -324,14 +326,42 @@ class SharedController {
     btnMore?.addEventListener('click', (e) => {
       e.stopPropagation();
       if (menuDropdown) {
-        const isVisible = menuDropdown.style.display !== 'none';
+        const isVisible = menuDropdown.style.display === 'flex';
         this.closeAllDropdowns();
         if (!isVisible) {
-          menuDropdown.style.display = 'block';
+          menuDropdown.style.display = 'flex';
           card.classList.add('has-dropdown-open');
           actionsWrapper?.classList.add('is-open');
           this.activeDropdown = menuDropdown;
           this.activeOpenCard = card;
+
+          if (window.innerWidth > 768) {
+            this.activePopperInstance = createPopper(btnMore, menuDropdown, {
+              placement: 'bottom-end',
+              modifiers: [
+                {
+                  name: 'offset',
+                  options: {
+                    offset: [0, 4],
+                  },
+                },
+                {
+                  name: 'flip',
+                  options: {
+                    fallbackPlacements: ['top-end', 'bottom-start', 'top-start'],
+                    padding: 8,
+                  },
+                },
+                {
+                  name: 'preventOverflow',
+                  options: {
+                    boundary: 'viewport',
+                    padding: 8,
+                  },
+                },
+              ],
+            });
+          }
         }
       }
     });
@@ -373,6 +403,10 @@ class SharedController {
   }
 
   private closeAllDropdowns(): void {
+    if (this.activePopperInstance) {
+      this.activePopperInstance.destroy();
+      this.activePopperInstance = null;
+    }
     if (this.activeDropdown) {
       this.activeDropdown.style.display = 'none';
       this.activeDropdown = null;

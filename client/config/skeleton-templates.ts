@@ -42,12 +42,12 @@ function renderTableRowsHtml(count = 6): string {
 }
 
 const SKELETON_RAIL_HTML = `
-  <div class="layout-rail" data-ref="skeleton-rail" style="width: auto; min-width: 68px; max-width: 76px; height: 100%; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 8px 6px 20px 6px; gap: 12px; box-sizing: border-box; flex-shrink: 0;">
+  <div class="layout-rail" data-ref="skeleton-rail" style="width: auto; min-width: 68px; max-width: 76px; height: 100%; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 12px 6px 12px 6px; gap: 12px; box-sizing: border-box; flex-shrink: 0;">
     <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%;">
       <div class="skeleton" style="width: 40px; height: 40px; border-radius: 12px;"></div>
       <div class="skeleton" style="width: 40px; height: 40px; border-radius: 12px;"></div>
     </div>
-    <div class="rail-divider" style="width: 32px; height: 1px; background: var(--border-color); margin: 2px 0;"></div>
+    <div class="rail-divider" style="width: 36px; height: 1px; background: var(--border-color); margin: 0;"></div>
     <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%;">
       <div style="display: flex; flex-direction: column; align-items: center; gap: 3px;">
         <div class="skeleton" style="width: 40px; height: 40px; border-radius: 12px;"></div>

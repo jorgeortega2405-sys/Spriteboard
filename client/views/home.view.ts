@@ -1,3 +1,4 @@
+import { createPopper, Instance as PopperInstance } from '@popperjs/core';
 import { navigate } from '../app-router.js';
 import { openCanvasDownloadModal } from '../components/canvas-download-modal.component.js';
 import { openCanvasShareModal } from '../components/canvas-share-modal.component.js';
@@ -63,6 +64,7 @@ class HomeController {
   private scrollObserver: IntersectionObserver | null = null;
   private activeOpenDropdown: HTMLElement | null = null;
   private activeOpenCard: HTMLElement | null = null;
+  private activeCardPopper: PopperInstance | null = null;
 
   private isSearchActive = false;
   private btnToggleSearch: HTMLElement | null = null;
@@ -568,6 +570,10 @@ class HomeController {
   }
 
   private closeAllDropdowns(): void {
+    if (this.activeCardPopper) {
+      this.activeCardPopper.destroy();
+      this.activeCardPopper = null;
+    }
     if (this.activeOpenDropdown) {
       this.activeOpenDropdown.style.display = 'none';
       this.activeOpenDropdown = null;
@@ -1153,6 +1159,34 @@ class HomeController {
         actionsWrapper?.classList.add('is-open');
         this.activeOpenDropdown = menuDropdown;
         this.activeOpenCard = card;
+
+        if (window.innerWidth > 768) {
+          this.activeCardPopper = createPopper(btnMore, menuDropdown, {
+            placement: 'bottom-end',
+            modifiers: [
+              {
+                name: 'offset',
+                options: {
+                  offset: [0, 4],
+                },
+              },
+              {
+                name: 'flip',
+                options: {
+                  fallbackPlacements: ['top-end', 'bottom-start', 'top-start'],
+                  padding: 8,
+                },
+              },
+              {
+                name: 'preventOverflow',
+                options: {
+                  boundary: 'viewport',
+                  padding: 8,
+                },
+              },
+            ],
+          });
+        }
       }
     });
 
@@ -1528,6 +1562,34 @@ class HomeController {
         actionsWrapper?.classList.add('is-open');
         this.activeOpenDropdown = dropdown;
         this.activeOpenCard = card;
+
+        if (window.innerWidth > 768) {
+          this.activeCardPopper = createPopper(btnMore, dropdown, {
+            placement: 'bottom-end',
+            modifiers: [
+              {
+                name: 'offset',
+                options: {
+                  offset: [0, 4],
+                },
+              },
+              {
+                name: 'flip',
+                options: {
+                  fallbackPlacements: ['top-end', 'bottom-start', 'top-start'],
+                  padding: 8,
+                },
+              },
+              {
+                name: 'preventOverflow',
+                options: {
+                  boundary: 'viewport',
+                  padding: 8,
+                },
+              },
+            ],
+          });
+        }
       }
     });
 

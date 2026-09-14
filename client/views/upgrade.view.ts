@@ -216,10 +216,69 @@ export async function createUpgradeView(): Promise<HTMLElement> {
     ],
   };
 
+  const teachersTier = {
+    id: 'docentes',
+    name: 'Spriteboard Docentes',
+    tagline: 'Plataforma de aprendizaje creativo 100% gratuita para docentes y sus clases.',
+    storage: '50 GB de almacenamiento',
+    price: 0,
+    priceMonthly: 0,
+    priceYearly: 0,
+    currency: 'USD',
+    billingPeriod: 'yearly',
+    icon: 'local_library',
+    badge: 'Para Educadores',
+    isPopular: false,
+    buttonText: 'Completar verificación',
+    isVerification: true,
+    features: [
+      {
+        title: 'Aulas escolares y códigos de clase',
+        desc: 'Crea salones interactivos con códigos de unión rápida (SP-XXXXXX) para tus alumnos',
+        icon: 'meeting_room',
+      },
+      {
+        title: 'Colaboración masiva en vivo (hasta 50 alumnos)',
+        desc: 'Toda tu clase trabajando en simultáneo en lienzos compartidos con cursores activos',
+        icon: 'groups_3',
+      },
+      {
+        title: 'Herencia de ventajas Pro en el aula',
+        desc: 'Tus estudiantes disfrutan de ventajas Pro dentro de los lienzos de tu clase',
+        icon: 'military_tech',
+      },
+      {
+        title: 'Capas y snapshots de clase ilimitados',
+        desc: 'Supervisa el progreso paso a paso y recupera versiones de trabajo de tus estudiantes',
+        icon: 'all_inclusive',
+      },
+      {
+        title: 'Exportación Spritesheet, GIF y Game Atlas',
+        desc: 'Exporta animaciones y atlas listos para motores de videojuegos (Unity, Godot)',
+        icon: 'sports_esports',
+      },
+      {
+        title: 'Exportación en alta resolución (hasta 8x)',
+        desc: 'Imprime y proyecta los proyectos artísticos de tus alumnos en alta fidelidad',
+        icon: 'hd',
+      },
+      {
+        title: 'Privacidad estudiantil segura',
+        desc: 'Entorno cerrado y protegido para el trabajo creativo de tus alumnos',
+        icon: 'security',
+      },
+      {
+        title: '100% gratuito con verificación',
+        desc: 'Acceso completo sin costo para docentes en activo de colegios o academias',
+        icon: 'verified',
+      },
+    ],
+  };
+
   const educationTier = {
     id: 'schools',
     name: 'Spriteboard Educación',
-    tagline: 'Infraestructura creativa centralizada para colegios, academias, universidades y docentes.',
+    tagline: 'Infraestructura creativa centralizada para escuelas, colegios y sistemas educativos.',
     storage: '1 TB+ de almacenamiento institucional',
     price: 0,
     priceMonthly: 0,
@@ -288,7 +347,7 @@ export async function createUpgradeView(): Promise<HTMLElement> {
 
   const categoryTiers: Record<'personal_teams' | 'education', any[]> = {
     personal_teams: [freeTier, proTier, businessTier],
-    education: [educationTier],
+    education: [teachersTier, educationTier],
   };
 
   const TIER_HIERARCHY: Record<string, number> = {
@@ -299,6 +358,7 @@ export async function createUpgradeView(): Promise<HTMLElement> {
     negocios: 2,
     docentes: 2,
     escuelas: 3,
+    schools: 3,
   };
 
   const renderCards = (category: 'personal_teams' | 'education'): void => {
@@ -316,7 +376,8 @@ export async function createUpgradeView(): Promise<HTMLElement> {
         currentUser && (
           userTier === tier.id ||
           (tier.id === 'business' && userTier === 'negocios') ||
-          (tier.id === 'schools' && ['schools', 'escuelas', 'docentes', 'education'].includes(userTier))
+          (tier.id === 'schools' && ['schools', 'escuelas', 'education'].includes(userTier)) ||
+          (tier.id === 'docentes' && ['docentes', 'teachers'].includes(userTier))
         )
       );
       const cardTierLevel = TIER_HIERARCHY[tier.id] ?? 0;
@@ -331,11 +392,12 @@ export async function createUpgradeView(): Promise<HTMLElement> {
       const featuresList = Array.isArray(tier.features) ? tier.features : [];
 
       featuresList.forEach((feat: any, idx: number) => {
-        if (tierIdx > 0 && idx === 2 && category === 'personal_teams') {
+        if (tierIdx > 0 && idx === 2) {
+          const dividerText = category === 'education' ? 'Todo lo de Docentes, más:' : 'Todo lo del plan anterior, más:';
           featuresHtml += `
             <div class="component-card-feature-divider-container" data-ref="feature-divider-${tier.id}">
               <hr class="component-divider component-card-feature-divider" />
-              <p class="component-card-feature-divider-text">Todo lo del plan anterior, más:</p>
+              <p class="component-card-feature-divider-text">${dividerText}</p>
             </div>
           `;
         }
@@ -380,16 +442,19 @@ export async function createUpgradeView(): Promise<HTMLElement> {
         </div>
 
         <div class="component-card-section component-card-section--price" data-ref="card-price-${tier.id}">
-          <div class="component-card-price-label">${tier.isCustomPrice ? 'Presupuesto' : isFree ? 'Para siempre' : tier.isVerification ? 'Gratis con verificación' : 'Desde'}</div>
+          <div class="component-card-price-label">${tier.isCustomPrice ? 'Presupuesto' : isFree ? 'Para siempre' : tier.isVerification ? '100% Gratuito' : 'Desde'}</div>
           <div class="component-card-price-container">
             ${tier.isCustomPrice ? `
               <span class="component-card-price" style="font-size: 26px;">A medida</span>
               <span class="component-card-period">/ institucional</span>
+            ` : tier.isVerification ? `
+              <span class="component-card-price" style="font-size: 30px;">Gratis</span>
+              <span class="component-card-period">/ con verificación</span>
             ` : `
               <span class="component-card-price">
                 USD $<span data-ref="plan-price-${tier.id}" data-monthly="${monthlyPrice}" data-yearly="${yearlyPrice}">${initialPrice}</span>
               </span>
-              <span class="component-card-period" data-ref="plan-period-${tier.id}" data-period-monthly="/ mes" data-period-yearly="${isFree ? '/ mes' : '/ mes facturado anualmente'}">${tier.isVerification ? '/ gratis' : isFree ? '/ mes' : isYearly ? '/ mes facturado anualmente' : '/ mes'}</span>
+              <span class="component-card-period" data-ref="plan-period-${tier.id}" data-period-monthly="/ mes" data-period-yearly="${isFree ? '/ mes' : '/ mes facturado anualmente'}">${isFree ? '/ mes' : isYearly ? '/ mes facturado anualmente' : '/ mes'}</span>
             `}
           </div>
         </div>
@@ -630,7 +695,7 @@ export async function createUpgradeView(): Promise<HTMLElement> {
 
     const currentTiers = categoryTiers[currentCategory] || [];
     currentTiers.forEach((tier) => {
-      if (tier.isCustomPrice) return;
+      if (tier.isCustomPrice || tier.isVerification) return;
       const priceEl = container.querySelector<HTMLElement>(`[data-ref="plan-price-${tier.id}"]`);
       const periodEl = container.querySelector<HTMLElement>(`[data-ref="plan-period-${tier.id}"]`);
 

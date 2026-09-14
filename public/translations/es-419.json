@@ -806,6 +806,7 @@
   },
   "education": {
     "title": "Educación",
+    "my_classrooms_title": "Aulas escolares",
     "subtitle": "Crea y administra aulas virtuales, gestiona tu profesorado y colabora en tiempo real.",
     "tab_classrooms": "Salones y aulas",
     "tab_teachers": "Docentes",
@@ -898,7 +899,9 @@
     "benefit_layers": "Capas por lienzo",
     "benefit_history": "Historial de versiones",
     "benefit_trash": "Retención en papelera",
-    "benefit_sso": "Inicio de sesión único (SSO)"
+    "benefit_sso": "Inicio de sesión único (SSO)",
+    "institution_divider": "Instituciones",
+    "institution_btn": "Obtén Spriteboard Instituciones gratis"
   },
   "comments": {
     "title": "Comentarios",

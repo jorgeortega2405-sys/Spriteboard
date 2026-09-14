@@ -19,6 +19,18 @@ let chatSidebarInitPromise: Promise<HTMLElement> | null = null;
 
 let drawerRemovalTimer: ReturnType<typeof setTimeout> | null = null;
 
+function createDrawerSkeletonRow(): HTMLElement {
+  const row = document.createElement('div');
+  row.className = 'drawer-canvas-item is-skeleton';
+  row.setAttribute('data-ref', 'drawer-canvas-skeleton');
+  row.style.pointerEvents = 'none';
+  row.innerHTML = `
+    <div class="drawer-canvas-item__thumb skeleton" style="border: none;"></div>
+    <div class="skeleton skeleton--text" style="width: 65%; height: 12px; border-radius: 4px; margin-left: 2px;"></div>
+  `;
+  return row;
+}
+
 function createDrawerElement(): HTMLElement {
   const drawer = document.createElement('div');
   drawer.className = 'layout-drawer';
@@ -32,34 +44,68 @@ function createDrawerElement(): HTMLElement {
   const drawerFooter = document.createElement('div');
   drawerFooter.className = 'layout-drawer__footer';
   drawerFooter.setAttribute('data-ref', 'drawer-footer');
-
-  const btnTrash = document.createElement('button');
-  btnTrash.type = 'button';
-  btnTrash.className = 'drawer-footer-item';
-  btnTrash.setAttribute('data-ref', 'drawer-btn-trash');
-  btnTrash.setAttribute('data-tooltip', 'Papelera');
-  btnTrash.setAttribute('aria-label', 'Papelera');
-  btnTrash.innerHTML = `
-    <span class="material-symbols-rounded drawer-footer-item__icon">delete</span>
-    <span class="drawer-footer-item__text">${t('nav.trash') || 'Papelera'}</span>
-  `;
-
-  btnTrash.addEventListener('click', (e) => {
-    e.preventDefault();
-    if (window.innerWidth <= 768) {
-      toggleDrawer(false);
-    }
-    navigate('/trash');
-  });
-
-  if (window.location.pathname === '/trash') {
-    btnTrash.classList.add('is-active');
-  }
-
-  drawerFooter.appendChild(btnTrash);
   drawer.appendChild(drawerFooter);
 
   return drawer;
+}
+
+function updateDrawerFooter(drawer: HTMLElement, currentPath: string): void {
+  const drawerFooter = drawer.querySelector<HTMLElement>('[data-ref="drawer-footer"]');
+  if (!drawerFooter) return;
+
+  drawerFooter.innerHTML = '';
+
+  const bindNavLink = (btn: HTMLElement | null, path: string) => {
+    btn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (window.innerWidth <= 768) {
+        toggleDrawer(false);
+      }
+      navigate(path);
+    });
+  };
+
+  if (currentPath.startsWith('/settings')) {
+    if (currentUser) {
+      drawerFooter.style.display = 'flex';
+      drawerFooter.innerHTML = `
+        <button type="button" class="drawer-footer-item${currentPath === '/settings/billing' ? ' is-active' : ''}" data-ref="btn-nav-settings-billing" data-tooltip="${t('nav.billing') || 'Facturación'}" aria-label="${t('nav.billing') || 'Facturación'}">
+          <svg class="component-icon drawer-footer-item__icon" aria-hidden="true"><use href="/icons.svg#credit_card"></use></svg>
+          <span class="drawer-footer-item__text" data-i18n="nav.billing">${t('nav.billing') || 'Facturación'}</span>
+        </button>
+        <button type="button" class="drawer-footer-item${currentPath === '/settings/purchases' ? ' is-active' : ''}" data-ref="btn-nav-settings-purchases" data-tooltip="${t('nav.purchases') || 'Compras'}" aria-label="${t('nav.purchases') || 'Compras'}">
+          <svg class="component-icon drawer-footer-item__icon" aria-hidden="true"><use href="/icons.svg#receipt_long"></use></svg>
+          <span class="drawer-footer-item__text" data-i18n="nav.purchases">${t('nav.purchases') || 'Compras'}</span>
+        </button>
+      `;
+      const btnBilling = drawerFooter.querySelector<HTMLElement>('[data-ref="btn-nav-settings-billing"]');
+      const btnPurchases = drawerFooter.querySelector<HTMLElement>('[data-ref="btn-nav-settings-purchases"]');
+      bindNavLink(btnBilling, '/settings/billing');
+      bindNavLink(btnPurchases, '/settings/purchases');
+      translateElement(drawerFooter);
+      renderIcons(drawerFooter);
+    } else {
+      drawerFooter.style.display = 'none';
+    }
+  } else if (currentPath.startsWith('/help') || currentPath.startsWith('/education') || currentPath === '/institution') {
+    drawerFooter.style.display = 'none';
+  } else {
+    drawerFooter.style.display = 'flex';
+    const btnTrash = document.createElement('button');
+    btnTrash.type = 'button';
+    btnTrash.className = `drawer-footer-item${currentPath === '/trash' ? ' is-active' : ''}`;
+    btnTrash.setAttribute('data-ref', 'drawer-btn-trash');
+    btnTrash.setAttribute('data-tooltip', t('nav.trash') || 'Papelera');
+    btnTrash.setAttribute('aria-label', t('nav.trash') || 'Papelera');
+    btnTrash.innerHTML = `
+      <svg class="component-icon drawer-footer-item__icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
+      <span class="drawer-footer-item__text" data-i18n="nav.trash">${t('nav.trash') || 'Papelera'}</span>
+    `;
+    bindNavLink(btnTrash, '/trash');
+    drawerFooter.appendChild(btnTrash);
+    translateElement(drawerFooter);
+    renderIcons(drawerFooter);
+  }
 }
 
 export function getIsSidebarOpen(): boolean {
@@ -338,7 +384,14 @@ async function renderHomeDrawerContent(drawerBody: HTMLElement): Promise<void> {
         </button>
       </div>
       <div class="drawer-items-list" data-ref="drawer-favorites-list">
-        <div class="drawer-empty-hint">Cargando...</div>
+        <div class="drawer-canvas-item is-skeleton" style="pointer-events: none;">
+          <div class="drawer-canvas-item__thumb skeleton" style="border: none;"></div>
+          <div class="skeleton skeleton--text" style="width: 60%; height: 12px; border-radius: 4px;"></div>
+        </div>
+        <div class="drawer-canvas-item is-skeleton" style="pointer-events: none;">
+          <div class="drawer-canvas-item__thumb skeleton" style="border: none;"></div>
+          <div class="skeleton skeleton--text" style="width: 75%; height: 12px; border-radius: 4px;"></div>
+        </div>
       </div>
     </div>
 
@@ -347,9 +400,20 @@ async function renderHomeDrawerContent(drawerBody: HTMLElement): Promise<void> {
         <span class="drawer-section__title">Diseños recientes</span>
       </div>
       <div class="drawer-items-list" data-ref="drawer-recents-list">
-        <div class="drawer-empty-hint">Cargando...</div>
+        <div class="drawer-canvas-item is-skeleton" style="pointer-events: none;">
+          <div class="drawer-canvas-item__thumb skeleton" style="border: none;"></div>
+          <div class="skeleton skeleton--text" style="width: 70%; height: 12px; border-radius: 4px;"></div>
+        </div>
+        <div class="drawer-canvas-item is-skeleton" style="pointer-events: none;">
+          <div class="drawer-canvas-item__thumb skeleton" style="border: none;"></div>
+          <div class="skeleton skeleton--text" style="width: 50%; height: 12px; border-radius: 4px;"></div>
+        </div>
+        <div class="drawer-canvas-item is-skeleton" style="pointer-events: none;">
+          <div class="drawer-canvas-item__thumb skeleton" style="border: none;"></div>
+          <div class="skeleton skeleton--text" style="width: 65%; height: 12px; border-radius: 4px;"></div>
+        </div>
       </div>
-      <button type="button" class="drawer-link-btn" data-ref="btn-drawer-view-all">Ver todo</button>
+      <button type="button" class="drawer-link-btn" data-ref="btn-drawer-view-all" style="display: none;">Ver todo</button>
     </div>
   `;
 
@@ -363,15 +427,13 @@ async function renderHomeDrawerContent(drawerBody: HTMLElement): Promise<void> {
     openCreateCanvasModal();
   });
 
-  btnViewAll?.addEventListener('click', (e) => {
-    e.preventDefault();
-    if (window.location.pathname === '/' || window.location.pathname === '') {
-      const recentHeading = document.querySelector<HTMLElement>('.home-section');
-      recentHeading?.scrollIntoView({ behavior: 'smooth' });
-    } else {
-      navigate('/');
-    }
-  });
+  const INITIAL_RECENTS_LIMIT = 8;
+  const BATCH_LIMIT = 10;
+  const renderedUuids = new Set<string>();
+  let currentBatchPage = 1;
+  let hasMoreBatches = false;
+  let isLoadingBatch = false;
+  let isBatchScrollActive = false;
 
   try {
     let items: CanvasItem[] = [];
@@ -420,15 +482,106 @@ async function renderHomeDrawerContent(drawerBody: HTMLElement): Promise<void> {
     });
 
     if (recentsList) {
+      recentsList.innerHTML = '';
       if (sortedRecents.length === 0) {
         recentsList.innerHTML = `<div class="drawer-empty-hint">No hay diseños recientes</div>`;
       } else {
-        recentsList.innerHTML = '';
-        sortedRecents.slice(0, 7).forEach((c) => {
+        const initialSlice = sortedRecents.slice(0, INITIAL_RECENTS_LIMIT);
+        initialSlice.forEach((c) => {
+          renderedUuids.add(c.uuid);
           recentsList.appendChild(createDrawerCanvasRow(c));
         });
       }
     }
+
+    if (sortedRecents.length > INITIAL_RECENTS_LIMIT) {
+      if (btnViewAll) {
+        btnViewAll.style.display = 'block';
+      }
+      hasMoreBatches = true;
+    } else {
+      if (btnViewAll) {
+        btnViewAll.style.display = 'none';
+      }
+      hasMoreBatches = false;
+    }
+
+    const loadNextBatch = async () => {
+      if (isLoadingBatch || !hasMoreBatches || !recentsList) return;
+      isLoadingBatch = true;
+      currentBatchPage++;
+
+      const skeletons = [createDrawerSkeletonRow(), createDrawerSkeletonRow(), createDrawerSkeletonRow()];
+      skeletons.forEach((s) => recentsList.appendChild(s));
+
+      try {
+        if (currentUser) {
+          const res = await getApi(`${API_ROUTES.canvases.base}?page=${currentBatchPage}&limit=${BATCH_LIMIT}&sort=activity`);
+          skeletons.forEach((s) => s.remove());
+          if (res.ok) {
+            const data = await res.json();
+            if (data && Array.isArray(data.canvases) && data.canvases.length > 0) {
+              let addedCount = 0;
+              data.canvases.forEach((c: CanvasItem) => {
+                if (!renderedUuids.has(c.uuid) && !c.deleted_at) {
+                  renderedUuids.add(c.uuid);
+                  recentsList.appendChild(createDrawerCanvasRow(c));
+                  addedCount++;
+                }
+              });
+              hasMoreBatches = Boolean(data.hasMore);
+              if (!hasMoreBatches && addedCount === 0) {
+                hasMoreBatches = false;
+              }
+            } else {
+              hasMoreBatches = false;
+            }
+          } else {
+            hasMoreBatches = false;
+          }
+        } else {
+          await new Promise((resolve) => setTimeout(resolve, 180));
+          skeletons.forEach((s) => s.remove());
+          const startIdx = (currentBatchPage - 1) * BATCH_LIMIT;
+          const localSlice = sortedRecents.slice(startIdx, startIdx + BATCH_LIMIT);
+          localSlice.forEach((c) => {
+            if (!renderedUuids.has(c.uuid)) {
+              renderedUuids.add(c.uuid);
+              recentsList.appendChild(createDrawerCanvasRow(c));
+            }
+          });
+          hasMoreBatches = startIdx + BATCH_LIMIT < sortedRecents.length;
+        }
+      } catch {
+        skeletons.forEach((s) => s.remove());
+        hasMoreBatches = false;
+      } finally {
+        isLoadingBatch = false;
+      }
+    };
+
+    btnViewAll?.addEventListener('click', async (e) => {
+      e.preventDefault();
+      if (btnViewAll) {
+        btnViewAll.style.display = 'none';
+      }
+      await loadNextBatch();
+
+      if (!isBatchScrollActive) {
+        isBatchScrollActive = true;
+        drawerBody.addEventListener(
+          'scroll',
+          () => {
+            if (!hasMoreBatches || isLoadingBatch) return;
+            const scrollRemaining = drawerBody.scrollHeight - drawerBody.scrollTop - drawerBody.clientHeight;
+            if (scrollRemaining < 80) {
+              void loadNextBatch();
+            }
+          },
+          { passive: true }
+        );
+      }
+    });
   } catch {
     if (favoritesList) favoritesList.innerHTML = `<div class="drawer-empty-hint">Sin favoritos</div>`;
     if (recentsList) recentsList.innerHTML = `<div class="drawer-empty-hint">No hay diseños recientes</div>`;
@@ -501,22 +654,12 @@ async function populateDrawerContent(drawer: HTMLElement): Promise<void> {
           <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#accessibility_new"></use></svg>
           <span class="menu-item__text" data-i18n="nav.accessibility">Accesibilidad</span>
         </button>
-        <button type="button" class="menu-item" data-ref="btn-nav-settings-billing">
-          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#credit_card"></use></svg>
-          <span class="menu-item__text" data-i18n="nav.billing">Facturación</span>
-        </button>
-        <button type="button" class="menu-item" data-ref="btn-nav-settings-purchases">
-          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#receipt_long"></use></svg>
-          <span class="menu-item__text" data-i18n="nav.purchases">Compras</span>
-        </button>
       `;
       translateElement(drawerBody);
 
       const btnAccount = drawerBody.querySelector<HTMLElement>('[data-ref="btn-nav-settings-account"]');
       const btnSecurity = drawerBody.querySelector<HTMLElement>('[data-ref="btn-nav-settings-security"]');
       const btnAccessibility = drawerBody.querySelector<HTMLElement>('[data-ref="btn-nav-settings-accessibility"]');
-      const btnBilling = drawerBody.querySelector<HTMLElement>('[data-ref="btn-nav-settings-billing"]');
-      const btnPurchases = drawerBody.querySelector<HTMLElement>('[data-ref="btn-nav-settings-purchases"]');
 
       if (currentPath === '/settings' || currentPath === '/settings/your-account') {
         btnAccount?.classList.add('is-active');
@@ -524,17 +667,11 @@ async function populateDrawerContent(drawer: HTMLElement): Promise<void> {
         btnSecurity?.classList.add('is-active');
       } else if (currentPath === '/settings/accessibility') {
         btnAccessibility?.classList.add('is-active');
-      } else if (currentPath === '/settings/billing') {
-        btnBilling?.classList.add('is-active');
-      } else if (currentPath === '/settings/purchases') {
-        btnPurchases?.classList.add('is-active');
       }
 
       bindNavLink(btnAccount, '/settings/your-account');
       bindNavLink(btnSecurity, '/settings/security');
       bindNavLink(btnAccessibility, '/settings/accessibility');
-      bindNavLink(btnBilling, '/settings/billing');
-      bindNavLink(btnPurchases, '/settings/purchases');
     } else {
       drawerBody.innerHTML = `
         <button type="button" class="menu-item" data-ref="btn-nav-settings-guest">
@@ -638,6 +775,7 @@ async function populateDrawerContent(drawer: HTMLElement): Promise<void> {
   } else {
     await renderHomeDrawerContent(drawerBody);
   }
+  updateDrawerFooter(drawer, currentPath);
   renderIcons(drawerBody);
 }
 

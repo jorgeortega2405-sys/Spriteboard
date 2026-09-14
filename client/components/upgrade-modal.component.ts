@@ -84,15 +84,25 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
                 </div>
               </div>
 
-              <button type="button" class="component-button component-button--h40 component-button--black component-button--w-full upgrade-modal__btn-cta" data-ref="btn-upgrade-cta">
+              <button type="button" class="component-button component-button--h40 component-button--brand component-button--w-full upgrade-modal__btn-cta" data-ref="btn-upgrade-cta">
                 <span class="upgrade-modal__btn-text" data-ref="upgrade-cta-text">${getCtaLabel(selectedPlan)}</span>
+              </button>
+
+              <button type="button" class="upgrade-modal__view-all-link" data-ref="btn-upgrade-view-all">
+                <span>${t('upgrade_modal.view_all_link') || 'Ver todos los planes y características'}</span>
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_forward"></use></svg>
               </button>
             </div>
 
-            <button type="button" class="component-button component-button--h40 component-button--w-full upgrade-modal__btn-view-all" data-ref="btn-upgrade-view-all">
-              <span>${t('upgrade_modal.view_all_link') || 'Ver todos los planes y características'}</span>
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_forward"></use></svg>
-            </button>
+            <div class="upgrade-modal__institution-section" data-ref="upgrade-modal-institution-section">
+              <div class="upgrade-modal__divider" data-ref="upgrade-modal-divider">
+                <span class="upgrade-modal__divider-text">${t('upgrade_modal.institution_divider') || 'Instituciones'}</span>
+              </div>
+              <button type="button" class="component-button component-button--h40 component-button--outline component-button--w-full upgrade-modal__btn-institution" data-ref="btn-upgrade-institution">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#school"></use></svg>
+                <span>${t('upgrade_modal.institution_btn') || 'Obtén Spriteboard Instituciones gratis'}</span>
+              </button>
+            </div>
           </div>
 
           <div class="upgrade-modal__right" data-ref="upgrade-modal-right">
@@ -191,6 +201,7 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
   const ctaTextEl = backdrop.querySelector<HTMLElement>('[data-ref="upgrade-cta-text"]');
   const btnClose = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-upgrade-modal-close"]');
   const btnViewAll = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-upgrade-view-all"]');
+  const btnInstitution = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-upgrade-institution"]');
   const tableWrapper = backdrop.querySelector<HTMLElement>('[data-ref="upgrade-table-wrapper"]');
   const activeIndicator = backdrop.querySelector<HTMLElement>('[data-ref="active-column-indicator"]');
 
@@ -252,6 +263,11 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
 
   ctaBtn?.addEventListener('click', goToUpgrade);
   btnViewAll?.addEventListener('click', goToUpgrade);
+  btnInstitution?.addEventListener('click', (e: MouseEvent) => {
+    e.preventDefault();
+    closeModal();
+    navigate('/education/institution');
+  });
 
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {

@@ -480,10 +480,18 @@
   --accent-primary: var(--sl-color-neutral-900);
   --accent-color: var(--sl-color-neutral-900);
   --color-primary: var(--sl-color-neutral-900);
-  --accent-pink: #db2777;
-  --accent-pink-subtle: rgba(255, 107, 194, 0.14);
-  --accent-pink-hover: rgba(255, 107, 194, 0.22);
-  --accent-pink-border: rgba(219, 39, 119, 0.35);
+  --accent-pink: #4f46e5;
+  --accent-pink-subtle: rgba(99, 102, 241, 0.14);
+  --accent-pink-hover: rgba(99, 102, 241, 0.22);
+  --accent-pink-border: rgba(79, 70, 229, 0.35);
+  --hero-gradient: linear-gradient(315deg, #e0f2fe 0%, #e0e7ff 20%, #c7d2fe 40%, #a5b4fc 60%, #818cf8 80%, #6366f1 100%);
+  --theme-gradient: var(--hero-gradient);
+  --theme-accent: var(--accent-pink);
+  --theme-accent-subtle: var(--accent-pink-subtle);
+  --theme-accent-hover: var(--accent-pink-hover);
+  --theme-accent-border: var(--accent-pink-border);
+  --title-gradient: linear-gradient(135deg, #1e1b4b 0%, #312e81 25%, #4338ca 55%, #4f46e5 80%, #6366f1 100%);
+  --hero-title-gradient: var(--title-gradient);
 
   /* Toasts */
   --color-toast-info: var(--sl-color-sky-600);
@@ -529,6 +537,9 @@
   --skeleton-base: #e4e4e7;
   --skeleton-highlight: rgba(255, 255, 255, 0.7);
   --color-brand: var(--action-primary);
+  --color-brand-blue: #2563eb;
+  --color-brand-blue-hover: #1d4ed8;
+  --color-brand-blue-active: #1e40af;
 }
 
 /* ==========================================================================
@@ -606,10 +617,18 @@ body.dark-theme {
   --accent-primary: #f4f4f5;
   --accent-color: #f4f4f5;
   --color-primary: #f4f4f5;
-  --accent-pink: #ff80bf;
-  --accent-pink-subtle: rgba(255, 107, 194, 0.18);
-  --accent-pink-hover: rgba(255, 107, 194, 0.26);
-  --accent-pink-border: rgba(255, 128, 191, 0.35);
+  --accent-pink: #818cf8;
+  --accent-pink-subtle: rgba(129, 140, 248, 0.18);
+  --accent-pink-hover: rgba(129, 140, 248, 0.26);
+  --accent-pink-border: rgba(129, 140, 248, 0.35);
+  --hero-gradient: linear-gradient(315deg, #1e1b4b 0%, #312e81 30%, #4338ca 60%, #6366f1 100%);
+  --theme-gradient: var(--hero-gradient);
+  --theme-accent: var(--accent-pink);
+  --theme-accent-subtle: var(--accent-pink-subtle);
+  --theme-accent-hover: var(--accent-pink-hover);
+  --theme-accent-border: var(--accent-pink-border);
+  --title-gradient: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 25%, #a5b4fc 50%, #818cf8 75%, #6366f1 100%);
+  --hero-title-gradient: var(--title-gradient);
 
   --shadow-card: none;
   --shadow-dropdown: none;
@@ -642,6 +661,9 @@ body.dark-theme {
   --skeleton-base: #1f1f23;
   --skeleton-highlight: rgba(255, 255, 255, 0.12);
   --color-brand: var(--action-primary);
+  --color-brand-blue: #3b82f6;
+  --color-brand-blue-hover: #60a5fa;
+  --color-brand-blue-active: #2563eb;
 }
 
 /* ==========================================================================
@@ -716,10 +738,18 @@ body.dark-theme {
     --accent-primary: #f4f4f5;
     --accent-color: #f4f4f5;
     --color-primary: #f4f4f5;
-    --accent-pink: #ff80bf;
-    --accent-pink-subtle: rgba(255, 107, 194, 0.18);
-    --accent-pink-hover: rgba(255, 107, 194, 0.26);
-    --accent-pink-border: rgba(255, 128, 191, 0.35);
+    --accent-pink: #818cf8;
+    --accent-pink-subtle: rgba(129, 140, 248, 0.18);
+    --accent-pink-hover: rgba(129, 140, 248, 0.26);
+    --accent-pink-border: rgba(129, 140, 248, 0.35);
+    --hero-gradient: linear-gradient(315deg, #1e1b4b 0%, #312e81 30%, #4338ca 60%, #6366f1 100%);
+    --theme-gradient: var(--hero-gradient);
+    --theme-accent: var(--accent-pink);
+    --theme-accent-subtle: var(--accent-pink-subtle);
+    --theme-accent-hover: var(--accent-pink-hover);
+    --theme-accent-border: var(--accent-pink-border);
+    --title-gradient: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 25%, #a5b4fc 50%, #818cf8 75%, #6366f1 100%);
+    --hero-title-gradient: var(--title-gradient);
 
     --shadow-card: none;
     --shadow-dropdown: none;
@@ -752,6 +782,9 @@ body.dark-theme {
     --skeleton-base: #1f1f23;
     --skeleton-highlight: rgba(255, 255, 255, 0.12);
     --color-brand: var(--action-primary);
+    --color-brand-blue: #3b82f6;
+    --color-brand-blue-hover: #60a5fa;
+    --color-brand-blue-active: #2563eb;
   }
 }
 

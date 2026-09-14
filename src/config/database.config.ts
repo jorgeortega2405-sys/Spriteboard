@@ -505,14 +505,6 @@ export async function runMigrations(): Promise<void> {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
-    const [docentesRows] = await conn.query<mysql.RowDataPacket[]>(
-      "SELECT COUNT(*) as count FROM users WHERE subscription_tier = 'docentes'"
-    );
-    if ((docentesRows[0] as any)?.count > 0) {
-      await conn.query("UPDATE users SET subscription_tier = 'escuelas' WHERE subscription_tier = 'docentes'");
-      logger.db.info('Migración completada: usuarios con tier docentes actualizados a escuelas.');
-    }
-
     await conn.query(`
       UPDATE teams t
       JOIN school_organizations s ON s.admin_id = t.owner_id

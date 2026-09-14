@@ -168,6 +168,32 @@
   min-width: 40px;
 }
 
+.component-button--brand,
+.component-button--blue {
+  background-color: var(--color-brand-blue, #2563eb);
+  color: #ffffff;
+  border-color: var(--color-brand-blue, #2563eb);
+}
+
+.component-button--brand:hover,
+.component-button--blue:hover {
+  background-color: var(--color-brand-blue-hover, #1d4ed8);
+  border-color: var(--color-brand-blue-hover, #1d4ed8);
+  color: #ffffff;
+}
+
+.component-button--brand:active,
+.component-button--blue:active {
+  background-color: var(--color-brand-blue-active, #1e40af);
+  border-color: var(--color-brand-blue-active, #1e40af);
+  color: #ffffff;
+}
+
+.component-button--brand:focus-visible,
+.component-button--blue:focus-visible {
+  box-shadow: 0 0 0 2px var(--bg-app), 0 0 0 4px var(--color-brand-blue, #2563eb);
+}
+
 .component-button--black,
 .component-button--primary {
   background-color: var(--action-primary);
@@ -1468,9 +1494,10 @@ html.dark-theme .component-badge--active .component-icon {
 
 .component-badge.is-active,
 .component-badge.active {
-  background-color: rgba(255, 107, 194, 0.14) !important;
-  color: #db2777 !important;
-  border-color: transparent !important;
+  background-color: var(--accent-pink-subtle) !important;
+  color: var(--accent-pink) !important;
+  border-color: var(--accent-pink-border, transparent) !important;
+  box-shadow: 0 0 0 1.5px var(--accent-pink-border) !important;
   font-weight: 600;
 }
 
@@ -1478,22 +1505,35 @@ html.dark-theme .component-badge--active .component-icon {
 .component-badge.active .material-symbols-rounded,
 .component-badge.is-active .component-icon,
 .component-badge.active .component-icon {
-  color: #db2777 !important;
+  color: var(--accent-pink) !important;
   fill: currentColor;
 }
 
 .component-badge.is-active:hover,
 .component-badge.active:hover {
-  background-color: rgba(255, 107, 194, 0.22) !important;
+  background-color: var(--accent-pink-hover) !important;
+}
+
+.component-tags-carousel .component-badge--interactive:hover {
+  background-color: var(--accent-pink-subtle) !important;
+  border-color: var(--accent-pink-border) !important;
+  color: var(--accent-pink) !important;
+}
+
+.component-tags-carousel .component-badge--interactive:hover .component-icon,
+.component-tags-carousel .component-badge--interactive:hover .material-symbols-rounded {
+  color: var(--accent-pink) !important;
+  fill: currentColor !important;
 }
 
 html[data-theme="dark"] .component-badge.is-active,
 html[data-theme="dark"] .component-badge.active,
 html.dark-theme .component-badge.is-active,
 html.dark-theme .component-badge.active {
-  background-color: rgba(255, 107, 194, 0.18) !important;
-  color: #ff80bf !important;
-  border-color: transparent !important;
+  background-color: var(--accent-pink-subtle) !important;
+  color: var(--accent-pink) !important;
+  border-color: var(--accent-pink-border, transparent) !important;
+  box-shadow: 0 0 0 1.5px var(--accent-pink-border) !important;
 }
 
 html[data-theme="dark"] .component-badge.is-active .material-symbols-rounded,
@@ -1504,7 +1544,7 @@ html.dark-theme .component-badge.is-active .material-symbols-rounded,
 html.dark-theme .component-badge.active .material-symbols-rounded,
 html.dark-theme .component-badge.is-active .component-icon,
 html.dark-theme .component-badge.active .component-icon {
-  color: #ff80bf !important;
+  color: var(--accent-pink) !important;
   fill: currentColor;
 }
 
@@ -1512,7 +1552,7 @@ html[data-theme="dark"] .component-badge.is-active:hover,
 html[data-theme="dark"] .component-badge.active:hover,
 html.dark-theme .component-badge.is-active:hover,
 html.dark-theme .component-badge.active:hover {
-  background-color: rgba(255, 107, 194, 0.26) !important;
+  background-color: var(--accent-pink-hover) !important;
 }
 
 .component-badge--sm {

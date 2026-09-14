@@ -87,6 +87,10 @@ export function initTheme(initialPrefs: { theme?: string; high_contrast?: boolea
   currentThemeSetting = savedTheme;
   applyThemeToDom(savedTheme);
 
+  try {
+    localStorage.removeItem('sprite_theme_palette_index');
+  } catch {}
+
   if (initialPrefs) {
     applyAccessibilityPreferences(initialPrefs);
   }
