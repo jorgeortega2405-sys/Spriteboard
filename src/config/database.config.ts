@@ -476,6 +476,22 @@ export async function runMigrations(): Promise<void> {
       logger.db.info('Columna school_id añadida a la tabla teams.');
     }
 
+    const [campusIdCols] = await conn.query<mysql.RowDataPacket[]>(
+      "SHOW COLUMNS FROM teams LIKE 'campus_id'"
+    );
+    if (campusIdCols.length === 0) {
+      await conn.query('ALTER TABLE teams ADD COLUMN campus_id INT NULL AFTER school_id');
+      logger.db.info('Columna campus_id añadida a la tabla teams.');
+    }
+
+    const [facultyIdCols] = await conn.query<mysql.RowDataPacket[]>(
+      "SHOW COLUMNS FROM teams LIKE 'faculty_id'"
+    );
+    if (facultyIdCols.length === 0) {
+      await conn.query('ALTER TABLE teams ADD COLUMN faculty_id INT NULL AFTER campus_id');
+      logger.db.info('Columna faculty_id añadida a la tabla teams.');
+    }
+
     await conn.query(`
       CREATE TABLE IF NOT EXISTS school_organizations (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -555,6 +571,62 @@ export async function runMigrations(): Promise<void> {
         UNIQUE KEY uq_tenant_user (tenant_id, user_id),
         INDEX idx_fed_user (user_id),
         FOREIGN KEY (tenant_id) REFERENCES enterprise_tenants(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS university_campuses (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        tenant_id INT NOT NULL,
+        name VARCHAR(150) NOT NULL,
+        code VARCHAR(50) NULL,
+        city VARCHAR(100) NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_campus_tenant (tenant_id),
+        FOREIGN KEY (tenant_id) REFERENCES enterprise_tenants(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS university_faculties (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        campus_id INT NOT NULL,
+        tenant_id INT NOT NULL,
+        name VARCHAR(150) NOT NULL,
+        code VARCHAR(50) NULL,
+        dean_user_id INT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_faculty_campus (campus_id),
+        INDEX idx_faculty_tenant (tenant_id),
+        FOREIGN KEY (campus_id) REFERENCES university_campuses(id) ON DELETE CASCADE,
+        FOREIGN KEY (tenant_id) REFERENCES enterprise_tenants(id) ON DELETE CASCADE,
+        FOREIGN KEY (dean_user_id) REFERENCES users(id) ON DELETE SET NULL
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS university_members (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        tenant_id INT NOT NULL,
+        campus_id INT NULL,
+        faculty_id INT NULL,
+        user_id INT NOT NULL,
+        academic_role ENUM('superadmin', 'campus_admin', 'faculty_admin', 'professor', 'ta', 'student', 'staff') NOT NULL DEFAULT 'student',
+        student_code VARCHAR(50) NULL,
+        status ENUM('active', 'suspended', 'graduated') NOT NULL DEFAULT 'active',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_uni_tenant_user (tenant_id, user_id),
+        INDEX idx_uni_member_user (user_id),
+        INDEX idx_uni_member_campus (campus_id),
+        INDEX idx_uni_member_faculty (faculty_id),
+        INDEX idx_uni_member_role (tenant_id, academic_role),
+        FOREIGN KEY (tenant_id) REFERENCES enterprise_tenants(id) ON DELETE CASCADE,
+        FOREIGN KEY (campus_id) REFERENCES university_campuses(id) ON DELETE SET NULL,
+        FOREIGN KEY (faculty_id) REFERENCES university_faculties(id) ON DELETE SET NULL,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);

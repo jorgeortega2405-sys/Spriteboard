@@ -19,7 +19,7 @@ export async function createTeam(ownerId: number, dto: CreateTeamDto): Promise<T
   );
   const userTier = (uRows[0]?.subscription_tier || 'free').toLowerCase();
 
-  if (['escuelas', 'docentes', 'schools', 'education'].includes(userTier)) {
+  if (['escuelas', 'docentes', 'schools', 'education', 'universidades', 'universities'].includes(userTier)) {
     throw new Error('Las cuentas de Educación gestionan sus aulas y salones desde la sección Educación.');
   }
 

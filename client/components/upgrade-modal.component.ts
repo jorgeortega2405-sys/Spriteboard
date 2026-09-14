@@ -2,12 +2,12 @@ import { navigate } from '../app-router.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 
-type PlanTier = 'free' | 'pro' | 'business' | 'negocios' | 'docentes' | 'escuelas' | 'teachers' | 'schools';
+type PlanTier = 'free' | 'pro' | 'business' | 'negocios' | 'docentes' | 'escuelas' | 'teachers' | 'schools' | 'universidades' | 'universities';
 
 let activeUpgradeModal: { close: () => void } | null = null;
 
 export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => void } {
-  if (initialPlan === 'teachers' || initialPlan === 'docentes' || initialPlan === 'schools' || initialPlan === 'escuelas') {
+  if (initialPlan === 'teachers' || initialPlan === 'docentes' || initialPlan === 'schools' || initialPlan === 'escuelas' || initialPlan === 'universidades' || initialPlan === 'universities') {
     navigate('/upgrade');
     return { close: () => {} };
   }

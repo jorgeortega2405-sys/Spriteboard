@@ -83,13 +83,17 @@ export async function resolveOrProvisionFederatedUser(
     let username: string;
     let role: UserRole = 'user';
     let avatarUrl: string | null = null;
-    const targetTier = tenant.tenant_type === 'university' ? 'docentes' : 'business';
+    let targetTier = tenant.tenant_type === 'university' ? 'pro' : 'business';
 
     if (userRows.length > 0) {
       userId = userRows[0].id;
       username = userRows[0].username;
       role = (userRows[0].role as UserRole) || 'user';
       avatarUrl = userRows[0].avatar_url || null;
+
+      if (tenant.tenant_type === 'university' && tenant.owner_id === userId) {
+        targetTier = 'universidades';
+      }
 
       await pool.execute(
         `UPDATE users SET subscription_tier = ? WHERE id = ?`,
@@ -128,6 +132,16 @@ export async function resolveOrProvisionFederatedUser(
        ON DUPLICATE KEY UPDATE active = TRUE, external_id = VALUES(external_id)`,
       [tenant.id, userId, cleanExtId]
     );
+
+    if (tenant.tenant_type === 'university') {
+      const academicRole = tenant.owner_id === userId ? 'superadmin' : 'student';
+      await pool.execute(
+        `INSERT INTO university_members (tenant_id, user_id, academic_role, status)
+         VALUES (?, ?, ?, 'active')
+         ON DUPLICATE KEY UPDATE status = 'active'`,
+        [tenant.id, userId, academicRole]
+      );
+    }
 
     if (tenant.target_team_id) {
       await pool.execute(

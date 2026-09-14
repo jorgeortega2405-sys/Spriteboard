@@ -352,7 +352,7 @@ class TeamsController {
     }
 
     const userTier = (currentUser?.subscription_tier || 'free').toLowerCase();
-    const isEducation = ['escuelas', 'docentes', 'schools', 'education'].includes(userTier);
+    const isEducation = ['escuelas', 'docentes', 'schools', 'education', 'universidades', 'universities'].includes(userTier);
     const hasTeams = this.allTeams.length > 0;
 
     if (isEducation && !hasTeams) {
@@ -556,7 +556,7 @@ class TeamsController {
   private openTeamModal(teamToEdit?: Team): void {
     const userTier = (currentUser?.subscription_tier || 'free').toLowerCase();
     if (!teamToEdit) {
-      if (['escuelas', 'docentes', 'schools', 'education'].includes(userTier)) {
+      if (['escuelas', 'docentes', 'schools', 'education', 'universidades', 'universities'].includes(userTier)) {
         showToast('Las cuentas de Educación gestionan sus aulas y salones desde la sección Educación.', 'info');
         navigate('/education');
         return;

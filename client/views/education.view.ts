@@ -123,6 +123,19 @@ class EducationController {
   private inputSchoolDomain: HTMLInputElement | null = null;
   private bannerSchoolError: HTMLElement | null = null;
 
+  private cardStatCampuses: HTMLElement | null = null;
+  private cardStatFaculties: HTMLElement | null = null;
+  private statSchoolCampuses: HTMLElement | null = null;
+  private statSchoolFaculties: HTMLElement | null = null;
+  private btnOpenUniversityCampuses: HTMLElement | null = null;
+  private modalCampusesBackdrop: HTMLElement | null = null;
+  private campusesListContainer: HTMLElement | null = null;
+  private btnAddCampus: HTMLElement | null = null;
+  private formAddCampus: HTMLFormElement | null = null;
+  private inputNewCampusName: HTMLInputElement | null = null;
+  private inputNewCampusCity: HTMLInputElement | null = null;
+  private bannerCampusError: HTMLElement | null = null;
+
   constructor(container: HTMLElement, activeTab: 'classrooms' | 'teachers' | 'students' | 'school' = 'classrooms') {
     this.container = container;
     this.activeTab = activeTab;
@@ -244,6 +257,19 @@ class EducationController {
     this.inputSchoolName = this.container.querySelector<HTMLInputElement>('[data-ref="input-school-name"]');
     this.inputSchoolDomain = this.container.querySelector<HTMLInputElement>('[data-ref="input-school-domain"]');
     this.bannerSchoolError = this.container.querySelector<HTMLElement>('[data-ref="banner-school-error"]');
+
+    this.cardStatCampuses = this.container.querySelector<HTMLElement>('[data-ref="card-stat-campuses"]');
+    this.cardStatFaculties = this.container.querySelector<HTMLElement>('[data-ref="card-stat-faculties"]');
+    this.statSchoolCampuses = this.container.querySelector<HTMLElement>('[data-ref="stat-school-campuses"]');
+    this.statSchoolFaculties = this.container.querySelector<HTMLElement>('[data-ref="stat-school-faculties"]');
+    this.btnOpenUniversityCampuses = this.container.querySelector<HTMLElement>('[data-ref="btn-open-university-campuses"]');
+    this.modalCampusesBackdrop = this.container.querySelector<HTMLElement>('[data-ref="modal-campuses-backdrop"]');
+    this.campusesListContainer = this.container.querySelector<HTMLElement>('[data-ref="campuses-list-container"]');
+    this.btnAddCampus = this.container.querySelector<HTMLElement>('[data-ref="btn-add-campus"]');
+    this.formAddCampus = this.container.querySelector<HTMLFormElement>('[data-ref="form-add-campus"]');
+    this.inputNewCampusName = this.container.querySelector<HTMLInputElement>('[data-ref="input-new-campus-name"]');
+    this.inputNewCampusCity = this.container.querySelector<HTMLInputElement>('[data-ref="input-new-campus-city"]');
+    this.bannerCampusError = this.container.querySelector<HTMLElement>('[data-ref="banner-campus-error"]');
   }
 
   private setupDropdowns(): void {
@@ -425,6 +451,7 @@ class EducationController {
 
     this.btnEditSchool?.addEventListener('click', () => this.openSchoolModal(), { signal });
     this.btnOpenSchoolEdit?.addEventListener('click', () => this.openSchoolModal(), { signal });
+    this.btnOpenUniversityCampuses?.addEventListener('click', () => this.openCampusesModal(), { signal });
     this.btnOpenEducationSso?.addEventListener('click', () => {
       void openEnterpriseSsoModal({ tenantType: 'university' });
     }, { signal });
@@ -436,6 +463,24 @@ class EducationController {
     this.formSchool?.addEventListener('submit', (e) => {
       e.preventDefault();
       void this.handleSchoolSubmit();
+    }, { signal });
+
+    const btnCloseCampuses = this.container.querySelector<HTMLElement>('[data-ref="btn-close-campuses-modal"]');
+    btnCloseCampuses?.addEventListener('click', () => this.closeCampusesModal(), { signal });
+
+    this.btnAddCampus?.addEventListener('click', () => {
+      this.formAddCampus?.classList.toggle('is-hidden');
+      this.inputNewCampusName?.focus();
+    }, { signal });
+
+    const btnCancelAddCampus = this.container.querySelector<HTMLElement>('[data-ref="btn-cancel-add-campus"]');
+    btnCancelAddCampus?.addEventListener('click', () => {
+      this.formAddCampus?.classList.add('is-hidden');
+    }, { signal });
+
+    this.formAddCampus?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      void this.handleAddCampusSubmit();
     }, { signal });
 
     const btnLockedUpgrade = this.container.querySelector<HTMLElement>('[data-ref="btn-locked-upgrade"]');
@@ -569,8 +614,102 @@ class EducationController {
       this.statSchoolStudents.textContent = String(this.school.students_count || 0);
     }
 
+    void this.loadUniversityStats();
     this.renderTeachersTable();
     this.renderStudentsTable();
+  }
+
+  private async loadUniversityStats(): Promise<void> {
+    try {
+      const res = await getApi(API_ROUTES.education.university);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!data.ok) return;
+
+      if (this.cardStatCampuses) this.cardStatCampuses.classList.remove('is-hidden');
+      if (this.cardStatFaculties) this.cardStatFaculties.classList.remove('is-hidden');
+      if (this.statSchoolCampuses) this.statSchoolCampuses.textContent = String(data.total_campuses || 0);
+      if (this.statSchoolFaculties) this.statSchoolFaculties.textContent = String(data.total_faculties || 0);
+      if (this.btnOpenUniversityCampuses) this.btnOpenUniversityCampuses.classList.remove('is-hidden');
+    } catch {}
+  }
+
+  private openCampusesModal(): void {
+    if (!this.modalCampusesBackdrop) return;
+    this.modalCampusesBackdrop.classList.add('is-visible');
+    document.body.classList.add('modal-open');
+    void this.loadCampusesList();
+  }
+
+  private closeCampusesModal(): void {
+    if (!this.modalCampusesBackdrop) return;
+    this.modalCampusesBackdrop.classList.remove('is-visible');
+    document.body.classList.remove('modal-open');
+    this.formAddCampus?.classList.add('is-hidden');
+    if (this.bannerCampusError) this.bannerCampusError.classList.add('is-hidden');
+  }
+
+  private async loadCampusesList(): Promise<void> {
+    if (!this.campusesListContainer) return;
+    this.campusesListContainer.innerHTML = '<p style="padding: 12px; color: var(--text-secondary); font-size: 13px;">Cargando sedes...</p>';
+    try {
+      const res = await getApi(API_ROUTES.education.university);
+      if (!res.ok) {
+        this.campusesListContainer.innerHTML = '<p style="padding: 12px; color: var(--text-secondary); font-size: 13px;">No se pudieron cargar las sedes.</p>';
+        return;
+      }
+      const data = await res.json();
+      const campuses = data.campuses || [];
+      if (campuses.length === 0) {
+        this.campusesListContainer.innerHTML = '<p style="padding: 12px; color: var(--text-secondary); font-size: 13px;">Aún no has registrado campus o sedes universitarias.</p>';
+        return;
+      }
+
+      this.campusesListContainer.innerHTML = campuses.map((c: any) => `
+        <div class="card card--padded" style="border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <strong style="color: var(--text-primary); font-size: 14px;">${escapeHtml(c.name)}</strong>
+            <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+              ${c.city ? escapeHtml(c.city) + ' • ' : ''}${c.faculties_count || 0} facultades • ${c.members_count || 0} integrantes
+            </div>
+          </div>
+          <span class="component-badge component-badge--sm">${escapeHtml(c.code || 'SEDE')}</span>
+        </div>
+      `).join('');
+    } catch {
+      this.campusesListContainer.innerHTML = '<p style="padding: 12px; color: var(--text-danger); font-size: 13px;">Error al consultar sedes.</p>';
+    }
+  }
+
+  private async handleAddCampusSubmit(): Promise<void> {
+    if (!this.inputNewCampusName) return;
+    const name = this.inputNewCampusName.value.trim();
+    const city = this.inputNewCampusCity?.value.trim() || undefined;
+    if (!name) return;
+
+    try {
+      const res = await postApi(API_ROUTES.education.universityCampuses, { name, city });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        if (this.bannerCampusError) {
+          this.bannerCampusError.textContent = errData.error || 'Error al crear campus.';
+          this.bannerCampusError.classList.remove('is-hidden');
+        }
+        return;
+      }
+      this.inputNewCampusName.value = '';
+      if (this.inputNewCampusCity) this.inputNewCampusCity.value = '';
+      this.formAddCampus?.classList.add('is-hidden');
+      if (this.bannerCampusError) this.bannerCampusError.classList.add('is-hidden');
+      showToast('Sede universitaria creada exitosamente.', 'success');
+      await this.loadCampusesList();
+      await this.loadUniversityStats();
+    } catch {
+      if (this.bannerCampusError) {
+        this.bannerCampusError.textContent = 'Error de conexión al crear sede.';
+        this.bannerCampusError.classList.remove('is-hidden');
+      }
+    }
   }
 
   private renderClassrooms(): void {
@@ -968,7 +1107,7 @@ class EducationController {
 
   private openCreateModal(): void {
     const rawTier = (currentUser?.subscription_tier || 'free').toLowerCase();
-    const canCreate = ['docentes', 'escuelas', 'education', 'business', 'negocios', 'pro'].includes(rawTier);
+    const canCreate = ['docentes', 'escuelas', 'education', 'business', 'negocios', 'pro', 'universidades', 'universities'].includes(rawTier);
 
     if (!canCreate) {
       showToast('La creación de aulas escolares requiere el plan Docentes o Escuelas e Instituciones.', 'warning');

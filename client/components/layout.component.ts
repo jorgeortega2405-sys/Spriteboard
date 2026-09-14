@@ -327,7 +327,7 @@ function setupRailNavigation(sidebar: HTMLElement): void {
   });
 
   const userTier = (currentUser?.subscription_tier || 'free').toLowerCase();
-  const isEducation = ['escuelas', 'docentes', 'schools', 'education'].includes(userTier);
+  const isEducation = ['escuelas', 'docentes', 'schools', 'education', 'universidades', 'universities'].includes(userTier);
 
   const itemTeams = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-teams"]');
   const itemEducation = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-education"]');
@@ -745,8 +745,9 @@ async function populateDrawerContent(drawer: HTMLElement): Promise<void> {
     bindNavLink(btnSupport, '/help/support');
   } else if (currentPath.startsWith('/education') || currentPath === '/institution') {
     const isTeachers = currentPath === '/education/teachers';
+    const isStudents = currentPath === '/education/students';
     const isInstitution = currentPath === '/education/institution' || currentPath === '/institution';
-    const isClassrooms = !isTeachers && !isInstitution;
+    const isClassrooms = !isTeachers && !isStudents && !isInstitution;
 
     drawerBody.innerHTML = `
       <div class="drawer-section__header" style="padding: 8px 8px 4px 8px;">
@@ -760,6 +761,10 @@ async function populateDrawerContent(drawer: HTMLElement): Promise<void> {
         <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#school"></use></svg>
         <span class="menu-item__text">Docentes</span>
       </button>
+      <button type="button" class="menu-item${isStudents ? ' is-active' : ''}" data-ref="btn-drawer-edu-students">
+        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
+        <span class="menu-item__text">Estudiantes</span>
+      </button>
       <button type="button" class="menu-item${isInstitution ? ' is-active' : ''}" data-ref="btn-drawer-edu-institution">
         <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#apartment"></use></svg>
         <span class="menu-item__text">Institución</span>
@@ -767,10 +772,12 @@ async function populateDrawerContent(drawer: HTMLElement): Promise<void> {
     `;
     const btnClassrooms = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-edu-classrooms"]');
     const btnTeachers = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-edu-teachers"]');
+    const btnStudents = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-edu-students"]');
     const btnInstitution = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-edu-institution"]');
 
     bindNavLink(btnClassrooms, '/education');
     bindNavLink(btnTeachers, '/education/teachers');
+    bindNavLink(btnStudents, '/education/students');
     bindNavLink(btnInstitution, '/education/institution');
   } else {
     await renderHomeDrawerContent(drawerBody);

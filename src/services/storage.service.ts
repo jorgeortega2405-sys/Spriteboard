@@ -40,6 +40,8 @@ export const TIER_STORAGE_LIMITS: Record<string, number> = {
   docentes: 1024 * 1024 * 1024 * 1024,
   escuelas: 1024 * 1024 * 1024 * 1024,
   education: 1024 * 1024 * 1024 * 1024,
+  universidades: 2 * 1024 * 1024 * 1024 * 1024,
+  universities: 2 * 1024 * 1024 * 1024 * 1024,
 };
 
 const TIER_DISPLAY_NAMES: Record<string, string> = {
@@ -50,6 +52,8 @@ const TIER_DISPLAY_NAMES: Record<string, string> = {
   docentes: 'Spriteboard Docentes',
   escuelas: 'Spriteboard Escuelas',
   education: 'Spriteboard Educación',
+  universidades: 'Spriteboard Universidades',
+  universities: 'Spriteboard Universidades',
 };
 
 export function formatStorageBytes(bytes: number): string {

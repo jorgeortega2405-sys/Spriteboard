@@ -106,7 +106,7 @@ export class DesignController {
   private set isOwner(val: boolean) {
     this.collaborationManager.isOwner = val;
   }
-  private effectiveTier: 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios' | 'docentes' | 'escuelas' | 'education' = 'free';
+  private effectiveTier: 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios' | 'docentes' | 'escuelas' | 'education' | 'universidades' | 'universities' = 'free';
   private ownerInfo: OwnerInfo | null = null;
   private get collaborators(): Map<string, CollaboratorState> {
     return this.collaborationManager.collaborators;
@@ -1407,7 +1407,7 @@ export class DesignController {
 
     if (broadcast) {
       const effTier = (this.effectiveTier || currentUser?.subscription_tier || 'free').toLowerCase();
-      const isProOrBusiness = effTier === 'pro' || effTier === 'ultra' || effTier === 'business' || effTier === 'negocios' || effTier === 'docentes' || effTier === 'escuelas' || effTier === 'education';
+      const isProOrBusiness = effTier === 'pro' || effTier === 'ultra' || effTier === 'business' || effTier === 'negocios' || effTier === 'docentes' || effTier === 'escuelas' || effTier === 'education' || effTier === 'universidades' || effTier === 'universities';
       if (!isProOrBusiness && frame.layers.length >= 5) {
         showToast(t('design.layers_free_limit') || 'El plan Gratis permite hasta 5 capas por lienzo. Mejora a Pro para capas ilimitadas.', 'warning');
         openUpgradeModal('pro');

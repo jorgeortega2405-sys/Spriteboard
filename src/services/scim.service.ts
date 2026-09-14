@@ -287,7 +287,7 @@ export async function createScimUser(
         [email]
       );
 
-      const targetTier = tenant.tenant_type === 'university' ? 'docentes' : 'business';
+      const targetTier = tenant.tenant_type === 'university' ? 'pro' : 'business';
 
       if (existingUser.length > 0) {
         userId = existingUser[0].id;
@@ -314,7 +314,8 @@ export async function createScimUser(
         }
 
         const [insertUser] = await pool.execute<mysql.ResultSetHeader>(
-          `INSERT INTO users (username, email, password_hash, subscription_tier) VALUES (?, ?, ?, ?)`,
+          `INSERT INTO users (username, email, password_hash, subscription_tier)
+           VALUES (?, ?, ?, ?)`,
           [uniqueUsername, email, passHash, targetTier]
         );
 
@@ -334,6 +335,15 @@ export async function createScimUser(
          ON DUPLICATE KEY UPDATE external_id = VALUES(external_id), active = VALUES(active)`,
         [tenant.id, userId, externalId, isActive]
       );
+
+      if (tenant.tenant_type === 'university') {
+        await pool.execute(
+          `INSERT INTO university_members (tenant_id, user_id, academic_role, status)
+           VALUES (?, ?, 'student', ?)
+           ON DUPLICATE KEY UPDATE status = VALUES(status)`,
+          [tenant.id, userId, isActive ? 'active' : 'suspended']
+        );
+      }
     }
 
     if (tenant.target_team_id) {

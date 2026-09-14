@@ -24,7 +24,7 @@ export async function createClassroom(
     );
 
     const rawTier = (userRows[0]?.subscription_tier || 'free').toLowerCase();
-    const canCreate = ['docentes', 'escuelas', 'education', 'business', 'negocios', 'pro'].includes(rawTier);
+    const canCreate = ['docentes', 'escuelas', 'education', 'business', 'negocios', 'pro', 'universidades', 'universities'].includes(rawTier);
 
     if (!canCreate) {
       throw new Error('La creación de aulas requiere una suscripción de Docente, Institución o Negocios.');
@@ -311,7 +311,7 @@ export async function getSchoolOrganization(userId: number): Promise<SchoolOrgan
         [userId]
       );
       const tier = (uRows[0]?.subscription_tier || '').toLowerCase();
-      if (['escuelas', 'instituciones', 'education_institution', 'schools'].includes(tier)) {
+      if (['escuelas', 'instituciones', 'education_institution', 'schools', 'universidades', 'universities'].includes(tier)) {
         const uuid = crypto.randomUUID();
         const defaultName = `Institución de ${uRows[0]?.username || 'Educación'}`;
         const [insertRes] = await pool.execute<mysql.ResultSetHeader>(

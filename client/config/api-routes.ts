@@ -55,6 +55,13 @@ export const API_ROUTES = {
     removeTeacher: (userId: number) => `/api/education/school/teachers/${encodeURIComponent(userId)}`,
     school: '/api/education/school',
     students: '/api/education/school/students',
+    university: '/api/education/university',
+    universityCampuses: '/api/education/university/campuses',
+    universityCampusById: (id: number) => `/api/education/university/campuses/${encodeURIComponent(id)}`,
+    universityFaculties: '/api/education/university/faculties',
+    universityFacultyById: (id: number) => `/api/education/university/faculties/${encodeURIComponent(id)}`,
+    universityMembers: '/api/education/university/members',
+    universityMemberById: (id: number) => `/api/education/university/members/${encodeURIComponent(id)}`,
   },
   enterprise: {
     checkDomainSso: (domain: string) => `/api/auth/sso/check-domain?domain=${encodeURIComponent(domain)}`,

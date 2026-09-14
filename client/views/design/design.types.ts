@@ -79,7 +79,7 @@ export type BucketMode = 'contiguous' | 'global';
 export type MirrorAxis = 'vertical' | 'horizontal' | 'both';
 export type ShapeDrawMode = 'outline' | 'filled';
 export type DownloadType = 'png-current' | 'spritesheet' | 'spritesheet-atlas' | 'gif' | 'project-json';
-export type SubscriptionTierType = 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios' | 'docentes' | 'escuelas' | 'education';
+export type SubscriptionTierType = 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios' | 'docentes' | 'escuelas' | 'education' | 'universidades' | 'universities';
 
 export interface CollaboratorState {
   avatarUrl?: string | null;

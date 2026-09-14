@@ -65,3 +65,68 @@ export interface SchoolStudent {
   status: 'active';
   created_at: string;
 }
+
+export type AcademicRole = 'superadmin' | 'campus_admin' | 'faculty_admin' | 'professor' | 'ta' | 'student' | 'staff';
+
+export interface UniversityCampus {
+  id: number;
+  tenant_id: number;
+  name: string;
+  code?: string | null;
+  city?: string | null;
+  faculties_count?: number;
+  members_count?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UniversityFaculty {
+  id: number;
+  campus_id: number;
+  tenant_id: number;
+  name: string;
+  code?: string | null;
+  dean_user_id?: number | null;
+  dean_username?: string | null;
+  campus_name?: string | null;
+  members_count?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UniversityMember {
+  id: number;
+  tenant_id: number;
+  campus_id?: number | null;
+  faculty_id?: number | null;
+  user_id: number;
+  academic_role: AcademicRole;
+  student_code?: string | null;
+  status: 'active' | 'suspended' | 'graduated';
+  username?: string;
+  email?: string;
+  avatar_url?: string | null;
+  subscription_tier?: string;
+  campus_name?: string | null;
+  faculty_name?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UniversityOverviewDto {
+  tenant: {
+    id: number;
+    uuid: string;
+    name: string;
+    domain: string;
+    sso_enabled: boolean;
+    scim_enabled: boolean;
+  };
+  campuses: UniversityCampus[];
+  faculties: UniversityFaculty[];
+  total_students: number;
+  total_professors: number;
+  total_campuses: number;
+  total_faculties: number;
+  is_admin: boolean;
+}

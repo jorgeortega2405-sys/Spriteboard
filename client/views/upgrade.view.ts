@@ -345,9 +345,69 @@ export async function createUpgradeView(): Promise<HTMLElement> {
     ],
   };
 
+  const universityTier = {
+    id: 'universidades',
+    name: 'Spriteboard Universidades',
+    tagline: 'Facilita el trabajo en equipo, la comunicación y la creatividad para todas las personas de tu universidad.',
+    storage: 'Almacenamiento masivo para todo el campus',
+    price: 0,
+    priceMonthly: 0,
+    priceYearly: 0,
+    isCustomPrice: true,
+    currency: 'USD',
+    billingPeriod: 'yearly',
+    icon: 'military_tech',
+    badge: 'Educación Superior',
+    isPopular: false,
+    buttonText: t('upgrade.btn_contact_university') || 'Conversemos',
+    isContact: true,
+    features: [
+      {
+        title: 'Acceso a Spriteboard Pro para cada estudiante',
+        desc: 'Herramientas Pro desbloqueadas automáticamente con su correo institucional',
+        icon: 'verified_user',
+      },
+      {
+        title: 'Acceso empresarial para personal y cuerpo docente',
+        desc: 'Gestión avanzada de aulas universitarias, proyectos de cátedra y auditoría',
+        icon: 'badge',
+      },
+      {
+        title: 'Estructura multi-campus y facultades',
+        desc: 'Organización jerárquica por sedes regionales, facultades y escuelas académicas',
+        icon: 'apartment',
+      },
+      {
+        title: 'Implementación en toda la universidad con SSO',
+        desc: 'Inicio de sesión único institucional con SAML 2.0, Microsoft Entra ID, Okta o Google Workspace',
+        icon: 'vpn_key',
+      },
+      {
+        title: 'Aprovisionamiento automatizado de usuarios (SCIM)',
+        desc: 'Sincronización continua de altas, bajas y matrículas estudiantiles',
+        icon: 'sync_alt',
+      },
+      {
+        title: 'Directorio y permisos por roles académicos',
+        desc: 'Catedráticos, docentes adjuntos, ayudantes de cátedra (TAs) y alumnos',
+        icon: 'groups_3',
+      },
+      {
+        title: 'Controles de administración y reportes centralizados',
+        desc: 'Analíticas de adopción, métricas de colaboración y registros de auditoría',
+        icon: 'insights',
+      },
+      {
+        title: 'Soporte prioritario y asesoramiento exclusivo',
+        desc: 'Atención prioritaria y acompañamiento continuo de éxito institucional',
+        icon: 'support_agent',
+      },
+    ],
+  };
+
   const categoryTiers: Record<'personal_teams' | 'education', any[]> = {
     personal_teams: [freeTier, proTier, businessTier],
-    education: [teachersTier, educationTier],
+    education: [teachersTier, educationTier, universityTier],
   };
 
   const TIER_HIERARCHY: Record<string, number> = {
@@ -359,6 +419,8 @@ export async function createUpgradeView(): Promise<HTMLElement> {
     docentes: 2,
     escuelas: 3,
     schools: 3,
+    universidades: 4,
+    universities: 4,
   };
 
   const renderCards = (category: 'personal_teams' | 'education'): void => {
@@ -377,7 +439,8 @@ export async function createUpgradeView(): Promise<HTMLElement> {
           userTier === tier.id ||
           (tier.id === 'business' && userTier === 'negocios') ||
           (tier.id === 'schools' && ['schools', 'escuelas', 'education'].includes(userTier)) ||
-          (tier.id === 'docentes' && ['docentes', 'teachers'].includes(userTier))
+          (tier.id === 'docentes' && ['docentes', 'teachers'].includes(userTier)) ||
+          (tier.id === 'universidades' && ['universidades', 'universities'].includes(userTier))
         )
       );
       const cardTierLevel = TIER_HIERARCHY[tier.id] ?? 0;
@@ -393,7 +456,10 @@ export async function createUpgradeView(): Promise<HTMLElement> {
 
       featuresList.forEach((feat: any, idx: number) => {
         if (tierIdx > 0 && idx === 2) {
-          const dividerText = category === 'education' ? 'Todo lo de Docentes, más:' : 'Todo lo del plan anterior, más:';
+          let dividerText = 'Todo lo del plan anterior, más:';
+          if (category === 'education') {
+            dividerText = tierIdx === 1 ? 'Todo lo de Docentes, más:' : 'Todo lo de Escuelas, más:';
+          }
           featuresHtml += `
             <div class="component-card-feature-divider-container" data-ref="feature-divider-${tier.id}">
               <hr class="component-divider component-card-feature-divider" />
@@ -560,9 +626,38 @@ export async function createUpgradeView(): Promise<HTMLElement> {
           }
 
           if (tier.isContact) {
+            if (tier.id === 'universidades') {
+              openModal({
+                title: 'Spriteboard para Universidades y Educación Superior',
+                description: 'Infraestructura creativa a gran escala para campus, facultades y toda la comunidad universitaria.',
+                bodyHtml: `
+                  <div style="font-size: 14px; line-height: 1.6; color: var(--text-secondary); display: flex; flex-direction: column; gap: 12px;">
+                    <p>Diseñamos propuestas institucionales para universidades y centros de educación superior, con despliegue multi-campus, integración federada SSO/SCIM y cuentas Pro automáticas para todos tus estudiantes.</p>
+                    <div style="background: var(--bg-hover-light, rgba(0,0,0,0.03)); padding: 14px; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+                      <strong style="color: var(--text-primary); display: block; margin-bottom: 6px;">¿Qué incluye el plan institucional universitario?</strong>
+                      <ul style="margin: 0; padding-left: 20px;">
+                        <li>Acceso Spriteboard Pro automático para cada alumno con correo institucional</li>
+                        <li>Autenticación centralizada SSO (SAML 2.0 / Azure Entra / Okta / Shibboleth)</li>
+                        <li>Gestión jerárquica de Campus, Sedes regionales y Facultades autónomas</li>
+                        <li>Aprovisionamiento automatizado de matrículas con protocolo SCIM 2.0</li>
+                        <li>Acuerdo institucional, cumplimiento de privacidad y asesor técnico dedicado</li>
+                      </ul>
+                    </div>
+                    <p>Contáctanos directamente en <a class="link" href="mailto:soporte@spriteboard.com?subject=Propuesta%20Plan%20Universidades%20-%20Spriteboard">soporte@spriteboard.com</a> para agendar una reunión y demostración con nuestro equipo institucional.</p>
+                  </div>
+                `,
+                confirmText: 'Contactar asesor institucional',
+                cancelText: 'Cerrar',
+                onConfirm: () => {
+                  window.location.href = 'mailto:soporte@spriteboard.com?subject=Propuesta%20Plan%20Universidades%20-%20Spriteboard';
+                },
+              });
+              return;
+            }
+
             openModal({
               title: 'Plan Escuelas y Sistemas Educativos',
-              description: 'Infraestructura creativa centralizada para colegios, universidades y distritos escolares.',
+              description: 'Infraestructura creativa centralizada para colegios y distritos escolares.',
               bodyHtml: `
                 <div style="font-size: 14px; line-height: 1.6; color: var(--text-secondary); display: flex; flex-direction: column; gap: 12px;">
                   <p>Diseñamos propuestas a medida con despliegue multi-profesor, panel de control administrativo, acuerdos de privacidad de datos (COPPA/FERPA) e integración con plataformas educativas.</p>

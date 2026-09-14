@@ -64,6 +64,8 @@ export const TIER_BORDER_COLORS: Record<string, string> = {
   escuelas: 'conic-gradient(from 295deg, #8b5cf6 0% 28%, #ec4899 28% 57%, #3b82f6 57% 85%, #6366f1 85% 100%)',
   docentes: 'conic-gradient(from 295deg, #8b5cf6 0% 28%, #ec4899 28% 57%, #3b82f6 57% 85%, #6366f1 85% 100%)',
   education: 'conic-gradient(from 295deg, #8b5cf6 0% 28%, #ec4899 28% 57%, #3b82f6 57% 85%, #6366f1 85% 100%)',
+  universidades: 'conic-gradient(from 295deg, #f59e0b 0% 28%, #d97706 28% 57%, #8b5cf6 57% 85%, #fbbf24 85% 100%)',
+  universities: 'conic-gradient(from 295deg, #f59e0b 0% 28%, #d97706 28% 57%, #8b5cf6 57% 85%, #fbbf24 85% 100%)',
 };
 
 export function getTierBorderColor(tier?: string): string {
@@ -74,7 +76,7 @@ export function getTierBorderColor(tier?: string): string {
 export function getTierLimits(tier?: string): TierLimits {
   const normalized = (tier || 'free').toLowerCase();
   let key = normalized === 'negocios' ? 'business' : normalized;
-  if (key === 'docentes' || key === 'escuelas' || key === 'education' || key === 'educacion') {
+  if (key === 'docentes' || key === 'escuelas' || key === 'education' || key === 'educacion' || key === 'universidades' || key === 'universities') {
     key = 'business';
   }
   return TIER_LIMITS[key] || TIER_LIMITS.free;
@@ -82,6 +84,8 @@ export function getTierLimits(tier?: string): TierLimits {
 
 export function resolveHigherTier(tier1?: string, tier2?: string): SubscriptionTierId {
   const rank: Record<string, number> = {
+    universidades: 4,
+    universities: 4,
     escuelas: 3,
     docentes: 3,
     education: 3,
