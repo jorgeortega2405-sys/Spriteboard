@@ -42,8 +42,8 @@ export const TIER_STORAGE_LIMITS: Record<string, number> = {
   escuelas: 1024 * 1024 * 1024 * 1024,
   schools: 1024 * 1024 * 1024 * 1024,
   education: 1024 * 1024 * 1024 * 1024,
-  universidades: 2 * 1024 * 1024 * 1024 * 1024,
-  universities: 2 * 1024 * 1024 * 1024 * 1024,
+  universidades: 100 * 1024 * 1024 * 1024 * 1024,
+  universities: 100 * 1024 * 1024 * 1024 * 1024,
 };
 
 const TIER_DISPLAY_NAMES: Record<string, string> = {

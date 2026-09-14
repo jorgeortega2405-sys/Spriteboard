@@ -65,7 +65,7 @@ export const TIER_LIMITS: Record<string, TierLimits> = {
     allowedExportTypes: ['png-current', 'project-json', 'spritesheet', 'gif', 'spritesheet-atlas'],
   },
   universidades: {
-    storageBytes: 2 * 1024 * 1024 * 1024 * 1024,
+    storageBytes: 100 * 1024 * 1024 * 1024 * 1024,
     maxCanvasDimension: 16384,
     maxLiveCollaborators: 50,
     maxTeams: 999999,

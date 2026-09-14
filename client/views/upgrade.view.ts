@@ -349,7 +349,7 @@ export async function createUpgradeView(): Promise<HTMLElement> {
     id: 'universidades',
     name: 'Spriteboard Universidades',
     tagline: 'Facilita el trabajo en equipo, la comunicación y la creatividad para todas las personas de tu universidad.',
-    storage: 'Almacenamiento masivo para todo el campus',
+    storage: '100 TB de almacenamiento institucional compartido',
     price: 0,
     priceMonthly: 0,
     priceYearly: 0,
