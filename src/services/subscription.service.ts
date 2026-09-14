@@ -1,94 +1,26 @@
 import { canvasPool, pool } from '../config/database.config.js';
-import { SubscriptionTier, SubscriptionTierId } from '../types/subscription.types.js';
+import { getFeatureRequiredTier, getTierBorderColor, getTierLimits, getTierRank, hasFeatureAccess, hasTier, normalizeTierKey, PLAN_TIER_CONFIGS, type PlanBenefitDefinition, type PlanFeatureKey, type PlanLimits, type SubscriptionTierId } from '../config/plans.config.js';
+import type { SubscriptionTier } from '../types/subscription.types.js';
 import mysql from 'mysql2/promise';
 
-export interface TierLimits {
-  storageBytes: number;
-  maxCanvasDimension: number;
-  maxLiveCollaborators: number;
-  maxTeams: number;
-  maxTeamMembers: number;
-  maxLayers: number;
-  maxSnapshots: number;
-  snapshotRetentionDays: number;
-  maxExportScale: number;
-  allowedExportTypes: string[];
-}
+export { getFeatureRequiredTier, getTierBorderColor, getTierLimits, getTierRank, hasFeatureAccess, hasTier, normalizeTierKey, PLAN_TIER_CONFIGS, type PlanBenefitDefinition, type PlanFeatureKey, type PlanLimits, type SubscriptionTierId };
 
-export const TIER_LIMITS: Record<SubscriptionTierId, TierLimits> = {
-  free: {
-    storageBytes: 1024 * 1024 * 1024,
-    maxCanvasDimension: 16384,
-    maxLiveCollaborators: 3,
-    maxTeams: 0,
-    maxTeamMembers: 0,
-    maxLayers: 5,
-    maxSnapshots: 3,
-    snapshotRetentionDays: 7,
-    maxExportScale: 2,
-    allowedExportTypes: ['png-current', 'project-json'],
-  },
-  pro: {
-    storageBytes: 10 * 1024 * 1024 * 1024,
-    maxCanvasDimension: 16384,
-    maxLiveCollaborators: 6,
-    maxTeams: 0,
-    maxTeamMembers: 0,
-    maxLayers: 999999,
-    maxSnapshots: 30,
-    snapshotRetentionDays: 30,
-    maxExportScale: 8,
-    allowedExportTypes: ['png-current', 'project-json', 'spritesheet', 'gif'],
-  },
-  business: {
-    storageBytes: 1024 * 1024 * 1024 * 1024,
-    maxCanvasDimension: 16384,
-    maxLiveCollaborators: 50,
-    maxTeams: 999999,
-    maxTeamMembers: 999999,
-    maxLayers: 999999,
-    maxSnapshots: 999999,
-    snapshotRetentionDays: 999999,
-    maxExportScale: 16,
-    allowedExportTypes: ['png-current', 'project-json', 'spritesheet', 'gif', 'spritesheet-atlas'],
-  },
+export type TierLimits = PlanLimits;
+export const TIER_LIMITS = {
+  free: PLAN_TIER_CONFIGS.free.limits,
+  pro: PLAN_TIER_CONFIGS.pro.limits,
+  business: PLAN_TIER_CONFIGS.business.limits,
 };
-
-export const TIER_BORDER_COLORS: Record<SubscriptionTierId, string> = {
-  free: '#9ca3af',
-  pro: '#3b82f6',
-  business: 'conic-gradient(from 295deg, #8b5cf6 0% 28%, #ec4899 28% 57%, #3b82f6 57% 85%, #6366f1 85% 100%)',
+export const TIER_BORDER_COLORS = {
+  free: PLAN_TIER_CONFIGS.free.borderColor,
+  pro: PLAN_TIER_CONFIGS.pro.borderColor,
+  business: PLAN_TIER_CONFIGS.business.borderColor,
 };
-
-export function normalizeTierKey(tier?: string): SubscriptionTierId {
-  const norm = (tier || 'free').toLowerCase();
-  if (norm === 'negocios') return 'business';
-  if (norm === 'plus' || norm === 'ultra') return 'pro';
-  if (['free', 'pro', 'business'].includes(norm)) {
-    return norm as SubscriptionTierId;
-  }
-  return 'free';
-}
-
-export function getTierBorderColor(tier?: string): string {
-  const key = normalizeTierKey(tier);
-  return TIER_BORDER_COLORS[key] || TIER_BORDER_COLORS.free;
-}
-
-export function getTierLimits(tier?: string): TierLimits {
-  const key = normalizeTierKey(tier);
-  return TIER_LIMITS[key] || TIER_LIMITS.free;
-}
 
 export function resolveHigherTier(tier1?: string, tier2?: string): SubscriptionTierId {
-  const rank: Record<SubscriptionTierId, number> = {
-    business: 2,
-    pro: 1,
-    free: 0,
-  };
   const norm1 = normalizeTierKey(tier1);
   const norm2 = normalizeTierKey(tier2);
-  return (rank[norm2] ?? 0) > (rank[norm1] ?? 0) ? norm2 : norm1;
+  return getTierRank(norm2) > getTierRank(norm1) ? norm2 : norm1;
 }
 
 export async function resolveUserRestoredTier(userId: number): Promise<SubscriptionTierId> {

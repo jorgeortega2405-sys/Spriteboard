@@ -1,5 +1,6 @@
 import { navigate, render } from '../app-router.js';
 import { API_ROUTES } from '../config/api-routes.js';
+import { hasFeature, protectRoute } from '../config/plans.config.js';
 import { currentUser, deleteApi, escapeHtml, getApi, linkedAccounts, logoutAllApi, logoutApi, patchApi, postApi, switchAccountApi } from '../services/api.service.js';
 import { getAllLocalCanvases } from '../services/canvas-storage.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
@@ -287,6 +288,11 @@ function setupRailNavigation(sidebar: HTMLElement): void {
     const btn = sidebar.querySelector<HTMLElement>(`[data-ref="${btnRef}"]`);
     const handler = (e: Event) => {
       e.preventDefault();
+      const routeGate = protectRoute(path, currentUser);
+      if (!routeGate.allowed) {
+        openUpgradeModal(routeGate.requiredTier || 'business');
+        return;
+      }
       navigate(path);
     };
     btn?.addEventListener('click', handler);
@@ -307,6 +313,16 @@ function setupRailNavigation(sidebar: HTMLElement): void {
   bindNav('rail-item-templates', 'btn-rail-templates', '/templates', currentPath === '/templates');
   bindNav('rail-item-shared', 'btn-rail-shared', '/shared', currentPath === '/shared');
   bindNav('rail-item-teams', 'btn-rail-teams', '/teams', currentPath === '/teams');
+
+  const updateRailTeamsBadge = () => {
+    const railTeamsBadge = sidebar.querySelector<HTMLElement>('[data-ref="rail-teams-badge"]');
+    if (railTeamsBadge) {
+      const hasTeamsAccess = hasFeature('teams', currentUser);
+      railTeamsBadge.classList.toggle('is-hidden', hasTeamsAccess);
+    }
+  };
+  updateRailTeamsBadge();
+  window.addEventListener('subscription-updated', updateRailTeamsBadge);
 
   const btnCreate = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-create"]');
   const itemCreate = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-create"]');
@@ -1141,19 +1157,22 @@ function setupRailUserControls(sidebar: HTMLElement): void {
       updateTopBarTier(userTier);
 
       const groupMenuTeams = avatarContainer.querySelector<HTMLElement>('[data-ref="group-menu-teams"]');
-      const updateTeamsVisibility = (tier: string) => {
-        const tVal = (tier || (currentUser ? currentUser.subscription_tier : 'free') || 'free').toLowerCase();
-        const isBusiness = tVal === 'business' || tVal === 'negocios';
+      const menuTeamsBadge = avatarContainer.querySelector<HTMLElement>('[data-ref="menu-teams-badge"]');
+      const updateTeamsVisibility = () => {
         if (groupMenuTeams) {
-          groupMenuTeams.style.display = isBusiness ? 'block' : 'none';
+          groupMenuTeams.style.display = 'block';
+        }
+        if (menuTeamsBadge) {
+          const hasTeamsAccess = hasFeature('teams', currentUser);
+          menuTeamsBadge.classList.toggle('is-hidden', hasTeamsAccess);
         }
       };
-      updateTeamsVisibility(userTier);
+      updateTeamsVisibility();
 
       const handleSubscriptionUpdated = (e: any) => {
         const tier = e.detail?.subscription_tier || currentUser?.subscription_tier || 'free';
         updateTopBarTier(tier);
-        updateTeamsVisibility(tier);
+        updateTeamsVisibility();
         renderAccountList();
       };
       window.addEventListener('subscription-updated', handleSubscriptionUpdated);
@@ -1537,6 +1556,10 @@ function setupRailUserControls(sidebar: HTMLElement): void {
       btnTeams?.addEventListener('click', (e) => {
         e.preventDefault();
         closeMenu();
+        if (!hasFeature('teams', currentUser)) {
+          openUpgradeModal('business');
+          return;
+        }
         navigate('/teams');
       });
 

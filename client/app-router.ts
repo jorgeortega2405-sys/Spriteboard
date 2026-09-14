@@ -1,5 +1,7 @@
 import { attachChatSidebarToView, getIsSidebarOpen, hasDesignatedMenuItems, toggleDrawer, toggleSidebar, updateDynamicDrawer, updateSidebarActiveState } from './components/layout.component.js';
+import { openUpgradeModal } from './components/upgrade-modal.component.js';
 import { API_ROUTES } from './config/api-routes.js';
+import { hasFeature, protectRoute } from './config/plans.config.js';
 import { hasPersistentTopBar } from './config/skeleton-routes.js';
 import { currentUser, getApi } from './services/api.service.js';
 import { renderIcons } from './services/icon.service.js';
@@ -40,41 +42,31 @@ function normalizePath(rawPath: string): string {
   return clean;
 }
 
-export function navigate(url: string, options: { force?: boolean } = {}): void {
-  const targetUrl = new URL(url, window.location.origin);
-  const currentUrl = new URL(window.location.href);
+export function navigate(url: string, replace = false): void {
+  const normalized = normalizePath(url);
+  if (window.location.pathname === normalized && !replace) return;
 
-  const targetPath = normalizePath(targetUrl.pathname);
-  const currentPath = normalizePath(currentUrl.pathname);
+  const prev = window.location.pathname;
+  previousPath = prev;
 
-  const isSamePath = targetPath === currentPath;
-  const isSameSearch = targetUrl.search === currentUrl.search;
-  const isSameHash = targetUrl.hash === currentUrl.hash;
-
-  if (!options.force && isSamePath && isSameSearch) {
-    if (!isSameHash && targetUrl.hash) {
-      window.history.pushState({}, '', url);
-      const targetEl = document.querySelector(targetUrl.hash) || document.querySelector(`[data-ref="${targetUrl.hash.slice(1)}"]`);
-      targetEl?.scrollIntoView({ behavior: 'smooth' });
-      return;
-    }
-
-    if (window.innerWidth <= 768) {
-      toggleSidebar(false);
-    }
-    hideTooltip();
-
-    const scrollable = document.querySelector<HTMLElement>(
-      '.layout-content, .component-wrapper, .view-wrapper, .home-wrapper, .view-scrollable, .home-scrollable, .layout-scrollable, .layout-body--scrollable, .layout-content__scrollable, .component-table-wrapper'
-    );
-    if (scrollable) {
-      scrollable.scrollTo({ behavior: 'smooth', top: 0 });
-    }
+  const protection = protectRoute(normalized, currentUser);
+  if (!protection.allowed) {
+    openUpgradeModal(protection.requiredTier || 'business');
     return;
   }
 
-  window.history.pushState({}, '', url);
-  render();
+  if (replace) {
+    window.history.replaceState({}, '', normalized);
+  } else {
+    window.history.pushState({}, '', normalized);
+  }
+
+  const existingSidebar = document.querySelector<HTMLElement>('[data-ref="sidebar"], .layout-nav');
+  if (existingSidebar) {
+    updateSidebarActiveState(existingSidebar, normalized);
+  }
+
+  void render();
 }
 
 export async function render(): Promise<void> {
@@ -83,6 +75,23 @@ export async function render(): Promise<void> {
   if (!appRoot) return;
 
   const path = window.location.pathname;
+
+  const protection = protectRoute(path, currentUser);
+  if (!protection.allowed) {
+    const fallbackPath = previousPath && previousPath !== path ? previousPath : '/';
+    window.history.replaceState({}, '', fallbackPath);
+    const existingSidebar = appRoot.querySelector<HTMLElement>('[data-ref="sidebar"], .layout-nav');
+    if (existingSidebar) {
+      updateSidebarActiveState(existingSidebar, fallbackPath);
+    }
+    openUpgradeModal(protection.requiredTier || 'business');
+    if (isInitialPageLoad) {
+      isInitialPageLoad = false;
+      await render();
+    }
+    return;
+  }
+
   const navId = ++currentNavigation;
 
   const existingSidebar = appRoot.querySelector<HTMLElement>('[data-ref="sidebar"], .layout-nav');
@@ -138,6 +147,10 @@ export async function render(): Promise<void> {
         const { createLoginView } = await import('./views/auth.view.js');
         const loginView = await createLoginView();
         viewElements = [loginView];
+      } else if (!hasFeature('teams', currentUser)) {
+        window.history.replaceState({}, '', previousPath || '/');
+        openUpgradeModal('business');
+        return;
       } else {
         const { createTeamsView } = await import('./views/teams.view.js');
         const teamsView = await createTeamsView();

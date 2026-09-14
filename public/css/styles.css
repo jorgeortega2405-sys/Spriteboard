@@ -437,8 +437,37 @@ html.dark-theme .layout-content:has(.layout-nav) {
   color: inherit;
 }
 
-.rail-btn--notifications {
+.rail-btn--notifications,
+.rail-btn--has-badge {
   position: relative;
+}
+
+.rail-btn__badge {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  transition: transform var(--sl-transition-fast), opacity var(--sl-transition-fast);
+}
+
+.rail-btn__badge .component-icon {
+  width: 10px;
+  height: 10px;
+  font-size: 10px;
+  color: #ffffff;
+}
+
+.rail-btn__badge.is-hidden {
+  display: none;
 }
 
 .rail-btn--create {
