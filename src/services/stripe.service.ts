@@ -3,7 +3,8 @@ import { redis } from '../config/redis.config.js';
 import { updateUserSubscriptionInSessions } from './auth.service.js';
 import { logger } from './logger.service.js';
 import { purchaseService } from './purchase.service.js';
-import { subscriptionService } from './subscription.service.js';
+import { invalidateUserStorageCache } from './storage.service.js';
+import { normalizeTierKey, subscriptionService } from './subscription.service.js';
 import Stripe from 'stripe';
 
 export class StripeService {
@@ -30,8 +31,10 @@ export class StripeService {
     billingPeriod: 'monthly' | 'yearly',
     baseUrl: string
   ): Promise<{ id: string; url: string }> {
+    const normalizedPlan = normalizeTierKey(planId);
+
     const tiers = await subscriptionService.getAvailableTiers();
-    const tier = tiers.find((t) => t.id === planId);
+    const tier = tiers.find((t) => t.id === normalizedPlan);
 
     if (!tier) {
       throw new Error(`Plan "${planId}" no encontrado.`);
@@ -174,7 +177,7 @@ export class StripeService {
     }
 
     const existing = await purchaseService.getPurchaseBySessionId(session.id);
-    if (existing) {
+    if (existing && existing.status === 'completed') {
       return;
     }
 
@@ -209,6 +212,7 @@ export class StripeService {
     );
 
     await updateUserSubscriptionInSessions(userId, planId);
+    await invalidateUserStorageCache(userId);
 
     logger.app.info('Checkout procesado y cuenta mejorada con éxito', {
       userId,
@@ -389,7 +393,7 @@ export class StripeService {
 
     try {
       const existing = await purchaseService.getPurchaseBySessionId(session.id);
-      if (existing) {
+      if (existing && existing.status === 'completed') {
         return {
           success: true,
           tier: existing.plan_id || planId,
@@ -432,6 +436,7 @@ export class StripeService {
       );
 
       await updateUserSubscriptionInSessions(userId, planId);
+      await invalidateUserStorageCache(userId);
 
       return {
         success: true,

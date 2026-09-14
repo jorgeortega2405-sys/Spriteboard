@@ -1618,23 +1618,14 @@ export async function createBillingView(): Promise<HTMLElement> {
       }
     } else if (
       info.tier &&
-      ['docentes', 'teachers', 'escuelas', 'schools', 'education', 'universidades', 'universities', 'business', 'negocios', 'pro'].includes(info.tier.toLowerCase()) &&
+      ['business', 'negocios', 'pro'].includes(info.tier.toLowerCase()) &&
       info.tier.toLowerCase() !== 'free' &&
       info.tier.toLowerCase() !== 'none'
     ) {
       const activeTier = info.tier.toLowerCase();
       let displayName = t('upgrade_modal.plan_pro_name') || 'Spriteboard Pro';
       let descText = t('upgrade_modal.plan_pro_desc') || 'Para profesionales y creadores independientes.';
-      if (['docentes', 'teachers'].includes(activeTier)) {
-        displayName = t('upgrade_modal.plan_teachers_name') || 'Spriteboard Docentes';
-        descText = t('upgrade_modal.plan_teachers_desc') || 'Plan educativo verificado para docentes y aulas escolares.';
-      } else if (['escuelas', 'schools', 'education'].includes(activeTier)) {
-        displayName = t('upgrade_modal.plan_schools_name') || 'Spriteboard Escuelas';
-        descText = t('upgrade_modal.plan_schools_desc') || 'Plan institucional escolar para docentes, aulas y alumnos.';
-      } else if (['universidades', 'universities'].includes(activeTier)) {
-        displayName = t('upgrade_modal.plan_universities_name') || 'Spriteboard Universidades';
-        descText = t('upgrade_modal.plan_universities_desc') || 'Plan de educación superior para campus, facultades y estudiantes.';
-      } else if (['business', 'negocios'].includes(activeTier)) {
+      if (activeTier === 'business' || activeTier === 'negocios') {
         displayName = t('upgrade_modal.plan_business_name') || 'Spriteboard Negocios';
         descText = t('upgrade_modal.plan_business_desc') || 'Plan para equipos de desarrollo y estudios creativos.';
       }

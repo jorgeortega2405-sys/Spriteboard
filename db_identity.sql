@@ -142,6 +142,7 @@ CREATE TABLE IF NOT EXISTS team_members (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY uq_team_user (team_id, user_id),
     INDEX idx_team_members_user (user_id),
+    INDEX idx_team_members_team_role (team_id, role),
     FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -170,6 +171,41 @@ CREATE TABLE IF NOT EXISTS ai_chat_feedback (
     INDEX idx_ai_feedback_rating (rating),
     INDEX idx_ai_feedback_created_at (created_at),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS enterprise_tenants (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    uuid VARCHAR(36) NOT NULL UNIQUE,
+    name VARCHAR(255) NOT NULL,
+    domain VARCHAR(255) NOT NULL UNIQUE,
+    idp_entity_id VARCHAR(512) NULL,
+    idp_sso_url VARCHAR(512) NULL,
+    idp_certificate TEXT NULL,
+    scim_token_hash VARCHAR(255) NULL,
+    scim_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    sso_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    enforce_sso BOOLEAN NOT NULL DEFAULT FALSE,
+    default_role ENUM('user', 'moderator', 'administrator') NOT NULL DEFAULT 'user',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_tenant_domain (domain)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS user_federated_identities (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    tenant_id INT NOT NULL,
+    external_id VARCHAR(255) NOT NULL,
+    provider_type ENUM('saml', 'scim') NOT NULL DEFAULT 'saml',
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_tenant_external (tenant_id, external_id),
+    UNIQUE KEY uq_user_tenant (user_id, tenant_id),
+    INDEX idx_fed_user (user_id),
+    INDEX idx_fed_tenant_active (tenant_id, active),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (tenant_id) REFERENCES enterprise_tenants(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 GRANT ALL PRIVILEGES ON db_identity.* TO 'sprite_user'@'%';

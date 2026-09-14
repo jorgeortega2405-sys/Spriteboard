@@ -220,7 +220,7 @@ class TrashController {
     toolbar.setAttribute('data-ref', 'selection-toolbar');
     toolbar.innerHTML = `
       <div class="selection-toolbar__left" data-ref="selection-toolbar-left">
-        <button type="button" class="component-button component-button--icon-only component-button--h34 selection-toolbar__btn selection-toolbar__btn--close" data-ref="btn-selection-close" data-tooltip="${t('canvas.cancel_selection') || 'Cancelar selección'}" aria-label="${t('canvas.cancel_selection') || 'Cancelar selección'}">
+        <button type="button" class="component-button component-button--icon-only component-button--h34 selection-toolbar__btn selection-toolbar__btn--close" data-ref="btn-selection-close" data-tooltip="${t('canvas.selection_cancel') || 'Cancelar selección'}" aria-label="${t('canvas.selection_cancel') || 'Cancelar selección'}">
           ${createIconSvg('close')}
         </button>
         <span class="selection-toolbar__count" data-ref="selection-count">0 seleccionados</span>

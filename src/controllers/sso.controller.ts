@@ -1,7 +1,8 @@
+import { config } from '../config/env.config.js';
 import { addAccountToSession } from '../services/auth.service.js';
+import { logger } from '../services/logger.service.js';
 import { checkDomainSso, getSpMetadataXml, resolveOrProvisionFederatedUser } from '../services/sso.service.js';
 import { getTenantByDomain, getTenantByUuid } from '../services/tenant.service.js';
-import { logger } from '../services/logger.service.js';
 import { Request, Response } from 'express';
 
 export async function checkDomainSsoHandler(req: Request, res: Response): Promise<void> {
@@ -49,6 +50,11 @@ export async function initiateSamlLoginHandler(req: Request, res: Response): Pro
       return;
     }
 
+    if (config.nodeEnv !== 'development') {
+      res.redirect('/login?error=sso_not_configured');
+      return;
+    }
+
     res.send(`<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><title>Simulación SSO - Spriteboard</title></head>
@@ -88,7 +94,7 @@ export async function samlCallbackHandler(req: Request, res: Response): Promise<
       targetTenant = await getTenantByUuid(tenantUuid);
     }
 
-    if (testEmail) {
+    if (testEmail && config.nodeEnv === 'development') {
       resolvedEmail = String(testEmail).trim().toLowerCase();
       externalId = resolvedEmail;
     } else if (SAMLResponse) {
@@ -110,8 +116,18 @@ export async function samlCallbackHandler(req: Request, res: Response): Promise<
       }
     }
 
-    if (!resolvedEmail || !targetTenant) {
+    if (!resolvedEmail || !targetTenant || !targetTenant.sso_enabled) {
       res.redirect('/login?error=sso_invalid_response');
+      return;
+    }
+
+    const emailDomain = resolvedEmail.split('@')[1] || '';
+    if (emailDomain.toLowerCase() !== targetTenant.domain.toLowerCase()) {
+      logger.security.warn('Rechazada autenticación SAML por discrepancia de dominio', {
+        resolvedEmail,
+        tenantDomain: targetTenant.domain,
+      });
+      res.redirect('/login?error=sso_domain_mismatch');
       return;
     }
 

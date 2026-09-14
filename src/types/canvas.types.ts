@@ -1,3 +1,5 @@
+import { SubscriptionTierId } from './subscription.types.js';
+
 export interface Canvas {
   id: number;
   uuid: string;
@@ -20,8 +22,8 @@ export interface Canvas {
   is_favorite?: boolean;
   owner_name?: string | null;
   owner_avatar?: string | null;
-  owner_tier?: 'free' | 'pro' | 'business' | 'negocios' | 'docentes' | 'escuelas' | 'education' | 'universidades' | null;
-  effective_tier?: 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios' | 'docentes' | 'escuelas' | 'education' | 'universidades' | null;
+  owner_tier?: SubscriptionTierId | null;
+  effective_tier?: SubscriptionTierId | null;
   team_info?: { id: number; uuid: string; name: string; color?: string } | null;
   created_at: string;
   updated_at: string;
@@ -95,7 +97,7 @@ export interface CanvasMember {
   username: string;
   email?: string | null;
   avatar_url?: string | null;
-  subscription_tier?: 'free' | 'pro' | 'business' | 'negocios' | 'docentes' | 'escuelas' | 'education' | 'universidades';
+  subscription_tier?: SubscriptionTierId | null;
   role: 'editor' | 'viewer';
   created_at: string;
 }

@@ -1,12 +1,22 @@
 import { pool } from '../config/database.config.js';
 import { config } from '../config/env.config.js';
-import { UserPayload, UserRole } from '../types/auth.types.js';
-import { EnterpriseTenant } from '../types/enterprise.types.js';
-import { hashPassword } from './auth.service.js';
+import { hashPassword, updateUserSubscriptionInSessions } from './auth.service.js';
 import { logger } from './logger.service.js';
+import { resolveHigherTier } from './subscription.service.js';
 import { cleanDomain, getTenantByDomain, getTenantByUuid } from './tenant.service.js';
+import { EnterpriseTenant } from '../types/enterprise.types.js';
+import { UserPayload, UserRole } from '../types/auth.types.js';
 import crypto from 'crypto';
 import mysql from 'mysql2/promise';
+
+function escapeXml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
 
 export async function checkDomainSso(rawDomain: string): Promise<{
   ssoEnabled: boolean;
@@ -49,6 +59,7 @@ export async function getSpMetadataXml(tenantUuid: string): Promise<string> {
   const baseUrl = (config.appUrl || 'http://localhost:3000').replace(/\/+$/, '');
   const entityId = `${baseUrl}/api/auth/sso/saml/metadata/${tenant.uuid}`;
   const acsUrl = `${baseUrl}/api/auth/sso/saml/callback`;
+  const safeName = escapeXml(tenant.name);
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <md:EntityDescriptor xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata" entityID="${entityId}">
@@ -57,8 +68,8 @@ export async function getSpMetadataXml(tenantUuid: string): Promise<string> {
     <md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="${acsUrl}" index="1" isDefault="true"/>
   </md:SPSSODescriptor>
   <md:Organization>
-    <md:OrganizationName xml:lang="es">${tenant.name}</md:OrganizationName>
-    <md:OrganizationDisplayName xml:lang="es">${tenant.name} en Spriteboard</md:OrganizationDisplayName>
+    <md:OrganizationName xml:lang="es">${safeName}</md:OrganizationName>
+    <md:OrganizationDisplayName xml:lang="es">${safeName} en Spriteboard</md:OrganizationDisplayName>
     <md:OrganizationURL xml:lang="es">${baseUrl}</md:OrganizationURL>
   </md:Organization>
 </md:EntityDescriptor>`;
@@ -73,6 +84,15 @@ export async function resolveOrProvisionFederatedUser(
   try {
     const cleanEmail = email.trim().toLowerCase();
     const cleanExtId = (externalId || cleanEmail).trim();
+    const emailDomain = cleanEmail.split('@')[1] || '';
+
+    if (emailDomain.toLowerCase() !== tenant.domain.toLowerCase()) {
+      logger.security.warn('Rechazado intento de federación SSO con dominio incompatible', {
+        tenantDomain: tenant.domain,
+        userEmail: cleanEmail,
+      });
+      throw new Error('El dominio del correo no coincide con la organización.');
+    }
 
     const [userRows] = await pool.query<mysql.RowDataPacket[]>(
       `SELECT * FROM users WHERE LOWER(email) = ? LIMIT 1`,
@@ -83,9 +103,7 @@ export async function resolveOrProvisionFederatedUser(
     let username: string;
     let role: UserRole = 'user';
     let avatarUrl: string | null = null;
-    let targetTier = tenant.tenant_type === 'university'
-      ? 'pro'
-      : (tenant.tenant_type === 'school' ? 'escuelas' : 'business');
+    let targetTier = 'business';
 
     if (userRows.length > 0) {
       userId = userRows[0].id;
@@ -93,16 +111,14 @@ export async function resolveOrProvisionFederatedUser(
       role = (userRows[0].role as UserRole) || 'user';
       avatarUrl = userRows[0].avatar_url || null;
 
-      if (tenant.owner_id === userId) {
-        targetTier = tenant.tenant_type === 'university'
-          ? 'universidades'
-          : (tenant.tenant_type === 'school' ? 'escuelas' : 'business');
-      }
+      const existingTier = (userRows[0].subscription_tier || 'free').toLowerCase();
+      const effectiveTier = resolveHigherTier(existingTier, targetTier);
 
       await pool.execute(
         `UPDATE users SET subscription_tier = ? WHERE id = ?`,
-        [targetTier, userId]
+        [effectiveTier, userId]
       );
+      await updateUserSubscriptionInSessions(userId, effectiveTier);
     } else {
       let uniqueUsername = (displayName || cleanEmail.split('@')[0])
         .replace(/[^a-zA-Z0-9_-]/g, '')
@@ -136,16 +152,6 @@ export async function resolveOrProvisionFederatedUser(
        ON DUPLICATE KEY UPDATE active = TRUE, external_id = VALUES(external_id)`,
       [tenant.id, userId, cleanExtId]
     );
-
-    if (tenant.tenant_type === 'university') {
-      const academicRole = tenant.owner_id === userId ? 'superadmin' : 'student';
-      await pool.execute(
-        `INSERT INTO university_members (tenant_id, user_id, academic_role, status)
-         VALUES (?, ?, ?, 'active')
-         ON DUPLICATE KEY UPDATE status = 'active'`,
-        [tenant.id, userId, academicRole]
-      );
-    }
 
     if (tenant.target_team_id) {
       await pool.execute(

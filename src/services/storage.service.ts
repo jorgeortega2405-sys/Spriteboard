@@ -2,6 +2,7 @@ import { canvasPool, pool } from '../config/database.config.js';
 import { redis } from '../config/redis.config.js';
 import { logger } from './logger.service.js';
 import { headObject } from './s3.service.js';
+import { normalizeTierKey } from './subscription.service.js';
 import fs from 'fs';
 import mysql from 'mysql2/promise';
 import path from 'path';
@@ -36,28 +37,12 @@ export const TIER_STORAGE_LIMITS: Record<string, number> = {
   free: 1024 * 1024 * 1024,
   pro: 10 * 1024 * 1024 * 1024,
   business: 1024 * 1024 * 1024 * 1024,
-  negocios: 1024 * 1024 * 1024 * 1024,
-  docentes: 50 * 1024 * 1024 * 1024,
-  teachers: 50 * 1024 * 1024 * 1024,
-  escuelas: 1024 * 1024 * 1024 * 1024,
-  schools: 1024 * 1024 * 1024 * 1024,
-  education: 1024 * 1024 * 1024 * 1024,
-  universidades: 100 * 1024 * 1024 * 1024 * 1024,
-  universities: 100 * 1024 * 1024 * 1024 * 1024,
 };
 
 const TIER_DISPLAY_NAMES: Record<string, string> = {
   free: 'Spriteboard Gratis',
   pro: 'Spriteboard Pro',
   business: 'Spriteboard Negocios',
-  negocios: 'Spriteboard Negocios',
-  docentes: 'Spriteboard Docentes',
-  teachers: 'Spriteboard Docentes',
-  escuelas: 'Spriteboard Escuelas',
-  schools: 'Spriteboard Escuelas',
-  education: 'Spriteboard Educación',
-  universidades: 'Spriteboard Universidades',
-  universities: 'Spriteboard Universidades',
 };
 
 export function formatStorageBytes(bytes: number): string {
@@ -90,8 +75,7 @@ export async function getUserStorageUsage(userId: number): Promise<UserStorageUs
     [userId]
   );
 
-  const rawTier = (userRows[0]?.subscription_tier || 'free').toLowerCase();
-  const normalizedTier = rawTier === 'negocios' ? 'business' : rawTier;
+  const normalizedTier = normalizeTierKey(userRows[0]?.subscription_tier);
   const tierName = TIER_DISPLAY_NAMES[normalizedTier] || 'Spriteboard Gratis';
   const limitBytes = TIER_STORAGE_LIMITS[normalizedTier] || TIER_STORAGE_LIMITS.free;
 

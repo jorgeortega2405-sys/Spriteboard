@@ -1,3 +1,5 @@
+import { SubscriptionTierId } from './subscription.types.js';
+
 export type UserRole = 'user' | 'moderator' | 'administrator' | 'superadministrator';
 
 export const USER_ROLES: readonly UserRole[] = ['user', 'moderator', 'administrator', 'superadministrator'] as const;
@@ -11,7 +13,7 @@ export interface UserPayload {
   avatar_url?: string | null;
   role?: UserRole;
   google_id?: string | null;
-  subscription_tier?: 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios' | 'escuelas' | 'schools' | 'docentes' | 'teachers' | 'education' | 'universidades' | 'universities';
+  subscription_tier?: SubscriptionTierId;
   subscription_tier_color?: string;
   two_factor_enabled?: boolean;
 }
@@ -23,7 +25,7 @@ export interface SessionAccount {
   avatar_url?: string | null;
   role?: UserRole;
   google_id?: string | null;
-  subscription_tier?: 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios' | 'escuelas' | 'schools' | 'docentes' | 'teachers' | 'education' | 'universidades' | 'universities';
+  subscription_tier?: SubscriptionTierId;
   subscription_tier_color?: string;
   two_factor_enabled?: boolean;
   sessionId?: string;

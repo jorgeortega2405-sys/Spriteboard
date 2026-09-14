@@ -284,7 +284,7 @@ export class BoardController {
     const userId = currentUser ? currentUser.id : null;
     const username = currentUser ? currentUser.username : 'Invitado';
     const avatarUrl = currentUser?.avatar_url || null;
-    const tier = (currentUser?.subscription_tier || 'free') as 'business' | 'free' | 'negocios' | 'plus' | 'pro' | 'ultra';
+    const tier = (currentUser?.subscription_tier || 'free') as BoardCollaboratorState['subscriptionTier'];
 
     this.collaborationManager.roomToken = this.roomToken;
     this.collaborationManager.isOwner = this.isOwner;

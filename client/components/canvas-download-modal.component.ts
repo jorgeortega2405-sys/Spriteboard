@@ -32,9 +32,9 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
   let selectedBg: 'transparent' | 'solid' = 'transparent';
 
   const userTier = (canvas.effective_tier || canvas.owner_tier || currentUser?.subscription_tier || 'free').toLowerCase();
-  const isHighRes = ['pro', 'ultra', 'business', 'negocios', 'docentes', 'teachers', 'escuelas', 'schools', 'education', 'universidades', 'universities'].includes(userTier);
-  const isAtlasSupported = ['business', 'negocios', 'docentes', 'teachers', 'escuelas', 'schools', 'education', 'universidades', 'universities'].includes(userTier);
-  const isUltraScale = ['business', 'negocios', 'escuelas', 'schools', 'education', 'universidades', 'universities'].includes(userTier);
+  const isHighRes = ['pro', 'business', 'negocios'].includes(userTier);
+  const isAtlasSupported = ['business', 'negocios'].includes(userTier);
+  const isUltraScale = ['business', 'negocios'].includes(userTier);
 
   const baseW = canvas.width || 800;
   const baseH = canvas.height || 600;
@@ -279,7 +279,7 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
     onSelect: (val, item) => {
       const requiredTier = item?.getAttribute('data-required-tier');
       if (requiredTier === 'atlas' && !isAtlasSupported) {
-        showToast('La exportación Game Atlas requiere el plan Negocios o Docentes.', 'info');
+        showToast('La exportación Game Atlas requiere el plan Negocios.', 'info');
         openUpgradeModal('business');
         typeCtrl?.close();
         return false;

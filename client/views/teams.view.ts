@@ -342,7 +342,7 @@ class TeamsController {
       const res = await getApi(API_ROUTES.teams.base);
       if (res.ok) {
         const data = await res.json();
-        this.allTeams = (Array.isArray(data.teams) ? data.teams : []).filter((t: any) => t.team_type !== 'classroom');
+        this.allTeams = Array.isArray(data.teams) ? data.teams : [];
       } else {
         this.allTeams = [];
       }
@@ -352,15 +352,9 @@ class TeamsController {
     }
 
     const userTier = (currentUser?.subscription_tier || 'free').toLowerCase();
-    const isEducation = ['escuelas', 'docentes', 'schools', 'education', 'universidades', 'universities'].includes(userTier);
     const hasTeams = this.allTeams.length > 0;
 
-    if (isEducation && !hasTeams) {
-      navigate('/education');
-      return;
-    }
-
-    const canCreateTeams = ['business', 'negocios'].includes(userTier);
+    const canCreateTeams = userTier === 'business';
     if (!canCreateTeams && !hasTeams) {
       if (this.lockedStateEl) {
         this.lockedStateEl.classList.remove('is-hidden');
@@ -557,11 +551,6 @@ class TeamsController {
   private openTeamModal(teamToEdit?: Team): void {
     const userTier = (currentUser?.subscription_tier || 'free').toLowerCase();
     if (!teamToEdit) {
-      if (['escuelas', 'docentes', 'schools', 'education', 'universidades', 'universities'].includes(userTier)) {
-        showToast('Las cuentas de Educación gestionan sus aulas y salones desde la sección Educación.', 'info');
-        navigate('/education');
-        return;
-      }
       if (!['business', 'negocios'].includes(userTier)) {
         showToast(t('teams.toast_upgrade_required') || 'La creación de equipos requiere una suscripción a Spriteboard Negocios.', 'warning');
         openUpgradeModal('business');

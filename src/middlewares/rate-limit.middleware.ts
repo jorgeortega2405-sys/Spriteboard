@@ -265,3 +265,17 @@ export const canvasHeartbeatLimiter = createRateLimiter({
   max: 60,
   message: 'Demasiadas solicitudes de actividad en el lienzo. Por favor espera un momento.',
 });
+
+export const ssoCheckLimiter = createRateLimiter({
+  prefix: 'sso_check_domain',
+  windowMs: 5 * 60 * 1000,
+  max: 30,
+  message: 'Demasiadas consultas de verificación SSO. Por favor espera unos minutos.',
+});
+
+export const ssoCallbackLimiter = createRateLimiter({
+  prefix: 'sso_callback',
+  windowMs: 5 * 60 * 1000,
+  max: 15,
+  message: 'Demasiados intentos de autenticación SSO. Por favor espera unos minutos.',
+});

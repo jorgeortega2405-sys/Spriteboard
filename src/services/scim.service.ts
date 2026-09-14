@@ -1,8 +1,10 @@
 import { pool } from '../config/database.config.js';
 import { config } from '../config/env.config.js';
 import { EnterpriseTenant, ScimListResponse, ScimPatchRequest, ScimUserResource } from '../types/enterprise.types.js';
-import { hashPassword, revokeAllUserSessions } from './auth.service.js';
+import { hashPassword, revokeAllUserSessions, updateUserSubscriptionInSessions } from './auth.service.js';
 import { logger } from './logger.service.js';
+import { invalidateUserStorageCache } from './storage.service.js';
+import { resolveHigherTier, resolveUserRestoredTier } from './subscription.service.js';
 import crypto from 'crypto';
 import mysql from 'mysql2/promise';
 
@@ -281,24 +283,43 @@ export async function createScimUser(
         `UPDATE user_federated_identities SET external_id = ?, active = ?, updated_at = NOW() WHERE id = ?`,
         [externalId, isActive, userRow.id]
       );
+
+      const targetTier = 'business';
+
+      if (!isActive) {
+        const restoredTier = await resolveUserRestoredTier(userId);
+        await pool.execute(`UPDATE users SET subscription_tier = ? WHERE id = ?`, [restoredTier, userId]);
+        await updateUserSubscriptionInSessions(userId, restoredTier);
+        await invalidateUserStorageCache(userId);
+        await revokeAllUserSessions(userId);
+      } else {
+        const [uRow] = await pool.query<mysql.RowDataPacket[]>(`SELECT subscription_tier FROM users WHERE id = ?`, [userId]);
+        const currentTier = uRow[0]?.subscription_tier || 'free';
+        const finalTier = resolveHigherTier(currentTier, targetTier);
+        await pool.execute(`UPDATE users SET subscription_tier = ? WHERE id = ?`, [finalTier, userId]);
+        await updateUserSubscriptionInSessions(userId, finalTier);
+        await invalidateUserStorageCache(userId);
+      }
     } else {
       const [existingUser] = await pool.query<mysql.RowDataPacket[]>(
         'SELECT * FROM users WHERE LOWER(email) = ? LIMIT 1',
         [email]
       );
 
-      const targetTier = tenant.tenant_type === 'university'
-        ? 'pro'
-        : (tenant.tenant_type === 'school' ? 'escuelas' : 'business');
+      const targetTier = 'business';
 
       if (existingUser.length > 0) {
         userId = existingUser[0].id;
         userRow = existingUser[0];
 
+        const currentTier = existingUser[0].subscription_tier || 'free';
+        const finalTier = resolveHigherTier(currentTier, targetTier);
         await pool.execute(
           `UPDATE users SET subscription_tier = ? WHERE id = ?`,
-          [targetTier, userId]
+          [finalTier, userId]
         );
+        await updateUserSubscriptionInSessions(userId, finalTier);
+        await invalidateUserStorageCache(userId);
       } else {
         const randomPassword = crypto.randomBytes(24).toString('hex');
         const passHash = await hashPassword(randomPassword);
@@ -337,15 +358,6 @@ export async function createScimUser(
          ON DUPLICATE KEY UPDATE external_id = VALUES(external_id), active = VALUES(active)`,
         [tenant.id, userId, externalId, isActive]
       );
-
-      if (tenant.tenant_type === 'university') {
-        await pool.execute(
-          `INSERT INTO university_members (tenant_id, user_id, academic_role, status)
-           VALUES (?, ?, 'student', ?)
-           ON DUPLICATE KEY UPDATE status = VALUES(status)`,
-          [tenant.id, userId, isActive ? 'active' : 'suspended']
-        );
-      }
     }
 
     if (tenant.target_team_id) {
@@ -424,12 +436,23 @@ export async function patchScimUser(
       );
 
       if (!newActive) {
+        const restoredTier = await resolveUserRestoredTier(r.id);
+        await pool.execute(`UPDATE users SET subscription_tier = ? WHERE id = ?`, [restoredTier, r.id]);
+        await updateUserSubscriptionInSessions(r.id, restoredTier);
+        await invalidateUserStorageCache(r.id);
         await revokeAllUserSessions(r.id);
         logger.security.info('Usuario SCIM suspendido y sesiones revocadas', {
           tenantId: tenant.id,
           userId: r.id,
         });
       } else {
+        const targetTier = 'business';
+        const [uRow] = await pool.query<mysql.RowDataPacket[]>(`SELECT subscription_tier FROM users WHERE id = ?`, [r.id]);
+        const currentTier = uRow[0]?.subscription_tier || 'free';
+        const finalTier = resolveHigherTier(currentTier, targetTier);
+        await pool.execute(`UPDATE users SET subscription_tier = ? WHERE id = ?`, [finalTier, r.id]);
+        await updateUserSubscriptionInSessions(r.id, finalTier);
+        await invalidateUserStorageCache(r.id);
         logger.security.info('Usuario SCIM reactivado', {
           tenantId: tenant.id,
           userId: r.id,
@@ -477,14 +500,19 @@ export async function deleteScimUser(
       [fedId]
     );
 
-    await revokeAllUserSessions(userId);
-
     if (tenant.target_team_id) {
       await pool.execute(
         `DELETE FROM team_members WHERE team_id = ? AND user_id = ?`,
         [tenant.target_team_id, userId]
       );
     }
+
+    const restoredTier = await resolveUserRestoredTier(userId);
+    await pool.execute(`UPDATE users SET subscription_tier = ? WHERE id = ?`, [restoredTier, userId]);
+    await updateUserSubscriptionInSessions(userId, restoredTier);
+    await invalidateUserStorageCache(userId);
+
+    await revokeAllUserSessions(userId);
 
     logger.security.info('Usuario SCIM desasociado y suspendido', {
       tenantId: tenant.id,

@@ -1,6 +1,6 @@
+import { Request, Response } from 'express';
 import { config } from '../config/env.config.js';
 import { generateCsrfToken } from '../middlewares/csrf.middleware.js';
-import { Request, Response } from 'express';
 
 export function getAppConfig(_req: Request, res: Response): void {
   res.json({

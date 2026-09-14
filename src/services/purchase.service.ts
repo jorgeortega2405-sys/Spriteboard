@@ -1,6 +1,7 @@
 import pool from '../config/database.config.js';
 import { redis } from '../config/redis.config.js';
 import { logger } from './logger.service.js';
+import { normalizeTierKey } from './subscription.service.js';
 import mysql from 'mysql2/promise';
 
 export interface PurchaseRecord {
@@ -90,12 +91,14 @@ export class PurchaseService {
     status: string = 'active',
     periodEnd?: Date | null
   ): Promise<void> {
+    const canonicalTier = normalizeTierKey(tier);
+
     const conn = await pool.getConnection();
     try {
       const shouldUpdateSubId = subscriptionId !== undefined;
       const shouldUpdatePeriodEnd = periodEnd !== undefined;
 
-      const params: unknown[] = [tier, customerId || null];
+      const params: unknown[] = [canonicalTier, customerId || null];
       if (shouldUpdateSubId) params.push(subscriptionId);
       params.push(status);
       if (shouldUpdatePeriodEnd) params.push(periodEnd);

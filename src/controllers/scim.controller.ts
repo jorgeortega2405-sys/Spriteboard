@@ -1,6 +1,6 @@
-import { EnterpriseTenant } from '../types/enterprise.types.js';
-import { createScimUser, deleteScimUser, getResourceTypes, getSchemas, getScimUserById, getServiceProviderConfig, listScimUsers, patchScimUser } from '../services/scim.service.js';
 import { logger } from '../services/logger.service.js';
+import { createScimUser, deleteScimUser, getResourceTypes, getSchemas, getScimUserById, getServiceProviderConfig, listScimUsers, patchScimUser } from '../services/scim.service.js';
+import { EnterpriseTenant } from '../types/enterprise.types.js';
 import { Request, Response } from 'express';
 
 function getReqTenant(req: Request): EnterpriseTenant {
@@ -40,7 +40,7 @@ export async function listScimUsersHandler(req: Request, res: Response): Promise
     res.status(500).json({
       schemas: ['urn:ietf:params:scim:api:messages:2.0:Error'],
       status: '500',
-      detail: 'Error interno al consultar usuarios SCIM.',
+      detail: 'Ha ocurrido un error inesperado al procesar la solicitud.',
     });
   }
 }
@@ -56,7 +56,7 @@ export async function getScimUserHandler(req: Request, res: Response): Promise<v
       res.status(404).json({
         schemas: ['urn:ietf:params:scim:api:messages:2.0:Error'],
         status: '404',
-        detail: `Usuario con id ${id} no encontrado en este tenant.`,
+        detail: 'Usuario no encontrado.',
       });
       return;
     }
@@ -67,7 +67,7 @@ export async function getScimUserHandler(req: Request, res: Response): Promise<v
     res.status(500).json({
       schemas: ['urn:ietf:params:scim:api:messages:2.0:Error'],
       status: '500',
-      detail: 'Error interno al consultar el usuario SCIM.',
+      detail: 'Ha ocurrido un error inesperado al procesar la solicitud.',
     });
   }
 }
@@ -91,10 +91,20 @@ export async function createScimUserHandler(req: Request, res: Response): Promis
     res.status(201).json(created);
   } catch (err: any) {
     logger.security.error('Error en createScimUserHandler', err);
+    const isDuplicate = err?.code === 'ER_DUP_ENTRY' || err?.message?.includes('Duplicate');
+    if (isDuplicate) {
+      res.status(409).json({
+        schemas: ['urn:ietf:params:scim:api:messages:2.0:Error'],
+        scimType: 'uniqueness',
+        status: '409',
+        detail: 'El identificador o correo electrónico ya se encuentra registrado.',
+      });
+      return;
+    }
     res.status(400).json({
       schemas: ['urn:ietf:params:scim:api:messages:2.0:Error'],
       status: '400',
-      detail: err?.message || 'Error al aprovisionar usuario SCIM.',
+      detail: 'Error al aprovisionar usuario SCIM.',
     });
   }
 }
@@ -119,10 +129,18 @@ export async function patchScimUserHandler(req: Request, res: Response): Promise
     res.json(updated);
   } catch (err: any) {
     logger.security.error('Error en patchScimUserHandler', err);
+    if (err?.message?.includes('no encontrado')) {
+      res.status(404).json({
+        schemas: ['urn:ietf:params:scim:api:messages:2.0:Error'],
+        status: '404',
+        detail: 'Usuario no encontrado.',
+      });
+      return;
+    }
     res.status(400).json({
       schemas: ['urn:ietf:params:scim:api:messages:2.0:Error'],
       status: '400',
-      detail: err?.message || 'Error al actualizar usuario SCIM.',
+      detail: 'Error al actualizar usuario SCIM.',
     });
   }
 }
@@ -137,6 +155,14 @@ export async function deleteScimUserHandler(req: Request, res: Response): Promis
     res.status(204).send();
   } catch (err: any) {
     logger.security.error('Error en deleteScimUserHandler', err);
+    if (err?.message?.includes('no encontrado')) {
+      res.status(404).json({
+        schemas: ['urn:ietf:params:scim:api:messages:2.0:Error'],
+        status: '404',
+        detail: 'Usuario no encontrado.',
+      });
+      return;
+    }
     res.status(500).json({
       schemas: ['urn:ietf:params:scim:api:messages:2.0:Error'],
       status: '500',

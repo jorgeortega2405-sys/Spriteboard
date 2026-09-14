@@ -1,4 +1,4 @@
-export type EnterpriseTenantType = 'business' | 'university' | 'school';
+export type EnterpriseTenantType = 'business';
 
 export interface EnterpriseTenant {
   id: number;

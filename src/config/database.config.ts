@@ -492,55 +492,14 @@ export async function runMigrations(): Promise<void> {
       logger.db.info('Columna faculty_id añadida a la tabla teams.');
     }
 
-    await conn.query(`
-      CREATE TABLE IF NOT EXISTS school_organizations (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        uuid VARCHAR(36) NOT NULL UNIQUE,
-        admin_id INT NOT NULL,
-        name VARCHAR(150) NOT NULL,
-        domain VARCHAR(100) NULL,
-        max_teachers INT NOT NULL DEFAULT 5,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        INDEX idx_school_admin (admin_id),
-        FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE CASCADE
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-    `);
 
-    await conn.query(`
-      CREATE TABLE IF NOT EXISTS school_teachers (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        school_id INT NOT NULL,
-        user_id INT NOT NULL,
-        status ENUM('invited', 'active', 'revoked') NOT NULL DEFAULT 'active',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE KEY uq_school_teacher (school_id, user_id),
-        INDEX idx_school_teachers_user (user_id),
-        FOREIGN KEY (school_id) REFERENCES school_organizations(id) ON DELETE CASCADE,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-    `);
-
-    await conn.query(`
-      UPDATE teams t
-      JOIN school_organizations s ON s.admin_id = t.owner_id
-      SET t.school_id = s.id
-      WHERE t.team_type = 'classroom' AND t.school_id IS NULL
-    `);
-
-    await conn.query(`
-      UPDATE teams t
-      JOIN school_teachers st ON st.user_id = t.owner_id AND st.status = 'active'
-      SET t.school_id = st.school_id
-      WHERE t.team_type = 'classroom' AND t.school_id IS NULL
-    `);
 
     await conn.query(`
       CREATE TABLE IF NOT EXISTS enterprise_tenants (
         id INT AUTO_INCREMENT PRIMARY KEY,
         uuid VARCHAR(36) NOT NULL UNIQUE,
         owner_id INT NOT NULL,
-        tenant_type ENUM('business', 'university', 'school') NOT NULL DEFAULT 'business',
+        tenant_type ENUM('business') NOT NULL DEFAULT 'business',
         name VARCHAR(150) NOT NULL,
         domain VARCHAR(100) NOT NULL UNIQUE,
         sso_enabled BOOLEAN NOT NULL DEFAULT FALSE,
@@ -571,62 +530,6 @@ export async function runMigrations(): Promise<void> {
         UNIQUE KEY uq_tenant_user (tenant_id, user_id),
         INDEX idx_fed_user (user_id),
         FOREIGN KEY (tenant_id) REFERENCES enterprise_tenants(id) ON DELETE CASCADE,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-    `);
-
-    await conn.query(`
-      CREATE TABLE IF NOT EXISTS university_campuses (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        tenant_id INT NOT NULL,
-        name VARCHAR(150) NOT NULL,
-        code VARCHAR(50) NULL,
-        city VARCHAR(100) NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        INDEX idx_campus_tenant (tenant_id),
-        FOREIGN KEY (tenant_id) REFERENCES enterprise_tenants(id) ON DELETE CASCADE
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-    `);
-
-    await conn.query(`
-      CREATE TABLE IF NOT EXISTS university_faculties (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        campus_id INT NOT NULL,
-        tenant_id INT NOT NULL,
-        name VARCHAR(150) NOT NULL,
-        code VARCHAR(50) NULL,
-        dean_user_id INT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        INDEX idx_faculty_campus (campus_id),
-        INDEX idx_faculty_tenant (tenant_id),
-        FOREIGN KEY (campus_id) REFERENCES university_campuses(id) ON DELETE CASCADE,
-        FOREIGN KEY (tenant_id) REFERENCES enterprise_tenants(id) ON DELETE CASCADE,
-        FOREIGN KEY (dean_user_id) REFERENCES users(id) ON DELETE SET NULL
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-    `);
-
-    await conn.query(`
-      CREATE TABLE IF NOT EXISTS university_members (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        tenant_id INT NOT NULL,
-        campus_id INT NULL,
-        faculty_id INT NULL,
-        user_id INT NOT NULL,
-        academic_role ENUM('superadmin', 'campus_admin', 'faculty_admin', 'professor', 'ta', 'student', 'staff') NOT NULL DEFAULT 'student',
-        student_code VARCHAR(50) NULL,
-        status ENUM('active', 'suspended', 'graduated') NOT NULL DEFAULT 'active',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        UNIQUE KEY uq_uni_tenant_user (tenant_id, user_id),
-        INDEX idx_uni_member_user (user_id),
-        INDEX idx_uni_member_campus (campus_id),
-        INDEX idx_uni_member_faculty (faculty_id),
-        INDEX idx_uni_member_role (tenant_id, academic_role),
-        FOREIGN KEY (tenant_id) REFERENCES enterprise_tenants(id) ON DELETE CASCADE,
-        FOREIGN KEY (campus_id) REFERENCES university_campuses(id) ON DELETE SET NULL,
-        FOREIGN KEY (faculty_id) REFERENCES university_faculties(id) ON DELETE SET NULL,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
@@ -805,6 +708,14 @@ export async function runMigrations(): Promise<void> {
       logger.db.info('Índice idx_views_canvas_session añadido a db_canvas.canvas_views.');
     }
 
+    const [viewsViewedIndices] = await conn.query<mysql.RowDataPacket[]>(
+      "SHOW INDEX FROM db_canvas.canvas_views WHERE Key_name = 'idx_views_canvas_viewed'"
+    );
+    if (viewsViewedIndices.length === 0) {
+      await conn.query('ALTER TABLE db_canvas.canvas_views ADD INDEX idx_views_canvas_viewed (canvas_id, viewed_at DESC)');
+      logger.db.info('Índice idx_views_canvas_viewed añadido a db_canvas.canvas_views.');
+    }
+
     const [notifIndices] = await conn.query<mysql.RowDataPacket[]>(
       "SHOW INDEX FROM notifications WHERE Key_name = 'idx_notifications_user_created'"
     );
@@ -819,6 +730,54 @@ export async function runMigrations(): Promise<void> {
     if (canvasNameIndices.length === 0) {
       await conn.query('ALTER TABLE db_canvas.canvases ADD INDEX idx_canvases_user_name (user_id, name)');
       logger.db.info('Índice idx_canvases_user_name añadido a db_canvas.canvases.');
+    }
+
+    const [canvasDelCreatedIndices] = await conn.query<mysql.RowDataPacket[]>(
+      "SHOW INDEX FROM db_canvas.canvases WHERE Key_name = 'idx_canvases_user_deleted_created'"
+    );
+    if (canvasDelCreatedIndices.length === 0) {
+      await conn.query('ALTER TABLE db_canvas.canvases ADD INDEX idx_canvases_user_deleted_created (user_id, deleted_at, created_at DESC)');
+      logger.db.info('Índice idx_canvases_user_deleted_created añadido a db_canvas.canvases.');
+    }
+
+    const [canvasFolderIndices] = await conn.query<mysql.RowDataPacket[]>(
+      "SHOW INDEX FROM db_canvas.canvases WHERE Key_name = 'idx_canvases_user_folder'"
+    );
+    if (canvasFolderIndices.length === 0) {
+      await conn.query('ALTER TABLE db_canvas.canvases ADD INDEX idx_canvases_user_folder (user_id, folder_id, deleted_at)');
+      logger.db.info('Índice idx_canvases_user_folder añadido a db_canvas.canvases.');
+    }
+
+    const [canvasDelNameIndices] = await conn.query<mysql.RowDataPacket[]>(
+      "SHOW INDEX FROM db_canvas.canvases WHERE Key_name = 'idx_canvases_user_deleted_name'"
+    );
+    if (canvasDelNameIndices.length === 0) {
+      await conn.query('ALTER TABLE db_canvas.canvases ADD INDEX idx_canvases_user_deleted_name (user_id, deleted_at, name)');
+      logger.db.info('Índice idx_canvases_user_deleted_name añadido a db_canvas.canvases.');
+    }
+
+    const [folderDelIndices] = await conn.query<mysql.RowDataPacket[]>(
+      "SHOW INDEX FROM db_canvas.folders WHERE Key_name = 'idx_folders_user_deleted'"
+    );
+    if (folderDelIndices.length === 0) {
+      await conn.query('ALTER TABLE db_canvas.folders ADD INDEX idx_folders_user_deleted (user_id, deleted_at, created_at DESC)');
+      logger.db.info('Índice idx_folders_user_deleted añadido a db_canvas.folders.');
+    }
+
+    const [teamRoleIndices] = await conn.query<mysql.RowDataPacket[]>(
+      "SHOW INDEX FROM team_members WHERE Key_name = 'idx_team_members_team_role'"
+    );
+    if (teamRoleIndices.length === 0) {
+      await conn.query('ALTER TABLE team_members ADD INDEX idx_team_members_team_role (team_id, role)');
+      logger.db.info('Índice idx_team_members_team_role añadido a team_members.');
+    }
+
+    const [auditActionIndices] = await conn.query<mysql.RowDataPacket[]>(
+      "SHOW INDEX FROM user_audit_logs WHERE Key_name = 'idx_audit_user_action'"
+    );
+    if (auditActionIndices.length === 0) {
+      await conn.query('ALTER TABLE user_audit_logs ADD INDEX idx_audit_user_action (user_id, action, created_at DESC)');
+      logger.db.info('Índice idx_audit_user_action añadido a user_audit_logs.');
     }
 
     logger.db.info('Tablas, columnas e índices de identidad, 2FA, suscripciones, compras, GeoIP, db_canvas, equipos, vistas, feedback IA, snapshots y notificaciones verificadas exitosamente.');

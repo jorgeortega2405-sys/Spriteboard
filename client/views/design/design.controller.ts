@@ -1407,7 +1407,7 @@ export class DesignController {
 
     if (broadcast) {
       const effTier = (this.effectiveTier || currentUser?.subscription_tier || 'free').toLowerCase();
-      const isProOrBusiness = ['pro', 'ultra', 'business', 'negocios', 'docentes', 'teachers', 'escuelas', 'schools', 'education', 'universidades', 'universities'].includes(effTier);
+      const isProOrBusiness = ['pro', 'business', 'negocios'].includes(effTier);
       if (!isProOrBusiness && frame.layers.length >= 5) {
         showToast(t('design.layers_free_limit') || 'El plan Gratis permite hasta 5 capas por lienzo. Mejora a Pro para capas ilimitadas.', 'warning');
         openUpgradeModal('pro');

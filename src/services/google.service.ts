@@ -150,6 +150,10 @@ export async function processGoogleAuthCallback(code: string, clientIp?: string)
   }
 
   const googleUser = (await userInfoRes.json()) as GoogleUserInfo;
+  if (!googleUser.verified_email && (googleUser as any).email_verified !== true) {
+    logger.security.warn('Rechazado intento de login con Google por correo no verificado', { email: googleUser.email });
+    throw new Error('El correo electrónico de Google no se encuentra verificado.');
+  }
   const googleId = googleUser.id;
   const email = googleUser.email.toLowerCase();
 

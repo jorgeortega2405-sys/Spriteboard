@@ -21,10 +21,10 @@ export async function openEnterpriseSsoModal(options: {
 
   const type = options.tenantType || 'business';
   const rawTier = (currentUser?.subscription_tier || 'free').toLowerCase();
-  const hasAccess = ['business', 'negocios', 'escuelas', 'instituciones', 'education_institution', 'schools', 'universidades', 'universities'].includes(rawTier);
+  const hasAccess = ['business', 'negocios'].includes(rawTier);
 
   if (!hasAccess) {
-    openUpgradeModal(type === 'business' ? 'business' : 'schools');
+    openUpgradeModal('business');
     return;
   }
 

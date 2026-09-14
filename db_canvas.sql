@@ -13,7 +13,8 @@ CREATE TABLE IF NOT EXISTS folders (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_folders_user (user_id),
     INDEX idx_folders_uuid (uuid),
-    INDEX idx_folders_deleted_at (deleted_at)
+    INDEX idx_folders_deleted_at (deleted_at),
+    INDEX idx_folders_user_deleted (user_id, deleted_at, created_at DESC)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS canvases (
@@ -25,6 +26,7 @@ CREATE TABLE IF NOT EXISTS canvases (
     width INT NOT NULL DEFAULT 1920,
     height INT NOT NULL DEFAULT 1080,
     unit VARCHAR(20) NOT NULL DEFAULT 'px',
+    canvas_type VARCHAR(20) NOT NULL DEFAULT 'pixel',
     size_bytes INT NOT NULL DEFAULT 0,
     compressed_bytes INT NOT NULL DEFAULT 0,
     data JSON NULL,
@@ -43,6 +45,9 @@ CREATE TABLE IF NOT EXISTS canvases (
     INDEX idx_canvases_custom_slug (custom_slug),
     INDEX idx_canvases_deleted_at (deleted_at),
     INDEX idx_canvases_user_deleted (user_id, deleted_at, updated_at),
+    INDEX idx_canvases_user_deleted_created (user_id, deleted_at, created_at DESC),
+    INDEX idx_canvases_user_folder (user_id, folder_id, deleted_at),
+    INDEX idx_canvases_user_deleted_name (user_id, deleted_at, name),
     FOREIGN KEY (folder_id) REFERENCES folders(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -82,6 +87,8 @@ CREATE TABLE IF NOT EXISTS canvas_views (
     INDEX idx_canvas_views_user (user_id),
     INDEX idx_canvas_views_session (session_id),
     INDEX idx_canvas_views_viewed_at (viewed_at),
+    INDEX idx_views_canvas_viewed (canvas_id, viewed_at DESC),
+    INDEX idx_views_canvas_session (canvas_id, session_id),
     FOREIGN KEY (canvas_id) REFERENCES canvases(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

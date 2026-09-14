@@ -87,7 +87,7 @@ function updateDrawerFooter(drawer: HTMLElement, currentPath: string): void {
     } else {
       drawerFooter.style.display = 'none';
     }
-  } else if (currentPath.startsWith('/help') || currentPath.startsWith('/education') || currentPath === '/institution') {
+  } else if (currentPath.startsWith('/help')) {
     drawerFooter.style.display = 'none';
   } else {
     drawerFooter.style.display = 'flex';
@@ -144,9 +144,7 @@ export function hasDesignatedMenuItems(pathname: string): boolean {
   if (!pathname) return false;
   return (
     pathname.startsWith('/settings') ||
-    pathname.startsWith('/help') ||
-    pathname.startsWith('/education') ||
-    pathname === '/institution'
+    pathname.startsWith('/help')
   );
 }
 
@@ -155,7 +153,6 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   const isTemplates = path === '/templates';
   const isShared = path === '/shared';
   const isTeams = path === '/teams';
-  const isEducation = path.startsWith('/education') || path === '/institution';
 
   const updateItem = (itemRef: string, btnRef: string, isActive: boolean) => {
     const item = sidebar.querySelector<HTMLElement>(`[data-ref="${itemRef}"]`);
@@ -168,7 +165,6 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   updateItem('rail-item-templates', 'btn-rail-templates', isTemplates);
   updateItem('rail-item-shared', 'btn-rail-shared', isShared);
   updateItem('rail-item-teams', 'btn-rail-teams', isTeams);
-  updateItem('rail-item-education', 'btn-rail-education', isEducation);
 }
 
 export async function updateDynamicDrawer(sidebar?: HTMLElement): Promise<void> {
@@ -311,7 +307,6 @@ function setupRailNavigation(sidebar: HTMLElement): void {
   bindNav('rail-item-templates', 'btn-rail-templates', '/templates', currentPath === '/templates');
   bindNav('rail-item-shared', 'btn-rail-shared', '/shared', currentPath === '/shared');
   bindNav('rail-item-teams', 'btn-rail-teams', '/teams', currentPath === '/teams');
-  bindNav('rail-item-education', 'btn-rail-education', '/education', currentPath.startsWith('/education') || currentPath === '/institution');
 
   const btnCreate = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-create"]');
   const itemCreate = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-create"]');
@@ -325,22 +320,6 @@ function setupRailNavigation(sidebar: HTMLElement): void {
       createHandler(e);
     }
   });
-
-  const userTier = (currentUser?.subscription_tier || 'free').toLowerCase();
-  const isEducation = ['escuelas', 'docentes', 'schools', 'education', 'universidades', 'universities'].includes(userTier);
-
-  const itemTeams = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-teams"]');
-  const itemEducation = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-education"]');
-
-  if (itemTeams && itemEducation) {
-    if (isEducation) {
-      itemTeams.style.display = 'none';
-      itemEducation.style.display = 'flex';
-    } else {
-      itemTeams.style.display = 'flex';
-      itemEducation.style.display = 'none';
-    }
-  }
 }
 
 function createDrawerCanvasRow(canvas: CanvasItem): HTMLElement {
@@ -743,42 +722,6 @@ async function populateDrawerContent(drawer: HTMLElement): Promise<void> {
     bindNavLink(btnLegal, '/help/legal-notice');
     bindNavLink(btnBilling, '/help/billing');
     bindNavLink(btnSupport, '/help/support');
-  } else if (currentPath.startsWith('/education') || currentPath === '/institution') {
-    const isTeachers = currentPath === '/education/teachers';
-    const isStudents = currentPath === '/education/students';
-    const isInstitution = currentPath === '/education/institution' || currentPath === '/institution';
-    const isClassrooms = !isTeachers && !isStudents && !isInstitution;
-
-    drawerBody.innerHTML = `
-      <div class="drawer-section__header" style="padding: 8px 8px 4px 8px;">
-        <span class="drawer-section__title" style="font-size: 13px; font-weight: 600; color: var(--text-primary);" data-i18n="nav.education">Educación</span>
-      </div>
-      <button type="button" class="menu-item${isClassrooms ? ' is-active' : ''}" data-ref="btn-drawer-edu-classrooms">
-        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#meeting_room"></use></svg>
-        <span class="menu-item__text" data-i18n="education.tab_classrooms">Salones y aulas</span>
-      </button>
-      <button type="button" class="menu-item${isTeachers ? ' is-active' : ''}" data-ref="btn-drawer-edu-teachers">
-        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#school"></use></svg>
-        <span class="menu-item__text" data-i18n="education.tab_teachers">Docentes</span>
-      </button>
-      <button type="button" class="menu-item${isStudents ? ' is-active' : ''}" data-ref="btn-drawer-edu-students">
-        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
-        <span class="menu-item__text" data-i18n="education.tab_students">Estudiantes</span>
-      </button>
-      <button type="button" class="menu-item${isInstitution ? ' is-active' : ''}" data-ref="btn-drawer-edu-institution">
-        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#apartment"></use></svg>
-        <span class="menu-item__text" data-i18n="education.tab_school">Institución</span>
-      </button>
-    `;
-    const btnClassrooms = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-edu-classrooms"]');
-    const btnTeachers = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-edu-teachers"]');
-    const btnStudents = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-edu-students"]');
-    const btnInstitution = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-edu-institution"]');
-
-    bindNavLink(btnClassrooms, '/education');
-    bindNavLink(btnTeachers, '/education/teachers');
-    bindNavLink(btnStudents, '/education/students');
-    bindNavLink(btnInstitution, '/education/institution');
   } else {
     await renderHomeDrawerContent(drawerBody);
   }

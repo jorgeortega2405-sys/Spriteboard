@@ -47,22 +47,7 @@ export const API_ROUTES = {
     members: (uuid: string) => `/api/teams/${encodeURIComponent(uuid)}/members`,
     removeMember: (uuid: string, userId: number) => `/api/teams/${encodeURIComponent(uuid)}/members/${encodeURIComponent(userId)}`,
   },
-  education: {
-    addTeacher: '/api/education/school/teachers',
-    classrooms: '/api/education/classrooms',
-    join: '/api/education/join',
-    regenerateCode: (uuid: string) => `/api/education/classrooms/${encodeURIComponent(uuid)}/code`,
-    removeTeacher: (userId: number) => `/api/education/school/teachers/${encodeURIComponent(userId)}`,
-    school: '/api/education/school',
-    students: '/api/education/school/students',
-    university: '/api/education/university',
-    universityCampuses: '/api/education/university/campuses',
-    universityCampusById: (id: number) => `/api/education/university/campuses/${encodeURIComponent(id)}`,
-    universityFaculties: '/api/education/university/faculties',
-    universityFacultyById: (id: number) => `/api/education/university/faculties/${encodeURIComponent(id)}`,
-    universityMembers: '/api/education/university/members',
-    universityMemberById: (id: number) => `/api/education/university/members/${encodeURIComponent(id)}`,
-  },
+
   enterprise: {
     checkDomainSso: (domain: string) => `/api/auth/sso/check-domain?domain=${encodeURIComponent(domain)}`,
     config: (type: string = 'business') => `/api/enterprise/config?type=${encodeURIComponent(type)}`,

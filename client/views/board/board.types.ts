@@ -115,7 +115,7 @@ export interface BoardCollaboratorState {
   color: string;
   connId: string;
   role: 'editor' | 'owner' | 'viewer';
-  subscriptionTier: 'business' | 'free' | 'negocios' | 'plus' | 'pro' | 'ultra';
+  subscriptionTier: 'business' | 'free' | 'pro';
   userId: number;
   username: string;
   x?: number;

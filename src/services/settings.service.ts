@@ -1,3 +1,7 @@
+import fs from 'fs';
+import type { ResultSetHeader, RowDataPacket } from 'mysql2';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { pool } from '../config/database.config.js';
 import { redis } from '../config/redis.config.js';
 import { detectLanguageFromHeader, isValidLanguageCode } from '../utils/languages.util.js';
@@ -8,10 +12,6 @@ import { logger } from './logger.service.js';
 import { sendEmailChangeCodeEmail } from './mail.service.js';
 import { deleteObject, getPublicUrl, putObject } from './s3.service.js';
 import { consumeEmailChangeAuthorization, consumePasswordChangeAuth, generateSixDigitCode, isEmailChangeAuthorized, saveEmailChangeCode, savePasswordChangeAuth, verifyEmailChangeCode } from './verification.service.js';
-import fs from 'fs';
-import type { ResultSetHeader, RowDataPacket } from 'mysql2';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

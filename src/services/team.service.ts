@@ -1,11 +1,13 @@
-import crypto from 'crypto';
-import mysql from 'mysql2/promise';
 import { canvasPool, pool } from '../config/database.config.js';
 import { Canvas } from '../types/canvas.types.js';
 import { CreateTeamDto, Team, TeamMember, UpdateTeamDto } from '../types/team.types.js';
+import { updateUserSubscriptionInSessions } from './auth.service.js';
 import { logger } from './logger.service.js';
 import { createNotification } from './notification.service.js';
-import { getEffectiveTiersForCanvases, getTierLimits } from './subscription.service.js';
+import { invalidateUserStorageCache } from './storage.service.js';
+import { getEffectiveTiersForCanvases, getTierLimits, resolveUserRestoredTier } from './subscription.service.js';
+import crypto from 'crypto';
+import mysql from 'mysql2/promise';
 
 export async function createTeam(ownerId: number, dto: CreateTeamDto): Promise<Team> {
   const uuid = crypto.randomUUID();
@@ -18,10 +20,6 @@ export async function createTeam(ownerId: number, dto: CreateTeamDto): Promise<T
     [ownerId]
   );
   const userTier = (uRows[0]?.subscription_tier || 'free').toLowerCase();
-
-  if (['escuelas', 'docentes', 'schools', 'education', 'universidades', 'universities'].includes(userTier)) {
-    throw new Error('Las cuentas de Educación gestionan sus aulas y salones desde la sección Educación.');
-  }
 
   if (!['business', 'negocios'].includes(userTier)) {
     throw new Error('La creación de equipos de trabajo es exclusiva del plan Spriteboard Negocios.');
@@ -335,7 +333,7 @@ export async function addTeamMember(
 export async function removeTeamMember(uuid: string, currentUserId: number, targetUserId: number): Promise<boolean> {
   try {
     const [teamRows] = await pool.query<mysql.RowDataPacket[]>(
-      'SELECT id, owner_id FROM teams WHERE uuid = ? LIMIT 1',
+      'SELECT id, owner_id, team_type FROM teams WHERE uuid = ? LIMIT 1',
       [uuid]
     );
 

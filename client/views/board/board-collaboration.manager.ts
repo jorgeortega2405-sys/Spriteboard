@@ -37,7 +37,7 @@ export class BoardCollaborationManager {
     userId: number | null | undefined,
     username: string,
     avatarUrl: string | null | undefined,
-    tier: 'business' | 'free' | 'negocios' | 'plus' | 'pro' | 'ultra',
+    tier: BoardCollaboratorState['subscriptionTier'],
     callbacks: BoardCollaborationCallbacks
   ): void {
     this.cleanup();
@@ -66,7 +66,7 @@ export class BoardCollaborationManager {
           const uColor = u.color || getCollaboratorColor(uUserId || uConnId);
           const uRole = (u.role || 'editor') as 'editor' | 'owner' | 'viewer';
           const uAvatar = u.avatarUrl || u.avatar_url || null;
-          const uTier = (u.subscriptionTier || u.subscription_tier || 'free') as 'business' | 'free' | 'negocios' | 'plus' | 'pro' | 'ultra';
+          const uTier = (u.subscriptionTier || u.subscription_tier || 'free') as BoardCollaboratorState['subscriptionTier'];
           if (uUserId && uUserId === userId && uUsername === username) continue;
           this.collaborators.set(uConnId, {
             avatarUrl: uAvatar,
@@ -92,7 +92,7 @@ export class BoardCollaborationManager {
       const uColor = u.color || getCollaboratorColor(uUserId || uConnId);
       const uRole = (u.role || 'editor') as 'editor' | 'owner' | 'viewer';
       const uAvatar = u.avatarUrl || u.avatar_url || null;
-      const uTier = (u.subscriptionTier || u.subscription_tier || 'free') as 'business' | 'free' | 'negocios' | 'plus' | 'pro' | 'ultra';
+      const uTier = (u.subscriptionTier || u.subscription_tier || 'free') as BoardCollaboratorState['subscriptionTier'];
       if (uUserId && uUserId === userId && uUsername === username) return;
       this.collaborators.set(uConnId, {
         avatarUrl: uAvatar,
@@ -128,7 +128,7 @@ export class BoardCollaborationManager {
           color: payload.color || getCollaboratorColor(payload.userId || connId),
           connId,
           role: (payload.role || 'editor') as 'editor' | 'owner' | 'viewer',
-          subscriptionTier: (payload.subscriptionTier || payload.subscription_tier || 'free') as 'business' | 'free' | 'negocios' | 'plus' | 'pro' | 'ultra',
+          subscriptionTier: (payload.subscriptionTier || payload.subscription_tier || 'free') as BoardCollaboratorState['subscriptionTier'],
           userId: payload.userId || 0,
           username: payload.username || 'Invitado',
         };

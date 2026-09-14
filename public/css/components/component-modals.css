@@ -2502,9 +2502,6 @@ body[data-theme="dark"] .component-category-pill-glider {
   transform: translateX(0);
 }
 
-.component-category-pill[data-category="education"] .component-category-pill-glider {
-  transform: translateX(100%);
-}
 
 .component-category-pill .component-button {
   position: relative;

@@ -1,8 +1,8 @@
+import mysql from 'mysql2/promise';
 import { pool } from '../config/database.config.js';
 import { redis } from '../config/redis.config.js';
 import { CreateNotificationDto, NotificationItem } from '../types/notification.types.js';
 import { logger } from './logger.service.js';
-import mysql from 'mysql2/promise';
 
 export async function createNotification(dto: CreateNotificationDto): Promise<number> {
   try {
