@@ -9,14 +9,47 @@ function hashToken(token: string): string {
   return crypto.createHash('sha256').update(token.trim()).digest('hex');
 }
 
+const DISALLOWED_DOMAINS = new Set([
+  'aol.com',
+  'gmail.com',
+  'gmx.com',
+  'googlemail.com',
+  'hotmail.com',
+  'icloud.com',
+  'live.com',
+  'mac.com',
+  'mail.com',
+  'me.com',
+  'msn.com',
+  'outlook.com',
+  'proton.me',
+  'protonmail.com',
+  'yandex.com',
+  'yandex.ru',
+  'yahoo.com',
+  'ymail.com',
+  'zoho.com',
+]);
+
 export function cleanDomain(rawDomain: string): string {
-  return rawDomain
+  const clean = rawDomain
     .trim()
     .toLowerCase()
     .replace(/^https?:\/\//, '')
     .replace(/^www\./, '')
     .replace(/^@/, '')
-    .split('/')[0];
+    .split('/')[0]
+    .split(':')[0];
+
+  if (!clean || !clean.includes('.') || clean.startsWith('.') || clean.endsWith('.')) {
+    throw new Error('El formato del dominio no es válido.');
+  }
+
+  if (DISALLOWED_DOMAINS.has(clean)) {
+    throw new Error('No se permite el uso de dominios de correo electrónico público o gratuito.');
+  }
+
+  return clean;
 }
 
 export async function getTenantById(id: number): Promise<EnterpriseTenant | null> {

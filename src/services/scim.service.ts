@@ -287,7 +287,9 @@ export async function createScimUser(
         [email]
       );
 
-      const targetTier = tenant.tenant_type === 'university' ? 'pro' : 'business';
+      const targetTier = tenant.tenant_type === 'university'
+        ? 'pro'
+        : (tenant.tenant_type === 'school' ? 'escuelas' : 'business');
 
       if (existingUser.length > 0) {
         userId = existingUser[0].id;

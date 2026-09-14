@@ -1,4 +1,4 @@
-export type SubscriptionTierId = 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios' | 'docentes' | 'escuelas' | 'education' | 'universidades';
+export type SubscriptionTierId = 'free' | 'plus' | 'pro' | 'ultra' | 'business' | 'negocios' | 'docentes' | 'teachers' | 'escuelas' | 'schools' | 'education' | 'universidades' | 'universities';
 
 export type BillingPeriod = 'monthly' | 'yearly';
 

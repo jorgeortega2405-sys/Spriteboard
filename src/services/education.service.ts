@@ -1,8 +1,9 @@
+import crypto from 'crypto';
+import mysql from 'mysql2/promise';
 import { pool } from '../config/database.config.js';
 import { Classroom, CreateClassroomDto, SchoolOrganization, SchoolStudent, SchoolTeacher } from '../types/education.types.js';
 import { logger } from './logger.service.js';
-import crypto from 'crypto';
-import mysql from 'mysql2/promise';
+import { cleanDomain } from './tenant.service.js';
 
 function generateRandomClassCode(): string {
   const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
@@ -424,14 +425,14 @@ export async function updateSchoolOrganization(
       throw new Error('El nombre de la institución no puede estar vacío.');
     }
 
-    let cleanDomain = (dto.domain || '').trim().toLowerCase();
-    if (cleanDomain) {
-      cleanDomain = cleanDomain.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/^@/, '');
+    let validDomain: string | null = null;
+    if (dto.domain && dto.domain.trim()) {
+      validDomain = cleanDomain(dto.domain);
     }
 
     await pool.execute(
       'UPDATE school_organizations SET name = ?, domain = ? WHERE id = ?',
-      [cleanName, cleanDomain || null, school.id]
+      [cleanName, validDomain, school.id]
     );
 
     logger.db.info(`Organización escolar ${school.id} actualizada por admin ${adminId}: ${cleanName}`);
@@ -452,16 +453,33 @@ export async function removeSchoolTeacher(
     if (!school) {
       throw new Error('No posees una organización escolar activa.');
     }
+    if (!school.is_admin) {
+      throw new Error('Solo el administrador escolar puede desvincular docentes de la institución.');
+    }
+    if (targetUserId === adminId) {
+      throw new Error('No es posible desvincular al administrador titular de la institución.');
+    }
 
     await pool.execute(
       "UPDATE school_teachers SET status = 'revoked' WHERE school_id = ? AND user_id = ?",
       [school.id, targetUserId]
     );
 
-    await pool.execute(
-      "UPDATE users SET subscription_tier = 'free' WHERE id = ? AND subscription_tier IN ('docentes', 'escuelas')",
+    const [otherSchools] = await pool.query<mysql.RowDataPacket[]>(
+      "SELECT id FROM school_teachers WHERE user_id = ? AND status = 'active' LIMIT 1",
       [targetUserId]
     );
+    const [billingRows] = await pool.query<mysql.RowDataPacket[]>(
+      "SELECT status FROM user_billing WHERE user_id = ? AND status = 'active' LIMIT 1",
+      [targetUserId]
+    );
+
+    if (otherSchools.length === 0 && billingRows.length === 0) {
+      await pool.execute(
+        "UPDATE users SET subscription_tier = 'free' WHERE id = ? AND subscription_tier = 'escuelas'",
+        [targetUserId]
+      );
+    }
 
     logger.db.info(`Docente ${targetUserId} revocado de la escuela ${school.uuid} por admin ${adminId}`);
     return true;
@@ -480,6 +498,12 @@ export async function addSchoolTeacher(
     if (!school) {
       throw new Error('No posees una organización escolar activa.');
     }
+    if (!school.is_admin) {
+      throw new Error('Solo el administrador escolar puede vincular docentes a la institución.');
+    }
+    if (school.teachers.length >= (school.max_teachers || 50)) {
+      throw new Error('Has alcanzado el límite máximo de docentes permitidos para tu plan.');
+    }
 
     const query = (targetEmailOrUsername || '').trim().toLowerCase();
     const [userRows] = await pool.query<mysql.RowDataPacket[]>(
@@ -492,6 +516,9 @@ export async function addSchoolTeacher(
     }
 
     const targetUser = userRows[0];
+    if (targetUser.id === adminId) {
+      throw new Error('El administrador ya es el titular de la institución.');
+    }
 
     const [existingTeacher] = await pool.query<mysql.RowDataPacket[]>(
       'SELECT id, status FROM school_teachers WHERE school_id = ? AND user_id = ? LIMIT 1',

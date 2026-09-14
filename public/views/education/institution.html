@@ -69,11 +69,11 @@
             <div style="font-size: 18px; font-weight: 700; color: var(--text-primary); margin-top: 4px;" data-ref="stat-school-students">0</div>
           </div>
           <div class="card card--padded is-hidden" data-ref="card-stat-campuses" style="border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; background: var(--bg-surface);">
-            <div style="font-size: 12px; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;">Sedes y Campus</div>
+            <div style="font-size: 12px; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;" data-i18n="education.stat_campuses">Sedes y Campus</div>
             <div style="font-size: 18px; font-weight: 700; color: var(--text-primary); margin-top: 4px;" data-ref="stat-school-campuses">0</div>
           </div>
           <div class="card card--padded is-hidden" data-ref="card-stat-faculties" style="border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; background: var(--bg-surface);">
-            <div style="font-size: 12px; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;">Facultades y Escuelas</div>
+            <div style="font-size: 12px; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;" data-i18n="education.stat_faculties">Facultades y Escuelas</div>
             <div style="font-size: 18px; font-weight: 700; color: var(--text-primary); margin-top: 4px;" data-ref="stat-school-faculties">0</div>
           </div>
         </div>
@@ -91,7 +91,7 @@
             </button>
             <button type="button" class="component-button component-button--h40 component-button--outline is-hidden" data-ref="btn-open-university-campuses">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#apartment"></use></svg>
-              <span>Sedes y Facultades</span>
+              <span data-i18n="education.btn_campuses_faculties">Sedes y Facultades</span>
             </button>
             <button type="button" class="component-button component-button--h40 component-button--outline" data-ref="btn-open-education-sso">
               <span class="material-symbols-rounded" style="font-size: 20px; margin-right: 6px;">vpn_key</span>
@@ -141,37 +141,88 @@
       </button>
       <div class="modal-card modal-card--w-640" data-ref="modal-campuses-card">
         <div class="modal-card__header">
-          <h2 class="modal-card__title" data-ref="modal-campuses-title">Sedes, Campus y Facultades</h2>
-          <p class="modal-card__desc">Administra la estructura física y académica de tu universidad para organizar docentes, cátedras y alumnos.</p>
+          <h2 class="modal-card__title" data-ref="modal-campuses-title" data-i18n="education.modal_campuses_title">Sedes, Campus y Facultades</h2>
+          <p class="modal-card__desc" data-i18n="education.modal_campuses_desc">Administra la estructura física y académica de tu universidad para organizar docentes, cátedras y alumnos.</p>
         </div>
-        <div class="modal-card__body" data-ref="modal-campuses-body">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-            <span style="font-weight: 600; font-size: 14px; color: var(--text-primary);">Sedes registradas</span>
-            <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-add-campus">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
-              <span>Agregar sede</span>
-            </button>
-          </div>
-          <div class="component-table-wrapper" data-ref="campuses-list-wrapper" style="max-height: 280px; overflow-y: auto;">
-            <div data-ref="campuses-list-container"></div>
-          </div>
-          <form class="is-hidden" data-ref="form-add-campus" style="margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px;">
-            <div style="display: flex; gap: 10px;">
-              <label class="field" data-ref="field-new-campus-name" style="flex: 1;">
-                <input class="field__input" data-ref="input-new-campus-name" type="text" placeholder=" " maxlength="150" autocomplete="off" required />
-                <span class="field__label">Nombre del campus (ej. Campus Norte)</span>
-              </label>
-              <label class="field" data-ref="field-new-campus-city" style="flex: 1;">
-                <input class="field__input" data-ref="input-new-campus-city" type="text" placeholder=" " maxlength="100" autocomplete="off" />
-                <span class="field__label">Ciudad o ubicación</span>
-              </label>
+        <div style="display: flex; gap: 8px; border-bottom: 1px solid var(--border-color); padding: 0 24px; margin-bottom: 16px;">
+          <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-tab-campuses" style="border-bottom-left-radius: 0; border-bottom-right-radius: 0;">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#apartment"></use></svg>
+            <span data-i18n="education.stat_campuses">Sedes y Campus</span>
+          </button>
+          <button type="button" class="component-button component-button--h34 component-button--outline" data-ref="btn-tab-faculties" style="border-bottom-left-radius: 0; border-bottom-right-radius: 0;">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#school"></use></svg>
+            <span data-i18n="education.stat_faculties">Facultades y Escuelas</span>
+          </button>
+        </div>
+        <div class="modal-card__body" data-ref="modal-campuses-body" style="padding-top: 0;">
+          <!-- Pestaña de Sedes -->
+          <div data-ref="section-tab-campuses">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+              <span style="font-weight: 600; font-size: 14px; color: var(--text-primary);" data-i18n="education.registered_campuses">Sedes registradas</span>
+              <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-add-campus">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+                <span data-i18n="education.btn_add_campus">Agregar sede</span>
+              </button>
             </div>
-            <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px;">
-              <button type="button" class="component-button component-button--h34 component-button--outline" data-ref="btn-cancel-add-campus">Cancelar</button>
-              <button type="submit" class="component-button component-button--h34 component-button--black" data-ref="btn-save-campus">Guardar sede</button>
+            <div class="component-table-wrapper" data-ref="campuses-list-wrapper" style="max-height: 280px; overflow-y: auto;">
+              <div data-ref="campuses-list-container"></div>
             </div>
-          </form>
-          <div class="banner banner--danger is-hidden" data-ref="banner-campus-error" style="margin-top: 12px;"></div>
+            <form class="is-hidden" data-ref="form-add-campus" style="margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px;">
+              <div style="display: flex; gap: 10px;">
+                <label class="field" data-ref="field-new-campus-name" style="flex: 1;">
+                  <input class="field__input" data-ref="input-new-campus-name" type="text" placeholder=" " maxlength="150" autocomplete="off" required />
+                  <span class="field__label" data-i18n="education.campus_name_label">Nombre del campus (ej. Campus Norte)</span>
+                </label>
+                <label class="field" data-ref="field-new-campus-city" style="flex: 1;">
+                  <input class="field__input" data-ref="input-new-campus-city" type="text" placeholder=" " maxlength="100" autocomplete="off" />
+                  <span class="field__label" data-i18n="education.campus_city_label">Ciudad o ubicación</span>
+                </label>
+              </div>
+              <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px;">
+                <button type="button" class="component-button component-button--h34 component-button--outline" data-ref="btn-cancel-add-campus" data-i18n="modal.cancel">Cancelar</button>
+                <button type="submit" class="component-button component-button--h34 component-button--black" data-ref="btn-save-campus" data-i18n="education.btn_save_campus">Guardar sede</button>
+              </div>
+              <div class="banner banner--danger is-hidden" data-ref="banner-campus-error" style="margin-top: 12px;"></div>
+            </form>
+          </div>
+
+          <!-- Pestaña de Facultades -->
+          <div class="is-hidden" data-ref="section-tab-faculties">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+              <span style="font-weight: 600; font-size: 14px; color: var(--text-primary);" data-i18n="education.registered_faculties">Facultades registradas</span>
+              <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-add-faculty">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+                <span data-i18n="education.btn_add_faculty">Agregar facultad</span>
+              </button>
+            </div>
+            <div class="component-table-wrapper" data-ref="faculties-list-wrapper" style="max-height: 280px; overflow-y: auto;">
+              <div data-ref="faculties-list-container"></div>
+            </div>
+            <form class="is-hidden" data-ref="form-add-faculty" style="margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 16px;">
+              <div style="display: flex; gap: 10px; flex-direction: column;">
+                <label class="field" data-ref="field-new-faculty-campus">
+                  <select class="field__input" data-ref="select-new-faculty-campus" required style="cursor: pointer;">
+                  </select>
+                  <span class="field__label" data-i18n="education.faculty_campus_label">Sede o campus</span>
+                </label>
+                <div style="display: flex; gap: 10px;">
+                  <label class="field" data-ref="field-new-faculty-name" style="flex: 2;">
+                    <input class="field__input" data-ref="input-new-faculty-name" type="text" placeholder=" " maxlength="150" autocomplete="off" required />
+                    <span class="field__label" data-i18n="education.faculty_name_label">Nombre de la facultad</span>
+                  </label>
+                  <label class="field" data-ref="field-new-faculty-code" style="flex: 1;">
+                    <input class="field__input" data-ref="input-new-faculty-code" type="text" placeholder=" " maxlength="20" autocomplete="off" />
+                    <span class="field__label">Código (ej. FAC-ART)</span>
+                  </label>
+                </div>
+              </div>
+              <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px;">
+                <button type="button" class="component-button component-button--h34 component-button--outline" data-ref="btn-cancel-add-faculty" data-i18n="modal.cancel">Cancelar</button>
+                <button type="submit" class="component-button component-button--h34 component-button--black" data-ref="btn-save-faculty" data-i18n="education.btn_save_faculty">Guardar facultad</button>
+              </div>
+              <div class="banner banner--danger is-hidden" data-ref="banner-faculty-error" style="margin-top: 12px;"></div>
+            </form>
+          </div>
         </div>
       </div>
     </div>

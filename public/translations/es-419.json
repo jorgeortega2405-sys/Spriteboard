@@ -875,7 +875,24 @@
     "school_domain_label": "Dominio escolar (ej. colegio.edu)",
     "school_save_btn": "Guardar cambios",
     "school_saved_toast": "Institución actualizada correctamente.",
-    "remove_teacher_confirm": "¿Estás seguro de que deseas desvincular a este docente de la institución?"
+    "remove_teacher_confirm": "¿Estás seguro de que deseas desvincular a este docente de la institución?",
+    "stat_campuses": "Sedes y Campus",
+    "stat_faculties": "Facultades y Escuelas",
+    "btn_campuses_faculties": "Sedes y Facultades",
+    "modal_campuses_title": "Sedes, Campus y Facultades",
+    "modal_campuses_desc": "Administra la estructura física y académica de tu universidad para organizar docentes, cátedras y alumnos.",
+    "registered_campuses": "Sedes registradas",
+    "registered_faculties": "Facultades registradas",
+    "btn_add_campus": "Agregar sede",
+    "btn_add_faculty": "Agregar facultad",
+    "campus_name_label": "Nombre del campus (ej. Campus Norte)",
+    "campus_city_label": "Ciudad o ubicación",
+    "faculty_name_label": "Nombre de la facultad (ej. Facultad de Artes)",
+    "faculty_campus_label": "Sede o campus",
+    "btn_save_campus": "Guardar sede",
+    "btn_save_faculty": "Guardar facultad",
+    "delete_campus_confirm": "¿Estás seguro de que deseas eliminar esta sede universitaria?",
+    "delete_faculty_confirm": "¿Estás seguro de que deseas eliminar esta facultad?"
   },
   "design": {
     "layers_free_limit": "El plan Gratis permite hasta 5 capas por lienzo. Mejora a Pro para capas ilimitadas."

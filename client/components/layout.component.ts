@@ -755,19 +755,19 @@ async function populateDrawerContent(drawer: HTMLElement): Promise<void> {
       </div>
       <button type="button" class="menu-item${isClassrooms ? ' is-active' : ''}" data-ref="btn-drawer-edu-classrooms">
         <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#meeting_room"></use></svg>
-        <span class="menu-item__text">Salones y aulas</span>
+        <span class="menu-item__text" data-i18n="education.tab_classrooms">Salones y aulas</span>
       </button>
       <button type="button" class="menu-item${isTeachers ? ' is-active' : ''}" data-ref="btn-drawer-edu-teachers">
         <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#school"></use></svg>
-        <span class="menu-item__text">Docentes</span>
+        <span class="menu-item__text" data-i18n="education.tab_teachers">Docentes</span>
       </button>
       <button type="button" class="menu-item${isStudents ? ' is-active' : ''}" data-ref="btn-drawer-edu-students">
         <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
-        <span class="menu-item__text">Estudiantes</span>
+        <span class="menu-item__text" data-i18n="education.tab_students">Estudiantes</span>
       </button>
       <button type="button" class="menu-item${isInstitution ? ' is-active' : ''}" data-ref="btn-drawer-edu-institution">
         <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#apartment"></use></svg>
-        <span class="menu-item__text">Institución</span>
+        <span class="menu-item__text" data-i18n="education.tab_school">Institución</span>
       </button>
     `;
     const btnClassrooms = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-edu-classrooms"]');

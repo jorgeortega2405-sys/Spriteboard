@@ -83,7 +83,9 @@ export async function resolveOrProvisionFederatedUser(
     let username: string;
     let role: UserRole = 'user';
     let avatarUrl: string | null = null;
-    let targetTier = tenant.tenant_type === 'university' ? 'pro' : 'business';
+    let targetTier = tenant.tenant_type === 'university'
+      ? 'pro'
+      : (tenant.tenant_type === 'school' ? 'escuelas' : 'business');
 
     if (userRows.length > 0) {
       userId = userRows[0].id;
@@ -91,8 +93,10 @@ export async function resolveOrProvisionFederatedUser(
       role = (userRows[0].role as UserRole) || 'user';
       avatarUrl = userRows[0].avatar_url || null;
 
-      if (tenant.tenant_type === 'university' && tenant.owner_id === userId) {
-        targetTier = 'universidades';
+      if (tenant.owner_id === userId) {
+        targetTier = tenant.tenant_type === 'university'
+          ? 'universidades'
+          : (tenant.tenant_type === 'school' ? 'escuelas' : 'business');
       }
 
       await pool.execute(

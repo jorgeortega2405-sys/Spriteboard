@@ -135,6 +135,18 @@ class EducationController {
   private inputNewCampusName: HTMLInputElement | null = null;
   private inputNewCampusCity: HTMLInputElement | null = null;
   private bannerCampusError: HTMLElement | null = null;
+  private btnTabCampuses: HTMLElement | null = null;
+  private btnTabFaculties: HTMLElement | null = null;
+  private sectionTabCampuses: HTMLElement | null = null;
+  private sectionTabFaculties: HTMLElement | null = null;
+  private btnAddFaculty: HTMLElement | null = null;
+  private formAddFaculty: HTMLFormElement | null = null;
+  private selectNewFacultyCampus: HTMLSelectElement | null = null;
+  private inputNewFacultyName: HTMLInputElement | null = null;
+  private inputNewFacultyCode: HTMLInputElement | null = null;
+  private facultiesListContainer: HTMLElement | null = null;
+  private bannerFacultyError: HTMLElement | null = null;
+  private cachedCampuses: any[] = [];
 
   constructor(container: HTMLElement, activeTab: 'classrooms' | 'teachers' | 'students' | 'school' = 'classrooms') {
     this.container = container;
@@ -270,6 +282,18 @@ class EducationController {
     this.inputNewCampusName = this.container.querySelector<HTMLInputElement>('[data-ref="input-new-campus-name"]');
     this.inputNewCampusCity = this.container.querySelector<HTMLInputElement>('[data-ref="input-new-campus-city"]');
     this.bannerCampusError = this.container.querySelector<HTMLElement>('[data-ref="banner-campus-error"]');
+
+    this.btnTabCampuses = this.container.querySelector<HTMLElement>('[data-ref="btn-tab-campuses"]');
+    this.btnTabFaculties = this.container.querySelector<HTMLElement>('[data-ref="btn-tab-faculties"]');
+    this.sectionTabCampuses = this.container.querySelector<HTMLElement>('[data-ref="section-tab-campuses"]');
+    this.sectionTabFaculties = this.container.querySelector<HTMLElement>('[data-ref="section-tab-faculties"]');
+    this.btnAddFaculty = this.container.querySelector<HTMLElement>('[data-ref="btn-add-faculty"]');
+    this.formAddFaculty = this.container.querySelector<HTMLFormElement>('[data-ref="form-add-faculty"]');
+    this.selectNewFacultyCampus = this.container.querySelector<HTMLSelectElement>('[data-ref="select-new-faculty-campus"]');
+    this.inputNewFacultyName = this.container.querySelector<HTMLInputElement>('[data-ref="input-new-faculty-name"]');
+    this.inputNewFacultyCode = this.container.querySelector<HTMLInputElement>('[data-ref="input-new-faculty-code"]');
+    this.facultiesListContainer = this.container.querySelector<HTMLElement>('[data-ref="faculties-list-container"]');
+    this.bannerFacultyError = this.container.querySelector<HTMLElement>('[data-ref="banner-faculty-error"]');
   }
 
   private setupDropdowns(): void {
@@ -453,7 +477,9 @@ class EducationController {
     this.btnOpenSchoolEdit?.addEventListener('click', () => this.openSchoolModal(), { signal });
     this.btnOpenUniversityCampuses?.addEventListener('click', () => this.openCampusesModal(), { signal });
     this.btnOpenEducationSso?.addEventListener('click', () => {
-      void openEnterpriseSsoModal({ tenantType: 'university' });
+      const userTier = (currentUser as any)?.subscription_tier;
+      const isUniv = userTier === 'universidades' || userTier === 'universities';
+      void openEnterpriseSsoModal({ tenantType: isUniv ? 'university' : 'school' });
     }, { signal });
     const btnCloseSchool = this.container.querySelector<HTMLElement>('[data-ref="btn-close-school-modal"]');
     const btnCancelSchool = this.container.querySelector<HTMLElement>('[data-ref="btn-cancel-school"]');
@@ -468,6 +494,9 @@ class EducationController {
     const btnCloseCampuses = this.container.querySelector<HTMLElement>('[data-ref="btn-close-campuses-modal"]');
     btnCloseCampuses?.addEventListener('click', () => this.closeCampusesModal(), { signal });
 
+    this.btnTabCampuses?.addEventListener('click', () => this.switchCampusModalTab('campuses'), { signal });
+    this.btnTabFaculties?.addEventListener('click', () => this.switchCampusModalTab('faculties'), { signal });
+
     this.btnAddCampus?.addEventListener('click', () => {
       this.formAddCampus?.classList.toggle('is-hidden');
       this.inputNewCampusName?.focus();
@@ -481,6 +510,21 @@ class EducationController {
     this.formAddCampus?.addEventListener('submit', (e) => {
       e.preventDefault();
       void this.handleAddCampusSubmit();
+    }, { signal });
+
+    this.btnAddFaculty?.addEventListener('click', () => {
+      this.formAddFaculty?.classList.toggle('is-hidden');
+      this.inputNewFacultyName?.focus();
+    }, { signal });
+
+    const btnCancelAddFaculty = this.container.querySelector<HTMLElement>('[data-ref="btn-cancel-add-faculty"]');
+    btnCancelAddFaculty?.addEventListener('click', () => {
+      this.formAddFaculty?.classList.add('is-hidden');
+    }, { signal });
+
+    this.formAddFaculty?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      void this.handleAddFacultySubmit();
     }, { signal });
 
     const btnLockedUpgrade = this.container.querySelector<HTMLElement>('[data-ref="btn-locked-upgrade"]');
@@ -638,7 +682,7 @@ class EducationController {
     if (!this.modalCampusesBackdrop) return;
     this.modalCampusesBackdrop.classList.add('is-visible');
     document.body.classList.add('modal-open');
-    void this.loadCampusesList();
+    this.switchCampusModalTab('campuses');
   }
 
   private closeCampusesModal(): void {
@@ -646,7 +690,47 @@ class EducationController {
     this.modalCampusesBackdrop.classList.remove('is-visible');
     document.body.classList.remove('modal-open');
     this.formAddCampus?.classList.add('is-hidden');
+    this.formAddFaculty?.classList.add('is-hidden');
     if (this.bannerCampusError) this.bannerCampusError.classList.add('is-hidden');
+    if (this.bannerFacultyError) this.bannerFacultyError.classList.add('is-hidden');
+  }
+
+  private switchCampusModalTab(tab: 'campuses' | 'faculties'): void {
+    if (tab === 'campuses') {
+      this.btnTabCampuses?.classList.add('component-button--black');
+      this.btnTabCampuses?.classList.remove('component-button--outline');
+      this.btnTabFaculties?.classList.remove('component-button--black');
+      this.btnTabFaculties?.classList.add('component-button--outline');
+      this.sectionTabCampuses?.classList.remove('is-hidden');
+      this.sectionTabFaculties?.classList.add('is-hidden');
+      void this.loadCampusesList();
+    } else {
+      this.btnTabFaculties?.classList.add('component-button--black');
+      this.btnTabFaculties?.classList.remove('component-button--outline');
+      this.btnTabCampuses?.classList.remove('component-button--black');
+      this.btnTabCampuses?.classList.add('component-button--outline');
+      this.sectionTabFaculties?.classList.remove('is-hidden');
+      this.sectionTabCampuses?.classList.add('is-hidden');
+      void this.loadFacultiesList();
+    }
+  }
+
+  private populateCampusSelect(campuses: any[]): void {
+    if (!this.selectNewFacultyCampus) return;
+    this.selectNewFacultyCampus.innerHTML = '';
+    if (campuses.length === 0) {
+      const opt = document.createElement('option');
+      opt.value = '';
+      opt.textContent = t('education.no_campuses_yet') || 'Primero debes registrar al menos una sede';
+      this.selectNewFacultyCampus.appendChild(opt);
+      return;
+    }
+    for (const c of campuses) {
+      const opt = document.createElement('option');
+      opt.value = String(c.id);
+      opt.textContent = `${c.name}${c.city ? ` (${c.city})` : ''}`;
+      this.selectNewFacultyCampus.appendChild(opt);
+    }
   }
 
   private async loadCampusesList(): Promise<void> {
@@ -660,24 +744,128 @@ class EducationController {
       }
       const data = await res.json();
       const campuses = data.campuses || [];
+      this.cachedCampuses = campuses;
+      this.populateCampusSelect(campuses);
+
       if (campuses.length === 0) {
         this.campusesListContainer.innerHTML = '<p style="padding: 12px; color: var(--text-secondary); font-size: 13px;">Aún no has registrado campus o sedes universitarias.</p>';
         return;
       }
 
-      this.campusesListContainer.innerHTML = campuses.map((c: any) => `
-        <div class="card card--padded" style="border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-          <div>
-            <strong style="color: var(--text-primary); font-size: 14px;">${escapeHtml(c.name)}</strong>
-            <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
-              ${c.city ? escapeHtml(c.city) + ' • ' : ''}${c.faculties_count || 0} facultades • ${c.members_count || 0} integrantes
-            </div>
-          </div>
-          <span class="component-badge component-badge--sm">${escapeHtml(c.code || 'SEDE')}</span>
-        </div>
-      `).join('');
+      this.campusesListContainer.innerHTML = '';
+      for (const c of campuses) {
+        const item = document.createElement('div');
+        item.className = 'card card--padded';
+        item.style.cssText = 'border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;';
+
+        const left = document.createElement('div');
+        const title = document.createElement('strong');
+        title.style.cssText = 'color: var(--text-primary); font-size: 14px;';
+        title.textContent = c.name;
+
+        const sub = document.createElement('div');
+        sub.style.cssText = 'font-size: 12px; color: var(--text-secondary); margin-top: 2px;';
+        sub.textContent = `${c.city ? c.city + ' • ' : ''}${c.faculties_count || 0} facultades • ${c.members_count || 0} integrantes`;
+
+        left.appendChild(title);
+        left.appendChild(sub);
+
+        const right = document.createElement('div');
+        right.style.cssText = 'display: flex; align-items: center; gap: 8px;';
+
+        const badge = document.createElement('span');
+        badge.className = 'component-badge component-badge--sm';
+        badge.textContent = c.code || 'SEDE';
+        right.appendChild(badge);
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.className = 'component-button component-button--icon-only component-button--ghost component-button--h28';
+        deleteBtn.setAttribute('data-tooltip', 'Eliminar sede');
+        deleteBtn.setAttribute('aria-label', 'Eliminar sede');
+        deleteBtn.innerHTML = '<svg class="component-icon" aria-hidden="true" style="width: 16px; height: 16px;"><use href="/icons.svg#delete"></use></svg>';
+        deleteBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.confirmDeleteCampus(c.id, c.name);
+        }, { signal: this.abortController.signal });
+        right.appendChild(deleteBtn);
+
+        item.appendChild(left);
+        item.appendChild(right);
+        this.campusesListContainer.appendChild(item);
+      }
     } catch {
       this.campusesListContainer.innerHTML = '<p style="padding: 12px; color: var(--text-danger); font-size: 13px;">Error al consultar sedes.</p>';
+    }
+  }
+
+  private async loadFacultiesList(): Promise<void> {
+    if (!this.facultiesListContainer) return;
+    this.facultiesListContainer.innerHTML = '<p style="padding: 12px; color: var(--text-secondary); font-size: 13px;">Cargando facultades...</p>';
+    try {
+      const res = await getApi(API_ROUTES.education.university);
+      if (!res.ok) {
+        this.facultiesListContainer.innerHTML = '<p style="padding: 12px; color: var(--text-secondary); font-size: 13px;">No se pudieron cargar las facultades.</p>';
+        return;
+      }
+      const data = await res.json();
+      const campuses = data.campuses || [];
+      this.cachedCampuses = campuses;
+      this.populateCampusSelect(campuses);
+
+      const allFaculties: any[] = [];
+      for (const camp of campuses) {
+        if (Array.isArray(camp.faculties)) {
+          for (const f of camp.faculties) {
+            allFaculties.push({ ...f, campus_name: camp.name });
+          }
+        }
+      }
+
+      if (allFaculties.length === 0) {
+        this.facultiesListContainer.innerHTML = '<p style="padding: 12px; color: var(--text-secondary); font-size: 13px;">Aún no has registrado facultades o escuelas universitarias.</p>';
+        return;
+      }
+
+      this.facultiesListContainer.innerHTML = '';
+      for (const f of allFaculties) {
+        const item = document.createElement('div');
+        item.className = 'card card--padded';
+        item.style.cssText = 'border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;';
+
+        const left = document.createElement('div');
+        const title = document.createElement('strong');
+        title.style.cssText = 'color: var(--text-primary); font-size: 14px;';
+        title.textContent = f.name;
+
+        const sub = document.createElement('div');
+        sub.style.cssText = 'font-size: 12px; color: var(--text-secondary); margin-top: 2px;';
+        sub.textContent = `Sede: ${f.campus_name}${f.code ? ` • Código: ${f.code}` : ''}`;
+
+        left.appendChild(title);
+        left.appendChild(sub);
+
+        const right = document.createElement('div');
+        right.style.cssText = 'display: flex; align-items: center; gap: 8px;';
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.className = 'component-button component-button--icon-only component-button--ghost component-button--h28';
+        deleteBtn.setAttribute('data-tooltip', 'Eliminar facultad');
+        deleteBtn.setAttribute('aria-label', 'Eliminar facultad');
+        deleteBtn.innerHTML = '<svg class="component-icon" aria-hidden="true" style="width: 16px; height: 16px;"><use href="/icons.svg#delete"></use></svg>';
+        deleteBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.confirmDeleteFaculty(f.id, f.name);
+        }, { signal: this.abortController.signal });
+        right.appendChild(deleteBtn);
+
+        item.appendChild(left);
+        item.appendChild(right);
+        this.facultiesListContainer.appendChild(item);
+      }
+    } catch {
+      this.facultiesListContainer.innerHTML = '<p style="padding: 12px; color: var(--text-danger); font-size: 13px;">Error al consultar facultades.</p>';
     }
   }
 
@@ -710,6 +898,91 @@ class EducationController {
         this.bannerCampusError.classList.remove('is-hidden');
       }
     }
+  }
+
+  private async handleAddFacultySubmit(): Promise<void> {
+    if (!this.inputNewFacultyName || !this.selectNewFacultyCampus) return;
+    const name = this.inputNewFacultyName.value.trim();
+    const campusId = parseInt(this.selectNewFacultyCampus.value, 10);
+    const code = this.inputNewFacultyCode?.value.trim() || undefined;
+
+    if (!name || isNaN(campusId)) {
+      if (this.bannerFacultyError) {
+        this.bannerFacultyError.textContent = 'Por favor selecciona una sede e ingresa el nombre de la facultad.';
+        this.bannerFacultyError.classList.remove('is-hidden');
+      }
+      return;
+    }
+
+    try {
+      const res = await postApi(API_ROUTES.education.universityFaculties, { campusId, name, code });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        if (this.bannerFacultyError) {
+          this.bannerFacultyError.textContent = errData.error || 'Error al registrar facultad.';
+          this.bannerFacultyError.classList.remove('is-hidden');
+        }
+        return;
+      }
+      this.inputNewFacultyName.value = '';
+      if (this.inputNewFacultyCode) this.inputNewFacultyCode.value = '';
+      this.formAddFaculty?.classList.add('is-hidden');
+      if (this.bannerFacultyError) this.bannerFacultyError.classList.add('is-hidden');
+      showToast('Facultad registrada exitosamente.', 'success');
+      await this.loadFacultiesList();
+      await this.loadUniversityStats();
+    } catch {
+      if (this.bannerFacultyError) {
+        this.bannerFacultyError.textContent = 'Error de conexión al registrar facultad.';
+        this.bannerFacultyError.classList.remove('is-hidden');
+      }
+    }
+  }
+
+  private confirmDeleteCampus(campusId: number, campusName: string): void {
+    openModal({
+      confirmClass: 'component-button--danger',
+      confirmText: t('education.confirm_delete_campus_btn') || 'Eliminar sede',
+      description: (t('education.confirm_delete_campus_desc') || '¿Estás seguro de que deseas eliminar esta sede?').replace('{name}', campusName),
+      onConfirm: async () => {
+        try {
+          const res = await deleteApi(API_ROUTES.education.universityCampusById(campusId));
+          if (!res.ok) {
+            showToast('No se pudo eliminar la sede universitaria', 'danger');
+            return;
+          }
+          showToast('Sede universitaria eliminada', 'info');
+          await this.loadCampusesList();
+          await this.loadUniversityStats();
+        } catch {
+          showToast('Error al eliminar sede', 'danger');
+        }
+      },
+      title: t('education.confirm_delete_campus_title') || 'Eliminar sede',
+    });
+  }
+
+  private confirmDeleteFaculty(facultyId: number, facultyName: string): void {
+    openModal({
+      confirmClass: 'component-button--danger',
+      confirmText: t('education.confirm_delete_faculty_btn') || 'Eliminar facultad',
+      description: (t('education.confirm_delete_faculty_desc') || '¿Estás seguro de que deseas eliminar esta facultad?').replace('{name}', facultyName),
+      onConfirm: async () => {
+        try {
+          const res = await deleteApi(API_ROUTES.education.universityFacultyById(facultyId));
+          if (!res.ok) {
+            showToast('No se pudo eliminar la facultad', 'danger');
+            return;
+          }
+          showToast('Facultad eliminada', 'info');
+          await this.loadFacultiesList();
+          await this.loadUniversityStats();
+        } catch {
+          showToast('Error al eliminar facultad', 'danger');
+        }
+      },
+      title: t('education.confirm_delete_faculty_title') || 'Eliminar facultad',
+    });
   }
 
   private renderClassrooms(): void {

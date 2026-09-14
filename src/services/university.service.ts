@@ -1,7 +1,35 @@
-import { pool } from '../config/database.config.js';
-import { logger } from './logger.service.js';
-import { AcademicRole, UniversityCampus, UniversityFaculty, UniversityMember, UniversityOverviewDto } from '../types/education.types.js';
+import crypto from 'crypto';
 import mysql from 'mysql2/promise';
+import { pool } from '../config/database.config.js';
+import { AcademicRole, UniversityCampus, UniversityFaculty, UniversityMember, UniversityOverviewDto } from '../types/education.types.js';
+import { logger } from './logger.service.js';
+
+export async function getUniversityAdminPermission(
+  userId: number,
+  tenant: any
+): Promise<{ canManageAll: boolean; campusId: number | null }> {
+  if (tenant.owner_id === userId) {
+    return { canManageAll: true, campusId: null };
+  }
+
+  const [memberRows] = await pool.query<mysql.RowDataPacket[]>(
+    `SELECT academic_role, campus_id FROM university_members
+     WHERE tenant_id = ? AND user_id = ? AND status = 'active' LIMIT 1`,
+    [tenant.id, userId]
+  );
+
+  if (memberRows.length > 0) {
+    const role = memberRows[0].academic_role;
+    if (role === 'superadmin') {
+      return { canManageAll: true, campusId: null };
+    }
+    if (role === 'campus_admin') {
+      return { canManageAll: false, campusId: memberRows[0].campus_id };
+    }
+  }
+
+  return { canManageAll: false, campusId: null };
+}
 
 export async function getUniversityTenantForUser(userId: number): Promise<any | null> {
   try {
@@ -24,7 +52,7 @@ export async function getUniversityTenantForUser(userId: number): Promise<any | 
     }
 
     const [userRows] = await pool.query<mysql.RowDataPacket[]>(
-      'SELECT email, subscription_tier FROM users WHERE id = ? LIMIT 1',
+      'SELECT username, email, subscription_tier FROM users WHERE id = ? LIMIT 1',
       [userId]
     );
     if (userRows.length > 0) {
@@ -38,6 +66,34 @@ export async function getUniversityTenantForUser(userId: number): Promise<any | 
         if (domainRows.length > 0) {
           return domainRows[0];
         }
+      }
+
+      const rawTier = (userRows[0].subscription_tier || '').toLowerCase();
+      if (['universidades', 'universities'].includes(rawTier)) {
+        const uuid = crypto.randomUUID();
+        const defaultName = `Universidad de ${userRows[0]?.username || 'Educación Superior'}`;
+        const defaultDomain = `uni-${userId}-${Date.now().toString(36)}.edu`;
+        const [insertRes] = await pool.execute<mysql.ResultSetHeader>(
+          `INSERT INTO enterprise_tenants (uuid, owner_id, tenant_type, name, domain, sso_enabled, scim_enabled)
+           VALUES (?, ?, 'university', ?, ?, FALSE, FALSE)`,
+          [uuid, userId, defaultName, defaultDomain]
+        );
+        const tenantId = insertRes.insertId;
+        await pool.execute(
+          `INSERT INTO university_members (tenant_id, user_id, academic_role, status)
+           VALUES (?, ?, 'superadmin', 'active')`,
+          [tenantId, userId]
+        );
+        return {
+          id: tenantId,
+          uuid,
+          owner_id: userId,
+          tenant_type: 'university',
+          name: defaultName,
+          domain: defaultDomain,
+          sso_enabled: 0,
+          scim_enabled: 0,
+        };
       }
     }
 
@@ -105,7 +161,7 @@ export async function getUniversityOverview(userId: number): Promise<UniversityO
     const [countRows] = await pool.query<mysql.RowDataPacket[]>(
       `SELECT
          SUM(CASE WHEN academic_role = 'student' THEN 1 ELSE 0 END) AS students_count,
-         SUM(CASE WHEN academic_role IN ('professor', 'faculty_admin', 'campus_admin', 'dean') THEN 1 ELSE 0 END) AS professors_count
+         SUM(CASE WHEN academic_role IN ('professor', 'faculty_admin', 'campus_admin', 'superadmin', 'staff') THEN 1 ELSE 0 END) AS professors_count
        FROM university_members
        WHERE tenant_id = ? AND status = 'active'`,
       [tenant.id]
@@ -113,6 +169,8 @@ export async function getUniversityOverview(userId: number): Promise<UniversityO
 
     const total_students = Number(countRows[0]?.students_count) || 0;
     const total_professors = Number(countRows[0]?.professors_count) || 0;
+
+    const perm = await getUniversityAdminPermission(userId, tenant);
 
     return {
       tenant: {
@@ -129,7 +187,7 @@ export async function getUniversityOverview(userId: number): Promise<UniversityO
       total_professors,
       total_campuses: campuses.length,
       total_faculties: faculties.length,
-      is_admin: tenant.owner_id === userId,
+      is_admin: perm.canManageAll || perm.campusId !== null,
     };
   } catch (err: any) {
     logger.db.error(`Error al obtener resumen universitario para usuario ${userId}`, err);
@@ -143,8 +201,13 @@ export async function createUniversityCampus(
 ): Promise<UniversityCampus> {
   try {
     const tenant = await getUniversityTenantForUser(adminId);
-    if (!tenant || tenant.owner_id !== adminId) {
-      throw new Error('Solo el administrador de la institución universitaria puede crear sedes o campus.');
+    if (!tenant) {
+      throw new Error('Institución universitaria no encontrada.');
+    }
+
+    const perm = await getUniversityAdminPermission(adminId, tenant);
+    if (!perm.canManageAll) {
+      throw new Error('Solo los administradores generales de la institución pueden crear sedes.');
     }
 
     const cleanName = (dto.name || '').trim();
@@ -183,8 +246,13 @@ export async function updateUniversityCampus(
 ): Promise<boolean> {
   try {
     const tenant = await getUniversityTenantForUser(adminId);
-    if (!tenant || tenant.owner_id !== adminId) {
-      throw new Error('Solo el administrador universitario puede modificar una sede.');
+    if (!tenant) {
+      throw new Error('Institución universitaria no encontrada.');
+    }
+
+    const perm = await getUniversityAdminPermission(adminId, tenant);
+    if (!perm.canManageAll && perm.campusId !== campusId) {
+      throw new Error('No posees permisos para modificar esta sede.');
     }
 
     const cleanName = (dto.name || '').trim();
@@ -208,8 +276,13 @@ export async function updateUniversityCampus(
 export async function deleteUniversityCampus(adminId: number, campusId: number): Promise<boolean> {
   try {
     const tenant = await getUniversityTenantForUser(adminId);
-    if (!tenant || tenant.owner_id !== adminId) {
-      throw new Error('Solo el administrador universitario puede eliminar una sede.');
+    if (!tenant) {
+      throw new Error('Institución universitaria no encontrada.');
+    }
+
+    const perm = await getUniversityAdminPermission(adminId, tenant);
+    if (!perm.canManageAll) {
+      throw new Error('Solo el administrador general universitario puede eliminar una sede.');
     }
 
     await pool.execute(
@@ -231,8 +304,21 @@ export async function createUniversityFaculty(
 ): Promise<UniversityFaculty> {
   try {
     const tenant = await getUniversityTenantForUser(adminId);
-    if (!tenant || tenant.owner_id !== adminId) {
-      throw new Error('Solo el administrador universitario puede registrar facultades.');
+    if (!tenant) {
+      throw new Error('Institución universitaria no encontrada.');
+    }
+
+    const perm = await getUniversityAdminPermission(adminId, tenant);
+    if (!perm.canManageAll && perm.campusId !== dto.campusId) {
+      throw new Error('No posees permisos para registrar facultades en este campus.');
+    }
+
+    const [campusRows] = await pool.query<mysql.RowDataPacket[]>(
+      'SELECT id FROM university_campuses WHERE id = ? AND tenant_id = ? LIMIT 1',
+      [dto.campusId, tenant.id]
+    );
+    if (campusRows.length === 0) {
+      throw new Error('El campus especificado no pertenece a esta institución.');
     }
 
     const cleanName = (dto.name || '').trim();
@@ -267,8 +353,21 @@ export async function createUniversityFaculty(
 export async function deleteUniversityFaculty(adminId: number, facultyId: number): Promise<boolean> {
   try {
     const tenant = await getUniversityTenantForUser(adminId);
-    if (!tenant || tenant.owner_id !== adminId) {
-      throw new Error('Solo el administrador universitario puede eliminar una facultad.');
+    if (!tenant) {
+      throw new Error('Institución universitaria no encontrada.');
+    }
+
+    const [facRows] = await pool.query<mysql.RowDataPacket[]>(
+      'SELECT id, campus_id FROM university_faculties WHERE id = ? AND tenant_id = ? LIMIT 1',
+      [facultyId, tenant.id]
+    );
+    if (facRows.length === 0) {
+      throw new Error('La facultad especificada no pertenece a esta institución.');
+    }
+
+    const perm = await getUniversityAdminPermission(adminId, tenant);
+    if (!perm.canManageAll && perm.campusId !== facRows[0].campus_id) {
+      throw new Error('No posees permisos para eliminar facultades en esta sede.');
     }
 
     await pool.execute(
@@ -291,6 +390,17 @@ export async function listUniversityMembers(
   try {
     const tenant = await getUniversityTenantForUser(userId);
     if (!tenant) {
+      return [];
+    }
+
+    const perm = await getUniversityAdminPermission(userId, tenant);
+    const [memberRoleRows] = await pool.query<mysql.RowDataPacket[]>(
+      "SELECT academic_role FROM university_members WHERE tenant_id = ? AND user_id = ? AND status = 'active' LIMIT 1",
+      [tenant.id, userId]
+    );
+    const userRole = memberRoleRows[0]?.academic_role;
+    const canViewDirectory = perm.canManageAll || perm.campusId !== null || ['faculty_admin', 'professor', 'staff'].includes(userRole);
+    if (!canViewDirectory) {
       return [];
     }
 
@@ -363,11 +473,55 @@ export async function assignUniversityMember(
 ): Promise<UniversityMember> {
   try {
     const tenant = await getUniversityTenantForUser(adminId);
-    if (!tenant || tenant.owner_id !== adminId) {
-      throw new Error('Solo el administrador universitario puede asignar integrantes a la institución.');
+    if (!tenant) {
+      throw new Error('Institución universitaria no encontrada.');
     }
 
-    const assignedTier = (dto.academicRole === 'student' || dto.academicRole === 'ta') ? 'pro' : 'universidades';
+    const perm = await getUniversityAdminPermission(adminId, tenant);
+    if (!perm.canManageAll && (!perm.campusId || perm.campusId !== dto.campusId)) {
+      throw new Error('Solo los administradores universitarios autorizados pueden asignar integrantes.');
+    }
+
+    if (!perm.canManageAll && dto.academicRole === 'superadmin') {
+      throw new Error('Solo el titular o superadministrador puede otorgar rol de superadministrador.');
+    }
+
+    if (dto.campusId) {
+      const [cRows] = await pool.query<mysql.RowDataPacket[]>(
+        'SELECT id FROM university_campuses WHERE id = ? AND tenant_id = ? LIMIT 1',
+        [dto.campusId, tenant.id]
+      );
+      if (cRows.length === 0) {
+        throw new Error('El campus especificado no pertenece a esta institución.');
+      }
+    }
+
+    if (dto.facultyId) {
+      const [fRows] = await pool.query<mysql.RowDataPacket[]>(
+        'SELECT id, campus_id FROM university_faculties WHERE id = ? AND tenant_id = ? LIMIT 1',
+        [dto.facultyId, tenant.id]
+      );
+      if (fRows.length === 0) {
+        throw new Error('La facultad especificada no pertenece a esta institución.');
+      }
+      if (dto.campusId && fRows[0].campus_id !== dto.campusId) {
+        throw new Error('La facultad no pertenece al campus especificado.');
+      }
+    }
+
+    const [uRows] = await pool.query<mysql.RowDataPacket[]>(
+      'SELECT subscription_tier FROM users WHERE id = ? LIMIT 1',
+      [dto.targetUserId]
+    );
+    if (uRows.length === 0) {
+      throw new Error('El usuario especificado no existe.');
+    }
+
+    const currentTier = (uRows[0].subscription_tier || 'free').toLowerCase();
+    let assignedTier = (dto.academicRole === 'student' || dto.academicRole === 'ta') ? 'pro' : 'universidades';
+    if (['ultra', 'business', 'negocios'].includes(currentTier)) {
+      assignedTier = currentTier;
+    }
 
     await pool.execute(
       'UPDATE users SET subscription_tier = ? WHERE id = ?',
@@ -436,12 +590,14 @@ export async function assignUniversityMember(
 export async function removeUniversityMember(adminId: number, memberId: number): Promise<boolean> {
   try {
     const tenant = await getUniversityTenantForUser(adminId);
-    if (!tenant || tenant.owner_id !== adminId) {
-      throw new Error('Solo el administrador universitario puede remover integrantes.');
+    if (!tenant) {
+      throw new Error('Institución universitaria no encontrada.');
     }
 
+    const perm = await getUniversityAdminPermission(adminId, tenant);
+
     const [rows] = await pool.query<mysql.RowDataPacket[]>(
-      'SELECT user_id FROM university_members WHERE id = ? AND tenant_id = ? LIMIT 1',
+      'SELECT user_id, campus_id FROM university_members WHERE id = ? AND tenant_id = ? LIMIT 1',
       [memberId, tenant.id]
     );
     if (rows.length === 0) {
@@ -449,13 +605,27 @@ export async function removeUniversityMember(adminId: number, memberId: number):
     }
 
     const targetUserId = rows[0].user_id;
+    if (targetUserId === tenant.owner_id) {
+      throw new Error('No es posible remover al titular principal de la institución.');
+    }
+
+    if (!perm.canManageAll && perm.campusId !== rows[0].campus_id) {
+      throw new Error('No posees permisos para remover miembros de esta sede.');
+    }
 
     await pool.execute('DELETE FROM university_members WHERE id = ? AND tenant_id = ?', [memberId, tenant.id]);
 
-    await pool.execute(
-      "UPDATE users SET subscription_tier = 'free' WHERE id = ? AND subscription_tier IN ('pro', 'universidades', 'docentes')",
+    const [billingRows] = await pool.query<mysql.RowDataPacket[]>(
+      "SELECT status FROM user_billing WHERE user_id = ? AND status = 'active' LIMIT 1",
       [targetUserId]
     );
+
+    if (billingRows.length === 0) {
+      await pool.execute(
+        "UPDATE users SET subscription_tier = 'free' WHERE id = ? AND subscription_tier IN ('pro', 'universidades')",
+        [targetUserId]
+      );
+    }
 
     logger.db.info(`Miembro universitario ${memberId} (usuario ${targetUserId}) removido por admin ${adminId}`);
     return true;

@@ -1,6 +1,6 @@
-import { assignUniversityMember, createUniversityCampus, createUniversityFaculty, deleteUniversityCampus, deleteUniversityFaculty, getUniversityOverview, listUniversityMembers, removeUniversityMember, updateUniversityCampus } from '../services/university.service.js';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import { logger } from '../services/logger.service.js';
+import { assignUniversityMember, createUniversityCampus, createUniversityFaculty, deleteUniversityCampus, deleteUniversityFaculty, getUniversityOverview, listUniversityMembers, removeUniversityMember, updateUniversityCampus } from '../services/university.service.js';
 import { Request, Response } from 'express';
 
 export async function getUniversityOverviewHandler(req: Request, res: Response): Promise<void> {

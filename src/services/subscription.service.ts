@@ -52,6 +52,30 @@ export const TIER_LIMITS: Record<string, TierLimits> = {
     maxExportScale: 16,
     allowedExportTypes: ['png-current', 'project-json', 'spritesheet', 'gif', 'spritesheet-atlas'],
   },
+  docentes: {
+    storageBytes: 50 * 1024 * 1024 * 1024,
+    maxCanvasDimension: 16384,
+    maxLiveCollaborators: 50,
+    maxTeams: 1,
+    maxTeamMembers: 50,
+    maxLayers: 999999,
+    maxSnapshots: 999999,
+    snapshotRetentionDays: 999999,
+    maxExportScale: 8,
+    allowedExportTypes: ['png-current', 'project-json', 'spritesheet', 'gif', 'spritesheet-atlas'],
+  },
+  universidades: {
+    storageBytes: 2 * 1024 * 1024 * 1024 * 1024,
+    maxCanvasDimension: 16384,
+    maxLiveCollaborators: 50,
+    maxTeams: 999999,
+    maxTeamMembers: 999999,
+    maxLayers: 999999,
+    maxSnapshots: 999999,
+    snapshotRetentionDays: 999999,
+    maxExportScale: 16,
+    allowedExportTypes: ['png-current', 'project-json', 'spritesheet', 'gif', 'spritesheet-atlas'],
+  },
 };
 
 export const TIER_BORDER_COLORS: Record<string, string> = {
@@ -62,7 +86,9 @@ export const TIER_BORDER_COLORS: Record<string, string> = {
   business: 'conic-gradient(from 295deg, #8b5cf6 0% 28%, #ec4899 28% 57%, #3b82f6 57% 85%, #6366f1 85% 100%)',
   negocios: 'conic-gradient(from 295deg, #8b5cf6 0% 28%, #ec4899 28% 57%, #3b82f6 57% 85%, #6366f1 85% 100%)',
   escuelas: 'conic-gradient(from 295deg, #8b5cf6 0% 28%, #ec4899 28% 57%, #3b82f6 57% 85%, #6366f1 85% 100%)',
+  schools: 'conic-gradient(from 295deg, #8b5cf6 0% 28%, #ec4899 28% 57%, #3b82f6 57% 85%, #6366f1 85% 100%)',
   docentes: 'conic-gradient(from 295deg, #8b5cf6 0% 28%, #ec4899 28% 57%, #3b82f6 57% 85%, #6366f1 85% 100%)',
+  teachers: 'conic-gradient(from 295deg, #8b5cf6 0% 28%, #ec4899 28% 57%, #3b82f6 57% 85%, #6366f1 85% 100%)',
   education: 'conic-gradient(from 295deg, #8b5cf6 0% 28%, #ec4899 28% 57%, #3b82f6 57% 85%, #6366f1 85% 100%)',
   universidades: 'conic-gradient(from 295deg, #f59e0b 0% 28%, #d97706 28% 57%, #8b5cf6 57% 85%, #fbbf24 85% 100%)',
   universities: 'conic-gradient(from 295deg, #f59e0b 0% 28%, #d97706 28% 57%, #8b5cf6 57% 85%, #fbbf24 85% 100%)',
@@ -75,10 +101,11 @@ export function getTierBorderColor(tier?: string): string {
 
 export function getTierLimits(tier?: string): TierLimits {
   const normalized = (tier || 'free').toLowerCase();
-  let key = normalized === 'negocios' ? 'business' : normalized;
-  if (key === 'docentes' || key === 'escuelas' || key === 'education' || key === 'educacion' || key === 'universidades' || key === 'universities') {
-    key = 'business';
-  }
+  let key = normalized;
+  if (key === 'negocios') key = 'business';
+  else if (key === 'teachers') key = 'docentes';
+  else if (key === 'schools' || key === 'education' || key === 'educacion' || key === 'escuelas') key = 'business';
+  else if (key === 'universities') key = 'universidades';
   return TIER_LIMITS[key] || TIER_LIMITS.free;
 }
 
@@ -87,7 +114,9 @@ export function resolveHigherTier(tier1?: string, tier2?: string): SubscriptionT
     universidades: 4,
     universities: 4,
     escuelas: 3,
+    schools: 3,
     docentes: 3,
+    teachers: 3,
     education: 3,
     educacion: 3,
     business: 3,
@@ -101,10 +130,12 @@ export function resolveHigherTier(tier1?: string, tier2?: string): SubscriptionT
   const norm2 = (tier2 || 'free').toLowerCase();
   const r1 = rank[norm1] ?? 0;
   const r2 = rank[norm2] ?? 0;
-  if (r2 > r1) {
-    return (norm2 === 'negocios' ? 'business' : norm2) as SubscriptionTierId;
-  }
-  return (norm1 === 'negocios' ? 'business' : norm1) as SubscriptionTierId;
+  const chosen = r2 > r1 ? norm2 : norm1;
+  if (chosen === 'negocios') return 'business';
+  if (chosen === 'schools' || chosen === 'educacion' || chosen === 'education') return 'escuelas';
+  if (chosen === 'teachers') return 'docentes';
+  if (chosen === 'universities') return 'universidades';
+  return chosen as SubscriptionTierId;
 }
 
 export async function getEffectiveTiersForCanvases(
