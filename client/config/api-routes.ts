@@ -54,6 +54,16 @@ export const API_ROUTES = {
     regenerateCode: (uuid: string) => `/api/education/classrooms/${encodeURIComponent(uuid)}/code`,
     removeTeacher: (userId: number) => `/api/education/school/teachers/${encodeURIComponent(userId)}`,
     school: '/api/education/school',
+    students: '/api/education/school/students',
+  },
+  enterprise: {
+    checkDomainSso: (domain: string) => `/api/auth/sso/check-domain?domain=${encodeURIComponent(domain)}`,
+    config: (type: string = 'business') => `/api/enterprise/config?type=${encodeURIComponent(type)}`,
+    generateScimToken: '/api/enterprise/scim/token',
+    revokeScimToken: '/api/enterprise/scim/token',
+    samlMetadata: (uuid: string) => `/api/auth/sso/saml/metadata/${encodeURIComponent(uuid)}`,
+    saveConfig: '/api/enterprise/config',
+    ssoLogin: (domain: string) => `/api/auth/sso/login?domain=${encodeURIComponent(domain)}`,
   },
   trash: {
     base: '/api/trash',

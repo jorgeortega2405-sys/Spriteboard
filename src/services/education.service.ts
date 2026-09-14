@@ -1,5 +1,5 @@
 import { pool } from '../config/database.config.js';
-import { Classroom, CreateClassroomDto, SchoolOrganization, SchoolTeacher } from '../types/education.types.js';
+import { Classroom, CreateClassroomDto, SchoolOrganization, SchoolStudent, SchoolTeacher } from '../types/education.types.js';
 import { logger } from './logger.service.js';
 import crypto from 'crypto';
 import mysql from 'mysql2/promise';
@@ -355,6 +355,36 @@ export async function getSchoolOrganization(userId: number): Promise<SchoolOrgan
       avatar_url: t.avatar_url,
     }));
 
+    const [studentCountRows] = await pool.query<mysql.RowDataPacket[]>(
+      `SELECT COUNT(DISTINCT u.id) AS total
+       FROM users u
+       LEFT JOIN team_members tm ON tm.user_id = u.id AND tm.role = 'member'
+       LEFT JOIN teams t ON t.id = tm.team_id AND (
+         t.school_id = ?
+         OR t.owner_id = ?
+         OR t.owner_id IN (SELECT user_id FROM school_teachers WHERE school_id = ? AND status = 'active')
+       )
+       WHERE u.id != ?
+         AND u.id NOT IN (SELECT user_id FROM school_teachers WHERE school_id = ? AND status = 'active')
+         AND (
+           t.id IS NOT NULL
+           OR (? != '' AND LOWER(u.email) LIKE CONCAT('%@', ?))
+           OR EXISTS(
+             SELECT 1 FROM user_federated_identities ufi
+             INNER JOIN enterprise_tenants et ON et.id = ufi.tenant_id
+             WHERE ufi.user_id = u.id AND (et.owner_id = ? OR (et.domain IS NOT NULL AND et.domain = ?))
+           )
+         )`,
+      [
+        orgRecord.id, orgRecord.admin_id, orgRecord.id,
+        orgRecord.admin_id,
+        orgRecord.id,
+        orgRecord.domain || '', orgRecord.domain || '',
+        orgRecord.admin_id, orgRecord.domain || '',
+      ]
+    );
+    const students_count = Number(studentCountRows[0]?.total) || 0;
+
     return {
       id: orgRecord.id,
       uuid: orgRecord.uuid,
@@ -366,6 +396,7 @@ export async function getSchoolOrganization(userId: number): Promise<SchoolOrgan
       updated_at: orgRecord.updated_at,
       teachers_count: Number(orgRecord.teachers_count) || teachers.length,
       classrooms_count: Number(orgRecord.classrooms_count) || 0,
+      students_count,
       teachers,
       is_admin: orgRecord.admin_id === userId,
     };
@@ -503,5 +534,90 @@ export async function addSchoolTeacher(
   } catch (err: any) {
     logger.db.error(`Error al agregar docente a la escuela por admin ${adminId}`, err);
     throw err;
+  }
+}
+
+export async function getSchoolStudents(
+  userId: number
+): Promise<SchoolStudent[]> {
+  try {
+    const school = await getSchoolOrganization(userId);
+    if (!school) {
+      return [];
+    }
+
+    const domain = (school.domain || '').trim().toLowerCase();
+
+    const [rows] = await pool.query<mysql.RowDataPacket[]>(
+      `SELECT
+         u.id,
+         u.username,
+         u.email,
+         u.avatar_url,
+         u.created_at,
+         COUNT(DISTINCT tm.team_id) AS classrooms_count,
+         EXISTS(
+           SELECT 1 FROM user_federated_identities ufi
+           INNER JOIN enterprise_tenants et ON et.id = ufi.tenant_id
+           WHERE ufi.user_id = u.id AND (et.owner_id = ? OR (et.domain IS NOT NULL AND et.domain = ?))
+         ) AS is_federated
+       FROM users u
+       LEFT JOIN team_members tm ON tm.user_id = u.id AND tm.role = 'member'
+       LEFT JOIN teams t ON t.id = tm.team_id AND (
+         t.school_id = ?
+         OR t.owner_id = ?
+         OR t.owner_id IN (SELECT user_id FROM school_teachers WHERE school_id = ? AND status = 'active')
+       )
+       WHERE u.id != ?
+         AND u.id NOT IN (SELECT user_id FROM school_teachers WHERE school_id = ? AND status = 'active')
+         AND (
+           t.id IS NOT NULL
+           OR (? != '' AND LOWER(u.email) LIKE CONCAT('%@', ?))
+           OR EXISTS(
+             SELECT 1 FROM user_federated_identities ufi2
+             INNER JOIN enterprise_tenants et2 ON et2.id = ufi2.tenant_id
+             WHERE ufi2.user_id = u.id AND (et2.owner_id = ? OR (et2.domain IS NOT NULL AND et2.domain = ?))
+           )
+         )
+       GROUP BY u.id, u.username, u.email, u.avatar_url, u.created_at
+       ORDER BY u.created_at DESC`,
+      [
+        school.admin_id, domain,
+        school.id, school.admin_id, school.id,
+        school.admin_id,
+        school.id,
+        domain, domain,
+        school.admin_id, domain,
+      ]
+    );
+
+    return rows.map((r) => {
+      let source: 'sso_scim' | 'classroom' | 'domain' = 'classroom';
+      let source_label = 'Aula escolar';
+
+      if (Boolean(r.is_federated)) {
+        source = 'sso_scim';
+        source_label = 'SSO / SCIM';
+      } else if (domain && (r.email || '').toLowerCase().endsWith(`@${domain}`)) {
+        source = 'domain';
+        source_label = 'Dominio institucional';
+      }
+
+      return {
+        id: r.id,
+        user_id: r.id,
+        username: r.username,
+        email: r.email,
+        avatar_url: r.avatar_url || null,
+        classrooms_count: Number(r.classrooms_count) || 0,
+        source,
+        source_label,
+        status: 'active',
+        created_at: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
+      };
+    });
+  } catch (err: any) {
+    logger.db.error(`Error al consultar estudiantes de la escuela para usuario ${userId}`, err);
+    throw new Error('No se pudo obtener la lista de estudiantes.');
   }
 }

@@ -1,6 +1,6 @@
 import { navigate } from '../app-router';
 import { API_ROUTES } from '../config/api-routes';
-import { currentUser, postApi, setCurrentUser, setLinkedAccounts } from '../services/api.service';
+import { currentUser, getApi, postApi, setCurrentUser, setLinkedAccounts } from '../services/api.service';
 import { t } from '../services/i18n.service';
 import { loadTemplate } from '../services/template.service';
 import { initWebSocket } from '../services/websocket.service';
@@ -161,6 +161,8 @@ export async function createLoginView(startAt2FA = false): Promise<HTMLElement> 
   const passwordInput = container.querySelector<HTMLInputElement>('[data-ref="login-password"]');
   const toggleBtn = container.querySelector<HTMLElement>('[data-ref="toggle-login-password"]');
   const submitBtn = container.querySelector<HTMLButtonElement>('[data-ref="btn-submit-login"]');
+  const ssoBtn = container.querySelector<HTMLButtonElement>('[data-ref="btn-sso-login"]');
+  const ssoBtnText = container.querySelector<HTMLElement>('[data-ref="sso-btn-text"]');
   const googleBtn = container.querySelector<HTMLElement>('[data-ref="btn-google-login"]');
   const titleEl = container.querySelector<HTMLElement>('[data-ref="login-title"]');
   const subtitleEl = container.querySelector<HTMLElement>('[data-ref="login-subtitle"]');
@@ -200,6 +202,53 @@ export async function createLoginView(startAt2FA = false): Promise<HTMLElement> 
   googleBtn?.addEventListener('click', () => {
     window.location.href = API_ROUTES.auth.google;
   });
+
+  let ssoLoginUrl = '';
+  const checkSso = async (emailVal: string) => {
+    const email = emailVal.trim().toLowerCase();
+    const domain = email.includes('@') ? email.split('@')[1].trim() : '';
+    const publicDomains = ['gmail.com', 'outlook.com', 'hotmail.com', 'yahoo.com', 'icloud.com', 'live.com', 'proton.me', 'msn.com'];
+    if (!domain || publicDomains.includes(domain)) {
+      ssoLoginUrl = '';
+      ssoBtn?.classList.add('is-hidden');
+      return;
+    }
+
+    try {
+      const res = await getApi(API_ROUTES.enterprise.checkDomainSso(domain));
+      if (res.ok) {
+        const data = await res.json();
+        if (data.ssoEnabled && data.loginUrl) {
+          ssoLoginUrl = data.loginUrl;
+          if (ssoBtnText) {
+            const teamName = data.tenantName || domain;
+            ssoBtnText.textContent = t('auth.login.sso_btn_team', { team: teamName }) || `Continuar con SSO (${teamName})`;
+          }
+          ssoBtn?.classList.remove('is-hidden');
+          return;
+        }
+      }
+    } catch {}
+
+    ssoLoginUrl = '';
+    ssoBtn?.classList.add('is-hidden');
+  };
+
+  ssoBtn?.addEventListener('click', () => {
+    if (ssoLoginUrl) {
+      window.location.href = ssoLoginUrl;
+    }
+  });
+
+  emailInput?.addEventListener('blur', () => {
+    if (emailInput.value) {
+      void checkSso(emailInput.value);
+    }
+  });
+
+  if (emailInput?.value) {
+    void checkSso(emailInput.value);
+  }
 
   setupPasswordToggle(toggleBtn, passwordInput, {
     showTooltip: t('auth.login.show_password'),

@@ -520,6 +520,46 @@ export async function runMigrations(): Promise<void> {
     `);
 
     await conn.query(`
+      CREATE TABLE IF NOT EXISTS enterprise_tenants (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        uuid VARCHAR(36) NOT NULL UNIQUE,
+        owner_id INT NOT NULL,
+        tenant_type ENUM('business', 'university', 'school') NOT NULL DEFAULT 'business',
+        name VARCHAR(150) NOT NULL,
+        domain VARCHAR(100) NOT NULL UNIQUE,
+        sso_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+        idp_entity_id VARCHAR(255) NULL,
+        idp_sso_url VARCHAR(500) NULL,
+        idp_certificate TEXT NULL,
+        scim_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+        scim_token_hash VARCHAR(255) NULL,
+        target_team_id INT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_enterprise_owner (owner_id),
+        INDEX idx_enterprise_domain (domain),
+        FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS user_federated_identities (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        tenant_id INT NOT NULL,
+        user_id INT NOT NULL,
+        external_id VARCHAR(255) NOT NULL,
+        active BOOLEAN NOT NULL DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_tenant_external (tenant_id, external_id),
+        UNIQUE KEY uq_tenant_user (tenant_id, user_id),
+        INDEX idx_fed_user (user_id),
+        FOREIGN KEY (tenant_id) REFERENCES enterprise_tenants(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await conn.query(`
       CREATE TABLE IF NOT EXISTS db_canvas.canvas_teams (
         id INT AUTO_INCREMENT PRIMARY KEY,
         canvas_id INT NOT NULL,

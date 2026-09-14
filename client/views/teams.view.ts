@@ -1,5 +1,6 @@
 import { navigate } from '../app-router.js';
 import { openCreateCanvasModal } from '../components/create-canvas-modal.component.js';
+import { openEnterpriseSsoModal } from '../components/enterprise-sso-modal.component.js';
 import { createSidebar } from '../components/layout.component.js';
 import { openModal } from '../components/modal.component.js';
 import { openUpgradeModal } from '../components/upgrade-modal.component.js';
@@ -144,6 +145,11 @@ class TeamsController {
 
     this.btnCreateTeam?.addEventListener('click', () => this.openTeamModal(), { signal });
 
+    const btnOpenSsoConfig = this.container.querySelector<HTMLElement>('[data-ref="btn-open-sso-config"]');
+    btnOpenSsoConfig?.addEventListener('click', () => {
+      void openEnterpriseSsoModal({ tenantType: 'business' });
+    }, { signal });
+
     this.btnToggleSearch?.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -226,6 +232,19 @@ class TeamsController {
       const team = this.allTeams.find((t) => t.uuid === selectedUuid);
       if (team) {
         void this.openMembersModal(team);
+      }
+    }, { signal });
+
+    const btnActionSso = this.container.querySelector<HTMLElement>('[data-ref="btn-action-sso"]');
+    btnActionSso?.addEventListener('click', () => {
+      const selectedUuid = [...this.selectedTeamUuids][0];
+      const team = this.allTeams.find((t) => t.uuid === selectedUuid);
+      if (team) {
+        void openEnterpriseSsoModal({
+          tenantType: 'business',
+          targetTeamId: team.id,
+          targetTeamName: team.name,
+        });
       }
     }, { signal });
 

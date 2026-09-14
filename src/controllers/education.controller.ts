@@ -1,5 +1,5 @@
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
-import { addSchoolTeacher, createClassroom, getSchoolOrganization, getUserClassrooms, joinClassroomByCode, regenerateClassroomCode, removeSchoolTeacher, updateSchoolOrganization } from '../services/education.service.js';
+import { addSchoolTeacher, createClassroom, getSchoolOrganization, getSchoolStudents, getUserClassrooms, joinClassroomByCode, regenerateClassroomCode, removeSchoolTeacher, updateSchoolOrganization } from '../services/education.service.js';
 import { logger } from '../services/logger.service.js';
 import { Request, Response } from 'express';
 
@@ -184,6 +184,24 @@ export async function removeSchoolTeacherHandler(req: Request, res: Response): P
   } catch (err: any) {
     logger.app.error('Error al revocar docente de la escuela', err);
     res.status(400).json({
+      error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
+    });
+  }
+}
+
+export async function getSchoolStudentsHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const user = getCurrentUser(req);
+    if (!user) {
+      res.status(401).json({ error: 'No autorizado.' });
+      return;
+    }
+
+    const students = await getSchoolStudents(user.id);
+    res.json({ ok: true, students });
+  } catch (err: any) {
+    logger.app.error('Error al consultar estudiantes de la escuela', err);
+    res.status(500).json({
       error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
     });
   }

@@ -37,6 +37,8 @@ export function validateCsrf(req: Request, res: Response, next: NextFunction): v
   if (
     cleanPath === '/subscriptions/webhook' ||
     cleanPath === '/webhooks/stripe' ||
+    cleanPath.startsWith('/scim') ||
+    cleanPath.startsWith('/auth/sso/saml/callback') ||
     /^\/canvases\/[a-zA-Z0-9_-]+\/views(\/heartbeat)?$/.test(cleanPath)
   ) {
     return next();

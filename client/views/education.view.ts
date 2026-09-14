@@ -1,5 +1,6 @@
 import { navigate } from '../app-router.js';
 import { openCreateCanvasModal } from '../components/create-canvas-modal.component.js';
+import { openEnterpriseSsoModal } from '../components/enterprise-sso-modal.component.js';
 import { createSidebar } from '../components/layout.component.js';
 import { openModal } from '../components/modal.component.js';
 import { openUpgradeModal } from '../components/upgrade-modal.component.js';
@@ -79,6 +80,7 @@ class EducationController {
   private statSchoolClassrooms: HTMLElement | null = null;
   private btnEditSchool: HTMLElement | null = null;
   private btnOpenSchoolEdit: HTMLElement | null = null;
+  private btnOpenEducationSso: HTMLElement | null = null;
 
   private modalJoinBackdrop: HTMLElement | null = null;
   private formJoin: HTMLFormElement | null = null;
@@ -181,6 +183,7 @@ class EducationController {
     this.statSchoolClassrooms = this.container.querySelector<HTMLElement>('[data-ref="stat-school-classrooms"]');
     this.btnEditSchool = this.container.querySelector<HTMLElement>('[data-ref="btn-edit-school"]');
     this.btnOpenSchoolEdit = this.container.querySelector<HTMLElement>('[data-ref="btn-open-school-edit"]');
+    this.btnOpenEducationSso = this.container.querySelector<HTMLElement>('[data-ref="btn-open-education-sso"]');
 
     this.modalJoinBackdrop = this.container.querySelector<HTMLElement>('[data-ref="modal-join-backdrop"]');
     this.formJoin = this.container.querySelector<HTMLFormElement>('[data-ref="form-join"]');
@@ -377,6 +380,9 @@ class EducationController {
 
     this.btnEditSchool?.addEventListener('click', () => this.openSchoolModal(), { signal });
     this.btnOpenSchoolEdit?.addEventListener('click', () => this.openSchoolModal(), { signal });
+    this.btnOpenEducationSso?.addEventListener('click', () => {
+      void openEnterpriseSsoModal({ tenantType: 'university' });
+    }, { signal });
     const btnCloseSchool = this.container.querySelector<HTMLElement>('[data-ref="btn-close-school-modal"]');
     const btnCancelSchool = this.container.querySelector<HTMLElement>('[data-ref="btn-cancel-school"]');
     btnCloseSchool?.addEventListener('click', () => this.closeSchoolModal(), { signal });

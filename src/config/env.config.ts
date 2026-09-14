@@ -37,6 +37,7 @@ export const config = {
     port: Number(process.env.WEBSOCKET_PORT) || 3001,
   },
   baseUrl: process.env.BASE_URL || 'http://localhost:3000',
+  appUrl: process.env.APP_URL || process.env.BASE_URL || 'http://localhost:3000',
   stripe: {
     secretKey: process.env.STRIPE_SECRET_KEY || '',
     publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || '',

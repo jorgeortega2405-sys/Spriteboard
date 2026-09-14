@@ -30,6 +30,10 @@
                   <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#school"></use></svg>
                   <span class="menu-item__text" data-i18n="education.tab_teachers">Docentes</span>
                 </button>
+                <button type="button" class="menu-item" data-ref="tab-btn-students" data-tab="students">
+                  <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
+                  <span class="menu-item__text" data-i18n="education.tab_students">Estudiantes</span>
+                </button>
                 <button type="button" class="menu-item is-active" data-ref="tab-btn-school" data-tab="school">
                   <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#apartment"></use></svg>
                   <span class="menu-item__text" data-i18n="education.tab_school">Institución</span>
@@ -60,15 +64,28 @@
             <div style="font-size: 12px; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;" data-i18n="education.card_classrooms">Aulas activas</div>
             <div style="font-size: 18px; font-weight: 700; color: var(--text-primary); margin-top: 4px;" data-ref="stat-school-classrooms">0</div>
           </div>
+          <div class="card card--padded" data-ref="card-stat-students" style="border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; background: var(--bg-surface); cursor: pointer;">
+            <div style="font-size: 12px; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;" data-i18n="education.card_students">Estudiantes activos</div>
+            <div style="font-size: 18px; font-weight: 700; color: var(--text-primary); margin-top: 4px;" data-ref="stat-school-students">0</div>
+          </div>
         </div>
 
         <div class="card card--padded" style="border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; background: var(--bg-surface); max-width: 640px;">
           <h2 style="font-size: 18px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px;" data-i18n="education.school_title">Configuración Institucional</h2>
-          <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 20px;" data-i18n="education.school_modal_desc">Configura el nombre oficial de tu colegio o universidad y el dominio de correo escolar.</p>
-          <button type="button" class="component-button component-button--h40 component-button--black" data-ref="btn-open-school-edit">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
-            <span data-i18n="education.school_edit_btn">Editar datos de la institución</span>
-          </button>
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button type="button" class="component-button component-button--h40 component-button--black" data-ref="btn-open-school-edit">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
+              <span data-i18n="education.school_edit_btn">Editar datos de la institución</span>
+            </button>
+            <button type="button" class="component-button component-button--h40 component-button--outline" data-ref="btn-view-students">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
+              <span data-i18n="education.btn_view_students">Ver estudiantes</span>
+            </button>
+            <button type="button" class="component-button component-button--h40 component-button--outline" data-ref="btn-open-education-sso">
+              <span class="material-symbols-rounded" style="font-size: 20px; margin-right: 6px;">vpn_key</span>
+              <span>Inicio de sesión único (SSO) y SCIM</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

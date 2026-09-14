@@ -37,6 +37,7 @@ export interface SchoolOrganization {
   updated_at: string;
   teachers_count?: number;
   classrooms_count?: number;
+  students_count?: number;
   teachers?: SchoolTeacher[];
   is_admin?: boolean;
 }
@@ -50,4 +51,17 @@ export interface SchoolTeacher {
   username?: string;
   email?: string;
   avatar_url?: string | null;
+}
+
+export interface SchoolStudent {
+  id: number;
+  user_id: number;
+  username: string;
+  email: string;
+  avatar_url?: string | null;
+  classrooms_count: number;
+  source: 'sso_scim' | 'classroom' | 'domain';
+  source_label: string;
+  status: 'active';
+  created_at: string;
 }
