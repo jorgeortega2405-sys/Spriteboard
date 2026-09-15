@@ -40,12 +40,124 @@ export async function openEnterpriseSsoModal(options: {
   } catch {}
 
   const backdrop = document.createElement('div');
-  backdrop.className = 'modal-backdrop is-visible';
+  backdrop.className = 'modal-backdrop';
   backdrop.setAttribute('data-ref', 'modal-enterprise-sso-backdrop');
 
   const origin = window.location.origin;
   const acsUrl = `${origin}/api/auth/sso/saml/callback`;
   const scimBaseUrl = `${origin}/api/scim/v2`;
+
+  let isClosing = false;
+
+  const closeModal = () => {
+    if (isClosing) return;
+    isClosing = true;
+
+    window.removeEventListener('keydown', handleKeyDown);
+    detachPointerListeners();
+    const dragZone = backdrop.querySelector<HTMLElement>('[data-ref="modal-drag-zone"]');
+    dragZone?.removeEventListener('pointerdown', onPointerDown);
+    dragZone?.removeEventListener('lostpointercapture', onPointerUp);
+
+    backdrop.classList.remove('is-visible');
+    document.body.classList.remove('modal-open');
+    setTimeout(() => {
+      backdrop.remove();
+      if (activeSsoModal && activeSsoModal.close === closeModal) {
+        activeSsoModal = null;
+      }
+    }, 200);
+  };
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      closeModal();
+    }
+  };
+
+  let startY = 0;
+  let currentY = 0;
+  let startTime = 0;
+  let isDragging = false;
+  let activePointerId: number | null = null;
+
+  const detachPointerListeners = () => {
+    window.removeEventListener('pointermove', onPointerMove);
+    window.removeEventListener('pointerup', onPointerUp);
+    window.removeEventListener('pointercancel', onPointerUp);
+  };
+
+  const onPointerDown = (e: PointerEvent) => {
+    const card = backdrop.querySelector<HTMLElement>('[data-ref="modal-enterprise-sso-card"]');
+    const dragZone = backdrop.querySelector<HTMLElement>('[data-ref="modal-drag-zone"]');
+    if (isClosing || !card) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+
+    isDragging = true;
+    activePointerId = e.pointerId;
+    startY = e.clientY;
+    currentY = startY;
+    startTime = performance.now();
+
+    try {
+      (dragZone || card).setPointerCapture(activePointerId);
+    } catch (_) {}
+
+    card.style.transition = 'none';
+    backdrop.style.transition = 'none';
+
+    window.addEventListener('pointermove', onPointerMove, { passive: true });
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onPointerUp);
+  };
+
+  const onPointerMove = (e: PointerEvent) => {
+    const card = backdrop.querySelector<HTMLElement>('[data-ref="modal-enterprise-sso-card"]');
+    if (!isDragging || (activePointerId !== null && e.pointerId !== activePointerId)) return;
+    currentY = e.clientY;
+    const diff = currentY - startY;
+
+    if (card) {
+      if (diff > 0) {
+        card.style.transform = `translateY(${diff}px)`;
+        const progress = Math.min(diff / 240, 1);
+        backdrop.style.opacity = `${Math.max(0.2, 1 - progress * 0.8)}`;
+      } else {
+        const rubberDiff = Math.max(diff * 0.15, -24);
+        card.style.transform = `translateY(${rubberDiff}px)`;
+      }
+    }
+  };
+
+  const onPointerUp = (e: PointerEvent) => {
+    const card = backdrop.querySelector<HTMLElement>('[data-ref="modal-enterprise-sso-card"]');
+    const dragZone = backdrop.querySelector<HTMLElement>('[data-ref="modal-drag-zone"]');
+    if (!isDragging || (activePointerId !== null && e.pointerId !== activePointerId)) return;
+    isDragging = false;
+    detachPointerListeners();
+
+    try {
+      if (activePointerId !== null) {
+        (dragZone || card)?.releasePointerCapture(activePointerId);
+      }
+    } catch (_) {}
+    activePointerId = null;
+
+    const diff = currentY - startY;
+    const elapsed = Math.max(1, performance.now() - startTime);
+    const velocity = diff / elapsed;
+
+    if (diff > 80 || (diff > 25 && velocity > 0.45)) {
+      closeModal();
+    } else {
+      backdrop.style.transition = 'opacity 0.25s ease';
+      backdrop.style.opacity = '1';
+      if (card) {
+        card.style.transition = 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)';
+        card.style.transform = '';
+      }
+    }
+  };
 
   const renderContent = () => {
     const isSsoActive = Boolean(currentTenant?.sso_enabled);
@@ -60,9 +172,12 @@ export async function openEnterpriseSsoModal(options: {
     backdrop.innerHTML = `
       <div class="modal-container" data-ref="modal-enterprise-sso-container">
         <button type="button" class="modal-close-btn" data-ref="btn-modal-close" aria-label="${t('modal.close') || 'Cerrar'}">
-          <span class="material-symbols-rounded">close</span>
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
         </button>
         <div class="modal-card modal-card--w-640" data-ref="modal-enterprise-sso-card">
+          <div class="modal-card__drag-zone" data-ref="modal-drag-zone" aria-hidden="true">
+            <div class="modal-card__drag-handle"></div>
+          </div>
           <div class="modal-card__header">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
               <h2 class="modal-card__title" data-ref="modal-sso-title" style="margin: 0;">${t('teams.sso_modal_title') || 'Inicio de sesión único (SSO) y SCIM'}</h2>
@@ -75,11 +190,11 @@ export async function openEnterpriseSsoModal(options: {
 
           <div style="display: flex; gap: 8px; border-bottom: 1px solid var(--border-color); padding: 0 24px; margin-bottom: 16px;">
             <button type="button" class="component-button component-button--h34 ${activeTab === 'sso' ? 'component-button--black' : 'component-button--outline'}" data-ref="btn-tab-sso" style="border-bottom-left-radius: 0; border-bottom-right-radius: 0;">
-              <span class="material-symbols-rounded" style="font-size: 18px; margin-right: 6px;">vpn_key</span>
+              <svg class="component-icon" aria-hidden="true" style="font-size: 18px; margin-right: 6px;"><use href="/icons.svg#vpn_key"></use></svg>
               <span>SSO (SAML / Entra ID / Google)</span>
             </button>
             <button type="button" class="component-button component-button--h34 ${activeTab === 'scim' ? 'component-button--black' : 'component-button--outline'}" data-ref="btn-tab-scim" style="border-bottom-left-radius: 0; border-bottom-right-radius: 0;">
-              <span class="material-symbols-rounded" style="font-size: 18px; margin-right: 6px;">sync_alt</span>
+              <svg class="component-icon" aria-hidden="true" style="font-size: 18px; margin-right: 6px;"><use href="/icons.svg#sync_alt"></use></svg>
               <span>SCIM 2.0 (Aprovisionamiento)</span>
             </button>
           </div>
@@ -113,7 +228,7 @@ export async function openEnterpriseSsoModal(options: {
                   <div style="display: flex; justify-content: space-between; align-items: center;">
                     <span><strong>URL de ACS (Callback para tu IdP):</strong></span>
                     <button type="button" class="component-button component-button--h32 component-button--outline" data-ref="btn-copy-acs" data-copy="${acsUrl}">
-                      <span class="material-symbols-rounded" style="font-size: 16px; margin-right: 4px;">content_copy</span> Copiar
+                      <svg class="component-icon" aria-hidden="true" style="font-size: 16px; margin-right: 4px;"><use href="/icons.svg#content_copy"></use></svg> Copiar
                     </button>
                   </div>
                   <code style="word-break: break-all; font-size: 12px; color: var(--text-primary);">${acsUrl}</code>
@@ -142,7 +257,7 @@ export async function openEnterpriseSsoModal(options: {
                   <div style="display: flex; justify-content: space-between; align-items: center;">
                     <span style="font-size: 13px; font-weight: 600;">URL base de SCIM (Endpoint para Microsoft/Okta):</span>
                     <button type="button" class="component-button component-button--h32 component-button--outline" data-ref="btn-copy-scim-url" data-copy="${scimBaseUrl}">
-                      <span class="material-symbols-rounded" style="font-size: 16px; margin-right: 4px;">content_copy</span> Copiar
+                      <svg class="component-icon" aria-hidden="true" style="font-size: 16px; margin-right: 4px;"><use href="/icons.svg#content_copy"></use></svg> Copiar
                     </button>
                   </div>
                   <code style="word-break: break-all; font-size: 13px; color: var(--text-primary);">${scimBaseUrl}</code>
@@ -205,18 +320,17 @@ export async function openEnterpriseSsoModal(options: {
     const btnClose = backdrop.querySelector<HTMLElement>('[data-ref="btn-modal-close"]');
     const btnCancel = backdrop.querySelector<HTMLElement>('[data-ref="btn-cancel-sso"]');
     const btnCloseScim = backdrop.querySelector<HTMLElement>('[data-ref="btn-close-scim"]');
-    const closeHandler = () => {
-      backdrop.remove();
-      document.body.classList.remove('modal-open');
-      activeSsoModal = null;
-    };
+    const dragZone = backdrop.querySelector<HTMLElement>('[data-ref="modal-drag-zone"]');
 
-    btnClose?.addEventListener('click', closeHandler);
-    btnCancel?.addEventListener('click', closeHandler);
-    btnCloseScim?.addEventListener('click', closeHandler);
+    btnClose?.addEventListener('click', closeModal);
+    btnCancel?.addEventListener('click', closeModal);
+    btnCloseScim?.addEventListener('click', closeModal);
+
+    dragZone?.addEventListener('pointerdown', onPointerDown);
+    dragZone?.addEventListener('lostpointercapture', onPointerUp);
 
     backdrop.addEventListener('click', (e) => {
-      if (e.target === backdrop) closeHandler();
+      if (e.target === backdrop) closeModal();
     });
 
     const btnTabSso = backdrop.querySelector<HTMLElement>('[data-ref="btn-tab-sso"]');
@@ -363,12 +477,13 @@ export async function openEnterpriseSsoModal(options: {
   renderContent();
   document.body.appendChild(backdrop);
   document.body.classList.add('modal-open');
+  window.addEventListener('keydown', handleKeyDown);
+
+  requestAnimationFrame(() => {
+    backdrop.classList.add('is-visible');
+  });
 
   activeSsoModal = {
-    close: () => {
-      backdrop.remove();
-      document.body.classList.remove('modal-open');
-      activeSsoModal = null;
-    },
+    close: closeModal,
   };
 }

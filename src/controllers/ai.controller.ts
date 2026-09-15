@@ -1,7 +1,7 @@
+import { Request, Response } from 'express';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import { AiService, ChatMessage } from '../services/ai.service.js';
 import { logger } from '../services/logger.service.js';
-import { Request, Response } from 'express';
 
 export class AiController {
   static async chat(req: Request, res: Response): Promise<void> {
@@ -38,10 +38,18 @@ export class AiController {
       }
 
       const currentUser = getCurrentUser(req);
+      if (!currentUser) {
+        res.status(401).json({
+          success: false,
+          error: 'Debes iniciar sesión para usar el asistente de ayuda.',
+        });
+        return;
+      }
+
       const userContext = {
-        username: currentUser?.username,
-        email: currentUser?.email,
-        isAuthenticated: Boolean(currentUser),
+        email: currentUser.email,
+        isAuthenticated: true,
+        username: currentUser.username,
       };
 
       const reply = await AiService.generateReply(message.trim(), validHistory, userContext);

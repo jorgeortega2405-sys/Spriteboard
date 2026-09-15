@@ -11,7 +11,7 @@ import { SkeletonService } from '../services/skeleton.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { SharedCanvasItem } from '../types/canvas.types.js';
-import { removeEmptyState, renderEmptyState } from '../utils/dom.util.js';
+import { closeAllDropdowns, registerActiveDropdown, removeEmptyState, renderEmptyState, unregisterActiveDropdown } from '../utils/dom.util.js';
 
 function formatEditedTime(dateStr?: string | null): string {
   if (!dateStr) return 'hace un momento';
@@ -50,10 +50,12 @@ class SharedController {
   private searchToolbar: HTMLElement | null = null;
   private searchInput: HTMLInputElement | null = null;
   private btnClearSearch: HTMLElement | null = null;
+  private boundCloseCardDropdowns: () => void;
 
   constructor(container: HTMLElement) {
     this.container = container;
     this.abortController = new AbortController();
+    this.boundCloseCardDropdowns = this.closeAllDropdowns.bind(this);
   }
 
   public async init(): Promise<void> {
@@ -328,12 +330,17 @@ class SharedController {
       if (menuDropdown) {
         const isVisible = menuDropdown.style.display === 'flex';
         this.closeAllDropdowns();
+        closeAllDropdowns();
         if (!isVisible) {
           menuDropdown.style.display = 'flex';
           card.classList.add('has-dropdown-open');
           actionsWrapper?.classList.add('is-open');
           this.activeDropdown = menuDropdown;
           this.activeOpenCard = card;
+          registerActiveDropdown({
+            close: this.boundCloseCardDropdowns,
+            wrapper: card,
+          });
 
           if (window.innerWidth > 768) {
             this.activePopperInstance = createPopper(btnMore, menuDropdown, {
@@ -427,6 +434,7 @@ class SharedController {
     this.container.querySelectorAll<HTMLElement>('.canvas-card__actions-wrapper.is-open').forEach((w) => {
       w.classList.remove('is-open');
     });
+    unregisterActiveDropdown(this.boundCloseCardDropdowns);
   }
 
   private confirmLeaveCanvas(canvas: SharedCanvasItem): void {

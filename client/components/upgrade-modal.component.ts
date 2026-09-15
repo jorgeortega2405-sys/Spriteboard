@@ -26,7 +26,7 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
   };
 
   const backdrop = document.createElement('div');
-  backdrop.className = 'modal-backdrop is-visible';
+  backdrop.className = 'modal-backdrop';
   backdrop.setAttribute('data-ref', 'modal-upgrade-backdrop');
 
   backdrop.innerHTML = `
@@ -41,59 +41,59 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
         </div>
 
         <div class="modal-split__grid" data-ref="modal-split-grid">
-          <div class="upgrade-modal__left" data-ref="upgrade-modal-left">
-            <div class="upgrade-modal__left-top" data-ref="upgrade-modal-left-top">
-              <div class="upgrade-modal__heading" data-ref="upgrade-modal-heading">
-                <h2 class="upgrade-modal__title">
-                  <span class="upgrade-modal__title-prefix">${t('upgrade_modal.title_prefix') || 'Sube de categoría a'}</span>
-                  <span class="upgrade-modal__title-plan" data-ref="plan-title-highlight">${getPlanName(selectedPlan)}</span>
+          <div class="modal-split__left" data-ref="modal-split-left">
+            <div class="modal-split__left-top" data-ref="modal-split-left-top">
+              <div class="modal-split__heading" data-ref="modal-split-heading">
+                <h2 class="modal-split__title">
+                  <span class="modal-split__title-prefix">${t('upgrade_modal.title_prefix') || 'Sube de categoría a'}</span>
+                  <span class="modal-split__title-plan" data-ref="plan-title-highlight">${getPlanName(selectedPlan)}</span>
                 </h2>
-                <p class="upgrade-modal__subtitle">${t('upgrade_modal.choose_plan') || 'Elige tu plan.'}</p>
+                <p class="modal-split__subtitle">${t('upgrade_modal.choose_plan') || 'Elige tu plan.'}</p>
               </div>
 
-              <div class="upgrade-modal__plans" data-ref="upgrade-modal-plans">
-                <div class="upgrade-plan-card${selectedPlan === 'pro' ? ' is-selected' : ''}" data-ref="card-plan-pro" data-plan="pro">
-                  <div class="upgrade-plan-card__radio" data-ref="radio-plan-pro">
-                    <span class="upgrade-plan-card__dot"></span>
+              <div class="modal-split__plans" data-ref="modal-split-plans">
+                <div class="modal-split-plan-card upgrade-plan-card${selectedPlan === 'pro' ? ' is-selected' : ''}" data-ref="card-plan-pro" data-plan="pro">
+                  <div class="modal-split-plan-card__radio upgrade-plan-card__radio" data-ref="radio-plan-pro">
+                    <span class="modal-split-plan-card__dot upgrade-plan-card__dot"></span>
                   </div>
-                  <div class="upgrade-plan-card__info">
-                    <div class="upgrade-plan-card__header-row">
-                      <span class="upgrade-plan-card__name">${proTitle}</span>
-                      <span class="upgrade-plan-card__price">${t('upgrade_modal.plan_pro_price') || '$9.99/mes'}</span>
+                  <div class="modal-split-plan-card__info upgrade-plan-card__info">
+                    <div class="modal-split-plan-card__header-row upgrade-plan-card__header-row">
+                      <span class="modal-split-plan-card__name upgrade-plan-card__name">${proTitle}</span>
+                      <span class="modal-split-plan-card__price upgrade-plan-card__price">${t('upgrade_modal.plan_pro_price') || '$9.99/mes'}</span>
                     </div>
-                    <span class="upgrade-plan-card__desc">${t('upgrade_modal.plan_pro_desc') || 'Para profesionales y creadores exigentes.'}</span>
+                    <span class="modal-split-plan-card__desc upgrade-plan-card__desc">${t('upgrade_modal.plan_pro_desc') || 'Para profesionales y creadores exigentes.'}</span>
                   </div>
                 </div>
 
-                <div class="upgrade-plan-card${selectedPlan === 'business' ? ' is-selected' : ''}" data-ref="card-plan-business" data-plan="business">
-                  <div class="upgrade-plan-card__radio" data-ref="radio-plan-business">
-                    <span class="upgrade-plan-card__dot"></span>
+                <div class="modal-split-plan-card upgrade-plan-card${selectedPlan === 'business' ? ' is-selected' : ''}" data-ref="card-plan-business" data-plan="business">
+                  <div class="modal-split-plan-card__radio upgrade-plan-card__radio" data-ref="radio-plan-business">
+                    <span class="modal-split-plan-card__dot upgrade-plan-card__dot"></span>
                   </div>
-                  <div class="upgrade-plan-card__info">
-                    <div class="upgrade-plan-card__header-row">
-                      <span class="upgrade-plan-card__name">${businessTitle}</span>
-                      <span class="upgrade-plan-card__price">${t('upgrade_modal.plan_business_price') || '$19.99/mes'}</span>
+                  <div class="modal-split-plan-card__info upgrade-plan-card__info">
+                    <div class="modal-split-plan-card__header-row upgrade-plan-card__header-row">
+                      <span class="modal-split-plan-card__name upgrade-plan-card__name">${businessTitle}</span>
+                      <span class="modal-split-plan-card__price upgrade-plan-card__price">${t('upgrade_modal.plan_business_price') || '$19.99/mes'}</span>
                     </div>
-                    <span class="upgrade-plan-card__desc">${t('upgrade_modal.plan_business_desc') || 'Máxima potencia, colaboración y equipos centralizados.'}</span>
+                    <span class="modal-split-plan-card__desc upgrade-plan-card__desc">${t('upgrade_modal.plan_business_desc') || 'Máxima potencia, colaboración y equipos centralizados.'}</span>
                   </div>
                 </div>
               </div>
 
-              <button type="button" class="component-button component-button--h40 component-button--brand component-button--w-full upgrade-modal__btn-cta" data-ref="btn-upgrade-cta">
-                <span class="upgrade-modal__btn-text" data-ref="upgrade-cta-text">${getCtaLabel(selectedPlan)}</span>
+              <button type="button" class="component-button component-button--h40 component-button--brand component-button--w-full modal-split__btn-cta upgrade-modal__btn-cta" data-ref="btn-upgrade-cta">
+                <span class="modal-split__btn-text upgrade-modal__btn-text" data-ref="upgrade-cta-text">${getCtaLabel(selectedPlan)}</span>
               </button>
 
-              <button type="button" class="upgrade-modal__view-all-link" data-ref="btn-upgrade-view-all">
+              <button type="button" class="modal-split__view-all-link upgrade-modal__view-all-link" data-ref="btn-upgrade-view-all">
                 <span>${t('upgrade_modal.view_all_link') || 'Ver todos los planes y características'}</span>
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_forward"></use></svg>
               </button>
             </div>
           </div>
 
-          <div class="upgrade-modal__right" data-ref="upgrade-modal-right">
-            <div class="upgrade-modal__table-wrapper" data-ref="upgrade-table-wrapper" data-plan="${selectedPlan}">
-              <div class="upgrade-modal__active-indicator" data-ref="active-column-indicator"></div>
-              <table class="upgrade-modal__table" data-ref="upgrade-comparison-table">
+          <div class="modal-split__right" data-ref="modal-split-right">
+            <div class="modal-split__table-wrapper upgrade-modal__table-wrapper" data-ref="upgrade-table-wrapper" data-plan="${selectedPlan}">
+              <div class="modal-split__active-indicator upgrade-modal__active-indicator" data-ref="active-column-indicator"></div>
+              <table class="modal-split__table upgrade-modal__table" data-ref="upgrade-comparison-table">
                 <thead>
                   <tr>
                     <th class="col-feature">${t('upgrade_modal.col_benefits') || 'Beneficios'}</th>
@@ -144,6 +144,7 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
   document.body.appendChild(backdrop);
   document.body.classList.add('modal-open');
 
+  const card = backdrop.querySelector<HTMLElement>('[data-ref="modal-card-upgrade"]');
   const cardPro = backdrop.querySelector<HTMLElement>('[data-ref="card-plan-pro"]');
   const cardBusiness = backdrop.querySelector<HTMLElement>('[data-ref="card-plan-business"]');
   const highlightTitle = backdrop.querySelector<HTMLElement>('[data-ref="plan-title-highlight"]');
@@ -153,6 +154,7 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
   const btnViewAll = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-upgrade-view-all"]');
   const tableWrapper = backdrop.querySelector<HTMLElement>('[data-ref="upgrade-table-wrapper"]');
   const activeIndicator = backdrop.querySelector<HTMLElement>('[data-ref="active-column-indicator"]');
+  const dragZone = backdrop.querySelector<HTMLElement>('[data-ref="modal-drag-zone"]');
 
   const updateIndicatorPosition = (plan: PlanTier) => {
     if (!activeIndicator || !tableWrapper) return;
@@ -162,8 +164,10 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
     if (!activeTh) return;
     const wrapperRect = tableWrapper.getBoundingClientRect();
     const thRect = activeTh.getBoundingClientRect();
-    activeIndicator.style.left = `${thRect.left - wrapperRect.left}px`;
-    activeIndicator.style.width = `${thRect.width}px`;
+    if (thRect.width > 0) {
+      activeIndicator.style.left = `${thRect.left - wrapperRect.left}px`;
+      activeIndicator.style.width = `${thRect.width}px`;
+    }
   };
 
   const updateSelectedPlan = (plan: PlanTier) => {
@@ -188,7 +192,10 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
     updateIndicatorPosition(plan);
   };
 
-  updateIndicatorPosition(selectedPlan);
+  requestAnimationFrame(() => {
+    backdrop.classList.add('is-visible');
+    updateIndicatorPosition(selectedPlan);
+  });
 
   const handleResize = () => {
     updateIndicatorPosition(selectedPlan);
@@ -203,6 +210,90 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
   cardBusiness?.addEventListener('click', () => {
     updateSelectedPlan('business');
   });
+
+  let isClosing = false;
+
+  let startY = 0;
+  let currentY = 0;
+  let startTime = 0;
+  let isDragging = false;
+  let activePointerId: number | null = null;
+
+  const detachPointerListeners = () => {
+    window.removeEventListener('pointermove', onPointerMove);
+    window.removeEventListener('pointerup', onPointerUp);
+    window.removeEventListener('pointercancel', onPointerUp);
+  };
+
+  const onPointerDown = (e: PointerEvent) => {
+    if (isClosing || !card) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+
+    isDragging = true;
+    activePointerId = e.pointerId;
+    startY = e.clientY;
+    currentY = startY;
+    startTime = performance.now();
+
+    try {
+      (dragZone || card).setPointerCapture(activePointerId);
+    } catch (_) {}
+
+    card.style.transition = 'none';
+    backdrop.style.transition = 'none';
+
+    window.addEventListener('pointermove', onPointerMove, { passive: true });
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onPointerUp);
+  };
+
+  const onPointerMove = (e: PointerEvent) => {
+    if (!isDragging || (activePointerId !== null && e.pointerId !== activePointerId)) return;
+    currentY = e.clientY;
+    const diff = currentY - startY;
+
+    if (card) {
+      if (diff > 0) {
+        card.style.transform = `translateY(${diff}px)`;
+        const progress = Math.min(diff / 240, 1);
+        backdrop.style.opacity = `${Math.max(0.2, 1 - progress * 0.8)}`;
+      } else {
+        const rubberDiff = Math.max(diff * 0.15, -24);
+        card.style.transform = `translateY(${rubberDiff}px)`;
+      }
+    }
+  };
+
+  const onPointerUp = (e: PointerEvent) => {
+    if (!isDragging || (activePointerId !== null && e.pointerId !== activePointerId)) return;
+    isDragging = false;
+    detachPointerListeners();
+
+    try {
+      if (activePointerId !== null) {
+        (dragZone || card)?.releasePointerCapture(activePointerId);
+      }
+    } catch (_) {}
+    activePointerId = null;
+
+    const diff = currentY - startY;
+    const elapsed = Math.max(1, performance.now() - startTime);
+    const velocity = diff / elapsed;
+
+    if (diff > 80 || (diff > 25 && velocity > 0.45)) {
+      closeModal();
+    } else {
+      backdrop.style.transition = 'opacity 0.25s ease';
+      backdrop.style.opacity = '1';
+      if (card) {
+        card.style.transition = 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)';
+        card.style.transform = '';
+      }
+    }
+  };
+
+  dragZone?.addEventListener('pointerdown', onPointerDown);
+  dragZone?.addEventListener('lostpointercapture', onPointerUp);
 
   const goToUpgrade = (e: MouseEvent) => {
     e.preventDefault();
@@ -226,9 +317,16 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
   };
 
   const closeModal = () => {
+    if (isClosing) return;
+    isClosing = true;
+
     window.removeEventListener('keydown', handleKeyDown);
     window.removeEventListener('resize', handleResize);
+    detachPointerListeners();
+    dragZone?.removeEventListener('pointerdown', onPointerDown);
+    dragZone?.removeEventListener('lostpointercapture', onPointerUp);
     backdrop.removeEventListener('click', handleBackdropClick);
+
     backdrop.classList.remove('is-visible');
     document.body.classList.remove('modal-open');
     setTimeout(() => {

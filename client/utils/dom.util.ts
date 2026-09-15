@@ -1,7 +1,8 @@
+import { createPopper, Instance as PopperInstance, Placement } from '@popperjs/core';
 import { navigate } from '../app-router.js';
 import { EmptyIllustrationKey, getEmptyIllustration } from '../config/empty-illustrations.config.js';
 import { BannerManager } from '../types/common.types.js';
-import { createPopper, Instance as PopperInstance, Placement } from '@popperjs/core';
+
 
 export function setupPasswordToggle(
   toggleBtn: HTMLElement | null,
@@ -149,6 +150,50 @@ export function bindNavigationLinks(container: HTMLElement | null, routesMap: Re
   });
 }
 
+export interface ActiveDropdownRecord {
+  close: () => void;
+  wrapper: HTMLElement;
+}
+
+const activeDropdowns: ActiveDropdownRecord[] = [];
+
+export function registerActiveDropdown(record: ActiveDropdownRecord): void {
+  for (let i = activeDropdowns.length - 1; i >= 0; i--) {
+    const active = activeDropdowns[i];
+    if (active.wrapper === record.wrapper) continue;
+    if (!active.wrapper.contains(record.wrapper)) {
+      activeDropdowns.splice(i, 1);
+      active.close();
+    }
+  }
+  if (!activeDropdowns.some((item) => item.wrapper === record.wrapper)) {
+    activeDropdowns.push(record);
+  }
+}
+
+export function unregisterActiveDropdown(wrapperOrClose: HTMLElement | (() => void)): void {
+  const index = activeDropdowns.findIndex(
+    (item) => item.wrapper === wrapperOrClose || item.close === wrapperOrClose
+  );
+  if (index !== -1) {
+    activeDropdowns.splice(index, 1);
+  }
+}
+
+export function closeAllDropdowns(exceptWrapperOrClose?: HTMLElement | (() => void)): void {
+  for (let i = activeDropdowns.length - 1; i >= 0; i--) {
+    const active = activeDropdowns[i];
+    if (
+      exceptWrapperOrClose &&
+      (active.wrapper === exceptWrapperOrClose || active.close === exceptWrapperOrClose)
+    ) {
+      continue;
+    }
+    activeDropdowns.splice(i, 1);
+    active.close();
+  }
+}
+
 export function setupDropdown(
   wrapper: HTMLElement | null,
   options: {
@@ -267,6 +312,11 @@ export function setupDropdown(
   const openDropdown = () => {
     if (isClosing) return;
 
+    registerActiveDropdown({
+      close: closeDropdown,
+      wrapper,
+    });
+
     if (window.innerWidth <= 768 && backdrop && menu) {
       destroyPopper();
       backdrop.style.display = 'flex';
@@ -308,6 +358,7 @@ export function setupDropdown(
   const closeDropdown = () => {
     if (isClosing || !menu?.classList.contains('is-open')) return;
 
+    unregisterActiveDropdown(wrapper);
     destroyPopper();
 
     if (window.innerWidth <= 768 && backdrop && menu) {
@@ -581,6 +632,7 @@ export function setupDropdown(
   window.addEventListener('resize', onResize, { passive: true });
 
   const destroy = () => {
+    unregisterActiveDropdown(wrapper);
     detachPointerListeners();
     dragZone?.removeEventListener('pointerdown', onPointerDown);
     dragZone?.removeEventListener('lostpointercapture', onPointerUp);

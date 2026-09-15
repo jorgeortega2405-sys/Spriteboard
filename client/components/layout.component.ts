@@ -9,6 +9,7 @@ import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { closeWebSocket, initWebSocket } from '../services/websocket.service.js';
 import { CanvasItem } from '../types/canvas.types.js';
+import { closeAllDropdowns, registerActiveDropdown, unregisterActiveDropdown } from '../utils/dom.util.js';
 import { applyAvatarTier, getFallbackTierColor } from '../utils/tier.util.js';
 import { openCreateCanvasModal } from './create-canvas-modal.component.js';
 import { openUpgradeModal } from './upgrade-modal.component.js';
@@ -166,6 +167,23 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   updateItem('rail-item-templates', 'btn-rail-templates', isTemplates);
   updateItem('rail-item-shared', 'btn-rail-shared', isShared);
   updateItem('rail-item-teams', 'btn-rail-teams', isTeams);
+
+  const itemShared = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-shared"]');
+  const itemTeams = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-teams"]');
+  const notificationsContainer = sidebar.querySelector<HTMLElement>('[data-ref="notifications-container"]');
+  const btnNotifications = sidebar.querySelector<HTMLElement>('[data-ref="btn-notifications"]');
+
+  if (!currentUser) {
+    if (itemShared) itemShared.style.display = 'none';
+    if (itemTeams) itemTeams.style.display = 'none';
+    if (notificationsContainer) notificationsContainer.style.display = 'none';
+    if (btnNotifications) btnNotifications.style.display = 'none';
+  } else {
+    if (itemShared) itemShared.style.display = '';
+    if (itemTeams) itemTeams.style.display = '';
+    if (notificationsContainer) notificationsContainer.style.display = '';
+    if (btnNotifications) btnNotifications.style.display = '';
+  }
 }
 
 export async function updateDynamicDrawer(sidebar?: HTMLElement): Promise<void> {
@@ -182,6 +200,10 @@ export function getIsChatOpen(): boolean {
 }
 
 export async function toggleChatSidebar(forceState?: boolean): Promise<void> {
+  if (!currentUser) {
+    navigate('/help/terms');
+    return;
+  }
   const nextOpen = forceState !== undefined ? forceState : !isChatOpen;
   isChatOpen = nextOpen;
 
@@ -313,6 +335,13 @@ function setupRailNavigation(sidebar: HTMLElement): void {
   bindNav('rail-item-templates', 'btn-rail-templates', '/templates', currentPath === '/templates');
   bindNav('rail-item-shared', 'btn-rail-shared', '/shared', currentPath === '/shared');
   bindNav('rail-item-teams', 'btn-rail-teams', '/teams', currentPath === '/teams');
+
+  if (!currentUser) {
+    const itemShared = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-shared"]');
+    const itemTeams = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-teams"]');
+    if (itemShared) itemShared.style.display = 'none';
+    if (itemTeams) itemTeams.style.display = 'none';
+  }
 
   const updateRailTeamsBadge = () => {
     const railTeamsBadge = sidebar.querySelector<HTMLElement>('[data-ref="rail-teams-badge"]');
@@ -770,12 +799,17 @@ function setupRailUserControls(sidebar: HTMLElement): void {
   const btnRailHelp = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-help"]');
   btnRailHelp?.addEventListener('click', (e) => {
     e.preventDefault();
+    if (!currentUser) {
+      navigate('/help/terms');
+      return;
+    }
     void toggleChatSidebar();
   });
   if (isChatOpen) {
     btnRailHelp?.classList.add('is-active');
   }
 
+  const notificationsContainer = sidebar.querySelector<HTMLElement>('[data-ref="notifications-container"]');
   const btnNotifications = sidebar.querySelector<HTMLElement>('[data-ref="btn-notifications"]');
   const notificationsBadge = sidebar.querySelector<HTMLElement>('[data-ref="notifications-badge"]');
   const notificationsBackdrop = sidebar.querySelector<HTMLElement>('[data-ref="notifications-backdrop"]');
@@ -784,6 +818,11 @@ function setupRailUserControls(sidebar: HTMLElement): void {
   const btnMarkAllRead = sidebar.querySelector<HTMLElement>('[data-ref="btn-mark-all-read"]');
   const notificationsList = sidebar.querySelector<HTMLElement>('[data-ref="notifications-list"]');
   const notificationsEmpty = sidebar.querySelector<HTMLElement>('[data-ref="notifications-empty"]');
+
+  if (!currentUser) {
+    if (notificationsContainer) notificationsContainer.style.display = 'none';
+    if (btnNotifications) btnNotifications.style.display = 'none';
+  }
 
   let closeAvatarMenu = () => {};
   let isNotificationsClosing = false;
@@ -901,6 +940,13 @@ function setupRailUserControls(sidebar: HTMLElement): void {
     }
     if (isNotificationsClosing) return;
     closeAvatarMenu();
+    closeAllDropdowns();
+    if (notificationsPanel) {
+      registerActiveDropdown({
+        close: closeNotifications,
+        wrapper: notificationsPanel,
+      });
+    }
     void loadNotifications();
 
     if (window.innerWidth <= 768 && notificationsBackdrop && notificationsPanel) {
@@ -928,6 +974,9 @@ function setupRailUserControls(sidebar: HTMLElement): void {
 
   const closeNotifications = () => {
     if (isNotificationsClosing || !notificationsPanel?.classList.contains('is-open')) return;
+    if (notificationsPanel) {
+      unregisterActiveDropdown(notificationsPanel);
+    }
 
     if (window.innerWidth <= 768 && notificationsBackdrop && notificationsPanel) {
       isNotificationsClosing = true;
@@ -1313,6 +1362,13 @@ function setupRailUserControls(sidebar: HTMLElement): void {
       const openMenu = () => {
         if (isClosing) return;
         closeNotifications();
+        closeAllDropdowns();
+        if (avatarMenu) {
+          registerActiveDropdown({
+            close: closeMenu,
+            wrapper: avatarMenu,
+          });
+        }
 
         showPanel('main');
 
@@ -1341,6 +1397,9 @@ function setupRailUserControls(sidebar: HTMLElement): void {
 
       const closeMenu = () => {
         if (isClosing || !avatarMenu?.classList.contains('is-open')) return;
+        if (avatarMenu) {
+          unregisterActiveDropdown(avatarMenu);
+        }
 
         if (window.innerWidth <= 768 && avatarBackdrop && avatarMenu) {
           isClosing = true;
@@ -1882,6 +1941,11 @@ function setupChatSidebarEvents(sidebarElement: HTMLElement): void {
   }
 
   const sendMessage = async () => {
+    if (!currentUser) {
+      showToast(t('auth.login_required') || 'Inicia sesión para enviar mensajes al asistente.', 'warning');
+      navigate('/login');
+      return;
+    }
     if (isProcessing) return;
     const text = chatInput?.value?.trim();
     if (!text) return;

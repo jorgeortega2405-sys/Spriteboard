@@ -9,6 +9,7 @@ import { SkeletonService } from './services/skeleton.service.js';
 import { trackPageView } from './services/telemetry.service.js';
 import { hideTooltip } from './services/tooltip.service.js';
 import { ViewController } from './types/common.types.js';
+import { closeAllDropdowns } from './utils/dom.util.js';
 
 let isInitialPageLoad = true;
 let currentNavigation = 0;
@@ -71,6 +72,7 @@ export function navigate(url: string, replace = false): void {
 
 export async function render(): Promise<void> {
   hideTooltip();
+  closeAllDropdowns();
   const appRoot = document.querySelector<HTMLElement>('[data-ref="app"]');
   if (!appRoot) return;
 

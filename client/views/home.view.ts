@@ -9,6 +9,7 @@ import { openModal } from '../components/modal.component.js';
 import { openMoveCanvasModal } from '../components/move-canvas-modal.component.js';
 import { openUpgradeModal } from '../components/upgrade-modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
+import { ALL_PRESETS, PresetItem } from '../config/templates.config.js';
 import { currentUser, deleteApi, escapeHtml, getApi, postApi, putApi } from '../services/api.service.js';
 import { getAllLocalCanvases, getLocalCanvasByUuid, markLocalCanvasAsSynced, removeLocalCanvas, saveLocalCanvas } from '../services/canvas-storage.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
@@ -17,7 +18,7 @@ import { SkeletonService } from '../services/skeleton.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { CanvasItem, FolderItem } from '../types/canvas.types.js';
-import { bindDragToScroll, CarouselController, initCarouselScroll, removeEmptyState, renderEmptyState, setupDropdown, setupLazyImages } from '../utils/dom.util.js';
+import { bindDragToScroll, CarouselController, closeAllDropdowns, initCarouselScroll, registerActiveDropdown, removeEmptyState, renderEmptyState, setupDropdown, setupLazyImages, unregisterActiveDropdown } from '../utils/dom.util.js';
 
 const BATCH_SIZE = 20;
 
@@ -66,6 +67,20 @@ class HomeController {
   private activeOpenCard: HTMLElement | null = null;
   private activeCardPopper: PopperInstance | null = null;
 
+  private templatesSection: HTMLElement | null = null;
+  private templatesGridEl: HTMLElement | null = null;
+  private templatesSentinelEl: HTMLElement | null = null;
+  private templatesTypeDropdownController: ReturnType<typeof setupDropdown> | null = null;
+  private templatesSortDropdownController: ReturnType<typeof setupDropdown> | null = null;
+  private templateTypeFilter: 'all' | 'favorites' | 'pixel' | 'board' = 'all';
+  private templateSort: 'default' | 'alpha-asc' | 'alpha-desc' | 'size-desc' | 'size-asc' = 'default';
+  private favoritedTemplateIds = new Set<string>();
+  private currentTemplates: PresetItem[] = [];
+  private templatesRenderedCount = 0;
+  private isRenderingTemplateBatch = false;
+  private templatesScrollObserver: IntersectionObserver | null = null;
+  private isShowingTemplatesEmptyState = false;
+
   private isSearchActive = false;
   private btnToggleSearch: HTMLElement | null = null;
   private searchToolbar: HTMLElement | null = null;
@@ -104,10 +119,12 @@ class HomeController {
   private isShiftDrag = false;
   private didDrag = false;
   private currentDraggedUuids: string[] = [];
+  private boundCloseCardDropdowns: () => void;
 
   constructor(container: HTMLElement) {
     this.container = container;
     this.abortController = new AbortController();
+    this.boundCloseCardDropdowns = this.closeAllDropdowns.bind(this);
   }
 
   public async init(initialFolderUuid?: string | null): Promise<void> {
@@ -115,6 +132,10 @@ class HomeController {
     this.canvasSection = this.container.querySelector<HTMLElement>('[data-ref="canvas-section"]');
     this.scrollableEl = this.container;
     this.sentinelEl = this.container.querySelector<HTMLElement>('[data-ref="canvas-sentinel"]');
+
+    this.templatesSection = this.container.querySelector<HTMLElement>('[data-ref="templates-section"]');
+    this.templatesGridEl = this.container.querySelector<HTMLElement>('[data-ref="templates-grid"]');
+    this.templatesSentinelEl = this.container.querySelector<HTMLElement>('[data-ref="templates-sentinel"]');
 
     this.btnToggleSearch = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-search"]');
     this.searchToolbar = this.container.querySelector<HTMLElement>('[data-ref="search-toolbar"]');
@@ -170,6 +191,42 @@ class HomeController {
         },
         placement: 'bottom-end',
       });
+    }
+
+    const templatesTypeDropdownWrapper = this.container.querySelector<HTMLElement>('[data-ref="templates-dropdown-wrapper-type"]');
+    if (templatesTypeDropdownWrapper) {
+      this.templatesTypeDropdownController = setupDropdown(templatesTypeDropdownWrapper, {
+        matchWidth: false,
+        onSelect: (val: string) => {
+          this.templateTypeFilter = (val as 'all' | 'favorites' | 'pixel' | 'board') || 'all';
+          const typeMenu = this.container.querySelector<HTMLElement>('[data-ref="dropdown-menu-filter-type"]');
+          typeMenu?.querySelectorAll<HTMLButtonElement>('.menu-item').forEach((item) => {
+            item.classList.toggle('is-active', item.getAttribute('data-value') === this.templateTypeFilter);
+          });
+          this.renderTemplates();
+        },
+        placement: 'bottom-end',
+      });
+    }
+
+    const templatesSortDropdownWrapper = this.container.querySelector<HTMLElement>('[data-ref="templates-dropdown-wrapper-sort"]');
+    if (templatesSortDropdownWrapper) {
+      this.templatesSortDropdownController = setupDropdown(templatesSortDropdownWrapper, {
+        matchWidth: false,
+        onSelect: (val: string) => {
+          this.templateSort = (val as 'default' | 'alpha-asc' | 'alpha-desc' | 'size-desc' | 'size-asc') || 'default';
+          const sortMenu = this.container.querySelector<HTMLElement>('[data-ref="dropdown-menu-sort"]');
+          sortMenu?.querySelectorAll<HTMLButtonElement>('.menu-item').forEach((item) => {
+            item.classList.toggle('is-active', item.getAttribute('data-value') === this.templateSort);
+          });
+          this.renderTemplates();
+        },
+        placement: 'bottom-end',
+      });
+    }
+
+    if (currentUser) {
+      await this.loadFavoriteTemplates();
     }
 
     if (initialFolderUuid) {
@@ -452,6 +509,40 @@ class HomeController {
       { signal }
     );
 
+    this.templatesGridEl?.addEventListener(
+      'click',
+      (e) => {
+        const target = e.target as HTMLElement;
+        const bookmarkBtn = target.closest<HTMLButtonElement>('[data-bookmark-preset]');
+        if (bookmarkBtn) {
+          e.stopPropagation();
+          const presetId = bookmarkBtn.getAttribute('data-bookmark-preset');
+          if (presetId) {
+            void this.handleToggleTemplateFavorite(presetId, bookmarkBtn);
+          }
+          return;
+        }
+
+        const card = target.closest<HTMLElement>('[data-preset-id]');
+        if (!card) return;
+
+        const presetId = card.getAttribute('data-preset-id');
+        if (!presetId) return;
+
+        const preset = ALL_PRESETS.find((p) => p.id === presetId);
+        if (!preset) return;
+
+        openCreateCanvasModal({
+          height: preset.height,
+          name: preset.name,
+          templateImage: preset.imagePath,
+          templateName: preset.name,
+          variants: preset.variants,
+          width: preset.width,
+        });
+      },
+      { signal }
+    );
   }
 
   public destroy(): void {
@@ -463,6 +554,10 @@ class HomeController {
       this.scrollObserver.disconnect();
       this.scrollObserver = null;
     }
+    if (this.templatesScrollObserver) {
+      this.templatesScrollObserver.disconnect();
+      this.templatesScrollObserver = null;
+    }
     if (this.marqueeEl) {
       this.marqueeEl.remove();
       this.marqueeEl = null;
@@ -471,6 +566,10 @@ class HomeController {
     this.typeDropdownController = null;
     this.sortDropdownController?.destroy();
     this.sortDropdownController = null;
+    this.templatesTypeDropdownController?.destroy();
+    this.templatesTypeDropdownController = null;
+    this.templatesSortDropdownController?.destroy();
+    this.templatesSortDropdownController = null;
     this.categoriesCarouselController?.destroy();
     this.categoriesCarouselController = null;
     this.cleanupCategoriesDrag?.();
@@ -548,6 +647,9 @@ class HomeController {
 
   private async onFiltersChanged(): Promise<void> {
     this.filterFolders();
+    if (this.isShowingTemplatesEmptyState || (this.allCanvases.length === 0 && this.folders.length === 0 && !this.currentFolderUuid)) {
+      this.renderTemplates();
+    }
     await this.loadCanvases(true);
   }
 
@@ -590,6 +692,7 @@ class HomeController {
     this.container.querySelectorAll<HTMLElement>('.canvas-card__actions-wrapper.is-open').forEach((w) => {
       w.classList.remove('is-open');
     });
+    unregisterActiveDropdown(this.boundCloseCardDropdowns);
   }
 
   private async loadAll(): Promise<void> {
@@ -751,8 +854,12 @@ class HomeController {
       this.gridEl.innerHTML = '';
       this.gridEl.style.display = 'none';
 
-      if (this.canvasSection) {
-        if (this.currentFolderUuid) {
+      if (this.currentFolderUuid) {
+        if (this.templatesSection) {
+          this.templatesSection.style.display = 'none';
+        }
+        if (this.canvasSection) {
+          this.canvasSection.style.display = 'block';
           renderEmptyState({
             container: this.canvasSection,
             dataRef: 'canvas-empty-state',
@@ -760,25 +867,47 @@ class HomeController {
             graphicType: 'canvas',
             title: t('canvas.folder_empty_title') || 'Esta carpeta está vacía',
           });
-        } else {
+        }
+      } else if (isSearchResult && !this.isShowingTemplatesEmptyState) {
+        if (this.templatesSection) {
+          this.templatesSection.style.display = 'none';
+        }
+        if (this.canvasSection) {
+          this.canvasSection.style.display = 'block';
           renderEmptyState({
             container: this.canvasSection,
             dataRef: 'canvas-empty-state',
-            desc: isSearchResult
-              ? t('canvas.home_search_no_results') || 'No se encontraron lienzos que coincidan con la búsqueda.'
-              : t('canvas.home_empty_desc') || 'Empieza creando un centro de trabajo personalizado con las dimensiones que necesites.',
-            graphicType: isSearchResult ? 'search' : 'canvas',
-            title: isSearchResult
-              ? t('canvas.home_search_no_results_title') || 'Sin resultados'
-              : t('canvas.home_empty_title') || 'Aún no tienes lienzos creados',
+            desc: t('canvas.home_search_no_results') || 'No se encontraron lienzos que coincidan con la búsqueda.',
+            graphicType: 'search',
+            title: t('canvas.home_search_no_results_title') || 'Sin resultados',
           });
         }
+      } else {
+        this.isShowingTemplatesEmptyState = true;
+        if (this.canvasSection) {
+          removeEmptyState(this.canvasSection, 'canvas-empty-state');
+          this.canvasSection.style.display = 'none';
+        }
+        if (this.templatesSection) {
+          this.templatesSection.style.display = 'block';
+        }
+        this.renderTemplates();
       }
       return;
     }
 
+    this.isShowingTemplatesEmptyState = false;
+    if (this.templatesScrollObserver) {
+      this.templatesScrollObserver.disconnect();
+      this.templatesScrollObserver = null;
+    }
+    if (this.templatesSection) {
+      removeEmptyState(this.templatesSection, 'templates-empty-state');
+      this.templatesSection.style.display = 'none';
+    }
     if (this.canvasSection) {
       removeEmptyState(this.canvasSection, 'canvas-empty-state');
+      this.canvasSection.style.display = 'block';
     }
     this.gridEl.style.display = 'grid';
     this.gridEl.innerHTML = '';
@@ -913,11 +1042,273 @@ class HomeController {
   }
 
   private handleScroll(): void {
+    if (this.isShowingTemplatesEmptyState) {
+      this.handleTemplatesScroll();
+      return;
+    }
     if (!this.scrollableEl || this.isLoadingBatch || !this.hasMore) return;
     const { clientHeight, scrollHeight, scrollTop } = this.scrollableEl;
     if (scrollTop + clientHeight >= scrollHeight - 300) {
       void this.loadNextBatch();
     }
+  }
+
+  private async loadFavoriteTemplates(): Promise<void> {
+    try {
+      const res = await getApi(API_ROUTES.favorites.byType('template'));
+      if (res.ok) {
+        const data = await res.json();
+        if (data && Array.isArray(data.favorites)) {
+          this.favoritedTemplateIds.clear();
+          data.favorites.forEach((fav: { item_id: string }) => {
+            if (fav.item_id) {
+              this.favoritedTemplateIds.add(fav.item_id);
+            }
+          });
+        }
+      }
+    } catch {}
+  }
+
+  private async handleToggleTemplateFavorite(presetId: string, btn: HTMLButtonElement): Promise<void> {
+    if (!currentUser) {
+      showToast(t('canvas.bookmark_login_required'), 'info');
+      return;
+    }
+
+    const prevFavorite = this.favoritedTemplateIds.has(presetId);
+    const nextFavorite = !prevFavorite;
+
+    if (nextFavorite) {
+      this.favoritedTemplateIds.add(presetId);
+    } else {
+      this.favoritedTemplateIds.delete(presetId);
+    }
+
+    btn.classList.toggle('is-active', nextFavorite);
+
+    const tooltipText = nextFavorite ? t('canvas.bookmark_remove') : t('canvas.bookmark_save');
+    btn.setAttribute('data-tooltip', tooltipText);
+    btn.setAttribute('aria-label', tooltipText);
+    btn.innerHTML = `<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${nextFavorite ? 'star_fill' : 'star'}"></use></svg>`;
+
+    try {
+      const res = await postApi(API_ROUTES.favorites.toggle, {
+        itemId: presetId,
+        itemType: 'template',
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const serverFavorite = Boolean(data?.isFavorite);
+        if (serverFavorite) {
+          this.favoritedTemplateIds.add(presetId);
+        } else {
+          this.favoritedTemplateIds.delete(presetId);
+        }
+        btn.classList.toggle('is-active', serverFavorite);
+        const finalTooltip = serverFavorite ? t('canvas.bookmark_remove') : t('canvas.bookmark_save');
+        btn.setAttribute('data-tooltip', finalTooltip);
+        btn.setAttribute('aria-label', finalTooltip);
+        btn.innerHTML = `<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${serverFavorite ? 'star_fill' : 'star'}"></use></svg>`;
+        showToast(serverFavorite ? t('canvas.bookmark_saved') : t('canvas.bookmark_removed'), 'success');
+      } else {
+        if (prevFavorite) {
+          this.favoritedTemplateIds.add(presetId);
+        } else {
+          this.favoritedTemplateIds.delete(presetId);
+        }
+        btn.classList.toggle('is-active', prevFavorite);
+        const rollbackTooltip = prevFavorite ? t('canvas.bookmark_remove') : t('canvas.bookmark_save');
+        btn.setAttribute('data-tooltip', rollbackTooltip);
+        btn.setAttribute('aria-label', rollbackTooltip);
+        btn.innerHTML = `<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${prevFavorite ? 'star_fill' : 'star'}"></use></svg>`;
+        showToast(t('toasts.generic_error'), 'danger');
+      }
+    } catch {
+      if (prevFavorite) {
+        this.favoritedTemplateIds.add(presetId);
+      } else {
+        this.favoritedTemplateIds.delete(presetId);
+      }
+      btn.classList.toggle('is-active', prevFavorite);
+      const rollbackTooltip = prevFavorite ? t('canvas.bookmark_remove') : t('canvas.bookmark_save');
+      btn.setAttribute('data-tooltip', rollbackTooltip);
+      btn.setAttribute('aria-label', rollbackTooltip);
+      btn.innerHTML = `<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${prevFavorite ? 'star_fill' : 'star'}"></use></svg>`;
+      showToast(t('toasts.generic_error'), 'danger');
+    }
+  }
+
+  private renderTemplates(): void {
+    if (!this.templatesGridEl) return;
+
+    let filtered = [...ALL_PRESETS];
+
+    if (this.currentTypeFilter === 'board') {
+      filtered = filtered.filter((item) => item.categoryKey === 'board');
+    } else if (this.currentTypeFilter === 'pixel') {
+      filtered = filtered.filter((item) => item.categoryKey === 'pixel');
+    }
+
+    if (this.templateTypeFilter === 'favorites') {
+      filtered = filtered.filter((item) => this.favoritedTemplateIds.has(item.id));
+    } else if (this.templateTypeFilter === 'pixel') {
+      filtered = filtered.filter((item) => item.categoryKey === 'pixel');
+    } else if (this.templateTypeFilter === 'board') {
+      filtered = filtered.filter((item) => item.categoryKey === 'board');
+    }
+
+    if (this.searchQuery) {
+      const q = this.searchQuery;
+      filtered = filtered.filter((item) => {
+        const nameMatch = item.name.toLowerCase().includes(q);
+        const catMatch = item.categoryName ? item.categoryName.toLowerCase().includes(q) : false;
+        const dimMatch = `${item.width}x${item.height}`.includes(q) || `${item.width} x ${item.height}`.includes(q);
+        return nameMatch || catMatch || dimMatch;
+      });
+    }
+
+    if (this.templateSort === 'alpha-asc') {
+      filtered.sort((a, b) => a.name.localeCompare(b.name));
+    } else if (this.templateSort === 'alpha-desc') {
+      filtered.sort((a, b) => b.name.localeCompare(a.name));
+    } else if (this.templateSort === 'size-desc') {
+      filtered.sort((a, b) => (b.width * b.height) - (a.width * a.height));
+    } else if (this.templateSort === 'size-asc') {
+      filtered.sort((a, b) => (a.width * a.height) - (b.width * b.height));
+    }
+
+    this.currentTemplates = filtered;
+    this.templatesRenderedCount = 0;
+
+    if (filtered.length === 0) {
+      if (this.templatesScrollObserver) {
+        this.templatesScrollObserver.disconnect();
+        this.templatesScrollObserver = null;
+      }
+      if (this.templatesSentinelEl) {
+        this.templatesSentinelEl.style.display = 'none';
+      }
+      this.templatesGridEl.innerHTML = '';
+      this.templatesGridEl.style.display = 'none';
+
+      if (this.templatesSection) {
+        renderEmptyState({
+          container: this.templatesSection,
+          dataRef: 'templates-empty-state',
+          desc: t('templates.empty_desc') || 'Intenta con otro término de búsqueda o selecciona otra categoría.',
+          graphicType: 'search',
+          title: t('templates.empty_title') || 'No se encontraron plantillas',
+        });
+      }
+      return;
+    }
+
+    if (this.templatesSection) {
+      removeEmptyState(this.templatesSection, 'templates-empty-state');
+    }
+    this.templatesGridEl.style.display = 'grid';
+    this.templatesGridEl.innerHTML = '';
+    if (this.templatesSentinelEl) {
+      this.templatesSentinelEl.style.display = 'block';
+    }
+
+    this.renderNextTemplateBatch();
+    this.initTemplatesScrollObserver();
+  }
+
+  private renderNextTemplateBatch(): void {
+    if (!this.templatesGridEl || this.isRenderingTemplateBatch) return;
+    if (this.templatesRenderedCount >= this.currentTemplates.length) {
+      if (this.templatesScrollObserver) {
+        this.templatesScrollObserver.disconnect();
+        this.templatesScrollObserver = null;
+      }
+      if (this.templatesSentinelEl) {
+        this.templatesSentinelEl.style.display = 'none';
+      }
+      return;
+    }
+
+    this.isRenderingTemplateBatch = true;
+    const batch = this.currentTemplates.slice(this.templatesRenderedCount, this.templatesRenderedCount + BATCH_SIZE);
+    const html = batch.map((item) => this.buildTemplateCardHtml(item)).join('');
+    this.templatesGridEl.insertAdjacentHTML('beforeend', html);
+    this.templatesRenderedCount += batch.length;
+
+    setupLazyImages(this.templatesGridEl);
+    renderIcons(this.templatesGridEl);
+
+    this.isRenderingTemplateBatch = false;
+
+    if (this.templatesRenderedCount >= this.currentTemplates.length) {
+      if (this.templatesScrollObserver) {
+        this.templatesScrollObserver.disconnect();
+        this.templatesScrollObserver = null;
+      }
+      if (this.templatesSentinelEl) {
+        this.templatesSentinelEl.style.display = 'none';
+      }
+    }
+  }
+
+  private initTemplatesScrollObserver(): void {
+    if (this.templatesScrollObserver) {
+      this.templatesScrollObserver.disconnect();
+      this.templatesScrollObserver = null;
+    }
+    if (!this.templatesSentinelEl) return;
+
+    this.templatesScrollObserver = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (!entry) return;
+
+        if (entry.isIntersecting) {
+          if (this.scrollableEl && this.scrollableEl.scrollTop === 0 && this.scrollableEl.scrollHeight > this.scrollableEl.clientHeight) {
+            return;
+          }
+          this.renderNextTemplateBatch();
+        }
+      },
+      {
+        root: this.scrollableEl,
+        rootMargin: '40px',
+      }
+    );
+
+    this.templatesScrollObserver.observe(this.templatesSentinelEl);
+  }
+
+  private handleTemplatesScroll(): void {
+    if (!this.scrollableEl || this.isRenderingTemplateBatch) return;
+    if (this.templatesRenderedCount >= this.currentTemplates.length) return;
+
+    const { clientHeight, scrollHeight, scrollTop } = this.scrollableEl;
+    if (scrollTop + clientHeight >= scrollHeight - 200) {
+      this.renderNextTemplateBatch();
+    }
+  }
+
+  private buildTemplateCardHtml(item: PresetItem): string {
+    const isFavorite = this.favoritedTemplateIds.has(item.id);
+    const previewContent = `<img class="canvas-card__image image-lazy-fade" data-ref="template-card-img-${item.id}" src="${item.imagePath}" alt="${escapeHtml(item.name)}" loading="lazy" decoding="async" onload="this.classList.add('image-loaded')" onerror="this.classList.add('image-loaded')" />`;
+
+    return `
+      <div class="canvas-card template-card" data-ref="template-card-${item.id}" data-preset-id="${item.id}">
+        <div class="canvas-card__thumbnail template-card__thumbnail" data-ref="template-card-thumb-${item.id}">
+          ${previewContent}
+          <div class="canvas-card__actions-wrapper" data-ref="card-actions-wrapper-${item.id}">
+            <div class="canvas-card__actions" data-ref="card-actions-${item.id}">
+              <button type="button" class="canvas-card__action-btn${isFavorite ? ' is-active' : ''}" data-ref="btn-template-bookmark-${item.id}" data-bookmark-preset="${item.id}" data-tooltip="${isFavorite ? t('canvas.bookmark_remove') : t('canvas.bookmark_save')}" aria-label="${isFavorite ? t('canvas.bookmark_remove') : t('canvas.bookmark_save')}">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${isFavorite ? 'star_fill' : 'star'}"></use></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
   }
 
   private initScrollObserver(): void {
@@ -1152,6 +1543,7 @@ class HomeController {
 
       const isCurrentlyOpen = menuDropdown.style.display === 'flex';
       this.closeAllDropdowns();
+      closeAllDropdowns();
 
       if (!isCurrentlyOpen) {
         menuDropdown.style.display = 'flex';
@@ -1159,6 +1551,10 @@ class HomeController {
         actionsWrapper?.classList.add('is-open');
         this.activeOpenDropdown = menuDropdown;
         this.activeOpenCard = card;
+        registerActiveDropdown({
+          close: this.boundCloseCardDropdowns,
+          wrapper: card,
+        });
 
         if (window.innerWidth > 768) {
           this.activeCardPopper = createPopper(btnMore, menuDropdown, {
@@ -1556,12 +1952,17 @@ class HomeController {
       if (!dropdown) return;
       const isOpen = dropdown.style.display === 'flex';
       this.closeAllDropdowns();
+      closeAllDropdowns();
       if (!isOpen) {
         dropdown.style.display = 'flex';
         card.classList.add('has-dropdown-open');
         actionsWrapper?.classList.add('is-open');
         this.activeOpenDropdown = dropdown;
         this.activeOpenCard = card;
+        registerActiveDropdown({
+          close: this.boundCloseCardDropdowns,
+          wrapper: card,
+        });
 
         if (window.innerWidth > 768) {
           this.activeCardPopper = createPopper(btnMore, dropdown, {
@@ -2292,6 +2693,20 @@ class HomeController {
         }
       },
     });
+  }
+
+  public destroy(): void {
+    this.abortController.abort();
+    this.scrollObserver?.disconnect();
+    this.categoriesCarouselController?.destroy();
+    this.cleanupCategoriesDrag?.();
+    this.closeAllDropdowns();
+    this.typeDropdownController?.destroy();
+    this.sortDropdownController?.destroy();
+    if (this.searchDebounceTimer) {
+      clearTimeout(this.searchDebounceTimer);
+      this.searchDebounceTimer = null;
+    }
   }
 }
 
