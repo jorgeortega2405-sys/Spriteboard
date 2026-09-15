@@ -1,36 +1,119 @@
 <div class="layout-content" data-ref="admin-backups-view">
-  <div class="component-wrapper component-wrapper--full view-wrapper" data-ref="backups-wrapper">
-    <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="backups-scrollable">
-      <div class="view-body" data-ref="backups-container">
-        <div class="view-backdrop" data-ref="backups-backdrop"></div>
-        <div class="view-header" data-ref="backups-header">
-          <div class="view-header__left" data-ref="backups-header-left">
-            <h1 class="view-header__title" data-ref="backups-title">Copias de Seguridad</h1>
-          </div>
+  <div class="component-wrapper component-wrapper--full home-wrapper view-wrapper" data-ref="backups-wrapper">
+    <div class="component-bottom component-bottom--no-padding" data-ref="component-bottom">
+      <div class="home-floating-top" data-ref="component-top">
+        <div class="home-floating-top__left" data-ref="component-top-left">
+          <h1 class="section-floating-title" data-ref="backups-title">Copias de Seguridad</h1>
         </div>
 
-        <div class="view-hero" data-ref="backups-hero">
-          <div class="view-hero__content" style="max-width: 880px; margin: 0 auto; padding: 24px 20px;">
-            <div class="admin-welcome-card" data-ref="backups-main-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 32px 24px; box-shadow: var(--shadow-sm); text-align: center;">
-              <div class="admin-avatar-badge" data-ref="backups-avatar-badge" style="display: inline-flex; align-items: center; justify-content: center; width: 64px; height: 64px; border-radius: 50%; background: var(--bg-card-subtle); border: 1px solid var(--border-color); margin-bottom: 16px;">
-                <svg class="component-icon" style="width: 32px; height: 32px; color: #10b981;" aria-hidden="true"><use href="/icons.svg#cloud_upload"></use></svg>
-              </div>
+        <div class="home-floating-top__right" data-ref="component-top-right">
+          <div class="home-floating-actions" data-ref="backups-default-actions">
+            <button type="button" class="component-button component-button--h40 component-button--black" data-ref="btn-create-backup" style="gap: 8px; padding: 0 16px;">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+              <span>Crear copia</span>
+            </button>
 
-              <h2 class="view-hero__title" data-ref="backups-section-title" style="margin-bottom: 8px; font-size: 24px; font-weight: 700;">
-                Copias de Seguridad
-              </h2>
-              <p class="card__subtitle" data-ref="backups-section-desc" style="margin-bottom: 24px; color: var(--text-secondary); max-width: 540px; margin-left: auto; margin-right: auto;">
-                Gestión de respaldos automatizados, snapshots de base de datos MySQL / Redis y restauración de puntos de control.
-              </p>
+            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-toggle-search" data-tooltip="Buscar copias de seguridad" aria-label="Buscar copias de seguridad">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+            </button>
 
-              <div class="drawer-empty-card" data-ref="backups-placeholder-card" style="background: var(--bg-card-subtle); border-radius: var(--radius-md, 12px); padding: 32px 20px; border: 1px dashed var(--border-color); display: flex; flex-direction: column; align-items: center; gap: 8px;">
-                <div style="font-weight: 600; font-size: 15px; color: var(--text-primary);">Módulo de Copias de Seguridad en Desarrollo</div>
-                <div style="font-size: 13px; color: var(--text-secondary); max-width: 420px;">
-                  Las herramientas de programación de backups, descargas de dumps SQL y restauración segura estarán disponibles próximamente.
+            <div class="settings-dropdown-wrapper" data-ref="filter-dropdown-wrapper">
+              <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-toggle-filter" data-tooltip="Filtrar por estado" aria-label="Filtrar por estado">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
+              </button>
+
+              <div class="dropdown-backdrop" data-ref="filter-dropdown-backdrop">
+                <div class="menu-panel menu-panel--dropdown menu-panel--w-240 menu-panel--h-auto" data-ref="filter-dropdown-menu">
+                  <div class="avatar-menu__section-header">
+                    <span class="drawer-section__title">Filtrar por Estado</span>
+                  </div>
+                  <div class="menu-panel__list" data-ref="filter-status-list">
+                    <button type="button" class="menu-item is-active" data-ref="filter-status-all" data-status="all">
+                      <span class="menu-item__text">Todos los estados</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="filter-status-completed" data-status="completed">
+                      <span class="menu-item__text">Completadas</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="filter-status-in-progress" data-status="in_progress">
+                      <span class="menu-item__text">En progreso</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="filter-status-failed" data-status="failed">
+                      <span class="menu-item__text">Fallidas</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
+
+            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-refresh-backups" data-tooltip="Actualizar lista" aria-label="Actualizar lista">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
+            </button>
+
+            <div class="component-inline-control component-inline-control--fixed component-inline-control--pagination" data-ref="pagination-inline-control">
+              <div class="component-inline-control__group" data-ref="inline-group-page-prev">
+                <button type="button" class="component-inline-control__btn" data-ref="btn-pagination-prev" data-tooltip="Página anterior" aria-label="Página anterior" disabled>
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+                </button>
+              </div>
+              <input class="component-inline-control__input" data-ref="input-pagination-page" type="number" min="1" max="1" value="1" autocomplete="off" />
+              <div class="component-inline-control__group" data-ref="inline-group-page-next">
+                <button type="button" class="component-inline-control__btn" data-ref="btn-pagination-next" data-tooltip="Página siguiente" aria-label="Página siguiente" disabled>
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+                </button>
+              </div>
+            </div>
           </div>
+
+          <div class="home-floating-actions" data-ref="backups-selected-actions" style="display: none; align-items: center; gap: 8px;">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-action-deselect" data-tooltip="Cancelar selección" aria-label="Cancelar selección">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+            </button>
+
+            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-action-details" data-tooltip="Ver detalles" aria-label="Ver detalles">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#info"></use></svg>
+            </button>
+
+            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-action-download" data-tooltip="Descargar archivo" aria-label="Descargar archivo">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
+            </button>
+
+            <button type="button" class="component-button component-button--h40 component-button--icon-only component-button--danger home-floating-btn" data-ref="btn-action-delete" data-tooltip="Eliminar copia de seguridad" aria-label="Eliminar copia de seguridad">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="component-search-toolbar is-hidden" data-ref="search-toolbar">
+          <div class="component-search component-search--full" data-ref="search-box">
+            <div class="component-search__icon" data-ref="search-icon">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+            </div>
+            <div class="component-search__input-box" data-ref="search-input-box">
+              <input class="component-search__input" data-ref="backups-search-input" placeholder="Buscar por nombre, archivo o descripción..." type="text" maxlength="100" autocomplete="off" />
+            </div>
+            <button type="button" class="component-button component-button--h34 component-button--icon-only" data-ref="btn-clear-search" style="display: none; margin-right: 4px;" aria-label="Limpiar búsqueda">
+              <svg class="component-icon" aria-hidden="true" style="font-size: 18px;"><use href="/icons.svg#close"></use></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="component-table-wrapper" data-ref="backups-table-wrapper" style="display: flex; flex-direction: column; height: 100%;">
+        <div class="table-scroll-container" style="flex: 1; overflow: auto;">
+          <table class="component-table" data-ref="backups-table">
+            <thead class="component-table__head" data-ref="backups-thead">
+              <tr>
+                <th data-ref="th-name">Copia de Seguridad</th>
+                <th data-ref="th-components">Componentes Incluidos</th>
+                <th data-ref="th-size">Tamaño</th>
+                <th data-ref="th-status">Estado</th>
+                <th data-ref="th-date">Fecha de Creación</th>
+              </tr>
+            </thead>
+            <tbody class="component-table__body" data-ref="backups-tbody">
+              <!-- Inyectado dinámicamente -->
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

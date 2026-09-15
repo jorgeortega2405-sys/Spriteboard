@@ -293,6 +293,49 @@ ON DUPLICATE KEY UPDATE
     description = VALUES(description),
     category = VALUES(category);
 
+CREATE TABLE IF NOT EXISTS server_config (
+    `key` VARCHAR(100) PRIMARY KEY,
+    `value` TEXT NOT NULL,
+    `category` VARCHAR(50) NOT NULL DEFAULT 'general',
+    `type` ENUM('string', 'number', 'boolean', 'json') NOT NULL DEFAULT 'string',
+    `description` VARCHAR(255) NULL,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_server_config_category (category)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO server_config (`key`, `value`, `category`, `type`, `description`) VALUES
+('password_min_length', '8', 'security', 'number', 'Longitud mínima para contraseñas de usuarios'),
+('password_max_length', '128', 'security', 'number', 'Longitud máxima para contraseñas de usuarios'),
+('password_require_uppercase', 'false', 'security', 'boolean', 'Requerir al menos una letra mayúscula en contraseñas'),
+('password_require_lowercase', 'false', 'security', 'boolean', 'Requerir al menos una letra minúscula en contraseñas'),
+('password_require_number', 'false', 'security', 'boolean', 'Requerir al menos un número en contraseñas'),
+('password_require_special', 'false', 'security', 'boolean', 'Requerir al menos un carácter especial en contraseñas'),
+('session_ttl_days', '7', 'security', 'number', 'Duración en días de las sesiones de usuario'),
+('max_concurrent_accounts', '5', 'security', 'number', 'Máximo de cuentas simultáneas vinculadas en el selector de cuentas'),
+('username_min_length', '3', 'users', 'number', 'Longitud mínima para nombres de usuario'),
+('username_max_length', '30', 'users', 'number', 'Longitud máxima para nombres de usuario'),
+('allowed_email_domains', '["gmail.com","outlook.com","icloud.com","hotmail.com","yahoo.com"]', 'users', 'json', 'Dominios de correo permitidos para registro'),
+('enforce_allowed_email_domains', 'true', 'users', 'boolean', 'Restringir registro estrictamente a la lista de dominios permitidos'),
+('allow_registration', 'true', 'users', 'boolean', 'Habilitar nuevos registros de usuarios en la plataforma'),
+('allow_google_login', 'true', 'users', 'boolean', 'Permitir autenticación e inicio de sesión con Google'),
+('username_change_cooldown_days', '12', 'cooldowns', 'number', 'Días de espera entre cambios de nombre de usuario'),
+('email_change_cooldown_days', '30', 'cooldowns', 'number', 'Días de espera entre cambios de correo electrónico'),
+('verification_code_ttl_minutes', '15', 'cooldowns', 'number', 'Minutos de validez para códigos de verificación de 6 dígitos'),
+('verification_code_max_attempts', '5', 'cooldowns', 'number', 'Intentos fallidos máximos antes de invalidar código de verificación'),
+('password_reset_ttl_minutes', '15', 'cooldowns', 'number', 'Minutos de validez para enlaces de recuperación de contraseña'),
+('auth_action_window_minutes', '5', 'cooldowns', 'number', 'Minutos de ventana para autorizaciones sensibles tras verificar identidad'),
+('avatar_max_size_mb', '2', 'uploads', 'number', 'Tamaño máximo en MB para fotos de perfil y avatares'),
+('avatar_allowed_formats', '["image/png","image/jpeg","image/jpg","image/webp"]', 'uploads', 'json', 'Formatos MIME de imagen permitidos para fotos de perfil'),
+('app_name', 'Spriteboard', 'system', 'string', 'Nombre de la aplicación y plataforma'),
+('support_email', 'support@spriteboard.app', 'system', 'string', 'Correo electrónico de soporte y contacto técnico'),
+('maintenance_mode', 'false', 'system', 'boolean', 'Activar modo mantenimiento en toda la aplicación'),
+('maintenance_message', 'El sistema se encuentra en mantenimiento programado. Volveremos pronto.', 'system', 'string', 'Mensaje descriptivo mostrado durante el modo mantenimiento'),
+('rate_limit_login_max', '5', 'rate_limits', 'number', 'Máximo de intentos de inicio de sesión permitidos cada 5 minutos'),
+('rate_limit_register_max', '5', 'rate_limits', 'number', 'Máximo de intentos de registro permitidos cada 15 minutos'),
+('rate_limit_ai_chat_max', '20', 'rate_limits', 'number', 'Máximo de mensajes al asistente de IA permitidos por minuto')
+ON DUPLICATE KEY UPDATE
+    description = VALUES(description);
+
 GRANT ALL PRIVILEGES ON db_identity.* TO 'sprite_user'@'%';
 FLUSH PRIVILEGES;
 

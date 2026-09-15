@@ -182,15 +182,6 @@ class UsersController implements ViewController {
       }, { signal });
     });
 
-    this.selectAllCheckbox?.addEventListener('change', () => {
-      if (!this.selectAllCheckbox) return;
-      if (this.selectAllCheckbox.checked) {
-        this.users.forEach((u) => this.selectedUserIds.add(u.id));
-      } else {
-        this.selectedUserIds.clear();
-      }
-      this.updateSelectionUi();
-    }, { signal });
 
     this.btnActionDeselect?.addEventListener('click', () => {
       this.selectedUser = null;

@@ -15,7 +15,26 @@ export const ALLOWED_EMAIL_DOMAINS = [
 
 export type AllowedEmailDomain = typeof ALLOWED_EMAIL_DOMAINS[number];
 
-export function validateEmail(email: unknown): ValidationResult {
+export interface EmailValidationOptions {
+  allowedDomains?: string[];
+  enforceAllowedDomains?: boolean;
+}
+
+export interface PasswordValidationOptions {
+  maxLength?: number;
+  minLength?: number;
+  requireLowercase?: boolean;
+  requireNumber?: boolean;
+  requireSpecial?: boolean;
+  requireUppercase?: boolean;
+}
+
+export interface UsernameValidationOptions {
+  maxLength?: number;
+  minLength?: number;
+}
+
+export function validateEmail(email: unknown, options?: EmailValidationOptions): ValidationResult {
   if (!email || typeof email !== 'string') {
     return { valid: false, error: 'Ingresa un correo electrónico.' };
   }
@@ -31,49 +50,76 @@ export function validateEmail(email: unknown): ValidationResult {
     return { valid: false, error: 'Ingresa un correo electrónico válido.' };
   }
 
-  const parts = trimmed.split('@');
-  const domain = parts[1];
+  const enforce = options?.enforceAllowedDomains !== undefined ? options.enforceAllowedDomains : true;
+  if (enforce) {
+    const parts = trimmed.split('@');
+    const domain = parts[1];
+    const allowed = options?.allowedDomains && options.allowedDomains.length > 0
+      ? options.allowedDomains
+      : (ALLOWED_EMAIL_DOMAINS as readonly string[]);
 
-  if (!ALLOWED_EMAIL_DOMAINS.includes(domain as AllowedEmailDomain)) {
-    const allowedList = ALLOWED_EMAIL_DOMAINS.map(d => `@${d}`).join(', ');
-    return {
-      valid: false,
-      error: `Solo se permiten cuentas de correo con dominios: ${allowedList}.`,
-    };
+    if (!allowed.includes(domain)) {
+      const allowedList = allowed.map((d) => `@${d}`).join(', ');
+      return {
+        valid: false,
+        error: `Solo se permiten cuentas de correo con dominios: ${allowedList}.`,
+      };
+    }
   }
 
   return { valid: true };
 }
 
-export function validatePassword(password: unknown): ValidationResult {
+export function validatePassword(password: unknown, options?: PasswordValidationOptions): ValidationResult {
   if (!password || typeof password !== 'string') {
     return { valid: false, error: 'Ingresa una contraseña.' };
   }
 
-  if (password.length < 8) {
-    return { valid: false, error: 'La contraseña debe tener al menos 8 caracteres.' };
+  const min = options?.minLength ?? 8;
+  const max = options?.maxLength ?? 128;
+
+  if (password.length < min) {
+    return { valid: false, error: `La contraseña debe tener al menos ${min} caracteres.` };
   }
 
-  if (password.length > 128) {
-    return { valid: false, error: 'La contraseña no puede exceder los 128 caracteres.' };
+  if (password.length > max) {
+    return { valid: false, error: `La contraseña no puede exceder los ${max} caracteres.` };
+  }
+
+  if (options?.requireUppercase && !/[A-Z]/.test(password)) {
+    return { valid: false, error: 'La contraseña debe contener al menos una letra mayúscula.' };
+  }
+
+  if (options?.requireLowercase && !/[a-z]/.test(password)) {
+    return { valid: false, error: 'La contraseña debe contener al menos una letra minúscula.' };
+  }
+
+  if (options?.requireNumber && !/[0-9]/.test(password)) {
+    return { valid: false, error: 'La contraseña debe contener al menos un número.' };
+  }
+
+  if (options?.requireSpecial && !/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(password)) {
+    return { valid: false, error: 'La contraseña debe contener al menos un carácter especial.' };
   }
 
   return { valid: true };
 }
 
-export function validateUsername(username: unknown): ValidationResult {
+export function validateUsername(username: unknown, options?: UsernameValidationOptions): ValidationResult {
   if (!username || typeof username !== 'string') {
     return { valid: false, error: 'Ingresa un nombre de usuario.' };
   }
 
   const trimmed = username.trim();
+  const min = options?.minLength ?? 3;
+  const max = options?.maxLength ?? 30;
 
-  if (trimmed.length < 3) {
-    return { valid: false, error: 'El nombre de usuario debe tener al menos 3 caracteres.' };
+  if (trimmed.length < min) {
+    return { valid: false, error: `El nombre de usuario debe tener al menos ${min} caracteres.` };
   }
 
-  if (trimmed.length > 30) {
-    return { valid: false, error: 'El nombre de usuario no puede superar los 30 caracteres.' };
+  if (trimmed.length > max) {
+    return { valid: false, error: `El nombre de usuario no puede superar los ${max} caracteres.` };
   }
 
   const usernameRegex = /^[a-zA-Z0-9_.-]+$/;

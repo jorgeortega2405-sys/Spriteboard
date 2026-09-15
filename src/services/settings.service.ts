@@ -11,6 +11,7 @@ import { sanitizeAvatar } from './image-sanitizer.service.js';
 import { logger } from './logger.service.js';
 import { sendEmailChangeCodeEmail } from './mail.service.js';
 import { deleteObject, getPublicUrl, putObject } from './s3.service.js';
+import { getServerConfig } from './server-config.service.js';
 import { consumeEmailChangeAuthorization, consumePasswordChangeAuth, generateSixDigitCode, isEmailChangeAuthorized, saveEmailChangeCode, savePasswordChangeAuth, verifyEmailChangeCode } from './verification.service.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -220,15 +221,19 @@ export async function updateAvatar(
     return { success: false, error: 'No se ha subido ningún archivo.' };
   }
 
-  const maxBytes = 2 * 1024 * 1024;
+  const serverConfig = await getServerConfig();
+  const maxMb = serverConfig.avatar_max_size_mb || 2;
+  const maxBytes = maxMb * 1024 * 1024;
   if (file.size > maxBytes) {
     if (file.path) {
       await safeUnlink(file.path);
     }
-    return { success: false, error: 'La imagen no debe superar los 2 MB.' };
+    return { success: false, error: `La imagen no debe superar los ${maxMb} MB.` };
   }
 
-  const allowedMimes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+  const allowedMimes = serverConfig.avatar_allowed_formats && serverConfig.avatar_allowed_formats.length > 0
+    ? serverConfig.avatar_allowed_formats
+    : ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
   if (!allowedMimes.includes(file.mimetype)) {
     if (file.path) {
       await safeUnlink(file.path);
@@ -345,7 +350,11 @@ export async function updateUsername(
   ip?: string | null,
   ua?: string | null
 ): Promise<{ success: boolean; username?: string; error?: string; status?: number }> {
-  const validation = validateUsername(newUsername);
+  const serverConfig = await getServerConfig();
+  const validation = validateUsername(newUsername, {
+    maxLength: serverConfig.username_max_length,
+    minLength: serverConfig.username_min_length,
+  });
   if (!validation.valid) {
     return { success: false, error: validation.error, status: 400 };
   }
@@ -366,15 +375,18 @@ export async function updateUsername(
     return { success: true, username: oldUsername };
   }
 
+  const cooldownDays = serverConfig.username_change_cooldown_days ?? 12;
+  const cooldownMs = cooldownDays * 24 * 60 * 60 * 1000;
+
   if (currentUserRows[0].username_changed_at) {
     const lastChanged = new Date(currentUserRows[0].username_changed_at).getTime();
     const elapsed = Date.now() - lastChanged;
-    if (elapsed < USERNAME_CHANGE_COOLDOWN_MS) {
-      const remainingMs = USERNAME_CHANGE_COOLDOWN_MS - elapsed;
+    if (elapsed < cooldownMs) {
+      const remainingMs = cooldownMs - elapsed;
       const timeFormatted = formatRemainingTime(remainingMs);
       return {
         success: false,
-        error: `Solo puedes cambiar tu nombre de usuario una vez cada 12 días. Podrás cambiarlo nuevamente en ${timeFormatted}.`,
+        error: `Solo puedes cambiar tu nombre de usuario una vez cada ${cooldownDays} días. Podrás cambiarlo nuevamente en ${timeFormatted}.`,
         status: 429,
       };
     }
@@ -421,15 +433,19 @@ export async function requestEmailChangeCode(
     return { success: false, error: 'La cuenta no tiene un correo electrónico registrado.', status: 400 };
   }
 
+  const serverConfig = await getServerConfig();
+  const emailCooldownDays = serverConfig.email_change_cooldown_days ?? 30;
+  const emailCooldownMs = emailCooldownDays * 24 * 60 * 60 * 1000;
+
   if (user.email_changed_at) {
     const lastChanged = new Date(user.email_changed_at).getTime();
     const elapsed = Date.now() - lastChanged;
-    if (elapsed < EMAIL_CHANGE_COOLDOWN_MS) {
-      const remainingMs = EMAIL_CHANGE_COOLDOWN_MS - elapsed;
+    if (elapsed < emailCooldownMs) {
+      const remainingMs = emailCooldownMs - elapsed;
       const timeFormatted = formatRemainingTime(remainingMs);
       return {
         success: false,
-        error: `Solo puedes cambiar tu correo electrónico una vez cada 30 días. Podrás cambiarlo nuevamente en ${timeFormatted}.`,
+        error: `Solo puedes cambiar tu correo electrónico una vez cada ${emailCooldownDays} días. Podrás cambiarlo nuevamente en ${timeFormatted}.`,
         status: 429,
       };
     }
@@ -442,10 +458,11 @@ export async function requestEmailChangeCode(
   }
 
   const code = generateSixDigitCode();
-  await saveEmailChangeCode(userId, user.email, code, 300);
+  const ttlSeconds = (serverConfig.verification_code_ttl_minutes || 15) * 60;
+  await saveEmailChangeCode(userId, user.email, code, ttlSeconds);
 
   try {
-    await sendEmailChangeCodeEmail(user.email, user.username, code, 5);
+    await sendEmailChangeCodeEmail(user.email, user.username, code, Math.ceil(ttlSeconds / 60));
     logger.security.info('Código de cambio de correo enviado al usuario', { userId, email: user.email });
   } catch (error) {
     logger.app.error('Error al enviar correo con código de cambio de email', error);
@@ -486,7 +503,11 @@ export async function updateEmail(
     };
   }
 
-  const validation = validateEmail(newEmail);
+  const serverConfig = await getServerConfig();
+  const validation = validateEmail(newEmail, {
+    allowedDomains: serverConfig.allowed_email_domains,
+    enforceAllowedDomains: serverConfig.enforce_allowed_email_domains,
+  });
   if (!validation.valid) {
     return { success: false, error: validation.error, status: 400 };
   }
@@ -507,15 +528,18 @@ export async function updateEmail(
     return { success: true, email: oldEmail };
   }
 
+  const emailCooldownDays = serverConfig.email_change_cooldown_days ?? 30;
+  const emailCooldownMs = emailCooldownDays * 24 * 60 * 60 * 1000;
+
   if (currentUserRows[0].email_changed_at) {
     const lastChanged = new Date(currentUserRows[0].email_changed_at).getTime();
     const elapsed = Date.now() - lastChanged;
-    if (elapsed < EMAIL_CHANGE_COOLDOWN_MS) {
-      const remainingMs = EMAIL_CHANGE_COOLDOWN_MS - elapsed;
+    if (elapsed < emailCooldownMs) {
+      const remainingMs = emailCooldownMs - elapsed;
       const timeFormatted = formatRemainingTime(remainingMs);
       return {
         success: false,
-        error: `Solo puedes cambiar tu correo electrónico una vez cada 30 días. Podrás cambiarlo nuevamente en ${timeFormatted}.`,
+        error: `Solo puedes cambiar tu correo electrónico una vez cada ${emailCooldownDays} días. Podrás cambiarlo nuevamente en ${timeFormatted}.`,
         status: 429,
       };
     }
@@ -589,7 +613,9 @@ export async function verifyCurrentPassword(
     return { success: false, error: 'La contraseña actual es incorrecta.', status: 400 };
   }
 
-  await savePasswordChangeAuth(userId, 300);
+  const serverConfig = await getServerConfig();
+  const authWindowSeconds = (serverConfig.auth_action_window_minutes || 5) * 60;
+  await savePasswordChangeAuth(userId, authWindowSeconds);
   logger.security.info('Contraseña actual verificada exitosamente para cambio de contraseña', { userId });
 
   return { success: true };
@@ -610,7 +636,15 @@ export async function updateUserPasswordFromSettings(
     };
   }
 
-  const validation = validatePassword(newPassword);
+  const serverConfig = await getServerConfig();
+  const validation = validatePassword(newPassword, {
+    maxLength: serverConfig.password_max_length,
+    minLength: serverConfig.password_min_length,
+    requireLowercase: serverConfig.password_require_lowercase,
+    requireNumber: serverConfig.password_require_number,
+    requireSpecial: serverConfig.password_require_special,
+    requireUppercase: serverConfig.password_require_uppercase,
+  });
   if (!validation.valid) {
     return { success: false, error: validation.error, status: 400 };
   }

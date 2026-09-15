@@ -1,4 +1,5 @@
 import { isUserAdmin, SessionAccount, UserPayload } from '../types/auth.types.js';
+import { BackupCreatePayload, BackupRecord, BackupTargetOptions } from '../types/backup.types.js';
 
 export const API_ROUTES = {
   auth: {
@@ -10,6 +11,12 @@ export const API_ROUTES = {
     verify2fa: '/api/login/verify-2fa',
   },
   avatar: (name: string) => `/api/avatar?name=${encodeURIComponent(name)}`,
+  backups: {
+    base: '/api/backups',
+    byId: (id: number | string) => `/api/backups/${id}`,
+    download: (id: number | string) => `/api/backups/${id}/download`,
+    targets: '/api/backups/targets',
+  },
   config: '/api/config',
   csrfToken: '/api/csrf-token',
   health: '/health',
@@ -27,6 +34,10 @@ export const API_ROUTES = {
     status2fa: '/api/settings/2fa/status',
     username: '/api/settings/username',
     verifyPassword: '/api/settings/password/verify',
+  },
+  system: {
+    config: '/api/system/config',
+    reset: '/api/system/config/reset',
   },
   users: {
     account: (id: number | string) => `/api/users/${id}/account`,
@@ -677,6 +688,166 @@ export async function adminRevokeUserSessionsApi(
     return { error: data.error || 'Error al revocar sesiones.', ok: false };
   } catch {
     return { error: 'Error al conectar con el servidor.', ok: false };
+  }
+}
+
+export async function getSystemConfigApi(): Promise<{
+  categories?: Record<string, any[]>;
+  error?: string;
+  items?: any[];
+  map?: Record<string, any>;
+  ok: boolean;
+}> {
+  try {
+    const res = await getApi(API_ROUTES.system.config);
+    const data = await res.json();
+    if (res.ok && (data.ok || data.success)) {
+      return {
+        categories: data.categories || data.data?.categories,
+        items: data.items || data.data?.items,
+        map: data.map || data.data?.map,
+        ok: true,
+      };
+    }
+    return { error: data.error || 'Error al obtener la configuración del sistema.', ok: false };
+  } catch {
+    return { error: 'Error de conexión al cargar la configuración.', ok: false };
+  }
+}
+
+export async function updateSystemConfigApi(configs: Record<string, any>): Promise<{ error?: string; message?: string; ok: boolean }> {
+  try {
+    const res = await putApi(API_ROUTES.system.config, { configs });
+    const data = await res.json();
+    if (res.ok && (data.ok || data.success)) {
+      return { message: data.message || data.data?.message || 'Configuración actualizada con éxito.', ok: true };
+    }
+    return { error: data.error || 'Error al guardar la configuración.', ok: false };
+  } catch {
+    return { error: 'Error de conexión al guardar la configuración.', ok: false };
+  }
+}
+
+export async function resetSystemConfigApi(category?: string): Promise<{ error?: string; message?: string; ok: boolean }> {
+  try {
+    const res = await postApi(API_ROUTES.system.reset, { category });
+    const data = await res.json();
+    if (res.ok && (data.ok || data.success)) {
+      return { message: data.message || data.data?.message || 'Valores restablecidos con éxito.', ok: true };
+    }
+    return { error: data.error || 'Error al restablecer la configuración.', ok: false };
+  } catch {
+    return { error: 'Error de conexión al restablecer la configuración.', ok: false };
+  }
+}
+
+export async function getBackupsApi(params?: {
+  limit?: number;
+  page?: number;
+  search?: string;
+  status?: string;
+}): Promise<{
+  backups?: BackupRecord[];
+  error?: string;
+  ok: boolean;
+  pagination?: { limit: number; page: number; total: number; totalPages: number };
+}> {
+  try {
+    const query = new URLSearchParams();
+    if (params?.page) query.set('page', String(params.page));
+    if (params?.limit) query.set('limit', String(params.limit));
+    if (params?.search) query.set('search', params.search);
+    if (params?.status && params.status !== 'all') query.set('status', params.status);
+
+    const url = `${API_ROUTES.backups.base}${query.toString() ? `?${query.toString()}` : ''}`;
+    const res = await getApi(url);
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.ok) {
+      return {
+        backups: data.backups || [],
+        ok: true,
+        pagination: data.pagination,
+      };
+    }
+    return { error: data.error || 'Error al cargar las copias de seguridad.', ok: false };
+  } catch {
+    return { error: 'Error de conexión al cargar las copias de seguridad.', ok: false };
+  }
+}
+
+export async function getBackupTargetsApi(): Promise<{
+  error?: string;
+  ok: boolean;
+  targets?: BackupTargetOptions;
+}> {
+  try {
+    const res = await getApi(API_ROUTES.backups.targets);
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.ok) {
+      return {
+        ok: true,
+        targets: data.targets,
+      };
+    }
+    return { error: data.error || 'Error al consultar destinos de respaldo.', ok: false };
+  } catch {
+    return { error: 'Error de conexión al consultar destinos de respaldo.', ok: false };
+  }
+}
+
+export async function createBackupApi(payload: BackupCreatePayload): Promise<{
+  backup?: BackupRecord;
+  error?: string;
+  ok: boolean;
+}> {
+  try {
+    const res = await postApi(API_ROUTES.backups.base, payload);
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && (data.ok || data.success)) {
+      return {
+        backup: data.backup,
+        ok: true,
+      };
+    }
+    return { error: data.error || 'Error al iniciar la copia de seguridad.', ok: false };
+  } catch {
+    return { error: 'Error de conexión al solicitar la copia de seguridad.', ok: false };
+  }
+}
+
+export async function getBackupStatusApi(idOrUuid: number | string): Promise<{
+  backup?: BackupRecord;
+  error?: string;
+  ok: boolean;
+}> {
+  try {
+    const res = await getApi(API_ROUTES.backups.byId(idOrUuid));
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.ok) {
+      return {
+        backup: data.backup,
+        ok: true,
+      };
+    }
+    return { error: data.error || 'Error al consultar estado de la copia de seguridad.', ok: false };
+  } catch {
+    return { error: 'Error de conexión al consultar el estado.', ok: false };
+  }
+}
+
+export async function deleteBackupApi(idOrUuid: number | string): Promise<{
+  error?: string;
+  ok: boolean;
+}> {
+  try {
+    const res = await deleteApi(API_ROUTES.backups.byId(idOrUuid));
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && (data.ok || data.success)) {
+      return { ok: true };
+    }
+    return { error: data.error || 'Error al eliminar la copia de seguridad.', ok: false };
+  } catch {
+    return { error: 'Error de conexión al eliminar la copia de seguridad.', ok: false };
   }
 }
 

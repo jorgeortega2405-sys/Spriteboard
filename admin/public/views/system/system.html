@@ -1,37 +1,361 @@
 <div class="layout-content" data-ref="admin-system-view">
-  <div class="component-wrapper component-wrapper--full view-wrapper" data-ref="system-wrapper">
+  <div class="component-wrapper component-wrapper--full home-wrapper view-wrapper" data-ref="system-wrapper">
     <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="system-scrollable">
-      <div class="view-body" data-ref="system-container">
-        <div class="view-backdrop" data-ref="system-backdrop"></div>
-        <div class="view-header" data-ref="system-header">
-          <div class="view-header__left" data-ref="system-header-left">
-            <h1 class="view-header__title" data-ref="system-title">Configuración del Sistema</h1>
+      <div class="settings-layout" data-ref="system-layout" style="max-width: 920px; margin: 0 auto; padding-bottom: 60px;">
+
+        <div class="settings-header" data-ref="system-header">
+          <div class="view-header__left" data-ref="system-header-left" style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%; flex-wrap: wrap; gap: 16px;">
+            <div data-ref="system-header-text">
+              <h1 class="settings-title" data-ref="system-title">Configuración del Sistema</h1>
+              <p class="settings-subtitle" data-ref="system-subtitle">Ajustes globales de seguridad, registro de usuarios, límites, tiempos de expiración y mantenimiento.</p>
+            </div>
+            <div data-ref="system-header-actions" style="display: flex; align-items: center; gap: 10px;">
+              <button type="button" class="component-button component-button--h34" data-ref="btn-reset-all">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#history"></use></svg>
+                <span>Restablecer todo</span>
+              </button>
+              <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-save-all">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                <span>Guardar cambios</span>
+              </button>
+            </div>
           </div>
         </div>
 
-        <div class="view-hero" data-ref="system-hero">
-          <div class="view-hero__content" style="max-width: 880px; margin: 0 auto; padding: 24px 20px;">
-            <div class="admin-welcome-card" data-ref="system-main-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 32px 24px; box-shadow: var(--shadow-sm); text-align: center;">
-              <div class="admin-avatar-badge" data-ref="system-avatar-badge" style="display: inline-flex; align-items: center; justify-content: center; width: 64px; height: 64px; border-radius: 50%; background: var(--bg-card-subtle); border: 1px solid var(--border-color); margin-bottom: 16px;">
-                <svg class="component-icon" style="width: 32px; height: 32px; color: #f59e0b;" aria-hidden="true"><use href="/icons.svg#settings"></use></svg>
+        <div class="banner banner--danger" data-ref="system-config-error" style="display: none; margin-bottom: 20px;"></div>
+        <div class="banner banner--success" data-ref="system-config-success" style="display: none; margin-bottom: 20px;"></div>
+
+        <!-- Acordeón 1: Seguridad y Contraseñas -->
+        <div class="settings-group settings-group--accordion is-active" data-ref="accordion-security">
+          <div class="settings-accordion-header" data-ref="header-security">
+            <div class="settings-item__content" data-ref="header-content-security">
+              <div class="settings-item__icon-box" data-ref="icon-box-security">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#shield"></use></svg>
+              </div>
+              <div class="settings-item__text" data-ref="text-security">
+                <h2 class="settings-item__title" data-ref="title-security">Seguridad y Políticas de Contraseñas</h2>
+                <p class="settings-item__desc" data-ref="desc-security">Reglas de complejidad para credenciales de acceso, duración de sesiones y concurrencia.</p>
+              </div>
+            </div>
+            <div class="settings-accordion-icon" data-ref="chevron-security">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+            </div>
+          </div>
+
+          <div class="settings-accordion-body" data-ref="body-security">
+            <div class="settings-accordion-content" data-ref="content-security" style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px;">
+                <label class="field" data-ref="field-pwd-min">
+                  <span class="field__label-top" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; display: block;">Longitud mínima de contraseña</span>
+                  <input class="field__input" data-ref="input-password-min-length" type="number" min="4" max="64" step="1" />
+                </label>
+
+                <label class="field" data-ref="field-pwd-max">
+                  <span class="field__label-top" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; display: block;">Longitud máxima de contraseña</span>
+                  <input class="field__input" data-ref="input-password-max-length" type="number" min="16" max="256" step="1" />
+                </label>
               </div>
 
-              <h2 class="view-hero__title" data-ref="system-section-title" style="margin-bottom: 8px; font-size: 24px; font-weight: 700;">
-                Configuración del Sistema
-              </h2>
-              <p class="card__subtitle" data-ref="system-section-desc" style="margin-bottom: 24px; color: var(--text-secondary); max-width: 540px; margin-left: auto; margin-right: auto;">
-                Ajustes globales de la infraestructura, modo mantenimiento, variables del entorno y diagnóstico de servicios.
-              </p>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px;">
+                <label class="field" data-ref="field-session-ttl">
+                  <span class="field__label-top" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; display: block;">Duración de sesiones (en días)</span>
+                  <input class="field__input" data-ref="input-session-ttl-days" type="number" min="1" max="90" step="1" />
+                </label>
 
-              <div class="drawer-empty-card" data-ref="system-placeholder-card" style="background: var(--bg-card-subtle); border-radius: var(--radius-md, 12px); padding: 32px 20px; border: 1px dashed var(--border-color); display: flex; flex-direction: column; align-items: center; gap: 8px;">
-                <div style="font-weight: 600; font-size: 15px; color: var(--text-primary);">Módulo de Configuración Global en Desarrollo</div>
-                <div style="font-size: 13px; color: var(--text-secondary); max-width: 420px;">
-                  Opciones avanzadas para habilitar modo mantenimiento, inspeccionar logs del servidor y gestionar variables del sistema.
-                </div>
+                <label class="field" data-ref="field-max-accounts">
+                  <span class="field__label-top" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; display: block;">Máximo de cuentas simultáneas</span>
+                  <input class="field__input" data-ref="input-max-concurrent-accounts" type="number" min="1" max="20" step="1" />
+                </label>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 12px; padding: 16px; background: var(--bg-card-subtle); border-radius: var(--radius-md, 12px); border: 1px solid var(--border-color);">
+                <div style="font-size: 13px; font-weight: 600; color: var(--text-primary);">Requisitos obligatorios de contraseña</div>
+
+                <label class="settings-checkbox-item" data-ref="check-req-uppercase" style="display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none;">
+                  <input class="component-checkbox" data-ref="input-password-require-uppercase" type="checkbox" />
+                  <span style="font-size: 13px; color: var(--text-primary);">Requerir al menos una letra mayúscula (A-Z)</span>
+                </label>
+
+                <label class="settings-checkbox-item" data-ref="check-req-lowercase" style="display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none;">
+                  <input class="component-checkbox" data-ref="input-password-require-lowercase" type="checkbox" />
+                  <span style="font-size: 13px; color: var(--text-primary);">Requerir al menos una letra minúscula (a-z)</span>
+                </label>
+
+                <label class="settings-checkbox-item" data-ref="check-req-number" style="display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none;">
+                  <input class="component-checkbox" data-ref="input-password-require-number" type="checkbox" />
+                  <span style="font-size: 13px; color: var(--text-primary);">Requerir al menos un número (0-9)</span>
+                </label>
+
+                <label class="settings-checkbox-item" data-ref="check-req-special" style="display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none;">
+                  <input class="component-checkbox" data-ref="input-password-require-special" type="checkbox" />
+                  <span style="font-size: 13px; color: var(--text-primary);">Requerir al menos un carácter especial (@, #, $, %, etc.)</span>
+                </label>
               </div>
             </div>
           </div>
         </div>
+
+        <!-- Acordeón 2: Usuarios y Registro -->
+        <div class="settings-group settings-group--accordion" data-ref="accordion-users">
+          <div class="settings-accordion-header" data-ref="header-users">
+            <div class="settings-item__content" data-ref="header-content-users">
+              <div class="settings-item__icon-box" data-ref="icon-box-users">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#group"></use></svg>
+              </div>
+              <div class="settings-item__text" data-ref="text-users">
+                <h2 class="settings-item__title" data-ref="title-users">Usuarios, Registro y Dominios</h2>
+                <p class="settings-item__desc" data-ref="desc-users">Control de creación de cuentas, inicio con proveedores externos y dominios de correo permitidos.</p>
+              </div>
+            </div>
+            <div class="settings-accordion-icon" data-ref="chevron-users">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+            </div>
+          </div>
+
+          <div class="settings-accordion-body" data-ref="body-users">
+            <div class="settings-accordion-content" data-ref="content-users" style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px;">
+                <label class="field" data-ref="field-username-min">
+                  <span class="field__label-top" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; display: block;">Longitud mínima de nombre de usuario</span>
+                  <input class="field__input" data-ref="input-username-min-length" type="number" min="1" max="20" step="1" />
+                </label>
+
+                <label class="field" data-ref="field-username-max">
+                  <span class="field__label-top" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; display: block;">Longitud máxima de nombre de usuario</span>
+                  <input class="field__input" data-ref="input-username-max-length" type="number" min="10" max="100" step="1" />
+                </label>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 12px; padding: 16px; background: var(--bg-card-subtle); border-radius: var(--radius-md, 12px); border: 1px solid var(--border-color);">
+                <label class="settings-checkbox-item" data-ref="check-allow-reg" style="display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none;">
+                  <input class="component-checkbox" data-ref="input-allow-registration" type="checkbox" />
+                  <div>
+                    <div style="font-size: 13px; font-weight: 600; color: var(--text-primary);">Habilitar registro de nuevos usuarios</div>
+                    <div style="font-size: 12px; color: var(--text-secondary);">Si está deshabilitado, nuevos usuarios no podrán crear cuentas en la plataforma.</div>
+                  </div>
+                </label>
+
+                <hr class="settings-divider" style="margin: 4px 0;" />
+
+                <label class="settings-checkbox-item" data-ref="check-allow-google" style="display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none;">
+                  <input class="component-checkbox" data-ref="input-allow-google-login" type="checkbox" />
+                  <div>
+                    <div style="font-size: 13px; font-weight: 600; color: var(--text-primary);">Permitir autenticación con Google (OAuth 2.0)</div>
+                    <div style="font-size: 12px; color: var(--text-secondary);">Habilita o pausa los botones de iniciar sesión y vincular con Google.</div>
+                  </div>
+                </label>
+
+                <hr class="settings-divider" style="margin: 4px 0;" />
+
+                <label class="settings-checkbox-item" data-ref="check-enforce-domains" style="display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none;">
+                  <input class="component-checkbox" data-ref="input-enforce-allowed-email-domains" type="checkbox" />
+                  <div>
+                    <div style="font-size: 13px; font-weight: 600; color: var(--text-primary);">Restringir registro a dominios específicos de correo</div>
+                    <div style="font-size: 12px; color: var(--text-secondary);">Si está activado, únicamente se permitirá el registro con los dominios listados abajo.</div>
+                  </div>
+                </label>
+              </div>
+
+              <label class="field" data-ref="field-allowed-domains">
+                <span class="field__label-top" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; display: block;">Dominios de correo permitidos (separados por coma)</span>
+                <textarea class="field__input field__textarea" data-ref="input-allowed-email-domains" rows="3" placeholder="gmail.com, outlook.com, icloud.com, hotmail.com, yahoo.com" style="min-height: 80px; resize: vertical; padding: 10px 14px; font-family: monospace; font-size: 13px;"></textarea>
+                <span class="field__helper" style="font-size: 11px; color: var(--text-secondary); margin-top: 4px; display: block;">Ingresa los dominios sin arroba (@), separados por comas.</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Acordeón 3: Verificación y Tiempos de Espera (Cooldowns) -->
+        <div class="settings-group settings-group--accordion" data-ref="accordion-cooldowns">
+          <div class="settings-accordion-header" data-ref="header-cooldowns">
+            <div class="settings-item__content" data-ref="header-content-cooldowns">
+              <div class="settings-item__icon-box" data-ref="icon-box-cooldowns">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#history"></use></svg>
+              </div>
+              <div class="settings-item__text" data-ref="text-cooldowns">
+                <h2 class="settings-item__title" data-ref="title-cooldowns">Verificación y Tiempos de Espera (Cooldowns)</h2>
+                <p class="settings-item__desc" data-ref="desc-cooldowns">Límites de frecuencia para cambio de identificadores, caducidad de tokens y códigos OTP.</p>
+              </div>
+            </div>
+            <div class="settings-accordion-icon" data-ref="chevron-cooldowns">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+            </div>
+          </div>
+
+          <div class="settings-accordion-body" data-ref="body-cooldowns">
+            <div class="settings-accordion-content" data-ref="content-cooldowns" style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px;">
+                <label class="field" data-ref="field-user-cooldown">
+                  <span class="field__label-top" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; display: block;">Cooldown cambio de usuario (días)</span>
+                  <input class="field__input" data-ref="input-username-change-cooldown-days" type="number" min="0" max="365" step="1" />
+                </label>
+
+                <label class="field" data-ref="field-email-cooldown">
+                  <span class="field__label-top" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; display: block;">Cooldown cambio de correo (días)</span>
+                  <input class="field__input" data-ref="input-email-change-cooldown-days" type="number" min="0" max="365" step="1" />
+                </label>
+              </div>
+
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px;">
+                <label class="field" data-ref="field-code-ttl">
+                  <span class="field__label-top" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; display: block;">Validez de código de verificación (minutos)</span>
+                  <input class="field__input" data-ref="input-verification-code-ttl-minutes" type="number" min="1" max="120" step="1" />
+                </label>
+
+                <label class="field" data-ref="field-code-attempts">
+                  <span class="field__label-top" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; display: block;">Intentos máximos antes de invalidar código</span>
+                  <input class="field__input" data-ref="input-verification-code-max-attempts" type="number" min="1" max="20" step="1" />
+                </label>
+              </div>
+
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px;">
+                <label class="field" data-ref="field-reset-ttl">
+                  <span class="field__label-top" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; display: block;">Validez de enlace de reseteo (minutos)</span>
+                  <input class="field__input" data-ref="input-password-reset-ttl-minutes" type="number" min="1" max="120" step="1" />
+                </label>
+
+                <label class="field" data-ref="field-auth-window">
+                  <span class="field__label-top" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; display: block;">Ventana de autorización sensible (minutos)</span>
+                  <input class="field__input" data-ref="input-auth-action-window-minutes" type="number" min="1" max="60" step="1" />
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Acordeón 4: Almacenamiento y Archivos -->
+        <div class="settings-group settings-group--accordion" data-ref="accordion-uploads">
+          <div class="settings-accordion-header" data-ref="header-uploads">
+            <div class="settings-item__content" data-ref="header-content-uploads">
+              <div class="settings-item__icon-box" data-ref="icon-box-uploads">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cloud_upload"></use></svg>
+              </div>
+              <div class="settings-item__text" data-ref="text-uploads">
+                <h2 class="settings-item__title" data-ref="title-uploads">Almacenamiento y Archivos Multimedia</h2>
+                <p class="settings-item__desc" data-ref="desc-uploads">Límites de tamaño para fotos de perfil, avatares y tipos MIME permitidos.</p>
+              </div>
+            </div>
+            <div class="settings-accordion-icon" data-ref="chevron-uploads">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+            </div>
+          </div>
+
+          <div class="settings-accordion-body" data-ref="body-uploads">
+            <div class="settings-accordion-content" data-ref="content-uploads" style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px;">
+                <label class="field" data-ref="field-avatar-max-mb">
+                  <span class="field__label-top" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; display: block;">Tamaño máximo de avatar (MB)</span>
+                  <input class="field__input" data-ref="input-avatar-max-size-mb" type="number" min="1" max="25" step="1" />
+                </label>
+
+                <label class="field" data-ref="field-avatar-formats">
+                  <span class="field__label-top" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; display: block;">Formatos MIME de avatar (separados por coma)</span>
+                  <input class="field__input" data-ref="input-avatar-allowed-formats" type="text" placeholder="image/png, image/jpeg, image/jpg, image/webp" />
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Acordeón 5: Mantenimiento y Sistema -->
+        <div class="settings-group settings-group--accordion" data-ref="accordion-system">
+          <div class="settings-accordion-header" data-ref="header-system">
+            <div class="settings-item__content" data-ref="header-content-system">
+              <div class="settings-item__icon-box" data-ref="icon-box-system">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#settings"></use></svg>
+              </div>
+              <div class="settings-item__text" data-ref="text-system">
+                <h2 class="settings-item__title" data-ref="title-system">Mantenimiento y Datos de la Plataforma</h2>
+                <p class="settings-item__desc" data-ref="desc-system">Estado de mantenimiento global, nombres corporativos y correo de soporte.</p>
+              </div>
+            </div>
+            <div class="settings-accordion-icon" data-ref="chevron-system">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+            </div>
+          </div>
+
+          <div class="settings-accordion-body" data-ref="body-system">
+            <div class="settings-accordion-content" data-ref="content-system" style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
+              <div style="display: flex; flex-direction: column; gap: 12px; padding: 16px; background: var(--bg-card-subtle); border-radius: var(--radius-md, 12px); border: 1px solid var(--border-color);">
+                <label class="settings-checkbox-item" data-ref="check-maintenance-mode" style="display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none;">
+                  <input class="component-checkbox" data-ref="input-maintenance-mode" type="checkbox" />
+                  <div>
+                    <div style="font-size: 13px; font-weight: 600; color: #ef4444;">Activar Modo Mantenimiento</div>
+                    <div style="font-size: 12px; color: var(--text-secondary);">Muestra una pantalla informativa de mantenimiento a los usuarios y bloquea operaciones no administrativas.</div>
+                  </div>
+                </label>
+              </div>
+
+              <label class="field" data-ref="field-maint-msg">
+                <span class="field__label-top" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; display: block;">Mensaje descriptivo durante mantenimiento</span>
+                <input class="field__input" data-ref="input-maintenance-message" type="text" placeholder="El sistema se encuentra en mantenimiento programado. Volveremos pronto." />
+              </label>
+
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px;">
+                <label class="field" data-ref="field-app-name">
+                  <span class="field__label-top" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; display: block;">Nombre de la aplicación</span>
+                  <input class="field__input" data-ref="input-app-name" type="text" placeholder="Spriteboard" />
+                </label>
+
+                <label class="field" data-ref="field-support-email">
+                  <span class="field__label-top" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; display: block;">Correo de soporte técnico</span>
+                  <input class="field__input" data-ref="input-support-email" type="email" placeholder="support@spriteboard.app" />
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Acordeón 6: Límites de Peticiones (Rate Limits) -->
+        <div class="settings-group settings-group--accordion" data-ref="accordion-rate-limits">
+          <div class="settings-accordion-header" data-ref="header-rate-limits">
+            <div class="settings-item__content" data-ref="header-content-rate-limits">
+              <div class="settings-item__icon-box" data-ref="icon-box-rate-limits">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
+              </div>
+              <div class="settings-item__text" data-ref="text-rate-limits">
+                <h2 class="settings-item__title" data-ref="title-rate-limits">Límites de Peticiones y Protección Anti-Abuso</h2>
+                <p class="settings-item__desc" data-ref="desc-rate-limits">Parámetros de protección contra ataques de fuerza bruta y saturación de IA.</p>
+              </div>
+            </div>
+            <div class="settings-accordion-icon" data-ref="chevron-rate-limits">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+            </div>
+          </div>
+
+          <div class="settings-accordion-body" data-ref="body-rate-limits">
+            <div class="settings-accordion-content" data-ref="content-rate-limits" style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px;">
+                <label class="field" data-ref="field-rate-login">
+                  <span class="field__label-top" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; display: block;">Máx. intentos login / 5 min</span>
+                  <input class="field__input" data-ref="input-rate-limit-login-max" type="number" min="1" max="100" step="1" />
+                </label>
+
+                <label class="field" data-ref="field-rate-register">
+                  <span class="field__label-top" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; display: block;">Máx. intentos registro / 15 min</span>
+                  <input class="field__input" data-ref="input-rate-limit-register-max" type="number" min="1" max="100" step="1" />
+                </label>
+
+                <label class="field" data-ref="field-rate-ai">
+                  <span class="field__label-top" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; display: block;">Máx. mensajes IA / minuto</span>
+                  <input class="field__input" data-ref="input-rate-limit-ai-chat-max" type="number" min="1" max="200" step="1" />
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
+          <button type="button" class="component-button component-button--h44" data-ref="btn-reset-bottom">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#history"></use></svg>
+            <span>Restablecer valores</span>
+          </button>
+          <button type="button" class="component-button component-button--h44 component-button--black" data-ref="btn-save-bottom">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+            <span>Guardar configuración del sistema</span>
+          </button>
+        </div>
+
       </div>
     </div>
   </div>

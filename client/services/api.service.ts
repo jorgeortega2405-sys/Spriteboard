@@ -4,10 +4,58 @@ import { BillingDetailsResponse, PaymentMethod, PurchaseRecord, StorageUsageInfo
 
 export { API_ROUTES };
 
+export interface AppConfig {
+  allowGoogleLogin: boolean;
+  allowRegistration: boolean;
+  allowedEmailDomains: string[];
+  appName: string;
+  avatarAllowedFormats: string[];
+  avatarMaxSizeMb: number;
+  emailChangeCooldownDays: number;
+  enforceAllowedEmailDomains: boolean;
+  maintenanceMessage: string;
+  maintenanceMode: boolean;
+  passwordMaxLength: number;
+  passwordMinLength: number;
+  passwordRequireLowercase: boolean;
+  passwordRequireNumber: boolean;
+  passwordRequireSpecial: boolean;
+  passwordRequireUppercase: boolean;
+  stripePublishableKey: string;
+  supportEmail: string;
+  usernameChangeCooldownDays: number;
+  usernameMaxLength: number;
+  usernameMinLength: number;
+  verificationCodeLength: number;
+}
+
 export let currentUser: User | null = null;
 export let linkedAccounts: LinkedAccount[] = [];
 export let csrfToken = '';
-export const appConfig = { appName: 'Spriteboard', stripePublishableKey: '' };
+export const appConfig: AppConfig = {
+  allowGoogleLogin: true,
+  allowRegistration: true,
+  allowedEmailDomains: ['gmail.com', 'outlook.com', 'icloud.com', 'hotmail.com', 'yahoo.com'],
+  appName: 'Spriteboard',
+  avatarAllowedFormats: ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'],
+  avatarMaxSizeMb: 2,
+  emailChangeCooldownDays: 30,
+  enforceAllowedEmailDomains: true,
+  maintenanceMessage: 'El sistema se encuentra en mantenimiento programado. Volveremos pronto.',
+  maintenanceMode: false,
+  passwordMaxLength: 128,
+  passwordMinLength: 8,
+  passwordRequireLowercase: false,
+  passwordRequireNumber: false,
+  passwordRequireSpecial: false,
+  passwordRequireUppercase: false,
+  stripePublishableKey: '',
+  supportEmail: 'support@spriteboard.app',
+  usernameChangeCooldownDays: 12,
+  usernameMaxLength: 30,
+  usernameMinLength: 3,
+  verificationCodeLength: 6,
+};
 
 export function setCurrentUser(user: User | null): void {
   currentUser = user;
@@ -42,12 +90,9 @@ export async function fetchAppConfig(): Promise<void> {
     const res = await fetch(API_ROUTES.config);
     if (res.ok) {
       const data = await res.json();
+      Object.assign(appConfig, data);
       if (data.appName) {
-        appConfig.appName = data.appName;
         document.title = data.appName;
-      }
-      if (data.stripePublishableKey) {
-        appConfig.stripePublishableKey = data.stripePublishableKey;
       }
     }
   } catch {}

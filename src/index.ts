@@ -11,6 +11,7 @@ import { getCanvasBySlug, RESERVED_SLUGS } from './services/canvas.service.js';
 import { geoIpService } from './services/geoip.service.js';
 import { logger } from './services/logger.service.js';
 import { ensureBucketExists } from './services/s3.service.js';
+import { ensureServerConfigTable } from './services/server-config.service.js';
 import { telemetryService } from './services/telemetry.service.js';
 import cookieParser from 'cookie-parser';
 import 'dotenv/config';
@@ -137,6 +138,7 @@ async function startServer() {
       logger.security.warn('ADVERTENCIA DE SEGURIDAD: SESSION_SECRET utiliza la clave por defecto en entorno de producción. Configura una clave aleatoria en .env');
     }
     await checkDbConnection();
+    await ensureServerConfigTable();
     await checkRedisConnection();
     await ensureBucketExists();
     await geoIpService.init();

@@ -8,6 +8,8 @@ import { config } from './config/env.config.js';
 import { checkRedisConnection } from './config/redis.config.js';
 import { getHealth } from './controllers/config.controller.js';
 import apiRouter from './routes/api.routes.js';
+import { ensureBackupTable } from './services/backup.service.js';
+import { ensureServerConfigTable } from './services/server-config.service.js';
 import { logger } from './services/logger.service.js';
 
 const app = express();
@@ -84,6 +86,8 @@ async function setupClient(server: http.Server) {
 async function startServer() {
   try {
     await checkDbConnection();
+    await ensureServerConfigTable();
+    await ensureBackupTable();
     await checkRedisConnection();
 
     const server = http.createServer(app);

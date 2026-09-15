@@ -7,6 +7,7 @@ import { geoIpService } from '../services/geoip.service.js';
 import { getGoogleAuthUrl, getGoogleLinkAuthUrl, getGoogleVerifyAuthUrl, processGoogleAuthCallback, processGoogleLinkCallback, STATE_COOKIE_NAME } from '../services/google.service.js';
 import { logger } from '../services/logger.service.js';
 import { sendPasswordResetEmail, sendVerificationCodeEmail } from '../services/mail.service.js';
+import { getServerConfig } from '../services/server-config.service.js';
 import { consumePending2FALogin, getPending2FALogin, savePending2FALogin, verifyTotpCode } from '../services/two-factor.service.js';
 import { createUser, findUserByEmail, findUserById, findUserDuplicates, getUser2FASecret, updateUserGoogleId, updateUserLastLoginGeo, updateUserPassword, verifyAndConsumeBackupCode } from '../services/user.service.js';
 import { consumePasswordResetToken, generateSixDigitCode, getPendingRegistration, savePasswordChangeAuth, savePasswordResetToken, savePendingRegistration, verifyAndConsumeCode, verifyPasswordResetToken } from '../services/verification.service.js';
@@ -18,14 +19,30 @@ import { Request, Response } from 'express';
 export async function validateStage1(req: Request, res: Response): Promise<void> {
   try {
     const { email, password } = req.body;
+    const serverConfig = await getServerConfig();
 
-    const emailValidation = validateEmail(email);
+    if (!serverConfig.allow_registration) {
+      sendBadRequest(res, 'El registro de nuevos usuarios está deshabilitado temporalmente.');
+      return;
+    }
+
+    const emailValidation = validateEmail(email, {
+      allowedDomains: serverConfig.allowed_email_domains,
+      enforceAllowedDomains: serverConfig.enforce_allowed_email_domains,
+    });
     if (!emailValidation.valid) {
       sendBadRequest(res, emailValidation.error!);
       return;
     }
 
-    const passwordValidation = validatePassword(password);
+    const passwordValidation = validatePassword(password, {
+      maxLength: serverConfig.password_max_length,
+      minLength: serverConfig.password_min_length,
+      requireLowercase: serverConfig.password_require_lowercase,
+      requireNumber: serverConfig.password_require_number,
+      requireSpecial: serverConfig.password_require_special,
+      requireUppercase: serverConfig.password_require_uppercase,
+    });
     if (!passwordValidation.valid) {
       sendBadRequest(res, passwordValidation.error!);
       return;
@@ -48,20 +65,39 @@ export async function validateStage1(req: Request, res: Response): Promise<void>
 export async function sendRegistrationCode(req: Request, res: Response): Promise<void> {
   try {
     const { email, password, username } = req.body;
+    const serverConfig = await getServerConfig();
 
-    const emailValidation = validateEmail(email);
+    if (!serverConfig.allow_registration) {
+      sendBadRequest(res, 'El registro de nuevos usuarios está deshabilitado temporalmente.');
+      return;
+    }
+
+    const emailValidation = validateEmail(email, {
+      allowedDomains: serverConfig.allowed_email_domains,
+      enforceAllowedDomains: serverConfig.enforce_allowed_email_domains,
+    });
     if (!emailValidation.valid) {
       sendBadRequest(res, emailValidation.error!);
       return;
     }
 
-    const passwordValidation = validatePassword(password);
+    const passwordValidation = validatePassword(password, {
+      maxLength: serverConfig.password_max_length,
+      minLength: serverConfig.password_min_length,
+      requireLowercase: serverConfig.password_require_lowercase,
+      requireNumber: serverConfig.password_require_number,
+      requireSpecial: serverConfig.password_require_special,
+      requireUppercase: serverConfig.password_require_uppercase,
+    });
     if (!passwordValidation.valid) {
       sendBadRequest(res, passwordValidation.error!);
       return;
     }
 
-    const usernameValidation = validateUsername(username);
+    const usernameValidation = validateUsername(username, {
+      maxLength: serverConfig.username_max_length,
+      minLength: serverConfig.username_min_length,
+    });
     if (!usernameValidation.valid) {
       sendBadRequest(res, usernameValidation.error!);
       return;
@@ -86,12 +122,17 @@ export async function sendRegistrationCode(req: Request, res: Response): Promise
 
     const code = generateSixDigitCode();
     const passwordHash = await hashPassword(String(password));
+    const ttlSeconds = (serverConfig.verification_code_ttl_minutes || 15) * 60;
 
-    await savePendingRegistration(trimmedEmail, {
-      username: trimmedUsername,
-      passwordHash,
-      code,
-    });
+    await savePendingRegistration(
+      trimmedEmail,
+      {
+        code,
+        passwordHash,
+        username: trimmedUsername,
+      },
+      ttlSeconds
+    );
 
     await sendVerificationCodeEmail(trimmedEmail, trimmedUsername, code);
 
@@ -472,7 +513,12 @@ export async function me(req: Request, res: Response): Promise<void> {
   });
 }
 
-export function redirectToGoogle(req: Request, res: Response): void {
+export async function redirectToGoogle(req: Request, res: Response): Promise<void> {
+  const serverConfig = await getServerConfig();
+  if (!serverConfig.allow_google_login) {
+    res.redirect('/login?error=' + encodeURIComponent('El inicio de sesión con Google está temporalmente deshabilitado.'));
+    return;
+  }
   const url = getGoogleAuthUrl(req, res);
   res.redirect(url);
 }
@@ -505,6 +551,14 @@ export async function googleCallback(req: Request, res: Response): Promise<void>
     const isVerifyFlow =
       (storedState && storedState.startsWith('verify_pwd_')) ||
       (state && String(state).startsWith('verify_pwd_'));
+
+    if (!isLinkFlow && !isVerifyFlow) {
+      const serverConfig = await getServerConfig();
+      if (!serverConfig.allow_google_login) {
+        res.redirect('/login?error=' + encodeURIComponent('El inicio de sesión con Google está temporalmente deshabilitado.'));
+        return;
+      }
+    }
 
     if (error) {
       logger.security.warn('Google OAuth cancelado o con error', { error, isLinkFlow, isVerifyFlow });
@@ -751,7 +805,15 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
       return;
     }
 
-    const passwordValidation = validatePassword(password);
+    const serverConfig = await getServerConfig();
+    const passwordValidation = validatePassword(password, {
+      maxLength: serverConfig.password_max_length,
+      minLength: serverConfig.password_min_length,
+      requireLowercase: serverConfig.password_require_lowercase,
+      requireNumber: serverConfig.password_require_number,
+      requireSpecial: serverConfig.password_require_special,
+      requireUppercase: serverConfig.password_require_uppercase,
+    });
     if (!passwordValidation.valid) {
       sendBadRequest(res, passwordValidation.error!);
       return;
