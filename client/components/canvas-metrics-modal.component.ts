@@ -79,11 +79,6 @@ export function openCanvasMetricsModal(canvasUuid: string, canvasName: string): 
             <div class="component-top-left">
               <h2 class="component-top-title" data-ref="metrics-canvas-name">${escapeHtml(canvasName)}</h2>
             </div>
-            <div class="component-top-right">
-              <button type="button" class="component-button component-button--h34 component-button--icon-only" data-ref="btn-metrics-refresh" data-tooltip="Actualizar datos" aria-label="Actualizar datos">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#refresh"></use></svg>
-              </button>
-            </div>
           </div>
 
           <div class="modal-create-canvas__body-bottom" data-ref="modal-metrics-body-bottom">
@@ -91,7 +86,7 @@ export function openCanvasMetricsModal(canvasUuid: string, canvasName: string): 
               <span>Cargando estadísticas del lienzo...</span>
             </div>
 
-            <div class="metrics-content-container" data-ref="metrics-content" style="display: none; flex-direction: column; gap: 24px; width: 100%;">
+            <div class="metrics-content-container" data-ref="metrics-content" style="display: none; flex-direction: column; gap: 20px; width: 100%;">
               <div class="metrics-summary-grid" data-ref="metrics-summary-grid">
                 <div class="metrics-stat-card" data-ref="card-unique-viewers">
                   <div class="metrics-stat-card__icon-box">
@@ -100,7 +95,6 @@ export function openCanvasMetricsModal(canvasUuid: string, canvasName: string): 
                   <div class="metrics-stat-card__info">
                     <span class="metrics-stat-card__label">Total de personas</span>
                     <span class="metrics-stat-card__value" data-ref="val-unique-viewers">0</span>
-                    <span class="metrics-stat-card__hint">Personas que lo vieron</span>
                   </div>
                 </div>
 
@@ -111,7 +105,6 @@ export function openCanvasMetricsModal(canvasUuid: string, canvasName: string): 
                   <div class="metrics-stat-card__info">
                     <span class="metrics-stat-card__label">Total de visualizaciones</span>
                     <span class="metrics-stat-card__value" data-ref="val-total-views">0</span>
-                    <span class="metrics-stat-card__hint">Aperturas del lienzo</span>
                   </div>
                 </div>
 
@@ -122,28 +115,52 @@ export function openCanvasMetricsModal(canvasUuid: string, canvasName: string): 
                   <div class="metrics-stat-card__info">
                     <span class="metrics-stat-card__label">Tiempo promedio</span>
                     <span class="metrics-stat-card__value" data-ref="val-avg-duration">0 s</span>
-                    <span class="metrics-stat-card__hint">Permanencia en el lienzo</span>
                   </div>
                 </div>
               </div>
 
               <div class="metrics-section" data-ref="section-registered-viewers">
-                <div class="metrics-section__header" style="margin-bottom: 12px;">
+                <div class="metrics-section__header">
                   <h3 class="preset-category__title">Espectadores registrados</h3>
                   <p class="settings-item__desc">Usuarios registrados con cuenta que han visualizado este lienzo.</p>
                 </div>
-                <div class="settings-group" data-ref="group-registered-viewers">
-                  <div class="metrics-list" data-ref="list-registered-viewers"></div>
+                <div class="metrics-table-wrapper" data-ref="wrapper-registered-viewers">
+                  <table class="metrics-table" data-ref="table-registered-viewers">
+                    <thead>
+                      <tr>
+                        <th class="col-user">Usuario</th>
+                        <th class="col-date">Última visita</th>
+                        <th class="col-duration">Tiempo acumulado</th>
+                        <th class="col-views">Visualizaciones</th>
+                      </tr>
+                    </thead>
+                    <tbody data-ref="tbody-registered-viewers"></tbody>
+                  </table>
+                  <div class="metrics-table-empty" data-ref="empty-registered-viewers" style="display: none;">
+                    <p class="settings-item__desc" style="text-align: center; margin: 0;">Aún no hay espectadores registrados en este lienzo.</p>
+                  </div>
                 </div>
               </div>
 
               <div class="metrics-section" data-ref="section-recent-views">
-                <div class="metrics-section__header" style="margin-bottom: 12px;">
+                <div class="metrics-section__header">
                   <h3 class="preset-category__title">Registro de actividad reciente</h3>
                   <p class="settings-item__desc">Historial en tiempo real de quién visualizó el lienzo, a qué hora y duración.</p>
                 </div>
-                <div class="settings-group" data-ref="group-recent-views">
-                  <div class="metrics-list" data-ref="list-recent-views"></div>
+                <div class="metrics-table-wrapper" data-ref="wrapper-recent-views">
+                  <table class="metrics-table" data-ref="table-recent-views">
+                    <thead>
+                      <tr>
+                        <th class="col-user">Espectador</th>
+                        <th class="col-date">Fecha y hora</th>
+                        <th class="col-duration">Duración</th>
+                      </tr>
+                    </thead>
+                    <tbody data-ref="tbody-recent-views"></tbody>
+                  </table>
+                  <div class="metrics-table-empty" data-ref="empty-recent-views" style="display: none;">
+                    <p class="settings-item__desc" style="text-align: center; margin: 0;">No hay historial de visitas registrado todavía.</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -171,9 +188,14 @@ export function openCanvasMetricsModal(canvasUuid: string, canvasName: string): 
   const valUniqueViewers = backdrop.querySelector<HTMLElement>('[data-ref="val-unique-viewers"]');
   const valTotalViews = backdrop.querySelector<HTMLElement>('[data-ref="val-total-views"]');
   const valAvgDuration = backdrop.querySelector<HTMLElement>('[data-ref="val-avg-duration"]');
-  const listRegisteredViewers = backdrop.querySelector<HTMLElement>('[data-ref="list-registered-viewers"]');
-  const listRecentViews = backdrop.querySelector<HTMLElement>('[data-ref="list-recent-views"]');
-  const btnRefresh = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-metrics-refresh"]');
+
+  const tableRegisteredViewers = backdrop.querySelector<HTMLElement>('[data-ref="table-registered-viewers"]');
+  const tbodyRegisteredViewers = backdrop.querySelector<HTMLElement>('[data-ref="tbody-registered-viewers"]');
+  const emptyRegisteredViewers = backdrop.querySelector<HTMLElement>('[data-ref="empty-registered-viewers"]');
+
+  const tableRecentViews = backdrop.querySelector<HTMLElement>('[data-ref="table-recent-views"]');
+  const tbodyRecentViews = backdrop.querySelector<HTMLElement>('[data-ref="tbody-recent-views"]');
+  const emptyRecentViews = backdrop.querySelector<HTMLElement>('[data-ref="empty-recent-views"]');
 
   const showError = (msg: string) => {
     if (loadingEl) loadingEl.style.display = 'none';
@@ -199,74 +221,71 @@ export function openCanvasMetricsModal(canvasUuid: string, canvasName: string): 
       valAvgDuration.textContent = formatDuration(metrics.avg_duration_seconds);
     }
 
-    if (listRegisteredViewers) {
+    if (tbodyRegisteredViewers && emptyRegisteredViewers && tableRegisteredViewers) {
       if (!metrics.viewers || metrics.viewers.length === 0) {
-        listRegisteredViewers.innerHTML = `
-          <div class="settings-item" style="justify-content: center; padding: 24px;">
-            <p class="settings-item__desc" style="text-align: center;">Aún no hay espectadores registrados en este lienzo.</p>
-          </div>
-        `;
+        tbodyRegisteredViewers.innerHTML = '';
+        tableRegisteredViewers.style.display = 'none';
+        emptyRegisteredViewers.style.display = 'flex';
       } else {
-        listRegisteredViewers.innerHTML = metrics.viewers
-          .map((v, index) => `
-            ${index > 0 ? '<hr class="settings-divider" />' : ''}
-            <div class="settings-item" data-ref="viewer-item-${v.user_id}">
-              <div class="settings-item__content">
-                <div class="settings-item__avatar">
-                  <img class="avatar-preview-img image-lazy-fade" src="${v.avatar_url || '/assets/img/default-avatar.svg'}" alt="${escapeHtml(v.username)}" referrerpolicy="no-referrer" onload="this.classList.add('image-loaded')" onerror="this.classList.add('image-loaded')" />
-                </div>
-                <div class="settings-item__text">
-                  <h4 class="settings-item__title">${escapeHtml(v.username)}</h4>
-                  <p class="settings-item__desc">
-                    Última visita: ${formatDateTime(v.last_viewed_at)} · Tiempo acumulado: ${formatDuration(v.total_duration_seconds)}
-                  </p>
-                </div>
-              </div>
-              <div class="settings-item__actions">
-                <span class="settings-item__value" style="font-weight: 600; color: var(--text-primary);">
-                  ${v.views_count} ${v.views_count === 1 ? 'vista' : 'vistas'}
-                </span>
-              </div>
-            </div>
-          `)
+        tableRegisteredViewers.style.display = 'table';
+        emptyRegisteredViewers.style.display = 'none';
+        tbodyRegisteredViewers.innerHTML = metrics.viewers
+          .map((v) => {
+            const fallbackAvatar = API_ROUTES.avatar(v.username);
+            const avatarSrc = v.avatar_url || fallbackAvatar;
+            return `
+              <tr data-ref="viewer-row-${v.user_id}">
+                <td class="col-user">
+                  <div class="metrics-user-cell">
+                    <div class="metrics-user-avatar">
+                      <img class="avatar-preview-img image-lazy-fade" src="${avatarSrc}" alt="${escapeHtml(v.username)}" referrerpolicy="no-referrer" onload="this.classList.add('image-loaded')" onerror="this.onerror=null; this.src='${fallbackAvatar}'; this.classList.add('image-loaded')" />
+                    </div>
+                    <span class="metrics-user-name">${escapeHtml(v.username)}</span>
+                  </div>
+                </td>
+                <td class="col-date">${formatDateTime(v.last_viewed_at)}</td>
+                <td class="col-duration">${formatDuration(v.total_duration_seconds)}</td>
+                <td class="col-views">
+                  <span class="metrics-views-badge">${v.views_count} ${v.views_count === 1 ? 'vista' : 'vistas'}</span>
+                </td>
+              </tr>
+            `;
+          })
           .join('');
       }
     }
 
-    if (listRecentViews) {
+    if (tbodyRecentViews && emptyRecentViews && tableRecentViews) {
       if (!metrics.recent_views || metrics.recent_views.length === 0) {
-        listRecentViews.innerHTML = `
-          <div class="settings-item" style="justify-content: center; padding: 24px;">
-            <p class="settings-item__desc" style="text-align: center;">No hay historial de visitas registrado todavía.</p>
-          </div>
-        `;
+        tbodyRecentViews.innerHTML = '';
+        tableRecentViews.style.display = 'none';
+        emptyRecentViews.style.display = 'flex';
       } else {
-        listRecentViews.innerHTML = metrics.recent_views
-          .map((view, index) => `
-            ${index > 0 ? '<hr class="settings-divider" />' : ''}
-            <div class="settings-item" data-ref="view-entry-${view.id}">
-              <div class="settings-item__content">
-                <div class="settings-item__icon-box">
-                  ${
-                    view.is_registered && view.avatar_url
-                      ? `<img class="avatar-preview-img image-lazy-fade" src="${view.avatar_url}" alt="${escapeHtml(view.username)}" referrerpolicy="no-referrer" onload="this.classList.add('image-loaded')" onerror="this.classList.add('image-loaded')" />`
-                      : view.is_registered
-                        ? `<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#person"></use></svg>`
-                        : `<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#devices"></use></svg>`
-                  }
-                </div>
-                <div class="settings-item__text">
-                  <h4 class="settings-item__title">${escapeHtml(view.username)}</h4>
-                  <p class="settings-item__desc">${formatDateTime(view.viewed_at)}</p>
-                </div>
-              </div>
-              <div class="settings-item__actions">
-                <span class="settings-item__value" style="font-weight: 600; color: var(--text-primary);">
-                  ${formatDuration(view.duration_seconds)}
-                </span>
-              </div>
-            </div>
-          `)
+        tableRecentViews.style.display = 'table';
+        emptyRecentViews.style.display = 'none';
+        tbodyRecentViews.innerHTML = metrics.recent_views
+          .map((view) => {
+            const fallbackAvatar = API_ROUTES.avatar(view.username);
+            const avatarSrc = view.avatar_url || fallbackAvatar;
+            return `
+              <tr data-ref="recent-row-${view.id}">
+                <td class="col-user">
+                  <div class="metrics-user-cell">
+                    <div class="metrics-user-avatar">
+                      ${
+                        view.is_registered
+                          ? `<img class="avatar-preview-img image-lazy-fade" src="${avatarSrc}" alt="${escapeHtml(view.username)}" referrerpolicy="no-referrer" onload="this.classList.add('image-loaded')" onerror="this.onerror=null; this.src='${fallbackAvatar}'; this.classList.add('image-loaded')" />`
+                          : `<div class="metrics-user-icon-device"><svg class="component-icon" aria-hidden="true"><use href="/icons.svg#devices"></use></svg></div>`
+                      }
+                    </div>
+                    <span class="metrics-user-name">${escapeHtml(view.username)}</span>
+                  </div>
+                </td>
+                <td class="col-date">${formatDateTime(view.viewed_at)}</td>
+                <td class="col-duration">${formatDuration(view.duration_seconds)}</td>
+              </tr>
+            `;
+          })
           .join('');
       }
     }
@@ -297,10 +316,6 @@ export function openCanvasMetricsModal(canvasUuid: string, canvasName: string): 
       showError('Ocurrió un error al cargar las estadísticas del lienzo.');
     }
   };
-
-  btnRefresh?.addEventListener('click', () => {
-    void fetchMetrics();
-  });
 
   void fetchMetrics();
 

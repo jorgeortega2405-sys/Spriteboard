@@ -96,20 +96,6 @@ export async function createCanvasSnapshot(
 
   const isManual = dto.is_manual === true;
 
-  if (canvas.user_id && isManual) {
-    const effectiveTier = await getEffectiveTierForCanvas(canvas.id);
-    const tierLimits = getTierLimits(effectiveTier);
-    const [snapCountRows] = await canvasPool.query<mysql.RowDataPacket[]>(
-      'SELECT COUNT(id) AS total FROM db_canvas.canvas_snapshots WHERE canvas_id = ? AND is_manual = 1',
-      [canvas.id]
-    );
-    const manualCount = Number(snapCountRows[0]?.total || 0);
-    if (manualCount >= tierLimits.maxSnapshots) {
-      const tierName = effectiveTier === 'free' ? 'Gratis' : (effectiveTier === 'pro' ? 'Pro' : 'Negocios');
-      throw new Error(`Has alcanzado el límite de ${tierLimits.maxSnapshots} versiones manuales para tu plan (${tierName}). Mejora tu plan para guardar más versiones.`);
-    }
-  }
-
   const name = dto.name && dto.name.trim()
     ? dto.name.trim().slice(0, 255)
     : isManual

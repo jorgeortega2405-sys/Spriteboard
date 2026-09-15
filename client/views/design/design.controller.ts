@@ -1406,11 +1406,8 @@ export class DesignController {
     if (!frame) return;
 
     if (broadcast) {
-      const effTier = (this.effectiveTier || currentUser?.subscription_tier || 'free').toLowerCase();
-      const isProOrBusiness = ['pro', 'business', 'negocios'].includes(effTier);
-      if (!isProOrBusiness && frame.layers.length >= 5) {
-        showToast(t('design.layers_free_limit') || 'El plan Gratis permite hasta 5 capas por lienzo. Mejora a Pro para capas ilimitadas.', 'warning');
-        openUpgradeModal('pro');
+      if (frame.layers.length >= 25) {
+        showToast(t('design.layers_limit_reached') || 'Has alcanzado el límite máximo de 25 capas por lienzo.', 'warning');
         return;
       }
     }
@@ -6522,7 +6519,7 @@ export class DesignController {
       if (item.isOwner) {
         const badge = document.createElement('span');
         badge.className = 'design-collaborator-avatar__badge';
-        badge.innerHTML = '<span class="material-symbols-rounded">star</span>';
+        badge.innerHTML = '<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#star_fill"></use></svg>';
         avatarEl.appendChild(badge);
       }
 

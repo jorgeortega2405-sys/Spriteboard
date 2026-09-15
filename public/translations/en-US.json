@@ -351,7 +351,7 @@
       "storage_accordion_title": "Cloud storage",
       "storage_accordion_desc": "Control de espacio utilizado por tus lienzos, versiones y archivos multimedia.",
       "btn_increase_storage": "Aumentar almacenamiento",
-      "tier_business_badge": "Plan Negocios (1 TB)",
+      "tier_business_badge": "Business Plan (500 GB)",
       "storage_over_limit": "Has alcanzado el límite de almacenamiento de tu plan.",
       "storage_remaining_label": "Te quedan {amount} de espacio disponible",
       "storage_canvases_title": "Lienzos activos",
@@ -811,7 +811,7 @@
     "sso_invalid_domain": "Please enter a valid corporate domain (e.g. company.com)."
   },
   "design": {
-    "layers_free_limit": "El plan Gratis permite hasta 5 capas por lienzo. Mejora a Pro para capas ilimitadas."
+    "layers_limit_reached": "You have reached the maximum limit of 25 layers per canvas."
   },
   "upgrade_modal": {
     "title_prefix": "Upgrade to",
@@ -836,13 +836,14 @@
     "benefit_storage": "Cloud storage",
     "benefit_canvas_size": "Maximum canvas size",
     "benefit_collab": "Live collaboration",
-    "benefit_teams": "Equipos de trabajo",
+    "benefit_teams": "Work teams",
     "benefit_export_formats": "Export formats",
     "benefit_export_scale": "Maximum scale",
     "benefit_layers": "Layers per canvas",
     "benefit_history": "Version history",
     "benefit_trash": "Trash retention",
-    "benefit_sso": "Single Sign-On (SSO)"
+    "benefit_sso": "Single Sign-On (SSO)",
+    "benefit_support": "Technical support"
   },
   "comments": {
     "title": "Comments",

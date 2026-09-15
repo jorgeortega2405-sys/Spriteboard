@@ -7,7 +7,6 @@ import { showToast } from '../services/toast.service.js';
 import { CanvasItem } from '../types/canvas.types.js';
 import { setupDropdown } from '../utils/dom.util.js';
 import { encodeFramesToGif } from '../utils/gif-encoder.util.js';
-import { openUpgradeModal } from './upgrade-modal.component.js';
 
 function setIconUse(el: HTMLElement | null, iconName: string): void {
   if (!el) return;
@@ -30,11 +29,6 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
   let selectedType: 'png-current' | 'spritesheet' | 'spritesheet-atlas' | 'gif' | 'project-json' = 'png-current';
   let selectedScale = 1;
   let selectedBg: 'transparent' | 'solid' = 'transparent';
-
-  const userTier = (canvas.effective_tier || canvas.owner_tier || currentUser?.subscription_tier || 'free').toLowerCase();
-  const isHighRes = ['pro', 'business', 'negocios'].includes(userTier);
-  const isAtlasSupported = ['business', 'negocios'].includes(userTier);
-  const isUltraScale = ['business', 'negocios'].includes(userTier);
 
   const baseW = canvas.width || 800;
   const baseH = canvas.height || 600;
@@ -78,20 +72,17 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
                         <span class="material-symbols-rounded menu-item__icon">image</span>
                         <span class="menu-item__text">PNG (Fotograma actual)</span>
                       </button>
-                      <button type="button" class="menu-item" data-ref="btn-download-type-spritesheet" data-value="spritesheet" data-required-tier="pro">
+                      <button type="button" class="menu-item" data-ref="btn-download-type-spritesheet" data-value="spritesheet">
                         <span class="material-symbols-rounded menu-item__icon">grid_view</span>
                         <span class="menu-item__text">PNG (Hoja de sprites)</span>
-                        ${!isHighRes ? '<span class="component-badge component-badge--xs component-badge--primary">PRO</span>' : ''}
                       </button>
-                      <button type="button" class="menu-item" data-ref="btn-download-type-atlas" data-value="spritesheet-atlas" data-required-tier="atlas">
+                      <button type="button" class="menu-item" data-ref="btn-download-type-atlas" data-value="spritesheet-atlas">
                         <span class="material-symbols-rounded menu-item__icon">sports_esports</span>
                         <span class="menu-item__text">Hoja de sprites + JSON (Game Atlas)</span>
-                        ${!isAtlasSupported ? '<span class="component-badge component-badge--xs component-badge--warning">NEGOCIOS</span>' : ''}
                       </button>
-                      <button type="button" class="menu-item" data-ref="btn-download-type-gif" data-value="gif" data-required-tier="pro">
+                      <button type="button" class="menu-item" data-ref="btn-download-type-gif" data-value="gif">
                         <span class="material-symbols-rounded menu-item__icon">gif</span>
                         <span class="menu-item__text">GIF animado (.gif)</span>
-                        ${!isHighRes ? '<span class="component-badge component-badge--xs component-badge--primary">PRO</span>' : ''}
                       </button>
                       <button type="button" class="menu-item" data-ref="btn-download-type-project" data-value="project-json">
                         <span class="material-symbols-rounded menu-item__icon">data_object</span>
@@ -125,17 +116,14 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
                       <button type="button" class="menu-item" data-ref="btn-scale-2" data-value="2">
                         <span class="menu-item__text">2x (${baseW * 2} × ${baseH * 2} px)</span>
                       </button>
-                      <button type="button" class="menu-item" data-ref="btn-scale-4" data-value="4" data-required-tier="pro">
+                      <button type="button" class="menu-item" data-ref="btn-scale-4" data-value="4">
                         <span class="menu-item__text">4x (${baseW * 4} × ${baseH * 4} px)</span>
-                        ${!isHighRes ? '<span class="component-badge component-badge--xs component-badge--primary">PRO</span>' : ''}
                       </button>
-                      <button type="button" class="menu-item" data-ref="btn-scale-8" data-value="8" data-required-tier="pro">
+                      <button type="button" class="menu-item" data-ref="btn-scale-8" data-value="8">
                         <span class="menu-item__text">8x (${baseW * 8} × ${baseH * 8} px)</span>
-                        ${!isHighRes ? '<span class="component-badge component-badge--xs component-badge--primary">PRO</span>' : ''}
                       </button>
-                      <button type="button" class="menu-item" data-ref="btn-scale-16" data-value="16" data-required-tier="business">
+                      <button type="button" class="menu-item" data-ref="btn-scale-16" data-value="16">
                         <span class="menu-item__text">16x (${baseW * 16} × ${baseH * 16} px)</span>
-                        ${!isUltraScale ? '<span class="component-badge component-badge--xs component-badge--warning">NEGOCIOS</span>' : ''}
                       </button>
                     </div>
                   </div>
@@ -276,42 +264,14 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
   };
 
   typeCtrl = setupDropdown(dropdownWrapperType, {
-    onSelect: (val, item) => {
-      const requiredTier = item?.getAttribute('data-required-tier');
-      if (requiredTier === 'atlas' && !isAtlasSupported) {
-        showToast('La exportación Game Atlas requiere el plan Negocios.', 'info');
-        openUpgradeModal('business');
-        typeCtrl?.close();
-        return false;
-      }
-      if (requiredTier === 'pro' && !isHighRes) {
-        showToast('Esta opción de exportación requiere el plan Pro o Negocios.', 'info');
-        openUpgradeModal('pro');
-        typeCtrl?.close();
-        return false;
-      }
-
+    onSelect: (val) => {
       selectedType = val as typeof selectedType;
       updateUI();
     },
   });
 
   scaleCtrl = setupDropdown(dropdownWrapperScale, {
-    onSelect: (val, item) => {
-      const requiredTier = item?.getAttribute('data-required-tier');
-      if (requiredTier === 'business' && !isUltraScale) {
-        showToast('El escalado 16x (Ultra 4K) requiere el plan Negocios o Institucional.', 'info');
-        openUpgradeModal('business');
-        scaleCtrl?.close();
-        return false;
-      }
-      if (requiredTier === 'pro' && !isHighRes) {
-        showToast('El escalado en alta resolución requiere el plan Pro o Negocios.', 'info');
-        openUpgradeModal('pro');
-        scaleCtrl?.close();
-        return false;
-      }
-
+    onSelect: (val) => {
       selectedScale = parseInt(val || '1', 10);
       updateUI();
     },

@@ -2,7 +2,7 @@ import { canvasPool, pool } from '../config/database.config.js';
 import { redis } from '../config/redis.config.js';
 import { logger } from './logger.service.js';
 import { headObject } from './s3.service.js';
-import { normalizeTierKey } from './subscription.service.js';
+import { normalizeTierKey, PLAN_TIER_CONFIGS } from './subscription.service.js';
 import fs from 'fs';
 import mysql from 'mysql2/promise';
 import path from 'path';
@@ -34,9 +34,9 @@ export interface UserStorageUsage {
 }
 
 export const TIER_STORAGE_LIMITS: Record<string, number> = {
-  free: 1024 * 1024 * 1024,
-  pro: 10 * 1024 * 1024 * 1024,
-  business: 1024 * 1024 * 1024 * 1024,
+  free: PLAN_TIER_CONFIGS.free.limits.storageBytes,
+  pro: PLAN_TIER_CONFIGS.pro.limits.storageBytes,
+  business: PLAN_TIER_CONFIGS.business.limits.storageBytes,
 };
 
 const TIER_DISPLAY_NAMES: Record<string, string> = {
@@ -198,7 +198,7 @@ export async function checkUserStorageQuota(
       usedBytes: 0,
       limitBytes: TIER_STORAGE_LIMITS.free,
       remainingBytes: TIER_STORAGE_LIMITS.free,
-      limitFormatted: '1 GB',
+      limitFormatted: PLAN_TIER_CONFIGS.free.limits.storageFormatted || '5 GB',
     };
   }
 }

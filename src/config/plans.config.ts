@@ -5,12 +5,7 @@ export type { SubscriptionTierId };
 export type PlanFeatureKey =
   | 'teams'
   | 'live_collaborators_extended'
-  | 'unlimited_layers'
-  | 'advanced_export'
-  | 'advanced_snapshots'
-  | 'custom_palettes'
-  | 'enterprise_sso'
-  | 'priority_support';
+  | 'enterprise_sso';
 
 export interface PlanLimits {
   storageBytes: number;
@@ -20,8 +15,6 @@ export interface PlanLimits {
   maxTeams: number;
   maxTeamMembers: number;
   maxLayers: number;
-  maxSnapshots: number;
-  snapshotRetentionDays: number;
   trashRetentionDays: number;
   maxExportScale: number;
   allowedExportTypes: string[];
@@ -49,18 +42,16 @@ export const PLAN_TIER_CONFIGS: Record<SubscriptionTierId, PlanBenefitDefinition
     priceYearly: 0,
     currency: 'USD',
     limits: {
-      storageBytes: 1024 * 1024 * 1024,
-      storageFormatted: '1 GB',
+      storageBytes: 5 * 1024 * 1024 * 1024,
+      storageFormatted: '5 GB',
       maxCanvasDimension: 16384,
       maxLiveCollaborators: 3,
       maxTeams: 0,
       maxTeamMembers: 0,
-      maxLayers: 5,
-      maxSnapshots: 3,
-      snapshotRetentionDays: 7,
+      maxLayers: 25,
       trashRetentionDays: 30,
-      maxExportScale: 2,
-      allowedExportTypes: ['png-current', 'project-json'],
+      maxExportScale: 16,
+      allowedExportTypes: ['png-current', 'project-json', 'spritesheet', 'gif', 'spritesheet-atlas'],
     },
     features: [],
     borderColor: '#9ca3af',
@@ -74,25 +65,19 @@ export const PLAN_TIER_CONFIGS: Record<SubscriptionTierId, PlanBenefitDefinition
     priceYearly: 95.9,
     currency: 'USD',
     limits: {
-      storageBytes: 10 * 1024 * 1024 * 1024,
-      storageFormatted: '10 GB',
+      storageBytes: 100 * 1024 * 1024 * 1024,
+      storageFormatted: '100 GB',
       maxCanvasDimension: 16384,
       maxLiveCollaborators: 6,
       maxTeams: 0,
       maxTeamMembers: 0,
-      maxLayers: 999999,
-      maxSnapshots: 30,
-      snapshotRetentionDays: 30,
+      maxLayers: 25,
       trashRetentionDays: 30,
-      maxExportScale: 8,
-      allowedExportTypes: ['png-current', 'project-json', 'spritesheet', 'gif'],
+      maxExportScale: 16,
+      allowedExportTypes: ['png-current', 'project-json', 'spritesheet', 'gif', 'spritesheet-atlas'],
     },
     features: [
       'live_collaborators_extended',
-      'unlimited_layers',
-      'advanced_export',
-      'advanced_snapshots',
-      'custom_palettes',
     ],
     borderColor: '#3b82f6',
     ringBg: 'rgba(59, 130, 246, 0.15)',
@@ -105,15 +90,13 @@ export const PLAN_TIER_CONFIGS: Record<SubscriptionTierId, PlanBenefitDefinition
     priceYearly: 191.9,
     currency: 'USD',
     limits: {
-      storageBytes: 1024 * 1024 * 1024 * 1024,
-      storageFormatted: '1 TB',
+      storageBytes: 500 * 1024 * 1024 * 1024,
+      storageFormatted: '500 GB',
       maxCanvasDimension: 16384,
       maxLiveCollaborators: 50,
       maxTeams: 999999,
       maxTeamMembers: 999999,
-      maxLayers: 999999,
-      maxSnapshots: 999999,
-      snapshotRetentionDays: 999999,
+      maxLayers: 25,
       trashRetentionDays: 30,
       maxExportScale: 16,
       allowedExportTypes: ['png-current', 'project-json', 'spritesheet', 'gif', 'spritesheet-atlas'],
@@ -121,12 +104,7 @@ export const PLAN_TIER_CONFIGS: Record<SubscriptionTierId, PlanBenefitDefinition
     features: [
       'teams',
       'live_collaborators_extended',
-      'unlimited_layers',
-      'advanced_export',
-      'advanced_snapshots',
-      'custom_palettes',
       'enterprise_sso',
-      'priority_support',
     ],
     borderColor: 'conic-gradient(from 295deg, #8b5cf6 0% 28%, #ec4899 28% 57%, #3b82f6 57% 85%, #6366f1 85% 100%)',
     ringBg: 'rgba(139, 92, 246, 0.18)',
@@ -136,12 +114,7 @@ export const PLAN_TIER_CONFIGS: Record<SubscriptionTierId, PlanBenefitDefinition
 export const FEATURE_REQUIREMENTS: Record<PlanFeatureKey, { minTier: SubscriptionTierId; name: string }> = {
   teams: { minTier: 'business', name: 'Gestión de equipos' },
   live_collaborators_extended: { minTier: 'pro', name: 'Colaboración en vivo extendida' },
-  unlimited_layers: { minTier: 'pro', name: 'Capas ilimitadas' },
-  advanced_export: { minTier: 'pro', name: 'Exportación avanzada (GIF, Spritesheets)' },
-  advanced_snapshots: { minTier: 'pro', name: 'Historial de versiones y snapshots' },
-  custom_palettes: { minTier: 'pro', name: 'Paletas personalizadas' },
   enterprise_sso: { minTier: 'business', name: 'Autenticación empresarial (SSO / SCIM)' },
-  priority_support: { minTier: 'business', name: 'Soporte prioritario' },
 };
 
 export const TIER_RANK: Record<SubscriptionTierId, number> = {

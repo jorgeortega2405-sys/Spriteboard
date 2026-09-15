@@ -351,7 +351,7 @@
       "storage_accordion_title": "Almacenamiento en la nube",
       "storage_accordion_desc": "Control de espacio utilizado por tus lienzos, versiones y archivos multimedia.",
       "btn_increase_storage": "Aumentar almacenamiento",
-      "tier_business_badge": "Plan Negocios (1 TB)",
+      "tier_business_badge": "Plan Negocios (500 GB)",
       "storage_over_limit": "Has alcanzado el límite de almacenamiento de tu plan.",
       "storage_remaining_label": "Te quedan {amount} de espacio disponible",
       "storage_canvases_title": "Lienzos activos",
@@ -812,7 +812,7 @@
   },
 
   "design": {
-    "layers_free_limit": "El plan Gratis permite hasta 5 capas por lienzo. Mejora a Pro para capas ilimitadas."
+    "layers_limit_reached": "Has alcanzado el límite máximo de 25 capas por lienzo."
   },
   "upgrade_modal": {
     "title_prefix": "Sube de categoría a",
@@ -843,7 +843,8 @@
     "benefit_layers": "Capas por lienzo",
     "benefit_history": "Historial de versiones",
     "benefit_trash": "Retención en papelera",
-    "benefit_sso": "Inicio de sesión único (SSO)"
+    "benefit_sso": "Inicio de sesión único (SSO)",
+    "benefit_support": "Soporte técnico"
   },
   "comments": {
     "title": "Comentarios",

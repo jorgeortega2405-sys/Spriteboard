@@ -74,7 +74,7 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
                       <span class="upgrade-plan-card__name">${businessTitle}</span>
                       <span class="upgrade-plan-card__price">${t('upgrade_modal.plan_business_price') || '$19.99/mes'}</span>
                     </div>
-                    <span class="upgrade-plan-card__desc">${t('upgrade_modal.plan_business_desc') || 'Máxima potencia, colaboración y soporte 1 a 1.'}</span>
+                    <span class="upgrade-plan-card__desc">${t('upgrade_modal.plan_business_desc') || 'Máxima potencia, colaboración y equipos centralizados.'}</span>
                   </div>
                 </div>
               </div>
@@ -106,64 +106,29 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
                     <td class="col-feature">
                       <span>${t('upgrade_modal.benefit_storage') || 'Almacenamiento en la nube'}</span>
                     </td>
-                    <td class="col-plan col-plan--pro${selectedPlan === 'pro' ? ' is-active' : ''}">10 GB</td>
-                    <td class="col-plan col-plan--business${selectedPlan === 'business' ? ' is-active' : ''}">1 TB</td>
-                  </tr>
-                  <tr>
-                    <td class="col-feature">
-                      <span>${t('upgrade_modal.benefit_canvas_size') || 'Lienzo máximo'}</span>
-                    </td>
-                    <td class="col-plan col-plan--pro${selectedPlan === 'pro' ? ' is-active' : ''}">Cualquier tamaño</td>
-                    <td class="col-plan col-plan--business${selectedPlan === 'business' ? ' is-active' : ''}">Cualquier tamaño</td>
+                    <td class="col-plan col-plan--pro${selectedPlan === 'pro' ? ' is-active' : ''}">100 GB</td>
+                    <td class="col-plan col-plan--business${selectedPlan === 'business' ? ' is-active' : ''}">500 GB</td>
                   </tr>
                   <tr>
                     <td class="col-feature">
                       <span>${t('upgrade_modal.benefit_collab') || 'Colaboración en vivo'}</span>
                     </td>
-                    <td class="col-plan col-plan--pro${selectedPlan === 'pro' ? ' is-active' : ''}">6</td>
-                    <td class="col-plan col-plan--business${selectedPlan === 'business' ? ' is-active' : ''}">50</td>
+                    <td class="col-plan col-plan--pro${selectedPlan === 'pro' ? ' is-active' : ''}">Hasta 6 personas</td>
+                    <td class="col-plan col-plan--business${selectedPlan === 'business' ? ' is-active' : ''}">Hasta 50 personas</td>
                   </tr>
                   <tr>
                     <td class="col-feature">
                       <span>${t('upgrade_modal.benefit_teams') || 'Equipos de trabajo'}</span>
                     </td>
                     <td class="col-plan col-plan--pro${selectedPlan === 'pro' ? ' is-active' : ''}">—</td>
-                    <td class="col-plan col-plan--business${selectedPlan === 'business' ? ' is-active' : ''}">Ilimitados</td>
+                    <td class="col-plan col-plan--business${selectedPlan === 'business' ? ' is-active' : ''}">Incluido</td>
                   </tr>
                   <tr>
                     <td class="col-feature">
-                      <span>${t('upgrade_modal.benefit_export_formats') || 'Formatos de exportación'}</span>
+                      <span>${t('upgrade_modal.benefit_sso') || 'Autenticación empresarial SSO'}</span>
                     </td>
-                    <td class="col-plan col-plan--pro${selectedPlan === 'pro' ? ' is-active' : ''}">GIF, Atlas</td>
-                    <td class="col-plan col-plan--business${selectedPlan === 'business' ? ' is-active' : ''}">Todos</td>
-                  </tr>
-                  <tr>
-                    <td class="col-feature">
-                      <span>${t('upgrade_modal.benefit_export_scale') || 'Escala máxima'}</span>
-                    </td>
-                    <td class="col-plan col-plan--pro${selectedPlan === 'pro' ? ' is-active' : ''}">8x</td>
-                    <td class="col-plan col-plan--business${selectedPlan === 'business' ? ' is-active' : ''}">16x</td>
-                  </tr>
-                  <tr>
-                    <td class="col-feature">
-                      <span>${t('upgrade_modal.benefit_layers') || 'Capas por lienzo'}</span>
-                    </td>
-                    <td class="col-plan col-plan--pro${selectedPlan === 'pro' ? ' is-active' : ''}">Ilimitadas</td>
-                    <td class="col-plan col-plan--business${selectedPlan === 'business' ? ' is-active' : ''}">Ilimitadas</td>
-                  </tr>
-                  <tr>
-                    <td class="col-feature">
-                      <span>${t('upgrade_modal.benefit_history') || 'Historial de versiones'}</span>
-                    </td>
-                    <td class="col-plan col-plan--pro${selectedPlan === 'pro' ? ' is-active' : ''}">30 días</td>
-                    <td class="col-plan col-plan--business${selectedPlan === 'business' ? ' is-active' : ''}">Ilimitado</td>
-                  </tr>
-                  <tr>
-                    <td class="col-feature">
-                      <span>${t('upgrade_modal.benefit_trash') || 'Retención en papelera'}</span>
-                    </td>
-                    <td class="col-plan col-plan--pro${selectedPlan === 'pro' ? ' is-active' : ''}">30 días</td>
-                    <td class="col-plan col-plan--business${selectedPlan === 'business' ? ' is-active' : ''}">30 días</td>
+                    <td class="col-plan col-plan--pro${selectedPlan === 'pro' ? ' is-active' : ''}">—</td>
+                    <td class="col-plan col-plan--business${selectedPlan === 'business' ? ' is-active' : ''}">Incluido</td>
                   </tr>
                 </tbody>
               </table>
@@ -242,7 +207,7 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
   const goToUpgrade = (e: MouseEvent) => {
     e.preventDefault();
     closeModal();
-    navigate(`/upgrade?plan=${selectedPlan}`);
+    navigate('/upgrade');
   };
 
   ctaBtn?.addEventListener('click', goToUpgrade);

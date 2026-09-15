@@ -1727,7 +1727,7 @@ export async function createBillingView(): Promise<HTMLElement> {
 
     if (btnStorageUpgrade) {
       if (storage.tier === 'business') {
-        btnStorageUpgrade.textContent = t('settings.billing.tier_business_badge') || 'Plan Negocios (1 TB)';
+        btnStorageUpgrade.textContent = t('settings.billing.tier_business_badge') || 'Plan Negocios (500 GB)';
         btnStorageUpgrade.onclick = (e) => {
           e.preventDefault();
           navigate('/upgrade');
