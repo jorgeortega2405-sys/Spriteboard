@@ -1,0 +1,104 @@
+<div class="layout-nav" data-ref="sidebar">
+  <div class="layout-rail" data-ref="layout-rail">
+    <div class="layout-rail__top" data-ref="rail-top">
+      <button type="button" class="component-button component-button--h40 component-button--icon-only rail-btn rail-btn--toggle" data-ref="btn-toggle-drawer" data-tooltip="Alternar menú lateral" aria-label="Alternar menú lateral">
+        <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#dock_to_right"></use></svg>
+      </button>
+    </div>
+
+    <hr class="rail-divider" data-ref="rail-divider" />
+
+    <div class="layout-rail__center" data-ref="rail-center">
+      <div class="rail-nav-item" data-ref="rail-item-dashboard">
+        <button type="button" class="component-button component-button--h40 component-button--icon-only rail-btn" data-ref="btn-rail-dashboard" data-tooltip="Dashboard" aria-label="Dashboard">
+          <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#dashboard"></use></svg>
+        </button>
+        <span class="rail-nav-item__label">Dashboard</span>
+      </div>
+
+      <div class="rail-nav-item" data-ref="rail-item-users">
+        <button type="button" class="component-button component-button--h40 component-button--icon-only rail-btn" data-ref="btn-rail-users" data-tooltip="Gestionar usuarios" aria-label="Gestionar usuarios">
+          <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#group"></use></svg>
+        </button>
+        <span class="rail-nav-item__label">Gestionar usuarios</span>
+      </div>
+
+      <div class="rail-nav-item" data-ref="rail-item-backups">
+        <button type="button" class="component-button component-button--h40 component-button--icon-only rail-btn" data-ref="btn-rail-backups" data-tooltip="Copias de seguridad" aria-label="Copias de seguridad">
+          <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#cloud_upload"></use></svg>
+        </button>
+        <span class="rail-nav-item__label">Copias de seguridad</span>
+      </div>
+
+      <div class="rail-nav-item" data-ref="rail-item-system">
+        <button type="button" class="component-button component-button--h40 component-button--icon-only rail-btn" data-ref="btn-rail-system" data-tooltip="Configuración del sistema" aria-label="Configuración del sistema">
+          <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#settings"></use></svg>
+        </button>
+        <span class="rail-nav-item__label">Configuración del sistema</span>
+      </div>
+    </div>
+
+    <div class="layout-rail__bottom" data-ref="rail-bottom">
+      <div class="rail-item-container" data-ref="avatar-container">
+        <button type="button" class="component-button component-button--avatar rail-avatar-btn" data-ref="btn-avatar" data-tooltip="Perfil" aria-label="Perfil">
+          <img class="avatar-img image-lazy-fade" data-ref="avatar-img" src="" alt="Avatar" referrerpolicy="no-referrer" />
+        </button>
+
+        <div class="avatar-dropdown-backdrop" data-ref="avatar-menu-backdrop">
+          <div class="menu-panel menu-panel--dropdown menu-panel--w-325 menu-panel--h-auto avatar-panel rail-floating-panel" data-ref="avatar-menu">
+            <div class="menu-panel__drag-zone" data-ref="avatar-menu-drag-zone" aria-hidden="true">
+              <div class="menu-panel__drag-handle"></div>
+            </div>
+
+            <div class="menu-panel__list" data-ref="panel-main-options">
+              <div class="avatar-menu__section-header" data-ref="section-header-accounts">
+                <span class="drawer-section__title">Cuentas</span>
+              </div>
+              <button type="button" class="menu-item menu-item--bordered account-item" data-ref="btn-switch-account-menu">
+                <div class="account-item__avatar" data-ref="active-account-avatar-box">
+                  <img class="avatar-img image-lazy-fade" data-ref="active-account-avatar" src="" alt="Avatar" referrerpolicy="no-referrer" />
+                </div>
+                <div class="account-item__info" data-ref="active-account-info">
+                  <span class="account-item__name" data-ref="active-account-name"></span>
+                  <span class="account-item__email" data-ref="active-account-email"></span>
+                </div>
+                <svg class="component-icon account-item__arrow" aria-hidden="true"><use href="/icons.svg#navigate_next"></use></svg>
+              </button>
+
+              <div class="menu-divider" data-ref="active-account-divider"></div>
+
+              <button type="button" class="menu-item" data-ref="btn-menu-settings">
+                <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#settings"></use></svg>
+                <span class="menu-item__text">Configuración</span>
+              </button>
+
+              <div class="menu-divider"></div>
+
+              <button type="button" class="menu-item menu-item--bordered menu-item--danger" data-ref="btn-logout">
+                <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#logout"></use></svg>
+                <span class="menu-item__text">Cerrar sesión</span>
+              </button>
+            </div>
+
+            <div class="menu-panel__list" data-ref="panel-account-switcher" style="display: none;">
+              <button type="button" class="menu-item menu-item--bordered" data-ref="btn-back-to-main-menu">
+                <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
+                <span class="menu-item__text">Volver</span>
+              </button>
+              <div class="menu-divider"></div>
+
+              <div class="account-switcher__list" data-ref="account-switcher-list"></div>
+
+              <div class="menu-divider"></div>
+
+              <button type="button" class="menu-item menu-item--bordered menu-item--danger" data-ref="btn-logout-all">
+                <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#logout"></use></svg>
+                <span class="menu-item__text">Cerrar todas las sesiones</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

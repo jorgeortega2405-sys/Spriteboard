@@ -1,0 +1,64 @@
+<div class="layout-content" data-ref="user-sanctions-view">
+  <div class="component-wrapper component-wrapper--full home-wrapper view-wrapper" data-ref="sanctions-wrapper">
+    <div class="component-bottom component-bottom--no-padding" data-ref="component-bottom">
+      <div class="home-floating-top" data-ref="component-top">
+        <div class="home-floating-top__left" data-ref="component-top-left" style="display: flex; align-items: center; gap: 8px;">
+          <button type="button" class="component-button component-button--h34" data-ref="btn-back-users">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
+            <span>Volver</span>
+          </button>
+          <h1 class="section-floating-title" data-ref="sanctions-title" style="margin: 0;">Historial de Sanciones</h1>
+          <span class="component-badge component-badge--sm" data-ref="badge-sanctions-user">@usuario</span>
+        </div>
+
+        <div class="home-floating-top__right" data-ref="component-top-right">
+          <div class="home-floating-actions" data-ref="sanctions-actions" style="display: flex; align-items: center; gap: 8px;">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-toggle-search" data-tooltip="Buscar en historial" aria-label="Buscar en historial">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+            </button>
+
+            <button type="button" class="component-button component-button--h40 component-button--black home-floating-btn" data-ref="btn-apply-sanction" data-tooltip="Aplicar nueva sanción" aria-label="Aplicar nueva sanción">
+              <svg class="component-icon" aria-hidden="true" style="margin-right: 6px;"><use href="/icons.svg#shield"></use></svg>
+              <span>Aplicar sanción</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="component-search-toolbar is-hidden" data-ref="search-toolbar">
+          <div class="component-search component-search--full" data-ref="search-box">
+            <div class="component-search__icon" data-ref="search-icon">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+            </div>
+            <div class="component-search__input-box" data-ref="search-input-box">
+              <input class="component-search__input" data-ref="sanctions-search-input" placeholder="Buscar por motivo, tipo o administrador..." type="text" maxlength="100" autocomplete="off" />
+            </div>
+            <button type="button" class="component-button component-button--h34 component-button--icon-only" data-ref="btn-clear-search" style="display: none; margin-right: 4px;" aria-label="Limpiar búsqueda">
+              <svg class="component-icon" aria-hidden="true" style="font-size: 18px;"><use href="/icons.svg#close"></use></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="component-table-wrapper" data-ref="sanctions-table-wrapper" style="display: flex; flex-direction: column; height: 100%;">
+        <div class="table-scroll-container" style="flex: 1; overflow: auto;">
+          <table class="component-table" data-ref="sanctions-table">
+            <thead class="component-table__head" data-ref="sanctions-thead">
+              <tr>
+                <th data-ref="th-type" style="width: 170px;">Tipo de Sanción</th>
+                <th data-ref="th-status" style="width: 110px;">Estado</th>
+                <th data-ref="th-reason">Motivo / Causa</th>
+                <th data-ref="th-duration" style="width: 180px;">Duración / Vencimiento</th>
+                <th data-ref="th-admin" style="width: 150px;">Aplicado Por</th>
+                <th data-ref="th-date" style="width: 140px;">Fecha</th>
+                <th data-ref="th-actions" style="width: 100px; text-align: right;">Acciones</th>
+              </tr>
+            </thead>
+            <tbody class="component-table__body" data-ref="sanctions-tbody">
+              <!-- Inyectado dinámicamente -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

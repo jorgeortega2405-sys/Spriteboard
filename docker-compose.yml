@@ -120,6 +120,37 @@ services:
       - /app/node_modules
     command: npm run dev
 
+  admin:
+    build: ./admin
+    container_name: spriteboard-admin
+    restart: unless-stopped
+    ports:
+      - "3002:3002"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=development
+      - PORT=3002
+      - ADMIN_PORT=3002
+      - CHOKIDAR_USEPOLLING=true
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=sprite_user
+      - DB_PASSWORD=sprite_password
+      - DB_NAME=db_identity
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - ADMIN_GOOGLE_CALLBACK_URL=http://localhost:3002/api/auth/google/callback
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./admin:/app
+      - /app/node_modules
+    command: npm run dev
+
   worker:
     build: ./worker
     container_name: spriteboard-worker

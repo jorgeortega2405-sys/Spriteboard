@@ -1,0 +1,273 @@
+<div class="layout-content" data-ref="user-manage-view">
+  <div class="component-wrapper component-wrapper--full home-wrapper view-wrapper" data-ref="settings-wrapper">
+    <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="settings-scrollable">
+      <div class="settings-layout" data-ref="settings-layout">
+        
+        <!-- Header -->
+        <div class="settings-header" data-ref="settings-header">
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+            <button type="button" class="component-button component-button--h34" data-ref="btn-back-users">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
+              <span>Volver a usuarios</span>
+            </button>
+          </div>
+          <h1 class="settings-title" data-ref="settings-title">Gestionar cuenta</h1>
+          <p class="settings-subtitle" data-ref="settings-subtitle">Administra la información de perfil, credenciales, preferencias y sesiones del usuario seleccionado.</p>
+        </div>
+
+        <!-- Grupo 1: Perfil y Datos Personales -->
+        <div class="settings-group" data-ref="group-profile-data">
+          <!-- Item 1: Foto de perfil -->
+          <div class="settings-item" data-ref="item-avatar">
+            <div class="settings-item__content" data-ref="item-avatar-content">
+              <div class="settings-item__avatar" data-ref="avatar-preview-box">
+                <img class="avatar-preview-img image-lazy-fade" data-ref="profile-avatar-img" src="" alt="Avatar" referrerpolicy="no-referrer" onload="this.classList.add('image-loaded')" onerror="this.classList.add('image-loaded')" />
+                <div class="avatar-preview-overlay" data-ref="avatar-preview-overlay">
+                  <span class="material-symbols-rounded">photo_camera</span>
+                </div>
+              </div>
+              <div class="settings-item__text" data-ref="item-avatar-text">
+                <h2 class="settings-item__title" data-ref="item-avatar-title">Foto de perfil</h2>
+                <p class="settings-item__desc" data-ref="item-avatar-desc">Formatos compatibles: PNG, JPG o WEBP. Tamaño máximo 2 MB.</p>
+                <input class="settings-file-input" data-ref="input-avatar-file" type="file" accept="image/png, image/jpeg, image/jpg, image/webp" style="display: none;" />
+              </div>
+            </div>
+            <div class="settings-item__actions" data-ref="item-avatar-actions">
+              <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-upload-avatar">Subir foto</button>
+              <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-change-avatar" style="display: none;">Cambiar</button>
+              <button type="button" class="component-button component-button--h34" data-ref="btn-delete-avatar" style="display: none;">Eliminar</button>
+              <button type="button" class="component-button component-button--h34" data-ref="btn-cancel-avatar" style="display: none;">Cancelar</button>
+              <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-save-avatar" style="display: none;">Guardar</button>
+            </div>
+          </div>
+          <div class="banner banner--danger" data-ref="avatar-error" style="display: none; margin: 0 24px 16px 24px;"></div>
+
+          <hr class="settings-divider" />
+
+          <!-- Item 2: Nombre de usuario -->
+          <div class="settings-item" data-ref="item-username">
+            <div class="settings-item__content" data-ref="item-username-content">
+              <div class="settings-item__text" data-ref="item-username-text">
+                <h2 class="settings-item__title" data-ref="item-username-title">Nombre de usuario</h2>
+                <div class="settings-item__view-box" data-ref="username-view-box">
+                  <span class="settings-item__value" data-ref="display-username">-</span>
+                </div>
+                <div class="settings-edit-row" data-ref="username-edit-row" style="display: none;">
+                  <input class="field__input field__input--simple" data-ref="input-username" type="text" maxlength="30" autocomplete="username" placeholder="Nuevo nombre de usuario" />
+                  <div class="settings-item__actions">
+                    <button type="button" class="component-button component-button--h34" data-ref="btn-cancel-username">Cancelar</button>
+                    <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-save-username">Guardar</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="settings-item__actions" data-ref="username-view-actions">
+              <button type="button" class="component-button component-button--h34" data-ref="btn-edit-username">Editar</button>
+            </div>
+          </div>
+          <div class="banner banner--danger" data-ref="username-error" style="display: none; margin: 0 24px 16px 24px;"></div>
+
+          <hr class="settings-divider" />
+
+          <!-- Item 3: Correo electrónico -->
+          <div class="settings-item" data-ref="item-email">
+            <div class="settings-item__content" data-ref="item-email-content">
+              <div class="settings-item__text" data-ref="item-email-text">
+                <h2 class="settings-item__title" data-ref="item-email-title">Correo electrónico</h2>
+                <div class="settings-item__view-box" data-ref="email-view-box">
+                  <span class="settings-item__value" data-ref="display-email">-</span>
+                </div>
+                <div class="settings-edit-row" data-ref="email-edit-row" style="display: none;">
+                  <input class="field__input field__input--simple" data-ref="input-email" type="email" maxlength="254" autocomplete="email" placeholder="Nuevo correo electrónico" />
+                  <div class="settings-item__actions">
+                    <button type="button" class="component-button component-button--h34" data-ref="btn-cancel-email">Cancelar</button>
+                    <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-save-email">Guardar</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="settings-item__actions" data-ref="email-view-actions">
+              <button type="button" class="component-button component-button--h34" data-ref="btn-edit-email">Editar</button>
+            </div>
+          </div>
+          <div class="banner banner--danger" data-ref="email-error" style="display: none; margin: 0 24px 16px 24px;"></div>
+        </div>
+
+        <!-- Grupo 2: Gestión de sesiones -->
+        <div class="settings-group" data-ref="group-sessions-management">
+          <!-- Item: Cerrar todas las sesiones -->
+          <div class="settings-item" data-ref="item-logout-all">
+            <div class="settings-item__content" data-ref="item-logout-all-content">
+              <div class="settings-item__icon-box" data-ref="item-logout-all-icon-box">
+                <span class="material-symbols-rounded">devices</span>
+              </div>
+              <div class="settings-item__text" data-ref="item-logout-all-text">
+                <h2 class="settings-item__title" data-ref="item-logout-all-title">Cerrar sesión en todos los dispositivos</h2>
+                <p class="settings-item__desc" data-ref="item-logout-all-desc">Revoca y cierra todas las sesiones activas de este usuario en cualquier dispositivo o navegador.</p>
+              </div>
+            </div>
+            <div class="settings-item__actions" data-ref="item-logout-all-actions">
+              <button type="button" class="component-button component-button--h34 component-button--danger" data-ref="btn-revoke-all-sessions">Cerrar todas las sesiones</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Grupo 3: Preferencias del usuario -->
+        <div class="settings-group" data-ref="group-preferences">
+          <!-- Item 1: Idioma -->
+          <div class="settings-item settings-item--stacked" data-ref="item-language">
+            <div class="settings-item__content" data-ref="item-language-content">
+              <div class="settings-item__text" data-ref="item-language-text">
+                <h2 class="settings-item__title" data-ref="item-language-title">Idioma de la aplicación</h2>
+                <p class="settings-item__desc" data-ref="item-language-desc">Idioma configurado para la experiencia del usuario.</p>
+              </div>
+            </div>
+            <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-language">
+              <button type="button" class="dropdown-trigger" data-ref="btn-trigger-language" aria-label="Seleccionar idioma">
+                <div class="dropdown-trigger__left">
+                  <span class="material-symbols-rounded dropdown-trigger__icon">language</span>
+                  <span class="dropdown-trigger__text" data-ref="language-selected-text"></span>
+                </div>
+                <span class="material-symbols-rounded dropdown-trigger__chevron">expand_more</span>
+              </button>
+
+              <div class="dropdown-backdrop" data-ref="dropdown-backdrop-language">
+                <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-language">
+                  <div class="menu-panel__drag-zone" data-ref="drag-zone-language" aria-hidden="true">
+                    <div class="menu-panel__drag-handle"></div>
+                  </div>
+                  <div class="menu-panel__search" data-ref="search-wrapper-language">
+                    <span class="material-symbols-rounded menu-panel__search-icon">search</span>
+                    <input class="menu-panel__search-input" data-ref="input-search-language" type="text" maxlength="50" autocomplete="off" placeholder="Buscar idioma..." />
+                  </div>
+                  <div class="menu-panel__list menu-panel__list--scrollable" data-ref="list-languages">
+                  </div>
+                  <div class="menu-panel__empty" data-ref="empty-languages" style="display: none;">
+                    No se encontraron idiomas
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <hr class="settings-divider" />
+
+          <!-- Item 2: Abrir enlaces en nueva pestaña -->
+          <div class="settings-item" data-ref="item-open-links">
+            <div class="settings-item__content" data-ref="item-open-links-content">
+              <div class="settings-item__text" data-ref="item-open-links-text">
+                <h2 class="settings-item__title" data-ref="item-open-links-title">Abrir enlaces en nueva pestaña</h2>
+                <p class="settings-item__desc" data-ref="item-open-links-desc">Abre los recursos y documentación externa en una nueva pestaña del navegador.</p>
+              </div>
+            </div>
+            <div class="settings-item__actions" data-ref="item-open-links-actions">
+              <label class="toggle-switch" data-ref="label-toggle-open-links">
+                <input class="toggle-switch__input" data-ref="toggle-open-links" type="checkbox" />
+                <span class="toggle-switch__slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Grupo 4: Accesibilidad y Tema -->
+        <div class="settings-group" data-ref="group-accessibility">
+          <!-- Item 1: Tema -->
+          <div class="settings-item settings-item--stacked" data-ref="item-theme">
+            <div class="settings-item__content" data-ref="item-theme-content">
+              <div class="settings-item__text" data-ref="item-theme-text">
+                <h2 class="settings-item__title" data-ref="item-theme-title">Tema de la interfaz</h2>
+                <p class="settings-item__desc" data-ref="item-theme-desc">Apariencia visual de la plataforma para este usuario.</p>
+              </div>
+            </div>
+            <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-theme">
+              <button type="button" class="dropdown-trigger" data-ref="btn-trigger-theme" aria-label="Seleccionar tema">
+                <div class="dropdown-trigger__left">
+                  <span class="material-symbols-rounded dropdown-trigger__icon" data-ref="theme-selected-icon">brightness_auto</span>
+                  <span class="dropdown-trigger__text" data-ref="theme-selected-text">Automático (del sistema)</span>
+                </div>
+                <span class="material-symbols-rounded dropdown-trigger__chevron">expand_more</span>
+              </button>
+
+              <div class="dropdown-backdrop" data-ref="dropdown-backdrop-theme">
+                <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-theme">
+                  <div class="menu-panel__drag-zone" data-ref="drag-zone-theme" aria-hidden="true">
+                    <div class="menu-panel__drag-handle"></div>
+                  </div>
+                  <div class="menu-panel__list" data-ref="list-themes">
+                    <button type="button" class="menu-item is-active" data-ref="option-theme-system" data-theme-value="system">
+                      <span class="material-symbols-rounded menu-item__icon">brightness_auto</span>
+                      <span class="menu-item__text">Automático (del sistema)</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="option-theme-light" data-theme-value="light">
+                      <span class="material-symbols-rounded menu-item__icon">light_mode</span>
+                      <span class="menu-item__text">Claro</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="option-theme-dark" data-theme-value="dark">
+                      <span class="material-symbols-rounded menu-item__icon">dark_mode</span>
+                      <span class="menu-item__text">Oscuro</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <hr class="settings-divider" />
+
+          <!-- Item 2: Reducir animaciones -->
+          <div class="settings-item" data-ref="item-reduce-motion">
+            <div class="settings-item__content" data-ref="item-reduce-motion-content">
+              <div class="settings-item__text" data-ref="item-reduce-motion-text">
+                <h2 class="settings-item__title" data-ref="item-reduce-motion-title">Reducir animaciones</h2>
+                <p class="settings-item__desc" data-ref="item-reduce-motion-desc">Minimiza el movimiento y las transiciones en la interfaz.</p>
+              </div>
+            </div>
+            <div class="settings-item__actions" data-ref="item-reduce-motion-actions">
+              <label class="toggle-switch" data-ref="label-toggle-reduce-motion">
+                <input class="toggle-switch__input" data-ref="toggle-reduce-motion" type="checkbox" />
+                <span class="toggle-switch__slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <hr class="settings-divider" />
+
+          <!-- Item 3: Modo de alto contraste -->
+          <div class="settings-item" data-ref="item-high-contrast">
+            <div class="settings-item__content" data-ref="item-high-contrast-content">
+              <div class="settings-item__text" data-ref="item-high-contrast-text">
+                <h2 class="settings-item__title" data-ref="item-high-contrast-title">Modo de alto contraste</h2>
+                <p class="settings-item__desc" data-ref="item-high-contrast-desc">Aumenta el contraste de colores para mejorar la legibilidad.</p>
+              </div>
+            </div>
+            <div class="settings-item__actions" data-ref="item-high-contrast-actions">
+              <label class="toggle-switch" data-ref="label-toggle-high-contrast">
+                <input class="toggle-switch__input" data-ref="toggle-high-contrast" type="checkbox" />
+                <span class="toggle-switch__slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <hr class="settings-divider" />
+
+          <!-- Item 4: Notificaciones con mayor duración -->
+          <div class="settings-item" data-ref="item-extended-alerts">
+            <div class="settings-item__content" data-ref="item-extended-alerts-content">
+              <div class="settings-item__text" data-ref="item-extended-alerts-text">
+                <h2 class="settings-item__title" data-ref="item-extended-alerts-title">Notificaciones con mayor duración</h2>
+                <p class="settings-item__desc" data-ref="item-extended-alerts-desc">Mantiene las alertas y notificaciones en pantalla durante más tiempo.</p>
+              </div>
+            </div>
+            <div class="settings-item__actions" data-ref="item-extended-alerts-actions">
+              <label class="toggle-switch" data-ref="label-toggle-extended-alerts">
+                <input class="toggle-switch__input" data-ref="toggle-extended-alerts" type="checkbox" />
+                <span class="toggle-switch__slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>

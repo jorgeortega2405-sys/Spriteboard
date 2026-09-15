@@ -1,0 +1,81 @@
+<div class="layout-content" data-ref="admin-dashboard-view">
+  <div class="component-wrapper component-wrapper--full view-wrapper" data-ref="dashboard-wrapper">
+    <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="dashboard-scrollable">
+      <div class="view-body" data-ref="dashboard-container">
+        <div class="view-backdrop" data-ref="dashboard-backdrop"></div>
+        <div class="view-header" data-ref="dashboard-header">
+          <div class="view-header__left" data-ref="dashboard-header-left">
+            <h1 class="view-header__title" data-ref="dashboard-title">Dashboard</h1>
+          </div>
+        </div>
+
+        <div class="view-hero" data-ref="dashboard-hero">
+          <div class="view-hero__content" style="max-width: 880px; margin: 0 auto; padding: 24px 20px;">
+            <div class="admin-welcome-card" data-ref="admin-welcome-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 32px 24px; box-shadow: var(--shadow-sm); text-align: center; margin-bottom: 24px;">
+              <div class="admin-avatar-badge" data-ref="admin-avatar-badge" style="display: inline-flex; align-items: center; justify-content: center; width: 64px; height: 64px; border-radius: 50%; background: var(--bg-card-subtle); border: 1px solid var(--border-color); margin-bottom: 16px;">
+                <svg class="component-icon" style="width: 32px; height: 32px; color: var(--color-brand, #ea580c);" aria-hidden="true"><use href="/icons.svg#dashboard"></use></svg>
+              </div>
+
+              <h1 class="view-hero__title" data-ref="admin-welcome-title" style="margin-bottom: 8px; font-size: 28px;">
+                Hola <span data-ref="admin-user-name" style="color: var(--color-brand, #ea580c);"></span>
+              </h1>
+              <p class="card__subtitle" data-ref="admin-welcome-subtitle" style="margin-bottom: 24px; color: var(--text-secondary);">
+                Bienvenido al centro de administración de Spriteboard.
+              </p>
+
+              <div class="admin-roles-container" data-ref="admin-roles-container" style="text-align: left; background: var(--bg-card-subtle); border-radius: var(--radius-md, 12px); padding: 20px; border: 1px solid var(--border-color-subtle, var(--border-color));">
+                <div class="admin-roles-header" data-ref="admin-roles-header" style="display: flex; align-items: center; gap: 8px; margin-bottom: 14px;">
+                  <svg class="component-icon" style="width: 20px; height: 20px; color: var(--text-secondary);" aria-hidden="true"><use href="/icons.svg#shield"></use></svg>
+                  <span style="font-weight: 600; font-size: 15px; color: var(--text-primary);">Tus roles asignados:</span>
+                </div>
+                <div class="admin-roles-badges" data-ref="admin-roles-list" style="display: flex; flex-wrap: wrap; gap: 8px;">
+                </div>
+              </div>
+            </div>
+
+            <div class="dashboard-quick-grid" data-ref="dashboard-quick-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px;">
+              <button type="button" class="component-button component-button--bordered" data-ref="card-nav-users" style="display: flex; flex-direction: column; align-items: flex-start; padding: 20px; height: auto; border-radius: var(--radius-lg, 16px); background: var(--bg-card); gap: 10px; text-align: left;">
+                <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                  <div style="width: 40px; height: 40px; border-radius: 10px; background: var(--bg-card-subtle); display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
+                    <svg class="component-icon" style="width: 22px; height: 22px; color: var(--color-brand, #ea580c);" aria-hidden="true"><use href="/icons.svg#group"></use></svg>
+                  </div>
+                  <svg class="component-icon" style="width: 18px; height: 18px; color: var(--text-tertiary);" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+                </div>
+                <div>
+                  <div style="font-weight: 600; font-size: 15px; color: var(--text-primary);">Gestionar Usuarios</div>
+                  <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">Cuentas, roles y permisos administrativos</div>
+                </div>
+              </button>
+
+              <button type="button" class="component-button component-button--bordered" data-ref="card-nav-backups" style="display: flex; flex-direction: column; align-items: flex-start; padding: 20px; height: auto; border-radius: var(--radius-lg, 16px); background: var(--bg-card); gap: 10px; text-align: left;">
+                <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                  <div style="width: 40px; height: 40px; border-radius: 10px; background: var(--bg-card-subtle); display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
+                    <svg class="component-icon" style="width: 22px; height: 22px; color: #10b981;" aria-hidden="true"><use href="/icons.svg#cloud_upload"></use></svg>
+                  </div>
+                  <svg class="component-icon" style="width: 18px; height: 18px; color: var(--text-tertiary);" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+                </div>
+                <div>
+                  <div style="font-weight: 600; font-size: 15px; color: var(--text-primary);">Copias de Seguridad</div>
+                  <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">Snapshots de bases de datos y restauración</div>
+                </div>
+              </button>
+
+              <button type="button" class="component-button component-button--bordered" data-ref="card-nav-system" style="display: flex; flex-direction: column; align-items: flex-start; padding: 20px; height: auto; border-radius: var(--radius-lg, 16px); background: var(--bg-card); gap: 10px; text-align: left;">
+                <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                  <div style="width: 40px; height: 40px; border-radius: 10px; background: var(--bg-card-subtle); display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
+                    <svg class="component-icon" style="width: 22px; height: 22px; color: #f59e0b;" aria-hidden="true"><use href="/icons.svg#settings"></use></svg>
+                  </div>
+                  <svg class="component-icon" style="width: 18px; height: 18px; color: var(--text-tertiary);" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+                </div>
+                <div>
+                  <div style="font-weight: 600; font-size: 15px; color: var(--text-primary);">Configuración del Sistema</div>
+                  <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">Parámetros globales y estado del servidor</div>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

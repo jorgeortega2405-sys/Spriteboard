@@ -1,0 +1,135 @@
+<div class="layout-content" data-ref="users-view">
+  <div class="component-wrapper component-wrapper--full home-wrapper view-wrapper" data-ref="users-wrapper">
+    <div class="component-bottom component-bottom--no-padding" data-ref="component-bottom">
+      <div class="home-floating-top" data-ref="component-top">
+        <div class="home-floating-top__left" data-ref="component-top-left">
+          <h1 class="section-floating-title" data-ref="users-title">Gestionar Usuarios</h1>
+        </div>
+
+        <div class="home-floating-top__right" data-ref="component-top-right">
+          <div class="home-floating-actions" data-ref="users-default-actions">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-toggle-search" data-tooltip="Buscar usuarios" aria-label="Buscar usuarios">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+            </button>
+
+            <div class="settings-dropdown-wrapper" data-ref="filter-dropdown-wrapper">
+              <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-toggle-filter" data-tooltip="Filtros" aria-label="Filtros">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
+              </button>
+
+              <div class="dropdown-backdrop" data-ref="filter-dropdown-backdrop">
+                <div class="menu-panel menu-panel--dropdown menu-panel--w-285 menu-panel--h-auto" data-ref="filter-dropdown-menu">
+                  <div class="avatar-menu__section-header">
+                    <span class="drawer-section__title">Filtrar por Rol</span>
+                  </div>
+                  <div class="menu-panel__list" data-ref="filter-roles-list">
+                    <button type="button" class="menu-item is-active" data-ref="filter-role-all" data-role="all">
+                      <span class="menu-item__text">Todos los roles</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="filter-role-super-admin" data-role="SUPER_ADMIN">
+                      <span class="menu-item__text">Super Admin</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="filter-role-platform-admin" data-role="PLATFORM_ADMIN">
+                      <span class="menu-item__text">Platform Admin</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="filter-role-user" data-role="USER">
+                      <span class="menu-item__text">Usuario (Estándar)</span>
+                    </button>
+                  </div>
+
+                  <div class="menu-divider"></div>
+
+                  <div class="avatar-menu__section-header">
+                    <span class="drawer-section__title">Filtrar por 2FA</span>
+                  </div>
+                  <div class="menu-panel__list" data-ref="filter-2fa-list">
+                    <button type="button" class="menu-item is-active" data-ref="filter-2fa-all" data-2fa="all">
+                      <span class="menu-item__text">Todos</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="filter-2fa-enabled" data-2fa="enabled">
+                      <span class="menu-item__text">Con 2FA Activado</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="filter-2fa-disabled" data-2fa="disabled">
+                      <span class="menu-item__text">Sin 2FA</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="component-inline-control component-inline-control--fixed component-inline-control--pagination" data-ref="pagination-inline-control">
+              <div class="component-inline-control__group" data-ref="inline-group-page-prev">
+                <button type="button" class="component-inline-control__btn" data-ref="btn-pagination-prev" data-tooltip="Página anterior" aria-label="Página anterior" disabled>
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+                </button>
+              </div>
+              <input class="component-inline-control__input" data-ref="input-pagination-page" type="number" min="1" max="1" value="1" autocomplete="off" />
+              <div class="component-inline-control__group" data-ref="inline-group-page-next">
+                <button type="button" class="component-inline-control__btn" data-ref="btn-pagination-next" data-tooltip="Página siguiente" aria-label="Página siguiente" disabled>
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="home-floating-actions" data-ref="users-selected-actions" style="display: none; align-items: center; gap: 8px;">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-action-deselect" data-tooltip="Cancelar selección" aria-label="Cancelar selección">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+            </button>
+
+            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-action-account" data-tooltip="Gestionar cuenta" aria-label="Gestionar cuenta">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#person"></use></svg>
+            </button>
+
+            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-action-sanctions" data-tooltip="Gestionar sanciones" aria-label="Gestionar sanciones">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#shield"></use></svg>
+            </button>
+
+            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-action-sanctions-history" data-tooltip="Historial de sanciones" aria-label="Historial de sanciones">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#history"></use></svg>
+            </button>
+
+            <button type="button" class="component-button component-button--h40 component-button--icon-only component-button--black home-floating-btn" data-ref="btn-action-roles" data-tooltip="Gestionar roles" aria-label="Gestionar roles">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#admin_panel_settings"></use></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="component-search-toolbar is-hidden" data-ref="search-toolbar">
+          <div class="component-search component-search--full" data-ref="search-box">
+            <div class="component-search__icon" data-ref="search-icon">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+            </div>
+            <div class="component-search__input-box" data-ref="search-input-box">
+              <input class="component-search__input" data-ref="users-search-input" placeholder="Buscar por nombre o correo..." type="text" maxlength="100" autocomplete="off" />
+            </div>
+            <button type="button" class="component-button component-button--h34 component-button--icon-only" data-ref="btn-clear-search" style="display: none; margin-right: 4px;" aria-label="Limpiar búsqueda">
+              <svg class="component-icon" aria-hidden="true" style="font-size: 18px;"><use href="/icons.svg#close"></use></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="component-table-wrapper" data-ref="users-table-wrapper" style="display: flex; flex-direction: column; height: 100%;">
+        <div class="table-scroll-container" style="flex: 1; overflow: auto;">
+          <table class="component-table" data-ref="users-table">
+            <thead class="component-table__head" data-ref="users-thead">
+              <tr>
+                <th style="width: 48px; text-align: center;" data-ref="th-checkbox">
+                  <input class="component-table__checkbox" data-ref="input-select-all" type="checkbox" aria-label="Seleccionar todos" />
+                </th>
+                <th data-ref="th-user">Usuario</th>
+                <th data-ref="th-email">Correo Electrónico</th>
+                <th data-ref="th-roles">Roles</th>
+                <th data-ref="th-2fa">2FA</th>
+                <th data-ref="th-created">Fecha de Registro</th>
+              </tr>
+            </thead>
+            <tbody class="component-table__body" data-ref="users-tbody">
+              <!-- Inyectado dinámicamente -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,68 @@
+<div class="layout-content" data-ref="settings-security-view">
+  <div class="component-wrapper component-wrapper--full home-wrapper view-wrapper" data-ref="settings-wrapper">
+    <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="settings-scrollable">
+      <div class="settings-layout" data-ref="settings-layout">
+      <div class="settings-header" data-ref="settings-header">
+        <h1 class="settings-title" data-ref="settings-title" data-i18n="settings.security.title">Inicio de sesión y seguridad</h1>
+        <p class="settings-subtitle" data-ref="settings-subtitle" data-i18n="settings.security.subtitle">Gestiona tu contraseña, métodos de autenticación avanzados y sesiones activas.</p>
+      </div>
+
+      <!-- Grupo 1: Métodos de acceso -->
+      <div class="settings-group" data-ref="group-auth-methods">
+        <!-- Item 1: Contraseña -->
+        <div class="settings-item" data-ref="item-password">
+          <div class="settings-item__content" data-ref="item-password-content">
+            <div class="settings-item__icon-box" data-ref="item-password-icon-box">
+              <span class="material-symbols-rounded">lock</span>
+            </div>
+            <div class="settings-item__text" data-ref="item-password-text">
+              <h2 class="settings-item__title" data-ref="item-password-title" data-i18n="settings.security.password_title">Contraseña</h2>
+              <p class="settings-item__desc" data-ref="item-password-desc" data-i18n="settings.security.password_desc">Actualiza tu contraseña para mantener tu cuenta administrativa protegida.</p>
+            </div>
+          </div>
+          <div class="settings-item__actions" data-ref="item-password-actions">
+            <button type="button" class="component-button component-button--h34" data-ref="btn-change-password" data-i18n="settings.security.btn_change_password">Cambiar contraseña</button>
+          </div>
+        </div>
+
+        <hr class="settings-divider" />
+
+        <!-- Item 2: 2FA -->
+        <div class="settings-item" data-ref="item-2fa">
+          <div class="settings-item__content" data-ref="item-2fa-content">
+            <div class="settings-item__icon-box" data-ref="item-2fa-icon-box">
+              <span class="material-symbols-rounded">shield</span>
+            </div>
+            <div class="settings-item__text" data-ref="item-2fa-text">
+              <h2 class="settings-item__title" data-ref="item-2fa-title" data-i18n="settings.security.two_factor_title">Autenticación en dos pasos (2FA)</h2>
+              <p class="settings-item__desc" data-ref="item-2fa-desc" data-i18n="settings.security.two_factor_desc">Protege tu cuenta requiriendo un código de tu aplicación de autenticación al iniciar sesión.</p>
+            </div>
+          </div>
+          <div class="settings-item__actions" data-ref="item-2fa-actions">
+            <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-configure-2fa" data-i18n="settings.security.btn_configure_2fa">Configurar 2FA</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Grupo 2: Gestión de sesiones -->
+      <div class="settings-group" data-ref="group-sessions-management">
+        <!-- Item: Cerrar todas las sesiones -->
+        <div class="settings-item" data-ref="item-logout-all">
+          <div class="settings-item__content" data-ref="item-logout-all-content">
+            <div class="settings-item__icon-box" data-ref="item-logout-all-icon-box">
+              <span class="material-symbols-rounded">devices</span>
+            </div>
+            <div class="settings-item__text" data-ref="item-logout-all-text">
+              <h2 class="settings-item__title" data-ref="item-logout-all-title" data-i18n="settings.security.logout_all_title">Cerrar todas las sesiones</h2>
+              <p class="settings-item__desc" data-ref="item-logout-all-desc" data-i18n="settings.security.logout_all_desc">Cierra sesión en todos los demás navegadores y dispositivos conectados.</p>
+            </div>
+          </div>
+          <div class="settings-item__actions" data-ref="item-logout-all-actions">
+            <button type="button" class="component-button component-button--h34 component-button--danger" data-ref="btn-logout-all-devices" data-i18n="settings.security.btn_logout_all">Cerrar todas</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+</div>

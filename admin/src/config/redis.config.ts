@@ -1,0 +1,43 @@
+import { config } from './env.config.js';
+import { logger } from '../services/logger.service.js';
+import { Redis } from 'ioredis';
+
+export const redis = new Redis({
+  host: config.redis.host,
+  lazyConnect: true,
+  maxRetriesPerRequest: 3,
+  password: config.redis.password,
+  port: config.redis.port,
+  retryStrategy(times) {
+    const delay = Math.min(times * 100, 2000);
+    return delay;
+  },
+});
+
+redis.on('error', (err) => {
+  logger.db.warn('Advertencia en cliente Redis Admin:', err);
+});
+
+export async function checkRedisConnection(retries = 10, delayMs = 1500): Promise<void> {
+  for (let i = 1; i <= retries; i++) {
+    try {
+      if (redis.status !== 'ready' && redis.status !== 'connecting') {
+        await redis.connect();
+      }
+      const pong = await redis.ping();
+      if (pong === 'PONG') {
+        logger.db.info('Conexión establecida exitosamente con Redis desde Admin.');
+        return;
+      }
+    } catch (err) {
+      logger.db.warn(`Esperando a Redis en ${config.redis.host}:${config.redis.port} desde Admin (intento ${i}/${retries})...`);
+      if (i === retries) {
+        logger.db.error('No se pudo conectar a Redis desde Admin después de múltiples intentos.', err);
+        throw err;
+      }
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+}
+
+export default redis;
