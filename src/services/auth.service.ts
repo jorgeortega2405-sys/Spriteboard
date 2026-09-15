@@ -381,6 +381,9 @@ export function switchAccountInSession(
   target.last_accessed = Date.now();
   session.activeId = targetUserId;
   session.sessionId = target.sessionId;
+  if (target.sessionId) {
+    void touchSession(target.sessionId);
+  }
   setMultiAccountCookie(res, session);
 
   return { success: true, activeUser: target, accounts: session.accounts };

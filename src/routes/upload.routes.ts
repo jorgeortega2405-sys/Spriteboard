@@ -32,6 +32,8 @@ router.get('/uploads/*', async (req: Request, res: Response): Promise<void> => {
       if (s3Obj.etag) {
         res.setHeader('ETag', s3Obj.etag);
       }
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'");
       res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
       res.setHeader('Content-Length', s3Obj.buffer.length);
       res.end(s3Obj.buffer);
@@ -40,6 +42,8 @@ router.get('/uploads/*', async (req: Request, res: Response): Promise<void> => {
   } catch {}
 
   if (fs.existsSync(safePath) && fs.statSync(safePath).isFile()) {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'");
     res.sendFile(safePath);
     return;
   }
