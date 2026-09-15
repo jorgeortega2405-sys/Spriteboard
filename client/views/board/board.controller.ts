@@ -105,7 +105,9 @@ export class BoardController {
 
     this.collaboratorsBarEl = this.container.querySelector<HTMLElement>('[data-ref="board-collaborators-bar"]');
     this.collaboratorsListEl = this.container.querySelector<HTMLElement>('[data-ref="board-collaborators-list"]');
-    this.setupCollaboration();
+    if (this.canvasServerId) {
+      this.setupCollaboration();
+    }
 
     this.setupDropdowns();
     this.setupResizeObserver();
@@ -155,45 +157,47 @@ export class BoardController {
   private async loadBoardData(): Promise<boolean> {
     let canvas: CanvasItem | null = await getLocalCanvasByUuid(this.canvasUuid);
 
-    try {
-      const res = await getApi(API_ROUTES.canvases.byId(this.canvasUuid));
-      if (res.ok) {
-        const data = await res.json();
-        if (data && data.canvas) {
-          canvas = data.canvas;
-          this.canvasServerId = data.canvas.id || null;
-          this.canvasUserId = data.canvas.user_id || null;
-          if (data.role) {
-            this.role = data.role;
-          }
-          if (data.canvas.public_role) {
-            this.publicRole = data.canvas.public_role;
-          }
-          if (data.room_token) {
-            this.roomToken = data.room_token;
-          }
-        }
-      } else if (res.status === 404 && canvas?.id) {
-        await removeLocalCanvas(this.canvasUuid);
-        return false;
-      } else if (res.status === 401 || res.status === 403) {
-        return false;
-      }
-
-      if (!this.roomToken) {
-        try {
-          const tokenRes = await getApi(API_ROUTES.canvases.token(this.canvasUuid));
-          if (tokenRes.ok) {
-            const tokenData = await tokenRes.json();
-            if (tokenData?.room_token) {
-              this.roomToken = tokenData.room_token;
+    if (!canvas || !canvas.is_local) {
+      try {
+        const res = await getApi(API_ROUTES.canvases.byId(this.canvasUuid));
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.canvas) {
+            canvas = data.canvas;
+            this.canvasServerId = data.canvas.id || null;
+            this.canvasUserId = data.canvas.user_id || null;
+            if (data.role) {
+              this.role = data.role;
+            }
+            if (data.canvas.public_role) {
+              this.publicRole = data.canvas.public_role;
+            }
+            if (data.room_token) {
+              this.roomToken = data.room_token;
             }
           }
-        } catch {}
-      }
-    } catch {
-      if (!canvas || canvas.id) {
-        return false;
+        } else if (res.status === 404 && canvas?.id) {
+          await removeLocalCanvas(this.canvasUuid);
+          return false;
+        } else if (res.status === 401 || res.status === 403) {
+          return false;
+        }
+
+        if (this.canvasServerId && !this.roomToken) {
+          try {
+            const tokenRes = await getApi(API_ROUTES.canvases.token(this.canvasUuid));
+            if (tokenRes.ok) {
+              const tokenData = await tokenRes.json();
+              if (tokenData?.room_token) {
+                this.roomToken = tokenData.room_token;
+              }
+            }
+          } catch {}
+        }
+      } catch {
+        if (!canvas || canvas.id) {
+          return false;
+        }
       }
     }
 
@@ -201,7 +205,7 @@ export class BoardController {
       this.currentCanvasItem = canvas;
       if (canvas.canvas_type === 'pixel' && canvas.unit !== 'board') {
         navigate(`/design/${this.canvasUuid}`);
-        return false;
+        return true;
       }
 
       this.canvasServerId = canvas.id || this.canvasServerId;
@@ -281,6 +285,8 @@ export class BoardController {
   }
 
   private setupCollaboration(): void {
+    if (!this.canvasServerId || !currentUser) return;
+
     const userId = currentUser ? currentUser.id : null;
     const username = currentUser ? currentUser.username : 'Invitado';
     const avatarUrl = currentUser?.avatar_url || null;
@@ -301,6 +307,7 @@ export class BoardController {
         }
       },
       onAccessRevoked: () => {
+        if (!this.canvasServerId) return;
         this.handleAccessRevoked();
       },
       onCollaboratorsChanged: () => {

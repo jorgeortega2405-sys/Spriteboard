@@ -3,6 +3,7 @@ import { config } from '../config/env.config.js';
 import { GoogleTokenResponse, GoogleUserInfo, UserPayload } from '../types/auth.types.js';
 import { geoIpService } from './geoip.service.js';
 import { logger } from './logger.service.js';
+import { assignUserRole } from './role.service.js';
 import { logUserAudit } from './settings.service.js';
 import { updateUserLastLoginGeo } from './user.service.js';
 import crypto from 'crypto';
@@ -260,12 +261,18 @@ export async function processGoogleAuthCallback(code: string, clientIp?: string)
     ]
   );
 
+  const newUserId = insertResult.insertId;
+  try {
+    await assignUserRole(newUserId, 'USER');
+  } catch {}
+
   return {
-    id: insertResult.insertId,
+    id: newUserId,
     username: uniqueUsername,
     email: email,
     avatar_url: null,
-    role: 'user',
+    role: 'USER',
+    roles: ['USER'],
     google_id: googleId,
     subscription_tier: 'free',
     two_factor_enabled: false,

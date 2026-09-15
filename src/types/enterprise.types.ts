@@ -14,6 +14,7 @@ export interface EnterpriseTenant {
   scim_enabled: boolean;
   scim_token_hash?: string | null;
   target_team_id: number | null;
+  default_role?: string | null;
   created_at: string;
   updated_at: string;
   users_count?: number;

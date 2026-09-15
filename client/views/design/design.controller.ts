@@ -73,6 +73,7 @@ export class DesignController {
   private autoSaveTimer: number | null = null;
   private isSaving = false;
   private isLoaded = false;
+  private isDestroyed = false;
   private isAccessRevoked = false;
   private collaborationManager: DesignCollaborationManager;
   private get roomToken(): string {
@@ -942,26 +943,30 @@ export class DesignController {
       return false;
     }
 
-    this.setupWebSocketCollaboration();
+    if (this.canvasServerId) {
+      this.setupWebSocketCollaboration();
+    }
     this.setupResizeObserver();
     this.bindEvents();
-    this.commentsController = new CanvasCommentsController({
-      canvasUuid: this.canvasUuid,
-      container: this.container,
-      getCanvasTransform: () => ({
-        height: this.canvasHeight,
-        panX: this.panX,
-        panY: this.panY,
-        width: this.canvasWidth,
-        zoom: this.zoom
-      }),
-      getCurrentFrameIndex: () => {
-        const idx = this.frames.findIndex((f) => f.id === this.activeFrameId);
-        return idx >= 0 ? idx : 0;
-      },
-      onRequestRedraw: () => this.requestRedraw()
-    });
-    await this.commentsController.init();
+    if (this.canvasServerId) {
+      this.commentsController = new CanvasCommentsController({
+        canvasUuid: this.canvasUuid,
+        container: this.container,
+        getCanvasTransform: () => ({
+          height: this.canvasHeight,
+          panX: this.panX,
+          panY: this.panY,
+          width: this.canvasWidth,
+          zoom: this.zoom
+        }),
+        getCurrentFrameIndex: () => {
+          const idx = this.frames.findIndex((f) => f.id === this.activeFrameId);
+          return idx >= 0 ? idx : 0;
+        },
+        onRequestRedraw: () => this.requestRedraw()
+      });
+      await this.commentsController.init();
+    }
     this.renderLayersList();
     this.renderLayersCards();
     this.renderFramesCards();
@@ -5896,7 +5901,7 @@ export class DesignController {
   }
 
   private redraw(): void {
-    if (!this.ctx || !this.viewportCanvas) return;
+    if (this.isDestroyed || !this.ctx || !this.viewportCanvas || this.viewportCanvas.width === 0 || this.viewportCanvas.height === 0) return;
     const dpr = window.devicePixelRatio || 1;
     const w = this.viewportCanvas.width / dpr;
     const h = this.viewportCanvas.height / dpr;
@@ -6007,7 +6012,7 @@ export class DesignController {
           if (layer.visible) {
             if (this.isInfinite) {
               (layer as any).chunkGrid?.renderViewport(this.ctx, this.panX, this.panY, this.zoom, w, h, 0.25 * layer.opacity);
-            } else {
+            } else if (layer.canvas && layer.canvas.width > 0 && layer.canvas.height > 0) {
               this.ctx.save();
               this.ctx.translate(this.panX, this.panY);
               this.ctx.scale(this.zoom, this.zoom);
@@ -6026,7 +6031,7 @@ export class DesignController {
         if (layer.visible) {
           if (this.isInfinite) {
             (layer as any).chunkGrid?.renderViewport(this.ctx, this.panX, this.panY, this.zoom, w, h, layer.opacity);
-          } else {
+          } else if (layer.canvas && layer.canvas.width > 0 && layer.canvas.height > 0) {
             this.ctx.save();
             this.ctx.translate(this.panX, this.panY);
             this.ctx.scale(this.zoom, this.zoom);
@@ -6039,7 +6044,7 @@ export class DesignController {
     }
     this.ctx.globalAlpha = 1.0;
 
-    if (this.floatingSelection) {
+    if (this.floatingSelection && this.floatingSelection.canvas && this.floatingSelection.canvas.width > 0 && this.floatingSelection.canvas.height > 0) {
       this.ctx.save();
       this.ctx.translate(this.panX, this.panY);
       this.ctx.scale(this.zoom, this.zoom);
@@ -6047,7 +6052,7 @@ export class DesignController {
       this.ctx.restore();
     }
 
-    if (this.currentTool === 'text' && this.textCanvas) {
+    if (this.currentTool === 'text' && this.textCanvas && this.textCanvas.width > 0 && this.textCanvas.height > 0) {
       this.ctx.save();
       this.ctx.translate(this.panX, this.panY);
       this.ctx.scale(this.zoom, this.zoom);
@@ -6055,7 +6060,7 @@ export class DesignController {
       this.ctx.restore();
     }
 
-    if (this.isPlacingShape && this.shapeCanvas) {
+    if (this.isPlacingShape && this.shapeCanvas && this.shapeCanvas.width > 0 && this.shapeCanvas.height > 0) {
       this.ctx.save();
       this.ctx.translate(this.panX, this.panY);
       this.ctx.scale(this.zoom, this.zoom);
@@ -6970,6 +6975,8 @@ export class DesignController {
   }
 
   private setupWebSocketCollaboration(): void {
+    if (!this.canvasServerId || !currentUser) return;
+
     const userId = currentUser ? currentUser.id : 0;
     const username = currentUser ? currentUser.username : 'Invitado';
     const avatarUrl = currentUser?.avatar_url || '';
@@ -6999,6 +7006,7 @@ export class DesignController {
         this.updateAccessLevelUI();
       },
       onAccessRevoked: () => {
+        if (!this.canvasServerId) return;
         this.handleAccessRevoked();
       },
       onAction: (payload) => {
@@ -7330,6 +7338,7 @@ export class DesignController {
   }
 
   private async loadCanvasMembers(): Promise<void> {
+    if (!this.canvasServerId) return;
     try {
       const res = await getApi(API_ROUTES.canvases.members(this.canvasUuid));
       if (res.ok) {
@@ -7496,6 +7505,7 @@ export class DesignController {
   }
 
   private async loadCanvasTeams(): Promise<void> {
+    if (!this.canvasServerId) return;
     try {
       const res = await getApi(API_ROUTES.canvases.teams(this.canvasUuid));
       if (res.ok) {
@@ -8015,45 +8025,47 @@ export class DesignController {
   private async loadCanvasData(): Promise<boolean> {
     let canvas: CanvasItem | null = await getLocalCanvasByUuid(this.canvasUuid);
 
-    try {
-      const res = await getApi(API_ROUTES.canvases.byId(this.canvasUuid));
-      if (res.ok) {
-        const data = await res.json();
-        if (data && data.canvas) {
-          canvas = data.canvas;
-          this.canvasServerId = data.canvas.id || null;
-          this.canvasUserId = data.canvas.user_id || null;
-          if (data.role) {
-            this.role = data.role;
-          }
-          if (data.canvas.public_role) {
-            this.publicRole = data.canvas.public_role;
-          }
-          if (data.room_token) {
-            this.roomToken = data.room_token;
-          }
-        }
-      } else if (res.status === 404 && canvas?.id) {
-        await removeLocalCanvas(this.canvasUuid);
-        return false;
-      } else if (res.status === 401 || res.status === 403) {
-        return false;
-      }
-
-      if (!this.roomToken) {
-        try {
-          const tokenRes = await getApi(API_ROUTES.canvases.token(this.canvasUuid));
-          if (tokenRes.ok) {
-            const tokenData = await tokenRes.json();
-            if (tokenData?.room_token) {
-              this.roomToken = tokenData.room_token;
+    if (!canvas || !canvas.is_local) {
+      try {
+        const res = await getApi(API_ROUTES.canvases.byId(this.canvasUuid));
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.canvas) {
+            canvas = data.canvas;
+            this.canvasServerId = data.canvas.id || null;
+            this.canvasUserId = data.canvas.user_id || null;
+            if (data.role) {
+              this.role = data.role;
+            }
+            if (data.canvas.public_role) {
+              this.publicRole = data.canvas.public_role;
+            }
+            if (data.room_token) {
+              this.roomToken = data.room_token;
             }
           }
-        } catch {}
-      }
-    } catch {
-      if (!canvas || canvas.id) {
-        return false;
+        } else if (res.status === 404 && canvas?.id) {
+          await removeLocalCanvas(this.canvasUuid);
+          return false;
+        } else if (res.status === 401 || res.status === 403) {
+          return false;
+        }
+
+        if (this.canvasServerId && !this.roomToken) {
+          try {
+            const tokenRes = await getApi(API_ROUTES.canvases.token(this.canvasUuid));
+            if (tokenRes.ok) {
+              const tokenData = await tokenRes.json();
+              if (tokenData?.room_token) {
+                this.roomToken = tokenData.room_token;
+              }
+            }
+          } catch {}
+        }
+      } catch {
+        if (!canvas || canvas.id) {
+          return false;
+        }
       }
     }
 
@@ -8062,7 +8074,7 @@ export class DesignController {
     if (canvas) {
       if (canvas.canvas_type === 'board' || canvas.unit === 'board') {
         navigate(`/board/${this.canvasUuid}`);
-        return false;
+        return true;
       }
 
       this.canvasServerId = canvas.id || this.canvasServerId;
@@ -8154,8 +8166,10 @@ export class DesignController {
     this.applyViewerMode();
     this.updateCanvasModeRestrictions();
     this.renderCollaboratorsBar();
-    void this.loadCanvasMembers();
-    void this.loadCanvasTeams();
+    if (this.canvasServerId) {
+      void this.loadCanvasMembers();
+      void this.loadCanvasTeams();
+    }
 
     const parent = this.viewportCanvas?.parentElement;
     if (parent) {
@@ -8584,6 +8598,11 @@ export class DesignController {
     if (this.searchDebounceTimer) {
       clearTimeout(this.searchDebounceTimer);
       this.searchDebounceTimer = null;
+    }
+    this.isDestroyed = true;
+    if (this.rafId !== null) {
+      cancelAnimationFrame(this.rafId);
+      this.rafId = null;
     }
     this.collaborationManager.cleanup();
     this.shareDropdownController?.destroy();

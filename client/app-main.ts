@@ -1,5 +1,5 @@
 import { navigate, render } from './app-router';
-import { checkAuthSession, fetchAppConfig, fetchCsrfToken, verifySubscriptionSessionApi } from './services/api.service';
+import { checkAuthSession, currentUser, fetchAppConfig, fetchCsrfToken, verifySubscriptionSessionApi } from './services/api.service';
 import { initI18n } from './services/i18n.service';
 import { renderIcons } from './services/icon.service';
 import { initWebVitals } from './services/telemetry.service';
@@ -85,7 +85,9 @@ async function init(): Promise<void> {
   }
 
   await Promise.all([fetchCsrfToken(), checkAuthSession(), fetchAppConfig()]);
-  initWebSocket();
+  if (currentUser) {
+    initWebSocket();
+  }
   await initI18n();
   await render();
   renderIcons();

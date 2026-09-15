@@ -21,6 +21,10 @@ const messageHandlers: Map<string, Set<WebSocketHandler>> = new Map();
 const pendingMessages: any[] = [];
 
 export function initWebSocket(): void {
+  if (!currentUser) {
+    return;
+  }
+
   if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.CLOSING)) {
     return;
   }
@@ -176,11 +180,13 @@ export function initWebSocket(): void {
       if (ws === currentWs) {
         ws = null;
       }
-      if (!isIntentionallyClosed) {
+      if (!isIntentionallyClosed && currentUser) {
         console.warn(`[WebSocket] Conexión cerrada (código: ${event.code}). Reconectando en 4 segundos...`);
         if (reconnectTimer) clearTimeout(reconnectTimer);
         reconnectTimer = setTimeout(() => {
-          initWebSocket();
+          if (currentUser) {
+            initWebSocket();
+          }
         }, 4000);
       } else {
         console.log('[WebSocket] Conexión cerrada.');
@@ -216,6 +222,10 @@ export function closeWebSocket(): void {
 }
 
 export function sendWebSocketMessage(msg: any): void {
+  if (!currentUser) {
+    return;
+  }
+
   if (ws && ws.readyState === WebSocket.OPEN) {
     try {
       ws.send(typeof msg === 'string' ? msg : JSON.stringify(msg));
@@ -267,6 +277,10 @@ export function joinCanvasRoom(
   avatarUrl?: string,
   subscriptionTier?: string
 ): void {
+  if (!currentUser) {
+    return;
+  }
+
   currentActiveCanvasRoom = { avatarUrl, canvasUuid, color, roomToken, subscriptionTier, user, username };
   const userObj: {
     avatar_url?: string;
@@ -308,6 +322,10 @@ export function leaveCanvasRoom(canvasUuid: string): void {
   if (currentActiveCanvasRoom?.canvasUuid === canvasUuid) {
     currentActiveCanvasRoom = null;
   }
+  if (!currentUser) {
+    return;
+  }
+
   sendWebSocketMessage({
     canvasUuid,
     type: 'LEAVE_CANVAS',
@@ -315,10 +333,17 @@ export function leaveCanvasRoom(canvasUuid: string): void {
 }
 
 export function sendCanvasCursor(canvasUuid: string, x: number, y: number): void {
+  if (!currentUser) {
+    return;
+  }
   sendCanvasBinaryCursor(canvasUuid, x, y);
 }
 
 export function sendCanvasBinaryCursor(canvasUuid: string, x: number, y: number): void {
+  if (!currentUser) {
+    return;
+  }
+
   if (ws && ws.readyState === WebSocket.OPEN) {
     const enc = new TextEncoder();
     const uuidBytes = enc.encode(canvasUuid);
@@ -343,6 +368,10 @@ export function sendCanvasBinaryStroke(
   size: number,
   points: Array<{ x: number; y: number }>
 ): void {
+  if (!currentUser) {
+    return;
+  }
+
   if (ws && ws.readyState === WebSocket.OPEN) {
     const enc = new TextEncoder();
     const uuidBytes = enc.encode(canvasUuid);
@@ -405,6 +434,10 @@ export function sendCanvasDrawStroke(
   points?: Array<{ x: number; y: number }>,
   options?: any
 ): void {
+  if (!currentUser) {
+    return;
+  }
+
   if (typeof toolOrPayload === 'string') {
     sendWebSocketMessage({
       canvasUuid,
@@ -427,6 +460,10 @@ export function sendCanvasDrawStroke(
 }
 
 export function sendCanvasAction(canvasUuid: string, action: string, payload: any): void {
+  if (!currentUser) {
+    return;
+  }
+
   sendWebSocketMessage({
     type: 'CANVAS_ACTION',
     canvasUuid,
@@ -436,6 +473,10 @@ export function sendCanvasAction(canvasUuid: string, action: string, payload: an
 }
 
 export function sendCanvasFullUpdate(canvasUuid: string, data: any, targetConnId?: string): void {
+  if (!currentUser) {
+    return;
+  }
+
   sendWebSocketMessage({
     data,
     canvasUuid,
@@ -445,6 +486,10 @@ export function sendCanvasFullUpdate(canvasUuid: string, data: any, targetConnId
 }
 
 export function sendCanvasAccessChanged(canvasUuid: string, accessLevel: 'private' | 'public', publicRole?: 'viewer' | 'editor'): void {
+  if (!currentUser) {
+    return;
+  }
+
   sendWebSocketMessage({
     accessLevel,
     canvasUuid,
@@ -454,10 +499,15 @@ export function sendCanvasAccessChanged(canvasUuid: string, accessLevel: 'privat
 }
 
 export function sendCanvasMemberRemoved(canvasUuid: string, targetUserId: number): void {
+  if (!currentUser) {
+    return;
+  }
+
   sendWebSocketMessage({
     type: 'CANVAS_MEMBER_REMOVED',
     canvasUuid,
     targetUserId,
   });
 }
+
 

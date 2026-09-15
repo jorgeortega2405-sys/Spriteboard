@@ -31,7 +31,8 @@ export async function updateTenantConfigHandler(req: Request, res: Response): Pr
 
     const userTier = (user.subscription_tier || 'free').toLowerCase();
     const isEnterprise = ['business', 'negocios'].includes(userTier);
-    if (!isEnterprise && user.role !== 'administrator' && user.role !== 'superadministrator') {
+    const hasAdminRole = user.role === 'SUPER_ADMIN' || user.role === 'PLATFORM_ADMIN' || user.role === 'IAM_ADMIN' || (user.roles && user.roles.some((r: any) => ['SUPER_ADMIN', 'PLATFORM_ADMIN', 'IAM_ADMIN'].includes(r)));
+    if (!isEnterprise && !hasAdminRole) {
       res.status(403).json({ error: 'La configuración de inicio de sesión único (SSO) y SCIM requiere una suscripción de negocios.' });
       return;
     }
@@ -72,7 +73,8 @@ export async function generateScimTokenHandler(req: Request, res: Response): Pro
 
     const userTier = (user.subscription_tier || 'free').toLowerCase();
     const isEnterprise = ['business', 'negocios'].includes(userTier);
-    if (!isEnterprise && user.role !== 'administrator' && user.role !== 'superadministrator') {
+    const hasAdminRole = user.role === 'SUPER_ADMIN' || user.role === 'PLATFORM_ADMIN' || user.role === 'IAM_ADMIN' || (user.roles && user.roles.some((r: any) => ['SUPER_ADMIN', 'PLATFORM_ADMIN', 'IAM_ADMIN'].includes(r)));
+    if (!isEnterprise && !hasAdminRole) {
       res.status(403).json({ error: 'La generación de tokens SCIM requiere una suscripción de negocios.' });
       return;
     }
@@ -115,7 +117,8 @@ export async function revokeScimTokenHandler(req: Request, res: Response): Promi
 
     const userTier = (user.subscription_tier || 'free').toLowerCase();
     const isEnterprise = ['business', 'negocios'].includes(userTier);
-    if (!isEnterprise && user.role !== 'administrator' && user.role !== 'superadministrator') {
+    const hasAdminRole = user.role === 'SUPER_ADMIN' || user.role === 'PLATFORM_ADMIN' || user.role === 'IAM_ADMIN' || (user.roles && user.roles.some((r: any) => ['SUPER_ADMIN', 'PLATFORM_ADMIN', 'IAM_ADMIN'].includes(r)));
+    if (!isEnterprise && !hasAdminRole) {
       res.status(403).json({ error: 'La revocación de tokens SCIM requiere una suscripción institucional o de negocios.' });
       return;
     }

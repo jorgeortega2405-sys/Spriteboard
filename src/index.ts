@@ -6,6 +6,7 @@ import { getHealth } from './controllers/config.controller.js';
 import { telemetryMiddleware } from './middlewares/telemetry.middleware.js';
 import apiRouter from './routes/api.routes.js';
 import uploadRouter from './routes/upload.routes.js';
+import { COOKIE_NAME, isSessionRevoked, verifyMultiAccountToken } from './services/auth.service.js';
 import { getCanvasBySlug, RESERVED_SLUGS } from './services/canvas.service.js';
 import { geoIpService } from './services/geoip.service.js';
 import { logger } from './services/logger.service.js';
@@ -17,6 +18,19 @@ import express, { Request, Response } from 'express';
 import http from 'http';
 import net from 'net';
 import path from 'path';
+
+function parseCookieHeader(cookieHeader?: string): Record<string, string> {
+  if (!cookieHeader) return {};
+  const cookies: Record<string, string> = {};
+  const items = cookieHeader.split(';');
+  for (const item of items) {
+    const [key, ...val] = item.trim().split('=');
+    if (key) {
+      cookies[key] = decodeURIComponent(val.join('='));
+    }
+  }
+  return cookies;
+}
 
 const app = express();
 const PORT = config.port;
@@ -134,9 +148,38 @@ async function startServer() {
     const server = http.createServer(app);
     await setupClient(server);
 
-    server.on('upgrade', (req, clientSocket, head) => {
+    server.on('upgrade', async (req, clientSocket, head) => {
       const url = req.url || '';
       if (url === '/ws' || url.startsWith('/ws?')) {
+        const cookieHeader = req.headers.cookie || '';
+        const cookies = parseCookieHeader(cookieHeader);
+        const token = cookies[COOKIE_NAME];
+
+        if (!token) {
+          logger.security.warn('Conexión WebSocket rechazada: No se proporcionó cookie de sesión.');
+          clientSocket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+          clientSocket.destroy();
+          return;
+        }
+
+        const session = verifyMultiAccountToken(token);
+        if (!session) {
+          logger.security.warn('Conexión WebSocket rechazada: Token de sesión inválido o expirado.');
+          clientSocket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+          clientSocket.destroy();
+          return;
+        }
+
+        const activeAccount = session.accounts.find((a) => a.id === session.activeId);
+        const sid = activeAccount?.sessionId || session.sessionId;
+        const revoked = await isSessionRevoked(session.activeId, session.iat, sid);
+        if (revoked) {
+          logger.security.warn('Conexión WebSocket rechazada: Sesión revocada o inactiva.');
+          clientSocket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+          clientSocket.destroy();
+          return;
+        }
+
         clientSocket.pause();
         const proxySocket = net.connect(config.websocket.port, config.websocket.host, () => {
           if (clientSocket instanceof net.Socket) {

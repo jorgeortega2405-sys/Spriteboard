@@ -2694,20 +2694,6 @@ class HomeController {
       },
     });
   }
-
-  public destroy(): void {
-    this.abortController.abort();
-    this.scrollObserver?.disconnect();
-    this.categoriesCarouselController?.destroy();
-    this.cleanupCategoriesDrag?.();
-    this.closeAllDropdowns();
-    this.typeDropdownController?.destroy();
-    this.sortDropdownController?.destroy();
-    if (this.searchDebounceTimer) {
-      clearTimeout(this.searchDebounceTimer);
-      this.searchDebounceTimer = null;
-    }
-  }
 }
 
 export async function createHomeView(folderUuid?: string): Promise<HTMLElement> {

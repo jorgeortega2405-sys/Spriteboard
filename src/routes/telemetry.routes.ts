@@ -8,6 +8,6 @@ const router = Router();
 router.post('/telemetry/events', telemetryEventLimiter, handleRecordEvent);
 router.post('/telemetry/vitals', telemetryEventLimiter, handleRecordWebVital);
 
-router.get('/telemetry/stats', requireAuth, requireRole('administrator', 'superadministrator'), telemetryStatsLimiter, handleGetTelemetryStats);
+router.get('/telemetry/stats', requireAuth, requireRole('SUPER_ADMIN', 'PLATFORM_ADMIN', 'READ_ONLY_ADMIN', 'SRE', 'DEVOPS'), telemetryStatsLimiter, handleGetTelemetryStats);
 
 export default router;

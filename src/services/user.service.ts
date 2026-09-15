@@ -1,7 +1,3 @@
-import fs from 'fs';
-import type { ResultSetHeader, RowDataPacket } from 'mysql2';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import { canvasPool, pool } from '../config/database.config.js';
 import { redis } from '../config/redis.config.js';
 import { UserPayload, UserRole } from '../types/auth.types.js';
@@ -9,9 +5,14 @@ import { SubscriptionTierId } from '../types/subscription.types.js';
 import { revokeAllUserSessions } from './auth.service.js';
 import { deleteCanvasBlob } from './canvas-storage-blob.service.js';
 import { logger } from './logger.service.js';
+import { assignUserRole, getUserRoles, setUserRoles } from './role.service.js';
 import { deleteObject } from './s3.service.js';
 import { stripeService } from './stripe.service.js';
 import { hashBackupCode } from './two-factor.service.js';
+import fs from 'fs';
+import type { ResultSetHeader, RowDataPacket } from 'mysql2';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -24,6 +25,7 @@ export interface UserRecord extends RowDataPacket {
   password_hash?: string;
   avatar_url?: string;
   role?: UserRole;
+  roles?: UserRole[];
   google_id?: string;
   subscription_tier?: SubscriptionTierId;
   two_factor_enabled?: boolean | number;
@@ -51,7 +53,10 @@ export async function findUserByEmail(email: string): Promise<UserRecord | null>
     'SELECT id, username, email, password_hash, avatar_url, role, google_id, subscription_tier, two_factor_enabled, two_factor_secret, two_factor_recovery_codes FROM users WHERE email = ? LIMIT 1',
     [email.toLowerCase().trim()]
   );
-  return rows.length > 0 ? rows[0] : null;
+  if (rows.length === 0) return null;
+  const user = rows[0];
+  user.roles = await getUserRoles(user.id);
+  return user;
 }
 
 export async function findUserByUsername(username: string): Promise<UserRecord | null> {
@@ -59,7 +64,10 @@ export async function findUserByUsername(username: string): Promise<UserRecord |
     'SELECT id, username, email, avatar_url, role, google_id, subscription_tier, two_factor_enabled FROM users WHERE username = ? LIMIT 1',
     [username.trim()]
   );
-  return rows.length > 0 ? rows[0] : null;
+  if (rows.length === 0) return null;
+  const user = rows[0];
+  user.roles = await getUserRoles(user.id);
+  return user;
 }
 
 export async function findUserDuplicates(
@@ -98,6 +106,7 @@ export async function findUserById(id: number): Promise<UserRecord | null> {
   );
   if (rows.length === 0) return null;
   const user = rows[0];
+  user.roles = await getUserRoles(user.id);
   try {
     await redis.setex(cacheKey, 300, JSON.stringify(user));
   } catch {}
@@ -119,6 +128,7 @@ export async function createUser(data: {
   passwordHash: string;
   avatarUrl?: string;
   role?: UserRole;
+  roles?: UserRole[];
   registrationIp?: string | null;
   registrationCountryCode?: string | null;
   registrationCountryName?: string | null;
@@ -127,7 +137,7 @@ export async function createUser(data: {
   registrationAsn?: string | null;
   registrationIsp?: string | null;
 }): Promise<UserPayload> {
-  const role = data.role || 'user';
+  const role = data.role || 'USER';
   const [result] = await pool.query<ResultSetHeader>(
     `INSERT INTO users (
       username,
@@ -159,11 +169,20 @@ export async function createUser(data: {
     ]
   );
 
+  const userId = result.insertId;
+  const rolesToAssign = data.roles && data.roles.length > 0 ? data.roles : [role];
+  try {
+    await setUserRoles(userId, rolesToAssign);
+  } catch (err) {
+    logger.db.warn('No se pudieron asignar roles iniciales a usuario en user_roles', err);
+  }
+
   return {
-    id: result.insertId,
+    id: userId,
     username: data.username.trim(),
     email: data.email.toLowerCase().trim(),
     role,
+    roles: rolesToAssign,
     ...(data.avatarUrl ? { avatar_url: data.avatarUrl } : {}),
   };
 }
@@ -225,6 +244,9 @@ export async function updateUserRole(userId: number, role: UserRole): Promise<bo
     'UPDATE users SET role = ? WHERE id = ?',
     [role, userId]
   );
+  try {
+    await assignUserRole(userId, role);
+  } catch {}
   await invalidateUserProfileCache(userId);
   return result.affectedRows > 0;
 }

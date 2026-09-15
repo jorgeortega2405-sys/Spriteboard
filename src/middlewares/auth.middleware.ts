@@ -52,8 +52,10 @@ export function requireRole(...allowedRoles: UserRole[]) {
       return;
     }
 
-    const currentRole = user.role || 'user';
-    if (!allowedRoles.includes(currentRole)) {
+    const currentRole = user.role || 'USER';
+    const userRoles: UserRole[] = user.roles || [currentRole];
+    const hasRole = allowedRoles.some((r) => userRoles.includes(r) || currentRole === r);
+    if (!hasRole) {
       res.status(403).json({ error: 'Acceso denegado. Permisos insuficientes.' });
       return;
     }

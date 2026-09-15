@@ -80,19 +80,31 @@ export async function saveCanvasBlob(
   const compressedBytes = compressedBuffer.length;
   const etag = `"${crypto.createHash('md5').update(compressedBuffer).digest('hex')}"`;
 
-  const s3Key = getCanvasS3Key(safeUuid);
-  await putObject(s3Key, compressedBuffer, 'application/gzip', {
-    rawSizeBytes: String(sizeBytes),
-    compressedSizeBytes: String(compressedBytes),
-  });
-
-  const localFile = getCanvasBlobPath(safeUuid);
+  let savedToS3 = false;
   try {
-    await fs.promises.unlink(localFile);
-  } catch {}
+    const s3Key = getCanvasS3Key(safeUuid);
+    await putObject(s3Key, compressedBuffer, 'application/gzip', {
+      rawSizeBytes: String(sizeBytes),
+      compressedSizeBytes: String(compressedBytes),
+    });
+    savedToS3 = true;
+  } catch (s3Err) {
+    logger.db.warn(`Fallo al guardar en S3 para lienzo ${safeUuid}, usando almacenamiento local como respaldo`, s3Err);
+  }
+
+  if (savedToS3) {
+    const localFile = getCanvasBlobPath(safeUuid);
+    try {
+      await fs.promises.unlink(localFile);
+    } catch {}
+  } else {
+    await ensureCanvasStorageDir();
+    const localFile = getCanvasBlobPath(safeUuid);
+    await fs.promises.writeFile(localFile, compressedBuffer);
+  }
 
   const ratio = ((1 - compressedBytes / sizeBytes) * 100).toFixed(1);
-  logger.db.info(`Lienzo ${safeUuid} persistido en almacenamiento S3: ${sizeBytes}B -> ${compressedBytes}B (${ratio}% reducción)`);
+  logger.db.info(`Lienzo ${safeUuid} persistido en almacenamiento: ${sizeBytes}B -> ${compressedBytes}B (${ratio}% reducción)`);
 
   return { sizeBytes, compressedBytes, etag };
 }
@@ -162,16 +174,29 @@ export async function saveCanvasSnapshotBlob(
   const compressedBuffer = await gzipAsync(rawBuffer, { level: 6 });
   const compressedBytes = compressedBuffer.length;
 
-  const s3Key = getCanvasSnapshotS3Key(safeCanvasUuid, safeSnapshotUuid);
-  await putObject(s3Key, compressedBuffer, 'application/gzip', {
-    rawSizeBytes: String(sizeBytes),
-    compressedSizeBytes: String(compressedBytes),
-  });
-
-  const localPath = getCanvasSnapshotBlobPath(safeCanvasUuid, safeSnapshotUuid);
+  let savedToS3 = false;
   try {
-    await fs.promises.unlink(localPath);
-  } catch {}
+    const s3Key = getCanvasSnapshotS3Key(safeCanvasUuid, safeSnapshotUuid);
+    await putObject(s3Key, compressedBuffer, 'application/gzip', {
+      rawSizeBytes: String(sizeBytes),
+      compressedSizeBytes: String(compressedBytes),
+    });
+    savedToS3 = true;
+  } catch (s3Err) {
+    logger.db.warn(`Fallo al guardar snapshot en S3 para lienzo ${safeCanvasUuid}, usando almacenamiento local como respaldo`, s3Err);
+  }
+
+  const snapshotDir = path.join(CANVAS_STORAGE_DIR, 'snapshots', safeCanvasUuid);
+  const localPath = getCanvasSnapshotBlobPath(safeCanvasUuid, safeSnapshotUuid);
+
+  if (savedToS3) {
+    try {
+      await fs.promises.unlink(localPath);
+    } catch {}
+  } else {
+    await fs.promises.mkdir(snapshotDir, { recursive: true });
+    await fs.promises.writeFile(localPath, compressedBuffer);
+  }
 
   return { sizeBytes, compressedBytes };
 }

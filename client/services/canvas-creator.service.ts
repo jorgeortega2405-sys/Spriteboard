@@ -223,6 +223,13 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
     if (res.ok) {
       const created = await res.json();
       const canvasUuid = created?.canvas?.uuid || created?.uuid;
+      if (created?.canvas) {
+        await saveLocalCanvas({
+          ...created.canvas,
+          data: created.canvas.data || initialData,
+          preview_thumbnail: created.canvas.preview_thumbnail || previewThumbnail || undefined,
+        });
+      }
       showToast(t('canvas.toast_created'), 'success');
       navigate(isBoard ? `/board/${canvasUuid}` : `/design/${canvasUuid}`);
       return;

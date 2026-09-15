@@ -1,11 +1,12 @@
 import { pool } from '../config/database.config.js';
 import { config } from '../config/env.config.js';
+import { UserPayload, UserRole } from '../types/auth.types.js';
+import { EnterpriseTenant } from '../types/enterprise.types.js';
 import { hashPassword, updateUserSubscriptionInSessions } from './auth.service.js';
 import { logger } from './logger.service.js';
+import { assignUserRole } from './role.service.js';
 import { resolveHigherTier } from './subscription.service.js';
 import { cleanDomain, getTenantByDomain, getTenantByUuid } from './tenant.service.js';
-import { EnterpriseTenant } from '../types/enterprise.types.js';
-import { UserPayload, UserRole } from '../types/auth.types.js';
 import crypto from 'crypto';
 import mysql from 'mysql2/promise';
 
@@ -101,14 +102,14 @@ export async function resolveOrProvisionFederatedUser(
 
     let userId: number;
     let username: string;
-    let role: UserRole = 'user';
+    let role: UserRole = (tenant.default_role as UserRole) || 'USER';
     let avatarUrl: string | null = null;
     let targetTier = 'business';
 
     if (userRows.length > 0) {
       userId = userRows[0].id;
       username = userRows[0].username;
-      role = (userRows[0].role as UserRole) || 'user';
+      role = (userRows[0].role as UserRole) || 'USER';
       avatarUrl = userRows[0].avatar_url || null;
 
       const existingTier = (userRows[0].subscription_tier || 'free').toLowerCase();
@@ -138,12 +139,15 @@ export async function resolveOrProvisionFederatedUser(
       const passHash = await hashPassword(randomPass);
 
       const [insertRes] = await pool.execute<mysql.ResultSetHeader>(
-        `INSERT INTO users (username, email, password_hash, subscription_tier) VALUES (?, ?, ?, ?)`,
-        [uniqueUsername, cleanEmail, passHash, targetTier]
+        `INSERT INTO users (username, email, password_hash, role, subscription_tier) VALUES (?, ?, ?, ?, ?)`,
+        [uniqueUsername, cleanEmail, passHash, role, targetTier]
       );
 
       userId = insertRes.insertId;
       username = uniqueUsername;
+      try {
+        await assignUserRole(userId, role);
+      } catch {}
     }
 
     await pool.execute(

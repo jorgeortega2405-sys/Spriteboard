@@ -450,7 +450,7 @@ export async function me(req: Request, res: Response): Promise<void> {
   if (freshUser && (freshUser.subscription_tier !== user.subscription_tier || freshUser.role !== user.role)) {
     updateActiveAccountInSession(res, req, {
       subscription_tier: freshUser.subscription_tier || 'free',
-      role: freshUser.role || 'user',
+      role: freshUser.role || 'USER',
     });
   }
 
@@ -460,7 +460,7 @@ export async function me(req: Request, res: Response): Promise<void> {
       return {
         ...acc,
         subscription_tier: freshUser.subscription_tier || 'free',
-        role: freshUser.role || 'user',
+        role: freshUser.role || 'USER',
       };
     }
     return acc;
