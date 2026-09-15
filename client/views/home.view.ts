@@ -214,7 +214,9 @@ class HomeController {
       this.templatesSortDropdownController = setupDropdown(templatesSortDropdownWrapper, {
         matchWidth: false,
         onSelect: (val: string) => {
-          this.templateSort = (val as 'default' | 'alpha-asc' | 'alpha-desc' | 'size-desc' | 'size-asc') || 'default';
+          const next = (val as 'default' | 'alpha-asc' | 'alpha-desc' | 'size-desc' | 'size-asc') || 'default';
+          if (this.templateSort === next) return;
+          this.templateSort = next;
           const sortMenu = this.container.querySelector<HTMLElement>('[data-ref="dropdown-menu-sort"]');
           sortMenu?.querySelectorAll<HTMLButtonElement>('.menu-item').forEach((item) => {
             item.classList.toggle('is-active', item.getAttribute('data-value') === this.templateSort);
@@ -325,30 +327,23 @@ class HomeController {
       this.container.querySelector<HTMLElement>(`[data-ref="${ref}"]`)?.classList.add('is-active');
     };
 
-    const bindCat = (ref: string, handler: () => void) => {
+    const bindCat = (ref: string, filterType: 'all' | 'board' | 'pixel') => {
       this.container.querySelector<HTMLElement>(`[data-ref="${ref}"]`)?.addEventListener(
         'click',
         (e) => {
           e.preventDefault();
+          if (this.currentTypeFilter === filterType) return;
+          this.currentTypeFilter = filterType;
           setActiveBadge(ref);
-          handler();
+          void this.onFiltersChanged();
         },
         { signal }
       );
     };
 
-    bindCat('cat-badge-all', () => {
-      this.currentTypeFilter = 'all';
-      void this.onFiltersChanged();
-    });
-    bindCat('cat-badge-board', () => {
-      this.currentTypeFilter = 'board';
-      void this.onFiltersChanged();
-    });
-    bindCat('cat-badge-pixel', () => {
-      this.currentTypeFilter = 'pixel';
-      void this.onFiltersChanged();
-    });
+    bindCat('cat-badge-all', 'all');
+    bindCat('cat-badge-board', 'board');
+    bindCat('cat-badge-pixel', 'pixel');
 
     this.categoriesCarouselWrapper = this.container.querySelector<HTMLElement>('[data-ref="home-categories-carousel-wrapper"]');
     if (this.categoriesCarouselWrapper) {

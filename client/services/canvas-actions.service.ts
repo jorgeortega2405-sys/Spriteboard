@@ -93,7 +93,7 @@ export function applyResizeCanvas(
   anchor = 'top-left',
   scaleFit: 'fit' | 'stretch' = 'fit'
 ): void {
-  if (newW <= 0 || newH <= 0 || newW > 4096 || newH > 4096 || (newW === context.canvasWidth && newH === context.canvasHeight)) {
+  if (newW <= 0 || newH <= 0 || newW > 16384 || newH > 16384 || (newW === context.canvasWidth && newH === context.canvasHeight)) {
     return;
   }
 

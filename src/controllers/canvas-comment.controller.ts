@@ -1,6 +1,6 @@
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import { createCanvasComment, deleteCanvasComment, listCanvasComments, updateCanvasComment } from '../services/canvas-comment.service.js';
-import { logger } from '../services/logger.service.js';
+import { sendBadRequest, sendCreated, sendInternalError, sendSuccess, sendUnauthorized } from '../utils/http.util.js';
 import { Request, Response } from 'express';
 
 export async function listCommentsHandler(req: Request, res: Response): Promise<void> {
@@ -10,10 +10,9 @@ export async function listCommentsHandler(req: Request, res: Response): Promise<
     const frameIndex = req.query.frameIndex !== undefined ? Number(req.query.frameIndex) : undefined;
 
     const comments = await listCanvasComments(uuid, user ? user.id : undefined, frameIndex);
-    res.json({ comments, success: true });
+    sendSuccess(res, { comments, success: true });
   } catch (err: any) {
-    logger.db.error('Error al listar comentarios del lienzo', err);
-    res.status(500).json({ error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.' });
+    sendInternalError(res, 'Error al listar comentarios del lienzo', err);
   }
 }
 
@@ -21,7 +20,7 @@ export async function createCommentHandler(req: Request, res: Response): Promise
   try {
     const user = getCurrentUser(req);
     if (!user) {
-      res.status(401).json({ error: 'Debes iniciar sesión para comentar.' });
+      sendUnauthorized(res, 'Debes iniciar sesión para comentar.');
       return;
     }
 
@@ -29,7 +28,7 @@ export async function createCommentHandler(req: Request, res: Response): Promise
     const { content, frameIndex, parentId, posX, posY } = req.body;
 
     if (!content || typeof content !== 'string' || !content.trim()) {
-      res.status(400).json({ error: 'El contenido del comentario es obligatorio.' });
+      sendBadRequest(res, 'El contenido del comentario es obligatorio.');
       return;
     }
 
@@ -41,10 +40,9 @@ export async function createCommentHandler(req: Request, res: Response): Promise
       posY: posY !== undefined && posY !== null ? Number(posY) : undefined,
     });
 
-    res.status(201).json({ comment, success: true });
+    sendCreated(res, { comment, success: true });
   } catch (err: any) {
-    logger.db.error('Error al crear comentario', err);
-    res.status(500).json({ error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.' });
+    sendInternalError(res, 'Error al crear comentario', err);
   }
 }
 
@@ -52,7 +50,7 @@ export async function updateCommentHandler(req: Request, res: Response): Promise
   try {
     const user = getCurrentUser(req);
     if (!user) {
-      res.status(401).json({ error: 'No autorizado.' });
+      sendUnauthorized(res, 'No autorizado.');
       return;
     }
 
@@ -64,10 +62,9 @@ export async function updateCommentHandler(req: Request, res: Response): Promise
       status: status === 'resolved' || status === 'open' ? status : undefined,
     });
 
-    res.json({ comment, success: true });
+    sendSuccess(res, { comment, success: true });
   } catch (err: any) {
-    logger.db.error('Error al actualizar comentario', err);
-    res.status(500).json({ error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.' });
+    sendInternalError(res, 'Error al actualizar comentario', err);
   }
 }
 
@@ -75,16 +72,15 @@ export async function deleteCommentHandler(req: Request, res: Response): Promise
   try {
     const user = getCurrentUser(req);
     if (!user) {
-      res.status(401).json({ error: 'No autorizado.' });
+      sendUnauthorized(res, 'No autorizado.');
       return;
     }
 
     const { commentUuid, uuid } = req.params;
     await deleteCanvasComment(uuid, commentUuid, user.id);
 
-    res.json({ success: true });
+    sendSuccess(res, { success: true });
   } catch (err: any) {
-    logger.db.error('Error al eliminar comentario', err);
-    res.status(500).json({ error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.' });
+    sendInternalError(res, 'Error al eliminar comentario', err);
   }
 }

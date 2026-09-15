@@ -1,6 +1,6 @@
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import { createCanvasSnapshot, deleteCanvasSnapshot, forkCanvasSnapshot, getCanvasSnapshotData, listCanvasSnapshots, restoreCanvasSnapshot, updateCanvasSnapshot } from '../services/canvas-snapshot.service.js';
-import { logger } from '../services/logger.service.js';
+import { sendCreated, sendInternalError, sendSuccess, sendUnauthorized } from '../utils/http.util.js';
 import { Request, Response } from 'express';
 
 export async function listSnapshotsHandler(req: Request, res: Response): Promise<void> {
@@ -10,10 +10,9 @@ export async function listSnapshotsHandler(req: Request, res: Response): Promise
 
   try {
     const snapshots = await listCanvasSnapshots(uuid, userId);
-    res.json({ snapshots });
+    sendSuccess(res, { snapshots });
   } catch (err: any) {
-    logger.db.error(`Error al listar snapshots del lienzo ${uuid}`, err);
-    res.status(400).json({ error: 'No se pudo obtener el historial de versiones.' });
+    sendInternalError(res, `Error al listar snapshots del lienzo ${uuid}`, err, 'No se pudo obtener el historial de versiones.');
   }
 }
 
@@ -31,10 +30,9 @@ export async function createSnapshotHandler(req: Request, res: Response): Promis
       preview_thumbnail,
       data,
     });
-    res.status(201).json({ snapshot });
+    sendCreated(res, { snapshot });
   } catch (err: any) {
-    logger.db.error(`Error al crear snapshot para el lienzo ${uuid}`, err);
-    res.status(400).json({ error: 'No se pudo guardar la versión del lienzo.' });
+    sendInternalError(res, `Error al crear snapshot para el lienzo ${uuid}`, err, 'No se pudo guardar la versión del lienzo.');
   }
 }
 
@@ -45,10 +43,9 @@ export async function getSnapshotDataHandler(req: Request, res: Response): Promi
 
   try {
     const result = await getCanvasSnapshotData(uuid, snapshotUuid, userId);
-    res.json(result);
+    sendSuccess(res, result);
   } catch (err: any) {
-    logger.db.error(`Error al obtener datos del snapshot ${snapshotUuid} del lienzo ${uuid}`, err);
-    res.status(404).json({ error: 'No se encontró la versión solicitada.' });
+    sendInternalError(res, `Error al obtener datos del snapshot ${snapshotUuid} del lienzo ${uuid}`, err, 'No se encontró la versión solicitada.');
   }
 }
 
@@ -57,16 +54,15 @@ export async function restoreSnapshotHandler(req: Request, res: Response): Promi
   const user = getCurrentUser(req);
 
   if (!user) {
-    res.status(401).json({ error: 'Debes iniciar sesión para restaurar versiones.' });
+    sendUnauthorized(res, 'Debes iniciar sesión para restaurar versiones.');
     return;
   }
 
   try {
     const result = await restoreCanvasSnapshot(uuid, snapshotUuid, user.id);
-    res.json(result);
+    sendSuccess(res, result);
   } catch (err: any) {
-    logger.db.error(`Error al restaurar snapshot ${snapshotUuid} en lienzo ${uuid}`, err);
-    res.status(400).json({ error: 'No se pudo restaurar la versión del lienzo.' });
+    sendInternalError(res, `Error al restaurar snapshot ${snapshotUuid} en lienzo ${uuid}`, err, 'No se pudo restaurar la versión del lienzo.');
   }
 }
 
@@ -76,16 +72,15 @@ export async function forkSnapshotHandler(req: Request, res: Response): Promise<
   const { name } = req.body;
 
   if (!user) {
-    res.status(401).json({ error: 'Debes iniciar sesión para crear una copia a partir de una versión.' });
+    sendUnauthorized(res, 'Debes iniciar sesión para crear una copia a partir de una versión.');
     return;
   }
 
   try {
     const newCanvas = await forkCanvasSnapshot(uuid, snapshotUuid, user.id, name);
-    res.status(201).json({ canvas: newCanvas });
+    sendCreated(res, { canvas: newCanvas });
   } catch (err: any) {
-    logger.db.error(`Error al crear copia desde snapshot ${snapshotUuid} del lienzo ${uuid}`, err);
-    res.status(400).json({ error: 'No se pudo crear la copia del lienzo.' });
+    sendInternalError(res, `Error al crear copia desde snapshot ${snapshotUuid} del lienzo ${uuid}`, err, 'No se pudo crear la copia del lienzo.');
   }
 }
 
@@ -95,16 +90,15 @@ export async function updateSnapshotHandler(req: Request, res: Response): Promis
   const { name, description } = req.body;
 
   if (!user) {
-    res.status(401).json({ error: 'Debes iniciar sesión para actualizar la versión.' });
+    sendUnauthorized(res, 'Debes iniciar sesión para actualizar la versión.');
     return;
   }
 
   try {
     await updateCanvasSnapshot(uuid, snapshotUuid, user.id, { name, description });
-    res.json({ success: true });
+    sendSuccess(res, { success: true });
   } catch (err: any) {
-    logger.db.error(`Error al actualizar snapshot ${snapshotUuid} del lienzo ${uuid}`, err);
-    res.status(400).json({ error: 'No se pudo actualizar la versión.' });
+    sendInternalError(res, `Error al actualizar snapshot ${snapshotUuid} del lienzo ${uuid}`, err, 'No se pudo actualizar la versión.');
   }
 }
 
@@ -113,15 +107,14 @@ export async function deleteSnapshotHandler(req: Request, res: Response): Promis
   const user = getCurrentUser(req);
 
   if (!user) {
-    res.status(401).json({ error: 'Debes iniciar sesión para eliminar la versión.' });
+    sendUnauthorized(res, 'Debes iniciar sesión para eliminar la versión.');
     return;
   }
 
   try {
     await deleteCanvasSnapshot(uuid, snapshotUuid, user.id);
-    res.json({ success: true });
+    sendSuccess(res, { success: true });
   } catch (err: any) {
-    logger.db.error(`Error al eliminar snapshot ${snapshotUuid} del lienzo ${uuid}`, err);
-    res.status(400).json({ error: 'No se pudo eliminar la versión.' });
+    sendInternalError(res, `Error al eliminar snapshot ${snapshotUuid} del lienzo ${uuid}`, err, 'No se pudo eliminar la versión.');
   }
 }

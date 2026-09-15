@@ -1,19 +1,19 @@
-import { navigate, render } from '../app-router';
-import { createSidebar } from '../components/layout.component';
-import { open2FAModal, openModal } from '../components/modal.component';
-import { API_ROUTES } from '../config/api-routes';
-import { appConfig, cancelSubscriptionImmediateApi, checkAuthSession, clearUserState, createSetupIntentApi, currentUser, deleteApi, deletePaymentMethodApi, escapeHtml, getApi, getBillingDetailsApi, getPaymentMethodsApi, getPurchaseHistoryApi, getStorageUsageApi, logoutAllApi, postApi, postFormApi, setCurrentUser, setDefaultPaymentMethodApi, setLinkedAccounts, updateAutoRenewalApi } from '../services/api.service';
-import { getCurrentLanguage, setLanguage, t, translateElement } from '../services/i18n.service';
-import { loadTemplate } from '../services/template.service';
-import { applyAccessibilityPreferences, initTheme, setTheme } from '../services/theme.service';
-import { setToastPreferences, showToast } from '../services/toast.service';
-import { closeWebSocket } from '../services/websocket.service';
-import { ModalInstance } from '../types/common.types';
-import { BillingDetailsResponse, PaymentMethod, PurchaseRecord, StorageUsageInfo } from '../types/subscription.types';
-import { debounce, removeEmptyState, renderEmptyState, setupDropdown, setupPasswordToggle, withButtonLoading } from '../utils/dom.util';
-import { AVAILABLE_LANGUAGES, detectBrowserLanguage, getLanguageName } from '../utils/languages.util';
-import { applyAvatarTier } from '../utils/tier.util';
-import { validatePassword } from '../utils/validators.util';
+import { navigate, render } from '../app-router.js';
+import { createSidebar } from '../components/layout.component.js';
+import { open2FAModal, openModal } from '../components/modal.component.js';
+import { API_ROUTES } from '../config/api-routes.js';
+import { appConfig, cancelSubscriptionImmediateApi, checkAuthSession, clearUserState, createSetupIntentApi, currentUser, deleteApi, deletePaymentMethodApi, escapeHtml, getApi, getBillingDetailsApi, getPaymentMethodsApi, getPurchaseHistoryApi, getStorageUsageApi, logoutAllApi, postApi, postFormApi, setCurrentUser, setDefaultPaymentMethodApi, setLinkedAccounts, updateAutoRenewalApi } from '../services/api.service.js';
+import { getCurrentLanguage, setLanguage, t, translateElement } from '../services/i18n.service.js';
+import { loadTemplate } from '../services/template.service.js';
+import { applyAccessibilityPreferences, initTheme, setTheme } from '../services/theme.service.js';
+import { setToastPreferences, showToast } from '../services/toast.service.js';
+import { closeWebSocket } from '../services/websocket.service.js';
+import { ModalInstance } from '../types/common.types.js';
+import { BillingDetailsResponse, PaymentMethod, PurchaseRecord, StorageUsageInfo } from '../types/subscription.types.js';
+import { debounce, removeEmptyState, renderEmptyState, setupDropdown, setupPasswordToggle, withButtonLoading } from '../utils/dom.util.js';
+import { AVAILABLE_LANGUAGES, detectBrowserLanguage, getLanguageName } from '../utils/languages.util.js';
+import { applyAvatarTier } from '../utils/tier.util.js';
+import { validatePassword } from '../utils/validators.util.js';
 
 export async function createYourAccountView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/settings/your-account.html');

@@ -292,49 +292,56 @@
         </button>
         <div class="design-top-toolbar" data-ref="design-top-toolbar">
           <div class="design-top-toolbar__section design-top-toolbar__section--left" data-ref="top-toolbar-left">
-            <button type="button" class="design-toolbar-btn" data-ref="btn-toggle-layers" data-tooltip="Capas" aria-label="Capas">
-              <span class="component-icon">layers</span>
-            </button>
-            <button type="button" class="design-toolbar-btn" data-ref="btn-top-toggle-colors" data-tooltip="Paleta de colores" aria-label="Colores">
-              <span class="component-icon">palette</span>
-            </button>
-            <button type="button" class="design-toolbar-btn" data-ref="btn-tile-grid" data-tooltip="Rejilla de Tiles" aria-label="Rejilla de Tiles">
-              <span class="component-icon">grid_on</span>
-            </button>
-            <button type="button" class="design-toolbar-btn" data-ref="btn-top-toggle-shapes" data-tooltip="Figuras y Plantillas" aria-label="Figuras">
-              <span class="component-icon">category</span>
-            </button>
-            <button type="button" class="design-toolbar-btn" data-ref="btn-open-slicer" data-tooltip="Separador de sprites (Auto-Slicer)" aria-label="Auto-Slicer">
-              <span class="component-icon">grid_view</span>
-            </button>
+            <div class="design-toolbar-group" data-ref="top-group-panels">
+              <button type="button" class="design-toolbar-btn" data-ref="btn-toggle-layers" data-tooltip="Capas" aria-label="Capas">
+                <span class="component-icon">layers</span>
+              </button>
+              <button type="button" class="design-toolbar-btn" data-ref="btn-top-toggle-colors" data-tooltip="Paleta de colores" aria-label="Colores">
+                <span class="component-icon">palette</span>
+              </button>
+              <button type="button" class="design-toolbar-btn" data-ref="btn-tile-grid" data-tooltip="Rejilla de Tiles" aria-label="Rejilla de Tiles">
+                <span class="component-icon">grid_on</span>
+              </button>
+              <button type="button" class="design-toolbar-btn" data-ref="btn-top-toggle-shapes" data-tooltip="Figuras y Plantillas" aria-label="Figuras">
+                <span class="component-icon">category</span>
+              </button>
+              <button type="button" class="design-toolbar-btn" data-ref="btn-open-slicer" data-tooltip="Separador de sprites (Auto-Slicer)" aria-label="Auto-Slicer">
+                <span class="component-icon">grid_view</span>
+              </button>
+            </div>
             <div class="design-toolbar-divider" data-ref="top-toolbar-divider-undo"></div>
-            <button type="button" class="design-toolbar-btn is-disabled" data-ref="btn-undo" data-tooltip="Deshacer (Ctrl+Z)" aria-label="Deshacer" disabled>
-              <span class="component-icon">undo</span>
-            </button>
-            <button type="button" class="design-toolbar-btn is-disabled" data-ref="btn-redo" data-tooltip="Rehacer (Ctrl+Y)" aria-label="Rehacer" disabled>
-              <span class="component-icon">redo</span>
-            </button>
+            <div class="design-toolbar-group" data-ref="top-group-history">
+              <button type="button" class="design-toolbar-btn is-disabled" data-ref="btn-undo" data-tooltip="Deshacer (Ctrl+Z)" aria-label="Deshacer" disabled>
+                <span class="component-icon">undo</span>
+              </button>
+              <button type="button" class="design-toolbar-btn is-disabled" data-ref="btn-redo" data-tooltip="Rehacer (Ctrl+Y)" aria-label="Rehacer" disabled>
+                <span class="component-icon">redo</span>
+              </button>
+            </div>
             <div class="design-toolbar-divider" data-ref="top-toolbar-divider-resize"></div>
-            <button type="button" class="design-toolbar-btn" data-ref="btn-resize-canvas" data-tooltip="Redimensionar lienzo" aria-label="Redimensionar lienzo">
-              <span class="component-icon">aspect_ratio</span>
-            </button>
-            <div class="design-toolbar-divider" data-ref="top-toolbar-divider-transform"></div>
-            <button type="button" class="design-toolbar-btn" data-ref="btn-canvas-rotate-cw" data-tooltip="Rotar lienzo 90° horario" aria-label="Rotar lienzo horario">
-              <span class="component-icon">rotate_right</span>
-            </button>
-            <button type="button" class="design-toolbar-btn" data-ref="btn-canvas-rotate-ccw" data-tooltip="Rotar lienzo 90° antihorario" aria-label="Rotar lienzo antihorario">
-              <span class="component-icon">rotate_left</span>
-            </button>
-            <button type="button" class="design-toolbar-btn" data-ref="btn-canvas-flip-h" data-tooltip="Voltear lienzo horizontalmente" aria-label="Voltear horizontal">
-              <span class="component-icon">swap_horiz</span>
-            </button>
-            <button type="button" class="design-toolbar-btn" data-ref="btn-canvas-flip-v" data-tooltip="Voltear lienzo verticalmente" aria-label="Voltear vertical">
-              <span class="component-icon">swap_vert</span>
-            </button>
+            <div class="design-toolbar-group" data-ref="top-group-canvas">
+              <button type="button" class="design-toolbar-btn" data-ref="btn-resize-canvas" data-tooltip="Redimensionar lienzo" aria-label="Redimensionar lienzo">
+                <span class="component-icon">aspect_ratio</span>
+              </button>
+              <button type="button" class="design-toolbar-btn" data-ref="btn-canvas-rotate-cw" data-tooltip="Rotar lienzo 90° horario" aria-label="Rotar lienzo horario">
+                <span class="component-icon">rotate_right</span>
+              </button>
+              <button type="button" class="design-toolbar-btn" data-ref="btn-canvas-rotate-ccw" data-tooltip="Rotar lienzo 90° antihorario" aria-label="Rotar lienzo antihorario">
+                <span class="component-icon">rotate_left</span>
+              </button>
+              <button type="button" class="design-toolbar-btn" data-ref="btn-canvas-flip-h" data-tooltip="Voltear lienzo horizontalmente" aria-label="Voltear horizontal">
+                <span class="component-icon">swap_horiz</span>
+              </button>
+              <button type="button" class="design-toolbar-btn" data-ref="btn-canvas-flip-v" data-tooltip="Voltear lienzo verticalmente" aria-label="Voltear vertical">
+                <span class="component-icon">swap_vert</span>
+              </button>
+            </div>
             <div class="design-toolbar-divider" data-ref="top-toolbar-divider-collab"></div>
-            <button type="button" class="design-toolbar-btn" data-ref="btn-toggle-collaborators" data-tooltip="Colaboradores y cursores" aria-label="Colaboradores">
-              <span class="component-icon">group</span>
-            </button>
+            <div class="design-toolbar-group" data-ref="top-group-collab">
+              <button type="button" class="design-toolbar-btn" data-ref="btn-toggle-collaborators" data-tooltip="Colaboradores y cursores" aria-label="Colaboradores">
+                <span class="component-icon">group</span>
+              </button>
+            </div>
           </div>
           <div class="design-top-toolbar__section design-top-toolbar__section--right" data-ref="top-toolbar-right"></div>
         </div>
@@ -843,49 +850,65 @@
             <div class="design-options-tray__group is-hidden" data-ref="options-group-size">
               <span class="design-options-tray__label" data-ref="options-label-size">Tamaño:</span>
               <div class="design-options-tray__badges" data-ref="options-size-badges">
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable is-active" data-ref="btn-size-1" data-size="1">1px</button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-size-2" data-size="2">2px</button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-size-3" data-size="3">3px</button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-size-4" data-size="4">4px</button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-size-8" data-size="8">8px</button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-size-12" data-size="12">12px</button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-size-16" data-size="16">16px</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text is-active" data-ref="btn-size-1" data-size="1">1px</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-size-2" data-size="2">2px</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-size-3" data-size="3">3px</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-size-4" data-size="4">4px</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-size-8" data-size="8">8px</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-size-12" data-size="12">12px</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-size-16" data-size="16">16px</button>
               </div>
               <div class="design-toolbar-divider" data-ref="options-pixel-perfect-divider"></div>
               <div class="design-options-tray__badges" data-ref="options-pixel-perfect-badges">
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-brush-pixel-perfect" data-tooltip="Modo Pixel-Perfect (Suprime esquinas dobles en L)">
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-brush-pixel-perfect" data-tooltip="Modo Pixel-Perfect (Suprime esquinas dobles en L)">
                   <span>Pixel-Perfect: OFF</span>
                 </button>
               </div>
             </div>
 
             <div class="design-options-tray__group is-hidden" data-ref="options-group-shapes">
+              <span class="design-options-tray__label" data-ref="options-label-shapes-type">Figura:</span>
+              <div class="design-options-tray__badges" data-ref="options-shapes-type-badges">
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-shape-type-line" data-shape-type="line" data-tooltip="Línea recta (Shift sostenido)">
+                  <span class="component-icon">horizontal_rule</span>
+                  <span>Línea</span>
+                </button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text is-active" data-ref="btn-shape-type-rectangle" data-shape-type="rectangle" data-tooltip="Rectángulo">
+                  <span class="component-icon">crop_square</span>
+                  <span>Rectángulo</span>
+                </button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-shape-type-circle" data-shape-type="circle" data-tooltip="Círculo / Elipse">
+                  <span class="component-icon">circle</span>
+                  <span>Círculo</span>
+                </button>
+              </div>
+              <div class="design-toolbar-divider" data-ref="options-shapes-mode-divider"></div>
               <span class="design-options-tray__label" data-ref="options-label-shapes-mode">Modo:</span>
               <div class="design-options-tray__badges" data-ref="options-shapes-mode-badges">
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable is-active" data-ref="btn-shape-mode-outline" data-shape-mode="outline" data-tooltip="Modo contorno de 1px">Contorno</button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-shape-mode-filled" data-shape-mode="filled" data-tooltip="Modo relleno sólido">Relleno</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text is-active" data-ref="btn-shape-mode-outline" data-shape-mode="outline" data-tooltip="Modo contorno de 1px">Contorno</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-shape-mode-filled" data-shape-mode="filled" data-tooltip="Modo relleno sólido">Relleno</button>
               </div>
             </div>
 
             <div class="design-options-tray__group is-hidden" data-ref="options-group-dither">
               <span class="design-options-tray__label" data-ref="options-label-dither">Patrón:</span>
               <div class="design-options-tray__badges" data-ref="options-dither-badges">
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable is-active" data-ref="btn-dither-checker" data-pattern="checker-50" data-tooltip="Ajedrez 50%">Ajedrez 50%</button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-dither-dots25" data-pattern="dots-25" data-tooltip="Puntos 25%">Puntos 25%</button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-dither-dots75" data-pattern="dots-75" data-tooltip="Puntos 75%">Puntos 75%</button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-dither-diag" data-pattern="diag-lines" data-tooltip="Líneas Diagonales">Líneas Diag</button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-dither-hlines" data-pattern="h-lines" data-tooltip="Líneas Horizontales">Líneas Horiz</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text is-active" data-ref="btn-dither-checker" data-pattern="checker-50" data-tooltip="Ajedrez 50%">Ajedrez 50%</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-dither-dots25" data-pattern="dots-25" data-tooltip="Puntos 25%">Puntos 25%</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-dither-dots75" data-pattern="dots-75" data-tooltip="Puntos 75%">Puntos 75%</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-dither-diag" data-pattern="diag-lines" data-tooltip="Líneas Diagonales">Líneas Diag</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-dither-hlines" data-pattern="h-lines" data-tooltip="Líneas Horizontales">Líneas Horiz</button>
               </div>
             </div>
 
             <div class="design-options-tray__group is-hidden" data-ref="options-group-shading">
               <span class="design-options-tray__label" data-ref="options-label-shading-mode">Modo:</span>
               <div class="design-options-tray__badges" data-ref="options-shading-mode-badges">
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable is-active" data-ref="btn-shading-shadow" data-mode="shadow" data-tooltip="Modo Sombra (Oscurece gradualmente)">
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text is-active" data-ref="btn-shading-shadow" data-mode="shadow" data-tooltip="Modo Sombra (Oscurece gradualmente)">
                   <span class="component-icon">contrast</span>
                   <span>Sombra</span>
                 </button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-shading-highlight" data-mode="highlight" data-tooltip="Modo Brillo (Ilumina gradualmente)">
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-shading-highlight" data-mode="highlight" data-tooltip="Modo Brillo (Ilumina gradualmente)">
                   <span class="component-icon">wb_sunny</span>
                   <span>Brillo</span>
                 </button>
@@ -893,51 +916,51 @@
               <div class="design-toolbar-divider" data-ref="options-shading-divider"></div>
               <span class="design-options-tray__label" data-ref="options-label-shading-ramp">Rampa:</span>
               <div class="design-options-tray__badges" data-ref="options-shading-ramp-badges">
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable is-active" data-ref="btn-shading-ramp-warm-cool" data-ramp="warm-cool" data-tooltip="Rampa Cálido / Frío (Amarillo / Azul)">Cálido/Frío</button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-shading-ramp-night" data-ramp="night" data-tooltip="Rampa Nocturno (Cian / Azul Noche)">Nocturno</button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-shading-ramp-organic" data-ramp="organic" data-tooltip="Rampa Orgánico (Luz Cálida / Verde Musgo)">Orgánico</button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-shading-ramp-mono" data-ramp="mono" data-tooltip="Rampa Monocromática (Ajuste de Valor)">Monocromático</button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-shading-ramp-palette" data-ramp="palette" data-tooltip="Rampa de Paleta Activa">Paleta</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text is-active" data-ref="btn-shading-ramp-warm-cool" data-ramp="warm-cool" data-tooltip="Rampa Cálido / Frío (Amarillo / Azul)">Cálido/Frío</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-shading-ramp-night" data-ramp="night" data-tooltip="Rampa Nocturno (Cian / Azul Noche)">Nocturno</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-shading-ramp-organic" data-ramp="organic" data-tooltip="Rampa Orgánico (Luz Cálida / Verde Musgo)">Orgánico</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-shading-ramp-mono" data-ramp="mono" data-tooltip="Rampa Monocromática (Ajuste de Valor)">Monocromático</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-shading-ramp-palette" data-ramp="palette" data-tooltip="Rampa de Paleta Activa">Paleta</button>
               </div>
             </div>
 
             <div class="design-options-tray__group is-hidden" data-ref="options-group-spray">
               <span class="design-options-tray__label" data-ref="options-label-spray-radius">Radio:</span>
               <div class="design-options-tray__badges" data-ref="options-spray-radius-badges">
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-spray-r3" data-radius="3">3px</button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable is-active" data-ref="btn-spray-r5" data-radius="5">5px</button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-spray-r8" data-radius="8">8px</button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-spray-r12" data-radius="12">12px</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-spray-r3" data-radius="3">3px</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text is-active" data-ref="btn-spray-r5" data-radius="5">5px</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-spray-r8" data-radius="8">8px</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-spray-r12" data-radius="12">12px</button>
               </div>
               <div class="design-toolbar-divider" data-ref="options-spray-divider"></div>
               <span class="design-options-tray__label" data-ref="options-label-spray-density">Densidad:</span>
               <div class="design-options-tray__badges" data-ref="options-spray-density-badges">
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-spray-d-low" data-density="low">Baja</button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable is-active" data-ref="btn-spray-d-med" data-density="med">Media</button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-spray-d-high" data-density="high">Alta</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-spray-d-low" data-density="low">Baja</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text is-active" data-ref="btn-spray-d-med" data-density="med">Media</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-spray-d-high" data-density="high">Alta</button>
               </div>
             </div>
 
             <div class="design-options-tray__group is-hidden" data-ref="options-group-bucket">
               <span class="design-options-tray__label" data-ref="options-label-bucket">Relleno:</span>
               <div class="design-options-tray__badges" data-ref="options-bucket-badges">
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable is-active" data-ref="btn-bucket-contiguous" data-mode="contiguous" data-tooltip="Rellenar área contigua">Contiguo</button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-bucket-global" data-mode="global" data-tooltip="Reemplazar color en toda la capa">Global</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text is-active" data-ref="btn-bucket-contiguous" data-mode="contiguous" data-tooltip="Rellenar área contigua">Contiguo</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-bucket-global" data-mode="global" data-tooltip="Reemplazar color en toda la capa">Global</button>
               </div>
             </div>
 
             <div class="design-options-tray__group is-hidden" data-ref="options-group-mirror">
               <span class="design-options-tray__label" data-ref="options-label-mirror">Simetría:</span>
               <div class="design-options-tray__badges" data-ref="options-mirror-badges">
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable is-active" data-ref="btn-mirror-vertical" data-axis="vertical" data-tooltip="Eje Vertical (Izquierda / Derecha)">
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text is-active" data-ref="btn-mirror-vertical" data-axis="vertical" data-tooltip="Eje Vertical (Izquierda / Derecha)">
                   <span class="component-icon">swap_horiz</span>
                   <span>Vertical</span>
                 </button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-mirror-horizontal" data-axis="horizontal" data-tooltip="Eje Horizontal (Arriba / Abajo)">
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-mirror-horizontal" data-axis="horizontal" data-tooltip="Eje Horizontal (Arriba / Abajo)">
                   <span class="component-icon">swap_vert</span>
                   <span>Horizontal</span>
                 </button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-mirror-both" data-axis="both" data-tooltip="Eje Cuádruple (4 Cuadrantes)">
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-mirror-both" data-axis="both" data-tooltip="Eje Cuádruple (4 Cuadrantes)">
                   <span class="component-icon">grid_view</span>
                   <span>Ambos</span>
                 </button>
@@ -947,15 +970,15 @@
             <div class="design-options-tray__group is-hidden" data-ref="options-group-select">
               <span class="design-options-tray__label" data-ref="options-label-select-mode">Selección:</span>
               <div class="design-options-tray__badges" data-ref="options-select-mode-badges">
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable is-active" data-ref="btn-select-box" data-mode="box" data-tooltip="Rectangular (Box)">
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text is-active" data-ref="btn-select-box" data-mode="box" data-tooltip="Rectangular (Box)">
                   <span class="component-icon">crop_free</span>
                   <span>Caja</span>
                 </button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-select-lasso" data-mode="lasso" data-tooltip="Lazo a mano alzada (Lasso)">
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-select-lasso" data-mode="lasso" data-tooltip="Lazo a mano alzada (Lasso)">
                   <span class="component-icon">gesture</span>
                   <span>Lazo</span>
                 </button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-select-wand" data-mode="wand" data-tooltip="Varita mágica (Wand)">
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-select-wand" data-mode="wand" data-tooltip="Varita mágica (Wand)">
                   <span class="component-icon">auto_fix_high</span>
                   <span>Varita</span>
                 </button>
@@ -963,15 +986,15 @@
               <div class="design-toolbar-divider" data-ref="options-select-divider-1"></div>
               <span class="design-options-tray__label" data-ref="options-label-select-transform">Transformar:</span>
               <div class="design-options-tray__badges" data-ref="options-select-transform-badges">
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-select-flip-h" data-tooltip="Voltear Horizontal (Flip H)">
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-select-flip-h" data-tooltip="Voltear Horizontal (Flip H)">
                   <span class="component-icon">swap_horiz</span>
                   <span>Voltear H</span>
                 </button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-select-flip-v" data-tooltip="Voltear Vertical (Flip V)">
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-select-flip-v" data-tooltip="Voltear Vertical (Flip V)">
                   <span class="component-icon">swap_vert</span>
                   <span>Voltear V</span>
                 </button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-select-rotate-90" data-tooltip="Rotar 90° Horario">
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-select-rotate-90" data-tooltip="Rotar 90° Horario">
                   <span class="component-icon">rotate_right</span>
                   <span>Rotar 90°</span>
                 </button>
@@ -979,26 +1002,26 @@
               <div class="design-toolbar-divider" data-ref="options-select-divider-outline"></div>
               <span class="design-options-tray__label" data-ref="options-label-select-outline">Contorno:</span>
               <div class="design-options-tray__badges" data-ref="options-select-outline-badges">
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-select-outline-black" data-tooltip="Contorno exterior 1px (Negro)">
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-select-outline-black" data-tooltip="Contorno exterior 1px (Negro)">
                   <span class="component-icon">contrast</span>
                   <span>Borde Negro</span>
                 </button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-select-outline-white" data-tooltip="Contorno exterior 1px (Blanco)">
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-select-outline-white" data-tooltip="Contorno exterior 1px (Blanco)">
                   <span class="component-icon">light_mode</span>
                   <span>Borde Blanco</span>
                 </button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-select-outline-color" data-tooltip="Contorno exterior 1px (Color activo)">
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-select-outline-color" data-tooltip="Contorno exterior 1px (Color activo)">
                   <span class="component-icon">palette</span>
                   <span>Borde Color</span>
                 </button>
               </div>
               <div class="design-toolbar-divider" data-ref="options-select-divider-2"></div>
               <div class="design-options-tray__badges" data-ref="options-select-actions-badges">
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-select-commit" data-tooltip="Confirmar / Estampar selección">
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-select-commit" data-tooltip="Confirmar / Estampar selección">
                   <span class="component-icon">check</span>
                   <span>Estampar</span>
                 </button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-select-deselect" data-tooltip="Deseleccionar (Ctrl+D)">
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-select-deselect" data-tooltip="Deseleccionar (Ctrl+D)">
                   <span class="component-icon">deselect</span>
                   <span>Deseleccionar</span>
                 </button>
@@ -1008,14 +1031,14 @@
             <div class="design-options-tray__group is-hidden" data-ref="options-group-tilegrid">
               <span class="design-options-tray__label" data-ref="options-label-tilegrid">Rejilla de Tiles:</span>
               <div class="design-options-tray__badges" data-ref="options-tilegrid-badges">
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable is-active" data-ref="btn-tilegrid-off" data-size="0" data-tooltip="Desactivada">Off</button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-tilegrid-4" data-size="4" data-tooltip="Cuadrícula 4x4 px">4px</button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-tilegrid-8" data-size="8" data-tooltip="Cuadrícula 8x8 px">8px</button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-tilegrid-16" data-size="16" data-tooltip="Cuadrícula 16x16 px">16px</button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-tilegrid-32" data-size="32" data-tooltip="Cuadrícula 32x32 px">32px</button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-tilegrid-64" data-size="64" data-tooltip="Cuadrícula 64x64 px">64px</button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-tilegrid-128" data-size="128" data-tooltip="Cuadrícula 128x128 px">128px</button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-tilegrid-256" data-size="256" data-tooltip="Cuadrícula 256x256 px">256px</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text is-active" data-ref="btn-tilegrid-off" data-size="0" data-tooltip="Desactivada">Off</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-tilegrid-4" data-size="4" data-tooltip="Cuadrícula 4x4 px">4px</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-tilegrid-8" data-size="8" data-tooltip="Cuadrícula 8x8 px">8px</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-tilegrid-16" data-size="16" data-tooltip="Cuadrícula 16x16 px">16px</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-tilegrid-32" data-size="32" data-tooltip="Cuadrícula 32x32 px">32px</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-tilegrid-64" data-size="64" data-tooltip="Cuadrícula 64x64 px">64px</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-tilegrid-128" data-size="128" data-tooltip="Cuadrícula 128x128 px">128px</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-tilegrid-256" data-size="256" data-tooltip="Cuadrícula 256x256 px">256px</button>
               </div>
             </div>
 
@@ -1025,31 +1048,31 @@
               <div class="design-toolbar-divider" data-ref="options-text-divider-1"></div>
               <span class="design-options-tray__label" data-ref="options-label-text-font">Fuente:</span>
               <div class="design-options-tray__badges" data-ref="options-text-font-badges">
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable is-active" data-ref="btn-font-classic" data-font="classic" data-tooltip="Clásica (5x7)">Clásica</button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-font-mini" data-font="mini" data-tooltip="Miniatura (3x5)">Mini</button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-font-arcade" data-font="arcade" data-tooltip="Arcade (8x8)">Arcade</button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-font-bold" data-font="bold" data-tooltip="Retro Bold (7x7)">Bold</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text is-active" data-ref="btn-font-classic" data-font="classic" data-tooltip="Clásica (5x7)">Clásica</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-font-mini" data-font="mini" data-tooltip="Miniatura (3x5)">Mini</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-font-arcade" data-font="arcade" data-tooltip="Arcade (8x8)">Arcade</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-font-bold" data-font="bold" data-tooltip="Retro Bold (7x7)">Bold</button>
               </div>
               <div class="design-toolbar-divider" data-ref="options-text-divider-2"></div>
               <span class="design-options-tray__label" data-ref="options-label-text-scale">Escala:</span>
               <div class="design-options-tray__badges" data-ref="options-text-scale-badges">
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable is-active" data-ref="btn-text-scale-1" data-scale="1">1x</button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-text-scale-2" data-scale="2">2x</button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-text-scale-3" data-scale="3">3x</button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-text-scale-4" data-scale="4">4x</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text is-active" data-ref="btn-text-scale-1" data-scale="1">1x</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-text-scale-2" data-scale="2">2x</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-text-scale-3" data-scale="3">3x</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-text-scale-4" data-scale="4">4x</button>
               </div>
               <div class="design-toolbar-divider" data-ref="options-text-divider-3"></div>
               <div class="design-options-tray__badges" data-ref="options-text-style-badges">
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-text-outline" data-tooltip="Activar contorno de 1px">Contorno</button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-text-shadow" data-tooltip="Activar sombra proyectada">Sombra</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-text-outline" data-tooltip="Activar contorno de 1px">Contorno</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-text-shadow" data-tooltip="Activar sombra proyectada">Sombra</button>
               </div>
               <div class="design-toolbar-divider" data-ref="options-text-divider-4"></div>
               <div class="design-options-tray__badges" data-ref="options-text-actions-badges">
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable is-active" data-ref="btn-text-commit" data-tooltip="Estampar texto en la capa (Enter)">
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text is-active" data-ref="btn-text-commit" data-tooltip="Estampar texto en la capa (Enter)">
                   <span class="component-icon">check</span>
                   <span>Estampar</span>
                 </button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-text-cancel" data-tooltip="Cancelar texto (Esc)">
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="btn-text-cancel" data-tooltip="Cancelar texto (Esc)">
                   <span class="component-icon">close</span>
                   <span>Cancelar</span>
                 </button>
@@ -1067,83 +1090,100 @@
           </button>
           <div class="design-bottom-toolbar" data-ref="design-bottom-toolbar">
             <div class="design-bottom-toolbar__section design-bottom-toolbar__section--tools" data-ref="toolbar-tools">
-              <button type="button" class="design-toolbar-btn is-active" data-ref="tool-brush" data-tooltip="Pincel" aria-label="Pincel">
-                <span class="component-icon">brush</span>
-              </button>
-              <button type="button" class="design-toolbar-btn" data-ref="tool-eraser" data-tooltip="Borrador" aria-label="Borrador">
-                <span class="component-icon">ink_eraser</span>
-              </button>
-              <button type="button" class="design-toolbar-btn" data-ref="tool-line" data-tooltip="Línea recta (Shift sostenido)" aria-label="Línea recta">
-                <span class="component-icon">horizontal_rule</span>
-              </button>
-              <button type="button" class="design-toolbar-btn" data-ref="tool-rectangle" data-tooltip="Rectángulo" aria-label="Rectángulo">
-                <span class="component-icon">crop_square</span>
-              </button>
-              <button type="button" class="design-toolbar-btn" data-ref="tool-circle" data-tooltip="Círculo / Elipse" aria-label="Círculo">
-                <span class="component-icon">circle</span>
-              </button>
-              <button type="button" class="design-toolbar-btn" data-ref="tool-recolor" data-tooltip="Reemplazo de color (Color Swap)" aria-label="Reemplazo de color">
-                <span class="component-icon">find_replace</span>
-              </button>
-              <button type="button" class="design-toolbar-btn" data-ref="tool-bucket" data-tooltip="Balde de pintura" aria-label="Balde de pintura">
-                <span class="component-icon">format_color_fill</span>
-              </button>
-              <button type="button" class="design-toolbar-btn" data-ref="tool-dither" data-tooltip="Tramador / Semitonos" aria-label="Tramador">
-                <span class="component-icon">texture</span>
-              </button>
-              <button type="button" class="design-toolbar-btn" data-ref="tool-shading" data-tooltip="Sombreado e Iluminación" aria-label="Sombreado e Iluminación">
-                <span class="component-icon">tonality</span>
-              </button>
-              <button type="button" class="design-toolbar-btn" data-ref="tool-spray" data-tooltip="Spray / Aerógrafo" aria-label="Spray">
-                <span class="component-icon">blur_on</span>
-              </button>
-              <button type="button" class="design-toolbar-btn" data-ref="tool-select" data-tooltip="Área de Selección y Movimiento" aria-label="Selección">
-                <span class="component-icon">crop_free</span>
-              </button>
-              <button type="button" class="design-toolbar-btn" data-ref="tool-text" data-tooltip="Texto Pixel" aria-label="Texto Pixel">
-                <span class="component-icon">title</span>
-              </button>
-              <button type="button" class="design-toolbar-btn" data-ref="tool-mirror" data-tooltip="Modo Espejo / Simetría" aria-label="Modo Espejo">
-                <span class="component-icon">flip</span>
-              </button>
-              <button type="button" class="design-toolbar-btn" data-ref="btn-bottom-colors" data-tooltip="Paleta de colores" aria-label="Paleta de colores">
-                <span class="design-color-picker__preview" data-ref="tool-color-preview" style="background-color: #000000;"></span>
-              </button>
-              <div class="design-toolbar-divider" data-ref="toolbar-divider-1"></div>
-              <button type="button" class="design-toolbar-btn" data-ref="btn-tool-options" data-tooltip="Opciones de herramienta" aria-label="Opciones">
-                <span class="component-icon">tune</span>
-              </button>
-              <button type="button" class="design-toolbar-btn" data-ref="btn-clear-canvas" data-tooltip="Limpiar lienzo" aria-label="Limpiar lienzo">
-                <span class="component-icon">delete_outline</span>
-              </button>
-              <button type="button" class="design-toolbar-btn" data-ref="btn-bottom-layers" data-tooltip="Capas" aria-label="Capas">
-                <span class="component-icon">layers</span>
-              </button>
-              <button type="button" class="design-toolbar-btn" data-ref="btn-bottom-frames" data-tooltip="Animación / Cuadros" aria-label="Animación">
-                <span class="component-icon">animation</span>
-              </button>
+              <div class="design-toolbar-group" data-ref="toolbar-group-draw">
+                <button type="button" class="design-toolbar-btn is-active" data-ref="tool-brush" data-tooltip="Pincel (B)" aria-label="Pincel">
+                  <span class="component-icon">brush</span>
+                </button>
+                <button type="button" class="design-toolbar-btn" data-ref="tool-eraser" data-tooltip="Borrador (E)" aria-label="Borrador">
+                  <span class="component-icon">ink_eraser</span>
+                </button>
+                <button type="button" class="design-toolbar-btn" data-ref="tool-spray" data-tooltip="Spray / Aerógrafo (A)" aria-label="Spray">
+                  <span class="component-icon">blur_on</span>
+                </button>
+                <button type="button" class="design-toolbar-btn" data-ref="tool-dither" data-tooltip="Tramador / Semitonos (D)" aria-label="Tramador">
+                  <span class="component-icon">texture</span>
+                </button>
+                <button type="button" class="design-toolbar-btn" data-ref="tool-shading" data-tooltip="Sombreado e Iluminación" aria-label="Sombreado e Iluminación">
+                  <span class="component-icon">tonality</span>
+                </button>
+              </div>
+
+              <div class="design-toolbar-divider" data-ref="toolbar-divider-shapes"></div>
+
+              <div class="design-toolbar-group" data-ref="toolbar-group-shapes">
+                <button type="button" class="design-toolbar-btn" data-ref="tool-shapes" data-tooltip="Figuras rápidas: Línea, Rectángulo, Círculo (U)" aria-label="Figuras rápidas">
+                  <span class="component-icon">category</span>
+                </button>
+              </div>
+
+              <div class="design-toolbar-divider" data-ref="toolbar-divider-color"></div>
+
+              <div class="design-toolbar-group" data-ref="toolbar-group-fill">
+                <button type="button" class="design-toolbar-btn" data-ref="tool-bucket" data-tooltip="Balde de pintura (G)" aria-label="Balde de pintura">
+                  <span class="component-icon">format_color_fill</span>
+                </button>
+                <button type="button" class="design-toolbar-btn" data-ref="tool-recolor" data-tooltip="Reemplazo de color (Color Swap)" aria-label="Reemplazo de color">
+                  <span class="component-icon">find_replace</span>
+                </button>
+                <button type="button" class="design-toolbar-btn" data-ref="btn-bottom-colors" data-tooltip="Paleta de colores" aria-label="Paleta de colores">
+                  <span class="design-color-picker__preview" data-ref="tool-color-preview" style="background-color: #000000;"></span>
+                </button>
+              </div>
+
+              <div class="design-toolbar-divider" data-ref="toolbar-divider-select"></div>
+
+              <div class="design-toolbar-group" data-ref="toolbar-group-transform">
+                <button type="button" class="design-toolbar-btn" data-ref="tool-select" data-tooltip="Área de Selección y Movimiento (S)" aria-label="Selección">
+                  <span class="component-icon">crop_free</span>
+                </button>
+                <button type="button" class="design-toolbar-btn" data-ref="tool-text" data-tooltip="Texto Pixel (T)" aria-label="Texto Pixel">
+                  <span class="component-icon">title</span>
+                </button>
+                <button type="button" class="design-toolbar-btn" data-ref="tool-mirror" data-tooltip="Modo Espejo / Simetría (M)" aria-label="Modo Espejo">
+                  <span class="component-icon">flip</span>
+                </button>
+              </div>
+
+              <div class="design-toolbar-divider" data-ref="toolbar-divider-actions"></div>
+
+              <div class="design-toolbar-group" data-ref="toolbar-group-actions">
+                <button type="button" class="design-toolbar-btn" data-ref="btn-tool-options" data-tooltip="Opciones de herramienta" aria-label="Opciones">
+                  <span class="component-icon">tune</span>
+                </button>
+                <button type="button" class="design-toolbar-btn" data-ref="btn-clear-canvas" data-tooltip="Limpiar lienzo" aria-label="Limpiar lienzo">
+                  <span class="component-icon">delete_outline</span>
+                </button>
+                <button type="button" class="design-toolbar-btn" data-ref="btn-bottom-layers" data-tooltip="Capas" aria-label="Capas">
+                  <span class="component-icon">layers</span>
+                </button>
+                <button type="button" class="design-toolbar-btn" data-ref="btn-bottom-frames" data-tooltip="Animación / Cuadros" aria-label="Animación">
+                  <span class="component-icon">animation</span>
+                </button>
+              </div>
             </div>
 
             <div class="design-bottom-toolbar__section design-bottom-toolbar__section--zoom" data-ref="toolbar-zoom">
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-zoom-out" data-tooltip="Alejar" aria-label="Alejar zoom">
-                <span class="component-icon">remove</span>
-              </button>
-              <div class="design-zoom-slider-container" data-ref="zoom-slider-container">
-                <input class="design-zoom-slider" data-ref="zoom-slider" type="range" min="1" max="100" value="10" aria-label="Control de Zoom" />
+              <div class="design-toolbar-group" data-ref="toolbar-group-zoom">
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-zoom-out" data-tooltip="Alejar" aria-label="Alejar zoom">
+                  <span class="component-icon">remove</span>
+                </button>
+                <div class="design-zoom-slider-container" data-ref="zoom-slider-container">
+                  <input class="design-zoom-slider" data-ref="zoom-slider" type="range" min="1" max="100" value="10" aria-label="Control de Zoom" />
+                </div>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-zoom-in" data-tooltip="Acercar" aria-label="Acercar zoom">
+                  <span class="component-icon">add</span>
+                </button>
+                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-zoom-reset" data-tooltip="Restablecer (100%)" aria-label="Restablecer zoom">
+                  <span data-ref="zoom-value-text">100%</span>
+                </button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-zoom-fit" data-tooltip="Ajustar a pantalla" aria-label="Ajustar a pantalla">
+                  <span class="component-icon">fit_screen</span>
+                </button>
+                <div class="design-toolbar-divider" data-ref="toolbar-divider-help"></div>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-help" data-tooltip="Centro de ayuda y atajos de teclado" aria-label="Ayuda">
+                  <span class="component-icon">help</span>
+                </button>
               </div>
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-zoom-in" data-tooltip="Acercar" aria-label="Acercar zoom">
-                <span class="component-icon">add</span>
-              </button>
-              <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-zoom-reset" data-tooltip="Restablecer (100%)" aria-label="Restablecer zoom">
-                <span data-ref="zoom-value-text">100%</span>
-              </button>
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-zoom-fit" data-tooltip="Ajustar a pantalla" aria-label="Ajustar a pantalla">
-                <span class="component-icon">fit_screen</span>
-              </button>
-              <div class="design-toolbar-divider" data-ref="toolbar-divider-help"></div>
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-help" data-tooltip="Centro de ayuda y atajos de teclado" aria-label="Ayuda">
-                <span class="component-icon">help</span>
-              </button>
             </div>
           </div>
           <button type="button" class="design-toolbar__nav-btn design-toolbar__nav-btn--right is-disabled" data-ref="btn-bottom-toolbar-scroll-right" data-tooltip="Desplazar a la derecha" aria-label="Desplazar a la derecha">

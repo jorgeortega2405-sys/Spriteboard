@@ -2,7 +2,7 @@ import { canvasPool } from '../config/database.config.js';
 import { ALL_PRESETS, PresetItem } from '../config/templates.config.js';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import { AiSearchService, SemanticQueryResult } from '../services/ai-search.service.js';
-import { logger } from '../services/logger.service.js';
+import { sendInternalError, sendSuccess } from '../utils/http.util.js';
 import { Request, Response } from 'express';
 import mysql from 'mysql2/promise';
 
@@ -15,7 +15,7 @@ export async function searchHandler(req: Request, res: Response): Promise<void> 
   try {
     const rawQuery = typeof req.query.q === 'string' ? req.query.q.trim() : '';
     if (!rawQuery) {
-      res.json({
+      sendSuccess(res, {
         query: '',
         semantic: { category: 'all', intent: '', keywords: [] },
         canvases: [],
@@ -105,14 +105,13 @@ export async function searchHandler(req: Request, res: Response): Promise<void> 
     scoredTemplates.sort((a, b) => b.score - a.score);
     const matchedTemplates = scoredTemplates.map((item) => item.template);
 
-    res.json({
+    sendSuccess(res, {
       query: rawQuery,
       semantic,
       canvases: matchedCanvases,
       templates: matchedTemplates,
     });
   } catch (err) {
-    logger.app.error('Error procesando búsqueda unificada', err);
-    res.status(500).json({ error: 'Ha ocurrido un error al procesar la búsqueda. Por favor intenta más tarde.' });
+    sendInternalError(res, 'Error procesando búsqueda unificada', err, 'Ha ocurrido un error al procesar la búsqueda. Por favor intenta más tarde.');
   }
 }

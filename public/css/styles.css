@@ -180,7 +180,10 @@ html.dark-theme .layout-content {
   padding: 6px 6px 0 0;
   gap: 0;
   background-color: #ffffff;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 }
 
 html[data-theme="dark"] .layout-content:has(.layout-nav),
@@ -188,44 +191,75 @@ html.dark-theme .layout-content:has(.layout-nav) {
   background-color: #09090b;
 }
 
-.layout-content:has(.layout-nav) .layout-nav {
-  position: relative;
-  height: 100vh;
-  height: 100dvh;
-  margin-top: -6px;
+.layout-content:has(.layout-nav)::after {
+  content: '';
+  display: block;
+  width: 0;
+  height: var(--layout-scroll-height, 0);
   flex-shrink: 0;
+  pointer-events: none;
+}
+
+.layout-content:has(.layout-nav) .layout-nav {
+  position: sticky !important;
+  top: 0 !important;
+  align-self: flex-start !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  margin-top: -6px;
+  flex-shrink: 0 !important;
   z-index: 50;
   box-sizing: border-box;
 }
 
 .layout-content:has(.layout-nav) .view-wrapper,
 .layout-content:has(.layout-nav) .home-wrapper,
-.layout-content:has(.layout-nav) .component-wrapper {
-  position: relative;
-  height: calc(100vh - 6px);
-  height: calc(100dvh - 6px);
-  max-height: calc(100vh - 6px);
-  max-height: calc(100dvh - 6px);
-  min-height: 0;
-  overflow: hidden;
+.layout-content:has(.layout-nav) .component-wrapper:not(.no-padding) {
+  position: sticky !important;
+  top: 0 !important;
+  height: calc(100vh - 6px) !important;
+  height: calc(100dvh - 6px) !important;
+  max-height: calc(100vh - 6px) !important;
+  max-height: calc(100dvh - 6px) !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
   flex: 1 1 auto;
   align-self: flex-start;
   box-sizing: border-box;
   touch-action: pan-y;
 }
 
-.layout-content:has(.layout-nav) .component-wrapper--full {
-  height: calc(100vh - 6px);
-  height: calc(100dvh - 6px);
-  max-height: calc(100vh - 6px);
-  max-height: calc(100dvh - 6px);
+.layout-content:has(.layout-nav) .component-wrapper--full:not(.no-padding) {
+  height: calc(100vh - 6px) !important;
+  height: calc(100dvh - 6px) !important;
+  max-height: calc(100vh - 6px) !important;
+  max-height: calc(100dvh - 6px) !important;
+}
+
+.layout-content:has(.layout-nav) .view-wrapper .layout-body--scrollable,
+.layout-content:has(.layout-nav) .view-wrapper .layout-main--scrollable,
+.layout-content:has(.layout-nav) .view-wrapper .layout-scrollable,
+.layout-content:has(.layout-nav) .view-wrapper .view-scrollable,
+.layout-content:has(.layout-nav) .home-wrapper .layout-body--scrollable,
+.layout-content:has(.layout-nav) .home-wrapper .layout-main--scrollable,
+.layout-content:has(.layout-nav) .home-wrapper .layout-scrollable,
+.layout-content:has(.layout-nav) .home-wrapper .home-scrollable,
+.layout-content:has(.layout-nav) .component-wrapper:not(.no-padding) .layout-body--scrollable,
+.layout-content:has(.layout-nav) .component-wrapper:not(.no-padding) .layout-scrollable,
+.layout-content:has(.layout-nav) .component-wrapper:not(.no-padding) .view-scrollable {
+  overflow-y: hidden !important;
+  overflow-x: hidden;
+  height: 100% !important;
+  flex: 1 1 auto;
+  min-height: 0;
+  touch-action: pan-y;
 }
 
 .layout-content:has(.layout-nav) .view-wrapper .component-bottom,
 .layout-content:has(.layout-nav) .home-wrapper .component-bottom,
-.layout-content:has(.layout-nav) .component-wrapper .component-bottom {
-  overflow: hidden;
-  height: 100%;
+.layout-content:has(.layout-nav) .component-wrapper:not(.no-padding) .component-bottom {
+  overflow: hidden !important;
+  height: 100% !important;
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
@@ -234,10 +268,10 @@ html.dark-theme .layout-content:has(.layout-nav) {
 
 .layout-content:has(.layout-nav) .view-wrapper .component-table-wrapper,
 .layout-content:has(.layout-nav) .home-wrapper .component-table-wrapper,
-.layout-content:has(.layout-nav) .component-wrapper .component-table-wrapper {
-  overflow-y: auto;
+.layout-content:has(.layout-nav) .component-wrapper:not(.no-padding) .component-table-wrapper {
+  overflow-y: hidden !important;
   overflow-x: auto;
-  height: 100%;
+  height: 100% !important;
   flex: 1 1 auto;
   min-height: 0;
   touch-action: pan-y;
@@ -246,8 +280,8 @@ html.dark-theme .layout-content:has(.layout-nav) {
 .layout-content:has(.layout-nav) .view-wrapper > .component-top,
 .layout-content:has(.layout-nav) .home-wrapper > .component-top,
 .layout-content:has(.layout-nav) .view-wrapper > .home-floating-top,
-.layout-content:has(.layout-nav) .component-wrapper > .component-top,
-.layout-content:has(.layout-nav) .component-wrapper > .home-floating-top {
+.layout-content:has(.layout-nav) .component-wrapper:not(.no-padding) > .component-top,
+.layout-content:has(.layout-nav) .component-wrapper:not(.no-padding) > .home-floating-top {
   position: relative;
   border-top-left-radius: 15px;
   border-top-right-radius: 15px;
@@ -809,6 +843,40 @@ html.dark-theme .rail-nav-item.is-active .rail-nav-item__label {
   color: var(--text-tertiary, #a1a1aa);
   padding: 6px 8px;
   user-select: none;
+}
+
+.drawer-empty-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 16px 12px;
+  margin: 4px 8px;
+  border: 1.5px dashed var(--border-color);
+  border-radius: var(--radius-lg, 12px);
+  background-color: transparent;
+  box-sizing: border-box;
+  user-select: none;
+}
+
+.drawer-empty-card__title {
+  font-family: var(--sl-font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+  line-height: 1.3;
+}
+
+.drawer-empty-card__desc {
+  font-family: var(--sl-font-sans);
+  font-size: 11.5px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  max-width: 190px;
+  margin: 0;
 }
 
 .drawer-canvas-item {

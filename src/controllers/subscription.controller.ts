@@ -1,4 +1,3 @@
-import { Request, Response } from 'express';
 import { config } from '../config/env.config.js';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import { updateActiveAccountInSession } from '../services/auth.service.js';
@@ -8,18 +7,15 @@ import { getUserStorageUsage } from '../services/storage.service.js';
 import { stripeService } from '../services/stripe.service.js';
 import { getTierLimits, subscriptionService } from '../services/subscription.service.js';
 import { SubscriptionTierId } from '../types/subscription.types.js';
+import { sendBadRequest, sendInternalError, sendSuccess, sendUnauthorized } from '../utils/http.util.js';
+import { Request, Response } from 'express';
 
 export async function getSubscriptions(_req: Request, res: Response): Promise<void> {
   try {
     const tiers = await subscriptionService.getAvailableTiers();
-    res.json({
-      subscriptions: tiers,
-    });
+    sendSuccess(res, { subscriptions: tiers });
   } catch (error) {
-    logger.app.error('Error al obtener los planes de suscripción', error);
-    res.status(500).json({
-      error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
-    });
+    sendInternalError(res, 'Error al obtener los planes de suscripción', error, 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.');
   }
 }
 
@@ -27,14 +23,14 @@ export async function createCheckout(req: Request, res: Response): Promise<void>
   try {
     const user = getCurrentUser(req);
     if (!user) {
-      res.status(401).json({ error: 'Debes iniciar sesión para contratar una suscripción.' });
+      sendUnauthorized(res, 'Debes iniciar sesión para contratar una suscripción.');
       return;
     }
 
     const { planId, billingPeriod } = req.body;
 
     if (!planId || !['pro', 'business', 'negocios'].includes(planId)) {
-      res.status(400).json({ error: 'El plan seleccionado no es válido.' });
+      sendBadRequest(res, 'El plan seleccionado no es válido.');
       return;
     }
 
@@ -49,16 +45,13 @@ export async function createCheckout(req: Request, res: Response): Promise<void>
       baseUrl
     );
 
-    res.json({
+    sendSuccess(res, {
       success: true,
       url: checkout.url,
       sessionId: checkout.id,
     });
   } catch (error) {
-    logger.app.error('Error al generar sesión de checkout de Stripe', error);
-    res.status(500).json({
-      error: 'Ha ocurrido un error al conectar con la pasarela de pagos. Por favor intenta de nuevo.',
-    });
+    sendInternalError(res, 'Error al generar sesión de checkout de Stripe', error, 'Ha ocurrido un error al conectar con la pasarela de pagos. Por favor intenta de nuevo.');
   }
 }
 
@@ -66,13 +59,13 @@ export async function verifySession(req: Request, res: Response): Promise<void> 
   try {
     const user = getCurrentUser(req);
     if (!user) {
-      res.status(401).json({ error: 'No autorizado. Inicia sesión.' });
+      sendUnauthorized(res, 'No autorizado. Inicia sesión.');
       return;
     }
 
     const sessionId = req.query.session_id as string;
     if (!sessionId) {
-      res.status(400).json({ error: 'ID de sesión de pago ausente.' });
+      sendBadRequest(res, 'ID de sesión de pago ausente.');
       return;
     }
 
@@ -82,17 +75,14 @@ export async function verifySession(req: Request, res: Response): Promise<void> 
       subscription_tier: result.tier as SubscriptionTierId,
     });
 
-    res.json({
+    sendSuccess(res, {
       success: true,
       tier: result.tier,
       purchase: result.purchase,
       message: 'Suscripción activada con éxito.',
     });
   } catch (error) {
-    logger.app.error('Error al verificar sesión de Stripe Checkout', error);
-    res.status(400).json({
-      error: 'No se pudo verificar el estado del pago. Si el cargo fue realizado, se sincronizará automáticamente.',
-    });
+    sendInternalError(res, 'Error al verificar sesión de Stripe Checkout', error, 'No se pudo verificar el estado del pago. Si el cargo fue realizado, se sincronizará automáticamente.');
   }
 }
 
@@ -126,17 +116,14 @@ export async function getPurchaseHistory(req: Request, res: Response): Promise<v
   try {
     const user = getCurrentUser(req);
     if (!user) {
-      res.status(401).json({ error: 'No autorizado.' });
+      sendUnauthorized(res);
       return;
     }
 
     const purchases = await purchaseService.getPurchasesByUserId(user.id);
-    res.json({ purchases });
+    sendSuccess(res, { purchases });
   } catch (error) {
-    logger.app.error('Error al obtener historial de compras', error);
-    res.status(500).json({
-      error: 'Ha ocurrido un error al obtener el historial de compras.',
-    });
+    sendInternalError(res, 'Error al obtener historial de compras', error, 'Ha ocurrido un error al obtener el historial de compras.');
   }
 }
 
@@ -144,19 +131,16 @@ export async function getBillingDetails(req: Request, res: Response): Promise<vo
   try {
     const user = getCurrentUser(req);
     if (!user) {
-      res.status(401).json({ error: 'No autorizado.' });
+      sendUnauthorized(res);
       return;
     }
 
     const details = await stripeService.getSubscriptionDetails(user.id);
     const storage = await getUserStorageUsage(user.id);
     const limits = getTierLimits(user.subscription_tier);
-    res.json({ success: true, ...details, storage, limits });
+    sendSuccess(res, { success: true, ...details, storage, limits });
   } catch (error) {
-    logger.app.error('Error al obtener detalles de facturación', error);
-    res.status(500).json({
-      error: 'Ha ocurrido un error inesperado al consultar los detalles de facturación.',
-    });
+    sendInternalError(res, 'Error al obtener detalles de facturación', error, 'Ha ocurrido un error inesperado al consultar los detalles de facturación.');
   }
 }
 
@@ -164,17 +148,14 @@ export async function getSubscriptionLimits(req: Request, res: Response): Promis
   try {
     const user = getCurrentUser(req);
     if (!user) {
-      res.status(401).json({ error: 'No autorizado.' });
+      sendUnauthorized(res);
       return;
     }
 
     const limits = getTierLimits(user.subscription_tier);
-    res.json({ success: true, tier: user.subscription_tier, limits });
+    sendSuccess(res, { success: true, tier: user.subscription_tier, limits });
   } catch (error) {
-    logger.app.error('Error al consultar límites de suscripción del usuario', error);
-    res.status(500).json({
-      error: 'Ha ocurrido un error inesperado al consultar los límites de suscripción.',
-    });
+    sendInternalError(res, 'Error al consultar límites de suscripción del usuario', error, 'Ha ocurrido un error inesperado al consultar los límites de suscripción.');
   }
 }
 
@@ -182,17 +163,14 @@ export async function getStorageUsage(req: Request, res: Response): Promise<void
   try {
     const user = getCurrentUser(req);
     if (!user) {
-      res.status(401).json({ error: 'No autorizado.' });
+      sendUnauthorized(res);
       return;
     }
 
     const storage = await getUserStorageUsage(user.id);
-    res.json({ success: true, storage });
+    sendSuccess(res, { success: true, storage });
   } catch (error) {
-    logger.app.error('Error al consultar almacenamiento del usuario', error);
-    res.status(500).json({
-      error: 'Ha ocurrido un error inesperado al consultar el almacenamiento.',
-    });
+    sendInternalError(res, 'Error al consultar almacenamiento del usuario', error, 'Ha ocurrido un error inesperado al consultar el almacenamiento.');
   }
 }
 
@@ -200,14 +178,14 @@ export async function updateAutoRenewal(req: Request, res: Response): Promise<vo
   try {
     const user = getCurrentUser(req);
     if (!user) {
-      res.status(401).json({ error: 'No autorizado.' });
+      sendUnauthorized(res);
       return;
     }
 
     const { cancelAtPeriodEnd } = req.body;
     const result = await stripeService.updateSubscriptionRenewal(user.id, Boolean(cancelAtPeriodEnd));
 
-    res.json({
+    sendSuccess(res, {
       success: true,
       cancel_at_period_end: result.cancel_at_period_end,
       current_period_end: result.current_period_end,
@@ -216,10 +194,7 @@ export async function updateAutoRenewal(req: Request, res: Response): Promise<vo
         : 'Renovación automática reactivada exitosamente.',
     });
   } catch (error: any) {
-    logger.app.error('Error al modificar renovación automática', error);
-    res.status(400).json({
-      error: 'No se pudo actualizar la renovación automática.',
-    });
+    sendInternalError(res, 'Error al modificar renovación automática', error, 'No se pudo actualizar la renovación automática.');
   }
 }
 
@@ -227,7 +202,7 @@ export async function cancelSubscriptionImmediate(req: Request, res: Response): 
   try {
     const user = getCurrentUser(req);
     if (!user) {
-      res.status(401).json({ error: 'No autorizado.' });
+      sendUnauthorized(res);
       return;
     }
 
@@ -237,16 +212,13 @@ export async function cancelSubscriptionImmediate(req: Request, res: Response): 
       subscription_tier: 'free',
     });
 
-    res.json({
+    sendSuccess(res, {
       success: true,
       tier: 'free',
       message: 'Tu suscripción ha sido cancelada inmediatamente. Has vuelto al plan gratuito.',
     });
   } catch (error: any) {
-    logger.app.error('Error al cancelar suscripción inmediatamente', error);
-    res.status(400).json({
-      error: 'No se pudo cancelar la suscripción.',
-    });
+    sendInternalError(res, 'Error al cancelar suscripción inmediatamente', error, 'No se pudo cancelar la suscripción.');
   }
 }
 
@@ -254,17 +226,14 @@ export async function getPaymentMethods(req: Request, res: Response): Promise<vo
   try {
     const user = getCurrentUser(req);
     if (!user) {
-      res.status(401).json({ error: 'No autorizado.' });
+      sendUnauthorized(res);
       return;
     }
 
     const paymentMethods = await stripeService.listPaymentMethods(user.id);
-    res.json({ success: true, paymentMethods });
+    sendSuccess(res, { success: true, paymentMethods });
   } catch (error) {
-    logger.app.error('Error al listar métodos de pago', error);
-    res.status(500).json({
-      error: 'Ha ocurrido un error al consultar tus métodos de pago.',
-    });
+    sendInternalError(res, 'Error al listar métodos de pago', error, 'Ha ocurrido un error al consultar tus métodos de pago.');
   }
 }
 
@@ -272,17 +241,14 @@ export async function createSetupIntent(req: Request, res: Response): Promise<vo
   try {
     const user = getCurrentUser(req);
     if (!user) {
-      res.status(401).json({ error: 'No autorizado.' });
+      sendUnauthorized(res);
       return;
     }
 
     const result = await stripeService.createSetupIntent(user.id, user.email, user.username);
-    res.json({ success: true, clientSecret: result.clientSecret });
+    sendSuccess(res, { success: true, clientSecret: result.clientSecret });
   } catch (error: any) {
-    logger.app.error('Error al crear SetupIntent', error);
-    res.status(500).json({
-      error: 'No se pudo iniciar el proceso para agregar tarjeta.',
-    });
+    sendInternalError(res, 'Error al crear SetupIntent', error, 'No se pudo iniciar el proceso para agregar tarjeta.');
   }
 }
 
@@ -290,23 +256,20 @@ export async function setDefaultPaymentMethod(req: Request, res: Response): Prom
   try {
     const user = getCurrentUser(req);
     if (!user) {
-      res.status(401).json({ error: 'No autorizado.' });
+      sendUnauthorized(res);
       return;
     }
 
     const paymentMethodId = req.params.id;
     if (!paymentMethodId) {
-      res.status(400).json({ error: 'ID de método de pago no especificado.' });
+      sendBadRequest(res, 'ID de método de pago no especificado.');
       return;
     }
 
     await stripeService.setDefaultPaymentMethod(user.id, paymentMethodId);
-    res.json({ success: true, message: 'Método de pago predeterminado actualizado.' });
+    sendSuccess(res, { success: true, message: 'Método de pago predeterminado actualizado.' });
   } catch (error: any) {
-    logger.app.error('Error al establecer método de pago predeterminado', error);
-    res.status(400).json({
-      error: 'No se pudo establecer como método predeterminado.',
-    });
+    sendInternalError(res, 'Error al establecer método de pago predeterminado', error, 'No se pudo establecer como método predeterminado.');
   }
 }
 
@@ -314,22 +277,19 @@ export async function deletePaymentMethod(req: Request, res: Response): Promise<
   try {
     const user = getCurrentUser(req);
     if (!user) {
-      res.status(401).json({ error: 'No autorizado.' });
+      sendUnauthorized(res);
       return;
     }
 
     const paymentMethodId = req.params.id;
     if (!paymentMethodId) {
-      res.status(400).json({ error: 'ID de método de pago no especificado.' });
+      sendBadRequest(res, 'ID de método de pago no especificado.');
       return;
     }
 
     await stripeService.detachPaymentMethod(user.id, paymentMethodId);
-    res.json({ success: true, message: 'Tarjeta eliminada exitosamente.' });
+    sendSuccess(res, { success: true, message: 'Tarjeta eliminada exitosamente.' });
   } catch (error: any) {
-    logger.app.error('Error al desvincular tarjeta', error);
-    res.status(400).json({
-      error: 'No se pudo eliminar la tarjeta.',
-    });
+    sendInternalError(res, 'Error al desvincular tarjeta', error, 'No se pudo eliminar la tarjeta.');
   }
 }

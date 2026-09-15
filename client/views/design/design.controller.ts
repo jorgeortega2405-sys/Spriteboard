@@ -559,10 +559,9 @@ export class DesignController {
   private draggedLayerId: string | null = null;
 
   private brushBtn: HTMLButtonElement | null = null;
+  private currentShapeType: 'line' | 'rectangle' | 'circle' = 'rectangle';
   private eraserBtn: HTMLButtonElement | null = null;
-  private lineBtn: HTMLButtonElement | null = null;
-  private rectangleBtn: HTMLButtonElement | null = null;
-  private circleBtn: HTMLButtonElement | null = null;
+  private shapesBtn: HTMLButtonElement | null = null;
   private recolorBtn: HTMLButtonElement | null = null;
   private ditherBtn: HTMLButtonElement | null = null;
   private shadingBtn: HTMLButtonElement | null = null;
@@ -761,9 +760,7 @@ export class DesignController {
 
     this.brushBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="tool-brush"]');
     this.eraserBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="tool-eraser"]');
-    this.lineBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="tool-line"]');
-    this.rectangleBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="tool-rectangle"]');
-    this.circleBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="tool-circle"]');
+    this.shapesBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="tool-shapes"]');
     this.recolorBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="tool-recolor"]');
     this.ditherBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="tool-dither"]');
     this.shadingBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="tool-shading"]');
@@ -1177,7 +1174,7 @@ export class DesignController {
     const frame = this.getActiveFrame();
     if (!frame) return;
 
-    for (let i = 0; i < frame.layers.length; i++) {
+    for (let i = frame.layers.length - 1; i >= 0; i--) {
       const layer = frame.layers[i];
       const card = document.createElement('div');
       card.className = `design-layer-card ${layer.id === frame.activeLayerId ? 'is-active' : ''}`;
@@ -2431,6 +2428,14 @@ export class DesignController {
     this.requestRedraw();
   }
 
+  private setShapeType(type: 'line' | 'rectangle' | 'circle'): void {
+    this.currentShapeType = type;
+    this.container.querySelectorAll<HTMLButtonElement>('[data-ref^="btn-shape-type-"]').forEach((btn) => {
+      btn.classList.toggle('is-active', btn.getAttribute('data-shape-type') === type);
+    });
+    this.selectTool(type);
+  }
+
   private selectTool(tool: 'brush' | 'eraser' | 'line' | 'rectangle' | 'circle' | 'recolor' | 'dither' | 'shading' | 'spray' | 'bucket' | 'select' | 'text'): void {
     if (this.currentTool === 'text' && tool !== 'text') {
       this.commitText();
@@ -2438,13 +2443,19 @@ export class DesignController {
     if (this.currentTool === 'select' && tool !== 'select') {
       this.commitFloatingSelection();
     }
+    if (this.isPlacingShape) {
+      this.cancelShapePlacement();
+    }
+
+    const isShape = tool === 'line' || tool === 'rectangle' || tool === 'circle';
+    if (isShape) {
+      this.currentShapeType = tool;
+    }
 
     this.currentTool = tool;
     this.brushBtn?.classList.toggle('is-active', tool === 'brush');
     this.eraserBtn?.classList.toggle('is-active', tool === 'eraser');
-    this.lineBtn?.classList.toggle('is-active', tool === 'line');
-    this.rectangleBtn?.classList.toggle('is-active', tool === 'rectangle');
-    this.circleBtn?.classList.toggle('is-active', tool === 'circle');
+    this.shapesBtn?.classList.toggle('is-active', isShape);
     this.recolorBtn?.classList.toggle('is-active', tool === 'recolor');
     this.ditherBtn?.classList.toggle('is-active', tool === 'dither');
     this.shadingBtn?.classList.toggle('is-active', tool === 'shading');
@@ -2453,8 +2464,29 @@ export class DesignController {
     this.selectBtn?.classList.toggle('is-active', tool === 'select');
     this.textBtn?.classList.toggle('is-active', tool === 'text');
 
+    this.container.querySelectorAll<HTMLButtonElement>('[data-ref^="btn-shape-type-"]').forEach((btn) => {
+      btn.classList.toggle('is-active', btn.getAttribute('data-shape-type') === this.currentShapeType);
+    });
+
     if (tool === 'text') {
       this.updateTextCanvas();
+    }
+
+    const hasOptions =
+      tool === 'brush' ||
+      tool === 'eraser' ||
+      tool === 'spray' ||
+      tool === 'dither' ||
+      tool === 'shading' ||
+      isShape ||
+      tool === 'recolor' ||
+      tool === 'bucket' ||
+      tool === 'select' ||
+      tool === 'text';
+
+    if (hasOptions && this.optionsTrayEl) {
+      this.optionsTrayEl.classList.remove('is-hidden');
+      this.toolOptionsBtn?.classList.add('is-active');
     }
 
     this.updateSizeBadges();
@@ -3119,7 +3151,7 @@ export class DesignController {
           <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px; border-radius: 10px; background: var(--bg-surface-elevated, rgba(125, 125, 125, 0.06)); border: 1px solid var(--border-color);">
             <div style="flex: 1;">
               <span style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px;">Ancho (px)</span>
-              <input class="component-inline-control__input" data-ref="input-canvas-width" type="number" min="1" max="4096" value="${this.canvasWidth}" style="width: 100%; height: 38px; border-radius: 6px; border: 1px solid var(--border-color); text-align: center; font-weight: 600;" />
+              <input class="component-inline-control__input" data-ref="input-canvas-width" type="number" min="1" max="16384" value="${this.canvasWidth}" style="width: 100%; height: 38px; border-radius: 6px; border: 1px solid var(--border-color); text-align: center; font-weight: 600;" />
             </div>
 
             <button type="button" class="design-toolbar-btn is-active" data-ref="btn-lock-aspect" data-tooltip="Mantener proporción de aspecto" style="margin-top: 16px;">
@@ -3128,7 +3160,7 @@ export class DesignController {
 
             <div style="flex: 1;">
               <span style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px;">Alto (px)</span>
-              <input class="component-inline-control__input" data-ref="input-canvas-height" type="number" min="1" max="4096" value="${this.canvasHeight}" style="width: 100%; height: 38px; border-radius: 6px; border: 1px solid var(--border-color); text-align: center; font-weight: 600;" />
+              <input class="component-inline-control__input" data-ref="input-canvas-height" type="number" min="1" max="16384" value="${this.canvasHeight}" style="width: 100%; height: 38px; border-radius: 6px; border: 1px solid var(--border-color); text-align: center; font-weight: 600;" />
             </div>
           </div>
 
@@ -3290,9 +3322,9 @@ export class DesignController {
         return;
       }
 
-      if (w > 4096 || h > 4096) {
+      if (w > 16384 || h > 16384) {
         if (errorBanner) {
-          errorBanner.textContent = 'Las dimensiones no pueden superar los 4096 píxeles.';
+          errorBanner.textContent = 'Las dimensiones no pueden superar los 16384 píxeles.';
           errorBanner.style.display = 'block';
         }
         return;
@@ -3499,7 +3531,7 @@ export class DesignController {
       this.currentTool === 'recolor' ||
       this.currentTool === 'dither' ||
       this.currentTool === 'shading';
-    const isShapes = this.currentTool === 'rectangle' || this.currentTool === 'circle';
+    const isShapes = this.currentTool === 'line' || this.currentTool === 'rectangle' || this.currentTool === 'circle';
     const isDither = this.currentTool === 'dither';
     const isShading = this.currentTool === 'shading';
     const isSpray = this.currentTool === 'spray';
@@ -3522,6 +3554,18 @@ export class DesignController {
     const pixelPerfectBadgeWrapper = this.container.querySelector<HTMLElement>('[data-ref="options-pixel-perfect-badges"]');
     if (pixelPerfectDivider) pixelPerfectDivider.style.display = this.currentTool === 'brush' ? '' : 'none';
     if (pixelPerfectBadgeWrapper) pixelPerfectBadgeWrapper.style.display = this.currentTool === 'brush' ? '' : 'none';
+
+    const shapesModeDivider = this.container.querySelector<HTMLElement>('[data-ref="options-shapes-mode-divider"]');
+    const shapesModeLabel = this.container.querySelector<HTMLElement>('[data-ref="options-label-shapes-mode"]');
+    const shapesModeBadges = this.container.querySelector<HTMLElement>('[data-ref="options-shapes-mode-badges"]');
+    const showShapeMode = this.currentTool === 'rectangle' || this.currentTool === 'circle';
+    if (shapesModeDivider) shapesModeDivider.style.display = showShapeMode ? '' : 'none';
+    if (shapesModeLabel) shapesModeLabel.style.display = showShapeMode ? '' : 'none';
+    if (shapesModeBadges) shapesModeBadges.style.display = showShapeMode ? '' : 'none';
+
+    this.container.querySelectorAll<HTMLButtonElement>('[data-ref^="btn-shape-type-"]').forEach((btn) => {
+      btn.classList.toggle('is-active', btn.getAttribute('data-shape-type') === this.currentShapeType);
+    });
 
     if (!this.optionsTrayEl.classList.contains('is-hidden')) {
       this.updateToolbarHeights();
@@ -4010,7 +4054,12 @@ export class DesignController {
 
   private applyToolAt(x: number, y: number, broadcast = true, customLayer?: CanvasLayer, ignoreSymmetry = false): void {
     const layer = customLayer || this.getActiveLayer();
-    if (!layer || !layer.visible || (!this.isInfinite && (x < 0 || x >= this.canvasWidth || y < 0 || y >= this.canvasHeight))) return;
+    if (!layer || (!this.isInfinite && (x < 0 || x >= this.canvasWidth || y < 0 || y >= this.canvasHeight))) return;
+    if (!layer.visible) {
+      layer.visible = true;
+      this.renderLayersList();
+      this.renderLayersCards();
+    }
 
     const points = this.toolsManager.applyToolAt(layer, x, y, this.canvasWidth, this.canvasHeight, this.isInfinite, ignoreSymmetry);
 
@@ -4602,17 +4651,29 @@ export class DesignController {
       this.eraserBtn.addEventListener('click', () => this.selectTool('eraser'), { signal });
     }
 
-    if (this.lineBtn) {
-      this.lineBtn.addEventListener('click', () => this.selectTool('line'), { signal });
+    if (this.shapesBtn) {
+      this.shapesBtn.addEventListener(
+        'click',
+        () => {
+          this.selectTool(this.currentShapeType);
+          this.toggleToolOptions(true);
+        },
+        { signal }
+      );
     }
 
-    if (this.rectangleBtn) {
-      this.rectangleBtn.addEventListener('click', () => this.selectTool('rectangle'), { signal });
-    }
-
-    if (this.circleBtn) {
-      this.circleBtn.addEventListener('click', () => this.selectTool('circle'), { signal });
-    }
+    this.container.querySelectorAll<HTMLButtonElement>('[data-ref^="btn-shape-type-"]').forEach((btn) => {
+      btn.addEventListener(
+        'click',
+        () => {
+          const shapeType = btn.getAttribute('data-shape-type') as 'line' | 'rectangle' | 'circle';
+          if (shapeType) {
+            this.setShapeType(shapeType);
+          }
+        },
+        { signal }
+      );
+    });
 
     if (this.recolorBtn) {
       this.recolorBtn.addEventListener('click', () => this.selectTool('recolor'), { signal });
@@ -5742,7 +5803,12 @@ export class DesignController {
         }
         if (this.isDrawingShape && this.shapeStartPos && this.shapeCurrentPos) {
           const layer = this.getActiveLayer();
-          if (layer && layer.visible) {
+          if (layer) {
+            if (!layer.visible) {
+              layer.visible = true;
+              this.renderLayersList();
+              this.renderLayersCards();
+            }
             let pts: Array<{ x: number; y: number }> = [];
             const isLine = this.currentTool === 'line';
             if (isLine) {

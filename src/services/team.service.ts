@@ -5,7 +5,7 @@ import { updateUserSubscriptionInSessions } from './auth.service.js';
 import { logger } from './logger.service.js';
 import { createNotification } from './notification.service.js';
 import { invalidateUserStorageCache } from './storage.service.js';
-import { getEffectiveTiersForCanvases, getTierLimits, resolveUserRestoredTier } from './subscription.service.js';
+import { getEffectiveTiersForCanvases, getTierLimits, hasFeatureAccess, resolveUserRestoredTier } from './subscription.service.js';
 import crypto from 'crypto';
 import mysql from 'mysql2/promise';
 
@@ -19,9 +19,9 @@ export async function createTeam(ownerId: number, dto: CreateTeamDto): Promise<T
     'SELECT subscription_tier FROM users WHERE id = ? LIMIT 1',
     [ownerId]
   );
-  const userTier = (uRows[0]?.subscription_tier || 'free').toLowerCase();
+  const userTier = uRows[0]?.subscription_tier || 'free';
 
-  if (!['business', 'negocios'].includes(userTier)) {
+  if (!hasFeatureAccess(userTier, 'teams')) {
     throw new Error('La creación de equipos de trabajo es exclusiva del plan Spriteboard Negocios.');
   }
 

@@ -1,22 +1,21 @@
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import { createFolder, deleteFolder, getFolderByUuid, getFolderCanvases, getUserFolders, moveCanvasToFolder, updateFolder } from '../services/folder.service.js';
-import { logger } from '../services/logger.service.js';
+import { sendBadRequest, sendCreated, sendInternalError, sendNotFound, sendSuccess, sendUnauthorized } from '../utils/http.util.js';
 import { Request, Response } from 'express';
 
 export async function listFoldersHandler(req: Request, res: Response): Promise<void> {
   try {
     const user = getCurrentUser(req);
     if (!user) {
-      res.status(401).json({ error: 'No autorizado.' });
+      sendUnauthorized(res);
       return;
     }
 
     const includeDefault = req.query.include_default === 'true';
     const folders = await getUserFolders(user.id, includeDefault);
-    res.json({ folders });
+    sendSuccess(res, { folders });
   } catch (err) {
-    logger.app.error('Error al listar carpetas en folder controller', err);
-    res.status(500).json({ error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.' });
+    sendInternalError(res, 'Error al listar carpetas en folder controller', err, 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.');
   }
 }
 
@@ -24,13 +23,13 @@ export async function createFolderHandler(req: Request, res: Response): Promise<
   try {
     const user = getCurrentUser(req);
     if (!user) {
-      res.status(401).json({ error: 'No autorizado.' });
+      sendUnauthorized(res);
       return;
     }
 
     const { name, color } = req.body;
     if (!name || typeof name !== 'string' || !name.trim()) {
-      res.status(400).json({ error: 'El nombre de la carpeta es requerido.' });
+      sendBadRequest(res, 'El nombre de la carpeta es requerido.');
       return;
     }
 
@@ -39,10 +38,9 @@ export async function createFolderHandler(req: Request, res: Response): Promise<
       name: name.trim(),
     });
 
-    res.status(201).json({ folder });
+    sendCreated(res, { folder });
   } catch (err) {
-    logger.app.error('Error al crear carpeta en folder controller', err);
-    res.status(500).json({ error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.' });
+    sendInternalError(res, 'Error al crear carpeta en folder controller', err, 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.');
   }
 }
 
@@ -50,21 +48,20 @@ export async function getFolderHandler(req: Request, res: Response): Promise<voi
   try {
     const user = getCurrentUser(req);
     if (!user) {
-      res.status(401).json({ error: 'No autorizado.' });
+      sendUnauthorized(res);
       return;
     }
 
     const { uuid } = req.params;
     const folder = await getFolderByUuid(uuid, user.id);
     if (!folder) {
-      res.status(404).json({ error: 'Carpeta no encontrada.' });
+      sendNotFound(res, 'Carpeta no encontrada.');
       return;
     }
 
-    res.json({ folder });
+    sendSuccess(res, { folder });
   } catch (err) {
-    logger.app.error(`Error al consultar carpeta ${req.params.uuid} en folder controller`, err);
-    res.status(500).json({ error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.' });
+    sendInternalError(res, `Error al consultar carpeta ${req.params.uuid} en folder controller`, err, 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.');
   }
 }
 
@@ -72,7 +69,7 @@ export async function updateFolderHandler(req: Request, res: Response): Promise<
   try {
     const user = getCurrentUser(req);
     if (!user) {
-      res.status(401).json({ error: 'No autorizado.' });
+      sendUnauthorized(res);
       return;
     }
 
@@ -80,7 +77,7 @@ export async function updateFolderHandler(req: Request, res: Response): Promise<
     const { name, color } = req.body;
 
     if (name !== undefined && (typeof name !== 'string' || !name.trim())) {
-      res.status(400).json({ error: 'El nombre de la carpeta no puede estar vacío.' });
+      sendBadRequest(res, 'El nombre de la carpeta no puede estar vacío.');
       return;
     }
 
@@ -90,14 +87,13 @@ export async function updateFolderHandler(req: Request, res: Response): Promise<
     });
 
     if (!folder) {
-      res.status(404).json({ error: 'Carpeta no encontrada.' });
+      sendNotFound(res, 'Carpeta no encontrada.');
       return;
     }
 
-    res.json({ folder });
+    sendSuccess(res, { folder });
   } catch (err) {
-    logger.app.error(`Error al actualizar carpeta ${req.params.uuid} en folder controller`, err);
-    res.status(500).json({ error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.' });
+    sendInternalError(res, `Error al actualizar carpeta ${req.params.uuid} en folder controller`, err, 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.');
   }
 }
 
@@ -105,24 +101,24 @@ export async function deleteFolderHandler(req: Request, res: Response): Promise<
   try {
     const user = getCurrentUser(req);
     if (!user) {
-      res.status(401).json({ error: 'No autorizado.' });
+      sendUnauthorized(res);
       return;
     }
 
     const { uuid } = req.params;
     const success = await deleteFolder(uuid, user.id);
     if (!success) {
-      res.status(404).json({ error: 'Carpeta no encontrada.' });
+      sendNotFound(res, 'Carpeta no encontrada.');
       return;
     }
 
-    res.json({ success: true });
+    sendSuccess(res, { success: true });
   } catch (err: any) {
-    logger.app.error(`Error al eliminar carpeta ${req.params.uuid} en folder controller`, err);
-    const message = err?.message === 'La carpeta predeterminada no puede ser eliminada.'
-      ? err.message
-      : 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.';
-    res.status(400).json({ error: message });
+    if (err?.message === 'La carpeta predeterminada no puede ser eliminada.') {
+      sendBadRequest(res, err.message);
+      return;
+    }
+    sendInternalError(res, `Error al eliminar carpeta ${req.params.uuid} en folder controller`, err, 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.');
   }
 }
 
@@ -130,7 +126,7 @@ export async function moveCanvasHandler(req: Request, res: Response): Promise<vo
   try {
     const user = getCurrentUser(req);
     if (!user) {
-      res.status(401).json({ error: 'No autorizado.' });
+      sendUnauthorized(res);
       return;
     }
 
@@ -138,10 +134,9 @@ export async function moveCanvasHandler(req: Request, res: Response): Promise<vo
     const { folder_uuid } = req.body;
 
     const canvas = await moveCanvasToFolder(uuid, user.id, folder_uuid || null);
-    res.json({ canvas, success: true });
+    sendSuccess(res, { canvas, success: true });
   } catch (err: any) {
-    logger.app.error(`Error al mover lienzo ${req.params.uuid} en folder controller`, err);
-    res.status(500).json({ error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.' });
+    sendInternalError(res, `Error al mover lienzo ${req.params.uuid} en folder controller`, err, 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.');
   }
 }
 
@@ -149,7 +144,7 @@ export async function listFolderCanvasesHandler(req: Request, res: Response): Pr
   try {
     const user = getCurrentUser(req);
     if (!user) {
-      res.status(401).json({ error: 'No autorizado.' });
+      sendUnauthorized(res);
       return;
     }
 
@@ -167,9 +162,8 @@ export async function listFolderCanvasesHandler(req: Request, res: Response): Pr
       sort,
       search,
     });
-    res.json(result);
+    sendSuccess(res, result);
   } catch (err: any) {
-    logger.app.error(`Error al listar lienzos de la carpeta ${req.params.uuid} en folder controller`, err);
-    res.status(500).json({ error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.' });
+    sendInternalError(res, `Error al listar lienzos de la carpeta ${req.params.uuid} en folder controller`, err, 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.');
   }
 }

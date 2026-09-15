@@ -1342,10 +1342,130 @@ html.dark-theme .component-badge--active .component-icon {
     align-items: center;
   }
 
-  .toast-item {
+}
+
+/* ==========================================================================
+   20. COMPONENTE MENSAJES Y BANNERS INFERIORES (.bottom-message-banner)
+   ========================================================================== */
+
+.bottom-message-banner {
+  position: fixed;
+  bottom: 24px;
+  z-index: 9998;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 20px 24px;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl, 18px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.16);
+  box-sizing: border-box;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--sl-transition-medium), visibility var(--sl-transition-medium), transform var(--sl-transition-medium);
+}
+
+.bottom-message-banner--center {
+  left: 50%;
+  right: auto;
+  transform: translate(-50%, 24px);
+}
+
+.bottom-message-banner--center.is-active {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, 0);
+}
+
+.bottom-message-banner--left {
+  left: 24px;
+  right: auto;
+  transform: translateY(24px);
+}
+
+.bottom-message-banner--left.is-active {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.bottom-message-banner--right {
+  right: 24px;
+  left: auto;
+  transform: translateY(24px);
+}
+
+.bottom-message-banner--right.is-active {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.bottom-message-banner--w-1024 {
+  width: 1024px;
+  max-width: calc(100vw - 32px);
+}
+
+.bottom-message-banner--w-465 {
+  width: 465px;
+  max-width: calc(100vw - 32px);
+}
+
+.bottom-message-banner__content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.bottom-message-banner__title {
+  font-family: var(--sl-font-sans);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.3;
+  margin: 0;
+}
+
+.bottom-message-banner__desc {
+  font-family: var(--sl-font-sans);
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.bottom-message-banner__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-end;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+  .bottom-message-banner {
+    left: 16px !important;
+    right: 16px !important;
+    width: auto !important;
+    max-width: 100% !important;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    padding: 16px;
+    gap: 14px;
+    transform: translateY(24px) !important;
+  }
+
+  .bottom-message-banner.is-active {
+    transform: translateY(0) !important;
+  }
+
+  .bottom-message-banner__actions {
     width: 100%;
-    min-width: 100%;
-    max-width: 100%;
+    align-self: stretch;
+    justify-content: flex-end;
   }
 }
 

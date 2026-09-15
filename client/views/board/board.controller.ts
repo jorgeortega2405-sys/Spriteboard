@@ -673,10 +673,10 @@ export class BoardController {
       this.showOptionsTray('sticky');
     } else if (tool === 'pixel') {
       this.showOptionsTray('pixel');
+    } else if (tool === 'pen' || tool === 'marker' || tool === 'highlighter' || tool === 'eraser') {
+      this.showOptionsTray('width');
     } else {
-      if (this.activeTrayGroup === 'shapes' || this.activeTrayGroup === 'sticky' || this.activeTrayGroup === 'pixel') {
-        this.hideOptionsTray();
-      }
+      this.hideOptionsTray();
     }
 
     if (tool !== 'select' && tool !== 'pixel') {

@@ -1,7 +1,7 @@
-import { Request, Response } from 'express';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import { AiService, ChatMessage } from '../services/ai.service.js';
 import { logger } from '../services/logger.service.js';
+import { Request, Response } from 'express';
 
 export class AiController {
   static async chat(req: Request, res: Response): Promise<void> {
@@ -59,9 +59,7 @@ export class AiController {
         reply,
       });
     } catch (error) {
-      logger.app.error('AiController: Error al procesar consulta de chat', {
-        error: error instanceof Error ? error.message : String(error),
-      });
+      logger.app.error('AiController: Error al procesar consulta de chat', error);
 
       res.status(500).json({
         success: false,
@@ -112,9 +110,7 @@ export class AiController {
         message: 'Feedback registrado correctamente.',
       });
     } catch (error) {
-      logger.app.error('AiController: Error al guardar feedback de chat', {
-        error: error instanceof Error ? error.message : String(error),
-      });
+      logger.app.error('AiController: Error al guardar feedback de chat', error);
 
       res.status(500).json({
         success: false,

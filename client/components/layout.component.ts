@@ -122,7 +122,6 @@ export function toggleDrawer(forceState?: boolean): void {
 
   isDrawerOpen = nextOpen;
   btnToggle?.classList.toggle('is-active', isDrawerOpen);
-  localStorage.setItem('sprite_drawer_open', isDrawerOpen ? 'true' : 'false');
 
   if (isDrawerOpen) {
     if (drawerRemovalTimer) {
@@ -132,7 +131,9 @@ export function toggleDrawer(forceState?: boolean): void {
     if (sidebar) {
       void openDynamicDrawer(sidebar);
     }
-    toggleChatSidebar(false);
+    if (isChatOpen) {
+      toggleChatSidebar(false);
+    }
   } else {
     closeDynamicDrawer();
   }
@@ -201,7 +202,9 @@ export function getIsChatOpen(): boolean {
 
 export async function toggleChatSidebar(forceState?: boolean): Promise<void> {
   if (!currentUser) {
-    navigate('/help/terms');
+    if (forceState === true) {
+      navigate('/help/terms');
+    }
     return;
   }
   const nextOpen = forceState !== undefined ? forceState : !isChatOpen;
@@ -490,7 +493,12 @@ async function renderHomeDrawerContent(drawerBody: HTMLElement): Promise<void> {
     const favorites = nonDeleted.filter((c) => c.is_favorite);
     if (favoritesList) {
       if (favorites.length === 0) {
-        favoritesList.innerHTML = `<div class="drawer-empty-hint">Sin favoritos aún</div>`;
+        favoritesList.innerHTML = `
+          <div class="drawer-empty-card" data-ref="drawer-empty-card-favorites">
+            <div class="drawer-empty-card__title">Diseños favoritos</div>
+            <div class="drawer-empty-card__desc">Aquí aparecerán los diseños que marques como favoritos.</div>
+          </div>
+        `;
       } else {
         favoritesList.innerHTML = '';
         favorites.slice(0, 6).forEach((c) => {
@@ -508,7 +516,12 @@ async function renderHomeDrawerContent(drawerBody: HTMLElement): Promise<void> {
     if (recentsList) {
       recentsList.innerHTML = '';
       if (sortedRecents.length === 0) {
-        recentsList.innerHTML = `<div class="drawer-empty-hint">No hay diseños recientes</div>`;
+        recentsList.innerHTML = `
+          <div class="drawer-empty-card" data-ref="drawer-empty-card-recents">
+            <div class="drawer-empty-card__title">Diseños recientes</div>
+            <div class="drawer-empty-card__desc">Aquí aparecerán los últimos diseños que hayas creado o abierto.</div>
+          </div>
+        `;
       } else {
         const initialSlice = sortedRecents.slice(0, INITIAL_RECENTS_LIMIT);
         initialSlice.forEach((c) => {
@@ -607,8 +620,22 @@ async function renderHomeDrawerContent(drawerBody: HTMLElement): Promise<void> {
       }
     });
   } catch {
-    if (favoritesList) favoritesList.innerHTML = `<div class="drawer-empty-hint">Sin favoritos</div>`;
-    if (recentsList) recentsList.innerHTML = `<div class="drawer-empty-hint">No hay diseños recientes</div>`;
+    if (favoritesList) {
+      favoritesList.innerHTML = `
+        <div class="drawer-empty-card" data-ref="drawer-empty-card-favorites">
+          <div class="drawer-empty-card__title">Diseños favoritos</div>
+          <div class="drawer-empty-card__desc">Aquí aparecerán los diseños que marques como favoritos.</div>
+        </div>
+      `;
+    }
+    if (recentsList) {
+      recentsList.innerHTML = `
+        <div class="drawer-empty-card" data-ref="drawer-empty-card-recents">
+          <div class="drawer-empty-card__title">Diseños recientes</div>
+          <div class="drawer-empty-card__desc">Aquí aparecerán los últimos diseños que hayas creado o abierto.</div>
+        </div>
+      `;
+    }
   }
 }
 
@@ -781,17 +808,10 @@ function setupDrawerContent(sidebar: HTMLElement): void {
     toggleDrawer();
   });
 
-  const savedDrawer = localStorage.getItem('sprite_drawer_open');
-  if (savedDrawer === 'true' && window.innerWidth > 768) {
-    isDrawerOpen = true;
-    btnToggle?.classList.add('is-active');
-    void openDynamicDrawer(sidebar);
-  } else {
-    isDrawerOpen = false;
-    btnToggle?.classList.remove('is-active');
-    const existingDrawer = sidebar.querySelector<HTMLElement>('[data-ref="layout-drawer"]');
-    existingDrawer?.remove();
-  }
+  isDrawerOpen = false;
+  btnToggle?.classList.remove('is-active');
+  const existingDrawer = sidebar.querySelector<HTMLElement>('[data-ref="layout-drawer"]');
+  existingDrawer?.remove();
 }
 
 

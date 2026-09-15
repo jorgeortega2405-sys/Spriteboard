@@ -217,9 +217,7 @@ export class CanvasCommentsController {
           EMOJI_CATEGORIES.recent = this.recentEmojis;
         }
       }
-    } catch {
-      // Ignorar fallback silencioso
-    }
+    } catch {}
   }
 
   private bindEvents(): void {
@@ -539,9 +537,7 @@ export class CanvasCommentsController {
           this.renderPins();
         }
       }
-    } catch {
-      // Ignorar fallback silencioso
-    }
+    } catch {}
   }
 
   public toggleCommentsPanel(): void {
@@ -1238,9 +1234,7 @@ export class CanvasCommentsController {
     EMOJI_CATEGORIES.recent = this.recentEmojis;
     try {
       localStorage.setItem('spriteboard_recent_emojis', JSON.stringify(this.recentEmojis));
-    } catch {
-      // Ignorar fallback silencioso
-    }
+    } catch {}
 
     this.hideEmojiPicker();
   }

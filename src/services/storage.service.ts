@@ -39,12 +39,6 @@ export const TIER_STORAGE_LIMITS: Record<string, number> = {
   business: PLAN_TIER_CONFIGS.business.limits.storageBytes,
 };
 
-const TIER_DISPLAY_NAMES: Record<string, string> = {
-  free: 'Spriteboard Gratis',
-  pro: 'Spriteboard Pro',
-  business: 'Spriteboard Negocios',
-};
-
 export function formatStorageBytes(bytes: number): string {
   if (bytes <= 0) return '0 B';
   const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
@@ -76,7 +70,7 @@ export async function getUserStorageUsage(userId: number): Promise<UserStorageUs
   );
 
   const normalizedTier = normalizeTierKey(userRows[0]?.subscription_tier);
-  const tierName = TIER_DISPLAY_NAMES[normalizedTier] || 'Spriteboard Gratis';
+  const tierName = PLAN_TIER_CONFIGS[normalizedTier]?.name || PLAN_TIER_CONFIGS.free.name;
   const limitBytes = TIER_STORAGE_LIMITS[normalizedTier] || TIER_STORAGE_LIMITS.free;
 
   const [activeCanvasRows] = await canvasPool.query<mysql.RowDataPacket[]>(

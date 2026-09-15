@@ -27,57 +27,65 @@
 
         <div class="design-top-toolbar" data-ref="board-top-toolbar">
           <div class="design-top-toolbar__section" data-ref="board-top-toolbar-left">
-            <button type="button" class="design-toolbar-btn is-disabled" data-ref="btn-undo" data-tooltip="Deshacer (Ctrl+Z)" aria-label="Deshacer" disabled>
-              <span class="component-icon">undo</span>
-            </button>
-            <button type="button" class="design-toolbar-btn is-disabled" data-ref="btn-redo" data-tooltip="Rehacer (Ctrl+Y)" aria-label="Rehacer" disabled>
-              <span class="component-icon">redo</span>
-            </button>
-
-            <div class="design-toolbar-divider"></div>
-
-            <button type="button" class="design-toolbar-btn" data-ref="btn-top-toggle-colors" data-tooltip="Paleta de colores" aria-label="Colores">
-              <span class="component-icon">palette</span>
-            </button>
-
-            <div class="design-toolbar-divider"></div>
-
-            <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-export">
-              <button type="button" class="design-toolbar-btn" data-ref="btn-toggle-export" data-tooltip="Descargar o Exportar" aria-label="Descargar o Exportar">
-                <span class="component-icon">download</span>
+            <div class="design-toolbar-group" data-ref="board-top-group-history">
+              <button type="button" class="design-toolbar-btn is-disabled" data-ref="btn-undo" data-tooltip="Deshacer (Ctrl+Z)" aria-label="Deshacer" disabled>
+                <span class="component-icon">undo</span>
               </button>
-              <div class="dropdown-backdrop" data-ref="backdrop-export">
-                <div class="menu-panel menu-panel--dropdown menu-panel--w-240 menu-panel--h-auto" data-ref="menu-export">
-                  <div class="menu-panel__drag-zone" data-ref="export-drag-zone" aria-hidden="true">
-                    <div class="menu-panel__drag-handle"></div>
-                  </div>
-                  <div class="menu-panel__list" data-ref="list-export-options">
-                    <button type="button" class="menu-item" data-ref="btn-export-png-content">
-                      <span class="component-icon menu-item__icon">image</span>
-                      <span class="menu-item__text">Imagen PNG (Contenido)</span>
-                    </button>
-                    <button type="button" class="menu-item" data-ref="btn-export-png-view">
-                      <span class="component-icon menu-item__icon">crop</span>
-                      <span class="menu-item__text">Imagen PNG (Vista actual)</span>
-                    </button>
-                    <button type="button" class="menu-item" data-ref="btn-export-svg">
-                      <span class="component-icon menu-item__icon">code</span>
-                      <span class="menu-item__text">Vectorial SVG</span>
-                    </button>
-                    <button type="button" class="menu-item" data-ref="btn-export-json">
-                      <span class="component-icon menu-item__icon">data_object</span>
-                      <span class="menu-item__text">Archivo JSON del proyecto</span>
-                    </button>
+              <button type="button" class="design-toolbar-btn is-disabled" data-ref="btn-redo" data-tooltip="Rehacer (Ctrl+Y)" aria-label="Rehacer" disabled>
+                <span class="component-icon">redo</span>
+              </button>
+            </div>
+
+            <div class="design-toolbar-divider" data-ref="board-top-divider-colors"></div>
+
+            <div class="design-toolbar-group" data-ref="board-top-group-colors">
+              <button type="button" class="design-toolbar-btn" data-ref="btn-top-toggle-colors" data-tooltip="Paleta de colores" aria-label="Colores">
+                <span class="component-icon">palette</span>
+              </button>
+            </div>
+
+            <div class="design-toolbar-divider" data-ref="board-top-divider-export"></div>
+
+            <div class="design-toolbar-group" data-ref="board-top-group-export">
+              <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-export">
+                <button type="button" class="design-toolbar-btn" data-ref="btn-toggle-export" data-tooltip="Descargar o Exportar" aria-label="Descargar o Exportar">
+                  <span class="component-icon">download</span>
+                </button>
+                <div class="dropdown-backdrop" data-ref="backdrop-export">
+                  <div class="menu-panel menu-panel--dropdown menu-panel--w-240 menu-panel--h-auto" data-ref="menu-export">
+                    <div class="menu-panel__drag-zone" data-ref="export-drag-zone" aria-hidden="true">
+                      <div class="menu-panel__drag-handle"></div>
+                    </div>
+                    <div class="menu-panel__list" data-ref="list-export-options">
+                      <button type="button" class="menu-item" data-ref="btn-export-png-content">
+                        <span class="component-icon menu-item__icon">image</span>
+                        <span class="menu-item__text">Imagen PNG (Contenido)</span>
+                      </button>
+                      <button type="button" class="menu-item" data-ref="btn-export-png-view">
+                        <span class="component-icon menu-item__icon">crop</span>
+                        <span class="menu-item__text">Imagen PNG (Vista actual)</span>
+                      </button>
+                      <button type="button" class="menu-item" data-ref="btn-export-svg">
+                        <span class="component-icon menu-item__icon">code</span>
+                        <span class="menu-item__text">Vectorial SVG</span>
+                      </button>
+                      <button type="button" class="menu-item" data-ref="btn-export-json">
+                        <span class="component-icon menu-item__icon">data_object</span>
+                        <span class="menu-item__text">Archivo JSON del proyecto</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div class="design-toolbar-divider"></div>
+            <div class="design-toolbar-divider" data-ref="board-top-divider-clear"></div>
 
-            <button type="button" class="design-toolbar-btn" data-ref="btn-clear-board" data-tooltip="Limpiar pizarrón" aria-label="Limpiar pizarrón">
-              <span class="component-icon">delete_sweep</span>
-            </button>
+            <div class="design-toolbar-group" data-ref="board-top-group-clear">
+              <button type="button" class="design-toolbar-btn" data-ref="btn-clear-board" data-tooltip="Limpiar pizarrón" aria-label="Limpiar pizarrón">
+                <span class="component-icon">delete_sweep</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -190,35 +198,35 @@
             <div class="design-options-tray__group is-hidden" data-ref="options-group-shapes">
               <span class="design-options-tray__label">Forma:</span>
               <div class="design-options-tray__badges" data-ref="shapes-options-badges">
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable is-active" data-ref="shape-rect" data-shape="rect" data-tooltip="Rectángulo">
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text is-active" data-ref="shape-rect" data-shape="rect" data-tooltip="Rectángulo">
                   <span class="component-icon">crop_square</span>
                   <span>Rectángulo</span>
                 </button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="shape-round-rect" data-shape="round-rect" data-tooltip="Rectángulo redondeado">
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="shape-round-rect" data-shape="round-rect" data-tooltip="Rectángulo redondeado">
                   <span class="component-icon">rounded_corner</span>
                   <span>Redondeado</span>
                 </button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="shape-circle" data-shape="circle" data-tooltip="Círculo">
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="shape-circle" data-shape="circle" data-tooltip="Círculo">
                   <span class="component-icon">circle</span>
                   <span>Círculo</span>
                 </button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="shape-line" data-shape="line" data-tooltip="Línea">
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="shape-line" data-shape="line" data-tooltip="Línea">
                   <span class="component-icon">horizontal_rule</span>
                   <span>Línea</span>
                 </button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="shape-arrow" data-shape="arrow" data-tooltip="Flecha">
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="shape-arrow" data-shape="arrow" data-tooltip="Flecha">
                   <span class="component-icon">arrow_forward</span>
                   <span>Flecha</span>
                 </button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="shape-triangle" data-shape="triangle" data-tooltip="Triángulo">
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="shape-triangle" data-shape="triangle" data-tooltip="Triángulo">
                   <span class="component-icon">change_history</span>
                   <span>Triángulo</span>
                 </button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="shape-star" data-shape="star" data-tooltip="Estrella">
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="shape-star" data-shape="star" data-tooltip="Estrella">
                   <span class="component-icon">star</span>
                   <span>Estrella</span>
                 </button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="shape-diamond" data-shape="diamond" data-tooltip="Rombo">
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="shape-diamond" data-shape="diamond" data-tooltip="Rombo">
                   <span class="component-icon">square</span>
                   <span>Rombo</span>
                 </button>
@@ -240,30 +248,30 @@
             <div class="design-options-tray__group is-hidden" data-ref="options-group-width">
               <span class="design-options-tray__label">Grosor de trazo:</span>
               <div class="design-options-tray__badges" data-ref="width-options-badges">
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="width-opt-2" data-width="2">2px</button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable is-active" data-ref="width-opt-4" data-width="4">4px</button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="width-opt-8" data-width="8">8px</button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="width-opt-16" data-width="16">16px</button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="width-opt-24" data-width="24">24px</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="width-opt-2" data-width="2">2px</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text is-active" data-ref="width-opt-4" data-width="4">4px</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="width-opt-8" data-width="8">8px</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="width-opt-16" data-width="16">16px</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="width-opt-24" data-width="24">24px</button>
               </div>
             </div>
 
             <div class="design-options-tray__group is-hidden" data-ref="options-group-pixel">
               <span class="design-options-tray__label">Pixel:</span>
               <div class="design-options-tray__badges" data-ref="pixel-subtool-badges">
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable is-active" data-ref="pixel-tool-pencil" data-subtool="pencil" data-tooltip="Lápiz de píxel">
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text is-active" data-ref="pixel-tool-pencil" data-subtool="pencil" data-tooltip="Lápiz de píxel">
                   <span class="component-icon">draw</span>
                   <span>Lápiz</span>
                 </button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="pixel-tool-eraser" data-subtool="eraser" data-tooltip="Goma de píxel">
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="pixel-tool-eraser" data-subtool="eraser" data-tooltip="Goma de píxel">
                   <span class="component-icon">ink_eraser</span>
                   <span>Goma</span>
                 </button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="pixel-tool-bucket" data-subtool="bucket" data-tooltip="Cubeta de relleno">
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="pixel-tool-bucket" data-subtool="bucket" data-tooltip="Cubeta de relleno">
                   <span class="component-icon">format_color_fill</span>
                   <span>Relleno</span>
                 </button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="pixel-tool-eyedropper" data-subtool="eyedropper" data-tooltip="Cuentagotas (I)">
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="pixel-tool-eyedropper" data-subtool="eyedropper" data-tooltip="Cuentagotas (I)">
                   <span class="component-icon">colorize</span>
                   <span>Gotero</span>
                 </button>
@@ -273,14 +281,14 @@
 
               <span class="design-options-tray__label">Pincel:</span>
               <div class="design-options-tray__badges" data-ref="pixel-brush-badges">
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable is-active" data-ref="pixel-brush-1" data-pixel-brush="1">1px</button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="pixel-brush-2" data-pixel-brush="2">2px</button>
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="pixel-brush-4" data-pixel-brush="4">4px</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text is-active" data-ref="pixel-brush-1" data-pixel-brush="1">1px</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="pixel-brush-2" data-pixel-brush="2">2px</button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="pixel-brush-4" data-pixel-brush="4">4px</button>
               </div>
 
               <div class="design-toolbar-divider"></div>
 
-              <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable is-active" data-ref="btn-toggle-pixel-gridlines" data-tooltip="Ver/Ocultar cuadrícula">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--text is-active" data-ref="btn-toggle-pixel-gridlines" data-tooltip="Ver/Ocultar cuadrícula">
                 <span class="component-icon">grid_on</span>
                 <span>Rejilla</span>
               </button>
@@ -308,70 +316,89 @@
 
           <div class="design-bottom-toolbar" data-ref="board-bottom-toolbar">
             <div class="design-bottom-toolbar__section design-bottom-toolbar__section--tools" data-ref="board-tools-section">
-              <button type="button" class="design-toolbar-btn is-active" data-ref="tool-select" data-tool="select" data-tooltip="Seleccionar / Mover (V)" aria-label="Seleccionar">
-                <span class="component-icon">near_me</span>
-              </button>
-              <button type="button" class="design-toolbar-btn" data-ref="tool-hand" data-tool="hand" data-tooltip="Mano / Desplazar (H o Espacio)" aria-label="Mano">
-                <span class="component-icon">pan_tool</span>
-              </button>
-              <div class="design-toolbar-divider"></div>
-              <button type="button" class="design-toolbar-btn" data-ref="tool-pen" data-tool="pen" data-tooltip="Pluma suave (P)" aria-label="Pluma suave">
-                <span class="component-icon">draw</span>
-              </button>
-              <button type="button" class="design-toolbar-btn" data-ref="tool-marker" data-tool="marker" data-tooltip="Marcador (M)" aria-label="Marcador">
-                <span class="component-icon">brush</span>
-              </button>
-              <button type="button" class="design-toolbar-btn" data-ref="tool-highlighter" data-tool="highlighter" data-tooltip="Resaltador (R)" aria-label="Resaltador">
-                <span class="component-icon">ink_highlighter</span>
-              </button>
-              <button type="button" class="design-toolbar-btn" data-ref="tool-eraser" data-tool="eraser" data-tooltip="Borrador (E)" aria-label="Borrador">
-                <span class="component-icon">ink_eraser</span>
-              </button>
-              <div class="design-toolbar-divider"></div>
-              <button type="button" class="design-toolbar-btn" data-ref="tool-shapes" data-tool="shapes" data-tooltip="Formas y flechas (S)" aria-label="Formas">
-                <span class="component-icon">shapes</span>
-              </button>
-              <button type="button" class="design-toolbar-btn" data-ref="tool-sticky" data-tool="sticky" data-tooltip="Nota adhesiva (N)" aria-label="Nota adhesiva">
-                <span class="component-icon">sticky_note_2</span>
-              </button>
-              <button type="button" class="design-toolbar-btn" data-ref="tool-text" data-tool="text" data-tooltip="Texto (T)" aria-label="Texto">
-                <span class="component-icon">text_fields</span>
-              </button>
-              <div class="design-toolbar-divider"></div>
-              <button type="button" class="design-toolbar-btn" data-ref="tool-pixel" data-tool="pixel" data-tooltip="Lápiz de píxeles (X)" aria-label="Lápiz de píxeles">
-                <span class="component-icon">draw</span>
-              </button>
-              <button type="button" class="design-toolbar-btn" data-ref="btn-insert-pixel-grid" data-tooltip="Insertar cuadrícula Pixel Art" aria-label="Insertar cuadrícula Pixel Art">
-                <span class="component-icon">grid_on</span>
-              </button>
-              <div class="design-toolbar-divider"></div>
+              <div class="design-toolbar-group" data-ref="board-group-select">
+                <button type="button" class="design-toolbar-btn is-active" data-ref="tool-select" data-tool="select" data-tooltip="Seleccionar / Mover (V)" aria-label="Seleccionar">
+                  <span class="component-icon">near_me</span>
+                </button>
+                <button type="button" class="design-toolbar-btn" data-ref="tool-hand" data-tool="hand" data-tooltip="Mano / Desplazar (H o Espacio)" aria-label="Mano">
+                  <span class="component-icon">pan_tool</span>
+                </button>
+              </div>
 
-              <button type="button" class="design-toolbar-btn" data-ref="btn-color-prop" data-tooltip="Color de trazo" aria-label="Color de trazo">
-                <span class="design-color-picker__preview" data-ref="color-swatch-circle" style="background-color: #1e293b;"></span>
-              </button>
-              <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-width-prop" data-tooltip="Grosor de trazo" aria-label="Grosor de trazo">
-                <span class="board-width-dot" data-ref="width-dot-indicator"></span>
-                <span class="design-toolbar-badge__text" data-ref="width-label">4px</span>
-              </button>
-              <button type="button" class="design-toolbar-btn" data-ref="btn-fill-prop" data-tooltip="Color de relleno" aria-label="Color de relleno">
-                <span class="component-icon">format_color_fill</span>
-                <span class="board-fill-preview-dot" data-ref="fill-swatch-circle"></span>
-              </button>
+              <div class="design-toolbar-divider" data-ref="board-divider-draw"></div>
+
+              <div class="design-toolbar-group" data-ref="board-group-draw">
+                <button type="button" class="design-toolbar-btn" data-ref="tool-pen" data-tool="pen" data-tooltip="Pluma suave (P)" aria-label="Pluma suave">
+                  <span class="component-icon">draw</span>
+                </button>
+                <button type="button" class="design-toolbar-btn" data-ref="tool-marker" data-tool="marker" data-tooltip="Marcador (M)" aria-label="Marcador">
+                  <span class="component-icon">brush</span>
+                </button>
+                <button type="button" class="design-toolbar-btn" data-ref="tool-highlighter" data-tool="highlighter" data-tooltip="Resaltador (R)" aria-label="Resaltador">
+                  <span class="component-icon">ink_highlighter</span>
+                </button>
+                <button type="button" class="design-toolbar-btn" data-ref="tool-eraser" data-tool="eraser" data-tooltip="Borrador (E)" aria-label="Borrador">
+                  <span class="component-icon">ink_eraser</span>
+                </button>
+              </div>
+
+              <div class="design-toolbar-divider" data-ref="board-divider-objects"></div>
+
+              <div class="design-toolbar-group" data-ref="board-group-objects">
+                <button type="button" class="design-toolbar-btn" data-ref="tool-shapes" data-tool="shapes" data-tooltip="Formas y flechas (S)" aria-label="Formas">
+                  <span class="component-icon">shapes</span>
+                </button>
+                <button type="button" class="design-toolbar-btn" data-ref="tool-sticky" data-tool="sticky" data-tooltip="Nota adhesiva (N)" aria-label="Nota adhesiva">
+                  <span class="component-icon">sticky_note_2</span>
+                </button>
+                <button type="button" class="design-toolbar-btn" data-ref="tool-text" data-tool="text" data-tooltip="Texto (T)" aria-label="Texto">
+                  <span class="component-icon">text_fields</span>
+                </button>
+              </div>
+
+              <div class="design-toolbar-divider" data-ref="board-divider-pixel"></div>
+
+              <div class="design-toolbar-group" data-ref="board-group-pixel">
+                <button type="button" class="design-toolbar-btn" data-ref="tool-pixel" data-tool="pixel" data-tooltip="Lápiz de píxeles (X)" aria-label="Lápiz de píxeles">
+                  <span class="component-icon">draw</span>
+                </button>
+                <button type="button" class="design-toolbar-btn" data-ref="btn-insert-pixel-grid" data-tooltip="Insertar cuadrícula Pixel Art" aria-label="Insertar cuadrícula Pixel Art">
+                  <span class="component-icon">grid_on</span>
+                </button>
+              </div>
+
+              <div class="design-toolbar-divider" data-ref="board-divider-props"></div>
+
+              <div class="design-toolbar-group" data-ref="board-group-props">
+                <button type="button" class="design-toolbar-btn" data-ref="btn-color-prop" data-tooltip="Color de trazo" aria-label="Color de trazo">
+                  <span class="design-color-picker__preview" data-ref="color-swatch-circle" style="background-color: #1e293b;"></span>
+                </button>
+                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-width-prop" data-tooltip="Grosor de trazo" aria-label="Grosor de trazo">
+                  <span class="board-width-dot" data-ref="width-dot-indicator"></span>
+                  <span class="design-toolbar-badge__text" data-ref="width-label">4px</span>
+                </button>
+                <button type="button" class="design-toolbar-btn" data-ref="btn-fill-prop" data-tooltip="Color de relleno" aria-label="Color de relleno">
+                  <span class="component-icon">format_color_fill</span>
+                  <span class="board-fill-preview-dot" data-ref="fill-swatch-circle"></span>
+                </button>
+              </div>
             </div>
 
             <div class="design-bottom-toolbar__section design-bottom-toolbar__section--zoom" data-ref="board-zoom-section">
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-zoom-out" data-tooltip="Alejar (Ctrl -)" aria-label="Alejar">
-                <span class="component-icon">remove</span>
-              </button>
-              <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-zoom-reset" data-tooltip="Restablecer zoom (100%)" aria-label="Restablecer zoom">
-                <span class="design-toolbar-badge__text" data-ref="board-zoom-value">100%</span>
-              </button>
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-zoom-in" data-tooltip="Acercar (Ctrl +)" aria-label="Acercar">
-                <span class="component-icon">add</span>
-              </button>
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-zoom-fit" data-tooltip="Ajustar a contenido" aria-label="Ajustar a contenido">
-                <span class="component-icon">fit_screen</span>
-              </button>
+              <div class="design-toolbar-group" data-ref="board-group-zoom">
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-zoom-out" data-tooltip="Alejar (Ctrl -)" aria-label="Alejar">
+                  <span class="component-icon">remove</span>
+                </button>
+                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-zoom-reset" data-tooltip="Restablecer zoom (100%)" aria-label="Restablecer zoom">
+                  <span class="design-toolbar-badge__text" data-ref="board-zoom-value">100%</span>
+                </button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-zoom-in" data-tooltip="Acercar (Ctrl +)" aria-label="Acercar">
+                  <span class="component-icon">add</span>
+                </button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-zoom-fit" data-tooltip="Ajustar a contenido" aria-label="Ajustar a contenido">
+                  <span class="component-icon">fit_screen</span>
+                </button>
+              </div>
             </div>
           </div>
 

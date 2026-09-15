@@ -4154,7 +4154,7 @@ html.dark-theme .canvas-card.is-selected:hover .canvas-card__thumbnail {
 
 
 .component-bottom--canvas {
-  padding: 0;
+  padding: 0 !important;
   overflow: hidden;
   position: relative;
   width: 100%;
@@ -4163,6 +4163,8 @@ html.dark-theme .canvas-card.is-selected:hover .canvas-card__thumbnail {
   min-height: 0;
   display: flex;
   background-color: var(--bg-surface, #ffffff);
+  border-bottom-left-radius: 15px;
+  border-bottom-right-radius: 15px;
   contain: layout size paint;
   isolation: isolate;
 }
@@ -4211,58 +4213,16 @@ html.dark-theme .component-bottom--canvas {
   cursor: grabbing;
 }
 
-.design-top-toolbar-container {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  width: 100%;
-  padding: 8px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 20;
-  box-sizing: border-box;
-  pointer-events: none;
-  transform: translateZ(0);
-}
-
-.design-top-toolbar {
-  width: 100%;
-  height: auto;
-  padding: 8px;
-  background: rgba(18, 18, 22, 0.78);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 9999px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  box-sizing: border-box;
-  user-select: none;
-  pointer-events: auto;
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.35), inset 0 1px 0 0 rgba(255, 255, 255, 0.14);
-  transform: translateZ(0);
-}
-
-.design-top-toolbar__section {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
 .component-bottom--canvas {
-  --top-toolbar-height: 50px;
-  --bottom-toolbar-height: 50px;
+  --top-toolbar-height: 44px;
+  --bottom-toolbar-height: 44px;
 }
 
 .design-colors-panel {
   position: absolute;
-  top: calc(var(--top-toolbar-height, 50px) + 8px);
-  bottom: calc(var(--bottom-toolbar-height, 50px) + 8px);
-  left: 8px;
+  top: calc(8px + var(--top-toolbar-height, 44px) + 12px);
+  bottom: calc(8px + var(--bottom-toolbar-height, 44px) + 12px);
+  left: 12px;
   width: 285px;
   background: rgba(18, 18, 22, 0.85);
   backdrop-filter: blur(14px);
@@ -4543,10 +4503,10 @@ html.dark-theme .component-bottom--canvas {
 
 .design-layers-panel {
   position: absolute;
-  top: calc(var(--top-toolbar-height, 50px) + 8px);
-  left: 8px;
+  top: calc(8px + var(--top-toolbar-height, 44px) + 12px);
+  left: 12px;
   width: 260px;
-  max-height: calc(100% - var(--top-toolbar-height, 50px) - var(--bottom-toolbar-height, 50px) - 16px);
+  max-height: calc(100% - var(--top-toolbar-height, 44px) - var(--bottom-toolbar-height, 44px) - 40px);
   height: auto;
   background: rgba(18, 18, 22, 0.85);
   backdrop-filter: blur(14px);
@@ -4715,18 +4675,20 @@ html.dark-theme .component-bottom--canvas {
   left: 8px;
   right: 8px;
   max-width: calc(100% - 16px);
+  padding: 0;
   display: flex;
   align-items: center;
   gap: 6px;
   pointer-events: none;
   z-index: 25;
+  box-sizing: border-box;
 }
 
 .design-top-toolbar {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px;
+  padding: 4px;
   background: rgba(18, 18, 22, 0.78);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
@@ -4829,7 +4791,7 @@ html.dark-theme .component-bottom--canvas {
 
 .design-coords-badge {
   position: absolute;
-  top: calc(var(--top-toolbar-height, 50px) + 8px);
+  top: calc(8px + var(--top-toolbar-height, 44px) + 12px);
   left: 12px;
   z-index: 20;
   display: inline-flex;
@@ -4968,7 +4930,7 @@ html.dark-theme .component-bottom--canvas {
   width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
-  padding: 2px 28px;
+  padding: 0;
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
@@ -5137,7 +5099,7 @@ html.dark-theme .component-bottom--canvas {
   width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
-  padding: 2px 28px;
+  padding: 0;
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
@@ -5247,7 +5209,7 @@ html.dark-theme .component-bottom--canvas {
   max-width: 100%;
   min-width: 0;
   height: auto;
-  padding: 8px 14px;
+  padding: 4px;
   background: rgba(18, 18, 22, 0.78);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
@@ -5256,7 +5218,7 @@ html.dark-theme .component-bottom--canvas {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 8px;
   box-sizing: border-box;
   user-select: none;
   pointer-events: auto;
@@ -5278,7 +5240,7 @@ html.dark-theme .component-bottom--canvas {
 .design-bottom-toolbar__section {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .design-bottom-toolbar__section--tools {
@@ -5286,6 +5248,13 @@ html.dark-theme .component-bottom--canvas {
 }
 
 .design-bottom-toolbar__section--zoom {
+  flex: 0 0 auto;
+}
+
+.design-toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   flex: 0 0 auto;
 }
 
@@ -5345,6 +5314,30 @@ html.dark-theme .component-bottom--canvas {
 .design-toolbar-btn--sm {
   width: 30px;
   height: 30px;
+}
+
+.design-toolbar-btn--text {
+  width: auto;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 10px;
+  gap: 6px;
+  font-family: 'Roboto Mono', 'SFMono-Regular', Consolas, monospace;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.design-toolbar-btn--text span {
+  font-size: 12px;
+  line-height: 1;
+}
+
+.design-toolbar-btn--text .component-icon {
+  width: 15px;
+  height: 15px;
+  font-size: 15px;
 }
 
 .design-toolbar-btn .component-icon {
@@ -5559,9 +5552,9 @@ html.dark-theme .component-bottom--canvas {
 
 .design-shapes-panel {
   position: absolute;
-  top: calc(var(--top-toolbar-height, 50px) + 8px);
-  bottom: calc(var(--bottom-toolbar-height, 50px) + 8px);
-  left: 8px;
+  top: calc(8px + var(--top-toolbar-height, 44px) + 12px);
+  bottom: calc(8px + var(--bottom-toolbar-height, 44px) + 12px);
+  left: 12px;
   width: 285px;
   background: rgba(18, 18, 22, 0.85);
   backdrop-filter: blur(14px);
@@ -6745,10 +6738,10 @@ html[data-theme="dark"] .design-share-search-results,
 
 .design-collaborators-panel {
   position: absolute;
-  top: calc(var(--top-toolbar-height, 50px) + 8px);
-  left: 8px;
+  top: calc(8px + var(--top-toolbar-height, 44px) + 12px);
+  left: 12px;
   width: 280px;
-  max-height: calc(100% - var(--top-toolbar-height, 50px) - var(--bottom-toolbar-height, 50px) - 16px);
+  max-height: calc(100% - var(--top-toolbar-height, 44px) - var(--bottom-toolbar-height, 44px) - 40px);
   height: auto;
   background: rgba(18, 18, 22, 0.85);
   backdrop-filter: blur(14px);
@@ -8540,7 +8533,7 @@ body[data-theme="dark"] .upgrade-modal__active-indicator {
 
 .design-history-preview-banner {
   position: absolute;
-  top: calc(var(--top-toolbar-height, 50px) + 12px);
+  top: calc(8px + var(--top-toolbar-height, 44px) + 12px);
   left: 50%;
   transform: translateX(-50%);
   z-index: 45;

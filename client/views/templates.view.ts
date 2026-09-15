@@ -66,7 +66,9 @@ class TemplatesController {
       this.typeDropdownController = setupDropdown(typeDropdownWrapper, {
         matchWidth: false,
         onSelect: (val: string) => {
-          this.currentTypeFilter = (val as 'all' | 'favorites' | 'pixel' | 'board') || 'all';
+          const next = (val as 'all' | 'favorites' | 'pixel' | 'board') || 'all';
+          if (this.currentTypeFilter === next) return;
+          this.currentTypeFilter = next;
           const typeMenu = this.container.querySelector<HTMLElement>('[data-ref="dropdown-menu-filter-type"]');
           typeMenu?.querySelectorAll<HTMLButtonElement>('.menu-item').forEach((item) => {
             item.classList.toggle('is-active', item.getAttribute('data-value') === this.currentTypeFilter);
@@ -82,7 +84,9 @@ class TemplatesController {
       this.sortDropdownController = setupDropdown(sortDropdownWrapper, {
         matchWidth: false,
         onSelect: (val: string) => {
-          this.currentSort = (val as 'default' | 'alpha-asc' | 'alpha-desc' | 'size-desc' | 'size-asc') || 'default';
+          const next = (val as 'default' | 'alpha-asc' | 'alpha-desc' | 'size-desc' | 'size-asc') || 'default';
+          if (this.currentSort === next) return;
+          this.currentSort = next;
           const sortMenu = this.container.querySelector<HTMLElement>('[data-ref="dropdown-menu-sort"]');
           sortMenu?.querySelectorAll<HTMLButtonElement>('.menu-item').forEach((item) => {
             item.classList.toggle('is-active', item.getAttribute('data-value') === this.currentSort);

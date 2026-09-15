@@ -118,9 +118,7 @@ export class DesignLayersManager {
           (layer as any).chunkGrid?.populateFromCanvas(layer.canvas);
         }
       } catch {}
-    } catch {
-      // Ignored
-    }
+    } catch {}
   }
 
   public addLayer(name?: string, customLayerId?: string, customIndex?: number, customFrameId?: string): CanvasLayer | null {

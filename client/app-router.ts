@@ -115,215 +115,139 @@ export async function render(): Promise<void> {
   let viewElements: HTMLElement[] = [];
 
   try {
-    if (path === '/login') {
-      const { createLoginView } = await import('./views/auth.view.js');
-      const loginView = await createLoginView();
-      viewElements = [loginView];
-    } else if (path === '/login/verification-aditional') {
-      const { createLogin2FAView } = await import('./views/auth.view.js');
-      const login2FAView = await createLogin2FAView();
-      viewElements = [login2FAView];
-    } else if (path === '/register') {
-      const { createRegisterStage1View } = await import('./views/auth.view.js');
-      const stage1View = await createRegisterStage1View();
-      viewElements = [stage1View];
-    } else if (path === '/register/aditional-data') {
-      const { createRegisterStage2View } = await import('./views/auth.view.js');
-      const stage2View = await createRegisterStage2View();
-      viewElements = [stage2View];
-    } else if (path === '/register/verification-account') {
-      const { createRegisterStage3View } = await import('./views/auth.view.js');
-      const stage3View = await createRegisterStage3View();
-      viewElements = [stage3View];
-    } else if (path === '/forgot-password') {
-      const { createForgotPasswordView } = await import('./views/auth.view.js');
-      const forgotView = await createForgotPasswordView();
-      viewElements = [forgotView];
-    } else if (path === '/reset-password') {
-      const { createResetPasswordView } = await import('./views/auth.view.js');
-      const resetView = await createResetPasswordView();
-      viewElements = [resetView];
+    if (path.startsWith('/login') || path.startsWith('/register') || path === '/forgot-password' || path === '/reset-password') {
+      const { createForgotPasswordView, createLogin2FAView, createLoginView, createRegisterStage1View, createRegisterStage2View, createRegisterStage3View, createResetPasswordView } = await import('./views/auth.view.js');
+      switch (path) {
+        case '/login/verification-aditional':
+          viewElements = [await createLogin2FAView()];
+          break;
+        case '/register':
+          viewElements = [await createRegisterStage1View()];
+          break;
+        case '/register/aditional-data':
+          viewElements = [await createRegisterStage2View()];
+          break;
+        case '/register/verification-account':
+          viewElements = [await createRegisterStage3View()];
+          break;
+        case '/forgot-password':
+          viewElements = [await createForgotPasswordView()];
+          break;
+        case '/reset-password':
+          viewElements = [await createResetPasswordView()];
+          break;
+        case '/login':
+        default:
+          viewElements = [await createLoginView()];
+          break;
+      }
     } else if (path === '/teams') {
       if (!currentUser) {
         window.history.replaceState({}, '', '/login');
         const { createLoginView } = await import('./views/auth.view.js');
-        const loginView = await createLoginView();
-        viewElements = [loginView];
+        viewElements = [await createLoginView()];
       } else if (!hasFeature('teams', currentUser)) {
         window.history.replaceState({}, '', previousPath || '/');
         openUpgradeModal('business');
         return;
       } else {
         const { createTeamsView } = await import('./views/teams.view.js');
-        const teamsView = await createTeamsView();
-        viewElements = [teamsView];
+        viewElements = [await createTeamsView()];
       }
     } else if (path === '/templates') {
       const { createTemplatesView } = await import('./views/templates.view.js');
-      const templatesView = await createTemplatesView();
-      viewElements = [templatesView];
+      viewElements = [await createTemplatesView()];
     } else if (path === '/search') {
       const { createSearchView } = await import('./views/search.view.js');
-      const searchView = await createSearchView();
-      viewElements = [searchView];
+      viewElements = [await createSearchView()];
     } else if (path === '/shared') {
       if (!currentUser) {
         window.history.replaceState({}, '', '/login');
         const { createLoginView } = await import('./views/auth.view.js');
-        const loginView = await createLoginView();
-        viewElements = [loginView];
+        viewElements = [await createLoginView()];
       } else {
         const { createSharedView } = await import('./views/shared.view.js');
-        const sharedView = await createSharedView();
-        viewElements = [sharedView];
+        viewElements = [await createSharedView()];
       }
     } else if (path === '/trash') {
       if (!currentUser) {
         window.history.replaceState({}, '', '/login');
         const { createLoginView } = await import('./views/auth.view.js');
-        const loginView = await createLoginView();
-        viewElements = [loginView];
+        viewElements = [await createLoginView()];
       } else {
         const { createTrashView } = await import('./views/trash.view.js');
-        const trashView = await createTrashView();
-        viewElements = [trashView];
+        viewElements = [await createTrashView()];
       }
     } else if (path === '/upgrade') {
       const { createUpgradeView } = await import('./views/upgrade.view.js');
-      const upgradeView = await createUpgradeView();
-      viewElements = [upgradeView];
-    } else if (path === '/settings') {
-      const { createGuestSettingsView, createYourAccountView } = await import('./views/settings.view.js');
-      if (currentUser) {
-        window.history.replaceState({}, '', '/settings/your-account');
-        const settingsView = await createYourAccountView();
-        viewElements = [settingsView];
-      } else {
-        window.history.replaceState({}, '', '/settings/guest');
-        const settingsView = await createGuestSettingsView();
-        viewElements = [settingsView];
-      }
-    } else if (path === '/settings/your-account') {
-      const { createGuestSettingsView, createYourAccountView } = await import('./views/settings.view.js');
+      viewElements = [await createUpgradeView()];
+    } else if (path.startsWith('/settings')) {
+      const { createAccessibilityView, createBillingView, createGuestSettingsView, createPurchasesView, createSecurityView, createYourAccountView } = await import('./views/settings.view.js');
       if (!currentUser) {
-        window.history.replaceState({}, '', '/settings/guest');
-        const settingsView = await createGuestSettingsView();
-        viewElements = [settingsView];
+        if (path !== '/settings/guest') {
+          window.history.replaceState({}, '', '/settings/guest');
+        }
+        viewElements = [await createGuestSettingsView()];
       } else {
-        const settingsView = await createYourAccountView();
-        viewElements = [settingsView];
+        if (path === '/settings' || path === '/settings/guest') {
+          window.history.replaceState({}, '', '/settings/your-account');
+        }
+        const subPath = path === '/settings' || path === '/settings/guest' ? '/settings/your-account' : path;
+        switch (subPath) {
+          case '/settings/security':
+          case '/settings/login-and-security':
+            viewElements = [await createSecurityView()];
+            break;
+          case '/settings/billing':
+            viewElements = [await createBillingView()];
+            break;
+          case '/settings/purchases':
+            viewElements = [await createPurchasesView()];
+            break;
+          case '/settings/accessibility':
+            viewElements = [await createAccessibilityView()];
+            break;
+          case '/settings/your-account':
+          default:
+            viewElements = [await createYourAccountView()];
+            break;
+        }
       }
-    } else if (path === '/settings/security' || path === '/settings/login-and-security') {
-      const { createGuestSettingsView, createSecurityView } = await import('./views/settings.view.js');
-      if (!currentUser) {
-        window.history.replaceState({}, '', '/settings/guest');
-        const settingsView = await createGuestSettingsView();
-        viewElements = [settingsView];
-      } else {
-        const settingsView = await createSecurityView();
-        viewElements = [settingsView];
-      }
-    } else if (path === '/settings/billing') {
-      const { createBillingView, createGuestSettingsView } = await import('./views/settings.view.js');
-      if (!currentUser) {
-        window.history.replaceState({}, '', '/settings/guest');
-        const settingsView = await createGuestSettingsView();
-        viewElements = [settingsView];
-      } else {
-        const settingsView = await createBillingView();
-        viewElements = [settingsView];
-      }
-    } else if (path === '/settings/purchases') {
-      const { createGuestSettingsView, createPurchasesView } = await import('./views/settings.view.js');
-      if (!currentUser) {
-        window.history.replaceState({}, '', '/settings/guest');
-        const settingsView = await createGuestSettingsView();
-        viewElements = [settingsView];
-      } else {
-        const settingsView = await createPurchasesView();
-        viewElements = [settingsView];
-      }
-    } else if (path === '/settings/accessibility') {
-      const { createAccessibilityView, createGuestSettingsView } = await import('./views/settings.view.js');
-      if (!currentUser) {
-        window.history.replaceState({}, '', '/settings/guest');
-        const settingsView = await createGuestSettingsView();
-        viewElements = [settingsView];
-      } else {
-        const settingsView = await createAccessibilityView();
-        viewElements = [settingsView];
-      }
-    } else if (path === '/settings/guest') {
-      const { createGuestSettingsView, createYourAccountView } = await import('./views/settings.view.js');
-      if (currentUser) {
-        window.history.replaceState({}, '', '/settings/your-account');
-        const settingsView = await createYourAccountView();
-        viewElements = [settingsView];
-      } else {
-        const settingsView = await createGuestSettingsView();
-        viewElements = [settingsView];
-      }
-    } else if (path === '/help' || path === '/legal') {
-      window.history.replaceState({}, '', '/help/terms');
+    } else if (path.startsWith('/help') || path.startsWith('/legal')) {
       const { createHelpView } = await import('./views/help.view.js');
-      const termsView = await createHelpView('terms');
-      viewElements = [termsView];
-    } else if (path === '/help/terms' || path === '/legal/terms') {
-      const { createHelpView } = await import('./views/help.view.js');
-      const termsView = await createHelpView('terms');
-      viewElements = [termsView];
-    } else if (path === '/help/privacy' || path === '/legal/privacy') {
-      const { createHelpView } = await import('./views/help.view.js');
-      const privacyView = await createHelpView('privacy');
-      viewElements = [privacyView];
-    } else if (path === '/help/cookies' || path === '/legal/cookies') {
-      const { createHelpView } = await import('./views/help.view.js');
-      const cookiesView = await createHelpView('cookies');
-      viewElements = [cookiesView];
-    } else if (path === '/help/legal-notice' || path === '/legal/legal-notice' || path === '/help/legal') {
-      const { createHelpView } = await import('./views/help.view.js');
-      const legalView = await createHelpView('legal_notice');
-      viewElements = [legalView];
-    } else if (path === '/help/billing' || path === '/legal/billing') {
-      const { createHelpView } = await import('./views/help.view.js');
-      const billingView = await createHelpView('billing');
-      viewElements = [billingView];
-    } else if (path === '/help/support' || path === '/help/feedback' || path === '/help/contact') {
-      const { createHelpView } = await import('./views/help.view.js');
-      const supportView = await createHelpView('support');
-      viewElements = [supportView];
+      let tab = 'terms';
+      if (path === '/help/privacy' || path === '/legal/privacy') tab = 'privacy';
+      else if (path === '/help/cookies' || path === '/legal/cookies') tab = 'cookies';
+      else if (path === '/help/legal-notice' || path === '/legal/legal-notice' || path === '/help/legal') tab = 'legal_notice';
+      else if (path === '/help/billing' || path === '/legal/billing') tab = 'billing';
+      else if (path === '/help/support' || path === '/help/feedback' || path === '/help/contact') tab = 'support';
+      viewElements = [await createHelpView(tab)];
     } else if (path === '/' || path === '') {
       const { createHomeView } = await import('./views/home.view.js');
-      const homeView = await createHomeView();
-      viewElements = [homeView];
+      viewElements = [await createHomeView()];
     } else if (path.startsWith('/folder/')) {
       const folderUuid = path.split('/folder/')[1]?.split('/')[0] || '';
       const { createHomeView } = await import('./views/home.view.js');
-      const folderView = await createHomeView(folderUuid);
-      viewElements = [folderView];
+      viewElements = [await createHomeView(folderUuid)];
     } else if (path === '/design' || path === '/design/' || path.startsWith('/design/')) {
       const canvasUuid = path.startsWith('/design/') ? (path.split('/design/')[1]?.split('/')[0] || '') : '';
       if (!canvasUuid) {
         window.history.replaceState({}, '', '/');
         const { createHomeView } = await import('./views/home.view.js');
-        const homeView = await createHomeView();
-        viewElements = [homeView];
+        viewElements = [await createHomeView()];
       } else {
         const { createDesignView } = await import('./views/design.view.js');
-        const designView = await createDesignView(canvasUuid);
-        viewElements = [designView];
+        viewElements = [await createDesignView(canvasUuid)];
       }
     } else if (path === '/board' || path === '/board/' || path.startsWith('/board/')) {
       const canvasUuid = path.startsWith('/board/') ? (path.split('/board/')[1]?.split('/')[0] || '') : '';
       if (!canvasUuid) {
         window.history.replaceState({}, '', '/');
         const { createHomeView } = await import('./views/home.view.js');
-        const homeView = await createHomeView();
-        viewElements = [homeView];
+        viewElements = [await createHomeView()];
       } else {
         const { createBoardView } = await import('./views/board.view.js');
-        const boardView = await createBoardView(canvasUuid);
-        viewElements = [boardView];
+        viewElements = [await createBoardView(canvasUuid)];
       }
     } else if (/^\/[a-zA-Z0-9_-]{3,50}$/.test(path)) {
       const slug = path.slice(1);
@@ -345,34 +269,30 @@ export async function render(): Promise<void> {
         window.history.replaceState({}, '', targetPath);
         if (resolvedType === 'board') {
           const { createBoardView } = await import('./views/board.view.js');
-          const boardView = await createBoardView(resolvedUuid);
-          viewElements = [boardView];
+          viewElements = [await createBoardView(resolvedUuid)];
         } else {
           const { createDesignView } = await import('./views/design.view.js');
-          const designView = await createDesignView(resolvedUuid);
-          viewElements = [designView];
+          viewElements = [await createDesignView(resolvedUuid)];
         }
       } else {
         const { createErrorView } = await import('./views/error.view.js');
-        const notFoundView = await createErrorView({
+        viewElements = [await createErrorView({
           code: '404',
           title: 'Página no encontrada',
           description: `La ruta "${path}" no existe o ha sido movida.`,
           actionText: 'Ir a la página principal',
           actionUrl: '/',
-        });
-        viewElements = [notFoundView];
+        })];
       }
     } else {
       const { createErrorView } = await import('./views/error.view.js');
-      const notFoundView = await createErrorView({
+      viewElements = [await createErrorView({
         code: '404',
         title: 'Página no encontrada',
         description: `La ruta "${path}" no existe o ha sido movida.`,
         actionText: 'Ir a la página principal',
         actionUrl: '/',
-      });
-      viewElements = [notFoundView];
+      })];
     }
   } catch {
     const { createErrorView } = await import('./views/error.view.js');
