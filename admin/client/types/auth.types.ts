@@ -10,6 +10,7 @@ export interface UserPayload {
   subscription_tier_color?: string;
   two_factor_enabled?: boolean;
   username: string;
+  uuid?: string;
 }
 
 export interface SessionAccount {
@@ -26,6 +27,7 @@ export interface SessionAccount {
   subscription_tier_color?: string;
   two_factor_enabled?: boolean;
   username: string;
+  uuid?: string;
 }
 
 export interface AuthSessionResponse {

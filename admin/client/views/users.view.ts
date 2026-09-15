@@ -7,6 +7,7 @@ import { renderIcons } from '../services/icon.service.js';
 import { showToast } from '../services/toast.service.js';
 import { ViewController } from '../types/common.types.js';
 import { escapeHtml, setupDropdown } from '../utils/dom.util.js';
+import { getFallbackTierColor } from '../utils/tier.util.js';
 
 interface UserRowData {
   avatar_url: string | null;
@@ -23,6 +24,7 @@ interface UserRowData {
   subscription_tier: string;
   two_factor_enabled: boolean;
   username: string;
+  uuid: string;
 }
 
 function formatDate(iso?: string | null): string {
@@ -44,7 +46,7 @@ class UsersController implements ViewController {
   private container: HTMLElement;
 
   private users: UserRowData[] = [];
-  private selectedUserIds = new Set<number>();
+  private selectedUser: UserRowData | null = null;
   private allRoles: Array<{ category?: string; description?: string; display_name: string; id?: number; name: string }> = [];
 
   private currentPage = 1;
@@ -60,7 +62,6 @@ class UsersController implements ViewController {
 
   private tableEl: HTMLElement | null = null;
   private tbodyEl: HTMLElement | null = null;
-  private selectAllCheckbox: HTMLInputElement | null = null;
 
   private defaultActions: HTMLElement | null = null;
   private selectedActions: HTMLElement | null = null;
@@ -90,7 +91,6 @@ class UsersController implements ViewController {
   async init(): Promise<void> {
     this.tableEl = this.container.querySelector<HTMLElement>('[data-ref="users-table"]');
     this.tbodyEl = this.container.querySelector<HTMLElement>('[data-ref="users-tbody"]');
-    this.selectAllCheckbox = this.container.querySelector<HTMLInputElement>('[data-ref="input-select-all"]');
 
     this.defaultActions = this.container.querySelector<HTMLElement>('[data-ref="users-default-actions"]');
     this.selectedActions = this.container.querySelector<HTMLElement>('[data-ref="users-selected-actions"]');
@@ -193,29 +193,25 @@ class UsersController implements ViewController {
     }, { signal });
 
     this.btnActionDeselect?.addEventListener('click', () => {
-      this.selectedUserIds.clear();
+      this.selectedUser = null;
       this.updateSelectionUi();
     }, { signal });
 
     this.btnActionAccount?.addEventListener('click', () => {
-      const selectedId = [...this.selectedUserIds][0];
-      if (selectedId) {
-        navigate(`/users/${selectedId}`);
+      if (this.selectedUser) {
+        navigate(`/users/${this.selectedUser.uuid || this.selectedUser.id}`);
       }
     }, { signal });
 
     this.btnActionSanctions?.addEventListener('click', () => {
-      const selectedId = [...this.selectedUserIds][0];
-      const targetUser = this.users.find((u) => u.id === selectedId);
-      if (targetUser) {
-        this.openManageSanctionsModal(targetUser);
+      if (this.selectedUser) {
+        this.openManageSanctionsModal(this.selectedUser);
       }
     }, { signal });
 
     this.btnActionSanctionsHistory?.addEventListener('click', () => {
-      const selectedId = [...this.selectedUserIds][0];
-      if (selectedId) {
-        navigate(`/users/${selectedId}/sanctions`);
+      if (this.selectedUser) {
+        navigate(`/users/${this.selectedUser.uuid || this.selectedUser.id}/sanctions`);
       }
     }, { signal });
 
@@ -257,8 +253,8 @@ class UsersController implements ViewController {
       if (e.key === 'Escape') {
         if (this.isSearchActive) {
           this.toggleSearchToolbar(false);
-        } else if (this.selectedUserIds.size > 0) {
-          this.selectedUserIds.clear();
+        } else if (this.selectedUser) {
+          this.selectedUser = null;
           this.updateSelectionUi();
         }
       }
@@ -293,7 +289,7 @@ class UsersController implements ViewController {
 
   private async loadUsers(page = 1): Promise<void> {
     this.currentPage = page;
-    this.selectedUserIds.clear();
+    this.selectedUser = null;
 
     const res = await getUsersApi({
       limit: this.limit,
@@ -328,7 +324,7 @@ class UsersController implements ViewController {
     if (this.users.length === 0) {
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td colspan="6" style="text-align: center; padding: 48px 16px; color: var(--text-secondary);">
+        <td colspan="5" style="text-align: center; padding: 48px 16px; color: var(--text-secondary);">
           <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
             <svg class="component-icon" style="width: 40px; height: 40px; color: var(--text-tertiary);" aria-hidden="true"><use href="/icons.svg#group"></use></svg>
             <div style="font-weight: 600; font-size: 14px; color: var(--text-primary);">No se encontraron usuarios</div>
@@ -347,21 +343,19 @@ class UsersController implements ViewController {
       tr.setAttribute('data-ref', `user-row-${user.id}`);
       tr.setAttribute('data-user-id', String(user.id));
 
-      const isSelected = this.selectedUserIds.has(user.id);
+      const isSelected = this.selectedUser?.id === user.id;
       if (isSelected) tr.classList.add('is-selected');
 
       const avatarUrl = user.avatar_url || `/api/avatar?name=${encodeURIComponent(user.username)}`;
+      const tierColor = getFallbackTierColor(user.subscription_tier);
       const rolesHtml = user.roles && user.roles.length > 0
         ? user.roles.map((r) => `<span class="component-badge component-badge--sm" data-ref="badge-role-${r.toLowerCase()}">${escapeHtml(r)}</span>`).join('')
         : `<span class="component-badge component-badge--sm">${escapeHtml(user.role || 'USER')}</span>`;
 
       tr.innerHTML = `
-        <td style="width: 48px; text-align: center;" data-ref="cell-checkbox-${user.id}">
-          <input class="component-table__checkbox" data-ref="checkbox-user-${user.id}" type="checkbox" ${isSelected ? 'checked' : ''} aria-label="Seleccionar ${escapeHtml(user.username)}" />
-        </td>
         <td data-ref="cell-user-${user.id}">
           <div class="user-cell">
-            <div class="user-cell__avatar">
+            <div class="user-cell__avatar" data-tier="${escapeHtml(user.subscription_tier || 'free')}" style="--avatar-tier-bg: ${tierColor};">
               <img src="${avatarUrl}" alt="${escapeHtml(user.username)}" referrerpolicy="no-referrer" />
             </div>
             <div class="user-cell__info">
@@ -388,15 +382,8 @@ class UsersController implements ViewController {
         </td>
       `;
 
-      tr.addEventListener('click', (e) => {
-        const target = e.target as HTMLElement;
-        if (target.tagName === 'INPUT') return;
-        this.toggleUserSelection(user.id);
-      });
-
-      const rowCheckbox = tr.querySelector<HTMLInputElement>(`[data-ref="checkbox-user-${user.id}"]`);
-      rowCheckbox?.addEventListener('change', () => {
-        this.toggleUserSelection(user.id, rowCheckbox.checked);
+      tr.addEventListener('click', () => {
+        this.toggleUserSelection(user);
       });
 
       this.tbodyEl.appendChild(tr);
@@ -405,44 +392,31 @@ class UsersController implements ViewController {
     renderIcons(this.tbodyEl);
   }
 
-  private toggleUserSelection(userId: number, forceState?: boolean): void {
-    const shouldSelect = forceState !== undefined ? forceState : !this.selectedUserIds.has(userId);
-    if (shouldSelect) {
-      this.selectedUserIds.add(userId);
+  private toggleUserSelection(user: UserRowData): void {
+    if (this.selectedUser?.id === user.id) {
+      this.selectedUser = null;
     } else {
-      this.selectedUserIds.delete(userId);
+      this.selectedUser = user;
     }
     this.updateSelectionUi();
   }
 
   private updateSelectionUi(): void {
-    const totalSelected = this.selectedUserIds.size;
+    const isSelected = this.selectedUser !== null;
 
-    if (totalSelected === 0) {
+    if (!isSelected) {
       if (this.defaultActions) this.defaultActions.style.display = 'flex';
       if (this.selectedActions) this.selectedActions.style.display = 'none';
-      if (this.selectAllCheckbox) {
-        this.selectAllCheckbox.checked = false;
-        this.selectAllCheckbox.indeterminate = false;
-      }
     } else {
       if (this.defaultActions) this.defaultActions.style.display = 'none';
       if (this.selectedActions) this.selectedActions.style.display = 'flex';
-
-      if (this.selectAllCheckbox) {
-        const allVisibleSelected = this.users.length > 0 && this.users.every((u) => this.selectedUserIds.has(u.id));
-        this.selectAllCheckbox.checked = allVisibleSelected;
-        this.selectAllCheckbox.indeterminate = !allVisibleSelected;
-      }
     }
 
     if (this.tbodyEl) {
       this.users.forEach((u) => {
         const row = this.tbodyEl?.querySelector<HTMLElement>(`[data-ref="user-row-${u.id}"]`);
-        const cb = this.tbodyEl?.querySelector<HTMLInputElement>(`[data-ref="checkbox-user-${u.id}"]`);
-        const isSelected = this.selectedUserIds.has(u.id);
-        if (row) row.classList.toggle('is-selected', isSelected);
-        if (cb) cb.checked = isSelected;
+        const rowSelected = this.selectedUser?.id === u.id;
+        if (row) row.classList.toggle('is-selected', rowSelected);
       });
     }
   }
@@ -465,8 +439,8 @@ class UsersController implements ViewController {
   }
 
   private openManageRolesModal(): void {
-    const selectedUsers = this.users.filter((u) => this.selectedUserIds.has(u.id));
-    if (selectedUsers.length === 0) return;
+    if (!this.selectedUser) return;
+    const targetUser = this.selectedUser;
 
     if (this.allRoles.length === 0) {
       this.allRoles = PLATFORM_ROLES.map((r) => ({
@@ -477,15 +451,13 @@ class UsersController implements ViewController {
       }));
     }
 
-    const initialRoles = selectedUsers[0].roles && selectedUsers[0].roles.length > 0
-      ? selectedUsers[0].roles
-      : [selectedUsers[0].role || 'USER'];
+    const initialRoles = targetUser.roles && targetUser.roles.length > 0
+      ? targetUser.roles
+      : [targetUser.role || 'USER'];
     const selectedRoleNames = new Set<string>(initialRoles);
 
     const title = 'Gestionar roles';
-    const description = selectedUsers.length === 1
-      ? `Asigna o modifica los roles de acceso para el usuario "${escapeHtml(selectedUsers[0].username)}".`
-      : `Asigna o modifica los roles de acceso para los ${selectedUsers.length} usuarios seleccionados.`;
+    const description = `Asigna o modifica los roles de acceso para el usuario "${escapeHtml(targetUser.username)}".`;
 
     const summaryText = () => {
       if (selectedRoleNames.size === 0) return 'Seleccionar roles...';
@@ -544,26 +516,17 @@ class UsersController implements ViewController {
         const rolesArray = [...selectedRoleNames];
         modal.setConfirmLoading?.(true, 'Guardando...');
 
-        let hasError = false;
-        let errorMsg = '';
-
-        for (const user of selectedUsers) {
-          const res = await updateUserRolesApi(user.id, rolesArray);
-          if (!res.ok) {
-            hasError = true;
-            errorMsg = res.error || 'Error al actualizar roles.';
-            break;
-          }
-          user.roles = [...rolesArray];
-          user.role = rolesArray[0] || 'USER';
-        }
-
+        const targetIdOrUuid = targetUser.uuid || targetUser.id;
+        const res = await updateUserRolesApi(targetIdOrUuid, rolesArray);
         modal.setConfirmLoading?.(false);
 
-        if (hasError) {
-          modal.setError(errorMsg);
+        if (!res.ok) {
+          modal.setError(res.error || 'Error al actualizar roles.');
           return;
         }
+
+        targetUser.roles = [...rolesArray];
+        targetUser.role = rolesArray[0] || 'USER';
 
         showToast('Roles actualizados exitosamente.', 'success');
         this.renderRows();
@@ -693,6 +656,24 @@ class UsersController implements ViewController {
     let selectedType: 'ban' | 'suspension' | 'warning' = 'warning';
     let selectedDurationDays = 7;
 
+    const sanctionTypeMeta: Record<string, { desc: string; icon: string; title: string }> = {
+      ban: {
+        desc: 'Bloquea el acceso a la cuenta de forma definitiva e indefinida.',
+        icon: 'block',
+        title: 'Baneo permanente',
+      },
+      suspension: {
+        desc: 'Bloquea el acceso durante una cantidad determinada de días.',
+        icon: 'timer',
+        title: 'Suspensión temporal',
+      },
+      warning: {
+        desc: 'Aviso formal en el expediente. No bloquea el acceso.',
+        icon: 'warning_amber',
+        title: 'Advertencia',
+      },
+    };
+
     const modal = openModal({
       bodyHtml: `
         <div class="manage-sanctions-modal" data-ref="modal-manage-sanctions" style="display: flex; flex-direction: column; gap: 16px;">
@@ -711,31 +692,47 @@ class UsersController implements ViewController {
           <div class="menu-divider" style="margin: 0;"></div>
 
           <div data-ref="modal-group-type">
-            <div style="font-size: 13px; font-weight: 500; color: var(--text-primary); margin-bottom: 8px;">Aplicar nueva sanción:</div>
-            <div style="display: grid; grid-template-columns: 1fr; gap: 8px;" data-ref="modal-type-options">
-              <label class="sanction-option-card" data-ref="modal-option-warning" style="display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: var(--radius-sm, 6px); cursor: pointer; background: var(--bg-card-subtle);">
-                <input class="component-radio" data-ref="modal-radio-warning" type="radio" name="modal_sanction_type" value="warning" checked style="margin-top: 3px;" />
-                <div>
-                  <div style="font-weight: 600; font-size: 13px; color: var(--text-primary);">Advertencia</div>
-                  <div style="font-size: 12px; color: var(--text-secondary);">Aviso formal en el expediente. No bloquea el acceso.</div>
+            <div style="font-size: 13px; font-weight: 500; color: var(--text-primary); margin-bottom: 8px;">Tipo de sanción:</div>
+            
+            <div class="settings-dropdown-wrapper" data-ref="modal-dropdown-wrapper-sanction-type" style="position: relative; width: 100%;">
+              <button type="button" class="dropdown-trigger" data-ref="btn-modal-trigger-sanction-type" style="width: 100%; justify-content: space-between;" aria-label="Seleccionar tipo de sanción">
+                <div class="dropdown-trigger__left" style="display: flex; align-items: center; gap: 8px;">
+                  <span class="material-symbols-rounded dropdown-trigger__icon" data-ref="modal-sanction-type-icon">warning_amber</span>
+                  <span class="dropdown-trigger__text" data-ref="modal-sanction-type-text">Advertencia</span>
                 </div>
-              </label>
-              
-              <label class="sanction-option-card" data-ref="modal-option-suspension" style="display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: var(--radius-sm, 6px); cursor: pointer;">
-                <input class="component-radio" data-ref="modal-radio-suspension" type="radio" name="modal_sanction_type" value="suspension" style="margin-top: 3px;" />
-                <div>
-                  <div style="font-weight: 600; font-size: 13px; color: var(--text-primary);">Suspensión temporal</div>
-                  <div style="font-size: 12px; color: var(--text-secondary);">Bloquea el acceso durante una cantidad determinada de días.</div>
+                <span class="material-symbols-rounded dropdown-trigger__chevron">expand_more</span>
+              </button>
+
+              <div class="dropdown-backdrop" data-ref="modal-dropdown-backdrop-sanction-type">
+                <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="modal-dropdown-menu-sanction-type">
+                  <div class="menu-panel__drag-zone" data-ref="modal-drag-zone-sanction-type" aria-hidden="true">
+                    <div class="menu-panel__drag-handle"></div>
+                  </div>
+                  <div class="menu-panel__list" data-ref="modal-list-sanction-types">
+                    <button type="button" class="menu-item is-active" data-ref="option-sanction-type-warning" data-value="warning" style="padding: 10px 12px; display: flex; align-items: flex-start; gap: 10px; width: 100%;">
+                      <span class="material-symbols-rounded menu-item__icon" style="font-size: 20px; margin-top: 1px;">warning_amber</span>
+                      <div style="display: flex; flex-direction: column; gap: 2px; text-align: left; flex: 1;">
+                        <span class="menu-item__text" style="font-weight: 600; font-size: 13px;">Advertencia</span>
+                        <span style="font-size: 11px; color: var(--text-secondary); line-height: 1.3;">Aviso formal en el expediente. No bloquea el acceso.</span>
+                      </div>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="option-sanction-type-suspension" data-value="suspension" style="padding: 10px 12px; display: flex; align-items: flex-start; gap: 10px; width: 100%;">
+                      <span class="material-symbols-rounded menu-item__icon" style="font-size: 20px; margin-top: 1px;">timer</span>
+                      <div style="display: flex; flex-direction: column; gap: 2px; text-align: left; flex: 1;">
+                        <span class="menu-item__text" style="font-weight: 600; font-size: 13px;">Suspensión temporal</span>
+                        <span style="font-size: 11px; color: var(--text-secondary); line-height: 1.3;">Bloquea el acceso durante una cantidad determinada de días.</span>
+                      </div>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="option-sanction-type-ban" data-value="ban" style="padding: 10px 12px; display: flex; align-items: flex-start; gap: 10px; width: 100%;">
+                      <span class="material-symbols-rounded menu-item__icon" style="font-size: 20px; margin-top: 1px;">block</span>
+                      <div style="display: flex; flex-direction: column; gap: 2px; text-align: left; flex: 1;">
+                        <span class="menu-item__text" style="font-weight: 600; font-size: 13px;">Baneo permanente</span>
+                        <span style="font-size: 11px; color: var(--text-secondary); line-height: 1.3;">Bloquea el acceso a la cuenta de forma definitiva e indefinida.</span>
+                      </div>
+                    </button>
+                  </div>
                 </div>
-              </label>
-              
-              <label class="sanction-option-card" data-ref="modal-option-ban" style="display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: var(--radius-sm, 6px); cursor: pointer;">
-                <input class="component-radio" data-ref="modal-radio-ban" type="radio" name="modal_sanction_type" value="ban" style="margin-top: 3px;" />
-                <div>
-                  <div style="font-weight: 600; font-size: 13px; color: var(--text-primary);">Baneo permanente</div>
-                  <div style="font-size: 12px; color: var(--text-secondary);">Bloquea el acceso a la cuenta de forma definitiva e indefinida.</div>
-                </div>
-              </label>
+              </div>
             </div>
           </div>
 
@@ -789,7 +786,8 @@ class UsersController implements ViewController {
         }
 
         modal.setConfirmLoading?.(true, 'Aplicando...');
-        const res = await applyUserSanctionApi(targetUser.id, {
+        const targetIdOrUuid = targetUser.uuid || targetUser.id;
+        const res = await applyUserSanctionApi(targetIdOrUuid, {
           durationDays,
           reason,
           type: selectedType,
@@ -812,7 +810,8 @@ class UsersController implements ViewController {
     const statusDesc = modal.body.querySelector<HTMLElement>('[data-ref="modal-status-desc"]');
     const statusCard = modal.body.querySelector<HTMLElement>('[data-ref="modal-sanction-status-card"]');
 
-    void getUserSanctionsApi(targetUser.id).then((res) => {
+    const targetIdOrUuid = targetUser.uuid || targetUser.id;
+    void getUserSanctionsApi(targetIdOrUuid).then((res) => {
       if (!res.ok) {
         if (statusBadge) statusBadge.textContent = 'Error al consultar';
         if (statusDesc) statusDesc.textContent = 'No se pudo obtener el estado de sanciones del usuario.';
@@ -876,43 +875,37 @@ class UsersController implements ViewController {
       }
     });
 
-    const optionCards = modal.body.querySelectorAll<HTMLElement>('.sanction-option-card');
-    const radios = modal.body.querySelectorAll<HTMLInputElement>('input[name="modal_sanction_type"]');
+    const dropdownTypeWrapper = modal.body.querySelector<HTMLElement>('[data-ref="modal-dropdown-wrapper-sanction-type"]');
+    const triggerIcon = modal.body.querySelector<HTMLElement>('[data-ref="modal-sanction-type-icon"]');
+    const triggerText = modal.body.querySelector<HTMLElement>('[data-ref="modal-sanction-type-text"]');
     const durationGroup = modal.body.querySelector<HTMLElement>('[data-ref="modal-group-duration"]');
     const durationInput = modal.body.querySelector<HTMLInputElement>('[data-ref="modal-input-duration"]');
     const presetButtons = modal.body.querySelectorAll<HTMLElement>('[data-duration]');
 
-    const updateTypeSelection = (newType: 'ban' | 'suspension' | 'warning') => {
+    const updateTypeUi = (newType: 'ban' | 'suspension' | 'warning') => {
       selectedType = newType;
-      optionCards.forEach((card) => {
-        const radio = card.querySelector<HTMLInputElement>('input[type="radio"]');
-        const isChecked = radio?.value === newType;
-        if (radio) radio.checked = isChecked;
-        card.style.background = isChecked ? 'var(--bg-card-subtle)' : 'transparent';
-      });
+      const meta = sanctionTypeMeta[newType];
+      if (meta) {
+        if (triggerIcon) triggerIcon.textContent = meta.icon;
+        if (triggerText) triggerText.textContent = meta.title;
+      }
 
       if (durationGroup) {
         durationGroup.style.display = newType === 'suspension' ? 'block' : 'none';
       }
     };
 
-    radios.forEach((r) => {
-      r.addEventListener('change', () => {
-        if (r.checked) {
-          updateTypeSelection(r.value as 'ban' | 'suspension' | 'warning');
-        }
+    if (dropdownTypeWrapper) {
+      setupDropdown(dropdownTypeWrapper, {
+        isSelect: true,
+        matchWidth: true,
+        onSelect: (val) => {
+          if (val === 'ban' || val === 'suspension' || val === 'warning') {
+            updateTypeUi(val);
+          }
+        },
       });
-    });
-
-    optionCards.forEach((card) => {
-      card.addEventListener('click', () => {
-        const radio = card.querySelector<HTMLInputElement>('input[type="radio"]');
-        if (radio && !radio.checked) {
-          radio.checked = true;
-          updateTypeSelection(radio.value as 'ban' | 'suspension' | 'warning');
-        }
-      });
-    });
+    }
 
     presetButtons.forEach((btn) => {
       btn.addEventListener('click', (e) => {

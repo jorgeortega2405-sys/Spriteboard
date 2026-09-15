@@ -1729,16 +1729,18 @@ html.dark-theme .component-wrapper {
 }
 
 .user-cell__avatar {
+  position: relative;
   width: 32px;
   height: 32px;
   min-width: 32px;
   border-radius: 50%;
-  overflow: hidden;
+  overflow: visible !important;
+  border: none !important;
   background: var(--bg-card-subtle);
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--border-color);
+  box-shadow: 0 0 0 2px var(--bg-surface) !important;
 }
 
 .user-cell__avatar img {
@@ -1746,6 +1748,9 @@ html.dark-theme .component-wrapper {
   height: 100%;
   object-fit: cover;
   border-radius: 50%;
+  display: block;
+  position: relative;
+  z-index: 2;
 }
 
 .user-cell__info {

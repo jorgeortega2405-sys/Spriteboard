@@ -27,6 +27,7 @@ export interface UserRecord extends RowDataPacket {
   two_factor_recovery_codes?: string | null;
   two_factor_secret?: string | null;
   username: string;
+  uuid?: string;
 }
 
 export interface UserSanctionRecord extends RowDataPacket {
@@ -71,10 +72,27 @@ export interface ListUsersResult {
     subscription_tier: string;
     two_factor_enabled: boolean;
     username: string;
+    uuid: string;
   }>;
 }
 
 let isSanctionsTableEnsured = false;
+let isUserUuidEnsured = false;
+
+export async function ensureUserUuidColumn(): Promise<void> {
+  if (isUserUuidEnsured) return;
+  try {
+    const [cols] = await pool.query<RowDataPacket[]>("SHOW COLUMNS FROM users LIKE 'uuid'");
+    if (cols.length === 0) {
+      await pool.query('ALTER TABLE users ADD COLUMN uuid VARCHAR(36) NULL UNIQUE AFTER id');
+      await pool.query("UPDATE users SET uuid = UUID() WHERE uuid IS NULL OR uuid = ''");
+      logger.db.info('Columna uuid añadida a users y backfill completado desde Admin.');
+    }
+    isUserUuidEnsured = true;
+  } catch (error) {
+    logger.db.error('Error al verificar columna uuid en users', error);
+  }
+}
 
 export async function ensureSanctionsTable(): Promise<void> {
   if (isSanctionsTableEnsured) return;
@@ -100,8 +118,9 @@ export async function ensureSanctionsTable(): Promise<void> {
 }
 
 export async function findUserByEmail(email: string): Promise<UserRecord | null> {
+  await ensureUserUuidColumn();
   const [rows] = await pool.query<UserRecord[]>(
-    'SELECT id, username, email, password_hash, avatar_url, role, google_id, subscription_tier, two_factor_enabled, two_factor_secret, two_factor_recovery_codes FROM users WHERE email = ? LIMIT 1',
+    'SELECT id, uuid, username, email, password_hash, avatar_url, role, google_id, subscription_tier, two_factor_enabled, two_factor_secret, two_factor_recovery_codes FROM users WHERE email = ? LIMIT 1',
     [email.toLowerCase().trim()]
   );
   if (rows.length === 0) return null;
@@ -111,10 +130,30 @@ export async function findUserByEmail(email: string): Promise<UserRecord | null>
 }
 
 export async function findUserById(id: number): Promise<UserRecord | null> {
+  await ensureUserUuidColumn();
   const [rows] = await pool.query<UserRecord[]>(
-    'SELECT id, username, email, avatar_url, role, google_id, subscription_tier, two_factor_enabled, two_factor_secret, two_factor_recovery_codes, created_at, last_login_at, last_login_ip, last_login_country, last_login_city, last_login_isp FROM users WHERE id = ? LIMIT 1',
+    'SELECT id, uuid, username, email, avatar_url, role, google_id, subscription_tier, two_factor_enabled, two_factor_secret, two_factor_recovery_codes, created_at, last_login_at, last_login_ip, last_login_country, last_login_city, last_login_isp FROM users WHERE id = ? LIMIT 1',
     [id]
   );
+  if (rows.length === 0) return null;
+  const user = rows[0];
+  user.roles = await getUserRoles(user.id);
+  return user;
+}
+
+export async function findUserByIdOrUuid(idOrUuid: number | string): Promise<UserRecord | null> {
+  await ensureUserUuidColumn();
+  const str = String(idOrUuid).trim();
+  const isNum = /^\d+$/.test(str);
+  const [rows] = isNum
+    ? await pool.query<UserRecord[]>(
+        'SELECT id, uuid, username, email, avatar_url, role, google_id, subscription_tier, two_factor_enabled, two_factor_secret, two_factor_recovery_codes, created_at, last_login_at, last_login_ip, last_login_country, last_login_city, last_login_isp FROM users WHERE id = ? OR uuid = ? LIMIT 1',
+        [Number(str), str]
+      )
+    : await pool.query<UserRecord[]>(
+        'SELECT id, uuid, username, email, avatar_url, role, google_id, subscription_tier, two_factor_enabled, two_factor_secret, two_factor_recovery_codes, created_at, last_login_at, last_login_ip, last_login_country, last_login_city, last_login_isp FROM users WHERE uuid = ? OR id = ? LIMIT 1',
+        [str, Number(str) || 0]
+      );
   if (rows.length === 0) return null;
   const user = rows[0];
   user.roles = await getUserRoles(user.id);
@@ -224,9 +263,10 @@ export async function listUsers(options: ListUsersOptions = {}): Promise<ListUse
   const total = Number(countRows[0]?.total) || 0;
   const totalPages = Math.ceil(total / limit) || 1;
 
+  await ensureUserUuidColumn();
   const queryParams = [...params, limit, offset];
   const [userRows] = await pool.query<RowDataPacket[]>(
-    `SELECT u.id, u.username, u.email, u.avatar_url, u.role, u.google_id, 
+    `SELECT u.id, u.uuid, u.username, u.email, u.avatar_url, u.role, u.google_id, 
             u.subscription_tier, u.two_factor_enabled, u.created_at, 
             u.last_login_at, u.last_login_ip, u.last_login_country, u.last_login_city 
      FROM users u 
@@ -254,6 +294,7 @@ export async function listUsers(options: ListUsersOptions = {}): Promise<ListUse
         subscription_tier: row.subscription_tier || 'free',
         two_factor_enabled: Boolean(row.two_factor_enabled),
         username: row.username,
+        uuid: row.uuid || '',
       };
     })
   );
@@ -269,12 +310,12 @@ export async function listUsers(options: ListUsersOptions = {}): Promise<ListUse
   };
 }
 
-export async function getUserDetails(userId: number): Promise<{
+export async function getUserDetails(userIdOrUuid: number | string): Promise<{
   sanctions: UserSanctionRecord[];
   user: UserRecord | null;
 }> {
   await ensureSanctionsTable();
-  const user = await findUserById(userId);
+  const user = await findUserByIdOrUuid(userIdOrUuid);
   if (!user) {
     return { sanctions: [], user: null };
   }
@@ -285,7 +326,7 @@ export async function getUserDetails(userId: number): Promise<{
      LEFT JOIN users u ON s.admin_id = u.id
      WHERE s.user_id = ?
      ORDER BY s.id DESC`,
-    [userId]
+    [user.id]
   );
 
   return {
@@ -295,12 +336,12 @@ export async function getUserDetails(userId: number): Promise<{
 }
 
 export async function updateUserRoles(
-  userId: number,
+  userIdOrUuid: number | string,
   roleNames: UserRole[],
   adminId: number
 ): Promise<{ error?: string; success: boolean }> {
   try {
-    const targetUser = await findUserById(userId);
+    const targetUser = await findUserByIdOrUuid(userIdOrUuid);
     if (!targetUser) {
       return { error: 'Usuario no encontrado.', success: false };
     }
@@ -313,34 +354,34 @@ export async function updateUserRoles(
     const validRoleIds = roleRecords.map((r) => r.id);
     const primaryRole = roleNames[0] || 'USER';
 
-    await pool.query('DELETE FROM user_roles WHERE user_id = ?', [userId]);
+    await pool.query('DELETE FROM user_roles WHERE user_id = ?', [targetUser.id]);
 
     for (const roleId of validRoleIds) {
-      await pool.query('INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)', [userId, roleId]);
+      await pool.query('INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)', [targetUser.id, roleId]);
     }
 
-    await pool.query('UPDATE users SET role = ? WHERE id = ?', [primaryRole, userId]);
+    await pool.query('UPDATE users SET role = ? WHERE id = ?', [primaryRole, targetUser.id]);
 
     logger.security.info('Roles de usuario actualizados por administrador', {
       adminId,
       newRoles: roleNames,
-      targetUserId: userId,
+      targetUserId: targetUser.id,
     });
 
     return { success: true };
   } catch (error) {
-    logger.db.error('Error al actualizar roles de usuario en Admin', { adminId, error, roleNames, userId });
+    logger.db.error('Error al actualizar roles de usuario en Admin', { adminId, error, roleNames, userIdOrUuid });
     return { error: 'Error al actualizar roles.', success: false };
   }
 }
 
 export async function updateUserAccount(
-  userId: number,
+  userIdOrUuid: number | string,
   data: { email?: string; subscription_tier?: string; username?: string },
   adminId: number
 ): Promise<{ error?: string; success: boolean }> {
   try {
-    const targetUser = await findUserById(userId);
+    const targetUser = await findUserByIdOrUuid(userIdOrUuid);
     if (!targetUser) {
       return { error: 'Usuario no encontrado.', success: false };
     }
@@ -351,7 +392,7 @@ export async function updateUserAccount(
     if (data.username && data.username.trim() && data.username !== targetUser.username) {
       const [existingName] = await pool.query<RowDataPacket[]>(
         'SELECT id FROM users WHERE username = ? AND id != ? LIMIT 1',
-        [data.username.trim(), userId]
+        [data.username.trim(), targetUser.id]
       );
       if (existingName.length > 0) {
         return { error: 'El nombre de usuario ya está en uso.', success: false };
@@ -363,7 +404,7 @@ export async function updateUserAccount(
     if (data.email && data.email.trim() && data.email.toLowerCase() !== targetUser.email.toLowerCase()) {
       const [existingEmail] = await pool.query<RowDataPacket[]>(
         'SELECT id FROM users WHERE email = ? AND id != ? LIMIT 1',
-        [data.email.toLowerCase().trim(), userId]
+        [data.email.toLowerCase().trim(), targetUser.id]
       );
       if (existingEmail.length > 0) {
         return { error: 'El correo electrónico ya está registrado.', success: false };
@@ -378,31 +419,31 @@ export async function updateUserAccount(
     }
 
     if (updates.length > 0) {
-      values.push(userId);
+      values.push(targetUser.id);
       await pool.query(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`, values);
     }
 
     logger.security.info('Datos de cuenta de usuario actualizados por administrador', {
       adminId,
       changes: data,
-      targetUserId: userId,
+      targetUserId: targetUser.id,
     });
 
     return { success: true };
   } catch (error) {
-    logger.db.error('Error al actualizar cuenta de usuario en Admin', { adminId, data, error, userId });
+    logger.db.error('Error al actualizar cuenta de usuario en Admin', { adminId, data, error, userIdOrUuid });
     return { error: 'Error al actualizar cuenta.', success: false };
   }
 }
 
 export async function applyUserSanction(
-  userId: number,
+  userIdOrUuid: number | string,
   sanction: { durationDays?: number; reason: string; type: 'ban' | 'suspension' | 'warning' },
   adminId: number
 ): Promise<{ error?: string; success: boolean }> {
   try {
     await ensureSanctionsTable();
-    const targetUser = await findUserById(userId);
+    const targetUser = await findUserByIdOrUuid(userIdOrUuid);
     if (!targetUser) {
       return { error: 'Usuario no encontrado.', success: false };
     }
@@ -415,20 +456,20 @@ export async function applyUserSanction(
     await pool.query(
       `INSERT INTO user_sanctions (user_id, admin_id, type, reason, duration_days, expires_at)
        VALUES (?, ?, ?, ?, ?, ?)`,
-      [userId, adminId, sanction.type, sanction.reason.trim(), sanction.durationDays || null, expiresAt]
+      [targetUser.id, adminId, sanction.type, sanction.reason.trim(), sanction.durationDays || null, expiresAt]
     );
 
     logger.security.warn('Sanción administrativa aplicada a usuario', {
       adminId,
       expiresAt,
       reason: sanction.reason,
-      targetUserId: userId,
+      targetUserId: targetUser.id,
       type: sanction.type,
     });
 
     return { success: true };
   } catch (error) {
-    logger.db.error('Error al aplicar sanción en Admin', { adminId, error, sanction, userId });
+    logger.db.error('Error al aplicar sanción en Admin', { adminId, error, sanction, userIdOrUuid });
     return { error: 'Error al aplicar sanción.', success: false };
   }
 }
@@ -463,18 +504,18 @@ export async function revokeUserSanction(
   }
 }
 
-export async function getUserManagementData(userId: number): Promise<{
+export async function getUserManagementData(userIdOrUuid: number | string): Promise<{
   activeSessionsCount: number;
   preferences: UserPreferences | null;
   user: UserRecord | null;
 }> {
-  const user = await findUserById(userId);
+  const user = await findUserByIdOrUuid(userIdOrUuid);
   if (!user) {
     return { activeSessionsCount: 0, preferences: null, user: null };
   }
 
-  const preferences = await getUserPreferences(userId);
-  const sessions = await getUserActiveSessions(userId);
+  const preferences = await getUserPreferences(user.id);
+  const sessions = await getUserActiveSessions(user.id);
 
   return {
     activeSessionsCount: sessions.length,
@@ -484,67 +525,79 @@ export async function getUserManagementData(userId: number): Promise<{
 }
 
 export async function updateUserUsernameByAdmin(
-  userId: number,
+  userIdOrUuid: number | string,
   newUsername: string,
   adminId: number
 ): Promise<{ error?: string; success: boolean }> {
-  const result = await updateUsername(userId, newUsername);
+  const targetUser = await findUserByIdOrUuid(userIdOrUuid);
+  if (!targetUser) return { error: 'Usuario no encontrado.', success: false };
+  const result = await updateUsername(targetUser.id, newUsername);
   if (result.success) {
-    logger.security.info('Nombre de usuario actualizado por admin', { adminId, newUsername, userId });
+    logger.security.info('Nombre de usuario actualizado por admin', { adminId, newUsername, userId: targetUser.id });
   }
   return result;
 }
 
 export async function updateUserEmailByAdmin(
-  userId: number,
+  userIdOrUuid: number | string,
   newEmail: string,
   adminId: number
 ): Promise<{ error?: string; success: boolean }> {
-  const result = await updateEmail(userId, newEmail);
+  const targetUser = await findUserByIdOrUuid(userIdOrUuid);
+  if (!targetUser) return { error: 'Usuario no encontrado.', success: false };
+  const result = await updateEmail(targetUser.id, newEmail);
   if (result.success) {
-    logger.security.info('Correo electrónico actualizado por admin', { adminId, newEmail, userId });
+    logger.security.info('Correo electrónico actualizado por admin', { adminId, newEmail, userId: targetUser.id });
   }
   return result;
 }
 
 export async function updateUserAvatarByAdmin(
-  userId: number,
+  userIdOrUuid: number | string,
   buffer: Buffer,
   extension: string,
   adminId: number
 ): Promise<{ avatar_url?: string; error?: string; success: boolean }> {
-  const result = await updateAvatarFile(userId, buffer, extension);
+  const targetUser = await findUserByIdOrUuid(userIdOrUuid);
+  if (!targetUser) return { error: 'Usuario no encontrado.', success: false };
+  const result = await updateAvatarFile(targetUser.id, buffer, extension);
   if (result.success) {
-    logger.security.info('Avatar de usuario actualizado por admin', { adminId, avatarUrl: result.avatar_url, userId });
+    logger.security.info('Avatar de usuario actualizado por admin', { adminId, avatarUrl: result.avatar_url, userId: targetUser.id });
   }
   return result;
 }
 
 export async function deleteUserAvatarByAdmin(
-  userId: number,
+  userIdOrUuid: number | string,
   adminId: number
 ): Promise<{ success: boolean }> {
-  const result = await deleteAvatar(userId);
-  logger.security.info('Avatar de usuario eliminado por admin', { adminId, userId });
+  const targetUser = await findUserByIdOrUuid(userIdOrUuid);
+  if (!targetUser) return { success: false };
+  const result = await deleteAvatar(targetUser.id);
+  logger.security.info('Avatar de usuario eliminado por admin', { adminId, userId: targetUser.id });
   return result;
 }
 
 export async function updateUserPreferencesByAdmin(
-  userId: number,
+  userIdOrUuid: number | string,
   preferences: Partial<UserPreferences>,
   adminId: number
-): Promise<{ preferences: UserPreferences; success: boolean }> {
-  const next = await updateUserPreferences(userId, preferences);
-  logger.security.info('Preferencias de usuario actualizadas por admin', { adminId, preferences: next, userId });
+): Promise<{ preferences: UserPreferences | null; success: boolean }> {
+  const targetUser = await findUserByIdOrUuid(userIdOrUuid);
+  if (!targetUser) return { preferences: null, success: false };
+  const next = await updateUserPreferences(targetUser.id, preferences);
+  logger.security.info('Preferencias de usuario actualizadas por admin', { adminId, preferences: next, userId: targetUser.id });
   return { preferences: next, success: true };
 }
 
 export async function revokeUserAllSessionsByAdmin(
-  userId: number,
+  userIdOrUuid: number | string,
   adminId: number
 ): Promise<{ success: boolean }> {
-  await revokeAllUserSessions(userId);
-  logger.security.info('Todas las sesiones de usuario revocadas por admin', { adminId, userId });
+  const targetUser = await findUserByIdOrUuid(userIdOrUuid);
+  if (!targetUser) return { success: false };
+  await revokeAllUserSessions(targetUser.id);
+  logger.security.info('Todas las sesiones de usuario revocadas por admin', { adminId, userId: targetUser.id });
   return { success: true };
 }
 

@@ -1508,7 +1508,8 @@ html.dark-theme .component-badge--active .component-icon {
 .component-button--avatar::before,
 .account-item__avatar::before,
 .settings-item__avatar::before,
-.design-collaborator-avatar::before {
+.design-collaborator-avatar::before,
+.user-cell__avatar::before {
   content: "";
   position: absolute;
   inset: -4px;

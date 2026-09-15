@@ -58,16 +58,16 @@ export async function render(): Promise<void> {
     } else if (path === '/users') {
       const { createUsersView } = await import('./views/users.view.js');
       viewElement = await createUsersView();
-    } else if (/^\/users\/(\d+)\/sanctions$/.test(path)) {
-      const match = path.match(/^\/users\/(\d+)\/sanctions$/);
-      const userId = Number(match![1]);
+    } else if (/^\/users\/([0-9a-zA-Z-]+)\/sanctions$/.test(path)) {
+      const match = path.match(/^\/users\/([0-9a-zA-Z-]+)\/sanctions$/);
+      const userIdentifier = match![1];
       const { createUserSanctionsView } = await import('./views/user-sanctions.view.js');
-      viewElement = await createUserSanctionsView(userId);
-    } else if (/^\/users\/(\d+)$/.test(path)) {
-      const match = path.match(/^\/users\/(\d+)$/);
-      const userId = Number(match![1]);
+      viewElement = await createUserSanctionsView(userIdentifier);
+    } else if (/^\/users\/([0-9a-zA-Z-]+)$/.test(path)) {
+      const match = path.match(/^\/users\/([0-9a-zA-Z-]+)$/);
+      const userIdentifier = match![1];
       const { createUserManageView } = await import('./views/user-manage.view.js');
-      viewElement = await createUserManageView(userId);
+      viewElement = await createUserManageView(userIdentifier);
     } else if (path === '/backups') {
       const { createBackupsView } = await import('./views/backups.view.js');
       viewElement = await createBackupsView();

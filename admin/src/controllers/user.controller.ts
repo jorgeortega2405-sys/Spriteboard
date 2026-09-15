@@ -22,13 +22,13 @@ export async function handleGetUsers(req: Request, res: Response): Promise<void>
 
 export async function handleGetUserById(req: Request, res: Response): Promise<void> {
   try {
-    const userId = Number(req.params.id);
-    if (!userId || isNaN(userId)) {
-      res.status(400).json({ error: 'ID de usuario no válido.', ok: false });
+    const userIdentifier = req.params.id;
+    if (!userIdentifier || !String(userIdentifier).trim()) {
+      res.status(400).json({ error: 'Identificador de usuario no válido.', ok: false });
       return;
     }
 
-    const { sanctions, user } = await getUserDetails(userId);
+    const { sanctions, user } = await getUserDetails(userIdentifier);
     if (!user) {
       res.status(404).json({ error: 'Usuario no encontrado.', ok: false });
       return;
@@ -50,6 +50,7 @@ export async function handleGetUserById(req: Request, res: Response): Promise<vo
       subscription_tier: user.subscription_tier || 'free',
       two_factor_enabled: Boolean(user.two_factor_enabled),
       username: user.username,
+      uuid: user.uuid || null,
     };
 
     res.json({ ok: true, sanctions, user: sanitizedUser });
@@ -67,10 +68,10 @@ export async function handleUpdateUserRoles(req: Request, res: Response): Promis
       return;
     }
 
-    const userId = Number(req.params.id);
+    const userId = req.params.id;
     const { roles } = req.body;
 
-    if (!userId || isNaN(userId) || !Array.isArray(roles) || roles.length === 0) {
+    if (!userId || !String(userId).trim() || !Array.isArray(roles) || roles.length === 0) {
       res.status(400).json({ error: 'Parámetros no válidos. Debes especificar al menos un rol.', ok: false });
       return;
     }
@@ -96,11 +97,11 @@ export async function handleUpdateUserAccount(req: Request, res: Response): Prom
       return;
     }
 
-    const userId = Number(req.params.id);
+    const userId = req.params.id;
     const { email, subscription_tier, username } = req.body;
 
-    if (!userId || isNaN(userId)) {
-      res.status(400).json({ error: 'ID de usuario no válido.', ok: false });
+    if (!userId || !String(userId).trim()) {
+      res.status(400).json({ error: 'Identificador de usuario no válido.', ok: false });
       return;
     }
 
@@ -125,10 +126,10 @@ export async function handleApplyUserSanction(req: Request, res: Response): Prom
       return;
     }
 
-    const userId = Number(req.params.id);
+    const userId = req.params.id;
     const { durationDays, reason, type } = req.body;
 
-    if (!userId || isNaN(userId) || !type || !reason || !['ban', 'suspension', 'warning'].includes(type)) {
+    if (!userId || !String(userId).trim() || !type || !reason || !['ban', 'suspension', 'warning'].includes(type)) {
       res.status(400).json({ error: 'Datos de sanción incompletos o no válidos.', ok: false });
       return;
     }
@@ -157,9 +158,9 @@ export async function handleApplyUserSanction(req: Request, res: Response): Prom
 
 export async function handleGetUserSanctions(req: Request, res: Response): Promise<void> {
   try {
-    const userId = Number(req.params.id);
-    if (!userId || isNaN(userId)) {
-      res.status(400).json({ error: 'ID de usuario no válido.', ok: false });
+    const userId = req.params.id;
+    if (!userId || !String(userId).trim()) {
+      res.status(400).json({ error: 'Identificador de usuario no válido.', ok: false });
       return;
     }
 
@@ -179,6 +180,7 @@ export async function handleGetUserSanctions(req: Request, res: Response): Promi
       roles: user.roles || [user.role || 'USER'],
       subscription_tier: user.subscription_tier || 'free',
       username: user.username,
+      uuid: user.uuid || null,
     };
 
     res.json({ ok: true, sanctions, user: sanitizedUser });
@@ -227,9 +229,9 @@ export async function handleGetAllRoles(_req: Request, res: Response): Promise<v
 
 export async function handleGetUserManagementData(req: Request, res: Response): Promise<void> {
   try {
-    const userId = Number(req.params.id);
-    if (!userId || isNaN(userId)) {
-      res.status(400).json({ error: 'ID de usuario no válido.', ok: false });
+    const userId = req.params.id;
+    if (!userId || !String(userId).trim()) {
+      res.status(400).json({ error: 'Identificador de usuario no válido.', ok: false });
       return;
     }
 
@@ -255,6 +257,7 @@ export async function handleGetUserManagementData(req: Request, res: Response): 
       subscription_tier: user.subscription_tier || 'free',
       two_factor_enabled: Boolean(user.two_factor_enabled),
       username: user.username,
+      uuid: user.uuid || null,
     };
 
     res.json({ activeSessionsCount, ok: true, preferences, user: sanitizedUser });
@@ -272,10 +275,10 @@ export async function handleAdminUpdateUserUsername(req: Request, res: Response)
       return;
     }
 
-    const userId = Number(req.params.id);
+    const userId = req.params.id;
     const { username } = req.body;
 
-    if (!userId || isNaN(userId) || !username) {
+    if (!userId || !String(userId).trim() || !username) {
       res.status(400).json({ error: 'Parámetros no válidos.', ok: false });
       return;
     }
@@ -301,10 +304,10 @@ export async function handleAdminUpdateUserEmail(req: Request, res: Response): P
       return;
     }
 
-    const userId = Number(req.params.id);
+    const userId = req.params.id;
     const { email } = req.body;
 
-    if (!userId || isNaN(userId) || !email) {
+    if (!userId || !String(userId).trim() || !email) {
       res.status(400).json({ error: 'Parámetros no válidos.', ok: false });
       return;
     }
@@ -330,10 +333,10 @@ export async function handleAdminUpdateUserAvatar(req: Request, res: Response): 
       return;
     }
 
-    const userId = Number(req.params.id);
+    const userId = req.params.id;
     const { avatarBase64 } = req.body;
 
-    if (!userId || isNaN(userId) || !avatarBase64 || typeof avatarBase64 !== 'string') {
+    if (!userId || !String(userId).trim() || !avatarBase64 || typeof avatarBase64 !== 'string') {
       res.status(400).json({ error: 'Formato de imagen no válido.', ok: false });
       return;
     }
@@ -373,9 +376,9 @@ export async function handleAdminDeleteUserAvatar(req: Request, res: Response): 
       return;
     }
 
-    const userId = Number(req.params.id);
-    if (!userId || isNaN(userId)) {
-      res.status(400).json({ error: 'ID de usuario no válido.', ok: false });
+    const userId = req.params.id;
+    if (!userId || !String(userId).trim()) {
+      res.status(400).json({ error: 'Identificador de usuario no válido.', ok: false });
       return;
     }
 
@@ -395,9 +398,9 @@ export async function handleAdminUpdateUserPreferences(req: Request, res: Respon
       return;
     }
 
-    const userId = Number(req.params.id);
-    if (!userId || isNaN(userId)) {
-      res.status(400).json({ error: 'ID de usuario no válido.', ok: false });
+    const userId = req.params.id;
+    if (!userId || !String(userId).trim()) {
+      res.status(400).json({ error: 'Identificador de usuario no válido.', ok: false });
       return;
     }
 
@@ -418,9 +421,9 @@ export async function handleAdminRevokeUserSessions(req: Request, res: Response)
       return;
     }
 
-    const userId = Number(req.params.id);
-    if (!userId || isNaN(userId)) {
-      res.status(400).json({ error: 'ID de usuario no válido.', ok: false });
+    const userId = req.params.id;
+    if (!userId || !String(userId).trim()) {
+      res.status(400).json({ error: 'Identificador de usuario no válido.', ok: false });
       return;
     }
 

@@ -7,11 +7,12 @@ import { showToast } from '../services/toast.service.js';
 import { ViewController } from '../types/common.types.js';
 import { setupDropdown, withButtonLoading } from '../utils/dom.util.js';
 import { AVAILABLE_LANGUAGES, getLanguageName } from '../utils/languages.util.js';
+import { applyAvatarTier } from '../utils/tier.util.js';
 
 class UserManageController implements ViewController {
   private abortController = new AbortController();
   private container: HTMLElement;
-  private userId: number;
+  private userIdOrUuid: number | string;
 
   private targetUser: any = null;
   private targetPreferences: any = null;
@@ -19,9 +20,9 @@ class UserManageController implements ViewController {
   private langDropdownInstance: { close: () => void; destroy: () => void; update: () => void } | null = null;
   private themeDropdownInstance: { close: () => void; destroy: () => void; update: () => void } | null = null;
 
-  constructor(container: HTMLElement, userId: number) {
+  constructor(container: HTMLElement, userIdOrUuid: number | string) {
     this.container = container;
-    this.userId = userId;
+    this.userIdOrUuid = userIdOrUuid;
   }
 
   async init(): Promise<void> {
@@ -109,7 +110,7 @@ class UserManageController implements ViewController {
       if (avatarError) avatarError.style.display = 'none';
 
       await withButtonLoading(btnSaveAvatar, 'Guardando...', async () => {
-        const res = await adminUpdateUserAvatarApi(this.userId, this.selectedAvatarBase64!);
+        const res = await adminUpdateUserAvatarApi(this.userIdOrUuid, this.selectedAvatarBase64!);
         if (res.ok) {
           showToast('Foto de perfil actualizada correctamente.', 'success');
           if (this.targetUser) this.targetUser.avatar_url = res.avatar_url;
@@ -128,7 +129,7 @@ class UserManageController implements ViewController {
     btnDelete?.addEventListener('click', async () => {
       if (avatarError) avatarError.style.display = 'none';
       await withButtonLoading(btnDelete, 'Eliminando...', async () => {
-        const res = await adminDeleteUserAvatarApi(this.userId);
+        const res = await adminDeleteUserAvatarApi(this.userIdOrUuid);
         if (res.ok) {
           showToast('Foto de perfil eliminada.', 'success');
           if (this.targetUser) this.targetUser.avatar_url = null;
@@ -168,7 +169,7 @@ class UserManageController implements ViewController {
       if (usernameError) usernameError.style.display = 'none';
 
       await withButtonLoading(btnSaveUsername, 'Guardando...', async () => {
-        const res = await adminUpdateUserUsernameApi(this.userId, newName);
+        const res = await adminUpdateUserUsernameApi(this.userIdOrUuid, newName);
         if (res.ok) {
           showToast('Nombre de usuario actualizado.', 'success');
           if (this.targetUser) this.targetUser.username = newName;
@@ -209,7 +210,7 @@ class UserManageController implements ViewController {
       if (emailError) emailError.style.display = 'none';
 
       await withButtonLoading(btnSaveEmail, 'Guardando...', async () => {
-        const res = await adminUpdateUserEmailApi(this.userId, newEmail);
+        const res = await adminUpdateUserEmailApi(this.userIdOrUuid, newEmail);
         if (res.ok) {
           showToast('Correo electrónico actualizado.', 'success');
           if (this.targetUser) this.targetUser.email = res.email || newEmail;
@@ -231,7 +232,7 @@ class UserManageController implements ViewController {
         confirmText: 'Cerrar sesiones',
         description: `¿Estás seguro de que deseas cerrar todas las sesiones activas del usuario "${escapeHtml(this.targetUser?.username || '')}"? El usuario tendrá que volver a iniciar sesión.`,
         onConfirm: async () => {
-          const res = await adminRevokeUserSessionsApi(this.userId);
+          const res = await adminRevokeUserSessionsApi(this.userIdOrUuid);
           if (res.ok) {
             showToast('Todas las sesiones del usuario han sido revocadas.', 'success');
           } else {
@@ -244,7 +245,7 @@ class UserManageController implements ViewController {
 
     const toggleOpenLinks = this.container.querySelector<HTMLInputElement>('[data-ref="toggle-open-links"]');
     toggleOpenLinks?.addEventListener('change', async () => {
-      const res = await adminUpdateUserPreferencesApi(this.userId, { open_links_new_tab: toggleOpenLinks.checked });
+      const res = await adminUpdateUserPreferencesApi(this.userIdOrUuid, { open_links_new_tab: toggleOpenLinks.checked });
       if (res.ok) {
         showToast('Preferencia de navegación actualizada.', 'success');
       } else {
@@ -254,7 +255,7 @@ class UserManageController implements ViewController {
 
     const toggleReduceMotion = this.container.querySelector<HTMLInputElement>('[data-ref="toggle-reduce-motion"]');
     toggleReduceMotion?.addEventListener('change', async () => {
-      const res = await adminUpdateUserPreferencesApi(this.userId, { reduce_motion: toggleReduceMotion.checked });
+      const res = await adminUpdateUserPreferencesApi(this.userIdOrUuid, { reduce_motion: toggleReduceMotion.checked });
       if (res.ok) {
         showToast('Preferencia actualizada.', 'success');
       } else {
@@ -264,7 +265,7 @@ class UserManageController implements ViewController {
 
     const toggleHighContrast = this.container.querySelector<HTMLInputElement>('[data-ref="toggle-high-contrast"]');
     toggleHighContrast?.addEventListener('change', async () => {
-      const res = await adminUpdateUserPreferencesApi(this.userId, { high_contrast: toggleHighContrast.checked });
+      const res = await adminUpdateUserPreferencesApi(this.userIdOrUuid, { high_contrast: toggleHighContrast.checked });
       if (res.ok) {
         showToast('Preferencia actualizada.', 'success');
       } else {
@@ -274,7 +275,7 @@ class UserManageController implements ViewController {
 
     const toggleExtendedAlerts = this.container.querySelector<HTMLInputElement>('[data-ref="toggle-extended-alerts"]');
     toggleExtendedAlerts?.addEventListener('change', async () => {
-      const res = await adminUpdateUserPreferencesApi(this.userId, { extended_alerts: toggleExtendedAlerts.checked });
+      const res = await adminUpdateUserPreferencesApi(this.userIdOrUuid, { extended_alerts: toggleExtendedAlerts.checked });
       if (res.ok) {
         showToast('Preferencia actualizada.', 'success');
       } else {
@@ -321,6 +322,7 @@ class UserManageController implements ViewController {
     if (!this.targetUser) return;
 
     const avatarImg = this.container.querySelector<HTMLImageElement>('[data-ref="profile-avatar-img"]');
+    const avatarPreviewBox = this.container.querySelector<HTMLElement>('[data-ref="avatar-preview-box"]');
     const displayUsername = this.container.querySelector<HTMLElement>('[data-ref="display-username"]');
     const displayEmail = this.container.querySelector<HTMLElement>('[data-ref="display-email"]');
 
@@ -336,6 +338,10 @@ class UserManageController implements ViewController {
       if (avatarImg.complete && avatarImg.naturalWidth > 0) {
         avatarImg.classList.add('image-loaded');
       }
+    }
+
+    if (avatarPreviewBox) {
+      applyAvatarTier(avatarPreviewBox, this.targetUser.subscription_tier);
     }
 
     if (displayUsername) displayUsername.textContent = this.targetUser.username;
@@ -394,7 +400,7 @@ class UserManageController implements ViewController {
       isSelect: true,
       onSelect: async (val) => {
         if (!val) return;
-        const res = await adminUpdateUserPreferencesApi(this.userId, { language: val });
+        const res = await adminUpdateUserPreferencesApi(this.userIdOrUuid, { language: val });
         if (res.ok) {
           if (langSelectedText) langSelectedText.textContent = getLanguageName(val);
           renderList(val);
@@ -436,7 +442,7 @@ class UserManageController implements ViewController {
       isSelect: true,
       onSelect: async (val) => {
         const theme = val || 'system';
-        const res = await adminUpdateUserPreferencesApi(this.userId, { theme });
+        const res = await adminUpdateUserPreferencesApi(this.userIdOrUuid, { theme });
         if (res.ok) {
           updateUi(theme);
           showToast('Tema visual actualizado.', 'success');
@@ -448,7 +454,7 @@ class UserManageController implements ViewController {
   }
 
   private async loadData(): Promise<void> {
-    const res = await getUserManagementDataApi(this.userId);
+    const res = await getUserManagementDataApi(this.userIdOrUuid);
     if (!res.ok || !res.user) {
       showToast(res.error || 'Error al cargar datos del usuario.', 'error');
       navigate('/users');
@@ -508,14 +514,14 @@ class UserManageController implements ViewController {
   }
 }
 
-export async function createUserManageView(userId: number): Promise<HTMLElement> {
+export async function createUserManageView(userIdOrUuid: number | string): Promise<HTMLElement> {
   const container = await loadTemplate('/views/users/user-manage.html');
   const sidebar = await createSidebar();
   container.prepend(sidebar);
 
   renderIcons(container);
 
-  const controller = new UserManageController(container, userId);
+  const controller = new UserManageController(container, userIdOrUuid);
   void controller.init();
   (container as any).__controller = controller;
 

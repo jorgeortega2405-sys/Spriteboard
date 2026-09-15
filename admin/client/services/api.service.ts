@@ -29,19 +29,19 @@ export const API_ROUTES = {
     verifyPassword: '/api/settings/password/verify',
   },
   users: {
-    account: (id: number) => `/api/users/${id}/account`,
+    account: (id: number | string) => `/api/users/${id}/account`,
     allRoles: '/api/users/roles/all',
-    avatar: (id: number) => `/api/users/${id}/avatar`,
+    avatar: (id: number | string) => `/api/users/${id}/avatar`,
     base: '/api/users',
-    byId: (id: number) => `/api/users/${id}`,
-    email: (id: number) => `/api/users/${id}/email`,
-    manage: (id: number) => `/api/users/${id}/manage`,
-    preferences: (id: number) => `/api/users/${id}/preferences`,
-    revokeSanction: (id: number, sanctionId: number) => `/api/users/${id}/sanctions/${sanctionId}`,
-    revokeSessions: (id: number) => `/api/users/${id}/revoke-sessions`,
-    roles: (id: number) => `/api/users/${id}/roles`,
-    sanctions: (id: number) => `/api/users/${id}/sanctions`,
-    username: (id: number) => `/api/users/${id}/username`,
+    byId: (id: number | string) => `/api/users/${id}`,
+    email: (id: number | string) => `/api/users/${id}/email`,
+    manage: (id: number | string) => `/api/users/${id}/manage`,
+    preferences: (id: number | string) => `/api/users/${id}/preferences`,
+    revokeSanction: (id: number | string, sanctionId: number) => `/api/users/${id}/sanctions/${sanctionId}`,
+    revokeSessions: (id: number | string) => `/api/users/${id}/revoke-sessions`,
+    roles: (id: number | string) => `/api/users/${id}/roles`,
+    sanctions: (id: number | string) => `/api/users/${id}/sanctions`,
+    username: (id: number | string) => `/api/users/${id}/username`,
   },
 };
 
@@ -476,7 +476,7 @@ export async function getUsersApi(options: {
   }
 }
 
-export async function getUserDetailsApi(userId: number): Promise<{
+export async function getUserDetailsApi(userId: number | string): Promise<{
   error?: string;
   ok: boolean;
   sanctions?: any[];
@@ -495,7 +495,7 @@ export async function getUserDetailsApi(userId: number): Promise<{
 }
 
 export async function updateUserRolesApi(
-  userId: number,
+  userId: number | string,
   roles: string[]
 ): Promise<{ error?: string; ok: boolean }> {
   try {
@@ -509,7 +509,7 @@ export async function updateUserRolesApi(
 }
 
 export async function updateUserAccountApi(
-  userId: number,
+  userId: number | string,
   payload: { email?: string; subscription_tier?: string; username?: string }
 ): Promise<{ error?: string; ok: boolean }> {
   try {
@@ -523,7 +523,7 @@ export async function updateUserAccountApi(
 }
 
 export async function applyUserSanctionApi(
-  userId: number,
+  userId: number | string,
   payload: { durationDays?: number; reason: string; type: 'ban' | 'suspension' | 'warning' }
 ): Promise<{ error?: string; ok: boolean }> {
   try {
@@ -536,7 +536,7 @@ export async function applyUserSanctionApi(
   }
 }
 
-export async function getUserSanctionsApi(userId: number): Promise<{
+export async function getUserSanctionsApi(userId: number | string): Promise<{
   error?: string;
   ok: boolean;
   sanctions?: any[];
@@ -555,7 +555,7 @@ export async function getUserSanctionsApi(userId: number): Promise<{
 }
 
 export async function revokeUserSanctionApi(
-  userId: number,
+  userId: number | string,
   sanctionId: number
 ): Promise<{ error?: string; ok: boolean }> {
   try {
@@ -579,7 +579,7 @@ export async function getAllRolesApi(): Promise<{ error?: string; ok: boolean; r
   }
 }
 
-export async function getUserManagementDataApi(userId: number): Promise<{
+export async function getUserManagementDataApi(userId: number | string): Promise<{
   activeSessionsCount?: number;
   error?: string;
   ok: boolean;
@@ -599,7 +599,7 @@ export async function getUserManagementDataApi(userId: number): Promise<{
 }
 
 export async function adminUpdateUserUsernameApi(
-  userId: number,
+  userId: number | string,
   username: string
 ): Promise<{ error?: string; ok: boolean; username?: string }> {
   try {
@@ -613,7 +613,7 @@ export async function adminUpdateUserUsernameApi(
 }
 
 export async function adminUpdateUserEmailApi(
-  userId: number,
+  userId: number | string,
   email: string
 ): Promise<{ email?: string; error?: string; ok: boolean }> {
   try {
@@ -627,7 +627,7 @@ export async function adminUpdateUserEmailApi(
 }
 
 export async function adminUpdateUserAvatarApi(
-  userId: number,
+  userId: number | string,
   avatarBase64: string
 ): Promise<{ avatar_url?: string; error?: string; ok: boolean }> {
   try {
@@ -641,7 +641,7 @@ export async function adminUpdateUserAvatarApi(
 }
 
 export async function adminDeleteUserAvatarApi(
-  userId: number
+  userId: number | string
 ): Promise<{ error?: string; ok: boolean }> {
   try {
     const res = await deleteApi(API_ROUTES.users.avatar(userId));
@@ -654,7 +654,7 @@ export async function adminDeleteUserAvatarApi(
 }
 
 export async function adminUpdateUserPreferencesApi(
-  userId: number,
+  userId: number | string,
   preferences: any
 ): Promise<{ error?: string; ok: boolean; preferences?: any }> {
   try {
@@ -668,7 +668,7 @@ export async function adminUpdateUserPreferencesApi(
 }
 
 export async function adminRevokeUserSessionsApi(
-  userId: number
+  userId: number | string
 ): Promise<{ error?: string; ok: boolean }> {
   try {
     const res = await postApi(API_ROUTES.users.revokeSessions(userId));

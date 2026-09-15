@@ -83,6 +83,15 @@ export const canvasPool = dbManager.registerMySql('canvas', canvasDbOptions);
 export async function runMigrations(): Promise<void> {
   const conn = await pool.getConnection();
   try {
+    const [uuidCols] = await conn.query<mysql.RowDataPacket[]>(
+      "SHOW COLUMNS FROM users LIKE 'uuid'"
+    );
+    if (uuidCols.length === 0) {
+      await conn.query('ALTER TABLE users ADD COLUMN uuid VARCHAR(36) NULL UNIQUE AFTER id');
+      await conn.query("UPDATE users SET uuid = UUID() WHERE uuid IS NULL OR uuid = ''");
+      logger.db.info('Columna uuid añadida a la tabla users y backfill completado.');
+    }
+
     const [pwdCols] = await conn.query<mysql.RowDataPacket[]>(
       "SHOW COLUMNS FROM users LIKE 'password_hash'"
     );

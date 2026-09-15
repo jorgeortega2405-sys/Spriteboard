@@ -1,10 +1,11 @@
 import { navigate } from '../app-router.js';
 import { createSidebar } from '../components/layout.component.js';
 import { openModal } from '../components/modal.component.js';
-import { applyUserSanctionApi, escapeHtml, getUserSanctionsApi, loadTemplate, revokeUserSanctionApi } from '../services/api.service.js';
+import { applyUserSanctionApi, getUserSanctionsApi, loadTemplate, revokeUserSanctionApi } from '../services/api.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { showToast } from '../services/toast.service.js';
 import { ViewController } from '../types/common.types.js';
+import { escapeHtml, setupDropdown } from '../utils/dom.util.js';
 
 interface UserSanctionItem {
   admin_id: number;
@@ -35,32 +36,39 @@ function formatDate(iso?: string | null): string {
 class UserSanctionsController implements ViewController {
   private abortController = new AbortController();
   private container: HTMLElement;
-  private userId: number;
+  private userIdOrUuid: number | string;
 
   private targetUser: any = null;
   private sanctions: UserSanctionItem[] = [];
+  private selectedSanction: UserSanctionItem | null = null;
   private searchQuery = '';
   private isSearchActive = false;
   private searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
   private tbodyEl: HTMLElement | null = null;
+  private defaultActions: HTMLElement | null = null;
+  private selectedActions: HTMLElement | null = null;
   private btnToggleSearch: HTMLElement | null = null;
   private searchToolbar: HTMLElement | null = null;
   private searchInput: HTMLInputElement | null = null;
   private btnClearSearch: HTMLElement | null = null;
   private btnApplySanction: HTMLElement | null = null;
-  private btnBack: HTMLElement | null = null;
+  private btnActionDeselect: HTMLElement | null = null;
+  private btnActionRevoke: HTMLElement | null = null;
   private badgeUser: HTMLElement | null = null;
 
-  constructor(container: HTMLElement, userId: number) {
+  constructor(container: HTMLElement, userIdOrUuid: number | string) {
     this.container = container;
-    this.userId = userId;
+    this.userIdOrUuid = userIdOrUuid;
   }
 
   async init(): Promise<void> {
     this.tbodyEl = this.container.querySelector<HTMLElement>('[data-ref="sanctions-tbody"]');
-    this.btnBack = this.container.querySelector<HTMLElement>('[data-ref="btn-back-users"]');
+    this.defaultActions = this.container.querySelector<HTMLElement>('[data-ref="sanctions-default-actions"]');
+    this.selectedActions = this.container.querySelector<HTMLElement>('[data-ref="sanctions-selected-actions"]');
     this.btnApplySanction = this.container.querySelector<HTMLElement>('[data-ref="btn-apply-sanction"]');
+    this.btnActionDeselect = this.container.querySelector<HTMLElement>('[data-ref="btn-action-deselect"]');
+    this.btnActionRevoke = this.container.querySelector<HTMLElement>('[data-ref="btn-action-revoke"]');
     this.badgeUser = this.container.querySelector<HTMLElement>('[data-ref="badge-sanctions-user"]');
 
     this.btnToggleSearch = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-search"]');
@@ -75,12 +83,35 @@ class UserSanctionsController implements ViewController {
   bindEvents(): void {
     const signal = this.abortController.signal;
 
-    this.btnBack?.addEventListener('click', () => {
-      navigate('/users');
-    }, { signal });
-
     this.btnApplySanction?.addEventListener('click', () => {
       this.openApplySanctionModal();
+    }, { signal });
+
+    this.btnActionDeselect?.addEventListener('click', () => {
+      this.selectedSanction = null;
+      this.updateSelectionUi();
+    }, { signal });
+
+    this.btnActionRevoke?.addEventListener('click', () => {
+      if (!this.selectedSanction) return;
+      const sanctionToRevoke = this.selectedSanction;
+
+      openModal({
+        confirmClass: 'component-button--danger',
+        confirmText: 'Revocar sanción',
+        description: `¿Estás seguro de que deseas revocar y eliminar esta sanción aplicada a @${escapeHtml(this.targetUser?.username || '')}?`,
+        onConfirm: async () => {
+          const res = await revokeUserSanctionApi(this.userIdOrUuid, sanctionToRevoke.id);
+          if (res.ok) {
+            showToast('Sanción revocada exitosamente.', 'success');
+            this.selectedSanction = null;
+            await this.loadData();
+          } else {
+            showToast(res.error || 'Error al revocar sanción.', 'error');
+          }
+        },
+        title: 'Revocar sanción',
+      });
     }, { signal });
 
     this.btnToggleSearch?.addEventListener('click', (e) => {
@@ -114,11 +145,22 @@ class UserSanctionsController implements ViewController {
         this.renderTableRows();
       }, 250);
     }, { signal });
+
+    document.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (this.isSearchActive) {
+          this.toggleSearchToolbar(false);
+        } else if (this.selectedSanction) {
+          this.selectedSanction = null;
+          this.updateSelectionUi();
+        }
+      }
+    }, { signal });
   }
 
-  private toggleSearchToolbar(): void {
+  private toggleSearchToolbar(forceState?: boolean): void {
     if (!this.searchToolbar) return;
-    this.isSearchActive = !this.isSearchActive;
+    this.isSearchActive = forceState !== undefined ? forceState : !this.isSearchActive;
     if (this.isSearchActive) {
       this.searchToolbar.classList.remove('is-hidden');
       this.btnToggleSearch?.classList.add('is-active');
@@ -136,7 +178,7 @@ class UserSanctionsController implements ViewController {
   }
 
   private async loadData(): Promise<void> {
-    const res = await getUserSanctionsApi(this.userId);
+    const res = await getUserSanctionsApi(this.userIdOrUuid);
     if (!res.ok || !res.user) {
       showToast(res.error || 'Error al cargar datos del usuario.', 'error');
       navigate('/users');
@@ -145,12 +187,14 @@ class UserSanctionsController implements ViewController {
 
     this.targetUser = res.user;
     this.sanctions = res.sanctions || [];
+    this.selectedSanction = null;
 
     if (this.badgeUser && this.targetUser) {
       this.badgeUser.textContent = `@${this.targetUser.username}`;
     }
 
     this.renderTableRows();
+    this.updateSelectionUi();
   }
 
   private renderTableRows(): void {
@@ -169,7 +213,7 @@ class UserSanctionsController implements ViewController {
     if (filtered.length === 0) {
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td colspan="7" style="text-align: center; padding: 48px 16px; color: var(--text-secondary);">
+        <td colspan="6" style="text-align: center; padding: 48px 16px; color: var(--text-secondary);">
           <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
             <span class="material-symbols-rounded" style="font-size: 40px; color: var(--text-tertiary);">security</span>
             <div style="font-weight: 600; font-size: 14px; color: var(--text-primary);">${q ? 'No se encontraron sanciones con ese término' : 'Sin sanciones registradas'}</div>
@@ -184,7 +228,11 @@ class UserSanctionsController implements ViewController {
 
     for (const s of filtered) {
       const tr = document.createElement('tr');
+      tr.className = 'is-selectable';
       tr.setAttribute('data-ref', `sanction-row-${s.id}`);
+
+      const isSelected = this.selectedSanction?.id === s.id;
+      if (isSelected) tr.classList.add('is-selected');
 
       let typeBadge = '';
       let statusBadge = '';
@@ -226,31 +274,10 @@ class UserSanctionsController implements ViewController {
         <td data-ref="cell-date-${s.id}">
           <span style="color: var(--text-secondary); font-size: 12px;">${formatDate(s.created_at)}</span>
         </td>
-        <td data-ref="cell-actions-${s.id}" style="text-align: right;">
-          <button type="button" class="component-button component-button--h28" data-ref="btn-revoke-sanction-${s.id}" data-sanction-id="${s.id}" style="color: var(--danger-color, #ef4444); border-color: rgba(239, 68, 68, 0.25);">
-            <span class="material-symbols-rounded" style="font-size: 16px; margin-right: 4px;">delete</span>
-            <span>Revocar</span>
-          </button>
-        </td>
       `;
 
-      const btnRevoke = tr.querySelector<HTMLElement>(`[data-ref="btn-revoke-sanction-${s.id}"]`);
-      btnRevoke?.addEventListener('click', () => {
-        openModal({
-          confirmClass: 'component-button--danger',
-          confirmText: 'Revocar sanción',
-          description: `¿Estás seguro de que deseas revocar y eliminar esta sanción aplicada a @${escapeHtml(this.targetUser?.username || '')}?`,
-          onConfirm: async () => {
-            const res = await revokeUserSanctionApi(this.userId, s.id);
-            if (res.ok) {
-              showToast('Sanción revocada exitosamente.', 'success');
-              await this.loadData();
-            } else {
-              showToast(res.error || 'Error al revocar sanción.', 'error');
-            }
-          },
-          title: 'Revocar sanción',
-        });
+      tr.addEventListener('click', () => {
+        this.toggleSanctionSelection(s);
       });
 
       this.tbodyEl.appendChild(tr);
@@ -259,9 +286,56 @@ class UserSanctionsController implements ViewController {
     renderIcons(this.tbodyEl);
   }
 
+  private toggleSanctionSelection(s: UserSanctionItem): void {
+    if (this.selectedSanction?.id === s.id) {
+      this.selectedSanction = null;
+    } else {
+      this.selectedSanction = s;
+    }
+    this.updateSelectionUi();
+  }
+
+  private updateSelectionUi(): void {
+    const isSelected = this.selectedSanction !== null;
+
+    if (!isSelected) {
+      if (this.defaultActions) this.defaultActions.style.display = 'flex';
+      if (this.selectedActions) this.selectedActions.style.display = 'none';
+    } else {
+      if (this.defaultActions) this.defaultActions.style.display = 'none';
+      if (this.selectedActions) this.selectedActions.style.display = 'flex';
+    }
+
+    if (this.tbodyEl) {
+      this.sanctions.forEach((s) => {
+        const row = this.tbodyEl?.querySelector<HTMLElement>(`[data-ref="sanction-row-${s.id}"]`);
+        const rowSelected = this.selectedSanction?.id === s.id;
+        if (row) row.classList.toggle('is-selected', rowSelected);
+      });
+    }
+  }
+
   private openApplySanctionModal(): void {
     let selectedType: 'ban' | 'suspension' | 'warning' = 'warning';
     let selectedDurationDays = 7;
+
+    const sanctionTypeMeta: Record<string, { desc: string; icon: string; title: string }> = {
+      ban: {
+        desc: 'Bloquea el acceso a la cuenta de forma definitiva e indefinida.',
+        icon: 'block',
+        title: 'Baneo permanente',
+      },
+      suspension: {
+        desc: 'Bloquea el acceso durante una cantidad determinada de días.',
+        icon: 'timer',
+        title: 'Suspensión temporal',
+      },
+      warning: {
+        desc: 'Registro de aviso formal en el expediente. No bloquea el acceso.',
+        icon: 'warning_amber',
+        title: 'Advertencia',
+      },
+    };
 
     const modal = openModal({
       bodyHtml: `
@@ -269,30 +343,46 @@ class UserSanctionsController implements ViewController {
           
           <div data-ref="group-sanction-type">
             <div style="font-size: 13px; font-weight: 500; color: var(--text-primary); margin-bottom: 8px;">Tipo de sanción:</div>
-            <div style="display: grid; grid-template-columns: 1fr; gap: 8px;" data-ref="sanction-type-options">
-              <label class="sanction-option-card" data-ref="option-type-warning" style="display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: var(--radius-sm, 6px); cursor: pointer; background: var(--bg-card-subtle);">
-                <input class="component-radio" data-ref="radio-type-warning" type="radio" name="sanction_type" value="warning" checked style="margin-top: 3px;" />
-                <div>
-                  <div style="font-weight: 600; font-size: 13px; color: var(--text-primary);">Advertencia</div>
-                  <div style="font-size: 12px; color: var(--text-secondary);">Registro de aviso formal en el expediente. No bloquea el acceso.</div>
+            
+            <div class="settings-dropdown-wrapper" data-ref="modal-dropdown-wrapper-sanction-type" style="position: relative; width: 100%;">
+              <button type="button" class="dropdown-trigger" data-ref="btn-modal-trigger-sanction-type" style="width: 100%; justify-content: space-between;" aria-label="Seleccionar tipo de sanción">
+                <div class="dropdown-trigger__left" style="display: flex; align-items: center; gap: 8px;">
+                  <span class="material-symbols-rounded dropdown-trigger__icon" data-ref="modal-sanction-type-icon">warning_amber</span>
+                  <span class="dropdown-trigger__text" data-ref="modal-sanction-type-text">Advertencia</span>
                 </div>
-              </label>
-              
-              <label class="sanction-option-card" data-ref="option-type-suspension" style="display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: var(--radius-sm, 6px); cursor: pointer;">
-                <input class="component-radio" data-ref="radio-type-suspension" type="radio" name="sanction_type" value="suspension" style="margin-top: 3px;" />
-                <div>
-                  <div style="font-weight: 600; font-size: 13px; color: var(--text-primary);">Suspensión temporal</div>
-                  <div style="font-size: 12px; color: var(--text-secondary);">Bloquea el acceso a la cuenta durante una cantidad determinada de días.</div>
+                <span class="material-symbols-rounded dropdown-trigger__chevron">expand_more</span>
+              </button>
+
+              <div class="dropdown-backdrop" data-ref="modal-dropdown-backdrop-sanction-type">
+                <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="modal-dropdown-menu-sanction-type">
+                  <div class="menu-panel__drag-zone" data-ref="modal-drag-zone-sanction-type" aria-hidden="true">
+                    <div class="menu-panel__drag-handle"></div>
+                  </div>
+                  <div class="menu-panel__list" data-ref="modal-list-sanction-types">
+                    <button type="button" class="menu-item is-active" data-ref="option-sanction-type-warning" data-value="warning" style="padding: 10px 12px; display: flex; align-items: flex-start; gap: 10px; width: 100%;">
+                      <span class="material-symbols-rounded menu-item__icon" style="font-size: 20px; margin-top: 1px;">warning_amber</span>
+                      <div style="display: flex; flex-direction: column; gap: 2px; text-align: left; flex: 1;">
+                        <span class="menu-item__text" style="font-weight: 600; font-size: 13px;">Advertencia</span>
+                        <span style="font-size: 11px; color: var(--text-secondary); line-height: 1.3;">Registro de aviso formal en el expediente. No bloquea el acceso.</span>
+                      </div>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="option-sanction-type-suspension" data-value="suspension" style="padding: 10px 12px; display: flex; align-items: flex-start; gap: 10px; width: 100%;">
+                      <span class="material-symbols-rounded menu-item__icon" style="font-size: 20px; margin-top: 1px;">timer</span>
+                      <div style="display: flex; flex-direction: column; gap: 2px; text-align: left; flex: 1;">
+                        <span class="menu-item__text" style="font-weight: 600; font-size: 13px;">Suspensión temporal</span>
+                        <span style="font-size: 11px; color: var(--text-secondary); line-height: 1.3;">Bloquea el acceso a la cuenta durante una cantidad determinada de días.</span>
+                      </div>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="option-sanction-type-ban" data-value="ban" style="padding: 10px 12px; display: flex; align-items: flex-start; gap: 10px; width: 100%;">
+                      <span class="material-symbols-rounded menu-item__icon" style="font-size: 20px; margin-top: 1px;">block</span>
+                      <div style="display: flex; flex-direction: column; gap: 2px; text-align: left; flex: 1;">
+                        <span class="menu-item__text" style="font-weight: 600; font-size: 13px;">Baneo permanente</span>
+                        <span style="font-size: 11px; color: var(--text-secondary); line-height: 1.3;">Bloquea el acceso a la cuenta de forma definitiva e indefinida.</span>
+                      </div>
+                    </button>
+                  </div>
                 </div>
-              </label>
-              
-              <label class="sanction-option-card" data-ref="option-type-ban" style="display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: var(--radius-sm, 6px); cursor: pointer;">
-                <input class="component-radio" data-ref="radio-type-ban" type="radio" name="sanction_type" value="ban" style="margin-top: 3px;" />
-                <div>
-                  <div style="font-weight: 600; font-size: 13px; color: var(--text-primary);">Baneo permanente</div>
-                  <div style="font-size: 12px; color: var(--text-secondary);">Bloquea el acceso a la cuenta de forma definitiva e indefinida.</div>
-                </div>
-              </label>
+              </div>
             </div>
           </div>
 
@@ -346,7 +436,7 @@ class UserSanctionsController implements ViewController {
         }
 
         modal.setConfirmLoading?.(true, 'Aplicando...');
-        const res = await applyUserSanctionApi(this.userId, {
+        const res = await applyUserSanctionApi(this.userIdOrUuid, {
           durationDays,
           reason,
           type: selectedType,
@@ -365,43 +455,37 @@ class UserSanctionsController implements ViewController {
       title: 'Aplicar sanción',
     });
 
-    const optionCards = modal.body.querySelectorAll<HTMLElement>('.sanction-option-card');
-    const radios = modal.body.querySelectorAll<HTMLInputElement>('input[name="sanction_type"]');
+    const dropdownTypeWrapper = modal.body.querySelector<HTMLElement>('[data-ref="modal-dropdown-wrapper-sanction-type"]');
+    const triggerIcon = modal.body.querySelector<HTMLElement>('[data-ref="modal-sanction-type-icon"]');
+    const triggerText = modal.body.querySelector<HTMLElement>('[data-ref="modal-sanction-type-text"]');
     const durationGroup = modal.body.querySelector<HTMLElement>('[data-ref="group-sanction-duration"]');
     const durationInput = modal.body.querySelector<HTMLInputElement>('[data-ref="modal-input-duration"]');
     const presetButtons = modal.body.querySelectorAll<HTMLElement>('[data-duration]');
 
-    const updateTypeSelection = (newType: 'ban' | 'suspension' | 'warning') => {
+    const updateTypeUi = (newType: 'ban' | 'suspension' | 'warning') => {
       selectedType = newType;
-      optionCards.forEach((card) => {
-        const radio = card.querySelector<HTMLInputElement>('input[type="radio"]');
-        const isChecked = radio?.value === newType;
-        if (radio) radio.checked = isChecked;
-        card.style.background = isChecked ? 'var(--bg-card-subtle)' : 'transparent';
-      });
+      const meta = sanctionTypeMeta[newType];
+      if (meta) {
+        if (triggerIcon) triggerIcon.textContent = meta.icon;
+        if (triggerText) triggerText.textContent = meta.title;
+      }
 
       if (durationGroup) {
         durationGroup.style.display = newType === 'suspension' ? 'block' : 'none';
       }
     };
 
-    radios.forEach((r) => {
-      r.addEventListener('change', () => {
-        if (r.checked) {
-          updateTypeSelection(r.value as 'ban' | 'suspension' | 'warning');
-        }
+    if (dropdownTypeWrapper) {
+      setupDropdown(dropdownTypeWrapper, {
+        isSelect: true,
+        matchWidth: true,
+        onSelect: (val) => {
+          if (val === 'ban' || val === 'suspension' || val === 'warning') {
+            updateTypeUi(val);
+          }
+        },
       });
-    });
-
-    optionCards.forEach((card) => {
-      card.addEventListener('click', () => {
-        const radio = card.querySelector<HTMLInputElement>('input[type="radio"]');
-        if (radio && !radio.checked) {
-          radio.checked = true;
-          updateTypeSelection(radio.value as 'ban' | 'suspension' | 'warning');
-        }
-      });
-    });
+    }
 
     presetButtons.forEach((btn) => {
       btn.addEventListener('click', (e) => {
@@ -435,14 +519,14 @@ class UserSanctionsController implements ViewController {
   }
 }
 
-export async function createUserSanctionsView(userId: number): Promise<HTMLElement> {
+export async function createUserSanctionsView(userIdOrUuid: number | string): Promise<HTMLElement> {
   const container = await loadTemplate('/views/users/user-sanctions.html');
   const sidebar = await createSidebar();
   container.prepend(sidebar);
 
   renderIcons(container);
 
-  const controller = new UserSanctionsController(container, userId);
+  const controller = new UserSanctionsController(container, userIdOrUuid);
   void controller.init();
   (container as any).__controller = controller;
 
