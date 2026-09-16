@@ -1,16 +1,31 @@
-import 'dotenv/config';
 import cookieParser from 'cookie-parser';
+import 'dotenv/config';
 import express, { Request, Response } from 'express';
 import http from 'http';
+import net from 'net';
 import path from 'path';
 import { checkDbConnection } from './config/database.config.js';
 import { config } from './config/env.config.js';
 import { checkRedisConnection } from './config/redis.config.js';
 import { getHealth } from './controllers/config.controller.js';
 import apiRouter from './routes/api.routes.js';
+import { COOKIE_NAME, isSessionRevoked, verifyMultiAccountToken } from './services/auth.service.js';
 import { ensureBackupTable } from './services/backup.service.js';
-import { ensureServerConfigTable } from './services/server-config.service.js';
 import { logger } from './services/logger.service.js';
+import { ensureServerConfigTable } from './services/server-config.service.js';
+
+function parseCookieHeader(cookieHeader?: string): Record<string, string> {
+  if (!cookieHeader) return {};
+  const cookies: Record<string, string> = {};
+  const items = cookieHeader.split(';');
+  for (const item of items) {
+    const [key, ...val] = item.trim().split('=');
+    if (key) {
+      cookies[key] = decodeURIComponent(val.join('='));
+    }
+  }
+  return cookies;
+}
 
 const app = express();
 const PORT = config.port;
@@ -92,6 +107,77 @@ async function startServer() {
 
     const server = http.createServer(app);
     await setupClient(server);
+
+    server.on('upgrade', async (req, clientSocket, head) => {
+      const url = req.url || '';
+      if (url === '/ws' || url.startsWith('/ws?')) {
+        const cookieHeader = req.headers.cookie || '';
+        const cookies = parseCookieHeader(cookieHeader);
+        const token = cookies[COOKIE_NAME];
+
+        if (!token) {
+          logger.security.warn('Conexión WebSocket rechazada en Admin: No se proporcionó cookie de sesión.');
+          clientSocket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+          clientSocket.destroy();
+          return;
+        }
+
+        const session = verifyMultiAccountToken(token);
+        if (!session) {
+          logger.security.warn('Conexión WebSocket rechazada en Admin: Token de sesión inválido.');
+          clientSocket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+          clientSocket.destroy();
+          return;
+        }
+
+        const activeAccount = session.accounts.find((a) => a.id === session.activeId);
+        const sid = activeAccount?.sessionId || session.sessionId;
+        const revoked = await isSessionRevoked(session.activeId, session.iat, sid);
+        if (revoked) {
+          logger.security.warn('Conexión WebSocket rechazada en Admin: Sesión revocada.');
+          clientSocket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+          clientSocket.destroy();
+          return;
+        }
+
+        clientSocket.pause();
+        const proxySocket = net.connect(config.websocket.port, config.websocket.host, () => {
+          if (clientSocket instanceof net.Socket) {
+            clientSocket.setNoDelay(true);
+          }
+          proxySocket.setNoDelay(true);
+          proxySocket.write(`${req.method} ${req.url} HTTP/${req.httpVersion}\r\n`);
+          for (let i = 0; i < req.rawHeaders.length; i += 2) {
+            proxySocket.write(`${req.rawHeaders[i]}: ${req.rawHeaders[i + 1]}\r\n`);
+          }
+          proxySocket.write('\r\n');
+          if (head && head.length > 0) {
+            proxySocket.write(head);
+          }
+          clientSocket.pipe(proxySocket);
+          proxySocket.pipe(clientSocket);
+          clientSocket.resume();
+        });
+
+        proxySocket.on('error', (err) => {
+          logger.app.warn('No se pudo conectar con el microservicio WebSocket en Rust desde Admin', err);
+          clientSocket.write('HTTP/1.1 502 Bad Gateway\r\n\r\n');
+          clientSocket.destroy();
+        });
+
+        clientSocket.on('error', () => {
+          proxySocket.destroy();
+        });
+
+        clientSocket.on('close', () => {
+          proxySocket.destroy();
+        });
+
+        proxySocket.on('close', () => {
+          clientSocket.destroy();
+        });
+      }
+    });
 
     server.listen(PORT, () => {
       logger.app.info(`Servidor Admin iniciado y escuchando en puerto ${PORT}`);

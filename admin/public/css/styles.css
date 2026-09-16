@@ -1800,6 +1800,67 @@ html.dark-theme .component-wrapper {
   box-sizing: border-box;
 }
 
+.support-search-container {
+  padding: 12px 12px 8px 12px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background-color: var(--bg-surface);
+  flex-shrink: 0;
+}
+
+.support-filter-tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 2px 0 2px 0;
+  scrollbar-width: none;
+}
+
+.support-filter-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.support-ticket-items {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-sizing: border-box;
+}
+
+.support-ticket-card {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  text-align: left;
+  padding: 12px 14px;
+  border-radius: var(--radius-lg, 12px) !important;
+  border: 1px solid var(--border-color) !important;
+  background-color: var(--bg-surface) !important;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+
+.support-ticket-card:hover {
+  background-color: var(--bg-hover) !important;
+  border-color: var(--border-color-hover) !important;
+}
+
+.support-ticket-card.is-active {
+  background-color: var(--bg-hover) !important;
+  border-color: var(--action-primary, #6366f1) !important;
+  box-shadow: 0 0 0 1.5px var(--action-primary, #6366f1) !important;
+}
+
 .support-chat-workspace {
   flex: 1 1 auto;
   height: 100%;
@@ -1833,15 +1894,6 @@ html.dark-theme .component-wrapper {
   gap: 12px;
 }
 
-.support-ticket-items {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
 @media (max-width: 768px) {
   .support-main-split {
     flex-direction: column !important;
@@ -1852,6 +1904,13 @@ html.dark-theme .component-wrapper {
     height: auto;
     max-height: 40%;
   }
+}
+
+.chat-pill-input__btn.is-ready-to-send {
+  background-color: #10b981 !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.35);
+  transform: scale(1.05);
 }
 
 

@@ -342,6 +342,7 @@ async fn ws_handler(
 
     let session_secret = state.session_secret.clone();
     let auth_user = extract_cookie(&req, "sprite_session")
+        .or_else(|| extract_cookie(&req, "sprite_admin_session"))
         .or_else(|| extract_cookie(&req, "auth_session"))
         .or_else(|| extract_cookie(&req, "sb_session"))
         .and_then(|token| verify_session_token(token, &session_secret));
@@ -366,6 +367,7 @@ async fn ws_handler(
 }
 
 async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: AppState) {
+    println!("[WebSocket Server] Socket conectado: id={}, username={}", user.id, user.username);
     let session_secret = state.session_secret.clone();
     let conn_id = format!(
         "{}_{}",
@@ -385,6 +387,9 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
             .entry(user.id)
             .or_default()
             .insert(conn_id.clone(), tx.clone());
+        println!("[WebSocket Server] Usuario {} registrado en clientes activos. Total usuarios activos: {}", user.id, clients.len());
+    } else {
+        println!("[WebSocket Server] ADVERTENCIA: Conexión no autenticada como usuario registrado (id={})", user.id);
     }
 
     let mut msg_rate_counter = 0u32;
@@ -878,6 +883,10 @@ async fn run_redis_pubsub(state: AppState) {
                         tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
                         continue;
                     }
+                    if let Err(_) = pubsub.subscribe("support:events").await {
+                        tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
+                        continue;
+                    }
                     if let Err(_) = pubsub.psubscribe("canvas:events:*").await {
                         tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
                         continue;
@@ -943,6 +952,41 @@ async fn run_redis_pubsub(state: AppState) {
                                         state.cleanup_empty_room(canvas_uuid).await;
                                     }
                                 }
+                            }
+                        } else if channel_name == "support:events" {
+                            println!("[Redis PubSub] Recibido evento en support:events: {}", payload);
+                            if let Ok(event) = serde_json::from_str::<serde_json::Value>(&payload) {
+                                let target_user_id = event.get("targetUserId").and_then(|u| u.as_i64());
+                                let is_broadcast = event.get("broadcastToAgents").and_then(|b| b.as_bool()).unwrap_or(false);
+
+                                let clients = state.clients.read().await;
+                                println!("[WebSocket Server] Clientes conectados activos: {:?}", clients.keys().collect::<Vec<_>>());
+                                let mut sent_count = 0;
+                                if let Some(user_id) = target_user_id {
+                                    if let Some(user_conns) = clients.get(&user_id) {
+                                        let outgoing = Message::Text(payload.clone());
+                                        for tx in user_conns.values() {
+                                            if tx.try_send(outgoing.clone()).is_ok() {
+                                                sent_count += 1;
+                                            }
+                                        }
+                                    }
+                                }
+                                if is_broadcast {
+                                    let outgoing = Message::Text(payload.clone());
+                                    for (uid, user_conns) in clients.iter() {
+                                        if target_user_id != Some(*uid) {
+                                            for tx in user_conns.values() {
+                                                if tx.try_send(outgoing.clone()).is_ok() {
+                                                    sent_count += 1;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                println!("[WebSocket Server] Evento support:events despachado a {} socket(s)", sent_count);
+                            } else {
+                                eprintln!("[Redis PubSub] Error al parsear payload de support:events: {}", payload);
                             }
                         } else if channel_name.starts_with("canvas:events:") {
                             let canvas_uuid = match channel_name.strip_prefix("canvas:events:") {

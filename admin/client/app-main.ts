@@ -1,8 +1,9 @@
 import { navigate, render } from './app-router.js';
-import { checkAuthSession, fetchAppConfig, fetchCsrfToken } from './services/api.service.js';
+import { checkAuthSession, currentUser, fetchAppConfig, fetchCsrfToken } from './services/api.service.js';
 import { initI18n } from './services/i18n.service.js';
 import { renderIcons } from './services/icon.service.js';
 import { initTheme } from './services/theme.service.js';
+import { initWebSocket } from './services/websocket.service.js';
 
 function initLinkInterception(): void {
   document.addEventListener('click', (e: MouseEvent) => {
@@ -51,6 +52,9 @@ async function init(): Promise<void> {
   initLinkInterception();
 
   await Promise.all([fetchCsrfToken(), checkAuthSession(), fetchAppConfig()]);
+  if (currentUser) {
+    initWebSocket();
+  }
   await initI18n();
   await render();
   renderIcons();

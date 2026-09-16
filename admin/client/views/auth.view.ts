@@ -2,6 +2,7 @@ import { navigate } from '../app-router.js';
 import { loadTemplate, loginApi, verify2FALoginApi } from '../services/api.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { showToast } from '../services/toast.service.js';
+import { initWebSocket } from '../services/websocket.service.js';
 import { ViewController } from '../types/common.types.js';
 import { withButtonLoading } from '../utils/dom.util.js';
 import { validateEmail, validatePassword } from '../utils/validators.util.js';
@@ -207,6 +208,7 @@ class AuthController implements ViewController {
         if (result.requires2FA && result.tempToken) {
           this.show2FAStep(result.tempToken);
         } else {
+          initWebSocket();
           showToast('Bienvenido al panel de administración.', 'success');
           navigate('/');
         }
@@ -233,6 +235,7 @@ class AuthController implements ViewController {
     await withButtonLoading(this.btnSubmit2FA, async () => {
       const result = await verify2FALoginApi(this.tempToken!, code);
       if (result.success) {
+        initWebSocket();
         showToast('Bienvenido al panel de administración.', 'success');
         navigate('/');
       } else {

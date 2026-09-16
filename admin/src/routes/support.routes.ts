@@ -1,6 +1,6 @@
+import { Router } from 'express';
 import { AdminSupportController } from '../controllers/support.controller.js';
 import { requireAuth } from '../middlewares/auth.middleware.js';
-import { Router } from 'express';
 
 const supportRouter = Router();
 
@@ -9,6 +9,7 @@ supportRouter.use(requireAuth);
 supportRouter.get('/tickets', AdminSupportController.getTickets);
 supportRouter.get('/tickets/stats', AdminSupportController.getStats);
 supportRouter.get('/tickets/:id', AdminSupportController.getTicket);
+supportRouter.post('/refine-message', AdminSupportController.refineMessage);
 supportRouter.post('/tickets/:id/accept', AdminSupportController.acceptTicket);
 supportRouter.post('/tickets/:id/escalate', AdminSupportController.escalateTicket);
 supportRouter.post('/tickets/:id/transfer', AdminSupportController.transferTicket);

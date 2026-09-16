@@ -1,5 +1,6 @@
 import mysql from 'mysql2/promise';
 import { pool } from '../config/database.config.js';
+import { redis } from '../config/redis.config.js';
 import { logger } from './logger.service.js';
 
 export interface AdminSupportTicket {
@@ -256,6 +257,18 @@ export class AdminSupportService {
           [ticketId, agentId, `El agente @${agentName} ha aceptado el caso y se ha unido al chat.`]
         );
         logger.db.info(`Ticket aceptado: ticketId=${ticketId}, agentId=${agentId}`);
+
+        const updated = await this.getTicketDetails(ticketId);
+        if (updated.ticket) {
+          await redis.publish('support:events', JSON.stringify({
+            broadcastToAgents: true,
+            targetUserId: updated.ticket.user_id,
+            ticket: updated.ticket,
+            ticketId,
+            type: 'SUPPORT_TICKET_UPDATED',
+          })).catch(() => {});
+        }
+
         return true;
       }
       return false;
@@ -297,6 +310,18 @@ export class AdminSupportService {
           [ticketId, agentId, sysMsg]
         );
         logger.db.info(`Ticket escalado: ticketId=${ticketId}, level=${targetRole}, by=${agentId}`);
+
+        const updated = await this.getTicketDetails(ticketId);
+        if (updated.ticket) {
+          await redis.publish('support:events', JSON.stringify({
+            broadcastToAgents: true,
+            targetUserId: updated.ticket.user_id,
+            ticket: updated.ticket,
+            ticketId,
+            type: 'SUPPORT_TICKET_UPDATED',
+          })).catch(() => {});
+        }
+
         return true;
       }
       return false;
@@ -333,6 +358,18 @@ export class AdminSupportService {
           [ticketId, fromAgentId, sysMsg]
         );
         logger.db.info(`Ticket transferido: ticketId=${ticketId}, to=${toAgentId}`);
+
+        const updated = await this.getTicketDetails(ticketId);
+        if (updated.ticket) {
+          await redis.publish('support:events', JSON.stringify({
+            broadcastToAgents: true,
+            targetUserId: updated.ticket.user_id,
+            ticket: updated.ticket,
+            ticketId,
+            type: 'SUPPORT_TICKET_UPDATED',
+          })).catch(() => {});
+        }
+
         return true;
       }
       return false;
@@ -367,6 +404,18 @@ export class AdminSupportService {
           [ticketId, agentId, sysMsg]
         );
         logger.db.info(`Ticket resuelto: ticketId=${ticketId}, agentId=${agentId}`);
+
+        const updated = await this.getTicketDetails(ticketId);
+        if (updated.ticket) {
+          await redis.publish('support:events', JSON.stringify({
+            broadcastToAgents: true,
+            targetUserId: updated.ticket.user_id,
+            ticket: updated.ticket,
+            ticketId,
+            type: 'SUPPORT_TICKET_UPDATED',
+          })).catch(() => {});
+        }
+
         return true;
       }
       return false;
@@ -396,6 +445,18 @@ export class AdminSupportService {
           [ticketId, agentId, `Caso reabierto por @${agentName}.`]
         );
         logger.db.info(`Ticket reabierto: ticketId=${ticketId}, agentId=${agentId}`);
+
+        const updated = await this.getTicketDetails(ticketId);
+        if (updated.ticket) {
+          await redis.publish('support:events', JSON.stringify({
+            broadcastToAgents: true,
+            targetUserId: updated.ticket.user_id,
+            ticket: updated.ticket,
+            ticketId,
+            type: 'SUPPORT_TICKET_UPDATED',
+          })).catch(() => {});
+        }
+
         return true;
       }
       return false;
@@ -431,7 +492,20 @@ export class AdminSupportService {
       );
 
       if (msgRows.length === 0) return null;
-      return msgRows[0] as AdminSupportMessage;
+      const newMsg = msgRows[0] as AdminSupportMessage;
+
+      const [tRows] = await pool.execute<mysql.RowDataPacket[]>('SELECT user_id FROM support_tickets WHERE id = ?', [ticketId]);
+      const ticketOwnerId = tRows[0]?.user_id;
+
+      await redis.publish('support:events', JSON.stringify({
+        broadcastToAgents: true,
+        message: newMsg,
+        targetUserId: ticketOwnerId,
+        ticketId,
+        type: 'SUPPORT_MESSAGE_RECEIVED',
+      })).catch(() => {});
+
+      return newMsg;
     } catch (error) {
       logger.db.error('AdminSupportService: Error al enviar mensaje de agente', error);
       return null;

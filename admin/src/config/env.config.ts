@@ -10,6 +10,10 @@ export const config = {
     port: Number(process.env.DB_PORT) || 3306,
     user: process.env.DB_USER || 'sprite_user',
   },
+  gemini: {
+    apiKey: process.env.GEMINI_API_KEY || '',
+    model: process.env.GEMINI_MODEL || 'gemini-flash-lite-latest',
+  },
   google: {
     callbackUrl: process.env.ADMIN_GOOGLE_CALLBACK_URL || 'http://localhost:3002/api/auth/google/callback',
     clientId: process.env.GOOGLE_CLIENT_ID || '',
@@ -24,4 +28,8 @@ export const config = {
   },
   sessionSecret: process.env.SESSION_SECRET || 'spriteboard_session_secret_key_2026',
   trustProxy: 1,
+  websocket: {
+    host: process.env.WEBSOCKET_HOST || 'websocket',
+    port: Number(process.env.WEBSOCKET_PORT) || 3001,
+  },
 } as const;

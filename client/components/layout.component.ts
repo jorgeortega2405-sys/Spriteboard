@@ -7,7 +7,7 @@ import { t, translateElement } from '../services/i18n.service.js';
 import { createIconSvg, renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
-import { closeWebSocket, initWebSocket } from '../services/websocket.service.js';
+import { closeWebSocket, initWebSocket, registerWebSocketHandler } from '../services/websocket.service.js';
 import { CanvasItem } from '../types/canvas.types.js';
 import { closeAllDropdowns, registerActiveDropdown, unregisterActiveDropdown } from '../utils/dom.util.js';
 import { applyAvatarTier, getFallbackTierColor } from '../utils/tier.util.js';
@@ -1737,7 +1737,6 @@ function setupChatSidebarEvents(sidebarElement: HTMLElement): void {
   const conversationHistory: Array<{ role: string; text: string }> = [];
   let activeTicket: any = null;
   let isAwaitingSupportReason = false;
-  let supportPollTimer: ReturnType<typeof setInterval> | null = null;
   const renderedMessageIds = new Set<number>();
 
   const btnClose = sidebarElement.querySelector<HTMLElement>('[data-ref="btn-chat-close"]');
@@ -2031,51 +2030,37 @@ function setupChatSidebarEvents(sidebarElement: HTMLElement): void {
     }
   };
 
-  const startSupportPolling = () => {
-    if (supportPollTimer) return;
-    supportPollTimer = setInterval(async () => {
-      if (!activeTicket || !document.body.contains(sidebarElement)) {
-        stopSupportPolling();
+  registerWebSocketHandler('SUPPORT_MESSAGE_RECEIVED', (data: any) => {
+    if (!activeTicket || !data) return;
+    if (Number(data.ticketId) === Number(activeTicket.id) && data.message) {
+      renderSupportMessage(data.message);
+    }
+  });
+
+  registerWebSocketHandler('SUPPORT_TICKET_UPDATED', (data: any) => {
+    if (!activeTicket || !data || !data.ticket) return;
+    if (Number(data.ticket.id) === Number(activeTicket.id)) {
+      const prevStatus = activeTicket.status;
+      activeTicket = data.ticket;
+
+      if (activeTicket.status === 'resolved' || activeTicket.status === 'closed' || activeTicket.status === 'cancelled') {
+        hideSupportBanner();
+        appendSystemNotice('La sesión de soporte técnico ha finalizado.');
+        activeTicket = null;
         return;
       }
-      try {
-        const res = await getApi(API_ROUTES.support.active);
-        if (res.ok) {
-          const data = await res.json();
-          if (!data.active || !data.ticket) {
-            stopSupportPolling();
-            hideSupportBanner();
-            if (activeTicket) {
-              appendSystemNotice('La sesión de soporte técnico ha finalizado.');
-              activeTicket = null;
-            }
-            return;
-          }
 
-          const prevStatus = activeTicket.status;
-          activeTicket = data.ticket;
-          renderSupportBanner(activeTicket);
+      renderSupportBanner(activeTicket);
 
-          if (prevStatus === 'queued' && (activeTicket.status === 'in_progress' || activeTicket.status === 'escalated')) {
-            appendSystemNotice(activeTicket.assigned_agent_name ? `El agente ${activeTicket.assigned_agent_name} se ha conectado a la conversación.` : 'Un agente de soporte se ha conectado.');
-          }
-
-          if (Array.isArray(data.messages)) {
-            for (const msg of data.messages) {
-              renderSupportMessage(msg);
-            }
-          }
-        }
-      } catch (_) {}
-    }, 3500);
-  };
-
-  const stopSupportPolling = () => {
-    if (supportPollTimer) {
-      clearInterval(supportPollTimer);
-      supportPollTimer = null;
+      if (prevStatus === 'queued' && (activeTicket.status === 'in_progress' || activeTicket.status === 'escalated')) {
+        appendSystemNotice(
+          activeTicket.assigned_agent_name
+            ? `El agente @${activeTicket.assigned_agent_name} se ha conectado a la conversación.`
+            : 'Un agente de soporte se ha conectado.'
+        );
+      }
     }
-  };
+  });
 
   const checkActiveSupportTicket = async () => {
     if (!currentUser) return;
@@ -2091,7 +2076,6 @@ function setupChatSidebarEvents(sidebarElement: HTMLElement): void {
               renderSupportMessage(msg);
             }
           }
-          startSupportPolling();
         } else {
           hideSupportBanner();
         }
@@ -2105,7 +2089,6 @@ function setupChatSidebarEvents(sidebarElement: HTMLElement): void {
     try {
       const res = await postApi(API_ROUTES.support.cancel, { ticketId: activeTicket.id });
       if (res.ok) {
-        stopSupportPolling();
         hideSupportBanner();
         appendSystemNotice('Has finalizado la sesión de soporte técnico.');
         appendMessage('agent', '¿Hay algo más en lo que pueda ayudarte hoy?');
@@ -2189,7 +2172,12 @@ function setupChatSidebarEvents(sidebarElement: HTMLElement): void {
           message: text,
           ticketId: activeTicket.id,
         });
-        if (!res.ok) {
+        if (res.ok) {
+          const data = await res.json().catch(() => ({}));
+          if (data && data.message && data.message.id) {
+            renderedMessageIds.add(data.message.id);
+          }
+        } else {
           showToast('No se pudo enviar el mensaje a soporte. Intenta de nuevo.', 'error');
         }
       } catch (_) {
@@ -2218,7 +2206,6 @@ function setupChatSidebarEvents(sidebarElement: HTMLElement): void {
             activeTicket = data.ticket;
             renderSupportBanner(activeTicket);
             appendMessage('agent', `Hemos registrado tu solicitud con el Ticket #${activeTicket.ticket_number}. Te hemos añadido a la lista de espera de soporte técnico; un agente se comunicará contigo en breve.`);
-            startSupportPolling();
           }
         } else {
           appendMessage('agent', 'No se pudo crear la solicitud de soporte en este momento. Por favor intenta más tarde.');

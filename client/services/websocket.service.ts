@@ -161,7 +161,8 @@ export function initWebSocket(): void {
         }
 
         const handlers = messageHandlers.get(data.type);
-        if (handlers) {
+        if (handlers && handlers.size > 0) {
+          console.log(`[WebSocket] Despachando evento '${data.type}' a ${handlers.size} manejador(es):`, data);
           handlers.forEach((handler) => {
             try {
               handler(data);
@@ -169,6 +170,8 @@ export function initWebSocket(): void {
               console.warn('[WebSocket] Error en manejador de mensaje:', err);
             }
           });
+        } else {
+          console.warn(`[WebSocket] No hay manejadores registrados para el tipo de evento: '${data.type}'`);
         }
       } catch (err) {
         console.warn('[WebSocket] Error al procesar mensaje recibido:', err);
@@ -252,12 +255,14 @@ export function sendWebSocketMessage(msg: any): void {
 }
 
 export function registerWebSocketHandler(type: string, handler: WebSocketHandler): () => void {
+  console.log(`[WebSocket] Registrando manejador para evento: '${type}'`);
   if (!messageHandlers.has(type)) {
     messageHandlers.set(type, new Set());
   }
   messageHandlers.get(type)!.add(handler);
 
   return () => {
+    console.log(`[WebSocket] Desregistrando manejador para evento: '${type}'`);
     const set = messageHandlers.get(type);
     if (set) {
       set.delete(handler);
