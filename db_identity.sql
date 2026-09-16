@@ -377,7 +377,45 @@ CREATE TABLE IF NOT EXISTS support_messages (
     FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS internal_tickets (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    uuid VARCHAR(36) NOT NULL UNIQUE,
+    ticket_number VARCHAR(32) NOT NULL UNIQUE,
+    creator_id INT NOT NULL,
+    assigned_agent_id INT NULL,
+    category ENUM('hardware', 'software', 'network', 'facilities', 'access', 'other') NOT NULL DEFAULT 'hardware',
+    priority ENUM('low', 'medium', 'high', 'urgent') NOT NULL DEFAULT 'medium',
+    status ENUM('open', 'in_progress', 'waiting_third_party', 'resolved', 'closed') NOT NULL DEFAULT 'open',
+    location VARCHAR(100) NULL,
+    title VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    resolution_note TEXT NULL,
+    resolved_by INT NULL,
+    resolved_at TIMESTAMP NULL DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_int_ticket_creator (creator_id),
+    INDEX idx_int_ticket_agent (assigned_agent_id),
+    INDEX idx_int_ticket_status (status),
+    INDEX idx_int_ticket_category (category),
+    INDEX idx_int_ticket_priority (priority),
+    INDEX idx_int_ticket_created (created_at DESC),
+    FOREIGN KEY (creator_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (assigned_agent_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (resolved_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS internal_ticket_messages (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    ticket_id INT NOT NULL,
+    user_id INT NOT NULL,
+    message TEXT NOT NULL,
+    is_internal_note BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_int_msg_ticket_created (ticket_id, created_at ASC),
+    FOREIGN KEY (ticket_id) REFERENCES internal_tickets(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 GRANT ALL PRIVILEGES ON db_identity.* TO 'sprite_user'@'%';
 FLUSH PRIVILEGES;
-
-

@@ -84,6 +84,11 @@ export async function render(): Promise<void> {
       const ticketParam = match ? match[1] : undefined;
       const { createSupportView } = await import('./views/support.view.js');
       viewElement = await createSupportView(ticketParam);
+    } else if (path === '/internal-tickets' || /^\/internal-tickets\/([0-9a-zA-Z-]+)$/.test(path)) {
+      const match = path.match(/^\/internal-tickets\/([0-9a-zA-Z-]+)$/);
+      const ticketParam = match ? match[1] : undefined;
+      const { createInternalTicketsView } = await import('./views/internal-tickets.view.js');
+      viewElement = await createInternalTicketsView(ticketParam);
     } else if (/^\/users\/([0-9a-zA-Z-]+)\/sanctions$/.test(path)) {
       const match = path.match(/^\/users\/([0-9a-zA-Z-]+)\/sanctions$/);
       const userIdentifier = match![1];

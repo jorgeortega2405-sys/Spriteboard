@@ -1,8 +1,10 @@
 import { navigate, render } from '../app-router.js';
+import { openCreateInternalTicketModal } from './internal-ticket-modal.component.js';
 import { currentUser, linkedAccounts, loadTemplate, logoutAllApi, logoutApi, switchAccountApi } from '../services/api.service.js';
 import { createIconSvg, renderIcons } from '../services/icon.service.js';
 import { showToast } from '../services/toast.service.js';
 import { closeAllDropdowns, escapeHtml, registerActiveDropdown, unregisterActiveDropdown } from '../utils/dom.util.js';
+
 
 let isDrawerOpen = false;
 let drawerRemovalTimer: ReturnType<typeof setTimeout> | null = null;
@@ -80,6 +82,7 @@ function populateDrawerContent(drawer: HTMLElement): void {
   const isUsers = currentPath === '/users' || currentPath.startsWith('/users/');
   const isAds = currentPath === '/ads' || currentPath.startsWith('/ads/');
   const isSupport = currentPath === '/support' || currentPath.startsWith('/support/');
+  const isInternalTickets = currentPath === '/internal-tickets' || currentPath.startsWith('/internal-tickets/');
   const isBackups = currentPath === '/backups' || currentPath.startsWith('/backups/');
   const isLogs = currentPath === '/logs' || currentPath.startsWith('/logs/');
   const isSystem = currentPath === '/system' || currentPath.startsWith('/system/') || currentPath === '/system-settings';
@@ -104,6 +107,10 @@ function populateDrawerContent(drawer: HTMLElement): void {
       <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#chat_bubble"></use></svg>
       <span class="menu-item__text">Soporte Técnico</span>
     </button>
+    <button type="button" class="menu-item${isInternalTickets ? ' is-active' : ''}" data-ref="btn-drawer-internal-tickets">
+      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#devices"></use></svg>
+      <span class="menu-item__text">Mesa de Ayuda</span>
+    </button>
     <button type="button" class="menu-item${isBackups ? ' is-active' : ''}" data-ref="btn-drawer-backups">
       <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#cloud_upload"></use></svg>
       <span class="menu-item__text">Copias de Seguridad</span>
@@ -122,6 +129,7 @@ function populateDrawerContent(drawer: HTMLElement): void {
   const btnUsers = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-users"]');
   const btnAds = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-ads"]');
   const btnSupport = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-support"]');
+  const btnInternalTickets = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-internal-tickets"]');
   const btnBackups = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-backups"]');
   const btnLogs = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-logs"]');
   const btnSystem = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-system"]');
@@ -130,6 +138,7 @@ function populateDrawerContent(drawer: HTMLElement): void {
   bindNavLink(btnUsers, '/users');
   bindNavLink(btnAds, '/ads');
   bindNavLink(btnSupport, '/support');
+  bindNavLink(btnInternalTickets, '/internal-tickets');
   bindNavLink(btnBackups, '/backups');
   bindNavLink(btnLogs, '/logs');
   bindNavLink(btnSystem, '/system');
@@ -186,6 +195,7 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path: string): vo
   const isUsers = path === '/users' || path.startsWith('/users/');
   const isAds = path === '/ads' || path.startsWith('/ads/');
   const isSupport = path === '/support' || path.startsWith('/support/');
+  const isInternalTickets = path === '/internal-tickets' || path.startsWith('/internal-tickets/');
   const isBackups = path === '/backups' || path.startsWith('/backups/');
   const isLogs = path === '/logs' || path.startsWith('/logs/');
   const isSystem = path === '/system' || path.startsWith('/system/') || path === '/system-settings';
@@ -198,6 +208,8 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path: string): vo
   const btnAds = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-ads"]');
   const itemSupport = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-support"]');
   const btnSupport = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-support"]');
+  const itemInternalTickets = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-internal-tickets"]');
+  const btnInternalTickets = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-internal-tickets"]');
   const itemBackups = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-backups"]');
   const btnBackups = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-backups"]');
   const itemLogs = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-logs"]');
@@ -213,6 +225,8 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path: string): vo
   if (btnAds) btnAds.classList.toggle('is-active', isAds);
   if (itemSupport) itemSupport.classList.toggle('is-active', isSupport);
   if (btnSupport) btnSupport.classList.toggle('is-active', isSupport);
+  if (itemInternalTickets) itemInternalTickets.classList.toggle('is-active', isInternalTickets);
+  if (btnInternalTickets) btnInternalTickets.classList.toggle('is-active', isInternalTickets);
   if (itemBackups) itemBackups.classList.toggle('is-active', isBackups);
   if (btnBackups) btnBackups.classList.toggle('is-active', isBackups);
   if (itemLogs) itemLogs.classList.toggle('is-active', isLogs);
@@ -283,6 +297,7 @@ export async function createSidebar(): Promise<HTMLElement> {
   bindRailNav('btn-rail-users', 'rail-item-users', '/users');
   bindRailNav('btn-rail-ads', 'rail-item-ads', '/ads');
   bindRailNav('btn-rail-support', 'rail-item-support', '/support');
+  bindRailNav('btn-rail-internal-tickets', 'rail-item-internal-tickets', '/internal-tickets');
   bindRailNav('btn-rail-backups', 'rail-item-backups', '/backups');
   bindRailNav('btn-rail-logs', 'rail-item-logs', '/logs');
   bindRailNav('btn-rail-system', 'rail-item-system', '/system');
@@ -603,6 +618,8 @@ export async function createSidebar(): Promise<HTMLElement> {
       showPanel('main');
     });
 
+    const btnMenuReportIssue = avatarContainer.querySelector<HTMLElement>('[data-ref="btn-menu-report-issue"]');
+
     btnMenuSettings?.addEventListener('click', (e) => {
       e.preventDefault();
       closeMenu();
@@ -610,6 +627,21 @@ export async function createSidebar(): Promise<HTMLElement> {
         toggleDrawer(false);
       }
       navigate('/settings/your-account');
+    });
+
+    btnMenuReportIssue?.addEventListener('click', (e) => {
+      e.preventDefault();
+      closeMenu();
+      if (window.innerWidth <= 768) {
+        toggleDrawer(false);
+      }
+      openCreateInternalTicketModal({
+        onSuccess: () => {
+          if (window.location.pathname === '/internal-tickets') {
+            void render();
+          }
+        },
+      });
     });
 
     btnLogout?.addEventListener('click', async (e) => {

@@ -6,6 +6,7 @@ import avatarRoutes from './avatar.routes.js';
 import backupRoutes from './backup.routes.js';
 import configRoutes from './config.routes.js';
 import dashboardRoutes from './dashboard.routes.js';
+import internalTicketRoutes from './internal-ticket.routes.js';
 import logRoutes from './log.routes.js';
 import settingsRoutes from './settings.routes.js';
 import supportRoutes from './support.routes.js';
@@ -22,8 +23,10 @@ apiRouter.use('/', settingsRoutes);
 apiRouter.use('/ads', adRoutes);
 apiRouter.use('/backups', backupRoutes);
 apiRouter.use('/dashboard', dashboardRoutes);
+apiRouter.use('/internal-tickets', internalTicketRoutes);
 apiRouter.use('/logs', logRoutes);
 apiRouter.use('/support', supportRoutes);
 apiRouter.use('/users', userRoutes);
 
 export default apiRouter;
+

@@ -3,6 +3,7 @@ export const SKELETON_ROUTES: Record<string, string> = {
   '/ads': 'table-layout',
   '/backups': 'table-layout',
   '/dashboard': 'dashboard-layout',
+  '/internal-tickets': 'table-layout',
   '/login': 'centered-form',
   '/logs': 'table-layout',
   '/logs/viewer': 'dashboard-layout',
@@ -26,6 +27,7 @@ export function getSkeletonForUrl(pathname: string, onlyBottom = false): string 
     pathname === '/ads' ||
     pathname.startsWith('/ads') ||
     pathname.startsWith('/support') ||
+    pathname.startsWith('/internal-tickets') ||
     pathname === '/backups' ||
     pathname === '/logs' ||
     /^\/users\/[0-9a-zA-Z-]+\/sanctions$/.test(pathname)

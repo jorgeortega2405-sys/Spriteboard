@@ -11,8 +11,10 @@ import { getHealth } from './controllers/config.controller.js';
 import apiRouter from './routes/api.routes.js';
 import { COOKIE_NAME, isSessionRevoked, verifyMultiAccountToken } from './services/auth.service.js';
 import { ensureBackupTable } from './services/backup.service.js';
+import { InternalTicketService } from './services/internal-ticket.service.js';
 import { logger } from './services/logger.service.js';
 import { ensureServerConfigTable } from './services/server-config.service.js';
+
 
 function parseCookieHeader(cookieHeader?: string): Record<string, string> {
   if (!cookieHeader) return {};
@@ -103,6 +105,7 @@ async function startServer() {
     await checkDbConnection();
     await ensureServerConfigTable();
     await ensureBackupTable();
+    await InternalTicketService.ensureInternalTicketsTables();
     await checkRedisConnection();
 
     const server = http.createServer(app);
