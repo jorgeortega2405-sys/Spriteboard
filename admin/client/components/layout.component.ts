@@ -78,6 +78,7 @@ function populateDrawerContent(drawer: HTMLElement): void {
 
   const isDashboard = currentPath === '/' || currentPath === '' || currentPath === '/dashboard';
   const isUsers = currentPath === '/users' || currentPath.startsWith('/users/');
+  const isAds = currentPath === '/ads' || currentPath.startsWith('/ads/');
   const isSupport = currentPath === '/support' || currentPath.startsWith('/support/');
   const isBackups = currentPath === '/backups' || currentPath.startsWith('/backups/');
   const isLogs = currentPath === '/logs' || currentPath.startsWith('/logs/');
@@ -94,6 +95,10 @@ function populateDrawerContent(drawer: HTMLElement): void {
     <button type="button" class="menu-item${isUsers ? ' is-active' : ''}" data-ref="btn-drawer-users">
       <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#group"></use></svg>
       <span class="menu-item__text">Gestionar Usuarios</span>
+    </button>
+    <button type="button" class="menu-item${isAds ? ' is-active' : ''}" data-ref="btn-drawer-ads">
+      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#campaign"></use></svg>
+      <span class="menu-item__text">Gestión de Anuncios</span>
     </button>
     <button type="button" class="menu-item${isSupport ? ' is-active' : ''}" data-ref="btn-drawer-support">
       <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#chat_bubble"></use></svg>
@@ -115,6 +120,7 @@ function populateDrawerContent(drawer: HTMLElement): void {
 
   const btnDashboard = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-dashboard"]');
   const btnUsers = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-users"]');
+  const btnAds = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-ads"]');
   const btnSupport = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-support"]');
   const btnBackups = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-backups"]');
   const btnLogs = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-logs"]');
@@ -122,6 +128,7 @@ function populateDrawerContent(drawer: HTMLElement): void {
 
   bindNavLink(btnDashboard, '/dashboard');
   bindNavLink(btnUsers, '/users');
+  bindNavLink(btnAds, '/ads');
   bindNavLink(btnSupport, '/support');
   bindNavLink(btnBackups, '/backups');
   bindNavLink(btnLogs, '/logs');
@@ -177,6 +184,7 @@ export function toggleDrawer(forceState?: boolean): void {
 export function updateSidebarActiveState(sidebar: HTMLElement, path: string): void {
   const isDashboard = path === '/' || path === '' || path === '/dashboard';
   const isUsers = path === '/users' || path.startsWith('/users/');
+  const isAds = path === '/ads' || path.startsWith('/ads/');
   const isSupport = path === '/support' || path.startsWith('/support/');
   const isBackups = path === '/backups' || path.startsWith('/backups/');
   const isLogs = path === '/logs' || path.startsWith('/logs/');
@@ -186,6 +194,8 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path: string): vo
   const btnDashboard = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-dashboard"]');
   const itemUsers = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-users"]');
   const btnUsers = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-users"]');
+  const itemAds = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-ads"]');
+  const btnAds = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-ads"]');
   const itemSupport = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-support"]');
   const btnSupport = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-support"]');
   const itemBackups = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-backups"]');
@@ -199,6 +209,8 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path: string): vo
   if (btnDashboard) btnDashboard.classList.toggle('is-active', isDashboard);
   if (itemUsers) itemUsers.classList.toggle('is-active', isUsers);
   if (btnUsers) btnUsers.classList.toggle('is-active', isUsers);
+  if (itemAds) itemAds.classList.toggle('is-active', isAds);
+  if (btnAds) btnAds.classList.toggle('is-active', isAds);
   if (itemSupport) itemSupport.classList.toggle('is-active', isSupport);
   if (btnSupport) btnSupport.classList.toggle('is-active', isSupport);
   if (itemBackups) itemBackups.classList.toggle('is-active', isBackups);
@@ -269,6 +281,7 @@ export async function createSidebar(): Promise<HTMLElement> {
 
   bindRailNav('btn-rail-dashboard', 'rail-item-dashboard', '/dashboard');
   bindRailNav('btn-rail-users', 'rail-item-users', '/users');
+  bindRailNav('btn-rail-ads', 'rail-item-ads', '/ads');
   bindRailNav('btn-rail-support', 'rail-item-support', '/support');
   bindRailNav('btn-rail-backups', 'rail-item-backups', '/backups');
   bindRailNav('btn-rail-logs', 'rail-item-logs', '/logs');

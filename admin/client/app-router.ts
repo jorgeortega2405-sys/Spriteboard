@@ -76,6 +76,9 @@ export async function render(): Promise<void> {
     } else if (path === '/users') {
       const { createUsersView } = await import('./views/users.view.js');
       viewElement = await createUsersView();
+    } else if (path === '/ads' || path.startsWith('/ads/')) {
+      const { createAdsView } = await import('./views/ads.view.js');
+      viewElement = await createAdsView();
     } else if (path === '/support' || /^\/support\/([0-9a-zA-Z-]+)$/.test(path)) {
       const match = path.match(/^\/support\/([0-9a-zA-Z-]+)$/);
       const ticketParam = match ? match[1] : undefined;

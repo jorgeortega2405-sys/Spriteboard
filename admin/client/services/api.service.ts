@@ -1,9 +1,18 @@
+import { AdRowData, AdvertiserRowData } from '../types/ad.types.js';
 import { isUserAdmin, SessionAccount, UserPayload } from '../types/auth.types.js';
 import { BackupCreatePayload, BackupRecord, BackupScheduleConfig, BackupSchedulePayload, BackupTargetOptions } from '../types/backup.types.js';
 import { DashboardStatsResponse } from '../types/dashboard.types.js';
 import { LogFileContent, LogFileRecord } from '../types/log.types.js';
 
 export const API_ROUTES = {
+  ads: {
+    advertiserAds: (id: number | string) => `/api/ads/advertisers/${id}/ads`,
+    advertiserById: (id: number | string) => `/api/ads/advertisers/${id}`,
+    advertisers: '/api/ads/advertisers',
+    itemById: (id: number | string) => `/api/ads/items/${id}`,
+    itemStatus: (id: number | string) => `/api/ads/items/${id}/status`,
+    public: '/api/ads/public',
+  },
   auth: {
     login: '/api/login',
     logout: '/api/logout',
@@ -962,6 +971,185 @@ export async function getDashboardStatsApi(): Promise<{
     return { error: data.error || 'Error al cargar estadísticas del dashboard.', ok: false };
   } catch {
     return { error: 'Error de conexión al cargar estadísticas del dashboard.', ok: false };
+  }
+}
+
+export async function getAdvertisersApi(params: {
+  limit?: number;
+  page?: number;
+  search?: string;
+  status?: string;
+  type?: string;
+} = {}): Promise<{
+  advertisers?: AdvertiserRowData[];
+  error?: string;
+  ok: boolean;
+  pagination?: { limit: number; page: number; total: number; totalPages: number };
+}> {
+  try {
+    const q = new URLSearchParams();
+    if (params.page) q.set('page', String(params.page));
+    if (params.limit) q.set('limit', String(params.limit));
+    if (params.search) q.set('search', params.search);
+    if (params.type && params.type !== 'all') q.set('type', params.type);
+    if (params.status && params.status !== 'all') q.set('status', params.status);
+    const qs = q.toString() ? `?${q.toString()}` : '';
+    const res = await getApi(`${API_ROUTES.ads.advertisers}${qs}`);
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.ok) {
+      return { advertisers: data.advertisers, ok: true, pagination: data.pagination };
+    }
+    return { error: data.error || 'Error al obtener anunciantes.', ok: false };
+  } catch {
+    return { error: 'Error de conexión al cargar anunciantes.', ok: false };
+  }
+}
+
+export async function createAdvertiserApi(dto: {
+  contact_email?: string | null;
+  name: string;
+  notes?: string | null;
+  provider_name?: string | null;
+  status?: string;
+  type: string;
+  website?: string | null;
+}): Promise<{ advertiser?: AdvertiserRowData; error?: string; ok: boolean }> {
+  try {
+    const res = await postApi(API_ROUTES.ads.advertisers, dto);
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.ok) {
+      return { advertiser: data.advertiser, ok: true };
+    }
+    return { error: data.error || 'Error al crear anunciante.', ok: false };
+  } catch {
+    return { error: 'Error de conexión al crear anunciante.', ok: false };
+  }
+}
+
+export async function updateAdvertiserApi(id: number | string, dto: {
+  contact_email?: string | null;
+  name?: string;
+  notes?: string | null;
+  provider_name?: string | null;
+  status?: string;
+  type?: string;
+  website?: string | null;
+}): Promise<{ advertiser?: AdvertiserRowData; error?: string; ok: boolean }> {
+  try {
+    const res = await putApi(API_ROUTES.ads.advertiserById(id), dto);
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.ok) {
+      return { advertiser: data.advertiser, ok: true };
+    }
+    return { error: data.error || 'Error al actualizar anunciante.', ok: false };
+  } catch {
+    return { error: 'Error de conexión al actualizar anunciante.', ok: false };
+  }
+}
+
+export async function deleteAdvertiserApi(id: number | string): Promise<{ error?: string; ok: boolean }> {
+  try {
+    const res = await deleteApi(API_ROUTES.ads.advertiserById(id));
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.ok) {
+      return { ok: true };
+    }
+    return { error: data.error || 'Error al eliminar anunciante.', ok: false };
+  } catch {
+    return { error: 'Error de conexión al eliminar anunciante.', ok: false };
+  }
+}
+
+export async function getAdvertiserAdsApi(advertiserId: number | string): Promise<{
+  ads?: AdRowData[];
+  error?: string;
+  ok: boolean;
+}> {
+  try {
+    const res = await getApi(API_ROUTES.ads.advertiserAds(advertiserId));
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.ok) {
+      return { ads: data.ads, ok: true };
+    }
+    return { error: data.error || 'Error al obtener anuncios del anunciante.', ok: false };
+  } catch {
+    return { error: 'Error de conexión al cargar anuncios.', ok: false };
+  }
+}
+
+export async function createAdApi(advertiserId: number | string, dto: {
+  badge_text?: string;
+  description?: string | null;
+  frequency?: number;
+  image_url: string;
+  placements?: string;
+  priority?: string;
+  status?: string;
+  target_url: string;
+  title: string;
+}): Promise<{ ad?: AdRowData; error?: string; ok: boolean }> {
+  try {
+    const res = await postApi(API_ROUTES.ads.advertiserAds(advertiserId), dto);
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.ok) {
+      return { ad: data.ad, ok: true };
+    }
+    return { error: data.error || 'Error al crear anuncio.', ok: false };
+  } catch {
+    return { error: 'Error de conexión al crear anuncio.', ok: false };
+  }
+}
+
+export async function updateAdApi(id: number | string, dto: {
+  badge_text?: string;
+  description?: string | null;
+  frequency?: number;
+  image_url?: string;
+  placements?: string;
+  priority?: string;
+  status?: string;
+  target_url?: string;
+  title?: string;
+}): Promise<{ ad?: AdRowData; error?: string; ok: boolean }> {
+  try {
+    const res = await putApi(API_ROUTES.ads.itemById(id), dto);
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.ok) {
+      return { ad: data.ad, ok: true };
+    }
+    return { error: data.error || 'Error al actualizar anuncio.', ok: false };
+  } catch {
+    return { error: 'Error de conexión al actualizar anuncio.', ok: false };
+  }
+}
+
+export async function deleteAdApi(id: number | string): Promise<{ error?: string; ok: boolean }> {
+  try {
+    const res = await deleteApi(API_ROUTES.ads.itemById(id));
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.ok) {
+      return { ok: true };
+    }
+    return { error: data.error || 'Error al eliminar anuncio.', ok: false };
+  } catch {
+    return { error: 'Error de conexión al eliminar anuncio.', ok: false };
+  }
+}
+
+export async function toggleAdStatusApi(id: number | string, status?: string): Promise<{
+  ad?: AdRowData;
+  error?: string;
+  ok: boolean;
+}> {
+  try {
+    const res = await patchApi(API_ROUTES.ads.itemStatus(id), status ? { status } : {});
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.ok) {
+      return { ad: data.ad, ok: true };
+    }
+    return { error: data.error || 'Error al cambiar estado del anuncio.', ok: false };
+  } catch {
+    return { error: 'Error de conexión al actualizar estado del anuncio.', ok: false };
   }
 }
 

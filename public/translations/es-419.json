@@ -887,5 +887,10 @@
     "thread_delete_confirm": "¿Estás seguro de que deseas eliminar este comentario?",
     "thread_resolve": "Resolver",
     "thread_reopen": "Reabrir"
+  },
+  "ads": {
+    "badge": "AD",
+    "sponsored": "Patrocinado",
+    "visit_link": "Visitar enlace"
   }
 }

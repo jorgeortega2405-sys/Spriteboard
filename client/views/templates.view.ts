@@ -2,6 +2,7 @@ import { openCreateCanvasModal } from '../components/create-canvas-modal.compone
 import { createSidebar } from '../components/layout.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { ALL_PRESETS, PresetItem, TEMPLATE_CATEGORIES } from '../config/templates.config.js';
+import { buildAdCardHtml, DEFAULT_AD_FREQUENCY, getAdByIndex, handleAdClick, shouldShowAds } from '../services/ad.service.js';
 import { currentUser, escapeHtml, getApi, postApi } from '../services/api.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
@@ -194,6 +195,18 @@ class TemplatesController {
       'click',
       (e) => {
         const target = e.target as HTMLElement;
+        const adCard = target.closest<HTMLElement>('[data-ad-url]');
+        if (adCard) {
+          if (target.closest('a')) return;
+          const adUrl = adCard.getAttribute('data-ad-url');
+          if (adUrl) {
+            e.preventDefault();
+            e.stopPropagation();
+            handleAdClick(adUrl);
+          }
+          return;
+        }
+
         const bookmarkBtn = target.closest<HTMLButtonElement>('[data-bookmark-preset]');
         if (bookmarkBtn) {
           e.stopPropagation();
@@ -310,8 +323,17 @@ class TemplatesController {
 
     this.isRenderingBatch = true;
     const batch = this.currentTemplates.slice(this.renderedCount, this.renderedCount + BATCH_SIZE);
-    const html = batch.map((item) => this.buildCardHtml(item)).join('');
-    this.gridEl.insertAdjacentHTML('beforeend', html);
+    const htmlChunks: string[] = [];
+    batch.forEach((item, index) => {
+      htmlChunks.push(this.buildCardHtml(item));
+      const overallIndex = this.renderedCount + index + 1;
+      if (shouldShowAds() && overallIndex % DEFAULT_AD_FREQUENCY === 0) {
+        const adIndex = Math.floor(overallIndex / DEFAULT_AD_FREQUENCY) - 1;
+        const ad = getAdByIndex(adIndex);
+        htmlChunks.push(buildAdCardHtml(ad));
+      }
+    });
+    this.gridEl.insertAdjacentHTML('beforeend', htmlChunks.join(''));
     this.renderedCount += batch.length;
 
     setupLazyImages(this.gridEl);
