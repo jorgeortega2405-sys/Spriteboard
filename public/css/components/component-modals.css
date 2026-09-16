@@ -1842,12 +1842,21 @@ body.modal-open {
     rgba(0, 0, 0, 0.04) 96%,
     rgba(0, 0, 0, 0) 100%
   );
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--sl-transition-normal), visibility var(--sl-transition-normal);
 }
 
-html[data-theme="dark"] .chat-gradient-backdrop,
-html.dark-theme .chat-gradient-backdrop {
+.chat-panel.is-empty .chat-gradient-backdrop {
+  opacity: 1;
+  visibility: visible;
+}
+
+html[data-theme="dark"] .chat-panel.is-empty .chat-gradient-backdrop,
+html.dark-theme .chat-panel.is-empty .chat-gradient-backdrop {
   opacity: 0.38;
 }
+
 
 /* 1. Sección Superior (Top): Historial a la izquierda y Cerrar a la derecha */
 .chat-panel__top {
@@ -2298,6 +2307,136 @@ html.dark-theme .chat-empty-state__icon {
   opacity: 0.7;
 }
 
+/* 4. Sección de Historial de Soporte Técnico (Cassandra NoSQL) */
+.chat-history-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.chat-history-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 2px 8px;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 4px;
+}
+
+.chat-history-header__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.chat-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.chat-history-card {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  cursor: pointer;
+  text-align: left;
+  transition: all var(--sl-transition-fast);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.chat-history-card:hover {
+  background-color: var(--bg-hover);
+  border-color: var(--action-primary);
+  transform: translateY(-1px);
+}
+
+.chat-history-card.is-active {
+  border-color: var(--action-primary);
+  background-color: rgba(99, 102, 241, 0.04);
+}
+
+.chat-history-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+}
+
+.chat-history-card__num {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 0.2px;
+}
+
+.chat-history-card__date {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+.chat-history-card__subject {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-history-card__preview {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-history-card__bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 2px;
+}
+
+.chat-history-card__agent {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.chat-history-closed-notice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  text-align: center;
+  background-color: var(--bg-hover);
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-md);
+  margin-top: 6px;
+}
+
+.chat-history-closed-notice p {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin: 0;
+}
 
 /* Reglas responsive para dispositivos móviles */
 @media (max-width: 768px) {

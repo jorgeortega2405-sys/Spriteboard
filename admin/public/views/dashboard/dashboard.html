@@ -1,81 +1,226 @@
 <div class="layout-content" data-ref="admin-dashboard-view">
-  <div class="component-wrapper component-wrapper--full view-wrapper" data-ref="dashboard-wrapper">
-    <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="dashboard-scrollable">
-      <div class="view-body" data-ref="dashboard-container">
-        <div class="view-backdrop" data-ref="dashboard-backdrop"></div>
-        <div class="view-header" data-ref="dashboard-header">
-          <div class="view-header__left" data-ref="dashboard-header-left">
-            <h1 class="view-header__title" data-ref="dashboard-title">Dashboard</h1>
-          </div>
+  <div class="component-wrapper component-wrapper--full home-wrapper view-wrapper" data-ref="dashboard-wrapper">
+    <div class="component-bottom component-bottom--no-padding" data-ref="component-bottom">
+
+      <!-- Standard Top Floating Bar (Title on Left, Buttons/Actions on Right) -->
+      <div class="home-floating-top" data-ref="component-top">
+        <div class="home-floating-top__left" data-ref="component-top-left">
+          <h1 class="section-floating-title" data-ref="dashboard-title">Dashboard</h1>
         </div>
 
-        <div class="view-hero" data-ref="dashboard-hero">
-          <div class="view-hero__content" style="max-width: 880px; margin: 0 auto; padding: 24px 20px;">
-            <div class="admin-welcome-card" data-ref="admin-welcome-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 32px 24px; box-shadow: var(--shadow-sm); text-align: center; margin-bottom: 24px;">
-              <div class="admin-avatar-badge" data-ref="admin-avatar-badge" style="display: inline-flex; align-items: center; justify-content: center; width: 64px; height: 64px; border-radius: 50%; background: var(--bg-card-subtle); border: 1px solid var(--border-color); margin-bottom: 16px;">
-                <svg class="component-icon" style="width: 32px; height: 32px; color: var(--color-brand, #ea580c);" aria-hidden="true"><use href="/icons.svg#dashboard"></use></svg>
-              </div>
-
-              <h1 class="view-hero__title" data-ref="admin-welcome-title" style="margin-bottom: 8px; font-size: 28px;">
-                Hola <span data-ref="admin-user-name" style="color: var(--color-brand, #ea580c);"></span>
-              </h1>
-              <p class="card__subtitle" data-ref="admin-welcome-subtitle" style="margin-bottom: 24px; color: var(--text-secondary);">
-                Bienvenido al centro de administración de Spriteboard.
-              </p>
-
-              <div class="admin-roles-container" data-ref="admin-roles-container" style="text-align: left; background: var(--bg-card-subtle); border-radius: var(--radius-md, 12px); padding: 20px; border: 1px solid var(--border-color-subtle, var(--border-color));">
-                <div class="admin-roles-header" data-ref="admin-roles-header" style="display: flex; align-items: center; gap: 8px; margin-bottom: 14px;">
-                  <svg class="component-icon" style="width: 20px; height: 20px; color: var(--text-secondary);" aria-hidden="true"><use href="/icons.svg#shield"></use></svg>
-                  <span style="font-weight: 600; font-size: 15px; color: var(--text-primary);">Tus roles asignados:</span>
-                </div>
-                <div class="admin-roles-badges" data-ref="admin-roles-list" style="display: flex; flex-wrap: wrap; gap: 8px;">
-                </div>
-              </div>
+        <div class="home-floating-top__right" data-ref="component-top-right">
+          <div class="home-floating-actions" data-ref="dashboard-default-actions" style="display: flex; align-items: center; gap: 8px;">
+            <div class="component-badge component-badge--status component-badge--success" data-ref="system-status-indicator" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; font-size: 12px; font-weight: 600; border-radius: var(--sl-border-radius-pill, 9999px); background: rgba(16, 185, 129, 0.12); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.25);">
+              <span style="width: 7px; height: 7px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
+              <span>Sistema Operacional</span>
             </div>
 
-            <div class="dashboard-quick-grid" data-ref="dashboard-quick-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px;">
-              <button type="button" class="component-button component-button--bordered" data-ref="card-nav-users" style="display: flex; flex-direction: column; align-items: flex-start; padding: 20px; height: auto; border-radius: var(--radius-lg, 16px); background: var(--bg-card); gap: 10px; text-align: left;">
-                <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-                  <div style="width: 40px; height: 40px; border-radius: 10px; background: var(--bg-card-subtle); display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
-                    <svg class="component-icon" style="width: 22px; height: 22px; color: var(--color-brand, #ea580c);" aria-hidden="true"><use href="/icons.svg#group"></use></svg>
-                  </div>
-                  <svg class="component-icon" style="width: 18px; height: 18px; color: var(--text-tertiary);" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
-                </div>
-                <div>
-                  <div style="font-weight: 600; font-size: 15px; color: var(--text-primary);">Gestionar Usuarios</div>
-                  <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">Cuentas, roles y permisos administrativos</div>
-                </div>
-              </button>
-
-              <button type="button" class="component-button component-button--bordered" data-ref="card-nav-backups" style="display: flex; flex-direction: column; align-items: flex-start; padding: 20px; height: auto; border-radius: var(--radius-lg, 16px); background: var(--bg-card); gap: 10px; text-align: left;">
-                <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-                  <div style="width: 40px; height: 40px; border-radius: 10px; background: var(--bg-card-subtle); display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
-                    <svg class="component-icon" style="width: 22px; height: 22px; color: #10b981;" aria-hidden="true"><use href="/icons.svg#cloud_upload"></use></svg>
-                  </div>
-                  <svg class="component-icon" style="width: 18px; height: 18px; color: var(--text-tertiary);" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
-                </div>
-                <div>
-                  <div style="font-weight: 600; font-size: 15px; color: var(--text-primary);">Copias de Seguridad</div>
-                  <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">Snapshots de bases de datos y restauración</div>
-                </div>
-              </button>
-
-              <button type="button" class="component-button component-button--bordered" data-ref="card-nav-system" style="display: flex; flex-direction: column; align-items: flex-start; padding: 20px; height: auto; border-radius: var(--radius-lg, 16px); background: var(--bg-card); gap: 10px; text-align: left;">
-                <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-                  <div style="width: 40px; height: 40px; border-radius: 10px; background: var(--bg-card-subtle); display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
-                    <svg class="component-icon" style="width: 22px; height: 22px; color: #f59e0b;" aria-hidden="true"><use href="/icons.svg#settings"></use></svg>
-                  </div>
-                  <svg class="component-icon" style="width: 18px; height: 18px; color: var(--text-tertiary);" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
-                </div>
-                <div>
-                  <div style="font-weight: 600; font-size: 15px; color: var(--text-primary);">Configuración del Sistema</div>
-                  <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">Parámetros globales y estado del servidor</div>
-                </div>
-              </button>
-            </div>
+            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-refresh-stats" data-tooltip="Actualizar estadísticas" aria-label="Actualizar estadísticas">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
+            </button>
           </div>
         </div>
       </div>
+
+      <!-- Dashboard Scrollable Body -->
+      <div class="component-table-wrapper" data-ref="dashboard-body-wrapper" style="display: flex; flex-direction: column; height: 100%; overflow-y: auto; overflow-x: hidden;">
+        <div class="dashboard-content-container" data-ref="dashboard-content-container" style="width: 100%; box-sizing: border-box; padding: 20px 24px 60px;">
+
+          <!-- 4 Metric Cards Grid -->
+          <div class="dashboard-stats-grid" data-ref="dashboard-stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; margin-bottom: 20px; width: 100%;">
+            <!-- Card 1: Cuentas Creadas Hoy -->
+            <div class="dashboard-stat-card" data-ref="card-stat-accounts" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Cuentas Hoy</span>
+                <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(59, 130, 246, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(59, 130, 246, 0.25);">
+                  <svg class="component-icon" style="width: 18px; height: 18px; color: #3b82f6;" aria-hidden="true"><use href="/icons.svg#group"></use></svg>
+                </div>
+              </div>
+              <div>
+                <div class="stat-card-value" data-ref="stat-accounts-today" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">-</div>
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
+                  <span data-ref="stat-accounts-total" style="font-size: 12px; color: var(--text-secondary);">Total: - usuarios</span>
+                  <span class="stat-trend-badge" data-ref="stat-accounts-trend" style="font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 6px; background: var(--bg-card-subtle); color: var(--text-secondary);">--</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card 2: Lienzos Creados Hoy -->
+            <div class="dashboard-stat-card" data-ref="card-stat-canvases" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Lienzos Hoy</span>
+                <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(234, 88, 12, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(234, 88, 12, 0.25);">
+                  <svg class="component-icon" style="width: 18px; height: 18px; color: var(--color-brand, #ea580c);" aria-hidden="true"><use href="/icons.svg#palette"></use></svg>
+                </div>
+              </div>
+              <div>
+                <div class="stat-card-value" data-ref="stat-canvases-today" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">-</div>
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
+                  <span data-ref="stat-canvases-total" style="font-size: 12px; color: var(--text-secondary);">Total: - lienzos</span>
+                  <span class="stat-trend-badge" data-ref="stat-canvases-trend" style="font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 6px; background: var(--bg-card-subtle); color: var(--text-secondary);">--</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card 3: Tickets de Soporte Activos -->
+            <div class="dashboard-stat-card" data-ref="card-stat-tickets" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Tickets Activos</span>
+                <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(245, 158, 11, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(245, 158, 11, 0.25);">
+                  <svg class="component-icon" style="width: 18px; height: 18px; color: #f59e0b;" aria-hidden="true"><use href="/icons.svg#support_agent"></use></svg>
+                </div>
+              </div>
+              <div>
+                <div class="stat-card-value" data-ref="stat-tickets-active" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">-</div>
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
+                  <span data-ref="stat-tickets-resolved" style="font-size: 12px; color: var(--text-secondary);">- resueltos</span>
+                  <span class="stat-trend-badge" data-ref="stat-tickets-badge" style="font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 6px; background: rgba(245, 158, 11, 0.12); color: #f59e0b;">En atención</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card 4: Suscripciones Activas -->
+            <div class="dashboard-stat-card" data-ref="card-stat-subscribers" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Suscripciones Pro</span>
+                <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(16, 185, 129, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(16, 185, 129, 0.25);">
+                  <svg class="component-icon" style="width: 18px; height: 18px; color: #10b981;" aria-hidden="true"><use href="/icons.svg#card_membership"></use></svg>
+                </div>
+              </div>
+              <div>
+                <div class="stat-card-value" data-ref="stat-subscribers-active" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">-</div>
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
+                  <span data-ref="stat-subscribers-total" style="font-size: 12px; color: var(--text-secondary);">Planes activos</span>
+                  <span class="stat-trend-badge" data-ref="stat-subscribers-ratio" style="font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 6px; background: rgba(16, 185, 129, 0.12); color: #10b981;">Premium</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Interactive Charts Grid -->
+          <div class="dashboard-charts-grid" data-ref="dashboard-charts-grid" style="display: grid; grid-template-columns: 1fr; gap: 20px; margin-bottom: 20px; width: 100%;">
+
+            <!-- Chart 1: Time Series Area / Line Chart -->
+            <div class="dashboard-chart-card" data-ref="chart-card-trends" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 20px 22px; box-shadow: var(--shadow-sm); width: 100%; box-sizing: border-box;">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+                <div>
+                  <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 3px;">Crecimiento y Actividad de la Plataforma</h3>
+                  <p style="font-size: 12px; color: var(--text-secondary); margin: 0;">Nuevos usuarios vs creación de lienzos en los últimos 14 días.</p>
+                </div>
+                <div style="display: flex; align-items: center; gap: 14px;">
+                  <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary);">
+                    <span style="width: 9px; height: 9px; border-radius: 3px; background: #3b82f6; display: inline-block;"></span>
+                    <span>Nuevos Usuarios</span>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary);">
+                    <span style="width: 9px; height: 9px; border-radius: 3px; background: #ea580c; display: inline-block;"></span>
+                    <span>Lienzos Creados</span>
+                  </div>
+                </div>
+              </div>
+              <div class="dashboard-chart-wrapper" data-ref="wrapper-chart-trends" style="position: relative; width: 100%; height: 280px;">
+                <canvas class="dashboard-chart-canvas" data-ref="canvas-chart-trends" style="width: 100%; height: 100%;"></canvas>
+              </div>
+            </div>
+
+            <!-- Chart Row 2 (2 Columns: Subscription Distribution & Support Tickets Breakdown) -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; width: 100%;">
+
+              <!-- Chart 2: Subscription Distribution (Doughnut) -->
+              <div class="dashboard-chart-card" data-ref="chart-card-tiers" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 20px 22px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+                <div style="margin-bottom: 12px;">
+                  <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 3px;">Distribución de Planes</h3>
+                  <p style="font-size: 12px; color: var(--text-secondary); margin: 0;">Usuarios clasificados por nivel de suscripción actual.</p>
+                </div>
+                <div class="dashboard-chart-wrapper" data-ref="wrapper-chart-tiers" style="position: relative; width: 100%; height: 200px; display: flex; align-items: center; justify-content: center;">
+                  <canvas class="dashboard-chart-canvas" data-ref="canvas-chart-tiers" style="width: 100%; height: 100%;"></canvas>
+                </div>
+                <div class="dashboard-tier-legend" data-ref="dashboard-tier-legend" style="display: flex; justify-content: space-around; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-color-subtle, var(--border-color));">
+                  <div style="text-align: center;">
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; color: var(--text-secondary); margin-bottom: 2px;">
+                      <span style="width: 8px; height: 8px; border-radius: 50%; background: #64748b; display: inline-block;"></span>
+                      <span>Free</span>
+                    </div>
+                    <div data-ref="tier-count-free" style="font-size: 15px; font-weight: 700; color: var(--text-primary);">-</div>
+                  </div>
+                  <div style="text-align: center;">
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; color: var(--text-secondary); margin-bottom: 2px;">
+                      <span style="width: 8px; height: 8px; border-radius: 50%; background: #3b82f6; display: inline-block;"></span>
+                      <span>Pro</span>
+                    </div>
+                    <div data-ref="tier-count-pro" style="font-size: 15px; font-weight: 700; color: var(--text-primary);">-</div>
+                  </div>
+                  <div style="text-align: center;">
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; color: var(--text-secondary); margin-bottom: 2px;">
+                      <span style="width: 8px; height: 8px; border-radius: 50%; background: #ea580c; display: inline-block;"></span>
+                      <span>Business</span>
+                    </div>
+                    <div data-ref="tier-count-business" style="font-size: 15px; font-weight: 700; color: var(--text-primary);">-</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Chart 3: Support Tickets Breakdown (Bar Chart) -->
+              <div class="dashboard-chart-card" data-ref="chart-card-tickets" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 20px 22px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+                <div style="margin-bottom: 12px;">
+                  <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 3px;">Estado de Tickets de Soporte</h3>
+                  <p style="font-size: 12px; color: var(--text-secondary); margin: 0;">Carga de trabajo y solicitudes de usuarios por estado.</p>
+                </div>
+                <div class="dashboard-chart-wrapper" data-ref="wrapper-chart-tickets" style="position: relative; width: 100%; height: 240px;">
+                  <canvas class="dashboard-chart-canvas" data-ref="canvas-chart-tickets" style="width: 100%; height: 100%;"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Access Navigation Section -->
+          <div class="dashboard-quick-section" data-ref="dashboard-quick-section" style="width: 100%;">
+            <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 12px;">Módulos de Gestión</h3>
+            <div class="dashboard-quick-grid" data-ref="dashboard-quick-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; width: 100%;">
+              <button type="button" class="component-button component-button--bordered" data-ref="card-nav-users" style="display: flex; flex-direction: column; align-items: flex-start; padding: 18px; height: auto; border-radius: var(--radius-lg, 16px); background: var(--bg-card); gap: 10px; text-align: left; box-sizing: border-box;">
+                <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                  <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(59, 130, 246, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(59, 130, 246, 0.25);">
+                    <svg class="component-icon" style="width: 20px; height: 20px; color: #3b82f6;" aria-hidden="true"><use href="/icons.svg#group"></use></svg>
+                  </div>
+                  <svg class="component-icon" style="width: 18px; height: 18px; color: var(--text-tertiary);" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+                </div>
+                <div>
+                  <div style="font-weight: 600; font-size: 14px; color: var(--text-primary);">Gestionar Usuarios</div>
+                  <div style="font-size: 12px; color: var(--text-secondary); margin-top: 3px;">Cuentas, roles y permisos administrativos</div>
+                </div>
+              </button>
+
+              <button type="button" class="component-button component-button--bordered" data-ref="card-nav-backups" style="display: flex; flex-direction: column; align-items: flex-start; padding: 18px; height: auto; border-radius: var(--radius-lg, 16px); background: var(--bg-card); gap: 10px; text-align: left; box-sizing: border-box;">
+                <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                  <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(16, 185, 129, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(16, 185, 129, 0.25);">
+                    <svg class="component-icon" style="width: 20px; height: 20px; color: #10b981;" aria-hidden="true"><use href="/icons.svg#cloud_upload"></use></svg>
+                  </div>
+                  <svg class="component-icon" style="width: 18px; height: 18px; color: var(--text-tertiary);" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+                </div>
+                <div>
+                  <div style="font-weight: 600; font-size: 14px; color: var(--text-primary);">Copias de Seguridad</div>
+                  <div style="font-size: 12px; color: var(--text-secondary); margin-top: 3px;">Snapshots de bases de datos y restauración</div>
+                </div>
+              </button>
+
+              <button type="button" class="component-button component-button--bordered" data-ref="card-nav-system" style="display: flex; flex-direction: column; align-items: flex-start; padding: 18px; height: auto; border-radius: var(--radius-lg, 16px); background: var(--bg-card); gap: 10px; text-align: left; box-sizing: border-box;">
+                <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                  <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(245, 158, 11, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(245, 158, 11, 0.25);">
+                    <svg class="component-icon" style="width: 20px; height: 20px; color: #f59e0b;" aria-hidden="true"><use href="/icons.svg#settings"></use></svg>
+                  </div>
+                  <svg class="component-icon" style="width: 18px; height: 18px; color: var(--text-tertiary);" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+                </div>
+                <div>
+                  <div style="font-weight: 600; font-size: 14px; color: var(--text-primary);">Configuración del Sistema</div>
+                  <div style="font-size: 12px; color: var(--text-secondary); margin-top: 3px;">Parámetros globales y estado del servidor</div>
+                </div>
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
     </div>
   </div>
 </div>

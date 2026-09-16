@@ -1,8 +1,9 @@
-import crypto from 'crypto';
-import mysql from 'mysql2/promise';
 import { pool } from '../config/database.config.js';
 import { redis } from '../config/redis.config.js';
 import { logger } from './logger.service.js';
+import { SupportCassandraService } from './support-cassandra.service.js';
+import crypto from 'crypto';
+import mysql from 'mysql2/promise';
 
 export interface SupportTicket {
   assigned_agent_id: number | null;
@@ -92,6 +93,11 @@ export class SupportService {
       logger.db.info(`Ticket de soporte creado: id=${ticketId}, number=${ticketNumber}, user_id=${userId}`);
       const createdTicket = await this.getTicketById(ticketId);
       if (createdTicket) {
+        await SupportCassandraService.saveConversation(createdTicket).catch(() => {});
+        const msgs = await this.getTicketMessages(ticketId);
+        for (const m of msgs) {
+          await SupportCassandraService.saveMessage(ticketId, m).catch(() => {});
+        }
         await redis.publish('support:events', JSON.stringify({
           broadcastToAgents: true,
           ticket: createdTicket,
@@ -230,6 +236,8 @@ export class SupportService {
       );
       const ticketOwnerId = tRows[0]?.user_id;
 
+      await SupportCassandraService.saveMessage(ticketId, newMsg).catch(() => {});
+
       await redis.publish('support:events', JSON.stringify({
         broadcastToAgents: true,
         message: newMsg,
@@ -260,6 +268,7 @@ export class SupportService {
 
         const updatedTicket = await this.getTicketById(ticketId);
         if (updatedTicket) {
+          await SupportCassandraService.saveConversation(updatedTicket).catch(() => {});
           await redis.publish('support:events', JSON.stringify({
             broadcastToAgents: true,
             targetUserId: userId,

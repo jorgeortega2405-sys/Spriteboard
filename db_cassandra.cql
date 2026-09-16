@@ -1,4 +1,4 @@
-﻿CREATE KEYSPACE IF NOT EXISTS spriteboard_telemetry
+CREATE KEYSPACE IF NOT EXISTS spriteboard_telemetry
 WITH replication = {
     'class': 'SimpleStrategy',
     'replication_factor': 1
@@ -80,3 +80,64 @@ CREATE TABLE IF NOT EXISTS spriteboard_telemetry.web_vitals (
     PRIMARY KEY ((bucket_day), created_at, id)
 ) WITH CLUSTERING ORDER BY (created_at DESC, id DESC)
   AND default_time_to_live = 2592000;
+
+CREATE KEYSPACE IF NOT EXISTS spriteboard_support
+WITH replication = {
+    'class': 'SimpleStrategy',
+    'replication_factor': 1
+};
+
+CREATE TABLE IF NOT EXISTS spriteboard_support.conversations_by_user (
+    user_id int,
+    created_at timestamp,
+    ticket_id int,
+    ticket_uuid text,
+    ticket_number text,
+    subject text,
+    description text,
+    status text,
+    priority text,
+    assigned_agent_id int,
+    assigned_agent_name text,
+    updated_at timestamp,
+    closed_at timestamp,
+    last_message text,
+    last_message_sender text,
+    last_message_at timestamp,
+    total_messages int,
+    PRIMARY KEY ((user_id), created_at, ticket_id)
+) WITH CLUSTERING ORDER BY (created_at DESC, ticket_id DESC);
+
+CREATE TABLE IF NOT EXISTS spriteboard_support.tickets_by_id (
+    ticket_id int,
+    user_id int,
+    ticket_uuid text,
+    ticket_number text,
+    subject text,
+    description text,
+    status text,
+    priority text,
+    assigned_agent_id int,
+    assigned_agent_name text,
+    created_at timestamp,
+    updated_at timestamp,
+    closed_at timestamp,
+    last_message text,
+    last_message_sender text,
+    last_message_at timestamp,
+    total_messages int,
+    PRIMARY KEY (ticket_id)
+);
+
+CREATE TABLE IF NOT EXISTS spriteboard_support.messages_by_ticket (
+    ticket_id int,
+    created_at timestamp,
+    id int,
+    sender_type text,
+    sender_id int,
+    sender_name text,
+    sender_avatar text,
+    message text,
+    PRIMARY KEY ((ticket_id), created_at, id)
+) WITH CLUSTERING ORDER BY (created_at ASC, id ASC);
+

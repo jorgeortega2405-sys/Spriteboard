@@ -2,20 +2,26 @@
   <div class="chat-panel" data-ref="chat-panel">
     <div class="chat-gradient-backdrop" data-ref="chat-gradient-backdrop"></div>
     <div class="chat-panel__top" data-ref="chat-panel-top">
-      <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-chat-history" data-i18n-tooltip="chat.history" aria-label="Historial de chats">
-        <span class="material-symbols-rounded">history</span>
+      <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-chat-history" data-i18n-tooltip="chat.history" aria-label="Historial de soporte">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#history"></use></svg>
       </button>
 
+      <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-chat-back" data-i18n-tooltip="chat.back_to_chat" aria-label="Volver al asistente" style="display: none;">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
+      </button>
+
+      <span class="chat-panel__title" data-ref="chat-panel-title" style="display: none;" data-i18n="chat.history_title">Historial de Soporte</span>
+
       <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-chat-close" data-i18n-tooltip="chat.close" aria-label="Cerrar chat">
-        <span class="material-symbols-rounded">close</span>
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
       </button>
     </div>
 
     <div class="chat-support-banner" data-ref="chat-support-banner" style="display: none; padding: 10px 14px; background-color: var(--bg-surface); border-bottom: 1px solid var(--border-color); z-index: 2; flex-direction: column; gap: 6px;">
       <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
         <div style="display: flex; align-items: center; gap: 6px;">
-          <span class="material-symbols-rounded" style="font-size: 18px; color: var(--action-primary);">support_agent</span>
-          <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);" data-ref="chat-support-ticket-num">Soporte Técnico</span>
+          <svg class="component-icon" style="width: 18px; height: 18px; color: var(--action-primary);" aria-hidden="true"><use href="/icons.svg#support_agent"></use></svg>
+          <span class="chat-support-title" data-ref="chat-support-ticket-num" style="font-size: 13px; font-weight: 600; color: var(--text-primary);">Soporte Técnico</span>
         </div>
         <button type="button" class="component-button component-button--ghost component-button--h24" data-ref="btn-chat-cancel-support" style="font-size: 11px; padding: 2px 8px; color: var(--text-tertiary);" aria-label="Finalizar soporte">
           Finalizar
@@ -25,7 +31,7 @@
         <div class="component-badge component-badge--info" data-ref="chat-support-status-pill" style="font-size: 11px; padding: 2px 8px; font-weight: 600;">
           En cola de espera
         </div>
-        <span style="font-size: 11px; color: var(--text-secondary);" data-ref="chat-support-wait-time">Buscando agente...</span>
+        <span class="chat-support-wait" data-ref="chat-support-wait-time" style="font-size: 11px; color: var(--text-secondary);">Buscando agente...</span>
       </div>
     </div>
 
@@ -36,16 +42,46 @@
           <p class="chat-empty-state__desc" data-i18n="chat.empty_desc">Respuestas rápidas con tecnología de IA</p>
         </div>
       </div>
+
+      <div class="chat-history-container" data-ref="chat-history-container" style="display: none;">
+        <div class="chat-history-list" data-ref="chat-history-list"></div>
+        <div class="chat-empty-state" data-ref="chat-history-empty-state" style="display: none;">
+          <div class="chat-empty-state__icon">
+            <svg class="component-icon" style="width: 24px; height: 24px;" aria-hidden="true"><use href="/icons.svg#support_agent"></use></svg>
+          </div>
+          <h3 class="chat-empty-state__title" data-i18n="chat.history_empty">No hay conversaciones previas con soporte.</h3>
+          <p class="chat-empty-state__desc" data-i18n="chat.history_empty_desc">Tus consultas y chats con agentes de soporte técnico se registrarán aquí.</p>
+        </div>
+      </div>
+
+      <div class="chat-ticket-detail" data-ref="chat-ticket-detail" style="display: none; width: 100%; flex-direction: column; gap: 8px;">
+        <div class="chat-history-header" data-ref="chat-ticket-header">
+          <button type="button" class="component-button component-button--ghost component-button--h28 component-button--icon-only" data-ref="btn-history-back-to-list" aria-label="Volver a la lista de tickets">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
+          </button>
+          <span class="chat-history-header__title" data-ref="chat-ticket-detail-title">Ticket #TK</span>
+          <div class="component-badge" data-ref="chat-ticket-detail-badge"></div>
+        </div>
+        <div class="chat-messages" data-ref="chat-ticket-messages"></div>
+        <div class="chat-history-closed-notice" data-ref="chat-ticket-closed-notice" style="display: none;">
+          <p data-i18n="chat.ticket_closed_notice">Esta consulta con soporte técnico ha finalizado.</p>
+          <button type="button" class="component-button component-button--primary component-button--h32" data-ref="btn-ticket-new-chat">
+            <span data-i18n="chat.new_conversation">Nueva consulta</span>
+          </button>
+        </div>
+      </div>
     </div>
 
     <div class="chat-panel__bottom" data-ref="chat-panel-bottom">
       <div class="chat-pill-input" data-ref="chat-input-box">
         <textarea class="chat-pill-input__field" data-ref="chat-input" data-i18n-placeholder="chat.input_placeholder" placeholder="Escribe un mensaje..." rows="1" maxlength="2000"></textarea>
         <button type="button" class="component-button component-button--icon-only chat-pill-input__btn" data-ref="btn-chat-send" data-i18n-tooltip="chat.send" aria-label="Enviar mensaje">
-          <span class="material-symbols-rounded">send</span>
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#send"></use></svg>
         </button>
       </div>
-      <p class="chat-disclaimer" data-i18n="chat.disclaimer">La IA puede cometer errores, verifica que la información sea correcta.</p>
+      <p class="chat-disclaimer" data-ref="chat-disclaimer" data-i18n="chat.disclaimer">La IA puede cometer errores, verifica que la información sea correcta.</p>
     </div>
   </div>
 </div>
+
+

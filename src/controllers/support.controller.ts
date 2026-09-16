@@ -1,5 +1,6 @@
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import { logger } from '../services/logger.service.js';
+import { SupportCassandraService } from '../services/support-cassandra.service.js';
 import { SupportService } from '../services/support.service.js';
 import { Request, Response } from 'express';
 
@@ -210,6 +211,76 @@ export class SupportController {
       });
     }
   }
+
+  static async getHistory(req: Request, res: Response): Promise<void> {
+    try {
+      const user = getCurrentUser(req);
+      if (!user) {
+        res.status(401).json({ success: false, error: 'Debes iniciar sesión para consultar el historial.' });
+        return;
+      }
+
+      let conversations = await SupportCassandraService.getUserConversations(user.id);
+      if (conversations.length === 0) {
+        await SupportCassandraService.syncFromDatabase().catch(() => {});
+        conversations = await SupportCassandraService.getUserConversations(user.id);
+      }
+
+      res.status(200).json({
+        conversations,
+        success: true,
+      });
+    } catch (error) {
+      logger.app.error('SupportController: Error al consultar historial de soporte en Cassandra', error);
+      res.status(500).json({
+        error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
+        success: false,
+      });
+    }
+  }
+
+  static async getHistoryTicket(req: Request, res: Response): Promise<void> {
+    try {
+      const user = getCurrentUser(req);
+      if (!user) {
+        res.status(401).json({ success: false, error: 'Debes iniciar sesión para consultar el ticket.' });
+        return;
+      }
+
+      const ticketId = Number(req.params.ticketId);
+      if (!ticketId) {
+        res.status(400).json({ success: false, error: 'Identificador de ticket no válido.' });
+        return;
+      }
+
+      let ticket = await SupportCassandraService.getConversationById(ticketId);
+      let messages = await SupportCassandraService.getTicketMessages(ticketId);
+
+      if (!ticket || messages.length === 0) {
+        await SupportCassandraService.syncFromDatabase().catch(() => {});
+        ticket = await SupportCassandraService.getConversationById(ticketId);
+        messages = await SupportCassandraService.getTicketMessages(ticketId);
+      }
+
+      if (!ticket || ticket.user_id !== user.id) {
+        res.status(404).json({ success: false, error: 'No se encontró la conversación de soporte solicitada.' });
+        return;
+      }
+
+      res.status(200).json({
+        messages,
+        success: true,
+        ticket,
+      });
+    } catch (error) {
+      logger.app.error('SupportController: Error al consultar detalle de ticket en Cassandra', error);
+      res.status(500).json({
+        error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
+        success: false,
+      });
+    }
+  }
 }
 
 export default SupportController;
+

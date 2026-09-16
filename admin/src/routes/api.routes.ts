@@ -2,6 +2,7 @@ import authRoutes from './auth.routes.js';
 import avatarRoutes from './avatar.routes.js';
 import backupRoutes from './backup.routes.js';
 import configRoutes from './config.routes.js';
+import dashboardRoutes from './dashboard.routes.js';
 import settingsRoutes from './settings.routes.js';
 import supportRoutes from './support.routes.js';
 import userRoutes from './user.routes.js';
@@ -17,8 +18,8 @@ apiRouter.use('/', authRoutes);
 apiRouter.use('/', avatarRoutes);
 apiRouter.use('/', settingsRoutes);
 apiRouter.use('/backups', backupRoutes);
+apiRouter.use('/dashboard', dashboardRoutes);
 apiRouter.use('/support', supportRoutes);
 apiRouter.use('/users', userRoutes);
 
 export default apiRouter;
-

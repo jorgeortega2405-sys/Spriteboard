@@ -12,6 +12,7 @@ import { geoIpService } from './services/geoip.service.js';
 import { logger } from './services/logger.service.js';
 import { ensureBucketExists } from './services/s3.service.js';
 import { ensureServerConfigTable } from './services/server-config.service.js';
+import { SupportCassandraService } from './services/support-cassandra.service.js';
 import { telemetryService } from './services/telemetry.service.js';
 import cookieParser from 'cookie-parser';
 import 'dotenv/config';
@@ -143,9 +144,15 @@ async function startServer() {
     await ensureBucketExists();
     await geoIpService.init();
 
-    void checkCassandraConnection().catch((err) => {
-      logger.db.warn('Cassandra aún no disponible; telemetría retenida en buffer.', err);
-    });
+    void checkCassandraConnection()
+      .then(() => {
+        SupportCassandraService.initRedisSubscriber();
+        void SupportCassandraService.syncFromDatabase();
+      })
+      .catch((err) => {
+        logger.db.warn('Cassandra aún no disponible; telemetría retenida en buffer.', err);
+      });
+
 
     const server = http.createServer(app);
     await setupClient(server);

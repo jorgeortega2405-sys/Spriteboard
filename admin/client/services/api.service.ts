@@ -1,5 +1,6 @@
 import { isUserAdmin, SessionAccount, UserPayload } from '../types/auth.types.js';
 import { BackupCreatePayload, BackupRecord, BackupTargetOptions } from '../types/backup.types.js';
+import { DashboardStatsResponse } from '../types/dashboard.types.js';
 
 export const API_ROUTES = {
   auth: {
@@ -19,6 +20,9 @@ export const API_ROUTES = {
   },
   config: '/api/config',
   csrfToken: '/api/csrf-token',
+  dashboard: {
+    stats: '/api/dashboard/stats',
+  },
   health: '/health',
   settings: {
     avatar: '/api/settings/avatar',
@@ -851,6 +855,22 @@ export async function deleteBackupApi(idOrUuid: number | string): Promise<{
   }
 }
 
+export async function getDashboardStatsApi(): Promise<{
+  error?: string;
+  ok: boolean;
+  stats?: DashboardStatsResponse;
+}> {
+  try {
+    const res = await getApi(API_ROUTES.dashboard.stats);
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.ok) {
+      return { ok: true, stats: data.stats };
+    }
+    return { error: data.error || 'Error al cargar estadísticas del dashboard.', ok: false };
+  } catch {
+    return { error: 'Error de conexión al cargar estadísticas del dashboard.', ok: false };
+  }
+}
 
 const templateCache = new Map<string, string>();
 

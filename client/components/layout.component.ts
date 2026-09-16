@@ -1736,29 +1736,36 @@ export async function createSidebar(): Promise<HTMLElement> {
 function setupChatSidebarEvents(sidebarElement: HTMLElement): void {
   const conversationHistory: Array<{ role: string; text: string }> = [];
   let activeTicket: any = null;
+  let currentViewingTicketId: number | null = null;
+  let currentView: 'chat' | 'history-list' | 'ticket-detail' = 'chat';
   let isAwaitingSupportReason = false;
   const renderedMessageIds = new Set<number>();
+  const renderedDetailMessageIds = new Set<number>();
 
   const btnClose = sidebarElement.querySelector<HTMLElement>('[data-ref="btn-chat-close"]');
-  btnClose?.addEventListener('click', (e) => {
-    e.preventDefault();
-    toggleChatSidebar(false);
-  });
-
   const btnHistory = sidebarElement.querySelector<HTMLElement>('[data-ref="btn-chat-history"]');
-  btnHistory?.addEventListener('click', (e) => {
-    e.preventDefault();
-    const emptyStateTitle = sidebarElement.querySelector<HTMLElement>('[data-ref="chat-empty-state"] h3');
-    const emptyStateDesc = sidebarElement.querySelector<HTMLElement>('[data-ref="chat-empty-state"] p');
-    if (emptyStateTitle && emptyStateDesc) {
-      emptyStateTitle.textContent = 'Historial de Chats';
-      emptyStateDesc.textContent = 'No hay conversaciones previas registradas.';
-    }
-  });
+  const btnBack = sidebarElement.querySelector<HTMLElement>('[data-ref="btn-chat-back"]');
+  const panelTitle = sidebarElement.querySelector<HTMLElement>('[data-ref="chat-panel-title"]');
+
+  const chatMessages = sidebarElement.querySelector<HTMLElement>('[data-ref="chat-messages"]');
+  const historyContainer = sidebarElement.querySelector<HTMLElement>('[data-ref="chat-history-container"]');
+  const historyList = sidebarElement.querySelector<HTMLElement>('[data-ref="chat-history-list"]');
+  const historyEmpty = sidebarElement.querySelector<HTMLElement>('[data-ref="chat-history-empty-state"]');
+
+  const ticketDetail = sidebarElement.querySelector<HTMLElement>('[data-ref="chat-ticket-detail"]');
+  const ticketDetailTitle = sidebarElement.querySelector<HTMLElement>('[data-ref="chat-ticket-detail-title"]');
+  const ticketDetailBadge = sidebarElement.querySelector<HTMLElement>('[data-ref="chat-ticket-detail-badge"]');
+  const ticketDetailMessages = sidebarElement.querySelector<HTMLElement>('[data-ref="chat-ticket-messages"]');
+  const ticketClosedNotice = sidebarElement.querySelector<HTMLElement>('[data-ref="chat-ticket-closed-notice"]');
+  const btnHistoryBackToList = sidebarElement.querySelector<HTMLElement>('[data-ref="btn-history-back-to-list"]');
+  const btnTicketNewChat = sidebarElement.querySelector<HTMLElement>('[data-ref="btn-ticket-new-chat"]');
 
   const chatInput = sidebarElement.querySelector<HTMLTextAreaElement>('[data-ref="chat-input"]');
   const chatInputBox = sidebarElement.querySelector<HTMLElement>('[data-ref="chat-input-box"]');
   const btnSend = sidebarElement.querySelector<HTMLButtonElement>('[data-ref="btn-chat-send"]');
+  const chatBottom = sidebarElement.querySelector<HTMLElement>('[data-ref="chat-panel-bottom"]');
+  const chatDisclaimer = sidebarElement.querySelector<HTMLElement>('[data-ref="chat-disclaimer"]');
+
   const bannerEl = sidebarElement.querySelector<HTMLElement>('[data-ref="chat-support-banner"]');
   const ticketNumEl = sidebarElement.querySelector<HTMLElement>('[data-ref="chat-support-ticket-num"]');
   const statusPillEl = sidebarElement.querySelector<HTMLElement>('[data-ref="chat-support-status-pill"]');
@@ -1784,6 +1791,308 @@ function setupChatSidebarEvents(sidebarElement: HTMLElement): void {
     <rect x="7" y="17" width="8" height="8" rx="2.5" fill="url(#sb-subtle-c)"/>
     <rect x="17" y="17" width="8" height="8" rx="2.5" fill="url(#sb-bright-c)"/>
   </svg>`;
+
+  function updateChatEmptyState(): void {
+    const emptyState = sidebarElement.querySelector<HTMLElement>('[data-ref="chat-empty-state"]');
+    const messages = sidebarElement.querySelectorAll('[data-ref="chat-messages"] .chat-message');
+    const chatPanel = sidebarElement.querySelector<HTMLElement>('[data-ref="chat-panel"]');
+    const hasMessages = messages.length > 0;
+    const isChatView = currentView === 'chat';
+    const isEmpty = isChatView && !hasMessages && !activeTicket;
+
+    if (emptyState) {
+      emptyState.style.display = isEmpty ? 'flex' : 'none';
+    }
+
+    if (chatPanel) {
+      if (isEmpty) {
+        chatPanel.classList.add('is-empty');
+      } else {
+        chatPanel.classList.remove('is-empty');
+      }
+    }
+  }
+
+  function formatChatDate(dateValue?: string | Date | null): string {
+    if (!dateValue) return '';
+    const d = new Date(dateValue);
+    const now = new Date();
+    if (d.toDateString() === now.toDateString()) {
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    return d.toLocaleDateString([], { day: 'numeric', month: 'short' });
+  }
+
+  function getStatusMeta(status: string): { badgeClass: string; label: string } {
+    switch (status) {
+      case 'queued':
+        return { badgeClass: 'component-badge--warning', label: t('chat.status_queued') || 'En cola' };
+      case 'in_progress':
+        return { badgeClass: 'component-badge--success', label: t('chat.status_in_progress') || 'En atención' };
+      case 'escalated':
+        return { badgeClass: 'component-badge--info', label: t('chat.status_escalated') || 'Escalado' };
+      case 'resolved':
+        return { badgeClass: 'component-badge--success', label: t('chat.status_resolved') || 'Resuelto' };
+      case 'closed':
+      default:
+        return { badgeClass: 'component-badge--neutral', label: t('chat.status_closed') || 'Cerrado' };
+    }
+  }
+
+  function switchView(view: 'chat' | 'history-list' | 'ticket-detail'): void {
+    currentView = view;
+
+    if (view === 'chat') {
+      currentViewingTicketId = null;
+      if (btnHistory) btnHistory.style.display = 'inline-flex';
+      if (btnBack) btnBack.style.display = 'none';
+      if (panelTitle) panelTitle.style.display = 'none';
+
+      if (chatMessages) chatMessages.style.display = 'flex';
+      if (historyContainer) historyContainer.style.display = 'none';
+      if (ticketDetail) ticketDetail.style.display = 'none';
+
+      if (chatBottom) chatBottom.style.display = 'block';
+      if (chatDisclaimer) chatDisclaimer.style.display = 'block';
+
+      if (activeTicket) {
+        renderSupportBanner(activeTicket);
+      } else {
+        hideSupportBanner();
+      }
+      updateChatEmptyState();
+    } else if (view === 'history-list') {
+      currentViewingTicketId = null;
+      if (btnHistory) btnHistory.style.display = 'none';
+      if (btnBack) btnBack.style.display = 'inline-flex';
+      if (panelTitle) {
+        panelTitle.style.display = 'block';
+        panelTitle.textContent = t('chat.history_title') || 'Historial de Soporte';
+      }
+
+      if (chatMessages) chatMessages.style.display = 'none';
+      if (historyContainer) historyContainer.style.display = 'flex';
+      if (ticketDetail) ticketDetail.style.display = 'none';
+      hideSupportBanner();
+
+      if (chatBottom) chatBottom.style.display = 'none';
+      updateChatEmptyState();
+      void loadSupportHistory();
+    } else if (view === 'ticket-detail') {
+      if (btnHistory) btnHistory.style.display = 'none';
+      if (btnBack) btnBack.style.display = 'inline-flex';
+      if (panelTitle) {
+        panelTitle.style.display = 'block';
+        panelTitle.textContent = t('chat.history_title') || 'Historial de Soporte';
+      }
+
+      if (chatMessages) chatMessages.style.display = 'none';
+      if (historyContainer) historyContainer.style.display = 'none';
+      if (ticketDetail) ticketDetail.style.display = 'flex';
+      hideSupportBanner();
+      updateChatEmptyState();
+    }
+  }
+
+  async function loadSupportHistory(): Promise<void> {
+    if (!currentUser) {
+      if (historyEmpty) historyEmpty.style.display = 'flex';
+      if (historyList) historyList.style.display = 'none';
+      return;
+    }
+
+    if (historyList) {
+      historyList.innerHTML = '<div style="padding: 16px; text-align: center; color: var(--text-tertiary); font-size: 12px;">Cargando historial...</div>';
+      historyList.style.display = 'flex';
+    }
+    if (historyEmpty) historyEmpty.style.display = 'none';
+
+    try {
+      const res = await getApi(API_ROUTES.support.history);
+      if (res.ok) {
+        const data = await res.json();
+        const conversations = Array.isArray(data.conversations) ? data.conversations : [];
+
+        if (historyList) historyList.innerHTML = '';
+
+        if (conversations.length === 0) {
+          if (historyEmpty) historyEmpty.style.display = 'flex';
+          if (historyList) historyList.style.display = 'none';
+          return;
+        }
+
+        if (historyEmpty) historyEmpty.style.display = 'none';
+        if (historyList) historyList.style.display = 'flex';
+
+        for (const conv of conversations) {
+          const card = document.createElement('div');
+          card.className = 'chat-history-card';
+          card.setAttribute('data-ref', 'chat-history-card');
+
+          const tId = Number(conv.ticket_id || conv.id);
+          const meta = getStatusMeta(conv.status);
+
+          const topRow = document.createElement('div');
+          topRow.className = 'chat-history-card__top';
+
+          const numSpan = document.createElement('span');
+          numSpan.className = 'chat-history-card__num';
+          numSpan.textContent = `#${conv.ticket_number || tId}`;
+
+          const dateSpan = document.createElement('span');
+          dateSpan.className = 'chat-history-card__date';
+          dateSpan.textContent = formatChatDate(conv.created_at);
+
+          topRow.appendChild(numSpan);
+          topRow.appendChild(dateSpan);
+
+          const subjSpan = document.createElement('div');
+          subjSpan.className = 'chat-history-card__subject';
+          subjSpan.textContent = conv.subject || 'Consulta de soporte';
+
+          const prevSpan = document.createElement('div');
+          prevSpan.className = 'chat-history-card__preview';
+          prevSpan.textContent = conv.last_message || conv.description || 'Sin mensajes';
+
+          const btmRow = document.createElement('div');
+          btmRow.className = 'chat-history-card__bottom';
+
+          const badge = document.createElement('div');
+          badge.className = `component-badge ${meta.badgeClass}`;
+          badge.style.fontSize = '10px';
+          badge.style.padding = '1px 6px';
+          badge.textContent = meta.label;
+          btmRow.appendChild(badge);
+
+          if (conv.assigned_agent_name) {
+            const agentSpan = document.createElement('span');
+            agentSpan.className = 'chat-history-card__agent';
+            agentSpan.innerHTML = `${createIconSvg('support_agent', 'chat-card-agent-icon')} <span>${escapeHtml(conv.assigned_agent_name)}</span>`;
+            btmRow.appendChild(agentSpan);
+          }
+
+          card.appendChild(topRow);
+          card.appendChild(subjSpan);
+          card.appendChild(prevSpan);
+          card.appendChild(btmRow);
+
+          card.addEventListener('click', (e) => {
+            e.preventDefault();
+            void openTicketDetail(tId);
+          });
+
+          historyList?.appendChild(card);
+        }
+      } else {
+        if (historyList) historyList.innerHTML = '<div style="padding: 16px; text-align: center; color: var(--text-tertiary); font-size: 12px;">No se pudo cargar el historial.</div>';
+      }
+    } catch (_) {
+      if (historyList) historyList.innerHTML = '<div style="padding: 16px; text-align: center; color: var(--text-tertiary); font-size: 12px;">Error de conexión.</div>';
+    }
+  }
+
+  async function openTicketDetail(ticketId: number): Promise<void> {
+    currentViewingTicketId = ticketId;
+    renderedDetailMessageIds.clear();
+    switchView('ticket-detail');
+
+    if (ticketDetailTitle) {
+      ticketDetailTitle.textContent = `Ticket #${ticketId}`;
+    }
+    if (ticketDetailBadge) {
+      ticketDetailBadge.className = 'component-badge component-badge--neutral';
+      ticketDetailBadge.textContent = '...';
+    }
+    if (ticketDetailMessages) {
+      ticketDetailMessages.innerHTML = '<div style="padding: 16px; text-align: center; color: var(--text-tertiary); font-size: 12px;">Cargando mensajes...</div>';
+    }
+    if (ticketClosedNotice) ticketClosedNotice.style.display = 'none';
+
+    try {
+      const res = await getApi(API_ROUTES.support.historyTicket(ticketId));
+      if (res.ok) {
+        const data = await res.json();
+        const ticket = data.ticket;
+        const messages = Array.isArray(data.messages) ? data.messages : [];
+
+        if (ticketDetailTitle && ticket) {
+          ticketDetailTitle.textContent = `#${ticket.ticket_number || ticket.ticket_id || ticketId}`;
+        }
+        if (ticketDetailBadge && ticket) {
+          const meta = getStatusMeta(ticket.status);
+          ticketDetailBadge.className = `component-badge ${meta.badgeClass}`;
+          ticketDetailBadge.textContent = meta.label;
+        }
+
+        if (ticketDetailMessages) ticketDetailMessages.innerHTML = '';
+
+        for (const msg of messages) {
+          renderTicketDetailMessage(msg);
+        }
+
+        const isLive = ticket && (ticket.status === 'queued' || ticket.status === 'in_progress' || ticket.status === 'escalated');
+        if (isLive) {
+          activeTicket = ticket;
+          if (chatBottom) chatBottom.style.display = 'block';
+          if (chatDisclaimer) chatDisclaimer.style.display = 'none';
+          if (ticketClosedNotice) ticketClosedNotice.style.display = 'none';
+        } else {
+          if (chatBottom) chatBottom.style.display = 'none';
+          if (ticketClosedNotice) ticketClosedNotice.style.display = 'flex';
+        }
+
+        const scrollArea = sidebarElement.querySelector<HTMLElement>('[data-ref="chat-panel-center"]');
+        if (scrollArea) scrollArea.scrollTop = scrollArea.scrollHeight;
+      } else {
+        if (ticketDetailMessages) ticketDetailMessages.innerHTML = '<div style="padding: 16px; text-align: center; color: var(--text-tertiary); font-size: 12px;">No se pudo cargar la conversación.</div>';
+      }
+    } catch (_) {
+      if (ticketDetailMessages) ticketDetailMessages.innerHTML = '<div style="padding: 16px; text-align: center; color: var(--text-tertiary); font-size: 12px;">Error al conectar con el servidor.</div>';
+    }
+  }
+
+  function renderTicketDetailMessage(msg: any): void {
+    if (!ticketDetailMessages) return;
+    const msgId = Number(msg.id);
+    if (msgId && renderedDetailMessageIds.has(msgId)) return;
+    if (msgId) renderedDetailMessageIds.add(msgId);
+
+    const type = msg.sender_type || 'user';
+    const text = msg.message || '';
+
+    if (type === 'agent') {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'chat-message chat-message--agent';
+      wrapper.setAttribute('data-ref', 'chat-message-agent');
+      wrapper.appendChild(createSupportAgentBadge(msg.sender_name || 'Agente de Soporte', msg.sender_avatar || null));
+
+      const bubble = document.createElement('div');
+      bubble.className = 'chat-agent-bubble';
+      bubble.textContent = text;
+      wrapper.appendChild(bubble);
+
+      ticketDetailMessages.appendChild(wrapper);
+    } else if (type === 'system') {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'chat-message chat-message--system';
+      wrapper.setAttribute('data-ref', 'chat-message-system');
+      wrapper.style.alignSelf = 'center';
+      wrapper.style.fontSize = '11px';
+      wrapper.style.color = 'var(--text-tertiary)';
+      wrapper.style.padding = '4px 12px';
+      wrapper.style.borderRadius = '12px';
+      wrapper.style.background = 'var(--bg-hover)';
+      wrapper.style.margin = '4px 0';
+      wrapper.textContent = text;
+      ticketDetailMessages.appendChild(wrapper);
+    } else {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'chat-message chat-message--user';
+      wrapper.setAttribute('data-ref', 'chat-message-user');
+      wrapper.textContent = text;
+      ticketDetailMessages.appendChild(wrapper);
+    }
+  }
 
   function createAgentBadge(thinking = false): HTMLElement {
     const badge = document.createElement('div');
@@ -1821,11 +2130,11 @@ function setupChatSidebarEvents(sidebarElement: HTMLElement): void {
       img.style.objectFit = 'cover';
       iconWrap.appendChild(img);
     } else {
-      iconWrap.innerHTML = '<span class="material-symbols-rounded" style="font-size: 14px; color: var(--action-primary);">support_agent</span>';
+      iconWrap.innerHTML = `<svg class="component-icon" style="width: 14px; height: 14px; color: var(--action-primary);" aria-hidden="true"><use href="/icons.svg#support_agent"></use></svg>`;
     }
 
     const label = document.createElement('span');
-    label.textContent = name ? `${name} (Soporte)` : 'Soporte Técnico';
+    label.textContent = name ? `${name} (${t('chat.agent_support') || 'Soporte'})` : (t('chat.agent_support') || 'Soporte Técnico');
 
     badge.appendChild(iconWrap);
     badge.appendChild(label);
@@ -1891,7 +2200,7 @@ function setupChatSidebarEvents(sidebarElement: HTMLElement): void {
       btnLike.setAttribute('data-ref', 'btn-chat-like');
       btnLike.setAttribute('data-tooltip', 'Buena respuesta');
       btnLike.setAttribute('aria-label', 'Buena respuesta');
-      btnLike.innerHTML = '<span class="material-symbols-rounded">thumb_up</span>';
+      btnLike.innerHTML = createIconSvg('thumb_up');
 
       const btnDislike = document.createElement('button');
       btnDislike.type = 'button';
@@ -1899,7 +2208,7 @@ function setupChatSidebarEvents(sidebarElement: HTMLElement): void {
       btnDislike.setAttribute('data-ref', 'btn-chat-dislike');
       btnDislike.setAttribute('data-tooltip', 'Mala respuesta');
       btnDislike.setAttribute('aria-label', 'Mala respuesta');
-      btnDislike.innerHTML = '<span class="material-symbols-rounded">thumb_down</span>';
+      btnDislike.innerHTML = createIconSvg('thumb_down');
 
       const btnCopy = document.createElement('button');
       btnCopy.type = 'button';
@@ -1907,7 +2216,7 @@ function setupChatSidebarEvents(sidebarElement: HTMLElement): void {
       btnCopy.setAttribute('data-ref', 'btn-chat-copy');
       btnCopy.setAttribute('data-tooltip', 'Copiar respuesta');
       btnCopy.setAttribute('aria-label', 'Copiar respuesta');
-      btnCopy.innerHTML = '<span class="material-symbols-rounded">content_copy</span>';
+      btnCopy.innerHTML = createIconSvg('content_copy');
 
       btnLike.addEventListener('click', () => {
         const isLiked = btnLike.classList.toggle('is-active');
@@ -1946,8 +2255,6 @@ function setupChatSidebarEvents(sidebarElement: HTMLElement): void {
       actions.appendChild(btnDislike);
       actions.appendChild(btnCopy);
       wrapper.appendChild(actions);
-
-      renderIcons(actions);
     } else {
       wrapper.textContent = text;
     }
@@ -1960,6 +2267,7 @@ function setupChatSidebarEvents(sidebarElement: HTMLElement): void {
 
     return wrapper;
   }
+
 
   function appendTypingIndicator(): HTMLElement {
     const messagesContainer = sidebarElement.querySelector<HTMLElement>('[data-ref="chat-messages"]');
@@ -1986,19 +2294,15 @@ function setupChatSidebarEvents(sidebarElement: HTMLElement): void {
   }
 
   const renderSupportBanner = (ticket: any) => {
-    if (!bannerEl) return;
+    if (!bannerEl || currentView !== 'chat') return;
     bannerEl.style.display = 'flex';
     if (ticketNumEl) {
-      ticketNumEl.textContent = `Ticket #${ticket.ticket_number || ticket.id}`;
+      ticketNumEl.textContent = `Ticket #${ticket.ticket_number || ticket.id || ticket.ticket_id}`;
     }
     if (statusPillEl) {
-      if (ticket.status === 'queued') {
-        statusPillEl.textContent = 'En cola de espera';
-        statusPillEl.className = 'component-badge component-badge--warning';
-      } else if (ticket.status === 'in_progress' || ticket.status === 'escalated') {
-        statusPillEl.textContent = 'En atención';
-        statusPillEl.className = 'component-badge component-badge--success';
-      }
+      const meta = getStatusMeta(ticket.status);
+      statusPillEl.textContent = meta.label;
+      statusPillEl.className = `component-badge ${meta.badgeClass}`;
     }
     if (waitTimeEl) {
       if (ticket.status === 'queued') {
@@ -2014,6 +2318,11 @@ function setupChatSidebarEvents(sidebarElement: HTMLElement): void {
   };
 
   const renderSupportMessage = (msg: any) => {
+    if (currentView === 'ticket-detail' && currentViewingTicketId) {
+      renderTicketDetailMessage(msg);
+      return;
+    }
+
     if (renderedMessageIds.has(msg.id)) return;
     renderedMessageIds.add(msg.id);
 
@@ -2031,15 +2340,34 @@ function setupChatSidebarEvents(sidebarElement: HTMLElement): void {
   };
 
   registerWebSocketHandler('SUPPORT_MESSAGE_RECEIVED', (data: any) => {
-    if (!activeTicket || !data) return;
-    if (Number(data.ticketId) === Number(activeTicket.id) && data.message) {
+    if (!data) return;
+    if (currentView === 'ticket-detail' && currentViewingTicketId && Number(data.ticketId) === currentViewingTicketId && data.message) {
+      renderTicketDetailMessage(data.message);
+      return;
+    }
+    if (!activeTicket) return;
+    if (Number(data.ticketId) === Number(activeTicket.id || activeTicket.ticket_id) && data.message) {
       renderSupportMessage(data.message);
     }
   });
 
   registerWebSocketHandler('SUPPORT_TICKET_UPDATED', (data: any) => {
-    if (!activeTicket || !data || !data.ticket) return;
-    if (Number(data.ticket.id) === Number(activeTicket.id)) {
+    if (!data || !data.ticket) return;
+
+    if (currentView === 'ticket-detail' && currentViewingTicketId && Number(data.ticket.id || data.ticket.ticket_id) === currentViewingTicketId) {
+      const meta = getStatusMeta(data.ticket.status);
+      if (ticketDetailBadge) {
+        ticketDetailBadge.className = `component-badge ${meta.badgeClass}`;
+        ticketDetailBadge.textContent = meta.label;
+      }
+      if (data.ticket.status === 'resolved' || data.ticket.status === 'closed') {
+        if (chatBottom) chatBottom.style.display = 'none';
+        if (ticketClosedNotice) ticketClosedNotice.style.display = 'flex';
+      }
+    }
+
+    if (!activeTicket) return;
+    if (Number(data.ticket.id || data.ticket.ticket_id) === Number(activeTicket.id || activeTicket.ticket_id)) {
       const prevStatus = activeTicket.status;
       activeTicket = data.ticket;
 
@@ -2087,7 +2415,8 @@ function setupChatSidebarEvents(sidebarElement: HTMLElement): void {
     e.preventDefault();
     if (!activeTicket) return;
     try {
-      const res = await postApi(API_ROUTES.support.cancel, { ticketId: activeTicket.id });
+      const targetId = activeTicket.id || activeTicket.ticket_id;
+      const res = await postApi(API_ROUTES.support.cancel, { ticketId: targetId });
       if (res.ok) {
         hideSupportBanner();
         appendSystemNotice('Has finalizado la sesión de soporte técnico.');
@@ -2100,6 +2429,36 @@ function setupChatSidebarEvents(sidebarElement: HTMLElement): void {
     } catch (_) {
       showToast('Error al procesar la cancelación.', 'error');
     }
+  });
+
+  btnClose?.addEventListener('click', (e) => {
+    e.preventDefault();
+    toggleChatSidebar(false);
+  });
+
+  btnHistory?.addEventListener('click', (e) => {
+    e.preventDefault();
+    switchView('history-list');
+  });
+
+  btnBack?.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (currentView === 'ticket-detail') {
+      switchView('history-list');
+    } else {
+      switchView('chat');
+    }
+  });
+
+  btnHistoryBackToList?.addEventListener('click', (e) => {
+    e.preventDefault();
+    switchView('history-list');
+  });
+
+  btnTicketNewChat?.addEventListener('click', (e) => {
+    e.preventDefault();
+    switchView('chat');
+    chatInput?.focus();
   });
 
   let isProcessing = false;
@@ -2163,14 +2522,48 @@ function setupChatSidebarEvents(sidebarElement: HTMLElement): void {
       chatInput.value = '';
       autoResizeTextarea();
     }
+
+    if (currentView === 'ticket-detail' && currentViewingTicketId) {
+      renderTicketDetailMessage({
+        created_at: new Date().toISOString(),
+        id: Date.now(),
+        message: text,
+        sender_type: 'user',
+        ticket_id: currentViewingTicketId,
+      });
+
+      setLoading(true);
+      try {
+        const res = await postApi(API_ROUTES.support.message, {
+          message: text,
+          ticketId: currentViewingTicketId,
+        });
+        if (res.ok) {
+          const data = await res.json().catch(() => ({}));
+          if (data && data.message && data.message.id) {
+            renderedDetailMessageIds.add(data.message.id);
+          }
+        } else {
+          showToast('No se pudo enviar el mensaje a soporte. Intenta de nuevo.', 'error');
+        }
+      } catch (_) {
+        showToast('Error al enviar el mensaje. Verifica tu conexión.', 'error');
+      } finally {
+        setLoading(false);
+        chatInput?.focus();
+      }
+      return;
+    }
+
     appendMessage('user', text);
 
     if (activeTicket) {
       setLoading(true);
       try {
+        const targetId = activeTicket.id || activeTicket.ticket_id;
         const res = await postApi(API_ROUTES.support.message, {
           message: text,
-          ticketId: activeTicket.id,
+          ticketId: targetId,
         });
         if (res.ok) {
           const data = await res.json().catch(() => ({}));
@@ -2205,7 +2598,7 @@ function setupChatSidebarEvents(sidebarElement: HTMLElement): void {
           if (data.ticket) {
             activeTicket = data.ticket;
             renderSupportBanner(activeTicket);
-            appendMessage('agent', `Hemos registrado tu solicitud con el Ticket #${activeTicket.ticket_number}. Te hemos añadido a la lista de espera de soporte técnico; un agente se comunicará contigo en breve.`);
+            appendMessage('agent', `Hemos registrado tu solicitud con el Ticket #${activeTicket.ticket_number || activeTicket.id}. Te hemos añadido a la lista de espera de soporte técnico; un agente se comunicará contigo en breve.`);
           }
         } else {
           appendMessage('agent', 'No se pudo crear la solicitud de soporte en este momento. Por favor intenta más tarde.');
