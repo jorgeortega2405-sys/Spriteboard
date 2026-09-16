@@ -1,10 +1,10 @@
 import { navigate } from '../app-router.js';
 import { createSidebar } from '../components/layout.component.js';
 import { API_ROUTES, getLogContentApi, getLogFilesApi, loadTemplate } from '../services/api.service.js';
-import { createIconSvg, renderIcons } from '../services/icon.service.js';
+import { renderIcons } from '../services/icon.service.js';
 import { showToast } from '../services/toast.service.js';
 import { ViewController } from '../types/common.types.js';
-import { LogCategory, LogFileContent, LogFileRecord, LogLevel, LogServiceSource, ParsedLogLine } from '../types/log.types.js';
+import { LogFileContent, LogFileRecord, LogLevel, ParsedLogLine } from '../types/log.types.js';
 import { escapeHtml, setupDropdown } from '../utils/dom.util.js';
 
 function formatDate(iso?: string | null): string {
@@ -16,7 +16,6 @@ function formatDate(iso?: string | null): string {
       hour: '2-digit',
       minute: '2-digit',
       month: 'short',
-      second: '2-digit',
       year: 'numeric',
     });
   } catch {
@@ -31,118 +30,103 @@ class LogsController implements ViewController {
   private allFiles: LogFileRecord[] = [];
   private filteredFiles: LogFileRecord[] = [];
   private selectedFileIds = new Set<string>();
+  private lastClickedIndex = -1;
+
+  private currentPage = 1;
+  private limit = 20;
+  private totalPages = 1;
 
   private searchQuery = '';
   private currentOriginFilter = 'all';
   private currentCategoryFilter = 'all';
-  private isSearchOpen = false;
+  private isSearchActive = false;
+  private searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
-  private tableBody: HTMLElement | null = null;
-  private selectAllCheckbox: HTMLInputElement | null = null;
-  private emptyState: HTMLElement | null = null;
+  private tableEl: HTMLElement | null = null;
+  private tbodyEl: HTMLElement | null = null;
 
   private defaultActions: HTMLElement | null = null;
   private selectedActions: HTMLElement | null = null;
   private selectedCountEl: HTMLElement | null = null;
-  private btnViewSelected: HTMLElement | null = null;
-  private btnClearSelection: HTMLElement | null = null;
 
   private btnToggleSearch: HTMLElement | null = null;
   private searchToolbar: HTMLElement | null = null;
   private searchInput: HTMLInputElement | null = null;
   private btnClearSearch: HTMLElement | null = null;
-  private btnCloseSearchToolbar: HTMLElement | null = null;
 
-  private originFilterWrapper: HTMLElement | null = null;
-  private originFilterLabel: HTMLElement | null = null;
-  private originDropdownController: ReturnType<typeof setupDropdown> | null = null;
-
-  private categoryFilterWrapper: HTMLElement | null = null;
-  private categoryFilterLabel: HTMLElement | null = null;
-  private categoryDropdownController: ReturnType<typeof setupDropdown> | null = null;
+  private filterDropdownWrapper: HTMLElement | null = null;
+  private filterDropdownController: ReturnType<typeof setupDropdown> | null = null;
 
   private btnRefreshLogs: HTMLElement | null = null;
+
+  private btnActionDeselect: HTMLElement | null = null;
+  private btnActionView: HTMLElement | null = null;
+  private btnActionDownload: HTMLElement | null = null;
+
+  private inputPaginationPage: HTMLInputElement | null = null;
+  private btnPaginationPrev: HTMLButtonElement | null = null;
+  private btnPaginationNext: HTMLButtonElement | null = null;
 
   constructor(container: HTMLElement) {
     this.container = container;
   }
 
   async init(): Promise<void> {
-    this.tableBody = this.container.querySelector<HTMLElement>('[data-ref="logs-table-body"]');
-    this.selectAllCheckbox = this.container.querySelector<HTMLInputElement>('[data-ref="select-all-checkbox"]');
-    this.emptyState = this.container.querySelector<HTMLElement>('[data-ref="logs-empty-state"]');
+    this.tableEl = this.container.querySelector<HTMLElement>('[data-ref="logs-table"]');
+    this.tbodyEl = this.container.querySelector<HTMLElement>('[data-ref="logs-tbody"]');
 
     this.defaultActions = this.container.querySelector<HTMLElement>('[data-ref="logs-default-actions"]');
     this.selectedActions = this.container.querySelector<HTMLElement>('[data-ref="logs-selected-actions"]');
     this.selectedCountEl = this.container.querySelector<HTMLElement>('[data-ref="logs-selected-count"]');
-    this.btnViewSelected = this.container.querySelector<HTMLElement>('[data-ref="btn-view-selected"]');
-    this.btnClearSelection = this.container.querySelector<HTMLElement>('[data-ref="btn-clear-selection"]');
 
     this.btnToggleSearch = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-search"]');
-    this.searchToolbar = this.container.querySelector<HTMLElement>('[data-ref="logs-search-toolbar"]');
-    this.searchInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-search-logs"]');
-    this.btnClearSearch = this.container.querySelector<HTMLElement>('[data-ref="btn-clear-search-logs"]');
-    this.btnCloseSearchToolbar = this.container.querySelector<HTMLElement>('[data-ref="btn-close-search-toolbar"]');
+    this.searchToolbar = this.container.querySelector<HTMLElement>('[data-ref="search-toolbar"]');
+    this.searchInput = this.container.querySelector<HTMLInputElement>('[data-ref="logs-search-input"]');
+    this.btnClearSearch = this.container.querySelector<HTMLElement>('[data-ref="btn-clear-search"]');
 
-    this.originFilterWrapper = this.container.querySelector<HTMLElement>('[data-ref="origin-filter-wrapper"]');
-    this.originFilterLabel = this.container.querySelector<HTMLElement>('[data-ref="origin-filter-label"]');
-    this.categoryFilterWrapper = this.container.querySelector<HTMLElement>('[data-ref="category-filter-wrapper"]');
-    this.categoryFilterLabel = this.container.querySelector<HTMLElement>('[data-ref="category-filter-label"]');
+    this.filterDropdownWrapper = this.container.querySelector<HTMLElement>('[data-ref="filter-dropdown-wrapper"]');
 
     this.btnRefreshLogs = this.container.querySelector<HTMLElement>('[data-ref="btn-refresh-logs"]');
 
-    this.setupDropdowns();
-    this.bindEvents();
+    this.btnActionDeselect = this.container.querySelector<HTMLElement>('[data-ref="btn-action-deselect"]');
+    this.btnActionView = this.container.querySelector<HTMLElement>('[data-ref="btn-action-view"]');
+    this.btnActionDownload = this.container.querySelector<HTMLElement>('[data-ref="btn-action-download"]');
 
+    this.inputPaginationPage = this.container.querySelector<HTMLInputElement>('[data-ref="input-pagination-page"]');
+    this.btnPaginationPrev = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-pagination-prev"]');
+    this.btnPaginationNext = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-pagination-next"]');
+
+    if (this.filterDropdownWrapper) {
+      this.filterDropdownController = setupDropdown(this.filterDropdownWrapper, {
+        isSelect: false,
+        matchWidth: false,
+        placement: 'bottom-end',
+      });
+    }
+
+    this.bindEvents();
     await this.loadLogs();
   }
 
   destroy(): void {
     this.abortController.abort();
-    if (this.originDropdownController) {
-      this.originDropdownController.destroy();
-      this.originDropdownController = null;
+    if (this.searchDebounceTimer) {
+      clearTimeout(this.searchDebounceTimer);
+      this.searchDebounceTimer = null;
     }
-    if (this.categoryDropdownController) {
-      this.categoryDropdownController.destroy();
-      this.categoryDropdownController = null;
-    }
-  }
-
-  private setupDropdowns(): void {
-    if (this.originFilterWrapper) {
-      this.originDropdownController = setupDropdown(this.originFilterWrapper);
-    }
-
-    if (this.categoryFilterWrapper) {
-      this.categoryDropdownController = setupDropdown(this.categoryFilterWrapper);
+    if (this.filterDropdownController) {
+      this.filterDropdownController.destroy();
+      this.filterDropdownController = null;
     }
   }
 
-  private bindEvents(): void {
+  bindEvents(): void {
     const signal = this.abortController.signal;
-
-    this.btnRefreshLogs?.addEventListener('click', (e) => {
-      e.preventDefault();
-      void this.loadLogs();
-    }, { signal });
 
     this.btnToggleSearch?.addEventListener('click', (e) => {
       e.preventDefault();
-      this.toggleSearchToolbar(true);
-    }, { signal });
-
-    this.btnCloseSearchToolbar?.addEventListener('click', (e) => {
-      e.preventDefault();
-      this.toggleSearchToolbar(false);
-    }, { signal });
-
-    this.searchInput?.addEventListener('input', () => {
-      this.searchQuery = (this.searchInput?.value || '').trim().toLowerCase();
-      if (this.btnClearSearch) {
-        this.btnClearSearch.style.display = this.searchQuery ? 'flex' : 'none';
-      }
-      this.applyFilters();
+      e.stopPropagation();
+      this.toggleSearchToolbar();
     }, { signal });
 
     this.btnClearSearch?.addEventListener('click', (e) => {
@@ -150,121 +134,188 @@ class LogsController implements ViewController {
       if (this.searchInput) {
         this.searchInput.value = '';
         this.searchQuery = '';
+        if (this.btnClearSearch) this.btnClearSearch.style.display = 'none';
+        this.applyFilters(1);
+        this.searchInput.focus();
       }
+    }, { signal });
+
+    this.searchInput?.addEventListener('input', () => {
+      const val = (this.searchInput?.value || '').trim().toLowerCase();
       if (this.btnClearSearch) {
-        this.btnClearSearch.style.display = 'none';
+        this.btnClearSearch.style.display = val.length > 0 ? 'inline-flex' : 'none';
       }
-      this.applyFilters();
-      this.searchInput?.focus();
+
+      if (this.searchDebounceTimer) {
+        clearTimeout(this.searchDebounceTimer);
+      }
+      this.searchDebounceTimer = setTimeout(() => {
+        this.searchQuery = val;
+        this.applyFilters(1);
+      }, 300);
     }, { signal });
 
-    const originButtons = this.container.querySelectorAll<HTMLButtonElement>('[data-origin]');
-    originButtons.forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        const originVal = btn.getAttribute('data-origin') || 'all';
-        this.currentOriginFilter = originVal;
-
-        originButtons.forEach((b) => b.classList.toggle('is-active', b === btn));
-        if (this.originFilterLabel) {
-          this.originFilterLabel.textContent = btn.textContent?.trim() || 'Todos los orígenes';
-        }
-
-        this.originDropdownController?.close();
-        this.applyFilters();
+    const originFilterButtons = this.container.querySelectorAll<HTMLElement>('[data-ref^="filter-origin-"]');
+    originFilterButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        originFilterButtons.forEach((b) => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        this.currentOriginFilter = btn.getAttribute('data-origin') || 'all';
+        this.filterDropdownController?.close();
+        this.applyFilters(1);
       }, { signal });
     });
 
-    const categoryButtons = this.container.querySelectorAll<HTMLButtonElement>('[data-category]');
-    categoryButtons.forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        const catVal = btn.getAttribute('data-category') || 'all';
-        this.currentCategoryFilter = catVal;
-
-        categoryButtons.forEach((b) => b.classList.toggle('is-active', b === btn));
-        if (this.categoryFilterLabel) {
-          this.categoryFilterLabel.textContent = btn.textContent?.trim() || 'Todas las categorías';
-        }
-
-        this.categoryDropdownController?.close();
-        this.applyFilters();
+    const categoryFilterButtons = this.container.querySelectorAll<HTMLElement>('[data-ref^="filter-category-"]');
+    categoryFilterButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        categoryFilterButtons.forEach((b) => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        this.currentCategoryFilter = btn.getAttribute('data-category') || 'all';
+        this.filterDropdownController?.close();
+        this.applyFilters(1);
       }, { signal });
     });
 
-    this.selectAllCheckbox?.addEventListener('change', () => {
-      const isChecked = this.selectAllCheckbox?.checked ?? false;
-      if (isChecked) {
-        this.filteredFiles.forEach((f) => this.selectedFileIds.add(f.id));
-      } else {
-        this.filteredFiles.forEach((f) => this.selectedFileIds.delete(f.id));
-      }
-      this.updateSelectionUI();
-    }, { signal });
-
-    this.btnClearSelection?.addEventListener('click', (e) => {
+    this.btnRefreshLogs?.addEventListener('click', (e) => {
       e.preventDefault();
+      void this.loadLogs();
+    }, { signal });
+
+    this.btnActionDeselect?.addEventListener('click', () => {
       this.selectedFileIds.clear();
-      this.updateSelectionUI();
+      this.lastClickedIndex = -1;
+      this.updateSelectionUi();
     }, { signal });
 
-    this.btnViewSelected?.addEventListener('click', (e) => {
-      e.preventDefault();
+    this.btnActionView?.addEventListener('click', () => {
+      if (this.selectedFileIds.size > 0) {
+        const idsParam = Array.from(this.selectedFileIds).join(',');
+        navigate(`/logs/viewer?files=${encodeURIComponent(idsParam)}`);
+      }
+    }, { signal });
+
+    this.btnActionDownload?.addEventListener('click', () => {
       if (this.selectedFileIds.size === 0) return;
-      const idsParam = Array.from(this.selectedFileIds).join(',');
-      navigate(`/logs/viewer?files=${encodeURIComponent(idsParam)}`);
+      const ids = Array.from(this.selectedFileIds);
+      if (ids.length === 1) {
+        window.open(API_ROUTES.logs.download(ids[0]), '_blank');
+      } else {
+        showToast(`Iniciando descarga de ${ids.length} archivos...`, 'info');
+        ids.forEach((id, idx) => {
+          setTimeout(() => {
+            const link = document.createElement('a');
+            link.href = API_ROUTES.logs.download(id);
+            link.download = '';
+            link.target = '_blank';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          }, idx * 250);
+        });
+      }
+    }, { signal });
+
+    this.inputPaginationPage?.addEventListener('change', () => {
+      let page = parseInt(this.inputPaginationPage?.value || '1', 10);
+      if (isNaN(page) || page < 1) page = 1;
+      if (page > this.totalPages) page = this.totalPages;
+      if (page !== this.currentPage) {
+        this.currentPage = page;
+        this.renderRows();
+        this.updatePaginationUi();
+      } else if (this.inputPaginationPage) {
+        this.inputPaginationPage.value = String(this.currentPage);
+      }
+    }, { signal });
+
+    this.inputPaginationPage?.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        this.inputPaginationPage?.blur();
+      }
+    }, { signal });
+
+    this.btnPaginationPrev?.addEventListener('click', () => {
+      if (this.currentPage > 1) {
+        this.currentPage--;
+        this.renderRows();
+        this.updatePaginationUi();
+      }
+    }, { signal });
+
+    this.btnPaginationNext?.addEventListener('click', () => {
+      if (this.currentPage < this.totalPages) {
+        this.currentPage++;
+        this.renderRows();
+        this.updatePaginationUi();
+      }
+    }, { signal });
+
+    document.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (this.isSearchActive) {
+          this.toggleSearchToolbar(false);
+        } else if (this.selectedFileIds.size > 0) {
+          this.selectedFileIds.clear();
+          this.lastClickedIndex = -1;
+          this.updateSelectionUi();
+        }
+      }
     }, { signal });
   }
 
-  private toggleSearchToolbar(open: boolean): void {
-    this.isSearchOpen = open;
+  private toggleSearchToolbar(forceState?: boolean): void {
+    this.isSearchActive = forceState !== undefined ? forceState : !this.isSearchActive;
+
     if (this.searchToolbar) {
-      this.searchToolbar.style.display = open ? 'flex' : 'none';
+      this.searchToolbar.classList.toggle('is-active', this.isSearchActive);
+      this.searchToolbar.classList.toggle('is-hidden', !this.isSearchActive);
     }
-    if (open) {
-      this.searchInput?.focus();
-    } else {
-      if (this.searchInput) {
-        this.searchInput.value = '';
-        this.searchQuery = '';
-      }
-      if (this.btnClearSearch) {
-        this.btnClearSearch.style.display = 'none';
-      }
-      this.applyFilters();
+
+    if (this.btnToggleSearch) {
+      this.btnToggleSearch.classList.toggle('is-active', this.isSearchActive);
+    }
+
+    if (this.isSearchActive && this.searchInput) {
+      setTimeout(() => this.searchInput?.focus(), 50);
     }
   }
 
   private async loadLogs(): Promise<void> {
-    if (this.tableBody) {
-      this.tableBody.innerHTML = `
+    if (this.tbodyEl) {
+      this.tbodyEl.innerHTML = `
         <tr>
-          <td colspan="9" style="text-align: center; padding: 48px; color: var(--text-tertiary);">
-            Cargando registros de logs...
+          <td colspan="7" style="text-align: center; padding: 48px 16px; color: var(--text-secondary);">
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+              <svg class="component-icon" style="width: 40px; height: 40px; color: var(--text-tertiary);" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
+              <div style="font-weight: 600; font-size: 14px; color: var(--text-primary);">Cargando registros...</div>
+            </div>
           </td>
         </tr>
       `;
+      renderIcons(this.tbodyEl);
     }
 
     const res = await getLogFilesApi();
     if (res.ok && Array.isArray(res.files)) {
       this.allFiles = res.files;
-      this.applyFilters();
+      this.applyFilters(1);
     } else {
-      showToast(res.error || 'No se pudieron cargar los archivos de logs.', 'error');
-      if (this.tableBody) {
-        this.tableBody.innerHTML = `
-          <tr>
-            <td colspan="9" style="text-align: center; padding: 48px; color: var(--color-danger);">
-              ${escapeHtml(res.error || 'Error al cargar los registros.')}
-            </td>
-          </tr>
-        `;
-      }
+      this.allFiles = [];
+      this.filteredFiles = [];
+      this.totalPages = 1;
+      this.renderRows();
+      this.updatePaginationUi();
+      showToast(res.error || 'No se pudieron cargar los registros de logs.', 'error');
     }
   }
 
-  private applyFilters(): void {
+  private applyFilters(page = 1): void {
+    this.currentPage = page;
+    this.selectedFileIds.clear();
+    this.lastClickedIndex = -1;
+
     this.filteredFiles = this.allFiles.filter((file) => {
       if (this.currentOriginFilter !== 'all' && file.service !== this.currentOriginFilter) {
         return false;
@@ -274,148 +325,177 @@ class LogsController implements ViewController {
       }
       if (this.searchQuery) {
         const matchesName = file.fileName.toLowerCase().includes(this.searchQuery);
-        const matchesCategory = file.categoryLabel.toLowerCase().includes(this.searchQuery);
-        const matchesService = file.serviceLabel.toLowerCase().includes(this.searchQuery);
-        if (!matchesName && !matchesCategory && !matchesService) {
+        const matchesCat = file.categoryLabel.toLowerCase().includes(this.searchQuery);
+        const matchesServ = file.serviceLabel.toLowerCase().includes(this.searchQuery);
+        if (!matchesName && !matchesCat && !matchesServ) {
           return false;
         }
       }
       return true;
     });
 
-    this.renderTable();
+    this.totalPages = Math.max(1, Math.ceil(this.filteredFiles.length / this.limit));
+    if (this.currentPage > this.totalPages) {
+      this.currentPage = this.totalPages;
+    }
+
+    this.renderRows();
+    this.updatePaginationUi();
+    this.updateSelectionUi();
   }
 
-  private renderTable(): void {
-    const tbody = this.tableBody;
-    if (!tbody) return;
+  private renderRows(): void {
+    if (!this.tbodyEl) return;
+    this.tbodyEl.innerHTML = '';
 
     if (this.filteredFiles.length === 0) {
-      tbody.innerHTML = '';
-      if (this.emptyState) this.emptyState.style.display = 'block';
-      this.updateSelectionUI();
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td colspan="7" style="text-align: center; padding: 48px 16px; color: var(--text-secondary);">
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+            <svg class="component-icon" style="width: 40px; height: 40px; color: var(--text-tertiary);" aria-hidden="true"><use href="/icons.svg#article"></use></svg>
+            <div style="font-weight: 600; font-size: 14px; color: var(--text-primary);">No se encontraron registros de logs</div>
+            <div style="font-size: 12px;">Intenta ajustar los términos de búsqueda o los filtros aplicados.</div>
+          </div>
+        </td>
+      `;
+      this.tbodyEl.appendChild(tr);
+      renderIcons(this.tbodyEl);
       return;
     }
 
-    if (this.emptyState) this.emptyState.style.display = 'none';
+    const startIdx = (this.currentPage - 1) * this.limit;
+    const pageFiles = this.filteredFiles.slice(startIdx, startIdx + this.limit);
 
-    tbody.innerHTML = '';
-
-    this.filteredFiles.forEach((file) => {
-      const isSelected = this.selectedFileIds.has(file.id);
+    for (let i = 0; i < pageFiles.length; i++) {
+      const file = pageFiles[i];
+      const globalIdx = startIdx + i;
       const tr = document.createElement('tr');
+      tr.className = 'is-selectable';
       tr.setAttribute('data-ref', `log-row-${file.id}`);
+
+      const isSelected = this.selectedFileIds.has(file.id);
       if (isSelected) tr.classList.add('is-selected');
 
       const originBadgeClass = file.service === 'web' ? 'component-badge--info' : 'component-badge--warning';
+
       let categoryBadgeClass = 'component-badge--neutral';
       if (file.category === 'app') categoryBadgeClass = 'component-badge--info';
       else if (file.category === 'database') categoryBadgeClass = 'component-badge--success';
       else if (file.category === 'security') categoryBadgeClass = 'component-badge--danger';
 
-      let statusHtml = '<span class="component-badge component-badge--success">Limpio</span>';
+      let statusBadge = '<span class="component-badge component-badge--sm component-badge--success">Limpio</span>';
       if (file.errorCount > 0) {
-        statusHtml = `<span class="component-badge component-badge--danger">${file.errorCount} ${file.errorCount === 1 ? 'error' : 'errores'}</span>`;
+        statusBadge = `<span class="component-badge component-badge--sm component-badge--danger">${file.errorCount} ${file.errorCount === 1 ? 'error' : 'errores'}</span>`;
       } else if (file.warnCount > 0) {
-        statusHtml = `<span class="component-badge component-badge--warning">${file.warnCount} ${file.warnCount === 1 ? 'aviso' : 'avisos'}</span>`;
+        statusBadge = `<span class="component-badge component-badge--sm component-badge--warning">${file.warnCount} ${file.warnCount === 1 ? 'aviso' : 'avisos'}</span>`;
       }
 
       tr.innerHTML = `
-        <td style="width: 40px; text-align: center;">
-          <input class="component-checkbox" data-ref="checkbox-${file.id}" type="checkbox"${isSelected ? ' checked' : ''} />
-        </td>
-        <td>
-          <div style="display: flex; align-items: center; gap: 8px; font-weight: 500;">
-            <svg class="component-icon" style="color: var(--text-secondary); width: 18px; height: 18px;" aria-hidden="true">
+        <td data-ref="cell-file-${file.id}">
+          <div style="display: inline-flex; align-items: center; gap: 8px; font-weight: 500;">
+            <svg class="component-icon" style="color: var(--text-secondary); width: 18px; height: 18px; flex-shrink: 0;" aria-hidden="true">
               <use href="/icons.svg#article"></use>
             </svg>
-            <span style="font-family: ui-monospace, monospace; font-size: 13px;">${escapeHtml(file.fileName)}</span>
+            <span style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 13px;">${escapeHtml(file.fileName)}</span>
           </div>
         </td>
-        <td>
-          <span class="component-badge ${originBadgeClass}">${escapeHtml(file.serviceLabel)}</span>
+        <td data-ref="cell-origin-${file.id}">
+          <span class="component-badge component-badge--sm ${originBadgeClass}">${escapeHtml(file.serviceLabel)}</span>
         </td>
-        <td>
-          <span class="component-badge ${categoryBadgeClass}">${escapeHtml(file.categoryLabel)}</span>
+        <td data-ref="cell-category-${file.id}">
+          <span class="component-badge component-badge--sm ${categoryBadgeClass}">${escapeHtml(file.categoryLabel)}</span>
         </td>
-        <td style="font-size: 13px; color: var(--text-secondary);">
-          ${escapeHtml(file.sizeFormatted)}
+        <td data-ref="cell-size-${file.id}">
+          <span style="color: var(--text-secondary); font-size: 13px;">${escapeHtml(file.sizeFormatted)}</span>
         </td>
-        <td style="font-size: 13px; color: var(--text-secondary);">
-          ${file.lineCount} líneas
+        <td data-ref="cell-lines-${file.id}">
+          <span style="color: var(--text-secondary); font-size: 13px;">${file.lineCount} líneas</span>
         </td>
-        <td>
-          ${statusHtml}
+        <td data-ref="cell-status-${file.id}">
+          ${statusBadge}
         </td>
-        <td style="font-size: 12px; color: var(--text-tertiary);">
-          ${formatDate(file.updatedAt)}
-        </td>
-        <td style="text-align: right;">
-          <div style="display: inline-flex; gap: 4px;">
-            <button type="button" class="component-button component-button--h32 component-button--icon-only" data-ref="btn-view-row-${file.id}" data-tooltip="Visualizar log" aria-label="Visualizar log">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
-            </button>
-            <a class="component-button component-button--h32 component-button--icon-only" data-ref="btn-download-row-${file.id}" data-tooltip="Descargar log" aria-label="Descargar log" href="${API_ROUTES.logs.download(file.id)}" target="_blank" download="${escapeHtml(file.fileName)}">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
-            </a>
-          </div>
+        <td data-ref="cell-updated-${file.id}">
+          <span style="color: var(--text-secondary); font-size: 12px;">${formatDate(file.updatedAt)}</span>
         </td>
       `;
 
-      const checkbox = tr.querySelector<HTMLInputElement>(`[data-ref="checkbox-${file.id}"]`);
-      checkbox?.addEventListener('change', () => {
-        if (checkbox.checked) {
-          this.selectedFileIds.add(file.id);
-        } else {
-          this.selectedFileIds.delete(file.id);
-        }
-        this.updateSelectionUI();
+      tr.addEventListener('click', (e: MouseEvent) => {
+        this.handleRowClick(file, globalIdx, e);
       });
 
-      const btnView = tr.querySelector<HTMLElement>(`[data-ref="btn-view-row-${file.id}"]`);
-      btnView?.addEventListener('click', (e) => {
+      tr.addEventListener('dblclick', (e) => {
         e.preventDefault();
         navigate(`/logs/viewer?files=${encodeURIComponent(file.id)}`);
       });
 
-      tbody.appendChild(tr);
-    });
-
-    renderIcons(tbody);
-    this.updateSelectionUI();
-  }
-
-  private updateSelectionUI(): void {
-    const totalVisible = this.filteredFiles.length;
-    const selectedVisibleCount = this.filteredFiles.filter((f) => this.selectedFileIds.has(f.id)).length;
-    const totalSelected = this.selectedFileIds.size;
-
-    if (this.selectAllCheckbox) {
-      this.selectAllCheckbox.checked = totalVisible > 0 && selectedVisibleCount === totalVisible;
-      this.selectAllCheckbox.indeterminate = selectedVisibleCount > 0 && selectedVisibleCount < totalVisible;
+      this.tbodyEl.appendChild(tr);
     }
 
-    if (this.selectedActions && this.defaultActions) {
-      if (totalSelected > 0) {
-        this.defaultActions.style.display = 'none';
-        this.selectedActions.style.display = 'flex';
-        if (this.selectedCountEl) {
-          this.selectedCountEl.textContent = `${totalSelected} ${totalSelected === 1 ? 'archivo seleccionado' : 'archivos seleccionados'}`;
+    renderIcons(this.tbodyEl);
+  }
+
+  private handleRowClick(file: LogFileRecord, globalIndex: number, e: MouseEvent): void {
+    if (e.shiftKey && this.lastClickedIndex >= 0) {
+      const start = Math.min(this.lastClickedIndex, globalIndex);
+      const end = Math.max(this.lastClickedIndex, globalIndex);
+      for (let i = start; i <= end; i++) {
+        if (this.filteredFiles[i]) {
+          this.selectedFileIds.add(this.filteredFiles[i].id);
         }
+      }
+    } else {
+      if (this.selectedFileIds.has(file.id)) {
+        this.selectedFileIds.delete(file.id);
       } else {
-        this.defaultActions.style.display = 'flex';
-        this.selectedActions.style.display = 'none';
+        this.selectedFileIds.add(file.id);
+      }
+      this.lastClickedIndex = globalIndex;
+    }
+    this.updateSelectionUi();
+  }
+
+  private updateSelectionUi(): void {
+    const count = this.selectedFileIds.size;
+    const isSelected = count > 0;
+
+    if (!isSelected) {
+      if (this.defaultActions) this.defaultActions.style.display = 'flex';
+      if (this.selectedActions) this.selectedActions.style.display = 'none';
+      if (this.selectedCountEl) this.selectedCountEl.style.display = 'none';
+    } else {
+      if (this.defaultActions) this.defaultActions.style.display = 'none';
+      if (this.selectedActions) this.selectedActions.style.display = 'flex';
+      if (this.selectedCountEl) {
+        this.selectedCountEl.style.display = 'inline-flex';
+        this.selectedCountEl.textContent = count === 1 ? '1 seleccionado' : `${count} seleccionados`;
       }
     }
 
-    this.filteredFiles.forEach((file) => {
-      const row = this.container.querySelector<HTMLElement>(`[data-ref="log-row-${file.id}"]`);
-      const isSelected = this.selectedFileIds.has(file.id);
-      row?.classList.toggle('is-selected', isSelected);
+    if (this.tbodyEl) {
+      this.filteredFiles.forEach((f) => {
+        const row = this.tbodyEl?.querySelector<HTMLElement>(`[data-ref="log-row-${f.id}"]`);
+        const rowSelected = this.selectedFileIds.has(f.id);
+        if (row) row.classList.toggle('is-selected', rowSelected);
+      });
+    }
+  }
 
-      const checkbox = this.container.querySelector<HTMLInputElement>(`[data-ref="checkbox-${file.id}"]`);
-      if (checkbox) checkbox.checked = isSelected;
-    });
+  private updatePaginationUi(): void {
+    if (this.inputPaginationPage) {
+      this.inputPaginationPage.value = String(this.currentPage);
+      this.inputPaginationPage.min = '1';
+      this.inputPaginationPage.max = String(Math.max(1, this.totalPages));
+      this.inputPaginationPage.disabled = this.totalPages <= 1;
+    }
+
+    if (this.btnPaginationPrev) {
+      this.btnPaginationPrev.disabled = this.currentPage <= 1;
+    }
+
+    if (this.btnPaginationNext) {
+      this.btnPaginationNext.disabled = this.currentPage >= this.totalPages;
+    }
   }
 }
 
@@ -431,15 +511,22 @@ class LogViewerController implements ViewController {
   private searchQuery = '';
   private activeLevelFilter: 'ALL' | LogLevel = 'ALL';
   private wrapLines = false;
-  private autoScroll = false;
+  private isSearchActive = false;
+  private searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
+  private tabsBar: HTMLElement | null = null;
   private tabsContainer: HTMLElement | null = null;
   private linesList: HTMLElement | null = null;
   private terminalBox: HTMLElement | null = null;
+  private filenameBadge: HTMLElement | null = null;
 
+  private btnToggleSearch: HTMLElement | null = null;
+  private searchToolbar: HTMLElement | null = null;
   private searchInput: HTMLInputElement | null = null;
   private btnClearSearch: HTMLElement | null = null;
-  private levelButtons: NodeListOf<HTMLButtonElement> | null = null;
+
+  private levelFilterWrapper: HTMLElement | null = null;
+  private levelDropdownController: ReturnType<typeof setupDropdown> | null = null;
 
   private btnToggleWrap: HTMLElement | null = null;
   private btnScrollBottom: HTMLElement | null = null;
@@ -460,13 +547,18 @@ class LogViewerController implements ViewController {
   }
 
   async init(): Promise<void> {
+    this.tabsBar = this.container.querySelector<HTMLElement>('[data-ref="viewer-tabs-bar"]');
     this.tabsContainer = this.container.querySelector<HTMLElement>('[data-ref="viewer-tabs-container"]');
     this.linesList = this.container.querySelector<HTMLElement>('[data-ref="viewer-lines-list"]');
     this.terminalBox = this.container.querySelector<HTMLElement>('[data-ref="viewer-terminal-box"]');
+    this.filenameBadge = this.container.querySelector<HTMLElement>('[data-ref="viewer-filename-badge"]');
 
-    this.searchInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-viewer-search"]');
-    this.btnClearSearch = this.container.querySelector<HTMLElement>('[data-ref="btn-clear-viewer-search"]');
-    this.levelButtons = this.container.querySelectorAll<HTMLButtonElement>('[data-level]');
+    this.btnToggleSearch = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-search"]');
+    this.searchToolbar = this.container.querySelector<HTMLElement>('[data-ref="search-toolbar"]');
+    this.searchInput = this.container.querySelector<HTMLInputElement>('[data-ref="viewer-search-input"]');
+    this.btnClearSearch = this.container.querySelector<HTMLElement>('[data-ref="btn-clear-search"]');
+
+    this.levelFilterWrapper = this.container.querySelector<HTMLElement>('[data-ref="level-filter-wrapper"]');
 
     this.btnToggleWrap = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-wrap"]');
     this.btnScrollBottom = this.container.querySelector<HTMLElement>('[data-ref="btn-scroll-bottom"]');
@@ -482,6 +574,14 @@ class LogViewerController implements ViewController {
     this.statFileSize = this.container.querySelector<HTMLElement>('[data-ref="stat-active-file-size"]');
     this.statFileUpdated = this.container.querySelector<HTMLElement>('[data-ref="stat-active-file-updated"]');
 
+    if (this.levelFilterWrapper) {
+      this.levelDropdownController = setupDropdown(this.levelFilterWrapper, {
+        isSelect: false,
+        matchWidth: false,
+        placement: 'bottom-end',
+      });
+    }
+
     const params = new URLSearchParams(window.location.search);
     const filesParam = params.get('files') || '';
     this.requestedFileIds = filesParam.split(',').map((f) => f.trim()).filter(Boolean);
@@ -491,13 +591,17 @@ class LogViewerController implements ViewController {
     if (this.requestedFileIds.length === 0) {
       if (this.linesList) {
         this.linesList.innerHTML = `
-          <div style="padding: 32px; text-align: center; color: #64748b;">
-            No se seleccionó ningún archivo de log para visualizar.
-            <div style="margin-top: 12px;">
-              <button type="button" class="component-button component-button--h32" data-ref="btn-goto-logs">Ir a lista de logs</button>
+          <div style="padding: 48px 16px; text-align: center; color: var(--text-secondary);">
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+              <svg class="component-icon" style="width: 40px; height: 40px; color: var(--text-tertiary);" aria-hidden="true"><use href="/icons.svg#article"></use></svg>
+              <div style="font-weight: 600; font-size: 14px; color: var(--text-primary);">No se especificó ningún archivo de log</div>
+              <div style="margin-top: 8px;">
+                <button type="button" class="component-button component-button--h36 component-button--black" data-ref="btn-goto-logs">Ir a lista de registros</button>
+              </div>
             </div>
           </div>
         `;
+        renderIcons(this.linesList);
         this.linesList.querySelector('[data-ref="btn-goto-logs"]')?.addEventListener('click', () => {
           navigate('/logs');
         });
@@ -510,6 +614,14 @@ class LogViewerController implements ViewController {
 
   destroy(): void {
     this.abortController.abort();
+    if (this.searchDebounceTimer) {
+      clearTimeout(this.searchDebounceTimer);
+      this.searchDebounceTimer = null;
+    }
+    if (this.levelDropdownController) {
+      this.levelDropdownController.destroy();
+      this.levelDropdownController = null;
+    }
   }
 
   private bindEvents(): void {
@@ -525,12 +637,10 @@ class LogViewerController implements ViewController {
       void this.loadLogsContent();
     }, { signal });
 
-    this.searchInput?.addEventListener('input', () => {
-      this.searchQuery = (this.searchInput?.value || '').trim().toLowerCase();
-      if (this.btnClearSearch) {
-        this.btnClearSearch.style.display = this.searchQuery ? 'flex' : 'none';
-      }
-      this.renderLines();
+    this.btnToggleSearch?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.toggleSearchToolbar();
     }, { signal });
 
     this.btnClearSearch?.addEventListener('click', (e) => {
@@ -546,14 +656,28 @@ class LogViewerController implements ViewController {
       this.searchInput?.focus();
     }, { signal });
 
-    const lvlButtons = this.levelButtons;
-    lvlButtons?.forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
+    this.searchInput?.addEventListener('input', () => {
+      const val = (this.searchInput?.value || '').trim().toLowerCase();
+      if (this.btnClearSearch) {
+        this.btnClearSearch.style.display = val ? 'inline-flex' : 'none';
+      }
+      if (this.searchDebounceTimer) {
+        clearTimeout(this.searchDebounceTimer);
+      }
+      this.searchDebounceTimer = setTimeout(() => {
+        this.searchQuery = val;
+        this.renderLines();
+      }, 150);
+    }, { signal });
+
+    const levelButtons = this.container.querySelectorAll<HTMLElement>('[data-ref^="filter-level-"]');
+    levelButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        levelButtons.forEach((b) => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
         const level = btn.getAttribute('data-level') as 'ALL' | LogLevel;
         this.activeLevelFilter = level || 'ALL';
-
-        lvlButtons.forEach((b) => b.classList.toggle('is-active', b === btn));
+        this.levelDropdownController?.close();
         this.renderLines();
       }, { signal });
     });
@@ -586,9 +710,9 @@ class LogViewerController implements ViewController {
 
       try {
         await navigator.clipboard.writeText(raw);
-        showToast('Contenido copiado al portapapeles', 'success');
+        showToast('Contenido copiado al portapapeles.', 'success');
       } catch {
-        showToast('No se pudo copiar al portapapeles', 'error');
+        showToast('No se pudo copiar al portapapeles.', 'error');
       }
     }, { signal });
 
@@ -598,15 +722,44 @@ class LogViewerController implements ViewController {
       if (!currentFile) return;
       window.open(API_ROUTES.logs.download(currentFile.id), '_blank');
     }, { signal });
+
+    document.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (this.isSearchActive) {
+          this.toggleSearchToolbar(false);
+        }
+      }
+    }, { signal });
+  }
+
+  private toggleSearchToolbar(forceState?: boolean): void {
+    this.isSearchActive = forceState !== undefined ? forceState : !this.isSearchActive;
+
+    if (this.searchToolbar) {
+      this.searchToolbar.classList.toggle('is-active', this.isSearchActive);
+      this.searchToolbar.classList.toggle('is-hidden', !this.isSearchActive);
+    }
+
+    if (this.btnToggleSearch) {
+      this.btnToggleSearch.classList.toggle('is-active', this.isSearchActive);
+    }
+
+    if (this.isSearchActive && this.searchInput) {
+      setTimeout(() => this.searchInput?.focus(), 50);
+    }
   }
 
   private async loadLogsContent(): Promise<void> {
     if (this.linesList) {
       this.linesList.innerHTML = `
-        <div style="padding: 32px; text-align: center; color: #64748b;">
-          Cargando contenido de los registros...
+        <div style="padding: 48px 16px; text-align: center; color: #64748b;">
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+            <svg class="component-icon" style="width: 32px; height: 32px; color: #64748b;" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
+            <div>Cargando contenido del registro...</div>
+          </div>
         </div>
       `;
+      renderIcons(this.linesList);
     }
 
     const res = await getLogContentApi(this.requestedFileIds);
@@ -621,8 +774,8 @@ class LogViewerController implements ViewController {
       showToast(res.error || 'No se pudo cargar el contenido de los logs.', 'error');
       if (this.linesList) {
         this.linesList.innerHTML = `
-          <div style="padding: 32px; text-align: center; color: #ef4444;">
-            ${escapeHtml(res.error || 'Error al cargar los archivos.')}
+          <div style="padding: 48px 16px; text-align: center; color: #ef4444;">
+            ${escapeHtml(res.error || 'Error al cargar los archivos seleccionados.')}
           </div>
         `;
       }
@@ -633,6 +786,22 @@ class LogViewerController implements ViewController {
     const container = this.tabsContainer;
     if (!container) return;
     container.innerHTML = '';
+
+    if (this.loadedFiles.length <= 1) {
+      if (this.tabsBar) this.tabsBar.style.display = 'none';
+      if (this.filenameBadge && this.loadedFiles[0]) {
+        this.filenameBadge.style.display = 'inline-flex';
+        this.filenameBadge.textContent = `${this.loadedFiles[0].serviceLabel} • ${this.loadedFiles[0].categoryLabel} / ${this.loadedFiles[0].fileName}`;
+      }
+      return;
+    }
+
+    if (this.filenameBadge) {
+      this.filenameBadge.style.display = 'none';
+    }
+    if (this.tabsBar) {
+      this.tabsBar.style.display = 'flex';
+    }
 
     this.loadedFiles.forEach((file, index) => {
       const isCurrent = !this.isCombinedView && this.activeTabIndex === index;
@@ -663,30 +832,27 @@ class LogViewerController implements ViewController {
       container.appendChild(tabBtn);
     });
 
-    if (this.loadedFiles.length > 1) {
-      const combinedBtn = document.createElement('button');
-      combinedBtn.type = 'button';
-      combinedBtn.className = `component-button component-button--h32${this.isCombinedView ? ' component-button--black' : ''}`;
-      combinedBtn.setAttribute('data-ref', 'tab-log-combined');
-      combinedBtn.style.gap = '6px';
-      combinedBtn.style.padding = '0 12px';
-      combinedBtn.style.fontSize = '12px';
+    const combinedBtn = document.createElement('button');
+    combinedBtn.type = 'button';
+    combinedBtn.className = `component-button component-button--h32${this.isCombinedView ? ' component-button--black' : ''}`;
+    combinedBtn.setAttribute('data-ref', 'tab-log-combined');
+    combinedBtn.style.gap = '6px';
+    combinedBtn.style.padding = '0 12px';
+    combinedBtn.style.fontSize = '12px';
 
-      combinedBtn.innerHTML = `
-        <svg class="component-icon" style="width: 14px; height: 14px;" aria-hidden="true"><use href="/icons.svg#view_stream"></use></svg>
-        <span>Vista combinada (${this.loadedFiles.length})</span>
-      `;
+    combinedBtn.innerHTML = `
+      <svg class="component-icon" style="width: 14px; height: 14px;" aria-hidden="true"><use href="/icons.svg#view_stream"></use></svg>
+      <span>Vista combinada (${this.loadedFiles.length})</span>
+    `;
 
-      combinedBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        this.isCombinedView = true;
-        this.renderTabs();
-        this.renderLines();
-      });
+    combinedBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.isCombinedView = true;
+      this.renderTabs();
+      this.renderLines();
+    });
 
-      container.appendChild(combinedBtn);
-    }
-
+    container.appendChild(combinedBtn);
     renderIcons(container);
   }
 
@@ -880,3 +1046,4 @@ export async function createLogViewerView(): Promise<HTMLElement> {
 
   return container;
 }
+

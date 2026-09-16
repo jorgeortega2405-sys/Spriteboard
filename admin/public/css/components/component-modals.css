@@ -6652,7 +6652,7 @@ html[data-theme="dark"] .design-share-search-results,
 }
 
 .component-table tbody tr.is-selected td:first-child {
-  box-shadow: inset 5px 0 0 0 #000000;
+  box-shadow: inset 5px 0 0 0 var(--action-primary);
 }
 
 .component-table tbody tr.is-selectable {
