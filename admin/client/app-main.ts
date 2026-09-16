@@ -3,7 +3,118 @@ import { checkAuthSession, currentUser, fetchAppConfig, fetchCsrfToken } from '.
 import { initI18n } from './services/i18n.service.js';
 import { renderIcons } from './services/icon.service.js';
 import { initTheme } from './services/theme.service.js';
+import { initTooltips } from './services/tooltip.service.js';
 import { initWebSocket } from './services/websocket.service.js';
+
+let activeResizeObserver: ResizeObserver | null = null;
+
+function setupLayoutScrollSync(): void {
+  const layoutContent = document.querySelector<HTMLElement>('.layout-content:has(.layout-nav)');
+  if (activeResizeObserver) {
+    activeResizeObserver.disconnect();
+    activeResizeObserver = null;
+  }
+  if (!layoutContent) return;
+
+  const scrollableBody = layoutContent.querySelector<HTMLElement>(
+    '.view-scrollable, .home-scrollable, .layout-body--scrollable, .layout-scrollable, .component-table-wrapper'
+  );
+  if (!scrollableBody) {
+    layoutContent.style.removeProperty('--layout-scroll-height');
+    return;
+  }
+
+  const updateScrollHeight = () => {
+    const scrollHeight = scrollableBody.scrollHeight;
+    layoutContent.style.setProperty('--layout-scroll-height', `${scrollHeight}px`);
+  };
+
+  updateScrollHeight();
+
+  activeResizeObserver = new ResizeObserver(() => {
+    updateScrollHeight();
+  });
+
+  activeResizeObserver.observe(scrollableBody);
+  const firstChild = scrollableBody.firstElementChild;
+  if (firstChild) {
+    activeResizeObserver.observe(firstChild);
+  }
+}
+
+function initScrollShadow(): void {
+  setupLayoutScrollSync();
+
+  const appRoot = document.querySelector<HTMLElement>('[data-ref="app"]') || document.body;
+  const routeObserver = new MutationObserver(() => {
+    setupLayoutScrollSync();
+  });
+  routeObserver.observe(appRoot, { childList: true });
+
+  document.addEventListener(
+    'scroll',
+    (e: Event) => {
+      const target = e.target as HTMLElement | null;
+      if (!target || target.nodeType !== 1) return;
+
+      if (target.classList.contains('layout-content')) {
+        const scrollableBody = target.querySelector<HTMLElement>(
+          '.view-scrollable, .home-scrollable, .layout-body--scrollable, .layout-scrollable, .component-table-wrapper'
+        );
+        if (scrollableBody && scrollableBody.scrollTop !== target.scrollTop) {
+          scrollableBody.scrollTop = target.scrollTop;
+        }
+      } else if (
+        target.classList.contains('view-scrollable') ||
+        target.classList.contains('home-scrollable') ||
+        target.classList.contains('layout-scrollable') ||
+        target.classList.contains('layout-body--scrollable') ||
+        target.classList.contains('component-table-wrapper')
+      ) {
+        const layoutContent = target.closest<HTMLElement>('.layout-content:has(.layout-nav)');
+        if (layoutContent && layoutContent.scrollTop !== target.scrollTop) {
+          layoutContent.scrollTop = target.scrollTop;
+        }
+      }
+
+      if (
+        target.classList.contains('layout-content') ||
+        target.classList.contains('component-wrapper') ||
+        target.classList.contains('view-wrapper') ||
+        target.classList.contains('home-wrapper') ||
+        target.classList.contains('view-scrollable') ||
+        target.classList.contains('home-scrollable') ||
+        target.classList.contains('layout-scrollable') ||
+        target.classList.contains('layout-body--scrollable') ||
+        target.classList.contains('layout-content__scrollable') ||
+        target.classList.contains('component-table-wrapper')
+      ) {
+        const isScrolled = target.scrollTop > 0;
+        const componentWrapper = target.closest('.component-wrapper') || target.querySelector<HTMLElement>('.component-wrapper');
+        const componentTop = componentWrapper
+          ? componentWrapper.querySelector<HTMLElement>('.component-top, .view-header, .home-floating-top')
+          : target.closest('.layout-content')?.querySelector<HTMLElement>('.component-top, .view-header, .home-floating-top');
+
+        if (componentTop) {
+          componentTop.classList.toggle('shadow', isScrolled);
+          componentTop.classList.toggle('component-top--shadow', isScrolled);
+
+          const header = document.querySelector<HTMLElement>('.layout-header, .general-content-top');
+          if (header) {
+            header.classList.remove('shadow', 'layout-header--shadow');
+          }
+        } else {
+          const header = document.querySelector<HTMLElement>('.layout-header, .general-content-top');
+          if (header) {
+            header.classList.toggle('shadow', isScrolled);
+            header.classList.toggle('layout-header--shadow', isScrolled);
+          }
+        }
+      }
+    },
+    true
+  );
+}
 
 function initLinkInterception(): void {
   document.addEventListener('click', (e: MouseEvent) => {
@@ -19,35 +130,9 @@ function initLinkInterception(): void {
   });
 }
 
-function initScrollShadow(): void {
-  document.addEventListener(
-    'scroll',
-    (e: Event) => {
-      const target = e.target as HTMLElement | null;
-      if (!target || target.nodeType !== 1) return;
-
-      if (
-        target.classList.contains('layout-content') ||
-        target.classList.contains('component-wrapper') ||
-        target.classList.contains('view-wrapper') ||
-        target.classList.contains('view-scrollable') ||
-        target.classList.contains('layout-scrollable') ||
-        target.classList.contains('layout-body--scrollable')
-      ) {
-        const isScrolled = target.scrollTop > 0;
-        const header = document.querySelector<HTMLElement>('.view-header, .layout-header');
-        if (header) {
-          header.classList.toggle('shadow', isScrolled);
-          header.classList.toggle('view-header--shadow', isScrolled);
-        }
-      }
-    },
-    true
-  );
-}
-
 async function init(): Promise<void> {
   initTheme();
+  initTooltips();
   initScrollShadow();
   initLinkInterception();
 

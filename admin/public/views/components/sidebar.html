@@ -46,9 +46,9 @@
     </div>
 
     <div class="layout-rail__bottom" data-ref="rail-bottom">
-      <div class="rail-item-container" data-ref="avatar-container">
+      <div class="rail-item-container" data-ref="avatar-container" style="display: none;">
         <button type="button" class="component-button component-button--avatar rail-avatar-btn" data-ref="btn-avatar" data-tooltip="Perfil" aria-label="Perfil">
-          <img class="avatar-img image-lazy-fade" data-ref="avatar-img" src="" alt="Avatar" referrerpolicy="no-referrer" />
+          <img class="avatar-img image-lazy-fade" data-ref="avatar-img" src="" alt="Avatar" referrerpolicy="no-referrer" onload="this.classList.add('image-loaded')" onerror="this.classList.add('image-loaded')" />
         </button>
 
         <div class="avatar-dropdown-backdrop" data-ref="avatar-menu-backdrop">
@@ -63,7 +63,7 @@
               </div>
               <button type="button" class="menu-item menu-item--bordered account-item" data-ref="btn-switch-account-menu">
                 <div class="account-item__avatar" data-ref="active-account-avatar-box">
-                  <img class="avatar-img image-lazy-fade" data-ref="active-account-avatar" src="" alt="Avatar" referrerpolicy="no-referrer" />
+                  <img class="avatar-img image-lazy-fade" data-ref="active-account-avatar" src="" alt="Avatar" referrerpolicy="no-referrer" onload="this.classList.add('image-loaded')" onerror="this.classList.add('image-loaded')" />
                 </div>
                 <div class="account-item__info" data-ref="active-account-info">
                   <span class="account-item__name" data-ref="active-account-name"></span>

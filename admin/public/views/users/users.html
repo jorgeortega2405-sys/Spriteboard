@@ -1,19 +1,19 @@
 <div class="layout-content" data-ref="users-view">
-  <div class="component-wrapper component-wrapper--full home-wrapper view-wrapper" data-ref="users-wrapper">
-    <div class="component-bottom component-bottom--no-padding" data-ref="component-bottom">
-      <div class="home-floating-top" data-ref="component-top">
-        <div class="home-floating-top__left" data-ref="component-top-left">
-          <h1 class="section-floating-title" data-ref="users-title">Gestionar Usuarios</h1>
+  <div class="component-wrapper component-wrapper--full view-wrapper" data-ref="users-wrapper">
+    <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="users-scrollable">
+      <div class="view-header" data-ref="users-floating-top">
+        <div class="view-header__left" data-ref="users-floating-left">
+          <h1 class="view-header__title" data-ref="users-title">Gestionar Usuarios</h1>
         </div>
 
-        <div class="home-floating-top__right" data-ref="component-top-right">
-          <div class="home-floating-actions" data-ref="users-default-actions">
-            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-toggle-search" data-tooltip="Buscar usuarios" aria-label="Buscar usuarios">
+        <div class="view-header__right" data-ref="users-floating-right">
+          <div class="view-header__actions" data-ref="users-default-actions">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-toggle-search" data-tooltip="Buscar usuarios" aria-label="Buscar usuarios">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
             </button>
 
             <div class="settings-dropdown-wrapper" data-ref="filter-dropdown-wrapper">
-              <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-toggle-filter" data-tooltip="Filtros" aria-label="Filtros">
+              <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-toggle-filter" data-tooltip="Filtros" aria-label="Filtros">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
               </button>
 
@@ -71,24 +71,24 @@
             </div>
           </div>
 
-          <div class="home-floating-actions" data-ref="users-selected-actions" style="display: none; align-items: center; gap: 8px;">
-            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-action-deselect" data-tooltip="Cancelar selección" aria-label="Cancelar selección">
+          <div class="view-header__actions" data-ref="users-selected-actions" style="display: none; align-items: center; gap: 8px;">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-deselect" data-tooltip="Cancelar selección" aria-label="Cancelar selección">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
             </button>
 
-            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-action-account" data-tooltip="Gestionar cuenta" aria-label="Gestionar cuenta">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-account" data-tooltip="Gestionar cuenta" aria-label="Gestionar cuenta">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#person"></use></svg>
             </button>
 
-            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-action-sanctions" data-tooltip="Gestionar sanciones" aria-label="Gestionar sanciones">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-sanctions" data-tooltip="Gestionar sanciones" aria-label="Gestionar sanciones">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#shield"></use></svg>
             </button>
 
-            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-action-sanctions-history" data-tooltip="Historial de sanciones" aria-label="Historial de sanciones">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-sanctions-history" data-tooltip="Historial de sanciones" aria-label="Historial de sanciones">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#history"></use></svg>
             </button>
 
-            <button type="button" class="component-button component-button--h40 component-button--icon-only component-button--black home-floating-btn" data-ref="btn-action-roles" data-tooltip="Gestionar roles" aria-label="Gestionar roles">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only component-button--black view-header__btn" data-ref="btn-action-roles" data-tooltip="Gestionar roles" aria-label="Gestionar roles">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#admin_panel_settings"></use></svg>
             </button>
           </div>
@@ -109,7 +109,7 @@
         </div>
       </div>
 
-      <div class="component-table-wrapper" data-ref="users-table-wrapper" style="display: flex; flex-direction: column; height: 100%;">
+      <div class="component-table-wrapper" data-ref="users-table-wrapper" style="display: flex; flex-direction: column; height: calc(100% - 56px);">
         <div class="table-scroll-container" style="flex: 1; overflow: auto;">
           <table class="component-table" data-ref="users-table">
             <thead class="component-table__head" data-ref="users-thead">

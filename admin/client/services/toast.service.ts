@@ -1,5 +1,15 @@
 export type ToastType = 'danger' | 'error' | 'info' | 'success' | 'warning';
 
+let userPreferences = {
+  extended_alerts: false,
+};
+
+export function setToastPreferences(prefs: { extended_alerts?: boolean }): void {
+  if (prefs && typeof prefs === 'object') {
+    userPreferences = { ...userPreferences, ...prefs };
+  }
+}
+
 export function showToast(message: string, type: ToastType = 'success', customDuration: number | null = null): () => void {
   if (!message) return () => {};
 
@@ -34,7 +44,9 @@ export function showToast(message: string, type: ToastType = 'success', customDu
   container.appendChild(toastEl);
   requestAnimationFrame(() => toastEl.classList.add('is-active'));
 
-  const duration = customDuration !== null ? customDuration : 4000;
+  const duration = customDuration !== null
+    ? customDuration
+    : (userPreferences.extended_alerts ? 8000 : 4000);
 
   let isDismissed = false;
   const dismiss = () => {
@@ -61,3 +73,4 @@ export const toast = {
   success: (msg: string, dur?: number) => showToast(msg, 'success', dur ?? null),
   warning: (msg: string, dur?: number) => showToast(msg, 'warning', dur ?? null),
 };
+

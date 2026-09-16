@@ -1,20 +1,19 @@
 <div class="layout-content" data-ref="support-view">
-  <div class="component-wrapper component-wrapper--full home-wrapper view-wrapper" data-ref="support-wrapper">
-    <div class="component-bottom component-bottom--no-padding" data-ref="component-bottom" style="height: 100%; display: flex; flex-direction: column;">
-      
-      <!-- Top Bar Header -->
-      <div class="home-floating-top" data-ref="component-top">
-        <div class="home-floating-top__left" data-ref="component-top-left">
-          <h1 class="section-floating-title" data-ref="support-title">Soporte Técnico</h1>
+  <div class="component-wrapper component-wrapper--full view-wrapper" data-ref="support-wrapper">
+    <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="support-scrollable">
+      <!-- View Header -->
+      <div class="view-header" data-ref="support-floating-top">
+        <div class="view-header__left" data-ref="support-floating-left">
+          <h1 class="view-header__title" data-ref="support-title">Soporte Técnico</h1>
           <div class="component-badge component-badge--interactive" data-ref="support-queue-counter-badge" style="cursor: default; padding: 4px 10px; font-size: 12px; font-weight: 600; margin-left: 8px;">
             <svg class="component-icon" aria-hidden="true" style="width: 14px; height: 14px; margin-right: 4px;"><use href="/icons.svg#schedule"></use></svg>
             <span data-ref="support-queue-counter-text">0 en espera</span>
           </div>
         </div>
 
-        <div class="home-floating-top__right" data-ref="component-top-right">
-          <div class="home-floating-actions" data-ref="support-top-actions">
-            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-refresh-tickets" data-tooltip="Actualizar solicitudes" aria-label="Actualizar solicitudes">
+        <div class="view-header__right" data-ref="support-floating-right">
+          <div class="view-header__actions" data-ref="support-top-actions">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-refresh-tickets" data-tooltip="Actualizar solicitudes" aria-label="Actualizar solicitudes">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
             </button>
           </div>

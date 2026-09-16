@@ -1,24 +1,24 @@
 <div class="layout-content" data-ref="admin-backups-view">
-  <div class="component-wrapper component-wrapper--full home-wrapper view-wrapper" data-ref="backups-wrapper">
-    <div class="component-bottom component-bottom--no-padding" data-ref="component-bottom">
-      <div class="home-floating-top" data-ref="component-top">
-        <div class="home-floating-top__left" data-ref="component-top-left">
-          <h1 class="section-floating-title" data-ref="backups-title">Copias de Seguridad</h1>
+  <div class="component-wrapper component-wrapper--full view-wrapper" data-ref="backups-wrapper">
+    <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="backups-scrollable">
+      <div class="view-header" data-ref="backups-floating-top">
+        <div class="view-header__left" data-ref="backups-floating-left">
+          <h1 class="view-header__title" data-ref="backups-title">Copias de Seguridad</h1>
         </div>
 
-        <div class="home-floating-top__right" data-ref="component-top-right">
-          <div class="home-floating-actions" data-ref="backups-default-actions">
-            <button type="button" class="component-button component-button--h40 component-button--black" data-ref="btn-create-backup" style="gap: 8px; padding: 0 16px;">
+        <div class="view-header__right" data-ref="backups-floating-right">
+          <div class="view-header__actions" data-ref="backups-default-actions">
+            <button type="button" class="component-button component-button--h40 component-button--black view-header__btn" data-ref="btn-create-backup" style="gap: 8px; padding: 0 16px; width: auto;">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
               <span>Crear copia</span>
             </button>
 
-            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-toggle-search" data-tooltip="Buscar copias de seguridad" aria-label="Buscar copias de seguridad">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-toggle-search" data-tooltip="Buscar copias de seguridad" aria-label="Buscar copias de seguridad">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
             </button>
 
             <div class="settings-dropdown-wrapper" data-ref="filter-dropdown-wrapper">
-              <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-toggle-filter" data-tooltip="Filtrar por estado" aria-label="Filtrar por estado">
+              <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-toggle-filter" data-tooltip="Filtrar por estado" aria-label="Filtrar por estado">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
               </button>
 
@@ -45,7 +45,7 @@
               </div>
             </div>
 
-            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-refresh-backups" data-tooltip="Actualizar lista" aria-label="Actualizar lista">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-refresh-backups" data-tooltip="Actualizar lista" aria-label="Actualizar lista">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
             </button>
 
@@ -64,20 +64,20 @@
             </div>
           </div>
 
-          <div class="home-floating-actions" data-ref="backups-selected-actions" style="display: none; align-items: center; gap: 8px;">
-            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-action-deselect" data-tooltip="Cancelar selección" aria-label="Cancelar selección">
+          <div class="view-header__actions" data-ref="backups-selected-actions" style="display: none; align-items: center; gap: 8px;">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-deselect" data-tooltip="Cancelar selección" aria-label="Cancelar selección">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
             </button>
 
-            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-action-details" data-tooltip="Ver detalles" aria-label="Ver detalles">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-details" data-tooltip="Ver detalles" aria-label="Ver detalles">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#info"></use></svg>
             </button>
 
-            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-action-download" data-tooltip="Descargar archivo" aria-label="Descargar archivo">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-download" data-tooltip="Descargar archivo" aria-label="Descargar archivo">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
             </button>
 
-            <button type="button" class="component-button component-button--h40 component-button--icon-only component-button--danger home-floating-btn" data-ref="btn-action-delete" data-tooltip="Eliminar copia de seguridad" aria-label="Eliminar copia de seguridad">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only component-button--danger view-header__btn" data-ref="btn-action-delete" data-tooltip="Eliminar copia de seguridad" aria-label="Eliminar copia de seguridad">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
             </button>
           </div>
@@ -98,7 +98,7 @@
         </div>
       </div>
 
-      <div class="component-table-wrapper" data-ref="backups-table-wrapper" style="display: flex; flex-direction: column; height: 100%;">
+      <div class="component-table-wrapper" data-ref="backups-table-wrapper" style="display: flex; flex-direction: column; height: calc(100% - 56px);">
         <div class="table-scroll-container" style="flex: 1; overflow: auto;">
           <table class="component-table" data-ref="backups-table">
             <thead class="component-table__head" data-ref="backups-thead">

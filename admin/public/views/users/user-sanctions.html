@@ -1,29 +1,29 @@
 <div class="layout-content" data-ref="user-sanctions-view">
-  <div class="component-wrapper component-wrapper--full home-wrapper view-wrapper" data-ref="sanctions-wrapper">
-    <div class="component-bottom component-bottom--no-padding" data-ref="component-bottom">
-      <div class="home-floating-top" data-ref="component-top">
-        <div class="home-floating-top__left" data-ref="component-top-left" style="display: flex; align-items: center; gap: 8px;">
-          <h1 class="section-floating-title" data-ref="sanctions-title" style="margin: 0;">Historial de Sanciones</h1>
+  <div class="component-wrapper component-wrapper--full view-wrapper" data-ref="sanctions-wrapper">
+    <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="sanctions-scrollable">
+      <div class="view-header" data-ref="sanctions-floating-top">
+        <div class="view-header__left" data-ref="sanctions-floating-left" style="display: flex; align-items: center; gap: 8px;">
+          <h1 class="view-header__title" data-ref="sanctions-title" style="margin: 0;">Historial de Sanciones</h1>
           <span class="component-badge component-badge--sm" data-ref="badge-sanctions-user">@usuario</span>
         </div>
 
-        <div class="home-floating-top__right" data-ref="component-top-right">
-          <div class="home-floating-actions" data-ref="sanctions-default-actions" style="display: flex; align-items: center; gap: 8px;">
-            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-toggle-search" data-tooltip="Buscar en historial" aria-label="Buscar en historial">
+        <div class="view-header__right" data-ref="sanctions-floating-right">
+          <div class="view-header__actions" data-ref="sanctions-default-actions" style="display: flex; align-items: center; gap: 8px;">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-toggle-search" data-tooltip="Buscar en historial" aria-label="Buscar en historial">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
             </button>
 
-            <button type="button" class="component-button component-button--h40 component-button--black component-button--icon-only home-floating-btn" data-ref="btn-apply-sanction" data-tooltip="Aplicar nueva sanción" aria-label="Aplicar nueva sanción">
+            <button type="button" class="component-button component-button--h40 component-button--black component-button--icon-only view-header__btn" data-ref="btn-apply-sanction" data-tooltip="Aplicar nueva sanción" aria-label="Aplicar nueva sanción">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#shield"></use></svg>
             </button>
           </div>
 
-          <div class="home-floating-actions" data-ref="sanctions-selected-actions" style="display: none; align-items: center; gap: 8px;">
-            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-action-deselect" data-tooltip="Deseleccionar (Esc)" aria-label="Deseleccionar">
+          <div class="view-header__actions" data-ref="sanctions-selected-actions" style="display: none; align-items: center; gap: 8px;">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-deselect" data-tooltip="Deseleccionar (Esc)" aria-label="Deseleccionar">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
             </button>
 
-            <button type="button" class="component-button component-button--h40 component-button--danger component-button--icon-only home-floating-btn" data-ref="btn-action-revoke" data-tooltip="Revocar sanción" aria-label="Revocar sanción">
+            <button type="button" class="component-button component-button--h40 component-button--danger component-button--icon-only view-header__btn" data-ref="btn-action-revoke" data-tooltip="Revocar sanción" aria-label="Revocar sanción">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
             </button>
           </div>
@@ -44,7 +44,7 @@
         </div>
       </div>
 
-      <div class="component-table-wrapper" data-ref="sanctions-table-wrapper" style="display: flex; flex-direction: column; height: 100%;">
+      <div class="component-table-wrapper" data-ref="sanctions-table-wrapper" style="display: flex; flex-direction: column; height: calc(100% - 56px);">
         <div class="table-scroll-container" style="flex: 1; overflow: auto;">
           <table class="component-table" data-ref="sanctions-table">
             <thead class="component-table__head" data-ref="sanctions-thead">

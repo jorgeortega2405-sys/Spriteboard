@@ -1,9 +1,13 @@
 import { updateSidebarActiveState } from './components/layout.component.js';
+import { hasPersistentTopBar } from './config/skeleton-routes.js';
 import { currentUser } from './services/api.service.js';
 import { renderIcons } from './services/icon.service.js';
+import { SkeletonService } from './services/skeleton.service.js';
+import { hideTooltip } from './services/tooltip.service.js';
 import { ViewController } from './types/common.types.js';
 import { closeAllDropdowns } from './utils/dom.util.js';
 
+let isInitialPageLoad = true;
 let currentNavigation = 0;
 let activeControllers: ViewController[] = [];
 
@@ -31,6 +35,7 @@ export function navigate(url: string, replace = false): void {
 }
 
 export async function render(): Promise<void> {
+  hideTooltip();
   closeAllDropdowns();
   const appRoot = document.querySelector<HTMLElement>('[data-ref="app"]');
   if (!appRoot) return;
@@ -46,6 +51,19 @@ export async function render(): Promise<void> {
   }
 
   const navId = ++currentNavigation;
+
+  const existingSidebar = appRoot.querySelector<HTMLElement>('[data-ref="sidebar"], .layout-nav');
+  const isIntraAppNavigation = !isInitialPageLoad && Boolean(existingSidebar) && hasPersistentTopBar(path);
+
+  if (existingSidebar) {
+    updateSidebarActiveState(existingSidebar, path);
+  }
+
+  const skeletonSession = SkeletonService.showSkeleton(path, appRoot, {
+    minDuration: 180,
+    onlyBottom: isIntraAppNavigation,
+  });
+
   let viewElement: HTMLElement | null = null;
 
   try {
@@ -117,8 +135,11 @@ export async function render(): Promise<void> {
     }
     activeControllers = [];
 
-    appRoot.innerHTML = '';
-    appRoot.appendChild(viewElement);
+    await skeletonSession.finish([viewElement], () => navId === currentNavigation);
+
+    if (isInitialPageLoad) {
+      isInitialPageLoad = false;
+    }
 
     const c = (viewElement as any)?.__controller;
     if (c && typeof c.destroy === 'function') {
@@ -130,3 +151,4 @@ export async function render(): Promise<void> {
 }
 
 window.addEventListener('popstate', render);
+

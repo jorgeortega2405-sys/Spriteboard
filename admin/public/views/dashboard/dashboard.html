@@ -1,30 +1,26 @@
 <div class="layout-content" data-ref="admin-dashboard-view">
-  <div class="component-wrapper component-wrapper--full home-wrapper view-wrapper" data-ref="dashboard-wrapper">
-    <div class="component-bottom component-bottom--no-padding" data-ref="component-bottom">
-
-      <!-- Standard Top Floating Bar (Title on Left, Buttons/Actions on Right) -->
-      <div class="home-floating-top" data-ref="component-top">
-        <div class="home-floating-top__left" data-ref="component-top-left">
-          <h1 class="section-floating-title" data-ref="dashboard-title">Dashboard</h1>
+  <div class="component-wrapper component-wrapper--full view-wrapper" data-ref="dashboard-wrapper">
+    <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="dashboard-scrollable">
+      <div class="view-header" data-ref="dashboard-floating-top">
+        <div class="view-header__left" data-ref="dashboard-floating-left">
+          <h1 class="view-header__title" data-ref="dashboard-title">Dashboard</h1>
         </div>
 
-        <div class="home-floating-top__right" data-ref="component-top-right">
-          <div class="home-floating-actions" data-ref="dashboard-default-actions" style="display: flex; align-items: center; gap: 8px;">
+        <div class="view-header__right" data-ref="dashboard-floating-right">
+          <div class="view-header__actions" data-ref="dashboard-default-actions" style="display: flex; align-items: center; gap: 8px;">
             <div class="component-badge component-badge--status component-badge--success" data-ref="system-status-indicator" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; font-size: 12px; font-weight: 600; border-radius: var(--sl-border-radius-pill, 9999px); background: rgba(16, 185, 129, 0.12); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.25);">
               <span style="width: 7px; height: 7px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
               <span>Sistema Operacional</span>
             </div>
 
-            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-refresh-stats" data-tooltip="Actualizar estadísticas" aria-label="Actualizar estadísticas">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-refresh-stats" data-tooltip="Actualizar estadísticas" aria-label="Actualizar estadísticas">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
             </button>
           </div>
         </div>
       </div>
 
-      <!-- Dashboard Scrollable Body -->
-      <div class="component-table-wrapper" data-ref="dashboard-body-wrapper" style="display: flex; flex-direction: column; height: 100%; overflow-y: auto; overflow-x: hidden;">
-        <div class="dashboard-content-container" data-ref="dashboard-content-container" style="width: 100%; box-sizing: border-box; padding: 20px 24px 60px;">
+      <div class="view-body" data-ref="dashboard-content-container" style="width: 100%; box-sizing: border-box; padding: 20px 24px 60px;">
 
           <!-- 4 Metric Cards Grid -->
           <div class="dashboard-stats-grid" data-ref="dashboard-stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; margin-bottom: 20px; width: 100%;">
@@ -220,7 +216,7 @@
 
         </div>
       </div>
-
     </div>
   </div>
 </div>
+

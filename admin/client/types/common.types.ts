@@ -2,6 +2,10 @@ export interface ViewController {
   destroy: () => void;
 }
 
+export interface SkeletonSession {
+  finish: (newElements: HTMLElement[], isActiveCheck?: () => boolean) => Promise<void>;
+}
+
 export interface Language {
   code: string;
   name: string;

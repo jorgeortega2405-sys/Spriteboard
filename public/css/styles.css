@@ -177,7 +177,7 @@ html.dark-theme .layout-content {
 }
 
 .layout-content:has(.layout-nav) {
-  padding: 6px 6px 0 0;
+  padding: 0 6px 0 0;
   gap: 0;
   background-color: #ffffff;
   overflow-y: auto;
@@ -206,7 +206,6 @@ html.dark-theme .layout-content:has(.layout-nav) {
   align-self: flex-start !important;
   height: 100vh !important;
   height: 100dvh !important;
-  margin-top: -6px;
   flex-shrink: 0 !important;
   z-index: 50;
   box-sizing: border-box;
@@ -216,7 +215,8 @@ html.dark-theme .layout-content:has(.layout-nav) {
 .layout-content:has(.layout-nav) .home-wrapper,
 .layout-content:has(.layout-nav) .component-wrapper:not(.no-padding) {
   position: sticky !important;
-  top: 0 !important;
+  top: 6px !important;
+  margin-top: 6px;
   height: calc(100vh - 6px) !important;
   height: calc(100dvh - 6px) !important;
   max-height: calc(100vh - 6px) !important;

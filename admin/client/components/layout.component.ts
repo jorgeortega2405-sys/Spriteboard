@@ -31,47 +31,46 @@ function populateDrawerContent(drawer: HTMLElement): void {
 
   const currentPath = window.location.pathname;
 
+  const bindNavLink = (btn: HTMLElement | null, path: string) => {
+    btn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (window.innerWidth <= 768) {
+        toggleDrawer(false);
+      }
+      navigate(path);
+    });
+  };
+
   if (currentPath.startsWith('/settings')) {
     const isYourAccount = currentPath === '/settings/your-account' || currentPath === '/settings';
     const isSecurity = currentPath === '/settings/security';
     const isAccessibility = currentPath === '/settings/accessibility';
 
     drawerBody.innerHTML = `
-      <div class="drawer-section" data-ref="drawer-section-settings">
-        <div class="drawer-section__header" data-ref="drawer-header-settings">
-          <span class="drawer-section__title">Configuración</span>
-        </div>
-        <div class="drawer-nav-list" data-ref="drawer-settings-list" style="display: flex; flex-direction: column; gap: 4px;">
-          <button type="button" class="component-button component-button--w-full drawer-nav-item ${isYourAccount ? 'is-active' : ''}" data-ref="btn-drawer-your-account" style="justify-content: flex-start; text-align: left; padding: 10px 14px; gap: 10px;">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#person"></use></svg>
-            <span>Tu Cuenta</span>
-          </button>
-          <button type="button" class="component-button component-button--w-full drawer-nav-item ${isSecurity ? 'is-active' : ''}" data-ref="btn-drawer-security" style="justify-content: flex-start; text-align: left; padding: 10px 14px; gap: 10px;">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#shield"></use></svg>
-            <span>Seguridad</span>
-          </button>
-          <button type="button" class="component-button component-button--w-full drawer-nav-item ${isAccessibility ? 'is-active' : ''}" data-ref="btn-drawer-accessibility" style="justify-content: flex-start; text-align: left; padding: 10px 14px; gap: 10px;">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
-            <span>Accesibilidad</span>
-          </button>
-        </div>
+      <div class="drawer-section__header" style="padding: 8px 8px 4px 8px;">
+        <span class="drawer-section__title" style="font-size: 13px; font-weight: 600; color: var(--text-primary);">Configuración</span>
       </div>
+      <button type="button" class="menu-item${isYourAccount ? ' is-active' : ''}" data-ref="btn-drawer-your-account">
+        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#person"></use></svg>
+        <span class="menu-item__text">Tu cuenta</span>
+      </button>
+      <button type="button" class="menu-item${isSecurity ? ' is-active' : ''}" data-ref="btn-drawer-security">
+        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#lock"></use></svg>
+        <span class="menu-item__text">Seguridad</span>
+      </button>
+      <button type="button" class="menu-item${isAccessibility ? ' is-active' : ''}" data-ref="btn-drawer-accessibility">
+        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#accessibility_new"></use></svg>
+        <span class="menu-item__text">Accesibilidad</span>
+      </button>
     `;
 
     const btnYourAccount = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-your-account"]');
     const btnSecurity = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-security"]');
     const btnAccessibility = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-accessibility"]');
 
-    const handleNav = (url: string) => {
-      if (window.innerWidth <= 768) {
-        toggleDrawer(false);
-      }
-      navigate(url);
-    };
-
-    btnYourAccount?.addEventListener('click', (e) => { e.preventDefault(); handleNav('/settings/your-account'); });
-    btnSecurity?.addEventListener('click', (e) => { e.preventDefault(); handleNav('/settings/security'); });
-    btnAccessibility?.addEventListener('click', (e) => { e.preventDefault(); handleNav('/settings/accessibility'); });
+    bindNavLink(btnYourAccount, '/settings/your-account');
+    bindNavLink(btnSecurity, '/settings/security');
+    bindNavLink(btnAccessibility, '/settings/accessibility');
 
     renderIcons(drawerBody);
     return;
@@ -84,33 +83,29 @@ function populateDrawerContent(drawer: HTMLElement): void {
   const isSystem = currentPath === '/system' || currentPath.startsWith('/system/') || currentPath === '/system-settings';
 
   drawerBody.innerHTML = `
-    <div class="drawer-section" data-ref="drawer-section-admin">
-      <div class="drawer-section__header" data-ref="drawer-header-admin">
-        <span class="drawer-section__title">Panel de Administración</span>
-      </div>
-      <div class="drawer-nav-list" data-ref="drawer-admin-list" style="display: flex; flex-direction: column; gap: 4px;">
-        <button type="button" class="component-button component-button--w-full drawer-nav-item ${isDashboard ? 'is-active' : ''}" data-ref="btn-drawer-dashboard" style="justify-content: flex-start; text-align: left; padding: 10px 14px; gap: 10px;">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#dashboard"></use></svg>
-          <span>Dashboard</span>
-        </button>
-        <button type="button" class="component-button component-button--w-full drawer-nav-item ${isUsers ? 'is-active' : ''}" data-ref="btn-drawer-users" style="justify-content: flex-start; text-align: left; padding: 10px 14px; gap: 10px;">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#group"></use></svg>
-          <span>Gestionar Usuarios</span>
-        </button>
-        <button type="button" class="component-button component-button--w-full drawer-nav-item ${isSupport ? 'is-active' : ''}" data-ref="btn-drawer-support" style="justify-content: flex-start; text-align: left; padding: 10px 14px; gap: 10px;">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chat_bubble"></use></svg>
-          <span>Soporte Técnico</span>
-        </button>
-        <button type="button" class="component-button component-button--w-full drawer-nav-item ${isBackups ? 'is-active' : ''}" data-ref="btn-drawer-backups" style="justify-content: flex-start; text-align: left; padding: 10px 14px; gap: 10px;">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cloud_upload"></use></svg>
-          <span>Copias de Seguridad</span>
-        </button>
-        <button type="button" class="component-button component-button--w-full drawer-nav-item ${isSystem ? 'is-active' : ''}" data-ref="btn-drawer-system" style="justify-content: flex-start; text-align: left; padding: 10px 14px; gap: 10px;">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#settings"></use></svg>
-          <span>Configuración del Sistema</span>
-        </button>
-      </div>
+    <div class="drawer-section__header" style="padding: 8px 8px 4px 8px;">
+      <span class="drawer-section__title" style="font-size: 13px; font-weight: 600; color: var(--text-primary);">Panel de Administración</span>
     </div>
+    <button type="button" class="menu-item${isDashboard ? ' is-active' : ''}" data-ref="btn-drawer-dashboard">
+      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#dashboard"></use></svg>
+      <span class="menu-item__text">Dashboard</span>
+    </button>
+    <button type="button" class="menu-item${isUsers ? ' is-active' : ''}" data-ref="btn-drawer-users">
+      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#group"></use></svg>
+      <span class="menu-item__text">Gestionar Usuarios</span>
+    </button>
+    <button type="button" class="menu-item${isSupport ? ' is-active' : ''}" data-ref="btn-drawer-support">
+      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#chat_bubble"></use></svg>
+      <span class="menu-item__text">Soporte Técnico</span>
+    </button>
+    <button type="button" class="menu-item${isBackups ? ' is-active' : ''}" data-ref="btn-drawer-backups">
+      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#cloud_upload"></use></svg>
+      <span class="menu-item__text">Copias de Seguridad</span>
+    </button>
+    <button type="button" class="menu-item${isSystem ? ' is-active' : ''}" data-ref="btn-drawer-system">
+      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#settings"></use></svg>
+      <span class="menu-item__text">Configuración del Sistema</span>
+    </button>
   `;
 
   const btnDashboard = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-dashboard"]');
@@ -119,18 +114,11 @@ function populateDrawerContent(drawer: HTMLElement): void {
   const btnBackups = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-backups"]');
   const btnSystem = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-system"]');
 
-  const handleNav = (url: string) => {
-    if (window.innerWidth <= 768) {
-      toggleDrawer(false);
-    }
-    navigate(url);
-  };
-
-  btnDashboard?.addEventListener('click', (e) => { e.preventDefault(); handleNav('/dashboard'); });
-  btnUsers?.addEventListener('click', (e) => { e.preventDefault(); handleNav('/users'); });
-  btnSupport?.addEventListener('click', (e) => { e.preventDefault(); handleNav('/support'); });
-  btnBackups?.addEventListener('click', (e) => { e.preventDefault(); handleNav('/backups'); });
-  btnSystem?.addEventListener('click', (e) => { e.preventDefault(); handleNav('/system'); });
+  bindNavLink(btnDashboard, '/dashboard');
+  bindNavLink(btnUsers, '/users');
+  bindNavLink(btnSupport, '/support');
+  bindNavLink(btnBackups, '/backups');
+  bindNavLink(btnSystem, '/system');
 
   renderIcons(drawerBody);
 }
@@ -278,9 +266,10 @@ export async function createSidebar(): Promise<HTMLElement> {
   const avatarImg = sidebar.querySelector<HTMLImageElement>('[data-ref="avatar-img"]');
   const avatarBackdrop = sidebar.querySelector<HTMLElement>('[data-ref="avatar-menu-backdrop"]');
   const avatarMenu = sidebar.querySelector<HTMLElement>('[data-ref="avatar-menu"]');
+  const dragZone = sidebar.querySelector<HTMLElement>('[data-ref="avatar-menu-drag-zone"]');
 
   if (currentUser && avatarContainer) {
-    avatarContainer.style.display = 'block';
+    avatarContainer.style.display = 'inline-flex';
 
     const defaultAvatar = `/api/avatar?name=${encodeURIComponent(currentUser.username)}`;
     const avatarUrl = currentUser.avatar_url || defaultAvatar;
@@ -440,6 +429,7 @@ export async function createSidebar(): Promise<HTMLElement> {
           avatarBackdrop.style.pointerEvents = '';
           avatarMenu.style.transform = '';
           avatarMenu.style.transition = '';
+          showPanel('main');
           isClosing = false;
         }, 200);
       } else {
@@ -454,6 +444,7 @@ export async function createSidebar(): Promise<HTMLElement> {
           avatarMenu.style.transform = '';
           avatarMenu.style.transition = '';
         }
+        showPanel('main');
       }
     };
 
@@ -471,6 +462,108 @@ export async function createSidebar(): Promise<HTMLElement> {
         closeMenu();
       }
     });
+
+    let startY = 0;
+    let currentY = 0;
+    let startTime = 0;
+    let isDragging = false;
+    let activePointerId: number | null = null;
+
+    const detachAvatarPointerListeners = () => {
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', onPointerUp);
+    };
+
+    const onPointerDown = (e: PointerEvent) => {
+      if (window.innerWidth > 768 || isClosing || !avatarMenu) return;
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+
+      isDragging = true;
+      activePointerId = e.pointerId;
+      startY = e.clientY;
+      currentY = startY;
+      startTime = performance.now();
+
+      try {
+        dragZone?.setPointerCapture(activePointerId);
+      } catch {}
+
+      avatarMenu.style.transition = 'none';
+      if (avatarBackdrop) {
+        avatarBackdrop.style.transition = 'none';
+      }
+
+      window.addEventListener('pointermove', onPointerMove, { passive: true });
+      window.addEventListener('pointerup', onPointerUp);
+      window.addEventListener('pointercancel', onPointerUp);
+    };
+
+    const onPointerMove = (e: PointerEvent) => {
+      if (!isDragging || (activePointerId !== null && e.pointerId !== activePointerId)) return;
+      currentY = e.clientY;
+      const diff = currentY - startY;
+
+      if (avatarMenu) {
+        if (diff > 0) {
+          avatarMenu.style.transform = `translateY(${diff}px)`;
+          if (avatarBackdrop) {
+            const progress = Math.min(diff / 240, 1);
+            avatarBackdrop.style.opacity = `${Math.max(0.2, 1 - progress * 0.8)}`;
+          }
+        } else {
+          const rubberDiff = Math.max(diff * 0.15, -24);
+          avatarMenu.style.transform = `translateY(${rubberDiff}px)`;
+        }
+      }
+    };
+
+    const onPointerUp = (e: PointerEvent) => {
+      if (!isDragging || (activePointerId !== null && e.pointerId !== activePointerId)) return;
+      isDragging = false;
+      detachAvatarPointerListeners();
+
+      try {
+        if (activePointerId !== null) {
+          dragZone?.releasePointerCapture(activePointerId);
+        }
+      } catch {}
+      activePointerId = null;
+
+      const diff = currentY - startY;
+      const elapsed = Math.max(1, performance.now() - startTime);
+      const velocity = diff / elapsed;
+
+      if (diff > 75 || (diff > 25 && velocity > 0.45)) {
+        closeMenu();
+      } else {
+        if (avatarBackdrop) {
+          avatarBackdrop.style.transition = 'opacity 0.25s ease';
+          avatarBackdrop.style.opacity = '1';
+        }
+        if (avatarMenu) {
+          avatarMenu.style.transition = 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)';
+          avatarMenu.style.transform = 'translateY(0)';
+        }
+      }
+    };
+
+    dragZone?.addEventListener('pointerdown', onPointerDown);
+    dragZone?.addEventListener('lostpointercapture', onPointerUp);
+
+    const closeMenuHandler = (e: MouseEvent) => {
+      if (!avatarMenu?.contains(e.target as Node) && !btnAvatar?.contains(e.target as Node)) {
+        closeMenu();
+      }
+    };
+    document.addEventListener('click', closeMenuHandler);
+
+    const closeMenuKeydownHandler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && avatarMenu?.classList.contains('is-open')) {
+        closeMenu();
+      }
+    };
+    document.addEventListener('keydown', closeMenuKeydownHandler);
 
     btnSwitchAccountMenu?.addEventListener('click', (e) => {
       e.preventDefault();
@@ -513,3 +606,4 @@ export async function createSidebar(): Promise<HTMLElement> {
   renderIcons(sidebar);
   return sidebar;
 }
+
