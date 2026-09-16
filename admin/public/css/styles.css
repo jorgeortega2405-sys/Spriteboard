@@ -1772,5 +1772,87 @@ html.dark-theme .component-wrapper {
   font-family: monospace;
 }
 
+/* Support Split View Layout */
+.support-main-split {
+  flex: 1 1 auto;
+  display: flex !important;
+  flex-direction: row !important;
+  width: 100%;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.support-tickets-panel {
+  width: 340px;
+  min-width: 300px;
+  max-width: 400px;
+  height: 100%;
+  min-height: 0;
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg-surface);
+  flex-shrink: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.support-chat-workspace {
+  flex: 1 1 auto;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg-body);
+  overflow: hidden;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.support-active-container {
+  flex: 1 1 auto;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.support-messages-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.support-ticket-items {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 768px) {
+  .support-main-split {
+    flex-direction: column !important;
+  }
+  .support-tickets-panel {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    max-height: 40%;
+  }
+}
+
 
 

@@ -1,4 +1,3 @@
-import { validateCsrf } from '../middlewares/csrf.middleware.js';
 import aiRoutes from './ai.routes.js';
 import authRoutes from './auth.routes.js';
 import avatarRoutes from './avatar.routes.js';
@@ -12,8 +11,10 @@ import scimRoutes from './scim.routes.js';
 import searchRoutes from './search.routes.js';
 import settingsRoutes from './settings.routes.js';
 import subscriptionRoutes from './subscription.routes.js';
+import supportRoutes from './support.routes.js';
 import teamRoutes from './team.routes.js';
 import telemetryRoutes from './telemetry.routes.js';
+import { validateCsrf } from '../middlewares/csrf.middleware.js';
 import { Router } from 'express';
 
 const apiRouter = Router();
@@ -31,9 +32,11 @@ apiRouter.use('/', folderRoutes);
 apiRouter.use('/', notificationRoutes);
 apiRouter.use('/', searchRoutes);
 apiRouter.use('/', settingsRoutes);
+apiRouter.use('/support', supportRoutes);
 apiRouter.use('/', teamRoutes);
 apiRouter.use('/', telemetryRoutes);
 apiRouter.use('/', aiRoutes);
 apiRouter.use('/', subscriptionRoutes);
 
 export default apiRouter;
+

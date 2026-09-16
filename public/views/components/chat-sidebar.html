@@ -11,6 +11,24 @@
       </button>
     </div>
 
+    <div class="chat-support-banner" data-ref="chat-support-banner" style="display: none; padding: 10px 14px; background-color: var(--bg-surface); border-bottom: 1px solid var(--border-color); z-index: 2; flex-direction: column; gap: 6px;">
+      <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <span class="material-symbols-rounded" style="font-size: 18px; color: var(--action-primary);">support_agent</span>
+          <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);" data-ref="chat-support-ticket-num">Soporte Técnico</span>
+        </div>
+        <button type="button" class="component-button component-button--ghost component-button--h24" data-ref="btn-chat-cancel-support" style="font-size: 11px; padding: 2px 8px; color: var(--text-tertiary);" aria-label="Finalizar soporte">
+          Finalizar
+        </button>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+        <div class="component-badge component-badge--info" data-ref="chat-support-status-pill" style="font-size: 11px; padding: 2px 8px; font-weight: 600;">
+          En cola de espera
+        </div>
+        <span style="font-size: 11px; color: var(--text-secondary);" data-ref="chat-support-wait-time">Buscando agente...</span>
+      </div>
+    </div>
+
     <div class="chat-panel__center layout-scrollable" data-ref="chat-panel-center">
       <div class="chat-messages" data-ref="chat-messages">
         <div class="chat-empty-state" data-ref="chat-empty-state">

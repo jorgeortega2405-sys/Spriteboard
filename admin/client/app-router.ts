@@ -14,7 +14,7 @@ function normalizePath(rawPath: string): string {
 
 export function navigate(url: string, replace = false): void {
   const normalized = normalizePath(url);
-  if (window.location.pathname === normalized && !replace) return;
+  if (window.location.pathname === normalized) return;
 
   if (replace) {
     window.history.replaceState({}, '', normalized);
@@ -58,6 +58,11 @@ export async function render(): Promise<void> {
     } else if (path === '/users') {
       const { createUsersView } = await import('./views/users.view.js');
       viewElement = await createUsersView();
+    } else if (path === '/support' || /^\/support\/([0-9a-zA-Z-]+)$/.test(path)) {
+      const match = path.match(/^\/support\/([0-9a-zA-Z-]+)$/);
+      const ticketParam = match ? match[1] : undefined;
+      const { createSupportView } = await import('./views/support.view.js');
+      viewElement = await createSupportView(ticketParam);
     } else if (/^\/users\/([0-9a-zA-Z-]+)\/sanctions$/.test(path)) {
       const match = path.match(/^\/users\/([0-9a-zA-Z-]+)\/sanctions$/);
       const userIdentifier = match![1];

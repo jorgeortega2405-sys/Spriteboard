@@ -1,0 +1,248 @@
+<div class="layout-content" data-ref="support-view">
+  <div class="component-wrapper component-wrapper--full home-wrapper view-wrapper" data-ref="support-wrapper">
+    <div class="component-bottom component-bottom--no-padding" data-ref="component-bottom" style="height: 100%; display: flex; flex-direction: column;">
+      
+      <!-- Top Bar Header -->
+      <div class="home-floating-top" data-ref="component-top">
+        <div class="home-floating-top__left" data-ref="component-top-left">
+          <h1 class="section-floating-title" data-ref="support-title">Soporte Técnico</h1>
+          <div class="component-badge component-badge--interactive" data-ref="support-queue-counter-badge" style="cursor: default; padding: 4px 10px; font-size: 12px; font-weight: 600; margin-left: 8px;">
+            <svg class="component-icon" aria-hidden="true" style="width: 14px; height: 14px; margin-right: 4px;"><use href="/icons.svg#schedule"></use></svg>
+            <span data-ref="support-queue-counter-text">0 en espera</span>
+          </div>
+        </div>
+
+        <div class="home-floating-top__right" data-ref="component-top-right">
+          <div class="home-floating-actions" data-ref="support-top-actions">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only home-floating-btn" data-ref="btn-refresh-tickets" data-tooltip="Actualizar solicitudes" aria-label="Actualizar solicitudes">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Split View Container -->
+      <div class="support-main-split" data-ref="support-main-split">
+        
+        <!-- Left Panel: Tickets Queue & List -->
+        <div class="support-tickets-panel" data-ref="support-tickets-panel">
+          
+          <!-- Search & Filter Controls -->
+          <div class="support-search-bar" data-ref="support-search-bar" style="padding: 12px; border-bottom: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 8px;">
+            <div class="field field--compact" data-ref="field-search-tickets">
+              <div class="field__container">
+                <svg class="component-icon field__leading-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+                <input class="field__input" data-ref="input-search-tickets" type="text" placeholder="Buscar por usuario, ticket o motivo..." autocomplete="off" />
+              </div>
+            </div>
+
+            <!-- Filter Tabs -->
+            <div class="support-filter-tabs" data-ref="support-filter-tabs" style="display: flex; gap: 4px; overflow-x: auto; padding-bottom: 2px;">
+              <button type="button" class="component-button component-button--h32 component-button--ghost is-active" data-ref="tab-filter-queued" data-status="queued" style="font-size: 12px; padding: 4px 10px; border-radius: var(--radius-md);">
+                <span>En cola</span>
+                <span class="component-badge component-badge--count" data-ref="tab-count-queued" style="margin-left: 4px; font-size: 11px; padding: 1px 6px;">0</span>
+              </button>
+              <button type="button" class="component-button component-button--h32 component-button--ghost" data-ref="tab-filter-my-active" data-status="in_progress" style="font-size: 12px; padding: 4px 10px; border-radius: var(--radius-md);">
+                <span>Mis activos</span>
+              </button>
+              <button type="button" class="component-button component-button--h32 component-button--ghost" data-ref="tab-filter-escalated" data-status="escalated" style="font-size: 12px; padding: 4px 10px; border-radius: var(--radius-md);">
+                <span>Escalados</span>
+              </button>
+              <button type="button" class="component-button component-button--h32 component-button--ghost" data-ref="tab-filter-all" data-status="all" style="font-size: 12px; padding: 4px 10px; border-radius: var(--radius-md);">
+                <span>Todos</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Ticket List Scrollable Container -->
+          <div class="support-ticket-items" data-ref="support-ticket-items">
+            <div class="support-loading-indicator" data-ref="support-loading-indicator" style="padding: 24px; text-align: center; color: var(--text-secondary);">
+              <svg class="component-icon" aria-hidden="true" style="animation: spin 1s linear infinite;"><use href="/icons.svg#autorenew"></use></svg>
+              <span style="margin-left: 8px; font-size: 13px;">Cargando solicitudes...</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Panel: Active Chat & Workspace -->
+        <div class="support-chat-workspace" data-ref="support-chat-workspace">
+          
+          <!-- Empty State (when no ticket selected) -->
+          <div class="support-empty-workspace" data-ref="support-empty-workspace" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px; text-align: center; gap: 12px;">
+            <div class="support-empty-icon" data-ref="support-empty-icon" style="width: 64px; height: 64px; border-radius: 50%; background-color: var(--bg-surface); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; color: var(--text-tertiary);">
+              <svg class="component-icon" aria-hidden="true" style="width: 32px; height: 32px;"><use href="/icons.svg#chat_bubble"></use></svg>
+            </div>
+            <h3 class="support-empty-title" data-ref="support-empty-title" style="font-size: 16px; font-weight: 600; color: var(--text-primary); margin: 0;">Selecciona una solicitud de soporte</h3>
+            <p class="support-empty-desc" data-ref="support-empty-desc" style="font-size: 13px; color: var(--text-secondary); max-width: 340px; margin: 0;">Elige un ticket de la lista lateral para atender al usuario en tiempo real, escalar el caso o resolverlo.</p>
+          </div>
+
+          <!-- Active Ticket Details & Conversation (hidden by default) -->
+          <div class="support-active-container" data-ref="support-active-container" style="display: none;">
+            
+            <!-- Ticket Header Info Bar -->
+            <div class="support-ticket-header" data-ref="support-ticket-header" style="padding: 12px 16px; background-color: var(--bg-surface); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; gap: 12px; z-index: 2;">
+              <div class="support-ticket-header__user" data-ref="support-header-user" style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+                <div class="avatar-box" data-ref="ticket-user-avatar-box" style="width: 36px; height: 36px; border-radius: 50%; overflow: hidden; flex-shrink: 0; background-color: var(--bg-surface);">
+                  <img class="avatar-img image-lazy-fade" data-ref="ticket-user-avatar" src="" alt="Avatar" referrerpolicy="no-referrer" style="width: 100%; height: 100%; object-fit: cover;" />
+                </div>
+                <div class="support-ticket-header__meta" data-ref="support-header-meta" style="min-width: 0;">
+                  <div style="display: flex; align-items: center; gap: 6px;">
+                    <span class="support-ticket-header__username" data-ref="ticket-user-username" style="font-size: 14px; font-weight: 600; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
+                    <span class="component-badge" data-ref="ticket-user-tier" style="font-size: 11px; padding: 2px 6px;"></span>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-secondary);">
+                    <span data-ref="ticket-number-display" style="font-weight: 500; color: var(--text-primary);"></span>
+                    <span>•</span>
+                    <span data-ref="ticket-user-email" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Action Toolbar -->
+              <div class="support-ticket-header__actions" data-ref="support-header-actions" style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
+                <div class="component-badge" data-ref="ticket-status-badge" style="font-size: 12px; padding: 4px 8px; font-weight: 600;"></div>
+                <div class="component-badge" data-ref="ticket-escalation-badge" style="font-size: 12px; padding: 4px 8px; display: none;"></div>
+
+                <button type="button" class="component-button component-button--h36 component-button--primary" data-ref="btn-action-accept" style="display: none; padding: 0 14px; font-size: 13px;">
+                  <svg class="component-icon" aria-hidden="true" style="margin-right: 6px;"><use href="/icons.svg#check"></use></svg>
+                  <span>Aceptar caso</span>
+                </button>
+
+                <button type="button" class="component-button component-button--h36 component-button--ghost" data-ref="btn-action-escalate" style="display: none; padding: 0 12px; font-size: 13px;">
+                  <svg class="component-icon" aria-hidden="true" style="margin-right: 6px;"><use href="/icons.svg#arrow_upward"></use></svg>
+                  <span>Escalar</span>
+                </button>
+
+                <button type="button" class="component-button component-button--h36 component-button--ghost" data-ref="btn-action-resolve" style="display: none; padding: 0 12px; font-size: 13px;">
+                  <svg class="component-icon" aria-hidden="true" style="margin-right: 6px;"><use href="/icons.svg#check_circle"></use></svg>
+                  <span>Resolver</span>
+                </button>
+
+                <button type="button" class="component-button component-button--h36 component-button--ghost" data-ref="btn-action-reopen" style="display: none; padding: 0 12px; font-size: 13px;">
+                  <svg class="component-icon" aria-hidden="true" style="margin-right: 6px;"><use href="/icons.svg#autorenew"></use></svg>
+                  <span>Reabrir</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Subject Banner -->
+            <div class="support-subject-bar" data-ref="support-subject-bar" style="padding: 10px 16px; background-color: rgba(99, 102, 241, 0.06); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; font-size: 13px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-weight: 600; color: var(--text-primary);">Motivo:</span>
+                <span data-ref="ticket-subject-text" style="color: var(--text-secondary);"></span>
+              </div>
+              <span data-ref="ticket-created-time" style="font-size: 12px; color: var(--text-tertiary);"></span>
+            </div>
+
+            <!-- Chat Messages Scroll Container -->
+            <div class="support-messages-scroll" data-ref="support-messages-scroll">
+              <div class="support-messages-feed" data-ref="support-messages-feed" style="display: flex; flex-direction: column; gap: 10px; width: 100%;"></div>
+            </div>
+
+            <!-- Chat Message Composer -->
+            <div class="support-composer" data-ref="support-composer" style="padding: 12px 16px; background-color: var(--bg-surface); border-top: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 8px;">
+              
+              <!-- Quick Response Chips -->
+              <div class="support-quick-chips" data-ref="support-quick-chips" style="display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px;">
+                <button type="button" class="component-badge component-badge--interactive quick-chip" data-ref="chip-greeting" data-text="¡Hola! Un gusto saludarte. ¿Cómo puedo ayudarte con tu cuenta de Spriteboard hoy?" style="cursor: pointer; font-size: 11px; padding: 3px 8px;">
+                  👋 Saludo inicial
+                </button>
+                <button type="button" class="component-badge component-badge--interactive quick-chip" data-ref="chip-investigating" data-text="Permíteme unos instantes mientras reviso los detalles técnicos en el sistema..." style="cursor: pointer; font-size: 11px; padding: 3px 8px;">
+                  🔍 Revisando caso
+                </button>
+                <button type="button" class="component-badge component-badge--interactive quick-chip" data-ref="chip-solved" data-text="Hemos solucionado la incidencia. Por favor recarga tu página o verifica si todo está funcionando como esperas." style="cursor: pointer; font-size: 11px; padding: 3px 8px;">
+                  ✅ Solucionado
+                </button>
+              </div>
+
+              <!-- Input Row -->
+              <div class="support-composer__input-row" data-ref="composer-input-row" style="display: flex; align-items: flex-end; gap: 8px;">
+                <div class="field field--textarea" data-ref="field-composer" style="flex: 1; margin: 0;">
+                  <textarea class="field__input field__input--textarea" data-ref="input-agent-message" placeholder="Escribe una respuesta para el usuario..." rows="2" maxlength="5000" style="resize: none;"></textarea>
+                </div>
+                <button type="button" class="component-button component-button--primary component-button--h44" data-ref="btn-send-agent-message" style="padding: 0 16px; flex-shrink: 0;" aria-label="Enviar respuesta">
+                  <svg class="component-icon" aria-hidden="true" style="margin-right: 4px;"><use href="/icons.svg#send"></use></svg>
+                  <span>Enviar</span>
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Escalate Modal -->
+  <div class="component-modal-backdrop" data-ref="escalate-modal-backdrop" style="display: none; position: fixed; inset: 0; background-color: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+    <div class="component-modal component-modal--w460" data-ref="escalate-modal" style="background-color: var(--bg-surface); border-radius: var(--radius-xl); padding: 20px; box-shadow: var(--shadow-xl); max-width: 90vw; width: 440px; display: flex; flex-direction: column; gap: 16px;">
+      <div class="component-modal__header" style="display: flex; align-items: center; justify-content: space-between;">
+        <h3 class="component-modal__title" style="margin: 0; font-size: 16px; font-weight: 600; color: var(--text-primary);">Escalar Solicitud de Soporte</h3>
+        <button type="button" class="component-button component-button--icon-only component-button--ghost" data-ref="btn-close-escalate-modal" aria-label="Cerrar modal">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+        </button>
+      </div>
+
+      <div class="component-modal__body" style="display: flex; flex-direction: column; gap: 12px;">
+        <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">Selecciona el nivel técnico al que deseas transferir este caso y agrega una nota descriptiva para el especialista.</p>
+
+        <div class="field" data-ref="field-escalate-role">
+          <label class="field__label" style="font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 4px; display: block;">Nivel de Soporte Destino</label>
+          <select class="field__input" data-ref="select-escalate-role" style="width: 100%; height: 38px; border-radius: var(--radius-md); padding: 0 10px; background-color: var(--bg-body); border: 1px solid var(--border-color); color: var(--text-primary);">
+            <option value="SUPPORT_L2">Support L2 (Soporte Técnico Avanzado)</option>
+            <option value="SUPPORT_L3">Support L3 (Infraestructura / Ingeniería)</option>
+            <option value="SUPPORT_MANAGER">Support Manager (Supervisión y Gestión)</option>
+            <option value="CUSTOMER_SUCCESS">Customer Success (Cuentas y Clientes)</option>
+            <option value="INCIDENT_MANAGER">Incident Manager (Incidentes Críticos)</option>
+          </select>
+        </div>
+
+        <div class="field field--textarea" data-ref="field-escalate-note">
+          <label class="field__label" style="font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 4px; display: block;">Motivo o Nota Interna</label>
+          <textarea class="field__input field__input--textarea" data-ref="input-escalate-note" placeholder="Describe brevemente por qué se escala el caso..." rows="3" maxlength="1000" style="resize: none; width: 100%;"></textarea>
+        </div>
+      </div>
+
+      <div class="component-modal__footer" style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button type="button" class="component-button component-button--ghost component-button--h36" data-ref="btn-cancel-escalate">
+          <span>Cancelar</span>
+        </button>
+        <button type="button" class="component-button component-button--primary component-button--h36" data-ref="btn-submit-escalate">
+          <span>Confirmar Escalación</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Resolve Modal -->
+  <div class="component-modal-backdrop" data-ref="resolve-modal-backdrop" style="display: none; position: fixed; inset: 0; background-color: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+    <div class="component-modal component-modal--w460" data-ref="resolve-modal" style="background-color: var(--bg-surface); border-radius: var(--radius-xl); padding: 20px; box-shadow: var(--shadow-xl); max-width: 90vw; width: 440px; display: flex; flex-direction: column; gap: 16px;">
+      <div class="component-modal__header" style="display: flex; align-items: center; justify-content: space-between;">
+        <h3 class="component-modal__title" style="margin: 0; font-size: 16px; font-weight: 600; color: var(--text-primary);">Resolver y Cerrar Solicitud</h3>
+        <button type="button" class="component-button component-button--icon-only component-button--ghost" data-ref="btn-close-resolve-modal" aria-label="Cerrar modal">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+        </button>
+      </div>
+
+      <div class="component-modal__body" style="display: flex; flex-direction: column; gap: 12px;">
+        <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">¿Deseas marcar esta solicitud como resuelta? Puedes agregar un resumen de la solución otorgada.</p>
+
+        <div class="field field--textarea" data-ref="field-resolve-note">
+          <label class="field__label" style="font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 4px; display: block;">Nota de Resolución (Opcional)</label>
+          <textarea class="field__input field__input--textarea" data-ref="input-resolve-note" placeholder="Ej. Solucionado el problema de exportación en el navegador del usuario..." rows="3" maxlength="1000" style="resize: none; width: 100%;"></textarea>
+        </div>
+      </div>
+
+      <div class="component-modal__footer" style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button type="button" class="component-button component-button--ghost component-button--h36" data-ref="btn-cancel-resolve">
+          <span>Cancelar</span>
+        </button>
+        <button type="button" class="component-button component-button--primary component-button--h36" data-ref="btn-submit-resolve">
+          <span>Marcar como Resuelto</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>

@@ -336,6 +336,47 @@ INSERT INTO server_config (`key`, `value`, `category`, `type`, `description`) VA
 ON DUPLICATE KEY UPDATE
     description = VALUES(description);
 
+CREATE TABLE IF NOT EXISTS support_tickets (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    uuid VARCHAR(36) NOT NULL UNIQUE,
+    ticket_number VARCHAR(32) NOT NULL UNIQUE,
+    user_id INT NOT NULL,
+    subject VARCHAR(255) NOT NULL,
+    description TEXT NULL,
+    status ENUM('queued', 'in_progress', 'escalated', 'resolved', 'closed') NOT NULL DEFAULT 'queued',
+    priority ENUM('low', 'medium', 'high', 'urgent') NOT NULL DEFAULT 'medium',
+    assigned_agent_id INT NULL,
+    assigned_role VARCHAR(50) NOT NULL DEFAULT 'SUPPORT_L1',
+    escalation_level ENUM('SUPPORT_L1', 'SUPPORT_L2', 'SUPPORT_L3', 'SUPPORT_MANAGER') NOT NULL DEFAULT 'SUPPORT_L1',
+    escalation_note TEXT NULL,
+    metadata JSON NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    closed_at TIMESTAMP NULL DEFAULT NULL,
+    closed_by INT NULL,
+    INDEX idx_support_user (user_id),
+    INDEX idx_support_status (status),
+    INDEX idx_support_agent (assigned_agent_id),
+    INDEX idx_support_created (created_at DESC),
+    INDEX idx_support_escalation (escalation_level),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (assigned_agent_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (closed_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS support_messages (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    ticket_id INT NOT NULL,
+    sender_type ENUM('user', 'agent', 'system', 'bot') NOT NULL,
+    sender_id INT NULL,
+    message TEXT NOT NULL,
+    is_read BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_sup_msg_ticket_created (ticket_id, created_at ASC),
+    FOREIGN KEY (ticket_id) REFERENCES support_tickets(id) ON DELETE CASCADE,
+    FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 GRANT ALL PRIVILEGES ON db_identity.* TO 'sprite_user'@'%';
 FLUSH PRIVILEGES;
 

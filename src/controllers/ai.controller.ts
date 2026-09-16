@@ -52,11 +52,19 @@ export class AiController {
         username: currentUser.username,
       };
 
+      const normalized = message.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      const isSupportIntent = (
+        /(hablar|comunicar|contactar|conectar|chatear|pasame|transferirme|transferir|atencion|asistencia|ayuda).*?(agente|humano|persona|soporte|asesor|tecnico)/i.test(normalized) ||
+        /(quiero|necesito|deseo|solicito|busco).*?(soporte|un agente|un humano|una persona|hablar con alguien)/i.test(normalized) ||
+        /^(soporte|agente|humano|ayuda de soporte|contacto soporte)$/i.test(normalized.trim())
+      );
+
       const reply = await AiService.generateReply(message.trim(), validHistory, userContext);
 
       res.status(200).json({
-        success: true,
+        isSupportHandover: isSupportIntent,
         reply,
+        success: true,
       });
     } catch (error) {
       logger.app.error('AiController: Error al procesar consulta de chat', error);

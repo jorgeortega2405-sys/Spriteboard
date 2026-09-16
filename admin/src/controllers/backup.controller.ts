@@ -1,3 +1,4 @@
+import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import { createBackupJob, deleteBackup, getBackupByIdOrUuid, getBackupTargetOptions, listBackups } from '../services/backup.service.js';
 import { logger } from '../services/logger.service.js';
 import { BackupCreatePayload } from '../types/backup.types.js';
@@ -78,7 +79,8 @@ export async function createBackup(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const creator = req.user ? { id: req.user.id, username: req.user.username } : undefined;
+    const user = getCurrentUser(req);
+    const creator = user ? { id: user.id, username: user.username } : undefined;
     const backup = await createBackupJob(body, creator);
 
     res.status(201).json({

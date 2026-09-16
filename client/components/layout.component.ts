@@ -1735,6 +1735,10 @@ export async function createSidebar(): Promise<HTMLElement> {
 
 function setupChatSidebarEvents(sidebarElement: HTMLElement): void {
   const conversationHistory: Array<{ role: string; text: string }> = [];
+  let activeTicket: any = null;
+  let isAwaitingSupportReason = false;
+  let supportPollTimer: ReturnType<typeof setInterval> | null = null;
+  const renderedMessageIds = new Set<number>();
 
   const btnClose = sidebarElement.querySelector<HTMLElement>('[data-ref="btn-chat-close"]');
   btnClose?.addEventListener('click', (e) => {
@@ -1756,6 +1760,11 @@ function setupChatSidebarEvents(sidebarElement: HTMLElement): void {
   const chatInput = sidebarElement.querySelector<HTMLTextAreaElement>('[data-ref="chat-input"]');
   const chatInputBox = sidebarElement.querySelector<HTMLElement>('[data-ref="chat-input-box"]');
   const btnSend = sidebarElement.querySelector<HTMLButtonElement>('[data-ref="btn-chat-send"]');
+  const bannerEl = sidebarElement.querySelector<HTMLElement>('[data-ref="chat-support-banner"]');
+  const ticketNumEl = sidebarElement.querySelector<HTMLElement>('[data-ref="chat-support-ticket-num"]');
+  const statusPillEl = sidebarElement.querySelector<HTMLElement>('[data-ref="chat-support-status-pill"]');
+  const waitTimeEl = sidebarElement.querySelector<HTMLElement>('[data-ref="chat-support-wait-time"]');
+  const btnCancelSupport = sidebarElement.querySelector<HTMLButtonElement>('[data-ref="btn-chat-cancel-support"]');
 
   const AGENT_AVATAR_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
     <defs>
@@ -1793,7 +1802,66 @@ function setupChatSidebarEvents(sidebarElement: HTMLElement): void {
     return badge;
   }
 
-  function appendMessage(type: string, text: string): HTMLElement {
+  function createSupportAgentBadge(name?: string, avatarUrl?: string | null): HTMLElement {
+    const badge = document.createElement('div');
+    badge.className = 'chat-agent-badge';
+
+    const iconWrap = document.createElement('span');
+    iconWrap.className = 'chat-agent-badge__icon';
+    iconWrap.style.display = 'inline-flex';
+    iconWrap.style.alignItems = 'center';
+    iconWrap.style.justifyContent = 'center';
+
+    if (avatarUrl) {
+      const img = document.createElement('img');
+      img.src = avatarUrl;
+      img.alt = name || 'Soporte';
+      img.style.width = '100%';
+      img.style.height = '100%';
+      img.style.borderRadius = '4px';
+      img.style.objectFit = 'cover';
+      iconWrap.appendChild(img);
+    } else {
+      iconWrap.innerHTML = '<span class="material-symbols-rounded" style="font-size: 14px; color: var(--action-primary);">support_agent</span>';
+    }
+
+    const label = document.createElement('span');
+    label.textContent = name ? `${name} (Soporte)` : 'Soporte Técnico';
+
+    badge.appendChild(iconWrap);
+    badge.appendChild(label);
+    return badge;
+  }
+
+  function appendSystemNotice(text: string): HTMLElement {
+    const messagesContainer = sidebarElement.querySelector<HTMLElement>('[data-ref="chat-messages"]');
+    const emptyState = sidebarElement.querySelector<HTMLElement>('[data-ref="chat-empty-state"]');
+    if (emptyState) emptyState.style.display = 'none';
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'chat-message chat-message--system';
+    wrapper.setAttribute('data-ref', 'chat-message-system');
+    wrapper.style.alignSelf = 'center';
+    wrapper.style.fontSize = '11px';
+    wrapper.style.color = 'var(--text-tertiary)';
+    wrapper.style.padding = '4px 12px';
+    wrapper.style.borderRadius = '12px';
+    wrapper.style.background = 'var(--bg-hover)';
+    wrapper.style.margin = '4px 0';
+    wrapper.textContent = text;
+
+    messagesContainer?.appendChild(wrapper);
+    updateChatEmptyState();
+    const scrollArea = sidebarElement.querySelector<HTMLElement>('[data-ref="chat-panel-center"]');
+    if (scrollArea) scrollArea.scrollTop = scrollArea.scrollHeight;
+    return wrapper;
+  }
+
+  function appendMessage(
+    type: string,
+    text: string,
+    options?: { agentName?: string; avatarUrl?: string | null; isHumanAgent?: boolean }
+  ): HTMLElement {
     const messagesContainer = sidebarElement.querySelector<HTMLElement>('[data-ref="chat-messages"]');
     const emptyState = sidebarElement.querySelector<HTMLElement>('[data-ref="chat-empty-state"]');
     if (emptyState) emptyState.style.display = 'none';
@@ -1803,7 +1871,12 @@ function setupChatSidebarEvents(sidebarElement: HTMLElement): void {
     wrapper.setAttribute('data-ref', `chat-message-${type}`);
 
     if (type === 'agent') {
-      wrapper.appendChild(createAgentBadge(false));
+      if (options?.isHumanAgent) {
+        wrapper.appendChild(createSupportAgentBadge(options.agentName, options.avatarUrl));
+      } else {
+        wrapper.appendChild(createAgentBadge(false));
+      }
+
       const bubble = document.createElement('div');
       bubble.className = 'chat-agent-bubble';
       bubble.textContent = text;
@@ -1913,6 +1986,139 @@ function setupChatSidebarEvents(sidebarElement: HTMLElement): void {
     return wrapper;
   }
 
+  const renderSupportBanner = (ticket: any) => {
+    if (!bannerEl) return;
+    bannerEl.style.display = 'flex';
+    if (ticketNumEl) {
+      ticketNumEl.textContent = `Ticket #${ticket.ticket_number || ticket.id}`;
+    }
+    if (statusPillEl) {
+      if (ticket.status === 'queued') {
+        statusPillEl.textContent = 'En cola de espera';
+        statusPillEl.className = 'component-badge component-badge--warning';
+      } else if (ticket.status === 'in_progress' || ticket.status === 'escalated') {
+        statusPillEl.textContent = 'En atención';
+        statusPillEl.className = 'component-badge component-badge--success';
+      }
+    }
+    if (waitTimeEl) {
+      if (ticket.status === 'queued') {
+        waitTimeEl.textContent = 'Buscando agente disponible...';
+      } else if (ticket.status === 'in_progress' || ticket.status === 'escalated') {
+        waitTimeEl.textContent = ticket.assigned_agent_name ? `Agente: ${ticket.assigned_agent_name}` : 'Agente asignado';
+      }
+    }
+  };
+
+  const hideSupportBanner = () => {
+    if (bannerEl) bannerEl.style.display = 'none';
+  };
+
+  const renderSupportMessage = (msg: any) => {
+    if (renderedMessageIds.has(msg.id)) return;
+    renderedMessageIds.add(msg.id);
+
+    if (msg.sender_type === 'agent') {
+      appendMessage('agent', msg.message, {
+        agentName: msg.sender_name || 'Agente de Soporte',
+        avatarUrl: msg.sender_avatar || null,
+        isHumanAgent: true,
+      });
+    } else if (msg.sender_type === 'system') {
+      appendSystemNotice(msg.message);
+    } else if (msg.sender_type === 'user') {
+      appendMessage('user', msg.message);
+    }
+  };
+
+  const startSupportPolling = () => {
+    if (supportPollTimer) return;
+    supportPollTimer = setInterval(async () => {
+      if (!activeTicket || !document.body.contains(sidebarElement)) {
+        stopSupportPolling();
+        return;
+      }
+      try {
+        const res = await getApi(API_ROUTES.support.active);
+        if (res.ok) {
+          const data = await res.json();
+          if (!data.active || !data.ticket) {
+            stopSupportPolling();
+            hideSupportBanner();
+            if (activeTicket) {
+              appendSystemNotice('La sesión de soporte técnico ha finalizado.');
+              activeTicket = null;
+            }
+            return;
+          }
+
+          const prevStatus = activeTicket.status;
+          activeTicket = data.ticket;
+          renderSupportBanner(activeTicket);
+
+          if (prevStatus === 'queued' && (activeTicket.status === 'in_progress' || activeTicket.status === 'escalated')) {
+            appendSystemNotice(activeTicket.assigned_agent_name ? `El agente ${activeTicket.assigned_agent_name} se ha conectado a la conversación.` : 'Un agente de soporte se ha conectado.');
+          }
+
+          if (Array.isArray(data.messages)) {
+            for (const msg of data.messages) {
+              renderSupportMessage(msg);
+            }
+          }
+        }
+      } catch (_) {}
+    }, 3500);
+  };
+
+  const stopSupportPolling = () => {
+    if (supportPollTimer) {
+      clearInterval(supportPollTimer);
+      supportPollTimer = null;
+    }
+  };
+
+  const checkActiveSupportTicket = async () => {
+    if (!currentUser) return;
+    try {
+      const res = await getApi(API_ROUTES.support.active);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.active && data.ticket) {
+          activeTicket = data.ticket;
+          renderSupportBanner(activeTicket);
+          if (Array.isArray(data.messages) && data.messages.length > 0) {
+            for (const msg of data.messages) {
+              renderSupportMessage(msg);
+            }
+          }
+          startSupportPolling();
+        } else {
+          hideSupportBanner();
+        }
+      }
+    } catch (_) {}
+  };
+
+  btnCancelSupport?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    if (!activeTicket) return;
+    try {
+      const res = await postApi(API_ROUTES.support.cancel, { ticketId: activeTicket.id });
+      if (res.ok) {
+        stopSupportPolling();
+        hideSupportBanner();
+        appendSystemNotice('Has finalizado la sesión de soporte técnico.');
+        appendMessage('agent', '¿Hay algo más en lo que pueda ayudarte hoy?');
+        activeTicket = null;
+        showToast('Sesión de soporte finalizada', 'info');
+      } else {
+        showToast('No se pudo cancelar la solicitud de soporte.', 'error');
+      }
+    } catch (_) {
+      showToast('Error al procesar la cancelación.', 'error');
+    }
+  });
+
   let isProcessing = false;
 
   function setLoading(loading: boolean): void {
@@ -1975,15 +2181,66 @@ function setupChatSidebarEvents(sidebarElement: HTMLElement): void {
       autoResizeTextarea();
     }
     appendMessage('user', text);
-    conversationHistory.push({ role: 'user', text });
 
+    if (activeTicket) {
+      setLoading(true);
+      try {
+        const res = await postApi(API_ROUTES.support.message, {
+          message: text,
+          ticketId: activeTicket.id,
+        });
+        if (!res.ok) {
+          showToast('No se pudo enviar el mensaje a soporte. Intenta de nuevo.', 'error');
+        }
+      } catch (_) {
+        showToast('Error al enviar el mensaje. Verifica tu conexión.', 'error');
+      } finally {
+        setLoading(false);
+        chatInput?.focus();
+      }
+      return;
+    }
+
+    if (isAwaitingSupportReason) {
+      isAwaitingSupportReason = false;
+      setLoading(true);
+      const typingIndicator = appendTypingIndicator();
+      try {
+        const res = await postApi(API_ROUTES.support.request, {
+          description: text,
+          priority: 'medium',
+          subject: text.slice(0, 80),
+        });
+        typingIndicator.remove();
+        if (res.ok) {
+          const data = await res.json();
+          if (data.ticket) {
+            activeTicket = data.ticket;
+            renderSupportBanner(activeTicket);
+            appendMessage('agent', `Hemos registrado tu solicitud con el Ticket #${activeTicket.ticket_number}. Te hemos añadido a la lista de espera de soporte técnico; un agente se comunicará contigo en breve.`);
+            startSupportPolling();
+          }
+        } else {
+          appendMessage('agent', 'No se pudo crear la solicitud de soporte en este momento. Por favor intenta más tarde.');
+        }
+      } catch (_) {
+        typingIndicator.remove();
+        appendMessage('agent', 'Error al conectar con el servidor de soporte. Por favor intenta de nuevo.');
+      } finally {
+        setLoading(false);
+        chatInput?.focus();
+      }
+      return;
+    }
+
+    conversationHistory.push({ role: 'user', text });
     setLoading(true);
     const typingIndicator = appendTypingIndicator();
 
     try {
       const res = await postApi(API_ROUTES.chat, {
-        message: text,
         history: conversationHistory.slice(-10),
+        message: text,
       });
 
       typingIndicator.remove();
@@ -1993,6 +2250,10 @@ function setupChatSidebarEvents(sidebarElement: HTMLElement): void {
         const reply = data.reply || 'No pude generar una respuesta. Por favor intenta de nuevo.';
         appendMessage('agent', reply);
         conversationHistory.push({ role: 'model', text: reply });
+
+        if (data.isSupportHandover) {
+          isAwaitingSupportReason = true;
+        }
       } else {
         appendMessage(
           'agent',
@@ -2030,6 +2291,8 @@ function setupChatSidebarEvents(sidebarElement: HTMLElement): void {
       }
     }
   });
+
+  void checkActiveSupportTicket();
 }
 
 export async function initChatSidebar(): Promise<HTMLElement> {
