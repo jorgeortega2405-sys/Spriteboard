@@ -18,6 +18,9 @@ export interface SupportTicket {
   id: number;
   metadata?: any;
   priority: 'high' | 'low' | 'medium' | 'urgent';
+  rated_at?: string | null;
+  rating?: number | null;
+  rating_comment?: string | null;
   status: 'closed' | 'escalated' | 'in_progress' | 'queued' | 'resolved';
   subject: string;
   ticket_number: string;
@@ -283,6 +286,47 @@ export class SupportService {
       return false;
     } catch (error) {
       logger.db.error('SupportService: Error al cancelar ticket de soporte', error);
+      return false;
+    }
+  }
+
+  static async rateTicket(
+    ticketId: number,
+    userId: number,
+    rating: number,
+    comment?: string | null
+  ): Promise<boolean> {
+    try {
+      const sanitizedRating = Math.max(1, Math.min(6, Math.round(Number(rating))));
+      const sanitizedComment = comment && typeof comment === 'string' ? comment.trim().slice(0, 1000) : null;
+
+      const [result] = await pool.execute<mysql.ResultSetHeader>(
+        `UPDATE support_tickets 
+         SET rating = ?, rating_comment = ?, rated_at = CURRENT_TIMESTAMP 
+         WHERE id = ? AND user_id = ?`,
+        [sanitizedRating, sanitizedComment, ticketId, userId]
+      );
+
+      if (result.affectedRows > 0) {
+        logger.db.info(`Ticket calificado por usuario: ticketId=${ticketId}, userId=${userId}, rating=${sanitizedRating}`);
+
+        const updatedTicket = await this.getTicketById(ticketId);
+        if (updatedTicket) {
+          await SupportCassandraService.saveConversation(updatedTicket).catch(() => {});
+          await redis.publish('support:events', JSON.stringify({
+            broadcastToAgents: true,
+            targetUserId: userId,
+            ticket: updatedTicket,
+            ticketId,
+            type: 'SUPPORT_TICKET_UPDATED',
+          })).catch(() => {});
+        }
+
+        return true;
+      }
+      return false;
+    } catch (error) {
+      logger.db.error('SupportService: Error al calificar ticket de soporte', error);
       return false;
     }
   }

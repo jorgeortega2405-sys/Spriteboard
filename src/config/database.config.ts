@@ -900,6 +900,9 @@ export async function runMigrations(): Promise<void> {
         escalation_level ENUM('SUPPORT_L1', 'SUPPORT_L2', 'SUPPORT_L3', 'SUPPORT_MANAGER') NOT NULL DEFAULT 'SUPPORT_L1',
         escalation_note TEXT NULL,
         metadata JSON NULL,
+        rating INT NULL,
+        rating_comment TEXT NULL,
+        rated_at TIMESTAMP NULL DEFAULT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         closed_at TIMESTAMP NULL DEFAULT NULL,
@@ -914,6 +917,23 @@ export async function runMigrations(): Promise<void> {
         FOREIGN KEY (closed_by) REFERENCES users(id) ON DELETE SET NULL
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
+
+    const [ticketColumns] = await conn.query<mysql.RowDataPacket[]>(
+      'SHOW COLUMNS FROM support_tickets'
+    );
+    const existingTicketCols = new Set(ticketColumns.map((c) => c.Field));
+    if (!existingTicketCols.has('rating')) {
+      await conn.query('ALTER TABLE support_tickets ADD COLUMN rating INT NULL');
+      logger.db.info('Columna rating añadida a support_tickets.');
+    }
+    if (!existingTicketCols.has('rating_comment')) {
+      await conn.query('ALTER TABLE support_tickets ADD COLUMN rating_comment TEXT NULL');
+      logger.db.info('Columna rating_comment añadida a support_tickets.');
+    }
+    if (!existingTicketCols.has('rated_at')) {
+      await conn.query('ALTER TABLE support_tickets ADD COLUMN rated_at TIMESTAMP NULL DEFAULT NULL');
+      logger.db.info('Columna rated_at añadida a support_tickets.');
+    }
 
     await conn.query(`
       CREATE TABLE IF NOT EXISTS support_messages (

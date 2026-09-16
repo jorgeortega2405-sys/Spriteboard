@@ -12,6 +12,7 @@ import { CanvasItem } from '../types/canvas.types.js';
 import { closeAllDropdowns, registerActiveDropdown, unregisterActiveDropdown } from '../utils/dom.util.js';
 import { applyAvatarTier, getFallbackTierColor } from '../utils/tier.util.js';
 import { openCreateCanvasModal } from './create-canvas-modal.component.js';
+import { openModal } from './modal.component.js';
 import { openUpgradeModal } from './upgrade-modal.component.js';
 
 let isDrawerOpen = false;
@@ -2351,6 +2352,125 @@ function setupChatSidebarEvents(sidebarElement: HTMLElement): void {
     }
   });
 
+  function openSupportRatingModal(ticketId: number, agentName?: string | null): void {
+    let selectedRating = 5;
+    const ratingLabels = [
+      'Muy mala',
+      'Mala',
+      'Regular',
+      'Buena',
+      'Excelente',
+    ];
+
+    const promptText = agentName
+      ? `¿Cómo calificarías la atención brindada por @${escapeHtml(agentName)}?`
+      : '¿Cómo calificarías la atención recibida por parte de nuestro equipo de soporte técnico?';
+
+    const modal = openModal({
+      bodyHtml: `
+        <div class="support-rating-modal" data-ref="modal-support-rating" style="display: flex; flex-direction: column; gap: 16px; padding: 4px 0;">
+          <p style="margin: 0; font-size: 13px; color: var(--text-secondary); line-height: 1.5; text-align: center;">
+            ${promptText}
+          </p>
+
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+            <div class="support-rating-stars" data-ref="rating-stars-container" style="display: flex; gap: 6px; justify-content: center;">
+              ${[1, 2, 3, 4, 5].map((star) => `
+                <button type="button" class="component-button component-button--icon-only" data-ref="btn-star-${star}" data-star="${star}" style="width: 36px; height: 36px; border: none; background: transparent; cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; transition: transform 0.15s ease;" aria-label="${star} estrellas">
+                  <svg class="component-icon" style="width: 28px; height: 28px; color: #f59e0b;" aria-hidden="true">
+                    <use href="/icons.svg#star_fill"></use>
+                  </svg>
+                </button>
+              `).join('')}
+            </div>
+            <span class="support-rating-label" data-ref="rating-text-label" style="font-size: 12px; font-weight: 600; color: #f59e0b;">Excelente</span>
+          </div>
+
+          <label class="field" data-ref="field-rating-comment">
+            <textarea class="field__textarea" data-ref="input-rating-comment" placeholder=" " maxlength="1000" rows="3" style="min-height: 80px; resize: vertical;"></textarea>
+            <span class="field__label">Comentarios o sugerencias sobre el servicio (opcional)</span>
+          </label>
+        </div>
+      `,
+      cancelText: 'Omitir',
+      confirmClass: 'component-button--black',
+      confirmText: 'Enviar calificación',
+      description: 'Tus comentarios nos ayudan a mejorar la calidad de nuestro servicio.',
+      onConfirm: async () => {
+        const commentInput = modal.body.querySelector<HTMLTextAreaElement>('[data-ref="input-rating-comment"]');
+        const comment = (commentInput?.value || '').trim();
+
+        modal.setConfirmLoading?.(true, 'Enviando...');
+        try {
+          const res = await postApi(API_ROUTES.support.rate, {
+            comment: comment || undefined,
+            rating: selectedRating,
+            ticketId,
+          });
+          modal.setConfirmLoading?.(false);
+
+          if (res.ok) {
+            showToast('¡Gracias por tus comentarios!', 'success');
+            modal.close();
+          } else {
+            const errData = await res.json().catch(() => ({}));
+            modal.setError(errData.error || 'No se pudo registrar la calificación.');
+          }
+        } catch {
+          modal.setConfirmLoading?.(false);
+          modal.setError('Error de conexión al enviar la calificación.');
+        }
+      },
+      title: 'Calificar atención de soporte',
+    });
+
+    const starsContainer = modal.body.querySelector<HTMLElement>('[data-ref="rating-stars-container"]');
+    const labelEl = modal.body.querySelector<HTMLElement>('[data-ref="rating-text-label"]');
+    const starButtons = modal.body.querySelectorAll<HTMLButtonElement>('[data-star]');
+
+    const updateStarVisuals = (hoverVal?: number) => {
+      const val = hoverVal !== undefined ? hoverVal : selectedRating;
+      starButtons.forEach((btn) => {
+        const starNum = parseInt(btn.getAttribute('data-star') || '1', 10);
+        const svg = btn.querySelector('svg');
+        const use = btn.querySelector('use');
+        const isFilled = starNum <= val;
+
+        if (svg) {
+          svg.style.color = isFilled ? '#f59e0b' : 'var(--text-tertiary)';
+        }
+        if (use) {
+          use.setAttribute('href', isFilled ? '/icons.svg#star_fill' : '/icons.svg#star');
+        }
+        btn.style.transform = isFilled ? 'scale(1.1)' : 'scale(1)';
+      });
+
+      if (labelEl) {
+        labelEl.textContent = ratingLabels[val - 1] || `${val} estrellas`;
+      }
+    };
+
+    starButtons.forEach((btn) => {
+      const starNum = parseInt(btn.getAttribute('data-star') || '1', 10);
+      btn.addEventListener('mouseenter', () => {
+        updateStarVisuals(starNum);
+      });
+
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        selectedRating = starNum;
+        updateStarVisuals();
+      });
+    });
+
+    starsContainer?.addEventListener('mouseleave', () => {
+      updateStarVisuals();
+    });
+
+    updateStarVisuals();
+    renderIcons(modal.body);
+  }
+
   registerWebSocketHandler('SUPPORT_TICKET_UPDATED', (data: any) => {
     if (!data || !data.ticket) return;
 
@@ -2369,12 +2489,15 @@ function setupChatSidebarEvents(sidebarElement: HTMLElement): void {
     if (!activeTicket) return;
     if (Number(data.ticket.id || data.ticket.ticket_id) === Number(activeTicket.id || activeTicket.ticket_id)) {
       const prevStatus = activeTicket.status;
+      const finishedTicketId = Number(activeTicket.id || activeTicket.ticket_id);
+      const assignedAgent = activeTicket.assigned_agent_name;
       activeTicket = data.ticket;
 
       if (activeTicket.status === 'resolved' || activeTicket.status === 'closed' || activeTicket.status === 'cancelled') {
         hideSupportBanner();
         appendSystemNotice('La sesión de soporte técnico ha finalizado.');
         activeTicket = null;
+        openSupportRatingModal(finishedTicketId, assignedAgent);
         return;
       }
 
@@ -2416,6 +2539,7 @@ function setupChatSidebarEvents(sidebarElement: HTMLElement): void {
     if (!activeTicket) return;
     try {
       const targetId = activeTicket.id || activeTicket.ticket_id;
+      const agentName = activeTicket.assigned_agent_name;
       const res = await postApi(API_ROUTES.support.cancel, { ticketId: targetId });
       if (res.ok) {
         hideSupportBanner();
@@ -2423,6 +2547,7 @@ function setupChatSidebarEvents(sidebarElement: HTMLElement): void {
         appendMessage('agent', '¿Hay algo más en lo que pueda ayudarte hoy?');
         activeTicket = null;
         showToast('Sesión de soporte finalizada', 'info');
+        openSupportRatingModal(targetId, agentName);
       } else {
         showToast('No se pudo cancelar la solicitud de soporte.', 'error');
       }

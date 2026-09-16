@@ -149,6 +149,7 @@ services:
     volumes:
       - ./admin:/app
       - /app/node_modules
+      - ./logs:/app/main_logs:ro
     command: npm run dev
 
   worker:

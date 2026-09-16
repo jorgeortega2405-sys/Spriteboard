@@ -80,6 +80,7 @@ function populateDrawerContent(drawer: HTMLElement): void {
   const isUsers = currentPath === '/users' || currentPath.startsWith('/users/');
   const isSupport = currentPath === '/support' || currentPath.startsWith('/support/');
   const isBackups = currentPath === '/backups' || currentPath.startsWith('/backups/');
+  const isLogs = currentPath === '/logs' || currentPath.startsWith('/logs/');
   const isSystem = currentPath === '/system' || currentPath.startsWith('/system/') || currentPath === '/system-settings';
 
   drawerBody.innerHTML = `
@@ -102,6 +103,10 @@ function populateDrawerContent(drawer: HTMLElement): void {
       <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#cloud_upload"></use></svg>
       <span class="menu-item__text">Copias de Seguridad</span>
     </button>
+    <button type="button" class="menu-item${isLogs ? ' is-active' : ''}" data-ref="btn-drawer-logs">
+      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#article"></use></svg>
+      <span class="menu-item__text">Registros (Logs)</span>
+    </button>
     <button type="button" class="menu-item${isSystem ? ' is-active' : ''}" data-ref="btn-drawer-system">
       <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#settings"></use></svg>
       <span class="menu-item__text">Configuración del Sistema</span>
@@ -112,12 +117,14 @@ function populateDrawerContent(drawer: HTMLElement): void {
   const btnUsers = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-users"]');
   const btnSupport = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-support"]');
   const btnBackups = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-backups"]');
+  const btnLogs = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-logs"]');
   const btnSystem = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-system"]');
 
   bindNavLink(btnDashboard, '/dashboard');
   bindNavLink(btnUsers, '/users');
   bindNavLink(btnSupport, '/support');
   bindNavLink(btnBackups, '/backups');
+  bindNavLink(btnLogs, '/logs');
   bindNavLink(btnSystem, '/system');
 
   renderIcons(drawerBody);
@@ -172,6 +179,7 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path: string): vo
   const isUsers = path === '/users' || path.startsWith('/users/');
   const isSupport = path === '/support' || path.startsWith('/support/');
   const isBackups = path === '/backups' || path.startsWith('/backups/');
+  const isLogs = path === '/logs' || path.startsWith('/logs/');
   const isSystem = path === '/system' || path.startsWith('/system/') || path === '/system-settings';
 
   const itemDashboard = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-dashboard"]');
@@ -182,6 +190,8 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path: string): vo
   const btnSupport = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-support"]');
   const itemBackups = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-backups"]');
   const btnBackups = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-backups"]');
+  const itemLogs = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-logs"]');
+  const btnLogs = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-logs"]');
   const itemSystem = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-system"]');
   const btnSystem = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-system"]');
 
@@ -193,6 +203,8 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path: string): vo
   if (btnSupport) btnSupport.classList.toggle('is-active', isSupport);
   if (itemBackups) itemBackups.classList.toggle('is-active', isBackups);
   if (btnBackups) btnBackups.classList.toggle('is-active', isBackups);
+  if (itemLogs) itemLogs.classList.toggle('is-active', isLogs);
+  if (btnLogs) btnLogs.classList.toggle('is-active', isLogs);
   if (itemSystem) itemSystem.classList.toggle('is-active', isSystem);
   if (btnSystem) btnSystem.classList.toggle('is-active', isSystem);
 }
@@ -259,6 +271,7 @@ export async function createSidebar(): Promise<HTMLElement> {
   bindRailNav('btn-rail-users', 'rail-item-users', '/users');
   bindRailNav('btn-rail-support', 'rail-item-support', '/support');
   bindRailNav('btn-rail-backups', 'rail-item-backups', '/backups');
+  bindRailNav('btn-rail-logs', 'rail-item-logs', '/logs');
   bindRailNav('btn-rail-system', 'rail-item-system', '/system');
 
   const avatarContainer = sidebar.querySelector<HTMLElement>('[data-ref="avatar-container"]');

@@ -13,6 +13,7 @@ supportRouter.get('/messages/:ticketId', SupportController.getMessages);
 supportRouter.get('/history', SupportController.getHistory);
 supportRouter.get('/history/:ticketId', SupportController.getHistoryTicket);
 supportRouter.post('/cancel', SupportController.cancel);
+supportRouter.post('/rate', SupportController.rateTicket);
 
 export default supportRouter;
 

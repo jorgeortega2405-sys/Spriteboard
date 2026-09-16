@@ -22,6 +22,9 @@ interface SupportTicketItem {
   last_message_at?: string | null;
   last_message_sender?: string | null;
   priority: 'high' | 'low' | 'medium' | 'urgent';
+  rated_at?: string | null;
+  rating?: number | null;
+  rating_comment?: string | null;
   status: 'closed' | 'escalated' | 'in_progress' | 'queued' | 'resolved';
   subject: string;
   ticket_number: string;
@@ -540,7 +543,10 @@ class SupportController implements ViewController {
         </div>
 
         <div class="support-ticket-card__footer" style="display: flex; align-items: center; justify-content: space-between; width: 100%; margin-top: 8px;">
-          <span style="font-size: 11px; color: var(--text-tertiary); font-family: monospace; font-weight: 500;">${escapeHtml(t.ticket_number)}</span>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span style="font-size: 11px; color: var(--text-tertiary); font-family: monospace; font-weight: 500;">${escapeHtml(t.ticket_number)}</span>
+            ${t.rating ? `<span class="component-badge component-badge--sm" style="background: rgba(245, 158, 11, 0.12); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 10px; padding: 0 4px;">★ ${t.rating}</span>` : ''}
+          </div>
           <span class="component-badge component-badge--sm ${statusBadgeClass}" style="font-size: 11px; padding: 2px 8px;">${escapeHtml(statusLabel)}</span>
         </div>
       `;
@@ -638,6 +644,25 @@ class SupportController implements ViewController {
 
     const createdTimeEl = this.container.querySelector<HTMLElement>('[data-ref="ticket-created-time"]');
     if (createdTimeEl) createdTimeEl.textContent = `Creado: ${new Date(ticket.created_at).toLocaleString()}`;
+
+    const ratingContainer = this.container.querySelector<HTMLElement>('[data-ref="ticket-rating-display"]');
+    if (ratingContainer) {
+      if (ticket.rating) {
+        const fullStars = '★'.repeat(ticket.rating);
+        const emptyStars = '☆'.repeat(Math.max(0, 5 - ticket.rating));
+        ratingContainer.style.display = 'inline-flex';
+        ratingContainer.innerHTML = `
+          <span class="component-badge component-badge--sm" style="background: rgba(245, 158, 11, 0.12); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); gap: 4px; padding: 2px 8px; font-size: 11px;" title="${escapeHtml(ticket.rating_comment || 'Sin comentarios')}">
+            <span style="letter-spacing: 1px;">${fullStars}${emptyStars}</span>
+            <span style="font-weight: 600;">(${ticket.rating}/5)</span>
+            ${ticket.rating_comment ? `<span style="color: var(--text-secondary); margin-left: 4px; font-style: italic;">"${escapeHtml(ticket.rating_comment)}"</span>` : ''}
+          </span>
+        `;
+      } else {
+        ratingContainer.style.display = 'none';
+        ratingContainer.innerHTML = '';
+      }
+    }
 
     this.updateTicketHeaderStatus(ticket);
 

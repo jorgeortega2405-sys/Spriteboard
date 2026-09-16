@@ -138,12 +138,15 @@
             </div>
 
             <!-- Subject Banner -->
-            <div class="support-subject-bar" data-ref="support-subject-bar" style="padding: 10px 16px; background-color: rgba(99, 102, 241, 0.06); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; font-size: 13px;">
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-weight: 600; color: var(--text-primary);">Motivo:</span>
-                <span data-ref="ticket-subject-text" style="color: var(--text-secondary);"></span>
+            <div class="support-subject-bar" data-ref="support-subject-bar" style="padding: 10px 16px; background-color: rgba(99, 102, 241, 0.06); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; font-size: 13px; gap: 12px; flex-wrap: wrap;">
+              <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+                <span style="font-weight: 600; color: var(--text-primary); flex-shrink: 0;">Motivo:</span>
+                <span data-ref="ticket-subject-text" style="color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
               </div>
-              <span data-ref="ticket-created-time" style="font-size: 12px; color: var(--text-tertiary);"></span>
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <div class="support-ticket-rating" data-ref="ticket-rating-display" style="display: none; align-items: center; gap: 6px;"></div>
+                <span data-ref="ticket-created-time" style="font-size: 12px; color: var(--text-tertiary);"></span>
+              </div>
             </div>
 
             <!-- Chat Messages Scroll Container -->

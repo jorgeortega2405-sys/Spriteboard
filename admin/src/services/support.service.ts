@@ -18,6 +18,9 @@ export interface AdminSupportTicket {
   last_message_at?: string | null;
   last_message_sender?: string | null;
   priority: 'high' | 'low' | 'medium' | 'urgent';
+  rated_at?: string | null;
+  rating?: number | null;
+  rating_comment?: string | null;
   status: 'closed' | 'escalated' | 'in_progress' | 'queued' | 'resolved';
   subject: string;
   ticket_number: string;

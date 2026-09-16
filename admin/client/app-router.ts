@@ -94,6 +94,12 @@ export async function render(): Promise<void> {
     } else if (path === '/backups') {
       const { createBackupsView } = await import('./views/backups.view.js');
       viewElement = await createBackupsView();
+    } else if (path === '/logs') {
+      const { createLogsView } = await import('./views/logs.view.js');
+      viewElement = await createLogsView();
+    } else if (path === '/logs/viewer' || path.startsWith('/logs/viewer')) {
+      const { createLogViewerView } = await import('./views/logs.view.js');
+      viewElement = await createLogViewerView();
     } else if (path === '/system' || path === '/system-settings') {
       const { createSystemView } = await import('./views/system.view.js');
       viewElement = await createSystemView();

@@ -1,9 +1,9 @@
 import { createSidebar } from '../components/layout.component.js';
 import { openModal } from '../components/modal.component.js';
-import { createBackupApi, deleteBackupApi, getBackupsApi, getBackupTargetsApi, loadTemplate } from '../services/api.service.js';
+import { createBackupApi, deleteBackupApi, getBackupsApi, getBackupScheduleApi, getBackupTargetsApi, loadTemplate, saveBackupScheduleApi, triggerBackupScheduleApi } from '../services/api.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { showToast } from '../services/toast.service.js';
-import { BackupCreatePayload, BackupDatabaseOption, BackupRecord, BackupTargetOptions } from '../types/backup.types.js';
+import { BackupCreatePayload, BackupDatabaseOption, BackupRecord, BackupScheduleConfig, BackupScheduleInterval, BackupSchedulePayload, BackupTargetOptions } from '../types/backup.types.js';
 import { ViewController } from '../types/common.types.js';
 import { escapeHtml, setupDropdown } from '../utils/dom.util.js';
 
@@ -58,6 +58,7 @@ class BackupsController implements ViewController {
   private selectedActions: HTMLElement | null = null;
 
   private btnCreateBackup: HTMLElement | null = null;
+  private btnConfigureSchedule: HTMLElement | null = null;
   private btnToggleSearch: HTMLElement | null = null;
   private searchToolbar: HTMLElement | null = null;
   private searchInput: HTMLInputElement | null = null;
@@ -88,6 +89,7 @@ class BackupsController implements ViewController {
     this.selectedActions = this.container.querySelector<HTMLElement>('[data-ref="backups-selected-actions"]');
 
     this.btnCreateBackup = this.container.querySelector<HTMLElement>('[data-ref="btn-create-backup"]');
+    this.btnConfigureSchedule = this.container.querySelector<HTMLElement>('[data-ref="btn-configure-schedule"]');
     this.btnToggleSearch = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-search"]');
     this.searchToolbar = this.container.querySelector<HTMLElement>('[data-ref="search-toolbar"]');
     this.searchInput = this.container.querySelector<HTMLInputElement>('[data-ref="backups-search-input"]');
@@ -136,6 +138,11 @@ class BackupsController implements ViewController {
     this.btnCreateBackup?.addEventListener('click', (e) => {
       e.preventDefault();
       void this.openCreateBackupModal();
+    }, { signal });
+
+    this.btnConfigureSchedule?.addEventListener('click', (e) => {
+      e.preventDefault();
+      void this.openScheduleModal();
     }, { signal });
 
     this.btnToggleSearch?.addEventListener('click', (e) => {
@@ -774,6 +781,358 @@ class BackupsController implements ViewController {
           container.style.display = container.style.display === 'none' ? 'block' : 'none';
         }
       });
+    });
+
+    renderIcons(modal.body);
+  }
+
+  private async openScheduleModal(): Promise<void> {
+    if (!this.targetsCache) {
+      const res = await getBackupTargetsApi();
+      if (res.ok && res.targets) {
+        this.targetsCache = res.targets;
+      }
+    }
+
+    const scheduleRes = await getBackupScheduleApi();
+    const schedule: BackupScheduleConfig = scheduleRes.schedule || {
+      databases_included: [
+        { database: 'db_identity', include_data: true, include_schema: true, tables: [] },
+        { database: 'db_canvas', include_data: true, include_schema: true, tables: [] },
+      ],
+      day_of_month: 1,
+      day_of_week: 1,
+      description: '',
+      enabled: false,
+      format: 'zip',
+      include_cassandra: false,
+      include_redis: true,
+      include_s3: true,
+      interval_hours: 24,
+      interval_type: 'daily',
+      last_run_at: null,
+      name: 'Copia Automática Programada',
+      next_run_at: null,
+      retention_count: 7,
+      s3_buckets_included: ['spriteboard-storage'],
+      time_of_day: '02:00',
+    };
+
+    const databases = this.targetsCache?.databases || [
+      { name: 'db_identity', table_count: 0, tables: [] },
+      { name: 'db_canvas', table_count: 0, tables: [] },
+    ];
+
+    const scheduledDbMap = new Map<string, Set<string>>();
+    let hasExplicitDbSelection = false;
+    if (schedule.databases_included && Array.isArray(schedule.databases_included)) {
+      hasExplicitDbSelection = schedule.databases_included.length > 0;
+      schedule.databases_included.forEach((d) => {
+        scheduledDbMap.set(d.database, new Set(d.tables || []));
+      });
+    }
+
+    const dbsHtml = databases.map((db) => {
+      const isDbSelected = !hasExplicitDbSelection || scheduledDbMap.has(db.name);
+      const selectedTables = scheduledDbMap.get(db.name) || new Set();
+      const allTablesPreselected = !hasExplicitDbSelection || selectedTables.size === 0;
+
+      const tablesListHtml = db.tables.map((tbl) => {
+        const isTblChecked = isDbSelected && (allTablesPreselected || selectedTables.has(tbl.name));
+        return `
+          <label class="backup-table-item" style="display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; border-radius: 4px; background: var(--bg-surface); margin-bottom: 3px; cursor: pointer;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <input type="checkbox" class="component-checkbox" data-ref="chk-sched-table-${db.name}-${tbl.name}" data-sched-db="${db.name}" data-sched-table="${tbl.name}" ${isTblChecked ? 'checked' : ''} />
+              <span style="font-size: 12px; font-family: monospace; color: var(--text-primary);">${escapeHtml(tbl.name)}</span>
+            </div>
+            <span style="font-size: 11px; color: var(--text-secondary);">${tbl.row_count} filas</span>
+          </label>
+        `;
+      }).join('');
+
+      return `
+        <div class="backup-db-card" data-ref="card-sched-db-${db.name}" style="border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin-bottom: 10px; background: var(--bg-card-subtle);">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600; font-size: 13px; color: var(--text-primary);">
+              <input type="checkbox" class="component-checkbox" data-ref="chk-sched-db-${db.name}" data-sched-db-parent="${db.name}" ${isDbSelected ? 'checked' : ''} />
+              <span>${escapeHtml(db.name)}</span>
+            </label>
+            <button type="button" class="component-button component-button--h28" data-ref="btn-sched-toggle-tables-${db.name}" data-sched-db-toggle="${db.name}" style="font-size: 11px; padding: 0 8px;">
+              Alternar tablas (${db.tables.length})
+            </button>
+          </div>
+          <div class="backup-tables-container" data-ref="container-sched-tables-${db.name}" style="max-height: 140px; overflow-y: auto; padding-right: 4px;">
+            ${tablesListHtml || '<div style="font-size: 12px; color: var(--text-tertiary); padding: 4px;">Todas las tablas serán incluidas</div>'}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    const modal = openModal({
+      bodyHtml: `
+        <div class="schedule-backup-modal-body" data-ref="modal-schedule-backup" style="display: flex; flex-direction: column; gap: 14px; max-height: 520px; overflow-y: auto; padding-right: 2px;">
+          
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-radius: 8px; background: var(--bg-card-subtle); border: 1px solid var(--border-color);">
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+              <span style="font-weight: 600; font-size: 13px; color: var(--text-primary);">Estado de la programación automática</span>
+              <span style="font-size: 12px; color: var(--text-secondary);">El worker de Python ejecutará los respaldos periódicos según este horario</span>
+            </div>
+            <label style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer;">
+              <input type="checkbox" class="component-checkbox" data-ref="modal-sched-enabled" ${schedule.enabled ? 'checked' : ''} />
+              <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);">${schedule.enabled ? 'Activada' : 'Pausada'}</span>
+            </label>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: var(--bg-card-subtle); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+            <div>
+              <span style="font-size: 11px; color: var(--text-secondary); display: block;">Última ejecución realizada</span>
+              <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);" data-ref="sched-val-last-run">${formatDate(schedule.last_run_at)}</span>
+            </div>
+            <div>
+              <span style="font-size: 11px; color: var(--text-secondary); display: block;">Próxima ejecución estimada</span>
+              <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);" data-ref="sched-val-next-run">${schedule.enabled ? formatDate(schedule.next_run_at) : 'En pausa'}</span>
+            </div>
+          </div>
+
+          <div class="menu-divider" style="margin: 2px 0;"></div>
+
+          <label class="field" data-ref="modal-sched-field-name">
+            <input class="field__input" data-ref="modal-sched-input-name" type="text" value="${escapeHtml(schedule.name || 'Copia Automática Programada')}" placeholder=" " maxlength="80" autocomplete="off" />
+            <span class="field__label">Nombre del trabajo programado</span>
+          </label>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <label class="field" data-ref="modal-sched-field-interval">
+              <select class="field__input" data-ref="modal-sched-select-interval" style="cursor: pointer;">
+                <option value="hourly" ${schedule.interval_type === 'hourly' ? 'selected' : ''}>Cada hora</option>
+                <option value="every_6_hours" ${schedule.interval_type === 'every_6_hours' ? 'selected' : ''}>Cada 6 horas</option>
+                <option value="every_12_hours" ${schedule.interval_type === 'every_12_hours' ? 'selected' : ''}>Cada 12 horas</option>
+                <option value="daily" ${schedule.interval_type === 'daily' ? 'selected' : ''}>Diario (una vez al día)</option>
+                <option value="weekly" ${schedule.interval_type === 'weekly' ? 'selected' : ''}>Semanal (un día fijo)</option>
+                <option value="monthly" ${schedule.interval_type === 'monthly' ? 'selected' : ''}>Mensual (un día al mes)</option>
+                <option value="custom_hours" ${schedule.interval_type === 'custom_hours' ? 'selected' : ''}>Personalizado (horas)</option>
+              </select>
+              <span class="field__label">Frecuencia / Intervalo</span>
+            </label>
+
+            <label class="field" data-ref="modal-sched-field-retention">
+              <input class="field__input" data-ref="modal-sched-input-retention" type="number" min="0" max="100" value="${schedule.retention_count ?? 7}" placeholder=" " autocomplete="off" />
+              <span class="field__label">Retención (mantener últimas N copias)</span>
+            </label>
+          </div>
+
+          <div class="schedule-interval-extra" data-ref="sched-extra-controls" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <label class="field" data-ref="modal-sched-field-time" style="display: ${schedule.interval_type === 'hourly' || schedule.interval_type === 'custom_hours' ? 'none' : 'block'};">
+              <input class="field__input" data-ref="modal-sched-input-time" type="time" value="${schedule.time_of_day || '02:00'}" placeholder=" " />
+              <span class="field__label">Hora de ejecución (HH:MM)</span>
+            </label>
+
+            <label class="field" data-ref="modal-sched-field-dow" style="display: ${schedule.interval_type === 'weekly' ? 'block' : 'none'};">
+              <select class="field__input" data-ref="modal-sched-select-dow">
+                <option value="1" ${schedule.day_of_week === 1 ? 'selected' : ''}>Lunes</option>
+                <option value="2" ${schedule.day_of_week === 2 ? 'selected' : ''}>Martes</option>
+                <option value="3" ${schedule.day_of_week === 3 ? 'selected' : ''}>Miércoles</option>
+                <option value="4" ${schedule.day_of_week === 4 ? 'selected' : ''}>Jueves</option>
+                <option value="5" ${schedule.day_of_week === 5 ? 'selected' : ''}>Viernes</option>
+                <option value="6" ${schedule.day_of_week === 6 ? 'selected' : ''}>Sábado</option>
+                <option value="7" ${schedule.day_of_week === 7 ? 'selected' : ''}>Domingo</option>
+              </select>
+              <span class="field__label">Día de la semana</span>
+            </label>
+
+            <label class="field" data-ref="modal-sched-field-dom" style="display: ${schedule.interval_type === 'monthly' ? 'block' : 'none'};">
+              <input class="field__input" data-ref="modal-sched-input-dom" type="number" min="1" max="28" value="${schedule.day_of_month || 1}" placeholder=" " />
+              <span class="field__label">Día del mes (1-28)</span>
+            </label>
+
+            <label class="field" data-ref="modal-sched-field-custom-hours" style="display: ${schedule.interval_type === 'custom_hours' ? 'block' : 'none'};">
+              <input class="field__input" data-ref="modal-sched-input-custom-hours" type="number" min="1" max="168" value="${schedule.interval_hours || 24}" placeholder=" " />
+              <span class="field__label">Cada N horas</span>
+            </label>
+          </div>
+
+          <div class="menu-divider" style="margin: 2px 0;"></div>
+
+          <div>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+              <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);">Bases de datos y tablas incluidas</span>
+              <span style="font-size: 11px; color: var(--text-secondary);">Selecciona qué tablas se respaldarán automáticamente</span>
+            </div>
+            ${dbsHtml}
+          </div>
+
+          <div class="menu-divider" style="margin: 2px 0;"></div>
+
+          <div>
+            <span style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; display: block;">Servicios Adicionales</span>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <label style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-card-subtle); cursor: pointer;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <svg class="component-icon" style="width: 20px; height: 20px; color: var(--text-secondary);" aria-hidden="true"><use href="/icons.svg#storage"></use></svg>
+                  <div>
+                    <div style="font-weight: 600; font-size: 13px; color: var(--text-primary);">Almacenamiento S3 / MinIO</div>
+                    <div style="font-size: 11px; color: var(--text-secondary);">Respaldar objetos multimedia y archivos de usuarios</div>
+                  </div>
+                </div>
+                <input type="checkbox" class="component-checkbox" data-ref="modal-sched-chk-s3" ${schedule.include_s3 ? 'checked' : ''} />
+              </label>
+
+              <label style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-card-subtle); cursor: pointer;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <svg class="component-icon" style="width: 20px; height: 20px; color: var(--text-secondary);" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
+                  <div>
+                    <div style="font-weight: 600; font-size: 13px; color: var(--text-primary);">Caché y Sesiones Redis</div>
+                    <div style="font-size: 11px; color: var(--text-secondary);">Respaldar instantánea de claves y estados de sesión</div>
+                  </div>
+                </div>
+                <input type="checkbox" class="component-checkbox" data-ref="modal-sched-chk-redis" ${schedule.include_redis ? 'checked' : ''} />
+              </label>
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; margin-top: 4px;">
+            <button type="button" class="component-button component-button--h34 view-header__btn" data-ref="btn-modal-sched-run-now" style="gap: 6px; padding: 0 12px; width: auto; font-size: 12px;">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
+              <span>Ejecutar ahora mismo</span>
+            </button>
+          </div>
+
+        </div>
+      `,
+      confirmClass: 'component-button--black',
+      confirmText: 'Guardar programación',
+      description: 'Configura la periodicidad y alcance de los respaldos automáticos gestionados por el worker.',
+      onConfirm: async () => {
+        const enabledChk = modal.body.querySelector<HTMLInputElement>('[data-ref="modal-sched-enabled"]');
+        const nameInput = modal.body.querySelector<HTMLInputElement>('[data-ref="modal-sched-input-name"]');
+        const intervalSelect = modal.body.querySelector<HTMLSelectElement>('[data-ref="modal-sched-select-interval"]');
+        const retentionInput = modal.body.querySelector<HTMLInputElement>('[data-ref="modal-sched-input-retention"]');
+        const timeInput = modal.body.querySelector<HTMLInputElement>('[data-ref="modal-sched-input-time"]');
+        const dowSelect = modal.body.querySelector<HTMLSelectElement>('[data-ref="modal-sched-select-dow"]');
+        const domInput = modal.body.querySelector<HTMLInputElement>('[data-ref="modal-sched-input-dom"]');
+        const customHoursInput = modal.body.querySelector<HTMLInputElement>('[data-ref="modal-sched-input-custom-hours"]');
+        const s3Chk = modal.body.querySelector<HTMLInputElement>('[data-ref="modal-sched-chk-s3"]');
+        const redisChk = modal.body.querySelector<HTMLInputElement>('[data-ref="modal-sched-chk-redis"]');
+
+        const isEnabled = Boolean(enabledChk?.checked);
+        const name = (nameInput?.value || '').trim() || 'Copia Automática Programada';
+        const intervalType = (intervalSelect?.value || 'daily') as BackupScheduleInterval;
+        const retentionCount = Math.max(0, parseInt(retentionInput?.value || '7', 10));
+        const timeOfDay = timeInput?.value || '02:00';
+        const dayOfWeek = parseInt(dowSelect?.value || '1', 10);
+        const dayOfMonth = parseInt(domInput?.value || '1', 10);
+        const intervalHours = parseInt(customHoursInput?.value || '24', 10);
+        const includeS3 = Boolean(s3Chk?.checked);
+        const includeRedis = Boolean(redisChk?.checked);
+
+        const databaseOptions: BackupDatabaseOption[] = [];
+        for (const db of databases) {
+          const dbChk = modal.body.querySelector<HTMLInputElement>(`[data-ref="chk-sched-db-${db.name}"]`);
+          if (dbChk && !dbChk.checked) {
+            continue;
+          }
+
+          const selectedTables: string[] = [];
+          modal.body.querySelectorAll<HTMLInputElement>(`[data-sched-db="${db.name}"]:checked`).forEach((tblChk) => {
+            const tName = tblChk.getAttribute('data-sched-table');
+            if (tName) selectedTables.push(tName);
+          });
+
+          databaseOptions.push({
+            database: db.name,
+            include_data: true,
+            include_schema: true,
+            tables: selectedTables,
+          });
+        }
+
+        const payload: BackupSchedulePayload = {
+          databases_included: databaseOptions,
+          day_of_month: dayOfMonth,
+          day_of_week: dayOfWeek,
+          description: 'Copia periódica generada por el worker de Spriteboard',
+          enabled: isEnabled,
+          format: 'zip',
+          include_cassandra: false,
+          include_redis: includeRedis,
+          include_s3: includeS3,
+          interval_hours: intervalHours,
+          interval_type: intervalType,
+          name,
+          retention_count: retentionCount,
+          s3_buckets_included: ['spriteboard-storage'],
+          time_of_day: timeOfDay,
+        };
+
+        modal.setConfirmLoading?.(true, 'Guardando...');
+        const res = await saveBackupScheduleApi(payload);
+        modal.setConfirmLoading?.(false);
+
+        if (!res.ok) {
+          modal.setError(res.error || 'Error al guardar la programación.');
+          return;
+        }
+
+        showToast(
+          isEnabled
+            ? 'Programación de copias de seguridad activada exitosamente.'
+            : 'Configuración guardada (programación en pausa).',
+          'success'
+        );
+        modal.close();
+      },
+      size: 'md',
+      title: 'Configurar Copias Automáticas',
+    });
+
+    const intervalSelect = modal.body.querySelector<HTMLSelectElement>('[data-ref="modal-sched-select-interval"]');
+    const fieldTime = modal.body.querySelector<HTMLElement>('[data-ref="modal-sched-field-time"]');
+    const fieldDow = modal.body.querySelector<HTMLElement>('[data-ref="modal-sched-field-dow"]');
+    const fieldDom = modal.body.querySelector<HTMLElement>('[data-ref="modal-sched-field-dom"]');
+    const fieldCustomHours = modal.body.querySelector<HTMLElement>('[data-ref="modal-sched-field-custom-hours"]');
+
+    intervalSelect?.addEventListener('change', () => {
+      const val = intervalSelect.value;
+      if (fieldTime) fieldTime.style.display = (val === 'hourly' || val === 'custom_hours') ? 'none' : 'block';
+      if (fieldDow) fieldDow.style.display = val === 'weekly' ? 'block' : 'none';
+      if (fieldDom) fieldDom.style.display = val === 'monthly' ? 'block' : 'none';
+      if (fieldCustomHours) fieldCustomHours.style.display = val === 'custom_hours' ? 'block' : 'none';
+    });
+
+    databases.forEach((db) => {
+      const parentChk = modal.body.querySelector<HTMLInputElement>(`[data-ref="chk-sched-db-${db.name}"]`);
+      const childCheckboxes = modal.body.querySelectorAll<HTMLInputElement>(`[data-sched-db="${db.name}"]`);
+      const toggleBtn = modal.body.querySelector<HTMLElement>(`[data-ref="btn-sched-toggle-tables-${db.name}"]`);
+      const container = modal.body.querySelector<HTMLElement>(`[data-ref="container-sched-tables-${db.name}"]`);
+
+      parentChk?.addEventListener('change', () => {
+        childCheckboxes.forEach((c) => {
+          c.checked = parentChk.checked;
+        });
+      });
+
+      toggleBtn?.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (container) {
+          container.style.display = container.style.display === 'none' ? 'block' : 'none';
+        }
+      });
+    });
+
+    const btnRunNow = modal.body.querySelector<HTMLElement>('[data-ref="btn-modal-sched-run-now"]');
+    btnRunNow?.addEventListener('click', async (e) => {
+      e.preventDefault();
+      modal.setConfirmLoading?.(true, 'Iniciando copia programada...');
+      const runRes = await triggerBackupScheduleApi();
+      modal.setConfirmLoading?.(false);
+
+      if (runRes.ok) {
+        showToast('Copia de seguridad programada iniciada inmediatamente.', 'success');
+        modal.close();
+        void this.loadBackups(1);
+      } else {
+        modal.setError(runRes.error || 'Error al ejecutar la copia programada.');
+      }
     });
 
     renderIcons(modal.body);

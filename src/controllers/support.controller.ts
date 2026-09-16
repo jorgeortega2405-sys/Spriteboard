@@ -280,6 +280,47 @@ export class SupportController {
       });
     }
   }
+
+  static async rateTicket(req: Request, res: Response): Promise<void> {
+    try {
+      const user = getCurrentUser(req);
+      if (!user) {
+        res.status(401).json({ error: 'Debes iniciar sesión para calificar la atención.', success: false });
+        return;
+      }
+
+      const { comment, rating, ticketId } = req.body;
+      const parsedTicketId = Number(ticketId);
+      const parsedRating = Number(rating);
+
+      if (!parsedTicketId) {
+        res.status(400).json({ error: 'Identificador de ticket no válido.', success: false });
+        return;
+      }
+
+      if (isNaN(parsedRating) || parsedRating < 1 || parsedRating > 6) {
+        res.status(400).json({ error: 'La calificación debe ser un valor entre 1 y 6 estrellas.', success: false });
+        return;
+      }
+
+      const success = await SupportService.rateTicket(parsedTicketId, user.id, parsedRating, comment);
+      if (!success) {
+        res.status(400).json({ error: 'No se pudo registrar la calificación.', success: false });
+        return;
+      }
+
+      res.status(200).json({
+        message: 'Calificación registrada correctamente.',
+        success: true,
+      });
+    } catch (error) {
+      logger.app.error('SupportController: Error al calificar ticket de soporte', error);
+      res.status(500).json({
+        error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
+        success: false,
+      });
+    }
+  }
 }
 
 export default SupportController;

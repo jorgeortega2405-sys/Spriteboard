@@ -22,6 +22,7 @@ class Config:
     DB_PORT = int(os.getenv("DB_PORT", "3306"))
     DB_USER = os.getenv("DB_USER", "sprite_user")
     DB_PASSWORD = os.getenv("DB_PASSWORD", "sprite_password")
+    DB_NAME = os.getenv("DB_NAME", "db_identity")
     DB_CANVAS_NAME = os.getenv("DB_CANVAS_NAME", "db_canvas")
     CANVAS_STORAGE_DIR = os.getenv("CANVAS_STORAGE_DIR", "/data/canvases")
 

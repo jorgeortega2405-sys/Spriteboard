@@ -1,3 +1,12 @@
+export type BackupScheduleInterval =
+  | 'hourly'
+  | 'every_6_hours'
+  | 'every_12_hours'
+  | 'daily'
+  | 'weekly'
+  | 'monthly'
+  | 'custom_hours';
+
 export interface BackupDatabaseOption {
   database: string;
   include_data: boolean;
@@ -19,6 +28,47 @@ export interface BackupCreatePayload {
   include_redis?: boolean;
   name: string;
   s3?: BackupS3Option;
+}
+
+export interface BackupScheduleConfig {
+  created_at?: string;
+  databases_included: BackupDatabaseOption[];
+  day_of_month: number;
+  day_of_week: number;
+  description?: string | null;
+  enabled: boolean;
+  format: 'tar.gz' | 'zip';
+  id?: number;
+  include_cassandra: boolean;
+  include_redis: boolean;
+  include_s3: boolean;
+  interval_hours: number;
+  interval_type: BackupScheduleInterval;
+  last_run_at: string | null;
+  name: string;
+  next_run_at: string | null;
+  retention_count: number;
+  s3_buckets_included: string[];
+  time_of_day: string;
+  updated_at?: string;
+}
+
+export interface BackupSchedulePayload {
+  databases_included: BackupDatabaseOption[];
+  day_of_month?: number;
+  day_of_week?: number;
+  description?: string;
+  enabled: boolean;
+  format?: 'tar.gz' | 'zip';
+  include_cassandra?: boolean;
+  include_redis?: boolean;
+  include_s3?: boolean;
+  interval_hours?: number;
+  interval_type: BackupScheduleInterval;
+  name?: string;
+  retention_count?: number;
+  s3_buckets_included?: string[];
+  time_of_day?: string;
 }
 
 export interface BackupRecord {

@@ -1,7 +1,7 @@
+import { createBackupJob, deleteBackup, getBackupByIdOrUuid, getBackupSchedule, getBackupTargetOptions, listBackups, saveBackupSchedule, triggerBackupSchedule } from '../services/backup.service.js';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
-import { createBackupJob, deleteBackup, getBackupByIdOrUuid, getBackupTargetOptions, listBackups } from '../services/backup.service.js';
 import { logger } from '../services/logger.service.js';
-import { BackupCreatePayload } from '../types/backup.types.js';
+import { BackupCreatePayload, BackupSchedulePayload } from '../types/backup.types.js';
 import { Request, Response } from 'express';
 import fs from 'fs';
 
@@ -153,6 +153,65 @@ export async function deleteBackupHandler(req: Request, res: Response): Promise<
     });
   } catch (error) {
     logger.app.error(`Error al eliminar copia de seguridad ${req.params.id}`, error);
+    res.status(500).json({
+      error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
+      ok: false,
+    });
+  }
+}
+
+export async function getSchedule(_req: Request, res: Response): Promise<void> {
+  try {
+    const schedule = await getBackupSchedule();
+    res.json({
+      ok: true,
+      schedule,
+    });
+  } catch (error) {
+    logger.app.error('Error al obtener configuración de programación de copias de seguridad', error);
+    res.status(500).json({
+      error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
+      ok: false,
+    });
+  }
+}
+
+export async function saveSchedule(req: Request, res: Response): Promise<void> {
+  try {
+    const body = req.body as BackupSchedulePayload;
+    if (!body || typeof body !== 'object') {
+      res.status(400).json({
+        error: 'La configuración de programación no es válida.',
+        ok: false,
+      });
+      return;
+    }
+
+    const schedule = await saveBackupSchedule(body);
+    res.json({
+      ok: true,
+      schedule,
+      success: true,
+    });
+  } catch (error) {
+    logger.app.error('Error al guardar configuración de programación de copias de seguridad', error);
+    res.status(500).json({
+      error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
+      ok: false,
+    });
+  }
+}
+
+export async function triggerSchedule(_req: Request, res: Response): Promise<void> {
+  try {
+    const backup = await triggerBackupSchedule();
+    res.status(201).json({
+      backup,
+      ok: true,
+      success: true,
+    });
+  } catch (error) {
+    logger.app.error('Error al disparar ejecución de copia de seguridad programada', error);
     res.status(500).json({
       error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
       ok: false,

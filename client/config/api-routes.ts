@@ -82,6 +82,7 @@ export const API_ROUTES = {
     historyTicket: (ticketId: number) => `/api/support/history/${encodeURIComponent(ticketId)}`,
     message: '/api/support/message',
     messages: (ticketId: number) => `/api/support/messages/${encodeURIComponent(ticketId)}`,
+    rate: '/api/support/rate',
     request: '/api/support/request',
   },
   auth: {

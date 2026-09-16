@@ -1,7 +1,7 @@
-import { pool } from '../config/database.config.js';
+import { BackupCreatePayload, BackupDatabaseOption, BackupListQuery, BackupRecord, BackupScheduleConfig, BackupScheduleInterval, BackupSchedulePayload, BackupTargetOptions } from '../types/backup.types.js';
 import { config } from '../config/env.config.js';
-import { BackupCreatePayload, BackupListQuery, BackupRecord, BackupTargetOptions } from '../types/backup.types.js';
 import { logger } from './logger.service.js';
+import { pool } from '../config/database.config.js';
 import { spawn, spawnSync } from 'child_process';
 import crypto from 'crypto';
 import fs from 'fs';
@@ -31,6 +31,29 @@ interface BackupRowPacket extends RowDataPacket {
   s3_buckets_included: string | null;
   status: 'completed' | 'failed' | 'in_progress' | 'pending';
   uuid: string;
+}
+
+interface BackupScheduleRowPacket extends RowDataPacket {
+  created_at: Date;
+  databases_included: string | null;
+  day_of_month: number;
+  day_of_week: number;
+  description: string | null;
+  enabled: number | boolean;
+  format: 'tar.gz' | 'zip';
+  id: number;
+  include_cassandra: number | boolean;
+  include_redis: number | boolean;
+  include_s3: number | boolean;
+  interval_hours: number;
+  interval_type: BackupScheduleInterval;
+  last_run_at: Date | null;
+  name: string;
+  next_run_at: Date | null;
+  retention_count: number;
+  s3_buckets_included: string | null;
+  time_of_day: string;
+  updated_at: Date;
 }
 
 export function getBackupDir(): string {
@@ -114,8 +137,33 @@ export async function ensureBackupTable(): Promise<void> {
         INDEX idx_backups_created_at (created_at)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS backup_schedules (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(255) NOT NULL DEFAULT 'Copia Automática Programada',
+        enabled BOOLEAN NOT NULL DEFAULT FALSE,
+        interval_type ENUM('hourly', 'every_6_hours', 'every_12_hours', 'daily', 'weekly', 'monthly', 'custom_hours') NOT NULL DEFAULT 'daily',
+        interval_hours INT NOT NULL DEFAULT 24,
+        time_of_day VARCHAR(5) NOT NULL DEFAULT '02:00',
+        day_of_week INT NOT NULL DEFAULT 1,
+        day_of_month INT NOT NULL DEFAULT 1,
+        databases_included JSON NULL,
+        include_s3 BOOLEAN NOT NULL DEFAULT TRUE,
+        s3_buckets_included JSON NULL,
+        include_redis BOOLEAN NOT NULL DEFAULT TRUE,
+        include_cassandra BOOLEAN NOT NULL DEFAULT FALSE,
+        format VARCHAR(20) NOT NULL DEFAULT 'zip',
+        retention_count INT NOT NULL DEFAULT 7,
+        description TEXT NULL,
+        last_run_at TIMESTAMP NULL DEFAULT NULL,
+        next_run_at TIMESTAMP NULL DEFAULT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
   } catch (error) {
-    logger.db.error('Error al asegurar tabla de copias de seguridad en MySQL', error);
+    logger.db.error('Error al asegurar tablas de copias de seguridad en MySQL', error);
   }
 }
 
@@ -437,4 +485,310 @@ export async function deleteBackup(idOrUuid: number | string): Promise<boolean> 
   });
 
   return true;
+}
+
+export function calculateNextRun(
+  intervalType: BackupScheduleInterval,
+  intervalHours: number = 24,
+  timeOfDay: string = '02:00',
+  dayOfWeek: number = 1,
+  dayOfMonth: number = 1,
+  fromDate: Date = new Date()
+): Date {
+  const [hourStr, minStr] = (timeOfDay || '02:00').split(':');
+  const targetHour = parseInt(hourStr || '2', 10);
+  const targetMin = parseInt(minStr || '0', 10);
+
+  const next = new Date(fromDate.getTime());
+
+  if (intervalType === 'hourly') {
+    next.setMinutes(targetMin, 0, 0);
+    if (next <= fromDate) {
+      next.setHours(next.getHours() + 1);
+    }
+    return next;
+  }
+
+  if (intervalType === 'every_6_hours') {
+    next.setMinutes(targetMin, 0, 0);
+    while (next <= fromDate) {
+      next.setHours(next.getHours() + 6);
+    }
+    return next;
+  }
+
+  if (intervalType === 'every_12_hours') {
+    next.setMinutes(targetMin, 0, 0);
+    while (next <= fromDate) {
+      next.setHours(next.getHours() + 12);
+    }
+    return next;
+  }
+
+  if (intervalType === 'custom_hours') {
+    const hours = Math.max(1, Number(intervalHours) || 24);
+    next.setMinutes(targetMin, 0, 0);
+    while (next <= fromDate) {
+      next.setHours(next.getHours() + hours);
+    }
+    return next;
+  }
+
+  if (intervalType === 'weekly') {
+    const jsTargetDay = dayOfWeek === 7 ? 0 : dayOfWeek;
+    next.setHours(targetHour, targetMin, 0, 0);
+    let daysAhead = (jsTargetDay - next.getDay() + 7) % 7;
+    if (daysAhead === 0 && next <= fromDate) {
+      daysAhead = 7;
+    }
+    next.setDate(next.getDate() + daysAhead);
+    return next;
+  }
+
+  if (intervalType === 'monthly') {
+    next.setDate(Math.min(28, Math.max(1, dayOfMonth || 1)));
+    next.setHours(targetHour, targetMin, 0, 0);
+    if (next <= fromDate) {
+      next.setMonth(next.getMonth() + 1);
+    }
+    return next;
+  }
+
+  next.setHours(targetHour, targetMin, 0, 0);
+  if (next <= fromDate) {
+    next.setDate(next.getDate() + 1);
+  }
+  return next;
+}
+
+function mapBackupScheduleRecord(row: BackupScheduleRowPacket): BackupScheduleConfig {
+  let databasesIncluded: BackupDatabaseOption[] = [];
+  if (row.databases_included) {
+    try {
+      databasesIncluded = typeof row.databases_included === 'string'
+        ? JSON.parse(row.databases_included)
+        : row.databases_included;
+    } catch {}
+  }
+
+  let s3Buckets: string[] = [];
+  if (row.s3_buckets_included) {
+    try {
+      s3Buckets = typeof row.s3_buckets_included === 'string'
+        ? JSON.parse(row.s3_buckets_included)
+        : row.s3_buckets_included;
+    } catch {}
+  }
+
+  return {
+    created_at: row.created_at ? new Date(row.created_at).toISOString() : undefined,
+    databases_included: databasesIncluded,
+    day_of_month: Number(row.day_of_month || 1),
+    day_of_week: Number(row.day_of_week || 1),
+    description: row.description,
+    enabled: Boolean(row.enabled),
+    format: row.format || 'zip',
+    id: row.id,
+    include_cassandra: Boolean(row.include_cassandra),
+    include_redis: Boolean(row.include_redis),
+    include_s3: Boolean(row.include_s3),
+    interval_hours: Number(row.interval_hours || 24),
+    interval_type: row.interval_type || 'daily',
+    last_run_at: row.last_run_at ? new Date(row.last_run_at).toISOString() : null,
+    name: row.name || 'Copia Automática Programada',
+    next_run_at: row.next_run_at ? new Date(row.next_run_at).toISOString() : null,
+    retention_count: Number(row.retention_count || 7),
+    s3_buckets_included: s3Buckets,
+    time_of_day: row.time_of_day || '02:00',
+    updated_at: row.updated_at ? new Date(row.updated_at).toISOString() : undefined,
+  };
+}
+
+export async function getBackupSchedule(): Promise<BackupScheduleConfig> {
+  await ensureBackupTable();
+
+  const [rows] = await pool.query<BackupScheduleRowPacket[]>(
+    'SELECT * FROM backup_schedules ORDER BY id ASC LIMIT 1'
+  );
+
+  if (rows && rows.length > 0) {
+    return mapBackupScheduleRecord(rows[0]);
+  }
+
+  const defaultNextRun = calculateNextRun('daily', 24, '02:00', 1, 1, new Date());
+  const defaultDatabases: BackupDatabaseOption[] = [
+    { database: 'db_identity', include_data: true, include_schema: true, tables: [] },
+    { database: 'db_canvas', include_data: true, include_schema: true, tables: [] },
+  ];
+
+  await pool.query(
+    `INSERT INTO backup_schedules (
+      name, enabled, interval_type, interval_hours, time_of_day, day_of_week, day_of_month,
+      databases_included, include_s3, s3_buckets_included, include_redis, include_cassandra,
+      format, retention_count, description, next_run_at
+    ) VALUES (?, FALSE, 'daily', 24, '02:00', 1, 1, ?, TRUE, ?, TRUE, FALSE, 'zip', 7, NULL, ?)`,
+    [
+      'Copia Automática Programada',
+      JSON.stringify(defaultDatabases),
+      JSON.stringify(['spriteboard-storage']),
+      defaultNextRun,
+    ]
+  );
+
+  const [createdRows] = await pool.query<BackupScheduleRowPacket[]>(
+    'SELECT * FROM backup_schedules ORDER BY id ASC LIMIT 1'
+  );
+
+  return mapBackupScheduleRecord(createdRows[0]);
+}
+
+export async function saveBackupSchedule(payload: BackupSchedulePayload): Promise<BackupScheduleConfig> {
+  await ensureBackupTable();
+
+  const current = await getBackupSchedule();
+  const enabled = Boolean(payload.enabled);
+  const intervalType = payload.interval_type || 'daily';
+  const intervalHours = Math.max(1, Number(payload.interval_hours || 24));
+  const timeOfDay = payload.time_of_day || '02:00';
+  const dayOfWeek = Math.max(1, Math.min(7, Number(payload.day_of_week || 1)));
+  const dayOfMonth = Math.max(1, Math.min(31, Number(payload.day_of_month || 1)));
+  const retentionCount = Math.max(0, Number(payload.retention_count ?? 7));
+  const format = payload.format === 'tar.gz' ? 'tar.gz' : 'zip';
+  const name = (payload.name || 'Copia Automática Programada').trim();
+  const description = payload.description ? payload.description.trim() : null;
+
+  const databasesIncludedJson = JSON.stringify(payload.databases_included || []);
+  const s3BucketsJson = JSON.stringify(payload.s3_buckets_included || ['spriteboard-storage']);
+
+  let nextRunAt: Date | null = null;
+  if (enabled) {
+    nextRunAt = calculateNextRun(intervalType, intervalHours, timeOfDay, dayOfWeek, dayOfMonth, new Date());
+  }
+
+  await pool.query(
+    `UPDATE backup_schedules SET
+      name = ?,
+      enabled = ?,
+      interval_type = ?,
+      interval_hours = ?,
+      time_of_day = ?,
+      day_of_week = ?,
+      day_of_month = ?,
+      databases_included = ?,
+      include_s3 = ?,
+      s3_buckets_included = ?,
+      include_redis = ?,
+      include_cassandra = ?,
+      format = ?,
+      retention_count = ?,
+      description = ?,
+      next_run_at = ?,
+      updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?`,
+    [
+      name,
+      enabled,
+      intervalType,
+      intervalHours,
+      timeOfDay,
+      dayOfWeek,
+      dayOfMonth,
+      databasesIncludedJson,
+      Boolean(payload.include_s3),
+      s3BucketsJson,
+      Boolean(payload.include_redis),
+      Boolean(payload.include_cassandra),
+      format,
+      retentionCount,
+      description,
+      nextRunAt,
+      current.id,
+    ]
+  );
+
+  logger.security.info('Configuración de copias de seguridad programadas actualizada', {
+    enabled,
+    intervalType,
+    nextRunAt: nextRunAt?.toISOString() || null,
+  });
+
+  return getBackupSchedule();
+}
+
+export async function enforceBackupRetention(retentionCount: number): Promise<void> {
+  if (retentionCount <= 0) return;
+
+  try {
+    const [rows] = await pool.query<RowDataPacket[]>(
+      `SELECT id, uuid, filename, file_path
+       FROM backups
+       WHERE status = 'completed' AND (created_by_username = 'Sistema (Worker Automático)' OR name LIKE '%Programada%')
+       ORDER BY created_at DESC`
+    );
+
+    if (rows.length > retentionCount) {
+      const toDelete = rows.slice(retentionCount);
+      for (const item of toDelete) {
+        if (item.file_path && fs.existsSync(item.file_path)) {
+          try {
+            fs.unlinkSync(item.file_path);
+          } catch {}
+        }
+        await pool.query('DELETE FROM backups WHERE id = ?', [item.id]);
+        logger.app.info(`Copia de seguridad antigua purgada por política de retención (${retentionCount})`, {
+          id: item.id,
+          filename: item.filename,
+        });
+      }
+    }
+  } catch (err) {
+    logger.db.error('Error al aplicar política de retención de copias de seguridad', err);
+  }
+}
+
+export async function triggerBackupSchedule(): Promise<BackupRecord | null> {
+  const schedule = await getBackupSchedule();
+  const dateStr = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+  const backupName = `${schedule.name || 'Copia Automática'} - ${dateStr}`;
+
+  const payload: BackupCreatePayload = {
+    databases: schedule.databases_included,
+    description: schedule.description || 'Ejecución manual de la copia de seguridad programada.',
+    format: schedule.format,
+    include_cassandra: schedule.include_cassandra,
+    include_redis: schedule.include_redis,
+    name: backupName,
+    s3: {
+      buckets: schedule.s3_buckets_included.length > 0 ? schedule.s3_buckets_included : ['spriteboard-storage'],
+      include: schedule.include_s3,
+      prefixes: [],
+    },
+  };
+
+  const backup = await createBackupJob(payload, {
+    id: 0,
+    username: 'Sistema (Worker Automático)',
+  });
+
+  const nextRun = calculateNextRun(
+    schedule.interval_type,
+    schedule.interval_hours,
+    schedule.time_of_day,
+    schedule.day_of_week,
+    schedule.day_of_month,
+    new Date()
+  );
+
+  await pool.query(
+    'UPDATE backup_schedules SET last_run_at = NOW(), next_run_at = ? WHERE id = ?',
+    [nextRun, schedule.id]
+  );
+
+  if (schedule.retention_count > 0) {
+    setTimeout(() => {
+      void enforceBackupRetention(schedule.retention_count);
+    }, 15000);
+  }
+
+  return backup;
 }

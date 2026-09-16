@@ -4,7 +4,7 @@ import sys
 import time
 from typing import List
 from config import config
-from tasks import BaseJob, TelemetryJob, TrashCleanupJob
+from tasks import BackupScheduleJob, BaseJob, TelemetryJob, TrashCleanupJob
 
 # Configuración de Logging Unificado y Seguro
 logging.basicConfig(
@@ -96,5 +96,8 @@ if __name__ == "__main__":
 
     # 2. Limpieza periódica de papelera de reciclaje (cada 24 horas - lienzos con > 30 días)
     daemon.register(TrashCleanupJob())
+
+    # 3. Copias de seguridad automáticas y periódicas
+    daemon.register(BackupScheduleJob())
 
     daemon.run()

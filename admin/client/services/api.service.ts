@@ -1,6 +1,7 @@
 import { isUserAdmin, SessionAccount, UserPayload } from '../types/auth.types.js';
-import { BackupCreatePayload, BackupRecord, BackupTargetOptions } from '../types/backup.types.js';
+import { BackupCreatePayload, BackupRecord, BackupScheduleConfig, BackupSchedulePayload, BackupTargetOptions } from '../types/backup.types.js';
 import { DashboardStatsResponse } from '../types/dashboard.types.js';
+import { LogFileContent, LogFileRecord } from '../types/log.types.js';
 
 export const API_ROUTES = {
   auth: {
@@ -16,6 +17,8 @@ export const API_ROUTES = {
     base: '/api/backups',
     byId: (id: number | string) => `/api/backups/${id}`,
     download: (id: number | string) => `/api/backups/${id}/download`,
+    schedule: '/api/backups/schedule',
+    scheduleTrigger: '/api/backups/schedule/trigger',
     targets: '/api/backups/targets',
   },
   config: '/api/config',
@@ -24,6 +27,11 @@ export const API_ROUTES = {
     stats: '/api/dashboard/stats',
   },
   health: '/health',
+  logs: {
+    base: '/api/logs',
+    content: '/api/logs/content',
+    download: (fileId: string) => `/api/logs/download?fileId=${encodeURIComponent(fileId)}`,
+  },
   settings: {
     avatar: '/api/settings/avatar',
     disable2fa: '/api/settings/2fa/disable',
@@ -852,6 +860,91 @@ export async function deleteBackupApi(idOrUuid: number | string): Promise<{
     return { error: data.error || 'Error al eliminar la copia de seguridad.', ok: false };
   } catch {
     return { error: 'Error de conexión al eliminar la copia de seguridad.', ok: false };
+  }
+}
+
+export async function getBackupScheduleApi(): Promise<{
+  error?: string;
+  ok: boolean;
+  schedule?: BackupScheduleConfig;
+}> {
+  try {
+    const res = await getApi(API_ROUTES.backups.schedule);
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.ok) {
+      return { ok: true, schedule: data.schedule };
+    }
+    return { error: data.error || 'Error al consultar la configuración de programación.', ok: false };
+  } catch {
+    return { error: 'Error de conexión al consultar la programación.', ok: false };
+  }
+}
+
+export async function saveBackupScheduleApi(payload: BackupSchedulePayload): Promise<{
+  error?: string;
+  ok: boolean;
+  schedule?: BackupScheduleConfig;
+}> {
+  try {
+    const res = await postApi(API_ROUTES.backups.schedule, payload);
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && (data.ok || data.success)) {
+      return { ok: true, schedule: data.schedule };
+    }
+    return { error: data.error || 'Error al guardar la configuración de programación.', ok: false };
+  } catch {
+    return { error: 'Error de conexión al guardar la programación.', ok: false };
+  }
+}
+
+export async function triggerBackupScheduleApi(): Promise<{
+  backup?: BackupRecord;
+  error?: string;
+  ok: boolean;
+}> {
+  try {
+    const res = await postApi(API_ROUTES.backups.scheduleTrigger, {});
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && (data.ok || data.success)) {
+      return { backup: data.backup, ok: true };
+    }
+    return { error: data.error || 'Error al ejecutar la copia de seguridad programada.', ok: false };
+  } catch {
+    return { error: 'Error de conexión al ejecutar el respaldo.', ok: false };
+  }
+}
+
+export async function getLogFilesApi(): Promise<{
+  error?: string;
+  files?: LogFileRecord[];
+  ok: boolean;
+}> {
+  try {
+    const res = await getApi(API_ROUTES.logs.base);
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.ok) {
+      return { files: data.files, ok: true };
+    }
+    return { error: data.error || 'Error al obtener la lista de registros de logs.', ok: false };
+  } catch {
+    return { error: 'Error de conexión al cargar archivos de logs.', ok: false };
+  }
+}
+
+export async function getLogContentApi(fileIds: string[]): Promise<{
+  error?: string;
+  files?: LogFileContent[];
+  ok: boolean;
+}> {
+  try {
+    const res = await postApi(API_ROUTES.logs.content, { fileIds });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.ok) {
+      return { files: data.files, ok: true };
+    }
+    return { error: data.error || 'Error al obtener el contenido de los registros seleccionados.', ok: false };
+  } catch {
+    return { error: 'Error de conexión al cargar contenido de los logs.', ok: false };
   }
 }
 
