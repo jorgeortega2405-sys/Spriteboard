@@ -1,4 +1,4 @@
-import { getAnalyticsBreakdowns, getAnalyticsExportCsv, getAnalyticsFinancialsAndTeams, getAnalyticsOverview, getAnalyticsRankings, getAnalyticsTrends } from '../services/analytics.service.js';
+import { executeSafeSqlQuery, getAnalyticsBreakdowns, getAnalyticsExportCsv, getAnalyticsFinancialsAndTeams, getAnalyticsOverview, getAnalyticsRankings, getAnalyticsTrends, getDatabaseSchemaMetadata } from '../services/analytics.service.js';
 import { logger } from '../services/logger.service.js';
 import { Request, Response } from 'express';
 
@@ -67,4 +67,26 @@ export async function handleGetAnalyticsExport(req: Request, res: Response): Pro
     res.status(500).json({ error: 'Ha ocurrido un error al exportar los datos analíticos.' });
   }
 }
+
+export async function handleGetDatabaseSchema(req: Request, res: Response): Promise<void> {
+  try {
+    const data = await getDatabaseSchemaMetadata();
+    res.json(data);
+  } catch (error) {
+    logger.app.error('Error al responder metadatos del esquema de base de datos', error);
+    res.status(500).json({ error: 'Ha ocurrido un error al cargar el esquema de base de datos.' });
+  }
+}
+
+export async function handleExecuteSqlQuery(req: Request, res: Response): Promise<void> {
+  try {
+    const query = typeof req.body.query === 'string' ? req.body.query : '';
+    const result = await executeSafeSqlQuery(query);
+    res.json(result);
+  } catch (error: any) {
+    logger.app.warn('Fallo en ejecución de consulta SQL interactiva', { error: error.message });
+    res.status(400).json({ error: error.message || 'Error al ejecutar la consulta SQL.' });
+  }
+}
+
 

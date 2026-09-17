@@ -1,4 +1,4 @@
-import { handleGetAnalyticsBreakdown, handleGetAnalyticsExport, handleGetAnalyticsFinancials, handleGetAnalyticsOverview, handleGetAnalyticsRankings, handleGetAnalyticsTrends } from '../controllers/analytics.controller.js';
+import { handleExecuteSqlQuery, handleGetAnalyticsBreakdown, handleGetAnalyticsExport, handleGetAnalyticsFinancials, handleGetAnalyticsOverview, handleGetAnalyticsRankings, handleGetAnalyticsTrends, handleGetDatabaseSchema } from '../controllers/analytics.controller.js';
 import { requireAuth, requirePermission } from '../middlewares/auth.middleware.js';
 import { Router } from 'express';
 
@@ -12,6 +12,8 @@ router.get('/breakdown', requirePermission('analytics:read', 'analytics:export')
 router.get('/financials', requirePermission('analytics:read', 'analytics:export'), handleGetAnalyticsFinancials);
 router.get('/rankings', requirePermission('analytics:read', 'analytics:export'), handleGetAnalyticsRankings);
 router.get('/export', requirePermission('analytics:read', 'analytics:export'), handleGetAnalyticsExport);
+router.get('/schema', requirePermission('analytics:read', 'analytics:export'), handleGetDatabaseSchema);
+router.post('/query', requirePermission('analytics:read', 'analytics:export'), handleExecuteSqlQuery);
 
 export default router;
 

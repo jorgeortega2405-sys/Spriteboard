@@ -755,3 +755,234 @@ export async function getAnalyticsExportCsv(range = '30d'): Promise<string> {
 
   return rows.join('\n');
 }
+
+export interface DatabaseSchemaColumn {
+  columnKey: string;
+  columnName: string;
+  dataType: string;
+  isNullable: boolean;
+  typeFormatted: string;
+}
+
+export interface DatabaseSchemaTable {
+  columns: DatabaseSchemaColumn[];
+  database: string;
+  estimatedRows: number;
+  tableName: string;
+}
+
+export interface DatabaseSchemaResponse {
+  databases: {
+    description: string;
+    engine: string;
+    name: string;
+    tables: DatabaseSchemaTable[];
+  }[];
+  redisKeys: {
+    description: string;
+    pattern: string;
+    ttl: string;
+    type: string;
+  }[];
+}
+
+export interface SqlQueryExecutionResult {
+  columns: string[];
+  executionTimeMs: number;
+  ok: boolean;
+  rows: Record<string, any>[];
+  totalRows: number;
+}
+
+export async function getDatabaseSchemaMetadata(): Promise<DatabaseSchemaResponse> {
+  try {
+    const [tableRows] = await pool.query<RowDataPacket[]>(`
+      SELECT 
+        TABLE_SCHEMA AS dbName,
+        TABLE_NAME AS tableName,
+        COALESCE(TABLE_ROWS, 0) AS estimatedRows
+      FROM information_schema.TABLES
+      WHERE TABLE_SCHEMA IN ('db_identity', 'db_canvas')
+      ORDER BY TABLE_SCHEMA ASC, TABLE_NAME ASC
+    `);
+
+    const [columnRows] = await pool.query<RowDataPacket[]>(`
+      SELECT 
+        TABLE_SCHEMA AS dbName,
+        TABLE_NAME AS tableName,
+        COLUMN_NAME AS columnName,
+        DATA_TYPE AS dataType,
+        COLUMN_TYPE AS typeFormatted,
+        IS_NULLABLE AS isNullable,
+        COLUMN_KEY AS columnKey
+      FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA IN ('db_identity', 'db_canvas')
+      ORDER BY TABLE_SCHEMA ASC, TABLE_NAME ASC, ORDINAL_POSITION ASC
+    `);
+
+    const tablesByDb: Record<string, Record<string, DatabaseSchemaTable>> = {
+      db_canvas: {},
+      db_identity: {},
+    };
+
+    tableRows.forEach((t) => {
+      const db = String(t.dbName);
+      const name = String(t.tableName);
+      if (!tablesByDb[db]) tablesByDb[db] = {};
+      tablesByDb[db][name] = {
+        columns: [],
+        database: db,
+        estimatedRows: Number(t.estimatedRows || 0),
+        tableName: name,
+      };
+    });
+
+    columnRows.forEach((c) => {
+      const db = String(c.dbName);
+      const tbl = String(c.tableName);
+      if (tablesByDb[db] && tablesByDb[db][tbl]) {
+        tablesByDb[db][tbl].columns.push({
+          columnKey: String(c.columnKey || ''),
+          columnName: String(c.columnName),
+          dataType: String(c.dataType),
+          isNullable: String(c.isNullable).toUpperCase() === 'YES',
+          typeFormatted: String(c.typeFormatted),
+        });
+      }
+    });
+
+    const databases = [
+      {
+        description: 'Base de datos principal de autenticación, usuarios, suscripciones, equipos y auditoría',
+        engine: 'InnoDB (MySQL)',
+        name: 'db_identity',
+        tables: Object.values(tablesByDb.db_identity || {}),
+      },
+      {
+        description: 'Base de datos relacional de lienzos, carpetas, capas, snapshots, vistas y comentarios',
+        engine: 'InnoDB (MySQL)',
+        name: 'db_canvas',
+        tables: Object.values(tablesByDb.db_canvas || {}),
+      },
+    ];
+
+    const redisKeys = [
+      {
+        description: 'Almacenamiento de sesiones activas de usuario y tokens de acceso',
+        pattern: 'session:<session_id>',
+        ttl: '7 días',
+        type: 'Hash / String',
+      },
+      {
+        description: 'Contadores de límite de tasa de peticiones HTTP (Rate Limiter)',
+        pattern: 'rate:<ip_address>:<endpoint>',
+        ttl: '60 segundos',
+        type: 'Integer / Key',
+      },
+      {
+        description: 'Caché en memoria de estadísticas y métricas del dashboard',
+        pattern: 'cache:dashboard:*',
+        ttl: '5 minutos',
+        type: 'JSON String',
+      },
+      {
+        description: 'Tokens temporales de verificación de dos factores (2FA)',
+        pattern: '2fa_temp:<token>',
+        ttl: '10 minutos',
+        type: 'String',
+      },
+      {
+        description: 'Caché de listas de anuncios públicos activos',
+        pattern: 'cache:ads:public',
+        ttl: '15 minutos',
+        type: 'JSON String',
+      },
+    ];
+
+    return { databases, redisKeys };
+  } catch (error) {
+    logger.db.error('Error al obtener metadatos del esquema de base de datos', error);
+    throw error;
+  }
+}
+
+const FORBIDDEN_SQL_PATTERN = /\b(DROP|DELETE|UPDATE|INSERT|ALTER|TRUNCATE|GRANT|REVOKE|CREATE|REPLACE|LOCK|UNLOCK|EXECUTE|CALL|SET|FLUSH|KILL|INTO\s+OUTFILE|INTO\s+DUMPFILE|LOAD_FILE)\b/i;
+const ALLOWED_SQL_START = /^\s*(SELECT|SHOW|DESCRIBE|DESC|EXPLAIN|WITH)\b/i;
+const SENSITIVE_COLUMNS = new Set([
+  'password_hash',
+  'two_factor_secret',
+  'two_factor_recovery_codes',
+  'stripe_session_id',
+  'stripe_payment_intent_id',
+  'stripe_customer_id',
+  'stripe_subscription_id',
+]);
+
+export async function executeSafeSqlQuery(sqlQuery: string): Promise<SqlQueryExecutionResult> {
+  const trimmed = (sqlQuery || '').trim();
+  if (!trimmed) {
+    throw new Error('La consulta SQL no puede estar vacía.');
+  }
+
+  const statements = trimmed
+    .split(';')
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  if (statements.length > 1) {
+    throw new Error('Por motivos de seguridad, solo se permite ejecutar una instrucción SQL a la vez.');
+  }
+
+  const singleQuery = statements[0];
+
+  if (!ALLOWED_SQL_START.test(singleQuery)) {
+    throw new Error('Operación no permitida. La consola solo admite consultas de solo lectura (SELECT, SHOW, DESCRIBE, EXPLAIN).');
+  }
+
+  if (FORBIDDEN_SQL_PATTERN.test(singleQuery)) {
+    throw new Error('Operación rechazada. Se han detectado palabras clave prohibidas de modificación o administración de base de datos.');
+  }
+
+  let finalQuery = singleQuery;
+  const hasLimit = /\bLIMIT\s+\d+/i.test(singleQuery);
+  if (!hasLimit && /^\s*(SELECT|WITH)\b/i.test(singleQuery)) {
+    finalQuery = `${singleQuery} LIMIT 200`;
+  }
+
+  const startTime = performance.now();
+  try {
+    const [resultRows] = await pool.query<RowDataPacket[]>(finalQuery);
+    const executionTimeMs = Math.round((performance.now() - startTime) * 100) / 100;
+
+    const rawArray = Array.isArray(resultRows) ? resultRows : [];
+    const sanitizedRows = rawArray.slice(0, 500).map((row) => {
+      const sanitized: Record<string, any> = {};
+      Object.keys(row).forEach((key) => {
+        if (SENSITIVE_COLUMNS.has(key.toLowerCase())) {
+          sanitized[key] = row[key] ? '[PROTECTED_HASH]' : null;
+        } else if (row[key] instanceof Date) {
+          sanitized[key] = row[key].toISOString();
+        } else if (typeof row[key] === 'bigint') {
+          sanitized[key] = row[key].toString();
+        } else {
+          sanitized[key] = row[key];
+        }
+      });
+      return sanitized;
+    });
+
+    const columns = sanitizedRows.length > 0 ? Object.keys(sanitizedRows[0]) : [];
+
+    return {
+      columns,
+      executionTimeMs,
+      ok: true,
+      rows: sanitizedRows,
+      totalRows: sanitizedRows.length,
+    };
+  } catch (error: any) {
+    logger.db.warn('Error al ejecutar consulta SQL en SQL Studio', { error: error.message, query: finalQuery });
+    throw new Error(error.message || 'Error al ejecutar la consulta SQL.');
+  }
+}
+

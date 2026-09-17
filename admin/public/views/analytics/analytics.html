@@ -58,6 +58,10 @@
               <svg class="component-icon" style="width: 14px; height: 14px;" aria-hidden="true"><use href="/icons.svg#receipt_long"></use></svg>
               <span>4. Monetización, Equipos & IA</span>
             </button>
+            <button type="button" class="component-badge component-badge--interactive" data-ref="tab-btn-sql-studio" data-tab="sql-studio">
+              <svg class="component-icon" style="width: 14px; height: 14px;" aria-hidden="true"><use href="/icons.svg#terminal"></use></svg>
+              <span>5. Esquema & SQL Studio</span>
+            </button>
           </div>
         </div>
         <div data-ref="analytics-tab-indicator" style="font-size: 12px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
@@ -600,6 +604,174 @@
                   </tr>
                 </tbody>
               </table>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ==================================================================== -->
+        <!-- PANE 5: ESQUEMA DE DATOS & SQL STUDIO (DATA DICTIONARY & SQL CONSOLE) -->
+        <!-- ==================================================================== -->
+        <div class="analytics-tab-pane" data-ref="pane-sql-studio" style="display: none;">
+          
+          <!-- Banner / Notice for Data Analysts -->
+          <div class="dashboard-chart-card" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(59, 130, 246, 0.05)); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: var(--radius-lg, 16px); padding: 16px 20px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(99, 102, 241, 0.15); display: flex; align-items: center; justify-content: center; color: #6366f1;">
+                <svg class="component-icon" style="width: 22px; height: 22px;" aria-hidden="true"><use href="/icons.svg#database"></use></svg>
+              </div>
+              <div>
+                <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px 0;">Entorno de Exploración de Datos & SQL Studio</h3>
+                <p style="font-size: 12px; color: var(--text-secondary); margin: 0;">Consulta los esquemas relacionales (MySQL) y en memoria (Redis) o ejecuta consultas SELECT analíticas seguras en tiempo real.</p>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span class="component-badge" style="background: rgba(16, 185, 129, 0.12); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.25);">
+                <svg class="component-icon" style="width: 12px; height: 12px; margin-right: 4px;" aria-hidden="true"><use href="/icons.svg#shield"></use></svg>
+                Modo Solo Lectura (SELECT/EXPLAIN)
+              </span>
+              <span class="component-badge" style="background: rgba(59, 130, 246, 0.12); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.25);">
+                Límite máx. 500 filas
+              </span>
+            </div>
+          </div>
+
+          <!-- Studio Grid: Left (Schema Explorer) & Right (SQL Console + Results) -->
+          <div style="display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 20px; align-items: start;">
+            
+            <!-- Left Column: Schema Tree / Data Dictionary -->
+            <div class="dashboard-rankings-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; height: 750px; box-sizing: border-box; overflow: hidden;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-shrink: 0;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <svg class="component-icon" style="color: #6366f1; width: 18px; height: 18px;" aria-hidden="true"><use href="/icons.svg#layers"></use></svg>
+                  <h3 style="font-size: 14px; font-weight: 700; color: var(--text-primary); margin: 0;">Diccionario de Datos</h3>
+                </div>
+                <button type="button" class="component-button component-button--sm component-button--ghost" data-ref="btn-refresh-schema" data-tooltip="Recargar esquema" aria-label="Recargar esquema">
+                  <svg class="component-icon" style="width: 14px; height: 14px;" aria-hidden="true"><use href="/icons.svg#refresh"></use></svg>
+                </button>
+              </div>
+
+              <!-- Search / Filter Input for Schema -->
+              <div style="margin-bottom: 12px; flex-shrink: 0;">
+                <input class="component-input component-input--sm" data-ref="input-filter-schema" type="text" placeholder="Filtrar tablas o campos..." style="width: 100%; box-sizing: border-box; font-size: 12px; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-card-subtle); color: var(--text-primary);" />
+              </div>
+
+              <!-- Database Tabs / Segmented Switcher -->
+              <div style="display: flex; gap: 4px; background: var(--bg-card-subtle); padding: 3px; border-radius: 8px; margin-bottom: 12px; flex-shrink: 0;">
+                <button type="button" class="component-badge component-badge--interactive is-active" data-ref="schema-tab-db-identity" data-schemadb="db_identity" style="flex: 1; text-align: center; justify-content: center; font-size: 11px; padding: 5px 0;">
+                  db_identity
+                </button>
+                <button type="button" class="component-badge component-badge--interactive" data-ref="schema-tab-db-canvas" data-schemadb="db_canvas" style="flex: 1; text-align: center; justify-content: center; font-size: 11px; padding: 5px 0;">
+                  db_canvas
+                </button>
+                <button type="button" class="component-badge component-badge--interactive" data-ref="schema-tab-redis" data-schemadb="redis" style="flex: 1; text-align: center; justify-content: center; font-size: 11px; padding: 5px 0;">
+                  Redis NoSQL
+                </button>
+              </div>
+
+              <!-- Schema Tree Container (Scrollable) -->
+              <div class="layout-scrollable" data-ref="schema-tree-container" style="flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding-right: 4px; display: flex; flex-direction: column; gap: 8px;">
+                <div style="text-align: center; padding: 30px 10px; color: var(--text-secondary); font-size: 12px;">
+                  Cargando esquema de base de datos...
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Column: Interactive SQL Studio & Results -->
+            <div style="display: flex; flex-direction: column; gap: 16px; min-width: 0;">
+              
+              <!-- Query Editor Card -->
+              <div class="dashboard-chart-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); box-sizing: border-box;">
+                
+                <!-- Snippets Bar -->
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+                  <div style="display: flex; align-items: center; gap: 6px;">
+                    <svg class="component-icon" style="width: 16px; height: 16px;" aria-hidden="true"><use href="/icons.svg#lightbulb"></use></svg>
+                    <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary);">Consultas Rápidas (Snippets Analíticos):</span>
+                  </div>
+                  <div style="display: flex; gap: 6px; flex-wrap: wrap;" data-ref="sql-snippets-bar">
+                    <button type="button" class="component-badge component-badge--interactive" data-ref="btn-snippet-top-users" data-snippet="top-users" style="font-size: 11px;">
+                      Top Usuarios
+                    </button>
+                    <button type="button" class="component-badge component-badge--interactive" data-ref="btn-snippet-canvases-storage" data-snippet="canvases-storage" style="font-size: 11px;">
+                      Lienzos + Pesados
+                    </button>
+                    <button type="button" class="component-badge component-badge--interactive" data-ref="btn-snippet-revenue-plans" data-snippet="revenue-plans" style="font-size: 11px;">
+                      Ingresos x Plan
+                    </button>
+                    <button type="button" class="component-badge component-badge--interactive" data-ref="btn-snippet-ai-satisfaction" data-snippet="ai-satisfaction" style="font-size: 11px;">
+                      Feedback IA
+                    </button>
+                    <button type="button" class="component-badge component-badge--interactive" data-ref="btn-snippet-2fa-adoption" data-snippet="2fa-adoption" style="font-size: 11px;">
+                      Adopción 2FA
+                    </button>
+                  </div>
+                </div>
+
+                <!-- SQL Textarea Box -->
+                <div style="position: relative; margin-bottom: 12px;">
+                  <textarea class="component-textarea" data-ref="sql-query-input" rows="7" placeholder="Escribe tu consulta SQL aquí... Ej: SELECT id, username, email, created_at FROM db_identity.users ORDER BY id DESC LIMIT 50;" style="width: 100%; box-sizing: border-box; font-family: 'Fira Code', 'Cascadia Code', Consolas, Monaco, monospace; font-size: 13px; line-height: 1.5; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border-color); background: #0f172a; color: #f8fafc; resize: vertical; tab-size: 2; outline: none;"></textarea>
+                </div>
+
+                <!-- Actions Bar -->
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <button type="button" class="component-button component-button--h40 component-button--primary" data-ref="btn-execute-sql" style="display: flex; align-items: center; gap: 6px; font-weight: 600;">
+                      <svg class="component-icon" style="width: 16px; height: 16px;" aria-hidden="true"><use href="/icons.svg#play_arrow"></use></svg>
+                      <span>Ejecutar Consulta</span>
+                      <kbd style="font-size: 10px; background: rgba(255, 255, 255, 0.2); padding: 2px 5px; border-radius: 4px; margin-left: 4px;">Ctrl+Enter</kbd>
+                    </button>
+                    <button type="button" class="component-button component-button--h40 component-button--bordered" data-ref="btn-clear-sql">
+                      <span>Limpiar</span>
+                    </button>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 10px;">
+                    <button type="button" class="component-button component-button--h40 component-button--bordered" data-ref="btn-export-sql-csv" disabled style="display: flex; align-items: center; gap: 6px;">
+                      <svg class="component-icon" style="width: 16px; height: 16px;" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
+                      <span>Exportar Resultado (CSV)</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Query Error Message Banner (Under actions) -->
+                <div class="banner banner--danger" data-ref="sql-error-banner" style="display: none; margin-top: 14px; padding: 12px 16px; border-radius: 8px; font-size: 13px;">
+                  <span data-ref="sql-error-message"></span>
+                </div>
+
+              </div>
+
+              <!-- Execution Status / Results Info Header -->
+              <div data-ref="sql-results-meta" style="display: none; align-items: center; justify-content: space-between; background: var(--bg-card-subtle); border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 14px; font-size: 12px; color: var(--text-secondary);">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                  <span>Filas: <strong data-ref="sql-meta-rows" style="color: var(--text-primary);">0</strong></span>
+                  <span>Tiempo: <strong data-ref="sql-meta-time" style="color: var(--text-primary);">0.00 ms</strong></span>
+                  <span>Columnas: <strong data-ref="sql-meta-cols" style="color: var(--text-primary);">0</strong></span>
+                </div>
+                <div style="color: var(--text-secondary); font-size: 11px;">
+                  Solo lectura &bull; Datos enmascarados
+                </div>
+              </div>
+
+              <!-- Query Results Table Container -->
+              <div class="dashboard-rankings-card" data-ref="sql-results-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); min-height: 250px; box-sizing: border-box;">
+                <div class="component-table-wrapper" data-ref="sql-table-wrapper" style="overflow-x: auto; max-height: 480px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px;">
+                  <table class="component-table" data-ref="table-sql-results" style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                    <thead data-ref="sql-thead">
+                      <tr style="background: var(--bg-card-subtle); border-bottom: 1px solid var(--border-color); text-align: left;">
+                        <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary);">Resultado de la consulta</th>
+                      </tr>
+                    </thead>
+                    <tbody data-ref="sql-tbody">
+                      <tr>
+                        <td style="padding: 30px; text-align: center; color: var(--text-secondary);">
+                          Ejecuta una consulta SQL para visualizar los datos aquí.
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
             </div>
           </div>
 

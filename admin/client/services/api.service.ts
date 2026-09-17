@@ -18,7 +18,9 @@ export const API_ROUTES = {
     export: (range = '30d') => `/api/analytics/export?range=${encodeURIComponent(range)}`,
     financials: '/api/analytics/financials',
     overview: '/api/analytics/overview',
+    query: '/api/analytics/query',
     rankings: '/api/analytics/rankings',
+    schema: '/api/analytics/schema',
     trends: (range = '30d') => `/api/analytics/trends?range=${encodeURIComponent(range)}`,
   },
   auth: {
@@ -1249,6 +1251,28 @@ export async function getAnalyticsRankingsApi(): Promise<{ data?: any; error?: s
     return { error: data.error || 'Error al cargar rankings.', ok: false };
   } catch {
     return { error: 'Error de conexión al cargar rankings.', ok: false };
+  }
+}
+
+export async function getDatabaseSchemaApi(): Promise<{ data?: any; error?: string; ok: boolean }> {
+  try {
+    const res = await getApi(API_ROUTES.analytics.schema);
+    const data = await res.json();
+    if (res.ok) return { data, ok: true };
+    return { error: data.error || 'Error al cargar esquema de base de datos.', ok: false };
+  } catch {
+    return { error: 'Error de conexión al cargar esquema de base de datos.', ok: false };
+  }
+}
+
+export async function executeSqlQueryApi(query: string): Promise<{ data?: any; error?: string; ok: boolean }> {
+  try {
+    const res = await postApi(API_ROUTES.analytics.query, { query });
+    const data = await res.json();
+    if (res.ok) return { data, ok: true };
+    return { error: data.error || 'Error al ejecutar la consulta SQL.', ok: false };
+  } catch {
+    return { error: 'Error de conexión al ejecutar la consulta SQL.', ok: false };
   }
 }
 
