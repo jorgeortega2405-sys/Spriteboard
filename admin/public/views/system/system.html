@@ -1,32 +1,26 @@
 <div class="layout-content" data-ref="admin-system-view">
   <div class="component-wrapper component-wrapper--full view-wrapper" data-ref="system-wrapper">
-    <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="system-scrollable">
-      <div class="settings-layout" data-ref="system-layout" style="max-width: 920px; margin: 0 auto; padding-bottom: 60px;">
-
-        <div class="settings-header" data-ref="system-header">
-          <div class="view-header__left" data-ref="system-header-left" style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%; flex-wrap: wrap; gap: 16px;">
-            <div data-ref="system-header-text">
-              <h1 class="settings-title" data-ref="system-title">Configuración del Sistema</h1>
-              <p class="settings-subtitle" data-ref="system-subtitle">Ajustes globales de seguridad, registro de usuarios, límites, tiempos de expiración y mantenimiento.</p>
-            </div>
-            <div data-ref="system-header-actions" style="display: flex; align-items: center; gap: 10px;">
-              <button type="button" class="component-button component-button--h34" data-ref="btn-reset-all">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#history"></use></svg>
-                <span>Restablecer todo</span>
-              </button>
-              <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-save-all">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
-                <span>Guardar cambios</span>
-              </button>
-            </div>
-          </div>
+    <div class="view-header" data-ref="system-view-header">
+      <div class="view-header__left" data-ref="system-header-left">
+        <h1 class="view-header__title" data-ref="system-title">Configuración del Sistema</h1>
+      </div>
+      <div class="view-header__right" data-ref="system-header-right">
+        <div class="view-header__actions" data-ref="system-default-actions">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only component-button--black view-header__btn" data-ref="btn-save-all" data-tooltip="Guardar cambios" aria-label="Guardar cambios">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+          </button>
         </div>
+      </div>
+    </div>
+
+    <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="system-scrollable">
+      <div class="settings-layout settings-layout--wide" data-ref="system-layout" style="margin: 0 auto; padding: 24px 24px 60px 24px;">
 
         <div class="banner banner--danger" data-ref="system-config-error" style="display: none; margin-bottom: 20px;"></div>
         <div class="banner banner--success" data-ref="system-config-success" style="display: none; margin-bottom: 20px;"></div>
 
         <!-- Acordeón 1: Seguridad y Contraseñas -->
-        <div class="settings-group settings-group--accordion is-active" data-ref="accordion-security">
+        <div class="settings-group settings-group--accordion" data-ref="accordion-security">
           <div class="settings-accordion-header" data-ref="header-security">
             <div class="settings-item__content" data-ref="header-content-security">
               <div class="settings-item__icon-box" data-ref="icon-box-security">
@@ -43,53 +37,207 @@
           </div>
 
           <div class="settings-accordion-body" data-ref="body-security">
-            <div class="settings-accordion-content" data-ref="content-security" style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
-              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px;">
-                <label class="field" data-ref="field-pwd-min">
-                  <span class="field__label-top" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; display: block;">Longitud mínima de contraseña</span>
-                  <input class="field__input" data-ref="input-password-min-length" type="number" min="4" max="64" step="1" />
-                </label>
-
-                <label class="field" data-ref="field-pwd-max">
-                  <span class="field__label-top" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; display: block;">Longitud máxima de contraseña</span>
-                  <input class="field__input" data-ref="input-password-max-length" type="number" min="16" max="256" step="1" />
-                </label>
+            <div class="settings-accordion-content" data-ref="content-security">
+              <!-- Item: Longitud mínima de contraseña -->
+              <div class="settings-item" data-ref="item-pwd-min">
+                <div class="settings-item__content" data-ref="item-pwd-min-content">
+                  <div class="settings-item__text" data-ref="item-pwd-min-text">
+                    <h2 class="settings-item__title" data-ref="item-pwd-min-title">Longitud mínima de contraseña</h2>
+                    <p class="settings-item__desc" data-ref="item-pwd-min-desc">Número mínimo de caracteres exigidos al crear o restablecer contraseñas (mín. 4, máx. 64).</p>
+                  </div>
+                </div>
+                <div class="settings-item__actions" data-ref="item-pwd-min-actions">
+                  <div class="component-inline-control component-inline-control--fixed" data-ref="inline-control-pwd-min">
+                    <div class="component-inline-control__group" data-ref="inline-group-pwd-min-dec">
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-pwd-min-dec-large" data-step-change="-4" data-tooltip="-4" aria-label="Disminuir 4">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#keyboard_double_arrow_left"></use></svg>
+                      </button>
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-pwd-min-dec" data-step-change="-1" data-tooltip="-1" aria-label="Disminuir 1">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+                      </button>
+                    </div>
+                    <input class="component-inline-control__input" data-ref="input-password-min-length" type="number" min="4" max="64" step="1" value="8" autocomplete="off" />
+                    <div class="component-inline-control__group" data-ref="inline-group-pwd-min-inc">
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-pwd-min-inc" data-step-change="1" data-tooltip="+1" aria-label="Aumentar 1">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+                      </button>
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-pwd-min-inc-large" data-step-change="4" data-tooltip="+4" aria-label="Aumentar 4">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#keyboard_double_arrow_right"></use></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px;">
-                <label class="field" data-ref="field-session-ttl">
-                  <span class="field__label-top" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; display: block;">Duración de sesiones (en días)</span>
-                  <input class="field__input" data-ref="input-session-ttl-days" type="number" min="1" max="90" step="1" />
-                </label>
+              <hr class="settings-divider" />
 
-                <label class="field" data-ref="field-max-accounts">
-                  <span class="field__label-top" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; display: block;">Máximo de cuentas simultáneas</span>
-                  <input class="field__input" data-ref="input-max-concurrent-accounts" type="number" min="1" max="20" step="1" />
-                </label>
+              <!-- Item: Longitud máxima de contraseña -->
+              <div class="settings-item" data-ref="item-pwd-max">
+                <div class="settings-item__content" data-ref="item-pwd-max-content">
+                  <div class="settings-item__text" data-ref="item-pwd-max-text">
+                    <h2 class="settings-item__title" data-ref="item-pwd-max-title">Longitud máxima de contraseña</h2>
+                    <p class="settings-item__desc" data-ref="item-pwd-max-desc">Límite superior de caracteres permitidos para contraseñas de usuarios (mín. 16, máx. 256).</p>
+                  </div>
+                </div>
+                <div class="settings-item__actions" data-ref="item-pwd-max-actions">
+                  <div class="component-inline-control component-inline-control--fixed" data-ref="inline-control-pwd-max">
+                    <div class="component-inline-control__group" data-ref="inline-group-pwd-max-dec">
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-pwd-max-dec-large" data-step-change="-16" data-tooltip="-16" aria-label="Disminuir 16">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#keyboard_double_arrow_left"></use></svg>
+                      </button>
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-pwd-max-dec" data-step-change="-1" data-tooltip="-1" aria-label="Disminuir 1">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+                      </button>
+                    </div>
+                    <input class="component-inline-control__input" data-ref="input-password-max-length" type="number" min="16" max="256" step="1" value="128" autocomplete="off" />
+                    <div class="component-inline-control__group" data-ref="inline-group-pwd-max-inc">
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-pwd-max-inc" data-step-change="1" data-tooltip="+1" aria-label="Aumentar 1">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+                      </button>
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-pwd-max-inc-large" data-step-change="16" data-tooltip="+16" aria-label="Aumentar 16">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#keyboard_double_arrow_right"></use></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <div style="display: flex; flex-direction: column; gap: 12px; padding: 16px; background: var(--bg-card-subtle); border-radius: var(--radius-md, 12px); border: 1px solid var(--border-color);">
-                <div style="font-size: 13px; font-weight: 600; color: var(--text-primary);">Requisitos obligatorios de contraseña</div>
+              <hr class="settings-divider" />
 
-                <label class="settings-checkbox-item" data-ref="check-req-uppercase" style="display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none;">
-                  <input class="component-checkbox" data-ref="input-password-require-uppercase" type="checkbox" />
-                  <span style="font-size: 13px; color: var(--text-primary);">Requerir al menos una letra mayúscula (A-Z)</span>
-                </label>
+              <!-- Item: Duración de sesiones -->
+              <div class="settings-item" data-ref="item-session-ttl">
+                <div class="settings-item__content" data-ref="item-session-ttl-content">
+                  <div class="settings-item__text" data-ref="item-session-ttl-text">
+                    <h2 class="settings-item__title" data-ref="item-session-ttl-title">Duración de sesiones (en días)</h2>
+                    <p class="settings-item__desc" data-ref="item-session-ttl-desc">Tiempo de validez de sesiones activas antes de requerir nuevo inicio de sesión (mín. 1, máx. 90).</p>
+                  </div>
+                </div>
+                <div class="settings-item__actions" data-ref="item-session-ttl-actions">
+                  <div class="component-inline-control component-inline-control--fixed" data-ref="inline-control-session-ttl">
+                    <div class="component-inline-control__group" data-ref="inline-group-session-ttl-dec">
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-session-ttl-dec-large" data-step-change="-7" data-tooltip="-7 días" aria-label="Disminuir 7 días">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#keyboard_double_arrow_left"></use></svg>
+                      </button>
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-session-ttl-dec" data-step-change="-1" data-tooltip="-1 día" aria-label="Disminuir 1 día">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+                      </button>
+                    </div>
+                    <input class="component-inline-control__input" data-ref="input-session-ttl-days" type="number" min="1" max="90" step="1" value="7" autocomplete="off" />
+                    <div class="component-inline-control__group" data-ref="inline-group-session-ttl-inc">
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-session-ttl-inc" data-step-change="1" data-tooltip="+1 día" aria-label="Aumentar 1 día">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+                      </button>
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-session-ttl-inc-large" data-step-change="7" data-tooltip="+7 días" aria-label="Aumentar 7 días">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#keyboard_double_arrow_right"></use></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-                <label class="settings-checkbox-item" data-ref="check-req-lowercase" style="display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none;">
-                  <input class="component-checkbox" data-ref="input-password-require-lowercase" type="checkbox" />
-                  <span style="font-size: 13px; color: var(--text-primary);">Requerir al menos una letra minúscula (a-z)</span>
-                </label>
+              <hr class="settings-divider" />
 
-                <label class="settings-checkbox-item" data-ref="check-req-number" style="display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none;">
-                  <input class="component-checkbox" data-ref="input-password-require-number" type="checkbox" />
-                  <span style="font-size: 13px; color: var(--text-primary);">Requerir al menos un número (0-9)</span>
-                </label>
+              <!-- Item: Máximo de cuentas simultáneas -->
+              <div class="settings-item" data-ref="item-max-accounts">
+                <div class="settings-item__content" data-ref="item-max-accounts-content">
+                  <div class="settings-item__text" data-ref="item-max-accounts-text">
+                    <h2 class="settings-item__title" data-ref="item-max-accounts-title">Máximo de cuentas simultáneas</h2>
+                    <p class="settings-item__desc" data-ref="item-max-accounts-desc">Número máximo de cuentas que un usuario puede mantener vinculadas a la vez (mín. 1, máx. 20).</p>
+                  </div>
+                </div>
+                <div class="settings-item__actions" data-ref="item-max-accounts-actions">
+                  <div class="component-inline-control component-inline-control--fixed" data-ref="inline-control-max-accounts">
+                    <div class="component-inline-control__group" data-ref="inline-group-max-accounts-dec">
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-max-accounts-dec-large" data-step-change="-5" data-tooltip="-5" aria-label="Disminuir 5">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#keyboard_double_arrow_left"></use></svg>
+                      </button>
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-max-accounts-dec" data-step-change="-1" data-tooltip="-1" aria-label="Disminuir 1">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+                      </button>
+                    </div>
+                    <input class="component-inline-control__input" data-ref="input-max-concurrent-accounts" type="number" min="1" max="20" step="1" value="5" autocomplete="off" />
+                    <div class="component-inline-control__group" data-ref="inline-group-max-accounts-inc">
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-max-accounts-inc" data-step-change="1" data-tooltip="+1" aria-label="Aumentar 1">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+                      </button>
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-max-accounts-inc-large" data-step-change="5" data-tooltip="+5" aria-label="Aumentar 5">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#keyboard_double_arrow_right"></use></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-                <label class="settings-checkbox-item" data-ref="check-req-special" style="display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none;">
-                  <input class="component-checkbox" data-ref="input-password-require-special" type="checkbox" />
-                  <span style="font-size: 13px; color: var(--text-primary);">Requerir al menos un carácter especial (@, #, $, %, etc.)</span>
-                </label>
+              <hr class="settings-divider" />
+
+              <!-- Item: Requerir mayúscula -->
+              <div class="settings-item" data-ref="item-pwd-req-uppercase">
+                <div class="settings-item__content" data-ref="item-pwd-req-uppercase-content">
+                  <div class="settings-item__text" data-ref="item-pwd-req-uppercase-text">
+                    <h2 class="settings-item__title" data-ref="item-pwd-req-uppercase-title">Requerir letra mayúscula</h2>
+                    <p class="settings-item__desc" data-ref="item-pwd-req-uppercase-desc">Exige al menos una letra mayúscula (A-Z) en la contraseña.</p>
+                  </div>
+                </div>
+                <div class="settings-item__actions" data-ref="item-pwd-req-uppercase-actions">
+                  <label class="toggle-switch" data-ref="label-toggle-pwd-uppercase">
+                    <input class="toggle-switch__input" data-ref="input-password-require-uppercase" type="checkbox" />
+                    <span class="toggle-switch__slider"></span>
+                  </label>
+                </div>
+              </div>
+
+              <hr class="settings-divider" />
+
+              <!-- Item: Requerir minúscula -->
+              <div class="settings-item" data-ref="item-pwd-req-lowercase">
+                <div class="settings-item__content" data-ref="item-pwd-req-lowercase-content">
+                  <div class="settings-item__text" data-ref="item-pwd-req-lowercase-text">
+                    <h2 class="settings-item__title" data-ref="item-pwd-req-lowercase-title">Requerir letra minúscula</h2>
+                    <p class="settings-item__desc" data-ref="item-pwd-req-lowercase-desc">Exige al menos una letra minúscula (a-z) en la contraseña.</p>
+                  </div>
+                </div>
+                <div class="settings-item__actions" data-ref="item-pwd-req-lowercase-actions">
+                  <label class="toggle-switch" data-ref="label-toggle-pwd-lowercase">
+                    <input class="toggle-switch__input" data-ref="input-password-require-lowercase" type="checkbox" />
+                    <span class="toggle-switch__slider"></span>
+                  </label>
+                </div>
+              </div>
+
+              <hr class="settings-divider" />
+
+              <!-- Item: Requerir número -->
+              <div class="settings-item" data-ref="item-pwd-req-number">
+                <div class="settings-item__content" data-ref="item-pwd-req-number-content">
+                  <div class="settings-item__text" data-ref="item-pwd-req-number-text">
+                    <h2 class="settings-item__title" data-ref="item-pwd-req-number-title">Requerir números</h2>
+                    <p class="settings-item__desc" data-ref="item-pwd-req-number-desc">Exige al menos un número (0-9) en la contraseña.</p>
+                  </div>
+                </div>
+                <div class="settings-item__actions" data-ref="item-pwd-req-number-actions">
+                  <label class="toggle-switch" data-ref="label-toggle-pwd-number">
+                    <input class="toggle-switch__input" data-ref="input-password-require-number" type="checkbox" />
+                    <span class="toggle-switch__slider"></span>
+                  </label>
+                </div>
+              </div>
+
+              <hr class="settings-divider" />
+
+              <!-- Item: Requerir especial -->
+              <div class="settings-item" data-ref="item-pwd-req-special">
+                <div class="settings-item__content" data-ref="item-pwd-req-special-content">
+                  <div class="settings-item__text" data-ref="item-pwd-req-special-text">
+                    <h2 class="settings-item__title" data-ref="item-pwd-req-special-title">Requerir carácter especial</h2>
+                    <p class="settings-item__desc" data-ref="item-pwd-req-special-desc">Exige al menos un carácter especial (@, #, $, %, etc.) en la contraseña.</p>
+                  </div>
+                </div>
+                <div class="settings-item__actions" data-ref="item-pwd-req-special-actions">
+                  <label class="toggle-switch" data-ref="label-toggle-pwd-special">
+                    <input class="toggle-switch__input" data-ref="input-password-require-special" type="checkbox" />
+                    <span class="toggle-switch__slider"></span>
+                  </label>
+                </div>
               </div>
             </div>
           </div>
@@ -113,54 +261,137 @@
           </div>
 
           <div class="settings-accordion-body" data-ref="body-users">
-            <div class="settings-accordion-content" data-ref="content-users" style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
-              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px;">
-                <label class="field" data-ref="field-username-min">
-                  <span class="field__label-top" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; display: block;">Longitud mínima de nombre de usuario</span>
-                  <input class="field__input" data-ref="input-username-min-length" type="number" min="1" max="20" step="1" />
-                </label>
-
-                <label class="field" data-ref="field-username-max">
-                  <span class="field__label-top" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; display: block;">Longitud máxima de nombre de usuario</span>
-                  <input class="field__input" data-ref="input-username-max-length" type="number" min="10" max="100" step="1" />
-                </label>
+            <div class="settings-accordion-content" data-ref="content-users">
+              <!-- Item: Longitud mínima de usuario -->
+              <div class="settings-item" data-ref="item-username-min">
+                <div class="settings-item__content" data-ref="item-username-min-content">
+                  <div class="settings-item__text" data-ref="item-username-min-text">
+                    <h2 class="settings-item__title" data-ref="item-username-min-title">Longitud mínima de nombre de usuario</h2>
+                    <p class="settings-item__desc" data-ref="item-username-min-desc">Número mínimo de caracteres para nombres de usuario (mín. 1, máx. 20).</p>
+                  </div>
+                </div>
+                <div class="settings-item__actions" data-ref="item-username-min-actions">
+                  <div class="component-inline-control component-inline-control--fixed" data-ref="inline-control-username-min">
+                    <div class="component-inline-control__group" data-ref="inline-group-username-min-dec">
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-username-min-dec-large" data-step-change="-3" data-tooltip="-3" aria-label="Disminuir 3">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#keyboard_double_arrow_left"></use></svg>
+                      </button>
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-username-min-dec" data-step-change="-1" data-tooltip="-1" aria-label="Disminuir 1">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+                      </button>
+                    </div>
+                    <input class="component-inline-control__input" data-ref="input-username-min-length" type="number" min="1" max="20" step="1" value="3" autocomplete="off" />
+                    <div class="component-inline-control__group" data-ref="inline-group-username-min-inc">
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-username-min-inc" data-step-change="1" data-tooltip="+1" aria-label="Aumentar 1">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+                      </button>
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-username-min-inc-large" data-step-change="3" data-tooltip="+3" aria-label="Aumentar 3">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#keyboard_double_arrow_right"></use></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <div style="display: flex; flex-direction: column; gap: 12px; padding: 16px; background: var(--bg-card-subtle); border-radius: var(--radius-md, 12px); border: 1px solid var(--border-color);">
-                <label class="settings-checkbox-item" data-ref="check-allow-reg" style="display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none;">
-                  <input class="component-checkbox" data-ref="input-allow-registration" type="checkbox" />
-                  <div>
-                    <div style="font-size: 13px; font-weight: 600; color: var(--text-primary);">Habilitar registro de nuevos usuarios</div>
-                    <div style="font-size: 12px; color: var(--text-secondary);">Si está deshabilitado, nuevos usuarios no podrán crear cuentas en la plataforma.</div>
+              <hr class="settings-divider" />
+
+              <!-- Item: Longitud máxima de usuario -->
+              <div class="settings-item" data-ref="item-username-max">
+                <div class="settings-item__content" data-ref="item-username-max-content">
+                  <div class="settings-item__text" data-ref="item-username-max-text">
+                    <h2 class="settings-item__title" data-ref="item-username-max-title">Longitud máxima de nombre de usuario</h2>
+                    <p class="settings-item__desc" data-ref="item-username-max-desc">Número máximo de caracteres para nombres de usuario (mín. 10, máx. 100).</p>
                   </div>
-                </label>
-
-                <hr class="settings-divider" style="margin: 4px 0;" />
-
-                <label class="settings-checkbox-item" data-ref="check-allow-google" style="display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none;">
-                  <input class="component-checkbox" data-ref="input-allow-google-login" type="checkbox" />
-                  <div>
-                    <div style="font-size: 13px; font-weight: 600; color: var(--text-primary);">Permitir autenticación con Google (OAuth 2.0)</div>
-                    <div style="font-size: 12px; color: var(--text-secondary);">Habilita o pausa los botones de iniciar sesión y vincular con Google.</div>
+                </div>
+                <div class="settings-item__actions" data-ref="item-username-max-actions">
+                  <div class="component-inline-control component-inline-control--fixed" data-ref="inline-control-username-max">
+                    <div class="component-inline-control__group" data-ref="inline-group-username-max-dec">
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-username-max-dec-large" data-step-change="-5" data-tooltip="-5" aria-label="Disminuir 5">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#keyboard_double_arrow_left"></use></svg>
+                      </button>
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-username-max-dec" data-step-change="-1" data-tooltip="-1" aria-label="Disminuir 1">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+                      </button>
+                    </div>
+                    <input class="component-inline-control__input" data-ref="input-username-max-length" type="number" min="10" max="100" step="1" value="30" autocomplete="off" />
+                    <div class="component-inline-control__group" data-ref="inline-group-username-max-inc">
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-username-max-inc" data-step-change="1" data-tooltip="+1" aria-label="Aumentar 1">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+                      </button>
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-username-max-inc-large" data-step-change="5" data-tooltip="+5" aria-label="Aumentar 5">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#keyboard_double_arrow_right"></use></svg>
+                      </button>
+                    </div>
                   </div>
-                </label>
-
-                <hr class="settings-divider" style="margin: 4px 0;" />
-
-                <label class="settings-checkbox-item" data-ref="check-enforce-domains" style="display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none;">
-                  <input class="component-checkbox" data-ref="input-enforce-allowed-email-domains" type="checkbox" />
-                  <div>
-                    <div style="font-size: 13px; font-weight: 600; color: var(--text-primary);">Restringir registro a dominios específicos de correo</div>
-                    <div style="font-size: 12px; color: var(--text-secondary);">Si está activado, únicamente se permitirá el registro con los dominios listados abajo.</div>
-                  </div>
-                </label>
+                </div>
               </div>
 
-              <label class="field" data-ref="field-allowed-domains">
-                <span class="field__label-top" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; display: block;">Dominios de correo permitidos (separados por coma)</span>
-                <textarea class="field__input field__textarea" data-ref="input-allowed-email-domains" rows="3" placeholder="gmail.com, outlook.com, icloud.com, hotmail.com, yahoo.com" style="min-height: 80px; resize: vertical; padding: 10px 14px; font-family: monospace; font-size: 13px;"></textarea>
-                <span class="field__helper" style="font-size: 11px; color: var(--text-secondary); margin-top: 4px; display: block;">Ingresa los dominios sin arroba (@), separados por comas.</span>
-              </label>
+              <hr class="settings-divider" />
+
+              <!-- Item: Habilitar registro -->
+              <div class="settings-item" data-ref="item-allow-registration">
+                <div class="settings-item__content" data-ref="item-allow-registration-content">
+                  <div class="settings-item__text" data-ref="item-allow-registration-text">
+                    <h2 class="settings-item__title" data-ref="item-allow-registration-title">Habilitar registro de nuevos usuarios</h2>
+                    <p class="settings-item__desc" data-ref="item-allow-registration-desc">Permite a nuevas personas crear cuentas en la plataforma.</p>
+                  </div>
+                </div>
+                <div class="settings-item__actions" data-ref="item-allow-registration-actions">
+                  <label class="toggle-switch" data-ref="label-toggle-allow-registration">
+                    <input class="toggle-switch__input" data-ref="input-allow-registration" type="checkbox" />
+                    <span class="toggle-switch__slider"></span>
+                  </label>
+                </div>
+              </div>
+
+              <hr class="settings-divider" />
+
+              <!-- Item: Google Login -->
+              <div class="settings-item" data-ref="item-allow-google">
+                <div class="settings-item__content" data-ref="item-allow-google-content">
+                  <div class="settings-item__text" data-ref="item-allow-google-text">
+                    <h2 class="settings-item__title" data-ref="item-allow-google-title">Autenticación con Google (OAuth 2.0)</h2>
+                    <p class="settings-item__desc" data-ref="item-allow-google-desc">Habilita o pausa el inicio de sesión y vinculación con Google.</p>
+                  </div>
+                </div>
+                <div class="settings-item__actions" data-ref="item-allow-google-actions">
+                  <label class="toggle-switch" data-ref="label-toggle-allow-google">
+                    <input class="toggle-switch__input" data-ref="input-allow-google-login" type="checkbox" />
+                    <span class="toggle-switch__slider"></span>
+                  </label>
+                </div>
+              </div>
+
+              <hr class="settings-divider" />
+
+              <!-- Item: Restringir dominios -->
+              <div class="settings-item" data-ref="item-enforce-domains">
+                <div class="settings-item__content" data-ref="item-enforce-domains-content">
+                  <div class="settings-item__text" data-ref="item-enforce-domains-text">
+                    <h2 class="settings-item__title" data-ref="item-enforce-domains-title">Restringir registro por dominio de correo</h2>
+                    <p class="settings-item__desc" data-ref="item-enforce-domains-desc">Si está activado, únicamente se permitirá el registro con los dominios autorizados.</p>
+                  </div>
+                </div>
+                <div class="settings-item__actions" data-ref="item-enforce-domains-actions">
+                  <label class="toggle-switch" data-ref="label-toggle-enforce-domains">
+                    <input class="toggle-switch__input" data-ref="input-enforce-allowed-email-domains" type="checkbox" />
+                    <span class="toggle-switch__slider"></span>
+                  </label>
+                </div>
+              </div>
+
+              <hr class="settings-divider" />
+
+              <!-- Item: Dominios permitidos -->
+              <div class="settings-item settings-item--stacked" data-ref="item-allowed-domains">
+                <div class="settings-item__content" data-ref="item-allowed-domains-content">
+                  <div class="settings-item__text" data-ref="item-allowed-domains-text">
+                    <h2 class="settings-item__title" data-ref="item-allowed-domains-title">Dominios de correo permitidos</h2>
+                    <p class="settings-item__desc" data-ref="item-allowed-domains-desc">Ingresa los dominios sin arroba (@), separados por comas (ej. gmail.com, outlook.com).</p>
+                  </div>
+                </div>
+                <textarea class="field__input field__textarea" data-ref="input-allowed-email-domains" rows="2" placeholder="gmail.com, outlook.com, icloud.com, hotmail.com, yahoo.com" style="width: 100%; min-height: 70px; resize: vertical; padding: 10px 14px; font-family: monospace; font-size: 13px;"></textarea>
+              </div>
             </div>
           </div>
         </div>
@@ -183,41 +414,201 @@
           </div>
 
           <div class="settings-accordion-body" data-ref="body-cooldowns">
-            <div class="settings-accordion-content" data-ref="content-cooldowns" style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
-              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px;">
-                <label class="field" data-ref="field-user-cooldown">
-                  <span class="field__label-top" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; display: block;">Cooldown cambio de usuario (días)</span>
-                  <input class="field__input" data-ref="input-username-change-cooldown-days" type="number" min="0" max="365" step="1" />
-                </label>
-
-                <label class="field" data-ref="field-email-cooldown">
-                  <span class="field__label-top" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; display: block;">Cooldown cambio de correo (días)</span>
-                  <input class="field__input" data-ref="input-email-change-cooldown-days" type="number" min="0" max="365" step="1" />
-                </label>
+            <div class="settings-accordion-content" data-ref="content-cooldowns">
+              <!-- Item: Cooldown cambio de usuario -->
+              <div class="settings-item" data-ref="item-user-cooldown">
+                <div class="settings-item__content" data-ref="item-user-cooldown-content">
+                  <div class="settings-item__text" data-ref="item-user-cooldown-text">
+                    <h2 class="settings-item__title" data-ref="item-user-cooldown-title">Espera para cambio de usuario (días)</h2>
+                    <p class="settings-item__desc" data-ref="item-user-cooldown-desc">Días que debe esperar un usuario antes de volver a modificar su nombre de usuario (mín. 0, máx. 365).</p>
+                  </div>
+                </div>
+                <div class="settings-item__actions" data-ref="item-user-cooldown-actions">
+                  <div class="component-inline-control component-inline-control--fixed" data-ref="inline-control-user-cooldown">
+                    <div class="component-inline-control__group" data-ref="inline-group-user-cooldown-dec">
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-user-cooldown-dec-large" data-step-change="-5" data-tooltip="-5 días" aria-label="Disminuir 5 días">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#keyboard_double_arrow_left"></use></svg>
+                      </button>
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-user-cooldown-dec" data-step-change="-1" data-tooltip="-1 día" aria-label="Disminuir 1 día">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+                      </button>
+                    </div>
+                    <input class="component-inline-control__input" data-ref="input-username-change-cooldown-days" type="number" min="0" max="365" step="1" value="12" autocomplete="off" />
+                    <div class="component-inline-control__group" data-ref="inline-group-user-cooldown-inc">
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-user-cooldown-inc" data-step-change="1" data-tooltip="+1 día" aria-label="Aumentar 1 día">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+                      </button>
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-user-cooldown-inc-large" data-step-change="5" data-tooltip="+5 días" aria-label="Aumentar 5 días">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#keyboard_double_arrow_right"></use></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px;">
-                <label class="field" data-ref="field-code-ttl">
-                  <span class="field__label-top" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; display: block;">Validez de código de verificación (minutos)</span>
-                  <input class="field__input" data-ref="input-verification-code-ttl-minutes" type="number" min="1" max="120" step="1" />
-                </label>
+              <hr class="settings-divider" />
 
-                <label class="field" data-ref="field-code-attempts">
-                  <span class="field__label-top" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; display: block;">Intentos máximos antes de invalidar código</span>
-                  <input class="field__input" data-ref="input-verification-code-max-attempts" type="number" min="1" max="20" step="1" />
-                </label>
+              <!-- Item: Cooldown cambio de correo -->
+              <div class="settings-item" data-ref="item-email-cooldown">
+                <div class="settings-item__content" data-ref="item-email-cooldown-content">
+                  <div class="settings-item__text" data-ref="item-email-cooldown-text">
+                    <h2 class="settings-item__title" data-ref="item-email-cooldown-title">Espera para cambio de correo (días)</h2>
+                    <p class="settings-item__desc" data-ref="item-email-cooldown-desc">Días que debe esperar un usuario antes de volver a actualizar su correo (mín. 0, máx. 365).</p>
+                  </div>
+                </div>
+                <div class="settings-item__actions" data-ref="item-email-cooldown-actions">
+                  <div class="component-inline-control component-inline-control--fixed" data-ref="inline-control-email-cooldown">
+                    <div class="component-inline-control__group" data-ref="inline-group-email-cooldown-dec">
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-email-cooldown-dec-large" data-step-change="-5" data-tooltip="-5 días" aria-label="Disminuir 5 días">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#keyboard_double_arrow_left"></use></svg>
+                      </button>
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-email-cooldown-dec" data-step-change="-1" data-tooltip="-1 día" aria-label="Disminuir 1 día">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+                      </button>
+                    </div>
+                    <input class="component-inline-control__input" data-ref="input-email-change-cooldown-days" type="number" min="0" max="365" step="1" value="30" autocomplete="off" />
+                    <div class="component-inline-control__group" data-ref="inline-group-email-cooldown-inc">
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-email-cooldown-inc" data-step-change="1" data-tooltip="+1 día" aria-label="Aumentar 1 día">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+                      </button>
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-email-cooldown-inc-large" data-step-change="5" data-tooltip="+5 días" aria-label="Aumentar 5 días">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#keyboard_double_arrow_right"></use></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px;">
-                <label class="field" data-ref="field-reset-ttl">
-                  <span class="field__label-top" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; display: block;">Validez de enlace de reseteo (minutos)</span>
-                  <input class="field__input" data-ref="input-password-reset-ttl-minutes" type="number" min="1" max="120" step="1" />
-                </label>
+              <hr class="settings-divider" />
 
-                <label class="field" data-ref="field-auth-window">
-                  <span class="field__label-top" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; display: block;">Ventana de autorización sensible (minutos)</span>
-                  <input class="field__input" data-ref="input-auth-action-window-minutes" type="number" min="1" max="60" step="1" />
-                </label>
+              <!-- Item: Validez OTP -->
+              <div class="settings-item" data-ref="item-code-ttl">
+                <div class="settings-item__content" data-ref="item-code-ttl-content">
+                  <div class="settings-item__text" data-ref="item-code-ttl-text">
+                    <h2 class="settings-item__title" data-ref="item-code-ttl-title">Validez de código de verificación (minutos)</h2>
+                    <p class="settings-item__desc" data-ref="item-code-ttl-desc">Minutos de vida útil para códigos OTP de verificación enviados por email (mín. 1, máx. 120).</p>
+                  </div>
+                </div>
+                <div class="settings-item__actions" data-ref="item-code-ttl-actions">
+                  <div class="component-inline-control component-inline-control--fixed" data-ref="inline-control-code-ttl">
+                    <div class="component-inline-control__group" data-ref="inline-group-code-ttl-dec">
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-code-ttl-dec-large" data-step-change="-5" data-tooltip="-5 min" aria-label="Disminuir 5 minutos">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#keyboard_double_arrow_left"></use></svg>
+                      </button>
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-code-ttl-dec" data-step-change="-1" data-tooltip="-1 min" aria-label="Disminuir 1 minuto">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+                      </button>
+                    </div>
+                    <input class="component-inline-control__input" data-ref="input-verification-code-ttl-minutes" type="number" min="1" max="120" step="1" value="15" autocomplete="off" />
+                    <div class="component-inline-control__group" data-ref="inline-group-code-ttl-inc">
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-code-ttl-inc" data-step-change="1" data-tooltip="+1 min" aria-label="Aumentar 1 minuto">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+                      </button>
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-code-ttl-inc-large" data-step-change="5" data-tooltip="+5 min" aria-label="Aumentar 5 minutos">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#keyboard_double_arrow_right"></use></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <hr class="settings-divider" />
+
+              <!-- Item: Intentos OTP -->
+              <div class="settings-item" data-ref="item-code-attempts">
+                <div class="settings-item__content" data-ref="item-code-attempts-content">
+                  <div class="settings-item__text" data-ref="item-code-attempts-text">
+                    <h2 class="settings-item__title" data-ref="item-code-attempts-title">Intentos máximos antes de invalidar código</h2>
+                    <p class="settings-item__desc" data-ref="item-code-attempts-desc">Intentos fallidos tolerados antes de invalidar un código OTP activo (mín. 1, máx. 20).</p>
+                  </div>
+                </div>
+                <div class="settings-item__actions" data-ref="item-code-attempts-actions">
+                  <div class="component-inline-control component-inline-control--fixed" data-ref="inline-control-code-attempts">
+                    <div class="component-inline-control__group" data-ref="inline-group-code-attempts-dec">
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-code-attempts-dec-large" data-step-change="-3" data-tooltip="-3" aria-label="Disminuir 3">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#keyboard_double_arrow_left"></use></svg>
+                      </button>
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-code-attempts-dec" data-step-change="-1" data-tooltip="-1" aria-label="Disminuir 1">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+                      </button>
+                    </div>
+                    <input class="component-inline-control__input" data-ref="input-verification-code-max-attempts" type="number" min="1" max="20" step="1" value="5" autocomplete="off" />
+                    <div class="component-inline-control__group" data-ref="inline-group-code-attempts-inc">
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-code-attempts-inc" data-step-change="1" data-tooltip="+1" aria-label="Aumentar 1">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+                      </button>
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-code-attempts-inc-large" data-step-change="3" data-tooltip="+3" aria-label="Aumentar 3">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#keyboard_double_arrow_right"></use></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <hr class="settings-divider" />
+
+              <!-- Item: Validez reseteo -->
+              <div class="settings-item" data-ref="item-reset-ttl">
+                <div class="settings-item__content" data-ref="item-reset-ttl-content">
+                  <div class="settings-item__text" data-ref="item-reset-ttl-text">
+                    <h2 class="settings-item__title" data-ref="item-reset-ttl-title">Validez de enlace de reseteo (minutos)</h2>
+                    <p class="settings-item__desc" data-ref="item-reset-ttl-desc">Minutos de vigencia para el enlace de restablecimiento de contraseña (mín. 1, máx. 120).</p>
+                  </div>
+                </div>
+                <div class="settings-item__actions" data-ref="item-reset-ttl-actions">
+                  <div class="component-inline-control component-inline-control--fixed" data-ref="inline-control-reset-ttl">
+                    <div class="component-inline-control__group" data-ref="inline-group-reset-ttl-dec">
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-reset-ttl-dec-large" data-step-change="-5" data-tooltip="-5 min" aria-label="Disminuir 5 minutos">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#keyboard_double_arrow_left"></use></svg>
+                      </button>
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-reset-ttl-dec" data-step-change="-1" data-tooltip="-1 min" aria-label="Disminuir 1 minuto">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+                      </button>
+                    </div>
+                    <input class="component-inline-control__input" data-ref="input-password-reset-ttl-minutes" type="number" min="1" max="120" step="1" value="15" autocomplete="off" />
+                    <div class="component-inline-control__group" data-ref="inline-group-reset-ttl-inc">
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-reset-ttl-inc" data-step-change="1" data-tooltip="+1 min" aria-label="Aumentar 1 minuto">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+                      </button>
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-reset-ttl-inc-large" data-step-change="5" data-tooltip="+5 min" aria-label="Aumentar 5 minutos">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#keyboard_double_arrow_right"></use></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <hr class="settings-divider" />
+
+              <!-- Item: Ventana confirmación -->
+              <div class="settings-item" data-ref="item-auth-window">
+                <div class="settings-item__content" data-ref="item-auth-window-content">
+                  <div class="settings-item__text" data-ref="item-auth-window-text">
+                    <h2 class="settings-item__title" data-ref="item-auth-window-title">Ventana de autorización sensible (minutos)</h2>
+                    <p class="settings-item__desc" data-ref="item-auth-window-desc">Tiempo concedido tras validar contraseña antes de volver a solicitarla (mín. 1, máx. 60).</p>
+                  </div>
+                </div>
+                <div class="settings-item__actions" data-ref="item-auth-window-actions">
+                  <div class="component-inline-control component-inline-control--fixed" data-ref="inline-control-auth-window">
+                    <div class="component-inline-control__group" data-ref="inline-group-auth-window-dec">
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-auth-window-dec-large" data-step-change="-5" data-tooltip="-5 min" aria-label="Disminuir 5 minutos">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#keyboard_double_arrow_left"></use></svg>
+                      </button>
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-auth-window-dec" data-step-change="-1" data-tooltip="-1 min" aria-label="Disminuir 1 minuto">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+                      </button>
+                    </div>
+                    <input class="component-inline-control__input" data-ref="input-auth-action-window-minutes" type="number" min="1" max="60" step="1" value="5" autocomplete="off" />
+                    <div class="component-inline-control__group" data-ref="inline-group-auth-window-inc">
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-auth-window-inc" data-step-change="1" data-tooltip="+1 min" aria-label="Aumentar 1 minuto">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+                      </button>
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-auth-window-inc-large" data-step-change="5" data-tooltip="+5 min" aria-label="Aumentar 5 minutos">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#keyboard_double_arrow_right"></use></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -241,17 +632,49 @@
           </div>
 
           <div class="settings-accordion-body" data-ref="body-uploads">
-            <div class="settings-accordion-content" data-ref="content-uploads" style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
-              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px;">
-                <label class="field" data-ref="field-avatar-max-mb">
-                  <span class="field__label-top" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; display: block;">Tamaño máximo de avatar (MB)</span>
-                  <input class="field__input" data-ref="input-avatar-max-size-mb" type="number" min="1" max="25" step="1" />
-                </label>
+            <div class="settings-accordion-content" data-ref="content-uploads">
+              <!-- Item: Tamaño máximo avatar -->
+              <div class="settings-item" data-ref="item-avatar-max">
+                <div class="settings-item__content" data-ref="item-avatar-max-content">
+                  <div class="settings-item__text" data-ref="item-avatar-max-text">
+                    <h2 class="settings-item__title" data-ref="item-avatar-max-title">Tamaño máximo de avatar (MB)</h2>
+                    <p class="settings-item__desc" data-ref="item-avatar-max-desc">Peso máximo permitido en megabytes para fotos de perfil de usuarios (mín. 1, máx. 25).</p>
+                  </div>
+                </div>
+                <div class="settings-item__actions" data-ref="item-avatar-max-actions">
+                  <div class="component-inline-control component-inline-control--fixed" data-ref="inline-control-avatar-max">
+                    <div class="component-inline-control__group" data-ref="inline-group-avatar-max-dec">
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-avatar-max-dec-large" data-step-change="-2" data-tooltip="-2 MB" aria-label="Disminuir 2 MB">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#keyboard_double_arrow_left"></use></svg>
+                      </button>
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-avatar-max-dec" data-step-change="-1" data-tooltip="-1 MB" aria-label="Disminuir 1 MB">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+                      </button>
+                    </div>
+                    <input class="component-inline-control__input" data-ref="input-avatar-max-size-mb" type="number" min="1" max="25" step="1" value="2" autocomplete="off" />
+                    <div class="component-inline-control__group" data-ref="inline-group-avatar-max-inc">
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-avatar-max-inc" data-step-change="1" data-tooltip="+1 MB" aria-label="Aumentar 1 MB">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+                      </button>
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-avatar-max-inc-large" data-step-change="2" data-tooltip="+2 MB" aria-label="Aumentar 2 MB">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#keyboard_double_arrow_right"></use></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-                <label class="field" data-ref="field-avatar-formats">
-                  <span class="field__label-top" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; display: block;">Formatos MIME de avatar (separados por coma)</span>
-                  <input class="field__input" data-ref="input-avatar-allowed-formats" type="text" placeholder="image/png, image/jpeg, image/jpg, image/webp" />
-                </label>
+              <hr class="settings-divider" />
+
+              <!-- Item: Formatos MIME -->
+              <div class="settings-item settings-item--stacked" data-ref="item-avatar-formats">
+                <div class="settings-item__content" data-ref="item-avatar-formats-content">
+                  <div class="settings-item__text" data-ref="item-avatar-formats-text">
+                    <h2 class="settings-item__title" data-ref="item-avatar-formats-title">Formatos MIME permitidos</h2>
+                    <p class="settings-item__desc" data-ref="item-avatar-formats-desc">Tipos MIME aceptados para subida de fotos de perfil (separados por coma).</p>
+                  </div>
+                </div>
+                <input class="field__input" data-ref="input-avatar-allowed-formats" type="text" placeholder="image/png, image/jpeg, image/jpg, image/webp" style="width: 100%; padding: 10px 14px; font-family: monospace; font-size: 13px;" />
               </div>
             </div>
           </div>
@@ -275,32 +698,64 @@
           </div>
 
           <div class="settings-accordion-body" data-ref="body-system">
-            <div class="settings-accordion-content" data-ref="content-system" style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
-              <div style="display: flex; flex-direction: column; gap: 12px; padding: 16px; background: var(--bg-card-subtle); border-radius: var(--radius-md, 12px); border: 1px solid var(--border-color);">
-                <label class="settings-checkbox-item" data-ref="check-maintenance-mode" style="display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none;">
-                  <input class="component-checkbox" data-ref="input-maintenance-mode" type="checkbox" />
-                  <div>
-                    <div style="font-size: 13px; font-weight: 600; color: #ef4444;">Activar Modo Mantenimiento</div>
-                    <div style="font-size: 12px; color: var(--text-secondary);">Muestra una pantalla informativa de mantenimiento a los usuarios y bloquea operaciones no administrativas.</div>
+            <div class="settings-accordion-content" data-ref="content-system">
+              <!-- Item: Modo Mantenimiento -->
+              <div class="settings-item" data-ref="item-maintenance-mode">
+                <div class="settings-item__content" data-ref="item-maintenance-mode-content">
+                  <div class="settings-item__text" data-ref="item-maintenance-mode-text">
+                    <h2 class="settings-item__title" data-ref="item-maintenance-mode-title" style="color: #ef4444;">Activar Modo Mantenimiento</h2>
+                    <p class="settings-item__desc" data-ref="item-maintenance-mode-desc">Muestra pantalla de mantenimiento a usuarios y bloquea operaciones no administrativas.</p>
                   </div>
-                </label>
+                </div>
+                <div class="settings-item__actions" data-ref="item-maintenance-mode-actions">
+                  <label class="toggle-switch" data-ref="label-toggle-maintenance-mode">
+                    <input class="toggle-switch__input" data-ref="input-maintenance-mode" type="checkbox" />
+                    <span class="toggle-switch__slider"></span>
+                  </label>
+                </div>
               </div>
 
-              <label class="field" data-ref="field-maint-msg">
-                <span class="field__label-top" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; display: block;">Mensaje descriptivo durante mantenimiento</span>
-                <input class="field__input" data-ref="input-maintenance-message" type="text" placeholder="El sistema se encuentra en mantenimiento programado. Volveremos pronto." />
-              </label>
+              <hr class="settings-divider" />
 
-              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px;">
-                <label class="field" data-ref="field-app-name">
-                  <span class="field__label-top" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; display: block;">Nombre de la aplicación</span>
-                  <input class="field__input" data-ref="input-app-name" type="text" placeholder="Spriteboard" />
-                </label>
+              <!-- Item: Mensaje Mantenimiento -->
+              <div class="settings-item settings-item--stacked" data-ref="item-maint-msg">
+                <div class="settings-item__content" data-ref="item-maint-msg-content">
+                  <div class="settings-item__text" data-ref="item-maint-msg-text">
+                    <h2 class="settings-item__title" data-ref="item-maint-msg-title">Mensaje durante mantenimiento</h2>
+                    <p class="settings-item__desc" data-ref="item-maint-msg-desc">Texto informativo mostrado a los usuarios cuando el sitio se encuentra en mantenimiento.</p>
+                  </div>
+                </div>
+                <input class="field__input" data-ref="input-maintenance-message" type="text" placeholder="El sistema se encuentra en mantenimiento programado. Volveremos pronto." style="width: 100%;" />
+              </div>
 
-                <label class="field" data-ref="field-support-email">
-                  <span class="field__label-top" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; display: block;">Correo de soporte técnico</span>
-                  <input class="field__input" data-ref="input-support-email" type="email" placeholder="support@spriteboard.app" />
-                </label>
+              <hr class="settings-divider" />
+
+              <!-- Item: Nombre App -->
+              <div class="settings-item" data-ref="item-app-name">
+                <div class="settings-item__content" data-ref="item-app-name-content">
+                  <div class="settings-item__text" data-ref="item-app-name-text">
+                    <h2 class="settings-item__title" data-ref="item-app-name-title">Nombre de la aplicación</h2>
+                    <p class="settings-item__desc" data-ref="item-app-name-desc">Nombre público utilizado en correos, notificaciones y títulos de página.</p>
+                  </div>
+                </div>
+                <div class="settings-item__actions" data-ref="item-app-name-actions" style="max-width: 260px; width: 100%;">
+                  <input class="field__input" data-ref="input-app-name" type="text" placeholder="Spriteboard" style="width: 100%;" />
+                </div>
+              </div>
+
+              <hr class="settings-divider" />
+
+              <!-- Item: Email Soporte -->
+              <div class="settings-item" data-ref="item-support-email">
+                <div class="settings-item__content" data-ref="item-support-email-content">
+                  <div class="settings-item__text" data-ref="item-support-email-text">
+                    <h2 class="settings-item__title" data-ref="item-support-email-title">Correo de soporte técnico</h2>
+                    <p class="settings-item__desc" data-ref="item-support-email-desc">Dirección de contacto mostrada a los usuarios para asistencia.</p>
+                  </div>
+                </div>
+                <div class="settings-item__actions" data-ref="item-support-email-actions" style="max-width: 260px; width: 100%;">
+                  <input class="field__input" data-ref="input-support-email" type="email" placeholder="support@spriteboard.app" style="width: 100%;" />
+                </div>
               </div>
             </div>
           </div>
@@ -324,36 +779,105 @@
           </div>
 
           <div class="settings-accordion-body" data-ref="body-rate-limits">
-            <div class="settings-accordion-content" data-ref="content-rate-limits" style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
-              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px;">
-                <label class="field" data-ref="field-rate-login">
-                  <span class="field__label-top" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; display: block;">Máx. intentos login / 5 min</span>
-                  <input class="field__input" data-ref="input-rate-limit-login-max" type="number" min="1" max="100" step="1" />
-                </label>
+            <div class="settings-accordion-content" data-ref="content-rate-limits">
+              <!-- Item: Rate Limit Login -->
+              <div class="settings-item" data-ref="item-rate-login">
+                <div class="settings-item__content" data-ref="item-rate-login-content">
+                  <div class="settings-item__text" data-ref="item-rate-login-text">
+                    <h2 class="settings-item__title" data-ref="item-rate-login-title">Límite de intentos de inicio de sesión</h2>
+                    <p class="settings-item__desc" data-ref="item-rate-login-desc">Máximo de intentos de login permitidos cada 5 minutos por IP (mín. 1, máx. 100).</p>
+                  </div>
+                </div>
+                <div class="settings-item__actions" data-ref="item-rate-login-actions">
+                  <div class="component-inline-control component-inline-control--fixed" data-ref="inline-control-rate-login">
+                    <div class="component-inline-control__group" data-ref="inline-group-rate-login-dec">
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-rate-login-dec-large" data-step-change="-5" data-tooltip="-5" aria-label="Disminuir 5">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#keyboard_double_arrow_left"></use></svg>
+                      </button>
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-rate-login-dec" data-step-change="-1" data-tooltip="-1" aria-label="Disminuir 1">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+                      </button>
+                    </div>
+                    <input class="component-inline-control__input" data-ref="input-rate-limit-login-max" type="number" min="1" max="100" step="1" value="5" autocomplete="off" />
+                    <div class="component-inline-control__group" data-ref="inline-group-rate-login-inc">
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-rate-login-inc" data-step-change="1" data-tooltip="+1" aria-label="Aumentar 1">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+                      </button>
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-rate-login-inc-large" data-step-change="5" data-tooltip="+5" aria-label="Aumentar 5">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#keyboard_double_arrow_right"></use></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-                <label class="field" data-ref="field-rate-register">
-                  <span class="field__label-top" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; display: block;">Máx. intentos registro / 15 min</span>
-                  <input class="field__input" data-ref="input-rate-limit-register-max" type="number" min="1" max="100" step="1" />
-                </label>
+              <hr class="settings-divider" />
 
-                <label class="field" data-ref="field-rate-ai">
-                  <span class="field__label-top" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; display: block;">Máx. mensajes IA / minuto</span>
-                  <input class="field__input" data-ref="input-rate-limit-ai-chat-max" type="number" min="1" max="200" step="1" />
-                </label>
+              <!-- Item: Rate Limit Register -->
+              <div class="settings-item" data-ref="item-rate-register">
+                <div class="settings-item__content" data-ref="item-rate-register-content">
+                  <div class="settings-item__text" data-ref="item-rate-register-text">
+                    <h2 class="settings-item__title" data-ref="item-rate-register-title">Límite de solicitudes de registro</h2>
+                    <p class="settings-item__desc" data-ref="item-rate-register-desc">Máximo de intentos de registro permitidos cada 15 minutos por IP (mín. 1, máx. 100).</p>
+                  </div>
+                </div>
+                <div class="settings-item__actions" data-ref="item-rate-register-actions">
+                  <div class="component-inline-control component-inline-control--fixed" data-ref="inline-control-rate-register">
+                    <div class="component-inline-control__group" data-ref="inline-group-rate-register-dec">
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-rate-register-dec-large" data-step-change="-5" data-tooltip="-5" aria-label="Disminuir 5">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#keyboard_double_arrow_left"></use></svg>
+                      </button>
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-rate-register-dec" data-step-change="-1" data-tooltip="-1" aria-label="Disminuir 1">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+                      </button>
+                    </div>
+                    <input class="component-inline-control__input" data-ref="input-rate-limit-register-max" type="number" min="1" max="100" step="1" value="5" autocomplete="off" />
+                    <div class="component-inline-control__group" data-ref="inline-group-rate-register-inc">
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-rate-register-inc" data-step-change="1" data-tooltip="+1" aria-label="Aumentar 1">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+                      </button>
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-rate-register-inc-large" data-step-change="5" data-tooltip="+5" aria-label="Aumentar 5">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#keyboard_double_arrow_right"></use></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <hr class="settings-divider" />
+
+              <!-- Item: Rate Limit AI -->
+              <div class="settings-item" data-ref="item-rate-ai">
+                <div class="settings-item__content" data-ref="item-rate-ai-content">
+                  <div class="settings-item__text" data-ref="item-rate-ai-text">
+                    <h2 class="settings-item__title" data-ref="item-rate-ai-title">Límite de mensajes al asistente IA</h2>
+                    <p class="settings-item__desc" data-ref="item-rate-ai-desc">Máximo de mensajes por minuto permitidos por usuario en el chat de IA (mín. 1, máx. 200).</p>
+                  </div>
+                </div>
+                <div class="settings-item__actions" data-ref="item-rate-ai-actions">
+                  <div class="component-inline-control component-inline-control--fixed" data-ref="inline-control-rate-ai">
+                    <div class="component-inline-control__group" data-ref="inline-group-rate-ai-dec">
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-rate-ai-dec-large" data-step-change="-10" data-tooltip="-10" aria-label="Disminuir 10">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#keyboard_double_arrow_left"></use></svg>
+                      </button>
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-rate-ai-dec" data-step-change="-1" data-tooltip="-1" aria-label="Disminuir 1">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+                      </button>
+                    </div>
+                    <input class="component-inline-control__input" data-ref="input-rate-limit-ai-chat-max" type="number" min="1" max="200" step="1" value="20" autocomplete="off" />
+                    <div class="component-inline-control__group" data-ref="inline-group-rate-ai-inc">
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-rate-ai-inc" data-step-change="1" data-tooltip="+1" aria-label="Aumentar 1">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+                      </button>
+                      <button type="button" class="component-inline-control__btn" data-ref="btn-rate-ai-inc-large" data-step-change="10" data-tooltip="+10" aria-label="Aumentar 10">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#keyboard_double_arrow_right"></use></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-
-        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
-          <button type="button" class="component-button component-button--h44" data-ref="btn-reset-bottom">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#history"></use></svg>
-            <span>Restablecer valores</span>
-          </button>
-          <button type="button" class="component-button component-button--h44 component-button--black" data-ref="btn-save-bottom">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
-            <span>Guardar configuración del sistema</span>
-          </button>
         </div>
 
       </div>

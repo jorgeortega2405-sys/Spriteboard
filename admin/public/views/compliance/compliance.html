@@ -1,0 +1,193 @@
+<div class="layout-content" data-ref="admin-compliance-view">
+  <div class="component-wrapper component-wrapper--full view-wrapper" data-ref="compliance-wrapper">
+    <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="compliance-scrollable">
+      <div class="view-header" data-ref="compliance-floating-top">
+        <div class="view-header__left" data-ref="compliance-floating-left">
+          <h1 class="view-header__title" data-ref="compliance-title">Privacidad y Cumplimiento (GDPR)</h1>
+        </div>
+
+        <div class="view-header__right" data-ref="compliance-floating-right">
+          <div class="view-header__actions" data-ref="compliance-default-actions">
+            <button type="button" class="component-button component-button--h40 component-button--bordered view-header__btn" data-ref="btn-export-audit" data-tooltip="Exportar registro de auditoría legal" aria-label="Exportar registro de auditoría legal">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
+              <span>Exportar Auditoría</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="view-body" data-ref="compliance-content-container" style="width: 100%; box-sizing: border-box; padding: 20px 24px 60px;">
+        <div class="dashboard-stats-grid" data-ref="compliance-metrics-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; margin-bottom: 20px; width: 100%;">
+          <div class="dashboard-stat-card" data-ref="metric-pending-requests" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+              <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Solicitudes Pendientes</span>
+              <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(245, 158, 11, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(245, 158, 11, 0.25);">
+                <svg class="component-icon" style="width: 18px; height: 18px; color: #f59e0b;" aria-hidden="true"><use href="/icons.svg#schedule"></use></svg>
+              </div>
+            </div>
+            <div>
+              <div class="stat-card-value" data-ref="val-pending-requests" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
+              <span style="font-size: 12px; color: var(--text-secondary);">SLA límite de 30 días</span>
+            </div>
+          </div>
+
+          <div class="dashboard-stat-card" data-ref="metric-export-requests" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+              <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Exportaciones de Datos</span>
+              <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(59, 130, 246, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(59, 130, 246, 0.25);">
+                <svg class="component-icon" style="width: 18px; height: 18px; color: #3b82f6;" aria-hidden="true"><use href="/icons.svg#folder_shared"></use></svg>
+              </div>
+            </div>
+            <div>
+              <div class="stat-card-value" data-ref="val-export-requests" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
+              <span style="font-size: 12px; color: var(--text-secondary);">Paquetes ZIP solicitados</span>
+            </div>
+          </div>
+
+          <div class="dashboard-stat-card" data-ref="metric-erasure-requests" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+              <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Derecho al Olvido</span>
+              <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(239, 68, 68, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(239, 68, 68, 0.25);">
+                <svg class="component-icon" style="width: 18px; height: 18px; color: #ef4444;" aria-hidden="true"><use href="/icons.svg#restore_from_trash"></use></svg>
+              </div>
+            </div>
+            <div>
+              <div class="stat-card-value" data-ref="val-erasure-requests" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
+              <span style="font-size: 12px; color: var(--text-secondary);">Purgas de cuenta solicitadas</span>
+            </div>
+          </div>
+
+          <div class="dashboard-stat-card" data-ref="metric-completed-requests" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+              <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Solicitudes Resueltas</span>
+              <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(16, 185, 129, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(16, 185, 129, 0.25);">
+                <svg class="component-icon" style="width: 18px; height: 18px; color: #10b981;" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+              </div>
+            </div>
+            <div>
+              <div class="stat-card-value" data-ref="val-completed-requests" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
+              <span style="font-size: 12px; color: var(--text-secondary);">Conformidad total GDPR</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="support-search-container" data-ref="compliance-search-container" style="padding: 0; border: 1px solid var(--border-color); border-radius: var(--border-radius-md); margin-bottom: 20px; background-color: var(--bg-card);">
+          <div class="support-search-container__input-wrap" data-ref="compliance-input-wrap" style="padding: 10px 12px; border-bottom: 1px solid var(--border-color);">
+            <div class="component-search component-search--full" data-ref="search-box">
+              <div class="component-search__icon" data-ref="search-icon">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+              </div>
+              <div class="component-search__input-box" data-ref="search-input-box">
+                <input class="component-search__input" data-ref="input-search-compliance" type="text" maxlength="100" autocomplete="off" placeholder="Buscar solicitudes por usuario, correo o notas..." />
+              </div>
+              <button type="button" class="component-button component-button--icon-only component-search__clear" data-ref="btn-clear-search" style="display: none;" aria-label="Limpiar búsqueda">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cancel"></use></svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="support-search-container__filters-wrap" data-ref="compliance-filters-wrap" style="padding: 8px 12px;">
+            <div class="component-tags-carousel-wrapper view-tags-wrapper" data-ref="compliance-tags-carousel-wrapper">
+              <button type="button" class="component-tag-nav-btn component-tag-nav-left is-disabled" data-ref="btn-tags-scroll-left" data-tooltip="Desplazar a la izquierda" aria-label="Desplazar a la izquierda">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+              </button>
+
+              <div class="component-tags-carousel" data-ref="compliance-filter-tabs">
+                <button type="button" class="component-badge component-badge--interactive is-active" data-ref="filter-status-all" data-status="all">
+                  <span>Todas</span>
+                </button>
+                <button type="button" class="component-badge component-badge--interactive" data-ref="filter-status-pending" data-status="pending">
+                  <span>Pendientes</span>
+                </button>
+                <button type="button" class="component-badge component-badge--interactive" data-ref="filter-status-in_progress" data-status="in_progress">
+                  <span>En Proceso</span>
+                </button>
+                <button type="button" class="component-badge component-badge--interactive" data-ref="filter-status-completed" data-status="completed">
+                  <span>Completadas</span>
+                </button>
+                <button type="button" class="component-badge component-badge--interactive" data-ref="filter-status-rejected" data-status="rejected">
+                  <span>Rechazadas</span>
+                </button>
+              </div>
+
+              <button type="button" class="component-tag-nav-btn component-tag-nav-right is-disabled" data-ref="btn-tags-scroll-right" data-tooltip="Desplazar a la derecha" aria-label="Desplazar a la derecha">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="component-table-wrapper" data-ref="compliance-table-wrapper">
+          <table class="component-table" data-ref="compliance-table">
+            <thead>
+              <tr>
+                <th>ID / Tipo</th>
+                <th>Usuario Solicitante</th>
+                <th>Fecha Solicitud</th>
+                <th>Fecha Límite Legal</th>
+                <th>Estado</th>
+                <th>Notas</th>
+                <th style="text-align: right;">Acciones</th>
+              </tr>
+            </thead>
+            <tbody data-ref="compliance-tbody">
+              <!-- Renderizado dinámico -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="view-empty-state" data-ref="compliance-empty-state" style="display: none; padding: 48px 16px; text-align: center;">
+          <svg class="component-icon view-empty-state__icon" aria-hidden="true" style="width: 48px; height: 48px; margin-bottom: 12px; color: var(--text-secondary);"><use href="/icons.svg#shield_person"></use></svg>
+          <h3 class="view-empty-state__title" style="margin-bottom: 6px;">No hay solicitudes de privacidad</h3>
+          <p class="view-empty-state__description" style="color: var(--text-secondary); font-size: 14px;">No se encontraron registros de solicitudes GDPR bajo los filtros seleccionados.</p>
+        </div>
+
+        <div class="pagination-bar" data-ref="compliance-pagination" style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px;">
+          <span class="pagination-info" data-ref="pagination-info" style="font-size: 13px; color: var(--text-secondary);">Mostrando solicitudes</span>
+          <div class="pagination-actions" style="display: flex; gap: 8px;">
+            <button type="button" class="component-button component-button--h35 component-button--bordered" data-ref="btn-prev-page" disabled>
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+              <span>Anterior</span>
+            </button>
+            <button type="button" class="component-button component-button--h35 component-button--bordered" data-ref="btn-next-page" disabled>
+              <span>Siguiente</span>
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" data-ref="modal-compliance-backdrop" style="display: none;">
+    <div class="modal-dialog modal-dialog--sm" data-ref="modal-compliance">
+      <div class="modal-header">
+        <h3 class="modal-title">Gestionar Solicitud GDPR</h3>
+        <button type="button" class="component-button component-button--icon-only modal-close-btn" data-ref="btn-close-compliance-modal" aria-label="Cerrar modal">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cancel"></use></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 14px; margin-bottom: 16px; color: var(--text-secondary);">Actualiza el estado de la solicitud <strong data-ref="compliance-modal-id">#0</strong>.</p>
+        <div class="field-group" style="margin-bottom: 16px;">
+          <label class="field" data-ref="field-compliance-status">
+            <span class="field__label">Nuevo Estado</span>
+            <select class="field__input" data-ref="select-compliance-status">
+              <option value="in_progress">En Proceso</option>
+              <option value="completed">Completada</option>
+              <option value="rejected">Rechazada</option>
+            </select>
+          </label>
+        </div>
+        <label class="field" data-ref="field-compliance-notes">
+          <span class="field__label">Notas Internas / Motivo</span>
+          <input class="field__input" data-ref="input-compliance-notes" type="text" placeholder="Ej. Archivo ZIP enviado al correo del usuario" />
+        </label>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button type="button" class="component-button component-button--h40 component-button--bordered" data-ref="btn-cancel-compliance">Cancelar</button>
+        <button type="button" class="component-button component-button--h40 component-button--black" data-ref="btn-save-compliance">Guardar Cambios</button>
+      </div>
+    </div>
+  </div>
+</div>

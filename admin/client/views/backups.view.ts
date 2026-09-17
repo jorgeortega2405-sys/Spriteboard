@@ -5,7 +5,7 @@ import { renderIcons } from '../services/icon.service.js';
 import { showToast } from '../services/toast.service.js';
 import { BackupCreatePayload, BackupDatabaseOption, BackupRecord, BackupScheduleConfig, BackupScheduleInterval, BackupSchedulePayload, BackupTargetOptions } from '../types/backup.types.js';
 import { ViewController } from '../types/common.types.js';
-import { escapeHtml, setupDropdown } from '../utils/dom.util.js';
+import { escapeHtml, removeEmptyState, renderEmptyState, setupDropdown } from '../utils/dom.util.js';
 
 function formatBytes(bytes?: number): string {
   if (!bytes || bytes <= 0) return '0 B';
@@ -64,9 +64,10 @@ class BackupsController implements ViewController {
   private searchInput: HTMLInputElement | null = null;
   private btnClearSearch: HTMLElement | null = null;
 
+  private createDropdownWrapper: HTMLElement | null = null;
+  private createDropdownController: ReturnType<typeof setupDropdown> | null = null;
   private filterDropdownWrapper: HTMLElement | null = null;
   private filterDropdownController: ReturnType<typeof setupDropdown> | null = null;
-  private btnRefreshBackups: HTMLElement | null = null;
 
   private btnActionDeselect: HTMLElement | null = null;
   private btnActionDetails: HTMLElement | null = null;
@@ -88,6 +89,7 @@ class BackupsController implements ViewController {
     this.defaultActions = this.container.querySelector<HTMLElement>('[data-ref="backups-default-actions"]');
     this.selectedActions = this.container.querySelector<HTMLElement>('[data-ref="backups-selected-actions"]');
 
+    this.createDropdownWrapper = this.container.querySelector<HTMLElement>('[data-ref="create-dropdown-wrapper"]');
     this.btnCreateBackup = this.container.querySelector<HTMLElement>('[data-ref="btn-create-backup"]');
     this.btnConfigureSchedule = this.container.querySelector<HTMLElement>('[data-ref="btn-configure-schedule"]');
     this.btnToggleSearch = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-search"]');
@@ -96,7 +98,6 @@ class BackupsController implements ViewController {
     this.btnClearSearch = this.container.querySelector<HTMLElement>('[data-ref="btn-clear-search"]');
 
     this.filterDropdownWrapper = this.container.querySelector<HTMLElement>('[data-ref="filter-dropdown-wrapper"]');
-    this.btnRefreshBackups = this.container.querySelector<HTMLElement>('[data-ref="btn-refresh-backups"]');
 
     this.btnActionDeselect = this.container.querySelector<HTMLElement>('[data-ref="btn-action-deselect"]');
     this.btnActionDetails = this.container.querySelector<HTMLElement>('[data-ref="btn-action-details"]');
@@ -106,6 +107,14 @@ class BackupsController implements ViewController {
     this.inputPaginationPage = this.container.querySelector<HTMLInputElement>('[data-ref="input-pagination-page"]');
     this.btnPaginationPrev = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-pagination-prev"]');
     this.btnPaginationNext = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-pagination-next"]');
+
+    if (this.createDropdownWrapper) {
+      this.createDropdownController = setupDropdown(this.createDropdownWrapper, {
+        isSelect: false,
+        matchWidth: false,
+        placement: 'bottom-end',
+      });
+    }
 
     if (this.filterDropdownWrapper) {
       this.filterDropdownController = setupDropdown(this.filterDropdownWrapper, {
@@ -122,6 +131,14 @@ class BackupsController implements ViewController {
 
   destroy(): void {
     this.abortController.abort();
+    if (this.createDropdownController) {
+      this.createDropdownController.destroy();
+      this.createDropdownController = null;
+    }
+    if (this.filterDropdownController) {
+      this.filterDropdownController.destroy();
+      this.filterDropdownController = null;
+    }
     if (this.pollingTimer) {
       clearTimeout(this.pollingTimer);
       this.pollingTimer = null;
@@ -137,11 +154,13 @@ class BackupsController implements ViewController {
 
     this.btnCreateBackup?.addEventListener('click', (e) => {
       e.preventDefault();
+      this.createDropdownController?.close();
       void this.openCreateBackupModal();
     }, { signal });
 
     this.btnConfigureSchedule?.addEventListener('click', (e) => {
       e.preventDefault();
+      this.createDropdownController?.close();
       void this.openScheduleModal();
     }, { signal });
 
@@ -187,11 +206,6 @@ class BackupsController implements ViewController {
         void this.loadBackups(1);
       }, { signal });
     });
-
-    this.btnRefreshBackups?.addEventListener('click', (e) => {
-      e.preventDefault();
-      void this.loadBackups(this.currentPage);
-    }, { signal });
 
     this.btnActionDeselect?.addEventListener('click', () => {
       this.selectedBackup = null;
@@ -290,10 +304,28 @@ class BackupsController implements ViewController {
       this.pollingTimer = null;
     }
 
+    const tableWrapper = this.container.querySelector<HTMLElement>('[data-ref="backups-table-wrapper"]');
+    if (tableWrapper) {
+      removeEmptyState(tableWrapper, 'backups-empty-state');
+    }
+    if (this.tableEl) this.tableEl.style.display = '';
+
+    if (this.tbodyEl && !silent) {
+      this.tbodyEl.innerHTML = Array(7).fill(0).map(() => `
+        <tr class="skeleton-table-row">
+          <td><div class="skeleton" style="height: 20px; width: 140px; border-radius: 4px;"></div></td>
+          <td><div class="skeleton" style="height: 20px; width: 100px; border-radius: 4px;"></div></td>
+          <td><div class="skeleton" style="height: 20px; width: 80px; border-radius: 4px;"></div></td>
+          <td><div class="skeleton" style="height: 20px; width: 70px; border-radius: 4px;"></div></td>
+          <td><div class="skeleton" style="height: 20px; width: 110px; border-radius: 4px;"></div></td>
+        </tr>
+      `).join('');
+    }
+
     const res = await getBackupsApi({
       limit: this.limit,
       page: this.currentPage,
-      search: this.searchQuery || undefined,
+      search: this.searchQuery,
       status: this.currentStatusFilter !== 'all' ? this.currentStatusFilter : undefined,
     });
 
@@ -332,21 +364,26 @@ class BackupsController implements ViewController {
     if (!this.tbodyEl) return;
     this.tbodyEl.innerHTML = '';
 
+    const tableWrapper = this.container.querySelector<HTMLElement>('[data-ref="backups-table-wrapper"]');
     if (this.backups.length === 0) {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td colspan="5" style="text-align: center; padding: 48px 16px; color: var(--text-secondary);">
-          <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
-            <svg class="component-icon" style="width: 40px; height: 40px; color: var(--text-tertiary);" aria-hidden="true"><use href="/icons.svg#cloud_upload"></use></svg>
-            <div style="font-weight: 600; font-size: 14px; color: var(--text-primary);">No se encontraron copias de seguridad</div>
-            <div style="font-size: 12px;">Haz clic en "Crear copia" en la parte superior para generar un nuevo respaldo del sistema.</div>
-          </div>
-        </td>
-      `;
-      this.tbodyEl.appendChild(tr);
-      renderIcons(this.tbodyEl);
+      if (this.tableEl) this.tableEl.style.display = 'none';
+      if (tableWrapper) {
+        renderEmptyState({
+          container: tableWrapper,
+          dataRef: 'backups-empty-state',
+          desc: 'Haz clic en "Crear copia" en la parte superior para generar un nuevo respaldo del sistema.',
+          graphicType: 'backups',
+          isTable: true,
+          title: 'No se encontraron copias de seguridad',
+        });
+      }
       return;
     }
+
+    if (tableWrapper) {
+      removeEmptyState(tableWrapper, 'backups-empty-state');
+    }
+    if (this.tableEl) this.tableEl.style.display = '';
 
     for (const backup of this.backups) {
       const tr = document.createElement('tr');
@@ -395,25 +432,25 @@ class BackupsController implements ViewController {
             <div style="display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 8px; background: var(--bg-card-subtle); border: 1px solid var(--border-color); flex-shrink: 0;">
               <svg class="component-icon" style="width: 18px; height: 18px; color: var(--text-secondary);" aria-hidden="true"><use href="/icons.svg#cloud_upload"></use></svg>
             </div>
-            <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0;">
-              <span style="font-weight: 600; font-size: 13px; color: var(--text-primary);">${escapeHtml(backup.name)}</span>
-              <span style="font-size: 11px; color: var(--text-secondary); font-family: monospace;">${escapeHtml(backup.filename)}</span>
+            <div style="display: flex; gap: 4px; align-items: center; flex-wrap: wrap; min-width: 0;">
+              <span class="component-badge component-badge--sm">${escapeHtml(backup.name)}</span>
+              <span class="component-badge component-badge--sm" style="font-family: monospace;">${escapeHtml(backup.filename)}</span>
             </div>
           </div>
         </td>
         <td data-ref="cell-components-${backup.uuid}">
           <div style="display: flex; gap: 4px; flex-wrap: wrap;">
-            ${componentsBadges.join('') || '<span style="color: var(--text-tertiary); font-size: 12px;">Personalizado</span>'}
+            ${componentsBadges.join('') || '<span class="component-badge component-badge--sm">Personalizado</span>'}
           </div>
         </td>
         <td data-ref="cell-size-${backup.uuid}">
-          <span style="font-size: 12px; color: var(--text-primary); font-weight: 500;">${formatBytes(backup.file_size_bytes)}</span>
+          <span class="component-badge component-badge--sm">${formatBytes(backup.file_size_bytes)}</span>
         </td>
         <td data-ref="cell-status-${backup.uuid}">
           ${statusHtml}
         </td>
         <td data-ref="cell-created-${backup.uuid}">
-          <span style="color: var(--text-secondary); font-size: 12px;">${formatDate(backup.created_at)}</span>
+          <span class="component-badge component-badge--sm">${formatDate(backup.created_at)}</span>
         </td>
       `;
 

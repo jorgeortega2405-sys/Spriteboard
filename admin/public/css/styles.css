@@ -1305,8 +1305,8 @@ html.dark-theme .component-wrapper {
 
 .component-table-wrapper {
   background-color: var(--bg-surface);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-xl);
+  border: none;
+  border-radius: 0;
   width: 100%;
   flex: 1 1 auto;
   min-height: 0;
@@ -1801,13 +1801,21 @@ html.dark-theme .component-wrapper {
 }
 
 .support-search-container {
-  padding: 12px 12px 8px 12px;
+  padding: 0;
   border-bottom: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
-  gap: 8px;
   background-color: var(--bg-surface);
   flex-shrink: 0;
+}
+
+.support-search-container__input-wrap {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.support-search-container__filters-wrap {
+  padding: 8px 12px;
 }
 
 .support-filter-tabs {
@@ -1856,9 +1864,9 @@ html.dark-theme .component-wrapper {
 }
 
 .support-ticket-card.is-active {
-  background-color: var(--bg-hover) !important;
-  border-color: var(--action-primary, #6366f1) !important;
-  box-shadow: 0 0 0 1.5px var(--action-primary, #6366f1) !important;
+  background-color: transparent !important;
+  border-color: var(--accent-pink) !important;
+  box-shadow: 0 0 0 1px var(--accent-pink) !important;
 }
 
 .support-chat-workspace {

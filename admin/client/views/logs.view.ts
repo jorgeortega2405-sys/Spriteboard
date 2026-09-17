@@ -5,7 +5,7 @@ import { renderIcons } from '../services/icon.service.js';
 import { showToast } from '../services/toast.service.js';
 import { ViewController } from '../types/common.types.js';
 import { LogFileContent, LogFileRecord, LogLevel, ParsedLogLine } from '../types/log.types.js';
-import { escapeHtml, setupDropdown } from '../utils/dom.util.js';
+import { escapeHtml, removeEmptyState, renderEmptyState, setupDropdown } from '../utils/dom.util.js';
 
 function formatDate(iso?: string | null): string {
   if (!iso) return '—';
@@ -283,18 +283,24 @@ class LogsController implements ViewController {
   }
 
   private async loadLogs(): Promise<void> {
+    const tableWrapper = this.container.querySelector<HTMLElement>('[data-ref="logs-table-wrapper"]');
+    if (tableWrapper) {
+      removeEmptyState(tableWrapper, 'logs-empty-state');
+    }
+    if (this.tableEl) this.tableEl.style.display = '';
+
     if (this.tbodyEl) {
-      this.tbodyEl.innerHTML = `
-        <tr>
-          <td colspan="7" style="text-align: center; padding: 48px 16px; color: var(--text-secondary);">
-            <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
-              <svg class="component-icon" style="width: 40px; height: 40px; color: var(--text-tertiary);" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
-              <div style="font-weight: 600; font-size: 14px; color: var(--text-primary);">Cargando registros...</div>
-            </div>
-          </td>
+      this.tbodyEl.innerHTML = Array(7).fill(0).map(() => `
+        <tr class="skeleton-table-row">
+          <td><div class="skeleton" style="height: 20px; width: 140px; border-radius: 4px;"></div></td>
+          <td><div class="skeleton" style="height: 20px; width: 70px; border-radius: 4px;"></div></td>
+          <td><div class="skeleton" style="height: 20px; width: 80px; border-radius: 4px;"></div></td>
+          <td><div class="skeleton" style="height: 20px; width: 60px; border-radius: 4px;"></div></td>
+          <td><div class="skeleton" style="height: 20px; width: 70px; border-radius: 4px;"></div></td>
+          <td><div class="skeleton" style="height: 20px; width: 80px; border-radius: 4px;"></div></td>
+          <td><div class="skeleton" style="height: 20px; width: 110px; border-radius: 4px;"></div></td>
         </tr>
-      `;
-      renderIcons(this.tbodyEl);
+      `).join('');
     }
 
     const res = await getLogFilesApi();
@@ -348,21 +354,26 @@ class LogsController implements ViewController {
     if (!this.tbodyEl) return;
     this.tbodyEl.innerHTML = '';
 
+    const tableWrapper = this.container.querySelector<HTMLElement>('[data-ref="logs-table-wrapper"]');
     if (this.filteredFiles.length === 0) {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td colspan="7" style="text-align: center; padding: 48px 16px; color: var(--text-secondary);">
-          <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
-            <svg class="component-icon" style="width: 40px; height: 40px; color: var(--text-tertiary);" aria-hidden="true"><use href="/icons.svg#article"></use></svg>
-            <div style="font-weight: 600; font-size: 14px; color: var(--text-primary);">No se encontraron registros de logs</div>
-            <div style="font-size: 12px;">Intenta ajustar los términos de búsqueda o los filtros aplicados.</div>
-          </div>
-        </td>
-      `;
-      this.tbodyEl.appendChild(tr);
-      renderIcons(this.tbodyEl);
+      if (this.tableEl) this.tableEl.style.display = 'none';
+      if (tableWrapper) {
+        renderEmptyState({
+          container: tableWrapper,
+          dataRef: 'logs-empty-state',
+          desc: 'Intenta ajustar los términos de búsqueda o los filtros aplicados.',
+          graphicType: this.searchQuery ? 'search' : 'logs',
+          isTable: true,
+          title: 'No se encontraron registros de logs',
+        });
+      }
       return;
     }
+
+    if (tableWrapper) {
+      removeEmptyState(tableWrapper, 'logs-empty-state');
+    }
+    if (this.tableEl) this.tableEl.style.display = '';
 
     const startIdx = (this.currentPage - 1) * this.limit;
     const pageFiles = this.filteredFiles.slice(startIdx, startIdx + this.limit);
@@ -393,11 +404,11 @@ class LogsController implements ViewController {
 
       tr.innerHTML = `
         <td data-ref="cell-file-${file.id}">
-          <div style="display: inline-flex; align-items: center; gap: 8px; font-weight: 500;">
+          <div style="display: inline-flex; align-items: center; gap: 8px;">
             <svg class="component-icon" style="color: var(--text-secondary); width: 18px; height: 18px; flex-shrink: 0;" aria-hidden="true">
               <use href="/icons.svg#article"></use>
             </svg>
-            <span style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 13px;">${escapeHtml(file.fileName)}</span>
+            <span class="component-badge component-badge--sm" style="font-family: ui-monospace, monospace;">${escapeHtml(file.fileName)}</span>
           </div>
         </td>
         <td data-ref="cell-origin-${file.id}">
@@ -407,16 +418,16 @@ class LogsController implements ViewController {
           <span class="component-badge component-badge--sm ${categoryBadgeClass}">${escapeHtml(file.categoryLabel)}</span>
         </td>
         <td data-ref="cell-size-${file.id}">
-          <span style="color: var(--text-secondary); font-size: 13px;">${escapeHtml(file.sizeFormatted)}</span>
+          <span class="component-badge component-badge--sm">${escapeHtml(file.sizeFormatted)}</span>
         </td>
         <td data-ref="cell-lines-${file.id}">
-          <span style="color: var(--text-secondary); font-size: 13px;">${file.lineCount} líneas</span>
+          <span class="component-badge component-badge--sm">${file.lineCount} líneas</span>
         </td>
         <td data-ref="cell-status-${file.id}">
           ${statusBadge}
         </td>
         <td data-ref="cell-updated-${file.id}">
-          <span style="color: var(--text-secondary); font-size: 12px;">${formatDate(file.updatedAt)}</span>
+          <span class="component-badge component-badge--sm">${formatDate(file.updatedAt)}</span>
         </td>
       `;
 
@@ -533,7 +544,6 @@ class LogViewerController implements ViewController {
   private btnCopyRawLog: HTMLElement | null = null;
   private btnDownloadActiveLog: HTMLElement | null = null;
   private btnRefreshViewer: HTMLElement | null = null;
-  private btnBackToLogs: HTMLElement | null = null;
 
   private statTotalLines: HTMLElement | null = null;
   private statFilteredLines: HTMLElement | null = null;
@@ -565,7 +575,6 @@ class LogViewerController implements ViewController {
     this.btnCopyRawLog = this.container.querySelector<HTMLElement>('[data-ref="btn-copy-raw-log"]');
     this.btnDownloadActiveLog = this.container.querySelector<HTMLElement>('[data-ref="btn-download-active-log"]');
     this.btnRefreshViewer = this.container.querySelector<HTMLElement>('[data-ref="btn-refresh-viewer"]');
-    this.btnBackToLogs = this.container.querySelector<HTMLElement>('[data-ref="btn-back-to-logs"]');
 
     this.statTotalLines = this.container.querySelector<HTMLElement>('[data-ref="stat-total-lines"]');
     this.statFilteredLines = this.container.querySelector<HTMLElement>('[data-ref="stat-filtered-lines"]');
@@ -590,20 +599,13 @@ class LogViewerController implements ViewController {
 
     if (this.requestedFileIds.length === 0) {
       if (this.linesList) {
-        this.linesList.innerHTML = `
-          <div style="padding: 48px 16px; text-align: center; color: var(--text-secondary);">
-            <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
-              <svg class="component-icon" style="width: 40px; height: 40px; color: var(--text-tertiary);" aria-hidden="true"><use href="/icons.svg#article"></use></svg>
-              <div style="font-weight: 600; font-size: 14px; color: var(--text-primary);">No se especificó ningún archivo de log</div>
-              <div style="margin-top: 8px;">
-                <button type="button" class="component-button component-button--h36 component-button--black" data-ref="btn-goto-logs">Ir a lista de registros</button>
-              </div>
-            </div>
-          </div>
-        `;
-        renderIcons(this.linesList);
-        this.linesList.querySelector('[data-ref="btn-goto-logs"]')?.addEventListener('click', () => {
-          navigate('/logs');
+        this.linesList.innerHTML = '';
+        renderEmptyState({
+          container: this.linesList,
+          dataRef: 'viewer-empty-state',
+          desc: 'Selecciona al menos un archivo de log desde la lista principal para visualizar su contenido.',
+          graphicType: 'logs',
+          title: 'No se especificó ningún archivo de log',
         });
       }
       return;
@@ -626,11 +628,6 @@ class LogViewerController implements ViewController {
 
   private bindEvents(): void {
     const signal = this.abortController.signal;
-
-    this.btnBackToLogs?.addEventListener('click', (e) => {
-      e.preventDefault();
-      navigate('/logs');
-    }, { signal });
 
     this.btnRefreshViewer?.addEventListener('click', (e) => {
       e.preventDefault();
@@ -752,14 +749,16 @@ class LogViewerController implements ViewController {
   private async loadLogsContent(): Promise<void> {
     if (this.linesList) {
       this.linesList.innerHTML = `
-        <div style="padding: 48px 16px; text-align: center; color: #64748b;">
-          <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
-            <svg class="component-icon" style="width: 32px; height: 32px; color: #64748b;" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
-            <div>Cargando contenido del registro...</div>
-          </div>
+        <div class="viewer-lines-skeleton" data-ref="viewer-lines-skeleton" style="padding: 16px 24px; display: flex; flex-direction: column; gap: 12px;">
+          <div class="skeleton" style="height: 16px; width: 85%; border-radius: 4px;"></div>
+          <div class="skeleton" style="height: 16px; width: 60%; border-radius: 4px;"></div>
+          <div class="skeleton" style="height: 16px; width: 92%; border-radius: 4px;"></div>
+          <div class="skeleton" style="height: 16px; width: 75%; border-radius: 4px;"></div>
+          <div class="skeleton" style="height: 16px; width: 50%; border-radius: 4px;"></div>
+          <div class="skeleton" style="height: 16px; width: 88%; border-radius: 4px;"></div>
+          <div class="skeleton" style="height: 16px; width: 68%; border-radius: 4px;"></div>
         </div>
       `;
-      renderIcons(this.linesList);
     }
 
     const res = await getLogContentApi(this.requestedFileIds);
@@ -773,11 +772,14 @@ class LogViewerController implements ViewController {
     } else {
       showToast(res.error || 'No se pudo cargar el contenido de los logs.', 'error');
       if (this.linesList) {
-        this.linesList.innerHTML = `
-          <div style="padding: 48px 16px; text-align: center; color: #ef4444;">
-            ${escapeHtml(res.error || 'Error al cargar los archivos seleccionados.')}
-          </div>
-        `;
+        this.linesList.innerHTML = '';
+        renderEmptyState({
+          container: this.linesList,
+          dataRef: 'viewer-error-state',
+          desc: res.error || 'Error al cargar los archivos seleccionados.',
+          graphicType: 'error',
+          title: 'Error al cargar registros',
+        });
       }
     }
   }
@@ -931,11 +933,14 @@ class LogViewerController implements ViewController {
     }
 
     if (filtered.length === 0) {
-      this.linesList.innerHTML = `
-        <div style="padding: 48px 16px; text-align: center; color: #64748b;">
-          No hay líneas que coincidan con los filtros aplicados.
-        </div>
-      `;
+      this.linesList.innerHTML = '';
+      renderEmptyState({
+        container: this.linesList,
+        dataRef: 'viewer-empty-filtered-state',
+        desc: 'No hay líneas en este archivo que coincidan con los filtros aplicados o el término de búsqueda.',
+        graphicType: this.searchQuery ? 'search' : 'logs',
+        title: 'Sin líneas coincidentes',
+      });
       return;
     }
 
@@ -950,24 +955,24 @@ class LogViewerController implements ViewController {
       lineRow.style.padding = '2px 16px';
       lineRow.style.gap = '12px';
 
-      let levelColor = '#94a3b8';
+      let levelColor = 'var(--text-secondary)';
       let levelBg = 'transparent';
       let rowBg = 'transparent';
 
       if (line.level === 'ERROR') {
-        levelColor = '#f87171';
-        levelBg = 'rgba(239, 68, 68, 0.15)';
-        rowBg = 'rgba(239, 68, 68, 0.05)';
+        levelColor = '#ef4444';
+        levelBg = 'rgba(239, 68, 68, 0.12)';
+        rowBg = 'rgba(239, 68, 68, 0.04)';
       } else if (line.level === 'WARN') {
-        levelColor = '#fbbf24';
-        levelBg = 'rgba(245, 158, 11, 0.15)';
-        rowBg = 'rgba(245, 158, 11, 0.05)';
+        levelColor = '#f59e0b';
+        levelBg = 'rgba(245, 158, 11, 0.12)';
+        rowBg = 'rgba(245, 158, 11, 0.04)';
       } else if (line.level === 'INFO') {
-        levelColor = '#60a5fa';
-        levelBg = 'rgba(59, 130, 246, 0.15)';
+        levelColor = '#3b82f6';
+        levelBg = 'rgba(59, 130, 246, 0.12)';
       } else if (line.level === 'DEBUG') {
-        levelColor = '#a78bfa';
-        levelBg = 'rgba(139, 92, 246, 0.15)';
+        levelColor = '#8b5cf6';
+        levelBg = 'rgba(139, 92, 246, 0.12)';
       }
 
       if (rowBg !== 'transparent') {
@@ -980,17 +985,17 @@ class LogViewerController implements ViewController {
         formattedMessage = formattedMessage.replace(regex, '<mark style="background: #fef08a; color: #0f172a; border-radius: 2px; padding: 0 2px;">$1</mark>');
       }
 
-      const numSpan = `<span style="width: 48px; text-align: right; user-select: none; color: #475569; font-size: 11px; flex-shrink: 0;">${line.lineNumber}</span>`;
+      const numSpan = `<span style="width: 48px; text-align: right; user-select: none; color: var(--text-tertiary); font-size: 11px; flex-shrink: 0;">${line.lineNumber}</span>`;
 
       let originBadgeHtml = '';
       if (line.originLabel) {
-        originBadgeHtml = `<span style="background: #1e293b; color: #94a3b8; font-size: 10px; padding: 1px 6px; border-radius: 4px; flex-shrink: 0;">${escapeHtml(line.originLabel)}</span>`;
+        originBadgeHtml = `<span class="component-badge component-badge--sm" style="font-size: 10px; padding: 1px 6px; flex-shrink: 0;">${escapeHtml(line.originLabel)}</span>`;
       }
 
       let timeHtml = '';
       if (line.timestamp) {
         const timePart = line.timestamp.includes('T') ? line.timestamp.split('T')[1].replace('Z', '') : line.timestamp;
-        timeHtml = `<span style="color: #64748b; font-size: 11px; flex-shrink: 0;">${escapeHtml(timePart)}</span>`;
+        timeHtml = `<span style="color: var(--text-secondary); font-size: 11px; flex-shrink: 0;">${escapeHtml(timePart)}</span>`;
       }
 
       let levelBadgeHtml = '';
@@ -1000,7 +1005,7 @@ class LogViewerController implements ViewController {
 
       let catHtml = '';
       if (line.category) {
-        catHtml = `<span style="color: #94a3b8; font-size: 11px; flex-shrink: 0;">[${escapeHtml(line.category)}]</span>`;
+        catHtml = `<span style="color: var(--text-secondary); font-size: 11px; flex-shrink: 0;">[${escapeHtml(line.category)}]</span>`;
       }
 
       lineRow.innerHTML = `
@@ -1009,7 +1014,7 @@ class LogViewerController implements ViewController {
         ${timeHtml}
         ${levelBadgeHtml}
         ${catHtml}
-        <span class="viewer-line-text" style="flex: 1; color: ${line.level === 'ERROR' ? '#fca5a5' : '#cbd5e1'}; word-break: break-all;">${formattedMessage}</span>
+        <span class="viewer-line-text" style="flex: 1; color: ${line.level === 'ERROR' ? '#ef4444' : 'var(--text-primary)'}; word-break: break-all;">${formattedMessage}</span>
       `;
 
       fragment.appendChild(lineRow);

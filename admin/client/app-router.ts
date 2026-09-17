@@ -6,6 +6,7 @@ import { SkeletonService } from './services/skeleton.service.js';
 import { hideTooltip } from './services/tooltip.service.js';
 import { ViewController } from './types/common.types.js';
 import { closeAllDropdowns } from './utils/dom.util.js';
+import { canAccessRoute, getDefaultLandingRoute } from './utils/permission.util.js';
 
 let isInitialPageLoad = true;
 let currentNavigation = 0;
@@ -46,8 +47,13 @@ export async function render(): Promise<void> {
     window.history.replaceState({}, '', '/login');
     path = '/login';
   } else if (currentUser && path === '/login') {
-    window.history.replaceState({}, '', '/');
-    path = '/';
+    const defaultLanding = getDefaultLandingRoute(currentUser);
+    window.history.replaceState({}, '', defaultLanding);
+    path = defaultLanding;
+  } else if (currentUser && (path === '/' || path === '' || path === '/dashboard') && !canAccessRoute('/dashboard', currentUser)) {
+    const defaultLanding = getDefaultLandingRoute(currentUser);
+    window.history.replaceState({}, '', defaultLanding);
+    path = defaultLanding;
   }
 
   const navId = ++currentNavigation;
@@ -67,7 +73,16 @@ export async function render(): Promise<void> {
   let viewElement: HTMLElement | null = null;
 
   try {
-    if (path === '/login') {
+    if (currentUser && !canAccessRoute(path, currentUser)) {
+      const { createErrorView } = await import('./views/error.view.js');
+      viewElement = await createErrorView({
+        actionText: 'Ir a mi inicio',
+        actionUrl: getDefaultLandingRoute(currentUser),
+        code: '403',
+        description: 'No cuentas con los permisos requeridos para acceder a esta sección.',
+        title: 'Acceso Restringido',
+      });
+    } else if (path === '/login') {
       const { createLoginView } = await import('./views/auth.view.js');
       viewElement = await createLoginView();
     } else if (path === '/' || path === '' || path === '/dashboard') {
@@ -108,6 +123,21 @@ export async function render(): Promise<void> {
     } else if (path === '/logs/viewer' || path.startsWith('/logs/viewer')) {
       const { createLogViewerView } = await import('./views/logs.view.js');
       viewElement = await createLogViewerView();
+    } else if (path === '/billing' || path.startsWith('/billing/')) {
+      const { createBillingView } = await import('./views/billing.view.js');
+      viewElement = await createBillingView();
+    } else if (path === '/analytics' || path.startsWith('/analytics/')) {
+      const { createAnalyticsView } = await import('./views/analytics.view.js');
+      viewElement = await createAnalyticsView();
+    } else if (path === '/compliance' || path.startsWith('/compliance/')) {
+      const { createComplianceView } = await import('./views/compliance.view.js');
+      viewElement = await createComplianceView();
+    } else if (path === '/workflows' || path.startsWith('/workflows/')) {
+      const { createWorkflowsView } = await import('./views/workflows.view.js');
+      viewElement = await createWorkflowsView();
+    } else if (path === '/roles' || path.startsWith('/roles/')) {
+      const { createRolesView } = await import('./views/roles.view.js');
+      viewElement = await createRolesView();
     } else if (path === '/system' || path === '/system-settings') {
       const { createSystemView } = await import('./views/system.view.js');
       viewElement = await createSystemView();

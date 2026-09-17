@@ -4,7 +4,7 @@ import { createIconSvg, renderIcons } from '../services/icon.service.js';
 import { showToast } from '../services/toast.service.js';
 import { registerWebSocketHandler } from '../services/websocket.service.js';
 import { ViewController } from '../types/common.types.js';
-import { debounce, escapeHtml, setupDropdown, withButtonLoading } from '../utils/dom.util.js';
+import { CarouselController, debounce, escapeHtml, getEmptyGraphicSvg, initCarouselScroll, renderEmptyState, setupDropdown, withButtonLoading } from '../utils/dom.util.js';
 import { applyAvatarTier, getFallbackTierColor } from '../utils/tier.util.js';
 
 interface SupportTicketItem {
@@ -77,6 +77,7 @@ class SupportController implements ViewController {
   private container: HTMLElement;
   private currentFilter: string = 'queued';
   private initialTicketParam?: string;
+  private carouselController: CarouselController | null = null;
   private isAiRefining = false;
   private isLoading = false;
   private isPolishedByAi = false;
@@ -93,6 +94,18 @@ class SupportController implements ViewController {
   }
 
   init(): void {
+    const emptyGraphic = this.container.querySelector<HTMLElement>('[data-ref="support-empty-graphic"]');
+    if (emptyGraphic) {
+      emptyGraphic.innerHTML = getEmptyGraphicSvg('messages');
+    }
+
+    const carouselWrapper = this.container.querySelector<HTMLElement>('[data-ref="support-tags-carousel-wrapper"]');
+    if (carouselWrapper) {
+      this.carouselController = initCarouselScroll(carouselWrapper, {
+        carouselSelector: '[data-ref="support-filter-tabs"]',
+      });
+    }
+
     this.bindEvents();
     this.setupDropdowns();
     this.setupWebSocketListeners();
@@ -245,16 +258,6 @@ class SupportController implements ViewController {
 
   bindEvents(): void {
     const signal = this.abortController.signal;
-
-    const btnRefresh = this.container.querySelector<HTMLElement>('[data-ref="btn-refresh-tickets"]');
-    btnRefresh?.addEventListener('click', () => {
-      void this.loadTickets(false);
-      void this.loadStats();
-      if (this.activeTicketId) {
-        void this.loadActiveTicketDetails(this.activeTicketId, false);
-      }
-      showToast('Solicitudes actualizadas.', 'info');
-    }, { signal });
 
     const searchInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-search-tickets"]');
     const btnClearSearch = this.container.querySelector<HTMLElement>('[data-ref="btn-clear-search"]');
@@ -464,6 +467,23 @@ class SupportController implements ViewController {
     if (this.isLoading && !silent) return;
     if (!silent) this.isLoading = true;
 
+    const listContainer = this.container.querySelector<HTMLElement>('[data-ref="support-ticket-items"]');
+    if (listContainer && !silent) {
+      listContainer.innerHTML = Array(5).fill(0).map(() => `
+        <div style="padding: 12px; display: flex; flex-direction: column; gap: 8px; border-bottom: 1px solid var(--border-color);">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="skeleton" style="width: 100px; height: 16px; border-radius: 4px;"></div>
+            <div class="skeleton" style="width: 50px; height: 12px; border-radius: 4px;"></div>
+          </div>
+          <div class="skeleton" style="width: 80%; height: 14px; border-radius: 4px;"></div>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="skeleton" style="width: 60px; height: 12px; border-radius: 4px;"></div>
+            <div class="skeleton" style="width: 60px; height: 16px; border-radius: 4px;"></div>
+          </div>
+        </div>
+      `).join('');
+    }
+
     try {
       let url = `/api/support/tickets?status=${encodeURIComponent(this.currentFilter)}&limit=50`;
       if (this.searchQuery) {
@@ -491,13 +511,14 @@ class SupportController implements ViewController {
     if (!listContainer) return;
 
     if (this.tickets.length === 0) {
-      listContainer.innerHTML = `
-        <div class="support-empty-list" data-ref="support-empty-list" style="padding: 32px 16px; text-align: center; color: var(--text-secondary); display: flex; flex-direction: column; align-items: center; gap: 8px;">
-          <svg class="component-icon" aria-hidden="true" style="width: 28px; height: 28px; color: var(--text-tertiary);"><use href="/icons.svg#check_circle"></use></svg>
-          <span style="font-size: 13px; font-weight: 500;">No hay solicitudes en esta sección</span>
-          <span style="font-size: 12px; color: var(--text-tertiary);">Las nuevas peticiones de usuarios aparecerán aquí.</span>
-        </div>
-      `;
+      listContainer.innerHTML = '';
+      renderEmptyState({
+        container: listContainer,
+        dataRef: 'support-empty-list',
+        desc: this.searchQuery ? 'Intenta modificar el término de búsqueda.' : 'Las nuevas peticiones de usuarios aparecerán aquí.',
+        graphicType: this.searchQuery ? 'search' : 'messages',
+        title: this.searchQuery ? 'Sin resultados' : 'No hay solicitudes en esta sección',
+      });
       return;
     }
 
@@ -895,6 +916,10 @@ class SupportController implements ViewController {
     this.abortController.abort();
     this.wsUnsubscribers.forEach((unsub) => unsub());
     this.wsUnsubscribers = [];
+    if (this.carouselController) {
+      this.carouselController.destroy();
+      this.carouselController = null;
+    }
     if (this.actionsDropdown) {
       this.actionsDropdown.destroy();
       this.actionsDropdown = null;

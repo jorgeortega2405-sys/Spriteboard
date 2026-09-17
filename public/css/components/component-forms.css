@@ -538,11 +538,14 @@ body[data-theme="dark"] .login-logo-img {
 .settings-accordion-body {
   display: grid;
   grid-template-rows: 0fr;
-  transition: grid-template-rows 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  overflow: hidden;
+  transition: grid-template-rows 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), visibility 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  visibility: hidden;
 }
 
 .settings-group--accordion.is-active .settings-accordion-body {
   grid-template-rows: 1fr;
+  visibility: visible;
 }
 
 .settings-accordion-content {

@@ -1,0 +1,183 @@
+<div class="layout-content" data-ref="admin-billing-view">
+  <div class="component-wrapper component-wrapper--full view-wrapper" data-ref="billing-wrapper">
+    <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="billing-scrollable">
+      <div class="view-header" data-ref="billing-floating-top">
+        <div class="view-header__left" data-ref="billing-floating-left">
+          <h1 class="view-header__title" data-ref="billing-title">Facturación y Finanzas</h1>
+        </div>
+
+        <div class="view-header__right" data-ref="billing-floating-right">
+          <div class="view-header__actions" data-ref="billing-default-actions">
+            <button type="button" class="component-button component-button--h40 component-button--bordered view-header__btn" data-ref="btn-export-csv" data-tooltip="Exportar transacciones a CSV" aria-label="Exportar transacciones a CSV">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
+              <span>Exportar CSV</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="view-body" data-ref="billing-content-container" style="width: 100%; box-sizing: border-box; padding: 20px 24px 60px;">
+        <div class="dashboard-stats-grid" data-ref="billing-metrics-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; margin-bottom: 20px; width: 100%;">
+          <div class="dashboard-stat-card" data-ref="metric-mrr" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+              <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">MRR (Mensual)</span>
+              <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(59, 130, 246, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(59, 130, 246, 0.25);">
+                <svg class="component-icon" style="width: 18px; height: 18px; color: #3b82f6;" aria-hidden="true"><use href="/icons.svg#receipt_long"></use></svg>
+              </div>
+            </div>
+            <div>
+              <div class="stat-card-value" data-ref="val-mrr" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">$0.00 USD</div>
+              <span style="font-size: 12px; color: var(--text-secondary);">Ingresos recurrentes mensuales</span>
+            </div>
+          </div>
+
+          <div class="dashboard-stat-card" data-ref="metric-arr" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+              <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">ARR (Proyectado Anual)</span>
+              <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(16, 185, 129, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(16, 185, 129, 0.25);">
+                <svg class="component-icon" style="width: 18px; height: 18px; color: #10b981;" aria-hidden="true"><use href="/icons.svg#bar_chart"></use></svg>
+              </div>
+            </div>
+            <div>
+              <div class="stat-card-value" data-ref="val-arr" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">$0.00 USD</div>
+              <span style="font-size: 12px; color: var(--text-secondary);">Base anualizada</span>
+            </div>
+          </div>
+
+          <div class="dashboard-stat-card" data-ref="metric-subscribers" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+              <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Suscripciones Activas</span>
+              <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(234, 88, 12, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(234, 88, 12, 0.25);">
+                <svg class="component-icon" style="width: 18px; height: 18px; color: #ea580c;" aria-hidden="true"><use href="/icons.svg#group"></use></svg>
+              </div>
+            </div>
+            <div>
+              <div class="stat-card-value" data-ref="val-subscribers" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
+              <div data-ref="val-subscribers-detail" style="font-size: 12px; color: var(--text-secondary);">0 Pro · 0 Business</div>
+            </div>
+          </div>
+
+          <div class="dashboard-stat-card" data-ref="metric-refunds" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+              <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Reembolsos Emitidos</span>
+              <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(245, 158, 11, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(245, 158, 11, 0.25);">
+                <svg class="component-icon" style="width: 18px; height: 18px; color: #f59e0b;" aria-hidden="true"><use href="/icons.svg#restore"></use></svg>
+              </div>
+            </div>
+            <div>
+              <div class="stat-card-value" data-ref="val-refunds" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">$0.00 USD</div>
+              <div data-ref="val-refunds-count" style="font-size: 12px; color: var(--text-secondary);">0 reembolsos</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="support-search-container" data-ref="billing-search-container" style="padding: 0; border: 1px solid var(--border-color); border-radius: var(--border-radius-md); margin-bottom: 20px; background-color: var(--bg-card);">
+          <div class="support-search-container__input-wrap" data-ref="billing-input-wrap" style="padding: 10px 12px; border-bottom: 1px solid var(--border-color);">
+            <div class="component-search component-search--full" data-ref="search-box">
+              <div class="component-search__icon" data-ref="search-icon">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+              </div>
+              <div class="component-search__input-box" data-ref="search-input-box">
+                <input class="component-search__input" data-ref="input-search-transactions" type="text" maxlength="100" autocomplete="off" placeholder="Buscar por usuario, correo o ID de sesión..." />
+              </div>
+              <button type="button" class="component-button component-button--icon-only component-search__clear" data-ref="btn-clear-search" style="display: none;" aria-label="Limpiar búsqueda">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cancel"></use></svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="support-search-container__filters-wrap" data-ref="billing-filters-wrap" style="padding: 8px 12px;">
+            <div class="component-tags-carousel-wrapper view-tags-wrapper" data-ref="billing-tags-carousel-wrapper">
+              <button type="button" class="component-tag-nav-btn component-tag-nav-left is-disabled" data-ref="btn-tags-scroll-left" data-tooltip="Desplazar a la izquierda" aria-label="Desplazar a la izquierda">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+              </button>
+
+              <div class="component-tags-carousel" data-ref="billing-filter-tabs">
+                <button type="button" class="component-badge component-badge--interactive is-active" data-ref="filter-status-all" data-status="all">
+                  <span>Todas</span>
+                </button>
+                <button type="button" class="component-badge component-badge--interactive" data-ref="filter-status-succeeded" data-status="succeeded">
+                  <span>Completadas</span>
+                </button>
+                <button type="button" class="component-badge component-badge--interactive" data-ref="filter-status-refunded" data-status="refunded">
+                  <span>Reembolsadas</span>
+                </button>
+                <button type="button" class="component-badge component-badge--interactive" data-ref="filter-status-pending" data-status="pending">
+                  <span>Pendientes</span>
+                </button>
+                <button type="button" class="component-badge component-badge--interactive" data-ref="filter-status-failed" data-status="failed">
+                  <span>Fallidas</span>
+                </button>
+              </div>
+
+              <button type="button" class="component-tag-nav-btn component-tag-nav-right is-disabled" data-ref="btn-tags-scroll-right" data-tooltip="Desplazar a la derecha" aria-label="Desplazar a la derecha">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="component-table-wrapper" data-ref="transactions-table-wrapper">
+          <table class="component-table" data-ref="transactions-table">
+            <thead>
+              <tr>
+                <th>ID / Sesión</th>
+                <th>Usuario</th>
+                <th>Concepto</th>
+                <th>Importe</th>
+                <th>Estado</th>
+                <th>Fecha</th>
+                <th style="text-align: right;">Acciones</th>
+              </tr>
+            </thead>
+            <tbody data-ref="transactions-tbody">
+              <!-- Renderizado dinámico -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="view-empty-state" data-ref="billing-empty-state" style="display: none; padding: 48px 16px; text-align: center;">
+          <svg class="component-icon view-empty-state__icon" aria-hidden="true" style="width: 48px; height: 48px; margin-bottom: 12px; color: var(--text-secondary);"><use href="/icons.svg#receipt_long"></use></svg>
+          <h3 class="view-empty-state__title" style="margin-bottom: 6px;">No se encontraron transacciones</h3>
+          <p class="view-empty-state__description" style="color: var(--text-secondary); font-size: 14px;">No hay registros de compras que coincidan con los filtros aplicados.</p>
+        </div>
+
+        <div class="pagination-bar" data-ref="billing-pagination" style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px;">
+          <span class="pagination-info" data-ref="pagination-info" style="font-size: 13px; color: var(--text-secondary);">Mostrando transacciones</span>
+          <div class="pagination-actions" style="display: flex; gap: 8px;">
+            <button type="button" class="component-button component-button--h35 component-button--bordered" data-ref="btn-prev-page" disabled>
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+              <span>Anterior</span>
+            </button>
+            <button type="button" class="component-button component-button--h35 component-button--bordered" data-ref="btn-next-page" disabled>
+              <span>Siguiente</span>
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" data-ref="modal-refund-backdrop" style="display: none;">
+    <div class="modal-dialog modal-dialog--sm" data-ref="modal-refund">
+      <div class="modal-header">
+        <h3 class="modal-title">Emitir Reembolso</h3>
+        <button type="button" class="component-button component-button--icon-only modal-close-btn" data-ref="btn-close-refund-modal" aria-label="Cerrar modal">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cancel"></use></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 14px; margin-bottom: 16px; color: var(--text-secondary);">¿Estás seguro de que deseas reembolsar la transacción <strong data-ref="refund-modal-id">#0</strong>? Esta acción es irreversible.</p>
+        <label class="field" data-ref="field-refund-reason">
+          <span class="field__label">Motivo del Reembolso</span>
+          <input class="field__input" data-ref="input-refund-reason" type="text" placeholder="Ej. Solicitud de usuario / Cargo no reconocido" />
+        </label>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button type="button" class="component-button component-button--h40 component-button--bordered" data-ref="btn-cancel-refund">Cancelar</button>
+        <button type="button" class="component-button component-button--h40 component-button--danger" data-ref="btn-confirm-refund">Emitir Reembolso</button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,12 +1,13 @@
 import { navigate, render } from '../app-router.js';
-import { openCreateInternalTicketModal } from './internal-ticket-modal.component.js';
 import { currentUser, linkedAccounts, loadTemplate, logoutAllApi, logoutApi, switchAccountApi } from '../services/api.service.js';
 import { createIconSvg, renderIcons } from '../services/icon.service.js';
 import { showToast } from '../services/toast.service.js';
 import { closeAllDropdowns, escapeHtml, registerActiveDropdown, unregisterActiveDropdown } from '../utils/dom.util.js';
+import { ALL_NAV_MODULES, getAllowedNavModulesGrouped } from '../utils/permission.util.js';
+import { openCreateInternalTicketModal } from './internal-ticket-modal.component.js';
 
-
-let isDrawerOpen = false;
+const storedDrawer = localStorage.getItem('admin_drawer_open');
+let isDrawerOpen = storedDrawer !== null ? storedDrawer === 'true' : (typeof window !== 'undefined' && window.innerWidth > 768);
 let drawerRemovalTimer: ReturnType<typeof setTimeout> | null = null;
 
 function createDrawerElement(): HTMLElement {
@@ -49,21 +50,25 @@ function populateDrawerContent(drawer: HTMLElement): void {
     const isAccessibility = currentPath === '/settings/accessibility';
 
     drawerBody.innerHTML = `
-      <div class="drawer-section__header" style="padding: 8px 8px 4px 8px;">
-        <span class="drawer-section__title" style="font-size: 13px; font-weight: 600; color: var(--text-primary);">Configuración</span>
+      <div class="drawer-section" data-ref="drawer-section-settings">
+        <div class="drawer-section__header">
+          <span class="drawer-section__title">Configuración</span>
+        </div>
+        <div class="drawer-items-list" data-ref="drawer-list-settings">
+          <button type="button" class="menu-item${isYourAccount ? ' is-active' : ''}" data-ref="btn-drawer-your-account">
+            <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#person"></use></svg>
+            <span class="menu-item__text">Tu cuenta</span>
+          </button>
+          <button type="button" class="menu-item${isSecurity ? ' is-active' : ''}" data-ref="btn-drawer-security">
+            <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#lock"></use></svg>
+            <span class="menu-item__text">Seguridad</span>
+          </button>
+          <button type="button" class="menu-item${isAccessibility ? ' is-active' : ''}" data-ref="btn-drawer-accessibility">
+            <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#accessibility_new"></use></svg>
+            <span class="menu-item__text">Accesibilidad</span>
+          </button>
+        </div>
       </div>
-      <button type="button" class="menu-item${isYourAccount ? ' is-active' : ''}" data-ref="btn-drawer-your-account">
-        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#person"></use></svg>
-        <span class="menu-item__text">Tu cuenta</span>
-      </button>
-      <button type="button" class="menu-item${isSecurity ? ' is-active' : ''}" data-ref="btn-drawer-security">
-        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#lock"></use></svg>
-        <span class="menu-item__text">Seguridad</span>
-      </button>
-      <button type="button" class="menu-item${isAccessibility ? ' is-active' : ''}" data-ref="btn-drawer-accessibility">
-        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#accessibility_new"></use></svg>
-        <span class="menu-item__text">Accesibilidad</span>
-      </button>
     `;
 
     const btnYourAccount = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-your-account"]');
@@ -78,70 +83,43 @@ function populateDrawerContent(drawer: HTMLElement): void {
     return;
   }
 
-  const isDashboard = currentPath === '/' || currentPath === '' || currentPath === '/dashboard';
-  const isUsers = currentPath === '/users' || currentPath.startsWith('/users/');
-  const isAds = currentPath === '/ads' || currentPath.startsWith('/ads/');
-  const isSupport = currentPath === '/support' || currentPath.startsWith('/support/');
-  const isInternalTickets = currentPath === '/internal-tickets' || currentPath.startsWith('/internal-tickets/');
-  const isBackups = currentPath === '/backups' || currentPath.startsWith('/backups/');
-  const isLogs = currentPath === '/logs' || currentPath.startsWith('/logs/');
-  const isSystem = currentPath === '/system' || currentPath.startsWith('/system/') || currentPath === '/system-settings';
+  const groupedModules = getAllowedNavModulesGrouped(currentUser);
 
-  drawerBody.innerHTML = `
-    <div class="drawer-section__header" style="padding: 8px 8px 4px 8px;">
-      <span class="drawer-section__title" style="font-size: 13px; font-weight: 600; color: var(--text-primary);">Panel de Administración</span>
-    </div>
-    <button type="button" class="menu-item${isDashboard ? ' is-active' : ''}" data-ref="btn-drawer-dashboard">
-      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#dashboard"></use></svg>
-      <span class="menu-item__text">Dashboard</span>
-    </button>
-    <button type="button" class="menu-item${isUsers ? ' is-active' : ''}" data-ref="btn-drawer-users">
-      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#group"></use></svg>
-      <span class="menu-item__text">Gestionar Usuarios</span>
-    </button>
-    <button type="button" class="menu-item${isAds ? ' is-active' : ''}" data-ref="btn-drawer-ads">
-      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#campaign"></use></svg>
-      <span class="menu-item__text">Gestión de Anuncios</span>
-    </button>
-    <button type="button" class="menu-item${isSupport ? ' is-active' : ''}" data-ref="btn-drawer-support">
-      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#chat_bubble"></use></svg>
-      <span class="menu-item__text">Soporte Técnico</span>
-    </button>
-    <button type="button" class="menu-item${isInternalTickets ? ' is-active' : ''}" data-ref="btn-drawer-internal-tickets">
-      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#devices"></use></svg>
-      <span class="menu-item__text">Mesa de Ayuda</span>
-    </button>
-    <button type="button" class="menu-item${isBackups ? ' is-active' : ''}" data-ref="btn-drawer-backups">
-      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#cloud_upload"></use></svg>
-      <span class="menu-item__text">Copias de Seguridad</span>
-    </button>
-    <button type="button" class="menu-item${isLogs ? ' is-active' : ''}" data-ref="btn-drawer-logs">
-      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#article"></use></svg>
-      <span class="menu-item__text">Registros (Logs)</span>
-    </button>
-    <button type="button" class="menu-item${isSystem ? ' is-active' : ''}" data-ref="btn-drawer-system">
-      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#settings"></use></svg>
-      <span class="menu-item__text">Configuración del Sistema</span>
-    </button>
-  `;
+  let itemsHtml = '';
 
-  const btnDashboard = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-dashboard"]');
-  const btnUsers = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-users"]');
-  const btnAds = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-ads"]');
-  const btnSupport = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-support"]');
-  const btnInternalTickets = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-internal-tickets"]');
-  const btnBackups = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-backups"]');
-  const btnLogs = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-logs"]');
-  const btnSystem = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-system"]');
+  for (const group of groupedModules) {
+    itemsHtml += `
+      <div class="drawer-section" data-ref="drawer-section-${group.category.key}">
+        <div class="drawer-section__header">
+          <span class="drawer-section__title">${escapeHtml(group.category.label)}</span>
+        </div>
+        <div class="drawer-items-list" data-ref="drawer-list-${group.category.key}">
+    `;
 
-  bindNavLink(btnDashboard, '/dashboard');
-  bindNavLink(btnUsers, '/users');
-  bindNavLink(btnAds, '/ads');
-  bindNavLink(btnSupport, '/support');
-  bindNavLink(btnInternalTickets, '/internal-tickets');
-  bindNavLink(btnBackups, '/backups');
-  bindNavLink(btnLogs, '/logs');
-  bindNavLink(btnSystem, '/system');
+    for (const mod of group.modules) {
+      const isModActive = currentPath === mod.route || (mod.route !== '/' && mod.route !== '/dashboard' && currentPath.startsWith(mod.route)) || (mod.route === '/dashboard' && (currentPath === '/' || currentPath === '' || currentPath === '/dashboard'));
+      itemsHtml += `
+        <button type="button" class="menu-item${isModActive ? ' is-active' : ''}" data-ref="${mod.btnDrawerRef}">
+          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#${mod.icon}"></use></svg>
+          <span class="menu-item__text">${escapeHtml(mod.label)}</span>
+        </button>
+      `;
+    }
+
+    itemsHtml += `
+        </div>
+      </div>
+    `;
+  }
+
+  drawerBody.innerHTML = itemsHtml;
+
+  for (const group of groupedModules) {
+    for (const mod of group.modules) {
+      const btn = drawerBody.querySelector<HTMLElement>(`[data-ref="${mod.btnDrawerRef}"]`);
+      bindNavLink(btn, mod.route);
+    }
+  }
 
   renderIcons(drawerBody);
 }
@@ -156,6 +134,9 @@ export function toggleDrawer(forceState?: boolean): void {
   const nextOpen = forceState !== undefined ? forceState : !isDrawerOpen;
 
   isDrawerOpen = nextOpen;
+  try {
+    localStorage.setItem('admin_drawer_open', String(isDrawerOpen));
+  } catch {}
   btnToggle?.classList.toggle('is-active', isDrawerOpen);
 
   if (isDrawerOpen) {
@@ -173,6 +154,7 @@ export function toggleDrawer(forceState?: boolean): void {
       populateDrawerContent(drawer);
       void drawer.offsetWidth;
       drawer.classList.add('is-expanded');
+      updateSidebarActiveState(sidebar, window.location.pathname);
     }
   } else {
     const drawer = document.querySelector<HTMLElement>('[data-ref="layout-drawer"]');
@@ -187,57 +169,59 @@ export function toggleDrawer(forceState?: boolean): void {
         }
       }, 250);
     }
+    if (sidebar) {
+      updateSidebarActiveState(sidebar, window.location.pathname);
+    }
   }
 }
 
 export function updateSidebarActiveState(sidebar: HTMLElement, path: string): void {
-  const isDashboard = path === '/' || path === '' || path === '/dashboard';
-  const isUsers = path === '/users' || path.startsWith('/users/');
-  const isAds = path === '/ads' || path.startsWith('/ads/');
-  const isSupport = path === '/support' || path.startsWith('/support/');
-  const isInternalTickets = path === '/internal-tickets' || path.startsWith('/internal-tickets/');
-  const isBackups = path === '/backups' || path.startsWith('/backups/');
-  const isLogs = path === '/logs' || path.startsWith('/logs/');
-  const isSystem = path === '/system' || path.startsWith('/system/') || path === '/system-settings';
+  const isSettings = path.startsWith('/settings');
+  const btnRailSettings = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-settings"]');
+  if (btnRailSettings) {
+    btnRailSettings.classList.toggle('is-active', isSettings);
+  }
 
-  const itemDashboard = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-dashboard"]');
-  const btnDashboard = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-dashboard"]');
-  const itemUsers = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-users"]');
-  const btnUsers = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-users"]');
-  const itemAds = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-ads"]');
-  const btnAds = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-ads"]');
-  const itemSupport = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-support"]');
-  const btnSupport = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-support"]');
-  const itemInternalTickets = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-internal-tickets"]');
-  const btnInternalTickets = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-internal-tickets"]');
-  const itemBackups = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-backups"]');
-  const btnBackups = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-backups"]');
-  const itemLogs = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-logs"]');
-  const btnLogs = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-logs"]');
-  const itemSystem = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-system"]');
-  const btnSystem = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-system"]');
+  const activeModule = ALL_NAV_MODULES.find((mod) =>
+    path === mod.route || (mod.route !== '/' && mod.route !== '/dashboard' && path.startsWith(mod.route)) || (mod.route === '/dashboard' && (path === '/' || path === '' || path === '/dashboard'))
+  );
 
-  if (itemDashboard) itemDashboard.classList.toggle('is-active', isDashboard);
-  if (btnDashboard) btnDashboard.classList.toggle('is-active', isDashboard);
-  if (itemUsers) itemUsers.classList.toggle('is-active', isUsers);
-  if (btnUsers) btnUsers.classList.toggle('is-active', isUsers);
-  if (itemAds) itemAds.classList.toggle('is-active', isAds);
-  if (btnAds) btnAds.classList.toggle('is-active', isAds);
-  if (itemSupport) itemSupport.classList.toggle('is-active', isSupport);
-  if (btnSupport) btnSupport.classList.toggle('is-active', isSupport);
-  if (itemInternalTickets) itemInternalTickets.classList.toggle('is-active', isInternalTickets);
-  if (btnInternalTickets) btnInternalTickets.classList.toggle('is-active', isInternalTickets);
-  if (itemBackups) itemBackups.classList.toggle('is-active', isBackups);
-  if (btnBackups) btnBackups.classList.toggle('is-active', isBackups);
-  if (itemLogs) itemLogs.classList.toggle('is-active', isLogs);
-  if (btnLogs) btnLogs.classList.toggle('is-active', isLogs);
-  if (itemSystem) itemSystem.classList.toggle('is-active', isSystem);
-  if (btnSystem) btnSystem.classList.toggle('is-active', isSystem);
+  const railCenter = sidebar.querySelector<HTMLElement>('[data-ref="rail-center"]');
+  if (railCenter) {
+    if (!isDrawerOpen && activeModule && !isSettings) {
+      railCenter.innerHTML = `
+        <button type="button" class="component-button component-button--h40 component-button--icon-only rail-btn is-active" data-ref="btn-rail-active-module" data-tooltip="${escapeHtml(activeModule.label)}" aria-label="${escapeHtml(activeModule.label)}">
+          <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#${activeModule.icon}"></use></svg>
+        </button>
+      `;
+      const activeBtn = railCenter.querySelector<HTMLElement>('[data-ref="btn-rail-active-module"]');
+      activeBtn?.addEventListener('click', (e) => {
+        e.preventDefault();
+        toggleDrawer(true);
+      });
+      renderIcons(railCenter);
+    } else {
+      railCenter.innerHTML = '';
+    }
+  }
+
+  const drawer = sidebar.querySelector<HTMLElement>('[data-ref="layout-drawer"]') || document.querySelector<HTMLElement>('[data-ref="layout-drawer"]');
+  if (drawer) {
+    for (const mod of ALL_NAV_MODULES) {
+      const isModActive = path === mod.route || (mod.route !== '/' && mod.route !== '/dashboard' && path.startsWith(mod.route)) || (mod.route === '/dashboard' && (path === '/' || path === '' || path === '/dashboard'));
+      const drawerBtn = drawer.querySelector<HTMLElement>(`[data-ref="${mod.btnDrawerRef}"]`);
+      if (drawerBtn) drawerBtn.classList.toggle('is-active', isModActive);
+    }
+  }
 }
 
 document.addEventListener('keydown', (e: KeyboardEvent) => {
   if (e.key === 'Escape') {
     if (window.innerWidth <= 768 && isDrawerOpen) toggleDrawer(false);
+  }
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'b' || e.key === 'B')) {
+    e.preventDefault();
+    toggleDrawer();
   }
 });
 
@@ -263,6 +247,16 @@ export async function createSidebar(): Promise<HTMLElement> {
     e.preventDefault();
     toggleDrawer();
   });
+
+  const btnRailSettings = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-settings"]');
+  btnRailSettings?.addEventListener('click', (e: Event) => {
+    e.preventDefault();
+    if (window.innerWidth <= 768) {
+      toggleDrawer(false);
+    }
+    navigate('/settings/your-account');
+  });
+
   if (isDrawerOpen) {
     btnToggleDrawer?.classList.add('is-active');
     let drawer = sidebar.querySelector<HTMLElement>('[data-ref="layout-drawer"]');
@@ -274,33 +268,6 @@ export async function createSidebar(): Promise<HTMLElement> {
     populateDrawerContent(drawer);
     drawer.classList.add('is-expanded');
   }
-
-  const bindRailNav = (btnRef: string, itemRef: string, route: string) => {
-    const btn = sidebar.querySelector<HTMLElement>(`[data-ref="${btnRef}"]`);
-    const item = sidebar.querySelector<HTMLElement>(`[data-ref="${itemRef}"]`);
-    const handler = (e: Event) => {
-      e.preventDefault();
-      if (window.innerWidth <= 768) {
-        toggleDrawer(false);
-      }
-      navigate(route);
-    };
-    btn?.addEventListener('click', handler);
-    item?.addEventListener('click', (e) => {
-      if (e.target !== btn && !btn?.contains(e.target as Node)) {
-        handler(e);
-      }
-    });
-  };
-
-  bindRailNav('btn-rail-dashboard', 'rail-item-dashboard', '/dashboard');
-  bindRailNav('btn-rail-users', 'rail-item-users', '/users');
-  bindRailNav('btn-rail-ads', 'rail-item-ads', '/ads');
-  bindRailNav('btn-rail-support', 'rail-item-support', '/support');
-  bindRailNav('btn-rail-internal-tickets', 'rail-item-internal-tickets', '/internal-tickets');
-  bindRailNav('btn-rail-backups', 'rail-item-backups', '/backups');
-  bindRailNav('btn-rail-logs', 'rail-item-logs', '/logs');
-  bindRailNav('btn-rail-system', 'rail-item-system', '/system');
 
   const avatarContainer = sidebar.querySelector<HTMLElement>('[data-ref="avatar-container"]');
   const btnAvatar = sidebar.querySelector<HTMLElement>('[data-ref="btn-avatar"]');

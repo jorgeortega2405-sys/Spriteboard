@@ -267,6 +267,154 @@ export const SKELETON_TEMPLATES: Record<string, string> = {
       </div>
     </div>
   `,
+
+  'viewer-layout': `
+    <div class="layout-root" data-ref="skeleton-viewer-root" style="width: 100%; height: 100%; display: flex; flex-direction: row; overflow: hidden;">
+      ${SKELETON_RAIL_HTML}
+      <div class="layout-content skeleton-container" data-ref="skeleton-viewer-view">
+        <div class="view-wrapper component-wrapper component-wrapper--full" data-ref="skeleton-viewer-wrapper">
+          <div class="view-header" data-ref="skeleton-floating-top">
+            <div class="skeleton skeleton--title" style="width: 200px; height: 24px; margin: 0;"></div>
+            <div style="display: flex; gap: 8px;">
+              <div class="skeleton" style="width: 40px; height: 40px; border-radius: 12px;"></div>
+              <div class="skeleton" style="width: 40px; height: 40px; border-radius: 12px;"></div>
+              <div class="skeleton" style="width: 40px; height: 40px; border-radius: 12px;"></div>
+            </div>
+          </div>
+          <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="skeleton-viewer-scrollable">
+            <div style="padding: 12px 24px; display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color);">
+              <div style="display: flex; gap: 16px;">
+                <div class="skeleton" style="width: 90px; height: 16px; border-radius: 4px;"></div>
+                <div class="skeleton" style="width: 70px; height: 16px; border-radius: 4px;"></div>
+                <div class="skeleton" style="width: 70px; height: 16px; border-radius: 4px;"></div>
+              </div>
+              <div style="display: flex; gap: 16px;">
+                <div class="skeleton" style="width: 80px; height: 16px; border-radius: 4px;"></div>
+                <div class="skeleton" style="width: 120px; height: 16px; border-radius: 4px;"></div>
+              </div>
+            </div>
+            <div style="padding: 20px 24px; display: flex; flex-direction: column; gap: 14px;">
+              <div class="skeleton" style="height: 16px; width: 75%; border-radius: 4px;"></div>
+              <div class="skeleton" style="height: 16px; width: 90%; border-radius: 4px;"></div>
+              <div class="skeleton" style="height: 16px; width: 60%; border-radius: 4px;"></div>
+              <div class="skeleton" style="height: 16px; width: 85%; border-radius: 4px;"></div>
+              <div class="skeleton" style="height: 16px; width: 50%; border-radius: 4px;"></div>
+              <div class="skeleton" style="height: 16px; width: 95%; border-radius: 4px;"></div>
+              <div class="skeleton" style="height: 16px; width: 70%; border-radius: 4px;"></div>
+              <div class="skeleton" style="height: 16px; width: 80%; border-radius: 4px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `,
+
+  'viewer-layout-bottom': `
+    <div class="layout-content skeleton-container" data-ref="skeleton-viewer-view">
+      <div class="view-wrapper component-wrapper component-wrapper--full" data-ref="skeleton-viewer-wrapper">
+        <div class="view-header" data-ref="skeleton-floating-top">
+          <div class="skeleton skeleton--title" style="width: 200px; height: 24px; margin: 0;"></div>
+          <div style="display: flex; gap: 8px;">
+            <div class="skeleton" style="width: 40px; height: 40px; border-radius: 12px;"></div>
+            <div class="skeleton" style="width: 40px; height: 40px; border-radius: 12px;"></div>
+            <div class="skeleton" style="width: 40px; height: 40px; border-radius: 12px;"></div>
+          </div>
+        </div>
+        <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="skeleton-viewer-scrollable">
+          <div style="padding: 12px 24px; display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color);">
+            <div style="display: flex; gap: 16px;">
+              <div class="skeleton" style="width: 90px; height: 16px; border-radius: 4px;"></div>
+              <div class="skeleton" style="width: 70px; height: 16px; border-radius: 4px;"></div>
+              <div class="skeleton" style="width: 70px; height: 16px; border-radius: 4px;"></div>
+            </div>
+            <div style="display: flex; gap: 16px;">
+              <div class="skeleton" style="width: 80px; height: 16px; border-radius: 4px;"></div>
+              <div class="skeleton" style="width: 120px; height: 16px; border-radius: 4px;"></div>
+            </div>
+          </div>
+          <div style="padding: 20px 24px; display: flex; flex-direction: column; gap: 14px;">
+            <div class="skeleton" style="height: 16px; width: 75%; border-radius: 4px;"></div>
+            <div class="skeleton" style="height: 16px; width: 90%; border-radius: 4px;"></div>
+            <div class="skeleton" style="height: 16px; width: 60%; border-radius: 4px;"></div>
+            <div class="skeleton" style="height: 16px; width: 85%; border-radius: 4px;"></div>
+            <div class="skeleton" style="height: 16px; width: 50%; border-radius: 4px;"></div>
+            <div class="skeleton" style="height: 16px; width: 95%; border-radius: 4px;"></div>
+            <div class="skeleton" style="height: 16px; width: 70%; border-radius: 4px;"></div>
+            <div class="skeleton" style="height: 16px; width: 80%; border-radius: 4px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `,
+
+  'split-layout': `
+    <div class="layout-root" data-ref="skeleton-split-root" style="width: 100%; height: 100%; display: flex; flex-direction: row; overflow: hidden;">
+      ${SKELETON_RAIL_HTML}
+      <div class="layout-content skeleton-container" data-ref="skeleton-split-view">
+        <div class="view-wrapper component-wrapper component-wrapper--full" data-ref="skeleton-split-wrapper">
+          <div class="view-header" data-ref="skeleton-floating-top">
+            <div class="skeleton skeleton--title" style="width: 200px; height: 24px; margin: 0;"></div>
+            <div style="display: flex; gap: 8px;">
+              <div class="skeleton" style="width: 40px; height: 40px; border-radius: 12px;"></div>
+            </div>
+          </div>
+          <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="skeleton-split-scrollable">
+            <div style="display: flex; height: 100%;">
+              <div style="width: 340px; border-right: 1px solid var(--border-color); padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+                <div class="skeleton" style="height: 40px; border-radius: 10px;"></div>
+                <div style="display: flex; gap: 6px;">
+                  <div class="skeleton" style="height: 24px; width: 60px; border-radius: 12px;"></div>
+                  <div class="skeleton" style="height: 24px; width: 80px; border-radius: 12px;"></div>
+                  <div class="skeleton" style="height: 24px; width: 70px; border-radius: 12px;"></div>
+                </div>
+                <div class="skeleton" style="height: 70px; border-radius: 12px;"></div>
+                <div class="skeleton" style="height: 70px; border-radius: 12px;"></div>
+                <div class="skeleton" style="height: 70px; border-radius: 12px;"></div>
+              </div>
+              <div style="flex: 1; padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+                <div class="skeleton" style="height: 48px; border-radius: 12px;"></div>
+                <div class="skeleton" style="height: 120px; border-radius: 12px;"></div>
+                <div class="skeleton" style="height: 80px; border-radius: 12px;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `,
+
+  'split-layout-bottom': `
+    <div class="layout-content skeleton-container" data-ref="skeleton-split-view">
+      <div class="view-wrapper component-wrapper component-wrapper--full" data-ref="skeleton-split-wrapper">
+        <div class="view-header" data-ref="skeleton-floating-top">
+          <div class="skeleton skeleton--title" style="width: 200px; height: 24px; margin: 0;"></div>
+          <div style="display: flex; gap: 8px;">
+            <div class="skeleton" style="width: 40px; height: 40px; border-radius: 12px;"></div>
+          </div>
+        </div>
+        <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="skeleton-split-scrollable">
+          <div style="display: flex; height: 100%;">
+            <div style="width: 340px; border-right: 1px solid var(--border-color); padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+              <div class="skeleton" style="height: 40px; border-radius: 10px;"></div>
+              <div style="display: flex; gap: 6px;">
+                <div class="skeleton" style="height: 24px; width: 60px; border-radius: 12px;"></div>
+                <div class="skeleton" style="height: 24px; width: 80px; border-radius: 12px;"></div>
+                <div class="skeleton" style="height: 24px; width: 70px; border-radius: 12px;"></div>
+              </div>
+              <div class="skeleton" style="height: 70px; border-radius: 12px;"></div>
+              <div class="skeleton" style="height: 70px; border-radius: 12px;"></div>
+              <div class="skeleton" style="height: 70px; border-radius: 12px;"></div>
+            </div>
+            <div style="flex: 1; padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+              <div class="skeleton" style="height: 48px; border-radius: 12px;"></div>
+              <div class="skeleton" style="height: 120px; border-radius: 12px;"></div>
+              <div class="skeleton" style="height: 80px; border-radius: 12px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `,
 };
 
 export function getSkeletonTemplate(name: string): string {

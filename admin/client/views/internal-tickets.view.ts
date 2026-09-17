@@ -1,19 +1,19 @@
-import { createSidebar } from '../components/layout.component.js';
 import { openCreateInternalTicketModal } from '../components/internal-ticket-modal.component.js';
+import { createSidebar } from '../components/layout.component.js';
 import { getApi, loadTemplate, postApi } from '../services/api.service.js';
-import { registerWebSocketHandler } from '../services/websocket.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { showToast } from '../services/toast.service.js';
+import { registerWebSocketHandler } from '../services/websocket.service.js';
 import { ViewController } from '../types/common.types.js';
-import { InternalTicketCategory, InternalTicketItem, InternalTicketMessageItem, InternalTicketPriority, InternalTicketStatsData, InternalTicketStatus } from '../types/internal-ticket.types.js';
-import { debounce, escapeHtml, setupDropdown, withButtonLoading } from '../utils/dom.util.js';
+import { InternalTicketItem, InternalTicketMessageItem, InternalTicketPriority, InternalTicketStatsData, InternalTicketStatus } from '../types/internal-ticket.types.js';
+import { CarouselController, debounce, escapeHtml, getEmptyGraphicSvg, initCarouselScroll, renderEmptyState, setupDropdown, withButtonLoading } from '../utils/dom.util.js';
 
 class InternalTicketsController implements ViewController {
   private abortController: AbortController = new AbortController();
   private activeTicket: InternalTicketItem | null = null;
   private activeTicketId: number | null = null;
+  private carouselController: CarouselController | null = null;
   private container: HTMLElement;
-  private currentCategory: string = 'all';
   private currentScope: string = 'open_queue';
   private currentSearch: string = '';
   private dropdownInstance: { close: () => void; destroy: () => void; open: () => void; toggle: () => void; update: () => void } | null = null;
@@ -30,6 +30,18 @@ class InternalTicketsController implements ViewController {
   }
 
   public init(): void {
+    const emptyGraphic = this.container.querySelector<HTMLElement>('[data-ref="internal-empty-graphic"]');
+    if (emptyGraphic) {
+      emptyGraphic.innerHTML = getEmptyGraphicSvg('messages');
+    }
+
+    const carouselWrapper = this.container.querySelector<HTMLElement>('[data-ref="internal-tags-carousel-wrapper"]');
+    if (carouselWrapper) {
+      this.carouselController = initCarouselScroll(carouselWrapper, {
+        carouselSelector: '[data-ref="internal-scope-tabs"]',
+      });
+    }
+
     this.bindEvents();
     this.setupWebSocketListeners();
     void this.loadStats();
@@ -44,6 +56,10 @@ class InternalTicketsController implements ViewController {
       } catch {}
     });
     this.wsUnsubscribers = [];
+    if (this.carouselController) {
+      this.carouselController.destroy();
+      this.carouselController = null;
+    }
     if (this.dropdownInstance) {
       this.dropdownInstance.destroy();
       this.dropdownInstance = null;
@@ -52,16 +68,6 @@ class InternalTicketsController implements ViewController {
 
   private bindEvents(): void {
     const signal = this.abortController.signal;
-
-    const btnRefresh = this.container.querySelector<HTMLElement>('[data-ref="btn-refresh-tickets"]');
-    btnRefresh?.addEventListener(
-      'click',
-      () => {
-        void this.loadStats();
-        void this.loadTickets();
-      },
-      { signal }
-    );
 
     const btnNewTicket = this.container.querySelector<HTMLElement>('[data-ref="btn-new-ticket"]');
     btnNewTicket?.addEventListener(
@@ -127,20 +133,6 @@ class InternalTicketsController implements ViewController {
           scopeButtons.forEach((b) => b.classList.remove('is-active'));
           btn.classList.add('is-active');
           this.currentScope = btn.getAttribute('data-scope') || 'open_queue';
-          void this.loadTickets();
-        },
-        { signal }
-      );
-    });
-
-    const categoryButtons = this.container.querySelectorAll<HTMLElement>('[data-category]');
-    categoryButtons.forEach((btn) => {
-      btn.addEventListener(
-        'click',
-        () => {
-          categoryButtons.forEach((b) => b.classList.remove('is-active'));
-          btn.classList.add('is-active');
-          this.currentCategory = btn.getAttribute('data-category') || 'all';
           void this.loadTickets();
         },
         { signal }
@@ -266,9 +258,9 @@ class InternalTicketsController implements ViewController {
 
       if (ticketId === this.activeTicketId) {
         this.activeTicket = updatedTicket;
-        const statusBadgeBox = this.container.querySelector<HTMLElement>('[data-ref="internal-status-badge"]');
-        if (statusBadgeBox) {
-          statusBadgeBox.innerHTML = this.getStatusBadge(updatedTicket.status);
+        const statusTextEl = this.container.querySelector<HTMLElement>('[data-ref="internal-status-text"]');
+        if (statusTextEl) {
+          statusTextEl.textContent = this.getStatusLabel(updatedTicket.status);
         }
       }
 
@@ -299,7 +291,7 @@ class InternalTicketsController implements ViewController {
     row.innerHTML = `
       <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
         <div style="display: flex; align-items: center; gap: 8px;">
-          <img class="avatar-img" src="${avatar}" alt="${escapeHtml(m.user_username)}" style="width: 24px; height: 24px; border-radius: 50%;" />
+          <img class="avatar-img image-lazy-fade image-loaded" src="${escapeHtml(avatar)}" alt="${escapeHtml(m.user_username)}" style="width: 24px; height: 24px; border-radius: 50%;" />
           <span style="font-size: 12px; font-weight: 600; color: var(--text-primary);">@${escapeHtml(m.user_username)}</span>
           ${isInternal ? '<span class="component-badge component-badge--sm" style="background-color: #fef3c7; color: #92400e; font-size: 10px; padding: 1px 6px;">🔒 Nota Técnica</span>' : ''}
           ${isSystem ? '<span class="component-badge component-badge--sm" style="font-size: 10px; padding: 1px 6px;">⚙️ Sistema</span>' : ''}
@@ -325,11 +317,9 @@ class InternalTicketsController implements ViewController {
       if (res.ok) {
         const data = await res.json();
         const stats = data.stats as InternalTicketStatsData;
-        const counterText = this.container.querySelector<HTMLElement>('[data-ref="internal-counter-text"]');
         const countScopeOpen = this.container.querySelector<HTMLElement>('[data-ref="count-scope-open"]');
         const pendingCount = (stats.open || 0) + (stats.inProgress || 0) + (stats.waitingThirdParty || 0);
 
-        if (counterText) counterText.textContent = `${pendingCount} pendientes`;
         if (countScopeOpen) countScopeOpen.textContent = `${pendingCount}`;
       }
     } catch {}
@@ -338,20 +328,23 @@ class InternalTicketsController implements ViewController {
   private async loadTickets(): Promise<void> {
     const listContainer = this.container.querySelector<HTMLElement>('[data-ref="internal-ticket-items"]');
     if (listContainer) {
-      listContainer.innerHTML = `
-        <div class="support-loading-indicator" data-ref="internal-loading-indicator" style="padding: 24px; text-align: center; color: var(--text-secondary);">
-          <svg class="component-icon" aria-hidden="true" style="animation: spin 1s linear infinite;"><use href="/icons.svg#autorenew"></use></svg>
-          <span style="margin-left: 8px; font-size: 13px;">Cargando tickets internos...</span>
+      listContainer.innerHTML = Array(5).fill(0).map(() => `
+        <div style="padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; border-bottom: 1px solid var(--border-color);">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="skeleton" style="width: 80px; height: 14px; border-radius: 4px;"></div>
+            <div class="skeleton" style="width: 50px; height: 14px; border-radius: 4px;"></div>
+          </div>
+          <div class="skeleton" style="width: 90%; height: 16px; border-radius: 4px;"></div>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="skeleton" style="width: 100px; height: 12px; border-radius: 4px;"></div>
+            <div class="skeleton" style="width: 60px; height: 12px; border-radius: 4px;"></div>
+          </div>
         </div>
-      `;
-      renderIcons(listContainer);
+      `).join('');
     }
 
     try {
       let url = `/api/internal-tickets/tickets?filterScope=${encodeURIComponent(this.currentScope)}&limit=50`;
-      if (this.currentCategory && this.currentCategory !== 'all') {
-        url += `&category=${encodeURIComponent(this.currentCategory)}`;
-      }
       if (this.currentSearch) {
         url += `&search=${encodeURIComponent(this.currentSearch)}`;
       }
@@ -375,20 +368,26 @@ class InternalTicketsController implements ViewController {
         }
       } else {
         if (listContainer) {
-          listContainer.innerHTML = `
-            <div class="support-empty-list" style="padding: 32px 16px; text-align: center; color: var(--text-secondary);">
-              <span>No se pudieron cargar los tickets. Por favor reintenta.</span>
-            </div>
-          `;
+          listContainer.innerHTML = '';
+          renderEmptyState({
+            container: listContainer,
+            dataRef: 'internal-error-list',
+            desc: 'No se pudieron cargar los tickets. Por favor reintenta.',
+            graphicType: 'error',
+            title: 'Error al cargar',
+          });
         }
       }
     } catch {
       if (listContainer) {
-        listContainer.innerHTML = `
-          <div class="support-empty-list" style="padding: 32px 16px; text-align: center; color: var(--text-secondary);">
-            <span>Error de conexión al cargar tickets.</span>
-          </div>
-        `;
+        listContainer.innerHTML = '';
+        renderEmptyState({
+          container: listContainer,
+          dataRef: 'internal-error-list',
+          desc: 'Error de conexión al cargar tickets.',
+          graphicType: 'error',
+          title: 'Error de conexión',
+        });
       }
     }
   }
@@ -398,13 +397,14 @@ class InternalTicketsController implements ViewController {
     if (!listContainer) return;
 
     if (this.tickets.length === 0) {
-      listContainer.innerHTML = `
-        <div class="support-empty-list" style="padding: 32px 16px; text-align: center; color: var(--text-secondary); display: flex; flex-direction: column; align-items: center; gap: 8px;">
-          <svg class="component-icon" aria-hidden="true" style="width: 32px; height: 32px; color: var(--text-tertiary);"><use href="/icons.svg#devices"></use></svg>
-          <span style="font-size: 13px;">No hay incidencias reportadas en este filtro.</span>
-        </div>
-      `;
-      renderIcons(listContainer);
+      listContainer.innerHTML = '';
+      renderEmptyState({
+        container: listContainer,
+        dataRef: 'internal-empty-list',
+        desc: this.currentSearch ? 'No hay incidencias que coincidan con la búsqueda.' : 'No hay incidencias reportadas en este filtro.',
+        graphicType: this.currentSearch ? 'search' : 'messages',
+        title: this.currentSearch ? 'Sin resultados' : 'Sin incidencias reportadas',
+      });
       return;
     }
 
@@ -420,33 +420,33 @@ class InternalTicketsController implements ViewController {
       card.style.flexDirection = 'column';
       card.style.alignItems = 'flex-start';
       card.style.padding = '12px 14px';
-      card.style.borderBottom = '1px solid var(--border-color)';
       card.style.textAlign = 'left';
       card.style.gap = '6px';
-      card.style.backgroundColor = isSelected ? 'var(--bg-active, rgba(99, 102, 241, 0.08))' : 'transparent';
 
       const priorityBadge = this.getPriorityBadge(t.priority);
       const statusBadge = this.getStatusBadge(t.status);
-      const categoryIcon = this.getCategoryEmoji(t.category);
       const locationText = t.location ? escapeHtml(t.location) : 'Ubicación no especificada';
+      const creatorAvatar = t.creator_avatar || `/api/avatar?name=${encodeURIComponent(t.creator_username)}`;
 
       card.innerHTML = `
-        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 6px;">
-          <div style="display: flex; align-items: center; gap: 6px;">
-            <span style="font-family: monospace; font-weight: 600; font-size: 11px; color: var(--text-primary);">${escapeHtml(t.ticket_number)}</span>
-            <span style="font-size: 11px; color: var(--text-secondary);">${categoryIcon}</span>
+        <div class="support-ticket-card__header" style="display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+            <div class="user-cell__avatar" style="width: 24px; height: 24px; min-width: 24px; border-radius: 50%;">
+              <img class="image-lazy-fade image-loaded" src="${escapeHtml(creatorAvatar)}" alt="${escapeHtml(t.creator_username)}" />
+            </div>
+            <span style="font-size: 13px; font-weight: 600; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(t.creator_username)}</span>
           </div>
-          <div style="display: flex; align-items: center; gap: 4px;">
+          <span style="font-size: 11px; color: var(--text-tertiary); font-family: monospace; font-weight: 500;">${escapeHtml(t.ticket_number)}</span>
+        </div>
+        <div class="support-ticket-card__subject" style="font-size: 13px; font-weight: 500; color: var(--text-primary); margin-top: 6px; line-height: 1.35; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%;">
+          ${escapeHtml(t.title)}
+        </div>
+        <div class="support-ticket-card__footer" style="display: flex; align-items: center; justify-content: space-between; width: 100%; margin-top: 8px; gap: 6px;">
+          <span style="font-size: 11px; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60%;">📍 ${locationText}</span>
+          <div style="display: flex; align-items: center; gap: 4px; flex-shrink: 0;">
             ${priorityBadge}
             ${statusBadge}
           </div>
-        </div>
-        <div style="font-size: 13px; font-weight: 600; color: var(--text-primary); width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-          ${escapeHtml(t.title)}
-        </div>
-        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; font-size: 11px; color: var(--text-secondary); margin-top: 2px;">
-          <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60%;">📍 ${locationText}</span>
-          <span>@${escapeHtml(t.creator_username)}</span>
         </div>
       `;
 
@@ -463,7 +463,6 @@ class InternalTicketsController implements ViewController {
     const cards = this.container.querySelectorAll<HTMLElement>('.support-ticket-card');
     cards.forEach((c) => {
       const match = c.getAttribute('data-ref') === `internal-card-${ticketId}`;
-      c.style.backgroundColor = match ? 'var(--bg-active, rgba(99, 102, 241, 0.08))' : 'transparent';
       c.classList.toggle('is-active', match);
     });
 
@@ -493,29 +492,32 @@ class InternalTicketsController implements ViewController {
     const creatorUsername = this.container.querySelector<HTMLElement>('[data-ref="internal-creator-username"]');
     const ticketNumberDisplay = this.container.querySelector<HTMLElement>('[data-ref="internal-ticket-number"]');
     const locationDisplay = this.container.querySelector<HTMLElement>('[data-ref="internal-location-display"]');
-    const categoryBadge = this.container.querySelector<HTMLElement>('[data-ref="internal-category-badge"]');
-    const priorityBadgeBox = this.container.querySelector<HTMLElement>('[data-ref="internal-priority-badge"]');
-    const statusBadgeBox = this.container.querySelector<HTMLElement>('[data-ref="internal-status-badge"]');
     const titleText = this.container.querySelector<HTMLElement>('[data-ref="internal-title-text"]');
     const assignedText = this.container.querySelector<HTMLElement>('[data-ref="internal-assigned-text"]');
     const createdTimeText = this.container.querySelector<HTMLElement>('[data-ref="internal-created-time"]');
 
     if (creatorAvatar) {
+      creatorAvatar.classList.add('image-lazy-fade');
+      creatorAvatar.classList.remove('image-loaded');
       creatorAvatar.src = ticket.creator_avatar || `/api/avatar?name=${encodeURIComponent(ticket.creator_username)}`;
       creatorAvatar.alt = escapeHtml(ticket.creator_username);
+      creatorAvatar.onload = () => creatorAvatar.classList.add('image-loaded');
+      if (creatorAvatar.complete && creatorAvatar.naturalWidth > 0) {
+        creatorAvatar.classList.add('image-loaded');
+      }
     }
     if (creatorUsername) creatorUsername.textContent = `@${ticket.creator_username}`;
     if (ticketNumberDisplay) ticketNumberDisplay.textContent = ticket.ticket_number;
     if (locationDisplay) locationDisplay.textContent = ticket.location ? `📍 ${ticket.location}` : '📍 Sin ubicación fija';
-    if (categoryBadge) {
-      categoryBadge.textContent = `${this.getCategoryEmoji(ticket.category)} ${this.getCategoryLabel(ticket.category)}`;
-    }
 
-    if (priorityBadgeBox) {
-      priorityBadgeBox.innerHTML = this.getPriorityBadge(ticket.priority);
+    const priorityTextEl = this.container.querySelector<HTMLElement>('[data-ref="internal-priority-text"]');
+    const statusTextEl = this.container.querySelector<HTMLElement>('[data-ref="internal-status-text"]');
+
+    if (priorityTextEl) {
+      priorityTextEl.textContent = this.getPriorityLabel(ticket.priority);
     }
-    if (statusBadgeBox) {
-      statusBadgeBox.innerHTML = this.getStatusBadge(ticket.status);
+    if (statusTextEl) {
+      statusTextEl.textContent = this.getStatusLabel(ticket.status);
     }
 
     if (titleText) titleText.textContent = ticket.title;
@@ -647,7 +649,6 @@ class InternalTicketsController implements ViewController {
 
   private async handleCreateTicket(): Promise<void> {
     const inputTitle = this.container.querySelector<HTMLInputElement>('[data-ref="input-new-title"]');
-    const selectCategory = this.container.querySelector<HTMLSelectElement>('[data-ref="select-new-category"]');
     const selectPriority = this.container.querySelector<HTMLSelectElement>('[data-ref="select-new-priority"]');
     const inputLocation = this.container.querySelector<HTMLInputElement>('[data-ref="input-new-location"]');
     const inputDescription = this.container.querySelector<HTMLTextAreaElement>('[data-ref="input-new-description"]');
@@ -655,7 +656,6 @@ class InternalTicketsController implements ViewController {
     const errorBanner = this.container.querySelector<HTMLElement>('[data-ref="new-ticket-error"]');
 
     const title = inputTitle?.value.trim() || '';
-    const category = (selectCategory?.value || 'hardware') as InternalTicketCategory;
     const priority = (selectPriority?.value || 'medium') as InternalTicketPriority;
     const location = inputLocation?.value.trim() || '';
     const description = inputDescription?.value.trim() || '';
@@ -681,7 +681,7 @@ class InternalTicketsController implements ViewController {
     await withButtonLoading(btnSubmit, async () => {
       try {
         const res = await postApi('/api/internal-tickets/tickets', {
-          category,
+          category: 'other',
           description,
           location,
           priority,
@@ -771,37 +771,37 @@ class InternalTicketsController implements ViewController {
     });
   }
 
-  private getCategoryEmoji(cat: InternalTicketCategory): string {
-    switch (cat) {
-      case 'hardware':
-        return '🖨️';
-      case 'network':
-        return '🌐';
-      case 'facilities':
-        return '🏢';
-      case 'software':
-        return '💻';
-      case 'access':
-        return '🔑';
+
+
+  private getPriorityLabel(priority: InternalTicketPriority): string {
+    switch (priority) {
+      case 'urgent':
+        return 'Prioridad Urgente';
+      case 'high':
+        return 'Prioridad Alta';
+      case 'medium':
+        return 'Prioridad Media';
+      case 'low':
+        return 'Prioridad Baja';
       default:
-        return '📦';
+        return '';
     }
   }
 
-  private getCategoryLabel(cat: InternalTicketCategory): string {
-    switch (cat) {
-      case 'hardware':
-        return 'Hardware';
-      case 'network':
-        return 'Red/Wi-Fi';
-      case 'facilities':
-        return 'Instalaciones';
-      case 'software':
-        return 'Software';
-      case 'access':
-        return 'Accesos';
+  private getStatusLabel(status: InternalTicketStatus): string {
+    switch (status) {
+      case 'open':
+        return 'Abierto';
+      case 'in_progress':
+        return 'En Proceso';
+      case 'waiting_third_party':
+        return 'Esperando Repuesto';
+      case 'resolved':
+        return 'Resuelto';
+      case 'closed':
+        return 'Cerrado';
       default:
-        return 'General';
+        return '';
     }
   }
 

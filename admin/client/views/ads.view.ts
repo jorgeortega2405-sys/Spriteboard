@@ -5,7 +5,7 @@ import { renderIcons } from '../services/icon.service.js';
 import { showToast } from '../services/toast.service.js';
 import { AdRowData, AdvertiserRowData } from '../types/ad.types.js';
 import { ViewController } from '../types/common.types.js';
-import { escapeHtml, setupDropdown } from '../utils/dom.util.js';
+import { escapeHtml, removeEmptyState, renderEmptyState, setupDropdown } from '../utils/dom.util.js';
 
 function formatDate(iso?: string | null): string {
   if (!iso) return '—';
@@ -290,16 +290,24 @@ class AdsController implements ViewController {
 
   private async loadAdvertisers(page: number): Promise<void> {
     this.deselectAdvertiser();
+    const tableWrapper = this.container.querySelector<HTMLElement>('[data-ref="ads-table-wrapper"]');
+    const tableEl = this.container.querySelector<HTMLElement>('[data-ref="advertisers-table"]');
+    if (tableWrapper) {
+      removeEmptyState(tableWrapper, 'ads-empty-state');
+    }
+    if (tableEl) tableEl.style.display = '';
+
     if (this.tbodyEl) {
-      this.tbodyEl.innerHTML = `
-        <tr>
-          <td class="table-empty-cell" colspan="6">
-            <div style="padding: 32px 0; text-align: center; color: var(--text-secondary); font-size: 13px;">
-              Cargando anunciantes...
-            </div>
-          </td>
+      this.tbodyEl.innerHTML = Array(7).fill(0).map(() => `
+        <tr class="skeleton-table-row">
+          <td><div class="skeleton" style="height: 20px; width: 140px; border-radius: 4px;"></div></td>
+          <td><div class="skeleton" style="height: 20px; width: 120px; border-radius: 4px;"></div></td>
+          <td><div class="skeleton" style="height: 20px; width: 80px; border-radius: 4px;"></div></td>
+          <td><div class="skeleton" style="height: 20px; width: 60px; border-radius: 4px;"></div></td>
+          <td><div class="skeleton" style="height: 20px; width: 100px; border-radius: 4px;"></div></td>
+          <td><div class="skeleton" style="height: 20px; width: 80px; border-radius: 4px;"></div></td>
         </tr>
-      `;
+      `).join('');
     }
 
     const res = await getAdvertisersApi({
@@ -312,17 +320,8 @@ class AdsController implements ViewController {
 
     if (!res.ok) {
       showToast(res.error || 'Error al cargar la lista de anunciantes.', 'error');
-      if (this.tbodyEl) {
-        this.tbodyEl.innerHTML = `
-          <tr>
-            <td class="table-empty-cell" colspan="6">
-              <div style="padding: 32px 0; text-align: center; color: var(--text-secondary); font-size: 13px;">
-                No se pudieron cargar los anunciantes.
-              </div>
-            </td>
-          </tr>
-        `;
-      }
+      this.advertisers = [];
+      this.renderAdvertisers();
       return;
     }
 
@@ -341,20 +340,28 @@ class AdsController implements ViewController {
     if (!this.tbodyEl) return;
     this.tbodyEl.innerHTML = '';
 
+    const tableWrapper = this.container.querySelector<HTMLElement>('[data-ref="ads-table-wrapper"]');
+    const tableEl = this.container.querySelector<HTMLElement>('[data-ref="advertisers-table"]');
+
     if (this.advertisers.length === 0) {
-      this.tbodyEl.innerHTML = `
-        <tr>
-          <td class="table-empty-cell" colspan="6">
-            <div style="padding: 48px 0; text-align: center; color: var(--text-secondary); font-size: 13px;">
-              <svg class="component-icon" style="width: 40px; height: 40px; margin-bottom: 8px; opacity: 0.5;" aria-hidden="true"><use href="/icons.svg#campaign"></use></svg>
-              <div>No se encontraron anunciantes registrados.</div>
-            </div>
-          </td>
-        </tr>
-      `;
-      renderIcons(this.tbodyEl);
+      if (tableEl) tableEl.style.display = 'none';
+      if (tableWrapper) {
+        renderEmptyState({
+          container: tableWrapper,
+          dataRef: 'ads-empty-state',
+          desc: 'No hay anunciantes registrados o que coincidan con la búsqueda.',
+          graphicType: this.searchQuery ? 'search' : 'advertisements',
+          isTable: true,
+          title: 'No se encontraron anunciantes',
+        });
+      }
       return;
     }
+
+    if (tableWrapper) {
+      removeEmptyState(tableWrapper, 'ads-empty-state');
+    }
+    if (tableEl) tableEl.style.display = '';
 
     this.advertisers.forEach((adv) => {
       const tr = document.createElement('tr');
@@ -362,38 +369,36 @@ class AdsController implements ViewController {
       tr.setAttribute('data-ref', `advertiser-row-${adv.id}`);
 
       const isProvider = adv.type === 'provider';
-      const typeBadge = isProvider
-        ? `<span class="badge badge--info" style="font-size: 11px; padding: 2px 8px; border-radius: 4px; background: rgba(59, 130, 246, 0.1); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.2);">Red / Proveedor${adv.provider_name ? ` (${escapeHtml(adv.provider_name)})` : ''}</span>`
-        : `<span class="badge badge--neutral" style="font-size: 11px; padding: 2px 8px; border-radius: 4px; background: var(--bg-card-subtle); color: var(--text-secondary); border: 1px solid var(--border-color);">Anunciante Directo</span>`;
+      const typeBadge = `<span class="component-badge component-badge--sm ${isProvider ? 'component-badge--info' : 'component-badge--neutral'}">${isProvider ? `Red / Proveedor${adv.provider_name ? ` (${escapeHtml(adv.provider_name)})` : ''}` : 'Anunciante Directo'}</span>`;
 
       const isActive = adv.status === 'active';
-      const statusBadge = isActive
-        ? `<span class="badge badge--success" style="font-size: 11px; padding: 2px 8px; border-radius: 4px; background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2); display: inline-flex; align-items: center; gap: 4px;"><span style="width: 6px; height: 6px; border-radius: 50%; background: #10b981;"></span>Activo</span>`
-        : `<span class="badge badge--inactive" style="font-size: 11px; padding: 2px 8px; border-radius: 4px; background: var(--bg-card-subtle); color: var(--text-secondary); border: 1px solid var(--border-color); display: inline-flex; align-items: center; gap: 4px;"><span style="width: 6px; height: 6px; border-radius: 50%; background: var(--text-secondary);"></span>Inactivo</span>`;
+      const statusBadge = `<span class="component-badge component-badge--sm ${isActive ? 'component-badge--success' : 'component-badge--neutral'}">${isActive ? 'Activo' : 'Inactivo'}</span>`;
 
-      let contactHtml = '—';
+      let contactHtml = '<span class="component-badge component-badge--sm">—</span>';
       if (adv.website && adv.contact_email) {
-        contactHtml = `<div style="display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 12px; color: var(--text-primary);">${escapeHtml(adv.contact_email)}</span><a class="link" href="${escapeHtml(adv.website)}" target="_blank" rel="noopener noreferrer" style="font-size: 11px; color: var(--text-secondary);" onclick="event.stopPropagation();">${escapeHtml(adv.website)}</a></div>`;
+        contactHtml = `<div style="display: flex; gap: 4px; align-items: center; flex-wrap: wrap;"><span class="component-badge component-badge--sm">${escapeHtml(adv.contact_email)}</span><span class="component-badge component-badge--sm">${escapeHtml(adv.website)}</span></div>`;
       } else if (adv.website) {
-        contactHtml = `<a class="link" href="${escapeHtml(adv.website)}" target="_blank" rel="noopener noreferrer" style="font-size: 12px;" onclick="event.stopPropagation();">${escapeHtml(adv.website)}</a>`;
+        contactHtml = `<span class="component-badge component-badge--sm">${escapeHtml(adv.website)}</span>`;
       } else if (adv.contact_email) {
-        contactHtml = `<span style="font-size: 12px; color: var(--text-primary);">${escapeHtml(adv.contact_email)}</span>`;
+        contactHtml = `<span class="component-badge component-badge--sm">${escapeHtml(adv.contact_email)}</span>`;
       }
 
       tr.innerHTML = `
         <td data-ref="td-name-${adv.id}">
-          <div style="display: flex; flex-direction: column;">
-            <span style="font-weight: 600; font-size: 13px; color: var(--text-primary);">${escapeHtml(adv.name)}</span>
-            ${adv.notes ? `<span style="font-size: 11px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 240px;">${escapeHtml(adv.notes)}</span>` : ''}
+          <div style="display: flex; gap: 4px; align-items: center; flex-wrap: wrap;">
+            <span class="component-badge component-badge--sm">${escapeHtml(adv.name)}</span>
+            ${adv.notes ? `<span class="component-badge component-badge--sm">${escapeHtml(adv.notes)}</span>` : ''}
           </div>
         </td>
         <td data-ref="td-type-${adv.id}">${typeBadge}</td>
         <td data-ref="td-contact-${adv.id}">${contactHtml}</td>
         <td data-ref="td-ads-${adv.id}">
-          <span class="badge" style="font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 12px; background: var(--bg-card-subtle); border: 1px solid var(--border-color);">${adv.ads_count} ${adv.ads_count === 1 ? 'anuncio' : 'anuncios'}</span>
+          <span class="component-badge component-badge--sm">${adv.ads_count} ${adv.ads_count === 1 ? 'anuncio' : 'anuncios'}</span>
         </td>
         <td data-ref="td-status-${adv.id}">${statusBadge}</td>
-        <td data-ref="td-created-${adv.id}" style="font-size: 12px; color: var(--text-secondary);">${formatDate(adv.created_at)}</td>
+        <td data-ref="td-created-${adv.id}">
+          <span class="component-badge component-badge--sm">${formatDate(adv.created_at)}</span>
+        </td>
       `;
 
       tr.addEventListener('click', () => {
@@ -727,8 +732,8 @@ class AdsController implements ViewController {
         <div class="manage-ads-container" data-ref="manage-ads-container" style="display: flex; flex-direction: column; gap: 16px; min-width: min(100%, 640px);">
           <div class="manage-ads-toolbar" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color);">
             <div style="display: flex; align-items: center; gap: 8px;">
-              <span class="badge" style="font-size: 11px; padding: 4px 8px; border-radius: 4px; background: var(--bg-card-subtle); color: var(--text-secondary); border: 1px solid var(--border-color);">${escapeHtml(typeLabel)}</span>
-              <span class="badge" data-ref="ads-count-badge" style="font-size: 11px; font-weight: 600; padding: 4px 8px; border-radius: 12px; background: var(--bg-card-subtle); border: 1px solid var(--border-color);">Cargando...</span>
+              <span class="component-badge component-badge--sm">${escapeHtml(typeLabel)}</span>
+              <span class="component-badge component-badge--sm" data-ref="ads-count-badge">—</span>
             </div>
             <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-modal-create-ad">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
@@ -737,7 +742,9 @@ class AdsController implements ViewController {
           </div>
 
           <div class="manage-ads-list" data-ref="ads-list-container" style="display: flex; flex-direction: column; gap: 10px; max-height: 460px; overflow-y: auto; padding-right: 4px;">
-            <div style="text-align: center; padding: 32px 0; color: var(--text-secondary); font-size: 13px;">Cargando anuncios...</div>
+            <div class="skeleton" style="height: 56px; border-radius: 8px;"></div>
+            <div class="skeleton" style="height: 56px; border-radius: 8px;"></div>
+            <div class="skeleton" style="height: 56px; border-radius: 8px;"></div>
           </div>
         </div>
       `,
@@ -762,21 +769,26 @@ class AdsController implements ViewController {
       }
 
       if (adsList.length === 0) {
-        adsListContainer.innerHTML = `
-          <div style="text-align: center; padding: 48px 16px; border-radius: 8px; border: 1px dashed var(--border-color); background: var(--bg-card-subtle);">
-            <svg class="component-icon" style="width: 44px; height: 44px; color: var(--text-secondary); opacity: 0.5; margin-bottom: 8px;" aria-hidden="true"><use href="/icons.svg#campaign"></use></svg>
-            <div style="font-weight: 600; font-size: 14px; color: var(--text-primary); margin-bottom: 4px;">No hay anuncios creados</div>
-            <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 16px;">Crea el primer anuncio para que aparezca en el inicio o plantillas.</div>
-            <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-empty-create-ad">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
-              <span>Crear Anuncio</span>
-            </button>
-          </div>
+        renderEmptyState({
+          container: adsListContainer,
+          dataRef: 'modal-ads-empty-state',
+          desc: 'Crea el primer anuncio para que aparezca en el inicio o plantillas.',
+          graphicType: 'advertisements',
+          title: 'No hay anuncios creados',
+        });
+        const btnEmpty = document.createElement('button');
+        btnEmpty.type = 'button';
+        btnEmpty.className = 'component-button component-button--h34 component-button--black';
+        btnEmpty.setAttribute('data-ref', 'btn-empty-create-ad');
+        btnEmpty.style.marginTop = '12px';
+        btnEmpty.innerHTML = `
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+          <span>Crear Anuncio</span>
         `;
-        const btnEmpty = adsListContainer.querySelector<HTMLElement>('[data-ref="btn-empty-create-ad"]');
-        btnEmpty?.addEventListener('click', () => {
+        btnEmpty.addEventListener('click', () => {
           this.openCreateAdModal(adv, () => void fetchAds());
         });
+        adsListContainer.querySelector('.component-empty-state')?.appendChild(btnEmpty);
         renderIcons(adsListContainer);
         return;
       }

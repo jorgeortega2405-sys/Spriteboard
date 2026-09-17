@@ -1,5 +1,4 @@
 import Chart from 'chart.js/auto';
-import { navigate } from '../app-router.js';
 import { createSidebar } from '../components/layout.component.js';
 import { getDashboardStatsApi, loadTemplate } from '../services/api.service.js';
 import { renderIcons } from '../services/icon.service.js';
@@ -31,35 +30,7 @@ class DashboardController implements ViewController {
     this.loadStats();
   }
 
-  bindEvents(): void {
-    const signal = this.abortController.signal;
-
-    const btnRefresh = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-refresh-stats"]');
-    btnRefresh?.addEventListener('click', async () => {
-      btnRefresh.disabled = true;
-      const spinIcon = btnRefresh.querySelector('svg');
-      if (spinIcon) spinIcon.style.animation = 'spin 0.8s linear infinite';
-      await this.loadStats();
-      if (spinIcon) spinIcon.style.animation = '';
-      btnRefresh.disabled = false;
-      showToast('Estadísticas actualizadas', 'info');
-    }, { signal });
-
-    const cardUsers = this.container.querySelector<HTMLElement>('[data-ref="card-nav-users"]');
-    cardUsers?.addEventListener('click', () => {
-      navigate('/users');
-    }, { signal });
-
-    const cardBackups = this.container.querySelector<HTMLElement>('[data-ref="card-nav-backups"]');
-    cardBackups?.addEventListener('click', () => {
-      navigate('/backups');
-    }, { signal });
-
-    const cardSystem = this.container.querySelector<HTMLElement>('[data-ref="card-nav-system"]');
-    cardSystem?.addEventListener('click', () => {
-      navigate('/system');
-    }, { signal });
-  }
+  bindEvents(): void {}
 
   private setupThemeObserver(): void {
     this.themeObserver = new MutationObserver(() => {

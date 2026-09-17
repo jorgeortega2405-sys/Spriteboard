@@ -1,4 +1,5 @@
 import { createPopper, Instance as PopperInstance, Placement } from '@popperjs/core';
+import { EmptyIllustrationKey, getEmptyIllustration } from '../config/empty-illustrations.config.js';
 
 export interface ActiveDropdownRecord {
   close: () => void;
@@ -540,4 +541,247 @@ export function setupDropdown(
     update: () => popperInstance?.update(),
   };
 }
+
+export function getEmptyGraphicSvg(type: string | EmptyIllustrationKey): string {
+  return getEmptyIllustration(type);
+}
+
+export interface RenderEmptyStateOptions {
+  container: HTMLElement;
+  dataRef?: string;
+  desc: string;
+  graphicType: string | EmptyIllustrationKey;
+  isTable?: boolean;
+  title: string;
+}
+
+export function renderEmptyState(options: RenderEmptyStateOptions): HTMLElement {
+  removeEmptyState(options.container, options.dataRef);
+
+  const emptyEl = document.createElement('div');
+  emptyEl.className = `component-empty-state${options.isTable ? ' component-empty-state--table' : ''}`;
+  if (options.dataRef) {
+    emptyEl.setAttribute('data-ref', options.dataRef);
+  }
+
+  const graphicEl = document.createElement('div');
+  graphicEl.className = 'component-empty-state-graphic';
+  graphicEl.innerHTML = getEmptyGraphicSvg(options.graphicType);
+
+  const titleEl = document.createElement('h2');
+  titleEl.className = 'component-empty-state-title';
+  titleEl.textContent = options.title;
+
+  const descEl = document.createElement('p');
+  descEl.className = 'component-empty-state-desc';
+  descEl.textContent = options.desc;
+
+  emptyEl.appendChild(graphicEl);
+  emptyEl.appendChild(titleEl);
+  emptyEl.appendChild(descEl);
+
+  options.container.appendChild(emptyEl);
+  return emptyEl;
+}
+
+export function removeEmptyState(container: HTMLElement, dataRef?: string): void {
+  const selector = dataRef ? `[data-ref="${dataRef}"]` : '.component-empty-state';
+  const existing = container.querySelector(selector);
+  if (existing) {
+    existing.remove();
+  }
+}
+
+export function bindDragToScroll(carousel: HTMLElement, isVertical = false): () => void {
+  let isDown = false;
+  let startX = 0;
+  let startY = 0;
+  let scrollLeft = 0;
+  let scrollTop = 0;
+  let isDragging = false;
+
+  const onMouseDown = (e: MouseEvent) => {
+    if ((e.target as HTMLElement)?.closest('input, select, textarea, .component-range, [contenteditable="true"]')) return;
+    if (e.button !== 0) return;
+    isDown = true;
+    isDragging = false;
+    startX = e.pageX - carousel.offsetLeft;
+    startY = e.pageY - carousel.offsetTop;
+    scrollLeft = carousel.scrollLeft;
+    scrollTop = carousel.scrollTop;
+  };
+
+  const onMouseUp = () => {
+    if (!isDown) return;
+    isDown = false;
+    carousel.classList.remove('is-dragging');
+    setTimeout(() => {
+      isDragging = false;
+    }, 60);
+  };
+
+  const onMouseMove = (e: MouseEvent) => {
+    if (!isDown) return;
+    const x = e.pageX - carousel.offsetLeft;
+    const y = e.pageY - carousel.offsetTop;
+    const walkX = (x - startX) * 1.5;
+    const walkY = (y - startY) * 1.5;
+
+    if (Math.abs(walkX) > 4 || Math.abs(walkY) > 4) {
+      if (!isDragging) {
+        isDragging = true;
+        carousel.classList.add('is-dragging');
+      }
+    }
+    if (isDragging) {
+      e.preventDefault();
+      if (isVertical) {
+        carousel.scrollTop = scrollTop - walkY;
+      } else {
+        carousel.scrollLeft = scrollLeft - walkX;
+      }
+    }
+  };
+
+  const onClick = (e: MouseEvent) => {
+    if (isDragging) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+    }
+  };
+
+  carousel.addEventListener('mousedown', onMouseDown);
+  carousel.addEventListener('mouseleave', onMouseUp);
+  carousel.addEventListener('mouseup', onMouseUp);
+  window.addEventListener('mouseup', onMouseUp);
+  carousel.addEventListener('mousemove', onMouseMove);
+  carousel.addEventListener('click', onClick, { capture: true });
+
+  return () => {
+    carousel.removeEventListener('mousedown', onMouseDown);
+    carousel.removeEventListener('mouseleave', onMouseUp);
+    carousel.removeEventListener('mouseup', onMouseUp);
+    window.removeEventListener('mouseup', onMouseUp);
+    carousel.removeEventListener('mousemove', onMouseMove);
+    carousel.removeEventListener('click', onClick, { capture: true });
+  };
+}
+
+export interface CarouselController {
+  destroy: () => void;
+  updateButtons: () => void;
+}
+
+export function initCarouselScroll(
+  wrapper: HTMLElement | null,
+  options: {
+    carouselSelector?: string;
+    isVertical?: boolean;
+    leftBtnSelector?: string;
+    rightBtnSelector?: string;
+    step?: number;
+  } = {}
+): CarouselController | null {
+  if (!wrapper) return null;
+
+  const isVertical = !!options.isVertical;
+  const step = options.step || 220;
+
+  const carousel = options.carouselSelector
+    ? wrapper.querySelector<HTMLElement>(options.carouselSelector) || wrapper
+    : wrapper.querySelector<HTMLElement>('.component-tags-carousel') || wrapper;
+
+  if (!carousel) return null;
+
+  const leftBtn = options.leftBtnSelector
+    ? wrapper.querySelector<HTMLElement>(options.leftBtnSelector)
+    : wrapper.querySelector<HTMLElement>('.component-tag-nav-left, [data-ref*="scroll-left"]');
+
+  const rightBtn = options.rightBtnSelector
+    ? wrapper.querySelector<HTMLElement>(options.rightBtnSelector)
+    : wrapper.querySelector<HTMLElement>('.component-tag-nav-right, [data-ref*="scroll-right"]');
+
+  const updateButtons = () => {
+    if (!carousel) return;
+    if (isVertical) {
+      const hasOverflow = carousel.scrollHeight > carousel.clientHeight + 2;
+      if (!hasOverflow) {
+        leftBtn?.classList.add('is-disabled');
+        rightBtn?.classList.add('is-disabled');
+        return;
+      }
+      leftBtn?.classList.toggle('is-disabled', carousel.scrollTop <= 5);
+      const canScrollDown = Math.ceil(carousel.scrollTop + carousel.clientHeight) < carousel.scrollHeight - 5;
+      rightBtn?.classList.toggle('is-disabled', !canScrollDown);
+    } else {
+      const hasOverflow = carousel.scrollWidth > carousel.clientWidth + 2;
+      if (!hasOverflow) {
+        leftBtn?.classList.add('is-disabled');
+        rightBtn?.classList.add('is-disabled');
+        return;
+      }
+      leftBtn?.classList.toggle('is-disabled', carousel.scrollLeft <= 5);
+      const canScrollRight = Math.ceil(carousel.scrollLeft + carousel.clientWidth) < carousel.scrollWidth - 5;
+      rightBtn?.classList.toggle('is-disabled', !canScrollRight);
+    }
+  };
+
+  const onLeftClick = (e: MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (isVertical) {
+      carousel.scrollBy({ top: -step, behavior: 'smooth' });
+    } else {
+      carousel.scrollBy({ left: -step, behavior: 'smooth' });
+    }
+    setTimeout(updateButtons, 300);
+  };
+
+  const onRightClick = (e: MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (isVertical) {
+      carousel.scrollBy({ top: step, behavior: 'smooth' });
+    } else {
+      carousel.scrollBy({ left: step, behavior: 'smooth' });
+    }
+    setTimeout(updateButtons, 300);
+  };
+
+  leftBtn?.addEventListener('click', onLeftClick);
+  rightBtn?.addEventListener('click', onRightClick);
+  carousel.addEventListener('scroll', updateButtons, { passive: true });
+  window.addEventListener('resize', updateButtons, { passive: true });
+
+  const unbindDrag = bindDragToScroll(carousel, isVertical);
+
+  let resizeObserver: ResizeObserver | null = null;
+  if (typeof ResizeObserver !== 'undefined') {
+    resizeObserver = new ResizeObserver(() => updateButtons());
+    resizeObserver.observe(carousel);
+    if (wrapper !== carousel) {
+      resizeObserver.observe(wrapper);
+    }
+  }
+
+  setTimeout(updateButtons, 80);
+
+  const destroy = () => {
+    leftBtn?.removeEventListener('click', onLeftClick);
+    rightBtn?.removeEventListener('click', onRightClick);
+    carousel.removeEventListener('scroll', updateButtons);
+    window.removeEventListener('resize', updateButtons);
+    unbindDrag();
+    resizeObserver?.disconnect();
+  };
+
+  return {
+    destroy,
+    updateButtons,
+  };
+}
+
+export { getEmptyIllustration };
+
 

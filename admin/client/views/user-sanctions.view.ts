@@ -5,7 +5,7 @@ import { applyUserSanctionApi, getUserSanctionsApi, loadTemplate, revokeUserSanc
 import { renderIcons } from '../services/icon.service.js';
 import { showToast } from '../services/toast.service.js';
 import { ViewController } from '../types/common.types.js';
-import { escapeHtml, setupDropdown } from '../utils/dom.util.js';
+import { escapeHtml, removeEmptyState, renderEmptyState, setupDropdown } from '../utils/dom.util.js';
 
 interface UserSanctionItem {
   admin_id: number;
@@ -45,6 +45,7 @@ class UserSanctionsController implements ViewController {
   private isSearchActive = false;
   private searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
+  private tableEl: HTMLElement | null = null;
   private tbodyEl: HTMLElement | null = null;
   private defaultActions: HTMLElement | null = null;
   private selectedActions: HTMLElement | null = null;
@@ -63,6 +64,7 @@ class UserSanctionsController implements ViewController {
   }
 
   async init(): Promise<void> {
+    this.tableEl = this.container.querySelector<HTMLElement>('[data-ref="sanctions-table"]');
     this.tbodyEl = this.container.querySelector<HTMLElement>('[data-ref="sanctions-tbody"]');
     this.defaultActions = this.container.querySelector<HTMLElement>('[data-ref="sanctions-default-actions"]');
     this.selectedActions = this.container.querySelector<HTMLElement>('[data-ref="sanctions-selected-actions"]');
@@ -178,6 +180,25 @@ class UserSanctionsController implements ViewController {
   }
 
   private async loadData(): Promise<void> {
+    const tableWrapper = this.container.querySelector<HTMLElement>('[data-ref="sanctions-table-wrapper"]');
+    if (tableWrapper) {
+      removeEmptyState(tableWrapper, 'sanctions-empty-state');
+    }
+    if (this.tableEl) this.tableEl.style.display = '';
+
+    if (this.tbodyEl) {
+      this.tbodyEl.innerHTML = Array(6).fill(0).map(() => `
+        <tr class="skeleton-table-row">
+          <td><div class="skeleton" style="height: 20px; width: 90px; border-radius: 4px;"></div></td>
+          <td><div class="skeleton" style="height: 20px; width: 80px; border-radius: 4px;"></div></td>
+          <td><div class="skeleton" style="height: 20px; width: 180px; border-radius: 4px;"></div></td>
+          <td><div class="skeleton" style="height: 20px; width: 90px; border-radius: 4px;"></div></td>
+          <td><div class="skeleton" style="height: 20px; width: 100px; border-radius: 4px;"></div></td>
+          <td><div class="skeleton" style="height: 20px; width: 80px; border-radius: 4px;"></div></td>
+        </tr>
+      `).join('');
+    }
+
     const res = await getUserSanctionsApi(this.userIdOrUuid);
     if (!res.ok || !res.user) {
       showToast(res.error || 'Error al cargar datos del usuario.', 'error');
@@ -210,21 +231,26 @@ class UserSanctionsController implements ViewController {
         )
       : this.sanctions;
 
+    const tableWrapper = this.container.querySelector<HTMLElement>('[data-ref="sanctions-table-wrapper"]');
     if (filtered.length === 0) {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td colspan="6" style="text-align: center; padding: 48px 16px; color: var(--text-secondary);">
-          <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
-            <span class="material-symbols-rounded" style="font-size: 40px; color: var(--text-tertiary);">security</span>
-            <div style="font-weight: 600; font-size: 14px; color: var(--text-primary);">${q ? 'No se encontraron sanciones con ese término' : 'Sin sanciones registradas'}</div>
-            <div style="font-size: 12px;">${q ? 'Intenta modificar el término de búsqueda.' : 'Este usuario no tiene ninguna sanción en su historial.'}</div>
-          </div>
-        </td>
-      `;
-      this.tbodyEl.appendChild(tr);
-      renderIcons(this.tbodyEl);
+      if (this.tableEl) this.tableEl.style.display = 'none';
+      if (tableWrapper) {
+        renderEmptyState({
+          container: tableWrapper,
+          dataRef: 'sanctions-empty-state',
+          desc: q ? 'Intenta modificar el término de búsqueda.' : 'Este usuario no tiene ninguna sanción en su historial.',
+          graphicType: q ? 'search' : 'sanctions',
+          isTable: true,
+          title: q ? 'No se encontraron sanciones' : 'Sin sanciones registradas',
+        });
+      }
       return;
     }
+
+    if (tableWrapper) {
+      removeEmptyState(tableWrapper, 'sanctions-empty-state');
+    }
+    if (this.tableEl) this.tableEl.style.display = '';
 
     for (const s of filtered) {
       const tr = document.createElement('tr');
@@ -252,8 +278,8 @@ class UserSanctionsController implements ViewController {
       }
 
       const durationInfo = s.duration_days
-        ? `<div><strong>${s.duration_days} días</strong>${s.expires_at ? `<br><span style="font-size: 11px; color: var(--text-secondary);">Vence: ${formatDate(s.expires_at)}</span>` : ''}</div>`
-        : (s.type === 'ban' ? '<span style="color: var(--danger-color, #ef4444); font-size: 12px; font-weight: 500;">Indefinido</span>' : '<span style="color: var(--text-secondary);">—</span>');
+        ? `<span class="component-badge component-badge--sm">${s.duration_days} días${s.expires_at ? ` (Vence: ${formatDate(s.expires_at)})` : ''}</span>`
+        : (s.type === 'ban' ? '<span class="component-badge component-badge--sm component-badge--danger">Indefinido</span>' : '<span class="component-badge component-badge--sm">—</span>');
 
       tr.innerHTML = `
         <td data-ref="cell-type-${s.id}">
@@ -263,16 +289,16 @@ class UserSanctionsController implements ViewController {
           ${statusBadge}
         </td>
         <td data-ref="cell-reason-${s.id}" style="max-width: 320px;">
-          <span style="color: var(--text-primary); font-size: 13px; line-height: 1.4; display: block;">${escapeHtml(s.reason)}</span>
+          <span class="component-badge component-badge--sm">${escapeHtml(s.reason)}</span>
         </td>
         <td data-ref="cell-duration-${s.id}">
           ${durationInfo}
         </td>
         <td data-ref="cell-admin-${s.id}">
-          <span style="color: var(--text-secondary); font-size: 13px;">@${escapeHtml(s.admin_username || 'Sistema')}</span>
+          <span class="component-badge component-badge--sm">@${escapeHtml(s.admin_username || 'Sistema')}</span>
         </td>
         <td data-ref="cell-date-${s.id}">
-          <span style="color: var(--text-secondary); font-size: 12px;">${formatDate(s.created_at)}</span>
+          <span class="component-badge component-badge--sm">${formatDate(s.created_at)}</span>
         </td>
       `;
 

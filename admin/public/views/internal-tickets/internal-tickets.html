@@ -5,20 +5,12 @@
       <div class="view-header" data-ref="internal-header">
         <div class="view-header__left" data-ref="internal-header-left">
           <h1 class="view-header__title" data-ref="internal-title">Mesa de Ayuda Interna</h1>
-          <div class="component-badge component-badge--interactive" data-ref="internal-counter-badge" style="cursor: default; padding: 4px 10px; font-size: 12px; font-weight: 600; margin-left: 8px;">
-            <svg class="component-icon" aria-hidden="true" style="width: 14px; height: 14px; margin-right: 4px;"><use href="/icons.svg#schedule"></use></svg>
-            <span data-ref="internal-counter-text">0 pendientes</span>
-          </div>
         </div>
 
         <div class="view-header__right" data-ref="internal-header-right">
           <div class="view-header__actions" data-ref="internal-top-actions">
-            <button type="button" class="component-button component-button--h40 component-button--primary" data-ref="btn-new-ticket">
-              <svg class="component-icon" aria-hidden="true" style="margin-right: 6px;"><use href="/icons.svg#add"></use></svg>
-              <span>Nuevo Ticket</span>
-            </button>
-            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-refresh-tickets" data-tooltip="Actualizar lista" aria-label="Actualizar lista">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
+            <button type="button" class="component-button component-button--h40 component-button--icon-only component-button--black view-header__btn" data-ref="btn-new-ticket" data-tooltip="Nuevo Ticket" aria-label="Nuevo Ticket">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
             </button>
           </div>
         </div>
@@ -29,72 +21,65 @@
         <div class="support-tickets-panel" data-ref="internal-tickets-panel">
           
           <div class="support-search-container" data-ref="internal-search-container">
-            <div class="component-search component-search--full" data-ref="internal-search-box">
-              <div class="component-search__icon" data-ref="internal-search-icon">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+            <div class="support-search-container__input-wrap" data-ref="internal-search-input-wrap">
+              <div class="component-search component-search--full" data-ref="internal-search-box">
+                <div class="component-search__icon" data-ref="internal-search-icon">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+                </div>
+                <div class="component-search__input-box" data-ref="internal-search-input-box">
+                  <input class="component-search__input" data-ref="input-search-tickets" type="text" maxlength="100" autocomplete="off" placeholder="Buscar por código, título, piso o creador..." />
+                </div>
+                <button type="button" class="component-button component-button--h34 component-button--icon-only" data-ref="btn-clear-search" style="display: none; margin-right: 4px;" aria-label="Limpiar búsqueda">
+                  <svg class="component-icon" aria-hidden="true" style="font-size: 18px;"><use href="/icons.svg#close"></use></svg>
+                </button>
               </div>
-              <div class="component-search__input-box" data-ref="internal-search-input-box">
-                <input class="component-search__input" data-ref="input-search-tickets" type="text" maxlength="100" autocomplete="off" placeholder="Buscar por código, título, piso o creador..." />
-              </div>
-              <button type="button" class="component-button component-button--h34 component-button--icon-only" data-ref="btn-clear-search" style="display: none; margin-right: 4px;" aria-label="Limpiar búsqueda">
-                <svg class="component-icon" aria-hidden="true" style="font-size: 18px;"><use href="/icons.svg#close"></use></svg>
-              </button>
             </div>
 
-            <div class="support-filter-tabs" data-ref="internal-scope-tabs" style="margin-top: 8px;">
-              <button type="button" class="component-badge component-badge--sm component-badge--interactive is-active" data-ref="tab-scope-open" data-scope="open_queue">
-                <span>Por Atender</span>
-                <span class="component-badge component-badge--count" data-ref="count-scope-open" style="margin-left: 4px; font-size: 10px; padding: 0 5px;">0</span>
-              </button>
-              <button type="button" class="component-badge component-badge--sm component-badge--interactive" data-ref="tab-scope-my-created" data-scope="created_by_me">
-                <span>Mis Reportes</span>
-              </button>
-              <button type="button" class="component-badge component-badge--sm component-badge--interactive" data-ref="tab-scope-my-assigned" data-scope="assigned_to_me">
-                <span>Mis Asignados</span>
-              </button>
-              <button type="button" class="component-badge component-badge--sm component-badge--interactive" data-ref="tab-scope-all" data-scope="all">
-                <span>Todos</span>
-              </button>
-            </div>
+            <div class="support-search-container__filters-wrap" data-ref="internal-filter-wrap">
+              <div class="component-tags-carousel-wrapper view-tags-wrapper" data-ref="internal-tags-carousel-wrapper">
+                <button type="button" class="component-tag-nav-btn component-tag-nav-left is-disabled" data-ref="btn-tags-scroll-left" data-tooltip="Desplazar a la izquierda" aria-label="Desplazar a la izquierda">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+                </button>
 
-            <div class="internal-category-chips" data-ref="internal-category-chips" style="display: flex; gap: 4px; overflow-x: auto; padding: 6px 0 2px 0;">
-              <button type="button" class="component-badge component-badge--sm component-badge--interactive is-active" data-ref="chip-cat-all" data-category="all">
-                <span>Todas</span>
-              </button>
-              <button type="button" class="component-badge component-badge--sm component-badge--interactive" data-ref="chip-cat-hardware" data-category="hardware">
-                <span>🖨️ Hardware</span>
-              </button>
-              <button type="button" class="component-badge component-badge--sm component-badge--interactive" data-ref="chip-cat-network" data-category="network">
-                <span>🌐 Red/Wi-Fi</span>
-              </button>
-              <button type="button" class="component-badge component-badge--sm component-badge--interactive" data-ref="chip-cat-facilities" data-category="facilities">
-                <span>🏢 Instalaciones</span>
-              </button>
-              <button type="button" class="component-badge component-badge--sm component-badge--interactive" data-ref="chip-cat-software" data-category="software">
-                <span>💻 Software</span>
-              </button>
-              <button type="button" class="component-badge component-badge--sm component-badge--interactive" data-ref="chip-cat-access" data-category="access">
-                <span>🔑 Accesos</span>
-              </button>
+                <div class="component-tags-carousel" data-ref="internal-scope-tabs">
+                  <button type="button" class="component-badge component-badge--sm component-badge--interactive is-active" data-ref="tab-scope-open" data-scope="open_queue">
+                    <span>Por Atender</span>
+                    <span class="component-badge component-badge--count" data-ref="count-scope-open" style="margin-left: 4px; font-size: 10px; padding: 0 5px;">0</span>
+                  </button>
+                  <button type="button" class="component-badge component-badge--sm component-badge--interactive" data-ref="tab-scope-my-created" data-scope="created_by_me">
+                    <span>Mis Reportes</span>
+                  </button>
+                  <button type="button" class="component-badge component-badge--sm component-badge--interactive" data-ref="tab-scope-my-assigned" data-scope="assigned_to_me">
+                    <span>Mis Asignados</span>
+                  </button>
+                  <button type="button" class="component-badge component-badge--sm component-badge--interactive" data-ref="tab-scope-all" data-scope="all">
+                    <span>Todos</span>
+                  </button>
+                </div>
+
+                <button type="button" class="component-tag-nav-btn component-tag-nav-right is-disabled" data-ref="btn-tags-scroll-right" data-tooltip="Desplazar a la derecha" aria-label="Desplazar a la derecha">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+                </button>
+              </div>
             </div>
           </div>
 
           <div class="support-ticket-items" data-ref="internal-ticket-items">
-            <div class="support-loading-indicator" data-ref="internal-loading-indicator" style="padding: 24px; text-align: center; color: var(--text-secondary);">
-              <svg class="component-icon" aria-hidden="true" style="animation: spin 1s linear infinite;"><use href="/icons.svg#autorenew"></use></svg>
-              <span style="margin-left: 8px; font-size: 13px;">Cargando tickets internos...</span>
+            <div class="support-loading-skeleton" data-ref="internal-loading-skeleton" style="padding: 12px; display: flex; flex-direction: column; gap: 8px;">
+              <div class="skeleton" style="height: 72px; border-radius: 12px;"></div>
+              <div class="skeleton" style="height: 72px; border-radius: 12px;"></div>
+              <div class="skeleton" style="height: 72px; border-radius: 12px;"></div>
+              <div class="skeleton" style="height: 72px; border-radius: 12px;"></div>
             </div>
           </div>
         </div>
 
         <div class="support-chat-workspace" data-ref="internal-workspace">
           
-          <div class="support-empty-workspace" data-ref="internal-empty-workspace" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px; text-align: center; gap: 12px;">
-            <div class="support-empty-icon" data-ref="internal-empty-icon" style="width: 64px; height: 64px; border-radius: 50%; background-color: var(--bg-surface); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; color: var(--text-tertiary);">
-              <svg class="component-icon" aria-hidden="true" style="width: 32px; height: 32px;"><use href="/icons.svg#devices"></use></svg>
-            </div>
-            <h3 class="support-empty-title" data-ref="internal-empty-title" style="font-size: 16px; font-weight: 600; color: var(--text-primary); margin: 0;">Selecciona un reporte interno</h3>
-            <p class="support-empty-desc" data-ref="internal-empty-desc" style="font-size: 13px; color: var(--text-secondary); max-width: 380px; margin: 0;">Elige un ticket de la lista para ver la ubicación, asignarte la atención técnica, agregar comentarios o marcarlo como resuelto.</p>
+          <div class="component-empty-state" data-ref="internal-empty-workspace" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px; text-align: center;">
+            <div class="component-empty-state-graphic" data-ref="internal-empty-graphic"></div>
+            <h2 class="component-empty-state-title" data-ref="internal-empty-title">Selecciona un reporte interno</h2>
+            <p class="component-empty-state-desc" data-ref="internal-empty-desc">Elige un ticket de la lista para ver la ubicación, asignarte la atención técnica, agregar comentarios o marcarlo como resuelto.</p>
           </div>
 
           <div class="support-active-container" data-ref="internal-active-container" style="display: none; flex-direction: column; height: 100%;">
@@ -107,19 +92,20 @@
                 <div class="support-ticket-header__meta" data-ref="internal-header-meta" style="min-width: 0; display: flex; flex-direction: column; gap: 2px;">
                   <div style="display: flex; align-items: center; gap: 6px;">
                     <span class="support-ticket-header__username" data-ref="internal-creator-username" style="font-size: 14px; font-weight: 600; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
-                    <span class="component-badge component-badge--sm" data-ref="internal-category-badge" style="font-size: 11px; padding: 2px 6px;"></span>
                   </div>
-                  <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-secondary);">
+                  <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-secondary); flex-wrap: wrap;">
                     <span data-ref="internal-ticket-number" style="font-weight: 600; font-family: monospace; color: var(--text-primary);"></span>
                     <span>•</span>
                     <span data-ref="internal-location-display" style="color: var(--action-primary); font-weight: 500;"></span>
+                    <span>•</span>
+                    <span data-ref="internal-priority-text" style="font-weight: 500;"></span>
+                    <span>•</span>
+                    <span data-ref="internal-status-text" style="font-weight: 500;"></span>
                   </div>
                 </div>
               </div>
 
               <div class="support-ticket-header__actions" data-ref="internal-header-actions" style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
-                <div class="component-badge component-badge--sm" data-ref="internal-priority-badge"></div>
-                <div class="component-badge component-badge--sm" data-ref="internal-status-badge"></div>
 
                 <div class="settings-dropdown-wrapper" data-ref="internal-actions-wrapper" style="position: relative;">
                   <button type="button" class="component-button component-button--h36 component-button--icon-only home-floating-btn" data-ref="btn-internal-options" data-tooltip="Acciones del ticket" aria-label="Acciones del ticket">
@@ -207,28 +193,14 @@
           <input class="field__input" data-ref="input-new-title" type="text" maxlength="150" placeholder="Ej. Impresora Piso 2 no responde" style="width: 100%; height: 38px; border-radius: var(--radius-md); padding: 0 10px; background-color: var(--bg-body); border: 1px solid var(--border-color); color: var(--text-primary);" />
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-          <div class="field" data-ref="field-ticket-category">
-            <label class="field__label" style="font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 4px; display: block;">Categoría</label>
-            <select class="field__input" data-ref="select-new-category" style="width: 100%; height: 38px; border-radius: var(--radius-md); padding: 0 10px; background-color: var(--bg-body); border: 1px solid var(--border-color); color: var(--text-primary);">
-              <option value="hardware">🖨️ Hardware / Equipos</option>
-              <option value="network">🌐 Red / Conectividad</option>
-              <option value="facilities">🏢 Instalaciones / Oficina</option>
-              <option value="software">💻 Software / Aplicaciones</option>
-              <option value="access">🔑 Accesos / Cuentas</option>
-              <option value="other">📦 Otro</option>
-            </select>
-          </div>
-
-          <div class="field" data-ref="field-ticket-priority">
-            <label class="field__label" style="font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 4px; display: block;">Prioridad</label>
-            <select class="field__input" data-ref="select-new-priority" style="width: 100%; height: 38px; border-radius: var(--radius-md); padding: 0 10px; background-color: var(--bg-body); border: 1px solid var(--border-color); color: var(--text-primary);">
-              <option value="low">Baja (Sin urgencia)</option>
-              <option value="medium" selected>Media (Normal)</option>
-              <option value="high">Alta (Afecta trabajo)</option>
-              <option value="urgent">Urgente (Bloqueo crítico)</option>
-            </select>
-          </div>
+        <div class="field" data-ref="field-ticket-priority">
+          <label class="field__label" style="font-size: 12px; font-weight: 500; color: var(--text-secondary); margin-bottom: 4px; display: block;">Prioridad</label>
+          <select class="field__input" data-ref="select-new-priority" style="width: 100%; height: 38px; border-radius: var(--radius-md); padding: 0 10px; background-color: var(--bg-body); border: 1px solid var(--border-color); color: var(--text-primary);">
+            <option value="low">Baja (Sin urgencia)</option>
+            <option value="medium" selected>Media (Normal)</option>
+            <option value="high">Alta (Afecta trabajo)</option>
+            <option value="urgent">Urgente (Bloqueo crítico)</option>
+          </select>
         </div>
 
         <div class="field" data-ref="field-ticket-location">

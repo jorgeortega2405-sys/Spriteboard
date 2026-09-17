@@ -82,6 +82,7 @@ export interface UserPayload {
   google_id?: string | null;
   id: number;
   language?: string;
+  permissions?: string[];
   role?: UserRole;
   roles?: UserRole[];
   subscription_tier?: string;
@@ -98,6 +99,7 @@ export interface SessionAccount {
   id: number;
   language?: string;
   last_accessed?: number;
+  permissions?: string[];
   role?: UserRole;
   roles?: UserRole[];
   sessionId?: string;

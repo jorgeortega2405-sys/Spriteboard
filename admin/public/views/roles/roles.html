@@ -1,0 +1,113 @@
+<div class="layout-content" data-ref="admin-roles-view">
+  <div class="component-wrapper component-wrapper--full view-wrapper" data-ref="roles-wrapper">
+    <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="roles-scrollable">
+      <div class="view-header" data-ref="roles-floating-top">
+        <div class="view-header__left" data-ref="roles-floating-left">
+          <h1 class="view-header__title" data-ref="roles-title">Roles y Permisos</h1>
+        </div>
+
+        <div class="view-header__right" data-ref="roles-floating-right">
+          <div class="view-header__actions" data-ref="roles-default-actions">
+            <button type="button" class="component-button component-button--h40 component-button--bordered view-header__btn" data-ref="btn-export-roles" data-tooltip="Exportar matriz de permisos" aria-label="Exportar matriz de permisos">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
+              <span>Exportar Matriz</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="view-body" data-ref="roles-content-container" style="width: 100%; box-sizing: border-box; padding: 20px 24px 60px;">
+        <div class="support-search-container" data-ref="roles-search-container" style="padding: 0; border: 1px solid var(--border-color); border-radius: var(--border-radius-md); margin-bottom: 20px; background-color: var(--bg-card);">
+          <div class="support-search-container__input-wrap" data-ref="roles-input-wrap" style="padding: 10px 12px; border-bottom: 1px solid var(--border-color);">
+            <div class="component-search component-search--full" data-ref="search-box">
+              <div class="component-search__icon" data-ref="search-icon">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+              </div>
+              <div class="component-search__input-box" data-ref="search-input-box">
+                <input class="component-search__input" data-ref="input-search-roles" type="text" maxlength="100" autocomplete="off" placeholder="Buscar por nombre de rol, categoría o permiso..." />
+              </div>
+              <button type="button" class="component-button component-button--icon-only component-search__clear" data-ref="btn-clear-search" style="display: none;" aria-label="Limpiar búsqueda">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cancel"></use></svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="support-search-container__filters-wrap" data-ref="roles-filters-wrap" style="padding: 8px 12px;">
+            <div class="component-tags-carousel-wrapper view-tags-wrapper" data-ref="roles-tags-carousel-wrapper">
+              <button type="button" class="component-tag-nav-btn component-tag-nav-left is-disabled" data-ref="btn-tags-scroll-left" data-tooltip="Desplazar a la izquierda" aria-label="Desplazar a la izquierda">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+              </button>
+
+              <div class="component-tags-carousel" data-ref="roles-category-tabs">
+                <button type="button" class="component-badge component-badge--interactive is-active" data-ref="filter-cat-all" data-category="all">
+                  <span>Todos los Roles (32)</span>
+                </button>
+                <button type="button" class="component-badge component-badge--interactive" data-ref="filter-cat-platform" data-category="platform">
+                  <span>Platform (7)</span>
+                </button>
+                <button type="button" class="component-badge component-badge--interactive" data-ref="filter-cat-support" data-category="support">
+                  <span>Support (6)</span>
+                </button>
+                <button type="button" class="component-badge component-badge--interactive" data-ref="filter-cat-engineering" data-category="engineering">
+                  <span>Engineering (5)</span>
+                </button>
+                <button type="button" class="component-badge component-badge--interactive" data-ref="filter-cat-data" data-category="data">
+                  <span>Data (5)</span>
+                </button>
+                <button type="button" class="component-badge component-badge--interactive" data-ref="filter-cat-finance" data-category="finance">
+                  <span>Finance (4)</span>
+                </button>
+                <button type="button" class="component-badge component-badge--interactive" data-ref="filter-cat-operations" data-category="operations">
+                  <span>Operations (4)</span>
+                </button>
+              </div>
+
+              <button type="button" class="component-tag-nav-btn component-tag-nav-right is-disabled" data-ref="btn-tags-scroll-right" data-tooltip="Desplazar a la derecha" aria-label="Desplazar a la derecha">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="component-table-wrapper" data-ref="roles-table-wrapper">
+          <table class="component-table" data-ref="roles-table">
+            <thead>
+              <tr>
+                <th>Rol / Clave</th>
+                <th>Categoría</th>
+                <th>Descripción</th>
+                <th>Usuarios</th>
+                <th>Permisos Asignados</th>
+                <th style="text-align: right;">Acciones</th>
+              </tr>
+            </thead>
+            <tbody data-ref="roles-tbody">
+              <!-- Renderizado dinámico -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" data-ref="modal-role-backdrop" style="display: none;">
+    <div class="modal-dialog modal-dialog--md" data-ref="modal-role">
+      <div class="modal-header">
+        <h3 class="modal-title" data-ref="modal-role-title">Detalle del Rol</h3>
+        <button type="button" class="component-button component-button--icon-only modal-close-btn" data-ref="btn-close-role-modal" aria-label="Cerrar modal">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cancel"></use></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 14px; margin-bottom: 16px; color: var(--text-secondary);" data-ref="modal-role-desc"></p>
+        <h4 style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">Alcances y Privilegios:</h4>
+        <div data-ref="modal-role-permissions" style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px;">
+          <!-- Badges de permisos -->
+        </div>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: flex-end;">
+        <button type="button" class="component-button component-button--h40 component-button--bordered" data-ref="btn-dismiss-role-modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>

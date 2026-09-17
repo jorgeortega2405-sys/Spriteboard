@@ -1,6 +1,5 @@
 import { createSidebar } from '../components/layout.component.js';
-import { openModal } from '../components/modal.component.js';
-import { getSystemConfigApi, loadTemplate, resetSystemConfigApi, updateSystemConfigApi } from '../services/api.service.js';
+import { getSystemConfigApi, loadTemplate, updateSystemConfigApi } from '../services/api.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { showToast } from '../services/toast.service.js';
 import { ViewController } from '../types/common.types.js';
@@ -9,7 +8,6 @@ import { withButtonLoading } from '../utils/dom.util.js';
 class SystemController implements ViewController {
   private abortController = new AbortController();
   private container: HTMLElement;
-  private currentConfigMap: Record<string, any> = {};
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -43,26 +41,59 @@ class SystemController implements ViewController {
       );
     });
 
-    const btnSaveTop = this.container.querySelector<HTMLElement>('[data-ref="btn-save-all"]');
-    const btnSaveBottom = this.container.querySelector<HTMLElement>('[data-ref="btn-save-bottom"]');
-    const btnResetTop = this.container.querySelector<HTMLElement>('[data-ref="btn-reset-all"]');
-    const btnResetBottom = this.container.querySelector<HTMLElement>('[data-ref="btn-reset-bottom"]');
+    const inlineBtns = this.container.querySelectorAll<HTMLButtonElement>('.component-inline-control__btn[data-step-change]');
+    inlineBtns.forEach((btn) => {
+      btn.addEventListener(
+        'click',
+        (e) => {
+          e.preventDefault();
+          const stepChange = Number(btn.dataset.stepChange) || 0;
+          const control = btn.closest('.component-inline-control');
+          const input = control?.querySelector<HTMLInputElement>('.component-inline-control__input');
+          if (!input) return;
 
-    const handleSave = async (button: HTMLElement | null) => {
-      await withButtonLoading(button, async () => {
-        await this.saveConfig();
-      });
-    };
+          const currentVal = Number(input.value) || 0;
+          const min = input.min !== '' ? Number(input.min) : -Infinity;
+          const max = input.max !== '' ? Number(input.max) : Infinity;
 
-    btnSaveTop?.addEventListener('click', () => void handleSave(btnSaveTop), { signal });
-    btnSaveBottom?.addEventListener('click', () => void handleSave(btnSaveBottom), { signal });
+          let newVal = currentVal + stepChange;
+          if (newVal < min) newVal = min;
+          if (newVal > max) newVal = max;
 
-    const handleReset = () => {
-      this.promptReset();
-    };
+          input.value = String(newVal);
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+        },
+        { signal }
+      );
+    });
 
-    btnResetTop?.addEventListener('click', handleReset, { signal });
-    btnResetBottom?.addEventListener('click', handleReset, { signal });
+    const numInputs = this.container.querySelectorAll<HTMLInputElement>('.component-inline-control__input');
+    numInputs.forEach((input) => {
+      input.addEventListener(
+        'change',
+        () => {
+          const val = Number(input.value);
+          if (isNaN(val)) return;
+          const min = input.min !== '' ? Number(input.min) : -Infinity;
+          const max = input.max !== '' ? Number(input.max) : Infinity;
+          if (val < min) input.value = String(min);
+          if (val > max) input.value = String(max);
+        },
+        { signal }
+      );
+    });
+
+    const btnSave = this.container.querySelector<HTMLElement>('[data-ref="btn-save-all"]');
+    btnSave?.addEventListener(
+      'click',
+      () => {
+        void withButtonLoading(btnSave, async () => {
+          await this.saveConfig();
+        });
+      },
+      { signal }
+    );
   }
 
   private async loadConfig(): Promise<void> {
@@ -74,7 +105,6 @@ class SystemController implements ViewController {
       return;
     }
 
-    this.currentConfigMap = res.map;
     this.populateForm(res.map);
   }
 
@@ -159,7 +189,7 @@ class SystemController implements ViewController {
       rate_limit_ai_chat_max: Math.max(1, Number(this.getInputValue('input-rate-limit-ai-chat-max')) || 20),
       rate_limit_login_max: Math.max(1, Number(this.getInputValue('input-rate-limit-login-max')) || 5),
       rate_limit_register_max: Math.max(1, Number(this.getInputValue('input-rate-limit-register-max')) || 5),
-      session_ttl_days: Math.max(1, Number(this.getInputValue('input-session-ttl-days')) || 7),
+      session_ttl_days: Math.max(1, Number(this.getInputValue('session_ttl_days')) || Number(this.getInputValue('input-session-ttl-days')) || 7),
       support_email: this.getInputValue('input-support-email') || 'support@spriteboard.app',
       username_change_cooldown_days: Math.max(0, Number(this.getInputValue('input-username-change-cooldown-days')) || 12),
       username_max_length: Math.max(10, Number(this.getInputValue('input-username-max-length')) || 30),
@@ -190,33 +220,7 @@ class SystemController implements ViewController {
       return;
     }
 
-    this.currentConfigMap = payload;
     showToast('Configuraciones guardadas y caché de Redis purgada exitosamente.', 'success');
-  }
-
-  private promptReset(): void {
-    openModal({
-      bodyHtml: `
-        <div style="font-size: 14px; color: var(--text-secondary); line-height: 1.5;">
-          ¿Estás seguro de que deseas restablecer todos los parámetros del sistema a los valores de fábrica?
-          Esta acción actualizará la base de datos MySQL e invalidará la caché de Redis inmediatamente.
-        </div>
-      `,
-      cancelText: 'Cancelar',
-      confirmClass: 'component-button--danger',
-      confirmText: 'Restablecer valores',
-      description: 'Esta acción restaurará todos los parámetros del sistema.',
-      onConfirm: async () => {
-        const res = await resetSystemConfigApi();
-        if (res.ok) {
-          showToast('Configuración del sistema restablecida a valores por defecto.', 'success');
-          await this.loadConfig();
-        } else {
-          showToast(res.error || 'Error al restablecer la configuración.', 'error');
-        }
-      },
-      title: 'Restablecer Configuración Global',
-    });
   }
 
   private getInputValue(ref: string): string {

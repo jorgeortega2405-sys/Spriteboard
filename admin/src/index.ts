@@ -13,6 +13,7 @@ import { COOKIE_NAME, isSessionRevoked, verifyMultiAccountToken } from './servic
 import { ensureBackupTable } from './services/backup.service.js';
 import { InternalTicketService } from './services/internal-ticket.service.js';
 import { logger } from './services/logger.service.js';
+import { ensureRolePermissions } from './services/role.service.js';
 import { ensureServerConfigTable } from './services/server-config.service.js';
 
 
@@ -103,6 +104,7 @@ async function setupClient(server: http.Server) {
 async function startServer() {
   try {
     await checkDbConnection();
+    await ensureRolePermissions();
     await ensureServerConfigTable();
     await ensureBackupTable();
     await InternalTicketService.ensureInternalTicketsTables();

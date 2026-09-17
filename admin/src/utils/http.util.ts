@@ -8,6 +8,7 @@ export function sanitizeUser(user: any): UserPayload {
     avatar_url: user.avatar_url || null,
     email: user.email,
     id: user.id,
+    permissions: Array.isArray(user.permissions) ? user.permissions : undefined,
     role: user.role || 'USER',
     roles: Array.isArray(user.roles) ? user.roles : (user.role ? [user.role] : ['USER']),
     subscription_tier: tier,

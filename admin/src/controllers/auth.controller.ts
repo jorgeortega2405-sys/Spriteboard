@@ -5,6 +5,7 @@ import { getClientIp } from '../middlewares/rate-limit.middleware.js';
 import { addAccountToSession, clearSessionCookie, removeAccountFromSession, revokeAllUserSessions, switchAccountInSession, verifyPassword } from '../services/auth.service.js';
 import { getGoogleAuthUrl, processAdminGoogleAuthCallback, STATE_COOKIE_NAME } from '../services/google.service.js';
 import { logger } from '../services/logger.service.js';
+import { getUserEffectivePermissions } from '../services/role.service.js';
 import { consumePending2FALogin, savePending2FALogin, verifyTotpCode } from '../services/two-factor.service.js';
 import { findUserByEmail, findUserById, getUser2FASecret, updateUserLastLoginGeo, verifyAndConsumeBackupCode } from '../services/user.service.js';
 import { isUserAdmin } from '../types/auth.types.js';
@@ -58,6 +59,7 @@ export async function login(req: Request, res: Response): Promise<void> {
       return;
     }
 
+    userRow.permissions = await getUserEffectivePermissions(userRow.id, userRow.role, userRow.roles);
     const user = sanitizeUser(userRow);
     const clientIp = getClientIp(req);
     void updateUserLastLoginGeo(user.id, { ip: clientIp });
@@ -123,6 +125,7 @@ export async function verify2FALogin(req: Request, res: Response): Promise<void>
       return;
     }
 
+    userRow.permissions = await getUserEffectivePermissions(userRow.id, userRow.role, userRow.roles);
     const user = sanitizeUser(userRow);
     const clientIp = getClientIp(req);
     void updateUserLastLoginGeo(user.id, { ip: clientIp });
@@ -158,9 +161,17 @@ export async function me(req: Request, res: Response): Promise<void> {
       return;
     }
 
+    freshUser.permissions = await getUserEffectivePermissions(freshUser.id, freshUser.role, freshUser.roles);
     const sanitized = sanitizeUser(freshUser);
+    const enrichedAccounts = await Promise.all(
+      linkedAccounts.map(async (acc) => {
+        const perms = await getUserEffectivePermissions(acc.id, acc.role, acc.roles);
+        return sanitizeUser({ ...acc, permissions: perms });
+      })
+    );
+
     sendSuccess(res, {
-      accounts: linkedAccounts.map(sanitizeUser),
+      accounts: enrichedAccounts,
       user: sanitized,
     });
   } catch (error) {
@@ -217,10 +228,17 @@ export async function switchAccount(req: Request, res: Response): Promise<void> 
       return;
     }
 
+    freshUser.permissions = await getUserEffectivePermissions(freshUser.id, freshUser.role, freshUser.roles);
     const sanitized = sanitizeUser(freshUser);
+    const enrichedAccounts = await Promise.all(
+      result.accounts.map(async (acc) => {
+        const perms = await getUserEffectivePermissions(acc.id, acc.role, acc.roles);
+        return sanitizeUser({ ...acc, permissions: perms });
+      })
+    );
 
     sendSuccess(res, {
-      accounts: result.accounts.map(sanitizeUser),
+      accounts: enrichedAccounts,
       message: 'Cuenta cambiada exitosamente.',
       user: sanitized,
     });

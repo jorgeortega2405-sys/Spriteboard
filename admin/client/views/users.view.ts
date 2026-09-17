@@ -6,7 +6,7 @@ import { applyUserSanctionApi, getAllRolesApi, getUserSanctionsApi, getUsersApi,
 import { renderIcons } from '../services/icon.service.js';
 import { showToast } from '../services/toast.service.js';
 import { ViewController } from '../types/common.types.js';
-import { escapeHtml, setupDropdown } from '../utils/dom.util.js';
+import { escapeHtml, removeEmptyState, renderEmptyState, setupDropdown } from '../utils/dom.util.js';
 import { getFallbackTierColor } from '../utils/tier.util.js';
 
 interface UserRowData {
@@ -282,6 +282,24 @@ class UsersController implements ViewController {
     this.currentPage = page;
     this.selectedUser = null;
 
+    const tableWrapper = this.container.querySelector<HTMLElement>('[data-ref="users-table-wrapper"]');
+    if (tableWrapper) {
+      removeEmptyState(tableWrapper, 'users-empty-state');
+    }
+    if (this.tableEl) this.tableEl.style.display = '';
+
+    if (this.tbodyEl) {
+      this.tbodyEl.innerHTML = Array(7).fill(0).map(() => `
+        <tr class="skeleton-table-row">
+          <td><div class="skeleton" style="height: 32px; width: 140px; border-radius: 4px;"></div></td>
+          <td><div class="skeleton" style="height: 20px; width: 180px; border-radius: 4px;"></div></td>
+          <td><div class="skeleton" style="height: 20px; width: 80px; border-radius: 4px;"></div></td>
+          <td><div class="skeleton" style="height: 20px; width: 60px; border-radius: 4px;"></div></td>
+          <td><div class="skeleton" style="height: 20px; width: 100px; border-radius: 4px;"></div></td>
+        </tr>
+      `).join('');
+    }
+
     const res = await getUsersApi({
       limit: this.limit,
       page: this.currentPage,
@@ -312,21 +330,26 @@ class UsersController implements ViewController {
     if (!this.tbodyEl) return;
     this.tbodyEl.innerHTML = '';
 
+    const tableWrapper = this.container.querySelector<HTMLElement>('[data-ref="users-table-wrapper"]');
     if (this.users.length === 0) {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td colspan="5" style="text-align: center; padding: 48px 16px; color: var(--text-secondary);">
-          <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
-            <svg class="component-icon" style="width: 40px; height: 40px; color: var(--text-tertiary);" aria-hidden="true"><use href="/icons.svg#group"></use></svg>
-            <div style="font-weight: 600; font-size: 14px; color: var(--text-primary);">No se encontraron usuarios</div>
-            <div style="font-size: 12px;">Intenta ajustar los términos de búsqueda o los filtros aplicados.</div>
-          </div>
-        </td>
-      `;
-      this.tbodyEl.appendChild(tr);
-      renderIcons(this.tbodyEl);
+      if (this.tableEl) this.tableEl.style.display = 'none';
+      if (tableWrapper) {
+        renderEmptyState({
+          container: tableWrapper,
+          dataRef: 'users-empty-state',
+          desc: 'Intenta ajustar los términos de búsqueda o los filtros aplicados.',
+          graphicType: this.searchQuery ? 'search' : 'users',
+          isTable: true,
+          title: 'No se encontraron usuarios',
+        });
+      }
       return;
     }
+
+    if (tableWrapper) {
+      removeEmptyState(tableWrapper, 'users-empty-state');
+    }
+    if (this.tableEl) this.tableEl.style.display = '';
 
     for (const user of this.users) {
       const tr = document.createElement('tr');
@@ -339,9 +362,20 @@ class UsersController implements ViewController {
 
       const avatarUrl = user.avatar_url || `/api/avatar?name=${encodeURIComponent(user.username)}`;
       const tierColor = getFallbackTierColor(user.subscription_tier);
-      const rolesHtml = user.roles && user.roles.length > 0
-        ? user.roles.map((r) => `<span class="component-badge component-badge--sm" data-ref="badge-role-${r.toLowerCase()}">${escapeHtml(r)}</span>`).join('')
-        : `<span class="component-badge component-badge--sm">${escapeHtml(user.role || 'USER')}</span>`;
+      let rolesHtml = '';
+      if (user.roles && user.roles.length > 1) {
+        const firstRole = user.roles[0];
+        const remainingCount = user.roles.length - 1;
+        const remainingTooltip = user.roles.slice(1).map((r) => escapeHtml(r)).join(', ');
+        rolesHtml = `
+          <span class="component-badge component-badge--sm" data-ref="badge-role-${firstRole.toLowerCase()}">${escapeHtml(firstRole)}</span>
+          <span class="component-badge component-badge--sm" data-ref="badge-role-more-${user.id}" data-tooltip="${remainingTooltip}">+${remainingCount}</span>
+        `;
+      } else if (user.roles && user.roles.length === 1) {
+        rolesHtml = `<span class="component-badge component-badge--sm" data-ref="badge-role-${user.roles[0].toLowerCase()}">${escapeHtml(user.roles[0])}</span>`;
+      } else {
+        rolesHtml = `<span class="component-badge component-badge--sm">${escapeHtml(user.role || 'USER')}</span>`;
+      }
 
       tr.innerHTML = `
         <td data-ref="cell-user-${user.id}">
@@ -349,14 +383,13 @@ class UsersController implements ViewController {
             <div class="user-cell__avatar" data-tier="${escapeHtml(user.subscription_tier || 'free')}" style="--avatar-tier-bg: ${tierColor};">
               <img src="${avatarUrl}" alt="${escapeHtml(user.username)}" referrerpolicy="no-referrer" />
             </div>
-            <div class="user-cell__info">
-              <span class="user-cell__name">${escapeHtml(user.username)}</span>
-              <span class="user-cell__id">ID #${user.id}</span>
+            <div class="user-cell__info" style="display: flex; gap: 4px; align-items: center; flex-wrap: wrap;">
+              <span class="component-badge component-badge--sm">${escapeHtml(user.username)}</span>
             </div>
           </div>
         </td>
         <td data-ref="cell-email-${user.id}">
-          <span style="color: var(--text-secondary);">${escapeHtml(user.email)}</span>
+          <span class="component-badge component-badge--sm">${escapeHtml(user.email)}</span>
         </td>
         <td data-ref="cell-roles-${user.id}">
           <div style="display: flex; gap: 4px; flex-wrap: wrap;">
@@ -369,7 +402,7 @@ class UsersController implements ViewController {
           </span>
         </td>
         <td data-ref="cell-created-${user.id}">
-          <span style="color: var(--text-secondary); font-size: 12px;">${formatDate(user.created_at)}</span>
+          <span class="component-badge component-badge--sm">${formatDate(user.created_at)}</span>
         </td>
       `;
 
@@ -674,9 +707,9 @@ class UsersController implements ViewController {
             <div style="flex: 1;">
               <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 2px;">
                 <span style="font-weight: 600; font-size: 13px; color: var(--text-primary);">Estado actual:</span>
-                <span class="component-badge component-badge--sm" data-ref="modal-status-badge">Consultando...</span>
+                <span class="component-badge component-badge--sm" data-ref="modal-status-badge">—</span>
               </div>
-              <p class="settings-item__desc" data-ref="modal-status-desc" style="margin: 0; font-size: 12px; color: var(--text-secondary); line-height: 1.4;">Cargando información del usuario...</p>
+              <p class="settings-item__desc" data-ref="modal-status-desc" style="margin: 0; font-size: 12px; color: var(--text-secondary); line-height: 1.4;"><span class="skeleton" style="display: inline-block; height: 12px; width: 140px; border-radius: 4px;"></span></p>
             </div>
           </div>
 

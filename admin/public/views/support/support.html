@@ -5,19 +5,9 @@
       <div class="view-header" data-ref="support-floating-top">
         <div class="view-header__left" data-ref="support-floating-left">
           <h1 class="view-header__title" data-ref="support-title">Soporte Técnico</h1>
-          <div class="component-badge component-badge--interactive" data-ref="support-queue-counter-badge" style="cursor: default; padding: 4px 10px; font-size: 12px; font-weight: 600; margin-left: 8px;">
-            <svg class="component-icon" aria-hidden="true" style="width: 14px; height: 14px; margin-right: 4px;"><use href="/icons.svg#schedule"></use></svg>
-            <span data-ref="support-queue-counter-text">0 en espera</span>
-          </div>
         </div>
 
-        <div class="view-header__right" data-ref="support-floating-right">
-          <div class="view-header__actions" data-ref="support-top-actions">
-            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-refresh-tickets" data-tooltip="Actualizar solicitudes" aria-label="Actualizar solicitudes">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#autorenew"></use></svg>
-            </button>
-          </div>
-        </div>
+        <div class="view-header__right" data-ref="support-floating-right"></div>
       </div>
 
       <!-- Main Split View Container -->
@@ -28,41 +18,57 @@
           
           <!-- Search & Filter Controls -->
           <div class="support-search-container" data-ref="support-search-container">
-            <div class="component-search component-search--full" data-ref="search-box">
-              <div class="component-search__icon" data-ref="search-icon">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search" xlink:href="/icons.svg#search"></use></svg>
+            <div class="support-search-container__input-wrap" data-ref="support-search-input-wrap">
+              <div class="component-search component-search--full" data-ref="search-box">
+                <div class="component-search__icon" data-ref="search-icon">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search" xlink:href="/icons.svg#search"></use></svg>
+                </div>
+                <div class="component-search__input-box" data-ref="search-input-box">
+                  <input class="component-search__input" data-ref="input-search-tickets" type="text" maxlength="100" autocomplete="off" placeholder="Buscar por usuario, ticket o motivo..." />
+                </div>
+                <button type="button" class="component-button component-button--h34 component-button--icon-only" data-ref="btn-clear-search" style="display: none; margin-right: 4px;" aria-label="Limpiar búsqueda">
+                  <svg class="component-icon" aria-hidden="true" style="font-size: 18px;"><use href="/icons.svg#close" xlink:href="/icons.svg#close"></use></svg>
+                </button>
               </div>
-              <div class="component-search__input-box" data-ref="search-input-box">
-                <input class="component-search__input" data-ref="input-search-tickets" type="text" maxlength="100" autocomplete="off" placeholder="Buscar por usuario, ticket o motivo..." />
-              </div>
-              <button type="button" class="component-button component-button--h34 component-button--icon-only" data-ref="btn-clear-search" style="display: none; margin-right: 4px;" aria-label="Limpiar búsqueda">
-                <svg class="component-icon" aria-hidden="true" style="font-size: 18px;"><use href="/icons.svg#close" xlink:href="/icons.svg#close"></use></svg>
-              </button>
             </div>
 
             <!-- Filter Tabs -->
-            <div class="support-filter-tabs" data-ref="support-filter-tabs">
-              <button type="button" class="component-badge component-badge--sm component-badge--interactive is-active" data-ref="tab-filter-queued" data-status="queued">
-                <span>En cola</span>
-                <span class="component-badge component-badge--count" data-ref="tab-count-queued" style="margin-left: 4px; font-size: 10px; padding: 0 5px;">0</span>
-              </button>
-              <button type="button" class="component-badge component-badge--sm component-badge--interactive" data-ref="tab-filter-my-active" data-status="in_progress">
-                <span>Mis activos</span>
-              </button>
-              <button type="button" class="component-badge component-badge--sm component-badge--interactive" data-ref="tab-filter-escalated" data-status="escalated">
-                <span>Escalados</span>
-              </button>
-              <button type="button" class="component-badge component-badge--sm component-badge--interactive" data-ref="tab-filter-all" data-status="all">
-                <span>Todos</span>
-              </button>
+            <div class="support-search-container__filters-wrap" data-ref="support-filter-wrap">
+              <div class="component-tags-carousel-wrapper view-tags-wrapper" data-ref="support-tags-carousel-wrapper">
+                <button type="button" class="component-tag-nav-btn component-tag-nav-left is-disabled" data-ref="btn-tags-scroll-left" data-tooltip="Desplazar a la izquierda" aria-label="Desplazar a la izquierda">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+                </button>
+
+                <div class="component-tags-carousel" data-ref="support-filter-tabs">
+                  <button type="button" class="component-badge component-badge--sm component-badge--interactive is-active" data-ref="tab-filter-queued" data-status="queued">
+                    <span>En cola</span>
+                    <span class="component-badge component-badge--count" data-ref="tab-count-queued" style="margin-left: 4px; font-size: 10px; padding: 0 5px;">0</span>
+                  </button>
+                  <button type="button" class="component-badge component-badge--sm component-badge--interactive" data-ref="tab-filter-my-active" data-status="in_progress">
+                    <span>Mis activos</span>
+                  </button>
+                  <button type="button" class="component-badge component-badge--sm component-badge--interactive" data-ref="tab-filter-escalated" data-status="escalated">
+                    <span>Escalados</span>
+                  </button>
+                  <button type="button" class="component-badge component-badge--sm component-badge--interactive" data-ref="tab-filter-all" data-status="all">
+                    <span>Todos</span>
+                  </button>
+                </div>
+
+                <button type="button" class="component-tag-nav-btn component-tag-nav-right is-disabled" data-ref="btn-tags-scroll-right" data-tooltip="Desplazar a la derecha" aria-label="Desplazar a la derecha">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+                </button>
+              </div>
             </div>
           </div>
 
           <!-- Ticket List Scrollable Container -->
           <div class="support-ticket-items" data-ref="support-ticket-items">
-            <div class="support-loading-indicator" data-ref="support-loading-indicator" style="padding: 24px; text-align: center; color: var(--text-secondary);">
-              <svg class="component-icon" aria-hidden="true" style="animation: spin 1s linear infinite;"><use href="/icons.svg#autorenew"></use></svg>
-              <span style="margin-left: 8px; font-size: 13px;">Cargando solicitudes...</span>
+            <div class="support-loading-skeleton" data-ref="support-loading-skeleton" style="padding: 12px; display: flex; flex-direction: column; gap: 8px;">
+              <div class="skeleton" style="height: 72px; border-radius: 12px;"></div>
+              <div class="skeleton" style="height: 72px; border-radius: 12px;"></div>
+              <div class="skeleton" style="height: 72px; border-radius: 12px;"></div>
+              <div class="skeleton" style="height: 72px; border-radius: 12px;"></div>
             </div>
           </div>
         </div>
@@ -71,12 +77,10 @@
         <div class="support-chat-workspace" data-ref="support-chat-workspace">
           
           <!-- Empty State (when no ticket selected) -->
-          <div class="support-empty-workspace" data-ref="support-empty-workspace" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px; text-align: center; gap: 12px;">
-            <div class="support-empty-icon" data-ref="support-empty-icon" style="width: 64px; height: 64px; border-radius: 50%; background-color: var(--bg-surface); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; color: var(--text-tertiary);">
-              <svg class="component-icon" aria-hidden="true" style="width: 32px; height: 32px;"><use href="/icons.svg#chat_bubble"></use></svg>
-            </div>
-            <h3 class="support-empty-title" data-ref="support-empty-title" style="font-size: 16px; font-weight: 600; color: var(--text-primary); margin: 0;">Selecciona una solicitud de soporte</h3>
-            <p class="support-empty-desc" data-ref="support-empty-desc" style="font-size: 13px; color: var(--text-secondary); max-width: 340px; margin: 0;">Elige un ticket de la lista lateral para atender al usuario en tiempo real, escalar el caso o resolverlo.</p>
+          <div class="component-empty-state" data-ref="support-empty-workspace" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px; text-align: center;">
+            <div class="component-empty-state-graphic" data-ref="support-empty-graphic"></div>
+            <h2 class="component-empty-state-title" data-ref="support-empty-title">Selecciona una solicitud de soporte</h2>
+            <p class="component-empty-state-desc" data-ref="support-empty-desc">Elige un ticket de la lista lateral para atender al usuario en tiempo real, escalar el caso o resolverlo.</p>
           </div>
 
           <!-- Active Ticket Details & Conversation (hidden by default) -->

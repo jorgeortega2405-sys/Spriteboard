@@ -4,6 +4,7 @@ export interface UserPayload {
   google_id?: string | null;
   id: number;
   language?: string;
+  permissions?: string[];
   role?: string;
   roles?: string[];
   subscription_tier?: string;
@@ -20,6 +21,7 @@ export interface SessionAccount {
   id: number;
   language?: string;
   last_accessed?: number;
+  permissions?: string[];
   role?: string;
   roles?: string[];
   sessionId?: string;
