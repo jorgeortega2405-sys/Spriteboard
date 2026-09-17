@@ -28,19 +28,19 @@ function createDrawerElement(): HTMLElement {
   return drawer;
 }
 
-function populateDrawerContent(drawer: HTMLElement): void {
+function populateDrawerContent(drawer: HTMLElement, path?: string): void {
   const drawerBody = drawer.querySelector<HTMLElement>('[data-ref="drawer-body"]');
   if (!drawerBody) return;
 
-  const currentPath = window.location.pathname;
+  const currentPath = path || window.location.pathname;
 
-  const bindNavLink = (btn: HTMLElement | null, path: string) => {
+  const bindNavLink = (btn: HTMLElement | null, targetPath: string) => {
     btn?.addEventListener('click', (e) => {
       e.preventDefault();
       if (window.innerWidth <= 768) {
         toggleDrawer(false);
       }
-      navigate(path);
+      navigate(targetPath);
     });
   };
 
@@ -51,6 +51,11 @@ function populateDrawerContent(drawer: HTMLElement): void {
 
     drawerBody.innerHTML = `
       <div class="drawer-section" data-ref="drawer-section-settings">
+        <button type="button" class="menu-item menu-item--bordered" data-ref="btn-drawer-back-to-admin">
+          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
+          <span class="menu-item__text">Volver al panel</span>
+        </button>
+        <div class="menu-divider"></div>
         <div class="drawer-section__header">
           <span class="drawer-section__title">Configuración</span>
         </div>
@@ -71,10 +76,12 @@ function populateDrawerContent(drawer: HTMLElement): void {
       </div>
     `;
 
+    const btnBackToAdmin = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-back-to-admin"]');
     const btnYourAccount = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-your-account"]');
     const btnSecurity = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-security"]');
     const btnAccessibility = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-accessibility"]');
 
+    bindNavLink(btnBackToAdmin, '/');
     bindNavLink(btnYourAccount, '/settings/your-account');
     bindNavLink(btnSecurity, '/settings/security');
     bindNavLink(btnAccessibility, '/settings/accessibility');
@@ -151,7 +158,7 @@ export function toggleDrawer(forceState?: boolean): void {
         sidebar.appendChild(drawer);
         renderIcons(drawer);
       }
-      populateDrawerContent(drawer);
+      populateDrawerContent(drawer, window.location.pathname);
       void drawer.offsetWidth;
       drawer.classList.add('is-expanded');
       updateSidebarActiveState(sidebar, window.location.pathname);
@@ -177,6 +184,13 @@ export function toggleDrawer(forceState?: boolean): void {
 
 export function updateSidebarActiveState(sidebar: HTMLElement, path: string): void {
   const isSettings = path.startsWith('/settings');
+  const isDashboard = path === '/' || path === '' || path === '/dashboard';
+
+  const btnRailDashboard = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-dashboard"]');
+  if (btnRailDashboard) {
+    btnRailDashboard.classList.toggle('is-active', isDashboard);
+  }
+
   const btnRailSettings = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-settings"]');
   if (btnRailSettings) {
     btnRailSettings.classList.toggle('is-active', isSettings);
@@ -207,11 +221,7 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path: string): vo
 
   const drawer = sidebar.querySelector<HTMLElement>('[data-ref="layout-drawer"]') || document.querySelector<HTMLElement>('[data-ref="layout-drawer"]');
   if (drawer) {
-    for (const mod of ALL_NAV_MODULES) {
-      const isModActive = path === mod.route || (mod.route !== '/' && mod.route !== '/dashboard' && path.startsWith(mod.route)) || (mod.route === '/dashboard' && (path === '/' || path === '' || path === '/dashboard'));
-      const drawerBtn = drawer.querySelector<HTMLElement>(`[data-ref="${mod.btnDrawerRef}"]`);
-      if (drawerBtn) drawerBtn.classList.toggle('is-active', isModActive);
-    }
+    populateDrawerContent(drawer, path);
   }
 }
 
@@ -246,6 +256,15 @@ export async function createSidebar(): Promise<HTMLElement> {
   btnToggleDrawer?.addEventListener('click', (e: Event) => {
     e.preventDefault();
     toggleDrawer();
+  });
+
+  const btnRailDashboard = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-dashboard"]');
+  btnRailDashboard?.addEventListener('click', (e: Event) => {
+    e.preventDefault();
+    if (window.innerWidth <= 768) {
+      toggleDrawer(false);
+    }
+    navigate('/');
   });
 
   const btnRailSettings = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-settings"]');

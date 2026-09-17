@@ -347,15 +347,20 @@ export async function handleAdminUpdateUserAvatar(req: Request, res: Response): 
       return;
     }
 
-    const extension = matches[1].toLowerCase() === 'jpeg' ? 'jpg' : matches[1].toLowerCase();
-    const buffer = Buffer.from(matches[2], 'base64');
+    const rawMime = matches[1].toLowerCase();
+    const allowedMimes = ['jpeg', 'jpg', 'png', 'webp', 'gif'];
+    if (!allowedMimes.includes(rawMime)) {
+      res.status(400).json({ error: 'Formato de imagen no compatible. Usa JPG, PNG o WEBP.', ok: false });
+      return;
+    }
 
+    const buffer = Buffer.from(matches[2], 'base64');
     if (buffer.length > 2 * 1024 * 1024) {
       res.status(400).json({ error: 'La imagen supera el límite permitido de 2 MB.', ok: false });
       return;
     }
 
-    const result = await updateUserAvatarByAdmin(userId, buffer, extension, adminUser.id);
+    const result = await updateUserAvatarByAdmin(userId, buffer, adminUser.id);
     if (!result.success) {
       res.status(400).json({ error: result.error || 'Error al guardar avatar.', ok: false });
       return;

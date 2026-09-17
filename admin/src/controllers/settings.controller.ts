@@ -1,8 +1,8 @@
+import { Request, Response } from 'express';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import { getMultiAccountSession, updateActiveAccountInSession } from '../services/auth.service.js';
 import { logger } from '../services/logger.service.js';
 import { checkCurrentPassword, deleteAvatar, disable2FA, enable2FA, generate2FASecret, get2FAStatus, getUserActiveSessions, getUserPreferences, revokeUserSessionById, unlinkGoogleAccount, updateAvatarFile, updateEmail, updatePassword, updateUserPreferences, updateUsername } from '../services/settings.service.js';
-import { Request, Response } from 'express';
 
 export async function handleGetPreferences(req: Request, res: Response): Promise<void> {
   try {
@@ -89,6 +89,7 @@ export async function handleUnlinkGoogle(req: Request, res: Response): Promise<v
       res.status(400).json({ error: result.error });
       return;
     }
+    updateActiveAccountInSession(res, req, { google_id: null });
     res.json({ message: 'Cuenta de Google desvinculada exitosamente.', ok: true });
   } catch (error) {
     logger.app.error('Error al desvincular Google en Admin', error);
@@ -250,17 +251,22 @@ export async function handleUpdateAvatar(req: Request, res: Response): Promise<v
       return;
     }
 
-    const extension = matches[1].toLowerCase() === 'jpeg' ? 'jpg' : matches[1].toLowerCase();
-    const buffer = Buffer.from(matches[2], 'base64');
+    const rawMime = matches[1].toLowerCase();
+    const allowedMimes = ['jpeg', 'jpg', 'png', 'webp', 'gif'];
+    if (!allowedMimes.includes(rawMime)) {
+      res.status(400).json({ error: 'Formato de imagen no compatible. Usa JPG, PNG o WEBP.' });
+      return;
+    }
 
+    const buffer = Buffer.from(matches[2], 'base64');
     if (buffer.length > 2 * 1024 * 1024) {
       res.status(400).json({ error: 'La imagen supera el límite permitido de 2 MB.' });
       return;
     }
 
-    const result = await updateAvatarFile(user.id, buffer, extension);
+    const result = await updateAvatarFile(user.id, buffer);
     if (!result.success) {
-      res.status(400).json({ error: result.error });
+      res.status(400).json({ error: result.error || 'No se pudo guardar la imagen de perfil.' });
       return;
     }
 

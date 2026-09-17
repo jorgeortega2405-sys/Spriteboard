@@ -49,6 +49,10 @@ export async function handleProcessRefund(req: Request, res: Response): Promise<
     res.json({ message: 'Reembolso procesado exitosamente.' });
   } catch (error: any) {
     logger.app.error('Error al ejecutar reembolso', error);
-    res.status(400).json({ error: error.message || 'Ha ocurrido un error al procesar el reembolso.' });
+    const knownErrors = ['Transacción no encontrada', 'La transacción ya se encuentra reembolsada'];
+    const message = error instanceof Error && knownErrors.includes(error.message)
+      ? error.message
+      : 'Ha ocurrido un error al procesar el reembolso.';
+    res.status(400).json({ error: message });
   }
 }

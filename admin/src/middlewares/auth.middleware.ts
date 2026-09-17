@@ -1,7 +1,8 @@
+import { NextFunction, Request, Response } from 'express';
 import { clearSessionCookie, COOKIE_NAME, getMultiAccountSession, isSessionRevoked, verifyMultiAccountToken } from '../services/auth.service.js';
 import { getUserEffectivePermissions } from '../services/role.service.js';
+import { getActiveUserSanction } from '../services/user.service.js';
 import { isUserAdmin, SessionAccount, UserPayload, UserRole } from '../types/auth.types.js';
-import { NextFunction, Request, Response } from 'express';
 
 export function getCurrentUser(req: Request): UserPayload | null {
   if ((req as any).user) {
@@ -16,6 +17,7 @@ export function getCurrentUser(req: Request): UserPayload | null {
       const userPayload: UserPayload = {
         avatar_url: active.avatar_url ?? null,
         email: active.email,
+        google_id: active.google_id || null,
         id: active.id,
         permissions: active.permissions,
         role: active.role || 'USER',
@@ -44,6 +46,13 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
 
   if (!isUserAdmin(user.role, user.roles)) {
     res.status(403).json({ error: 'Acceso denegado. Permisos insuficientes.' });
+    return;
+  }
+
+  const activeSanction = await getActiveUserSanction(user.id);
+  if (activeSanction) {
+    clearSessionCookie(res);
+    res.status(403).json({ error: 'Tu cuenta se encuentra suspendida o bloqueada.' });
     return;
   }
 

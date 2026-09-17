@@ -37,6 +37,9 @@ export async function handleTriggerWorkflowJob(req: Request, res: Response): Pro
     res.json(result);
   } catch (error: any) {
     logger.app.error('Error al ejecutar trabajo', error);
-    res.status(400).json({ error: error.message || 'Ha ocurrido un error al ejecutar la tarea.' });
+    const message = error instanceof Error && error.message.startsWith('Trabajo de automatización')
+      ? error.message
+      : 'Ha ocurrido un error al ejecutar la tarea.';
+    res.status(400).json({ error: message });
   }
 }

@@ -120,7 +120,11 @@ export async function triggerWorkflowJob(
     if (jobId === 'cleanup_expired_sessions') {
       logger.app.info('Ejecutando purga manual de sesiones huérfanas');
     } else if (jobId === 'purge_deleted_canvases') {
-      await pool.query('DELETE FROM db_canvas.canvases WHERE deleted_at IS NOT NULL AND deleted_at < DATE_SUB(NOW(), INTERVAL 30 DAY)');
+      try {
+        await pool.query('DELETE FROM db_canvas.canvases WHERE deleted_at IS NOT NULL AND deleted_at < DATE_SUB(NOW(), INTERVAL 30 DAY)');
+      } catch (canvasErr) {
+        logger.db.warn('No se pudo purgar db_canvas.canvases (tabla o BD inaccesible)', canvasErr);
+      }
     }
 
     const durationMs = Date.now() - startTime;

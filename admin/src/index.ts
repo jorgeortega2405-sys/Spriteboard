@@ -15,6 +15,7 @@ import { InternalTicketService } from './services/internal-ticket.service.js';
 import { logger } from './services/logger.service.js';
 import { ensureRolePermissions } from './services/role.service.js';
 import { ensureServerConfigTable } from './services/server-config.service.js';
+import { isUserAdmin } from './types/auth.types.js';
 
 
 function parseCookieHeader(cookieHeader?: string): Record<string, string> {
@@ -136,6 +137,13 @@ async function startServer() {
         }
 
         const activeAccount = session.accounts.find((a) => a.id === session.activeId);
+        if (!activeAccount || !isUserAdmin(activeAccount.role, activeAccount.roles)) {
+          logger.security.warn('Conexión WebSocket rechazada en Admin: Usuario sin rol administrativo.');
+          clientSocket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
+          clientSocket.destroy();
+          return;
+        }
+
         const sid = activeAccount?.sessionId || session.sessionId;
         const revoked = await isSessionRevoked(session.activeId, session.iat, sid);
         if (revoked) {

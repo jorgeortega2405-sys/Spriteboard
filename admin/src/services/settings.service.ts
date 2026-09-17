@@ -1,12 +1,13 @@
-import { pool } from '../config/database.config.js';
-import { redis } from '../config/redis.config.js';
-import { hashPassword, revokeAllUserSessions, revokeSession, SESSION_PREFIX, USER_SESSIONS_PREFIX, verifyPassword } from './auth.service.js';
-import { logger } from './logger.service.js';
-import { base32Encode, hashBackupCode, verifyTotpCode } from './two-factor.service.js';
 import crypto from 'crypto';
 import fs from 'fs';
 import type { ResultSetHeader, RowDataPacket } from 'mysql2';
 import path from 'path';
+import { pool } from '../config/database.config.js';
+import { redis } from '../config/redis.config.js';
+import { hashPassword, revokeAllUserSessions, revokeSession, SESSION_PREFIX, USER_SESSIONS_PREFIX, verifyPassword } from './auth.service.js';
+import { validateAvatarBuffer } from './image-sanitizer.service.js';
+import { logger } from './logger.service.js';
+import { base32Encode, hashBackupCode, verifyTotpCode } from './two-factor.service.js';
 
 const AVATARS_DIR = path.join(process.cwd(), 'public/uploads/avatars');
 
@@ -350,12 +351,17 @@ export async function deleteAvatar(userId: number): Promise<{ success: boolean }
 export async function updateAvatarFile(
   userId: number,
   buffer: Buffer,
-  extension: string
+  _extension?: string
 ): Promise<{ avatar_url?: string; error?: string; success: boolean }> {
+  const validation = validateAvatarBuffer(buffer);
+  if (!validation.success) {
+    return { error: validation.error || 'Formato de imagen no compatible.', success: false };
+  }
+
   try {
     await fs.promises.mkdir(AVATARS_DIR, { recursive: true });
 
-    const fileName = `avatar_${userId}_${Date.now()}.${extension}`;
+    const fileName = `avatar_${userId}_${Date.now()}.${validation.extension}`;
     const filePath = path.join(AVATARS_DIR, fileName);
 
     await fs.promises.writeFile(filePath, buffer);

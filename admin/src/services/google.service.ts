@@ -97,6 +97,7 @@ export async function processAdminGoogleAuthCallback(
     if (emailRows.length > 0) {
       userRecord = emailRows[0];
       await pool.query('UPDATE users SET google_id = ? WHERE id = ?', [googleId, userRecord.id]);
+      userRecord.google_id = googleId;
     }
   }
 
@@ -119,6 +120,7 @@ export async function processAdminGoogleAuthCallback(
   return {
     avatar_url: userRecord.avatar_url || googleUser.picture || null,
     email: userRecord.email,
+    google_id: userRecord.google_id || googleId || null,
     id: userRecord.id,
     role: userRecord.role || 'USER',
     roles: userRoles,

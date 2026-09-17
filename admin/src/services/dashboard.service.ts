@@ -1,7 +1,7 @@
-import { pool } from '../config/database.config.js';
-import { logger } from './logger.service.js';
-import { DashboardStatsResponse, DashboardSummary, DashboardTierDistribution, DashboardTimeSeriesPoint, DashboardTicketsByStatus } from '../types/dashboard.types.js';
 import { RowDataPacket } from 'mysql2';
+import { pool } from '../config/database.config.js';
+import { DashboardStatsResponse, DashboardSummary, DashboardTicketsByStatus, DashboardTierDistribution, DashboardTimeSeriesPoint } from '../types/dashboard.types.js';
+import { logger } from './logger.service.js';
 
 function formatDayLabel(dateStr: string): string {
   const parts = dateStr.split('-');
@@ -15,14 +15,42 @@ function formatDayLabel(dateStr: string): string {
 
 export async function getDashboardStats(): Promise<DashboardStatsResponse> {
   try {
+    let canvasesToday = 0;
+    let canvasesYesterday = 0;
+    let canvasesTotal = 0;
+    const canvasMap = new Map<string, number>();
+
+    try {
+      const [canvasRows] = await pool.query<RowDataPacket[]>(`
+        SELECT
+          (SELECT COUNT(*) FROM db_canvas.canvases WHERE deleted_at IS NULL AND DATE(created_at) = CURDATE()) AS canvasesToday,
+          (SELECT COUNT(*) FROM db_canvas.canvases WHERE deleted_at IS NULL AND DATE(created_at) = SUBDATE(CURDATE(), 1)) AS canvasesYesterday,
+          (SELECT COUNT(*) FROM db_canvas.canvases WHERE deleted_at IS NULL) AS canvasesTotal
+      `);
+      if (canvasRows[0]) {
+        canvasesToday = Number(canvasRows[0].canvasesToday || 0);
+        canvasesYesterday = Number(canvasRows[0].canvasesYesterday || 0);
+        canvasesTotal = Number(canvasRows[0].canvasesTotal || 0);
+      }
+
+      const [canvasTrendRows] = await pool.query<RowDataPacket[]>(`
+        SELECT DATE_FORMAT(created_at, '%Y-%m-%d') AS date, COUNT(*) AS count
+        FROM db_canvas.canvases
+        WHERE deleted_at IS NULL AND created_at >= DATE_SUB(CURDATE(), INTERVAL 13 DAY)
+        GROUP BY DATE_FORMAT(created_at, '%Y-%m-%d')
+      `);
+      canvasTrendRows.forEach((r) => {
+        canvasMap.set(String(r.date), Number(r.count || 0));
+      });
+    } catch (canvasErr) {
+      logger.db.warn('No se pudieron consultar métricas de db_canvas.canvases', canvasErr);
+    }
+
     const [summaryRows] = await pool.query<RowDataPacket[]>(`
       SELECT
         (SELECT COUNT(*) FROM users WHERE DATE(created_at) = CURDATE()) AS accountsToday,
         (SELECT COUNT(*) FROM users WHERE DATE(created_at) = SUBDATE(CURDATE(), 1)) AS accountsYesterday,
         (SELECT COUNT(*) FROM users) AS accountsTotal,
-        (SELECT COUNT(*) FROM db_canvas.canvases WHERE deleted_at IS NULL AND DATE(created_at) = CURDATE()) AS canvasesToday,
-        (SELECT COUNT(*) FROM db_canvas.canvases WHERE deleted_at IS NULL AND DATE(created_at) = SUBDATE(CURDATE(), 1)) AS canvasesYesterday,
-        (SELECT COUNT(*) FROM db_canvas.canvases WHERE deleted_at IS NULL) AS canvasesTotal,
         (SELECT COUNT(*) FROM support_tickets WHERE status IN ('queued', 'in_progress', 'escalated')) AS ticketsActive,
         (SELECT COUNT(*) FROM support_tickets WHERE status IN ('resolved', 'closed')) AS ticketsResolved,
         (SELECT COUNT(*) FROM support_tickets) AS ticketsTotal,
@@ -36,9 +64,9 @@ export async function getDashboardStats(): Promise<DashboardStatsResponse> {
       accountsTotal: Number(s.accountsTotal || 0),
       accountsYesterday: Number(s.accountsYesterday || 0),
       activeSubscribers: Number(s.activeSubscribers || 0),
-      canvasesToday: Number(s.canvasesToday || 0),
-      canvasesTotal: Number(s.canvasesTotal || 0),
-      canvasesYesterday: Number(s.canvasesYesterday || 0),
+      canvasesToday,
+      canvasesTotal,
+      canvasesYesterday,
       ticketsActive: Number(s.ticketsActive || 0),
       ticketsResolved: Number(s.ticketsResolved || 0),
       ticketsTotal: Number(s.ticketsTotal || 0),
@@ -52,21 +80,9 @@ export async function getDashboardStats(): Promise<DashboardStatsResponse> {
       GROUP BY DATE_FORMAT(created_at, '%Y-%m-%d')
     `);
 
-    const [canvasTrendRows] = await pool.query<RowDataPacket[]>(`
-      SELECT DATE_FORMAT(created_at, '%Y-%m-%d') AS date, COUNT(*) AS count
-      FROM db_canvas.canvases
-      WHERE deleted_at IS NULL AND created_at >= DATE_SUB(CURDATE(), INTERVAL 13 DAY)
-      GROUP BY DATE_FORMAT(created_at, '%Y-%m-%d')
-    `);
-
     const userMap = new Map<string, number>();
     userTrendRows.forEach((r) => {
       userMap.set(String(r.date), Number(r.count || 0));
-    });
-
-    const canvasMap = new Map<string, number>();
-    canvasTrendRows.forEach((r) => {
-      canvasMap.set(String(r.date), Number(r.count || 0));
     });
 
     const trends: DashboardTimeSeriesPoint[] = [];

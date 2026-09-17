@@ -41,6 +41,7 @@ export function createSessionToken(user: UserPayload): string {
       {
         avatar_url: user.avatar_url ?? null,
         email: user.email,
+        google_id: user.google_id ?? null,
         id: user.id,
         last_accessed: Date.now(),
         role: user.role || 'USER',
@@ -84,6 +85,7 @@ export function verifyMultiAccountToken(token: string): MultiAccountSessionPaylo
             {
               avatar_url: parsed.avatar_url ?? null,
               email: parsed.email,
+              google_id: parsed.google_id ?? null,
               id: parsed.id,
               last_accessed: Date.now(),
               role: parsed.role || 'USER',
@@ -244,6 +246,7 @@ export async function addAccountToSession(
   const sessionAcc: SessionAccount = {
     avatar_url: user.avatar_url ?? null,
     email: user.email,
+    google_id: user.google_id ?? null,
     id: user.id,
     last_accessed: now,
     role: user.role || 'USER',

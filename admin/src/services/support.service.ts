@@ -116,7 +116,7 @@ export class AdminSupportService {
 
       const total = Number(countRows[0]?.total || 0);
 
-      const [rows] = await pool.execute<mysql.RowDataPacket[]>(
+      const [rows] = await pool.query<mysql.RowDataPacket[]>(
         `SELECT t.*, 
                 u.username as user_username, 
                 u.email as user_email, 
@@ -140,7 +140,7 @@ export class AdminSupportService {
            END ASC,
            t.updated_at DESC
          LIMIT ? OFFSET ?`,
-        [...params, String(limit), String(offset)]
+        [...params, limit, offset]
       );
 
       return {

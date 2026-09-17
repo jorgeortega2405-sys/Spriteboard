@@ -50,6 +50,10 @@ export async function handleUpdatePrivacyRequestStatus(req: Request, res: Respon
     res.json({ message: 'Solicitud actualizada correctamente.' });
   } catch (error: any) {
     logger.app.error('Error al actualizar solicitud de privacidad', error);
-    res.status(400).json({ error: error.message || 'Ha ocurrido un error al procesar la solicitud.' });
+    const knownErrors = ['Solicitud de privacidad no encontrada'];
+    const message = error instanceof Error && knownErrors.includes(error.message)
+      ? error.message
+      : 'Ha ocurrido un error al procesar la solicitud.';
+    res.status(400).json({ error: message });
   }
 }

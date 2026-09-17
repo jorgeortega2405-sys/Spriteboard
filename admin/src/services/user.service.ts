@@ -361,6 +361,7 @@ export async function updateUserRoles(
     }
 
     await pool.query('UPDATE users SET role = ? WHERE id = ?', [primaryRole, targetUser.id]);
+    await revokeAllUserSessions(targetUser.id);
 
     logger.security.info('Roles de usuario actualizados por administrador', {
       adminId,
@@ -459,6 +460,10 @@ export async function applyUserSanction(
       [targetUser.id, adminId, sanction.type, sanction.reason.trim(), sanction.durationDays || null, expiresAt]
     );
 
+    if (sanction.type === 'ban' || sanction.type === 'suspension') {
+      await revokeAllUserSessions(targetUser.id);
+    }
+
     logger.security.warn('Sanción administrativa aplicada a usuario', {
       adminId,
       expiresAt,
@@ -471,6 +476,42 @@ export async function applyUserSanction(
   } catch (error) {
     logger.db.error('Error al aplicar sanción en Admin', { adminId, error, sanction, userIdOrUuid });
     return { error: 'Error al aplicar sanción.', success: false };
+  }
+}
+
+export async function getActiveUserSanction(userId: number): Promise<{
+  expiresAt: Date | null;
+  isBanned: boolean;
+  isSuspended: boolean;
+  reason: string;
+  type: 'ban' | 'suspension';
+} | null> {
+  try {
+    await ensureSanctionsTable();
+    const [rows] = await pool.query<UserSanctionRecord[]>(
+      `SELECT id, user_id, type, reason, expires_at 
+       FROM user_sanctions 
+       WHERE user_id = ? 
+         AND type IN ('ban', 'suspension') 
+         AND (expires_at IS NULL OR expires_at > NOW())
+       ORDER BY id DESC 
+       LIMIT 1`,
+      [userId]
+    );
+
+    if (rows.length === 0) return null;
+
+    const s = rows[0];
+    return {
+      expiresAt: s.expires_at || null,
+      isBanned: s.type === 'ban',
+      isSuspended: s.type === 'suspension',
+      reason: s.reason,
+      type: s.type,
+    };
+  } catch (error) {
+    logger.db.error('Error al consultar sanción activa de usuario', { error, userId });
+    return null;
   }
 }
 
@@ -555,12 +596,11 @@ export async function updateUserEmailByAdmin(
 export async function updateUserAvatarByAdmin(
   userIdOrUuid: number | string,
   buffer: Buffer,
-  extension: string,
   adminId: number
 ): Promise<{ avatar_url?: string; error?: string; success: boolean }> {
   const targetUser = await findUserByIdOrUuid(userIdOrUuid);
   if (!targetUser) return { error: 'Usuario no encontrado.', success: false };
-  const result = await updateAvatarFile(targetUser.id, buffer, extension);
+  const result = await updateAvatarFile(targetUser.id, buffer);
   if (result.success) {
     logger.security.info('Avatar de usuario actualizado por admin', { adminId, avatarUrl: result.avatar_url, userId: targetUser.id });
   }

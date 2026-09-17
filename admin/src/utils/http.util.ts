@@ -7,6 +7,7 @@ export function sanitizeUser(user: any): UserPayload {
   return {
     avatar_url: user.avatar_url || null,
     email: user.email,
+    google_id: user.google_id || null,
     id: user.id,
     permissions: Array.isArray(user.permissions) ? user.permissions : undefined,
     role: user.role || 'USER',

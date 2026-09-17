@@ -7,7 +7,7 @@ import { getGoogleAuthUrl, processAdminGoogleAuthCallback, STATE_COOKIE_NAME } f
 import { logger } from '../services/logger.service.js';
 import { getUserEffectivePermissions } from '../services/role.service.js';
 import { consumePending2FALogin, savePending2FALogin, verifyTotpCode } from '../services/two-factor.service.js';
-import { findUserByEmail, findUserById, getUser2FASecret, updateUserLastLoginGeo, verifyAndConsumeBackupCode } from '../services/user.service.js';
+import { findUserByEmail, findUserById, getActiveUserSanction, getUser2FASecret, updateUserLastLoginGeo, verifyAndConsumeBackupCode } from '../services/user.service.js';
 import { isUserAdmin } from '../types/auth.types.js';
 import { sanitizeUser, sendBadRequest, sendForbidden, sendInternalError, sendSuccess, sendUnauthorized } from '../utils/http.util.js';
 
@@ -40,6 +40,13 @@ export async function login(req: Request, res: Response): Promise<void> {
     if (!isUserAdmin(userRow.role, userRow.roles)) {
       logger.security.warn('Acceso denegado a Admin: usuario sin rol administrativo', { email: trimmedEmail, roles: userRow.roles });
       sendForbidden(res, 'Acceso denegado. No tienes permisos de administrador para acceder a este panel.');
+      return;
+    }
+
+    const activeSanction = await getActiveUserSanction(userRow.id);
+    if (activeSanction) {
+      logger.security.warn('Intento de inicio de sesión de usuario sancionado en Admin', { sanctionType: activeSanction.sanction_type, userId: userRow.id });
+      sendForbidden(res, 'Tu cuenta se encuentra suspendida o bloqueada.');
       return;
     }
 
@@ -125,6 +132,13 @@ export async function verify2FALogin(req: Request, res: Response): Promise<void>
       return;
     }
 
+    const activeSanction = await getActiveUserSanction(userRow.id);
+    if (activeSanction) {
+      logger.security.warn('Intento de verificación 2FA de usuario sancionado en Admin', { sanctionType: activeSanction.sanction_type, userId: userRow.id });
+      sendForbidden(res, 'Tu cuenta se encuentra suspendida o bloqueada.');
+      return;
+    }
+
     userRow.permissions = await getUserEffectivePermissions(userRow.id, userRow.role, userRow.roles);
     const user = sanitizeUser(userRow);
     const clientIp = getClientIp(req);
@@ -156,6 +170,13 @@ export async function me(req: Request, res: Response): Promise<void> {
 
     const freshUser = await findUserById(currentUser.id);
     if (!freshUser || !isUserAdmin(freshUser.role, freshUser.roles)) {
+      clearSessionCookie(res);
+      sendSuccess(res, { accounts: [], user: null });
+      return;
+    }
+
+    const activeSanction = await getActiveUserSanction(freshUser.id);
+    if (activeSanction) {
       clearSessionCookie(res);
       sendSuccess(res, { accounts: [], user: null });
       return;
@@ -222,6 +243,12 @@ export async function switchAccount(req: Request, res: Response): Promise<void> 
       return;
     }
 
+    const activeSanction = await getActiveUserSanction(freshUser.id);
+    if (activeSanction) {
+      sendForbidden(res, 'La cuenta seleccionada se encuentra suspendida o bloqueada.');
+      return;
+    }
+
     const result = switchAccountInSession(res, req, userId);
     if (!result.success || !result.activeUser) {
       sendUnauthorized(res, 'No se pudo cambiar a la cuenta especificada.');
@@ -276,6 +303,21 @@ export async function googleAuthCallback(req: Request, res: Response): Promise<v
   try {
     const clientIp = getClientIp(req);
     const user = await processAdminGoogleAuthCallback(String(code), clientIp);
+
+    const activeSanction = await getActiveUserSanction(user.id);
+    if (activeSanction) {
+      logger.security.warn('Intento de login con Google en Admin de usuario sancionado', { sanctionType: activeSanction.sanction_type, userId: user.id });
+      res.redirect('/login?error=account_suspended');
+      return;
+    }
+
+    if (user.two_factor_enabled) {
+      const tempToken = crypto.randomBytes(32).toString('hex');
+      await savePending2FALogin(tempToken, { email: user.email, userId: user.id }, 300);
+      logger.security.info('Login con Google en Admin requiere segundo factor 2FA', { email: user.email, userId: user.id });
+      res.redirect(`/login?step=2fa&tempToken=${encodeURIComponent(tempToken)}`);
+      return;
+    }
 
     await addAccountToSession(res, req, user);
 

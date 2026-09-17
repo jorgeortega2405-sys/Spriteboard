@@ -52,10 +52,21 @@ class AuthController implements ViewController {
   private checkUrlErrors(): void {
     const params = new URLSearchParams(window.location.search);
     const err = params.get('error');
+    const step = params.get('step');
+    const tempToken = params.get('tempToken');
+
+    if (step === '2fa' && tempToken) {
+      this.show2FAStep(tempToken);
+      window.history.replaceState({}, '', '/login');
+      return;
+    }
+
     if (err === 'no_admin_account') {
       this.showError('No existe ninguna cuenta de administrador registrada con este correo de Google.');
     } else if (err === 'forbidden') {
       this.showError('Acceso denegado. Tu cuenta no cuenta con permisos de administrador.');
+    } else if (err === 'account_suspended') {
+      this.showError('Tu cuenta se encuentra suspendida o bloqueada.');
     } else if (err === 'email_not_verified') {
       this.showError('El correo de Google no se encuentra verificado.');
     } else if (err === 'invalid_state' || err === 'oauth_failed') {
