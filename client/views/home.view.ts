@@ -1374,9 +1374,10 @@ class HomeController {
     const isLocal = Boolean(canvas.is_local);
     const canSync = isLocal && Boolean(currentUser);
     const isFavorite = Boolean(canvas.is_favorite);
-    const isBoard = canvas.canvas_type === 'board' || canvas.unit === 'board';
-    const targetUrl = isBoard ? `/board/${canvas.uuid}` : `/design/${canvas.uuid}`;
-    const typeIcon = isBoard ? 'draw' : 'grid_4x4';
+    const isDiagram = canvas.canvas_type === 'diagram' || canvas.canvas_type === 'mindmap' || canvas.unit === 'diagram';
+    const isBoard = !isDiagram && (canvas.canvas_type === 'board' || canvas.unit === 'board');
+    const targetUrl = isDiagram ? `/diagram/${canvas.uuid}` : (isBoard ? `/board/${canvas.uuid}` : `/design/${canvas.uuid}`);
+    const typeIcon = isDiagram ? 'psychology' : (isBoard ? 'draw' : 'grid_4x4');
     const editedTime = formatEditedTime(canvas.updated_at || canvas.created_at);
 
     const badgeText = isLocal ? t('canvas.status_local') : t('canvas.status_cloud');

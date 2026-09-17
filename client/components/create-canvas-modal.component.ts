@@ -2,13 +2,14 @@ import { PresetVariant } from '../config/templates.config.js';
 import { createAndOpenCanvas } from '../services/canvas-creator.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
+import { DIAGRAM_SUBTYPES } from '../types/mindmap.types.js';
 import { setupDropdown } from '../utils/dom.util.js';
 
 let activeCreateCanvasModal: { close: () => void } | null = null;
 
 export interface OpenCreateCanvasModalOptions {
   height?: number;
-  initialType?: 'pixel' | 'board';
+  initialType?: 'board' | 'diagram' | 'pixel';
   name?: string;
   teamName?: string | null;
   teamUuid?: string | null;
@@ -26,7 +27,10 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
   const initialName = options?.name || options?.templateName || '';
   const templateVariants = options?.variants && options.variants.length > 0 ? options.variants : null;
   const templateName = options?.templateName || null;
-  let selectedCreationType: 'pixel' | 'board' = templateVariants ? 'pixel' : (options?.initialType || 'board');
+  let selectedCreationType: 'board' | 'diagram' | 'pixel' = templateVariants ? 'pixel' : (options?.initialType || 'board');
+  let selectedDiagramSubtype: 'conceptmap' | 'flowchart' | 'kanban' | 'mindmap' | 'orgchart' = 'mindmap';
+  let selectedLineStyle: 'curved' | 'orthogonal' | 'straight' = 'curved';
+  let selectedTheme: string = 'slate';
 
   let currentWidth = options?.width || templateVariants?.[0]?.width || 64;
   let currentHeight = options?.height || templateVariants?.[0]?.height || 64;
@@ -71,7 +75,7 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
                 <span class="material-symbols-rounded menu-item__icon">space_dashboard</span>
                 <span class="menu-item__text" data-i18n="canvas.stage_dimensions">${t('canvas.stage_dimensions')}</span>
               </button>
-              <button type="button" class="menu-item" data-ref="tab-stage-background" data-stage="background" style="${selectedCreationType === 'board' ? 'display: none;' : ''}">
+              <button type="button" class="menu-item" data-ref="tab-stage-background" data-stage="background" style="${selectedCreationType !== 'pixel' ? 'display: none;' : ''}">
                 <span class="material-symbols-rounded menu-item__icon">palette</span>
                 <span class="menu-item__text" data-i18n="canvas.stage_background">${t('canvas.stage_background')}</span>
               </button>
@@ -151,15 +155,15 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
                     <div class="settings-item__content" data-ref="content-canvas-creation-type">
                       <div class="settings-item__text" data-ref="text-canvas-creation-type">
                         <h2 class="settings-item__title" data-ref="title-canvas-creation-type">Tipo de espacio</h2>
-                        <p class="settings-item__desc" data-ref="desc-canvas-creation-type">Elige entre un pizarrón virtual infinito para dibujo libre o un lienzo para pixelart.</p>
+                        <p class="settings-item__desc" data-ref="desc-canvas-creation-type">Elige entre pizarrón libre, esquemas y diagramas, o lienzo pixel art.</p>
                       </div>
                     </div>
                     <div class="settings-item__actions" data-ref="actions-canvas-creation-type">
                       <div class="settings-dropdown-wrapper settings-dropdown-wrapper--w-320" data-ref="dropdown-wrapper-creation-type">
                         <button type="button" class="dropdown-trigger" data-ref="btn-trigger-creation-type" aria-label="Tipo de espacio">
                           <div class="dropdown-trigger__left" data-ref="creation-type-trigger-left">
-                            <span class="material-symbols-rounded dropdown-trigger__icon" data-ref="creation-type-selected-icon">${selectedCreationType === 'board' ? 'space_dashboard' : 'grid_on'}</span>
-                            <span class="dropdown-trigger__text" data-ref="creation-type-selected-text">${selectedCreationType === 'board' ? 'Pizarrón virtual' : 'Lienzo (Pixelart)'}</span>
+                            <span class="material-symbols-rounded dropdown-trigger__icon" data-ref="creation-type-selected-icon">${selectedCreationType === 'board' ? 'space_dashboard' : (selectedCreationType === 'diagram' ? 'psychology' : 'grid_on')}</span>
+                            <span class="dropdown-trigger__text" data-ref="creation-type-selected-text">${selectedCreationType === 'board' ? 'Pizarrón virtual' : (selectedCreationType === 'diagram' ? 'Diagramas y Esquemas' : 'Lienzo (Pixelart)')}</span>
                           </div>
                           <span class="material-symbols-rounded dropdown-trigger__chevron" data-ref="creation-type-chevron">expand_more</span>
                         </button>
@@ -173,6 +177,10 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
                                 <span class="material-symbols-rounded menu-item__icon">space_dashboard</span>
                                 <span class="menu-item__text">Pizarrón virtual</span>
                               </button>
+                              <button type="button" class="menu-item${selectedCreationType === 'diagram' ? ' is-active' : ''}" data-ref="option-creation-diagram" data-value="diagram">
+                                <span class="material-symbols-rounded menu-item__icon">psychology</span>
+                                <span class="menu-item__text">Diagramas y Esquemas</span>
+                              </button>
                               <button type="button" class="menu-item${selectedCreationType === 'pixel' ? ' is-active' : ''}" data-ref="option-creation-pixel" data-value="pixel">
                                 <span class="material-symbols-rounded menu-item__icon">grid_on</span>
                                 <span class="menu-item__text">Lienzo (Pixelart)</span>
@@ -185,7 +193,73 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
                   </div>
                 </div>
 
-                <div class="settings-group" data-ref="group-canvas-mode" style="${selectedCreationType === 'board' ? 'display: none;' : ''}">
+                <div class="settings-group" data-ref="group-diagram-subtypes" style="${selectedCreationType === 'diagram' ? '' : 'display: none;'}">
+                  <div class="settings-item" data-ref="item-diagram-subtypes">
+                    <div class="settings-item__content" data-ref="content-diagram-subtypes">
+                      <div class="settings-item__text" data-ref="text-diagram-subtypes">
+                        <h2 class="settings-item__title" data-ref="title-diagram-subtypes">Tipo de esquema</h2>
+                        <p class="settings-item__desc" data-ref="desc-diagram-subtypes">Selecciona la estructura visual que deseas crear.</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="settings-item" data-ref="item-diagram-cards" style="padding-top: 0;">
+                    <div class="diagram-subtypes-grid" data-ref="diagram-subtypes-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; width: 100%;">
+                      ${DIAGRAM_SUBTYPES.map((sub) => `
+                        <button type="button" class="template-variant-pill${sub.id === selectedDiagramSubtype ? ' is-active' : ''}${!sub.isEnabled ? ' is-disabled' : ''}" data-ref="btn-subtype-${sub.id}" data-subtype="${sub.id}" style="display: flex; flex-direction: column; align-items: flex-start; padding: 12px; height: auto; text-align: left; position: relative; ${!sub.isEnabled ? 'opacity: 0.6; cursor: not-allowed;' : ''}">
+                          <div style="display: flex; align-items: center; gap: 8px; width: 100%; margin-bottom: 4px;">
+                            <span class="material-symbols-rounded" style="font-size: 20px;">${sub.icon}</span>
+                            <strong style="font-size: 13px;">${sub.name}</strong>
+                            ${sub.badge ? `<span style="margin-left: auto; font-size: 10px; padding: 2px 6px; background: rgba(255,255,255,0.1); border-radius: 4px; font-weight: normal;">${sub.badge}</span>` : ''}
+                          </div>
+                          <p style="font-size: 11px; margin: 0; color: var(--color-text-muted, #94a3b8); line-height: 1.3;">${sub.description}</p>
+                        </button>
+                      `).join('')}
+                    </div>
+                  </div>
+                </div>
+
+                <div class="settings-group" data-ref="group-mindmap-root-text" style="${selectedCreationType === 'diagram' ? '' : 'display: none;'}">
+                  <div class="settings-item" data-ref="item-mindmap-root-text">
+                    <div class="settings-item__content" data-ref="content-mindmap-root-text">
+                      <div class="settings-item__text" data-ref="text-mindmap-root-text">
+                        <h2 class="settings-item__title" data-ref="title-mindmap-root-text">Idea o Concepto Central</h2>
+                        <p class="settings-item__desc" data-ref="desc-mindmap-root-text">El tema raíz desde el cual se ramificarán todas las ideas.</p>
+                      </div>
+                    </div>
+                    <div class="settings-item__actions" data-ref="actions-mindmap-root-text">
+                      <input class="modal-canvas-panel__name-input" data-ref="input-mindmap-root" type="text" placeholder="Idea Principal" value="Idea Principal" maxlength="80" autocomplete="off" />
+                    </div>
+                  </div>
+                </div>
+
+                <div class="settings-group" data-ref="group-mindmap-line-style" style="${selectedCreationType === 'diagram' ? '' : 'display: none;'}">
+                  <div class="settings-item" data-ref="item-mindmap-line-style">
+                    <div class="settings-item__content" data-ref="content-mindmap-line-style">
+                      <div class="settings-item__text" data-ref="text-mindmap-line-style">
+                        <h2 class="settings-item__title" data-ref="title-mindmap-line-style">Estilo de ramificación</h2>
+                        <p class="settings-item__desc" data-ref="desc-mindmap-line-style">Curvatura de las líneas conectoras del árbol mental.</p>
+                      </div>
+                    </div>
+                    <div class="settings-item__actions" data-ref="actions-mindmap-line-style">
+                      <div class="template-variants-pills" data-ref="mindmap-line-pills">
+                        <button type="button" class="template-variant-pill is-active" data-ref="btn-line-curved" data-line="curved">
+                          <span class="material-symbols-rounded" style="font-size: 16px; margin-right: 4px;">gesture</span>
+                          <span>Curvas</span>
+                        </button>
+                        <button type="button" class="template-variant-pill" data-ref="btn-line-orthogonal" data-line="orthogonal">
+                          <span class="material-symbols-rounded" style="font-size: 16px; margin-right: 4px;">alt_route</span>
+                          <span>Ortogonales</span>
+                        </button>
+                        <button type="button" class="template-variant-pill" data-ref="btn-line-straight" data-line="straight">
+                          <span class="material-symbols-rounded" style="font-size: 16px; margin-right: 4px;">horizontal_rule</span>
+                          <span>Rectas</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="settings-group" data-ref="group-canvas-mode" style="${selectedCreationType === 'pixel' ? '' : 'display: none;'}">
                   <div class="settings-item" data-ref="item-canvas-mode">
                     <div class="settings-item__content" data-ref="content-canvas-mode">
                       <div class="settings-item__text" data-ref="text-canvas-mode">
@@ -219,7 +293,7 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
                   </div>
                 </div>
 
-                <div class="settings-group" data-ref="custom-size-group-width" style="${selectedCreationType === 'board' ? 'display: none;' : ''}">
+                <div class="settings-group" data-ref="custom-size-group-width" style="${selectedCreationType === 'pixel' ? '' : 'display: none;'}">
                   <div class="settings-item" data-ref="custom-size-item-width">
                     <div class="settings-item__content" data-ref="custom-size-width-content">
                       <div class="settings-item__text" data-ref="custom-size-width-text">
@@ -251,7 +325,7 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
                   </div>
                 </div>
 
-                <div class="settings-group" data-ref="custom-size-group-height" style="${selectedCreationType === 'board' ? 'display: none;' : ''}">
+                <div class="settings-group" data-ref="custom-size-group-height" style="${selectedCreationType === 'pixel' ? '' : 'display: none;'}">
                   <div class="settings-item" data-ref="custom-size-item-height">
                     <div class="settings-item__content" data-ref="custom-size-height-content">
                       <div class="settings-item__text" data-ref="custom-size-height-text">
@@ -283,7 +357,7 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
                   </div>
                 </div>
 
-                <div class="settings-group" data-ref="custom-size-group-quick-presets" style="${selectedCreationType === 'board' ? 'display: none;' : ''}">
+                <div class="settings-group" data-ref="custom-size-group-quick-presets" style="${selectedCreationType === 'pixel' ? '' : 'display: none;'}">
                   <div class="settings-item" data-ref="custom-size-item-presets">
                     <div class="settings-item__content" data-ref="custom-size-presets-content">
                       <div class="settings-item__text" data-ref="custom-size-presets-text">
@@ -315,7 +389,11 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
                       <span class="material-symbols-rounded" style="margin-right: 6px;">space_dashboard</span>
                       <span>Crear pizarrón</span>
                     </button>
-                    <button type="button" class="component-button component-button--h44 component-button--black" data-ref="btn-stage1-next" style="${selectedCreationType === 'board' ? 'display: none;' : ''}">
+                    <button type="button" class="component-button component-button--h44 component-button--black" data-ref="btn-stage1-create-diagram" style="${selectedCreationType === 'diagram' ? '' : 'display: none;'}">
+                      <span class="material-symbols-rounded" style="margin-right: 6px;">psychology</span>
+                      <span>Crear mapa mental</span>
+                    </button>
+                    <button type="button" class="component-button component-button--h44 component-button--black" data-ref="btn-stage1-next" style="${selectedCreationType === 'pixel' ? '' : 'display: none;'}">
                       <span>${t('canvas.btn_next')}</span>
                       <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
                     </button>
@@ -464,12 +542,15 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
   const inputName = backdrop.querySelector<HTMLInputElement>('[data-ref="input-canvas-name"]');
   const inputWidth = backdrop.querySelector<HTMLInputElement>('[data-ref="input-canvas-width"]');
   const inputHeight = backdrop.querySelector<HTMLInputElement>('[data-ref="input-canvas-height"]');
+  const inputMindmapRoot = backdrop.querySelector<HTMLInputElement>('[data-ref="input-mindmap-root"]');
   const btnSubmit = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-submit-create-canvas"]');
   const errorBoxStage1 = backdrop.querySelector<HTMLElement>('[data-ref="create-canvas-error-stage1"]');
   const hugeCanvasWarning = backdrop.querySelector<HTMLElement>('[data-ref="huge-canvas-warning"]');
   const errorBoxStage2 = backdrop.querySelector<HTMLElement>('[data-ref="create-canvas-error"]');
 
   const btnStage1Next = backdrop.querySelector<HTMLElement>('[data-ref="btn-stage1-next"]');
+  const btnStage1CreateBoard = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-stage1-create-board"]');
+  const btnStage1CreateDiagram = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-stage1-create-diagram"]');
   const btnStage2Prev = backdrop.querySelector<HTMLElement>('[data-ref="btn-stage2-prev"]');
 
   const btnWidthDecLarge = backdrop.querySelector<HTMLElement>('[data-ref="btn-width-dec-large"]');
@@ -483,9 +564,11 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
   const btnHeightIncLarge = backdrop.querySelector<HTMLElement>('[data-ref="btn-height-inc-large"]');
 
   const quickPresetPills = backdrop.querySelectorAll<HTMLElement>('[data-ref^="btn-preset-"]');
-
   const groupCanvasMode = backdrop.querySelector<HTMLElement>('[data-ref="group-canvas-mode"]');
-  const btnStage1CreateBoard = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-stage1-create-board"]');
+  const groupDiagramSubtypes = backdrop.querySelector<HTMLElement>('[data-ref="group-diagram-subtypes"]');
+  const groupMindmapRootText = backdrop.querySelector<HTMLElement>('[data-ref="group-mindmap-root-text"]');
+  const groupMindmapLineStyle = backdrop.querySelector<HTMLElement>('[data-ref="group-mindmap-line-style"]');
+  const groupMindmapTheme = backdrop.querySelector<HTMLElement>('[data-ref="group-mindmap-theme"]');
 
   let selectedCanvasMode: 'fixed' | 'infinite' = 'fixed';
   const btnModeFixed = backdrop.querySelector<HTMLElement>('[data-ref="btn-mode-fixed"]');
@@ -495,7 +578,7 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
   const groupCanvasPresets = backdrop.querySelector<HTMLElement>('[data-ref="custom-size-group-quick-presets"]');
   const groupInfiniteInfo = backdrop.querySelector<HTMLElement>('[data-ref="group-infinite-info"]');
 
-  let selectedBgType: 'transparent' | 'solid' = 'transparent';
+  let selectedBgType: 'solid' | 'transparent' = 'transparent';
   let selectedCheckSize = 16;
   let selectedSolidColor = '#ffffff';
 
@@ -547,7 +630,7 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
     }
   };
 
-  const switchStage = (stage: 'dimensions' | 'background') => {
+  const switchStage = (stage: 'background' | 'dimensions') => {
     tabStageDimensions?.classList.toggle('is-active', stage === 'dimensions');
     tabStageBackground?.classList.toggle('is-active', stage === 'background');
 
@@ -575,7 +658,7 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
     if (errorBoxStage2) errorBoxStage2.style.display = 'none';
     if (hugeCanvasWarning) hugeCanvasWarning.style.display = 'none';
 
-    if (selectedCanvasMode === 'infinite') {
+    if (selectedCreationType !== 'pixel' || selectedCanvasMode === 'infinite') {
       return true;
     }
 
@@ -756,19 +839,21 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
       creationTypeDropdownController = setupDropdown(creationTypeDropdown, {
         matchWidth: true,
         onSelect: (val: unknown) => {
-          const type = (val as string) === 'pixel' ? 'pixel' : 'board';
+          const type = (val as string) === 'diagram' ? 'diagram' : ((val as string) === 'pixel' ? 'pixel' : 'board');
           selectedCreationType = type;
 
           if (creationTypeSelectedIcon) {
-            creationTypeSelectedIcon.textContent = type === 'board' ? 'space_dashboard' : 'grid_on';
+            creationTypeSelectedIcon.textContent = type === 'board' ? 'space_dashboard' : (type === 'diagram' ? 'psychology' : 'grid_on');
           }
           if (creationTypeSelectedText) {
-            creationTypeSelectedText.textContent = type === 'board' ? 'Pizarrón virtual' : 'Lienzo (Pixelart)';
+            creationTypeSelectedText.textContent = type === 'board' ? 'Pizarrón virtual' : (type === 'diagram' ? 'Diagramas y Esquemas' : 'Lienzo (Pixelart)');
           }
 
           const optBoard = backdrop.querySelector<HTMLElement>('[data-ref="option-creation-board"]');
+          const optDiagram = backdrop.querySelector<HTMLElement>('[data-ref="option-creation-diagram"]');
           const optPixel = backdrop.querySelector<HTMLElement>('[data-ref="option-creation-pixel"]');
           optBoard?.classList.toggle('is-active', type === 'board');
+          optDiagram?.classList.toggle('is-active', type === 'diagram');
           optPixel?.classList.toggle('is-active', type === 'pixel');
 
           if (type === 'board') {
@@ -777,14 +862,36 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
             if (groupCanvasWidth) groupCanvasWidth.style.display = 'none';
             if (groupCanvasHeight) groupCanvasHeight.style.display = 'none';
             if (groupCanvasPresets) groupCanvasPresets.style.display = 'none';
+            if (groupDiagramSubtypes) groupDiagramSubtypes.style.display = 'none';
+            if (groupMindmapRootText) groupMindmapRootText.style.display = 'none';
+            if (groupMindmapLineStyle) groupMindmapLineStyle.style.display = 'none';
+            if (groupMindmapTheme) groupMindmapTheme.style.display = 'none';
             if (btnStage1CreateBoard) btnStage1CreateBoard.style.display = '';
+            if (btnStage1CreateDiagram) btnStage1CreateDiagram.style.display = 'none';
             if (btnStage1Next) btnStage1Next.style.display = 'none';
-            if (tabStageBackground) {
-              tabStageBackground.style.display = 'none';
-            }
+            if (tabStageBackground) tabStageBackground.style.display = 'none';
+            switchStage('dimensions');
+          } else if (type === 'diagram') {
+            if (groupCanvasMode) groupCanvasMode.style.display = 'none';
+            if (groupInfiniteInfo) groupInfiniteInfo.style.display = 'none';
+            if (groupCanvasWidth) groupCanvasWidth.style.display = 'none';
+            if (groupCanvasHeight) groupCanvasHeight.style.display = 'none';
+            if (groupCanvasPresets) groupCanvasPresets.style.display = 'none';
+            if (groupDiagramSubtypes) groupDiagramSubtypes.style.display = '';
+            if (groupMindmapRootText) groupMindmapRootText.style.display = '';
+            if (groupMindmapLineStyle) groupMindmapLineStyle.style.display = '';
+            if (groupMindmapTheme) groupMindmapTheme.style.display = '';
+            if (btnStage1CreateBoard) btnStage1CreateBoard.style.display = 'none';
+            if (btnStage1CreateDiagram) btnStage1CreateDiagram.style.display = '';
+            if (btnStage1Next) btnStage1Next.style.display = 'none';
+            if (tabStageBackground) tabStageBackground.style.display = 'none';
             switchStage('dimensions');
           } else {
             if (groupCanvasMode) groupCanvasMode.style.display = '';
+            if (groupDiagramSubtypes) groupDiagramSubtypes.style.display = 'none';
+            if (groupMindmapRootText) groupMindmapRootText.style.display = 'none';
+            if (groupMindmapLineStyle) groupMindmapLineStyle.style.display = 'none';
+            if (groupMindmapTheme) groupMindmapTheme.style.display = 'none';
             if (selectedCanvasMode === 'infinite') {
               if (groupInfiniteInfo) groupInfiniteInfo.style.display = '';
               if (groupCanvasWidth) groupCanvasWidth.style.display = 'none';
@@ -797,14 +904,37 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
               if (groupCanvasPresets) groupCanvasPresets.style.display = '';
             }
             if (btnStage1CreateBoard) btnStage1CreateBoard.style.display = 'none';
+            if (btnStage1CreateDiagram) btnStage1CreateDiagram.style.display = 'none';
             if (btnStage1Next) btnStage1Next.style.display = '';
-            if (tabStageBackground) {
-              tabStageBackground.style.display = '';
-            }
+            if (tabStageBackground) tabStageBackground.style.display = '';
           }
         },
       });
     }
+
+    const subtypeButtons = backdrop.querySelectorAll<HTMLElement>('[data-subtype]');
+    subtypeButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const subtype = btn.getAttribute('data-subtype') as 'conceptmap' | 'flowchart' | 'kanban' | 'mindmap' | 'orgchart';
+        const subInfo = DIAGRAM_SUBTYPES.find((s) => s.id === subtype);
+        if (!subInfo?.isEnabled) return;
+        selectedDiagramSubtype = subtype;
+        subtypeButtons.forEach((b) => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+      });
+    });
+
+    const linePills = backdrop.querySelectorAll<HTMLElement>('[data-line]');
+    linePills.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const line = btn.getAttribute('data-line') as 'curved' | 'orthogonal' | 'straight';
+        if (line) {
+          selectedLineStyle = line;
+          linePills.forEach((b) => b.classList.remove('is-active'));
+          btn.classList.add('is-active');
+        }
+      });
+    });
 
     btnStage1CreateBoard?.addEventListener('click', async () => {
       const name = inputName?.value.trim() || 'Pizarrón sin título';
@@ -815,12 +945,12 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
 
       try {
         await createAndOpenCanvas({
-          name,
-          canvasType: 'board',
           bgType: 'dots',
+          canvasType: 'board',
+          effectiveTier: options?.teamUuid ? 'business' : null,
+          name,
           solidColor: '#ffffff',
           teamUuid: options?.teamUuid || null,
-          effectiveTier: options?.teamUuid ? 'business' : null,
         });
         closeModal();
       } catch (err: unknown) {
@@ -832,6 +962,40 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
         if (btnStage1CreateBoard) {
           btnStage1CreateBoard.disabled = false;
           btnStage1CreateBoard.textContent = 'Crear pizarrón';
+        }
+      }
+    });
+
+    btnStage1CreateDiagram?.addEventListener('click', async () => {
+      const name = inputName?.value.trim() || 'Mapa Mental sin título';
+      const rootIdea = inputMindmapRoot?.value.trim() || 'Idea Principal';
+      if (btnStage1CreateDiagram) {
+        btnStage1CreateDiagram.disabled = true;
+        btnStage1CreateDiagram.textContent = t('modal.loading');
+      }
+
+      try {
+        await createAndOpenCanvas({
+          bgType: 'dots',
+          canvasType: 'diagram',
+          diagramSubtype: selectedDiagramSubtype,
+          effectiveTier: options?.teamUuid ? 'business' : null,
+          mindmapLineStyle: selectedLineStyle,
+          name,
+          rootIdeaText: rootIdea,
+          solidColor: '#ffffff',
+          teamUuid: options?.teamUuid || null,
+        });
+        closeModal();
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : t('canvas.error_save');
+        if (errorBoxStage1) {
+          errorBoxStage1.textContent = msg;
+          errorBoxStage1.style.display = 'block';
+        }
+        if (btnStage1CreateDiagram) {
+          btnStage1CreateDiagram.disabled = false;
+          btnStage1CreateDiagram.textContent = 'Crear mapa mental';
         }
       }
     });
@@ -934,18 +1098,18 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
 
     try {
       await createAndOpenCanvas({
-        name,
-        width,
+        bgType: selectedBgType,
+        checkSize: selectedCheckSize,
+        effectiveTier: options?.teamUuid ? 'business' : null,
+        fps: 8,
         height,
         isInfinite,
-        templateImage: currentTemplateImage,
-        bgType: selectedBgType,
-        solidColor: selectedSolidColor,
-        checkSize: selectedCheckSize,
-        fps: 8,
+        name,
         onionSkin: false,
+        solidColor: selectedSolidColor,
         teamUuid: options?.teamUuid || null,
-        effectiveTier: options?.teamUuid ? 'business' : null,
+        templateImage: currentTemplateImage,
+        width,
       });
       closeModal();
     } catch (err: unknown) {
@@ -966,6 +1130,8 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
     } else if (e.key === 'Enter' && e.target === inputName) {
       if (selectedCreationType === 'board') {
         btnStage1CreateBoard?.click();
+      } else if (selectedCreationType === 'diagram') {
+        btnStage1CreateDiagram?.click();
       } else if (validateDimensions()) {
         switchStage('background');
       }

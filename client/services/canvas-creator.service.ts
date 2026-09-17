@@ -6,15 +6,19 @@ import { t } from './i18n.service.js';
 import { showToast } from './toast.service.js';
 
 export interface CreateCanvasOptions {
-  bgType?: 'transparent' | 'solid' | 'dots' | 'grid' | 'blank' | 'dark';
-  canvasType?: 'pixel' | 'board';
+  bgType?: 'blank' | 'dark' | 'dots' | 'grid' | 'light' | 'solid' | 'transparent';
+  canvasType?: 'board' | 'diagram' | 'mindmap' | 'pixel';
   checkSize?: number;
+  diagramSubtype?: 'conceptmap' | 'flowchart' | 'kanban' | 'mindmap' | 'orgchart';
   effectiveTier?: string | null;
   fps?: number;
   height?: number;
   isInfinite?: boolean;
+  mindmapLineStyle?: 'curved' | 'orthogonal' | 'straight';
+  mindmapTheme?: string;
   name: string;
   onionSkin?: boolean;
+  rootIdeaText?: string;
   solidColor?: string;
   teamUuid?: string | null;
   templateImage?: string | null;
@@ -23,7 +27,8 @@ export interface CreateCanvasOptions {
 
 export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise<void> {
   const isBoard = options.canvasType === 'board';
-  const isInfinite = isBoard || (options.isInfinite ?? false);
+  const isDiagram = options.canvasType === 'diagram' || options.canvasType === 'mindmap';
+  const isInfinite = isBoard || isDiagram || (options.isInfinite ?? false);
   const width = isInfinite ? 0 : (options.width || 64);
   const height = isInfinite ? 0 : (options.height || 64);
 
@@ -33,7 +38,8 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
     return;
   }
 
-  const name = options.name.trim() || (isBoard ? 'Pizarrón sin título' : t('canvas.input_name_placeholder'));
+  const defaultName = isDiagram ? 'Mapa Mental sin título' : (isBoard ? 'Pizarrón sin título' : t('canvas.input_name_placeholder'));
+  const name = options.name.trim() || defaultName;
   const bgType = options.bgType || 'transparent';
   const solidColor = options.solidColor || '#ffffff';
   const checkSize = options.checkSize || 16;
@@ -84,56 +90,286 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
     }
   }
 
-  const initialProject = isBoard
-    ? {
-        version: 1,
-        type: 'board',
-        background: {
-          type: options.bgType || 'dots',
-          color: solidColor || '#ffffff',
-        },
+  let initialProject: any = null;
+
+  if (isDiagram) {
+    const isFlowchart = options.diagramSubtype === 'flowchart';
+    const isConceptMap = options.diagramSubtype === 'conceptmap';
+    const rootId = 'root_' + Math.random().toString(36).substring(2, 9);
+    const rootIdea = options.rootIdeaText?.trim() || options.name.trim() || (isFlowchart ? 'Inicio del Proceso' : (isConceptMap ? 'Concepto General' : 'Idea Principal'));
+
+    if (isFlowchart) {
+      const ioId = 'node_' + Math.random().toString(36).substring(2, 9);
+      const decId = 'node_' + Math.random().toString(36).substring(2, 9);
+      const yesId = 'node_' + Math.random().toString(36).substring(2, 9);
+      const noId = 'node_' + Math.random().toString(36).substring(2, 9);
+      const endId = 'node_' + Math.random().toString(36).substring(2, 9);
+
+      initialProject = {
         camera: { x: 0, y: 0, zoom: 1 },
-        elements: [],
-      }
-    : {
-        version: 1,
-        fps,
-        onionSkin,
-        isInfinite,
-        activeFrameId: 'frame_1',
-        background: {
-          type: bgType,
-          color: solidColor,
-          checkSize: checkSize,
-          checkColor1: '#ffffff',
-          checkColor2: '#e2e8f0',
-        },
-        animationTags: [],
-        frames: [
-          {
-            id: 'frame_1',
-            name: 'Cuadro 1',
-            activeLayerId: 'layer_1',
-            layers: [
-              {
-                id: 'layer_1',
-                name: options.templateImage ? name : 'Capa 1',
-                visible: true,
-                opacity: 1.0,
-                data: templateDataUrl || '',
-                chunks: {},
-              },
-            ],
+        connections: [],
+        nodes: {
+          [rootId]: {
+            color: '#10b981',
+            fontSize: 15,
+            icon: 'play_arrow',
+            id: rootId,
+            orderIndex: 0,
+            parentId: null,
+            shape: 'pill',
+            text: 'Inicio',
+            textColor: '#ffffff',
+            x: 0,
+            y: 0,
           },
-        ],
+          [ioId]: {
+            color: '#0284c7',
+            fontSize: 14,
+            id: ioId,
+            orderIndex: 0,
+            parentId: rootId,
+            shape: 'parallelogram',
+            text: 'Ingresar datos / solicitud',
+            textColor: '#ffffff',
+            x: 0,
+            y: 0,
+          },
+          [decId]: {
+            color: '#f59e0b',
+            fontSize: 14,
+            id: decId,
+            orderIndex: 0,
+            parentId: ioId,
+            shape: 'diamond',
+            text: '¿Datos válidos?',
+            textColor: '#ffffff',
+            x: 0,
+            y: 0,
+          },
+          [yesId]: {
+            color: '#6366f1',
+            fontSize: 14,
+            id: yesId,
+            linkingPhrase: 'Sí',
+            orderIndex: 0,
+            parentId: decId,
+            shape: 'rounded',
+            text: 'Procesar y guardar',
+            textColor: '#ffffff',
+            x: 0,
+            y: 0,
+          },
+          [endId]: {
+            color: '#10b981',
+            fontSize: 14,
+            icon: 'check',
+            id: endId,
+            linkingPhrase: 'éxito',
+            orderIndex: 0,
+            parentId: yesId,
+            shape: 'pill',
+            text: 'Fin',
+            textColor: '#ffffff',
+            x: 0,
+            y: 0,
+          },
+          [noId]: {
+            color: '#ef4444',
+            fontSize: 14,
+            id: noId,
+            linkingPhrase: 'No',
+            orderIndex: 1,
+            parentId: decId,
+            shape: 'rounded',
+            text: 'Mostrar mensaje de error',
+            textColor: '#ffffff',
+            x: 0,
+            y: 0,
+          },
+        },
+        rootId,
+        subtype: 'flowchart',
+        theme: {
+          backgroundColor: '#ffffff',
+          branchColors: [
+            '#6366f1', '#3b82f6', '#0ea5e9', '#06b6d4', '#14b8a6', '#10b981',
+            '#84cc16', '#eab308', '#f59e0b', '#f97316', '#ef4444', '#ec4899',
+            '#d946ef', '#a855f7', '#8b5cf6', '#64748b'
+          ],
+          fontFamily: 'system-ui, -apple-system, sans-serif',
+          layoutDirection: 'top-down',
+          lineStyle: options.mindmapLineStyle || 'orthogonal',
+          nodeShape: 'rounded',
+        },
+        type: 'mindmap',
+        version: 1,
       };
+    } else if (isConceptMap) {
+      const c1Id = 'node_' + Math.random().toString(36).substring(2, 9);
+      const c2Id = 'node_' + Math.random().toString(36).substring(2, 9);
+      const c11Id = 'node_' + Math.random().toString(36).substring(2, 9);
+
+      initialProject = {
+        camera: { x: 0, y: 0, zoom: 1 },
+        connections: [],
+        nodes: {
+          [rootId]: {
+            color: '#6366f1',
+            fontSize: 16,
+            id: rootId,
+            orderIndex: 0,
+            parentId: null,
+            shape: 'rounded',
+            text: rootIdea,
+            textColor: '#ffffff',
+            x: 0,
+            y: 0,
+          },
+          [c1Id]: {
+            color: '#3b82f6',
+            fontSize: 14,
+            id: c1Id,
+            linkingPhrase: 'se divide en',
+            orderIndex: 0,
+            parentId: rootId,
+            shape: 'rounded',
+            text: 'Concepto Subordinado 1',
+            textColor: '#ffffff',
+            x: 0,
+            y: 0,
+          },
+          [c2Id]: {
+            color: '#10b981',
+            fontSize: 14,
+            id: c2Id,
+            linkingPhrase: 'produce',
+            orderIndex: 1,
+            parentId: rootId,
+            shape: 'rounded',
+            text: 'Concepto Subordinado 2',
+            textColor: '#ffffff',
+            x: 0,
+            y: 0,
+          },
+          [c11Id]: {
+            color: '#3b82f6',
+            fontSize: 13,
+            id: c11Id,
+            linkingPhrase: 'ejemplo de',
+            orderIndex: 0,
+            parentId: c1Id,
+            shape: 'rounded',
+            text: 'Ejemplo Práctico',
+            textColor: '#ffffff',
+            x: 0,
+            y: 0,
+          },
+        },
+        rootId,
+        subtype: 'conceptmap',
+        theme: {
+          backgroundColor: '#ffffff',
+          branchColors: [
+            '#6366f1', '#3b82f6', '#0ea5e9', '#06b6d4', '#14b8a6', '#10b981',
+            '#84cc16', '#eab308', '#f59e0b', '#f97316', '#ef4444', '#ec4899',
+            '#d946ef', '#a855f7', '#8b5cf6', '#64748b'
+          ],
+          fontFamily: 'system-ui, -apple-system, sans-serif',
+          layoutDirection: 'top-down',
+          lineStyle: options.mindmapLineStyle || 'orthogonal',
+          nodeShape: 'rounded',
+        },
+        type: 'mindmap',
+        version: 1,
+      };
+    } else {
+      initialProject = {
+        camera: { x: 0, y: 0, zoom: 1 },
+        connections: [],
+        nodes: {
+          [rootId]: {
+            color: '#6366f1',
+            fontSize: 16,
+            id: rootId,
+            orderIndex: 0,
+            parentId: null,
+            shape: 'pill',
+            text: rootIdea,
+            textColor: '#ffffff',
+            x: 0,
+            y: 0,
+          },
+        },
+        rootId,
+        subtype: 'mindmap',
+        theme: {
+          backgroundColor: '#ffffff',
+          branchColors: [
+            '#6366f1', '#3b82f6', '#0ea5e9', '#06b6d4', '#14b8a6', '#10b981',
+            '#84cc16', '#eab308', '#f59e0b', '#f97316', '#ef4444', '#ec4899',
+            '#d946ef', '#a855f7', '#8b5cf6', '#64748b'
+          ],
+          fontFamily: 'system-ui, -apple-system, sans-serif',
+          layoutDirection: 'radial',
+          lineStyle: options.mindmapLineStyle || 'curved',
+          nodeShape: 'pill',
+        },
+        type: 'mindmap',
+        version: 1,
+      };
+    }
+  } else if (isBoard) {
+    initialProject = {
+      background: {
+        color: solidColor || '#ffffff',
+        type: options.bgType || 'dots',
+      },
+      camera: { x: 0, y: 0, zoom: 1 },
+      elements: [],
+      type: 'board',
+      version: 1,
+    };
+  } else {
+    initialProject = {
+      activeFrameId: 'frame_1',
+      animationTags: [],
+      background: {
+        checkColor1: '#ffffff',
+        checkColor2: '#e2e8f0',
+        checkSize: checkSize,
+        color: solidColor,
+        type: bgType,
+      },
+      fps,
+      frames: [
+        {
+          activeLayerId: 'layer_1',
+          id: 'frame_1',
+          layers: [
+            {
+              chunks: {},
+              data: templateDataUrl || '',
+              id: 'layer_1',
+              name: options.templateImage ? name : 'Capa 1',
+              opacity: 1.0,
+              visible: true,
+            },
+          ],
+          name: 'Cuadro 1',
+        },
+      ],
+      isInfinite,
+      onionSkin,
+      version: 1,
+    };
+  }
 
   const initialData = JSON.stringify(initialProject);
 
   let previewThumbnail: string | null = null;
   const maxThumbDim = 320;
-  let thumbW = isInfinite ? (isBoard ? 320 : 256) : width;
-  let thumbH = isInfinite ? (isBoard ? 180 : 256) : height;
+  let thumbW = isInfinite ? (isBoard || isDiagram ? 320 : 256) : width;
+  let thumbH = isInfinite ? (isBoard || isDiagram ? 180 : 256) : height;
   if (thumbW > maxThumbDim || thumbH > maxThumbDim) {
     const ratio = Math.min(maxThumbDim / thumbW, maxThumbDim / thumbH);
     thumbW = Math.max(1, Math.round(thumbW * ratio));
@@ -146,7 +382,35 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
   const thumbCtx = thumbCanvas.getContext('2d');
 
   if (thumbCtx) {
-    if (isBoard) {
+    if (isDiagram) {
+      thumbCtx.fillStyle = '#ffffff';
+      thumbCtx.fillRect(0, 0, thumbW, thumbH);
+
+      thumbCtx.fillStyle = '#cbd5e1';
+      const step = 16;
+      for (let y = 8; y < thumbH; y += step) {
+        for (let x = 8; x < thumbW; x += step) {
+          thumbCtx.beginPath();
+          thumbCtx.arc(x, y, 1.2, 0, Math.PI * 2);
+          thumbCtx.fill();
+        }
+      }
+
+      const pillW = 120;
+      const pillH = 32;
+      const pillX = (thumbW - pillW) / 2;
+      const pillY = (thumbH - pillH) / 2;
+      thumbCtx.fillStyle = '#6366f1';
+      thumbCtx.beginPath();
+      thumbCtx.roundRect ? thumbCtx.roundRect(pillX, pillY, pillW, pillH, 16) : thumbCtx.rect(pillX, pillY, pillW, pillH);
+      thumbCtx.fill();
+
+      thumbCtx.fillStyle = '#ffffff';
+      thumbCtx.font = '600 12px system-ui, sans-serif';
+      thumbCtx.textAlign = 'center';
+      thumbCtx.textBaseline = 'middle';
+      thumbCtx.fillText(initialProject.nodes[initialProject.rootId]?.text || 'Idea Principal', thumbW / 2, thumbH / 2);
+    } else if (isBoard) {
       const isDark = options.bgType === 'dark';
       thumbCtx.fillStyle = isDark ? '#18181b' : (solidColor || '#ffffff');
       thumbCtx.fillRect(0, 0, thumbW, thumbH);
@@ -206,8 +470,10 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
     previewThumbnail = templateDataUrl;
   }
 
-  const unit = isBoard ? 'board' : (isInfinite ? 'infinite' : 'px');
-  const canvasType = isBoard ? 'board' : 'pixel';
+  const unit = isDiagram ? 'diagram' : (isBoard ? 'board' : (isInfinite ? 'infinite' : 'px'));
+  const canvasType = isDiagram ? 'diagram' : (isBoard ? 'board' : 'pixel');
+  const targetRoute = isDiagram ? `/diagram/` : (isBoard ? `/board/` : `/design/`);
+
   if (currentUser) {
     const res = await postApi(API_ROUTES.canvases.base, {
       canvas_type: canvasType,
@@ -231,7 +497,7 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
         });
       }
       showToast(t('canvas.toast_created'), 'success');
-      navigate(isBoard ? `/board/${canvasUuid}` : `/design/${canvasUuid}`);
+      navigate(`${targetRoute}${canvasUuid}`);
       return;
     }
 
@@ -256,5 +522,5 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
   });
 
   showToast(t('canvas.toast_created_guest'), 'success');
-  navigate(isBoard ? `/board/${localUuid}` : `/design/${localUuid}`);
+  navigate(`${targetRoute}${localUuid}`);
 }

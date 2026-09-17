@@ -8,5 +8,7 @@ aiRouter.post('/chat', aiChatLimiter, AiController.chat);
 aiRouter.post('/ai/chat', aiChatLimiter, AiController.chat);
 aiRouter.post('/chat/feedback', aiChatLimiter, AiController.feedback);
 aiRouter.post('/ai/chat/feedback', aiChatLimiter, AiController.feedback);
+aiRouter.post('/mindmap', aiChatLimiter, AiController.generateMindMap);
+aiRouter.post('/ai/mindmap', aiChatLimiter, AiController.generateMindMap);
 
 export default aiRouter;

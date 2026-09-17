@@ -39,7 +39,7 @@ export function getSkeletonForUrl(pathname: string, onlyBottom = false): string 
     pathname.startsWith('/login')
   ) {
     template = 'centered-form';
-  } else if (pathname.startsWith('/design') || pathname.startsWith('/board')) {
+  } else if (pathname.startsWith('/design') || pathname.startsWith('/board') || pathname.startsWith('/diagram') || pathname.startsWith('/mindmap')) {
     template = 'canvas-layout';
   } else if (SKELETON_ROUTES[pathname]) {
     template = SKELETON_ROUTES[pathname];
@@ -81,7 +81,9 @@ export function hasPersistentTopBar(pathname: string): boolean {
     pathname.startsWith('/settings') ||
     pathname.startsWith('/help') ||
     pathname.startsWith('/design') ||
-    pathname.startsWith('/board')
+    pathname.startsWith('/board') ||
+    pathname.startsWith('/diagram') ||
+    pathname.startsWith('/mindmap')
   ) {
     return true;
   }

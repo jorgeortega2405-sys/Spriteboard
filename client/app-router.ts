@@ -249,6 +249,17 @@ export async function render(): Promise<void> {
         const { createBoardView } = await import('./views/board.view.js');
         viewElements = [await createBoardView(canvasUuid)];
       }
+    } else if (path === '/diagram' || path === '/diagram/' || path.startsWith('/diagram/') || path === '/mindmap' || path === '/mindmap/' || path.startsWith('/mindmap/')) {
+      const prefix = path.startsWith('/mindmap') ? '/mindmap/' : '/diagram/';
+      const canvasUuid = path.includes(prefix) ? (path.split(prefix)[1]?.split('/')[0] || '') : '';
+      if (!canvasUuid) {
+        window.history.replaceState({}, '', '/');
+        const { createHomeView } = await import('./views/home.view.js');
+        viewElements = [await createHomeView()];
+      } else {
+        const { createMindMapView } = await import('./views/mindmap/mindmap.view.js');
+        viewElements = [await createMindMapView(canvasUuid)];
+      }
     } else if (/^\/[a-zA-Z0-9_-]{3,50}$/.test(path)) {
       const slug = path.slice(1);
       let resolvedUuid: string | null = null;
@@ -259,15 +270,18 @@ export async function render(): Promise<void> {
           const data = await res.json();
           if (data?.uuid) {
             resolvedUuid = data.uuid;
-            resolvedType = data.canvas_type || (data.unit === 'board' ? 'board' : 'pixel');
+            resolvedType = data.canvas_type || (data.unit === 'board' ? 'board' : (data.unit === 'diagram' ? 'diagram' : 'pixel'));
           }
         }
       } catch {}
 
       if (resolvedUuid) {
-        const targetPath = resolvedType === 'board' ? `/board/${resolvedUuid}` : `/design/${resolvedUuid}`;
+        const targetPath = resolvedType === 'diagram' || resolvedType === 'mindmap' ? `/diagram/${resolvedUuid}` : (resolvedType === 'board' ? `/board/${resolvedUuid}` : `/design/${resolvedUuid}`);
         window.history.replaceState({}, '', targetPath);
-        if (resolvedType === 'board') {
+        if (resolvedType === 'diagram' || resolvedType === 'mindmap') {
+          const { createMindMapView } = await import('./views/mindmap/mindmap.view.js');
+          viewElements = [await createMindMapView(resolvedUuid)];
+        } else if (resolvedType === 'board') {
           const { createBoardView } = await import('./views/board.view.js');
           viewElements = [await createBoardView(resolvedUuid)];
         } else {

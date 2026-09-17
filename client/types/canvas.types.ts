@@ -9,7 +9,7 @@ export interface CanvasItem {
   width: number;
   height: number;
   unit: string;
-  canvas_type?: 'pixel' | 'board';
+  canvas_type?: 'pixel' | 'board' | 'diagram' | 'mindmap';
   data?: string | null;
   preview_thumbnail?: string | null;
   access_level?: 'private' | 'public';
@@ -63,7 +63,7 @@ export interface CreateCanvasPayload {
   width: number;
   height: number;
   unit?: string;
-  canvas_type?: 'pixel' | 'board';
+  canvas_type?: 'pixel' | 'board' | 'diagram' | 'mindmap';
   access_level?: 'private' | 'public';
   public_role?: 'viewer' | 'editor';
   data?: any;

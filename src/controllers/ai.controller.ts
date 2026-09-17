@@ -126,6 +126,46 @@ export class AiController {
       });
     }
   }
+
+  static async generateMindMap(req: Request, res: Response): Promise<void> {
+    try {
+      const { contextNodeText, diagramType = 'mindmap', mode = 'full', prompt } = req.body;
+
+      if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
+        res.status(400).json({
+          error: 'El tema o descripción del mapa no puede estar vacío.',
+          success: false,
+        });
+        return;
+      }
+
+      if (prompt.length > 1000) {
+        res.status(400).json({
+          error: 'La descripción excede el límite permitido de caracteres.',
+          success: false,
+        });
+        return;
+      }
+
+      const validMode = (mode === 'expand' || mode === 'checklist') ? mode : 'full';
+      const validDiagramType = (diagramType === 'conceptmap' || diagramType === 'flowchart') ? diagramType : 'mindmap';
+      const cleanContext = typeof contextNodeText === 'string' ? contextNodeText.trim().slice(0, 300) : undefined;
+
+      const result = await AiService.generateMindMap(prompt.trim(), validMode, cleanContext, validDiagramType);
+
+      res.status(200).json({
+        mindmap: result,
+        success: true,
+      });
+    } catch (error) {
+      logger.app.error('AiController: Error al generar mapa mental con IA', error);
+
+      res.status(500).json({
+        error: 'Ha ocurrido un error inesperado al generar el mapa mental. Por favor intenta más tarde.',
+        success: false,
+      });
+    }
+  }
 }
 
 export default AiController;

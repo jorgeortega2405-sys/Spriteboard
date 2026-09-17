@@ -376,9 +376,10 @@ function createDrawerCanvasRow(canvas: CanvasItem): HTMLElement {
   item.type = 'button';
   item.className = 'drawer-canvas-item';
   item.setAttribute('data-ref', `drawer-canvas-${canvas.uuid}`);
-
-  const isBoard = canvas.canvas_type === 'board';
-  const iconName = isBoard ? 'dashboard' : 'grid_view';
+  const isDiagram = canvas.canvas_type === 'diagram' || canvas.canvas_type === 'mindmap' || canvas.unit === 'diagram';
+  const isBoard = !isDiagram && (canvas.canvas_type === 'board' || canvas.unit === 'board');
+  const targetUrl = isDiagram ? `/diagram/${canvas.uuid}` : (isBoard ? `/board/${canvas.uuid}` : `/design/${canvas.uuid}`);
+  const iconName = isDiagram ? 'psychology' : (isBoard ? 'dashboard' : 'grid_view');
 
   const thumbHtml = canvas.preview_thumbnail
     ? `<img class="drawer-canvas-item__thumb-img" src="${canvas.preview_thumbnail}" alt="" />`
@@ -396,7 +397,7 @@ function createDrawerCanvasRow(canvas: CanvasItem): HTMLElement {
     if (window.innerWidth <= 768) {
       toggleDrawer(false);
     }
-    navigate(isBoard ? `/board/${canvas.uuid}` : `/design/${canvas.uuid}`);
+    navigate(targetUrl);
   });
 
   return item;
