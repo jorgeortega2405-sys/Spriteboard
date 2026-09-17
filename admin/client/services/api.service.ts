@@ -13,6 +13,14 @@ export const API_ROUTES = {
     itemStatus: (id: number | string) => `/api/ads/items/${id}/status`,
     public: '/api/ads/public',
   },
+  analytics: {
+    breakdown: '/api/analytics/breakdown',
+    export: (range = '30d') => `/api/analytics/export?range=${encodeURIComponent(range)}`,
+    financials: '/api/analytics/financials',
+    overview: '/api/analytics/overview',
+    rankings: '/api/analytics/rankings',
+    trends: (range = '30d') => `/api/analytics/trends?range=${encodeURIComponent(range)}`,
+  },
   auth: {
     login: '/api/login',
     logout: '/api/logout',
@@ -57,7 +65,9 @@ export const API_ROUTES = {
     verifyPassword: '/api/settings/password/verify',
   },
   system: {
+    cachePurge: '/api/system/cache/purge',
     config: '/api/system/config',
+    diagnostics: '/api/system/diagnostics',
     reset: '/api/system/config/reset',
   },
   users: {
@@ -762,6 +772,40 @@ export async function resetSystemConfigApi(category?: string): Promise<{ error?:
   }
 }
 
+export async function getSystemDiagnosticsApi(): Promise<{
+  data?: {
+    mysql: { canvasDbSizeMb: string; identityDbSizeMb: string; pingMs: number; status: string; totalTables: number };
+    node: { heapTotalMb: string; heapUsedMb: string; nodeVersion: string; platform: string; rssMb: string; uptimeSeconds: number };
+    redis: { clients: number; keysCount: number; memoryHuman: string; pingMs: number; status: string; uptimeSeconds: number };
+  };
+  error?: string;
+  ok: boolean;
+}> {
+  try {
+    const res = await getApi(API_ROUTES.system.diagnostics);
+    const data = await res.json();
+    if (res.ok && (data.ok || data.success)) {
+      return { data: data.data || data, ok: true };
+    }
+    return { error: data.error || 'Error al obtener diagnóstico del sistema.', ok: false };
+  } catch {
+    return { error: 'Error de conexión al cargar diagnóstico.', ok: false };
+  }
+}
+
+export async function purgeRedisCacheApi(): Promise<{ error?: string; message?: string; ok: boolean }> {
+  try {
+    const res = await postApi(API_ROUTES.system.cachePurge);
+    const data = await res.json();
+    if (res.ok && (data.ok || data.success)) {
+      return { message: data.message || data.data?.message || 'Caché de Redis purgada con éxito.', ok: true };
+    }
+    return { error: data.error || 'Error al purgar la caché.', ok: false };
+  } catch {
+    return { error: 'Error de conexión al purgar la caché.', ok: false };
+  }
+}
+
 export async function getBackupsApi(params?: {
   limit?: number;
   page?: number;
@@ -1150,6 +1194,61 @@ export async function toggleAdStatusApi(id: number | string, status?: string): P
     return { error: data.error || 'Error al cambiar estado del anuncio.', ok: false };
   } catch {
     return { error: 'Error de conexión al actualizar estado del anuncio.', ok: false };
+  }
+}
+
+export async function getAnalyticsOverviewApi(): Promise<{ data?: any; error?: string; ok: boolean }> {
+  try {
+    const res = await getApi(API_ROUTES.analytics.overview);
+    const data = await res.json();
+    if (res.ok) return { data, ok: true };
+    return { error: data.error || 'Error al cargar analíticas.', ok: false };
+  } catch {
+    return { error: 'Error de conexión al cargar analíticas.', ok: false };
+  }
+}
+
+export async function getAnalyticsTrendsApi(range = '30d'): Promise<{ data?: any[]; error?: string; ok: boolean }> {
+  try {
+    const res = await getApi(API_ROUTES.analytics.trends(range));
+    const data = await res.json();
+    if (res.ok) return { data, ok: true };
+    return { error: data.error || 'Error al cargar tendencias.', ok: false };
+  } catch {
+    return { error: 'Error de conexión al cargar tendencias.', ok: false };
+  }
+}
+
+export async function getAnalyticsBreakdownApi(): Promise<{ data?: any; error?: string; ok: boolean }> {
+  try {
+    const res = await getApi(API_ROUTES.analytics.breakdown);
+    const data = await res.json();
+    if (res.ok) return { data, ok: true };
+    return { error: data.error || 'Error al cargar desgloses.', ok: false };
+  } catch {
+    return { error: 'Error de conexión al cargar desgloses.', ok: false };
+  }
+}
+
+export async function getAnalyticsFinancialsApi(): Promise<{ data?: any; error?: string; ok: boolean }> {
+  try {
+    const res = await getApi(API_ROUTES.analytics.financials);
+    const data = await res.json();
+    if (res.ok) return { data, ok: true };
+    return { error: data.error || 'Error al cargar datos financieros.', ok: false };
+  } catch {
+    return { error: 'Error de conexión al cargar datos financieros.', ok: false };
+  }
+}
+
+export async function getAnalyticsRankingsApi(): Promise<{ data?: any; error?: string; ok: boolean }> {
+  try {
+    const res = await getApi(API_ROUTES.analytics.rankings);
+    const data = await res.json();
+    if (res.ok) return { data, ok: true };
+    return { error: data.error || 'Error al cargar rankings.', ok: false };
+  } catch {
+    return { error: 'Error de conexión al cargar rankings.', ok: false };
   }
 }
 

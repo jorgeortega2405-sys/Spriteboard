@@ -502,12 +502,13 @@ export async function getActiveUserSanction(userId: number): Promise<{
     if (rows.length === 0) return null;
 
     const s = rows[0];
+    const sanctionType = s.type as 'ban' | 'suspension';
     return {
       expiresAt: s.expires_at || null,
-      isBanned: s.type === 'ban',
-      isSuspended: s.type === 'suspension',
+      isBanned: sanctionType === 'ban',
+      isSuspended: sanctionType === 'suspension',
       reason: s.reason,
-      type: s.type,
+      type: sanctionType,
     };
   } catch (error) {
     logger.db.error('Error al consultar sanción activa de usuario', { error, userId });

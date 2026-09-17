@@ -1,8 +1,18 @@
 <div class="layout-content" data-ref="admin-system-view">
   <div class="component-wrapper component-wrapper--full view-wrapper" data-ref="system-wrapper">
     <div class="view-header" data-ref="system-view-header">
-      <div class="view-header__left" data-ref="system-header-left">
-        <h1 class="view-header__title" data-ref="system-title">Configuración del Sistema</h1>
+      <div class="view-header__left" data-ref="system-header-left" style="display: flex; align-items: center; gap: 20px;">
+        <h1 class="view-header__title" data-ref="system-title">Sistema</h1>
+        <div class="component-filter-tabs" data-ref="system-tabs">
+          <button type="button" class="component-filter-tabs__btn is-active" data-ref="tab-btn-config" data-tab="config">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
+            <span>Configuración General</span>
+          </button>
+          <button type="button" class="component-filter-tabs__btn" data-ref="tab-btn-diagnostics" data-tab="diagnostics">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#monitoring"></use></svg>
+            <span>Telemetría & Diagnóstico</span>
+          </button>
+        </div>
       </div>
       <div class="view-header__right" data-ref="system-header-right">
         <div class="view-header__actions" data-ref="system-default-actions">
@@ -10,11 +20,17 @@
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
           </button>
         </div>
+        <div class="view-header__actions" data-ref="system-diagnostics-actions" style="display: none; gap: 8px;">
+          <button type="button" class="component-button component-button--h40 component-button--bordered view-header__btn" data-ref="btn-refresh-diagnostics" data-tooltip="Refrescar telemetría" aria-label="Refrescar telemetría">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#refresh"></use></svg>
+            <span>Actualizar</span>
+          </button>
+        </div>
       </div>
     </div>
 
     <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="system-scrollable">
-      <div class="settings-layout settings-layout--wide" data-ref="system-layout" style="margin: 0 auto; padding: 24px 24px 60px 24px;">
+      <div class="settings-layout settings-layout--wide system-tab-pane" data-ref="pane-config" style="margin: 0 auto; padding: 24px 24px 60px 24px;">
 
         <div class="banner banner--danger" data-ref="system-config-error" style="display: none; margin-bottom: 20px;"></div>
         <div class="banner banner--success" data-ref="system-config-success" style="display: none; margin-bottom: 20px;"></div>
@@ -880,6 +896,150 @@
           </div>
         </div>
 
+      </div>
+      <!-- Tab Pane 2: Diagnostics & Telemetry -->
+      <div class="system-tab-pane" data-ref="pane-diagnostics" style="display: none; width: 100%; max-width: 1200px; margin: 0 auto; box-sizing: border-box; padding: 24px 24px 60px 24px;">
+        <div class="banner banner--danger" data-ref="system-diag-error" style="display: none; margin-bottom: 20px;"></div>
+        <div class="banner banner--success" data-ref="system-diag-success" style="display: none; margin-bottom: 20px;"></div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin-bottom: 24px;">
+          <!-- Card 1: Node.js Runtime -->
+          <div class="system-card" data-ref="card-diag-node" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(34, 197, 94, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(34, 197, 94, 0.25);">
+                  <svg class="component-icon" style="width: 20px; height: 20px; color: #22c55e;" aria-hidden="true"><use href="/icons.svg#memory"></use></svg>
+                </div>
+                <div>
+                  <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0;">Runtime Node.js</h3>
+                  <span style="font-size: 12px; color: var(--text-secondary);">Motor de ejecución backend</span>
+                </div>
+              </div>
+              <span class="component-badge component-badge--success" data-ref="diag-node-status">Activo</span>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 12px; font-size: 13px;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: var(--text-secondary);">Versión de Node:</span>
+                <strong data-ref="diag-node-version" style="font-family: monospace; color: var(--text-primary);">-</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: var(--text-secondary);">Plataforma SO:</span>
+                <strong data-ref="diag-node-platform" style="font-family: monospace; color: var(--text-primary);">-</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: var(--text-secondary);">Tiempo de Actividad (Uptime):</span>
+                <strong data-ref="diag-node-uptime" style="color: var(--text-primary);">-</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: var(--text-secondary);">Memoria RSS del Proceso:</span>
+                <strong data-ref="diag-node-rss" style="color: var(--text-primary); font-family: monospace;">- MB</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: var(--text-secondary);">Heap Usado / Total:</span>
+                <strong data-ref="diag-node-heap" style="color: var(--text-primary); font-family: monospace;">- / - MB</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2: Redis In-Memory Store -->
+          <div class="system-card" data-ref="card-diag-redis" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(239, 68, 68, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(239, 68, 68, 0.25);">
+                  <svg class="component-icon" style="width: 20px; height: 20px; color: #ef4444;" aria-hidden="true"><use href="/icons.svg#speed"></use></svg>
+                </div>
+                <div>
+                  <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0;">Caché Redis</h3>
+                  <span style="font-size: 12px; color: var(--text-secondary);">Sesiones, OTP y Rate Limits</span>
+                </div>
+              </div>
+              <span class="component-badge component-badge--success" data-ref="diag-redis-status">Conectado</span>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 12px; font-size: 13px;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: var(--text-secondary);">Latencia Ping:</span>
+                <strong data-ref="diag-redis-ping" style="font-family: monospace; color: var(--text-primary);">- ms</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: var(--text-secondary);">Memoria Usada:</span>
+                <strong data-ref="diag-redis-memory" style="font-family: monospace; color: var(--text-primary);">- MB</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: var(--text-secondary);">Llaves Almacenadas:</span>
+                <strong data-ref="diag-redis-keys" style="color: var(--text-primary);">-</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: var(--text-secondary);">Clientes Conectados:</span>
+                <strong data-ref="diag-redis-clients" style="color: var(--text-primary);">-</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: var(--text-secondary);">Tiempo Uptime Redis:</span>
+                <strong data-ref="diag-redis-uptime" style="color: var(--text-primary);">-</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 3: MySQL Database -->
+          <div class="system-card" data-ref="card-diag-mysql" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(59, 130, 246, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(59, 130, 246, 0.25);">
+                  <svg class="component-icon" style="width: 20px; height: 20px; color: #3b82f6;" aria-hidden="true"><use href="/icons.svg#database"></use></svg>
+                </div>
+                <div>
+                  <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0;">Base de Datos MySQL</h3>
+                  <span style="font-size: 12px; color: var(--text-secondary);">Persistencia relacional dual</span>
+                </div>
+              </div>
+              <span class="component-badge component-badge--success" data-ref="diag-mysql-status">Conectado</span>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 12px; font-size: 13px;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: var(--text-secondary);">Latencia Ping:</span>
+                <strong data-ref="diag-mysql-ping" style="font-family: monospace; color: var(--text-primary);">- ms</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: var(--text-secondary);">Tablas Totales:</span>
+                <strong data-ref="diag-mysql-tables" style="color: var(--text-primary);">-</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: var(--text-secondary);">Tamaño db_identity:</span>
+                <strong data-ref="diag-mysql-identity-size" style="font-family: monospace; color: var(--text-primary);">- MB</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: var(--text-secondary);">Tamaño db_canvas:</span>
+                <strong data-ref="diag-mysql-canvas-size" style="font-family: monospace; color: var(--text-primary);">- MB</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Maintenance Operations Card -->
+        <div class="system-card" data-ref="card-diag-maintenance" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 24px; box-shadow: var(--shadow-sm);">
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+            <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(239, 68, 68, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(239, 68, 68, 0.25);">
+              <svg class="component-icon" style="width: 20px; height: 20px; color: #ef4444;" aria-hidden="true"><use href="/icons.svg#delete_sweep"></use></svg>
+            </div>
+            <div>
+              <h3 style="font-size: 16px; font-weight: 700; color: var(--text-primary); margin: 0;">Mantenimiento y Purga de Caché</h3>
+              <p style="font-size: 13px; color: var(--text-secondary); margin: 2px 0 0 0;">Acciones de emergencia para invalidación y limpieza en caliente.</p>
+            </div>
+          </div>
+
+          <div style="padding: 16px; background: var(--bg-surface); border-radius: var(--radius-md, 12px); border: 1px solid var(--border-color); margin-bottom: 16px; font-size: 13px; color: var(--text-secondary); line-height: 1.5;">
+            La purga de caché vacía inmediatamente todas las llaves almacenadas en la base de datos Redis actual (incluyendo contadores de rate limiting en memoria y configuraciones cacheadas). Las configuraciones se recargarán automáticamente de MySQL en la siguiente petición.
+          </div>
+
+          <div style="display: flex; align-items: center; justify-content: flex-end; gap: 12px;">
+            <button type="button" class="component-button component-button--h40 component-button--danger" data-ref="btn-purge-cache">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete_sweep"></use></svg>
+              <span>Purgar Toda la Caché de Redis</span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>

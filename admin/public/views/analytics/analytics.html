@@ -1,6 +1,8 @@
 <div class="layout-content" data-ref="admin-analytics-view">
   <div class="component-wrapper component-wrapper--full view-wrapper" data-ref="analytics-wrapper">
     <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="analytics-scrollable">
+      
+      <!-- Top View Header -->
       <div class="view-header" data-ref="analytics-floating-top">
         <div class="view-header__left" data-ref="analytics-floating-left">
           <h1 class="view-header__title" data-ref="analytics-title">Analítica de Plataforma</h1>
@@ -8,6 +10,8 @@
 
         <div class="view-header__right" data-ref="analytics-floating-right">
           <div class="view-header__actions" data-ref="analytics-default-actions">
+            
+            <!-- Time Range Selector -->
             <div class="component-tags-carousel-wrapper view-tags-wrapper" data-ref="analytics-range-carousel">
               <div class="component-tags-carousel" data-ref="analytics-range-tabs">
                 <button type="button" class="component-badge component-badge--interactive" data-ref="range-7d" data-range="7d">
@@ -25,111 +29,584 @@
               </div>
             </div>
 
-            <button type="button" class="component-button component-button--h40 component-button--bordered view-header__btn" data-ref="btn-export-analytics" data-tooltip="Exportar reporte analítico" aria-label="Exportar reporte analítico">
+            <!-- Export CSV Dataset Button -->
+            <button type="button" class="component-button component-button--h40 component-button--bordered view-header__btn" data-ref="btn-export-analytics-csv" data-tooltip="Exportar dataset analítico en formato CSV" aria-label="Exportar dataset analítico en formato CSV">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
-              <span>Exportar Datos</span>
+              <span>Exportar Dataset (CSV)</span>
             </button>
           </div>
         </div>
       </div>
 
+      <!-- Secondary Sub-Navigation Tabs Bar -->
+      <div class="view-subnav" data-ref="analytics-subnav" style="padding: 12px 24px; border-bottom: 1px solid var(--border-color); background: var(--bg-surface); display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+        <div class="component-tags-carousel-wrapper" data-ref="analytics-tab-buttons-wrapper">
+          <div class="component-tags-carousel" data-ref="analytics-module-tabs" style="display: flex; gap: 8px;">
+            <button type="button" class="component-badge component-badge--interactive is-active" data-ref="tab-btn-overview" data-tab="overview">
+              <svg class="component-icon" style="width: 14px; height: 14px;" aria-hidden="true"><use href="/icons.svg#insights"></use></svg>
+              <span>1. Vista General & Crecimiento</span>
+            </button>
+            <button type="button" class="component-badge component-badge--interactive" data-ref="tab-btn-canvases" data-tab="canvases">
+              <svg class="component-icon" style="width: 14px; height: 14px;" aria-hidden="true"><use href="/icons.svg#brush"></use></svg>
+              <span>2. Lienzos & Almacenamiento</span>
+            </button>
+            <button type="button" class="component-badge component-badge--interactive" data-ref="tab-btn-users" data-tab="users">
+              <svg class="component-icon" style="width: 14px; height: 14px;" aria-hidden="true"><use href="/icons.svg#group"></use></svg>
+              <span>3. Geografía & Demografía</span>
+            </button>
+            <button type="button" class="component-badge component-badge--interactive" data-ref="tab-btn-monetization" data-tab="monetization">
+              <svg class="component-icon" style="width: 14px; height: 14px;" aria-hidden="true"><use href="/icons.svg#receipt_long"></use></svg>
+              <span>4. Monetización, Equipos & IA</span>
+            </button>
+          </div>
+        </div>
+        <div data-ref="analytics-tab-indicator" style="font-size: 12px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+          <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: #10b981;"></span>
+          <span>Datos en tiempo real sincronizados</span>
+        </div>
+      </div>
+
       <div class="view-body" data-ref="analytics-content-container" style="width: 100%; box-sizing: border-box; padding: 20px 24px 60px;">
-        <div class="dashboard-stats-grid" data-ref="analytics-metrics-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; margin-bottom: 20px; width: 100%;">
-          <div class="dashboard-stat-card" data-ref="metric-dau-mau" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-              <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Usuarios Activos (DAU / MAU)</span>
-              <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(59, 130, 246, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(59, 130, 246, 0.25);">
-                <svg class="component-icon" style="width: 18px; height: 18px; color: #3b82f6;" aria-hidden="true"><use href="/icons.svg#group"></use></svg>
+
+        <!-- ==================================================================== -->
+        <!-- PANE 1: VISTA GENERAL & CRECIMIENTO (OVERVIEW & GROWTH)               -->
+        <!-- ==================================================================== -->
+        <div class="analytics-tab-pane" data-ref="pane-overview" style="display: block;">
+          
+          <!-- Executive KPI Grid -->
+          <div class="dashboard-stats-grid" data-ref="overview-metrics-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 24px; width: 100%;">
+            
+            <div class="dashboard-stat-card" data-ref="metric-dau-mau" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Usuarios Activos (DAU / MAU)</span>
+                <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(59, 130, 246, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(59, 130, 246, 0.25);">
+                  <svg class="component-icon" style="width: 18px; height: 18px; color: #3b82f6;" aria-hidden="true"><use href="/icons.svg#group"></use></svg>
+                </div>
+              </div>
+              <div>
+                <div class="stat-card-value" data-ref="val-dau-mau" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0 / 0</div>
+                <div data-ref="val-dau-ratio" style="font-size: 12px; color: var(--text-secondary);">Calculando stickiness...</div>
               </div>
             </div>
-            <div>
-              <div class="stat-card-value" data-ref="val-dau-mau" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0 / 0</div>
-              <div data-ref="val-dau-ratio" style="font-size: 12px; color: var(--text-secondary);">Calculando ratio...</div>
+
+            <div class="dashboard-stat-card" data-ref="metric-users-growth" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Base de Usuarios & WAU</span>
+                <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(99, 102, 241, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(99, 102, 241, 0.25);">
+                  <svg class="component-icon" style="width: 18px; height: 18px; color: #6366f1;" aria-hidden="true"><use href="/icons.svg#person_add"></use></svg>
+                </div>
+              </div>
+              <div>
+                <div class="stat-card-value" data-ref="val-users-total" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
+                <div data-ref="val-users-wau" style="font-size: 12px; color: var(--text-secondary);">0 nuevos en 30 días · 0 WAU</div>
+              </div>
             </div>
+
+            <div class="dashboard-stat-card" data-ref="metric-mrr-arr" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">MRR / ARR Estimado</span>
+                <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(16, 185, 129, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(16, 185, 129, 0.25);">
+                  <svg class="component-icon" style="width: 18px; height: 18px; color: #10b981;" aria-hidden="true"><use href="/icons.svg#receipt_long"></use></svg>
+                </div>
+              </div>
+              <div>
+                <div class="stat-card-value" data-ref="val-mrr-overview" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">$0.00 USD</div>
+                <div data-ref="val-arr-overview" style="font-size: 12px; color: var(--text-secondary);">$0.00 USD proyectado anual (ARR)</div>
+              </div>
+            </div>
+
+            <div class="dashboard-stat-card" data-ref="metric-conversion" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Conversión a Planes de Pago</span>
+                <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(6, 182, 212, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(6, 182, 212, 0.25);">
+                  <svg class="component-icon" style="width: 18px; height: 18px; color: #06b6d4;" aria-hidden="true"><use href="/icons.svg#credit_card"></use></svg>
+                </div>
+              </div>
+              <div>
+                <div class="stat-card-value" data-ref="val-conversion-rate" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0.00%</div>
+                <div data-ref="val-subscribers-count" style="font-size: 12px; color: var(--text-secondary);">0 usuarios en Pro / Business</div>
+              </div>
+            </div>
+
+            <div class="dashboard-stat-card" data-ref="metric-canvases-total" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Lienzos Creados</span>
+                <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(234, 88, 12, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(234, 88, 12, 0.25);">
+                  <svg class="component-icon" style="width: 18px; height: 18px; color: #ea580c;" aria-hidden="true"><use href="/icons.svg#brush"></use></svg>
+                </div>
+              </div>
+              <div>
+                <div class="stat-card-value" data-ref="val-canvases-total" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
+                <div data-ref="val-canvases-active" style="font-size: 12px; color: var(--text-secondary);">0 modificados recientemente</div>
+              </div>
+            </div>
+
+            <div class="dashboard-stat-card" data-ref="metric-storage-savings" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Almacenamiento Optimizado</span>
+                <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(245, 158, 11, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(245, 158, 11, 0.25);">
+                  <svg class="component-icon" style="width: 18px; height: 18px; color: #f59e0b;" aria-hidden="true"><use href="/icons.svg#cloud_upload"></use></svg>
+                </div>
+              </div>
+              <div>
+                <div class="stat-card-value" data-ref="val-storage-comp" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0.00 MB</div>
+                <div data-ref="val-storage-savings" style="font-size: 12px; color: var(--text-secondary);">0.0% ahorro por compresión</div>
+              </div>
+            </div>
+
           </div>
 
-          <div class="dashboard-stat-card" data-ref="metric-canvases" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-              <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Lienzos Creados</span>
-              <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(234, 88, 12, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(234, 88, 12, 0.25);">
-                <svg class="component-icon" style="width: 18px; height: 18px; color: #ea580c;" aria-hidden="true"><use href="/icons.svg#brush"></use></svg>
+          <!-- Overview Charts Grid -->
+          <div class="dashboard-charts-grid" data-ref="overview-charts-grid-top" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(440px, 1fr)); gap: 20px; margin-bottom: 24px; width: 100%;">
+            
+            <div class="dashboard-chart-card" data-ref="chart-growth-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 20px 22px; box-shadow: var(--shadow-sm); box-sizing: border-box;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <div>
+                  <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px 0;">Crecimiento de Usuarios vs. Creación de Lienzos</h3>
+                  <span style="font-size: 12px; color: var(--text-secondary);">Velocidad diaria de captación de usuarios y producción creativa</span>
+                </div>
+                <span class="component-badge component-badge--sm" data-ref="chart-growth-range-label">Últimos 30 días</span>
+              </div>
+              <div class="dashboard-chart-container" data-ref="chart-growth-container" style="height: 250px; position: relative; width: 100%;">
+                <canvas class="dashboard-canvas-chart" data-ref="canvas-chart-growth"></canvas>
               </div>
             </div>
-            <div>
-              <div class="stat-card-value" data-ref="val-canvases" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
-              <div data-ref="val-canvases-active" style="font-size: 12px; color: var(--text-secondary);">0 modificados recientemente</div>
+
+            <div class="dashboard-chart-card" data-ref="chart-activity-trend-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 20px 22px; box-shadow: var(--shadow-sm); box-sizing: border-box;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <div>
+                  <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px 0;">Tráfico e Interacción Diaria (Visualizaciones)</h3>
+                  <span style="font-size: 12px; color: var(--text-secondary);">Volumen de visualizaciones de lienzos en la galería y perfiles</span>
+                </div>
+                <span class="component-badge component-badge--sm" data-ref="chart-activity-range-label">Últimos 30 días</span>
+              </div>
+              <div class="dashboard-chart-container" data-ref="chart-activity-container" style="height: 250px; position: relative; width: 100%;">
+                <canvas class="dashboard-canvas-chart" data-ref="canvas-chart-activity-trend"></canvas>
+              </div>
             </div>
+
           </div>
 
-          <div class="dashboard-stat-card" data-ref="metric-storage" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-              <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Almacenamiento Total</span>
-              <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(245, 158, 11, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(245, 158, 11, 0.25);">
-                <svg class="component-icon" style="width: 18px; height: 18px; color: #f59e0b;" aria-hidden="true"><use href="/icons.svg#cloud_upload"></use></svg>
+          <!-- Secondary Overview Charts Grid -->
+          <div class="dashboard-charts-grid" data-ref="overview-charts-grid-bottom" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; width: 100%;">
+            
+            <div class="dashboard-chart-card" data-ref="chart-tiers-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 20px 22px; box-shadow: var(--shadow-sm); box-sizing: border-box;">
+              <div style="margin-bottom: 16px;">
+                <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px 0;">Distribución de Suscripciones</h3>
+                <span style="font-size: 12px; color: var(--text-secondary);">Composición actual de planes (Free, Pro, Business)</span>
+              </div>
+              <div class="dashboard-chart-container" data-ref="chart-tiers-container" style="height: 220px; position: relative; width: 100%;">
+                <canvas class="dashboard-canvas-chart" data-ref="canvas-chart-tiers"></canvas>
               </div>
             </div>
-            <div>
-              <div class="stat-card-value" data-ref="val-storage" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0.00 MB</div>
-              <div data-ref="val-storage-compressed" style="font-size: 12px; color: var(--text-secondary);">0.00 MB optimizados</div>
+
+            <div class="dashboard-chart-card" data-ref="chart-auth-security-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 20px 22px; box-shadow: var(--shadow-sm); box-sizing: border-box;">
+              <div style="margin-bottom: 16px;">
+                <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px 0;">Adopción de Seguridad & Autenticación</h3>
+                <span style="font-size: 12px; color: var(--text-secondary);">2FA, Google OAuth vs. Contraseña estándar</span>
+              </div>
+              <div class="dashboard-chart-container" data-ref="chart-auth-security-container" style="height: 220px; position: relative; width: 100%;">
+                <canvas class="dashboard-canvas-chart" data-ref="canvas-chart-auth-security"></canvas>
+              </div>
             </div>
+
+            <div class="dashboard-chart-card" data-ref="chart-dow-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 20px 22px; box-shadow: var(--shadow-sm); box-sizing: border-box;">
+              <div style="margin-bottom: 16px;">
+                <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px 0;">Actividad por Día de la Semana</h3>
+                <span style="font-size: 12px; color: var(--text-secondary);">Días de mayor concurrencia de creación y guardado</span>
+              </div>
+              <div class="dashboard-chart-container" data-ref="chart-dow-container" style="height: 220px; position: relative; width: 100%;">
+                <canvas class="dashboard-canvas-chart" data-ref="canvas-chart-dow"></canvas>
+              </div>
+            </div>
+
           </div>
 
-          <div class="dashboard-stat-card" data-ref="metric-engagement" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-              <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Interacción & Proyectos</span>
-              <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(16, 185, 129, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(16, 185, 129, 0.25);">
-                <svg class="component-icon" style="width: 18px; height: 18px; color: #10b981;" aria-hidden="true"><use href="/icons.svg#chat_bubble"></use></svg>
-              </div>
-            </div>
-            <div>
-              <div class="stat-card-value" data-ref="val-comments" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
-              <div data-ref="val-folders" style="font-size: 12px; color: var(--text-secondary);">0 carpetas organizadas</div>
-            </div>
-          </div>
         </div>
 
-        <div class="dashboard-charts-grid" data-ref="analytics-charts-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 20px; width: 100%;">
-          <div class="dashboard-chart-card" data-ref="chart-activity-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 20px 22px; box-shadow: var(--shadow-sm); box-sizing: border-box;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-              <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0;">Nuevos Usuarios vs Lienzos Creados</h3>
-              <span class="component-badge component-badge--sm" data-ref="chart-activity-range-label">Últimos 30 días</span>
-            </div>
-            <div class="dashboard-chart-container" data-ref="chart-activity-container" style="height: 220px; position: relative; width: 100%;">
-              <svg class="dashboard-svg-chart" data-ref="svg-activity-chart" viewBox="0 0 500 200" preserveAspectRatio="none" style="width: 100%; height: 100%; overflow: visible;">
-                <!-- Render dinámico -->
-              </svg>
-            </div>
-            <div class="dashboard-chart-legend" style="display: flex; gap: 16px; justify-content: center; margin-top: 14px; font-size: 12px; color: var(--text-secondary);">
-              <div style="display: flex; align-items: center; gap: 6px;">
-                <span style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background-color: #3b82f6;"></span>
-                <span>Usuarios</span>
+
+        <!-- ==================================================================== -->
+        <!-- PANE 2: LIENZOS, EDITOR & ALMACENAMIENTO (CANVASES & STORAGE)          -->
+        <!-- ==================================================================== -->
+        <div class="analytics-tab-pane" data-ref="pane-canvases" style="display: none;">
+          
+          <!-- Canvas Top Metrics Grid -->
+          <div class="dashboard-stats-grid" data-ref="canvases-metrics-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 24px; width: 100%;">
+            
+            <div class="dashboard-stat-card" data-ref="metric-canvases-privacy" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Privacidad de Lienzos</span>
+                <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(59, 130, 246, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(59, 130, 246, 0.25);">
+                  <svg class="component-icon" style="width: 18px; height: 18px; color: #3b82f6;" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
+                </div>
               </div>
-              <div style="display: flex; align-items: center; gap: 6px;">
-                <span style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background-color: #ea580c;"></span>
-                <span>Lienzos</span>
+              <div>
+                <div class="stat-card-value" data-ref="val-public-canvases" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0 Públicos</div>
+                <div data-ref="val-private-canvases" style="font-size: 12px; color: var(--text-secondary);">0 Privados guardados en la nube</div>
               </div>
+            </div>
+
+            <div class="dashboard-stat-card" data-ref="metric-storage-breakdown" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Almacenamiento Bruto vs Optimizado</span>
+                <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(245, 158, 11, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(245, 158, 11, 0.25);">
+                  <svg class="component-icon" style="width: 18px; height: 18px; color: #f59e0b;" aria-hidden="true"><use href="/icons.svg#cloud_upload"></use></svg>
+                </div>
+              </div>
+              <div>
+                <div class="stat-card-value" data-ref="val-raw-storage-comp" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0.00 MB</div>
+                <div data-ref="val-raw-storage-details" style="font-size: 12px; color: var(--text-secondary);">0.00 MB en bruto sin comprimir</div>
+              </div>
+            </div>
+
+            <div class="dashboard-stat-card" data-ref="metric-avg-canvas" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Peso Promedio & Versiones</span>
+                <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(244, 63, 94, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(244, 63, 94, 0.25);">
+                  <svg class="component-icon" style="width: 18px; height: 18px; color: #f43f5e;" aria-hidden="true"><use href="/icons.svg#data_object"></use></svg>
+                </div>
+              </div>
+              <div>
+                <div class="stat-card-value" data-ref="val-avg-canvas-size-tab" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0 KB</div>
+                <div data-ref="val-snapshots-count" style="font-size: 12px; color: var(--text-secondary);">0 snapshots y versiones históricas</div>
+              </div>
+            </div>
+
+            <div class="dashboard-stat-card" data-ref="metric-views-duration" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Interacción & Tiempo en Editor</span>
+                <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(139, 92, 246, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(139, 92, 246, 0.25);">
+                  <svg class="component-icon" style="width: 18px; height: 18px; color: #8b5cf6;" aria-hidden="true"><use href="/icons.svg#schedule"></use></svg>
+                </div>
+              </div>
+              <div>
+                <div class="stat-card-value" data-ref="val-views-tab" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0 Vistas</div>
+                <div data-ref="val-duration-tab" style="font-size: 12px; color: var(--text-secondary);">0s duración media de sesión de edición</div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Canvases Charts Row -->
+          <div class="dashboard-charts-grid" data-ref="canvases-charts-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin-bottom: 24px; width: 100%;">
+            
+            <div class="dashboard-chart-card" data-ref="chart-resolutions-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 20px 22px; box-shadow: var(--shadow-sm); box-sizing: border-box;">
+              <div style="margin-bottom: 16px;">
+                <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px 0;">Distribución de Resoluciones</h3>
+                <span style="font-size: 12px; color: var(--text-secondary);">Dimensiones de cuadrícula elegidas (Micro, Sprite, Estándar, HD)</span>
+              </div>
+              <div class="dashboard-chart-container" data-ref="chart-resolutions-container" style="height: 220px; position: relative; width: 100%;">
+                <canvas class="dashboard-canvas-chart" data-ref="canvas-chart-resolutions"></canvas>
+              </div>
+            </div>
+
+            <div class="dashboard-chart-card" data-ref="chart-formats-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 20px 22px; box-shadow: var(--shadow-sm); box-sizing: border-box;">
+              <div style="margin-bottom: 16px;">
+                <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px 0;">Formatos y Tipología de Lienzo</h3>
+                <span style="font-size: 12px; color: var(--text-secondary);">Pixel Art estándar vs. Vectorial vs. Lienzo Mixto</span>
+              </div>
+              <div class="dashboard-chart-container" data-ref="chart-formats-container" style="height: 220px; position: relative; width: 100%;">
+                <canvas class="dashboard-canvas-chart" data-ref="canvas-chart-formats"></canvas>
+              </div>
+            </div>
+
+            <div class="dashboard-chart-card" data-ref="chart-storage-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 20px 22px; box-shadow: var(--shadow-sm); box-sizing: border-box;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <div>
+                  <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px 0;">Almacenamiento Bruto vs. Optimizado (MB)</h3>
+                  <span style="font-size: 12px; color: var(--text-secondary);">Evolución temporal del peso comprimido</span>
+                </div>
+                <span class="component-badge component-badge--sm" data-ref="chart-storage-range-label">Últimos 30 días</span>
+              </div>
+              <div class="dashboard-chart-container" data-ref="chart-storage-container" style="height: 220px; position: relative; width: 100%;">
+                <canvas class="dashboard-canvas-chart" data-ref="canvas-chart-storage"></canvas>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Top 10 Canvases Ranking Table -->
+          <div class="dashboard-rankings-card" data-ref="rankings-canvases-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 20px 22px; box-shadow: var(--shadow-sm); box-sizing: border-box; width: 100%;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <svg class="component-icon" style="color: #3b82f6; width: 20px; height: 20px;" aria-hidden="true"><use href="/icons.svg#brush"></use></svg>
+                <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0;">Top 10 Lienzos con Mayor Impacto</h3>
+              </div>
+              <span class="component-badge component-badge--sm">Visualizaciones & Engagement</span>
+            </div>
+            <div class="component-table-wrapper" style="overflow-x: auto; border: 1px solid var(--border-color); border-radius: 8px;">
+              <table class="component-table" data-ref="table-top-canvases" style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                <thead>
+                  <tr style="background: var(--bg-card-subtle); border-bottom: 1px solid var(--border-color); text-align: left;">
+                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary);">Lienzo</th>
+                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary);">Creador</th>
+                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary);">Dimensiones</th>
+                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary);">Acceso</th>
+                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary); text-align: right;">Impacto</th>
+                  </tr>
+                </thead>
+                <tbody data-ref="analytics-top-canvases-tbody">
+                  <tr>
+                    <td colspan="5" style="padding: 18px; text-align: center; color: var(--text-secondary);">Cargando ranking de lienzos...</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
 
-          <div class="dashboard-chart-card" data-ref="chart-storage-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 20px 22px; box-shadow: var(--shadow-sm); box-sizing: border-box;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-              <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0;">Crecimiento de Almacenamiento (MB)</h3>
-              <span class="component-badge component-badge--sm" data-ref="chart-storage-range-label">Últimos 30 días</span>
-            </div>
-            <div class="dashboard-chart-container" data-ref="chart-storage-container" style="height: 220px; position: relative; width: 100%;">
-              <svg class="dashboard-svg-chart" data-ref="svg-storage-chart" viewBox="0 0 500 200" preserveAspectRatio="none" style="width: 100%; height: 100%; overflow: visible;">
-                <!-- Render dinámico -->
-              </svg>
-            </div>
-            <div class="dashboard-chart-legend" style="display: flex; gap: 16px; justify-content: center; margin-top: 14px; font-size: 12px; color: var(--text-secondary);">
-              <div style="display: flex; align-items: center; gap: 6px;">
-                <span style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background-color: #f59e0b;"></span>
-                <span>Megabytes almacenados</span>
+        </div>
+
+
+        <!-- ==================================================================== -->
+        <!-- PANE 3: USUARIOS, GEOGRAFÍA & DEMOGRAFÍA (USERS & DEMOGRAPHICS)        -->
+        <!-- ==================================================================== -->
+        <div class="analytics-tab-pane" data-ref="pane-users" style="display: none;">
+          
+          <!-- Users Demographics Top Metrics Grid -->
+          <div class="dashboard-stats-grid" data-ref="users-metrics-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 24px; width: 100%;">
+            
+            <div class="dashboard-stat-card" data-ref="metric-users-total-tab" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Usuarios Registrados</span>
+                <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(59, 130, 246, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(59, 130, 246, 0.25);">
+                  <svg class="component-icon" style="width: 18px; height: 18px; color: #3b82f6;" aria-hidden="true"><use href="/icons.svg#group"></use></svg>
+                </div>
+              </div>
+              <div>
+                <div class="stat-card-value" data-ref="val-users-count-tab" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
+                <div data-ref="val-users-active-pct" style="font-size: 12px; color: var(--text-secondary);">0 activos en los últimos 30 días</div>
               </div>
             </div>
+
+            <div class="dashboard-stat-card" data-ref="metric-security-2fa" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Adopción de 2FA & Google</span>
+                <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(16, 185, 129, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(16, 185, 129, 0.25);">
+                  <svg class="component-icon" style="width: 18px; height: 18px; color: #10b981;" aria-hidden="true"><use href="/icons.svg#verified_user"></use></svg>
+                </div>
+              </div>
+              <div>
+                <div class="stat-card-value" data-ref="val-2fa-adoption-pct" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0.0% 2FA</div>
+                <div data-ref="val-google-auth-pct" style="font-size: 12px; color: var(--text-secondary);">0.0% Google OAuth vinculado</div>
+              </div>
+            </div>
+
+            <div class="dashboard-stat-card" data-ref="metric-engagement-community" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Interacción Social & Carpetas</span>
+                <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(234, 88, 12, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(234, 88, 12, 0.25);">
+                  <svg class="component-icon" style="width: 18px; height: 18px; color: #ea580c;" aria-hidden="true"><use href="/icons.svg#chat_bubble"></use></svg>
+                </div>
+              </div>
+              <div>
+                <div class="stat-card-value" data-ref="val-comments-tab" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
+                <div data-ref="val-folders-tab" style="font-size: 12px; color: var(--text-secondary);">0 carpetas creadas para organizar</div>
+              </div>
+            </div>
+
+            <div class="dashboard-stat-card" data-ref="metric-dau-wau-ratio" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Densidad de Uso (DAU / WAU)</span>
+                <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(99, 102, 241, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(99, 102, 241, 0.25);">
+                  <svg class="component-icon" style="width: 18px; height: 18px; color: #6366f1;" aria-hidden="true"><use href="/icons.svg#timeline"></use></svg>
+                </div>
+              </div>
+              <div>
+                <div class="stat-card-value" data-ref="val-dau-wau-tab" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0 / 0</div>
+                <div data-ref="val-stickiness-tab" style="font-size: 12px; color: var(--text-secondary);">Stickiness: 0.0%</div>
+              </div>
+            </div>
+
           </div>
+
+          <!-- User Demographics Charts Row -->
+          <div class="dashboard-charts-grid" data-ref="users-charts-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(440px, 1fr)); gap: 20px; margin-bottom: 24px; width: 100%;">
+            
+            <div class="dashboard-chart-card" data-ref="chart-geo-distribution-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 20px 22px; box-shadow: var(--shadow-sm); box-sizing: border-box;">
+              <div style="margin-bottom: 16px;">
+                <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px 0;">Distribución Geográfica (Top 10 Países)</h3>
+                <span style="font-size: 12px; color: var(--text-secondary);">Países con mayor concentración de cuentas registradas</span>
+              </div>
+              <div class="dashboard-chart-container" data-ref="chart-geo-container" style="height: 250px; position: relative; width: 100%;">
+                <canvas class="dashboard-canvas-chart" data-ref="canvas-chart-geo-distribution"></canvas>
+              </div>
+            </div>
+
+            <div class="dashboard-chart-card" data-ref="chart-preferences-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 20px 22px; box-shadow: var(--shadow-sm); box-sizing: border-box;">
+              <div style="margin-bottom: 16px;">
+                <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px 0;">Preferencia de Idiomas & Temas Visuales</h3>
+                <span style="font-size: 12px; color: var(--text-secondary);">Idiomas de interfaz y adopción de tema Claro vs Oscuro</span>
+              </div>
+              <div class="dashboard-chart-container" data-ref="chart-preferences-container" style="height: 250px; position: relative; width: 100%;">
+                <canvas class="dashboard-canvas-chart" data-ref="canvas-chart-preferences"></canvas>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Top 10 Creators Ranking Table -->
+          <div class="dashboard-rankings-card" data-ref="rankings-creators-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 20px 22px; box-shadow: var(--shadow-sm); box-sizing: border-box; width: 100%;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <svg class="component-icon" style="color: #ea580c; width: 20px; height: 20px;" aria-hidden="true"><use href="/icons.svg#stars"></use></svg>
+                <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0;">Top 10 Creadores Más Activos</h3>
+              </div>
+              <span class="component-badge component-badge--sm">Volumen de Creación & Audiencia</span>
+            </div>
+            <div class="component-table-wrapper" style="overflow-x: auto; border: 1px solid var(--border-color); border-radius: 8px;">
+              <table class="component-table" data-ref="table-top-creators" style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                <thead>
+                  <tr style="background: var(--bg-card-subtle); border-bottom: 1px solid var(--border-color); text-align: left;">
+                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary);">Usuario</th>
+                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary);">Plan</th>
+                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary);">Lienzos</th>
+                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary);">Vistas Acumuladas</th>
+                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary); text-align: right;">Espacio Usado</th>
+                  </tr>
+                </thead>
+                <tbody data-ref="analytics-top-creators-tbody">
+                  <tr>
+                    <td colspan="5" style="padding: 18px; text-align: center; color: var(--text-secondary);">Cargando ranking de creadores...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
         </div>
+
+
+        <!-- ==================================================================== -->
+        <!-- PANE 4: MONETIZACIÓN, EQUIPOS & IA (FINANCE, TEAMS & AI)              -->
+        <!-- ==================================================================== -->
+        <div class="analytics-tab-pane" data-ref="pane-monetization" style="display: none;">
+          
+          <!-- Monetization Top Metrics Grid -->
+          <div class="dashboard-stats-grid" data-ref="monetization-metrics-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 24px; width: 100%;">
+            
+            <div class="dashboard-stat-card" data-ref="metric-finance-revenue" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Ingresos Totales (Revenue)</span>
+                <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(16, 185, 129, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(16, 185, 129, 0.25);">
+                  <svg class="component-icon" style="width: 18px; height: 18px; color: #10b981;" aria-hidden="true"><use href="/icons.svg#receipt_long"></use></svg>
+                </div>
+              </div>
+              <div>
+                <div class="stat-card-value" data-ref="val-total-revenue" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">$0.00 USD</div>
+                <div data-ref="val-avg-order-value" style="font-size: 12px; color: var(--text-secondary);">Ticket promedio (AOV): $0.00 USD</div>
+              </div>
+            </div>
+
+            <div class="dashboard-stat-card" data-ref="metric-finance-purchases" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Transacciones de Suscripción</span>
+                <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(59, 130, 246, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(59, 130, 246, 0.25);">
+                  <svg class="component-icon" style="width: 18px; height: 18px; color: #3b82f6;" aria-hidden="true"><use href="/icons.svg#credit_card"></use></svg>
+                </div>
+              </div>
+              <div>
+                <div class="stat-card-value" data-ref="val-purchases-count" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
+                <div data-ref="val-purchases-status" style="font-size: 12px; color: var(--text-secondary);">Pagos procesados exitosamente</div>
+              </div>
+            </div>
+
+            <div class="dashboard-stat-card" data-ref="metric-teams-education" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Equipos B2B & Educación</span>
+                <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(99, 102, 241, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(99, 102, 241, 0.25);">
+                  <svg class="component-icon" style="width: 18px; height: 18px; color: #6366f1;" aria-hidden="true"><use href="/icons.svg#school"></use></svg>
+                </div>
+              </div>
+              <div>
+                <div class="stat-card-value" data-ref="val-teams-count" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0 Equipos</div>
+                <div data-ref="val-classrooms-schools" style="font-size: 12px; color: var(--text-secondary);">0 Aulas · 0 Instituciones escolares</div>
+              </div>
+            </div>
+
+            <div class="dashboard-stat-card" data-ref="metric-ai-health" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Satisfacción del Asistente IA</span>
+                <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(234, 88, 12, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(234, 88, 12, 0.25);">
+                  <svg class="component-icon" style="width: 18px; height: 18px; color: #ea580c;" aria-hidden="true"><use href="/icons.svg#smart_toy"></use></svg>
+                </div>
+              </div>
+              <div>
+                <div class="stat-card-value" data-ref="val-ai-satisfaction-pct" style="font-size: 26px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0.0%</div>
+                <div data-ref="val-ai-feedback-detail" style="font-size: 12px; color: var(--text-secondary);">0 👍 Likes vs. 0 👎 Dislikes</div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Monetization Charts Row -->
+          <div class="dashboard-charts-grid" data-ref="monetization-charts-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin-bottom: 24px; width: 100%;">
+            
+            <div class="dashboard-chart-card" data-ref="chart-financial-periods-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 20px 22px; box-shadow: var(--shadow-sm); box-sizing: border-box;">
+              <div style="margin-bottom: 16px;">
+                <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px 0;">Facturación: Mensual vs. Anual</h3>
+                <span style="font-size: 12px; color: var(--text-secondary);">Ingresos generados según el período de facturación</span>
+              </div>
+              <div class="dashboard-chart-container" data-ref="chart-financial-periods-container" style="height: 220px; position: relative; width: 100%;">
+                <canvas class="dashboard-canvas-chart" data-ref="canvas-chart-financial-periods"></canvas>
+              </div>
+            </div>
+
+            <div class="dashboard-chart-card" data-ref="chart-purchases-plan-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 20px 22px; box-shadow: var(--shadow-sm); box-sizing: border-box;">
+              <div style="margin-bottom: 16px;">
+                <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px 0;">Ingresos por Plan Contratado</h3>
+                <span style="font-size: 12px; color: var(--text-secondary);">Volumen de ventas por categoría de plan</span>
+              </div>
+              <div class="dashboard-chart-container" data-ref="chart-purchases-plan-container" style="height: 220px; position: relative; width: 100%;">
+                <canvas class="dashboard-canvas-chart" data-ref="canvas-chart-purchases-plan"></canvas>
+              </div>
+            </div>
+
+            <div class="dashboard-chart-card" data-ref="chart-ai-feedback-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 20px 22px; box-shadow: var(--shadow-sm); box-sizing: border-box;">
+              <div style="margin-bottom: 16px;">
+                <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px 0;">Aprobación del Asistente IA</h3>
+                <span style="font-size: 12px; color: var(--text-secondary);">Proporción de retroalimentación positiva vs negativa</span>
+              </div>
+              <div class="dashboard-chart-container" data-ref="chart-ai-feedback-container" style="height: 220px; position: relative; width: 100%;">
+                <canvas class="dashboard-canvas-chart" data-ref="canvas-chart-ai-feedback"></canvas>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Recent Purchases Table -->
+          <div class="dashboard-rankings-card" data-ref="recent-purchases-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 20px 22px; box-shadow: var(--shadow-sm); box-sizing: border-box; width: 100%;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <svg class="component-icon" style="color: #10b981; width: 20px; height: 20px;" aria-hidden="true"><use href="/icons.svg#receipt_long"></use></svg>
+                <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0;">Transacciones y Compras Recientes</h3>
+              </div>
+              <span class="component-badge component-badge--sm">Últimos pagos auditados</span>
+            </div>
+            <div class="component-table-wrapper" style="overflow-x: auto; border: 1px solid var(--border-color); border-radius: 8px;">
+              <table class="component-table" data-ref="table-recent-purchases" style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                <thead>
+                  <tr style="background: var(--bg-card-subtle); border-bottom: 1px solid var(--border-color); text-align: left;">
+                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary);">Usuario</th>
+                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary);">Plan</th>
+                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary);">Período</th>
+                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary);">Fecha</th>
+                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary);">Estado</th>
+                    <th style="padding: 10px 12px; font-weight: 600; color: var(--text-secondary); text-align: right;">Monto</th>
+                  </tr>
+                </thead>
+                <tbody data-ref="analytics-recent-purchases-tbody">
+                  <tr>
+                    <td colspan="6" style="padding: 18px; text-align: center; color: var(--text-secondary);">Cargando transacciones recientes...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+
       </div>
     </div>
   </div>
 </div>
+

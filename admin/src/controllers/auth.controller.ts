@@ -45,7 +45,7 @@ export async function login(req: Request, res: Response): Promise<void> {
 
     const activeSanction = await getActiveUserSanction(userRow.id);
     if (activeSanction) {
-      logger.security.warn('Intento de inicio de sesión de usuario sancionado en Admin', { sanctionType: activeSanction.sanction_type, userId: userRow.id });
+      logger.security.warn('Intento de inicio de sesión de usuario sancionado en Admin', { sanctionType: activeSanction.type, userId: userRow.id });
       sendForbidden(res, 'Tu cuenta se encuentra suspendida o bloqueada.');
       return;
     }
@@ -134,7 +134,7 @@ export async function verify2FALogin(req: Request, res: Response): Promise<void>
 
     const activeSanction = await getActiveUserSanction(userRow.id);
     if (activeSanction) {
-      logger.security.warn('Intento de verificación 2FA de usuario sancionado en Admin', { sanctionType: activeSanction.sanction_type, userId: userRow.id });
+      logger.security.warn('Intento de verificación 2FA de usuario sancionado en Admin', { sanctionType: activeSanction.type, userId: userRow.id });
       sendForbidden(res, 'Tu cuenta se encuentra suspendida o bloqueada.');
       return;
     }
@@ -306,7 +306,7 @@ export async function googleAuthCallback(req: Request, res: Response): Promise<v
 
     const activeSanction = await getActiveUserSanction(user.id);
     if (activeSanction) {
-      logger.security.warn('Intento de login con Google en Admin de usuario sancionado', { sanctionType: activeSanction.sanction_type, userId: user.id });
+      logger.security.warn('Intento de login con Google en Admin de usuario sancionado', { sanctionType: activeSanction.type, userId: user.id });
       res.redirect('/login?error=account_suspended');
       return;
     }

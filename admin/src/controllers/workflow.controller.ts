@@ -1,6 +1,6 @@
-import { Request, Response } from 'express';
-import { getWorkflowJobs, getWorkflowOverview, triggerWorkflowJob } from '../services/workflow.service.js';
 import { logger } from '../services/logger.service.js';
+import { getWorkflowJobHistory, getWorkflowJobs, getWorkflowOverview, triggerWorkflowJob } from '../services/workflow.service.js';
+import { Request, Response } from 'express';
 
 export async function handleGetWorkflowOverview(req: Request, res: Response): Promise<void> {
   try {
@@ -19,6 +19,22 @@ export async function handleGetWorkflowJobs(req: Request, res: Response): Promis
   } catch (error) {
     logger.app.error('Error al responder lista de trabajos', error);
     res.status(500).json({ error: 'Ha ocurrido un error al cargar los trabajos programados.' });
+  }
+}
+
+export async function handleGetWorkflowJobHistory(req: Request, res: Response): Promise<void> {
+  try {
+    const { id } = req.params;
+    if (!id || typeof id !== 'string') {
+      res.status(400).json({ error: 'Identificador de trabajo no válido.' });
+      return;
+    }
+
+    const history = await getWorkflowJobHistory(id);
+    res.json(history);
+  } catch (error) {
+    logger.app.error('Error al responder historial del trabajo', error);
+    res.status(500).json({ error: 'Ha ocurrido un error al cargar el historial del trabajo.' });
   }
 }
 

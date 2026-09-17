@@ -71,6 +71,44 @@
           </div>
         </div>
 
+        <div class="support-search-container" data-ref="workflows-search-container" style="padding: 0; border: 1px solid var(--border-color); border-radius: var(--border-radius-md); margin-bottom: 20px; background-color: var(--bg-card);">
+          <div class="support-search-container__input-wrap" data-ref="workflows-input-wrap" style="padding: 10px 12px; border-bottom: 1px solid var(--border-color);">
+            <div class="component-search component-search--full" data-ref="search-box">
+              <div class="component-search__icon" data-ref="search-icon">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+              </div>
+              <div class="component-search__input-box" data-ref="search-input-box">
+                <input class="component-search__input" data-ref="input-search-workflows" type="text" maxlength="100" autocomplete="off" placeholder="Buscar automatización por nombre, descripción o cron..." />
+              </div>
+              <button type="button" class="component-button component-button--icon-only component-search__clear" data-ref="btn-clear-search" style="display: none;" aria-label="Limpiar búsqueda">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cancel"></use></svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="support-search-container__filters-wrap" data-ref="workflows-filters-wrap" style="padding: 8px 12px;">
+            <div class="component-tags-carousel-wrapper view-tags-wrapper" data-ref="workflows-tags-carousel-wrapper">
+              <div class="component-tags-carousel" data-ref="workflows-filter-tabs">
+                <button type="button" class="component-badge component-badge--interactive is-active" data-ref="filter-category-all" data-category="all">
+                  <span>Todas</span>
+                </button>
+                <button type="button" class="component-badge component-badge--interactive" data-ref="filter-category-cleanup" data-category="cleanup">
+                  <span>Limpieza y Purga</span>
+                </button>
+                <button type="button" class="component-badge component-badge--interactive" data-ref="filter-category-backup" data-category="backup">
+                  <span>Copias de Seguridad</span>
+                </button>
+                <button type="button" class="component-badge component-badge--interactive" data-ref="filter-category-mail" data-category="mail">
+                  <span>Colas de Correo</span>
+                </button>
+                <button type="button" class="component-badge component-badge--interactive" data-ref="filter-category-analytics" data-category="analytics">
+                  <span>Analítica Diaria</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="component-table-wrapper" data-ref="workflows-table-wrapper">
           <table class="component-table" data-ref="workflows-table">
             <thead>
@@ -89,6 +127,47 @@
             </tbody>
           </table>
         </div>
+
+        <div class="view-empty-state" data-ref="workflows-empty-state" style="display: none; padding: 48px 16px; text-align: center;">
+          <svg class="component-icon view-empty-state__icon" aria-hidden="true" style="width: 48px; height: 48px; margin-bottom: 12px; color: var(--text-secondary);"><use href="/icons.svg#tune"></use></svg>
+          <h3 class="view-empty-state__title" style="margin-bottom: 6px;">No se encontraron automatizaciones</h3>
+          <p class="view-empty-state__description" style="color: var(--text-secondary); font-size: 14px;">No hay tareas que coincidan con la búsqueda o categoría seleccionada.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" data-ref="modal-workflow-history-backdrop" style="display: none;">
+    <div class="modal-dialog modal-dialog--md" data-ref="modal-workflow-history">
+      <div class="modal-header">
+        <h3 class="modal-title" data-ref="workflow-history-title">Historial de Ejecución</h3>
+        <button type="button" class="component-button component-button--icon-only modal-close-btn" data-ref="btn-close-history-modal" aria-label="Cerrar modal">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cancel"></use></svg>
+        </button>
+      </div>
+      <div class="modal-body" style="max-height: 60vh; overflow-y: auto;">
+        <div class="component-table-wrapper" data-ref="history-table-wrapper">
+          <table class="component-table" data-ref="history-table">
+            <thead>
+              <tr>
+                <th>Fecha / Hora</th>
+                <th>Disparador</th>
+                <th>Duración</th>
+                <th>Estado</th>
+                <th>Detalle</th>
+              </tr>
+            </thead>
+            <tbody data-ref="history-tbody">
+              <!-- Renderizado dinámico -->
+            </tbody>
+          </table>
+        </div>
+        <div class="view-empty-state" data-ref="history-empty-state" style="display: none; padding: 24px; text-align: center;">
+          <p style="color: var(--text-secondary); font-size: 13px;">No hay registros previos de ejecución para este trabajo.</p>
+        </div>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: flex-end;">
+        <button type="button" class="component-button component-button--h40 component-button--bordered" data-ref="btn-close-history-footer">Cerrar</button>
       </div>
     </div>
   </div>

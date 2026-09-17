@@ -22,6 +22,16 @@ export interface WorkflowJobItem {
   success_rate: number;
 }
 
+export interface JobExecutionLog {
+  duration_ms: number;
+  executed_at: string;
+  id: string;
+  job_id: string;
+  message: string;
+  status: 'failed' | 'success';
+  trigger: 'automatic' | 'manual';
+}
+
 const JOBS_REGISTRY: WorkflowJobItem[] = [
   {
     category: 'cleanup',
@@ -85,6 +95,100 @@ const JOBS_REGISTRY: WorkflowJobItem[] = [
   },
 ];
 
+const EXECUTION_HISTORY: Record<string, JobExecutionLog[]> = {
+  analytics_aggregation_job: [
+    {
+      duration_ms: 890,
+      executed_at: new Date(Date.now() - 36000000).toISOString(),
+      id: 'exec_agg_1',
+      job_id: 'analytics_aggregation_job',
+      message: 'Métricas de DAU, MAU y almacenamiento diario consolidadas exitosamente.',
+      status: 'success',
+      trigger: 'automatic',
+    },
+    {
+      duration_ms: 915,
+      executed_at: new Date(Date.now() - 122400000).toISOString(),
+      id: 'exec_agg_2',
+      job_id: 'analytics_aggregation_job',
+      message: 'Métricas de DAU, MAU y almacenamiento diario consolidadas exitosamente.',
+      status: 'success',
+      trigger: 'automatic',
+    },
+  ],
+  cleanup_expired_sessions: [
+    {
+      duration_ms: 320,
+      executed_at: new Date(Date.now() - 25200000).toISOString(),
+      id: 'exec_ses_1',
+      job_id: 'cleanup_expired_sessions',
+      message: 'Purga completada: 42 sesiones inactivas eliminadas.',
+      status: 'success',
+      trigger: 'automatic',
+    },
+    {
+      duration_ms: 410,
+      executed_at: new Date(Date.now() - 111600000).toISOString(),
+      id: 'exec_ses_2',
+      job_id: 'cleanup_expired_sessions',
+      message: 'Purga completada: 18 sesiones inactivas eliminadas.',
+      status: 'success',
+      trigger: 'automatic',
+    },
+  ],
+  database_snapshot_backup: [
+    {
+      duration_ms: 2450,
+      executed_at: new Date(Date.now() - 28800000).toISOString(),
+      id: 'exec_bak_1',
+      job_id: 'database_snapshot_backup',
+      message: 'Copia de seguridad snapshot_daily_auto.tar.gz generada correctamente.',
+      status: 'success',
+      trigger: 'automatic',
+    },
+    {
+      duration_ms: 2380,
+      executed_at: new Date(Date.now() - 115200000).toISOString(),
+      id: 'exec_bak_2',
+      job_id: 'database_snapshot_backup',
+      message: 'Copia de seguridad snapshot_daily_auto.tar.gz generada correctamente.',
+      status: 'success',
+      trigger: 'automatic',
+    },
+  ],
+  purge_deleted_canvases: [
+    {
+      duration_ms: 680,
+      executed_at: new Date(Date.now() - 21600000).toISOString(),
+      id: 'exec_cnv_1',
+      job_id: 'purge_deleted_canvases',
+      message: 'Purga completada: 3 lienzos caducados en papelera eliminados permanentemente.',
+      status: 'success',
+      trigger: 'automatic',
+    },
+  ],
+  trans_mail_retry_queue: [
+    {
+      duration_ms: 150,
+      executed_at: new Date(Date.now() - 600000).toISOString(),
+      id: 'exec_mail_1',
+      job_id: 'trans_mail_retry_queue',
+      message: 'Cola procesada: 0 correos pendientes de reintento.',
+      status: 'success',
+      trigger: 'automatic',
+    },
+    {
+      duration_ms: 180,
+      executed_at: new Date(Date.now() - 1500000).toISOString(),
+      id: 'exec_mail_2',
+      job_id: 'trans_mail_retry_queue',
+      message: 'Cola procesada: 1 correo reenviado con éxito.',
+      status: 'success',
+      trigger: 'automatic',
+    },
+  ],
+};
+
 export async function getWorkflowOverview(): Promise<WorkflowOverview> {
   try {
     return {
@@ -102,6 +206,10 @@ export async function getWorkflowOverview(): Promise<WorkflowOverview> {
 
 export async function getWorkflowJobs(): Promise<WorkflowJobItem[]> {
   return [...JOBS_REGISTRY];
+}
+
+export async function getWorkflowJobHistory(jobId: string): Promise<JobExecutionLog[]> {
+  return EXECUTION_HISTORY[jobId] || [];
 }
 
 export async function triggerWorkflowJob(
@@ -130,6 +238,21 @@ export async function triggerWorkflowJob(
     const durationMs = Date.now() - startTime;
     job.last_run = 'Hace unos instantes';
     job.last_duration_ms = durationMs;
+
+    const logEntry: JobExecutionLog = {
+      duration_ms: durationMs,
+      executed_at: new Date().toISOString(),
+      id: `exec_manual_${Date.now()}`,
+      job_id: jobId,
+      message: `Ejecución manual iniciada por administrador (ID ${adminUserId}). Duración: ${durationMs}ms.`,
+      status: 'success',
+      trigger: 'manual',
+    };
+
+    if (!EXECUTION_HISTORY[jobId]) {
+      EXECUTION_HISTORY[jobId] = [];
+    }
+    EXECUTION_HISTORY[jobId].unshift(logEntry);
 
     await pool.query(
       'INSERT INTO user_audit_logs (user_id, action, old_value, new_value, ip_address) VALUES (?, ?, ?, ?, ?)',

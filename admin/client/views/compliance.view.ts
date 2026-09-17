@@ -269,7 +269,10 @@ export class ComplianceViewController implements ViewController {
           <span style="font-size: 12px; color: var(--text-secondary);">${req.created_at}</span>
         </td>
         <td>
-          <span style="font-size: 12px; font-weight: 500;">${req.deadline}</span>
+          <div style="display: flex; flex-direction: column; gap: 3px;">
+            <span style="font-size: 12px; font-weight: 500; font-family: monospace;">${req.deadline}</span>
+            <div>${this.renderSlaBadge(req.deadline, req.status)}</div>
+          </div>
         </td>
         <td>${statusBadge}</td>
         <td>
@@ -303,6 +306,30 @@ export class ComplianceViewController implements ViewController {
     if (btnNext) btnNext.disabled = this.currentPage >= this.totalPages;
 
     renderIcons(tbody);
+  }
+
+  private renderSlaBadge(deadlineStr: string, status: string): string {
+    if (status === 'completed') {
+      return '<span class="component-badge component-badge--sm component-badge--success">Completada</span>';
+    }
+    if (status === 'rejected') {
+      return '<span class="component-badge component-badge--sm component-badge--secondary">Cerrada</span>';
+    }
+
+    if (!deadlineStr) return '<span class="component-badge component-badge--sm component-badge--secondary">Sin fecha</span>';
+
+    const deadlineDate = new Date(deadlineStr);
+    const now = new Date();
+    const diffTime = deadlineDate.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) {
+      return `<span class="component-badge component-badge--sm component-badge--danger">Vencido (${Math.abs(diffDays)}d)</span>`;
+    }
+    if (diffDays <= 5) {
+      return `<span class="component-badge component-badge--sm component-badge--warning">Vence en ${diffDays}d</span>`;
+    }
+    return `<span class="component-badge component-badge--sm component-badge--info">En plazo (${diffDays}d)</span>`;
   }
 
   private openModal(reqId: number, status: string, notes: string): void {

@@ -1,5 +1,5 @@
 import { createSidebar } from '../components/layout.component.js';
-import { getSystemConfigApi, loadTemplate, updateSystemConfigApi } from '../services/api.service.js';
+import { getSystemConfigApi, getSystemDiagnosticsApi, loadTemplate, purgeRedisCacheApi, updateSystemConfigApi } from '../services/api.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { showToast } from '../services/toast.service.js';
 import { ViewController } from '../types/common.types.js';
@@ -7,6 +7,7 @@ import { withButtonLoading } from '../utils/dom.util.js';
 
 class SystemController implements ViewController {
   private abortController = new AbortController();
+  private activeTab: 'config' | 'diagnostics' = 'config';
   private container: HTMLElement;
 
   constructor(container: HTMLElement) {
@@ -25,6 +26,21 @@ class SystemController implements ViewController {
 
   private bindEvents(): void {
     const signal = this.abortController.signal;
+
+    const tabBtns = this.container.querySelectorAll<HTMLButtonElement>('[data-tab]');
+    tabBtns.forEach((btn) => {
+      btn.addEventListener(
+        'click',
+        (e) => {
+          e.preventDefault();
+          const tab = btn.dataset.tab as 'config' | 'diagnostics';
+          if (tab && tab !== this.activeTab) {
+            this.switchTab(tab);
+          }
+        },
+        { signal }
+      );
+    });
 
     const accordionHeaders = this.container.querySelectorAll<HTMLElement>('.settings-accordion-header');
     accordionHeaders.forEach((header) => {
@@ -94,6 +110,59 @@ class SystemController implements ViewController {
       },
       { signal }
     );
+
+    const btnRefresh = this.container.querySelector<HTMLElement>('[data-ref="btn-refresh-diagnostics"]');
+    btnRefresh?.addEventListener(
+      'click',
+      () => {
+        void withButtonLoading(btnRefresh, async () => {
+          await this.loadDiagnostics();
+        });
+      },
+      { signal }
+    );
+
+    const btnPurge = this.container.querySelector<HTMLElement>('[data-ref="btn-purge-cache"]');
+    btnPurge?.addEventListener(
+      'click',
+      () => {
+        void withButtonLoading(btnPurge, async () => {
+          await this.handlePurgeCache();
+        });
+      },
+      { signal }
+    );
+  }
+
+  private switchTab(tab: 'config' | 'diagnostics'): void {
+    this.activeTab = tab;
+
+    const tabBtns = this.container.querySelectorAll<HTMLButtonElement>('[data-tab]');
+    tabBtns.forEach((btn) => {
+      if (btn.dataset.tab === tab) {
+        btn.classList.add('is-active');
+      } else {
+        btn.classList.remove('is-active');
+      }
+    });
+
+    const paneConfig = this.container.querySelector<HTMLElement>('[data-ref="pane-config"]');
+    const paneDiag = this.container.querySelector<HTMLElement>('[data-ref="pane-diagnostics"]');
+    const actionsConfig = this.container.querySelector<HTMLElement>('[data-ref="system-default-actions"]');
+    const actionsDiag = this.container.querySelector<HTMLElement>('[data-ref="system-diagnostics-actions"]');
+
+    if (tab === 'config') {
+      if (paneConfig) paneConfig.style.display = 'block';
+      if (paneDiag) paneDiag.style.display = 'none';
+      if (actionsConfig) actionsConfig.style.display = 'flex';
+      if (actionsDiag) actionsDiag.style.display = 'none';
+    } else {
+      if (paneConfig) paneConfig.style.display = 'none';
+      if (paneDiag) paneDiag.style.display = 'block';
+      if (actionsConfig) actionsConfig.style.display = 'none';
+      if (actionsDiag) actionsDiag.style.display = 'flex';
+      void this.loadDiagnostics();
+    }
   }
 
   private async loadConfig(): Promise<void> {
@@ -106,6 +175,76 @@ class SystemController implements ViewController {
     }
 
     this.populateForm(res.map);
+  }
+
+  private async loadDiagnostics(): Promise<void> {
+    const res = await getSystemDiagnosticsApi();
+    if (!res.ok || !res.data) {
+      showToast(res.error || 'Error al obtener telemetría del sistema.', 'danger');
+      return;
+    }
+
+    const { mysql, node, redis } = res.data;
+
+    this.setTextContent('diag-node-version', node.nodeVersion);
+    this.setTextContent('diag-node-platform', node.platform);
+    this.setTextContent('diag-node-uptime', this.formatUptime(node.uptimeSeconds));
+    this.setTextContent('diag-node-rss', `${node.rssMb} MB`);
+    this.setTextContent('diag-node-heap', `${node.heapUsedMb} / ${node.heapTotalMb} MB`);
+
+    const redisBadge = this.container.querySelector<HTMLElement>('[data-ref="diag-redis-status"]');
+    if (redisBadge) {
+      const isConnected = redis.status === 'connected';
+      redisBadge.textContent = isConnected ? 'Conectado' : 'Degradado';
+      redisBadge.className = `component-badge ${isConnected ? 'component-badge--success' : 'component-badge--danger'}`;
+    }
+    this.setTextContent('diag-redis-ping', `${redis.pingMs} ms`);
+    this.setTextContent('diag-redis-memory', redis.memoryHuman);
+    this.setTextContent('diag-redis-keys', String(redis.keysCount));
+    this.setTextContent('diag-redis-clients', String(redis.clients));
+    this.setTextContent('diag-redis-uptime', this.formatUptime(redis.uptimeSeconds));
+
+    const mysqlBadge = this.container.querySelector<HTMLElement>('[data-ref="diag-mysql-status"]');
+    if (mysqlBadge) {
+      const isConnected = mysql.status === 'connected';
+      mysqlBadge.textContent = isConnected ? 'Conectado' : 'Degradado';
+      mysqlBadge.className = `component-badge ${isConnected ? 'component-badge--success' : 'component-badge--danger'}`;
+    }
+    this.setTextContent('diag-mysql-ping', `${mysql.pingMs} ms`);
+    this.setTextContent('diag-mysql-tables', String(mysql.totalTables));
+    this.setTextContent('diag-mysql-identity-size', `${mysql.identityDbSizeMb} MB`);
+    this.setTextContent('diag-mysql-canvas-size', `${mysql.canvasDbSizeMb} MB`);
+  }
+
+  private async handlePurgeCache(): Promise<void> {
+    const res = await purgeRedisCacheApi();
+    if (!res.ok) {
+      showToast(res.error || 'Error al purgar la caché de Redis.', 'danger');
+      return;
+    }
+
+    showToast(res.message || 'Caché de Redis purgada exitosamente.', 'success');
+    await this.loadDiagnostics();
+  }
+
+  private formatUptime(seconds: number): string {
+    if (!seconds || seconds <= 0) return '0m';
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+
+    const parts: string[] = [];
+    if (days > 0) parts.push(`${days}d`);
+    if (hours > 0) parts.push(`${hours}h`);
+    parts.push(`${mins}m`);
+    return parts.join(' ');
+  }
+
+  private setTextContent(ref: string, text: string): void {
+    const el = this.container.querySelector<HTMLElement>(`[data-ref="${ref}"]`);
+    if (el) {
+      el.textContent = text;
+    }
   }
 
   private populateForm(map: Record<string, any>): void {
