@@ -82,6 +82,7 @@ export function drawBranchConnections(
   const isKanban = subtype === 'kanban';
   const isFishbone = subtype === 'fishbone';
   const isTimeline = subtype === 'timeline';
+  const isMatrix = subtype === 'matrix';
   const lineStyle = theme.lineStyle || 'curved';
   const isTopDown = isKanban || subtype === 'conceptmap' || subtype === 'orgchart' || subtype === 'flowchart' || theme.layoutDirection === 'top-down';
 
@@ -91,6 +92,9 @@ export function drawBranchConnections(
     if (!parent) return;
 
     if (isKanban && node.depth > 1) {
+      return;
+    }
+    if (isMatrix && node.depth > 1) {
       return;
     }
     if (isFishbone && node.depth >= 1) {
@@ -601,7 +605,10 @@ export function drawMindMapNodes(
       prefix += node.isDone ? '☑ ' : '☐ ';
     }
     if (node.icon) {
-      prefix += `${node.icon} `;
+      const emoji = resolveNodeIconEmoji(node.icon);
+      if (emoji && !node.text.startsWith(emoji)) {
+        prefix += `${emoji} `;
+      }
     }
 
     const fullText = prefix + node.text;
@@ -763,3 +770,81 @@ function drawDocument(ctx: CanvasRenderingContext2D, x: number, y: number, w: nu
   );
   ctx.closePath();
 }
+
+const ICON_TO_EMOJI_MAP: Record<string, string> = {
+  account_balance: '🏛️',
+  add_circle_outline: '➕',
+  add_task: '📝',
+  alt_route: '🔀',
+  arrow_right_alt: '➔',
+  assignment: '📋',
+  badge: '🪪',
+  bolt: '⚡',
+  bug_report: '🐛',
+  calendar_month: '📅',
+  call_split: '🔀',
+  campaign: '📢',
+  cancel: '❌',
+  category: '📁',
+  check_circle: '✅',
+  code: '💻',
+  computer: '💻',
+  corporate_fare: '🏢',
+  crop_square: '⬜',
+  dangerous: '🛡️',
+  dashboard_customize: '📊',
+  description: '📄',
+  design_services: '🎨',
+  domain: '🏢',
+  flag: '🚩',
+  groups: '👥',
+  handshake: '🤝',
+  help: '❓',
+  hub: '🔗',
+  input: '📥',
+  inventory_2: '📦',
+  label: '🏷️',
+  lightbulb: '💡',
+  paid: '💰',
+  pending: '⏳',
+  person: '👤',
+  pest_control: '🔍',
+  play_circle: '▶️',
+  precision_manufacturing: '🏭',
+  psychology: '🧠',
+  report_problem: '⚠️',
+  rocket_launch: '🚀',
+  rule: '📏',
+  settings: '⚙️',
+  settings_suggest: '⚙️',
+  shield: '🛡️',
+  star: '⭐',
+  stars: '✨',
+  sticky_note_2: '📝',
+  stop_circle: '⏹️',
+  storage: '🗄️',
+  subdirectory_arrow_right: '↳',
+  target: '🎯',
+  task_alt: '✔️',
+  terminal: '💻',
+  thumb_up: '💪',
+  timeline: '⏳',
+  trending_down: '📉',
+  trending_up: '⚡',
+  verified: '✔️',
+  view_column: '📊',
+  view_kanban: '📋',
+  warning: '⚠️',
+};
+
+export function resolveNodeIconEmoji(icon?: string): string {
+  if (!icon) return '';
+  if (ICON_TO_EMOJI_MAP[icon]) {
+    return ICON_TO_EMOJI_MAP[icon];
+  }
+  if (/[^\u0000-\u007F]/.test(icon) || icon.length <= 2) {
+    return icon;
+  }
+  return '';
+}
+

@@ -50,8 +50,8 @@ export class TimelineStrategy implements DiagramStrategy {
         if (!phaseNode) return;
 
         const phaseDim = estimateNodeDimensions(phaseNode, false);
-        const autoPhaseX = startX + idx * phaseSpacing;
-        const autoPhaseY = 0;
+        const autoPhaseX = rootX + startX + idx * phaseSpacing;
+        const autoPhaseY = rootY + 210;
         const currentPhaseX = phaseNode.customPos ? phaseNode.x : autoPhaseX;
         const currentPhaseY = phaseNode.customPos ? phaseNode.y : autoPhaseY;
         const items = phaseNode.isCollapsed ? [] : (childrenMap.get(phaseId) || []);
@@ -142,20 +142,22 @@ export class TimelineStrategy implements DiagramStrategy {
     if (!root || !root.childrenIds || root.childrenIds.length === 0) return;
 
     ctx.save();
-    const timelineY = 0;
+    const phases = root.childrenIds.map((id) => layoutMap.get(id)).filter(Boolean) as ComputedNodeLayout[];
+    const timelineY = phases.length > 0 ? phases.reduce((acc, p) => acc + p.y, 0) / phases.length : root.y + 210;
+
+    let minX = root.x - 200;
+    let maxX = root.x + 200;
+    if (phases.length > 0) {
+      minX = Math.min(...phases.map((p) => p.x - p.width / 2)) - 80;
+      maxX = Math.max(...phases.map((p) => p.x + p.width / 2)) + 80;
+    }
+
     const screenTimelineY = (timelineY - camera.y) * camera.zoom + canvasH / 2;
-
-    const firstPhase = layoutMap.get(root.childrenIds[0]);
-    const lastPhase = layoutMap.get(root.childrenIds[root.childrenIds.length - 1]);
-
-    const minX = (firstPhase ? firstPhase.x - 120 : -400);
-    const maxX = (lastPhase ? lastPhase.x + 120 : 400);
-
     const screenStart = (minX - camera.x) * camera.zoom + canvasW / 2;
     const screenEnd = (maxX - camera.x) * camera.zoom + canvasW / 2;
 
     ctx.strokeStyle = '#cbd5e1';
-    ctx.lineWidth = Math.max(4, 6 * camera.zoom);
+    ctx.lineWidth = Math.max(3.5, 5 * camera.zoom);
     ctx.lineCap = 'round';
 
     ctx.beginPath();

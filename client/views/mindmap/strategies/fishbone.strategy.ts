@@ -52,7 +52,7 @@ export class FishboneStrategy implements DiagramStrategy {
         }
       });
 
-      const spineStartX = -520;
+      const spineStartX = rootX - 880;
       const spineEndX = rootX - rootDim.width / 2 - 20;
 
       const layoutBones = (catIds: string[], isTop: boolean): void => {
@@ -68,7 +68,7 @@ export class FishboneStrategy implements DiagramStrategy {
           const boneBaseX = spineStartX + (idx + 1) * segmentWidth;
           const catDim = estimateNodeDimensions(catNode, false);
           const autoCatX = boneBaseX - 50;
-          const autoCatY = isTop ? -180 : 180;
+          const autoCatY = rootY + (isTop ? -180 : 180);
           const currentCatX = catNode.customPos ? catNode.x : autoCatX;
           const currentCatY = catNode.customPos ? catNode.y : autoCatY;
           const subCauses = catNode.isCollapsed ? [] : (childrenMap.get(catId) || []);
@@ -159,7 +159,15 @@ export class FishboneStrategy implements DiagramStrategy {
     if (!root) return;
 
     ctx.save();
-    const spineStartX = -540;
+    let minCatX = root.x - 520;
+    root.childrenIds.forEach((catId) => {
+      const cat = layoutMap.get(catId);
+      if (cat && cat.x - 80 < minCatX) {
+        minCatX = cat.x - 80;
+      }
+    });
+
+    const spineStartX = minCatX - 40;
     const spineEndX = root.x - root.width / 2 - 10;
     const spineY = root.y;
 

@@ -15,7 +15,7 @@ export class KanbanStrategy implements DiagramStrategy {
     if (rootNode) {
       const rootDim = estimateNodeDimensions(rootNode, true);
       const rootX = rootNode.customPos ? rootNode.x : 0;
-      const rootY = rootNode.customPos ? rootNode.y : -140;
+      const rootY = rootNode.customPos ? rootNode.y : -150;
 
       layoutMap.set(rootId, {
         childrenIds: childrenMap.get(rootId) || [],
@@ -35,34 +35,68 @@ export class KanbanStrategy implements DiagramStrategy {
         side: 'bottom',
         text: rootNode.text,
         textColor: '#ffffff',
-        width: rootDim.width,
+        width: Math.max(180, rootDim.width),
         x: rootX,
         y: rootY,
       });
 
-      const colW = 250;
-      const colGap = 28;
+      const columns = childrenMap.get(rootId) || [];
+      const colGap = 36;
       const cardGap = 12;
 
-      const columns = childrenMap.get(rootId) || [];
-      const totalColsW = columns.length > 0 ? (columns.length * colW + (columns.length - 1) * colGap) : 0;
-      const startColX = rootX - totalColsW / 2 + colW / 2;
-      const colHeaderY = rootY + rootDim.height / 2 + 65;
+      const measureCardSubtree = (cardId: string, depth = 0): { height: number; maxWidth: number } => {
+        const cNode = nodes[cardId];
+        if (!cNode) return { height: 0, maxWidth: 0 };
+        const dim = estimateNodeDimensions(cNode, false);
+        const children = cNode.isCollapsed ? [] : (childrenMap.get(cardId) || []);
+        let totalH = Math.max(40, dim.height);
+        let maxW = dim.width + depth * 14;
+        children.forEach((subId) => {
+          const sub = measureCardSubtree(subId, depth + 1);
+          totalH += sub.height + cardGap;
+          if (sub.maxWidth > maxW) maxW = sub.maxWidth;
+        });
+        return { height: totalH, maxWidth: maxW };
+      };
+
+      const getColumnDimensions = (colId: string): { height: number; width: number } => {
+        const colNode = nodes[colId];
+        if (!colNode) return { height: 280, width: 280 };
+        const colDim = estimateNodeDimensions(colNode, false);
+        const directCards = colNode.isCollapsed ? [] : (childrenMap.get(colId) || []);
+        let cardsTotalH = 0;
+        let cardsMaxW = colDim.width;
+        directCards.forEach((cId) => {
+          const m = measureCardSubtree(cId, 0);
+          cardsTotalH += m.height + cardGap;
+          if (m.maxWidth > cardsMaxW) cardsMaxW = m.maxWidth;
+        });
+        const totalH = Math.max(280, 14 + colDim.height + 16 + cardsTotalH + 24);
+        const totalW = Math.max(280, cardsMaxW + 40, colDim.width + 30);
+        return { height: totalH, width: totalW };
+      };
+
+      const colWidths = columns.map((colId) => getColumnDimensions(colId).width);
+      const totalColsW = colWidths.reduce((sum, w) => sum + w, 0) + Math.max(0, columns.length - 1) * colGap;
+      let runningLeftX = rootX - totalColsW / 2;
+      const colHeaderY = rootY + rootDim.height / 2 + 64;
 
       columns.forEach((colId, colIdx) => {
         const colNode = nodes[colId];
         if (!colNode) return;
 
-        const colDim = estimateNodeDimensions(colNode, false);
-        const colComputedW = Math.max(colW, colDim.width);
-        const autoColX = startColX + colIdx * (colW + colGap);
+        const colW = colWidths[colIdx];
+        const autoColX = runningLeftX + colW / 2;
+        runningLeftX += colW + colGap;
+
         const autoColY = colHeaderY;
         const currentColX = colNode.customPos ? colNode.x : autoColX;
         const currentColY = colNode.customPos ? colNode.y : autoColY;
-        const colCards = colNode.isCollapsed ? [] : (childrenMap.get(colId) || []);
+        const directCards = colNode.isCollapsed ? [] : (childrenMap.get(colId) || []);
+        const colDim = estimateNodeDimensions(colNode, false);
 
         layoutMap.set(colId, {
-          childrenIds: colCards,
+          childrenIds: directCards,
           color: colNode.color || '#3b82f6',
           depth: 1,
           fontSize: 14,
@@ -79,61 +113,67 @@ export class KanbanStrategy implements DiagramStrategy {
           side: 'bottom',
           text: colNode.text,
           textColor: colNode.textColor || '#ffffff',
-          width: colComputedW,
+          width: colW - 20,
           x: currentColX,
           y: currentColY,
         });
 
-        let nextCardTop = currentColY + colDim.height / 2 + 16;
+        if (directCards.length > 0) {
+          let nextCardTop = currentColY + colDim.height / 2 + 16;
 
-        const layoutCardAndChildren = (cardId: string, depth: number, indent: number): void => {
-          const cardNode = nodes[cardId];
-          if (!cardNode) return;
+          const layoutCardAndChildren = (cardId: string, depth: number, indent: number): void => {
+            const cardNode = nodes[cardId];
+            if (!cardNode) return;
 
-          const cardDim = estimateNodeDimensions(cardNode, false);
-          const cardW = Math.max(colW - 16 - indent * 14, cardDim.width);
-          const cardH = Math.max(38, cardDim.height);
-          const cardCenterY = nextCardTop + cardH / 2;
-          const autoCardX = currentColX + (indent > 0 ? indent * 8 : 0);
-          const currentCardX = cardNode.customPos ? cardNode.x : autoCardX;
-          const currentCardY = cardNode.customPos ? cardNode.y : cardCenterY;
-          const subChildren = cardNode.isCollapsed ? [] : (childrenMap.get(cardId) || []);
+            const cardDim = estimateNodeDimensions(cardNode, false);
+            const cardW = Math.max(160, colW - 32 - indent * 14);
+            const cardH = Math.max(40, cardDim.height);
+            const autoCardX = currentColX + (indent > 0 ? indent * 8 : 0);
+            const autoCardY = nextCardTop + cardH / 2;
+            const currentCardX = cardNode.customPos ? cardNode.x : autoCardX;
+            const currentCardY = cardNode.customPos ? cardNode.y : autoCardY;
+            const subChildren = cardNode.isCollapsed ? [] : (childrenMap.get(cardId) || []);
 
-          layoutMap.set(cardId, {
-            childrenIds: subChildren,
-            color: cardNode.color || colNode.color || '#3b82f6',
-            depth,
-            fontSize: Math.max(12, 14 - depth),
-            height: cardH,
-            icon: cardNode.icon,
-            id: cardId,
-            isCollapsed: !!cardNode.isCollapsed,
-            isDone: cardNode.isDone,
-            isTask: cardNode.isTask !== undefined ? cardNode.isTask : true,
-            linkingPhrase: cardNode.linkingPhrase,
-            orderIndex: cardNode.orderIndex ?? 0,
-            parentId: cardNode.parentId,
-            shape: cardNode.shape || 'rounded',
-            side: 'bottom',
-            text: cardNode.text,
-            textColor: cardNode.textColor || '#ffffff',
-            width: cardW,
-            x: currentCardX,
-            y: currentCardY,
-          });
-
-          nextCardTop += cardH + cardGap;
-
-          if (subChildren.length > 0) {
-            subChildren.forEach((subId) => {
-              layoutCardAndChildren(subId, depth + 1, indent + 1);
+            layoutMap.set(cardId, {
+              childrenIds: subChildren,
+              color: cardNode.color || colNode.color || '#3b82f6',
+              depth,
+              fontSize: Math.max(12, 14 - depth),
+              height: cardH,
+              icon: cardNode.icon,
+              id: cardId,
+              isCollapsed: !!cardNode.isCollapsed,
+              isDone: cardNode.isDone,
+              isTask: cardNode.isTask !== undefined ? cardNode.isTask : true,
+              linkingPhrase: cardNode.linkingPhrase,
+              orderIndex: cardNode.orderIndex ?? 0,
+              parentId: cardNode.parentId,
+              shape: cardNode.shape || 'rounded',
+              side: 'bottom',
+              text: cardNode.text,
+              textColor: cardNode.textColor || '#ffffff',
+              width: cardW,
+              x: currentCardX,
+              y: currentCardY,
             });
-          }
-        };
 
-        colCards.forEach((cardId) => {
-          layoutCardAndChildren(cardId, 2, 0);
-        });
+            nextCardTop += cardH + cardGap;
+
+            if (subChildren.length > 0) {
+              subChildren.forEach((subId) => {
+                layoutCardAndChildren(subId, depth + 1, indent + 1);
+              });
+            }
+          };
+
+          directCards.forEach((cardId, cardIdx) => {
+            const cNode = nodes[cardId];
+            if (cNode && cNode.orderIndex === undefined) {
+              cNode.orderIndex = cardIdx;
+            }
+            layoutCardAndChildren(cardId, 2, 0);
+          });
+        }
       });
     }
 
@@ -154,58 +194,58 @@ export class KanbanStrategy implements DiagramStrategy {
 
     ctx.save();
 
-    root.childrenIds.forEach((colId) => {
+    const columns = root.childrenIds;
+    let maxBoardColH = 280;
+
+    columns.forEach((colId) => {
       const col = layoutMap.get(colId);
       if (!col) return;
-
-      const cardNodes: ComputedNodeLayout[] = [];
+      let maxY = col.y + col.height / 2;
       const collectDescendants = (nodeId: string) => {
         const node = layoutMap.get(nodeId);
         if (!node) return;
         node.childrenIds.forEach((childId) => {
           const child = layoutMap.get(childId);
           if (child) {
-            cardNodes.push(child);
+            const childBottom = child.y + child.height / 2;
+            if (childBottom > maxY) maxY = childBottom;
             collectDescendants(childId);
           }
         });
       };
       collectDescendants(colId);
+      const topY = col.y - col.height / 2 - 12;
+      const totalColH = maxY - topY + 24;
+      if (totalColH > maxBoardColH) maxBoardColH = totalColH;
+    });
 
-      const paddingX = 10;
-      const paddingTop = 8;
-      const paddingBottom = 16;
+    columns.forEach((colId) => {
+      const col = layoutMap.get(colId);
+      if (!col) return;
+
+      const boxW = col.width + 20;
+      const boxTopY = col.y - col.height / 2 - 12;
+      const boxH = Math.max(maxBoardColH, 280);
+
       const colScreenX = (col.x - camera.x) * camera.zoom + canvasW / 2;
-      const colScreenY = (col.y - camera.y) * camera.zoom + canvasH / 2;
-      const colW = (col.width + paddingX * 2) * camera.zoom;
-      const colLeft = colScreenX - colW / 2;
-      const colTop = colScreenY - ((col.height / 2) + paddingTop) * camera.zoom;
+      const colScreenY = (boxTopY - camera.y) * camera.zoom + canvasH / 2;
+      const screenW = boxW * camera.zoom;
+      const screenH = boxH * camera.zoom;
+      const colLeft = colScreenX - screenW / 2;
+      const colTop = colScreenY;
 
-      let maxBottomY = col.y + col.height / 2;
-      if (cardNodes.length > 0) {
-        cardNodes.forEach((card) => {
-          const bottom = card.y + card.height / 2;
-          if (bottom > maxBottomY) maxBottomY = bottom;
-        });
-      } else {
-        maxBottomY += 120;
-      }
-
-      const bottomScreenY = (maxBottomY + paddingBottom - camera.y) * camera.zoom + canvasH / 2;
-      const colH = Math.max(160 * camera.zoom, bottomScreenY - colTop);
-
-      ctx.fillStyle = 'rgba(248, 250, 252, 0.75)';
-      ctx.strokeStyle = 'rgba(226, 232, 240, 0.85)';
+      ctx.fillStyle = 'rgba(248, 250, 252, 0.92)';
+      ctx.strokeStyle = 'rgba(203, 213, 225, 0.95)';
       ctx.lineWidth = Math.max(1, 1.2 * camera.zoom);
 
       ctx.beginPath();
-      ctx.roundRect(colLeft, colTop, colW, colH, 12 * camera.zoom);
+      ctx.roundRect(colLeft, colTop, screenW, screenH, 12 * camera.zoom);
       ctx.fill();
       ctx.stroke();
 
       ctx.fillStyle = col.color || '#3b82f6';
       ctx.beginPath();
-      ctx.roundRect(colLeft + 4 * camera.zoom, colTop + 2 * camera.zoom, colW - 8 * camera.zoom, 4 * camera.zoom, 2 * camera.zoom);
+      ctx.roundRect(colLeft + 4 * camera.zoom, colTop + 2 * camera.zoom, screenW - 8 * camera.zoom, 4 * camera.zoom, 2 * camera.zoom);
       ctx.fill();
     });
 
@@ -255,7 +295,7 @@ export class KanbanStrategy implements DiagramStrategy {
           text: rootText || 'Tablero del Proyecto',
           textColor: '#ffffff',
           x: 0,
-          y: -140,
+          y: -150,
         },
         [todoId]: {
           color: '#3b82f6',

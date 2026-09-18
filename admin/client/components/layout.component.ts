@@ -4,6 +4,7 @@ import { createIconSvg, renderIcons } from '../services/icon.service.js';
 import { showToast } from '../services/toast.service.js';
 import { closeAllDropdowns, escapeHtml, registerActiveDropdown, unregisterActiveDropdown } from '../utils/dom.util.js';
 import { ALL_NAV_MODULES, getAllowedNavModulesGrouped } from '../utils/permission.util.js';
+import { getIsAiAssistantOpen, toggleAiAssistantDrawer, updateSuggestions } from './ai-assistant-drawer.component.js';
 import { openCreateInternalTicketModal } from './internal-ticket-modal.component.js';
 
 const storedDrawer = localStorage.getItem('admin_drawer_open');
@@ -196,6 +197,13 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path: string): vo
     btnRailSettings.classList.toggle('is-active', isSettings);
   }
 
+  const btnRailAiAssistant = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-ai-assistant"]');
+  if (btnRailAiAssistant) {
+    btnRailAiAssistant.classList.toggle('is-active', getIsAiAssistantOpen());
+  }
+
+  updateSuggestions();
+
   const activeModule = ALL_NAV_MODULES.find((mod) =>
     path === mod.route || (mod.route !== '/' && mod.route !== '/dashboard' && path.startsWith(mod.route)) || (mod.route === '/dashboard' && (path === '/' || path === '' || path === '/dashboard'))
   );
@@ -274,6 +282,12 @@ export async function createSidebar(): Promise<HTMLElement> {
       toggleDrawer(false);
     }
     navigate('/settings/your-account');
+  });
+
+  const btnRailAiAssistant = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-ai-assistant"]');
+  btnRailAiAssistant?.addEventListener('click', (e: Event) => {
+    e.preventDefault();
+    void toggleAiAssistantDrawer();
   });
 
   if (isDrawerOpen) {

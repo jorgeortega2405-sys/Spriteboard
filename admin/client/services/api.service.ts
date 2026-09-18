@@ -13,6 +13,9 @@ export const API_ROUTES = {
     itemStatus: (id: number | string) => `/api/ads/items/${id}/status`,
     public: '/api/ads/public',
   },
+  ai: {
+    chat: '/api/ai/chat',
+  },
   analytics: {
     breakdown: '/api/analytics/breakdown',
     export: (range = '30d') => `/api/analytics/export?range=${encodeURIComponent(range)}`,
@@ -1273,6 +1276,21 @@ export async function executeSqlQueryApi(query: string): Promise<{ data?: any; e
     return { error: data.error || 'Error al ejecutar la consulta SQL.', ok: false };
   } catch {
     return { error: 'Error de conexión al ejecutar la consulta SQL.', ok: false };
+  }
+}
+
+export async function sendAiAssistantMessageApi(
+  message: string,
+  history: Array<{ content: string; role: 'assistant' | 'user' }> = [],
+  pageContext: string = '/analytics'
+): Promise<{ data?: { queriesExecuted: Array<{ executionTimeMs: number; rowsCount: number; sql: string }>; reply: string; success: boolean }; error?: string; ok: boolean }> {
+  try {
+    const res = await postApi(API_ROUTES.ai.chat, { history, message, pageContext });
+    const data = await res.json();
+    if (res.ok) return { data, ok: true };
+    return { error: data.error || 'Error al comunicarse con el asistente.', ok: false };
+  } catch {
+    return { error: 'Error de conexión con el asistente.', ok: false };
   }
 }
 

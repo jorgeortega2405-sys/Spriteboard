@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { validateCsrf } from '../middlewares/csrf.middleware.js';
 import adRoutes from './ad.routes.js';
+import aiRoutes from './ai-assistant.routes.js';
 import analyticsRoutes from './analytics.routes.js';
 import authRoutes from './auth.routes.js';
 import avatarRoutes from './avatar.routes.js';
@@ -26,6 +27,7 @@ apiRouter.use('/', authRoutes);
 apiRouter.use('/', avatarRoutes);
 apiRouter.use('/', settingsRoutes);
 apiRouter.use('/ads', adRoutes);
+apiRouter.use('/ai', aiRoutes);
 apiRouter.use('/analytics', analyticsRoutes);
 apiRouter.use('/backups', backupRoutes);
 apiRouter.use('/billing', billingRoutes);

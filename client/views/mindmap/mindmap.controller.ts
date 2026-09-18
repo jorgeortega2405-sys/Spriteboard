@@ -743,25 +743,47 @@ export class MindMapController implements ViewController {
       }
 
       if (this.hasMovedDuringDrag) {
-        this.draggedSubtreeInitialPositions.forEach((initialPos, id) => {
-          const n = this.project.nodes[id];
-          if (n) {
-            n.x = Math.round(initialPos.x + dx);
-            n.y = Math.round(initialPos.y + dy);
-            n.customPos = true;
-          }
-        });
+        const isRootDrag = this.draggedNodeId === this.project.rootId;
 
-        const potentialParentId = this.findNodeAtScreenPos(mouseX, mouseY);
-        if (
-          potentialParentId &&
-          potentialParentId !== this.draggedNodeId &&
-          !this.isDescendantOf(potentialParentId, this.draggedNodeId) &&
-          this.selectedNodeIds.size === 1
-        ) {
-          this.dropTargetNodeId = potentialParentId;
+        if (isRootDrag) {
+          const rootNode = this.project.nodes[this.project.rootId];
+          const initialRoot = this.draggedSubtreeInitialPositions.get(this.project.rootId);
+          if (rootNode && initialRoot) {
+            rootNode.x = Math.round(initialRoot.x + dx);
+            rootNode.y = Math.round(initialRoot.y + dy);
+            rootNode.customPos = true;
+          }
         } else {
-          this.dropTargetNodeId = null;
+          this.draggedSubtreeInitialPositions.forEach((initialPos, id) => {
+            const n = this.project.nodes[id];
+            if (n) {
+              n.x = Math.round(initialPos.x + dx);
+              n.y = Math.round(initialPos.y + dy);
+              n.customPos = true;
+            }
+          });
+
+          const directTarget = this.findNodeAtScreenPos(mouseX, mouseY);
+          if (
+            directTarget &&
+            directTarget !== this.draggedNodeId &&
+            !this.isDescendantOf(directTarget, this.draggedNodeId) &&
+            this.selectedNodeIds.size === 1
+          ) {
+            this.dropTargetNodeId = directTarget;
+          } else {
+            const containerTarget = this.findContainerAtScreenPos(mouseX, mouseY);
+            if (
+              containerTarget &&
+              containerTarget !== this.draggedNodeId &&
+              !this.isDescendantOf(containerTarget, this.draggedNodeId) &&
+              this.selectedNodeIds.size === 1
+            ) {
+              this.dropTargetNodeId = containerTarget;
+            } else {
+              this.dropTargetNodeId = null;
+            }
+          }
         }
 
         this.recomputeLayout();
@@ -829,12 +851,116 @@ export class MindMapController implements ViewController {
 
     if (this.isDraggingNode && this.draggedNodeId) {
       if (this.hasMovedDuringDrag) {
-        if (this.dropTargetNodeId && this.dropTargetNodeId !== this.draggedNodeId && this.selectedNodeIds.size === 1) {
-          const draggedNode = this.project.nodes[this.draggedNodeId];
-          if (draggedNode && !this.isDescendantOf(this.dropTargetNodeId, this.draggedNodeId)) {
-            draggedNode.parentId = this.dropTargetNodeId;
-            draggedNode.customPos = false;
-            showToast('Idea vinculada a la nueva rama', 'success');
+        const isRootDrag = this.draggedNodeId === this.project.rootId;
+        const draggedNode = this.project.nodes[this.draggedNodeId];
+
+        if (isRootDrag) {
+          const rootNode = this.project.nodes[this.project.rootId];
+          if (rootNode) {
+            rootNode.customPos = true;
+          }
+          Object.values(this.project.nodes).forEach((n) => {
+            if (n.id !== this.project.rootId && !n.isFree) {
+              n.customPos = false;
+            }
+          });
+        } else if (draggedNode) {
+          const targetId = this.dropTargetNodeId;
+          const isStructured = this.project.subtype === 'kanban' || this.project.subtype === 'matrix';
+
+          if (targetId && targetId !== this.draggedNodeId && !this.isDescendantOf(targetId, this.draggedNodeId) && this.selectedNodeIds.size === 1) {
+            const targetNode = this.project.nodes[targetId];
+            if (targetNode) {
+              if (isStructured) {
+                if (targetNode.parentId === this.project.rootId) {
+                  draggedNode.parentId = targetNode.id;
+                  draggedNode.customPos = false;
+                  if (targetNode.color && this.project.subtype === 'kanban') {
+                    draggedNode.color = targetNode.color;
+                  }
+                  const resetDescendants = (nId: string) => {
+                    Object.values(this.project.nodes).forEach((child) => {
+                      if (child.parentId === nId) {
+                        child.customPos = false;
+                        if (targetNode.color && this.project.subtype === 'kanban') child.color = targetNode.color;
+                        resetDescendants(child.id);
+                      }
+                    });
+                  };
+                  resetDescendants(draggedNode.id);
+
+                  const sibs = Object.values(this.project.nodes)
+                    .filter((n) => n.parentId === targetNode.id && n.id !== draggedNode.id)
+                    .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
+                  draggedNode.orderIndex = sibs.length;
+                  sibs.push(draggedNode);
+                  sibs.forEach((s, i) => { s.orderIndex = i; });
+                  showToast(`Elemento movido a ${targetNode.text}`, 'success');
+                } else {
+                  draggedNode.parentId = targetNode.parentId;
+                  draggedNode.customPos = false;
+                  if (targetNode.color && this.project.subtype === 'kanban') {
+                    draggedNode.color = targetNode.color;
+                  }
+                  const resetDescendants = (nId: string) => {
+                    Object.values(this.project.nodes).forEach((child) => {
+                      if (child.parentId === nId) {
+                        child.customPos = false;
+                        if (targetNode.color && this.project.subtype === 'kanban') child.color = targetNode.color;
+                        resetDescendants(child.id);
+                      }
+                    });
+                  };
+                  resetDescendants(draggedNode.id);
+
+                  const sibs = Object.values(this.project.nodes)
+                    .filter((n) => n.parentId === targetNode.parentId && n.id !== draggedNode.id)
+                    .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
+                  const targetIdx = sibs.findIndex((s) => s.id === targetNode.id);
+                  const insertIdx = targetIdx >= 0 ? targetIdx + 1 : sibs.length;
+                  sibs.splice(insertIdx, 0, draggedNode);
+                  sibs.forEach((s, i) => { s.orderIndex = i; });
+                  showToast('Elemento reordenado', 'success');
+                }
+              } else {
+                draggedNode.parentId = targetId;
+                draggedNode.customPos = false;
+                const resetDescendants = (nId: string) => {
+                  Object.values(this.project.nodes).forEach((child) => {
+                    if (child.parentId === nId) {
+                      child.customPos = false;
+                      resetDescendants(child.id);
+                    }
+                  });
+                };
+                resetDescendants(draggedNode.id);
+                showToast('Idea vinculada a la nueva rama', 'success');
+              }
+            }
+          } else if (isStructured) {
+            if (draggedNode.parentId && draggedNode.parentId !== this.project.rootId) {
+              draggedNode.customPos = false;
+              const resetDescendants = (nId: string) => {
+                Object.values(this.project.nodes).forEach((child) => {
+                  if (child.parentId === nId) {
+                    child.customPos = false;
+                    resetDescendants(child.id);
+                  }
+                });
+              };
+              resetDescendants(draggedNode.id);
+            } else if (draggedNode.parentId === this.project.rootId) {
+              Object.values(this.project.nodes).forEach((n) => {
+                if (n.parentId === this.draggedNodeId) {
+                  n.customPos = false;
+                  Object.values(this.project.nodes).forEach((sub) => {
+                    if (sub.parentId === n.id) {
+                      sub.customPos = false;
+                    }
+                  });
+                }
+              });
+            }
           }
         }
         this.commitChange();
@@ -1154,6 +1280,93 @@ export class MindMapController implements ViewController {
     });
 
     return foundId;
+  }
+
+  private findContainerAtScreenPos(screenX: number, screenY: number): string | null {
+    if (!this.canvas) return null;
+    const rect = this.canvas.getBoundingClientRect();
+    const w = rect.width;
+    const h = rect.height;
+    const zoom = this.project.camera.zoom;
+    const subtype = this.project.subtype;
+
+    if (subtype === 'kanban') {
+      const root = this.layoutMap.get(this.project.rootId);
+      if (!root || !root.childrenIds) return null;
+
+      for (const colId of root.childrenIds) {
+        const col = this.layoutMap.get(colId);
+        if (!col) continue;
+
+        let maxY = col.y + col.height / 2;
+        const checkDescendants = (nId: string) => {
+          const n = this.layoutMap.get(nId);
+          if (!n) return;
+          n.childrenIds.forEach((cId) => {
+            const c = this.layoutMap.get(cId);
+            if (c) {
+              const b = c.y + c.height / 2;
+              if (b > maxY) maxY = b;
+              checkDescendants(cId);
+            }
+          });
+        };
+        checkDescendants(colId);
+
+        const boxW = col.width + 24;
+        const boxTopY = col.y - col.height / 2 - 14;
+        const boxH = Math.max(280, maxY - boxTopY + 30);
+
+        const colScreenX = (col.x - this.project.camera.x) * zoom + w / 2;
+        const colScreenY = (boxTopY - this.project.camera.y) * zoom + h / 2;
+        const screenW = boxW * zoom;
+        const screenH = boxH * zoom;
+        const colLeft = colScreenX - screenW / 2;
+        const colTop = colScreenY;
+
+        if (screenX >= colLeft && screenX <= colLeft + screenW && screenY >= colTop && screenY <= colTop + screenH) {
+          return colId;
+        }
+      }
+    } else if (subtype === 'matrix') {
+      const root = this.layoutMap.get(this.project.rootId);
+      if (!root || !root.childrenIds) return null;
+
+      for (const qId of root.childrenIds) {
+        const q = this.layoutMap.get(qId);
+        if (!q) continue;
+
+        let maxY = q.y + q.height / 2;
+        const checkDescendants = (nId: string) => {
+          const n = this.layoutMap.get(nId);
+          if (!n) return;
+          n.childrenIds.forEach((cId) => {
+            const c = this.layoutMap.get(cId);
+            if (c) {
+              const b = c.y + c.height / 2;
+              if (b > maxY) maxY = b;
+              checkDescendants(cId);
+            }
+          });
+        };
+        checkDescendants(qId);
+
+        const boxW = q.width + 24;
+        const boxTopY = q.y - q.height / 2 - 14;
+        const boxH = Math.max(240, maxY - boxTopY + 30);
+
+        const screenLeft = (q.x - boxW / 2 - this.project.camera.x) * zoom + w / 2;
+        const screenTop = (boxTopY - this.project.camera.y) * zoom + h / 2;
+        const screenW = boxW * zoom;
+        const screenH = boxH * zoom;
+
+        if (screenX >= screenLeft && screenX <= screenLeft + screenW && screenY >= screenTop && screenY <= screenTop + screenH) {
+          return qId;
+        }
+      }
+    }
+
+    return null;
   }
 
   private findLinkingPhraseAtScreenPos(screenX: number, screenY: number): string | null {
@@ -1513,17 +1726,91 @@ export class MindMapController implements ViewController {
     if (!targetNode) return;
 
     switch (action) {
-      case 'add-child':
+      case 'add-quadrant':
+        this.addChildNode(this.project.rootId);
+        break;
+      case 'add-note': {
+        if (targetNodeId === this.project.rootId) {
+          const quads = Object.values(this.project.nodes).filter((n) => n.parentId === this.project.rootId);
+          if (quads.length > 0) {
+            this.addChildNode(quads[0].id);
+          } else {
+            this.addChildNode(this.project.rootId);
+          }
+        } else {
+          this.addChildNode(targetNodeId);
+        }
+        break;
+      }
+      case 'add-column':
+        this.addChildNode(this.project.rootId);
+        break;
+      case 'add-task':
+      case 'add-card': {
+        if (targetNodeId === this.project.rootId) {
+          const cols = Object.values(this.project.nodes).filter((n) => n.parentId === this.project.rootId);
+          if (cols.length > 0) {
+            this.addCardToColumn(cols[0].id);
+          } else {
+            this.addChildNode(this.project.rootId);
+          }
+        } else if (targetNode.parentId === this.project.rootId) {
+          this.addCardToColumn(targetNodeId);
+        } else {
+          this.addCardToColumn(targetNode.parentId || this.project.rootId);
+        }
+        break;
+      }
+      case 'add-phase':
+        this.addChildNode(this.project.rootId);
+        break;
+      case 'add-deliverable':
+      case 'add-milestone': {
+        if (targetNodeId === this.project.rootId) {
+          const phases = Object.values(this.project.nodes).filter((n) => n.parentId === this.project.rootId);
+          if (phases.length > 0) {
+            this.addChildNode(phases[0].id);
+          } else {
+            this.addChildNode(this.project.rootId);
+          }
+        } else {
+          this.addChildNode(targetNodeId);
+        }
+        break;
+      }
+      case 'add-category':
+        this.addChildNode(this.project.rootId);
+        break;
+      case 'add-cause':
+        if (targetNodeId === this.project.rootId) {
+          const cats = Object.values(this.project.nodes).filter((n) => n.parentId === this.project.rootId);
+          if (cats.length > 0) {
+            this.addChildNode(cats[0].id);
+          } else {
+            this.addChildNode(this.project.rootId);
+          }
+        } else {
+          this.addChildNode(targetNodeId);
+        }
+        break;
+      case 'add-subcause':
         this.addChildNode(targetNodeId);
         break;
-      case 'add-sibling':
+      case 'add-subordinate':
+        this.addChildNode(targetNodeId);
+        break;
+      case 'add-peer':
         this.addSiblingNode(targetNodeId);
+        break;
+      case 'add-department':
+        this.addChildNode(this.project.rootId);
+        break;
+      case 'add-process':
+      case 'add-step':
+        this.addCustomNodeWithShape(targetNodeId, 'rect', 'Nuevo Paso');
         break;
       case 'add-decision':
         this.addCustomNodeWithShape(targetNodeId, 'diamond', '¿Condición?', 'Sí');
-        break;
-      case 'add-step':
-        this.addCustomNodeWithShape(targetNodeId, 'rect', 'Nuevo Paso');
         break;
       case 'add-io':
         this.addCustomNodeWithShape(targetNodeId, 'parallelogram', 'Entrada / Salida');
@@ -1531,29 +1818,30 @@ export class MindMapController implements ViewController {
       case 'add-end':
         this.addCustomNodeWithShape(targetNodeId, 'pill', 'Fin');
         break;
-      case 'add-column':
-        this.addChildNode(this.project.rootId);
+      case 'add-branch':
+        this.addDecisionBranch(targetNodeId, 'Opción');
         break;
-      case 'add-card':
-        this.addCardToColumn(targetNodeId);
+      case 'add-outcome':
+        this.addCustomNodeWithShape(targetNodeId, 'rounded', 'Resultado Final', 'Resultado');
         break;
-      case 'add-phase':
-        this.addChildNode(this.project.rootId);
-        break;
-      case 'add-milestone':
+      case 'add-child':
         this.addChildNode(targetNodeId);
         break;
-      case 'add-cause':
-        this.addChildNode(this.project.rootId);
+      case 'add-sibling':
+        this.addSiblingNode(targetNodeId);
         break;
-      case 'add-subcause':
-        this.addChildNode(targetNodeId);
+      case 'add-free-node':
+        this.addFreeNode();
         break;
-      case 'add-item':
-        this.addChildNode(targetNodeId);
+      case 'tool-connect': {
+        this.isConnectToolActive = !this.isConnectToolActive;
+        const btnToolConnect = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-connect"]');
+        btnToolConnect?.classList.toggle('is-active', this.isConnectToolActive);
+        showToast(this.isConnectToolActive ? 'Haz clic en una idea y arrastra hacia otra para conectarlas' : 'Modo conector desactivado', 'info');
         break;
-      case 'add-prop':
-        this.addCustomNodeWithShape(targetNodeId, targetNode.shape || 'rounded', 'Nuevo concepto', 'se relaciona con');
+      }
+      case 'tidy-up':
+        this.realignTree();
         break;
       case 'toggle-task':
         targetNode.isTask = !targetNode.isTask;
@@ -1587,12 +1875,22 @@ export class MindMapController implements ViewController {
       branchColor = PALETTE_COLORS[orderIndex % PALETTE_COLORS.length];
     }
 
+    const isMatrix = this.project.subtype === 'matrix';
     const isKanban = this.project.subtype === 'kanban';
     const isOrgChart = this.project.subtype === 'orgchart';
     const isFlowchart = this.project.subtype === 'flowchart';
-    const isConceptMap = this.project.subtype === 'conceptmap' || (!isKanban && !isOrgChart && !isFlowchart && this.project.theme?.layoutDirection === 'top-down');
+    const isFishbone = this.project.subtype === 'fishbone';
+    const isTimeline = this.project.subtype === 'timeline';
+    const isDecisionTree = this.project.subtype === 'decisiontree';
+    const isConceptMap = this.project.subtype === 'conceptmap' || (!isMatrix && !isKanban && !isOrgChart && !isFlowchart && !isFishbone && !isTimeline && !isDecisionTree && this.project.theme?.layoutDirection === 'top-down');
+
     let defaultLinkingPhrase: string | undefined = undefined;
     let defaultShape = parent.shape || 'rounded';
+    let defaultText = 'Nueva idea';
+    let isTask = false;
+    let textColor = '#ffffff';
+    let fontSize = 14;
+    let icon = parent.icon;
 
     if (parent.shape === 'diamond') {
       defaultLinkingPhrase = orderIndex === 0 ? 'Sí' : (orderIndex === 1 ? 'No' : 'Opción');
@@ -1601,24 +1899,85 @@ export class MindMapController implements ViewController {
       defaultLinkingPhrase = 'se relaciona con';
     }
 
-    let defaultText = 'Nueva idea';
-    let isTask = false;
-    if (isKanban) {
+    if (isMatrix) {
+      if (parentId === this.project.rootId) {
+        const matrixHeaders = [
+          { color: '#10b981', icon: 'thumb_up', text: '💪 Fortalezas (Internas)' },
+          { color: '#3b82f6', icon: 'lightbulb', text: '🚀 Oportunidades (Externas)' },
+          { color: '#f59e0b', icon: 'warning', text: '⚠️ Debilidades (Internas)' },
+          { color: '#ef4444', icon: 'dangerous', text: '🛡️ Amenazas (Externas)' },
+        ];
+        const cfg = matrixHeaders[orderIndex] || { color: PALETTE_COLORS[orderIndex % PALETTE_COLORS.length], icon: 'category', text: `Cuadrante ${orderIndex + 1}` };
+        defaultText = cfg.text;
+        branchColor = cfg.color;
+        icon = cfg.icon;
+        defaultShape = 'rounded';
+      } else {
+        defaultShape = 'sticky';
+        defaultText = 'Nuevo factor';
+        textColor = '#1e293b';
+        fontSize = 12;
+        icon = 'sticky_note_2';
+        branchColor = parent.color || '#3b82f6';
+      }
+    } else if (isKanban) {
       if (parentId === this.project.rootId) {
         defaultText = 'Nueva columna';
+        defaultShape = 'rounded';
+        icon = 'view_column';
       } else {
         defaultText = 'Nueva tarea';
+        defaultShape = 'rounded';
         isTask = true;
+        branchColor = parent.color || '#3b82f6';
+      }
+    } else if (isTimeline) {
+      if (parentId === this.project.rootId) {
+        defaultText = `Fase ${orderIndex + 1}: Hito`;
+        defaultShape = 'pill';
+        icon = 'flag';
+      } else {
+        defaultText = 'Nuevo entregable';
+        defaultShape = 'rounded';
+        isTask = true;
+        fontSize = 12;
+        branchColor = parent.color || '#3b82f6';
+      }
+    } else if (isFishbone) {
+      if (parentId === this.project.rootId) {
+        defaultText = `${orderIndex + 1}. Categoría (6M)`;
+        defaultShape = 'rounded';
+        icon = 'label';
+      } else {
+        defaultText = 'Causa secundaria';
+        defaultShape = 'underline';
+        textColor = '#1e293b';
+        fontSize = 12;
       }
     } else if (isOrgChart) {
-      defaultText = 'Nuevo rol';
+      defaultText = parentId === this.project.rootId ? 'Dirección de Área' : 'Nuevo rol / reporte';
+      defaultShape = 'rounded';
+      icon = parentId === this.project.rootId ? 'badge' : 'person';
     } else if (isFlowchart) {
       defaultText = 'Nuevo paso';
+      defaultShape = 'rect';
+    } else if (isDecisionTree) {
+      if (parentId === this.project.rootId) {
+        defaultText = 'Escenario / Opción';
+        defaultShape = 'diamond';
+        defaultLinkingPhrase = 'Opción';
+      } else {
+        defaultText = 'Resultado estimado';
+        defaultShape = 'rounded';
+        defaultLinkingPhrase = 'Resultado';
+        icon = 'paid';
+      }
     }
 
     const newNode: MindMapNode = {
       color: branchColor,
-      fontSize: 14,
+      fontSize,
+      icon,
       id: newId,
       isTask,
       linkingPhrase: defaultLinkingPhrase,
@@ -1626,7 +1985,7 @@ export class MindMapController implements ViewController {
       parentId,
       shape: defaultShape,
       text: defaultText,
-      textColor: '#ffffff',
+      textColor,
       x: 0,
       y: 0,
     };
@@ -1667,11 +2026,22 @@ export class MindMapController implements ViewController {
       branchColor = PALETTE_COLORS[siblings.length % PALETTE_COLORS.length];
     }
 
+    const isMatrix = this.project.subtype === 'matrix';
     const isKanban = this.project.subtype === 'kanban';
     const isOrgChart = this.project.subtype === 'orgchart';
     const isFlowchart = this.project.subtype === 'flowchart';
-    const isConceptMap = this.project.subtype === 'conceptmap' || (!isKanban && !isOrgChart && !isFlowchart && this.project.theme?.layoutDirection === 'top-down');
+    const isFishbone = this.project.subtype === 'fishbone';
+    const isTimeline = this.project.subtype === 'timeline';
+    const isDecisionTree = this.project.subtype === 'decisiontree';
+    const isConceptMap = this.project.subtype === 'conceptmap' || (!isMatrix && !isKanban && !isOrgChart && !isFlowchart && !isFishbone && !isTimeline && !isDecisionTree && this.project.theme?.layoutDirection === 'top-down');
+
     let defaultLinkingPhrase: string | undefined = undefined;
+    let defaultShape = currentNode.shape || 'rounded';
+    let defaultText = 'Nueva idea';
+    let isTask = false;
+    let textColor = currentNode.textColor || '#ffffff';
+    let fontSize = currentNode.fontSize || 14;
+    let icon = currentNode.icon;
 
     if (parentNode?.shape === 'diamond') {
       defaultLinkingPhrase = siblings.length === 1 ? 'No' : 'Opción';
@@ -1679,32 +2049,93 @@ export class MindMapController implements ViewController {
       defaultLinkingPhrase = 'se relaciona con';
     }
 
-    let defaultText = 'Nueva idea';
-    let isTask = false;
-    if (isKanban) {
+    if (isMatrix) {
+      if (parentId === this.project.rootId) {
+        const matrixHeaders = [
+          { color: '#10b981', icon: 'thumb_up', text: '💪 Fortalezas (Internas)' },
+          { color: '#3b82f6', icon: 'lightbulb', text: '🚀 Oportunidades (Externas)' },
+          { color: '#f59e0b', icon: 'warning', text: '⚠️ Debilidades (Internas)' },
+          { color: '#ef4444', icon: 'dangerous', text: '🛡️ Amenazas (Externas)' },
+        ];
+        const cfg = matrixHeaders[siblings.length] || { color: PALETTE_COLORS[siblings.length % PALETTE_COLORS.length], icon: 'category', text: `Cuadrante ${siblings.length + 1}` };
+        defaultText = cfg.text;
+        branchColor = cfg.color;
+        icon = cfg.icon;
+        defaultShape = 'rounded';
+      } else {
+        defaultShape = 'sticky';
+        defaultText = 'Nuevo factor';
+        textColor = '#1e293b';
+        fontSize = 12;
+        icon = 'sticky_note_2';
+        branchColor = parentNode?.color || currentNode.color || '#3b82f6';
+      }
+    } else if (isKanban) {
       if (parentId === this.project.rootId) {
         defaultText = 'Nueva columna';
+        defaultShape = 'rounded';
+        icon = 'view_column';
       } else {
         defaultText = 'Nueva tarea';
+        defaultShape = 'rounded';
         isTask = true;
+        branchColor = parentNode?.color || currentNode.color || '#3b82f6';
+      }
+    } else if (isTimeline) {
+      if (parentId === this.project.rootId) {
+        defaultText = `Fase ${siblings.length + 1}: Hito`;
+        defaultShape = 'pill';
+        icon = 'flag';
+      } else {
+        defaultText = 'Nuevo entregable';
+        defaultShape = 'rounded';
+        isTask = true;
+        fontSize = 12;
+        branchColor = parentNode?.color || currentNode.color || '#3b82f6';
+      }
+    } else if (isFishbone) {
+      if (parentId === this.project.rootId) {
+        defaultText = `${siblings.length + 1}. Categoría (6M)`;
+        defaultShape = 'rounded';
+        icon = 'label';
+      } else {
+        defaultText = 'Causa secundaria';
+        defaultShape = 'underline';
+        textColor = '#1e293b';
+        fontSize = 12;
       }
     } else if (isOrgChart) {
-      defaultText = 'Nuevo rol';
+      defaultText = parentId === this.project.rootId ? 'Dirección de Área' : 'Nuevo rol / par';
+      defaultShape = 'rounded';
+      icon = parentId === this.project.rootId ? 'badge' : 'person';
     } else if (isFlowchart) {
       defaultText = 'Nuevo paso';
+      defaultShape = 'rect';
+    } else if (isDecisionTree) {
+      if (parentId === this.project.rootId) {
+        defaultText = 'Escenario / Opción';
+        defaultShape = 'diamond';
+        defaultLinkingPhrase = 'Opción';
+      } else {
+        defaultText = 'Resultado estimado';
+        defaultShape = 'rounded';
+        defaultLinkingPhrase = 'Resultado';
+        icon = 'paid';
+      }
     }
 
     const newNode: MindMapNode = {
       color: branchColor,
-      fontSize: 14,
+      fontSize,
+      icon,
       id: newId,
       isTask,
       linkingPhrase: defaultLinkingPhrase,
       orderIndex,
       parentId,
-      shape: currentNode.shape || 'rounded',
+      shape: defaultShape,
       text: defaultText,
-      textColor: '#ffffff',
+      textColor,
       x: 0,
       y: 0,
     };

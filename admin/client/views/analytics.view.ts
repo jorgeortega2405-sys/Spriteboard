@@ -1,3 +1,4 @@
+import { toggleAiAssistantDrawer } from '../components/ai-assistant-drawer.component.js';
 import { createSidebar } from '../components/layout.component.js';
 import { executeSqlQueryApi, getAnalyticsBreakdownApi, getAnalyticsFinancialsApi, getAnalyticsOverviewApi, getAnalyticsRankingsApi, getAnalyticsTrendsApi, getDatabaseSchemaApi, loadTemplate } from '../services/api.service.js';
 import { renderIcons } from '../services/icon.service.js';
@@ -335,6 +336,17 @@ export class AnalyticsViewController implements ViewController {
         'click',
         () => {
           this.exportCsv();
+        },
+        { signal }
+      );
+    }
+
+    const btnOpenAi = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-open-ai-analytics"]');
+    if (btnOpenAi) {
+      btnOpenAi.addEventListener(
+        'click',
+        () => {
+          void toggleAiAssistantDrawer(true);
         },
         { signal }
       );

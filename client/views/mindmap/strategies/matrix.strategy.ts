@@ -41,32 +41,94 @@ export class MatrixStrategy implements DiagramStrategy {
       });
 
       const quadrants = childrenMap.get(rootId) || [];
-      const quadPositions = [
-        { defaultColor: '#10b981', name: 'Fortalezas', x: -210, y: -130 },
-        { defaultColor: '#3b82f6', name: 'Oportunidades', x: 210, y: -130 },
-        { defaultColor: '#f59e0b', name: 'Debilidades', x: -210, y: 130 },
-        { defaultColor: '#ef4444', name: 'Amenazas', x: 210, y: 130 },
+      const quadConfigs = [
+        { defaultColor: '#10b981', name: 'Fortalezas' },
+        { defaultColor: '#3b82f6', name: 'Oportunidades' },
+        { defaultColor: '#f59e0b', name: 'Debilidades' },
+        { defaultColor: '#ef4444', name: 'Amenazas' },
       ];
+
+      const measureSubtree = (nodeId: string, depth = 0): { height: number; maxWidth: number } => {
+        const node = nodes[nodeId];
+        if (!node) return { height: 0, maxWidth: 0 };
+        const dim = estimateNodeDimensions(node, false);
+        const children = node.isCollapsed ? [] : (childrenMap.get(nodeId) || []);
+        let totalH = Math.max(38, dim.height);
+        let maxW = dim.width + depth * 14;
+        children.forEach((childId) => {
+          const sub = measureSubtree(childId, depth + 1);
+          totalH += sub.height + 12;
+          if (sub.maxWidth > maxW) maxW = sub.maxWidth;
+        });
+        return { height: totalH, maxWidth: maxW };
+      };
+
+      const getQuadrantDimensions = (qId: string): { height: number; width: number } => {
+        const qNode = nodes[qId];
+        if (!qNode) return { height: 240, width: 300 };
+        const qDim = estimateNodeDimensions(qNode, false);
+        const directNotes = qNode.isCollapsed ? [] : (childrenMap.get(qId) || []);
+        let notesTotalH = 0;
+        let notesMaxW = qDim.width;
+        directNotes.forEach((nId) => {
+          const m = measureSubtree(nId, 0);
+          notesTotalH += m.height + 12;
+          if (m.maxWidth > notesMaxW) notesMaxW = m.maxWidth;
+        });
+        const totalH = Math.max(240, 14 + qDim.height + 16 + notesTotalH + 24);
+        const totalW = Math.max(300, notesMaxW + 48, qDim.width + 36);
+        return { height: totalH, width: totalW };
+      };
+
+      const leftQuads = quadrants.filter((_, idx) => idx % 2 === 0);
+      const rightQuads = quadrants.filter((_, idx) => idx % 2 !== 0);
+
+      const maxLeftW = leftQuads.length > 0 ? Math.max(...leftQuads.map((id) => getQuadrantDimensions(id).width)) : 300;
+      const maxRightW = rightQuads.length > 0 ? Math.max(...rightQuads.map((id) => getQuadrantDimensions(id).width)) : 300;
+      const colW = Math.max(maxLeftW, maxRightW, 300);
+
+      const numRows = Math.ceil(quadrants.length / 2);
+      const rowHeights: number[] = [];
+      for (let r = 0; r < numRows; r++) {
+        const qLeftId = quadrants[r * 2];
+        const qRightId = quadrants[r * 2 + 1];
+        const hLeft = qLeftId ? getQuadrantDimensions(qLeftId).height : 240;
+        const hRight = qRightId ? getQuadrantDimensions(qRightId).height : 240;
+        rowHeights.push(Math.max(hLeft, hRight, 240));
+      }
+
+      const gapX = 36;
+      const gapY = 36;
+      const matrixTopY = rootY + rootDim.height / 2 + 60;
+      const rowYTop: number[] = [];
+      let currentTopY = matrixTopY;
+      for (let r = 0; r < numRows; r++) {
+        rowYTop.push(currentTopY);
+        currentTopY += rowHeights[r] + gapY;
+      }
 
       quadrants.forEach((qId, idx) => {
         const qNode = nodes[qId];
         if (!qNode) return;
 
-        const defaultPos = quadPositions[idx] || { defaultColor: '#6366f1', name: `Cuadrante ${idx + 1}`, x: (idx % 2 === 0 ? -210 : 210), y: (idx < 2 ? -130 : 130) };
+        const isLeft = idx % 2 === 0;
+        const rowIdx = Math.floor(idx / 2);
+        const autoQX = isLeft ? rootX - (colW / 2 + gapX / 2) : rootX + (colW / 2 + gapX / 2);
         const qDim = estimateNodeDimensions(qNode, false);
-        const autoQX = defaultPos.x;
-        const autoQY = defaultPos.y;
+        const autoQY = (rowYTop[rowIdx] || matrixTopY) + qDim.height / 2 + 14;
+
         const currentQX = qNode.customPos ? qNode.x : autoQX;
         const currentQY = qNode.customPos ? qNode.y : autoQY;
-        const notesList = qNode.isCollapsed ? [] : (childrenMap.get(qId) || []);
+        const directNotes = qNode.isCollapsed ? [] : (childrenMap.get(qId) || []);
+        const defaultCfg = quadConfigs[idx] || { defaultColor: '#6366f1', name: `Cuadrante ${idx + 1}` };
 
         layoutMap.set(qId, {
-          childrenIds: notesList,
-          color: qNode.color || defaultPos.defaultColor,
+          childrenIds: directNotes,
+          color: qNode.color || defaultCfg.defaultColor,
           depth: 1,
           fontSize: 14,
           height: qDim.height,
-          icon: qNode.icon || 'category',
+          icon: qNode.icon,
           id: qId,
           isCollapsed: !!qNode.isCollapsed,
           isDone: qNode.isDone,
@@ -78,49 +140,65 @@ export class MatrixStrategy implements DiagramStrategy {
           side: 'bottom',
           text: qNode.text,
           textColor: '#ffffff',
-          width: Math.max(180, qDim.width),
+          width: colW - 24,
           x: currentQX,
           y: currentQY,
         });
 
-        if (notesList.length > 0) {
-          let currentNoteY = currentQY + qDim.height / 2 + 18;
+        if (directNotes.length > 0) {
+          let currentNoteTop = currentQY + qDim.height / 2 + 16;
 
-          notesList.forEach((nId, nIdx) => {
+          const layoutNoteSubtree = (nId: string, depth: number, indent: number): void => {
             const noteNode = nodes[nId];
             if (!noteNode) return;
 
             const nDim = estimateNodeDimensions(noteNode, false);
-            const autoNoteX = currentQX;
-            const autoNoteY = currentNoteY + nDim.height / 2;
+            const noteW = Math.max(160, colW - 28 - indent * 14);
+            const noteH = Math.max(38, nDim.height);
+            const autoNoteX = currentQX + (indent > 0 ? indent * 8 : 0);
+            const autoNoteY = currentNoteTop + noteH / 2;
             const currentNoteX = noteNode.customPos ? noteNode.x : autoNoteX;
-            const actualNoteY = noteNode.customPos ? noteNode.y : autoNoteY;
+            const currentNoteY = noteNode.customPos ? noteNode.y : autoNoteY;
             const subItems = noteNode.isCollapsed ? [] : (childrenMap.get(nId) || []);
 
             layoutMap.set(nId, {
               childrenIds: subItems,
-              color: noteNode.color || defaultPos.defaultColor,
-              depth: 2,
-              fontSize: 12,
-              height: nDim.height,
-              icon: noteNode.icon || 'sticky_note_2',
+              color: noteNode.color || defaultCfg.defaultColor,
+              depth,
+              fontSize: Math.max(11, 13 - indent),
+              height: noteH,
+              icon: noteNode.icon,
               id: nId,
               isCollapsed: !!noteNode.isCollapsed,
               isDone: noteNode.isDone,
               isTask: noteNode.isTask,
               linkingPhrase: noteNode.linkingPhrase,
-              orderIndex: noteNode.orderIndex ?? nIdx,
-              parentId: qId,
+              orderIndex: noteNode.orderIndex ?? 0,
+              parentId: noteNode.parentId,
               shape: noteNode.shape || 'sticky',
               side: 'bottom',
               text: noteNode.text,
               textColor: noteNode.textColor || '#1e293b',
-              width: Math.max(170, nDim.width),
+              width: noteW,
               x: currentNoteX,
-              y: actualNoteY,
+              y: currentNoteY,
             });
 
-            currentNoteY += nDim.height + 10;
+            currentNoteTop += noteH + 12;
+
+            if (subItems.length > 0) {
+              subItems.forEach((subId) => {
+                layoutNoteSubtree(subId, depth + 1, indent + 1);
+              });
+            }
+          };
+
+          directNotes.forEach((nId, nIdx) => {
+            const nNode = nodes[nId];
+            if (nNode && nNode.orderIndex === undefined) {
+              nNode.orderIndex = nIdx;
+            }
+            layoutNoteSubtree(nId, 2, 0);
           });
         }
       });
@@ -135,33 +213,76 @@ export class MatrixStrategy implements DiagramStrategy {
     layoutMap: Map<string, ComputedNodeLayout>,
     camera: MindMapCamera,
     canvasW: number,
-    canvasH: number
+    canvasH: number,
+    rootId?: string
   ): void {
+    if (!rootId) return;
+    const root = layoutMap.get(rootId);
+    if (!root || !root.childrenIds || root.childrenIds.length === 0) return;
+
     ctx.save();
-    const boxSize = 340;
-    const padding = 12;
 
-    const quadrants = [
-      { bg: 'rgba(16, 185, 129, 0.06)', border: '#10b981', x: -boxSize - padding, y: -boxSize / 2 - padding },
-      { bg: 'rgba(59, 130, 246, 0.06)', border: '#3b82f6', x: padding, y: -boxSize / 2 - padding },
-      { bg: 'rgba(245, 158, 11, 0.06)', border: '#f59e0b', x: -boxSize - padding, y: padding },
-      { bg: 'rgba(239, 68, 68, 0.06)', border: '#ef4444', x: padding, y: padding },
-    ];
+    const quadrants = root.childrenIds;
+    const numRows = Math.ceil(quadrants.length / 2);
+    const rowHeights: number[] = [];
 
-    quadrants.forEach((q) => {
-      const screenX = (q.x - camera.x) * camera.zoom + canvasW / 2;
-      const screenY = (q.y - camera.y) * camera.zoom + canvasH / 2;
-      const w = boxSize * camera.zoom;
-      const h = (boxSize / 1.3) * camera.zoom;
+    const getQuadrantFullHeight = (qId: string): number => {
+      const q = layoutMap.get(qId);
+      if (!q) return 240;
+      let maxY = q.y + q.height / 2;
+      const collectDescendants = (nodeId: string) => {
+        const node = layoutMap.get(nodeId);
+        if (!node) return;
+        node.childrenIds.forEach((childId) => {
+          const child = layoutMap.get(childId);
+          if (child) {
+            const childBottom = child.y + child.height / 2;
+            if (childBottom > maxY) maxY = childBottom;
+            collectDescendants(childId);
+          }
+        });
+      };
+      collectDescendants(qId);
+      const topY = q.y - q.height / 2 - 14;
+      return Math.max(240, maxY - topY + 24);
+    };
 
-      ctx.fillStyle = q.bg;
-      ctx.strokeStyle = q.border;
-      ctx.lineWidth = Math.max(1, 1.2 * camera.zoom);
+    for (let r = 0; r < numRows; r++) {
+      const qLeftId = quadrants[r * 2];
+      const qRightId = quadrants[r * 2 + 1];
+      const hLeft = qLeftId ? getQuadrantFullHeight(qLeftId) : 240;
+      const hRight = qRightId ? getQuadrantFullHeight(qRightId) : 240;
+      rowHeights.push(Math.max(hLeft, hRight, 240));
+    }
+
+    quadrants.forEach((qId, idx) => {
+      const q = layoutMap.get(qId);
+      if (!q) return;
+
+      const rowIdx = Math.floor(idx / 2);
+      const boxW = q.width + 24;
+      const boxH = rowHeights[rowIdx] || 240;
+      const boxTopY = q.y - q.height / 2 - 14;
+
+      const screenLeft = (q.x - boxW / 2 - camera.x) * camera.zoom + canvasW / 2;
+      const screenTop = (boxTopY - camera.y) * camera.zoom + canvasH / 2;
+      const screenW = boxW * camera.zoom;
+      const screenH = boxH * camera.zoom;
+
+      const color = q.color || '#3b82f6';
+      ctx.fillStyle = hexToRgba(color, 0.08);
+      ctx.strokeStyle = hexToRgba(color, 0.38);
+      ctx.lineWidth = Math.max(1.2, 1.6 * camera.zoom);
 
       ctx.beginPath();
-      ctx.roundRect(screenX, screenY, w, h, 10 * camera.zoom);
+      ctx.roundRect(screenLeft, screenTop, screenW, screenH, 14 * camera.zoom);
       ctx.fill();
       ctx.stroke();
+
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.roundRect(screenLeft + 4 * camera.zoom, screenTop + 2 * camera.zoom, screenW - 8 * camera.zoom, 5 * camera.zoom, 2 * camera.zoom);
+      ctx.fill();
     });
 
     ctx.restore();
@@ -330,4 +451,16 @@ export class MatrixStrategy implements DiagramStrategy {
       version: 1,
     };
   }
+}
+
+function hexToRgba(hex: string, alpha: number): string {
+  if (!hex || !hex.startsWith('#')) return `rgba(99, 102, 241, ${alpha})`;
+  let c = hex.substring(1);
+  if (c.length === 3) c = c.split('').map((x) => x + x).join('');
+  const num = parseInt(c, 16);
+  if (isNaN(num)) return `rgba(99, 102, 241, ${alpha})`;
+  const r = (num >> 16) & 255;
+  const g = (num >> 8) & 255;
+  const b = num & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
