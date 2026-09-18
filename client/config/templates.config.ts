@@ -1,3 +1,5 @@
+import { DiagramSubtype } from '../types/mindmap.types.js';
+
 export interface PresetVariant {
   label: string;
   width: number;
@@ -19,7 +21,7 @@ export interface PresetItem {
   tags?: string[];
   variants?: PresetVariant[];
   canvasType?: 'pixel' | 'board' | 'diagram' | 'mindmap';
-  diagramSubtype?: 'conceptmap' | 'flowchart' | 'kanban' | 'mindmap' | 'orgchart';
+  diagramSubtype?: DiagramSubtype;
 }
 
 export interface TemplateCategory {
@@ -86,7 +88,7 @@ export function makeNatureTemplateItem(
 export function makeDiagramTemplateItem(
   id: string,
   name: string,
-  subtype: 'conceptmap' | 'flowchart' | 'kanban' | 'mindmap' | 'orgchart',
+  subtype: DiagramSubtype,
   tags: string[] = []
 ): PresetItem {
   return {
@@ -141,6 +143,18 @@ export const ALL_PRESETS: PresetItem[] = [
   ]),
   makeDiagramTemplateItem('tmpl-diag-orgchart', 'Organigrama Jerárquico de Equipo', 'orgchart', [
     'organigrama', 'org chart', 'empresa', 'roles', 'jerarquia', 'diagram'
+  ]),
+  makeDiagramTemplateItem('tmpl-diag-fishbone', 'Diagrama de Ishikawa (Causa-Efecto)', 'fishbone', [
+    'ishikawa', 'fishbone', 'causa', 'efecto', 'diagrama', 'analisis', 'calidad', 'diagram'
+  ]),
+  makeDiagramTemplateItem('tmpl-diag-timeline', 'Línea de Tiempo y Roadmap de Proyecto', 'timeline', [
+    'timeline', 'roadmap', 'cronograma', 'hitos', 'fases', 'planificacion', 'diagram'
+  ]),
+  makeDiagramTemplateItem('tmpl-diag-matrix', 'Matriz Estratégica 2x2 (FODA)', 'matrix', [
+    'matriz', 'foda', 'swot', 'cuadrantes', 'eisenhower', 'estrategia', 'analisis', 'diagram'
+  ]),
+  makeDiagramTemplateItem('tmpl-diag-decisiontree', 'Árbol de Decisiones y Escenarios', 'decisiontree', [
+    'decision', 'arbol', 'tree', 'probabilidad', 'escenarios', 'logica', 'diagram'
   ]),
   makeBoardTemplateItem('tmpl-board-brainstorm', 'Pizarra de Ideas y Notas', 'brainstorm', [
     'pizarra', 'board', 'brainstorm', 'notas', 'dibujo', 'whiteboard', 'ideas'

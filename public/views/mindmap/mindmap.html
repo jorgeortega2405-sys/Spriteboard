@@ -49,6 +49,9 @@
               <button type="button" class="design-toolbar-btn" data-ref="btn-toggle-task" data-tooltip="Convertir en tarea / checklist" aria-label="Tarea">
                 <span class="component-icon">check_box</span>
               </button>
+              <button type="button" class="design-toolbar-btn" data-ref="btn-tidy-up" data-tooltip="Auto-organizar y equilibrar esquema" aria-label="Auto-organizar">
+                <span class="component-icon">auto_fix_high</span>
+              </button>
               <button type="button" class="design-toolbar-btn" data-ref="btn-edit-node" data-tooltip="Editar texto (F2 o Doble Clic)" aria-label="Editar texto">
                 <span class="component-icon">edit</span>
               </button>
@@ -56,6 +59,8 @@
                 <span class="component-icon">delete_outline</span>
               </button>
             </div>
+
+            <div class="design-toolbar-group" data-ref="mindmap-contextual-actions"></div>
 
             <div class="design-toolbar-divider" data-ref="mindmap-divider-style"></div>
 
@@ -213,6 +218,31 @@
       <canvas class="design-viewport-canvas" data-ref="mindmap-viewport-canvas"></canvas>
 
       <div class="board-text-editor-container" data-ref="mindmap-text-editor-container"></div>
+
+      <div class="menu-panel menu-panel--dropdown is-hidden" data-ref="mindmap-quick-inserter" style="position: absolute; z-index: 90; min-width: 220px; box-shadow: 0 12px 28px -4px rgba(0,0,0,0.18); border-radius: 10px;">
+        <div class="menu-panel__list" data-ref="list-quick-inserter">
+          <button type="button" class="menu-item" data-ref="btn-quick-add-child" data-action="add-child">
+            <span class="component-icon menu-item__icon">subdirectory_arrow_right</span>
+            <span class="menu-item__text">Agregar rama hija (Tab)</span>
+          </button>
+          <button type="button" class="menu-item" data-ref="btn-quick-add-sibling" data-action="add-sibling">
+            <span class="component-icon menu-item__icon">add_circle_outline</span>
+            <span class="menu-item__text">Agregar idea hermana (Enter)</span>
+          </button>
+          <button type="button" class="menu-item" data-ref="btn-quick-add-free" data-action="add-free">
+            <span class="component-icon menu-item__icon">crop_square</span>
+            <span class="menu-item__text">Insertar cuadro libre</span>
+          </button>
+          <button type="button" class="menu-item" data-ref="btn-quick-add-ai" data-action="add-ai" style="color: #6366f1;">
+            <span class="component-icon menu-item__icon">auto_awesome</span>
+            <span class="menu-item__text">Generar con IA (Gemini)</span>
+          </button>
+          <button type="button" class="menu-item" data-ref="btn-quick-tidy" data-action="tidy-up">
+            <span class="component-icon menu-item__icon">auto_fix_high</span>
+            <span class="menu-item__text">Auto-organizar esquema</span>
+          </button>
+        </div>
+      </div>
 
       <div class="design-colors-panel is-hidden" data-ref="mindmap-colors-panel">
         <div class="design-colors-panel__header" data-ref="mindmap-colors-header">

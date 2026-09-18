@@ -1,6 +1,6 @@
 import { MindMapProject } from '../../types/mindmap.types.js';
 import { ComputedNodeLayout } from './mindmap-layout.engine.js';
-import { drawBranchConnections, drawCustomConnections, drawKanbanSwimlanes, drawMindMapBackground, drawMindMapNodes } from './mindmap-renderer.js';
+import { drawBranchConnections, drawCustomConnections, drawMindMapBackground, drawMindMapNodes, drawStrategyBackground } from './mindmap-renderer.js';
 
 function computeProjectBoundingBox(layoutMap: Map<string, ComputedNodeLayout>): { height: number; maxX: number; maxY: number; minX: number; minY: number; width: number } {
   if (layoutMap.size === 0) {
@@ -62,11 +62,9 @@ export function generateMindMapThumbnail(project: MindMapProject, layoutMap: Map
   };
 
   drawMindMapBackground(ctx, targetW, targetH, camera);
-  if (project.subtype === 'kanban') {
-    drawKanbanSwimlanes(ctx, layoutMap, camera, targetW, targetH, project.rootId);
-  }
+  drawStrategyBackground(ctx, layoutMap, camera, targetW, targetH, project.rootId, project.subtype);
   drawBranchConnections(ctx, layoutMap, camera, targetW, targetH, project.theme, project.subtype);
-  drawCustomConnections(ctx, project.connections, layoutMap, camera, targetW, targetH);
+  drawCustomConnections(ctx, project.connections || [], layoutMap, camera, targetW, targetH);
   drawMindMapNodes(ctx, layoutMap, camera, targetW, targetH, new Set<string>(), null);
 
   return canvas.toDataURL('image/png');
@@ -94,11 +92,9 @@ export async function exportMindMapPng(project: MindMapProject, layoutMap: Map<s
   };
 
   drawMindMapBackground(ctx, exportW, exportH, camera);
-  if (project.subtype === 'kanban') {
-    drawKanbanSwimlanes(ctx, layoutMap, camera, exportW, exportH, project.rootId);
-  }
+  drawStrategyBackground(ctx, layoutMap, camera, exportW, exportH, project.rootId, project.subtype);
   drawBranchConnections(ctx, layoutMap, camera, exportW, exportH, project.theme, project.subtype);
-  drawCustomConnections(ctx, project.connections, layoutMap, camera, exportW, exportH);
+  drawCustomConnections(ctx, project.connections || [], layoutMap, camera, exportW, exportH);
   drawMindMapNodes(ctx, layoutMap, camera, exportW, exportH, new Set<string>(), null);
 
   const dataUrl = canvas.toDataURL('image/png');

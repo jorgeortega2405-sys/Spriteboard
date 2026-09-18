@@ -1,12 +1,13 @@
 import { API_ROUTES } from '../../config/api-routes.js';
 import { postApi } from '../../services/api.service.js';
 import { showToast } from '../../services/toast.service.js';
+import { DiagramSubtype } from '../../types/mindmap.types.js';
 import { withButtonLoading } from '../../utils/dom.util.js';
 
 export interface MindMapAiModalOptions {
   contextNodeId?: string | null;
   contextNodeText?: string | null;
-  diagramType?: 'conceptmap' | 'flowchart' | 'kanban' | 'mindmap' | 'orgchart';
+  diagramType?: DiagramSubtype;
   onSuccess: (result: {
     mode: 'checklist' | 'expand' | 'full';
     nodes: Array<{ color?: string; icon?: string; id: string; isTask?: boolean; linkingPhrase?: string; parentId: string | null; shape?: string; text: string }>;
@@ -27,6 +28,10 @@ export function openMindMapAiModal(options: MindMapAiModalOptions): void {
   const isOrgChart = options.diagramType === 'orgchart';
   const isFlowchart = options.diagramType === 'flowchart';
   const isConceptMap = options.diagramType === 'conceptmap';
+  const isFishbone = options.diagramType === 'fishbone';
+  const isTimeline = options.diagramType === 'timeline';
+  const isMatrix = options.diagramType === 'matrix';
+  const isDecisionTree = options.diagramType === 'decisiontree';
   const hasContext = Boolean(options.contextNodeId && options.contextNodeText);
   const initialMode = hasContext ? 'expand' : 'full';
   let selectedMode: 'checklist' | 'expand' | 'full' = initialMode;
@@ -48,7 +53,17 @@ export function openMindMapAiModal(options: MindMapAiModalOptions): void {
       ? 'Generador de Organigramas con IA'
       : (isFlowchart
         ? 'Generador de Flujogramas con IA'
-        : (isConceptMap ? 'Generador de Mapas Conceptuales con IA' : 'Generador de Mapas con IA')));
+        : (isConceptMap
+          ? 'Generador de Mapas Conceptuales con IA'
+          : (isFishbone
+            ? 'Generador de Diagramas Ishikawa con IA'
+            : (isTimeline
+              ? 'Generador de Líneas de Tiempo y Roadmaps con IA'
+              : (isMatrix
+                ? 'Generador de Matrices Estratégicas y FODA con IA'
+                : (isDecisionTree
+                  ? 'Generador de Árboles de Decisión con IA'
+                  : 'Generador de Mapas con IA')))))));
 
   const modalDesc = isKanban
     ? 'Describe tu proyecto o sprint y la IA estructurará las columnas de flujo de trabajo y tarjetas de tareas con prioridades.'
@@ -58,7 +73,15 @@ export function openMindMapAiModal(options: MindMapAiModalOptions): void {
         ? 'Describe el proceso o algoritmo y la IA estructurará las decisiones lógicas (Sí/No), terminadores y pasos de acción.'
         : (isConceptMap
           ? 'Describe el tema y la IA estructurará los conceptos jerárquicos con sus respectivas palabras y frases de enlace.'
-          : 'Describe el tema o concepto y la IA estructurará automáticamente las ramas, colores, formas e iconos en tu canvas.')));
+          : (isFishbone
+            ? 'Describe el problema o efecto no deseado y la IA categorizará las posibles causas raíz (Método, Máquina, Personal, etc.).'
+            : (isTimeline
+              ? 'Describe tu proyecto y la IA creará los hitos cronológicos, fases temporales y entregables clave.'
+              : (isMatrix
+                ? 'Describe tu negocio, producto o dilema y la IA clasificará las ideas en los 4 cuadrantes estratégicos.'
+                : (isDecisionTree
+                  ? 'Describe el escenario de decisión y la IA bifurcará las alternativas, probabilidades y resultados derivados.'
+                  : 'Describe el tema o concepto y la IA estructurará automáticamente las ramas, colores, formas e iconos en tu canvas.')))))));
 
   const promptPlaceholder = isKanban
     ? '¿Qué proyecto, sprint o flujo de trabajo deseas organizar en tu tablero?'
@@ -66,28 +89,81 @@ export function openMindMapAiModal(options: MindMapAiModalOptions): void {
       ? '¿Qué tipo de organización, empresa o equipo deseas estructurar?'
       : (isFlowchart
         ? '¿Qué proceso, algoritmo o flujo de trabajo deseas diseñar?'
-        : (isConceptMap ? '¿Sobre qué tema o conceptos deseas estructurar tu mapa?' : '¿Qué quieres plasmar en tu mapa mental?')));
+        : (isConceptMap
+          ? '¿Sobre qué tema o conceptos deseas estructurar tu mapa?'
+          : (isFishbone
+            ? '¿Cuál es el problema, falla o efecto que deseas analizar?'
+            : (isTimeline
+              ? '¿Qué roadmap, cronograma de proyecto o fases deseas planificar?'
+              : (isMatrix
+                ? '¿Qué empresa, producto o situación deseas analizar en matriz 2x2 / FODA?'
+                : (isDecisionTree
+                  ? '¿Qué decisión estratégica o dilema de opciones deseas evaluar?'
+                  : '¿Qué quieres plasmar en tu mapa mental?')))))));
 
   const sugg1 = isKanban
     ? 'Lanzamiento de MVP y desarrollo de plataforma web'
     : (isOrgChart
       ? 'Startup tecnológica SaaS con equipo de producto e ingeniería'
-      : (isFlowchart ? 'Autenticación de usuario con 2FA y validación de contraseña' : 'Estrategia de lanzamiento de videojuego indie en Steam'));
+      : (isFlowchart
+        ? 'Autenticación de usuario con 2FA y validación de contraseña'
+        : (isFishbone
+          ? 'Baja tasa de conversión en checkout de ecommerce'
+          : (isTimeline
+            ? 'Roadmap de producto 2026: Q1 a Q4'
+            : (isMatrix
+              ? 'Análisis FODA para lanzamiento de nueva app SaaS'
+              : (isDecisionTree
+                ? 'Decisión: Desarrollar producto propio vs. Licenciar solución externa'
+                : 'Estrategia de lanzamiento de videojuego indie en Steam'))))));
+
   const sugg2 = isKanban
     ? 'Sprint de desarrollo de videojuego: Arte, Audio y Programación'
     : (isOrgChart
       ? 'Estudio independiente de desarrollo de videojuegos'
-      : (isFlowchart ? 'Flujo de compra y checkout en ecommerce con pasarela de pago' : 'Arquitectura y stack tecnológico de una aplicación web escalable'));
+      : (isFlowchart
+        ? 'Flujo de compra y checkout en ecommerce con pasarela de pago'
+        : (isFishbone
+          ? 'Retrasos recurrentes en las entregas de proyectos de software'
+          : (isTimeline
+            ? 'Fases de remodelación y construcción de oficinas'
+            : (isMatrix
+              ? 'Matriz Eisenhower de priorización de tareas diarias'
+              : (isDecisionTree
+                ? 'Estrategia de expansión: Abrir sucursales físicas vs. Enfocarse en online'
+                : 'Arquitectura y stack tecnológico de una aplicación web escalable'))))));
+
   const sugg3 = isKanban
     ? 'Campaña de marketing digital y lanzamiento de producto'
     : (isOrgChart
       ? 'Agencia de marketing digital y diseño creativo'
-      : (isFlowchart ? 'Algoritmo de búsqueda binaria y resolución de colisiones' : 'Plan de estudio y preparación para examen de programación'));
+      : (isFlowchart
+        ? 'Algoritmo de búsqueda binaria y resolución de colisiones'
+        : (isFishbone
+          ? 'Aumento de devoluciones de producto por defectos de calidad'
+          : (isTimeline
+            ? 'Plan de lanzamiento de campaña de marketing trimestral'
+            : (isMatrix
+              ? 'Matriz de Impacto vs Esfuerzo para backlog de features'
+              : (isDecisionTree
+                ? 'Inversión en campaña publicitaria con demanda alta vs moderada'
+                : 'Plan de estudio y preparación para examen de programación'))))));
+
   const sugg4 = isKanban
     ? 'Gestión de operaciones, inventario y logística de entregas'
     : (isOrgChart
       ? 'Empresa de logística y distribución de productos'
-      : (isFlowchart ? 'Proceso de soporte técnico y escalado de incidencias' : 'Estrategia de marketing digital y captación de usuarios'));
+      : (isFlowchart
+        ? 'Proceso de soporte técnico y escalado de incidencias'
+        : (isFishbone
+          ? 'Alta rotación de personal en el equipo de atención al cliente'
+          : (isTimeline
+            ? 'Proceso de desarrollo y testing de videojuegos en 6 meses'
+            : (isMatrix
+              ? 'Análisis estratégico de competidores directos e indirectos'
+              : (isDecisionTree
+                ? 'Elección de proveedor de nube según costos y disponibilidad SLA'
+                : 'Estrategia de marketing digital y captación de usuarios'))))));
 
   backdrop.innerHTML = `
     <div class="modal-container" data-ref="modal-mindmap-ai-container">

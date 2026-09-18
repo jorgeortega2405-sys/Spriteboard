@@ -2,15 +2,15 @@ import { PresetVariant } from '../config/templates.config.js';
 import { createAndOpenCanvas } from '../services/canvas-creator.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
-import { DIAGRAM_SUBTYPES } from '../types/mindmap.types.js';
+import { DIAGRAM_CATEGORIES, DIAGRAM_SUBTYPES, DiagramCategory, DiagramSubtype } from '../types/mindmap.types.js';
 import { setupDropdown } from '../utils/dom.util.js';
 
 let activeCreateCanvasModal: { close: () => void } | null = null;
 
 export interface OpenCreateCanvasModalOptions {
-  diagramSubtype?: 'conceptmap' | 'flowchart' | 'kanban' | 'mindmap' | 'orgchart';
+  diagramSubtype?: DiagramSubtype;
   height?: number;
-  initialType?: 'board' | 'diagram' | 'pixel';
+  initialType?: 'board' | 'diagram' | 'mindmap' | 'pixel';
   name?: string;
   teamName?: string | null;
   teamUuid?: string | null;
@@ -28,8 +28,9 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
   const initialName = options?.name || options?.templateName || '';
   const templateVariants = options?.variants && options.variants.length > 0 ? options.variants : null;
   const templateName = options?.templateName || null;
-  let selectedCreationType: 'board' | 'diagram' | 'pixel' = options?.initialType || (templateVariants ? 'pixel' : 'board');
-  let selectedDiagramSubtype: 'conceptmap' | 'flowchart' | 'kanban' | 'mindmap' | 'orgchart' = options?.diagramSubtype || 'mindmap';
+  const normalizedInitialType = options?.initialType === 'mindmap' ? 'diagram' : options?.initialType;
+  let selectedCreationType: 'board' | 'diagram' | 'pixel' = normalizedInitialType || (templateVariants ? 'pixel' : 'board');
+  let selectedDiagramSubtype: DiagramSubtype = options?.diagramSubtype || 'mindmap';
   let selectedLineStyle: 'curved' | 'orthogonal' | 'straight' = 'curved';
   let selectedTheme: string = 'slate';
 
@@ -199,14 +200,22 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
                     <div class="settings-item__content" data-ref="content-diagram-subtypes">
                       <div class="settings-item__text" data-ref="text-diagram-subtypes">
                         <h2 class="settings-item__title" data-ref="title-diagram-subtypes">Tipo de esquema</h2>
-                        <p class="settings-item__desc" data-ref="desc-diagram-subtypes">Selecciona la estructura visual que deseas crear.</p>
+                        <p class="settings-item__desc" data-ref="desc-diagram-subtypes">Selecciona la estructura visual que deseas crear según tu objetivo.</p>
                       </div>
                     </div>
                   </div>
-                  <div class="settings-item" data-ref="item-diagram-cards" style="padding-top: 0;">
-                    <div class="diagram-subtypes-grid" data-ref="diagram-subtypes-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; width: 100%;">
+                  <div class="settings-item" data-ref="item-diagram-cards" style="padding-top: 0; flex-direction: column; align-items: stretch;">
+                    <div class="template-variants-pills" data-ref="diagram-category-pills" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; width: 100%;">
+                      ${DIAGRAM_CATEGORIES.map((cat) => `
+                        <button type="button" class="template-variant-pill${cat.id === 'all' ? ' is-active' : ''}" data-ref="btn-diag-cat-${cat.id}" data-category="${cat.id}">
+                          <span class="material-symbols-rounded" style="font-size: 16px; margin-right: 4px;">${cat.icon}</span>
+                          <span>${cat.name}</span>
+                        </button>
+                      `).join('')}
+                    </div>
+                    <div class="diagram-subtypes-grid" data-ref="diagram-subtypes-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; width: 100%;">
                       ${DIAGRAM_SUBTYPES.map((sub) => `
-                        <button type="button" class="template-variant-pill${sub.id === selectedDiagramSubtype ? ' is-active' : ''}${!sub.isEnabled ? ' is-disabled' : ''}" data-ref="btn-subtype-${sub.id}" data-subtype="${sub.id}" style="display: flex; flex-direction: column; align-items: flex-start; padding: 12px; height: auto; text-align: left; position: relative; ${!sub.isEnabled ? 'opacity: 0.6; cursor: not-allowed;' : ''}">
+                        <button type="button" class="template-variant-pill${sub.id === selectedDiagramSubtype ? ' is-active' : ''}${!sub.isEnabled ? ' is-disabled' : ''}" data-ref="btn-subtype-${sub.id}" data-subtype="${sub.id}" data-category="${sub.category}" style="display: flex; flex-direction: column; align-items: flex-start; padding: 12px; height: auto; text-align: left; position: relative; ${!sub.isEnabled ? 'opacity: 0.6; cursor: not-allowed;' : ''}">
                           <div style="display: flex; align-items: center; gap: 8px; width: 100%; margin-bottom: 4px;">
                             <span class="material-symbols-rounded" style="font-size: 20px;">${sub.icon}</span>
                             <strong style="font-size: 13px;">${sub.name}</strong>
@@ -913,15 +922,53 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
       });
     }
 
+    const categoryButtons = backdrop.querySelectorAll<HTMLElement>('[data-category]');
     const subtypeButtons = backdrop.querySelectorAll<HTMLElement>('[data-subtype]');
+
+    categoryButtons.forEach((catBtn) => {
+      catBtn.addEventListener('click', () => {
+        const cat = catBtn.getAttribute('data-category') as DiagramCategory;
+        categoryButtons.forEach((b) => b.classList.remove('is-active'));
+        catBtn.classList.add('is-active');
+
+        subtypeButtons.forEach((btn) => {
+          const btnCat = btn.getAttribute('data-category') as DiagramCategory;
+          if (cat === 'all' || btnCat === cat) {
+            btn.style.display = 'flex';
+          } else {
+            btn.style.display = 'none';
+          }
+        });
+      });
+    });
+
+    const rootPlaceholders: Record<DiagramSubtype, string> = {
+      conceptmap: 'Concepto General',
+      decisiontree: 'Decisión Principal',
+      fishbone: 'Problema / Efecto Principal',
+      flowchart: 'Inicio del Proceso',
+      kanban: 'Tablero del Proyecto',
+      matrix: 'Análisis FODA Estratégico',
+      mindmap: 'Idea Principal',
+      orgchart: 'Dirección General (CEO)',
+      timeline: 'Roadmap del Proyecto',
+    };
+
     subtypeButtons.forEach((btn) => {
       btn.addEventListener('click', () => {
-        const subtype = btn.getAttribute('data-subtype') as 'conceptmap' | 'flowchart' | 'kanban' | 'mindmap' | 'orgchart';
+        const subtype = btn.getAttribute('data-subtype') as DiagramSubtype;
         const subInfo = DIAGRAM_SUBTYPES.find((s) => s.id === subtype);
         if (!subInfo?.isEnabled) return;
         selectedDiagramSubtype = subtype;
         subtypeButtons.forEach((b) => b.classList.remove('is-active'));
         btn.classList.add('is-active');
+
+        if (inputMindmapRoot && rootPlaceholders[subtype]) {
+          inputMindmapRoot.placeholder = rootPlaceholders[subtype];
+          if (!inputMindmapRoot.value || Object.values(rootPlaceholders).includes(inputMindmapRoot.value)) {
+            inputMindmapRoot.value = rootPlaceholders[subtype];
+          }
+        }
       });
     });
 

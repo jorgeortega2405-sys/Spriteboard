@@ -3,13 +3,14 @@ import { currentUser, getApi, putApi } from '../../services/api.service.js';
 import { getLocalCanvasByUuid, saveLocalCanvas } from '../../services/canvas-storage.service.js';
 import { showToast } from '../../services/toast.service.js';
 import { ViewController } from '../../types/common.types.js';
-import { MindMapCamera, MindMapConnection, MindMapNode, MindMapProject } from '../../types/mindmap.types.js';
+import { DiagramSubtype, MindMapCamera, MindMapConnection, MindMapNode, MindMapProject, SmartHandleDirection } from '../../types/mindmap.types.js';
 import { setupDropdown } from '../../utils/dom.util.js';
 import { openMindMapAiModal } from './mindmap-ai-modal.component.js';
 import { exportMindMapMarkdown, exportMindMapPng, exportMindMapSvg, generateMindMapThumbnail } from './mindmap-export.service.js';
 import { MindMapHistoryManager } from './mindmap-history.manager.js';
 import { ComputedNodeLayout, computeMindMapTreeLayout, estimateNodeDimensions } from './mindmap-layout.engine.js';
-import { drawBranchConnections, drawConnectionDraft, drawCustomConnections, drawKanbanSwimlanes, drawMindMapBackground, drawMindMapNodes, drawMinimap, drawSelectionBox, screenToWorld, worldToScreen } from './mindmap-renderer.js';
+import { drawBranchConnections, drawConnectionDraft, drawCustomConnections, drawMindMapBackground, drawMindMapNodes, drawMinimap, drawSelectionBox, drawStrategyBackground, getSmartHandleAtPoint, screenToWorld, worldToScreen } from './mindmap-renderer.js';
+import { getDiagramStrategy } from './strategies/strategy.registry.js';
 
 const PALETTE_COLORS = [
   '#6366f1', '#3b82f6', '#0ea5e9', '#06b6d4', '#14b8a6', '#10b981',
@@ -39,6 +40,7 @@ export class MindMapController implements ViewController {
   private hasMovedDuringDrag = false;
   private historyManager: MindMapHistoryManager = new MindMapHistoryManager();
   private hoveredNodeId: string | null = null;
+  private hoveredSmartHandle: { direction: SmartHandleDirection; nodeId: string } | null = null;
   private isConnectToolActive = false;
   private isDraggingCanvas = false;
   private isDraggingNode = false;
@@ -61,6 +63,7 @@ export class MindMapController implements ViewController {
     type: 'mindmap',
     version: 1,
   };
+  private quickInserterWorldPos: { x: number; y: number } = { x: 0, y: 0 };
   private resizeObserver: ResizeObserver | null = null;
   private saveDebounceTimer: number | null = null;
   private selectedConnectionId: string | null = null;
@@ -218,11 +221,9 @@ export class MindMapController implements ViewController {
 
     this.ctx.clearRect(0, 0, w, h);
     drawMindMapBackground(this.ctx, w, h, this.project.camera);
-    if (this.project.subtype === 'kanban') {
-      drawKanbanSwimlanes(this.ctx, this.layoutMap, this.project.camera, w, h, this.project.rootId);
-    }
+    drawStrategyBackground(this.ctx, this.layoutMap, this.project.camera, w, h, this.project.rootId, this.project.subtype);
     drawBranchConnections(this.ctx, this.layoutMap, this.project.camera, w, h, this.project.theme, this.project.subtype);
-    drawCustomConnections(this.ctx, this.project.connections, this.layoutMap, this.project.camera, w, h, this.selectedConnectionId);
+    drawCustomConnections(this.ctx, this.project.connections || [], this.layoutMap, this.project.camera, w, h, this.selectedConnectionId);
 
     if (this.isDrawingConnector && this.connectorSourceId) {
       drawConnectionDraft(this.ctx, this.connectorSourceId, this.connectorMouseWorld, this.layoutMap, this.project.camera, w, h);
@@ -240,7 +241,8 @@ export class MindMapController implements ViewController {
       h,
       this.selectedNodeIds,
       this.hoveredNodeId,
-      this.dropTargetNodeId
+      this.dropTargetNodeId,
+      this.hoveredSmartHandle
     );
 
     if (this.showMinimap) {
@@ -248,6 +250,7 @@ export class MindMapController implements ViewController {
     }
 
     this.updateZoomIndicator();
+    this.updateContextualToolbar();
   }
 
   private bindEvents(): void {
@@ -319,6 +322,31 @@ export class MindMapController implements ViewController {
     btnEditNode?.addEventListener('click', () => {
       if (this.selectedNodeId) this.startEditingNode(this.selectedNodeId);
     }, { signal });
+
+    const btnTidyUp = this.container.querySelector<HTMLElement>('[data-ref="btn-tidy-up"]');
+    btnTidyUp?.addEventListener('click', () => this.realignTree(), { signal });
+
+    const quickInserter = this.container.querySelector<HTMLElement>('[data-ref="mindmap-quick-inserter"]');
+    if (quickInserter) {
+      quickInserter.querySelectorAll<HTMLButtonElement>('[data-action]').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const action = btn.getAttribute('data-action');
+          this.hideQuickInserter();
+          if (action === 'add-child') {
+            this.addChildNode(this.selectedNodeId || this.project.rootId);
+          } else if (action === 'add-sibling') {
+            this.addSiblingNode(this.selectedNodeId || this.project.rootId);
+          } else if (action === 'add-free') {
+            this.addFreeNodeAtWorldPos(this.quickInserterWorldPos.x, this.quickInserterWorldPos.y);
+          } else if (action === 'add-ai') {
+            this.openAiModal();
+          } else if (action === 'tidy-up') {
+            this.realignTree();
+          }
+        }, { signal });
+      });
+    }
 
     btnDeleteNode?.addEventListener('click', () => {
       if (this.selectedNodeIds.size > 0) {
@@ -516,6 +544,19 @@ export class MindMapController implements ViewController {
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
     const mouseWorld = screenToWorld(mouseX, mouseY, this.project.camera, rect.width, rect.height);
+
+    this.hideQuickInserter();
+
+    if (this.selectedNodeIds.size === 1 && this.selectedNodeId && this.project.camera.zoom >= 0.45) {
+      const selLayout = this.layoutMap.get(this.selectedNodeId);
+      if (selLayout) {
+        const handleDir = getSmartHandleAtPoint(selLayout, mouseX, mouseY, this.project.camera, rect.width, rect.height);
+        if (handleDir) {
+          this.handleSmartHandleClick(this.selectedNodeId, handleDir);
+          return;
+        }
+      }
+    }
 
     const clickedCollapseNodeId = this.findCollapseBadgeAtScreenPos(mouseX, mouseY);
     if (clickedCollapseNodeId) {
@@ -729,10 +770,30 @@ export class MindMapController implements ViewController {
       return;
     }
 
+    let smartHover: { direction: SmartHandleDirection; nodeId: string } | null = null;
+    if (this.selectedNodeIds.size === 1 && this.selectedNodeId && this.project.camera.zoom >= 0.45) {
+      const selLayout = this.layoutMap.get(this.selectedNodeId);
+      if (selLayout) {
+        const handleDir = getSmartHandleAtPoint(selLayout, mouseX, mouseY, this.project.camera, rect.width, rect.height);
+        if (handleDir) {
+          smartHover = { direction: handleDir, nodeId: this.selectedNodeId };
+        }
+      }
+    }
+
+    let handleHoverChanged = false;
+    if (
+      (smartHover && (!this.hoveredSmartHandle || this.hoveredSmartHandle.nodeId !== smartHover.nodeId || this.hoveredSmartHandle.direction !== smartHover.direction)) ||
+      (!smartHover && this.hoveredSmartHandle)
+    ) {
+      this.hoveredSmartHandle = smartHover;
+      handleHoverChanged = true;
+    }
+
     const hovered = this.findNodeAtScreenPos(mouseX, mouseY);
-    if (hovered !== this.hoveredNodeId) {
+    if (hovered !== this.hoveredNodeId || handleHoverChanged) {
       this.hoveredNodeId = hovered;
-      this.canvas.style.cursor = this.isSpacePressed ? 'grab' : (hovered ? 'pointer' : 'default');
+      this.canvas.style.cursor = smartHover ? 'crosshair' : (this.isSpacePressed ? 'grab' : (hovered ? 'pointer' : 'default'));
       this.render();
     }
   }
@@ -845,13 +906,23 @@ export class MindMapController implements ViewController {
       }
     }
 
-    this.addFreeNodeAtScreenPos(mouseX, mouseY);
+    const mouseWorld = screenToWorld(mouseX, mouseY, this.project.camera, rect.width, rect.height);
+    this.showQuickInserter(e.clientX, e.clientY, mouseWorld.x, mouseWorld.y);
   }
 
   private handleKeyDown(e: KeyboardEvent): void {
     if (this.editingNodeId) {
       if (e.key === 'Escape') {
         this.finishEditingNode();
+      }
+      return;
+    }
+
+    if (e.key === '/') {
+      e.preventDefault();
+      if (this.canvas) {
+        const rect = this.canvas.getBoundingClientRect();
+        this.showQuickInserter(rect.left + rect.width / 2, rect.top + rect.height / 2, this.project.camera.x, this.project.camera.y);
       }
       return;
     }
@@ -926,6 +997,7 @@ export class MindMapController implements ViewController {
     }
 
     if (e.key === 'Escape') {
+      this.hideQuickInserter();
       this.selectedNodeId = null;
       this.selectedNodeIds.clear();
       this.selectedConnectionId = null;
@@ -1218,11 +1290,7 @@ export class MindMapController implements ViewController {
     showToast('Cuadro libre añadido. Puedes arrastrarlo y conectarlo.', 'success');
   }
 
-  private addFreeNodeAtScreenPos(screenX: number, screenY: number): void {
-    if (!this.canvas) return;
-    const rect = this.canvas.getBoundingClientRect();
-    const mouseWorld = screenToWorld(screenX, screenY, this.project.camera, rect.width, rect.height);
-
+  public addFreeNodeAtWorldPos(worldX: number, worldY: number): void {
     const newId = 'free_' + Math.random().toString(36).substring(2, 9);
     const orderIndex = Object.values(this.project.nodes).length;
 
@@ -1237,8 +1305,8 @@ export class MindMapController implements ViewController {
       shape: 'rounded',
       text: 'Nueva idea',
       textColor: '#ffffff',
-      x: Math.round(mouseWorld.x),
-      y: Math.round(mouseWorld.y),
+      x: Math.round(worldX),
+      y: Math.round(worldY),
     };
 
     this.project.nodes[newId] = newNode;
@@ -1246,6 +1314,260 @@ export class MindMapController implements ViewController {
     this.selectedNodeIds = new Set([newId]);
     this.commitChange();
     this.startEditingNode(newId);
+  }
+
+  private addFreeNodeAtOffset(nodeId: string, offsetX: number, offsetY: number): void {
+    const baseNode = this.project.nodes[nodeId];
+    const layout = this.layoutMap.get(nodeId);
+    const baseX = layout ? layout.x : (baseNode?.x || 0);
+    const baseY = layout ? layout.y : (baseNode?.y || 0);
+    this.addFreeNodeAtWorldPos(baseX + offsetX, baseY + offsetY);
+  }
+
+  private addFreeNodeAtScreenPos(screenX: number, screenY: number): void {
+    if (!this.canvas) return;
+    const rect = this.canvas.getBoundingClientRect();
+    const mouseWorld = screenToWorld(screenX, screenY, this.project.camera, rect.width, rect.height);
+    this.addFreeNodeAtWorldPos(mouseWorld.x, mouseWorld.y);
+  }
+
+  private showQuickInserter(clientX: number, clientY: number, worldX: number, worldY: number): void {
+    const quickInserter = this.container.querySelector<HTMLElement>('[data-ref="mindmap-quick-inserter"]');
+    if (!quickInserter || !this.canvasContainer) return;
+
+    this.quickInserterWorldPos = { x: worldX, y: worldY };
+
+    const containerRect = this.canvasContainer.getBoundingClientRect();
+    const posX = Math.max(10, Math.min(containerRect.width - 240, clientX - containerRect.left));
+    const posY = Math.max(10, Math.min(containerRect.height - 220, clientY - containerRect.top));
+
+    quickInserter.style.left = `${posX}px`;
+    quickInserter.style.top = `${posY}px`;
+    quickInserter.classList.remove('is-hidden');
+  }
+
+  private hideQuickInserter(): void {
+    const quickInserter = this.container.querySelector<HTMLElement>('[data-ref="mindmap-quick-inserter"]');
+    if (quickInserter) {
+      quickInserter.classList.add('is-hidden');
+    }
+  }
+
+  private addDecisionBranch(parentId: string, branchLabel: string): void {
+    const parentNode = this.project.nodes[parentId];
+    if (!parentNode) return;
+
+    const newId = 'node_' + Math.random().toString(36).substring(2, 9);
+    const existingChildren = Object.values(this.project.nodes).filter((n) => n.parentId === parentId);
+    const orderIndex = existingChildren.length;
+
+    const newNode: MindMapNode = {
+      color: parentNode.color || PALETTE_COLORS[orderIndex % PALETTE_COLORS.length],
+      fontSize: 14,
+      id: newId,
+      linkingPhrase: branchLabel,
+      orderIndex,
+      parentId,
+      shape: 'rounded',
+      text: branchLabel === 'Sí' ? 'Acción afirmativa' : 'Acción alternativa',
+      textColor: '#ffffff',
+      x: 0,
+      y: 0,
+    };
+
+    this.project.nodes[newId] = newNode;
+    this.selectedNodeId = newId;
+    this.selectedNodeIds = new Set([newId]);
+    this.commitChange();
+    this.startEditingNode(newId);
+  }
+
+  private addCustomNodeWithShape(parentId: string, shape: MindMapNode['shape'], defaultText: string, linkingPhrase?: string): void {
+    const parentNode = this.project.nodes[parentId];
+    if (!parentNode) return;
+
+    const newId = 'node_' + Math.random().toString(36).substring(2, 9);
+    const existingChildren = Object.values(this.project.nodes).filter((n) => n.parentId === parentId);
+    const orderIndex = existingChildren.length;
+
+    const newNode: MindMapNode = {
+      color: parentNode.color || PALETTE_COLORS[orderIndex % PALETTE_COLORS.length],
+      fontSize: 14,
+      id: newId,
+      linkingPhrase,
+      orderIndex,
+      parentId,
+      shape: shape || 'rounded',
+      text: defaultText,
+      textColor: '#ffffff',
+      x: 0,
+      y: 0,
+    };
+
+    this.project.nodes[newId] = newNode;
+    this.selectedNodeId = newId;
+    this.selectedNodeIds = new Set([newId]);
+    this.commitChange();
+    this.startEditingNode(newId);
+  }
+
+  private addCardToColumn(columnId: string): void {
+    const columnNode = this.project.nodes[columnId];
+    if (!columnNode) return;
+
+    const newId = 'card_' + Math.random().toString(36).substring(2, 9);
+    const existingChildren = Object.values(this.project.nodes).filter((n) => n.parentId === columnId);
+    const orderIndex = existingChildren.length;
+
+    const newNode: MindMapNode = {
+      color: columnNode.color || '#3b82f6',
+      fontSize: 13,
+      id: newId,
+      isDone: false,
+      isTask: true,
+      orderIndex,
+      parentId: columnId,
+      shape: 'rounded',
+      text: 'Nueva tarea',
+      textColor: '#ffffff',
+      x: 0,
+      y: 0,
+    };
+
+    this.project.nodes[newId] = newNode;
+    this.selectedNodeId = newId;
+    this.selectedNodeIds = new Set([newId]);
+    this.commitChange();
+    this.startEditingNode(newId);
+  }
+
+  private handleSmartHandleClick(nodeId: string, direction: SmartHandleDirection): void {
+    const parentNode = this.project.nodes[nodeId];
+    if (!parentNode) return;
+
+    if (direction === 'bottom') {
+      this.addChildNode(nodeId);
+    } else if (direction === 'top') {
+      if (parentNode.parentId) {
+        this.addSiblingNode(nodeId);
+      } else {
+        this.addFreeNodeAtOffset(nodeId, 0, -140);
+      }
+    } else if (direction === 'right') {
+      if (parentNode.shape === 'diamond') {
+        this.addDecisionBranch(nodeId, 'Sí');
+      } else {
+        this.addChildNode(nodeId);
+      }
+    } else if (direction === 'left') {
+      if (parentNode.shape === 'diamond') {
+        this.addDecisionBranch(nodeId, 'No');
+      } else {
+        this.addChildNode(nodeId);
+      }
+    }
+  }
+
+  private updateContextualToolbar(): void {
+    const actionsContainer = this.container.querySelector<HTMLElement>('[data-ref="mindmap-contextual-actions"]');
+    if (!actionsContainer) return;
+
+    if (this.selectedNodeIds.size !== 1 || !this.selectedNodeId) {
+      actionsContainer.innerHTML = '';
+      return;
+    }
+
+    const selectedNode = this.project.nodes[this.selectedNodeId];
+    if (!selectedNode) {
+      actionsContainer.innerHTML = '';
+      return;
+    }
+
+    const strategy = getDiagramStrategy(this.project.subtype);
+    const quickTools = strategy.getQuickTools ? strategy.getQuickTools() : [];
+
+    if (quickTools.length === 0) {
+      actionsContainer.innerHTML = '';
+      return;
+    }
+
+    actionsContainer.innerHTML = quickTools.map((tool) => `
+      <button type="button" class="design-toolbar-btn" data-context-action="${tool.actionId}" data-tooltip="${tool.tooltip || tool.label}" aria-label="${tool.label}">
+        <span class="component-icon">${tool.icon}</span>
+      </button>
+    `).join('');
+
+    actionsContainer.querySelectorAll<HTMLButtonElement>('[data-context-action]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const action = btn.getAttribute('data-context-action');
+        if (action && this.selectedNodeId) {
+          this.executeContextualAction(action, this.selectedNodeId);
+        }
+      });
+    });
+  }
+
+  private executeContextualAction(action: string, targetNodeId: string): void {
+    const targetNode = this.project.nodes[targetNodeId];
+    if (!targetNode) return;
+
+    switch (action) {
+      case 'add-child':
+        this.addChildNode(targetNodeId);
+        break;
+      case 'add-sibling':
+        this.addSiblingNode(targetNodeId);
+        break;
+      case 'add-decision':
+        this.addCustomNodeWithShape(targetNodeId, 'diamond', '¿Condición?', 'Sí');
+        break;
+      case 'add-step':
+        this.addCustomNodeWithShape(targetNodeId, 'rect', 'Nuevo Paso');
+        break;
+      case 'add-io':
+        this.addCustomNodeWithShape(targetNodeId, 'parallelogram', 'Entrada / Salida');
+        break;
+      case 'add-end':
+        this.addCustomNodeWithShape(targetNodeId, 'pill', 'Fin');
+        break;
+      case 'add-column':
+        this.addChildNode(this.project.rootId);
+        break;
+      case 'add-card':
+        this.addCardToColumn(targetNodeId);
+        break;
+      case 'add-phase':
+        this.addChildNode(this.project.rootId);
+        break;
+      case 'add-milestone':
+        this.addChildNode(targetNodeId);
+        break;
+      case 'add-cause':
+        this.addChildNode(this.project.rootId);
+        break;
+      case 'add-subcause':
+        this.addChildNode(targetNodeId);
+        break;
+      case 'add-item':
+        this.addChildNode(targetNodeId);
+        break;
+      case 'add-prop':
+        this.addCustomNodeWithShape(targetNodeId, targetNode.shape || 'rounded', 'Nuevo concepto', 'se relaciona con');
+        break;
+      case 'toggle-task':
+        targetNode.isTask = !targetNode.isTask;
+        if (targetNode.isTask && targetNode.isDone === undefined) targetNode.isDone = false;
+        this.commitChange();
+        break;
+      case 'mark-done':
+        targetNode.isDone = !targetNode.isDone;
+        this.commitChange();
+        break;
+      default:
+        this.addChildNode(targetNodeId);
+        break;
+    }
   }
 
   private addChildNode(parentId: string): void {
@@ -1431,16 +1753,7 @@ export class MindMapController implements ViewController {
 
   private openAiModal(): void {
     const selectedNode = this.selectedNodeId ? this.project.nodes[this.selectedNodeId] : null;
-    let diagramType: 'conceptmap' | 'flowchart' | 'kanban' | 'mindmap' | 'orgchart' = 'mindmap';
-    if (this.project.subtype === 'kanban') {
-      diagramType = 'kanban';
-    } else if (this.project.subtype === 'orgchart') {
-      diagramType = 'orgchart';
-    } else if (this.project.subtype === 'flowchart') {
-      diagramType = 'flowchart';
-    } else if (this.project.subtype === 'conceptmap' || this.project.theme?.layoutDirection === 'top-down') {
-      diagramType = 'conceptmap';
-    }
+    const diagramType: DiagramSubtype = this.project.subtype || (this.project.theme?.layoutDirection === 'top-down' ? 'conceptmap' : 'mindmap');
 
     openMindMapAiModal({
       contextNodeId: selectedNode && this.selectedNodeId !== this.project.rootId ? this.selectedNodeId : null,
@@ -1463,21 +1776,21 @@ export class MindMapController implements ViewController {
       idMap.set('root', newRootId);
       idMap.set('null', newRootId);
 
-      const isKanban = this.project.subtype === 'kanban';
-      const isOrgChart = this.project.subtype === 'orgchart';
-      const isFlowchart = this.project.subtype === 'flowchart';
-      const rootColor = isKanban || isOrgChart ? '#1e293b' : (isFlowchart ? '#10b981' : '#6366f1');
+      const subtype = this.project.subtype;
+      const strategy = getDiagramStrategy(subtype);
+      const initial = strategy.getInitialProject(result.rootText || result.title);
+      const rootNodeInit = initial.nodes[initial.rootId];
 
       const newNodes: Record<string, MindMapNode> = {
         [newRootId]: {
-          color: rootColor,
+          color: rootNodeInit?.color || '#6366f1',
           fontSize: 16,
-          icon: isKanban ? 'view_kanban' : (isOrgChart ? 'corporate_fare' : undefined),
+          icon: rootNodeInit?.icon,
           id: newRootId,
           orderIndex: 0,
           parentId: null,
-          shape: isKanban || isOrgChart ? 'rounded' : 'pill',
-          text: result.rootText || result.title || (isKanban ? 'Tablero del Proyecto' : (isOrgChart ? 'Dirección General (CEO)' : (isFlowchart ? 'Inicio' : 'Idea Principal'))),
+          shape: rootNodeInit?.shape || 'pill',
+          text: result.rootText || result.title || rootNodeInit?.text || 'Idea Principal',
           textColor: '#ffffff',
           x: 0,
           y: 0,
@@ -1494,7 +1807,7 @@ export class MindMapController implements ViewController {
         let mappedParentId = n.parentId ? idMap.get(n.parentId) : newRootId;
         if (!mappedParentId) mappedParentId = newRootId;
 
-        const isTaskNode = n.isTask !== undefined ? Boolean(n.isTask) : (isKanban && mappedParentId !== newRootId);
+        const isTaskNode = n.isTask !== undefined ? Boolean(n.isTask) : (subtype === 'kanban' && mappedParentId !== newRootId);
 
         newNodes[mappedId] = {
           color: n.color || PALETTE_COLORS[idx % PALETTE_COLORS.length],

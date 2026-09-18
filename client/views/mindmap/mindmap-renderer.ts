@@ -1,5 +1,6 @@
-import { MindMapCamera, MindMapConnection, MindMapTheme } from '../../types/mindmap.types.js';
+import { DiagramSubtype, MindMapCamera, MindMapConnection, MindMapTheme, SmartHandleDirection } from '../../types/mindmap.types.js';
 import { ComputedNodeLayout } from './mindmap-layout.engine.js';
+import { getDiagramStrategy } from './strategies/strategy.registry.js';
 
 export function worldToScreen(wx: number, wy: number, camera: MindMapCamera, canvasWidth: number, canvasHeight: number): { x: number; y: number } {
   return {
@@ -53,71 +54,19 @@ export function drawMindMapBackground(
   ctx.restore();
 }
 
-export function drawKanbanSwimlanes(
+export function drawStrategyBackground(
   ctx: CanvasRenderingContext2D,
   layoutMap: Map<string, ComputedNodeLayout>,
   camera: MindMapCamera,
   canvasW: number,
   canvasH: number,
-  rootId: string
+  rootId: string,
+  subtype?: DiagramSubtype
 ): void {
-  const root = layoutMap.get(rootId);
-  if (!root || !root.childrenIds || root.childrenIds.length === 0) return;
-
-  ctx.save();
-
-  root.childrenIds.forEach((colId) => {
-    const col = layoutMap.get(colId);
-    if (!col) return;
-
-    const cardNodes: ComputedNodeLayout[] = [];
-    const collectDescendants = (nodeId: string) => {
-      const node = layoutMap.get(nodeId);
-      if (!node) return;
-      node.childrenIds.forEach((childId) => {
-        const child = layoutMap.get(childId);
-        if (child) {
-          cardNodes.push(child);
-          collectDescendants(childId);
-        }
-      });
-    };
-    collectDescendants(colId);
-
-    const paddingX = 10;
-    const paddingTop = 8;
-    const paddingBottom = 16;
-    const colScreen = worldToScreen(col.x, col.y, camera, canvasW, canvasH);
-    const colW = (col.width + paddingX * 2) * camera.zoom;
-    const colLeft = colScreen.x - colW / 2;
-    const colTop = colScreen.y - ((col.height / 2) + paddingTop) * camera.zoom;
-
-    let maxBottomY = col.y + col.height / 2;
-    if (cardNodes.length > 0) {
-      cardNodes.forEach((card) => {
-        const bottom = card.y + card.height / 2;
-        if (bottom > maxBottomY) maxBottomY = bottom;
-      });
-    } else {
-      maxBottomY += 120;
-    }
-
-    const bottomScreen = worldToScreen(col.x, maxBottomY + paddingBottom, camera, canvasW, canvasH);
-    const colH = Math.max(160 * camera.zoom, bottomScreen.y - colTop);
-
-    ctx.fillStyle = 'rgba(248, 250, 252, 0.75)';
-    ctx.strokeStyle = 'rgba(226, 232, 240, 0.85)';
-    ctx.lineWidth = Math.max(1, 1.2 * camera.zoom);
-    drawRoundedRect(ctx, colLeft, colTop, colW, colH, 12 * camera.zoom);
-    ctx.fill();
-    ctx.stroke();
-
-    ctx.fillStyle = col.color || '#3b82f6';
-    drawRoundedRect(ctx, colLeft + 4 * camera.zoom, colTop + 2 * camera.zoom, colW - 8 * camera.zoom, 4 * camera.zoom, 2 * camera.zoom);
-    ctx.fill();
-  });
-
-  ctx.restore();
+  const strategy = getDiagramStrategy(subtype);
+  if (strategy.drawCustomBackground) {
+    strategy.drawCustomBackground(ctx, layoutMap, camera, canvasW, canvasH, rootId);
+  }
 }
 
 export function drawBranchConnections(
@@ -127,12 +76,14 @@ export function drawBranchConnections(
   canvasW: number,
   canvasH: number,
   theme: MindMapTheme,
-  subtype?: string
+  subtype?: DiagramSubtype
 ): void {
   ctx.save();
   const isKanban = subtype === 'kanban';
+  const isFishbone = subtype === 'fishbone';
+  const isTimeline = subtype === 'timeline';
   const lineStyle = theme.lineStyle || 'curved';
-  const isTopDown = isKanban || theme.layoutDirection === 'top-down';
+  const isTopDown = isKanban || subtype === 'conceptmap' || subtype === 'orgchart' || subtype === 'flowchart' || theme.layoutDirection === 'top-down';
 
   layoutMap.forEach((node) => {
     if (!node.parentId) return;
@@ -140,6 +91,12 @@ export function drawBranchConnections(
     if (!parent) return;
 
     if (isKanban && node.depth > 1) {
+      return;
+    }
+    if (isFishbone && node.depth >= 1) {
+      return;
+    }
+    if (isTimeline && node.depth > 1) {
       return;
     }
 
@@ -275,78 +232,91 @@ export function drawBranchConnections(
 
 export function drawCustomConnections(
   ctx: CanvasRenderingContext2D,
-  connections: MindMapConnection[] | undefined,
+  connections: MindMapConnection[],
   layoutMap: Map<string, ComputedNodeLayout>,
   camera: MindMapCamera,
   canvasW: number,
   canvasH: number,
-  selectedConnId?: string | null
+  selectedConnectionId: string | null = null
 ): void {
   if (!connections || connections.length === 0) return;
 
   ctx.save();
 
   connections.forEach((conn) => {
-    const fromNode = layoutMap.get(conn.fromId);
-    const toNode = layoutMap.get(conn.toId);
-    if (!fromNode || !toNode) return;
+    const from = layoutMap.get(conn.fromId);
+    const to = layoutMap.get(conn.toId);
+    if (!from || !to) return;
 
-    const fromScreen = worldToScreen(fromNode.x, fromNode.y, camera, canvasW, canvasH);
-    const toScreen = worldToScreen(toNode.x, toNode.y, camera, canvasW, canvasH);
+    const fromScreen = worldToScreen(from.x, from.y, camera, canvasW, canvasH);
+    const toScreen = worldToScreen(to.x, to.y, camera, canvasW, canvasH);
 
-    const fromHalfW = (fromNode.width * camera.zoom) / 2;
-    const toHalfW = (toNode.width * camera.zoom) / 2;
+    const fromHalfW = (from.width * camera.zoom) / 2;
+    const fromHalfH = (from.height * camera.zoom) / 2;
+    const toHalfW = (to.width * camera.zoom) / 2;
+    const toHalfH = (to.height * camera.zoom) / 2;
+
+    const dx = toScreen.x - fromScreen.x;
+    const dy = toScreen.y - fromScreen.y;
 
     let startX = fromScreen.x;
     let startY = fromScreen.y;
     let endX = toScreen.x;
     let endY = toScreen.y;
 
-    if (toNode.x >= fromNode.x) {
-      startX = fromScreen.x + fromHalfW;
-      endX = toScreen.x - toHalfW;
+    if (Math.abs(dx) > Math.abs(dy)) {
+      startX = dx > 0 ? fromScreen.x + fromHalfW : fromScreen.x - fromHalfW;
+      endX = dx > 0 ? toScreen.x - toHalfW : toScreen.x + toHalfW;
     } else {
-      startX = fromScreen.x - fromHalfW;
-      endX = toScreen.x + toHalfW;
+      startY = dy > 0 ? fromScreen.y + fromHalfH : fromScreen.y - fromHalfH;
+      endY = dy > 0 ? toScreen.y - toHalfH : toScreen.y + toHalfH;
     }
 
-    const isSelected = conn.id === selectedConnId;
-    const color = isSelected ? '#0284c7' : (conn.color || '#475569');
+    const isSelected = conn.id === selectedConnectionId;
+    const color = isSelected ? '#0284c7' : (conn.color || '#64748b');
 
     ctx.beginPath();
     ctx.strokeStyle = color;
     ctx.lineWidth = (isSelected ? 3 : 2) * camera.zoom;
-    ctx.setLineDash(conn.style === 'orthogonal' ? [6, 4] : []);
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
+    ctx.setLineDash(conn.style === 'straight' ? [] : [6, 4]);
 
-    const midX = (startX + endX) / 2;
-    ctx.moveTo(startX, startY);
-    ctx.bezierCurveTo(midX, startY, midX, endY, endX, endY);
+    if (conn.style === 'orthogonal') {
+      const midX = (startX + endX) / 2;
+      ctx.moveTo(startX, startY);
+      ctx.lineTo(midX, startY);
+      ctx.lineTo(midX, endY);
+      ctx.lineTo(endX, endY);
+    } else if (conn.style === 'straight') {
+      ctx.moveTo(startX, startY);
+      ctx.lineTo(endX, endY);
+    } else {
+      const cp1x = startX + (endX - startX) / 2;
+      const cp1y = startY;
+      const cp2x = startX + (endX - startX) / 2;
+      const cp2y = endY;
+      ctx.moveTo(startX, startY);
+      ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, endX, endY);
+    }
     ctx.stroke();
     ctx.setLineDash([]);
 
-    const arrowAngle = Math.atan2(endY - startY, endX - midX);
-    const arrowLen = 10 * camera.zoom;
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.moveTo(endX, endY);
-    ctx.lineTo(
-      endX - arrowLen * Math.cos(arrowAngle - Math.PI / 7),
-      endY - arrowLen * Math.sin(arrowAngle - Math.PI / 7)
-    );
-    ctx.lineTo(
-      endX - arrowLen * Math.cos(arrowAngle + Math.PI / 7),
-      endY - arrowLen * Math.sin(arrowAngle + Math.PI / 7)
-    );
-    ctx.closePath();
-    ctx.fill();
+    if (conn.arrow !== false) {
+      const angle = Math.atan2(endY - startY, endX - startX);
+      const arrowLen = 10 * camera.zoom;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(endX, endY);
+      ctx.lineTo(endX - arrowLen * Math.cos(angle - Math.PI / 6), endY - arrowLen * Math.sin(angle - Math.PI / 6));
+      ctx.lineTo(endX - arrowLen * Math.cos(angle + Math.PI / 6), endY - arrowLen * Math.sin(angle + Math.PI / 6));
+      ctx.closePath();
+      ctx.fill();
+    }
 
     if (conn.label) {
       const labelX = (startX + endX) / 2;
       const labelY = (startY + endY) / 2;
       ctx.save();
-      ctx.font = `600 ${11 * camera.zoom}px sans-serif`;
+      ctx.font = `600 ${Math.max(10, 11 * camera.zoom)}px system-ui, -apple-system, sans-serif`;
       const textW = ctx.measureText(conn.label).width;
       ctx.fillStyle = '#ffffff';
       ctx.strokeStyle = color;
@@ -424,6 +394,83 @@ export function drawSelectionBox(
   ctx.restore();
 }
 
+export function drawSmartHandle(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  radius: number,
+  isHovered: boolean
+): void {
+  ctx.save();
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.15)';
+  ctx.shadowBlur = 4;
+  ctx.shadowOffsetY = 1;
+
+  ctx.fillStyle = isHovered ? '#0284c7' : '#ffffff';
+  ctx.strokeStyle = '#0284c7';
+  ctx.lineWidth = 1.5;
+
+  ctx.beginPath();
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.strokeStyle = isHovered ? '#ffffff' : '#0284c7';
+  ctx.lineWidth = 1.8;
+  const cross = radius * 0.5;
+
+  ctx.beginPath();
+  ctx.moveTo(x - cross, y);
+  ctx.lineTo(x + cross, y);
+  ctx.moveTo(x, y - cross);
+  ctx.lineTo(x, y + cross);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+export function getSmartHandlePositions(
+  node: ComputedNodeLayout,
+  camera: MindMapCamera,
+  canvasW: number,
+  canvasH: number
+): Record<SmartHandleDirection, { radius: number; x: number; y: number }> {
+  const screen = worldToScreen(node.x, node.y, camera, canvasW, canvasH);
+  const w = node.width * camera.zoom;
+  const h = node.height * camera.zoom;
+  const radius = Math.max(7, Math.min(11, 8.5 * camera.zoom));
+  const offset = radius + 4 * camera.zoom;
+
+  return {
+    bottom: { radius, x: screen.x, y: screen.y + h / 2 + offset },
+    left: { radius, x: screen.x - w / 2 - offset, y: screen.y },
+    right: { radius, x: screen.x + w / 2 + offset, y: screen.y },
+    top: { radius, x: screen.x, y: screen.y - h / 2 - offset },
+  };
+}
+
+export function getSmartHandleAtPoint(
+  node: ComputedNodeLayout,
+  screenX: number,
+  screenY: number,
+  camera: MindMapCamera,
+  canvasW: number,
+  canvasH: number
+): SmartHandleDirection | null {
+  const handles = getSmartHandlePositions(node, camera, canvasW, canvasH);
+  const dirs: SmartHandleDirection[] = ['right', 'bottom', 'left', 'top'];
+
+  for (const dir of dirs) {
+    const h = handles[dir];
+    const dx = screenX - h.x;
+    const dy = screenY - h.y;
+    if (dx * dx + dy * dy <= (h.radius + 3) * (h.radius + 3)) {
+      return dir;
+    }
+  }
+  return null;
+}
+
 export function drawMindMapNodes(
   ctx: CanvasRenderingContext2D,
   layoutMap: Map<string, ComputedNodeLayout>,
@@ -432,7 +479,8 @@ export function drawMindMapNodes(
   canvasH: number,
   selectedNodeIds: Set<string>,
   hoveredNodeId: string | null,
-  dropTargetNodeId: string | null = null
+  dropTargetNodeId: string | null = null,
+  hoveredSmartHandle: { direction: SmartHandleDirection; nodeId: string } | null = null
 ): void {
   ctx.save();
 
@@ -571,25 +619,15 @@ export function drawMindMapNodes(
     }
     ctx.restore();
 
-    if ((isSelected || isHovered) && camera.zoom > 0.4) {
-      const handleRadius = 4.5 * camera.zoom;
-      const rightHandleX = left + w;
-      const leftHandleX = left;
-      const handleY = screen.y;
+    if (selectedNodeIds.size === 1 && isSelected && camera.zoom >= 0.45) {
+      const handles = getSmartHandlePositions(node, camera, canvasW, canvasH);
+      const dirs: SmartHandleDirection[] = ['right', 'bottom', 'left', 'top'];
 
-      ctx.fillStyle = '#ffffff';
-      ctx.strokeStyle = '#0284c7';
-      ctx.lineWidth = 1.5 * camera.zoom;
-
-      ctx.beginPath();
-      ctx.arc(rightHandleX, handleY, handleRadius, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.arc(leftHandleX, handleY, handleRadius, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
+      dirs.forEach((dir) => {
+        const hPos = handles[dir];
+        const isHov = hoveredSmartHandle?.nodeId === node.id && hoveredSmartHandle.direction === dir;
+        drawSmartHandle(ctx, hPos.x, hPos.y, hPos.radius, isHov);
+      });
     }
 
     if (node.childrenIds.length > 0) {
