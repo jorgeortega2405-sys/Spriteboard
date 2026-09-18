@@ -229,65 +229,44 @@ export async function render(): Promise<void> {
       const folderUuid = path.split('/folder/')[1]?.split('/')[0] || '';
       const { createHomeView } = await import('./views/home.view.js');
       viewElements = [await createHomeView(folderUuid)];
-    } else if (path === '/design' || path === '/design/' || path.startsWith('/design/')) {
-      const canvasUuid = path.startsWith('/design/') ? (path.split('/design/')[1]?.split('/')[0] || '') : '';
+    } else if (
+      path === '/design' || path === '/design/' || path.startsWith('/design/') ||
+      path === '/board' || path === '/board/' || path.startsWith('/board/') ||
+      path === '/diagram' || path === '/diagram/' || path.startsWith('/diagram/') ||
+      path === '/mindmap' || path === '/mindmap/' || path.startsWith('/mindmap/') ||
+      path === '/doc' || path === '/doc/' || path.startsWith('/doc/')
+    ) {
+      const match = path.match(/^\/(?:design|board|diagram|mindmap|doc)(?:\/([a-zA-Z0-9_-]+))?/);
+      const canvasUuid = match?.[1] || '';
       if (!canvasUuid) {
         window.history.replaceState({}, '', '/');
         const { createHomeView } = await import('./views/home.view.js');
         viewElements = [await createHomeView()];
       } else {
+        if (!path.startsWith(`/design/${canvasUuid}`)) {
+          window.history.replaceState({}, '', `/design/${canvasUuid}`);
+        }
         const { createDesignView } = await import('./views/design.view.js');
         viewElements = [await createDesignView(canvasUuid)];
-      }
-    } else if (path === '/board' || path === '/board/' || path.startsWith('/board/')) {
-      const canvasUuid = path.startsWith('/board/') ? (path.split('/board/')[1]?.split('/')[0] || '') : '';
-      if (!canvasUuid) {
-        window.history.replaceState({}, '', '/');
-        const { createHomeView } = await import('./views/home.view.js');
-        viewElements = [await createHomeView()];
-      } else {
-        const { createBoardView } = await import('./views/board.view.js');
-        viewElements = [await createBoardView(canvasUuid)];
-      }
-    } else if (path === '/diagram' || path === '/diagram/' || path.startsWith('/diagram/') || path === '/mindmap' || path === '/mindmap/' || path.startsWith('/mindmap/')) {
-      const prefix = path.startsWith('/mindmap') ? '/mindmap/' : '/diagram/';
-      const canvasUuid = path.includes(prefix) ? (path.split(prefix)[1]?.split('/')[0] || '') : '';
-      if (!canvasUuid) {
-        window.history.replaceState({}, '', '/');
-        const { createHomeView } = await import('./views/home.view.js');
-        viewElements = [await createHomeView()];
-      } else {
-        const { createMindMapView } = await import('./views/mindmap/mindmap.view.js');
-        viewElements = [await createMindMapView(canvasUuid)];
       }
     } else if (/^\/[a-zA-Z0-9_-]{3,50}$/.test(path)) {
       const slug = path.slice(1);
       let resolvedUuid: string | null = null;
-      let resolvedType: string = 'pixel';
       try {
         const res = await getApi(API_ROUTES.canvases.resolveSlug(slug));
         if (res.ok) {
           const data = await res.json();
           if (data?.uuid) {
             resolvedUuid = data.uuid;
-            resolvedType = data.canvas_type || (data.unit === 'board' ? 'board' : (data.unit === 'diagram' ? 'diagram' : 'pixel'));
           }
         }
       } catch {}
 
       if (resolvedUuid) {
-        const targetPath = resolvedType === 'diagram' || resolvedType === 'mindmap' ? `/diagram/${resolvedUuid}` : (resolvedType === 'board' ? `/board/${resolvedUuid}` : `/design/${resolvedUuid}`);
+        const targetPath = `/design/${resolvedUuid}`;
         window.history.replaceState({}, '', targetPath);
-        if (resolvedType === 'diagram' || resolvedType === 'mindmap') {
-          const { createMindMapView } = await import('./views/mindmap/mindmap.view.js');
-          viewElements = [await createMindMapView(resolvedUuid)];
-        } else if (resolvedType === 'board') {
-          const { createBoardView } = await import('./views/board.view.js');
-          viewElements = [await createBoardView(resolvedUuid)];
-        } else {
-          const { createDesignView } = await import('./views/design.view.js');
-          viewElements = [await createDesignView(resolvedUuid)];
-        }
+        const { createDesignView } = await import('./views/design.view.js');
+        viewElements = [await createDesignView(resolvedUuid)];
       } else {
         const { createErrorView } = await import('./views/error.view.js');
         viewElements = [await createErrorView({

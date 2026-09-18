@@ -3619,6 +3619,166 @@ html.dark-theme .component-card-button--downgrade {
   font-weight: 600;
 }
 
+.creation-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+  gap: 20px 16px;
+  width: 100%;
+}
+
+.creation-category-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  margin-bottom: 24px;
+}
+
+.creation-category-section:last-child {
+  margin-bottom: 0;
+}
+
+.creation-category-section__title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0;
+}
+
+.creation-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  padding: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
+  user-select: none;
+  outline: none;
+}
+
+.creation-card__thumbnail {
+  position: relative;
+  width: 100%;
+  height: 136px;
+  border-radius: 16px;
+  background-color: var(--bg-surface-elevated, rgba(125, 125, 125, 0.08));
+  border: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  box-sizing: border-box;
+  transition: transform var(--sl-transition-fast), border-color var(--sl-transition-fast), box-shadow var(--sl-transition-fast);
+}
+
+.creation-card:hover .creation-card__thumbnail {
+  border-color: var(--border-color-hover, var(--text-primary));
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+  transform: translateY(-2px);
+}
+
+.creation-card:active .creation-card__thumbnail {
+  transform: translateY(0);
+}
+
+.creation-card:focus-visible .creation-card__thumbnail {
+  outline: 2px solid var(--color-primary, #6366f1);
+  outline-offset: 2px;
+}
+
+.creation-card.is-loading .creation-card__thumbnail {
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.creation-card__svg-wrapper {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+.creation-card__svg-wrapper svg {
+  width: 100%;
+  height: 100%;
+  max-height: 116px;
+  object-fit: contain;
+  display: block;
+}
+
+.creation-card__badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(18, 18, 22, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  line-height: 1.2;
+  z-index: 2;
+}
+
+.creation-card__badge--popular {
+  background: rgba(99, 102, 241, 0.88);
+  border-color: rgba(99, 102, 241, 0.4);
+}
+
+.creation-card__badge--primary {
+  background: rgba(16, 185, 129, 0.88);
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.creation-card__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  margin-top: 8px;
+  padding: 0 2px;
+}
+
+.creation-card__title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.creation-card__meta {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.creation-card--custom .creation-card__thumbnail {
+  border-style: dashed;
+  border-width: 1.5px;
+  background-color: var(--bg-surface-elevated, rgba(125, 125, 125, 0.04));
+}
+
 .bg-live-preview {
   width: 100%;
   height: 90px;
@@ -4888,10 +5048,11 @@ html.dark-theme .component-bottom--canvas {
 }
 
 .design-top-toolbar__section {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
   flex: 0 0 auto;
+  flex-shrink: 0;
 }
 
 .design-toolbar__nav-btn {
@@ -5413,24 +5574,29 @@ html.dark-theme .component-bottom--canvas {
 }
 
 .design-bottom-toolbar__section {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
+  flex: 0 0 auto;
+  flex-shrink: 0;
 }
 
 .design-bottom-toolbar__section--tools {
   flex: 0 0 auto;
+  flex-shrink: 0;
 }
 
 .design-bottom-toolbar__section--zoom {
   flex: 0 0 auto;
+  flex-shrink: 0;
 }
 
 .design-toolbar-group {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 4px;
   flex: 0 0 auto;
+  flex-shrink: 0;
 }
 
 .design-toolbar-btn {
@@ -5439,14 +5605,21 @@ html.dark-theme .component-bottom--canvas {
   justify-content: center;
   width: 34px;
   height: 34px;
+  min-width: 34px;
+  min-height: 34px;
+  max-width: 34px;
+  max-height: 34px;
   padding: 0;
-  border-radius: 9999px;
+  border-radius: 50% !important;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
   color: rgba(255, 255, 255, 0.9);
   cursor: pointer;
   transition: all 0.15s ease;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  position: relative;
 }
 
 .design-toolbar-btn:hover {
@@ -5489,19 +5662,29 @@ html.dark-theme .component-bottom--canvas {
 .design-toolbar-btn--sm {
   width: 30px;
   height: 30px;
+  min-width: 30px;
+  min-height: 30px;
+  max-width: 30px;
+  max-height: 30px;
+  border-radius: 50% !important;
+  flex-shrink: 0;
 }
 
 .design-toolbar-btn--text {
   width: auto;
-  min-width: 30px;
+  max-width: none;
+  max-height: none;
+  min-width: max-content;
   height: 30px;
   padding: 0 10px;
+  border-radius: 9999px !important;
   gap: 6px;
   font-family: 'Roboto Mono', 'SFMono-Regular', Consolas, monospace;
   font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.02em;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .design-toolbar-btn--text span {
@@ -5526,11 +5709,25 @@ html.dark-theme .component-bottom--canvas {
   height: 16px;
 }
 
+.design-toolbar-btn .board-fill-preview-dot {
+  position: absolute;
+  bottom: 3px;
+  right: 3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(18, 18, 22, 0.9);
+  pointer-events: none;
+  margin: 0;
+}
+
 .design-toolbar-divider {
   width: 1px;
+  min-width: 1px;
   height: 20px;
   background: rgba(255, 255, 255, 0.12);
   margin: 0 4px;
+  flex-shrink: 0;
 }
 
 .design-color-picker-wrapper {

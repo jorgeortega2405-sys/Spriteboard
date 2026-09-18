@@ -48,7 +48,7 @@ class HomeController {
   private allCanvases: CanvasItem[] = [];
   private currentCanvases: CanvasItem[] = [];
   private currentEntityFilter: 'all' | 'designs' | 'folders' = 'all';
-  private currentTypeFilter: 'all' | 'board' | 'diagram' | 'pixel' = 'all';
+  private currentTypeFilter: 'all' | 'board' | 'diagram' | 'doc' | 'pixel' = 'all';
   private currentSort: 'activity' | 'alpha-asc' | 'alpha-desc' = 'activity';
   private currentFolders: FolderItem[] = [];
   private typeDropdownController: ReturnType<typeof setupDropdown> | null = null;
@@ -328,7 +328,7 @@ class HomeController {
       this.container.querySelector<HTMLElement>(`[data-ref="${ref}"]`)?.classList.add('is-active');
     };
 
-    const bindCat = (ref: string, filterType: 'all' | 'board' | 'diagram' | 'pixel') => {
+    const bindCat = (ref: string, filterType: 'all' | 'board' | 'diagram' | 'doc' | 'pixel') => {
       this.container.querySelector<HTMLElement>(`[data-ref="${ref}"]`)?.addEventListener(
         'click',
         (e) => {
@@ -346,6 +346,7 @@ class HomeController {
     bindCat('cat-badge-board', 'board');
     bindCat('cat-badge-diagram', 'diagram');
     bindCat('cat-badge-pixel', 'pixel');
+    bindCat('cat-badge-doc', 'doc');
 
     this.categoriesCarouselWrapper = this.container.querySelector<HTMLElement>('[data-ref="home-categories-carousel-wrapper"]');
     if (this.categoriesCarouselWrapper) {
@@ -795,11 +796,13 @@ class HomeController {
             return true;
           });
           if (this.currentTypeFilter === 'board') {
-            unsyncedLocals = unsyncedLocals.filter((c) => (c.canvas_type === 'board' || c.unit === 'board') && c.canvas_type !== 'diagram' && c.canvas_type !== 'mindmap' && c.unit !== 'diagram');
+            unsyncedLocals = unsyncedLocals.filter((c) => (c.canvas_type === 'board' || c.unit === 'board') && c.canvas_type !== 'diagram' && c.canvas_type !== 'mindmap' && c.canvas_type !== 'doc' && c.unit !== 'diagram' && c.unit !== 'doc');
           } else if (this.currentTypeFilter === 'diagram') {
             unsyncedLocals = unsyncedLocals.filter((c) => c.canvas_type === 'diagram' || c.canvas_type === 'mindmap' || c.unit === 'diagram');
+          } else if (this.currentTypeFilter === 'doc') {
+            unsyncedLocals = unsyncedLocals.filter((c) => c.canvas_type === 'doc' || c.unit === 'doc');
           } else if (this.currentTypeFilter === 'pixel') {
-            unsyncedLocals = unsyncedLocals.filter((c) => c.canvas_type !== 'board' && c.unit !== 'board' && c.canvas_type !== 'diagram' && c.canvas_type !== 'mindmap' && c.unit !== 'diagram');
+            unsyncedLocals = unsyncedLocals.filter((c) => c.canvas_type !== 'board' && c.unit !== 'board' && c.canvas_type !== 'diagram' && c.canvas_type !== 'mindmap' && c.canvas_type !== 'doc' && c.unit !== 'diagram' && c.unit !== 'doc');
           }
           if (this.searchQuery) {
             unsyncedLocals = unsyncedLocals.filter((c) => c.name.toLowerCase().includes(this.searchQuery));
@@ -823,11 +826,13 @@ class HomeController {
       const localCanvases = await getAllLocalCanvases();
       let filtered = localCanvases.filter((c) => c.is_local && !c.user_id && !c.id && c.access_level !== 'public');
       if (this.currentTypeFilter === 'board') {
-        filtered = filtered.filter((c) => (c.canvas_type === 'board' || c.unit === 'board') && c.canvas_type !== 'diagram' && c.canvas_type !== 'mindmap' && c.unit !== 'diagram');
+        filtered = filtered.filter((c) => (c.canvas_type === 'board' || c.unit === 'board') && c.canvas_type !== 'diagram' && c.canvas_type !== 'mindmap' && c.canvas_type !== 'doc' && c.unit !== 'diagram' && c.unit !== 'doc');
       } else if (this.currentTypeFilter === 'diagram') {
         filtered = filtered.filter((c) => c.canvas_type === 'diagram' || c.canvas_type === 'mindmap' || c.unit === 'diagram');
+      } else if (this.currentTypeFilter === 'doc') {
+        filtered = filtered.filter((c) => c.canvas_type === 'doc' || c.unit === 'doc');
       } else if (this.currentTypeFilter === 'pixel') {
-        filtered = filtered.filter((c) => c.canvas_type !== 'board' && c.unit !== 'board' && c.canvas_type !== 'diagram' && c.canvas_type !== 'mindmap' && c.unit !== 'diagram');
+        filtered = filtered.filter((c) => c.canvas_type !== 'board' && c.unit !== 'board' && c.canvas_type !== 'diagram' && c.canvas_type !== 'mindmap' && c.canvas_type !== 'doc' && c.unit !== 'diagram' && c.unit !== 'doc');
       }
       if (this.searchQuery) {
         filtered = filtered.filter((c) => c.name.toLowerCase().includes(this.searchQuery));
@@ -1177,8 +1182,10 @@ class HomeController {
       filtered = filtered.filter((item) => item.canvasType === 'board' || item.categoryKey === 'board');
     } else if (this.currentTypeFilter === 'diagram') {
       filtered = filtered.filter((item) => item.canvasType === 'diagram' || item.canvasType === 'mindmap' || item.categoryKey === 'diagram' || item.categoryKey === 'mindmap');
+    } else if (this.currentTypeFilter === 'doc') {
+      filtered = filtered.filter((item) => item.canvasType === 'doc' || item.categoryKey === 'doc');
     } else if (this.currentTypeFilter === 'pixel') {
-      filtered = filtered.filter((item) => (item.canvasType || 'pixel') === 'pixel' && item.categoryKey !== 'board' && item.categoryKey !== 'diagram');
+      filtered = filtered.filter((item) => (item.canvasType || 'pixel') === 'pixel' && item.categoryKey !== 'board' && item.categoryKey !== 'diagram' && item.categoryKey !== 'doc');
     }
 
     if (this.templateTypeFilter === 'favorites') {
@@ -1386,10 +1393,11 @@ class HomeController {
     const isLocal = Boolean(canvas.is_local);
     const canSync = isLocal && Boolean(currentUser);
     const isFavorite = Boolean(canvas.is_favorite);
-    const isDiagram = canvas.canvas_type === 'diagram' || canvas.canvas_type === 'mindmap' || canvas.unit === 'diagram';
-    const isBoard = !isDiagram && (canvas.canvas_type === 'board' || canvas.unit === 'board');
-    const targetUrl = isDiagram ? `/diagram/${canvas.uuid}` : (isBoard ? `/board/${canvas.uuid}` : `/design/${canvas.uuid}`);
-    const typeIcon = isDiagram ? 'psychology' : (isBoard ? 'draw' : 'grid_4x4');
+    const isDoc = canvas.canvas_type === 'doc' || canvas.unit === 'doc';
+    const isDiagram = !isDoc && (canvas.canvas_type === 'diagram' || canvas.canvas_type === 'mindmap' || canvas.unit === 'diagram');
+    const isBoard = !isDoc && !isDiagram && (canvas.canvas_type === 'board' || canvas.unit === 'board');
+    const targetUrl = `/design/${canvas.uuid}`;
+    const typeIcon = isDoc ? 'description' : (isDiagram ? 'psychology' : (isBoard ? 'draw' : 'grid_4x4'));
     const editedTime = formatEditedTime(canvas.updated_at || canvas.created_at);
 
     const badgeText = isLocal ? t('canvas.status_local') : t('canvas.status_cloud');

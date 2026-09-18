@@ -400,7 +400,7 @@ export class KanbanStrategy implements DiagramStrategy {
       rootId,
       subtype: 'kanban',
       theme: {
-        backgroundColor: '#f8fafc',
+        backgroundColor: '#ffffff',
         branchColors: ['#3b82f6', '#f59e0b', '#10b981'],
         fontFamily: 'system-ui, -apple-system, sans-serif',
         layoutDirection: 'top-down',

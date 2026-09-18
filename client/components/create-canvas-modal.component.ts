@@ -1,17 +1,25 @@
+import { getBoardSvg, getDiagramSvg, getDocSvg, getDocTemplateSvg, getPixelSvg, getTemplateVariantSvg } from './create-canvas-graphics.js';
 import { PresetVariant } from '../config/templates.config.js';
-import { createAndOpenCanvas } from '../services/canvas-creator.service.js';
+import { createAndOpenCanvas, CreateCanvasOptions } from '../services/canvas-creator.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { DIAGRAM_CATEGORIES, DIAGRAM_SUBTYPES, DiagramCategory, DiagramSubtype } from '../types/mindmap.types.js';
-import { setupDropdown } from '../utils/dom.util.js';
+import { DOC_TEMPLATES } from '../views/doc/doc-templates.config.js';
+import { DocOrientation, DocPaperSize } from '../views/doc/doc.types.js';
 
 let activeCreateCanvasModal: { close: () => void } | null = null;
 
 export interface OpenCreateCanvasModalOptions {
+  boardTemplateId?: string;
   diagramSubtype?: DiagramSubtype;
+  diagramTemplateId?: string;
+  docOrientation?: DocOrientation;
+  docPaperSize?: DocPaperSize;
+  docTemplateId?: string;
   height?: number;
-  initialType?: 'board' | 'diagram' | 'mindmap' | 'pixel';
+  initialType?: 'board' | 'diagram' | 'doc' | 'mindmap' | 'pixel';
   name?: string;
+  pixelTemplateId?: string;
   teamName?: string | null;
   teamUuid?: string | null;
   templateImage?: string | null;
@@ -25,34 +33,24 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
     activeCreateCanvasModal.close();
   }
 
-  const initialName = options?.name || options?.templateName || '';
   const templateVariants = options?.variants && options.variants.length > 0 ? options.variants : null;
   const templateName = options?.templateName || null;
+  const templateImage = options?.templateImage || null;
   const normalizedInitialType = options?.initialType === 'mindmap' ? 'diagram' : options?.initialType;
-  let selectedCreationType: 'board' | 'diagram' | 'pixel' = normalizedInitialType || (templateVariants ? 'pixel' : 'board');
-  let selectedDiagramSubtype: DiagramSubtype = options?.diagramSubtype || 'mindmap';
-  let selectedLineStyle: 'curved' | 'orthogonal' | 'straight' = 'curved';
-  let selectedTheme: string = 'slate';
+  let activeCategory: 'board' | 'diagram' | 'doc' | 'pixel' | 'template' = templateVariants ? 'template' : (normalizedInitialType || 'board');
 
-  let currentWidth = options?.width || templateVariants?.[0]?.width || 64;
-  let currentHeight = options?.height || templateVariants?.[0]?.height || 64;
-  let currentTemplateImage = options?.templateImage || templateVariants?.[0]?.imagePath || null;
-
-  const initialVariant = templateVariants
-    ? templateVariants.find((v) => v.width === currentWidth && v.height === currentHeight) || templateVariants[0]
-    : null;
-  if (initialVariant) {
-    currentWidth = initialVariant.width;
-    currentHeight = initialVariant.height;
-    if (initialVariant.imagePath) {
-      currentTemplateImage = initialVariant.imagePath;
-    }
-  }
-  const initialVariantLabel = initialVariant ? initialVariant.label : `${currentWidth} × ${currentHeight} px`;
+  let customWidth = options?.width || 64;
+  let customHeight = options?.height || 64;
+  let selectedBgType: 'solid' | 'transparent' = 'transparent';
+  let selectedCheckSize = 16;
+  let selectedSolidColor = '#ffffff';
+  let isCreating = false;
 
   const backdrop = document.createElement('div');
   backdrop.className = 'modal-backdrop';
   backdrop.setAttribute('data-ref', 'modal-create-canvas-backdrop');
+
+  const modalTitle = templateName ? `Plantilla: ${templateName}` : (options?.teamName ? `Lienzo para ${options.teamName}` : 'Crear centro de trabajo');
 
   backdrop.innerHTML = `
     <div class="modal-container" data-ref="modal-create-canvas-container">
@@ -68,18 +66,32 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
         <div class="modal-create-canvas__sidebar" data-ref="modal-create-canvas-sidebar">
           <div class="modal-create-canvas__sidebar-top" data-ref="modal-sidebar-top">
             <div class="component-top-left" data-ref="modal-sidebar-top-left">
-              <h1 class="component-top-title">${templateName ? 'Crear desde plantilla' : (options?.teamName ? `Lienzo para ${options.teamName}` : t('canvas.modal_title'))}</h1>
+              <h1 class="component-top-title">${modalTitle}</h1>
             </div>
           </div>
           <div class="modal-create-canvas__sidebar-bottom" data-ref="modal-sidebar-bottom">
             <div class="menu-panel__list" data-ref="modal-nav-list">
-              <button type="button" class="menu-item is-active" data-ref="tab-stage-dimensions" data-stage="dimensions">
-                <span class="material-symbols-rounded menu-item__icon">space_dashboard</span>
-                <span class="menu-item__text" data-i18n="canvas.stage_dimensions">${t('canvas.stage_dimensions')}</span>
+              ${templateVariants ? `
+              <button type="button" class="menu-item is-active" data-ref="tab-category-template" data-category="template">
+                <span class="material-symbols-rounded menu-item__icon">style</span>
+                <span class="menu-item__text">Plantilla</span>
               </button>
-              <button type="button" class="menu-item" data-ref="tab-stage-background" data-stage="background" style="${selectedCreationType !== 'pixel' ? 'display: none;' : ''}">
-                <span class="material-symbols-rounded menu-item__icon">palette</span>
-                <span class="menu-item__text" data-i18n="canvas.stage_background">${t('canvas.stage_background')}</span>
+              ` : ''}
+              <button type="button" class="menu-item${activeCategory === 'board' ? ' is-active' : ''}" data-ref="tab-category-board" data-category="board">
+                <span class="material-symbols-rounded menu-item__icon">space_dashboard</span>
+                <span class="menu-item__text">Pizarrón Infinito</span>
+              </button>
+              <button type="button" class="menu-item${activeCategory === 'diagram' ? ' is-active' : ''}" data-ref="tab-category-diagram" data-category="diagram">
+                <span class="material-symbols-rounded menu-item__icon">account_tree</span>
+                <span class="menu-item__text">Diagramas y Esquemas</span>
+              </button>
+              <button type="button" class="menu-item${activeCategory === 'doc' ? ' is-active' : ''}" data-ref="tab-category-doc" data-category="doc">
+                <span class="material-symbols-rounded menu-item__icon">description</span>
+                <span class="menu-item__text">Documento Doc</span>
+              </button>
+              <button type="button" class="menu-item${activeCategory === 'pixel' ? ' is-active' : ''}" data-ref="tab-category-pixel" data-category="pixel">
+                <span class="material-symbols-rounded menu-item__icon">grid_on</span>
+                <span class="menu-item__text">Pixel Art</span>
               </button>
             </div>
           </div>
@@ -88,245 +100,340 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
         <div class="modal-create-canvas__body" data-ref="modal-create-canvas-body">
           <div class="modal-create-canvas__body-top" data-ref="modal-body-top">
             <div class="component-top-left" data-ref="modal-body-top-left">
-              <h2 class="component-top-title" data-ref="modal-stage-title" data-i18n="canvas.stage_dimensions">${t('canvas.stage_dimensions')}</h2>
+              <h2 class="component-top-title" data-ref="modal-body-title">Pizarrón Infinito</h2>
             </div>
           </div>
 
           <div class="modal-create-canvas__body-bottom" data-ref="modal-body-bottom">
-            <div class="modal-canvas-panel" data-ref="panel-stage-dimensions">
-              <div class="modal-canvas-panel__form" data-ref="form-stage-dimensions">
-                <div class="settings-group" data-ref="custom-size-group-name">
-                  <div class="settings-item" data-ref="custom-size-item-name">
-                    <div class="settings-item__content" data-ref="custom-size-name-content">
-                      <div class="settings-item__text" data-ref="custom-size-name-text">
-                        <h2 class="settings-item__title" data-ref="custom-size-name-title" data-i18n="canvas.canvas_name_title">${t('canvas.canvas_name_title')}</h2>
-                        <p class="settings-item__desc" data-ref="custom-size-name-desc" data-i18n="canvas.canvas_name_desc">${t('canvas.canvas_name_desc')}</p>
-                      </div>
-                    </div>
-                    <div class="settings-item__actions" data-ref="custom-size-name-actions">
-                      <input class="modal-canvas-panel__name-input" data-ref="input-canvas-name" type="text" placeholder="${t('canvas.input_name_placeholder')}" value="${initialName || t('canvas.input_name_placeholder')}" maxlength="100" autocomplete="off" />
-                    </div>
-                  </div>
-                </div>
-
-                ${templateVariants ? `
-                <div class="settings-group" data-ref="custom-size-group-template-sizes">
-                  <div class="settings-item" data-ref="custom-size-item-template-size">
-                    <div class="settings-item__content" data-ref="custom-size-template-size-content">
-                      <div class="settings-item__text" data-ref="custom-size-template-size-text">
-                        <h2 class="settings-item__title" data-ref="custom-size-template-size-title">Tamaño de la plantilla</h2>
-                        <p class="settings-item__desc" data-ref="custom-size-template-size-desc">Selecciona una de las resoluciones optimizadas disponibles.</p>
-                      </div>
-                    </div>
-                    <div class="settings-item__actions" data-ref="custom-size-template-size-actions">
-                      <div class="settings-dropdown-wrapper settings-dropdown-wrapper--w-320" data-ref="dropdown-wrapper-template-size">
-                        <button type="button" class="dropdown-trigger" data-ref="btn-trigger-template-size" aria-label="Seleccionar tamaño de plantilla">
-                          <div class="dropdown-trigger__left" data-ref="template-size-trigger-left">
-                            <span class="material-symbols-rounded dropdown-trigger__icon" data-ref="template-size-selected-icon">aspect_ratio</span>
-                            <span class="dropdown-trigger__text" data-ref="template-size-selected-text">${initialVariantLabel}</span>
-                          </div>
-                          <span class="material-symbols-rounded dropdown-trigger__chevron" data-ref="template-size-chevron">expand_more</span>
-                        </button>
-                        <div class="dropdown-backdrop" data-ref="dropdown-backdrop-template-size">
-                          <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-template-size">
-                            <div class="menu-panel__drag-zone" data-ref="drag-zone-template-size" aria-hidden="true">
-                              <div class="menu-panel__drag-handle"></div>
-                            </div>
-                            <div class="menu-panel__list" data-ref="list-template-sizes" style="max-height: 280px; overflow-y: auto;">
-                              ${templateVariants.map((v) => {
-                                const isSel = v.width === currentWidth && v.height === currentHeight;
-                                return `
-                                  <button type="button" class="menu-item${isSel ? ' is-active' : ''}" data-ref="option-template-size-${v.width}x${v.height}" data-w="${v.width}" data-h="${v.height}" data-img="${v.imagePath || ''}" data-label="${v.label}" data-value="${v.width}x${v.height}">
-                                    <span class="material-symbols-rounded menu-item__icon">aspect_ratio</span>
-                                    <span class="menu-item__text">${v.label}</span>
-                                  </button>
-                                `;
-                              }).join('')}
-                            </div>
-                          </div>
+            ${templateVariants ? `
+            <div class="modal-canvas-panel" data-ref="panel-category-template" style="${activeCategory === 'template' ? '' : 'display: none;'}">
+              <div class="creation-category-section" data-ref="section-template-variants">
+                <h3 class="creation-category-section__title">Resoluciones disponibles de la plantilla</h3>
+                <div class="creation-cards-grid" data-ref="grid-template-variants">
+                  ${templateVariants.map((v) => `
+                    <button type="button" class="creation-card" data-ref="card-template-${v.width}x${v.height}" data-type="template-variant" data-w="${v.width}" data-h="${v.height}" data-img="${v.imagePath || ''}">
+                      <div class="creation-card__thumbnail" data-ref="thumb-card-tpl-${v.width}">
+                        <div class="creation-card__svg-wrapper" data-ref="svg-card-tpl-${v.width}">
+                          ${getTemplateVariantSvg(v.width, v.height, v.imagePath)}
                         </div>
+                        <span class="creation-card__badge" data-ref="badge-card-tpl-${v.width}">${v.width} × ${v.height} px</span>
                       </div>
-                    </div>
-                  </div>
+                      <div class="creation-card__info" data-ref="info-card-tpl-${v.width}">
+                        <h4 class="creation-card__title" data-ref="title-card-tpl-${v.width}">${v.label || `${v.width} × ${v.height} px`}</h4>
+                        <p class="creation-card__meta" data-ref="meta-card-tpl-${v.width}">Plantilla de lienzo</p>
+                      </div>
+                    </button>
+                  `).join('')}
                 </div>
-                <input class="hidden" data-ref="input-canvas-width" type="hidden" value="${currentWidth}" />
-                <input class="hidden" data-ref="input-canvas-height" type="hidden" value="${currentHeight}" />
-                ` : `
-                <div class="settings-group" data-ref="group-canvas-creation-type">
-                  <div class="settings-item" data-ref="item-canvas-creation-type">
-                    <div class="settings-item__content" data-ref="content-canvas-creation-type">
-                      <div class="settings-item__text" data-ref="text-canvas-creation-type">
-                        <h2 class="settings-item__title" data-ref="title-canvas-creation-type">Tipo de espacio</h2>
-                        <p class="settings-item__desc" data-ref="desc-canvas-creation-type">Elige entre pizarrón libre, esquemas y diagramas, o lienzo pixel art.</p>
-                      </div>
+              </div>
+            </div>
+            ` : ''}
+
+            <div class="modal-canvas-panel" data-ref="panel-category-board" style="${activeCategory === 'board' ? '' : 'display: none;'}">
+              <div class="creation-cards-grid" data-ref="grid-boards">
+                <button type="button" class="creation-card" data-ref="card-board-dots" data-type="board" data-bg="dots" data-color="#ffffff">
+                  <div class="creation-card__thumbnail" data-ref="thumb-board-dots">
+                    <div class="creation-card__svg-wrapper" data-ref="svg-board-dots">
+                      ${getBoardSvg('dots')}
                     </div>
-                    <div class="settings-item__actions" data-ref="actions-canvas-creation-type">
-                      <div class="settings-dropdown-wrapper settings-dropdown-wrapper--w-320" data-ref="dropdown-wrapper-creation-type">
-                        <button type="button" class="dropdown-trigger" data-ref="btn-trigger-creation-type" aria-label="Tipo de espacio">
-                          <div class="dropdown-trigger__left" data-ref="creation-type-trigger-left">
-                            <span class="material-symbols-rounded dropdown-trigger__icon" data-ref="creation-type-selected-icon">${selectedCreationType === 'board' ? 'space_dashboard' : (selectedCreationType === 'diagram' ? 'psychology' : 'grid_on')}</span>
-                            <span class="dropdown-trigger__text" data-ref="creation-type-selected-text">${selectedCreationType === 'board' ? 'Pizarrón virtual' : (selectedCreationType === 'diagram' ? 'Diagramas y Esquemas' : 'Lienzo (Pixelart)')}</span>
-                          </div>
-                          <span class="material-symbols-rounded dropdown-trigger__chevron" data-ref="creation-type-chevron">expand_more</span>
-                        </button>
-                        <div class="dropdown-backdrop" data-ref="dropdown-backdrop-creation-type">
-                          <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-creation-type">
-                            <div class="menu-panel__drag-zone" data-ref="drag-zone-creation-type" aria-hidden="true">
-                              <div class="menu-panel__drag-handle"></div>
-                            </div>
-                            <div class="menu-panel__list" data-ref="list-creation-type">
-                              <button type="button" class="menu-item${selectedCreationType === 'board' ? ' is-active' : ''}" data-ref="option-creation-board" data-value="board">
-                                <span class="material-symbols-rounded menu-item__icon">space_dashboard</span>
-                                <span class="menu-item__text">Pizarrón virtual</span>
-                              </button>
-                              <button type="button" class="menu-item${selectedCreationType === 'diagram' ? ' is-active' : ''}" data-ref="option-creation-diagram" data-value="diagram">
-                                <span class="material-symbols-rounded menu-item__icon">psychology</span>
-                                <span class="menu-item__text">Diagramas y Esquemas</span>
-                              </button>
-                              <button type="button" class="menu-item${selectedCreationType === 'pixel' ? ' is-active' : ''}" data-ref="option-creation-pixel" data-value="pixel">
-                                <span class="material-symbols-rounded menu-item__icon">grid_on</span>
-                                <span class="menu-item__text">Lienzo (Pixelart)</span>
-                              </button>
-                            </div>
-                          </div>
+                    <span class="creation-card__badge creation-card__badge--popular" data-ref="badge-board-dots">Estándar</span>
+                  </div>
+                  <div class="creation-card__info" data-ref="info-board-dots">
+                    <h4 class="creation-card__title" data-ref="title-board-dots">Pizarrón Infinito</h4>
+                    <p class="creation-card__meta" data-ref="meta-board-dots">Fondo blanco • Cuadrícula de puntos</p>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            <div class="modal-canvas-panel" data-ref="panel-category-diagram" style="${activeCategory === 'diagram' ? '' : 'display: none;'}">
+              <div class="template-variants-pills" data-ref="diagram-category-pills" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; width: 100%;">
+                ${DIAGRAM_CATEGORIES.map((cat) => `
+                  <button type="button" class="template-variant-pill${cat.id === 'all' ? ' is-active' : ''}" data-ref="btn-diag-cat-${cat.id}" data-category="${cat.id}">
+                    <span class="material-symbols-rounded" style="font-size: 16px; margin-right: 4px;">${cat.icon}</span>
+                    <span>${cat.name}</span>
+                  </button>
+                `).join('')}
+              </div>
+
+              <div class="creation-cards-grid" data-ref="grid-diagrams">
+                ${DIAGRAM_SUBTYPES.map((sub) => `
+                  <button type="button" class="creation-card" data-ref="card-diagram-${sub.id}" data-type="diagram" data-subtype="${sub.id}" data-category="${sub.category}">
+                    <div class="creation-card__thumbnail" data-ref="thumb-diag-${sub.id}">
+                      <div class="creation-card__svg-wrapper" data-ref="svg-diag-${sub.id}">
+                        ${getDiagramSvg(sub.id)}
+                      </div>
+                      ${sub.badge ? `<span class="creation-card__badge ${sub.badge === 'Popular' ? 'creation-card__badge--popular' : ''}" data-ref="badge-diag-${sub.id}">${sub.badge}</span>` : ''}
+                    </div>
+                    <div class="creation-card__info" data-ref="info-diag-${sub.id}">
+                      <h4 class="creation-card__title" data-ref="title-diag-${sub.id}">${sub.name}</h4>
+                      <p class="creation-card__meta" data-ref="meta-diag-${sub.id}">${sub.description}</p>
+                    </div>
+                  </button>
+                `).join('')}
+              </div>
+            </div>
+
+            <div class="modal-canvas-panel" data-ref="panel-category-doc" style="${activeCategory === 'doc' ? '' : 'display: none;'}">
+              <div class="creation-category-section" data-ref="section-doc-paper-sizes">
+                <h3 class="creation-category-section__title">Formatos de papel estándar</h3>
+                <div class="creation-cards-grid" data-ref="grid-doc-papers">
+                  <button type="button" class="creation-card" data-ref="card-doc-digital" data-type="doc" data-paper="digital" data-template="blank">
+                    <div class="creation-card__thumbnail" data-ref="thumb-doc-digital">
+                      <div class="creation-card__svg-wrapper" data-ref="svg-doc-digital">
+                        ${getDocSvg('digital')}
+                      </div>
+                      <span class="creation-card__badge creation-card__badge--popular" data-ref="badge-doc-digital">Recomendado</span>
+                    </div>
+                    <div class="creation-card__info" data-ref="info-doc-digital">
+                      <h4 class="creation-card__title" data-ref="title-doc-digital">Doc (Digital)</h4>
+                      <p class="creation-card__meta" data-ref="meta-doc-digital">Lienzo continuo adaptable</p>
+                    </div>
+                  </button>
+
+                  <button type="button" class="creation-card" data-ref="card-doc-a4" data-type="doc" data-paper="a4" data-template="blank">
+                    <div class="creation-card__thumbnail" data-ref="thumb-doc-a4">
+                      <div class="creation-card__svg-wrapper" data-ref="svg-doc-a4">
+                        ${getDocSvg('a4')}
+                      </div>
+                      <span class="creation-card__badge" data-ref="badge-doc-a4">ISO 216</span>
+                    </div>
+                    <div class="creation-card__info" data-ref="info-doc-a4">
+                      <h4 class="creation-card__title" data-ref="title-doc-a4">Doc (A4)</h4>
+                      <p class="creation-card__meta" data-ref="meta-doc-a4">21 × 29.7 cm • Informes y cartas</p>
+                    </div>
+                  </button>
+
+                  <button type="button" class="creation-card" data-ref="card-doc-letter" data-type="doc" data-paper="letter" data-template="blank">
+                    <div class="creation-card__thumbnail" data-ref="thumb-doc-letter">
+                      <div class="creation-card__svg-wrapper" data-ref="svg-doc-letter">
+                        ${getDocSvg('letter')}
+                      </div>
+                      <span class="creation-card__badge" data-ref="badge-doc-letter">Carta</span>
+                    </div>
+                    <div class="creation-card__info" data-ref="info-doc-letter">
+                      <h4 class="creation-card__title" data-ref="title-doc-letter">Doc (Carta)</h4>
+                      <p class="creation-card__meta" data-ref="meta-doc-letter">8.5 × 11 in • Estándar América</p>
+                    </div>
+                  </button>
+
+                  <button type="button" class="creation-card" data-ref="card-doc-a3" data-type="doc" data-paper="a3" data-template="blank">
+                    <div class="creation-card__thumbnail" data-ref="thumb-doc-a3">
+                      <div class="creation-card__svg-wrapper" data-ref="svg-doc-a3">
+                        ${getDocSvg('a3')}
+                      </div>
+                      <span class="creation-card__badge" data-ref="badge-doc-a3">Gran Formato</span>
+                    </div>
+                    <div class="creation-card__info" data-ref="info-doc-a3">
+                      <h4 class="creation-card__title" data-ref="title-doc-a3">Doc (A3)</h4>
+                      <p class="creation-card__meta" data-ref="meta-doc-a3">29.7 × 42 cm • Tablas y esquemas</p>
+                    </div>
+                  </button>
+
+                  <button type="button" class="creation-card" data-ref="card-doc-legal" data-type="doc" data-paper="legal" data-template="blank">
+                    <div class="creation-card__thumbnail" data-ref="thumb-doc-legal">
+                      <div class="creation-card__svg-wrapper" data-ref="svg-doc-legal">
+                        ${getDocSvg('legal')}
+                      </div>
+                      <span class="creation-card__badge" data-ref="badge-doc-legal">Legal</span>
+                    </div>
+                    <div class="creation-card__info" data-ref="info-doc-legal">
+                      <h4 class="creation-card__title" data-ref="title-doc-legal">Doc (Oficio)</h4>
+                      <p class="creation-card__meta" data-ref="meta-doc-legal">8.5 × 14 in • Contratos y acuerdos</p>
+                    </div>
+                  </button>
+
+                  <button type="button" class="creation-card" data-ref="card-doc-a5" data-type="doc" data-paper="a5" data-template="blank">
+                    <div class="creation-card__thumbnail" data-ref="thumb-doc-a5">
+                      <div class="creation-card__svg-wrapper" data-ref="svg-doc-a5">
+                        ${getDocSvg('a5')}
+                      </div>
+                      <span class="creation-card__badge" data-ref="badge-doc-a5">Compacto</span>
+                    </div>
+                    <div class="creation-card__info" data-ref="info-doc-a5">
+                      <h4 class="creation-card__title" data-ref="title-doc-a5">Doc (A5)</h4>
+                      <p class="creation-card__meta" data-ref="meta-doc-a5">14.8 × 21 cm • Folletos y notas</p>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              <div class="creation-category-section" data-ref="section-doc-templates">
+                <h3 class="creation-category-section__title">Plantillas iniciales estructuradas</h3>
+                <div class="creation-cards-grid" data-ref="grid-doc-templates">
+                  ${DOC_TEMPLATES.filter((t) => t.id !== 'blank').map((tpl) => `
+                    <button type="button" class="creation-card" data-ref="card-doc-tpl-${tpl.id}" data-type="doc" data-paper="letter" data-template="${tpl.id}">
+                      <div class="creation-card__thumbnail" data-ref="thumb-doc-tpl-${tpl.id}">
+                        <div class="creation-card__svg-wrapper" data-ref="svg-doc-tpl-${tpl.id}">
+                          ${getDocTemplateSvg(tpl.id)}
                         </div>
+                        ${tpl.badge ? `<span class="creation-card__badge creation-card__badge--popular" data-ref="badge-doc-tpl-${tpl.id}">${tpl.badge}</span>` : ''}
                       </div>
+                      <div class="creation-card__info" data-ref="info-doc-tpl-${tpl.id}">
+                        <h4 class="creation-card__title" data-ref="title-doc-tpl-${tpl.id}">${tpl.name}</h4>
+                        <p class="creation-card__meta" data-ref="meta-doc-tpl-${tpl.id}">${tpl.description}</p>
+                      </div>
+                    </button>
+                  `).join('')}
+                </div>
+              </div>
+            </div>
+
+            <div class="modal-canvas-panel" data-ref="panel-category-pixel" style="${activeCategory === 'pixel' ? '' : 'display: none;'}">
+              <div class="creation-cards-grid" data-ref="grid-pixel-presets">
+                <button type="button" class="creation-card" data-ref="card-pixel-infinite" data-type="pixel-infinite">
+                  <div class="creation-card__thumbnail" data-ref="thumb-pixel-infinite">
+                    <div class="creation-card__svg-wrapper" data-ref="svg-pixel-infinite">
+                      ${getPixelSvg('pixel-infinite')}
+                    </div>
+                    <span class="creation-card__badge creation-card__badge--popular" data-ref="badge-pixel-infinite">Infinito</span>
+                  </div>
+                  <div class="creation-card__info" data-ref="info-pixel-infinite">
+                    <h4 class="creation-card__title" data-ref="title-pixel-infinite">Lienzo Infinito</h4>
+                    <p class="creation-card__meta" data-ref="meta-pixel-infinite">Expansión continua por chunks</p>
+                  </div>
+                </button>
+
+                <button type="button" class="creation-card" data-ref="card-pixel-16" data-type="pixel-fixed" data-w="16" data-h="16">
+                  <div class="creation-card__thumbnail" data-ref="thumb-pixel-16">
+                    <div class="creation-card__svg-wrapper" data-ref="svg-pixel-16">
+                      ${getPixelSvg('fixed', 16)}
+                    </div>
+                    <span class="creation-card__badge" data-ref="badge-pixel-16">16 × 16 px</span>
+                  </div>
+                  <div class="creation-card__info" data-ref="info-pixel-16">
+                    <h4 class="creation-card__title" data-ref="title-pixel-16">Sprite Diminuto</h4>
+                    <p class="creation-card__meta" data-ref="meta-pixel-16">16 × 16 px • Iconos y favicons</p>
+                  </div>
+                </button>
+
+                <button type="button" class="creation-card" data-ref="card-pixel-32" data-type="pixel-fixed" data-w="32" data-h="32">
+                  <div class="creation-card__thumbnail" data-ref="thumb-pixel-32">
+                    <div class="creation-card__svg-wrapper" data-ref="svg-pixel-32">
+                      ${getPixelSvg('fixed', 32)}
+                    </div>
+                    <span class="creation-card__badge creation-card__badge--popular" data-ref="badge-pixel-32">Popular</span>
+                  </div>
+                  <div class="creation-card__info" data-ref="info-pixel-32">
+                    <h4 class="creation-card__title" data-ref="title-pixel-32">Sprite Clásico</h4>
+                    <p class="creation-card__meta" data-ref="meta-pixel-32">32 × 32 px • Personajes 16-bit</p>
+                  </div>
+                </button>
+
+                <button type="button" class="creation-card" data-ref="card-pixel-64" data-type="pixel-fixed" data-w="64" data-h="64">
+                  <div class="creation-card__thumbnail" data-ref="thumb-pixel-64">
+                    <div class="creation-card__svg-wrapper" data-ref="svg-pixel-64">
+                      ${getPixelSvg('fixed', 64)}
+                    </div>
+                    <span class="creation-card__badge" data-ref="badge-pixel-64">Estándar</span>
+                  </div>
+                  <div class="creation-card__info" data-ref="info-pixel-64">
+                    <h4 class="creation-card__title" data-ref="title-pixel-64">Lienzo 64 × 64</h4>
+                    <p class="creation-card__meta" data-ref="meta-pixel-64">64 × 64 px • Avatares y retratos</p>
+                  </div>
+                </button>
+
+                <button type="button" class="creation-card" data-ref="card-pixel-128" data-type="pixel-fixed" data-w="128" data-h="128">
+                  <div class="creation-card__thumbnail" data-ref="thumb-pixel-128">
+                    <div class="creation-card__svg-wrapper" data-ref="svg-pixel-128">
+                      ${getPixelSvg('fixed', 128)}
+                    </div>
+                    <span class="creation-card__badge" data-ref="badge-pixel-128">128 × 128 px</span>
+                  </div>
+                  <div class="creation-card__info" data-ref="info-pixel-128">
+                    <h4 class="creation-card__title" data-ref="title-pixel-128">Resolución Media</h4>
+                    <p class="creation-card__meta" data-ref="meta-pixel-128">128 × 128 px • Sprites y fondos</p>
+                  </div>
+                </button>
+
+                <button type="button" class="creation-card" data-ref="card-pixel-256" data-type="pixel-fixed" data-w="256" data-h="256">
+                  <div class="creation-card__thumbnail" data-ref="thumb-pixel-256">
+                    <div class="creation-card__svg-wrapper" data-ref="svg-pixel-256">
+                      ${getPixelSvg('fixed', 256)}
+                    </div>
+                    <span class="creation-card__badge" data-ref="badge-pixel-256">256 × 256 px</span>
+                  </div>
+                  <div class="creation-card__info" data-ref="info-pixel-256">
+                    <h4 class="creation-card__title" data-ref="title-pixel-256">Ilustración Grande</h4>
+                    <p class="creation-card__meta" data-ref="meta-pixel-256">256 × 256 px • Concept art HD</p>
+                  </div>
+                </button>
+
+                <button type="button" class="creation-card" data-ref="card-pixel-512" data-type="pixel-fixed" data-w="512" data-h="512">
+                  <div class="creation-card__thumbnail" data-ref="thumb-pixel-512">
+                    <div class="creation-card__svg-wrapper" data-ref="svg-pixel-512">
+                      ${getPixelSvg('fixed', 512)}
+                    </div>
+                    <span class="creation-card__badge" data-ref="badge-pixel-512">512 × 512 px</span>
+                  </div>
+                  <div class="creation-card__info" data-ref="info-pixel-512">
+                    <h4 class="creation-card__title" data-ref="title-pixel-512">Alta Resolución</h4>
+                    <p class="creation-card__meta" data-ref="meta-pixel-512">512 × 512 px • Gran formato</p>
+                  </div>
+                </button>
+
+                <button type="button" class="creation-card creation-card--custom" data-ref="btn-trigger-custom-size">
+                  <div class="creation-card__thumbnail" data-ref="thumb-pixel-custom">
+                    <div class="creation-card__svg-wrapper" data-ref="svg-pixel-custom">
+                      ${getPixelSvg('custom')}
+                    </div>
+                    <span class="creation-card__badge creation-card__badge--popular" data-ref="badge-pixel-custom">Personalizado</span>
+                  </div>
+                  <div class="creation-card__info" data-ref="info-pixel-custom">
+                    <h4 class="creation-card__title" data-ref="title-pixel-custom">Elegir tamaño a medida...</h4>
+                    <p class="creation-card__meta" data-ref="meta-pixel-custom">Resolución y fondo personalizados</p>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            <div class="modal-canvas-panel" data-ref="panel-pixel-custom-form" style="display: none;">
+              <div class="modal-canvas-panel__form" data-ref="form-pixel-custom">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                  <button type="button" class="component-button component-button--h36 component-button--outline" data-ref="btn-back-to-pixel-presets">
+                    <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+                    <span>Volver a tamaños rápidos</span>
+                  </button>
+                </div>
+
+                <div class="settings-group" data-ref="group-custom-name">
+                  <div class="settings-item" data-ref="item-custom-name">
+                    <div class="settings-item__content" data-ref="content-custom-name">
+                      <div class="settings-item__text" data-ref="text-custom-name">
+                        <h2 class="settings-item__title" data-ref="title-custom-name">Nombre del lienzo</h2>
+                        <p class="settings-item__desc" data-ref="desc-custom-name">Identificador de tu proyecto (opcional).</p>
+                      </div>
+                    </div>
+                    <div class="settings-item__actions" data-ref="actions-custom-name">
+                      <input class="modal-canvas-panel__name-input" data-ref="input-custom-name" type="text" placeholder="Lienzo sin título" value="" maxlength="100" autocomplete="off" />
                     </div>
                   </div>
                 </div>
 
-                <div class="settings-group" data-ref="group-diagram-subtypes" style="${selectedCreationType === 'diagram' ? '' : 'display: none;'}">
-                  <div class="settings-item" data-ref="item-diagram-subtypes">
-                    <div class="settings-item__content" data-ref="content-diagram-subtypes">
-                      <div class="settings-item__text" data-ref="text-diagram-subtypes">
-                        <h2 class="settings-item__title" data-ref="title-diagram-subtypes">Tipo de esquema</h2>
-                        <p class="settings-item__desc" data-ref="desc-diagram-subtypes">Selecciona la estructura visual que deseas crear según tu objetivo.</p>
+                <div class="settings-group" data-ref="group-custom-width">
+                  <div class="settings-item" data-ref="item-custom-width">
+                    <div class="settings-item__content" data-ref="content-custom-width">
+                      <div class="settings-item__text" data-ref="text-custom-width">
+                        <h2 class="settings-item__title" data-ref="title-custom-width">Ancho (PX)</h2>
+                        <p class="settings-item__desc" data-ref="desc-custom-width">Dimensión horizontal del lienzo.</p>
                       </div>
                     </div>
-                  </div>
-                  <div class="settings-item" data-ref="item-diagram-cards" style="padding-top: 0; flex-direction: column; align-items: stretch;">
-                    <div class="template-variants-pills" data-ref="diagram-category-pills" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; width: 100%;">
-                      ${DIAGRAM_CATEGORIES.map((cat) => `
-                        <button type="button" class="template-variant-pill${cat.id === 'all' ? ' is-active' : ''}" data-ref="btn-diag-cat-${cat.id}" data-category="${cat.id}">
-                          <span class="material-symbols-rounded" style="font-size: 16px; margin-right: 4px;">${cat.icon}</span>
-                          <span>${cat.name}</span>
-                        </button>
-                      `).join('')}
-                    </div>
-                    <div class="diagram-subtypes-grid" data-ref="diagram-subtypes-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; width: 100%;">
-                      ${DIAGRAM_SUBTYPES.map((sub) => `
-                        <button type="button" class="template-variant-pill${sub.id === selectedDiagramSubtype ? ' is-active' : ''}${!sub.isEnabled ? ' is-disabled' : ''}" data-ref="btn-subtype-${sub.id}" data-subtype="${sub.id}" data-category="${sub.category}" style="display: flex; flex-direction: column; align-items: flex-start; padding: 12px; height: auto; text-align: left; position: relative; ${!sub.isEnabled ? 'opacity: 0.6; cursor: not-allowed;' : ''}">
-                          <div style="display: flex; align-items: center; gap: 8px; width: 100%; margin-bottom: 4px;">
-                            <span class="material-symbols-rounded" style="font-size: 20px;">${sub.icon}</span>
-                            <strong style="font-size: 13px;">${sub.name}</strong>
-                            ${sub.badge ? `<span style="margin-left: auto; font-size: 10px; padding: 2px 6px; background: rgba(255,255,255,0.1); border-radius: 4px; font-weight: normal;">${sub.badge}</span>` : ''}
-                          </div>
-                          <p style="font-size: 11px; margin: 0; color: var(--color-text-muted, #94a3b8); line-height: 1.3;">${sub.description}</p>
-                        </button>
-                      `).join('')}
-                    </div>
-                  </div>
-                </div>
-
-                <div class="settings-group" data-ref="group-mindmap-root-text" style="${selectedCreationType === 'diagram' ? '' : 'display: none;'}">
-                  <div class="settings-item" data-ref="item-mindmap-root-text">
-                    <div class="settings-item__content" data-ref="content-mindmap-root-text">
-                      <div class="settings-item__text" data-ref="text-mindmap-root-text">
-                        <h2 class="settings-item__title" data-ref="title-mindmap-root-text">Idea o Concepto Central</h2>
-                        <p class="settings-item__desc" data-ref="desc-mindmap-root-text">El tema raíz desde el cual se ramificarán todas las ideas.</p>
-                      </div>
-                    </div>
-                    <div class="settings-item__actions" data-ref="actions-mindmap-root-text">
-                      <input class="modal-canvas-panel__name-input" data-ref="input-mindmap-root" type="text" placeholder="Idea Principal" value="Idea Principal" maxlength="80" autocomplete="off" />
-                    </div>
-                  </div>
-                </div>
-
-                <div class="settings-group" data-ref="group-mindmap-line-style" style="${selectedCreationType === 'diagram' ? '' : 'display: none;'}">
-                  <div class="settings-item" data-ref="item-mindmap-line-style">
-                    <div class="settings-item__content" data-ref="content-mindmap-line-style">
-                      <div class="settings-item__text" data-ref="text-mindmap-line-style">
-                        <h2 class="settings-item__title" data-ref="title-mindmap-line-style">Estilo de ramificación</h2>
-                        <p class="settings-item__desc" data-ref="desc-mindmap-line-style">Curvatura de las líneas conectoras del árbol mental.</p>
-                      </div>
-                    </div>
-                    <div class="settings-item__actions" data-ref="actions-mindmap-line-style">
-                      <div class="template-variants-pills" data-ref="mindmap-line-pills">
-                        <button type="button" class="template-variant-pill is-active" data-ref="btn-line-curved" data-line="curved">
-                          <span class="material-symbols-rounded" style="font-size: 16px; margin-right: 4px;">gesture</span>
-                          <span>Curvas</span>
-                        </button>
-                        <button type="button" class="template-variant-pill" data-ref="btn-line-orthogonal" data-line="orthogonal">
-                          <span class="material-symbols-rounded" style="font-size: 16px; margin-right: 4px;">alt_route</span>
-                          <span>Ortogonales</span>
-                        </button>
-                        <button type="button" class="template-variant-pill" data-ref="btn-line-straight" data-line="straight">
-                          <span class="material-symbols-rounded" style="font-size: 16px; margin-right: 4px;">horizontal_rule</span>
-                          <span>Rectas</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="settings-group" data-ref="group-canvas-mode" style="${selectedCreationType === 'pixel' ? '' : 'display: none;'}">
-                  <div class="settings-item" data-ref="item-canvas-mode">
-                    <div class="settings-item__content" data-ref="content-canvas-mode">
-                      <div class="settings-item__text" data-ref="text-canvas-mode">
-                        <h2 class="settings-item__title" data-ref="title-canvas-mode">Tipo de lienzo</h2>
-                        <p class="settings-item__desc" data-ref="desc-canvas-mode">Elige entre dimensiones fijas tradicionales o un espacio libre infinito.</p>
-                      </div>
-                    </div>
-                    <div class="settings-item__actions" data-ref="actions-canvas-mode">
-                      <div class="template-variants-pills" data-ref="canvas-mode-pills">
-                        <button type="button" class="template-variant-pill is-active" data-ref="btn-mode-fixed" data-mode="fixed">
-                          <span class="material-symbols-rounded" style="font-size: 16px; margin-right: 4px;">crop_free</span>
-                          <span>Dimensiones fijas</span>
-                        </button>
-                        <button type="button" class="template-variant-pill" data-ref="btn-mode-infinite" data-mode="infinite">
-                          <span class="material-symbols-rounded" style="font-size: 16px; margin-right: 4px;">all_inclusive</span>
-                          <span>Lienzo Infinito</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="settings-group" data-ref="group-infinite-info" style="display: none;">
-                  <div class="settings-item" data-ref="item-infinite-info">
-                    <div class="settings-item__content" data-ref="content-infinite-info">
-                      <div class="settings-item__text" data-ref="text-infinite-info">
-                        <h2 class="settings-item__title" data-ref="title-infinite-info">Espacio Infinito Dinámico</h2>
-                        <p class="settings-item__desc" data-ref="desc-infinite-info">Sin límites de bordes ni resolución máxima. El lienzo se expande automáticamente mediante chunks de 256×256 px en cualquier dirección.</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="settings-group" data-ref="custom-size-group-width" style="${selectedCreationType === 'pixel' ? '' : 'display: none;'}">
-                  <div class="settings-item" data-ref="custom-size-item-width">
-                    <div class="settings-item__content" data-ref="custom-size-width-content">
-                      <div class="settings-item__text" data-ref="custom-size-width-text">
-                        <h2 class="settings-item__title" data-ref="custom-size-width-title" data-i18n="canvas.canvas_width_title">${t('canvas.canvas_width_title')}</h2>
-                        <p class="settings-item__desc" data-ref="custom-size-width-desc" data-i18n="canvas.canvas_width_desc">${t('canvas.canvas_width_desc')}</p>
-                      </div>
-                    </div>
-                    <div class="settings-item__actions" data-ref="custom-size-width-actions">
-                      <div class="component-inline-control component-inline-control--fixed" data-ref="inline-control-width">
-                        <div class="component-inline-control__group" data-ref="inline-group-width-dec">
-                          <button type="button" class="component-inline-control__btn" data-ref="btn-width-dec-large" data-tooltip="-16 px" aria-label="Disminuir 16 píxeles">
+                    <div class="settings-item__actions" data-ref="actions-custom-width">
+                      <div class="component-inline-control component-inline-control--fixed" data-ref="inline-control-custom-width">
+                        <div class="component-inline-control__group" data-ref="group-width-dec">
+                          <button type="button" class="component-inline-control__btn" data-ref="btn-custom-w-dec-large" data-tooltip="-16 px" aria-label="Disminuir 16 píxeles">
                             <span class="material-symbols-rounded">keyboard_double_arrow_left</span>
                           </button>
-                          <button type="button" class="component-inline-control__btn" data-ref="btn-width-dec" data-tooltip="-1 px" aria-label="Disminuir 1 píxel">
+                          <button type="button" class="component-inline-control__btn" data-ref="btn-custom-w-dec" data-tooltip="-1 px" aria-label="Disminuir 1 píxel">
                             <span class="material-symbols-rounded">chevron_left</span>
                           </button>
                         </div>
-                        <input class="component-inline-control__input" data-ref="input-canvas-width" type="number" min="1" max="16384" value="${currentWidth}" autocomplete="off" />
-                        <div class="component-inline-control__group" data-ref="inline-group-width-inc">
-                          <button type="button" class="component-inline-control__btn" data-ref="btn-width-inc" data-tooltip="+1 px" aria-label="Aumentar 1 píxel">
+                        <input class="component-inline-control__input" data-ref="input-custom-width" type="number" min="1" max="16384" value="${customWidth}" autocomplete="off" />
+                        <div class="component-inline-control__group" data-ref="group-width-inc">
+                          <button type="button" class="component-inline-control__btn" data-ref="btn-custom-w-inc" data-tooltip="+1 px" aria-label="Aumentar 1 píxel">
                             <span class="material-symbols-rounded">chevron_right</span>
                           </button>
-                          <button type="button" class="component-inline-control__btn" data-ref="btn-width-inc-large" data-tooltip="+16 px" aria-label="Aumentar 16 píxeles">
+                          <button type="button" class="component-inline-control__btn" data-ref="btn-custom-w-inc-large" data-tooltip="+16 px" aria-label="Aumentar 16 píxeles">
                             <span class="material-symbols-rounded">keyboard_double_arrow_right</span>
                           </button>
                         </div>
@@ -335,30 +442,30 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
                   </div>
                 </div>
 
-                <div class="settings-group" data-ref="custom-size-group-height" style="${selectedCreationType === 'pixel' ? '' : 'display: none;'}">
-                  <div class="settings-item" data-ref="custom-size-item-height">
-                    <div class="settings-item__content" data-ref="custom-size-height-content">
-                      <div class="settings-item__text" data-ref="custom-size-height-text">
-                        <h2 class="settings-item__title" data-ref="custom-size-height-title" data-i18n="canvas.canvas_height_title">${t('canvas.canvas_height_title')}</h2>
-                        <p class="settings-item__desc" data-ref="custom-size-height-desc" data-i18n="canvas.canvas_height_desc">${t('canvas.canvas_height_desc')}</p>
+                <div class="settings-group" data-ref="group-custom-height">
+                  <div class="settings-item" data-ref="item-custom-height">
+                    <div class="settings-item__content" data-ref="content-custom-height">
+                      <div class="settings-item__text" data-ref="text-custom-height">
+                        <h2 class="settings-item__title" data-ref="title-custom-height">Alto (PX)</h2>
+                        <p class="settings-item__desc" data-ref="desc-custom-height">Dimensión vertical del lienzo.</p>
                       </div>
                     </div>
-                    <div class="settings-item__actions" data-ref="custom-size-height-actions">
-                      <div class="component-inline-control component-inline-control--fixed" data-ref="inline-control-height">
-                        <div class="component-inline-control__group" data-ref="inline-group-height-dec">
-                          <button type="button" class="component-inline-control__btn" data-ref="btn-height-dec-large" data-tooltip="-16 px" aria-label="Disminuir 16 píxeles">
+                    <div class="settings-item__actions" data-ref="actions-custom-height">
+                      <div class="component-inline-control component-inline-control--fixed" data-ref="inline-control-custom-height">
+                        <div class="component-inline-control__group" data-ref="group-height-dec">
+                          <button type="button" class="component-inline-control__btn" data-ref="btn-custom-h-dec-large" data-tooltip="-16 px" aria-label="Disminuir 16 píxeles">
                             <span class="material-symbols-rounded">keyboard_double_arrow_left</span>
                           </button>
-                          <button type="button" class="component-inline-control__btn" data-ref="btn-height-dec" data-tooltip="-1 px" aria-label="Disminuir 1 píxel">
+                          <button type="button" class="component-inline-control__btn" data-ref="btn-custom-h-dec" data-tooltip="-1 px" aria-label="Disminuir 1 píxel">
                             <span class="material-symbols-rounded">chevron_left</span>
                           </button>
                         </div>
-                        <input class="component-inline-control__input" data-ref="input-canvas-height" type="number" min="1" max="16384" value="${currentHeight}" autocomplete="off" />
-                        <div class="component-inline-control__group" data-ref="inline-group-height-inc">
-                          <button type="button" class="component-inline-control__btn" data-ref="btn-height-inc" data-tooltip="+1 px" aria-label="Aumentar 1 píxel">
+                        <input class="component-inline-control__input" data-ref="input-custom-height" type="number" min="1" max="16384" value="${customHeight}" autocomplete="off" />
+                        <div class="component-inline-control__group" data-ref="group-height-inc">
+                          <button type="button" class="component-inline-control__btn" data-ref="btn-custom-h-inc" data-tooltip="+1 px" aria-label="Aumentar 1 píxel">
                             <span class="material-symbols-rounded">chevron_right</span>
                           </button>
-                          <button type="button" class="component-inline-control__btn" data-ref="btn-height-inc-large" data-tooltip="+16 px" aria-label="Aumentar 16 píxeles">
+                          <button type="button" class="component-inline-control__btn" data-ref="btn-custom-h-inc-large" data-tooltip="+16 px" aria-label="Aumentar 16 píxeles">
                             <span class="material-symbols-rounded">keyboard_double_arrow_right</span>
                           </button>
                         </div>
@@ -367,164 +474,102 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
                   </div>
                 </div>
 
-                <div class="settings-group" data-ref="custom-size-group-quick-presets" style="${selectedCreationType === 'pixel' ? '' : 'display: none;'}">
-                  <div class="settings-item" data-ref="custom-size-item-presets">
-                    <div class="settings-item__content" data-ref="custom-size-presets-content">
-                      <div class="settings-item__text" data-ref="custom-size-presets-text">
-                        <h2 class="settings-item__title" data-ref="custom-size-presets-title">Tamaños rápidos</h2>
-                        <p class="settings-item__desc" data-ref="custom-size-presets-desc">Establece una resolución estándar con un clic.</p>
+                <div class="settings-group" data-ref="group-custom-quick-chips">
+                  <div class="settings-item" data-ref="item-custom-quick-chips">
+                    <div class="settings-item__content" data-ref="content-custom-chips">
+                      <div class="settings-item__text" data-ref="text-custom-chips">
+                        <h2 class="settings-item__title" data-ref="title-custom-chips">Resoluciones rápidas</h2>
+                        <p class="settings-item__desc" data-ref="desc-custom-chips">Selecciona proporciones cuadradas predefinidas.</p>
                       </div>
                     </div>
-                    <div class="settings-item__actions" data-ref="custom-size-presets-actions">
-                      <div class="template-variants-pills" data-ref="quick-preset-pills">
-                        <button type="button" class="template-variant-pill" data-ref="btn-preset-16" data-w="16" data-h="16">16 × 16</button>
-                        <button type="button" class="template-variant-pill" data-ref="btn-preset-32" data-w="32" data-h="32">32 × 32</button>
-                        <button type="button" class="template-variant-pill is-active" data-ref="btn-preset-64" data-w="64" data-h="64">64 × 64</button>
-                        <button type="button" class="template-variant-pill" data-ref="btn-preset-128" data-w="128" data-h="128">128 × 128</button>
-                        <button type="button" class="template-variant-pill" data-ref="btn-preset-256" data-w="256" data-h="256">256 × 256</button>
-                        <button type="button" class="template-variant-pill" data-ref="btn-preset-512" data-w="512" data-h="512">512 × 512</button>
-                        <button type="button" class="template-variant-pill" data-ref="btn-preset-1024" data-w="1024" data-h="1024">1024 × 1024</button>
-                        <button type="button" class="template-variant-pill" data-ref="btn-preset-2048" data-w="2048" data-h="2048">2048 × 2048</button>
-                        <button type="button" class="template-variant-pill" data-ref="btn-preset-4096" data-w="4096" data-h="4096">4096 × 4096</button>
+                    <div class="settings-item__actions" data-ref="actions-custom-chips">
+                      <div class="template-variants-pills" data-ref="custom-preset-chips">
+                        <button type="button" class="template-variant-pill" data-ref="btn-custom-chip-16" data-w="16" data-h="16">16 × 16</button>
+                        <button type="button" class="template-variant-pill" data-ref="btn-custom-chip-32" data-w="32" data-h="32">32 × 32</button>
+                        <button type="button" class="template-variant-pill is-active" data-ref="btn-custom-chip-64" data-w="64" data-h="64">64 × 64</button>
+                        <button type="button" class="template-variant-pill" data-ref="btn-custom-chip-128" data-w="128" data-h="128">128 × 128</button>
+                        <button type="button" class="template-variant-pill" data-ref="btn-custom-chip-256" data-w="256" data-h="256">256 × 256</button>
+                        <button type="button" class="template-variant-pill" data-ref="btn-custom-chip-512" data-w="512" data-h="512">512 × 512</button>
                       </div>
                     </div>
                   </div>
                 </div>
-                `}
 
-                <div class="modal-canvas-panel__actions" data-ref="stage1-actions">
-                  <div class="modal-canvas-panel__actions-row" data-ref="stage1-actions-row">
+                <div class="settings-group" data-ref="group-custom-bg-type">
+                  <div class="settings-item" data-ref="item-custom-bg-type">
+                    <div class="settings-item__content" data-ref="content-custom-bg-type">
+                      <div class="settings-item__text" data-ref="text-custom-bg-type">
+                        <h2 class="settings-item__title" data-ref="title-custom-bg-type">Tipo de fondo</h2>
+                        <p class="settings-item__desc" data-ref="desc-custom-bg-type">Cuadrícula transparente o color sólido.</p>
+                      </div>
+                    </div>
+                    <div class="settings-item__actions" data-ref="actions-custom-bg-type">
+                      <div class="template-variants-pills" data-ref="custom-bg-type-pills">
+                        <button type="button" class="template-variant-pill is-active" data-ref="btn-custom-bg-trans" data-bg-type="transparent">
+                          <span class="material-symbols-rounded" style="font-size: 16px; margin-right: 4px;">opacity</span>
+                          <span>Transparente</span>
+                        </button>
+                        <button type="button" class="template-variant-pill" data-ref="btn-custom-bg-solid" data-bg-type="solid">
+                          <span class="material-symbols-rounded" style="font-size: 16px; margin-right: 4px;">format_color_fill</span>
+                          <span>Color Sólido</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="settings-group" data-ref="group-custom-bg-check">
+                  <div class="settings-item" data-ref="item-custom-bg-check">
+                    <div class="settings-item__content" data-ref="content-custom-bg-check">
+                      <div class="settings-item__text" data-ref="text-custom-bg-check">
+                        <h2 class="settings-item__title" data-ref="title-custom-bg-check">Tamaño de cuadrícula</h2>
+                        <p class="settings-item__desc" data-ref="desc-custom-bg-check">Dimensión del patrón de transparencia.</p>
+                      </div>
+                    </div>
+                    <div class="settings-item__actions" data-ref="actions-custom-bg-check">
+                      <div class="template-variants-pills" data-ref="custom-check-pills">
+                        <button type="button" class="template-variant-pill" data-ref="btn-custom-check-8" data-size="8">8 px</button>
+                        <button type="button" class="template-variant-pill is-active" data-ref="btn-custom-check-16" data-size="16">16 px</button>
+                        <button type="button" class="template-variant-pill" data-ref="btn-custom-check-32" data-size="32">32 px</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="settings-group" data-ref="group-custom-bg-color" style="display: none;">
+                  <div class="settings-item" data-ref="item-custom-bg-color">
+                    <div class="settings-item__content" data-ref="content-custom-bg-color">
+                      <div class="settings-item__text" data-ref="text-custom-bg-color">
+                        <h2 class="settings-item__title" data-ref="title-custom-bg-color">Color de fondo</h2>
+                        <p class="settings-item__desc" data-ref="desc-custom-bg-color">Selecciona color predefinido o personalizado.</p>
+                      </div>
+                    </div>
+                    <div class="settings-item__actions" data-ref="actions-custom-bg-color">
+                      <div class="template-variants-pills" data-ref="custom-color-pills" style="margin-bottom: 8px;">
+                        <button type="button" class="template-variant-pill is-active" data-ref="btn-custom-color-white" data-color="#ffffff">Blanco</button>
+                        <button type="button" class="template-variant-pill" data-ref="btn-custom-color-black" data-color="#000000">Negro</button>
+                        <button type="button" class="template-variant-pill" data-ref="btn-custom-color-picker" data-color="custom">Personalizado</button>
+                      </div>
+                      <div class="design-colors-custom-row" data-ref="custom-color-row" style="display: none;">
+                        <input class="design-color-active-input" data-ref="input-custom-bg-color" type="color" value="#ffffff" />
+                        <input class="design-colors-text-input" data-ref="input-custom-bg-color-hex" type="text" value="#ffffff" maxlength="7" placeholder="#ffffff" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="modal-canvas-panel__actions" data-ref="custom-pixel-actions">
+                  <div class="modal-canvas-panel__actions-row" data-ref="custom-pixel-actions-row">
                     <div></div>
-                    <button type="button" class="component-button component-button--h44 component-button--black" data-ref="btn-stage1-create-board" style="${selectedCreationType === 'board' ? '' : 'display: none;'}">
-                      <span class="material-symbols-rounded" style="margin-right: 6px;">space_dashboard</span>
-                      <span>Crear pizarrón</span>
-                    </button>
-                    <button type="button" class="component-button component-button--h44 component-button--black" data-ref="btn-stage1-create-diagram" style="${selectedCreationType === 'diagram' ? '' : 'display: none;'}">
-                      <span class="material-symbols-rounded" style="margin-right: 6px;">psychology</span>
-                      <span>Crear mapa mental</span>
-                    </button>
-                    <button type="button" class="component-button component-button--h44 component-button--black" data-ref="btn-stage1-next" style="${selectedCreationType === 'pixel' ? '' : 'display: none;'}">
-                      <span>${t('canvas.btn_next')}</span>
-                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+                    <button type="button" class="component-button component-button--h44 component-button--black" data-ref="btn-submit-custom-pixel">
+                      <span>Crear lienzo</span>
                     </button>
                   </div>
-                  <div class="banner banner--danger" data-ref="create-canvas-error-stage1" style="display: none;"></div>
-                  <div class="banner banner--warning" data-ref="huge-canvas-warning" style="display: none; margin-top: 10px;"></div>
                 </div>
               </div>
             </div>
 
-            <div class="modal-canvas-panel" data-ref="panel-stage-background" style="display: none;">
-              <div class="modal-canvas-panel__form" data-ref="form-stage-background">
-                <div class="settings-group" data-ref="custom-size-group-preview">
-                  <div class="settings-item" data-ref="custom-size-item-preview">
-                    <div class="settings-item__content" data-ref="custom-size-preview-content">
-                      <div class="settings-item__text" data-ref="custom-size-preview-text">
-                        <h2 class="settings-item__title" data-ref="custom-size-preview-title">Previsualización del fondo</h2>
-                        <p class="settings-item__desc" data-ref="custom-size-preview-desc">Vista previa en tiempo real de la base de dibujo.</p>
-                      </div>
-                    </div>
-                    <div class="settings-item__actions" data-ref="custom-size-preview-actions" style="width: 220px;">
-                      <div class="bg-live-preview is-check-16" data-ref="bg-live-preview">
-                        <span class="bg-live-preview__label" data-ref="bg-live-preview-label">Transparente (16px)</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="settings-group" data-ref="custom-size-group-background">
-                  <div class="settings-item" data-ref="custom-size-item-background">
-                    <div class="settings-item__content" data-ref="custom-size-bg-content">
-                      <div class="settings-item__text" data-ref="custom-size-bg-text">
-                        <h2 class="settings-item__title" data-ref="custom-size-bg-title">Tipo de fondo</h2>
-                        <p class="settings-item__desc" data-ref="custom-size-bg-desc">Elige entre fondo transparente de tablero o color sólido.</p>
-                      </div>
-                    </div>
-                    <div class="settings-item__actions" data-ref="custom-size-bg-actions">
-                      <div class="settings-dropdown-wrapper settings-dropdown-wrapper--w-320" data-ref="dropdown-wrapper-bg-type">
-                        <button type="button" class="dropdown-trigger" data-ref="btn-trigger-bg-type" aria-label="Tipo de fondo">
-                          <div class="dropdown-trigger__left" data-ref="bg-type-trigger-left">
-                            <span class="material-symbols-rounded dropdown-trigger__icon" data-ref="bg-type-selected-icon">opacity</span>
-                            <span class="dropdown-trigger__text" data-ref="bg-type-selected-text">Transparente</span>
-                          </div>
-                          <span class="material-symbols-rounded dropdown-trigger__chevron" data-ref="bg-type-chevron">expand_more</span>
-                        </button>
-                        <div class="dropdown-backdrop" data-ref="dropdown-backdrop-bg-type">
-                          <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-bg-type">
-                            <div class="menu-panel__drag-zone" data-ref="drag-zone-bg-type" aria-hidden="true">
-                              <div class="menu-panel__drag-handle"></div>
-                            </div>
-                            <div class="menu-panel__list" data-ref="list-bg-type">
-                              <button type="button" class="menu-item is-active" data-ref="option-bg-type-transparent" data-value="transparent">
-                                <span class="material-symbols-rounded menu-item__icon">opacity</span>
-                                <span class="menu-item__text">Transparente</span>
-                              </button>
-                              <button type="button" class="menu-item" data-ref="option-bg-type-solid" data-value="solid">
-                                <span class="material-symbols-rounded menu-item__icon">format_color_fill</span>
-                                <span class="menu-item__text">Color Sólido</span>
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="settings-group" data-ref="custom-size-group-bg-transparent">
-                  <div class="settings-item" data-ref="custom-size-item-bg-check">
-                    <div class="settings-item__content" data-ref="custom-size-check-content">
-                      <div class="settings-item__text" data-ref="custom-size-check-text">
-                        <h2 class="settings-item__title" data-ref="custom-size-check-title">Tamaño de cuadrícula</h2>
-                        <p class="settings-item__desc" data-ref="custom-size-check-desc">Tamaño de los cuadros del patrón transparente.</p>
-                      </div>
-                    </div>
-                    <div class="settings-item__actions" data-ref="custom-size-check-actions">
-                      <div class="template-variants-pills" data-ref="bg-checksize-pills">
-                        <button type="button" class="template-variant-pill" data-ref="btn-check-8" data-size="8">8 px</button>
-                        <button type="button" class="template-variant-pill is-active" data-ref="btn-check-16" data-size="16">16 px</button>
-                        <button type="button" class="template-variant-pill" data-ref="btn-check-32" data-size="32">32 px</button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="settings-group" data-ref="custom-size-group-bg-solid" style="display: none;">
-                  <div class="settings-item" data-ref="custom-size-item-bg-color">
-                    <div class="settings-item__content" data-ref="custom-size-solid-content">
-                      <div class="settings-item__text" data-ref="custom-size-solid-text">
-                        <h2 class="settings-item__title" data-ref="custom-size-solid-title">Color de fondo</h2>
-                        <p class="settings-item__desc" data-ref="custom-size-solid-desc">Selecciona un color predeterminado o personalizado.</p>
-                      </div>
-                    </div>
-                    <div class="settings-item__actions" data-ref="custom-size-solid-actions">
-                      <div class="template-variants-pills" data-ref="bg-color-pills" style="margin-bottom: 8px;">
-                        <button type="button" class="template-variant-pill is-active" data-ref="btn-color-white" data-color="#ffffff">Blanco</button>
-                        <button type="button" class="template-variant-pill" data-ref="btn-color-black" data-color="#000000">Negro</button>
-                        <button type="button" class="template-variant-pill" data-ref="btn-color-custom" data-color="custom">Personalizado</button>
-                      </div>
-                      <div class="design-colors-custom-row" data-ref="bg-color-custom-row" style="display: none;">
-                        <input class="design-color-active-input" data-ref="input-bg-color" type="color" value="#ffffff" />
-                        <input class="design-colors-text-input" data-ref="input-bg-color-hex" type="text" value="#ffffff" maxlength="7" placeholder="#ffffff" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="modal-canvas-panel__actions" data-ref="stage2-actions">
-                  <div class="modal-canvas-panel__actions-row" data-ref="stage2-actions-row">
-                    <button type="button" class="component-button component-button--h44 component-button--outline" data-ref="btn-stage2-prev">
-                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
-                      <span>${t('canvas.btn_back')}</span>
-                    </button>
-                    <button type="button" class="component-button component-button--h44 component-button--black" data-ref="btn-submit-create-canvas">
-                      ${t('canvas.btn_create')}
-                    </button>
-                  </div>
-                  <div class="banner banner--danger" data-ref="create-canvas-error" style="display: none;"></div>
-                </div>
-              </div>
-            </div>
+            <div class="banner banner--danger" data-ref="create-canvas-error" style="display: none; margin-top: 14px;"></div>
           </div>
         </div>
       </div>
@@ -541,648 +586,396 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
     backdrop.classList.add('is-visible');
   });
 
-  const tabStageDimensions = backdrop.querySelector<HTMLElement>('[data-ref="tab-stage-dimensions"]');
-  const tabStageBackground = backdrop.querySelector<HTMLElement>('[data-ref="tab-stage-background"]');
+  const categoryTitles: Record<string, string> = {
+    board: 'Pizarrón Infinito',
+    diagram: 'Diagramas y Esquemas',
+    doc: 'Documento Doc',
+    pixel: 'Pixel Art',
+    template: templateName ? `Plantilla: ${templateName}` : 'Plantilla',
+  };
 
-  const panelStageDimensions = backdrop.querySelector<HTMLElement>('[data-ref="panel-stage-dimensions"]');
-  const panelStageBackground = backdrop.querySelector<HTMLElement>('[data-ref="panel-stage-background"]');
-  const modalStageTitle = backdrop.querySelector<HTMLElement>('[data-ref="modal-stage-title"]');
-
+  const navItems = backdrop.querySelectorAll<HTMLElement>('[data-category]');
+  const panels = backdrop.querySelectorAll<HTMLElement>('[data-ref^="panel-category-"]');
+  const bodyTitle = backdrop.querySelector<HTMLElement>('[data-ref="modal-body-title"]');
+  const errorBanner = backdrop.querySelector<HTMLElement>('[data-ref="create-canvas-error"]');
   const btnClose = backdrop.querySelector<HTMLElement>('[data-ref="btn-modal-close"]');
-  const inputName = backdrop.querySelector<HTMLInputElement>('[data-ref="input-canvas-name"]');
-  const inputWidth = backdrop.querySelector<HTMLInputElement>('[data-ref="input-canvas-width"]');
-  const inputHeight = backdrop.querySelector<HTMLInputElement>('[data-ref="input-canvas-height"]');
-  const inputMindmapRoot = backdrop.querySelector<HTMLInputElement>('[data-ref="input-mindmap-root"]');
-  const btnSubmit = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-submit-create-canvas"]');
-  const errorBoxStage1 = backdrop.querySelector<HTMLElement>('[data-ref="create-canvas-error-stage1"]');
-  const hugeCanvasWarning = backdrop.querySelector<HTMLElement>('[data-ref="huge-canvas-warning"]');
-  const errorBoxStage2 = backdrop.querySelector<HTMLElement>('[data-ref="create-canvas-error"]');
 
-  const btnStage1Next = backdrop.querySelector<HTMLElement>('[data-ref="btn-stage1-next"]');
-  const btnStage1CreateBoard = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-stage1-create-board"]');
-  const btnStage1CreateDiagram = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-stage1-create-diagram"]');
-  const btnStage2Prev = backdrop.querySelector<HTMLElement>('[data-ref="btn-stage2-prev"]');
+  const panelPixelCustomForm = backdrop.querySelector<HTMLElement>('[data-ref="panel-pixel-custom-form"]');
+  const panelCategoryPixel = backdrop.querySelector<HTMLElement>('[data-ref="panel-category-pixel"]');
+  const btnTriggerCustomSize = backdrop.querySelector<HTMLElement>('[data-ref="btn-trigger-custom-size"]');
+  const btnBackToPixelPresets = backdrop.querySelector<HTMLElement>('[data-ref="btn-back-to-pixel-presets"]');
 
-  const btnWidthDecLarge = backdrop.querySelector<HTMLElement>('[data-ref="btn-width-dec-large"]');
-  const btnWidthDec = backdrop.querySelector<HTMLElement>('[data-ref="btn-width-dec"]');
-  const btnWidthInc = backdrop.querySelector<HTMLElement>('[data-ref="btn-width-inc"]');
-  const btnWidthIncLarge = backdrop.querySelector<HTMLElement>('[data-ref="btn-width-inc-large"]');
+  const switchCategory = (category: 'board' | 'diagram' | 'doc' | 'pixel' | 'template') => {
+    activeCategory = category;
+    navItems.forEach((item) => {
+      item.classList.toggle('is-active', item.getAttribute('data-category') === category);
+    });
 
-  const btnHeightDecLarge = backdrop.querySelector<HTMLElement>('[data-ref="btn-height-dec-large"]');
-  const btnHeightDec = backdrop.querySelector<HTMLElement>('[data-ref="btn-height-dec"]');
-  const btnHeightInc = backdrop.querySelector<HTMLElement>('[data-ref="btn-height-inc"]');
-  const btnHeightIncLarge = backdrop.querySelector<HTMLElement>('[data-ref="btn-height-inc-large"]');
-
-  const quickPresetPills = backdrop.querySelectorAll<HTMLElement>('[data-ref^="btn-preset-"]');
-  const groupCanvasMode = backdrop.querySelector<HTMLElement>('[data-ref="group-canvas-mode"]');
-  const groupDiagramSubtypes = backdrop.querySelector<HTMLElement>('[data-ref="group-diagram-subtypes"]');
-  const groupMindmapRootText = backdrop.querySelector<HTMLElement>('[data-ref="group-mindmap-root-text"]');
-  const groupMindmapLineStyle = backdrop.querySelector<HTMLElement>('[data-ref="group-mindmap-line-style"]');
-  const groupMindmapTheme = backdrop.querySelector<HTMLElement>('[data-ref="group-mindmap-theme"]');
-
-  let selectedCanvasMode: 'fixed' | 'infinite' = 'fixed';
-  const btnModeFixed = backdrop.querySelector<HTMLElement>('[data-ref="btn-mode-fixed"]');
-  const btnModeInfinite = backdrop.querySelector<HTMLElement>('[data-ref="btn-mode-infinite"]');
-  const groupCanvasWidth = backdrop.querySelector<HTMLElement>('[data-ref="custom-size-group-width"]');
-  const groupCanvasHeight = backdrop.querySelector<HTMLElement>('[data-ref="custom-size-group-height"]');
-  const groupCanvasPresets = backdrop.querySelector<HTMLElement>('[data-ref="custom-size-group-quick-presets"]');
-  const groupInfiniteInfo = backdrop.querySelector<HTMLElement>('[data-ref="group-infinite-info"]');
-
-  let selectedBgType: 'solid' | 'transparent' = 'transparent';
-  let selectedCheckSize = 16;
-  let selectedSolidColor = '#ffffff';
-
-  const groupBgTransparent = backdrop.querySelector<HTMLElement>('[data-ref="custom-size-group-bg-transparent"]');
-  const groupBgSolid = backdrop.querySelector<HTMLElement>('[data-ref="custom-size-group-bg-solid"]');
-  const checkSizePills = backdrop.querySelectorAll<HTMLElement>('[data-ref^="btn-check-"]');
-  const colorPresetPills = backdrop.querySelectorAll<HTMLElement>('[data-ref^="btn-color-"]');
-  const customColorRow = backdrop.querySelector<HTMLElement>('[data-ref="bg-color-custom-row"]');
-  const inputBgColor = backdrop.querySelector<HTMLInputElement>('[data-ref="input-bg-color"]');
-  const inputBgColorHex = backdrop.querySelector<HTMLInputElement>('[data-ref="input-bg-color-hex"]');
-
-  const bgLivePreview = backdrop.querySelector<HTMLElement>('[data-ref="bg-live-preview"]');
-  const bgLivePreviewLabel = backdrop.querySelector<HTMLElement>('[data-ref="bg-live-preview-label"]');
-
-  const updateLivePreview = () => {
-    if (!bgLivePreview) return;
-
-    if (currentTemplateImage) {
-      bgLivePreview.style.backgroundImage = `url("${currentTemplateImage}")`;
-      bgLivePreview.style.backgroundSize = 'cover';
-      bgLivePreview.style.backgroundPosition = 'center';
-      if (selectedBgType === 'solid') {
-        bgLivePreview.style.backgroundColor = selectedSolidColor;
-        if (bgLivePreviewLabel) {
-          bgLivePreviewLabel.textContent = `Plantilla sobre color sólido (${selectedSolidColor.toUpperCase()})`;
-        }
-      } else {
-        bgLivePreview.style.backgroundColor = '';
-        if (bgLivePreviewLabel) {
-          bgLivePreviewLabel.textContent = `Plantilla sobre cuadrícula (${selectedCheckSize} px)`;
-        }
-      }
-      return;
+    panels.forEach((p) => {
+      p.style.display = 'none';
+    });
+    if (panelPixelCustomForm) {
+      panelPixelCustomForm.style.display = 'none';
     }
 
-    if (selectedBgType === 'solid') {
-      bgLivePreview.className = 'bg-live-preview';
-      bgLivePreview.style.backgroundImage = 'none';
-      bgLivePreview.style.backgroundColor = selectedSolidColor;
-      if (bgLivePreviewLabel) {
-        bgLivePreviewLabel.textContent = `Color sólido (${selectedSolidColor.toUpperCase()})`;
-      }
-    } else {
-      bgLivePreview.style.backgroundColor = '';
-      bgLivePreview.className = `bg-live-preview is-check-${selectedCheckSize}`;
-      if (bgLivePreviewLabel) {
-        bgLivePreviewLabel.textContent = `Cuadrícula transparente (${selectedCheckSize} px)`;
-      }
+    const activePanel = backdrop.querySelector<HTMLElement>(`[data-ref="panel-category-${category}"]`);
+    if (activePanel) {
+      activePanel.style.display = 'block';
+    }
+
+    if (bodyTitle && categoryTitles[category]) {
+      bodyTitle.textContent = categoryTitles[category];
+    }
+    if (errorBanner) {
+      errorBanner.style.display = 'none';
     }
   };
 
-  const switchStage = (stage: 'background' | 'dimensions') => {
-    tabStageDimensions?.classList.toggle('is-active', stage === 'dimensions');
-    tabStageBackground?.classList.toggle('is-active', stage === 'background');
-
-    if (panelStageDimensions) panelStageDimensions.style.display = stage === 'dimensions' ? 'block' : 'none';
-    if (panelStageBackground) panelStageBackground.style.display = stage === 'background' ? 'block' : 'none';
-
-    if (modalStageTitle) {
-      modalStageTitle.textContent = stage === 'dimensions' ? t('canvas.stage_dimensions') : t('canvas.stage_background');
-    }
-
-    if (stage === 'background') {
-      updateLivePreview();
-    }
-  };
-
-  tabStageDimensions?.addEventListener('click', () => switchStage('dimensions'));
-  tabStageBackground?.addEventListener('click', () => {
-    if (selectedCreationType === 'pixel' && validateDimensions()) {
-      switchStage('background');
-    }
-  });
-
-  const validateDimensions = (): boolean => {
-    if (errorBoxStage1) errorBoxStage1.style.display = 'none';
-    if (errorBoxStage2) errorBoxStage2.style.display = 'none';
-    if (hugeCanvasWarning) hugeCanvasWarning.style.display = 'none';
-
-    if (selectedCreationType !== 'pixel' || selectedCanvasMode === 'infinite') {
-      return true;
-    }
-
-    const width = parseInt(inputWidth?.value || '0', 10);
-    const height = parseInt(inputHeight?.value || '0', 10);
-
-    if (isNaN(width) || width <= 0 || isNaN(height) || height <= 0) {
-      if (errorBoxStage1) {
-        errorBoxStage1.textContent = 'Las dimensiones deben ser mayores a 0.';
-        errorBoxStage1.style.display = 'block';
-      }
-      return false;
-    }
-
-    if (width > 16384 || height > 16384) {
-      if (errorBoxStage1) {
-        errorBoxStage1.textContent = 'Las dimensiones no pueden superar los 16384 píxeles.';
-        errorBoxStage1.style.display = 'block';
-      }
-      return false;
-    }
-
-    if (width > 4096 || height > 4096) {
-      if (hugeCanvasWarning) {
-        hugeCanvasWarning.textContent = `Lienzo de resolución masiva (${width} × ${height} px). Consumirá más memoria y cuota de almacenamiento.`;
-        hugeCanvasWarning.style.display = 'block';
-      }
-    }
-
-    return true;
-  };
-
-  btnStage1Next?.addEventListener('click', () => {
-    if (validateDimensions()) {
-      switchStage('background');
-    }
-  });
-
-  btnStage2Prev?.addEventListener('click', () => switchStage('dimensions'));
-
-  const setupNumberStepper = (
-    inputEl: HTMLInputElement | null,
-    btnDecLarge: HTMLElement | null,
-    btnDec: HTMLElement | null,
-    btnInc: HTMLElement | null,
-    btnIncLarge: HTMLElement | null,
-    minVal = 1,
-    maxVal = 16384
-  ) => {
-    if (!inputEl) return;
-
-    const adjust = (delta: number) => {
-      const current = parseInt(inputEl.value, 10) || minVal;
-      const next = Math.max(minVal, Math.min(maxVal, current + delta));
-      inputEl.value = String(next);
-      inputEl.dispatchEvent(new Event('input', { bubbles: true }));
-      inputEl.dispatchEvent(new Event('change', { bubbles: true }));
-      updatePresetPillsState();
-    };
-
-    btnDecLarge?.addEventListener('click', () => adjust(-16));
-    btnDec?.addEventListener('click', () => adjust(-1));
-    btnInc?.addEventListener('click', () => adjust(1));
-    btnIncLarge?.addEventListener('click', () => adjust(16));
-
-    inputEl.addEventListener('change', () => {
-      let val = parseInt(inputEl.value, 10);
-      if (isNaN(val) || val < minVal) val = minVal;
-      if (val > maxVal) val = maxVal;
-      inputEl.value = String(val);
-      updatePresetPillsState();
-    });
-  };
-
-  const updatePresetPillsState = () => {
-    const currentW = parseInt(inputWidth?.value || '0', 10);
-    const currentH = parseInt(inputHeight?.value || '0', 10);
-    quickPresetPills.forEach((pill) => {
-      const pw = parseInt(pill.getAttribute('data-w') || '0', 10);
-      const ph = parseInt(pill.getAttribute('data-h') || '0', 10);
-      pill.classList.toggle('is-active', pw === currentW && ph === currentH);
-    });
-  };
-
-  let templateSizeDropdownController: ReturnType<typeof setupDropdown> | null = null;
-  let creationTypeDropdownController: ReturnType<typeof setupDropdown> | null = null;
-  let bgTypeDropdownController: ReturnType<typeof setupDropdown> | null = null;
-
-  if (templateVariants) {
-    const templateSizeDropdown = backdrop.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-template-size"]');
-    const templateSizeSelectedText = backdrop.querySelector<HTMLElement>('[data-ref="template-size-selected-text"]');
-
-    if (templateSizeDropdown) {
-      templateSizeDropdownController = setupDropdown(templateSizeDropdown, {
-        matchWidth: true,
-        onSelect: (_val: unknown, item?: HTMLElement) => {
-          if (!item) return;
-          const wStr = item.getAttribute('data-w');
-          const hStr = item.getAttribute('data-h');
-          const img = item.getAttribute('data-img');
-          const label = item.getAttribute('data-label') || item.querySelector('.menu-item__text')?.textContent?.trim() || '';
-
-          const newW = parseInt(wStr || '0', 10);
-          const newH = parseInt(hStr || '0', 10);
-
-          if (newW > 0 && newH > 0) {
-            currentWidth = newW;
-            currentHeight = newH;
-            if (inputWidth) inputWidth.value = String(newW);
-            if (inputHeight) inputHeight.value = String(newH);
-            if (img) currentTemplateImage = img;
-            if (templateSizeSelectedText) templateSizeSelectedText.textContent = label;
-            updateLivePreview();
-          }
-        },
-      });
-    }
-  } else {
-    setupNumberStepper(inputWidth, btnWidthDecLarge, btnWidthDec, btnWidthInc, btnWidthIncLarge);
-    setupNumberStepper(inputHeight, btnHeightDecLarge, btnHeightDec, btnHeightInc, btnHeightIncLarge);
-    updatePresetPillsState();
-
-    inputWidth?.addEventListener('input', () => {
-      validateDimensions();
-      updatePresetPillsState();
-    });
-
-    inputHeight?.addEventListener('input', () => {
-      validateDimensions();
-      updatePresetPillsState();
-    });
-
-    quickPresetPills.forEach((pill) => {
-      pill.addEventListener('click', () => {
-        const w = pill.getAttribute('data-w');
-        const h = pill.getAttribute('data-h');
-        if (w && inputWidth) {
-          inputWidth.value = w;
-          inputWidth.dispatchEvent(new Event('input', { bubbles: true }));
-        }
-        if (h && inputHeight) {
-          inputHeight.value = h;
-          inputHeight.dispatchEvent(new Event('input', { bubbles: true }));
-        }
-        validateDimensions();
-        updatePresetPillsState();
-      });
-    });
-
-    btnModeFixed?.addEventListener('click', () => {
-      selectedCanvasMode = 'fixed';
-      btnModeFixed.classList.add('is-active');
-      btnModeInfinite?.classList.remove('is-active');
-      if (groupCanvasWidth) groupCanvasWidth.style.display = '';
-      if (groupCanvasHeight) groupCanvasHeight.style.display = '';
-      if (groupCanvasPresets) groupCanvasPresets.style.display = '';
-      if (groupInfiniteInfo) groupInfiniteInfo.style.display = 'none';
-      validateDimensions();
-    });
-
-    btnModeInfinite?.addEventListener('click', () => {
-      selectedCanvasMode = 'infinite';
-      btnModeInfinite.classList.add('is-active');
-      btnModeFixed?.classList.remove('is-active');
-      if (groupCanvasWidth) groupCanvasWidth.style.display = 'none';
-      if (groupCanvasHeight) groupCanvasHeight.style.display = 'none';
-      if (groupCanvasPresets) groupCanvasPresets.style.display = 'none';
-      if (groupInfiniteInfo) groupInfiniteInfo.style.display = '';
-      if (errorBoxStage1) errorBoxStage1.style.display = 'none';
-      if (hugeCanvasWarning) hugeCanvasWarning.style.display = 'none';
-    });
-
-    const creationTypeDropdown = backdrop.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-creation-type"]');
-    const creationTypeSelectedIcon = backdrop.querySelector<HTMLElement>('[data-ref="creation-type-selected-icon"]');
-    const creationTypeSelectedText = backdrop.querySelector<HTMLElement>('[data-ref="creation-type-selected-text"]');
-
-    if (creationTypeDropdown) {
-      creationTypeDropdownController = setupDropdown(creationTypeDropdown, {
-        matchWidth: true,
-        onSelect: (val: unknown) => {
-          const type = (val as string) === 'diagram' ? 'diagram' : ((val as string) === 'pixel' ? 'pixel' : 'board');
-          selectedCreationType = type;
-
-          if (creationTypeSelectedIcon) {
-            creationTypeSelectedIcon.textContent = type === 'board' ? 'space_dashboard' : (type === 'diagram' ? 'psychology' : 'grid_on');
-          }
-          if (creationTypeSelectedText) {
-            creationTypeSelectedText.textContent = type === 'board' ? 'Pizarrón virtual' : (type === 'diagram' ? 'Diagramas y Esquemas' : 'Lienzo (Pixelart)');
-          }
-
-          const optBoard = backdrop.querySelector<HTMLElement>('[data-ref="option-creation-board"]');
-          const optDiagram = backdrop.querySelector<HTMLElement>('[data-ref="option-creation-diagram"]');
-          const optPixel = backdrop.querySelector<HTMLElement>('[data-ref="option-creation-pixel"]');
-          optBoard?.classList.toggle('is-active', type === 'board');
-          optDiagram?.classList.toggle('is-active', type === 'diagram');
-          optPixel?.classList.toggle('is-active', type === 'pixel');
-
-          if (type === 'board') {
-            if (groupCanvasMode) groupCanvasMode.style.display = 'none';
-            if (groupInfiniteInfo) groupInfiniteInfo.style.display = 'none';
-            if (groupCanvasWidth) groupCanvasWidth.style.display = 'none';
-            if (groupCanvasHeight) groupCanvasHeight.style.display = 'none';
-            if (groupCanvasPresets) groupCanvasPresets.style.display = 'none';
-            if (groupDiagramSubtypes) groupDiagramSubtypes.style.display = 'none';
-            if (groupMindmapRootText) groupMindmapRootText.style.display = 'none';
-            if (groupMindmapLineStyle) groupMindmapLineStyle.style.display = 'none';
-            if (groupMindmapTheme) groupMindmapTheme.style.display = 'none';
-            if (btnStage1CreateBoard) btnStage1CreateBoard.style.display = '';
-            if (btnStage1CreateDiagram) btnStage1CreateDiagram.style.display = 'none';
-            if (btnStage1Next) btnStage1Next.style.display = 'none';
-            if (tabStageBackground) tabStageBackground.style.display = 'none';
-            switchStage('dimensions');
-          } else if (type === 'diagram') {
-            if (groupCanvasMode) groupCanvasMode.style.display = 'none';
-            if (groupInfiniteInfo) groupInfiniteInfo.style.display = 'none';
-            if (groupCanvasWidth) groupCanvasWidth.style.display = 'none';
-            if (groupCanvasHeight) groupCanvasHeight.style.display = 'none';
-            if (groupCanvasPresets) groupCanvasPresets.style.display = 'none';
-            if (groupDiagramSubtypes) groupDiagramSubtypes.style.display = '';
-            if (groupMindmapRootText) groupMindmapRootText.style.display = '';
-            if (groupMindmapLineStyle) groupMindmapLineStyle.style.display = '';
-            if (groupMindmapTheme) groupMindmapTheme.style.display = '';
-            if (btnStage1CreateBoard) btnStage1CreateBoard.style.display = 'none';
-            if (btnStage1CreateDiagram) btnStage1CreateDiagram.style.display = '';
-            if (btnStage1Next) btnStage1Next.style.display = 'none';
-            if (tabStageBackground) tabStageBackground.style.display = 'none';
-            switchStage('dimensions');
-          } else {
-            if (groupCanvasMode) groupCanvasMode.style.display = '';
-            if (groupDiagramSubtypes) groupDiagramSubtypes.style.display = 'none';
-            if (groupMindmapRootText) groupMindmapRootText.style.display = 'none';
-            if (groupMindmapLineStyle) groupMindmapLineStyle.style.display = 'none';
-            if (groupMindmapTheme) groupMindmapTheme.style.display = 'none';
-            if (selectedCanvasMode === 'infinite') {
-              if (groupInfiniteInfo) groupInfiniteInfo.style.display = '';
-              if (groupCanvasWidth) groupCanvasWidth.style.display = 'none';
-              if (groupCanvasHeight) groupCanvasHeight.style.display = 'none';
-              if (groupCanvasPresets) groupCanvasPresets.style.display = 'none';
-            } else {
-              if (groupInfiniteInfo) groupInfiniteInfo.style.display = 'none';
-              if (groupCanvasWidth) groupCanvasWidth.style.display = '';
-              if (groupCanvasHeight) groupCanvasHeight.style.display = '';
-              if (groupCanvasPresets) groupCanvasPresets.style.display = '';
-            }
-            if (btnStage1CreateBoard) btnStage1CreateBoard.style.display = 'none';
-            if (btnStage1CreateDiagram) btnStage1CreateDiagram.style.display = 'none';
-            if (btnStage1Next) btnStage1Next.style.display = '';
-            if (tabStageBackground) tabStageBackground.style.display = '';
-          }
-        },
-      });
-    }
-
-    const categoryButtons = backdrop.querySelectorAll<HTMLElement>('[data-category]');
-    const subtypeButtons = backdrop.querySelectorAll<HTMLElement>('[data-subtype]');
-
-    categoryButtons.forEach((catBtn) => {
-      catBtn.addEventListener('click', () => {
-        const cat = catBtn.getAttribute('data-category') as DiagramCategory;
-        categoryButtons.forEach((b) => b.classList.remove('is-active'));
-        catBtn.classList.add('is-active');
-
-        subtypeButtons.forEach((btn) => {
-          const btnCat = btn.getAttribute('data-category') as DiagramCategory;
-          if (cat === 'all' || btnCat === cat) {
-            btn.style.display = 'flex';
-          } else {
-            btn.style.display = 'none';
-          }
-        });
-      });
-    });
-
-    const rootPlaceholders: Record<DiagramSubtype, string> = {
-      conceptmap: 'Concepto General',
-      decisiontree: 'Decisión Principal',
-      fishbone: 'Problema / Efecto Principal',
-      flowchart: 'Inicio del Proceso',
-      kanban: 'Tablero del Proyecto',
-      matrix: 'Análisis FODA Estratégico',
-      mindmap: 'Idea Principal',
-      orgchart: 'Dirección General (CEO)',
-      timeline: 'Roadmap del Proyecto',
-    };
-
-    subtypeButtons.forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const subtype = btn.getAttribute('data-subtype') as DiagramSubtype;
-        const subInfo = DIAGRAM_SUBTYPES.find((s) => s.id === subtype);
-        if (!subInfo?.isEnabled) return;
-        selectedDiagramSubtype = subtype;
-        subtypeButtons.forEach((b) => b.classList.remove('is-active'));
-        btn.classList.add('is-active');
-
-        if (inputMindmapRoot && rootPlaceholders[subtype]) {
-          inputMindmapRoot.placeholder = rootPlaceholders[subtype];
-          if (!inputMindmapRoot.value || Object.values(rootPlaceholders).includes(inputMindmapRoot.value)) {
-            inputMindmapRoot.value = rootPlaceholders[subtype];
-          }
-        }
-      });
-    });
-
-    const linePills = backdrop.querySelectorAll<HTMLElement>('[data-line]');
-    linePills.forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const line = btn.getAttribute('data-line') as 'curved' | 'orthogonal' | 'straight';
-        if (line) {
-          selectedLineStyle = line;
-          linePills.forEach((b) => b.classList.remove('is-active'));
-          btn.classList.add('is-active');
-        }
-      });
-    });
-
-    btnStage1CreateBoard?.addEventListener('click', async () => {
-      const name = inputName?.value.trim() || 'Pizarrón sin título';
-      if (btnStage1CreateBoard) {
-        btnStage1CreateBoard.disabled = true;
-        btnStage1CreateBoard.textContent = t('modal.loading');
-      }
-
-      try {
-        await createAndOpenCanvas({
-          bgType: 'dots',
-          canvasType: 'board',
-          effectiveTier: options?.teamUuid ? 'business' : null,
-          name,
-          solidColor: '#ffffff',
-          teamUuid: options?.teamUuid || null,
-        });
-        closeModal();
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : t('canvas.error_save');
-        if (errorBoxStage1) {
-          errorBoxStage1.textContent = msg;
-          errorBoxStage1.style.display = 'block';
-        }
-        if (btnStage1CreateBoard) {
-          btnStage1CreateBoard.disabled = false;
-          btnStage1CreateBoard.textContent = 'Crear pizarrón';
-        }
-      }
-    });
-
-    btnStage1CreateDiagram?.addEventListener('click', async () => {
-      const name = inputName?.value.trim() || 'Mapa Mental sin título';
-      const rootIdea = inputMindmapRoot?.value.trim() || 'Idea Principal';
-      if (btnStage1CreateDiagram) {
-        btnStage1CreateDiagram.disabled = true;
-        btnStage1CreateDiagram.textContent = t('modal.loading');
-      }
-
-      try {
-        await createAndOpenCanvas({
-          bgType: 'dots',
-          canvasType: 'diagram',
-          diagramSubtype: selectedDiagramSubtype,
-          effectiveTier: options?.teamUuid ? 'business' : null,
-          mindmapLineStyle: selectedLineStyle,
-          name,
-          rootIdeaText: rootIdea,
-          solidColor: '#ffffff',
-          teamUuid: options?.teamUuid || null,
-        });
-        closeModal();
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : t('canvas.error_save');
-        if (errorBoxStage1) {
-          errorBoxStage1.textContent = msg;
-          errorBoxStage1.style.display = 'block';
-        }
-        if (btnStage1CreateDiagram) {
-          btnStage1CreateDiagram.disabled = false;
-          btnStage1CreateDiagram.textContent = 'Crear mapa mental';
-        }
-      }
-    });
+  if (bodyTitle && categoryTitles[activeCategory]) {
+    bodyTitle.textContent = categoryTitles[activeCategory];
   }
 
-  const bgTypeDropdown = backdrop.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-bg-type"]');
-  const bgTypeSelectedIcon = backdrop.querySelector<HTMLElement>('[data-ref="bg-type-selected-icon"]');
-  const bgTypeSelectedText = backdrop.querySelector<HTMLElement>('[data-ref="bg-type-selected-text"]');
-
-  if (bgTypeDropdown) {
-    bgTypeDropdownController = setupDropdown(bgTypeDropdown, {
-      matchWidth: true,
-      onSelect: (val: unknown) => {
-        const type = (val as string) === 'solid' ? 'solid' : 'transparent';
-        selectedBgType = type;
-
-        if (bgTypeSelectedIcon) {
-          bgTypeSelectedIcon.textContent = type === 'solid' ? 'format_color_fill' : 'opacity';
-        }
-        if (bgTypeSelectedText) {
-          bgTypeSelectedText.textContent = type === 'solid' ? 'Color Sólido' : 'Transparente';
-        }
-
-        const optTrans = backdrop.querySelector<HTMLElement>('[data-ref="option-bg-type-transparent"]');
-        const optSolid = backdrop.querySelector<HTMLElement>('[data-ref="option-bg-type-solid"]');
-        optTrans?.classList.toggle('is-active', type === 'transparent');
-        optSolid?.classList.toggle('is-active', type === 'solid');
-
-        if (groupBgTransparent) groupBgTransparent.style.display = type === 'transparent' ? '' : 'none';
-        if (groupBgSolid) groupBgSolid.style.display = type === 'solid' ? '' : 'none';
-
-        updateLivePreview();
-      },
-    });
-  }
-
-  checkSizePills.forEach((pill) => {
-    pill.addEventListener('click', () => {
-      checkSizePills.forEach((p) => p.classList.remove('is-active'));
-      pill.classList.add('is-active');
-      selectedCheckSize = parseInt(pill.getAttribute('data-size') || '16', 10);
-      updateLivePreview();
-    });
-  });
-
-  colorPresetPills.forEach((pill) => {
-    pill.addEventListener('click', () => {
-      colorPresetPills.forEach((p) => p.classList.remove('is-active'));
-      pill.classList.add('is-active');
-      const colorVal = pill.getAttribute('data-color');
-      if (colorVal === 'custom') {
-        if (customColorRow) customColorRow.style.display = 'flex';
-        selectedSolidColor = inputBgColorHex?.value || inputBgColor?.value || '#ffffff';
-      } else {
-        if (customColorRow) customColorRow.style.display = 'none';
-        selectedSolidColor = colorVal || '#ffffff';
+  navItems.forEach((item) => {
+    item.addEventListener('click', () => {
+      const cat = item.getAttribute('data-category') as 'board' | 'diagram' | 'doc' | 'pixel' | 'template';
+      if (cat) {
+        switchCategory(cat);
       }
-      updateLivePreview();
     });
   });
 
-  inputBgColor?.addEventListener('input', () => {
-    selectedSolidColor = inputBgColor.value;
-    if (inputBgColorHex) inputBgColorHex.value = inputBgColor.value;
-    updateLivePreview();
+  const categoryPills = backdrop.querySelectorAll<HTMLElement>('[data-ref^="btn-diag-cat-"]');
+  const diagramCards = backdrop.querySelectorAll<HTMLElement>('[data-ref^="card-diagram-"]');
+
+  categoryPills.forEach((pill) => {
+    pill.addEventListener('click', () => {
+      const cat = pill.getAttribute('data-category') as DiagramCategory;
+      categoryPills.forEach((p) => p.classList.remove('is-active'));
+      pill.classList.add('is-active');
+
+      diagramCards.forEach((card) => {
+        const cardCat = card.getAttribute('data-category') as DiagramCategory;
+        if (cat === 'all' || cardCat === cat) {
+          card.style.display = 'flex';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    });
   });
 
-  inputBgColorHex?.addEventListener('input', () => {
-    let hex = inputBgColorHex.value.trim();
-    if (!hex.startsWith('#')) hex = '#' + hex;
-    if (/^#[0-9A-Fa-f]{6}$/.test(hex)) {
-      selectedSolidColor = hex;
-      if (inputBgColor) inputBgColor.value = hex;
-      updateLivePreview();
+  const handleInstantCreation = async (optionsToCreate: CreateCanvasOptions, triggerButton?: HTMLElement | null) => {
+    if (isCreating) return;
+    isCreating = true;
+
+    if (errorBanner) {
+      errorBanner.style.display = 'none';
     }
-  });
-
-  const showError = (msg: string) => {
-    if (errorBoxStage2) {
-      errorBoxStage2.textContent = msg;
-      errorBoxStage2.style.display = 'block';
-    }
-  };
-
-  const handleCreateCanvas = async () => {
-    if (!validateDimensions()) {
-      switchStage('dimensions');
-      return;
-    }
-
-    const isInfinite = selectedCanvasMode === 'infinite';
-    const name = inputName?.value.trim() || t('canvas.input_name_placeholder');
-    const width = isInfinite ? 0 : parseInt(inputWidth?.value || '0', 10);
-    const height = isInfinite ? 0 : parseInt(inputHeight?.value || '0', 10);
-
-    if (btnSubmit) {
-      btnSubmit.disabled = true;
-      btnSubmit.textContent = t('modal.loading');
+    if (triggerButton) {
+      triggerButton.classList.add('is-loading');
     }
 
     try {
       await createAndOpenCanvas({
-        bgType: selectedBgType,
-        checkSize: selectedCheckSize,
+        ...optionsToCreate,
         effectiveTier: options?.teamUuid ? 'business' : null,
-        fps: 8,
-        height,
-        isInfinite,
-        name,
-        onionSkin: false,
-        solidColor: selectedSolidColor,
         teamUuid: options?.teamUuid || null,
-        templateImage: currentTemplateImage,
-        width,
       });
       closeModal();
     } catch (err: unknown) {
+      isCreating = false;
+      if (triggerButton) {
+        triggerButton.classList.remove('is-loading');
+      }
       const msg = err instanceof Error ? err.message : t('canvas.error_save');
-      showError(msg);
-      if (btnSubmit) {
-        btnSubmit.disabled = false;
-        btnSubmit.textContent = t('canvas.btn_create');
+      if (errorBanner) {
+        errorBanner.textContent = msg;
+        errorBanner.style.display = 'block';
       }
     }
   };
 
-  btnSubmit?.addEventListener('click', handleCreateCanvas);
+  const boardCards = backdrop.querySelectorAll<HTMLElement>('[data-ref^="card-board-"]');
+  boardCards.forEach((card) => {
+    card.addEventListener('click', () => {
+      void handleInstantCreation({
+        bgType: 'dots',
+        canvasType: 'board',
+        name: 'Pizarrón sin título',
+        solidColor: '#ffffff',
+      }, card);
+    });
+  });
+
+  diagramCards.forEach((card) => {
+    card.addEventListener('click', () => {
+      const subtype = (card.getAttribute('data-subtype') as DiagramSubtype) || 'mindmap';
+      const subtypeInfo = DIAGRAM_SUBTYPES.find((s) => s.id === subtype);
+      void handleInstantCreation({
+        bgType: 'dots',
+        canvasType: 'diagram',
+        diagramSubtype: subtype,
+        mindmapLineStyle: 'curved',
+        name: subtypeInfo?.name ? `${subtypeInfo.name} sin título` : 'Mapa Mental sin título',
+        rootIdeaText: subtypeInfo?.name || 'Idea Principal',
+        solidColor: '#ffffff',
+      }, card);
+    });
+  });
+
+  const docCards = backdrop.querySelectorAll<HTMLElement>('[data-ref^="card-doc-"]');
+  docCards.forEach((card) => {
+    card.addEventListener('click', () => {
+      const paper = (card.getAttribute('data-paper') as DocPaperSize) || 'letter';
+      const templateId = card.getAttribute('data-template') || 'blank';
+      const tpl = DOC_TEMPLATES.find((t) => t.id === templateId);
+      const name = tpl && tpl.id !== 'blank' ? tpl.name : `Documento ${paper.toUpperCase()}`;
+      void handleInstantCreation({
+        canvasType: 'doc',
+        docOrientation: 'portrait',
+        docPaperSize: paper,
+        docTemplateId: templateId,
+        name,
+      }, card);
+    });
+  });
+
+  const pixelPresetCards = backdrop.querySelectorAll<HTMLElement>('[data-ref^="card-pixel-"]');
+  pixelPresetCards.forEach((card) => {
+    card.addEventListener('click', () => {
+      const type = card.getAttribute('data-type');
+      if (type === 'pixel-infinite') {
+        void handleInstantCreation({
+          bgType: 'transparent',
+          canvasType: 'pixel',
+          isInfinite: true,
+          name: 'Lienzo Pixelart Infinito',
+        }, card);
+      } else if (type === 'pixel-fixed') {
+        const w = parseInt(card.getAttribute('data-w') || '64', 10);
+        const h = parseInt(card.getAttribute('data-h') || '64', 10);
+        void handleInstantCreation({
+          bgType: 'transparent',
+          canvasType: 'pixel',
+          checkSize: 16,
+          fps: 8,
+          height: h,
+          isInfinite: false,
+          name: `Lienzo ${w}x${h}`,
+          solidColor: '#ffffff',
+          width: w,
+        }, card);
+      }
+    });
+  });
+
+  const templateVariantCards = backdrop.querySelectorAll<HTMLElement>('[data-ref^="card-template-"]');
+  templateVariantCards.forEach((card) => {
+    card.addEventListener('click', () => {
+      const w = parseInt(card.getAttribute('data-w') || '64', 10);
+      const h = parseInt(card.getAttribute('data-h') || '64', 10);
+      const img = card.getAttribute('data-img') || templateImage || null;
+      void handleInstantCreation({
+        bgType: 'transparent',
+        canvasType: 'pixel',
+        checkSize: 16,
+        fps: 8,
+        height: h,
+        isInfinite: false,
+        name: templateName || `Plantilla ${w}x${h}`,
+        solidColor: '#ffffff',
+        templateImage: img,
+        width: w,
+      }, card);
+    });
+  });
+
+  btnTriggerCustomSize?.addEventListener('click', () => {
+    if (panelCategoryPixel) panelCategoryPixel.style.display = 'none';
+    if (panelPixelCustomForm) panelPixelCustomForm.style.display = 'block';
+    if (bodyTitle) bodyTitle.textContent = 'Pixel Art personalizado';
+    if (errorBanner) errorBanner.style.display = 'none';
+  });
+
+  btnBackToPixelPresets?.addEventListener('click', () => {
+    if (panelPixelCustomForm) panelPixelCustomForm.style.display = 'none';
+    if (panelCategoryPixel) panelCategoryPixel.style.display = 'block';
+    if (bodyTitle) bodyTitle.textContent = 'Pixel Art';
+    if (errorBanner) errorBanner.style.display = 'none';
+  });
+
+  const inputCustomName = backdrop.querySelector<HTMLInputElement>('[data-ref="input-custom-name"]');
+  const inputCustomWidth = backdrop.querySelector<HTMLInputElement>('[data-ref="input-custom-width"]');
+  const inputCustomHeight = backdrop.querySelector<HTMLInputElement>('[data-ref="input-custom-height"]');
+  const btnCustomWDecLarge = backdrop.querySelector<HTMLElement>('[data-ref="btn-custom-w-dec-large"]');
+  const btnCustomWDec = backdrop.querySelector<HTMLElement>('[data-ref="btn-custom-w-dec"]');
+  const btnCustomWInc = backdrop.querySelector<HTMLElement>('[data-ref="btn-custom-w-inc"]');
+  const btnCustomWIncLarge = backdrop.querySelector<HTMLElement>('[data-ref="btn-custom-w-inc-large"]');
+  const btnCustomHDecLarge = backdrop.querySelector<HTMLElement>('[data-ref="btn-custom-h-dec-large"]');
+  const btnCustomHDec = backdrop.querySelector<HTMLElement>('[data-ref="btn-custom-h-dec"]');
+  const btnCustomHInc = backdrop.querySelector<HTMLElement>('[data-ref="btn-custom-h-inc"]');
+  const btnCustomHIncLarge = backdrop.querySelector<HTMLElement>('[data-ref="btn-custom-h-inc-large"]');
+  const customPresetChips = backdrop.querySelectorAll<HTMLElement>('[data-ref^="btn-custom-chip-"]');
+  const btnSubmitCustomPixel = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-submit-custom-pixel"]');
+
+  const setupStepper = (
+    inputEl: HTMLInputElement | null,
+    btnDecL: HTMLElement | null,
+    btnDecS: HTMLElement | null,
+    btnIncS: HTMLElement | null,
+    btnIncL: HTMLElement | null
+  ) => {
+    if (!inputEl) return;
+    const adjust = (delta: number) => {
+      const val = parseInt(inputEl.value, 10) || 64;
+      const next = Math.max(1, Math.min(16384, val + delta));
+      inputEl.value = String(next);
+      inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+      updateChips();
+    };
+
+    btnDecL?.addEventListener('click', () => adjust(-16));
+    btnDecS?.addEventListener('click', () => adjust(-1));
+    btnIncS?.addEventListener('click', () => adjust(1));
+    btnIncL?.addEventListener('click', () => adjust(16));
+
+    inputEl.addEventListener('change', () => {
+      let val = parseInt(inputEl.value, 10);
+      if (isNaN(val) || val < 1) val = 1;
+      if (val > 16384) val = 16384;
+      inputEl.value = String(val);
+      updateChips();
+    });
+  };
+
+  const updateChips = () => {
+    const curW = parseInt(inputCustomWidth?.value || '0', 10);
+    const curH = parseInt(inputCustomHeight?.value || '0', 10);
+    customPresetChips.forEach((chip) => {
+      const cw = parseInt(chip.getAttribute('data-w') || '0', 10);
+      const ch = parseInt(chip.getAttribute('data-h') || '0', 10);
+      chip.classList.toggle('is-active', cw === curW && ch === curH);
+    });
+  };
+
+  setupStepper(inputCustomWidth, btnCustomWDecLarge, btnCustomWDec, btnCustomWInc, btnCustomWIncLarge);
+  setupStepper(inputCustomHeight, btnCustomHDecLarge, btnCustomHDec, btnCustomHInc, btnCustomHIncLarge);
+
+  customPresetChips.forEach((chip) => {
+    chip.addEventListener('click', () => {
+      const w = chip.getAttribute('data-w');
+      const h = chip.getAttribute('data-h');
+      if (w && inputCustomWidth) {
+        inputCustomWidth.value = w;
+      }
+      if (h && inputCustomHeight) {
+        inputCustomHeight.value = h;
+      }
+      updateChips();
+    });
+  });
+
+  const btnCustomBgTrans = backdrop.querySelector<HTMLElement>('[data-ref="btn-custom-bg-trans"]');
+  const btnCustomBgSolid = backdrop.querySelector<HTMLElement>('[data-ref="btn-custom-bg-solid"]');
+  const groupCustomBgCheck = backdrop.querySelector<HTMLElement>('[data-ref="group-custom-bg-check"]');
+  const groupCustomBgColor = backdrop.querySelector<HTMLElement>('[data-ref="group-custom-bg-color"]');
+  const customCheckPills = backdrop.querySelectorAll<HTMLElement>('[data-ref^="btn-custom-check-"]');
+  const customColorPills = backdrop.querySelectorAll<HTMLElement>('[data-ref^="btn-custom-color-"]');
+  const customColorRow = backdrop.querySelector<HTMLElement>('[data-ref="custom-color-row"]');
+  const inputCustomBgColor = backdrop.querySelector<HTMLInputElement>('[data-ref="input-custom-bg-color"]');
+  const inputCustomBgColorHex = backdrop.querySelector<HTMLInputElement>('[data-ref="input-custom-bg-color-hex"]');
+
+  btnCustomBgTrans?.addEventListener('click', () => {
+    selectedBgType = 'transparent';
+    btnCustomBgTrans.classList.add('is-active');
+    btnCustomBgSolid?.classList.remove('is-active');
+    if (groupCustomBgCheck) groupCustomBgCheck.style.display = '';
+    if (groupCustomBgColor) groupCustomBgColor.style.display = 'none';
+  });
+
+  btnCustomBgSolid?.addEventListener('click', () => {
+    selectedBgType = 'solid';
+    btnCustomBgSolid.classList.add('is-active');
+    btnCustomBgTrans?.classList.remove('is-active');
+    if (groupCustomBgCheck) groupCustomBgCheck.style.display = 'none';
+    if (groupCustomBgColor) groupCustomBgColor.style.display = '';
+  });
+
+  customCheckPills.forEach((pill) => {
+    pill.addEventListener('click', () => {
+      customCheckPills.forEach((p) => p.classList.remove('is-active'));
+      pill.classList.add('is-active');
+      selectedCheckSize = parseInt(pill.getAttribute('data-size') || '16', 10);
+    });
+  });
+
+  customColorPills.forEach((pill) => {
+    pill.addEventListener('click', () => {
+      customColorPills.forEach((p) => p.classList.remove('is-active'));
+      pill.classList.add('is-active');
+      const c = pill.getAttribute('data-color');
+      if (c === 'custom') {
+        if (customColorRow) customColorRow.style.display = 'flex';
+        selectedSolidColor = inputCustomBgColorHex?.value || inputCustomBgColor?.value || '#ffffff';
+      } else {
+        if (customColorRow) customColorRow.style.display = 'none';
+        selectedSolidColor = c || '#ffffff';
+      }
+    });
+  });
+
+  inputCustomBgColor?.addEventListener('input', () => {
+    selectedSolidColor = inputCustomBgColor.value;
+    if (inputCustomBgColorHex) inputCustomBgColorHex.value = inputCustomBgColor.value;
+  });
+
+  inputCustomBgColorHex?.addEventListener('input', () => {
+    let hex = inputCustomBgColorHex.value.trim();
+    if (!hex.startsWith('#')) hex = '#' + hex;
+    if (/^#[0-9A-Fa-f]{6}$/.test(hex)) {
+      selectedSolidColor = hex;
+      if (inputCustomBgColor) inputCustomBgColor.value = hex;
+    }
+  });
+
+  btnSubmitCustomPixel?.addEventListener('click', () => {
+    const w = parseInt(inputCustomWidth?.value || '64', 10);
+    const h = parseInt(inputCustomHeight?.value || '64', 10);
+
+    if (isNaN(w) || w <= 0 || isNaN(h) || h <= 0) {
+      if (errorBanner) {
+        errorBanner.textContent = 'Las dimensiones deben ser mayores a 0.';
+        errorBanner.style.display = 'block';
+      }
+      return;
+    }
+
+    if (w > 16384 || h > 16384) {
+      if (errorBanner) {
+        errorBanner.textContent = 'Las dimensiones no pueden superar los 16384 píxeles.';
+        errorBanner.style.display = 'block';
+      }
+      return;
+    }
+
+    const name = inputCustomName?.value.trim() || `Lienzo ${w}x${h}`;
+    void handleInstantCreation({
+      bgType: selectedBgType,
+      canvasType: 'pixel',
+      checkSize: selectedCheckSize,
+      fps: 8,
+      height: h,
+      isInfinite: false,
+      name,
+      solidColor: selectedSolidColor,
+      templateImage,
+      width: w,
+    }, btnSubmitCustomPixel);
+  });
 
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
       closeModal();
-    } else if (e.key === 'Enter' && e.target === inputName) {
-      if (selectedCreationType === 'board') {
-        btnStage1CreateBoard?.click();
-      } else if (selectedCreationType === 'diagram') {
-        btnStage1CreateDiagram?.click();
-      } else if (validateDimensions()) {
-        switchStage('background');
-      }
     }
   };
 
@@ -1197,18 +990,6 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
     backdrop.removeEventListener('click', handleBackdropClick);
     backdrop.classList.remove('is-visible');
     document.body.classList.remove('modal-open');
-    if (templateSizeDropdownController) {
-      templateSizeDropdownController.destroy();
-      templateSizeDropdownController = null;
-    }
-    if (creationTypeDropdownController) {
-      creationTypeDropdownController.destroy();
-      creationTypeDropdownController = null;
-    }
-    if (bgTypeDropdownController) {
-      bgTypeDropdownController.destroy();
-      bgTypeDropdownController = null;
-    }
     setTimeout(() => {
       backdrop.remove();
       if (activeCreateCanvasModal && activeCreateCanvasModal.close === closeModal) {
@@ -1222,9 +1003,5 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
   window.addEventListener('keydown', handleKeyDown);
 
   activeCreateCanvasModal = { close: closeModal };
-
-  setTimeout(() => {
-    inputName?.focus();
-    inputName?.select();
-  }, 100);
 }
+

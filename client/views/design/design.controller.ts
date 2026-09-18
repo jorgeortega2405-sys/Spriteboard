@@ -8138,11 +8138,6 @@ export class DesignController {
     const titleEl = this.container.querySelector<HTMLElement>('[data-ref="design-title"]');
 
     if (canvas) {
-      if (canvas.canvas_type === 'board' || canvas.unit === 'board') {
-        navigate(`/board/${this.canvasUuid}`);
-        return true;
-      }
-
       this.canvasServerId = canvas.id || this.canvasServerId;
       this.canvasUserId = canvas.user_id || this.canvasUserId;
       this.canvasName = canvas.name || 'Lienzo sin título';

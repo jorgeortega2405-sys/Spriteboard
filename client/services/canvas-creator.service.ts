@@ -1,6 +1,11 @@
 import { navigate } from '../app-router.js';
 import { API_ROUTES } from '../config/api-routes.js';
+import { getBoardTemplateElements } from '../config/board-templates.data.js';
+import { getCustomDiagramProject } from '../config/diagram-templates.data.js';
 import { DiagramSubtype } from '../types/mindmap.types.js';
+import { generateDocThumbnail } from '../views/doc/doc-export.service.js';
+import { getDocTemplateById } from '../views/doc/doc-templates.config.js';
+import { DOC_PAPER_DIMENSIONS, DocMargins, DocOrientation, DocPaperSize } from '../views/doc/doc.types.js';
 import { getDiagramStrategy } from '../views/mindmap/strategies/strategy.registry.js';
 import { currentUser, postApi } from './api.service.js';
 import { saveLocalCanvas } from './canvas-storage.service.js';
@@ -9,9 +14,15 @@ import { showToast } from './toast.service.js';
 
 export interface CreateCanvasOptions {
   bgType?: 'blank' | 'dark' | 'dots' | 'grid' | 'light' | 'solid' | 'transparent';
-  canvasType?: 'board' | 'diagram' | 'mindmap' | 'pixel';
+  boardTemplateId?: string;
+  canvasType?: 'board' | 'diagram' | 'doc' | 'mindmap' | 'pixel';
   checkSize?: number;
   diagramSubtype?: DiagramSubtype;
+  diagramTemplateId?: string;
+  docMargins?: DocMargins;
+  docOrientation?: DocOrientation;
+  docPaperSize?: DocPaperSize;
+  docTemplateId?: string;
   effectiveTier?: string | null;
   fps?: number;
   height?: number;
@@ -20,6 +31,7 @@ export interface CreateCanvasOptions {
   mindmapTheme?: string;
   name: string;
   onionSkin?: boolean;
+  pixelTemplateId?: string;
   rootIdeaText?: string;
   solidColor?: string;
   teamUuid?: string | null;
@@ -30,17 +42,21 @@ export interface CreateCanvasOptions {
 export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise<void> {
   const isBoard = options.canvasType === 'board';
   const isDiagram = options.canvasType === 'diagram' || options.canvasType === 'mindmap';
+  const isDoc = options.canvasType === 'doc';
   const isInfinite = isBoard || isDiagram || (options.isInfinite ?? false);
-  const width = isInfinite ? 0 : (options.width || 64);
-  const height = isInfinite ? 0 : (options.height || 64);
+  const paperPreset = (options.docPaperSize && DOC_PAPER_DIMENSIONS[options.docPaperSize])
+    ? DOC_PAPER_DIMENSIONS[options.docPaperSize][options.docOrientation || 'portrait']
+    : DOC_PAPER_DIMENSIONS.letter.portrait;
+  const width = isDoc ? (options.width || paperPreset.widthPx || 816) : (isInfinite ? 0 : (options.width || 64));
+  const height = isDoc ? (options.height || paperPreset.heightPx || 0) : (isInfinite ? 0 : (options.height || 64));
 
   const MAX_CANVAS_DIMENSION = 16384;
-  if (!isInfinite && (width > MAX_CANVAS_DIMENSION || height > MAX_CANVAS_DIMENSION || width <= 0 || height <= 0)) {
+  if (!isInfinite && !isDoc && (width > MAX_CANVAS_DIMENSION || height > MAX_CANVAS_DIMENSION || width <= 0 || height <= 0)) {
     showToast(`El tamaño (${width}×${height} px) debe ser mayor a 0 y no superar los ${MAX_CANVAS_DIMENSION}×${MAX_CANVAS_DIMENSION} px.`, 'warning');
     return;
   }
 
-  const defaultName = isDiagram ? 'Mapa Mental sin título' : (isBoard ? 'Pizarrón sin título' : t('canvas.input_name_placeholder'));
+  const defaultName = isDoc ? 'Documento sin título' : (isDiagram ? 'Mapa Mental sin título' : (isBoard ? 'Pizarrón sin título' : t('canvas.input_name_placeholder')));
   const name = options.name.trim() || defaultName;
   const bgType = options.bgType || 'transparent';
   const solidColor = options.solidColor || '#ffffff';
@@ -94,21 +110,52 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
 
   let initialProject: any = null;
 
-  if (isDiagram) {
+  if (isDoc) {
+    const templatePreset = getDocTemplateById(options.docTemplateId);
+    const paperSize = options.docPaperSize || templatePreset.settings.paperSize || 'letter';
+    const orientation = options.docOrientation || templatePreset.settings.orientation || 'portrait';
+    const margins = options.docMargins || templatePreset.settings.margins || { bottom: 96, left: 96, right: 96, top: 96 };
+
+    initialProject = {
+      pages: templatePreset.initialPages.map((p) => ({ ...p })),
+      settings: {
+        fontFamily: templatePreset.settings.fontFamily || 'Inter, system-ui, sans-serif',
+        fontSize: templatePreset.settings.fontSize || 11,
+        footerText: templatePreset.settings.footerText || '',
+        headerText: templatePreset.settings.headerText || '',
+        lineHeight: templatePreset.settings.lineHeight || 1.5,
+        margins,
+        orientation,
+        paperSize,
+        showPageNumbers: templatePreset.settings.showPageNumbers ?? true,
+        viewMode: 'paginated',
+        zoom: 1,
+      },
+      type: 'doc',
+      version: 1,
+    };
+  } else if (isDiagram) {
     const rootIdea = options.rootIdeaText?.trim() || options.name.trim() || 'Idea Principal';
-    const strategy = getDiagramStrategy(options.diagramSubtype);
-    initialProject = strategy.getInitialProject(rootIdea);
+    if (options.diagramTemplateId && options.diagramSubtype) {
+      initialProject = getCustomDiagramProject(options.diagramTemplateId, options.diagramSubtype, rootIdea);
+    } else {
+      const strategy = getDiagramStrategy(options.diagramSubtype);
+      initialProject = strategy.getInitialProject(rootIdea);
+    }
+    initialProject.theme.backgroundColor = '#ffffff';
     if (options.mindmapLineStyle) {
       initialProject.theme.lineStyle = options.mindmapLineStyle;
     }
   } else if (isBoard) {
+    const templateElements = getBoardTemplateElements(options.boardTemplateId);
     initialProject = {
       background: {
-        color: solidColor || '#ffffff',
-        type: options.bgType || 'dots',
+        color: '#ffffff',
+        dotColor: '#cbd5e1',
+        type: 'dots',
       },
       camera: { x: 0, y: 0, zoom: 1 },
-      elements: [],
+      elements: templateElements,
       type: 'board',
       version: 1,
     };
@@ -150,112 +197,114 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
   const initialData = JSON.stringify(initialProject);
 
   let previewThumbnail: string | null = null;
-  const maxThumbDim = 320;
-  let thumbW = isInfinite ? (isBoard || isDiagram ? 320 : 256) : width;
-  let thumbH = isInfinite ? (isBoard || isDiagram ? 180 : 256) : height;
-  if (thumbW > maxThumbDim || thumbH > maxThumbDim) {
-    const ratio = Math.min(maxThumbDim / thumbW, maxThumbDim / thumbH);
-    thumbW = Math.max(1, Math.round(thumbW * ratio));
-    thumbH = Math.max(1, Math.round(thumbH * ratio));
-  }
+  if (isDoc) {
+    previewThumbnail = generateDocThumbnail(initialProject);
+  } else {
+    const maxThumbDim = 320;
+    let thumbW = isInfinite ? (isBoard || isDiagram ? 320 : 256) : width;
+    let thumbH = isInfinite ? (isBoard || isDiagram ? 180 : 256) : height;
+    if (thumbW > maxThumbDim || thumbH > maxThumbDim) {
+      const ratio = Math.min(maxThumbDim / thumbW, maxThumbDim / thumbH);
+      thumbW = Math.max(1, Math.round(thumbW * ratio));
+      thumbH = Math.max(1, Math.round(thumbH * ratio));
+    }
 
-  const thumbCanvas = document.createElement('canvas');
-  thumbCanvas.width = thumbW;
-  thumbCanvas.height = thumbH;
-  const thumbCtx = thumbCanvas.getContext('2d');
+    const thumbCanvas = document.createElement('canvas');
+    thumbCanvas.width = thumbW;
+    thumbCanvas.height = thumbH;
+    const thumbCtx = thumbCanvas.getContext('2d');
 
-  if (thumbCtx) {
-    if (isDiagram) {
-      thumbCtx.fillStyle = '#ffffff';
-      thumbCtx.fillRect(0, 0, thumbW, thumbH);
+    if (thumbCtx) {
+      if (isDiagram) {
+        thumbCtx.fillStyle = '#ffffff';
+        thumbCtx.fillRect(0, 0, thumbW, thumbH);
 
-      thumbCtx.fillStyle = '#cbd5e1';
-      const step = 16;
-      for (let y = 8; y < thumbH; y += step) {
-        for (let x = 8; x < thumbW; x += step) {
-          thumbCtx.beginPath();
-          thumbCtx.arc(x, y, 1.2, 0, Math.PI * 2);
-          thumbCtx.fill();
-        }
-      }
-
-      const pillW = 120;
-      const pillH = 32;
-      const pillX = (thumbW - pillW) / 2;
-      const pillY = (thumbH - pillH) / 2;
-      thumbCtx.fillStyle = '#6366f1';
-      thumbCtx.beginPath();
-      thumbCtx.roundRect ? thumbCtx.roundRect(pillX, pillY, pillW, pillH, 16) : thumbCtx.rect(pillX, pillY, pillW, pillH);
-      thumbCtx.fill();
-
-      thumbCtx.fillStyle = '#ffffff';
-      thumbCtx.font = '600 12px system-ui, sans-serif';
-      thumbCtx.textAlign = 'center';
-      thumbCtx.textBaseline = 'middle';
-      thumbCtx.fillText(initialProject.nodes[initialProject.rootId]?.text || 'Idea Principal', thumbW / 2, thumbH / 2);
-    } else if (isBoard) {
-      const isDark = options.bgType === 'dark';
-      thumbCtx.fillStyle = isDark ? '#18181b' : (solidColor || '#ffffff');
-      thumbCtx.fillRect(0, 0, thumbW, thumbH);
-
-      const dotColor = isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.15)';
-      thumbCtx.fillStyle = dotColor;
-      const step = 16;
-      for (let y = 8; y < thumbH; y += step) {
-        for (let x = 8; x < thumbW; x += step) {
-          thumbCtx.beginPath();
-          thumbCtx.arc(x, y, 1.2, 0, Math.PI * 2);
-          thumbCtx.fill();
-        }
-      }
-    } else {
-      thumbCtx.imageSmoothingEnabled = false;
-      if (templateDataUrl) {
-        const thumbImg = new Image();
-        await new Promise<void>((r) => {
-          thumbImg.onload = () => {
-            try {
-              thumbCtx.drawImage(thumbImg, 0, 0, thumbW, thumbH);
-            } catch {}
-            r();
-          };
-          thumbImg.onerror = () => r();
-          thumbImg.src = templateDataUrl!;
-          if (thumbImg.complete && thumbImg.naturalWidth > 0) {
-            try {
-              thumbCtx.drawImage(thumbImg, 0, 0, thumbW, thumbH);
-            } catch {}
-            r();
+        thumbCtx.fillStyle = '#cbd5e1';
+        const step = 16;
+        for (let y = 8; y < thumbH; y += step) {
+          for (let x = 8; x < thumbW; x += step) {
+            thumbCtx.beginPath();
+            thumbCtx.arc(x, y, 1.2, 0, Math.PI * 2);
+            thumbCtx.fill();
           }
-        });
+        }
+
+        const pillW = 120;
+        const pillH = 32;
+        const pillX = (thumbW - pillW) / 2;
+        const pillY = (thumbH - pillH) / 2;
+        thumbCtx.fillStyle = '#6366f1';
+        thumbCtx.beginPath();
+        thumbCtx.roundRect ? thumbCtx.roundRect(pillX, pillY, pillW, pillH, 16) : thumbCtx.rect(pillX, pillY, pillW, pillH);
+        thumbCtx.fill();
+
+        thumbCtx.fillStyle = '#ffffff';
+        thumbCtx.font = '600 12px system-ui, sans-serif';
+        thumbCtx.textAlign = 'center';
+        thumbCtx.textBaseline = 'middle';
+        thumbCtx.fillText(initialProject.nodes[initialProject.rootId]?.text || 'Idea Principal', thumbW / 2, thumbH / 2);
+      } else if (isBoard) {
+        thumbCtx.fillStyle = '#ffffff';
+        thumbCtx.fillRect(0, 0, thumbW, thumbH);
+
+        thumbCtx.fillStyle = '#cbd5e1';
+        const step = 16;
+        for (let y = 8; y < thumbH; y += step) {
+          for (let x = 8; x < thumbW; x += step) {
+            thumbCtx.beginPath();
+            thumbCtx.arc(x, y, 1.2, 0, Math.PI * 2);
+            thumbCtx.fill();
+          }
+        }
       } else {
-        if (bgType === 'solid') {
-          thumbCtx.fillStyle = solidColor;
-          thumbCtx.fillRect(0, 0, thumbW, thumbH);
+        thumbCtx.imageSmoothingEnabled = false;
+        if (templateDataUrl) {
+          const thumbImg = new Image();
+          await new Promise<void>((r) => {
+            thumbImg.onload = () => {
+              try {
+                thumbCtx.drawImage(thumbImg, 0, 0, thumbW, thumbH);
+              } catch {}
+              r();
+            };
+            thumbImg.onerror = () => r();
+            thumbImg.src = templateDataUrl!;
+            if (thumbImg.complete && thumbImg.naturalWidth > 0) {
+              try {
+                thumbCtx.drawImage(thumbImg, 0, 0, thumbW, thumbH);
+              } catch {}
+              r();
+            }
+          });
         } else {
-          const cs = Math.max(4, Math.round(checkSize * (thumbW / (width || 256))));
-          for (let y = 0; y < thumbH; y += cs) {
-            for (let x = 0; x < thumbW; x += cs) {
-              const isEven = ((x / cs) + (y / cs)) % 2 === 0;
-              thumbCtx.fillStyle = isEven ? '#ffffff' : '#e2e8f0';
-              thumbCtx.fillRect(x, y, cs, cs);
+          if (bgType === 'solid') {
+            thumbCtx.fillStyle = solidColor;
+            thumbCtx.fillRect(0, 0, thumbW, thumbH);
+          } else {
+            const cs = Math.max(4, Math.round(checkSize * (thumbW / (width || 256))));
+            for (let y = 0; y < thumbH; y += cs) {
+              for (let x = 0; x < thumbW; x += cs) {
+                const isEven = ((x / cs) + (y / cs)) % 2 === 0;
+                thumbCtx.fillStyle = isEven ? '#ffffff' : '#e2e8f0';
+                thumbCtx.fillRect(x, y, cs, cs);
+              }
             }
           }
         }
       }
-    }
-    try {
-      previewThumbnail = thumbCanvas.toDataURL('image/png');
-    } catch {
+      try {
+        previewThumbnail = thumbCanvas.toDataURL('image/png');
+      } catch {
+        previewThumbnail = templateDataUrl;
+      }
+    } else {
       previewThumbnail = templateDataUrl;
     }
-  } else {
-    previewThumbnail = templateDataUrl;
   }
 
-  const unit = isDiagram ? 'diagram' : (isBoard ? 'board' : (isInfinite ? 'infinite' : 'px'));
-  const canvasType = isDiagram ? 'diagram' : (isBoard ? 'board' : 'pixel');
-  const targetRoute = isDiagram ? `/diagram/` : (isBoard ? `/board/` : `/design/`);
+  const unit = isDoc ? 'doc' : (isDiagram ? 'diagram' : (isBoard ? 'board' : (isInfinite ? 'infinite' : 'px')));
+  const canvasType = isDoc ? 'doc' : (isDiagram ? 'diagram' : (isBoard ? 'board' : 'pixel'));
+  const targetRoute = `/design/`;
 
   if (currentUser) {
     const res = await postApi(API_ROUTES.canvases.base, {

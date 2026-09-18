@@ -203,11 +203,6 @@ export class BoardController {
 
     if (canvas) {
       this.currentCanvasItem = canvas;
-      if (canvas.canvas_type === 'pixel' && canvas.unit !== 'board') {
-        navigate(`/design/${this.canvasUuid}`);
-        return true;
-      }
-
       this.canvasServerId = canvas.id || this.canvasServerId;
       this.canvasUserId = canvas.user_id || this.canvasUserId;
       this.boardName = canvas.name || 'Pizarrón sin título';
@@ -264,13 +259,10 @@ export class BoardController {
               };
             }
             if (project.background) {
-              const bgType = project.background.type || 'dots';
-              const rawColor = project.background.color;
-              const isBlueOrDark = rawColor === '#0f172a' || rawColor === '#18181b' || bgType === 'dark';
               this.boardBackground = {
-                color: isBlueOrDark ? '#ffffff' : (rawColor || '#ffffff'),
-                dotColor: isBlueOrDark ? '#cbd5e1' : (project.background.dotColor || '#cbd5e1'),
-                type: (bgType === 'dark' ? 'dots' : bgType) as BackgroundType,
+                color: '#ffffff',
+                dotColor: '#cbd5e1',
+                type: 'dots',
               };
             }
           }

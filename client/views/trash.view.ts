@@ -479,10 +479,11 @@ class TrashController {
       ? `<img class="canvas-card__image image-lazy-fade" src="${escapeHtml(canvas.preview_thumbnail)}" alt="${escapeHtml(canvas.name)}" loading="lazy" decoding="async" onload="this.classList.add('image-loaded')" onerror="this.onerror=null; this.classList.add('image-loaded');" />`
       : `<div class="canvas-card__canvas-placeholder"></div>`;
 
-    const isDiagram = canvas.canvas_type === 'diagram' || canvas.canvas_type === 'mindmap' || canvas.unit === 'diagram';
-    const isBoard = !isDiagram && (canvas.canvas_type === 'board' || canvas.unit === 'board');
-    const typeIcon = isDiagram ? 'psychology' : (isBoard ? 'draw' : 'grid_4x4');
-    const typeLabel = isDiagram ? 'Mapa Mental' : (isBoard ? 'Pizarrón' : `Lienzo ${canvas.width}×${canvas.height}`);
+    const isDoc = canvas.canvas_type === 'doc' || canvas.unit === 'doc';
+    const isDiagram = !isDoc && (canvas.canvas_type === 'diagram' || canvas.canvas_type === 'mindmap' || canvas.unit === 'diagram');
+    const isBoard = !isDoc && !isDiagram && (canvas.canvas_type === 'board' || canvas.unit === 'board');
+    const typeIcon = isDoc ? 'description' : (isDiagram ? 'psychology' : (isBoard ? 'draw' : 'grid_4x4'));
+    const typeLabel = isDoc ? 'Documento' : (isDiagram ? 'Mapa Mental' : (isBoard ? 'Pizarrón' : `Lienzo ${canvas.width}×${canvas.height}`));
 
     card.innerHTML = `
       <div class="canvas-card__thumbnail" data-ref="card-thumbnail">

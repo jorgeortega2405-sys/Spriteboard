@@ -4,6 +4,7 @@ import { API_ROUTES } from '../config/api-routes.js';
 import { ALL_PRESETS, PresetItem, TEMPLATE_CATEGORIES } from '../config/templates.config.js';
 import { buildAdCardHtml, DEFAULT_AD_FREQUENCY, getAdByIndex, handleAdClick, shouldShowAds } from '../services/ad.service.js';
 import { currentUser, escapeHtml, getApi, postApi } from '../services/api.service.js';
+import { createAndOpenCanvas } from '../services/canvas-creator.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { SkeletonService } from '../services/skeleton.service.js';
@@ -12,6 +13,8 @@ import { showToast } from '../services/toast.service.js';
 import { bindDragToScroll, CarouselController, initCarouselScroll, removeEmptyState, renderEmptyState, setupDropdown, setupLazyImages } from '../utils/dom.util.js';
 
 const BATCH_SIZE = 20;
+
+type TemplateTypeFilter = 'all' | 'favorites' | 'board' | 'mindmap' | 'conceptmap' | 'flowchart' | 'doc' | 'pixel';
 
 class TemplatesController {
   private container: HTMLElement;
@@ -36,7 +39,7 @@ class TemplatesController {
   private isRenderingBatch = false;
 
   private activeCategory = 'all';
-  private currentTypeFilter: 'all' | 'favorites' | 'pixel' | 'board' | 'diagram' = 'all';
+  private currentTypeFilter: TemplateTypeFilter = 'all';
   private currentSort: 'default' | 'alpha-asc' | 'alpha-desc' | 'size-desc' | 'size-asc' = 'default';
   private searchQuery = '';
   private favoritedTemplateIds = new Set<string>();
@@ -67,7 +70,7 @@ class TemplatesController {
       this.typeDropdownController = setupDropdown(typeDropdownWrapper, {
         matchWidth: false,
         onSelect: (val: string) => {
-          const next = (val as 'all' | 'favorites' | 'pixel' | 'board' | 'diagram') || 'all';
+          const next = (val as TemplateTypeFilter) || 'all';
           if (this.currentTypeFilter === next) return;
           this.currentTypeFilter = next;
           const typeMenu = this.container.querySelector<HTMLElement>('[data-ref="dropdown-menu-filter-type"]');
@@ -226,7 +229,7 @@ class TemplatesController {
         const preset = ALL_PRESETS.find((p) => p.id === presetId);
         if (!preset) return;
 
-        this.handleUseTemplate(preset);
+        void this.handleUseTemplate(preset);
       },
       { signal }
     );
@@ -244,11 +247,17 @@ class TemplatesController {
     if (this.currentTypeFilter === 'favorites') {
       filtered = filtered.filter((item) => this.favoritedTemplateIds.has(item.id));
     } else if (this.currentTypeFilter === 'pixel') {
-      filtered = filtered.filter((item) => (item.canvasType || 'pixel') === 'pixel' && item.categoryKey !== 'board' && item.categoryKey !== 'diagram');
+      filtered = filtered.filter((item) => item.categoryKey === 'pixel' || item.canvasType === 'pixel');
     } else if (this.currentTypeFilter === 'board') {
-      filtered = filtered.filter((item) => item.canvasType === 'board' || item.categoryKey === 'board');
-    } else if (this.currentTypeFilter === 'diagram') {
-      filtered = filtered.filter((item) => item.canvasType === 'diagram' || item.canvasType === 'mindmap' || item.categoryKey === 'diagram' || item.categoryKey === 'mindmap');
+      filtered = filtered.filter((item) => item.categoryKey === 'board' || item.canvasType === 'board');
+    } else if (this.currentTypeFilter === 'mindmap') {
+      filtered = filtered.filter((item) => item.categoryKey === 'mindmap');
+    } else if (this.currentTypeFilter === 'conceptmap') {
+      filtered = filtered.filter((item) => item.categoryKey === 'conceptmap');
+    } else if (this.currentTypeFilter === 'flowchart') {
+      filtered = filtered.filter((item) => item.categoryKey === 'flowchart');
+    } else if (this.currentTypeFilter === 'doc') {
+      filtered = filtered.filter((item) => item.categoryKey === 'doc' || item.canvasType === 'doc');
     }
 
     if (this.searchQuery) {
@@ -499,18 +508,40 @@ class TemplatesController {
     }
   }
 
-  private handleUseTemplate(preset: PresetItem): void {
-    const canvasType = preset.canvasType || (preset.categoryKey === 'board' ? 'board' : (preset.categoryKey === 'diagram' ? 'diagram' : 'pixel'));
-    openCreateCanvasModal({
-      diagramSubtype: preset.diagramSubtype,
-      height: preset.height,
-      initialType: canvasType,
-      name: preset.name,
-      templateImage: preset.imagePath,
-      templateName: preset.name,
-      variants: preset.variants,
-      width: preset.width,
-    });
+  private async handleUseTemplate(preset: PresetItem): Promise<void> {
+    if (preset.variants && preset.variants.length > 0) {
+      openCreateCanvasModal({
+        height: preset.height,
+        initialType: 'pixel',
+        name: preset.name,
+        templateImage: preset.imagePath,
+        templateName: preset.name,
+        variants: preset.variants,
+        width: preset.width,
+      });
+      return;
+    }
+
+    try {
+      const canvasType = preset.canvasType || (preset.categoryKey === 'board' ? 'board' : (preset.categoryKey === 'doc' ? 'doc' : (preset.categoryKey === 'pixel' ? 'pixel' : 'diagram')));
+      await createAndOpenCanvas({
+        bgType: canvasType === 'board' || canvasType === 'diagram' ? 'dots' : (canvasType === 'pixel' ? 'transparent' : undefined),
+        boardTemplateId: preset.boardTemplateId,
+        canvasType,
+        diagramSubtype: preset.diagramSubtype,
+        diagramTemplateId: preset.diagramTemplateId,
+        docTemplateId: preset.docTemplateId,
+        height: preset.height,
+        name: preset.name,
+        pixelTemplateId: preset.pixelTemplateId,
+        rootIdeaText: preset.name,
+        solidColor: '#ffffff',
+        templateImage: preset.imagePath,
+        width: preset.width,
+      });
+    } catch {
+      showToast(t('toasts.generic_error'), 'danger');
+    }
   }
 
   public destroy(): void {
