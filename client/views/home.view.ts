@@ -1,4 +1,4 @@
-import { createPopper, Instance as PopperInstance } from '@popperjs/core';
+import { createPopper, Instance as PopperInstance, VirtualElement } from '@popperjs/core';
 import { navigate } from '../app-router.js';
 import { openCanvasDownloadModal } from '../components/canvas-download-modal.component.js';
 import { openCanvasShareModal } from '../components/canvas-share-modal.component.js';
@@ -468,6 +468,31 @@ class HomeController {
       { signal }
     );
 
+    document.addEventListener(
+      'contextmenu',
+      (e: MouseEvent) => {
+        const target = e.target as HTMLElement | null;
+        if (
+          this.activeOpenDropdown &&
+          !this.activeOpenDropdown.contains(target) &&
+          !target?.closest('.canvas-card')
+        ) {
+          this.closeAllDropdowns();
+        }
+      },
+      { signal }
+    );
+
+    this.scrollableEl?.addEventListener(
+      'scroll',
+      () => {
+        if (this.activeOpenDropdown) {
+          this.closeAllDropdowns();
+        }
+      },
+      { signal, passive: true }
+    );
+
     this.scrollableEl?.addEventListener(
       'pointerdown',
       (e: PointerEvent) => {
@@ -496,6 +521,10 @@ class HomeController {
       'keydown',
       (e: KeyboardEvent) => {
         if (e.key === 'Escape') {
+          if (this.activeOpenDropdown) {
+            this.closeAllDropdowns();
+            return;
+          }
           if (this.selectedUuids.size > 0) {
             this.clearSelection();
             return;
@@ -697,6 +726,11 @@ class HomeController {
     }
     if (this.activeOpenDropdown) {
       this.activeOpenDropdown.style.display = 'none';
+      this.activeOpenDropdown.removeAttribute('data-popper-placement');
+      this.activeOpenDropdown.style.position = '';
+      this.activeOpenDropdown.style.top = '';
+      this.activeOpenDropdown.style.left = '';
+      this.activeOpenDropdown.style.transform = '';
       this.activeOpenDropdown = null;
     }
     if (this.activeOpenCard) {
@@ -712,6 +746,105 @@ class HomeController {
       w.classList.remove('is-open');
     });
     unregisterActiveDropdown(this.boundCloseCardDropdowns);
+  }
+
+  private openCardDropdown(
+    card: HTMLElement,
+    dropdown: HTMLElement,
+    actionsWrapper: HTMLElement | null,
+    target: HTMLElement | { x: number; y: number }
+  ): void {
+    const isCurrentlyOpen = this.activeOpenDropdown === dropdown && dropdown.style.display === 'flex';
+    this.closeAllDropdowns();
+    closeAllDropdowns();
+
+    if (isCurrentlyOpen && target instanceof HTMLElement) {
+      return;
+    }
+
+    dropdown.style.display = 'flex';
+    card.classList.add('has-dropdown-open');
+    actionsWrapper?.classList.add('is-open');
+    this.activeOpenDropdown = dropdown;
+    this.activeOpenCard = card;
+    registerActiveDropdown({
+      close: this.boundCloseCardDropdowns,
+      wrapper: card,
+    });
+
+    if (window.innerWidth > 768) {
+      if (target instanceof HTMLElement) {
+        this.activeCardPopper = createPopper(target, dropdown, {
+          placement: 'bottom-end',
+          modifiers: [
+            {
+              name: 'offset',
+              options: {
+                offset: [0, 4],
+              },
+            },
+            {
+              name: 'flip',
+              options: {
+                fallbackPlacements: ['top-end', 'bottom-start', 'top-start'],
+                padding: 8,
+              },
+            },
+            {
+              name: 'preventOverflow',
+              options: {
+                boundary: 'viewport',
+                padding: 8,
+              },
+            },
+          ],
+        });
+      } else {
+        const { x, y } = target;
+        const virtualElement: VirtualElement = {
+          getBoundingClientRect: () =>
+            ({
+              bottom: y,
+              height: 0,
+              left: x,
+              right: x,
+              top: y,
+              width: 0,
+              x,
+              y,
+              toJSON: () => {},
+            } as DOMRect),
+          contextElement: card,
+        };
+
+        this.activeCardPopper = createPopper(virtualElement, dropdown, {
+          placement: 'bottom-start',
+          strategy: 'fixed',
+          modifiers: [
+            {
+              name: 'offset',
+              options: {
+                offset: [0, 2],
+              },
+            },
+            {
+              name: 'flip',
+              options: {
+                fallbackPlacements: ['top-start', 'bottom-end', 'top-end'],
+                padding: 8,
+              },
+            },
+            {
+              name: 'preventOverflow',
+              options: {
+                boundary: 'viewport',
+                padding: 8,
+              },
+            },
+          ],
+        });
+      }
+    }
   }
 
   private async loadAll(): Promise<void> {
@@ -1593,53 +1726,22 @@ class HomeController {
       e.stopPropagation();
     });
 
+    card.addEventListener('contextmenu', (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target?.closest('[data-ref="card-menu-dropdown"]')) {
+        e.preventDefault();
+        return;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+      if (!menuDropdown) return;
+      this.openCardDropdown(card, menuDropdown, actionsWrapper, { x: e.clientX, y: e.clientY });
+    });
+
     btnMore?.addEventListener('click', (e) => {
       e.stopPropagation();
       if (!menuDropdown) return;
-
-      const isCurrentlyOpen = menuDropdown.style.display === 'flex';
-      this.closeAllDropdowns();
-      closeAllDropdowns();
-
-      if (!isCurrentlyOpen) {
-        menuDropdown.style.display = 'flex';
-        card.classList.add('has-dropdown-open');
-        actionsWrapper?.classList.add('is-open');
-        this.activeOpenDropdown = menuDropdown;
-        this.activeOpenCard = card;
-        registerActiveDropdown({
-          close: this.boundCloseCardDropdowns,
-          wrapper: card,
-        });
-
-        if (window.innerWidth > 768) {
-          this.activeCardPopper = createPopper(btnMore, menuDropdown, {
-            placement: 'bottom-end',
-            modifiers: [
-              {
-                name: 'offset',
-                options: {
-                  offset: [0, 4],
-                },
-              },
-              {
-                name: 'flip',
-                options: {
-                  fallbackPlacements: ['top-end', 'bottom-start', 'top-start'],
-                  padding: 8,
-                },
-              },
-              {
-                name: 'preventOverflow',
-                options: {
-                  boundary: 'viewport',
-                  padding: 8,
-                },
-              },
-            ],
-          });
-        }
-      }
+      this.openCardDropdown(card, menuDropdown, actionsWrapper, btnMore);
     });
 
     actionOpenNewTab?.addEventListener('click', (e) => {
@@ -1752,6 +1854,10 @@ class HomeController {
 
     card.addEventListener('click', () => {
       if (this.didDrag) return;
+      if (this.activeOpenDropdown) {
+        this.closeAllDropdowns();
+        return;
+      }
       if (this.selectedUuids.size > 0) {
         this.toggleCardSelection(canvas.uuid);
         return;
@@ -1999,55 +2105,30 @@ class HomeController {
 
     card.addEventListener('click', () => {
       if (this.didDrag) return;
+      if (this.activeOpenDropdown) {
+        this.closeAllDropdowns();
+        return;
+      }
       this.closeAllDropdowns();
       void this.openFolder(folder.uuid);
+    });
+
+    card.addEventListener('contextmenu', (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target?.closest('[data-ref="folder-menu-dropdown"]')) {
+        e.preventDefault();
+        return;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+      if (!dropdown) return;
+      this.openCardDropdown(card, dropdown, actionsWrapper, { x: e.clientX, y: e.clientY });
     });
 
     btnMore?.addEventListener('click', (e) => {
       e.stopPropagation();
       if (!dropdown) return;
-      const isOpen = dropdown.style.display === 'flex';
-      this.closeAllDropdowns();
-      closeAllDropdowns();
-      if (!isOpen) {
-        dropdown.style.display = 'flex';
-        card.classList.add('has-dropdown-open');
-        actionsWrapper?.classList.add('is-open');
-        this.activeOpenDropdown = dropdown;
-        this.activeOpenCard = card;
-        registerActiveDropdown({
-          close: this.boundCloseCardDropdowns,
-          wrapper: card,
-        });
-
-        if (window.innerWidth > 768) {
-          this.activeCardPopper = createPopper(btnMore, dropdown, {
-            placement: 'bottom-end',
-            modifiers: [
-              {
-                name: 'offset',
-                options: {
-                  offset: [0, 4],
-                },
-              },
-              {
-                name: 'flip',
-                options: {
-                  fallbackPlacements: ['top-end', 'bottom-start', 'top-start'],
-                  padding: 8,
-                },
-              },
-              {
-                name: 'preventOverflow',
-                options: {
-                  boundary: 'viewport',
-                  padding: 8,
-                },
-              },
-            ],
-          });
-        }
-      }
+      this.openCardDropdown(card, dropdown, actionsWrapper, btnMore);
     });
 
     actionRename?.addEventListener('click', (e) => {

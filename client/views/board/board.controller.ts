@@ -1,5 +1,6 @@
 import { navigate } from '../../app-router.js';
 import { openCanvasShareModal } from '../../components/canvas-share-modal.component.js';
+import { closeContextMenu, ContextMenuItem, openContextMenu } from '../../components/context-menu.component.js';
 import { InsertPixelGridConfig, openInsertPixelGridModal } from '../../components/insert-pixel-grid-modal.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
 import { currentUser, getApi, postApi } from '../../services/api.service.js';
@@ -136,6 +137,7 @@ export class BoardController {
       this.autoSaveTimer = null;
     }
     this.commitInlineEditor();
+    closeContextMenu();
     if (this.isLoaded && this.isOwner) {
       void this.saveImmediate();
     }
@@ -1462,6 +1464,235 @@ export class BoardController {
       },
       { signal }
     );
+
+    this.canvasElement.addEventListener(
+      'contextmenu',
+      (e: MouseEvent) => {
+        this.handleContextMenu(e);
+      },
+      { signal }
+    );
+  }
+
+  private handleContextMenu(e: MouseEvent): void {
+    e.preventDefault();
+    if (!this.canvasElement) return;
+
+    const rect = this.canvasElement.getBoundingClientRect();
+    const screenPos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    const worldPos = screenToWorld(screenPos.x, screenPos.y, this.canvasElement, this.camera);
+
+    const hit = hitTestElement(this.elements, worldPos.x, worldPos.y, this.camera.zoom);
+    if (hit) {
+      if (this.selectedElementId !== hit.id) {
+        this.selectedElementId = hit.id;
+        this.updateSelectionToolbar();
+        this.requestRedraw();
+      }
+
+      const items: ContextMenuItem[] = [
+        {
+          action: () => this.duplicateSelected(),
+          icon: 'filter_none',
+          label: 'Duplicar',
+          ref: 'ctx-board-duplicate',
+          shortcut: 'Ctrl+D',
+        },
+        {
+          action: () => this.reorderSelected(true),
+          icon: 'flip_to_front',
+          label: 'Traer al frente',
+          ref: 'ctx-board-bring-forward',
+        },
+        {
+          action: () => this.reorderSelected(false),
+          icon: 'flip_to_back',
+          label: 'Enviar al fondo',
+          ref: 'ctx-board-send-backward',
+        },
+      ];
+
+      if (hit.type === 'pixel-grid') {
+        items.push({
+          action: () => {
+            this.selectedElementId = hit.id;
+            this.setTool('pixel');
+          },
+          icon: 'edit',
+          label: 'Editar píxeles',
+          ref: 'ctx-board-edit-pixels',
+        });
+        items.push({
+          action: () => this.pixelGrid.exportPixelGridSprite(hit as BoardPixelGridElement),
+          icon: 'download',
+          label: 'Exportar sprite',
+          ref: 'ctx-board-export-sprite',
+        });
+      }
+
+      if (hit.type === 'sticky' || hit.type === 'text') {
+        items.push({
+          action: () => {
+            this.selectedElementId = hit.id;
+            this.openInlineEditor(hit as BoardStickyElement | BoardTextElement);
+          },
+          icon: 'edit',
+          label: 'Editar texto',
+          ref: 'ctx-board-edit-text',
+        });
+      }
+
+      items.push(
+        {
+          action: () => this.deleteSelected(),
+          danger: true,
+          icon: 'delete',
+          label: 'Eliminar',
+          ref: 'ctx-board-delete',
+          shortcut: 'Supr',
+        },
+        { divider: true },
+        {
+          action: () => this.undo(),
+          disabled: !this.history.canUndo(),
+          icon: 'undo',
+          label: 'Deshacer',
+          ref: 'ctx-board-undo',
+          shortcut: 'Ctrl+Z',
+        },
+        {
+          action: () => this.redo(),
+          disabled: !this.history.canRedo(),
+          icon: 'redo',
+          label: 'Rehacer',
+          ref: 'ctx-board-redo',
+          shortcut: 'Ctrl+Y',
+        }
+      );
+
+      openContextMenu({
+        items,
+        x: e.clientX,
+        y: e.clientY,
+      });
+      return;
+    }
+
+    const items: ContextMenuItem[] = [
+      {
+        action: () => {
+          this.pushHistoryState();
+          const stickyEl: BoardStickyElement = {
+            color: this.stickyDefaultColor,
+            fontSize: 16,
+            height: 160,
+            id: `sticky-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            text: 'Nota',
+            textColor: '#1e293b',
+            type: 'sticky',
+            width: 160,
+            x: worldPos.x - 80,
+            y: worldPos.y - 80,
+          };
+          this.elements.push(stickyEl);
+          this.collaborationManager.broadcastAddElement(stickyEl);
+          this.selectedElementId = stickyEl.id;
+          this.updateSelectionToolbar();
+          this.requestRedraw();
+          this.scheduleAutoSave();
+        },
+        icon: 'sticky_note_2',
+        label: 'Añadir nota adhesiva',
+        ref: 'ctx-board-add-sticky',
+        shortcut: 'N',
+      },
+      {
+        action: () => {
+          this.pushHistoryState();
+          const textEl: BoardTextElement = {
+            color: this.currentColor,
+            fontSize: 20,
+            height: 36,
+            id: `text-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            text: 'Texto',
+            type: 'text',
+            width: 120,
+            x: worldPos.x,
+            y: worldPos.y,
+          };
+          this.elements.push(textEl);
+          this.collaborationManager.broadcastAddElement(textEl);
+          this.selectedElementId = textEl.id;
+          this.updateSelectionToolbar();
+          this.requestRedraw();
+          this.scheduleAutoSave();
+        },
+        icon: 'title',
+        label: 'Añadir texto',
+        ref: 'ctx-board-add-text',
+        shortcut: 'T',
+      },
+      {
+        action: () => {
+          this.pushHistoryState();
+          const shapeEl: BoardShapeElement = {
+            fillColor: this.currentFillColor,
+            height: 100,
+            id: `shape-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            shapeType: 'rect',
+            strokeColor: this.currentColor,
+            strokeWidth: this.currentStrokeWidth,
+            type: 'shape',
+            width: 140,
+            x: worldPos.x - 70,
+            y: worldPos.y - 50,
+          };
+          this.elements.push(shapeEl);
+          this.collaborationManager.broadcastAddElement(shapeEl);
+          this.selectedElementId = shapeEl.id;
+          this.updateSelectionToolbar();
+          this.requestRedraw();
+          this.scheduleAutoSave();
+        },
+        icon: 'crop_square',
+        label: 'Añadir figura',
+        ref: 'ctx-board-add-shape',
+        shortcut: 'R',
+      },
+      { divider: true },
+      {
+        action: () => {
+          this.setZoom(1);
+        },
+        icon: 'zoom_in',
+        label: 'Restablecer zoom (100%)',
+        ref: 'ctx-board-reset-zoom',
+        shortcut: 'Ctrl+0',
+      },
+      { divider: true },
+      {
+        action: () => this.undo(),
+        disabled: !this.history.canUndo(),
+        icon: 'undo',
+        label: 'Deshacer',
+        ref: 'ctx-board-undo',
+        shortcut: 'Ctrl+Z',
+      },
+      {
+        action: () => this.redo(),
+        disabled: !this.history.canRedo(),
+        icon: 'redo',
+        label: 'Rehacer',
+        ref: 'ctx-board-redo',
+        shortcut: 'Ctrl+Y',
+      },
+    ];
+
+    openContextMenu({
+      items,
+      x: e.clientX,
+      y: e.clientY,
+    });
   }
 
   private handlePointerDown(e: PointerEvent): void {

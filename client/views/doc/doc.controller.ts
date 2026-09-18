@@ -1,4 +1,5 @@
 import { openCanvasShareModal } from '../../components/canvas-share-modal.component.js';
+import { closeContextMenu, ContextMenuItem, openContextMenu } from '../../components/context-menu.component.js';
 import { openModal } from '../../components/modal.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
 import { currentUser, getApi, putApi } from '../../services/api.service.js';
@@ -96,6 +97,7 @@ export class DocController implements ViewController {
   }
 
   public destroy(): void {
+    closeContextMenu();
     this.abortController.abort();
     if (this.fontPicker) {
       this.fontPicker.destroy();
@@ -719,6 +721,9 @@ export class DocController implements ViewController {
         fontsPanel?.classList.add('is-hidden');
         colorsPanel?.classList.add('is-hidden');
       }
+    }, { signal });
+    viewport?.addEventListener('contextmenu', (e: MouseEvent) => {
+      this.handleContextMenu(e);
     }, { signal });
   }
 
@@ -2251,6 +2256,341 @@ export class DocController implements ViewController {
       `,
       confirmText: 'Aceptar',
       title: 'Estadísticas del Documento',
+    });
+  }
+
+  private handleContextMenu(e: MouseEvent): void {
+    e.preventDefault();
+
+    const target = e.target as HTMLElement;
+    const canUndo = this.historyManager.canUndo();
+    const canRedo = this.historyManager.canRedo();
+
+    const cell = (target.tagName === 'TD' || target.tagName === 'TH')
+      ? (target as HTMLTableCellElement)
+      : (target.closest('td, th') as HTMLTableCellElement | null);
+    const table = cell ? cell.closest('table') : (target.closest('table') as HTMLTableElement | null);
+
+    const imgWrapper = target.closest('.doc-image-wrapper') as HTMLElement | null;
+
+    const selection = window.getSelection();
+    const selectedText = selection ? selection.toString() : '';
+    const hasTextSelected = selectedText.length > 0;
+
+    const items: ContextMenuItem[] = [];
+
+    if (cell && table) {
+      this.activeTableCell = cell;
+      this.activeTable = table;
+
+      items.push(
+        {
+          action: () => {
+            const row = cell.parentElement as HTMLTableRowElement;
+            const newRow = table.insertRow(row.rowIndex);
+            for (let i = 0; i < row.cells.length; i++) {
+              const newCell = newRow.insertCell(i);
+              newCell.innerHTML = '<br>';
+              newCell.style.border = '1px solid #cbd5e1';
+              newCell.style.padding = '8px';
+            }
+            this.recordChange();
+          },
+          icon: 'add',
+          label: 'Insertar fila arriba',
+          ref: 'ctx-doc-insert-row-above',
+        },
+        {
+          action: () => {
+            const row = cell.parentElement as HTMLTableRowElement;
+            const newRow = table.insertRow(row.rowIndex + 1);
+            for (let i = 0; i < row.cells.length; i++) {
+              const newCell = newRow.insertCell(i);
+              newCell.innerHTML = '<br>';
+              newCell.style.border = '1px solid #cbd5e1';
+              newCell.style.padding = '8px';
+            }
+            this.recordChange();
+          },
+          icon: 'add',
+          label: 'Insertar fila abajo',
+          ref: 'ctx-doc-insert-row-below',
+        },
+        {
+          action: () => {
+            const cellIndex = cell.cellIndex;
+            for (let i = 0; i < table.rows.length; i++) {
+              const row = table.rows[i];
+              const newCell = row.insertCell(cellIndex);
+              newCell.innerHTML = '<br>';
+              newCell.style.border = '1px solid #cbd5e1';
+              newCell.style.padding = '8px';
+            }
+            this.recordChange();
+          },
+          icon: 'add',
+          label: 'Insertar columna izquierda',
+          ref: 'ctx-doc-insert-col-left',
+        },
+        {
+          action: () => {
+            const cellIndex = cell.cellIndex + 1;
+            for (let i = 0; i < table.rows.length; i++) {
+              const row = table.rows[i];
+              const newCell = row.insertCell(cellIndex);
+              newCell.innerHTML = '<br>';
+              newCell.style.border = '1px solid #cbd5e1';
+              newCell.style.padding = '8px';
+            }
+            this.recordChange();
+          },
+          icon: 'add',
+          label: 'Insertar columna derecha',
+          ref: 'ctx-doc-insert-col-right',
+        },
+        { divider: true },
+        {
+          action: () => {
+            const row = cell.parentElement as HTMLTableRowElement;
+            table.deleteRow(row.rowIndex);
+            this.activeTableCell = null;
+            this.recordChange();
+          },
+          danger: true,
+          icon: 'delete',
+          label: 'Eliminar fila',
+          ref: 'ctx-doc-delete-row',
+        },
+        {
+          action: () => {
+            const cellIndex = cell.cellIndex;
+            for (let i = 0; i < table.rows.length; i++) {
+              table.rows[i].deleteCell(cellIndex);
+            }
+            this.activeTableCell = null;
+            this.recordChange();
+          },
+          danger: true,
+          icon: 'delete',
+          label: 'Eliminar columna',
+          ref: 'ctx-doc-delete-col',
+        },
+        {
+          action: () => {
+            table.remove();
+            this.activeTable = null;
+            this.activeTableCell = null;
+            this.recordChange();
+          },
+          danger: true,
+          icon: 'delete_sweep',
+          label: 'Eliminar tabla',
+          ref: 'ctx-doc-delete-table',
+        }
+      );
+    } else if (imgWrapper) {
+      items.push(
+        {
+          action: () => {
+            imgWrapper.classList.remove('doc-img-wrap--inline', 'doc-img-wrap--left', 'doc-img-wrap--right', 'doc-img-wrap--center', 'doc-img-wrap--free');
+            imgWrapper.classList.add('doc-img-wrap--inline');
+            this.recordChange();
+          },
+          icon: 'align_horizontal_left',
+          label: 'Alineación en línea',
+          ref: 'ctx-doc-img-inline',
+        },
+        {
+          action: () => {
+            imgWrapper.classList.remove('doc-img-wrap--inline', 'doc-img-wrap--left', 'doc-img-wrap--right', 'doc-img-wrap--center', 'doc-img-wrap--free');
+            imgWrapper.classList.add('doc-img-wrap--center');
+            this.recordChange();
+          },
+          icon: 'align_horizontal_center',
+          label: 'Alineación centrada',
+          ref: 'ctx-doc-img-center',
+        },
+        { divider: true },
+        {
+          action: () => {
+            imgWrapper.remove();
+            this.recordChange();
+          },
+          danger: true,
+          icon: 'delete',
+          label: 'Eliminar imagen',
+          ref: 'ctx-doc-img-delete',
+          shortcut: 'Supr',
+        }
+      );
+    } else if (hasTextSelected) {
+      items.push(
+        {
+          action: () => {
+            document.execCommand('cut');
+            this.recordChange();
+          },
+          icon: 'content_cut',
+          label: 'Cortar',
+          ref: 'ctx-doc-cut',
+          shortcut: 'Ctrl+X',
+        },
+        {
+          action: () => {
+            document.execCommand('copy');
+          },
+          icon: 'content_copy',
+          label: 'Copiar',
+          ref: 'ctx-doc-copy',
+          shortcut: 'Ctrl+C',
+        },
+        {
+          action: async () => {
+            try {
+              if (navigator.clipboard) {
+                const text = await navigator.clipboard.readText();
+                document.execCommand('insertText', false, text);
+                this.recordChange();
+              } else {
+                document.execCommand('paste');
+                this.recordChange();
+              }
+            } catch {
+              document.execCommand('paste');
+              this.recordChange();
+            }
+          },
+          icon: 'content_paste',
+          label: 'Pegar',
+          ref: 'ctx-doc-paste',
+          shortcut: 'Ctrl+V',
+        },
+        { divider: true },
+        {
+          action: () => {
+            document.execCommand('bold', false);
+            this.recordChange();
+          },
+          icon: 'format_bold',
+          label: 'Negrita',
+          ref: 'ctx-doc-bold',
+          shortcut: 'Ctrl+B',
+        },
+        {
+          action: () => {
+            document.execCommand('italic', false);
+            this.recordChange();
+          },
+          icon: 'format_italic',
+          label: 'Cursiva',
+          ref: 'ctx-doc-italic',
+          shortcut: 'Ctrl+I',
+        },
+        {
+          action: () => {
+            document.execCommand('underline', false);
+            this.recordChange();
+          },
+          icon: 'format_underlined',
+          label: 'Subrayado',
+          ref: 'ctx-doc-underline',
+          shortcut: 'Ctrl+U',
+        },
+        {
+          action: () => {
+            document.execCommand('removeFormat', false);
+            this.recordChange();
+          },
+          icon: 'format_clear',
+          label: 'Limpiar formato',
+          ref: 'ctx-doc-clear-format',
+        },
+        {
+          action: () => {
+            const url = prompt('URL del enlace:');
+            if (url) {
+              document.execCommand('createLink', false, url);
+              this.recordChange();
+            }
+          },
+          icon: 'link',
+          label: 'Insertar enlace',
+          ref: 'ctx-doc-link',
+          shortcut: 'Ctrl+K',
+        }
+      );
+    } else {
+      items.push(
+        {
+          action: async () => {
+            try {
+              if (navigator.clipboard) {
+                const text = await navigator.clipboard.readText();
+                document.execCommand('insertText', false, text);
+                this.recordChange();
+              } else {
+                document.execCommand('paste');
+                this.recordChange();
+              }
+            } catch {
+              document.execCommand('paste');
+              this.recordChange();
+            }
+          },
+          icon: 'content_paste',
+          label: 'Pegar',
+          ref: 'ctx-doc-paste',
+          shortcut: 'Ctrl+V',
+        },
+        {
+          action: () => {
+            document.execCommand('selectAll');
+          },
+          icon: 'select_all',
+          label: 'Seleccionar todo',
+          ref: 'ctx-doc-select-all',
+          shortcut: 'Ctrl+A',
+        },
+        { divider: true },
+        {
+          action: () => this.insertTable(3, 3),
+          icon: 'table_chart',
+          label: 'Insertar tabla 3×3',
+          ref: 'ctx-doc-insert-table',
+        },
+        {
+          action: () => this.openPageSetupModal(),
+          icon: 'settings',
+          label: 'Configurar página',
+          ref: 'ctx-doc-page-setup',
+        }
+      );
+    }
+
+    items.push(
+      { divider: true },
+      {
+        action: () => this.handleUndo(),
+        disabled: !canUndo,
+        icon: 'undo',
+        label: 'Deshacer',
+        ref: 'ctx-doc-undo',
+        shortcut: 'Ctrl+Z',
+      },
+      {
+        action: () => this.handleRedo(),
+        disabled: !canRedo,
+        icon: 'redo',
+        label: 'Rehacer',
+        ref: 'ctx-doc-redo',
+        shortcut: 'Ctrl+Y',
+      }
+    );
+
+    openContextMenu({
+      items,
+      x: e.clientX,
+      y: e.clientY,
     });
   }
 }

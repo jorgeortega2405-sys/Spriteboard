@@ -616,6 +616,49 @@
   box-sizing: border-box;
 }
 
+.menu-panel--context-menu {
+  display: flex !important;
+  flex-direction: column;
+  position: fixed !important;
+  width: 225px;
+  min-width: 200px;
+  max-width: 280px;
+  z-index: 10000 !important;
+  box-shadow: var(--shadow-dropdown, 0 8px 24px rgba(0, 0, 0, 0.25));
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-surface);
+  border-radius: var(--radius-lg);
+  padding: 4px;
+}
+
+.menu-panel--context-menu .menu-item {
+  height: 34px;
+  min-height: 34px;
+  padding: 0 10px;
+  font-size: 12.5px;
+}
+
+.menu-panel--context-menu .menu-divider {
+  margin: 4px -4px;
+  width: calc(100% + 8px);
+}
+
+.menu-item__shortcut {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-tertiary, #94a3b8);
+  margin-left: auto;
+  padding-left: 12px;
+  letter-spacing: 0.2px;
+  user-select: none;
+}
+
+.menu-item.is-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 /* ==========================================================================
    5.1 COMPONENTE DE ELEMENTO DE CUENTA (MULTICUENTAS)
    ========================================================================== */
@@ -4074,6 +4117,10 @@ html.dark-theme .canvas-card.is-selected:hover .canvas-card__thumbnail {
 
 .canvas-card.has-dropdown-open {
   z-index: 30;
+}
+
+.canvas-card.has-dropdown-open .canvas-card__thumbnail {
+  overflow: visible;
 }
 
 .canvas-card__image {

@@ -1,6 +1,7 @@
 import { navigate } from '../../app-router.js';
 import { CanvasCommentsController } from '../../components/canvas-comments.component.js';
 import { openCanvasMetricsModal } from '../../components/canvas-metrics-modal.component.js';
+import { closeContextMenu, ContextMenuItem, openContextMenu } from '../../components/context-menu.component.js';
 import { openModal } from '../../components/modal.component.js';
 import { openUpgradeModal } from '../../components/upgrade-modal.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
@@ -3634,6 +3635,14 @@ export class DesignController {
     this.requestRedraw();
   }
 
+  private invertSelection(): void {
+    if (this.isInfinite) return;
+    this.commitFloatingSelection();
+    this.toolsManager.invertSelection(this.canvasWidth, this.canvasHeight, this.isInfinite);
+    this.startMarchingAntsLoop();
+    this.requestRedraw();
+  }
+
   private flipSelectionHorizontal(): void {
     if (!this.floatingSelection && this.selectionMask) {
       this.liftSelectionToFloating();
@@ -5434,6 +5443,14 @@ export class DesignController {
           if (this.isPlacingShape && this.viewportCanvas) {
             this.viewportCanvas.style.cursor = '';
           }
+        },
+        { signal }
+      );
+
+      this.viewportCanvas.addEventListener(
+        'contextmenu',
+        (e: MouseEvent) => {
+          this.handleContextMenu(e);
         },
         { signal }
       );
@@ -8639,6 +8656,178 @@ export class DesignController {
     }
   }
 
+  private resetCanvasView(): void {
+    const parent = this.viewportCanvas?.parentElement;
+    if (parent) {
+      const rect = parent.getBoundingClientRect();
+      this.zoom = 1.0;
+      this.panX = this.isInfinite ? Math.round(rect.width / 2) : Math.round((rect.width - this.canvasWidth * this.zoom) / 2);
+      this.panY = this.isInfinite ? Math.round(rect.height / 2) : Math.round((rect.height - this.canvasHeight * this.zoom) / 2);
+      this.updateZoomUI();
+      this.requestRedraw();
+    } else {
+      this.setZoom(1.0);
+    }
+  }
+
+  private handleContextMenu(e: MouseEvent): void {
+    e.preventDefault();
+    if (!this.viewportCanvas) return;
+
+    const hasSelection = Boolean(this.floatingSelection || this.selectionMask);
+    const hasClipboard = Boolean(this.clipboard);
+    const canUndo = this.undoStack.length > 0;
+    const canRedo = this.redoStack.length > 0;
+
+    const items: ContextMenuItem[] = [];
+
+    if (hasSelection) {
+      items.push(
+        {
+          action: () => this.copySelection(),
+          icon: 'content_copy',
+          label: 'Copiar selección',
+          ref: 'ctx-design-copy',
+          shortcut: 'Ctrl+C',
+        },
+        {
+          action: () => this.cutSelection(),
+          icon: 'content_cut',
+          label: 'Cortar selección',
+          ref: 'ctx-design-cut',
+          shortcut: 'Ctrl+X',
+        },
+        {
+          action: () => this.pasteClipboard(),
+          disabled: !hasClipboard,
+          icon: 'content_paste',
+          label: 'Pegar',
+          ref: 'ctx-design-paste',
+          shortcut: 'Ctrl+V',
+        },
+        { divider: true },
+        {
+          action: () => this.flipSelectionHorizontal(),
+          icon: 'swap_horiz',
+          label: 'Voltear selección horizontal',
+          ref: 'ctx-design-flip-h',
+          shortcut: 'H',
+        },
+        {
+          action: () => this.flipSelectionVertical(),
+          icon: 'swap_vert',
+          label: 'Voltear selección vertical',
+          ref: 'ctx-design-flip-v',
+          shortcut: 'V',
+        },
+        {
+          action: () => this.rotateSelection90(),
+          icon: 'rotate_right',
+          label: 'Rotar selección 90°',
+          ref: 'ctx-design-rotate',
+        },
+        {
+          action: () => this.invertSelection(),
+          icon: 'invert_colors',
+          label: 'Invertir selección',
+          ref: 'ctx-design-invert',
+        },
+        {
+          action: () => this.clearSelection(),
+          icon: 'close',
+          label: 'Deseleccionar',
+          ref: 'ctx-design-deselect',
+          shortcut: 'Esc',
+        },
+        {
+          action: () => this.deleteSelection(),
+          danger: true,
+          icon: 'delete',
+          label: 'Eliminar selección',
+          ref: 'ctx-design-delete',
+          shortcut: 'Supr',
+        }
+      );
+    } else {
+      items.push(
+        {
+          action: () => this.pasteClipboard(),
+          disabled: !hasClipboard,
+          icon: 'content_paste',
+          label: 'Pegar',
+          ref: 'ctx-design-paste',
+          shortcut: 'Ctrl+V',
+        },
+        {
+          action: () => this.selectAll(),
+          disabled: this.isInfinite,
+          icon: 'select_all',
+          label: 'Seleccionar todo',
+          ref: 'ctx-design-select-all',
+          shortcut: 'Ctrl+A',
+        },
+        { divider: true },
+        {
+          action: () => this.flipCanvas(true),
+          disabled: this.isInfinite,
+          icon: 'swap_horiz',
+          label: 'Voltear lienzo horizontal',
+          ref: 'ctx-design-flip-canvas-h',
+        },
+        {
+          action: () => this.flipCanvas(false),
+          disabled: this.isInfinite,
+          icon: 'swap_vert',
+          label: 'Voltear lienzo vertical',
+          ref: 'ctx-design-flip-canvas-v',
+        },
+        {
+          action: () => this.resetCanvasView(),
+          icon: 'center_focus_strong',
+          label: 'Centrar vista',
+          ref: 'ctx-design-center',
+        },
+        { divider: true },
+        {
+          action: () => this.toggleOnionSkin(),
+          icon: 'layers',
+          label: this.onionSkinEnabled ? 'Desactivar papel cebolla' : 'Activar papel cebolla',
+          ref: 'ctx-design-onion-skin',
+        },
+        {
+          action: () => this.toggleTileGridOptions(),
+          disabled: this.isInfinite,
+          icon: 'grid_view',
+          label: 'Rejilla de tiles',
+          ref: 'ctx-design-tile-grid',
+        },
+        { divider: true },
+        {
+          action: () => this.undo(),
+          disabled: !canUndo,
+          icon: 'undo',
+          label: 'Deshacer',
+          ref: 'ctx-design-undo',
+          shortcut: 'Ctrl+Z',
+        },
+        {
+          action: () => this.redo(),
+          disabled: !canRedo,
+          icon: 'redo',
+          label: 'Rehacer',
+          ref: 'ctx-design-redo',
+          shortcut: 'Ctrl+Y',
+        }
+      );
+    }
+
+    openContextMenu({
+      items,
+      x: e.clientX,
+      y: e.clientY,
+    });
+  }
+
   public destroy(): void {
     if (this.viewHeartbeatTimer !== null) {
       clearInterval(this.viewHeartbeatTimer);
@@ -8661,6 +8850,7 @@ export class DesignController {
       this.searchDebounceTimer = null;
     }
     this.isDestroyed = true;
+    closeContextMenu();
     if (this.rafId !== null) {
       cancelAnimationFrame(this.rafId);
       this.rafId = null;

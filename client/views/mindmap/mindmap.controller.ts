@@ -1,3 +1,4 @@
+import { closeContextMenu, ContextMenuItem, openContextMenu } from '../../components/context-menu.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
 import { currentUser, getApi, putApi } from '../../services/api.service.js';
 import { getLocalCanvasByUuid, saveLocalCanvas } from '../../services/canvas-storage.service.js';
@@ -102,6 +103,7 @@ export class MindMapController implements ViewController {
   }
 
   public destroy(): void {
+    closeContextMenu();
     if (this.saveDebounceTimer !== null) {
       window.clearTimeout(this.saveDebounceTimer);
       this.saveDebounceTimer = null;
@@ -262,6 +264,7 @@ export class MindMapController implements ViewController {
     window.addEventListener('mouseup', () => this.handleMouseUp(), { signal });
     this.canvas.addEventListener('wheel', (e) => this.handleWheel(e), { passive: false, signal });
     this.canvas.addEventListener('dblclick', (e) => this.handleDoubleClick(e), { signal });
+    this.canvas.addEventListener('contextmenu', (e) => this.handleContextMenu(e), { signal });
 
     window.addEventListener('keydown', (e) => this.handleKeyDown(e), { signal });
     window.addEventListener('keyup', (e) => this.handleKeyUp(e), { signal });
@@ -540,6 +543,7 @@ export class MindMapController implements ViewController {
 
   private handleMouseDown(e: MouseEvent): void {
     if (!this.canvas) return;
+    if (e.button === 2) return;
     const rect = this.canvas.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
@@ -1034,6 +1038,189 @@ export class MindMapController implements ViewController {
 
     const mouseWorld = screenToWorld(mouseX, mouseY, this.project.camera, rect.width, rect.height);
     this.showQuickInserter(e.clientX, e.clientY, mouseWorld.x, mouseWorld.y);
+  }
+
+  private handleContextMenu(e: MouseEvent): void {
+    e.preventDefault();
+    if (!this.canvas) return;
+
+    const rect = this.canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    const clickedNodeId = this.findNodeAtScreenPos(mouseX, mouseY);
+
+    const canUndo = this.historyManager.canUndo();
+    const canRedo = this.historyManager.canRedo();
+
+    if (clickedNodeId) {
+      if (!this.selectedNodeIds.has(clickedNodeId)) {
+        this.selectedNodeIds = new Set([clickedNodeId]);
+        this.selectedNodeId = clickedNodeId;
+        this.render();
+      }
+
+      const node = this.project.nodes[clickedNodeId];
+      const isRoot = clickedNodeId === this.project.rootId;
+      const hasChildren = Object.values(this.project.nodes).some((n) => n.parentId === clickedNodeId);
+
+      const items: ContextMenuItem[] = [
+        {
+          action: () => this.addChildNode(clickedNodeId),
+          icon: 'subdirectory_arrow_right',
+          label: 'Agregar nodo hijo',
+          ref: 'ctx-mindmap-add-child',
+          shortcut: 'Tab',
+        },
+      ];
+
+      if (!isRoot) {
+        items.push({
+          action: () => this.addSiblingNode(clickedNodeId),
+          icon: 'add_circle_outline',
+          label: 'Agregar nodo hermano',
+          ref: 'ctx-mindmap-add-sibling',
+          shortcut: 'Enter',
+        });
+      }
+
+      items.push({
+        action: () => this.startEditingNode(clickedNodeId),
+        icon: 'edit',
+        label: 'Editar texto',
+        ref: 'ctx-mindmap-edit',
+        shortcut: 'F2',
+      });
+
+      if (node) {
+        items.push({
+          action: () => {
+            if (!node.isTask) {
+              node.isTask = true;
+              node.isDone = false;
+            } else {
+              node.isDone = !node.isDone;
+            }
+            this.commitChange();
+          },
+          icon: node.isTask ? (node.isDone ? 'check_box' : 'check_box_outline_blank') : 'task_alt',
+          label: node.isTask ? (node.isDone ? 'Marcar como pendiente' : 'Marcar como completada') : 'Convertir en tarea',
+          ref: 'ctx-mindmap-toggle-task',
+        });
+      }
+
+      if (hasChildren && node) {
+        items.push({
+          action: () => {
+            node.isCollapsed = !node.isCollapsed;
+            this.commitChange();
+          },
+          icon: node.isCollapsed ? 'unfold_more' : 'unfold_less',
+          label: node.isCollapsed ? 'Expandir rama' : 'Colapsar rama',
+          ref: 'ctx-mindmap-toggle-collapse',
+        });
+      }
+
+      if (!isRoot) {
+        items.push(
+          { divider: true },
+          {
+            action: () => this.deleteNode(clickedNodeId),
+            danger: true,
+            icon: 'delete',
+            label: 'Eliminar nodo',
+            ref: 'ctx-mindmap-delete',
+            shortcut: 'Supr',
+          }
+        );
+      }
+
+      items.push(
+        { divider: true },
+        {
+          action: () => this.undo(),
+          disabled: !canUndo,
+          icon: 'undo',
+          label: 'Deshacer',
+          ref: 'ctx-mindmap-undo',
+          shortcut: 'Ctrl+Z',
+        },
+        {
+          action: () => this.redo(),
+          disabled: !canRedo,
+          icon: 'redo',
+          label: 'Rehacer',
+          ref: 'ctx-mindmap-redo',
+          shortcut: 'Ctrl+Y',
+        }
+      );
+
+      openContextMenu({
+        items,
+        x: e.clientX,
+        y: e.clientY,
+      });
+      return;
+    }
+
+    const mouseWorld = screenToWorld(mouseX, mouseY, this.project.camera, rect.width, rect.height);
+
+    const items: ContextMenuItem[] = [
+      {
+        action: () => this.addChildNode(this.project.rootId),
+        icon: 'add_circle',
+        label: 'Añadir tema principal',
+        ref: 'ctx-mindmap-add-root-child',
+      },
+      {
+        action: () => this.showQuickInserter(e.clientX, e.clientY, mouseWorld.x, mouseWorld.y),
+        icon: 'playlist_add',
+        label: 'Insertador rápido',
+        ref: 'ctx-mindmap-quick-insert',
+        shortcut: '/',
+      },
+      { divider: true },
+      {
+        action: () => this.centerCamera(),
+        icon: 'center_focus_strong',
+        label: 'Centrar mapa',
+        ref: 'ctx-mindmap-center',
+      },
+      {
+        action: () => this.fitView(),
+        icon: 'fit_screen',
+        label: 'Ajustar a pantalla',
+        ref: 'ctx-mindmap-fit',
+      },
+      {
+        action: () => this.realignTree(),
+        icon: 'account_tree',
+        label: 'Auto-organizar ramas',
+        ref: 'ctx-mindmap-realign',
+      },
+      { divider: true },
+      {
+        action: () => this.undo(),
+        disabled: !canUndo,
+        icon: 'undo',
+        label: 'Deshacer',
+        ref: 'ctx-mindmap-undo',
+        shortcut: 'Ctrl+Z',
+      },
+      {
+        action: () => this.redo(),
+        disabled: !canRedo,
+        icon: 'redo',
+        label: 'Rehacer',
+        ref: 'ctx-mindmap-redo',
+        shortcut: 'Ctrl+Y',
+      }
+    ];
+
+    openContextMenu({
+      items,
+      x: e.clientX,
+      y: e.clientY,
+    });
   }
 
   private handleKeyDown(e: KeyboardEvent): void {
