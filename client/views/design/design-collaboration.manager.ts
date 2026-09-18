@@ -46,6 +46,7 @@ export class DesignCollaborationManager {
     const unsubJoinError = registerWebSocketHandler('CANVAS_JOIN_ERROR', (payload: any) => {
       const roomUuid = payload.canvasUuid || payload.canvas_uuid;
       if (roomUuid !== this.canvasUuid) return;
+      if (this.isOwner) return;
       callbacks.onAccessRevoked();
     });
 

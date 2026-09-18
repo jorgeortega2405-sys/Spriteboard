@@ -1,4 +1,3 @@
-import { openCreateCanvasModal } from '../components/create-canvas-modal.component.js';
 import { createSidebar } from '../components/layout.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { ALL_PRESETS, PresetItem, TEMPLATE_CATEGORIES } from '../config/templates.config.js';
@@ -509,19 +508,6 @@ class TemplatesController {
   }
 
   private async handleUseTemplate(preset: PresetItem): Promise<void> {
-    if (preset.variants && preset.variants.length > 0) {
-      openCreateCanvasModal({
-        height: preset.height,
-        initialType: 'pixel',
-        name: preset.name,
-        templateImage: preset.imagePath,
-        templateName: preset.name,
-        variants: preset.variants,
-        width: preset.width,
-      });
-      return;
-    }
-
     try {
       const canvasType = preset.canvasType || (preset.categoryKey === 'board' ? 'board' : (preset.categoryKey === 'doc' ? 'doc' : (preset.categoryKey === 'pixel' ? 'pixel' : 'diagram')));
       await createAndOpenCanvas({

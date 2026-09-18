@@ -7072,7 +7072,7 @@ export class DesignController {
         this.updateAccessLevelUI();
       },
       onAccessRevoked: () => {
-        if (!this.canvasServerId) return;
+        if (!this.canvasServerId || this.isOwner) return;
         this.handleAccessRevoked();
       },
       onAction: (payload) => {
@@ -7123,7 +7123,7 @@ export class DesignController {
   }
 
   private handleAccessRevoked(): void {
-    if (this.isAccessRevoked) return;
+    if (this.isAccessRevoked || this.isOwner) return;
     this.isAccessRevoked = true;
     this.isLoaded = false;
     this.isDrawing = false;
@@ -8091,7 +8091,7 @@ export class DesignController {
   private async loadCanvasData(): Promise<boolean> {
     let canvas: CanvasItem | null = await getLocalCanvasByUuid(this.canvasUuid);
 
-    if (!canvas || !canvas.is_local) {
+    if (!canvas || !canvas.is_local || canvas.id) {
       try {
         const res = await getApi(API_ROUTES.canvases.byId(this.canvasUuid));
         if (res.ok) {
@@ -8116,23 +8116,23 @@ export class DesignController {
         } else if (res.status === 401 || res.status === 403) {
           return false;
         }
-
-        if (this.canvasServerId && !this.roomToken) {
-          try {
-            const tokenRes = await getApi(API_ROUTES.canvases.token(this.canvasUuid));
-            if (tokenRes.ok) {
-              const tokenData = await tokenRes.json();
-              if (tokenData?.room_token) {
-                this.roomToken = tokenData.room_token;
-              }
-            }
-          } catch {}
-        }
       } catch {
         if (!canvas || canvas.id) {
           return false;
         }
       }
+    }
+
+    if (this.canvasServerId && !this.roomToken) {
+      try {
+        const tokenRes = await getApi(API_ROUTES.canvases.token(this.canvasUuid));
+        if (tokenRes.ok) {
+          const tokenData = await tokenRes.json();
+          if (tokenData?.room_token) {
+            this.roomToken = tokenData.room_token;
+          }
+        }
+      } catch {}
     }
 
     const titleEl = this.container.querySelector<HTMLElement>('[data-ref="design-title"]');

@@ -1,10 +1,9 @@
-import { getBoardSvg, getDiagramSvg, getDocSvg, getDocTemplateSvg, getPixelSvg, getTemplateVariantSvg } from './create-canvas-graphics.js';
+import { getBoardSvg, getDiagramSvg, getDocSvg, getPixelSvg, getTemplateVariantSvg } from './create-canvas-graphics.js';
 import { PresetVariant } from '../config/templates.config.js';
 import { createAndOpenCanvas, CreateCanvasOptions } from '../services/canvas-creator.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { DIAGRAM_CATEGORIES, DIAGRAM_SUBTYPES, DiagramCategory, DiagramSubtype } from '../types/mindmap.types.js';
-import { DOC_TEMPLATES } from '../views/doc/doc-templates.config.js';
 import { DocOrientation, DocPaperSize } from '../views/doc/doc.types.js';
 
 let activeCreateCanvasModal: { close: () => void } | null = null;
@@ -258,25 +257,7 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
                 </div>
               </div>
 
-              <div class="creation-category-section" data-ref="section-doc-templates">
-                <h3 class="creation-category-section__title">Plantillas iniciales estructuradas</h3>
-                <div class="creation-cards-grid" data-ref="grid-doc-templates">
-                  ${DOC_TEMPLATES.filter((t) => t.id !== 'blank').map((tpl) => `
-                    <button type="button" class="creation-card" data-ref="card-doc-tpl-${tpl.id}" data-type="doc" data-paper="letter" data-template="${tpl.id}">
-                      <div class="creation-card__thumbnail" data-ref="thumb-doc-tpl-${tpl.id}">
-                        <div class="creation-card__svg-wrapper" data-ref="svg-doc-tpl-${tpl.id}">
-                          ${getDocTemplateSvg(tpl.id)}
-                        </div>
-                        ${tpl.badge ? `<span class="creation-card__badge creation-card__badge--popular" data-ref="badge-doc-tpl-${tpl.id}">${tpl.badge}</span>` : ''}
-                      </div>
-                      <div class="creation-card__info" data-ref="info-doc-tpl-${tpl.id}">
-                        <h4 class="creation-card__title" data-ref="title-doc-tpl-${tpl.id}">${tpl.name}</h4>
-                        <p class="creation-card__meta" data-ref="meta-doc-tpl-${tpl.id}">${tpl.description}</p>
-                      </div>
-                    </button>
-                  `).join('')}
-                </div>
-              </div>
+
             </div>
 
             <div class="modal-canvas-panel" data-ref="panel-category-pixel" style="${activeCategory === 'pixel' ? '' : 'display: none;'}">
@@ -728,8 +709,7 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
     card.addEventListener('click', () => {
       const paper = (card.getAttribute('data-paper') as DocPaperSize) || 'letter';
       const templateId = card.getAttribute('data-template') || 'blank';
-      const tpl = DOC_TEMPLATES.find((t) => t.id === templateId);
-      const name = tpl && tpl.id !== 'blank' ? tpl.name : `Documento ${paper.toUpperCase()}`;
+      const name = `Documento ${paper.toUpperCase()}`;
       void handleInstantCreation({
         canvasType: 'doc',
         docOrientation: 'portrait',

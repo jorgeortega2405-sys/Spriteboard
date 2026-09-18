@@ -1,9 +1,9 @@
 import { navigate } from '../app-router.js';
-import { openCreateCanvasModal } from '../components/create-canvas-modal.component.js';
 import { createSidebar } from '../components/layout.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { ALL_PRESETS, PresetItem } from '../config/templates.config.js';
 import { currentUser, escapeHtml, getApi, postApi } from '../services/api.service.js';
+import { createAndOpenCanvas } from '../services/canvas-creator.service.js';
 import { getAllLocalCanvases } from '../services/canvas-storage.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
@@ -322,15 +322,20 @@ export class SearchController {
         const preset = ALL_PRESETS.find((p) => p.id === presetId);
         if (!preset) return;
 
-        const canvasType = preset.canvasType || (preset.categoryKey === 'board' ? 'board' : (preset.categoryKey === 'diagram' ? 'diagram' : 'pixel'));
-        openCreateCanvasModal({
+        const canvasType = preset.canvasType || (preset.categoryKey === 'board' ? 'board' : (preset.categoryKey === 'doc' ? 'doc' : (preset.categoryKey === 'pixel' ? 'pixel' : 'diagram')));
+        void createAndOpenCanvas({
+          bgType: canvasType === 'board' || canvasType === 'diagram' ? 'dots' : (canvasType === 'pixel' ? 'transparent' : undefined),
+          boardTemplateId: preset.boardTemplateId,
+          canvasType,
           diagramSubtype: preset.diagramSubtype,
+          diagramTemplateId: preset.diagramTemplateId,
+          docTemplateId: preset.docTemplateId,
           height: preset.height,
-          initialType: canvasType,
           name: preset.name,
+          pixelTemplateId: preset.pixelTemplateId,
+          rootIdeaText: preset.name,
+          solidColor: '#ffffff',
           templateImage: preset.imagePath,
-          templateName: preset.name,
-          variants: preset.variants,
           width: preset.width,
         });
       },

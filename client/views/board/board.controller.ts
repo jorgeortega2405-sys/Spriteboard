@@ -157,7 +157,7 @@ export class BoardController {
   private async loadBoardData(): Promise<boolean> {
     let canvas: CanvasItem | null = await getLocalCanvasByUuid(this.canvasUuid);
 
-    if (!canvas || !canvas.is_local) {
+    if (!canvas || !canvas.is_local || canvas.id) {
       try {
         const res = await getApi(API_ROUTES.canvases.byId(this.canvasUuid));
         if (res.ok) {
@@ -182,23 +182,23 @@ export class BoardController {
         } else if (res.status === 401 || res.status === 403) {
           return false;
         }
-
-        if (this.canvasServerId && !this.roomToken) {
-          try {
-            const tokenRes = await getApi(API_ROUTES.canvases.token(this.canvasUuid));
-            if (tokenRes.ok) {
-              const tokenData = await tokenRes.json();
-              if (tokenData?.room_token) {
-                this.roomToken = tokenData.room_token;
-              }
-            }
-          } catch {}
-        }
       } catch {
         if (!canvas || canvas.id) {
           return false;
         }
       }
+    }
+
+    if (this.canvasServerId && !this.roomToken) {
+      try {
+        const tokenRes = await getApi(API_ROUTES.canvases.token(this.canvasUuid));
+        if (tokenRes.ok) {
+          const tokenData = await tokenRes.json();
+          if (tokenData?.room_token) {
+            this.roomToken = tokenData.room_token;
+          }
+        }
+      } catch {}
     }
 
     if (canvas) {
@@ -299,7 +299,7 @@ export class BoardController {
         }
       },
       onAccessRevoked: () => {
-        if (!this.canvasServerId) return;
+        if (!this.canvasServerId || this.isOwner) return;
         this.handleAccessRevoked();
       },
       onCollaboratorsChanged: () => {
@@ -367,6 +367,7 @@ export class BoardController {
   }
 
   private handleAccessRevoked(): void {
+    if (this.isOwner) return;
     if (this.canvasElement) {
       this.canvasElement.style.pointerEvents = 'none';
       this.canvasElement.style.filter = 'grayscale(100%)';

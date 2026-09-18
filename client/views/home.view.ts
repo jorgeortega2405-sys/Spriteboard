@@ -12,6 +12,7 @@ import { API_ROUTES } from '../config/api-routes.js';
 import { ALL_PRESETS, PresetItem } from '../config/templates.config.js';
 import { buildAdCardHtml, createAdCardElement, DEFAULT_AD_FREQUENCY, getAdByIndex, handleAdClick, shouldShowAds } from '../services/ad.service.js';
 import { currentUser, deleteApi, escapeHtml, getApi, postApi, putApi } from '../services/api.service.js';
+import { createAndOpenCanvas } from '../services/canvas-creator.service.js';
 import { getAllLocalCanvases, getLocalCanvasByUuid, markLocalCanvasAsSynced, removeLocalCanvas, saveLocalCanvas } from '../services/canvas-storage.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { createIconSvg, renderIcons } from '../services/icon.service.js';
@@ -542,15 +543,20 @@ class HomeController {
         const preset = ALL_PRESETS.find((p) => p.id === presetId);
         if (!preset) return;
 
-        const canvasType = preset.canvasType || (preset.categoryKey === 'board' ? 'board' : (preset.categoryKey === 'diagram' ? 'diagram' : 'pixel'));
-        openCreateCanvasModal({
+        const canvasType = preset.canvasType || (preset.categoryKey === 'board' ? 'board' : (preset.categoryKey === 'doc' ? 'doc' : (preset.categoryKey === 'pixel' ? 'pixel' : 'diagram')));
+        void createAndOpenCanvas({
+          bgType: canvasType === 'board' || canvasType === 'diagram' ? 'dots' : (canvasType === 'pixel' ? 'transparent' : undefined),
+          boardTemplateId: preset.boardTemplateId,
+          canvasType,
           diagramSubtype: preset.diagramSubtype,
+          diagramTemplateId: preset.diagramTemplateId,
+          docTemplateId: preset.docTemplateId,
           height: preset.height,
-          initialType: canvasType,
           name: preset.name,
+          pixelTemplateId: preset.pixelTemplateId,
+          rootIdeaText: preset.name,
+          solidColor: '#ffffff',
           templateImage: preset.imagePath,
-          templateName: preset.name,
-          variants: preset.variants,
           width: preset.width,
         });
       },

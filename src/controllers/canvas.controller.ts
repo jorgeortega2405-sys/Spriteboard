@@ -83,7 +83,13 @@ export async function createCanvasHandler(req: Request, res: Response): Promise<
       width: numWidth,
     });
 
-    sendCreated(res, { canvas });
+    const roomToken = generateCanvasRoomToken(canvas.uuid, user.id, 'owner');
+
+    sendCreated(res, {
+      canvas,
+      role: 'owner',
+      room_token: roomToken,
+    });
   } catch (err) {
     sendInternalError(res, 'Error al crear lienzo en canvas controller', err, 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.');
   }

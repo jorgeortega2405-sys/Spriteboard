@@ -140,7 +140,22 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
       initialProject = getCustomDiagramProject(options.diagramTemplateId, options.diagramSubtype, rootIdea);
     } else {
       const strategy = getDiagramStrategy(options.diagramSubtype);
-      initialProject = strategy.getInitialProject(rootIdea);
+      const fullProject = strategy.getInitialProject(rootIdea);
+      const rootNode = fullProject.nodes[fullProject.rootId];
+      if (rootNode) {
+        initialProject = {
+          ...fullProject,
+          connections: [],
+          nodes: {
+            [fullProject.rootId]: {
+              ...rootNode,
+              parentId: null,
+            },
+          },
+        };
+      } else {
+        initialProject = fullProject;
+      }
     }
     initialProject.theme.backgroundColor = '#ffffff';
     if (options.mindmapLineStyle) {
@@ -325,6 +340,7 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
         await saveLocalCanvas({
           ...created.canvas,
           data: created.canvas.data || initialData,
+          is_local: false,
           preview_thumbnail: created.canvas.preview_thumbnail || previewThumbnail || undefined,
         });
       }
