@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { Request, Response } from 'express';
+import { AuditService } from '../services/audit.service.js';
 import { addEmployeeDocument, getCompanyTimeOffCalendar, getDocumentByUuid, getEmployeeById, getEmployeeCompensationHistory, getEmployeeDocuments, getEmployeeTimeOffSummary, getOrganizationChart, hireEmployee, listEmployees, listTimeOffRequests, recordCompensationChange, requestTimeOff, reviewTimeOffRequest, updateEmployeeStatus } from '../services/hr.service.js';
 import { logger } from '../services/logger.service.js';
 import { UserRole } from '../types/auth.types.js';
@@ -175,6 +176,21 @@ export async function handleHireEmployee(req: Request, res: Response): Promise<v
       } catch {}
     }
 
+    void AuditService.recordAdminAudit({
+      action: 'HIRE_EMPLOYEE',
+      actorId: adminId,
+      actorRole: (req as any).user?.role || 'ADMIN',
+      actorUsername: (req as any).user?.username || 'admin',
+      description: `Contratación de colaborador ${first_name} ${last_name} (${job_title} · ${department})`,
+      ipAddress: req.ip || '',
+      module: 'hr',
+      newValues: { contract_type, department, job_title, personal_email, role, work_email },
+      riskLevel: 'critical',
+      targetId: result.employee.id,
+      targetType: 'employee',
+      userAgent: req.headers['user-agent'] || '',
+    });
+
     res.status(201).json({
       employee: result.employee,
       message: 'Colaborador contratado exitosamente.',
@@ -233,6 +249,21 @@ export async function handlePromoteEmployee(req: Request, res: Response): Promis
       },
       adminId
     );
+
+    void AuditService.recordAdminAudit({
+      action: 'PROMOTE_OR_SALARY_CHANGE',
+      actorId: adminId,
+      actorRole: (req as any).user?.role || 'ADMIN',
+      actorUsername: (req as any).user?.username || 'admin',
+      description: `Ajuste laboral/salarial (${change_type || 'promotion'}) para colaborador #${employee.id} (${employee.first_name} ${employee.last_name}): ${reason || 'Sin justificación'}`,
+      ipAddress: req.ip || '',
+      module: 'hr',
+      newValues: { change_type, effective_date, new_department, new_job_title, new_platform_role, new_salary, reason },
+      riskLevel: 'critical',
+      targetId: employee.id,
+      targetType: 'employee',
+      userAgent: req.headers['user-agent'] || '',
+    });
 
     res.status(200).json({
       historyRecord: record,
@@ -333,6 +364,22 @@ export async function handleReviewTimeOffRequest(req: Request, res: Response): P
     }
 
     const updated = await reviewTimeOffRequest(id, status, adminId, rejection_reason);
+
+    void AuditService.recordAdminAudit({
+      action: 'REVIEW_TIME_OFF',
+      actorId: adminId,
+      actorRole: (req as any).user?.role || 'ADMIN',
+      actorUsername: (req as any).user?.username || 'admin',
+      description: `Revisión de solicitud de PTO #${id} marcada como "${status}": ${rejection_reason || 'Sin notas'}`,
+      ipAddress: req.ip || '',
+      module: 'hr',
+      newValues: { rejection_reason, status },
+      riskLevel: 'high',
+      targetId: id,
+      targetType: 'time_off_request',
+      userAgent: req.headers['user-agent'] || '',
+    });
+
     res.json({
       message: `Solicitud ${status === 'approved' ? 'aprobada' : 'rechazada'} exitosamente.`,
       request: updated,
@@ -410,6 +457,22 @@ export async function handleUpdateEmployeeStatus(req: Request, res: Response): P
     }
 
     await updateEmployeeStatus(id, status as any, adminId);
+
+    void AuditService.recordAdminAudit({
+      action: 'UPDATE_EMPLOYEE_STATUS',
+      actorId: adminId,
+      actorRole: (req as any).user?.role || 'ADMIN',
+      actorUsername: (req as any).user?.username || 'admin',
+      description: `Actualización de estado laboral de colaborador #${id} a "${status}"`,
+      ipAddress: req.ip || '',
+      module: 'hr',
+      newValues: { status },
+      riskLevel: 'high',
+      targetId: id,
+      targetType: 'employee',
+      userAgent: req.headers['user-agent'] || '',
+    });
+
     res.json({ message: 'Estado laboral actualizado con éxito.', success: true });
   } catch (error) {
     logger.app.error('Error al actualizar estado del colaborador', { error: String(error) });
@@ -451,6 +514,21 @@ export async function handleUploadDocument(req: Request, res: Response): Promise
         fs.unlinkSync(req.file.path);
       } catch {}
     }
+
+    void AuditService.recordAdminAudit({
+      action: 'UPLOAD_EMPLOYEE_DOCUMENT',
+      actorId: adminId,
+      actorRole: (req as any).user?.role || 'ADMIN',
+      actorUsername: (req as any).user?.username || 'admin',
+      description: `Subida de documento "${doc.file_name}" (${document_type || 'contract'}) para colaborador #${id}`,
+      ipAddress: req.ip || '',
+      module: 'hr',
+      newValues: { document_type: document_type || 'contract', file_name: doc.file_name, file_size_bytes: doc.file_size_bytes },
+      riskLevel: 'medium',
+      targetId: id,
+      targetType: 'employee',
+      userAgent: req.headers['user-agent'] || '',
+    });
 
     res.status(201).json({
       document: doc,

@@ -77,7 +77,7 @@
     "status_escalated": "Escalated",
     "status_resolved": "Resolved",
     "status_closed": "Closed",
-    "disclaimer": "AI can make mistakes, verify important info."
+    "disclaimer": "Conversations are AI-processed and audited for quality and safety."
   },
   "auth": {
     "login": {

@@ -24,6 +24,15 @@ function createDrawerElement(): HTMLElement {
   const drawerFooter = document.createElement('div');
   drawerFooter.className = 'layout-drawer__footer';
   drawerFooter.setAttribute('data-ref', 'drawer-footer');
+  drawerFooter.innerHTML = `
+    <div class="drawer-compliance" data-ref="drawer-compliance" style="padding: 10px 14px; border-top: 1px solid var(--border-color); display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text-secondary);">
+      <div style="width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 6px rgba(16, 185, 129, 0.6); flex-shrink: 0;"></div>
+      <div style="display: flex; flex-direction: column; gap: 1px; line-height: 1.2;">
+        <span style="font-weight: 600; color: var(--text-primary); font-size: 11px;">Entorno Seguro & Auditado</span>
+        <span style="font-size: 9px; color: var(--text-secondary);">Cassandra NoSQL Logs</span>
+      </div>
+    </div>
+  `;
   drawer.appendChild(drawerFooter);
 
   return drawer;

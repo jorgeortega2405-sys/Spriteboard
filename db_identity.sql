@@ -3,6 +3,7 @@ USE db_identity;
 
 CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
+    uuid VARCHAR(36) NULL UNIQUE,
     username VARCHAR(50) NOT NULL UNIQUE,
     email VARCHAR(255) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NULL,
@@ -14,6 +15,7 @@ CREATE TABLE IF NOT EXISTS users (
     stripe_subscription_id VARCHAR(255) NULL,
     subscription_status VARCHAR(50) NOT NULL DEFAULT 'active',
     subscription_period_end TIMESTAMP NULL,
+    force_password_change TINYINT(1) NOT NULL DEFAULT 0,
     two_factor_enabled BOOLEAN NOT NULL DEFAULT FALSE,
     two_factor_secret VARCHAR(255) NULL,
     two_factor_recovery_codes TEXT NULL,
@@ -287,6 +289,8 @@ INSERT INTO roles (name, display_name, description, category) VALUES
 ('OPERATIONS_MANAGER', 'Operations Manager', 'Supervisión operacional.', 'operations'),
 ('WORKFLOW_ADMIN', 'Workflow Admin', 'Workflows, jobs y procesos.', 'operations'),
 ('SYSTEM_OPERATOR', 'System Operator', 'Operaciones sensibles sobre sistemas.', 'operations'),
+('HR_MANAGER', 'HR Manager', 'Gestión de recursos humanos, contrataciones y compensación.', 'operations'),
+('HR_RECRUITER', 'HR Recruiter', 'Reclutamiento y altas de personal.', 'operations'),
 ('USER', 'Usuario', 'Usuario estándar de la plataforma.', 'general')
 ON DUPLICATE KEY UPDATE
     display_name = VALUES(display_name),
@@ -415,6 +419,107 @@ CREATE TABLE IF NOT EXISTS internal_ticket_messages (
     INDEX idx_int_msg_ticket_created (ticket_id, created_at ASC),
     FOREIGN KEY (ticket_id) REFERENCES internal_tickets(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS employees (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    uuid VARCHAR(36) NOT NULL UNIQUE,
+    user_id INT NOT NULL UNIQUE,
+    first_name VARCHAR(80) NOT NULL,
+    last_name VARCHAR(80) NOT NULL,
+    document_id VARCHAR(50) NOT NULL,
+    personal_email VARCHAR(100) NOT NULL,
+    work_email VARCHAR(100) NOT NULL UNIQUE,
+    phone VARCHAR(30) NULL,
+    job_title VARCHAR(100) NOT NULL,
+    department VARCHAR(100) NOT NULL,
+    manager_id INT NULL,
+    contract_type VARCHAR(50) NOT NULL DEFAULT 'full_time',
+    work_mode VARCHAR(50) NOT NULL DEFAULT 'remote',
+    salary DECIMAL(12, 2) NULL,
+    currency VARCHAR(10) NOT NULL DEFAULT 'USD',
+    hire_date DATE NOT NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'active',
+    emergency_contact_name VARCHAR(100) NULL,
+    emergency_contact_phone VARCHAR(30) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_emp_user (user_id),
+    INDEX idx_emp_dept (department),
+    INDEX idx_emp_status (status),
+    INDEX idx_emp_manager (manager_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (manager_id) REFERENCES employees(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS employee_documents (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    uuid VARCHAR(36) NOT NULL UNIQUE,
+    employee_id INT NOT NULL,
+    file_name VARCHAR(255) NOT NULL,
+    file_path VARCHAR(500) NOT NULL,
+    file_size_bytes BIGINT NOT NULL,
+    mime_type VARCHAR(100) NOT NULL DEFAULT 'application/pdf',
+    document_type VARCHAR(50) NOT NULL DEFAULT 'contract',
+    uploaded_by INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_doc_emp (employee_id),
+    FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE,
+    FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS employee_compensation_history (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    uuid VARCHAR(36) NOT NULL UNIQUE,
+    employee_id INT NOT NULL,
+    change_type VARCHAR(50) NOT NULL,
+    previous_job_title VARCHAR(100) NULL,
+    new_job_title VARCHAR(100) NOT NULL,
+    previous_department VARCHAR(100) NULL,
+    new_department VARCHAR(100) NOT NULL,
+    previous_salary DECIMAL(12, 2) NULL,
+    new_salary DECIMAL(12, 2) NULL,
+    currency VARCHAR(10) NOT NULL DEFAULT 'USD',
+    effective_date DATE NOT NULL,
+    reason TEXT NULL,
+    approved_by_user_id INT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_comp_emp (employee_id),
+    FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE,
+    FOREIGN KEY (approved_by_user_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS employee_time_off_balances (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    employee_id INT NOT NULL,
+    year INT NOT NULL,
+    vacation_days_total INT NOT NULL DEFAULT 15,
+    vacation_days_used INT NOT NULL DEFAULT 0,
+    sick_days_used INT NOT NULL DEFAULT 0,
+    personal_days_used INT NOT NULL DEFAULT 0,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_emp_year (employee_id, year),
+    FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS employee_time_off_requests (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    uuid VARCHAR(36) NOT NULL UNIQUE,
+    employee_id INT NOT NULL,
+    request_type VARCHAR(50) NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    total_days INT NOT NULL,
+    reason TEXT NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'pending',
+    reviewed_by_user_id INT NULL,
+    rejection_reason TEXT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_pto_emp (employee_id),
+    INDEX idx_pto_status (status),
+    FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE,
+    FOREIGN KEY (reviewed_by_user_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 GRANT ALL PRIVILEGES ON db_identity.* TO 'sprite_user'@'%';

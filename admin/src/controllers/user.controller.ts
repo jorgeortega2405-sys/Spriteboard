@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
+import { AuditService } from '../services/audit.service.js';
 import { logger } from '../services/logger.service.js';
 import { getAllRoles } from '../services/role.service.js';
 import { applyUserSanction, deleteUserAvatarByAdmin, getUserDetails, getUserManagementData, listUsers, revokeUserAllSessionsByAdmin, revokeUserSanction, updateUserAccount, updateUserAvatarByAdmin, updateUserEmailByAdmin, updateUserPreferencesByAdmin, updateUserRoles, updateUserUsernameByAdmin } from '../services/user.service.js';
@@ -82,6 +83,21 @@ export async function handleUpdateUserRoles(req: Request, res: Response): Promis
       return;
     }
 
+    void AuditService.recordAdminAudit({
+      action: 'UPDATE_USER_ROLES',
+      actorId: adminUser.id,
+      actorRole: adminUser.role,
+      actorUsername: adminUser.username,
+      description: `Actualización de roles para usuario #${userId}`,
+      ipAddress: req.ip || '',
+      module: 'users',
+      newValues: { roles },
+      riskLevel: 'critical',
+      targetId: userId,
+      targetType: 'user',
+      userAgent: req.headers['user-agent'] || '',
+    });
+
     res.json({ message: 'Roles actualizados exitosamente.', ok: true });
   } catch (error) {
     logger.app.error('Error al actualizar roles de usuario en Admin', error);
@@ -110,6 +126,21 @@ export async function handleUpdateUserAccount(req: Request, res: Response): Prom
       res.status(400).json({ error: result.error || 'Error al actualizar cuenta.', ok: false });
       return;
     }
+
+    void AuditService.recordAdminAudit({
+      action: 'UPDATE_USER_ACCOUNT',
+      actorId: adminUser.id,
+      actorRole: adminUser.role,
+      actorUsername: adminUser.username,
+      description: `Actualización de cuenta para usuario #${userId}`,
+      ipAddress: req.ip || '',
+      module: 'users',
+      newValues: { email, subscription_tier, username },
+      riskLevel: 'high',
+      targetId: userId,
+      targetType: 'user',
+      userAgent: req.headers['user-agent'] || '',
+    });
 
     res.json({ message: 'Cuenta actualizada exitosamente.', ok: true });
   } catch (error) {
@@ -148,6 +179,21 @@ export async function handleApplyUserSanction(req: Request, res: Response): Prom
       res.status(400).json({ error: result.error || 'Error al aplicar sanción.', ok: false });
       return;
     }
+
+    void AuditService.recordAdminAudit({
+      action: 'APPLY_SANCTION',
+      actorId: adminUser.id,
+      actorRole: adminUser.role,
+      actorUsername: adminUser.username,
+      description: `Sanción (${type}) aplicada a usuario #${userId}: ${reason}`,
+      ipAddress: req.ip || '',
+      module: 'users',
+      newValues: { durationDays, reason, type },
+      riskLevel: 'critical',
+      targetId: userId,
+      targetType: 'user',
+      userAgent: req.headers['user-agent'] || '',
+    });
 
     res.json({ message: 'Sanción aplicada exitosamente.', ok: true });
   } catch (error) {
@@ -209,6 +255,20 @@ export async function handleRevokeUserSanction(req: Request, res: Response): Pro
       res.status(400).json({ error: result.error || 'Error al revocar sanción.', ok: false });
       return;
     }
+
+    void AuditService.recordAdminAudit({
+      action: 'REVOKE_SANCTION',
+      actorId: adminUser.id,
+      actorRole: adminUser.role,
+      actorUsername: adminUser.username,
+      description: `Revocación de sanción #${sanctionId}`,
+      ipAddress: req.ip || '',
+      module: 'users',
+      riskLevel: 'high',
+      targetId: sanctionId,
+      targetType: 'sanction',
+      userAgent: req.headers['user-agent'] || '',
+    });
 
     res.json({ message: 'Sanción revocada exitosamente.', ok: true });
   } catch (error) {
@@ -289,6 +349,21 @@ export async function handleAdminUpdateUserUsername(req: Request, res: Response)
       return;
     }
 
+    void AuditService.recordAdminAudit({
+      action: 'UPDATE_USERNAME',
+      actorId: adminUser.id,
+      actorRole: adminUser.role,
+      actorUsername: adminUser.username,
+      description: `Cambio de nombre de usuario a "${username.trim()}" para usuario #${userId}`,
+      ipAddress: req.ip || '',
+      module: 'users',
+      newValues: { username: username.trim() },
+      riskLevel: 'medium',
+      targetId: userId,
+      targetType: 'user',
+      userAgent: req.headers['user-agent'] || '',
+    });
+
     res.json({ message: 'Nombre de usuario actualizado con éxito.', ok: true, username: username.trim() });
   } catch (error) {
     logger.app.error('Error al actualizar nombre de usuario por admin', error);
@@ -317,6 +392,21 @@ export async function handleAdminUpdateUserEmail(req: Request, res: Response): P
       res.status(400).json({ error: result.error || 'Error al actualizar correo electrónico.', ok: false });
       return;
     }
+
+    void AuditService.recordAdminAudit({
+      action: 'UPDATE_EMAIL',
+      actorId: adminUser.id,
+      actorRole: adminUser.role,
+      actorUsername: adminUser.username,
+      description: `Cambio de correo electrónico a "${email.trim().toLowerCase()}" para usuario #${userId}`,
+      ipAddress: req.ip || '',
+      module: 'users',
+      newValues: { email: email.trim().toLowerCase() },
+      riskLevel: 'high',
+      targetId: userId,
+      targetType: 'user',
+      userAgent: req.headers['user-agent'] || '',
+    });
 
     res.json({ email: email.trim().toLowerCase(), message: 'Correo electrónico actualizado con éxito.', ok: true });
   } catch (error) {
@@ -366,6 +456,20 @@ export async function handleAdminUpdateUserAvatar(req: Request, res: Response): 
       return;
     }
 
+    void AuditService.recordAdminAudit({
+      action: 'UPDATE_AVATAR',
+      actorId: adminUser.id,
+      actorRole: adminUser.role,
+      actorUsername: adminUser.username,
+      description: `Actualización de avatar para usuario #${userId}`,
+      ipAddress: req.ip || '',
+      module: 'users',
+      riskLevel: 'low',
+      targetId: userId,
+      targetType: 'user',
+      userAgent: req.headers['user-agent'] || '',
+    });
+
     res.json({ avatar_url: result.avatar_url, message: 'Avatar actualizado con éxito.', ok: true });
   } catch (error) {
     logger.app.error('Error al actualizar avatar de usuario por admin', error);
@@ -388,6 +492,21 @@ export async function handleAdminDeleteUserAvatar(req: Request, res: Response): 
     }
 
     await deleteUserAvatarByAdmin(userId, adminUser.id);
+
+    void AuditService.recordAdminAudit({
+      action: 'DELETE_AVATAR',
+      actorId: adminUser.id,
+      actorRole: adminUser.role,
+      actorUsername: adminUser.username,
+      description: `Eliminación de avatar para usuario #${userId}`,
+      ipAddress: req.ip || '',
+      module: 'users',
+      riskLevel: 'low',
+      targetId: userId,
+      targetType: 'user',
+      userAgent: req.headers['user-agent'] || '',
+    });
+
     res.json({ avatar_url: null, message: 'Avatar restablecido correctamente.', ok: true });
   } catch (error) {
     logger.app.error('Error al eliminar avatar de usuario por admin', error);
@@ -411,6 +530,22 @@ export async function handleAdminUpdateUserPreferences(req: Request, res: Respon
 
     const updates = req.body || {};
     const result = await updateUserPreferencesByAdmin(userId, updates, adminUser.id);
+
+    void AuditService.recordAdminAudit({
+      action: 'UPDATE_PREFERENCES',
+      actorId: adminUser.id,
+      actorRole: adminUser.role,
+      actorUsername: adminUser.username,
+      description: `Actualización de preferencias para usuario #${userId}`,
+      ipAddress: req.ip || '',
+      module: 'users',
+      newValues: updates,
+      riskLevel: 'low',
+      targetId: userId,
+      targetType: 'user',
+      userAgent: req.headers['user-agent'] || '',
+    });
+
     res.json({ message: 'Preferencias actualizadas con éxito.', ok: true, preferences: result.preferences });
   } catch (error) {
     logger.app.error('Error al actualizar preferencias de usuario por admin', error);
@@ -433,6 +568,21 @@ export async function handleAdminRevokeUserSessions(req: Request, res: Response)
     }
 
     await revokeUserAllSessionsByAdmin(userId, adminUser.id);
+
+    void AuditService.recordAdminAudit({
+      action: 'REVOKE_ALL_SESSIONS',
+      actorId: adminUser.id,
+      actorRole: adminUser.role,
+      actorUsername: adminUser.username,
+      description: `Cierre forzado de todas las sesiones activas de usuario #${userId}`,
+      ipAddress: req.ip || '',
+      module: 'users',
+      riskLevel: 'medium',
+      targetId: userId,
+      targetType: 'user',
+      userAgent: req.headers['user-agent'] || '',
+    });
+
     res.json({ message: 'Todas las sesiones del usuario han sido revocadas exitosamente.', ok: true });
   } catch (error) {
     logger.app.error('Error al revocar sesiones de usuario por admin', error);

@@ -1,5 +1,7 @@
+import cassandra from 'cassandra-driver';
 import { ASSISTANT_KNOWLEDGE } from '../config/assistant-knowledge.js';
 import { ASSISTANT_RULES } from '../config/assistant-rules.js';
+import { cassandraClient, isCassandraReady } from '../config/cassandra.config.js';
 import { pool } from '../config/database.config.js';
 import { config } from '../config/env.config.js';
 import { logger } from './logger.service.js';
@@ -10,9 +12,11 @@ export interface ChatMessage {
 }
 
 export interface UserContext {
-  username?: string;
   email?: string;
+  id?: number;
   isAuthenticated: boolean;
+  sessionId?: string;
+  username?: string;
 }
 
 export class AiService {
@@ -41,23 +45,23 @@ export class AiService {
       .slice(-10)
       .filter((m) => m && typeof m.text === 'string' && (m.role === 'user' || m.role === 'model'))
       .map((m) => ({
-        role: m.role,
         parts: [{ text: m.text }],
+        role: m.role,
       }));
 
     validHistory.push({
-      role: 'user',
       parts: [{ text: message }],
+      role: 'user',
     });
 
     const requestBody = {
       contents: validHistory,
+      generationConfig: {
+        maxOutputTokens: 1000,
+        temperature: 0.6,
+      },
       systemInstruction: {
         parts: [{ text: systemInstruction }],
-      },
-      generationConfig: {
-        temperature: 0.6,
-        maxOutputTokens: 1000,
       },
     };
 
@@ -74,9 +78,9 @@ export class AiService {
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
     const fetchOptions = {
-      method: 'POST' as const,
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(requestBody),
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST' as const,
     };
 
     try {
@@ -94,8 +98,8 @@ export class AiService {
       if (!response.ok) {
         const errorText = await response.text();
         logger.app.error('AiService: Error HTTP desde Google Gemini API', {
-          status: response.status,
           response: errorText.slice(0, 300),
+          status: response.status,
         });
         return 'Lo siento, en este momento el servicio de asistencia no pudo procesar tu mensaje. Por favor intenta de nuevo en unos instantes.';
       }
@@ -112,6 +116,40 @@ export class AiService {
         .replace(/gemini/gi, 'Spritebot')
         .replace(/google/gi, 'Spriteboard')
         .trim();
+
+      if (isCassandraReady() && userContext) {
+        const userId = userContext.id || 0;
+        const username = userContext.username || 'invitado';
+        const sessionId = userContext.sessionId || `user_${userId}_chat`;
+        const now = new Date();
+        const year = now.getUTCFullYear();
+        const monthStr = String(now.getUTCMonth() + 1).padStart(2, '0');
+        const bucketMonth = `${year}-${monthStr}`;
+
+        const msgUserTime = cassandra.types.TimeUuid.now();
+        const msgModelTime = cassandra.types.TimeUuid.now();
+
+        const qInsertMsg = `
+          INSERT INTO spriteboard_ai.chat_messages (
+            session_id, created_at, message_id, user_id, username, is_admin,
+            sender_role, content, model_name, tokens_prompt, tokens_completion, feedback_rating, metadata
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+
+        const qSession = `
+          INSERT INTO spriteboard_ai.chat_sessions_by_user (
+            user_id, bucket_month, created_at, session_id, first_message, total_messages, last_message_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        `;
+
+        void Promise.all([
+          cassandraClient.execute(qInsertMsg, [sessionId, now, msgUserTime, userId, username, false, 'user', message, modelName, 0, 0, 'none', '{}'], { prepare: true }),
+          cassandraClient.execute(qInsertMsg, [sessionId, new Date(Date.now() + 10), msgModelTime, userId, username, false, 'model', sanitized, modelName, 0, 0, 'none', '{}'], { prepare: true }),
+          cassandraClient.execute(qSession, [userId, bucketMonth, now, sessionId, message.slice(0, 100), (history.length || 0) + 2, now], { prepare: true }),
+        ]).catch((casErr) => {
+          logger.db.warn('Error no fatal al registrar mensajes de chat en Cassandra', { error: String(casErr) });
+        });
+      }
 
       return sanitized;
     } catch (err) {

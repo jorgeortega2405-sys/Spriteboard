@@ -4,6 +4,11 @@ export const config = {
   appName: process.env.APP_NAME || 'Spriteboard Admin',
   appUrl: process.env.APP_URL || 'http://localhost:3000',
   adminUrl: process.env.ADMIN_URL || 'http://localhost:3002',
+  cassandra: {
+    contactPoints: (process.env.CASSANDRA_CONTACT_POINTS || 'localhost').split(',').map((s) => s.trim()),
+    localDataCenter: process.env.CASSANDRA_LOCAL_DC || 'datacenter1',
+    port: Number(process.env.CASSANDRA_PORT) || 9042,
+  },
   csrfSecret: process.env.CSRF_SECRET || 'spriteboard_csrf_secret_key_2026',
   db: {
     database: process.env.DB_NAME || 'db_identity',

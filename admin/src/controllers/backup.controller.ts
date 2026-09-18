@@ -1,9 +1,10 @@
-import { createBackupJob, deleteBackup, getBackupByIdOrUuid, getBackupSchedule, getBackupTargetOptions, listBackups, saveBackupSchedule, triggerBackupSchedule } from '../services/backup.service.js';
+import fs from 'fs';
+import { Request, Response } from 'express';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
+import { AuditService } from '../services/audit.service.js';
+import { createBackupJob, deleteBackup, getBackupByIdOrUuid, getBackupSchedule, getBackupTargetOptions, listBackups, saveBackupSchedule, triggerBackupSchedule } from '../services/backup.service.js';
 import { logger } from '../services/logger.service.js';
 import { BackupCreatePayload, BackupSchedulePayload } from '../types/backup.types.js';
-import { Request, Response } from 'express';
-import fs from 'fs';
 
 export async function getBackups(req: Request, res: Response): Promise<void> {
   try {
@@ -83,6 +84,21 @@ export async function createBackup(req: Request, res: Response): Promise<void> {
     const creator = user ? { id: user.id, username: user.username } : undefined;
     const backup = await createBackupJob(body, creator);
 
+    void AuditService.recordAdminAudit({
+      action: 'CREATE_BACKUP',
+      actorId: user?.id || 1,
+      actorRole: user?.role || 'ADMIN',
+      actorUsername: user?.username || 'admin',
+      description: `Creación de copia de seguridad manual "${backup.filename}" (${backup.format})`,
+      ipAddress: req.ip || '',
+      module: 'backups',
+      newValues: { filename: backup.filename, format: backup.format },
+      riskLevel: 'critical',
+      targetId: backup.id,
+      targetType: 'backup',
+      userAgent: req.headers['user-agent'] || '',
+    });
+
     res.status(201).json({
       backup,
       ok: true,
@@ -117,6 +133,21 @@ export async function downloadBackup(req: Request, res: Response): Promise<void>
       return;
     }
 
+    const user = getCurrentUser(req);
+    void AuditService.recordAdminAudit({
+      action: 'DOWNLOAD_BACKUP',
+      actorId: user?.id || 1,
+      actorRole: user?.role || 'ADMIN',
+      actorUsername: user?.username || 'admin',
+      description: `Descarga de archivo de respaldo "${backup.filename}"`,
+      ipAddress: req.ip || '',
+      module: 'backups',
+      riskLevel: 'high',
+      targetId: backup.id,
+      targetType: 'backup',
+      userAgent: req.headers['user-agent'] || '',
+    });
+
     res.download(backup.file_path, backup.filename, (err) => {
       if (err && !res.headersSent) {
         logger.app.error(`Error al descargar archivo de backup ${backup.filename}`, err);
@@ -138,6 +169,7 @@ export async function downloadBackup(req: Request, res: Response): Promise<void>
 export async function deleteBackupHandler(req: Request, res: Response): Promise<void> {
   try {
     const idOrUuid = req.params.id;
+    const user = getCurrentUser(req);
     const deleted = await deleteBackup(idOrUuid);
     if (!deleted) {
       res.status(404).json({
@@ -146,6 +178,20 @@ export async function deleteBackupHandler(req: Request, res: Response): Promise<
       });
       return;
     }
+
+    void AuditService.recordAdminAudit({
+      action: 'DELETE_BACKUP',
+      actorId: user?.id || 1,
+      actorRole: user?.role || 'ADMIN',
+      actorUsername: user?.username || 'admin',
+      description: `Eliminación de copia de seguridad #${idOrUuid}`,
+      ipAddress: req.ip || '',
+      module: 'backups',
+      riskLevel: 'critical',
+      targetId: idOrUuid,
+      targetType: 'backup',
+      userAgent: req.headers['user-agent'] || '',
+    });
 
     res.json({
       ok: true,
@@ -187,7 +233,24 @@ export async function saveSchedule(req: Request, res: Response): Promise<void> {
       return;
     }
 
+    const user = getCurrentUser(req);
     const schedule = await saveBackupSchedule(body);
+
+    void AuditService.recordAdminAudit({
+      action: 'UPDATE_BACKUP_SCHEDULE',
+      actorId: user?.id || 1,
+      actorRole: user?.role || 'ADMIN',
+      actorUsername: user?.username || 'admin',
+      description: `Actualización de política de programación de respaldos (${schedule.interval_type || 'custom'})`,
+      ipAddress: req.ip || '',
+      module: 'backups',
+      newValues: body as any,
+      riskLevel: 'high',
+      targetId: schedule.id,
+      targetType: 'backup_schedule',
+      userAgent: req.headers['user-agent'] || '',
+    });
+
     res.json({
       ok: true,
       schedule,
@@ -202,9 +265,27 @@ export async function saveSchedule(req: Request, res: Response): Promise<void> {
   }
 }
 
-export async function triggerSchedule(_req: Request, res: Response): Promise<void> {
+export async function triggerSchedule(req: Request, res: Response): Promise<void> {
   try {
+    const user = getCurrentUser(req);
     const backup = await triggerBackupSchedule();
+
+    if (backup) {
+      void AuditService.recordAdminAudit({
+        action: 'TRIGGER_BACKUP_SCHEDULE',
+        actorId: user?.id || 1,
+        actorRole: user?.role || 'ADMIN',
+        actorUsername: user?.username || 'admin',
+        description: `Disparo manual de respaldo programado "${backup.filename}"`,
+        ipAddress: req.ip || '',
+        module: 'backups',
+        riskLevel: 'high',
+        targetId: backup.id,
+        targetType: 'backup',
+        userAgent: req.headers['user-agent'] || '',
+      });
+    }
+
     res.status(201).json({
       backup,
       ok: true,

@@ -48,7 +48,9 @@ export class AiController {
 
       const userContext = {
         email: currentUser.email,
+        id: currentUser.id,
         isAuthenticated: true,
+        sessionId: req.headers['x-session-id'] ? String(req.headers['x-session-id']) : `user_${currentUser.id}_session`,
         username: currentUser.username,
       };
 

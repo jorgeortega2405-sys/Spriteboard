@@ -1,6 +1,7 @@
 import { pool } from '../config/database.config.js';
 import { redis } from '../config/redis.config.js';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
+import { AuditService } from '../services/audit.service.js';
 import { logger } from '../services/logger.service.js';
 import { getAllServerConfigs, resetServerConfigs, updateServerConfigs } from '../services/server-config.service.js';
 import { sendBadRequest, sendInternalError, sendSuccess, sendUnauthorized } from '../utils/http.util.js';
@@ -41,6 +42,20 @@ export async function handleUpdateSystemConfig(req: Request, res: Response): Pro
 
     const result = await updateServerConfigs(configs, currentUser.id, ip, ua);
 
+    void AuditService.recordAdminAudit({
+      action: 'UPDATE_SYSTEM_CONFIG',
+      actorId: currentUser.id,
+      actorRole: currentUser.role,
+      actorUsername: currentUser.username,
+      description: `Actualización de ${result.updatedCount} variable(s) de configuración global`,
+      ipAddress: ip || '',
+      module: 'system',
+      newValues: configs,
+      riskLevel: 'high',
+      targetType: 'system_config',
+      userAgent: ua || '',
+    });
+
     sendSuccess(res, {
       message: 'Configuraciones del sistema guardadas y caché de Redis actualizada correctamente.',
       updatedCount: result.updatedCount,
@@ -63,6 +78,20 @@ export async function handleResetSystemConfig(req: Request, res: Response): Prom
     const ua = req.headers['user-agent'] || null;
 
     const result = await resetServerConfigs(category, currentUser.id, ip, ua);
+
+    void AuditService.recordAdminAudit({
+      action: 'RESET_SYSTEM_CONFIG',
+      actorId: currentUser.id,
+      actorRole: currentUser.role,
+      actorUsername: currentUser.username,
+      description: category ? `Restablecimiento de categoría "${category}" de configuración` : 'Restablecimiento de toda la configuración del sistema',
+      ipAddress: ip || '',
+      module: 'system',
+      newValues: { category },
+      riskLevel: 'high',
+      targetType: 'system_config',
+      userAgent: ua || '',
+    });
 
     sendSuccess(res, {
       message: category

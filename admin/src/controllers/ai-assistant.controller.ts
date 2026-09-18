@@ -1,6 +1,7 @@
-import { AiAssistantService } from '../services/ai-assistant.service.js';
-import { logger } from '../services/logger.service.js';
 import { Request, Response } from 'express';
+import { AiAssistantService } from '../services/ai-assistant.service.js';
+import { AuditService } from '../services/audit.service.js';
+import { logger } from '../services/logger.service.js';
 
 export async function handleAiAssistantChat(req: Request, res: Response): Promise<void> {
   try {
@@ -18,14 +19,30 @@ export async function handleAiAssistantChat(req: Request, res: Response): Promis
       : [];
 
     const safeContext = typeof pageContext === 'string' ? pageContext.slice(0, 100) : '/analytics';
+    const user = (req as any).user;
+    const adminId = Number(user?.id || 0);
+    const adminUsername = String(user?.username || 'admin');
 
     logger.security.info('Consulta enviada a Asistente IA', {
       context: safeContext,
       messageLength: message.length,
-      userId: (req as any).user?.id,
+      userId: adminId,
     });
 
+    const startTime = Date.now();
     const result = await AiAssistantService.askAssistant(message, safeHistory, safeContext);
+    const executionTimeMs = Date.now() - startTime;
+
+    void AuditService.recordCopilotAudit({
+      adminId,
+      adminUsername,
+      executionTimeMs,
+      modelReply: result.reply,
+      pageContext: safeContext,
+      sqlQueriesExecuted: result.queriesExecuted,
+      success: result.success,
+      userPrompt: message,
+    });
 
     res.json(result);
   } catch (error) {

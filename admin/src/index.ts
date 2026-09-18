@@ -4,6 +4,7 @@ import express, { Request, Response } from 'express';
 import http from 'http';
 import net from 'net';
 import path from 'path';
+import { checkCassandraConnection } from './config/cassandra.config.js';
 import { checkDbConnection } from './config/database.config.js';
 import { config } from './config/env.config.js';
 import { checkRedisConnection } from './config/redis.config.js';
@@ -112,6 +113,7 @@ async function startServer() {
     await ensureHrTables();
     await InternalTicketService.ensureInternalTicketsTables();
     await checkRedisConnection();
+    await checkCassandraConnection();
 
     const server = http.createServer(app);
     await setupClient(server);

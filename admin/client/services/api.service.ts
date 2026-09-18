@@ -1,4 +1,5 @@
 import { AdRowData, AdvertiserRowData } from '../types/ad.types.js';
+import { AdminAuditRecord, CopilotAuditRecord, UserChatMessageRecord, UserChatSessionRecord } from '../types/audit.types.js';
 import { isUserAdmin, SessionAccount, UserPayload } from '../types/auth.types.js';
 import { BackupCreatePayload, BackupRecord, BackupScheduleConfig, BackupSchedulePayload, BackupTargetOptions } from '../types/backup.types.js';
 import { DashboardStatsResponse } from '../types/dashboard.types.js';
@@ -67,9 +68,34 @@ export const API_ROUTES = {
     timeOffReview: (id: number | string) => `/api/hr/time-off/${id}/review`,
   },
   logs: {
+    audit: (params: { actorId?: number; limit?: number; month?: string } = {}) => {
+      const sp = new URLSearchParams();
+      if (params.actorId) sp.append('actorId', String(params.actorId));
+      if (params.limit) sp.append('limit', String(params.limit));
+      if (params.month) sp.append('month', params.month);
+      const q = sp.toString();
+      return `/api/logs/audit${q ? `?${q}` : ''}`;
+    },
     base: '/api/logs',
     content: '/api/logs/content',
+    copilot: (params: { adminId?: number; limit?: number; month?: string } = {}) => {
+      const sp = new URLSearchParams();
+      if (params.adminId) sp.append('adminId', String(params.adminId));
+      if (params.limit) sp.append('limit', String(params.limit));
+      if (params.month) sp.append('month', params.month);
+      const q = sp.toString();
+      return `/api/logs/copilot${q ? `?${q}` : ''}`;
+    },
     download: (fileId: string) => `/api/logs/download?fileId=${encodeURIComponent(fileId)}`,
+    userChatMessages: (sessionId: string) => `/api/logs/ai-chat/messages?sessionId=${encodeURIComponent(sessionId)}`,
+    userChatSessions: (params: { limit?: number; month?: string; userId?: number } = {}) => {
+      const sp = new URLSearchParams();
+      if (params.userId) sp.append('userId', String(params.userId));
+      if (params.limit) sp.append('limit', String(params.limit));
+      if (params.month) sp.append('month', params.month);
+      const q = sp.toString();
+      return `/api/logs/ai-chat/sessions${q ? `?${q}` : ''}`;
+    },
   },
   settings: {
     avatar: '/api/settings/avatar',
@@ -1020,6 +1046,74 @@ export async function getLogContentApi(fileIds: string[]): Promise<{
     return { error: data.error || 'Error al obtener el contenido de los registros seleccionados.', ok: false };
   } catch {
     return { error: 'Error de conexión al cargar contenido de los logs.', ok: false };
+  }
+}
+
+export async function getAdminAuditLogsApi(params: { actorId?: number; limit?: number; month?: string } = {}): Promise<{
+  error?: string;
+  logs?: AdminAuditRecord[];
+  ok: boolean;
+}> {
+  try {
+    const res = await getApi(API_ROUTES.logs.audit(params));
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.ok) {
+      return { logs: data.logs, ok: true };
+    }
+    return { error: data.error || 'Error al obtener registros de auditoría.', ok: false };
+  } catch {
+    return { error: 'Error de conexión al cargar registros de auditoría.', ok: false };
+  }
+}
+
+export async function getCopilotAuditLogsApi(params: { adminId?: number; limit?: number; month?: string } = {}): Promise<{
+  error?: string;
+  logs?: CopilotAuditRecord[];
+  ok: boolean;
+}> {
+  try {
+    const res = await getApi(API_ROUTES.logs.copilot(params));
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.ok) {
+      return { logs: data.logs, ok: true };
+    }
+    return { error: data.error || 'Error al obtener consultas de Copilot.', ok: false };
+  } catch {
+    return { error: 'Error de conexión al cargar consultas de Copilot.', ok: false };
+  }
+}
+
+export async function getUserChatSessionsApi(params: { limit?: number; month?: string; userId?: number } = {}): Promise<{
+  error?: string;
+  ok: boolean;
+  sessions?: UserChatSessionRecord[];
+}> {
+  try {
+    const res = await getApi(API_ROUTES.logs.userChatSessions(params));
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.ok) {
+      return { ok: true, sessions: data.sessions };
+    }
+    return { error: data.error || 'Error al obtener sesiones de chat.', ok: false };
+  } catch {
+    return { error: 'Error de conexión al cargar sesiones de chat.', ok: false };
+  }
+}
+
+export async function getUserChatMessagesApi(sessionId: string): Promise<{
+  error?: string;
+  messages?: UserChatMessageRecord[];
+  ok: boolean;
+}> {
+  try {
+    const res = await getApi(API_ROUTES.logs.userChatMessages(sessionId));
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.ok) {
+      return { messages: data.messages, ok: true };
+    }
+    return { error: data.error || 'Error al obtener mensajes de la conversación.', ok: false };
+  } catch {
+    return { error: 'Error de conexión al cargar mensajes de chat.', ok: false };
   }
 }
 

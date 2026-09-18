@@ -1,8 +1,10 @@
 import { navigate } from '../app-router.js';
 import { createSidebar } from '../components/layout.component.js';
-import { API_ROUTES, getLogContentApi, getLogFilesApi, loadTemplate } from '../services/api.service.js';
+import { openModal } from '../components/modal.component.js';
+import { API_ROUTES, getAdminAuditLogsApi, getCopilotAuditLogsApi, getLogContentApi, getLogFilesApi, getUserChatMessagesApi, getUserChatSessionsApi, loadTemplate } from '../services/api.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { showToast } from '../services/toast.service.js';
+import { AdminAuditRecord, CopilotAuditRecord, UserChatMessageRecord, UserChatSessionRecord } from '../types/audit.types.js';
 import { ViewController } from '../types/common.types.js';
 import { LogFileContent, LogFileRecord, LogLevel, ParsedLogLine } from '../types/log.types.js';
 import { escapeHtml, removeEmptyState, renderEmptyState, setupDropdown } from '../utils/dom.util.js';
@@ -23,14 +25,33 @@ function formatDate(iso?: string | null): string {
   }
 }
 
+function formatBytes(bytes?: number): string {
+  if (!bytes || bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+}
+
 class LogsController implements ViewController {
   private abortController = new AbortController();
   private container: HTMLElement;
+
+  private activeTab: 'audit' | 'chat' | 'copilot' | 'files' = 'files';
 
   private allFiles: LogFileRecord[] = [];
   private filteredFiles: LogFileRecord[] = [];
   private selectedFileIds = new Set<string>();
   private lastClickedIndex = -1;
+
+  private allAuditLogs: AdminAuditRecord[] = [];
+  private filteredAuditLogs: AdminAuditRecord[] = [];
+
+  private allCopilotLogs: CopilotAuditRecord[] = [];
+  private filteredCopilotLogs: CopilotAuditRecord[] = [];
+
+  private allChatSessions: UserChatSessionRecord[] = [];
+  private filteredChatSessions: UserChatSessionRecord[] = [];
 
   private currentPage = 1;
   private limit = 20;
@@ -44,6 +65,15 @@ class LogsController implements ViewController {
 
   private tableEl: HTMLElement | null = null;
   private tbodyEl: HTMLElement | null = null;
+
+  private auditTableWrapper: HTMLElement | null = null;
+  private auditTbodyEl: HTMLElement | null = null;
+
+  private copilotTableWrapper: HTMLElement | null = null;
+  private copilotTbodyEl: HTMLElement | null = null;
+
+  private chatTableWrapper: HTMLElement | null = null;
+  private chatTbodyEl: HTMLElement | null = null;
 
   private defaultActions: HTMLElement | null = null;
   private selectedActions: HTMLElement | null = null;
@@ -75,6 +105,15 @@ class LogsController implements ViewController {
     this.tableEl = this.container.querySelector<HTMLElement>('[data-ref="logs-table"]');
     this.tbodyEl = this.container.querySelector<HTMLElement>('[data-ref="logs-tbody"]');
 
+    this.auditTableWrapper = this.container.querySelector<HTMLElement>('[data-ref="audit-table-wrapper"]');
+    this.auditTbodyEl = this.container.querySelector<HTMLElement>('[data-ref="audit-tbody"]');
+
+    this.copilotTableWrapper = this.container.querySelector<HTMLElement>('[data-ref="copilot-table-wrapper"]');
+    this.copilotTbodyEl = this.container.querySelector<HTMLElement>('[data-ref="copilot-tbody"]');
+
+    this.chatTableWrapper = this.container.querySelector<HTMLElement>('[data-ref="chat-table-wrapper"]');
+    this.chatTbodyEl = this.container.querySelector<HTMLElement>('[data-ref="chat-tbody"]');
+
     this.defaultActions = this.container.querySelector<HTMLElement>('[data-ref="logs-default-actions"]');
     this.selectedActions = this.container.querySelector<HTMLElement>('[data-ref="logs-selected-actions"]');
     this.selectedCountEl = this.container.querySelector<HTMLElement>('[data-ref="logs-selected-count"]');
@@ -105,7 +144,7 @@ class LogsController implements ViewController {
     }
 
     this.bindEvents();
-    await this.loadLogs();
+    await this.loadCurrentTab();
   }
 
   destroy(): void {
@@ -122,6 +161,28 @@ class LogsController implements ViewController {
 
   bindEvents(): void {
     const signal = this.abortController.signal;
+
+    const tabButtons = this.container.querySelectorAll<HTMLElement>('[data-ref^="tab-btn-"]');
+    tabButtons.forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const tab = (btn.getAttribute('data-tab') as any) || 'files';
+        if (tab === this.activeTab) return;
+
+        tabButtons.forEach((b) => {
+          b.classList.remove('is-active');
+          b.style.background = 'transparent';
+          b.style.color = 'var(--text-secondary)';
+        });
+        btn.classList.add('is-active');
+        btn.style.background = 'var(--bg-card)';
+        btn.style.color = 'var(--text-primary)';
+
+        this.activeTab = tab;
+        this.switchTabUi();
+        void this.loadCurrentTab();
+      }, { signal });
+    });
 
     this.btnToggleSearch?.addEventListener('click', (e) => {
       e.preventDefault();
@@ -179,7 +240,7 @@ class LogsController implements ViewController {
 
     this.btnRefreshLogs?.addEventListener('click', (e) => {
       e.preventDefault();
-      void this.loadLogs();
+      void this.loadCurrentTab();
     }, { signal });
 
     this.btnActionDeselect?.addEventListener('click', () => {
@@ -222,7 +283,7 @@ class LogsController implements ViewController {
       if (page > this.totalPages) page = this.totalPages;
       if (page !== this.currentPage) {
         this.currentPage = page;
-        this.renderRows();
+        this.renderCurrentTabRows();
         this.updatePaginationUi();
       } else if (this.inputPaginationPage) {
         this.inputPaginationPage.value = String(this.currentPage);
@@ -239,7 +300,7 @@ class LogsController implements ViewController {
     this.btnPaginationPrev?.addEventListener('click', () => {
       if (this.currentPage > 1) {
         this.currentPage--;
-        this.renderRows();
+        this.renderCurrentTabRows();
         this.updatePaginationUi();
       }
     }, { signal });
@@ -247,7 +308,7 @@ class LogsController implements ViewController {
     this.btnPaginationNext?.addEventListener('click', () => {
       if (this.currentPage < this.totalPages) {
         this.currentPage++;
-        this.renderRows();
+        this.renderCurrentTabRows();
         this.updatePaginationUi();
       }
     }, { signal });
@@ -263,6 +324,44 @@ class LogsController implements ViewController {
         }
       }
     }, { signal });
+  }
+
+  private switchTabUi(): void {
+    const panels = this.container.querySelectorAll<HTMLElement>('.tab-content-panel');
+    panels.forEach((p) => {
+      p.style.display = 'none';
+      p.classList.remove('is-active');
+    });
+
+    if (this.activeTab === 'files') {
+      const filesPanel = this.container.querySelector<HTMLElement>('[data-ref="logs-table-wrapper"]');
+      if (filesPanel) {
+        filesPanel.style.display = 'flex';
+        filesPanel.classList.add('is-active');
+      }
+    } else if (this.activeTab === 'audit') {
+      if (this.auditTableWrapper) {
+        this.auditTableWrapper.style.display = 'flex';
+        this.auditTableWrapper.classList.add('is-active');
+      }
+    } else if (this.activeTab === 'copilot') {
+      if (this.copilotTableWrapper) {
+        this.copilotTableWrapper.style.display = 'flex';
+        this.copilotTableWrapper.classList.add('is-active');
+      }
+    } else if (this.activeTab === 'chat') {
+      if (this.chatTableWrapper) {
+        this.chatTableWrapper.style.display = 'flex';
+        this.chatTableWrapper.classList.add('is-active');
+      }
+    }
+
+    if (this.filterDropdownWrapper) {
+      this.filterDropdownWrapper.style.display = this.activeTab === 'files' ? 'block' : 'none';
+    }
+
+    this.selectedFileIds.clear();
+    this.updateSelectionUi();
   }
 
   private toggleSearchToolbar(forceState?: boolean): void {
@@ -282,11 +381,21 @@ class LogsController implements ViewController {
     }
   }
 
-  private async loadLogs(): Promise<void> {
-    const tableWrapper = this.container.querySelector<HTMLElement>('[data-ref="logs-table-wrapper"]');
-    if (tableWrapper) {
-      removeEmptyState(tableWrapper, 'logs-empty-state');
+  private async loadCurrentTab(): Promise<void> {
+    if (this.activeTab === 'files') {
+      await this.loadFiles();
+    } else if (this.activeTab === 'audit') {
+      await this.loadAuditLogs();
+    } else if (this.activeTab === 'copilot') {
+      await this.loadCopilotLogs();
+    } else if (this.activeTab === 'chat') {
+      await this.loadChatSessions();
     }
+  }
+
+  private async loadFiles(): Promise<void> {
+    const tableWrapper = this.container.querySelector<HTMLElement>('[data-ref="logs-table-wrapper"]');
+    if (tableWrapper) removeEmptyState(tableWrapper, 'logs-empty-state');
     if (this.tableEl) this.tableEl.style.display = '';
 
     if (this.tbodyEl) {
@@ -311,46 +420,181 @@ class LogsController implements ViewController {
       this.allFiles = [];
       this.filteredFiles = [];
       this.totalPages = 1;
-      this.renderRows();
+      this.renderCurrentTabRows();
       this.updatePaginationUi();
       showToast(res.error || 'No se pudieron cargar los registros de logs.', 'error');
     }
   }
 
+  private async loadAuditLogs(): Promise<void> {
+    if (this.auditTableWrapper) removeEmptyState(this.auditTableWrapper, 'audit-empty-state');
+    if (this.auditTbodyEl) {
+      this.auditTbodyEl.innerHTML = Array(7).fill(0).map(() => `
+        <tr class="skeleton-table-row">
+          <td><div class="skeleton" style="height: 20px; width: 110px; border-radius: 4px;"></div></td>
+          <td><div class="skeleton" style="height: 20px; width: 100px; border-radius: 4px;"></div></td>
+          <td><div class="skeleton" style="height: 20px; width: 70px; border-radius: 4px;"></div></td>
+          <td><div class="skeleton" style="height: 20px; width: 120px; border-radius: 4px;"></div></td>
+          <td><div class="skeleton" style="height: 20px; width: 180px; border-radius: 4px;"></div></td>
+          <td><div class="skeleton" style="height: 20px; width: 60px; border-radius: 4px;"></div></td>
+          <td><div class="skeleton" style="height: 20px; width: 90px; border-radius: 4px;"></div></td>
+          <td><div class="skeleton" style="height: 20px; width: 70px; border-radius: 4px;"></div></td>
+        </tr>
+      `).join('');
+    }
+
+    const res = await getAdminAuditLogsApi({ limit: 100 });
+    if (res.ok && Array.isArray(res.logs)) {
+      this.allAuditLogs = res.logs;
+      this.applyFilters(1);
+    } else {
+      this.allAuditLogs = [];
+      this.filteredAuditLogs = [];
+      this.totalPages = 1;
+      this.renderCurrentTabRows();
+      this.updatePaginationUi();
+      showToast(res.error || 'No se pudieron cargar los eventos de auditoría.', 'error');
+    }
+  }
+
+  private async loadCopilotLogs(): Promise<void> {
+    if (this.copilotTableWrapper) removeEmptyState(this.copilotTableWrapper, 'copilot-empty-state');
+    if (this.copilotTbodyEl) {
+      this.copilotTbodyEl.innerHTML = Array(6).fill(0).map(() => `
+        <tr class="skeleton-table-row">
+          <td><div class="skeleton" style="height: 20px; width: 110px; border-radius: 4px;"></div></td>
+          <td><div class="skeleton" style="height: 20px; width: 90px; border-radius: 4px;"></div></td>
+          <td><div class="skeleton" style="height: 20px; width: 80px; border-radius: 4px;"></div></td>
+          <td><div class="skeleton" style="height: 20px; width: 220px; border-radius: 4px;"></div></td>
+          <td><div class="skeleton" style="height: 20px; width: 90px; border-radius: 4px;"></div></td>
+          <td><div class="skeleton" style="height: 20px; width: 60px; border-radius: 4px;"></div></td>
+          <td><div class="skeleton" style="height: 20px; width: 80px; border-radius: 4px;"></div></td>
+        </tr>
+      `).join('');
+    }
+
+    const res = await getCopilotAuditLogsApi({ limit: 100 });
+    if (res.ok && Array.isArray(res.logs)) {
+      this.allCopilotLogs = res.logs;
+      this.applyFilters(1);
+    } else {
+      this.allCopilotLogs = [];
+      this.filteredCopilotLogs = [];
+      this.totalPages = 1;
+      this.renderCurrentTabRows();
+      this.updatePaginationUi();
+      showToast(res.error || 'No se pudieron cargar las consultas de Copilot.', 'error');
+    }
+  }
+
+  private async loadChatSessions(): Promise<void> {
+    if (this.chatTableWrapper) removeEmptyState(this.chatTableWrapper, 'chat-empty-state');
+    if (this.chatTbodyEl) {
+      this.chatTbodyEl.innerHTML = Array(6).fill(0).map(() => `
+        <tr class="skeleton-table-row">
+          <td><div class="skeleton" style="height: 20px; width: 110px; border-radius: 4px;"></div></td>
+          <td><div class="skeleton" style="height: 20px; width: 140px; border-radius: 4px;"></div></td>
+          <td><div class="skeleton" style="height: 20px; width: 100px; border-radius: 4px;"></div></td>
+          <td><div class="skeleton" style="height: 20px; width: 220px; border-radius: 4px;"></div></td>
+          <td><div class="skeleton" style="height: 20px; width: 70px; border-radius: 4px;"></div></td>
+          <td><div class="skeleton" style="height: 20px; width: 110px; border-radius: 4px;"></div></td>
+        </tr>
+      `).join('');
+    }
+
+    const res = await getUserChatSessionsApi({ limit: 100 });
+    if (res.ok && Array.isArray(res.sessions)) {
+      this.allChatSessions = res.sessions;
+      this.applyFilters(1);
+    } else {
+      this.allChatSessions = [];
+      this.filteredChatSessions = [];
+      this.totalPages = 1;
+      this.renderCurrentTabRows();
+      this.updatePaginationUi();
+      showToast(res.error || 'No se pudieron cargar las sesiones de chat.', 'error');
+    }
+  }
+
   private applyFilters(page = 1): void {
     this.currentPage = page;
-    this.selectedFileIds.clear();
-    this.lastClickedIndex = -1;
 
-    this.filteredFiles = this.allFiles.filter((file) => {
-      if (this.currentOriginFilter !== 'all' && file.service !== this.currentOriginFilter) {
-        return false;
-      }
-      if (this.currentCategoryFilter !== 'all' && file.category !== this.currentCategoryFilter) {
-        return false;
-      }
-      if (this.searchQuery) {
-        const matchesName = file.fileName.toLowerCase().includes(this.searchQuery);
-        const matchesCat = file.categoryLabel.toLowerCase().includes(this.searchQuery);
-        const matchesServ = file.serviceLabel.toLowerCase().includes(this.searchQuery);
-        if (!matchesName && !matchesCat && !matchesServ) {
-          return false;
+    if (this.activeTab === 'files') {
+      this.selectedFileIds.clear();
+      this.lastClickedIndex = -1;
+
+      this.filteredFiles = this.allFiles.filter((file) => {
+        if (this.currentOriginFilter !== 'all' && file.service !== this.currentOriginFilter) return false;
+        if (this.currentCategoryFilter !== 'all' && file.category !== this.currentCategoryFilter) return false;
+        if (this.searchQuery) {
+          const matchesName = file.fileName.toLowerCase().includes(this.searchQuery);
+          const matchesCat = file.categoryLabel.toLowerCase().includes(this.searchQuery);
+          const matchesServ = file.serviceLabel.toLowerCase().includes(this.searchQuery);
+          if (!matchesName && !matchesCat && !matchesServ) return false;
         }
-      }
-      return true;
-    });
+        return true;
+      });
+      this.totalPages = Math.max(1, Math.ceil(this.filteredFiles.length / this.limit));
+    } else if (this.activeTab === 'audit') {
+      this.filteredAuditLogs = this.allAuditLogs.filter((log) => {
+        if (this.searchQuery) {
+          const s = this.searchQuery;
+          const matchAct = log.action.toLowerCase().includes(s);
+          const matchDesc = log.description.toLowerCase().includes(s);
+          const matchMod = log.module.toLowerCase().includes(s);
+          const matchUser = log.actor_username.toLowerCase().includes(s);
+          if (!matchAct && !matchDesc && !matchMod && !matchUser) return false;
+        }
+        return true;
+      });
+      this.totalPages = Math.max(1, Math.ceil(this.filteredAuditLogs.length / this.limit));
+    } else if (this.activeTab === 'copilot') {
+      this.filteredCopilotLogs = this.allCopilotLogs.filter((log) => {
+        if (this.searchQuery) {
+          const s = this.searchQuery;
+          const matchPrompt = log.user_prompt.toLowerCase().includes(s);
+          const matchContext = log.page_context.toLowerCase().includes(s);
+          const matchUser = log.admin_username.toLowerCase().includes(s);
+          if (!matchPrompt && !matchContext && !matchUser) return false;
+        }
+        return true;
+      });
+      this.totalPages = Math.max(1, Math.ceil(this.filteredCopilotLogs.length / this.limit));
+    } else if (this.activeTab === 'chat') {
+      this.filteredChatSessions = this.allChatSessions.filter((sess) => {
+        if (this.searchQuery) {
+          const s = this.searchQuery;
+          const matchId = sess.session_id.toLowerCase().includes(s);
+          const matchFirst = sess.first_message.toLowerCase().includes(s);
+          if (!matchId && !matchFirst) return false;
+        }
+        return true;
+      });
+      this.totalPages = Math.max(1, Math.ceil(this.filteredChatSessions.length / this.limit));
+    }
 
-    this.totalPages = Math.max(1, Math.ceil(this.filteredFiles.length / this.limit));
     if (this.currentPage > this.totalPages) {
       this.currentPage = this.totalPages;
     }
 
-    this.renderRows();
+    this.renderCurrentTabRows();
     this.updatePaginationUi();
     this.updateSelectionUi();
   }
 
-  private renderRows(): void {
+  private renderCurrentTabRows(): void {
+    if (this.activeTab === 'files') {
+      this.renderFilesRows();
+    } else if (this.activeTab === 'audit') {
+      this.renderAuditRows();
+    } else if (this.activeTab === 'copilot') {
+      this.renderCopilotRows();
+    } else if (this.activeTab === 'chat') {
+      this.renderChatRows();
+    }
+  }
+
+  private renderFilesRows(): void {
     if (!this.tbodyEl) return;
     this.tbodyEl.innerHTML = '';
 
@@ -370,9 +614,7 @@ class LogsController implements ViewController {
       return;
     }
 
-    if (tableWrapper) {
-      removeEmptyState(tableWrapper, 'logs-empty-state');
-    }
+    if (tableWrapper) removeEmptyState(tableWrapper, 'logs-empty-state');
     if (this.tableEl) this.tableEl.style.display = '';
 
     const startIdx = (this.currentPage - 1) * this.limit;
@@ -444,6 +686,290 @@ class LogsController implements ViewController {
     }
 
     renderIcons(this.tbodyEl);
+  }
+
+  private renderAuditRows(): void {
+    if (!this.auditTbodyEl) return;
+    this.auditTbodyEl.innerHTML = '';
+
+    if (this.filteredAuditLogs.length === 0) {
+      if (this.auditTableWrapper) {
+        renderEmptyState({
+          container: this.auditTableWrapper,
+          dataRef: 'audit-empty-state',
+          desc: 'No hay eventos de auditoría registrados para el criterio seleccionado.',
+          graphicType: 'logs',
+          isTable: true,
+          title: 'No hay eventos de auditoría',
+        });
+      }
+      return;
+    }
+
+    if (this.auditTableWrapper) removeEmptyState(this.auditTableWrapper, 'audit-empty-state');
+
+    const startIdx = (this.currentPage - 1) * this.limit;
+    const pageLogs = this.filteredAuditLogs.slice(startIdx, startIdx + this.limit);
+
+    for (const log of pageLogs) {
+      const tr = document.createElement('tr');
+
+      let riskBadge = '<span class="component-badge component-badge--sm component-badge--neutral">Bajo</span>';
+      if (log.risk_level === 'medium') riskBadge = '<span class="component-badge component-badge--sm component-badge--info">Medio</span>';
+      else if (log.risk_level === 'high') riskBadge = '<span class="component-badge component-badge--sm component-badge--warning">Alto</span>';
+      else if (log.risk_level === 'critical') riskBadge = '<span class="component-badge component-badge--sm component-badge--danger">Crítico</span>';
+
+      tr.innerHTML = `
+        <td><span class="component-badge component-badge--sm">${formatDate(log.created_at)}</span></td>
+        <td>
+          <div style="display: flex; flex-direction: column;">
+            <strong style="font-size: 13px; color: var(--text-primary);">${escapeHtml(log.actor_username)}</strong>
+            <span style="font-size: 11px; color: var(--text-secondary);">ID #${log.actor_id} · ${escapeHtml(log.actor_role)}</span>
+          </div>
+        </td>
+        <td><span class="component-badge component-badge--sm component-badge--info">${escapeHtml(log.module.toUpperCase())}</span></td>
+        <td><span class="component-badge component-badge--sm component-badge--neutral" style="font-family: monospace;">${escapeHtml(log.action)}</span></td>
+        <td><span style="font-size: 12.5px; color: var(--text-primary);">${escapeHtml(log.description)}</span></td>
+        <td>${riskBadge}</td>
+        <td><span class="component-badge component-badge--sm" style="font-family: monospace;">${escapeHtml(log.ip_address || '127.0.0.1')}</span></td>
+        <td>
+          <button type="button" class="component-button component-button--h30 component-button--ghost" data-ref="btn-view-audit-detail" style="padding: 0 8px; font-size: 11px;">
+            Ver JSON
+          </button>
+        </td>
+      `;
+
+      const btnDetail = tr.querySelector<HTMLElement>('[data-ref="btn-view-audit-detail"]');
+      btnDetail?.addEventListener('click', () => {
+        this.openAuditDetailModal(log);
+      });
+
+      this.auditTbodyEl.appendChild(tr);
+    }
+
+    renderIcons(this.auditTbodyEl);
+  }
+
+  private openAuditDetailModal(log: AdminAuditRecord): void {
+    const detailHtml = `
+      <div style="display: flex; flex-direction: column; gap: 14px; font-size: 13px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: var(--bg-surface); padding: 12px; border-radius: 8px;">
+          <div><strong>Módulo:</strong> ${escapeHtml(log.module)}</div>
+          <div><strong>Acción:</strong> ${escapeHtml(log.action)}</div>
+          <div><strong>Actor:</strong> ${escapeHtml(log.actor_username)} (#${log.actor_id})</div>
+          <div><strong>Nivel de Riesgo:</strong> ${escapeHtml(log.risk_level)}</div>
+          <div><strong>IP:</strong> ${escapeHtml(log.ip_address || 'N/A')}</div>
+          <div><strong>User Agent:</strong> <span style="font-size: 11px; color: var(--text-secondary);">${escapeHtml(log.user_agent || 'N/A')}</span></div>
+        </div>
+
+        <div>
+          <strong style="display: block; margin-bottom: 4px;">Valores Previos (Old Values):</strong>
+          <pre style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 10px; border-radius: 6px; font-family: monospace; font-size: 11px; max-height: 140px; overflow: auto;"><code>${escapeHtml(log.old_values ? JSON.stringify(JSON.parse(log.old_values), null, 2) : 'null')}</code></pre>
+        </div>
+
+        <div>
+          <strong style="display: block; margin-bottom: 4px;">Nuevos Valores (New Values):</strong>
+          <pre style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 10px; border-radius: 6px; font-family: monospace; font-size: 11px; max-height: 140px; overflow: auto;"><code>${escapeHtml(log.new_values ? JSON.stringify(JSON.parse(log.new_values), null, 2) : 'null')}</code></pre>
+        </div>
+      </div>
+    `;
+
+    openModal({
+      bodyHtml: detailHtml,
+      showConfirm: false,
+      size: 'lg',
+      title: `Detalle de Auditoría: ${log.action}`,
+    });
+  }
+
+  private renderCopilotRows(): void {
+    if (!this.copilotTbodyEl) return;
+    this.copilotTbodyEl.innerHTML = '';
+
+    if (this.filteredCopilotLogs.length === 0) {
+      if (this.copilotTableWrapper) {
+        renderEmptyState({
+          container: this.copilotTableWrapper,
+          dataRef: 'copilot-empty-state',
+          desc: 'No se han registrado consultas del Copilot con los filtros aplicados.',
+          graphicType: 'logs',
+          isTable: true,
+          title: 'No hay consultas de IA',
+        });
+      }
+      return;
+    }
+
+    if (this.copilotTableWrapper) removeEmptyState(this.copilotTableWrapper, 'copilot-empty-state');
+
+    const startIdx = (this.currentPage - 1) * this.limit;
+    const pageLogs = this.filteredCopilotLogs.slice(startIdx, startIdx + this.limit);
+
+    for (const log of pageLogs) {
+      const tr = document.createElement('tr');
+
+      let queriesCount = 0;
+      try {
+        const parsed = JSON.parse(log.sql_queries_executed || '[]');
+        if (Array.isArray(parsed)) queriesCount = parsed.length;
+      } catch {}
+
+      tr.innerHTML = `
+        <td><span class="component-badge component-badge--sm">${formatDate(log.created_at)}</span></td>
+        <td><strong style="font-size: 13px;">${escapeHtml(log.admin_username)}</strong></td>
+        <td><span class="component-badge component-badge--sm component-badge--info">${escapeHtml(log.page_context)}</span></td>
+        <td style="max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+          <span style="font-size: 12.5px; color: var(--text-primary);">${escapeHtml(log.user_prompt)}</span>
+        </td>
+        <td>
+          <span class="component-badge component-badge--sm ${queriesCount > 0 ? 'component-badge--success' : 'component-badge--neutral'}">
+            ${queriesCount} query(s) SQL
+          </span>
+        </td>
+        <td><span class="component-badge component-badge--sm">${log.execution_time_ms} ms</span></td>
+        <td>
+          <button type="button" class="component-button component-button--h30 component-button--ghost" data-ref="btn-view-copilot-dialog" style="padding: 0 8px; font-size: 11px;">
+            Ver Diálogo
+          </button>
+        </td>
+      `;
+
+      const btnView = tr.querySelector<HTMLElement>('[data-ref="btn-view-copilot-dialog"]');
+      btnView?.addEventListener('click', () => {
+        this.openCopilotDialogModal(log);
+      });
+
+      this.copilotTbodyEl.appendChild(tr);
+    }
+
+    renderIcons(this.copilotTbodyEl);
+  }
+
+  private openCopilotDialogModal(log: CopilotAuditRecord): void {
+    let queriesHtml = '<p style="color: var(--text-secondary); font-size: 12px;">Ninguna consulta SQL fue ejecutada en esta interacción.</p>';
+    try {
+      const queries = JSON.parse(log.sql_queries_executed || '[]');
+      if (Array.isArray(queries) && queries.length > 0) {
+        queriesHtml = queries.map((q: any) => `
+          <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; margin-bottom: 8px;">
+            <div style="font-size: 11px; color: #818cf8; margin-bottom: 4px; font-weight: 600;">SQL (${q.executionTimeMs || 0} ms · ${q.rowsCount || 0} filas):</div>
+            <pre style="margin: 0; font-family: monospace; font-size: 11px; color: var(--text-primary); white-space: pre-wrap;"><code>${escapeHtml(q.sql)}</code></pre>
+          </div>
+        `).join('');
+      }
+    } catch {}
+
+    const html = `
+      <div style="display: flex; flex-direction: column; gap: 14px; font-size: 13px;">
+        <div style="background: rgba(99, 102, 241, 0.08); padding: 12px; border-radius: 8px; border: 1px solid rgba(99, 102, 241, 0.2);">
+          <strong style="color: #6366f1; font-size: 12px; display: block; margin-bottom: 4px;">PROMPT DEL ADMINISTRADOR:</strong>
+          <p style="margin: 0; font-size: 13px; color: var(--text-primary);">${escapeHtml(log.user_prompt)}</p>
+        </div>
+
+        <div>
+          <strong style="font-size: 12px; display: block; margin-bottom: 6px;">CONSULTAS SQL EJECUTADAS:</strong>
+          ${queriesHtml}
+        </div>
+
+        <div>
+          <strong style="font-size: 12px; display: block; margin-bottom: 6px;">RESPUESTA GENERADA:</strong>
+          <div style="background: var(--bg-surface); padding: 14px; border-radius: 8px; border: 1px solid var(--border-color); line-height: 1.5; max-height: 220px; overflow-y: auto; white-space: pre-wrap;">${escapeHtml(log.model_reply)}</div>
+        </div>
+      </div>
+    `;
+
+    openModal({
+      bodyHtml: html,
+      showConfirm: false,
+      size: 'lg',
+      title: `Interacción Copilot AI (${log.admin_username} · ${log.page_context})`,
+    });
+  }
+
+  private renderChatRows(): void {
+    if (!this.chatTbodyEl) return;
+    this.chatTbodyEl.innerHTML = '';
+
+    if (this.filteredChatSessions.length === 0) {
+      if (this.chatTableWrapper) {
+        renderEmptyState({
+          container: this.chatTableWrapper,
+          dataRef: 'chat-empty-state',
+          desc: 'No se encontraron conversaciones de chatbot para los criterios seleccionados.',
+          graphicType: 'logs',
+          isTable: true,
+          title: 'No hay sesiones de chat',
+        });
+      }
+      return;
+    }
+
+    if (this.chatTableWrapper) removeEmptyState(this.chatTableWrapper, 'chat-empty-state');
+
+    const startIdx = (this.currentPage - 1) * this.limit;
+    const pageSessions = this.filteredChatSessions.slice(startIdx, startIdx + this.limit);
+
+    for (const sess of pageSessions) {
+      const tr = document.createElement('tr');
+
+      tr.innerHTML = `
+        <td><span class="component-badge component-badge--sm">${formatDate(sess.last_message_at || sess.created_at)}</span></td>
+        <td><span class="component-badge component-badge--sm" style="font-family: monospace;">${escapeHtml(sess.session_id)}</span></td>
+        <td><strong style="font-size: 13px;">Usuario #${sess.user_id}</strong></td>
+        <td style="max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+          <span style="font-size: 12.5px; color: var(--text-primary);">${escapeHtml(sess.first_message || '—')}</span>
+        </td>
+        <td><span class="component-badge component-badge--sm component-badge--info">${sess.total_messages} mensajes</span></td>
+        <td>
+          <button type="button" class="component-button component-button--h30 component-button--ghost" data-ref="btn-view-chat-transcript" style="padding: 0 8px; font-size: 11px;">
+            Ver Transcripción
+          </button>
+        </td>
+      `;
+
+      const btnView = tr.querySelector<HTMLElement>('[data-ref="btn-view-chat-transcript"]');
+      btnView?.addEventListener('click', () => {
+        void this.openChatTranscriptModal(sess.session_id);
+      });
+
+      this.chatTbodyEl.appendChild(tr);
+    }
+
+    renderIcons(this.chatTbodyEl);
+  }
+
+  private async openChatTranscriptModal(sessionId: string): Promise<void> {
+    const res = await getUserChatMessagesApi(sessionId);
+    if (!res.ok || !Array.isArray(res.messages)) {
+      showToast(res.error || 'No se pudieron cargar los mensajes de la conversación.', 'error');
+      return;
+    }
+
+    const messages = res.messages;
+    const messagesHtml = messages.map((m) => {
+      const isUser = m.sender_role === 'user';
+      return `
+        <div style="display: flex; flex-direction: column; align-items: ${isUser ? 'flex-end' : 'flex-start'}; margin-bottom: 12px;">
+          <span style="font-size: 10px; color: var(--text-secondary); margin-bottom: 2px;">${isUser ? (m.username || 'Usuario') : 'Spritebot AI'} · ${formatDate(m.created_at)}</span>
+          <div style="max-width: 80%; background: ${isUser ? 'var(--primary-color, #6366f1)' : 'var(--bg-surface)'}; color: ${isUser ? '#ffffff' : 'var(--text-primary)'}; padding: 10px 14px; border-radius: 12px; font-size: 13px; line-height: 1.4; border: ${isUser ? 'none' : '1px solid var(--border-color)'};">
+            ${escapeHtml(m.content)}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    const bodyHtml = `
+      <div style="max-height: 420px; overflow-y: auto; padding: 8px 4px; display: flex; flex-direction: column;">
+        ${messagesHtml || '<p style="color: var(--text-secondary); text-align: center;">No hay mensajes registrados en esta sesión.</p>'}
+      </div>
+    `;
+
+    openModal({
+      bodyHtml,
+      showConfirm: false,
+      size: 'lg',
+      title: `Transcripción de Chat (${sessionId})`,
+    });
   }
 
   private handleRowClick(file: LogFileRecord, globalIndex: number, e: MouseEvent): void {
@@ -749,14 +1275,9 @@ class LogViewerController implements ViewController {
   private async loadLogsContent(): Promise<void> {
     if (this.linesList) {
       this.linesList.innerHTML = `
-        <div class="viewer-lines-skeleton" data-ref="viewer-lines-skeleton" style="padding: 16px 24px; display: flex; flex-direction: column; gap: 12px;">
-          <div class="skeleton" style="height: 16px; width: 85%; border-radius: 4px;"></div>
-          <div class="skeleton" style="height: 16px; width: 60%; border-radius: 4px;"></div>
-          <div class="skeleton" style="height: 16px; width: 92%; border-radius: 4px;"></div>
-          <div class="skeleton" style="height: 16px; width: 75%; border-radius: 4px;"></div>
-          <div class="skeleton" style="height: 16px; width: 50%; border-radius: 4px;"></div>
-          <div class="skeleton" style="height: 16px; width: 88%; border-radius: 4px;"></div>
-          <div class="skeleton" style="height: 16px; width: 68%; border-radius: 4px;"></div>
+        <div style="padding: 24px; text-align: center; color: var(--text-secondary);">
+          <div class="skeleton" style="height: 18px; width: 60%; margin: 0 auto 12px; border-radius: 4px;"></div>
+          <div class="skeleton" style="height: 18px; width: 40%; margin: 0 auto; border-radius: 4px;"></div>
         </div>
       `;
     }
@@ -764,20 +1285,16 @@ class LogViewerController implements ViewController {
     const res = await getLogContentApi(this.requestedFileIds);
     if (res.ok && Array.isArray(res.files) && res.files.length > 0) {
       this.loadedFiles = res.files;
-      if (this.activeTabIndex >= this.loadedFiles.length) {
-        this.activeTabIndex = 0;
-      }
       this.renderTabs();
       this.renderLines();
     } else {
-      showToast(res.error || 'No se pudo cargar el contenido de los logs.', 'error');
       if (this.linesList) {
         this.linesList.innerHTML = '';
         renderEmptyState({
           container: this.linesList,
-          dataRef: 'viewer-error-state',
-          desc: res.error || 'Error al cargar los archivos seleccionados.',
-          graphicType: 'error',
+          dataRef: 'viewer-empty-state',
+          desc: res.error || 'No se pudieron recuperar las líneas de los archivos de log seleccionados.',
+          graphicType: 'logs',
           title: 'Error al cargar registros',
         });
       }
@@ -785,247 +1302,135 @@ class LogViewerController implements ViewController {
   }
 
   private renderTabs(): void {
-    const container = this.tabsContainer;
-    if (!container) return;
-    container.innerHTML = '';
+    if (!this.tabsContainer) return;
+    this.tabsContainer.innerHTML = '';
 
-    if (this.loadedFiles.length <= 1) {
-      if (this.tabsBar) this.tabsBar.style.display = 'none';
-      if (this.filenameBadge && this.loadedFiles[0]) {
-        this.filenameBadge.style.display = 'inline-flex';
-        this.filenameBadge.textContent = `${this.loadedFiles[0].serviceLabel} • ${this.loadedFiles[0].categoryLabel} / ${this.loadedFiles[0].fileName}`;
-      }
-      return;
-    }
-
-    if (this.filenameBadge) {
-      this.filenameBadge.style.display = 'none';
-    }
-    if (this.tabsBar) {
-      this.tabsBar.style.display = 'flex';
+    if (this.loadedFiles.length > 1) {
+      const combinedTab = document.createElement('button');
+      combinedTab.type = 'button';
+      combinedTab.className = `viewer-tab${this.isCombinedView ? ' is-active' : ''}`;
+      combinedTab.setAttribute('data-ref', 'tab-combined');
+      combinedTab.innerHTML = `
+        <svg class="component-icon" style="width: 14px; height: 14px;" aria-hidden="true"><use href="/icons.svg#layers"></use></svg>
+        <span>Vista Combinada (${this.loadedFiles.length})</span>
+      `;
+      combinedTab.addEventListener('click', () => {
+        this.isCombinedView = true;
+        this.renderTabs();
+        this.renderLines();
+      });
+      this.tabsContainer.appendChild(combinedTab);
     }
 
     this.loadedFiles.forEach((file, index) => {
-      const isCurrent = !this.isCombinedView && this.activeTabIndex === index;
-      const tabBtn = document.createElement('button');
-      tabBtn.type = 'button';
-      tabBtn.className = `component-button component-button--h32${isCurrent ? ' component-button--black' : ''}`;
-      tabBtn.setAttribute('data-ref', `tab-log-${file.id}`);
-      tabBtn.style.gap = '6px';
-      tabBtn.style.padding = '0 12px';
-      tabBtn.style.fontSize = '12px';
-      tabBtn.style.fontFamily = 'ui-monospace, monospace';
-
-      const originBadge = file.service === 'web' ? 'Web' : 'Admin';
-
-      tabBtn.innerHTML = `
-        <span style="opacity: 0.75; font-size: 10px; text-transform: uppercase;">[${originBadge}:${escapeHtml(file.category)}]</span>
+      const tab = document.createElement('button');
+      tab.type = 'button';
+      const isActive = !this.isCombinedView && this.activeTabIndex === index;
+      tab.className = `viewer-tab${isActive ? ' is-active' : ''}`;
+      tab.setAttribute('data-ref', `tab-file-${file.id}`);
+      tab.innerHTML = `
+        <svg class="component-icon" style="width: 14px; height: 14px;" aria-hidden="true"><use href="/icons.svg#article"></use></svg>
         <span>${escapeHtml(file.fileName)}</span>
       `;
-
-      tabBtn.addEventListener('click', (e) => {
-        e.preventDefault();
+      tab.addEventListener('click', () => {
         this.isCombinedView = false;
         this.activeTabIndex = index;
         this.renderTabs();
         this.renderLines();
       });
-
-      container.appendChild(tabBtn);
+      this.tabsContainer?.appendChild(tab);
     });
 
-    const combinedBtn = document.createElement('button');
-    combinedBtn.type = 'button';
-    combinedBtn.className = `component-button component-button--h32${this.isCombinedView ? ' component-button--black' : ''}`;
-    combinedBtn.setAttribute('data-ref', 'tab-log-combined');
-    combinedBtn.style.gap = '6px';
-    combinedBtn.style.padding = '0 12px';
-    combinedBtn.style.fontSize = '12px';
-
-    combinedBtn.innerHTML = `
-      <svg class="component-icon" style="width: 14px; height: 14px;" aria-hidden="true"><use href="/icons.svg#view_stream"></use></svg>
-      <span>Vista combinada (${this.loadedFiles.length})</span>
-    `;
-
-    combinedBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      this.isCombinedView = true;
-      this.renderTabs();
-      this.renderLines();
-    });
-
-    container.appendChild(combinedBtn);
-    renderIcons(container);
+    renderIcons(this.tabsContainer);
   }
 
   private renderLines(): void {
     if (!this.linesList) return;
+    this.linesList.innerHTML = '';
 
-    let linesToDisplay: Array<ParsedLogLine & { originLabel?: string }> = [];
-    let activeTotalLines = 0;
-    let activeErrors = 0;
-    let activeWarns = 0;
-    let fileSizeStr = '0 B';
-    let fileUpdatedStr = '—';
+    let activeLines: Array<ParsedLogLine & { sourceFile?: string }> = [];
+    let currentFile: LogFileContent | null = null;
 
     if (this.isCombinedView) {
-      const allLines: Array<ParsedLogLine & { originLabel?: string; tsValue: number }> = [];
       this.loadedFiles.forEach((file) => {
-        activeTotalLines += file.stats.totalLines;
-        activeErrors += file.stats.errorCount;
-        activeWarns += file.stats.warnCount;
-        file.lines.forEach((line) => {
-          let tsValue = 0;
-          if (line.timestamp) {
-            tsValue = new Date(line.timestamp).getTime() || 0;
-          }
-          allLines.push({
-            ...line,
-            originLabel: `${file.service === 'web' ? 'Web' : 'Admin'}:${file.category}`,
-            tsValue,
-          });
+        file.lines.forEach((l) => {
+          activeLines.push({ ...l, sourceFile: `${file.serviceLabel} [${file.categoryLabel}]` });
         });
       });
-
-      allLines.sort((a, b) => a.tsValue - b.tsValue);
-      linesToDisplay = allLines;
-      fileSizeStr = `${this.loadedFiles.length} archivos`;
-      fileUpdatedStr = 'Combinado';
     } else {
-      const currentFile = this.loadedFiles[this.activeTabIndex];
-      if (!currentFile) {
-        this.linesList.innerHTML = '<div style="padding: 32px; text-align: center; color: #64748b;">No hay contenido disponible.</div>';
-        return;
+      currentFile = this.loadedFiles[this.activeTabIndex];
+      if (currentFile) {
+        activeLines = currentFile.lines;
       }
-      activeTotalLines = currentFile.stats.totalLines;
-      activeErrors = currentFile.stats.errorCount;
-      activeWarns = currentFile.stats.warnCount;
-      fileSizeStr = `${parseFloat((currentFile.sizeBytes / 1024).toFixed(1))} KB`;
-      fileUpdatedStr = formatDate(currentFile.updatedAt);
-      linesToDisplay = currentFile.lines;
     }
 
-    const filtered = linesToDisplay.filter((line) => {
-      if (this.activeLevelFilter !== 'ALL') {
-        if (line.level !== this.activeLevelFilter) return false;
+    if (this.filenameBadge) {
+      if (this.isCombinedView) {
+        this.filenameBadge.textContent = `Combinada (${this.loadedFiles.length} archivos)`;
+      } else if (currentFile) {
+        this.filenameBadge.textContent = `${currentFile.serviceLabel} › ${currentFile.categoryLabel} › ${currentFile.fileName}`;
+      }
+    }
+
+    let errorCount = 0;
+    let warnCount = 0;
+    activeLines.forEach((l) => {
+      if (l.level === 'ERROR') errorCount++;
+      if (l.level === 'WARN') warnCount++;
+    });
+
+    const filtered = activeLines.filter((line) => {
+      if (this.activeLevelFilter !== 'ALL' && line.level !== this.activeLevelFilter) {
+        return false;
       }
       if (this.searchQuery) {
-        if (!line.raw.toLowerCase().includes(this.searchQuery)) {
-          return false;
-        }
+        const matchesMsg = line.message.toLowerCase().includes(this.searchQuery);
+        const matchesRaw = line.raw.toLowerCase().includes(this.searchQuery);
+        if (!matchesMsg && !matchesRaw) return false;
       }
       return true;
     });
 
-    if (this.statTotalLines) this.statTotalLines.innerHTML = `Líneas: <strong>${activeTotalLines}</strong>`;
-    if (this.statErrors) this.statErrors.innerHTML = `Errores: <strong>${activeErrors}</strong>`;
-    if (this.statWarns) this.statWarns.innerHTML = `Avisos: <strong>${activeWarns}</strong>`;
-    if (this.statFileSize) this.statFileSize.innerHTML = `Tamaño: <strong>${fileSizeStr}</strong>`;
-    if (this.statFileUpdated) this.statFileUpdated.innerHTML = `Actualizado: <strong>${fileUpdatedStr}</strong>`;
-
-    if (this.statFilteredLines) {
-      if (this.searchQuery || this.activeLevelFilter !== 'ALL') {
-        this.statFilteredLines.style.display = 'inline';
-        this.statFilteredLines.innerHTML = `Filtradas: <strong>${filtered.length}</strong>`;
-      } else {
-        this.statFilteredLines.style.display = 'none';
-      }
-    }
+    if (this.statTotalLines) this.statTotalLines.textContent = `${activeLines.length} líneas`;
+    if (this.statFilteredLines) this.statFilteredLines.textContent = `${filtered.length} visibles`;
+    if (this.statErrors) this.statErrors.textContent = `${errorCount} errores`;
+    if (this.statWarns) this.statWarns.textContent = `${warnCount} avisos`;
+    if (this.statFileSize && currentFile) this.statFileSize.textContent = formatBytes(currentFile.sizeBytes);
+    if (this.statFileUpdated && currentFile) this.statFileUpdated.textContent = formatDate(currentFile.updatedAt);
 
     if (filtered.length === 0) {
-      this.linesList.innerHTML = '';
-      renderEmptyState({
-        container: this.linesList,
-        dataRef: 'viewer-empty-filtered-state',
-        desc: 'No hay líneas en este archivo que coincidan con los filtros aplicados o el término de búsqueda.',
-        graphicType: this.searchQuery ? 'search' : 'logs',
-        title: 'Sin líneas coincidentes',
-      });
+      this.linesList.innerHTML = `
+        <div style="padding: 32px; text-align: center; color: var(--text-secondary);">
+          <p style="margin: 0; font-size: 13px;">No hay líneas que coincidan con los filtros aplicados.</p>
+        </div>
+      `;
       return;
     }
 
-    this.linesList.innerHTML = '';
     const fragment = document.createDocumentFragment();
 
     filtered.forEach((line) => {
-      const lineRow = document.createElement('div');
-      lineRow.className = 'viewer-line-row';
-      lineRow.style.display = 'flex';
-      lineRow.style.alignItems = 'flex-start';
-      lineRow.style.padding = '2px 16px';
-      lineRow.style.gap = '12px';
-
-      let levelColor = 'var(--text-secondary)';
-      let levelBg = 'transparent';
-      let rowBg = 'transparent';
-
-      if (line.level === 'ERROR') {
-        levelColor = '#ef4444';
-        levelBg = 'rgba(239, 68, 68, 0.12)';
-        rowBg = 'rgba(239, 68, 68, 0.04)';
-      } else if (line.level === 'WARN') {
-        levelColor = '#f59e0b';
-        levelBg = 'rgba(245, 158, 11, 0.12)';
-        rowBg = 'rgba(245, 158, 11, 0.04)';
-      } else if (line.level === 'INFO') {
-        levelColor = '#3b82f6';
-        levelBg = 'rgba(59, 130, 246, 0.12)';
-      } else if (line.level === 'DEBUG') {
-        levelColor = '#8b5cf6';
-        levelBg = 'rgba(139, 92, 246, 0.12)';
-      }
-
-      if (rowBg !== 'transparent') {
-        lineRow.style.background = rowBg;
-      }
-
-      let formattedMessage = escapeHtml(line.message);
-      if (this.searchQuery) {
-        const regex = new RegExp(`(${escapeRegExp(this.searchQuery)})`, 'gi');
-        formattedMessage = formattedMessage.replace(regex, '<mark style="background: #fef08a; color: #0f172a; border-radius: 2px; padding: 0 2px;">$1</mark>');
-      }
-
-      const numSpan = `<span style="width: 48px; text-align: right; user-select: none; color: var(--text-tertiary); font-size: 11px; flex-shrink: 0;">${line.lineNumber}</span>`;
-
-      let originBadgeHtml = '';
-      if (line.originLabel) {
-        originBadgeHtml = `<span class="component-badge component-badge--sm" style="font-size: 10px; padding: 1px 6px; flex-shrink: 0;">${escapeHtml(line.originLabel)}</span>`;
-      }
-
-      let timeHtml = '';
-      if (line.timestamp) {
-        const timePart = line.timestamp.includes('T') ? line.timestamp.split('T')[1].replace('Z', '') : line.timestamp;
-        timeHtml = `<span style="color: var(--text-secondary); font-size: 11px; flex-shrink: 0;">${escapeHtml(timePart)}</span>`;
-      }
-
-      let levelBadgeHtml = '';
+      const lineEl = document.createElement('div');
+      lineEl.className = 'log-line-item';
       if (line.level) {
-        levelBadgeHtml = `<span style="background: ${levelBg}; color: ${levelColor}; font-weight: 700; font-size: 10px; padding: 1px 6px; border-radius: 4px; flex-shrink: 0;">${line.level}</span>`;
+        lineEl.classList.add(`log-line-item--${line.level.toLowerCase()}`);
       }
 
-      let catHtml = '';
-      if (line.category) {
-        catHtml = `<span style="color: var(--text-secondary); font-size: 11px; flex-shrink: 0;">[${escapeHtml(line.category)}]</span>`;
-      }
+      let timePart = line.timestamp ? `<span class="log-line__time">[${escapeHtml(line.timestamp)}]</span> ` : '';
+      let levelPart = line.level ? `<span class="log-line__level log-line__level--${line.level.toLowerCase()}">[${line.level}]</span> ` : '';
+      let catPart = line.category ? `<span class="log-line__cat">[${escapeHtml(line.category)}]</span> ` : '';
+      let sourcePart = line.sourceFile ? `<span class="log-line__source">[${escapeHtml(line.sourceFile)}]</span> ` : '';
 
-      lineRow.innerHTML = `
-        ${numSpan}
-        ${originBadgeHtml}
-        ${timeHtml}
-        ${levelBadgeHtml}
-        ${catHtml}
-        <span class="viewer-line-text" style="flex: 1; color: ${line.level === 'ERROR' ? '#ef4444' : 'var(--text-primary)'}; word-break: break-all;">${formattedMessage}</span>
+      lineEl.innerHTML = `
+        <span class="log-line__num">${line.lineNumber}</span>
+        <span class="log-line__content">${sourcePart}${timePart}${levelPart}${catPart}${escapeHtml(line.message)}</span>
       `;
 
-      fragment.appendChild(lineRow);
+      fragment.appendChild(lineEl);
     });
 
     this.linesList.appendChild(fragment);
   }
-}
-
-function escapeRegExp(string: string): string {
-  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 export async function createLogsView(): Promise<HTMLElement> {
@@ -1034,8 +1439,8 @@ export async function createLogsView(): Promise<HTMLElement> {
   container.prepend(sidebar);
 
   const controller = new LogsController(container);
-  void controller.init();
   (container as any).__controller = controller;
+  await controller.init();
 
   return container;
 }
@@ -1046,9 +1451,8 @@ export async function createLogViewerView(): Promise<HTMLElement> {
   container.prepend(sidebar);
 
   const controller = new LogViewerController(container);
-  void controller.init();
   (container as any).__controller = controller;
+  await controller.init();
 
   return container;
 }
-

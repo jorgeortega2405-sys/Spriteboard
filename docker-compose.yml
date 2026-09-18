@@ -140,11 +140,16 @@ services:
       - DB_NAME=db_identity
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - CASSANDRA_CONTACT_POINTS=cassandra
+      - CASSANDRA_PORT=9042
+      - CASSANDRA_LOCAL_DC=datacenter1
       - ADMIN_GOOGLE_CALLBACK_URL=http://localhost:3002/api/auth/google/callback
     depends_on:
       mysql:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      cassandra:
         condition: service_healthy
     volumes:
       - ./admin:/app
