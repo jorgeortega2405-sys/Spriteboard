@@ -190,6 +190,14 @@ export class SearchController {
       card.setAttribute('data-ref', `canvas-card-${canvas.uuid}`);
       card.setAttribute('data-uuid', canvas.uuid);
 
+      const isDiagram = (canvas as any).canvas_type === 'diagram' || (canvas as any).canvas_type === 'mindmap' || (canvas as any).unit === 'diagram';
+      const isBoard = !isDiagram && ((canvas as any).canvas_type === 'board' || (canvas as any).unit === 'board');
+      const targetUrl = isDiagram ? `/diagram/${canvas.uuid}` : (isBoard ? `/board/${canvas.uuid}` : `/design/${canvas.uuid}`);
+      const typeLabel = isDiagram
+        ? ((canvas as any).canvas_type === 'mindmap' ? 'Mapa Mental' : 'Diagrama')
+        : (isBoard ? 'Pizarra Infinita' : `${canvas.width} × ${canvas.height} px`);
+      const typeIcon = isDiagram ? 'psychology' : (isBoard ? 'draw' : 'straighten');
+
       const thumbnailHtml = canvas.preview_thumbnail
         ? `<img class="canvas-card__image image-lazy-fade" src="${escapeHtml(canvas.preview_thumbnail)}" alt="${escapeHtml(canvas.name)}" loading="lazy" decoding="async" onload="this.classList.add('image-loaded')" onerror="this.onerror=null; this.classList.add('image-loaded');" />`
         : `<div class="canvas-card__canvas-placeholder"></div>`;
@@ -198,8 +206,8 @@ export class SearchController {
         ${thumbnailHtml}
         <div class="canvas-card__badges-tl" data-ref="badges-tl-${canvas.uuid}">
           <div class="canvas-card__badge canvas-card__badge--glass">
-            <span class="material-symbols-rounded">straighten</span>
-            <span>${canvas.width} × ${canvas.height} px</span>
+            <span class="material-symbols-rounded">${typeIcon}</span>
+            <span>${typeLabel}</span>
           </div>
         </div>
         <div class="canvas-card__bottom" data-ref="card-bottom-${canvas.uuid}">
@@ -213,7 +221,7 @@ export class SearchController {
 
       card.addEventListener('click', (e) => {
         e.preventDefault();
-        navigate(`/design/${canvas.uuid}`);
+        navigate(targetUrl);
       });
 
       this.canvasesGridEl.appendChild(card);
@@ -311,8 +319,11 @@ export class SearchController {
         const preset = ALL_PRESETS.find((p) => p.id === presetId);
         if (!preset) return;
 
+        const canvasType = preset.canvasType || (preset.categoryKey === 'board' ? 'board' : (preset.categoryKey === 'diagram' ? 'diagram' : 'pixel'));
         openCreateCanvasModal({
+          diagramSubtype: preset.diagramSubtype,
           height: preset.height,
+          initialType: canvasType,
           name: preset.name,
           templateImage: preset.imagePath,
           templateName: preset.name,

@@ -231,8 +231,9 @@ class SharedController {
 
     const isDiagram = canvas.canvas_type === 'diagram' || canvas.canvas_type === 'mindmap' || canvas.unit === 'diagram';
     const isBoard = !isDiagram && (canvas.canvas_type === 'board' || canvas.unit === 'board');
+    const targetUrl = isDiagram ? `/diagram/${canvas.uuid}` : (isBoard ? `/board/${canvas.uuid}` : `/design/${canvas.uuid}`);
     const typeIcon = isDiagram ? 'psychology' : (isBoard ? 'draw' : 'grid_4x4');
-    const typeLabel = isDiagram ? 'Mapa Mental' : (isBoard ? 'Pizarrón' : `Lienzo ${canvas.width}×${canvas.height}`);
+    const typeLabel = isDiagram ? (canvas.canvas_type === 'mindmap' ? 'Mapa Mental' : 'Diagrama') : (isBoard ? 'Pizarrón' : `Lienzo ${canvas.width}×${canvas.height}`);
     const editedTime = formatEditedTime(canvas.updated_at || canvas.created_at);
 
     card.innerHTML = `
@@ -293,7 +294,7 @@ class SharedController {
       if (target?.closest('[data-ref="card-actions"]') || target?.closest('[data-ref="card-menu-dropdown"]')) {
         return;
       }
-      navigate(`/design/${canvas.uuid}`);
+      navigate(targetUrl);
     });
 
     const actionsWrapper = card.querySelector<HTMLElement>('[data-ref="card-actions-wrapper"]');
@@ -377,7 +378,7 @@ class SharedController {
     actionOpenNewTab?.addEventListener('click', (e) => {
       e.stopPropagation();
       this.closeAllDropdowns();
-      window.open(`/design/${canvas.uuid}`, '_blank');
+      window.open(targetUrl, '_blank');
     });
 
     actionDuplicate?.addEventListener('click', async (e) => {

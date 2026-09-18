@@ -36,7 +36,7 @@ class TemplatesController {
   private isRenderingBatch = false;
 
   private activeCategory = 'all';
-  private currentTypeFilter: 'all' | 'favorites' | 'pixel' | 'board' = 'all';
+  private currentTypeFilter: 'all' | 'favorites' | 'pixel' | 'board' | 'diagram' = 'all';
   private currentSort: 'default' | 'alpha-asc' | 'alpha-desc' | 'size-desc' | 'size-asc' = 'default';
   private searchQuery = '';
   private favoritedTemplateIds = new Set<string>();
@@ -67,7 +67,7 @@ class TemplatesController {
       this.typeDropdownController = setupDropdown(typeDropdownWrapper, {
         matchWidth: false,
         onSelect: (val: string) => {
-          const next = (val as 'all' | 'favorites' | 'pixel' | 'board') || 'all';
+          const next = (val as 'all' | 'favorites' | 'pixel' | 'board' | 'diagram') || 'all';
           if (this.currentTypeFilter === next) return;
           this.currentTypeFilter = next;
           const typeMenu = this.container.querySelector<HTMLElement>('[data-ref="dropdown-menu-filter-type"]');
@@ -244,9 +244,11 @@ class TemplatesController {
     if (this.currentTypeFilter === 'favorites') {
       filtered = filtered.filter((item) => this.favoritedTemplateIds.has(item.id));
     } else if (this.currentTypeFilter === 'pixel') {
-      filtered = filtered.filter((item) => item.categoryKey === 'pixel');
+      filtered = filtered.filter((item) => (item.canvasType || 'pixel') === 'pixel' && item.categoryKey !== 'board' && item.categoryKey !== 'diagram');
     } else if (this.currentTypeFilter === 'board') {
-      filtered = filtered.filter((item) => item.categoryKey === 'board');
+      filtered = filtered.filter((item) => item.canvasType === 'board' || item.categoryKey === 'board');
+    } else if (this.currentTypeFilter === 'diagram') {
+      filtered = filtered.filter((item) => item.canvasType === 'diagram' || item.canvasType === 'mindmap' || item.categoryKey === 'diagram' || item.categoryKey === 'mindmap');
     }
 
     if (this.searchQuery) {
@@ -498,8 +500,11 @@ class TemplatesController {
   }
 
   private handleUseTemplate(preset: PresetItem): void {
+    const canvasType = preset.canvasType || (preset.categoryKey === 'board' ? 'board' : (preset.categoryKey === 'diagram' ? 'diagram' : 'pixel'));
     openCreateCanvasModal({
+      diagramSubtype: preset.diagramSubtype,
       height: preset.height,
+      initialType: canvasType,
       name: preset.name,
       templateImage: preset.imagePath,
       templateName: preset.name,

@@ -8,6 +8,7 @@ import { setupDropdown } from '../utils/dom.util.js';
 let activeCreateCanvasModal: { close: () => void } | null = null;
 
 export interface OpenCreateCanvasModalOptions {
+  diagramSubtype?: 'conceptmap' | 'flowchart' | 'kanban' | 'mindmap' | 'orgchart';
   height?: number;
   initialType?: 'board' | 'diagram' | 'pixel';
   name?: string;
@@ -27,8 +28,8 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
   const initialName = options?.name || options?.templateName || '';
   const templateVariants = options?.variants && options.variants.length > 0 ? options.variants : null;
   const templateName = options?.templateName || null;
-  let selectedCreationType: 'board' | 'diagram' | 'pixel' = templateVariants ? 'pixel' : (options?.initialType || 'board');
-  let selectedDiagramSubtype: 'conceptmap' | 'flowchart' | 'kanban' | 'mindmap' | 'orgchart' = 'mindmap';
+  let selectedCreationType: 'board' | 'diagram' | 'pixel' = options?.initialType || (templateVariants ? 'pixel' : 'board');
+  let selectedDiagramSubtype: 'conceptmap' | 'flowchart' | 'kanban' | 'mindmap' | 'orgchart' = options?.diagramSubtype || 'mindmap';
   let selectedLineStyle: 'curved' | 'orthogonal' | 'straight' = 'curved';
   let selectedTheme: string = 'slate';
 

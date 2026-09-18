@@ -18,6 +18,8 @@ export interface PresetItem {
   aspectType: 'wide' | 'tall' | 'square' | 'standard' | 'large' | 'compact';
   tags?: string[];
   variants?: PresetVariant[];
+  canvasType?: 'pixel' | 'board' | 'diagram' | 'mindmap';
+  diagramSubtype?: 'conceptmap' | 'flowchart' | 'kanban' | 'mindmap' | 'orgchart';
 }
 
 export interface TemplateCategory {
@@ -29,6 +31,8 @@ export interface TemplateCategory {
 
 export const TEMPLATE_CATEGORIES: TemplateCategory[] = [
   { id: 'all', nameKey: 'templates.all_categories', defaultName: 'Todas las categorías', iconName: 'grid_view' },
+  { id: 'diagram', nameKey: 'home.filter_diagram', defaultName: 'Diagramas', iconName: 'psychology' },
+  { id: 'board', nameKey: 'home.filter_board', defaultName: 'Pizarras', iconName: 'draw' },
   { id: 'nature', nameKey: 'canvas.tab_nature', defaultName: 'Naturaleza', iconName: 'eco' },
   { id: 'cities', nameKey: 'canvas.tab_cities', defaultName: 'Ciudades', iconName: 'apartment' },
   { id: 'fantasy', nameKey: 'canvas.tab_fantasy', defaultName: 'Fantasía', iconName: 'shield' },
@@ -69,6 +73,7 @@ export function makeNatureTemplateItem(
     categoryName: 'Naturaleza',
     aspectType,
     tags,
+    canvasType: 'pixel',
     variants: NATURE_RESOLUTIONS.map((res) => ({
       label: res.label,
       width: res.width,
@@ -78,7 +83,74 @@ export function makeNatureTemplateItem(
   };
 }
 
+export function makeDiagramTemplateItem(
+  id: string,
+  name: string,
+  subtype: 'conceptmap' | 'flowchart' | 'kanban' | 'mindmap' | 'orgchart',
+  tags: string[] = []
+): PresetItem {
+  return {
+    id,
+    name,
+    width: 1920,
+    height: 1080,
+    imagePath: `/assets/templates/diagrams/${subtype}.svg`,
+    isTemplate: true,
+    categoryKey: 'diagram',
+    categoryName: 'Diagramas',
+    aspectType: 'wide',
+    tags,
+    canvasType: 'diagram',
+    diagramSubtype: subtype,
+  };
+}
+
+export function makeBoardTemplateItem(
+  id: string,
+  name: string,
+  fileBase: string,
+  tags: string[] = []
+): PresetItem {
+  return {
+    id,
+    name,
+    width: 1920,
+    height: 1080,
+    imagePath: `/assets/templates/boards/${fileBase}.svg`,
+    isTemplate: true,
+    categoryKey: 'board',
+    categoryName: 'Pizarras',
+    aspectType: 'wide',
+    tags,
+    canvasType: 'board',
+  };
+}
+
 export const ALL_PRESETS: PresetItem[] = [
+  makeDiagramTemplateItem('tmpl-diag-mindmap', 'Mapa Mental de Lluvia de Ideas', 'mindmap', [
+    'diagrama', 'mapa mental', 'mindmap', 'brainstorming', 'ideas', 'esquema', 'diagram'
+  ]),
+  makeDiagramTemplateItem('tmpl-diag-flowchart', 'Diagrama de Flujo de Procesos', 'flowchart', [
+    'flujo', 'flowchart', 'proceso', 'algoritmo', 'decision', 'esquema', 'diagram'
+  ]),
+  makeDiagramTemplateItem('tmpl-diag-conceptmap', 'Mapa Conceptual Educativo', 'conceptmap', [
+    'concepto', 'concept map', 'educacion', 'aprendizaje', 'esquema', 'diagram'
+  ]),
+  makeDiagramTemplateItem('tmpl-diag-kanban', 'Tablero Kanban de Tareas', 'kanban', [
+    'kanban', 'tablero', 'tareas', 'sprint', 'agile', 'flujo', 'diagram'
+  ]),
+  makeDiagramTemplateItem('tmpl-diag-orgchart', 'Organigrama Jerárquico de Equipo', 'orgchart', [
+    'organigrama', 'org chart', 'empresa', 'roles', 'jerarquia', 'diagram'
+  ]),
+  makeBoardTemplateItem('tmpl-board-brainstorm', 'Pizarra de Ideas y Notas', 'brainstorm', [
+    'pizarra', 'board', 'brainstorm', 'notas', 'dibujo', 'whiteboard', 'ideas'
+  ]),
+  makeBoardTemplateItem('tmpl-board-retro', 'Retrospectiva Ágil de Equipo', 'retro', [
+    'retrospectiva', 'retro', 'agile', 'pizarra', 'board', 'scrum'
+  ]),
+  makeBoardTemplateItem('tmpl-board-moodboard', 'Muro de Inspiración Visual', 'moodboard', [
+    'moodboard', 'inspiracion', 'diseno', 'fotos', 'pizarra', 'board', 'colores'
+  ]),
   makeNatureTemplateItem('tmpl-nat-forest', 'Bosque de Pinos Místico', 'forest', 'wide', [
     'bosque', 'forest', 'woods', 'pinos', 'mistico', 'arboles', 'niebla', 'selva fria', 'arboleda', 'woodland', 'flora', 'naturaleza'
   ]),
