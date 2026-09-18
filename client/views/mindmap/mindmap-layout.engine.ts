@@ -51,7 +51,8 @@ export function computeMindMapTreeLayout(project: MindMapProject): Map<string, C
   const nodes = project.nodes;
   const rootId = project.rootId;
   const rootNode = nodes[rootId];
-  const isTopDown = project.theme?.layoutDirection === 'top-down';
+  const isKanban = project.subtype === 'kanban';
+  const isTopDown = !isKanban && project.theme?.layoutDirection === 'top-down';
 
   const childrenMap = new Map<string, string[]>();
   const freeRootIds: string[] = [];
@@ -73,15 +74,15 @@ export function computeMindMapTreeLayout(project: MindMapProject): Map<string, C
   if (rootNode) {
     const rootDim = estimateNodeDimensions(rootNode, true);
     const rootX = rootNode.customPos ? rootNode.x : 0;
-    const rootY = rootNode.customPos ? rootNode.y : 0;
+    const rootY = rootNode.customPos ? rootNode.y : (isKanban ? -120 : 0);
 
     const rootLayout: ComputedNodeLayout = {
       childrenIds: childrenMap.get(rootId) || [],
-      color: rootNode.color || '#6366f1',
+      color: rootNode.color || (isKanban ? '#1e293b' : '#6366f1'),
       depth: 0,
       fontSize: 16,
       height: rootDim.height,
-      icon: rootNode.icon,
+      icon: rootNode.icon || (isKanban ? 'view_kanban' : undefined),
       id: rootId,
       isCollapsed: !!rootNode.isCollapsed,
       isDone: rootNode.isDone,
@@ -89,8 +90,8 @@ export function computeMindMapTreeLayout(project: MindMapProject): Map<string, C
       linkingPhrase: rootNode.linkingPhrase,
       orderIndex: 0,
       parentId: null,
-      shape: rootNode.shape || (isTopDown ? 'rounded' : 'pill'),
-      side: isTopDown ? 'bottom' : 'center',
+      shape: rootNode.shape || (isTopDown || isKanban ? 'rounded' : 'pill'),
+      side: isTopDown || isKanban ? 'bottom' : 'center',
       text: rootNode.text,
       textColor: '#ffffff',
       width: rootDim.width,
@@ -99,7 +100,103 @@ export function computeMindMapTreeLayout(project: MindMapProject): Map<string, C
     };
     layoutMap.set(rootId, rootLayout);
 
-    if (isTopDown) {
+    if (isKanban) {
+      const colW = 240;
+      const colGap = 28;
+      const cardGap = 12;
+
+      const columns = childrenMap.get(rootId) || [];
+      const totalColsW = columns.length > 0 ? (columns.length * colW + (columns.length - 1) * colGap) : 0;
+      const startColX = rootX - totalColsW / 2 + colW / 2;
+      const colHeaderY = rootY + rootDim.height / 2 + 65;
+
+      columns.forEach((colId, colIdx) => {
+        const colNode = nodes[colId];
+        if (!colNode) return;
+
+        const colDim = estimateNodeDimensions(colNode, false);
+        const colComputedW = Math.max(colW, colDim.width);
+        const autoColX = startColX + colIdx * (colW + colGap);
+        const autoColY = colHeaderY;
+        const currentColX = colNode.customPos ? colNode.x : autoColX;
+        const currentColY = colNode.customPos ? colNode.y : autoColY;
+        const colCards = colNode.isCollapsed ? [] : (childrenMap.get(colId) || []);
+
+        layoutMap.set(colId, {
+          childrenIds: colCards,
+          color: colNode.color || '#3b82f6',
+          depth: 1,
+          fontSize: 14,
+          height: colDim.height,
+          icon: colNode.icon,
+          id: colId,
+          isCollapsed: !!colNode.isCollapsed,
+          isDone: colNode.isDone,
+          isTask: colNode.isTask,
+          linkingPhrase: colNode.linkingPhrase,
+          orderIndex: colNode.orderIndex ?? colIdx,
+          parentId: rootId,
+          shape: colNode.shape || 'rounded',
+          side: 'bottom',
+          text: colNode.text,
+          textColor: colNode.textColor || '#ffffff',
+          width: colComputedW,
+          x: currentColX,
+          y: currentColY,
+        });
+
+        let nextCardTop = currentColY + colDim.height / 2 + 16;
+
+        const layoutCardAndChildren = (cardId: string, depth: number, indent: number): void => {
+          const cardNode = nodes[cardId];
+          if (!cardNode) return;
+
+          const cardDim = estimateNodeDimensions(cardNode, false);
+          const cardW = Math.max(colW - 12 - indent * 16, cardDim.width);
+          const cardH = Math.max(38, cardDim.height);
+          const cardCenterY = nextCardTop + cardH / 2;
+          const autoCardX = currentColX + (indent > 0 ? indent * 8 : 0);
+          const currentCardX = cardNode.customPos ? cardNode.x : autoCardX;
+          const currentCardY = cardNode.customPos ? cardNode.y : cardCenterY;
+          const subChildren = cardNode.isCollapsed ? [] : (childrenMap.get(cardId) || []);
+
+          layoutMap.set(cardId, {
+            childrenIds: subChildren,
+            color: cardNode.color || colNode.color || '#3b82f6',
+            depth,
+            fontSize: Math.max(12, 14 - depth),
+            height: cardH,
+            icon: cardNode.icon,
+            id: cardId,
+            isCollapsed: !!cardNode.isCollapsed,
+            isDone: cardNode.isDone,
+            isTask: cardNode.isTask !== undefined ? cardNode.isTask : true,
+            linkingPhrase: cardNode.linkingPhrase,
+            orderIndex: cardNode.orderIndex ?? 0,
+            parentId: cardNode.parentId,
+            shape: cardNode.shape || 'rounded',
+            side: 'bottom',
+            text: cardNode.text,
+            textColor: cardNode.textColor || '#ffffff',
+            width: cardW,
+            x: currentCardX,
+            y: currentCardY,
+          });
+
+          nextCardTop += cardH + cardGap;
+
+          if (subChildren.length > 0) {
+            subChildren.forEach((subId) => {
+              layoutCardAndChildren(subId, depth + 1, indent + 1);
+            });
+          }
+        };
+
+        colCards.forEach((cardId) => {
+          layoutCardAndChildren(cardId, 2, 0);
+        });
+      });
+    } else if (isTopDown) {
       const hGap = 36;
       const vGap = 84;
 

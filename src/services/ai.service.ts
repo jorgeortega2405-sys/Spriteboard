@@ -144,12 +144,14 @@ export class AiService {
     prompt: string,
     mode: 'checklist' | 'expand' | 'full' = 'full',
     contextNodeText?: string,
-    diagramType: 'conceptmap' | 'flowchart' | 'mindmap' = 'mindmap'
+    diagramType: 'conceptmap' | 'flowchart' | 'kanban' | 'mindmap' | 'orgchart' = 'mindmap'
   ): Promise<{ nodes: Array<{ color?: string; icon?: string; id: string; isTask?: boolean; linkingPhrase?: string; parentId: string | null; shape?: string; text: string }>; rootText: string; title: string }> {
     const apiKey = config.gemini.apiKey;
-    const defaultPalette = ['#6366f1', '#3b82f6', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+    const defaultPalette = ['#0ea5e9', '#10b981', '#f59e0b', '#6366f1', '#3b82f6', '#06b6d4', '#14b8a6', '#84cc16', '#eab308', '#f97316', '#ef4444', '#ec4899'];
+    const isKanban = diagramType === 'kanban';
     const isConceptMap = diagramType === 'conceptmap';
     const isFlowchart = diagramType === 'flowchart';
+    const isOrgChart = diagramType === 'orgchart';
 
     if (!apiKey) {
       logger.app.warn('AiService: GEMINI_API_KEY no configurada al generar mapa. Usando generador inteligente local.');
@@ -157,10 +159,14 @@ export class AiService {
     }
 
     let expertRole = 'Mapas Mentales y Diagramas de asociación libre';
-    if (isConceptMap) {
+    if (isKanban) {
+      expertRole = 'Tableros Kanban y Gestión Ágil de Proyectos (columnas de estados y tarjetas de tareas estructuradas con prioridades)';
+    } else if (isConceptMap) {
       expertRole = 'Mapas Conceptuales jerárquicos (estilo Joseph Novak con proposiciones y frases de enlace)';
     } else if (isFlowchart) {
       expertRole = 'Diagramas de Flujo y Procesos de Negocio / Algoritmos (estándar ANSI/ISO 5807 con inicio/fin, decisiones Sí/No, entrada/salida y procesos)';
+    } else if (isOrgChart) {
+      expertRole = 'Organigramas Empresariales, Estructuras Corporativas y Cadenas de Mando (jerarquía con C-Level, directores de área, líderes de equipo y especialistas)';
     }
 
     const systemPrompt = `Eres un experto mundial en pensamiento visual, organización conceptual y diseño de ${expertRole}.
@@ -169,47 +175,49 @@ Tu objetivo es transformar la solicitud del usuario en un esquema perfectamente 
 Debes responder ÚNICAMENTE con un objeto JSON válido que cumpla estrictamente este formato:
 {
   "title": "Título conciso y profesional del esquema",
-  "rootText": "${isFlowchart ? 'Inicio' : 'Concepto o Idea Central'}",
+  "rootText": "${isKanban ? 'Tablero del Proyecto' : (isOrgChart ? 'Dirección General (CEO)' : (isFlowchart ? 'Inicio' : 'Concepto o Idea Central'))}",
   "nodes": [
     {
       "id": "1",
-      "text": "${isFlowchart ? 'Ingresar credenciales' : '1. Concepto Principal'}",
+      "text": "${isKanban ? '📋 Por Hacer' : (isOrgChart ? 'Dirección de Tecnología (CTO)' : (isFlowchart ? 'Ingresar credenciales' : '1. Concepto Principal'))}",
       "parentId": null,
-      ${isConceptMap ? '"linkingPhrase": "se compone de",' : (isFlowchart ? '"linkingPhrase": undefined,' : '')}
-      "color": "#6366f1",
-      "icon": "🚀",
+      ${isConceptMap ? '"linkingPhrase": "se compone de",' : ''}
+      "color": "#3b82f6",
+      "icon": "${isKanban ? '📋' : (isOrgChart ? '💻' : (isFlowchart ? '📥' : '🚀'))}",
       "shape": "${isFlowchart ? 'parallelogram' : 'rounded'}",
       "isTask": false
     },
     {
       "id": "2",
-      "text": "${isFlowchart ? '¿Contraseña correcta?' : 'Sub-concepto específico'}",
+      "text": "${isKanban ? 'Definir requerimientos de arquitectura' : (isOrgChart ? 'Líder de Desarrollo Frontend' : (isFlowchart ? '¿Contraseña correcta?' : 'Sub-concepto específico'))}",
       "parentId": "1",
       ${isConceptMap ? '"linkingPhrase": "produce",' : (isFlowchart ? '"linkingPhrase": "verificar",' : '')}
-      "color": "#f59e0b",
-      "icon": "⚙️",
+      "color": "#3b82f6",
+      "icon": "${isKanban ? '📝' : (isOrgChart ? '👨‍💻' : (isFlowchart ? '❓' : '⚙️'))}",
       "shape": "${isFlowchart ? 'diamond' : 'rounded'}",
-      "isTask": false
+      "isTask": ${isKanban ? 'true' : 'false'}
     }
   ]
 }
 
 Reglas estrictas de generación:
 1. Modo solicitado: "${mode}". Tipo de esquema: "${diagramType}".
+${isKanban ? '- Para Tableros Kanban: genera en el primer nivel (parentId: null) de 3 a 5 columnas de estado claras (ej. "📋 Por Hacer", "⚡ En Progreso", "🔍 En Revisión", "✅ Completado" o fases del proyecto). Cada columna debe tener de 2 a 4 tarjetas hijas (parentId: id de la columna) con "isTask": true, color de columna uniforme y emojis/iconos representativos de cada tarea.' : ''}
 ${isConceptMap ? '- Cada nodo que tenga parentId DEBE incluir una propiedad "linkingPhrase" con una frase verbal corta de enlace ("se divide en", "produce", "requiere", "es parte de", "se caracteriza por", "incluye", etc.) para formar proposiciones lógicas.' : ''}
 ${isFlowchart ? '- Para diagramas de flujo: usa "shape": "pill" para inicio/fin (color verde #10b981), "shape": "diamond" para preguntas/decisiones (color ámbar #f59e0b con ramas hijas que tengan linkingPhrase "Sí" y "No"), "shape": "parallelogram" para entrada/salida de datos (color azul #0284c7) y "shape": "rounded" o "rect" para pasos de proceso estándar (color índigo #6366f1).' : ''}
-${mode === 'full' ? '- Genera una secuencia estructurada y lógica de 6 a 12 nodos bien distribuidos.' : ''}
+${isOrgChart ? '- Para organigramas: genera una jerarquía clara con el puesto más alto en la raíz (CEO / Dirección), directores de área en el primer nivel (CTO, COO, CMO, CFO) e integrantes/líderes de equipo en los siguientes niveles. Mantén un color distintivo y uniforme por cada departamento y sus miembros.' : ''}
+${mode === 'full' ? '- Genera una secuencia estructurada y lógica de 6 a 14 nodos bien distribuidos.' : ''}
 ${mode === 'checklist' ? '- Todos o la mayoría de los sub-nodos deben tener "isTask": true para funcionar como listas de tareas ejecutables.' : ''}
-${mode === 'expand' ? `- Expande detalladamente el concepto o paso existente: "${contextNodeText || prompt}". Genera de 4 a 8 sub-ramas específicas directas.` : ''}
-2. Asigna un color hexadecimal vibrante y armónico por cada rama/paso (ejemplos: #6366f1, #3b82f6, #0ea5e9, #10b981, #f59e0b, #ef4444, #8b5cf6, #ec4899).
-3. Asigna emojis o iconos representativos (icon) en cada nodo (💡, 🚀, ⚙️, 📊, 🎯, 🔍, 📝, 📦, 🎨, 🌐, 🔒, 🧪, 📈, etc.).
+${mode === 'expand' ? `- Expande detalladamente el concepto, columna o paso existente: "${contextNodeText || prompt}". Genera de 4 a 8 sub-ramas específicas directas.` : ''}
+2. Asigna un color hexadecimal vibrante y armónico por cada departamento/rama (ejemplos: #0ea5e9, #10b981, #f59e0b, #6366f1, #3b82f6, #06b6d4, #14b8a6, #84cc16, #ef4444, #ec4899).
+3. Asigna emojis o iconos representativos (icon) en cada nodo (💼, 💻, 🚀, ⚙️, 📊, 🎯, 🔍, 📝, 📦, 🎨, 🌐, 🔒, 🧪, 📈, etc.).
 4. Formas disponibles para shape: "pill", "rounded", "rect", "diamond", "parallelogram", "document", "sticky", "underline".
 5. Textos claros, concisos, bien redactados en español.
 6. NO devuelvas texto introductorio, explicaciones ni bloques de formato markdown. DEVUELVE EXCLUSIVAMENTE EL OBJETO JSON PURO.`;
 
     const userMessage = mode === 'expand' && contextNodeText
-      ? `Expande el paso/concepto: "${contextNodeText}". Contexto adicional del usuario: "${prompt}"`
-      : `Crea un ${isFlowchart ? 'diagrama de flujo paso a paso con decisiones Sí/No' : (isConceptMap ? 'mapa conceptual con proposiciones y frases de enlace' : 'mapa mental')} sobre: "${prompt}".`;
+      ? `Expande ${isKanban ? 'la columna o tarjeta' : (isOrgChart ? 'el rol o departamento' : (isFlowchart ? 'el paso' : 'el concepto'))}: "${contextNodeText}". Contexto adicional del usuario: "${prompt}"`
+      : `Crea un ${isKanban ? 'tablero Kanban con columnas de estados y tarjetas de tareas' : (isOrgChart ? 'organigrama empresarial jerárquico por departamentos y roles' : (isFlowchart ? 'diagrama de flujo paso a paso con decisiones Sí/No' : (isConceptMap ? 'mapa conceptual con proposiciones y frases de enlace' : 'mapa mental')))} sobre: "${prompt}".`;
 
     const requestBody = {
       contents: [{ role: 'user', parts: [{ text: userMessage }] }],
@@ -273,7 +281,7 @@ ${mode === 'expand' ? `- Expande detalladamente el concepto o paso existente: "$
             linkingPhrase: n.linkingPhrase ? String(n.linkingPhrase) : (isConceptMap && n.parentId ? 'se relaciona con' : undefined),
             parentId: n.parentId ? String(n.parentId) : null,
             shape: n.shape || (isFlowchart ? (idx === 0 ? 'pill' : 'rounded') : 'rounded'),
-            text: String(n.text || `Paso ${idx + 1}`),
+            text: String(n.text || (isOrgChart ? `Rol ${idx + 1}` : `Paso ${idx + 1}`)),
           })),
           rootText: parsed.rootText || prompt,
           title: parsed.title || prompt,
@@ -291,12 +299,75 @@ ${mode === 'expand' ? `- Expande detalladamente el concepto o paso existente: "$
     prompt: string,
     mode: 'checklist' | 'expand' | 'full' = 'full',
     contextNodeText?: string,
-    diagramType: 'conceptmap' | 'flowchart' | 'mindmap' = 'mindmap'
+    diagramType: 'conceptmap' | 'flowchart' | 'kanban' | 'mindmap' | 'orgchart' = 'mindmap'
   ): { nodes: Array<{ color?: string; icon?: string; id: string; isTask?: boolean; linkingPhrase?: string; parentId: string | null; shape?: string; text: string }>; rootText: string; title: string } {
     const isTaskMode = mode === 'checklist';
+    const isKanban = diagramType === 'kanban';
     const isConcept = diagramType === 'conceptmap';
     const isFlowchart = diagramType === 'flowchart';
-    const rootText = contextNodeText || prompt.trim() || (isFlowchart ? 'Inicio' : (isConcept ? 'Concepto General' : 'Proyecto'));
+    const isOrgChart = diagramType === 'orgchart';
+    const rootText = contextNodeText || prompt.trim() || (isKanban ? 'Tablero del Proyecto' : (isOrgChart ? 'Dirección General (CEO)' : (isFlowchart ? 'Inicio' : (isConcept ? 'Concepto General' : 'Proyecto'))));
+
+    if (isKanban) {
+      if (mode === 'expand') {
+        return {
+          nodes: [
+            { color: '#3b82f6', icon: '📝', id: '1', isTask: true, parentId: null, shape: 'rounded', text: 'Tarea prioritaria 1' },
+            { color: '#3b82f6', icon: '⚙️', id: '2', isTask: true, parentId: null, shape: 'rounded', text: 'Tarea técnica 2' },
+            { color: '#3b82f6', icon: '🔍', id: '3', isTask: true, parentId: null, shape: 'rounded', text: 'Revisión y pruebas 3' },
+            { color: '#3b82f6', icon: '📦', id: '4', isTask: true, parentId: null, shape: 'rounded', text: 'Entrega final 4' },
+          ],
+          rootText,
+          title: `Tareas para ${rootText}`,
+        };
+      }
+
+      return {
+        nodes: [
+          { color: '#3b82f6', icon: '📋', id: '1', isTask: false, parentId: null, shape: 'rounded', text: 'Por Hacer' },
+          { color: '#3b82f6', icon: '🎨', id: '1_1', isTask: true, parentId: '1', shape: 'rounded', text: 'Diseñar arquitectura y bocetos' },
+          { color: '#3b82f6', icon: '📝', id: '1_2', isTask: true, parentId: '1', shape: 'rounded', text: 'Definir especificaciones técnicas' },
+          { color: '#f59e0b', icon: '⚡', id: '2', isTask: false, parentId: null, shape: 'rounded', text: 'En Progreso' },
+          { color: '#f59e0b', icon: '💻', id: '2_1', isTask: true, parentId: '2', shape: 'rounded', text: 'Implementar lógica principal' },
+          { color: '#f59e0b', icon: '🗄️', id: '2_2', isTask: true, parentId: '2', shape: 'rounded', text: 'Configurar base de datos' },
+          { color: '#8b5cf6', icon: '🔍', id: '3', isTask: false, parentId: null, shape: 'rounded', text: 'En Revisión' },
+          { color: '#8b5cf6', icon: '🧪', id: '3_1', isTask: true, parentId: '3', shape: 'rounded', text: 'Ejecutar pruebas de integración' },
+          { color: '#10b981', icon: '✅', id: '4', isTask: false, parentId: null, shape: 'rounded', text: 'Completado' },
+          { color: '#10b981', icon: '🚀', id: '4_1', isTask: true, parentId: '4', shape: 'rounded', text: 'Despliegue en producción' },
+        ],
+        rootText: prompt.trim() || 'Tablero del Proyecto',
+        title: prompt.trim() || 'Tablero Kanban',
+      };
+    }
+
+    if (isOrgChart) {
+      if (mode === 'expand') {
+        return {
+          nodes: [
+            { color: '#0ea5e9', icon: '💻', id: '1', isTask: isTaskMode, parentId: null, shape: 'rounded', text: 'Líder de Área' },
+            { color: '#0ea5e9', icon: '👨‍💻', id: '2', isTask: isTaskMode, parentId: '1', shape: 'rounded', text: 'Especialista Senior' },
+            { color: '#0ea5e9', icon: '👩‍💻', id: '3', isTask: isTaskMode, parentId: '1', shape: 'rounded', text: 'Especialista Junior' },
+            { color: '#0ea5e9', icon: '📋', id: '4', isTask: isTaskMode, parentId: '1', shape: 'rounded', text: 'Practicante / Asistente' },
+          ],
+          rootText,
+          title: `Equipo de ${rootText}`,
+        };
+      }
+
+      return {
+        nodes: [
+          { color: '#0ea5e9', icon: '💻', id: '1', isTask: false, parentId: null, shape: 'rounded', text: 'Dirección de Tecnología (CTO)' },
+          { color: '#0ea5e9', icon: '👨‍💻', id: '1_1', isTask: isTaskMode, parentId: '1', shape: 'rounded', text: 'Líder Frontend' },
+          { color: '#0ea5e9', icon: '☁️', id: '1_2', isTask: isTaskMode, parentId: '1', shape: 'rounded', text: 'Líder Backend & Cloud' },
+          { color: '#10b981', icon: '⚙️', id: '2', isTask: false, parentId: null, shape: 'rounded', text: 'Dirección de Operaciones (COO)' },
+          { color: '#10b981', icon: '📦', id: '2_1', isTask: isTaskMode, parentId: '2', shape: 'rounded', text: 'Coordinador de Logística' },
+          { color: '#f59e0b', icon: '📢', id: '3', isTask: false, parentId: null, shape: 'rounded', text: 'Dirección de Marketing (CMO)' },
+          { color: '#f59e0b', icon: '📈', id: '3_1', isTask: isTaskMode, parentId: '3', shape: 'rounded', text: 'Especialista en Growth' },
+        ],
+        rootText: 'Dirección General (CEO)',
+        title: prompt.trim() || 'Organigrama Empresarial',
+      };
+    }
 
     if (isFlowchart) {
       if (mode === 'expand') {

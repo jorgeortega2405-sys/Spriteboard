@@ -53,22 +53,95 @@ export function drawMindMapBackground(
   ctx.restore();
 }
 
+export function drawKanbanSwimlanes(
+  ctx: CanvasRenderingContext2D,
+  layoutMap: Map<string, ComputedNodeLayout>,
+  camera: MindMapCamera,
+  canvasW: number,
+  canvasH: number,
+  rootId: string
+): void {
+  const root = layoutMap.get(rootId);
+  if (!root || !root.childrenIds || root.childrenIds.length === 0) return;
+
+  ctx.save();
+
+  root.childrenIds.forEach((colId) => {
+    const col = layoutMap.get(colId);
+    if (!col) return;
+
+    const cardNodes: ComputedNodeLayout[] = [];
+    const collectDescendants = (nodeId: string) => {
+      const node = layoutMap.get(nodeId);
+      if (!node) return;
+      node.childrenIds.forEach((childId) => {
+        const child = layoutMap.get(childId);
+        if (child) {
+          cardNodes.push(child);
+          collectDescendants(childId);
+        }
+      });
+    };
+    collectDescendants(colId);
+
+    const paddingX = 10;
+    const paddingTop = 8;
+    const paddingBottom = 16;
+    const colScreen = worldToScreen(col.x, col.y, camera, canvasW, canvasH);
+    const colW = (col.width + paddingX * 2) * camera.zoom;
+    const colLeft = colScreen.x - colW / 2;
+    const colTop = colScreen.y - ((col.height / 2) + paddingTop) * camera.zoom;
+
+    let maxBottomY = col.y + col.height / 2;
+    if (cardNodes.length > 0) {
+      cardNodes.forEach((card) => {
+        const bottom = card.y + card.height / 2;
+        if (bottom > maxBottomY) maxBottomY = bottom;
+      });
+    } else {
+      maxBottomY += 120;
+    }
+
+    const bottomScreen = worldToScreen(col.x, maxBottomY + paddingBottom, camera, canvasW, canvasH);
+    const colH = Math.max(160 * camera.zoom, bottomScreen.y - colTop);
+
+    ctx.fillStyle = 'rgba(248, 250, 252, 0.75)';
+    ctx.strokeStyle = 'rgba(226, 232, 240, 0.85)';
+    ctx.lineWidth = Math.max(1, 1.2 * camera.zoom);
+    drawRoundedRect(ctx, colLeft, colTop, colW, colH, 12 * camera.zoom);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = col.color || '#3b82f6';
+    drawRoundedRect(ctx, colLeft + 4 * camera.zoom, colTop + 2 * camera.zoom, colW - 8 * camera.zoom, 4 * camera.zoom, 2 * camera.zoom);
+    ctx.fill();
+  });
+
+  ctx.restore();
+}
+
 export function drawBranchConnections(
   ctx: CanvasRenderingContext2D,
   layoutMap: Map<string, ComputedNodeLayout>,
   camera: MindMapCamera,
   canvasW: number,
   canvasH: number,
-  theme: MindMapTheme
+  theme: MindMapTheme,
+  subtype?: string
 ): void {
   ctx.save();
+  const isKanban = subtype === 'kanban';
   const lineStyle = theme.lineStyle || 'curved';
-  const isTopDown = theme.layoutDirection === 'top-down';
+  const isTopDown = isKanban || theme.layoutDirection === 'top-down';
 
   layoutMap.forEach((node) => {
     if (!node.parentId) return;
     const parent = layoutMap.get(node.parentId);
     if (!parent) return;
+
+    if (isKanban && node.depth > 1) {
+      return;
+    }
 
     const parentScreen = worldToScreen(parent.x, parent.y, camera, canvasW, canvasH);
     const nodeScreen = worldToScreen(node.x, node.y, camera, canvasW, canvasH);

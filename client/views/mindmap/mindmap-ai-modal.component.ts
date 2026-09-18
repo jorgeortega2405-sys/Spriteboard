@@ -6,7 +6,7 @@ import { withButtonLoading } from '../../utils/dom.util.js';
 export interface MindMapAiModalOptions {
   contextNodeId?: string | null;
   contextNodeText?: string | null;
-  diagramType?: 'conceptmap' | 'flowchart' | 'mindmap';
+  diagramType?: 'conceptmap' | 'flowchart' | 'kanban' | 'mindmap' | 'orgchart';
   onSuccess: (result: {
     mode: 'checklist' | 'expand' | 'full';
     nodes: Array<{ color?: string; icon?: string; id: string; isTask?: boolean; linkingPhrase?: string; parentId: string | null; shape?: string; text: string }>;
@@ -23,6 +23,8 @@ export function openMindMapAiModal(options: MindMapAiModalOptions): void {
     activeAiModal.close();
   }
 
+  const isKanban = options.diagramType === 'kanban';
+  const isOrgChart = options.diagramType === 'orgchart';
   const isFlowchart = options.diagramType === 'flowchart';
   const isConceptMap = options.diagramType === 'conceptmap';
   const hasContext = Boolean(options.contextNodeId && options.contextNodeText);
@@ -40,24 +42,52 @@ export function openMindMapAiModal(options: MindMapAiModalOptions): void {
       </div>`
     : '';
 
-  const modalTitle = isFlowchart
-    ? 'Generador de Flujogramas con IA'
-    : (isConceptMap ? 'Generador de Mapas Conceptuales con IA' : 'Generador de Mapas con IA');
+  const modalTitle = isKanban
+    ? 'Generador de Tableros Kanban con IA'
+    : (isOrgChart
+      ? 'Generador de Organigramas con IA'
+      : (isFlowchart
+        ? 'Generador de Flujogramas con IA'
+        : (isConceptMap ? 'Generador de Mapas Conceptuales con IA' : 'Generador de Mapas con IA')));
 
-  const modalDesc = isFlowchart
-    ? 'Describe el proceso o algoritmo y la IA estructurará las decisiones lógicas (Sí/No), terminadores y pasos de acción.'
-    : (isConceptMap
-      ? 'Describe el tema y la IA estructurará los conceptos jerárquicos con sus respectivas palabras y frases de enlace.'
-      : 'Describe el tema o concepto y la IA estructurará automáticamente las ramas, colores, formas e iconos en tu canvas.');
+  const modalDesc = isKanban
+    ? 'Describe tu proyecto o sprint y la IA estructurará las columnas de flujo de trabajo y tarjetas de tareas con prioridades.'
+    : (isOrgChart
+      ? 'Describe la estructura de tu empresa o equipo y la IA definirá las direcciones, roles jerárquicos y áreas especializadas.'
+      : (isFlowchart
+        ? 'Describe el proceso o algoritmo y la IA estructurará las decisiones lógicas (Sí/No), terminadores y pasos de acción.'
+        : (isConceptMap
+          ? 'Describe el tema y la IA estructurará los conceptos jerárquicos con sus respectivas palabras y frases de enlace.'
+          : 'Describe el tema o concepto y la IA estructurará automáticamente las ramas, colores, formas e iconos en tu canvas.')));
 
-  const promptPlaceholder = isFlowchart
-    ? '¿Qué proceso, algoritmo o flujo de trabajo deseas diseñar?'
-    : (isConceptMap ? '¿Sobre qué tema o conceptos deseas estructurar tu mapa?' : '¿Qué quieres plasmar en tu mapa mental?');
+  const promptPlaceholder = isKanban
+    ? '¿Qué proyecto, sprint o flujo de trabajo deseas organizar en tu tablero?'
+    : (isOrgChart
+      ? '¿Qué tipo de organización, empresa o equipo deseas estructurar?'
+      : (isFlowchart
+        ? '¿Qué proceso, algoritmo o flujo de trabajo deseas diseñar?'
+        : (isConceptMap ? '¿Sobre qué tema o conceptos deseas estructurar tu mapa?' : '¿Qué quieres plasmar en tu mapa mental?')));
 
-  const sugg1 = isFlowchart ? 'Autenticación de usuario con 2FA y validación de contraseña' : 'Estrategia de lanzamiento de videojuego indie en Steam';
-  const sugg2 = isFlowchart ? 'Flujo de compra y checkout en ecommerce con pasarela de pago' : 'Arquitectura y stack tecnológico de una aplicación web escalable';
-  const sugg3 = isFlowchart ? 'Algoritmo de búsqueda binaria y resolución de colisiones' : 'Plan de estudio y preparación para examen de programación';
-  const sugg4 = isFlowchart ? 'Proceso de soporte técnico y escalado de incidencias' : 'Estrategia de marketing digital y captación de usuarios';
+  const sugg1 = isKanban
+    ? 'Lanzamiento de MVP y desarrollo de plataforma web'
+    : (isOrgChart
+      ? 'Startup tecnológica SaaS con equipo de producto e ingeniería'
+      : (isFlowchart ? 'Autenticación de usuario con 2FA y validación de contraseña' : 'Estrategia de lanzamiento de videojuego indie en Steam'));
+  const sugg2 = isKanban
+    ? 'Sprint de desarrollo de videojuego: Arte, Audio y Programación'
+    : (isOrgChart
+      ? 'Estudio independiente de desarrollo de videojuegos'
+      : (isFlowchart ? 'Flujo de compra y checkout en ecommerce con pasarela de pago' : 'Arquitectura y stack tecnológico de una aplicación web escalable'));
+  const sugg3 = isKanban
+    ? 'Campaña de marketing digital y lanzamiento de producto'
+    : (isOrgChart
+      ? 'Agencia de marketing digital y diseño creativo'
+      : (isFlowchart ? 'Algoritmo de búsqueda binaria y resolución de colisiones' : 'Plan de estudio y preparación para examen de programación'));
+  const sugg4 = isKanban
+    ? 'Gestión de operaciones, inventario y logística de entregas'
+    : (isOrgChart
+      ? 'Empresa de logística y distribución de productos'
+      : (isFlowchart ? 'Proceso de soporte técnico y escalado de incidencias' : 'Estrategia de marketing digital y captación de usuarios'));
 
   backdrop.innerHTML = `
     <div class="modal-container" data-ref="modal-mindmap-ai-container">
@@ -82,15 +112,15 @@ export function openMindMapAiModal(options: MindMapAiModalOptions): void {
           <div class="design-toolbar-group" data-ref="ai-mode-pills" style="display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;">
             <button type="button" class="template-variant-pill ${initialMode === 'full' ? 'is-active' : ''}" data-ref="btn-mode-full" data-mode="full" style="padding: 6px 14px; font-size: 13px; display: flex; align-items: center; gap: 6px;">
               <span class="component-icon" style="font-size: 16px;">hub</span>
-              <span>${isFlowchart ? 'Flujo Completo' : 'Esquema Completo'}</span>
+              <span>${isKanban ? 'Tablero Completo' : (isOrgChart ? 'Estructura Completa' : (isFlowchart ? 'Flujo Completo' : 'Esquema Completo'))}</span>
             </button>
             <button type="button" class="template-variant-pill ${initialMode === 'expand' ? 'is-active' : ''}" data-ref="btn-mode-expand" data-mode="expand" style="padding: 6px 14px; font-size: 13px; display: flex; align-items: center; gap: 6px;">
               <span class="component-icon" style="font-size: 16px;">account_tree</span>
-              <span>${isFlowchart ? 'Desglosar Paso' : 'Expandir Idea'}</span>
+              <span>${isKanban ? 'Añadir a Columna' : (isOrgChart ? 'Desglosar Área' : (isFlowchart ? 'Desglosar Paso' : 'Expandir Idea'))}</span>
             </button>
             <button type="button" class="template-variant-pill" data-ref="btn-mode-checklist" data-mode="checklist" style="padding: 6px 14px; font-size: 13px; display: flex; align-items: center; gap: 6px;">
               <span class="component-icon" style="font-size: 16px;">checklist</span>
-              <span>Plan de Acción / Tareas</span>
+              <span>${isKanban ? 'Lista de Tareas' : (isOrgChart ? 'Responsabilidades / Tareas' : 'Plan de Acción / Tareas')}</span>
             </button>
           </div>
 
@@ -102,9 +132,9 @@ export function openMindMapAiModal(options: MindMapAiModalOptions): void {
           <div class="design-toolbar-group" data-ref="ai-suggestions-group" style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px;">
             <span style="font-size: 11px; color: var(--color-text-muted, #64748b); width: 100%; margin-bottom: 2px;">Sugerencias rápidas:</span>
             <button type="button" class="template-variant-pill" data-ref="btn-sugg-1" data-sugg="${sugg1}" style="padding: 4px 8px; font-size: 11px;">⚡ ${sugg1.slice(0, 24)}...</button>
-            <button type="button" class="template-variant-pill" data-ref="btn-sugg-2" data-sugg="${sugg2}" style="padding: 4px 8px; font-size: 11px;">🛒 ${sugg2.slice(0, 24)}...</button>
-            <button type="button" class="template-variant-pill" data-ref="btn-sugg-3" data-sugg="${sugg3}" style="padding: 4px 8px; font-size: 11px;">🔍 ${sugg3.slice(0, 24)}...</button>
-            <button type="button" class="template-variant-pill" data-ref="btn-sugg-4" data-sugg="${sugg4}" style="padding: 4px 8px; font-size: 11px;">🛠️ ${sugg4.slice(0, 24)}...</button>
+            <button type="button" class="template-variant-pill" data-ref="btn-sugg-2" data-sugg="${sugg2}" style="padding: 4px 8px; font-size: 11px;">🎮 ${sugg2.slice(0, 24)}...</button>
+            <button type="button" class="template-variant-pill" data-ref="btn-sugg-3" data-sugg="${sugg3}" style="padding: 4px 8px; font-size: 11px;">📢 ${sugg3.slice(0, 24)}...</button>
+            <button type="button" class="template-variant-pill" data-ref="btn-sugg-4" data-sugg="${sugg4}" style="padding: 4px 8px; font-size: 11px;">🏗️ ${sugg4.slice(0, 24)}...</button>
           </div>
         </div>
 

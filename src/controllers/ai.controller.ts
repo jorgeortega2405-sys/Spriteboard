@@ -148,7 +148,7 @@ export class AiController {
       }
 
       const validMode = (mode === 'expand' || mode === 'checklist') ? mode : 'full';
-      const validDiagramType = (diagramType === 'conceptmap' || diagramType === 'flowchart') ? diagramType : 'mindmap';
+      const validDiagramType = (diagramType === 'conceptmap' || diagramType === 'flowchart' || diagramType === 'kanban' || diagramType === 'orgchart') ? diagramType : 'mindmap';
       const cleanContext = typeof contextNodeText === 'string' ? contextNodeText.trim().slice(0, 300) : undefined;
 
       const result = await AiService.generateMindMap(prompt.trim(), validMode, cleanContext, validDiagramType);

@@ -87,11 +87,10 @@ export const DIAGRAM_SUBTYPES: DiagramSubtypeInfo[] = [
     name: 'Mapa Conceptual',
   },
   {
-    badge: 'Próximamente',
     description: 'Columnas y tarjetas para gestión visual de tareas y flujo de trabajo.',
     icon: 'view_kanban',
     id: 'kanban',
-    isEnabled: false,
+    isEnabled: true,
     name: 'Tablero Kanban',
   },
   {
@@ -102,11 +101,10 @@ export const DIAGRAM_SUBTYPES: DiagramSubtypeInfo[] = [
     name: 'Diagrama de Flujo',
   },
   {
-    badge: 'Próximamente',
     description: 'Estructuras jerárquicas empresariales, roles de equipo y organigramas.',
     icon: 'lan',
     id: 'orgchart',
-    isEnabled: false,
+    isEnabled: true,
     name: 'Organigrama',
   },
 ];

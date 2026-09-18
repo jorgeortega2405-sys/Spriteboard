@@ -9,7 +9,7 @@ import { openMindMapAiModal } from './mindmap-ai-modal.component.js';
 import { exportMindMapMarkdown, exportMindMapPng, exportMindMapSvg, generateMindMapThumbnail } from './mindmap-export.service.js';
 import { MindMapHistoryManager } from './mindmap-history.manager.js';
 import { ComputedNodeLayout, computeMindMapTreeLayout, estimateNodeDimensions } from './mindmap-layout.engine.js';
-import { drawBranchConnections, drawConnectionDraft, drawCustomConnections, drawMindMapBackground, drawMindMapNodes, drawMinimap, drawSelectionBox, screenToWorld, worldToScreen } from './mindmap-renderer.js';
+import { drawBranchConnections, drawConnectionDraft, drawCustomConnections, drawKanbanSwimlanes, drawMindMapBackground, drawMindMapNodes, drawMinimap, drawSelectionBox, screenToWorld, worldToScreen } from './mindmap-renderer.js';
 
 const PALETTE_COLORS = [
   '#6366f1', '#3b82f6', '#0ea5e9', '#06b6d4', '#14b8a6', '#10b981',
@@ -218,7 +218,10 @@ export class MindMapController implements ViewController {
 
     this.ctx.clearRect(0, 0, w, h);
     drawMindMapBackground(this.ctx, w, h, this.project.camera);
-    drawBranchConnections(this.ctx, this.layoutMap, this.project.camera, w, h, this.project.theme);
+    if (this.project.subtype === 'kanban') {
+      drawKanbanSwimlanes(this.ctx, this.layoutMap, this.project.camera, w, h, this.project.rootId);
+    }
+    drawBranchConnections(this.ctx, this.layoutMap, this.project.camera, w, h, this.project.theme, this.project.subtype);
     drawCustomConnections(this.ctx, this.project.connections, this.layoutMap, this.project.camera, w, h, this.selectedConnectionId);
 
     if (this.isDrawingConnector && this.connectorSourceId) {
@@ -1262,27 +1265,45 @@ export class MindMapController implements ViewController {
       branchColor = PALETTE_COLORS[orderIndex % PALETTE_COLORS.length];
     }
 
+    const isKanban = this.project.subtype === 'kanban';
+    const isOrgChart = this.project.subtype === 'orgchart';
     const isFlowchart = this.project.subtype === 'flowchart';
-    const isTopDown = this.project.theme?.layoutDirection === 'top-down';
+    const isConceptMap = this.project.subtype === 'conceptmap' || (!isKanban && !isOrgChart && !isFlowchart && this.project.theme?.layoutDirection === 'top-down');
     let defaultLinkingPhrase: string | undefined = undefined;
     let defaultShape = parent.shape || 'rounded';
 
     if (parent.shape === 'diamond') {
       defaultLinkingPhrase = orderIndex === 0 ? 'Sí' : (orderIndex === 1 ? 'No' : 'Opción');
       defaultShape = 'rounded';
-    } else if (isTopDown && !isFlowchart) {
+    } else if (isConceptMap) {
       defaultLinkingPhrase = 'se relaciona con';
+    }
+
+    let defaultText = 'Nueva idea';
+    let isTask = false;
+    if (isKanban) {
+      if (parentId === this.project.rootId) {
+        defaultText = 'Nueva columna';
+      } else {
+        defaultText = 'Nueva tarea';
+        isTask = true;
+      }
+    } else if (isOrgChart) {
+      defaultText = 'Nuevo rol';
+    } else if (isFlowchart) {
+      defaultText = 'Nuevo paso';
     }
 
     const newNode: MindMapNode = {
       color: branchColor,
       fontSize: 14,
       id: newId,
+      isTask,
       linkingPhrase: defaultLinkingPhrase,
       orderIndex,
       parentId,
       shape: defaultShape,
-      text: 'Nueva idea',
+      text: defaultText,
       textColor: '#ffffff',
       x: 0,
       y: 0,
@@ -1324,25 +1345,43 @@ export class MindMapController implements ViewController {
       branchColor = PALETTE_COLORS[siblings.length % PALETTE_COLORS.length];
     }
 
+    const isKanban = this.project.subtype === 'kanban';
+    const isOrgChart = this.project.subtype === 'orgchart';
     const isFlowchart = this.project.subtype === 'flowchart';
-    const isTopDown = this.project.theme?.layoutDirection === 'top-down';
+    const isConceptMap = this.project.subtype === 'conceptmap' || (!isKanban && !isOrgChart && !isFlowchart && this.project.theme?.layoutDirection === 'top-down');
     let defaultLinkingPhrase: string | undefined = undefined;
 
     if (parentNode?.shape === 'diamond') {
       defaultLinkingPhrase = siblings.length === 1 ? 'No' : 'Opción';
-    } else if (isTopDown && !isFlowchart) {
+    } else if (isConceptMap) {
       defaultLinkingPhrase = 'se relaciona con';
+    }
+
+    let defaultText = 'Nueva idea';
+    let isTask = false;
+    if (isKanban) {
+      if (parentId === this.project.rootId) {
+        defaultText = 'Nueva columna';
+      } else {
+        defaultText = 'Nueva tarea';
+        isTask = true;
+      }
+    } else if (isOrgChart) {
+      defaultText = 'Nuevo rol';
+    } else if (isFlowchart) {
+      defaultText = 'Nuevo paso';
     }
 
     const newNode: MindMapNode = {
       color: branchColor,
       fontSize: 14,
       id: newId,
+      isTask,
       linkingPhrase: defaultLinkingPhrase,
       orderIndex,
       parentId,
       shape: currentNode.shape || 'rounded',
-      text: 'Nueva idea',
+      text: defaultText,
       textColor: '#ffffff',
       x: 0,
       y: 0,
@@ -1392,8 +1431,12 @@ export class MindMapController implements ViewController {
 
   private openAiModal(): void {
     const selectedNode = this.selectedNodeId ? this.project.nodes[this.selectedNodeId] : null;
-    let diagramType: 'conceptmap' | 'flowchart' | 'mindmap' = 'mindmap';
-    if (this.project.subtype === 'flowchart') {
+    let diagramType: 'conceptmap' | 'flowchart' | 'kanban' | 'mindmap' | 'orgchart' = 'mindmap';
+    if (this.project.subtype === 'kanban') {
+      diagramType = 'kanban';
+    } else if (this.project.subtype === 'orgchart') {
+      diagramType = 'orgchart';
+    } else if (this.project.subtype === 'flowchart') {
       diagramType = 'flowchart';
     } else if (this.project.subtype === 'conceptmap' || this.project.theme?.layoutDirection === 'top-down') {
       diagramType = 'conceptmap';
@@ -1420,15 +1463,21 @@ export class MindMapController implements ViewController {
       idMap.set('root', newRootId);
       idMap.set('null', newRootId);
 
+      const isKanban = this.project.subtype === 'kanban';
+      const isOrgChart = this.project.subtype === 'orgchart';
+      const isFlowchart = this.project.subtype === 'flowchart';
+      const rootColor = isKanban || isOrgChart ? '#1e293b' : (isFlowchart ? '#10b981' : '#6366f1');
+
       const newNodes: Record<string, MindMapNode> = {
         [newRootId]: {
-          color: '#6366f1',
+          color: rootColor,
           fontSize: 16,
+          icon: isKanban ? 'view_kanban' : (isOrgChart ? 'corporate_fare' : undefined),
           id: newRootId,
           orderIndex: 0,
           parentId: null,
-          shape: 'pill',
-          text: result.rootText || result.title || 'Idea Principal',
+          shape: isKanban || isOrgChart ? 'rounded' : 'pill',
+          text: result.rootText || result.title || (isKanban ? 'Tablero del Proyecto' : (isOrgChart ? 'Dirección General (CEO)' : (isFlowchart ? 'Inicio' : 'Idea Principal'))),
           textColor: '#ffffff',
           x: 0,
           y: 0,
@@ -1445,13 +1494,15 @@ export class MindMapController implements ViewController {
         let mappedParentId = n.parentId ? idMap.get(n.parentId) : newRootId;
         if (!mappedParentId) mappedParentId = newRootId;
 
+        const isTaskNode = n.isTask !== undefined ? Boolean(n.isTask) : (isKanban && mappedParentId !== newRootId);
+
         newNodes[mappedId] = {
           color: n.color || PALETTE_COLORS[idx % PALETTE_COLORS.length],
           fontSize: 14,
           icon: n.icon,
           id: mappedId,
           isDone: false,
-          isTask: Boolean(n.isTask),
+          isTask: isTaskNode,
           linkingPhrase: n.linkingPhrase,
           orderIndex: idx,
           parentId: mappedParentId,

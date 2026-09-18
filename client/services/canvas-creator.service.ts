@@ -93,12 +93,323 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
   let initialProject: any = null;
 
   if (isDiagram) {
+    const isKanban = options.diagramSubtype === 'kanban';
+    const isOrgChart = options.diagramSubtype === 'orgchart';
     const isFlowchart = options.diagramSubtype === 'flowchart';
     const isConceptMap = options.diagramSubtype === 'conceptmap';
     const rootId = 'root_' + Math.random().toString(36).substring(2, 9);
-    const rootIdea = options.rootIdeaText?.trim() || options.name.trim() || (isFlowchart ? 'Inicio del Proceso' : (isConceptMap ? 'Concepto General' : 'Idea Principal'));
+    const rootIdea = options.rootIdeaText?.trim() || options.name.trim() || (isKanban ? 'Tablero del Proyecto' : (isOrgChart ? 'Dirección General (CEO)' : (isFlowchart ? 'Inicio del Proceso' : (isConceptMap ? 'Concepto General' : 'Idea Principal'))));
 
-    if (isFlowchart) {
+    if (isKanban) {
+      const todoId = 'node_' + Math.random().toString(36).substring(2, 9);
+      const inProgId = 'node_' + Math.random().toString(36).substring(2, 9);
+      const reviewId = 'node_' + Math.random().toString(36).substring(2, 9);
+      const doneId = 'node_' + Math.random().toString(36).substring(2, 9);
+
+      const task1Id = 'node_' + Math.random().toString(36).substring(2, 9);
+      const task2Id = 'node_' + Math.random().toString(36).substring(2, 9);
+      const task3Id = 'node_' + Math.random().toString(36).substring(2, 9);
+      const task4Id = 'node_' + Math.random().toString(36).substring(2, 9);
+      const task5Id = 'node_' + Math.random().toString(36).substring(2, 9);
+
+      initialProject = {
+        camera: { x: 0, y: 0, zoom: 1 },
+        connections: [],
+        nodes: {
+          [rootId]: {
+            color: '#1e293b',
+            fontSize: 15,
+            icon: 'view_kanban',
+            id: rootId,
+            orderIndex: 0,
+            parentId: null,
+            shape: 'rounded',
+            text: rootIdea || 'Tablero del Proyecto',
+            textColor: '#ffffff',
+            x: 0,
+            y: 0,
+          },
+          [todoId]: {
+            color: '#3b82f6',
+            fontSize: 14,
+            icon: 'assignment',
+            id: todoId,
+            orderIndex: 0,
+            parentId: rootId,
+            shape: 'rounded',
+            text: '📋 Por Hacer',
+            textColor: '#ffffff',
+            x: 0,
+            y: 0,
+          },
+          [task1Id]: {
+            color: '#3b82f6',
+            fontSize: 13,
+            icon: 'design_services',
+            id: task1Id,
+            isDone: false,
+            isTask: true,
+            orderIndex: 0,
+            parentId: todoId,
+            shape: 'rounded',
+            text: 'Diseñar interfaz y prototipo de usuario',
+            textColor: '#ffffff',
+            x: 0,
+            y: 0,
+          },
+          [task2Id]: {
+            color: '#3b82f6',
+            fontSize: 13,
+            icon: 'storage',
+            id: task2Id,
+            isDone: false,
+            isTask: true,
+            orderIndex: 1,
+            parentId: todoId,
+            shape: 'rounded',
+            text: 'Definir modelo de datos y esquemas',
+            textColor: '#ffffff',
+            x: 0,
+            y: 0,
+          },
+          [inProgId]: {
+            color: '#f59e0b',
+            fontSize: 14,
+            icon: 'trending_up',
+            id: inProgId,
+            orderIndex: 1,
+            parentId: rootId,
+            shape: 'rounded',
+            text: '⚡ En Progreso',
+            textColor: '#ffffff',
+            x: 0,
+            y: 0,
+          },
+          [task3Id]: {
+            color: '#f59e0b',
+            fontSize: 13,
+            icon: 'code',
+            id: task3Id,
+            isDone: false,
+            isTask: true,
+            orderIndex: 0,
+            parentId: inProgId,
+            shape: 'rounded',
+            text: 'Implementar autenticación y permisos',
+            textColor: '#ffffff',
+            x: 0,
+            y: 0,
+          },
+          [reviewId]: {
+            color: '#8b5cf6',
+            fontSize: 14,
+            icon: 'rate_review',
+            id: reviewId,
+            orderIndex: 2,
+            parentId: rootId,
+            shape: 'rounded',
+            text: '🔍 En Revisión',
+            textColor: '#ffffff',
+            x: 0,
+            y: 0,
+          },
+          [task4Id]: {
+            color: '#8b5cf6',
+            fontSize: 13,
+            icon: 'fact_check',
+            id: task4Id,
+            isDone: false,
+            isTask: true,
+            orderIndex: 0,
+            parentId: reviewId,
+            shape: 'rounded',
+            text: 'Testing de integración y rendimiento',
+            textColor: '#ffffff',
+            x: 0,
+            y: 0,
+          },
+          [doneId]: {
+            color: '#10b981',
+            fontSize: 14,
+            icon: 'check_circle',
+            id: doneId,
+            orderIndex: 3,
+            parentId: rootId,
+            shape: 'rounded',
+            text: '✅ Completado',
+            textColor: '#ffffff',
+            x: 0,
+            y: 0,
+          },
+          [task5Id]: {
+            color: '#10b981',
+            fontSize: 13,
+            icon: 'rocket_launch',
+            id: task5Id,
+            isDone: true,
+            isTask: true,
+            orderIndex: 0,
+            parentId: doneId,
+            shape: 'rounded',
+            text: 'Configurar repositorio y CI/CD',
+            textColor: '#ffffff',
+            x: 0,
+            y: 0,
+          },
+        },
+        rootId,
+        subtype: 'kanban',
+        theme: {
+          backgroundColor: '#ffffff',
+          branchColors: [
+            '#3b82f6', '#f59e0b', '#8b5cf6', '#10b981',
+            '#0ea5e9', '#ec4899', '#06b6d4', '#14b8a6',
+            '#84cc16', '#eab308', '#f97316', '#ef4444'
+          ],
+          fontFamily: 'system-ui, -apple-system, sans-serif',
+          layoutDirection: 'top-down',
+          lineStyle: options.mindmapLineStyle || 'orthogonal',
+          nodeShape: 'rounded',
+        },
+        type: 'mindmap',
+        version: 1,
+      };
+    } else if (isOrgChart) {
+      const ctoId = 'node_' + Math.random().toString(36).substring(2, 9);
+      const cooId = 'node_' + Math.random().toString(36).substring(2, 9);
+      const cmoId = 'node_' + Math.random().toString(36).substring(2, 9);
+      const feId = 'node_' + Math.random().toString(36).substring(2, 9);
+      const beId = 'node_' + Math.random().toString(36).substring(2, 9);
+      const logId = 'node_' + Math.random().toString(36).substring(2, 9);
+      const mktId = 'node_' + Math.random().toString(36).substring(2, 9);
+
+      initialProject = {
+        camera: { x: 0, y: 0, zoom: 1 },
+        connections: [],
+        nodes: {
+          [rootId]: {
+            color: '#1e293b',
+            fontSize: 15,
+            icon: 'corporate_fare',
+            id: rootId,
+            orderIndex: 0,
+            parentId: null,
+            shape: 'rounded',
+            text: rootIdea || 'Dirección General (CEO)',
+            textColor: '#ffffff',
+            x: 0,
+            y: 0,
+          },
+          [ctoId]: {
+            color: '#0ea5e9',
+            fontSize: 14,
+            icon: 'terminal',
+            id: ctoId,
+            orderIndex: 0,
+            parentId: rootId,
+            shape: 'rounded',
+            text: 'Dirección de Tecnología (CTO)',
+            textColor: '#ffffff',
+            x: 0,
+            y: 0,
+          },
+          [feId]: {
+            color: '#0ea5e9',
+            fontSize: 13,
+            icon: 'code',
+            id: feId,
+            orderIndex: 0,
+            parentId: ctoId,
+            shape: 'rounded',
+            text: 'Líder Frontend',
+            textColor: '#ffffff',
+            x: 0,
+            y: 0,
+          },
+          [beId]: {
+            color: '#0ea5e9',
+            fontSize: 13,
+            icon: 'cloud',
+            id: beId,
+            orderIndex: 1,
+            parentId: ctoId,
+            shape: 'rounded',
+            text: 'Líder Backend & Cloud',
+            textColor: '#ffffff',
+            x: 0,
+            y: 0,
+          },
+          [cooId]: {
+            color: '#10b981',
+            fontSize: 14,
+            icon: 'account_balance',
+            id: cooId,
+            orderIndex: 1,
+            parentId: rootId,
+            shape: 'rounded',
+            text: 'Dirección de Operaciones (COO)',
+            textColor: '#ffffff',
+            x: 0,
+            y: 0,
+          },
+          [logId]: {
+            color: '#10b981',
+            fontSize: 13,
+            icon: 'inventory_2',
+            id: logId,
+            orderIndex: 0,
+            parentId: cooId,
+            shape: 'rounded',
+            text: 'Coordinador de Logística',
+            textColor: '#ffffff',
+            x: 0,
+            y: 0,
+          },
+          [cmoId]: {
+            color: '#f59e0b',
+            fontSize: 14,
+            icon: 'campaign',
+            id: cmoId,
+            orderIndex: 2,
+            parentId: rootId,
+            shape: 'rounded',
+            text: 'Dirección de Marketing (CMO)',
+            textColor: '#ffffff',
+            x: 0,
+            y: 0,
+          },
+          [mktId]: {
+            color: '#f59e0b',
+            fontSize: 13,
+            icon: 'trending_up',
+            id: mktId,
+            orderIndex: 0,
+            parentId: cmoId,
+            shape: 'rounded',
+            text: 'Especialista en Growth',
+            textColor: '#ffffff',
+            x: 0,
+            y: 0,
+          },
+        },
+        rootId,
+        subtype: 'orgchart',
+        theme: {
+          backgroundColor: '#ffffff',
+          branchColors: [
+            '#0ea5e9', '#10b981', '#f59e0b', '#6366f1', '#3b82f6', '#06b6d4',
+            '#14b8a6', '#84cc16', '#eab308', '#f97316', '#ef4444', '#ec4899',
+            '#d946ef', '#a855f7', '#8b5cf6', '#64748b'
+          ],
+          fontFamily: 'system-ui, -apple-system, sans-serif',
+          layoutDirection: 'top-down',
+          lineStyle: options.mindmapLineStyle || 'orthogonal',
+          nodeShape: 'rounded',
+        },
+        type: 'mindmap',
+        version: 1,
+      };
+    } else if (isFlowchart) {
       const ioId = 'node_' + Math.random().toString(36).substring(2, 9);
       const decId = 'node_' + Math.random().toString(36).substring(2, 9);
       const yesId = 'node_' + Math.random().toString(36).substring(2, 9);
