@@ -2,6 +2,8 @@ import 'dotenv/config';
 
 export const config = {
   appName: process.env.APP_NAME || 'Spriteboard Admin',
+  appUrl: process.env.APP_URL || 'http://localhost:3000',
+  adminUrl: process.env.ADMIN_URL || 'http://localhost:3002',
   csrfSecret: process.env.CSRF_SECRET || 'spriteboard_csrf_secret_key_2026',
   db: {
     database: process.env.DB_NAME || 'db_identity',
@@ -27,6 +29,14 @@ export const config = {
     port: Number(process.env.REDIS_PORT) || 6379,
   },
   sessionSecret: process.env.SESSION_SECRET || 'spriteboard_session_secret_key_2026',
+  smtp: {
+    fromEmail: process.env.SMTP_FROM_EMAIL || 'no-reply@spriteboard.com',
+    fromName: process.env.SMTP_FROM_NAME || 'Spriteboard Recursos Humanos',
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    pass: process.env.SMTP_PASS || '',
+    port: Number(process.env.SMTP_PORT) || 465,
+    user: process.env.SMTP_USER || '',
+  },
   trustProxy: 1,
   websocket: {
     host: process.env.WEBSOCKET_HOST || 'websocket',

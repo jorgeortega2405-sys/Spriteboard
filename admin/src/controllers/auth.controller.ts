@@ -2,12 +2,12 @@ import crypto from 'crypto';
 import { Request, Response } from 'express';
 import { getCurrentUser, getLinkedAccounts } from '../middlewares/auth.middleware.js';
 import { getClientIp } from '../middlewares/rate-limit.middleware.js';
-import { addAccountToSession, clearSessionCookie, removeAccountFromSession, revokeAllUserSessions, switchAccountInSession, verifyPassword } from '../services/auth.service.js';
+import { addAccountToSession, clearSessionCookie, hashPassword, removeAccountFromSession, revokeAllUserSessions, switchAccountInSession, verifyPassword } from '../services/auth.service.js';
 import { getGoogleAuthUrl, processAdminGoogleAuthCallback, STATE_COOKIE_NAME } from '../services/google.service.js';
 import { logger } from '../services/logger.service.js';
 import { getUserEffectivePermissions } from '../services/role.service.js';
 import { consumePending2FALogin, savePending2FALogin, verifyTotpCode } from '../services/two-factor.service.js';
-import { findUserByEmail, findUserById, getActiveUserSanction, getUser2FASecret, updateUserLastLoginGeo, verifyAndConsumeBackupCode } from '../services/user.service.js';
+import { findUserByEmail, findUserById, getActiveUserSanction, getUser2FASecret, updateUserLastLoginGeo, updateUserPassword, verifyAndConsumeBackupCode } from '../services/user.service.js';
 import { isUserAdmin } from '../types/auth.types.js';
 import { sanitizeUser, sendBadRequest, sendForbidden, sendInternalError, sendSuccess, sendUnauthorized } from '../utils/http.util.js';
 
@@ -47,6 +47,22 @@ export async function login(req: Request, res: Response): Promise<void> {
     if (activeSanction) {
       logger.security.warn('Intento de inicio de sesión de usuario sancionado en Admin', { sanctionType: activeSanction.type, userId: userRow.id });
       sendForbidden(res, 'Tu cuenta se encuentra suspendida o bloqueada.');
+      return;
+    }
+
+    if ((userRow as any).force_password_change) {
+      const tempToken = crypto.randomBytes(32).toString('hex');
+      await savePending2FALogin(tempToken, { email: userRow.email, userId: userRow.id }, 600);
+      logger.security.info('Inicio de sesión en Admin requiere primer cambio forzado de contraseña', {
+        email: userRow.email,
+        userId: userRow.id,
+      });
+
+      sendSuccess(res, {
+        email: userRow.email,
+        requiresPasswordChange: true,
+        tempToken,
+      });
       return;
     }
 
@@ -155,6 +171,57 @@ export async function verify2FALogin(req: Request, res: Response): Promise<void>
     });
   } catch (error) {
     sendInternalError(res, 'Error al verificar 2FA en Admin', error, 'Error al procesar la verificación 2FA.');
+  }
+}
+
+export async function firstLoginChangePassword(req: Request, res: Response): Promise<void> {
+  try {
+    const { newPassword, tempToken } = req.body;
+
+    if (!tempToken || !newPassword) {
+      sendBadRequest(res, 'Token temporal y nueva contraseña son requeridos.');
+      return;
+    }
+
+    if (String(newPassword).length < 8) {
+      sendBadRequest(res, 'La nueva contraseña debe tener al menos 8 caracteres.');
+      return;
+    }
+
+    const pending = await consumePending2FALogin(String(tempToken));
+    if (!pending) {
+      sendUnauthorized(res, 'La sesión de activación ha expirado. Inicia sesión de nuevo.');
+      return;
+    }
+
+    const userRow = await findUserById(pending.userId);
+    if (!userRow) {
+      sendUnauthorized(res, 'Usuario no encontrado.');
+      return;
+    }
+
+    const passwordHash = await hashPassword(String(newPassword));
+    await updateUserPassword(userRow.id, passwordHash);
+
+    userRow.permissions = await getUserEffectivePermissions(userRow.id, userRow.role, userRow.roles);
+    const user = sanitizeUser(userRow);
+    const clientIp = getClientIp(req);
+    void updateUserLastLoginGeo(user.id, { ip: clientIp });
+
+    const session = await addAccountToSession(res, req, user);
+
+    logger.security.info('Primer cambio de contraseña y activación completada para colaborador', {
+      email: user.email,
+      userId: user.id,
+    });
+
+    sendSuccess(res, {
+      accounts: session.accounts.map(sanitizeUser),
+      message: 'Contraseña actualizada exitosamente. Bienvenido a la plataforma.',
+      user,
+    });
+  } catch (error) {
+    sendInternalError(res, 'Error al actualizar contraseña de primer ingreso', error, 'Error al actualizar contraseña.');
   }
 }
 

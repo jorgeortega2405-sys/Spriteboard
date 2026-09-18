@@ -2,6 +2,7 @@ import { AdRowData, AdvertiserRowData } from '../types/ad.types.js';
 import { isUserAdmin, SessionAccount, UserPayload } from '../types/auth.types.js';
 import { BackupCreatePayload, BackupRecord, BackupScheduleConfig, BackupSchedulePayload, BackupTargetOptions } from '../types/backup.types.js';
 import { DashboardStatsResponse } from '../types/dashboard.types.js';
+import { CompensationHistoryItem, Employee, EmployeeDetailResponse, EmployeesResponse, OrgChartNode, TimeOffBalance, TimeOffRequest } from '../types/hr.types.js';
 import { LogFileContent, LogFileRecord } from '../types/log.types.js';
 
 export const API_ROUTES = {
@@ -27,6 +28,7 @@ export const API_ROUTES = {
     trends: (range = '30d') => `/api/analytics/trends?range=${encodeURIComponent(range)}`,
   },
   auth: {
+    firstChangePassword: '/api/login/first-change-password',
     login: '/api/login',
     logout: '/api/logout',
     logoutAll: '/api/logout-all',
@@ -49,6 +51,21 @@ export const API_ROUTES = {
     stats: '/api/dashboard/stats',
   },
   health: '/health',
+  hr: {
+    base: '/api/hr/employees',
+    byId: (id: number | string) => `/api/hr/employees/${id}`,
+    careerHistory: (id: number | string) => `/api/hr/employees/${id}/career-history`,
+    documentDownload: (docUuid: string, download = false) => `/api/hr/documents/${docUuid}/download${download ? '?download=true' : ''}`,
+    documents: (id: number | string) => `/api/hr/employees/${id}/documents`,
+    hire: '/api/hr/hire',
+    orgChart: '/api/hr/org-chart',
+    promotions: (id: number | string) => `/api/hr/employees/${id}/promotions`,
+    status: (id: number | string) => `/api/hr/employees/${id}/status`,
+    timeOff: '/api/hr/time-off',
+    timeOffCalendar: '/api/hr/time-off/calendar',
+    timeOffRequest: '/api/hr/time-off/request',
+    timeOffReview: (id: number | string) => `/api/hr/time-off/${id}/review`,
+  },
   logs: {
     base: '/api/logs',
     content: '/api/logs/content',
@@ -1276,6 +1293,211 @@ export async function executeSqlQueryApi(query: string): Promise<{ data?: any; e
     return { error: data.error || 'Error al ejecutar la consulta SQL.', ok: false };
   } catch {
     return { error: 'Error de conexión al ejecutar la consulta SQL.', ok: false };
+  }
+}
+
+export async function getEmployeesApi(params: { department?: string; limit?: number; page?: number; role?: string; search?: string; status?: string } = {}): Promise<{ data?: EmployeesResponse; error?: string; ok: boolean }> {
+  try {
+    const qs = new URLSearchParams();
+    if (params.page) qs.set('page', String(params.page));
+    if (params.limit) qs.set('limit', String(params.limit));
+    if (params.search) qs.set('search', params.search);
+    if (params.department && params.department !== 'all') qs.set('department', params.department);
+    if (params.status && params.status !== 'all') qs.set('status', params.status);
+    if (params.role && params.role !== 'all') qs.set('role', params.role);
+
+    const url = `${API_ROUTES.hr.base}${qs.toString() ? `?${qs.toString()}` : ''}`;
+    const res = await getApi(url);
+    const data = await res.json();
+    if (res.ok) return { data, ok: true };
+    return { error: data.error || 'Error al cargar colaboradores.', ok: false };
+  } catch {
+    return { error: 'Error de conexión al cargar colaboradores.', ok: false };
+  }
+}
+
+export async function getEmployeeDetailsApi(id: number | string): Promise<{ data?: EmployeeDetailResponse; error?: string; ok: boolean }> {
+  try {
+    const res = await getApi(API_ROUTES.hr.byId(id));
+    const data = await res.json();
+    if (res.ok) return { data, ok: true };
+    return { error: data.error || 'Error al cargar expediente del colaborador.', ok: false };
+  } catch {
+    return { error: 'Error de conexión al cargar expediente.', ok: false };
+  }
+}
+
+export async function hireEmployeeApi(formData: FormData): Promise<{ data?: { employee: Employee; temporaryPassword?: string }; error?: string; ok: boolean }> {
+  try {
+    const res = await apiRequest(API_ROUTES.hr.hire, {
+      body: formData,
+      method: 'POST',
+    });
+    const data = await res.json();
+    if (res.ok) return { data, ok: true };
+    return { error: data.error || 'Error al procesar la contratación.', ok: false };
+  } catch {
+    return { error: 'Error de conexión al procesar la contratación.', ok: false };
+  }
+}
+
+export async function updateEmployeeStatusApi(id: number | string, status: string): Promise<{ error?: string; ok: boolean }> {
+  try {
+    const res = await postApi(API_ROUTES.hr.status(id), { status });
+    const data = await res.json();
+    if (res.ok) return { ok: true };
+    return { error: data.error || 'Error al actualizar estado laboral.', ok: false };
+  } catch {
+    return { error: 'Error de conexión al actualizar estado.', ok: false };
+  }
+}
+
+export async function uploadEmployeeDocumentApi(id: number | string, formData: FormData): Promise<{ data?: any; error?: string; ok: boolean }> {
+  try {
+    const res = await apiRequest(API_ROUTES.hr.documents(id), {
+      body: formData,
+      method: 'POST',
+    });
+    const data = await res.json();
+    if (res.ok) return { data, ok: true };
+    return { error: data.error || 'Error al subir el documento.', ok: false };
+  } catch {
+    return { error: 'Error de conexión al subir el documento.', ok: false };
+  }
+}
+
+export async function getOrgChartApi(): Promise<{ data?: { orgChart: OrgChartNode[] }; error?: string; ok: boolean }> {
+  try {
+    const res = await getApi(API_ROUTES.hr.orgChart);
+    const data = await res.json();
+    if (res.ok) return { data, ok: true };
+    return { error: data.error || 'Error al cargar el organigrama.', ok: false };
+  } catch {
+    return { error: 'Error de conexión al cargar el organigrama.', ok: false };
+  }
+}
+
+export async function promoteEmployeeApi(
+  id: number | string,
+  payload: {
+    change_type: string;
+    currency?: string;
+    effective_date?: string;
+    new_department?: string;
+    new_job_title?: string;
+    new_platform_role?: string;
+    new_salary?: number;
+    reason?: string;
+  }
+): Promise<{ data?: { historyRecord: CompensationHistoryItem }; error?: string; ok: boolean }> {
+  try {
+    const res = await postApi(API_ROUTES.hr.promotions(id), payload);
+    const data = await res.json();
+    if (res.ok) return { data, ok: true };
+    return { error: data.error || 'Error al registrar promoción/ajuste.', ok: false };
+  } catch {
+    return { error: 'Error de conexión al registrar promoción.', ok: false };
+  }
+}
+
+export async function getCareerHistoryApi(id: number | string): Promise<{ data?: { history: CompensationHistoryItem[] }; error?: string; ok: boolean }> {
+  try {
+    const res = await getApi(API_ROUTES.hr.careerHistory(id));
+    const data = await res.json();
+    if (res.ok) return { data, ok: true };
+    return { error: data.error || 'Error al obtener historial.', ok: false };
+  } catch {
+    return { error: 'Error de conexión al obtener historial.', ok: false };
+  }
+}
+
+export async function getTimeOffRequestsApi(params: { department?: string; limit?: number; page?: number; status?: string } = {}): Promise<{
+  data?: { pagination: { limit: number; page: number; total: number; totalPages: number }; requests: TimeOffRequest[] };
+  error?: string;
+  ok: boolean;
+}> {
+  try {
+    const qs = new URLSearchParams();
+    if (params.page) qs.set('page', String(params.page));
+    if (params.limit) qs.set('limit', String(params.limit));
+    if (params.status && params.status !== 'all') qs.set('status', params.status);
+    if (params.department && params.department !== 'all') qs.set('department', params.department);
+
+    const url = `${API_ROUTES.hr.timeOff}${qs.toString() ? `?${qs.toString()}` : ''}`;
+    const res = await getApi(url);
+    const data = await res.json();
+    if (res.ok) return { data, ok: true };
+    return { error: data.error || 'Error al cargar solicitudes de vacaciones.', ok: false };
+  } catch {
+    return { error: 'Error de conexión al cargar solicitudes.', ok: false };
+  }
+}
+
+export async function submitTimeOffRequestApi(payload: {
+  employee_id: number;
+  end_date: string;
+  reason?: string;
+  request_type: string;
+  start_date: string;
+  total_days?: number;
+}): Promise<{ data?: { request: TimeOffRequest }; error?: string; ok: boolean }> {
+  try {
+    const res = await postApi(API_ROUTES.hr.timeOffRequest, payload);
+    const data = await res.json();
+    if (res.ok) return { data, ok: true };
+    return { error: data.error || 'Error al registrar solicitud de vacaciones.', ok: false };
+  } catch {
+    return { error: 'Error de conexión al enviar solicitud.', ok: false };
+  }
+}
+
+export async function reviewTimeOffRequestApi(
+  id: number | string,
+  payload: { rejection_reason?: string; status: 'approved' | 'rejected' }
+): Promise<{ data?: { request: TimeOffRequest }; error?: string; ok: boolean }> {
+  try {
+    const res = await postApi(API_ROUTES.hr.timeOffReview(id), payload);
+    const data = await res.json();
+    if (res.ok) return { data, ok: true };
+    return { error: data.error || 'Error al revisar solicitud.', ok: false };
+  } catch {
+    return { error: 'Error de conexión al procesar revisión.', ok: false };
+  }
+}
+
+export async function getTimeOffCalendarApi(params: { month?: number; year?: number } = {}): Promise<{
+  data?: { calendar: Array<{ department: string; employee_id: number; employee_name: string; end_date: string; id: number; request_type: string; start_date: string; total_days: number }> };
+  error?: string;
+  ok: boolean;
+}> {
+  try {
+    const qs = new URLSearchParams();
+    if (params.month) qs.set('month', String(params.month));
+    if (params.year) qs.set('year', String(params.year));
+
+    const url = `${API_ROUTES.hr.timeOffCalendar}${qs.toString() ? `?${qs.toString()}` : ''}`;
+    const res = await getApi(url);
+    const data = await res.json();
+    if (res.ok) return { data, ok: true };
+    return { error: data.error || 'Error al cargar calendario de ausencias.', ok: false };
+  } catch {
+    return { error: 'Error de conexión al cargar calendario.', ok: false };
+  }
+}
+
+export async function firstLoginChangePasswordApi(payload: {
+  newPassword: string;
+  tempToken: string;
+}): Promise<{ accounts?: SessionAccount[]; error?: string; message?: string; ok: boolean; user?: UserPayload }> {
+  try {
+    const res = await postApi(API_ROUTES.auth.firstChangePassword, payload);
+    const data = await res.json();
+    if (res.ok && data.ok) {
+      return { accounts: data.accounts, message: data.message, ok: true, user: data.user };
+    }
+    return { error: data.error || 'Error al actualizar contraseña.', ok: false };
+  } catch {
+    return { error: 'Error al conectar con el servidor.', ok: false };
   }
 }
 

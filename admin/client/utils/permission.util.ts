@@ -84,6 +84,17 @@ export const ALL_NAV_MODULES: readonly NavModuleItem[] = [
     route: '/ads',
   },
   {
+    btnDrawerRef: 'btn-drawer-hr',
+    btnRailRef: 'btn-rail-hr',
+    category: 'operations',
+    icon: 'badge',
+    id: 'hr',
+    label: 'Recursos Humanos',
+    railItemRef: 'rail-item-hr',
+    requiredPermissions: ['hr:read', 'hr:manage', 'hr:hire'],
+    route: '/hr',
+  },
+  {
     btnDrawerRef: 'btn-drawer-billing',
     btnRailRef: 'btn-rail-billing',
     category: 'finance',
@@ -213,6 +224,9 @@ export function canAccessRoute(path: string, user: UserPayload | null = currentU
   }
   if (path === '/ads' || path.startsWith('/ads/')) {
     return canAccessModule('ads', user);
+  }
+  if (path === '/hr' || path.startsWith('/hr/')) {
+    return canAccessModule('hr', user);
   }
   if (path === '/support' || path.startsWith('/support/')) {
     return canAccessModule('support', user);

@@ -642,3 +642,18 @@ export async function revokeUserAllSessionsByAdmin(
   return { success: true };
 }
 
+export async function updateUserPassword(
+  userId: number,
+  passwordHash: string
+): Promise<boolean> {
+  try {
+    await pool.query('UPDATE users SET password_hash = ?, force_password_change = 0, updated_at = NOW() WHERE id = ?', [passwordHash, userId]);
+    return true;
+  } catch (error) {
+    logger.db.error('Error al actualizar contraseña de usuario', { error: String(error), userId });
+    return false;
+  }
+}
+
+
+

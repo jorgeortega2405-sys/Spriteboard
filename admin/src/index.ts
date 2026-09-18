@@ -11,6 +11,7 @@ import { getHealth } from './controllers/config.controller.js';
 import apiRouter from './routes/api.routes.js';
 import { COOKIE_NAME, isSessionRevoked, verifyMultiAccountToken } from './services/auth.service.js';
 import { ensureBackupTable } from './services/backup.service.js';
+import { ensureHrTables } from './services/hr.service.js';
 import { InternalTicketService } from './services/internal-ticket.service.js';
 import { logger } from './services/logger.service.js';
 import { ensureRolePermissions } from './services/role.service.js';
@@ -108,6 +109,7 @@ async function startServer() {
     await ensureRolePermissions();
     await ensureServerConfigTable();
     await ensureBackupTable();
+    await ensureHrTables();
     await InternalTicketService.ensureInternalTicketsTables();
     await checkRedisConnection();
 

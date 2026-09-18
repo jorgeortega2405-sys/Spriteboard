@@ -11,6 +11,8 @@ export type UserRole =
   | 'DEVOPS'
   | 'ENGINEER'
   | 'FINANCE_ADMIN'
+  | 'HR_MANAGER'
+  | 'HR_RECRUITER'
   | 'IAM_ADMIN'
   | 'INCIDENT_MANAGER'
   | 'OPERATIONS_AGENT'
@@ -69,6 +71,8 @@ export const PLATFORM_ROLES: readonly RoleDefinition[] = [
   { category: 'finance', description: 'Gestión financiera avanzada.', display_name: 'Billing Manager', name: 'BILLING_MANAGER' },
   { category: 'finance', description: 'Configuración financiera.', display_name: 'Finance Admin', name: 'FINANCE_ADMIN' },
   { category: 'finance', description: 'Refunds/credits con permisos específicos.', display_name: 'Refunds Admin', name: 'REFUNDS_ADMIN' },
+  { category: 'operations', description: 'Gestión de recursos humanos, contrataciones y contratos.', display_name: 'HR Manager', name: 'HR_MANAGER' },
+  { category: 'operations', description: 'Reclutamiento y alta de talento.', display_name: 'HR Recruiter', name: 'HR_RECRUITER' },
   { category: 'operations', description: 'Operaciones diarias.', display_name: 'Operations Agent', name: 'OPERATIONS_AGENT' },
   { category: 'operations', description: 'Supervisión operacional.', display_name: 'Operations Manager', name: 'OPERATIONS_MANAGER' },
   { category: 'operations', description: 'Workflows, jobs y procesos.', display_name: 'Workflow Admin', name: 'WORKFLOW_ADMIN' },

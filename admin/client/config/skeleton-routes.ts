@@ -6,6 +6,7 @@ export const SKELETON_ROUTES: Record<string, string> = {
   '/billing': 'table-layout',
   '/compliance': 'table-layout',
   '/dashboard': 'dashboard-layout',
+  '/hr': 'table-layout',
   '/internal-tickets': 'split-layout',
   '/login': 'centered-form',
   '/logs': 'table-layout',
@@ -36,6 +37,7 @@ export function getSkeletonForUrl(pathname: string, onlyBottom = false): string 
     pathname === '/users' ||
     pathname === '/ads' ||
     pathname.startsWith('/ads') ||
+    pathname === '/hr' ||
     pathname === '/backups' ||
     pathname === '/billing' ||
     pathname.startsWith('/billing') ||
@@ -56,6 +58,7 @@ export function getSkeletonForUrl(pathname: string, onlyBottom = false): string 
   } else if (
     pathname.startsWith('/settings') ||
     pathname.startsWith('/system') ||
+    /^\/hr\/[0-9a-zA-Z-]+$/.test(pathname) ||
     /^\/users\/[0-9a-zA-Z-]+$/.test(pathname)
   ) {
     template = 'grouped-layout';

@@ -1,0 +1,293 @@
+<div class="layout-content" data-ref="admin-hr-view">
+  <div class="component-wrapper component-wrapper--full view-wrapper" data-ref="hr-wrapper">
+    <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="hr-scrollable">
+      
+      <div class="view-header" data-ref="hr-floating-top">
+        <div class="view-header__left" data-ref="hr-floating-left" style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+          <h1 class="view-header__title" data-ref="hr-title">Recursos Humanos</h1>
+          
+          <div class="component-tags-carousel" data-ref="hr-main-tabs" style="display: flex; gap: 6px;">
+            <button type="button" class="component-badge component-badge--interactive is-active" data-ref="tab-btn-directory" data-tab="directory">
+              <svg class="component-icon" style="font-size: 15px;" aria-hidden="true"><use href="/icons.svg#group"></use></svg>
+              <span>Directorio</span>
+            </button>
+            <button type="button" class="component-badge component-badge--interactive" data-ref="tab-btn-orgchart" data-tab="orgchart">
+              <svg class="component-icon" style="font-size: 15px;" aria-hidden="true"><use href="/icons.svg#schema"></use></svg>
+              <span>Organigrama</span>
+            </button>
+            <button type="button" class="component-badge component-badge--interactive" data-ref="tab-btn-timeoff" data-tab="timeoff">
+              <svg class="component-icon" style="font-size: 15px;" aria-hidden="true"><use href="/icons.svg#calendar_today"></use></svg>
+              <span>Vacaciones & PTO</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="view-header__right" data-ref="hr-floating-right">
+          <div class="view-header__actions" data-ref="hr-default-actions">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only component-button--black view-header__btn" data-ref="btn-open-hire-modal" data-tooltip="Nueva contratación" aria-label="Nueva contratación">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+            </button>
+
+            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-toggle-search" data-tooltip="Buscar colaboradores" aria-label="Buscar colaboradores">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+            </button>
+
+            <div class="settings-dropdown-wrapper" data-ref="filter-dropdown-wrapper">
+              <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-toggle-filter" data-tooltip="Filtros" aria-label="Filtros">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
+              </button>
+
+              <div class="dropdown-backdrop" data-ref="filter-dropdown-backdrop">
+                <div class="menu-panel menu-panel--dropdown menu-panel--w-285 menu-panel--h-auto" data-ref="filter-dropdown-menu">
+                  <div class="avatar-menu__section-header">
+                    <span class="drawer-section__title">Filtrar por Departamento</span>
+                  </div>
+                  <div class="menu-panel__list" data-ref="filter-departments-list">
+                    <button type="button" class="menu-item is-active" data-ref="filter-dept-all" data-dept="all">
+                      <span class="menu-item__text">Todos</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="filter-dept-engineering" data-dept="Ingeniería">
+                      <span class="menu-item__text">Ingeniería</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="filter-dept-support" data-dept="Soporte y Operaciones">
+                      <span class="menu-item__text">Soporte y Operaciones</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="filter-dept-finance" data-dept="Finanzas y Legal">
+                      <span class="menu-item__text">Finanzas y Legal</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="filter-dept-hr" data-dept="Recursos Humanos">
+                      <span class="menu-item__text">Recursos Humanos</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="filter-dept-marketing" data-dept="Marketing y Producto">
+                      <span class="menu-item__text">Marketing y Producto</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="filter-dept-direction" data-dept="Dirección General">
+                      <span class="menu-item__text">Dirección General</span>
+                    </button>
+                  </div>
+
+                  <div class="menu-divider"></div>
+
+                  <div class="avatar-menu__section-header">
+                    <span class="drawer-section__title">Filtrar por Estado</span>
+                  </div>
+                  <div class="menu-panel__list" data-ref="filter-status-list">
+                    <button type="button" class="menu-item is-active" data-ref="filter-status-all" data-status="all">
+                      <span class="menu-item__text">Todos los estados</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="filter-status-active" data-status="active">
+                      <span class="menu-item__text">Activo</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="filter-status-onboarding" data-status="onboarding">
+                      <span class="menu-item__text">En Onboarding</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="filter-status-suspended" data-status="suspended">
+                      <span class="menu-item__text">Suspendido</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="filter-status-terminated" data-status="terminated">
+                      <span class="menu-item__text">Desvinculado</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="component-inline-control component-inline-control--fixed component-inline-control--pagination" data-ref="pagination-inline-control">
+              <div class="component-inline-control__group" data-ref="inline-group-page-prev">
+                <button type="button" class="component-inline-control__btn" data-ref="btn-pagination-prev" data-tooltip="Página anterior" aria-label="Página anterior" disabled>
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+                </button>
+              </div>
+              <input class="component-inline-control__input" data-ref="input-pagination-page" type="number" min="1" max="1" value="1" autocomplete="off" />
+              <div class="component-inline-control__group" data-ref="inline-group-page-next">
+                <button type="button" class="component-inline-control__btn" data-ref="btn-pagination-next" data-tooltip="Página siguiente" aria-label="Página siguiente" disabled>
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="view-header__actions" data-ref="hr-selected-actions" style="display: none; align-items: center; gap: 8px;">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-deselect" data-tooltip="Cancelar selección" aria-label="Cancelar selección">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+            </button>
+
+            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-dossier" data-tooltip="Ver expediente laboral" aria-label="Ver expediente laboral">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#person"></use></svg>
+            </button>
+
+            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-upload-doc" data-tooltip="Adjuntar documento" aria-label="Adjuntar documento">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cloud_upload"></use></svg>
+            </button>
+
+            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-status" data-tooltip="Cambiar estado" aria-label="Cambiar estado">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
+            </button>
+
+            <button type="button" class="component-button component-button--h40 component-button--icon-only component-button--danger view-header__btn" data-ref="btn-action-offboard" data-tooltip="Desvincular colaborador" aria-label="Desvincular colaborador">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#person_off"></use></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="component-search-toolbar is-hidden" data-ref="search-toolbar">
+          <div class="component-search component-search--full" data-ref="search-box">
+            <div class="component-search__icon" data-ref="search-icon">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+            </div>
+            <div class="component-search__input-box" data-ref="search-input-box">
+              <input class="component-search__input" data-ref="hr-search-input" placeholder="Buscar por nombre, cargo, documento, correo o usuario..." type="text" maxlength="100" autocomplete="off" />
+            </div>
+            <button type="button" class="component-button component-button--h34 component-button--icon-only" data-ref="btn-clear-search" style="display: none; margin-right: 4px;" aria-label="Limpiar búsqueda">
+              <svg class="component-icon" aria-hidden="true" style="font-size: 18px;"><use href="/icons.svg#close"></use></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 1: Directory Table -->
+      <div class="hr-section-view" data-ref="section-directory" style="display: flex; flex-direction: column; height: calc(100% - 56px);">
+        <div class="component-table-wrapper" data-ref="hr-table-wrapper" style="display: flex; flex-direction: column; height: 100%;">
+          <div class="table-scroll-container" style="flex: 1; overflow: auto;">
+            <table class="component-table" data-ref="hr-table">
+              <thead class="component-table__head" data-ref="hr-thead">
+                <tr>
+                  <th data-ref="th-employee">Colaborador</th>
+                  <th data-ref="th-position">Cargo y Área</th>
+                  <th data-ref="th-manager">Responsable Directo</th>
+                  <th data-ref="th-role">Rol de Sistema</th>
+                  <th data-ref="th-workmode">Modalidad</th>
+                  <th data-ref="th-status">Estado</th>
+                  <th data-ref="th-hiredate">Fecha de Ingreso</th>
+                </tr>
+              </thead>
+              <tbody class="component-table__body" data-ref="hr-tbody">
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 2: Organigram / Org Chart -->
+      <div class="hr-section-view" data-ref="section-orgchart" style="display: none; flex-direction: column; padding: 24px; box-sizing: border-box; height: calc(100% - 56px); overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <div>
+            <h2 style="font-size: 16px; font-weight: 700; color: var(--text-primary); margin: 0 0 4px 0;">Estructura y Cadena de Mando</h2>
+            <p style="font-size: 12px; color: var(--text-secondary); margin: 0;">Visualización jerárquica de líderes de equipo, directores y colaboradores por departamento.</p>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button type="button" class="component-button component-button--h34" data-ref="btn-refresh-orgchart">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#refresh"></use></svg>
+              <span>Actualizar</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="orgchart-container" data-ref="orgchart-tree-container" style="display: flex; flex-direction: column; gap: 24px; align-items: center; width: 100%; min-height: 400px;">
+        </div>
+      </div>
+
+      <!-- Section 3: Time Off & PTO -->
+      <div class="hr-section-view" data-ref="section-timeoff" style="display: none; flex-direction: column; padding: 24px; box-sizing: border-box; height: calc(100% - 56px); overflow-y: auto;">
+        
+        <!-- KPI Metrics Grid -->
+        <div class="dashboard-stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; width: 100%;">
+          <div class="dashboard-stat-card" style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-xl); padding: 18px 20px; display: flex; flex-direction: column; justify-content: space-between;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+              <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase;">Pendientes de Aprobación</span>
+              <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(245, 158, 11, 0.12); display: flex; align-items: center; justify-content: center; color: #f59e0b;">
+                <svg class="component-icon" style="width: 18px; height: 18px;" aria-hidden="true"><use href="/icons.svg#schedule"></use></svg>
+              </div>
+            </div>
+            <div class="stat-card-value" data-ref="val-pto-pending" style="font-size: 26px; font-weight: 800; color: var(--text-primary);">0</div>
+          </div>
+
+          <div class="dashboard-stat-card" style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-xl); padding: 18px 20px; display: flex; flex-direction: column; justify-content: space-between;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+              <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase;">Ausencias Activas Hoy</span>
+              <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(59, 130, 246, 0.12); display: flex; align-items: center; justify-content: center; color: #3b82f6;">
+                <svg class="component-icon" style="width: 18px; height: 18px;" aria-hidden="true"><use href="/icons.svg#flight_takeoff"></use></svg>
+              </div>
+            </div>
+            <div class="stat-card-value" data-ref="val-pto-active-today" style="font-size: 26px; font-weight: 800; color: var(--text-primary);">0</div>
+          </div>
+
+          <div class="dashboard-stat-card" style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-xl); padding: 18px 20px; display: flex; flex-direction: column; justify-content: space-between;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+              <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase;">Días Aprobados (Mes)</span>
+              <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(16, 185, 129, 0.12); display: flex; align-items: center; justify-content: center; color: #10b981;">
+                <svg class="component-icon" style="width: 18px; height: 18px;" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+              </div>
+            </div>
+            <div class="stat-card-value" data-ref="val-pto-approved-days" style="font-size: 26px; font-weight: 800; color: var(--text-primary);">0</div>
+          </div>
+        </div>
+
+        <!-- PTO Header & Controls -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+          <div class="component-tags-carousel" data-ref="pto-filter-tabs" style="display: flex; gap: 6px;">
+            <button type="button" class="component-badge component-badge--interactive is-active" data-ref="pto-filter-all" data-status="all">
+              <span>Todas</span>
+            </button>
+            <button type="button" class="component-badge component-badge--interactive" data-ref="pto-filter-pending" data-status="pending">
+              <span>Pendientes</span>
+            </button>
+            <button type="button" class="component-badge component-badge--interactive" data-ref="pto-filter-approved" data-status="approved">
+              <span>Aprobadas</span>
+            </button>
+            <button type="button" class="component-badge component-badge--interactive" data-ref="pto-filter-rejected" data-status="rejected">
+              <span>Rechazadas</span>
+            </button>
+          </div>
+
+          <div style="display: flex; gap: 8px;">
+            <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-open-request-pto">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+              <span>Solicitar Ausencia / Permiso</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- PTO Requests Table -->
+        <div class="component-table-wrapper" data-ref="pto-table-wrapper" style="border: 1px solid var(--border-color); border-radius: var(--radius-xl); overflow: hidden; margin-bottom: 32px; background: var(--bg-surface);">
+          <div class="table-scroll-container">
+            <table class="component-table" data-ref="pto-table">
+              <thead class="component-table__head">
+                <tr>
+                  <th>Colaborador</th>
+                  <th>Tipo de Permiso</th>
+                  <th>Período</th>
+                  <th>Total Días</th>
+                  <th>Motivo</th>
+                  <th>Estado</th>
+                  <th style="text-align: right; width: 140px;">Acciones</th>
+                </tr>
+              </thead>
+              <tbody class="component-table__body" data-ref="pto-tbody">
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Monthly Absence Calendar -->
+        <div class="settings-group" data-ref="group-timeoff-calendar" style="padding: 20px 24px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0; display: flex; align-items: center; gap: 8px;">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#calendar_month"></use></svg>
+              <span>Calendario de Ausencias del Mes</span>
+            </h3>
+            <span style="font-size: 12px; color: var(--text-secondary);" data-ref="calendar-month-name"></span>
+          </div>
+
+          <div class="timeoff-calendar-list" data-ref="timeoff-calendar-list" style="display: flex; flex-direction: column; gap: 8px;">
+          </div>
+          <div data-ref="timeoff-calendar-empty" style="display: none; padding: 24px; text-align: center; color: var(--text-secondary); font-size: 13px;">
+            No hay ausencias programadas para este mes.
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+</div>

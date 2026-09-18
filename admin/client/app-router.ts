@@ -94,6 +94,14 @@ export async function render(): Promise<void> {
     } else if (path === '/ads' || path.startsWith('/ads/')) {
       const { createAdsView } = await import('./views/ads.view.js');
       viewElement = await createAdsView();
+    } else if (path === '/hr') {
+      const { createHrView } = await import('./views/hr.view.js');
+      viewElement = await createHrView();
+    } else if (/^\/hr\/([0-9a-zA-Z-]+)$/.test(path)) {
+      const match = path.match(/^\/hr\/([0-9a-zA-Z-]+)$/);
+      const empIdentifier = match![1];
+      const { createHrManageView } = await import('./views/hr-manage.view.js');
+      viewElement = await createHrManageView(empIdentifier);
     } else if (path === '/support' || /^\/support\/([0-9a-zA-Z-]+)$/.test(path)) {
       const match = path.match(/^\/support\/([0-9a-zA-Z-]+)$/);
       const ticketParam = match ? match[1] : undefined;
