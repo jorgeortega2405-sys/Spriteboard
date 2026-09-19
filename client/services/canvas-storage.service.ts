@@ -77,10 +77,11 @@ export async function saveLocalCanvas(canvas: CanvasItem): Promise<CanvasItem> {
   return item;
 }
 
-export async function getAllLocalCanvases(): Promise<CanvasItem[]> {
+export async function getAllLocalCanvases(includeDeleted = false): Promise<CanvasItem[]> {
+  let allItems: CanvasItem[] = [];
   try {
     const db = await openDatabase();
-    return await new Promise<CanvasItem[]>((resolve) => {
+    allItems = await new Promise<CanvasItem[]>((resolve) => {
       const tx = db.transaction(STORE_NAME, 'readonly');
       const store = tx.objectStore(STORE_NAME);
       const req = store.getAll();
@@ -95,7 +96,52 @@ export async function getAllLocalCanvases(): Promise<CanvasItem[]> {
       req.onerror = () => resolve(getLocalStorageCanvases());
     });
   } catch {
-    return getLocalStorageCanvases();
+    allItems = getLocalStorageCanvases();
+  }
+
+  if (!includeDeleted) {
+    return allItems.filter((c) => !c.deleted_at);
+  }
+  return allItems;
+}
+
+export async function getLocalTrashCanvases(): Promise<CanvasItem[]> {
+  const allItems = await getAllLocalCanvases(true);
+  return allItems
+    .filter((c) => Boolean(c.deleted_at))
+    .sort((a, b) => new Date(b.deleted_at || b.updated_at || b.created_at).getTime() - new Date(a.deleted_at || a.updated_at || a.created_at).getTime());
+}
+
+export async function softDeleteLocalCanvas(uuid: string): Promise<void> {
+  const canvas = await getLocalCanvasByUuid(uuid);
+  if (!canvas) return;
+
+  const updated: CanvasItem = {
+    ...canvas,
+    deleted_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+
+  await saveLocalCanvas(updated);
+}
+
+export async function restoreLocalCanvas(uuid: string): Promise<void> {
+  const canvas = await getLocalCanvasByUuid(uuid);
+  if (!canvas) return;
+
+  const updated: CanvasItem = {
+    ...canvas,
+    deleted_at: null,
+    updated_at: new Date().toISOString(),
+  };
+
+  await saveLocalCanvas(updated);
+}
+
+export async function emptyLocalTrash(): Promise<void> {
+  const trashed = await getLocalTrashCanvases();
+  for (const item of trashed) {
+    await removeLocalCanvas(item.uuid);
   }
 }
 

@@ -2,6 +2,7 @@ import { createSidebar } from '../components/layout.component.js';
 import { openModal } from '../components/modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { currentUser, deleteApi, escapeHtml, getApi, postApi } from '../services/api.service.js';
+import { emptyLocalTrash, getLocalTrashCanvases, removeLocalCanvas, restoreLocalCanvas } from '../services/canvas-storage.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { createIconSvg, renderIcons } from '../services/icon.service.js';
 import { SkeletonService } from '../services/skeleton.service.js';
@@ -409,26 +410,40 @@ class TrashController {
   }
 
   private async loadTrash(): Promise<void> {
-    if (!currentUser) {
-      this.renderGrid([]);
-      return;
-    }
     if (this.gridEl && this.allCanvases.length === 0) {
       if (this.sectionEl) this.sectionEl.style.display = '';
       SkeletonService.renderGridCardSkeletons(this.gridEl, 6, 'canvas');
     }
+
     try {
+      const localTrash = await getLocalTrashCanvases();
+      if (!currentUser) {
+        this.allCanvases = localTrash;
+        this.renderGrid(this.allCanvases);
+        return;
+      }
+
       const res = await getApi(API_ROUTES.trash.base);
       if (res.ok) {
         const data = await res.json();
-        this.allCanvases = Array.isArray(data.canvases) ? data.canvases : [];
+        const cloudCanvases: CanvasItem[] = Array.isArray(data.canvases) ? data.canvases : [];
+        const cloudUuids = new Set(cloudCanvases.map((c) => c.uuid));
+        const unsyncedTrash = localTrash.filter((c) => !cloudUuids.has(c.uuid));
+        this.allCanvases = [...unsyncedTrash, ...cloudCanvases];
         this.renderGrid(this.allCanvases);
       } else {
-        this.renderGrid([]);
+        this.allCanvases = localTrash;
+        this.renderGrid(this.allCanvases);
         showToast(t('trash.empty_desc') || 'Error al cargar la papelera', 'danger');
       }
     } catch {
-      this.renderGrid([]);
+      try {
+        const localTrash = await getLocalTrashCanvases();
+        this.allCanvases = localTrash;
+        this.renderGrid(this.allCanvases);
+      } catch {
+        this.renderGrid([]);
+      }
       showToast(t('trash.empty_desc') || 'Error al cargar la papelera', 'danger');
     }
   }
@@ -554,8 +569,17 @@ class TrashController {
 
   private async handleRestoreSingle(canvas: CanvasItem): Promise<void> {
     try {
+      if (canvas.is_local || !canvas.id || !currentUser) {
+        await restoreLocalCanvas(canvas.uuid);
+        showToast(t('trash.toast_restored') || 'Lienzo restaurado correctamente.', 'success');
+        this.selectedUuids.delete(canvas.uuid);
+        await this.loadTrash();
+        return;
+      }
+
       const res = await postApi(API_ROUTES.trash.restore(canvas.uuid));
       if (res.ok) {
+        await restoreLocalCanvas(canvas.uuid);
         showToast(t('trash.toast_restored') || 'Lienzo restaurado correctamente.', 'success');
         this.selectedUuids.delete(canvas.uuid);
         await this.loadTrash();
@@ -576,8 +600,18 @@ class TrashController {
       onConfirm: async (modal) => {
         modal.setConfirmLoading(true);
         try {
+          if (canvas.is_local || !canvas.id || !currentUser) {
+            await removeLocalCanvas(canvas.uuid);
+            showToast(t('trash.toast_deleted_forever') || 'Lienzo eliminado definitivamente.', 'info');
+            this.selectedUuids.delete(canvas.uuid);
+            modal.close();
+            await this.loadTrash();
+            return;
+          }
+
           const res = await deleteApi(API_ROUTES.trash.deletePermanent(canvas.uuid));
           if (res.ok) {
+            await removeLocalCanvas(canvas.uuid);
             showToast(t('trash.toast_deleted_forever') || 'Lienzo eliminado definitivamente.', 'info');
             this.selectedUuids.delete(canvas.uuid);
             modal.close();
@@ -600,7 +634,13 @@ class TrashController {
     const list = [...this.selectedUuids];
     try {
       for (const uuid of list) {
-        await postApi(API_ROUTES.trash.restore(uuid));
+        const item = this.allCanvases.find((c) => c.uuid === uuid);
+        if (item?.is_local || !item?.id || !currentUser) {
+          await restoreLocalCanvas(uuid);
+        } else {
+          await postApi(API_ROUTES.trash.restore(uuid));
+          await restoreLocalCanvas(uuid);
+        }
       }
       showToast(list.length === 1 ? (t('trash.toast_restored') || 'Lienzo restaurado correctamente.') : `${list.length} lienzos restaurados.`, 'success');
       this.selectedUuids.clear();
@@ -623,7 +663,13 @@ class TrashController {
         modal.setConfirmLoading(true);
         try {
           for (const uuid of list) {
-            await deleteApi(API_ROUTES.trash.deletePermanent(uuid));
+            const item = this.allCanvases.find((c) => c.uuid === uuid);
+            if (item?.is_local || !item?.id || !currentUser) {
+              await removeLocalCanvas(uuid);
+            } else {
+              await deleteApi(API_ROUTES.trash.deletePermanent(uuid));
+              await removeLocalCanvas(uuid);
+            }
           }
           showToast(`${list.length} lienzos eliminados definitivamente.`, 'info');
           this.selectedUuids.clear();
@@ -649,15 +695,14 @@ class TrashController {
       onConfirm: async (modal) => {
         modal.setConfirmLoading(true);
         try {
-          const res = await deleteApi(API_ROUTES.trash.empty);
-          if (res.ok) {
-            showToast(t('trash.toast_empty_success') || 'Papelera vaciada correctamente.', 'info');
-            this.selectedUuids.clear();
-            modal.close();
-            await this.loadTrash();
-          } else {
-            modal.showError('Error al vaciar la papelera.');
+          await emptyLocalTrash();
+          if (currentUser) {
+            await deleteApi(API_ROUTES.trash.empty);
           }
+          showToast(t('trash.toast_empty_success') || 'Papelera vaciada correctamente.', 'info');
+          this.selectedUuids.clear();
+          modal.close();
+          await this.loadTrash();
         } catch {
           modal.showError('Error al vaciar la papelera.');
         } finally {

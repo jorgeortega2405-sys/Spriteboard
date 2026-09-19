@@ -257,6 +257,9 @@ export class SearchController {
             <span>${item.categoryName || 'Plantilla'}</span>
           </div>
         </div>
+        ${
+          currentUser
+            ? `
         <div class="canvas-card__actions-wrapper" data-ref="card-actions-wrapper-${item.id}">
           <div class="canvas-card__actions" data-ref="card-actions-${item.id}">
             <button type="button" class="canvas-card__action-btn${isFavorite ? ' is-active' : ''}" data-ref="btn-template-bookmark-${item.id}" data-bookmark-preset="${item.id}" data-tooltip="${isFavorite ? t('canvas.bookmark_remove') : t('canvas.bookmark_save')}" aria-label="${isFavorite ? t('canvas.bookmark_remove') : t('canvas.bookmark_save')}">
@@ -264,6 +267,9 @@ export class SearchController {
             </button>
           </div>
         </div>
+        `
+            : ''
+        }
         <div class="canvas-card__bottom" data-ref="template-card-bottom-${item.id}">
           <div class="canvas-card__badge canvas-card__badge--glass canvas-card__badge--title" data-ref="template-card-title-badge-${item.id}">
             <span class="canvas-card__title" data-ref="template-card-title-${item.id}" title="${item.name}">

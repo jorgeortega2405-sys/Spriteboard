@@ -502,7 +502,7 @@ function createDrawerCanvasRow(canvas: CanvasItem): HTMLElement {
 }
 
 async function renderHomeDrawerContent(drawerBody: HTMLElement): Promise<void> {
-  drawerBody.innerHTML = `
+  const favoritesSectionHtml = currentUser ? `
     <div class="drawer-section" data-ref="drawer-section-favorites">
       <div class="drawer-section__header" data-ref="drawer-header-favorites">
         <span class="drawer-section__title">Favoritos</span>
@@ -521,6 +521,17 @@ async function renderHomeDrawerContent(drawerBody: HTMLElement): Promise<void> {
         </div>
       </div>
     </div>
+  ` : `
+    <div class="drawer-section" data-ref="drawer-section-favorites" style="display: none;">
+      <div class="drawer-section__header" data-ref="drawer-header-favorites">
+        <span class="drawer-section__title">Favoritos</span>
+      </div>
+      <div class="drawer-items-list" data-ref="drawer-favorites-list"></div>
+    </div>
+  `;
+
+  drawerBody.innerHTML = `
+    ${favoritesSectionHtml}
 
     <div class="drawer-section" data-ref="drawer-section-recents">
       <div class="drawer-section__header" data-ref="drawer-header-recents">
@@ -544,6 +555,7 @@ async function renderHomeDrawerContent(drawerBody: HTMLElement): Promise<void> {
     </div>
   `;
 
+  const sectionFavorites = drawerBody.querySelector<HTMLElement>('[data-ref="drawer-section-favorites"]');
   const favoritesList = drawerBody.querySelector<HTMLElement>('[data-ref="drawer-favorites-list"]');
   const recentsList = drawerBody.querySelector<HTMLElement>('[data-ref="drawer-recents-list"]');
   const btnAddFav = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-add-favorite"]');
@@ -591,15 +603,12 @@ async function renderHomeDrawerContent(drawerBody: HTMLElement): Promise<void> {
     const nonDeleted = items.filter((c) => !c.deleted_at);
 
     const favorites = nonDeleted.filter((c) => c.is_favorite);
-    if (favoritesList) {
-      if (favorites.length === 0) {
-        favoritesList.innerHTML = `
-          <div class="drawer-empty-card" data-ref="drawer-empty-card-favorites">
-            <div class="drawer-empty-card__title">Diseños favoritos</div>
-            <div class="drawer-empty-card__desc">Aquí aparecerán los diseños que marques como favoritos.</div>
-          </div>
-        `;
+    if (sectionFavorites && favoritesList) {
+      if (!currentUser || favorites.length === 0) {
+        sectionFavorites.style.display = 'none';
+        favoritesList.innerHTML = '';
       } else {
+        sectionFavorites.style.display = '';
         favoritesList.innerHTML = '';
         favorites.slice(0, 6).forEach((c) => {
           favoritesList.appendChild(createDrawerCanvasRow(c));
@@ -720,13 +729,11 @@ async function renderHomeDrawerContent(drawerBody: HTMLElement): Promise<void> {
       }
     });
   } catch {
+    if (sectionFavorites) {
+      sectionFavorites.style.display = 'none';
+    }
     if (favoritesList) {
-      favoritesList.innerHTML = `
-        <div class="drawer-empty-card" data-ref="drawer-empty-card-favorites">
-          <div class="drawer-empty-card__title">Diseños favoritos</div>
-          <div class="drawer-empty-card__desc">Aquí aparecerán los diseños que marques como favoritos.</div>
-        </div>
-      `;
+      favoritesList.innerHTML = '';
     }
     if (recentsList) {
       recentsList.innerHTML = `

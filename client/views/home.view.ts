@@ -14,7 +14,7 @@ import { ALL_PRESETS, PresetItem } from '../config/templates.config.js';
 import { buildAdCardHtml, createAdCardElement, DEFAULT_AD_FREQUENCY, getAdByIndex, handleAdClick, shouldShowAds } from '../services/ad.service.js';
 import { currentUser, deleteApi, escapeHtml, getApi, postApi, putApi } from '../services/api.service.js';
 import { createAndOpenCanvas } from '../services/canvas-creator.service.js';
-import { getAllLocalCanvases, getLocalCanvasByUuid, markLocalCanvasAsSynced, removeLocalCanvas, saveLocalCanvas } from '../services/canvas-storage.service.js';
+import { getAllLocalCanvases, getLocalCanvasByUuid, markLocalCanvasAsSynced, removeLocalCanvas, saveLocalCanvas, softDeleteLocalCanvas } from '../services/canvas-storage.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { createIconSvg, renderIcons } from '../services/icon.service.js';
 import { SkeletonService } from '../services/skeleton.service.js';
@@ -157,6 +157,15 @@ class HomeController {
     this.btnCreateFolder = this.container.querySelector<HTMLElement>('[data-ref="btn-create-folder"]');
     this.btnHomeUpgrade = this.container.querySelector<HTMLElement>('[data-ref="btn-home-upgrade"]');
 
+    if (!currentUser) {
+      if (this.btnHomeUpgrade) {
+        this.btnHomeUpgrade.style.display = 'none';
+      }
+      if (this.btnCreateFolder) {
+        this.btnCreateFolder.style.display = 'none';
+      }
+    }
+
     this.homeTitle = this.container.querySelector<HTMLElement>('[data-ref="home-title"]');
     this.folderTitleContainer = this.container.querySelector<HTMLElement>('[data-ref="folder-title-container"]');
     this.folderTitleName = this.container.querySelector<HTMLElement>('[data-ref="folder-title-name"]');
@@ -169,6 +178,12 @@ class HomeController {
 
     const typeDropdownWrapper = this.container.querySelector<HTMLElement>('[data-ref="home-dropdown-wrapper-type"]');
     if (typeDropdownWrapper) {
+      if (!currentUser) {
+        const foldersFilterItem = typeDropdownWrapper.querySelector<HTMLElement>('[data-value="folders"]');
+        if (foldersFilterItem) {
+          foldersFilterItem.style.display = 'none';
+        }
+      }
       this.typeDropdownController = setupDropdown(typeDropdownWrapper, {
         matchWidth: false,
         onSelect: (val: string) => {
@@ -370,7 +385,7 @@ class HomeController {
       'click',
       () => {
         if (!currentUser) {
-          showToast(t('canvas.bookmark_login_required'), 'info');
+          showToast(t('canvas.folder_login_required') || 'Debes iniciar sesión para crear carpetas', 'info');
           return;
         }
         openCreateFolderModal({
@@ -1488,10 +1503,8 @@ class HomeController {
     const isFavorite = this.favoritedTemplateIds.has(item.id);
     const previewContent = `<img class="canvas-card__image image-lazy-fade" data-ref="template-card-img-${item.id}" src="${item.imagePath}" alt="${escapeHtml(item.name)}" loading="lazy" decoding="async" onload="this.classList.add('image-loaded')" onerror="this.classList.add('image-loaded')" />`;
 
-    return `
-      <div class="canvas-card template-card" data-ref="template-card-${item.id}" data-preset-id="${item.id}">
-        <div class="canvas-card__thumbnail template-card__thumbnail" data-ref="template-card-thumb-${item.id}">
-          ${previewContent}
+    const actionsHtml = currentUser
+      ? `
           <div class="canvas-card__actions-wrapper" data-ref="card-actions-wrapper-${item.id}">
             <div class="canvas-card__actions" data-ref="card-actions-${item.id}">
               <button type="button" class="canvas-card__action-btn${isFavorite ? ' is-active' : ''}" data-ref="btn-template-bookmark-${item.id}" data-bookmark-preset="${item.id}" data-tooltip="${isFavorite ? t('canvas.bookmark_remove') : t('canvas.bookmark_save')}" aria-label="${isFavorite ? t('canvas.bookmark_remove') : t('canvas.bookmark_save')}">
@@ -1499,6 +1512,14 @@ class HomeController {
               </button>
             </div>
           </div>
+        `
+      : '';
+
+    return `
+      <div class="canvas-card template-card" data-ref="template-card-${item.id}" data-preset-id="${item.id}">
+        <div class="canvas-card__thumbnail template-card__thumbnail" data-ref="template-card-thumb-${item.id}">
+          ${previewContent}
+          ${actionsHtml}
         </div>
       </div>
     `;
@@ -1572,9 +1593,15 @@ class HomeController {
 
         <div class="canvas-card__actions-wrapper" data-ref="card-actions-wrapper">
           <div class="canvas-card__actions" data-ref="card-actions">
+            ${
+              currentUser
+                ? `
             <button type="button" class="canvas-card__action-btn${isFavorite ? ' is-active' : ''}" data-ref="btn-card-bookmark" data-tooltip="${isFavorite ? t('canvas.bookmark_remove') : t('canvas.bookmark_save')}" aria-label="${isFavorite ? t('canvas.bookmark_remove') : t('canvas.bookmark_save')}">
               <span class="material-symbols-rounded">${isFavorite ? 'star_fill' : 'star'}</span>
             </button>
+            `
+                : ''
+            }
             <button type="button" class="canvas-card__action-btn" data-ref="btn-card-more" data-tooltip="Opciones" aria-label="${t('canvas.menu_open_new_tab')}">
               <span class="material-symbols-rounded">more_vert</span>
             </button>
@@ -1605,10 +1632,16 @@ class HomeController {
                 <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#link"></use></svg>
                 <span class="menu-item__text" data-i18n="canvas.menu_copy_link">${t('canvas.menu_copy_link')}</span>
               </button>
+              ${
+                currentUser
+                  ? `
               <button type="button" class="menu-item" data-ref="action-move">
                 <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#drive_file_move"></use></svg>
                 <span class="menu-item__text" data-i18n="canvas.menu_move">${t('canvas.menu_move')}</span>
               </button>
+              `
+                  : ''
+              }
               <div class="menu-divider"></div>
               <button type="button" class="menu-item menu-item--bordered menu-item--danger" data-ref="action-delete">
                 <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
@@ -1657,7 +1690,7 @@ class HomeController {
       e.stopPropagation();
       this.closeAllDropdowns();
       if (!currentUser) {
-        showToast(t('canvas.bookmark_login_required'), 'info');
+        showToast(t('canvas.folder_login_required') || 'Debes iniciar sesión para organizar en carpetas', 'info');
         return;
       }
       openMoveCanvasModal(canvas, {
@@ -1894,14 +1927,14 @@ class HomeController {
         modal.setConfirmLoading(true);
         try {
           if (canvas.is_local || !canvas.id || !currentUser) {
-            await removeLocalCanvas(canvas.uuid);
+            await softDeleteLocalCanvas(canvas.uuid);
             showToast(t('canvas.trash_success'));
             modal.close();
             await this.loadCanvases();
           } else {
             const res = await deleteApi(API_ROUTES.canvases.delete(canvas.uuid));
             if (res.ok) {
-              await removeLocalCanvas(canvas.uuid);
+              await softDeleteLocalCanvas(canvas.uuid);
               showToast(t('canvas.trash_success'));
               modal.close();
               await this.loadCanvases();
@@ -2264,9 +2297,15 @@ class HomeController {
         <button type="button" class="component-button component-button--icon-only component-button--h34 selection-toolbar__btn" data-ref="btn-selection-download" data-tooltip="Descargar" aria-label="Descargar">
           ${createIconSvg('download')}
         </button>
+        ${
+          currentUser
+            ? `
         <button type="button" class="component-button component-button--icon-only component-button--h34 selection-toolbar__btn" data-ref="btn-selection-move" data-tooltip="Mover a carpeta" aria-label="Mover a carpeta">
           ${createIconSvg('drive_file_move')}
         </button>
+        `
+            : ''
+        }
         <button type="button" class="component-button component-button--icon-only component-button--h34 selection-toolbar__btn" data-ref="btn-selection-duplicate" data-tooltip="Duplicar" aria-label="Duplicar">
           ${createIconSvg('filter_none')}
         </button>
@@ -2633,7 +2672,7 @@ class HomeController {
       return;
     }
     if (!currentUser) {
-      showToast(t('canvas.bookmark_login_required'), 'info');
+      showToast(t('canvas.folder_login_required') || 'Debes iniciar sesión para organizar en carpetas', 'info');
       return;
     }
 
@@ -2860,10 +2899,10 @@ class HomeController {
           await Promise.all([
             ...selectedCanvases.map(async (c) => {
               if (c.is_local || !c.id || !currentUser) {
-                await removeLocalCanvas(c.uuid);
+                await softDeleteLocalCanvas(c.uuid);
               } else {
                 await deleteApi(API_ROUTES.canvases.delete(c.uuid));
-                await removeLocalCanvas(c.uuid);
+                await softDeleteLocalCanvas(c.uuid);
               }
             }),
           ]);

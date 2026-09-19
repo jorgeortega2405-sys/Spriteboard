@@ -406,10 +406,8 @@ class TemplatesController {
     const isFavorite = this.favoritedTemplateIds.has(item.id);
     const previewContent = `<img class="canvas-card__image image-lazy-fade" data-ref="template-card-img-${item.id}" src="${item.imagePath}" alt="${escapeHtml(item.name)}" loading="lazy" decoding="async" onload="this.classList.add('image-loaded')" onerror="this.classList.add('image-loaded')" />`;
 
-    return `
-      <div class="canvas-card template-card" data-ref="template-card-${item.id}" data-preset-id="${item.id}">
-        <div class="canvas-card__thumbnail template-card__thumbnail" data-ref="template-card-thumb-${item.id}">
-          ${previewContent}
+    const actionsHtml = currentUser
+      ? `
           <div class="canvas-card__actions-wrapper" data-ref="card-actions-wrapper-${item.id}">
             <div class="canvas-card__actions" data-ref="card-actions-${item.id}">
               <button type="button" class="canvas-card__action-btn${isFavorite ? ' is-active' : ''}" data-ref="btn-template-bookmark-${item.id}" data-bookmark-preset="${item.id}" data-tooltip="${isFavorite ? t('canvas.bookmark_remove') : t('canvas.bookmark_save')}" aria-label="${isFavorite ? t('canvas.bookmark_remove') : t('canvas.bookmark_save')}">
@@ -417,6 +415,14 @@ class TemplatesController {
               </button>
             </div>
           </div>
+        `
+      : '';
+
+    return `
+      <div class="canvas-card template-card" data-ref="template-card-${item.id}" data-preset-id="${item.id}">
+        <div class="canvas-card__thumbnail template-card__thumbnail" data-ref="template-card-thumb-${item.id}">
+          ${previewContent}
+          ${actionsHtml}
         </div>
       </div>
     `;

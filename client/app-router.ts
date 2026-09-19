@@ -180,14 +180,8 @@ export async function render(): Promise<void> {
         viewElements = [await createSharedView()];
       }
     } else if (path === '/trash') {
-      if (!currentUser) {
-        window.history.replaceState({}, '', '/login');
-        const { createLoginView } = await import('./views/auth.view.js');
-        viewElements = [await createLoginView()];
-      } else {
-        const { createTrashView } = await import('./views/trash.view.js');
-        viewElements = [await createTrashView()];
-      }
+      const { createTrashView } = await import('./views/trash.view.js');
+      viewElements = [await createTrashView()];
     } else if (path === '/upgrade') {
       const { createUpgradeView } = await import('./views/upgrade.view.js');
       viewElements = [await createUpgradeView()];
