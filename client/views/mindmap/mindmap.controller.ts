@@ -2,7 +2,7 @@ import { openCanvasShareModal } from '../../components/canvas-share-modal.compon
 import { closeContextMenu, ContextMenuItem, openContextMenu } from '../../components/context-menu.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
 import { getCustomDiagramProject } from '../../config/diagram-templates.data.js';
-import { currentUser, getApi, putApi } from '../../services/api.service.js';
+import { currentUser, getApi, postApi } from '../../services/api.service.js';
 import { getLocalCanvasByUuid, saveLocalCanvas } from '../../services/canvas-storage.service.js';
 import { showToast } from '../../services/toast.service.js';
 import { CanvasItem } from '../../types/canvas.types.js';
@@ -2894,7 +2894,7 @@ export class MindMapController implements ViewController {
     this.project = newProject;
     this.selectedNodeId = this.project.rootId;
     this.selectedNodeIds = new Set([this.project.rootId]);
-    this.camera = { x: 0, y: 0, zoom: 1 };
+    this.project.camera = { x: 0, y: 0, zoom: 1 };
     this.commitChange();
   }
 
@@ -3252,10 +3252,13 @@ export class MindMapController implements ViewController {
 
     if (currentUser) {
       try {
-        await putApi(API_ROUTES.canvases.byId(this.canvasUuid), {
+        await postApi(API_ROUTES.canvases.sync, {
+          canvas_type: 'diagram',
           data: dataString,
           name: this.canvasTitle,
           preview_thumbnail: thumbnail || undefined,
+          unit: 'diagram',
+          uuid: this.canvasUuid,
         });
       } catch {}
     }
@@ -3272,45 +3275,6 @@ export class MindMapController implements ViewController {
         });
       }
     } catch {}
-  }
-
-  public isDiagramEmpty(): boolean {
-    const nodes = Object.values(this.project.nodes || {});
-    return nodes.length <= 1;
-  }
-
-  public applyTemplate(templateId: string, subtype: DiagramSubtype = 'mindmap'): void {
-    const customProject = getCustomDiagramProject(templateId, subtype);
-    if (customProject) {
-      this.project = JSON.parse(JSON.stringify(customProject));
-      this.commitChange();
-      this.centerView();
-    }
-  }
-
-  public insertShapeOrSticker(shape: PixelShape): void {
-    const targetParentId = this.selectedNodeId || this.project.rootId;
-    const targetParent = this.project.nodes[targetParentId];
-    if (!targetParent) return;
-
-    const existingChildren = Object.values(this.project.nodes).filter((n) => n.parentId === targetParentId);
-    const newId = `node_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-    const newNode: MindMapNode = {
-      color: targetParent.color || '#6366f1',
-      fontSize: 13,
-      id: newId,
-      orderIndex: existingChildren.length,
-      parentId: targetParentId,
-      shape: 'pill',
-      text: shape.name || 'Elemento',
-      textColor: '#ffffff',
-      x: 0,
-      y: 0,
-    };
-    this.project.nodes[newId] = newNode;
-    this.selectedNodeId = newId;
-    this.selectedNodeIds = new Set([newId]);
-    this.commitChange();
   }
 
   private exportJson(): void {

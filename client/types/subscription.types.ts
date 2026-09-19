@@ -61,6 +61,8 @@ export interface StorageUsageInfo {
   };
 }
 
+export type UserStorageUsage = StorageUsageInfo;
+
 export interface BillingDetailsResponse {
   success: boolean;
   tier?: string;

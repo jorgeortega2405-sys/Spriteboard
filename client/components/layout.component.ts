@@ -198,6 +198,7 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
 
   if (!isCanvas) {
     activeCanvasTab = null;
+    updateCanvasRailActiveState(sidebar);
   } else {
     updateCanvasRailActiveState(sidebar);
   }
@@ -423,6 +424,8 @@ function setupRailNavigation(sidebar: HTMLElement): void {
   const itemCanvasHome = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-canvas-home"]');
   const canvasHomeHandler = (e: Event) => {
     e.preventDefault();
+    toggleDrawer(false);
+    activeCanvasTab = null;
     navigate('/');
   };
   btnCanvasHome?.addEventListener('click', canvasHomeHandler);
@@ -1245,10 +1248,12 @@ function handleApplyCanvasUpload(item: UserUploadItem, canvasType: 'board' | 'di
     const stickerShape: PixelShape = {
       category: 'templates',
       file: '',
+      height: item.height || 32,
       id: `upload_${item.uuid}`,
       name: item.original_filename,
       type: 'sticker',
       url: item.url,
+      width: item.width || 32,
     };
     controller.insertShapeOrSticker(stickerShape);
     showToast(`«${item.original_filename}» añadida al diagrama`, 'success');
@@ -2094,10 +2099,12 @@ async function handleApplyCanvasProject(
     const stickerShape: PixelShape = {
       category: 'templates',
       file: '',
+      height: 32,
       id: `proj_${canvas.uuid}_${pageIndex >= 0 ? pageIndex : 0}`,
       name: label,
       type: 'sticker',
       url: thumbnailToUse,
+      width: 32,
     };
     controller.insertShapeOrSticker(stickerShape);
     showToast(`«${label}» añadido al diagrama`, 'success');

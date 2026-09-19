@@ -44,14 +44,14 @@ export class DesignCollaborationManager {
     joinCanvasRoom(this.canvasUuid, userId || undefined, username, this.myCollaboratorColor, this.roomToken, avatarUrl || undefined, tier);
 
     const unsubJoinError = registerWebSocketHandler('CANVAS_JOIN_ERROR', (payload: any) => {
-      const roomUuid = payload.canvasUuid || payload.canvas_uuid;
+      const roomUuid = typeof payload.canvasUuid === 'object' ? payload.canvasUuid?.canvasUuid : (payload.canvasUuid || payload.canvas_uuid);
       if (roomUuid !== this.canvasUuid) return;
       if (this.isOwner) return;
       callbacks.onAccessRevoked();
     });
 
     const unsubPresence = registerWebSocketHandler('ROOM_PRESENCE', (payload: any) => {
-      const roomUuid = payload.canvasUuid || payload.canvas_uuid;
+      const roomUuid = typeof payload.canvasUuid === 'object' ? payload.canvasUuid?.canvasUuid : (payload.canvasUuid || payload.canvas_uuid);
       if (roomUuid !== this.canvasUuid) return;
       if (payload.yourRole) {
         this.role = payload.yourRole;
@@ -83,7 +83,7 @@ export class DesignCollaborationManager {
     });
 
     const unsubJoined = registerWebSocketHandler('USER_JOINED', (payload: any) => {
-      const roomUuid = payload.canvasUuid || payload.canvas_uuid;
+      const roomUuid = typeof payload.canvasUuid === 'object' ? payload.canvasUuid?.canvasUuid : (payload.canvasUuid || payload.canvas_uuid);
       if (roomUuid !== this.canvasUuid || !payload.user) return;
       const u = payload.user;
       const uConnId = u.connId || u.conn_id;
@@ -109,7 +109,7 @@ export class DesignCollaborationManager {
     });
 
     const unsubLeft = registerWebSocketHandler('USER_LEFT', (payload: any) => {
-      const roomUuid = payload.canvasUuid || payload.canvas_uuid;
+      const roomUuid = typeof payload.canvasUuid === 'object' ? payload.canvasUuid?.canvasUuid : (payload.canvasUuid || payload.canvas_uuid);
       const connId = payload.connId || payload.conn_id;
       if (roomUuid !== this.canvasUuid || !connId) return;
       this.collaborators.delete(connId);
@@ -117,7 +117,7 @@ export class DesignCollaborationManager {
     });
 
     const unsubCursor = registerWebSocketHandler('CANVAS_CURSOR', (payload: any) => {
-      const roomUuid = payload.canvasUuid || payload.canvas_uuid;
+      const roomUuid = typeof payload.canvasUuid === 'object' ? payload.canvasUuid?.canvasUuid : (payload.canvasUuid || payload.canvas_uuid);
       const connId = payload.connId || payload.conn_id;
       if (!connId || (roomUuid && roomUuid !== this.canvasUuid)) return;
       let collab = this.collaborators.get(connId);
@@ -141,26 +141,26 @@ export class DesignCollaborationManager {
     });
 
     const unsubStroke = registerWebSocketHandler('CANVAS_DRAW_STROKE', (payload: any) => {
-      const roomUuid = payload.canvasUuid || payload.canvas_uuid;
+      const roomUuid = typeof payload.canvasUuid === 'object' ? payload.canvasUuid?.canvasUuid : (payload.canvasUuid || payload.canvas_uuid);
       if (roomUuid && roomUuid !== this.canvasUuid) return;
       callbacks.onStroke(payload);
     });
 
     const unsubAction = registerWebSocketHandler('CANVAS_ACTION', (payload: any) => {
-      const roomUuid = payload.canvasUuid || payload.canvas_uuid;
+      const roomUuid = typeof payload.canvasUuid === 'object' ? payload.canvasUuid?.canvasUuid : (payload.canvasUuid || payload.canvas_uuid);
       if (roomUuid !== this.canvasUuid) return;
       callbacks.onAction(payload);
     });
 
     const unsubFullUpdate = registerWebSocketHandler('CANVAS_FULL_UPDATE', (payload: any) => {
-      const roomUuid = payload.canvasUuid || payload.canvas_uuid;
+      const roomUuid = typeof payload.canvasUuid === 'object' ? payload.canvasUuid?.canvasUuid : (payload.canvasUuid || payload.canvas_uuid);
       const projectData = payload.data || payload.project;
       if (roomUuid !== this.canvasUuid || !projectData) return;
       callbacks.onFullUpdate(projectData);
     });
 
     const unsubAccess = registerWebSocketHandler('CANVAS_ACCESS_CHANGED', (payload: any) => {
-      const roomUuid = payload.canvasUuid || payload.canvas_uuid;
+      const roomUuid = typeof payload.canvasUuid === 'object' ? payload.canvasUuid?.canvasUuid : (payload.canvasUuid || payload.canvas_uuid);
       if (roomUuid !== this.canvasUuid) return;
       this.accessLevel = payload.accessLevel || payload.access_level || 'private';
       if (payload.publicRole) {
@@ -170,7 +170,7 @@ export class DesignCollaborationManager {
     });
 
     const unsubMemberRemoved = registerWebSocketHandler('CANVAS_MEMBER_REMOVED', (payload: any) => {
-      const roomUuid = payload.canvasUuid || payload.canvas_uuid;
+      const roomUuid = typeof payload.canvasUuid === 'object' ? payload.canvasUuid?.canvasUuid : (payload.canvasUuid || payload.canvas_uuid);
       if (roomUuid !== this.canvasUuid) return;
       const targetUserId = Number(payload.targetUserId || payload.target_user_id);
       callbacks.onMemberRemoved(targetUserId);

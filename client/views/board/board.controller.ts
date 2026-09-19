@@ -2490,7 +2490,7 @@ export class BoardController {
     }
     this.pixelGrid.syncPixelGridCanvases(this.elements, () => this.requestRedraw());
     this.pushHistoryState();
-    this.collaborationManager.broadcastBoardUpdate(this.elements);
+    this.collaborationManager.broadcastFullUpdate({ elements: this.elements });
     this.requestRedraw();
     this.scheduleAutoSave();
   }
@@ -3004,49 +3004,6 @@ export class BoardController {
     this.scheduleAutoSave();
   }
 
-  public isBoardEmpty(): boolean {
-    return this.elements.length === 0;
-  }
-
-  public applyTemplate(templateId: string, mode: 'insert' | 'replace' = 'insert'): void {
-    if (mode === 'replace') {
-      this.elements = [];
-    }
-    const templateElements = getBoardTemplateElements(templateId);
-    if (templateElements && templateElements.length > 0) {
-      this.insertBoardElements(templateElements);
-    }
-  }
-
-  public insertShapeOrSticker(shape: PixelShape): void {
-    if (shape.type === 'sticker' && shape.file) {
-      this.insertImage(`/assets/img/stickers/${shape.file}`, 160, 160, shape.name);
-      return;
-    }
-    const dpr = window.devicePixelRatio || 1;
-    const screenW = this.canvasElement ? this.canvasElement.width / dpr : 800;
-    const screenH = this.canvasElement ? this.canvasElement.height / dpr : 600;
-    const centerWorld = screenToWorld(screenW / 2, screenH / 2, this.canvasElement, this.camera);
-    const shapeEl: BoardShapeElement = {
-      fillColor: '#3b82f6',
-      height: 120,
-      id: `shape_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-      shapeType: 'round-rect',
-      strokeColor: '#1e293b',
-      strokeWidth: 2,
-      type: 'shape',
-      width: 160,
-      x: Math.round(centerWorld.x - 80),
-      y: Math.round(centerWorld.y - 60),
-    };
-    this.elements.push(shapeEl);
-    this.collaborationManager.broadcastAddElement(shapeEl);
-    this.selectedElementId = shapeEl.id;
-    this.updateSelectionToolbar();
-    this.requestRedraw();
-    this.scheduleAutoSave();
-  }
-
   private pushHistoryState(): void {
     this.history.pushState(this.elements);
     this.updateUndoRedoUI();
@@ -3125,7 +3082,7 @@ export class BoardController {
 
     await saveLocalCanvas(canvasItem);
 
-    if (currentUser && this.isOwner) {
+    if (currentUser && (this.isOwner || this.role === 'editor' || this.collaborationManager.role === 'editor')) {
       try {
         await postApi(API_ROUTES.canvases.sync, {
           canvas_type: 'board',

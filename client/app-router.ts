@@ -1,4 +1,6 @@
-import { attachChatSidebarToView, getIsSidebarOpen, hasDesignatedMenuItems, toggleDrawer, toggleSidebar, updateDynamicDrawer, updateSidebarActiveState } from './components/layout.component.js';
+import { closeContextMenu } from './components/context-menu.component.js';
+import { attachChatSidebarToView, getIsSidebarOpen, hasDesignatedMenuItems, isCanvasRoute, toggleDrawer, toggleSidebar, updateDynamicDrawer, updateSidebarActiveState } from './components/layout.component.js';
+import { closeAllModals } from './components/modal.component.js';
 import { openUpgradeModal } from './components/upgrade-modal.component.js';
 import { API_ROUTES } from './config/api-routes.js';
 import { hasFeature, protectRoute } from './config/plans.config.js';
@@ -73,10 +75,18 @@ export function navigate(url: string, replace = false): void {
 export async function render(): Promise<void> {
   hideTooltip();
   closeAllDropdowns();
+  closeAllModals();
+  closeContextMenu();
   const appRoot = document.querySelector<HTMLElement>('[data-ref="app"]');
   if (!appRoot) return;
 
   const path = window.location.pathname;
+
+  const wasCanvas = isCanvasRoute(previousPath);
+  const isNowCanvas = isCanvasRoute(path);
+  if ((wasCanvas && !isNowCanvas) || (!hasDesignatedMenuItems(path) && !isNowCanvas)) {
+    toggleDrawer(false);
+  }
 
   const protection = protectRoute(path, currentUser);
   if (!protection.allowed) {
@@ -336,7 +346,7 @@ export async function render(): Promise<void> {
       if (window.innerWidth > 768) {
         toggleDrawer(true);
       }
-    } else if (getIsSidebarOpen()) {
+    } else if (getIsSidebarOpen() && isCanvasRoute(path)) {
       void updateDynamicDrawer(currentSidebar);
     }
   }

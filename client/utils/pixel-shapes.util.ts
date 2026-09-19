@@ -1,4 +1,5 @@
 export type ShapeCategory = 'shapes' | 'templates';
+export type CanvasShapeCategory = ShapeCategory;
 export type ShapeColorMode = 'original' | 'primary';
 
 export interface PixelShape {
@@ -12,6 +13,8 @@ export interface PixelShape {
   url?: string;
   width: number;
 }
+
+export type CanvasShape = PixelShape;
 
 export const SHAPE_SVG_PATHS: Record<string, string> = {
   arch: 'M 6 42 V 24 A 18 18 0 0 1 42 24 V 42 Z',
@@ -367,6 +370,8 @@ export const PIXEL_SHAPES: PixelShape[] = [
     height: 32,
   })),
 ];
+
+export const CANVAS_SHAPES: CanvasShape[] = PIXEL_SHAPES;
 
 const imageCache = new Map<string, HTMLImageElement>();
 

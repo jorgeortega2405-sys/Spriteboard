@@ -1,3 +1,5 @@
+export type CanvasType = 'board' | 'diagram' | 'doc' | 'mindmap' | 'pixel';
+
 export interface CanvasItem {
   id?: number;
   uuid: string;
@@ -9,7 +11,7 @@ export interface CanvasItem {
   width: number;
   height: number;
   unit: string;
-  canvas_type?: 'pixel' | 'board' | 'diagram' | 'mindmap' | 'doc';
+  canvas_type?: CanvasType;
   data?: string | null;
   preview_thumbnail?: string | null;
   access_level?: 'private' | 'public';
@@ -63,7 +65,7 @@ export interface CreateCanvasPayload {
   width: number;
   height: number;
   unit?: string;
-  canvas_type?: 'pixel' | 'board' | 'diagram' | 'mindmap' | 'doc';
+  canvas_type?: CanvasType;
   access_level?: 'private' | 'public';
   public_role?: 'viewer' | 'editor';
   data?: any;

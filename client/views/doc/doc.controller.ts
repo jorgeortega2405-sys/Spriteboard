@@ -2,7 +2,7 @@ import { openCanvasShareModal } from '../../components/canvas-share-modal.compon
 import { closeContextMenu, ContextMenuItem, openContextMenu } from '../../components/context-menu.component.js';
 import { openModal } from '../../components/modal.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
-import { currentUser, escapeHtml, getApi, putApi } from '../../services/api.service.js';
+import { currentUser, escapeHtml, getApi, postApi } from '../../services/api.service.js';
 import { getLocalCanvasByUuid, saveLocalCanvas } from '../../services/canvas-storage.service.js';
 import { renderIcons } from '../../services/icon.service.js';
 import { showToast } from '../../services/toast.service.js';
@@ -2314,7 +2314,7 @@ export class DocController implements ViewController {
       });
 
       if (currentUser) {
-        await putApi(API_ROUTES.canvases.sync, {
+        await postApi(API_ROUTES.canvases.sync, {
           canvas_type: 'doc',
           data: dataStr,
           height: 1056,
