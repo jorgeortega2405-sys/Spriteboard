@@ -22,40 +22,45 @@ export async function createDesignView(canvasUuid: string): Promise<HTMLElement>
     } catch {}
   }
 
-  let canvasType = 'pixel';
-  if (canvasRecord) {
-    canvasType = canvasRecord.canvas_type || (canvasRecord.unit === 'board' ? 'board' : (canvasRecord.unit === 'diagram' ? 'diagram' : (canvasRecord.unit === 'doc' ? 'doc' : 'pixel')));
-    if (canvasType === 'pixel' && canvasRecord.data) {
-      try {
-        const parsed = typeof canvasRecord.data === 'string' ? JSON.parse(canvasRecord.data) : canvasRecord.data;
-        if (parsed?.type === 'doc' || (Array.isArray(parsed?.pages) && parsed.pages.length > 0)) {
-          canvasType = 'doc';
-        } else if (parsed?.type === 'board' || (Array.isArray(parsed?.elements) && parsed?.camera)) {
-          canvasType = 'board';
-        } else if (parsed?.type === 'mindmap' || parsed?.type === 'diagram' || (parsed?.nodes && parsed?.rootId)) {
-          canvasType = 'diagram';
-        }
-      } catch {}
-    }
+  if (!canvasRecord) {
+    return await createErrorView({
+      code: '404',
+      description: 'El lienzo solicitado no existe, ha sido eliminado o no tienes permisos para acceder.',
+      title: 'Lienzo no encontrado',
+    });
+  }
+
+  let canvasType = canvasRecord.canvas_type || (canvasRecord.unit === 'board' ? 'board' : (canvasRecord.unit === 'diagram' ? 'diagram' : (canvasRecord.unit === 'doc' ? 'doc' : 'pixel')));
+  if (canvasType === 'pixel' && canvasRecord.data) {
+    try {
+      const parsed = typeof canvasRecord.data === 'string' ? JSON.parse(canvasRecord.data) : canvasRecord.data;
+      if (parsed?.type === 'doc' || (Array.isArray(parsed?.pages) && parsed.pages.length > 0)) {
+        canvasType = 'doc';
+      } else if (parsed?.type === 'board' || (Array.isArray(parsed?.elements) && parsed?.camera)) {
+        canvasType = 'board';
+      } else if (parsed?.type === 'mindmap' || parsed?.type === 'diagram' || (parsed?.nodes && parsed?.rootId)) {
+        canvasType = 'diagram';
+      }
+    } catch {}
   }
 
   if (canvasType === 'doc') {
-    return await createDocView(canvasUuid);
+    return await createDocView(canvasUuid, canvasRecord);
   }
 
   if (canvasType === 'board') {
-    return await createBoardView(canvasUuid);
+    return await createBoardView(canvasUuid, canvasRecord);
   }
 
   if (canvasType === 'diagram' || canvasType === 'mindmap') {
-    return await createMindMapView(canvasUuid);
+    return await createMindMapView(canvasUuid, canvasRecord);
   }
 
   const container = await loadTemplate('/views/design/design.html');
   const sidebar = await createSidebar();
   container.prepend(sidebar);
 
-  const controller = new DesignController(container, canvasUuid);
+  const controller = new DesignController(container, canvasUuid, canvasRecord);
   let loaded = false;
   try {
     loaded = await Promise.race([
@@ -68,7 +73,11 @@ export async function createDesignView(canvasUuid: string): Promise<HTMLElement>
 
   if (!loaded) {
     controller.destroy();
-    return await createErrorView({ code: '404' });
+    return await createErrorView({
+      code: '404',
+      description: 'No se pudo cargar el lienzo solicitado.',
+      title: 'Lienzo no encontrado',
+    });
   }
   (container as any).__controller = controller;
   return container;

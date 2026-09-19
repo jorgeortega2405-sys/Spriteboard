@@ -81,6 +81,7 @@ export class MindMapController implements ViewController {
     type: 'mindmap',
     version: 1,
   };
+  private initialCanvasRecord: CanvasItem | null = null;
   private publicRole: 'editor' | 'viewer' = 'editor';
   private quickInserterWorldPos: { x: number; y: number } = { x: 0, y: 0 };
   private resizeObserver: ResizeObserver | null = null;
@@ -92,9 +93,10 @@ export class MindMapController implements ViewController {
   private showMinimap = false;
   private textEditorContainer: HTMLElement | null = null;
 
-  constructor(container: HTMLElement, canvasUuid: string) {
+  constructor(container: HTMLElement, canvasUuid: string, initialCanvasRecord?: CanvasItem | null) {
     this.container = container;
     this.canvasUuid = canvasUuid;
+    this.initialCanvasRecord = initialCanvasRecord || null;
     this.collaborationManager = new MindMapCollaborationManager(canvasUuid);
   }
 
@@ -146,9 +148,9 @@ export class MindMapController implements ViewController {
   }
 
   private async loadCanvasData(): Promise<boolean> {
-    let canvasRecord: any = null;
+    let canvasRecord: any = this.initialCanvasRecord || (await getLocalCanvasByUuid(this.canvasUuid));
 
-    if (currentUser) {
+    if (!canvasRecord || !canvasRecord.is_local || canvasRecord.id) {
       try {
         const res = await getApi(API_ROUTES.canvases.byId(this.canvasUuid));
         if (res.ok) {
@@ -2896,22 +2898,54 @@ export class MindMapController implements ViewController {
 
   public insertShapeOrSticker(shape: PixelShape): void {
     const parentId = this.selectedNodeId || this.project.rootId;
-    const newId = `node_${crypto.randomUUID().slice(0, 8)}`;
-    const newNode: MindMapNode = {
-      children: [],
-      color: '#3b82f6',
-      id: newId,
-      parentId,
-      shape: 'pill',
-      text: shape.name,
+    const parentNode = this.project.nodes[parentId];
+    const newId = 'node_' + Math.random().toString(36).substring(2, 9);
+    const existingChildren = Object.values(this.project.nodes).filter((n) => n.parentId === parentId);
+    const orderIndex = existingChildren.length;
+
+    const shapeMap: Record<string, MindMapNode['shape']> = {
+      barrel: 'document',
+      chamfer_square: 'rect',
+      circle: 'rounded',
+      diamond: 'diamond',
+      flow_data: 'parallelogram',
+      flow_decision: 'diamond',
+      flow_document: 'document',
+      flow_manual: 'parallelogram',
+      flow_preparation: 'diamond',
+      flow_process: 'rect',
+      flow_terminator: 'pill',
+      parallelogram_left: 'parallelogram',
+      parallelogram_right: 'parallelogram',
+      quarter_circle: 'rounded',
+      rounded_rectangle: 'rounded',
+      semi_circle: 'rounded',
+      square: 'rect',
+      sticky: 'sticky',
+      ticket: 'document',
     };
+
+    const cleanId = shape.id.replace(/^shape_/, '');
+    const mappedShape = shapeMap[cleanId] || (shape.category === 'shapes' ? 'rounded' : 'pill');
+
+    const newNode: MindMapNode = {
+      color: parentNode?.color || PALETTE_COLORS[orderIndex % PALETTE_COLORS.length] || '#3b82f6',
+      fontSize: 14,
+      id: newId,
+      orderIndex,
+      parentId,
+      shape: mappedShape,
+      text: shape.name,
+      textColor: mappedShape === 'sticky' ? '#1e293b' : '#ffffff',
+      x: 0,
+      y: 0,
+    };
+
     this.project.nodes[newId] = newNode;
-    if (this.project.nodes[parentId]) {
-      this.project.nodes[parentId].children.push(newId);
-    }
     this.selectedNodeId = newId;
     this.selectedNodeIds = new Set([newId]);
     this.commitChange();
+    this.startEditingNode(newId);
   }
 
   private commitChange(): void {

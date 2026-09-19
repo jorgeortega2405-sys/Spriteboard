@@ -249,8 +249,12 @@ export async function render(): Promise<void> {
         const { createDesignView } = await import('./views/design.view.js');
         viewElements = [await createDesignView(canvasUuid)];
       }
-    } else if (/^\/[a-zA-Z0-9_-]{3,50}$/.test(path)) {
-      const slug = path.slice(1);
+    } else if (path.startsWith('/s/') || path.startsWith('/share/') || /^\/[a-zA-Z0-9_-]{3,50}$/.test(path)) {
+      const slug = path.startsWith('/s/')
+        ? path.slice(3)
+        : path.startsWith('/share/')
+        ? path.slice(7)
+        : path.slice(1);
       let resolvedUuid: string | null = null;
       try {
         const res = await getApi(API_ROUTES.canvases.resolveSlug(slug));
@@ -271,10 +275,8 @@ export async function render(): Promise<void> {
         const { createErrorView } = await import('./views/error.view.js');
         viewElements = [await createErrorView({
           code: '404',
-          title: 'Página no encontrada',
           description: `La ruta "${path}" no existe o ha sido movida.`,
-          actionText: 'Ir a la página principal',
-          actionUrl: '/',
+          title: 'Página no encontrada',
         })];
       }
     } else {

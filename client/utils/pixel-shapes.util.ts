@@ -524,6 +524,25 @@ export function renderShapeCanvas(
   return finalCanvas;
 }
 
+export async function preloadShapeImage(shape: PixelShape): Promise<HTMLImageElement | null> {
+  if (shape.type !== 'sticker' || !shape.file) return null;
+  const imgUrl = `/assets/img/stickers/${shape.file}`;
+  const cached = imageCache.get(imgUrl);
+  if (cached && cached.complete && cached.naturalWidth > 0) {
+    return cached;
+  }
+  return new Promise<HTMLImageElement>((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      imageCache.set(imgUrl, img);
+      resolve(img);
+    };
+    img.onerror = () => resolve(img);
+    img.src = imgUrl;
+  });
+}
+
 export function renderShapeThumbnail(shape: PixelShape): HTMLElement | SVGElement {
   if (shape.type === 'vector' && shape.pathD) {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');

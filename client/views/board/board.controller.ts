@@ -77,6 +77,7 @@ export class BoardController {
   private ownerInfo: { avatarUrl: string | null; id: number | null; subscriptionTier: string; username: string } | null = null;
   private panStartCamera: BoardPoint = { x: 0, y: 0 };
   private panStartMouse: BoardPoint = { x: 0, y: 0 };
+  private initialCanvasRecord: CanvasItem | null = null;
   private pixelGrid = new BoardPixelGridManager();
   private publicRole: 'editor' | 'viewer' = 'editor';
   private rafId: number | null = null;
@@ -91,9 +92,10 @@ export class BoardController {
   private stickyDefaultColor = '#fef08a';
   private topToggleColorsBtn: HTMLButtonElement | null = null;
 
-  constructor(container: HTMLElement, canvasUuid: string) {
+  constructor(container: HTMLElement, canvasUuid: string, initialCanvasRecord?: CanvasItem | null) {
     this.container = container;
     this.canvasUuid = canvasUuid;
+    this.initialCanvasRecord = initialCanvasRecord || null;
     this.abortController = new AbortController();
     this.collaborationManager = new BoardCollaborationManager(canvasUuid);
   }
@@ -164,7 +166,7 @@ export class BoardController {
   }
 
   private async loadBoardData(): Promise<boolean> {
-    let canvas: CanvasItem | null = await getLocalCanvasByUuid(this.canvasUuid);
+    let canvas: CanvasItem | null = this.initialCanvasRecord || (await getLocalCanvasByUuid(this.canvasUuid));
 
     if (!canvas || !canvas.is_local || canvas.id) {
       try {
@@ -2440,11 +2442,11 @@ export class BoardController {
     ctx.save();
     ctx.imageSmoothingEnabled = false;
 
-    if (el.backgroundColor === 'transparent') {
-      drawCheckerboard(ctx, el.x, el.y, el.width, el.height);
-    } else {
+    if (el.backgroundColor && el.backgroundColor !== 'transparent') {
       ctx.fillStyle = el.backgroundColor;
       ctx.fillRect(el.x, el.y, el.width, el.height);
+    } else if (el.showGrid || (this.currentTool === 'pixel' && this.selectedElementId === el.id)) {
+      drawCheckerboard(ctx, el.x, el.y, el.width, el.height);
     }
 
     ctx.drawImage(canvas, el.x, el.y, el.width, el.height);
@@ -2489,24 +2491,42 @@ export class BoardController {
     this.scheduleAutoSave();
   }
 
-  public insertShapeOrSticker(shape: PixelShape, color = '#3b82f6'): void {
+  public insertShapeOrSticker(shape: PixelShape, color?: string): void {
     this.pushHistoryState();
 
+    const shapeColor = color || this.currentColor || '#1e293b';
     const dpr = window.devicePixelRatio || 1;
     const screenW = this.canvasElement ? this.canvasElement.width / dpr : 800;
     const screenH = this.canvasElement ? this.canvasElement.height / dpr : 600;
     const centerWorld = screenToWorld(screenW / 2, screenH / 2, this.canvasElement, this.camera);
 
     const shapeMap: Record<string, ShapeType> = {
+      arrow_down: 'arrow',
+      arrow_left: 'arrow',
+      arrow_ribbon: 'arrow',
+      arrow_right: 'arrow',
+      arrow_up: 'arrow',
+      chamfer_square: 'rect',
       circle: 'circle',
       diamond: 'diamond',
+      flow_decision: 'diamond',
+      flow_process: 'rect',
+      quarter_circle: 'circle',
       rounded_rectangle: 'round-rect',
+      semi_circle: 'circle',
       square: 'rect',
+      star_4_sparkle: 'star',
       star_5: 'star',
+      star_6: 'star',
+      star_7: 'star',
+      star_8: 'star',
+      triangle_down: 'triangle',
+      triangle_right_angle: 'triangle',
       triangle_up: 'triangle',
     };
 
-    const directShape = shapeMap[shape.id.replace(/^shape_/, '')];
+    const cleanId = shape.id.replace(/^shape_/, '');
+    const directShape = shapeMap[cleanId];
     if (directShape) {
       const elWidth = 140;
       const elHeight = 140;
@@ -2515,7 +2535,7 @@ export class BoardController {
         height: elHeight,
         id: `shape-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         shapeType: directShape,
-        strokeColor: color,
+        strokeColor: shapeColor,
         strokeWidth: 3,
         type: 'shape',
         width: elWidth,
@@ -2531,7 +2551,7 @@ export class BoardController {
       return;
     }
 
-    const sCanvas = renderShapeCanvas(shape, shape.type === 'vector' ? 'primary' : 'original', color);
+    const sCanvas = renderShapeCanvas(shape, shape.type === 'vector' ? 'primary' : 'original', shapeColor);
     const dataUrl = sCanvas.toDataURL();
     const pixelSize = 4;
     const gridW = sCanvas.width;

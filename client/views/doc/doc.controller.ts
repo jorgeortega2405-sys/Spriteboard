@@ -101,14 +101,16 @@ export class DocController implements ViewController {
     type: 'doc',
     version: 1,
   };
+  private initialCanvasRecord: CanvasItem | null = null;
   private publicRole: 'editor' | 'viewer' = 'editor';
   private saveDebounceTimer: number | null = null;
   private selectedImageWrapper: HTMLElement | null = null;
   private stylesDropdownController: { close: () => void; destroy: () => void } | null = null;
 
-  constructor(container: HTMLElement, canvasUuid: string) {
+  constructor(container: HTMLElement, canvasUuid: string, initialCanvasRecord?: CanvasItem | null) {
     this.container = container;
     this.canvasUuid = canvasUuid;
+    this.initialCanvasRecord = initialCanvasRecord || null;
     this.collaborationManager = new DocCollaborationManager(canvasUuid);
   }
 
@@ -153,9 +155,9 @@ export class DocController implements ViewController {
   }
 
   private async loadCanvasData(): Promise<boolean> {
-    let canvasRecord: any = null;
+    let canvasRecord: any = this.initialCanvasRecord || (await getLocalCanvasByUuid(this.canvasUuid));
 
-    if (currentUser) {
+    if (!canvasRecord || !canvasRecord.is_local || canvasRecord.id) {
       try {
         const res = await getApi(API_ROUTES.canvases.byId(this.canvasUuid));
         if (res.ok) {
@@ -1258,11 +1260,11 @@ export class DocController implements ViewController {
     }
   }
 
-  private insertImageElement(src: string): void {
+  private insertImageElement(src: string, initialWidth = '50%', altText = 'Imagen insertada'): void {
     const wrapper = document.createElement('div');
     wrapper.className = 'doc-image-wrapper doc-img-wrap--left doc-img-radius--8 doc-img-shadow--sm';
-    wrapper.style.width = '50%';
-    wrapper.innerHTML = `<img src="${src}" alt="Imagen insertada" />`;
+    wrapper.style.width = initialWidth;
+    wrapper.innerHTML = `<img src="${src}" alt="${altText}" />`;
 
     const sel = window.getSelection();
     if (sel && sel.rangeCount > 0) {
@@ -1280,17 +1282,17 @@ export class DocController implements ViewController {
     this.initSingleImageWrapper(wrapper);
     this.selectImageWrapper(wrapper);
     this.recordChange();
-    showToast('Imagen insertada con éxito', 'success');
+    showToast('Elemento insertado con éxito', 'success');
   }
 
-  public insertImage(src: string, alt = 'Elemento'): void {
-    this.insertImageElement(src);
+  public insertImage(src: string, alt = 'Elemento', width = '180px'): void {
+    this.insertImageElement(src, width, alt);
   }
 
   public insertShapeSvg(pathD: string, name = 'Figura', color = '#1e293b'): void {
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="160" height="160"><path d="${pathD}" fill="${color}" /></svg>`;
     const dataUrl = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
-    this.insertImageElement(dataUrl);
+    this.insertImageElement(dataUrl, '160px', name);
   }
 
   private initExistingImages(): void {

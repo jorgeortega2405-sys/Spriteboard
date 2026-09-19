@@ -20,7 +20,7 @@ import { ChunkGrid } from '../../utils/chunk-grid.util.js';
 import { CarouselController, initCarouselScroll, setupDropdown } from '../../utils/dom.util.js';
 import { applyOutlineDirectToLayer, generatePixelOutline } from '../../utils/pixel-effects.util.js';
 import { PixelFontFamily } from '../../utils/pixel-font.util.js';
-import { getCachedImage, PIXEL_SHAPES, PixelShape, renderShapeCanvas, renderShapeThumbnail, ShapeCategory, ShapeColorMode } from '../../utils/pixel-shapes.util.js';
+import { getCachedImage, PIXEL_SHAPES, PixelShape, preloadShapeImage, renderShapeCanvas, renderShapeThumbnail, ShapeCategory, ShapeColorMode } from '../../utils/pixel-shapes.util.js';
 import { DetectedSpriteRect, detectSpriteIslands, extractSpriteCanvas, sliceByGrid } from '../../utils/pixel-slicer.util.js';
 import { applyAvatarTier } from '../../utils/tier.util.js';
 import { DesignCollaborationManager } from './design-collaboration.manager.js';
@@ -742,12 +742,12 @@ export class DesignController {
     this.historyManager.activePreviewSnapshotUuid = val;
   }
   private lastAutoSnapshotTime = Date.now();
-  private hasUnsavedSnapshotChanges = false;
-  private autoSnapshotCheckTimer: number | null = null;
+  private initialCanvasRecord: CanvasItem | null = null;
 
-  constructor(container: HTMLElement, canvasUuid: string) {
+  constructor(container: HTMLElement, canvasUuid: string, initialCanvasRecord?: CanvasItem | null) {
     this.container = container;
     this.canvasUuid = canvasUuid;
+    this.initialCanvasRecord = initialCanvasRecord || null;
     this.abortController = new AbortController();
     this.collaborationManager = new DesignCollaborationManager(canvasUuid);
 
@@ -2244,23 +2244,32 @@ export class DesignController {
     this.shapeFlipV = false;
 
     const baseAspect = (shape.width || 32) / (shape.height || 32);
-    const targetSize = Math.max(16, Math.min(128, Math.floor(Math.min(this.canvasWidth, this.canvasHeight) / 3)));
+    const targetSize = this.isInfinite
+      ? Math.max(16, Math.min(128, shape.width || 32))
+      : Math.max(16, Math.min(128, Math.floor(Math.min(this.canvasWidth, this.canvasHeight) / 3)));
     let initialW = targetSize;
     let initialH = Math.round(initialW / baseAspect);
-    if (initialH > this.canvasHeight) {
+    if (!this.isInfinite && initialH > this.canvasHeight) {
       initialH = Math.max(8, this.canvasHeight - 4);
       initialW = Math.round(initialH * baseAspect);
     }
     this.shapeTemplateW = Math.max(8, initialW);
     this.shapeTemplateH = Math.max(8, initialH);
 
-    this.shapeTemplateX = Math.max(0, Math.floor((this.canvasWidth - this.shapeTemplateW) / 2));
-    this.shapeTemplateY = Math.max(0, Math.floor((this.canvasHeight - this.shapeTemplateH) / 2));
+    if (this.isInfinite) {
+      const containerW = this.viewportCanvas?.clientWidth || 800;
+      const containerH = this.viewportCanvas?.clientHeight || 600;
+      const centerX = Math.floor((-this.panX + containerW / 2) / this.zoom);
+      const centerY = Math.floor((-this.panY + containerH / 2) / this.zoom);
+      this.shapeTemplateX = centerX - Math.floor(this.shapeTemplateW / 2);
+      this.shapeTemplateY = centerY - Math.floor(this.shapeTemplateH / 2);
+    } else {
+      this.shapeTemplateX = Math.max(0, Math.floor((this.canvasWidth - this.shapeTemplateW) / 2));
+      this.shapeTemplateY = Math.max(0, Math.floor((this.canvasHeight - this.shapeTemplateH) / 2));
+    }
 
-    if (shape.type === 'sticker' && shape.file) {
-      try {
-        await getCachedImage(`/assets/img/stickers/${shape.file}`);
-      } catch {}
+    if (shape.type === 'sticker') {
+      await preloadShapeImage(shape);
     }
 
     this.updateShapeCanvas();
@@ -3154,9 +3163,25 @@ export class DesignController {
     this.addLayer(true, undefined, templateName);
     const layer = this.layersManager.getActiveLayer();
     if (layer) {
-      const destX = Math.max(0, Math.floor((this.canvasWidth - img.naturalWidth) / 2));
-      const destY = Math.max(0, Math.floor((this.canvasHeight - img.naturalHeight) / 2));
+      let destX = 0;
+      let destY = 0;
+
+      if (this.isInfinite) {
+        const containerW = this.viewportCanvas?.clientWidth || 800;
+        const containerH = this.viewportCanvas?.clientHeight || 600;
+        const centerX = Math.floor((-this.panX + containerW / 2) / this.zoom);
+        const centerY = Math.floor((-this.panY + containerH / 2) / this.zoom);
+        destX = centerX - Math.floor(img.naturalWidth / 2);
+        destY = centerY - Math.floor(img.naturalHeight / 2);
+      } else {
+        destX = Math.max(0, Math.floor((this.canvasWidth - img.naturalWidth) / 2));
+        destY = Math.max(0, Math.floor((this.canvasHeight - img.naturalHeight) / 2));
+      }
+
       layer.ctx.drawImage(img, destX, destY);
+      if (this.isInfinite && (layer as any).chunkGrid) {
+        (layer as any).chunkGrid.populateFromCanvas(img, destX, destY);
+      }
     }
     this.scheduleAutoSave();
     this.renderLayersCards();
@@ -3164,17 +3189,7 @@ export class DesignController {
   }
 
   public async applyShapeOrSticker(shape: PixelShape): Promise<void> {
-    const sCanvas = renderShapeCanvas(shape, 'original', '#000000');
-    this.addLayer(true, undefined, shape.name);
-    const layer = this.layersManager.getActiveLayer();
-    if (layer) {
-      const destX = Math.max(0, Math.floor((this.canvasWidth - sCanvas.width) / 2));
-      const destY = Math.max(0, Math.floor((this.canvasHeight - sCanvas.height) / 2));
-      layer.ctx.drawImage(sCanvas, destX, destY);
-    }
-    this.scheduleAutoSave();
-    this.renderLayersCards();
-    this.requestRedraw();
+    await this.selectShapeTemplate(shape);
   }
 
   private openResizeCanvasModal(): void {
@@ -8211,7 +8226,7 @@ export class DesignController {
   }
 
   private async loadCanvasData(): Promise<boolean> {
-    let canvas: CanvasItem | null = await getLocalCanvasByUuid(this.canvasUuid);
+    let canvas: CanvasItem | null = this.initialCanvasRecord || (await getLocalCanvasByUuid(this.canvasUuid));
 
     if (!canvas || !canvas.is_local || canvas.id) {
       try {

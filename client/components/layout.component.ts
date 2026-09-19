@@ -1049,7 +1049,7 @@ function handleApplyCanvasElement(shape: PixelShape, canvasType: 'board' | 'diag
     }
 
     void controller.applyShapeOrSticker(shape);
-    showToast(`«${shape.name}» agregado en una nueva capa`, 'success');
+    showToast(`«${shape.name}» listo para posicionar`, 'success');
     if (window.innerWidth <= 768) {
       toggleDrawer(false);
     }
