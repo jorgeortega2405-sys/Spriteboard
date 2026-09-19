@@ -299,7 +299,7 @@ export async function moveCanvasToFolder(canvasUuid: string, userId: number, tar
 
     const [updatedRows] = await canvasPool.query<mysql.RowDataPacket[]>(
       `SELECT c.id, c.uuid, c.user_id, c.folder_id, c.name, c.width, c.height, c.unit,
-              COALESCE(c.canvas_type, CASE WHEN c.unit = 'board' THEN 'board' WHEN c.unit = 'diagram' THEN 'diagram' WHEN c.unit = 'doc' THEN 'doc' ELSE 'pixel' END) AS canvas_type,
+              COALESCE(c.canvas_type, 'board') AS canvas_type,
               c.preview_thumbnail, c.access_level, c.public_role, c.short_code, c.custom_slug,
               c.created_at, c.updated_at, f.uuid AS folder_uuid, f.name AS folder_name
        FROM canvases c
@@ -340,11 +340,9 @@ export async function getFolderCanvases(
       if (type === 'diagram') {
         conditions.push("(c.canvas_type IN ('diagram', 'mindmap') OR c.unit = 'diagram')");
       } else if (type === 'board') {
-        conditions.push("(c.canvas_type = 'board' OR (c.unit = 'board' AND c.unit != 'diagram'))");
+        conditions.push("(c.canvas_type = 'board' OR c.unit = 'board')");
       } else if (type === 'doc') {
         conditions.push("(c.canvas_type = 'doc' OR c.unit = 'doc')");
-      } else if (type === 'pixel') {
-        conditions.push("((c.canvas_type = 'pixel' OR c.canvas_type IS NULL) AND c.unit NOT IN ('board', 'diagram', 'doc'))");
       }
 
       if (search) {
@@ -372,7 +370,7 @@ export async function getFolderCanvases(
       const queryParams = [userId, ...params, limit, offset];
       const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
         `SELECT c.id, c.uuid, c.user_id, c.folder_id, c.name, c.width, c.height, c.unit,
-                COALESCE(c.canvas_type, CASE WHEN c.unit = 'board' THEN 'board' WHEN c.unit = 'diagram' THEN 'diagram' WHEN c.unit = 'doc' THEN 'doc' ELSE 'pixel' END) AS canvas_type,
+                COALESCE(c.canvas_type, 'board') AS canvas_type,
                 c.preview_thumbnail, c.access_level, c.public_role, c.short_code, c.custom_slug,
                 c.created_at, c.updated_at, f.uuid AS folder_uuid, f.name AS folder_name,
                 (uf.id IS NOT NULL) AS is_favorite
@@ -406,7 +404,7 @@ export async function getFolderCanvases(
 
     const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
       `SELECT c.id, c.uuid, c.user_id, c.folder_id, c.name, c.width, c.height, c.unit,
-              COALESCE(c.canvas_type, CASE WHEN c.unit = 'board' THEN 'board' WHEN c.unit = 'diagram' THEN 'diagram' WHEN c.unit = 'doc' THEN 'doc' ELSE 'pixel' END) AS canvas_type,
+              COALESCE(c.canvas_type, 'board') AS canvas_type,
               c.preview_thumbnail, c.access_level, c.public_role, c.short_code, c.custom_slug,
               c.created_at, c.updated_at, f.uuid AS folder_uuid, f.name AS folder_name,
               (uf.id IS NOT NULL) AS is_favorite

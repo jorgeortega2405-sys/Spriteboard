@@ -1571,7 +1571,7 @@ function renderCanvasDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement)
       if (canvasType === 'doc') return item.canvasType === 'doc';
       if (canvasType === 'board') return item.canvasType === 'board';
       if (canvasType === 'diagram') return item.canvasType === 'diagram' || item.categoryKey === 'mindmap' || item.categoryKey === 'conceptmap' || item.categoryKey === 'flowchart';
-      return item.canvasType === 'pixel' || item.categoryKey === 'pixel';
+      return item.categoryKey === 'pixel' || item.canvasType === 'board';
     });
 
     drawerBody.innerHTML = `

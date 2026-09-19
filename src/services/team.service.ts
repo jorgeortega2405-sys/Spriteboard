@@ -394,7 +394,7 @@ export async function getTeamCanvases(uuid: string, currentUserId: number): Prom
 
     const [canvasRows] = await canvasPool.query<mysql.RowDataPacket[]>(
       `SELECT c.id, c.uuid, c.user_id, c.folder_id, c.name, c.width, c.height, c.unit,
-              COALESCE(c.canvas_type, CASE WHEN c.unit = 'board' THEN 'board' WHEN c.unit = 'diagram' THEN 'diagram' WHEN c.unit = 'doc' THEN 'doc' ELSE 'pixel' END) AS canvas_type,
+              COALESCE(c.canvas_type, 'board') AS canvas_type,
               c.preview_thumbnail,
               c.access_level, c.public_role, c.short_code, c.custom_slug, c.created_at, c.updated_at,
               u.username AS owner_name, u.avatar_url AS owner_avatar, u.subscription_tier AS owner_tier,

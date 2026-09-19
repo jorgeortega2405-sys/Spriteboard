@@ -10,7 +10,7 @@ export interface PresetVariant {
 export interface PresetItem {
   aspectType: 'compact' | 'large' | 'square' | 'standard' | 'tall' | 'wide';
   boardTemplateId?: string;
-  canvasType?: 'board' | 'diagram' | 'doc' | 'mindmap' | 'pixel';
+  canvasType?: 'board' | 'diagram' | 'doc' | 'mindmap';
   categoryKey: string;
   categoryName: string;
   diagramSubtype?: DiagramSubtype;
@@ -759,7 +759,7 @@ export const ALL_PRESETS: PresetItem[] = [
   // 10 Pixel Art
   {
     aspectType: 'square',
-    canvasType: 'pixel',
+    canvasType: 'board',
     categoryKey: 'pixel',
     categoryName: 'Pixel Art',
     height: 32,
@@ -773,7 +773,7 @@ export const ALL_PRESETS: PresetItem[] = [
   },
   {
     aspectType: 'square',
-    canvasType: 'pixel',
+    canvasType: 'board',
     categoryKey: 'pixel',
     categoryName: 'Pixel Art',
     height: 32,
@@ -787,7 +787,7 @@ export const ALL_PRESETS: PresetItem[] = [
   },
   {
     aspectType: 'square',
-    canvasType: 'pixel',
+    canvasType: 'board',
     categoryKey: 'pixel',
     categoryName: 'Pixel Art',
     height: 16,
@@ -801,7 +801,7 @@ export const ALL_PRESETS: PresetItem[] = [
   },
   {
     aspectType: 'square',
-    canvasType: 'pixel',
+    canvasType: 'board',
     categoryKey: 'pixel',
     categoryName: 'Pixel Art',
     height: 32,
@@ -815,7 +815,7 @@ export const ALL_PRESETS: PresetItem[] = [
   },
   {
     aspectType: 'square',
-    canvasType: 'pixel',
+    canvasType: 'board',
     categoryKey: 'pixel',
     categoryName: 'Pixel Art',
     height: 32,
@@ -829,7 +829,7 @@ export const ALL_PRESETS: PresetItem[] = [
   },
   {
     aspectType: 'square',
-    canvasType: 'pixel',
+    canvasType: 'board',
     categoryKey: 'pixel',
     categoryName: 'Pixel Art',
     height: 32,
@@ -843,7 +843,7 @@ export const ALL_PRESETS: PresetItem[] = [
   },
   {
     aspectType: 'square',
-    canvasType: 'pixel',
+    canvasType: 'board',
     categoryKey: 'pixel',
     categoryName: 'Pixel Art',
     height: 64,
@@ -857,7 +857,7 @@ export const ALL_PRESETS: PresetItem[] = [
   },
   {
     aspectType: 'square',
-    canvasType: 'pixel',
+    canvasType: 'board',
     categoryKey: 'pixel',
     categoryName: 'Pixel Art',
     height: 16,
@@ -871,7 +871,7 @@ export const ALL_PRESETS: PresetItem[] = [
   },
   {
     aspectType: 'square',
-    canvasType: 'pixel',
+    canvasType: 'board',
     categoryKey: 'pixel',
     categoryName: 'Pixel Art',
     height: 32,
@@ -885,7 +885,7 @@ export const ALL_PRESETS: PresetItem[] = [
   },
   {
     aspectType: 'square',
-    canvasType: 'pixel',
+    canvasType: 'board',
     categoryKey: 'pixel',
     categoryName: 'Pixel Art',
     height: 16,

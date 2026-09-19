@@ -15,7 +15,7 @@ import { showToast } from './toast.service.js';
 export interface CreateCanvasOptions {
   bgType?: 'blank' | 'dark' | 'dots' | 'grid' | 'light' | 'solid' | 'transparent';
   boardTemplateId?: string;
-  canvasType?: 'board' | 'diagram' | 'doc' | 'mindmap' | 'pixel';
+  canvasType?: 'board' | 'diagram' | 'doc' | 'mindmap';
   checkSize?: number;
   diagramSubtype?: DiagramSubtype;
   diagramTemplateId?: string;
@@ -31,6 +31,7 @@ export interface CreateCanvasOptions {
   mindmapTheme?: string;
   name: string;
   onionSkin?: boolean;
+  pixelGrid?: { backgroundColor?: string; gridHeight: number; gridWidth: number; pixelSize?: number };
   pixelTemplateId?: string;
   rootIdeaText?: string;
   solidColor?: string;
@@ -40,23 +41,17 @@ export interface CreateCanvasOptions {
 }
 
 export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise<void> {
-  const isBoard = options.canvasType === 'board';
   const isDiagram = options.canvasType === 'diagram' || options.canvasType === 'mindmap';
   const isDoc = options.canvasType === 'doc';
-  const isInfinite = isBoard || isDiagram || (options.isInfinite ?? false);
+  const isBoard = !isDiagram && !isDoc;
+  const isInfinite = isBoard || isDiagram;
   const paperPreset = (options.docPaperSize && DOC_PAPER_DIMENSIONS[options.docPaperSize])
     ? DOC_PAPER_DIMENSIONS[options.docPaperSize][options.docOrientation || 'portrait']
     : DOC_PAPER_DIMENSIONS.letter.portrait;
-  const width = isDoc ? (options.width || paperPreset.widthPx || 816) : (isInfinite ? 0 : (options.width || 64));
-  const height = isDoc ? (options.height || paperPreset.heightPx || 0) : (isInfinite ? 0 : (options.height || 64));
+  const width = isDoc ? (options.width || paperPreset.widthPx || 816) : 0;
+  const height = isDoc ? (options.height || paperPreset.heightPx || 0) : 0;
 
-  const MAX_CANVAS_DIMENSION = 16384;
-  if (!isInfinite && !isDoc && (width > MAX_CANVAS_DIMENSION || height > MAX_CANVAS_DIMENSION || width <= 0 || height <= 0)) {
-    showToast(`El tamaño (${width}×${height} px) debe ser mayor a 0 y no superar los ${MAX_CANVAS_DIMENSION}×${MAX_CANVAS_DIMENSION} px.`, 'warning');
-    return;
-  }
-
-  const defaultName = isDoc ? 'Documento sin título' : (isDiagram ? 'Mapa Mental sin título' : (isBoard ? 'Pizarrón sin título' : t('canvas.input_name_placeholder')));
+  const defaultName = isDoc ? 'Documento sin título' : (isDiagram ? 'Mapa Mental sin título' : 'Pizarrón sin título');
   const name = options.name.trim() || defaultName;
   const bgType = options.bgType || 'transparent';
   const solidColor = options.solidColor || '#ffffff';
@@ -161,8 +156,31 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
     if (options.mindmapLineStyle) {
       initialProject.theme.lineStyle = options.mindmapLineStyle;
     }
-  } else if (isBoard) {
-    const templateElements = getBoardTemplateElements(options.boardTemplateId);
+  } else {
+    let elements = getBoardTemplateElements(options.boardTemplateId);
+    const gridW = options.pixelGrid?.gridWidth || (options.width && options.width > 0 && options.width <= 4096 ? options.width : 0);
+    const gridH = options.pixelGrid?.gridHeight || (options.height && options.height > 0 && options.height <= 4096 ? options.height : 0);
+    const hasPixelGrid = Boolean(options.pixelGrid || options.pixelTemplateId || (gridW > 0 && gridH > 0 && (options.templateImage || options.width)));
+
+    if (hasPixelGrid && gridW > 0 && gridH > 0) {
+      const cellScale = options.pixelGrid?.pixelSize || (gridW <= 32 ? 16 : (gridW <= 64 ? 12 : 8));
+      const pixelEl: any = {
+        backgroundColor: options.pixelGrid?.backgroundColor || (options.bgType === 'solid' ? solidColor : 'transparent'),
+        data: templateDataUrl || '',
+        gridHeight: gridH,
+        gridWidth: gridW,
+        height: gridH * cellScale,
+        id: `pixel-grid-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        pixelSize: cellScale,
+        showGrid: true,
+        type: 'pixel-grid',
+        width: gridW * cellScale,
+        x: Math.round(-(gridW * cellScale) / 2),
+        y: Math.round(-(gridH * cellScale) / 2),
+      };
+      elements = [pixelEl, ...elements];
+    }
+
     initialProject = {
       background: {
         color: '#ffffff',
@@ -170,41 +188,8 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
         type: 'dots',
       },
       camera: { x: 0, y: 0, zoom: 1 },
-      elements: templateElements,
+      elements,
       type: 'board',
-      version: 1,
-    };
-  } else {
-    initialProject = {
-      activeFrameId: 'frame_1',
-      animationTags: [],
-      background: {
-        checkColor1: '#ffffff',
-        checkColor2: '#e2e8f0',
-        checkSize: checkSize,
-        color: solidColor,
-        type: bgType,
-      },
-      fps,
-      frames: [
-        {
-          activeLayerId: 'layer_1',
-          id: 'frame_1',
-          layers: [
-            {
-              chunks: {},
-              data: templateDataUrl || '',
-              id: 'layer_1',
-              name: options.templateImage ? name : 'Capa 1',
-              opacity: 1.0,
-              visible: true,
-            },
-          ],
-          name: 'Cuadro 1',
-        },
-      ],
-      isInfinite,
-      onionSkin,
       version: 1,
     };
   }
@@ -258,7 +243,7 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
         thumbCtx.textAlign = 'center';
         thumbCtx.textBaseline = 'middle';
         thumbCtx.fillText(initialProject.nodes[initialProject.rootId]?.text || 'Idea Principal', thumbW / 2, thumbH / 2);
-      } else if (isBoard) {
+      } else {
         thumbCtx.fillStyle = '#ffffff';
         thumbCtx.fillRect(0, 0, thumbW, thumbH);
 
@@ -271,14 +256,25 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
             thumbCtx.fill();
           }
         }
-      } else {
-        thumbCtx.imageSmoothingEnabled = false;
+
         if (templateDataUrl) {
           const thumbImg = new Image();
           await new Promise<void>((r) => {
             thumbImg.onload = () => {
               try {
-                thumbCtx.drawImage(thumbImg, 0, 0, thumbW, thumbH);
+                const maxDim = Math.min(thumbW * 0.7, thumbH * 0.7);
+                const imgRatio = thumbImg.naturalWidth / thumbImg.naturalHeight;
+                let dw = maxDim;
+                let dh = maxDim;
+                if (imgRatio >= 1) {
+                  dh = maxDim / imgRatio;
+                } else {
+                  dw = maxDim * imgRatio;
+                }
+                const dx = (thumbW - dw) / 2;
+                const dy = (thumbH - dh) / 2;
+                thumbCtx.imageSmoothingEnabled = false;
+                thumbCtx.drawImage(thumbImg, dx, dy, dw, dh);
               } catch {}
               r();
             };
@@ -291,20 +287,6 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
               r();
             }
           });
-        } else {
-          if (bgType === 'solid') {
-            thumbCtx.fillStyle = solidColor;
-            thumbCtx.fillRect(0, 0, thumbW, thumbH);
-          } else {
-            const cs = Math.max(4, Math.round(checkSize * (thumbW / (width || 256))));
-            for (let y = 0; y < thumbH; y += cs) {
-              for (let x = 0; x < thumbW; x += cs) {
-                const isEven = ((x / cs) + (y / cs)) % 2 === 0;
-                thumbCtx.fillStyle = isEven ? '#ffffff' : '#e2e8f0';
-                thumbCtx.fillRect(x, y, cs, cs);
-              }
-            }
-          }
         }
       }
       try {
@@ -317,8 +299,8 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
     }
   }
 
-  const unit = isDoc ? 'doc' : (isDiagram ? 'diagram' : (isBoard ? 'board' : (isInfinite ? 'infinite' : 'px')));
-  const canvasType = isDoc ? 'doc' : (isDiagram ? 'diagram' : (isBoard ? 'board' : 'pixel'));
+  const unit = isDoc ? 'doc' : (isDiagram ? 'diagram' : 'board');
+  const canvasType = isDoc ? 'doc' : (isDiagram ? (options.canvasType === 'mindmap' ? 'mindmap' : 'diagram') : 'board');
   const targetRoute = `/design/`;
 
   if (currentUser) {

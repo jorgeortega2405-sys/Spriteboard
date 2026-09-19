@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS canvases (
     width INT NOT NULL DEFAULT 1920,
     height INT NOT NULL DEFAULT 1080,
     unit VARCHAR(20) NOT NULL DEFAULT 'px',
-    canvas_type VARCHAR(20) NOT NULL DEFAULT 'pixel',
+    canvas_type VARCHAR(20) NOT NULL DEFAULT 'board',
     size_bytes INT NOT NULL DEFAULT 0,
     compressed_bytes INT NOT NULL DEFAULT 0,
     data JSON NULL,

@@ -726,23 +726,20 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
       const type = card.getAttribute('data-type');
       if (type === 'pixel-infinite') {
         void handleInstantCreation({
-          bgType: 'transparent',
-          canvasType: 'pixel',
-          isInfinite: true,
-          name: 'Lienzo Pixelart Infinito',
+          bgType: 'dots',
+          canvasType: 'board',
+          name: 'Pizarrón con Pixel Art',
+          pixelGrid: { backgroundColor: 'transparent', gridHeight: 64, gridWidth: 64, pixelSize: 16 },
         }, card);
       } else if (type === 'pixel-fixed') {
         const w = parseInt(card.getAttribute('data-w') || '64', 10);
         const h = parseInt(card.getAttribute('data-h') || '64', 10);
         void handleInstantCreation({
-          bgType: 'transparent',
-          canvasType: 'pixel',
-          checkSize: 16,
-          fps: 8,
+          bgType: 'dots',
+          canvasType: 'board',
           height: h,
-          isInfinite: false,
-          name: `Lienzo ${w}x${h}`,
-          solidColor: '#ffffff',
+          name: `Pizarrón Pixel ${w}×${h}`,
+          pixelGrid: { backgroundColor: 'transparent', gridHeight: h, gridWidth: w, pixelSize: 16 },
           width: w,
         }, card);
       }
@@ -756,14 +753,11 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
       const h = parseInt(card.getAttribute('data-h') || '64', 10);
       const img = card.getAttribute('data-img') || templateImage || null;
       void handleInstantCreation({
-        bgType: 'transparent',
-        canvasType: 'pixel',
-        checkSize: 16,
-        fps: 8,
+        bgType: 'dots',
+        canvasType: 'board',
         height: h,
-        isInfinite: false,
-        name: templateName || `Plantilla ${w}x${h}`,
-        solidColor: '#ffffff',
+        name: templateName || `Pizarrón ${w}×${h}`,
+        pixelGrid: { backgroundColor: 'transparent', gridHeight: h, gridWidth: w, pixelSize: 16 },
         templateImage: img,
         width: w,
       }, card);
@@ -940,13 +934,11 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
 
     const name = inputCustomName?.value.trim() || `Lienzo ${w}x${h}`;
     void handleInstantCreation({
-      bgType: selectedBgType,
-      canvasType: 'pixel',
-      checkSize: selectedCheckSize,
-      fps: 8,
+      bgType: 'dots',
+      canvasType: 'board',
       height: h,
-      isInfinite: false,
       name,
+      pixelGrid: { backgroundColor: selectedBgType === 'solid' ? selectedSolidColor : 'transparent', gridHeight: h, gridWidth: w, pixelSize: selectedCheckSize },
       solidColor: selectedSolidColor,
       templateImage,
       width: w,

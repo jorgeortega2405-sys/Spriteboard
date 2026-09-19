@@ -248,7 +248,7 @@ class TemplatesController {
     if (this.currentTypeFilter === 'favorites') {
       filtered = filtered.filter((item) => this.favoritedTemplateIds.has(item.id));
     } else if (this.currentTypeFilter === 'pixel') {
-      filtered = filtered.filter((item) => item.categoryKey === 'pixel' || item.canvasType === 'pixel');
+      filtered = filtered.filter((item) => item.categoryKey === 'pixel');
     } else if (this.currentTypeFilter === 'board') {
       filtered = filtered.filter((item) => item.categoryKey === 'board' || item.canvasType === 'board');
     } else if (this.currentTypeFilter === 'mindmap') {

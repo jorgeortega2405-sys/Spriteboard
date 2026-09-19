@@ -53,7 +53,7 @@ class HomeController {
   private allCanvases: CanvasItem[] = [];
   private currentCanvases: CanvasItem[] = [];
   private currentEntityFilter: 'all' | 'designs' | 'folders' = 'all';
-  private currentTypeFilter: 'all' | 'board' | 'diagram' | 'doc' | 'pixel' = 'all';
+  private currentTypeFilter: 'all' | 'board' | 'diagram' | 'doc' = 'all';
   private currentSort: 'activity' | 'alpha-asc' | 'alpha-desc' = 'activity';
   private currentFolders: FolderItem[] = [];
   private typeDropdownController: ReturnType<typeof setupDropdown> | null = null;
@@ -348,7 +348,7 @@ class HomeController {
       this.container.querySelector<HTMLElement>(`[data-ref="${ref}"]`)?.classList.add('is-active');
     };
 
-    const bindCat = (ref: string, filterType: 'all' | 'board' | 'diagram' | 'doc' | 'pixel') => {
+    const bindCat = (ref: string, filterType: 'all' | 'board' | 'diagram' | 'doc') => {
       this.container.querySelector<HTMLElement>(`[data-ref="${ref}"]`)?.addEventListener(
         'click',
         (e) => {
@@ -365,7 +365,6 @@ class HomeController {
     bindCat('cat-badge-all', 'all');
     bindCat('cat-badge-board', 'board');
     bindCat('cat-badge-diagram', 'diagram');
-    bindCat('cat-badge-pixel', 'pixel');
     bindCat('cat-badge-doc', 'doc');
 
     this.categoriesCarouselWrapper = this.container.querySelector<HTMLElement>('[data-ref="home-categories-carousel-wrapper"]');
@@ -961,8 +960,6 @@ class HomeController {
             unsyncedLocals = unsyncedLocals.filter((c) => c.canvas_type === 'diagram' || c.canvas_type === 'mindmap' || c.unit === 'diagram');
           } else if (this.currentTypeFilter === 'doc') {
             unsyncedLocals = unsyncedLocals.filter((c) => c.canvas_type === 'doc' || c.unit === 'doc');
-          } else if (this.currentTypeFilter === 'pixel') {
-            unsyncedLocals = unsyncedLocals.filter((c) => c.canvas_type !== 'board' && c.unit !== 'board' && c.canvas_type !== 'diagram' && c.canvas_type !== 'mindmap' && c.canvas_type !== 'doc' && c.unit !== 'diagram' && c.unit !== 'doc');
           }
           if (this.searchQuery) {
             unsyncedLocals = unsyncedLocals.filter((c) => c.name.toLowerCase().includes(this.searchQuery));
@@ -991,8 +988,6 @@ class HomeController {
         filtered = filtered.filter((c) => c.canvas_type === 'diagram' || c.canvas_type === 'mindmap' || c.unit === 'diagram');
       } else if (this.currentTypeFilter === 'doc') {
         filtered = filtered.filter((c) => c.canvas_type === 'doc' || c.unit === 'doc');
-      } else if (this.currentTypeFilter === 'pixel') {
-        filtered = filtered.filter((c) => c.canvas_type !== 'board' && c.unit !== 'board' && c.canvas_type !== 'diagram' && c.canvas_type !== 'mindmap' && c.canvas_type !== 'doc' && c.unit !== 'diagram' && c.unit !== 'doc');
       }
       if (this.searchQuery) {
         filtered = filtered.filter((c) => c.name.toLowerCase().includes(this.searchQuery));
@@ -1344,14 +1339,12 @@ class HomeController {
       filtered = filtered.filter((item) => item.canvasType === 'diagram' || item.canvasType === 'mindmap' || item.categoryKey === 'diagram' || item.categoryKey === 'mindmap');
     } else if (this.currentTypeFilter === 'doc') {
       filtered = filtered.filter((item) => item.canvasType === 'doc' || item.categoryKey === 'doc');
-    } else if (this.currentTypeFilter === 'pixel') {
-      filtered = filtered.filter((item) => (item.canvasType || 'pixel') === 'pixel' && item.categoryKey !== 'board' && item.categoryKey !== 'diagram' && item.categoryKey !== 'doc');
     }
 
     if (this.templateTypeFilter === 'favorites') {
       filtered = filtered.filter((item) => this.favoritedTemplateIds.has(item.id));
     } else if (this.templateTypeFilter === 'pixel') {
-      filtered = filtered.filter((item) => (item.canvasType || 'pixel') === 'pixel' && item.categoryKey !== 'board' && item.categoryKey !== 'diagram');
+      filtered = filtered.filter((item) => item.categoryKey === 'pixel');
     } else if (this.templateTypeFilter === 'board') {
       filtered = filtered.filter((item) => item.canvasType === 'board' || item.categoryKey === 'board');
     } else if (this.templateTypeFilter === 'diagram') {
