@@ -216,6 +216,8 @@ export function exportSvg(
       const { canvas } = getPixelGridCanvas(el);
       const dataUrl = canvas.toDataURL('image/png');
       svgContent += `  <image href="${dataUrl}" x="${el.x}" y="${el.y}" width="${el.width}" height="${el.height}" style="image-rendering: pixelated;" />\n`;
+    } else if (el.type === 'image') {
+      svgContent += `  <image href="${escAttr(el.url)}" x="${el.x}" y="${el.y}" width="${el.width}" height="${el.height}" preserveAspectRatio="none" />\n`;
     }
   }
 

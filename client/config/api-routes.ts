@@ -64,6 +64,10 @@ export const API_ROUTES = {
     restore: (uuid: string) => `/api/trash/${encodeURIComponent(uuid)}/restore`,
   },
   search: (q: string) => `/api/search?q=${encodeURIComponent(q)}`,
+  uploads: {
+    base: '/api/uploads',
+    byUuid: (uuid: string) => `/api/uploads/${encodeURIComponent(uuid)}`,
+  },
   users: {
     search: (q: string) => `/api/users/search?q=${encodeURIComponent(q)}`,
   },

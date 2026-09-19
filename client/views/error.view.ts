@@ -26,16 +26,28 @@ export async function createErrorView({
     container.prepend(sidebar);
   }
 
+  translateElement(container);
+  renderIcons(container);
+
   const titleEl = container.querySelector<HTMLElement>('[data-ref="error-title"]');
   const descEl = container.querySelector<HTMLElement>('[data-ref="error-desc"]');
   const actionBtn = container.querySelector<HTMLElement>('[data-ref="error-action-btn"]');
   const homeLink = container.querySelector<HTMLElement>('[data-ref="error-home-link"]');
 
-  if (titleEl) titleEl.textContent = title;
-  if (descEl) descEl.textContent = description;
+  if (title && titleEl) {
+    titleEl.removeAttribute('data-i18n');
+    titleEl.textContent = title;
+  }
+  if (description && descEl) {
+    descEl.removeAttribute('data-i18n');
+    descEl.textContent = description;
+  }
 
   if (actionBtn) {
-    actionBtn.textContent = actionText;
+    if (actionText) {
+      actionBtn.removeAttribute('data-i18n');
+      actionBtn.textContent = actionText;
+    }
     actionBtn.addEventListener('click', (e) => {
       e.preventDefault();
       navigate(actionUrl);
@@ -46,9 +58,6 @@ export async function createErrorView({
     e.preventDefault();
     navigate('/');
   });
-
-  translateElement(container);
-  renderIcons(container);
 
   return container;
 }

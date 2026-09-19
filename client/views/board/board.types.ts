@@ -92,7 +92,21 @@ export interface BoardPixelGridElement {
   y: number;
 }
 
-export type BoardElement = BoardStrokeElement | BoardShapeElement | BoardStickyElement | BoardTextElement | BoardPixelGridElement;
+export interface BoardImageElement {
+  alt?: string;
+  aspectRatio: number;
+  height: number;
+  id: string;
+  originalHeight?: number;
+  originalWidth?: number;
+  type: 'image';
+  url: string;
+  width: number;
+  x: number;
+  y: number;
+}
+
+export type BoardElement = BoardStrokeElement | BoardShapeElement | BoardStickyElement | BoardTextElement | BoardPixelGridElement | BoardImageElement;
 
 export interface BoardProject {
   background: {

@@ -1,5 +1,65 @@
 import { getElementBoundingBox } from './board-elements.manager.js';
-import { BackgroundType, BoardCollaboratorState, BoardElement, BoardPixelGridElement, BoardPoint, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTextElement } from './board.types.js';
+import { BackgroundType, BoardCollaboratorState, BoardElement, BoardImageElement, BoardPixelGridElement, BoardPoint, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTextElement } from './board.types.js';
+
+const imageCache = new Map<string, HTMLImageElement>();
+const imageLoadCallbacks = new Map<string, Array<() => void>>();
+
+export function getCachedImage(url: string, onLoaded?: () => void): HTMLImageElement | null {
+  if (imageCache.has(url)) {
+    const img = imageCache.get(url)!;
+    if (img.complete && img.naturalWidth > 0) {
+      return img;
+    }
+  }
+
+  if (onLoaded) {
+    const callbacks = imageLoadCallbacks.get(url) || [];
+    callbacks.push(onLoaded);
+    imageLoadCallbacks.set(url, callbacks);
+  }
+
+  if (!imageCache.has(url)) {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const callbacks = imageLoadCallbacks.get(url) || [];
+      imageLoadCallbacks.delete(url);
+      callbacks.forEach((cb) => cb());
+    };
+    img.onerror = () => {
+      imageLoadCallbacks.delete(url);
+    };
+    img.src = url;
+    imageCache.set(url, img);
+  }
+
+  const existing = imageCache.get(url)!;
+  return existing.complete && existing.naturalWidth > 0 ? existing : null;
+}
+
+export function drawImage(
+  ctx: CanvasRenderingContext2D,
+  imageEl: BoardImageElement,
+  onImageLoaded?: () => void
+): void {
+  const cached = getCachedImage(imageEl.url, onImageLoaded);
+  if (cached) {
+    ctx.drawImage(cached, imageEl.x, imageEl.y, imageEl.width, imageEl.height);
+  } else {
+    ctx.save();
+    ctx.fillStyle = '#f1f5f9';
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.lineWidth = 1;
+    ctx.fillRect(imageEl.x, imageEl.y, imageEl.width, imageEl.height);
+    ctx.strokeRect(imageEl.x, imageEl.y, imageEl.width, imageEl.height);
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('Cargando imagen...', imageEl.x + imageEl.width / 2, imageEl.y + imageEl.height / 2);
+    ctx.restore();
+  }
+}
 
 export function screenToWorld(sx: number, sy: number, canvas: HTMLCanvasElement | null, camera: { x: number; y: number; zoom: number }): BoardPoint {
   const rect = canvas?.getBoundingClientRect();

@@ -1,6 +1,7 @@
 import { API_ROUTES } from '../config/api-routes.js';
 import { LinkedAccount, User } from '../types/auth.types.js';
 import { BillingDetailsResponse, PaymentMethod, PurchaseRecord, StorageUsageInfo, SubscriptionPlan } from '../types/subscription.types.js';
+import { DeleteUploadResponse, UploadsResponse, UserUploadItem } from '../types/upload.types.js';
 
 export { API_ROUTES };
 
@@ -486,5 +487,52 @@ export async function getPurchaseHistoryApi(): Promise<{ success: boolean; purch
     return { success: res.ok, purchases: data.purchases || [] };
   } catch {
     return { success: false, purchases: [] };
+  }
+}
+
+export async function getUploadsApi(): Promise<UploadsResponse> {
+  try {
+    const res = await getApi(API_ROUTES.uploads.base);
+    const data = await res.json();
+    return {
+      storage: data.storage,
+      success: res.ok,
+      uploads: data.uploads || [],
+    };
+  } catch {
+    return { success: false, uploads: [] };
+  }
+}
+
+export async function uploadFilesApi(files: File[]): Promise<UploadsResponse> {
+  try {
+    const formData = new FormData();
+    for (const file of files) {
+      formData.append('files', file);
+    }
+    const res = await postFormApi(API_ROUTES.uploads.base, formData);
+    const data = await res.json();
+    return {
+      message: data.message || data.error,
+      storage: data.storage,
+      success: res.ok,
+      uploads: data.uploads || [],
+    };
+  } catch {
+    return { message: 'Error de conexión al subir los archivos.', success: false, uploads: [] };
+  }
+}
+
+export async function deleteUploadApi(uuid: string): Promise<DeleteUploadResponse> {
+  try {
+    const res = await deleteApi(API_ROUTES.uploads.byUuid(uuid));
+    const data = await res.json();
+    return {
+      message: data.message || data.error,
+      storage: data.storage,
+      success: res.ok,
+    };
+  } catch {
+    return { message: 'Error de conexión al eliminar el archivo.', success: false };
   }
 }

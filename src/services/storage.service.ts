@@ -97,8 +97,19 @@ export async function getUserStorageUsage(userId: number): Promise<UserStorageUs
   const trashBytes = Number(trashRows[0]?.total_bytes || 0);
   const trashCount = Number(trashRows[0]?.total_count || 0);
 
-  let uploadsBytes = 0;
-  let uploadsCount = 0;
+  let userUploadsBytes = 0;
+  let userUploadsCount = 0;
+  try {
+    const [uploadRows] = await pool.query<mysql.RowDataPacket[]>(
+      'SELECT COALESCE(SUM(size_bytes), 0) AS total_bytes, COUNT(id) AS total_count FROM user_uploads WHERE user_id = ?',
+      [userId]
+    );
+    userUploadsBytes = Number(uploadRows[0]?.total_bytes || 0);
+    userUploadsCount = Number(uploadRows[0]?.total_count || 0);
+  } catch {}
+
+  let avatarBytes = 0;
+  let avatarCount = 0;
   const avatarUrl = userRows[0]?.avatar_url;
   if (avatarUrl && typeof avatarUrl === 'string' && avatarUrl.includes('/uploads/avatars/')) {
     const avatarFilename = path.basename(avatarUrl);
@@ -106,16 +117,19 @@ export async function getUserStorageUsage(userId: number): Promise<UserStorageUs
     try {
       const s3Meta = await headObject(s3Key);
       if (s3Meta && s3Meta.contentLength) {
-        uploadsBytes = s3Meta.contentLength;
-        uploadsCount = 1;
+        avatarBytes = s3Meta.contentLength;
+        avatarCount = 1;
       } else {
         const avatarPath = path.join(process.cwd(), 'public', 'uploads', 'avatars', avatarFilename);
         const stat = await fs.promises.stat(avatarPath);
-        uploadsBytes = stat.size;
-        uploadsCount = 1;
+        avatarBytes = stat.size;
+        avatarCount = 1;
       }
     } catch {}
   }
+
+  const uploadsBytes = userUploadsBytes + avatarBytes;
+  const uploadsCount = userUploadsCount + avatarCount;
 
   const usedBytes = canvasesBytes + snapshotsBytes + trashBytes + uploadsBytes;
   const rawPercentage = limitBytes > 0 ? (usedBytes / limitBytes) * 100 : 0;

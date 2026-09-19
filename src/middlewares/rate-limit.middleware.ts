@@ -295,3 +295,11 @@ export const canvasSnapshotLimiter = createRateLimiter({
   keyGenerator: getUserOrIpKey,
   message: 'Has alcanzado el límite de creación de versiones. Por favor espera unos minutos antes de crear otra.',
 });
+
+export const uploadLimiter = createRateLimiter({
+  keyGenerator: getUserOrIpKey,
+  max: 40,
+  message: 'Has alcanzado el límite de subidas por minuto. Por favor espera un momento.',
+  prefix: 'user_upload',
+  windowMs: 60 * 1000,
+});

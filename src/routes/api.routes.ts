@@ -14,6 +14,7 @@ import subscriptionRoutes from './subscription.routes.js';
 import supportRoutes from './support.routes.js';
 import teamRoutes from './team.routes.js';
 import telemetryRoutes from './telemetry.routes.js';
+import userUploadRoutes from './user-upload.routes.js';
 import { validateCsrf } from '../middlewares/csrf.middleware.js';
 import { Router } from 'express';
 
@@ -37,6 +38,7 @@ apiRouter.use('/', teamRoutes);
 apiRouter.use('/', telemetryRoutes);
 apiRouter.use('/', aiRoutes);
 apiRouter.use('/', subscriptionRoutes);
+apiRouter.use('/', userUploadRoutes);
 
 export default apiRouter;
 

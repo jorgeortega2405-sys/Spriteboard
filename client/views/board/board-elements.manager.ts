@@ -114,29 +114,65 @@ export function resizeElementByHandle(
   el: BoardElement,
   handle: 'tl' | 'tr' | 'bl' | 'br',
   worldPos: BoardPoint,
-  startRect: { height: number; width: number; x: number; y: number }
+  startRect: { height: number; width: number; x: number; y: number },
+  lockAspect = false
 ): void {
   if (!('width' in el)) return;
 
+  const preserveAspect = lockAspect || el.type === 'image';
+  const aspect = ('aspectRatio' in el && el.aspectRatio) ? el.aspectRatio : (startRect.width / Math.max(1, startRect.height));
+
   if (handle === 'br') {
-    el.width = Math.max(30, worldPos.x - startRect.x);
-    el.height = Math.max(20, worldPos.y - startRect.y);
+    let w = Math.max(30, worldPos.x - startRect.x);
+    let h = Math.max(20, worldPos.y - startRect.y);
+    if (preserveAspect) {
+      if (Math.abs(w - startRect.width) > Math.abs(h - startRect.height)) {
+        h = Math.round(w / aspect);
+      } else {
+        w = Math.round(h * aspect);
+      }
+    }
+    el.width = Math.max(30, w);
+    el.height = Math.max(20, h);
   } else if (handle === 'bl') {
-    const newW = Math.max(30, startRect.x + startRect.width - worldPos.x);
+    let newW = Math.max(30, startRect.x + startRect.width - worldPos.x);
+    let newH = Math.max(20, worldPos.y - startRect.y);
+    if (preserveAspect) {
+      if (Math.abs(newW - startRect.width) > Math.abs(newH - startRect.height)) {
+        newH = Math.round(newW / aspect);
+      } else {
+        newW = Math.round(newH * aspect);
+      }
+    }
     el.x = startRect.x + startRect.width - newW;
-    el.width = newW;
-    el.height = Math.max(20, worldPos.y - startRect.y);
+    el.width = Math.max(30, newW);
+    el.height = Math.max(20, newH);
   } else if (handle === 'tr') {
-    const newH = Math.max(20, startRect.y + startRect.height - worldPos.y);
+    let newW = Math.max(30, worldPos.x - startRect.x);
+    let newH = Math.max(20, startRect.y + startRect.height - worldPos.y);
+    if (preserveAspect) {
+      if (Math.abs(newW - startRect.width) > Math.abs(newH - startRect.height)) {
+        newH = Math.round(newW / aspect);
+      } else {
+        newW = Math.round(newH * aspect);
+      }
+    }
     el.y = startRect.y + startRect.height - newH;
-    el.width = Math.max(30, worldPos.x - startRect.x);
-    el.height = newH;
+    el.width = Math.max(30, newW);
+    el.height = Math.max(20, newH);
   } else if (handle === 'tl') {
-    const newW = Math.max(30, startRect.x + startRect.width - worldPos.x);
-    const newH = Math.max(20, startRect.y + startRect.height - worldPos.y);
+    let newW = Math.max(30, startRect.x + startRect.width - worldPos.x);
+    let newH = Math.max(20, startRect.y + startRect.height - worldPos.y);
+    if (preserveAspect) {
+      if (Math.abs(newW - startRect.width) > Math.abs(newH - startRect.height)) {
+        newH = Math.round(newW / aspect);
+      } else {
+        newW = Math.round(newH * aspect);
+      }
+    }
     el.x = startRect.x + startRect.width - newW;
     el.y = startRect.y + startRect.height - newH;
-    el.width = newW;
-    el.height = newH;
+    el.width = Math.max(30, newW);
+    el.height = Math.max(20, newH);
   }
 }

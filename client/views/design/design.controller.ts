@@ -3192,6 +3192,19 @@ export class DesignController {
     await this.selectShapeTemplate(shape);
   }
 
+  public async applyUploadedImage(url: string, width?: number, height?: number, name?: string): Promise<void> {
+    const shape: PixelShape = {
+      category: 'templates',
+      height: height || 64,
+      id: `upload-${Date.now()}`,
+      name: name || 'Imagen subida',
+      type: 'sticker',
+      url,
+      width: width || 64,
+    };
+    await this.selectShapeTemplate(shape);
+  }
+
   private openResizeCanvasModal(): void {
     if (this.isInfinite) {
       showToast('Los lienzos infinitos tienen un tamaño dinámico y no admiten redimensión fija', 'warning');
@@ -8946,6 +8959,39 @@ export class DesignController {
       x: e.clientX,
       y: e.clientY,
     });
+  }
+
+  public async applyUploadedImage(url: string, width?: number, height?: number, name?: string): Promise<void> {
+    if (!url) return;
+    const activeFrame = this.frames.find((f) => f.id === this.activeFrameId) || this.frames[0];
+    if (!activeFrame) return;
+
+    const newLayer = this.layersManager.createLayer(name || 'Imagen importada');
+    await this.layersManager.loadLayerImage(newLayer, url);
+
+    activeFrame.layers.push(newLayer);
+    activeFrame.activeLayerId = newLayer.id;
+
+    this.renderLayersList();
+    this.renderLayersCards();
+    this.requestRedraw();
+    this.scheduleAutoSave();
+  }
+
+  public async applyShapeOrSticker(shape: PixelShape): Promise<void> {
+    if (shape.type === 'sticker' && shape.file) {
+      await this.applyUploadedImage(`/assets/img/stickers/${shape.file}`, undefined, undefined, shape.name);
+      return;
+    }
+    if (shape.type === 'vector' && shape.pathD) {
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="64" height="64"><path d="${shape.pathD}" fill="${this.currentColor}" /></svg>`;
+      const dataUrl = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+      await this.applyUploadedImage(dataUrl, 64, 64, shape.name);
+    }
+  }
+
+  public async applyTemplate(imagePath: string, name: string): Promise<void> {
+    await this.applyUploadedImage(imagePath, undefined, undefined, name);
   }
 
   public destroy(): void {

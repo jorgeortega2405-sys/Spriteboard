@@ -9,17 +9,19 @@ import { getLocalCanvasByUuid, removeLocalCanvas, saveLocalCanvas } from '../../
 import { renderIcons } from '../../services/icon.service.js';
 import { showToast } from '../../services/toast.service.js';
 import { CanvasItem } from '../../types/canvas.types.js';
+import { MindMapProject } from '../../types/mindmap.types.js';
 import { setupDropdown } from '../../utils/dom.util.js';
 import { PixelShape, renderShapeCanvas } from '../../utils/pixel-shapes.util.js';
 import { generateShadingRamp, getCollaboratorColor } from '../design/design-color.util.js';
+import { DocPage } from '../doc/doc.types.js';
 import { openBoardAiModal } from './board-ai-modal.component.js';
 import { BoardCollaborationManager } from './board-collaboration.manager.js';
 import { computeElementsBoundingBox, getElementBoundingBox, hitTestElement, hitTestResizeHandle, moveElementByDrag, resizeElementByHandle } from './board-elements.manager.js';
 import { exportJson, exportPng, exportSvg, generateThumbnail } from './board-export.service.js';
 import { BoardHistoryManager } from './board-history.manager.js';
 import { BoardPixelGridManager } from './board-pixel-grid.manager.js';
-import { drawBackground, drawBoardCollaboratorCursors, drawCheckerboard, drawPixelGridLines, drawSelectionBox, drawShape, drawSticky, drawStroke, drawText, screenToWorld, worldToScreen } from './board-renderer.js';
-import { BackgroundType, BoardCollaboratorState, BoardElement, BoardPixelGridElement, BoardPoint, BoardProject, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTextElement, BoardTool, DEFAULT_CLASSIC_PALETTE, GAMEBOY_PALETTE, PICO8_PALETTE, PixelSubtool, ShapeType } from './board.types.js';
+import { drawBackground, drawBoardCollaboratorCursors, drawCheckerboard, drawImage, drawPixelGridLines, drawSelectionBox, drawShape, drawSticky, drawStroke, drawText, screenToWorld, worldToScreen } from './board-renderer.js';
+import { BackgroundType, BoardCollaboratorState, BoardElement, BoardImageElement, BoardPixelGridElement, BoardPoint, BoardProject, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTextElement, BoardTool, DEFAULT_CLASSIC_PALETTE, GAMEBOY_PALETTE, PICO8_PALETTE, PixelSubtool, ShapeType } from './board.types.js';
 
 export class BoardController {
   private abortController: AbortController;
@@ -2434,6 +2436,8 @@ export class BoardController {
       drawText(ctx, el);
     } else if (el.type === 'pixel-grid') {
       this.drawPixelGrid(ctx, el);
+    } else if (el.type === 'image') {
+      drawImage(ctx, el, () => this.requestRedraw());
     }
   }
 
@@ -2578,6 +2582,466 @@ export class BoardController {
     this.pixelGrid.syncPixelGridCanvases(this.elements, () => this.requestRedraw());
     this.collaborationManager.broadcastAddElement(gridEl);
     this.selectedElementId = gridEl.id;
+    this.updateSelectionToolbar();
+    this.requestRedraw();
+    this.scheduleAutoSave();
+  }
+
+  public insertBoardElements(newElements: BoardElement[]): void {
+    if (!newElements || newElements.length === 0) return;
+    this.pushHistoryState();
+
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+
+    newElements.forEach((el) => {
+      if (el.type === 'stroke') {
+        el.points.forEach((pt) => {
+          if (pt.x < minX) minX = pt.x;
+          if (pt.y < minY) minY = pt.y;
+          if (pt.x > maxX) maxX = pt.x;
+          if (pt.y > maxY) maxY = pt.y;
+        });
+      } else {
+        if (el.x < minX) minX = el.x;
+        if (el.y < minY) minY = el.y;
+        if (el.x + el.width > maxX) maxX = el.x + el.width;
+        if (el.y + el.height > maxY) maxY = el.y + el.height;
+      }
+    });
+
+    if (minX === Infinity) {
+      minX = 0;
+      minY = 0;
+      maxX = 400;
+      maxY = 300;
+    }
+
+    const centerSourceX = (minX + maxX) / 2;
+    const centerSourceY = (minY + maxY) / 2;
+
+    const dpr = window.devicePixelRatio || 1;
+    const screenW = this.canvasElement ? this.canvasElement.width / dpr : 800;
+    const screenH = this.canvasElement ? this.canvasElement.height / dpr : 600;
+    const centerTarget = screenToWorld(screenW / 2, screenH / 2, this.canvasElement, this.camera);
+
+    const offsetX = Math.round(centerTarget.x - centerSourceX);
+    const offsetY = Math.round(centerTarget.y - centerSourceY);
+
+    const clonedElements: BoardElement[] = newElements.map((el) => {
+      const newId = `elem_${crypto.randomUUID().slice(0, 8)}`;
+      if (el.type === 'stroke') {
+        return {
+          ...el,
+          id: newId,
+          points: el.points.map((p) => ({ x: p.x + offsetX, y: p.y + offsetY })),
+        };
+      }
+      return {
+        ...el,
+        id: newId,
+        x: el.x + offsetX,
+        y: el.y + offsetY,
+      };
+    });
+
+    this.elements.push(...clonedElements);
+    this.pixelGrid.syncPixelGridCanvases(this.elements, () => this.requestRedraw());
+    clonedElements.forEach((el) => this.collaborationManager.broadcastAddElement(el));
+    this.selectedElementId = clonedElements[clonedElements.length - 1]?.id || null;
+    this.updateSelectionToolbar();
+    this.requestRedraw();
+    this.scheduleAutoSave();
+  }
+
+  public insertDocAsBoardElements(pages: DocPage[], docTitle: string): void {
+    if (!pages || pages.length === 0) return;
+    this.pushHistoryState();
+
+    const dpr = window.devicePixelRatio || 1;
+    const screenW = this.canvasElement ? this.canvasElement.width / dpr : 800;
+    const screenH = this.canvasElement ? this.canvasElement.height / dpr : 600;
+    const centerWorld = screenToWorld(screenW / 2, screenH / 2, this.canvasElement, this.camera);
+
+    const cardW = 440;
+    const cardH = 580;
+    const gap = 40;
+    const totalW = pages.length * cardW + (pages.length - 1) * gap;
+    const startX = Math.round(centerWorld.x - totalW / 2);
+    const startY = Math.round(centerWorld.y - cardH / 2);
+
+    const newElements: BoardElement[] = [];
+
+    pages.forEach((page, pIdx) => {
+      const pageX = startX + pIdx * (cardW + gap);
+      const pageY = startY;
+      const pageId = `page_card_${Date.now()}_${pIdx}_${Math.random().toString(36).slice(2, 6)}`;
+
+      const sheetEl: BoardShapeElement = {
+        fillColor: '#ffffff',
+        height: cardH,
+        id: pageId,
+        shapeType: 'round-rect',
+        strokeColor: '#cbd5e1',
+        strokeWidth: 2,
+        type: 'shape',
+        width: cardW,
+        x: pageX,
+        y: pageY,
+      };
+      newElements.push(sheetEl);
+
+      const pageTitleText = pages.length > 1 ? `${docTitle} (Pág. ${pIdx + 1})` : docTitle;
+      const headerEl: BoardTextElement = {
+        color: '#0f172a',
+        fontSize: 18,
+        height: 32,
+        id: `text_${Date.now()}_h_${pIdx}_${Math.random().toString(36).slice(2, 6)}`,
+        text: pageTitleText,
+        type: 'text',
+        width: cardW - 48,
+        x: pageX + 24,
+        y: pageY + 24,
+      };
+      newElements.push(headerEl);
+
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = page.contentHtml || '';
+
+      let curY = pageY + 70;
+      const children = Array.from(tempDiv.children);
+
+      if (children.length === 0) {
+        const text = (tempDiv.textContent || '').trim();
+        if (text) {
+          const pEl: BoardTextElement = {
+            color: '#334155',
+            fontSize: 13,
+            height: 80,
+            id: `text_${Date.now()}_p_${pIdx}_${Math.random().toString(36).slice(2, 6)}`,
+            text: text.slice(0, 300),
+            type: 'text',
+            width: cardW - 48,
+            x: pageX + 24,
+            y: curY,
+          };
+          newElements.push(pEl);
+        }
+      } else {
+        for (const node of children) {
+          if (curY >= pageY + cardH - 60) break;
+          const tagName = node.tagName.toLowerCase();
+          const textContent = (node.textContent || '').trim();
+          if (!textContent && tagName !== 'img' && tagName !== 'hr') continue;
+
+          if (tagName === 'blockquote') {
+            const stickyEl: BoardStickyElement = {
+              color: '#fef08a',
+              fontSize: 13,
+              height: 90,
+              id: `sticky_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+              text: textContent.slice(0, 200),
+              textColor: '#1e293b',
+              type: 'sticky',
+              width: cardW - 48,
+              x: pageX + 24,
+              y: curY,
+            };
+            newElements.push(stickyEl);
+            curY += 102;
+          } else if (tagName.startsWith('h')) {
+            const hEl: BoardTextElement = {
+              color: '#0f172a',
+              fontSize: tagName === 'h1' ? 16 : 14,
+              height: 26,
+              id: `text_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+              text: textContent.slice(0, 100),
+              type: 'text',
+              width: cardW - 48,
+              x: pageX + 24,
+              y: curY,
+            };
+            newElements.push(hEl);
+            curY += 34;
+          } else if (tagName === 'ul' || tagName === 'ol') {
+            const listItems = Array.from(node.querySelectorAll('li')).map((li) => `• ${(li.textContent || '').trim()}`).filter(Boolean);
+            const listText = listItems.slice(0, 4).join('\n');
+            if (listText) {
+              const listEl: BoardTextElement = {
+                color: '#334155',
+                fontSize: 13,
+                height: Math.min(100, listItems.length * 20 + 10),
+                id: `text_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+                text: listText,
+                type: 'text',
+                width: cardW - 48,
+                x: pageX + 24,
+                y: curY,
+              };
+              newElements.push(listEl);
+              curY += listEl.height + 12;
+            }
+          } else {
+            const pEl: BoardTextElement = {
+              color: '#334155',
+              fontSize: 13,
+              height: 48,
+              id: `text_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+              text: textContent.slice(0, 160),
+              type: 'text',
+              width: cardW - 48,
+              x: pageX + 24,
+              y: curY,
+            };
+            newElements.push(pEl);
+            curY += 56;
+          }
+        }
+      }
+    });
+
+    this.elements.push(...newElements);
+    this.pixelGrid.syncPixelGridCanvases(this.elements, () => this.requestRedraw());
+    newElements.forEach((el) => this.collaborationManager.broadcastAddElement(el));
+    this.selectedElementId = newElements[newElements.length - 1]?.id || null;
+    this.updateSelectionToolbar();
+    this.requestRedraw();
+    this.scheduleAutoSave();
+  }
+
+  public insertDiagramAsBoardElements(diagram: MindMapProject, diagramTitle: string): void {
+    if (!diagram || !diagram.nodes) return;
+    this.pushHistoryState();
+
+    const dpr = window.devicePixelRatio || 1;
+    const screenW = this.canvasElement ? this.canvasElement.width / dpr : 800;
+    const screenH = this.canvasElement ? this.canvasElement.height / dpr : 600;
+    const centerWorld = screenToWorld(screenW / 2, screenH / 2, this.canvasElement, this.camera);
+
+    const nodes = Object.values(diagram.nodes);
+    if (nodes.length === 0) return;
+
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+
+    nodes.forEach((n) => {
+      const nx = n.x || 0;
+      const ny = n.y || 0;
+      const nw = n.width || 140;
+      const nh = n.height || 48;
+      if (nx < minX) minX = nx;
+      if (ny < minY) minY = ny;
+      if (nx + nw > maxX) maxX = nx + nw;
+      if (ny + nh > maxY) maxY = ny + nh;
+    });
+
+    if (minX === Infinity) {
+      minX = 0;
+      minY = 0;
+      maxX = 400;
+      maxY = 300;
+    }
+
+    const centerSourceX = (minX + maxX) / 2;
+    const centerSourceY = (minY + maxY) / 2;
+    const offsetX = Math.round(centerWorld.x - centerSourceX);
+    const offsetY = Math.round(centerWorld.y - centerSourceY);
+
+    const newElements: BoardElement[] = [];
+    const nodeCenterMap = new Map<string, { x: number; y: number }>();
+
+    nodes.forEach((n) => {
+      const nw = n.width || 140;
+      const nh = n.height || 48;
+      const nx = Math.round((n.x || 0) + offsetX);
+      const ny = Math.round((n.y || 0) + offsetY);
+      nodeCenterMap.set(n.id, { x: nx + nw / 2, y: ny + nh / 2 });
+
+      const shapeType: ShapeType = n.shape === 'diamond' ? 'diamond' : (n.shape === 'rect' ? 'rect' : 'round-rect');
+      const shapeEl: BoardShapeElement = {
+        fillColor: n.color || '#3b82f6',
+        height: nh,
+        id: `diag_shape_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        shapeType,
+        strokeColor: '#1e293b',
+        strokeWidth: 2,
+        type: 'shape',
+        width: nw,
+        x: nx,
+        y: ny,
+      };
+      newElements.push(shapeEl);
+
+      const textEl: BoardTextElement = {
+        color: n.textColor || '#ffffff',
+        fontSize: n.fontSize || 13,
+        height: nh - 8,
+        id: `diag_text_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        text: n.text || '',
+        type: 'text',
+        width: nw - 12,
+        x: nx + 6,
+        y: ny + 4,
+      };
+      newElements.push(textEl);
+    });
+
+    nodes.forEach((n) => {
+      if (n.parentId && nodeCenterMap.has(n.parentId) && nodeCenterMap.has(n.id)) {
+        const pCenter = nodeCenterMap.get(n.parentId)!;
+        const cCenter = nodeCenterMap.get(n.id)!;
+        const arrowEl: BoardShapeElement = {
+          fillColor: '#94a3b8',
+          height: Math.max(10, Math.abs(cCenter.y - pCenter.y)),
+          id: `diag_conn_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+          shapeType: 'arrow',
+          strokeColor: '#64748b',
+          strokeWidth: 2,
+          type: 'shape',
+          width: Math.max(10, Math.abs(cCenter.x - pCenter.x)),
+          x: Math.min(pCenter.x, cCenter.x),
+          y: Math.min(pCenter.y, cCenter.y),
+        };
+        newElements.push(arrowEl);
+      }
+    });
+
+    this.elements.push(...newElements);
+    this.pixelGrid.syncPixelGridCanvases(this.elements, () => this.requestRedraw());
+    newElements.forEach((el) => this.collaborationManager.broadcastAddElement(el));
+    this.selectedElementId = newElements[newElements.length - 1]?.id || null;
+    this.updateSelectionToolbar();
+    this.requestRedraw();
+    this.scheduleAutoSave();
+  }
+
+  public insertPixelGridElement(dataUrl: string, width: number, height: number, name?: string): void {
+    this.pushHistoryState();
+
+    const dpr = window.devicePixelRatio || 1;
+    const screenW = this.canvasElement ? this.canvasElement.width / dpr : 800;
+    const screenH = this.canvasElement ? this.canvasElement.height / dpr : 600;
+    const centerWorld = screenToWorld(screenW / 2, screenH / 2, this.canvasElement, this.camera);
+
+    const pixelSize = 4;
+    const gridW = width || 32;
+    const gridH = height || 32;
+    const elementWidth = gridW * pixelSize;
+    const elementHeight = gridH * pixelSize;
+
+    const gridEl: BoardPixelGridElement = {
+      backgroundColor: 'transparent',
+      data: dataUrl,
+      gridHeight: gridH,
+      gridWidth: gridW,
+      height: elementHeight,
+      id: `elem-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      pixelSize,
+      showGrid: false,
+      type: 'pixel-grid',
+      width: elementWidth,
+      x: Math.round(centerWorld.x - elementWidth / 2),
+      y: Math.round(centerWorld.y - elementHeight / 2),
+    };
+
+    this.elements.push(gridEl);
+    this.pixelGrid.syncPixelGridCanvases(this.elements, () => this.requestRedraw());
+    this.collaborationManager.broadcastAddElement(gridEl);
+    this.selectedElementId = gridEl.id;
+    this.updateSelectionToolbar();
+    this.requestRedraw();
+    this.scheduleAutoSave();
+  }
+
+  public insertImage(url: string, width?: number, height?: number, name?: string): void {
+    this.pushHistoryState();
+
+    const dpr = window.devicePixelRatio || 1;
+    const screenW = this.canvasElement ? this.canvasElement.width / dpr : 800;
+    const screenH = this.canvasElement ? this.canvasElement.height / dpr : 600;
+    const centerWorld = screenToWorld(screenW / 2, screenH / 2, this.canvasElement, this.camera);
+
+    const initialW = width || 320;
+    const initialH = height || 240;
+    const aspect = initialW / Math.max(1, initialH);
+
+    const maxInitDim = 400;
+    let targetW = initialW;
+    let targetH = initialH;
+    if (targetW > maxInitDim || targetH > maxInitDim) {
+      if (targetW >= targetH) {
+        targetW = maxInitDim;
+        targetH = Math.round(targetW / aspect);
+      } else {
+        targetH = maxInitDim;
+        targetW = Math.round(targetH * aspect);
+      }
+    }
+
+    const imageEl: BoardImageElement = {
+      alt: name || 'Imagen',
+      aspectRatio: aspect,
+      height: targetH,
+      id: `image-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      originalHeight: height,
+      originalWidth: width,
+      type: 'image',
+      url,
+      width: targetW,
+      x: Math.round(centerWorld.x - targetW / 2),
+      y: Math.round(centerWorld.y - targetH / 2),
+    };
+
+    this.elements.push(imageEl);
+    this.collaborationManager.broadcastAddElement(imageEl);
+    this.selectedElementId = imageEl.id;
+    this.updateSelectionToolbar();
+    this.requestRedraw();
+    this.scheduleAutoSave();
+  }
+
+  public isBoardEmpty(): boolean {
+    return this.elements.length === 0;
+  }
+
+  public applyTemplate(templateId: string, mode: 'insert' | 'replace' = 'insert'): void {
+    if (mode === 'replace') {
+      this.elements = [];
+    }
+    const templateElements = getBoardTemplateElements(templateId);
+    if (templateElements && templateElements.length > 0) {
+      this.insertBoardElements(templateElements);
+    }
+  }
+
+  public insertShapeOrSticker(shape: PixelShape): void {
+    if (shape.type === 'sticker' && shape.file) {
+      this.insertImage(`/assets/img/stickers/${shape.file}`, 160, 160, shape.name);
+      return;
+    }
+    const dpr = window.devicePixelRatio || 1;
+    const screenW = this.canvasElement ? this.canvasElement.width / dpr : 800;
+    const screenH = this.canvasElement ? this.canvasElement.height / dpr : 600;
+    const centerWorld = screenToWorld(screenW / 2, screenH / 2, this.canvasElement, this.camera);
+    const shapeEl: BoardShapeElement = {
+      fillColor: '#3b82f6',
+      height: 120,
+      id: `shape_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      shapeType: 'round-rect',
+      strokeColor: '#1e293b',
+      strokeWidth: 2,
+      type: 'shape',
+      width: 160,
+      x: Math.round(centerWorld.x - 80),
+      y: Math.round(centerWorld.y - 60),
+    };
+    this.elements.push(shapeEl);
+    this.collaborationManager.broadcastAddElement(shapeEl);
+    this.selectedElementId = shapeEl.id;
     this.updateSelectionToolbar();
     this.requestRedraw();
     this.scheduleAutoSave();

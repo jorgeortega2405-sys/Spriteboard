@@ -2,18 +2,23 @@ import { navigate, render } from '../app-router.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { hasFeature, protectRoute } from '../config/plans.config.js';
 import { ALL_PRESETS, PresetItem } from '../config/templates.config.js';
-import { currentUser, deleteApi, escapeHtml, getApi, linkedAccounts, logoutAllApi, logoutApi, patchApi, postApi, switchAccountApi } from '../services/api.service.js';
-import { getAllLocalCanvases } from '../services/canvas-storage.service.js';
+import { currentUser, deleteApi, deleteUploadApi, escapeHtml, getApi, getUploadsApi, linkedAccounts, logoutAllApi, logoutApi, patchApi, postApi, switchAccountApi, uploadFilesApi } from '../services/api.service.js';
+import { getAllLocalCanvases, getLocalCanvasByUuid } from '../services/canvas-storage.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { createIconSvg, renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { closeWebSocket, initWebSocket, registerWebSocketHandler } from '../services/websocket.service.js';
 import { CanvasItem } from '../types/canvas.types.js';
+import { MindMapProject } from '../types/mindmap.types.js';
+import { UserStorageUsage } from '../types/subscription.types.js';
+import { UserUploadItem } from '../types/upload.types.js';
 import { closeAllDropdowns, registerActiveDropdown, unregisterActiveDropdown } from '../utils/dom.util.js';
 import { PIXEL_SHAPES, PixelShape } from '../utils/pixel-shapes.util.js';
 import { applyAvatarTier, getFallbackTierColor } from '../utils/tier.util.js';
+import { BoardProject } from '../views/board/board.types.js';
 import { DOC_TEMPLATES, getDocTemplateById } from '../views/doc/doc-templates.config.js';
+import { DocPage, DocProject } from '../views/doc/doc.types.js';
 import { openCreateCanvasModal } from './create-canvas-modal.component.js';
 import { openModal } from './modal.component.js';
 import { openUpgradeModal } from './upgrade-modal.component.js';
@@ -1190,12 +1195,361 @@ function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElemen
   renderIcons(drawerBody);
 }
 
+function formatBytes(bytes: number): string {
+  if (!bytes || bytes <= 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+  if (i === 0) return `${bytes} B`;
+  const rawValue = bytes / Math.pow(1024, i);
+  const formatted = rawValue % 1 === 0 ? rawValue.toString() : rawValue.toFixed(rawValue >= 100 || i >= 3 ? 1 : 2);
+  return `${formatted} ${units[i]}`;
+}
+
+function handleApplyCanvasUpload(item: UserUploadItem, canvasType: 'board' | 'diagram' | 'doc' | 'pixel'): void {
+  const controller = getActiveCanvasController();
+
+  if (canvasType === 'doc') {
+    if (!controller) {
+      showToast('No se encontró el controlador del documento', 'warning');
+      return;
+    }
+
+    controller.insertImage(item.url, item.original_filename);
+    showToast(`«${item.original_filename}» insertada en el documento`, 'success');
+    if (window.innerWidth <= 768) {
+      toggleDrawer(false);
+    }
+    return;
+  }
+
+  if (canvasType === 'board') {
+    if (!controller) {
+      showToast('No se encontró el controlador del pizarrón', 'warning');
+      return;
+    }
+
+    controller.insertImage(item.url, item.width || undefined, item.height || undefined, item.original_filename);
+    showToast(`«${item.original_filename}» añadida al pizarrón`, 'success');
+    if (window.innerWidth <= 768) {
+      toggleDrawer(false);
+    }
+    return;
+  }
+
+  if (canvasType === 'diagram') {
+    if (!controller) {
+      showToast('No se encontró el controlador del diagrama', 'warning');
+      return;
+    }
+
+    const stickerShape: PixelShape = {
+      category: 'templates',
+      file: '',
+      id: `upload_${item.uuid}`,
+      name: item.original_filename,
+      type: 'sticker',
+      url: item.url,
+    };
+    controller.insertShapeOrSticker(stickerShape);
+    showToast(`«${item.original_filename}» añadida al diagrama`, 'success');
+    if (window.innerWidth <= 768) {
+      toggleDrawer(false);
+    }
+    return;
+  }
+
+  if (canvasType === 'pixel') {
+    if (!controller) {
+      showToast('No se encontró el controlador de diseño', 'warning');
+      return;
+    }
+
+    void controller.applyUploadedImage(item.url, item.width || undefined, item.height || undefined, item.original_filename);
+    showToast(`«${item.original_filename}» lista para posicionar`, 'success');
+    if (window.innerWidth <= 768) {
+      toggleDrawer(false);
+    }
+  }
+}
+
+function renderUploadsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement): void {
+  const sidebar = drawer.closest<HTMLElement>('[data-ref="sidebar"]') || document.querySelector<HTMLElement>('[data-ref="sidebar"]');
+  const canvasType = getActiveCanvasType();
+
+  drawerBody.innerHTML = `
+    <div class="canvas-panel-card" data-ref="canvas-panel-card">
+      <div class="canvas-panel-card__header" data-ref="canvas-panel-header">
+        <div class="canvas-panel-card__title-box" data-ref="canvas-panel-title-box">
+          <svg class="component-icon canvas-panel-card__icon" aria-hidden="true"><use href="/icons.svg#cloud_upload"></use></svg>
+          <span class="canvas-panel-card__title" data-ref="canvas-panel-title">${t('nav.uploads') || 'Subidos'}</span>
+        </div>
+        <button type="button" class="component-button component-button--h32 component-button--icon-only rail-btn canvas-panel-card__close" data-ref="btn-close-canvas-panel" data-tooltip="Cerrar panel" aria-label="Cerrar panel">
+          <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+        </button>
+      </div>
+      <div class="canvas-panel-card__body canvas-uploads-container" data-ref="canvas-panel-body">
+        <div class="canvas-upload-dropzone" data-ref="canvas-upload-dropzone">
+          <input class="canvas-upload-file-input" data-ref="canvas-upload-file-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" multiple style="display: none;" />
+          <svg class="component-icon canvas-upload-dropzone__icon" aria-hidden="true"><use href="/icons.svg#cloud_upload"></use></svg>
+          <span class="canvas-upload-dropzone__title">Sube tus fotos o imágenes</span>
+          <span class="canvas-upload-dropzone__subtitle">Arrastra y suelta aquí o haz clic para explorar</span>
+        </div>
+
+        <div class="canvas-upload-storage-meter" data-ref="canvas-upload-storage-meter" style="display: none;">
+          <div class="canvas-upload-storage-meter__header">
+            <span class="canvas-upload-storage-meter__label">Almacenamiento</span>
+            <span class="canvas-upload-storage-meter__value" data-ref="canvas-upload-storage-text">0 B / 0 B</span>
+          </div>
+          <div class="canvas-upload-storage-meter__track">
+            <div class="canvas-upload-storage-meter__fill" data-ref="canvas-upload-storage-fill" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <div class="canvas-panel-search" data-ref="canvas-panel-search">
+          <svg class="component-icon canvas-panel-search__icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+          <input class="canvas-panel-search__input" data-ref="canvas-uploads-search-input" type="text" placeholder="Buscar subidos..." />
+        </div>
+
+        <div class="canvas-panel-uploads-grid" data-ref="canvas-uploads-grid">
+          <div class="canvas-panel-card__empty" style="grid-column: 1 / -1;" data-ref="canvas-uploads-loading">
+            <div class="canvas-panel-card__empty-icon">
+              <svg class="component-icon component-icon--spin" aria-hidden="true"><use href="/icons.svg#progress_activity"></use></svg>
+            </div>
+            <span class="canvas-panel-card__empty-title">Cargando archivos...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const btnClose = drawerBody.querySelector<HTMLElement>('[data-ref="btn-close-canvas-panel"]');
+  btnClose?.addEventListener('click', (e) => {
+    e.preventDefault();
+    toggleDrawer(false);
+  });
+
+  const dropzone = drawerBody.querySelector<HTMLElement>('[data-ref="canvas-upload-dropzone"]');
+  const fileInput = drawerBody.querySelector<HTMLInputElement>('[data-ref="canvas-upload-file-input"]');
+  const storageMeter = drawerBody.querySelector<HTMLElement>('[data-ref="canvas-upload-storage-meter"]');
+  const storageText = drawerBody.querySelector<HTMLElement>('[data-ref="canvas-upload-storage-text"]');
+  const storageFill = drawerBody.querySelector<HTMLElement>('[data-ref="canvas-upload-storage-fill"]');
+  const searchInput = drawerBody.querySelector<HTMLInputElement>('[data-ref="canvas-uploads-search-input"]');
+  const grid = drawerBody.querySelector<HTMLElement>('[data-ref="canvas-uploads-grid"]');
+
+  let uploads: UserUploadItem[] = [];
+  let isUploading = false;
+
+  const updateStorage = (storage?: UserStorageUsage) => {
+    if (!storage || !storageMeter || !storageText || !storageFill) return;
+    storageMeter.style.display = 'flex';
+    storageText.textContent = `${storage.usedFormatted} / ${storage.limitFormatted}`;
+    const pct = Math.min(100, Math.max(0, storage.percentage));
+    storageFill.style.width = `${pct}%`;
+    storageFill.className = 'canvas-upload-storage-meter__fill';
+    if (storage.isOverLimit) {
+      storageFill.classList.add('canvas-upload-storage-meter__fill--danger');
+    } else if (storage.isNearLimit) {
+      storageFill.classList.add('canvas-upload-storage-meter__fill--warning');
+    }
+  };
+
+  const renderGrid = (query = '') => {
+    if (!grid) return;
+    const cleanQ = query.trim().toLowerCase();
+    const filtered = cleanQ
+      ? uploads.filter((u) => u.original_filename.toLowerCase().includes(cleanQ))
+      : uploads;
+
+    if (filtered.length === 0) {
+      if (uploads.length === 0) {
+        grid.innerHTML = `
+          <div class="canvas-panel-card__empty" style="grid-column: 1 / -1;" data-ref="canvas-uploads-empty">
+            <div class="canvas-panel-card__empty-icon">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cloud_upload"></use></svg>
+            </div>
+            <span class="canvas-panel-card__empty-title">Aún no tienes archivos subidos</span>
+            <p class="canvas-panel-card__empty-desc">Sube fotos o imágenes para colocarlas en tus lienzos.</p>
+          </div>
+        `;
+      } else {
+        grid.innerHTML = `
+          <div class="canvas-panel-card__empty" style="grid-column: 1 / -1;" data-ref="canvas-uploads-no-results">
+            <span class="canvas-panel-card__empty-title">Sin resultados</span>
+            <p class="canvas-panel-card__empty-desc">No se encontraron archivos que coincidan con «${escapeHtml(query)}»</p>
+          </div>
+        `;
+      }
+      renderIcons(grid);
+      return;
+    }
+
+    grid.innerHTML = filtered.map((item) => `
+      <div class="canvas-upload-card" data-ref="canvas-upload-card-${item.uuid}" data-upload-uuid="${item.uuid}">
+        <div class="canvas-upload-card__thumb">
+          <img class="canvas-upload-card__img" data-ref="img-upload-${item.uuid}" src="${escapeHtml(item.url)}" alt="${escapeHtml(item.original_filename)}" loading="lazy" />
+          <button type="button" class="canvas-upload-card__delete" data-ref="btn-delete-upload-${item.uuid}" data-delete-uuid="${item.uuid}" data-tooltip="Eliminar imagen" aria-label="Eliminar imagen">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
+          </button>
+        </div>
+        <div class="canvas-upload-card__info">
+          <span class="canvas-upload-card__name" data-ref="name-upload-${item.uuid}" title="${escapeHtml(item.original_filename)}">${escapeHtml(item.original_filename)}</span>
+          <span class="canvas-upload-card__meta" data-ref="meta-upload-${item.uuid}">${formatBytes(item.size_bytes)}${item.width && item.height ? ` • ${item.width}×${item.height}` : ''}</span>
+        </div>
+      </div>
+    `).join('');
+
+    renderIcons(grid);
+
+    grid.querySelectorAll<HTMLElement>('.canvas-upload-card').forEach((card) => {
+      card.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement | null;
+        if (target?.closest('[data-delete-uuid]')) return;
+        const uuid = card.getAttribute('data-upload-uuid');
+        const found = uploads.find((u) => u.uuid === uuid);
+        if (found) {
+          handleApplyCanvasUpload(found, canvasType);
+        }
+      });
+    });
+
+    grid.querySelectorAll<HTMLButtonElement>('[data-delete-uuid]').forEach((btnDel) => {
+      btnDel.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const uuid = btnDel.getAttribute('data-delete-uuid');
+        const found = uploads.find((u) => u.uuid === uuid);
+        if (!found) return;
+
+        const modal = openModal({
+          cancelText: 'Cancelar',
+          confirmClass: 'component-button--danger',
+          confirmText: 'Eliminar',
+          description: `¿Estás seguro de que deseas eliminar «${found.original_filename}»? Esta acción liberará espacio de tu cuenta.`,
+          showCancel: true,
+          showConfirm: true,
+          title: 'Eliminar archivo subido',
+          onConfirm: async () => {
+            const res = await deleteUploadApi(found.uuid);
+            if (res.success) {
+              showToast('Archivo eliminado con éxito', 'success');
+              uploads = uploads.filter((u) => u.uuid !== found.uuid);
+              if (res.storage) {
+                updateStorage(res.storage);
+              }
+              renderGrid(searchInput?.value || '');
+            } else {
+              showToast(res.message || 'Error al eliminar el archivo.', 'danger');
+            }
+          },
+        });
+      });
+    });
+  };
+
+  const handleFiles = async (files: FileList | File[]) => {
+    if (!currentUser) {
+      showToast('Debes iniciar sesión para subir fotos.', 'warning');
+      return;
+    }
+    const fileArray = Array.from(files).filter((f) => f.type.startsWith('image/'));
+    if (fileArray.length === 0) {
+      showToast('Por favor selecciona archivos de imagen válidos (PNG, JPEG, WebP, GIF, SVG).', 'warning');
+      return;
+    }
+
+    if (isUploading) return;
+    isUploading = true;
+    showToast('Subiendo archivo(s)...', 'info');
+
+    const res = await uploadFilesApi(fileArray);
+    isUploading = false;
+
+    if (res.success) {
+      showToast(res.message || 'Archivos subidos correctamente.', 'success');
+      if (res.uploads && res.uploads.length > 0) {
+        uploads = [...res.uploads, ...uploads];
+      }
+      if (res.storage) {
+        updateStorage(res.storage);
+      }
+      renderGrid(searchInput?.value || '');
+    } else {
+      showToast(res.message || 'Error al subir los archivos.', 'danger');
+    }
+  };
+
+  dropzone?.addEventListener('click', () => {
+    fileInput?.click();
+  });
+
+  fileInput?.addEventListener('change', () => {
+    if (fileInput.files && fileInput.files.length > 0) {
+      void handleFiles(fileInput.files);
+      fileInput.value = '';
+    }
+  });
+
+  dropzone?.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropzone.classList.add('is-dragover');
+  });
+
+  dropzone?.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    dropzone.classList.remove('is-dragover');
+  });
+
+  dropzone?.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropzone.classList.remove('is-dragover');
+    if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
+      void handleFiles(e.dataTransfer.files);
+    }
+  });
+
+  searchInput?.addEventListener('input', () => {
+    renderGrid(searchInput.value);
+  });
+
+  if (!currentUser) {
+    uploads = [];
+    renderGrid();
+  } else {
+    void getUploadsApi().then((res) => {
+      if (res.success) {
+        uploads = res.uploads || [];
+        if (res.storage) {
+          updateStorage(res.storage);
+        }
+      } else {
+        uploads = [];
+      }
+      renderGrid(searchInput?.value || '');
+    });
+  }
+
+  const drawerFooter = drawer.querySelector<HTMLElement>('[data-ref="drawer-footer"]');
+  if (drawerFooter) {
+    drawerFooter.style.display = 'none';
+  }
+
+  if (sidebar) {
+    updateCanvasRailActiveState(sidebar);
+  }
+
+  renderIcons(drawerBody);
+}
+
 function renderCanvasDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement): void {
   const tab = activeCanvasTab || 'templates';
   const sidebar = drawer.closest<HTMLElement>('[data-ref="sidebar"]') || document.querySelector<HTMLElement>('[data-ref="sidebar"]');
 
   if (tab === 'elements') {
     renderElementsDrawerContent(drawer, drawerBody);
+    return;
+  }
+
+  if (tab === 'uploads') {
+    renderUploadsDrawerContent(drawer, drawerBody);
     return;
   }
 
@@ -1297,6 +1651,11 @@ function renderCanvasDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement)
     return;
   }
 
+  if (tab === 'projects') {
+    void renderProjectsDrawerContent(drawer, drawerBody);
+    return;
+  }
+
   const tabMeta: Record<string, { desc: string; icon: string; title: string }> = {
     elements: {
       desc: 'Agrega figuras, iconos, gráficos y componentes a tu lienzo.',
@@ -1350,6 +1709,668 @@ function renderCanvasDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement)
     e.preventDefault();
     toggleDrawer(false);
   });
+
+  const drawerFooter = drawer.querySelector<HTMLElement>('[data-ref="drawer-footer"]');
+  if (drawerFooter) {
+    drawerFooter.style.display = 'none';
+  }
+
+  if (sidebar) {
+    updateCanvasRailActiveState(sidebar);
+  }
+
+  renderIcons(drawerBody);
+}
+
+function renderDocPageToDataUrl(page: DocPage, title = 'Documento'): Promise<string> {
+  return new Promise((resolve) => {
+    try {
+      const width = 816;
+      const height = 1056;
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(width * 1.5);
+      canvas.height = Math.round(height * 1.5);
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        resolve('');
+        return;
+      }
+
+      ctx.scale(1.5, 1.5);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, width, height);
+
+      const contentHtml = page.contentHtml || '<p>Página sin contenido</p>';
+      const cleanHtml = contentHtml
+        .replace(/&nbsp;/g, ' ')
+        .replace(/<br>/g, '<br/>')
+        .replace(/<img([^>]*?)(?<!\/)>/gi, '<img$1 />')
+        .replace(/<hr([^>]*?)(?<!\/)>/gi, '<hr$1 />')
+        .replace(/<input([^>]*?)(?<!\/)>/gi, '<input$1 />');
+
+      const svgString = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
+          <foreignObject width="100%" height="100%">
+            <div xmlns="http://www.w3.org/1999/xhtml" style="box-sizing: border-box; width: ${width}px; height: ${height}px; padding: 48px 56px; background-color: #ffffff; color: #1e293b; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.6; word-break: break-word; overflow: hidden;">
+              <style>
+                p { margin: 0 0 10px 0; }
+                h1 { font-size: 26px; font-weight: 700; margin: 0 0 16px 0; color: #0f172a; }
+                h2 { font-size: 20px; font-weight: 600; margin: 16px 0 12px 0; color: #0f172a; }
+                h3 { font-size: 16px; font-weight: 600; margin: 14px 0 8px 0; color: #0f172a; }
+                ul, ol { margin: 0 0 12px 0; padding-left: 24px; }
+                li { margin-bottom: 4px; }
+                blockquote { border-left: 3px solid #3b82f6; padding-left: 12px; margin: 12px 0; color: #475569; font-style: italic; }
+                table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+                th, td { border: 1px solid #cbd5e1; padding: 8px 12px; text-align: left; }
+                th { background: #f8fafc; font-weight: 600; }
+                img { max-width: 100%; height: auto; border-radius: 6px; }
+                hr { border: none; border-top: 1px solid #e2e8f0; margin: 16px 0; }
+              </style>
+              ${cleanHtml}
+            </div>
+          </foreignObject>
+        </svg>
+      `;
+
+      const img = new Image();
+      const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+      const blobUrl = URL.createObjectURL(svgBlob);
+
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0, width, height);
+        URL.revokeObjectURL(blobUrl);
+        resolve(canvas.toDataURL('image/png'));
+      };
+
+      img.onerror = () => {
+        URL.revokeObjectURL(blobUrl);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, width, height);
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillRect(0, 0, width, 60);
+        ctx.strokeStyle = '#e2e8f0';
+        ctx.strokeRect(0, 0, width, height);
+        ctx.fillStyle = '#0f172a';
+        ctx.font = 'bold 20px sans-serif';
+        ctx.fillText(title, 40, 38);
+        ctx.fillStyle = '#64748b';
+        ctx.font = '14px sans-serif';
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = page.contentHtml || '';
+        const lines = (tempDiv.textContent || '').trim().split('\n').filter(Boolean);
+        let y = 100;
+        lines.slice(0, 25).forEach((line) => {
+          ctx.fillText(line.slice(0, 80), 40, y);
+          y += 24;
+        });
+        resolve(canvas.toDataURL('image/png'));
+      };
+
+      img.src = blobUrl;
+    } catch {
+      resolve('');
+    }
+  });
+}
+
+function openDocPageSelectionModal(
+  canvas: CanvasItem,
+  docProject: DocProject,
+  targetCanvasType: 'board' | 'diagram' | 'doc' | 'pixel'
+): void {
+  const pages = docProject.pages || [];
+  if (pages.length === 0) {
+    showToast('El documento no contiene páginas para insertar.', 'warning');
+    return;
+  }
+
+  let selectedIndex = -1;
+
+  const getPageSnippet = (html: string): string => {
+    const temp = document.createElement('div');
+    temp.innerHTML = html;
+    const text = (temp.textContent || '').replace(/\s+/g, ' ').trim();
+    return text.length > 90 ? `${text.slice(0, 90)}...` : (text || 'Página en blanco');
+  };
+
+  const modal = openModal({
+    cancelText: 'Cancelar',
+    confirmClass: 'component-button--black',
+    confirmText: 'Insertar en el lienzo',
+    description: `Este documento tiene ${pages.length} páginas. Selecciona cuál deseas colocar en tu lienzo:`,
+    showCancel: true,
+    showConfirm: true,
+    size: 'lg',
+    title: `Seleccionar página de «${canvas.name}»`,
+    bodyHtml: `
+      <div class="doc-page-picker" data-ref="doc-page-picker">
+        <div class="doc-page-picker__all-card is-selected" data-ref="card-page-all" data-page-idx="-1">
+          <div class="doc-page-picker__all-icon">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_stories"></use></svg>
+          </div>
+          <div class="doc-page-picker__all-info">
+            <span class="doc-page-picker__all-title">Todas las páginas</span>
+            <span class="doc-page-picker__all-desc">Coloca las ${pages.length} páginas del documento en tu lienzo activo.</span>
+          </div>
+          <span class="doc-page-picker__badge">${pages.length} págs</span>
+        </div>
+
+        <div class="doc-page-picker__grid" data-ref="doc-pages-grid">
+          ${pages.map((p, idx) => `
+            <div class="doc-page-picker__card" data-ref="card-page-${idx}" data-page-idx="${idx}">
+              <div class="doc-page-picker__card-header">
+                <span class="doc-page-picker__card-num">Pág. ${idx + 1}</span>
+              </div>
+              <div class="doc-page-picker__card-preview">
+                <p class="doc-page-picker__card-text">${escapeHtml(getPageSnippet(p.contentHtml))}</p>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `,
+    onConfirm: async () => {
+      modal.close();
+      await handleApplyCanvasProject(canvas, targetCanvasType, selectedIndex, docProject);
+    },
+  });
+
+  const pickerEl = modal.backdrop.querySelector<HTMLElement>('[data-ref="doc-page-picker"]');
+  const allCard = pickerEl?.querySelector<HTMLElement>('[data-ref="card-page-all"]');
+  const pageCards = pickerEl?.querySelectorAll<HTMLElement>('[data-page-idx]');
+
+  const updateSelection = (idx: number) => {
+    selectedIndex = idx;
+    allCard?.classList.toggle('is-selected', selectedIndex === -1);
+    pageCards?.forEach((c) => {
+      const cardIdx = parseInt(c.getAttribute('data-page-idx') || '-99', 10);
+      c.classList.toggle('is-selected', cardIdx === selectedIndex);
+    });
+  };
+
+  allCard?.addEventListener('click', () => updateSelection(-1));
+  pageCards?.forEach((c) => {
+    c.addEventListener('click', () => {
+      const idx = parseInt(c.getAttribute('data-page-idx') || '-1', 10);
+      updateSelection(idx);
+    });
+  });
+
+  renderIcons(modal.backdrop);
+}
+
+async function handleApplyCanvasProject(
+  canvas: CanvasItem,
+  targetCanvasType: 'board' | 'diagram' | 'doc' | 'pixel',
+  pageIndex = -1,
+  loadedProjectData?: any
+): Promise<void> {
+  const controller = getActiveCanvasController();
+  if (!controller) {
+    showToast('No se encontró el controlador del lienzo activo', 'warning');
+    return;
+  }
+
+  let projectData = loadedProjectData;
+  if (!projectData) {
+    if (canvas.data) {
+      try {
+        projectData = typeof canvas.data === 'string' ? JSON.parse(canvas.data) : canvas.data;
+      } catch {}
+    }
+    if (!projectData) {
+      const fullCanvas = await getLocalCanvasByUuid(canvas.uuid);
+      if (fullCanvas?.data) {
+        try {
+          projectData = typeof fullCanvas.data === 'string' ? JSON.parse(fullCanvas.data) : fullCanvas.data;
+        } catch {}
+      }
+    }
+    if (!projectData && currentUser && canvas.id) {
+      try {
+        const res = await getApi(API_ROUTES.canvases.byId(canvas.uuid));
+        if (res.ok) {
+          const resData = await res.json();
+          if (resData?.canvas?.data) {
+            projectData = typeof resData.canvas.data === 'string' ? JSON.parse(resData.canvas.data) : resData.canvas.data;
+          }
+        }
+      } catch {}
+    }
+  }
+
+  const sourceType = canvas.canvas_type || (canvas.unit === 'board' ? 'board' : (canvas.unit === 'diagram' ? 'diagram' : (canvas.unit === 'doc' ? 'doc' : 'pixel')));
+
+  if (targetCanvasType === 'board') {
+    if (sourceType === 'board' && projectData && Array.isArray(projectData.elements) && projectData.elements.length > 0) {
+      if (typeof controller.insertBoardElements === 'function') {
+        controller.insertBoardElements(projectData.elements);
+        showToast(`Elementos de «${canvas.name}» insertados en el pizarrón`, 'success');
+        if (window.innerWidth <= 768) toggleDrawer(false);
+        return;
+      }
+    }
+
+    if (sourceType === 'doc' && projectData && Array.isArray(projectData.pages) && projectData.pages.length > 0) {
+      const pagesToInsert: DocPage[] = pageIndex >= 0 && projectData.pages[pageIndex]
+        ? [projectData.pages[pageIndex]]
+        : projectData.pages;
+
+      if (typeof controller.insertDocAsBoardElements === 'function') {
+        controller.insertDocAsBoardElements(pagesToInsert, canvas.name);
+        showToast(`«${canvas.name}» insertado como tarjetas y textos editables`, 'success');
+        if (window.innerWidth <= 768) toggleDrawer(false);
+        return;
+      }
+    }
+
+    if ((sourceType === 'diagram' || sourceType === 'mindmap') && projectData && projectData.nodes) {
+      if (typeof controller.insertDiagramAsBoardElements === 'function') {
+        controller.insertDiagramAsBoardElements(projectData, canvas.name);
+        showToast(`Diagrama «${canvas.name}» insertado como figuras y flechas editables`, 'success');
+        if (window.innerWidth <= 768) toggleDrawer(false);
+        return;
+      }
+    }
+
+    if (sourceType === 'pixel' && canvas.preview_thumbnail) {
+      if (typeof controller.insertPixelGridElement === 'function') {
+        controller.insertPixelGridElement(canvas.preview_thumbnail, canvas.width || 32, canvas.height || 32, canvas.name);
+        showToast(`Pixel art «${canvas.name}» insertado como grilla de píxeles editable`, 'success');
+        if (window.innerWidth <= 768) toggleDrawer(false);
+        return;
+      }
+    }
+
+    const fallbackThumbnail = canvas.preview_thumbnail || '';
+    if (fallbackThumbnail) {
+      controller.insertImage(fallbackThumbnail, canvas.width || 320, canvas.height || 240, canvas.name);
+      showToast(`«${canvas.name}» colocado en el pizarrón`, 'success');
+      if (window.innerWidth <= 768) toggleDrawer(false);
+      return;
+    }
+
+    showToast(`No se pudo obtener la información de «${canvas.name}»`, 'warning');
+    return;
+  }
+
+  if (targetCanvasType === 'doc') {
+    if (sourceType === 'doc' && projectData && Array.isArray(projectData.pages) && projectData.pages.length > 0) {
+      const pagesToInsert: DocPage[] = pageIndex >= 0 && projectData.pages[pageIndex]
+        ? [projectData.pages[pageIndex]]
+        : projectData.pages;
+
+      pagesToInsert.forEach((page) => {
+        if (typeof controller.insertDocPage === 'function') {
+          controller.insertDocPage(page, 'new_page');
+        } else if (typeof controller.applyTemplateAsNewPage === 'function') {
+          controller.applyTemplateAsNewPage({
+            badge: '',
+            description: '',
+            icon: '',
+            id: `doc_import_${Date.now()}`,
+            initialPages: [page],
+            name: canvas.name,
+            settings: {},
+          });
+        }
+      });
+      showToast(`Página(s) de «${canvas.name}» insertadas en el documento`, 'success');
+      if (window.innerWidth <= 768) toggleDrawer(false);
+      return;
+    }
+
+    if ((sourceType === 'diagram' || sourceType === 'mindmap') && projectData && projectData.nodes) {
+      if (typeof controller.insertDiagramAsDocOutline === 'function') {
+        controller.insertDiagramAsDocOutline(projectData, canvas.name);
+        showToast(`Esquema estructurado de «${canvas.name}» insertado en el documento`, 'success');
+        if (window.innerWidth <= 768) toggleDrawer(false);
+        return;
+      }
+    }
+
+    if (sourceType === 'board' && projectData && Array.isArray(projectData.elements)) {
+      if (typeof controller.insertBoardAsDocContent === 'function') {
+        controller.insertBoardAsDocContent(projectData, canvas.name);
+        showToast(`Notas y textos de «${canvas.name}» insertados en el documento`, 'success');
+        if (window.innerWidth <= 768) toggleDrawer(false);
+        return;
+      }
+    }
+
+    const fallbackThumbnail = canvas.preview_thumbnail || '';
+    if (fallbackThumbnail) {
+      controller.insertImage(fallbackThumbnail, canvas.name, '400px');
+      showToast(`«${canvas.name}» insertado en el documento`, 'success');
+      if (window.innerWidth <= 768) toggleDrawer(false);
+      return;
+    }
+
+    showToast(`No se pudo insertar «${canvas.name}» en el documento`, 'warning');
+    return;
+  }
+
+  if (targetCanvasType === 'diagram') {
+    if ((sourceType === 'diagram' || sourceType === 'mindmap') && projectData && projectData.nodes) {
+      if (typeof controller.insertDiagramSubtree === 'function') {
+        controller.insertDiagramSubtree(projectData);
+        showToast(`Ramas de «${canvas.name}» acopladas al diagrama`, 'success');
+        if (window.innerWidth <= 768) toggleDrawer(false);
+        return;
+      }
+    }
+
+    if (sourceType === 'doc' && projectData && Array.isArray(projectData.pages)) {
+      if (typeof controller.insertDocAsMindMapNodes === 'function') {
+        controller.insertDocAsMindMapNodes(projectData, canvas.name);
+        showToast(`Contenido de «${canvas.name}» convertido en ramas del diagrama`, 'success');
+        if (window.innerWidth <= 768) toggleDrawer(false);
+        return;
+      }
+    }
+
+    if (sourceType === 'board' && projectData && Array.isArray(projectData.elements)) {
+      if (typeof controller.insertBoardStickyNodes === 'function') {
+        controller.insertBoardStickyNodes(projectData);
+        showToast(`Notas de «${canvas.name}» añadidas como nodos al diagrama`, 'success');
+        if (window.innerWidth <= 768) toggleDrawer(false);
+        return;
+      }
+    }
+
+    let thumbnailToUse = canvas.preview_thumbnail || '';
+    let label = canvas.name;
+
+    if (sourceType === 'doc' && projectData && Array.isArray(projectData.pages)) {
+      const pageToUse = pageIndex >= 0 && projectData.pages[pageIndex] ? projectData.pages[pageIndex] : projectData.pages[0];
+      const pageNum = pageIndex >= 0 ? pageIndex + 1 : 1;
+      label = `${canvas.name} (Pág. ${pageNum})`;
+      if (pageToUse) {
+        const rendered = await renderDocPageToDataUrl(pageToUse, label);
+        if (rendered) thumbnailToUse = rendered;
+      }
+    }
+
+    const stickerShape: PixelShape = {
+      category: 'templates',
+      file: '',
+      id: `proj_${canvas.uuid}_${pageIndex >= 0 ? pageIndex : 0}`,
+      name: label,
+      type: 'sticker',
+      url: thumbnailToUse,
+    };
+    controller.insertShapeOrSticker(stickerShape);
+    showToast(`«${label}» añadido al diagrama`, 'success');
+    if (window.innerWidth <= 768) toggleDrawer(false);
+    return;
+  }
+
+  if (targetCanvasType === 'pixel') {
+    let thumbnailToUse = canvas.preview_thumbnail || '';
+    let label = canvas.name;
+
+    if (sourceType === 'doc' && projectData && Array.isArray(projectData.pages)) {
+      const pageToUse = pageIndex >= 0 && projectData.pages[pageIndex] ? projectData.pages[pageIndex] : projectData.pages[0];
+      const pageNum = pageIndex >= 0 ? pageIndex + 1 : 1;
+      label = `${canvas.name} (Pág. ${pageNum})`;
+      if (pageToUse) {
+        const rendered = await renderDocPageToDataUrl(pageToUse, label);
+        if (rendered) thumbnailToUse = rendered;
+      }
+    }
+
+    if (thumbnailToUse) {
+      await controller.applyUploadedImage(thumbnailToUse, canvas.width || 128, canvas.height || 128, label);
+      showToast(`«${label}» listo para posicionar en el lienzo`, 'success');
+      if (window.innerWidth <= 768) toggleDrawer(false);
+      return;
+    }
+
+    showToast(`No se pudo importar «${canvas.name}» en el lienzo`, 'warning');
+  }
+}
+
+let activeProjectsFilter: 'all' | 'board' | 'doc' | 'diagram' | 'pixel' = 'all';
+
+async function renderProjectsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement): Promise<void> {
+  const sidebar = drawer.closest<HTMLElement>('[data-ref="sidebar"]') || document.querySelector<HTMLElement>('[data-ref="sidebar"]');
+  const targetCanvasType = getActiveCanvasType();
+
+  drawerBody.innerHTML = `
+    <div class="canvas-panel-card" data-ref="canvas-panel-card">
+      <div class="canvas-panel-card__header" data-ref="canvas-panel-header">
+        <div class="canvas-panel-card__title-box" data-ref="canvas-panel-title-box">
+          <svg class="component-icon canvas-panel-card__icon" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
+          <span class="canvas-panel-card__title" data-ref="canvas-panel-title">${t('nav.projects') || 'Proyectos'}</span>
+        </div>
+        <button type="button" class="component-button component-button--h32 component-button--icon-only rail-btn canvas-panel-card__close" data-ref="btn-close-canvas-panel" data-tooltip="Cerrar panel" aria-label="Cerrar panel">
+          <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+        </button>
+      </div>
+      <div class="canvas-panel-card__body canvas-projects-container" data-ref="canvas-panel-body">
+        <div class="canvas-panel-tabs" data-ref="canvas-projects-tabs">
+          <button type="button" class="canvas-panel-tab-btn${activeProjectsFilter === 'all' ? ' is-active' : ''}" data-ref="btn-filter-proj-all" data-filter="all">Todos</button>
+          <button type="button" class="canvas-panel-tab-btn${activeProjectsFilter === 'board' ? ' is-active' : ''}" data-ref="btn-filter-proj-board" data-filter="board">Pizarrón</button>
+          <button type="button" class="canvas-panel-tab-btn${activeProjectsFilter === 'doc' ? ' is-active' : ''}" data-ref="btn-filter-proj-doc" data-filter="doc">Documentos</button>
+          <button type="button" class="canvas-panel-tab-btn${activeProjectsFilter === 'diagram' ? ' is-active' : ''}" data-ref="btn-filter-proj-diagram" data-filter="diagram">Diagramas</button>
+          <button type="button" class="canvas-panel-tab-btn${activeProjectsFilter === 'pixel' ? ' is-active' : ''}" data-ref="btn-filter-proj-pixel" data-filter="pixel">Pixel Art</button>
+        </div>
+
+        <div class="canvas-panel-search" data-ref="canvas-panel-search">
+          <svg class="component-icon canvas-panel-search__icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+          <input class="canvas-panel-search__input" data-ref="canvas-projects-search-input" type="text" placeholder="Buscar en tus proyectos..." />
+        </div>
+
+        <div class="canvas-panel-projects-grid" data-ref="canvas-projects-grid">
+          <div class="canvas-panel-card__empty" style="grid-column: 1 / -1;" data-ref="canvas-projects-loading">
+            <div class="canvas-panel-card__empty-icon">
+              <svg class="component-icon component-icon--spin" aria-hidden="true"><use href="/icons.svg#progress_activity"></use></svg>
+            </div>
+            <span class="canvas-panel-card__empty-title">Cargando proyectos...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const btnClose = drawerBody.querySelector<HTMLElement>('[data-ref="btn-close-canvas-panel"]');
+  btnClose?.addEventListener('click', (e) => {
+    e.preventDefault();
+    toggleDrawer(false);
+  });
+
+  const searchInput = drawerBody.querySelector<HTMLInputElement>('[data-ref="canvas-projects-search-input"]');
+  const grid = drawerBody.querySelector<HTMLElement>('[data-ref="canvas-projects-grid"]');
+  const tabs = drawerBody.querySelectorAll<HTMLButtonElement>('[data-ref^="btn-filter-proj-"]');
+
+  let projectItems: CanvasItem[] = [];
+
+  const getCanvasTypeKey = (c: CanvasItem): 'board' | 'diagram' | 'doc' | 'pixel' => {
+    if (c.canvas_type === 'doc' || c.unit === 'doc') return 'doc';
+    if (c.canvas_type === 'diagram' || c.canvas_type === 'mindmap' || c.unit === 'diagram') return 'diagram';
+    if (c.canvas_type === 'board' || c.unit === 'board') return 'board';
+    return 'pixel';
+  };
+
+  const getBadgeText = (c: CanvasItem): string => {
+    const typeKey = getCanvasTypeKey(c);
+    if (typeKey === 'doc') {
+      try {
+        if (c.data) {
+          const parsed = typeof c.data === 'string' ? JSON.parse(c.data) : c.data;
+          const count = parsed?.pages?.length || 1;
+          return `Documento • ${count} ${count === 1 ? 'pág' : 'págs'}`;
+        }
+      } catch {}
+      return 'Documento';
+    }
+    if (typeKey === 'board') return 'Pizarrón';
+    if (typeKey === 'diagram') return c.canvas_type === 'mindmap' ? 'Mapa Mental' : 'Diagrama';
+    return c.width && c.height ? `${c.width}×${c.height} px` : 'Pixel Art';
+  };
+
+  const getTypeIcon = (typeKey: 'board' | 'diagram' | 'doc' | 'pixel'): string => {
+    if (typeKey === 'doc') return 'description';
+    if (typeKey === 'board') return 'dashboard';
+    if (typeKey === 'diagram') return 'psychology';
+    return 'grid_view';
+  };
+
+  const renderGrid = (query = '') => {
+    if (!grid) return;
+    const cleanQ = query.trim().toLowerCase();
+
+    let filtered = projectItems.filter((c) => !c.deleted_at);
+
+    if (activeProjectsFilter !== 'all') {
+      filtered = filtered.filter((c) => getCanvasTypeKey(c) === activeProjectsFilter);
+    }
+
+    if (cleanQ) {
+      filtered = filtered.filter((c) => (c.name || '').toLowerCase().includes(cleanQ));
+    }
+
+    if (filtered.length === 0) {
+      if (projectItems.length === 0) {
+        grid.innerHTML = `
+          <div class="canvas-panel-card__empty" style="grid-column: 1 / -1;" data-ref="canvas-projects-empty">
+            <div class="canvas-panel-card__empty-icon">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#folder_open"></use></svg>
+            </div>
+            <span class="canvas-panel-card__empty-title">Aún no tienes proyectos</span>
+            <p class="canvas-panel-card__empty-desc">Crea diseños, pizarrones o documentos para verlos aquí y colocarlos en tus lienzos.</p>
+          </div>
+        `;
+      } else {
+        grid.innerHTML = `
+          <div class="canvas-panel-card__empty" style="grid-column: 1 / -1;" data-ref="canvas-projects-no-results">
+            <span class="canvas-panel-card__empty-title">Sin resultados</span>
+            <p class="canvas-panel-card__empty-desc">No encontramos proyectos que coincidan con «${escapeHtml(query)}»</p>
+          </div>
+        `;
+      }
+      renderIcons(grid);
+      return;
+    }
+
+    grid.innerHTML = filtered.map((c) => {
+      const typeKey = getCanvasTypeKey(c);
+      const iconName = getTypeIcon(typeKey);
+      const badgeText = getBadgeText(c);
+      const thumbHtml = c.preview_thumbnail
+        ? `<img class="canvas-panel-project-card__img" src="${c.preview_thumbnail}" alt="" loading="lazy" />`
+        : `<svg class="component-icon canvas-panel-project-card__fallback-icon" aria-hidden="true"><use href="/icons.svg#${iconName}"></use></svg>`;
+
+      return `
+        <div class="canvas-panel-project-card" data-ref="canvas-project-card-${c.uuid}" data-project-uuid="${c.uuid}">
+          <div class="canvas-panel-project-card__thumb">
+            ${thumbHtml}
+            <span class="canvas-panel-project-card__badge">${escapeHtml(badgeText)}</span>
+          </div>
+          <div class="canvas-panel-project-card__info">
+            <span class="canvas-panel-project-card__title" title="${escapeHtml(c.name || 'Diseño sin título')}">${escapeHtml(c.name || 'Diseño sin título')}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    renderIcons(grid);
+
+    grid.querySelectorAll<HTMLElement>('.canvas-panel-project-card').forEach((card) => {
+      card.addEventListener('click', async () => {
+        const uuid = card.getAttribute('data-project-uuid');
+        const found = projectItems.find((p) => p.uuid === uuid);
+        if (!found) return;
+
+        const typeKey = getCanvasTypeKey(found);
+
+        if (typeKey === 'doc') {
+          let docProj: DocProject | null = null;
+          if (found.data) {
+            try {
+              docProj = typeof found.data === 'string' ? JSON.parse(found.data) : found.data;
+            } catch {}
+          }
+          if (!docProj) {
+            const localData = await getLocalCanvasByUuid(found.uuid);
+            if (localData?.data) {
+              try {
+                docProj = typeof localData.data === 'string' ? JSON.parse(localData.data) : localData.data;
+              } catch {}
+            }
+          }
+          if (!docProj && currentUser && found.id) {
+            try {
+              const res = await getApi(API_ROUTES.canvases.byId(found.uuid));
+              if (res.ok) {
+                const resData = await res.json();
+                if (resData?.canvas?.data) {
+                  docProj = typeof resData.canvas.data === 'string' ? JSON.parse(resData.canvas.data) : resData.canvas.data;
+                }
+              }
+            } catch {}
+          }
+
+          if (docProj && docProj.pages && docProj.pages.length > 1) {
+            openDocPageSelectionModal(found, docProj, targetCanvasType);
+            return;
+          }
+        }
+
+        await handleApplyCanvasProject(found, targetCanvasType, -1);
+      });
+    });
+  };
+
+  tabs.forEach((tabBtn) => {
+    tabBtn.addEventListener('click', () => {
+      const filter = tabBtn.getAttribute('data-filter') as 'all' | 'board' | 'doc' | 'diagram' | 'pixel';
+      if (filter && activeProjectsFilter !== filter) {
+        activeProjectsFilter = filter;
+        tabs.forEach((b) => b.classList.toggle('is-active', b === tabBtn));
+        renderGrid(searchInput?.value || '');
+      }
+    });
+  });
+
+  searchInput?.addEventListener('input', () => {
+    renderGrid(searchInput.value);
+  });
+
+  try {
+    const localCanvases = await getAllLocalCanvases();
+    if (currentUser) {
+      try {
+        const res = await getApi(API_ROUTES.canvases.base);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && Array.isArray(data.canvases)) {
+            const cloudUuids = new Set(data.canvases.map((c: CanvasItem) => c.uuid));
+            const unsynced = localCanvases.filter((c) => c.is_local && !cloudUuids.has(c.uuid) && !c.id && (!c.user_id || c.user_id === currentUser?.id));
+            projectItems = [...unsynced, ...data.canvases];
+          } else {
+            projectItems = localCanvases;
+          }
+        } else {
+          projectItems = localCanvases;
+        }
+      } catch {
+        projectItems = localCanvases;
+      }
+    } else {
+      projectItems = localCanvases.filter((c) => c.is_local && !c.user_id && !c.id);
+    }
+  } catch {
+    projectItems = [];
+  }
+
+  projectItems.sort((a, b) => {
+    const timeA = new Date(a.updated_at || a.created_at).getTime();
+    const timeB = new Date(b.updated_at || b.created_at).getTime();
+    return timeB - timeA;
+  });
+
+  renderGrid(searchInput?.value || '');
 
   const drawerFooter = drawer.querySelector<HTMLElement>('[data-ref="drawer-footer"]');
   if (drawerFooter) {

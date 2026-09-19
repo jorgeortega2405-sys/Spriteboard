@@ -10,6 +10,8 @@ import { ViewController } from '../../types/common.types.js';
 import { DiagramSubtype, MindMapCamera, MindMapConnection, MindMapNode, MindMapProject, SmartHandleDirection } from '../../types/mindmap.types.js';
 import { setupDropdown } from '../../utils/dom.util.js';
 import { PixelShape } from '../../utils/pixel-shapes.util.js';
+import { BoardProject } from '../board/board.types.js';
+import { DocProject } from '../doc/doc.types.js';
 import { openMindMapAiModal } from './mindmap-ai-modal.component.js';
 import { MindMapCollaborationManager, MindMapCollaboratorState } from './mindmap-collaboration.manager.js';
 import { exportMindMapMarkdown, exportMindMapPng, exportMindMapSvg, generateMindMapThumbnail } from './mindmap-export.service.js';
@@ -2948,6 +2950,172 @@ export class MindMapController implements ViewController {
     this.startEditingNode(newId);
   }
 
+  public insertDiagramSubtree(sourceDiagram: MindMapProject, parentNodeId?: string): void {
+    if (!sourceDiagram || !sourceDiagram.nodes) return;
+    const targetParentId = parentNodeId || this.selectedNodeId || this.project.rootId;
+    const targetParent = this.project.nodes[targetParentId];
+    if (!targetParent) return;
+
+    const idMap = new Map<string, string>();
+    const sourceNodes = Object.values(sourceDiagram.nodes);
+    const sourceRootId = sourceDiagram.rootId || sourceNodes.find((n) => !n.parentId)?.id || '';
+
+    sourceNodes.forEach((n) => {
+      idMap.set(n.id, `node_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`);
+    });
+
+    const existingChildren = Object.values(this.project.nodes).filter((n) => n.parentId === targetParentId);
+    let orderOffset = existingChildren.length;
+
+    sourceNodes.forEach((sn) => {
+      const newId = idMap.get(sn.id)!;
+      const isSourceRoot = sn.id === sourceRootId;
+      const parentId = isSourceRoot ? targetParentId : (sn.parentId && idMap.has(sn.parentId) ? idMap.get(sn.parentId)! : targetParentId);
+
+      const newNode: MindMapNode = {
+        ...sn,
+        id: newId,
+        orderIndex: isSourceRoot ? orderOffset++ : sn.orderIndex,
+        parentId,
+        x: (targetParent.x || 0) + (sn.x || 0),
+        y: (targetParent.y || 0) + (sn.y || 0),
+      };
+      this.project.nodes[newId] = newNode;
+    });
+
+    if (sourceDiagram.connections && Array.isArray(sourceDiagram.connections)) {
+      if (!this.project.connections) this.project.connections = [];
+      sourceDiagram.connections.forEach((conn) => {
+        if (idMap.has(conn.fromId) && idMap.has(conn.toId)) {
+          this.project.connections!.push({
+            ...conn,
+            fromId: idMap.get(conn.fromId)!,
+            id: `conn_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+            toId: idMap.get(conn.toId)!,
+          });
+        }
+      });
+    }
+
+    const newRootId = idMap.get(sourceRootId);
+    if (newRootId) {
+      this.selectedNodeId = newRootId;
+      this.selectedNodeIds = new Set([newRootId]);
+    }
+
+    this.commitChange();
+  }
+
+  public insertDocAsMindMapNodes(docProject: DocProject, docTitle: string, parentNodeId?: string): void {
+    if (!docProject || !docProject.pages) return;
+    const targetParentId = parentNodeId || this.selectedNodeId || this.project.rootId;
+    const targetParent = this.project.nodes[targetParentId];
+    if (!targetParent) return;
+
+    const existingChildren = Object.values(this.project.nodes).filter((n) => n.parentId === targetParentId);
+    const mainOrder = existingChildren.length;
+
+    const mainBranchId = `node_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const mainBranchNode: MindMapNode = {
+      color: PALETTE_COLORS[mainOrder % PALETTE_COLORS.length] || '#6366f1',
+      fontSize: 15,
+      id: mainBranchId,
+      orderIndex: mainOrder,
+      parentId: targetParentId,
+      shape: 'rounded',
+      text: docTitle || 'Documento',
+      textColor: '#ffffff',
+      x: 0,
+      y: 0,
+    };
+    this.project.nodes[mainBranchId] = mainBranchNode;
+
+    let sectionOrder = 0;
+    docProject.pages.forEach((page, pIdx) => {
+      const temp = document.createElement('div');
+      temp.innerHTML = page.contentHtml || '';
+
+      const headings = Array.from(temp.querySelectorAll('h1, h2, h3, h4'));
+      if (headings.length > 0) {
+        headings.forEach((h) => {
+          const hText = (h.textContent || '').trim();
+          if (!hText) return;
+          const hId = `node_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+          const hNode: MindMapNode = {
+            color: mainBranchNode.color,
+            fontSize: 13,
+            id: hId,
+            orderIndex: sectionOrder++,
+            parentId: mainBranchId,
+            shape: 'pill',
+            text: hText.slice(0, 80),
+            textColor: '#ffffff',
+            x: 0,
+            y: 0,
+          };
+          this.project.nodes[hId] = hNode;
+        });
+      } else {
+        const pId = `node_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+        const pText = (temp.textContent || '').trim().slice(0, 60) || `Página ${pIdx + 1}`;
+        const pNode: MindMapNode = {
+          color: mainBranchNode.color,
+          fontSize: 13,
+          id: pId,
+          orderIndex: sectionOrder++,
+          parentId: mainBranchId,
+          shape: 'pill',
+          text: pText,
+          textColor: '#ffffff',
+          x: 0,
+          y: 0,
+        };
+        this.project.nodes[pId] = pNode;
+      }
+    });
+
+    this.selectedNodeId = mainBranchId;
+    this.selectedNodeIds = new Set([mainBranchId]);
+    this.commitChange();
+  }
+
+  public insertBoardStickyNodes(board: BoardProject, parentNodeId?: string): void {
+    if (!board || !board.elements) return;
+    const targetParentId = parentNodeId || this.selectedNodeId || this.project.rootId;
+    const targetParent = this.project.nodes[targetParentId];
+    if (!targetParent) return;
+
+    const stickies = board.elements.filter((el) => el.type === 'sticky') as any[];
+    const texts = board.elements.filter((el) => el.type === 'text') as any[];
+    const items = [...stickies, ...texts];
+    if (items.length === 0) return;
+
+    const existingChildren = Object.values(this.project.nodes).filter((n) => n.parentId === targetParentId);
+    let orderIndex = existingChildren.length;
+
+    items.slice(0, 12).forEach((item) => {
+      const text = (item.text || '').trim();
+      if (!text) return;
+      const newId = `node_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      const isSticky = item.type === 'sticky';
+      const newNode: MindMapNode = {
+        color: isSticky ? (item.color || '#fef08a') : (targetParent.color || '#3b82f6'),
+        fontSize: 13,
+        id: newId,
+        orderIndex: orderIndex++,
+        parentId: targetParentId,
+        shape: isSticky ? 'sticky' : 'rounded',
+        text: text.slice(0, 80),
+        textColor: isSticky ? '#1e293b' : '#ffffff',
+        x: 0,
+        y: 0,
+      };
+      this.project.nodes[newId] = newNode;
+    });
+
+    this.commitChange();
+  }
+
   private commitChange(): void {
     this.recomputeLayout();
     this.historyManager.pushState(this.project);
@@ -3104,6 +3272,45 @@ export class MindMapController implements ViewController {
         });
       }
     } catch {}
+  }
+
+  public isDiagramEmpty(): boolean {
+    const nodes = Object.values(this.project.nodes || {});
+    return nodes.length <= 1;
+  }
+
+  public applyTemplate(templateId: string, subtype: DiagramSubtype = 'mindmap'): void {
+    const customProject = getCustomDiagramProject(templateId, subtype);
+    if (customProject) {
+      this.project = JSON.parse(JSON.stringify(customProject));
+      this.commitChange();
+      this.centerView();
+    }
+  }
+
+  public insertShapeOrSticker(shape: PixelShape): void {
+    const targetParentId = this.selectedNodeId || this.project.rootId;
+    const targetParent = this.project.nodes[targetParentId];
+    if (!targetParent) return;
+
+    const existingChildren = Object.values(this.project.nodes).filter((n) => n.parentId === targetParentId);
+    const newId = `node_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const newNode: MindMapNode = {
+      color: targetParent.color || '#6366f1',
+      fontSize: 13,
+      id: newId,
+      orderIndex: existingChildren.length,
+      parentId: targetParentId,
+      shape: 'pill',
+      text: shape.name || 'Elemento',
+      textColor: '#ffffff',
+      x: 0,
+      y: 0,
+    };
+    this.project.nodes[newId] = newNode;
+    this.selectedNodeId = newId;
+    this.selectedNodeIds = new Set([newId]);
+    this.commitChange();
   }
 
   private exportJson(): void {

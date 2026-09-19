@@ -2,14 +2,15 @@ export type ShapeCategory = 'shapes' | 'templates';
 export type ShapeColorMode = 'original' | 'primary';
 
 export interface PixelShape {
+  category: ShapeCategory;
+  file?: string;
+  height: number;
   id: string;
   name: string;
-  category: ShapeCategory;
-  type: 'vector' | 'sticker';
-  file?: string;
   pathD?: string;
+  type: 'vector' | 'sticker';
+  url?: string;
   width: number;
-  height: number;
 }
 
 export const SHAPE_SVG_PATHS: Record<string, string> = {
@@ -477,8 +478,8 @@ export function renderShapeCanvas(
     for (let i = 0; i < points.length; i++) {
       rawCtx.fillRect(points[i].x, points[i].y, 1, 1);
     }
-  } else if (shape.type === 'sticker' && shape.file) {
-    const imgUrl = `/assets/img/stickers/${shape.file}`;
+  } else if (shape.type === 'sticker' && (shape.file || shape.url)) {
+    const imgUrl = shape.url || `/assets/img/stickers/${shape.file}`;
     const cachedImg = imageCache.get(imgUrl);
     if (cachedImg && cachedImg.complete && cachedImg.naturalWidth > 0) {
       rawCtx.drawImage(cachedImg, 0, 0, rawW, rawH);
@@ -525,8 +526,8 @@ export function renderShapeCanvas(
 }
 
 export async function preloadShapeImage(shape: PixelShape): Promise<HTMLImageElement | null> {
-  if (shape.type !== 'sticker' || !shape.file) return null;
-  const imgUrl = `/assets/img/stickers/${shape.file}`;
+  if (shape.type !== 'sticker' || (!shape.file && !shape.url)) return null;
+  const imgUrl = shape.url || `/assets/img/stickers/${shape.file}`;
   const cached = imageCache.get(imgUrl);
   if (cached && cached.complete && cached.naturalWidth > 0) {
     return cached;

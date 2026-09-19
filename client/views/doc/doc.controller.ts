@@ -8,7 +8,9 @@ import { renderIcons } from '../../services/icon.service.js';
 import { showToast } from '../../services/toast.service.js';
 import { CanvasItem } from '../../types/canvas.types.js';
 import { ViewController } from '../../types/common.types.js';
+import { MindMapProject } from '../../types/mindmap.types.js';
 import { initCarouselScroll, setupDropdown } from '../../utils/dom.util.js';
+import { BoardProject } from '../board/board.types.js';
 import { openDocAiModal } from './doc-ai-modal.component.js';
 import { DocCollaborationManager, DocCollaboratorState } from './doc-collaboration.manager.js';
 import { exportDocHtml, exportDocJson, exportDocMarkdown, exportDocPdf, exportDocTxt, exportDocWord, generateDocThumbnail } from './doc-export.service.js';
@@ -2007,6 +2009,128 @@ export class DocController implements ViewController {
     }
     this.renderDocument();
     this.recordChange();
+  }
+
+  public insertDocPage(page: DocPage, mode: 'new_page' | 'current_page' = 'new_page'): void {
+    const content = page.contentHtml || '<p><br></p>';
+    if (mode === 'current_page') {
+      let targetPage = this.project.pages.find((p) => p.id === this.lastActivePageId);
+      if (!targetPage) {
+        targetPage = this.project.pages[0];
+      }
+      if (!targetPage) {
+        targetPage = this.paginationManager.addPage(this.project);
+      }
+      targetPage.contentHtml = content;
+      this.renderDocument();
+      this.recordChange();
+      const targetPageEl = this.container.querySelector<HTMLElement>(`[data-ref="doc-page-${targetPage.id}"]`);
+      if (targetPageEl) {
+        targetPageEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const contentEl = targetPageEl.querySelector<HTMLElement>('.doc-page__content');
+        contentEl?.focus();
+      }
+    } else {
+      const newPage = this.paginationManager.addPage(this.project);
+      newPage.contentHtml = content;
+      this.renderDocument();
+      this.recordChange();
+      const newPageEl = this.container.querySelector<HTMLElement>(`[data-ref="doc-page-${newPage.id}"]`);
+      if (newPageEl) {
+        newPageEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const contentEl = newPageEl.querySelector<HTMLElement>('.doc-page__content');
+        contentEl?.focus();
+      }
+    }
+  }
+
+  public insertDiagramAsDocOutline(diagram: MindMapProject, title = 'Diagrama'): void {
+    if (!diagram || !diagram.nodes) return;
+    const nodes = diagram.nodes;
+    const rootNode = diagram.rootId && nodes[diagram.rootId] ? nodes[diagram.rootId] : Object.values(nodes).find((n) => !n.parentId);
+    const mainTitle = rootNode ? rootNode.text : title;
+
+    let html = `<h1>${escapeHtml(mainTitle)}</h1>`;
+
+    const childMap = new Map<string, string[]>();
+    Object.values(nodes).forEach((n) => {
+      if (n.parentId) {
+        if (!childMap.has(n.parentId)) childMap.set(n.parentId, []);
+        childMap.get(n.parentId)!.push(n.id);
+      }
+    });
+
+    const rootId = rootNode?.id || '';
+    const level1Ids = rootId && childMap.has(rootId) ? childMap.get(rootId)! : Object.values(nodes).filter((n) => n.id !== rootId && !n.parentId).map((n) => n.id);
+
+    if (level1Ids.length === 0) {
+      Object.values(nodes).forEach((n) => {
+        if (n.id !== rootId) {
+          html += `<p>${escapeHtml(n.text)}</p>`;
+        }
+      });
+    } else {
+      level1Ids.forEach((id) => {
+        const node = nodes[id];
+        if (!node) return;
+        html += `<h2>${escapeHtml(node.text)}</h2>`;
+        const subIds = childMap.get(id) || [];
+        if (subIds.length > 0) {
+          html += '<ul>';
+          subIds.forEach((sid) => {
+            const sub = nodes[sid];
+            if (sub) {
+              html += `<li>${escapeHtml(sub.text)}`;
+              const deepIds = childMap.get(sid) || [];
+              if (deepIds.length > 0) {
+                html += '<ul>';
+                deepIds.forEach((did) => {
+                  const deep = nodes[did];
+                  if (deep) html += `<li>${escapeHtml(deep.text)}</li>`;
+                });
+                html += '</ul>';
+              }
+              html += '</li>';
+            }
+          });
+          html += '</ul>';
+        }
+      });
+    }
+
+    this.insertDocPage({ contentHtml: html, id: `page_${crypto.randomUUID().slice(0, 8)}` }, 'new_page');
+  }
+
+  public insertBoardAsDocContent(board: BoardProject, title = 'Pizarrón'): void {
+    if (!board || !board.elements) return;
+    let html = `<h1>${escapeHtml(title)}</h1>`;
+
+    const stickies = board.elements.filter((el) => el.type === 'sticky') as any[];
+    const texts = board.elements.filter((el) => el.type === 'text') as any[];
+
+    if (stickies.length > 0) {
+      html += '<h2>Notas y Puntos Clave</h2>';
+      stickies.forEach((s) => {
+        if (s.text) {
+          html += `<blockquote><strong>Nota:</strong> ${escapeHtml(s.text)}</blockquote>`;
+        }
+      });
+    }
+
+    if (texts.length > 0) {
+      html += '<h2>Textos del Pizarrón</h2>';
+      texts.forEach((t) => {
+        if (t.text) {
+          html += `<p>${escapeHtml(t.text)}</p>`;
+        }
+      });
+    }
+
+    if (stickies.length === 0 && texts.length === 0) {
+      html += '<p>Contenido importado del pizarrón.</p>';
+    }
+
+    this.insertDocPage({ contentHtml: html, id: `page_${crypto.randomUUID().slice(0, 8)}` }, 'new_page');
   }
 
   private updateEmptyPlaceholder(): void {
