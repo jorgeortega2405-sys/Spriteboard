@@ -337,9 +337,7 @@ export async function getFolderCanvases(
       const conditions: string[] = ['c.folder_id = ?', 'c.user_id = ?', 'c.deleted_at IS NULL'];
       const params: any[] = [folder.id, userId];
 
-      if (type === 'diagram') {
-        conditions.push("(c.canvas_type IN ('diagram', 'mindmap') OR c.unit = 'diagram')");
-      } else if (type === 'board') {
+      if (type === 'board') {
         conditions.push("(c.canvas_type = 'board' OR c.unit = 'board')");
       } else if (type === 'doc') {
         conditions.push("(c.canvas_type = 'doc' OR c.unit = 'doc')");

@@ -1,4 +1,4 @@
-import { BoardElement, BoardPoint, BoardStrokeElement } from './board.types.js';
+import { BoardConnectorElement, BoardElement, BoardPoint, BoardStrokeElement } from './board.types.js';
 
 export function computeStrokeBoundingBox(stroke: BoardStrokeElement): { height: number; width: number; x: number; y: number } {
   if (stroke.points.length === 0) return { height: 0, width: 0, x: 0, y: 0 };
@@ -21,9 +21,81 @@ export function computeStrokeBoundingBox(stroke: BoardStrokeElement): { height: 
   };
 }
 
-export function getElementBoundingBox(el: BoardElement): { height: number; width: number; x: number; y: number } {
+export function getNodeAnchorPoint(
+  bbox: { height: number; width: number; x: number; y: number },
+  target: BoardPoint
+): BoardPoint {
+  const cx = bbox.x + bbox.width / 2;
+  const cy = bbox.y + bbox.height / 2;
+  const dx = target.x - cx;
+  const dy = target.y - cy;
+
+  if (Math.abs(dx) * bbox.height > Math.abs(dy) * bbox.width) {
+    return {
+      x: dx > 0 ? bbox.x + bbox.width : bbox.x,
+      y: cy,
+    };
+  } else {
+    return {
+      x: cx,
+      y: dy > 0 ? bbox.y + bbox.height : bbox.y,
+    };
+  }
+}
+
+export function getConnectorEndpoints(
+  connector: BoardConnectorElement,
+  elements: BoardElement[]
+): { from: BoardPoint; to: BoardPoint } {
+  let from: BoardPoint = connector.startPoint || { x: 0, y: 0 };
+  let to: BoardPoint = connector.endPoint || { x: 100, y: 100 };
+
+  const fromEl = connector.fromId ? elements.find((e) => e.id === connector.fromId) : null;
+  const toEl = connector.toId ? elements.find((e) => e.id === connector.toId) : null;
+
+  if (fromEl && toEl) {
+    const b1 = getElementBoundingBox(fromEl, elements);
+    const b2 = getElementBoundingBox(toEl, elements);
+    const c1 = { x: b1.x + b1.width / 2, y: b1.y + b1.height / 2 };
+    const c2 = { x: b2.x + b2.width / 2, y: b2.y + b2.height / 2 };
+    from = getNodeAnchorPoint(b1, c2);
+    to = getNodeAnchorPoint(b2, c1);
+  } else if (fromEl) {
+    const b1 = getElementBoundingBox(fromEl, elements);
+    from = getNodeAnchorPoint(b1, to);
+  } else if (toEl) {
+    const b2 = getElementBoundingBox(toEl, elements);
+    to = getNodeAnchorPoint(b2, from);
+  }
+
+  return { from, to };
+}
+
+export function distToSegment(px: number, py: number, x1: number, y1: number, x2: number, y2: number): number {
+  const l2 = (x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1);
+  if (l2 === 0) return Math.hypot(px - x1, py - y1);
+  let t = ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / l2;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(px - (x1 + t * (x2 - x1)), py - (y1 + t * (y2 - y1)));
+}
+
+export function getElementBoundingBox(el: BoardElement, allElements?: BoardElement[]): { height: number; width: number; x: number; y: number } {
   if ('width' in el) {
     return { height: el.height, width: el.width, x: el.x, y: el.y };
+  }
+  if (el.type === 'connector') {
+    const ep = getConnectorEndpoints(el, allElements || []);
+    const minX = Math.min(ep.from.x, ep.to.x);
+    const maxX = Math.max(ep.from.x, ep.to.x);
+    const minY = Math.min(ep.from.y, ep.to.y);
+    const maxY = Math.max(ep.from.y, ep.to.y);
+    const pad = Math.max(14, (el.strokeWidth || 2) * 2);
+    return {
+      height: Math.max(1, maxY - minY + pad * 2),
+      width: Math.max(1, maxX - minX + pad * 2),
+      x: minX - pad,
+      y: minY - pad,
+    };
   }
   return computeStrokeBoundingBox(el);
 }
@@ -36,7 +108,7 @@ export function computeElementsBoundingBox(elements: BoardElement[]): { height: 
   let maxY = -Infinity;
 
   for (const el of elements) {
-    const bbox = getElementBoundingBox(el);
+    const bbox = getElementBoundingBox(el, elements);
     if (bbox.x < minX) minX = bbox.x;
     if (bbox.x + bbox.width > maxX) maxX = bbox.x + bbox.width;
     if (bbox.y < minY) minY = bbox.y;
@@ -60,8 +132,46 @@ export function hitTestElement(elements: BoardElement[], x: number, y: number, z
       if (el.points.some((p) => Math.hypot(p.x - x, p.y - y) <= threshold)) {
         return el;
       }
+    } else if (el.type === 'connector') {
+      const ep = getConnectorEndpoints(el, elements);
+      const threshold = (el.strokeWidth + 12) / zoom;
+      if (el.style === 'orthogonal') {
+        const midX = (ep.from.x + ep.to.x) / 2;
+        const d1 = distToSegment(x, y, ep.from.x, ep.from.y, midX, ep.from.y);
+        const d2 = distToSegment(x, y, midX, ep.from.y, midX, ep.to.y);
+        const d3 = distToSegment(x, y, midX, ep.to.y, ep.to.x, ep.to.y);
+        if (Math.min(d1, d2, d3) <= threshold) return el;
+      } else if (el.style === 'curved') {
+        const dx = ep.to.x - ep.from.x;
+        const dy = ep.to.y - ep.from.y;
+        const cx1 = ep.from.x + dx * 0.5;
+        const cy1 = ep.from.y;
+        const cx2 = ep.from.x + dx * 0.5;
+        const cy2 = ep.to.y;
+        let minD = Infinity;
+        let prevPt = ep.from;
+        for (let step = 1; step <= 10; step++) {
+          const t = step / 10;
+          const u = 1 - t;
+          const px = u * u * u * ep.from.x + 3 * u * u * t * cx1 + 3 * u * t * t * cx2 + t * t * t * ep.to.x;
+          const py = u * u * u * ep.from.y + 3 * u * u * t * cy1 + 3 * u * t * t * cy2 + t * t * t * ep.to.y;
+          const curPt = { x: px, y: py };
+          const d = distToSegment(x, y, prevPt.x, prevPt.y, curPt.x, curPt.y);
+          if (d < minD) minD = d;
+          prevPt = curPt;
+        }
+        if (minD <= threshold) return el;
+      } else {
+        if (distToSegment(x, y, ep.from.x, ep.from.y, ep.to.x, ep.to.y) <= threshold) return el;
+      }
+
+      if (el.label) {
+        const midX = (ep.from.x + ep.to.x) / 2;
+        const midY = (ep.from.y + ep.to.y) / 2;
+        if (Math.abs(x - midX) <= 40 && Math.abs(y - midY) <= 18) return el;
+      }
     } else {
-      const bbox = getElementBoundingBox(el);
+      const bbox = getElementBoundingBox(el, elements);
       if (x >= bbox.x && x <= bbox.x + bbox.width && y >= bbox.y && y <= bbox.y + bbox.height) {
         return el;
       }
@@ -107,6 +217,12 @@ export function moveElementByDrag(el: BoardElement, worldPos: BoardPoint, dragOf
     const dx = targetX - bbox.x;
     const dy = targetY - bbox.y;
     el.points = el.points.map((p) => ({ x: p.x + dx, y: p.y + dy }));
+  } else if (el.type === 'connector' && !el.fromId && !el.toId && el.startPoint && el.endPoint) {
+    const bbox = getElementBoundingBox(el);
+    const dx = Math.round(targetX - bbox.x);
+    const dy = Math.round(targetY - bbox.y);
+    el.startPoint = { x: el.startPoint.x + dx, y: el.startPoint.y + dy };
+    el.endPoint = { x: el.endPoint.x + dx, y: el.endPoint.y + dy };
   }
 }
 

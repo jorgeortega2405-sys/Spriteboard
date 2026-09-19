@@ -1,6 +1,6 @@
-export type BoardTool = 'select' | 'hand' | 'pen' | 'marker' | 'highlighter' | 'eraser' | 'shapes' | 'sticky' | 'text' | 'pixel';
+export type BoardTool = 'select' | 'hand' | 'pen' | 'marker' | 'highlighter' | 'eraser' | 'shapes' | 'sticky' | 'text' | 'pixel' | 'connector';
 
-export type ShapeType = 'rect' | 'round-rect' | 'circle' | 'line' | 'arrow' | 'triangle' | 'star' | 'diamond';
+export type ShapeType = 'rect' | 'round-rect' | 'circle' | 'line' | 'arrow' | 'triangle' | 'star' | 'diamond' | 'parallelogram' | 'cylinder' | 'pill' | 'document' | 'cloud';
 
 export type BackgroundType = 'dots' | 'blank' | 'dark' | 'solid';
 
@@ -41,11 +41,15 @@ export interface BoardStrokeElement {
 
 export interface BoardShapeElement {
   fillColor: string;
+  fontSize?: number;
   height: number;
   id: string;
+  isMindMapNode?: boolean;
   shapeType: ShapeType;
   strokeColor: string;
   strokeWidth: number;
+  text?: string;
+  textColor?: string;
   type: 'shape';
   width: number;
   x: number;
@@ -106,7 +110,30 @@ export interface BoardImageElement {
   y: number;
 }
 
-export type BoardElement = BoardStrokeElement | BoardShapeElement | BoardStickyElement | BoardTextElement | BoardPixelGridElement | BoardImageElement;
+export interface BoardConnectorElement {
+  arrowEnd?: boolean;
+  arrowStart?: boolean;
+  color: string;
+  endPoint?: BoardPoint;
+  fontSize?: number;
+  fromId?: string;
+  id: string;
+  label?: string;
+  startPoint?: BoardPoint;
+  strokeWidth: number;
+  style: 'curved' | 'orthogonal' | 'straight';
+  toId?: string;
+  type: 'connector';
+}
+
+export type BoardElement =
+  | BoardStrokeElement
+  | BoardShapeElement
+  | BoardStickyElement
+  | BoardTextElement
+  | BoardPixelGridElement
+  | BoardImageElement
+  | BoardConnectorElement;
 
 export interface BoardProject {
   background: {

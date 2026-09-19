@@ -8,7 +8,7 @@ export interface PresetVariant {
 export interface PresetItem {
   aspectType: 'compact' | 'large' | 'square' | 'standard' | 'tall' | 'wide';
   boardTemplateId?: string;
-  canvasType?: 'board' | 'diagram' | 'doc' | 'mindmap';
+  canvasType?: 'board' | 'doc';
   categoryKey: string;
   categoryName: string;
   diagramSubtype?: string;
@@ -172,7 +172,7 @@ export const ALL_PRESETS: PresetItem[] = [
   // 10 Mapas Mentales
   {
     aspectType: 'wide',
-    canvasType: 'diagram',
+    canvasType: 'board',
     categoryKey: 'mindmap',
     categoryName: 'Mapas Mentales',
     diagramSubtype: 'mindmap',
@@ -186,7 +186,7 @@ export const ALL_PRESETS: PresetItem[] = [
   },
   {
     aspectType: 'wide',
-    canvasType: 'diagram',
+    canvasType: 'board',
     categoryKey: 'mindmap',
     categoryName: 'Mapas Mentales',
     diagramSubtype: 'mindmap',
@@ -200,7 +200,7 @@ export const ALL_PRESETS: PresetItem[] = [
   },
   {
     aspectType: 'wide',
-    canvasType: 'diagram',
+    canvasType: 'board',
     categoryKey: 'mindmap',
     categoryName: 'Mapas Mentales',
     diagramSubtype: 'mindmap',
@@ -214,7 +214,7 @@ export const ALL_PRESETS: PresetItem[] = [
   },
   {
     aspectType: 'wide',
-    canvasType: 'diagram',
+    canvasType: 'board',
     categoryKey: 'mindmap',
     categoryName: 'Mapas Mentales',
     diagramSubtype: 'mindmap',
@@ -228,7 +228,7 @@ export const ALL_PRESETS: PresetItem[] = [
   },
   {
     aspectType: 'wide',
-    canvasType: 'diagram',
+    canvasType: 'board',
     categoryKey: 'mindmap',
     categoryName: 'Mapas Mentales',
     diagramSubtype: 'mindmap',
@@ -242,7 +242,7 @@ export const ALL_PRESETS: PresetItem[] = [
   },
   {
     aspectType: 'wide',
-    canvasType: 'diagram',
+    canvasType: 'board',
     categoryKey: 'mindmap',
     categoryName: 'Mapas Mentales',
     diagramSubtype: 'mindmap',
@@ -256,7 +256,7 @@ export const ALL_PRESETS: PresetItem[] = [
   },
   {
     aspectType: 'wide',
-    canvasType: 'diagram',
+    canvasType: 'board',
     categoryKey: 'mindmap',
     categoryName: 'Mapas Mentales',
     diagramSubtype: 'mindmap',
@@ -270,7 +270,7 @@ export const ALL_PRESETS: PresetItem[] = [
   },
   {
     aspectType: 'wide',
-    canvasType: 'diagram',
+    canvasType: 'board',
     categoryKey: 'mindmap',
     categoryName: 'Mapas Mentales',
     diagramSubtype: 'mindmap',
@@ -284,7 +284,7 @@ export const ALL_PRESETS: PresetItem[] = [
   },
   {
     aspectType: 'wide',
-    canvasType: 'diagram',
+    canvasType: 'board',
     categoryKey: 'mindmap',
     categoryName: 'Mapas Mentales',
     diagramSubtype: 'mindmap',
@@ -298,7 +298,7 @@ export const ALL_PRESETS: PresetItem[] = [
   },
   {
     aspectType: 'wide',
-    canvasType: 'diagram',
+    canvasType: 'board',
     categoryKey: 'mindmap',
     categoryName: 'Mapas Mentales',
     diagramSubtype: 'mindmap',
@@ -314,7 +314,7 @@ export const ALL_PRESETS: PresetItem[] = [
   // 10 Mapas Conceptuales
   {
     aspectType: 'wide',
-    canvasType: 'diagram',
+    canvasType: 'board',
     categoryKey: 'conceptmap',
     categoryName: 'Mapas Conceptuales',
     diagramSubtype: 'conceptmap',
@@ -328,7 +328,7 @@ export const ALL_PRESETS: PresetItem[] = [
   },
   {
     aspectType: 'wide',
-    canvasType: 'diagram',
+    canvasType: 'board',
     categoryKey: 'conceptmap',
     categoryName: 'Mapas Conceptuales',
     diagramSubtype: 'conceptmap',
@@ -342,7 +342,7 @@ export const ALL_PRESETS: PresetItem[] = [
   },
   {
     aspectType: 'wide',
-    canvasType: 'diagram',
+    canvasType: 'board',
     categoryKey: 'conceptmap',
     categoryName: 'Mapas Conceptuales',
     diagramSubtype: 'conceptmap',
@@ -356,7 +356,7 @@ export const ALL_PRESETS: PresetItem[] = [
   },
   {
     aspectType: 'wide',
-    canvasType: 'diagram',
+    canvasType: 'board',
     categoryKey: 'conceptmap',
     categoryName: 'Mapas Conceptuales',
     diagramSubtype: 'conceptmap',
@@ -370,7 +370,7 @@ export const ALL_PRESETS: PresetItem[] = [
   },
   {
     aspectType: 'wide',
-    canvasType: 'diagram',
+    canvasType: 'board',
     categoryKey: 'conceptmap',
     categoryName: 'Mapas Conceptuales',
     diagramSubtype: 'conceptmap',
@@ -384,7 +384,7 @@ export const ALL_PRESETS: PresetItem[] = [
   },
   {
     aspectType: 'wide',
-    canvasType: 'diagram',
+    canvasType: 'board',
     categoryKey: 'conceptmap',
     categoryName: 'Mapas Conceptuales',
     diagramSubtype: 'conceptmap',
@@ -398,7 +398,7 @@ export const ALL_PRESETS: PresetItem[] = [
   },
   {
     aspectType: 'wide',
-    canvasType: 'diagram',
+    canvasType: 'board',
     categoryKey: 'conceptmap',
     categoryName: 'Mapas Conceptuales',
     diagramSubtype: 'conceptmap',
@@ -412,7 +412,7 @@ export const ALL_PRESETS: PresetItem[] = [
   },
   {
     aspectType: 'wide',
-    canvasType: 'diagram',
+    canvasType: 'board',
     categoryKey: 'conceptmap',
     categoryName: 'Mapas Conceptuales',
     diagramSubtype: 'conceptmap',
@@ -426,7 +426,7 @@ export const ALL_PRESETS: PresetItem[] = [
   },
   {
     aspectType: 'wide',
-    canvasType: 'diagram',
+    canvasType: 'board',
     categoryKey: 'conceptmap',
     categoryName: 'Mapas Conceptuales',
     diagramSubtype: 'conceptmap',
@@ -440,7 +440,7 @@ export const ALL_PRESETS: PresetItem[] = [
   },
   {
     aspectType: 'wide',
-    canvasType: 'diagram',
+    canvasType: 'board',
     categoryKey: 'conceptmap',
     categoryName: 'Mapas Conceptuales',
     diagramSubtype: 'conceptmap',
@@ -456,7 +456,7 @@ export const ALL_PRESETS: PresetItem[] = [
   // 10 Diagramas de Flujo
   {
     aspectType: 'wide',
-    canvasType: 'diagram',
+    canvasType: 'board',
     categoryKey: 'flowchart',
     categoryName: 'Diagramas de Flujo',
     diagramSubtype: 'flowchart',
@@ -470,7 +470,7 @@ export const ALL_PRESETS: PresetItem[] = [
   },
   {
     aspectType: 'wide',
-    canvasType: 'diagram',
+    canvasType: 'board',
     categoryKey: 'flowchart',
     categoryName: 'Diagramas de Flujo',
     diagramSubtype: 'flowchart',
@@ -484,7 +484,7 @@ export const ALL_PRESETS: PresetItem[] = [
   },
   {
     aspectType: 'wide',
-    canvasType: 'diagram',
+    canvasType: 'board',
     categoryKey: 'flowchart',
     categoryName: 'Diagramas de Flujo',
     diagramSubtype: 'flowchart',
@@ -498,7 +498,7 @@ export const ALL_PRESETS: PresetItem[] = [
   },
   {
     aspectType: 'wide',
-    canvasType: 'diagram',
+    canvasType: 'board',
     categoryKey: 'flowchart',
     categoryName: 'Diagramas de Flujo',
     diagramSubtype: 'flowchart',
@@ -512,7 +512,7 @@ export const ALL_PRESETS: PresetItem[] = [
   },
   {
     aspectType: 'wide',
-    canvasType: 'diagram',
+    canvasType: 'board',
     categoryKey: 'flowchart',
     categoryName: 'Diagramas de Flujo',
     diagramSubtype: 'flowchart',
@@ -526,7 +526,7 @@ export const ALL_PRESETS: PresetItem[] = [
   },
   {
     aspectType: 'wide',
-    canvasType: 'diagram',
+    canvasType: 'board',
     categoryKey: 'flowchart',
     categoryName: 'Diagramas de Flujo',
     diagramSubtype: 'flowchart',
@@ -540,7 +540,7 @@ export const ALL_PRESETS: PresetItem[] = [
   },
   {
     aspectType: 'wide',
-    canvasType: 'diagram',
+    canvasType: 'board',
     categoryKey: 'flowchart',
     categoryName: 'Diagramas de Flujo',
     diagramSubtype: 'flowchart',
@@ -554,7 +554,7 @@ export const ALL_PRESETS: PresetItem[] = [
   },
   {
     aspectType: 'wide',
-    canvasType: 'diagram',
+    canvasType: 'board',
     categoryKey: 'flowchart',
     categoryName: 'Diagramas de Flujo',
     diagramSubtype: 'flowchart',
@@ -568,7 +568,7 @@ export const ALL_PRESETS: PresetItem[] = [
   },
   {
     aspectType: 'wide',
-    canvasType: 'diagram',
+    canvasType: 'board',
     categoryKey: 'flowchart',
     categoryName: 'Diagramas de Flujo',
     diagramSubtype: 'flowchart',
@@ -582,7 +582,7 @@ export const ALL_PRESETS: PresetItem[] = [
   },
   {
     aspectType: 'wide',
-    canvasType: 'diagram',
+    canvasType: 'board',
     categoryKey: 'flowchart',
     categoryName: 'Diagramas de Flujo',
     diagramSubtype: 'flowchart',

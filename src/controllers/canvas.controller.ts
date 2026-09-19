@@ -14,7 +14,7 @@ export async function listCanvases(req: Request, res: Response): Promise<void> {
     const pageParam = req.query.page !== undefined ? parseInt(req.query.page as string, 10) : undefined;
     if (pageParam !== undefined) {
       const limitParam = req.query.limit ? parseInt(req.query.limit as string, 10) : 20;
-      const type = req.query.type as 'all' | 'board' | 'diagram' | 'doc' | undefined;
+      const type = req.query.type as 'all' | 'board' | 'doc' | undefined;
       const sort = req.query.sort as 'activity' | 'alpha-asc' | 'alpha-desc' | undefined;
       const search = req.query.search as string | undefined;
 
@@ -60,9 +60,8 @@ export async function createCanvasHandler(req: Request, res: Response): Promise<
 
     const { access_level, canvas_type, data, height, name, preview_thumbnail, public_role, unit, width } = req.body;
     const isDoc = canvas_type === 'doc' || unit === 'doc';
-    const isDiagram = canvas_type === 'diagram' || canvas_type === 'mindmap' || unit === 'diagram';
-    const isBoard = canvas_type === 'board' || unit === 'board' || (!isDoc && !isDiagram);
-    const isInfinite = isBoard || isDiagram || unit === 'infinite' || (Number(width) === 0 && Number(height) === 0);
+    const isBoard = !isDoc;
+    const isInfinite = isBoard || unit === 'infinite' || (Number(width) === 0 && Number(height) === 0);
     const numWidth = isInfinite ? 0 : Number(width);
     const numHeight = isInfinite ? 0 : Number(height);
 
@@ -73,13 +72,13 @@ export async function createCanvasHandler(req: Request, res: Response): Promise<
 
     const canvas = await createCanvas(user.id, {
       access_level: access_level === 'public' ? 'public' : 'private',
-      canvas_type: isDiagram ? (canvas_type === 'mindmap' ? 'mindmap' : 'diagram') : (isDoc ? 'doc' : 'board'),
+      canvas_type: isDoc ? 'doc' : 'board',
       data,
       height: numHeight,
       name,
       preview_thumbnail: typeof preview_thumbnail === 'string' ? preview_thumbnail : null,
       public_role: public_role === 'viewer' ? 'viewer' : 'editor',
-      unit: isDiagram ? 'diagram' : (isDoc ? 'doc' : 'board'),
+      unit: isDoc ? 'doc' : 'board',
       width: numWidth,
     });
 
@@ -106,22 +105,21 @@ export async function syncCanvasHandler(req: Request, res: Response): Promise<vo
     }
 
     const isDoc = canvas_type === 'doc' || unit === 'doc';
-    const isDiagram = canvas_type === 'diagram' || canvas_type === 'mindmap' || unit === 'diagram';
-    const isBoard = canvas_type === 'board' || unit === 'board' || (!isDoc && !isDiagram);
-    const isInfinite = isBoard || isDiagram || unit === 'infinite' || (Number(width) === 0 && Number(height) === 0);
+    const isBoard = !isDoc;
+    const isInfinite = isBoard || unit === 'infinite' || (Number(width) === 0 && Number(height) === 0);
     const numWidth = isInfinite ? 0 : (Number(width) || 1920);
     const numHeight = isInfinite ? 0 : (Number(height) || 1080);
 
     const canvas = await syncCanvas(user ? user.id : null, {
       access_level: access_level === 'public' ? 'public' : access_level === 'private' ? 'private' : undefined,
-      canvas_type: isDiagram ? (canvas_type === 'mindmap' ? 'mindmap' : 'diagram') : (isDoc ? 'doc' : 'board'),
+      canvas_type: isDoc ? 'doc' : 'board',
       data,
       height: numHeight,
       id: id ? Number(id) : undefined,
       name,
       preview_thumbnail,
       public_role: public_role === 'viewer' ? 'viewer' : public_role === 'editor' ? 'editor' : undefined,
-      unit: isDiagram ? 'diagram' : (isDoc ? 'doc' : 'board'),
+      unit: isDoc ? 'doc' : 'board',
       uuid,
       width: numWidth,
     });

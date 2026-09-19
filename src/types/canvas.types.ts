@@ -11,7 +11,7 @@ export interface Canvas {
   width: number;
   height: number;
   unit: string;
-  canvas_type?: 'board' | 'diagram' | 'doc' | 'mindmap';
+  canvas_type?: 'board' | 'doc';
   data: string | null;
   preview_thumbnail: string | null;
   access_level: 'private' | 'public';
@@ -67,7 +67,7 @@ export interface CreateCanvasDto {
   width: number;
   height: number;
   unit?: string;
-  canvas_type?: 'board' | 'diagram' | 'doc' | 'mindmap';
+  canvas_type?: 'board' | 'doc';
   access_level?: 'private' | 'public';
   public_role?: 'viewer' | 'editor';
   data?: any;
@@ -83,7 +83,7 @@ export interface SyncCanvasDto {
   width: number;
   height: number;
   unit?: string;
-  canvas_type?: 'board' | 'diagram' | 'doc' | 'mindmap';
+  canvas_type?: 'board' | 'doc';
   data?: any;
   preview_thumbnail?: string | null;
   access_level?: 'private' | 'public';
@@ -141,7 +141,7 @@ export interface CanvasMetricsData {
 export interface GetUserCanvasesOptions {
   page?: number;
   limit?: number;
-  type?: 'all' | 'board' | 'diagram' | 'doc';
+  type?: 'all' | 'board' | 'doc';
   sort?: 'activity' | 'alpha-asc' | 'alpha-desc';
   search?: string;
   folderId?: number | null;

@@ -1,5 +1,5 @@
-import { getElementBoundingBox } from './board-elements.manager.js';
-import { BackgroundType, BoardCollaboratorState, BoardElement, BoardImageElement, BoardPixelGridElement, BoardPoint, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTextElement } from './board.types.js';
+import { getConnectorEndpoints, getElementBoundingBox } from './board-elements.manager.js';
+import { BackgroundType, BoardCollaboratorState, BoardConnectorElement, BoardElement, BoardImageElement, BoardPixelGridElement, BoardPoint, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTextElement } from './board.types.js';
 
 const imageCache = new Map<string, HTMLImageElement>();
 const imageLoadCallbacks = new Map<string, Array<() => void>>();
@@ -247,12 +247,191 @@ export function drawShape(ctx: CanvasRenderingContext2D, shape: BoardShapeElemen
       rot += step;
     }
     ctx.closePath();
+  } else if (shape.shapeType === 'parallelogram') {
+    const skew = Math.min(24, Math.abs(w) * 0.22);
+    ctx.moveTo(x + skew, y);
+    ctx.lineTo(x + w, y);
+    ctx.lineTo(x + w - skew, y + h);
+    ctx.lineTo(x, y + h);
+    ctx.closePath();
+  } else if (shape.shapeType === 'cylinder') {
+    const ry = Math.min(18, Math.abs(h) * 0.18);
+    const rx = Math.abs(w) / 2;
+    const cx = x + rx;
+    ctx.moveTo(x, y + ry);
+    ctx.lineTo(x, y + h - ry);
+    ctx.ellipse(cx, y + h - ry, rx, ry, 0, Math.PI, 0, true);
+    ctx.lineTo(x + w, y + ry);
+    ctx.ellipse(cx, y + ry, rx, ry, 0, 0, Math.PI, true);
+    ctx.closePath();
+  } else if (shape.shapeType === 'pill') {
+    const r = Math.min(Math.abs(w) / 2, Math.abs(h) / 2);
+    if (typeof (ctx as any).roundRect === 'function') {
+      (ctx as any).roundRect(x, y, w, h, r);
+    } else {
+      ctx.rect(x, y, w, h);
+    }
+  } else if (shape.shapeType === 'document') {
+    const waveH = Math.min(16, Math.abs(h) * 0.15);
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + w, y);
+    ctx.lineTo(x + w, y + h - waveH);
+    ctx.bezierCurveTo(
+      x + w * 0.75, y + h + waveH * 0.5,
+      x + w * 0.25, y + h - waveH * 1.5,
+      x, y + h - waveH * 0.3
+    );
+    ctx.closePath();
+  } else if (shape.shapeType === 'cloud') {
+    const rx = Math.abs(w) / 6;
+    const ry = Math.abs(h) / 4;
+    ctx.moveTo(x + rx * 2, y + ry);
+    ctx.bezierCurveTo(x + rx * 2, y, x + rx * 4, y, x + rx * 4, y + ry);
+    ctx.bezierCurveTo(x + w, y + ry, x + w, y + ry * 3, x + rx * 5, y + ry * 3);
+    ctx.bezierCurveTo(x + rx * 5, y + h, x + rx * 2, y + h, x + rx * 2, y + ry * 3);
+    ctx.bezierCurveTo(x, y + ry * 3, x, y + ry, x + rx * 2, y + ry);
+    ctx.closePath();
   }
 
   if (shape.fillColor !== 'transparent') {
     ctx.fill();
   }
   ctx.stroke();
+
+  if (shape.shapeType === 'cylinder') {
+    const ry = Math.min(18, Math.abs(h) * 0.18);
+    const rx = Math.abs(w) / 2;
+    const cx = x + rx;
+    ctx.beginPath();
+    ctx.ellipse(cx, y + ry, rx, ry, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  if (shape.text) {
+    ctx.save();
+    ctx.fillStyle = shape.textColor || '#1e293b';
+    const fs = shape.fontSize || 14;
+    ctx.font = `600 ${fs}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const pad = Math.min(24, Math.abs(w) * 0.15);
+    const maxW = Math.max(20, Math.abs(w) - pad * 2);
+    const lines = wrapText(ctx, shape.text, maxW, fs);
+    const lineHeight = fs * 1.3;
+    const totalH = lines.length * lineHeight;
+    let currY = y + h / 2 - totalH / 2 + lineHeight / 2;
+    const cx = x + w / 2;
+    for (const line of lines) {
+      ctx.fillText(line, cx, currY);
+      currY += lineHeight;
+    }
+    ctx.restore();
+  }
+
+  ctx.restore();
+}
+
+export function drawConnector(
+  ctx: CanvasRenderingContext2D,
+  connector: BoardConnectorElement,
+  elements: BoardElement[]
+): void {
+  const { from, to } = getConnectorEndpoints(connector, elements);
+
+  ctx.save();
+  ctx.strokeStyle = connector.color || '#475569';
+  ctx.fillStyle = connector.color || '#475569';
+  ctx.lineWidth = connector.strokeWidth || 2;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  ctx.beginPath();
+  ctx.moveTo(from.x, from.y);
+
+  let angleEnd = Math.atan2(to.y - from.y, to.x - from.x);
+  let angleStart = Math.atan2(from.y - to.y, from.x - to.x);
+  let midPoint: BoardPoint = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
+
+  if (connector.style === 'curved') {
+    const dx = to.x - from.x;
+    const cx1 = from.x + dx * 0.5;
+    const cy1 = from.y;
+    const cx2 = from.x + dx * 0.5;
+    const cy2 = to.y;
+    ctx.bezierCurveTo(cx1, cy1, cx2, cy2, to.x, to.y);
+    angleEnd = Math.atan2(to.y - cy2, to.x - cx2);
+    angleStart = Math.atan2(from.y - cy1, from.x - cx1);
+    midPoint = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
+  } else if (connector.style === 'orthogonal') {
+    const midX = (from.x + to.x) / 2;
+    ctx.lineTo(midX, from.y);
+    ctx.lineTo(midX, to.y);
+    ctx.lineTo(to.x, to.y);
+    angleEnd = Math.atan2(0, to.x - midX);
+    angleStart = Math.atan2(0, from.x - midX);
+    midPoint = { x: midX, y: (from.y + to.y) / 2 };
+  } else {
+    ctx.lineTo(to.x, to.y);
+  }
+  ctx.stroke();
+
+  const arrowLen = Math.max(10, (connector.strokeWidth || 2) * 3);
+  if (connector.arrowEnd !== false) {
+    ctx.beginPath();
+    ctx.moveTo(to.x, to.y);
+    ctx.lineTo(
+      to.x - arrowLen * Math.cos(angleEnd - Math.PI / 6),
+      to.y - arrowLen * Math.sin(angleEnd - Math.PI / 6)
+    );
+    ctx.lineTo(
+      to.x - arrowLen * Math.cos(angleEnd + Math.PI / 6),
+      to.y - arrowLen * Math.sin(angleEnd + Math.PI / 6)
+    );
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  if (connector.arrowStart) {
+    ctx.beginPath();
+    ctx.moveTo(from.x, from.y);
+    ctx.lineTo(
+      from.x - arrowLen * Math.cos(angleStart - Math.PI / 6),
+      from.y - arrowLen * Math.sin(angleStart - Math.PI / 6)
+    );
+    ctx.lineTo(
+      from.x - arrowLen * Math.cos(angleStart + Math.PI / 6),
+      from.y - arrowLen * Math.sin(angleStart + Math.PI / 6)
+    );
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  if (connector.label) {
+    ctx.font = `500 ${connector.fontSize || 12}px sans-serif`;
+    const tw = ctx.measureText(connector.label).width;
+    const bh = 22;
+    const bw = tw + 16;
+    const bx = midPoint.x - bw / 2;
+    const by = midPoint.y - bh / 2;
+
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = connector.color || '#cbd5e1';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    if (typeof (ctx as any).roundRect === 'function') {
+      (ctx as any).roundRect(bx, by, bw, bh, 4);
+    } else {
+      ctx.rect(bx, by, bw, bh);
+    }
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#334155';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(connector.label, midPoint.x, midPoint.y);
+  }
+
   ctx.restore();
 }
 
@@ -306,8 +485,8 @@ export function drawText(ctx: CanvasRenderingContext2D, textEl: BoardTextElement
   ctx.restore();
 }
 
-export function drawSelectionBox(ctx: CanvasRenderingContext2D, el: BoardElement, camera: { zoom: number }): void {
-  const bbox = getElementBoundingBox(el);
+export function drawSelectionBox(ctx: CanvasRenderingContext2D, el: BoardElement, camera: { zoom: number }, allElements?: BoardElement[]): void {
+  const bbox = getElementBoundingBox(el, allElements);
   ctx.save();
   ctx.strokeStyle = '#2563eb';
   ctx.lineWidth = 1.5 / camera.zoom;
@@ -331,6 +510,18 @@ export function drawSelectionBox(ctx: CanvasRenderingContext2D, el: BoardElement
     for (const c of corners) {
       ctx.beginPath();
       ctx.arc(c.x, c.y, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
+  } else if (el.type === 'connector') {
+    const ep = getConnectorEndpoints(el, allElements || []);
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = '#2563eb';
+    ctx.lineWidth = 2 / camera.zoom;
+    const r = 5 / camera.zoom;
+    for (const pt of [ep.from, ep.to]) {
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, r, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
     }

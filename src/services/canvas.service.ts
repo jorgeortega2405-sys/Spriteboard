@@ -66,14 +66,13 @@ export function generateShortCode(): string {
 export async function createCanvas(userId: number, dto: CreateCanvasDto): Promise<Canvas> {
   const uuid = dto.uuid && dto.uuid.trim().length === 36 ? dto.uuid.trim() : crypto.randomUUID();
   const name = dto.name && dto.name.trim() ? dto.name.trim().slice(0, 255) : 'Lienzo sin título';
-  const isDiagram = dto.canvas_type === 'diagram' || dto.canvas_type === 'mindmap' || dto.unit === 'diagram';
-  const isDoc = !isDiagram && (dto.canvas_type === 'doc' || dto.unit === 'doc');
-  const isBoard = !isDiagram && !isDoc;
-  const canvasType = isDiagram ? (dto.canvas_type === 'mindmap' ? 'mindmap' : 'diagram') : (isDoc ? 'doc' : 'board');
-  const isInfinite = isBoard || isDiagram;
+  const isDoc = dto.canvas_type === 'doc' || dto.unit === 'doc';
+  const isBoard = !isDoc;
+  const canvasType = isDoc ? 'doc' : 'board';
+  const isInfinite = isBoard;
   const width = isInfinite ? 0 : Math.max(1, Math.min(16384, Math.floor(Number(dto.width) || 1920)));
   const height = isInfinite ? 0 : Math.max(1, Math.min(16384, Math.floor(Number(dto.height) || 1080)));
-  const unit = isDiagram ? 'diagram' : (isDoc ? 'doc' : 'board');
+  const unit = isDoc ? 'doc' : 'board';
   const accessLevel = dto.access_level === 'public' ? 'public' : 'private';
   const publicRole = dto.public_role === 'viewer' ? 'viewer' : 'editor';
   const shortCode = generateShortCode();
@@ -200,7 +199,7 @@ export async function createCanvas(userId: number, dto: CreateCanvasDto): Promis
     }
 
     const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
-      'SELECT id, uuid, user_id, folder_id, name, width, height, unit, COALESCE(canvas_type, CASE WHEN unit = \'board\' THEN \'board\' WHEN unit = \'diagram\' THEN \'diagram\' WHEN unit = \'doc\' THEN \'doc\' ELSE \'pixel\' END) AS canvas_type, access_level, public_role, short_code, custom_slug, created_at, updated_at FROM canvases WHERE id = ? LIMIT 1',
+      'SELECT id, uuid, user_id, folder_id, name, width, height, unit, COALESCE(canvas_type, \'board\') AS canvas_type, access_level, public_role, short_code, custom_slug, created_at, updated_at FROM canvases WHERE id = ? LIMIT 1',
       [insertedId]
     );
 
@@ -314,9 +313,7 @@ export async function getUserCanvasesPaginated(userId: number, options: GetUserC
     const conditions: string[] = ['c.user_id = ?', 'c.deleted_at IS NULL'];
     const params: any[] = [userId];
 
-    if (type === 'diagram') {
-      conditions.push("(c.canvas_type IN ('diagram', 'mindmap') OR c.unit = 'diagram')");
-    } else if (type === 'board') {
+    if (type === 'board') {
       conditions.push("(c.canvas_type = 'board' OR c.unit = 'board')");
     } else if (type === 'doc') {
       conditions.push("(c.canvas_type = 'doc' OR c.unit = 'doc')");
@@ -653,14 +650,13 @@ export async function updateCanvasAccessLevel(
 export async function syncCanvas(userId: number | null, dto: SyncCanvasDto): Promise<Canvas> {
   const uuid = dto.uuid.trim();
   const name = dto.name && dto.name.trim() ? dto.name.trim().slice(0, 255) : 'Lienzo sin título';
-  const isDiagram = dto.canvas_type === 'diagram' || dto.canvas_type === 'mindmap' || dto.unit === 'diagram';
-  const isDoc = !isDiagram && (dto.canvas_type === 'doc' || dto.unit === 'doc');
-  const isBoard = !isDiagram && !isDoc;
-  const canvasType = isDiagram ? (dto.canvas_type === 'mindmap' ? 'mindmap' : 'diagram') : (isDoc ? 'doc' : 'board');
-  const isInfinite = isDiagram || isBoard;
+  const isDoc = dto.canvas_type === 'doc' || dto.unit === 'doc';
+  const isBoard = !isDoc;
+  const canvasType = isDoc ? 'doc' : 'board';
+  const isInfinite = isBoard;
   const width = isInfinite ? 0 : Math.max(1, Math.min(16384, Math.floor(Number(dto.width) || 1920)));
   const height = isInfinite ? 0 : Math.max(1, Math.min(16384, Math.floor(Number(dto.height) || 1080)));
-  const unit = isDiagram ? 'diagram' : (isDoc ? 'doc' : 'board');
+  const unit = isDoc ? 'doc' : 'board';
   const data = dto.data ? (typeof dto.data === 'string' ? dto.data : JSON.stringify(dto.data)) : null;
   const previewThumbnail = dto.preview_thumbnail !== undefined ? dto.preview_thumbnail : null;
   const accessLevel = dto.access_level;
@@ -1249,7 +1245,7 @@ export async function getUserTrashCanvases(userId: number): Promise<Canvas[]> {
 
   try {
     const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
-      'SELECT id, uuid, user_id, name, width, height, unit, COALESCE(canvas_type, CASE WHEN unit = \'board\' THEN \'board\' WHEN unit = \'diagram\' THEN \'diagram\' WHEN unit = \'doc\' THEN \'doc\' ELSE \'pixel\' END) AS canvas_type, preview_thumbnail, access_level, deleted_at, created_at, updated_at FROM canvases WHERE user_id = ? AND deleted_at IS NOT NULL ORDER BY deleted_at DESC',
+      'SELECT id, uuid, user_id, name, width, height, unit, COALESCE(canvas_type, \'board\') AS canvas_type, preview_thumbnail, access_level, deleted_at, created_at, updated_at FROM canvases WHERE user_id = ? AND deleted_at IS NOT NULL ORDER BY deleted_at DESC',
       [userId]
     );
     const result = rows as Canvas[];
@@ -1289,7 +1285,7 @@ export async function restoreCanvas(uuid: string, userId: number): Promise<Canva
     logger.db.info(`Lienzo ${uuid} restaurado por el usuario ${userId}`);
 
     const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
-      'SELECT id, uuid, user_id, name, width, height, unit, COALESCE(canvas_type, CASE WHEN unit = \'board\' THEN \'board\' WHEN unit = \'diagram\' THEN \'diagram\' WHEN unit = \'doc\' THEN \'doc\' ELSE \'pixel\' END) AS canvas_type, access_level, public_role, short_code, custom_slug, created_at, updated_at FROM canvases WHERE id = ? LIMIT 1',
+      'SELECT id, uuid, user_id, name, width, height, unit, COALESCE(canvas_type, \'board\') AS canvas_type, access_level, public_role, short_code, custom_slug, created_at, updated_at FROM canvases WHERE id = ? LIMIT 1',
       [canvas.id]
     );
     return rows[0] as Canvas;
@@ -1364,7 +1360,7 @@ export async function emptyTrash(userId: number): Promise<boolean> {
 export async function duplicateCanvas(uuid: string, userId: number): Promise<Canvas> {
   try {
     const [canvasRows] = await canvasPool.query<mysql.RowDataPacket[]>(
-      'SELECT id, uuid, user_id, name, width, height, unit, COALESCE(canvas_type, CASE WHEN unit = \'board\' THEN \'board\' WHEN unit = \'diagram\' THEN \'diagram\' WHEN unit = \'doc\' THEN \'doc\' ELSE \'pixel\' END) AS canvas_type, data, preview_thumbnail, access_level FROM canvases WHERE uuid = ? AND deleted_at IS NULL LIMIT 1',
+      'SELECT id, uuid, user_id, name, width, height, unit, COALESCE(canvas_type, \'board\') AS canvas_type, data, preview_thumbnail, access_level FROM canvases WHERE uuid = ? AND deleted_at IS NULL LIMIT 1',
       [uuid]
     );
 
@@ -1427,7 +1423,7 @@ export async function duplicateCanvas(uuid: string, userId: number): Promise<Can
       ? JSON.stringify({ storage: 'blob', version: 2 })
       : fullData;
 
-    const originalType = original.canvas_type || (original.unit === 'diagram' ? 'diagram' : (original.unit === 'doc' ? 'doc' : 'board'));
+    const originalType = original.canvas_type || (original.unit === 'doc' ? 'doc' : 'board');
     const [result] = await canvasPool.execute<mysql.ResultSetHeader>(
       `INSERT INTO canvases (uuid, user_id, name, width, height, unit, canvas_type, size_bytes, compressed_bytes, access_level, short_code, data, preview_thumbnail)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'private', ?, ?, ?)`,
@@ -1459,7 +1455,7 @@ export async function getCanvasBySlug(slug: string): Promise<Canvas | null> {
     const cleanSlug = slug.trim();
     if (!cleanSlug) return null;
     const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
-      'SELECT id, uuid, user_id, name, width, height, unit, COALESCE(canvas_type, CASE WHEN unit = \'board\' THEN \'board\' WHEN unit = \'diagram\' THEN \'diagram\' WHEN unit = \'doc\' THEN \'doc\' ELSE \'pixel\' END) AS canvas_type, data, preview_thumbnail, access_level, public_role, short_code, custom_slug, created_at, updated_at FROM canvases WHERE (custom_slug = ? OR short_code = ?) AND deleted_at IS NULL LIMIT 1',
+      'SELECT id, uuid, user_id, name, width, height, unit, COALESCE(canvas_type, \'board\') AS canvas_type, data, preview_thumbnail, access_level, public_role, short_code, custom_slug, created_at, updated_at FROM canvases WHERE (custom_slug = ? OR short_code = ?) AND deleted_at IS NULL LIMIT 1',
       [cleanSlug, cleanSlug]
     );
     if (rows.length === 0) return null;
@@ -1510,7 +1506,7 @@ export async function updateCanvasSlug(uuid: string, userId: number, rawSlug: st
     logger.db.info(`Enlace personalizado para lienzo ${uuid} actualizado a '${cleanSlug}' por usuario ${userId}`);
 
     const [updatedRows] = await canvasPool.query<mysql.RowDataPacket[]>(
-      'SELECT id, uuid, user_id, name, width, height, unit, COALESCE(canvas_type, CASE WHEN unit = \'board\' THEN \'board\' WHEN unit = \'diagram\' THEN \'diagram\' WHEN unit = \'doc\' THEN \'doc\' ELSE \'pixel\' END) AS canvas_type, data, preview_thumbnail, access_level, public_role, short_code, custom_slug, created_at, updated_at FROM canvases WHERE uuid = ? LIMIT 1',
+      'SELECT id, uuid, user_id, name, width, height, unit, COALESCE(canvas_type, \'board\') AS canvas_type, data, preview_thumbnail, access_level, public_role, short_code, custom_slug, created_at, updated_at FROM canvases WHERE uuid = ? LIMIT 1',
       [uuid]
     );
     const updated = updatedRows[0] as Canvas;

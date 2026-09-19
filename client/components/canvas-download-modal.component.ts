@@ -5,19 +5,16 @@ import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { showToast } from '../services/toast.service.js';
 import { CanvasItem } from '../types/canvas.types.js';
-import { MindMapProject } from '../types/mindmap.types.js';
 import { setupDropdown } from '../utils/dom.util.js';
 import { encodeFramesToGif } from '../utils/gif-encoder.util.js';
 import { computeElementsBoundingBox } from '../views/board/board-elements.manager.js';
 import { exportSvg } from '../views/board/board-export.service.js';
-import { drawShape, drawSticky, drawStroke, drawText } from '../views/board/board-renderer.js';
+import { drawConnector, drawShape, drawSticky, drawStroke, drawText } from '../views/board/board-renderer.js';
 import { BoardElement, BoardProject } from '../views/board/board.types.js';
 import { exportDocHtml, exportDocJson, exportDocMarkdown, exportDocPdf, exportDocTxt, exportDocWord } from '../views/doc/doc-export.service.js';
 import { DocProject } from '../views/doc/doc.types.js';
-import { exportMindMapMarkdown, exportMindMapPng, exportMindMapSvg } from '../views/mindmap/mindmap-export.service.js';
-import { computeMindMapTreeLayout } from '../views/mindmap/mindmap-layout.engine.js';
 
-export type DownloadCanvasKind = 'board' | 'diagram' | 'doc' | 'pixel';
+export type DownloadCanvasKind = 'board' | 'doc';
 
 interface ExportFormatOption {
   icon: string;
@@ -29,13 +26,7 @@ function getCanvasKind(canvas: CanvasItem): DownloadCanvasKind {
   if (canvas.canvas_type === 'doc' || canvas.unit === 'doc') {
     return 'doc';
   }
-  if (canvas.canvas_type === 'diagram' || canvas.canvas_type === 'mindmap' || canvas.unit === 'diagram') {
-    return 'diagram';
-  }
-  if (canvas.canvas_type === 'board' || canvas.unit === 'board') {
-    return 'board';
-  }
-  return 'pixel';
+  return 'board';
 }
 
 function getFormatOptionsForKind(kind: DownloadCanvasKind): ExportFormatOption[] {
@@ -49,26 +40,9 @@ function getFormatOptionsForKind(kind: DownloadCanvasKind): ExportFormatOption[]
       { icon: 'data_object', id: 'project-json', label: t('download.type_project_json') || 'Proyecto Spriteboard (.json)' },
     ];
   }
-  if (kind === 'board') {
-    return [
-      { icon: 'image', id: 'png', label: t('download.type_png') || 'Imagen PNG (.png)' },
-      { icon: 'polyline', id: 'svg', label: t('download.type_svg') || 'Vectorial SVG (.svg)' },
-      { icon: 'data_object', id: 'project-json', label: t('download.type_project_json') || 'Proyecto Spriteboard (.json)' },
-    ];
-  }
-  if (kind === 'diagram') {
-    return [
-      { icon: 'image', id: 'png', label: t('download.type_png') || 'Imagen PNG (.png)' },
-      { icon: 'polyline', id: 'svg', label: t('download.type_svg') || 'Vectorial SVG (.svg)' },
-      { icon: 'markdown', id: 'markdown', label: t('download.type_markdown') || 'Esquema Markdown (.md)' },
-      { icon: 'data_object', id: 'project-json', label: t('download.type_project_json') || 'Proyecto Spriteboard (.json)' },
-    ];
-  }
   return [
-    { icon: 'image', id: 'png-current', label: t('download.type_png_current') || 'PNG (Fotograma actual)' },
-    { icon: 'grid_view', id: 'spritesheet', label: t('download.type_spritesheet') || 'PNG (Hoja de sprites)' },
-    { icon: 'sports_esports', id: 'spritesheet-atlas', label: t('download.type_atlas') || 'Hoja de sprites + JSON (Game Atlas)' },
-    { icon: 'gif', id: 'gif', label: t('download.type_gif') || 'GIF animado (.gif)' },
+    { icon: 'image', id: 'png', label: t('download.type_png') || 'Imagen PNG (.png)' },
+    { icon: 'polyline', id: 'svg', label: t('download.type_svg') || 'Vectorial SVG (.svg)' },
     { icon: 'data_object', id: 'project-json', label: t('download.type_project_json') || 'Proyecto Spriteboard (.json)' },
   ];
 }
@@ -466,68 +440,6 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
         return;
       }
 
-      if (kind === 'diagram') {
-        let mindMapProject: MindMapProject = {
-          camera: { x: 0, y: 0, zoom: 1 },
-          connections: [],
-          nodes: {
-            'root-1': {
-              color: '#6366f1',
-              fontSize: 16,
-              id: 'root-1',
-              orderIndex: 0,
-              parentId: null,
-              shape: 'pill',
-              text: fullCanvas.name || 'Idea Principal',
-              textColor: '#ffffff',
-              x: 0,
-              y: 0,
-            },
-          },
-          rootId: 'root-1',
-          subtype: 'mindmap',
-          theme: {
-            backgroundColor: '#ffffff',
-            branchColors: ['#6366f1', '#3b82f6', '#10b981', '#f59e0b', '#ec4899'],
-            fontFamily: 'system-ui, -apple-system, sans-serif',
-            lineStyle: 'curved',
-            nodeShape: 'pill',
-          },
-          type: 'mindmap',
-          version: 1,
-        };
-        if (fullCanvas.data) {
-          try {
-            const parsed = typeof fullCanvas.data === 'string' ? JSON.parse(fullCanvas.data) : fullCanvas.data;
-            if (parsed && parsed.nodes && parsed.rootId) {
-              mindMapProject = parsed as MindMapProject;
-            }
-          } catch {}
-        }
-
-        const finalMindMapProject = mindMapProject;
-
-        if (selectedType === 'project-json') {
-          const jsonBlob = new Blob([JSON.stringify(finalMindMapProject, null, 2)], { type: 'application/json;charset=utf-8' });
-          triggerBlobDownload(jsonBlob, `${cleanName}_project.json`);
-          showToast(t('canvas.download_success'));
-          closeModal();
-          return;
-        }
-
-        const layoutMap = computeMindMapTreeLayout(finalMindMapProject);
-        if (selectedType === 'png') {
-          await exportMindMapPng(finalMindMapProject, layoutMap, `${cleanName}.png`);
-        } else if (selectedType === 'svg') {
-          exportMindMapSvg(finalMindMapProject, layoutMap, `${cleanName}.svg`);
-        } else if (selectedType === 'markdown') {
-          exportMindMapMarkdown(finalMindMapProject, `${cleanName}.md`);
-        }
-        showToast(t('canvas.download_success'));
-        closeModal();
-        return;
-      }
-
       if (kind === 'board') {
         let boardProject: BoardProject | null = null;
         if (fullCanvas.data) {
@@ -596,6 +508,8 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
                 drawStroke(ectx, el);
               } else if (el.type === 'shape') {
                 drawShape(ectx, el);
+              } else if (el.type === 'connector') {
+                drawConnector(ectx, el, elements);
               } else if (el.type === 'sticky') {
                 drawSticky(ectx, el);
               } else if (el.type === 'text') {
