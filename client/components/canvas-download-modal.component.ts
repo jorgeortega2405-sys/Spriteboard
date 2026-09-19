@@ -5,18 +5,72 @@ import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { showToast } from '../services/toast.service.js';
 import { CanvasItem } from '../types/canvas.types.js';
+import { MindMapProject } from '../types/mindmap.types.js';
 import { setupDropdown } from '../utils/dom.util.js';
 import { encodeFramesToGif } from '../utils/gif-encoder.util.js';
+import { computeElementsBoundingBox } from '../views/board/board-elements.manager.js';
+import { exportSvg } from '../views/board/board-export.service.js';
+import { drawShape, drawSticky, drawStroke, drawText } from '../views/board/board-renderer.js';
+import { BoardElement, BoardProject } from '../views/board/board.types.js';
+import { exportDocHtml, exportDocJson, exportDocMarkdown, exportDocPdf, exportDocTxt, exportDocWord } from '../views/doc/doc-export.service.js';
+import { DocProject } from '../views/doc/doc.types.js';
+import { exportMindMapMarkdown, exportMindMapPng, exportMindMapSvg } from '../views/mindmap/mindmap-export.service.js';
+import { computeMindMapTreeLayout } from '../views/mindmap/mindmap-layout.engine.js';
 
-function setIconUse(el: HTMLElement | null, iconName: string): void {
-  if (!el) return;
-  const use = el.querySelector('use');
-  if (use) {
-    use.setAttribute('href', `/icons.svg#${iconName}`);
-    use.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', `/icons.svg#${iconName}`);
-  } else {
-    el.textContent = iconName;
+export type DownloadCanvasKind = 'board' | 'diagram' | 'doc' | 'pixel';
+
+interface ExportFormatOption {
+  icon: string;
+  id: string;
+  label: string;
+}
+
+function getCanvasKind(canvas: CanvasItem): DownloadCanvasKind {
+  if (canvas.canvas_type === 'doc' || canvas.unit === 'doc') {
+    return 'doc';
   }
+  if (canvas.canvas_type === 'diagram' || canvas.canvas_type === 'mindmap' || canvas.unit === 'diagram') {
+    return 'diagram';
+  }
+  if (canvas.canvas_type === 'board' || canvas.unit === 'board') {
+    return 'board';
+  }
+  return 'pixel';
+}
+
+function getFormatOptionsForKind(kind: DownloadCanvasKind): ExportFormatOption[] {
+  if (kind === 'doc') {
+    return [
+      { icon: 'picture_as_pdf', id: 'pdf', label: t('download.type_pdf') || 'Documento PDF (.pdf)' },
+      { icon: 'article', id: 'word', label: t('download.type_word') || 'Documento Word (.doc)' },
+      { icon: 'markdown', id: 'markdown', label: t('download.type_markdown') || 'Documento Markdown (.md)' },
+      { icon: 'text_snippet', id: 'txt', label: t('download.type_txt') || 'Texto sin formato (.txt)' },
+      { icon: 'code', id: 'html', label: t('download.type_html') || 'Página web (.html)' },
+      { icon: 'data_object', id: 'project-json', label: t('download.type_project_json') || 'Proyecto Spriteboard (.json)' },
+    ];
+  }
+  if (kind === 'board') {
+    return [
+      { icon: 'image', id: 'png', label: t('download.type_png') || 'Imagen PNG (.png)' },
+      { icon: 'polyline', id: 'svg', label: t('download.type_svg') || 'Vectorial SVG (.svg)' },
+      { icon: 'data_object', id: 'project-json', label: t('download.type_project_json') || 'Proyecto Spriteboard (.json)' },
+    ];
+  }
+  if (kind === 'diagram') {
+    return [
+      { icon: 'image', id: 'png', label: t('download.type_png') || 'Imagen PNG (.png)' },
+      { icon: 'polyline', id: 'svg', label: t('download.type_svg') || 'Vectorial SVG (.svg)' },
+      { icon: 'markdown', id: 'markdown', label: t('download.type_markdown') || 'Esquema Markdown (.md)' },
+      { icon: 'data_object', id: 'project-json', label: t('download.type_project_json') || 'Proyecto Spriteboard (.json)' },
+    ];
+  }
+  return [
+    { icon: 'image', id: 'png-current', label: t('download.type_png_current') || 'PNG (Fotograma actual)' },
+    { icon: 'grid_view', id: 'spritesheet', label: t('download.type_spritesheet') || 'PNG (Hoja de sprites)' },
+    { icon: 'sports_esports', id: 'spritesheet-atlas', label: t('download.type_atlas') || 'Hoja de sprites + JSON (Game Atlas)' },
+    { icon: 'gif', id: 'gif', label: t('download.type_gif') || 'GIF animado (.gif)' },
+    { icon: 'data_object', id: 'project-json', label: t('download.type_project_json') || 'Proyecto Spriteboard (.json)' },
+  ];
 }
 
 let activeDownloadModal: { close: () => void } | null = null;
@@ -26,16 +80,39 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
     activeDownloadModal.close();
   }
 
-  let selectedType: 'png-current' | 'spritesheet' | 'spritesheet-atlas' | 'gif' | 'project-json' = 'png-current';
+  const kind = getCanvasKind(canvas);
+  const formatOptions = getFormatOptionsForKind(kind);
+  let selectedType = formatOptions[0]?.id || 'png-current';
   let selectedScale = 1;
-  let selectedBg: 'transparent' | 'solid' = 'transparent';
+  let selectedBg: 'solid' | 'transparent' = 'transparent';
 
   const baseW = canvas.width || 800;
   const baseH = canvas.height || 600;
 
+  let headerSubtitle = '';
+  if (kind === 'doc') {
+    headerSubtitle = `${escapeHtml(canvas.name)} • Documento Doc`;
+  } else if (kind === 'board') {
+    headerSubtitle = `${escapeHtml(canvas.name)} • Pizarrón Infinito`;
+  } else if (kind === 'diagram') {
+    const label = canvas.canvas_type === 'mindmap' ? 'Mapa Mental' : 'Diagrama';
+    headerSubtitle = `${escapeHtml(canvas.name)} • ${label}`;
+  } else {
+    headerSubtitle = `${escapeHtml(canvas.name)} (${baseW} × ${baseH} px)`;
+  }
+
   const backdrop = document.createElement('div');
   backdrop.className = 'modal-backdrop';
   backdrop.setAttribute('data-ref', 'modal-download-backdrop');
+
+  const menuItemsHtml = formatOptions.map((opt, index) => `
+    <button type="button" class="menu-item${index === 0 ? ' is-active' : ''}" data-ref="btn-download-type-${opt.id}" data-value="${opt.id}">
+      <span class="material-symbols-rounded menu-item__icon">${opt.icon}</span>
+      <span class="menu-item__text">${escapeHtml(opt.label)}</span>
+    </button>
+  `).join('');
+
+  const firstOption = formatOptions[0] || { icon: 'image', id: 'png', label: 'PNG' };
 
   backdrop.innerHTML = `
     <div class="modal-container" data-ref="modal-download-container">
@@ -48,7 +125,7 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
         </div>
         <div class="modal-card__header" data-ref="modal-download-header">
           <h2 class="modal-card__title">Descargar diseño</h2>
-          <p class="modal-card__desc">${escapeHtml(canvas.name)} (${baseW} × ${baseH} px)</p>
+          <p class="modal-card__desc">${headerSubtitle}</p>
         </div>
         <div class="modal-card__body" data-ref="modal-download-body">
           <div class="design-share-menu__content">
@@ -57,8 +134,8 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
               <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-download-type">
                 <button type="button" class="dropdown-trigger" data-ref="btn-trigger-download-type" aria-label="Tipo de archivo">
                   <div class="dropdown-trigger__left">
-                    <span class="material-symbols-rounded dropdown-trigger__icon" data-ref="download-type-selected-icon">image</span>
-                    <span class="dropdown-trigger__text" data-ref="download-type-selected-text">PNG (Fotograma actual)</span>
+                    <span class="material-symbols-rounded dropdown-trigger__icon" data-ref="download-type-selected-icon">${firstOption.icon}</span>
+                    <span class="dropdown-trigger__text" data-ref="download-type-selected-text">${escapeHtml(firstOption.label)}</span>
                   </div>
                   <span class="material-symbols-rounded dropdown-trigger__chevron">expand_more</span>
                 </button>
@@ -68,33 +145,14 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
                       <div class="menu-panel__drag-handle"></div>
                     </div>
                     <div class="menu-panel__list" data-ref="list-download-type">
-                      <button type="button" class="menu-item is-active" data-ref="btn-download-type-png" data-value="png-current">
-                        <span class="material-symbols-rounded menu-item__icon">image</span>
-                        <span class="menu-item__text">PNG (Fotograma actual)</span>
-                      </button>
-                      <button type="button" class="menu-item" data-ref="btn-download-type-spritesheet" data-value="spritesheet">
-                        <span class="material-symbols-rounded menu-item__icon">grid_view</span>
-                        <span class="menu-item__text">PNG (Hoja de sprites)</span>
-                      </button>
-                      <button type="button" class="menu-item" data-ref="btn-download-type-atlas" data-value="spritesheet-atlas">
-                        <span class="material-symbols-rounded menu-item__icon">sports_esports</span>
-                        <span class="menu-item__text">Hoja de sprites + JSON (Game Atlas)</span>
-                      </button>
-                      <button type="button" class="menu-item" data-ref="btn-download-type-gif" data-value="gif">
-                        <span class="material-symbols-rounded menu-item__icon">gif</span>
-                        <span class="menu-item__text">GIF animado (.gif)</span>
-                      </button>
-                      <button type="button" class="menu-item" data-ref="btn-download-type-project" data-value="project-json">
-                        <span class="material-symbols-rounded menu-item__icon">data_object</span>
-                        <span class="menu-item__text">Proyecto Spriteboard (.json)</span>
-                      </button>
+                      ${menuItemsHtml}
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div class="design-share-section" data-ref="section-download-scale">
+            <div class="design-share-section${kind === 'pixel' ? '' : ' is-hidden'}" data-ref="section-download-scale">
               <span class="design-share-section__label">Resolución y escala</span>
               <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-download-scale">
                 <button type="button" class="dropdown-trigger" data-ref="btn-trigger-download-scale" aria-label="Resolución y escala">
@@ -131,7 +189,7 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
               </div>
             </div>
 
-            <div class="design-share-section" data-ref="section-download-bg">
+            <div class="design-share-section${kind === 'pixel' ? '' : ' is-hidden'}" data-ref="section-download-bg">
               <span class="design-share-section__label">Fondo</span>
               <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-download-bg">
                 <button type="button" class="dropdown-trigger" data-ref="btn-trigger-download-bg" aria-label="Fondo">
@@ -164,7 +222,7 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
             <div class="design-share-link-row">
               <button type="button" class="component-button component-button--h40 component-button--black component-button--w-full" data-ref="btn-confirm-download">
                 <span class="material-symbols-rounded">download</span>
-                <span data-ref="btn-confirm-download-text">Descargar PNG (${baseW} × ${baseH} px)</span>
+                <span data-ref="btn-confirm-download-text">Descargar</span>
               </button>
             </div>
           </div>
@@ -191,15 +249,8 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
   const sectionBg = backdrop.querySelector<HTMLElement>('[data-ref="section-download-bg"]');
 
   const dropdownWrapperType = backdrop.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-download-type"]');
-  const typeSelectedIcon = backdrop.querySelector<HTMLElement>('[data-ref="download-type-selected-icon"]');
-  const typeSelectedText = backdrop.querySelector<HTMLElement>('[data-ref="download-type-selected-text"]');
-
   const dropdownWrapperScale = backdrop.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-download-scale"]');
-  const scaleSelectedText = backdrop.querySelector<HTMLElement>('[data-ref="download-scale-selected-text"]');
-
   const dropdownWrapperBg = backdrop.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-download-bg"]');
-  const bgSelectedIcon = backdrop.querySelector<HTMLElement>('[data-ref="download-bg-selected-icon"]');
-  const bgSelectedText = backdrop.querySelector<HTMLElement>('[data-ref="download-bg-selected-text"]');
 
   let typeCtrl: ReturnType<typeof setupDropdown> | null = null;
   let scaleCtrl: ReturnType<typeof setupDropdown> | null = null;
@@ -242,20 +293,67 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
   document.addEventListener('keydown', onKeyDown);
 
   const updateUI = () => {
-    if (btnConfirmText) {
-      const w = baseW * selectedScale;
-      const h = baseH * selectedScale;
-      if (selectedType === 'png-current') {
-        btnConfirmText.textContent = `Descargar PNG (${w} × ${h} px)`;
-      } else if (selectedType === 'spritesheet') {
-        btnConfirmText.textContent = `Descargar Hoja de sprites (${w} × ${h} px)`;
-      } else if (selectedType === 'spritesheet-atlas') {
-        btnConfirmText.textContent = `Descargar Atlas (PNG + JSON)`;
-      } else if (selectedType === 'gif') {
-        btnConfirmText.textContent = `Descargar GIF animado (${w} × ${h} px)`;
+    if (!btnConfirmText) return;
+
+    if (kind === 'doc') {
+      if (selectedType === 'pdf') {
+        btnConfirmText.textContent = 'Descargar PDF';
+      } else if (selectedType === 'word') {
+        btnConfirmText.textContent = 'Descargar Documento Word (.doc)';
+      } else if (selectedType === 'markdown') {
+        btnConfirmText.textContent = 'Descargar Markdown (.md)';
+      } else if (selectedType === 'txt') {
+        btnConfirmText.textContent = 'Descargar Texto (.txt)';
+      } else if (selectedType === 'html') {
+        btnConfirmText.textContent = 'Descargar HTML (.html)';
       } else {
         btnConfirmText.textContent = 'Descargar Proyecto (.json)';
       }
+      if (sectionScale) sectionScale.classList.add('is-hidden');
+      if (sectionBg) sectionBg.classList.add('is-hidden');
+      return;
+    }
+
+    if (kind === 'board') {
+      if (selectedType === 'png') {
+        btnConfirmText.textContent = 'Descargar Imagen PNG';
+      } else if (selectedType === 'svg') {
+        btnConfirmText.textContent = 'Descargar Vectorial SVG';
+      } else {
+        btnConfirmText.textContent = 'Descargar Proyecto (.json)';
+      }
+      if (sectionScale) sectionScale.classList.add('is-hidden');
+      if (sectionBg) sectionBg.classList.add('is-hidden');
+      return;
+    }
+
+    if (kind === 'diagram') {
+      if (selectedType === 'png') {
+        btnConfirmText.textContent = 'Descargar Imagen PNG';
+      } else if (selectedType === 'svg') {
+        btnConfirmText.textContent = 'Descargar Vectorial SVG';
+      } else if (selectedType === 'markdown') {
+        btnConfirmText.textContent = 'Descargar Esquema Markdown (.md)';
+      } else {
+        btnConfirmText.textContent = 'Descargar Proyecto (.json)';
+      }
+      if (sectionScale) sectionScale.classList.add('is-hidden');
+      if (sectionBg) sectionBg.classList.add('is-hidden');
+      return;
+    }
+
+    const w = baseW * selectedScale;
+    const h = baseH * selectedScale;
+    if (selectedType === 'png-current') {
+      btnConfirmText.textContent = `Descargar PNG (${w} × ${h} px)`;
+    } else if (selectedType === 'spritesheet') {
+      btnConfirmText.textContent = `Descargar Hoja de sprites (${w} × ${h} px)`;
+    } else if (selectedType === 'spritesheet-atlas') {
+      btnConfirmText.textContent = 'Descargar Atlas (PNG + JSON)';
+    } else if (selectedType === 'gif') {
+      btnConfirmText.textContent = `Descargar GIF animado (${w} × ${h} px)`;
+    } else {
+      btnConfirmText.textContent = 'Descargar Proyecto (.json)';
     }
 
     const isJson = selectedType === 'project-json';
@@ -263,9 +361,11 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
     if (sectionBg) sectionBg.classList.toggle('is-hidden', isJson);
   };
 
+  updateUI();
+
   typeCtrl = setupDropdown(dropdownWrapperType, {
     onSelect: (val) => {
-      selectedType = val as typeof selectedType;
+      selectedType = val || 'png-current';
       updateUI();
     },
   });
@@ -279,7 +379,7 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
 
   bgCtrl = setupDropdown(dropdownWrapperBg, {
     onSelect: (val) => {
-      selectedBg = val as typeof selectedBg;
+      selectedBg = (val as typeof selectedBg) || 'transparent';
     },
   });
 
@@ -318,16 +418,229 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
       }
       if (!fullCanvas) fullCanvas = canvas;
 
+      if (kind === 'doc') {
+        let docProject: DocProject | null = null;
+        if (fullCanvas.data) {
+          try {
+            const parsed = typeof fullCanvas.data === 'string' ? JSON.parse(fullCanvas.data) : fullCanvas.data;
+            if (parsed && Array.isArray(parsed.pages)) {
+              docProject = parsed as DocProject;
+            }
+          } catch {}
+        }
+        if (!docProject) {
+          docProject = {
+            pages: [{ contentHtml: '<p></p>', id: 'page-1' }],
+            settings: {
+              columnsCount: 1,
+              fontFamily: 'Inter',
+              fontSize: 11,
+              lineHeight: 1.5,
+              margins: { bottom: 96, left: 96, right: 96, top: 96 },
+              orientation: 'portrait',
+              paperSize: 'letter',
+              showPageNumbers: true,
+              viewMode: 'paginated',
+              zoom: 1,
+            },
+            type: 'doc',
+            version: 1,
+          };
+        }
+
+        if (selectedType === 'pdf') {
+          exportDocPdf(docProject, fullCanvas.name);
+        } else if (selectedType === 'word') {
+          exportDocWord(docProject, fullCanvas.name);
+        } else if (selectedType === 'markdown') {
+          exportDocMarkdown(docProject, fullCanvas.name);
+        } else if (selectedType === 'txt') {
+          exportDocTxt(docProject, fullCanvas.name);
+        } else if (selectedType === 'html') {
+          exportDocHtml(docProject, fullCanvas.name);
+        } else if (selectedType === 'project-json') {
+          exportDocJson(docProject, fullCanvas.name);
+        }
+        showToast(t('canvas.download_success'));
+        closeModal();
+        return;
+      }
+
+      if (kind === 'diagram') {
+        let mindMapProject: MindMapProject = {
+          camera: { x: 0, y: 0, zoom: 1 },
+          connections: [],
+          nodes: {
+            'root-1': {
+              color: '#6366f1',
+              fontSize: 16,
+              id: 'root-1',
+              orderIndex: 0,
+              parentId: null,
+              shape: 'pill',
+              text: fullCanvas.name || 'Idea Principal',
+              textColor: '#ffffff',
+              x: 0,
+              y: 0,
+            },
+          },
+          rootId: 'root-1',
+          subtype: 'mindmap',
+          theme: {
+            backgroundColor: '#ffffff',
+            branchColors: ['#6366f1', '#3b82f6', '#10b981', '#f59e0b', '#ec4899'],
+            fontFamily: 'system-ui, -apple-system, sans-serif',
+            lineStyle: 'curved',
+            nodeShape: 'pill',
+          },
+          type: 'mindmap',
+          version: 1,
+        };
+        if (fullCanvas.data) {
+          try {
+            const parsed = typeof fullCanvas.data === 'string' ? JSON.parse(fullCanvas.data) : fullCanvas.data;
+            if (parsed && parsed.nodes && parsed.rootId) {
+              mindMapProject = parsed as MindMapProject;
+            }
+          } catch {}
+        }
+
+        const finalMindMapProject = mindMapProject;
+
+        if (selectedType === 'project-json') {
+          const jsonBlob = new Blob([JSON.stringify(finalMindMapProject, null, 2)], { type: 'application/json;charset=utf-8' });
+          triggerBlobDownload(jsonBlob, `${cleanName}_project.json`);
+          showToast(t('canvas.download_success'));
+          closeModal();
+          return;
+        }
+
+        const layoutMap = computeMindMapTreeLayout(finalMindMapProject);
+        if (selectedType === 'png') {
+          await exportMindMapPng(finalMindMapProject, layoutMap, `${cleanName}.png`);
+        } else if (selectedType === 'svg') {
+          exportMindMapSvg(finalMindMapProject, layoutMap, `${cleanName}.svg`);
+        } else if (selectedType === 'markdown') {
+          exportMindMapMarkdown(finalMindMapProject, `${cleanName}.md`);
+        }
+        showToast(t('canvas.download_success'));
+        closeModal();
+        return;
+      }
+
+      if (kind === 'board') {
+        let boardProject: BoardProject | null = null;
+        if (fullCanvas.data) {
+          try {
+            const parsed = typeof fullCanvas.data === 'string' ? JSON.parse(fullCanvas.data) : fullCanvas.data;
+            if (parsed && Array.isArray(parsed.elements)) {
+              boardProject = parsed as BoardProject;
+            }
+          } catch {}
+        }
+        if (!boardProject) {
+          boardProject = {
+            background: { color: '#ffffff', dotColor: '#cbd5e1', type: 'dots' },
+            camera: { x: 0, y: 0, zoom: 1 },
+            elements: [],
+            type: 'board',
+            version: 1,
+          };
+        }
+
+        if (selectedType === 'project-json') {
+          const jsonBlob = new Blob([JSON.stringify(boardProject, null, 2)], { type: 'application/json;charset=utf-8' });
+          triggerBlobDownload(jsonBlob, `${cleanName}_project.json`);
+          showToast(t('canvas.download_success'));
+          closeModal();
+          return;
+        }
+
+        if (selectedType === 'svg') {
+          exportSvg(boardProject.elements, boardProject.background || { color: '#ffffff', type: 'dots' }, cleanName, (el) => {
+            const c = document.createElement('canvas');
+            c.width = el.gridWidth;
+            c.height = el.gridHeight;
+            const ctx = c.getContext('2d')!;
+            if (el.data) {
+              const img = new Image();
+              img.src = el.data;
+              ctx.drawImage(img, 0, 0);
+            }
+            return { canvas: c, ctx };
+          });
+          showToast(t('canvas.download_success'));
+          closeModal();
+          return;
+        }
+
+        const elements = boardProject.elements || [];
+        const bbox = computeElementsBoundingBox(elements);
+        const pad = 60;
+        const exportW = bbox ? Math.ceil(bbox.width + pad * 2) : 1200;
+        const exportH = bbox ? Math.ceil(bbox.height + pad * 2) : 800;
+
+        const exportCanvas = document.createElement('canvas');
+        exportCanvas.width = Math.min(8192, exportW);
+        exportCanvas.height = Math.min(8192, exportH);
+        const ectx = exportCanvas.getContext('2d');
+        if (ectx) {
+          ectx.fillStyle = boardProject.background?.color || '#ffffff';
+          ectx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+
+          if (bbox) {
+            ectx.save();
+            ectx.translate(pad - bbox.x, pad - bbox.y);
+            for (const el of elements) {
+              if (el.type === 'stroke') {
+                drawStroke(ectx, el);
+              } else if (el.type === 'shape') {
+                drawShape(ectx, el);
+              } else if (el.type === 'sticky') {
+                drawSticky(ectx, el);
+              } else if (el.type === 'text') {
+                drawText(ectx, el);
+              } else if (el.type === 'pixel-grid' && el.data) {
+                const img = new Image();
+                await new Promise<void>((r) => {
+                  img.onload = () => r();
+                  img.onerror = () => r();
+                  img.src = el.data!;
+                });
+                ectx.drawImage(img, el.x, el.y, el.width, el.height);
+              }
+            }
+            ectx.restore();
+          } else if (fullCanvas.preview_thumbnail) {
+            const img = new Image();
+            await new Promise<void>((r) => {
+              img.onload = () => r();
+              img.onerror = () => r();
+              img.src = fullCanvas.preview_thumbnail!;
+            });
+            ectx.drawImage(img, 0, 0, exportCanvas.width, exportCanvas.height);
+          }
+
+          const blob = await new Promise<Blob | null>((resolve) => exportCanvas.toBlob(resolve, 'image/png'));
+          if (blob) {
+            triggerBlobDownload(blob, `${cleanName}.png`);
+            showToast(t('canvas.download_success'));
+            closeModal();
+            return;
+          }
+        }
+      }
+
       if (selectedType === 'project-json') {
         let projectJson = fullCanvas.data;
         if (!projectJson) {
           projectJson = JSON.stringify({
-            version: 1,
-            name: fullCanvas.name,
-            width: baseW,
-            height: baseH,
-            unit: fullCanvas.unit || 'px',
             created_at: fullCanvas.created_at,
+            height: baseH,
+            name: fullCanvas.name,
+            unit: fullCanvas.unit || 'px',
+            version: 1,
+            width: baseW,
           }, null, 2);
         } else if (typeof projectJson !== 'string') {
           projectJson = JSON.stringify(projectJson, null, 2);
@@ -557,3 +870,4 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
     }
   });
 }
+

@@ -573,6 +573,24 @@ export class MindMapController implements ViewController {
           }
         },
       });
+
+      shapesDropdown.querySelectorAll<HTMLElement>('[data-shape]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const shape = btn.getAttribute('data-shape') as
+            | 'diamond'
+            | 'document'
+            | 'parallelogram'
+            | 'pill'
+            | 'rect'
+            | 'rounded'
+            | 'sticky'
+            | 'underline';
+          if (shape) {
+            this.applyShape(shape);
+            this.shapesDropdownController?.close();
+          }
+        }, { signal });
+      });
     }
 
     const emojisDropdown = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-emojis"]');
@@ -611,6 +629,34 @@ export class MindMapController implements ViewController {
             this.commitChange();
           }
         },
+      });
+
+      linesDropdown.querySelectorAll<HTMLElement>('[data-layout]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const layout = btn.getAttribute('data-layout') as 'top-down' | 'radial' | null;
+          if (layout) {
+            this.project.theme.layoutDirection = layout;
+            showToast(`Distribución cambiada a ${layout === 'top-down' ? 'Vertical (Mapa Conceptual)' : 'Radial (Mapa Mental)'}`, 'info');
+            this.commitChange();
+            this.fitView();
+            this.linesDropdownController?.close();
+          }
+        }, { signal });
+      });
+
+      linesDropdown.querySelectorAll<HTMLElement>('[data-style]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const style = btn.getAttribute('data-style') as 'curved' | 'orthogonal' | 'straight' | null;
+          if (style) {
+            this.project.theme.lineStyle = style;
+            const iconEl = this.container.querySelector<HTMLElement>('[data-ref="icon-current-line-style"]');
+            if (iconEl) {
+              iconEl.textContent = style === 'curved' ? 'gesture' : (style === 'orthogonal' ? 'alt_route' : 'horizontal_rule');
+            }
+            this.commitChange();
+            this.linesDropdownController?.close();
+          }
+        }, { signal });
       });
     }
 
@@ -2672,13 +2718,20 @@ export class MindMapController implements ViewController {
         conn.color = color;
         this.commitChange();
       }
+    } else if (this.project.nodes[this.project.rootId]) {
+      this.project.nodes[this.project.rootId].color = color;
+      this.updateActiveColorSwatch(color);
+      this.commitChange();
     }
   }
 
   private applyShape(shape: 'diamond' | 'document' | 'parallelogram' | 'pill' | 'rect' | 'rounded' | 'sticky' | 'underline'): void {
-    const targets = this.selectedNodeIds.size > 0 ? Array.from(this.selectedNodeIds) : (this.selectedNodeId ? [this.selectedNodeId] : []);
+    const targets = this.selectedNodeIds.size > 0
+      ? Array.from(this.selectedNodeIds)
+      : (this.selectedNodeId ? [this.selectedNodeId] : (this.project.nodes[this.project.rootId] ? [this.project.rootId] : []));
     if (targets.length === 0) return;
 
+    this.project.theme.nodeShape = shape;
     targets.forEach((id) => {
       const node = this.project.nodes[id];
       if (node) {
@@ -2705,7 +2758,9 @@ export class MindMapController implements ViewController {
   }
 
   private applyEmoji(emoji: string | undefined): void {
-    const targets = this.selectedNodeIds.size > 0 ? Array.from(this.selectedNodeIds) : (this.selectedNodeId ? [this.selectedNodeId] : []);
+    const targets = this.selectedNodeIds.size > 0
+      ? Array.from(this.selectedNodeIds)
+      : (this.selectedNodeId ? [this.selectedNodeId] : (this.project.nodes[this.project.rootId] ? [this.project.rootId] : []));
     if (targets.length === 0) return;
 
     targets.forEach((id) => {

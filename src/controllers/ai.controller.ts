@@ -178,6 +178,110 @@ export class AiController {
       });
     }
   }
+
+  static async generateDoc(req: Request, res: Response): Promise<void> {
+    try {
+      const { action = 'generate', contextText, prompt, targetLanguage = 'es', tone } = req.body;
+
+      if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
+        res.status(400).json({
+          error: 'El tema o instrucción no puede estar vacío.',
+          success: false,
+        });
+        return;
+      }
+
+      if (prompt.length > 2000) {
+        res.status(400).json({
+          error: 'La instrucción excede el límite permitido de caracteres.',
+          success: false,
+        });
+        return;
+      }
+
+      const validActions = ['generate', 'continue', 'summarize', 'improve', 'fix_grammar', 'change_tone', 'translate'];
+      const validAction = (validActions.includes(action) ? action : 'generate') as
+        | 'change_tone'
+        | 'continue'
+        | 'fix_grammar'
+        | 'generate'
+        | 'improve'
+        | 'summarize'
+        | 'translate';
+
+      const validTones = ['casual', 'concise', 'creative', 'formal', 'inspiring', 'professional'];
+      const validTone = tone && validTones.includes(tone) ? tone : undefined;
+      const cleanContext = typeof contextText === 'string' ? contextText.trim().slice(0, 3000) : undefined;
+      const cleanLang = typeof targetLanguage === 'string' ? targetLanguage.trim().slice(0, 10) : 'es';
+
+      const result = await AiService.generateDocContent(
+        prompt.trim(),
+        validAction,
+        validTone,
+        cleanLang,
+        cleanContext
+      );
+
+      res.status(200).json({
+        doc: result,
+        success: true,
+      });
+    } catch (error) {
+      logger.app.error('AiController: Error al generar contenido doc con IA', error);
+
+      res.status(500).json({
+        error: 'Ha ocurrido un error inesperado al generar el contenido. Por favor intenta más tarde.',
+        success: false,
+      });
+    }
+  }
+
+  static async generateBoard(req: Request, res: Response): Promise<void> {
+    try {
+      const { boardType = 'brainstorm', count, prompt } = req.body;
+
+      if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
+        res.status(400).json({
+          error: 'El tema o descripción del pizarrón no puede estar vacío.',
+          success: false,
+        });
+        return;
+      }
+
+      if (prompt.length > 1000) {
+        res.status(400).json({
+          error: 'La descripción excede el límite permitido de caracteres.',
+          success: false,
+        });
+        return;
+      }
+
+      const validBoardTypes = ['brainstorm', 'custom', 'kanban', 'retro', 'swot'];
+      const validBoardType = (validBoardTypes.includes(boardType) ? boardType : 'brainstorm') as
+        | 'brainstorm'
+        | 'custom'
+        | 'kanban'
+        | 'retro'
+        | 'swot';
+
+      const validCount = typeof count === 'number' && count > 0 && count <= 30 ? count : undefined;
+
+      const result = await AiService.generateBoardElements(prompt.trim(), validBoardType, validCount);
+
+      res.status(200).json({
+        board: result,
+        success: true,
+      });
+    } catch (error) {
+      logger.app.error('AiController: Error al generar elementos de board con IA', error);
+
+      res.status(500).json({
+        error: 'Ha ocurrido un error inesperado al generar los elementos del pizarrón. Por favor intenta más tarde.',
+        success: false,
+      });
+    }
+  }
 }
 
 export default AiController;
+

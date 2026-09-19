@@ -2,13 +2,14 @@ import { openCanvasShareModal } from '../../components/canvas-share-modal.compon
 import { closeContextMenu, ContextMenuItem, openContextMenu } from '../../components/context-menu.component.js';
 import { openModal } from '../../components/modal.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
-import { currentUser, getApi, putApi } from '../../services/api.service.js';
+import { currentUser, escapeHtml, getApi, putApi } from '../../services/api.service.js';
 import { getLocalCanvasByUuid, saveLocalCanvas } from '../../services/canvas-storage.service.js';
 import { renderIcons } from '../../services/icon.service.js';
 import { showToast } from '../../services/toast.service.js';
 import { CanvasItem } from '../../types/canvas.types.js';
 import { ViewController } from '../../types/common.types.js';
 import { initCarouselScroll, setupDropdown } from '../../utils/dom.util.js';
+import { openDocAiModal } from './doc-ai-modal.component.js';
 import { DocCollaborationManager, DocCollaboratorState } from './doc-collaboration.manager.js';
 import { exportDocHtml, exportDocJson, exportDocMarkdown, exportDocPdf, exportDocTxt, exportDocWord, generateDocThumbnail } from './doc-export.service.js';
 import { DocFontPickerComponent, FontSelectEvent } from './doc-font-picker.component.js';
@@ -16,6 +17,17 @@ import { ensureGoogleFontLoaded } from './doc-fonts.config.js';
 import { DocHistoryManager } from './doc-history.manager.js';
 import { DocPaginationManager } from './doc-pagination.manager.js';
 import { DOC_MARGIN_PRESETS, DOC_PAPER_DIMENSIONS, DocColumnsCount, DocImageRadius, DocImageShadow, DocImageWrapMode, DocMargins, DocOrientation, DocPage, DocPageBorder, DocPageColor, DocPaperSize, DocProject, DocWatermark } from './doc.types.js';
+
+const INSPIRING_QUOTES = [
+  '«El secreto para salir adelante es simplemente comenzar.» — Mark Twain',
+  '«La creatividad es la inteligencia divirtiéndose.» — Albert Einstein',
+  '«La simplicidad es la máxima sofisticación.» — Leonardo da Vinci',
+  '«Haz de cada día tu obra maestra.» — John Wooden',
+  '«La mejor forma de predecir el futuro es crearlo.» — Peter Drucker',
+  '«Escribe algo que valga la pena leer o haz algo que valga la pena escribir.» — Benjamin Franklin',
+  '«Todo parece imposible hasta que se hace.» — Nelson Mandela',
+  '«Lo que no se empieza hoy nunca se termina mañana.» — Johann Wolfgang von Goethe',
+];
 
 const PALETTE_COLORS = [
   '#000000', '#1e293b', '#475569', '#64748b', '#94a3b8', '#cbd5e1', '#ffffff',
@@ -35,6 +47,7 @@ const SPECIAL_SYMBOLS = [
 export class DocController implements ViewController {
   private abortController: AbortController = new AbortController();
   private accessLevel: 'private' | 'public' = 'private';
+  private activeInspiringQuote: string = INSPIRING_QUOTES[Math.floor(Math.random() * INSPIRING_QUOTES.length)] || INSPIRING_QUOTES[0];
   private activeTable: HTMLTableElement | null = null;
   private activeTableCell: HTMLTableCellElement | null = null;
   private alignmentDropdownController: { close: () => void; destroy: () => void } | null = null;
@@ -79,7 +92,7 @@ export class DocController implements ViewController {
       pageBorder: 'none',
       pageColor: 'white',
       paperSize: 'letter',
-      showPageNumbers: true,
+      showPageNumbers: false,
       viewMode: 'paginated',
       watermark: { enabled: false, text: 'CONFIDENCIAL', type: 'text' },
       zoom: 1,
@@ -345,7 +358,6 @@ export class DocController implements ViewController {
       pageEl.style.minHeight = paper.heightPx > 0 ? `${paper.heightPx}px` : 'calc(100vh - 180px)';
 
       const isFirstPage = index === 0;
-      const hideHeaderFooter = isFirstPage && this.project.settings.firstPageDifferent;
 
       let watermarkEl = '';
       if (this.project.settings.watermark?.enabled) {
@@ -356,47 +368,13 @@ export class DocController implements ViewController {
         }
       }
 
-      let headerInnerHtml = '';
-      if (!hideHeaderFooter) {
-        const headerLogo = this.project.settings.headerLogoUrl
-          ? `<img class="doc-page__header-logo" src="${this.project.settings.headerLogoUrl}" alt="Logo" />`
-          : '';
-        const headerText = this.paginationManager.formatHeaderFooter(
-          this.project.settings.headerText || '',
-          index + 1,
-          this.project.pages.length,
-          this.canvasTitle
-        );
-        headerInnerHtml = this.project.settings.headerLogoPosition === 'right'
-          ? `<span>${headerText}</span>${headerLogo}`
-          : `${headerLogo}<span>${headerText}</span>`;
-      }
-
-      let footerInnerHtml = '';
-      if (!hideHeaderFooter) {
-        const footerLogo = this.project.settings.footerLogoUrl
-          ? `<img class="doc-page__footer-logo" src="${this.project.settings.footerLogoUrl}" alt="Logo" />`
-          : '';
-        const footerText = this.project.settings.showPageNumbers
-          ? `Página ${index + 1} de ${this.project.pages.length}`
-          : this.paginationManager.formatHeaderFooter(
-              this.project.settings.footerText || '',
-              index + 1,
-              this.project.pages.length,
-              this.canvasTitle
-            );
-        footerInnerHtml = this.project.settings.footerLogoPosition === 'left'
-          ? `${footerLogo}<span>${footerText}</span>`
-          : `<span>${footerText}</span>${footerLogo}`;
-      }
-
       const letterSpacingStyle = this.project.settings.letterSpacing ? `letter-spacing: ${this.project.settings.letterSpacing}px;` : '';
+      const isDocEmpty = this.isDocumentEmpty();
 
       pageEl.innerHTML = `
         ${watermarkEl}
-        <div class="doc-page__header" data-ref="page-header-${page.id}" contenteditable="${hideHeaderFooter ? 'false' : 'true'}" spellcheck="false" placeholder="Encabezado">${headerInnerHtml}</div>
+        ${isFirstPage ? `<div class="doc-empty-placeholder" data-ref="doc-empty-placeholder" style="top: ${margins.top}px; left: ${margins.left}px; right: ${margins.right}px; display: ${isDocEmpty ? 'block' : 'none'};">${escapeHtml(this.activeInspiringQuote)}</div>` : ''}
         <div class="doc-page__content ${columnsClass}" data-ref="page-content-${page.id}" contenteditable="true" spellcheck="true" style="font-family: ${this.project.settings.fontFamily}; font-size: ${this.project.settings.fontSize}pt; line-height: ${this.project.settings.lineHeight}; ${letterSpacingStyle}">${page.contentHtml || '<p><br></p>'}</div>
-        <div class="doc-page__footer" data-ref="page-footer-${page.id}" contenteditable="${hideHeaderFooter ? 'false' : 'true'}" spellcheck="false" placeholder="Pie de página">${footerInnerHtml}</div>
         <div class="doc-page__badge">Página ${index + 1}</div>
         ${this.project.pages.length > 1 ? `<button type="button" class="doc-page__delete-btn" data-ref="btn-delete-page-${page.id}" data-page-id="${page.id}" data-tooltip="Eliminar página" aria-label="Eliminar página"><span class="component-icon">delete</span></button>` : ''}
       `;
@@ -532,6 +510,21 @@ export class DocController implements ViewController {
       }, { signal });
     }
 
+    const btnDocAi = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-doc-magic-ai"]');
+    if (btnDocAi) {
+      btnDocAi.addEventListener('click', (e) => {
+        e.preventDefault();
+        const sel = window.getSelection();
+        const selectedText = sel ? sel.toString().trim() : '';
+        openDocAiModal({
+          contextText: selectedText || undefined,
+          onSuccess: ({ html }) => {
+            this.insertAiGeneratedHtml(html);
+          },
+        });
+      }, { signal });
+    }
+
     this.bindFormattingTools(signal);
     this.bindDropdowns(signal);
     this.bindInsertTools(signal);
@@ -542,6 +535,26 @@ export class DocController implements ViewController {
     this.bindSelectionBubble(signal);
     this.bindImageAndTableControls(signal);
     this.bindDragDropAndPaste(signal);
+  }
+
+  private insertAiGeneratedHtml(html: string): void {
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
+      document.execCommand('insertHTML', false, html);
+    } else {
+      const activeContent = this.container.querySelector<HTMLElement>('.doc-page__content:focus') ||
+        this.container.querySelector<HTMLElement>('.doc-page__content');
+      if (activeContent) {
+        if (activeContent.innerHTML.trim() === '<p><br></p>' || activeContent.innerHTML.trim() === '') {
+          activeContent.innerHTML = html;
+        } else {
+          activeContent.insertAdjacentHTML('beforeend', html);
+        }
+      }
+    }
+    this.updateEmptyPlaceholder();
+    this.updateStats();
+    this.recordChange();
   }
 
   private bindFormattingTools(signal: AbortSignal): void {
@@ -1673,9 +1686,14 @@ export class DocController implements ViewController {
     const btnCloseFind = this.container.querySelector<HTMLElement>('[data-ref="btn-close-find"]');
     const inputFind = this.container.querySelector<HTMLInputElement>('[data-ref="input-find-text"]');
     const inputReplace = this.container.querySelector<HTMLInputElement>('[data-ref="input-replace-text"]');
+    const btnFindPrev = this.container.querySelector<HTMLElement>('[data-ref="btn-find-prev"]');
+    const btnFindNext = this.container.querySelector<HTMLElement>('[data-ref="btn-find-next"]');
     const btnReplaceOne = this.container.querySelector<HTMLElement>('[data-ref="btn-replace-one"]');
     const btnReplaceAll = this.container.querySelector<HTMLElement>('[data-ref="btn-replace-all"]');
     const matchCount = this.container.querySelector<HTMLElement>('[data-ref="find-match-count"]');
+
+    let currentMatchIndex = 0;
+    let totalMatches = 0;
 
     if (btnToggleFind && findTray && inputFind) {
       btnToggleFind.addEventListener('click', () => {
@@ -1683,6 +1701,7 @@ export class DocController implements ViewController {
         if (!findTray.classList.contains('is-hidden')) {
           inputFind.focus();
           inputFind.select();
+          runFind('none');
         }
       }, { signal });
     }
@@ -1693,32 +1712,63 @@ export class DocController implements ViewController {
       }, { signal });
     }
 
-    const runFind = () => {
-      const q = inputFind?.value.trim().toLowerCase() || '';
+    const runFind = (direction: 'next' | 'none' | 'prev' = 'none') => {
+      const q = inputFind?.value.trim() || '';
       if (!q) {
+        currentMatchIndex = 0;
+        totalMatches = 0;
         if (matchCount) matchCount.textContent = '0 de 0';
         return;
       }
-      let totalFound = 0;
+
+      totalMatches = 0;
+      const lowerQ = q.toLowerCase();
       this.container.querySelectorAll<HTMLElement>('.doc-page__content').forEach((pageEl) => {
         const text = pageEl.innerText.toLowerCase();
-        let pos = text.indexOf(q);
+        let pos = text.indexOf(lowerQ);
         while (pos !== -1) {
-          totalFound++;
-          pos = text.indexOf(q, pos + q.length);
+          totalMatches++;
+          pos = text.indexOf(lowerQ, pos + lowerQ.length);
         }
       });
+
+      if (totalMatches === 0) {
+        currentMatchIndex = 0;
+        if (matchCount) matchCount.textContent = '0 de 0';
+        return;
+      }
+
+      if (direction === 'next') {
+        currentMatchIndex = currentMatchIndex >= totalMatches ? 1 : currentMatchIndex + 1;
+        try {
+          (window as any).find(q, false, false, true, false, false, false);
+        } catch {}
+      } else if (direction === 'prev') {
+        currentMatchIndex = currentMatchIndex <= 1 ? totalMatches : currentMatchIndex - 1;
+        try {
+          (window as any).find(q, false, true, true, false, false, false);
+        } catch {}
+      } else {
+        currentMatchIndex = 1;
+        try {
+          (window as any).find(q, false, false, true, false, false, false);
+        } catch {}
+      }
+
       if (matchCount) {
-        matchCount.textContent = totalFound > 0 ? `1 de ${totalFound}` : '0 de 0';
+        matchCount.textContent = `${currentMatchIndex} de ${totalMatches}`;
       }
     };
 
+    btnFindPrev?.addEventListener('click', () => runFind('prev'), { signal });
+    btnFindNext?.addEventListener('click', () => runFind('next'), { signal });
+
     if (inputFind) {
-      inputFind.addEventListener('input', runFind, { signal });
+      inputFind.addEventListener('input', () => runFind('none'), { signal });
       inputFind.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
           e.preventDefault();
-          runFind();
+          runFind(e.shiftKey ? 'prev' : 'next');
         } else if (e.key === 'Escape') {
           findTray?.classList.add('is-hidden');
         }
@@ -1734,6 +1784,7 @@ export class DocController implements ViewController {
           pageEl.innerHTML = pageEl.innerHTML.replace(findVal, repVal);
         });
         this.recordChange();
+        runFind('none');
       }, { signal });
     }
 
@@ -1747,6 +1798,7 @@ export class DocController implements ViewController {
           pageEl.innerHTML = pageEl.innerHTML.replace(reg, repVal);
         });
         this.recordChange();
+        runFind('none');
         showToast('Todas las coincidencias fueron reemplazadas', 'success');
       }, { signal });
     }
@@ -1874,12 +1926,38 @@ export class DocController implements ViewController {
     }
   }
 
+  private isDocumentEmpty(): boolean {
+    if (!this.project?.pages || this.project.pages.length === 0) return true;
+    if (this.project.pages.length > 1) return false;
+    const firstPage = this.project.pages[0];
+    if (!firstPage) return true;
+    const content = firstPage.contentHtml || '';
+    const temp = document.createElement('div');
+    temp.innerHTML = content;
+    const hasMedia = temp.querySelector('img, table, hr, iframe, .doc-image-wrapper, .doc-table') !== null;
+    if (hasMedia) return false;
+    const text = (temp.textContent || '').replace(/[\s\u200B\u00A0]+/g, '').trim();
+    return text.length === 0;
+  }
+
+  private updateEmptyPlaceholder(): void {
+    const placeholderEl = this.container.querySelector<HTMLElement>('[data-ref="doc-empty-placeholder"]');
+    if (!placeholderEl) return;
+    const empty = this.isDocumentEmpty();
+    placeholderEl.style.display = empty ? 'block' : 'none';
+  }
+
   private bindPageEvents(): void {
     const signal = this.abortController.signal;
 
     this.container.querySelectorAll<HTMLElement>('.doc-page__content').forEach((contentEl) => {
       contentEl.addEventListener('input', () => {
+        this.updateEmptyPlaceholder();
         this.recordChange();
+      }, { signal });
+
+      contentEl.addEventListener('keyup', () => {
+        this.updateEmptyPlaceholder();
       }, { signal });
 
       contentEl.addEventListener('paste', (e) => {
@@ -1904,12 +1982,7 @@ export class DocController implements ViewController {
         e.preventDefault();
         const text = e.clipboardData?.getData('text/plain') || '';
         document.execCommand('insertText', false, text);
-        this.recordChange();
-      }, { signal });
-    });
-
-    this.container.querySelectorAll<HTMLElement>('.doc-page__header, .doc-page__footer').forEach((hfEl) => {
-      hfEl.addEventListener('input', () => {
+        this.updateEmptyPlaceholder();
         this.recordChange();
       }, { signal });
     });
@@ -1930,6 +2003,7 @@ export class DocController implements ViewController {
 
   private recordChange(): void {
     this.syncPagesFromDOM();
+    this.updateEmptyPlaceholder();
     this.historyManager.pushState(this.project);
     this.updateUndoRedoButtonsState();
     this.updateStats();

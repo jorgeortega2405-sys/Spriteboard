@@ -1,9 +1,9 @@
 import { createSidebar } from '../components/layout.component.js';
+import { openTemplatePreviewModal } from '../components/template-preview-modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { ALL_PRESETS, PresetItem, TEMPLATE_CATEGORIES } from '../config/templates.config.js';
 import { buildAdCardHtml, DEFAULT_AD_FREQUENCY, getAdByIndex, handleAdClick, shouldShowAds } from '../services/ad.service.js';
 import { currentUser, escapeHtml, getApi, postApi } from '../services/api.service.js';
-import { createAndOpenCanvas } from '../services/canvas-creator.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { SkeletonService } from '../services/skeleton.service.js';
@@ -228,7 +228,9 @@ class TemplatesController {
         const preset = ALL_PRESETS.find((p) => p.id === presetId);
         if (!preset) return;
 
-        void this.handleUseTemplate(preset);
+        openTemplatePreviewModal(preset, {
+          onFavoriteToggle: (favId, isFav) => this.syncCardFavorite(favId, isFav),
+        });
       },
       { signal }
     );
@@ -507,26 +509,20 @@ class TemplatesController {
     }
   }
 
-  private async handleUseTemplate(preset: PresetItem): Promise<void> {
-    try {
-      const canvasType = preset.canvasType || (preset.categoryKey === 'board' ? 'board' : (preset.categoryKey === 'doc' ? 'doc' : (preset.categoryKey === 'pixel' ? 'pixel' : 'diagram')));
-      await createAndOpenCanvas({
-        bgType: canvasType === 'board' || canvasType === 'diagram' ? 'dots' : (canvasType === 'pixel' ? 'transparent' : undefined),
-        boardTemplateId: preset.boardTemplateId,
-        canvasType,
-        diagramSubtype: preset.diagramSubtype,
-        diagramTemplateId: preset.diagramTemplateId,
-        docTemplateId: preset.docTemplateId,
-        height: preset.height,
-        name: preset.name,
-        pixelTemplateId: preset.pixelTemplateId,
-        rootIdeaText: preset.name,
-        solidColor: '#ffffff',
-        templateImage: preset.imagePath,
-        width: preset.width,
-      });
-    } catch {
-      showToast(t('toasts.generic_error'), 'danger');
+  private syncCardFavorite(presetId: string, isFav: boolean): void {
+    if (isFav) {
+      this.favoritedTemplateIds.add(presetId);
+    } else {
+      this.favoritedTemplateIds.delete(presetId);
+    }
+    const cardBtn = this.gridEl?.querySelector<HTMLButtonElement>(`[data-bookmark-preset="${presetId}"]`);
+    if (cardBtn) {
+      cardBtn.classList.toggle('is-active', isFav);
+      const tooltipText = isFav ? t('canvas.bookmark_remove') : t('canvas.bookmark_save');
+      cardBtn.setAttribute('data-tooltip', tooltipText);
+      cardBtn.setAttribute('aria-label', tooltipText);
+      cardBtn.innerHTML = `<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${isFav ? 'star_fill' : 'star'}"></use></svg>`;
+      renderIcons(cardBtn);
     }
   }
 

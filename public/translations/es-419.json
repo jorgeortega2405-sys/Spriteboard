@@ -413,6 +413,11 @@
     "all_categories": "Todas las categorías",
     "search_placeholder": "Buscar plantillas por nombre o tamaño...",
     "use_template": "Usar plantilla",
+    "customize_template": "Personalizar la plantilla",
+    "similar_content": "Más contenido similar",
+    "share_template": "Compartir plantilla",
+    "copy_link": "Copiar enlace",
+    "link_copied": "Enlace de la plantilla copiado al portapapeles.",
     "empty_title": "No se encontraron plantillas",
     "empty_desc": "Intenta con otro término de búsqueda o selecciona otra categoría."
   },
@@ -736,10 +741,19 @@
       "scale_label": "Resolución y escala",
       "stage_title": "Descargar diseño",
       "success_toast": "Archivo descargado con éxito",
+      "type_atlas": "Hoja de sprites + JSON (Game Atlas)",
+      "type_gif": "GIF animado (.gif)",
+      "type_html": "Página web (.html)",
       "type_label": "Tipo de archivo",
+      "type_markdown": "Documento Markdown (.md)",
+      "type_pdf": "Documento PDF (.pdf)",
+      "type_png": "Imagen PNG (.png)",
       "type_png_current": "PNG (Fotograma actual)",
       "type_project_json": "Proyecto Spriteboard (.json)",
-      "type_spritesheet": "PNG (Hoja de sprites)"
+      "type_spritesheet": "PNG (Hoja de sprites)",
+      "type_svg": "Vectorial SVG (.svg)",
+      "type_txt": "Texto sin formato (.txt)",
+      "type_word": "Documento Word (.doc)"
     }
   },
   "teams": {

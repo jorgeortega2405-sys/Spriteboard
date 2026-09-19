@@ -11,5 +11,10 @@ aiRouter.post('/chat/feedback', aiChatLimiter, AiController.feedback);
 aiRouter.post('/ai/chat/feedback', aiChatLimiter, AiController.feedback);
 aiRouter.post('/mindmap', requireAuth, aiChatLimiter, AiController.generateMindMap);
 aiRouter.post('/ai/mindmap', requireAuth, aiChatLimiter, AiController.generateMindMap);
+aiRouter.post('/doc', requireAuth, aiChatLimiter, AiController.generateDoc);
+aiRouter.post('/ai/doc', requireAuth, aiChatLimiter, AiController.generateDoc);
+aiRouter.post('/board', requireAuth, aiChatLimiter, AiController.generateBoard);
+aiRouter.post('/ai/board', requireAuth, aiChatLimiter, AiController.generateBoard);
 
 export default aiRouter;
+

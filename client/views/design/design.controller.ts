@@ -199,6 +199,7 @@ export class DesignController {
   private downloadBgDropdownWrapperEl: HTMLElement | null = null;
   private downloadBgTriggerBtn: HTMLButtonElement | null = null;
   private downloadBgSelectedIconEl: HTMLElement | null = null;
+  private downloadBgSelectedTextEl: HTMLElement | null = null;
   private downloadBgDropdownController: { close: () => void; destroy: () => void; open: () => void; toggle: () => void; update: () => void } | null = null;
   private canvasTransformDropdownController: { close: () => void; destroy: () => void; open: () => void; toggle: () => void; update: () => void } | null = null;
   private specialBrushesDropdownController: { close: () => void; destroy: () => void; open: () => void; toggle: () => void; update: () => void } | null = null;

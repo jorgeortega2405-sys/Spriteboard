@@ -1,9 +1,9 @@
 import { navigate } from '../app-router.js';
 import { createSidebar } from '../components/layout.component.js';
+import { openTemplatePreviewModal } from '../components/template-preview-modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { ALL_PRESETS, PresetItem } from '../config/templates.config.js';
 import { currentUser, escapeHtml, getApi, postApi } from '../services/api.service.js';
-import { createAndOpenCanvas } from '../services/canvas-creator.service.js';
 import { getAllLocalCanvases } from '../services/canvas-storage.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
@@ -322,21 +322,23 @@ export class SearchController {
         const preset = ALL_PRESETS.find((p) => p.id === presetId);
         if (!preset) return;
 
-        const canvasType = preset.canvasType || (preset.categoryKey === 'board' ? 'board' : (preset.categoryKey === 'doc' ? 'doc' : (preset.categoryKey === 'pixel' ? 'pixel' : 'diagram')));
-        void createAndOpenCanvas({
-          bgType: canvasType === 'board' || canvasType === 'diagram' ? 'dots' : (canvasType === 'pixel' ? 'transparent' : undefined),
-          boardTemplateId: preset.boardTemplateId,
-          canvasType,
-          diagramSubtype: preset.diagramSubtype,
-          diagramTemplateId: preset.diagramTemplateId,
-          docTemplateId: preset.docTemplateId,
-          height: preset.height,
-          name: preset.name,
-          pixelTemplateId: preset.pixelTemplateId,
-          rootIdeaText: preset.name,
-          solidColor: '#ffffff',
-          templateImage: preset.imagePath,
-          width: preset.width,
+        openTemplatePreviewModal(preset, {
+          onFavoriteToggle: (favId, isFav) => {
+            if (isFav) {
+              this.favoritedTemplateIds.add(favId);
+            } else {
+              this.favoritedTemplateIds.delete(favId);
+            }
+            const cardBtn = this.templatesGridEl?.querySelector<HTMLButtonElement>(`[data-bookmark-preset="${favId}"]`);
+            if (cardBtn) {
+              cardBtn.classList.toggle('is-active', isFav);
+              const tooltipText = isFav ? t('canvas.bookmark_remove') : t('canvas.bookmark_save');
+              cardBtn.setAttribute('data-tooltip', tooltipText);
+              cardBtn.setAttribute('aria-label', tooltipText);
+              cardBtn.innerHTML = `<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${isFav ? 'star_fill' : 'star'}"></use></svg>`;
+              renderIcons(cardBtn);
+            }
+          },
         });
       },
       { signal }

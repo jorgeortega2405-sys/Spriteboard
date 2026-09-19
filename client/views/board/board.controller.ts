@@ -10,6 +10,7 @@ import { showToast } from '../../services/toast.service.js';
 import { CanvasItem } from '../../types/canvas.types.js';
 import { setupDropdown } from '../../utils/dom.util.js';
 import { generateShadingRamp, getCollaboratorColor } from '../design/design-color.util.js';
+import { openBoardAiModal } from './board-ai-modal.component.js';
 import { BoardCollaborationManager } from './board-collaboration.manager.js';
 import { computeElementsBoundingBox, getElementBoundingBox, hitTestElement, hitTestResizeHandle, moveElementByDrag, resizeElementByHandle } from './board-elements.manager.js';
 import { exportJson, exportPng, exportSvg, generateThumbnail } from './board-export.service.js';
@@ -61,6 +62,7 @@ export class BoardController {
   private hasErasedInCurrentStroke = false;
   private history = new BoardHistoryManager();
   private hoveredPixelGridCell: { gridId: string; px: number; py: number } | null = null;
+  private didPan = false;
   private isDrawing = false;
   private isInteractingSelection = false;
   private isLoaded = false;
@@ -593,6 +595,19 @@ export class BoardController {
       { signal }
     );
 
+    const btnBoardAi = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-board-ai"]');
+    btnBoardAi?.addEventListener(
+      'click',
+      () => {
+        openBoardAiModal({
+          onSuccess: ({ elements }) => {
+            this.insertAiGeneratedBoardElements(elements);
+          },
+        });
+      },
+      { signal }
+    );
+
     this.bindExportButtons(signal);
     this.bindToolbarTools(signal);
     this.bindPropertiesControls(signal);
@@ -615,6 +630,44 @@ export class BoardController {
       },
       { signal }
     );
+  }
+
+  private insertAiGeneratedBoardElements(aiElements: BoardElement[]): void {
+    if (!aiElements || aiElements.length === 0) return;
+    this.pushHistoryState();
+
+    let cx = 0;
+    let cy = 0;
+    if (this.canvasElement) {
+      const centerWorld = screenToWorld(
+        this.canvasElement.clientWidth / 2,
+        this.canvasElement.clientHeight / 2,
+        this.canvasElement,
+        this.camera
+      );
+      cx = centerWorld.x;
+      cy = centerWorld.y;
+    }
+
+    const positionedElements = aiElements.map((el) => {
+      const copy = JSON.parse(JSON.stringify(el)) as BoardElement;
+      copy.id = `el-ai-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      if ('x' in copy) {
+        copy.x += cx;
+        copy.y += cy;
+      }
+      return copy;
+    });
+
+    for (const el of positionedElements) {
+      this.elements.push(el);
+      this.collaborationManager.broadcastAddElement(el);
+    }
+
+    this.selectedElementId = positionedElements[0]?.id || null;
+    this.updateSelectionToolbar();
+    this.requestRedraw();
+    this.scheduleAutoSave();
   }
 
   private bindExportButtons(signal: AbortSignal): void {
@@ -2507,12 +2560,12 @@ export class BoardController {
   }
 
   private bindPixelControls(signal: AbortSignal): void {
-    const pixelButtons = this.container.querySelectorAll<HTMLButtonElement>('[data-pixel-subtool]');
+    const pixelButtons = this.container.querySelectorAll<HTMLButtonElement>('[data-subtool], [data-pixel-subtool]');
     pixelButtons.forEach((btn) => {
       btn.addEventListener(
         'click',
         () => {
-          const subtool = btn.getAttribute('data-pixel-subtool') as PixelSubtool;
+          const subtool = (btn.getAttribute('data-subtool') || btn.getAttribute('data-pixel-subtool')) as PixelSubtool;
           if (subtool) {
             this.setActivePixelSubtool(subtool);
           }
@@ -2533,6 +2586,41 @@ export class BoardController {
       );
     });
 
+    const btnTogglePixelGrid = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-pixel-gridlines"]');
+    btnTogglePixelGrid?.addEventListener(
+      'click',
+      () => {
+        let anyUpdated = false;
+        if (this.selectedElementId) {
+          const el = this.elements.find((item) => item.id === this.selectedElementId);
+          if (el && el.type === 'pixel-grid') {
+            this.pushHistoryState();
+            el.showGrid = !el.showGrid;
+            this.collaborationManager.broadcastUpdateElement(el);
+            btnTogglePixelGrid.classList.toggle('is-active', el.showGrid);
+            anyUpdated = true;
+          }
+        }
+        if (!anyUpdated) {
+          const pixelGrids = this.elements.filter((el): el is BoardPixelGridElement => el.type === 'pixel-grid');
+          if (pixelGrids.length > 0) {
+            this.pushHistoryState();
+            const targetState = !pixelGrids[0].showGrid;
+            pixelGrids.forEach((g) => {
+              g.showGrid = targetState;
+              this.collaborationManager.broadcastUpdateElement(g);
+            });
+            btnTogglePixelGrid.classList.toggle('is-active', targetState);
+          } else {
+            btnTogglePixelGrid.classList.toggle('is-active');
+          }
+        }
+        this.requestRedraw();
+        this.scheduleAutoSave();
+      },
+      { signal }
+    );
+
     const paletteSelect = this.container.querySelector<HTMLSelectElement>('[data-ref="select-pixel-palette"]');
     paletteSelect?.addEventListener(
       'change',
@@ -2546,9 +2634,10 @@ export class BoardController {
 
   private setActivePixelSubtool(tool: PixelSubtool): void {
     this.pixelGrid.activePixelSubtool = tool;
-    const pixelButtons = this.container.querySelectorAll<HTMLButtonElement>('[data-pixel-subtool]');
+    const pixelButtons = this.container.querySelectorAll<HTMLButtonElement>('[data-subtool], [data-pixel-subtool]');
     pixelButtons.forEach((btn) => {
-      btn.classList.toggle('is-active', btn.getAttribute('data-pixel-subtool') === tool);
+      const val = btn.getAttribute('data-subtool') || btn.getAttribute('data-pixel-subtool');
+      btn.classList.toggle('is-active', val === tool);
     });
   }
 

@@ -1,0 +1,239 @@
+import { API_ROUTES } from '../../config/api-routes.js';
+import { postApi } from '../../services/api.service.js';
+import { showToast } from '../../services/toast.service.js';
+import { withButtonLoading } from '../../utils/dom.util.js';
+import { BoardElement } from './board.types.js';
+
+export type BoardAiType = 'brainstorm' | 'custom' | 'kanban' | 'retro' | 'swot';
+
+export interface BoardAiModalOptions {
+  onSuccess: (result: {
+    boardType: BoardAiType;
+    elements: BoardElement[];
+    title: string;
+  }) => void;
+}
+
+let activeBoardAiModal: { close: () => void } | null = null;
+
+export function openBoardAiModal(options: BoardAiModalOptions): void {
+  if (activeBoardAiModal) {
+    activeBoardAiModal.close();
+  }
+
+  let selectedType: BoardAiType = 'brainstorm';
+
+  const backdrop = document.createElement('div');
+  backdrop.className = 'modal-backdrop';
+  backdrop.setAttribute('data-ref', 'modal-board-ai-backdrop');
+
+  const suggestions: Record<BoardAiType, string[]> = {
+    brainstorm: [
+      'Estrategias de crecimiento y adquisición de clientes',
+      'Nuevas características para la app móvil en 2026',
+      'Ideas para campaña publicitaria de verano',
+      'Optimización de la experiencia de usuario y diseño',
+    ],
+    custom: [
+      'Plan de innovación y transformación digital',
+      'Lanzamiento de plataforma web escalable',
+      'Mapa de ideas para taller de diseño',
+      'Organización de recursos y herramientas del equipo',
+    ],
+    kanban: [
+      'Sprint de desarrollo de plataforma SaaS',
+      'Lanzamiento de producto MVP y pruebas beta',
+      'Plan de rediseño de marca y sitio web',
+      'Flujo de atención al cliente e incidencias',
+    ],
+    retro: [
+      'Retrospectiva del Sprint 14: Lanzamiento de funcionalidades',
+      'Evaluación trimestral del equipo de diseño y producto',
+      'Post-mortem de migración de base de datos a la nube',
+      'Revisión de procesos de onboarding y documentación',
+    ],
+    swot: [
+      'Análisis FODA para startup de inteligencia artificial',
+      'Evaluación estratégica para expansión a nuevos mercados',
+      'Análisis FODA de producto frente a competidores',
+      'Diagnóstico organizacional de la empresa',
+    ],
+  };
+
+  backdrop.innerHTML = `
+    <div class="modal-container" data-ref="modal-board-ai-container">
+      <button type="button" class="modal-close-btn" data-ref="btn-modal-close" aria-label="Cerrar">
+        <span class="component-icon">close</span>
+      </button>
+
+      <div class="modal-card modal-card--md" data-ref="modal-card">
+        <div class="modal-card__header" data-ref="modal-header">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="component-icon" style="color: #6366f1; font-size: 24px;">auto_awesome</span>
+            <h2 class="modal-card__title" data-ref="modal-title">Generador de Pizarrón con IA</h2>
+          </div>
+          <p class="modal-card__desc" data-ref="modal-desc">
+            Crea lluvias de ideas, tableros Kanban, matrices estratégicas FODA y retrospectivas con notas adhesivas organizadas visualmente.
+          </p>
+        </div>
+
+        <div class="modal-card__body" data-ref="modal-body">
+          <div class="design-toolbar-group" data-ref="board-ai-type-pills" style="display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap;">
+            <button type="button" class="template-variant-pill is-active" data-ref="btn-type-brainstorm" data-type="brainstorm" style="padding: 5px 12px; font-size: 12px; display: flex; align-items: center; gap: 5px;">
+              <span class="component-icon" style="font-size: 15px;">lightbulb</span>
+              <span>Lluvia de Ideas</span>
+            </button>
+            <button type="button" class="template-variant-pill" data-ref="btn-type-kanban" data-type="kanban" style="padding: 5px 12px; font-size: 12px; display: flex; align-items: center; gap: 5px;">
+              <span class="component-icon" style="font-size: 15px;">view_kanban</span>
+              <span>Tablero Kanban</span>
+            </button>
+            <button type="button" class="template-variant-pill" data-ref="btn-type-swot" data-type="swot" style="padding: 5px 12px; font-size: 12px; display: flex; align-items: center; gap: 5px;">
+              <span class="component-icon" style="font-size: 15px;">grid_view</span>
+              <span>Matriz FODA</span>
+            </button>
+            <button type="button" class="template-variant-pill" data-ref="btn-type-retro" data-type="retro" style="padding: 5px 12px; font-size: 12px; display: flex; align-items: center; gap: 5px;">
+              <span class="component-icon" style="font-size: 15px;">cached</span>
+              <span>Retrospectiva</span>
+            </button>
+          </div>
+
+          <label class="field" data-ref="field-board-ai-prompt" style="margin-bottom: 12px; display: block;">
+            <textarea class="field__input" data-ref="input-board-ai-prompt" rows="3" placeholder=" " style="min-height: 86px; padding-top: 18px; resize: vertical; line-height: 1.4;"></textarea>
+            <span class="field__label" data-ref="lbl-board-ai-prompt">¿Qué tema, proyecto o ideas deseas organizar en tu pizarrón?</span>
+          </label>
+
+          <div class="design-toolbar-group" data-ref="board-ai-suggestions-group" style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px;">
+            <span style="font-size: 11px; color: var(--color-text-muted, #64748b); width: 100%; margin-bottom: 2px;">Sugerencias rápidas:</span>
+            <div class="design-toolbar-group" data-ref="board-ai-sugg-container" style="display: flex; gap: 6px; flex-wrap: wrap; width: 100%;"></div>
+          </div>
+        </div>
+
+        <div class="modal-card__footer" data-ref="modal-footer">
+          <div class="modal-card__actions" data-ref="modal-actions">
+            <button type="button" class="component-button component-button--h40" data-ref="btn-board-ai-cancel">Cancelar</button>
+            <button type="button" class="component-button component-button--h40 component-button--black" data-ref="btn-board-ai-submit" style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); border: none;">
+              <span class="component-icon" style="font-size: 18px; margin-right: 6px;">auto_awesome</span>
+              <span>Generar en Pizarrón</span>
+            </button>
+          </div>
+          <div class="banner banner--danger" data-ref="board-ai-modal-error" style="display: none; margin-top: 12px;"></div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(backdrop);
+  document.body.style.overflow = 'hidden';
+
+  const close = () => {
+    backdrop.remove();
+    document.body.style.overflow = '';
+    activeBoardAiModal = null;
+  };
+
+  activeBoardAiModal = { close };
+
+  const btnClose = backdrop.querySelector<HTMLElement>('[data-ref="btn-modal-close"]');
+  const btnCancel = backdrop.querySelector<HTMLElement>('[data-ref="btn-board-ai-cancel"]');
+  const btnSubmit = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-board-ai-submit"]');
+  const inputPrompt = backdrop.querySelector<HTMLTextAreaElement>('[data-ref="input-board-ai-prompt"]');
+  const suggContainer = backdrop.querySelector<HTMLElement>('[data-ref="board-ai-sugg-container"]');
+  const errorBanner = backdrop.querySelector<HTMLElement>('[data-ref="board-ai-modal-error"]');
+
+  const renderSuggestions = () => {
+    if (!suggContainer) return;
+    suggContainer.innerHTML = '';
+    const currentSuggs = suggestions[selectedType] || suggestions.brainstorm;
+    currentSuggs.forEach((sugg, idx) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'template-variant-pill';
+      btn.setAttribute('data-ref', `btn-board-sugg-${idx + 1}`);
+      btn.setAttribute('data-sugg', sugg);
+      btn.style.padding = '4px 8px';
+      btn.style.fontSize = '11px';
+      btn.textContent = `${sugg.slice(0, 26)}...`;
+      btn.addEventListener('click', () => {
+        if (inputPrompt) {
+          inputPrompt.value = sugg;
+          inputPrompt.focus();
+        }
+      });
+      suggContainer.appendChild(btn);
+    });
+  };
+
+  renderSuggestions();
+
+  btnClose?.addEventListener('click', close);
+  btnCancel?.addEventListener('click', close);
+  backdrop.addEventListener('click', (e) => {
+    if (e.target === backdrop) close();
+  });
+
+  backdrop.querySelectorAll<HTMLElement>('[data-type]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const type = btn.getAttribute('data-type') as BoardAiType;
+      if (type) {
+        selectedType = type;
+        backdrop.querySelectorAll<HTMLElement>('[data-type]').forEach((b) => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        renderSuggestions();
+      }
+    });
+  });
+
+  btnSubmit?.addEventListener('click', async () => {
+    if (!inputPrompt) return;
+    const promptText = inputPrompt.value.trim();
+
+    if (!promptText) {
+      if (errorBanner) {
+        errorBanner.textContent = 'Por favor escribe un tema o descripción para el pizarrón.';
+        errorBanner.style.display = 'block';
+      }
+      inputPrompt.focus();
+      return;
+    }
+
+    if (errorBanner) {
+      errorBanner.style.display = 'none';
+      errorBanner.textContent = '';
+    }
+
+    await withButtonLoading(btnSubmit, 'Generando...', async () => {
+      try {
+        const res = await postApi(API_ROUTES.ai.board, {
+          boardType: selectedType,
+          prompt: promptText,
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || 'No se pudieron generar los elementos del pizarrón.');
+        }
+
+        const data = await res.json();
+        if (!data.board || !Array.isArray(data.board.elements)) {
+          throw new Error('La respuesta de la IA no contiene una lista válida de elementos.');
+        }
+
+        options.onSuccess({
+          boardType: selectedType,
+          elements: data.board.elements,
+          title: data.board.title || promptText,
+        });
+
+        close();
+        showToast('✨ Pizarrón generado con IA con éxito', 'success');
+      } catch (err: any) {
+        if (errorBanner) {
+          errorBanner.textContent = err.message || 'Ha ocurrido un problema al comunicarse con el servicio de IA.';
+          errorBanner.style.display = 'block';
+        }
+      }
+    });
+  });
+
+  setTimeout(() => inputPrompt?.focus(), 50);
+}

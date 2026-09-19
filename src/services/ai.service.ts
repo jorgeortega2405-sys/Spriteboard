@@ -564,6 +564,376 @@ ${mode === 'expand' ? `- Expande detalladamente el concepto, columna o paso exis
       title: rootText,
     };
   }
+
+  static async generateDocContent(
+    prompt: string,
+    action: 'change_tone' | 'continue' | 'fix_grammar' | 'generate' | 'improve' | 'summarize' | 'translate' = 'generate',
+    tone?: 'casual' | 'concise' | 'creative' | 'formal' | 'inspiring' | 'professional',
+    targetLanguage = 'es',
+    contextText?: string
+  ): Promise<{ html: string; text: string }> {
+    const apiKey = config.gemini.apiKey;
+    if (!apiKey) {
+      logger.app.warn('AiService: GEMINI_API_KEY no configurada para Doc. Usando generador inteligente local.');
+      return this.generateFallbackDocContent(prompt, action, tone, targetLanguage, contextText);
+    }
+
+    let actionInstructions = '';
+    if (action === 'continue') {
+      actionInstructions = `Continúa de forma fluida y coherente la redacción del siguiente texto existente: "${contextText || prompt}". Desarrolla las ideas siguientes de forma natural.`;
+    } else if (action === 'summarize') {
+      actionInstructions = `Resume de manera concisa y clara los puntos clave del siguiente texto: "${contextText || prompt}". Organiza el resumen con títulos y viñetas ejecutivas si aplica.`;
+    } else if (action === 'improve') {
+      actionInstructions = `Reescribe y mejora la calidad de redacción, estilo, fluidez y claridad del siguiente texto: "${contextText || prompt}". Mantén el mensaje central pero hazlo más impactante.`;
+    } else if (action === 'fix_grammar') {
+      actionInstructions = `Corrige la ortografía, puntuación, sintaxis y concordancia gramatical del siguiente texto: "${contextText || prompt}". No alteres innecesariamente el significado.`;
+    } else if (action === 'change_tone') {
+      const selectedTone = tone || 'professional';
+      actionInstructions = `Reescribe el siguiente texto adaptándolo a un tono estrictamente "${selectedTone}": "${contextText || prompt}".`;
+    } else if (action === 'translate') {
+      actionInstructions = `Traduce con precisión y naturalidad el siguiente texto al idioma "${targetLanguage}": "${contextText || prompt}".`;
+    } else {
+      actionInstructions = `Escribe un texto completo, profesional y bien estructurado sobre el tema o instrucción: "${prompt}".`;
+    }
+
+    const toneInstruction = tone ? `Aplica un tono "${tone}".` : 'Aplica un tono claro, profesional y moderno.';
+
+    const systemPrompt = `Eres un redactor y editor profesional de clase mundial integrado en un procesador de textos colaborativo.
+Tu objetivo es producir contenido en formato HTML limpio, semántico y moderno.
+
+Reglas obligatorias:
+1. Devuelve ÚNICAMENTE código HTML válido para ser insertado dentro de un documento (<p>, <h2>, <h3>, <ul>, <ol>, <li>, <blockquote>, <strong>, <em>, <table>, <tr>, <th>, <td>).
+2. NO incluyas etiquetas <html>, <head>, <body>, <!DOCTYPE>, ni estilos inline complejos.
+3. ${toneInstruction}
+4. NO devuelvas bloques de código markdown tipo \`\`\`html ni explicaciones previas o posteriores. DEVUELVE SOLO EL FRAGMENTO HTML DIRECTO.`;
+
+    const requestBody = {
+      contents: [{ role: 'user', parts: [{ text: `${actionInstructions}\nContexto adicional: ${prompt}` }] }],
+      generationConfig: {
+        maxOutputTokens: 2500,
+        temperature: action === 'fix_grammar' ? 0.2 : (tone === 'creative' ? 0.8 : 0.5),
+      },
+      systemInstruction: {
+        parts: [{ text: systemPrompt }],
+      },
+    };
+
+    const modelName = config.gemini.model || 'gemini-flash-lite-latest';
+    const fallbackModels = ['gemini-flash-lite-latest', 'gemini-flash-latest', 'gemini-3.6-flash', 'gemini-3.5-flash'];
+    const buildUrl = (model: string) => `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+    const fetchOptions = {
+      body: JSON.stringify(requestBody),
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST' as const,
+    };
+
+    try {
+      let response = await fetch(buildUrl(modelName), fetchOptions);
+
+      if (!response.ok && (response.status === 503 || response.status === 404)) {
+        for (const fallback of fallbackModels) {
+          if (fallback === modelName) continue;
+          logger.app.warn(`AiService: Reintentando generación de doc con ${fallback}`);
+          response = await fetch(buildUrl(fallback), fetchOptions);
+          if (response.ok) break;
+        }
+      }
+
+      if (!response.ok) {
+        logger.app.error('AiService: Error HTTP al generar contenido doc con Gemini', { status: response.status });
+        return this.generateFallbackDocContent(prompt, action, tone, targetLanguage, contextText);
+      }
+
+      const data = (await response.json()) as any;
+      const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+      if (!rawText || typeof rawText !== 'string') {
+        logger.app.warn('AiService: Respuesta vacía de Gemini al generar doc');
+        return this.generateFallbackDocContent(prompt, action, tone, targetLanguage, contextText);
+      }
+
+      let cleanHtml = rawText.trim();
+      if (cleanHtml.startsWith('```html')) cleanHtml = cleanHtml.slice(7);
+      if (cleanHtml.startsWith('```')) cleanHtml = cleanHtml.slice(3);
+      if (cleanHtml.endsWith('```')) cleanHtml = cleanHtml.slice(0, -3);
+      cleanHtml = cleanHtml.trim();
+
+      const plainText = cleanHtml.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+
+      return {
+        html: cleanHtml,
+        text: plainText,
+      };
+    } catch (err) {
+      logger.app.error('AiService: Error al procesar generación doc con IA', err);
+      return this.generateFallbackDocContent(prompt, action, tone, targetLanguage, contextText);
+    }
+  }
+
+  private static generateFallbackDocContent(
+    prompt: string,
+    action: 'change_tone' | 'continue' | 'fix_grammar' | 'generate' | 'improve' | 'summarize' | 'translate',
+    tone?: 'casual' | 'concise' | 'creative' | 'formal' | 'inspiring' | 'professional',
+    _targetLanguage = 'es',
+    contextText?: string
+  ): { html: string; text: string } {
+    const baseText = contextText || prompt;
+    const title = prompt.trim() || 'Documento Generado';
+
+    if (action === 'summarize') {
+      const html = `<h2>Resumen Ejecutivo: ${title}</h2><p>A continuación se destacan los aspectos fundamentales identificados:</p><ul><li><strong>Aspecto Clave 1:</strong> Definición de objetivos principales y alcance estratégico.</li><li><strong>Aspecto Clave 2:</strong> Metodología de ejecución y optimización de recursos disponibles.</li><li><strong>Aspecto Clave 3:</strong> Medición de resultados e impacto esperado a corto y mediano plazo.</li></ul><p>En conclusión, el enfoque propuesto garantiza eficiencia y alineación con las metas establecidas.</p>`;
+      return { html, text: html.replace(/<[^>]*>/g, ' ').trim() };
+    }
+
+    if (action === 'improve' || action === 'fix_grammar' || action === 'change_tone') {
+      const toneLabel = tone ? ` (${tone})` : '';
+      const html = `<p>${baseText.trim()}</p><p><em>Versión optimizada y pulida${toneLabel}:</em></p><p>Con el propósito de maximizar la claridad y coherencia del mensaje, se han reestructurado las ideas principales para asegurar una comunicación precisa, profesional y de alto impacto.</p>`;
+      return { html, text: html.replace(/<[^>]*>/g, ' ').trim() };
+    }
+
+    if (action === 'continue') {
+      const html = `<p>${baseText.trim()}</p><p>Asimismo, es crucial considerar que la implementación efectiva requiere un seguimiento continuo de cada una de las fases planteadas. Esto permite adaptar las tácticas según la retroalimentación recibida y garantizar la sostenibilidad de los resultados alcanzados.</p><ul><li>Monitoreo periódico de indicadores de desempeño.</li><li>Ajustes ágiles ante cambios de prioridades.</li><li>Comunicación transversal con todas las partes interesadas.</li></ul>`;
+      return { html, text: html.replace(/<[^>]*>/g, ' ').trim() };
+    }
+
+    const html = `<h2>${title}</h2><p>El desarrollo de <strong>${title}</strong> representa una oportunidad estratégica para impulsar la innovación, optimizar flujos de trabajo y alcanzar resultados de alto valor.</p><h3>1. Objetivos Principales</h3><ul><li>Establecer fundamentos sólidos y criterios de calidad.</li><li>Fomentar la colaboración efectiva entre los miembros del equipo.</li><li>Implementar metodologías ágiles y orientadas al usuario final.</li></ul><h3>2. Plan de Acción</h3><p>Para lograr estos objetivos, se recomienda estructurar el trabajo en iteraciones continuas, validando entregables en cada etapa y manteniendo una comunicación transparente.</p><blockquote>«La excelencia no es un acto aislado, sino un hábito continuo de mejora y dedicación.»</blockquote>`;
+    return { html, text: html.replace(/<[^>]*>/g, ' ').trim() };
+  }
+
+  static async generateBoardElements(
+    prompt: string,
+    boardType: 'brainstorm' | 'custom' | 'kanban' | 'retro' | 'swot' = 'brainstorm',
+    _count?: number
+  ): Promise<{ elements: Array<{ color?: string; fontSize?: number; height: number; id: string; shapeType?: string; strokeColor?: string; strokeWidth?: number; text?: string; textColor?: string; type: 'shape' | 'sticky' | 'text'; width: number; x: number; y: number }>; title: string }> {
+    const apiKey = config.gemini.apiKey;
+    if (!apiKey) {
+      logger.app.warn('AiService: GEMINI_API_KEY no configurada para Board. Usando generador inteligente local.');
+      return this.generateFallbackBoardElements(prompt, boardType);
+    }
+
+    let boardRole = 'Lluvia de ideas y notas adhesivas organizadas en clusters temáticos';
+    if (boardType === 'kanban') {
+      boardRole = 'Tablero Kanban de gestión ágil con columnas de estado (Por Hacer, En Progreso, En Revisión, Completado) y notas de tareas';
+    } else if (boardType === 'swot') {
+      boardRole = 'Matriz FODA / 2x2 con 4 cuadrantes claramente definidos (Fortalezas, Oportunidades, Debilidades, Amenazas)';
+    } else if (boardType === 'retro') {
+      boardRole = 'Retrospectiva Ágil con 3 columnas (¿Qué funcionó bien?, ¿Qué podemos mejorar?, Acciones / Próximos pasos)';
+    }
+
+    const systemPrompt = `Eres un facilitador y diseñador experto en pizarrón visual colaborativo (${boardRole}).
+Tu objetivo es transformar el tema del usuario en un conjunto de elementos geométricamente bien distribuidos en el plano (x, y).
+
+Formato de respuesta obligatorio: JSON puro que cumpla estrictamente este esquema:
+{
+  "title": "Título descriptivo del pizarrón",
+  "elements": [
+    {
+      "id": "el-1",
+      "type": "text",
+      "x": 0,
+      "y": -80,
+      "width": 400,
+      "height": 40,
+      "text": "Título de Sección",
+      "fontSize": 24,
+      "color": "#1e293b"
+    },
+    {
+      "id": "el-2",
+      "type": "sticky",
+      "x": 0,
+      "y": 0,
+      "width": 180,
+      "height": 180,
+      "text": "Idea o tarea específica",
+      "color": "#fef08a",
+      "textColor": "#1e293b",
+      "fontSize": 15
+    }
+  ]
+}
+
+Reglas de diseño de elementos:
+1. Tipo: "${boardType}".
+2. Para "sticky": width=180, height=180, fontSize=15. Colores pastel disponibles para stickies:
+   - Amarillo: #fef08a
+   - Azul: #bae6fd
+   - Verde: #bbf7d0
+   - Rosa: #fbcfe8
+   - Morado: #e9d5ff
+   - Naranja: #fed7aa
+3. Para "text": width=200-500, height=36-50, fontSize=20-28, color="#0f172a".
+4. Para "shape": shapeType="round-rect" | "rect", strokeColor="#cbd5e1", strokeWidth=2, fillColor="transparent" o "rgba(241, 245, 249, 0.5)".
+5. Distribución de coordenadas (x, y):
+   - Centra el grupo alrededor de (x: 0, y: 0).
+   - Espaciado horizontal entre columnas: 220px a 260px.
+   - Espaciado vertical entre notas de la misma columna: 200px a 220px.
+   - Si es brainstorm: genera de 6 a 12 notas adhesivas organizadas en 2 a 4 columnas con un título de cabecera en cada columna.
+   - Si es kanban: genera 3 a 4 columnas con encabezado y 2 a 3 notas adhesivas por columna.
+   - Si es swot: genera 4 cuadrantes (2x2) centrados con 2 a 3 notas en cada cuadrante.
+   - Si es retro: genera 3 columnas organizadas horizontalmente.
+6. NO devuelvas explicaciones ni bloques de markdown. DEVUELVE EXCLUSIVAMENTE EL OBJETO JSON.`;
+
+    const requestBody = {
+      contents: [{ role: 'user', parts: [{ text: `Crea un conjunto de elementos para pizarrón (${boardType}) sobre: "${prompt}".` }] }],
+      generationConfig: {
+        maxOutputTokens: 2500,
+        temperature: 0.35,
+      },
+      systemInstruction: {
+        parts: [{ text: systemPrompt }],
+      },
+    };
+
+    const modelName = config.gemini.model || 'gemini-flash-lite-latest';
+    const fallbackModels = ['gemini-flash-lite-latest', 'gemini-flash-latest', 'gemini-3.6-flash', 'gemini-3.5-flash'];
+    const buildUrl = (model: string) => `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+    const fetchOptions = {
+      body: JSON.stringify(requestBody),
+      headers: { 'Content-Type': 'application/json' },
+      method: 'POST' as const,
+    };
+
+    try {
+      let response = await fetch(buildUrl(modelName), fetchOptions);
+
+      if (!response.ok && (response.status === 503 || response.status === 404)) {
+        for (const fallback of fallbackModels) {
+          if (fallback === modelName) continue;
+          logger.app.warn(`AiService: Reintentando generación de board con ${fallback}`);
+          response = await fetch(buildUrl(fallback), fetchOptions);
+          if (response.ok) break;
+        }
+      }
+
+      if (!response.ok) {
+        logger.app.error('AiService: Error HTTP al generar board con Gemini', { status: response.status });
+        return this.generateFallbackBoardElements(prompt, boardType);
+      }
+
+      const data = (await response.json()) as any;
+      const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+      if (!rawText || typeof rawText !== 'string') {
+        logger.app.warn('AiService: Respuesta vacía de Gemini al generar board');
+        return this.generateFallbackBoardElements(prompt, boardType);
+      }
+
+      let cleanJson = rawText.trim();
+      if (cleanJson.startsWith('```json')) cleanJson = cleanJson.slice(7);
+      if (cleanJson.startsWith('```')) cleanJson = cleanJson.slice(3);
+      if (cleanJson.endsWith('```')) cleanJson = cleanJson.slice(0, -3);
+      cleanJson = cleanJson.trim();
+
+      const parsed = JSON.parse(cleanJson);
+      if (parsed && Array.isArray(parsed.elements) && parsed.elements.length > 0) {
+        const pastelPalette = ['#fef08a', '#bae6fd', '#bbf7d0', '#fbcfe8', '#e9d5ff', '#fed7aa'];
+        return {
+          elements: parsed.elements.map((el: any, idx: number) => {
+            const id = String(el.id || `ai-${Date.now()}-${idx}`);
+            const type = (el.type === 'shape' || el.type === 'text' || el.type === 'sticky') ? el.type : 'sticky';
+            return {
+              color: el.color || (type === 'sticky' ? pastelPalette[idx % pastelPalette.length] : '#1e293b'),
+              fontSize: el.fontSize || (type === 'text' ? 22 : 15),
+              height: Number(el.height) || (type === 'sticky' ? 180 : 36),
+              id,
+              shapeType: el.shapeType || (type === 'shape' ? 'round-rect' : undefined),
+              strokeColor: el.strokeColor || '#cbd5e1',
+              strokeWidth: Number(el.strokeWidth) || 2,
+              text: String(el.text || ''),
+              textColor: el.textColor || '#1e293b',
+              type,
+              width: Number(el.width) || (type === 'sticky' ? 180 : 200),
+              x: Number(el.x) || 0,
+              y: Number(el.y) || 0,
+            };
+          }),
+          title: parsed.title || prompt,
+        };
+      }
+
+      return this.generateFallbackBoardElements(prompt, boardType);
+    } catch (err) {
+      logger.app.error('AiService: Error al procesar generación de board con IA', err);
+      return this.generateFallbackBoardElements(prompt, boardType);
+    }
+  }
+
+  private static generateFallbackBoardElements(
+    prompt: string,
+    boardType: 'brainstorm' | 'custom' | 'kanban' | 'retro' | 'swot' = 'brainstorm'
+  ): { elements: Array<{ color?: string; fontSize?: number; height: number; id: string; shapeType?: string; strokeColor?: string; strokeWidth?: number; text?: string; textColor?: string; type: 'shape' | 'sticky' | 'text'; width: number; x: number; y: number }>; title: string } {
+    const title = prompt.trim() || 'Pizarrón con IA';
+    const now = Date.now();
+
+    if (boardType === 'kanban') {
+      return {
+        elements: [
+          { color: '#0f172a', fontSize: 24, height: 36, id: `hdr-${now}`, text: `📋 Kanban: ${title}`, type: 'text', width: 400, x: -330, y: -120 },
+          { color: '#2563eb', fontSize: 18, height: 30, id: `col1-${now}`, text: '📌 Por Hacer', type: 'text', width: 180, x: -330, y: -50 },
+          { color: '#bae6fd', fontSize: 15, height: 180, id: `stk1-${now}`, text: 'Definir requerimientos y alcance inicial', textColor: '#1e293b', type: 'sticky', width: 180, x: -330, y: 0 },
+          { color: '#bae6fd', fontSize: 15, height: 180, id: `stk2-${now}`, text: 'Diseñar bocetos y estructura base', textColor: '#1e293b', type: 'sticky', width: 180, x: -330, y: 200 },
+          { color: '#d97706', fontSize: 18, height: 30, id: `col2-${now}`, text: '⚡ En Progreso', type: 'text', width: 180, x: -110, y: -50 },
+          { color: '#fef08a', fontSize: 15, height: 180, id: `stk3-${now}`, text: 'Implementar funcionalidad principal', textColor: '#1e293b', type: 'sticky', width: 180, x: -110, y: 0 },
+          { color: '#fef08a', fontSize: 15, height: 180, id: `stk4-${now}`, text: 'Conectar integración de servicios', textColor: '#1e293b', type: 'sticky', width: 180, x: -110, y: 200 },
+          { color: '#7c3aed', fontSize: 18, height: 30, id: `col3-${now}`, text: '🔍 En Revisión', type: 'text', width: 180, x: 110, y: -50 },
+          { color: '#e9d5ff', fontSize: 15, height: 180, id: `stk5-${now}`, text: 'Ejecutar pruebas y revisión de calidad', textColor: '#1e293b', type: 'sticky', width: 180, x: 110, y: 0 },
+          { color: '#16a34a', fontSize: 18, height: 30, id: `col4-${now}`, text: '✅ Completado', type: 'text', width: 180, x: 330, y: -50 },
+          { color: '#bbf7d0', fontSize: 15, height: 180, id: `stk6-${now}`, text: 'Configuración de entorno y kickoff', textColor: '#1e293b', type: 'sticky', width: 180, x: 330, y: 0 },
+        ],
+        title: `Kanban: ${title}`,
+      };
+    }
+
+    if (boardType === 'swot') {
+      return {
+        elements: [
+          { color: '#0f172a', fontSize: 24, height: 36, id: `hdr-${now}`, text: `📊 Matriz FODA: ${title}`, type: 'text', width: 450, x: -220, y: -140 },
+          { color: '#16a34a', fontSize: 18, height: 30, id: `t1-${now}`, text: '💪 Fortalezas (Internas)', type: 'text', width: 200, x: -220, y: -70 },
+          { color: '#bbf7d0', fontSize: 15, height: 180, id: `s1-${now}`, text: 'Equipo multidisciplinario altamente calificado', textColor: '#1e293b', type: 'sticky', width: 180, x: -220, y: -20 },
+          { color: '#2563eb', fontSize: 18, height: 30, id: `t2-${now}`, text: '🚀 Oportunidades (Externas)', type: 'text', width: 200, x: 20, y: -70 },
+          { color: '#bae6fd', fontSize: 15, height: 180, id: `s2-${now}`, text: 'Creciente demanda de soluciones en la nube', textColor: '#1e293b', type: 'sticky', width: 180, x: 20, y: -20 },
+          { color: '#d97706', fontSize: 18, height: 30, id: `t3-${now}`, text: '⚠️ Debilidades (Internas)', type: 'text', width: 200, x: -220, y: 190 },
+          { color: '#fed7aa', fontSize: 15, height: 180, id: `s3-${now}`, text: 'Presupuesto ajustado para marketing inicial', textColor: '#1e293b', type: 'sticky', width: 180, x: -220, y: 240 },
+          { color: '#dc2626', fontSize: 18, height: 30, id: `t4-${now}`, text: '🛡️ Amenazas (Externas)', type: 'text', width: 200, x: 20, y: 190 },
+          { color: '#fbcfe8', fontSize: 15, height: 180, id: `s4-${now}`, text: 'Competidores establecidos con gran volumen', textColor: '#1e293b', type: 'sticky', width: 180, x: 20, y: 240 },
+        ],
+        title: `Matriz FODA: ${title}`,
+      };
+    }
+
+    if (boardType === 'retro') {
+      return {
+        elements: [
+          { color: '#0f172a', fontSize: 24, height: 36, id: `hdr-${now}`, text: `🔄 Retrospectiva: ${title}`, type: 'text', width: 450, x: -240, y: -120 },
+          { color: '#16a34a', fontSize: 18, height: 30, id: `c1-${now}`, text: '🎉 ¿Qué salió bien?', type: 'text', width: 200, x: -240, y: -50 },
+          { color: '#bbf7d0', fontSize: 15, height: 180, id: `r1-${now}`, text: 'Excelente comunicación y apoyo entre miembros', textColor: '#1e293b', type: 'sticky', width: 180, x: -240, y: 0 },
+          { color: '#bbf7d0', fontSize: 15, height: 180, id: `r2-${now}`, text: 'Entregas a tiempo en los hitos acordados', textColor: '#1e293b', type: 'sticky', width: 180, x: -240, y: 200 },
+          { color: '#d97706', fontSize: 18, height: 30, id: `c2-${now}`, text: '🔧 ¿Qué podemos mejorar?', type: 'text', width: 220, x: -20, y: -50 },
+          { color: '#fef08a', fontSize: 15, height: 180, id: `r3-${now}`, text: 'Reducir reuniones largas sin agenda previa', textColor: '#1e293b', type: 'sticky', width: 180, x: -20, y: 0 },
+          { color: '#fef08a', fontSize: 15, height: 180, id: `r4-${now}`, text: 'Mejorar la documentación técnica del código', textColor: '#1e293b', type: 'sticky', width: 180, x: -20, y: 200 },
+          { color: '#2563eb', fontSize: 18, height: 30, id: `c3-${now}`, text: '🎯 Acciones y Compromisos', type: 'text', width: 220, x: 200, y: -50 },
+          { color: '#bae6fd', fontSize: 15, height: 180, id: `r5-${now}`, text: 'Crear plantillas estándar para nuevos módulos', textColor: '#1e293b', type: 'sticky', width: 180, x: 200, y: 0 },
+          { color: '#bae6fd', fontSize: 15, height: 180, id: `r6-${now}`, text: 'Agendar sesiones de pair-programming semanales', textColor: '#1e293b', type: 'sticky', width: 180, x: 200, y: 200 },
+        ],
+        title: `Retrospectiva: ${title}`,
+      };
+    }
+
+    return {
+      elements: [
+        { color: '#0f172a', fontSize: 24, height: 36, id: `hdr-${now}`, text: `💡 Lluvia de Ideas: ${title}`, type: 'text', width: 450, x: -240, y: -120 },
+        { color: '#fef08a', fontSize: 15, height: 180, id: `b1-${now}`, text: 'Explorar nuevas propuestas de valor para usuarios', textColor: '#1e293b', type: 'sticky', width: 180, x: -240, y: -40 },
+        { color: '#bae6fd', fontSize: 15, height: 180, id: `b2-${now}`, text: 'Simplificar el flujo de incorporación (onboarding)', textColor: '#1e293b', type: 'sticky', width: 180, x: -20, y: -40 },
+        { color: '#bbf7d0', fontSize: 15, height: 180, id: `b3-${now}`, text: 'Integrar automatizaciones inteligentes con IA', textColor: '#1e293b', type: 'sticky', width: 180, x: 200, y: -40 },
+        { color: '#fbcfe8', fontSize: 15, height: 180, id: `b4-${now}`, text: 'Optimizar la experiencia en dispositivos móviles', textColor: '#1e293b', type: 'sticky', width: 180, x: -240, y: 160 },
+        { color: '#e9d5ff', fontSize: 15, height: 180, id: `b5-${now}`, text: 'Crear biblioteca de plantillas prediseñadas', textColor: '#1e293b', type: 'sticky', width: 180, x: -20, y: 160 },
+        { color: '#fed7aa', fontSize: 15, height: 180, id: `b6-${now}`, text: 'Implementar métricas de retención y satisfacción', textColor: '#1e293b', type: 'sticky', width: 180, x: 200, y: 160 },
+      ],
+      title: `Lluvia de Ideas: ${title}`,
+    };
+  }
 }
 
 export default AiService;
+

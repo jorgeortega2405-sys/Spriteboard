@@ -1786,6 +1786,19 @@ html.dark-theme .component-wrapper {
   pointer-events: none;
 }
 
+.doc-empty-placeholder {
+  position: absolute;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: #cbd5e1;
+  pointer-events: none;
+  user-select: none;
+  z-index: 1;
+  max-width: 580px;
+  transition: opacity 0.15s ease;
+}
+
 .doc-page__header,
 .doc-page-header {
   position: relative;

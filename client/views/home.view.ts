@@ -7,6 +7,7 @@ import { openCreateFolderModal, openRenameFolderModal } from '../components/fold
 import { createSidebar } from '../components/layout.component.js';
 import { openModal } from '../components/modal.component.js';
 import { openMoveCanvasModal } from '../components/move-canvas-modal.component.js';
+import { openTemplatePreviewModal } from '../components/template-preview-modal.component.js';
 import { openUpgradeModal } from '../components/upgrade-modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { ALL_PRESETS, PresetItem } from '../config/templates.config.js';
@@ -21,6 +22,9 @@ import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { CanvasItem, FolderItem } from '../types/canvas.types.js';
 import { bindDragToScroll, CarouselController, closeAllDropdowns, initCarouselScroll, registerActiveDropdown, removeEmptyState, renderEmptyState, setupDropdown, setupLazyImages, unregisterActiveDropdown } from '../utils/dom.util.js';
+import { exportDocWord } from './doc/doc-export.service.js';
+import { exportMindMapPng } from './mindmap/mindmap-export.service.js';
+import { computeMindMapTreeLayout } from './mindmap/mindmap-layout.engine.js';
 
 const BATCH_SIZE = 20;
 
@@ -572,21 +576,23 @@ class HomeController {
         const preset = ALL_PRESETS.find((p) => p.id === presetId);
         if (!preset) return;
 
-        const canvasType = preset.canvasType || (preset.categoryKey === 'board' ? 'board' : (preset.categoryKey === 'doc' ? 'doc' : (preset.categoryKey === 'pixel' ? 'pixel' : 'diagram')));
-        void createAndOpenCanvas({
-          bgType: canvasType === 'board' || canvasType === 'diagram' ? 'dots' : (canvasType === 'pixel' ? 'transparent' : undefined),
-          boardTemplateId: preset.boardTemplateId,
-          canvasType,
-          diagramSubtype: preset.diagramSubtype,
-          diagramTemplateId: preset.diagramTemplateId,
-          docTemplateId: preset.docTemplateId,
-          height: preset.height,
-          name: preset.name,
-          pixelTemplateId: preset.pixelTemplateId,
-          rootIdeaText: preset.name,
-          solidColor: '#ffffff',
-          templateImage: preset.imagePath,
-          width: preset.width,
+        openTemplatePreviewModal(preset, {
+          onFavoriteToggle: (favId, isFav) => {
+            if (isFav) {
+              this.favoritedTemplateIds.add(favId);
+            } else {
+              this.favoritedTemplateIds.delete(favId);
+            }
+            const cardBtn = this.templatesGridEl?.querySelector<HTMLButtonElement>(`[data-bookmark-preset="${favId}"]`);
+            if (cardBtn) {
+              cardBtn.classList.toggle('is-active', isFav);
+              const tooltipText = isFav ? t('canvas.bookmark_remove') : t('canvas.bookmark_save');
+              cardBtn.setAttribute('data-tooltip', tooltipText);
+              cardBtn.setAttribute('aria-label', tooltipText);
+              cardBtn.innerHTML = `<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${isFav ? 'star_fill' : 'star'}"></use></svg>`;
+              renderIcons(cardBtn);
+            }
+          },
         });
       },
       { signal }
@@ -2485,6 +2491,9 @@ class HomeController {
   }
 
   private async downloadSingleCanvas(canvas: CanvasItem): Promise<void> {
+    const isDoc = canvas.canvas_type === 'doc' || canvas.unit === 'doc';
+    const isDiagram = !isDoc && (canvas.canvas_type === 'diagram' || canvas.canvas_type === 'mindmap' || canvas.unit === 'diagram');
+
     const cleanName = (canvas.name || 'lienzo')
       .trim()
       .replace(/[/\\?%*:|"<>]/g, '_')
@@ -2502,6 +2511,50 @@ class HomeController {
         }
       }
       if (!fullCanvas) fullCanvas = canvas;
+
+      if (isDoc) {
+        let docProject: any = null;
+        if (fullCanvas.data) {
+          try {
+            docProject = typeof fullCanvas.data === 'string' ? JSON.parse(fullCanvas.data) : fullCanvas.data;
+          } catch {}
+        }
+        if (!docProject || !Array.isArray(docProject.pages)) {
+          docProject = {
+            pages: [{ contentHtml: '<p></p>', id: 'page-1' }],
+            settings: {
+              columnsCount: 1,
+              fontFamily: 'Inter',
+              fontSize: 11,
+              lineHeight: 1.5,
+              margins: { bottom: 96, left: 96, right: 96, top: 96 },
+              orientation: 'portrait',
+              paperSize: 'letter',
+              showPageNumbers: true,
+              viewMode: 'paginated',
+              zoom: 1,
+            },
+            type: 'doc',
+            version: 1,
+          };
+        }
+        exportDocWord(docProject, fullCanvas.name);
+        return;
+      }
+
+      if (isDiagram) {
+        let mindMapProject: any = null;
+        if (fullCanvas.data) {
+          try {
+            mindMapProject = typeof fullCanvas.data === 'string' ? JSON.parse(fullCanvas.data) : fullCanvas.data;
+          } catch {}
+        }
+        if (mindMapProject && mindMapProject.nodes && mindMapProject.rootId) {
+          const layoutMap = computeMindMapTreeLayout(mindMapProject);
+          await exportMindMapPng(mindMapProject, layoutMap, `${cleanName}.png`);
+          return;
+        }
+      }
 
       const baseW = fullCanvas.width || 800;
       const baseH = fullCanvas.height || 600;
