@@ -11,6 +11,7 @@ import { showToast } from '../services/toast.service.js';
 import { closeWebSocket, initWebSocket, registerWebSocketHandler } from '../services/websocket.service.js';
 import { CanvasItem } from '../types/canvas.types.js';
 import { closeAllDropdowns, registerActiveDropdown, unregisterActiveDropdown } from '../utils/dom.util.js';
+import { PIXEL_SHAPES, PixelShape } from '../utils/pixel-shapes.util.js';
 import { applyAvatarTier, getFallbackTierColor } from '../utils/tier.util.js';
 import { DOC_TEMPLATES, getDocTemplateById } from '../views/doc/doc-templates.config.js';
 import { openCreateCanvasModal } from './create-canvas-modal.component.js';
@@ -990,9 +991,213 @@ function handleApplyCanvasTemplate(preset: PresetItem, canvasType: 'board' | 'di
   }
 }
 
+let activeElementsCategory: 'shapes' | 'templates' = 'shapes';
+
+function handleApplyCanvasElement(shape: PixelShape, canvasType: 'board' | 'diagram' | 'doc' | 'pixel'): void {
+  const controller = getActiveCanvasController();
+
+  if (canvasType === 'doc') {
+    if (!controller) {
+      showToast('No se encontró el controlador del documento', 'warning');
+      return;
+    }
+
+    if (shape.type === 'vector' && shape.pathD) {
+      controller.insertShapeSvg(shape.pathD, shape.name, '#1e293b');
+    } else if (shape.type === 'sticker' && shape.file) {
+      controller.insertImage(`/assets/img/stickers/${shape.file}`, shape.name);
+    }
+    showToast(`«${shape.name}» insertado en el documento`, 'success');
+    if (window.innerWidth <= 768) {
+      toggleDrawer(false);
+    }
+    return;
+  }
+
+  if (canvasType === 'board') {
+    if (!controller) {
+      showToast('No se encontró el controlador del pizarrón', 'warning');
+      return;
+    }
+
+    controller.insertShapeOrSticker(shape);
+    showToast(`«${shape.name}» añadido al pizarrón`, 'success');
+    if (window.innerWidth <= 768) {
+      toggleDrawer(false);
+    }
+    return;
+  }
+
+  if (canvasType === 'diagram') {
+    if (!controller) {
+      showToast('No se encontró el controlador del diagrama', 'warning');
+      return;
+    }
+
+    controller.insertShapeOrSticker(shape);
+    showToast(`«${shape.name}» añadido al diagrama`, 'success');
+    if (window.innerWidth <= 768) {
+      toggleDrawer(false);
+    }
+    return;
+  }
+
+  if (canvasType === 'pixel') {
+    if (!controller) {
+      showToast('No se encontró el controlador de diseño', 'warning');
+      return;
+    }
+
+    void controller.applyShapeOrSticker(shape);
+    showToast(`«${shape.name}» agregado en una nueva capa`, 'success');
+    if (window.innerWidth <= 768) {
+      toggleDrawer(false);
+    }
+  }
+}
+
+function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement): void {
+  const sidebar = drawer.closest<HTMLElement>('[data-ref="sidebar"]') || document.querySelector<HTMLElement>('[data-ref="sidebar"]');
+  const canvasType = getActiveCanvasType();
+
+  drawerBody.innerHTML = `
+    <div class="canvas-panel-card" data-ref="canvas-panel-card">
+      <div class="canvas-panel-card__header" data-ref="canvas-panel-header">
+        <div class="canvas-panel-card__title-box" data-ref="canvas-panel-title-box">
+          <svg class="component-icon canvas-panel-card__icon" aria-hidden="true"><use href="/icons.svg#category"></use></svg>
+          <span class="canvas-panel-card__title" data-ref="canvas-panel-title">${t('nav.elements') || 'Elementos'}</span>
+        </div>
+        <button type="button" class="component-button component-button--h32 component-button--icon-only rail-btn canvas-panel-card__close" data-ref="btn-close-canvas-panel" data-tooltip="Cerrar panel" aria-label="Cerrar panel">
+          <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+        </button>
+      </div>
+      <div class="canvas-panel-card__body" data-ref="canvas-panel-body">
+        <div class="elements-tabs-bar" data-ref="elements-tabs-bar">
+          <button type="button" class="elements-tab-btn${activeElementsCategory === 'shapes' ? ' is-active' : ''}" data-ref="btn-tab-elements-shapes">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#category"></use></svg>
+            <span>Figuras</span>
+          </button>
+          <button type="button" class="elements-tab-btn${activeElementsCategory === 'templates' ? ' is-active' : ''}" data-ref="btn-tab-elements-templates">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
+            <span>Plantillas</span>
+          </button>
+        </div>
+
+        <div class="canvas-panel-search" data-ref="canvas-panel-search">
+          <svg class="component-icon canvas-panel-search__icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+          <input class="canvas-panel-search__input" data-ref="canvas-elements-search-input" type="text" placeholder="${activeElementsCategory === 'shapes' ? 'Buscar figuras...' : 'Buscar plantillas...'}" />
+        </div>
+
+        <div class="elements-grid" data-ref="elements-grid"></div>
+      </div>
+    </div>
+  `;
+
+  const btnClose = drawerBody.querySelector<HTMLElement>('[data-ref="btn-close-canvas-panel"]');
+  btnClose?.addEventListener('click', (e) => {
+    e.preventDefault();
+    toggleDrawer(false);
+  });
+
+  const btnTabShapes = drawerBody.querySelector<HTMLButtonElement>('[data-ref="btn-tab-elements-shapes"]');
+  const btnTabTemplates = drawerBody.querySelector<HTMLButtonElement>('[data-ref="btn-tab-elements-templates"]');
+  const searchInput = drawerBody.querySelector<HTMLInputElement>('[data-ref="canvas-elements-search-input"]');
+  const grid = drawerBody.querySelector<HTMLElement>('[data-ref="elements-grid"]');
+
+  const renderGrid = (query = '') => {
+    if (!grid) return;
+    const cleanQ = query.trim().toLowerCase();
+    const items = PIXEL_SHAPES.filter((s) => s.category === activeElementsCategory);
+    const filtered = cleanQ
+      ? items.filter((s) => s.name.toLowerCase().includes(cleanQ) || s.id.toLowerCase().includes(cleanQ))
+      : items;
+
+    if (filtered.length === 0) {
+      grid.innerHTML = `
+        <div class="canvas-panel-card__empty" style="grid-column: 1 / -1;" data-ref="elements-empty">
+          <span class="canvas-panel-card__empty-title">Sin resultados</span>
+          <p class="canvas-panel-card__empty-desc">No se encontraron elementos para «${escapeHtml(query)}»</p>
+        </div>
+      `;
+      return;
+    }
+
+    grid.innerHTML = filtered.map((item) => {
+      let previewHtml = '';
+      if (item.type === 'vector' && item.pathD) {
+        previewHtml = `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="${item.pathD}" fill="currentColor" /></svg>`;
+      } else if (item.type === 'sticker' && item.file) {
+        previewHtml = `<img src="/assets/img/stickers/${item.file}" alt="${escapeHtml(item.name)}" loading="lazy" />`;
+      }
+
+      return `
+        <button type="button" class="element-grid-item" data-ref="btn-element-item-${item.id}" data-element-id="${item.id}" data-tooltip="${escapeHtml(item.name)}" aria-label="${escapeHtml(item.name)}">
+          ${previewHtml}
+        </button>
+      `;
+    }).join('');
+
+    grid.querySelectorAll<HTMLButtonElement>('.element-grid-item').forEach((itemBtn) => {
+      itemBtn.addEventListener('click', () => {
+        const elId = itemBtn.getAttribute('data-element-id');
+        const found = PIXEL_SHAPES.find((s) => s.id === elId);
+        if (found) {
+          handleApplyCanvasElement(found, canvasType);
+        }
+      });
+    });
+  };
+
+  btnTabShapes?.addEventListener('click', () => {
+    if (activeElementsCategory === 'shapes') return;
+    activeElementsCategory = 'shapes';
+    btnTabShapes.classList.add('is-active');
+    btnTabTemplates?.classList.remove('is-active');
+    if (searchInput) {
+      searchInput.placeholder = 'Buscar figuras...';
+      searchInput.value = '';
+    }
+    renderGrid('');
+  });
+
+  btnTabTemplates?.addEventListener('click', () => {
+    if (activeElementsCategory === 'templates') return;
+    activeElementsCategory = 'templates';
+    btnTabTemplates.classList.add('is-active');
+    btnTabShapes?.classList.remove('is-active');
+    if (searchInput) {
+      searchInput.placeholder = 'Buscar plantillas...';
+      searchInput.value = '';
+    }
+    renderGrid('');
+  });
+
+  searchInput?.addEventListener('input', () => {
+    renderGrid(searchInput.value);
+  });
+
+  renderGrid();
+
+  const drawerFooter = drawer.querySelector<HTMLElement>('[data-ref="drawer-footer"]');
+  if (drawerFooter) {
+    drawerFooter.style.display = 'none';
+  }
+
+  if (sidebar) {
+    updateCanvasRailActiveState(sidebar);
+  }
+
+  renderIcons(drawerBody);
+}
+
 function renderCanvasDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement): void {
   const tab = activeCanvasTab || 'templates';
   const sidebar = drawer.closest<HTMLElement>('[data-ref="sidebar"]') || document.querySelector<HTMLElement>('[data-ref="sidebar"]');
+
+  if (tab === 'elements') {
+    renderElementsDrawerContent(drawer, drawerBody);
+    return;
+  }
 
   if (tab === 'templates') {
     const canvasType = getActiveCanvasType();

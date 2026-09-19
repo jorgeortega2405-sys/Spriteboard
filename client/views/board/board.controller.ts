@@ -10,6 +10,7 @@ import { renderIcons } from '../../services/icon.service.js';
 import { showToast } from '../../services/toast.service.js';
 import { CanvasItem } from '../../types/canvas.types.js';
 import { setupDropdown } from '../../utils/dom.util.js';
+import { PixelShape, renderShapeCanvas } from '../../utils/pixel-shapes.util.js';
 import { generateShadingRamp, getCollaboratorColor } from '../design/design-color.util.js';
 import { openBoardAiModal } from './board-ai-modal.component.js';
 import { BoardCollaborationManager } from './board-collaboration.manager.js';
@@ -2484,6 +2485,80 @@ export class BoardController {
     this.pixelGrid.syncPixelGridCanvases(this.elements, () => this.requestRedraw());
     this.pushHistoryState();
     this.collaborationManager.broadcastBoardUpdate(this.elements);
+    this.requestRedraw();
+    this.scheduleAutoSave();
+  }
+
+  public insertShapeOrSticker(shape: PixelShape, color = '#3b82f6'): void {
+    this.pushHistoryState();
+
+    const dpr = window.devicePixelRatio || 1;
+    const screenW = this.canvasElement ? this.canvasElement.width / dpr : 800;
+    const screenH = this.canvasElement ? this.canvasElement.height / dpr : 600;
+    const centerWorld = screenToWorld(screenW / 2, screenH / 2, this.canvasElement, this.camera);
+
+    const shapeMap: Record<string, ShapeType> = {
+      circle: 'circle',
+      diamond: 'diamond',
+      rounded_rectangle: 'round-rect',
+      square: 'rect',
+      star_5: 'star',
+      triangle_up: 'triangle',
+    };
+
+    const directShape = shapeMap[shape.id.replace(/^shape_/, '')];
+    if (directShape) {
+      const elWidth = 140;
+      const elHeight = 140;
+      const shapeEl: BoardShapeElement = {
+        fillColor: 'transparent',
+        height: elHeight,
+        id: `shape-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        shapeType: directShape,
+        strokeColor: color,
+        strokeWidth: 3,
+        type: 'shape',
+        width: elWidth,
+        x: Math.round(centerWorld.x - elWidth / 2),
+        y: Math.round(centerWorld.y - elHeight / 2),
+      };
+      this.elements.push(shapeEl);
+      this.collaborationManager.broadcastAddElement(shapeEl);
+      this.selectedElementId = shapeEl.id;
+      this.updateSelectionToolbar();
+      this.requestRedraw();
+      this.scheduleAutoSave();
+      return;
+    }
+
+    const sCanvas = renderShapeCanvas(shape, shape.type === 'vector' ? 'primary' : 'original', color);
+    const dataUrl = sCanvas.toDataURL();
+    const pixelSize = 4;
+    const gridW = sCanvas.width;
+    const gridH = sCanvas.height;
+    const elementWidth = gridW * pixelSize;
+    const elementHeight = gridH * pixelSize;
+
+    const gridEl: BoardPixelGridElement = {
+      backgroundColor: 'transparent',
+      data: dataUrl,
+      gridHeight: gridH,
+      gridWidth: gridW,
+      height: elementHeight,
+      id: `elem-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      pixelSize,
+      showGrid: false,
+      type: 'pixel-grid',
+      width: elementWidth,
+      x: Math.round(centerWorld.x - elementWidth / 2),
+      y: Math.round(centerWorld.y - elementHeight / 2),
+    };
+
+    this.elements.push(gridEl);
+    this.pixelGrid.syncPixelGridCanvases(this.elements, () => this.requestRedraw());
+    this.collaborationManager.broadcastAddElement(gridEl);
+    this.selectedElementId = gridEl.id;
+    this.updateSelectionToolbar();
     this.requestRedraw();
     this.scheduleAutoSave();
   }

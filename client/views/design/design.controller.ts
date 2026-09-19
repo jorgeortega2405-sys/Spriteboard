@@ -3163,6 +3163,20 @@ export class DesignController {
     this.requestRedraw();
   }
 
+  public async applyShapeOrSticker(shape: PixelShape): Promise<void> {
+    const sCanvas = renderShapeCanvas(shape, 'original', '#000000');
+    this.addLayer(true, undefined, shape.name);
+    const layer = this.layersManager.getActiveLayer();
+    if (layer) {
+      const destX = Math.max(0, Math.floor((this.canvasWidth - sCanvas.width) / 2));
+      const destY = Math.max(0, Math.floor((this.canvasHeight - sCanvas.height) / 2));
+      layer.ctx.drawImage(sCanvas, destX, destY);
+    }
+    this.scheduleAutoSave();
+    this.renderLayersCards();
+    this.requestRedraw();
+  }
+
   private openResizeCanvasModal(): void {
     if (this.isInfinite) {
       showToast('Los lienzos infinitos tienen un tamaño dinámico y no admiten redimensión fija', 'warning');

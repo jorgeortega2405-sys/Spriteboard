@@ -1383,6 +1383,122 @@ html.dark-theme .template-choice-card:hover {
   color: #ef4444;
 }
 
+.elements-tabs-bar {
+  display: flex;
+  background: var(--bg-surface-elevated, #f4f4f5);
+  border-radius: 10px;
+  padding: 3px;
+  gap: 2px;
+  margin-bottom: 10px;
+  border: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+html[data-theme="dark"] .elements-tabs-bar,
+html.dark-theme .elements-tabs-bar {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.elements-tab-btn {
+  flex: 1;
+  height: 32px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all var(--sl-transition-fast);
+}
+
+.elements-tab-btn .component-icon {
+  width: 16px;
+  height: 16px;
+  font-size: 16px;
+}
+
+.elements-tab-btn.is-active {
+  background: var(--bg-card, #ffffff);
+  color: var(--text-primary);
+  font-weight: 600;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+html[data-theme="dark"] .elements-tab-btn.is-active,
+html.dark-theme .elements-tab-btn.is-active {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-primary);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.elements-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: 12px;
+  flex: 1;
+}
+
+.element-grid-item {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-surface-elevated, #fafafa);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  cursor: pointer;
+  padding: 6px;
+  box-sizing: border-box;
+  position: relative;
+  transition: transform var(--sl-transition-x-fast), border-color var(--sl-transition-fast), background-color var(--sl-transition-fast), box-shadow var(--sl-transition-fast);
+}
+
+html[data-theme="dark"] .element-grid-item,
+html.dark-theme .element-grid-item {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.element-grid-item:hover {
+  border-color: var(--color-brand, var(--accent-pink));
+  background: var(--bg-card);
+  transform: translateY(-2px) scale(1.04);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+html[data-theme="dark"] .element-grid-item:hover,
+html.dark-theme .element-grid-item:hover {
+  border-color: var(--accent-pink);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+.element-grid-item svg {
+  width: 28px;
+  height: 28px;
+  fill: currentColor;
+  color: var(--text-primary);
+  transition: transform var(--sl-transition-fast);
+}
+
+.element-grid-item img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  transition: transform var(--sl-transition-fast);
+}
+
 @media (max-width: 768px) {
   .layout-drawer.is-expanded {
     position: fixed;

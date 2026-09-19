@@ -9,6 +9,7 @@ import { CanvasItem } from '../../types/canvas.types.js';
 import { ViewController } from '../../types/common.types.js';
 import { DiagramSubtype, MindMapCamera, MindMapConnection, MindMapNode, MindMapProject, SmartHandleDirection } from '../../types/mindmap.types.js';
 import { setupDropdown } from '../../utils/dom.util.js';
+import { PixelShape } from '../../utils/pixel-shapes.util.js';
 import { openMindMapAiModal } from './mindmap-ai-modal.component.js';
 import { MindMapCollaborationManager, MindMapCollaboratorState } from './mindmap-collaboration.manager.js';
 import { exportMindMapMarkdown, exportMindMapPng, exportMindMapSvg, generateMindMapThumbnail } from './mindmap-export.service.js';
@@ -2890,6 +2891,26 @@ export class MindMapController implements ViewController {
     this.selectedNodeId = this.project.rootId;
     this.selectedNodeIds = new Set([this.project.rootId]);
     this.camera = { x: 0, y: 0, zoom: 1 };
+    this.commitChange();
+  }
+
+  public insertShapeOrSticker(shape: PixelShape): void {
+    const parentId = this.selectedNodeId || this.project.rootId;
+    const newId = `node_${crypto.randomUUID().slice(0, 8)}`;
+    const newNode: MindMapNode = {
+      children: [],
+      color: '#3b82f6',
+      id: newId,
+      parentId,
+      shape: 'pill',
+      text: shape.name,
+    };
+    this.project.nodes[newId] = newNode;
+    if (this.project.nodes[parentId]) {
+      this.project.nodes[parentId].children.push(newId);
+    }
+    this.selectedNodeId = newId;
+    this.selectedNodeIds = new Set([newId]);
     this.commitChange();
   }
 
