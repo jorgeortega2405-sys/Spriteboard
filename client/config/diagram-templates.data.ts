@@ -143,7 +143,7 @@ export function getCustomDiagramProject(
       color: '#3b82f6',
       fontSize: 13,
       height: 34,
-      icon: 'cog',
+      icon: 'settings',
       id: step1Id,
       orderIndex: 0,
       parentId: rootId,

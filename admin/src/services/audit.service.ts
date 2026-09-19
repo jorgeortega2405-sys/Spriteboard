@@ -169,7 +169,7 @@ export class AuditService {
         }
 
         const result = await cassandraClient.execute(query, params, { prepare: true });
-        return result.rows.map((r) => ({
+        return result.rows.map((r: any) => ({
           action: String(r.action || ''),
           actor_id: Number(r.actor_id || 0),
           actor_role: String(r.actor_role || 'ADMIN'),
@@ -258,7 +258,7 @@ export class AuditService {
       }
 
       const result = await cassandraClient.execute(query, params, { prepare: true });
-      return result.rows.map((r) => ({
+      return result.rows.map((r: any) => ({
         admin_id: Number(r.admin_id || 0),
         admin_username: String(r.admin_username || ''),
         bucket_month: String(r.bucket_month || month),
@@ -305,7 +305,7 @@ export class AuditService {
       }
 
       const result = await cassandraClient.execute(query, params, { prepare: true });
-      return result.rows.map((r) => ({
+      return result.rows.map((r: any) => ({
         bucket_month: String(r.bucket_month || month),
         created_at: r.created_at instanceof Date ? r.created_at.toISOString() : String(r.created_at || ''),
         first_message: String(r.first_message || ''),
@@ -331,7 +331,7 @@ export class AuditService {
         ORDER BY created_at ASC, message_id ASC
       `;
       const result = await cassandraClient.execute(query, [sessionId], { prepare: true });
-      return result.rows.map((r) => ({
+      return result.rows.map((r: any) => ({
         content: String(r.content || ''),
         created_at: r.created_at instanceof Date ? r.created_at.toISOString() : String(r.created_at || ''),
         feedback_rating: String(r.feedback_rating || 'none'),

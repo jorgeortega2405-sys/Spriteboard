@@ -758,26 +758,32 @@
       </div>
 
       <div class="design-shape-minitoolbar is-hidden" data-ref="design-shape-minitoolbar">
-        <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-shape-inject" data-tooltip="Inyectar en capa activa (Enter)" aria-label="Inyectar">
-          <span class="component-icon">check</span>
-        </button>
+        <div class="design-toolbar-group" data-ref="shape-minitoolbar-group-actions">
+          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-shape-inject" data-tooltip="Inyectar en capa activa (Enter)" aria-label="Inyectar">
+            <span class="component-icon">check</span>
+          </button>
+        </div>
         <div class="design-toolbar-divider" data-ref="shape-minitoolbar-divider-1"></div>
-        <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-shape-outline" data-tooltip="Contorno 1px" aria-label="Contorno">
-          <span class="component-icon">crop_free</span>
-        </button>
-        <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-shape-flip-h" data-tooltip="Voltear Horizontal (H)" aria-label="Voltear Horizontal">
-          <span class="component-icon">swap_horiz</span>
-        </button>
-        <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-shape-flip-v" data-tooltip="Voltear Vertical (V)" aria-label="Voltear Vertical">
-          <span class="component-icon">swap_vert</span>
-        </button>
-        <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-shape-rotate" data-tooltip="Rotar 90° (R)" aria-label="Rotar 90°">
-          <span class="component-icon">rotate_right</span>
-        </button>
+        <div class="design-toolbar-group" data-ref="shape-minitoolbar-group-transform">
+          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-shape-outline" data-tooltip="Contorno 1px" aria-label="Contorno">
+            <span class="component-icon">crop_free</span>
+          </button>
+          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-shape-flip-h" data-tooltip="Voltear Horizontal (H)" aria-label="Voltear Horizontal">
+            <span class="component-icon">swap_horiz</span>
+          </button>
+          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-shape-flip-v" data-tooltip="Voltear Vertical (V)" aria-label="Voltear Vertical">
+            <span class="component-icon">swap_vert</span>
+          </button>
+          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-shape-rotate" data-tooltip="Rotar 90° (R)" aria-label="Rotar 90°">
+            <span class="component-icon">rotate_right</span>
+          </button>
+        </div>
         <div class="design-toolbar-divider" data-ref="shape-minitoolbar-divider-2"></div>
-        <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-shape-cancel" data-tooltip="Cancelar (Esc)" aria-label="Cancelar figura">
-          <span class="component-icon">close</span>
-        </button>
+        <div class="design-toolbar-group" data-ref="shape-minitoolbar-group-cancel">
+          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-shape-cancel" data-tooltip="Cancelar (Esc)" aria-label="Cancelar figura">
+            <span class="component-icon">close</span>
+          </button>
+        </div>
       </div>
 
       <div class="design-bottom-toolbar-container" data-ref="design-toolbar-container">
@@ -793,38 +799,46 @@
 
         <div class="design-frames-tray is-hidden" data-ref="design-frames-tray">
           <div class="design-frames-tray__toolbar" data-ref="frames-toolbar">
-            <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-frame-play" data-tooltip="Reproducir animación" aria-label="Reproducir">
-              <span class="component-icon">play_arrow</span>
-            </button>
-            <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-frame-prev" data-tooltip="Cuadro anterior" aria-label="Cuadro anterior">
-              <span class="component-icon">skip_previous</span>
-            </button>
-            <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-frame-next" data-tooltip="Cuadro siguiente" aria-label="Cuadro siguiente">
-              <span class="component-icon">skip_next</span>
-            </button>
+            <div class="design-toolbar-group" data-ref="frames-group-playback">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-frame-play" data-tooltip="Reproducir animación" aria-label="Reproducir">
+                <span class="component-icon">play_arrow</span>
+              </button>
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-frame-prev" data-tooltip="Cuadro anterior" aria-label="Cuadro anterior">
+                <span class="component-icon">skip_previous</span>
+              </button>
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-frame-next" data-tooltip="Cuadro siguiente" aria-label="Cuadro siguiente">
+                <span class="component-icon">skip_next</span>
+              </button>
+            </div>
             <div class="design-toolbar-divider" data-ref="frames-divider-1"></div>
-            <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-frame-duplicate" data-tooltip="Duplicar cuadro" aria-label="Duplicar cuadro">
-              <span class="component-icon">content_copy</span>
-            </button>
-            <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-frame-delete" data-tooltip="Eliminar cuadro" aria-label="Eliminar cuadro">
-              <span class="component-icon">delete_outline</span>
-            </button>
+            <div class="design-toolbar-group" data-ref="frames-group-actions">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-frame-duplicate" data-tooltip="Duplicar cuadro" aria-label="Duplicar cuadro">
+                <span class="component-icon">content_copy</span>
+              </button>
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-frame-delete" data-tooltip="Eliminar cuadro" aria-label="Eliminar cuadro">
+                <span class="component-icon">delete_outline</span>
+              </button>
+            </div>
             <div class="design-toolbar-divider" data-ref="frames-divider-2"></div>
-            <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-frame-fps" data-tooltip="Cambiar FPS" aria-label="Cambiar FPS">
-              <span data-ref="frame-fps-text">8 FPS</span>
-            </button>
-            <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-frame-onion" data-tooltip="Papel cebolla (Onion Skin)" aria-label="Papel cebolla">
-              <span class="component-icon">auto_awesome_motion</span>
-            </button>
+            <div class="design-toolbar-group" data-ref="frames-group-settings">
+              <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-frame-fps" data-tooltip="Cambiar FPS" aria-label="Cambiar FPS">
+                <span data-ref="frame-fps-text">8 FPS</span>
+              </button>
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-frame-onion" data-tooltip="Papel cebolla (Onion Skin)" aria-label="Papel cebolla">
+                <span class="component-icon">auto_awesome_motion</span>
+              </button>
+            </div>
             <div class="design-toolbar-divider" data-ref="frames-divider-3"></div>
-            <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-animation-tags" data-tooltip="Etiquetas de animación / Secciones" aria-label="Etiquetas">
-              <span class="component-icon">label</span>
-              <span data-ref="animation-tags-btn-text">Secciones</span>
-            </button>
-            <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-frame-duration" data-tooltip="Duración del cuadro actual" aria-label="Duración del cuadro">
-              <span class="component-icon">timer</span>
-              <span data-ref="frame-duration-text">125ms</span>
-            </button>
+            <div class="design-toolbar-group" data-ref="frames-group-meta">
+              <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-animation-tags" data-tooltip="Etiquetas de animación / Secciones" aria-label="Etiquetas">
+                <span class="component-icon">label</span>
+                <span data-ref="animation-tags-btn-text">Secciones</span>
+              </button>
+              <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-frame-duration" data-tooltip="Duración del cuadro actual" aria-label="Duración del cuadro">
+                <span class="component-icon">timer</span>
+                <span data-ref="frame-duration-text">125ms</span>
+              </button>
+            </div>
           </div>
           <div class="design-animation-tags-bar" data-ref="animation-tags-bar" style="display: none;"></div>
           <div class="design-frames-tray__cards-wrapper" data-ref="frames-cards-wrapper">
@@ -1199,7 +1213,9 @@
                 <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-zoom-fit" data-tooltip="Ajustar a pantalla" aria-label="Ajustar a pantalla">
                   <span class="component-icon">fit_screen</span>
                 </button>
-                <div class="design-toolbar-divider" data-ref="toolbar-divider-help"></div>
+              </div>
+              <div class="design-toolbar-divider" data-ref="toolbar-divider-help"></div>
+              <div class="design-toolbar-group" data-ref="toolbar-group-help">
                 <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-help" data-tooltip="Centro de ayuda y atajos de teclado" aria-label="Ayuda">
                   <span class="component-icon">help</span>
                 </button>

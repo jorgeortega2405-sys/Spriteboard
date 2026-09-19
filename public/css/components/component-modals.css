@@ -5641,9 +5641,21 @@ html.dark-theme .component-bottom--canvas {
 .design-toolbar-group {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
   flex: 0 0 auto;
   flex-shrink: 0;
+  padding: 2px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 9999px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  box-sizing: border-box;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.design-toolbar-group:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.12);
 }
 
 .design-toolbar-group > .settings-dropdown-wrapper {
@@ -5658,18 +5670,18 @@ html.dark-theme .component-bottom--canvas {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
-  min-width: 34px;
-  min-height: 34px;
-  max-width: 34px;
-  max-height: 34px;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  max-width: 32px;
+  max-height: 32px;
   padding: 0;
   border-radius: 50% !important;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.9);
+  background: transparent;
+  border: 1px solid transparent;
+  box-shadow: none;
+  color: rgba(255, 255, 255, 0.85);
   cursor: pointer;
   transition: all 0.15s ease;
   flex-shrink: 0;
@@ -5678,9 +5690,8 @@ html.dark-theme .component-bottom--canvas {
 }
 
 .design-toolbar-btn:hover {
-  background: rgba(255, 255, 255, 0.14);
-  border-color: rgba(255, 255, 255, 0.25);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
   color: #ffffff;
 }
 
@@ -5688,39 +5699,39 @@ html.dark-theme .component-bottom--canvas {
 .design-toolbar-btn.is-disabled {
   opacity: 0.35;
   cursor: not-allowed;
-  background: rgba(255, 255, 255, 0.02);
-  border-color: rgba(255, 255, 255, 0.05);
+  background: transparent;
+  border-color: transparent;
   box-shadow: none;
   color: rgba(255, 255, 255, 0.3);
 }
 
 .design-toolbar-btn:disabled:hover,
 .design-toolbar-btn.is-disabled:hover {
-  background: rgba(255, 255, 255, 0.02);
-  border-color: rgba(255, 255, 255, 0.05);
+  background: transparent;
+  border-color: transparent;
   box-shadow: none;
   color: rgba(255, 255, 255, 0.3);
 }
 
 .design-toolbar-btn:active {
   transform: scale(0.94);
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.18);
 }
 
 .design-toolbar-btn.is-active {
   background: rgba(255, 255, 255, 0.22);
-  border-color: rgba(255, 255, 255, 0.45);
+  border-color: rgba(255, 255, 255, 0.4);
   color: #ffffff;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 2px 8px rgba(0, 0, 0, 0.25);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 2px 6px rgba(0, 0, 0, 0.25);
 }
 
 .design-toolbar-btn--sm {
-  width: 30px;
-  height: 30px;
-  min-width: 30px;
-  min-height: 30px;
-  max-width: 30px;
-  max-height: 30px;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
+  max-width: 28px;
+  max-height: 28px;
   border-radius: 50% !important;
   flex-shrink: 0;
 }
@@ -5730,12 +5741,12 @@ html.dark-theme .component-bottom--canvas {
   max-width: none;
   max-height: none;
   min-width: max-content;
-  height: 30px;
-  padding: 0 10px;
+  height: 28px;
+  padding: 0 8px;
   border-radius: 9999px !important;
-  gap: 6px;
+  gap: 5px;
   font-family: 'Roboto Mono', 'SFMono-Regular', Consolas, monospace;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 500;
   letter-spacing: 0.02em;
   white-space: nowrap;
@@ -5743,7 +5754,7 @@ html.dark-theme .component-bottom--canvas {
 }
 
 .design-toolbar-btn--text span {
-  font-size: 12px;
+  font-size: 11.5px;
   line-height: 1;
 }
 
@@ -5766,8 +5777,8 @@ html.dark-theme .component-bottom--canvas {
 
 .design-toolbar-btn .board-fill-preview-dot {
   position: absolute;
-  bottom: 3px;
-  right: 3px;
+  bottom: 2px;
+  right: 2px;
   width: 7px;
   height: 7px;
   border-radius: 50%;
@@ -5777,23 +5788,27 @@ html.dark-theme .component-bottom--canvas {
 }
 
 .design-toolbar-divider {
-  width: 1px;
-  min-width: 1px;
-  height: 20px;
-  background: rgba(255, 255, 255, 0.12);
-  margin: 0 4px;
-  flex-shrink: 0;
+  display: none;
+}
+
+.menu-panel .design-toolbar-divider,
+.design-options-tray .design-toolbar-divider,
+.design-colors-panel .design-toolbar-divider {
+  display: block;
+  width: 100%;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 4px 0;
 }
 
 .design-color-picker-wrapper {
   position: relative;
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   border-radius: 9999px;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.06);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  border: 1px solid transparent;
+  background: transparent;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -5802,9 +5817,8 @@ html.dark-theme .component-bottom--canvas {
 }
 
 .design-color-picker-wrapper:hover {
-  background: rgba(255, 255, 255, 0.14);
-  border-color: rgba(255, 255, 255, 0.25);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .design-color-picker__input {
@@ -5830,14 +5844,14 @@ html.dark-theme .component-bottom--canvas {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 4px 12px;
-  height: 28px;
+  padding: 2px 8px;
+  height: 26px;
   font-family: 'Roboto Mono', 'SFMono-Regular', Consolas, monospace;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 500;
   color: #ffffff;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+  border: 1px solid transparent;
   border-radius: 9999px;
   letter-spacing: 0.02em;
   white-space: nowrap;
@@ -5845,22 +5859,19 @@ html.dark-theme .component-bottom--canvas {
 
 .design-toolbar-badge--clickable {
   cursor: pointer;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
   transition: all 0.15s ease;
-  min-width: 52px;
+  min-width: 44px;
 }
 
 .design-toolbar-badge--clickable:hover {
-  background: rgba(255, 255, 255, 0.14);
-  border-color: rgba(255, 255, 255, 0.25);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  color: #ffffff;
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
+.design-toolbar-badge--clickable.is-active,
 .design-toolbar-badge.is-active {
-  background: rgba(255, 255, 255, 0.28);
-  border-color: rgba(255, 255, 255, 0.55);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 2px 8px rgba(0, 0, 0, 0.25);
+  background: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.4);
   color: #ffffff;
   font-weight: 600;
 }

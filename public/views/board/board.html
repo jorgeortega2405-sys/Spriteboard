@@ -96,29 +96,33 @@
       <div class="board-text-editor-container" data-ref="board-text-editor-container"></div>
 
       <div class="board-selection-toolbar is-hidden" data-ref="board-selection-toolbar">
-        <button type="button" class="design-toolbar-btn design-toolbar-btn--sm is-hidden" data-ref="btn-sel-edit-pixels" data-tooltip="Pintar píxeles" aria-label="Pintar píxeles">
-          <span class="component-icon">edit</span>
-        </button>
-        <button type="button" class="design-toolbar-btn design-toolbar-btn--sm is-hidden" data-ref="btn-sel-toggle-grid" data-tooltip="Alternar cuadrícula" aria-label="Alternar cuadrícula">
-          <span class="component-icon">grid_on</span>
-        </button>
-        <button type="button" class="design-toolbar-btn design-toolbar-btn--sm is-hidden" data-ref="btn-sel-export-sprite" data-tooltip="Descargar sprite PNG" aria-label="Descargar sprite PNG">
-          <span class="component-icon">download</span>
-        </button>
-        <div class="design-toolbar-divider is-hidden" data-ref="sel-pixel-divider"></div>
-        <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-sel-duplicate" data-tooltip="Duplicar (Ctrl+D)" aria-label="Duplicar">
-          <span class="component-icon">content_copy</span>
-        </button>
-        <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-sel-bring-forward" data-tooltip="Traer al frente" aria-label="Traer al frente">
-          <span class="component-icon">flip_to_front</span>
-        </button>
-        <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-sel-send-backward" data-tooltip="Enviar al fondo" aria-label="Enviar al fondo">
-          <span class="component-icon">flip_to_back</span>
-        </button>
-        <div class="design-toolbar-divider"></div>
-        <button type="button" class="design-toolbar-btn design-toolbar-btn--sm board-selection-action-btn--danger" data-ref="btn-sel-delete" data-tooltip="Eliminar (Supr)" aria-label="Eliminar">
-          <span class="component-icon">delete_outline</span>
-        </button>
+        <div class="design-toolbar-group" data-ref="board-sel-group-pixels">
+          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm is-hidden" data-ref="btn-sel-edit-pixels" data-tooltip="Pintar píxeles" aria-label="Pintar píxeles">
+            <span class="component-icon">edit</span>
+          </button>
+          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm is-hidden" data-ref="btn-sel-toggle-grid" data-tooltip="Alternar cuadrícula" aria-label="Alternar cuadrícula">
+            <span class="component-icon">grid_on</span>
+          </button>
+          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm is-hidden" data-ref="btn-sel-export-sprite" data-tooltip="Descargar sprite PNG" aria-label="Descargar sprite PNG">
+            <span class="component-icon">download</span>
+          </button>
+        </div>
+        <div class="design-toolbar-group" data-ref="board-sel-group-layer">
+          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-sel-duplicate" data-tooltip="Duplicar (Ctrl+D)" aria-label="Duplicar">
+            <span class="component-icon">content_copy</span>
+          </button>
+          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-sel-bring-forward" data-tooltip="Traer al frente" aria-label="Traer al frente">
+            <span class="component-icon">flip_to_front</span>
+          </button>
+          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-sel-send-backward" data-tooltip="Enviar al fondo" aria-label="Enviar al fondo">
+            <span class="component-icon">flip_to_back</span>
+          </button>
+        </div>
+        <div class="design-toolbar-group" data-ref="board-sel-group-delete">
+          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm board-selection-action-btn--danger" data-ref="btn-sel-delete" data-tooltip="Eliminar (Supr)" aria-label="Eliminar">
+            <span class="component-icon">delete_outline</span>
+          </button>
+        </div>
       </div>
 
       <div class="design-colors-panel is-hidden" data-ref="board-colors-panel">
