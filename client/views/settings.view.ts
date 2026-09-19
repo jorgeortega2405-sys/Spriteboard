@@ -835,13 +835,21 @@ export async function createSecurityView(): Promise<HTMLElement> {
       const modal = openModal({
         titleKey: 'settings.security.two_factor_disable_title',
         descriptionKey: 'settings.security.two_factor_disable_confirm',
+        bodyHtml: `
+          <label class="field" data-ref="field-disable-2fa-password" style="margin-top: 16px;">
+            <input class="field__input" data-ref="input-disable-2fa-password" type="password" placeholder=" " autocomplete="current-password" />
+            <span class="field__label" data-ref="label-disable-2fa-password">${t('settings.security.current_password_label') || 'Contraseña o código de 6 dígitos'}</span>
+          </label>
+        `,
         cancelText: t('modal.cancel'),
         confirmText: t('settings.security.btn_disable_2fa') || 'Desactivar',
         showConfirm: true,
         onConfirm: async (inst) => {
           inst.setConfirmLoading(true);
+          const input = inst.backdrop.querySelector<HTMLInputElement>('[data-ref="input-disable-2fa-password"]');
+          const val = input ? input.value.trim() : '';
           try {
-            const res = await postApi(API_ROUTES.settings.twoFactorDisable);
+            const res = await postApi(API_ROUTES.settings.twoFactorDisable, { password: val, code: val });
             const data = await res.json();
             if (res.ok && data.ok) {
               inst.close();

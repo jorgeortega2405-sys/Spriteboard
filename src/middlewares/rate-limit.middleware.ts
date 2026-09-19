@@ -279,3 +279,19 @@ export const ssoCallbackLimiter = createRateLimiter({
   max: 15,
   message: 'Demasiados intentos de autenticación SSO. Por favor espera unos minutos.',
 });
+
+export const searchLimiter = createRateLimiter({
+  prefix: 'search_queries',
+  windowMs: 60 * 1000,
+  max: 60,
+  keyGenerator: getUserOrIpKey,
+  message: 'Has realizado demasiadas búsquedas en poco tiempo. Por favor espera un momento.',
+});
+
+export const canvasSnapshotLimiter = createRateLimiter({
+  prefix: 'canvas_snapshots',
+  windowMs: 10 * 60 * 1000,
+  max: 20,
+  keyGenerator: getUserOrIpKey,
+  message: 'Has alcanzado el límite de creación de versiones. Por favor espera unos minutos antes de crear otra.',
+});

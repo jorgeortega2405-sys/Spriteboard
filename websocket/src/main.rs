@@ -326,11 +326,16 @@ async fn ws_handler(
     req: Request,
 ) -> Response {
     if let Some(origin) = req.headers().get(header::ORIGIN).and_then(|o| o.to_str().ok()) {
-        let is_allowed = origin.starts_with("http://localhost")
-            || origin.starts_with("https://localhost")
-            || origin.starts_with("http://127.0.0.1")
-            || origin.starts_with("https://127.0.0.1")
-            || env::var("ALLOWED_ORIGIN").map(|ao| origin == ao).unwrap_or(false);
+        let is_allowed = origin == "http://localhost"
+            || origin == "https://localhost"
+            || origin.starts_with("http://localhost:")
+            || origin.starts_with("https://localhost:")
+            || origin == "http://127.0.0.1"
+            || origin == "https://127.0.0.1"
+            || origin.starts_with("http://127.0.0.1:")
+            || origin.starts_with("https://127.0.0.1:")
+            || env::var("ALLOWED_ORIGIN").map(|ao| origin == ao).unwrap_or(false)
+            || env::var("APP_URL").map(|au| origin == au || origin.trim_end_matches('/') == au.trim_end_matches('/')).unwrap_or(false);
 
         if !is_allowed && env::var("NODE_ENV").unwrap_or_default() == "production" {
             return axum::response::IntoResponse::into_response((

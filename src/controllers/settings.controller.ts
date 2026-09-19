@@ -3,7 +3,7 @@ import { addAccountToSession, removeAccountFromSession, updateActiveAccountInSes
 import { logger } from '../services/logger.service.js';
 import { deleteAvatar, getPasswordStatus, getUserPreferences, logUserAudit, requestEmailChangeCode, unlinkGoogleAccount, updateAvatar, updateEmail, updateUsername, updateUserPasswordFromSettings, updateUserPreferences, verifyCurrentPassword, verifyEmailChange } from '../services/settings.service.js';
 import { clearPending2FASetup, generateBackupCodes, generateTotpSecret, getOtpAuthUrl, getPending2FASetup, savePending2FASetup, verifyTotpCode } from '../services/two-factor.service.js';
-import { deleteUserPermanently, disableUser2FA, enableUser2FA, findUserById } from '../services/user.service.js';
+import { deleteUserPermanently, disableUser2FA, enableUser2FA, findUserById, getUser2FASecret, verifyAndConsumeBackupCode } from '../services/user.service.js';
 import { consumePasswordChangeAuth } from '../services/verification.service.js';
 import { sanitizeUser, sendBadRequest, sendConflict, sendInternalError, sendSuccess, sendUnauthorized } from '../utils/http.util.js';
 import { Request, Response } from 'express';
@@ -442,6 +442,48 @@ export async function handleDisable2FA(req: Request, res: Response): Promise<voi
     const currentUser = getCurrentUser(req);
     if (!currentUser) {
       sendUnauthorized(res, 'Sesión no válida o expirada.');
+      return;
+    }
+
+    const { code, password } = req.body || {};
+    const pwdStatus = await getPasswordStatus(currentUser.id);
+
+    let isAuthorized = false;
+    if (password && typeof password === 'string' && pwdStatus.hasPassword) {
+      const verifyRes = await verifyCurrentPassword(currentUser.id, password);
+      if (verifyRes.success) {
+        isAuthorized = true;
+      } else {
+        sendBadRequest(res, verifyRes.error || 'La contraseña ingresada es incorrecta.');
+        return;
+      }
+    }
+
+    if (!isAuthorized && code && typeof code === 'string') {
+      const cleanCode = code.trim();
+      const twoFactorData = await getUser2FASecret(currentUser.id);
+      if (/^\d{6}$/.test(cleanCode) && twoFactorData?.two_factor_secret) {
+        if (verifyTotpCode(cleanCode, twoFactorData.two_factor_secret, 2)) {
+          isAuthorized = true;
+        }
+      }
+      if (!isAuthorized) {
+        const backupConsumed = await verifyAndConsumeBackupCode(currentUser.id, cleanCode);
+        if (backupConsumed) {
+          isAuthorized = true;
+        }
+      }
+    }
+
+    if (!isAuthorized) {
+      const authCheck = await consumePasswordChangeAuth(currentUser.id);
+      if (authCheck.valid) {
+        isAuthorized = true;
+      }
+    }
+
+    if (!isAuthorized) {
+      sendBadRequest(res, 'Debes ingresar tu contraseña actual o un código de verificación para desactivar la autenticación en dos pasos.');
       return;
     }
 

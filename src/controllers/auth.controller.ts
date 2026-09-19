@@ -751,8 +751,8 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
       const resetToken = crypto.randomBytes(32).toString('hex');
       await savePasswordResetToken(user.email, user.id, resetToken, 900);
 
-      const origin = req.get('origin') || `${req.protocol}://${req.get('host')}`;
-      const resetUrl = `${origin}/reset-password?token=${resetToken}`;
+      const baseUrl = (config.appUrl || config.baseUrl || 'http://localhost:3000').replace(/\/+$/, '');
+      const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
 
       await sendPasswordResetEmail(user.email, user.username, resetUrl, 15);
 

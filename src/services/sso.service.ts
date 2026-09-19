@@ -183,3 +183,62 @@ export async function resolveOrProvisionFederatedUser(
     throw err;
   }
 }
+
+export function validateSamlAssertion(
+  decodedXml: string,
+  tenant: EnterpriseTenant
+): { valid: boolean; email?: string; externalId?: string; displayName?: string; error?: string } {
+  const notBeforeMatch = decodedXml.match(/NotBefore=["']([^"']+)["']/i);
+  const notOnOrAfterMatch = decodedXml.match(/NotOnOrAfter=["']([^"']+)["']/i);
+
+  if (notBeforeMatch && notBeforeMatch[1]) {
+    const notBefore = new Date(notBeforeMatch[1]).getTime();
+    if (!isNaN(notBefore) && Date.now() < notBefore - 60000) {
+      return { valid: false, error: 'La aserción SAML aún no es válida.' };
+    }
+  }
+
+  if (notOnOrAfterMatch && notOnOrAfterMatch[1]) {
+    const notOnOrAfter = new Date(notOnOrAfterMatch[1]).getTime();
+    if (!isNaN(notOnOrAfter) && Date.now() > notOnOrAfter + 60000) {
+      return { valid: false, error: 'La aserción SAML ha expirado.' };
+    }
+  }
+
+  if (tenant.idp_certificate && tenant.idp_certificate.trim()) {
+    const cleanCert = tenant.idp_certificate
+      .replace(/-----BEGIN CERTIFICATE-----/g, '')
+      .replace(/-----END CERTIFICATE-----/g, '')
+      .replace(/\s+/g, '');
+
+    const hasSignature = /<(?:ds:)?Signature[\s>]/i.test(decodedXml);
+    if (!hasSignature) {
+      return { valid: false, error: 'La respuesta SAML no contiene la firma digital requerida.' };
+    }
+
+    const x509Match = decodedXml.match(/<(?:ds:)?X509Certificate[^>]*>([^<]+)<\/(?:ds:)?X509Certificate>/i);
+    if (x509Match && cleanCert) {
+      const xmlCert = x509Match[1].replace(/\s+/g, '');
+      if (xmlCert !== cleanCert) {
+        return { valid: false, error: 'El certificado de la firma no coincide con el certificado IdP registrado.' };
+      }
+    }
+  }
+
+  const emailMatch = decodedXml.match(/<saml2?:NameID[^>]*>([^<]+)<\/saml2?:NameID>/i) ||
+                     decodedXml.match(/<NameID[^>]*>([^<]+)<\/NameID>/i);
+  if (!emailMatch) {
+    return { valid: false, error: 'No se encontró un NameID en la aserción SAML.' };
+  }
+
+  const resolvedEmail = emailMatch[1].trim().toLowerCase();
+  const displayNameMatch = decodedXml.match(/<saml2?:AttributeValue[^>]*>([^<]+)<\/saml2?:AttributeValue>/i);
+  const displayName = displayNameMatch ? displayNameMatch[1].trim() : undefined;
+
+  return {
+    displayName,
+    email: resolvedEmail,
+    externalId: resolvedEmail,
+    valid: true,
+  };
+}

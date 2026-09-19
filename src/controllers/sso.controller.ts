@@ -1,7 +1,7 @@
 import { config } from '../config/env.config.js';
 import { addAccountToSession } from '../services/auth.service.js';
 import { logger } from '../services/logger.service.js';
-import { checkDomainSso, getSpMetadataXml, resolveOrProvisionFederatedUser } from '../services/sso.service.js';
+import { checkDomainSso, getSpMetadataXml, resolveOrProvisionFederatedUser, validateSamlAssertion } from '../services/sso.service.js';
 import { getTenantByDomain, getTenantByUuid } from '../services/tenant.service.js';
 import { Request, Response } from 'express';
 
@@ -100,19 +100,32 @@ export async function samlCallbackHandler(req: Request, res: Response): Promise<
     } else if (SAMLResponse) {
       try {
         const decoded = Buffer.from(SAMLResponse, 'base64').toString('utf-8');
-        const emailMatch = decoded.match(/<saml2?:NameID[^>]*>([^<]+)<\/saml2?:NameID>/i) ||
-                           decoded.match(/<NameID[^>]*>([^<]+)<\/NameID>/i);
-        if (emailMatch) {
-          resolvedEmail = emailMatch[1].trim().toLowerCase();
-          externalId = resolvedEmail;
+        let tempTenant = targetTenant;
+        if (!tempTenant) {
+          const emailMatch = decoded.match(/<saml2?:NameID[^>]*>([^<]+)<\/saml2?:NameID>/i) ||
+                             decoded.match(/<NameID[^>]*>([^<]+)<\/NameID>/i);
+          if (emailMatch) {
+            const domain = emailMatch[1].trim().toLowerCase().split('@')[1];
+            if (domain) {
+              tempTenant = await getTenantByDomain(domain);
+            }
+          }
         }
 
-        const domain = resolvedEmail.split('@')[1];
-        if (domain && !targetTenant) {
-          targetTenant = await getTenantByDomain(domain);
+        if (tempTenant) {
+          targetTenant = tempTenant;
+          const validation = validateSamlAssertion(decoded, tempTenant);
+          if (!validation.valid) {
+            logger.security.warn('Validación de aserción SAML fallida', { error: validation.error, tenantId: tempTenant.id });
+            res.redirect('/login?error=sso_invalid_signature');
+            return;
+          }
+          resolvedEmail = validation.email || '';
+          externalId = validation.externalId || resolvedEmail;
+          displayName = validation.displayName || '';
         }
       } catch (e) {
-        logger.security.error('Error al decodificar SAMLResponse', e);
+        logger.security.error('Error al decodificar y validar SAMLResponse', e);
       }
     }
 

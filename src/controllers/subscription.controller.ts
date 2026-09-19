@@ -35,7 +35,7 @@ export async function createCheckout(req: Request, res: Response): Promise<void>
     }
 
     const cycle = billingPeriod === 'yearly' ? 'yearly' : 'monthly';
-    const baseUrl = `${req.protocol}://${req.get('host')}` || config.baseUrl;
+    const baseUrl = (config.appUrl || config.baseUrl || 'http://localhost:3000').replace(/\/+$/, '');
 
     const checkout = await stripeService.createCheckoutSession(
       user.id,
