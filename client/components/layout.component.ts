@@ -1,6 +1,7 @@
 import { navigate, render } from '../app-router.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { hasFeature, protectRoute } from '../config/plans.config.js';
+import { ALL_PRESETS, PresetItem } from '../config/templates.config.js';
 import { currentUser, deleteApi, escapeHtml, getApi, linkedAccounts, logoutAllApi, logoutApi, patchApi, postApi, switchAccountApi } from '../services/api.service.js';
 import { getAllLocalCanvases } from '../services/canvas-storage.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
@@ -11,12 +12,14 @@ import { closeWebSocket, initWebSocket, registerWebSocketHandler } from '../serv
 import { CanvasItem } from '../types/canvas.types.js';
 import { closeAllDropdowns, registerActiveDropdown, unregisterActiveDropdown } from '../utils/dom.util.js';
 import { applyAvatarTier, getFallbackTierColor } from '../utils/tier.util.js';
+import { DOC_TEMPLATES, getDocTemplateById } from '../views/doc/doc-templates.config.js';
 import { openCreateCanvasModal } from './create-canvas-modal.component.js';
 import { openModal } from './modal.component.js';
 import { openUpgradeModal } from './upgrade-modal.component.js';
 
 let isDrawerOpen = false;
 let isChatOpen = false;
+let activeCanvasTab: 'templates' | 'elements' | 'uploads' | 'projects' | null = null;
 let chatSidebarElement: HTMLElement | null = null;
 let chatSidebarInitPromise: Promise<HTMLElement> | null = null;
 
@@ -55,6 +58,11 @@ function createDrawerElement(): HTMLElement {
 function updateDrawerFooter(drawer: HTMLElement, currentPath: string): void {
   const drawerFooter = drawer.querySelector<HTMLElement>('[data-ref="drawer-footer"]');
   if (!drawerFooter) return;
+
+  if (isCanvasRoute(currentPath)) {
+    drawerFooter.style.display = 'none';
+    return;
+  }
 
   drawerFooter.innerHTML = '';
 
@@ -136,6 +144,10 @@ export function toggleDrawer(forceState?: boolean): void {
       toggleChatSidebar(false);
     }
   } else {
+    activeCanvasTab = null;
+    if (sidebar) {
+      updateCanvasRailActiveState(sidebar);
+    }
     closeDynamicDrawer();
   }
 }
@@ -152,7 +164,38 @@ export function hasDesignatedMenuItems(pathname: string): boolean {
   );
 }
 
+export function isCanvasRoute(pathname: string): boolean {
+  if (!pathname) return false;
+  return (
+    pathname.startsWith('/design') ||
+    pathname.startsWith('/board') ||
+    pathname.startsWith('/diagram') ||
+    pathname.startsWith('/mindmap') ||
+    pathname.startsWith('/doc')
+  );
+}
+
+export function updateCanvasRailActiveState(sidebar: HTMLElement): void {
+  const tabs = ['templates', 'elements', 'uploads', 'projects'] as const;
+  tabs.forEach((tabKey) => {
+    const item = sidebar.querySelector<HTMLElement>(`[data-ref="rail-item-canvas-${tabKey}"]`);
+    const btn = sidebar.querySelector<HTMLElement>(`[data-ref="btn-rail-canvas-${tabKey}"]`);
+    const isActive = isDrawerOpen && activeCanvasTab === tabKey;
+    item?.classList.toggle('is-active', isActive);
+    btn?.classList.toggle('is-active', isActive);
+  });
+}
+
 export function updateSidebarActiveState(sidebar: HTMLElement, path = window.location.pathname): void {
+  const isCanvas = isCanvasRoute(path);
+  sidebar.classList.toggle('is-canvas-mode', isCanvas);
+
+  if (!isCanvas) {
+    activeCanvasTab = null;
+  } else {
+    updateCanvasRailActiveState(sidebar);
+  }
+
   const isHome = path === '/' || path === '' || path.startsWith('/folder/');
   const isTemplates = path === '/templates';
   const isShared = path === '/shared';
@@ -368,6 +411,51 @@ function setupRailNavigation(sidebar: HTMLElement): void {
     if (e.target !== btnCreate && !btnCreate?.contains(e.target as Node)) {
       createHandler(e);
     }
+  });
+
+  const btnCanvasHome = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-canvas-home"]');
+  const itemCanvasHome = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-canvas-home"]');
+  const canvasHomeHandler = (e: Event) => {
+    e.preventDefault();
+    navigate('/');
+  };
+  btnCanvasHome?.addEventListener('click', canvasHomeHandler);
+  itemCanvasHome?.addEventListener('click', (e) => {
+    if (e.target !== btnCanvasHome && !btnCanvasHome?.contains(e.target as Node)) {
+      canvasHomeHandler(e);
+    }
+  });
+
+  const canvasItems: Array<{ tab: 'templates' | 'elements' | 'uploads' | 'projects'; btnRef: string; itemRef: string }> = [
+    { btnRef: 'btn-rail-canvas-templates', itemRef: 'rail-item-canvas-templates', tab: 'templates' },
+    { btnRef: 'btn-rail-canvas-elements', itemRef: 'rail-item-canvas-elements', tab: 'elements' },
+    { btnRef: 'btn-rail-canvas-uploads', itemRef: 'rail-item-canvas-uploads', tab: 'uploads' },
+    { btnRef: 'btn-rail-canvas-projects', itemRef: 'rail-item-canvas-projects', tab: 'projects' },
+  ];
+
+  canvasItems.forEach(({ btnRef, itemRef, tab }) => {
+    const btn = sidebar.querySelector<HTMLElement>(`[data-ref="${btnRef}"]`);
+    const item = sidebar.querySelector<HTMLElement>(`[data-ref="${itemRef}"]`);
+    const handler = (e: Event) => {
+      e.preventDefault();
+      if (isDrawerOpen && activeCanvasTab === tab) {
+        toggleDrawer(false);
+      } else {
+        activeCanvasTab = tab;
+        if (!isDrawerOpen) {
+          toggleDrawer(true);
+        } else {
+          void updateDynamicDrawer(sidebar);
+          updateCanvasRailActiveState(sidebar);
+        }
+      }
+    };
+    btn?.addEventListener('click', handler);
+    item?.addEventListener('click', (e) => {
+      if (e.target !== btn && !btn?.contains(e.target as Node)) {
+        handler(e);
+      }
+    });
   });
 }
 
@@ -672,6 +760,404 @@ function closeDynamicDrawer(): void {
   }
 }
 
+function getActiveCanvasType(): 'board' | 'diagram' | 'doc' | 'pixel' {
+  const content = document.querySelector<HTMLElement>('[data-ref="app"] .layout-content, .layout-content');
+  const ref = content?.getAttribute('data-ref');
+  if (ref === 'doc-view' || window.location.pathname.startsWith('/doc/')) return 'doc';
+  if (ref === 'board-view' || window.location.pathname.startsWith('/board/')) return 'board';
+  if (ref === 'mindmap-view' || window.location.pathname.startsWith('/mindmap/') || window.location.pathname.startsWith('/diagram/')) return 'diagram';
+  return 'pixel';
+}
+
+function getActiveCanvasController(): any {
+  const content = document.querySelector<HTMLElement>('[data-ref="app"] .layout-content, .layout-content');
+  return (content as any)?.__controller || null;
+}
+
+function handleApplyCanvasTemplate(preset: PresetItem, canvasType: 'board' | 'diagram' | 'doc' | 'pixel'): void {
+  const controller = getActiveCanvasController();
+
+  if (canvasType === 'doc') {
+    const docPreset = getDocTemplateById(preset.docTemplateId || preset.id) || DOC_TEMPLATES.find((p) => p.id === preset.docTemplateId) || DOC_TEMPLATES[0];
+    if (!controller) {
+      showToast('No se encontró el controlador del documento', 'warning');
+      return;
+    }
+
+    if (typeof controller.isDocumentEmpty === 'function' && controller.isDocumentEmpty()) {
+      controller.applyTemplateToDocument(docPreset);
+      showToast(`Plantilla «${preset.name}» aplicada`, 'success');
+      if (window.innerWidth <= 768) {
+        toggleDrawer(false);
+      }
+      return;
+    }
+
+    const modal = openModal({
+      cancelText: 'Cancelar',
+      description: `¿Cómo deseas aplicar «${preset.name}» en tu documento actual?`,
+      showCancel: true,
+      showConfirm: false,
+      title: 'Aplicar plantilla en el documento',
+      bodyHtml: `
+        <div class="template-choice-options" data-ref="template-choice-options">
+          <button type="button" class="template-choice-card" data-ref="btn-choice-new-page">
+            <div class="template-choice-card__icon">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#note_add"></use></svg>
+            </div>
+            <div class="template-choice-card__content">
+              <span class="template-choice-card__title">Añadir como nueva página</span>
+              <span class="template-choice-card__desc">Inserta el contenido de la plantilla en una página nueva al final.</span>
+            </div>
+          </button>
+
+          <button type="button" class="template-choice-card" data-ref="btn-choice-current-page">
+            <div class="template-choice-card__icon">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#find_replace"></use></svg>
+            </div>
+            <div class="template-choice-card__content">
+              <span class="template-choice-card__title">Reemplazar página actual</span>
+              <span class="template-choice-card__desc">Sobrescribe el contenido de la página actual con esta plantilla.</span>
+            </div>
+          </button>
+
+          <button type="button" class="template-choice-card template-choice-card--danger" data-ref="btn-choice-replace-doc">
+            <div class="template-choice-card__icon">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#refresh"></use></svg>
+            </div>
+            <div class="template-choice-card__content">
+              <span class="template-choice-card__title">Reemplazar todo el documento</span>
+              <span class="template-choice-card__desc">Elimina las páginas existentes y aplica la plantilla completa.</span>
+            </div>
+          </button>
+        </div>
+      `,
+    });
+
+    const btnNewPage = modal.card?.querySelector<HTMLElement>('[data-ref="btn-choice-new-page"]');
+    const btnCurrentPage = modal.card?.querySelector<HTMLElement>('[data-ref="btn-choice-current-page"]');
+    const btnReplaceDoc = modal.card?.querySelector<HTMLElement>('[data-ref="btn-choice-replace-doc"]');
+
+    btnNewPage?.addEventListener('click', () => {
+      controller.applyTemplateAsNewPage(docPreset);
+      modal.close();
+      showToast(`Plantilla «${preset.name}» añadida como nueva página`, 'success');
+      if (window.innerWidth <= 768) {
+        toggleDrawer(false);
+      }
+    });
+
+    btnCurrentPage?.addEventListener('click', () => {
+      controller.applyTemplateToCurrentPage(docPreset);
+      modal.close();
+      showToast(`Página actual actualizada con «${preset.name}»`, 'success');
+      if (window.innerWidth <= 768) {
+        toggleDrawer(false);
+      }
+    });
+
+    btnReplaceDoc?.addEventListener('click', () => {
+      controller.applyTemplateToDocument(docPreset);
+      modal.close();
+      showToast(`Documento reemplazado con «${preset.name}»`, 'success');
+      if (window.innerWidth <= 768) {
+        toggleDrawer(false);
+      }
+    });
+    return;
+  }
+
+  if (canvasType === 'board') {
+    if (!controller) {
+      showToast('No se encontró el controlador del pizarrón', 'warning');
+      return;
+    }
+
+    const templateId = preset.boardTemplateId || preset.id;
+
+    if (typeof controller.isBoardEmpty === 'function' && controller.isBoardEmpty()) {
+      controller.applyTemplate(templateId, 'replace');
+      showToast(`Plantilla «${preset.name}» cargada en el pizarrón`, 'success');
+      if (window.innerWidth <= 768) {
+        toggleDrawer(false);
+      }
+      return;
+    }
+
+    const modal = openModal({
+      cancelText: 'Cancelar',
+      description: `¿Cómo deseas insertar «${preset.name}» en tu pizarrón?`,
+      showCancel: true,
+      showConfirm: false,
+      title: 'Insertar plantilla en el pizarrón',
+      bodyHtml: `
+        <div class="template-choice-options" data-ref="template-choice-options">
+          <button type="button" class="template-choice-card" data-ref="btn-choice-insert-board">
+            <div class="template-choice-card__icon">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add_circle"></use></svg>
+            </div>
+            <div class="template-choice-card__content">
+              <span class="template-choice-card__title">Añadir al pizarrón</span>
+              <span class="template-choice-card__desc">Inserta los elementos de la plantilla sin borrar tus elementos actuales.</span>
+            </div>
+          </button>
+
+          <button type="button" class="template-choice-card template-choice-card--danger" data-ref="btn-choice-replace-board">
+            <div class="template-choice-card__icon">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#refresh"></use></svg>
+            </div>
+            <div class="template-choice-card__content">
+              <span class="template-choice-card__title">Reemplazar todo el pizarrón</span>
+              <span class="template-choice-card__desc">Limpia el pizarrón actual y coloca únicamente la plantilla seleccionada.</span>
+            </div>
+          </button>
+        </div>
+      `,
+    });
+
+    const btnInsertBoard = modal.card?.querySelector<HTMLElement>('[data-ref="btn-choice-insert-board"]');
+    const btnReplaceBoard = modal.card?.querySelector<HTMLElement>('[data-ref="btn-choice-replace-board"]');
+
+    btnInsertBoard?.addEventListener('click', () => {
+      controller.applyTemplate(templateId, 'insert');
+      modal.close();
+      showToast(`Plantilla «${preset.name}» añadida al pizarrón`, 'success');
+      if (window.innerWidth <= 768) {
+        toggleDrawer(false);
+      }
+    });
+
+    btnReplaceBoard?.addEventListener('click', () => {
+      controller.applyTemplate(templateId, 'replace');
+      modal.close();
+      showToast(`Pizarrón reemplazado con «${preset.name}»`, 'success');
+      if (window.innerWidth <= 768) {
+        toggleDrawer(false);
+      }
+    });
+    return;
+  }
+
+  if (canvasType === 'diagram') {
+    if (!controller) {
+      showToast('No se encontró el controlador del diagrama', 'warning');
+      return;
+    }
+
+    const templateId = preset.diagramTemplateId || preset.id;
+    const subtype = preset.diagramSubtype || 'mindmap';
+
+    if (typeof controller.isDiagramEmpty === 'function' && controller.isDiagramEmpty()) {
+      controller.applyTemplate(templateId, subtype);
+      showToast(`Plantilla «${preset.name}» aplicada al diagrama`, 'success');
+      if (window.innerWidth <= 768) {
+        toggleDrawer(false);
+      }
+      return;
+    }
+
+    const modal = openModal({
+      cancelText: 'Cancelar',
+      confirmClass: 'component-button--black',
+      confirmText: 'Reemplazar diagrama',
+      description: `¿Deseas reemplazar el diagrama actual con la plantilla «${preset.name}»?`,
+      showCancel: true,
+      showConfirm: true,
+      title: 'Aplicar plantilla de diagrama',
+      onConfirm: () => {
+        controller.applyTemplate(templateId, subtype);
+        modal.close();
+        showToast(`Plantilla «${preset.name}» aplicada`, 'success');
+        if (window.innerWidth <= 768) {
+          toggleDrawer(false);
+        }
+      },
+    });
+    return;
+  }
+
+  if (canvasType === 'pixel') {
+    if (!controller) {
+      showToast('No se encontró el controlador de diseño', 'warning');
+      return;
+    }
+
+    void controller.applyTemplate(preset.imagePath, preset.name);
+    showToast(`Plantilla «${preset.name}» importada`, 'success');
+    if (window.innerWidth <= 768) {
+      toggleDrawer(false);
+    }
+  }
+}
+
+function renderCanvasDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement): void {
+  const tab = activeCanvasTab || 'templates';
+  const sidebar = drawer.closest<HTMLElement>('[data-ref="sidebar"]') || document.querySelector<HTMLElement>('[data-ref="sidebar"]');
+
+  if (tab === 'templates') {
+    const canvasType = getActiveCanvasType();
+    const presets = ALL_PRESETS.filter((item) => {
+      if (canvasType === 'doc') return item.canvasType === 'doc';
+      if (canvasType === 'board') return item.canvasType === 'board';
+      if (canvasType === 'diagram') return item.canvasType === 'diagram' || item.categoryKey === 'mindmap' || item.categoryKey === 'conceptmap' || item.categoryKey === 'flowchart';
+      return item.canvasType === 'pixel' || item.categoryKey === 'pixel';
+    });
+
+    drawerBody.innerHTML = `
+      <div class="canvas-panel-card" data-ref="canvas-panel-card">
+        <div class="canvas-panel-card__header" data-ref="canvas-panel-header">
+          <div class="canvas-panel-card__title-box" data-ref="canvas-panel-title-box">
+            <svg class="component-icon canvas-panel-card__icon" aria-hidden="true"><use href="/icons.svg#space_dashboard"></use></svg>
+            <span class="canvas-panel-card__title" data-ref="canvas-panel-title">${t('nav.templates') || 'Plantillas'}</span>
+          </div>
+          <button type="button" class="component-button component-button--h32 component-button--icon-only rail-btn canvas-panel-card__close" data-ref="btn-close-canvas-panel" data-tooltip="Cerrar panel" aria-label="Cerrar panel">
+            <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+          </button>
+        </div>
+        <div class="canvas-panel-card__body" data-ref="canvas-panel-body">
+          <div class="canvas-panel-search" data-ref="canvas-panel-search">
+            <svg class="component-icon canvas-panel-search__icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+            <input class="canvas-panel-search__input" data-ref="canvas-templates-search-input" type="text" placeholder="${t('templates.search_placeholder') || 'Buscar plantillas...'}" />
+          </div>
+          <div class="canvas-panel-templates-grid" data-ref="canvas-templates-list"></div>
+        </div>
+      </div>
+    `;
+
+    const searchInput = drawerBody.querySelector<HTMLInputElement>('[data-ref="canvas-templates-search-input"]');
+    const templatesList = drawerBody.querySelector<HTMLElement>('[data-ref="canvas-templates-list"]');
+    const btnClose = drawerBody.querySelector<HTMLElement>('[data-ref="btn-close-canvas-panel"]');
+
+    btnClose?.addEventListener('click', (e) => {
+      e.preventDefault();
+      toggleDrawer(false);
+    });
+
+    const renderList = (query = '') => {
+      if (!templatesList) return;
+      const cleanQ = query.trim().toLowerCase();
+      const filtered = cleanQ
+        ? presets.filter((p) => p.name.toLowerCase().includes(cleanQ) || p.categoryName?.toLowerCase().includes(cleanQ) || (p.tags && p.tags.some((tag) => tag.toLowerCase().includes(cleanQ))))
+        : presets;
+
+      if (filtered.length === 0) {
+        templatesList.innerHTML = `
+          <div class="canvas-panel-card__empty" data-ref="canvas-panel-empty">
+            <span class="canvas-panel-card__empty-title">Sin resultados</span>
+            <p class="canvas-panel-card__empty-desc">No encontramos plantillas que coincidan con «${escapeHtml(query)}»</p>
+          </div>
+        `;
+        return;
+      }
+
+      templatesList.innerHTML = filtered.map((item) => `
+        <div class="canvas-panel-template-card" data-ref="canvas-template-card-${item.id}" data-template-id="${item.id}">
+          <div class="canvas-panel-template-card__thumb" data-ref="template-thumb-${item.id}">
+            <img class="canvas-panel-template-card__img" data-ref="template-img-${item.id}" src="${item.imagePath}" alt="${escapeHtml(item.name)}" loading="lazy" />
+          </div>
+          <div class="canvas-panel-template-card__info" data-ref="template-info-${item.id}">
+            <span class="canvas-panel-template-card__title" data-ref="template-title-${item.id}">${escapeHtml(item.name)}</span>
+            <span class="canvas-panel-template-card__badge" data-ref="template-badge-${item.id}">${escapeHtml(item.categoryName || (canvasType === 'doc' ? 'Documento' : (canvasType === 'board' ? 'Pizarrón' : (canvasType === 'diagram' ? 'Diagrama' : `${item.width}×${item.height}`))))}</span>
+          </div>
+        </div>
+      `).join('');
+
+      templatesList.querySelectorAll<HTMLElement>('.canvas-panel-template-card').forEach((card) => {
+        card.addEventListener('click', () => {
+          const tmplId = card.getAttribute('data-template-id');
+          const found = presets.find((p) => p.id === tmplId);
+          if (found) {
+            handleApplyCanvasTemplate(found, canvasType);
+          }
+        });
+      });
+    };
+
+    searchInput?.addEventListener('input', () => {
+      renderList(searchInput.value);
+    });
+
+    renderList();
+
+    const drawerFooter = drawer.querySelector<HTMLElement>('[data-ref="drawer-footer"]');
+    if (drawerFooter) {
+      drawerFooter.style.display = 'none';
+    }
+
+    if (sidebar) {
+      updateCanvasRailActiveState(sidebar);
+    }
+
+    renderIcons(drawerBody);
+    return;
+  }
+
+  const tabMeta: Record<string, { desc: string; icon: string; title: string }> = {
+    elements: {
+      desc: 'Agrega figuras, iconos, gráficos y componentes a tu lienzo.',
+      icon: 'category',
+      title: t('nav.elements') || 'Elementos',
+    },
+    projects: {
+      desc: 'Accede a tus proyectos, carpetas y otros diseños creados.',
+      icon: 'folder',
+      title: t('nav.projects') || 'Proyectos',
+    },
+    templates: {
+      desc: 'Explora plantillas predeterminadas para iniciar rápidamente tus diseños.',
+      icon: 'space_dashboard',
+      title: t('nav.templates') || 'Plantillas',
+    },
+    uploads: {
+      desc: 'Sube y administra imágenes, archivos multimedia y recursos para tu lienzo.',
+      icon: 'cloud_upload',
+      title: t('nav.uploads') || 'Subidos',
+    },
+  };
+
+  const meta = tabMeta[tab] || tabMeta.templates;
+
+  drawerBody.innerHTML = `
+    <div class="canvas-panel-card" data-ref="canvas-panel-card">
+      <div class="canvas-panel-card__header" data-ref="canvas-panel-header">
+        <div class="canvas-panel-card__title-box" data-ref="canvas-panel-title-box">
+          <svg class="component-icon canvas-panel-card__icon" aria-hidden="true"><use href="/icons.svg#${meta.icon}"></use></svg>
+          <span class="canvas-panel-card__title" data-ref="canvas-panel-title">${escapeHtml(meta.title)}</span>
+        </div>
+        <button type="button" class="component-button component-button--h32 component-button--icon-only rail-btn canvas-panel-card__close" data-ref="btn-close-canvas-panel" data-tooltip="Cerrar panel" aria-label="Cerrar panel">
+          <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+        </button>
+      </div>
+      <div class="canvas-panel-card__body" data-ref="canvas-panel-body">
+        <div class="canvas-panel-card__empty" data-ref="canvas-panel-empty">
+          <div class="canvas-panel-card__empty-icon" data-ref="canvas-panel-empty-icon">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${meta.icon}"></use></svg>
+          </div>
+          <span class="canvas-panel-card__empty-title" data-ref="canvas-panel-empty-title">${escapeHtml(meta.title)}</span>
+          <p class="canvas-panel-card__empty-desc" data-ref="canvas-panel-empty-desc">${escapeHtml(meta.desc)}</p>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const btnClose = drawerBody.querySelector<HTMLElement>('[data-ref="btn-close-canvas-panel"]');
+  btnClose?.addEventListener('click', (e) => {
+    e.preventDefault();
+    toggleDrawer(false);
+  });
+
+  const drawerFooter = drawer.querySelector<HTMLElement>('[data-ref="drawer-footer"]');
+  if (drawerFooter) {
+    drawerFooter.style.display = 'none';
+  }
+
+  if (sidebar) {
+    updateCanvasRailActiveState(sidebar);
+  }
+
+  renderIcons(drawerBody);
+}
+
 async function populateDrawerContent(drawer: HTMLElement): Promise<void> {
   const drawerBody = drawer.querySelector<HTMLElement>('[data-ref="drawer-body"]');
   if (!drawerBody) return;
@@ -689,6 +1175,11 @@ async function populateDrawerContent(drawer: HTMLElement): Promise<void> {
   };
 
   const isHome = currentPath === '/' || currentPath === '' || currentPath.startsWith('/folder/');
+
+  if (isCanvasRoute(currentPath)) {
+    renderCanvasDrawerContent(drawer, drawerBody);
+    return;
+  }
 
   if (currentPath.startsWith('/settings')) {
     if (currentUser) {
@@ -1731,6 +2222,7 @@ export async function createSidebar(): Promise<HTMLElement> {
   setupRailNavigation(sidebar);
   setupDrawerContent(sidebar);
   setupRailUserControls(sidebar);
+  updateSidebarActiveState(sidebar, window.location.pathname);
 
   renderIcons(sidebar);
   return sidebar;

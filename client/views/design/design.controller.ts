@@ -3142,6 +3142,27 @@ export class DesignController {
     });
   }
 
+  public async applyTemplate(imagePath: string, templateName: string): Promise<void> {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error('Failed to load image'));
+      img.src = imagePath;
+    });
+
+    this.addLayer(true, undefined, templateName);
+    const layer = this.layersManager.getActiveLayer();
+    if (layer) {
+      const destX = Math.max(0, Math.floor((this.canvasWidth - img.naturalWidth) / 2));
+      const destY = Math.max(0, Math.floor((this.canvasHeight - img.naturalHeight) / 2));
+      layer.ctx.drawImage(img, destX, destY);
+    }
+    this.scheduleAutoSave();
+    this.renderLayersCards();
+    this.requestRedraw();
+  }
+
   private openResizeCanvasModal(): void {
     if (this.isInfinite) {
       showToast('Los lienzos infinitos tienen un tamaño dinámico y no admiten redimensión fija', 'warning');

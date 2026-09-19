@@ -16,7 +16,7 @@ import { DocFontPickerComponent, FontSelectEvent } from './doc-font-picker.compo
 import { ensureGoogleFontLoaded } from './doc-fonts.config.js';
 import { DocHistoryManager } from './doc-history.manager.js';
 import { DocPaginationManager } from './doc-pagination.manager.js';
-import { DOC_MARGIN_PRESETS, DOC_PAPER_DIMENSIONS, DocColumnsCount, DocImageRadius, DocImageShadow, DocImageWrapMode, DocMargins, DocOrientation, DocPage, DocPageBorder, DocPageColor, DocPaperSize, DocProject, DocWatermark } from './doc.types.js';
+import { DOC_MARGIN_PRESETS, DOC_PAPER_DIMENSIONS, DocColumnsCount, DocImageRadius, DocImageShadow, DocImageWrapMode, DocMargins, DocOrientation, DocPage, DocPageBorder, DocPageColor, DocPaperSize, DocProject, DocTemplatePreset, DocWatermark } from './doc.types.js';
 
 const INSPIRING_QUOTES = [
   '«El secreto para salir adelante es simplemente comenzar.» — Mark Twain',
@@ -70,6 +70,7 @@ export class DocController implements ViewController {
   private indentsDropdownController: { close: () => void; destroy: () => void } | null = null;
   private insertMoreDropdownController: { close: () => void; destroy: () => void } | null = null;
   private isSaving = false;
+  private lastActivePageId: string | null = null;
   private lineSpacingDropdownController: { close: () => void; destroy: () => void } | null = null;
   private moreFormattingDropdownController: { close: () => void; destroy: () => void } | null = null;
   private paginationManager: DocPaginationManager = new DocPaginationManager();
@@ -1926,7 +1927,7 @@ export class DocController implements ViewController {
     }
   }
 
-  private isDocumentEmpty(): boolean {
+  public isDocumentEmpty(): boolean {
     if (!this.project?.pages || this.project.pages.length === 0) return true;
     if (this.project.pages.length > 1) return false;
     const firstPage = this.project.pages[0];
@@ -1940,6 +1941,62 @@ export class DocController implements ViewController {
     return text.length === 0;
   }
 
+  public applyTemplateAsNewPage(preset: DocTemplatePreset): void {
+    const templateContent = preset.initialPages?.[0]?.contentHtml || '<p><br></p>';
+    const newPage = this.paginationManager.addPage(this.project);
+    newPage.contentHtml = templateContent;
+    this.renderDocument();
+    this.recordChange();
+
+    const newPageEl = this.container.querySelector<HTMLElement>(`[data-ref="doc-page-${newPage.id}"]`);
+    if (newPageEl) {
+      newPageEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const contentEl = newPageEl.querySelector<HTMLElement>('.doc-page__content');
+      contentEl?.focus();
+    }
+  }
+
+  public applyTemplateToCurrentPage(preset: DocTemplatePreset): void {
+    const templateContent = preset.initialPages?.[0]?.contentHtml || '<p><br></p>';
+    let targetPage = this.project.pages.find((p) => p.id === this.lastActivePageId);
+    if (!targetPage) {
+      targetPage = this.project.pages[0];
+    }
+    if (!targetPage) {
+      targetPage = this.paginationManager.addPage(this.project);
+    }
+    targetPage.contentHtml = templateContent;
+    this.renderDocument();
+    this.recordChange();
+
+    const targetPageEl = this.container.querySelector<HTMLElement>(`[data-ref="doc-page-${targetPage.id}"]`);
+    if (targetPageEl) {
+      targetPageEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const contentEl = targetPageEl.querySelector<HTMLElement>('.doc-page__content');
+      contentEl?.focus();
+    }
+  }
+
+  public applyTemplateToDocument(preset: DocTemplatePreset): void {
+    this.project.pages = preset.initialPages.map((p) => ({
+      contentHtml: p.contentHtml,
+      id: `page_${crypto.randomUUID().slice(0, 8)}`,
+    }));
+    if (preset.settings) {
+      if (preset.settings.fontFamily) this.project.settings.fontFamily = preset.settings.fontFamily;
+      if (preset.settings.fontSize) this.project.settings.fontSize = preset.settings.fontSize;
+      if (preset.settings.lineHeight) this.project.settings.lineHeight = preset.settings.lineHeight;
+      if (preset.settings.margins) this.project.settings.margins = { ...preset.settings.margins };
+      if (preset.settings.orientation) this.project.settings.orientation = preset.settings.orientation;
+      if (preset.settings.paperSize) this.project.settings.paperSize = preset.settings.paperSize;
+      if (preset.settings.showPageNumbers !== undefined) this.project.settings.showPageNumbers = preset.settings.showPageNumbers;
+      if (preset.settings.headerText !== undefined) this.project.settings.headerText = preset.settings.headerText;
+      if (preset.settings.footerText !== undefined) this.project.settings.footerText = preset.settings.footerText;
+    }
+    this.renderDocument();
+    this.recordChange();
+  }
+
   private updateEmptyPlaceholder(): void {
     const placeholderEl = this.container.querySelector<HTMLElement>('[data-ref="doc-empty-placeholder"]');
     if (!placeholderEl) return;
@@ -1951,6 +2008,20 @@ export class DocController implements ViewController {
     const signal = this.abortController.signal;
 
     this.container.querySelectorAll<HTMLElement>('.doc-page__content').forEach((contentEl) => {
+      contentEl.addEventListener('focus', () => {
+        const pageEl = contentEl.closest('[data-page-id]');
+        if (pageEl) {
+          this.lastActivePageId = pageEl.getAttribute('data-page-id');
+        }
+      }, { signal });
+
+      contentEl.addEventListener('click', () => {
+        const pageEl = contentEl.closest('[data-page-id]');
+        if (pageEl) {
+          this.lastActivePageId = pageEl.getAttribute('data-page-id');
+        }
+      }, { signal });
+
       contentEl.addEventListener('input', () => {
         this.updateEmptyPlaceholder();
         this.recordChange();

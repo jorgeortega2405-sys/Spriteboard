@@ -1,6 +1,7 @@
 import { openCanvasShareModal } from '../../components/canvas-share-modal.component.js';
 import { closeContextMenu, ContextMenuItem, openContextMenu } from '../../components/context-menu.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
+import { getCustomDiagramProject } from '../../config/diagram-templates.data.js';
 import { currentUser, getApi, putApi } from '../../services/api.service.js';
 import { getLocalCanvasByUuid, saveLocalCanvas } from '../../services/canvas-storage.service.js';
 import { showToast } from '../../services/toast.service.js';
@@ -2867,6 +2868,28 @@ export class MindMapController implements ViewController {
       node.text = node.text.trim() || 'Idea';
     }
 
+    this.commitChange();
+  }
+
+  public isDiagramEmpty(): boolean {
+    if (!this.project?.nodes) return true;
+    const nodeIds = Object.keys(this.project.nodes);
+    if (nodeIds.length <= 1) {
+      const root = this.project.nodes[this.project.rootId];
+      if (!root || !root.text || root.text === 'Idea Principal' || root.text.trim() === '') {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  public applyTemplate(templateId: string, subtype: DiagramSubtype): void {
+    const rootText = this.project.nodes[this.project.rootId]?.text || this.canvasTitle || 'Idea Principal';
+    const newProject = getCustomDiagramProject(templateId, subtype, rootText);
+    this.project = newProject;
+    this.selectedNodeId = this.project.rootId;
+    this.selectedNodeIds = new Set([this.project.rootId]);
+    this.camera = { x: 0, y: 0, zoom: 1 };
     this.commitChange();
   }
 

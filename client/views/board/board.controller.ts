@@ -3,6 +3,7 @@ import { openCanvasShareModal } from '../../components/canvas-share-modal.compon
 import { closeContextMenu, ContextMenuItem, openContextMenu } from '../../components/context-menu.component.js';
 import { InsertPixelGridConfig, openInsertPixelGridModal } from '../../components/insert-pixel-grid-modal.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
+import { getBoardTemplateElements } from '../../config/board-templates.data.js';
 import { currentUser, getApi, postApi } from '../../services/api.service.js';
 import { getLocalCanvasByUuid, removeLocalCanvas, saveLocalCanvas } from '../../services/canvas-storage.service.js';
 import { renderIcons } from '../../services/icon.service.js';
@@ -2462,6 +2463,29 @@ export class BoardController {
     }
 
     ctx.restore();
+  }
+
+  public isBoardEmpty(): boolean {
+    return !this.elements || this.elements.length === 0;
+  }
+
+  public applyTemplate(templateId: string, mode: 'insert' | 'replace' = 'insert'): void {
+    const newElements = getBoardTemplateElements(templateId);
+    if (mode === 'replace') {
+      this.elements = newElements;
+      this.camera = { x: 0, y: 0, zoom: 1 };
+    } else {
+      const mapped = newElements.map((el) => ({
+        ...el,
+        id: `elem_${crypto.randomUUID().slice(0, 8)}`,
+      }));
+      this.elements = [...this.elements, ...mapped];
+    }
+    this.pixelGrid.syncPixelGridCanvases(this.elements, () => this.requestRedraw());
+    this.pushHistoryState();
+    this.collaborationManager.broadcastBoardUpdate(this.elements);
+    this.requestRedraw();
+    this.scheduleAutoSave();
   }
 
   private pushHistoryState(): void {

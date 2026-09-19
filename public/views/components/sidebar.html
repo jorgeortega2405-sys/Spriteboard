@@ -1,47 +1,86 @@
 <div class="layout-nav" data-ref="sidebar">
   <div class="layout-rail" data-ref="layout-rail">
     <div class="layout-rail__top" data-ref="rail-top">
-      <button type="button" class="component-button component-button--h40 component-button--icon-only rail-btn rail-btn--toggle" data-ref="btn-toggle-drawer" data-tooltip="Alternar menú lateral" aria-label="Alternar menú lateral">
-        <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#dock_to_right"></use></svg>
-      </button>
-      <div class="rail-nav-item" data-ref="rail-item-create">
-        <button type="button" class="component-button component-button--h40 component-button--icon-only rail-btn rail-btn--create" data-ref="btn-rail-create" data-tooltip="Crear diseño" aria-label="Crear diseño">
-          <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+      <div class="rail-top-default" data-ref="rail-top-default">
+        <button type="button" class="component-button component-button--h40 component-button--icon-only rail-btn rail-btn--toggle" data-ref="btn-toggle-drawer" data-tooltip="Alternar menú lateral" aria-label="Alternar menú lateral">
+          <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#dock_to_right"></use></svg>
         </button>
+        <div class="rail-nav-item" data-ref="rail-item-create">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only rail-btn rail-btn--create" data-ref="btn-rail-create" data-tooltip="Crear diseño" aria-label="Crear diseño">
+            <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="rail-top-canvas" data-ref="rail-top-canvas">
+        <div class="rail-nav-item" data-ref="rail-item-canvas-home">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only rail-btn" data-ref="btn-rail-canvas-home" data-tooltip="Inicio" aria-label="Inicio">
+            <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#home"></use></svg>
+          </button>
+          <span class="rail-nav-item__label" data-i18n="nav.home">Inicio</span>
+        </div>
       </div>
     </div>
 
     <hr class="rail-divider" data-ref="rail-divider" />
 
     <div class="layout-rail__center" data-ref="rail-center">
-      <div class="rail-nav-item" data-ref="rail-item-home">
-        <button type="button" class="component-button component-button--h40 component-button--icon-only rail-btn" data-ref="btn-rail-home" data-tooltip="Inicio" aria-label="Inicio">
-          <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#home"></use></svg>
-        </button>
-        <span class="rail-nav-item__label" data-i18n="nav.home">Inicio</span>
-      </div>
-      <div class="rail-nav-item" data-ref="rail-item-templates">
-        <button type="button" class="component-button component-button--h40 component-button--icon-only rail-btn" data-ref="btn-rail-templates" data-tooltip="Plantillas" aria-label="Plantillas">
-          <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#space_dashboard"></use></svg>
-        </button>
-        <span class="rail-nav-item__label" data-i18n="nav.templates">Plantillas</span>
-      </div>
-      <div class="rail-nav-item" data-ref="rail-item-shared">
-        <button type="button" class="component-button component-button--h40 component-button--icon-only rail-btn" data-ref="btn-rail-shared" data-tooltip="Compartidos" aria-label="Compartidos">
-          <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#folder_shared"></use></svg>
-        </button>
-        <span class="rail-nav-item__label" data-i18n="nav.shared">Compartidos</span>
-      </div>
-      <div class="rail-nav-item" data-ref="rail-item-teams">
-        <button type="button" class="component-button component-button--h40 component-button--icon-only rail-btn rail-btn--has-badge" data-ref="btn-rail-teams" data-tooltip="Tus equipos" aria-label="Tus equipos">
-          <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
-          <span class="rail-btn__badge" data-ref="rail-teams-badge">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#workspace_premium"></use></svg>
-          </span>
-        </button>
-        <span class="rail-nav-item__label" data-i18n="nav.teams">Tus equipos</span>
+      <div class="rail-center-default" data-ref="rail-center-default">
+        <div class="rail-nav-item" data-ref="rail-item-home">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only rail-btn" data-ref="btn-rail-home" data-tooltip="Inicio" aria-label="Inicio">
+            <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#home"></use></svg>
+          </button>
+          <span class="rail-nav-item__label" data-i18n="nav.home">Inicio</span>
+        </div>
+        <div class="rail-nav-item" data-ref="rail-item-templates">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only rail-btn" data-ref="btn-rail-templates" data-tooltip="Plantillas" aria-label="Plantillas">
+            <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#space_dashboard"></use></svg>
+          </button>
+          <span class="rail-nav-item__label" data-i18n="nav.templates">Plantillas</span>
+        </div>
+        <div class="rail-nav-item" data-ref="rail-item-shared">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only rail-btn" data-ref="btn-rail-shared" data-tooltip="Compartidos" aria-label="Compartidos">
+            <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#folder_shared"></use></svg>
+          </button>
+          <span class="rail-nav-item__label" data-i18n="nav.shared">Compartidos</span>
+        </div>
+        <div class="rail-nav-item" data-ref="rail-item-teams">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only rail-btn rail-btn--has-badge" data-ref="btn-rail-teams" data-tooltip="Tus equipos" aria-label="Tus equipos">
+            <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
+            <span class="rail-btn__badge" data-ref="rail-teams-badge">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#workspace_premium"></use></svg>
+            </span>
+          </button>
+          <span class="rail-nav-item__label" data-i18n="nav.teams">Tus equipos</span>
+        </div>
       </div>
 
+      <div class="rail-center-canvas" data-ref="rail-center-canvas">
+        <div class="rail-nav-item" data-ref="rail-item-canvas-templates">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only rail-btn" data-ref="btn-rail-canvas-templates" data-tooltip="Plantillas" aria-label="Plantillas">
+            <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#space_dashboard"></use></svg>
+          </button>
+          <span class="rail-nav-item__label" data-i18n="nav.templates">Plantillas</span>
+        </div>
+        <div class="rail-nav-item" data-ref="rail-item-canvas-elements">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only rail-btn" data-ref="btn-rail-canvas-elements" data-tooltip="Elementos" aria-label="Elementos">
+            <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#category"></use></svg>
+          </button>
+          <span class="rail-nav-item__label" data-i18n="nav.elements">Elementos</span>
+        </div>
+        <div class="rail-nav-item" data-ref="rail-item-canvas-uploads">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only rail-btn" data-ref="btn-rail-canvas-uploads" data-tooltip="Subidos" aria-label="Subidos">
+            <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#cloud_upload"></use></svg>
+          </button>
+          <span class="rail-nav-item__label" data-i18n="nav.uploads">Subidos</span>
+        </div>
+        <div class="rail-nav-item" data-ref="rail-item-canvas-projects">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only rail-btn" data-ref="btn-rail-canvas-projects" data-tooltip="Proyectos" aria-label="Proyectos">
+            <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
+          </button>
+          <span class="rail-nav-item__label" data-i18n="nav.projects">Proyectos</span>
+        </div>
+      </div>
     </div>
 
     <div class="layout-rail__bottom" data-ref="rail-bottom">
