@@ -6,6 +6,10 @@
       </div>
 
       <div class="component-top-right" data-ref="mindmap-top-right">
+        <div class="design-collaborators-bar is-hidden" data-ref="mindmap-collaborators-bar">
+          <div class="design-collaborators-list" data-ref="mindmap-collaborators-list"></div>
+        </div>
+
         <div class="design-share-wrapper" data-ref="mindmap-share-wrapper">
           <button type="button" class="component-button component-button--h40 component-button--black design-share-btn" data-ref="btn-share-mindmap" data-tooltip="Compartir mapa mental" aria-label="Compartir mapa mental">
             <span class="component-icon">share</span>
@@ -34,12 +38,32 @@
               <button type="button" class="design-toolbar-btn" data-ref="btn-add-child" data-tooltip="Agregar sub-idea / hijo (Tab)" aria-label="Agregar hijo">
                 <span class="component-icon">subdirectory_arrow_right</span>
               </button>
-              <button type="button" class="design-toolbar-btn" data-ref="btn-add-sibling" data-tooltip="Agregar idea hermana (Enter)" aria-label="Agregar hermano">
-                <span class="component-icon">add_circle_outline</span>
-              </button>
-              <button type="button" class="design-toolbar-btn" data-ref="btn-add-free-node" data-tooltip="Agregar cuadro / idea libre" aria-label="Agregar cuadro libre">
-                <span class="component-icon">crop_square</span>
-              </button>
+              <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-add-ideas">
+                <button type="button" class="design-toolbar-btn" data-ref="btn-trigger-add-ideas" data-tooltip="Más opciones de ideas" aria-label="Más ideas">
+                  <span class="component-icon">add_circle_outline</span>
+                </button>
+                <div class="dropdown-backdrop" data-ref="backdrop-add-ideas">
+                  <div class="menu-panel menu-panel--dropdown menu-panel--w-200 menu-panel--h-auto" data-ref="menu-add-ideas">
+                    <div class="menu-panel__drag-zone" data-ref="add-ideas-drag-zone" aria-hidden="true">
+                      <div class="menu-panel__drag-handle"></div>
+                    </div>
+                    <div class="menu-panel__list" data-ref="list-add-ideas">
+                      <button type="button" class="menu-item" data-ref="btn-add-sibling">
+                        <span class="component-icon menu-item__icon">add_circle_outline</span>
+                        <span class="menu-item__text">Idea hermana (Enter)</span>
+                      </button>
+                      <button type="button" class="menu-item" data-ref="btn-add-free-node">
+                        <span class="component-icon menu-item__icon">crop_square</span>
+                        <span class="menu-item__text">Idea / Cuadro libre</span>
+                      </button>
+                      <button type="button" class="menu-item" data-ref="btn-edit-node">
+                        <span class="component-icon menu-item__icon">edit</span>
+                        <span class="menu-item__text">Editar texto (F2)</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
               <button type="button" class="design-toolbar-btn" data-ref="btn-tool-connect" data-tooltip="Conector libre entre ideas (C)" aria-label="Conector">
                 <span class="component-icon">arrow_right_alt</span>
               </button>
@@ -51,9 +75,6 @@
               </button>
               <button type="button" class="design-toolbar-btn" data-ref="btn-tidy-up" data-tooltip="Auto-organizar y equilibrar esquema" aria-label="Auto-organizar">
                 <span class="component-icon">auto_fix_high</span>
-              </button>
-              <button type="button" class="design-toolbar-btn" data-ref="btn-edit-node" data-tooltip="Editar texto (F2 o Doble Clic)" aria-label="Editar texto">
-                <span class="component-icon">edit</span>
               </button>
               <button type="button" class="design-toolbar-btn" data-ref="btn-delete-node" data-tooltip="Eliminar seleccionado (Supr)" aria-label="Eliminar seleccionado">
                 <span class="component-icon">delete_outline</span>
@@ -167,10 +188,6 @@
                   </div>
                 </div>
               </div>
-
-              <button type="button" class="design-toolbar-btn" data-ref="btn-realign-tree" data-tooltip="Reordenar y auto-alinear árbol" aria-label="Auto-alinear">
-                <span class="component-icon">account_tree</span>
-              </button>
             </div>
 
             <div class="design-toolbar-divider" data-ref="mindmap-divider-export"></div>

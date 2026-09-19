@@ -127,73 +127,6 @@
               <button type="button" class="design-toolbar-btn" data-ref="btn-underline" data-tooltip="Subrayado (Ctrl+U)" aria-label="Subrayado">
                 <span class="component-icon">format_underlined</span>
               </button>
-              <button type="button" class="design-toolbar-btn" data-ref="btn-strike" data-tooltip="Tachado" aria-label="Tachado">
-                <span class="component-icon">format_strikethrough</span>
-              </button>
-              <button type="button" class="design-toolbar-btn" data-ref="btn-superscript" data-tooltip="Superíndice (x²)" aria-label="Superíndice">
-                <span class="component-icon">superscript</span>
-              </button>
-              <button type="button" class="design-toolbar-btn" data-ref="btn-subscript" data-tooltip="Subíndice (x₂)" aria-label="Subíndice">
-                <span class="component-icon">subscript</span>
-              </button>
-
-              <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-letter-spacing">
-                <button type="button" class="design-toolbar-btn" data-ref="btn-trigger-letter-spacing" data-tooltip="Interletrado (Espaciado de caracteres)" aria-label="Interletrado">
-                  <span class="component-icon">space_bar</span>
-                </button>
-                <div class="dropdown-backdrop" data-ref="backdrop-letter-spacing">
-                  <div class="menu-panel menu-panel--dropdown menu-panel--w-180 menu-panel--h-auto" data-ref="menu-letter-spacing">
-                    <div class="menu-panel__drag-zone" data-ref="spacing-letter-drag-zone" aria-hidden="true">
-                      <div class="menu-panel__drag-handle"></div>
-                    </div>
-                    <div class="menu-panel__list" data-ref="list-letter-spacing">
-                      <button type="button" class="menu-item" data-ref="opt-letter-spacing-tight" data-letter-spacing="-0.5px">
-                        <span class="menu-item__text">Estrecho (-0.5px)</span>
-                      </button>
-                      <button type="button" class="menu-item is-active" data-ref="opt-letter-spacing-normal" data-letter-spacing="0px">
-                        <span class="menu-item__text">Normal (0px)</span>
-                      </button>
-                      <button type="button" class="menu-item" data-ref="opt-letter-spacing-wide" data-letter-spacing="1px">
-                        <span class="menu-item__text">Amplio (+1px)</span>
-                      </button>
-                      <button type="button" class="menu-item" data-ref="opt-letter-spacing-wider" data-letter-spacing="2px">
-                        <span class="menu-item__text">Muy amplio (+2px)</span>
-                      </button>
-                      <button type="button" class="menu-item" data-ref="opt-letter-spacing-expanded" data-letter-spacing="3.5px">
-                        <span class="menu-item__text">Expandido (+3.5px)</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-case">
-                <button type="button" class="design-toolbar-btn" data-ref="btn-trigger-case" data-tooltip="Cambiar mayúsculas y minúsculas" aria-label="Mayúsculas y minúsculas">
-                  <span class="component-icon">match_case</span>
-                </button>
-                <div class="dropdown-backdrop" data-ref="backdrop-case">
-                  <div class="menu-panel menu-panel--dropdown menu-panel--w-180 menu-panel--h-auto" data-ref="menu-case">
-                    <div class="menu-panel__drag-zone" data-ref="case-drag-zone" aria-hidden="true">
-                      <div class="menu-panel__drag-handle"></div>
-                    </div>
-                    <div class="menu-panel__list" data-ref="list-cases">
-                      <button type="button" class="menu-item" data-ref="opt-case-upper">
-                        <span class="menu-item__text">MAYÚSCULAS</span>
-                      </button>
-                      <button type="button" class="menu-item" data-ref="opt-case-lower">
-                        <span class="menu-item__text">minúsculas</span>
-                      </button>
-                      <button type="button" class="menu-item" data-ref="opt-case-title">
-                        <span class="menu-item__text">Tipo Título (Capitalizar)</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <button type="button" class="design-toolbar-btn" data-ref="btn-clear-format" data-tooltip="Limpiar formato" aria-label="Limpiar formato">
-                <span class="component-icon">format_clear</span>
-              </button>
               <button type="button" class="design-toolbar-btn" data-ref="btn-text-color-trigger" data-tooltip="Color de texto" aria-label="Color de texto">
                 <span class="component-icon">format_color_text</span>
                 <span class="board-fill-preview-dot" data-ref="indicator-text-color" style="background-color: #0f172a;"></span>
@@ -202,23 +135,99 @@
                 <span class="component-icon">format_ink_highlighter</span>
                 <span class="board-fill-preview-dot" data-ref="indicator-bg-color" style="background-color: #fef08a;"></span>
               </button>
+
+              <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-more-formatting">
+                <button type="button" class="design-toolbar-btn" data-ref="btn-trigger-more-formatting" data-tooltip="Más formato de texto" aria-label="Más formato">
+                  <span class="component-icon">more_horiz</span>
+                </button>
+                <div class="dropdown-backdrop" data-ref="backdrop-more-formatting">
+                  <div class="menu-panel menu-panel--dropdown menu-panel--w-220 menu-panel--h-auto" data-ref="menu-more-formatting">
+                    <div class="menu-panel__drag-zone" data-ref="more-formatting-drag-zone" aria-hidden="true">
+                      <div class="menu-panel__drag-handle"></div>
+                    </div>
+                    <div class="menu-panel__list" data-ref="list-more-formatting">
+                      <button type="button" class="menu-item" data-ref="btn-strike">
+                        <span class="component-icon menu-item__icon">format_strikethrough</span>
+                        <span class="menu-item__text">Tachado</span>
+                      </button>
+                      <button type="button" class="menu-item" data-ref="btn-superscript">
+                        <span class="component-icon menu-item__icon">superscript</span>
+                        <span class="menu-item__text">Superíndice (x²)</span>
+                      </button>
+                      <button type="button" class="menu-item" data-ref="btn-subscript">
+                        <span class="component-icon menu-item__icon">subscript</span>
+                        <span class="menu-item__text">Subíndice (x₂)</span>
+                      </button>
+                      <div class="design-toolbar-divider" style="margin: 4px 0;"></div>
+                      <button type="button" class="menu-item" data-ref="opt-case-upper">
+                        <span class="component-icon menu-item__icon">text_fields</span>
+                        <span class="menu-item__text">MAYÚSCULAS</span>
+                      </button>
+                      <button type="button" class="menu-item" data-ref="opt-case-lower">
+                        <span class="component-icon menu-item__icon">text_format</span>
+                        <span class="menu-item__text">minúsculas</span>
+                      </button>
+                      <button type="button" class="menu-item" data-ref="opt-case-title">
+                        <span class="component-icon menu-item__icon">title</span>
+                        <span class="menu-item__text">Tipo Título</span>
+                      </button>
+                      <div class="design-toolbar-divider" style="margin: 4px 0;"></div>
+                      <button type="button" class="menu-item" data-ref="opt-letter-spacing-tight" data-letter-spacing="-0.5px">
+                        <span class="component-icon menu-item__icon">compress</span>
+                        <span class="menu-item__text">Espaciado estrecho (-0.5px)</span>
+                      </button>
+                      <button type="button" class="menu-item is-active" data-ref="opt-letter-spacing-normal" data-letter-spacing="0px">
+                        <span class="component-icon menu-item__icon">space_bar</span>
+                        <span class="menu-item__text">Espaciado normal (0px)</span>
+                      </button>
+                      <button type="button" class="menu-item" data-ref="opt-letter-spacing-wide" data-letter-spacing="1px">
+                        <span class="component-icon menu-item__icon">expand</span>
+                        <span class="menu-item__text">Espaciado amplio (+1px)</span>
+                      </button>
+                      <div class="design-toolbar-divider" style="margin: 4px 0;"></div>
+                      <button type="button" class="menu-item" data-ref="btn-clear-format">
+                        <span class="component-icon menu-item__icon">format_clear</span>
+                        <span class="menu-item__text">Limpiar formato</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div class="design-toolbar-divider" data-ref="doc-divider-paragraph"></div>
 
             <div class="design-toolbar-group" data-ref="doc-group-paragraph">
-              <button type="button" class="design-toolbar-btn is-active" data-ref="btn-align-left" data-tooltip="Alinear a la izquierda" aria-label="Alinear a la izquierda">
-                <span class="component-icon">format_align_left</span>
-              </button>
-              <button type="button" class="design-toolbar-btn" data-ref="btn-align-center" data-tooltip="Centrar" aria-label="Centrar">
-                <span class="component-icon">format_align_center</span>
-              </button>
-              <button type="button" class="design-toolbar-btn" data-ref="btn-align-right" data-tooltip="Alinear a la derecha" aria-label="Alinear a la derecha">
-                <span class="component-icon">format_align_right</span>
-              </button>
-              <button type="button" class="design-toolbar-btn" data-ref="btn-align-justify" data-tooltip="Justificar" aria-label="Justificar">
-                <span class="component-icon">format_align_justify</span>
-              </button>
+              <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-alignment">
+                <button type="button" class="design-toolbar-btn" data-ref="btn-trigger-alignment" data-tooltip="Alineación de texto" aria-label="Alineación">
+                  <span class="component-icon" data-ref="alignment-current-icon">format_align_left</span>
+                </button>
+                <div class="dropdown-backdrop" data-ref="backdrop-alignment">
+                  <div class="menu-panel menu-panel--dropdown menu-panel--w-180 menu-panel--h-auto" data-ref="menu-alignment">
+                    <div class="menu-panel__drag-zone" data-ref="alignment-drag-zone" aria-hidden="true">
+                      <div class="menu-panel__drag-handle"></div>
+                    </div>
+                    <div class="menu-panel__list" data-ref="list-alignment">
+                      <button type="button" class="menu-item is-active" data-ref="btn-align-left">
+                        <span class="component-icon menu-item__icon">format_align_left</span>
+                        <span class="menu-item__text">Izquierda</span>
+                      </button>
+                      <button type="button" class="menu-item" data-ref="btn-align-center">
+                        <span class="component-icon menu-item__icon">format_align_center</span>
+                        <span class="menu-item__text">Centrar</span>
+                      </button>
+                      <button type="button" class="menu-item" data-ref="btn-align-right">
+                        <span class="component-icon menu-item__icon">format_align_right</span>
+                        <span class="menu-item__text">Derecha</span>
+                      </button>
+                      <button type="button" class="menu-item" data-ref="btn-align-justify">
+                        <span class="component-icon menu-item__icon">format_align_justify</span>
+                        <span class="menu-item__text">Justificar</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
               <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-line-spacing">
                 <button type="button" class="design-toolbar-btn" data-ref="btn-trigger-line-spacing" data-tooltip="Interlineado y espaciado de párrafo" aria-label="Interlineado">
@@ -272,33 +281,50 @@
               <button type="button" class="design-toolbar-btn" data-ref="btn-list-ordered" data-tooltip="Lista numerada" aria-label="Lista numerada">
                 <span class="component-icon">format_list_numbered</span>
               </button>
-              <button type="button" class="design-toolbar-btn" data-ref="btn-list-checklist" data-tooltip="Lista de tareas / Checklist" aria-label="Lista de tareas">
-                <span class="component-icon">checklist</span>
-              </button>
-              <button type="button" class="design-toolbar-btn" data-ref="btn-outdent" data-tooltip="Disminuir sangría" aria-label="Disminuir sangría">
-                <span class="component-icon">format_indent_decrease</span>
-              </button>
-              <button type="button" class="design-toolbar-btn" data-ref="btn-indent" data-tooltip="Aumentar sangría" aria-label="Aumentar sangría">
-                <span class="component-icon">format_indent_increase</span>
-              </button>
-              <button type="button" class="design-toolbar-btn" data-ref="btn-indent-first-line" data-tooltip="Sangría de primera línea" aria-label="Sangría de primera línea">
-                <span class="component-icon">first_page</span>
-              </button>
+              <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-indents">
+                <button type="button" class="design-toolbar-btn" data-ref="btn-trigger-indents" data-tooltip="Sangría y listas avanzadas" aria-label="Sangría">
+                  <span class="component-icon">format_indent_increase</span>
+                </button>
+                <div class="dropdown-backdrop" data-ref="backdrop-indents">
+                  <div class="menu-panel menu-panel--dropdown menu-panel--w-200 menu-panel--h-auto" data-ref="menu-indents">
+                    <div class="menu-panel__drag-zone" data-ref="indents-drag-zone" aria-hidden="true">
+                      <div class="menu-panel__drag-handle"></div>
+                    </div>
+                    <div class="menu-panel__list" data-ref="list-indents">
+                      <button type="button" class="menu-item" data-ref="btn-list-checklist">
+                        <span class="component-icon menu-item__icon">checklist</span>
+                        <span class="menu-item__text">Lista de tareas</span>
+                      </button>
+                      <button type="button" class="menu-item" data-ref="btn-indent">
+                        <span class="component-icon menu-item__icon">format_indent_increase</span>
+                        <span class="menu-item__text">Aumentar sangría</span>
+                      </button>
+                      <button type="button" class="menu-item" data-ref="btn-outdent">
+                        <span class="component-icon menu-item__icon">format_indent_decrease</span>
+                        <span class="menu-item__text">Disminuir sangría</span>
+                      </button>
+                      <button type="button" class="menu-item" data-ref="btn-indent-first-line">
+                        <span class="component-icon menu-item__icon">first_page</span>
+                        <span class="menu-item__text">Sangría 1ra línea</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div class="design-toolbar-divider" data-ref="doc-divider-insert"></div>
 
             <div class="design-toolbar-group" data-ref="doc-group-insert">
+              <button type="button" class="design-toolbar-btn" data-ref="btn-insert-link" data-tooltip="Insertar enlace (Ctrl+K)" aria-label="Insertar enlace">
+                <span class="component-icon">link</span>
+              </button>
               <button type="button" class="design-toolbar-btn" data-ref="btn-insert-image" data-tooltip="Insertar o arrastrar imagen" aria-label="Insertar imagen">
                 <span class="component-icon">image</span>
               </button>
               <input class="is-hidden" data-ref="input-file-image" type="file" accept="image/*" style="display: none !important;" />
               <input class="is-hidden" data-ref="input-file-logo" type="file" accept="image/*" style="display: none !important;" />
               <input class="is-hidden" data-ref="input-file-replace-img" type="file" accept="image/*" style="display: none !important;" />
-
-              <button type="button" class="design-toolbar-btn" data-ref="btn-insert-logo" data-tooltip="Insertar logo en encabezado" aria-label="Insertar logo">
-                <span class="component-icon">verified_user</span>
-              </button>
 
               <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-table">
                 <button type="button" class="design-toolbar-btn" data-ref="btn-trigger-table" data-tooltip="Insertar tabla" aria-label="Insertar tabla">
@@ -317,76 +343,99 @@
                 </div>
               </div>
 
-              <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-callout">
-                <button type="button" class="design-toolbar-btn" data-ref="btn-trigger-callout" data-tooltip="Bloque de notas / Callout" aria-label="Insertar nota">
-                  <span class="component-icon">note_add</span>
+              <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-insert-more">
+                <button type="button" class="design-toolbar-btn" data-ref="btn-trigger-insert-more" data-tooltip="Más elementos a insertar" aria-label="Insertar más">
+                  <span class="component-icon">add_circle_outline</span>
                 </button>
-                <div class="dropdown-backdrop" data-ref="backdrop-callout">
-                  <div class="menu-panel menu-panel--dropdown menu-panel--w-180 menu-panel--h-auto" data-ref="menu-callout">
-                    <div class="menu-panel__drag-zone" data-ref="callout-drag-zone" aria-hidden="true">
+                <div class="dropdown-backdrop" data-ref="backdrop-insert-more">
+                  <div class="menu-panel menu-panel--dropdown menu-panel--w-220 menu-panel--h-auto" data-ref="menu-insert-more">
+                    <div class="menu-panel__drag-zone" data-ref="insert-more-drag-zone" aria-hidden="true">
                       <div class="menu-panel__drag-handle"></div>
                     </div>
-                    <div class="menu-panel__list" data-ref="list-callouts">
+                    <div class="menu-panel__list" data-ref="list-insert-more">
+                      <button type="button" class="menu-item" data-ref="btn-insert-logo">
+                        <span class="component-icon menu-item__icon">verified_user</span>
+                        <span class="menu-item__text">Logo de encabezado</span>
+                      </button>
+                      <button type="button" class="menu-item" data-ref="btn-insert-symbol">
+                        <span class="component-icon menu-item__icon">emoji_symbols</span>
+                        <span class="menu-item__text">Símbolo especial</span>
+                      </button>
+                      <button type="button" class="menu-item" data-ref="btn-insert-hr">
+                        <span class="component-icon menu-item__icon">horizontal_rule</span>
+                        <span class="menu-item__text">Línea divisoria</span>
+                      </button>
+                      <button type="button" class="menu-item" data-ref="btn-add-page">
+                        <span class="component-icon menu-item__icon">post_add</span>
+                        <span class="menu-item__text">Nueva página</span>
+                      </button>
+                      <div class="design-toolbar-divider" style="margin: 4px 0;"></div>
                       <button type="button" class="menu-item" data-ref="opt-callout-info" data-type="info">
                         <span class="component-icon menu-item__icon" style="color: #3b82f6;">info</span>
-                        <span class="menu-item__text">Información</span>
+                        <span class="menu-item__text">Nota informativa</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="opt-callout-success" data-type="success">
                         <span class="component-icon menu-item__icon" style="color: #22c55e;">check_circle</span>
-                        <span class="menu-item__text">Éxito</span>
+                        <span class="menu-item__text">Nota de éxito</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="opt-callout-warning" data-type="warning">
                         <span class="component-icon menu-item__icon" style="color: #f59e0b;">warning</span>
-                        <span class="menu-item__text">Advertencia</span>
+                        <span class="menu-item__text">Nota de advertencia</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="opt-callout-danger" data-type="danger">
                         <span class="component-icon menu-item__icon" style="color: #ef4444;">dangerous</span>
-                        <span class="menu-item__text">Peligro</span>
+                        <span class="menu-item__text">Nota de peligro</span>
                       </button>
                       <button type="button" class="menu-item" data-ref="opt-callout-tip" data-type="tip">
                         <span class="component-icon menu-item__icon" style="color: #a855f7;">lightbulb</span>
-                        <span class="menu-item__text">Consejo</span>
+                        <span class="menu-item__text">Nota de consejo</span>
                       </button>
                     </div>
                   </div>
                 </div>
               </div>
-
-              <button type="button" class="design-toolbar-btn" data-ref="btn-insert-link" data-tooltip="Insertar enlace (Ctrl+K)" aria-label="Insertar enlace">
-                <span class="component-icon">link</span>
-              </button>
-              <button type="button" class="design-toolbar-btn" data-ref="btn-insert-symbol" data-tooltip="Insertar símbolo o carácter especial" aria-label="Símbolos">
-                <span class="component-icon">emoji_symbols</span>
-              </button>
-              <button type="button" class="design-toolbar-btn" data-ref="btn-insert-hr" data-tooltip="Línea horizontal divisoria" aria-label="Separador horizontal">
-                <span class="component-icon">horizontal_rule</span>
-              </button>
-              <button type="button" class="design-toolbar-btn" data-ref="btn-add-page" data-tooltip="Añadir nueva página" aria-label="Añadir página">
-                <span class="component-icon">post_add</span>
-              </button>
             </div>
 
             <div class="design-toolbar-divider" data-ref="doc-divider-tools"></div>
 
             <div class="design-toolbar-group" data-ref="doc-group-tools">
-              <button type="button" class="design-toolbar-btn" data-ref="btn-page-setup" data-tooltip="Configuración de página y márgenes" aria-label="Configuración de página">
-                <span class="component-icon">pageview</span>
-              </button>
-              <button type="button" class="design-toolbar-btn" data-ref="btn-watermark-setup" data-tooltip="Marca de agua (Watermark)" aria-label="Marca de agua">
-                <span class="component-icon">branding_watermark</span>
-              </button>
-              <button type="button" class="design-toolbar-btn" data-ref="btn-page-design" data-tooltip="Diseño de hoja (Color, bordes y columnas)" aria-label="Diseño de hoja">
-                <span class="component-icon">auto_awesome_mosaic</span>
-              </button>
               <button type="button" class="design-toolbar-btn" data-ref="btn-toggle-find" data-tooltip="Buscar y reemplazar (Ctrl+F)" aria-label="Buscar y reemplazar">
                 <span class="component-icon">search</span>
               </button>
-              <button type="button" class="design-toolbar-btn" data-ref="btn-doc-stats" data-tooltip="Estadísticas del documento" aria-label="Estadísticas">
-                <span class="component-icon">analytics</span>
-              </button>
-              <button type="button" class="design-toolbar-btn" data-ref="btn-print" data-tooltip="Imprimir / PDF (Ctrl+P)" aria-label="Imprimir">
-                <span class="component-icon">print</span>
-              </button>
+              <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-doc-tools">
+                <button type="button" class="design-toolbar-btn" data-ref="btn-trigger-doc-tools" data-tooltip="Diseño y configuración de página" aria-label="Configuración de página">
+                  <span class="component-icon">tune</span>
+                </button>
+                <div class="dropdown-backdrop" data-ref="backdrop-doc-tools">
+                  <div class="menu-panel menu-panel--dropdown menu-panel--w-240 menu-panel--h-auto" data-ref="menu-doc-tools">
+                    <div class="menu-panel__drag-zone" data-ref="doc-tools-drag-zone" aria-hidden="true">
+                      <div class="menu-panel__drag-handle"></div>
+                    </div>
+                    <div class="menu-panel__list" data-ref="list-doc-tools">
+                      <button type="button" class="menu-item" data-ref="btn-page-setup">
+                        <span class="component-icon menu-item__icon">pageview</span>
+                        <span class="menu-item__text">Configuración de página</span>
+                      </button>
+                      <button type="button" class="menu-item" data-ref="btn-page-design">
+                        <span class="component-icon menu-item__icon">auto_awesome_mosaic</span>
+                        <span class="menu-item__text">Diseño y márgenes</span>
+                      </button>
+                      <button type="button" class="menu-item" data-ref="btn-watermark-setup">
+                        <span class="component-icon menu-item__icon">branding_watermark</span>
+                        <span class="menu-item__text">Marca de agua</span>
+                      </button>
+                      <button type="button" class="menu-item" data-ref="btn-doc-stats">
+                        <span class="component-icon menu-item__icon">analytics</span>
+                        <span class="menu-item__text">Estadísticas</span>
+                      </button>
+                      <button type="button" class="menu-item" data-ref="btn-print">
+                        <span class="component-icon menu-item__icon">print</span>
+                        <span class="menu-item__text">Imprimir / Guardar PDF</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
               <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-export">
                 <button type="button" class="design-toolbar-btn" data-ref="btn-toggle-export" data-tooltip="Descargar o Exportar" aria-label="Descargar o Exportar">

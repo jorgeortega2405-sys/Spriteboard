@@ -296,9 +296,6 @@
               <button type="button" class="design-toolbar-btn" data-ref="btn-toggle-layers" data-tooltip="Capas" aria-label="Capas">
                 <span class="component-icon">layers</span>
               </button>
-              <button type="button" class="design-toolbar-btn" data-ref="btn-top-toggle-colors" data-tooltip="Paleta de colores" aria-label="Colores">
-                <span class="component-icon">palette</span>
-              </button>
               <button type="button" class="design-toolbar-btn" data-ref="btn-tile-grid" data-tooltip="Rejilla de Tiles" aria-label="Rejilla de Tiles">
                 <span class="component-icon">grid_on</span>
               </button>
@@ -323,18 +320,36 @@
               <button type="button" class="design-toolbar-btn" data-ref="btn-resize-canvas" data-tooltip="Redimensionar lienzo" aria-label="Redimensionar lienzo">
                 <span class="component-icon">aspect_ratio</span>
               </button>
-              <button type="button" class="design-toolbar-btn" data-ref="btn-canvas-rotate-cw" data-tooltip="Rotar lienzo 90° horario" aria-label="Rotar lienzo horario">
-                <span class="component-icon">rotate_right</span>
-              </button>
-              <button type="button" class="design-toolbar-btn" data-ref="btn-canvas-rotate-ccw" data-tooltip="Rotar lienzo 90° antihorario" aria-label="Rotar lienzo antihorario">
-                <span class="component-icon">rotate_left</span>
-              </button>
-              <button type="button" class="design-toolbar-btn" data-ref="btn-canvas-flip-h" data-tooltip="Voltear lienzo horizontalmente" aria-label="Voltear horizontal">
-                <span class="component-icon">swap_horiz</span>
-              </button>
-              <button type="button" class="design-toolbar-btn" data-ref="btn-canvas-flip-v" data-tooltip="Voltear lienzo verticalmente" aria-label="Voltear vertical">
-                <span class="component-icon">swap_vert</span>
-              </button>
+              <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-canvas-transform">
+                <button type="button" class="design-toolbar-btn" data-ref="btn-trigger-canvas-transform" data-tooltip="Transformar lienzo (Rotar / Voltear)" aria-label="Transformar lienzo">
+                  <span class="component-icon">transform</span>
+                </button>
+                <div class="dropdown-backdrop" data-ref="dropdown-backdrop-canvas-transform">
+                  <div class="menu-panel menu-panel--dropdown menu-panel--w-220 menu-panel--h-auto" data-ref="dropdown-menu-canvas-transform">
+                    <div class="menu-panel__drag-zone" data-ref="canvas-transform-drag-zone" aria-hidden="true">
+                      <div class="menu-panel__drag-handle"></div>
+                    </div>
+                    <div class="menu-panel__list" data-ref="list-canvas-transform">
+                      <button type="button" class="menu-item" data-ref="btn-canvas-rotate-cw">
+                        <span class="component-icon menu-item__icon">rotate_right</span>
+                        <span class="menu-item__text">Rotar 90° horario</span>
+                      </button>
+                      <button type="button" class="menu-item" data-ref="btn-canvas-rotate-ccw">
+                        <span class="component-icon menu-item__icon">rotate_left</span>
+                        <span class="menu-item__text">Rotar 90° antihorario</span>
+                      </button>
+                      <button type="button" class="menu-item" data-ref="btn-canvas-flip-h">
+                        <span class="component-icon menu-item__icon">swap_horiz</span>
+                        <span class="menu-item__text">Voltear horizontal</span>
+                      </button>
+                      <button type="button" class="menu-item" data-ref="btn-canvas-flip-v">
+                        <span class="component-icon menu-item__icon">swap_vert</span>
+                        <span class="menu-item__text">Voltear vertical</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
             <div class="design-toolbar-divider" data-ref="top-toolbar-divider-collab"></div>
             <div class="design-toolbar-group" data-ref="top-group-collab">
@@ -1097,15 +1112,32 @@
                 <button type="button" class="design-toolbar-btn" data-ref="tool-eraser" data-tooltip="Borrador (E)" aria-label="Borrador">
                   <span class="component-icon">ink_eraser</span>
                 </button>
-                <button type="button" class="design-toolbar-btn" data-ref="tool-spray" data-tooltip="Spray / Aerógrafo (A)" aria-label="Spray">
-                  <span class="component-icon">blur_on</span>
-                </button>
-                <button type="button" class="design-toolbar-btn" data-ref="tool-dither" data-tooltip="Tramador / Semitonos (D)" aria-label="Tramador">
-                  <span class="component-icon">texture</span>
-                </button>
-                <button type="button" class="design-toolbar-btn" data-ref="tool-shading" data-tooltip="Sombreado e Iluminación" aria-label="Sombreado e Iluminación">
-                  <span class="component-icon">tonality</span>
-                </button>
+                <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-special-brushes">
+                  <button type="button" class="design-toolbar-btn" data-ref="btn-trigger-special-brushes" data-tooltip="Pinceles especiales (Spray, Tramador, Sombreado)" aria-label="Pinceles especiales">
+                    <span class="component-icon" data-ref="special-brush-current-icon">blur_on</span>
+                  </button>
+                  <div class="dropdown-backdrop" data-ref="dropdown-backdrop-special-brushes">
+                    <div class="menu-panel menu-panel--dropdown menu-panel--w-220 menu-panel--h-auto" data-ref="dropdown-menu-special-brushes">
+                      <div class="menu-panel__drag-zone" data-ref="special-brushes-drag-zone" aria-hidden="true">
+                        <div class="menu-panel__drag-handle"></div>
+                      </div>
+                      <div class="menu-panel__list" data-ref="list-special-brushes">
+                        <button type="button" class="menu-item" data-ref="tool-spray">
+                          <span class="component-icon menu-item__icon">blur_on</span>
+                          <span class="menu-item__text">Spray / Aerógrafo (A)</span>
+                        </button>
+                        <button type="button" class="menu-item" data-ref="tool-dither">
+                          <span class="component-icon menu-item__icon">texture</span>
+                          <span class="menu-item__text">Tramador / Dither (D)</span>
+                        </button>
+                        <button type="button" class="menu-item" data-ref="tool-shading">
+                          <span class="component-icon menu-item__icon">tonality</span>
+                          <span class="menu-item__text">Sombreado e Iluminación</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div class="design-toolbar-divider" data-ref="toolbar-divider-shapes"></div>
@@ -1119,12 +1151,28 @@
               <div class="design-toolbar-divider" data-ref="toolbar-divider-color"></div>
 
               <div class="design-toolbar-group" data-ref="toolbar-group-fill">
-                <button type="button" class="design-toolbar-btn" data-ref="tool-bucket" data-tooltip="Balde de pintura (G)" aria-label="Balde de pintura">
-                  <span class="component-icon">format_color_fill</span>
-                </button>
-                <button type="button" class="design-toolbar-btn" data-ref="tool-recolor" data-tooltip="Reemplazo de color (Color Swap)" aria-label="Reemplazo de color">
-                  <span class="component-icon">find_replace</span>
-                </button>
+                <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-fill-tools">
+                  <button type="button" class="design-toolbar-btn" data-ref="btn-trigger-fill-tools" data-tooltip="Herramientas de relleno (G)" aria-label="Herramientas de relleno">
+                    <span class="component-icon" data-ref="fill-tool-current-icon">format_color_fill</span>
+                  </button>
+                  <div class="dropdown-backdrop" data-ref="dropdown-backdrop-fill-tools">
+                    <div class="menu-panel menu-panel--dropdown menu-panel--w-200 menu-panel--h-auto" data-ref="dropdown-menu-fill-tools">
+                      <div class="menu-panel__drag-zone" data-ref="fill-tools-drag-zone" aria-hidden="true">
+                        <div class="menu-panel__drag-handle"></div>
+                      </div>
+                      <div class="menu-panel__list" data-ref="list-fill-tools">
+                        <button type="button" class="menu-item" data-ref="tool-bucket">
+                          <span class="component-icon menu-item__icon">format_color_fill</span>
+                          <span class="menu-item__text">Balde de pintura (G)</span>
+                        </button>
+                        <button type="button" class="menu-item" data-ref="tool-recolor">
+                          <span class="component-icon menu-item__icon">find_replace</span>
+                          <span class="menu-item__text">Reemplazo de color</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
                 <button type="button" class="design-toolbar-btn" data-ref="btn-bottom-colors" data-tooltip="Paleta de colores" aria-label="Paleta de colores">
                   <span class="design-color-picker__preview" data-ref="tool-color-preview" style="background-color: #000000;"></span>
                 </button>
@@ -1153,9 +1201,6 @@
                 <button type="button" class="design-toolbar-btn" data-ref="btn-clear-canvas" data-tooltip="Limpiar lienzo" aria-label="Limpiar lienzo">
                   <span class="component-icon">delete_outline</span>
                 </button>
-                <button type="button" class="design-toolbar-btn" data-ref="btn-bottom-layers" data-tooltip="Capas" aria-label="Capas">
-                  <span class="component-icon">layers</span>
-                </button>
                 <button type="button" class="design-toolbar-btn" data-ref="btn-bottom-frames" data-tooltip="Animación / Cuadros" aria-label="Animación">
                   <span class="component-icon">animation</span>
                 </button>
@@ -1167,14 +1212,11 @@
                 <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-zoom-out" data-tooltip="Alejar" aria-label="Alejar zoom">
                   <span class="component-icon">remove</span>
                 </button>
-                <div class="design-zoom-slider-container" data-ref="zoom-slider-container">
-                  <input class="design-zoom-slider" data-ref="zoom-slider" type="range" min="1" max="100" value="10" aria-label="Control de Zoom" />
-                </div>
-                <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-zoom-in" data-tooltip="Acercar" aria-label="Acercar zoom">
-                  <span class="component-icon">add</span>
-                </button>
                 <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-zoom-reset" data-tooltip="Restablecer (100%)" aria-label="Restablecer zoom">
                   <span data-ref="zoom-value-text">100%</span>
+                </button>
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-zoom-in" data-tooltip="Acercar" aria-label="Acercar zoom">
+                  <span class="component-icon">add</span>
                 </button>
                 <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-zoom-fit" data-tooltip="Ajustar a pantalla" aria-label="Ajustar a pantalla">
                   <span class="component-icon">fit_screen</span>

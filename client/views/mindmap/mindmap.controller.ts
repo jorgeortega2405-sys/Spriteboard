@@ -1,16 +1,19 @@
+import { openCanvasShareModal } from '../../components/canvas-share-modal.component.js';
 import { closeContextMenu, ContextMenuItem, openContextMenu } from '../../components/context-menu.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
 import { currentUser, getApi, putApi } from '../../services/api.service.js';
 import { getLocalCanvasByUuid, saveLocalCanvas } from '../../services/canvas-storage.service.js';
 import { showToast } from '../../services/toast.service.js';
+import { CanvasItem } from '../../types/canvas.types.js';
 import { ViewController } from '../../types/common.types.js';
 import { DiagramSubtype, MindMapCamera, MindMapConnection, MindMapNode, MindMapProject, SmartHandleDirection } from '../../types/mindmap.types.js';
 import { setupDropdown } from '../../utils/dom.util.js';
 import { openMindMapAiModal } from './mindmap-ai-modal.component.js';
+import { MindMapCollaborationManager, MindMapCollaboratorState } from './mindmap-collaboration.manager.js';
 import { exportMindMapMarkdown, exportMindMapPng, exportMindMapSvg, generateMindMapThumbnail } from './mindmap-export.service.js';
 import { MindMapHistoryManager } from './mindmap-history.manager.js';
 import { ComputedNodeLayout, computeMindMapTreeLayout, estimateNodeDimensions } from './mindmap-layout.engine.js';
-import { drawBranchConnections, drawConnectionDraft, drawCustomConnections, drawMindMapBackground, drawMindMapNodes, drawMinimap, drawSelectionBox, drawStrategyBackground, getSmartHandleAtPoint, screenToWorld, worldToScreen } from './mindmap-renderer.js';
+import { drawBranchConnections, drawConnectionDraft, drawCustomConnections, drawMindMapBackground, drawMindMapCollaboratorCursors, drawMindMapNodes, drawMinimap, drawSelectionBox, drawStrategyBackground, getSmartHandleAtPoint, screenToWorld, worldToScreen } from './mindmap-renderer.js';
 import { getDiagramStrategy } from './strategies/strategy.registry.js';
 
 const PALETTE_COLORS = [
@@ -21,16 +24,25 @@ const PALETTE_COLORS = [
 
 export class MindMapController implements ViewController {
   private abortController: AbortController = new AbortController();
+  private accessLevel: 'private' | 'public' = 'private';
+  private addIdeasDropdownController: { close: () => void; destroy: () => void } | null = null;
   private boxSelectCurrentWorld: { x: number; y: number } = { x: 0, y: 0 };
   private boxSelectStartWorld: { x: number; y: number } = { x: 0, y: 0 };
   private canvas: HTMLCanvasElement | null = null;
   private canvasContainer: HTMLElement | null = null;
+  private canvasCreatedAt: string | null = null;
+  private canvasServerId: number | null = null;
   private canvasTitle = 'Mapa Mental sin título';
+  private canvasUserId: number | null = null;
   private canvasUuid: string;
+  private collaborationManager: MindMapCollaborationManager;
+  private collaboratorsBarEl: HTMLElement | null = null;
+  private collaboratorsListEl: HTMLElement | null = null;
   private connectorMouseWorld: { x: number; y: number } = { x: 0, y: 0 };
   private connectorSourceId: string | null = null;
   private container: HTMLElement;
   private ctx: CanvasRenderingContext2D | null = null;
+  private currentCanvasItem: CanvasItem | null = null;
   private draggedNodeId: string | null = null;
   private draggedSubtreeInitialPositions: Map<string, { x: number; y: number }> = new Map();
   private dragStartCamera: { x: number; y: number } = { x: 0, y: 0 };
@@ -38,6 +50,8 @@ export class MindMapController implements ViewController {
   private dragStartMouseWorld: { x: number; y: number } = { x: 0, y: 0 };
   private dropTargetNodeId: string | null = null;
   private editingNodeId: string | null = null;
+  private emojisDropdownController: { close: () => void; destroy: () => void } | null = null;
+  private exportDropdownController: { close: () => void; destroy: () => void } | null = null;
   private hasMovedDuringDrag = false;
   private historyManager: MindMapHistoryManager = new MindMapHistoryManager();
   private hoveredNodeId: string | null = null;
@@ -49,6 +63,7 @@ export class MindMapController implements ViewController {
   private isSelectingBox = false;
   private isSpacePressed = false;
   private layoutMap: Map<string, ComputedNodeLayout> = new Map();
+  private linesDropdownController: { close: () => void; destroy: () => void } | null = null;
   private project: MindMapProject = {
     camera: { x: 0, y: 0, zoom: 1 },
     connections: [],
@@ -64,24 +79,29 @@ export class MindMapController implements ViewController {
     type: 'mindmap',
     version: 1,
   };
+  private publicRole: 'editor' | 'viewer' = 'editor';
   private quickInserterWorldPos: { x: number; y: number } = { x: 0, y: 0 };
   private resizeObserver: ResizeObserver | null = null;
   private saveDebounceTimer: number | null = null;
   private selectedConnectionId: string | null = null;
   private selectedNodeId: string | null = null;
   private selectedNodeIds: Set<string> = new Set();
+  private shapesDropdownController: { close: () => void; destroy: () => void } | null = null;
   private showMinimap = false;
   private textEditorContainer: HTMLElement | null = null;
 
   constructor(container: HTMLElement, canvasUuid: string) {
     this.container = container;
     this.canvasUuid = canvasUuid;
+    this.collaborationManager = new MindMapCollaborationManager(canvasUuid);
   }
 
   public async init(): Promise<boolean> {
     this.canvas = this.container.querySelector<HTMLCanvasElement>('[data-ref="mindmap-viewport-canvas"]');
     this.canvasContainer = this.container.querySelector<HTMLElement>('[data-ref="mindmap-viewport"]');
     this.textEditorContainer = this.container.querySelector<HTMLElement>('[data-ref="mindmap-text-editor-container"]');
+    this.collaboratorsBarEl = this.container.querySelector<HTMLElement>('[data-ref="mindmap-collaborators-bar"]');
+    this.collaboratorsListEl = this.container.querySelector<HTMLElement>('[data-ref="mindmap-collaborators-list"]');
 
     if (!this.canvas || !this.canvasContainer) return false;
 
@@ -91,6 +111,7 @@ export class MindMapController implements ViewController {
     const loaded = await this.loadCanvasData();
     if (!loaded) return false;
 
+    this.setupCollaboration();
     this.recomputeLayout();
     this.historyManager.pushState(this.project);
     this.updateUndoRedoButtonsState();
@@ -104,6 +125,12 @@ export class MindMapController implements ViewController {
 
   public destroy(): void {
     closeContextMenu();
+    this.collaborationManager.destroy();
+    this.addIdeasDropdownController?.destroy();
+    this.emojisDropdownController?.destroy();
+    this.exportDropdownController?.destroy();
+    this.linesDropdownController?.destroy();
+    this.shapesDropdownController?.destroy();
     if (this.saveDebounceTimer !== null) {
       window.clearTimeout(this.saveDebounceTimer);
       this.saveDebounceTimer = null;
@@ -134,6 +161,13 @@ export class MindMapController implements ViewController {
     }
 
     if (!canvasRecord) return false;
+
+    this.currentCanvasItem = canvasRecord as CanvasItem;
+    this.canvasServerId = canvasRecord.id || null;
+    this.canvasUserId = canvasRecord.user_id || null;
+    this.canvasCreatedAt = canvasRecord.created_at || null;
+    this.accessLevel = canvasRecord.access_level || 'private';
+    this.publicRole = canvasRecord.public_role || 'editor';
 
     this.canvasTitle = canvasRecord.name || 'Mapa Mental sin título';
     const titleEl = this.container.querySelector<HTMLElement>('[data-ref="mindmap-title"]');
@@ -188,6 +222,83 @@ export class MindMapController implements ViewController {
     this.selectedNodeIds = new Set([rootId]);
 
     return true;
+  }
+
+  private setupCollaboration(): void {
+    const userId = currentUser ? currentUser.id : null;
+    const username = currentUser ? currentUser.username : 'Invitado';
+    const avatarUrl = currentUser?.avatar_url || null;
+    const tier = (currentUser?.subscription_tier || 'free') as MindMapCollaboratorState['subscriptionTier'];
+
+    this.collaborationManager.isOwner = Boolean(
+      (currentUser && this.canvasUserId && this.canvasUserId === currentUser.id) ||
+      (!this.canvasUserId && !this.canvasServerId)
+    );
+    this.collaborationManager.accessLevel = this.accessLevel;
+    this.collaborationManager.publicRole = this.publicRole;
+
+    this.collaborationManager.init(userId, username, avatarUrl, tier, {
+      onAccessChanged: (accessLevel, publicRole) => {
+        this.accessLevel = accessLevel;
+        if (publicRole) this.publicRole = publicRole;
+      },
+      onAccessRevoked: () => {
+        showToast('El acceso a este esquema ha sido revocado', 'warning');
+      },
+      onCollaboratorsChanged: () => {
+        this.renderCollaboratorsBar();
+        this.render();
+      },
+      onCursor: () => {
+        this.render();
+      },
+      onRemoteFullUpdate: (remoteProject) => {
+        if (!remoteProject || !remoteProject.nodes || !remoteProject.rootId) return;
+        this.project = remoteProject;
+        this.recomputeLayout();
+        this.render();
+      },
+      onRemoteProjectUpdate: (remoteProject) => {
+        if (!remoteProject || !remoteProject.nodes || !remoteProject.rootId) return;
+        this.project = remoteProject;
+        this.recomputeLayout();
+        this.render();
+      },
+      onRequestFullState: (targetConnId) => {
+        this.collaborationManager.broadcastFullState(this.project, targetConnId);
+      },
+    });
+
+    this.renderCollaboratorsBar();
+  }
+
+  private renderCollaboratorsBar(): void {
+    if (!this.collaboratorsBarEl || !this.collaboratorsListEl) return;
+    this.collaboratorsListEl.innerHTML = '';
+
+    const count = this.collaborationManager.collaborators.size;
+    if (count === 0) {
+      this.collaboratorsBarEl.classList.add('is-hidden');
+      return;
+    }
+
+    this.collaboratorsBarEl.classList.remove('is-hidden');
+    this.collaborationManager.collaborators.forEach((collab) => {
+      const chip = document.createElement('div');
+      chip.className = 'design-collaborator-chip';
+      chip.setAttribute('data-ref', `collaborator-${collab.connId}`);
+      chip.setAttribute('data-tooltip', collab.username || 'Invitado');
+      chip.setAttribute('aria-label', collab.username || 'Invitado');
+      chip.style.borderColor = collab.color;
+
+      if (collab.avatarUrl) {
+        chip.style.backgroundImage = `url(${collab.avatarUrl})`;
+      } else {
+        chip.textContent = (collab.username || 'U').slice(0, 2).toUpperCase();
+        chip.style.backgroundColor = collab.color;
+      }
+      this.collaboratorsListEl?.appendChild(chip);
+    });
   }
 
   private setupCanvasSize(): void {
@@ -247,6 +358,8 @@ export class MindMapController implements ViewController {
       this.hoveredSmartHandle
     );
 
+    drawMindMapCollaboratorCursors(this.ctx, this.collaborationManager.collaborators, this.project.camera, w, h);
+
     if (this.showMinimap) {
       drawMinimap(this.ctx, this.layoutMap, this.project.camera, w, h);
     }
@@ -287,9 +400,20 @@ export class MindMapController implements ViewController {
     const btnEditNode = this.container.querySelector<HTMLElement>('[data-ref="btn-edit-node"]');
     const btnDeleteNode = this.container.querySelector<HTMLElement>('[data-ref="btn-delete-node"]');
 
+    const wrapperAddIdeas = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-add-ideas"]');
+    if (wrapperAddIdeas) {
+      this.addIdeasDropdownController = setupDropdown(wrapperAddIdeas, { matchWidth: false });
+    }
+
     btnAddChild?.addEventListener('click', () => this.addChildNode(this.selectedNodeId || this.project.rootId), { signal });
-    btnAddSibling?.addEventListener('click', () => this.addSiblingNode(this.selectedNodeId || this.project.rootId), { signal });
-    btnAddFree?.addEventListener('click', () => this.addFreeNode(), { signal });
+    btnAddSibling?.addEventListener('click', () => {
+      this.addIdeasDropdownController?.close();
+      this.addSiblingNode(this.selectedNodeId || this.project.rootId);
+    }, { signal });
+    btnAddFree?.addEventListener('click', () => {
+      this.addIdeasDropdownController?.close();
+      this.addFreeNode();
+    }, { signal });
 
     btnToolConnect?.addEventListener('click', () => {
       this.isConnectToolActive = !this.isConnectToolActive;
@@ -323,6 +447,7 @@ export class MindMapController implements ViewController {
     }, { signal });
 
     btnEditNode?.addEventListener('click', () => {
+      this.addIdeasDropdownController?.close();
       if (this.selectedNodeId) this.startEditingNode(this.selectedNodeId);
     }, { signal });
 
@@ -432,7 +557,7 @@ export class MindMapController implements ViewController {
 
     const shapesDropdown = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-shapes"]');
     if (shapesDropdown) {
-      setupDropdown(shapesDropdown, {
+      this.shapesDropdownController = setupDropdown(shapesDropdown, {
         onSelect: (val: unknown, item?: HTMLElement) => {
           const shape = (item?.getAttribute('data-shape') || val) as
             | 'diamond'
@@ -452,17 +577,19 @@ export class MindMapController implements ViewController {
 
     const emojisDropdown = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-emojis"]');
     if (emojisDropdown) {
+      this.emojisDropdownController = setupDropdown(emojisDropdown, { matchWidth: false });
       emojisDropdown.querySelectorAll<HTMLElement>('[data-emoji]').forEach((btn) => {
         btn.addEventListener('click', () => {
           const emoji = btn.getAttribute('data-emoji');
           this.applyEmoji(emoji === 'none' ? undefined : (emoji || undefined));
+          this.emojisDropdownController?.close();
         }, { signal });
       });
     }
 
     const linesDropdown = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-lines"]');
     if (linesDropdown) {
-      setupDropdown(linesDropdown, {
+      this.linesDropdownController = setupDropdown(linesDropdown, {
         onSelect: (_val: unknown, item?: HTMLElement) => {
           if (!item) return;
           const layout = item.getAttribute('data-layout') as 'top-down' | 'radial' | null;
@@ -487,12 +614,9 @@ export class MindMapController implements ViewController {
       });
     }
 
-    const btnRealign = this.container.querySelector<HTMLElement>('[data-ref="btn-realign-tree"]');
-    btnRealign?.addEventListener('click', () => this.realignTree(), { signal });
-
     const exportDropdown = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-export"]');
     if (exportDropdown) {
-      setupDropdown(exportDropdown, {
+      this.exportDropdownController = setupDropdown(exportDropdown, {
         onSelect: (val: unknown) => {
           if (val === 'png' || val === 'btn-export-png') {
             void exportMindMapPng(this.project, this.layoutMap, `${this.canvasTitle}.png`);
@@ -519,9 +643,21 @@ export class MindMapController implements ViewController {
 
     const btnShare = this.container.querySelector<HTMLElement>('[data-ref="btn-share-mindmap"]');
     btnShare?.addEventListener('click', () => {
-      if (navigator.clipboard) {
-        void navigator.clipboard.writeText(window.location.href);
-        showToast('Enlace copiado al portapapeles', 'success');
+      if (this.currentCanvasItem) {
+        openCanvasShareModal(this.currentCanvasItem);
+      } else {
+        openCanvasShareModal({
+          access_level: this.accessLevel,
+          canvas_type: 'diagram',
+          created_at: this.canvasCreatedAt || new Date().toISOString(),
+          id: this.canvasServerId || undefined,
+          name: this.canvasTitle,
+          public_role: this.publicRole,
+          unit: 'diagram',
+          updated_at: new Date().toISOString(),
+          user_id: this.canvasUserId || undefined,
+          uuid: this.canvasUuid,
+        } as CanvasItem);
       }
     }, { signal });
 
@@ -694,6 +830,7 @@ export class MindMapController implements ViewController {
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
     const mouseWorld = screenToWorld(mouseX, mouseY, this.project.camera, rect.width, rect.height);
+    this.collaborationManager.sendCursor(mouseWorld.x, mouseWorld.y);
 
     if (this.isDrawingConnector) {
       this.connectorMouseWorld = mouseWorld;
@@ -2682,6 +2819,7 @@ export class MindMapController implements ViewController {
     this.recomputeLayout();
     this.historyManager.pushState(this.project);
     this.updateUndoRedoButtonsState();
+    this.collaborationManager.broadcastProjectUpdate(this.project);
     this.render();
     this.scheduleAutoSave();
   }
@@ -2693,6 +2831,7 @@ export class MindMapController implements ViewController {
       this.project = JSON.parse(JSON.stringify(prev));
       this.recomputeLayout();
       this.updateUndoRedoButtonsState();
+      this.collaborationManager.broadcastProjectUpdate(this.project);
       this.render();
       this.scheduleAutoSave();
     }
@@ -2705,6 +2844,7 @@ export class MindMapController implements ViewController {
       this.project = JSON.parse(JSON.stringify(next));
       this.recomputeLayout();
       this.updateUndoRedoButtonsState();
+      this.collaborationManager.broadcastProjectUpdate(this.project);
       this.render();
       this.scheduleAutoSave();
     }

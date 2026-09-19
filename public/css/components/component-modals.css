@@ -5646,6 +5646,14 @@ html.dark-theme .component-bottom--canvas {
   flex-shrink: 0;
 }
 
+.design-toolbar-group > .settings-dropdown-wrapper {
+  display: inline-flex;
+  align-items: center;
+  width: auto;
+  max-width: none;
+  flex: 0 0 auto;
+}
+
 .design-toolbar-btn {
   display: inline-flex;
   align-items: center;

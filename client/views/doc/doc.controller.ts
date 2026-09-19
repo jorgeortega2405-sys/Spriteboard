@@ -9,6 +9,7 @@ import { showToast } from '../../services/toast.service.js';
 import { CanvasItem } from '../../types/canvas.types.js';
 import { ViewController } from '../../types/common.types.js';
 import { initCarouselScroll, setupDropdown } from '../../utils/dom.util.js';
+import { DocCollaborationManager, DocCollaboratorState } from './doc-collaboration.manager.js';
 import { exportDocHtml, exportDocJson, exportDocMarkdown, exportDocPdf, exportDocTxt, exportDocWord, generateDocThumbnail } from './doc-export.service.js';
 import { DocFontPickerComponent, FontSelectEvent } from './doc-font-picker.component.js';
 import { ensureGoogleFontLoaded } from './doc-fonts.config.js';
@@ -33,17 +34,31 @@ const SPECIAL_SYMBOLS = [
 
 export class DocController implements ViewController {
   private abortController: AbortController = new AbortController();
+  private accessLevel: 'private' | 'public' = 'private';
   private activeTable: HTMLTableElement | null = null;
   private activeTableCell: HTMLTableCellElement | null = null;
+  private alignmentDropdownController: { close: () => void; destroy: () => void } | null = null;
+  private canvasCreatedAt: string | null = null;
+  private canvasServerId: number | null = null;
   private canvasTitle = 'Documento sin título';
+  private canvasUserId: number | null = null;
   private canvasUuid: string;
+  private collaborationManager: DocCollaborationManager;
+  private collaboratorsBarEl: HTMLElement | null = null;
+  private collaboratorsListEl: HTMLElement | null = null;
   private container: HTMLElement;
   private currentColorTarget: 'highlight' | 'text' = 'text';
+  private currentCanvasItem: CanvasItem | null = null;
   private currentHighlightColor = '#fef08a';
   private currentTextColor = '#0f172a';
+  private docToolsDropdownController: { close: () => void; destroy: () => void } | null = null;
   private fontPicker: DocFontPickerComponent | null = null;
   private historyManager: DocHistoryManager = new DocHistoryManager();
+  private indentsDropdownController: { close: () => void; destroy: () => void } | null = null;
+  private insertMoreDropdownController: { close: () => void; destroy: () => void } | null = null;
   private isSaving = false;
+  private lineSpacingDropdownController: { close: () => void; destroy: () => void } | null = null;
+  private moreFormattingDropdownController: { close: () => void; destroy: () => void } | null = null;
   private paginationManager: DocPaginationManager = new DocPaginationManager();
   private project: DocProject = {
     pages: [
@@ -72,17 +87,24 @@ export class DocController implements ViewController {
     type: 'doc',
     version: 1,
   };
+  private publicRole: 'editor' | 'viewer' = 'editor';
   private saveDebounceTimer: number | null = null;
   private selectedImageWrapper: HTMLElement | null = null;
+  private stylesDropdownController: { close: () => void; destroy: () => void } | null = null;
 
   constructor(container: HTMLElement, canvasUuid: string) {
     this.container = container;
     this.canvasUuid = canvasUuid;
+    this.collaborationManager = new DocCollaborationManager(canvasUuid);
   }
 
   public async init(): Promise<boolean> {
     const loaded = await this.loadCanvasData();
     if (!loaded) return false;
+
+    this.collaboratorsBarEl = this.container.querySelector<HTMLElement>('[data-ref="doc-collaborators-bar"]');
+    this.collaboratorsListEl = this.container.querySelector<HTMLElement>('[data-ref="doc-collaborators-list"]');
+    this.setupCollaboration();
 
     this.historyManager.pushState(this.project);
     ensureGoogleFontLoaded(this.project.settings.fontFamily);
@@ -98,7 +120,15 @@ export class DocController implements ViewController {
 
   public destroy(): void {
     closeContextMenu();
+    this.collaborationManager.destroy();
     this.abortController.abort();
+    this.alignmentDropdownController?.destroy();
+    this.docToolsDropdownController?.destroy();
+    this.indentsDropdownController?.destroy();
+    this.insertMoreDropdownController?.destroy();
+    this.lineSpacingDropdownController?.destroy();
+    this.moreFormattingDropdownController?.destroy();
+    this.stylesDropdownController?.destroy();
     if (this.fontPicker) {
       this.fontPicker.destroy();
       this.fontPicker = null;
@@ -109,7 +139,7 @@ export class DocController implements ViewController {
   }
 
   private async loadCanvasData(): Promise<boolean> {
-    let rawData: any = null;
+    let canvasRecord: any = null;
 
     if (currentUser) {
       try {
@@ -117,21 +147,27 @@ export class DocController implements ViewController {
         if (res.ok) {
           const body = await res.json();
           if (body?.canvas) {
-            this.canvasTitle = body.canvas.name || 'Documento sin título';
-            rawData = body.canvas.data;
+            canvasRecord = body.canvas;
           }
         }
       } catch {}
     }
 
-    if (!rawData) {
-      const local = await getLocalCanvasByUuid(this.canvasUuid);
-      if (local) {
-        this.canvasTitle = local.name || 'Documento sin título';
-        rawData = local.data;
-      }
+    if (!canvasRecord) {
+      canvasRecord = await getLocalCanvasByUuid(this.canvasUuid);
     }
 
+    if (!canvasRecord) return false;
+
+    this.currentCanvasItem = canvasRecord as CanvasItem;
+    this.canvasServerId = canvasRecord.id || null;
+    this.canvasUserId = canvasRecord.user_id || null;
+    this.canvasCreatedAt = canvasRecord.created_at || null;
+    this.accessLevel = canvasRecord.access_level || 'private';
+    this.publicRole = canvasRecord.public_role || 'editor';
+    this.canvasTitle = canvasRecord.name || 'Documento sin título';
+
+    const rawData = canvasRecord.data;
     if (rawData) {
       try {
         const parsed = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
@@ -155,6 +191,80 @@ export class DocController implements ViewController {
     document.title = `${this.canvasTitle} - Spriteboard`;
 
     return true;
+  }
+
+  private setupCollaboration(): void {
+    const userId = currentUser ? currentUser.id : null;
+    const username = currentUser ? currentUser.username : 'Invitado';
+    const avatarUrl = currentUser?.avatar_url || null;
+    const tier = (currentUser?.subscription_tier || 'free') as DocCollaboratorState['subscriptionTier'];
+
+    this.collaborationManager.isOwner = Boolean(
+      (currentUser && this.canvasUserId && this.canvasUserId === currentUser.id) ||
+      (!this.canvasUserId && !this.canvasServerId)
+    );
+    this.collaborationManager.accessLevel = this.accessLevel;
+    this.collaborationManager.publicRole = this.publicRole;
+
+    this.collaborationManager.init(userId, username, avatarUrl, tier, {
+      onAccessChanged: (accessLevel, publicRole) => {
+        this.accessLevel = accessLevel;
+        if (publicRole) this.publicRole = publicRole;
+      },
+      onAccessRevoked: () => {
+        showToast('El acceso a este documento ha sido revocado', 'warning');
+      },
+      onCollaboratorsChanged: () => {
+        this.renderCollaboratorsBar();
+      },
+      onRemoteFullUpdate: (remoteProject) => {
+        if (!remoteProject || !Array.isArray(remoteProject.pages)) return;
+        this.project = remoteProject;
+        this.renderDocument();
+        this.updateStats();
+      },
+      onRemoteDocUpdate: (remoteProject) => {
+        if (!remoteProject || !Array.isArray(remoteProject.pages)) return;
+        this.project = remoteProject;
+        this.renderDocument();
+        this.updateStats();
+      },
+      onRequestFullState: (targetConnId) => {
+        this.syncPagesFromDOM();
+        this.collaborationManager.broadcastFullState(this.project, targetConnId);
+      },
+    });
+
+    this.renderCollaboratorsBar();
+  }
+
+  private renderCollaboratorsBar(): void {
+    if (!this.collaboratorsBarEl || !this.collaboratorsListEl) return;
+    this.collaboratorsListEl.innerHTML = '';
+
+    const count = this.collaborationManager.collaborators.size;
+    if (count === 0) {
+      this.collaboratorsBarEl.classList.add('is-hidden');
+      return;
+    }
+
+    this.collaboratorsBarEl.classList.remove('is-hidden');
+    this.collaborationManager.collaborators.forEach((collab) => {
+      const chip = document.createElement('div');
+      chip.className = 'design-collaborator-chip';
+      chip.setAttribute('data-ref', `collaborator-${collab.connId}`);
+      chip.setAttribute('data-tooltip', collab.username || 'Invitado');
+      chip.setAttribute('aria-label', collab.username || 'Invitado');
+      chip.style.borderColor = collab.color;
+
+      if (collab.avatarUrl) {
+        chip.style.backgroundImage = `url(${collab.avatarUrl})`;
+      } else {
+        chip.textContent = (collab.username || 'U').slice(0, 2).toUpperCase();
+        chip.style.backgroundColor = collab.color;
+      }
+      this.collaboratorsListEl?.appendChild(chip);
+    });
   }
 
   private renderDocument(): void {
@@ -349,6 +459,7 @@ export class DocController implements ViewController {
     const btnPrint = this.container.querySelector<HTMLElement>('[data-ref="btn-print"]');
     if (btnPrint) {
       btnPrint.addEventListener('click', () => {
+        this.docToolsDropdownController?.close();
         this.syncPagesFromDOM();
         exportDocPdf(this.project, this.canvasTitle);
       }, { signal });
@@ -356,7 +467,10 @@ export class DocController implements ViewController {
 
     const btnPageSetup = this.container.querySelector<HTMLElement>('[data-ref="btn-page-setup"]');
     if (btnPageSetup) {
-      btnPageSetup.addEventListener('click', () => this.openPageSetupModal(), { signal });
+      btnPageSetup.addEventListener('click', () => {
+        this.docToolsDropdownController?.close();
+        this.openPageSetupModal();
+      }, { signal });
     }
 
     const lblCurrentPaper = this.container.querySelector<HTMLElement>('[data-ref="lbl-current-paper"]');
@@ -366,39 +480,55 @@ export class DocController implements ViewController {
 
     const btnWatermark = this.container.querySelector<HTMLElement>('[data-ref="btn-watermark-setup"]');
     if (btnWatermark) {
-      btnWatermark.addEventListener('click', () => this.openWatermarkModal(), { signal });
+      btnWatermark.addEventListener('click', () => {
+        this.docToolsDropdownController?.close();
+        this.openWatermarkModal();
+      }, { signal });
     }
 
     const btnPageDesign = this.container.querySelector<HTMLElement>('[data-ref="btn-page-design"]');
     if (btnPageDesign) {
-      btnPageDesign.addEventListener('click', () => this.openPageDesignModal(), { signal });
+      btnPageDesign.addEventListener('click', () => {
+        this.docToolsDropdownController?.close();
+        this.openPageDesignModal();
+      }, { signal });
     }
 
     const btnSymbol = this.container.querySelector<HTMLElement>('[data-ref="btn-insert-symbol"]');
     if (btnSymbol) {
-      btnSymbol.addEventListener('click', () => this.openSymbolsModal(), { signal });
+      btnSymbol.addEventListener('click', () => {
+        this.insertMoreDropdownController?.close();
+        this.openSymbolsModal();
+      }, { signal });
     }
 
     const btnLogo = this.container.querySelector<HTMLElement>('[data-ref="btn-insert-logo"]');
     if (btnLogo) {
-      btnLogo.addEventListener('click', () => this.openLogoModal(), { signal });
+      btnLogo.addEventListener('click', () => {
+        this.insertMoreDropdownController?.close();
+        this.openLogoModal();
+      }, { signal });
     }
 
     const btnShare = this.container.querySelector<HTMLElement>('[data-ref="btn-share-doc"]');
     if (btnShare) {
       btnShare.addEventListener('click', () => {
-        openCanvasShareModal({
-          access_level: 'private',
-          canvas_type: 'doc',
-          created_at: new Date().toISOString(),
-          id: undefined,
-          name: this.canvasTitle,
-          public_role: 'editor',
-          unit: 'doc',
-          updated_at: new Date().toISOString(),
-          user_id: currentUser ? currentUser.id : undefined,
-          uuid: this.canvasUuid,
-        } as CanvasItem);
+        if (this.currentCanvasItem) {
+          openCanvasShareModal(this.currentCanvasItem);
+        } else {
+          openCanvasShareModal({
+            access_level: this.accessLevel,
+            canvas_type: 'doc',
+            created_at: this.canvasCreatedAt || new Date().toISOString(),
+            id: this.canvasServerId || undefined,
+            name: this.canvasTitle,
+            public_role: this.publicRole,
+            unit: 'doc',
+            updated_at: new Date().toISOString(),
+            user_id: this.canvasUserId || (currentUser ? currentUser.id : undefined),
+            uuid: this.canvasUuid,
+          } as CanvasItem);
+        }
       }, { signal });
     }
 
@@ -430,24 +560,82 @@ export class DocController implements ViewController {
     bindCmd('btn-bold', 'bold');
     bindCmd('btn-italic', 'italic');
     bindCmd('btn-underline', 'underline');
-    bindCmd('btn-strike', 'strikeThrough');
-    bindCmd('btn-superscript', 'superscript');
-    bindCmd('btn-subscript', 'subscript');
-    bindCmd('btn-align-left', 'justifyLeft');
-    bindCmd('btn-align-center', 'justifyCenter');
-    bindCmd('btn-align-right', 'justifyRight');
-    bindCmd('btn-align-justify', 'justifyFull');
+
+    const bindMoreFormatCmd = (ref: string, command: string) => {
+      const btn = this.container.querySelector<HTMLElement>(`[data-ref="${ref}"]`);
+      if (btn) {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          document.execCommand(command, false, undefined);
+          this.moreFormattingDropdownController?.close();
+          this.updateActiveFormattingButtons();
+          this.recordChange();
+        }, { signal });
+      }
+    };
+
+    bindMoreFormatCmd('btn-strike', 'strikeThrough');
+    bindMoreFormatCmd('btn-superscript', 'superscript');
+    bindMoreFormatCmd('btn-subscript', 'subscript');
+
+    const updateAlignmentIcon = (iconName: string) => {
+      const iconEl = this.container.querySelector<HTMLElement>('[data-ref="alignment-current-icon"]');
+      if (iconEl) iconEl.textContent = iconName;
+    };
+
+    const bindAlignmentCmd = (ref: string, command: string, iconName: string) => {
+      const btn = this.container.querySelector<HTMLElement>(`[data-ref="${ref}"]`);
+      if (btn) {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          document.execCommand(command, false, undefined);
+          updateAlignmentIcon(iconName);
+          this.alignmentDropdownController?.close();
+          this.updateActiveFormattingButtons();
+          this.recordChange();
+        }, { signal });
+      }
+    };
+
+    bindAlignmentCmd('btn-align-left', 'justifyLeft', 'format_align_left');
+    bindAlignmentCmd('btn-align-center', 'justifyCenter', 'format_align_center');
+    bindAlignmentCmd('btn-align-right', 'justifyRight', 'format_align_right');
+    bindAlignmentCmd('btn-align-justify', 'justifyFull', 'format_align_justify');
+
     bindCmd('btn-list-bullet', 'insertUnorderedList');
     bindCmd('btn-list-ordered', 'insertOrderedList');
-    bindCmd('btn-outdent', 'outdent');
-    bindCmd('btn-indent', 'indent');
-    bindCmd('btn-insert-hr', 'insertHorizontalRule');
+
+    const bindIndentCmd = (ref: string, command: string) => {
+      const btn = this.container.querySelector<HTMLElement>(`[data-ref="${ref}"]`);
+      if (btn) {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          document.execCommand(command, false, undefined);
+          this.indentsDropdownController?.close();
+          this.recordChange();
+        }, { signal });
+      }
+    };
+
+    bindIndentCmd('btn-outdent', 'outdent');
+    bindIndentCmd('btn-indent', 'indent');
+
+    const btnInsertHr = this.container.querySelector<HTMLElement>('[data-ref="btn-insert-hr"]');
+    if (btnInsertHr) {
+      btnInsertHr.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.execCommand('insertHorizontalRule', false, undefined);
+        this.insertMoreDropdownController?.close();
+        this.recordChange();
+      }, { signal });
+    }
 
     const btnClearFormat = this.container.querySelector<HTMLElement>('[data-ref="btn-clear-format"]');
     if (btnClearFormat) {
       btnClearFormat.addEventListener('click', (e) => {
         e.preventDefault();
         document.execCommand('removeFormat', false, undefined);
+        this.moreFormattingDropdownController?.close();
         this.recordChange();
         showToast('Formato limpiado', 'success');
       }, { signal });
@@ -465,6 +653,7 @@ export class DocController implements ViewController {
             this.recordChange();
           }
         }
+        this.indentsDropdownController?.close();
       }, { signal });
     }
 
@@ -474,6 +663,7 @@ export class DocController implements ViewController {
         e.preventDefault();
         const html = '<div class="doc-checklist-item" style="display: flex; align-items: flex-start; gap: 8px; margin: 4px 0;"><input type="checkbox" style="margin-top: 4px;" /><span>Tarea pendiente</span></div><p><br></p>';
         document.execCommand('insertHTML', false, html);
+        this.indentsDropdownController?.close();
         this.recordChange();
       }, { signal });
     }
@@ -517,6 +707,11 @@ export class DocController implements ViewController {
       if (el) el.classList.toggle('is-active', state);
     };
 
+    const updateAlignmentIcon = (iconName: string) => {
+      const iconEl = this.container.querySelector<HTMLElement>('[data-ref="alignment-current-icon"]');
+      if (iconEl) iconEl.textContent = iconName;
+    };
+
     try {
       updateActive('btn-bold', document.queryCommandState('bold'));
       updateActive('btn-italic', document.queryCommandState('italic'));
@@ -528,6 +723,16 @@ export class DocController implements ViewController {
       updateActive('btn-align-center', document.queryCommandState('justifyCenter'));
       updateActive('btn-align-right', document.queryCommandState('justifyRight'));
       updateActive('btn-align-justify', document.queryCommandState('justifyFull'));
+
+      if (document.queryCommandState('justifyCenter')) {
+        updateAlignmentIcon('format_align_center');
+      } else if (document.queryCommandState('justifyRight')) {
+        updateAlignmentIcon('format_align_right');
+      } else if (document.queryCommandState('justifyFull')) {
+        updateAlignmentIcon('format_align_justify');
+      } else {
+        updateAlignmentIcon('format_align_left');
+      }
     } catch {}
   }
 
@@ -756,7 +961,7 @@ export class DocController implements ViewController {
   private bindDropdowns(signal: AbortSignal): void {
     const wrapperStyles = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-styles"]');
     if (wrapperStyles) {
-      setupDropdown(wrapperStyles, { matchWidth: true });
+      this.stylesDropdownController = setupDropdown(wrapperStyles, { matchWidth: true });
     }
 
     this.container.querySelectorAll<HTMLElement>('[data-ref^="opt-style-"]').forEach((btn) => {
@@ -782,13 +987,34 @@ export class DocController implements ViewController {
 
         const lbl = this.container.querySelector<HTMLElement>('[data-ref="lbl-current-style"]');
         if (lbl) lbl.textContent = btn.querySelector('.menu-item__text')?.textContent?.trim() || btn.textContent?.trim() || 'Texto normal';
+        this.stylesDropdownController?.close();
         this.recordChange();
       }, { signal });
     });
 
-    const wrapperLetterSpacing = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-letter-spacing"]');
-    if (wrapperLetterSpacing) {
-      setupDropdown(wrapperLetterSpacing, { matchWidth: false });
+    const wrapperMoreFormatting = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-more-formatting"]');
+    if (wrapperMoreFormatting) {
+      this.moreFormattingDropdownController = setupDropdown(wrapperMoreFormatting, { matchWidth: false });
+    }
+
+    const wrapperAlignment = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-alignment"]');
+    if (wrapperAlignment) {
+      this.alignmentDropdownController = setupDropdown(wrapperAlignment, { matchWidth: false });
+    }
+
+    const wrapperIndents = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-indents"]');
+    if (wrapperIndents) {
+      this.indentsDropdownController = setupDropdown(wrapperIndents, { matchWidth: false });
+    }
+
+    const wrapperInsertMore = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-insert-more"]');
+    if (wrapperInsertMore) {
+      this.insertMoreDropdownController = setupDropdown(wrapperInsertMore, { matchWidth: false });
+    }
+
+    const wrapperDocTools = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-doc-tools"]');
+    if (wrapperDocTools) {
+      this.docToolsDropdownController = setupDropdown(wrapperDocTools, { matchWidth: false });
     }
 
     this.container.querySelectorAll<HTMLElement>('[data-ref^="opt-letter-spacing-"]').forEach((btn) => {
@@ -805,36 +1031,36 @@ export class DocController implements ViewController {
           this.project.settings.letterSpacing = parseFloat(spacing) || 0;
           this.renderDocument();
         }
+        this.moreFormattingDropdownController?.close();
         this.recordChange();
       }, { signal });
     });
 
-    const wrapperCase = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-case"]');
-    if (wrapperCase) {
-      setupDropdown(wrapperCase, { matchWidth: false });
-    }
-
     this.container.querySelector<HTMLElement>('[data-ref="opt-case-upper"]')?.addEventListener('click', () => {
       this.transformSelectedText((t) => t.toUpperCase());
+      this.moreFormattingDropdownController?.close();
     }, { signal });
 
     this.container.querySelector<HTMLElement>('[data-ref="opt-case-lower"]')?.addEventListener('click', () => {
       this.transformSelectedText((t) => t.toLowerCase());
+      this.moreFormattingDropdownController?.close();
     }, { signal });
 
     this.container.querySelector<HTMLElement>('[data-ref="opt-case-title"]')?.addEventListener('click', () => {
       this.transformSelectedText((t) => t.replace(/\b\w/g, (c) => c.toUpperCase()));
+      this.moreFormattingDropdownController?.close();
     }, { signal });
 
     const wrapperSpacing = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-line-spacing"]');
     if (wrapperSpacing) {
-      setupDropdown(wrapperSpacing, { matchWidth: false });
+      this.lineSpacingDropdownController = setupDropdown(wrapperSpacing, { matchWidth: false });
     }
 
     this.container.querySelectorAll<HTMLElement>('[data-ref^="opt-spacing-"]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const spacing = Number(btn.getAttribute('data-spacing')) || 1.15;
         this.project.settings.lineHeight = spacing;
+        this.lineSpacingDropdownController?.close();
         this.renderDocument();
         this.recordChange();
       }, { signal });
@@ -845,6 +1071,7 @@ export class DocController implements ViewController {
       const el = (sel?.anchorNode instanceof HTMLElement ? sel.anchorNode : sel?.anchorNode?.parentElement)?.closest('p, div, h1, h2, h3, h4');
       if (el) {
         (el as HTMLElement).style.marginBottom = '1.2em';
+        this.lineSpacingDropdownController?.close();
         this.recordChange();
         showToast('Espacio añadido después del párrafo', 'success');
       }
@@ -855,6 +1082,7 @@ export class DocController implements ViewController {
       const el = (sel?.anchorNode instanceof HTMLElement ? sel.anchorNode : sel?.anchorNode?.parentElement)?.closest('p, div, h1, h2, h3, h4');
       if (el) {
         (el as HTMLElement).style.marginBottom = '0';
+        this.lineSpacingDropdownController?.close();
         this.recordChange();
         showToast('Espacio removido del párrafo', 'success');
       }
@@ -959,11 +1187,6 @@ export class DocController implements ViewController {
       }
     }
 
-    const wrapperCallout = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-callout"]');
-    if (wrapperCallout) {
-      setupDropdown(wrapperCallout, { matchWidth: false });
-    }
-
     this.container.querySelectorAll<HTMLElement>('[data-ref^="opt-callout-"]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const type = btn.getAttribute('data-type') || 'info';
@@ -985,6 +1208,7 @@ export class DocController implements ViewController {
           <p><br></p>
         `;
         document.execCommand('insertHTML', false, html);
+        this.insertMoreDropdownController?.close();
         this.recordChange();
       }, { signal });
     });
@@ -1005,6 +1229,7 @@ export class DocController implements ViewController {
       btnAddPage.addEventListener('click', () => {
         this.paginationManager.addPage(this.project);
         this.renderDocument();
+        this.insertMoreDropdownController?.close();
         this.recordChange();
         showToast('Nueva página añadida al documento', 'success');
       }, { signal });
@@ -1012,7 +1237,10 @@ export class DocController implements ViewController {
 
     const btnDocStats = this.container.querySelector<HTMLElement>('[data-ref="btn-doc-stats"]');
     if (btnDocStats) {
-      btnDocStats.addEventListener('click', () => this.openStatsModal(), { signal });
+      btnDocStats.addEventListener('click', () => {
+        this.docToolsDropdownController?.close();
+        this.openStatsModal();
+      }, { signal });
     }
   }
 
@@ -1705,6 +1933,7 @@ export class DocController implements ViewController {
     this.historyManager.pushState(this.project);
     this.updateUndoRedoButtonsState();
     this.updateStats();
+    this.collaborationManager.broadcastDocUpdate(this.project);
     this.scheduleAutosave();
   }
 
@@ -1727,6 +1956,7 @@ export class DocController implements ViewController {
       this.renderDocument();
       this.updateUndoRedoButtonsState();
       this.updateStats();
+      this.collaborationManager.broadcastDocUpdate(this.project);
       this.scheduleAutosave();
     }
   }
@@ -1738,6 +1968,7 @@ export class DocController implements ViewController {
       this.renderDocument();
       this.updateUndoRedoButtonsState();
       this.updateStats();
+      this.collaborationManager.broadcastDocUpdate(this.project);
       this.scheduleAutosave();
     }
   }

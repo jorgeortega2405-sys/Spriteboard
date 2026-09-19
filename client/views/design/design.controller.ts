@@ -199,8 +199,10 @@ export class DesignController {
   private downloadBgDropdownWrapperEl: HTMLElement | null = null;
   private downloadBgTriggerBtn: HTMLButtonElement | null = null;
   private downloadBgSelectedIconEl: HTMLElement | null = null;
-  private downloadBgSelectedTextEl: HTMLElement | null = null;
   private downloadBgDropdownController: { close: () => void; destroy: () => void; open: () => void; toggle: () => void; update: () => void } | null = null;
+  private canvasTransformDropdownController: { close: () => void; destroy: () => void; open: () => void; toggle: () => void; update: () => void } | null = null;
+  private specialBrushesDropdownController: { close: () => void; destroy: () => void; open: () => void; toggle: () => void; update: () => void } | null = null;
+  private fillToolsDropdownController: { close: () => void; destroy: () => void; open: () => void; toggle: () => void; update: () => void } | null = null;
   private btnConfirmDownload: HTMLButtonElement | null = null;
   private btnConfirmDownloadText: HTMLElement | null = null;
   private selectedDownloadType: 'png-current' | 'spritesheet' | 'spritesheet-atlas' | 'gif' | 'project-json' = 'png-current';
@@ -2465,6 +2467,25 @@ export class DesignController {
     this.selectBtn?.classList.toggle('is-active', tool === 'select');
     this.textBtn?.classList.toggle('is-active', tool === 'text');
 
+    const isSpecialBrush = tool === 'spray' || tool === 'dither' || tool === 'shading';
+    const specialBrushTrigger = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-trigger-special-brushes"]');
+    specialBrushTrigger?.classList.toggle('is-active', isSpecialBrush);
+    const specialBrushIcon = this.container.querySelector<HTMLElement>('[data-ref="special-brush-current-icon"]');
+    if (specialBrushIcon) {
+      if (tool === 'spray') specialBrushIcon.textContent = 'blur_on';
+      else if (tool === 'dither') specialBrushIcon.textContent = 'texture';
+      else if (tool === 'shading') specialBrushIcon.textContent = 'tonality';
+    }
+
+    const isFillTool = tool === 'bucket' || tool === 'recolor';
+    const fillToolTrigger = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-trigger-fill-tools"]');
+    fillToolTrigger?.classList.toggle('is-active', isFillTool);
+    const fillToolIcon = this.container.querySelector<HTMLElement>('[data-ref="fill-tool-current-icon"]');
+    if (fillToolIcon) {
+      if (tool === 'bucket') fillToolIcon.textContent = 'format_color_fill';
+      else if (tool === 'recolor') fillToolIcon.textContent = 'find_replace';
+    }
+
     this.container.querySelectorAll<HTMLButtonElement>('[data-ref^="btn-shape-type-"]').forEach((btn) => {
       btn.classList.toggle('is-active', btn.getAttribute('data-shape-type') === this.currentShapeType);
     });
@@ -4361,6 +4382,27 @@ export class DesignController {
       });
     }
 
+    const canvasTransformWrapper = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-canvas-transform"]');
+    if (canvasTransformWrapper) {
+      this.canvasTransformDropdownController = setupDropdown(canvasTransformWrapper, {
+        placement: 'bottom-start',
+      });
+    }
+
+    const specialBrushesWrapper = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-special-brushes"]');
+    if (specialBrushesWrapper) {
+      this.specialBrushesDropdownController = setupDropdown(specialBrushesWrapper, {
+        placement: 'top-start',
+      });
+    }
+
+    const fillToolsWrapper = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-fill-tools"]');
+    if (fillToolsWrapper) {
+      this.fillToolsDropdownController = setupDropdown(fillToolsWrapper, {
+        placement: 'top-start',
+      });
+    }
+
     if (this.shareBtn) {
       this.shareBtn.addEventListener(
         'click',
@@ -4685,7 +4727,10 @@ export class DesignController {
     });
 
     if (this.recolorBtn) {
-      this.recolorBtn.addEventListener('click', () => this.selectTool('recolor'), { signal });
+      this.recolorBtn.addEventListener('click', () => {
+        this.fillToolsDropdownController?.close();
+        this.selectTool('recolor');
+      }, { signal });
     }
 
     if (this.undoBtn) {
@@ -4705,16 +4750,28 @@ export class DesignController {
     }
 
     if (this.btnCanvasRotateCw) {
-      this.btnCanvasRotateCw.addEventListener('click', () => this.rotateCanvas(true), { signal });
+      this.btnCanvasRotateCw.addEventListener('click', () => {
+        this.canvasTransformDropdownController?.close();
+        this.rotateCanvas(true);
+      }, { signal });
     }
     if (this.btnCanvasRotateCcw) {
-      this.btnCanvasRotateCcw.addEventListener('click', () => this.rotateCanvas(false), { signal });
+      this.btnCanvasRotateCcw.addEventListener('click', () => {
+        this.canvasTransformDropdownController?.close();
+        this.rotateCanvas(false);
+      }, { signal });
     }
     if (this.btnCanvasFlipH) {
-      this.btnCanvasFlipH.addEventListener('click', () => this.flipCanvas(true), { signal });
+      this.btnCanvasFlipH.addEventListener('click', () => {
+        this.canvasTransformDropdownController?.close();
+        this.flipCanvas(true);
+      }, { signal });
     }
     if (this.btnCanvasFlipV) {
-      this.btnCanvasFlipV.addEventListener('click', () => this.flipCanvas(false), { signal });
+      this.btnCanvasFlipV.addEventListener('click', () => {
+        this.canvasTransformDropdownController?.close();
+        this.flipCanvas(false);
+      }, { signal });
     }
 
     if (this.btnToggleCollaborators) {
@@ -4921,19 +4978,31 @@ export class DesignController {
     });
 
     if (this.ditherBtn) {
-      this.ditherBtn.addEventListener('click', () => this.selectTool('dither'), { signal });
+      this.ditherBtn.addEventListener('click', () => {
+        this.specialBrushesDropdownController?.close();
+        this.selectTool('dither');
+      }, { signal });
     }
 
     if (this.shadingBtn) {
-      this.shadingBtn.addEventListener('click', () => this.selectTool('shading'), { signal });
+      this.shadingBtn.addEventListener('click', () => {
+        this.specialBrushesDropdownController?.close();
+        this.selectTool('shading');
+      }, { signal });
     }
 
     if (this.sprayBtn) {
-      this.sprayBtn.addEventListener('click', () => this.selectTool('spray'), { signal });
+      this.sprayBtn.addEventListener('click', () => {
+        this.specialBrushesDropdownController?.close();
+        this.selectTool('spray');
+      }, { signal });
     }
 
     if (this.bucketBtn) {
-      this.bucketBtn.addEventListener('click', () => this.selectTool('bucket'), { signal });
+      this.bucketBtn.addEventListener('click', () => {
+        this.fillToolsDropdownController?.close();
+        this.selectTool('bucket');
+      }, { signal });
     }
 
     if (this.selectBtn) {
@@ -8862,6 +8931,9 @@ export class DesignController {
     this.downloadTypeDropdownController?.destroy();
     this.downloadScaleDropdownController?.destroy();
     this.downloadBgDropdownController?.destroy();
+    this.canvasTransformDropdownController?.destroy();
+    this.specialBrushesDropdownController?.destroy();
+    this.fillToolsDropdownController?.destroy();
     this.topToolbarCarouselController?.destroy();
     this.bottomToolbarCarouselController?.destroy();
     this.optionsTrayCarouselController?.destroy();

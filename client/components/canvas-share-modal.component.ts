@@ -35,6 +35,14 @@ export function openCanvasShareModal(canvas: CanvasItem): void {
   let currentAccessLevel: 'private' | 'public' = canvas.access_level || 'private';
   let currentPublicRole: 'viewer' | 'editor' = canvas.public_role || 'editor';
 
+  const shareTitle = canvas.canvas_type === 'doc' || canvas.unit === 'doc'
+    ? 'Compartir documento'
+    : canvas.canvas_type === 'board' || canvas.unit === 'board'
+    ? 'Compartir pizarrón'
+    : canvas.canvas_type === 'diagram' || canvas.unit === 'diagram' || canvas.canvas_type === 'mindmap'
+    ? 'Compartir esquema'
+    : 'Compartir el diseño';
+
   const backdrop = document.createElement('div');
   backdrop.className = 'modal-backdrop';
   backdrop.setAttribute('data-ref', 'modal-share-backdrop');
@@ -49,7 +57,7 @@ export function openCanvasShareModal(canvas: CanvasItem): void {
           <div class="modal-card__drag-handle"></div>
         </div>
         <div class="modal-card__header" data-ref="modal-share-header">
-          <h2 class="modal-card__title">Compartir el diseño</h2>
+          <h2 class="modal-card__title">${escapeHtml(shareTitle)}</h2>
           <p class="modal-card__desc">${escapeHtml(canvas.name)}</p>
         </div>
         <div class="modal-card__body" data-ref="modal-share-body">
@@ -635,12 +643,13 @@ export function openCanvasShareModal(canvas: CanvasItem): void {
   });
 
   btnCopyLink?.addEventListener('click', async () => {
-    const url = `${window.location.origin}/design/${canvas.uuid}`;
+    const slug = canvas.custom_slug || canvas.short_code;
+    const url = slug ? `${window.location.origin}/${slug}` : `${window.location.origin}/design/${canvas.uuid}`;
     try {
       await navigator.clipboard.writeText(url);
-      showToast(t('canvas.copy_link_success'));
+      showToast(t('canvas.copy_link_success') || 'Enlace copiado al portapapeles');
     } catch {
-      showToast(t('canvas.copy_link_error'), 'danger');
+      showToast(t('canvas.copy_link_error') || 'Error al copiar el enlace', 'danger');
     }
   });
 

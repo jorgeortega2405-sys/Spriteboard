@@ -36,14 +36,6 @@
               </button>
             </div>
 
-            <div class="design-toolbar-divider" data-ref="board-top-divider-colors"></div>
-
-            <div class="design-toolbar-group" data-ref="board-top-group-colors">
-              <button type="button" class="design-toolbar-btn" data-ref="btn-top-toggle-colors" data-tooltip="Paleta de colores" aria-label="Colores">
-                <span class="component-icon">palette</span>
-              </button>
-            </div>
-
             <div class="design-toolbar-divider" data-ref="board-top-divider-export"></div>
 
             <div class="design-toolbar-group" data-ref="board-top-group-export">
@@ -331,12 +323,28 @@
                 <button type="button" class="design-toolbar-btn" data-ref="tool-pen" data-tool="pen" data-tooltip="Pluma suave (P)" aria-label="Pluma suave">
                   <span class="component-icon">draw</span>
                 </button>
-                <button type="button" class="design-toolbar-btn" data-ref="tool-marker" data-tool="marker" data-tooltip="Marcador (M)" aria-label="Marcador">
-                  <span class="component-icon">brush</span>
-                </button>
-                <button type="button" class="design-toolbar-btn" data-ref="tool-highlighter" data-tool="highlighter" data-tooltip="Resaltador (R)" aria-label="Resaltador">
-                  <span class="component-icon">ink_highlighter</span>
-                </button>
+                <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-draw-tools">
+                  <button type="button" class="design-toolbar-btn" data-ref="btn-trigger-draw-tools" data-tooltip="Trazos especiales (Marcador, Resaltador)" aria-label="Trazos especiales">
+                    <span class="component-icon" data-ref="draw-tool-current-icon">brush</span>
+                  </button>
+                  <div class="dropdown-backdrop" data-ref="backdrop-draw-tools">
+                    <div class="menu-panel menu-panel--dropdown menu-panel--w-200 menu-panel--h-auto" data-ref="menu-draw-tools">
+                      <div class="menu-panel__drag-zone" data-ref="draw-tools-drag-zone" aria-hidden="true">
+                        <div class="menu-panel__drag-handle"></div>
+                      </div>
+                      <div class="menu-panel__list" data-ref="list-draw-tools">
+                        <button type="button" class="menu-item" data-ref="tool-marker" data-tool="marker">
+                          <span class="component-icon menu-item__icon">brush</span>
+                          <span class="menu-item__text">Marcador (M)</span>
+                        </button>
+                        <button type="button" class="menu-item" data-ref="tool-highlighter" data-tool="highlighter">
+                          <span class="component-icon menu-item__icon">ink_highlighter</span>
+                          <span class="menu-item__text">Resaltador (R)</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
                 <button type="button" class="design-toolbar-btn" data-ref="tool-eraser" data-tool="eraser" data-tooltip="Borrador (E)" aria-label="Borrador">
                   <span class="component-icon">ink_eraser</span>
                 </button>
@@ -359,12 +367,28 @@
               <div class="design-toolbar-divider" data-ref="board-divider-pixel"></div>
 
               <div class="design-toolbar-group" data-ref="board-group-pixel">
-                <button type="button" class="design-toolbar-btn" data-ref="tool-pixel" data-tool="pixel" data-tooltip="Lápiz de píxeles (X)" aria-label="Lápiz de píxeles">
-                  <span class="component-icon">draw</span>
-                </button>
-                <button type="button" class="design-toolbar-btn" data-ref="btn-insert-pixel-grid" data-tooltip="Insertar cuadrícula Pixel Art" aria-label="Insertar cuadrícula Pixel Art">
-                  <span class="component-icon">grid_on</span>
-                </button>
+                <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-pixel-tools">
+                  <button type="button" class="design-toolbar-btn" data-ref="btn-trigger-pixel-tools" data-tooltip="Herramientas Pixel Art" aria-label="Herramientas Pixel Art">
+                    <span class="component-icon">grid_on</span>
+                  </button>
+                  <div class="dropdown-backdrop" data-ref="backdrop-pixel-tools">
+                    <div class="menu-panel menu-panel--dropdown menu-panel--w-220 menu-panel--h-auto" data-ref="menu-pixel-tools">
+                      <div class="menu-panel__drag-zone" data-ref="pixel-tools-drag-zone" aria-hidden="true">
+                        <div class="menu-panel__drag-handle"></div>
+                      </div>
+                      <div class="menu-panel__list" data-ref="list-pixel-tools">
+                        <button type="button" class="menu-item" data-ref="tool-pixel" data-tool="pixel">
+                          <span class="component-icon menu-item__icon">draw</span>
+                          <span class="menu-item__text">Lápiz de píxeles (X)</span>
+                        </button>
+                        <button type="button" class="menu-item" data-ref="btn-insert-pixel-grid">
+                          <span class="component-icon menu-item__icon">grid_on</span>
+                          <span class="menu-item__text">Insertar cuadrícula</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div class="design-toolbar-divider" data-ref="board-divider-props"></div>

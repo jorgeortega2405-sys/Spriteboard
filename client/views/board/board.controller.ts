@@ -54,9 +54,10 @@ export class BoardController {
   private currentShape: ShapeType = 'rect';
   private currentStrokeWidth = 4;
   private currentTool: BoardTool = 'select';
-  private didPan = false;
+  private drawToolsDropdownController: { close: () => void; destroy: () => void; open: () => void; toggle: () => void; update: () => void } | null = null;
   private elements: BoardElement[] = [];
   private exportDropdownController: { close: () => void; destroy: () => void; open: () => void; toggle: () => void; update: () => void } | null = null;
+  private pixelToolsDropdownController: { close: () => void; destroy: () => void; open: () => void; toggle: () => void; update: () => void } | null = null;
   private hasErasedInCurrentStroke = false;
   private history = new BoardHistoryManager();
   private hoveredPixelGridCell: { gridId: string; px: number; py: number } | null = null;
@@ -143,6 +144,8 @@ export class BoardController {
     }
     this.collaborationManager.destroy();
     this.exportDropdownController?.destroy();
+    this.drawToolsDropdownController?.destroy();
+    this.pixelToolsDropdownController?.destroy();
     this.resizeObserver?.disconnect();
     for (const { canvas } of this.pixelGrid.pixelCanvasMap.values()) {
       canvas.width = 0;
@@ -519,6 +522,20 @@ export class BoardController {
         placement: 'bottom-end',
       });
     }
+
+    const drawToolsWrapper = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-draw-tools"]');
+    if (drawToolsWrapper) {
+      this.drawToolsDropdownController = setupDropdown(drawToolsWrapper, {
+        placement: 'top-start',
+      });
+    }
+
+    const pixelToolsWrapper = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-pixel-tools"]');
+    if (pixelToolsWrapper) {
+      this.pixelToolsDropdownController = setupDropdown(pixelToolsWrapper, {
+        placement: 'top-start',
+      });
+    }
   }
 
   private bindEvents(): void {
@@ -591,6 +608,7 @@ export class BoardController {
     btnInsertGrid?.addEventListener(
       'click',
       () => {
+        this.pixelToolsDropdownController?.close();
         openInsertPixelGridModal({
           onInsert: (cfg) => this.insertPixelGrid(cfg),
         });
@@ -658,6 +676,8 @@ export class BoardController {
   }
 
   private setTool(tool: BoardTool): void {
+    this.drawToolsDropdownController?.close();
+    this.pixelToolsDropdownController?.close();
     this.commitInlineEditor();
     this.currentTool = tool;
     this.renderActiveToolsUI();
@@ -694,6 +714,18 @@ export class BoardController {
     toolButtons.forEach((btn) => {
       btn.classList.toggle('is-active', btn.getAttribute('data-tool') === this.currentTool);
     });
+
+    const isSpecialDraw = this.currentTool === 'marker' || this.currentTool === 'highlighter';
+    const drawTrigger = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-trigger-draw-tools"]');
+    drawTrigger?.classList.toggle('is-active', isSpecialDraw);
+    const drawIcon = this.container.querySelector<HTMLElement>('[data-ref="draw-tool-current-icon"]');
+    if (drawIcon) {
+      drawIcon.textContent = this.currentTool === 'highlighter' ? 'ink_highlighter' : 'brush';
+    }
+
+    const isPixel = this.currentTool === 'pixel';
+    const pixelTrigger = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-trigger-pixel-tools"]');
+    pixelTrigger?.classList.toggle('is-active', isPixel);
 
     this.updateCanvasCursor();
   }
