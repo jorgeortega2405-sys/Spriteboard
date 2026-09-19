@@ -1,5 +1,5 @@
-import { navigate } from '../../app-router.js';
-import { openCanvasShareModal } from '../../components/canvas-share-modal.component.js';
+import { CanvasAiDropdownController, setupBoardAiDropdown } from '../../components/canvas-ai-dropdown.component.js';
+import { CanvasShareDropdownController, setupCanvasShareDropdown } from '../../components/canvas-share-dropdown.component.js';
 import { closeContextMenu, ContextMenuItem, openContextMenu } from '../../components/context-menu.component.js';
 import { InsertPixelGridConfig, openInsertPixelGridModal } from '../../components/insert-pixel-grid-modal.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
@@ -14,7 +14,6 @@ import { setupDropdown } from '../../utils/dom.util.js';
 import { PixelShape, renderShapeCanvas } from '../../utils/pixel-shapes.util.js';
 import { generateShadingRamp, getCollaboratorColor } from '../design/design-color.util.js';
 import { DocPage } from '../doc/doc.types.js';
-import { openBoardAiModal } from './board-ai-modal.component.js';
 import { BoardCollaborationManager } from './board-collaboration.manager.js';
 import { computeElementsBoundingBox, getElementBoundingBox, hitTestElement, hitTestResizeHandle, moveElementByDrag, resizeElementByHandle } from './board-elements.manager.js';
 import { exportJson, exportPng, exportSvg, generateThumbnail } from './board-export.service.js';
@@ -29,6 +28,8 @@ export class BoardController {
   private activeInlineEditor: HTMLTextAreaElement | null = null;
   private activeOpenDropdown: { close: () => void } | null = null;
   private activeTrayGroup: 'shapes' | 'sticky' | 'width' | 'pixel' | null = null;
+  private aiDropdownController: CanvasAiDropdownController | null = null;
+  private aiWrapperEl: HTMLElement | null = null;
   private autoSaveTimer: number | null = null;
   private boardBackground: { color: string; dotColor?: string; type: BackgroundType } = { color: '#ffffff', dotColor: '#cbd5e1', type: 'dots' };
   private boardName = 'Pizarrón sin título';
@@ -91,6 +92,8 @@ export class BoardController {
   private selectedElementId: string | null = null;
   private selectionDragOffset: BoardPoint = { x: 0, y: 0 };
   private selectionStartRect = { height: 0, width: 0, x: 0, y: 0 };
+  private shareDropdownController: CanvasShareDropdownController | null = null;
+  private shareWrapperEl: HTMLElement | null = null;
   private stickyDefaultColor = '#fef08a';
   private topToggleColorsBtn: HTMLButtonElement | null = null;
 
@@ -115,6 +118,8 @@ export class BoardController {
 
     this.collaboratorsBarEl = this.container.querySelector<HTMLElement>('[data-ref="board-collaborators-bar"]');
     this.collaboratorsListEl = this.container.querySelector<HTMLElement>('[data-ref="board-collaborators-list"]');
+    this.aiWrapperEl = this.container.querySelector<HTMLElement>('[data-ref="board-ai-wrapper"]');
+    this.shareWrapperEl = this.container.querySelector<HTMLElement>('[data-ref="board-share-wrapper"]');
     if (this.canvasServerId) {
       this.setupCollaboration();
     }
@@ -151,6 +156,10 @@ export class BoardController {
       void this.saveImmediate();
     }
     this.collaborationManager.destroy();
+    this.aiDropdownController?.destroy();
+    this.aiDropdownController = null;
+    this.shareDropdownController?.destroy();
+    this.shareDropdownController = null;
     this.exportDropdownController?.destroy();
     this.drawToolsDropdownController?.destroy();
     this.pixelToolsDropdownController?.destroy();
@@ -578,41 +587,30 @@ export class BoardController {
     );
 
     const btnShare = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-share-board"]');
-    btnShare?.addEventListener(
-      'click',
-      () => {
-        if (this.currentCanvasItem) {
-          openCanvasShareModal(this.currentCanvasItem);
-        } else {
-          openCanvasShareModal({
-            access_level: 'private',
-            canvas_type: 'board',
-            created_at: this.canvasCreatedAt || new Date().toISOString(),
-            id: this.canvasServerId || undefined,
-            name: this.boardName,
-            public_role: 'editor',
-            unit: 'board',
-            updated_at: new Date().toISOString(),
-            user_id: this.canvasUserId || undefined,
-            uuid: this.canvasUuid,
-          } as CanvasItem);
-        }
-      },
-      { signal }
-    );
+    if (this.shareWrapperEl && btnShare) {
+      this.shareDropdownController = setupCanvasShareDropdown({
+        getCanvas: () => this.getCanvasItemForShare(),
+        onAccessChanged: (access, role) => {
+          this.accessLevel = access;
+          if (role) this.publicRole = role;
+        },
+        signal,
+        trigger: btnShare,
+        wrapper: this.shareWrapperEl,
+      });
+    }
 
     const btnBoardAi = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-board-ai"]');
-    btnBoardAi?.addEventListener(
-      'click',
-      () => {
-        openBoardAiModal({
-          onSuccess: ({ elements }) => {
-            this.insertAiGeneratedBoardElements(elements);
-          },
-        });
-      },
-      { signal }
-    );
+    if (this.aiWrapperEl && btnBoardAi) {
+      this.aiDropdownController = setupBoardAiDropdown({
+        onSuccess: ({ elements }) => {
+          this.insertAiGeneratedBoardElements(elements);
+        },
+        signal,
+        trigger: btnBoardAi,
+        wrapper: this.aiWrapperEl,
+      });
+    }
 
     this.bindExportButtons(signal);
     this.bindToolbarTools(signal);
@@ -636,6 +634,22 @@ export class BoardController {
       },
       { signal }
     );
+  }
+
+  private getCanvasItemForShare(): CanvasItem {
+    return this.currentCanvasItem || ({
+      access_level: this.accessLevel,
+      canvas_type: 'board',
+      created_at: this.canvasCreatedAt || new Date().toISOString(),
+      height: 1080,
+      id: this.canvasServerId || undefined,
+      name: this.boardName,
+      public_role: this.publicRole,
+      unit: 'board',
+      updated_at: new Date().toISOString(),
+      user_id: this.canvasUserId || undefined,
+      uuid: this.canvasUuid,
+    } as CanvasItem);
   }
 
   private insertAiGeneratedBoardElements(aiElements: BoardElement[]): void {

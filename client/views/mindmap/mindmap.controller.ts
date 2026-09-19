@@ -1,4 +1,5 @@
-import { openCanvasShareModal } from '../../components/canvas-share-modal.component.js';
+import { CanvasAiDropdownController, setupMindMapAiDropdown } from '../../components/canvas-ai-dropdown.component.js';
+import { CanvasShareDropdownController, setupCanvasShareDropdown } from '../../components/canvas-share-dropdown.component.js';
 import { closeContextMenu, ContextMenuItem, openContextMenu } from '../../components/context-menu.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
 import { getCustomDiagramProject } from '../../config/diagram-templates.data.js';
@@ -30,6 +31,8 @@ export class MindMapController implements ViewController {
   private abortController: AbortController = new AbortController();
   private accessLevel: 'private' | 'public' = 'private';
   private addIdeasDropdownController: { close: () => void; destroy: () => void } | null = null;
+  private aiDropdownController: CanvasAiDropdownController | null = null;
+  private aiWrapperEl: HTMLElement | null = null;
   private boxSelectCurrentWorld: { x: number; y: number } = { x: 0, y: 0 };
   private boxSelectStartWorld: { x: number; y: number } = { x: 0, y: 0 };
   private canvas: HTMLCanvasElement | null = null;
@@ -92,6 +95,8 @@ export class MindMapController implements ViewController {
   private selectedNodeId: string | null = null;
   private selectedNodeIds: Set<string> = new Set();
   private shapesDropdownController: { close: () => void; destroy: () => void } | null = null;
+  private shareDropdownController: CanvasShareDropdownController | null = null;
+  private shareWrapperEl: HTMLElement | null = null;
   private showMinimap = false;
   private textEditorContainer: HTMLElement | null = null;
 
@@ -108,6 +113,8 @@ export class MindMapController implements ViewController {
     this.textEditorContainer = this.container.querySelector<HTMLElement>('[data-ref="mindmap-text-editor-container"]');
     this.collaboratorsBarEl = this.container.querySelector<HTMLElement>('[data-ref="mindmap-collaborators-bar"]');
     this.collaboratorsListEl = this.container.querySelector<HTMLElement>('[data-ref="mindmap-collaborators-list"]');
+    this.aiWrapperEl = this.container.querySelector<HTMLElement>('[data-ref="mindmap-ai-wrapper"]');
+    this.shareWrapperEl = this.container.querySelector<HTMLElement>('[data-ref="mindmap-share-wrapper"]');
 
     if (!this.canvas || !this.canvasContainer) return false;
 
@@ -132,6 +139,10 @@ export class MindMapController implements ViewController {
   public destroy(): void {
     closeContextMenu();
     this.collaborationManager.destroy();
+    this.aiDropdownController?.destroy();
+    this.aiDropdownController = null;
+    this.shareDropdownController?.destroy();
+    this.shareDropdownController = null;
     this.addIdeasDropdownController?.destroy();
     this.emojisDropdownController?.destroy();
     this.exportDropdownController?.destroy();
@@ -401,7 +412,6 @@ export class MindMapController implements ViewController {
     const btnAddSibling = this.container.querySelector<HTMLElement>('[data-ref="btn-add-sibling"]');
     const btnAddFree = this.container.querySelector<HTMLElement>('[data-ref="btn-add-free-node"]');
     const btnToolConnect = this.container.querySelector<HTMLElement>('[data-ref="btn-tool-connect"]');
-    const btnAiExpand = this.container.querySelector<HTMLElement>('[data-ref="btn-ai-expand"]');
     const btnToggleTask = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-task"]');
     const btnEditNode = this.container.querySelector<HTMLElement>('[data-ref="btn-edit-node"]');
     const btnDeleteNode = this.container.querySelector<HTMLElement>('[data-ref="btn-delete-node"]');
@@ -429,7 +439,27 @@ export class MindMapController implements ViewController {
       }
     }, { signal });
 
-    btnAiExpand?.addEventListener('click', () => this.openAiModal(), { signal });
+    const btnAiExpand = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-ai-expand"]');
+    if (this.aiWrapperEl && btnAiExpand) {
+      this.aiDropdownController = setupMindMapAiDropdown({
+        getContextNode: () => {
+          const selectedNode = this.selectedNodeId ? this.project.nodes[this.selectedNodeId] : null;
+          return {
+            id: selectedNode && this.selectedNodeId !== this.project.rootId ? this.selectedNodeId : null,
+            text: selectedNode ? selectedNode.text : null,
+          };
+        },
+        getDiagramType: () => {
+          return this.project.subtype || (this.project.theme?.layoutDirection === 'top-down' ? 'conceptmap' : 'mindmap');
+        },
+        onSuccess: (result) => this.applyAiGeneratedMindMap(result),
+        signal,
+        trigger: btnAiExpand,
+        wrapper: this.aiWrapperEl,
+      });
+    } else if (btnAiExpand) {
+      btnAiExpand.addEventListener('click', () => this.openAiModal(), { signal });
+    }
 
     btnToggleTask?.addEventListener('click', () => {
       if (this.selectedNodeIds.size === 0 && this.selectedNodeId) {
@@ -694,24 +724,18 @@ export class MindMapController implements ViewController {
     btnExportJson?.addEventListener('click', () => this.exportJson(), { signal });
 
     const btnShare = this.container.querySelector<HTMLElement>('[data-ref="btn-share-mindmap"]');
-    btnShare?.addEventListener('click', () => {
-      if (this.currentCanvasItem) {
-        openCanvasShareModal(this.currentCanvasItem);
-      } else {
-        openCanvasShareModal({
-          access_level: this.accessLevel,
-          canvas_type: 'diagram',
-          created_at: this.canvasCreatedAt || new Date().toISOString(),
-          id: this.canvasServerId || undefined,
-          name: this.canvasTitle,
-          public_role: this.publicRole,
-          unit: 'diagram',
-          updated_at: new Date().toISOString(),
-          user_id: this.canvasUserId || undefined,
-          uuid: this.canvasUuid,
-        } as CanvasItem);
-      }
-    }, { signal });
+    if (this.shareWrapperEl && btnShare) {
+      this.shareDropdownController = setupCanvasShareDropdown({
+        getCanvas: () => this.getCanvasItemForShare(),
+        onAccessChanged: (access, role) => {
+          this.accessLevel = access;
+          if (role) this.publicRole = role;
+        },
+        signal,
+        trigger: btnShare,
+        wrapper: this.shareWrapperEl,
+      });
+    }
 
     const titleEl = this.container.querySelector<HTMLElement>('[data-ref="mindmap-title"]');
     titleEl?.addEventListener('click', () => {
@@ -727,6 +751,22 @@ export class MindMapController implements ViewController {
         this.commitChange();
       }
     }, { signal });
+  }
+
+  private getCanvasItemForShare(): CanvasItem {
+    return this.currentCanvasItem || ({
+      access_level: this.accessLevel,
+      canvas_type: 'diagram',
+      created_at: this.canvasCreatedAt || new Date().toISOString(),
+      height: 1080,
+      id: this.canvasServerId || undefined,
+      name: this.canvasTitle,
+      public_role: this.publicRole,
+      unit: 'diagram',
+      updated_at: new Date().toISOString(),
+      user_id: this.canvasUserId || undefined,
+      uuid: this.canvasUuid,
+    } as CanvasItem);
   }
 
   private handleMouseDown(e: MouseEvent): void {
@@ -2559,6 +2599,10 @@ export class MindMapController implements ViewController {
   }
 
   private openAiModal(): void {
+    if (this.aiDropdownController) {
+      this.aiDropdownController.open();
+      return;
+    }
     const selectedNode = this.selectedNodeId ? this.project.nodes[this.selectedNodeId] : null;
     const diagramType: DiagramSubtype = this.project.subtype || (this.project.theme?.layoutDirection === 'top-down' ? 'conceptmap' : 'mindmap');
 

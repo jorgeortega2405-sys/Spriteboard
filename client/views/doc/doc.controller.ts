@@ -1,4 +1,5 @@
-import { openCanvasShareModal } from '../../components/canvas-share-modal.component.js';
+import { CanvasAiDropdownController, setupDocAiDropdown } from '../../components/canvas-ai-dropdown.component.js';
+import { CanvasShareDropdownController, setupCanvasShareDropdown } from '../../components/canvas-share-dropdown.component.js';
 import { closeContextMenu, ContextMenuItem, openContextMenu } from '../../components/context-menu.component.js';
 import { openModal } from '../../components/modal.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
@@ -11,7 +12,6 @@ import { ViewController } from '../../types/common.types.js';
 import { MindMapProject } from '../../types/mindmap.types.js';
 import { initCarouselScroll, setupDropdown } from '../../utils/dom.util.js';
 import { BoardProject } from '../board/board.types.js';
-import { openDocAiModal } from './doc-ai-modal.component.js';
 import { DocCollaborationManager, DocCollaboratorState } from './doc-collaboration.manager.js';
 import { exportDocHtml, exportDocJson, exportDocMarkdown, exportDocPdf, exportDocTxt, exportDocWord, generateDocThumbnail } from './doc-export.service.js';
 import { DocFontPickerComponent, FontSelectEvent } from './doc-font-picker.component.js';
@@ -52,6 +52,8 @@ export class DocController implements ViewController {
   private activeInspiringQuote: string = INSPIRING_QUOTES[Math.floor(Math.random() * INSPIRING_QUOTES.length)] || INSPIRING_QUOTES[0];
   private activeTable: HTMLTableElement | null = null;
   private activeTableCell: HTMLTableCellElement | null = null;
+  private aiDropdownController: CanvasAiDropdownController | null = null;
+  private aiWrapperEl: HTMLElement | null = null;
   private alignmentDropdownController: { close: () => void; destroy: () => void } | null = null;
   private canvasCreatedAt: string | null = null;
   private canvasServerId: number | null = null;
@@ -107,6 +109,8 @@ export class DocController implements ViewController {
   private publicRole: 'editor' | 'viewer' = 'editor';
   private saveDebounceTimer: number | null = null;
   private selectedImageWrapper: HTMLElement | null = null;
+  private shareDropdownController: CanvasShareDropdownController | null = null;
+  private shareWrapperEl: HTMLElement | null = null;
   private stylesDropdownController: { close: () => void; destroy: () => void } | null = null;
 
   constructor(container: HTMLElement, canvasUuid: string, initialCanvasRecord?: CanvasItem | null) {
@@ -122,6 +126,8 @@ export class DocController implements ViewController {
 
     this.collaboratorsBarEl = this.container.querySelector<HTMLElement>('[data-ref="doc-collaborators-bar"]');
     this.collaboratorsListEl = this.container.querySelector<HTMLElement>('[data-ref="doc-collaborators-list"]');
+    this.aiWrapperEl = this.container.querySelector<HTMLElement>('[data-ref="doc-ai-wrapper"]');
+    this.shareWrapperEl = this.container.querySelector<HTMLElement>('[data-ref="doc-share-wrapper"]');
     this.setupCollaboration();
 
     this.historyManager.pushState(this.project);
@@ -139,6 +145,10 @@ export class DocController implements ViewController {
   public destroy(): void {
     closeContextMenu();
     this.collaborationManager.destroy();
+    this.aiDropdownController?.destroy();
+    this.aiDropdownController = null;
+    this.shareDropdownController?.destroy();
+    this.shareDropdownController = null;
     this.abortController.abort();
     this.alignmentDropdownController?.destroy();
     this.docToolsDropdownController?.destroy();
@@ -494,40 +504,33 @@ export class DocController implements ViewController {
     }
 
     const btnShare = this.container.querySelector<HTMLElement>('[data-ref="btn-share-doc"]');
-    if (btnShare) {
-      btnShare.addEventListener('click', () => {
-        if (this.currentCanvasItem) {
-          openCanvasShareModal(this.currentCanvasItem);
-        } else {
-          openCanvasShareModal({
-            access_level: this.accessLevel,
-            canvas_type: 'doc',
-            created_at: this.canvasCreatedAt || new Date().toISOString(),
-            id: this.canvasServerId || undefined,
-            name: this.canvasTitle,
-            public_role: this.publicRole,
-            unit: 'doc',
-            updated_at: new Date().toISOString(),
-            user_id: this.canvasUserId || (currentUser ? currentUser.id : undefined),
-            uuid: this.canvasUuid,
-          } as CanvasItem);
-        }
-      }, { signal });
+    if (this.shareWrapperEl && btnShare) {
+      this.shareDropdownController = setupCanvasShareDropdown({
+        getCanvas: () => this.getCanvasItemForShare(),
+        onAccessChanged: (access, role) => {
+          this.accessLevel = access;
+          if (role) this.publicRole = role;
+        },
+        signal,
+        trigger: btnShare,
+        wrapper: this.shareWrapperEl,
+      });
     }
 
     const btnDocAi = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-doc-magic-ai"]');
-    if (btnDocAi) {
-      btnDocAi.addEventListener('click', (e) => {
-        e.preventDefault();
-        const sel = window.getSelection();
-        const selectedText = sel ? sel.toString().trim() : '';
-        openDocAiModal({
-          contextText: selectedText || undefined,
-          onSuccess: ({ html }) => {
-            this.insertAiGeneratedHtml(html);
-          },
-        });
-      }, { signal });
+    if (this.aiWrapperEl && btnDocAi) {
+      this.aiDropdownController = setupDocAiDropdown({
+        getContextText: () => {
+          const sel = window.getSelection();
+          return sel ? sel.toString().trim() : null;
+        },
+        onSuccess: ({ html }) => {
+          this.insertAiGeneratedHtml(html);
+        },
+        signal,
+        trigger: btnDocAi,
+        wrapper: this.aiWrapperEl,
+      });
     }
 
     this.bindFormattingTools(signal);
@@ -540,6 +543,22 @@ export class DocController implements ViewController {
     this.bindSelectionBubble(signal);
     this.bindImageAndTableControls(signal);
     this.bindDragDropAndPaste(signal);
+  }
+
+  private getCanvasItemForShare(): CanvasItem {
+    return this.currentCanvasItem || ({
+      access_level: this.accessLevel,
+      canvas_type: 'doc',
+      created_at: this.canvasCreatedAt || new Date().toISOString(),
+      height: 1080,
+      id: this.canvasServerId || undefined,
+      name: this.canvasTitle,
+      public_role: this.publicRole,
+      unit: 'doc',
+      updated_at: new Date().toISOString(),
+      user_id: this.canvasUserId || (currentUser ? currentUser.id : undefined),
+      uuid: this.canvasUuid,
+    } as CanvasItem);
   }
 
   private insertAiGeneratedHtml(html: string): void {
