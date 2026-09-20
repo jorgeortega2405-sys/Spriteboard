@@ -218,7 +218,7 @@ export function hitTestResizeHandle(
   screenY: number,
   worldToScreen: (wx: number, wy: number) => BoardPoint
 ): ResizeHandle | null {
-  if (!('width' in el)) return null;
+  if (!('width' in el) || el.type === 'pixel-grid') return null;
   const bbox = getElementBoundingBox(el);
   const cornerRadius = 12;
 

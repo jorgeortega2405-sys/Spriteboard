@@ -14,9 +14,9 @@ import { CanvasItem } from '../types/canvas.types.js';
 import { UserStorageUsage } from '../types/subscription.types.js';
 import { UserUploadItem } from '../types/upload.types.js';
 import { closeAllDropdowns, registerActiveDropdown, unregisterActiveDropdown } from '../utils/dom.util.js';
-import { PIXEL_SHAPES, PixelShape } from '../utils/pixel-shapes.util.js';
+import { PIXEL_SHAPES, PixelShape, ShapeCategory } from '../utils/pixel-shapes.util.js';
 import { applyAvatarTier, getFallbackTierColor } from '../utils/tier.util.js';
-import { BoardProject } from '../views/board/board.types.js';
+import { BoardProject, ShapeType } from '../views/board/board.types.js';
 import { DOC_TEMPLATES, getDocTemplateById } from '../views/doc/doc-templates.config.js';
 import { DocPage, DocProject } from '../views/doc/doc.types.js';
 import { openCreateCanvasModal } from './create-canvas-modal.component.js';
@@ -965,7 +965,53 @@ function handleApplyCanvasTemplate(preset: PresetItem, canvasType: 'board' | 'do
   }
 }
 
-let activeElementsCategory: 'root' | 'shapes' | 'stickers' | 'diagrams' = 'root';
+let activeElementsCategory: 'root' | 'shapes' | 'stickers' | 'stickies' | 'diagrams' = 'root';
+
+interface RecentElementItem {
+  category?: ShapeCategory;
+  diagramCategory?: string;
+  file?: string;
+  fillColor?: string;
+  id: string;
+  name: string;
+  pathD?: string;
+  previewSvg?: string;
+  shapeType?: ShapeType;
+  strokeColor?: string;
+  text?: string;
+  textColor?: string;
+  type: 'vector' | 'sticker' | 'diagram' | 'sticky';
+}
+
+function getRecentElements(): RecentElementItem[] {
+  try {
+    const raw = localStorage.getItem('spriteboard_recent_elements');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch {}
+  return [];
+}
+
+function addRecentElement(item: RecentElementItem): void {
+  try {
+    const current = getRecentElements().filter((r) => r.id !== item.id);
+    current.unshift(item);
+    localStorage.setItem('spriteboard_recent_elements', JSON.stringify(current.slice(0, 16)));
+  } catch {}
+}
+
+const STICKY_NOTE_PRESETS: Array<{ color: string; id: string; name: string; stroke: string; text: string }> = [
+  { color: '#fef08a', id: 'sticky_yellow', name: 'Amarillo', stroke: '#fde047', text: 'Nota' },
+  { color: '#fed7aa', id: 'sticky_orange', name: 'Naranja', stroke: '#fdba74', text: 'Nota' },
+  { color: '#fbcfe8', id: 'sticky_pink', name: 'Rosa', stroke: '#f472b6', text: 'Nota' },
+  { color: '#bae6fd', id: 'sticky_blue', name: 'Azul', stroke: '#7dd3fc', text: 'Nota' },
+  { color: '#bbf7d0', id: 'sticky_green', name: 'Verde', stroke: '#86efac', text: 'Nota' },
+  { color: '#e9d5ff', id: 'sticky_purple', name: 'Morado', stroke: '#d8b4fe', text: 'Nota' },
+  { color: '#fecaca', id: 'sticky_red', name: 'Rojo', stroke: '#fca5a5', text: 'Nota' },
+  { color: '#f1f5f9', id: 'sticky_gray', name: 'Gris', stroke: '#e2e8f0', text: 'Nota' },
+];
 
 const SHAPE_SECTIONS: Array<{ key: string; label: string; prefixes: string[] }> = [
   {
@@ -1042,6 +1088,19 @@ const SHAPE_SECTIONS: Array<{ key: string; label: string; prefixes: string[] }> 
 function handleApplyDiagramComponent(item: DiagramComponentItem, canvasType: 'board' | 'doc'): void {
   const controller = getActiveCanvasController();
 
+  addRecentElement({
+    diagramCategory: item.category,
+    fillColor: item.fillColor,
+    id: item.id,
+    name: item.name,
+    previewSvg: item.previewSvg,
+    shapeType: item.shapeType,
+    strokeColor: item.strokeColor,
+    text: item.text,
+    textColor: item.textColor,
+    type: 'diagram',
+  });
+
   if (canvasType === 'doc') {
     if (!controller) {
       showToast('No se encontró el controlador del documento', 'warning');
@@ -1095,6 +1154,15 @@ function handleApplyDiagramComponent(item: DiagramComponentItem, canvasType: 'bo
 function handleApplyCanvasElement(shape: PixelShape, canvasType: 'board' | 'doc'): void {
   const controller = getActiveCanvasController();
 
+  addRecentElement({
+    category: shape.category,
+    file: shape.file,
+    id: shape.id,
+    name: shape.name,
+    pathD: shape.pathD,
+    type: shape.type,
+  });
+
   if (canvasType === 'doc') {
     if (!controller) {
       showToast('No se encontró el controlador del documento', 'warning');
@@ -1125,6 +1193,80 @@ function handleApplyCanvasElement(shape: PixelShape, canvasType: 'board' | 'doc'
       toggleDrawer(false);
     }
     return;
+  }
+}
+
+function handleApplyStickyPreset(item: { color: string; id: string; name: string; stroke: string; text: string }, canvasType: 'board' | 'doc'): void {
+  const controller = getActiveCanvasController();
+
+  addRecentElement({
+    fillColor: item.color,
+    id: item.id,
+    name: item.name,
+    strokeColor: item.stroke,
+    text: item.text,
+    type: 'sticky',
+  });
+
+  if (canvasType === 'board' && controller) {
+    controller.insertStickyNote?.(item.color, item.text);
+    showToast(`Nota «${item.name}» añadida al pizarrón`, 'success');
+  } else if (canvasType === 'doc' && controller) {
+    showToast('Las notas adhesivas están optimizadas para el pizarrón', 'info');
+  }
+
+  if (window.innerWidth <= 768) {
+    toggleDrawer(false);
+  }
+}
+
+function handleApplyRecentElement(item: RecentElementItem, canvasType: 'board' | 'doc'): void {
+  if (item.type === 'sticky') {
+    handleApplyStickyPreset({
+      color: item.fillColor || '#fef08a',
+      id: item.id,
+      name: item.name,
+      stroke: item.strokeColor || '#fde047',
+      text: item.text || 'Nota',
+    }, canvasType);
+    return;
+  }
+  if (item.type === 'diagram') {
+    const diag = DIAGRAM_COMPONENTS.find((d) => d.id === item.id);
+    if (diag) {
+      handleApplyDiagramComponent(diag, canvasType);
+    } else {
+      handleApplyDiagramComponent({
+        category: (item.diagramCategory as any) || 'flowchart',
+        categoryLabel: 'Diagramas',
+        description: item.name,
+        fillColor: item.fillColor,
+        id: item.id,
+        name: item.name,
+        previewSvg: item.previewSvg || '',
+        shapeType: item.shapeType,
+        strokeColor: item.strokeColor,
+        text: item.text,
+        textColor: item.textColor,
+        type: 'shape',
+      }, canvasType);
+    }
+    return;
+  }
+  const shape = PIXEL_SHAPES.find((s) => s.id === item.id);
+  if (shape) {
+    handleApplyCanvasElement(shape, canvasType);
+  } else {
+    handleApplyCanvasElement({
+      category: item.category || 'shapes',
+      file: item.file,
+      height: 60,
+      id: item.id,
+      name: item.name,
+      pathD: item.pathD,
+      type: item.type as 'vector' | 'sticker',
+      width: 60,
+    }, canvasType);
   }
 }
 
@@ -1218,8 +1360,37 @@ function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElemen
     }
 
     if (activeElementsCategory === 'root') {
+      const recents = getRecentElements();
+      const recentsHtml = recents.length > 0 ? `
+        <div class="elements-recents-section" data-ref="elements-recents-section" style="margin-bottom: 14px;">
+          <span class="elements-categories-heading">Usados recientemente</span>
+          <div class="elements-recents-grid" data-ref="elements-recents-grid" style="display: flex; gap: 8px; overflow-x: auto; padding: 4px 2px 8px 2px;">
+            ${recents.map((item) => {
+              let preview = '';
+              if (item.type === 'vector' && item.pathD) {
+                preview = `<svg viewBox="0 0 48 48" aria-hidden="true" style="width: 24px; height: 24px;"><path d="${item.pathD}" fill="currentColor" /></svg>`;
+              } else if (item.type === 'sticker' && item.file) {
+                preview = `<img src="/assets/img/stickers/${item.file}" alt="${escapeHtml(item.name)}" loading="lazy" style="width: 26px; height: 26px; object-fit: contain;" />`;
+              } else if (item.type === 'diagram' && item.previewSvg) {
+                preview = `<svg viewBox="0 0 48 48" aria-hidden="true" style="width: 24px; height: 24px;">${item.previewSvg}</svg>`;
+              } else if (item.type === 'sticky') {
+                preview = `<div style="background-color: ${item.fillColor || '#fef08a'}; border: 1.5px solid ${item.strokeColor || '#fde047'}; border-radius: 4px; width: 24px; height: 24px;"></div>`;
+              } else {
+                preview = `<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#category"></use></svg>`;
+              }
+              return `
+                <button type="button" class="element-grid-item" data-ref="btn-recent-item-${item.id}" data-recent-id="${item.id}" data-tooltip="${escapeHtml(item.name)}" aria-label="${escapeHtml(item.name)}" style="flex-shrink: 0; width: 44px; height: 44px; padding: 4px;">
+                  ${preview}
+                </button>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      ` : '';
+
       contentContainer.innerHTML = `
         <div class="elements-categories-menu" data-ref="elements-categories-menu">
+          ${recentsHtml}
           <span class="elements-categories-heading">Explora las categorías</span>
           <div class="elements-categories-grid" data-ref="elements-categories-grid">
             <button type="button" class="element-category-card" data-ref="btn-category-shapes" data-category="shapes">
@@ -1236,6 +1407,13 @@ function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElemen
               <span class="element-category-card__label">Figuras</span>
             </button>
 
+            <button type="button" class="element-category-card" data-ref="btn-category-stickies" data-category="stickies">
+              <div class="element-category-card__icon-box element-category-card__icon-box--stickies">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#sticky_note_2"></use></svg>
+              </div>
+              <span class="element-category-card__label">Notas adhesivas</span>
+            </button>
+
             <button type="button" class="element-category-card" data-ref="btn-category-diagrams" data-category="diagrams">
               <div class="element-category-card__icon-box element-category-card__icon-box--diagrams">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#account_tree"></use></svg>
@@ -1248,19 +1426,22 @@ function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElemen
 
       contentContainer.querySelectorAll<HTMLButtonElement>('[data-category]').forEach((btn) => {
         btn.addEventListener('click', () => {
-          const cat = btn.getAttribute('data-category') as 'shapes' | 'stickers' | 'diagrams';
+          const cat = btn.getAttribute('data-category') as 'shapes' | 'stickers' | 'stickies' | 'diagrams';
           if (cat) {
             activeElementsCategory = cat;
             renderContent('');
           }
         });
       });
+
+      bindItemClicks(contentContainer);
       renderIcons(contentContainer);
       return;
     }
 
     let backTitle = 'Formas';
     if (activeElementsCategory === 'stickers') backTitle = 'Figuras';
+    if (activeElementsCategory === 'stickies') backTitle = 'Notas adhesivas';
     if (activeElementsCategory === 'diagrams') backTitle = 'Diagramas';
 
     let html = `
@@ -1306,6 +1487,15 @@ function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElemen
       html += stickers.map((item) => `
         <button type="button" class="element-grid-item" data-ref="btn-element-item-${item.id}" data-element-id="${item.id}" data-tooltip="${escapeHtml(item.name)}" aria-label="${escapeHtml(item.name)}">
           <img src="/assets/img/stickers/${item.file}" alt="${escapeHtml(item.name)}" loading="lazy" />
+        </button>
+      `).join('');
+    } else if (activeElementsCategory === 'stickies') {
+      html += STICKY_NOTE_PRESETS.map((item) => `
+        <button type="button" class="element-grid-item element-grid-item--diagram" data-ref="btn-sticky-item-${item.id}" data-sticky-id="${item.id}" data-tooltip="${escapeHtml(item.name)}" aria-label="${escapeHtml(item.name)}">
+          <div style="background-color: ${item.color}; border: 1.5px solid ${item.stroke}; border-radius: 6px; width: 34px; height: 34px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center;">
+            <span style="font-size: 9px; font-weight: 700; color: #1e293b;">Aa</span>
+          </div>
+          <span class="element-grid-item__label">${escapeHtml(item.name)}</span>
         </button>
       `).join('');
     } else if (activeElementsCategory === 'diagrams') {
@@ -1359,6 +1549,27 @@ function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElemen
         const found = DIAGRAM_COMPONENTS.find((d) => d.id === diagId);
         if (found) {
           handleApplyDiagramComponent(found, canvasType);
+        }
+      });
+    });
+
+    container.querySelectorAll<HTMLButtonElement>('[data-sticky-id]').forEach((itemBtn) => {
+      itemBtn.addEventListener('click', () => {
+        const stkId = itemBtn.getAttribute('data-sticky-id');
+        const found = STICKY_NOTE_PRESETS.find((s) => s.id === stkId);
+        if (found) {
+          handleApplyStickyPreset(found, canvasType);
+        }
+      });
+    });
+
+    container.querySelectorAll<HTMLButtonElement>('[data-recent-id]').forEach((itemBtn) => {
+      itemBtn.addEventListener('click', () => {
+        const recId = itemBtn.getAttribute('data-recent-id');
+        const recents = getRecentElements();
+        const found = recents.find((r) => r.id === recId);
+        if (found) {
+          handleApplyRecentElement(found, canvasType);
         }
       });
     });
@@ -1517,16 +1728,12 @@ function renderUploadsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement
     }
 
     grid.innerHTML = filtered.map((item) => `
-      <div class="canvas-upload-card" data-ref="canvas-upload-card-${item.uuid}" data-upload-uuid="${item.uuid}">
-        <div class="canvas-upload-card__thumb">
-          <img class="canvas-upload-card__img" data-ref="img-upload-${item.uuid}" src="${escapeHtml(item.url)}" alt="${escapeHtml(item.original_filename)}" loading="lazy" />
+      <div class="canvas-card template-card canvas-upload-card" data-ref="canvas-upload-card-${item.uuid}" data-upload-uuid="${item.uuid}" data-tooltip="${escapeHtml(item.original_filename)}">
+        <div class="canvas-card__thumbnail template-card__thumbnail" data-ref="upload-thumb-${item.uuid}">
+          <img class="canvas-card__image image-lazy-fade" data-ref="img-upload-${item.uuid}" src="${escapeHtml(item.url)}" alt="${escapeHtml(item.original_filename)}" loading="lazy" decoding="async" onload="this.classList.add('image-loaded')" onerror="this.classList.add('image-loaded')" />
           <button type="button" class="canvas-upload-card__delete" data-ref="btn-delete-upload-${item.uuid}" data-delete-uuid="${item.uuid}" data-tooltip="Eliminar imagen" aria-label="Eliminar imagen">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
           </button>
-        </div>
-        <div class="canvas-upload-card__info">
-          <span class="canvas-upload-card__name" data-ref="name-upload-${item.uuid}" title="${escapeHtml(item.original_filename)}">${escapeHtml(item.original_filename)}</span>
-          <span class="canvas-upload-card__meta" data-ref="meta-upload-${item.uuid}">${formatBytes(item.size_bytes)}${item.width && item.height ? ` • ${item.width}×${item.height}` : ''}</span>
         </div>
       </div>
     `).join('');
@@ -1815,18 +2022,14 @@ function renderCanvasDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement)
       }
 
       templatesList.innerHTML = filtered.map((item) => `
-        <div class="canvas-panel-template-card" data-ref="canvas-template-card-${item.id}" data-template-id="${item.id}">
-          <div class="canvas-panel-template-card__thumb" data-ref="template-thumb-${item.id}">
-            <img class="canvas-panel-template-card__img" data-ref="template-img-${item.id}" src="${item.imagePath}" alt="${escapeHtml(item.name)}" loading="lazy" />
-          </div>
-          <div class="canvas-panel-template-card__info" data-ref="template-info-${item.id}">
-            <span class="canvas-panel-template-card__title" data-ref="template-title-${item.id}">${escapeHtml(item.name)}</span>
-            <span class="canvas-panel-template-card__badge" data-ref="template-badge-${item.id}">${escapeHtml(item.categoryName || (canvasType === 'doc' ? 'Documento' : 'Pizarrón'))}</span>
+        <div class="canvas-card template-card" data-ref="canvas-template-card-${item.id}" data-template-id="${item.id}" data-tooltip="${escapeHtml(item.name)}">
+          <div class="canvas-card__thumbnail template-card__thumbnail" data-ref="template-thumb-${item.id}">
+            <img class="canvas-card__image image-lazy-fade" data-ref="template-img-${item.id}" src="${item.imagePath}" alt="${escapeHtml(item.name)}" loading="lazy" decoding="async" onload="this.classList.add('image-loaded')" onerror="this.classList.add('image-loaded')" />
           </div>
         </div>
       `).join('');
 
-      templatesList.querySelectorAll<HTMLElement>('.canvas-panel-template-card').forEach((card) => {
+      templatesList.querySelectorAll<HTMLElement>('.template-card').forEach((card) => {
         card.addEventListener('click', () => {
           const tmplId = card.getAttribute('data-template-id');
           const found = presets.find((p) => p.id === tmplId);

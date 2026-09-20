@@ -319,7 +319,7 @@ export function drawStroke(ctx: CanvasRenderingContext2D, stroke: BoardStrokeEle
   ctx.restore();
 }
 
-export function drawShape(ctx: CanvasRenderingContext2D, shape: BoardShapeElement): void {
+export function drawShape(ctx: CanvasRenderingContext2D, shape: BoardShapeElement, isEditing = false): void {
   ctx.save();
   ctx.globalAlpha = shape.opacity !== undefined ? shape.opacity : 1;
   ctx.strokeStyle = shape.strokeColor;
@@ -497,7 +497,7 @@ export function drawShape(ctx: CanvasRenderingContext2D, shape: BoardShapeElemen
     }
   }
 
-  if (shape.text) {
+  if (shape.text && !isEditing) {
     ctx.save();
     ctx.fillStyle = shape.textColor || '#1e293b';
     const fs = shape.fontSize || 14;
@@ -610,7 +610,7 @@ export function drawConnector(
   ctx.restore();
 }
 
-export function drawSticky(ctx: CanvasRenderingContext2D, sticky: BoardStickyElement): void {
+export function drawSticky(ctx: CanvasRenderingContext2D, sticky: BoardStickyElement, isEditing = false): void {
   ctx.save();
   ctx.globalAlpha = sticky.opacity !== undefined ? sticky.opacity : 1;
   ctx.shadowColor = 'rgba(0, 0, 0, 0.12)';
@@ -626,6 +626,8 @@ export function drawSticky(ctx: CanvasRenderingContext2D, sticky: BoardStickyEle
     ctx.fillRect(sticky.x, sticky.y, sticky.width, sticky.height);
   }
   ctx.restore();
+
+  if (isEditing) return;
 
   ctx.save();
   ctx.globalAlpha = sticky.opacity !== undefined ? sticky.opacity : 1;
@@ -647,7 +649,8 @@ export function drawSticky(ctx: CanvasRenderingContext2D, sticky: BoardStickyEle
   ctx.restore();
 }
 
-export function drawText(ctx: CanvasRenderingContext2D, textEl: BoardTextElement): void {
+export function drawText(ctx: CanvasRenderingContext2D, textEl: BoardTextElement, isEditing = false): void {
+  if (isEditing) return;
   ctx.save();
   ctx.globalAlpha = textEl.opacity !== undefined ? textEl.opacity : 1;
   ctx.fillStyle = textEl.color;
@@ -849,7 +852,7 @@ export function drawSelectionBox(ctx: CanvasRenderingContext2D, el: BoardElement
   ctx.setLineDash([]);
   ctx.strokeRect(bbox.x, bbox.y, bbox.width, bbox.height);
 
-  if ('width' in el) {
+  if ('width' in el && el.type !== 'pixel-grid') {
     const cornerRadius = 5.5 / camera.zoom;
     const pillLen = 15 / camera.zoom;
     const pillThick = 6.5 / camera.zoom;

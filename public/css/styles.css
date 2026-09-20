@@ -752,8 +752,8 @@ html.dark-theme .rail-nav-item.is-active .rail-nav-item__label {
 }
 
 .layout-drawer.is-expanded {
-  width: 295px;
-  min-width: 295px;
+  width: 365px;
+  min-width: 365px;
   border: none;
   background-color: transparent;
   box-shadow: none;
@@ -1403,7 +1403,7 @@ html.dark-theme .template-choice-card:hover {
 
 .elements-categories-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 10px;
   width: 100%;
 }
@@ -1466,6 +1466,11 @@ html.dark-theme .element-category-card:hover {
 
 .element-category-card__icon-box--stickers {
   background: linear-gradient(135deg, #ec4899 0%, #f43f5e 100%);
+  color: #ffffff;
+}
+
+.element-category-card__icon-box--stickies {
+  background: linear-gradient(135deg, #f59e0b 0%, #eab308 100%);
   color: #ffffff;
 }
 

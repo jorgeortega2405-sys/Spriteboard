@@ -28,6 +28,7 @@ export class BoardController {
   private activeOpenDropdown: { close: () => void } | null = null;
   private activePopover: HTMLElement | null = null;
   private activeTableInlineEditor: { col: number; row: number; tableId: string; textarea: HTMLTextAreaElement } | null = null;
+  private editingElementId: string | null = null;
   private activeVSubtoolbar: 'draw' | 'lines' | 'pixel' | 'shapes' | 'stickies' | null = null;
   private connectorStyle: 'curved' | 'orthogonal' | 'straight' = 'curved';
   private aiDropdownController: CanvasAiDropdownController | null = null;
@@ -2981,6 +2982,9 @@ export class BoardController {
     const container = this.container.querySelector<HTMLElement>('[data-ref="board-text-editor-container"]');
     if (!container || !this.canvasElement) return;
 
+    this.editingElementId = element.id;
+    this.requestRedraw();
+
     const bbox = getElementBoundingBox(element);
     const screenPos = worldToScreen(bbox.x, bbox.y, this.canvasElement, this.camera);
     const screenW = bbox.width * this.camera.zoom;
@@ -2989,22 +2993,39 @@ export class BoardController {
     const textarea = document.createElement('textarea');
     textarea.className = 'board-inline-textarea';
     textarea.value = element.type === 'shape' ? (element.text || '') : element.text;
-    textarea.style.left = `${screenPos.x}px`;
-    textarea.style.top = `${screenPos.y}px`;
-    textarea.style.width = `${Math.max(120, screenW)}px`;
-    textarea.style.height = `${Math.max(40, screenH)}px`;
+
     const fsize = element.type === 'shape' ? (element.fontSize || 14) : element.fontSize;
-    textarea.style.fontSize = `${Math.max(12, fsize * this.camera.zoom)}px`;
+    const scaledFontSize = Math.max(12, fsize * this.camera.zoom);
+    textarea.style.fontSize = `${scaledFontSize}px`;
+    textarea.style.background = 'transparent';
+    textarea.style.border = 'none';
+    textarea.style.boxShadow = 'none';
+    textarea.style.outline = 'none';
 
     if (element.type === 'sticky') {
-      textarea.style.color = element.textColor;
-      textarea.style.backgroundColor = element.color;
-    } else if (element.type === 'shape') {
+      const pad = 16 * this.camera.zoom;
+      textarea.style.left = `${screenPos.x + pad}px`;
+      textarea.style.top = `${screenPos.y + pad}px`;
+      textarea.style.width = `${Math.max(20, screenW - pad * 2)}px`;
+      textarea.style.height = `${Math.max(20, screenH - pad * 2)}px`;
       textarea.style.color = element.textColor || '#1e293b';
-      textarea.style.backgroundColor = element.fillColor !== 'transparent' ? element.fillColor : '#ffffff';
+      textarea.style.textAlign = 'left';
+    } else if (element.type === 'shape') {
+      const pad = Math.min(24, screenW * 0.15);
+      const innerW = Math.max(20, screenW - pad * 2);
+      textarea.style.left = `${screenPos.x + pad}px`;
+      textarea.style.top = `${screenPos.y + screenH / 2 - Math.max(16, scaledFontSize * 1.5) / 2}px`;
+      textarea.style.width = `${innerW}px`;
+      textarea.style.height = `${Math.max(30, screenH * 0.6)}px`;
+      textarea.style.color = element.textColor || '#1e293b';
       textarea.style.textAlign = 'center';
     } else {
-      textarea.style.color = element.color;
+      textarea.style.left = `${screenPos.x}px`;
+      textarea.style.top = `${screenPos.y}px`;
+      textarea.style.width = `${Math.max(120, screenW)}px`;
+      textarea.style.height = `${Math.max(40, screenH)}px`;
+      textarea.style.color = element.color || '#1e293b';
+      textarea.style.textAlign = 'left';
     }
 
     container.appendChild(textarea);
@@ -3024,7 +3045,13 @@ export class BoardController {
   }
 
   private commitInlineEditor(): void {
-    if (!this.activeInlineEditor) return;
+    if (!this.activeInlineEditor) {
+      if (this.editingElementId) {
+        this.editingElementId = null;
+        this.requestRedraw();
+      }
+      return;
+    }
     const text = this.activeInlineEditor.value.trim();
 
     if (this.activeTableInlineEditor) {
@@ -3037,8 +3064,9 @@ export class BoardController {
         this.scheduleAutoSave();
       }
       this.activeTableInlineEditor = null;
-    } else if (this.selectedElementId) {
-      const el = this.elements.find((item) => item.id === this.selectedElementId);
+    } else if (this.editingElementId || this.selectedElementId) {
+      const targetId = this.editingElementId || this.selectedElementId;
+      const el = this.elements.find((item) => item.id === targetId);
       if (el && (el.type === 'sticky' || el.type === 'text')) {
         this.pushHistoryState();
         el.text = text || (el.type === 'sticky' ? 'Nota' : 'Texto');
@@ -3053,6 +3081,7 @@ export class BoardController {
     }
     this.activeInlineEditor.remove();
     this.activeInlineEditor = null;
+    this.editingElementId = null;
     this.requestRedraw();
   }
 
@@ -3467,11 +3496,11 @@ export class BoardController {
     if (el.type === 'stroke') {
       drawStroke(ctx, el);
     } else if (el.type === 'shape') {
-      drawShape(ctx, el);
+      drawShape(ctx, el, this.editingElementId === el.id);
     } else if (el.type === 'sticky') {
-      drawSticky(ctx, el);
+      drawSticky(ctx, el, this.editingElementId === el.id);
     } else if (el.type === 'text') {
-      drawText(ctx, el);
+      drawText(ctx, el, this.editingElementId === el.id);
     } else if (el.type === 'pixel-grid') {
       this.drawPixelGrid(ctx, el);
     } else if (el.type === 'image') {
