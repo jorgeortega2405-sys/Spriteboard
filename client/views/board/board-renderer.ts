@@ -1,9 +1,47 @@
-import { getConnectorEndpoints, getElementBoundingBox } from './board-elements.manager.js';
+import { computeElementsBoundingBox, getConnectorEndpoints, getElementBoundingBox } from './board-elements.manager.js';
 import { BackgroundType, BoardCollaboratorState, BoardConnectorElement, BoardElement, BoardImageElement, BoardPixelGridElement, BoardPoint, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTextElement, MarkerType, StrokeStyle } from './board.types.js';
 
 const imageCache = new Map<string, HTMLImageElement>();
 const imageLoadCallbacks = new Map<string, Array<() => void>>();
+const svgBoundsCache = new Map<string, { height: number; width: number; x: number; y: number }>();
 const svgPath2dCache = new Map<string, Path2D>();
+let helperSvg: SVGSVGElement | null = null;
+let helperPath: SVGPathElement | null = null;
+
+export function getSvgPathBoundingBox(d: string): { height: number; width: number; x: number; y: number } {
+  if (svgBoundsCache.has(d)) {
+    return svgBoundsCache.get(d)!;
+  }
+  if (typeof document !== 'undefined') {
+    try {
+      if (!helperSvg) {
+        helperSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        helperSvg.style.position = 'fixed';
+        helperSvg.style.top = '-9999px';
+        helperSvg.style.left = '-9999px';
+        helperSvg.style.width = '1px';
+        helperSvg.style.height = '1px';
+        helperSvg.style.visibility = 'hidden';
+        helperSvg.style.pointerEvents = 'none';
+        helperPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        helperSvg.appendChild(helperPath);
+        document.body.appendChild(helperSvg);
+      }
+      if (helperPath) {
+        helperPath.setAttribute('d', d);
+        const bbox = helperPath.getBBox();
+        if (bbox && bbox.width > 0 && bbox.height > 0) {
+          const res = { height: bbox.height, width: bbox.width, x: bbox.x, y: bbox.y };
+          svgBoundsCache.set(d, res);
+          return res;
+        }
+      }
+    } catch {}
+  }
+  const fallback = { height: 48, width: 48, x: 0, y: 0 };
+  svgBoundsCache.set(d, fallback);
+  return fallback;
+}
 
 export function getCachedImage(url: string, onLoaded?: () => void): HTMLImageElement | null {
   if (imageCache.has(url)) {
@@ -305,11 +343,19 @@ export function drawShape(ctx: CanvasRenderingContext2D, shape: BoardShapeElemen
       } catch {}
     }
     if (pathObj) {
+      const bounds = getSvgPathBoundingBox(shape.svgPath);
+      const pathW = bounds.width || 48;
+      const pathH = bounds.height || 48;
+      const minX = bounds.x;
+      const minY = bounds.y;
+
       ctx.save();
       ctx.translate(x, y);
-      const scaleX = w / 48;
-      const scaleY = h / 48;
+      const scaleX = w / pathW;
+      const scaleY = h / pathH;
       ctx.scale(scaleX, scaleY);
+      ctx.translate(-minX, -minY);
+
       if (shape.fillColor && shape.fillColor !== 'transparent') {
         ctx.fill(pathObj, 'evenodd');
       }
@@ -617,20 +663,41 @@ export function drawText(ctx: CanvasRenderingContext2D, textEl: BoardTextElement
   ctx.restore();
 }
 
+function drawResizePill(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number
+): void {
+  ctx.beginPath();
+  if (typeof ctx.roundRect === 'function') {
+    ctx.roundRect(x, y, width, height, radius);
+  } else {
+    ctx.rect(x, y, width, height);
+  }
+  ctx.fill();
+  ctx.stroke();
+}
+
 export function drawSelectionBox(ctx: CanvasRenderingContext2D, el: BoardElement, camera: { zoom: number }, allElements?: BoardElement[]): void {
   const bbox = getElementBoundingBox(el, allElements);
   ctx.save();
-  ctx.strokeStyle = '#2563eb';
+  ctx.strokeStyle = '#8b3dff';
   ctx.lineWidth = 1.5 / camera.zoom;
-  ctx.setLineDash([4 / camera.zoom, 4 / camera.zoom]);
-  ctx.strokeRect(bbox.x, bbox.y, bbox.width, bbox.height);
   ctx.setLineDash([]);
+  ctx.strokeRect(bbox.x, bbox.y, bbox.width, bbox.height);
 
   if ('width' in el) {
+    const cornerRadius = 5.5 / camera.zoom;
+    const pillLen = 15 / camera.zoom;
+    const pillThick = 6.5 / camera.zoom;
+    const pillRadius = pillThick / 2;
+
     ctx.fillStyle = '#ffffff';
-    ctx.strokeStyle = '#2563eb';
-    ctx.lineWidth = 2 / camera.zoom;
-    const r = 5 / camera.zoom;
+    ctx.strokeStyle = '#8b3dff';
+    ctx.lineWidth = 1.5 / camera.zoom;
 
     const corners = [
       { x: bbox.x, y: bbox.y },
@@ -641,16 +708,21 @@ export function drawSelectionBox(ctx: CanvasRenderingContext2D, el: BoardElement
 
     for (const c of corners) {
       ctx.beginPath();
-      ctx.arc(c.x, c.y, r, 0, Math.PI * 2);
+      ctx.arc(c.x, c.y, cornerRadius, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
     }
+
+    drawResizePill(ctx, bbox.x + bbox.width / 2 - pillLen / 2, bbox.y - pillThick / 2, pillLen, pillThick, pillRadius);
+    drawResizePill(ctx, bbox.x + bbox.width / 2 - pillLen / 2, bbox.y + bbox.height - pillThick / 2, pillLen, pillThick, pillRadius);
+    drawResizePill(ctx, bbox.x - pillThick / 2, bbox.y + bbox.height / 2 - pillLen / 2, pillThick, pillLen, pillRadius);
+    drawResizePill(ctx, bbox.x + bbox.width - pillThick / 2, bbox.y + bbox.height / 2 - pillLen / 2, pillThick, pillLen, pillRadius);
   } else if (el.type === 'connector') {
     const ep = getConnectorEndpoints(el, allElements || []);
     ctx.fillStyle = '#ffffff';
-    ctx.strokeStyle = '#2563eb';
-    ctx.lineWidth = 2 / camera.zoom;
-    const r = 5 / camera.zoom;
+    ctx.strokeStyle = '#8b3dff';
+    ctx.lineWidth = 1.5 / camera.zoom;
+    const r = 5.5 / camera.zoom;
     for (const pt of [ep.from, ep.to]) {
       ctx.beginPath();
       ctx.arc(pt.x, pt.y, r, 0, Math.PI * 2);
@@ -782,4 +854,69 @@ export function drawBoardCollaboratorCursors(
 
     ctx.restore();
   });
+}
+
+export function drawMarqueeBox(
+  ctx: CanvasRenderingContext2D,
+  box: { height: number; width: number; x: number; y: number },
+  camera: { zoom: number }
+): void {
+  const normX = box.width < 0 ? box.x + box.width : box.x;
+  const normY = box.height < 0 ? box.y + box.height : box.y;
+  const normW = Math.abs(box.width);
+  const normH = Math.abs(box.height);
+
+  ctx.save();
+  ctx.fillStyle = 'rgba(99, 102, 241, 0.12)';
+  ctx.strokeStyle = '#6366f1';
+  ctx.lineWidth = 1.5 / camera.zoom;
+  ctx.setLineDash([4 / camera.zoom, 4 / camera.zoom]);
+  ctx.fillRect(normX, normY, normW, normH);
+  ctx.strokeRect(normX, normY, normW, normH);
+  ctx.restore();
+}
+
+export function drawMultiSelectionBounds(
+  ctx: CanvasRenderingContext2D,
+  elements: BoardElement[],
+  camera: { zoom: number }
+): void {
+  const bbox = computeElementsBoundingBox(elements);
+  if (!bbox) return;
+
+  ctx.save();
+  ctx.strokeStyle = '#8b3dff';
+  ctx.lineWidth = 1.5 / camera.zoom;
+  ctx.setLineDash([]);
+  ctx.strokeRect(bbox.x, bbox.y, bbox.width, bbox.height);
+
+  const cornerRadius = 5.5 / camera.zoom;
+  const pillLen = 15 / camera.zoom;
+  const pillThick = 6.5 / camera.zoom;
+  const pillRadius = pillThick / 2;
+
+  ctx.fillStyle = '#ffffff';
+  ctx.strokeStyle = '#8b3dff';
+  ctx.lineWidth = 1.5 / camera.zoom;
+
+  const corners = [
+    { x: bbox.x, y: bbox.y },
+    { x: bbox.x + bbox.width, y: bbox.y },
+    { x: bbox.x, y: bbox.y + bbox.height },
+    { x: bbox.x + bbox.width, y: bbox.y + bbox.height },
+  ];
+
+  for (const c of corners) {
+    ctx.beginPath();
+    ctx.arc(c.x, c.y, cornerRadius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  drawResizePill(ctx, bbox.x + bbox.width / 2 - pillLen / 2, bbox.y - pillThick / 2, pillLen, pillThick, pillRadius);
+  drawResizePill(ctx, bbox.x + bbox.width / 2 - pillLen / 2, bbox.y + bbox.height - pillThick / 2, pillLen, pillThick, pillRadius);
+  drawResizePill(ctx, bbox.x - pillThick / 2, bbox.y + bbox.height / 2 - pillLen / 2, pillThick, pillLen, pillRadius);
+  drawResizePill(ctx, bbox.x + bbox.width - pillThick / 2, bbox.y + bbox.height / 2 - pillLen / 2, pillThick, pillLen, pillRadius);
+
+  ctx.restore();
 }

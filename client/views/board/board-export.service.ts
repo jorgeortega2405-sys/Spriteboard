@@ -1,5 +1,6 @@
 import { showToast } from '../../services/toast.service.js';
 import { computeElementsBoundingBox } from './board-elements.manager.js';
+import { getSvgPathBoundingBox } from './board-renderer.js';
 import { BackgroundType, BoardElement, BoardPixelGridElement, BoardProject } from './board.types.js';
 
 export function generateThumbnail(
@@ -163,7 +164,12 @@ export function exportSvg(
       const dash = el.strokeStyle === 'dashed' ? 'stroke-dasharray="10,6"' : el.strokeStyle === 'dashed-short' ? 'stroke-dasharray="5,5"' : el.strokeStyle === 'dotted' ? 'stroke-dasharray="2,4"' : '';
 
       if (el.svgPath) {
-        svgContent += `  <path d="${el.svgPath}" transform="translate(${el.x}, ${el.y}) scale(${el.width / 48}, ${el.height / 48})" fill="${fill}" stroke="${stroke}" stroke-width="${el.strokeWidth * (48 / Math.max(el.width, el.height))}" stroke-linejoin="round" stroke-linecap="round" ${dash} opacity="${op}" />\n`;
+        const bounds = getSvgPathBoundingBox(el.svgPath);
+        const pathW = bounds.width || 48;
+        const pathH = bounds.height || 48;
+        const minX = bounds.x || 0;
+        const minY = bounds.y || 0;
+        svgContent += `  <path d="${el.svgPath}" transform="translate(${el.x}, ${el.y}) scale(${el.width / pathW}, ${el.height / pathH}) translate(${-minX}, ${-minY})" fill="${fill}" stroke="${stroke}" stroke-width="${el.strokeWidth * (Math.min(pathW, pathH) / Math.max(el.width, el.height))}" stroke-linejoin="round" stroke-linecap="round" ${dash} opacity="${op}" />\n`;
       } else if (el.shapeType === 'rect') {
         const rx = el.borderRadius ? `rx="${el.borderRadius}" ry="${el.borderRadius}"` : '';
         svgContent += `  <rect x="${el.x}" y="${el.y}" width="${el.width}" height="${el.height}" ${rx} fill="${fill}" stroke="${stroke}" stroke-width="${sw}" ${dash} opacity="${op}" />\n`;

@@ -1,4 +1,4 @@
-import { BoardConnectorElement, BoardElement, BoardPoint, BoardShapeElement, BoardStrokeElement, ShapeType } from './board.types.js';
+import { BoardConnectorElement, BoardElement, BoardPoint, BoardShapeElement, BoardStrokeElement, ResizeHandle, ShapeType } from './board.types.js';
 
 export function computeStrokeBoundingBox(stroke: BoardStrokeElement): { height: number; width: number; x: number; y: number } {
   if (stroke.points.length === 0) return { height: 0, width: 0, x: 0, y: 0 };
@@ -193,22 +193,34 @@ export function hitTestResizeHandle(
   screenX: number,
   screenY: number,
   worldToScreen: (wx: number, wy: number) => BoardPoint
-): 'tl' | 'tr' | 'bl' | 'br' | null {
+): ResizeHandle | null {
   if (!('width' in el)) return null;
   const bbox = getElementBoundingBox(el);
-  const radius = 12;
+  const cornerRadius = 12;
 
   const tl = worldToScreen(bbox.x, bbox.y);
-  if (Math.hypot(tl.x - screenX, tl.y - screenY) <= radius) return 'tl';
+  if (Math.hypot(tl.x - screenX, tl.y - screenY) <= cornerRadius) return 'tl';
 
   const tr = worldToScreen(bbox.x + bbox.width, bbox.y);
-  if (Math.hypot(tr.x - screenX, tr.y - screenY) <= radius) return 'tr';
+  if (Math.hypot(tr.x - screenX, tr.y - screenY) <= cornerRadius) return 'tr';
 
   const bl = worldToScreen(bbox.x, bbox.y + bbox.height);
-  if (Math.hypot(bl.x - screenX, bl.y - screenY) <= radius) return 'bl';
+  if (Math.hypot(bl.x - screenX, bl.y - screenY) <= cornerRadius) return 'bl';
 
   const br = worldToScreen(bbox.x + bbox.width, bbox.y + bbox.height);
-  if (Math.hypot(br.x - screenX, br.y - screenY) <= radius) return 'br';
+  if (Math.hypot(br.x - screenX, br.y - screenY) <= cornerRadius) return 'br';
+
+  const topMid = worldToScreen(bbox.x + bbox.width / 2, bbox.y);
+  if (Math.abs(screenX - topMid.x) <= 16 && Math.abs(screenY - topMid.y) <= 10) return 'n';
+
+  const botMid = worldToScreen(bbox.x + bbox.width / 2, bbox.y + bbox.height);
+  if (Math.abs(screenX - botMid.x) <= 16 && Math.abs(screenY - botMid.y) <= 10) return 's';
+
+  const leftMid = worldToScreen(bbox.x, bbox.y + bbox.height / 2);
+  if (Math.abs(screenX - leftMid.x) <= 10 && Math.abs(screenY - leftMid.y) <= 16) return 'w';
+
+  const rightMid = worldToScreen(bbox.x + bbox.width, bbox.y + bbox.height / 2);
+  if (Math.abs(screenX - rightMid.x) <= 10 && Math.abs(screenY - rightMid.y) <= 16) return 'e';
 
   return null;
 }
@@ -236,7 +248,7 @@ export function moveElementByDrag(el: BoardElement, worldPos: BoardPoint, dragOf
 
 export function resizeElementByHandle(
   el: BoardElement,
-  handle: 'tl' | 'tr' | 'bl' | 'br',
+  handle: ResizeHandle,
   worldPos: BoardPoint,
   startRect: { height: number; width: number; x: number; y: number },
   lockAspect = false
@@ -247,7 +259,7 @@ export function resizeElementByHandle(
   const aspect = ('aspectRatio' in el && el.aspectRatio) ? el.aspectRatio : (startRect.width / Math.max(1, startRect.height));
 
   if (handle === 'br') {
-    let w = Math.max(30, worldPos.x - startRect.x);
+    let w = Math.max(20, worldPos.x - startRect.x);
     let h = Math.max(20, worldPos.y - startRect.y);
     if (preserveAspect) {
       if (Math.abs(w - startRect.width) > Math.abs(h - startRect.height)) {
@@ -256,10 +268,10 @@ export function resizeElementByHandle(
         w = Math.round(h * aspect);
       }
     }
-    el.width = Math.max(30, w);
+    el.width = Math.max(20, w);
     el.height = Math.max(20, h);
   } else if (handle === 'bl') {
-    let newW = Math.max(30, startRect.x + startRect.width - worldPos.x);
+    let newW = Math.max(20, startRect.x + startRect.width - worldPos.x);
     let newH = Math.max(20, worldPos.y - startRect.y);
     if (preserveAspect) {
       if (Math.abs(newW - startRect.width) > Math.abs(newH - startRect.height)) {
@@ -269,10 +281,10 @@ export function resizeElementByHandle(
       }
     }
     el.x = startRect.x + startRect.width - newW;
-    el.width = Math.max(30, newW);
+    el.width = Math.max(20, newW);
     el.height = Math.max(20, newH);
   } else if (handle === 'tr') {
-    let newW = Math.max(30, worldPos.x - startRect.x);
+    let newW = Math.max(20, worldPos.x - startRect.x);
     let newH = Math.max(20, startRect.y + startRect.height - worldPos.y);
     if (preserveAspect) {
       if (Math.abs(newW - startRect.width) > Math.abs(newH - startRect.height)) {
@@ -282,10 +294,10 @@ export function resizeElementByHandle(
       }
     }
     el.y = startRect.y + startRect.height - newH;
-    el.width = Math.max(30, newW);
+    el.width = Math.max(20, newW);
     el.height = Math.max(20, newH);
   } else if (handle === 'tl') {
-    let newW = Math.max(30, startRect.x + startRect.width - worldPos.x);
+    let newW = Math.max(20, startRect.x + startRect.width - worldPos.x);
     let newH = Math.max(20, startRect.y + startRect.height - worldPos.y);
     if (preserveAspect) {
       if (Math.abs(newW - startRect.width) > Math.abs(newH - startRect.height)) {
@@ -296,8 +308,42 @@ export function resizeElementByHandle(
     }
     el.x = startRect.x + startRect.width - newW;
     el.y = startRect.y + startRect.height - newH;
-    el.width = Math.max(30, newW);
+    el.width = Math.max(20, newW);
     el.height = Math.max(20, newH);
+  } else if (handle === 'n') {
+    let newH = Math.max(20, startRect.y + startRect.height - worldPos.y);
+    if (preserveAspect) {
+      const newW = Math.round(newH * aspect);
+      el.x = startRect.x + (startRect.width - newW) / 2;
+      el.width = Math.max(20, newW);
+    }
+    el.y = startRect.y + startRect.height - newH;
+    el.height = Math.max(20, newH);
+  } else if (handle === 's') {
+    let newH = Math.max(20, worldPos.y - startRect.y);
+    if (preserveAspect) {
+      const newW = Math.round(newH * aspect);
+      el.x = startRect.x + (startRect.width - newW) / 2;
+      el.width = Math.max(20, newW);
+    }
+    el.height = Math.max(20, newH);
+  } else if (handle === 'w') {
+    let newW = Math.max(20, startRect.x + startRect.width - worldPos.x);
+    if (preserveAspect) {
+      const newH = Math.round(newW / aspect);
+      el.y = startRect.y + (startRect.height - newH) / 2;
+      el.height = Math.max(20, newH);
+    }
+    el.x = startRect.x + startRect.width - newW;
+    el.width = Math.max(20, newW);
+  } else if (handle === 'e') {
+    let newW = Math.max(20, worldPos.x - startRect.x);
+    if (preserveAspect) {
+      const newH = Math.round(newW / aspect);
+      el.y = startRect.y + (startRect.height - newH) / 2;
+      el.height = Math.max(20, newH);
+    }
+    el.width = Math.max(20, newW);
   }
 }
 
@@ -400,4 +446,53 @@ export function convertDiagramToBoardElements(diagram: { connections?: any[]; no
   }
 
   return newElements;
+}
+
+export function findElementsByMarqueeBox(
+  elements: BoardElement[],
+  box: { height: number; width: number; x: number; y: number }
+): BoardElement[] {
+  const normBox = {
+    height: Math.abs(box.height),
+    width: Math.abs(box.width),
+    x: box.width < 0 ? box.x + box.width : box.x,
+    y: box.height < 0 ? box.y + box.height : box.y,
+  };
+
+  if (normBox.width < 2 && normBox.height < 2) return [];
+
+  return elements.filter((el) => {
+    const bbox = getElementBoundingBox(el, elements);
+    return (
+      bbox.x < normBox.x + normBox.width &&
+      bbox.x + bbox.width > normBox.x &&
+      bbox.y < normBox.y + normBox.height &&
+      bbox.y + bbox.height > normBox.y
+    );
+  });
+}
+
+export function moveElementByDelta(
+  el: BoardElement,
+  dx: number,
+  dy: number,
+  startPos?: { endPoint?: BoardPoint; points?: BoardPoint[]; startPoint?: BoardPoint; x?: number; y?: number }
+): void {
+  if ('x' in el) {
+    const baseX = startPos?.x !== undefined ? startPos.x : el.x;
+    const baseY = startPos?.y !== undefined ? startPos.y : el.y;
+    el.x = Math.round(baseX + dx);
+    el.y = Math.round(baseY + dy);
+  } else if (el.type === 'stroke') {
+    if (startPos?.points) {
+      el.points = startPos.points.map((p) => ({ x: p.x + dx, y: p.y + dy }));
+    } else {
+      el.points = el.points.map((p) => ({ x: p.x + dx, y: p.y + dy }));
+    }
+  } else if (el.type === 'connector' && !el.fromId && !el.toId && el.startPoint && el.endPoint) {
+    const baseStart = startPos?.startPoint || el.startPoint;
+    const baseEnd = startPos?.endPoint || el.endPoint;
+    el.startPoint = { x: Math.round(baseStart.x + dx), y: Math.round(baseStart.y + dy) };
+    el.endPoint = { x: Math.round(baseEnd.x + dx), y: Math.round(baseEnd.y + dy) };
+  }
 }

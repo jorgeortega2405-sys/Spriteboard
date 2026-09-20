@@ -247,6 +247,27 @@ export function setupDropdown(
 
   let isClosing = false;
   let popperInstance: PopperInstance | null = null;
+  const teleportTarget = backdrop || menu;
+  let originalParent: HTMLElement | null = null;
+  let originalNextSibling: Node | null = null;
+
+  const teleportToBody = () => {
+    if (teleportTarget && teleportTarget.parentElement && teleportTarget.parentElement !== document.body) {
+      originalParent = teleportTarget.parentElement;
+      originalNextSibling = teleportTarget.nextSibling;
+      document.body.appendChild(teleportTarget);
+    }
+  };
+
+  const returnFromTeleport = () => {
+    if (teleportTarget && originalParent && teleportTarget.parentElement === document.body) {
+      if (originalNextSibling && originalNextSibling.parentNode === originalParent) {
+        originalParent.insertBefore(teleportTarget, originalNextSibling);
+      } else {
+        originalParent.appendChild(teleportTarget);
+      }
+    }
+  };
 
   const destroyPopper = () => {
     if (popperInstance) {
@@ -266,6 +287,7 @@ export function setupDropdown(
       }
       popperInstance = createPopper(trigger, menu, {
         placement: options.placement || defaultPlacement,
+        strategy: 'fixed',
         modifiers: [
           {
             name: 'offset',
@@ -276,14 +298,14 @@ export function setupDropdown(
           {
             name: 'flip',
             options: {
-              fallbackPlacements: ['top-start', 'bottom-end', 'top-end'],
+              fallbackPlacements: ['top-start', 'bottom-end', 'top-end', 'bottom-start'],
               padding: 8,
             },
           },
           {
             name: 'preventOverflow',
             options: {
-              boundary: 'clippingParents',
+              boundary: 'viewport',
               padding: 8,
             },
           },
@@ -316,6 +338,8 @@ export function setupDropdown(
       close: closeDropdown,
       wrapper,
     });
+
+    teleportToBody();
 
     if (window.innerWidth <= 768 && backdrop && menu) {
       destroyPopper();
@@ -380,6 +404,7 @@ export function setupDropdown(
         backdrop.style.pointerEvents = '';
         menu.style.transform = '';
         menu.style.transition = '';
+        returnFromTeleport();
         isClosing = false;
         if (typeof options.onClose === 'function') {
           options.onClose();
@@ -402,6 +427,7 @@ export function setupDropdown(
           menu.style.width = '';
         }
       }
+      returnFromTeleport();
       if (typeof options.onClose === 'function') {
         options.onClose();
       }
@@ -519,7 +545,12 @@ export function setupDropdown(
   dragZone?.addEventListener('lostpointercapture', onPointerUp);
 
   const onDocClick = (e: MouseEvent) => {
-    if (!wrapper.contains(e.target as Node)) {
+    const target = e.target as Node;
+    if (
+      !wrapper.contains(target) &&
+      (!backdrop || !backdrop.contains(target)) &&
+      (!menu || !menu.contains(target))
+    ) {
       closeDropdown();
     }
   };
@@ -541,9 +572,6 @@ export function setupDropdown(
     const closestMenu = item.closest<HTMLElement>('.menu-panel--dropdown, .menu-panel, [data-ref*="menu"]');
     if (closestMenu !== activeMenu) return;
 
-    e.preventDefault();
-    e.stopPropagation();
-
     const val =
       item.getAttribute('data-theme-value') ||
       item.getAttribute('data-value') ||
@@ -556,6 +584,7 @@ export function setupDropdown(
       if (typeof options.onSelect === 'function') {
         await options.onSelect(val, item);
       }
+      closeDropdown();
       return;
     }
 
@@ -632,6 +661,7 @@ export function setupDropdown(
   window.addEventListener('resize', onResize, { passive: true });
 
   const destroy = () => {
+    returnFromTeleport();
     unregisterActiveDropdown(wrapper);
     detachPointerListeners();
     dragZone?.removeEventListener('pointerdown', onPointerDown);

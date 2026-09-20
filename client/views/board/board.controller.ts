@@ -14,12 +14,12 @@ import { PixelShape } from '../../utils/pixel-shapes.util.js';
 import { generateShadingRamp, getCollaboratorColor } from '../design/design-color.util.js';
 import { DocPage } from '../doc/doc.types.js';
 import { BoardCollaborationManager } from './board-collaboration.manager.js';
-import { computeElementsBoundingBox, getConnectorEndpoints, getElementBoundingBox, hitTestElement, hitTestResizeHandle, moveElementByDrag, resizeElementByHandle } from './board-elements.manager.js';
+import { computeElementsBoundingBox, findElementsByMarqueeBox, getConnectorEndpoints, getElementBoundingBox, hitTestElement, hitTestResizeHandle, moveElementByDelta, moveElementByDrag, resizeElementByHandle } from './board-elements.manager.js';
 import { exportJson, exportPng, exportSvg, generateThumbnail } from './board-export.service.js';
 import { BoardHistoryManager } from './board-history.manager.js';
 import { BoardPixelGridManager } from './board-pixel-grid.manager.js';
-import { drawBackground, drawBoardCollaboratorCursors, drawCheckerboard, drawConnector, drawImage, drawPixelGridLines, drawSelectionBox, drawShape, drawSticky, drawStroke, drawText, screenToWorld, worldToScreen } from './board-renderer.js';
-import { BackgroundType, BoardCollaboratorState, BoardConnectorElement, BoardElement, BoardImageElement, BoardPixelGridElement, BoardPoint, BoardProject, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTextElement, BoardTool, DEFAULT_CLASSIC_PALETTE, GAMEBOY_PALETTE, MarkerType, PICO8_PALETTE, PixelSubtool, ShapeType, StrokeStyle } from './board.types.js';
+import { drawBackground, drawBoardCollaboratorCursors, drawCheckerboard, drawConnector, drawImage, drawMarqueeBox, drawMultiSelectionBounds, drawPixelGridLines, drawSelectionBox, drawShape, drawSticky, drawStroke, drawText, screenToWorld, worldToScreen } from './board-renderer.js';
+import { BackgroundType, BoardCollaboratorState, BoardConnectorElement, BoardElement, BoardImageElement, BoardPixelGridElement, BoardPoint, BoardProject, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTextElement, BoardTool, DEFAULT_CLASSIC_PALETTE, GAMEBOY_PALETTE, MarkerType, PICO8_PALETTE, PixelSubtool, ResizeHandle, ShapeType, StrokeStyle } from './board.types.js';
 
 export class BoardController {
   private abortController: AbortController;
@@ -92,13 +92,19 @@ export class BoardController {
   private popoverStrokeEl: HTMLElement | null = null;
   private publicRole: 'editor' | 'viewer' = 'editor';
   private rafId: number | null = null;
+  private isMarqueeSelecting = false;
+  private marqueeCurrentPos: BoardPoint | null = null;
+  private marqueeStartPos: BoardPoint | null = null;
   private recentColors: string[] = ['#000000', '#FFFFFF', '#FF0000', '#00FF00', '#0000FF', '#FFFF00'];
-  private resizeHandleType: 'tl' | 'tr' | 'bl' | 'br' | null = null;
+  private resizeHandleType: ResizeHandle | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private role: 'editor' | 'owner' | 'viewer' = 'owner';
   private roomToken = '';
   private selectedElementId: string | null = null;
+  private selectedElementIds: string[] = [];
   private selectionDragOffset: BoardPoint = { x: 0, y: 0 };
+  private selectionDragStartWorld: BoardPoint = { x: 0, y: 0 };
+  private selectionStartPositions = new Map<string, { endPoint?: BoardPoint; points?: BoardPoint[]; startPoint?: BoardPoint; x?: number; y?: number }>();
   private selectionStartRect = { height: 0, width: 0, x: 0, y: 0 };
   private shareDropdownController: CanvasShareDropdownController | null = null;
   private shareWrapperEl: HTMLElement | null = null;
@@ -590,6 +596,7 @@ export class BoardController {
         this.pixelGrid.pixelCanvasMap.clear();
         this.elements = [];
         this.selectedElementId = null;
+        this.selectedElementIds = [];
         this.collaborationManager.broadcastClear();
         this.updateSelectionToolbar();
         this.requestRedraw();
@@ -762,6 +769,13 @@ export class BoardController {
     });
   }
 
+  private getSelectedElements(): BoardElement[] {
+    const ids = this.selectedElementIds.length > 0 ? this.selectedElementIds : (this.selectedElementId ? [this.selectedElementId] : []);
+    if (ids.length === 0) return [];
+    const set = new Set(ids);
+    return this.elements.filter((el) => set.has(el.id));
+  }
+
   private setTool(tool: BoardTool): void {
     this.drawToolsDropdownController?.close();
     this.pixelToolsDropdownController?.close();
@@ -785,12 +799,14 @@ export class BoardController {
 
     if (tool !== 'select' && tool !== 'pixel') {
       this.selectedElementId = null;
+      this.selectedElementIds = [];
       this.updateSelectionToolbar();
     } else if (tool === 'pixel') {
       if (this.selectedElementId) {
         const sel = this.elements.find((el) => el.id === this.selectedElementId);
         if (sel?.type !== 'pixel-grid') {
           this.selectedElementId = null;
+          this.selectedElementIds = [];
         }
       }
       this.updateSelectionToolbar();
@@ -831,6 +847,19 @@ export class BoardController {
       this.canvasElement.style.cursor = 'crosshair';
     } else {
       this.canvasElement.style.cursor = 'crosshair';
+    }
+  }
+
+  private setResizeCursor(handle: ResizeHandle): void {
+    if (!this.canvasElement) return;
+    if (handle === 'tl' || handle === 'br') {
+      this.canvasElement.style.cursor = 'nwse-resize';
+    } else if (handle === 'tr' || handle === 'bl') {
+      this.canvasElement.style.cursor = 'nesw-resize';
+    } else if (handle === 'n' || handle === 's') {
+      this.canvasElement.style.cursor = 'ns-resize';
+    } else if (handle === 'w' || handle === 'e') {
+      this.canvasElement.style.cursor = 'ew-resize';
     }
   }
 
@@ -1270,10 +1299,10 @@ export class BoardController {
       this.saveRecentColors();
       this.renderRecentColors();
     }
-    if (this.selectedElementId) {
-      const el = this.elements.find((item) => item.id === this.selectedElementId);
-      if (el) {
-        this.pushHistoryState();
+    const selectedEls = this.getSelectedElements();
+    if (selectedEls.length > 0) {
+      this.pushHistoryState();
+      for (const el of selectedEls) {
         if (el.type === 'stroke') el.color = normalized;
         if (el.type === 'shape') {
           el.strokeColor = normalized;
@@ -1282,10 +1311,10 @@ export class BoardController {
         if (el.type === 'connector') el.color = normalized;
         if (el.type === 'text') el.color = normalized;
         this.collaborationManager.broadcastUpdateElement(el);
-        this.requestRedraw();
-        this.scheduleAutoSave();
-        this.updateContextualToolbar();
       }
+      this.requestRedraw();
+      this.scheduleAutoSave();
+      this.updateContextualToolbar();
     }
   }
 
@@ -1305,20 +1334,20 @@ export class BoardController {
       this.saveRecentColors();
       this.renderRecentColors();
     }
-    if (this.selectedElementId) {
-      const el = this.elements.find((item) => item.id === this.selectedElementId);
-      if (el) {
-        this.pushHistoryState();
+    const selectedEls = this.getSelectedElements();
+    if (selectedEls.length > 0) {
+      this.pushHistoryState();
+      for (const el of selectedEls) {
         if (el.type === 'shape') {
           el.fillColor = normalized;
         } else if (el.type === 'sticky') {
           el.color = normalized;
         }
         this.collaborationManager.broadcastUpdateElement(el);
-        this.requestRedraw();
-        this.scheduleAutoSave();
-        this.updateContextualToolbar();
       }
+      this.requestRedraw();
+      this.scheduleAutoSave();
+      this.updateContextualToolbar();
     }
   }
 
@@ -1329,19 +1358,19 @@ export class BoardController {
       this.saveRecentColors();
       this.renderRecentColors();
     }
-    if (this.selectedElementId) {
-      const el = this.elements.find((item) => item.id === this.selectedElementId);
-      if (el) {
-        this.pushHistoryState();
+    const selectedEls = this.getSelectedElements();
+    if (selectedEls.length > 0) {
+      this.pushHistoryState();
+      for (const el of selectedEls) {
         if (el.type === 'text') el.color = normalized;
         if (el.type === 'sticky') el.textColor = normalized;
         if (el.type === 'shape') el.textColor = normalized;
         if (el.type === 'connector') el.color = normalized;
         this.collaborationManager.broadcastUpdateElement(el);
-        this.requestRedraw();
-        this.scheduleAutoSave();
-        this.updateContextualToolbar();
       }
+      this.requestRedraw();
+      this.scheduleAutoSave();
+      this.updateContextualToolbar();
     }
   }
 
@@ -1358,18 +1387,18 @@ export class BoardController {
       opt.classList.toggle('is-active', parseInt(opt.getAttribute('data-width') || '0', 10) === w);
     });
 
-    if (this.selectedElementId) {
-      const el = this.elements.find((item) => item.id === this.selectedElementId);
-      if (el) {
-        this.pushHistoryState();
+    const selectedEls = this.getSelectedElements();
+    if (selectedEls.length > 0) {
+      this.pushHistoryState();
+      for (const el of selectedEls) {
         if (el.type === 'stroke') el.size = w;
         if (el.type === 'shape') el.strokeWidth = w;
         if (el.type === 'connector') el.strokeWidth = w;
         this.collaborationManager.broadcastUpdateElement(el);
-        this.requestRedraw();
-        this.scheduleAutoSave();
-        this.updateContextualToolbar();
       }
+      this.requestRedraw();
+      this.scheduleAutoSave();
+      this.updateContextualToolbar();
     }
   }
 
@@ -1504,18 +1533,14 @@ export class BoardController {
     this.updateContextualToolbar();
 
     const toolbar = this.container.querySelector<HTMLElement>('[data-ref="board-selection-toolbar"]');
-    if (!toolbar || !this.selectedElementId) {
+    const selectedEls = this.getSelectedElements();
+    if (!toolbar || selectedEls.length === 0 || !this.canvasElement) {
       toolbar?.classList.add('is-hidden');
       return;
     }
 
-    const el = this.elements.find((item) => item.id === this.selectedElementId);
-    if (!el || !this.canvasElement) {
-      toolbar.classList.add('is-hidden');
-      return;
-    }
-
-    const isPixel = el.type === 'pixel-grid';
+    const isSingle = selectedEls.length === 1;
+    const isPixel = isSingle && selectedEls[0].type === 'pixel-grid';
     const btnEdit = this.container.querySelector<HTMLElement>('[data-ref="btn-sel-edit-pixels"]');
     const btnGrid = this.container.querySelector<HTMLElement>('[data-ref="btn-sel-toggle-grid"]');
     const btnExport = this.container.querySelector<HTMLElement>('[data-ref="btn-sel-export-sprite"]');
@@ -1526,10 +1551,14 @@ export class BoardController {
     btnExport?.classList.toggle('is-hidden', !isPixel);
     divider?.classList.toggle('is-hidden', !isPixel);
 
-    const bbox = getElementBoundingBox(el);
-    const screenTopLeft = worldToScreen(bbox.x + bbox.width / 2, bbox.y, this.canvasElement, this.camera);
-    toolbar.style.left = `${Math.max(10, screenTopLeft.x)}px`;
-    toolbar.style.top = `${Math.max(60, screenTopLeft.y - 48)}px`;
+    const bbox = computeElementsBoundingBox(selectedEls);
+    if (!bbox) {
+      toolbar.classList.add('is-hidden');
+      return;
+    }
+    const screenTopCenter = worldToScreen(bbox.x + bbox.width / 2, bbox.y, this.canvasElement, this.camera);
+    toolbar.style.left = `${Math.max(10, screenTopCenter.x)}px`;
+    toolbar.style.top = `${Math.max(60, screenTopCenter.y - 48)}px`;
     toolbar.classList.remove('is-hidden');
   }
 
@@ -1542,14 +1571,8 @@ export class BoardController {
       this.topFontSizeLabelEl = this.container.querySelector<HTMLElement>('[data-ref="top-font-size-label"]');
     }
 
-    if (!this.selectedElementId) {
-      this.topSelectionSectionEl?.classList.add('is-hidden');
-      this.closeAllPopovers();
-      return;
-    }
-
-    const el = this.elements.find((item) => item.id === this.selectedElementId);
-    if (!el) {
+    const selectedEls = this.getSelectedElements();
+    if (selectedEls.length === 0) {
       this.topSelectionSectionEl?.classList.add('is-hidden');
       this.closeAllPopovers();
       return;
@@ -1564,73 +1587,86 @@ export class BoardController {
     const groupMarkers = this.container.querySelector<HTMLElement>('[data-ref="board-top-group-markers"]');
     const groupText = this.container.querySelector<HTMLElement>('[data-ref="board-top-group-text-props"]');
 
-    const isShape = el.type === 'shape';
-    const isConnector = el.type === 'connector';
-    const isSticky = el.type === 'sticky';
-    const isText = el.type === 'text';
-    const isStroke = el.type === 'stroke';
-    const isLineShape = isShape && (el.shapeType === 'line' || el.shapeType === 'arrow');
+    if (selectedEls.length === 1) {
+      const el = selectedEls[0];
+      const isShape = el.type === 'shape';
+      const isConnector = el.type === 'connector';
+      const isSticky = el.type === 'sticky';
+      const isText = el.type === 'text';
+      const isStroke = el.type === 'stroke';
+      const isLineShape = isShape && (el.shapeType === 'line' || el.shapeType === 'arrow');
 
-    if (groupFill) {
-      const showFill = (isShape && !isLineShape) || isSticky;
-      groupFill.classList.toggle('is-hidden', !showFill);
-      if (showFill && this.topFillSwatchEl) {
-        const fillColor = isShape ? el.fillColor : (isSticky ? el.color : '#000000');
-        if (fillColor === 'transparent') {
-          this.topFillSwatchEl.classList.add('is-transparent');
-          this.topFillSwatchEl.style.backgroundColor = 'transparent';
-        } else {
-          this.topFillSwatchEl.classList.remove('is-transparent');
-          this.topFillSwatchEl.style.backgroundColor = fillColor;
+      if (groupFill) {
+        const showFill = (isShape && !isLineShape) || isSticky;
+        groupFill.classList.toggle('is-hidden', !showFill);
+        if (showFill && this.topFillSwatchEl) {
+          const fillColor = isShape ? el.fillColor : (isSticky ? el.color : '#000000');
+          if (fillColor === 'transparent') {
+            this.topFillSwatchEl.classList.add('is-transparent');
+            this.topFillSwatchEl.style.backgroundColor = 'transparent';
+          } else {
+            this.topFillSwatchEl.classList.remove('is-transparent');
+            this.topFillSwatchEl.style.backgroundColor = fillColor;
+          }
         }
       }
-    }
 
-    if (groupStrokeColor) {
-      const showStroke = isLineShape || isConnector || isStroke || (isShape && el.strokeWidth > 0);
-      groupStrokeColor.classList.toggle('is-hidden', !showStroke);
-      if (showStroke && this.topStrokeSwatchEl) {
-        const strokeColor = isShape ? (el.strokeColor || '#1e293b') : (isConnector ? (el.color || '#475569') : (isStroke ? el.color : '#1e293b'));
-        if (strokeColor === 'transparent') {
-          this.topStrokeSwatchEl.classList.add('is-transparent');
-          this.topStrokeSwatchEl.style.backgroundColor = 'transparent';
-        } else {
-          this.topStrokeSwatchEl.classList.remove('is-transparent');
-          this.topStrokeSwatchEl.style.backgroundColor = strokeColor;
+      if (groupStrokeColor) {
+        const showStroke = isLineShape || isConnector || isStroke || (isShape && el.strokeWidth > 0);
+        groupStrokeColor.classList.toggle('is-hidden', !showStroke);
+        if (showStroke && this.topStrokeSwatchEl) {
+          const strokeColor = isShape ? (el.strokeColor || '#1e293b') : (isConnector ? (el.color || '#475569') : (isStroke ? el.color : '#1e293b'));
+          if (strokeColor === 'transparent') {
+            this.topStrokeSwatchEl.classList.add('is-transparent');
+            this.topStrokeSwatchEl.style.backgroundColor = 'transparent';
+          } else {
+            this.topStrokeSwatchEl.classList.remove('is-transparent');
+            this.topStrokeSwatchEl.style.backgroundColor = strokeColor;
+          }
         }
       }
-    }
 
-    if (groupStrokeStyle) {
-      const showStrokeStyle = isShape || isConnector || isStroke;
-      groupStrokeStyle.classList.toggle('is-hidden', !showStrokeStyle);
-    }
+      if (groupStrokeStyle) {
+        const showStrokeStyle = isShape || isConnector || isStroke;
+        groupStrokeStyle.classList.toggle('is-hidden', !showStrokeStyle);
+      }
 
-    if (groupCorners) {
-      const showCorners = isShape && !isLineShape;
-      groupCorners.classList.toggle('is-hidden', !showCorners);
-    }
+      if (groupCorners) {
+        const showCorners = isShape && !isLineShape;
+        groupCorners.classList.toggle('is-hidden', !showCorners);
+      }
 
-    if (groupMarkers) {
-      groupMarkers.classList.toggle('is-hidden', !isConnector);
-    }
+      if (groupMarkers) {
+        groupMarkers.classList.toggle('is-hidden', !isConnector);
+      }
 
-    if (groupText) {
-      const showText = isText || isSticky || (isShape && !!el.text) || (isConnector && !!el.label);
-      groupText.classList.toggle('is-hidden', !showText);
-      if (showText) {
-        const textColor = isText ? el.color : (isSticky ? el.textColor : (isShape ? (el.textColor || '#1e293b') : '#334155'));
-        const fontSize = isText ? el.fontSize : (isSticky ? el.fontSize : (isShape ? (el.fontSize || 14) : 12));
-        if (this.topTextSwatchEl) {
-          this.topTextSwatchEl.style.backgroundColor = textColor;
-        }
-        if (this.topFontSizeLabelEl) {
-          this.topFontSizeLabelEl.textContent = `${fontSize}`;
+      if (groupText) {
+        const showText = isText || isSticky || (isShape && !!el.text) || (isConnector && !!el.label);
+        groupText.classList.toggle('is-hidden', !showText);
+        if (showText) {
+          const textColor = isText ? el.color : (isSticky ? el.textColor : (isShape ? (el.textColor || '#1e293b') : '#334155'));
+          const fontSize = isText ? el.fontSize : (isSticky ? el.fontSize : (isShape ? (el.fontSize || 14) : 12));
+          if (this.topTextSwatchEl) {
+            this.topTextSwatchEl.style.backgroundColor = textColor;
+          }
+          if (this.topFontSizeLabelEl) {
+            this.topFontSizeLabelEl.textContent = `${fontSize}`;
+          }
         }
       }
-    }
 
-    this.syncPopoversWithElement(el);
+      this.syncPopoversWithElement(el);
+    } else {
+      const hasFillable = selectedEls.some((el) => (el.type === 'shape' && el.shapeType !== 'line' && el.shapeType !== 'arrow') || el.type === 'sticky');
+      const hasStrokeable = selectedEls.some((el) => el.type === 'stroke' || el.type === 'connector' || el.type === 'shape');
+
+      if (groupFill) groupFill.classList.toggle('is-hidden', !hasFillable);
+      if (groupStrokeColor) groupStrokeColor.classList.toggle('is-hidden', !hasStrokeable);
+      if (groupStrokeStyle) groupStrokeStyle.classList.toggle('is-hidden', !hasStrokeable);
+      if (groupCorners) groupCorners.classList.add('is-hidden');
+      if (groupMarkers) groupMarkers.classList.add('is-hidden');
+      if (groupText) groupText.classList.add('is-hidden');
+    }
   }
 
   private syncPopoversWithElement(el: BoardElement): void {
@@ -2018,66 +2054,85 @@ export class BoardController {
   }
 
   private duplicateSelected(): void {
-    if (!this.selectedElementId) return;
-    const el = this.elements.find((item) => item.id === this.selectedElementId);
-    if (!el) return;
+    const idsToDuplicate = this.selectedElementIds.length > 0 ? [...this.selectedElementIds] : (this.selectedElementId ? [this.selectedElementId] : []);
+    if (idsToDuplicate.length === 0) return;
 
     this.pushHistoryState();
-    const cloned = JSON.parse(JSON.stringify(el)) as BoardElement;
-    cloned.id = `el-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-    if ('x' in cloned) {
-      cloned.x += 24;
-      cloned.y += 24;
-    } else if (cloned.type === 'stroke') {
-      cloned.points = cloned.points.map((pt) => ({ x: pt.x + 24, y: pt.y + 24 }));
-    } else if (cloned.type === 'connector') {
-      if (cloned.startPoint) cloned.startPoint = { x: cloned.startPoint.x + 24, y: cloned.startPoint.y + 24 };
-      if (cloned.endPoint) cloned.endPoint = { x: cloned.endPoint.x + 24, y: cloned.endPoint.y + 24 };
+    const newIds: string[] = [];
+    for (const id of idsToDuplicate) {
+      const el = this.elements.find((item) => item.id === id);
+      if (!el) continue;
+
+      const cloned = JSON.parse(JSON.stringify(el)) as BoardElement;
+      cloned.id = `el-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      if ('x' in cloned) {
+        cloned.x += 24;
+        cloned.y += 24;
+      } else if (cloned.type === 'stroke') {
+        cloned.points = cloned.points.map((pt) => ({ x: pt.x + 24, y: pt.y + 24 }));
+      } else if (cloned.type === 'connector') {
+        if (cloned.startPoint) cloned.startPoint = { x: cloned.startPoint.x + 24, y: cloned.startPoint.y + 24 };
+        if (cloned.endPoint) cloned.endPoint = { x: cloned.endPoint.x + 24, y: cloned.endPoint.y + 24 };
+      }
+
+      if (cloned.type === 'pixel-grid') {
+        this.pixelGrid.pixelCanvasMap.delete(cloned.id);
+      }
+
+      this.elements.push(cloned);
+      this.collaborationManager.broadcastAddElement(cloned);
+      newIds.push(cloned.id);
     }
 
-    if (cloned.type === 'pixel-grid') {
-      this.pixelGrid.pixelCanvasMap.delete(cloned.id);
-    }
-
-    this.elements.push(cloned);
-    this.collaborationManager.broadcastAddElement(cloned);
-    this.selectedElementId = cloned.id;
+    this.selectedElementIds = newIds;
+    this.selectedElementId = newIds[0] || null;
     this.updateSelectionToolbar();
     this.requestRedraw();
     this.scheduleAutoSave();
-    showToast('Elemento duplicado');
+    showToast(newIds.length > 1 ? `${newIds.length} elementos duplicados` : 'Elemento duplicado');
   }
 
   private deleteSelected(): void {
-    if (!this.selectedElementId) return;
+    const idsToDelete = this.selectedElementIds.length > 0 ? [...this.selectedElementIds] : (this.selectedElementId ? [this.selectedElementId] : []);
+    if (idsToDelete.length === 0) return;
+
     this.pushHistoryState();
-    const removedId = this.selectedElementId;
-    const cached = this.pixelGrid.pixelCanvasMap.get(removedId);
-    if (cached) {
-      cached.canvas.width = 0;
-      cached.canvas.height = 0;
-      this.pixelGrid.pixelCanvasMap.delete(removedId);
+    const deleteSet = new Set(idsToDelete);
+
+    for (const id of idsToDelete) {
+      const cached = this.pixelGrid.pixelCanvasMap.get(id);
+      if (cached) {
+        cached.canvas.width = 0;
+        cached.canvas.height = 0;
+        this.pixelGrid.pixelCanvasMap.delete(id);
+      }
+      this.collaborationManager.broadcastDeleteElement(id);
     }
-    this.elements = this.elements.filter((item) => item.id !== removedId && !(item.type === 'connector' && (item.fromId === removedId || item.toId === removedId)));
-    this.collaborationManager.broadcastDeleteElement(removedId);
+
+    this.elements = this.elements.filter((item) => !deleteSet.has(item.id) && !(item.type === 'connector' && ((item.fromId && deleteSet.has(item.fromId)) || (item.toId && deleteSet.has(item.toId)))));
+    this.selectedElementIds = [];
     this.selectedElementId = null;
     this.updateSelectionToolbar();
     this.requestRedraw();
     this.scheduleAutoSave();
+    showToast(idsToDelete.length > 1 ? `${idsToDelete.length} elementos eliminados` : 'Elemento eliminado');
   }
 
   private reorderSelected(bringForward: boolean): void {
-    if (!this.selectedElementId) return;
-    const idx = this.elements.findIndex((item) => item.id === this.selectedElementId);
-    if (idx < 0) return;
+    const idsToReorder = this.selectedElementIds.length > 0 ? [...this.selectedElementIds] : (this.selectedElementId ? [this.selectedElementId] : []);
+    if (idsToReorder.length === 0) return;
 
     this.pushHistoryState();
-    const el = this.elements.splice(idx, 1)[0];
+    const set = new Set(idsToReorder);
+    const selected = this.elements.filter((el) => set.has(el.id));
+    const unselected = this.elements.filter((el) => !set.has(el.id));
+
     if (bringForward) {
-      this.elements.push(el);
+      this.elements = [...unselected, ...selected];
     } else {
-      this.elements.unshift(el);
+      this.elements = [...selected, ...unselected];
     }
+
     this.collaborationManager.broadcastReorderElements(this.elements);
     this.requestRedraw();
     this.scheduleAutoSave();
@@ -2373,7 +2428,7 @@ export class BoardController {
   }
 
   private handlePointerDown(e: PointerEvent): void {
-    if (e.button === 1 || this.currentTool === 'hand' || this.isSpacePressed || this.isShiftPressed || e.shiftKey) {
+    if (e.button === 1 || this.currentTool === 'hand' || this.isSpacePressed) {
       this.isPanning = true;
       this.didPan = false;
       this.panStartMouse = { x: e.clientX, y: e.clientY };
@@ -2395,13 +2450,14 @@ export class BoardController {
     this.lastMousePos = worldPos;
 
     if (this.currentTool === 'select') {
-      if (this.selectedElementId) {
-        const selEl = this.elements.find((item) => item.id === this.selectedElementId);
+      if (this.selectedElementIds.length === 1) {
+        const selEl = this.elements.find((item) => item.id === this.selectedElementIds[0]);
         if (selEl) {
           const handle = hitTestResizeHandle(selEl, screenPos.x, screenPos.y, (wx, wy) => worldToScreen(wx, wy, this.canvasElement, this.camera));
           if (handle) {
             this.isInteractingSelection = true;
             this.resizeHandleType = handle;
+            this.setResizeCursor(handle);
             const bbox = getElementBoundingBox(selEl);
             this.selectionStartRect = { ...bbox };
             return;
@@ -2411,15 +2467,48 @@ export class BoardController {
 
       const hit = hitTestElement(this.elements, worldPos.x, worldPos.y, this.camera.zoom);
       if (hit) {
-        this.selectedElementId = hit.id;
+        if (e.shiftKey) {
+          if (this.selectedElementIds.includes(hit.id)) {
+            this.selectedElementIds = this.selectedElementIds.filter((id) => id !== hit.id);
+          } else {
+            this.selectedElementIds.push(hit.id);
+          }
+          this.selectedElementId = this.selectedElementIds[0] || null;
+        } else {
+          if (!this.selectedElementIds.includes(hit.id)) {
+            this.selectedElementIds = [hit.id];
+            this.selectedElementId = hit.id;
+          }
+        }
+
         this.isInteractingSelection = true;
         this.resizeHandleType = null;
-        const bbox = getElementBoundingBox(hit);
-        this.selectionDragOffset = { x: worldPos.x - bbox.x, y: worldPos.y - bbox.y };
+        this.selectionDragStartWorld = { ...worldPos };
+
+        this.selectionStartPositions.clear();
+        for (const id of this.selectedElementIds) {
+          const el = this.elements.find((item) => item.id === id);
+          if (el) {
+            if ('x' in el) {
+              this.selectionStartPositions.set(id, { x: el.x, y: el.y });
+            } else if (el.type === 'stroke') {
+              this.selectionStartPositions.set(id, { points: el.points.map((p) => ({ ...p })) });
+            } else if (el.type === 'connector' && el.startPoint && el.endPoint) {
+              this.selectionStartPositions.set(id, { endPoint: { ...el.endPoint }, startPoint: { ...el.startPoint } });
+            }
+          }
+        }
+
         this.updateSelectionToolbar();
         this.requestRedraw();
       } else {
-        this.selectedElementId = null;
+        if (!e.shiftKey) {
+          this.selectedElementIds = [];
+          this.selectedElementId = null;
+        }
+        this.isMarqueeSelecting = true;
+        this.marqueeStartPos = { ...worldPos };
+        this.marqueeCurrentPos = { ...worldPos };
         this.updateSelectionToolbar();
         this.requestRedraw();
       }
@@ -2443,6 +2532,7 @@ export class BoardController {
         if (hit && hit.type === 'pixel-grid') {
           targetGrid = hit;
           this.selectedElementId = hit.id;
+          this.selectedElementIds = [hit.id];
           this.updateSelectionToolbar();
         }
       }
@@ -2539,6 +2629,7 @@ export class BoardController {
       this.elements.push(stickyEl);
       this.collaborationManager.broadcastAddElement(stickyEl);
       this.selectedElementId = stickyEl.id;
+      this.selectedElementIds = [stickyEl.id];
       this.setTool('select');
       this.updateSelectionToolbar();
       this.requestRedraw();
@@ -2562,6 +2653,7 @@ export class BoardController {
       this.elements.push(textEl);
       this.collaborationManager.broadcastAddElement(textEl);
       this.selectedElementId = textEl.id;
+      this.selectedElementIds = [textEl.id];
       this.setTool('select');
       this.openInlineEditor(textEl);
       this.requestRedraw();
@@ -2587,17 +2679,42 @@ export class BoardController {
     const worldPos = screenToWorld(screenPos.x, screenPos.y, this.canvasElement, this.camera);
     this.collaborationManager.sendCursor(worldPos.x, worldPos.y);
 
-    if (this.isInteractingSelection && this.selectedElementId) {
-      const el = this.elements.find((item) => item.id === this.selectedElementId);
-      if (el) {
-        if (this.resizeHandleType) {
-          resizeElementByHandle(el, this.resizeHandleType, worldPos, this.selectionStartRect);
-        } else {
-          moveElementByDrag(el, worldPos, this.selectionDragOffset);
+    if (this.isMarqueeSelecting && this.marqueeStartPos) {
+      this.marqueeCurrentPos = { ...worldPos };
+      const box = {
+        height: worldPos.y - this.marqueeStartPos.y,
+        width: worldPos.x - this.marqueeStartPos.x,
+        x: this.marqueeStartPos.x,
+        y: this.marqueeStartPos.y,
+      };
+      const found = findElementsByMarqueeBox(this.elements, box);
+      this.selectedElementIds = found.map((el) => el.id);
+      this.selectedElementId = this.selectedElementIds[0] || null;
+      this.updateSelectionToolbar();
+      this.requestRedraw();
+      return;
+    }
+
+    if (this.isInteractingSelection && this.selectedElementIds.length > 0) {
+      if (this.resizeHandleType && this.selectedElementId) {
+        const el = this.elements.find((item) => item.id === this.selectedElementId);
+        if (el) {
+          resizeElementByHandle(el, this.resizeHandleType, worldPos, this.selectionStartRect, e.shiftKey);
+          this.setResizeCursor(this.resizeHandleType);
         }
-        this.updateSelectionToolbar();
-        this.requestRedraw();
+      } else {
+        const dx = worldPos.x - this.selectionDragStartWorld.x;
+        const dy = worldPos.y - this.selectionDragStartWorld.y;
+        for (const id of this.selectedElementIds) {
+          const el = this.elements.find((item) => item.id === id);
+          const startPos = this.selectionStartPositions.get(id);
+          if (el) {
+            moveElementByDelta(el, dx, dy, startPos);
+          }
+        }
       }
+      this.updateSelectionToolbar();
+      this.requestRedraw();
       return;
     }
 
@@ -2666,6 +2783,20 @@ export class BoardController {
       this.hoveredPixelGridCell = null;
       this.requestRedraw();
     }
+
+    if (!this.isDrawing && !this.isInteractingSelection && !this.isMarqueeSelecting && !this.isPanning && this.currentTool === 'select') {
+      if (this.selectedElementIds.length === 1) {
+        const selEl = this.elements.find((item) => item.id === this.selectedElementIds[0]);
+        if (selEl && 'width' in selEl) {
+          const handle = hitTestResizeHandle(selEl, screenPos.x, screenPos.y, (wx, wy) => worldToScreen(wx, wy, this.canvasElement, this.camera));
+          if (handle) {
+            this.setResizeCursor(handle);
+            return;
+          }
+        }
+      }
+      this.updateCanvasCursor();
+    }
   }
 
   private handlePointerUp(_e: PointerEvent): void {
@@ -2673,7 +2804,7 @@ export class BoardController {
       this.isPanning = false;
       if (this.canvasElement) {
         this.canvasElement.classList.remove('is-panning');
-        if (this.currentTool === 'hand' || this.isSpacePressed || this.isShiftPressed || _e.shiftKey) {
+        if (this.currentTool === 'hand' || this.isSpacePressed) {
           this.canvasElement.classList.add('can-pan');
           this.canvasElement.style.cursor = 'grab';
         } else {
@@ -2682,6 +2813,22 @@ export class BoardController {
         }
       }
       this.scheduleAutoSave();
+      return;
+    }
+
+    if (this.isMarqueeSelecting) {
+      this.isMarqueeSelecting = false;
+      if (this.marqueeStartPos && this.marqueeCurrentPos) {
+        const dist = Math.hypot(this.marqueeCurrentPos.x - this.marqueeStartPos.x, this.marqueeCurrentPos.y - this.marqueeStartPos.y);
+        if (dist < 4 / this.camera.zoom && !_e.shiftKey) {
+          this.selectedElementIds = [];
+          this.selectedElementId = null;
+        }
+      }
+      this.marqueeStartPos = null;
+      this.marqueeCurrentPos = null;
+      this.updateSelectionToolbar();
+      this.requestRedraw();
       return;
     }
 
@@ -2698,13 +2845,18 @@ export class BoardController {
     if (this.isInteractingSelection) {
       this.isInteractingSelection = false;
       this.resizeHandleType = null;
-      if (this.selectedElementId) {
-        const el = this.elements.find((item) => item.id === this.selectedElementId);
-        if (el) {
-          this.collaborationManager.broadcastUpdateElement(el);
+      this.updateCanvasCursor();
+      if (this.selectedElementIds.length > 0) {
+        this.pushHistoryState();
+        for (const id of this.selectedElementIds) {
+          const el = this.elements.find((item) => item.id === id);
+          if (el) {
+            this.collaborationManager.broadcastUpdateElement(el);
+          }
         }
+        this.scheduleAutoSave();
       }
-      this.scheduleAutoSave();
+      this.selectionStartPositions.clear();
       return;
     }
 
@@ -2734,6 +2886,7 @@ export class BoardController {
         this.elements.push(this.liveDraftElement);
         this.collaborationManager.broadcastAddElement(this.liveDraftElement);
         this.selectedElementId = this.liveDraftElement.id;
+        this.selectedElementIds = [this.liveDraftElement.id];
         this.liveDraftElement = null;
         this.updateSelectionToolbar();
         this.requestRedraw();
@@ -2927,7 +3080,7 @@ export class BoardController {
         }
 
         if (e.key === 'Delete' || e.key === 'Backspace') {
-          if (this.selectedElementId) {
+          if (this.selectedElementIds.length > 0 || this.selectedElementId) {
             e.preventDefault();
             this.deleteSelected();
           }
@@ -3156,11 +3309,37 @@ export class BoardController {
       this.drawElement(this.liveDraftElement);
     }
 
-    if (this.selectedElementId) {
+    if (this.selectedElementIds.length > 0) {
+      if (this.selectedElementIds.length === 1) {
+        const selectedEl = this.elements.find((item) => item.id === this.selectedElementIds[0]);
+        if (selectedEl) {
+          drawSelectionBox(this.ctx, selectedEl, this.camera, this.elements);
+        }
+      } else {
+        const selectedEls = this.getSelectedElements();
+        for (const el of selectedEls) {
+          drawSelectionBox(this.ctx, el, this.camera, this.elements);
+        }
+        drawMultiSelectionBounds(this.ctx, selectedEls, this.camera);
+      }
+    } else if (this.selectedElementId) {
       const selectedEl = this.elements.find((item) => item.id === this.selectedElementId);
       if (selectedEl) {
         drawSelectionBox(this.ctx, selectedEl, this.camera, this.elements);
       }
+    }
+
+    if (this.isMarqueeSelecting && this.marqueeStartPos && this.marqueeCurrentPos) {
+      drawMarqueeBox(
+        this.ctx,
+        {
+          height: this.marqueeCurrentPos.y - this.marqueeStartPos.y,
+          width: this.marqueeCurrentPos.x - this.marqueeStartPos.x,
+          x: this.marqueeStartPos.x,
+          y: this.marqueeStartPos.y,
+        },
+        this.camera
+      );
     }
 
     this.ctx.restore();
@@ -3295,6 +3474,7 @@ export class BoardController {
 
       const directShape: ShapeType = shapeMap[cleanId] || (isLineOrArrow ? 'line' : 'rect');
 
+      const isNativeBasic = ['circle', 'pill', 'rect', 'round-rect', 'square', 'rounded_rectangle'].includes(cleanId);
       const shapeEl: BoardShapeElement = {
         fillColor: isLineOrArrow ? 'transparent' : '#000000',
         height: elHeight,
@@ -3302,7 +3482,7 @@ export class BoardController {
         shapeType: directShape,
         strokeColor: isLineOrArrow ? (color || this.currentColor || '#000000') : 'transparent',
         strokeWidth: isLineOrArrow ? 2 : 0,
-        svgPath: shape.pathD || undefined,
+        svgPath: isNativeBasic ? undefined : (shape.pathD || undefined),
         type: 'shape',
         width: elWidth,
         x: Math.round(centerWorld.x - elWidth / 2),
@@ -3412,6 +3592,42 @@ export class BoardController {
     this.updateSelectionToolbar();
     this.requestRedraw();
     this.scheduleAutoSave();
+  }
+
+  public insertTextPreset(type: 'heading' | 'subheading' | 'body'): void {
+    this.pushHistoryState();
+    const dpr = window.devicePixelRatio || 1;
+    const screenW = this.canvasElement ? this.canvasElement.width / dpr : 800;
+    const screenH = this.canvasElement ? this.canvasElement.height / dpr : 600;
+    const centerWorld = screenToWorld(screenW / 2, screenH / 2, this.canvasElement, this.camera);
+
+    const config = {
+      body: { fontSize: 16, height: 32, text: 'Agregar algo de texto', width: 220 },
+      heading: { fontSize: 36, height: 52, text: 'Agregar un título', width: 340 },
+      subheading: { fontSize: 24, height: 40, text: 'Agregar un subtítulo', width: 260 },
+    }[type];
+
+    const textEl: BoardTextElement = {
+      color: this.currentColor || '#000000',
+      fontSize: config.fontSize,
+      height: config.height,
+      id: `text-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      text: config.text,
+      type: 'text',
+      width: config.width,
+      x: Math.round(centerWorld.x - config.width / 2),
+      y: Math.round(centerWorld.y - config.height / 2),
+    };
+
+    this.elements.push(textEl);
+    this.collaborationManager.broadcastAddElement(textEl);
+    this.selectedElementId = textEl.id;
+    this.selectedElementIds = [textEl.id];
+    this.setTool('select');
+    this.updateSelectionToolbar();
+    this.requestRedraw();
+    this.scheduleAutoSave();
+    showToast(type === 'heading' ? 'Título añadido' : type === 'subheading' ? 'Subtítulo añadido' : 'Texto añadido', 'success');
   }
 
   public activateConnectorTool(style?: 'curved' | 'orthogonal' | 'straight'): void {

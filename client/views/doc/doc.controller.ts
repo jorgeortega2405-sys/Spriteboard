@@ -1316,6 +1316,16 @@ export class DocController implements ViewController {
     this.insertImageElement(dataUrl, '160px', name);
   }
 
+  public insertTextPreset(type: 'heading' | 'subheading' | 'body'): void {
+    const html = {
+      body: '<p>Agregar algo de texto</p>',
+      heading: '<h1>Agregar un título</h1>',
+      subheading: '<h3>Agregar un subtítulo</h3>',
+    }[type];
+    this.insertAiGeneratedHtml(html);
+    showToast(type === 'heading' ? 'Título añadido' : type === 'subheading' ? 'Subtítulo añadido' : 'Texto añadido', 'success');
+  }
+
   private initExistingImages(): void {
     this.container.querySelectorAll<HTMLElement>('.doc-image-wrapper').forEach((wrapper) => {
       this.initSingleImageWrapper(wrapper);
