@@ -1881,7 +1881,7 @@ class HomeController {
         this.toggleCardSelection(canvas.uuid);
         return;
       }
-      navigate(targetUrl);
+      window.open(targetUrl, '_blank');
     });
 
     return card;

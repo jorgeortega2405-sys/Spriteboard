@@ -299,7 +299,7 @@ class SharedController {
       if (target?.closest('[data-ref="card-actions"]') || target?.closest('[data-ref="card-menu-dropdown"]')) {
         return;
       }
-      navigate(targetUrl);
+      window.open(targetUrl, '_blank');
     });
 
     const actionsWrapper = card.querySelector<HTMLElement>('[data-ref="card-actions-wrapper"]');

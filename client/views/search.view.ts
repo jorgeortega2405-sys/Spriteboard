@@ -218,7 +218,7 @@ export class SearchController {
 
       card.addEventListener('click', (e) => {
         e.preventDefault();
-        navigate(targetUrl);
+        window.open(targetUrl, '_blank');
       });
 
       this.canvasesGridEl.appendChild(card);

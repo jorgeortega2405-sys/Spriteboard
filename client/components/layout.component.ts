@@ -224,17 +224,26 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   const itemTeams = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-teams"]');
   const notificationsContainer = sidebar.querySelector<HTMLElement>('[data-ref="notifications-container"]');
   const btnNotifications = sidebar.querySelector<HTMLElement>('[data-ref="btn-notifications"]');
+  const btnSettings = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-settings"]');
 
   if (!currentUser) {
     if (itemShared) itemShared.style.display = 'none';
     if (itemTeams) itemTeams.style.display = 'none';
     if (notificationsContainer) notificationsContainer.style.display = 'none';
     if (btnNotifications) btnNotifications.style.display = 'none';
+    if (btnSettings) {
+      btnSettings.style.display = 'inline-flex';
+      btnSettings.classList.toggle('is-active', path.startsWith('/settings'));
+    }
   } else {
     if (itemShared) itemShared.style.display = '';
     if (itemTeams) itemTeams.style.display = '';
     if (notificationsContainer) notificationsContainer.style.display = '';
     if (btnNotifications) btnNotifications.style.display = '';
+    if (btnSettings) {
+      btnSettings.style.display = 'none';
+      btnSettings.classList.remove('is-active');
+    }
   }
 }
 
@@ -507,7 +516,7 @@ function createDrawerCanvasRow(canvas: CanvasItem): HTMLElement {
     if (window.innerWidth <= 768) {
       toggleDrawer(false);
     }
-    navigate(targetUrl);
+    window.open(targetUrl, '_blank');
   });
 
   return item;
@@ -3235,6 +3244,7 @@ function setupRailUserControls(sidebar: HTMLElement): void {
 
   const avatarContainer = sidebar.querySelector<HTMLElement>('[data-ref="avatar-container"]');
   const btnLogin = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-login"], [data-ref="btn-login"]');
+  const btnSettings = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-settings"]');
 
   if (currentUser) {
     if (avatarContainer) {
@@ -3747,6 +3757,13 @@ function setupRailUserControls(sidebar: HTMLElement): void {
       });
     }
   } else {
+    if (btnSettings) {
+      btnSettings.style.display = 'inline-flex';
+      btnSettings.addEventListener('click', (e) => {
+        e.preventDefault();
+        navigate(currentUser ? '/settings/your-account' : '/settings/guest');
+      });
+    }
     if (btnLogin) {
       btnLogin.style.display = 'inline-flex';
       btnLogin.addEventListener('click', (e) => {

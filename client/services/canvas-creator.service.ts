@@ -1,4 +1,3 @@
-import { navigate } from '../app-router.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { getBoardTemplateElements } from '../config/board-templates.data.js';
 import { getCustomDiagramProject } from '../config/diagram-templates.data.js';
@@ -265,7 +264,7 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
         });
       }
       showToast(t('canvas.toast_created'), 'success');
-      navigate(`${targetRoute}${canvasUuid}`);
+      window.open(`${targetRoute}${canvasUuid}`, '_blank');
       return;
     }
 
@@ -290,5 +289,5 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
   });
 
   showToast(t('canvas.toast_created_guest'), 'success');
-  navigate(`${targetRoute}${localUuid}`);
+  window.open(`${targetRoute}${localUuid}`, '_blank');
 }
