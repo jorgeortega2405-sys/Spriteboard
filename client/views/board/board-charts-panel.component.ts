@@ -1,3 +1,4 @@
+import { setupDropdown } from '../../utils/dom.util.js';
 import { BoardChartElement, ChartDataRow, ChartSeriesConfig, ChartType, DEFAULT_CHART_PALETTES } from './board.types.js';
 
 export interface ChartsPanelCallbacks {
@@ -95,11 +96,16 @@ export const CHART_CATALOG: ChartCatalogItem[] = [
 ];
 
 export class BoardChartsPanelComponent {
+  private abbrevDropdownCtrl: ReturnType<typeof setupDropdown> | null = null;
   private activeTab: 'customize' | 'data' = 'data';
   private callbacks: ChartsPanelCallbacks;
+  private colorByDropdownCtrl: ReturnType<typeof setupDropdown> | null = null;
   private containerEl: HTMLElement | null = null;
   private currentChart: BoardChartElement | null = null;
+  private externalBackBtn: HTMLElement | null = null;
+  private numberStyleDropdownCtrl: ReturnType<typeof setupDropdown> | null = null;
   private panelEl: HTMLElement | null = null;
+  private typeDropdownCtrl: ReturnType<typeof setupDropdown> | null = null;
 
   constructor(container: HTMLElement, callbacks: ChartsPanelCallbacks) {
     this.containerEl = container;
@@ -115,10 +121,11 @@ export class BoardChartsPanelComponent {
     this.renderGallery();
   }
 
-  public open(chart?: BoardChartElement): void {
-    if (!this.panelEl) return;
-    this.panelEl.classList.remove('is-hidden');
-
+  public attach(panelEl: HTMLElement, chart?: BoardChartElement, backBtnEl?: HTMLElement | null): void {
+    this.panelEl = panelEl;
+    this.externalBackBtn = backBtnEl || null;
+    this.bindEvents();
+    this.renderGallery();
     if (chart) {
       this.currentChart = chart;
       this.showInspectorView();
@@ -128,15 +135,35 @@ export class BoardChartsPanelComponent {
     }
   }
 
+  public showGallery(): void {
+    this.currentChart = null;
+    this.showGalleryView();
+  }
+
+  public open(chart?: BoardChartElement): void {
+    if (chart) {
+      this.currentChart = chart;
+      if (this.panelEl && this.panelEl.isConnected) {
+        this.showInspectorView();
+      }
+    } else {
+      this.currentChart = null;
+      if (this.panelEl && this.panelEl.isConnected) {
+        this.showGalleryView();
+      }
+    }
+  }
+
   public close(): void {
     if (this.panelEl) {
       this.panelEl.classList.add('is-hidden');
     }
+    this.destroyDropdowns();
     this.currentChart = null;
   }
 
   public isOpen(): boolean {
-    return !!this.panelEl && !this.panelEl.classList.contains('is-hidden');
+    return !!this.panelEl && this.panelEl.isConnected;
   }
 
   public getSelectedChartId(): string | null {
@@ -144,30 +171,32 @@ export class BoardChartsPanelComponent {
   }
 
   public syncChart(chart: BoardChartElement): void {
-    if (!this.isOpen()) return;
     this.currentChart = chart;
-    this.showInspectorView();
+    if (this.panelEl && this.panelEl.isConnected) {
+      this.showInspectorView();
+    }
   }
 
-  private showGalleryView(): void {
+  public showGalleryView(): void {
     if (!this.panelEl) return;
     const galleryView = this.panelEl.querySelector<HTMLElement>('[data-ref="chart-drawer-gallery-view"]');
     const inspectorView = this.panelEl.querySelector<HTMLElement>('[data-ref="chart-drawer-inspector-view"]');
+    const backBtn = this.externalBackBtn || this.panelEl.querySelector<HTMLElement>('[data-ref="btn-chart-back-to-gallery"]');
     galleryView?.classList.remove('is-hidden');
     inspectorView?.classList.add('is-hidden');
+    backBtn?.classList.add('is-hidden');
   }
 
-  private showInspectorView(): void {
+  public showInspectorView(): void {
     if (!this.panelEl || !this.currentChart) return;
     const galleryView = this.panelEl.querySelector<HTMLElement>('[data-ref="chart-drawer-gallery-view"]');
     const inspectorView = this.panelEl.querySelector<HTMLElement>('[data-ref="chart-drawer-inspector-view"]');
+    const backBtn = this.externalBackBtn || this.panelEl.querySelector<HTMLElement>('[data-ref="btn-chart-back-to-gallery"]');
     galleryView?.classList.add('is-hidden');
     inspectorView?.classList.remove('is-hidden');
+    backBtn?.classList.remove('is-hidden');
 
-    const typeSelect = this.panelEl.querySelector<HTMLSelectElement>('[data-ref="chart-inspector-type-select"]');
-    if (typeSelect) {
-      typeSelect.value = this.currentChart.chartType;
-    }
+    this.syncDropdownSelection('[data-ref="dropdown-wrapper-chart-type"]', this.currentChart.chartType);
 
     this.updateTabUI();
     if (this.activeTab === 'data') {
@@ -209,12 +238,7 @@ export class BoardChartsPanelComponent {
       this.populateCustomizeTab();
     });
 
-    const typeSelect = this.panelEl.querySelector<HTMLSelectElement>('[data-ref="chart-inspector-type-select"]');
-    typeSelect?.addEventListener('change', () => {
-      if (!this.currentChart) return;
-      this.currentChart.chartType = typeSelect.value as ChartType;
-      this.callbacks.onChangeChart(this.currentChart);
-    });
+    this.setupDropdowns();
 
     const btnAddRow = this.panelEl.querySelector<HTMLButtonElement>('[data-ref="chart-btn-add-row"]');
     btnAddRow?.addEventListener('click', () => {
@@ -222,7 +246,7 @@ export class BoardChartsPanelComponent {
       const count = this.currentChart.data.length + 1;
       const numSeries = Math.max(1, this.currentChart.series.length);
       const defaultVals = Array(numSeries).fill(25);
-      const palette = this.currentChart.palette || DEFAULT_CHART_PALETTES.canva.colors;
+      const palette = this.currentChart.palette || DEFAULT_CHART_PALETTES.spriteboard.colors;
       this.currentChart.data.push({
         color: palette[(count - 1) % palette.length],
         id: `row-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
@@ -237,7 +261,7 @@ export class BoardChartsPanelComponent {
     btnAddSeries?.addEventListener('click', () => {
       if (!this.currentChart) return;
       const seriesIndex = this.currentChart.series.length + 1;
-      const palette = this.currentChart.palette || DEFAULT_CHART_PALETTES.canva.colors;
+      const palette = this.currentChart.palette || DEFAULT_CHART_PALETTES.spriteboard.colors;
       this.currentChart.series.push({
         color: palette[(seriesIndex - 1) % palette.length],
         name: `Serie ${seriesIndex}`,
@@ -269,7 +293,7 @@ export class BoardChartsPanelComponent {
     });
 
     const btnOpenImport = this.panelEl.querySelector<HTMLButtonElement>('[data-ref="chart-btn-open-import"]');
-    const importModal = this.containerEl?.querySelector<HTMLElement>('[data-ref="chart-import-modal"]');
+    const importModal = this.containerEl?.querySelector<HTMLElement>('[data-ref="chart-import-modal"]') || document.querySelector<HTMLElement>('[data-ref="chart-import-modal"]');
     btnOpenImport?.addEventListener('click', () => {
       importModal?.classList.remove('is-hidden');
       const textarea = importModal?.querySelector<HTMLTextAreaElement>('[data-ref="chart-import-textarea"]');
@@ -378,7 +402,7 @@ export class BoardChartsPanelComponent {
     thAction.style.width = '28px';
     headRow.appendChild(thAction);
 
-    const palette = this.currentChart.palette || DEFAULT_CHART_PALETTES.canva.colors;
+    const palette = this.currentChart.palette || DEFAULT_CHART_PALETTES.spriteboard.colors;
 
     for (let r = 0; r < this.currentChart.data.length; r++) {
       const row = this.currentChart.data[r];
@@ -454,16 +478,7 @@ export class BoardChartsPanelComponent {
 
   private renderDataConfig(): void {
     if (!this.panelEl || !this.currentChart) return;
-
-    const selectColorBy = this.panelEl.querySelector<HTMLSelectElement>('[data-ref="chart-select-color-by"]');
-    if (selectColorBy) {
-      selectColorBy.value = this.currentChart.colorBy || 'category';
-      selectColorBy.onchange = () => {
-        if (!this.currentChart) return;
-        this.currentChart.colorBy = selectColorBy.value as 'category' | 'series' | 'single';
-        this.callbacks.onChangeChart(this.currentChart);
-      };
-    }
+    this.syncDropdownSelection('[data-ref="dropdown-wrapper-color-by"]', this.currentChart.colorBy || 'category');
   }
 
   private populateCustomizeTab(): void {
@@ -497,11 +512,8 @@ export class BoardChartsPanelComponent {
     const toggleYLabels = this.panelEl.querySelector<HTMLInputElement>('[data-ref="chart-toggle-y-labels"]');
     if (toggleYLabels) toggleYLabels.checked = c.showYAxisLabels !== false;
 
-    const selectNumberStyle = this.panelEl.querySelector<HTMLSelectElement>('[data-ref="chart-select-number-style"]');
-    if (selectNumberStyle) selectNumberStyle.value = c.numberFormatStyle || 'normal';
-
-    const selectAbbrev = this.panelEl.querySelector<HTMLSelectElement>('[data-ref="chart-select-abbrev"]');
-    if (selectAbbrev) selectAbbrev.value = c.numberAbbreviation || 'none';
+    this.syncDropdownSelection('[data-ref="dropdown-wrapper-number-style"]', c.numberFormatStyle || 'normal');
+    this.syncDropdownSelection('[data-ref="dropdown-wrapper-abbrev"]', c.numberAbbreviation || 'none');
 
     const labelDecimals = this.panelEl.querySelector<HTMLElement>('[data-ref="chart-label-decimals"]');
     if (labelDecimals) labelDecimals.textContent = String(c.decimals || 0);
@@ -587,20 +599,6 @@ export class BoardChartsPanelComponent {
     toggleYLabels?.addEventListener('change', () => {
       if (!this.currentChart) return;
       this.currentChart.showYAxisLabels = toggleYLabels.checked;
-      this.callbacks.onChangeChart(this.currentChart);
-    });
-
-    const selectNumberStyle = this.panelEl.querySelector<HTMLSelectElement>('[data-ref="chart-select-number-style"]');
-    selectNumberStyle?.addEventListener('change', () => {
-      if (!this.currentChart) return;
-      this.currentChart.numberFormatStyle = selectNumberStyle.value as 'comma' | 'dot' | 'normal';
-      this.callbacks.onChangeChart(this.currentChart);
-    });
-
-    const selectAbbrev = this.panelEl.querySelector<HTMLSelectElement>('[data-ref="chart-select-abbrev"]');
-    selectAbbrev?.addEventListener('change', () => {
-      if (!this.currentChart) return;
-      this.currentChart.numberAbbreviation = selectAbbrev.value as 'kmb' | 'none';
       this.callbacks.onChangeChart(this.currentChart);
     });
 
@@ -730,7 +728,7 @@ export class BoardChartsPanelComponent {
     if (!this.currentChart || this.currentChart.data.length === 0) return;
     const oldRows = this.currentChart.data;
     const oldSeries = this.currentChart.series;
-    const palette = this.currentChart.palette || DEFAULT_CHART_PALETTES.canva.colors;
+    const palette = this.currentChart.palette || DEFAULT_CHART_PALETTES.spriteboard.colors;
 
     const newSeries: ChartSeriesConfig[] = oldRows.map((r, i) => ({
       color: r.color || palette[i % palette.length],
@@ -766,7 +764,7 @@ export class BoardChartsPanelComponent {
 
     const delimiter = lines[0].includes('\t') ? '\t' : lines[0].includes(';') ? ';' : ',';
     const headerCols = lines[0].split(delimiter).map((c) => c.trim().replace(/^["']|["']$/g, ''));
-    const palette = this.currentChart.palette || DEFAULT_CHART_PALETTES.canva.colors;
+    const palette = this.currentChart.palette || DEFAULT_CHART_PALETTES.spriteboard.colors;
 
     const seriesCount = Math.max(1, headerCols.length - 1);
     const seriesList: ChartSeriesConfig[] = [];
@@ -797,5 +795,102 @@ export class BoardChartsPanelComponent {
     this.currentChart.headers = headerCols;
     this.currentChart.series = seriesList;
     this.currentChart.data = dataRows;
+  }
+
+  private setupDropdowns(): void {
+    if (!this.panelEl) return;
+    this.destroyDropdowns();
+
+    const typeWrapper = this.panelEl.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-chart-type"]');
+    if (typeWrapper) {
+      this.typeDropdownCtrl = setupDropdown(typeWrapper, {
+        onSelect: (val) => {
+          if (!this.currentChart) return;
+          this.currentChart.chartType = val as ChartType;
+          this.callbacks.onChangeChart(this.currentChart);
+        },
+      });
+    }
+
+    const colorByWrapper = this.panelEl.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-color-by"]');
+    if (colorByWrapper) {
+      this.colorByDropdownCtrl = setupDropdown(colorByWrapper, {
+        onSelect: (val) => {
+          if (!this.currentChart) return;
+          this.currentChart.colorBy = val as 'category' | 'series' | 'single';
+          this.callbacks.onChangeChart(this.currentChart);
+        },
+      });
+    }
+
+    const numberStyleWrapper = this.panelEl.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-number-style"]');
+    if (numberStyleWrapper) {
+      this.numberStyleDropdownCtrl = setupDropdown(numberStyleWrapper, {
+        onSelect: (val) => {
+          if (!this.currentChart) return;
+          this.currentChart.numberFormatStyle = val as 'comma' | 'dot' | 'normal';
+          this.callbacks.onChangeChart(this.currentChart);
+        },
+      });
+    }
+
+    const abbrevWrapper = this.panelEl.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-abbrev"]');
+    if (abbrevWrapper) {
+      this.abbrevDropdownCtrl = setupDropdown(abbrevWrapper, {
+        onSelect: (val) => {
+          if (!this.currentChart) return;
+          this.currentChart.numberAbbreviation = val as 'kmb' | 'none';
+          this.callbacks.onChangeChart(this.currentChart);
+        },
+      });
+    }
+  }
+
+  private destroyDropdowns(): void {
+    this.typeDropdownCtrl?.destroy();
+    this.colorByDropdownCtrl?.destroy();
+    this.numberStyleDropdownCtrl?.destroy();
+    this.abbrevDropdownCtrl?.destroy();
+    this.typeDropdownCtrl = null;
+    this.colorByDropdownCtrl = null;
+    this.numberStyleDropdownCtrl = null;
+    this.abbrevDropdownCtrl = null;
+  }
+
+  private syncDropdownSelection(wrapperSelector: string, value: string): void {
+    if (!this.panelEl) return;
+    const wrapper = this.panelEl.querySelector<HTMLElement>(wrapperSelector);
+    if (!wrapper) return;
+
+    const items = wrapper.querySelectorAll<HTMLElement>('.menu-item, [data-ref*="opt-"]');
+    let matchedItem: HTMLElement | null = null;
+
+    items.forEach((item) => {
+      const itemVal = item.getAttribute('data-value') || '';
+      if (itemVal === value) {
+        item.classList.add('is-active');
+        matchedItem = item;
+      } else {
+        item.classList.remove('is-active');
+      }
+    });
+
+    if (matchedItem) {
+      const textEl = wrapper.querySelector<HTMLElement>('.dropdown-trigger__text, [data-ref*="text"]');
+      const itemText = (matchedItem as HTMLElement).querySelector<HTMLElement>('.menu-item__text')?.textContent?.trim() || '';
+      if (textEl && itemText) {
+        textEl.textContent = itemText;
+      }
+
+      const iconEl = wrapper.querySelector<HTMLElement>('.dropdown-trigger__icon, [data-ref*="icon"]');
+      const itemIcon = (matchedItem as HTMLElement).querySelector<HTMLElement>('.menu-item__icon');
+      if (iconEl && itemIcon) {
+        const itemUse = itemIcon.querySelector('use');
+        const href = itemUse?.getAttribute('href') || itemUse?.getAttributeNS('http://www.w3.org/1999/xlink', 'href');
+        if (href) {
+          iconEl.innerHTML = `<use href="${href}"></use>`;
+        }
+      }
+    }
   }
 }

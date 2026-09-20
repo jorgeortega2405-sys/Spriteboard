@@ -678,6 +678,28 @@ html.dark-theme .component-badge--active .component-icon {
   font-weight: 500;
 }
 
+.field--sm {
+  width: 100%;
+}
+
+.field--sm .field__input {
+  height: 42px;
+  border-radius: var(--radius-md, 10px);
+  padding: 16px 12px 4px 12px;
+  font-size: 13px;
+}
+
+.field--sm .field__label {
+  left: 12px;
+  font-size: 13px;
+}
+
+.field--sm .field__input:focus ~ .field__label,
+.field--sm .field__input:not(:placeholder-shown) ~ .field__label {
+  top: 11px;
+  transform: translateY(-50%) scale(0.75);
+}
+
 /* Botón de acción dentro del input (toggle de contraseña) */
 .field__action,
 .form-input-action {

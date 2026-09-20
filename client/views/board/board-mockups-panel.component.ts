@@ -28,6 +28,15 @@ export class BoardMockupsPanelComponent {
     this.renderMockupsList();
   }
 
+  public attach(panelEl: HTMLElement): void {
+    this.panelEl = panelEl;
+    this.bindEvents();
+    this.renderCategoryTabs();
+    this.renderMockupsList();
+    const searchInput = this.panelEl.querySelector<HTMLInputElement>('[data-ref="mockup-search-input"]');
+    searchInput?.focus();
+  }
+
   public open(): void {
     if (this.panelEl) {
       this.panelEl.classList.remove('is-hidden');
@@ -43,7 +52,7 @@ export class BoardMockupsPanelComponent {
   }
 
   public isOpen(): boolean {
-    return !!this.panelEl && !this.panelEl.classList.contains('is-hidden');
+    return !!this.panelEl && this.panelEl.isConnected;
   }
 
   private bindEvents(): void {

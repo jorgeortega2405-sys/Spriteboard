@@ -692,7 +692,7 @@ export function drawSection(ctx: CanvasRenderingContext2D, el: BoardSectionEleme
   ctx.stroke();
 
   const title = el.title || 'Sección';
-  ctx.fillStyle = el.titleColor || '#8b3dff';
+  ctx.fillStyle = el.titleColor || '#2563eb';
   ctx.font = 'bold 15px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
   ctx.textBaseline = 'bottom';
   ctx.fillText(title, el.x, el.y - 8);
@@ -852,7 +852,7 @@ function drawResizePill(
 export function drawSelectionBox(ctx: CanvasRenderingContext2D, el: BoardElement, camera: { zoom: number }, allElements?: BoardElement[]): void {
   const bbox = getElementBoundingBox(el, allElements);
   ctx.save();
-  ctx.strokeStyle = '#8b3dff';
+  ctx.strokeStyle = '#2563eb';
   ctx.lineWidth = 1.5 / camera.zoom;
   ctx.setLineDash([]);
   ctx.strokeRect(bbox.x, bbox.y, bbox.width, bbox.height);
@@ -864,7 +864,7 @@ export function drawSelectionBox(ctx: CanvasRenderingContext2D, el: BoardElement
     const pillRadius = pillThick / 2;
 
     ctx.fillStyle = '#ffffff';
-    ctx.strokeStyle = '#8b3dff';
+    ctx.strokeStyle = '#2563eb';
     ctx.lineWidth = 1.5 / camera.zoom;
 
     const corners = [
@@ -892,7 +892,7 @@ export function drawSelectionBox(ctx: CanvasRenderingContext2D, el: BoardElement
   } else if (el.type === 'connector') {
     const ep = getConnectorEndpoints(el, allElements || []);
     ctx.fillStyle = '#ffffff';
-    ctx.strokeStyle = '#8b3dff';
+    ctx.strokeStyle = '#2563eb';
     ctx.lineWidth = 1.5 / camera.zoom;
     const r = 5.5 / camera.zoom;
     for (const pt of [ep.from, ep.to]) {
@@ -1039,8 +1039,8 @@ export function drawMarqueeBox(
   const normH = Math.abs(box.height);
 
   ctx.save();
-  ctx.fillStyle = 'rgba(99, 102, 241, 0.12)';
-  ctx.strokeStyle = '#6366f1';
+  ctx.fillStyle = 'rgba(37, 99, 235, 0.12)';
+  ctx.strokeStyle = '#2563eb';
   ctx.lineWidth = 1.5 / camera.zoom;
   ctx.setLineDash([4 / camera.zoom, 4 / camera.zoom]);
   ctx.fillRect(normX, normY, normW, normH);
@@ -1057,7 +1057,7 @@ export function drawMultiSelectionBounds(
   if (!bbox) return;
 
   ctx.save();
-  ctx.strokeStyle = '#8b3dff';
+  ctx.strokeStyle = '#2563eb';
   ctx.lineWidth = 1.5 / camera.zoom;
   ctx.setLineDash([]);
   ctx.strokeRect(bbox.x, bbox.y, bbox.width, bbox.height);
@@ -1068,7 +1068,7 @@ export function drawMultiSelectionBounds(
   const pillRadius = pillThick / 2;
 
   ctx.fillStyle = '#ffffff';
-  ctx.strokeStyle = '#8b3dff';
+  ctx.strokeStyle = '#2563eb';
   ctx.lineWidth = 1.5 / camera.zoom;
 
   const corners = [

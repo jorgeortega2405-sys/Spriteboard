@@ -1125,10 +1125,10 @@ export function draw3DRotationGizmo(
   ctx.save();
   ctx.beginPath();
   ctx.arc(cx, cy, r, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(139, 61, 255, 0.18)';
+  ctx.fillStyle = 'rgba(37, 99, 235, 0.18)';
   ctx.fill();
 
-  ctx.strokeStyle = '#8b3dff';
+  ctx.strokeStyle = '#2563eb';
   ctx.lineWidth = 2 / camera.zoom;
   ctx.setLineDash([4 / camera.zoom, 3 / camera.zoom]);
   ctx.stroke();
@@ -1136,13 +1136,13 @@ export function draw3DRotationGizmo(
 
   ctx.beginPath();
   ctx.ellipse(cx, cy, r * 0.75, r * 0.35, Math.PI / 4, 0, Math.PI * 2);
-  ctx.strokeStyle = 'rgba(139, 61, 255, 0.7)';
+  ctx.strokeStyle = 'rgba(37, 99, 235, 0.7)';
   ctx.lineWidth = 1.5 / camera.zoom;
   ctx.stroke();
 
   ctx.beginPath();
   ctx.arc(cx, cy, 3.5 / camera.zoom, 0, Math.PI * 2);
-  ctx.fillStyle = '#8b3dff';
+  ctx.fillStyle = '#2563eb';
   ctx.fill();
 
   ctx.restore();

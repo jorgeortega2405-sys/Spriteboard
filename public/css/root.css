@@ -12,6 +12,7 @@
 
 :root {
   color-scheme: light;
+  accent-color: var(--action-primary, #111827);
 
   /* --------------------------------------------------------------------------
      1. PALETAS PRIMITIVAS DE COLOR (HSL Normalizado)

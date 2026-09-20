@@ -319,10 +319,10 @@ export interface BoardChartElement {
 }
 
 export const DEFAULT_CHART_PALETTES: Record<string, { colors: string[]; id: string; name: string }> = {
-  canva: {
-    colors: ['#3b82f6', '#a855f7', '#f59e0b', '#facc15', '#10b981', '#ec4899', '#06b6d4'],
-    id: 'canva',
-    name: 'Vibrante Canva',
+  spriteboard: {
+    colors: ['#2563eb', '#3b82f6', '#10b981', '#f59e0b', '#06b6d4', '#8b5cf6', '#f43f5e'],
+    id: 'spriteboard',
+    name: 'Spriteboard',
   },
   corporate: {
     colors: ['#1e40af', '#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe', '#2563eb', '#1d4ed8'],
@@ -345,6 +345,8 @@ export const DEFAULT_CHART_PALETTES: Record<string, { colors: string[]; id: stri
     name: 'Atardecer',
   },
 };
+
+DEFAULT_CHART_PALETTES.canva = DEFAULT_CHART_PALETTES.spriteboard;
 
 export type BoardElement =
   | BoardStrokeElement

@@ -155,7 +155,7 @@ export function drawChart(ctx: CanvasRenderingContext2D, el: BoardChartElement):
     curY += 18;
   }
 
-  const defaultPalette = el.palette && el.palette.length > 0 ? el.palette : DEFAULT_CHART_PALETTES.canva.colors;
+  const defaultPalette = el.palette && el.palette.length > 0 ? el.palette : DEFAULT_CHART_PALETTES.spriteboard.colors;
   const numRows = el.data?.length || 0;
   const seriesCount = Math.max(1, el.series?.length || 1);
 

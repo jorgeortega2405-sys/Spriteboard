@@ -309,7 +309,7 @@ export function exportSvg(
       const bg = escAttr(el.backgroundColor || '#ffffff');
       const border = escAttr(el.borderColor || '#cbd5e1');
       const sw = escAttr(el.borderWidth || 1.5);
-      const titleColor = escAttr(el.titleColor || '#8b3dff');
+      const titleColor = escAttr(el.titleColor || '#2563eb');
       out += `  <g opacity="${op}">\n`;
       out += `    <text x="${el.x}" y="${el.y - 8}" fill="${titleColor}" font-size="15" font-family="sans-serif" font-weight="bold">${escAttr(el.title || 'Sección')}</text>\n`;
       out += `    <rect x="${el.x}" y="${el.y}" width="${el.width}" height="${el.height}" rx="8" fill="${bg}" stroke="${border}" stroke-width="${sw}" />\n`;

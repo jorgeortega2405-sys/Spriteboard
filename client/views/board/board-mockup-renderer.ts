@@ -381,10 +381,10 @@ function drawHandOverlay(ctx: CanvasRenderingContext2D, w: number, h: number): v
 
 function drawDropzoneHighlight(ctx: CanvasRenderingContext2D, tpl: any, zoom: number): void {
   ctx.save();
-  ctx.strokeStyle = '#6366f1';
+  ctx.strokeStyle = '#2563eb';
   ctx.lineWidth = 3 / zoom;
   ctx.setLineDash([8 / zoom, 6 / zoom]);
-  ctx.fillStyle = 'rgba(99, 102, 241, 0.15)';
+  ctx.fillStyle = 'rgba(37, 99, 235, 0.12)';
 
   ctx.beginPath();
   ctx.roundRect(0, 0, tpl.width, tpl.height, 16);
@@ -396,7 +396,7 @@ function drawDropzoneHighlight(ctx: CanvasRenderingContext2D, tpl: any, zoom: nu
   const badgeX = (tpl.width - badgeW) / 2;
   const badgeY = (tpl.height - badgeH) / 2;
 
-  ctx.fillStyle = '#6366f1';
+  ctx.fillStyle = '#2563eb';
   ctx.setLineDash([]);
   ctx.beginPath();
   ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 17 / zoom);

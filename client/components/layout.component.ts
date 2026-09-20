@@ -21,7 +21,7 @@ import { closeAllDropdowns, registerActiveDropdown, unregisterActiveDropdown } f
 import { PIXEL_SHAPES, PixelShape, ShapeCategory } from '../utils/pixel-shapes.util.js';
 import { applyAvatarTier, getFallbackTierColor } from '../utils/tier.util.js';
 import { CHART_CATALOG } from '../views/board/board-charts-panel.component.js';
-import { BoardProject, ChartType, Shape3DType, ShapeType } from '../views/board/board.types.js';
+import { BoardChartElement, BoardProject, ChartType, Shape3DType, ShapeType } from '../views/board/board.types.js';
 import { DOC_TEMPLATES, getDocTemplateById } from '../views/doc/doc-templates.config.js';
 import { DocPage, DocProject } from '../views/doc/doc.types.js';
 import { openCreateCanvasModal } from './create-canvas-modal.component.js';
@@ -30,7 +30,8 @@ import { openUpgradeModal } from './upgrade-modal.component.js';
 
 let isDrawerOpen = false;
 let isChatOpen = false;
-let activeCanvasTab: 'templates' | 'elements' | 'text' | 'tools' | 'uploads' | 'projects' | null = null;
+let activeCanvasTab: 'templates' | 'elements' | 'text' | 'tools' | 'uploads' | 'projects' | 'charts' | 'mockups' | null = null;
+let activeChartInDrawer: BoardChartElement | null = null;
 let chatSidebarElement: HTMLElement | null = null;
 let chatSidebarInitPromise: Promise<HTMLElement> | null = null;
 
@@ -191,6 +192,8 @@ export function updateCanvasRailActiveState(sidebar: HTMLElement): void {
     const btn = sidebar.querySelector<HTMLElement>(`[data-ref="btn-rail-canvas-${tabKey}"]`);
     const isActive = tabKey === 'tools'
       ? activeCanvasTab === 'tools'
+      : tabKey === 'elements'
+      ? isDrawerOpen && (activeCanvasTab === 'elements' || activeCanvasTab === 'charts' || activeCanvasTab === 'mockups')
       : isDrawerOpen && activeCanvasTab === tabKey;
     item?.classList.toggle('is-active', isActive);
     btn?.classList.toggle('is-active', isActive);
@@ -1854,6 +1857,14 @@ function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElemen
       contentContainer.querySelectorAll<HTMLButtonElement>('[data-category]').forEach((btn) => {
         btn.addEventListener('click', () => {
           const cat = btn.getAttribute('data-category') as 'shapes' | 'stickers' | 'stickies' | 'diagrams' | 'tables' | 'charts' | 'mockups' | '3d';
+          if (cat === 'charts') {
+            openChartInspectorInDrawer();
+            return;
+          }
+          if (cat === 'mockups') {
+            openMockupsInDrawer();
+            return;
+          }
           if (cat) {
             activeElementsCategory = cat;
             renderContent('');
@@ -2502,6 +2513,470 @@ function renderTextDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement): 
   renderIcons(drawerBody);
 }
 
+function renderChartsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement): void {
+  const sidebar = drawer.closest<HTMLElement>('[data-ref="sidebar"]') || document.querySelector<HTMLElement>('[data-ref="sidebar"]');
+
+  drawerBody.innerHTML = `
+    <div class="canvas-panel-card" data-ref="canvas-panel-card">
+      <div class="canvas-panel-card__header" data-ref="canvas-panel-header">
+        <div class="canvas-panel-card__title-box" data-ref="canvas-panel-title-box">
+          <button type="button" class="component-button component-button--h32 component-button--icon-only${activeChartInDrawer ? '' : ' is-hidden'}" data-ref="btn-chart-back-to-gallery" data-tooltip="Volver a tipos de gráfica" aria-label="Volver">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
+          </button>
+          <svg class="component-icon canvas-panel-card__icon" aria-hidden="true"><use href="/icons.svg#bar_chart"></use></svg>
+          <span class="canvas-panel-card__title" data-ref="canvas-panel-title">Gráficas</span>
+        </div>
+        <button type="button" class="component-button component-button--h32 component-button--icon-only rail-btn canvas-panel-card__close" data-ref="btn-close-canvas-panel" data-tooltip="Cerrar panel" aria-label="Cerrar panel">
+          <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+        </button>
+      </div>
+      <div class="canvas-panel-card__body layout-drawer__chart-body" data-ref="board-charts-drawer">
+        <div class="chart-drawer-view" data-ref="chart-drawer-gallery-view">
+          <div class="chart-gallery-header">
+            <span class="chart-gallery-subtitle">Selecciona una gráfica para añadir al lienzo</span>
+          </div>
+          <div class="chart-gallery-grid" data-ref="chart-gallery-grid"></div>
+        </div>
+
+        <div class="chart-drawer-view is-hidden" data-ref="chart-drawer-inspector-view">
+          <div class="chart-type-selector-box">
+            <div class="settings-dropdown-wrapper settings-dropdown-wrapper--full" data-ref="dropdown-wrapper-chart-type">
+              <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="trigger-chart-type">
+                <div class="dropdown-trigger__left">
+                  <svg class="component-icon dropdown-trigger__icon" data-ref="icon-chart-type" aria-hidden="true"><use href="/icons.svg#bar_chart"></use></svg>
+                  <span class="dropdown-trigger__text" data-ref="text-chart-type">Barras verticales</span>
+                </div>
+                <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+              </button>
+              <div class="dropdown-backdrop" data-ref="backdrop-chart-type">
+                <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="menu-chart-type">
+                  <div class="menu-panel__drag-zone" aria-hidden="true">
+                    <div class="menu-panel__drag-handle"></div>
+                  </div>
+                  <div class="menu-panel__list" data-ref="list-chart-types">
+                    <button type="button" class="menu-item is-active" data-ref="opt-chart-type-bar-vertical" data-value="bar-vertical">
+                      <span class="menu-item__text">Barras verticales</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="opt-chart-type-bar-horizontal" data-value="bar-horizontal">
+                      <span class="menu-item__text">Barras horizontales</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="opt-chart-type-bar-categorical" data-value="bar-categorical">
+                      <span class="menu-item__text">Barras categóricas</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="opt-chart-type-bar-categorical-horizontal" data-value="bar-categorical-horizontal">
+                      <span class="menu-item__text">Filas categóricas</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="opt-chart-type-bar-grouped-vertical" data-value="bar-grouped-vertical">
+                      <span class="menu-item__text">Barras agrupadas</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="opt-chart-type-bar-grouped-horizontal" data-value="bar-grouped-horizontal">
+                      <span class="menu-item__text">Filas agrupadas</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="opt-chart-type-bar-stacked-vertical" data-value="bar-stacked-vertical">
+                      <span class="menu-item__text">Barras apiladas</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="opt-chart-type-bar-stacked-horizontal" data-value="bar-stacked-horizontal">
+                      <span class="menu-item__text">Filas apiladas</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="opt-chart-type-bar-stacked-100-vertical" data-value="bar-stacked-100-vertical">
+                      <span class="menu-item__text">Barras 100% apiladas</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="opt-chart-type-line" data-value="line">
+                      <span class="menu-item__text">Líneas</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="opt-chart-type-area" data-value="area">
+                      <span class="menu-item__text">Área</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="opt-chart-type-pie" data-value="pie">
+                      <span class="menu-item__text">Circular (Pastel)</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="opt-chart-type-donut" data-value="donut">
+                      <span class="menu-item__text">Anillo (Donut)</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="chart-tabs-bar">
+            <button type="button" class="chart-tab-btn is-active" data-ref="chart-tab-data">Datos</button>
+            <button type="button" class="chart-tab-btn" data-ref="chart-tab-customize">Personalizar</button>
+          </div>
+
+          <div class="chart-tab-pane" data-ref="chart-pane-data">
+            <div class="chart-spreadsheet-wrapper">
+              <table class="chart-spreadsheet-table">
+                <thead>
+                  <tr data-ref="chart-table-head-row"></tr>
+                </thead>
+                <tbody data-ref="chart-table-body"></tbody>
+              </table>
+            </div>
+
+            <div class="chart-spreadsheet-actions">
+              <button type="button" class="component-button component-button--h32 component-button--secondary chart-action-btn" data-ref="chart-btn-add-row">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+                <span>Fila</span>
+              </button>
+              <button type="button" class="component-button component-button--h32 component-button--secondary chart-action-btn" data-ref="chart-btn-add-series">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+                <span>Serie</span>
+              </button>
+              <button type="button" class="component-button component-button--h32 component-button--secondary chart-action-btn" data-ref="chart-btn-open-import" data-tooltip="Importar datos CSV/Excel" aria-label="Importar datos">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#upload_file"></use></svg>
+                <span>Importar</span>
+              </button>
+              <button type="button" class="component-button component-button--h32 component-button--secondary component-button--icon-only" data-ref="chart-btn-transpose" data-tooltip="Transponer filas y columnas" aria-label="Transponer">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#swap_horiz"></use></svg>
+              </button>
+              <button type="button" class="component-button component-button--h32 component-button--secondary component-button--icon-only" data-ref="chart-btn-clear-data" data-tooltip="Limpiar tabla" aria-label="Limpiar">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete_outline"></use></svg>
+              </button>
+            </div>
+
+            <div class="chart-data-config-section">
+              <div class="chart-config-title">Configuración de la gráfica</div>
+              <div class="chart-control-row">
+                <span class="chart-control-label">Colorear por</span>
+                <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-color-by">
+                  <button type="button" class="dropdown-trigger dropdown-trigger--sm dropdown-trigger--full" data-ref="trigger-chart-color-by">
+                    <span class="dropdown-trigger__text" data-ref="text-chart-color-by">Por categoría (multicolor)</span>
+                    <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+                  </button>
+                  <div class="dropdown-backdrop" data-ref="backdrop-chart-color-by">
+                    <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="menu-chart-color-by">
+                      <div class="menu-panel__drag-zone" aria-hidden="true">
+                        <div class="menu-panel__drag-handle"></div>
+                      </div>
+                      <div class="menu-panel__list" data-ref="list-color-by">
+                        <button type="button" class="menu-item menu-item--sm is-active" data-ref="opt-color-by-category" data-value="category">
+                          <span class="menu-item__text">Por categoría (multicolor)</span>
+                        </button>
+                        <button type="button" class="menu-item menu-item--sm" data-ref="opt-color-by-series" data-value="series">
+                          <span class="menu-item__text">Por serie de datos</span>
+                        </button>
+                        <button type="button" class="menu-item menu-item--sm" data-ref="opt-color-by-single" data-value="single">
+                          <span class="menu-item__text">Color único uniforme</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="chart-tab-pane is-hidden" data-ref="chart-pane-customize">
+            <div class="chart-accordion">
+              <div class="chart-accordion__item">
+                <div class="chart-accordion__header">
+                  <span class="chart-accordion__title">Texto y Leyenda</span>
+                  <svg class="component-icon chart-accordion__arrow" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+                </div>
+                <div class="chart-accordion__content">
+                  <div class="chart-control-row">
+                    <span class="chart-control-label">Leyenda</span>
+                    <label class="chart-switch">
+                      <input class="chart-switch__input" data-ref="chart-toggle-legend" type="checkbox" checked />
+                      <span class="chart-switch__slider"></span>
+                    </label>
+                  </div>
+
+                  <div class="chart-control-row">
+                    <span class="chart-control-label">Etiquetas de datos</span>
+                    <label class="chart-switch">
+                      <input class="chart-switch__input" data-ref="chart-toggle-data-labels" type="checkbox" />
+                      <span class="chart-switch__slider"></span>
+                    </label>
+                  </div>
+
+                  <div class="chart-control-col">
+                    <span class="chart-control-label">Posición de etiqueta</span>
+                    <div class="chart-segmented-control">
+                      <button type="button" class="chart-segmented-btn is-active" data-chart-pos="auto">Automático</button>
+                      <button type="button" class="chart-segmented-btn" data-chart-pos="outside">Externo</button>
+                      <button type="button" class="chart-segmented-btn" data-chart-pos="inside">Interno</button>
+                    </div>
+                  </div>
+
+                  <div class="chart-control-col">
+                    <label class="field field--sm" data-ref="field-chart-title">
+                      <input class="field__input" data-ref="chart-input-title" type="text" placeholder=" " />
+                      <span class="field__label" data-ref="label-chart-title">Título</span>
+                    </label>
+                  </div>
+
+                  <div class="chart-control-col">
+                    <label class="field field--sm" data-ref="field-chart-subtitle">
+                      <input class="field__input" data-ref="chart-input-subtitle" type="text" placeholder=" " />
+                      <span class="field__label" data-ref="label-chart-subtitle">Subtítulo</span>
+                    </label>
+                  </div>
+
+                  <div class="chart-control-col">
+                    <label class="field field--sm" data-ref="field-chart-source">
+                      <input class="field__input" data-ref="chart-input-source" type="text" placeholder=" " />
+                      <span class="field__label" data-ref="label-chart-source">Fuente</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="chart-accordion__item">
+                <div class="chart-accordion__header">
+                  <span class="chart-accordion__title">Eje X</span>
+                  <svg class="component-icon chart-accordion__arrow" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+                </div>
+                <div class="chart-accordion__content">
+                  <div class="chart-control-col">
+                    <label class="field field--sm" data-ref="field-chart-x-title">
+                      <input class="field__input" data-ref="chart-input-x-title" type="text" placeholder=" " />
+                      <span class="field__label" data-ref="label-chart-x-title">Título del eje X</span>
+                    </label>
+                  </div>
+                  <div class="chart-control-row">
+                    <span class="chart-control-label">Etiquetas del eje X</span>
+                    <label class="chart-switch">
+                      <input class="chart-switch__input" data-ref="chart-toggle-x-labels" type="checkbox" checked />
+                      <span class="chart-switch__slider"></span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="chart-accordion__item">
+                <div class="chart-accordion__header">
+                  <span class="chart-accordion__title">Eje Y</span>
+                  <svg class="component-icon chart-accordion__arrow" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+                </div>
+                <div class="chart-accordion__content">
+                  <div class="chart-control-col">
+                    <label class="field field--sm" data-ref="field-chart-y-title">
+                      <input class="field__input" data-ref="chart-input-y-title" type="text" placeholder=" " />
+                      <span class="field__label" data-ref="label-chart-y-title">Título del eje Y</span>
+                    </label>
+                  </div>
+
+                  <div class="chart-control-row">
+                    <span class="chart-control-label">Etiquetas del eje Y</span>
+                    <label class="chart-switch">
+                      <input class="chart-switch__input" data-ref="chart-toggle-y-labels" type="checkbox" checked />
+                      <span class="chart-switch__slider"></span>
+                    </label>
+                  </div>
+
+                  <div class="chart-control-row">
+                    <span class="chart-control-label">Estilo numérico</span>
+                    <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-number-style">
+                      <button type="button" class="dropdown-trigger dropdown-trigger--sm dropdown-trigger--full" data-ref="trigger-chart-number-style">
+                        <span class="dropdown-trigger__text" data-ref="text-chart-number-style">1000.00</span>
+                        <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+                      </button>
+                      <div class="dropdown-backdrop" data-ref="backdrop-chart-number-style">
+                        <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="menu-chart-number-style">
+                          <div class="menu-panel__drag-zone" aria-hidden="true">
+                            <div class="menu-panel__drag-handle"></div>
+                          </div>
+                          <div class="menu-panel__list" data-ref="list-number-style">
+                            <button type="button" class="menu-item menu-item--sm is-active" data-ref="opt-number-style-normal" data-value="normal">
+                              <span class="menu-item__text">1000.00</span>
+                            </button>
+                            <button type="button" class="menu-item menu-item--sm" data-ref="opt-number-style-comma" data-value="comma">
+                              <span class="menu-item__text">1,000.00</span>
+                            </button>
+                            <button type="button" class="menu-item menu-item--sm" data-ref="opt-number-style-dot" data-value="dot">
+                              <span class="menu-item__text">1.000,00</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="chart-control-row">
+                    <span class="chart-control-label">Abreviatura</span>
+                    <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-abbrev">
+                      <button type="button" class="dropdown-trigger dropdown-trigger--sm dropdown-trigger--full" data-ref="trigger-chart-abbrev">
+                        <span class="dropdown-trigger__text" data-ref="text-chart-abbrev">Ninguno</span>
+                        <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+                      </button>
+                      <div class="dropdown-backdrop" data-ref="backdrop-chart-abbrev">
+                        <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="menu-chart-abbrev">
+                          <div class="menu-panel__drag-zone" aria-hidden="true">
+                            <div class="menu-panel__drag-handle"></div>
+                          </div>
+                          <div class="menu-panel__list" data-ref="list-abbrev">
+                            <button type="button" class="menu-item menu-item--sm is-active" data-ref="opt-abbrev-none" data-value="none">
+                              <span class="menu-item__text">Ninguno</span>
+                            </button>
+                            <button type="button" class="menu-item menu-item--sm" data-ref="opt-abbrev-kmb" data-value="kmb">
+                              <span class="menu-item__text">K / M / B</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="chart-control-row">
+                    <span class="chart-control-label">Decimales</span>
+                    <div class="chart-stepper">
+                      <button type="button" class="chart-stepper__btn" data-ref="chart-btn-decimals-dec" aria-label="Menos decimales">-</button>
+                      <span class="chart-stepper__value" data-ref="chart-label-decimals">0</span>
+                      <button type="button" class="chart-stepper__btn" data-ref="chart-btn-decimals-inc" aria-label="Más decimales">+</button>
+                    </div>
+                  </div>
+
+                  <div class="chart-control-row chart-control-row--dual">
+                    <label class="field field--sm chart-field--half" data-ref="field-chart-prefix">
+                      <input class="field__input" data-ref="chart-input-prefix" type="text" placeholder=" " />
+                      <span class="field__label" data-ref="label-chart-prefix">Prefijo</span>
+                    </label>
+                    <label class="field field--sm chart-field--half" data-ref="field-chart-suffix">
+                      <input class="field__input" data-ref="chart-input-suffix" type="text" placeholder=" " />
+                      <span class="field__label" data-ref="label-chart-suffix">Sufijo</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="chart-accordion__item">
+                <div class="chart-accordion__header">
+                  <span class="chart-accordion__title">Estilo y Colores</span>
+                  <svg class="component-icon chart-accordion__arrow" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+                </div>
+                <div class="chart-accordion__content">
+                  <div class="chart-control-col">
+                    <span class="chart-control-label">Paleta de colores</span>
+                    <div class="chart-palettes-list" data-ref="chart-palettes-list"></div>
+                  </div>
+
+                  <div class="chart-control-col">
+                    <span class="chart-control-label">Redondeo de barras</span>
+                    <input class="chart-slider" data-ref="chart-slider-radius" type="range" min="0" max="24" value="8" aria-label="Redondeo de barras" />
+                  </div>
+
+                  <div class="chart-control-row">
+                    <span class="chart-control-label">Líneas de cuadrícula</span>
+                    <label class="chart-switch">
+                      <input class="chart-switch__input" data-ref="chart-toggle-gridlines" type="checkbox" checked />
+                      <span class="chart-switch__slider"></span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const btnClose = drawerBody.querySelector<HTMLElement>('[data-ref="btn-close-canvas-panel"]');
+  btnClose?.addEventListener('click', (e) => {
+    e.preventDefault();
+    toggleDrawer(false);
+  });
+
+  const btnBack = drawerBody.querySelector<HTMLButtonElement>('[data-ref="btn-chart-back-to-gallery"]');
+  btnBack?.addEventListener('click', () => {
+    const controller = getActiveCanvasController();
+    const chartsPanel = controller?.getChartsPanel?.();
+    if (activeChartInDrawer) {
+      activeChartInDrawer = null;
+      chartsPanel?.showGallery();
+      btnBack.classList.add('is-hidden');
+    } else {
+      activeCanvasTab = 'elements';
+      if (drawer) {
+        void populateDrawerContent(drawer);
+      }
+    }
+  });
+
+  const controller = getActiveCanvasController();
+  const chartsPanel = controller?.getChartsPanel?.();
+  const panelEl = drawerBody.querySelector<HTMLElement>('[data-ref="board-charts-drawer"]');
+  if (panelEl && chartsPanel) {
+    chartsPanel.attach(panelEl, activeChartInDrawer || undefined, btnBack);
+  }
+
+  const drawerFooter = drawer.querySelector<HTMLElement>('[data-ref="drawer-footer"]');
+  if (drawerFooter) {
+    drawerFooter.style.display = 'none';
+  }
+
+  if (sidebar) {
+    updateCanvasRailActiveState(sidebar);
+  }
+
+  renderIcons(drawerBody);
+}
+
+function renderMockupsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement): void {
+  const sidebar = drawer.closest<HTMLElement>('[data-ref="sidebar"]') || document.querySelector<HTMLElement>('[data-ref="sidebar"]');
+
+  drawerBody.innerHTML = `
+    <div class="canvas-panel-card" data-ref="canvas-panel-card">
+      <div class="canvas-panel-card__header" data-ref="canvas-panel-header">
+        <div class="canvas-panel-card__title-box" data-ref="canvas-panel-title-box">
+          <button type="button" class="component-button component-button--h32 component-button--icon-only" data-ref="btn-mockups-back-to-elements" data-tooltip="Volver a elementos" aria-label="Volver">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
+          </button>
+          <svg class="component-icon canvas-panel-card__icon" aria-hidden="true"><use href="/icons.svg#devices"></use></svg>
+          <span class="canvas-panel-card__title" data-ref="canvas-panel-title">Mockups</span>
+        </div>
+        <button type="button" class="component-button component-button--h32 component-button--icon-only rail-btn canvas-panel-card__close" data-ref="btn-close-canvas-panel" data-tooltip="Cerrar panel" aria-label="Cerrar panel">
+          <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+        </button>
+      </div>
+      <div class="canvas-panel-card__body layout-drawer__mockup-body" data-ref="board-mockups-drawer">
+        <div class="mockup-search-box">
+          <label class="field field--sm mockup-search-field" data-ref="field-mockup-search">
+            <input class="field__input mockup-search-input" data-ref="mockup-search-input" type="text" placeholder=" " />
+            <span class="field__label" data-ref="label-mockup-search">Buscar mockups...</span>
+          </label>
+        </div>
+        <div class="mockup-category-tabs" data-ref="mockup-category-tabs"></div>
+        <div class="mockup-templates-grid" data-ref="mockup-templates-grid"></div>
+      </div>
+    </div>
+  `;
+
+  const btnClose = drawerBody.querySelector<HTMLElement>('[data-ref="btn-close-canvas-panel"]');
+  btnClose?.addEventListener('click', (e) => {
+    e.preventDefault();
+    toggleDrawer(false);
+  });
+
+  const btnBack = drawerBody.querySelector<HTMLButtonElement>('[data-ref="btn-mockups-back-to-elements"]');
+  btnBack?.addEventListener('click', () => {
+    activeCanvasTab = 'elements';
+    if (drawer) {
+      void populateDrawerContent(drawer);
+    }
+  });
+
+  const controller = getActiveCanvasController();
+  const mockupsPanel = controller?.getMockupsPanel?.();
+  const panelEl = drawerBody.querySelector<HTMLElement>('[data-ref="board-mockups-drawer"]');
+  if (panelEl && mockupsPanel) {
+    mockupsPanel.attach(panelEl);
+  }
+
+  const drawerFooter = drawer.querySelector<HTMLElement>('[data-ref="drawer-footer"]');
+  if (drawerFooter) {
+    drawerFooter.style.display = 'none';
+  }
+
+  if (sidebar) {
+    updateCanvasRailActiveState(sidebar);
+  }
+
+  renderIcons(drawerBody);
+}
+
 function renderCanvasDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement): void {
   const tab = activeCanvasTab || 'templates';
   const sidebar = drawer.closest<HTMLElement>('[data-ref="sidebar"]') || document.querySelector<HTMLElement>('[data-ref="sidebar"]');
@@ -2513,6 +2988,16 @@ function renderCanvasDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement)
 
   if (tab === 'elements') {
     renderElementsDrawerContent(drawer, drawerBody);
+    return;
+  }
+
+  if (tab === 'charts') {
+    renderChartsDrawerContent(drawer, drawerBody);
+    return;
+  }
+
+  if (tab === 'mockups') {
+    renderMockupsDrawerContent(drawer, drawerBody);
     return;
   }
 
@@ -5427,4 +5912,31 @@ export async function initChatSidebar(): Promise<HTMLElement> {
   })();
 
   return chatSidebarInitPromise;
+}
+
+export function openChartInspectorInDrawer(chart?: BoardChartElement): void {
+  activeChartInDrawer = chart || null;
+  activeCanvasTab = 'charts';
+  const sidebar = document.querySelector<HTMLElement>('[data-ref="sidebar"]');
+  if (!isDrawerOpen) {
+    toggleDrawer(true);
+  } else if (sidebar) {
+    void updateDynamicDrawer(sidebar);
+    updateCanvasRailActiveState(sidebar);
+  }
+}
+
+export function openMockupsInDrawer(): void {
+  activeCanvasTab = 'mockups';
+  const sidebar = document.querySelector<HTMLElement>('[data-ref="sidebar"]');
+  if (!isDrawerOpen) {
+    toggleDrawer(true);
+  } else if (sidebar) {
+    void updateDynamicDrawer(sidebar);
+    updateCanvasRailActiveState(sidebar);
+  }
+}
+
+export function isChartInspectorOpen(): boolean {
+  return isDrawerOpen && activeCanvasTab === 'charts';
 }

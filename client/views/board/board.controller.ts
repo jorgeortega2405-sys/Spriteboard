@@ -2,6 +2,7 @@ import { CanvasAiDropdownController, setupBoardAiDropdown } from '../../componen
 import { CanvasShareDropdownController, setupCanvasShareDropdown } from '../../components/canvas-share-dropdown.component.js';
 import { closeContextMenu, ContextMenuItem, openContextMenu } from '../../components/context-menu.component.js';
 import { InsertPixelGridConfig, openInsertPixelGridModal } from '../../components/insert-pixel-grid-modal.component.js';
+import { openChartInspectorInDrawer, openMockupsInDrawer } from '../../components/layout.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
 import { BOARD_3D_SHAPES } from '../../config/board-3d-shapes.config.js';
 import { BOARD_SHAPES } from '../../config/board-shapes.config.js';
@@ -3229,7 +3230,7 @@ export class BoardController {
       this.selectedElementId = hit.id;
       this.selectedElementIds = [hit.id];
       this.updateSelectionToolbar();
-      this.chartsPanel?.open(hit);
+      this.openChartsPanel(hit);
       this.updateVerticalToolbarActiveButtons();
       return;
     }
@@ -4833,7 +4834,7 @@ export class BoardController {
       () => {
         const selectedChart = this.getSelectedChartElement();
         if (selectedChart) {
-          this.chartsPanel?.open(selectedChart);
+          this.openChartsPanel(selectedChart);
           this.updateVerticalToolbarActiveButtons();
         }
       },
@@ -5205,7 +5206,7 @@ export class BoardController {
       height,
       id: `section-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       title: title || 'Sección',
-      titleColor: '#8b3dff',
+      titleColor: '#2563eb',
       type: 'section',
       width,
       x: Math.round(centerWorld.x - width / 2),
@@ -5644,7 +5645,7 @@ export class BoardController {
     const screenH = this.canvasElement ? this.canvasElement.height / dpr : 600;
     const center = screenToWorld(screenW / 2, screenH / 2, this.canvasElement, this.camera);
 
-    const defaultPalette = [...DEFAULT_CHART_PALETTES.canva.colors];
+    const defaultPalette = [...DEFAULT_CHART_PALETTES.spriteboard.colors];
     const chartW = 460;
     const chartH = 320;
 
@@ -5718,18 +5719,26 @@ export class BoardController {
     this.updateSelectionToolbar();
     this.requestRedraw();
     this.scheduleAutoSave();
-    this.chartsPanel?.open(chartEl);
+    this.openChartsPanel(chartEl);
     this.updateVerticalToolbarActiveButtons();
     showToast('Gráfica insertada');
   }
 
+  public getChartsPanel(): BoardChartsPanelComponent | null {
+    return this.chartsPanel;
+  }
+
+  public getMockupsPanel(): BoardMockupsPanelComponent | null {
+    return this.mockupsPanel;
+  }
+
   public openChartsPanel(chartEl?: BoardChartElement): void {
     const target = chartEl || this.getSelectedChartElement() || undefined;
-    this.chartsPanel?.open(target);
+    openChartInspectorInDrawer(target);
   }
 
   public openMockupsPanel(): void {
-    this.mockupsPanel?.open();
+    openMockupsInDrawer();
   }
 
   private getSelectedChartElement(): BoardChartElement | null {
