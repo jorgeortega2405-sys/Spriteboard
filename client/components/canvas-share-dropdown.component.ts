@@ -9,7 +9,15 @@ import { CanvasItem, CanvasMember, SearchUserResult } from '../types/canvas.type
 import { CanvasTeamItem, Team } from '../types/team.types.js';
 import { setupDropdown } from '../utils/dom.util.js';
 
+export interface CanvasShareExportOption {
+  icon: string;
+  label: string;
+  onClick: () => void;
+  ref: string;
+}
+
 export interface CanvasShareDropdownOptions {
+  exportOptions?: CanvasShareExportOption[];
   getCanvas: () => CanvasItem;
   onAccessChanged?: (accessLevel: 'private' | 'public', publicRole?: 'viewer' | 'editor') => void;
   signal?: AbortSignal;
@@ -176,6 +184,35 @@ export function setupCanvasShareDropdown(options: CanvasShareDropdownOptions): C
                   <span>Personaliza tu enlace</span>
                 </button>
               </div>
+
+              ${
+                options.exportOptions && options.exportOptions.length > 0
+                  ? `<div class="design-share-section" data-ref="section-share-download" style="margin-top: 12px;">
+                      <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-share-download">
+                        <button type="button" class="component-button component-button--h40 component-button--outline component-button--w-full" data-ref="btn-share-download-trigger">
+                          <span class="component-icon">download</span>
+                          <span>Descargar</span>
+                        </button>
+                        <div class="dropdown-backdrop" data-ref="dropdown-backdrop-share-download">
+                          <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-share-download">
+                            <div class="menu-panel__list" data-ref="list-share-download">
+                              ${options.exportOptions
+                                .map(
+                                  (opt) => `
+                                <button type="button" class="menu-item" data-ref="${escapeHtml(opt.ref)}">
+                                  <span class="component-icon menu-item__icon">${escapeHtml(opt.icon)}</span>
+                                  <span class="menu-item__text">${escapeHtml(opt.label)}</span>
+                                </button>
+                              `
+                                )
+                                .join('')}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>`
+                  : ''
+              }
             </div>
           </div>
         </div>
@@ -249,12 +286,32 @@ export function setupCanvasShareDropdown(options: CanvasShareDropdownOptions): C
 
   let accessDropdownCtrl: { close: () => void; destroy: () => void } | null = null;
   let publicRoleDropdownCtrl: { close: () => void; destroy: () => void } | null = null;
+  let downloadDropdownCtrl: { close: () => void; destroy: () => void } | null = null;
 
   if (dropdownWrapperAccess) {
     accessDropdownCtrl = setupDropdown(dropdownWrapperAccess, {});
   }
   if (dropdownWrapperPublicRole) {
     publicRoleDropdownCtrl = setupDropdown(dropdownWrapperPublicRole, {});
+  }
+  const dropdownWrapperDownload = wrapper.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-share-download"]');
+  if (dropdownWrapperDownload) {
+    downloadDropdownCtrl = setupDropdown(dropdownWrapperDownload, {});
+  }
+
+  if (options.exportOptions) {
+    for (const opt of options.exportOptions) {
+      const optBtn = wrapper.querySelector<HTMLButtonElement>(`[data-ref="${opt.ref}"]`);
+      optBtn?.addEventListener(
+        'click',
+        () => {
+          downloadDropdownCtrl?.close();
+          dropdownController.close();
+          opt.onClick();
+        },
+        { signal }
+      );
+    }
   }
 
   btnAccessPrivate?.addEventListener('click', async () => {
@@ -759,11 +816,15 @@ export function setupCanvasShareDropdown(options: CanvasShareDropdownOptions): C
   }, { signal });
 
   return {
-    close: () => dropdownController.close(),
+    close: () => {
+      downloadDropdownCtrl?.close();
+      dropdownController.close();
+    },
     destroy: () => {
       if (searchTimer) clearTimeout(searchTimer);
       accessDropdownCtrl?.destroy();
       publicRoleDropdownCtrl?.destroy();
+      downloadDropdownCtrl?.destroy();
       dropdownController.destroy();
     },
     open: () => {

@@ -1,4 +1,28 @@
-import { BoardConnectorElement, BoardElement, BoardPoint, BoardShapeElement, BoardStrokeElement, ResizeHandle, ShapeType } from './board.types.js';
+import { BoardConnectorElement, BoardElement, BoardPoint, BoardSectionElement, BoardShapeElement, BoardStrokeElement, ResizeHandle, ShapeType } from './board.types.js';
+
+export function findContainingSection(
+  el: BoardElement,
+  sections: BoardSectionElement[],
+  allElements?: BoardElement[]
+): BoardSectionElement | null {
+  if (el.type === 'section') return null;
+
+  const bbox = getElementBoundingBox(el, allElements);
+  let bestSection: BoardSectionElement | null = null;
+  let maxOverlapArea = 0;
+
+  for (let i = sections.length - 1; i >= 0; i--) {
+    const s = sections[i];
+    const overlapX = Math.max(0, Math.min(bbox.x + bbox.width, s.x + s.width) - Math.max(bbox.x, s.x));
+    const overlapY = Math.max(0, Math.min(bbox.y + bbox.height, s.y + s.height) - Math.max(bbox.y, s.y));
+    const overlapArea = overlapX * overlapY;
+    if (overlapArea > 0 && overlapArea > maxOverlapArea) {
+      maxOverlapArea = overlapArea;
+      bestSection = s;
+    }
+  }
+  return bestSection;
+}
 
 export function computeStrokeBoundingBox(stroke: BoardStrokeElement): { height: number; width: number; x: number; y: number } {
   if (stroke.points.length === 0) return { height: 0, width: 0, x: 0, y: 0 };

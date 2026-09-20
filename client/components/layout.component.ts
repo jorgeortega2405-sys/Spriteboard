@@ -25,7 +25,7 @@ import { openUpgradeModal } from './upgrade-modal.component.js';
 
 let isDrawerOpen = false;
 let isChatOpen = false;
-let activeCanvasTab: 'templates' | 'elements' | 'text' | 'uploads' | 'projects' | null = null;
+let activeCanvasTab: 'templates' | 'elements' | 'text' | 'tools' | 'uploads' | 'projects' | null = null;
 let chatSidebarElement: HTMLElement | null = null;
 let chatSidebarInitPromise: Promise<HTMLElement> | null = null;
 
@@ -180,11 +180,13 @@ export function isCanvasRoute(pathname: string): boolean {
 }
 
 export function updateCanvasRailActiveState(sidebar: HTMLElement): void {
-  const tabs = ['templates', 'elements', 'text', 'uploads', 'projects'] as const;
+  const tabs = ['templates', 'elements', 'text', 'tools', 'uploads', 'projects'] as const;
   tabs.forEach((tabKey) => {
     const item = sidebar.querySelector<HTMLElement>(`[data-ref="rail-item-canvas-${tabKey}"]`);
     const btn = sidebar.querySelector<HTMLElement>(`[data-ref="btn-rail-canvas-${tabKey}"]`);
-    const isActive = isDrawerOpen && activeCanvasTab === tabKey;
+    const isActive = tabKey === 'tools'
+      ? activeCanvasTab === 'tools'
+      : isDrawerOpen && activeCanvasTab === tabKey;
     item?.classList.toggle('is-active', isActive);
     btn?.classList.toggle('is-active', isActive);
   });
@@ -433,10 +435,11 @@ function setupRailNavigation(sidebar: HTMLElement): void {
     }
   });
 
-  const canvasItems: Array<{ tab: 'templates' | 'elements' | 'text' | 'uploads' | 'projects'; btnRef: string; itemRef: string }> = [
+  const canvasItems: Array<{ tab: 'templates' | 'elements' | 'text' | 'tools' | 'uploads' | 'projects'; btnRef: string; itemRef: string }> = [
     { btnRef: 'btn-rail-canvas-templates', itemRef: 'rail-item-canvas-templates', tab: 'templates' },
     { btnRef: 'btn-rail-canvas-elements', itemRef: 'rail-item-canvas-elements', tab: 'elements' },
     { btnRef: 'btn-rail-canvas-text', itemRef: 'rail-item-canvas-text', tab: 'text' },
+    { btnRef: 'btn-rail-canvas-tools', itemRef: 'rail-item-canvas-tools', tab: 'tools' },
     { btnRef: 'btn-rail-canvas-uploads', itemRef: 'rail-item-canvas-uploads', tab: 'uploads' },
     { btnRef: 'btn-rail-canvas-projects', itemRef: 'rail-item-canvas-projects', tab: 'projects' },
   ];
@@ -446,6 +449,18 @@ function setupRailNavigation(sidebar: HTMLElement): void {
     const item = sidebar.querySelector<HTMLElement>(`[data-ref="${itemRef}"]`);
     const handler = (e: Event) => {
       e.preventDefault();
+      if (tab === 'tools') {
+        if (isDrawerOpen) {
+          toggleDrawer(false);
+        }
+        const controller = getActiveCanvasController();
+        if (controller && typeof controller.toggleVerticalToolbar === 'function') {
+          const isNowActive = controller.toggleVerticalToolbar();
+          activeCanvasTab = isNowActive ? 'tools' : null;
+          updateCanvasRailActiveState(sidebar);
+        }
+        return;
+      }
       if (isDrawerOpen && activeCanvasTab === tab) {
         toggleDrawer(false);
       } else {
@@ -1866,6 +1881,11 @@ function renderCanvasDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement)
       desc: 'Agrega títulos, subtítulos y párrafos de texto a tu lienzo.',
       icon: 'text_fields',
       title: t('nav.text') || 'Texto',
+    },
+    tools: {
+      desc: 'Herramientas de dibujo, selección, notas y formas en el lienzo.',
+      icon: 'draw',
+      title: t('nav.tools') || 'Herramientas',
     },
     uploads: {
       desc: 'Sube y administra imágenes, archivos multimedia y recursos para tu lienzo.',

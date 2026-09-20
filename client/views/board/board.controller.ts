@@ -14,12 +14,12 @@ import { PixelShape } from '../../utils/pixel-shapes.util.js';
 import { generateShadingRamp, getCollaboratorColor } from '../design/design-color.util.js';
 import { DocPage } from '../doc/doc.types.js';
 import { BoardCollaborationManager } from './board-collaboration.manager.js';
-import { computeElementsBoundingBox, findElementsByMarqueeBox, getConnectorEndpoints, getElementBoundingBox, hitTestElement, hitTestResizeHandle, moveElementByDelta, moveElementByDrag, resizeElementByHandle } from './board-elements.manager.js';
+import { computeElementsBoundingBox, findContainingSection, findElementsByMarqueeBox, getConnectorEndpoints, getElementBoundingBox, hitTestElement, hitTestResizeHandle, moveElementByDelta, moveElementByDrag, resizeElementByHandle } from './board-elements.manager.js';
 import { exportJson, exportPng, exportSvg, generateThumbnail } from './board-export.service.js';
 import { BoardHistoryManager } from './board-history.manager.js';
 import { BoardPixelGridManager } from './board-pixel-grid.manager.js';
-import { drawBackground, drawBoardCollaboratorCursors, drawCheckerboard, drawConnector, drawImage, drawMarqueeBox, drawMultiSelectionBounds, drawPixelGridLines, drawSelectionBox, drawShape, drawSticky, drawStroke, drawText, screenToWorld, worldToScreen } from './board-renderer.js';
-import { BackgroundType, BoardCollaboratorState, BoardConnectorElement, BoardElement, BoardImageElement, BoardPixelGridElement, BoardPoint, BoardProject, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTextElement, BoardTool, DEFAULT_CLASSIC_PALETTE, GAMEBOY_PALETTE, MarkerType, PICO8_PALETTE, PixelSubtool, ResizeHandle, ShapeType, StrokeStyle } from './board.types.js';
+import { drawBackground, drawBoardCollaboratorCursors, drawCheckerboard, drawConnector, drawImage, drawMarqueeBox, drawMultiSelectionBounds, drawPixelGridLines, drawSection, drawSelectionBox, drawShape, drawSticky, drawStroke, drawTable, drawText, screenToWorld, worldToScreen } from './board-renderer.js';
+import { BackgroundType, BoardCollaboratorState, BoardConnectorElement, BoardElement, BoardImageElement, BoardPixelGridElement, BoardPoint, BoardProject, BoardSectionElement, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTableCell, BoardTableElement, BoardTextElement, BoardTool, DEFAULT_CLASSIC_PALETTE, GAMEBOY_PALETTE, MarkerType, PICO8_PALETTE, PixelSubtool, ResizeHandle, ShapeType, StrokeStyle } from './board.types.js';
 
 export class BoardController {
   private abortController: AbortController;
@@ -27,7 +27,8 @@ export class BoardController {
   private activeInlineEditor: HTMLTextAreaElement | null = null;
   private activeOpenDropdown: { close: () => void } | null = null;
   private activePopover: HTMLElement | null = null;
-  private activeTrayGroup: 'connector' | 'pixel' | 'shapes' | 'sticky' | 'width' | null = null;
+  private activeTableInlineEditor: { col: number; row: number; tableId: string; textarea: HTMLTextAreaElement } | null = null;
+  private activeVSubtoolbar: 'draw' | 'lines' | 'pixel' | 'shapes' | 'stickies' | null = null;
   private connectorStyle: 'curved' | 'orthogonal' | 'straight' = 'curved';
   private aiDropdownController: CanvasAiDropdownController | null = null;
   private aiWrapperEl: HTMLElement | null = null;
@@ -102,6 +103,7 @@ export class BoardController {
   private roomToken = '';
   private selectedElementId: string | null = null;
   private selectedElementIds: string[] = [];
+  private selectedTableCell: { col: number; row: number; tableId: string } | null = null;
   private selectionDragOffset: BoardPoint = { x: 0, y: 0 };
   private selectionDragStartWorld: BoardPoint = { x: 0, y: 0 };
   private selectionStartPositions = new Map<string, { endPoint?: BoardPoint; points?: BoardPoint[]; startPoint?: BoardPoint; x?: number; y?: number }>();
@@ -115,6 +117,7 @@ export class BoardController {
   private topStrokeSwatchEl: HTMLElement | null = null;
   private topTextSwatchEl: HTMLElement | null = null;
   private topToggleColorsBtn: HTMLButtonElement | null = null;
+  private topToolbarContainerEl: HTMLElement | null = null;
 
   constructor(container: HTMLElement, canvasUuid: string, initialCanvasRecord?: CanvasItem | null) {
     this.container = container;
@@ -583,32 +586,35 @@ export class BoardController {
     const btnRedo = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-redo"]');
     btnRedo?.addEventListener('click', () => this.redo(), { signal });
 
-    const btnClear = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-clear-board"]');
-    btnClear?.addEventListener(
-      'click',
-      () => {
-        if (this.elements.length === 0) return;
-        this.pushHistoryState();
-        for (const { canvas } of this.pixelGrid.pixelCanvasMap.values()) {
-          canvas.width = 0;
-          canvas.height = 0;
-        }
-        this.pixelGrid.pixelCanvasMap.clear();
-        this.elements = [];
-        this.selectedElementId = null;
-        this.selectedElementIds = [];
-        this.collaborationManager.broadcastClear();
-        this.updateSelectionToolbar();
-        this.requestRedraw();
-        this.scheduleAutoSave();
-        showToast('Pizarrón limpiado');
-      },
-      { signal }
-    );
-
     const btnShare = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-share-board"]');
     if (this.shareWrapperEl && btnShare) {
       this.shareDropdownController = setupCanvasShareDropdown({
+        exportOptions: [
+          {
+            icon: 'image',
+            label: 'Imagen PNG (Contenido)',
+            onClick: () => exportPng(false, this.canvasElement, this.elements, this.boardBackground, this.boardName, (ctx, el) => this.drawElementOn(ctx, el)),
+            ref: 'btn-share-export-png-content',
+          },
+          {
+            icon: 'crop',
+            label: 'Imagen PNG (Vista actual)',
+            onClick: () => exportPng(true, this.canvasElement, this.elements, this.boardBackground, this.boardName, (ctx, el) => this.drawElementOn(ctx, el)),
+            ref: 'btn-share-export-png-view',
+          },
+          {
+            icon: 'code',
+            label: 'Vectorial SVG',
+            onClick: () => exportSvg(this.elements, this.boardBackground, this.boardName, (el) => this.pixelGrid.getOrCreatePixelGridCanvas(el)),
+            ref: 'btn-share-export-svg',
+          },
+          {
+            icon: 'data_object',
+            label: 'Archivo JSON del proyecto',
+            onClick: () => exportJson(this.elements, this.boardBackground, this.camera, this.boardName),
+            ref: 'btn-share-export-json',
+          },
+        ],
         getCanvas: () => this.getCanvasItemForShare(),
         onAccessChanged: (access, role) => {
           this.accessLevel = access;
@@ -632,8 +638,8 @@ export class BoardController {
       });
     }
 
-    this.bindExportButtons(signal);
     this.bindToolbarTools(signal);
+    this.bindVerticalToolbar(signal);
     this.bindPropertiesControls(signal);
     this.bindPixelControls(signal);
     this.bindZoomControls(signal);
@@ -711,47 +717,6 @@ export class BoardController {
     this.scheduleAutoSave();
   }
 
-  private bindExportButtons(signal: AbortSignal): void {
-    const btnPngContent = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-export-png-content"]');
-    btnPngContent?.addEventListener(
-      'click',
-      () => {
-        this.exportDropdownController?.close();
-        exportPng(false, this.canvasElement, this.elements, this.boardBackground, this.boardName, (ctx, el) => this.drawElementOn(ctx, el));
-      },
-      { signal }
-    );
-
-    const btnPngView = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-export-png-view"]');
-    btnPngView?.addEventListener(
-      'click',
-      () => {
-        this.exportDropdownController?.close();
-        exportPng(true, this.canvasElement, this.elements, this.boardBackground, this.boardName, (ctx, el) => this.drawElementOn(ctx, el));
-      },
-      { signal }
-    );
-
-    const btnSvg = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-export-svg"]');
-    btnSvg?.addEventListener(
-      'click',
-      () => {
-        this.exportDropdownController?.close();
-        exportSvg(this.elements, this.boardBackground, this.boardName, (el) => this.pixelGrid.getOrCreatePixelGridCanvas(el));
-      },
-      { signal }
-    );
-
-    const btnJson = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-export-json"]');
-    btnJson?.addEventListener(
-      'click',
-      () => {
-        this.exportDropdownController?.close();
-        exportJson(this.elements, this.boardBackground, this.camera, this.boardName);
-      },
-      { signal }
-    );
-  }
 
   private bindToolbarTools(signal: AbortSignal): void {
     const toolButtons = this.container.querySelectorAll<HTMLButtonElement>('[data-tool]');
@@ -782,20 +747,6 @@ export class BoardController {
     this.commitInlineEditor();
     this.currentTool = tool;
     this.renderActiveToolsUI();
-
-    if (tool === 'shapes') {
-      this.showOptionsTray('shapes');
-    } else if (tool === 'connector') {
-      this.showOptionsTray('connector');
-    } else if (tool === 'sticky') {
-      this.showOptionsTray('sticky');
-    } else if (tool === 'pixel') {
-      this.showOptionsTray('pixel');
-    } else if (tool === 'pen' || tool === 'marker' || tool === 'highlighter' || tool === 'eraser') {
-      this.showOptionsTray('width');
-    } else {
-      this.hideOptionsTray();
-    }
 
     if (tool !== 'select' && tool !== 'pixel') {
       this.selectedElementId = null;
@@ -832,6 +783,7 @@ export class BoardController {
     const pixelTrigger = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-trigger-pixel-tools"]');
     pixelTrigger?.classList.toggle('is-active', isPixel);
 
+    this.updateVerticalToolbarActiveButtons();
     this.updateCanvasCursor();
   }
 
@@ -874,20 +826,6 @@ export class BoardController {
       { signal }
     );
 
-    const btnWidthProp = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-width-prop"]');
-    btnWidthProp?.addEventListener(
-      'click',
-      (e) => {
-        e.stopPropagation();
-        if (this.activeTrayGroup === 'width') {
-          this.hideOptionsTray();
-        } else {
-          this.showOptionsTray('width');
-        }
-      },
-      { signal }
-    );
-
     const btnFillProp = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-fill-prop"]');
     btnFillProp?.addEventListener(
       'click',
@@ -910,9 +848,6 @@ export class BoardController {
 
     const btnCloseColors = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-close-board-colors"]');
     btnCloseColors?.addEventListener('click', () => this.hideColorsPanel(), { signal });
-
-    const btnCloseOptions = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-close-board-options"]');
-    btnCloseOptions?.addEventListener('click', () => this.hideOptionsTray(), { signal });
 
     this.colorsCustomInputEl?.addEventListener(
       'input',
@@ -999,43 +934,6 @@ export class BoardController {
       },
       { signal }
     );
-  }
-
-  private showOptionsTray(group: 'connector' | 'pixel' | 'shapes' | 'sticky' | 'width'): void {
-    const tray = this.container.querySelector<HTMLElement>('[data-ref="board-options-tray"]');
-    const groupShapes = this.container.querySelector<HTMLElement>('[data-ref="options-group-shapes"]');
-    const groupConnector = this.container.querySelector<HTMLElement>('[data-ref="options-group-connector"]');
-    const groupSticky = this.container.querySelector<HTMLElement>('[data-ref="options-group-sticky"]');
-    const groupWidth = this.container.querySelector<HTMLElement>('[data-ref="options-group-width"]');
-    const groupPixel = this.container.querySelector<HTMLElement>('[data-ref="options-group-pixel"]');
-
-    if (groupShapes) groupShapes.classList.toggle('is-hidden', group !== 'shapes');
-    if (groupConnector) groupConnector.classList.toggle('is-hidden', group !== 'connector');
-    if (groupSticky) groupSticky.classList.toggle('is-hidden', group !== 'sticky');
-    if (groupWidth) groupWidth.classList.toggle('is-hidden', group !== 'width');
-    if (groupPixel) groupPixel.classList.toggle('is-hidden', group !== 'pixel');
-
-    if (tray) {
-      tray.classList.remove('is-hidden');
-    }
-    this.activeTrayGroup = group;
-  }
-
-  private hideOptionsTray(): void {
-    const tray = this.container.querySelector<HTMLElement>('[data-ref="board-options-tray"]');
-    const groupShapes = this.container.querySelector<HTMLElement>('[data-ref="options-group-shapes"]');
-    const groupConnector = this.container.querySelector<HTMLElement>('[data-ref="options-group-connector"]');
-    const groupSticky = this.container.querySelector<HTMLElement>('[data-ref="options-group-sticky"]');
-    const groupWidth = this.container.querySelector<HTMLElement>('[data-ref="options-group-width"]');
-    const groupPixel = this.container.querySelector<HTMLElement>('[data-ref="options-group-pixel"]');
-
-    if (groupShapes) groupShapes.classList.add('is-hidden');
-    if (groupConnector) groupConnector.classList.add('is-hidden');
-    if (groupSticky) groupSticky.classList.add('is-hidden');
-    if (groupWidth) groupWidth.classList.add('is-hidden');
-    if (groupPixel) groupPixel.classList.add('is-hidden');
-    if (tray) tray.classList.add('is-hidden');
-    this.activeTrayGroup = null;
   }
 
   private loadRecentColors(): void {
@@ -1233,6 +1131,11 @@ export class BoardController {
       } else {
         this.colorsActiveSwatchEl.style.background = normalized;
       }
+    }
+
+    const vdrawSwatch = this.container.querySelector<HTMLElement>('[data-ref="vdraw-color-swatch"]');
+    if (vdrawSwatch) {
+      vdrawSwatch.style.backgroundColor = normalized === 'transparent' ? '#1e293b' : normalized;
     }
 
     this.renderShadingRamps();
@@ -1564,6 +1467,7 @@ export class BoardController {
 
   private updateContextualToolbar(): void {
     if (!this.topSelectionSectionEl) {
+      this.topToolbarContainerEl = this.container.querySelector<HTMLElement>('[data-ref="board-top-toolbar-container"]');
       this.topSelectionSectionEl = this.container.querySelector<HTMLElement>('[data-ref="board-top-selection-section"]');
       this.topFillSwatchEl = this.container.querySelector<HTMLElement>('[data-ref="top-fill-swatch"]');
       this.topStrokeSwatchEl = this.container.querySelector<HTMLElement>('[data-ref="top-stroke-swatch"]');
@@ -1573,11 +1477,13 @@ export class BoardController {
 
     const selectedEls = this.getSelectedElements();
     if (selectedEls.length === 0) {
+      this.topToolbarContainerEl?.classList.add('is-hidden');
       this.topSelectionSectionEl?.classList.add('is-hidden');
       this.closeAllPopovers();
       return;
     }
 
+    this.topToolbarContainerEl?.classList.remove('is-hidden');
     this.topSelectionSectionEl?.classList.remove('is-hidden');
 
     const groupFill = this.container.querySelector<HTMLElement>('[data-ref="board-top-group-fill"]');
@@ -1753,6 +1659,7 @@ export class BoardController {
   }
 
   private bindContextualToolbar(signal: AbortSignal): void {
+    this.topToolbarContainerEl = this.container.querySelector<HTMLElement>('[data-ref="board-top-toolbar-container"]');
     this.topSelectionSectionEl = this.container.querySelector<HTMLElement>('[data-ref="board-top-selection-section"]');
     this.topFillSwatchEl = this.container.querySelector<HTMLElement>('[data-ref="top-fill-swatch"]');
     this.topStrokeSwatchEl = this.container.querySelector<HTMLElement>('[data-ref="top-stroke-swatch"]');
@@ -2262,6 +2169,115 @@ export class BoardController {
         });
       }
 
+      if (hit.type === 'table') {
+        const table = hit as BoardTableElement;
+        const tableHit = this.getTableAtPoint(worldPos);
+        const r = tableHit ? tableHit.row : (this.selectedTableCell?.tableId === table.id ? this.selectedTableCell.row : 0);
+        const c = tableHit ? tableHit.col : (this.selectedTableCell?.tableId === table.id ? this.selectedTableCell.col : 0);
+        this.selectedTableCell = { col: c, row: r, tableId: table.id };
+        this.requestRedraw();
+
+        const tableItems: ContextMenuItem[] = [
+          {
+            action: () => this.deleteTable(table.id),
+            danger: true,
+            icon: 'table_chart',
+            label: 'Eliminar tabla',
+            ref: 'ctx-table-delete-table',
+          },
+          { divider: true },
+          {
+            action: () => this.deleteTableColumn(table.id, c),
+            icon: 'view_column',
+            label: 'Eliminar la columna',
+            ref: 'ctx-table-delete-col',
+          },
+          {
+            action: () => this.deleteTableRow(table.id, r),
+            icon: 'table_rows',
+            label: 'Eliminar la fila',
+            ref: 'ctx-table-delete-row',
+          },
+          {
+            action: () => this.addTableColumn(table.id, c),
+            icon: 'add',
+            label: 'Agregar una columna',
+            ref: 'ctx-table-add-col',
+          },
+          {
+            action: () => this.addTableRow(table.id, r),
+            icon: 'add',
+            label: 'Agregar una fila',
+            ref: 'ctx-table-add-row',
+          },
+          { divider: true },
+          {
+            action: () => this.fitTableRowToContent(table.id, r),
+            icon: 'height',
+            label: 'Ajustar el tamaño de la fila al contenido',
+            ref: 'ctx-table-fit-row',
+          },
+          {
+            action: () => this.fitTableColumnToContent(table.id, c),
+            icon: 'width',
+            label: 'Ajustar el tamaño de la columna al contenido',
+            ref: 'ctx-table-fit-col',
+          },
+          {
+            action: () => this.moveTableRow(table.id, r, r - 1),
+            disabled: r <= 0,
+            icon: 'keyboard_arrow_up',
+            label: 'Mover fila hacia arriba',
+            ref: 'ctx-table-move-row-up',
+          },
+          {
+            action: () => this.moveTableRow(table.id, r, r + 1),
+            disabled: r >= (table.rows || table.data?.length || 1) - 1,
+            icon: 'keyboard_arrow_down',
+            label: 'Mover fila hacia abajo',
+            ref: 'ctx-table-move-row-down',
+          },
+          {
+            action: () => this.moveTableColumn(table.id, c, c + 1),
+            disabled: c >= (table.cols || (table.data && table.data[0]?.length) || 1) - 1,
+            icon: 'keyboard_arrow_right',
+            label: 'Mover columna a la derecha',
+            ref: 'ctx-table-move-col-right',
+          },
+          {
+            action: () => this.moveTableColumn(table.id, c, c - 1),
+            disabled: c <= 0,
+            icon: 'keyboard_arrow_left',
+            label: 'Mover columna a la izquierda',
+            ref: 'ctx-table-move-col-left',
+          },
+          { divider: true },
+          {
+            action: () => this.undo(),
+            disabled: !this.history.canUndo(),
+            icon: 'undo',
+            label: 'Deshacer',
+            ref: 'ctx-board-undo',
+            shortcut: 'Ctrl+Z',
+          },
+          {
+            action: () => this.redo(),
+            disabled: !this.history.canRedo(),
+            icon: 'redo',
+            label: 'Rehacer',
+            ref: 'ctx-board-redo',
+            shortcut: 'Ctrl+Y',
+          },
+        ];
+
+        openContextMenu({
+          items: tableItems,
+          x: e.clientX,
+          y: e.clientY,
+        });
+        return;
+      }
+
       if (hit.type === 'sticky' || hit.type === 'text') {
         items.push({
           action: () => {
@@ -2486,7 +2502,23 @@ export class BoardController {
         this.selectionDragStartWorld = { ...worldPos };
 
         this.selectionStartPositions.clear();
+        const sections = this.elements.filter((item) => item.type === 'section') as BoardSectionElement[];
+        const idsToMove = new Set<string>(this.selectedElementIds);
         for (const id of this.selectedElementIds) {
+          const el = this.elements.find((item) => item.id === id);
+          if (el && el.type === 'section') {
+            for (const other of this.elements) {
+              if (other.id !== el.id) {
+                const containingSec = findContainingSection(other, sections, this.elements);
+                if (containingSec && containingSec.id === el.id) {
+                  idsToMove.add(other.id);
+                }
+              }
+            }
+          }
+        }
+
+        for (const id of idsToMove) {
           const el = this.elements.find((item) => item.id === id);
           if (el) {
             if ('x' in el) {
@@ -2499,12 +2531,22 @@ export class BoardController {
           }
         }
 
+        if (hit.type === 'table') {
+          const tableHit = this.getTableAtPoint(worldPos);
+          if (tableHit) {
+            this.selectedTableCell = { col: tableHit.col, row: tableHit.row, tableId: hit.id };
+          }
+        } else {
+          this.selectedTableCell = null;
+        }
+
         this.updateSelectionToolbar();
         this.requestRedraw();
       } else {
         if (!e.shiftKey) {
           this.selectedElementIds = [];
           this.selectedElementId = null;
+          this.selectedTableCell = null;
         }
         this.isMarqueeSelecting = true;
         this.marqueeStartPos = { ...worldPos };
@@ -2705,9 +2747,8 @@ export class BoardController {
       } else {
         const dx = worldPos.x - this.selectionDragStartWorld.x;
         const dy = worldPos.y - this.selectionDragStartWorld.y;
-        for (const id of this.selectedElementIds) {
+        for (const [id, startPos] of this.selectionStartPositions.entries()) {
           const el = this.elements.find((item) => item.id === id);
-          const startPos = this.selectionStartPositions.get(id);
           if (el) {
             moveElementByDelta(el, dx, dy, startPos);
           }
@@ -2848,7 +2889,7 @@ export class BoardController {
       this.updateCanvasCursor();
       if (this.selectedElementIds.length > 0) {
         this.pushHistoryState();
-        for (const id of this.selectedElementIds) {
+        for (const [id] of this.selectionStartPositions.entries()) {
           const el = this.elements.find((item) => item.id === id);
           if (el) {
             this.collaborationManager.broadcastUpdateElement(el);
@@ -2909,6 +2950,17 @@ export class BoardController {
       this.selectedElementId = hit.id;
       this.openInlineEditor(hit);
       return;
+    }
+    if (hit && hit.type === 'table') {
+      const tableHit = this.getTableAtPoint(worldPos);
+      if (tableHit) {
+        this.selectedElementId = hit.id;
+        this.selectedElementIds = [hit.id];
+        this.selectedTableCell = { col: tableHit.col, row: tableHit.row, tableId: hit.id };
+        this.openTableCellInlineEditor(tableHit.table, tableHit.row, tableHit.col);
+        this.requestRedraw();
+        return;
+      }
     }
     if (hit && hit.type === 'connector') {
       const current = hit.label || '';
@@ -2974,7 +3026,18 @@ export class BoardController {
   private commitInlineEditor(): void {
     if (!this.activeInlineEditor) return;
     const text = this.activeInlineEditor.value.trim();
-    if (this.selectedElementId) {
+
+    if (this.activeTableInlineEditor) {
+      const { col, row, tableId } = this.activeTableInlineEditor;
+      const table = this.elements.find((item) => item.id === tableId) as BoardTableElement | undefined;
+      if (table && table.data && table.data[row] && table.data[row][col]) {
+        this.pushHistoryState();
+        table.data[row][col].text = text;
+        this.collaborationManager.broadcastUpdateElement(table);
+        this.scheduleAutoSave();
+      }
+      this.activeTableInlineEditor = null;
+    } else if (this.selectedElementId) {
       const el = this.elements.find((item) => item.id === this.selectedElementId);
       if (el && (el.type === 'sticky' || el.type === 'text')) {
         this.pushHistoryState();
@@ -3292,7 +3355,10 @@ export class BoardController {
     const viewMinY = Math.min(topLeft.y, botRight.y);
     const viewMaxY = Math.max(topLeft.y, botRight.y);
 
+    const sections = this.elements.filter((e) => e.type === 'section') as BoardSectionElement[];
+
     for (const el of this.elements) {
+      if (el.type !== 'section') continue;
       const bbox = getElementBoundingBox(el);
       if (
         bbox.x + bbox.width < viewMinX ||
@@ -3305,8 +3371,53 @@ export class BoardController {
       this.drawElement(el);
     }
 
+    for (const el of this.elements) {
+      if (el.type === 'section') continue;
+      const bbox = getElementBoundingBox(el);
+      if (
+        bbox.x + bbox.width < viewMinX ||
+        bbox.x > viewMaxX ||
+        bbox.y + bbox.height < viewMinY ||
+        bbox.y > viewMaxY
+      ) {
+        continue;
+      }
+
+      const parentSection = findContainingSection(el, sections, this.elements);
+      if (parentSection) {
+        this.ctx.save();
+        this.ctx.beginPath();
+        const radius = 8;
+        if (typeof this.ctx.roundRect === 'function') {
+          this.ctx.roundRect(parentSection.x, parentSection.y, parentSection.width, parentSection.height, radius);
+        } else {
+          this.ctx.rect(parentSection.x, parentSection.y, parentSection.width, parentSection.height);
+        }
+        this.ctx.clip();
+        this.drawElement(el);
+        this.ctx.restore();
+      } else {
+        this.drawElement(el);
+      }
+    }
+
     if (this.liveDraftElement) {
-      this.drawElement(this.liveDraftElement);
+      const parentSection = findContainingSection(this.liveDraftElement, sections, this.elements);
+      if (parentSection) {
+        this.ctx.save();
+        this.ctx.beginPath();
+        const radius = 8;
+        if (typeof this.ctx.roundRect === 'function') {
+          this.ctx.roundRect(parentSection.x, parentSection.y, parentSection.width, parentSection.height, radius);
+        } else {
+          this.ctx.rect(parentSection.x, parentSection.y, parentSection.width, parentSection.height);
+        }
+        this.ctx.clip();
+        this.drawElement(this.liveDraftElement);
+        this.ctx.restore();
+      } else {
+        this.drawElement(this.liveDraftElement);
+      }
     }
 
     if (this.selectedElementIds.length > 0) {
@@ -3367,6 +3478,10 @@ export class BoardController {
       drawImage(ctx, el, () => this.requestRedraw());
     } else if (el.type === 'connector') {
       drawConnector(ctx, el, this.elements);
+    } else if (el.type === 'section') {
+      drawSection(ctx, el);
+    } else if (el.type === 'table') {
+      drawTable(ctx, el, this.selectedTableCell, this.camera.zoom);
     }
   }
 
@@ -4230,10 +4345,13 @@ export class BoardController {
       const val = btn.getAttribute('data-subtool') || btn.getAttribute('data-pixel-subtool');
       btn.classList.toggle('is-active', val === tool);
     });
+    const subsubPixelSize = this.container.querySelector<HTMLElement>('[data-ref="vsubsubtoolbar-pixel-size"]');
+    const showSize = this.activeVSubtoolbar === 'pixel' && (tool === 'pencil' || tool === 'eraser');
+    subsubPixelSize?.classList.toggle('is-hidden', !showSize);
   }
 
   private setPixelBrushSize(size: number): void {
-    this.pixelGrid.activePixelBrushSize = Math.max(1, Math.min(4, size));
+    this.pixelGrid.activePixelBrushSize = Math.max(1, Math.min(8, size));
     const brushButtons = this.container.querySelectorAll<HTMLButtonElement>('[data-pixel-brush]');
     brushButtons.forEach((btn) => {
       btn.classList.toggle('is-active', parseInt(btn.getAttribute('data-pixel-brush') || '1', 10) === size);
@@ -4306,5 +4424,779 @@ export class BoardController {
     this.requestRedraw();
     this.scheduleAutoSave();
     showToast(`Lienzo pixel (${config.gridWidth}×${config.gridHeight}) insertado`);
+  }
+
+  private bindVerticalToolbar(signal: AbortSignal): void {
+    const btnClose = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-close-vertical-toolbar"]');
+    btnClose?.addEventListener(
+      'click',
+      () => {
+        this.toggleVerticalToolbar(false);
+      },
+      { signal }
+    );
+
+    const vtoolButtons = this.container.querySelectorAll<HTMLButtonElement>('[data-vtool]');
+    vtoolButtons.forEach((btn) => {
+      btn.addEventListener(
+        'click',
+        () => {
+          const vtool = btn.getAttribute('data-vtool');
+          if (vtool === 'select') {
+            this.hideAllVSubtoolbars();
+            this.setTool('select');
+          } else if (vtool === 'hand') {
+            this.hideAllVSubtoolbars();
+            this.setTool('hand');
+          } else if (vtool === 'section') {
+            this.hideAllVSubtoolbars();
+            this.insertSection();
+          } else if (vtool === 'draw') {
+            this.toggleVSubtoolbar('draw');
+            if (this.currentTool !== 'pen' && this.currentTool !== 'marker' && this.currentTool !== 'highlighter' && this.currentTool !== 'eraser') {
+              this.setTool('pen');
+            }
+          } else if (vtool === 'pixel') {
+            this.toggleVSubtoolbar('pixel');
+            this.setTool('pixel');
+          } else if (vtool === 'shapes') {
+            this.toggleVSubtoolbar('shapes');
+          } else if (vtool === 'lines') {
+            this.toggleVSubtoolbar('lines');
+            this.activateConnectorTool(this.connectorStyle);
+          } else if (vtool === 'stickies') {
+            this.toggleVSubtoolbar('stickies');
+          } else if (vtool === 'text') {
+            this.hideAllVSubtoolbars();
+            this.insertTextPreset('body');
+          } else if (vtool === 'tables') {
+            this.hideAllVSubtoolbars();
+            this.insertTable(3, 3);
+          }
+        },
+        { signal }
+      );
+    });
+
+    const drawSubBtns = this.container.querySelectorAll<HTMLButtonElement>('[data-ref="vsubtoolbar-draw"] [data-subtool]');
+    drawSubBtns.forEach((btn) => {
+      btn.addEventListener(
+        'click',
+        () => {
+          const subtool = btn.getAttribute('data-subtool') as BoardTool;
+          if (subtool) {
+            this.setTool(subtool);
+            this.updateVerticalToolbarActiveButtons();
+          }
+        },
+        { signal }
+      );
+    });
+
+    const pixelSubBtns = this.container.querySelectorAll<HTMLButtonElement>('[data-ref="vsubtoolbar-pixel"] [data-pixel-subtool]');
+    pixelSubBtns.forEach((btn) => {
+      btn.addEventListener(
+        'click',
+        () => {
+          const subtool = btn.getAttribute('data-pixel-subtool') as PixelSubtool;
+          if (subtool) {
+            this.pixelGrid.activePixelSubtool = subtool;
+            if (this.currentTool !== 'pixel') {
+              this.setTool('pixel');
+            }
+            const subsubPixelSize = this.container.querySelector<HTMLElement>('[data-ref="vsubsubtoolbar-pixel-size"]');
+            const showSize = subtool === 'pencil' || subtool === 'eraser';
+            subsubPixelSize?.classList.toggle('is-hidden', !showSize);
+            this.updateVerticalToolbarActiveButtons();
+          }
+        },
+        { signal }
+      );
+    });
+
+    const pixelBrushBtns = this.container.querySelectorAll<HTMLButtonElement>('[data-ref="vsubsubtoolbar-pixel-size"] [data-pixel-brush]');
+    pixelBrushBtns.forEach((btn) => {
+      btn.addEventListener(
+        'click',
+        () => {
+          const size = parseInt(btn.getAttribute('data-pixel-brush') || '1', 10);
+          this.setPixelBrushSize(size);
+        },
+        { signal }
+      );
+    });
+
+    const vpixelBtnToggleGrid = this.container.querySelector<HTMLButtonElement>('[data-ref="vpixel-btn-toggle-grid"]');
+    vpixelBtnToggleGrid?.addEventListener(
+      'click',
+      () => {
+        if (this.selectedElementId) {
+          const el = this.elements.find((item) => item.id === this.selectedElementId);
+          if (el && el.type === 'pixel-grid') {
+            this.pushHistoryState();
+            el.showGrid = !el.showGrid;
+            this.collaborationManager.broadcastUpdateElement(el);
+            this.requestRedraw();
+            this.scheduleAutoSave();
+            vpixelBtnToggleGrid.classList.toggle('is-active', Boolean(el.showGrid));
+          }
+        }
+      },
+      { signal }
+    );
+
+    const vpixelBtnInsertGrid = this.container.querySelector<HTMLButtonElement>('[data-ref="vpixel-btn-insert-grid"]');
+    vpixelBtnInsertGrid?.addEventListener(
+      'click',
+      () => {
+        openInsertPixelGridModal({
+          onInsert: (cfg) => this.insertPixelGrid(cfg),
+        });
+      },
+      { signal }
+    );
+
+    const vpixelBtnExportSprite = this.container.querySelector<HTMLButtonElement>('[data-ref="vpixel-btn-export-sprite"]');
+    vpixelBtnExportSprite?.addEventListener(
+      'click',
+      () => {
+        const el = this.selectedElementId ? this.elements.find((item) => item.id === this.selectedElementId) : null;
+        if (el && el.type === 'pixel-grid') {
+          this.pixelGrid.exportPixelGridSprite(el);
+        } else {
+          showToast('Selecciona una cuadrícula de píxeles para exportar el sprite', 'info');
+        }
+      },
+      { signal }
+    );
+
+    const vdrawBtnColor = this.container.querySelector<HTMLButtonElement>('[data-ref="vdraw-btn-color"]');
+    vdrawBtnColor?.addEventListener(
+      'click',
+      (e) => {
+        e.stopPropagation();
+        this.toggleColorsPanel('stroke');
+      },
+      { signal }
+    );
+
+    const vdrawBtnWidth = this.container.querySelector<HTMLButtonElement>('[data-ref="vdraw-btn-width"]');
+    vdrawBtnWidth?.addEventListener(
+      'click',
+      (e) => {
+        e.stopPropagation();
+        if (this.popoverStrokeEl && vdrawBtnWidth) {
+          this.togglePopover(this.popoverStrokeEl, vdrawBtnWidth);
+        }
+      },
+      { signal }
+    );
+
+    const shapeBtns = this.container.querySelectorAll<HTMLButtonElement>('[data-ref="vsubtoolbar-shapes"] [data-shape]');
+    shapeBtns.forEach((btn) => {
+      btn.addEventListener(
+        'click',
+        () => {
+          shapeBtns.forEach((b) => b.classList.remove('is-active'));
+          btn.classList.add('is-active');
+          const shape = (btn.getAttribute('data-shape') as ShapeType) || 'rect';
+          this.currentShape = shape;
+          this.insertShapePreset(shape);
+        },
+        { signal }
+      );
+    });
+
+    const lineBtns = this.container.querySelectorAll<HTMLButtonElement>('[data-ref="vsubtoolbar-lines"] [data-conn-style]');
+    lineBtns.forEach((btn) => {
+      btn.addEventListener(
+        'click',
+        () => {
+          lineBtns.forEach((b) => b.classList.remove('is-active'));
+          btn.classList.add('is-active');
+          const style = (btn.getAttribute('data-conn-style') as 'straight' | 'curved' | 'orthogonal') || 'curved';
+          this.activateConnectorTool(style);
+        },
+        { signal }
+      );
+    });
+
+    const stickyBtns = this.container.querySelectorAll<HTMLButtonElement>('[data-ref="vsubtoolbar-stickies"] [data-color]');
+    stickyBtns.forEach((btn) => {
+      btn.addEventListener(
+        'click',
+        () => {
+          stickyBtns.forEach((b) => b.classList.remove('is-active'));
+          btn.classList.add('is-active');
+          const color = btn.getAttribute('data-color') || '#fef08a';
+          this.insertStickyNote(color);
+        },
+        { signal }
+      );
+    });
+  }
+
+  private showVSubtoolbar(sub: 'draw' | 'lines' | 'pixel' | 'shapes' | 'stickies'): void {
+    this.activeVSubtoolbar = sub;
+    const subDraw = this.container.querySelector<HTMLElement>('[data-ref="vsubtoolbar-draw"]');
+    const subPixel = this.container.querySelector<HTMLElement>('[data-ref="vsubtoolbar-pixel"]');
+    const subShapes = this.container.querySelector<HTMLElement>('[data-ref="vsubtoolbar-shapes"]');
+    const subLines = this.container.querySelector<HTMLElement>('[data-ref="vsubtoolbar-lines"]');
+    const subStickies = this.container.querySelector<HTMLElement>('[data-ref="vsubtoolbar-stickies"]');
+    const subsubPixelSize = this.container.querySelector<HTMLElement>('[data-ref="vsubsubtoolbar-pixel-size"]');
+
+    subDraw?.classList.toggle('is-hidden', sub !== 'draw');
+    subPixel?.classList.toggle('is-hidden', sub !== 'pixel');
+    subShapes?.classList.toggle('is-hidden', sub !== 'shapes');
+    subLines?.classList.toggle('is-hidden', sub !== 'lines');
+    subStickies?.classList.toggle('is-hidden', sub !== 'stickies');
+
+    const showPixelSize = sub === 'pixel' && (this.pixelGrid.activePixelSubtool === 'pencil' || this.pixelGrid.activePixelSubtool === 'eraser');
+    subsubPixelSize?.classList.toggle('is-hidden', !showPixelSize);
+
+    this.updateVerticalToolbarActiveButtons();
+  }
+
+  private hideAllVSubtoolbars(): void {
+    this.activeVSubtoolbar = null;
+    const subDraw = this.container.querySelector<HTMLElement>('[data-ref="vsubtoolbar-draw"]');
+    const subPixel = this.container.querySelector<HTMLElement>('[data-ref="vsubtoolbar-pixel"]');
+    const subShapes = this.container.querySelector<HTMLElement>('[data-ref="vsubtoolbar-shapes"]');
+    const subLines = this.container.querySelector<HTMLElement>('[data-ref="vsubtoolbar-lines"]');
+    const subStickies = this.container.querySelector<HTMLElement>('[data-ref="vsubtoolbar-stickies"]');
+    const subsubPixelSize = this.container.querySelector<HTMLElement>('[data-ref="vsubsubtoolbar-pixel-size"]');
+
+    subDraw?.classList.add('is-hidden');
+    subPixel?.classList.add('is-hidden');
+    subShapes?.classList.add('is-hidden');
+    subLines?.classList.add('is-hidden');
+    subStickies?.classList.add('is-hidden');
+    subsubPixelSize?.classList.add('is-hidden');
+
+    this.updateVerticalToolbarActiveButtons();
+  }
+
+  private toggleVSubtoolbar(sub: 'draw' | 'lines' | 'pixel' | 'shapes' | 'stickies'): void {
+    if (this.activeVSubtoolbar === sub) {
+      this.hideAllVSubtoolbars();
+    } else {
+      this.showVSubtoolbar(sub);
+    }
+  }
+
+  private updateVerticalToolbarActiveButtons(): void {
+    const vBtns = this.container.querySelectorAll<HTMLButtonElement>('[data-vtool]');
+    vBtns.forEach((btn) => {
+      const vtool = btn.getAttribute('data-vtool');
+      let active = false;
+      if (vtool === 'select' && this.currentTool === 'select' && !this.activeVSubtoolbar) {
+        active = true;
+      } else if (vtool === 'hand' && this.currentTool === 'hand' && !this.activeVSubtoolbar) {
+        active = true;
+      } else if (vtool === 'draw' && (this.activeVSubtoolbar === 'draw' || ['pen', 'marker', 'highlighter', 'eraser'].includes(this.currentTool))) {
+        active = true;
+      } else if (vtool === 'pixel' && (this.activeVSubtoolbar === 'pixel' || this.currentTool === 'pixel')) {
+        active = true;
+      } else if (vtool === 'shapes' && (this.activeVSubtoolbar === 'shapes' || this.currentTool === 'shapes')) {
+        active = true;
+      } else if (vtool === 'lines' && (this.activeVSubtoolbar === 'lines' || this.currentTool === 'connector')) {
+        active = true;
+      } else if (vtool === 'stickies' && (this.activeVSubtoolbar === 'stickies' || this.currentTool === 'sticky')) {
+        active = true;
+      }
+      btn.classList.toggle('is-active', active);
+    });
+
+    const drawSubBtns = this.container.querySelectorAll<HTMLButtonElement>('[data-ref="vsubtoolbar-draw"] [data-subtool]');
+    drawSubBtns.forEach((btn) => {
+      btn.classList.toggle('is-active', btn.getAttribute('data-subtool') === this.currentTool);
+    });
+
+    const pixelSubBtns = this.container.querySelectorAll<HTMLButtonElement>('[data-ref="vsubtoolbar-pixel"] [data-pixel-subtool]');
+    pixelSubBtns.forEach((btn) => {
+      btn.classList.toggle('is-active', btn.getAttribute('data-pixel-subtool') === this.pixelGrid.activePixelSubtool);
+    });
+
+    const pixelBrushBtns = this.container.querySelectorAll<HTMLButtonElement>('[data-ref="vsubsubtoolbar-pixel-size"] [data-pixel-brush]');
+    pixelBrushBtns.forEach((btn) => {
+      btn.classList.toggle('is-active', parseInt(btn.getAttribute('data-pixel-brush') || '1', 10) === this.pixelGrid.activePixelBrushSize);
+    });
+  }
+
+  public insertShapePreset(shapeType: ShapeType): void {
+    this.pushHistoryState();
+    const dpr = window.devicePixelRatio || 1;
+    const screenW = this.canvasElement ? this.canvasElement.width / dpr : 800;
+    const screenH = this.canvasElement ? this.canvasElement.height / dpr : 600;
+    const centerWorld = screenToWorld(screenW / 2, screenH / 2, this.canvasElement, this.camera);
+    const size = 140;
+
+    const shapeEl: BoardShapeElement = {
+      fillColor: this.currentFillColor || '#000000',
+      height: size,
+      id: `shape_${shapeType}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      shapeType,
+      strokeColor: this.currentColor || 'transparent',
+      strokeWidth: 2,
+      type: 'shape',
+      width: size,
+      x: Math.round(centerWorld.x - size / 2),
+      y: Math.round(centerWorld.y - size / 2),
+    };
+
+    this.elements.push(shapeEl);
+    this.collaborationManager.broadcastAddElement(shapeEl);
+    this.selectedElementId = shapeEl.id;
+    this.selectedElementIds = [shapeEl.id];
+    this.setTool('select');
+    this.updateSelectionToolbar();
+    this.requestRedraw();
+    this.scheduleAutoSave();
+    showToast('Forma añadida', 'success');
+  }
+
+  public insertSection(title = 'Sección', width = 480, height = 360): void {
+    this.pushHistoryState();
+    const dpr = window.devicePixelRatio || 1;
+    const screenW = this.canvasElement ? this.canvasElement.width / dpr : 800;
+    const screenH = this.canvasElement ? this.canvasElement.height / dpr : 600;
+    const centerWorld = screenToWorld(screenW / 2, screenH / 2, this.canvasElement, this.camera);
+
+    const sectionEl: BoardSectionElement = {
+      backgroundColor: '#ffffff',
+      borderColor: '#cbd5e1',
+      borderWidth: 2,
+      height,
+      id: `section-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      title: title || 'Sección',
+      titleColor: '#8b3dff',
+      type: 'section',
+      width,
+      x: Math.round(centerWorld.x - width / 2),
+      y: Math.round(centerWorld.y - height / 2),
+    };
+
+    this.elements.unshift(sectionEl);
+    this.collaborationManager.broadcastAddElement(sectionEl);
+    this.selectedElementId = sectionEl.id;
+    this.selectedElementIds = [sectionEl.id];
+    this.setTool('select');
+    this.updateSelectionToolbar();
+    this.requestRedraw();
+    this.scheduleAutoSave();
+    showToast('Sección creada', 'success');
+  }
+
+  public insertTable(rows = 3, cols = 3, width = 450, height = 210): void {
+    this.pushHistoryState();
+    const dpr = window.devicePixelRatio || 1;
+    const screenW = this.canvasElement ? this.canvasElement.width / dpr : 800;
+    const screenH = this.canvasElement ? this.canvasElement.height / dpr : 600;
+    const centerWorld = screenToWorld(screenW / 2, screenH / 2, this.canvasElement, this.camera);
+
+    const colWidths = Array(cols).fill(Math.round(width / cols));
+    const rowHeights = Array(rows).fill(Math.round(height / rows));
+
+    const cells: BoardTableCell[][] = [];
+    for (let r = 0; r < rows; r++) {
+      const rowCells: BoardTableCell[] = [];
+      for (let c = 0; c < cols; c++) {
+        rowCells.push({
+          backgroundColor: r === 0 ? '#f8fafc' : '#ffffff',
+          text: r === 0 ? `Encabezado ${c + 1}` : `Celda ${r},${c + 1}`,
+          textColor: '#1e293b',
+        });
+      }
+      cells.push(rowCells);
+    }
+
+    const tableEl: BoardTableElement = {
+      borderColor: '#cbd5e1',
+      borderWidth: 1,
+      colWidths,
+      cols,
+      data: cells,
+      height,
+      id: `table-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      rowHeights,
+      rows,
+      type: 'table',
+      width,
+      x: Math.round(centerWorld.x - width / 2),
+      y: Math.round(centerWorld.y - height / 2),
+    };
+
+    this.elements.push(tableEl);
+    this.collaborationManager.broadcastAddElement(tableEl);
+    this.selectedElementId = tableEl.id;
+    this.selectedElementIds = [tableEl.id];
+    this.selectedTableCell = { col: 0, row: 0, tableId: tableEl.id };
+    this.setTool('select');
+    this.updateSelectionToolbar();
+    this.requestRedraw();
+    this.scheduleAutoSave();
+    showToast('Tabla 3×3 añadida', 'success');
+  }
+
+  private getTableAtPoint(worldPos: BoardPoint): { col: number; row: number; table: BoardTableElement } | null {
+    for (let i = this.elements.length - 1; i >= 0; i--) {
+      const el = this.elements[i];
+      if (el.type === 'table') {
+        if (worldPos.x >= el.x && worldPos.x <= el.x + el.width && worldPos.y >= el.y && worldPos.y <= el.y + el.height) {
+          const rows = Math.max(1, el.rows || el.data?.length || 3);
+          const cols = Math.max(1, el.cols || (el.data && el.data[0]?.length) || 3);
+          const colWidths = el.colWidths && el.colWidths.length === cols ? el.colWidths : Array(cols).fill(el.width / cols);
+          const rowHeights = el.rowHeights && el.rowHeights.length === rows ? el.rowHeights : Array(rows).fill(el.height / rows);
+
+          const relX = worldPos.x - el.x;
+          let accumX = 0;
+          let clickedCol = cols - 1;
+          for (let c = 0; c < cols; c++) {
+            if (relX >= accumX && relX < accumX + colWidths[c]) {
+              clickedCol = c;
+              break;
+            }
+            accumX += colWidths[c];
+          }
+
+          const relY = worldPos.y - el.y;
+          let accumY = 0;
+          let clickedRow = rows - 1;
+          for (let r = 0; r < rows; r++) {
+            if (relY >= accumY && relY < accumY + rowHeights[r]) {
+              clickedRow = r;
+              break;
+            }
+            accumY += rowHeights[r];
+          }
+
+          return { col: clickedCol, row: clickedRow, table: el };
+        }
+      }
+    }
+    return null;
+  }
+
+  private openTableCellInlineEditor(table: BoardTableElement, row: number, col: number): void {
+    this.commitInlineEditor();
+    const container = this.container.querySelector<HTMLElement>('[data-ref="board-text-editor-container"]');
+    if (!container || !this.canvasElement) return;
+
+    const rows = Math.max(1, table.rows || table.data?.length || 3);
+    const cols = Math.max(1, table.cols || (table.data && table.data[0]?.length) || 3);
+    const colWidths = table.colWidths && table.colWidths.length === cols ? table.colWidths : Array(cols).fill(table.width / cols);
+    const rowHeights = table.rowHeights && table.rowHeights.length === rows ? table.rowHeights : Array(rows).fill(table.height / rows);
+
+    let cellX = table.x;
+    for (let c = 0; c < col; c++) {
+      cellX += colWidths[c];
+    }
+    let cellY = table.y;
+    for (let r = 0; r < row; r++) {
+      cellY += rowHeights[r];
+    }
+    const cellW = colWidths[col];
+    const cellH = rowHeights[row];
+
+    const screenPos = worldToScreen(cellX, cellY, this.canvasElement, this.camera);
+    const screenW = cellW * this.camera.zoom;
+    const screenH = cellH * this.camera.zoom;
+
+    const cell = table.data && table.data[row] && table.data[row][col];
+    const cellText = typeof cell === 'string' ? cell : (cell?.text || '');
+
+    const textarea = document.createElement('textarea');
+    textarea.className = 'board-inline-textarea board-inline-textarea--table-cell';
+    textarea.value = cellText;
+    textarea.style.left = `${screenPos.x}px`;
+    textarea.style.top = `${screenPos.y}px`;
+    textarea.style.width = `${Math.max(60, screenW)}px`;
+    textarea.style.height = `${Math.max(30, screenH)}px`;
+    const fsize = table.fontSize || 13;
+    textarea.style.fontSize = `${Math.max(11, fsize * this.camera.zoom)}px`;
+    textarea.style.backgroundColor = (cell && cell.backgroundColor && cell.backgroundColor !== 'transparent') ? cell.backgroundColor : (row === 0 ? (table.headerBackgroundColor || '#f8fafc') : '#ffffff');
+    textarea.style.color = (cell && cell.textColor) ? cell.textColor : (row === 0 ? '#0f172a' : '#334155');
+    textarea.style.padding = '6px 8px';
+
+    container.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    this.activeInlineEditor = textarea;
+    this.activeTableInlineEditor = { col, row, tableId: table.id, textarea };
+
+    textarea.addEventListener('blur', () => {
+      this.commitInlineEditor();
+    });
+
+    textarea.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        this.commitInlineEditor();
+      } else if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        this.commitInlineEditor();
+      }
+    });
+  }
+
+  public deleteTable(tableId: string): void {
+    const idx = this.elements.findIndex((el) => el.id === tableId);
+    if (idx === -1) return;
+    this.pushHistoryState();
+    const [deleted] = this.elements.splice(idx, 1);
+    this.collaborationManager.broadcastDeleteElement(deleted.id);
+    if (this.selectedElementId === tableId) {
+      this.selectedElementId = null;
+      this.selectedElementIds = [];
+      this.selectedTableCell = null;
+    }
+    this.updateSelectionToolbar();
+    this.requestRedraw();
+    this.scheduleAutoSave();
+    showToast('Tabla eliminada', 'info');
+  }
+
+  public deleteTableColumn(tableId: string, colIndex: number): void {
+    const table = this.elements.find((el) => el.id === tableId) as BoardTableElement | undefined;
+    if (!table || !table.data || table.cols <= 1) {
+      this.deleteTable(tableId);
+      return;
+    }
+    this.pushHistoryState();
+    const cols = table.cols;
+    const colWidths = table.colWidths && table.colWidths.length === cols ? [...table.colWidths] : Array(cols).fill(table.width / cols);
+    const removedWidth = colWidths.splice(colIndex, 1)[0] || (table.width / cols);
+
+    for (let r = 0; r < table.data.length; r++) {
+      if (table.data[r] && table.data[r].length > colIndex) {
+        table.data[r].splice(colIndex, 1);
+      }
+    }
+    table.cols -= 1;
+    table.colWidths = colWidths;
+    table.width = Math.max(100, table.width - removedWidth);
+
+    if (this.selectedTableCell && this.selectedTableCell.tableId === tableId) {
+      this.selectedTableCell.col = Math.min(table.cols - 1, Math.max(0, colIndex === table.cols ? colIndex - 1 : colIndex));
+    }
+
+    this.collaborationManager.broadcastUpdateElement(table);
+    this.updateSelectionToolbar();
+    this.requestRedraw();
+    this.scheduleAutoSave();
+    showToast('Columna eliminada', 'info');
+  }
+
+  public deleteTableRow(tableId: string, rowIndex: number): void {
+    const table = this.elements.find((el) => el.id === tableId) as BoardTableElement | undefined;
+    if (!table || !table.data || table.rows <= 1) {
+      this.deleteTable(tableId);
+      return;
+    }
+    this.pushHistoryState();
+    const rows = table.rows;
+    const rowHeights = table.rowHeights && table.rowHeights.length === rows ? [...table.rowHeights] : Array(rows).fill(table.height / rows);
+    const removedHeight = rowHeights.splice(rowIndex, 1)[0] || (table.height / rows);
+
+    table.data.splice(rowIndex, 1);
+    table.rows -= 1;
+    table.rowHeights = rowHeights;
+    table.height = Math.max(60, table.height - removedHeight);
+
+    if (this.selectedTableCell && this.selectedTableCell.tableId === tableId) {
+      this.selectedTableCell.row = Math.min(table.rows - 1, Math.max(0, rowIndex === table.rows ? rowIndex - 1 : rowIndex));
+    }
+
+    this.collaborationManager.broadcastUpdateElement(table);
+    this.updateSelectionToolbar();
+    this.requestRedraw();
+    this.scheduleAutoSave();
+    showToast('Fila eliminada', 'info');
+  }
+
+  public addTableColumn(tableId: string, afterColIndex: number): void {
+    const table = this.elements.find((el) => el.id === tableId) as BoardTableElement | undefined;
+    if (!table || !table.data) return;
+    this.pushHistoryState();
+
+    const insertIdx = Math.min(table.cols, afterColIndex + 1);
+    const cols = table.cols;
+    const avgColWidth = table.colWidths && table.colWidths.length === cols ? Math.round(table.width / cols) : 150;
+
+    for (let r = 0; r < table.data.length; r++) {
+      const newCell: BoardTableCell = {
+        backgroundColor: r === 0 ? (table.headerBackgroundColor || '#f8fafc') : '#ffffff',
+        text: r === 0 ? `Encabezado ${insertIdx + 1}` : `Celda ${r},${insertIdx + 1}`,
+        textColor: '#1e293b',
+      };
+      table.data[r].splice(insertIdx, 0, newCell);
+    }
+
+    const colWidths = table.colWidths && table.colWidths.length === cols ? [...table.colWidths] : Array(cols).fill(table.width / cols);
+    colWidths.splice(insertIdx, 0, avgColWidth);
+    table.cols += 1;
+    table.colWidths = colWidths;
+    table.width += avgColWidth;
+
+    this.selectedTableCell = { col: insertIdx, row: this.selectedTableCell?.row || 0, tableId };
+    this.collaborationManager.broadcastUpdateElement(table);
+    this.updateSelectionToolbar();
+    this.requestRedraw();
+    this.scheduleAutoSave();
+    showToast('Columna añadida', 'success');
+  }
+
+  public addTableRow(tableId: string, afterRowIndex: number): void {
+    const table = this.elements.find((el) => el.id === tableId) as BoardTableElement | undefined;
+    if (!table || !table.data) return;
+    this.pushHistoryState();
+
+    const insertIdx = Math.min(table.rows, afterRowIndex + 1);
+    const rows = table.rows;
+    const avgRowHeight = table.rowHeights && table.rowHeights.length === rows ? Math.round(table.height / rows) : 70;
+
+    const newRow: BoardTableCell[] = [];
+    for (let c = 0; c < table.cols; c++) {
+      newRow.push({
+        backgroundColor: '#ffffff',
+        text: `Celda ${insertIdx},${c + 1}`,
+        textColor: '#1e293b',
+      });
+    }
+    table.data.splice(insertIdx, 0, newRow);
+
+    const rowHeights = table.rowHeights && table.rowHeights.length === rows ? [...table.rowHeights] : Array(rows).fill(table.height / rows);
+    rowHeights.splice(insertIdx, 0, avgRowHeight);
+    table.rows += 1;
+    table.rowHeights = rowHeights;
+    table.height += avgRowHeight;
+
+    this.selectedTableCell = { col: this.selectedTableCell?.col || 0, row: insertIdx, tableId };
+    this.collaborationManager.broadcastUpdateElement(table);
+    this.updateSelectionToolbar();
+    this.requestRedraw();
+    this.scheduleAutoSave();
+    showToast('Fila añadida', 'success');
+  }
+
+  public moveTableRow(tableId: string, fromRow: number, toRow: number): void {
+    const table = this.elements.find((el) => el.id === tableId) as BoardTableElement | undefined;
+    if (!table || !table.data || fromRow < 0 || fromRow >= table.rows || toRow < 0 || toRow >= table.rows || fromRow === toRow) return;
+    this.pushHistoryState();
+
+    const [movedRow] = table.data.splice(fromRow, 1);
+    table.data.splice(toRow, 0, movedRow);
+
+    if (table.rowHeights && table.rowHeights.length === table.rows) {
+      const [movedH] = table.rowHeights.splice(fromRow, 1);
+      table.rowHeights.splice(toRow, 0, movedH);
+    }
+
+    if (this.selectedTableCell && this.selectedTableCell.tableId === tableId) {
+      this.selectedTableCell.row = toRow;
+    }
+
+    this.collaborationManager.broadcastUpdateElement(table);
+    this.requestRedraw();
+    this.scheduleAutoSave();
+  }
+
+  public moveTableColumn(tableId: string, fromCol: number, toCol: number): void {
+    const table = this.elements.find((el) => el.id === tableId) as BoardTableElement | undefined;
+    if (!table || !table.data || fromCol < 0 || fromCol >= table.cols || toCol < 0 || toCol >= table.cols || fromCol === toCol) return;
+    this.pushHistoryState();
+
+    for (let r = 0; r < table.data.length; r++) {
+      if (table.data[r] && table.data[r].length === table.cols) {
+        const [movedCell] = table.data[r].splice(fromCol, 1);
+        table.data[r].splice(toCol, 0, movedCell);
+      }
+    }
+
+    if (table.colWidths && table.colWidths.length === table.cols) {
+      const [movedW] = table.colWidths.splice(fromCol, 1);
+      table.colWidths.splice(toCol, 0, movedW);
+    }
+
+    if (this.selectedTableCell && this.selectedTableCell.tableId === tableId) {
+      this.selectedTableCell.col = toCol;
+    }
+
+    this.collaborationManager.broadcastUpdateElement(table);
+    this.requestRedraw();
+    this.scheduleAutoSave();
+  }
+
+  public fitTableRowToContent(tableId: string, rowIndex: number): void {
+    const table = this.elements.find((el) => el.id === tableId) as BoardTableElement | undefined;
+    if (!table || !table.data || !table.data[rowIndex]) return;
+    this.pushHistoryState();
+
+    const row = table.data[rowIndex];
+    let maxLines = 1;
+    for (const cell of row) {
+      const txt = typeof cell === 'string' ? cell : (cell?.text || '');
+      const lines = txt.split('\n').length;
+      if (lines > maxLines) maxLines = lines;
+    }
+    const fontSize = table.fontSize || 13;
+    const targetHeight = Math.max(40, maxLines * (fontSize * 1.5) + 24);
+
+    const rows = table.rows;
+    const rowHeights = table.rowHeights && table.rowHeights.length === rows ? [...table.rowHeights] : Array(rows).fill(table.height / rows);
+    const diff = targetHeight - rowHeights[rowIndex];
+    rowHeights[rowIndex] = targetHeight;
+    table.rowHeights = rowHeights;
+    table.height = Math.max(60, table.height + diff);
+
+    this.collaborationManager.broadcastUpdateElement(table);
+    this.requestRedraw();
+    this.scheduleAutoSave();
+    showToast('Tamaño de fila ajustado', 'success');
+  }
+
+  public fitTableColumnToContent(tableId: string, colIndex: number): void {
+    const table = this.elements.find((el) => el.id === tableId) as BoardTableElement | undefined;
+    if (!table || !table.data) return;
+    this.pushHistoryState();
+
+    let maxLen = 4;
+    for (let r = 0; r < table.data.length; r++) {
+      const cell = table.data[r] && table.data[r][colIndex];
+      const txt = typeof cell === 'string' ? cell : (cell?.text || '');
+      if (txt.length > maxLen) maxLen = txt.length;
+    }
+    const fontSize = table.fontSize || 13;
+    const targetWidth = Math.max(80, maxLen * (fontSize * 0.65) + 32);
+
+    const cols = table.cols;
+    const colWidths = table.colWidths && table.colWidths.length === cols ? [...table.colWidths] : Array(cols).fill(table.width / cols);
+    const diff = targetWidth - colWidths[colIndex];
+    colWidths[colIndex] = targetWidth;
+    table.colWidths = colWidths;
+    table.width = Math.max(100, table.width + diff);
+
+    this.collaborationManager.broadcastUpdateElement(table);
+    this.requestRedraw();
+    this.scheduleAutoSave();
+    showToast('Tamaño de columna ajustado', 'success');
+  }
+
+  public toggleVerticalToolbar(forceState?: boolean): boolean {
+    const vToolbar = this.container.querySelector<HTMLElement>('[data-ref="board-vertical-toolbar-container"]');
+    if (!vToolbar) return false;
+    const isCurrentlyHidden = vToolbar.classList.contains('is-hidden');
+    const shouldShow = typeof forceState === 'boolean' ? forceState : isCurrentlyHidden;
+    vToolbar.classList.toggle('is-hidden', !shouldShow);
+    if (!shouldShow) {
+      this.hideAllVSubtoolbars();
+    }
+    const sidebar = document.querySelector<HTMLElement>('[data-ref="sidebar"]');
+    if (sidebar) {
+      const railItem = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-canvas-tools"]');
+      const railBtn = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-canvas-tools"]');
+      railItem?.classList.toggle('is-active', shouldShow);
+      railBtn?.classList.toggle('is-active', shouldShow);
+    }
+    return shouldShow;
   }
 }

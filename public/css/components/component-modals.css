@@ -5051,15 +5051,194 @@ html.dark-theme .component-bottom--canvas {
   background: rgba(0, 0, 0, 0.15);
 }
 
+.design-vertical-toolbar-container {
+  position: absolute;
+  top: calc(var(--top-toolbar-height, 44px) + 20px);
+  left: 16px;
+  display: flex;
+  flex-direction: column;
+  pointer-events: none;
+  z-index: 30;
+  box-sizing: border-box;
+  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.design-vertical-toolbar-container.is-hidden {
+  display: none !important;
+}
+
+.design-vertical-toolbar-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.vertical-toolbar-close-btn {
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
+  min-height: 28px !important;
+  border-radius: 50% !important;
+  background: rgba(18, 18, 22, 0.78) !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: rgba(255, 255, 255, 0.7) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  pointer-events: auto;
+}
+
+.vertical-toolbar-close-btn:hover {
+  background: rgba(255, 255, 255, 0.18) !important;
+  color: #ffffff !important;
+}
+
+.design-vertical-toolbar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 6px;
+  background: rgba(18, 18, 22, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 20px;
+  box-shadow: 0 10px 36px 0 rgba(0, 0, 0, 0.45), inset 0 1px 0 0 rgba(255, 255, 255, 0.14);
+  pointer-events: auto;
+  user-select: none;
+  box-sizing: border-box;
+}
+
+.design-vsubtoolbar {
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 36px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 6px;
+  background: rgba(18, 18, 22, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 18px;
+  box-shadow: 0 10px 36px 0 rgba(0, 0, 0, 0.45), inset 0 1px 0 0 rgba(255, 255, 255, 0.14);
+  pointer-events: auto;
+  user-select: none;
+  box-sizing: border-box;
+  animation: vsubtoolbarIn 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.design-vsubtoolbar.is-hidden {
+  display: none !important;
+}
+
+.design-vsubsubtoolbar {
+  position: absolute;
+  left: calc(100% + 58px);
+  top: 36px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 6px;
+  background: rgba(18, 18, 22, 0.94);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 18px;
+  box-shadow: 0 10px 36px 0 rgba(0, 0, 0, 0.45), inset 0 1px 0 0 rgba(255, 255, 255, 0.14);
+  pointer-events: auto;
+  user-select: none;
+  box-sizing: border-box;
+  animation: vsubtoolbarIn 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.design-vsubsubtoolbar.is-hidden {
+  display: none !important;
+}
+
+.design-vsubtoolbar--scrollable {
+  max-height: 280px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+.design-vsubtoolbar--scrollable::-webkit-scrollbar {
+  width: 4px;
+}
+
+.design-vsubtoolbar--scrollable::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
+.vsubtoolbar-color-btn {
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vsubtoolbar-color-swatch {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.vsubtoolbar-sticky-swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1.5px solid rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  flex-shrink: 0;
+}
+
+.vsubtoolbar-sticky-swatch:hover {
+  transform: scale(1.15);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.35);
+}
+
+.vsubtoolbar-sticky-swatch.is-active {
+  border-color: #ffffff;
+  transform: scale(1.15);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.4), 0 3px 8px rgba(0, 0, 0, 0.4);
+}
+
+@keyframes vsubtoolbarIn {
+  from {
+    opacity: 0;
+    transform: translateX(-6px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
 .design-top-toolbar-container {
   position: absolute;
   top: 8px;
-  left: 8px;
-  right: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: auto;
   max-width: calc(100% - 16px);
   padding: 0;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   pointer-events: none;
   z-index: 25;
@@ -5067,7 +5246,7 @@ html.dark-theme .component-bottom--canvas {
 }
 
 .design-top-toolbar {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 4px;
@@ -5087,7 +5266,8 @@ html.dark-theme .component-bottom--canvas {
   -ms-overflow-style: none;
   max-width: 100%;
   min-width: 0;
-  flex: 1 1 auto;
+  width: auto;
+  flex: 0 0 auto;
 }
 
 .design-top-toolbar::-webkit-scrollbar {
@@ -5156,7 +5336,7 @@ html.dark-theme .component-bottom--canvas {
   position: relative;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: flex-end;
   width: 100%;
   max-width: 100%;
   pointer-events: auto;
@@ -5600,7 +5780,7 @@ html.dark-theme .component-bottom--canvas {
   border-radius: 9999px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 8px;
   box-sizing: border-box;
   user-select: none;
@@ -5965,7 +6145,7 @@ html.dark-theme .component-bottom--canvas {
     padding: 8px 12px;
     gap: 12px;
     flex-wrap: nowrap;
-    justify-content: flex-start;
+    justify-content: flex-end;
   }
   .design-zoom-slider-container {
     width: 80px;
@@ -10856,6 +11036,14 @@ html.dark-theme .templates-hero .component-badge {
   font-weight: 500;
   line-height: 1.35;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+.board-inline-textarea--table-cell {
+  border: 2px solid #8b5cf6 !important;
+  border-radius: 2px !important;
+  box-shadow: 0 2px 10px rgba(139, 92, 246, 0.25) !important;
+  z-index: 50;
+  overflow: hidden;
 }
 
 .board-pixel-swatches {

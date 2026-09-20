@@ -439,6 +439,9 @@ export class DocController implements ViewController {
       });
     }
 
+    const btnCloseVToolbar = this.container.querySelector<HTMLElement>('[data-ref="btn-close-vertical-toolbar"]');
+    btnCloseVToolbar?.addEventListener('click', () => this.toggleVerticalToolbar(false), { signal });
+
     const btnUndo = this.container.querySelector<HTMLElement>('[data-ref="btn-undo"]');
     if (btnUndo) {
       btnUndo.addEventListener('click', () => this.handleUndo(), { signal });
@@ -3133,6 +3136,22 @@ export class DocController implements ViewController {
       x: e.clientX,
       y: e.clientY,
     });
+  }
+
+  public toggleVerticalToolbar(forceState?: boolean): boolean {
+    const vToolbar = this.container.querySelector<HTMLElement>('[data-ref="doc-vertical-toolbar-container"]');
+    if (!vToolbar) return false;
+    const isCurrentlyHidden = vToolbar.classList.contains('is-hidden');
+    const shouldShow = typeof forceState === 'boolean' ? forceState : isCurrentlyHidden;
+    vToolbar.classList.toggle('is-hidden', !shouldShow);
+    const sidebar = document.querySelector<HTMLElement>('[data-ref="sidebar"]');
+    if (sidebar) {
+      const railItem = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-canvas-tools"]');
+      const railBtn = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-canvas-tools"]');
+      railItem?.classList.toggle('is-active', shouldShow);
+      railBtn?.classList.toggle('is-active', shouldShow);
+    }
+    return shouldShow;
   }
 }
 

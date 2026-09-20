@@ -154,6 +154,48 @@ export interface BoardConnectorElement {
   type: 'connector';
 }
 
+export interface BoardSectionElement {
+  backgroundColor?: string;
+  borderColor?: string;
+  borderWidth?: number;
+  elementIds?: string[];
+  height: number;
+  id: string;
+  isLocked?: boolean;
+  opacity?: number;
+  title: string;
+  titleColor?: string;
+  type: 'section';
+  width: number;
+  x: number;
+  y: number;
+}
+
+export interface BoardTableCell {
+  backgroundColor?: string;
+  text: string;
+  textColor?: string;
+}
+
+export interface BoardTableElement {
+  borderColor?: string;
+  borderWidth?: number;
+  cols: number;
+  colWidths?: number[];
+  data: BoardTableCell[][];
+  fontSize?: number;
+  headerBackgroundColor?: string;
+  height: number;
+  id: string;
+  opacity?: number;
+  rowHeights?: number[];
+  rows: number;
+  type: 'table';
+  width: number;
+  x: number;
+  y: number;
+}
+
 export type BoardElement =
   | BoardStrokeElement
   | BoardShapeElement
@@ -161,7 +203,9 @@ export type BoardElement =
   | BoardTextElement
   | BoardPixelGridElement
   | BoardImageElement
-  | BoardConnectorElement;
+  | BoardConnectorElement
+  | BoardSectionElement
+  | BoardTableElement;
 
 export interface BoardProject {
   background: {

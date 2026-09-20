@@ -26,6 +26,41 @@
     </div>
 
     <div class="component-bottom component-bottom--canvas" data-ref="doc-viewport-wrapper">
+      <div class="design-vertical-toolbar-container is-hidden" data-ref="doc-vertical-toolbar-container">
+        <div class="design-vertical-toolbar-wrapper" data-ref="doc-vertical-toolbar-wrapper">
+          <button type="button" class="design-toolbar-btn vertical-toolbar-close-btn" data-ref="btn-close-vertical-toolbar" data-tooltip="Cerrar barra" aria-label="Cerrar barra">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+          </button>
+
+          <div class="design-vertical-toolbar" data-ref="doc-vertical-toolbar">
+            <button type="button" class="design-toolbar-btn is-active" data-ref="vertical-tool-select" data-vtool="select" data-tooltip="Seleccionar" aria-label="Seleccionar">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#near_me"></use></svg>
+            </button>
+            <button type="button" class="design-toolbar-btn" data-ref="vertical-tool-sections" data-vtool="section" data-tooltip="Sección" aria-label="Sección">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#grid_view"></use></svg>
+            </button>
+            <button type="button" class="design-toolbar-btn" data-ref="vertical-tool-draw" data-vtool="draw" data-tooltip="Dibujar" aria-label="Dibujar">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#draw"></use></svg>
+            </button>
+            <button type="button" class="design-toolbar-btn" data-ref="vertical-tool-shapes" data-vtool="shapes" data-tooltip="Formas" aria-label="Formas">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#shapes"></use></svg>
+            </button>
+            <button type="button" class="design-toolbar-btn" data-ref="vertical-tool-lines" data-vtool="lines" data-tooltip="Líneas" aria-label="Líneas">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#polyline"></use></svg>
+            </button>
+            <button type="button" class="design-toolbar-btn" data-ref="vertical-tool-stickies" data-vtool="stickies" data-tooltip="Notas adhesivas" aria-label="Notas adhesivas">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#sticky_note_2"></use></svg>
+            </button>
+            <button type="button" class="design-toolbar-btn" data-ref="vertical-tool-text" data-vtool="text" data-tooltip="Texto" aria-label="Texto">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#text_fields"></use></svg>
+            </button>
+            <button type="button" class="design-toolbar-btn" data-ref="vertical-tool-tables" data-vtool="tables" data-tooltip="Tablas" aria-label="Tablas">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#table_chart"></use></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div class="design-top-toolbar-container" data-ref="doc-top-toolbar-container">
         <button type="button" class="design-toolbar__nav-btn design-toolbar__nav-btn--left is-disabled" data-ref="btn-top-toolbar-scroll-left" data-tooltip="Desplazar a la izquierda" aria-label="Desplazar a la izquierda">
           <span class="component-icon">chevron_left</span>
