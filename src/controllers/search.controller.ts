@@ -1,10 +1,10 @@
+import { Request, Response } from 'express';
+import mysql from 'mysql2/promise';
 import { canvasPool } from '../config/database.config.js';
 import { ALL_PRESETS, PresetItem } from '../config/templates.config.js';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import { AiSearchService, SemanticQueryResult } from '../services/ai-search.service.js';
 import { sendInternalError, sendSuccess } from '../utils/http.util.js';
-import { Request, Response } from 'express';
-import mysql from 'mysql2/promise';
 
 interface ScoredTemplate {
   template: PresetItem;
@@ -38,7 +38,7 @@ export async function searchHandler(req: Request, res: Response): Promise<void> 
 
       const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
         `SELECT c.id, c.uuid, c.user_id, c.name, c.width, c.height, c.unit,
-                COALESCE(c.canvas_type, CASE WHEN c.unit = 'board' THEN 'board' WHEN c.unit = 'diagram' THEN 'diagram' WHEN c.unit = 'doc' THEN 'doc' ELSE 'pixel' END) AS canvas_type,
+                COALESCE(c.canvas_type, 'board') AS canvas_type,
                 c.preview_thumbnail,
                 c.access_level, c.public_role, c.short_code, c.custom_slug, c.created_at, c.updated_at,
                 (uf.id IS NOT NULL) AS is_favorite

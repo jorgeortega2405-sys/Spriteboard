@@ -1,5 +1,5 @@
 import { joinCanvasRoom, leaveCanvasRoom, registerWebSocketHandler, sendCanvasAccessChanged, sendCanvasAction, sendCanvasCursor, sendCanvasFullUpdate } from '../../services/websocket.service.js';
-import { getCollaboratorColor } from '../design/design-color.util.js';
+import { getCollaboratorColor } from '../../utils/color.util.js';
 import { BackgroundType, BoardCollaboratorState, BoardElement } from './board.types.js';
 
 export interface BoardCollaborationCallbacks {

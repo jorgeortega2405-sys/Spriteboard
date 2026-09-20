@@ -2,6 +2,7 @@ import { navigate, render } from '../app-router.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { DIAGRAM_COMPONENTS, DiagramComponentItem } from '../config/diagram-components.data.js';
 import { hasFeature, protectRoute } from '../config/plans.config.js';
+import { STICKY_NOTE_PRESETS } from '../config/sticky-notes.config.js';
 import { ALL_PRESETS, PresetItem } from '../config/templates.config.js';
 import { currentUser, deleteApi, deleteUploadApi, escapeHtml, getApi, getUploadsApi, linkedAccounts, logoutAllApi, logoutApi, patchApi, postApi, switchAccountApi, uploadFilesApi } from '../services/api.service.js';
 import { getAllLocalCanvases, getLocalCanvasByUuid } from '../services/canvas-storage.service.js';
@@ -1010,17 +1011,6 @@ function addRecentElement(item: RecentElementItem): void {
     localStorage.setItem('spriteboard_recent_elements', JSON.stringify(current.slice(0, 16)));
   } catch {}
 }
-
-const STICKY_NOTE_PRESETS: Array<{ color: string; id: string; name: string; stroke: string; text: string }> = [
-  { color: '#fef08a', id: 'sticky_yellow', name: 'Amarillo', stroke: '#fde047', text: 'Nota' },
-  { color: '#fed7aa', id: 'sticky_orange', name: 'Naranja', stroke: '#fdba74', text: 'Nota' },
-  { color: '#fbcfe8', id: 'sticky_pink', name: 'Rosa', stroke: '#f472b6', text: 'Nota' },
-  { color: '#bae6fd', id: 'sticky_blue', name: 'Azul', stroke: '#7dd3fc', text: 'Nota' },
-  { color: '#bbf7d0', id: 'sticky_green', name: 'Verde', stroke: '#86efac', text: 'Nota' },
-  { color: '#e9d5ff', id: 'sticky_purple', name: 'Morado', stroke: '#d8b4fe', text: 'Nota' },
-  { color: '#fecaca', id: 'sticky_red', name: 'Rojo', stroke: '#fca5a5', text: 'Nota' },
-  { color: '#f1f5f9', id: 'sticky_gray', name: 'Gris', stroke: '#e2e8f0', text: 'Nota' },
-];
 
 const SHAPE_SECTIONS: Array<{ key: string; label: string; prefixes: string[] }> = [
   {

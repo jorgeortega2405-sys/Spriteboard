@@ -13,7 +13,7 @@ import { bindDragToScroll, CarouselController, initCarouselScroll, removeEmptySt
 
 const BATCH_SIZE = 20;
 
-type TemplateTypeFilter = 'all' | 'favorites' | 'board' | 'mindmap' | 'conceptmap' | 'flowchart' | 'doc' | 'pixel';
+type TemplateTypeFilter = 'all' | 'board' | 'doc' | 'favorites';
 
 class TemplatesController {
   private container: HTMLElement;
@@ -242,21 +242,13 @@ class TemplatesController {
     let filtered = [...ALL_PRESETS];
 
     if (this.activeCategory !== 'all') {
-      filtered = filtered.filter((item) => item.categoryKey === this.activeCategory);
+      filtered = filtered.filter((item) => item.categoryKey === this.activeCategory || item.canvasType === this.activeCategory);
     }
 
     if (this.currentTypeFilter === 'favorites') {
       filtered = filtered.filter((item) => this.favoritedTemplateIds.has(item.id));
-    } else if (this.currentTypeFilter === 'pixel') {
-      filtered = filtered.filter((item) => item.categoryKey === 'pixel');
     } else if (this.currentTypeFilter === 'board') {
       filtered = filtered.filter((item) => item.categoryKey === 'board' || item.canvasType === 'board');
-    } else if (this.currentTypeFilter === 'mindmap') {
-      filtered = filtered.filter((item) => item.categoryKey === 'mindmap');
-    } else if (this.currentTypeFilter === 'conceptmap') {
-      filtered = filtered.filter((item) => item.categoryKey === 'conceptmap');
-    } else if (this.currentTypeFilter === 'flowchart') {
-      filtered = filtered.filter((item) => item.categoryKey === 'flowchart');
     } else if (this.currentTypeFilter === 'doc') {
       filtered = filtered.filter((item) => item.categoryKey === 'doc' || item.canvasType === 'doc');
     }
@@ -266,8 +258,9 @@ class TemplatesController {
       filtered = filtered.filter((item) => {
         const nameMatch = item.name.toLowerCase().includes(q);
         const catMatch = item.categoryName ? item.categoryName.toLowerCase().includes(q) : false;
+        const tagMatch = Array.isArray(item.tags) ? item.tags.some((t) => t.toLowerCase().includes(q)) : false;
         const dimMatch = `${item.width}x${item.height}`.includes(q) || `${item.width} x ${item.height}`.includes(q);
-        return nameMatch || catMatch || dimMatch;
+        return nameMatch || catMatch || tagMatch || dimMatch;
       });
     }
 

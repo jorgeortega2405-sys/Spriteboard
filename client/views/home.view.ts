@@ -76,7 +76,7 @@ class HomeController {
   private templatesSentinelEl: HTMLElement | null = null;
   private templatesTypeDropdownController: ReturnType<typeof setupDropdown> | null = null;
   private templatesSortDropdownController: ReturnType<typeof setupDropdown> | null = null;
-  private templateTypeFilter: 'all' | 'board' | 'favorites' | 'pixel' = 'all';
+  private templateTypeFilter: 'all' | 'board' | 'doc' | 'favorites' = 'all';
   private templateSort: 'default' | 'alpha-asc' | 'alpha-desc' | 'size-desc' | 'size-asc' = 'default';
   private favoritedTemplateIds = new Set<string>();
   private currentTemplates: PresetItem[] = [];
@@ -217,7 +217,7 @@ class HomeController {
       this.templatesTypeDropdownController = setupDropdown(templatesTypeDropdownWrapper, {
         matchWidth: false,
         onSelect: (val: string) => {
-          this.templateTypeFilter = (val as 'all' | 'board' | 'favorites' | 'pixel') || 'all';
+          this.templateTypeFilter = (val as 'all' | 'board' | 'doc' | 'favorites') || 'all';
           const typeMenu = this.container.querySelector<HTMLElement>('[data-ref="dropdown-menu-filter-type"]');
           typeMenu?.querySelectorAll<HTMLButtonElement>('.menu-item').forEach((item) => {
             item.classList.toggle('is-active', item.getAttribute('data-value') === this.templateTypeFilter);
@@ -1334,10 +1334,10 @@ class HomeController {
 
     if (this.templateTypeFilter === 'favorites') {
       filtered = filtered.filter((item) => this.favoritedTemplateIds.has(item.id));
-    } else if (this.templateTypeFilter === 'pixel') {
-      filtered = filtered.filter((item) => item.categoryKey === 'pixel');
     } else if (this.templateTypeFilter === 'board') {
       filtered = filtered.filter((item) => item.canvasType === 'board' || item.categoryKey === 'board');
+    } else if (this.templateTypeFilter === 'doc') {
+      filtered = filtered.filter((item) => item.canvasType === 'doc' || item.categoryKey === 'doc');
     }
 
     if (this.searchQuery) {
@@ -1346,7 +1346,8 @@ class HomeController {
         const nameMatch = item.name.toLowerCase().includes(q);
         const catMatch = item.categoryName ? item.categoryName.toLowerCase().includes(q) : false;
         const dimMatch = `${item.width}x${item.height}`.includes(q) || `${item.width} x ${item.height}`.includes(q);
-        return nameMatch || catMatch || dimMatch;
+        const tagMatch = item.tags ? item.tags.some((t) => t.toLowerCase().includes(q)) : false;
+        return nameMatch || catMatch || dimMatch || tagMatch;
       });
     }
 

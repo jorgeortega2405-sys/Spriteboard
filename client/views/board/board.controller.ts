@@ -3,15 +3,17 @@ import { CanvasShareDropdownController, setupCanvasShareDropdown } from '../../c
 import { closeContextMenu, ContextMenuItem, openContextMenu } from '../../components/context-menu.component.js';
 import { InsertPixelGridConfig, openInsertPixelGridModal } from '../../components/insert-pixel-grid-modal.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
+import { BOARD_SHAPES } from '../../config/board-shapes.config.js';
 import { getBoardTemplateElements } from '../../config/board-templates.data.js';
+import { DEFAULT_STICKY_COLOR, STICKY_NOTE_PRESETS } from '../../config/sticky-notes.config.js';
 import { currentUser, getApi, postApi } from '../../services/api.service.js';
 import { getLocalCanvasByUuid, removeLocalCanvas, saveLocalCanvas } from '../../services/canvas-storage.service.js';
 import { renderIcons } from '../../services/icon.service.js';
 import { showToast } from '../../services/toast.service.js';
 import { CanvasItem } from '../../types/canvas.types.js';
+import { generateShadingRamp, getCollaboratorColor } from '../../utils/color.util.js';
 import { setupDropdown } from '../../utils/dom.util.js';
 import { PixelShape } from '../../utils/pixel-shapes.util.js';
-import { generateShadingRamp, getCollaboratorColor } from '../design/design-color.util.js';
 import { DocPage } from '../doc/doc.types.js';
 import { BoardCollaborationManager } from './board-collaboration.manager.js';
 import { computeElementsBoundingBox, findContainingSection, findElementsByMarqueeBox, getConnectorEndpoints, getElementBoundingBox, hitTestElement, hitTestResizeHandle, moveElementByDelta, moveElementByDrag, resizeElementByHandle } from './board-elements.manager.js';
@@ -4758,19 +4760,21 @@ export class BoardController {
     const screenW = this.canvasElement ? this.canvasElement.width / dpr : 800;
     const screenH = this.canvasElement ? this.canvasElement.height / dpr : 600;
     const centerWorld = screenToWorld(screenW / 2, screenH / 2, this.canvasElement, this.camera);
-    const size = 140;
+    const shapeConfig = BOARD_SHAPES.find((s) => s.id === shapeType);
+    const w = shapeConfig?.defaultWidth || 140;
+    const h = shapeConfig?.defaultHeight || 140;
 
     const shapeEl: BoardShapeElement = {
       fillColor: this.currentFillColor || '#000000',
-      height: size,
+      height: h,
       id: `shape_${shapeType}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
       shapeType,
       strokeColor: this.currentColor || 'transparent',
       strokeWidth: 2,
       type: 'shape',
-      width: size,
-      x: Math.round(centerWorld.x - size / 2),
-      y: Math.round(centerWorld.y - size / 2),
+      width: w,
+      x: Math.round(centerWorld.x - w / 2),
+      y: Math.round(centerWorld.y - h / 2),
     };
 
     this.elements.push(shapeEl);

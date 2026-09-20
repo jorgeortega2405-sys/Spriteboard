@@ -1,4 +1,5 @@
-import { ShapeType } from '../views/board/board.types.js';
+import { ShapeType } from './board-shapes.config.js';
+import { STICKY_NOTE_PRESETS } from './sticky-notes.config.js';
 
 export interface DiagramComponentItem {
   category: 'flowchart' | 'mindmap' | 'connectors' | 'stickies';
@@ -264,48 +265,15 @@ export const DIAGRAM_COMPONENTS: DiagramComponentItem[] = [
     previewSvg: '<line x1="8" y1="38" x2="38" y2="10" stroke="#10b981" stroke-width="3" stroke-linecap="round"/><polygon points="31,8 40,10 38,19" fill="#10b981"/>',
     type: 'connector',
   },
-  {
-    category: 'stickies',
+  ...STICKY_NOTE_PRESETS.map((s) => ({
+    category: 'stickies' as const,
     categoryLabel: 'Notas Adhesivas',
-    description: 'Nota adhesiva amarilla',
-    fillColor: '#fef08a',
-    id: 'stk_yellow',
-    name: 'Nota Amarilla',
-    previewSvg: '<rect x="8" y="8" width="32" height="32" rx="4" ry="4" fill="#fef08a" stroke="#fde047" stroke-width="1.5"/><line x1="14" y1="18" x2="30" y2="18" stroke="#ca8a04" stroke-width="2" stroke-linecap="round"/><line x1="14" y1="24" x2="26" y2="24" stroke="#ca8a04" stroke-width="2" stroke-linecap="round"/>',
-    text: 'Nueva nota',
-    type: 'sticky',
-  },
-  {
-    category: 'stickies',
-    categoryLabel: 'Notas Adhesivas',
-    description: 'Nota adhesiva azul',
-    fillColor: '#bae6fd',
-    id: 'stk_blue',
-    name: 'Nota Azul',
-    previewSvg: '<rect x="8" y="8" width="32" height="32" rx="4" ry="4" fill="#bae6fd" stroke="#7dd3fc" stroke-width="1.5"/><line x1="14" y1="18" x2="30" y2="18" stroke="#0284c7" stroke-width="2" stroke-linecap="round"/><line x1="14" y1="24" x2="26" y2="24" stroke="#0284c7" stroke-width="2" stroke-linecap="round"/>',
-    text: 'Idea clave',
-    type: 'sticky',
-  },
-  {
-    category: 'stickies',
-    categoryLabel: 'Notas Adhesivas',
-    description: 'Nota adhesiva verde',
-    fillColor: '#bbf7d0',
-    id: 'stk_green',
-    name: 'Nota Verde',
-    previewSvg: '<rect x="8" y="8" width="32" height="32" rx="4" ry="4" fill="#bbf7d0" stroke="#86efac" stroke-width="1.5"/><line x1="14" y1="18" x2="30" y2="18" stroke="#16a34a" stroke-width="2" stroke-linecap="round"/><line x1="14" y1="24" x2="26" y2="24" stroke="#16a34a" stroke-width="2" stroke-linecap="round"/>',
-    text: 'Completado',
-    type: 'sticky',
-  },
-  {
-    category: 'stickies',
-    categoryLabel: 'Notas Adhesivas',
-    description: 'Nota adhesiva rosa',
-    fillColor: '#fbcfe8',
-    id: 'stk_pink',
-    name: 'Nota Rosa',
-    previewSvg: '<rect x="8" y="8" width="32" height="32" rx="4" ry="4" fill="#fbcfe8" stroke="#f472b6" stroke-width="1.5"/><line x1="14" y1="18" x2="30" y2="18" stroke="#db2777" stroke-width="2" stroke-linecap="round"/><line x1="14" y1="24" x2="26" y2="24" stroke="#db2777" stroke-width="2" stroke-linecap="round"/>',
-    text: 'Recordatorio',
-    type: 'sticky',
-  },
+    description: `Nota adhesiva ${s.name.toLowerCase()}`,
+    fillColor: s.color,
+    id: `stk_${s.id.replace('sticky_', '')}`,
+    name: `Nota ${s.name}`,
+    previewSvg: `<rect x="8" y="8" width="32" height="32" rx="4" ry="4" fill="${s.color}" stroke="${s.stroke}" stroke-width="1.5"/><line x1="14" y1="18" x2="30" y2="18" stroke="${s.textColor}" stroke-width="2" stroke-linecap="round"/><line x1="14" y1="24" x2="26" y2="24" stroke="${s.textColor}" stroke-width="2" stroke-linecap="round"/>`,
+    textColor: s.textColor,
+    type: 'sticky' as const,
+  })),
 ];

@@ -56,12 +56,8 @@ export default defineConfig({
             return 'domain-auth';
           }
           if (
-            normalized.includes('/client/views/design') ||
             normalized.includes('/client/views/board') ||
             normalized.includes('/client/views/doc') ||
-            normalized.includes('/client/views/mindmap') ||
-            normalized.includes('/client/views/voxel') ||
-            normalized.includes('/client/views/design.view') ||
             normalized.includes('/client/views/board.view') ||
             normalized.includes('/client/views/doc.view')
           ) {

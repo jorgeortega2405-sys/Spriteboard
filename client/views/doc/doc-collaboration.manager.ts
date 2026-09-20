@@ -1,5 +1,5 @@
 import { joinCanvasRoom, leaveCanvasRoom, registerWebSocketHandler, sendCanvasAccessChanged, sendCanvasAction, sendCanvasFullUpdate } from '../../services/websocket.service.js';
-import { getCollaboratorColor } from '../design/design-color.util.js';
+import { getCollaboratorColor } from '../../utils/color.util.js';
 import { DocProject } from './doc.types.js';
 
 export interface DocCollaboratorState {
