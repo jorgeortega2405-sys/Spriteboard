@@ -1877,6 +1877,21 @@ export class DocController implements ViewController {
         }
       }, { signal });
     }
+
+    const viewport = this.container.querySelector<HTMLElement>('[data-ref="doc-viewport"]');
+    if (viewport) {
+      viewport.addEventListener(
+        'wheel',
+        (e: WheelEvent) => {
+          if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            const delta = e.deltaY < 0 ? 0.05 : -0.05;
+            this.updateZoom(this.project.settings.zoom + delta);
+          }
+        },
+        { passive: false, signal }
+      );
+    }
   }
 
   private updateZoom(nextZoom: number): void {

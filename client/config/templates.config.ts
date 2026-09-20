@@ -44,6 +44,20 @@ export const TEMPLATE_CATEGORIES: TemplateCategory[] = [
 export const ALL_PRESETS: PresetItem[] = [
   {
     aspectType: 'wide',
+    boardTemplateId: 'tmpl-board-showcase',
+    canvasType: 'board',
+    categoryKey: 'board',
+    categoryName: 'Pizarrón',
+    height: 1080,
+    id: 'tmpl-board-showcase',
+    imagePath: '/assets/templates/boards/brainstorm.svg',
+    isTemplate: true,
+    name: 'Showcase Integral de Elementos (Todas las Figuras y Notas)',
+    tags: ['showcase', 'pizarra', 'board', 'figuras', 'notas', 'conectores', 'diagramas', 'pixelart', 'tablas'],
+    width: 1920,
+  },
+  {
+    aspectType: 'wide',
     boardTemplateId: 'tmpl-board-brainstorm',
     canvasType: 'board',
     categoryKey: 'board',

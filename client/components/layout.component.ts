@@ -1195,20 +1195,21 @@ function handleApplyCanvasElement(shape: PixelShape, canvasType: 'board' | 'doc'
   }
 }
 
-function handleApplyStickyPreset(item: { color: string; id: string; name: string; stroke: string; text: string }, canvasType: 'board' | 'doc'): void {
+function handleApplyStickyPreset(item: { color: string; id: string; name: string; stroke: string; text?: string; textColor?: string }, canvasType: 'board' | 'doc'): void {
   const controller = getActiveCanvasController();
+  const noteText = item.text || 'Nota';
 
   addRecentElement({
     fillColor: item.color,
     id: item.id,
     name: item.name,
     strokeColor: item.stroke,
-    text: item.text,
+    text: noteText,
     type: 'sticky',
   });
 
   if (canvasType === 'board' && controller) {
-    controller.insertStickyNote?.(item.color, item.text);
+    controller.insertStickyNote?.(item.color, noteText);
     showToast(`Nota «${item.name}» añadida al pizarrón`, 'success');
   } else if (canvasType === 'doc' && controller) {
     showToast('Las notas adhesivas están optimizadas para el pizarrón', 'info');

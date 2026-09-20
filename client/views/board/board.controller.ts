@@ -96,7 +96,9 @@ export class BoardController {
   private popoverStrokeEl: HTMLElement | null = null;
   private publicRole: 'editor' | 'viewer' = 'editor';
   private rafId: number | null = null;
+  private hasMovedSelection = false;
   private isMarqueeSelecting = false;
+  private lastClickedHitId: string | null = null;
   private marqueeCurrentPos: BoardPoint | null = null;
   private marqueeStartPos: BoardPoint | null = null;
   private recentColors: string[] = ['#000000', '#FFFFFF', '#FF0000', '#00FF00', '#0000FF', '#FFFF00'];
@@ -368,13 +370,15 @@ export class BoardController {
       onRemoteClear: () => {
         this.elements = [];
         this.selectedElementId = null;
+        this.selectedElementIds = [];
         this.updateSelectionToolbar();
         this.requestRedraw();
       },
       onRemoteDeleteElement: (elementId) => {
         this.elements = this.elements.filter((el) => el.id !== elementId);
+        this.selectedElementIds = this.selectedElementIds.filter((id) => id !== elementId);
         if (this.selectedElementId === elementId) {
-          this.selectedElementId = null;
+          this.selectedElementId = this.selectedElementIds[0] || null;
           this.updateSelectionToolbar();
         }
         this.requestRedraw();
@@ -714,7 +718,8 @@ export class BoardController {
       this.collaborationManager.broadcastAddElement(el);
     }
 
-    this.selectedElementId = positionedElements[0]?.id || null;
+    this.selectedElementIds = positionedElements.map((el) => el.id);
+    this.selectedElementId = this.selectedElementIds[0] || null;
     this.updateSelectionToolbar();
     this.requestRedraw();
     this.scheduleAutoSave();
@@ -905,7 +910,21 @@ export class BoardController {
         () => {
           stickySwatches.forEach((s) => s.classList.remove('is-active'));
           swatch.classList.add('is-active');
-          this.stickyDefaultColor = swatch.getAttribute('data-color') || '#fef08a';
+          const color = swatch.getAttribute('data-color') || '#fef08a';
+          this.stickyDefaultColor = color;
+          const selectedEls = this.getSelectedElements();
+          if (selectedEls.length > 0 && selectedEls.some((el) => el.type === 'sticky')) {
+            this.pushHistoryState();
+            for (const el of selectedEls) {
+              if (el.type === 'sticky') {
+                el.color = color;
+                this.collaborationManager.broadcastUpdateElement(el);
+              }
+            }
+            this.updateSelectionToolbar();
+            this.requestRedraw();
+            this.scheduleAutoSave();
+          }
         },
         { signal }
       );
@@ -1069,7 +1088,10 @@ export class BoardController {
   }
 
   private handleColorPicked(color: string): void {
-    if (this.colorPanelTarget === 'fill') {
+    const selectedEls = this.getSelectedElements();
+    if (selectedEls.length === 1 && selectedEls[0].type === 'sticky' && this.colorPanelTarget !== 'text') {
+      this.setFill(color, true);
+    } else if (this.colorPanelTarget === 'fill') {
       this.setFill(color, true);
     } else if (this.colorPanelTarget === 'text') {
       this.setTextColor(color, true);
@@ -1216,6 +1238,7 @@ export class BoardController {
         }
         if (el.type === 'connector') el.color = normalized;
         if (el.type === 'text') el.color = normalized;
+        if (el.type === 'sticky') el.color = normalized;
         this.collaborationManager.broadcastUpdateElement(el);
       }
       this.requestRedraw();
@@ -2089,12 +2112,26 @@ export class BoardController {
     this.canvasElement.addEventListener(
       'wheel',
       (e: WheelEvent) => {
-        e.preventDefault();
-        const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
-        const rect = this.canvasElement!.getBoundingClientRect();
-        const screenX = e.clientX - rect.left;
-        const screenY = e.clientY - rect.top;
-        this.setZoom(this.camera.zoom * zoomFactor, screenX, screenY);
+        if (e.ctrlKey || e.metaKey) {
+          e.preventDefault();
+          const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
+          const rect = this.canvasElement!.getBoundingClientRect();
+          const screenX = e.clientX - rect.left;
+          const screenY = e.clientY - rect.top;
+          this.setZoom(this.camera.zoom * zoomFactor, screenX, screenY);
+        } else {
+          e.preventDefault();
+          if (e.shiftKey) {
+            this.camera.x += (e.deltaY || e.deltaX) / this.camera.zoom;
+          } else {
+            this.camera.y += e.deltaY / this.camera.zoom;
+            if (e.deltaX) {
+              this.camera.x += e.deltaX / this.camera.zoom;
+            }
+          }
+          this.updateSelectionToolbar();
+          this.requestRedraw();
+        }
       },
       { passive: false, signal }
     );
@@ -2126,8 +2163,9 @@ export class BoardController {
 
     const hit = hitTestElement(this.elements, worldPos.x, worldPos.y, this.camera.zoom);
     if (hit) {
-      if (this.selectedElementId !== hit.id) {
+      if (!this.selectedElementIds.includes(hit.id)) {
         this.selectedElementId = hit.id;
+        this.selectedElementIds = [hit.id];
         this.updateSelectionToolbar();
         this.requestRedraw();
       }
@@ -2158,6 +2196,7 @@ export class BoardController {
         items.push({
           action: () => {
             this.selectedElementId = hit.id;
+            this.selectedElementIds = [hit.id];
             this.setTool('pixel');
           },
           icon: 'edit',
@@ -2285,6 +2324,7 @@ export class BoardController {
         items.push({
           action: () => {
             this.selectedElementId = hit.id;
+            this.selectedElementIds = [hit.id];
             this.openInlineEditor(hit as BoardStickyElement | BoardTextElement);
           },
           icon: 'edit',
@@ -2348,6 +2388,7 @@ export class BoardController {
           this.elements.push(stickyEl);
           this.collaborationManager.broadcastAddElement(stickyEl);
           this.selectedElementId = stickyEl.id;
+          this.selectedElementIds = [stickyEl.id];
           this.updateSelectionToolbar();
           this.requestRedraw();
           this.scheduleAutoSave();
@@ -2374,6 +2415,7 @@ export class BoardController {
           this.elements.push(textEl);
           this.collaborationManager.broadcastAddElement(textEl);
           this.selectedElementId = textEl.id;
+          this.selectedElementIds = [textEl.id];
           this.updateSelectionToolbar();
           this.requestRedraw();
           this.scheduleAutoSave();
@@ -2401,6 +2443,7 @@ export class BoardController {
           this.elements.push(shapeEl);
           this.collaborationManager.broadcastAddElement(shapeEl);
           this.selectedElementId = shapeEl.id;
+          this.selectedElementIds = [shapeEl.id];
           this.updateSelectionToolbar();
           this.requestRedraw();
           this.scheduleAutoSave();
@@ -2486,6 +2529,8 @@ export class BoardController {
 
       const hit = hitTestElement(this.elements, worldPos.x, worldPos.y, this.camera.zoom);
       if (hit) {
+        this.lastClickedHitId = hit.id;
+        this.hasMovedSelection = false;
         if (e.shiftKey) {
           if (this.selectedElementIds.includes(hit.id)) {
             this.selectedElementIds = this.selectedElementIds.filter((id) => id !== hit.id);
@@ -2742,6 +2787,7 @@ export class BoardController {
 
     if (this.isInteractingSelection && this.selectedElementIds.length > 0) {
       if (this.resizeHandleType && this.selectedElementId) {
+        this.hasMovedSelection = true;
         const el = this.elements.find((item) => item.id === this.selectedElementId);
         if (el) {
           resizeElementByHandle(el, this.resizeHandleType, worldPos, this.selectionStartRect, e.shiftKey);
@@ -2750,6 +2796,9 @@ export class BoardController {
       } else {
         const dx = worldPos.x - this.selectionDragStartWorld.x;
         const dy = worldPos.y - this.selectionDragStartWorld.y;
+        if (Math.hypot(dx, dy) > 2 / this.camera.zoom) {
+          this.hasMovedSelection = true;
+        }
         for (const [id, startPos] of this.selectionStartPositions.entries()) {
           const el = this.elements.find((item) => item.id === id);
           if (el) {
@@ -2890,7 +2939,12 @@ export class BoardController {
       this.isInteractingSelection = false;
       this.resizeHandleType = null;
       this.updateCanvasCursor();
-      if (this.selectedElementIds.length > 0) {
+      if (!this.hasMovedSelection && !_e.shiftKey && this.lastClickedHitId) {
+        this.selectedElementIds = [this.lastClickedHitId];
+        this.selectedElementId = this.lastClickedHitId;
+        this.updateSelectionToolbar();
+        this.requestRedraw();
+      } else if (this.selectedElementIds.length > 0) {
         this.pushHistoryState();
         for (const [id] of this.selectionStartPositions.entries()) {
           const el = this.elements.find((item) => item.id === id);
@@ -2900,6 +2954,8 @@ export class BoardController {
         }
         this.scheduleAutoSave();
       }
+      this.lastClickedHitId = null;
+      this.hasMovedSelection = false;
       this.selectionStartPositions.clear();
       return;
     }
@@ -2946,11 +3002,13 @@ export class BoardController {
     const hit = hitTestElement(this.elements, worldPos.x, worldPos.y, this.camera.zoom);
     if (hit && hit.type === 'pixel-grid') {
       this.selectedElementId = hit.id;
+      this.selectedElementIds = [hit.id];
       this.setTool('pixel');
       return;
     }
     if (hit && (hit.type === 'sticky' || hit.type === 'text' || hit.type === 'shape')) {
       this.selectedElementId = hit.id;
+      this.selectedElementIds = [hit.id];
       this.openInlineEditor(hit);
       return;
     }
@@ -3121,6 +3179,7 @@ export class BoardController {
         this.collaborationManager.broadcastDeleteElement(id);
       }
       this.selectedElementId = null;
+      this.selectedElementIds = [];
       this.updateSelectionToolbar();
       this.requestRedraw();
       this.scheduleAutoSave();
@@ -3132,6 +3191,17 @@ export class BoardController {
       'keydown',
       (e: KeyboardEvent) => {
         if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+          return;
+        }
+
+        if (e.key === 'Escape') {
+          this.closeAllPopovers();
+          this.hideColorsPanel();
+          this.selectedElementId = null;
+          this.selectedElementIds = [];
+          this.selectedTableCell = null;
+          this.updateSelectionToolbar();
+          this.requestRedraw();
           return;
         }
 
@@ -3303,6 +3373,7 @@ export class BoardController {
     this.collaborationManager.broadcastAddElement(childNode);
     this.collaborationManager.broadcastAddElement(connector);
     this.selectedElementId = childNode.id;
+    this.selectedElementIds = [childNode.id];
     this.updateSelectionToolbar();
     this.requestRedraw();
     this.scheduleAutoSave();
@@ -3340,6 +3411,7 @@ export class BoardController {
     this.elements.push(siblingNode);
     this.collaborationManager.broadcastAddElement(siblingNode);
     this.selectedElementId = siblingNode.id;
+    this.selectedElementIds = [siblingNode.id];
     this.updateSelectionToolbar();
     this.requestRedraw();
     this.scheduleAutoSave();
@@ -3638,6 +3710,7 @@ export class BoardController {
       this.elements.push(shapeEl);
       this.collaborationManager.broadcastAddElement(shapeEl);
       this.selectedElementId = shapeEl.id;
+      this.selectedElementIds = [shapeEl.id];
       this.updateSelectionToolbar();
       this.requestRedraw();
       this.scheduleAutoSave();
@@ -3658,6 +3731,7 @@ export class BoardController {
       this.elements.push(imgEl);
       this.collaborationManager.broadcastAddElement(imgEl);
       this.selectedElementId = imgEl.id;
+      this.selectedElementIds = [imgEl.id];
       this.updateSelectionToolbar();
       this.requestRedraw();
       this.scheduleAutoSave();
@@ -3706,6 +3780,7 @@ export class BoardController {
     this.elements.push(shapeEl);
     this.collaborationManager.broadcastAddElement(shapeEl);
     this.selectedElementId = shapeEl.id;
+    this.selectedElementIds = [shapeEl.id];
     this.updateSelectionToolbar();
     this.requestRedraw();
     this.scheduleAutoSave();
@@ -3735,6 +3810,7 @@ export class BoardController {
     this.elements.push(stickyEl);
     this.collaborationManager.broadcastAddElement(stickyEl);
     this.selectedElementId = stickyEl.id;
+    this.selectedElementIds = [stickyEl.id];
     this.updateSelectionToolbar();
     this.requestRedraw();
     this.scheduleAutoSave();
@@ -3859,7 +3935,8 @@ export class BoardController {
     this.elements.push(...clonedElements);
     this.pixelGrid.syncPixelGridCanvases(this.elements, () => this.requestRedraw());
     clonedElements.forEach((el) => this.collaborationManager.broadcastAddElement(el));
-    this.selectedElementId = clonedElements[clonedElements.length - 1]?.id || null;
+    this.selectedElementIds = clonedElements.map((el) => el.id);
+    this.selectedElementId = this.selectedElementIds[0] || null;
     this.updateSelectionToolbar();
     this.requestRedraw();
     this.scheduleAutoSave();
@@ -4014,7 +4091,8 @@ export class BoardController {
     this.elements.push(...newElements);
     this.pixelGrid.syncPixelGridCanvases(this.elements, () => this.requestRedraw());
     newElements.forEach((el) => this.collaborationManager.broadcastAddElement(el));
-    this.selectedElementId = newElements[newElements.length - 1]?.id || null;
+    this.selectedElementIds = newElements.map((el) => el.id);
+    this.selectedElementId = this.selectedElementIds[0] || null;
     this.updateSelectionToolbar();
     this.requestRedraw();
     this.scheduleAutoSave();
@@ -4110,7 +4188,8 @@ export class BoardController {
     this.elements.push(...newElements);
     this.pixelGrid.syncPixelGridCanvases(this.elements, () => this.requestRedraw());
     newElements.forEach((el) => this.collaborationManager.broadcastAddElement(el));
-    this.selectedElementId = newElements[newElements.length - 1]?.id || null;
+    this.selectedElementIds = newElements.map((el) => el.id);
+    this.selectedElementId = this.selectedElementIds[0] || null;
     this.updateSelectionToolbar();
     this.requestRedraw();
     this.scheduleAutoSave();
@@ -4149,6 +4228,7 @@ export class BoardController {
     this.pixelGrid.syncPixelGridCanvases(this.elements, () => this.requestRedraw());
     this.collaborationManager.broadcastAddElement(gridEl);
     this.selectedElementId = gridEl.id;
+    this.selectedElementIds = [gridEl.id];
     this.updateSelectionToolbar();
     this.requestRedraw();
     this.scheduleAutoSave();
@@ -4196,6 +4276,7 @@ export class BoardController {
     this.elements.push(imageEl);
     this.collaborationManager.broadcastAddElement(imageEl);
     this.selectedElementId = imageEl.id;
+    this.selectedElementIds = [imageEl.id];
     this.updateSelectionToolbar();
     this.requestRedraw();
     this.scheduleAutoSave();
@@ -4212,6 +4293,7 @@ export class BoardController {
       this.elements = restored;
       this.pixelGrid.syncPixelGridCanvases(this.elements, () => this.requestRedraw());
       this.selectedElementId = null;
+      this.selectedElementIds = [];
       this.updateSelectionToolbar();
       this.updateUndoRedoUI();
       this.requestRedraw();
@@ -4225,6 +4307,7 @@ export class BoardController {
       this.elements = restored;
       this.pixelGrid.syncPixelGridCanvases(this.elements, () => this.requestRedraw());
       this.selectedElementId = null;
+      this.selectedElementIds = [];
       this.updateSelectionToolbar();
       this.updateUndoRedoUI();
       this.requestRedraw();
@@ -4450,6 +4533,7 @@ export class BoardController {
     this.elements.push(gridEl);
     this.collaborationManager.broadcastAddElement(gridEl);
     this.selectedElementId = gridEl.id;
+    this.selectedElementIds = [gridEl.id];
     this.setTool('pixel');
     this.updateSelectionToolbar();
     this.requestRedraw();
@@ -4660,7 +4744,22 @@ export class BoardController {
           stickyBtns.forEach((b) => b.classList.remove('is-active'));
           btn.classList.add('is-active');
           const color = btn.getAttribute('data-color') || '#fef08a';
-          this.insertStickyNote(color);
+          this.stickyDefaultColor = color;
+          const selectedEls = this.getSelectedElements();
+          if (selectedEls.length > 0 && selectedEls.some((el) => el.type === 'sticky')) {
+            this.pushHistoryState();
+            for (const el of selectedEls) {
+              if (el.type === 'sticky') {
+                el.color = color;
+                this.collaborationManager.broadcastUpdateElement(el);
+              }
+            }
+            this.updateSelectionToolbar();
+            this.requestRedraw();
+            this.scheduleAutoSave();
+          } else {
+            this.insertStickyNote(color);
+          }
         },
         { signal }
       );

@@ -613,18 +613,19 @@ export function drawConnector(
 export function drawSticky(ctx: CanvasRenderingContext2D, sticky: BoardStickyElement, isEditing = false): void {
   ctx.save();
   ctx.globalAlpha = sticky.opacity !== undefined ? sticky.opacity : 1;
-  ctx.shadowColor = 'rgba(0, 0, 0, 0.12)';
-  ctx.shadowBlur = 10;
-  ctx.shadowOffsetY = 4;
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.08)';
+  ctx.shadowBlur = 8;
+  ctx.shadowOffsetY = 3;
 
   ctx.fillStyle = sticky.color;
   const r = 8;
+  ctx.beginPath();
   if (typeof (ctx as any).roundRect === 'function') {
     (ctx as any).roundRect(sticky.x, sticky.y, sticky.width, sticky.height, r);
-    ctx.fill();
   } else {
-    ctx.fillRect(sticky.x, sticky.y, sticky.width, sticky.height);
+    ctx.rect(sticky.x, sticky.y, sticky.width, sticky.height);
   }
+  ctx.fill();
   ctx.restore();
 
   if (isEditing) return;
