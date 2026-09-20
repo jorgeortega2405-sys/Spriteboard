@@ -1393,30 +1393,181 @@ function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElemen
           ${recentsHtml}
           <span class="elements-categories-heading">Explora las categorías</span>
           <div class="elements-categories-grid" data-ref="elements-categories-grid">
+            <button type="button" class="element-category-card" data-ref="btn-category-stickies" data-category="stickies">
+              <div class="element-category-card__stack" data-ref="category-stack-stickies">
+                <div class="element-category-card__layer element-category-card__layer--back element-category-card__layer--stickies-back">
+                  <svg class="element-category-card__svg" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="6" y="6" width="60" height="60" rx="16" fill="url(#cva-grad-sticky-back)" />
+                    <path d="M46 50L66 50L66 30Z" fill="#047857" opacity="0.35" />
+                    <path d="M46 50L66 30L46 30Z" fill="#34d399" />
+                    <defs>
+                      <linearGradient id="cva-grad-sticky-back" x1="6" y1="6" x2="66" y2="66" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#34d399" />
+                        <stop offset="0.5" stop-color="#10b981" />
+                        <stop offset="1" stop-color="#059669" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </div>
+                <div class="element-category-card__layer element-category-card__layer--front element-category-card__layer--stickies-front">
+                  <svg class="element-category-card__svg" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="6" y="6" width="60" height="60" rx="16" fill="url(#cva-grad-sticky-front)" />
+                    <rect x="6.5" y="6.5" width="59" height="59" rx="15.5" stroke="rgba(255,255,255,0.4)" stroke-width="1" />
+                    <path d="M18 18H54C55.1 18 56 18.9 56 20V42L44 54H20C18.9 54 18 53.1 18 52V18Z" fill="#FFFBEB" />
+                    <rect x="23" y="24" width="22" height="3" rx="1.5" fill="#FBBF24" />
+                    <rect x="23" y="30" width="26" height="3" rx="1.5" fill="#FDE68A" />
+                    <rect x="23" y="36" width="16" height="3" rx="1.5" fill="#FDE68A" />
+                    <path d="M44 42L56 42L44 54Z" fill="#B45309" opacity="0.25" />
+                    <path d="M44 42L56 42C54 46 50 52 44 54L44 42Z" fill="url(#cva-grad-sticky-fold)" />
+                    <defs>
+                      <linearGradient id="cva-grad-sticky-front" x1="6" y1="6" x2="66" y2="66" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#FEF08A" />
+                        <stop offset="0.3" stop-color="#FDE047" />
+                        <stop offset="1" stop-color="#F59E0B" />
+                      </linearGradient>
+                      <linearGradient id="cva-grad-sticky-fold" x1="44" y1="42" x2="56" y2="54" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#FB7185" />
+                        <stop offset="1" stop-color="#E11D48" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </div>
+              </div>
+              <span class="element-category-card__label">Notas adhesivas</span>
+            </button>
+
             <button type="button" class="element-category-card" data-ref="btn-category-shapes" data-category="shapes">
-              <div class="element-category-card__icon-box element-category-card__icon-box--shapes">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#category"></use></svg>
+              <div class="element-category-card__stack" data-ref="category-stack-shapes">
+                <div class="element-category-card__layer element-category-card__layer--back element-category-card__layer--shapes-back">
+                  <svg class="element-category-card__svg" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="6" y="6" width="60" height="60" rx="16" fill="url(#cva-grad-shapes-back)" />
+                    <path d="M48 14L50.5 19.5L56 20.5L52 24.5L53 30L48 27L43 30L44 24.5L40 20.5L45.5 19.5Z" fill="#F97316" />
+                    <line x1="36" y1="46" x2="58" y2="46" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" />
+                    <circle cx="58" cy="46" r="4.5" fill="#FFFFFF" />
+                    <defs>
+                      <linearGradient id="cva-grad-shapes-back" x1="6" y1="6" x2="66" y2="66" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#2DD4BF" />
+                        <stop offset="0.5" stop-color="#06B6D4" />
+                        <stop offset="1" stop-color="#0284C7" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </div>
+                <div class="element-category-card__layer element-category-card__layer--front element-category-card__layer--shapes-front">
+                  <svg class="element-category-card__svg" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="6" y="6" width="60" height="60" rx="16" fill="url(#cva-grad-shapes-front)" />
+                    <rect x="6.5" y="6.5" width="59" height="59" rx="15.5" stroke="rgba(255,255,255,0.4)" stroke-width="1" />
+                    <path d="M26 20L35 25L32 36H18L15 25L26 20Z" fill="rgba(255,255,255,0.78)" />
+                    <path d="M48 24C49 22.5 51 22.5 52 24L59 36C60 37.5 59 39.5 57 39.5H43C41 39.5 40 37.5 41 36L48 24Z" fill="url(#cva-grad-pink-triangle)" />
+                    <g fill="#0F172A" opacity="0.85">
+                      <circle cx="20" cy="48" r="2.2" />
+                      <circle cx="26" cy="48" r="2.2" />
+                      <circle cx="32" cy="48" r="2.2" />
+                      <circle cx="38" cy="48" r="2.2" />
+                      <circle cx="44" cy="48" r="2.2" />
+                      <circle cx="50" cy="48" r="2.2" />
+                    </g>
+                    <defs>
+                      <linearGradient id="cva-grad-shapes-front" x1="6" y1="6" x2="66" y2="66" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#22D3EE" />
+                        <stop offset="0.4" stop-color="#06B6D4" />
+                        <stop offset="1" stop-color="#0284C7" />
+                      </linearGradient>
+                      <linearGradient id="cva-grad-pink-triangle" x1="41" y1="23" x2="59" y2="39" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#F472B6" />
+                        <stop offset="1" stop-color="#EC4899" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </div>
               </div>
               <span class="element-category-card__label">Formas</span>
             </button>
 
             <button type="button" class="element-category-card" data-ref="btn-category-stickers" data-category="stickers">
-              <div class="element-category-card__icon-box element-category-card__icon-box--stickers">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
+              <div class="element-category-card__stack" data-ref="category-stack-stickers">
+                <div class="element-category-card__layer element-category-card__layer--back element-category-card__layer--stickers-back">
+                  <svg class="element-category-card__svg" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="6" y="6" width="60" height="60" rx="16" fill="url(#cva-grad-stickers-back)" />
+                    <path d="M48 14L49.8 19.2L55 21L49.8 22.8L48 28L46.2 22.8L41 21L46.2 19.2Z" fill="#FFFFFF" />
+                    <path d="M56 32L57.2 35.5L60.5 36.5L57.2 37.5L56 41L54.8 37.5L51.5 36.5L54.8 35.5Z" fill="#FEF08A" />
+                    <defs>
+                      <linearGradient id="cva-grad-stickers-back" x1="6" y1="6" x2="66" y2="66" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#FDE047" />
+                        <stop offset="0.5" stop-color="#FBBF24" />
+                        <stop offset="1" stop-color="#F59E0B" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </div>
+                <div class="element-category-card__layer element-category-card__layer--front element-category-card__layer--stickers-front">
+                  <svg class="element-category-card__svg" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="6" y="6" width="60" height="60" rx="16" fill="url(#cva-grad-stickers-front)" />
+                    <rect x="6.5" y="6.5" width="59" height="59" rx="15.5" stroke="rgba(255,255,255,0.4)" stroke-width="1" />
+                    <path d="M22 47C26 43 32 45 36 49C29 53 23 51 22 47Z" fill="#10B981" />
+                    <path d="M50 47C46 43 40 45 36 49C43 53 49 51 50 47Z" fill="#10B981" />
+                    <circle cx="36" cy="33" r="14" fill="#FBBF24" />
+                    <path d="M36 17L38.5 22.5L44.5 21L43.5 27L49 28.5L45.5 33L49 37.5L43.5 39L44.5 45L38.5 43.5L36 49L33.5 43.5L27.5 45L28.5 39L23 37.5L26.5 33L23 28.5L28.5 27L27.5 21L33.5 22.5Z" fill="url(#cva-grad-sunflower-petals)" />
+                    <circle cx="36" cy="33" r="7.5" fill="url(#cva-grad-sunflower-center)" />
+                    <circle cx="36" cy="33" r="5.5" fill="#78350F" opacity="0.6" />
+                    <defs>
+                      <linearGradient id="cva-grad-stickers-front" x1="6" y1="6" x2="66" y2="66" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#FB923C" />
+                        <stop offset="0.4" stop-color="#F97316" />
+                        <stop offset="1" stop-color="#EF4444" />
+                      </linearGradient>
+                      <linearGradient id="cva-grad-sunflower-petals" x1="23" y1="17" x2="49" y2="49" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#FEF08A" />
+                        <stop offset="0.5" stop-color="#FDE047" />
+                        <stop offset="1" stop-color="#F59E0B" />
+                      </linearGradient>
+                      <linearGradient id="cva-grad-sunflower-center" x1="30" y1="27" x2="42" y2="39" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#92400E" />
+                        <stop offset="1" stop-color="#451A03" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </div>
               </div>
               <span class="element-category-card__label">Figuras</span>
             </button>
 
-            <button type="button" class="element-category-card" data-ref="btn-category-stickies" data-category="stickies">
-              <div class="element-category-card__icon-box element-category-card__icon-box--stickies">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#sticky_note_2"></use></svg>
-              </div>
-              <span class="element-category-card__label">Notas adhesivas</span>
-            </button>
-
             <button type="button" class="element-category-card" data-ref="btn-category-diagrams" data-category="diagrams">
-              <div class="element-category-card__icon-box element-category-card__icon-box--diagrams">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#account_tree"></use></svg>
+              <div class="element-category-card__stack" data-ref="category-stack-diagrams">
+                <div class="element-category-card__layer element-category-card__layer--back element-category-card__layer--diagrams-back">
+                  <svg class="element-category-card__svg" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="6" y="6" width="60" height="60" rx="16" fill="url(#cva-grad-diagrams-back)" />
+                    <path d="M42 20H52C54 20 55 21 55 23V32" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" />
+                    <rect x="48" y="32" width="14" height="10" rx="4" fill="#FFFFFF" />
+                    <defs>
+                      <linearGradient id="cva-grad-diagrams-back" x1="6" y1="6" x2="66" y2="66" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#E879F9" />
+                        <stop offset="0.5" stop-color="#C084FC" />
+                        <stop offset="1" stop-color="#9333EA" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </div>
+                <div class="element-category-card__layer element-category-card__layer--front element-category-card__layer--diagrams-front">
+                  <svg class="element-category-card__svg" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="6" y="6" width="60" height="60" rx="16" fill="url(#cva-grad-diagrams-front)" />
+                    <rect x="6.5" y="6.5" width="59" height="59" rx="15.5" stroke="rgba(255,255,255,0.4)" stroke-width="1" />
+                    <path d="M36 26V35M36 35H25V42M36 35H47V42" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+                    <rect x="27" y="17" width="18" height="11" rx="5.5" fill="#FFFFFF" />
+                    <rect x="30" y="21" width="12" height="3" rx="1.5" fill="#4F46E5" />
+                    <rect x="17" y="42" width="16" height="12" rx="4" fill="#C7D2FE" />
+                    <rect x="20" y="46" width="10" height="2.5" rx="1.2" fill="#3730A3" />
+                    <rect x="39" y="42" width="16" height="12" rx="4" fill="#A5F3FC" />
+                    <rect x="42" y="46" width="10" height="2.5" rx="1.2" fill="#0E7490" />
+                    <defs>
+                      <linearGradient id="cva-grad-diagrams-front" x1="6" y1="6" x2="66" y2="66" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#818CF8" />
+                        <stop offset="0.4" stop-color="#6366F1" />
+                        <stop offset="1" stop-color="#4F46E5" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </div>
               </div>
               <span class="element-category-card__label">Diagramas</span>
             </button>
