@@ -24,6 +24,20 @@ export const GAMEBOY_PALETTE: string[] = [
   '#0F380F', '#306230', '#8BAC0F', '#9BBC0F',
 ];
 
+export type StrokeStyle = 'solid' | 'dashed' | 'dashed-short' | 'dotted';
+
+export type MarkerType =
+  | 'arrow'
+  | 'arrow-filled'
+  | 'bar'
+  | 'circle'
+  | 'circle-filled'
+  | 'diamond'
+  | 'diamond-filled'
+  | 'none'
+  | 'square'
+  | 'square-filled';
+
 export interface BoardPoint {
   x: number;
   y: number;
@@ -35,19 +49,25 @@ export interface BoardStrokeElement {
   opacity: number;
   points: BoardPoint[];
   size: number;
+  strokeStyle?: StrokeStyle;
   tool: 'pen' | 'marker' | 'highlighter';
   type: 'stroke';
 }
 
 export interface BoardShapeElement {
+  borderRadius?: number;
   fillColor: string;
   fontSize?: number;
   height: number;
   id: string;
   isMindMapNode?: boolean;
+  opacity?: number;
   shapeType: ShapeType;
+  sides?: number;
   strokeColor: string;
+  strokeStyle?: StrokeStyle;
   strokeWidth: number;
+  svgPath?: string;
   text?: string;
   textColor?: string;
   type: 'shape';
@@ -61,6 +81,7 @@ export interface BoardStickyElement {
   fontSize: number;
   height: number;
   id: string;
+  opacity?: number;
   text: string;
   textColor: string;
   type: 'sticky';
@@ -74,6 +95,7 @@ export interface BoardTextElement {
   fontSize: number;
   height: number;
   id: string;
+  opacity?: number;
   text: string;
   type: 'text';
   width: number;
@@ -88,6 +110,7 @@ export interface BoardPixelGridElement {
   gridWidth: number;
   height: number;
   id: string;
+  opacity?: number;
   pixelSize: number;
   showGrid: boolean;
   type: 'pixel-grid';
@@ -101,6 +124,7 @@ export interface BoardImageElement {
   aspectRatio: number;
   height: number;
   id: string;
+  opacity?: number;
   originalHeight?: number;
   originalWidth?: number;
   type: 'image';
@@ -111,15 +135,17 @@ export interface BoardImageElement {
 }
 
 export interface BoardConnectorElement {
-  arrowEnd?: boolean;
-  arrowStart?: boolean;
+  arrowEnd?: boolean | MarkerType;
+  arrowStart?: boolean | MarkerType;
   color: string;
   endPoint?: BoardPoint;
   fontSize?: number;
   fromId?: string;
   id: string;
   label?: string;
+  opacity?: number;
   startPoint?: BoardPoint;
+  strokeStyle?: StrokeStyle;
   strokeWidth: number;
   style: 'curved' | 'orthogonal' | 'straight';
   toId?: string;

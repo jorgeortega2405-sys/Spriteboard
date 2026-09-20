@@ -154,20 +154,26 @@ export function exportSvg(
         const last = el.points[el.points.length - 1];
         d += ` L ${last.x} ${last.y}`;
       }
-      svgContent += `  <path d="${d}" fill="none" stroke="${escAttr(el.color)}" stroke-width="${escAttr(el.size)}" stroke-linecap="round" stroke-linejoin="round" opacity="${escAttr(el.opacity || 1)}" />\n`;
+      svgContent += `  <path d="${d}" fill="none" stroke="${escAttr(el.color)}" stroke-width="${escAttr(el.size)}" stroke-linecap="round" stroke-linejoin="round" opacity="${escAttr(el.opacity !== undefined ? el.opacity : 1)}" ${el.strokeStyle === 'dashed' ? 'stroke-dasharray="10,6"' : el.strokeStyle === 'dashed-short' ? 'stroke-dasharray="5,5"' : el.strokeStyle === 'dotted' ? 'stroke-dasharray="2,4"' : ''} />\n`;
     } else if (el.type === 'shape') {
       const fill = escAttr(el.fillColor);
-      const stroke = escAttr(el.strokeColor);
+      const stroke = escAttr(el.strokeWidth > 0 && el.strokeColor !== 'transparent' ? el.strokeColor : 'none');
       const sw = escAttr(el.strokeWidth);
+      const op = escAttr(el.opacity !== undefined ? el.opacity : 1);
+      const dash = el.strokeStyle === 'dashed' ? 'stroke-dasharray="10,6"' : el.strokeStyle === 'dashed-short' ? 'stroke-dasharray="5,5"' : el.strokeStyle === 'dotted' ? 'stroke-dasharray="2,4"' : '';
 
-      if (el.shapeType === 'rect') {
-        svgContent += `  <rect x="${el.x}" y="${el.y}" width="${el.width}" height="${el.height}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" />\n`;
+      if (el.svgPath) {
+        svgContent += `  <path d="${el.svgPath}" transform="translate(${el.x}, ${el.y}) scale(${el.width / 48}, ${el.height / 48})" fill="${fill}" stroke="${stroke}" stroke-width="${el.strokeWidth * (48 / Math.max(el.width, el.height))}" stroke-linejoin="round" stroke-linecap="round" ${dash} opacity="${op}" />\n`;
+      } else if (el.shapeType === 'rect') {
+        const rx = el.borderRadius ? `rx="${el.borderRadius}" ry="${el.borderRadius}"` : '';
+        svgContent += `  <rect x="${el.x}" y="${el.y}" width="${el.width}" height="${el.height}" ${rx} fill="${fill}" stroke="${stroke}" stroke-width="${sw}" ${dash} opacity="${op}" />\n`;
       } else if (el.shapeType === 'round-rect') {
-        svgContent += `  <rect x="${el.x}" y="${el.y}" width="${el.width}" height="${el.height}" rx="12" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" />\n`;
+        const rxVal = el.borderRadius !== undefined ? el.borderRadius : 12;
+        svgContent += `  <rect x="${el.x}" y="${el.y}" width="${el.width}" height="${el.height}" rx="${rxVal}" ry="${rxVal}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" ${dash} opacity="${op}" />\n`;
       } else if (el.shapeType === 'circle') {
-        svgContent += `  <ellipse cx="${el.x + el.width / 2}" cy="${el.y + el.height / 2}" rx="${Math.abs(el.width) / 2}" ry="${Math.abs(el.height) / 2}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" />\n`;
+        svgContent += `  <ellipse cx="${el.x + el.width / 2}" cy="${el.y + el.height / 2}" rx="${Math.abs(el.width) / 2}" ry="${Math.abs(el.height) / 2}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" ${dash} opacity="${op}" />\n`;
       } else if (el.shapeType === 'line') {
-        svgContent += `  <line x1="${el.x}" y1="${el.y}" x2="${el.x + el.width}" y2="${el.y + el.height}" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" />\n`;
+        svgContent += `  <line x1="${el.x}" y1="${el.y}" x2="${el.x + el.width}" y2="${el.y + el.height}" stroke="${escAttr(el.strokeColor || '#000000')}" stroke-width="${sw}" stroke-linecap="round" ${dash} opacity="${op}" />\n`;
       } else if (el.shapeType === 'arrow') {
         const angle = Math.atan2(el.height, el.width);
         const headLen = Math.max(12, el.strokeWidth * 3);
@@ -177,47 +183,62 @@ export function exportSvg(
         const hy1 = y2 - headLen * Math.sin(angle - Math.PI / 6);
         const hx2 = x2 - headLen * Math.cos(angle + Math.PI / 6);
         const hy2 = y2 - headLen * Math.sin(angle + Math.PI / 6);
-        svgContent += `  <path d="M ${el.x} ${el.y} L ${x2} ${y2} M ${x2} ${y2} L ${hx1} ${hy1} M ${x2} ${y2} L ${hx2} ${hy2}" fill="none" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" />\n`;
+        svgContent += `  <path d="M ${el.x} ${el.y} L ${x2} ${y2} M ${x2} ${y2} L ${hx1} ${hy1} M ${x2} ${y2} L ${hx2} ${hy2}" fill="none" stroke="${escAttr(el.strokeColor || '#000000')}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" ${dash} opacity="${op}" />\n`;
       } else if (el.shapeType === 'triangle') {
         const p1 = `${el.x + el.width / 2},${el.y}`;
         const p2 = `${el.x + el.width},${el.y + el.height}`;
         const p3 = `${el.x},${el.y + el.height}`;
-        svgContent += `  <polygon points="${p1} ${p2} ${p3}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" stroke-linejoin="round" />\n`;
+        svgContent += `  <polygon points="${p1} ${p2} ${p3}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" stroke-linejoin="round" ${dash} opacity="${op}" />\n`;
       } else if (el.shapeType === 'diamond') {
         const d1 = `${el.x + el.width / 2},${el.y}`;
         const d2 = `${el.x + el.width},${el.y + el.height / 2}`;
         const d3 = `${el.x + el.width / 2},${el.y + el.height}`;
         const d4 = `${el.x},${el.y + el.height / 2}`;
-        svgContent += `  <polygon points="${d1} ${d2} ${d3} ${d4}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" stroke-linejoin="round" />\n`;
+        svgContent += `  <polygon points="${d1} ${d2} ${d3} ${d4}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" stroke-linejoin="round" ${dash} opacity="${op}" />\n`;
       } else if (el.shapeType === 'star') {
         const cx = el.x + el.width / 2;
         const cy = el.y + el.height / 2;
+        const spikes = el.sides || 5;
         const outerR = Math.min(Math.abs(el.width), Math.abs(el.height)) / 2;
         const innerR = outerR / 2.2;
         let rot = (Math.PI / 2) * 3;
-        const step = Math.PI / 5;
+        const step = Math.PI / spikes;
         const pts: string[] = [];
-        for (let s = 0; s < 5; s++) {
+        for (let s = 0; s < spikes; s++) {
           pts.push(`${cx + Math.cos(rot) * outerR},${cy + Math.sin(rot) * outerR}`);
           rot += step;
           pts.push(`${cx + Math.cos(rot) * innerR},${cy + Math.sin(rot) * innerR}`);
           rot += step;
         }
-        svgContent += `  <polygon points="${pts.join(' ')}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" stroke-linejoin="round" />\n`;
+        svgContent += `  <polygon points="${pts.join(' ')}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" stroke-linejoin="round" ${dash} opacity="${op}" />\n`;
+      } else {
+        svgContent += `  <rect x="${el.x}" y="${el.y}" width="${el.width}" height="${el.height}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" ${dash} opacity="${op}" />\n`;
       }
+    } else if (el.type === 'connector') {
+      const p1 = el.startPoint || { x: 0, y: 0 };
+      const p2 = el.endPoint || { x: 100, y: 100 };
+      const op = escAttr(el.opacity !== undefined ? el.opacity : 1);
+      const stroke = escAttr(el.color || '#475569');
+      const sw = escAttr(el.strokeWidth || 2);
+      const dash = el.strokeStyle === 'dashed' ? 'stroke-dasharray="10,6"' : el.strokeStyle === 'dashed-short' ? 'stroke-dasharray="5,5"' : el.strokeStyle === 'dotted' ? 'stroke-dasharray="2,4"' : '';
+      svgContent += `  <line x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" ${dash} opacity="${op}" />\n`;
     } else if (el.type === 'sticky') {
-      svgContent += `  <g>\n`;
+      const op = escAttr(el.opacity !== undefined ? el.opacity : 1);
+      svgContent += `  <g opacity="${op}">\n`;
       svgContent += `    <rect x="${el.x}" y="${el.y}" width="${el.width}" height="${el.height}" rx="8" fill="${escAttr(el.color)}" filter="drop-shadow(0px 4px 8px rgba(0,0,0,0.15))" />\n`;
       svgContent += `    <text x="${el.x + 16}" y="${el.y + 24}" fill="${escAttr(el.textColor)}" font-size="${escAttr(el.fontSize)}" font-family="sans-serif">${escAttr(el.text)}</text>\n`;
       svgContent += `  </g>\n`;
     } else if (el.type === 'text') {
-      svgContent += `  <text x="${el.x}" y="${el.y + el.fontSize}" fill="${escAttr(el.color)}" font-size="${escAttr(el.fontSize)}" font-family="sans-serif" font-weight="600">${escAttr(el.text)}</text>\n`;
+      const op = escAttr(el.opacity !== undefined ? el.opacity : 1);
+      svgContent += `  <text x="${el.x}" y="${el.y + el.fontSize}" fill="${escAttr(el.color)}" font-size="${escAttr(el.fontSize)}" font-family="sans-serif" font-weight="600" opacity="${op}">${escAttr(el.text)}</text>\n`;
     } else if (el.type === 'pixel-grid') {
+      const op = escAttr(el.opacity !== undefined ? el.opacity : 1);
       const { canvas } = getPixelGridCanvas(el);
       const dataUrl = canvas.toDataURL('image/png');
-      svgContent += `  <image href="${dataUrl}" x="${el.x}" y="${el.y}" width="${el.width}" height="${el.height}" style="image-rendering: pixelated;" />\n`;
+      svgContent += `  <image href="${dataUrl}" x="${el.x}" y="${el.y}" width="${el.width}" height="${el.height}" style="image-rendering: pixelated;" opacity="${op}" />\n`;
     } else if (el.type === 'image') {
-      svgContent += `  <image href="${escAttr(el.url)}" x="${el.x}" y="${el.y}" width="${el.width}" height="${el.height}" preserveAspectRatio="none" />\n`;
+      const op = escAttr(el.opacity !== undefined ? el.opacity : 1);
+      svgContent += `  <image href="${escAttr(el.url)}" x="${el.x}" y="${el.y}" width="${el.width}" height="${el.height}" preserveAspectRatio="none" opacity="${op}" />\n`;
     }
   }
 

@@ -10,7 +10,7 @@ import { renderIcons } from '../../services/icon.service.js';
 import { showToast } from '../../services/toast.service.js';
 import { CanvasItem } from '../../types/canvas.types.js';
 import { setupDropdown } from '../../utils/dom.util.js';
-import { PixelShape, renderShapeCanvas } from '../../utils/pixel-shapes.util.js';
+import { PixelShape } from '../../utils/pixel-shapes.util.js';
 import { generateShadingRamp, getCollaboratorColor } from '../design/design-color.util.js';
 import { DocPage } from '../doc/doc.types.js';
 import { BoardCollaborationManager } from './board-collaboration.manager.js';
@@ -19,13 +19,14 @@ import { exportJson, exportPng, exportSvg, generateThumbnail } from './board-exp
 import { BoardHistoryManager } from './board-history.manager.js';
 import { BoardPixelGridManager } from './board-pixel-grid.manager.js';
 import { drawBackground, drawBoardCollaboratorCursors, drawCheckerboard, drawConnector, drawImage, drawPixelGridLines, drawSelectionBox, drawShape, drawSticky, drawStroke, drawText, screenToWorld, worldToScreen } from './board-renderer.js';
-import { BackgroundType, BoardCollaboratorState, BoardConnectorElement, BoardElement, BoardImageElement, BoardPixelGridElement, BoardPoint, BoardProject, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTextElement, BoardTool, DEFAULT_CLASSIC_PALETTE, GAMEBOY_PALETTE, PICO8_PALETTE, PixelSubtool, ShapeType } from './board.types.js';
+import { BackgroundType, BoardCollaboratorState, BoardConnectorElement, BoardElement, BoardImageElement, BoardPixelGridElement, BoardPoint, BoardProject, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTextElement, BoardTool, DEFAULT_CLASSIC_PALETTE, GAMEBOY_PALETTE, MarkerType, PICO8_PALETTE, PixelSubtool, ShapeType, StrokeStyle } from './board.types.js';
 
 export class BoardController {
   private abortController: AbortController;
   private accessLevel: 'private' | 'public' = 'private';
   private activeInlineEditor: HTMLTextAreaElement | null = null;
   private activeOpenDropdown: { close: () => void } | null = null;
+  private activePopover: HTMLElement | null = null;
   private activeTrayGroup: 'connector' | 'pixel' | 'shapes' | 'sticky' | 'width' | null = null;
   private connectorStyle: 'curved' | 'orthogonal' | 'straight' = 'curved';
   private aiDropdownController: CanvasAiDropdownController | null = null;
@@ -42,7 +43,7 @@ export class BoardController {
   private collaborationManager: BoardCollaborationManager;
   private collaboratorsBarEl: HTMLElement | null = null;
   private collaboratorsListEl: HTMLElement | null = null;
-  private colorPanelTarget: 'stroke' | 'fill' = 'stroke';
+  private colorPanelTarget: 'stroke' | 'fill' | 'text' = 'stroke';
   private colorsActiveSwatchEl: HTMLElement | null = null;
   private colorsCustomInputEl: HTMLInputElement | null = null;
   private colorsHexInputEl: HTMLInputElement | null = null;
@@ -56,7 +57,7 @@ export class BoardController {
   private ctx: CanvasRenderingContext2D | null = null;
   private currentCanvasItem: CanvasItem | null = null;
   private currentColor = '#1e293b';
-  private currentFillColor = 'transparent';
+  private currentFillColor = '#000000';
   private currentShape: ShapeType = 'rect';
   private currentStrokeWidth = 4;
   private currentTool: BoardTool = 'select';
@@ -82,6 +83,13 @@ export class BoardController {
   private panStartMouse: BoardPoint = { x: 0, y: 0 };
   private initialCanvasRecord: CanvasItem | null = null;
   private pixelGrid = new BoardPixelGridManager();
+  private popoverConnStyleEl: HTMLElement | null = null;
+  private popoverCornersEl: HTMLElement | null = null;
+  private popoverMarkerEndEl: HTMLElement | null = null;
+  private popoverMarkerStartEl: HTMLElement | null = null;
+  private popoverOpacityEl: HTMLElement | null = null;
+  private popoverPositionEl: HTMLElement | null = null;
+  private popoverStrokeEl: HTMLElement | null = null;
   private publicRole: 'editor' | 'viewer' = 'editor';
   private rafId: number | null = null;
   private recentColors: string[] = ['#000000', '#FFFFFF', '#FF0000', '#00FF00', '#0000FF', '#FFFF00'];
@@ -95,6 +103,11 @@ export class BoardController {
   private shareDropdownController: CanvasShareDropdownController | null = null;
   private shareWrapperEl: HTMLElement | null = null;
   private stickyDefaultColor = '#fef08a';
+  private topFillSwatchEl: HTMLElement | null = null;
+  private topFontSizeLabelEl: HTMLElement | null = null;
+  private topSelectionSectionEl: HTMLElement | null = null;
+  private topStrokeSwatchEl: HTMLElement | null = null;
+  private topTextSwatchEl: HTMLElement | null = null;
   private topToggleColorsBtn: HTMLButtonElement | null = null;
 
   constructor(container: HTMLElement, canvasUuid: string, initialCanvasRecord?: CanvasItem | null) {
@@ -618,6 +631,7 @@ export class BoardController {
     this.bindPixelControls(signal);
     this.bindZoomControls(signal);
     this.bindSelectionToolbar(signal);
+    this.bindContextualToolbar(signal);
     this.bindCanvasPointers(signal);
     this.bindKeyboardShortcuts(signal);
     this.setupToolbarScroll('[data-ref="board-top-toolbar"]', '[data-ref="btn-top-toolbar-scroll-left"]', '[data-ref="btn-top-toolbar-scroll-right"]', signal);
@@ -947,8 +961,11 @@ export class BoardController {
       'click',
       (e: MouseEvent) => {
         const target = e.target as HTMLElement | null;
-        if (!target?.closest('[data-ref="board-colors-panel"], [data-ref="btn-color-prop"], [data-ref="btn-fill-prop"], [data-ref="btn-top-toggle-colors"]')) {
+        if (!target?.closest('[data-ref="board-colors-panel"], [data-ref="btn-color-prop"], [data-ref="btn-fill-prop"], [data-ref="btn-top-toggle-colors"], [data-ref="top-btn-fill"], [data-ref="top-btn-stroke-color"], [data-ref="top-btn-text-color"]')) {
           this.hideColorsPanel();
+        }
+        if (!target?.closest('.board-context-popover, [data-ref="board-top-selection-section"]')) {
+          this.closeAllPopovers();
         }
       },
       { signal }
@@ -1124,13 +1141,15 @@ export class BoardController {
   private handleColorPicked(color: string): void {
     if (this.colorPanelTarget === 'fill') {
       this.setFill(color, true);
+    } else if (this.colorPanelTarget === 'text') {
+      this.setTextColor(color, true);
     } else {
       this.setColor(color, true);
     }
     this.updateColorPanelUI(color);
   }
 
-  private toggleColorsPanel(target: 'stroke' | 'fill'): void {
+  private toggleColorsPanel(target: 'stroke' | 'fill' | 'text'): void {
     if (!this.colorsPanelEl) return;
     const isHidden = this.colorsPanelEl.classList.contains('is-hidden');
     if (!isHidden && this.colorPanelTarget === target) {
@@ -1138,14 +1157,24 @@ export class BoardController {
       return;
     }
 
+    this.closeAllPopovers();
     this.colorPanelTarget = target;
     if (this.colorsTitleEl) {
-      this.colorsTitleEl.textContent = target === 'stroke' ? 'Color de trazo' : 'Color de relleno';
+      this.colorsTitleEl.textContent = target === 'stroke' ? 'Color de trazo o borde' : (target === 'fill' ? 'Color de relleno' : 'Color de texto');
     }
 
     this.renderDefaultPalette();
     this.renderRecentColors();
-    const currentVal = target === 'stroke' ? this.currentColor : this.currentFillColor;
+    let currentVal = this.currentColor;
+    if (target === 'fill') currentVal = this.currentFillColor;
+    if (target === 'text' && this.selectedElementId) {
+      const el = this.elements.find((item) => item.id === this.selectedElementId);
+      if (el) {
+        if (el.type === 'text') currentVal = el.color;
+        else if (el.type === 'sticky') currentVal = el.textColor;
+        else if (el.type === 'shape' && el.textColor) currentVal = el.textColor;
+      }
+    }
     this.updateColorPanelUI(currentVal);
     this.colorsPanelEl.classList.remove('is-hidden');
   }
@@ -1246,11 +1275,16 @@ export class BoardController {
       if (el) {
         this.pushHistoryState();
         if (el.type === 'stroke') el.color = normalized;
-        if (el.type === 'shape') el.strokeColor = normalized;
+        if (el.type === 'shape') {
+          el.strokeColor = normalized;
+          if (el.strokeWidth === 0) el.strokeWidth = 2;
+        }
+        if (el.type === 'connector') el.color = normalized;
         if (el.type === 'text') el.color = normalized;
         this.collaborationManager.broadcastUpdateElement(el);
         this.requestRedraw();
         this.scheduleAutoSave();
+        this.updateContextualToolbar();
       }
     }
   }
@@ -1273,12 +1307,40 @@ export class BoardController {
     }
     if (this.selectedElementId) {
       const el = this.elements.find((item) => item.id === this.selectedElementId);
-      if (el && el.type === 'shape') {
+      if (el) {
         this.pushHistoryState();
-        el.fillColor = normalized;
+        if (el.type === 'shape') {
+          el.fillColor = normalized;
+        } else if (el.type === 'sticky') {
+          el.color = normalized;
+        }
         this.collaborationManager.broadcastUpdateElement(el);
         this.requestRedraw();
         this.scheduleAutoSave();
+        this.updateContextualToolbar();
+      }
+    }
+  }
+
+  private setTextColor(color: string, recordRecent = true): void {
+    const normalized = color.toLowerCase() === 'transparent' ? 'transparent' : color.toUpperCase();
+    if (recordRecent && normalized !== 'transparent' && /^#[0-9A-Fa-f]{6}$/.test(normalized)) {
+      this.recentColors = [normalized, ...this.recentColors.filter((c) => c.toUpperCase() !== normalized)].slice(0, 12);
+      this.saveRecentColors();
+      this.renderRecentColors();
+    }
+    if (this.selectedElementId) {
+      const el = this.elements.find((item) => item.id === this.selectedElementId);
+      if (el) {
+        this.pushHistoryState();
+        if (el.type === 'text') el.color = normalized;
+        if (el.type === 'sticky') el.textColor = normalized;
+        if (el.type === 'shape') el.textColor = normalized;
+        if (el.type === 'connector') el.color = normalized;
+        this.collaborationManager.broadcastUpdateElement(el);
+        this.requestRedraw();
+        this.scheduleAutoSave();
+        this.updateContextualToolbar();
       }
     }
   }
@@ -1302,9 +1364,11 @@ export class BoardController {
         this.pushHistoryState();
         if (el.type === 'stroke') el.size = w;
         if (el.type === 'shape') el.strokeWidth = w;
+        if (el.type === 'connector') el.strokeWidth = w;
         this.collaborationManager.broadcastUpdateElement(el);
         this.requestRedraw();
         this.scheduleAutoSave();
+        this.updateContextualToolbar();
       }
     }
   }
@@ -1437,6 +1501,8 @@ export class BoardController {
   }
 
   private updateSelectionToolbar(): void {
+    this.updateContextualToolbar();
+
     const toolbar = this.container.querySelector<HTMLElement>('[data-ref="board-selection-toolbar"]');
     if (!toolbar || !this.selectedElementId) {
       toolbar?.classList.add('is-hidden');
@@ -1465,6 +1531,490 @@ export class BoardController {
     toolbar.style.left = `${Math.max(10, screenTopLeft.x)}px`;
     toolbar.style.top = `${Math.max(60, screenTopLeft.y - 48)}px`;
     toolbar.classList.remove('is-hidden');
+  }
+
+  private updateContextualToolbar(): void {
+    if (!this.topSelectionSectionEl) {
+      this.topSelectionSectionEl = this.container.querySelector<HTMLElement>('[data-ref="board-top-selection-section"]');
+      this.topFillSwatchEl = this.container.querySelector<HTMLElement>('[data-ref="top-fill-swatch"]');
+      this.topStrokeSwatchEl = this.container.querySelector<HTMLElement>('[data-ref="top-stroke-swatch"]');
+      this.topTextSwatchEl = this.container.querySelector<HTMLElement>('[data-ref="top-text-swatch"]');
+      this.topFontSizeLabelEl = this.container.querySelector<HTMLElement>('[data-ref="top-font-size-label"]');
+    }
+
+    if (!this.selectedElementId) {
+      this.topSelectionSectionEl?.classList.add('is-hidden');
+      this.closeAllPopovers();
+      return;
+    }
+
+    const el = this.elements.find((item) => item.id === this.selectedElementId);
+    if (!el) {
+      this.topSelectionSectionEl?.classList.add('is-hidden');
+      this.closeAllPopovers();
+      return;
+    }
+
+    this.topSelectionSectionEl?.classList.remove('is-hidden');
+
+    const groupFill = this.container.querySelector<HTMLElement>('[data-ref="board-top-group-fill"]');
+    const groupStrokeColor = this.container.querySelector<HTMLElement>('[data-ref="board-top-group-stroke-color"]');
+    const groupStrokeStyle = this.container.querySelector<HTMLElement>('[data-ref="board-top-group-stroke-style"]');
+    const groupCorners = this.container.querySelector<HTMLElement>('[data-ref="board-top-group-corners"]');
+    const groupMarkers = this.container.querySelector<HTMLElement>('[data-ref="board-top-group-markers"]');
+    const groupText = this.container.querySelector<HTMLElement>('[data-ref="board-top-group-text-props"]');
+
+    const isShape = el.type === 'shape';
+    const isConnector = el.type === 'connector';
+    const isSticky = el.type === 'sticky';
+    const isText = el.type === 'text';
+    const isStroke = el.type === 'stroke';
+    const isLineShape = isShape && (el.shapeType === 'line' || el.shapeType === 'arrow');
+
+    if (groupFill) {
+      const showFill = (isShape && !isLineShape) || isSticky;
+      groupFill.classList.toggle('is-hidden', !showFill);
+      if (showFill && this.topFillSwatchEl) {
+        const fillColor = isShape ? el.fillColor : (isSticky ? el.color : '#000000');
+        if (fillColor === 'transparent') {
+          this.topFillSwatchEl.classList.add('is-transparent');
+          this.topFillSwatchEl.style.backgroundColor = 'transparent';
+        } else {
+          this.topFillSwatchEl.classList.remove('is-transparent');
+          this.topFillSwatchEl.style.backgroundColor = fillColor;
+        }
+      }
+    }
+
+    if (groupStrokeColor) {
+      const showStroke = isLineShape || isConnector || isStroke || (isShape && el.strokeWidth > 0);
+      groupStrokeColor.classList.toggle('is-hidden', !showStroke);
+      if (showStroke && this.topStrokeSwatchEl) {
+        const strokeColor = isShape ? (el.strokeColor || '#1e293b') : (isConnector ? (el.color || '#475569') : (isStroke ? el.color : '#1e293b'));
+        if (strokeColor === 'transparent') {
+          this.topStrokeSwatchEl.classList.add('is-transparent');
+          this.topStrokeSwatchEl.style.backgroundColor = 'transparent';
+        } else {
+          this.topStrokeSwatchEl.classList.remove('is-transparent');
+          this.topStrokeSwatchEl.style.backgroundColor = strokeColor;
+        }
+      }
+    }
+
+    if (groupStrokeStyle) {
+      const showStrokeStyle = isShape || isConnector || isStroke;
+      groupStrokeStyle.classList.toggle('is-hidden', !showStrokeStyle);
+    }
+
+    if (groupCorners) {
+      const showCorners = isShape && !isLineShape;
+      groupCorners.classList.toggle('is-hidden', !showCorners);
+    }
+
+    if (groupMarkers) {
+      groupMarkers.classList.toggle('is-hidden', !isConnector);
+    }
+
+    if (groupText) {
+      const showText = isText || isSticky || (isShape && !!el.text) || (isConnector && !!el.label);
+      groupText.classList.toggle('is-hidden', !showText);
+      if (showText) {
+        const textColor = isText ? el.color : (isSticky ? el.textColor : (isShape ? (el.textColor || '#1e293b') : '#334155'));
+        const fontSize = isText ? el.fontSize : (isSticky ? el.fontSize : (isShape ? (el.fontSize || 14) : 12));
+        if (this.topTextSwatchEl) {
+          this.topTextSwatchEl.style.backgroundColor = textColor;
+        }
+        if (this.topFontSizeLabelEl) {
+          this.topFontSizeLabelEl.textContent = `${fontSize}`;
+        }
+      }
+    }
+
+    this.syncPopoversWithElement(el);
+  }
+
+  private syncPopoversWithElement(el: BoardElement): void {
+    const isShape = el.type === 'shape';
+    const isConnector = el.type === 'connector';
+    const isStroke = el.type === 'stroke';
+
+    const inputStrokeW = this.container.querySelector<HTMLInputElement>('[data-ref="input-popover-stroke-width"]');
+    const labelStrokeW = this.container.querySelector<HTMLElement>('[data-ref="label-popover-stroke-width"]');
+    const currentW = isShape ? el.strokeWidth : (isConnector ? el.strokeWidth : (isStroke ? el.size : 0));
+    if (inputStrokeW) inputStrokeW.value = `${currentW}`;
+    if (labelStrokeW) labelStrokeW.textContent = `${currentW}`;
+
+    const currentPreset = (el as any).strokeStyle || (currentW === 0 ? 'none' : 'solid');
+    this.container.querySelectorAll<HTMLButtonElement>('[data-stroke-preset]').forEach((btn) => {
+      btn.classList.toggle('is-active', btn.getAttribute('data-stroke-preset') === currentPreset);
+    });
+
+    const inputCorners = this.container.querySelector<HTMLInputElement>('[data-ref="input-popover-corner-radius"]');
+    const labelCorners = this.container.querySelector<HTMLElement>('[data-ref="label-popover-corner-radius"]');
+    const currentR = isShape ? (el.borderRadius || 0) : 0;
+    if (inputCorners) inputCorners.value = `${currentR}`;
+    if (labelCorners) labelCorners.textContent = `${currentR}`;
+
+    const sidesContainer = this.container.querySelector<HTMLElement>('[data-ref="popover-sides-container"]');
+    const inputSides = this.container.querySelector<HTMLInputElement>('[data-ref="input-popover-sides"]');
+    const labelSides = this.container.querySelector<HTMLElement>('[data-ref="label-popover-sides"]');
+    const hasSides = isShape && (el.shapeType === 'star' || (el.sides !== undefined && el.sides > 0));
+    if (sidesContainer) sidesContainer.classList.toggle('is-hidden', !hasSides);
+    if (hasSides && inputSides && labelSides) {
+      const currentSides = isShape && el.sides ? el.sides : 5;
+      inputSides.value = `${currentSides}`;
+      labelSides.textContent = `${currentSides}`;
+    }
+
+    const inputOpacity = this.container.querySelector<HTMLInputElement>('[data-ref="input-popover-opacity"]');
+    const labelOpacity = this.container.querySelector<HTMLElement>('[data-ref="label-popover-opacity"]');
+    const currentOp = Math.round(((el as any).opacity !== undefined ? (el as any).opacity : 1) * 100);
+    if (inputOpacity) inputOpacity.value = `${currentOp}`;
+    if (labelOpacity) labelOpacity.textContent = `${currentOp}`;
+
+    if (isConnector) {
+      const startMarker = el.arrowStart === true ? 'arrow-filled' : (el.arrowStart || 'none');
+      const endMarker = el.arrowEnd === true || el.arrowEnd === undefined ? 'arrow-filled' : (el.arrowEnd === false ? 'none' : el.arrowEnd);
+      this.container.querySelectorAll<HTMLButtonElement>('[data-ref="grid-marker-start"] [data-marker]').forEach((btn) => {
+        btn.classList.toggle('is-active', btn.getAttribute('data-marker') === startMarker);
+      });
+      this.container.querySelectorAll<HTMLButtonElement>('[data-ref="grid-marker-end"] [data-marker]').forEach((btn) => {
+        btn.classList.toggle('is-active', btn.getAttribute('data-marker') === endMarker);
+      });
+      this.container.querySelectorAll<HTMLButtonElement>('[data-conn-style]').forEach((btn) => {
+        btn.classList.toggle('is-active', btn.getAttribute('data-conn-style') === el.style);
+      });
+    }
+  }
+
+  private togglePopover(popover: HTMLElement, anchorBtn: HTMLElement): void {
+    if (!popover.classList.contains('is-hidden')) {
+      popover.classList.add('is-hidden');
+      this.activePopover = null;
+      return;
+    }
+
+    this.closeAllPopovers();
+    this.hideColorsPanel();
+
+    const rect = anchorBtn.getBoundingClientRect();
+    const containerRect = this.container.querySelector<HTMLElement>('[data-ref="board-viewport"]')?.getBoundingClientRect();
+    if (containerRect) {
+      const left = Math.max(8, Math.min(rect.left - containerRect.left, containerRect.width - 280));
+      popover.style.left = `${left}px`;
+      popover.style.top = `${rect.bottom - containerRect.top + 6}px`;
+    }
+
+    popover.classList.remove('is-hidden');
+    this.activePopover = popover;
+  }
+
+  private closeAllPopovers(): void {
+    this.container.querySelectorAll<HTMLElement>('.board-context-popover').forEach((p) => {
+      p.classList.add('is-hidden');
+    });
+    this.activePopover = null;
+  }
+
+  private bindContextualToolbar(signal: AbortSignal): void {
+    this.topSelectionSectionEl = this.container.querySelector<HTMLElement>('[data-ref="board-top-selection-section"]');
+    this.topFillSwatchEl = this.container.querySelector<HTMLElement>('[data-ref="top-fill-swatch"]');
+    this.topStrokeSwatchEl = this.container.querySelector<HTMLElement>('[data-ref="top-stroke-swatch"]');
+    this.topTextSwatchEl = this.container.querySelector<HTMLElement>('[data-ref="top-text-swatch"]');
+    this.topFontSizeLabelEl = this.container.querySelector<HTMLElement>('[data-ref="top-font-size-label"]');
+
+    this.popoverStrokeEl = this.container.querySelector<HTMLElement>('[data-ref="popover-stroke"]');
+    this.popoverCornersEl = this.container.querySelector<HTMLElement>('[data-ref="popover-corners"]');
+    this.popoverOpacityEl = this.container.querySelector<HTMLElement>('[data-ref="popover-opacity"]');
+    this.popoverMarkerStartEl = this.container.querySelector<HTMLElement>('[data-ref="popover-marker-start"]');
+    this.popoverMarkerEndEl = this.container.querySelector<HTMLElement>('[data-ref="popover-marker-end"]');
+    this.popoverConnStyleEl = this.container.querySelector<HTMLElement>('[data-ref="popover-connector-style"]');
+    this.popoverPositionEl = this.container.querySelector<HTMLElement>('[data-ref="popover-position"]');
+
+    const btnFill = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-fill"]');
+    btnFill?.addEventListener('click', () => this.toggleColorsPanel('fill'), { signal });
+
+    const btnStrokeColor = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-stroke-color"]');
+    btnStrokeColor?.addEventListener('click', () => this.toggleColorsPanel('stroke'), { signal });
+
+    const btnStrokeStyle = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-stroke-style"]');
+    btnStrokeStyle?.addEventListener('click', () => {
+      if (this.popoverStrokeEl && btnStrokeStyle) this.togglePopover(this.popoverStrokeEl, btnStrokeStyle);
+    }, { signal });
+
+    const btnCorners = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-corners"]');
+    btnCorners?.addEventListener('click', () => {
+      if (this.popoverCornersEl && btnCorners) this.togglePopover(this.popoverCornersEl, btnCorners);
+    }, { signal });
+
+    const btnMarkerStart = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-marker-start"]');
+    btnMarkerStart?.addEventListener('click', () => {
+      if (this.popoverMarkerStartEl && btnMarkerStart) this.togglePopover(this.popoverMarkerStartEl, btnMarkerStart);
+    }, { signal });
+
+    const btnSwapMarkers = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-swap-markers"]');
+    btnSwapMarkers?.addEventListener('click', () => {
+      if (!this.selectedElementId) return;
+      const el = this.elements.find((item) => item.id === this.selectedElementId);
+      if (el && el.type === 'connector') {
+        this.pushHistoryState();
+        const prevStart = el.arrowStart;
+        el.arrowStart = el.arrowEnd;
+        el.arrowEnd = prevStart;
+        if (!el.fromId && !el.toId && el.startPoint && el.endPoint) {
+          const ptStart = { ...el.startPoint };
+          el.startPoint = { ...el.endPoint };
+          el.endPoint = ptStart;
+        }
+        this.collaborationManager.broadcastUpdateElement(el);
+        this.requestRedraw();
+        this.scheduleAutoSave();
+        this.updateContextualToolbar();
+      }
+    }, { signal });
+
+    const btnMarkerEnd = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-marker-end"]');
+    btnMarkerEnd?.addEventListener('click', () => {
+      if (this.popoverMarkerEndEl && btnMarkerEnd) this.togglePopover(this.popoverMarkerEndEl, btnMarkerEnd);
+    }, { signal });
+
+    const btnConnStyle = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-connector-style"]');
+    btnConnStyle?.addEventListener('click', () => {
+      if (this.popoverConnStyleEl && btnConnStyle) this.togglePopover(this.popoverConnStyleEl, btnConnStyle);
+    }, { signal });
+
+    const btnTextColor = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-text-color"]');
+    btnTextColor?.addEventListener('click', () => this.toggleColorsPanel('text'), { signal });
+
+    const btnFontDec = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-font-dec"]');
+    btnFontDec?.addEventListener('click', () => {
+      if (!this.selectedElementId) return;
+      const el = this.elements.find((item) => item.id === this.selectedElementId);
+      if (el && 'fontSize' in el && el.fontSize) {
+        this.pushHistoryState();
+        el.fontSize = Math.max(10, el.fontSize - 2);
+        this.collaborationManager.broadcastUpdateElement(el);
+        this.requestRedraw();
+        this.scheduleAutoSave();
+        this.updateContextualToolbar();
+      }
+    }, { signal });
+
+    const btnFontInc = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-font-inc"]');
+    btnFontInc?.addEventListener('click', () => {
+      if (!this.selectedElementId) return;
+      const el = this.elements.find((item) => item.id === this.selectedElementId);
+      if (el && 'fontSize' in el && el.fontSize) {
+        this.pushHistoryState();
+        el.fontSize = Math.min(72, el.fontSize + 2);
+        this.collaborationManager.broadcastUpdateElement(el);
+        this.requestRedraw();
+        this.scheduleAutoSave();
+        this.updateContextualToolbar();
+      }
+    }, { signal });
+
+    const btnOpacity = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-opacity"]');
+    btnOpacity?.addEventListener('click', () => {
+      if (this.popoverOpacityEl && btnOpacity) this.togglePopover(this.popoverOpacityEl, btnOpacity);
+    }, { signal });
+
+    const btnPosition = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-position"]');
+    btnPosition?.addEventListener('click', () => {
+      if (this.popoverPositionEl && btnPosition) this.togglePopover(this.popoverPositionEl, btnPosition);
+    }, { signal });
+
+    const btnDuplicate = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-duplicate"]');
+    btnDuplicate?.addEventListener('click', () => this.duplicateSelected(), { signal });
+
+    const btnDelete = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-delete"]');
+    btnDelete?.addEventListener('click', () => this.deleteSelected(), { signal });
+
+    const btnPosFront = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-pos-front"]');
+    btnPosFront?.addEventListener('click', () => {
+      this.reorderSelected(true);
+      this.closeAllPopovers();
+    }, { signal });
+
+    const btnPosBack = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-pos-back"]');
+    btnPosBack?.addEventListener('click', () => {
+      this.reorderSelected(false);
+      this.closeAllPopovers();
+    }, { signal });
+
+    this.container.querySelectorAll<HTMLButtonElement>('[data-stroke-preset]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const preset = btn.getAttribute('data-stroke-preset') as StrokeStyle | 'none';
+        if (!this.selectedElementId) return;
+        const el = this.elements.find((item) => item.id === this.selectedElementId);
+        if (!el) return;
+        this.pushHistoryState();
+        if (preset === 'none') {
+          if (el.type === 'shape') el.strokeWidth = 0;
+          if (el.type === 'stroke') el.size = 0;
+          if (el.type === 'connector') el.strokeWidth = 0;
+        } else {
+          if (el.type === 'shape') {
+            el.strokeStyle = preset;
+            if (el.strokeWidth === 0) el.strokeWidth = 2;
+            if (el.strokeColor === 'transparent') el.strokeColor = '#1e293b';
+          }
+          if (el.type === 'stroke') {
+            el.strokeStyle = preset;
+            if (el.size === 0) el.size = 2;
+          }
+          if (el.type === 'connector') {
+            el.strokeStyle = preset;
+            if (el.strokeWidth === 0) el.strokeWidth = 2;
+          }
+        }
+        this.collaborationManager.broadcastUpdateElement(el);
+        this.requestRedraw();
+        this.scheduleAutoSave();
+        this.updateContextualToolbar();
+      }, { signal });
+    });
+
+    const inputStrokeW = this.container.querySelector<HTMLInputElement>('[data-ref="input-popover-stroke-width"]');
+    const labelStrokeW = this.container.querySelector<HTMLElement>('[data-ref="label-popover-stroke-width"]');
+    inputStrokeW?.addEventListener('input', () => {
+      const val = parseInt(inputStrokeW.value, 10) || 0;
+      if (labelStrokeW) labelStrokeW.textContent = `${val}`;
+      if (!this.selectedElementId) return;
+      const el = this.elements.find((item) => item.id === this.selectedElementId);
+      if (!el) return;
+      if (el.type === 'shape') {
+        el.strokeWidth = val;
+        if (val > 0 && el.strokeColor === 'transparent') el.strokeColor = '#1e293b';
+      }
+      if (el.type === 'stroke') el.size = Math.max(1, val);
+      if (el.type === 'connector') el.strokeWidth = Math.max(1, val);
+      this.requestRedraw();
+    }, { signal });
+    inputStrokeW?.addEventListener('change', () => {
+      if (!this.selectedElementId) return;
+      const el = this.elements.find((item) => item.id === this.selectedElementId);
+      if (el) {
+        this.pushHistoryState();
+        this.collaborationManager.broadcastUpdateElement(el);
+        this.scheduleAutoSave();
+        this.updateContextualToolbar();
+      }
+    }, { signal });
+
+    const inputCorners = this.container.querySelector<HTMLInputElement>('[data-ref="input-popover-corner-radius"]');
+    const labelCorners = this.container.querySelector<HTMLElement>('[data-ref="label-popover-corner-radius"]');
+    inputCorners?.addEventListener('input', () => {
+      const val = parseInt(inputCorners.value, 10) || 0;
+      if (labelCorners) labelCorners.textContent = `${val}`;
+      if (!this.selectedElementId) return;
+      const el = this.elements.find((item) => item.id === this.selectedElementId);
+      if (el && el.type === 'shape') {
+        el.borderRadius = val;
+        this.requestRedraw();
+      }
+    }, { signal });
+    inputCorners?.addEventListener('change', () => {
+      if (!this.selectedElementId) return;
+      const el = this.elements.find((item) => item.id === this.selectedElementId);
+      if (el && el.type === 'shape') {
+        this.pushHistoryState();
+        this.collaborationManager.broadcastUpdateElement(el);
+        this.scheduleAutoSave();
+      }
+    }, { signal });
+
+    const inputSides = this.container.querySelector<HTMLInputElement>('[data-ref="input-popover-sides"]');
+    const labelSides = this.container.querySelector<HTMLElement>('[data-ref="label-popover-sides"]');
+    inputSides?.addEventListener('input', () => {
+      const val = parseInt(inputSides.value, 10) || 5;
+      if (labelSides) labelSides.textContent = `${val}`;
+      if (!this.selectedElementId) return;
+      const el = this.elements.find((item) => item.id === this.selectedElementId);
+      if (el && el.type === 'shape') {
+        el.sides = val;
+        this.requestRedraw();
+      }
+    }, { signal });
+    inputSides?.addEventListener('change', () => {
+      if (!this.selectedElementId) return;
+      const el = this.elements.find((item) => item.id === this.selectedElementId);
+      if (el && el.type === 'shape') {
+        this.pushHistoryState();
+        this.collaborationManager.broadcastUpdateElement(el);
+        this.scheduleAutoSave();
+      }
+    }, { signal });
+
+    const inputOpacity = this.container.querySelector<HTMLInputElement>('[data-ref="input-popover-opacity"]');
+    const labelOpacity = this.container.querySelector<HTMLElement>('[data-ref="label-popover-opacity"]');
+    inputOpacity?.addEventListener('input', () => {
+      const val = parseInt(inputOpacity.value, 10) || 0;
+      if (labelOpacity) labelOpacity.textContent = `${val}`;
+      if (!this.selectedElementId) return;
+      const el = this.elements.find((item) => item.id === this.selectedElementId);
+      if (el) {
+        (el as any).opacity = val / 100;
+        this.requestRedraw();
+      }
+    }, { signal });
+    inputOpacity?.addEventListener('change', () => {
+      if (!this.selectedElementId) return;
+      const el = this.elements.find((item) => item.id === this.selectedElementId);
+      if (el) {
+        this.pushHistoryState();
+        this.collaborationManager.broadcastUpdateElement(el);
+        this.scheduleAutoSave();
+      }
+    }, { signal });
+
+    this.container.querySelectorAll<HTMLButtonElement>('[data-ref="grid-marker-start"] [data-marker]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const marker = btn.getAttribute('data-marker') as MarkerType;
+        if (!this.selectedElementId) return;
+        const el = this.elements.find((item) => item.id === this.selectedElementId);
+        if (el && el.type === 'connector') {
+          this.pushHistoryState();
+          el.arrowStart = marker === 'none' ? false : marker;
+          this.collaborationManager.broadcastUpdateElement(el);
+          this.requestRedraw();
+          this.scheduleAutoSave();
+          this.updateContextualToolbar();
+        }
+      }, { signal });
+    });
+
+    this.container.querySelectorAll<HTMLButtonElement>('[data-ref="grid-marker-end"] [data-marker]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const marker = btn.getAttribute('data-marker') as MarkerType;
+        if (!this.selectedElementId) return;
+        const el = this.elements.find((item) => item.id === this.selectedElementId);
+        if (el && el.type === 'connector') {
+          this.pushHistoryState();
+          el.arrowEnd = marker === 'none' ? false : marker;
+          this.collaborationManager.broadcastUpdateElement(el);
+          this.requestRedraw();
+          this.scheduleAutoSave();
+          this.updateContextualToolbar();
+        }
+      }, { signal });
+    });
+
+    this.container.querySelectorAll<HTMLButtonElement>('[data-conn-style]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const style = btn.getAttribute('data-conn-style') as 'curved' | 'orthogonal' | 'straight';
+        if (!this.selectedElementId) return;
+        const el = this.elements.find((item) => item.id === this.selectedElementId);
+        if (el && el.type === 'connector') {
+          this.pushHistoryState();
+          el.style = style;
+          this.collaborationManager.broadcastUpdateElement(el);
+          this.requestRedraw();
+          this.scheduleAutoSave();
+          this.updateContextualToolbar();
+        }
+      }, { signal });
+    });
   }
 
   private duplicateSelected(): void {
@@ -1763,12 +2313,12 @@ export class BoardController {
         action: () => {
           this.pushHistoryState();
           const shapeEl: BoardShapeElement = {
-            fillColor: this.currentFillColor,
+            fillColor: '#000000',
             height: 100,
             id: `shape-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
             shapeType: 'rect',
-            strokeColor: this.currentColor,
-            strokeWidth: this.currentStrokeWidth,
+            strokeColor: 'transparent',
+            strokeWidth: 0,
             type: 'shape',
             width: 140,
             x: worldPos.x - 70,
@@ -1837,6 +2387,7 @@ export class BoardController {
 
     if (e.button !== 0) return;
     this.commitInlineEditor();
+    this.closeAllPopovers();
 
     const rect = this.canvasElement!.getBoundingClientRect();
     const screenPos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
@@ -1934,13 +2485,14 @@ export class BoardController {
 
     if (this.currentTool === 'shapes') {
       this.isDrawing = true;
+      const isLineOrArrow = this.currentShape === 'line' || this.currentShape === 'arrow';
       const newShape: BoardShapeElement = {
-        fillColor: this.currentFillColor,
+        fillColor: isLineOrArrow ? 'transparent' : '#000000',
         height: 1,
         id: `shape-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         shapeType: this.currentShape,
-        strokeColor: this.currentColor,
-        strokeWidth: this.currentStrokeWidth,
+        strokeColor: isLineOrArrow ? this.currentColor : 'transparent',
+        strokeWidth: isLineOrArrow ? Math.max(2, this.currentStrokeWidth) : 0,
         type: 'shape',
         width: 1,
         x: worldPos.x,
@@ -2696,63 +3248,67 @@ export class BoardController {
   public insertShapeOrSticker(shape: PixelShape, color?: string): void {
     this.pushHistoryState();
 
-    const shapeColor = color || this.currentColor || '#1e293b';
     const dpr = window.devicePixelRatio || 1;
     const screenW = this.canvasElement ? this.canvasElement.width / dpr : 800;
     const screenH = this.canvasElement ? this.canvasElement.height / dpr : 600;
     const centerWorld = screenToWorld(screenW / 2, screenH / 2, this.canvasElement, this.camera);
 
-    const shapeMap: Record<string, ShapeType> = {
-      arrow_down: 'arrow',
-      arrow_left: 'arrow',
-      arrow_ribbon: 'arrow',
-      arrow_right: 'arrow',
-      arrow_up: 'arrow',
-      chamfer_square: 'rect',
-      circle: 'circle',
-      cloud: 'cloud',
-      cylinder: 'cylinder',
-      diamond: 'diamond',
-      document: 'document',
-      flow_database: 'cylinder',
-      flow_decision: 'diamond',
-      flow_document: 'document',
-      flow_input_output: 'parallelogram',
-      flow_process: 'rect',
-      flow_start_end: 'pill',
-      parallelogram: 'parallelogram',
-      pill: 'pill',
-      quarter_circle: 'circle',
-      rounded_rectangle: 'round-rect',
-      semi_circle: 'circle',
-      square: 'rect',
-      star_4_sparkle: 'star',
-      star_5: 'star',
-      star_6: 'star',
-      star_7: 'star',
-      star_8: 'star',
-      triangle_down: 'triangle',
-      triangle_right_angle: 'triangle',
-      triangle_up: 'triangle',
-    };
+    if (shape.type === 'vector') {
+      const isLineOrArrow = shape.id.includes('arrow') || shape.id.includes('line');
+      const elWidth = isLineOrArrow ? 160 : 140;
+      const elHeight = isLineOrArrow ? 40 : 140;
+      const cleanId = shape.id.replace(/^shape_/, '');
 
-    const cleanId = shape.id.replace(/^shape_/, '');
-    const directShape = shapeMap[cleanId];
-    if (directShape) {
-      const elWidth = 140;
-      const elHeight = 140;
+      const shapeMap: Record<string, ShapeType> = {
+        arrow_down: 'arrow',
+        arrow_left: 'arrow',
+        arrow_ribbon: 'arrow',
+        arrow_right: 'arrow',
+        arrow_up: 'arrow',
+        chamfer_square: 'rect',
+        circle: 'circle',
+        cloud: 'cloud',
+        cylinder: 'cylinder',
+        diamond: 'diamond',
+        document: 'document',
+        flow_database: 'cylinder',
+        flow_decision: 'diamond',
+        flow_document: 'document',
+        flow_input_output: 'parallelogram',
+        flow_process: 'rect',
+        flow_start_end: 'pill',
+        parallelogram: 'parallelogram',
+        pill: 'pill',
+        quarter_circle: 'circle',
+        rounded_rectangle: 'round-rect',
+        semi_circle: 'circle',
+        square: 'rect',
+        star_4_sparkle: 'star',
+        star_5: 'star',
+        star_6: 'star',
+        star_7: 'star',
+        star_8: 'star',
+        triangle_down: 'triangle',
+        triangle_right_angle: 'triangle',
+        triangle_up: 'triangle',
+      };
+
+      const directShape: ShapeType = shapeMap[cleanId] || (isLineOrArrow ? 'line' : 'rect');
+
       const shapeEl: BoardShapeElement = {
-        fillColor: 'transparent',
+        fillColor: isLineOrArrow ? 'transparent' : '#000000',
         height: elHeight,
         id: `shape-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         shapeType: directShape,
-        strokeColor: shapeColor,
-        strokeWidth: 3,
+        strokeColor: isLineOrArrow ? (color || this.currentColor || '#000000') : 'transparent',
+        strokeWidth: isLineOrArrow ? 2 : 0,
+        svgPath: shape.pathD || undefined,
         type: 'shape',
         width: elWidth,
         x: Math.round(centerWorld.x - elWidth / 2),
         y: Math.round(centerWorld.y - elHeight / 2),
       };
+
       this.elements.push(shapeEl);
       this.collaborationManager.broadcastAddElement(shapeEl);
       this.selectedElementId = shapeEl.id;
@@ -2762,36 +3318,24 @@ export class BoardController {
       return;
     }
 
-    const sCanvas = renderShapeCanvas(shape, shape.type === 'vector' ? 'primary' : 'original', shapeColor);
-    const dataUrl = sCanvas.toDataURL();
-    const pixelSize = 4;
-    const gridW = sCanvas.width;
-    const gridH = sCanvas.height;
-    const elementWidth = gridW * pixelSize;
-    const elementHeight = gridH * pixelSize;
-
-    const gridEl: BoardPixelGridElement = {
-      backgroundColor: 'transparent',
-      data: dataUrl,
-      gridHeight: gridH,
-      gridWidth: gridW,
-      height: elementHeight,
-      id: `elem-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      pixelSize,
-      showGrid: false,
-      type: 'pixel-grid',
-      width: elementWidth,
-      x: Math.round(centerWorld.x - elementWidth / 2),
-      y: Math.round(centerWorld.y - elementHeight / 2),
-    };
-
-    this.elements.push(gridEl);
-    this.pixelGrid.syncPixelGridCanvases(this.elements, () => this.requestRedraw());
-    this.collaborationManager.broadcastAddElement(gridEl);
-    this.selectedElementId = gridEl.id;
-    this.updateSelectionToolbar();
-    this.requestRedraw();
-    this.scheduleAutoSave();
+    if (shape.type === 'sticker' && shape.file) {
+      const imgEl: BoardImageElement = {
+        aspectRatio: 1,
+        height: 120,
+        id: `img-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        type: 'image',
+        url: `/assets/img/stickers/${shape.file}`,
+        width: 120,
+        x: Math.round(centerWorld.x - 60),
+        y: Math.round(centerWorld.y - 60),
+      };
+      this.elements.push(imgEl);
+      this.collaborationManager.broadcastAddElement(imgEl);
+      this.selectedElementId = imgEl.id;
+      this.updateSelectionToolbar();
+      this.requestRedraw();
+      this.scheduleAutoSave();
+    }
   }
 
   public insertDiagramNode(config: {
@@ -2800,6 +3344,8 @@ export class BoardController {
     isMindMapNode?: boolean;
     shapeType: ShapeType;
     strokeColor?: string;
+    strokeWidth?: number;
+    svgPath?: string;
     text?: string;
     textColor?: string;
     width?: number;
@@ -2814,16 +3360,17 @@ export class BoardController {
     const h = config.height || (config.shapeType === 'pill' ? 48 : config.shapeType === 'diamond' ? 80 : config.shapeType === 'cylinder' ? 75 : 60);
 
     const shapeEl: BoardShapeElement = {
-      fillColor: config.fillColor || '#ffffff',
+      fillColor: config.fillColor || '#000000',
       fontSize: 14,
       height: h,
       id: `shape_${crypto.randomUUID().slice(0, 8)}`,
       isMindMapNode: config.isMindMapNode || false,
       shapeType: config.shapeType,
-      strokeColor: config.strokeColor || '#3b82f6',
-      strokeWidth: 2,
+      strokeColor: config.strokeColor || 'transparent',
+      strokeWidth: config.strokeWidth !== undefined ? config.strokeWidth : (config.strokeColor && config.strokeColor !== 'transparent' ? 2 : 0),
+      svgPath: config.svgPath,
       text: config.text || '',
-      textColor: config.textColor || '#0f172a',
+      textColor: config.textColor || '#ffffff',
       type: 'shape',
       width: w,
       x: Math.round(centerWorld.x - w / 2),

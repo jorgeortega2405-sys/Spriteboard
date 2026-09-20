@@ -343,14 +343,14 @@ export function convertDiagramToBoardElements(diagram: { connections?: any[]; no
       : (n.shape === 'rect' ? 'rect' : (n.shape === 'pill' ? 'pill' : (n.shape === 'cylinder' ? 'cylinder' : (n.shape === 'document' ? 'document' : (n.shape === 'parallelogram' ? 'parallelogram' : 'round-rect')))));
 
     const shapeEl: BoardShapeElement = {
-      fillColor: n.color || '#3b82f6',
+      fillColor: n.color || '#000000',
       fontSize: n.fontSize || 14,
       height: nh,
       id: newId,
       isMindMapNode: true,
       shapeType,
-      strokeColor: '#1e293b',
-      strokeWidth: 2,
+      strokeColor: 'transparent',
+      strokeWidth: 0,
       text: n.text || '',
       textColor: n.textColor || '#ffffff',
       type: 'shape',

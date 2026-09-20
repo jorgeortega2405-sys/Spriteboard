@@ -1,8 +1,9 @@
 import { getConnectorEndpoints, getElementBoundingBox } from './board-elements.manager.js';
-import { BackgroundType, BoardCollaboratorState, BoardConnectorElement, BoardElement, BoardImageElement, BoardPixelGridElement, BoardPoint, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTextElement } from './board.types.js';
+import { BackgroundType, BoardCollaboratorState, BoardConnectorElement, BoardElement, BoardImageElement, BoardPixelGridElement, BoardPoint, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTextElement, MarkerType, StrokeStyle } from './board.types.js';
 
 const imageCache = new Map<string, HTMLImageElement>();
 const imageLoadCallbacks = new Map<string, Array<() => void>>();
+const svgPath2dCache = new Map<string, Path2D>();
 
 export function getCachedImage(url: string, onLoaded?: () => void): HTMLImageElement | null {
   if (imageCache.has(url)) {
@@ -144,14 +145,116 @@ export function drawBackground(
   ctx.fill();
 }
 
+export function applyLineDash(ctx: CanvasRenderingContext2D, style?: StrokeStyle, strokeWidth = 2): void {
+  if (style === 'dashed') {
+    const dash = Math.max(8, strokeWidth * 3);
+    ctx.setLineDash([dash, dash * 0.7]);
+  } else if (style === 'dashed-short') {
+    const dash = Math.max(4, strokeWidth * 1.5);
+    ctx.setLineDash([dash, dash]);
+  } else if (style === 'dotted') {
+    const dot = Math.max(2, strokeWidth);
+    ctx.setLineDash([dot, dot * 1.5]);
+  } else {
+    ctx.setLineDash([]);
+  }
+}
+
+export function drawEndpointMarker(
+  ctx: CanvasRenderingContext2D,
+  marker: boolean | MarkerType | undefined,
+  pt: BoardPoint,
+  angle: number,
+  strokeWidth: number,
+  color: string
+): void {
+  if (!marker || marker === 'none') return;
+  const size = Math.max(10, strokeWidth * 3.2);
+  ctx.save();
+  ctx.translate(pt.x, pt.y);
+  ctx.rotate(angle);
+
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = Math.max(1.5, strokeWidth);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.setLineDash([]);
+
+  if (marker === true || marker === 'arrow-filled') {
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(-size, -size * 0.45);
+    ctx.lineTo(-size * 0.75, 0);
+    ctx.lineTo(-size, size * 0.45);
+    ctx.closePath();
+    ctx.fill();
+  } else if (marker === 'arrow') {
+    ctx.beginPath();
+    ctx.moveTo(-size, -size * 0.5);
+    ctx.lineTo(0, 0);
+    ctx.lineTo(-size, size * 0.5);
+    ctx.stroke();
+  } else if (marker === 'circle-filled') {
+    const r = Math.max(4.5, strokeWidth * 1.6);
+    ctx.beginPath();
+    ctx.arc(-r, 0, r, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (marker === 'circle') {
+    const r = Math.max(4.5, strokeWidth * 1.6);
+    ctx.beginPath();
+    ctx.arc(-r, 0, r, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    ctx.stroke();
+  } else if (marker === 'square-filled') {
+    const s = Math.max(6, strokeWidth * 2.2);
+    ctx.fillRect(-s, -s / 2, s, s);
+  } else if (marker === 'square') {
+    const s = Math.max(6, strokeWidth * 2.2);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(-s, -s / 2, s, s);
+    ctx.strokeRect(-s, -s / 2, s, s);
+  } else if (marker === 'diamond-filled') {
+    const s = Math.max(7, strokeWidth * 2.5);
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(-s / 2, -s / 3);
+    ctx.lineTo(-s, 0);
+    ctx.lineTo(-s / 2, s / 3);
+    ctx.closePath();
+    ctx.fill();
+  } else if (marker === 'diamond') {
+    const s = Math.max(7, strokeWidth * 2.5);
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(-s / 2, -s / 3);
+    ctx.lineTo(-s, 0);
+    ctx.lineTo(-s / 2, s / 3);
+    ctx.closePath();
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    ctx.stroke();
+  } else if (marker === 'bar') {
+    const h = Math.max(8, strokeWidth * 3);
+    ctx.beginPath();
+    ctx.moveTo(0, -h / 2);
+    ctx.lineTo(0, h / 2);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
 export function drawStroke(ctx: CanvasRenderingContext2D, stroke: BoardStrokeElement): void {
   if (stroke.points.length === 0) return;
   ctx.save();
-  ctx.globalAlpha = stroke.opacity || 1;
+  ctx.globalAlpha = stroke.opacity !== undefined ? stroke.opacity : 1;
   ctx.strokeStyle = stroke.color;
   ctx.lineWidth = stroke.size;
   ctx.lineCap = stroke.tool === 'highlighter' ? 'square' : 'round';
   ctx.lineJoin = 'round';
+  applyLineDash(ctx, stroke.strokeStyle, stroke.size);
 
   if (stroke.points.length === 1) {
     const p = stroke.points[0];
@@ -180,131 +283,172 @@ export function drawStroke(ctx: CanvasRenderingContext2D, stroke: BoardStrokeEle
 
 export function drawShape(ctx: CanvasRenderingContext2D, shape: BoardShapeElement): void {
   ctx.save();
+  ctx.globalAlpha = shape.opacity !== undefined ? shape.opacity : 1;
   ctx.strokeStyle = shape.strokeColor;
   ctx.fillStyle = shape.fillColor;
   ctx.lineWidth = shape.strokeWidth;
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
+  applyLineDash(ctx, shape.strokeStyle, shape.strokeWidth);
 
   const x = shape.x;
   const y = shape.y;
   const w = shape.width;
   const h = shape.height;
 
-  ctx.beginPath();
-
-  if (shape.shapeType === 'rect') {
-    ctx.rect(x, y, w, h);
-  } else if (shape.shapeType === 'round-rect') {
-    const r = Math.min(16, Math.abs(w) / 4, Math.abs(h) / 4);
-    if (typeof (ctx as any).roundRect === 'function') {
-      (ctx as any).roundRect(x, y, w, h, r);
-    } else {
-      ctx.rect(x, y, w, h);
+  if (shape.svgPath) {
+    let pathObj = svgPath2dCache.get(shape.svgPath);
+    if (!pathObj) {
+      try {
+        pathObj = new Path2D(shape.svgPath);
+        svgPath2dCache.set(shape.svgPath, pathObj);
+      } catch {}
     }
-  } else if (shape.shapeType === 'circle') {
-    ctx.ellipse(x + w / 2, y + h / 2, Math.abs(w) / 2, Math.abs(h) / 2, 0, 0, Math.PI * 2);
-  } else if (shape.shapeType === 'line') {
-    ctx.moveTo(x, y);
-    ctx.lineTo(x + w, y + h);
-  } else if (shape.shapeType === 'arrow') {
-    ctx.moveTo(x, y);
-    ctx.lineTo(x + w, y + h);
-    const angle = Math.atan2(h, w);
-    const headLen = Math.max(12, shape.strokeWidth * 3);
-    ctx.lineTo(x + w - headLen * Math.cos(angle - Math.PI / 6), y + h - headLen * Math.sin(angle - Math.PI / 6));
-    ctx.moveTo(x + w, y + h);
-    ctx.lineTo(x + w - headLen * Math.cos(angle + Math.PI / 6), y + h - headLen * Math.sin(angle + Math.PI / 6));
-  } else if (shape.shapeType === 'triangle') {
-    ctx.moveTo(x + w / 2, y);
-    ctx.lineTo(x + w, y + h);
-    ctx.lineTo(x, y + h);
-    ctx.closePath();
-  } else if (shape.shapeType === 'diamond') {
-    ctx.moveTo(x + w / 2, y);
-    ctx.lineTo(x + w, y + h / 2);
-    ctx.lineTo(x + w / 2, y + h);
-    ctx.lineTo(x, y + h / 2);
-    ctx.closePath();
-  } else if (shape.shapeType === 'star') {
-    const cx = x + w / 2;
-    const cy = y + h / 2;
-    const spikes = 5;
-    const outerR = Math.min(Math.abs(w), Math.abs(h)) / 2;
-    const innerR = outerR / 2.2;
-    let rot = (Math.PI / 2) * 3;
-    const step = Math.PI / spikes;
-
-    ctx.moveTo(cx, cy - outerR);
-    for (let i = 0; i < spikes; i++) {
-      const px = cx + Math.cos(rot) * outerR;
-      const py = cy + Math.sin(rot) * outerR;
-      ctx.lineTo(px, py);
-      rot += step;
-      const innerPx = cx + Math.cos(rot) * innerR;
-      const innerPy = cy + Math.sin(rot) * innerR;
-      ctx.lineTo(innerPx, innerPy);
-      rot += step;
+    if (pathObj) {
+      ctx.save();
+      ctx.translate(x, y);
+      const scaleX = w / 48;
+      const scaleY = h / 48;
+      ctx.scale(scaleX, scaleY);
+      if (shape.fillColor && shape.fillColor !== 'transparent') {
+        ctx.fill(pathObj, 'evenodd');
+      }
+      if (shape.strokeWidth > 0 && shape.strokeColor && shape.strokeColor !== 'transparent') {
+        const avgScale = (Math.abs(scaleX) + Math.abs(scaleY)) / 2;
+        ctx.lineWidth = shape.strokeWidth / (avgScale || 1);
+        applyLineDash(ctx, shape.strokeStyle, shape.strokeWidth / (avgScale || 1));
+        ctx.stroke(pathObj);
+      }
+      ctx.restore();
     }
-    ctx.closePath();
-  } else if (shape.shapeType === 'parallelogram') {
-    const skew = Math.min(24, Math.abs(w) * 0.22);
-    ctx.moveTo(x + skew, y);
-    ctx.lineTo(x + w, y);
-    ctx.lineTo(x + w - skew, y + h);
-    ctx.lineTo(x, y + h);
-    ctx.closePath();
-  } else if (shape.shapeType === 'cylinder') {
-    const ry = Math.min(18, Math.abs(h) * 0.18);
-    const rx = Math.abs(w) / 2;
-    const cx = x + rx;
-    ctx.moveTo(x, y + ry);
-    ctx.lineTo(x, y + h - ry);
-    ctx.ellipse(cx, y + h - ry, rx, ry, 0, Math.PI, 0, true);
-    ctx.lineTo(x + w, y + ry);
-    ctx.ellipse(cx, y + ry, rx, ry, 0, 0, Math.PI, true);
-    ctx.closePath();
-  } else if (shape.shapeType === 'pill') {
-    const r = Math.min(Math.abs(w) / 2, Math.abs(h) / 2);
-    if (typeof (ctx as any).roundRect === 'function') {
-      (ctx as any).roundRect(x, y, w, h, r);
-    } else {
-      ctx.rect(x, y, w, h);
-    }
-  } else if (shape.shapeType === 'document') {
-    const waveH = Math.min(16, Math.abs(h) * 0.15);
-    ctx.moveTo(x, y);
-    ctx.lineTo(x + w, y);
-    ctx.lineTo(x + w, y + h - waveH);
-    ctx.bezierCurveTo(
-      x + w * 0.75, y + h + waveH * 0.5,
-      x + w * 0.25, y + h - waveH * 1.5,
-      x, y + h - waveH * 0.3
-    );
-    ctx.closePath();
-  } else if (shape.shapeType === 'cloud') {
-    const rx = Math.abs(w) / 6;
-    const ry = Math.abs(h) / 4;
-    ctx.moveTo(x + rx * 2, y + ry);
-    ctx.bezierCurveTo(x + rx * 2, y, x + rx * 4, y, x + rx * 4, y + ry);
-    ctx.bezierCurveTo(x + w, y + ry, x + w, y + ry * 3, x + rx * 5, y + ry * 3);
-    ctx.bezierCurveTo(x + rx * 5, y + h, x + rx * 2, y + h, x + rx * 2, y + ry * 3);
-    ctx.bezierCurveTo(x, y + ry * 3, x, y + ry, x + rx * 2, y + ry);
-    ctx.closePath();
-  }
-
-  if (shape.fillColor !== 'transparent') {
-    ctx.fill();
-  }
-  ctx.stroke();
-
-  if (shape.shapeType === 'cylinder') {
-    const ry = Math.min(18, Math.abs(h) * 0.18);
-    const rx = Math.abs(w) / 2;
-    const cx = x + rx;
+  } else {
     ctx.beginPath();
-    ctx.ellipse(cx, y + ry, rx, ry, 0, 0, Math.PI * 2);
-    ctx.stroke();
+
+    if (shape.shapeType === 'rect') {
+      const r = shape.borderRadius || 0;
+      if (r > 0 && typeof (ctx as any).roundRect === 'function') {
+        const clampedR = Math.min(r, Math.abs(w) / 2, Math.abs(h) / 2);
+        (ctx as any).roundRect(x, y, w, h, clampedR);
+      } else {
+        ctx.rect(x, y, w, h);
+      }
+    } else if (shape.shapeType === 'round-rect') {
+      const defaultR = Math.min(16, Math.abs(w) / 4, Math.abs(h) / 4);
+      const r = shape.borderRadius !== undefined ? Math.min(shape.borderRadius, Math.abs(w) / 2, Math.abs(h) / 2) : defaultR;
+      if (typeof (ctx as any).roundRect === 'function') {
+        (ctx as any).roundRect(x, y, w, h, r);
+      } else {
+        ctx.rect(x, y, w, h);
+      }
+    } else if (shape.shapeType === 'circle') {
+      ctx.ellipse(x + w / 2, y + h / 2, Math.abs(w) / 2, Math.abs(h) / 2, 0, 0, Math.PI * 2);
+    } else if (shape.shapeType === 'line') {
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + w, y + h);
+    } else if (shape.shapeType === 'arrow') {
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + w, y + h);
+      const angle = Math.atan2(h, w);
+      const headLen = Math.max(12, shape.strokeWidth * 3);
+      ctx.lineTo(x + w - headLen * Math.cos(angle - Math.PI / 6), y + h - headLen * Math.sin(angle - Math.PI / 6));
+      ctx.moveTo(x + w, y + h);
+      ctx.lineTo(x + w - headLen * Math.cos(angle + Math.PI / 6), y + h - headLen * Math.sin(angle + Math.PI / 6));
+    } else if (shape.shapeType === 'triangle') {
+      ctx.moveTo(x + w / 2, y);
+      ctx.lineTo(x + w, y + h);
+      ctx.lineTo(x, y + h);
+      ctx.closePath();
+    } else if (shape.shapeType === 'diamond') {
+      ctx.moveTo(x + w / 2, y);
+      ctx.lineTo(x + w, y + h / 2);
+      ctx.lineTo(x + w / 2, y + h);
+      ctx.lineTo(x, y + h / 2);
+      ctx.closePath();
+    } else if (shape.shapeType === 'star') {
+      const cx = x + w / 2;
+      const cy = y + h / 2;
+      const spikes = shape.sides || 5;
+      const outerR = Math.min(Math.abs(w), Math.abs(h)) / 2;
+      const innerR = outerR / 2.2;
+      let rot = (Math.PI / 2) * 3;
+      const step = Math.PI / spikes;
+
+      ctx.moveTo(cx, cy - outerR);
+      for (let i = 0; i < spikes; i++) {
+        const px = cx + Math.cos(rot) * outerR;
+        const py = cy + Math.sin(rot) * outerR;
+        ctx.lineTo(px, py);
+        rot += step;
+        const innerPx = cx + Math.cos(rot) * innerR;
+        const innerPy = cy + Math.sin(rot) * innerR;
+        ctx.lineTo(innerPx, innerPy);
+        rot += step;
+      }
+      ctx.closePath();
+    } else if (shape.shapeType === 'parallelogram') {
+      const skew = Math.min(24, Math.abs(w) * 0.22);
+      ctx.moveTo(x + skew, y);
+      ctx.lineTo(x + w, y);
+      ctx.lineTo(x + w - skew, y + h);
+      ctx.lineTo(x, y + h);
+      ctx.closePath();
+    } else if (shape.shapeType === 'cylinder') {
+      const ry = Math.min(18, Math.abs(h) * 0.18);
+      const rx = Math.abs(w) / 2;
+      const cx = x + rx;
+      ctx.moveTo(x, y + ry);
+      ctx.lineTo(x, y + h - ry);
+      ctx.ellipse(cx, y + h - ry, rx, ry, 0, Math.PI, 0, true);
+      ctx.lineTo(x + w, y + ry);
+      ctx.ellipse(cx, y + ry, rx, ry, 0, 0, Math.PI, true);
+      ctx.closePath();
+    } else if (shape.shapeType === 'pill') {
+      const r = Math.min(Math.abs(w) / 2, Math.abs(h) / 2);
+      if (typeof (ctx as any).roundRect === 'function') {
+        (ctx as any).roundRect(x, y, w, h, r);
+      } else {
+        ctx.rect(x, y, w, h);
+      }
+    } else if (shape.shapeType === 'document') {
+      const waveH = Math.min(16, Math.abs(h) * 0.15);
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + w, y);
+      ctx.lineTo(x + w - waveH, y + h - waveH);
+      ctx.bezierCurveTo(
+        x + w * 0.75, y + h + waveH * 0.5,
+        x + w * 0.25, y + h - waveH * 1.5,
+        x, y + h - waveH * 0.3
+      );
+      ctx.closePath();
+    } else if (shape.shapeType === 'cloud') {
+      const rx = Math.abs(w) / 6;
+      const ry = Math.abs(h) / 4;
+      ctx.moveTo(x + rx * 2, y + ry);
+      ctx.bezierCurveTo(x + rx * 2, y, x + rx * 4, y, x + rx * 4, y + ry);
+      ctx.bezierCurveTo(x + w, y + ry, x + w, y + ry * 3, x + rx * 5, y + ry * 3);
+      ctx.bezierCurveTo(x + rx * 5, y + h, x + rx * 2, y + h, x + rx * 2, y + ry * 3);
+      ctx.bezierCurveTo(x, y + ry * 3, x, y + ry, x + rx * 2, y + ry);
+      ctx.closePath();
+    }
+
+    if (shape.fillColor && shape.fillColor !== 'transparent' && shape.shapeType !== 'line' && shape.shapeType !== 'arrow') {
+      ctx.fill();
+    }
+
+    if (shape.shapeType === 'line' || shape.shapeType === 'arrow') {
+      ctx.stroke();
+    } else if (shape.strokeWidth > 0 && shape.strokeColor && shape.strokeColor !== 'transparent') {
+      ctx.stroke();
+    }
+
+    if (shape.shapeType === 'cylinder' && shape.strokeWidth > 0 && shape.strokeColor && shape.strokeColor !== 'transparent') {
+      const ry = Math.min(18, Math.abs(h) * 0.18);
+      const rx = Math.abs(w) / 2;
+      const cx = x + rx;
+      ctx.beginPath();
+      ctx.ellipse(cx, y + ry, rx, ry, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
   }
 
   if (shape.text) {
@@ -339,11 +483,13 @@ export function drawConnector(
   const { from, to } = getConnectorEndpoints(connector, elements);
 
   ctx.save();
+  ctx.globalAlpha = connector.opacity !== undefined ? connector.opacity : 1;
   ctx.strokeStyle = connector.color || '#475569';
   ctx.fillStyle = connector.color || '#475569';
   ctx.lineWidth = connector.strokeWidth || 2;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
+  applyLineDash(ctx, connector.strokeStyle, connector.strokeWidth || 2);
 
   ctx.beginPath();
   ctx.moveTo(from.x, from.y);
@@ -375,35 +521,17 @@ export function drawConnector(
   }
   ctx.stroke();
 
-  const arrowLen = Math.max(10, (connector.strokeWidth || 2) * 3);
-  if (connector.arrowEnd !== false) {
-    ctx.beginPath();
-    ctx.moveTo(to.x, to.y);
-    ctx.lineTo(
-      to.x - arrowLen * Math.cos(angleEnd - Math.PI / 6),
-      to.y - arrowLen * Math.sin(angleEnd - Math.PI / 6)
-    );
-    ctx.lineTo(
-      to.x - arrowLen * Math.cos(angleEnd + Math.PI / 6),
-      to.y - arrowLen * Math.sin(angleEnd + Math.PI / 6)
-    );
-    ctx.closePath();
-    ctx.fill();
+  const strokeW = connector.strokeWidth || 2;
+  const col = connector.color || '#475569';
+
+  if (connector.arrowEnd !== false && connector.arrowEnd !== 'none') {
+    const marker = connector.arrowEnd === true || connector.arrowEnd === undefined ? 'arrow-filled' : connector.arrowEnd;
+    drawEndpointMarker(ctx, marker, to, angleEnd, strokeW, col);
   }
 
-  if (connector.arrowStart) {
-    ctx.beginPath();
-    ctx.moveTo(from.x, from.y);
-    ctx.lineTo(
-      from.x - arrowLen * Math.cos(angleStart - Math.PI / 6),
-      from.y - arrowLen * Math.sin(angleStart - Math.PI / 6)
-    );
-    ctx.lineTo(
-      from.x - arrowLen * Math.cos(angleStart + Math.PI / 6),
-      from.y - arrowLen * Math.sin(angleStart + Math.PI / 6)
-    );
-    ctx.closePath();
-    ctx.fill();
+  if (connector.arrowStart && connector.arrowStart !== 'none') {
+    const marker = connector.arrowStart === true ? 'arrow-filled' : connector.arrowStart;
+    drawEndpointMarker(ctx, marker, from, angleStart, strokeW, col);
   }
 
   if (connector.label) {
@@ -417,6 +545,7 @@ export function drawConnector(
     ctx.fillStyle = '#ffffff';
     ctx.strokeStyle = connector.color || '#cbd5e1';
     ctx.lineWidth = 1;
+    ctx.setLineDash([]);
     ctx.beginPath();
     if (typeof (ctx as any).roundRect === 'function') {
       (ctx as any).roundRect(bx, by, bw, bh, 4);
@@ -437,6 +566,7 @@ export function drawConnector(
 
 export function drawSticky(ctx: CanvasRenderingContext2D, sticky: BoardStickyElement): void {
   ctx.save();
+  ctx.globalAlpha = sticky.opacity !== undefined ? sticky.opacity : 1;
   ctx.shadowColor = 'rgba(0, 0, 0, 0.12)';
   ctx.shadowBlur = 10;
   ctx.shadowOffsetY = 4;
@@ -452,6 +582,7 @@ export function drawSticky(ctx: CanvasRenderingContext2D, sticky: BoardStickyEle
   ctx.restore();
 
   ctx.save();
+  ctx.globalAlpha = sticky.opacity !== undefined ? sticky.opacity : 1;
   ctx.fillStyle = sticky.textColor || '#1e293b';
   ctx.font = `500 ${sticky.fontSize}px sans-serif`;
   ctx.textBaseline = 'top';
@@ -472,6 +603,7 @@ export function drawSticky(ctx: CanvasRenderingContext2D, sticky: BoardStickyEle
 
 export function drawText(ctx: CanvasRenderingContext2D, textEl: BoardTextElement): void {
   ctx.save();
+  ctx.globalAlpha = textEl.opacity !== undefined ? textEl.opacity : 1;
   ctx.fillStyle = textEl.color;
   ctx.font = `600 ${textEl.fontSize}px sans-serif`;
   ctx.textBaseline = 'top';
