@@ -18,6 +18,7 @@ import { generateShadingRamp, getCollaboratorColor } from '../../utils/color.uti
 import { setupDropdown } from '../../utils/dom.util.js';
 import { PixelShape } from '../../utils/pixel-shapes.util.js';
 import { DocPage } from '../doc/doc.types.js';
+import { BoardChartsPanelComponent } from './board-charts-panel.component.js';
 import { BoardCollaborationManager } from './board-collaboration.manager.js';
 import { computeElementsBoundingBox, findContainingSection, findElementsByMarqueeBox, getConnectorEndpoints, getElementBoundingBox, hitTest3DRotationGizmo, hitTestElement, hitTestResizeHandle, moveElementByDelta, moveElementByDrag, resizeElementByHandle } from './board-elements.manager.js';
 import { exportJson, exportPng, exportSvg, generateThumbnail } from './board-export.service.js';
@@ -25,8 +26,8 @@ import { BoardHistoryManager } from './board-history.manager.js';
 import { drawMockupElement } from './board-mockup-renderer.js';
 import { BoardMockupsPanelComponent } from './board-mockups-panel.component.js';
 import { BoardPixelGridManager } from './board-pixel-grid.manager.js';
-import { draw3DElement, draw3DGroundGrid, drawBackground, drawBoardCollaboratorCursors, drawCheckerboard, drawConnector, drawImage, drawMarqueeBox, drawMultiSelectionBounds, drawPixelGridLines, drawSection, drawSelectionBox, drawShape, drawSticky, drawStroke, drawTable, drawText, onCustomModelLoaded, preloadCustom3DModels, screenToWorld, worldToScreen } from './board-renderer.js';
-import { BackgroundType, Board3DElement, BoardCollaboratorState, BoardConnectorElement, BoardElement, BoardImageElement, BoardMockupElement, BoardPixelGridElement, BoardPoint, BoardProject, BoardSectionElement, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTableCell, BoardTableElement, BoardTextElement, BoardTool, DEFAULT_CLASSIC_PALETTE, GAMEBOY_PALETTE, MarkerType, PICO8_PALETTE, PixelSubtool, ResizeHandle, Shape3DType, ShapeType, StrokeStyle } from './board.types.js';
+import { draw3DElement, draw3DGroundGrid, drawBackground, drawBoardCollaboratorCursors, drawChart, drawCheckerboard, drawConnector, drawImage, drawMarqueeBox, drawMultiSelectionBounds, drawPixelGridLines, drawSection, drawSelectionBox, drawShape, drawSticky, drawStroke, drawTable, drawText, onCustomModelLoaded, preloadCustom3DModels, screenToWorld, worldToScreen } from './board-renderer.js';
+import { BackgroundType, Board3DElement, BoardChartElement, BoardCollaboratorState, BoardConnectorElement, BoardElement, BoardImageElement, BoardMockupElement, BoardPixelGridElement, BoardPoint, BoardProject, BoardSectionElement, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTableCell, BoardTableElement, BoardTextElement, BoardTool, ChartDataRow, ChartType, DEFAULT_CHART_PALETTES, DEFAULT_CLASSIC_PALETTE, GAMEBOY_PALETTE, MarkerType, PICO8_PALETTE, PixelSubtool, ResizeHandle, Shape3DType, ShapeType, StrokeStyle } from './board.types.js';
 
 export class BoardController {
   private abortController: AbortController;
@@ -84,6 +85,7 @@ export class BoardController {
   private history = new BoardHistoryManager();
   private hoveredPixelGridCell: { gridId: string; px: number; py: number } | null = null;
   private hoveredMockupDropId: string | null = null;
+  private chartsPanel: BoardChartsPanelComponent | null = null;
   private mockupsPanel: BoardMockupsPanelComponent | null = null;
   private didPan = false;
   private isDrawing = false;
@@ -166,6 +168,23 @@ export class BoardController {
 
     this.setupDropdowns();
     this.setupResizeObserver();
+    this.chartsPanel = new BoardChartsPanelComponent(this.container, {
+      onChangeChart: (chart) => {
+        const idx = this.elements.findIndex((e) => e.id === chart.id);
+        if (idx !== -1) {
+          this.elements[idx] = { ...chart };
+          this.requestRedraw();
+          this.scheduleAutoSave();
+        }
+      },
+      onClose: () => {
+        this.updateVerticalToolbarActiveButtons();
+      },
+      onCreateChart: (type) => {
+        this.insertChart(type);
+      },
+    });
+    this.chartsPanel.init();
     this.mockupsPanel = new BoardMockupsPanelComponent(this.container, {
       onClose: () => {
         this.updateVerticalToolbarActiveButtons();
@@ -212,6 +231,7 @@ export class BoardController {
     if (this.isLoaded && this.isOwner) {
       void this.saveImmediate();
     }
+    this.chartsPanel = null;
     this.mockupsPanel?.destroy();
     this.mockupsPanel = null;
     this.collaborationManager.destroy();
@@ -1512,18 +1532,25 @@ export class BoardController {
     const isSingle = selectedEls.length === 1;
     const isPixel = isSingle && selectedEls[0].type === 'pixel-grid';
     const isMockup = isSingle && selectedEls[0].type === 'mockup';
+    const isChart = isSingle && selectedEls[0].type === 'chart';
 
     const btnEdit = this.container.querySelector<HTMLElement>('[data-ref="btn-sel-edit-pixels"]');
     const btnGrid = this.container.querySelector<HTMLElement>('[data-ref="btn-sel-toggle-grid"]');
     const btnExport = this.container.querySelector<HTMLElement>('[data-ref="btn-sel-export-sprite"]');
     const divider = this.container.querySelector<HTMLElement>('[data-ref="sel-pixel-divider"]');
     const groupMockups = this.container.querySelector<HTMLElement>('[data-ref="board-sel-group-mockups"]');
+    const groupCharts = this.container.querySelector<HTMLElement>('[data-ref="board-sel-group-charts"]');
 
     btnEdit?.classList.toggle('is-hidden', !isPixel);
     btnGrid?.classList.toggle('is-hidden', !isPixel);
     btnExport?.classList.toggle('is-hidden', !isPixel);
     divider?.classList.toggle('is-hidden', !isPixel);
     groupMockups?.classList.toggle('is-hidden', !isMockup);
+    groupCharts?.classList.toggle('is-hidden', !isChart);
+
+    if (isChart && this.chartsPanel?.isOpen()) {
+      this.chartsPanel.syncChart(selectedEls[0] as BoardChartElement);
+    }
 
     const bbox = computeElementsBoundingBox(selectedEls);
     if (!bbox) {
@@ -3198,6 +3225,14 @@ export class BoardController {
       filePicker?.click();
       return;
     }
+    if (hit && hit.type === 'chart') {
+      this.selectedElementId = hit.id;
+      this.selectedElementIds = [hit.id];
+      this.updateSelectionToolbar();
+      this.chartsPanel?.open(hit);
+      this.updateVerticalToolbarActiveButtons();
+      return;
+    }
     if (hit && (hit.type === 'sticky' || hit.type === 'text' || hit.type === 'shape')) {
       this.selectedElementId = hit.id;
       this.selectedElementIds = [hit.id];
@@ -3784,6 +3819,8 @@ export class BoardController {
       drawSection(ctx, el);
     } else if (el.type === 'table') {
       drawTable(ctx, el, this.selectedTableCell, this.camera.zoom);
+    } else if (el.type === 'chart') {
+      drawChart(ctx, el);
     }
   }
 
@@ -4775,8 +4812,6 @@ export class BoardController {
             this.setTool('pixel');
           } else if (vtool === 'shapes') {
             this.toggleVSubtoolbar('shapes');
-          } else if (vtool === '3d') {
-            this.toggleVSubtoolbar('3d');
           } else if (vtool === 'lines') {
             this.toggleVSubtoolbar('lines');
             this.activateConnectorTool(this.connectorStyle);
@@ -4785,22 +4820,25 @@ export class BoardController {
           } else if (vtool === 'text') {
             this.hideAllVSubtoolbars();
             this.insertTextPreset('body');
-          } else if (vtool === 'tables') {
-            this.hideAllVSubtoolbars();
-            this.insertTable(3, 3);
-          } else if (vtool === 'mockups') {
-            this.hideAllVSubtoolbars();
-            if (this.mockupsPanel?.isOpen()) {
-              this.mockupsPanel.close();
-            } else {
-              this.mockupsPanel?.open();
-            }
-            this.updateVerticalToolbarActiveButtons();
           }
+          this.updateVerticalToolbarActiveButtons();
         },
         { signal }
       );
     });
+
+    const btnEditChart = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sel-edit-chart"]');
+    btnEditChart?.addEventListener(
+      'click',
+      () => {
+        const selectedChart = this.getSelectedChartElement();
+        if (selectedChart) {
+          this.chartsPanel?.open(selectedChart);
+          this.updateVerticalToolbarActiveButtons();
+        }
+      },
+      { signal }
+    );
 
     const drawSubBtns = this.container.querySelectorAll<HTMLButtonElement>('[data-ref="vsubtoolbar-draw"] [data-subtool]');
     drawSubBtns.forEach((btn) => {
@@ -5057,13 +5095,9 @@ export class BoardController {
         active = true;
       } else if (vtool === 'shapes' && (this.activeVSubtoolbar === 'shapes' || this.currentTool === 'shapes')) {
         active = true;
-      } else if (vtool === '3d' && this.activeVSubtoolbar === '3d') {
-        active = true;
       } else if (vtool === 'lines' && (this.activeVSubtoolbar === 'lines' || this.currentTool === 'connector')) {
         active = true;
       } else if (vtool === 'stickies' && (this.activeVSubtoolbar === 'stickies' || this.currentTool === 'sticky')) {
-        active = true;
-      } else if (vtool === 'mockups' && this.mockupsPanel?.isOpen()) {
         active = true;
       }
       btn.classList.toggle('is-active', active);
@@ -5600,6 +5634,110 @@ export class BoardController {
       railBtn?.classList.toggle('is-active', shouldShow);
     }
     return shouldShow;
+  }
+
+  public insertChart(chartType: ChartType = 'bar-categorical', worldPos?: BoardPoint): void {
+    this.pushHistoryState();
+
+    const dpr = window.devicePixelRatio || 1;
+    const screenW = this.canvasElement ? this.canvasElement.width / dpr : 800;
+    const screenH = this.canvasElement ? this.canvasElement.height / dpr : 600;
+    const center = screenToWorld(screenW / 2, screenH / 2, this.canvasElement, this.camera);
+
+    const defaultPalette = [...DEFAULT_CHART_PALETTES.canva.colors];
+    const chartW = 460;
+    const chartH = 320;
+
+    const isGrouped = chartType === 'bar-grouped-vertical' || chartType === 'bar-grouped-horizontal';
+    const isStacked =
+      chartType === 'bar-stacked-vertical' ||
+      chartType === 'bar-stacked-horizontal' ||
+      chartType === 'bar-stacked-100-vertical';
+
+    const series = isGrouped || isStacked
+      ? [
+          { color: defaultPalette[0], name: 'Ventas' },
+          { color: defaultPalette[1], name: 'Gastos' },
+        ]
+      : [{ color: defaultPalette[0], name: 'Ventas' }];
+
+    const headers = isGrouped || isStacked
+      ? ['Temporada', 'Ventas', 'Gastos']
+      : ['Temporada', 'Ventas'];
+
+    const data: ChartDataRow[] = isGrouped || isStacked
+      ? [
+          { color: defaultPalette[0], id: 'row-1', label: 'Invierno', values: [60, 25] },
+          { color: defaultPalette[1], id: 'row-2', label: 'Primavera', values: [45, 18] },
+          { color: defaultPalette[2], id: 'row-3', label: 'Verano', values: [78, 35] },
+          { color: defaultPalette[3], id: 'row-4', label: 'Otoño', values: [30, 15] },
+        ]
+      : [
+          { color: defaultPalette[0], id: 'row-1', label: 'Invierno', values: [60] },
+          { color: defaultPalette[1], id: 'row-2', label: 'Primavera', values: [45] },
+          { color: defaultPalette[2], id: 'row-3', label: 'Verano', values: [78] },
+          { color: defaultPalette[3], id: 'row-4', label: 'Otoño', values: [30] },
+        ];
+
+    const chartEl: BoardChartElement = {
+      barRadius: 8,
+      chartType,
+      colorBy:
+        chartType === 'bar-categorical' ||
+        chartType === 'bar-categorical-horizontal' ||
+        chartType === 'pie' ||
+        chartType === 'donut'
+          ? 'category'
+          : 'series',
+      data,
+      dataLabelPosition: 'auto',
+      decimals: 0,
+      headers,
+      height: chartH,
+      id: `chart-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      numberAbbreviation: 'none',
+      numberFormatStyle: 'normal',
+      palette: defaultPalette,
+      series,
+      showDataLabels: true,
+      showGridLines: true,
+      showLegend: false,
+      showXAxisLabels: true,
+      showYAxisLabels: true,
+      type: 'chart',
+      width: chartW,
+      x: Math.round((worldPos ? worldPos.x : center.x) - chartW / 2),
+      y: Math.round((worldPos ? worldPos.y : center.y) - chartH / 2),
+    };
+
+    this.elements.push(chartEl);
+    this.collaborationManager.broadcastAddElement(chartEl);
+    this.selectedElementId = chartEl.id;
+    this.selectedElementIds = [chartEl.id];
+    this.setTool('select');
+    this.updateSelectionToolbar();
+    this.requestRedraw();
+    this.scheduleAutoSave();
+    this.chartsPanel?.open(chartEl);
+    this.updateVerticalToolbarActiveButtons();
+    showToast('Gráfica insertada');
+  }
+
+  public openChartsPanel(chartEl?: BoardChartElement): void {
+    const target = chartEl || this.getSelectedChartElement() || undefined;
+    this.chartsPanel?.open(target);
+  }
+
+  public openMockupsPanel(): void {
+    this.mockupsPanel?.open();
+  }
+
+  private getSelectedChartElement(): BoardChartElement | null {
+    const selected = this.getSelectedElements();
+    if (selected.length === 1 && selected[0].type === 'chart') {
+      return selected[0] as BoardChartElement;
+    }
+    return null;
   }
 
   public insertMockup(tpl: MockupTemplate, worldPos?: BoardPoint): void {

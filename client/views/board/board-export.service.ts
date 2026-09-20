@@ -1,5 +1,6 @@
 import { showToast } from '../../services/toast.service.js';
 import { get3DElementProjectedFaces } from './board-3d-renderer.js';
+import { drawChart } from './board-chart-renderer.js';
 import { computeElementsBoundingBox, findContainingSection } from './board-elements.manager.js';
 import { getSvgPathBoundingBox } from './board-renderer.js';
 import { BackgroundType, Board3DElement, BoardElement, BoardPixelGridElement, BoardProject, BoardSectionElement } from './board.types.js';
@@ -367,6 +368,19 @@ export function exportSvg(
     } else if (el.type === 'image') {
       const op = escAttr(el.opacity !== undefined ? el.opacity : 1);
       out += `  <image href="${escAttr(el.url)}" x="${el.x}" y="${el.y}" width="${el.width}" height="${el.height}" preserveAspectRatio="none" opacity="${op}" />\n`;
+    } else if (el.type === 'chart') {
+      const op = escAttr(el.opacity !== undefined ? el.opacity : 1);
+      const c = document.createElement('canvas');
+      c.width = el.width * 2;
+      c.height = el.height * 2;
+      const cctx = c.getContext('2d');
+      if (cctx) {
+        cctx.scale(2, 2);
+        const tempEl = { ...el, x: 0, y: 0 };
+        drawChart(cctx, tempEl);
+        const dataUrl = c.toDataURL('image/png');
+        out += `  <image href="${dataUrl}" x="${el.x}" y="${el.y}" width="${el.width}" height="${el.height}" opacity="${op}" />\n`;
+      }
     }
     return out;
   };

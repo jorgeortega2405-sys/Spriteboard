@@ -1,6 +1,6 @@
 import { MockupFitMode } from '../../types/mockups.types.js';
 
-export type BoardTool = 'select' | 'hand' | 'pen' | 'marker' | 'highlighter' | 'eraser' | 'shapes' | 'sticky' | 'text' | 'pixel' | 'connector' | 'mockups';
+export type BoardTool = 'select' | 'hand' | 'pen' | 'marker' | 'highlighter' | 'eraser' | 'shapes' | 'sticky' | 'text' | 'pixel' | 'connector' | 'mockups' | 'charts';
 
 export type ResizeHandle = 'tl' | 'tr' | 'bl' | 'br' | 'n' | 's' | 'w' | 'e';
 
@@ -251,6 +251,101 @@ export interface BoardMockupElement {
   y: number;
 }
 
+export type ChartType =
+  | 'bar-vertical'
+  | 'bar-horizontal'
+  | 'bar-categorical'
+  | 'bar-categorical-horizontal'
+  | 'bar-grouped-vertical'
+  | 'bar-grouped-horizontal'
+  | 'bar-stacked-vertical'
+  | 'bar-stacked-horizontal'
+  | 'bar-stacked-100-vertical'
+  | 'bar-stacked-100-horizontal'
+  | 'line'
+  | 'area'
+  | 'pie'
+  | 'donut';
+
+export interface ChartDataRow {
+  color?: string;
+  id: string;
+  label: string;
+  values: number[];
+}
+
+export interface ChartSeriesConfig {
+  color?: string;
+  name: string;
+}
+
+export interface BoardChartElement {
+  barRadius?: number;
+  chartType: ChartType;
+  colorBy?: 'category' | 'series' | 'single';
+  data: ChartDataRow[];
+  dataLabelAlignment?: 'center' | 'end' | 'start';
+  dataLabelPosition?: 'auto' | 'inside' | 'outside';
+  decimals?: number;
+  headers: string[];
+  height: number;
+  id: string;
+  numberAbbreviation?: 'kmb' | 'none';
+  numberFormatStyle?: 'comma' | 'dot' | 'normal';
+  opacity?: number;
+  palette?: string[];
+  prefix?: string;
+  series: ChartSeriesConfig[];
+  showDataLabels?: boolean;
+  showGridLines?: boolean;
+  showLegend?: boolean;
+  showXAxisLabels?: boolean;
+  showXAxisTitle?: boolean;
+  showYAxisLabels?: boolean;
+  showYAxisTitle?: boolean;
+  sourceText?: string;
+  sourceUrl?: string;
+  subtitle?: string;
+  suffix?: string;
+  title?: string;
+  type: 'chart';
+  width: number;
+  x: number;
+  xAxisTitle?: string;
+  y: number;
+  yAxisMax?: number;
+  yAxisMin?: number;
+  yAxisTitle?: string;
+}
+
+export const DEFAULT_CHART_PALETTES: Record<string, { colors: string[]; id: string; name: string }> = {
+  canva: {
+    colors: ['#3b82f6', '#a855f7', '#f59e0b', '#facc15', '#10b981', '#ec4899', '#06b6d4'],
+    id: 'canva',
+    name: 'Vibrante Canva',
+  },
+  corporate: {
+    colors: ['#1e40af', '#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe', '#2563eb', '#1d4ed8'],
+    id: 'corporate',
+    name: 'Corporativo',
+  },
+  forest: {
+    colors: ['#059669', '#10b981', '#34d399', '#6ee7b7', '#047857', '#065f46', '#14b8a6'],
+    id: 'forest',
+    name: 'Esmeralda',
+  },
+  neon: {
+    colors: ['#8b5cf6', '#ec4899', '#06b6d4', '#10b981', '#f59e0b', '#6366f1', '#14b8a6'],
+    id: 'neon',
+    name: 'Neón',
+  },
+  sunset: {
+    colors: ['#f43f5e', '#fb923c', '#facc15', '#e11d48', '#ea580c', '#ca8a04', '#be123c'],
+    id: 'sunset',
+    name: 'Atardecer',
+  },
+};
+
 export type BoardElement =
   | BoardStrokeElement
   | BoardShapeElement
@@ -262,7 +357,8 @@ export type BoardElement =
   | BoardMockupElement
   | BoardConnectorElement
   | BoardSectionElement
-  | BoardTableElement;
+  | BoardTableElement
+  | BoardChartElement;
 
 export interface BoardProject {
   background: {
