@@ -236,11 +236,9 @@ export async function render(): Promise<void> {
     } else if (
       path === '/design' || path === '/design/' || path.startsWith('/design/') ||
       path === '/board' || path === '/board/' || path.startsWith('/board/') ||
-      path === '/diagram' || path === '/diagram/' || path.startsWith('/diagram/') ||
-      path === '/mindmap' || path === '/mindmap/' || path.startsWith('/mindmap/') ||
       path === '/doc' || path === '/doc/' || path.startsWith('/doc/')
     ) {
-      const match = path.match(/^\/(?:design|board|diagram|mindmap|doc)(?:\/([a-zA-Z0-9_-]+))?/);
+      const match = path.match(/^\/(?:design|board|doc)(?:\/([a-zA-Z0-9_-]+))?/);
       const canvasUuid = match?.[1] || '';
       if (!canvasUuid) {
         window.history.replaceState({}, '', '/');

@@ -3,10 +3,10 @@ import { API_ROUTES } from '../config/api-routes.js';
 import { getBoardTemplateElements } from '../config/board-templates.data.js';
 import { getCustomDiagramProject } from '../config/diagram-templates.data.js';
 import { DiagramSubtype } from '../types/mindmap.types.js';
+import { convertDiagramToBoardElements } from '../views/board/board-elements.manager.js';
 import { generateDocThumbnail } from '../views/doc/doc-export.service.js';
 import { getDocTemplateById } from '../views/doc/doc-templates.config.js';
 import { DOC_PAPER_DIMENSIONS, DocMargins, DocOrientation, DocPaperSize } from '../views/doc/doc.types.js';
-import { getDiagramStrategy } from '../views/mindmap/strategies/strategy.registry.js';
 import { currentUser, postApi } from './api.service.js';
 import { saveLocalCanvas } from './canvas-storage.service.js';
 import { t } from './i18n.service.js';
@@ -15,7 +15,7 @@ import { showToast } from './toast.service.js';
 export interface CreateCanvasOptions {
   bgType?: 'blank' | 'dark' | 'dots' | 'grid' | 'light' | 'solid' | 'transparent';
   boardTemplateId?: string;
-  canvasType?: 'board' | 'diagram' | 'doc' | 'mindmap';
+  canvasType?: 'board' | 'doc';
   checkSize?: number;
   diagramSubtype?: DiagramSubtype;
   diagramTemplateId?: string;
@@ -41,31 +41,24 @@ export interface CreateCanvasOptions {
 }
 
 export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise<void> {
-  const isDiagram = options.canvasType === 'diagram' || options.canvasType === 'mindmap';
   const isDoc = options.canvasType === 'doc';
-  const isBoard = !isDiagram && !isDoc;
-  const isInfinite = isBoard || isDiagram;
   const paperPreset = (options.docPaperSize && DOC_PAPER_DIMENSIONS[options.docPaperSize])
     ? DOC_PAPER_DIMENSIONS[options.docPaperSize][options.docOrientation || 'portrait']
     : DOC_PAPER_DIMENSIONS.letter.portrait;
   const width = isDoc ? (options.width || paperPreset.widthPx || 816) : 0;
   const height = isDoc ? (options.height || paperPreset.heightPx || 0) : 0;
 
-  const defaultName = isDoc ? 'Documento sin título' : (isDiagram ? 'Mapa Mental sin título' : 'Pizarrón sin título');
+  const defaultName = isDoc ? 'Documento sin título' : 'Pizarrón sin título';
   const name = options.name.trim() || defaultName;
-  const bgType = options.bgType || 'transparent';
   const solidColor = options.solidColor || '#ffffff';
-  const checkSize = options.checkSize || 16;
-  const fps = options.fps || 8;
-  const onionSkin = options.onionSkin ?? false;
 
   let templateDataUrl: string | null = null;
 
   if (options.templateImage) {
     try {
       const offscreen = document.createElement('canvas');
-      offscreen.width = width;
-      offscreen.height = height;
+      offscreen.width = width || 320;
+      offscreen.height = height || 180;
       const ctx = offscreen.getContext('2d');
       if (ctx) {
         ctx.imageSmoothingEnabled = false;
@@ -76,7 +69,7 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
             if (resolved) return;
             resolved = true;
             try {
-              ctx.drawImage(img, 0, 0, width, height);
+              ctx.drawImage(img, 0, 0, offscreen.width, offscreen.height);
             } catch {}
             resolve();
           };
@@ -129,35 +122,16 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
       type: 'doc',
       version: 1,
     };
-  } else if (isDiagram) {
-    const rootIdea = options.rootIdeaText?.trim() || options.name.trim() || 'Idea Principal';
-    if (options.diagramTemplateId && options.diagramSubtype) {
-      initialProject = getCustomDiagramProject(options.diagramTemplateId, options.diagramSubtype, rootIdea);
-    } else {
-      const strategy = getDiagramStrategy(options.diagramSubtype);
-      const fullProject = strategy.getInitialProject(rootIdea);
-      const rootNode = fullProject.nodes[fullProject.rootId];
-      if (rootNode) {
-        initialProject = {
-          ...fullProject,
-          connections: [],
-          nodes: {
-            [fullProject.rootId]: {
-              ...rootNode,
-              parentId: null,
-            },
-          },
-        };
-      } else {
-        initialProject = fullProject;
-      }
-    }
-    initialProject.theme.backgroundColor = '#ffffff';
-    if (options.mindmapLineStyle) {
-      initialProject.theme.lineStyle = options.mindmapLineStyle;
-    }
   } else {
-    let elements = getBoardTemplateElements(options.boardTemplateId);
+    let elements = getBoardTemplateElements(options.boardTemplateId || options.diagramTemplateId);
+    if (elements.length === 0 && (options.diagramSubtype || options.diagramTemplateId)) {
+      const rootIdea = options.rootIdeaText?.trim() || options.name.trim() || 'Idea Principal';
+      const subtype = options.diagramSubtype || 'mindmap';
+      const templateId = options.diagramTemplateId || 'default';
+      const diagProject = getCustomDiagramProject(templateId, subtype, rootIdea);
+      elements = convertDiagramToBoardElements(diagProject);
+    }
+
     const gridW = options.pixelGrid?.gridWidth || (options.width && options.width > 0 && options.width <= 4096 ? options.width : 0);
     const gridH = options.pixelGrid?.gridHeight || (options.height && options.height > 0 && options.height <= 4096 ? options.height : 0);
     const hasPixelGrid = Boolean(options.pixelGrid || options.pixelTemplateId || (gridW > 0 && gridH > 0 && (options.templateImage || options.width)));
@@ -200,95 +174,59 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
   if (isDoc) {
     previewThumbnail = generateDocThumbnail(initialProject);
   } else {
-    const maxThumbDim = 320;
-    let thumbW = isInfinite ? (isBoard || isDiagram ? 320 : 256) : width;
-    let thumbH = isInfinite ? (isBoard || isDiagram ? 180 : 256) : height;
-    if (thumbW > maxThumbDim || thumbH > maxThumbDim) {
-      const ratio = Math.min(maxThumbDim / thumbW, maxThumbDim / thumbH);
-      thumbW = Math.max(1, Math.round(thumbW * ratio));
-      thumbH = Math.max(1, Math.round(thumbH * ratio));
-    }
-
+    const thumbW = 320;
+    const thumbH = 180;
     const thumbCanvas = document.createElement('canvas');
     thumbCanvas.width = thumbW;
     thumbCanvas.height = thumbH;
     const thumbCtx = thumbCanvas.getContext('2d');
 
     if (thumbCtx) {
-      if (isDiagram) {
-        thumbCtx.fillStyle = '#ffffff';
-        thumbCtx.fillRect(0, 0, thumbW, thumbH);
+      thumbCtx.fillStyle = '#ffffff';
+      thumbCtx.fillRect(0, 0, thumbW, thumbH);
 
-        thumbCtx.fillStyle = '#cbd5e1';
-        const step = 16;
-        for (let y = 8; y < thumbH; y += step) {
-          for (let x = 8; x < thumbW; x += step) {
-            thumbCtx.beginPath();
-            thumbCtx.arc(x, y, 1.2, 0, Math.PI * 2);
-            thumbCtx.fill();
-          }
-        }
-
-        const pillW = 120;
-        const pillH = 32;
-        const pillX = (thumbW - pillW) / 2;
-        const pillY = (thumbH - pillH) / 2;
-        thumbCtx.fillStyle = '#6366f1';
-        thumbCtx.beginPath();
-        thumbCtx.roundRect ? thumbCtx.roundRect(pillX, pillY, pillW, pillH, 16) : thumbCtx.rect(pillX, pillY, pillW, pillH);
-        thumbCtx.fill();
-
-        thumbCtx.fillStyle = '#ffffff';
-        thumbCtx.font = '600 12px system-ui, sans-serif';
-        thumbCtx.textAlign = 'center';
-        thumbCtx.textBaseline = 'middle';
-        thumbCtx.fillText(initialProject.nodes[initialProject.rootId]?.text || 'Idea Principal', thumbW / 2, thumbH / 2);
-      } else {
-        thumbCtx.fillStyle = '#ffffff';
-        thumbCtx.fillRect(0, 0, thumbW, thumbH);
-
-        thumbCtx.fillStyle = '#cbd5e1';
-        const step = 16;
-        for (let y = 8; y < thumbH; y += step) {
-          for (let x = 8; x < thumbW; x += step) {
-            thumbCtx.beginPath();
-            thumbCtx.arc(x, y, 1.2, 0, Math.PI * 2);
-            thumbCtx.fill();
-          }
-        }
-
-        if (templateDataUrl) {
-          const thumbImg = new Image();
-          await new Promise<void>((r) => {
-            thumbImg.onload = () => {
-              try {
-                const maxDim = Math.min(thumbW * 0.7, thumbH * 0.7);
-                const imgRatio = thumbImg.naturalWidth / thumbImg.naturalHeight;
-                let dw = maxDim;
-                let dh = maxDim;
-                if (imgRatio >= 1) {
-                  dh = maxDim / imgRatio;
-                } else {
-                  dw = maxDim * imgRatio;
-                }
-                const dx = (thumbW - dw) / 2;
-                const dy = (thumbH - dh) / 2;
-                thumbCtx.imageSmoothingEnabled = false;
-                thumbCtx.drawImage(thumbImg, dx, dy, dw, dh);
-              } catch {}
-              r();
-            };
-            thumbImg.onerror = () => r();
-            thumbImg.src = templateDataUrl!;
-            if (thumbImg.complete && thumbImg.naturalWidth > 0) {
-              try {
-                thumbCtx.drawImage(thumbImg, 0, 0, thumbW, thumbH);
-              } catch {}
-              r();
-            }
-          });
+      thumbCtx.fillStyle = '#cbd5e1';
+      const step = 16;
+      for (let y = 8; y < thumbH; y += step) {
+        for (let x = 8; x < thumbW; x += step) {
+          thumbCtx.beginPath();
+          thumbCtx.arc(x, y, 1.2, 0, Math.PI * 2);
+          thumbCtx.fill();
         }
       }
+
+      if (templateDataUrl) {
+        const thumbImg = new Image();
+        await new Promise<void>((r) => {
+          thumbImg.onload = () => {
+            try {
+              const maxDim = Math.min(thumbW * 0.7, thumbH * 0.7);
+              const imgRatio = thumbImg.naturalWidth / thumbImg.naturalHeight;
+              let dw = maxDim;
+              let dh = maxDim;
+              if (imgRatio >= 1) {
+                dh = maxDim / imgRatio;
+              } else {
+                dw = maxDim * imgRatio;
+              }
+              const dx = (thumbW - dw) / 2;
+              const dy = (thumbH - dh) / 2;
+              thumbCtx.imageSmoothingEnabled = false;
+              thumbCtx.drawImage(thumbImg, dx, dy, dw, dh);
+            } catch {}
+            r();
+          };
+          thumbImg.onerror = () => r();
+          thumbImg.src = templateDataUrl!;
+          if (thumbImg.complete && thumbImg.naturalWidth > 0) {
+            try {
+              thumbCtx.drawImage(thumbImg, 0, 0, thumbW, thumbH);
+            } catch {}
+            r();
+          }
+        });
+      }
+
       try {
         previewThumbnail = thumbCanvas.toDataURL('image/png');
       } catch {
@@ -299,8 +237,8 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
     }
   }
 
-  const unit = isDoc ? 'doc' : (isDiagram ? 'diagram' : 'board');
-  const canvasType = isDoc ? 'doc' : (isDiagram ? (options.canvasType === 'mindmap' ? 'mindmap' : 'diagram') : 'board');
+  const unit = isDoc ? 'doc' : 'board';
+  const canvasType = isDoc ? 'doc' : 'board';
   const targetRoute = `/design/`;
 
   if (currentUser) {

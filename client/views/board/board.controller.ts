@@ -9,25 +9,25 @@ import { getLocalCanvasByUuid, removeLocalCanvas, saveLocalCanvas } from '../../
 import { renderIcons } from '../../services/icon.service.js';
 import { showToast } from '../../services/toast.service.js';
 import { CanvasItem } from '../../types/canvas.types.js';
-import { MindMapProject } from '../../types/mindmap.types.js';
 import { setupDropdown } from '../../utils/dom.util.js';
 import { PixelShape, renderShapeCanvas } from '../../utils/pixel-shapes.util.js';
 import { generateShadingRamp, getCollaboratorColor } from '../design/design-color.util.js';
 import { DocPage } from '../doc/doc.types.js';
 import { BoardCollaborationManager } from './board-collaboration.manager.js';
-import { computeElementsBoundingBox, getElementBoundingBox, hitTestElement, hitTestResizeHandle, moveElementByDrag, resizeElementByHandle } from './board-elements.manager.js';
+import { computeElementsBoundingBox, getConnectorEndpoints, getElementBoundingBox, hitTestElement, hitTestResizeHandle, moveElementByDrag, resizeElementByHandle } from './board-elements.manager.js';
 import { exportJson, exportPng, exportSvg, generateThumbnail } from './board-export.service.js';
 import { BoardHistoryManager } from './board-history.manager.js';
 import { BoardPixelGridManager } from './board-pixel-grid.manager.js';
-import { drawBackground, drawBoardCollaboratorCursors, drawCheckerboard, drawImage, drawPixelGridLines, drawSelectionBox, drawShape, drawSticky, drawStroke, drawText, screenToWorld, worldToScreen } from './board-renderer.js';
-import { BackgroundType, BoardCollaboratorState, BoardElement, BoardImageElement, BoardPixelGridElement, BoardPoint, BoardProject, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTextElement, BoardTool, DEFAULT_CLASSIC_PALETTE, GAMEBOY_PALETTE, PICO8_PALETTE, PixelSubtool, ShapeType } from './board.types.js';
+import { drawBackground, drawBoardCollaboratorCursors, drawCheckerboard, drawConnector, drawImage, drawPixelGridLines, drawSelectionBox, drawShape, drawSticky, drawStroke, drawText, screenToWorld, worldToScreen } from './board-renderer.js';
+import { BackgroundType, BoardCollaboratorState, BoardConnectorElement, BoardElement, BoardImageElement, BoardPixelGridElement, BoardPoint, BoardProject, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTextElement, BoardTool, DEFAULT_CLASSIC_PALETTE, GAMEBOY_PALETTE, PICO8_PALETTE, PixelSubtool, ShapeType } from './board.types.js';
 
 export class BoardController {
   private abortController: AbortController;
   private accessLevel: 'private' | 'public' = 'private';
   private activeInlineEditor: HTMLTextAreaElement | null = null;
   private activeOpenDropdown: { close: () => void } | null = null;
-  private activeTrayGroup: 'shapes' | 'sticky' | 'width' | 'pixel' | null = null;
+  private activeTrayGroup: 'connector' | 'pixel' | 'shapes' | 'sticky' | 'width' | null = null;
+  private connectorStyle: 'curved' | 'orthogonal' | 'straight' = 'curved';
   private aiDropdownController: CanvasAiDropdownController | null = null;
   private aiWrapperEl: HTMLElement | null = null;
   private autoSaveTimer: number | null = null;
@@ -757,6 +757,8 @@ export class BoardController {
 
     if (tool === 'shapes') {
       this.showOptionsTray('shapes');
+    } else if (tool === 'connector') {
+      this.showOptionsTray('connector');
     } else if (tool === 'sticky') {
       this.showOptionsTray('sticky');
     } else if (tool === 'pixel') {
@@ -928,6 +930,19 @@ export class BoardController {
       );
     });
 
+    const connectorBadges = this.container.querySelectorAll<HTMLButtonElement>('[data-connector-style]');
+    connectorBadges.forEach((opt) => {
+      opt.addEventListener(
+        'click',
+        () => {
+          connectorBadges.forEach((s) => s.classList.remove('is-active'));
+          opt.classList.add('is-active');
+          this.connectorStyle = (opt.getAttribute('data-connector-style') as 'curved' | 'orthogonal' | 'straight') || 'curved';
+        },
+        { signal }
+      );
+    });
+
     document.addEventListener(
       'click',
       (e: MouseEvent) => {
@@ -940,14 +955,16 @@ export class BoardController {
     );
   }
 
-  private showOptionsTray(group: 'shapes' | 'sticky' | 'width' | 'pixel'): void {
+  private showOptionsTray(group: 'connector' | 'pixel' | 'shapes' | 'sticky' | 'width'): void {
     const tray = this.container.querySelector<HTMLElement>('[data-ref="board-options-tray"]');
     const groupShapes = this.container.querySelector<HTMLElement>('[data-ref="options-group-shapes"]');
+    const groupConnector = this.container.querySelector<HTMLElement>('[data-ref="options-group-connector"]');
     const groupSticky = this.container.querySelector<HTMLElement>('[data-ref="options-group-sticky"]');
     const groupWidth = this.container.querySelector<HTMLElement>('[data-ref="options-group-width"]');
     const groupPixel = this.container.querySelector<HTMLElement>('[data-ref="options-group-pixel"]');
 
     if (groupShapes) groupShapes.classList.toggle('is-hidden', group !== 'shapes');
+    if (groupConnector) groupConnector.classList.toggle('is-hidden', group !== 'connector');
     if (groupSticky) groupSticky.classList.toggle('is-hidden', group !== 'sticky');
     if (groupWidth) groupWidth.classList.toggle('is-hidden', group !== 'width');
     if (groupPixel) groupPixel.classList.toggle('is-hidden', group !== 'pixel');
@@ -961,11 +978,13 @@ export class BoardController {
   private hideOptionsTray(): void {
     const tray = this.container.querySelector<HTMLElement>('[data-ref="board-options-tray"]');
     const groupShapes = this.container.querySelector<HTMLElement>('[data-ref="options-group-shapes"]');
+    const groupConnector = this.container.querySelector<HTMLElement>('[data-ref="options-group-connector"]');
     const groupSticky = this.container.querySelector<HTMLElement>('[data-ref="options-group-sticky"]');
     const groupWidth = this.container.querySelector<HTMLElement>('[data-ref="options-group-width"]');
     const groupPixel = this.container.querySelector<HTMLElement>('[data-ref="options-group-pixel"]');
 
     if (groupShapes) groupShapes.classList.add('is-hidden');
+    if (groupConnector) groupConnector.classList.add('is-hidden');
     if (groupSticky) groupSticky.classList.add('is-hidden');
     if (groupWidth) groupWidth.classList.add('is-hidden');
     if (groupPixel) groupPixel.classList.add('is-hidden');
@@ -1461,6 +1480,9 @@ export class BoardController {
       cloned.y += 24;
     } else if (cloned.type === 'stroke') {
       cloned.points = cloned.points.map((pt) => ({ x: pt.x + 24, y: pt.y + 24 }));
+    } else if (cloned.type === 'connector') {
+      if (cloned.startPoint) cloned.startPoint = { x: cloned.startPoint.x + 24, y: cloned.startPoint.y + 24 };
+      if (cloned.endPoint) cloned.endPoint = { x: cloned.endPoint.x + 24, y: cloned.endPoint.y + 24 };
     }
 
     if (cloned.type === 'pixel-grid') {
@@ -1486,7 +1508,7 @@ export class BoardController {
       cached.canvas.height = 0;
       this.pixelGrid.pixelCanvasMap.delete(removedId);
     }
-    this.elements = this.elements.filter((item) => item.id !== removedId);
+    this.elements = this.elements.filter((item) => item.id !== removedId && !(item.type === 'connector' && (item.fromId === removedId || item.toId === removedId)));
     this.collaborationManager.broadcastDeleteElement(removedId);
     this.selectedElementId = null;
     this.updateSelectionToolbar();
@@ -1929,6 +1951,25 @@ export class BoardController {
       return;
     }
 
+    if (this.currentTool === 'connector') {
+      this.isDrawing = true;
+      const hit = hitTestElement(this.elements, worldPos.x, worldPos.y, this.camera.zoom);
+      const newConnector: BoardConnectorElement = {
+        arrowEnd: true,
+        color: this.currentColor,
+        endPoint: worldPos,
+        fromId: hit ? hit.id : undefined,
+        id: `conn-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        startPoint: worldPos,
+        strokeWidth: Math.max(2, this.currentStrokeWidth),
+        style: this.connectorStyle,
+        type: 'connector',
+      };
+      this.liveDraftElement = newConnector;
+      this.requestRedraw();
+      return;
+    }
+
     if (this.currentTool === 'sticky') {
       this.pushHistoryState();
       const stickyEl: BoardStickyElement = {
@@ -2038,6 +2079,11 @@ export class BoardController {
           this.liveDraftElement.width = worldPos.x - this.liveDraftElement.x;
           this.liveDraftElement.height = worldPos.y - this.liveDraftElement.y;
           this.requestRedraw();
+        } else if (this.liveDraftElement.type === 'connector') {
+          this.liveDraftElement.endPoint = worldPos;
+          const hit = hitTestElement(this.elements, worldPos.x, worldPos.y, this.camera.zoom);
+          this.liveDraftElement.toId = hit && hit.id !== this.liveDraftElement.fromId ? hit.id : undefined;
+          this.requestRedraw();
         }
       }
     }
@@ -2125,6 +2171,14 @@ export class BoardController {
             this.liveDraftElement.height = Math.abs(this.liveDraftElement.height);
           }
         }
+        if (this.liveDraftElement.type === 'connector') {
+          const ep = getConnectorEndpoints(this.liveDraftElement, this.elements);
+          if (Math.hypot(ep.to.x - ep.from.x, ep.to.y - ep.from.y) < 10) {
+            this.liveDraftElement = null;
+            this.requestRedraw();
+            return;
+          }
+        }
         this.elements.push(this.liveDraftElement);
         this.collaborationManager.broadcastAddElement(this.liveDraftElement);
         this.selectedElementId = this.liveDraftElement.id;
@@ -2146,13 +2200,26 @@ export class BoardController {
       this.setTool('pixel');
       return;
     }
-    if (hit && (hit.type === 'sticky' || hit.type === 'text')) {
+    if (hit && (hit.type === 'sticky' || hit.type === 'text' || hit.type === 'shape')) {
       this.selectedElementId = hit.id;
       this.openInlineEditor(hit);
+      return;
+    }
+    if (hit && hit.type === 'connector') {
+      const current = hit.label || '';
+      const newLabel = window.prompt('Texto del conector:', current);
+      if (newLabel !== null) {
+        this.pushHistoryState();
+        hit.label = newLabel.trim();
+        this.collaborationManager.broadcastUpdateElement(hit);
+        this.scheduleAutoSave();
+        this.requestRedraw();
+      }
+      return;
     }
   }
 
-  private openInlineEditor(element: BoardStickyElement | BoardTextElement): void {
+  private openInlineEditor(element: BoardShapeElement | BoardStickyElement | BoardTextElement): void {
     this.commitInlineEditor();
     const container = this.container.querySelector<HTMLElement>('[data-ref="board-text-editor-container"]');
     if (!container || !this.canvasElement) return;
@@ -2164,16 +2231,23 @@ export class BoardController {
 
     const textarea = document.createElement('textarea');
     textarea.className = 'board-inline-textarea';
-    textarea.value = element.text;
+    textarea.value = element.type === 'shape' ? (element.text || '') : element.text;
     textarea.style.left = `${screenPos.x}px`;
     textarea.style.top = `${screenPos.y}px`;
     textarea.style.width = `${Math.max(120, screenW)}px`;
-    textarea.style.height = `${Math.max(60, screenH)}px`;
-    textarea.style.fontSize = `${Math.max(12, element.fontSize * this.camera.zoom)}px`;
-    textarea.style.color = element.type === 'sticky' ? element.textColor : element.color;
+    textarea.style.height = `${Math.max(40, screenH)}px`;
+    const fsize = element.type === 'shape' ? (element.fontSize || 14) : element.fontSize;
+    textarea.style.fontSize = `${Math.max(12, fsize * this.camera.zoom)}px`;
 
     if (element.type === 'sticky') {
+      textarea.style.color = element.textColor;
       textarea.style.backgroundColor = element.color;
+    } else if (element.type === 'shape') {
+      textarea.style.color = element.textColor || '#1e293b';
+      textarea.style.backgroundColor = element.fillColor !== 'transparent' ? element.fillColor : '#ffffff';
+      textarea.style.textAlign = 'center';
+    } else {
+      textarea.style.color = element.color;
     }
 
     container.appendChild(textarea);
@@ -2200,6 +2274,11 @@ export class BoardController {
       if (el && (el.type === 'sticky' || el.type === 'text')) {
         this.pushHistoryState();
         el.text = text || (el.type === 'sticky' ? 'Nota' : 'Texto');
+        this.collaborationManager.broadcastUpdateElement(el);
+        this.scheduleAutoSave();
+      } else if (el && el.type === 'shape') {
+        this.pushHistoryState();
+        el.text = text;
         this.collaborationManager.broadcastUpdateElement(el);
         this.scheduleAutoSave();
       }
@@ -2303,6 +2382,28 @@ export class BoardController {
           return;
         }
 
+        if (e.key === 'Tab') {
+          if (this.selectedElementId) {
+            const parentShape = this.elements.find((el) => el.id === this.selectedElementId);
+            if (parentShape && parentShape.type === 'shape') {
+              e.preventDefault();
+              this.createChildDiagramNode(parentShape);
+              return;
+            }
+          }
+        }
+
+        if (e.key === 'Enter') {
+          if (this.selectedElementId) {
+            const currentShape = this.elements.find((el) => el.id === this.selectedElementId);
+            if (currentShape && currentShape.type === 'shape') {
+              e.preventDefault();
+              this.createSiblingDiagramNode(currentShape);
+              return;
+            }
+          }
+        }
+
         const key = e.key.toLowerCase();
         if (key === 'v') this.setTool('select');
         if (key === 'h') this.setTool('hand');
@@ -2317,6 +2418,7 @@ export class BoardController {
           }
         }
         if (key === 's') this.setTool('shapes');
+        if (key === 'c') this.setTool('connector');
         if (key === 'n') this.setTool('sticky');
         if (key === 't') this.setTool('text');
         if (key === 'x') this.setTool('pixel');
@@ -2363,6 +2465,86 @@ export class BoardController {
       },
       { signal }
     );
+  }
+
+  private createChildDiagramNode(parent: BoardShapeElement): void {
+    const existingChildren = this.elements.filter((el) => el.type === 'connector' && el.fromId === parent.id);
+    const count = existingChildren.length;
+    const childX = parent.x + parent.width + 120;
+    const childY = parent.y + count * 80 - (count > 0 ? 30 : 0);
+
+    const childNode: BoardShapeElement = {
+      fillColor: '#ffffff',
+      fontSize: 14,
+      height: Math.max(48, parent.height),
+      id: `shape-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      isMindMapNode: true,
+      shapeType: parent.shapeType === 'pill' ? 'round-rect' : parent.shapeType,
+      strokeColor: parent.strokeColor,
+      strokeWidth: 2,
+      text: 'Subtema',
+      textColor: '#1e293b',
+      type: 'shape',
+      width: Math.max(120, parent.width),
+      x: childX,
+      y: childY,
+    };
+    const connector: BoardConnectorElement = {
+      arrowEnd: true,
+      color: parent.strokeColor,
+      fromId: parent.id,
+      id: `conn-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      strokeWidth: 2,
+      style: this.connectorStyle,
+      toId: childNode.id,
+      type: 'connector',
+    };
+    this.pushHistoryState();
+    this.elements.push(childNode, connector);
+    this.collaborationManager.broadcastAddElement(childNode);
+    this.collaborationManager.broadcastAddElement(connector);
+    this.selectedElementId = childNode.id;
+    this.updateSelectionToolbar();
+    this.requestRedraw();
+    this.scheduleAutoSave();
+    this.openInlineEditor(childNode);
+  }
+
+  private createSiblingDiagramNode(current: BoardShapeElement): void {
+    const incoming = this.elements.find((el): el is BoardConnectorElement => el.type === 'connector' && el.toId === current.id);
+    if (incoming && incoming.fromId) {
+      const parent = this.elements.find((el) => el.id === incoming.fromId && el.type === 'shape') as BoardShapeElement | undefined;
+      if (parent) {
+        this.createChildDiagramNode(parent);
+        return;
+      }
+    }
+    const siblingX = current.x;
+    const siblingY = current.y + current.height + 40;
+    const siblingNode: BoardShapeElement = {
+      fillColor: '#ffffff',
+      fontSize: 14,
+      height: current.height,
+      id: `shape-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      isMindMapNode: true,
+      shapeType: current.shapeType,
+      strokeColor: current.strokeColor,
+      strokeWidth: 2,
+      text: 'Nuevo tema',
+      textColor: '#1e293b',
+      type: 'shape',
+      width: current.width,
+      x: siblingX,
+      y: siblingY,
+    };
+    this.pushHistoryState();
+    this.elements.push(siblingNode);
+    this.collaborationManager.broadcastAddElement(siblingNode);
+    this.selectedElementId = siblingNode.id;
+    this.updateSelectionToolbar();
+    this.requestRedraw();
+    this.scheduleAutoSave();
+    this.openInlineEditor(siblingNode);
   }
 
   private requestRedraw(): void {
@@ -2425,7 +2607,7 @@ export class BoardController {
     if (this.selectedElementId) {
       const selectedEl = this.elements.find((item) => item.id === this.selectedElementId);
       if (selectedEl) {
-        drawSelectionBox(this.ctx, selectedEl, this.camera);
+        drawSelectionBox(this.ctx, selectedEl, this.camera, this.elements);
       }
     }
 
@@ -2452,6 +2634,8 @@ export class BoardController {
       this.drawPixelGrid(ctx, el);
     } else if (el.type === 'image') {
       drawImage(ctx, el, () => this.requestRedraw());
+    } else if (el.type === 'connector') {
+      drawConnector(ctx, el, this.elements);
     }
   }
 
@@ -2526,9 +2710,18 @@ export class BoardController {
       arrow_up: 'arrow',
       chamfer_square: 'rect',
       circle: 'circle',
+      cloud: 'cloud',
+      cylinder: 'cylinder',
       diamond: 'diamond',
+      document: 'document',
+      flow_database: 'cylinder',
       flow_decision: 'diamond',
+      flow_document: 'document',
+      flow_input_output: 'parallelogram',
       flow_process: 'rect',
+      flow_start_end: 'pill',
+      parallelogram: 'parallelogram',
+      pill: 'pill',
       quarter_circle: 'circle',
       rounded_rectangle: 'round-rect',
       semi_circle: 'circle',
@@ -2611,18 +2804,12 @@ export class BoardController {
     let maxY = -Infinity;
 
     newElements.forEach((el) => {
-      if (el.type === 'stroke') {
-        el.points.forEach((pt) => {
-          if (pt.x < minX) minX = pt.x;
-          if (pt.y < minY) minY = pt.y;
-          if (pt.x > maxX) maxX = pt.x;
-          if (pt.y > maxY) maxY = pt.y;
-        });
-      } else {
-        if (el.x < minX) minX = el.x;
-        if (el.y < minY) minY = el.y;
-        if (el.x + el.width > maxX) maxX = el.x + el.width;
-        if (el.y + el.height > maxY) maxY = el.y + el.height;
+      const bbox = getElementBoundingBox(el, newElements);
+      if (bbox) {
+        if (bbox.x < minX) minX = bbox.x;
+        if (bbox.y < minY) minY = bbox.y;
+        if (bbox.x + bbox.width > maxX) maxX = bbox.x + bbox.width;
+        if (bbox.y + bbox.height > maxY) maxY = bbox.y + bbox.height;
       }
     });
 
@@ -2644,13 +2831,28 @@ export class BoardController {
     const offsetX = Math.round(centerTarget.x - centerSourceX);
     const offsetY = Math.round(centerTarget.y - centerSourceY);
 
+    const idMap = new Map<string, string>();
+    newElements.forEach((el) => {
+      idMap.set(el.id, `elem_${crypto.randomUUID().slice(0, 8)}`);
+    });
+
     const clonedElements: BoardElement[] = newElements.map((el) => {
-      const newId = `elem_${crypto.randomUUID().slice(0, 8)}`;
+      const newId = idMap.get(el.id) || `elem_${crypto.randomUUID().slice(0, 8)}`;
       if (el.type === 'stroke') {
         return {
           ...el,
           id: newId,
           points: el.points.map((p) => ({ x: p.x + offsetX, y: p.y + offsetY })),
+        };
+      }
+      if (el.type === 'connector') {
+        return {
+          ...el,
+          endPoint: el.endPoint ? { x: el.endPoint.x + offsetX, y: el.endPoint.y + offsetY } : undefined,
+          fromId: el.fromId ? (idMap.get(el.fromId) || el.fromId) : undefined,
+          id: newId,
+          startPoint: el.startPoint ? { x: el.startPoint.x + offsetX, y: el.startPoint.y + offsetY } : undefined,
+          toId: el.toId ? (idMap.get(el.toId) || el.toId) : undefined,
         };
       }
       return {
@@ -2825,7 +3027,7 @@ export class BoardController {
     this.scheduleAutoSave();
   }
 
-  public insertDiagramAsBoardElements(diagram: MindMapProject, diagramTitle: string): void {
+  public insertDiagramAsBoardElements(diagram: { nodes?: Record<string, any>; connections?: any[] } | any, _diagramTitle: string): void {
     if (!diagram || !diagram.nodes) return;
     this.pushHistoryState();
 
@@ -2834,7 +3036,7 @@ export class BoardController {
     const screenH = this.canvasElement ? this.canvasElement.height / dpr : 600;
     const centerWorld = screenToWorld(screenW / 2, screenH / 2, this.canvasElement, this.camera);
 
-    const nodes = Object.values(diagram.nodes);
+    const nodes = Object.values(diagram.nodes) as any[];
     if (nodes.length === 0) return;
 
     let minX = Infinity;
@@ -2846,7 +3048,7 @@ export class BoardController {
       const nx = n.x || 0;
       const ny = n.y || 0;
       const nw = n.width || 140;
-      const nh = n.height || 48;
+      const nh = n.height || 50;
       if (nx < minX) minX = nx;
       if (ny < minY) minY = ny;
       if (nx + nw > maxX) maxX = nx + nw;
@@ -2866,61 +3068,49 @@ export class BoardController {
     const offsetY = Math.round(centerWorld.y - centerSourceY);
 
     const newElements: BoardElement[] = [];
-    const nodeCenterMap = new Map<string, { x: number; y: number }>();
+    const idMap = new Map<string, string>();
 
     nodes.forEach((n) => {
       const nw = n.width || 140;
-      const nh = n.height || 48;
+      const nh = n.height || 50;
       const nx = Math.round((n.x || 0) + offsetX);
       const ny = Math.round((n.y || 0) + offsetY);
-      nodeCenterMap.set(n.id, { x: nx + nw / 2, y: ny + nh / 2 });
+      const newId = `diag_shape_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+      idMap.set(n.id, newId);
 
-      const shapeType: ShapeType = n.shape === 'diamond' ? 'diamond' : (n.shape === 'rect' ? 'rect' : 'round-rect');
+      const shapeType: ShapeType = n.shape === 'diamond' ? 'diamond' : (n.shape === 'rect' ? 'rect' : (n.shape === 'pill' ? 'pill' : 'round-rect'));
       const shapeEl: BoardShapeElement = {
         fillColor: n.color || '#3b82f6',
+        fontSize: n.fontSize || 14,
         height: nh,
-        id: `diag_shape_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        id: newId,
+        isMindMapNode: true,
         shapeType,
         strokeColor: '#1e293b',
         strokeWidth: 2,
+        text: n.text || '',
+        textColor: n.textColor || '#ffffff',
         type: 'shape',
         width: nw,
         x: nx,
         y: ny,
       };
       newElements.push(shapeEl);
-
-      const textEl: BoardTextElement = {
-        color: n.textColor || '#ffffff',
-        fontSize: n.fontSize || 13,
-        height: nh - 8,
-        id: `diag_text_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-        text: n.text || '',
-        type: 'text',
-        width: nw - 12,
-        x: nx + 6,
-        y: ny + 4,
-      };
-      newElements.push(textEl);
     });
 
     nodes.forEach((n) => {
-      if (n.parentId && nodeCenterMap.has(n.parentId) && nodeCenterMap.has(n.id)) {
-        const pCenter = nodeCenterMap.get(n.parentId)!;
-        const cCenter = nodeCenterMap.get(n.id)!;
-        const arrowEl: BoardShapeElement = {
-          fillColor: '#94a3b8',
-          height: Math.max(10, Math.abs(cCenter.y - pCenter.y)),
+      if (n.parentId && idMap.has(n.parentId) && idMap.has(n.id)) {
+        const connEl: BoardConnectorElement = {
+          arrowEnd: true,
+          color: '#64748b',
+          fromId: idMap.get(n.parentId)!,
           id: `diag_conn_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-          shapeType: 'arrow',
-          strokeColor: '#64748b',
           strokeWidth: 2,
-          type: 'shape',
-          width: Math.max(10, Math.abs(cCenter.x - pCenter.x)),
-          x: Math.min(pCenter.x, cCenter.x),
-          y: Math.min(pCenter.y, cCenter.y),
+          style: 'curved',
+          toId: idMap.get(n.id)!,
+          type: 'connector',
         };
-        newElements.push(arrowEl);
+        newElements.push(connEl);
       }
     });
 

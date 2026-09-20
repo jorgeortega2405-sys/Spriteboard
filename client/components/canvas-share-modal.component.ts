@@ -37,11 +37,7 @@ export function openCanvasShareModal(canvas: CanvasItem): void {
 
   const shareTitle = canvas.canvas_type === 'doc' || canvas.unit === 'doc'
     ? 'Compartir documento'
-    : canvas.canvas_type === 'board' || canvas.unit === 'board'
-    ? 'Compartir pizarrón'
-    : canvas.canvas_type === 'diagram' || canvas.unit === 'diagram' || canvas.canvas_type === 'mindmap'
-    ? 'Compartir esquema'
-    : 'Compartir el diseño';
+    : 'Compartir pizarrón';
 
   const backdrop = document.createElement('div');
   backdrop.className = 'modal-backdrop';

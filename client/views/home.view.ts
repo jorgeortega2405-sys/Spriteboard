@@ -23,8 +23,6 @@ import { showToast } from '../services/toast.service.js';
 import { CanvasItem, FolderItem } from '../types/canvas.types.js';
 import { bindDragToScroll, CarouselController, closeAllDropdowns, initCarouselScroll, registerActiveDropdown, removeEmptyState, renderEmptyState, setupDropdown, setupLazyImages, unregisterActiveDropdown } from '../utils/dom.util.js';
 import { exportDocWord } from './doc/doc-export.service.js';
-import { exportMindMapPng } from './mindmap/mindmap-export.service.js';
-import { computeMindMapTreeLayout } from './mindmap/mindmap-layout.engine.js';
 
 const BATCH_SIZE = 20;
 
@@ -53,7 +51,7 @@ class HomeController {
   private allCanvases: CanvasItem[] = [];
   private currentCanvases: CanvasItem[] = [];
   private currentEntityFilter: 'all' | 'designs' | 'folders' = 'all';
-  private currentTypeFilter: 'all' | 'board' | 'diagram' | 'doc' = 'all';
+  private currentTypeFilter: 'all' | 'board' | 'doc' = 'all';
   private currentSort: 'activity' | 'alpha-asc' | 'alpha-desc' = 'activity';
   private currentFolders: FolderItem[] = [];
   private typeDropdownController: ReturnType<typeof setupDropdown> | null = null;
@@ -78,7 +76,7 @@ class HomeController {
   private templatesSentinelEl: HTMLElement | null = null;
   private templatesTypeDropdownController: ReturnType<typeof setupDropdown> | null = null;
   private templatesSortDropdownController: ReturnType<typeof setupDropdown> | null = null;
-  private templateTypeFilter: 'all' | 'board' | 'diagram' | 'favorites' | 'pixel' = 'all';
+  private templateTypeFilter: 'all' | 'board' | 'favorites' | 'pixel' = 'all';
   private templateSort: 'default' | 'alpha-asc' | 'alpha-desc' | 'size-desc' | 'size-asc' = 'default';
   private favoritedTemplateIds = new Set<string>();
   private currentTemplates: PresetItem[] = [];
@@ -219,7 +217,7 @@ class HomeController {
       this.templatesTypeDropdownController = setupDropdown(templatesTypeDropdownWrapper, {
         matchWidth: false,
         onSelect: (val: string) => {
-          this.templateTypeFilter = (val as 'all' | 'board' | 'diagram' | 'favorites' | 'pixel') || 'all';
+          this.templateTypeFilter = (val as 'all' | 'board' | 'favorites' | 'pixel') || 'all';
           const typeMenu = this.container.querySelector<HTMLElement>('[data-ref="dropdown-menu-filter-type"]');
           typeMenu?.querySelectorAll<HTMLButtonElement>('.menu-item').forEach((item) => {
             item.classList.toggle('is-active', item.getAttribute('data-value') === this.templateTypeFilter);
@@ -348,7 +346,7 @@ class HomeController {
       this.container.querySelector<HTMLElement>(`[data-ref="${ref}"]`)?.classList.add('is-active');
     };
 
-    const bindCat = (ref: string, filterType: 'all' | 'board' | 'diagram' | 'doc') => {
+    const bindCat = (ref: string, filterType: 'all' | 'board' | 'doc') => {
       this.container.querySelector<HTMLElement>(`[data-ref="${ref}"]`)?.addEventListener(
         'click',
         (e) => {
@@ -364,7 +362,6 @@ class HomeController {
 
     bindCat('cat-badge-all', 'all');
     bindCat('cat-badge-board', 'board');
-    bindCat('cat-badge-diagram', 'diagram');
     bindCat('cat-badge-doc', 'doc');
 
     this.categoriesCarouselWrapper = this.container.querySelector<HTMLElement>('[data-ref="home-categories-carousel-wrapper"]');
@@ -955,9 +952,7 @@ class HomeController {
             return true;
           });
           if (this.currentTypeFilter === 'board') {
-            unsyncedLocals = unsyncedLocals.filter((c) => (c.canvas_type === 'board' || c.unit === 'board') && c.canvas_type !== 'diagram' && c.canvas_type !== 'mindmap' && c.canvas_type !== 'doc' && c.unit !== 'diagram' && c.unit !== 'doc');
-          } else if (this.currentTypeFilter === 'diagram') {
-            unsyncedLocals = unsyncedLocals.filter((c) => c.canvas_type === 'diagram' || c.canvas_type === 'mindmap' || c.unit === 'diagram');
+            unsyncedLocals = unsyncedLocals.filter((c) => (c.canvas_type === 'board' || c.unit === 'board') && c.canvas_type !== 'doc' && c.unit !== 'doc');
           } else if (this.currentTypeFilter === 'doc') {
             unsyncedLocals = unsyncedLocals.filter((c) => c.canvas_type === 'doc' || c.unit === 'doc');
           }
@@ -983,9 +978,7 @@ class HomeController {
       const localCanvases = await getAllLocalCanvases();
       let filtered = localCanvases.filter((c) => c.is_local && !c.user_id && !c.id && c.access_level !== 'public');
       if (this.currentTypeFilter === 'board') {
-        filtered = filtered.filter((c) => (c.canvas_type === 'board' || c.unit === 'board') && c.canvas_type !== 'diagram' && c.canvas_type !== 'mindmap' && c.canvas_type !== 'doc' && c.unit !== 'diagram' && c.unit !== 'doc');
-      } else if (this.currentTypeFilter === 'diagram') {
-        filtered = filtered.filter((c) => c.canvas_type === 'diagram' || c.canvas_type === 'mindmap' || c.unit === 'diagram');
+        filtered = filtered.filter((c) => (c.canvas_type === 'board' || c.unit === 'board') && c.canvas_type !== 'doc' && c.unit !== 'doc');
       } else if (this.currentTypeFilter === 'doc') {
         filtered = filtered.filter((c) => c.canvas_type === 'doc' || c.unit === 'doc');
       }
@@ -1335,8 +1328,6 @@ class HomeController {
 
     if (this.currentTypeFilter === 'board') {
       filtered = filtered.filter((item) => item.canvasType === 'board' || item.categoryKey === 'board');
-    } else if (this.currentTypeFilter === 'diagram') {
-      filtered = filtered.filter((item) => item.canvasType === 'diagram' || item.canvasType === 'mindmap' || item.categoryKey === 'diagram' || item.categoryKey === 'mindmap');
     } else if (this.currentTypeFilter === 'doc') {
       filtered = filtered.filter((item) => item.canvasType === 'doc' || item.categoryKey === 'doc');
     }
@@ -1347,8 +1338,6 @@ class HomeController {
       filtered = filtered.filter((item) => item.categoryKey === 'pixel');
     } else if (this.templateTypeFilter === 'board') {
       filtered = filtered.filter((item) => item.canvasType === 'board' || item.categoryKey === 'board');
-    } else if (this.templateTypeFilter === 'diagram') {
-      filtered = filtered.filter((item) => item.canvasType === 'diagram' || item.canvasType === 'mindmap' || item.categoryKey === 'diagram' || item.categoryKey === 'mindmap');
     }
 
     if (this.searchQuery) {
@@ -1553,10 +1542,8 @@ class HomeController {
     const canSync = isLocal && Boolean(currentUser);
     const isFavorite = Boolean(canvas.is_favorite);
     const isDoc = canvas.canvas_type === 'doc' || canvas.unit === 'doc';
-    const isDiagram = !isDoc && (canvas.canvas_type === 'diagram' || canvas.canvas_type === 'mindmap' || canvas.unit === 'diagram');
-    const isBoard = !isDoc && !isDiagram && (canvas.canvas_type === 'board' || canvas.unit === 'board');
     const targetUrl = `/design/${canvas.uuid}`;
-    const typeIcon = isDoc ? 'description' : (isDiagram ? 'psychology' : (isBoard ? 'draw' : 'grid_4x4'));
+    const typeIcon = isDoc ? 'description' : 'draw';
     const editedTime = formatEditedTime(canvas.updated_at || canvas.created_at);
 
     const badgeText = isLocal ? t('canvas.status_local') : t('canvas.status_cloud');
@@ -2524,7 +2511,6 @@ class HomeController {
 
   private async downloadSingleCanvas(canvas: CanvasItem): Promise<void> {
     const isDoc = canvas.canvas_type === 'doc' || canvas.unit === 'doc';
-    const isDiagram = !isDoc && (canvas.canvas_type === 'diagram' || canvas.canvas_type === 'mindmap' || canvas.unit === 'diagram');
 
     const cleanName = (canvas.name || 'lienzo')
       .trim()
@@ -2572,20 +2558,6 @@ class HomeController {
         }
         exportDocWord(docProject, fullCanvas.name);
         return;
-      }
-
-      if (isDiagram) {
-        let mindMapProject: any = null;
-        if (fullCanvas.data) {
-          try {
-            mindMapProject = typeof fullCanvas.data === 'string' ? JSON.parse(fullCanvas.data) : fullCanvas.data;
-          } catch {}
-        }
-        if (mindMapProject && mindMapProject.nodes && mindMapProject.rootId) {
-          const layoutMap = computeMindMapTreeLayout(mindMapProject);
-          await exportMindMapPng(mindMapProject, layoutMap, `${cleanName}.png`);
-          return;
-        }
       }
 
       const baseW = fullCanvas.width || 800;

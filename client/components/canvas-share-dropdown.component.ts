@@ -51,11 +51,7 @@ export function setupCanvasShareDropdown(options: CanvasShareDropdownOptions): C
 
   const shareTitle = initialCanvas.canvas_type === 'doc' || initialCanvas.unit === 'doc'
     ? 'Compartir documento'
-    : initialCanvas.canvas_type === 'board' || initialCanvas.unit === 'board'
-    ? 'Compartir pizarrón'
-    : initialCanvas.canvas_type === 'diagram' || initialCanvas.unit === 'diagram' || initialCanvas.canvas_type === 'mindmap'
-    ? 'Compartir esquema'
-    : 'Compartir el diseño';
+    : 'Compartir pizarrón';
 
   let backdrop = wrapper.querySelector<HTMLElement>('[data-ref="dropdown-backdrop-share"]');
   let menu = wrapper.querySelector<HTMLElement>('[data-ref="dropdown-menu-share"]');
@@ -643,10 +639,8 @@ export function setupCanvasShareDropdown(options: CanvasShareDropdownOptions): C
     let fallbackPath = `/design/${canvas.uuid}`;
     if (canvas.canvas_type === 'doc' || canvas.unit === 'doc') {
       fallbackPath = `/doc/${canvas.uuid}`;
-    } else if (canvas.canvas_type === 'board' || canvas.unit === 'board') {
+    } else {
       fallbackPath = `/board/${canvas.uuid}`;
-    } else if (canvas.canvas_type === 'diagram' || canvas.unit === 'diagram' || canvas.canvas_type === 'mindmap') {
-      fallbackPath = `/diagram/${canvas.uuid}`;
     }
 
     const url = slug ? `${window.location.origin}/${slug}` : `${window.location.origin}${fallbackPath}`;

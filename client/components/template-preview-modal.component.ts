@@ -161,7 +161,7 @@ export function openTemplatePreviewModal(preset: PresetItem, options?: TemplateP
   const handleUseCurrentTemplate = async () => {
     try {
       modalInstance.close();
-      const canvasType = currentPreset.canvasType || (currentPreset.categoryKey === 'board' ? 'board' : (currentPreset.categoryKey === 'doc' ? 'doc' : (currentPreset.categoryKey === 'pixel' ? 'board' : 'diagram')));
+      const canvasType = currentPreset.canvasType || (currentPreset.categoryKey === 'doc' ? 'doc' : 'board');
       await createAndOpenCanvas({
         bgType: 'dots',
         boardTemplateId: currentPreset.boardTemplateId,

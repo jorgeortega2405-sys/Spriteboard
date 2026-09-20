@@ -4,7 +4,6 @@ import { getLocalCanvasByUuid } from '../services/canvas-storage.service.js';
 import { createBoardView } from './board.view.js';
 import { createDocView } from './doc.view.js';
 import { createErrorView } from './error.view.js';
-import { createMindMapView } from './mindmap/mindmap.view.js';
 
 export async function createDesignView(canvasUuid: string): Promise<HTMLElement> {
   let canvasRecord: any = await getLocalCanvasByUuid(canvasUuid);
@@ -27,15 +26,13 @@ export async function createDesignView(canvasUuid: string): Promise<HTMLElement>
     });
   }
 
-  let canvasType = canvasRecord.canvas_type || (canvasRecord.unit === 'doc' ? 'doc' : (canvasRecord.unit === 'diagram' ? 'diagram' : 'board'));
+  let canvasType = canvasRecord.canvas_type || (canvasRecord.unit === 'doc' ? 'doc' : 'board');
   if (canvasRecord.data) {
     try {
       const parsed = typeof canvasRecord.data === 'string' ? JSON.parse(canvasRecord.data) : canvasRecord.data;
       if (parsed?.type === 'doc' || (Array.isArray(parsed?.pages) && parsed.pages.length > 0)) {
         canvasType = 'doc';
-      } else if (parsed?.type === 'mindmap' || parsed?.type === 'diagram' || (parsed?.nodes && parsed?.rootId)) {
-        canvasType = 'diagram';
-      } else if (parsed?.type === 'board' || (Array.isArray(parsed?.elements) && parsed?.camera)) {
+      } else {
         canvasType = 'board';
       }
     } catch {}
@@ -43,10 +40,6 @@ export async function createDesignView(canvasUuid: string): Promise<HTMLElement>
 
   if (canvasType === 'doc') {
     return await createDocView(canvasUuid, canvasRecord);
-  }
-
-  if (canvasType === 'diagram' || canvasType === 'mindmap') {
-    return await createMindMapView(canvasUuid, canvasRecord);
   }
 
   return await createBoardView(canvasUuid, canvasRecord);

@@ -6,7 +6,6 @@ import { renderIcons } from '../services/icon.service.js';
 import { showToast } from '../services/toast.service.js';
 import { CanvasItem } from '../types/canvas.types.js';
 import { setupDropdown } from '../utils/dom.util.js';
-import { encodeFramesToGif } from '../utils/gif-encoder.util.js';
 import { computeElementsBoundingBox } from '../views/board/board-elements.manager.js';
 import { exportSvg } from '../views/board/board-export.service.js';
 import { drawConnector, drawShape, drawSticky, drawStroke, drawText } from '../views/board/board-renderer.js';
@@ -56,9 +55,7 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
 
   const kind = getCanvasKind(canvas);
   const formatOptions = getFormatOptionsForKind(kind);
-  let selectedType = formatOptions[0]?.id || 'png-current';
-  let selectedScale = 1;
-  let selectedBg: 'solid' | 'transparent' = 'transparent';
+  let selectedType = formatOptions[0]?.id || (kind === 'doc' ? 'pdf' : 'png');
 
   const baseW = canvas.width || 800;
   const baseH = canvas.height || 600;
@@ -66,13 +63,8 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
   let headerSubtitle = '';
   if (kind === 'doc') {
     headerSubtitle = `${escapeHtml(canvas.name)} • Documento Doc`;
-  } else if (kind === 'board') {
-    headerSubtitle = `${escapeHtml(canvas.name)} • Pizarrón Infinito`;
-  } else if (kind === 'diagram') {
-    const label = canvas.canvas_type === 'mindmap' ? 'Mapa Mental' : 'Diagrama';
-    headerSubtitle = `${escapeHtml(canvas.name)} • ${label}`;
   } else {
-    headerSubtitle = `${escapeHtml(canvas.name)} (${baseW} × ${baseH} px)`;
+    headerSubtitle = `${escapeHtml(canvas.name)} • Pizarrón Infinito`;
   }
 
   const backdrop = document.createElement('div');
@@ -126,73 +118,6 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
               </div>
             </div>
 
-            <div class="design-share-section${kind === 'pixel' ? '' : ' is-hidden'}" data-ref="section-download-scale">
-              <span class="design-share-section__label">Resolución y escala</span>
-              <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-download-scale">
-                <button type="button" class="dropdown-trigger" data-ref="btn-trigger-download-scale" aria-label="Resolución y escala">
-                  <div class="dropdown-trigger__left">
-                    <span class="material-symbols-rounded dropdown-trigger__icon">aspect_ratio</span>
-                    <span class="dropdown-trigger__text" data-ref="download-scale-selected-text">1x (Original - ${baseW} × ${baseH} px)</span>
-                  </div>
-                  <span class="material-symbols-rounded dropdown-trigger__chevron">expand_more</span>
-                </button>
-                <div class="dropdown-backdrop" data-ref="dropdown-backdrop-download-scale">
-                  <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-download-scale">
-                    <div class="menu-panel__drag-zone" data-ref="download-scale-drag-zone" aria-hidden="true">
-                      <div class="menu-panel__drag-handle"></div>
-                    </div>
-                    <div class="menu-panel__list" data-ref="list-download-scale">
-                      <button type="button" class="menu-item is-active" data-ref="btn-scale-1" data-value="1">
-                        <span class="menu-item__text">1x (Original - ${baseW} × ${baseH} px)</span>
-                      </button>
-                      <button type="button" class="menu-item" data-ref="btn-scale-2" data-value="2">
-                        <span class="menu-item__text">2x (${baseW * 2} × ${baseH * 2} px)</span>
-                      </button>
-                      <button type="button" class="menu-item" data-ref="btn-scale-4" data-value="4">
-                        <span class="menu-item__text">4x (${baseW * 4} × ${baseH * 4} px)</span>
-                      </button>
-                      <button type="button" class="menu-item" data-ref="btn-scale-8" data-value="8">
-                        <span class="menu-item__text">8x (${baseW * 8} × ${baseH * 8} px)</span>
-                      </button>
-                      <button type="button" class="menu-item" data-ref="btn-scale-16" data-value="16">
-                        <span class="menu-item__text">16x (${baseW * 16} × ${baseH * 16} px)</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="design-share-section${kind === 'pixel' ? '' : ' is-hidden'}" data-ref="section-download-bg">
-              <span class="design-share-section__label">Fondo</span>
-              <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-download-bg">
-                <button type="button" class="dropdown-trigger" data-ref="btn-trigger-download-bg" aria-label="Fondo">
-                  <div class="dropdown-trigger__left">
-                    <span class="material-symbols-rounded dropdown-trigger__icon" data-ref="download-bg-selected-icon">opacity</span>
-                    <span class="dropdown-trigger__text" data-ref="download-bg-selected-text">Transparente</span>
-                  </div>
-                  <span class="material-symbols-rounded dropdown-trigger__chevron">expand_more</span>
-                </button>
-                <div class="dropdown-backdrop" data-ref="dropdown-backdrop-download-bg">
-                  <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-download-bg">
-                    <div class="menu-panel__drag-zone" data-ref="download-bg-drag-zone" aria-hidden="true">
-                      <div class="menu-panel__drag-handle"></div>
-                    </div>
-                    <div class="menu-panel__list" data-ref="list-download-bg">
-                      <button type="button" class="menu-item is-active" data-ref="btn-download-bg-transparent" data-value="transparent">
-                        <span class="material-symbols-rounded menu-item__icon">opacity</span>
-                        <span class="menu-item__text">Transparente</span>
-                      </button>
-                      <button type="button" class="menu-item" data-ref="btn-download-bg-solid" data-value="solid">
-                        <span class="material-symbols-rounded menu-item__icon">format_color_fill</span>
-                        <span class="menu-item__text">Color del lienzo</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
             <div class="design-share-link-row">
               <button type="button" class="component-button component-button--h40 component-button--black component-button--w-full" data-ref="btn-confirm-download">
                 <span class="material-symbols-rounded">download</span>
@@ -219,24 +144,15 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
   const btnConfirm = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-confirm-download"]');
   const btnConfirmText = backdrop.querySelector<HTMLElement>('[data-ref="btn-confirm-download-text"]');
 
-  const sectionScale = backdrop.querySelector<HTMLElement>('[data-ref="section-download-scale"]');
-  const sectionBg = backdrop.querySelector<HTMLElement>('[data-ref="section-download-bg"]');
-
   const dropdownWrapperType = backdrop.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-download-type"]');
-  const dropdownWrapperScale = backdrop.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-download-scale"]');
-  const dropdownWrapperBg = backdrop.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-download-bg"]');
 
   let typeCtrl: ReturnType<typeof setupDropdown> | null = null;
-  let scaleCtrl: ReturnType<typeof setupDropdown> | null = null;
-  let bgCtrl: ReturnType<typeof setupDropdown> | null = null;
 
   let isClosing = false;
   const closeModal = () => {
     if (isClosing) return;
     isClosing = true;
     typeCtrl?.destroy();
-    scaleCtrl?.destroy();
-    bgCtrl?.destroy();
     backdrop.classList.remove('is-visible');
     document.removeEventListener('keydown', onKeyDown);
     setTimeout(() => {
@@ -283,77 +199,24 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
       } else {
         btnConfirmText.textContent = 'Descargar Proyecto (.json)';
       }
-      if (sectionScale) sectionScale.classList.add('is-hidden');
-      if (sectionBg) sectionBg.classList.add('is-hidden');
       return;
     }
 
-    if (kind === 'board') {
-      if (selectedType === 'png') {
-        btnConfirmText.textContent = 'Descargar Imagen PNG';
-      } else if (selectedType === 'svg') {
-        btnConfirmText.textContent = 'Descargar Vectorial SVG';
-      } else {
-        btnConfirmText.textContent = 'Descargar Proyecto (.json)';
-      }
-      if (sectionScale) sectionScale.classList.add('is-hidden');
-      if (sectionBg) sectionBg.classList.add('is-hidden');
-      return;
-    }
-
-    if (kind === 'diagram') {
-      if (selectedType === 'png') {
-        btnConfirmText.textContent = 'Descargar Imagen PNG';
-      } else if (selectedType === 'svg') {
-        btnConfirmText.textContent = 'Descargar Vectorial SVG';
-      } else if (selectedType === 'markdown') {
-        btnConfirmText.textContent = 'Descargar Esquema Markdown (.md)';
-      } else {
-        btnConfirmText.textContent = 'Descargar Proyecto (.json)';
-      }
-      if (sectionScale) sectionScale.classList.add('is-hidden');
-      if (sectionBg) sectionBg.classList.add('is-hidden');
-      return;
-    }
-
-    const w = baseW * selectedScale;
-    const h = baseH * selectedScale;
-    if (selectedType === 'png-current') {
-      btnConfirmText.textContent = `Descargar PNG (${w} × ${h} px)`;
-    } else if (selectedType === 'spritesheet') {
-      btnConfirmText.textContent = `Descargar Hoja de sprites (${w} × ${h} px)`;
-    } else if (selectedType === 'spritesheet-atlas') {
-      btnConfirmText.textContent = 'Descargar Atlas (PNG + JSON)';
-    } else if (selectedType === 'gif') {
-      btnConfirmText.textContent = `Descargar GIF animado (${w} × ${h} px)`;
+    if (selectedType === 'png') {
+      btnConfirmText.textContent = 'Descargar Imagen PNG';
+    } else if (selectedType === 'svg') {
+      btnConfirmText.textContent = 'Descargar Vectorial SVG';
     } else {
       btnConfirmText.textContent = 'Descargar Proyecto (.json)';
     }
-
-    const isJson = selectedType === 'project-json';
-    if (sectionScale) sectionScale.classList.toggle('is-hidden', isJson);
-    if (sectionBg) sectionBg.classList.toggle('is-hidden', isJson);
   };
 
   updateUI();
 
   typeCtrl = setupDropdown(dropdownWrapperType, {
     onSelect: (val) => {
-      selectedType = val || 'png-current';
+      selectedType = val || (kind === 'doc' ? 'pdf' : 'png');
       updateUI();
-    },
-  });
-
-  scaleCtrl = setupDropdown(dropdownWrapperScale, {
-    onSelect: (val) => {
-      selectedScale = parseInt(val || '1', 10);
-      updateUI();
-    },
-  });
-
-  bgCtrl = setupDropdown(dropdownWrapperBg, {
-    onSelect: (val) => {
-      selectedBg = (val as typeof selectedBg) || 'transparent';
     },
   });
 
@@ -543,239 +406,9 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
             return;
           }
         }
-      }
-
-      if (selectedType === 'project-json') {
-        let projectJson = fullCanvas.data;
-        if (!projectJson) {
-          projectJson = JSON.stringify({
-            created_at: fullCanvas.created_at,
-            height: baseH,
-            name: fullCanvas.name,
-            unit: fullCanvas.unit || 'px',
-            version: 1,
-            width: baseW,
-          }, null, 2);
-        } else if (typeof projectJson !== 'string') {
-          projectJson = JSON.stringify(projectJson, null, 2);
-        }
-        const blob = new Blob([projectJson], { type: 'application/json;charset=utf-8' });
-        triggerBlobDownload(blob, `${cleanName}_project.json`);
-        showToast(t('canvas.download_success'));
-        closeModal();
+        showToast(t('canvas.download_error'), 'danger');
         return;
       }
-
-      let parsedData: any = null;
-      if (fullCanvas.data) {
-        try {
-          parsedData = typeof fullCanvas.data === 'string' ? JSON.parse(fullCanvas.data) : fullCanvas.data;
-        } catch {}
-      }
-
-      const frames = Array.isArray(parsedData?.frames) && parsedData.frames.length > 0 ? parsedData.frames : null;
-      const targetScale = selectedScale;
-      const isTransparent = selectedBg === 'transparent';
-
-      if ((selectedType === 'spritesheet' || selectedType === 'spritesheet-atlas') && frames && frames.length > 0) {
-        const framesCount = frames.length;
-        const frameW = baseW * targetScale;
-        const frameH = baseH * targetScale;
-        const sheetCanvas = document.createElement('canvas');
-        sheetCanvas.width = frameW * framesCount;
-        sheetCanvas.height = frameH;
-        const sheetCtx = sheetCanvas.getContext('2d');
-
-        if (sheetCtx) {
-          sheetCtx.imageSmoothingEnabled = false;
-          if (!isTransparent) {
-            sheetCtx.fillStyle = '#ffffff';
-            sheetCtx.fillRect(0, 0, sheetCanvas.width, sheetCanvas.height);
-          }
-
-          const atlasFrames: any[] = [];
-          const defaultFps = parsedData?.fps || 8;
-          const defaultDelay = Math.round(1000 / defaultFps);
-
-          for (let i = 0; i < framesCount; i++) {
-            const frame = frames[i];
-            const fCanvas = document.createElement('canvas');
-            fCanvas.width = baseW;
-            fCanvas.height = baseH;
-            const fCtx = fCanvas.getContext('2d');
-            if (fCtx && Array.isArray(frame.layers)) {
-              for (const layer of frame.layers) {
-                if (layer.visible !== false && layer.data) {
-                  const img = new Image();
-                  await new Promise<void>((r) => {
-                    img.onload = () => r();
-                    img.onerror = () => r();
-                    img.src = layer.data;
-                  });
-                  fCtx.globalAlpha = typeof layer.opacity === 'number' ? layer.opacity : 1;
-                  fCtx.drawImage(img, 0, 0);
-                }
-              }
-            }
-            sheetCtx.drawImage(fCanvas, i * frameW, 0, frameW, frameH);
-
-            if (selectedType === 'spritesheet-atlas') {
-              atlasFrames.push({
-                duration: frame.durationMs || defaultDelay,
-                filename: `frame_${i}.png`,
-                frame: { h: frameH, w: frameW, x: i * frameW, y: 0 },
-                rotated: false,
-                sourceSize: { h: frameH, w: frameW },
-                spriteSourceSize: { h: frameH, w: frameW, x: 0, y: 0 },
-                trimmed: false,
-              });
-            }
-          }
-
-          const blob = await new Promise<Blob | null>((resolve) => sheetCanvas.toBlob(resolve, 'image/png'));
-          if (blob) {
-            triggerBlobDownload(blob, `${cleanName}_spritesheet_${targetScale}x.png`);
-
-            if (selectedType === 'spritesheet-atlas') {
-              const atlasJson = {
-                frames: atlasFrames,
-                meta: {
-                  app: 'Spriteboard',
-                  format: 'RGBA8888',
-                  image: `${cleanName}_spritesheet_${targetScale}x.png`,
-                  scale: `${targetScale}`,
-                  size: { h: frameH, w: frameW * framesCount },
-                  version: '1.0',
-                },
-              };
-              const jsonBlob = new Blob([JSON.stringify(atlasJson, null, 2)], { type: 'application/json;charset=utf-8' });
-              triggerBlobDownload(jsonBlob, `${cleanName}_atlas_${targetScale}x.json`);
-            }
-
-            showToast(t('canvas.download_success'));
-            closeModal();
-            return;
-          }
-        }
-      }
-
-      if (selectedType === 'gif') {
-        const activeFrames = frames && frames.length > 0 ? frames : [{ layers: frames?.[0]?.layers || [] }];
-        const framesCount = activeFrames.length;
-        const frameW = baseW * targetScale;
-        const frameH = baseH * targetScale;
-        const gifFrames: Array<{ canvas: HTMLCanvasElement; delayMs: number }> = [];
-        const defaultFps = parsedData?.fps || 8;
-        const defaultDelay = Math.round(1000 / defaultFps);
-
-        for (let i = 0; i < framesCount; i++) {
-          const frame = activeFrames[i];
-          const fCanvas = document.createElement('canvas');
-          fCanvas.width = frameW;
-          fCanvas.height = frameH;
-          const fCtx = fCanvas.getContext('2d');
-          if (fCtx) {
-            fCtx.imageSmoothingEnabled = false;
-            if (!isTransparent) {
-              fCtx.fillStyle = '#ffffff';
-              fCtx.fillRect(0, 0, frameW, frameH);
-            }
-            if (Array.isArray(frame.layers)) {
-              for (const layer of frame.layers) {
-                if (layer.visible !== false && layer.data) {
-                  const img = new Image();
-                  await new Promise<void>((r) => {
-                    img.onload = () => r();
-                    img.onerror = () => r();
-                    img.src = layer.data;
-                  });
-                  fCtx.globalAlpha = typeof layer.opacity === 'number' ? layer.opacity : 1;
-                  fCtx.drawImage(img, 0, 0, frameW, frameH);
-                }
-              }
-            } else if (fullCanvas.preview_thumbnail) {
-              const img = new Image();
-              await new Promise<void>((r) => {
-                img.onload = () => r();
-                img.onerror = () => r();
-                img.src = fullCanvas.preview_thumbnail!;
-              });
-              fCtx.drawImage(img, 0, 0, frameW, frameH);
-            }
-          }
-
-          gifFrames.push({
-            canvas: fCanvas,
-            delayMs: (frame as any).durationMs || defaultDelay,
-          });
-        }
-
-        const gifBlob = await encodeFramesToGif(gifFrames);
-        triggerBlobDownload(gifBlob, `${cleanName}_${targetScale}x.gif`);
-        showToast(t('canvas.download_success'));
-        closeModal();
-        return;
-      }
-
-      const outCanvas = document.createElement('canvas');
-      outCanvas.width = baseW * targetScale;
-      outCanvas.height = baseH * targetScale;
-      const outCtx = outCanvas.getContext('2d');
-
-      if (outCtx) {
-        outCtx.imageSmoothingEnabled = false;
-        if (!isTransparent) {
-          outCtx.fillStyle = '#ffffff';
-          outCtx.fillRect(0, 0, outCanvas.width, outCanvas.height);
-        }
-
-        let renderedFromLayers = false;
-        if (frames && frames[0] && Array.isArray(frames[0].layers)) {
-          const fCanvas = document.createElement('canvas');
-          fCanvas.width = baseW;
-          fCanvas.height = baseH;
-          const fCtx = fCanvas.getContext('2d');
-          if (fCtx) {
-            for (const layer of frames[0].layers) {
-              if (layer.visible !== false && layer.data) {
-                const img = new Image();
-                await new Promise<void>((r) => {
-                  img.onload = () => r();
-                  img.onerror = () => r();
-                  img.src = layer.data;
-                });
-                fCtx.globalAlpha = typeof layer.opacity === 'number' ? layer.opacity : 1;
-                fCtx.drawImage(img, 0, 0);
-              }
-            }
-            outCtx.drawImage(fCanvas, 0, 0, outCanvas.width, outCanvas.height);
-            renderedFromLayers = true;
-          }
-        }
-
-        if (!renderedFromLayers) {
-          const thumb = fullCanvas.preview_thumbnail || canvas.preview_thumbnail;
-          if (thumb) {
-            const img = new Image();
-            await new Promise<void>((r) => {
-              img.onload = () => r();
-              img.onerror = () => r();
-              img.src = thumb;
-            });
-            outCtx.drawImage(img, 0, 0, outCanvas.width, outCanvas.height);
-          }
-        }
-
-        const blob = await new Promise<Blob | null>((resolve) => outCanvas.toBlob(resolve, 'image/png'));
-        if (blob) {
-          triggerBlobDownload(blob, `${cleanName}_${targetScale}x.png`);
-          showToast(t('canvas.download_success'));
-          closeModal();
-          return;
-        }
-      }
-
-      showToast(t('canvas.download_error'), 'danger');
     } catch {
       showToast(t('canvas.download_error'), 'danger');
     } finally {

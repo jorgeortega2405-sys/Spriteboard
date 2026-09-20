@@ -10,7 +10,6 @@ import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { closeWebSocket, initWebSocket, registerWebSocketHandler } from '../services/websocket.service.js';
 import { CanvasItem } from '../types/canvas.types.js';
-import { MindMapProject } from '../types/mindmap.types.js';
 import { UserStorageUsage } from '../types/subscription.types.js';
 import { UserUploadItem } from '../types/upload.types.js';
 import { closeAllDropdowns, registerActiveDropdown, unregisterActiveDropdown } from '../utils/dom.util.js';
@@ -175,8 +174,6 @@ export function isCanvasRoute(pathname: string): boolean {
   return (
     pathname.startsWith('/design') ||
     pathname.startsWith('/board') ||
-    pathname.startsWith('/diagram') ||
-    pathname.startsWith('/mindmap') ||
     pathname.startsWith('/doc')
   );
 }
@@ -474,10 +471,8 @@ function createDrawerCanvasRow(canvas: CanvasItem): HTMLElement {
   item.className = 'drawer-canvas-item';
   item.setAttribute('data-ref', `drawer-canvas-${canvas.uuid}`);
   const isDoc = canvas.canvas_type === 'doc' || canvas.unit === 'doc';
-  const isDiagram = !isDoc && (canvas.canvas_type === 'diagram' || canvas.canvas_type === 'mindmap' || canvas.unit === 'diagram');
-  const isBoard = !isDoc && !isDiagram && (canvas.canvas_type === 'board' || canvas.unit === 'board');
   const targetUrl = `/design/${canvas.uuid}`;
-  const iconName = isDoc ? 'description' : (isDiagram ? 'psychology' : (isBoard ? 'dashboard' : 'grid_view'));
+  const iconName = isDoc ? 'description' : 'dashboard';
 
   const thumbHtml = canvas.preview_thumbnail
     ? `<img class="drawer-canvas-item__thumb-img" src="${canvas.preview_thumbnail}" alt="" />`
@@ -776,13 +771,11 @@ function closeDynamicDrawer(): void {
   }
 }
 
-function getActiveCanvasType(): 'board' | 'diagram' | 'doc' | 'pixel' {
+function getActiveCanvasType(): 'board' | 'doc' {
   const content = document.querySelector<HTMLElement>('[data-ref="app"] .layout-content, .layout-content');
   const ref = content?.getAttribute('data-ref');
   if (ref === 'doc-view' || window.location.pathname.startsWith('/doc/')) return 'doc';
-  if (ref === 'board-view' || window.location.pathname.startsWith('/board/')) return 'board';
-  if (ref === 'mindmap-view' || window.location.pathname.startsWith('/mindmap/') || window.location.pathname.startsWith('/diagram/')) return 'diagram';
-  return 'pixel';
+  return 'board';
 }
 
 function getActiveCanvasController(): any {
@@ -790,7 +783,7 @@ function getActiveCanvasController(): any {
   return (content as any)?.__controller || null;
 }
 
-function handleApplyCanvasTemplate(preset: PresetItem, canvasType: 'board' | 'diagram' | 'doc' | 'pixel'): void {
+function handleApplyCanvasTemplate(preset: PresetItem, canvasType: 'board' | 'doc'): void {
   const controller = getActiveCanvasController();
 
   if (canvasType === 'doc') {
@@ -889,7 +882,7 @@ function handleApplyCanvasTemplate(preset: PresetItem, canvasType: 'board' | 'di
       return;
     }
 
-    const templateId = preset.boardTemplateId || preset.id;
+    const templateId = preset.boardTemplateId || preset.diagramTemplateId || preset.id;
 
     if (typeof controller.isBoardEmpty === 'function' && controller.isBoardEmpty()) {
       controller.applyTemplate(templateId, 'replace');
@@ -953,62 +946,11 @@ function handleApplyCanvasTemplate(preset: PresetItem, canvasType: 'board' | 'di
     });
     return;
   }
-
-  if (canvasType === 'diagram') {
-    if (!controller) {
-      showToast('No se encontró el controlador del diagrama', 'warning');
-      return;
-    }
-
-    const templateId = preset.diagramTemplateId || preset.id;
-    const subtype = preset.diagramSubtype || 'mindmap';
-
-    if (typeof controller.isDiagramEmpty === 'function' && controller.isDiagramEmpty()) {
-      controller.applyTemplate(templateId, subtype);
-      showToast(`Plantilla «${preset.name}» aplicada al diagrama`, 'success');
-      if (window.innerWidth <= 768) {
-        toggleDrawer(false);
-      }
-      return;
-    }
-
-    const modal = openModal({
-      cancelText: 'Cancelar',
-      confirmClass: 'component-button--black',
-      confirmText: 'Reemplazar diagrama',
-      description: `¿Deseas reemplazar el diagrama actual con la plantilla «${preset.name}»?`,
-      showCancel: true,
-      showConfirm: true,
-      title: 'Aplicar plantilla de diagrama',
-      onConfirm: () => {
-        controller.applyTemplate(templateId, subtype);
-        modal.close();
-        showToast(`Plantilla «${preset.name}» aplicada`, 'success');
-        if (window.innerWidth <= 768) {
-          toggleDrawer(false);
-        }
-      },
-    });
-    return;
-  }
-
-  if (canvasType === 'pixel') {
-    if (!controller) {
-      showToast('No se encontró el controlador de diseño', 'warning');
-      return;
-    }
-
-    void controller.applyTemplate(preset.imagePath, preset.name);
-    showToast(`Plantilla «${preset.name}» importada`, 'success');
-    if (window.innerWidth <= 768) {
-      toggleDrawer(false);
-    }
-  }
 }
 
 let activeElementsCategory: 'shapes' | 'templates' = 'shapes';
 
-function handleApplyCanvasElement(shape: PixelShape, canvasType: 'board' | 'diagram' | 'doc' | 'pixel'): void {
+function handleApplyCanvasElement(shape: PixelShape, canvasType: 'board' | 'doc'): void {
   const controller = getActiveCanvasController();
 
   if (canvasType === 'doc') {
@@ -1041,33 +983,6 @@ function handleApplyCanvasElement(shape: PixelShape, canvasType: 'board' | 'diag
       toggleDrawer(false);
     }
     return;
-  }
-
-  if (canvasType === 'diagram') {
-    if (!controller) {
-      showToast('No se encontró el controlador del diagrama', 'warning');
-      return;
-    }
-
-    controller.insertShapeOrSticker(shape);
-    showToast(`«${shape.name}» añadido al diagrama`, 'success');
-    if (window.innerWidth <= 768) {
-      toggleDrawer(false);
-    }
-    return;
-  }
-
-  if (canvasType === 'pixel') {
-    if (!controller) {
-      showToast('No se encontró el controlador de diseño', 'warning');
-      return;
-    }
-
-    void controller.applyShapeOrSticker(shape);
-    showToast(`«${shape.name}» listo para posicionar`, 'success');
-    if (window.innerWidth <= 768) {
-      toggleDrawer(false);
-    }
   }
 }
 
@@ -1215,7 +1130,7 @@ function formatBytes(bytes: number): string {
   return `${formatted} ${units[i]}`;
 }
 
-function handleApplyCanvasUpload(item: UserUploadItem, canvasType: 'board' | 'diagram' | 'doc' | 'pixel'): void {
+function handleApplyCanvasUpload(item: UserUploadItem, canvasType: 'board' | 'doc'): void {
   const controller = getActiveCanvasController();
 
   if (canvasType === 'doc') {
@@ -1244,43 +1159,6 @@ function handleApplyCanvasUpload(item: UserUploadItem, canvasType: 'board' | 'di
       toggleDrawer(false);
     }
     return;
-  }
-
-  if (canvasType === 'diagram') {
-    if (!controller) {
-      showToast('No se encontró el controlador del diagrama', 'warning');
-      return;
-    }
-
-    const stickerShape: PixelShape = {
-      category: 'templates',
-      file: '',
-      height: item.height || 32,
-      id: `upload_${item.uuid}`,
-      name: item.original_filename,
-      type: 'sticker',
-      url: item.url,
-      width: item.width || 32,
-    };
-    controller.insertShapeOrSticker(stickerShape);
-    showToast(`«${item.original_filename}» añadida al diagrama`, 'success');
-    if (window.innerWidth <= 768) {
-      toggleDrawer(false);
-    }
-    return;
-  }
-
-  if (canvasType === 'pixel') {
-    if (!controller) {
-      showToast('No se encontró el controlador de diseño', 'warning');
-      return;
-    }
-
-    void controller.applyUploadedImage(item.url, item.width || undefined, item.height || undefined, item.original_filename);
-    showToast(`«${item.original_filename}» lista para posicionar`, 'success');
-    if (window.innerWidth <= 768) {
-      toggleDrawer(false);
-    }
   }
 }
 
@@ -1569,9 +1447,7 @@ function renderCanvasDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement)
     const canvasType = getActiveCanvasType();
     const presets = ALL_PRESETS.filter((item) => {
       if (canvasType === 'doc') return item.canvasType === 'doc';
-      if (canvasType === 'board') return item.canvasType === 'board';
-      if (canvasType === 'diagram') return item.canvasType === 'diagram' || item.categoryKey === 'mindmap' || item.categoryKey === 'conceptmap' || item.categoryKey === 'flowchart';
-      return item.categoryKey === 'pixel' || item.canvasType === 'board';
+      return item.canvasType === 'board';
     });
 
     drawerBody.innerHTML = `
@@ -1628,7 +1504,7 @@ function renderCanvasDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement)
           </div>
           <div class="canvas-panel-template-card__info" data-ref="template-info-${item.id}">
             <span class="canvas-panel-template-card__title" data-ref="template-title-${item.id}">${escapeHtml(item.name)}</span>
-            <span class="canvas-panel-template-card__badge" data-ref="template-badge-${item.id}">${escapeHtml(item.categoryName || (canvasType === 'doc' ? 'Documento' : (canvasType === 'board' ? 'Pizarrón' : (canvasType === 'diagram' ? 'Diagrama' : `${item.width}×${item.height}`))))}</span>
+            <span class="canvas-panel-template-card__badge" data-ref="template-badge-${item.id}">${escapeHtml(item.categoryName || (canvasType === 'doc' ? 'Documento' : 'Pizarrón'))}</span>
           </div>
         </div>
       `).join('');
@@ -1828,7 +1704,7 @@ function renderDocPageToDataUrl(page: DocPage, title = 'Documento'): Promise<str
 function openDocPageSelectionModal(
   canvas: CanvasItem,
   docProject: DocProject,
-  targetCanvasType: 'board' | 'diagram' | 'doc' | 'pixel'
+  targetCanvasType: 'board' | 'doc'
 ): void {
   const pages = docProject.pages || [];
   if (pages.length === 0) {
@@ -1856,29 +1732,26 @@ function openDocPageSelectionModal(
     title: `Seleccionar página de «${canvas.name}»`,
     bodyHtml: `
       <div class="doc-page-picker" data-ref="doc-page-picker">
-        <div class="doc-page-picker__all-card is-selected" data-ref="card-page-all" data-page-idx="-1">
-          <div class="doc-page-picker__all-icon">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_stories"></use></svg>
+        <button type="button" class="doc-page-picker__item is-selected" data-ref="card-page-all">
+          <div class="doc-page-picker__icon">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#library_books"></use></svg>
           </div>
-          <div class="doc-page-picker__all-info">
-            <span class="doc-page-picker__all-title">Todas las páginas</span>
-            <span class="doc-page-picker__all-desc">Coloca las ${pages.length} páginas del documento en tu lienzo activo.</span>
+          <div class="doc-page-picker__info">
+            <span class="doc-page-picker__title">Todas las páginas (${pages.length})</span>
+            <span class="doc-page-picker__snippet">Inserta el documento entero con todas sus páginas de forma secuencial.</span>
           </div>
-          <span class="doc-page-picker__badge">${pages.length} págs</span>
-        </div>
-
-        <div class="doc-page-picker__grid" data-ref="doc-pages-grid">
-          ${pages.map((p, idx) => `
-            <div class="doc-page-picker__card" data-ref="card-page-${idx}" data-page-idx="${idx}">
-              <div class="doc-page-picker__card-header">
-                <span class="doc-page-picker__card-num">Pág. ${idx + 1}</span>
-              </div>
-              <div class="doc-page-picker__card-preview">
-                <p class="doc-page-picker__card-text">${escapeHtml(getPageSnippet(p.contentHtml))}</p>
-              </div>
+        </button>
+        ${pages.map((p, idx) => `
+          <button type="button" class="doc-page-picker__item" data-ref="card-page-${idx}" data-page-idx="${idx}">
+            <div class="doc-page-picker__icon">
+              <span class="doc-page-picker__page-num">${idx + 1}</span>
             </div>
-          `).join('')}
-        </div>
+            <div class="doc-page-picker__info">
+              <span class="doc-page-picker__title">Página ${idx + 1}</span>
+              <span class="doc-page-picker__snippet">${escapeHtml(getPageSnippet(p.contentHtml || ''))}</span>
+            </div>
+          </button>
+        `).join('')}
       </div>
     `,
     onConfirm: async () => {
@@ -1913,7 +1786,7 @@ function openDocPageSelectionModal(
 
 async function handleApplyCanvasProject(
   canvas: CanvasItem,
-  targetCanvasType: 'board' | 'diagram' | 'doc' | 'pixel',
+  targetCanvasType: 'board' | 'doc',
   pageIndex = -1,
   loadedProjectData?: any
 ): Promise<void> {
@@ -1976,7 +1849,7 @@ async function handleApplyCanvasProject(
       }
     }
 
-    if ((sourceType === 'diagram' || sourceType === 'mindmap') && projectData && projectData.nodes) {
+    if (projectData && projectData.nodes) {
       if (typeof controller.insertDiagramAsBoardElements === 'function') {
         controller.insertDiagramAsBoardElements(projectData, canvas.name);
         showToast(`Diagrama «${canvas.name}» insertado como figuras y flechas editables`, 'success');
@@ -2032,7 +1905,7 @@ async function handleApplyCanvasProject(
       return;
     }
 
-    if ((sourceType === 'diagram' || sourceType === 'mindmap') && projectData && projectData.nodes) {
+    if (projectData && projectData.nodes) {
       if (typeof controller.insertDiagramAsDocOutline === 'function') {
         controller.insertDiagramAsDocOutline(projectData, canvas.name);
         showToast(`Esquema estructurado de «${canvas.name}» insertado en el documento`, 'success');
@@ -2061,90 +1934,9 @@ async function handleApplyCanvasProject(
     showToast(`No se pudo insertar «${canvas.name}» en el documento`, 'warning');
     return;
   }
-
-  if (targetCanvasType === 'diagram') {
-    if ((sourceType === 'diagram' || sourceType === 'mindmap') && projectData && projectData.nodes) {
-      if (typeof controller.insertDiagramSubtree === 'function') {
-        controller.insertDiagramSubtree(projectData);
-        showToast(`Ramas de «${canvas.name}» acopladas al diagrama`, 'success');
-        if (window.innerWidth <= 768) toggleDrawer(false);
-        return;
-      }
-    }
-
-    if (sourceType === 'doc' && projectData && Array.isArray(projectData.pages)) {
-      if (typeof controller.insertDocAsMindMapNodes === 'function') {
-        controller.insertDocAsMindMapNodes(projectData, canvas.name);
-        showToast(`Contenido de «${canvas.name}» convertido en ramas del diagrama`, 'success');
-        if (window.innerWidth <= 768) toggleDrawer(false);
-        return;
-      }
-    }
-
-    if (sourceType === 'board' && projectData && Array.isArray(projectData.elements)) {
-      if (typeof controller.insertBoardStickyNodes === 'function') {
-        controller.insertBoardStickyNodes(projectData);
-        showToast(`Notas de «${canvas.name}» añadidas como nodos al diagrama`, 'success');
-        if (window.innerWidth <= 768) toggleDrawer(false);
-        return;
-      }
-    }
-
-    let thumbnailToUse = canvas.preview_thumbnail || '';
-    let label = canvas.name;
-
-    if (sourceType === 'doc' && projectData && Array.isArray(projectData.pages)) {
-      const pageToUse = pageIndex >= 0 && projectData.pages[pageIndex] ? projectData.pages[pageIndex] : projectData.pages[0];
-      const pageNum = pageIndex >= 0 ? pageIndex + 1 : 1;
-      label = `${canvas.name} (Pág. ${pageNum})`;
-      if (pageToUse) {
-        const rendered = await renderDocPageToDataUrl(pageToUse, label);
-        if (rendered) thumbnailToUse = rendered;
-      }
-    }
-
-    const stickerShape: PixelShape = {
-      category: 'templates',
-      file: '',
-      height: 32,
-      id: `proj_${canvas.uuid}_${pageIndex >= 0 ? pageIndex : 0}`,
-      name: label,
-      type: 'sticker',
-      url: thumbnailToUse,
-      width: 32,
-    };
-    controller.insertShapeOrSticker(stickerShape);
-    showToast(`«${label}» añadido al diagrama`, 'success');
-    if (window.innerWidth <= 768) toggleDrawer(false);
-    return;
-  }
-
-  if (targetCanvasType === 'pixel') {
-    let thumbnailToUse = canvas.preview_thumbnail || '';
-    let label = canvas.name;
-
-    if (sourceType === 'doc' && projectData && Array.isArray(projectData.pages)) {
-      const pageToUse = pageIndex >= 0 && projectData.pages[pageIndex] ? projectData.pages[pageIndex] : projectData.pages[0];
-      const pageNum = pageIndex >= 0 ? pageIndex + 1 : 1;
-      label = `${canvas.name} (Pág. ${pageNum})`;
-      if (pageToUse) {
-        const rendered = await renderDocPageToDataUrl(pageToUse, label);
-        if (rendered) thumbnailToUse = rendered;
-      }
-    }
-
-    if (thumbnailToUse) {
-      await controller.applyUploadedImage(thumbnailToUse, canvas.width || 128, canvas.height || 128, label);
-      showToast(`«${label}» listo para posicionar en el lienzo`, 'success');
-      if (window.innerWidth <= 768) toggleDrawer(false);
-      return;
-    }
-
-    showToast(`No se pudo importar «${canvas.name}» en el lienzo`, 'warning');
-  }
 }
 
-let activeProjectsFilter: 'all' | 'board' | 'doc' | 'diagram' | 'pixel' = 'all';
+let activeProjectsFilter: 'all' | 'board' | 'doc' = 'all';
 
 async function renderProjectsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement): Promise<void> {
   const sidebar = drawer.closest<HTMLElement>('[data-ref="sidebar"]') || document.querySelector<HTMLElement>('[data-ref="sidebar"]');
@@ -2166,8 +1958,6 @@ async function renderProjectsDrawerContent(drawer: HTMLElement, drawerBody: HTML
           <button type="button" class="canvas-panel-tab-btn${activeProjectsFilter === 'all' ? ' is-active' : ''}" data-ref="btn-filter-proj-all" data-filter="all">Todos</button>
           <button type="button" class="canvas-panel-tab-btn${activeProjectsFilter === 'board' ? ' is-active' : ''}" data-ref="btn-filter-proj-board" data-filter="board">Pizarrón</button>
           <button type="button" class="canvas-panel-tab-btn${activeProjectsFilter === 'doc' ? ' is-active' : ''}" data-ref="btn-filter-proj-doc" data-filter="doc">Documentos</button>
-          <button type="button" class="canvas-panel-tab-btn${activeProjectsFilter === 'diagram' ? ' is-active' : ''}" data-ref="btn-filter-proj-diagram" data-filter="diagram">Diagramas</button>
-          <button type="button" class="canvas-panel-tab-btn${activeProjectsFilter === 'pixel' ? ' is-active' : ''}" data-ref="btn-filter-proj-pixel" data-filter="pixel">Pixel Art</button>
         </div>
 
         <div class="canvas-panel-search" data-ref="canvas-panel-search">
@@ -2199,11 +1989,9 @@ async function renderProjectsDrawerContent(drawer: HTMLElement, drawerBody: HTML
 
   let projectItems: CanvasItem[] = [];
 
-  const getCanvasTypeKey = (c: CanvasItem): 'board' | 'diagram' | 'doc' | 'pixel' => {
+  const getCanvasTypeKey = (c: CanvasItem): 'board' | 'doc' => {
     if (c.canvas_type === 'doc' || c.unit === 'doc') return 'doc';
-    if (c.canvas_type === 'diagram' || c.canvas_type === 'mindmap' || c.unit === 'diagram') return 'diagram';
-    if (c.canvas_type === 'board' || c.unit === 'board') return 'board';
-    return 'pixel';
+    return 'board';
   };
 
   const getBadgeText = (c: CanvasItem): string => {
@@ -2218,16 +2006,12 @@ async function renderProjectsDrawerContent(drawer: HTMLElement, drawerBody: HTML
       } catch {}
       return 'Documento';
     }
-    if (typeKey === 'board') return 'Pizarrón';
-    if (typeKey === 'diagram') return c.canvas_type === 'mindmap' ? 'Mapa Mental' : 'Diagrama';
-    return c.width && c.height ? `${c.width}×${c.height} px` : 'Pixel Art';
+    return 'Pizarrón';
   };
 
-  const getTypeIcon = (typeKey: 'board' | 'diagram' | 'doc' | 'pixel'): string => {
+  const getTypeIcon = (typeKey: 'board' | 'doc'): string => {
     if (typeKey === 'doc') return 'description';
-    if (typeKey === 'board') return 'dashboard';
-    if (typeKey === 'diagram') return 'psychology';
-    return 'grid_view';
+    return 'dashboard';
   };
 
   const renderGrid = (query = '') => {
@@ -2338,7 +2122,7 @@ async function renderProjectsDrawerContent(drawer: HTMLElement, drawerBody: HTML
 
   tabs.forEach((tabBtn) => {
     tabBtn.addEventListener('click', () => {
-      const filter = tabBtn.getAttribute('data-filter') as 'all' | 'board' | 'doc' | 'diagram' | 'pixel';
+      const filter = tabBtn.getAttribute('data-filter') as 'all' | 'board' | 'doc';
       if (filter && activeProjectsFilter !== filter) {
         activeProjectsFilter = filter;
         tabs.forEach((b) => b.classList.toggle('is-active', b === tabBtn));

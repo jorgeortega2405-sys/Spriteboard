@@ -230,11 +230,9 @@ class SharedController {
       : `<div class="canvas-card__canvas-placeholder"></div>`;
 
     const isDoc = canvas.canvas_type === 'doc' || canvas.unit === 'doc';
-    const isDiagram = !isDoc && (canvas.canvas_type === 'diagram' || canvas.canvas_type === 'mindmap' || canvas.unit === 'diagram');
-    const isBoard = !isDoc && !isDiagram && (canvas.canvas_type === 'board' || canvas.unit === 'board');
     const targetUrl = `/design/${canvas.uuid}`;
-    const typeIcon = isDoc ? 'description' : (isDiagram ? 'psychology' : (isBoard ? 'draw' : 'grid_4x4'));
-    const typeLabel = isDoc ? 'Documento' : (isDiagram ? (canvas.canvas_type === 'mindmap' ? 'Mapa Mental' : 'Diagrama') : (isBoard ? 'Pizarrón' : `Lienzo ${canvas.width}×${canvas.height}`));
+    const typeIcon = isDoc ? 'description' : 'draw';
+    const typeLabel = isDoc ? 'Documento' : 'Pizarrón';
     const editedTime = formatEditedTime(canvas.updated_at || canvas.created_at);
 
     card.innerHTML = `

@@ -191,15 +191,9 @@ export class SearchController {
       card.setAttribute('data-uuid', canvas.uuid);
 
       const isDoc = (canvas as any).canvas_type === 'doc' || (canvas as any).unit === 'doc';
-      const isDiagram = !isDoc && ((canvas as any).canvas_type === 'diagram' || (canvas as any).canvas_type === 'mindmap' || (canvas as any).unit === 'diagram');
-      const isBoard = !isDoc && !isDiagram && ((canvas as any).canvas_type === 'board' || (canvas as any).unit === 'board');
       const targetUrl = `/design/${canvas.uuid}`;
-      const typeLabel = isDoc
-        ? 'Documento'
-        : (isDiagram
-          ? ((canvas as any).canvas_type === 'mindmap' ? 'Mapa Mental' : 'Diagrama')
-          : (isBoard ? 'Pizarra Infinita' : `${canvas.width} × ${canvas.height} px`));
-      const typeIcon = isDoc ? 'description' : (isDiagram ? 'psychology' : (isBoard ? 'draw' : 'straighten'));
+      const typeLabel = isDoc ? 'Documento' : 'Pizarra Infinita';
+      const typeIcon = isDoc ? 'description' : 'draw';
 
       const thumbnailHtml = canvas.preview_thumbnail
         ? `<img class="canvas-card__image image-lazy-fade" src="${escapeHtml(canvas.preview_thumbnail)}" alt="${escapeHtml(canvas.name)}" loading="lazy" decoding="async" onload="this.classList.add('image-loaded')" onerror="this.onerror=null; this.classList.add('image-loaded');" />`

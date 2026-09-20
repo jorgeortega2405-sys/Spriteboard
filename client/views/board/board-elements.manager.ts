@@ -1,4 +1,4 @@
-import { BoardConnectorElement, BoardElement, BoardPoint, BoardStrokeElement } from './board.types.js';
+import { BoardConnectorElement, BoardElement, BoardPoint, BoardShapeElement, BoardStrokeElement, ShapeType } from './board.types.js';
 
 export function computeStrokeBoundingBox(stroke: BoardStrokeElement): { height: number; width: number; x: number; y: number } {
   if (stroke.points.length === 0) return { height: 0, width: 0, x: 0, y: 0 };
@@ -23,10 +23,18 @@ export function computeStrokeBoundingBox(stroke: BoardStrokeElement): { height: 
 
 export function getNodeAnchorPoint(
   bbox: { height: number; width: number; x: number; y: number },
-  target: BoardPoint
+  target: BoardPoint | 'bottom' | 'left' | 'right' | 'top'
 ): BoardPoint {
   const cx = bbox.x + bbox.width / 2;
   const cy = bbox.y + bbox.height / 2;
+
+  if (typeof target === 'string') {
+    if (target === 'right') return { x: bbox.x + bbox.width, y: cy };
+    if (target === 'left') return { x: bbox.x, y: cy };
+    if (target === 'bottom') return { x: cx, y: bbox.y + bbox.height };
+    return { x: cx, y: bbox.y };
+  }
+
   const dx = target.x - cx;
   const dy = target.y - cy;
 
@@ -291,4 +299,105 @@ export function resizeElementByHandle(
     el.width = Math.max(30, newW);
     el.height = Math.max(20, newH);
   }
+}
+
+export function convertDiagramToBoardElements(diagram: { connections?: any[]; nodes?: Record<string, any> } | any): BoardElement[] {
+  if (!diagram || !diagram.nodes) return [];
+  const nodes = Object.values(diagram.nodes) as any[];
+  if (nodes.length === 0) return [];
+
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+
+  nodes.forEach((n) => {
+    const nx = n.x || 0;
+    const ny = n.y || 0;
+    const nw = n.width || 140;
+    const nh = n.height || 50;
+    if (nx < minX) minX = nx;
+    if (ny < minY) minY = ny;
+    if (nx + nw > maxX) maxX = nx + nw;
+    if (ny + nh > maxY) maxY = ny + nh;
+  });
+
+  const centerSourceX = (minX + maxX) / 2;
+  const centerSourceY = (minY + maxY) / 2;
+  const offsetX = -centerSourceX;
+  const offsetY = -centerSourceY;
+
+  const newElements: BoardElement[] = [];
+  const idMap = new Map<string, string>();
+
+  nodes.forEach((n) => {
+    const nw = n.width || 140;
+    const nh = n.height || 50;
+    const nx = Math.round((n.x || 0) + offsetX);
+    const ny = Math.round((n.y || 0) + offsetY);
+    const newId = `diag_shape_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    idMap.set(n.id, newId);
+
+    const shapeType: ShapeType = n.shape === 'diamond'
+      ? 'diamond'
+      : (n.shape === 'rect' ? 'rect' : (n.shape === 'pill' ? 'pill' : (n.shape === 'cylinder' ? 'cylinder' : (n.shape === 'document' ? 'document' : (n.shape === 'parallelogram' ? 'parallelogram' : 'round-rect')))));
+
+    const shapeEl: BoardShapeElement = {
+      fillColor: n.color || '#3b82f6',
+      fontSize: n.fontSize || 14,
+      height: nh,
+      id: newId,
+      isMindMapNode: true,
+      shapeType,
+      strokeColor: '#1e293b',
+      strokeWidth: 2,
+      text: n.text || '',
+      textColor: n.textColor || '#ffffff',
+      type: 'shape',
+      width: nw,
+      x: nx,
+      y: ny,
+    };
+    newElements.push(shapeEl);
+  });
+
+  nodes.forEach((n) => {
+    if (n.parentId && idMap.has(n.parentId) && idMap.has(n.id)) {
+      const connEl: BoardConnectorElement = {
+        arrowEnd: true,
+        color: '#64748b',
+        fromId: idMap.get(n.parentId)!,
+        id: `diag_conn_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        label: n.linkingPhrase || undefined,
+        strokeWidth: 2,
+        style: 'curved',
+        toId: idMap.get(n.id)!,
+        type: 'connector',
+      };
+      newElements.push(connEl);
+    }
+  });
+
+  if (Array.isArray(diagram.connections)) {
+    diagram.connections.forEach((c: any) => {
+      const fromId = idMap.get(c.fromId || c.from);
+      const toId = idMap.get(c.toId || c.to);
+      if (fromId && toId) {
+        const connEl: BoardConnectorElement = {
+          arrowEnd: true,
+          color: c.color || '#64748b',
+          fromId,
+          id: `diag_conn_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+          label: c.label || undefined,
+          strokeWidth: c.strokeWidth || 2,
+          style: c.style || 'curved',
+          toId,
+          type: 'connector',
+        };
+        newElements.push(connEl);
+      }
+    });
+  }
+
+  return newElements;
 }

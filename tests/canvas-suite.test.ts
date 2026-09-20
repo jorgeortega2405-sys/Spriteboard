@@ -311,7 +311,7 @@ async function runSuite(): Promise<void> {
   const { generatePixelOutline } = await import('../client/utils/pixel-effects.util.js');
   const { PIXEL_SHAPES, renderShapeCanvas } = await import('../client/utils/pixel-shapes.util.js');
   const { detectSpriteIslands, sliceByGrid } = await import('../client/utils/pixel-slicer.util.js');
-  const { computeElementsBoundingBox, getElementBoundingBox, hitTestElement, hitTestResizeHandle, moveElementByDrag, resizeElementByHandle } = await import('../client/views/board/board-elements.manager.js');
+  const { computeElementsBoundingBox, convertDiagramToBoardElements, distToSegment, getConnectorEndpoints, getElementBoundingBox, getNodeAnchorPoint, hitTestElement, hitTestResizeHandle, moveElementByDrag, resizeElementByHandle } = await import('../client/views/board/board-elements.manager.js');
   const { BoardHistoryManager } = await import('../client/views/board/board-history.manager.js');
   const { BoardPixelGridManager } = await import('../client/views/board/board-pixel-grid.manager.js');
   const { screenToWorld, worldToScreen } = await import('../client/views/board/board-renderer.js');
@@ -962,6 +962,251 @@ async function runSuite(): Promise<void> {
     assert.strictEqual(isToolAllowed('resize', false, 64, 64), true, 'Redimensionar debe permitirse en 64x64');
     assert.strictEqual(isToolAllowed('slicer', false, 64, 64), true, 'Slicer debe permitirse en 64x64');
     assert.strictEqual(isToolAllowed('tileGrid', false, 64, 64), true, 'TileGrid debe permitirse en 64x64');
+  });
+
+  await test('15.1 Whiteboard Connectors - Puntos de anclaje (Anchor Points) y cálculo de extremos', () => {
+    const nodeA: any = {
+      color: '#000000',
+      fillColor: '#ffffff',
+      height: 100,
+      id: 'shape-a',
+      shapeType: 'rect',
+      strokeWidth: 2,
+      type: 'shape',
+      width: 120,
+      x: 50,
+      y: 50,
+    };
+
+    const nodeB: any = {
+      color: '#000000',
+      fillColor: '#ffffff',
+      height: 100,
+      id: 'shape-b',
+      shapeType: 'pill',
+      strokeWidth: 2,
+      type: 'shape',
+      width: 120,
+      x: 300,
+      y: 50,
+    };
+
+    const anchorRightA = getNodeAnchorPoint(nodeA, 'right');
+    assert.deepStrictEqual(anchorRightA, { x: 170, y: 100 });
+
+    const anchorLeftB = getNodeAnchorPoint(nodeB, 'left');
+    assert.deepStrictEqual(anchorLeftB, { x: 300, y: 100 });
+
+    const anchorTopA = getNodeAnchorPoint(nodeA, 'top');
+    assert.deepStrictEqual(anchorTopA, { x: 110, y: 50 });
+
+    const anchorBottomA = getNodeAnchorPoint(nodeA, 'bottom');
+    assert.deepStrictEqual(anchorBottomA, { x: 110, y: 150 });
+
+    const conn: any = {
+      arrowEnd: true,
+      color: '#64748b',
+      fromId: 'shape-a',
+      id: 'conn-1',
+      strokeWidth: 2,
+      style: 'curved',
+      toId: 'shape-b',
+      type: 'connector',
+    };
+
+    const endpoints = getConnectorEndpoints(conn, [nodeA, nodeB]);
+    assert.ok(endpoints);
+    assert.strictEqual(endpoints.from.x, 170);
+    assert.strictEqual(endpoints.from.y, 100);
+    assert.strictEqual(endpoints.to.x, 300);
+    assert.strictEqual(endpoints.to.y, 100);
+
+    const freeConn: any = {
+      color: '#64748b',
+      endPoint: { x: 400, y: 500 },
+      id: 'conn-free',
+      startPoint: { x: 10, y: 20 },
+      strokeWidth: 2,
+      style: 'straight',
+      type: 'connector',
+    };
+    const freeEndpoints = getConnectorEndpoints(freeConn, []);
+    assert.ok(freeEndpoints);
+    assert.deepStrictEqual(freeEndpoints.from, { x: 10, y: 20 });
+    assert.deepStrictEqual(freeEndpoints.to, { x: 400, y: 500 });
+  });
+
+  await test('15.2 Whiteboard Connectors - Geometría distToSegment y detección de colisión (Hit Testing)', () => {
+    const d1 = distToSegment(50, 15, 0, 10, 100, 10);
+    assert.strictEqual(d1, 5);
+
+    const d2 = distToSegment(-10, 10, 0, 10, 100, 10);
+    assert.strictEqual(d2, 10);
+
+    const d3 = distToSegment(110, 10, 0, 10, 100, 10);
+    assert.strictEqual(d3, 10);
+
+    const straightConn: any = {
+      color: '#000000',
+      endPoint: { x: 200, y: 100 },
+      id: 'conn-straight',
+      label: 'Flujo Principal',
+      startPoint: { x: 0, y: 100 },
+      strokeWidth: 2,
+      style: 'straight',
+      type: 'connector',
+    };
+
+    assert.strictEqual(hitTestElement([straightConn], 100, 103, 1), straightConn, 'Debe detectar clic cerca de la línea (distancia 3px <= tolerancia 8px)');
+    assert.strictEqual(hitTestElement([straightConn], 100, 120, 1), null, 'No debe detectar clic lejos de la línea (distancia 20px > tolerancia 8px)');
+    assert.strictEqual(hitTestElement([straightConn], 100, 95, 1), straightConn, 'Debe detectar clic dentro del badge de la etiqueta');
+  });
+
+  await test('15.3 Conversión de Diagramas y Esquemas a Elementos de Pizarrón (convertDiagramToBoardElements)', () => {
+    const diagramData: any = {
+      connections: [
+        { color: '#3b82f6', fromId: 'node-1', label: 'incluye', style: 'orthogonal', toId: 'node-3' },
+      ],
+      nodes: [
+        {
+          borderColor: '#1e293b',
+          borderWidth: 2,
+          color: '#ffffff',
+          height: 80,
+          id: 'node-1',
+          shape: 'pill',
+          text: 'Idea Central',
+          textColor: '#0f172a',
+          width: 160,
+          x: 200,
+          y: 200,
+        },
+        {
+          color: '#f8fafc',
+          height: 60,
+          id: 'node-2',
+          linkingPhrase: 'conduce a',
+          parentId: 'node-1',
+          shape: 'cylinder',
+          text: 'Base de Datos',
+          width: 140,
+          x: 450,
+          y: 150,
+        },
+        {
+          color: '#fef2f2',
+          height: 60,
+          id: 'node-3',
+          shape: 'parallelogram',
+          text: 'Proceso de Entrada',
+          width: 140,
+          x: 450,
+          y: 300,
+        },
+      ],
+    };
+
+    const boardElements = convertDiagramToBoardElements(diagramData);
+    assert.strictEqual(boardElements.length, 5, 'Debe generar 3 figuras y 2 conectores (1 por parentId y 1 por connections)');
+
+    const shapes = boardElements.filter((el) => el.type === 'shape');
+    assert.strictEqual(shapes.length, 3);
+    assert.strictEqual(shapes[0].shapeType, 'pill');
+    assert.strictEqual((shapes[0] as any).text, 'Idea Central');
+    assert.strictEqual((shapes[0] as any).isMindMapNode, true);
+    assert.strictEqual(shapes[1].shapeType, 'cylinder');
+    assert.strictEqual(shapes[2].shapeType, 'parallelogram');
+
+    const connectors = boardElements.filter((el) => el.type === 'connector');
+    assert.strictEqual(connectors.length, 2);
+    assert.strictEqual((connectors[0] as any).label, 'conduce a');
+    assert.strictEqual((connectors[0] as any).fromId, shapes[0].id);
+    assert.strictEqual((connectors[0] as any).toId, shapes[1].id);
+    assert.strictEqual((connectors[1] as any).label, 'incluye');
+    assert.strictEqual((connectors[1] as any).style, 'orthogonal');
+    assert.strictEqual((connectors[1] as any).fromId, shapes[0].id);
+    assert.strictEqual((connectors[1] as any).toId, shapes[2].id);
+  });
+
+  await test('15.4 Whiteboard Mindmap Shortcuts - Lógica de Ramificación Tab y Enter', () => {
+    const parentNode: any = {
+      color: '#000000',
+      fillColor: '#ffffff',
+      height: 60,
+      id: 'root-node',
+      isMindMapNode: true,
+      shapeType: 'pill',
+      strokeWidth: 2,
+      text: 'Nodo Raíz',
+      type: 'shape',
+      width: 140,
+      x: 100,
+      y: 200,
+    };
+
+    const childX = parentNode.x + parentNode.width + 120;
+    const childY = parentNode.y;
+    const childNode: any = {
+      color: '#000000',
+      fillColor: '#ffffff',
+      height: parentNode.height,
+      id: 'child-1',
+      isMindMapNode: true,
+      shapeType: parentNode.shapeType,
+      strokeWidth: 2,
+      text: 'Nuevo Subnodo',
+      type: 'shape',
+      width: parentNode.width,
+      x: childX,
+      y: childY,
+    };
+    const childConn: any = {
+      arrowEnd: true,
+      color: '#64748b',
+      fromId: parentNode.id,
+      id: 'conn-parent-child',
+      strokeWidth: 2,
+      style: 'curved',
+      toId: childNode.id,
+      type: 'connector',
+    };
+
+    assert.strictEqual(childNode.x, 360);
+    assert.strictEqual(childNode.y, 200);
+    assert.strictEqual(childConn.fromId, parentNode.id);
+    assert.strictEqual(childConn.toId, childNode.id);
+
+    const siblingX = childNode.x;
+    const siblingY = childNode.y + childNode.height + 40;
+    const siblingNode: any = {
+      color: '#000000',
+      fillColor: '#ffffff',
+      height: childNode.height,
+      id: 'child-2',
+      isMindMapNode: true,
+      shapeType: childNode.shapeType,
+      strokeWidth: 2,
+      text: 'Nuevo Subnodo',
+      type: 'shape',
+      width: childNode.width,
+      x: siblingX,
+      y: siblingY,
+    };
+    const siblingConn: any = {
+      arrowEnd: true,
+      color: '#64748b',
+      fromId: parentNode.id,
+      id: 'conn-parent-sibling',
+      strokeWidth: 2,
+      style: 'curved',
+      toId: siblingNode.id,
+      type: 'connector',
+    };
+
+    assert.strictEqual(siblingNode.x, 360);
+    assert.strictEqual(siblingNode.y, 300);
+    assert.strictEqual(siblingConn.fromId, parentNode.id);
+    assert.strictEqual(siblingConn.toId, siblingNode.id);
   });
 
   process.stdout.write(`\n=== TODAS LAS PRUEBAS PASARON EXITOSAMENTE (${passedTests} pruebas completadas) ===\n`);

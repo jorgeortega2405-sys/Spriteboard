@@ -1,4 +1,7 @@
+import { convertDiagramToBoardElements } from '../views/board/board-elements.manager.js';
 import { BoardElement } from '../views/board/board.types.js';
+import { getCustomDiagramProject } from './diagram-templates.data.js';
+import { ALL_PRESETS } from './templates.config.js';
 
 export function getBoardTemplateElements(templateId?: string | null): BoardElement[] {
   if (!templateId) return [];
@@ -726,7 +729,13 @@ export function getBoardTemplateElements(templateId?: string | null): BoardEleme
         },
       ];
 
-    default:
+    default: {
+      const preset = ALL_PRESETS.find((p) => p.id === templateId || p.boardTemplateId === templateId);
+      if (preset && preset.diagramSubtype) {
+        const diagProject = getCustomDiagramProject(preset.id, preset.diagramSubtype, preset.name);
+        return convertDiagramToBoardElements(diagProject);
+      }
       return [];
+    }
   }
 }
