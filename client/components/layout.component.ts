@@ -949,7 +949,79 @@ function handleApplyCanvasTemplate(preset: PresetItem, canvasType: 'board' | 'do
   }
 }
 
-let activeElementsCategory: 'diagrams' | 'shapes' | 'templates' = 'diagrams';
+let activeElementsCategory: 'root' | 'shapes' | 'stickers' | 'diagrams' = 'root';
+
+const SHAPE_SECTIONS: Array<{ key: string; label: string; prefixes: string[] }> = [
+  {
+    key: 'basic',
+    label: 'Formas básicas',
+    prefixes: [
+      'square', 'rounded_rectangle', 'chamfer_square', 'circle', 'semi_circle',
+      'quarter_circle', 'quadrant_ring', 'semi_ring', 'diamond', 'triangle_up',
+      'triangle_down', 'triangle_right_angle', 'trapezoid_up', 'trapezoid_down',
+      'parallelogram_left', 'parallelogram_right'
+    ],
+  },
+  {
+    key: 'polygons',
+    label: 'Polígonos',
+    prefixes: ['pentagon', 'hexagon_flat', 'hexagon_pointy', 'heptagon', 'octagon', 'decagon'],
+  },
+  {
+    key: 'stars',
+    label: 'Estrellas y Destellos',
+    prefixes: [
+      'star_4_sparkle', 'star_5', 'star_6', 'star_7', 'star_8', 'sparkle_8',
+      'sparkle_12', 'sunburst_16', 'burst_10', 'burst_12', 'burst_16', 'burst_20', 'burst_24', 'seal_scallop_32'
+    ],
+  },
+  {
+    key: 'arrows',
+    label: 'Flechas y Líneas',
+    prefixes: [
+      'arrow_right', 'arrow_left', 'arrow_up', 'arrow_down', 'arrow_double_horizontal',
+      'arrow_double_vertical', 'arrow_pointed_double', 'arrow_pointed_left', 'arrow_ribbon',
+      'chevron_right', 'wave_multi_ribbon', 'wave_s_curve'
+    ],
+  },
+  {
+    key: 'callouts',
+    label: 'Llamadas y Nubes',
+    prefixes: [
+      'callout_rectangular', 'callout_rounded_rect', 'callout_oval', 'callout_cloud',
+      'callout_curved_tail', 'cloud_fluffy_soft', 'cloud_flat_base_multi', 'cloud_flat_base_triple',
+      'cloud_round_dome', 'cloud_puffy_full'
+    ],
+  },
+  {
+    key: 'banners',
+    label: 'Banners y Cintas',
+    prefixes: [
+      'banner_horizontal_ribbon', 'banner_rounded_notch', 'banner_rounded_point',
+      'banner_vertical_notch', 'banner_vertical_point'
+    ],
+  },
+  {
+    key: 'flow',
+    label: 'Símbolos de Flujo',
+    prefixes: [
+      'flow_process', 'flow_decision', 'flow_data', 'flow_document', 'flow_terminator',
+      'flow_preparation', 'flow_delay', 'flow_manual', 'flow_merge', 'flow_offpage', 'flow_shield'
+    ],
+  },
+  {
+    key: 'symbols',
+    label: 'Símbolos y Naturaleza',
+    prefixes: [
+      'heart_classic', 'heart_rounded', 'heart_narrow', 'heart_wide', 'heart_playful',
+      'cross', 'leaf_curved', 'clover_4_leaves', 'flower_4_petals_cross', 'flower_6_petals_center_hole',
+      'flower_6_petals_drop', 'flower_8_petals_round', 'flower_8_petals_sharp', 'shield_u', 'ticket',
+      'arch', 'barrel', 'gear_12_teeth_large_hole', 'gear_12_teeth_pointed', 'gear_12_teeth_small_hole',
+      'gear_14_teeth_pointed', 'gear_16_teeth_large_hole', 'gear_16_teeth_pointed', 'tear_curved_flame',
+      'tear_narrow', 'tear_straight', 'tear_tilted', 'tear_wide'
+    ],
+  },
+];
 
 function handleApplyDiagramComponent(item: DiagramComponentItem, canvasType: 'board' | 'doc'): void {
   const controller = getActiveCanvasController();
@@ -1056,27 +1128,12 @@ function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElemen
         </button>
       </div>
       <div class="canvas-panel-card__body" data-ref="canvas-panel-body">
-        <div class="elements-tabs-bar" data-ref="elements-tabs-bar">
-          <button type="button" class="elements-tab-btn${activeElementsCategory === 'diagrams' ? ' is-active' : ''}" data-ref="btn-tab-elements-diagrams">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#account_tree"></use></svg>
-            <span>Diagramas</span>
-          </button>
-          <button type="button" class="elements-tab-btn${activeElementsCategory === 'shapes' ? ' is-active' : ''}" data-ref="btn-tab-elements-shapes">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#category"></use></svg>
-            <span>Figuras</span>
-          </button>
-          <button type="button" class="elements-tab-btn${activeElementsCategory === 'templates' ? ' is-active' : ''}" data-ref="btn-tab-elements-templates">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
-            <span>Stickers</span>
-          </button>
-        </div>
-
         <div class="canvas-panel-search" data-ref="canvas-panel-search">
           <svg class="component-icon canvas-panel-search__icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
-          <input class="canvas-panel-search__input" data-ref="canvas-elements-search-input" type="text" placeholder="${activeElementsCategory === 'diagrams' ? 'Buscar bloques, nodos, conectores...' : activeElementsCategory === 'shapes' ? 'Buscar figuras...' : 'Buscar stickers...'}" />
+          <input class="canvas-panel-search__input" data-ref="canvas-elements-search-input" type="text" placeholder="Buscar elementos..." />
         </div>
 
-        <div class="elements-grid" data-ref="elements-grid"></div>
+        <div class="elements-drawer-content" data-ref="elements-drawer-content"></div>
       </div>
     </div>
   `;
@@ -1087,56 +1144,32 @@ function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElemen
     toggleDrawer(false);
   });
 
-  const btnTabDiagrams = drawerBody.querySelector<HTMLButtonElement>('[data-ref="btn-tab-elements-diagrams"]');
-  const btnTabShapes = drawerBody.querySelector<HTMLButtonElement>('[data-ref="btn-tab-elements-shapes"]');
-  const btnTabTemplates = drawerBody.querySelector<HTMLButtonElement>('[data-ref="btn-tab-elements-templates"]');
   const searchInput = drawerBody.querySelector<HTMLInputElement>('[data-ref="canvas-elements-search-input"]');
-  const grid = drawerBody.querySelector<HTMLElement>('[data-ref="elements-grid"]');
+  const contentContainer = drawerBody.querySelector<HTMLElement>('[data-ref="elements-drawer-content"]');
 
-  const renderGrid = (query = '') => {
-    if (!grid) return;
+  const renderContent = (query = '') => {
+    if (!contentContainer) return;
     const cleanQ = query.trim().toLowerCase();
 
-    if (activeElementsCategory === 'diagrams') {
-      const filtered = cleanQ
-        ? DIAGRAM_COMPONENTS.filter((d) => d.name.toLowerCase().includes(cleanQ) || d.description.toLowerCase().includes(cleanQ) || d.categoryLabel.toLowerCase().includes(cleanQ))
-        : DIAGRAM_COMPONENTS;
+    if (cleanQ) {
+      const matchingDiagrams = DIAGRAM_COMPONENTS.filter((d) => d.name.toLowerCase().includes(cleanQ) || d.description.toLowerCase().includes(cleanQ) || d.categoryLabel.toLowerCase().includes(cleanQ));
+      const matchingShapes = PIXEL_SHAPES.filter((s) => s.name.toLowerCase().includes(cleanQ) || s.id.toLowerCase().includes(cleanQ));
 
-      if (filtered.length === 0) {
-        grid.innerHTML = `
-          <div class="canvas-panel-card__empty" style="grid-column: 1 / -1;" data-ref="elements-empty">
+      if (matchingDiagrams.length === 0 && matchingShapes.length === 0) {
+        contentContainer.innerHTML = `
+          <div class="canvas-panel-card__empty" data-ref="elements-empty">
             <span class="canvas-panel-card__empty-title">Sin resultados</span>
-            <p class="canvas-panel-card__empty-desc">No se encontraron componentes de diagrama para «${escapeHtml(query)}»</p>
+            <p class="canvas-panel-card__empty-desc">No se encontraron elementos para «${escapeHtml(query)}»</p>
           </div>
         `;
         return;
       }
 
-      if (!cleanQ) {
-        const categories: Array<{ key: string; label: string }> = [
-          { key: 'flowchart', label: 'Diagramas de Flujo' },
-          { key: 'mindmap', label: 'Mapas Mentales' },
-          { key: 'connectors', label: 'Conectores Rápidos' },
-          { key: 'stickies', label: 'Notas Adhesivas' },
-        ];
+      let html = '<div class="elements-grid" data-ref="elements-grid">';
 
-        grid.innerHTML = categories.map((cat) => {
-          const catItems = filtered.filter((item) => item.category === cat.key);
-          if (catItems.length === 0) return '';
-          const itemsHtml = catItems.map((item) => `
-            <button type="button" class="element-grid-item element-grid-item--diagram" data-ref="btn-diagram-item-${item.id}" data-diagram-id="${item.id}" data-tooltip="${escapeHtml(item.description || item.name)}" aria-label="${escapeHtml(item.name)}">
-              <svg viewBox="0 0 48 48" aria-hidden="true">${item.previewSvg}</svg>
-              <span class="element-grid-item__label">${escapeHtml(item.name)}</span>
-            </button>
-          `).join('');
-
-          return `
-            <div class="elements-section-title" data-ref="section-title-${cat.key}">${escapeHtml(cat.label)}</div>
-            ${itemsHtml}
-          `;
-        }).join('');
-      } else {
-        grid.innerHTML = filtered.map((item) => `
+      if (matchingDiagrams.length > 0) {
+        html += '<div class="elements-section-title">Diagramas</div>';
+        html += matchingDiagrams.map((item) => `
           <button type="button" class="element-grid-item element-grid-item--diagram" data-ref="btn-diagram-item-${item.id}" data-diagram-id="${item.id}" data-tooltip="${escapeHtml(item.description || item.name)}" aria-label="${escapeHtml(item.name)}">
             <svg viewBox="0 0 48 48" aria-hidden="true">${item.previewSvg}</svg>
             <span class="element-grid-item__label">${escapeHtml(item.name)}</span>
@@ -1144,49 +1177,157 @@ function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElemen
         `).join('');
       }
 
-      grid.querySelectorAll<HTMLButtonElement>('[data-diagram-id]').forEach((itemBtn) => {
-        itemBtn.addEventListener('click', () => {
-          const diagId = itemBtn.getAttribute('data-diagram-id');
-          const found = DIAGRAM_COMPONENTS.find((d) => d.id === diagId);
-          if (found) {
-            handleApplyDiagramComponent(found, canvasType);
+      if (matchingShapes.length > 0) {
+        html += '<div class="elements-section-title">Figuras y Formas</div>';
+        html += matchingShapes.map((item) => {
+          let previewHtml = '';
+          if (item.type === 'vector' && item.pathD) {
+            previewHtml = `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="${item.pathD}" fill="currentColor" /></svg>`;
+          } else if (item.type === 'sticker' && item.file) {
+            previewHtml = `<img src="/assets/img/stickers/${item.file}" alt="${escapeHtml(item.name)}" loading="lazy" />`;
+          }
+          return `
+            <button type="button" class="element-grid-item" data-ref="btn-element-item-${item.id}" data-element-id="${item.id}" data-tooltip="${escapeHtml(item.name)}" aria-label="${escapeHtml(item.name)}">
+              ${previewHtml}
+            </button>
+          `;
+        }).join('');
+      }
+
+      html += '</div>';
+      contentContainer.innerHTML = html;
+      bindItemClicks(contentContainer);
+      renderIcons(contentContainer);
+      return;
+    }
+
+    if (activeElementsCategory === 'root') {
+      contentContainer.innerHTML = `
+        <div class="elements-categories-menu" data-ref="elements-categories-menu">
+          <span class="elements-categories-heading">Explora las categorías</span>
+          <div class="elements-categories-grid" data-ref="elements-categories-grid">
+            <button type="button" class="element-category-card" data-ref="btn-category-shapes" data-category="shapes">
+              <div class="element-category-card__icon-box element-category-card__icon-box--shapes">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#category"></use></svg>
+              </div>
+              <span class="element-category-card__label">Formas</span>
+            </button>
+
+            <button type="button" class="element-category-card" data-ref="btn-category-stickers" data-category="stickers">
+              <div class="element-category-card__icon-box element-category-card__icon-box--stickers">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
+              </div>
+              <span class="element-category-card__label">Figuras</span>
+            </button>
+
+            <button type="button" class="element-category-card" data-ref="btn-category-diagrams" data-category="diagrams">
+              <div class="element-category-card__icon-box element-category-card__icon-box--diagrams">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#account_tree"></use></svg>
+              </div>
+              <span class="element-category-card__label">Diagramas</span>
+            </button>
+          </div>
+        </div>
+      `;
+
+      contentContainer.querySelectorAll<HTMLButtonElement>('[data-category]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const cat = btn.getAttribute('data-category') as 'shapes' | 'stickers' | 'diagrams';
+          if (cat) {
+            activeElementsCategory = cat;
+            renderContent('');
           }
         });
       });
+      renderIcons(contentContainer);
       return;
     }
 
-    const items = PIXEL_SHAPES.filter((s) => s.category === activeElementsCategory);
-    const filtered = cleanQ
-      ? items.filter((s) => s.name.toLowerCase().includes(cleanQ) || s.id.toLowerCase().includes(cleanQ))
-      : items;
+    let backTitle = 'Formas';
+    if (activeElementsCategory === 'stickers') backTitle = 'Figuras';
+    if (activeElementsCategory === 'diagrams') backTitle = 'Diagramas';
 
-    if (filtered.length === 0) {
-      grid.innerHTML = `
-        <div class="canvas-panel-card__empty" style="grid-column: 1 / -1;" data-ref="elements-empty">
-          <span class="canvas-panel-card__empty-title">Sin resultados</span>
-          <p class="canvas-panel-card__empty-desc">No se encontraron elementos para «${escapeHtml(query)}»</p>
-        </div>
-      `;
-      return;
-    }
+    let html = `
+      <button type="button" class="elements-back-btn" data-ref="btn-elements-back">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
+        <span>Volver a categorías (${escapeHtml(backTitle)})</span>
+      </button>
+      <div class="elements-grid" data-ref="elements-grid">
+    `;
 
-    grid.innerHTML = filtered.map((item) => {
-      let previewHtml = '';
-      if (item.type === 'vector' && item.pathD) {
-        previewHtml = `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="${item.pathD}" fill="currentColor" /></svg>`;
-      } else if (item.type === 'sticker' && item.file) {
-        previewHtml = `<img src="/assets/img/stickers/${item.file}" alt="${escapeHtml(item.name)}" loading="lazy" />`;
+    if (activeElementsCategory === 'shapes') {
+      const vectorShapes = PIXEL_SHAPES.filter((s) => s.category === 'shapes' && s.type === 'vector');
+      const assignedShapeIds = new Set<string>();
+
+      SHAPE_SECTIONS.forEach((sec) => {
+        const matching = vectorShapes.filter((s) => {
+          const rawKey = s.id.replace(/^shape_/, '');
+          return sec.prefixes.includes(rawKey) || sec.prefixes.some((p) => rawKey.startsWith(p));
+        });
+
+        if (matching.length > 0) {
+          matching.forEach((s) => assignedShapeIds.add(s.id));
+          html += `<div class="elements-section-title">${escapeHtml(sec.label)}</div>`;
+          html += matching.map((item) => `
+            <button type="button" class="element-grid-item" data-ref="btn-element-item-${item.id}" data-element-id="${item.id}" data-tooltip="${escapeHtml(item.name)}" aria-label="${escapeHtml(item.name)}">
+              <svg viewBox="0 0 48 48" aria-hidden="true"><path d="${item.pathD || ''}" fill="currentColor" /></svg>
+            </button>
+          `).join('');
+        }
+      });
+
+      const remainingShapes = vectorShapes.filter((s) => !assignedShapeIds.has(s.id));
+      if (remainingShapes.length > 0) {
+        html += '<div class="elements-section-title">Otras formas</div>';
+        html += remainingShapes.map((item) => `
+          <button type="button" class="element-grid-item" data-ref="btn-element-item-${item.id}" data-element-id="${item.id}" data-tooltip="${escapeHtml(item.name)}" aria-label="${escapeHtml(item.name)}">
+            <svg viewBox="0 0 48 48" aria-hidden="true"><path d="${item.pathD || ''}" fill="currentColor" /></svg>
+          </button>
+        `).join('');
       }
-
-      return `
+    } else if (activeElementsCategory === 'stickers') {
+      const stickers = PIXEL_SHAPES.filter((s) => s.type === 'sticker');
+      html += stickers.map((item) => `
         <button type="button" class="element-grid-item" data-ref="btn-element-item-${item.id}" data-element-id="${item.id}" data-tooltip="${escapeHtml(item.name)}" aria-label="${escapeHtml(item.name)}">
-          ${previewHtml}
+          <img src="/assets/img/stickers/${item.file}" alt="${escapeHtml(item.name)}" loading="lazy" />
         </button>
-      `;
-    }).join('');
+      `).join('');
+    } else if (activeElementsCategory === 'diagrams') {
+      const categories: Array<{ key: string; label: string }> = [
+        { key: 'flowchart', label: 'Diagramas de Flujo' },
+        { key: 'mindmap', label: 'Mapas Mentales' },
+        { key: 'connectors', label: 'Conectores Rápidos' },
+        { key: 'stickies', label: 'Notas Adhesivas' },
+      ];
 
-    grid.querySelectorAll<HTMLButtonElement>('.element-grid-item').forEach((itemBtn) => {
+      categories.forEach((cat) => {
+        const catItems = DIAGRAM_COMPONENTS.filter((item) => item.category === cat.key);
+        if (catItems.length === 0) return;
+        html += `<div class="elements-section-title">${escapeHtml(cat.label)}</div>`;
+        html += catItems.map((item) => `
+          <button type="button" class="element-grid-item element-grid-item--diagram" data-ref="btn-diagram-item-${item.id}" data-diagram-id="${item.id}" data-tooltip="${escapeHtml(item.description || item.name)}" aria-label="${escapeHtml(item.name)}">
+            <svg viewBox="0 0 48 48" aria-hidden="true">${item.previewSvg}</svg>
+            <span class="element-grid-item__label">${escapeHtml(item.name)}</span>
+          </button>
+        `).join('');
+      });
+    }
+
+    html += '</div>';
+    contentContainer.innerHTML = html;
+
+    const btnBack = contentContainer.querySelector<HTMLButtonElement>('[data-ref="btn-elements-back"]');
+    btnBack?.addEventListener('click', () => {
+      activeElementsCategory = 'root';
+      renderContent('');
+    });
+
+    bindItemClicks(contentContainer);
+    renderIcons(contentContainer);
+  };
+
+  const bindItemClicks = (container: HTMLElement) => {
+    container.querySelectorAll<HTMLButtonElement>('[data-element-id]').forEach((itemBtn) => {
       itemBtn.addEventListener('click', () => {
         const elId = itemBtn.getAttribute('data-element-id');
         const found = PIXEL_SHAPES.find((s) => s.id === elId);
@@ -1195,52 +1336,23 @@ function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElemen
         }
       });
     });
+
+    container.querySelectorAll<HTMLButtonElement>('[data-diagram-id]').forEach((itemBtn) => {
+      itemBtn.addEventListener('click', () => {
+        const diagId = itemBtn.getAttribute('data-diagram-id');
+        const found = DIAGRAM_COMPONENTS.find((d) => d.id === diagId);
+        if (found) {
+          handleApplyDiagramComponent(found, canvasType);
+        }
+      });
+    });
   };
 
-  btnTabDiagrams?.addEventListener('click', () => {
-    if (activeElementsCategory === 'diagrams') return;
-    activeElementsCategory = 'diagrams';
-    btnTabDiagrams.classList.add('is-active');
-    btnTabShapes?.classList.remove('is-active');
-    btnTabTemplates?.classList.remove('is-active');
-    if (searchInput) {
-      searchInput.placeholder = 'Buscar bloques, nodos, conectores...';
-      searchInput.value = '';
-    }
-    renderGrid('');
-  });
-
-  btnTabShapes?.addEventListener('click', () => {
-    if (activeElementsCategory === 'shapes') return;
-    activeElementsCategory = 'shapes';
-    btnTabShapes.classList.add('is-active');
-    btnTabDiagrams?.classList.remove('is-active');
-    btnTabTemplates?.classList.remove('is-active');
-    if (searchInput) {
-      searchInput.placeholder = 'Buscar figuras...';
-      searchInput.value = '';
-    }
-    renderGrid('');
-  });
-
-  btnTabTemplates?.addEventListener('click', () => {
-    if (activeElementsCategory === 'templates') return;
-    activeElementsCategory = 'templates';
-    btnTabTemplates.classList.add('is-active');
-    btnTabDiagrams?.classList.remove('is-active');
-    btnTabShapes?.classList.remove('is-active');
-    if (searchInput) {
-      searchInput.placeholder = 'Buscar stickers...';
-      searchInput.value = '';
-    }
-    renderGrid('');
-  });
-
   searchInput?.addEventListener('input', () => {
-    renderGrid(searchInput.value);
+    renderContent(searchInput.value);
   });
 
-  renderGrid();
+  renderContent();
 
   const drawerFooter = drawer.querySelector<HTMLElement>('[data-ref="drawer-footer"]');
   if (drawerFooter) {
@@ -1307,27 +1419,17 @@ function renderUploadsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement
           <svg class="component-icon canvas-panel-card__icon" aria-hidden="true"><use href="/icons.svg#cloud_upload"></use></svg>
           <span class="canvas-panel-card__title" data-ref="canvas-panel-title">${t('nav.uploads') || 'Subidos'}</span>
         </div>
-        <button type="button" class="component-button component-button--h32 component-button--icon-only rail-btn canvas-panel-card__close" data-ref="btn-close-canvas-panel" data-tooltip="Cerrar panel" aria-label="Cerrar panel">
-          <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
-        </button>
+        <div style="display: flex; align-items: center; gap: 4px;">
+          <button type="button" class="component-button component-button--h32 component-button--icon-only rail-btn" data-ref="btn-upload-file-trigger" data-tooltip="Subir imagen" aria-label="Subir imagen">
+            <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+          </button>
+          <button type="button" class="component-button component-button--h32 component-button--icon-only rail-btn canvas-panel-card__close" data-ref="btn-close-canvas-panel" data-tooltip="Cerrar panel" aria-label="Cerrar panel">
+            <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+          </button>
+        </div>
       </div>
       <div class="canvas-panel-card__body canvas-uploads-container" data-ref="canvas-panel-body">
-        <div class="canvas-upload-dropzone" data-ref="canvas-upload-dropzone">
-          <input class="canvas-upload-file-input" data-ref="canvas-upload-file-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" multiple style="display: none;" />
-          <svg class="component-icon canvas-upload-dropzone__icon" aria-hidden="true"><use href="/icons.svg#cloud_upload"></use></svg>
-          <span class="canvas-upload-dropzone__title">Sube tus fotos o imágenes</span>
-          <span class="canvas-upload-dropzone__subtitle">Arrastra y suelta aquí o haz clic para explorar</span>
-        </div>
-
-        <div class="canvas-upload-storage-meter" data-ref="canvas-upload-storage-meter" style="display: none;">
-          <div class="canvas-upload-storage-meter__header">
-            <span class="canvas-upload-storage-meter__label">Almacenamiento</span>
-            <span class="canvas-upload-storage-meter__value" data-ref="canvas-upload-storage-text">0 B / 0 B</span>
-          </div>
-          <div class="canvas-upload-storage-meter__track">
-            <div class="canvas-upload-storage-meter__fill" data-ref="canvas-upload-storage-fill" style="width: 0%;"></div>
-          </div>
-        </div>
+        <input class="canvas-upload-file-input" data-ref="canvas-upload-file-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" multiple style="display: none;" />
 
         <div class="canvas-panel-search" data-ref="canvas-panel-search">
           <svg class="component-icon canvas-panel-search__icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
@@ -1352,30 +1454,13 @@ function renderUploadsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement
     toggleDrawer(false);
   });
 
-  const dropzone = drawerBody.querySelector<HTMLElement>('[data-ref="canvas-upload-dropzone"]');
+  const btnUploadTrigger = drawerBody.querySelector<HTMLButtonElement>('[data-ref="btn-upload-file-trigger"]');
   const fileInput = drawerBody.querySelector<HTMLInputElement>('[data-ref="canvas-upload-file-input"]');
-  const storageMeter = drawerBody.querySelector<HTMLElement>('[data-ref="canvas-upload-storage-meter"]');
-  const storageText = drawerBody.querySelector<HTMLElement>('[data-ref="canvas-upload-storage-text"]');
-  const storageFill = drawerBody.querySelector<HTMLElement>('[data-ref="canvas-upload-storage-fill"]');
   const searchInput = drawerBody.querySelector<HTMLInputElement>('[data-ref="canvas-uploads-search-input"]');
   const grid = drawerBody.querySelector<HTMLElement>('[data-ref="canvas-uploads-grid"]');
 
   let uploads: UserUploadItem[] = [];
   let isUploading = false;
-
-  const updateStorage = (storage?: UserStorageUsage) => {
-    if (!storage || !storageMeter || !storageText || !storageFill) return;
-    storageMeter.style.display = 'flex';
-    storageText.textContent = `${storage.usedFormatted} / ${storage.limitFormatted}`;
-    const pct = Math.min(100, Math.max(0, storage.percentage));
-    storageFill.style.width = `${pct}%`;
-    storageFill.className = 'canvas-upload-storage-meter__fill';
-    if (storage.isOverLimit) {
-      storageFill.classList.add('canvas-upload-storage-meter__fill--danger');
-    } else if (storage.isNearLimit) {
-      storageFill.classList.add('canvas-upload-storage-meter__fill--warning');
-    }
-  };
 
   const renderGrid = (query = '') => {
     if (!grid) return;
@@ -1393,8 +1478,16 @@ function renderUploadsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement
             </div>
             <span class="canvas-panel-card__empty-title">Aún no tienes archivos subidos</span>
             <p class="canvas-panel-card__empty-desc">Sube fotos o imágenes para colocarlas en tus lienzos.</p>
+            <button type="button" class="component-button component-button--h36 component-button--black" data-ref="btn-upload-empty-trigger" style="margin-top: 8px;">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+              <span>Subir imagen</span>
+            </button>
           </div>
         `;
+        const btnEmptyUpload = grid.querySelector<HTMLButtonElement>('[data-ref="btn-upload-empty-trigger"]');
+        btnEmptyUpload?.addEventListener('click', () => {
+          fileInput?.click();
+        });
       } else {
         grid.innerHTML = `
           <div class="canvas-panel-card__empty" style="grid-column: 1 / -1;" data-ref="canvas-uploads-no-results">
@@ -1456,9 +1549,6 @@ function renderUploadsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement
             if (res.success) {
               showToast('Archivo eliminado con éxito', 'success');
               uploads = uploads.filter((u) => u.uuid !== found.uuid);
-              if (res.storage) {
-                updateStorage(res.storage);
-              }
               renderGrid(searchInput?.value || '');
             } else {
               showToast(res.message || 'Error al eliminar el archivo.', 'danger');
@@ -1492,16 +1582,13 @@ function renderUploadsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement
       if (res.uploads && res.uploads.length > 0) {
         uploads = [...res.uploads, ...uploads];
       }
-      if (res.storage) {
-        updateStorage(res.storage);
-      }
       renderGrid(searchInput?.value || '');
     } else {
       showToast(res.message || 'Error al subir los archivos.', 'danger');
     }
   };
 
-  dropzone?.addEventListener('click', () => {
+  btnUploadTrigger?.addEventListener('click', () => {
     fileInput?.click();
   });
 
@@ -1512,19 +1599,12 @@ function renderUploadsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement
     }
   });
 
-  dropzone?.addEventListener('dragover', (e) => {
+  drawerBody.addEventListener('dragover', (e) => {
     e.preventDefault();
-    dropzone.classList.add('is-dragover');
   });
 
-  dropzone?.addEventListener('dragleave', (e) => {
+  drawerBody.addEventListener('drop', (e) => {
     e.preventDefault();
-    dropzone.classList.remove('is-dragover');
-  });
-
-  dropzone?.addEventListener('drop', (e) => {
-    e.preventDefault();
-    dropzone.classList.remove('is-dragover');
     if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
       void handleFiles(e.dataTransfer.files);
     }
@@ -1541,9 +1621,6 @@ function renderUploadsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement
     void getUploadsApi().then((res) => {
       if (res.success) {
         uploads = res.uploads || [];
-        if (res.storage) {
-          updateStorage(res.storage);
-        }
       } else {
         uploads = [];
       }
