@@ -2794,6 +2794,90 @@ export class BoardController {
     this.scheduleAutoSave();
   }
 
+  public insertDiagramNode(config: {
+    fillColor?: string;
+    height?: number;
+    isMindMapNode?: boolean;
+    shapeType: ShapeType;
+    strokeColor?: string;
+    text?: string;
+    textColor?: string;
+    width?: number;
+  }): void {
+    this.pushHistoryState();
+    const dpr = window.devicePixelRatio || 1;
+    const screenW = this.canvasElement ? this.canvasElement.width / dpr : 800;
+    const screenH = this.canvasElement ? this.canvasElement.height / dpr : 600;
+    const centerWorld = screenToWorld(screenW / 2, screenH / 2, this.canvasElement, this.camera);
+
+    const w = config.width || (config.shapeType === 'pill' ? 140 : config.shapeType === 'diamond' ? 130 : config.shapeType === 'cylinder' ? 120 : 140);
+    const h = config.height || (config.shapeType === 'pill' ? 48 : config.shapeType === 'diamond' ? 80 : config.shapeType === 'cylinder' ? 75 : 60);
+
+    const shapeEl: BoardShapeElement = {
+      fillColor: config.fillColor || '#ffffff',
+      fontSize: 14,
+      height: h,
+      id: `shape_${crypto.randomUUID().slice(0, 8)}`,
+      isMindMapNode: config.isMindMapNode || false,
+      shapeType: config.shapeType,
+      strokeColor: config.strokeColor || '#3b82f6',
+      strokeWidth: 2,
+      text: config.text || '',
+      textColor: config.textColor || '#0f172a',
+      type: 'shape',
+      width: w,
+      x: Math.round(centerWorld.x - w / 2),
+      y: Math.round(centerWorld.y - h / 2),
+    };
+
+    this.elements.push(shapeEl);
+    this.collaborationManager.broadcastAddElement(shapeEl);
+    this.selectedElementId = shapeEl.id;
+    this.updateSelectionToolbar();
+    this.requestRedraw();
+    this.scheduleAutoSave();
+  }
+
+  public insertStickyNote(color: string, text?: string): void {
+    this.pushHistoryState();
+    const dpr = window.devicePixelRatio || 1;
+    const screenW = this.canvasElement ? this.canvasElement.width / dpr : 800;
+    const screenH = this.canvasElement ? this.canvasElement.height / dpr : 600;
+    const centerWorld = screenToWorld(screenW / 2, screenH / 2, this.canvasElement, this.camera);
+
+    const size = 150;
+    const stickyEl: BoardStickyElement = {
+      color: color || '#fef08a',
+      fontSize: 15,
+      height: size,
+      id: `sticky_${crypto.randomUUID().slice(0, 8)}`,
+      text: text || 'Nueva nota',
+      textColor: '#1e293b',
+      type: 'sticky',
+      width: size,
+      x: Math.round(centerWorld.x - size / 2),
+      y: Math.round(centerWorld.y - size / 2),
+    };
+
+    this.elements.push(stickyEl);
+    this.collaborationManager.broadcastAddElement(stickyEl);
+    this.selectedElementId = stickyEl.id;
+    this.updateSelectionToolbar();
+    this.requestRedraw();
+    this.scheduleAutoSave();
+  }
+
+  public activateConnectorTool(style?: 'curved' | 'orthogonal' | 'straight'): void {
+    if (style) {
+      this.connectorStyle = style;
+      const badges = this.container.querySelectorAll<HTMLButtonElement>('[data-connector-style]');
+      badges.forEach((b) => {
+        b.classList.toggle('is-active', b.getAttribute('data-connector-style') === style);
+      });
+    }
+    this.setTool('connector');
+  }
+
   public insertBoardElements(newElements: BoardElement[]): void {
     if (!newElements || newElements.length === 0) return;
     this.pushHistoryState();

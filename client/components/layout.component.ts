@@ -1,5 +1,6 @@
 import { navigate, render } from '../app-router.js';
 import { API_ROUTES } from '../config/api-routes.js';
+import { DIAGRAM_COMPONENTS, DiagramComponentItem } from '../config/diagram-components.data.js';
 import { hasFeature, protectRoute } from '../config/plans.config.js';
 import { ALL_PRESETS, PresetItem } from '../config/templates.config.js';
 import { currentUser, deleteApi, deleteUploadApi, escapeHtml, getApi, getUploadsApi, linkedAccounts, logoutAllApi, logoutApi, patchApi, postApi, switchAccountApi, uploadFilesApi } from '../services/api.service.js';
@@ -948,7 +949,60 @@ function handleApplyCanvasTemplate(preset: PresetItem, canvasType: 'board' | 'do
   }
 }
 
-let activeElementsCategory: 'shapes' | 'templates' = 'shapes';
+let activeElementsCategory: 'diagrams' | 'shapes' | 'templates' = 'diagrams';
+
+function handleApplyDiagramComponent(item: DiagramComponentItem, canvasType: 'board' | 'doc'): void {
+  const controller = getActiveCanvasController();
+
+  if (canvasType === 'doc') {
+    if (!controller) {
+      showToast('No se encontró el controlador del documento', 'warning');
+      return;
+    }
+
+    if (item.type === 'shape' && item.shapeType) {
+      controller.insertShapeSvg?.(item.previewSvg, item.name, item.strokeColor || '#1e293b');
+      showToast(`«${item.name}» insertado en el documento`, 'success');
+    } else {
+      showToast(`Elemento de diagrama «${item.name}» optimizado para Pizarrón`, 'info');
+    }
+    if (window.innerWidth <= 768) {
+      toggleDrawer(false);
+    }
+    return;
+  }
+
+  if (canvasType === 'board') {
+    if (!controller) {
+      showToast('No se encontró el controlador del pizarrón', 'warning');
+      return;
+    }
+
+    if (item.type === 'shape' && item.shapeType) {
+      controller.insertDiagramNode?.({
+        fillColor: item.fillColor,
+        height: item.height,
+        isMindMapNode: item.isMindMapNode,
+        shapeType: item.shapeType,
+        strokeColor: item.strokeColor,
+        text: item.text,
+        textColor: item.textColor,
+        width: item.width,
+      });
+      showToast(`«${item.name}» añadido al pizarrón`, 'success');
+    } else if (item.type === 'sticky') {
+      controller.insertStickyNote?.(item.fillColor || '#fef08a', item.text);
+      showToast(`Nota «${item.name}» añadida al pizarrón`, 'success');
+    } else if (item.type === 'connector') {
+      controller.activateConnectorTool?.(item.connectorStyle);
+      showToast(`Herramienta ${item.name} activada: arrastra entre nodos`, 'info');
+    }
+
+    if (window.innerWidth <= 768) {
+      toggleDrawer(false);
+    }
+  }
+}
 
 function handleApplyCanvasElement(shape: PixelShape, canvasType: 'board' | 'doc'): void {
   const controller = getActiveCanvasController();
@@ -1003,19 +1057,23 @@ function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElemen
       </div>
       <div class="canvas-panel-card__body" data-ref="canvas-panel-body">
         <div class="elements-tabs-bar" data-ref="elements-tabs-bar">
+          <button type="button" class="elements-tab-btn${activeElementsCategory === 'diagrams' ? ' is-active' : ''}" data-ref="btn-tab-elements-diagrams">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#account_tree"></use></svg>
+            <span>Diagramas</span>
+          </button>
           <button type="button" class="elements-tab-btn${activeElementsCategory === 'shapes' ? ' is-active' : ''}" data-ref="btn-tab-elements-shapes">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#category"></use></svg>
             <span>Figuras</span>
           </button>
           <button type="button" class="elements-tab-btn${activeElementsCategory === 'templates' ? ' is-active' : ''}" data-ref="btn-tab-elements-templates">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
-            <span>Plantillas</span>
+            <span>Stickers</span>
           </button>
         </div>
 
         <div class="canvas-panel-search" data-ref="canvas-panel-search">
           <svg class="component-icon canvas-panel-search__icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
-          <input class="canvas-panel-search__input" data-ref="canvas-elements-search-input" type="text" placeholder="${activeElementsCategory === 'shapes' ? 'Buscar figuras...' : 'Buscar plantillas...'}" />
+          <input class="canvas-panel-search__input" data-ref="canvas-elements-search-input" type="text" placeholder="${activeElementsCategory === 'diagrams' ? 'Buscar bloques, nodos, conectores...' : activeElementsCategory === 'shapes' ? 'Buscar figuras...' : 'Buscar stickers...'}" />
         </div>
 
         <div class="elements-grid" data-ref="elements-grid"></div>
@@ -1029,6 +1087,7 @@ function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElemen
     toggleDrawer(false);
   });
 
+  const btnTabDiagrams = drawerBody.querySelector<HTMLButtonElement>('[data-ref="btn-tab-elements-diagrams"]');
   const btnTabShapes = drawerBody.querySelector<HTMLButtonElement>('[data-ref="btn-tab-elements-shapes"]');
   const btnTabTemplates = drawerBody.querySelector<HTMLButtonElement>('[data-ref="btn-tab-elements-templates"]');
   const searchInput = drawerBody.querySelector<HTMLInputElement>('[data-ref="canvas-elements-search-input"]');
@@ -1037,6 +1096,66 @@ function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElemen
   const renderGrid = (query = '') => {
     if (!grid) return;
     const cleanQ = query.trim().toLowerCase();
+
+    if (activeElementsCategory === 'diagrams') {
+      const filtered = cleanQ
+        ? DIAGRAM_COMPONENTS.filter((d) => d.name.toLowerCase().includes(cleanQ) || d.description.toLowerCase().includes(cleanQ) || d.categoryLabel.toLowerCase().includes(cleanQ))
+        : DIAGRAM_COMPONENTS;
+
+      if (filtered.length === 0) {
+        grid.innerHTML = `
+          <div class="canvas-panel-card__empty" style="grid-column: 1 / -1;" data-ref="elements-empty">
+            <span class="canvas-panel-card__empty-title">Sin resultados</span>
+            <p class="canvas-panel-card__empty-desc">No se encontraron componentes de diagrama para «${escapeHtml(query)}»</p>
+          </div>
+        `;
+        return;
+      }
+
+      if (!cleanQ) {
+        const categories: Array<{ key: string; label: string }> = [
+          { key: 'flowchart', label: 'Diagramas de Flujo' },
+          { key: 'mindmap', label: 'Mapas Mentales' },
+          { key: 'connectors', label: 'Conectores Rápidos' },
+          { key: 'stickies', label: 'Notas Adhesivas' },
+        ];
+
+        grid.innerHTML = categories.map((cat) => {
+          const catItems = filtered.filter((item) => item.category === cat.key);
+          if (catItems.length === 0) return '';
+          const itemsHtml = catItems.map((item) => `
+            <button type="button" class="element-grid-item element-grid-item--diagram" data-ref="btn-diagram-item-${item.id}" data-diagram-id="${item.id}" data-tooltip="${escapeHtml(item.description || item.name)}" aria-label="${escapeHtml(item.name)}">
+              <svg viewBox="0 0 48 48" aria-hidden="true">${item.previewSvg}</svg>
+              <span class="element-grid-item__label">${escapeHtml(item.name)}</span>
+            </button>
+          `).join('');
+
+          return `
+            <div class="elements-section-title" data-ref="section-title-${cat.key}">${escapeHtml(cat.label)}</div>
+            ${itemsHtml}
+          `;
+        }).join('');
+      } else {
+        grid.innerHTML = filtered.map((item) => `
+          <button type="button" class="element-grid-item element-grid-item--diagram" data-ref="btn-diagram-item-${item.id}" data-diagram-id="${item.id}" data-tooltip="${escapeHtml(item.description || item.name)}" aria-label="${escapeHtml(item.name)}">
+            <svg viewBox="0 0 48 48" aria-hidden="true">${item.previewSvg}</svg>
+            <span class="element-grid-item__label">${escapeHtml(item.name)}</span>
+          </button>
+        `).join('');
+      }
+
+      grid.querySelectorAll<HTMLButtonElement>('[data-diagram-id]').forEach((itemBtn) => {
+        itemBtn.addEventListener('click', () => {
+          const diagId = itemBtn.getAttribute('data-diagram-id');
+          const found = DIAGRAM_COMPONENTS.find((d) => d.id === diagId);
+          if (found) {
+            handleApplyDiagramComponent(found, canvasType);
+          }
+        });
+      });
+      return;
+    }
+
     const items = PIXEL_SHAPES.filter((s) => s.category === activeElementsCategory);
     const filtered = cleanQ
       ? items.filter((s) => s.name.toLowerCase().includes(cleanQ) || s.id.toLowerCase().includes(cleanQ))
@@ -1078,10 +1197,24 @@ function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElemen
     });
   };
 
+  btnTabDiagrams?.addEventListener('click', () => {
+    if (activeElementsCategory === 'diagrams') return;
+    activeElementsCategory = 'diagrams';
+    btnTabDiagrams.classList.add('is-active');
+    btnTabShapes?.classList.remove('is-active');
+    btnTabTemplates?.classList.remove('is-active');
+    if (searchInput) {
+      searchInput.placeholder = 'Buscar bloques, nodos, conectores...';
+      searchInput.value = '';
+    }
+    renderGrid('');
+  });
+
   btnTabShapes?.addEventListener('click', () => {
     if (activeElementsCategory === 'shapes') return;
     activeElementsCategory = 'shapes';
     btnTabShapes.classList.add('is-active');
+    btnTabDiagrams?.classList.remove('is-active');
     btnTabTemplates?.classList.remove('is-active');
     if (searchInput) {
       searchInput.placeholder = 'Buscar figuras...';
@@ -1094,9 +1227,10 @@ function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElemen
     if (activeElementsCategory === 'templates') return;
     activeElementsCategory = 'templates';
     btnTabTemplates.classList.add('is-active');
+    btnTabDiagrams?.classList.remove('is-active');
     btnTabShapes?.classList.remove('is-active');
     if (searchInput) {
-      searchInput.placeholder = 'Buscar plantillas...';
+      searchInput.placeholder = 'Buscar stickers...';
       searchInput.value = '';
     }
     renderGrid('');

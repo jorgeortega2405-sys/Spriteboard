@@ -1499,6 +1499,50 @@ html.dark-theme .element-grid-item:hover {
   transition: transform var(--sl-transition-fast);
 }
 
+.elements-section-title {
+  grid-column: 1 / -1;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-tertiary, #94a3b8);
+  margin-top: 8px;
+  margin-bottom: 2px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.elements-section-title:first-child {
+  margin-top: 0;
+}
+
+.element-grid-item--diagram {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.element-grid-item--diagram svg {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
+.element-grid-item__label {
+  font-size: 9.5px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-align: center;
+  line-height: 1.1;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .canvas-uploads-container {
   display: flex;
   flex-direction: column;
