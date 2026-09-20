@@ -1,8 +1,27 @@
-export type BoardTool = 'select' | 'hand' | 'pen' | 'marker' | 'highlighter' | 'eraser' | 'shapes' | 'sticky' | 'text' | 'pixel' | 'connector';
+import { MockupFitMode } from '../../types/mockups.types.js';
+
+export type BoardTool = 'select' | 'hand' | 'pen' | 'marker' | 'highlighter' | 'eraser' | 'shapes' | 'sticky' | 'text' | 'pixel' | 'connector' | 'mockups';
 
 export type ResizeHandle = 'tl' | 'tr' | 'bl' | 'br' | 'n' | 's' | 'w' | 'e';
 
 export type ShapeType = 'rect' | 'round-rect' | 'circle' | 'line' | 'arrow' | 'triangle' | 'star' | 'diamond' | 'parallelogram' | 'cylinder' | 'pill' | 'document' | 'cloud';
+
+export type Shape3DType =
+  | 'book'
+  | 'car'
+  | 'cube'
+  | 'cylinder'
+  | 'diamond'
+  | 'globe'
+  | 'heart'
+  | 'house'
+  | 'pyramid'
+  | 'robot'
+  | 'rocket'
+  | 'sphere'
+  | 'star'
+  | 'torus'
+  | 'tree';
 
 export type BackgroundType = 'dots' | 'blank' | 'dark' | 'solid';
 
@@ -196,13 +215,51 @@ export interface BoardTableElement {
   y: number;
 }
 
+export interface Board3DElement {
+  fillColor: string;
+  height: number;
+  id: string;
+  opacity?: number;
+  rotationX: number;
+  rotationY: number;
+  rotationZ: number;
+  shading?: boolean;
+  shape3dType: Shape3DType;
+  strokeColor: string;
+  strokeStyle?: StrokeStyle;
+  strokeWidth: number;
+  type: 'shape-3d';
+  width: number;
+  x: number;
+  y: number;
+}
+
+export interface BoardMockupElement {
+  customUserImage?: string;
+  fitMode?: MockupFitMode;
+  height: number;
+  id: string;
+  imageOffsetX?: number;
+  imageOffsetY?: number;
+  imageScale?: number;
+  mockupId: string;
+  opacity?: number;
+  rotation?: number;
+  type: 'mockup';
+  width: number;
+  x: number;
+  y: number;
+}
+
 export type BoardElement =
   | BoardStrokeElement
   | BoardShapeElement
+  | Board3DElement
   | BoardStickyElement
   | BoardTextElement
   | BoardPixelGridElement
   | BoardImageElement
+  | BoardMockupElement
   | BoardConnectorElement
   | BoardSectionElement
   | BoardTableElement;

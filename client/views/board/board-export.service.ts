@@ -1,7 +1,8 @@
 import { showToast } from '../../services/toast.service.js';
+import { get3DElementProjectedFaces } from './board-3d-renderer.js';
 import { computeElementsBoundingBox, findContainingSection } from './board-elements.manager.js';
 import { getSvgPathBoundingBox } from './board-renderer.js';
-import { BackgroundType, BoardElement, BoardPixelGridElement, BoardProject, BoardSectionElement } from './board.types.js';
+import { BackgroundType, Board3DElement, BoardElement, BoardPixelGridElement, BoardProject, BoardSectionElement } from './board.types.js';
 
 export function generateThumbnail(
   elements: BoardElement[],
@@ -272,6 +273,19 @@ export function exportSvg(
       } else {
         out += `  <rect x="${el.x}" y="${el.y}" width="${el.width}" height="${el.height}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" ${dash} opacity="${op}" />\n`;
       }
+    } else if (el.type === 'shape-3d') {
+      const faces = get3DElementProjectedFaces(el);
+      const op = escAttr(el.opacity !== undefined ? el.opacity : 1);
+      out += `  <g opacity="${op}">\n`;
+      for (const face of faces) {
+        if (face.points.length === 0) continue;
+        const ptsStr = face.points.map((p) => `${p.x},${p.y}`).join(' ');
+        const fill = escAttr(face.color);
+        const stroke = escAttr(face.strokeWidth > 0 && face.strokeColor !== 'transparent' ? face.strokeColor : 'none');
+        const sw = escAttr(face.strokeWidth);
+        out += `    <polygon points="${ptsStr}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" stroke-linejoin="round" stroke-linecap="round" />\n`;
+      }
+      out += `  </g>\n`;
     } else if (el.type === 'connector') {
       const p1 = el.startPoint || { x: 0, y: 0 };
       const p2 = el.endPoint || { x: 100, y: 100 };

@@ -1,4 +1,7 @@
-import { BoardConnectorElement, BoardElement, BoardPoint, BoardSectionElement, BoardShapeElement, BoardStrokeElement, ResizeHandle, ShapeType } from './board.types.js';
+import { hitTest3DRotationGizmo } from './board-3d-renderer.js';
+import { Board3DElement, BoardConnectorElement, BoardElement, BoardPoint, BoardSectionElement, BoardShapeElement, BoardStrokeElement, ResizeHandle, ShapeType } from './board.types.js';
+
+export { hitTest3DRotationGizmo };
 
 export function findContainingSection(
   el: BoardElement,

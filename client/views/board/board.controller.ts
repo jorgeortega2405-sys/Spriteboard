@@ -3,25 +3,30 @@ import { CanvasShareDropdownController, setupCanvasShareDropdown } from '../../c
 import { closeContextMenu, ContextMenuItem, openContextMenu } from '../../components/context-menu.component.js';
 import { InsertPixelGridConfig, openInsertPixelGridModal } from '../../components/insert-pixel-grid-modal.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
+import { BOARD_3D_SHAPES } from '../../config/board-3d-shapes.config.js';
 import { BOARD_SHAPES } from '../../config/board-shapes.config.js';
 import { getBoardTemplateElements } from '../../config/board-templates.data.js';
+import { getMockupTemplateById } from '../../config/mockups.config.js';
 import { DEFAULT_STICKY_COLOR, STICKY_NOTE_PRESETS } from '../../config/sticky-notes.config.js';
 import { currentUser, getApi, postApi } from '../../services/api.service.js';
 import { getLocalCanvasByUuid, removeLocalCanvas, saveLocalCanvas } from '../../services/canvas-storage.service.js';
 import { renderIcons } from '../../services/icon.service.js';
 import { showToast } from '../../services/toast.service.js';
 import { CanvasItem } from '../../types/canvas.types.js';
+import { MockupFitMode, MockupTemplate } from '../../types/mockups.types.js';
 import { generateShadingRamp, getCollaboratorColor } from '../../utils/color.util.js';
 import { setupDropdown } from '../../utils/dom.util.js';
 import { PixelShape } from '../../utils/pixel-shapes.util.js';
 import { DocPage } from '../doc/doc.types.js';
 import { BoardCollaborationManager } from './board-collaboration.manager.js';
-import { computeElementsBoundingBox, findContainingSection, findElementsByMarqueeBox, getConnectorEndpoints, getElementBoundingBox, hitTestElement, hitTestResizeHandle, moveElementByDelta, moveElementByDrag, resizeElementByHandle } from './board-elements.manager.js';
+import { computeElementsBoundingBox, findContainingSection, findElementsByMarqueeBox, getConnectorEndpoints, getElementBoundingBox, hitTest3DRotationGizmo, hitTestElement, hitTestResizeHandle, moveElementByDelta, moveElementByDrag, resizeElementByHandle } from './board-elements.manager.js';
 import { exportJson, exportPng, exportSvg, generateThumbnail } from './board-export.service.js';
 import { BoardHistoryManager } from './board-history.manager.js';
+import { drawMockupElement } from './board-mockup-renderer.js';
+import { BoardMockupsPanelComponent } from './board-mockups-panel.component.js';
 import { BoardPixelGridManager } from './board-pixel-grid.manager.js';
-import { drawBackground, drawBoardCollaboratorCursors, drawCheckerboard, drawConnector, drawImage, drawMarqueeBox, drawMultiSelectionBounds, drawPixelGridLines, drawSection, drawSelectionBox, drawShape, drawSticky, drawStroke, drawTable, drawText, screenToWorld, worldToScreen } from './board-renderer.js';
-import { BackgroundType, BoardCollaboratorState, BoardConnectorElement, BoardElement, BoardImageElement, BoardPixelGridElement, BoardPoint, BoardProject, BoardSectionElement, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTableCell, BoardTableElement, BoardTextElement, BoardTool, DEFAULT_CLASSIC_PALETTE, GAMEBOY_PALETTE, MarkerType, PICO8_PALETTE, PixelSubtool, ResizeHandle, ShapeType, StrokeStyle } from './board.types.js';
+import { draw3DElement, draw3DGroundGrid, drawBackground, drawBoardCollaboratorCursors, drawCheckerboard, drawConnector, drawImage, drawMarqueeBox, drawMultiSelectionBounds, drawPixelGridLines, drawSection, drawSelectionBox, drawShape, drawSticky, drawStroke, drawTable, drawText, onCustomModelLoaded, preloadCustom3DModels, screenToWorld, worldToScreen } from './board-renderer.js';
+import { BackgroundType, Board3DElement, BoardCollaboratorState, BoardConnectorElement, BoardElement, BoardImageElement, BoardMockupElement, BoardPixelGridElement, BoardPoint, BoardProject, BoardSectionElement, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTableCell, BoardTableElement, BoardTextElement, BoardTool, DEFAULT_CLASSIC_PALETTE, GAMEBOY_PALETTE, MarkerType, PICO8_PALETTE, PixelSubtool, ResizeHandle, Shape3DType, ShapeType, StrokeStyle } from './board.types.js';
 
 export class BoardController {
   private abortController: AbortController;
@@ -31,7 +36,7 @@ export class BoardController {
   private activePopover: HTMLElement | null = null;
   private activeTableInlineEditor: { col: number; row: number; tableId: string; textarea: HTMLTextAreaElement } | null = null;
   private editingElementId: string | null = null;
-  private activeVSubtoolbar: 'draw' | 'lines' | 'pixel' | 'shapes' | 'stickies' | null = null;
+  private activeVSubtoolbar: '3d' | 'draw' | 'lines' | 'pixel' | 'shapes' | 'stickies' | null = null;
   private connectorStyle: 'curved' | 'orthogonal' | 'straight' = 'curved';
   private aiDropdownController: CanvasAiDropdownController | null = null;
   private aiWrapperEl: HTMLElement | null = null;
@@ -42,6 +47,7 @@ export class BoardController {
   private canvasCreatedAt: string | null = null;
   private canvasElement: HTMLCanvasElement | null = null;
   private canvasServerId: number | null = null;
+  private cleanup3DListener: (() => void) | null = null;
   private canvasUserId: number | null = null;
   private canvasUuid: string;
   private collaborationManager: BoardCollaborationManager;
@@ -63,6 +69,11 @@ export class BoardController {
   private currentColor = '#1e293b';
   private currentFillColor = '#000000';
   private currentShape: ShapeType = 'rect';
+  private currentShape3D: Shape3DType = 'globe';
+  private isRotating3D = false;
+  private rotate3DStartMouse: BoardPoint = { x: 0, y: 0 };
+  private rotate3DStartAngles = { rx: 0, ry: 0, rz: 0 };
+  private rotating3DElementId: string | null = null;
   private currentStrokeWidth = 4;
   private currentTool: BoardTool = 'select';
   private drawToolsDropdownController: { close: () => void; destroy: () => void; open: () => void; toggle: () => void; update: () => void } | null = null;
@@ -72,6 +83,8 @@ export class BoardController {
   private hasErasedInCurrentStroke = false;
   private history = new BoardHistoryManager();
   private hoveredPixelGridCell: { gridId: string; px: number; py: number } | null = null;
+  private hoveredMockupDropId: string | null = null;
+  private mockupsPanel: BoardMockupsPanelComponent | null = null;
   private didPan = false;
   private isDrawing = false;
   private isInteractingSelection = false;
@@ -153,12 +166,25 @@ export class BoardController {
 
     this.setupDropdowns();
     this.setupResizeObserver();
+    this.mockupsPanel = new BoardMockupsPanelComponent(this.container, {
+      onClose: () => {
+        this.updateVerticalToolbarActiveButtons();
+      },
+      onSelectMockup: (tpl) => {
+        this.insertMockup(tpl);
+      },
+    });
+    this.mockupsPanel.init();
     this.bindEvents();
     this.initColorsUI();
     this.renderPixelPaletteSwatches();
     this.updateUndoRedoUI();
     this.updateZoomUI();
     this.renderActiveToolsUI();
+    this.cleanup3DListener = onCustomModelLoaded(() => {
+      this.requestRedraw();
+    });
+    preloadCustom3DModels(BOARD_3D_SHAPES.map((s) => s.id));
     renderIcons(this.container);
     this.isLoaded = true;
     this.requestRedraw();
@@ -169,6 +195,10 @@ export class BoardController {
   }
 
   public destroy(): void {
+    if (this.cleanup3DListener) {
+      this.cleanup3DListener();
+      this.cleanup3DListener = null;
+    }
     if (this.rafId !== null) {
       cancelAnimationFrame(this.rafId);
       this.rafId = null;
@@ -182,6 +212,8 @@ export class BoardController {
     if (this.isLoaded && this.isOwner) {
       void this.saveImmediate();
     }
+    this.mockupsPanel?.destroy();
+    this.mockupsPanel = null;
     this.collaborationManager.destroy();
     this.aiDropdownController?.destroy();
     this.aiDropdownController = null;
@@ -653,6 +685,8 @@ export class BoardController {
     this.bindSelectionToolbar(signal);
     this.bindContextualToolbar(signal);
     this.bindCanvasPointers(signal);
+    this.bindCanvasDragAndDrop(signal);
+    this.bindMockupSelectionControls(signal);
     this.bindKeyboardShortcuts(signal);
     this.setupToolbarScroll('[data-ref="board-top-toolbar"]', '[data-ref="btn-top-toolbar-scroll-left"]', '[data-ref="btn-top-toolbar-scroll-right"]', signal);
     this.setupToolbarScroll('[data-ref="board-bottom-toolbar"]', '[data-ref="btn-bottom-toolbar-scroll-left"]', '[data-ref="btn-bottom-toolbar-scroll-right"]', signal);
@@ -1236,6 +1270,10 @@ export class BoardController {
           el.strokeColor = normalized;
           if (el.strokeWidth === 0) el.strokeWidth = 2;
         }
+        if (el.type === 'shape-3d') {
+          el.strokeColor = normalized;
+          if (el.strokeWidth === 0) el.strokeWidth = 1.5;
+        }
         if (el.type === 'connector') el.color = normalized;
         if (el.type === 'text') el.color = normalized;
         if (el.type === 'sticky') el.color = normalized;
@@ -1268,6 +1306,8 @@ export class BoardController {
       this.pushHistoryState();
       for (const el of selectedEls) {
         if (el.type === 'shape') {
+          el.fillColor = normalized;
+        } else if (el.type === 'shape-3d') {
           el.fillColor = normalized;
         } else if (el.type === 'sticky') {
           el.color = normalized;
@@ -1322,6 +1362,7 @@ export class BoardController {
       for (const el of selectedEls) {
         if (el.type === 'stroke') el.size = w;
         if (el.type === 'shape') el.strokeWidth = w;
+        if (el.type === 'shape-3d') el.strokeWidth = w;
         if (el.type === 'connector') el.strokeWidth = w;
         this.collaborationManager.broadcastUpdateElement(el);
       }
@@ -1470,15 +1511,19 @@ export class BoardController {
 
     const isSingle = selectedEls.length === 1;
     const isPixel = isSingle && selectedEls[0].type === 'pixel-grid';
+    const isMockup = isSingle && selectedEls[0].type === 'mockup';
+
     const btnEdit = this.container.querySelector<HTMLElement>('[data-ref="btn-sel-edit-pixels"]');
     const btnGrid = this.container.querySelector<HTMLElement>('[data-ref="btn-sel-toggle-grid"]');
     const btnExport = this.container.querySelector<HTMLElement>('[data-ref="btn-sel-export-sprite"]');
     const divider = this.container.querySelector<HTMLElement>('[data-ref="sel-pixel-divider"]');
+    const groupMockups = this.container.querySelector<HTMLElement>('[data-ref="board-sel-group-mockups"]');
 
     btnEdit?.classList.toggle('is-hidden', !isPixel);
     btnGrid?.classList.toggle('is-hidden', !isPixel);
     btnExport?.classList.toggle('is-hidden', !isPixel);
     divider?.classList.toggle('is-hidden', !isPixel);
+    groupMockups?.classList.toggle('is-hidden', !isMockup);
 
     const bbox = computeElementsBoundingBox(selectedEls);
     if (!bbox) {
@@ -1522,6 +1567,7 @@ export class BoardController {
     if (selectedEls.length === 1) {
       const el = selectedEls[0];
       const isShape = el.type === 'shape';
+      const is3D = el.type === 'shape-3d';
       const isConnector = el.type === 'connector';
       const isSticky = el.type === 'sticky';
       const isText = el.type === 'text';
@@ -1529,10 +1575,10 @@ export class BoardController {
       const isLineShape = isShape && (el.shapeType === 'line' || el.shapeType === 'arrow');
 
       if (groupFill) {
-        const showFill = (isShape && !isLineShape) || isSticky;
+        const showFill = (isShape && !isLineShape) || isSticky || is3D;
         groupFill.classList.toggle('is-hidden', !showFill);
         if (showFill && this.topFillSwatchEl) {
-          const fillColor = isShape ? el.fillColor : (isSticky ? el.color : '#000000');
+          const fillColor = isShape ? el.fillColor : (isSticky ? el.color : (is3D ? el.fillColor : '#000000'));
           if (fillColor === 'transparent') {
             this.topFillSwatchEl.classList.add('is-transparent');
             this.topFillSwatchEl.style.backgroundColor = 'transparent';
@@ -1544,10 +1590,10 @@ export class BoardController {
       }
 
       if (groupStrokeColor) {
-        const showStroke = isLineShape || isConnector || isStroke || (isShape && el.strokeWidth > 0);
+        const showStroke = isLineShape || isConnector || isStroke || is3D || (isShape && el.strokeWidth > 0);
         groupStrokeColor.classList.toggle('is-hidden', !showStroke);
         if (showStroke && this.topStrokeSwatchEl) {
-          const strokeColor = isShape ? (el.strokeColor || '#1e293b') : (isConnector ? (el.color || '#475569') : (isStroke ? el.color : '#1e293b'));
+          const strokeColor = isShape ? (el.strokeColor || '#1e293b') : (is3D ? (el.strokeColor || '#1e293b') : (isConnector ? (el.color || '#475569') : (isStroke ? el.color : '#1e293b')));
           if (strokeColor === 'transparent') {
             this.topStrokeSwatchEl.classList.add('is-transparent');
             this.topStrokeSwatchEl.style.backgroundColor = 'transparent';
@@ -1559,7 +1605,7 @@ export class BoardController {
       }
 
       if (groupStrokeStyle) {
-        const showStrokeStyle = isShape || isConnector || isStroke;
+        const showStrokeStyle = isShape || isConnector || isStroke || is3D;
         groupStrokeStyle.classList.toggle('is-hidden', !showStrokeStyle);
       }
 
@@ -1589,8 +1635,8 @@ export class BoardController {
 
       this.syncPopoversWithElement(el);
     } else {
-      const hasFillable = selectedEls.some((el) => (el.type === 'shape' && el.shapeType !== 'line' && el.shapeType !== 'arrow') || el.type === 'sticky');
-      const hasStrokeable = selectedEls.some((el) => el.type === 'stroke' || el.type === 'connector' || el.type === 'shape');
+      const hasFillable = selectedEls.some((el) => (el.type === 'shape' && el.shapeType !== 'line' && el.shapeType !== 'arrow') || el.type === 'sticky' || el.type === 'shape-3d');
+      const hasStrokeable = selectedEls.some((el) => el.type === 'stroke' || el.type === 'connector' || el.type === 'shape' || el.type === 'shape-3d');
 
       if (groupFill) groupFill.classList.toggle('is-hidden', !hasFillable);
       if (groupStrokeColor) groupStrokeColor.classList.toggle('is-hidden', !hasStrokeable);
@@ -1603,12 +1649,13 @@ export class BoardController {
 
   private syncPopoversWithElement(el: BoardElement): void {
     const isShape = el.type === 'shape';
+    const is3D = el.type === 'shape-3d';
     const isConnector = el.type === 'connector';
     const isStroke = el.type === 'stroke';
 
     const inputStrokeW = this.container.querySelector<HTMLInputElement>('[data-ref="input-popover-stroke-width"]');
     const labelStrokeW = this.container.querySelector<HTMLElement>('[data-ref="label-popover-stroke-width"]');
-    const currentW = isShape ? el.strokeWidth : (isConnector ? el.strokeWidth : (isStroke ? el.size : 0));
+    const currentW = isShape ? el.strokeWidth : (is3D ? el.strokeWidth : (isConnector ? el.strokeWidth : (isStroke ? el.size : 0)));
     if (inputStrokeW) inputStrokeW.value = `${currentW}`;
     if (labelStrokeW) labelStrokeW.textContent = `${currentW}`;
 
@@ -2320,6 +2367,54 @@ export class BoardController {
         return;
       }
 
+      if (hit.type === 'mockup') {
+        const mockupEl = hit as BoardMockupElement;
+        items.push(
+          {
+            action: () => {
+              this.selectedElementId = hit.id;
+              this.selectedElementIds = [hit.id];
+              this.updateSelectionToolbar();
+              const filePicker = this.container.querySelector<HTMLInputElement>('[data-ref="input-mockup-file-picker"]');
+              filePicker?.click();
+            },
+            icon: 'add_photo_alternate',
+            label: 'Subir / Cambiar imagen',
+            ref: 'ctx-board-mockup-change-img',
+          },
+          {
+            action: () => {
+              this.pushHistoryState();
+              const currentMode = mockupEl.fitMode || 'fill';
+              const nextMode: MockupFitMode = currentMode === 'fill' ? 'fit' : (currentMode === 'fit' ? 'stretch' : 'fill');
+              mockupEl.fitMode = nextMode;
+              this.collaborationManager.broadcastUpdateElement(mockupEl);
+              this.requestRedraw();
+              this.scheduleAutoSave();
+              const modeLabels: Record<MockupFitMode, string> = { fill: 'Rellenar (Fill)', fit: 'Ajustar (Fit)', stretch: 'Estirar (Stretch)' };
+              showToast(`Ajuste: ${modeLabels[nextMode]}`);
+            },
+            icon: 'aspect_ratio',
+            label: `Ajuste: ${mockupEl.fitMode === 'fit' ? 'Ajustar' : (mockupEl.fitMode === 'stretch' ? 'Estirar' : 'Rellenar')}`,
+            ref: 'ctx-board-mockup-fit-mode',
+          },
+          {
+            action: () => {
+              this.pushHistoryState();
+              mockupEl.customUserImage = undefined;
+              this.collaborationManager.broadcastUpdateElement(mockupEl);
+              this.requestRedraw();
+              this.scheduleAutoSave();
+              showToast('Imagen restablecida a la predeterminada');
+            },
+            icon: 'restart_alt',
+            label: 'Restablecer imagen por defecto',
+            ref: 'ctx-board-mockup-reset-img',
+          },
+          { divider: true }
+        );
+      }
+
       if (hit.type === 'sticky' || hit.type === 'text') {
         items.push({
           action: () => {
@@ -2523,6 +2618,20 @@ export class BoardController {
             const bbox = getElementBoundingBox(selEl);
             this.selectionStartRect = { ...bbox };
             return;
+          }
+          if (selEl.type === 'shape-3d') {
+            const onGizmo = hitTest3DRotationGizmo(selEl, screenPos.x, screenPos.y, (wx, wy) => worldToScreen(wx, wy, this.canvasElement, this.camera));
+            if (onGizmo || e.altKey) {
+              this.pushHistoryState();
+              this.isRotating3D = true;
+              this.rotating3DElementId = selEl.id;
+              this.rotate3DStartMouse = { x: e.clientX, y: e.clientY };
+              this.rotate3DStartAngles = { rx: selEl.rotationX || 0, ry: selEl.rotationY || 0, rz: selEl.rotationZ || 0 };
+              if (this.canvasElement) {
+                this.canvasElement.style.cursor = 'grabbing';
+              }
+              return;
+            }
           }
         }
       }
@@ -2769,6 +2878,18 @@ export class BoardController {
     const worldPos = screenToWorld(screenPos.x, screenPos.y, this.canvasElement, this.camera);
     this.collaborationManager.sendCursor(worldPos.x, worldPos.y);
 
+    if (this.isRotating3D && this.rotating3DElementId) {
+      const el = this.elements.find((item) => item.id === this.rotating3DElementId);
+      if (el && el.type === 'shape-3d') {
+        const dx = e.clientX - this.rotate3DStartMouse.x;
+        const dy = e.clientY - this.rotate3DStartMouse.y;
+        el.rotationY = this.rotate3DStartAngles.ry + dx * 0.015;
+        el.rotationX = this.rotate3DStartAngles.rx + dy * 0.015;
+        this.requestRedraw();
+        return;
+      }
+    }
+
     if (this.isMarqueeSelecting && this.marqueeStartPos) {
       this.marqueeCurrentPos = { ...worldPos };
       const box = {
@@ -2803,6 +2924,17 @@ export class BoardController {
           const el = this.elements.find((item) => item.id === id);
           if (el) {
             moveElementByDelta(el, dx, dy, startPos);
+          }
+        }
+        if (this.selectedElementIds.length === 1) {
+          const selEl = this.elements.find((item) => item.id === this.selectedElementIds[0]);
+          if (selEl && selEl.type === 'image') {
+            const targetMockup = this.elements.find(
+              (item) => item.id !== selEl.id && item.type === 'mockup' && worldPos.x >= item.x && worldPos.x <= item.x + item.width && worldPos.y >= item.y && worldPos.y <= item.y + item.height
+            );
+            this.hoveredMockupDropId = targetMockup?.id || null;
+          } else {
+            this.hoveredMockupDropId = null;
           }
         }
       }
@@ -2877,7 +3009,7 @@ export class BoardController {
       this.requestRedraw();
     }
 
-    if (!this.isDrawing && !this.isInteractingSelection && !this.isMarqueeSelecting && !this.isPanning && this.currentTool === 'select') {
+    if (!this.isDrawing && !this.isInteractingSelection && !this.isMarqueeSelecting && !this.isPanning && !this.isRotating3D && this.currentTool === 'select') {
       if (this.selectedElementIds.length === 1) {
         const selEl = this.elements.find((item) => item.id === this.selectedElementIds[0]);
         if (selEl && 'width' in selEl) {
@@ -2886,6 +3018,13 @@ export class BoardController {
             this.setResizeCursor(handle);
             return;
           }
+          if (selEl.type === 'shape-3d') {
+            const onGizmo = hitTest3DRotationGizmo(selEl, screenPos.x, screenPos.y, (wx, wy) => worldToScreen(wx, wy, this.canvasElement, this.camera));
+            if (onGizmo) {
+              this.canvasElement.style.cursor = 'grab';
+              return;
+            }
+          }
         }
       }
       this.updateCanvasCursor();
@@ -2893,6 +3032,20 @@ export class BoardController {
   }
 
   private handlePointerUp(_e: PointerEvent): void {
+    if (this.isRotating3D) {
+      this.isRotating3D = false;
+      if (this.rotating3DElementId) {
+        const el = this.elements.find((item) => item.id === this.rotating3DElementId);
+        if (el) {
+          this.collaborationManager.broadcastUpdateElement(el);
+          this.scheduleAutoSave();
+        }
+        this.rotating3DElementId = null;
+      }
+      this.updateCanvasCursor();
+      return;
+    }
+
     if (this.isPanning) {
       this.isPanning = false;
       if (this.canvasElement) {
@@ -2939,6 +3092,37 @@ export class BoardController {
       this.isInteractingSelection = false;
       this.resizeHandleType = null;
       this.updateCanvasCursor();
+
+      if (this.hasMovedSelection && this.selectedElementIds.length === 1) {
+        const movedEl = this.elements.find((item) => item.id === this.selectedElementIds[0]);
+        if (movedEl && movedEl.type === 'image') {
+          const movedCenter = { x: movedEl.x + movedEl.width / 2, y: movedEl.y + movedEl.height / 2 };
+          const targetMockup = this.elements.find(
+            (item) => item.id !== movedEl.id && item.type === 'mockup' && movedCenter.x >= item.x && movedCenter.x <= item.x + item.width && movedCenter.y >= item.y && movedCenter.y <= item.y + item.height
+          ) as BoardMockupElement | undefined;
+          if (targetMockup) {
+            this.pushHistoryState();
+            targetMockup.customUserImage = movedEl.url;
+            this.elements = this.elements.filter((item) => item.id !== movedEl.id);
+            this.selectedElementId = targetMockup.id;
+            this.selectedElementIds = [targetMockup.id];
+            this.hoveredMockupDropId = null;
+            this.collaborationManager.broadcastDeleteElement(movedEl.id);
+            this.collaborationManager.broadcastUpdateElement(targetMockup);
+            this.updateSelectionToolbar();
+            this.requestRedraw();
+            this.scheduleAutoSave();
+            showToast('¡Imagen acoplada al mockup exitosamente!', 'success');
+            this.lastClickedHitId = null;
+            this.hasMovedSelection = false;
+            this.selectionStartPositions.clear();
+            return;
+          }
+        }
+      }
+
+      this.hoveredMockupDropId = null;
+
       if (!this.hasMovedSelection && !_e.shiftKey && this.lastClickedHitId) {
         this.selectedElementIds = [this.lastClickedHitId];
         this.selectedElementId = this.lastClickedHitId;
@@ -3004,6 +3188,14 @@ export class BoardController {
       this.selectedElementId = hit.id;
       this.selectedElementIds = [hit.id];
       this.setTool('pixel');
+      return;
+    }
+    if (hit && hit.type === 'mockup') {
+      this.selectedElementId = hit.id;
+      this.selectedElementIds = [hit.id];
+      this.updateSelectionToolbar();
+      const filePicker = this.container.querySelector<HTMLInputElement>('[data-ref="input-mockup-file-picker"]');
+      filePicker?.click();
       return;
     }
     if (hit && (hit.type === 'sticky' || hit.type === 'text' || hit.type === 'shape')) {
@@ -3571,6 +3763,11 @@ export class BoardController {
       drawStroke(ctx, el);
     } else if (el.type === 'shape') {
       drawShape(ctx, el, this.editingElementId === el.id);
+    } else if (el.type === 'shape-3d') {
+      if (this.isRotating3D && this.rotating3DElementId === el.id) {
+        draw3DGroundGrid(ctx, el, this.camera);
+      }
+      draw3DElement(ctx, el);
     } else if (el.type === 'sticky') {
       drawSticky(ctx, el, this.editingElementId === el.id);
     } else if (el.type === 'text') {
@@ -3579,6 +3776,8 @@ export class BoardController {
       this.drawPixelGrid(ctx, el);
     } else if (el.type === 'image') {
       drawImage(ctx, el, () => this.requestRedraw());
+    } else if (el.type === 'mockup') {
+      drawMockupElement(ctx, el, () => this.requestRedraw(), this.camera, this.hoveredMockupDropId === el.id);
     } else if (el.type === 'connector') {
       drawConnector(ctx, el, this.elements);
     } else if (el.type === 'section') {
@@ -4576,6 +4775,8 @@ export class BoardController {
             this.setTool('pixel');
           } else if (vtool === 'shapes') {
             this.toggleVSubtoolbar('shapes');
+          } else if (vtool === '3d') {
+            this.toggleVSubtoolbar('3d');
           } else if (vtool === 'lines') {
             this.toggleVSubtoolbar('lines');
             this.activateConnectorTool(this.connectorStyle);
@@ -4587,6 +4788,14 @@ export class BoardController {
           } else if (vtool === 'tables') {
             this.hideAllVSubtoolbars();
             this.insertTable(3, 3);
+          } else if (vtool === 'mockups') {
+            this.hideAllVSubtoolbars();
+            if (this.mockupsPanel?.isOpen()) {
+              this.mockupsPanel.close();
+            } else {
+              this.mockupsPanel?.open();
+            }
+            this.updateVerticalToolbarActiveButtons();
           }
         },
         { signal }
@@ -4722,6 +4931,21 @@ export class BoardController {
       );
     });
 
+    const shape3dBtns = this.container.querySelectorAll<HTMLButtonElement>('[data-ref="vsubtoolbar-3d"] [data-shape3d]');
+    shape3dBtns.forEach((btn) => {
+      btn.addEventListener(
+        'click',
+        () => {
+          shape3dBtns.forEach((b) => b.classList.remove('is-active'));
+          btn.classList.add('is-active');
+          const shape3d = (btn.getAttribute('data-shape3d') as Shape3DType) || 'globe';
+          this.currentShape3D = shape3d;
+          this.insert3DShape(shape3d);
+        },
+        { signal }
+      );
+    });
+
     const lineBtns = this.container.querySelectorAll<HTMLButtonElement>('[data-ref="vsubtoolbar-lines"] [data-conn-style]');
     lineBtns.forEach((btn) => {
       btn.addEventListener(
@@ -4766,11 +4990,12 @@ export class BoardController {
     });
   }
 
-  private showVSubtoolbar(sub: 'draw' | 'lines' | 'pixel' | 'shapes' | 'stickies'): void {
+  private showVSubtoolbar(sub: '3d' | 'draw' | 'lines' | 'pixel' | 'shapes' | 'stickies'): void {
     this.activeVSubtoolbar = sub;
     const subDraw = this.container.querySelector<HTMLElement>('[data-ref="vsubtoolbar-draw"]');
     const subPixel = this.container.querySelector<HTMLElement>('[data-ref="vsubtoolbar-pixel"]');
     const subShapes = this.container.querySelector<HTMLElement>('[data-ref="vsubtoolbar-shapes"]');
+    const sub3D = this.container.querySelector<HTMLElement>('[data-ref="vsubtoolbar-3d"]');
     const subLines = this.container.querySelector<HTMLElement>('[data-ref="vsubtoolbar-lines"]');
     const subStickies = this.container.querySelector<HTMLElement>('[data-ref="vsubtoolbar-stickies"]');
     const subsubPixelSize = this.container.querySelector<HTMLElement>('[data-ref="vsubsubtoolbar-pixel-size"]');
@@ -4778,6 +5003,7 @@ export class BoardController {
     subDraw?.classList.toggle('is-hidden', sub !== 'draw');
     subPixel?.classList.toggle('is-hidden', sub !== 'pixel');
     subShapes?.classList.toggle('is-hidden', sub !== 'shapes');
+    sub3D?.classList.toggle('is-hidden', sub !== '3d');
     subLines?.classList.toggle('is-hidden', sub !== 'lines');
     subStickies?.classList.toggle('is-hidden', sub !== 'stickies');
 
@@ -4792,6 +5018,7 @@ export class BoardController {
     const subDraw = this.container.querySelector<HTMLElement>('[data-ref="vsubtoolbar-draw"]');
     const subPixel = this.container.querySelector<HTMLElement>('[data-ref="vsubtoolbar-pixel"]');
     const subShapes = this.container.querySelector<HTMLElement>('[data-ref="vsubtoolbar-shapes"]');
+    const sub3D = this.container.querySelector<HTMLElement>('[data-ref="vsubtoolbar-3d"]');
     const subLines = this.container.querySelector<HTMLElement>('[data-ref="vsubtoolbar-lines"]');
     const subStickies = this.container.querySelector<HTMLElement>('[data-ref="vsubtoolbar-stickies"]');
     const subsubPixelSize = this.container.querySelector<HTMLElement>('[data-ref="vsubsubtoolbar-pixel-size"]');
@@ -4799,6 +5026,7 @@ export class BoardController {
     subDraw?.classList.add('is-hidden');
     subPixel?.classList.add('is-hidden');
     subShapes?.classList.add('is-hidden');
+    sub3D?.classList.add('is-hidden');
     subLines?.classList.add('is-hidden');
     subStickies?.classList.add('is-hidden');
     subsubPixelSize?.classList.add('is-hidden');
@@ -4806,7 +5034,7 @@ export class BoardController {
     this.updateVerticalToolbarActiveButtons();
   }
 
-  private toggleVSubtoolbar(sub: 'draw' | 'lines' | 'pixel' | 'shapes' | 'stickies'): void {
+  private toggleVSubtoolbar(sub: '3d' | 'draw' | 'lines' | 'pixel' | 'shapes' | 'stickies'): void {
     if (this.activeVSubtoolbar === sub) {
       this.hideAllVSubtoolbars();
     } else {
@@ -4829,9 +5057,13 @@ export class BoardController {
         active = true;
       } else if (vtool === 'shapes' && (this.activeVSubtoolbar === 'shapes' || this.currentTool === 'shapes')) {
         active = true;
+      } else if (vtool === '3d' && this.activeVSubtoolbar === '3d') {
+        active = true;
       } else if (vtool === 'lines' && (this.activeVSubtoolbar === 'lines' || this.currentTool === 'connector')) {
         active = true;
       } else if (vtool === 'stickies' && (this.activeVSubtoolbar === 'stickies' || this.currentTool === 'sticky')) {
+        active = true;
+      } else if (vtool === 'mockups' && this.mockupsPanel?.isOpen()) {
         active = true;
       }
       btn.classList.toggle('is-active', active);
@@ -4851,6 +5083,44 @@ export class BoardController {
     pixelBrushBtns.forEach((btn) => {
       btn.classList.toggle('is-active', parseInt(btn.getAttribute('data-pixel-brush') || '1', 10) === this.pixelGrid.activePixelBrushSize);
     });
+  }
+
+  public insert3DShape(shape3dType: Shape3DType): void {
+    this.pushHistoryState();
+    const dpr = window.devicePixelRatio || 1;
+    const screenW = this.canvasElement ? this.canvasElement.width / dpr : 800;
+    const screenH = this.canvasElement ? this.canvasElement.height / dpr : 600;
+    const centerWorld = screenToWorld(screenW / 2, screenH / 2, this.canvasElement, this.camera);
+    const shapeConfig = BOARD_3D_SHAPES.find((s) => s.id === shape3dType);
+    const w = shapeConfig?.defaultWidth || 140;
+    const h = shapeConfig?.defaultHeight || 140;
+
+    const shape3dEl: Board3DElement = {
+      fillColor: this.currentFillColor || '#000000',
+      height: h,
+      id: `shape3d_${shape3dType}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      rotationX: shapeConfig?.initialRotX ?? -0.45,
+      rotationY: shapeConfig?.initialRotY ?? 0.65,
+      rotationZ: shapeConfig?.initialRotZ ?? 0,
+      shading: true,
+      shape3dType,
+      strokeColor: this.currentColor || '#1e293b',
+      strokeWidth: 1.5,
+      type: 'shape-3d',
+      width: w,
+      x: Math.round(centerWorld.x - w / 2),
+      y: Math.round(centerWorld.y - h / 2),
+    };
+
+    this.elements.push(shape3dEl);
+    this.collaborationManager.broadcastAddElement(shape3dEl);
+    this.selectedElementId = shape3dEl.id;
+    this.selectedElementIds = [shape3dEl.id];
+    this.setTool('select');
+    this.updateSelectionToolbar();
+    this.requestRedraw();
+    this.scheduleAutoSave();
+    showToast('Figura 3D añadida', 'success');
   }
 
   public insertShapePreset(shapeType: ShapeType): void {
@@ -5330,5 +5600,237 @@ export class BoardController {
       railBtn?.classList.toggle('is-active', shouldShow);
     }
     return shouldShow;
+  }
+
+  public insertMockup(tpl: MockupTemplate, worldPos?: BoardPoint): void {
+    this.pushHistoryState();
+
+    const dpr = window.devicePixelRatio || 1;
+    const screenW = this.canvasElement ? this.canvasElement.width / dpr : 800;
+    const screenH = this.canvasElement ? this.canvasElement.height / dpr : 600;
+    const center = screenToWorld(screenW / 2, screenH / 2, this.canvasElement, this.camera);
+
+    const mockupEl: BoardMockupElement = {
+      fitMode: tpl.fitModeDefault || 'fill',
+      height: tpl.height,
+      id: `mockup-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      mockupId: tpl.id,
+      type: 'mockup',
+      width: tpl.width,
+      x: Math.round((worldPos ? worldPos.x : center.x) - tpl.width / 2),
+      y: Math.round((worldPos ? worldPos.y : center.y) - tpl.height / 2),
+    };
+
+    this.elements.push(mockupEl);
+    this.collaborationManager.broadcastAddElement(mockupEl);
+    this.selectedElementId = mockupEl.id;
+    this.selectedElementIds = [mockupEl.id];
+    this.setTool('select');
+    this.updateSelectionToolbar();
+    this.requestRedraw();
+    this.scheduleAutoSave();
+    showToast(`Mockup "${tpl.name}" insertado`);
+  }
+
+  private bindCanvasDragAndDrop(signal: AbortSignal): void {
+    if (!this.canvasElement) return;
+
+    this.canvasElement.addEventListener(
+      'dragover',
+      (e: DragEvent) => {
+        e.preventDefault();
+        if (!this.canvasElement) return;
+        const rect = this.canvasElement.getBoundingClientRect();
+        const sx = e.clientX - rect.left;
+        const sy = e.clientY - rect.top;
+        const world = screenToWorld(sx, sy, this.canvasElement, this.camera);
+        const hit = hitTestElement(this.elements, world.x, world.y, this.camera.zoom);
+
+        const prevHover = this.hoveredMockupDropId;
+        if (hit && hit.type === 'mockup') {
+          this.hoveredMockupDropId = hit.id;
+          if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+        } else {
+          this.hoveredMockupDropId = null;
+          if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+        }
+
+        if (prevHover !== this.hoveredMockupDropId) {
+          this.requestRedraw();
+        }
+      },
+      { signal }
+    );
+
+    this.canvasElement.addEventListener(
+      'dragleave',
+      () => {
+        if (this.hoveredMockupDropId) {
+          this.hoveredMockupDropId = null;
+          this.requestRedraw();
+        }
+      },
+      { signal }
+    );
+
+    this.canvasElement.addEventListener(
+      'drop',
+      (e: DragEvent) => {
+        e.preventDefault();
+        if (!this.canvasElement) return;
+        const rect = this.canvasElement.getBoundingClientRect();
+        const sx = e.clientX - rect.left;
+        const sy = e.clientY - rect.top;
+        const world = screenToWorld(sx, sy, this.canvasElement, this.camera);
+        const targetMockupId = this.hoveredMockupDropId;
+        this.hoveredMockupDropId = null;
+        this.requestRedraw();
+
+        const customData = e.dataTransfer?.getData('application/json');
+        if (customData) {
+          try {
+            const parsed = JSON.parse(customData);
+            if (parsed?.type === 'mockup-template' && parsed?.mockupId) {
+              const tpl = getMockupTemplateById(parsed.mockupId);
+              if (tpl) {
+                this.insertMockup(tpl, world);
+                return;
+              }
+            }
+          } catch {}
+        }
+
+        const files = e.dataTransfer?.files;
+        if (files && files.length > 0) {
+          const file = files[0];
+          if (file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = () => {
+              const dataUrl = reader.result as string;
+              if (targetMockupId) {
+                const targetEl = this.elements.find((el) => el.id === targetMockupId);
+                if (targetEl && targetEl.type === 'mockup') {
+                  this.pushHistoryState();
+                  targetEl.customUserImage = dataUrl;
+                  this.collaborationManager.broadcastUpdateElement(targetEl);
+                  this.requestRedraw();
+                  this.scheduleAutoSave();
+                  showToast('¡Imagen adaptada al mockup con éxito!', 'success');
+                  return;
+                }
+              }
+
+              const img = new Image();
+              img.onload = () => {
+                this.pushHistoryState();
+                const maxW = 400;
+                const aspect = img.width / img.height;
+                const w = Math.min(img.width, maxW);
+                const h = Math.round(w / aspect);
+                const imgEl: BoardImageElement = {
+                  aspectRatio: aspect,
+                  height: h,
+                  id: `image-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                  originalHeight: img.height,
+                  originalWidth: img.width,
+                  type: 'image',
+                  url: dataUrl,
+                  width: w,
+                  x: Math.round(world.x - w / 2),
+                  y: Math.round(world.y - h / 2),
+                };
+                this.elements.push(imgEl);
+                this.collaborationManager.broadcastAddElement(imgEl);
+                this.selectedElementId = imgEl.id;
+                this.selectedElementIds = [imgEl.id];
+                this.updateSelectionToolbar();
+                this.requestRedraw();
+                this.scheduleAutoSave();
+                showToast('Imagen insertada en el pizarrón');
+              };
+              img.src = dataUrl;
+            };
+            reader.readAsDataURL(file);
+          }
+        }
+      },
+      { signal }
+    );
+  }
+
+  private bindMockupSelectionControls(signal: AbortSignal): void {
+    const filePicker = this.container.querySelector<HTMLInputElement>('[data-ref="input-mockup-file-picker"]');
+    const btnChangeImage = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sel-mockup-change-image"]');
+    btnChangeImage?.addEventListener(
+      'click',
+      () => {
+        filePicker?.click();
+      },
+      { signal }
+    );
+
+    filePicker?.addEventListener(
+      'change',
+      () => {
+        if (!filePicker.files || filePicker.files.length === 0) return;
+        const file = filePicker.files[0];
+        if (!this.selectedElementId) return;
+        const el = this.elements.find((item) => item.id === this.selectedElementId);
+        if (el && el.type === 'mockup') {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const dataUrl = reader.result as string;
+            this.pushHistoryState();
+            el.customUserImage = dataUrl;
+            this.collaborationManager.broadcastUpdateElement(el);
+            this.requestRedraw();
+            this.scheduleAutoSave();
+            showToast('Imagen del mockup actualizada', 'success');
+          };
+          reader.readAsDataURL(file);
+        }
+        filePicker.value = '';
+      },
+      { signal }
+    );
+
+    const btnFitMode = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sel-mockup-fit-mode"]');
+    btnFitMode?.addEventListener(
+      'click',
+      () => {
+        if (!this.selectedElementId) return;
+        const el = this.elements.find((item) => item.id === this.selectedElementId);
+        if (el && el.type === 'mockup') {
+          this.pushHistoryState();
+          const currentMode = el.fitMode || 'fill';
+          const nextMode: MockupFitMode = currentMode === 'fill' ? 'fit' : (currentMode === 'fit' ? 'stretch' : 'fill');
+          el.fitMode = nextMode;
+          this.collaborationManager.broadcastUpdateElement(el);
+          this.requestRedraw();
+          this.scheduleAutoSave();
+          const modeLabels: Record<MockupFitMode, string> = { fill: 'Rellenar (Fill)', fit: 'Ajustar (Fit)', stretch: 'Estirar (Stretch)' };
+          showToast(`Ajuste: ${modeLabels[nextMode]}`);
+        }
+      },
+      { signal }
+    );
+
+    const btnResetImage = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sel-mockup-reset-image"]');
+    btnResetImage?.addEventListener(
+      'click',
+      () => {
+        if (!this.selectedElementId) return;
+        const el = this.elements.find((item) => item.id === this.selectedElementId);
+        if (el && el.type === 'mockup') {
+          this.pushHistoryState();
+          el.customUserImage = undefined;
+          this.collaborationManager.broadcastUpdateElement(el);
+          this.requestRedraw();
+          this.scheduleAutoSave();
+          showToast('Imagen restablecida a la predeterminada');
+        }
+      },
+      { signal }
+    );
   }
 }

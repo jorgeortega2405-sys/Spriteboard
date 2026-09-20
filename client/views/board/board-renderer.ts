@@ -1,5 +1,8 @@
+import { draw3DElement, draw3DGroundGrid, draw3DRotationGizmo, onCustomModelLoaded, preloadCustom3DModels } from './board-3d-renderer.js';
 import { computeElementsBoundingBox, getConnectorEndpoints, getElementBoundingBox } from './board-elements.manager.js';
-import { BackgroundType, BoardCollaboratorState, BoardConnectorElement, BoardElement, BoardImageElement, BoardPixelGridElement, BoardPoint, BoardSectionElement, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTableElement, BoardTextElement, MarkerType, StrokeStyle } from './board.types.js';
+import { BackgroundType, Board3DElement, BoardCollaboratorState, BoardConnectorElement, BoardElement, BoardImageElement, BoardPixelGridElement, BoardPoint, BoardSectionElement, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTableElement, BoardTextElement, MarkerType, StrokeStyle } from './board.types.js';
+
+export { draw3DElement, draw3DGroundGrid, draw3DRotationGizmo, onCustomModelLoaded, preloadCustom3DModels };
 
 const imageCache = new Map<string, HTMLImageElement>();
 const imageLoadCallbacks = new Map<string, Array<() => void>>();
@@ -881,6 +884,10 @@ export function drawSelectionBox(ctx: CanvasRenderingContext2D, el: BoardElement
     drawResizePill(ctx, bbox.x + bbox.width / 2 - pillLen / 2, bbox.y + bbox.height - pillThick / 2, pillLen, pillThick, pillRadius);
     drawResizePill(ctx, bbox.x - pillThick / 2, bbox.y + bbox.height / 2 - pillLen / 2, pillThick, pillLen, pillRadius);
     drawResizePill(ctx, bbox.x + bbox.width - pillThick / 2, bbox.y + bbox.height / 2 - pillLen / 2, pillThick, pillLen, pillRadius);
+
+    if (el.type === 'shape-3d') {
+      draw3DRotationGizmo(ctx, el, camera);
+    }
   } else if (el.type === 'connector') {
     const ep = getConnectorEndpoints(el, allElements || []);
     ctx.fillStyle = '#ffffff';
