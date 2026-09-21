@@ -256,13 +256,35 @@ export class AiController {
         return;
       }
 
-      const validBoardTypes = ['brainstorm', 'custom', 'kanban', 'retro', 'swot'];
+      const validBoardTypes = [
+        'brainstorm',
+        'conceptmap',
+        'custom',
+        'decisiontree',
+        'fishbone',
+        'flowchart',
+        'kanban',
+        'matrix',
+        'mindmap',
+        'orgchart',
+        'retro',
+        'swot',
+        'timeline',
+      ];
       const validBoardType = (validBoardTypes.includes(boardType) ? boardType : 'brainstorm') as
         | 'brainstorm'
+        | 'conceptmap'
         | 'custom'
+        | 'decisiontree'
+        | 'fishbone'
+        | 'flowchart'
         | 'kanban'
+        | 'matrix'
+        | 'mindmap'
+        | 'orgchart'
         | 'retro'
-        | 'swot';
+        | 'swot'
+        | 'timeline';
 
       const validCount = typeof count === 'number' && count > 0 && count <= 30 ? count : undefined;
 

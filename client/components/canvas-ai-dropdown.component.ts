@@ -65,12 +65,85 @@ function setIconUse(el: HTMLElement | null, iconName: string): void {
   }
 }
 
-const BOARD_TYPE_MAP: Record<BoardAiType, { icon: string; text: string }> = {
-  brainstorm: { icon: 'lightbulb', text: 'Lluvia de Ideas' },
-  custom: { icon: 'dashboard_customize', text: 'Personalizado' },
-  kanban: { icon: 'view_kanban', text: 'Tablero Kanban' },
-  retro: { icon: 'cached', text: 'Retrospectiva' },
-  swot: { icon: 'grid_view', text: 'Matriz FODA' },
+const BOARD_TYPE_MAP: Record<BoardAiType, { desc: string; icon: string; placeholder: string; text: string }> = {
+  brainstorm: {
+    desc: 'Lluvia de ideas con notas adhesivas organizadas por temas y colores.',
+    icon: 'lightbulb',
+    placeholder: '¿Qué tema o proyecto deseas explorar en lluvia de ideas?',
+    text: 'Lluvia de Ideas',
+  },
+  conceptmap: {
+    desc: 'Estructura conceptos jerárquicos de arriba a abajo con palabras y frases de enlace.',
+    icon: 'hub',
+    placeholder: '¿Sobre qué conceptos o tema deseas estructurar tu mapa conceptual?',
+    text: 'Mapa Conceptual',
+  },
+  custom: {
+    desc: 'Estructura libre personalizada según tus especificaciones.',
+    icon: 'dashboard_customize',
+    placeholder: 'Describe el esquema o contenido visual que deseas generar...',
+    text: 'Personalizado',
+  },
+  decisiontree: {
+    desc: 'Bifurca alternativas, probabilidades de éxito y nodos de resultado final.',
+    icon: 'call_split',
+    placeholder: '¿Qué decisión estratégica o dilema deseas evaluar?',
+    text: 'Árbol de Decisiones',
+  },
+  fishbone: {
+    desc: 'Diagrama Ishikawa de causa-efecto con espina central y categorías 6M.',
+    icon: 'pest_control',
+    placeholder: '¿Cuál es el problema o falla que deseas analizar?',
+    text: 'Diagrama Ishikawa',
+  },
+  flowchart: {
+    desc: 'Diseña procesos paso a paso, decisiones Sí/No y algoritmos conectados.',
+    icon: 'account_tree',
+    placeholder: '¿Qué proceso, algoritmo o flujo de trabajo deseas diseñar?',
+    text: 'Diagrama de Flujo',
+  },
+  kanban: {
+    desc: 'Columnas de estado ágil (Por Hacer, En Progreso, Completado) con tarjetas.',
+    icon: 'view_kanban',
+    placeholder: '¿Qué proyecto o sprint deseas organizar en tu tablero?',
+    text: 'Tablero Kanban',
+  },
+  matrix: {
+    desc: 'Clasifica ideas en cuadrantes estratégicos 2x2 (FODA o Impacto/Esfuerzo).',
+    icon: 'grid_view',
+    placeholder: '¿Qué empresa, producto o situación deseas analizar en matriz?',
+    text: 'Matriz 2x2 / FODA',
+  },
+  mindmap: {
+    desc: 'Ramas radiales multicolores conectadas alrededor de una idea central.',
+    icon: 'psychology',
+    placeholder: '¿Qué tema o concepto deseas plasmar en tu mapa mental?',
+    text: 'Mapa Mental',
+  },
+  orgchart: {
+    desc: 'Estructura jerárquica corporativa con roles de mando y áreas.',
+    icon: 'lan',
+    placeholder: '¿Qué tipo de organización o empresa deseas estructurar?',
+    text: 'Organigrama',
+  },
+  retro: {
+    desc: 'Retrospectiva ágil en 3 columnas (¿Qué salió bien?, ¿Qué mejorar?, Acciones).',
+    icon: 'cached',
+    placeholder: '¿Sobre qué sprint o proyecto deseas hacer la retrospectiva?',
+    text: 'Retrospectiva',
+  },
+  swot: {
+    desc: 'Matriz FODA estratégica (Fortalezas, Oportunidades, Debilidades, Amenazas).',
+    icon: 'grid_view',
+    placeholder: '¿Qué negocio o producto deseas evaluar en análisis FODA?',
+    text: 'Matriz FODA',
+  },
+  timeline: {
+    desc: 'Hitos cronológicos horizontales, fases temporales y entregables.',
+    icon: 'timeline',
+    placeholder: '¿Qué roadmap o cronograma de proyecto deseas planificar?',
+    text: 'Línea de Tiempo',
+  },
 };
 
 const DOC_ACTION_MAP: Record<DocAiAction, { icon: string; text: string }> = {
@@ -161,41 +234,73 @@ export function setupBoardAiDropdown(options: BoardAiDropdownOptions): CanvasAiD
                 <h2 class="design-share-menu__title">Generador de Pizarrón con IA</h2>
               </div>
             </div>
-            <p class="settings-item__desc" style="margin: -6px 0 0 0; font-size: 13px; line-height: 1.4; color: var(--text-secondary);">
-              Crea lluvias de ideas, tableros Kanban, matrices estratégicas FODA y retrospectivas organizadas visualmente.
+            <p class="settings-item__desc" data-ref="board-ai-desc" style="margin: -6px 0 0 0; font-size: 13px; line-height: 1.4; color: var(--text-secondary);">
+              Crea diagramas de flujo, mapas mentales, organigramas, tableros Kanban, matrices FODA y líneas de tiempo conectados visualmente con IA.
             </p>
             <div class="design-share-menu__content">
               <div class="design-share-section" data-ref="board-ai-section-type">
-                <span class="design-share-section__label">Tipo de estructura</span>
+                <span class="design-share-section__label">Tipo de estructura o diagrama</span>
                 <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-board-type">
                   <button type="button" class="dropdown-trigger" data-ref="btn-trigger-board-type" aria-label="Tipo de estructura">
                     <div class="dropdown-trigger__left">
-                      <span class="component-icon dropdown-trigger__icon" data-ref="board-type-selected-icon">lightbulb</span>
-                      <span class="dropdown-trigger__text" data-ref="board-type-selected-text">Lluvia de Ideas</span>
+                      <span class="component-icon dropdown-trigger__icon" data-ref="board-type-selected-icon">account_tree</span>
+                      <span class="dropdown-trigger__text" data-ref="board-type-selected-text">Diagrama de Flujo</span>
                     </div>
                     <span class="component-icon dropdown-trigger__chevron">expand_more</span>
                   </button>
                   <div class="dropdown-backdrop" data-ref="dropdown-backdrop-board-type">
-                    <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-board-type">
+                    <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-board-type" style="max-height: 280px; overflow-y: auto;">
                       <div class="menu-panel__drag-zone" data-ref="board-type-drag-zone" aria-hidden="true">
                         <div class="menu-panel__drag-handle"></div>
                       </div>
                       <div class="menu-panel__list" data-ref="list-board-type">
-                        <button type="button" class="menu-item is-active" data-ref="btn-type-brainstorm" data-type="brainstorm">
-                          <span class="component-icon menu-item__icon">lightbulb</span>
-                          <span class="menu-item__text">Lluvia de Ideas</span>
+                        <button type="button" class="menu-item is-active" data-ref="btn-type-flowchart" data-type="flowchart">
+                          <span class="component-icon menu-item__icon">account_tree</span>
+                          <span class="menu-item__text">Diagrama de Flujo</span>
+                        </button>
+                        <button type="button" class="menu-item" data-ref="btn-type-mindmap" data-type="mindmap">
+                          <span class="component-icon menu-item__icon">psychology</span>
+                          <span class="menu-item__text">Mapa Mental</span>
+                        </button>
+                        <button type="button" class="menu-item" data-ref="btn-type-conceptmap" data-type="conceptmap">
+                          <span class="component-icon menu-item__icon">hub</span>
+                          <span class="menu-item__text">Mapa Conceptual</span>
+                        </button>
+                        <button type="button" class="menu-item" data-ref="btn-type-orgchart" data-type="orgchart">
+                          <span class="component-icon menu-item__icon">lan</span>
+                          <span class="menu-item__text">Organigrama</span>
+                        </button>
+                        <button type="button" class="menu-item" data-ref="btn-type-decisiontree" data-type="decisiontree">
+                          <span class="component-icon menu-item__icon">call_split</span>
+                          <span class="menu-item__text">Árbol de Decisiones</span>
+                        </button>
+                        <button type="button" class="menu-item" data-ref="btn-type-timeline" data-type="timeline">
+                          <span class="component-icon menu-item__icon">timeline</span>
+                          <span class="menu-item__text">Línea de Tiempo (Roadmap)</span>
+                        </button>
+                        <button type="button" class="menu-item" data-ref="btn-type-fishbone" data-type="fishbone">
+                          <span class="component-icon menu-item__icon">pest_control</span>
+                          <span class="menu-item__text">Diagrama Ishikawa</span>
+                        </button>
+                        <button type="button" class="menu-item" data-ref="btn-type-swot" data-type="swot">
+                          <span class="component-icon menu-item__icon">grid_view</span>
+                          <span class="menu-item__text">Matriz FODA (2x2)</span>
                         </button>
                         <button type="button" class="menu-item" data-ref="btn-type-kanban" data-type="kanban">
                           <span class="component-icon menu-item__icon">view_kanban</span>
                           <span class="menu-item__text">Tablero Kanban</span>
                         </button>
-                        <button type="button" class="menu-item" data-ref="btn-type-swot" data-type="swot">
-                          <span class="component-icon menu-item__icon">grid_view</span>
-                          <span class="menu-item__text">Matriz FODA</span>
+                        <button type="button" class="menu-item" data-ref="btn-type-brainstorm" data-type="brainstorm">
+                          <span class="component-icon menu-item__icon">lightbulb</span>
+                          <span class="menu-item__text">Lluvia de Ideas</span>
                         </button>
                         <button type="button" class="menu-item" data-ref="btn-type-retro" data-type="retro">
                           <span class="component-icon menu-item__icon">cached</span>
                           <span class="menu-item__text">Retrospectiva</span>
+                        </button>
+                        <button type="button" class="menu-item" data-ref="btn-type-custom" data-type="custom">
+                          <span class="component-icon menu-item__icon">dashboard_customize</span>
+                          <span class="menu-item__text">Personalizado</span>
                         </button>
                       </div>
                     </div>
@@ -207,7 +312,7 @@ export function setupBoardAiDropdown(options: BoardAiDropdownOptions): CanvasAiD
                 <span class="design-share-section__label">Tema o instrucciones</span>
                 <label class="field" data-ref="field-board-ai-prompt" style="display: block;">
                   <textarea class="field__input" data-ref="input-board-ai-prompt" rows="3" placeholder=" " style="min-height: 84px; padding-top: 18px; resize: vertical; line-height: 1.4;"></textarea>
-                  <span class="field__label" data-ref="lbl-board-ai-prompt">¿Qué tema, proyecto o ideas deseas organizar?</span>
+                  <span class="field__label" data-ref="lbl-board-ai-prompt">¿Qué proceso, algoritmo o flujo de trabajo deseas diseñar?</span>
                 </label>
               </div>
 
@@ -235,6 +340,8 @@ export function setupBoardAiDropdown(options: BoardAiDropdownOptions): CanvasAiD
   const dropdownWrapperType = wrapper.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-board-type"]');
   const typeSelectedIcon = wrapper.querySelector<HTMLElement>('[data-ref="board-type-selected-icon"]');
   const typeSelectedText = wrapper.querySelector<HTMLElement>('[data-ref="board-type-selected-text"]');
+  const descEl = wrapper.querySelector<HTMLElement>('[data-ref="board-ai-desc"]');
+  const lblPrompt = wrapper.querySelector<HTMLElement>('[data-ref="lbl-board-ai-prompt"]');
   const inputPrompt = wrapper.querySelector<HTMLTextAreaElement>('[data-ref="input-board-ai-prompt"]');
   const btnSubmit = wrapper.querySelector<HTMLButtonElement>('[data-ref="btn-board-ai-submit"]');
   const errorBanner = wrapper.querySelector<HTMLElement>('[data-ref="board-ai-error"]');
@@ -245,12 +352,18 @@ export function setupBoardAiDropdown(options: BoardAiDropdownOptions): CanvasAiD
   }
 
   const updateTypeUI = () => {
-    const info = BOARD_TYPE_MAP[selectedType] || BOARD_TYPE_MAP.brainstorm;
+    const info = BOARD_TYPE_MAP[selectedType] || BOARD_TYPE_MAP.flowchart;
     if (typeSelectedIcon) {
       setIconUse(typeSelectedIcon, info.icon);
     }
     if (typeSelectedText) {
       typeSelectedText.textContent = info.text;
+    }
+    if (descEl) {
+      descEl.textContent = info.desc;
+    }
+    if (lblPrompt) {
+      lblPrompt.textContent = info.placeholder;
     }
     wrapper.querySelectorAll<HTMLElement>('[data-type]').forEach((b) => {
       b.classList.toggle('is-active', b.getAttribute('data-type') === selectedType);

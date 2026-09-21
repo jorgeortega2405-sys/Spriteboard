@@ -1943,8 +1943,10 @@ function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElemen
     } else if (activeElementsCategory === 'diagrams') {
       const categories: Array<{ key: string; label: string }> = [
         { key: 'flowchart', label: 'Diagramas de Flujo' },
-        { key: 'mindmap', label: 'Mapas Mentales' },
-        { key: 'connectors', label: 'Conectores Rápidos' },
+        { key: 'mindmap', label: 'Mapas Mentales & Conceptuales' },
+        { key: 'cloud_data', label: 'Arquitectura Cloud & Infra' },
+        { key: 'structure', label: 'Estructura & Organización' },
+        { key: 'connectors', label: 'Conectores & Flechas' },
         { key: 'stickies', label: 'Notas Adhesivas' },
       ];
 

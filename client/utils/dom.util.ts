@@ -151,7 +151,9 @@ export function bindNavigationLinks(container: HTMLElement | null, routesMap: Re
 }
 
 export interface ActiveDropdownRecord {
+  backdrop?: HTMLElement | null;
   close: () => void;
+  menu?: HTMLElement | null;
   wrapper: HTMLElement;
 }
 
@@ -161,7 +163,11 @@ export function registerActiveDropdown(record: ActiveDropdownRecord): void {
   for (let i = activeDropdowns.length - 1; i >= 0; i--) {
     const active = activeDropdowns[i];
     if (active.wrapper === record.wrapper) continue;
-    if (!active.wrapper.contains(record.wrapper)) {
+    const isInsideActive =
+      active.wrapper.contains(record.wrapper) ||
+      Boolean(active.backdrop && active.backdrop.contains(record.wrapper)) ||
+      Boolean(active.menu && active.menu.contains(record.wrapper));
+    if (!isInsideActive) {
       activeDropdowns.splice(i, 1);
       active.close();
     }
@@ -335,7 +341,9 @@ export function setupDropdown(
     if (isClosing) return;
 
     registerActiveDropdown({
+      backdrop,
       close: closeDropdown,
+      menu,
       wrapper,
     });
 

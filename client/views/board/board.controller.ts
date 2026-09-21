@@ -943,12 +943,56 @@ export class BoardController {
       cy = centerWorld.y;
     }
 
-    const positionedElements = aiElements.map((el) => {
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+
+    for (const el of aiElements) {
+      if ('x' in el && 'y' in el && typeof (el as any).x === 'number' && typeof (el as any).y === 'number') {
+        const w = (el as any).width || 0;
+        const h = (el as any).height || 0;
+        minX = Math.min(minX, (el as any).x);
+        minY = Math.min(minY, (el as any).y);
+        maxX = Math.max(maxX, (el as any).x + w);
+        maxY = Math.max(maxY, (el as any).y + h);
+      }
+    }
+
+    const offsetX = isFinite(minX) && isFinite(maxX) ? cx - (minX + maxX) / 2 : cx;
+    const offsetY = isFinite(minY) && isFinite(maxY) ? cy - (minY + maxY) / 2 : cy;
+
+    const idMap = new Map<string, string>();
+    aiElements.forEach((el, index) => {
+      if (el.id) {
+        idMap.set(el.id, `el-ai-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 7)}`);
+      }
+    });
+
+    const positionedElements = aiElements.map((el, index) => {
       const copy = JSON.parse(JSON.stringify(el)) as BoardElement;
-      copy.id = `el-ai-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-      if ('x' in copy) {
-        copy.x += cx;
-        copy.y += cy;
+      const newId = (copy.id && idMap.get(copy.id)) || `el-ai-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 7)}`;
+      copy.id = newId;
+
+      if (copy.type === 'connector') {
+        const conn = copy as any;
+        if (conn.fromId && idMap.has(conn.fromId)) {
+          conn.fromId = idMap.get(conn.fromId);
+        }
+        if (conn.toId && idMap.has(conn.toId)) {
+          conn.toId = idMap.get(conn.toId);
+        }
+        if (conn.startPoint && typeof conn.startPoint.x === 'number' && typeof conn.startPoint.y === 'number') {
+          conn.startPoint.x += offsetX;
+          conn.startPoint.y += offsetY;
+        }
+        if (conn.endPoint && typeof conn.endPoint.x === 'number' && typeof conn.endPoint.y === 'number') {
+          conn.endPoint.x += offsetX;
+          conn.endPoint.y += offsetY;
+        }
+      } else if ('x' in copy && 'y' in copy && typeof (copy as any).x === 'number' && typeof (copy as any).y === 'number') {
+        (copy as any).x += offsetX;
+        (copy as any).y += offsetY;
       }
       return copy;
     });

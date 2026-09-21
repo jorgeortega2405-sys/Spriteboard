@@ -4,7 +4,20 @@ import { showToast } from '../../services/toast.service.js';
 import { withButtonLoading } from '../../utils/dom.util.js';
 import { BoardElement } from './board.types.js';
 
-export type BoardAiType = 'brainstorm' | 'custom' | 'kanban' | 'retro' | 'swot';
+export type BoardAiType =
+  | 'brainstorm'
+  | 'conceptmap'
+  | 'custom'
+  | 'decisiontree'
+  | 'fishbone'
+  | 'flowchart'
+  | 'kanban'
+  | 'matrix'
+  | 'mindmap'
+  | 'orgchart'
+  | 'retro'
+  | 'swot'
+  | 'timeline';
 
 export interface BoardAiModalOptions {
   onSuccess: (result: {
@@ -21,7 +34,7 @@ export function openBoardAiModal(options: BoardAiModalOptions): void {
     activeBoardAiModal.close();
   }
 
-  let selectedType: BoardAiType = 'brainstorm';
+  let selectedType: BoardAiType = 'flowchart';
 
   const backdrop = document.createElement('div');
   backdrop.className = 'modal-backdrop';
@@ -34,17 +47,59 @@ export function openBoardAiModal(options: BoardAiModalOptions): void {
       'Ideas para campaña publicitaria de verano',
       'Optimización de la experiencia de usuario y diseño',
     ],
+    conceptmap: [
+      'Conceptos fundamentales de computación en la nube',
+      'Estructura de arquitectura orientada a servicios',
+      'Principios de diseño de software y patrones SOLID',
+      'Metodologías de aprendizaje automático e IA',
+    ],
     custom: [
       'Plan de innovación y transformación digital',
       'Lanzamiento de plataforma web escalable',
       'Mapa de ideas para taller de diseño',
       'Organización de recursos y herramientas del equipo',
     ],
+    decisiontree: [
+      'Decisión entre desarrollo in-house vs software SaaS',
+      'Evaluación de proveedores de infraestructura cloud',
+      'Estrategia de lanzamiento de producto bajo incertidumbre',
+      'Análisis de riesgos y retorno de inversión en IA',
+    ],
+    fishbone: [
+      'Causas principales de retrasos en entregas de sprints',
+      'Análisis de fallas de rendimiento en base de datos',
+      'Diagnóstico de pérdida de clientes en checkout',
+      'Causas de rotación de talento en el equipo técnico',
+    ],
+    flowchart: [
+      'Flujo de registro y autenticación con verificación 2FA',
+      'Proceso de checkout y procesamiento de pagos',
+      'Algoritmo de moderación automática de contenido',
+      'Ciclo de vida de despliegue continuo CI/CD',
+    ],
     kanban: [
       'Sprint de desarrollo de plataforma SaaS',
       'Lanzamiento de producto MVP y pruebas beta',
       'Plan de rediseño de marca y sitio web',
       'Flujo de atención al cliente e incidencias',
+    ],
+    matrix: [
+      'Matriz FODA para startup de inteligencia artificial',
+      'Matriz de Impacto vs Esfuerzo para roadmap',
+      'Matriz Eisenhower de priorización de tareas',
+      'Análisis competitivo de mercado',
+    ],
+    mindmap: [
+      'Ecosistema integral de productos digitales',
+      'Estrategia de marketing digital y contenidos',
+      'Plan maestro de investigación de usuarios',
+      'Arquitectura de componentes del sistema',
+    ],
+    orgchart: [
+      'Estructura organizacional de startup tecnológica',
+      'Organigrama del departamento de ingeniería y producto',
+      'Cadena de mando de operaciones y logística',
+      'Equipos ágiles y squads multidisciplinarios',
     ],
     retro: [
       'Retrospectiva del Sprint 14: Lanzamiento de funcionalidades',
@@ -57,6 +112,12 @@ export function openBoardAiModal(options: BoardAiModalOptions): void {
       'Evaluación estratégica para expansión a nuevos mercados',
       'Análisis FODA de producto frente a competidores',
       'Diagnóstico organizacional de la empresa',
+    ],
+    timeline: [
+      'Roadmap trimestral de producto y funcionalidades',
+      'Cronograma de lanzamiento de plataforma web',
+      'Plan de migración de infraestructura a la nube',
+      'Fases de investigación y desarrollo de MVP',
     ],
   };
 
@@ -73,23 +134,51 @@ export function openBoardAiModal(options: BoardAiModalOptions): void {
             <h2 class="modal-card__title" data-ref="modal-title">Generador de Pizarrón con IA</h2>
           </div>
           <p class="modal-card__desc" data-ref="modal-desc">
-            Crea lluvias de ideas, tableros Kanban, matrices estratégicas FODA y retrospectivas con notas adhesivas organizadas visualmente.
+            Crea diagramas de flujo, mapas mentales, organigramas, tableros Kanban, matrices FODA y líneas de tiempo conectados visualmente con IA.
           </p>
         </div>
 
         <div class="modal-card__body" data-ref="modal-body">
           <div class="design-toolbar-group" data-ref="board-ai-type-pills" style="display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap;">
-            <button type="button" class="template-variant-pill is-active" data-ref="btn-type-brainstorm" data-type="brainstorm" style="padding: 5px 12px; font-size: 12px; display: flex; align-items: center; gap: 5px;">
-              <span class="component-icon" style="font-size: 15px;">lightbulb</span>
-              <span>Lluvia de Ideas</span>
+            <button type="button" class="template-variant-pill is-active" data-ref="btn-type-flowchart" data-type="flowchart" style="padding: 5px 12px; font-size: 12px; display: flex; align-items: center; gap: 5px;">
+              <span class="component-icon" style="font-size: 15px;">account_tree</span>
+              <span>Flujograma</span>
+            </button>
+            <button type="button" class="template-variant-pill" data-ref="btn-type-mindmap" data-type="mindmap" style="padding: 5px 12px; font-size: 12px; display: flex; align-items: center; gap: 5px;">
+              <span class="component-icon" style="font-size: 15px;">psychology</span>
+              <span>Mapa Mental</span>
+            </button>
+            <button type="button" class="template-variant-pill" data-ref="btn-type-conceptmap" data-type="conceptmap" style="padding: 5px 12px; font-size: 12px; display: flex; align-items: center; gap: 5px;">
+              <span class="component-icon" style="font-size: 15px;">hub</span>
+              <span>Mapa Conceptual</span>
+            </button>
+            <button type="button" class="template-variant-pill" data-ref="btn-type-orgchart" data-type="orgchart" style="padding: 5px 12px; font-size: 12px; display: flex; align-items: center; gap: 5px;">
+              <span class="component-icon" style="font-size: 15px;">lan</span>
+              <span>Organigrama</span>
+            </button>
+            <button type="button" class="template-variant-pill" data-ref="btn-type-decisiontree" data-type="decisiontree" style="padding: 5px 12px; font-size: 12px; display: flex; align-items: center; gap: 5px;">
+              <span class="component-icon" style="font-size: 15px;">call_split</span>
+              <span>Árbol de Decisión</span>
+            </button>
+            <button type="button" class="template-variant-pill" data-ref="btn-type-timeline" data-type="timeline" style="padding: 5px 12px; font-size: 12px; display: flex; align-items: center; gap: 5px;">
+              <span class="component-icon" style="font-size: 15px;">timeline</span>
+              <span>Línea de Tiempo</span>
+            </button>
+            <button type="button" class="template-variant-pill" data-ref="btn-type-fishbone" data-type="fishbone" style="padding: 5px 12px; font-size: 12px; display: flex; align-items: center; gap: 5px;">
+              <span class="component-icon" style="font-size: 15px;">pest_control</span>
+              <span>Ishikawa</span>
+            </button>
+            <button type="button" class="template-variant-pill" data-ref="btn-type-swot" data-type="swot" style="padding: 5px 12px; font-size: 12px; display: flex; align-items: center; gap: 5px;">
+              <span class="component-icon" style="font-size: 15px;">grid_view</span>
+              <span>Matriz FODA</span>
             </button>
             <button type="button" class="template-variant-pill" data-ref="btn-type-kanban" data-type="kanban" style="padding: 5px 12px; font-size: 12px; display: flex; align-items: center; gap: 5px;">
               <span class="component-icon" style="font-size: 15px;">view_kanban</span>
               <span>Tablero Kanban</span>
             </button>
-            <button type="button" class="template-variant-pill" data-ref="btn-type-swot" data-type="swot" style="padding: 5px 12px; font-size: 12px; display: flex; align-items: center; gap: 5px;">
-              <span class="component-icon" style="font-size: 15px;">grid_view</span>
-              <span>Matriz FODA</span>
+            <button type="button" class="template-variant-pill" data-ref="btn-type-brainstorm" data-type="brainstorm" style="padding: 5px 12px; font-size: 12px; display: flex; align-items: center; gap: 5px;">
+              <span class="component-icon" style="font-size: 15px;">lightbulb</span>
+              <span>Lluvia de Ideas</span>
             </button>
             <button type="button" class="template-variant-pill" data-ref="btn-type-retro" data-type="retro" style="padding: 5px 12px; font-size: 12px; display: flex; align-items: center; gap: 5px;">
               <span class="component-icon" style="font-size: 15px;">cached</span>
