@@ -178,7 +178,12 @@ export class BoardPagesTrayComponent {
       const subSpan = document.createElement('span');
       subSpan.className = 'design-page-card__sub';
       const elCount = page.elements ? page.elements.length : 0;
-      subSpan.textContent = `${elCount} obj.`;
+      if (this.isPresentation) {
+        const durationSec = page.duration !== undefined ? page.duration : 5.0;
+        subSpan.textContent = `${durationSec}s · ${elCount} obj.`;
+      } else {
+        subSpan.textContent = `${elCount} obj.`;
+      }
 
       card.appendChild(numSpan);
       card.appendChild(subSpan);

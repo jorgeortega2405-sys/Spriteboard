@@ -10,7 +10,7 @@ export interface PresetVariant {
 export interface PresetItem {
   aspectType: 'compact' | 'large' | 'square' | 'standard' | 'tall' | 'wide';
   boardTemplateId?: string;
-  canvasType?: 'board' | 'doc';
+  canvasType?: 'board' | 'doc' | 'presentation';
   categoryKey: string;
   categoryName: string;
   diagramSubtype?: DiagramSubtype;

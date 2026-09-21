@@ -1398,9 +1398,41 @@ Devuelve ÚNICAMENTE un objeto JSON válido, sin texto antes ni después, sin ex
 
       const parsed = JSON.parse(cleanJson);
       if (parsed && Array.isArray(parsed.slides) && parsed.slides.length > 0) {
+        const sanitizedSlides = parsed.slides.map((s: any, idx: number) => ({
+          background: s.background || (idx === 0 ? { color: '#0f172a', type: 'solid' } : { color: '#ffffff', type: 'solid' }),
+          elements: Array.isArray(s.elements)
+            ? s.elements.map((el: any) => {
+                let w = typeof el.width === 'number' ? Math.max(20, Math.min(slideWidth - 60, el.width)) : 300;
+                let h = typeof el.height === 'number' ? Math.max(10, Math.min(slideHeight - 60, el.height)) : 100;
+                let x = typeof el.x === 'number' ? el.x : -halfW + 60;
+                let y = typeof el.y === 'number' ? el.y : -halfH + 60;
+
+                if (x < -halfW + 30) x = -halfW + 30;
+                if (x + w > halfW - 30) {
+                  if (w > slideWidth - 60) w = slideWidth - 60;
+                  x = Math.max(-halfW + 30, halfW - 30 - w);
+                }
+                if (y < -halfH + 30) y = -halfH + 30;
+                if (y + h > halfH - 30) {
+                  if (h > slideHeight - 60) h = slideHeight - 60;
+                  y = Math.max(-halfH + 30, halfH - 30 - h);
+                }
+
+                return {
+                  ...el,
+                  height: h,
+                  width: w,
+                  x,
+                  y,
+                };
+              })
+            : [],
+          name: String(s.name || `Diapositiva ${idx + 1}`),
+        }));
+
         return {
-          slides: parsed.slides,
-          title: parsed.title || prompt.trim(),
+          slides: sanitizedSlides,
+          title: String(parsed.title || prompt.trim()),
         };
       }
 

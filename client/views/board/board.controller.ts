@@ -25,8 +25,10 @@ import { validateAndSanitizeFile } from '../../utils/validators.util.js';
 import { DocFontPickerComponent, FontSelectEvent } from '../doc/doc-font-picker.component.js';
 import { ensureGoogleFontLoaded } from '../doc/doc-fonts.config.js';
 import { DocPage } from '../doc/doc.types.js';
+import { BoardAnimationPanelComponent } from './board-animation-panel.component.js';
 import { BoardChartsPanelComponent } from './board-charts-panel.component.js';
 import { BoardCollaborationManager } from './board-collaboration.manager.js';
+import { BoardEffectsPanelComponent } from './board-effects-panel.component.js';
 import { computeElementsBoundingBox, findContainingSection, findElementsByMarqueeBox, getConnectorEndpoints, getElementBoundingBox, hitTest3DRotationGizmo, hitTestElement, hitTestResizeHandle, measureTextElementSize, moveElementByDelta, moveElementByDrag, resizeElementByHandle } from './board-elements.manager.js';
 import { exportJson, exportPng, exportSvg, generateThumbnail } from './board-export.service.js';
 import { BoardHistoryManager } from './board-history.manager.js';
@@ -36,9 +38,10 @@ import { BoardPagesTrayComponent, MAX_BOARD_PAGES } from './board-pages-tray.com
 import { BoardPixelGridManager } from './board-pixel-grid.manager.js';
 import { BoardPixelPanelComponent } from './board-pixel-panel.component.js';
 import { BoardPixelTimelineComponent } from './board-pixel-timeline.component.js';
-import { draw3DElement, draw3DGroundGrid, drawAlignmentGuides, drawBackground, drawBoardCollaboratorCursors, drawChart, drawCheckerboard, drawConnector, drawImage, drawMarqueeBox, drawMultiSelectionBounds, drawPixelGridLines, drawSection, drawSelectionBox, drawShape, drawSticky, drawStroke, drawTable, drawText, onCustomModelLoaded, preloadCustom3DModels, screenToWorld, worldToScreen } from './board-renderer.js';
+import { BoardPositionPanelComponent } from './board-position-panel.component.js';
+import { applyElementAnimation, applyElementEffect, draw3DElement, draw3DGroundGrid, drawAlignmentGuides, drawBackground, drawBoardCollaboratorCursors, drawChart, drawCheckerboard, drawConnector, drawImage, drawMarqueeBox, drawMultiSelectionBounds, drawPixelGridLines, drawSection, drawSelectionBox, drawShape, drawSticky, drawStroke, drawTable, drawText, onCustomModelLoaded, preloadCustom3DModels, screenToWorld, worldToScreen } from './board-renderer.js';
 import { AlignmentGuide, calculateDragSnapping, calculateResizeSnapping } from './board-snapping.manager.js';
-import { BackgroundType, Board3DElement, BoardChartElement, BoardCollaboratorState, BoardConnectorElement, BoardElement, BoardImageElement, BoardMockupElement, BoardPageItem, BoardPixelGridElement, BoardPoint, BoardProject, BoardSectionElement, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTableCell, BoardTableElement, BoardTextElement, BoardTool, ChartDataRow, ChartType, DEFAULT_CHART_PALETTES, DEFAULT_CLASSIC_PALETTE, GAMEBOY_PALETTE, MarkerType, PICO8_PALETTE, PixelSubtool, ResizeHandle, Shape3DType, ShapeType, StrokeStyle } from './board.types.js';
+import { BackgroundType, Board3DElement, BoardAnimationType, BoardChartElement, BoardCollaboratorState, BoardConnectorElement, BoardElement, BoardElementAnimation, BoardElementEffect, BoardImageElement, BoardMockupElement, BoardPageItem, BoardPixelGridElement, BoardPoint, BoardProject, BoardSectionElement, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTableCell, BoardTableElement, BoardTextElement, BoardTool, ChartDataRow, ChartType, DEFAULT_CHART_PALETTES, DEFAULT_CLASSIC_PALETTE, GAMEBOY_PALETTE, MarkerType, PICO8_PALETTE, PixelSubtool, ResizeHandle, Shape3DType, ShapeType, StrokeStyle } from './board.types.js';
 
 export class BoardController {
   private abortController: AbortController;
@@ -128,6 +131,18 @@ export class BoardController {
   private hoveredMockupDropId: string | null = null;
   private chartsPanel: BoardChartsPanelComponent | null = null;
   private mockupsPanel: BoardMockupsPanelComponent | null = null;
+  private animationPanel: BoardAnimationPanelComponent | null = null;
+  private effectsPanel: BoardEffectsPanelComponent | null = null;
+  private positionPanel: BoardPositionPanelComponent | null = null;
+  private btnSlideDuration: HTMLButtonElement | null = null;
+  private slideDurationTextEl: HTMLElement | null = null;
+  private popoverSlideDurationEl: HTMLElement | null = null;
+  private previewAnimElementId: string | null = null;
+  private previewAnimStartTime = 0;
+  private previewAnimConfig: BoardElementAnimation | null = null;
+  private slideshowAutoPlay = false;
+  private slideshowProgressRaf: number | null = null;
+  private slideshowSlideStartTime = 0;
   private didPan = false;
   private isDrawing = false;
   private isEyedropperActive = false;
@@ -274,6 +289,102 @@ export class BoardController {
       },
     });
     this.mockupsPanel.init();
+    this.effectsPanel = new BoardEffectsPanelComponent(this.container, {
+      onApplyEffect: (effect) => {
+        const selectedEls = this.getSelectedElements();
+        if (selectedEls.length > 0) {
+          this.pushHistoryState();
+          for (const el of selectedEls) {
+            el.effect = { ...effect };
+            this.collaborationManager.broadcastUpdateElement(el);
+          }
+          this.requestRedraw();
+          this.scheduleAutoSave();
+        }
+      },
+      onClose: () => {},
+    });
+    this.effectsPanel.init();
+    this.animationPanel = new BoardAnimationPanelComponent(this.container, {
+      onApplyAnimation: (animation) => {
+        const selectedEls = this.getSelectedElements();
+        if (selectedEls.length > 0) {
+          this.pushHistoryState();
+          for (const el of selectedEls) {
+            el.animation = { ...animation };
+            this.collaborationManager.broadcastUpdateElement(el);
+          }
+          this.scheduleAutoSave();
+        }
+      },
+      onClose: () => {},
+      onPreviewAnimation: (animation) => {
+        this.previewElementAnimation(animation);
+      },
+    });
+    this.animationPanel.init();
+    this.positionPanel = new BoardPositionPanelComponent(this.container, {
+      onAlign: (alignType) => {
+        this.alignSelectedToPage(alignType);
+      },
+      onClose: () => {},
+      onReorder: (action) => {
+        if (action === 'front') this.reorderSelected(true);
+        else if (action === 'back') this.reorderSelected(false);
+        else if (action === 'forward') this.reorderSelectedStep(1);
+        else if (action === 'backward') this.reorderSelectedStep(-1);
+      },
+      onReorderLayers: (from, to) => {
+        this.reorderElementZIndex(from, to);
+      },
+      onSelectElement: (elementId) => {
+        this.selectedElementId = elementId;
+        this.selectedElementIds = [elementId];
+        this.updateSelectionToolbar();
+        this.requestRedraw();
+      },
+      onToggleLock: (elementId) => {
+        const el = this.elements.find((item) => item.id === elementId);
+        if (el) {
+          this.pushHistoryState();
+          el.isLocked = !el.isLocked;
+          this.collaborationManager.broadcastUpdateElement(el);
+          this.positionPanel?.sync(this.getSelectedElements()[0] || null, this.elements);
+          this.scheduleAutoSave();
+        }
+      },
+      onToggleVisibility: (elementId) => {
+        const el = this.elements.find((item) => item.id === elementId);
+        if (el) {
+          this.pushHistoryState();
+          el.hidden = !el.hidden;
+          this.collaborationManager.broadcastUpdateElement(el);
+          this.positionPanel?.sync(this.getSelectedElements()[0] || null, this.elements);
+          this.requestRedraw();
+          this.scheduleAutoSave();
+        }
+      },
+      onUpdateTransform: (updates) => {
+        const selectedEls = this.getSelectedElements();
+        if (selectedEls.length > 0) {
+          this.pushHistoryState();
+          for (const el of selectedEls) {
+            if (updates.width !== undefined && 'width' in el) el.width = updates.width;
+            if (updates.height !== undefined && 'height' in el) el.height = updates.height;
+            if (updates.x !== undefined && 'x' in el) el.x = updates.x;
+            if (updates.y !== undefined && 'y' in el) el.y = updates.y;
+            if (updates.rotation !== undefined) el.rotation = updates.rotation;
+            if (updates.aspectRatioLocked !== undefined) el.aspectRatioLocked = updates.aspectRatioLocked;
+            this.clampElementToSlide(el);
+            this.collaborationManager.broadcastUpdateElement(el);
+          }
+          this.updateSelectionToolbar();
+          this.requestRedraw();
+          this.scheduleAutoSave();
+        }
+      },
+    });
+    this.positionPanel.init();
     this.pixelTimeline = new BoardPixelTimelineComponent({
       onChange: () => {
         const grid = this.getSelectedPixelGrid();
@@ -2382,12 +2493,19 @@ export class BoardController {
     if (selectedEls.length === 0) {
       this.topToolbarContainerEl?.classList.add('is-hidden');
       this.topSelectionSectionEl?.classList.add('is-hidden');
+      this.effectsPanel?.close();
+      this.animationPanel?.close();
+      this.positionPanel?.close();
       this.closeAllPopovers();
       return;
     }
 
     this.topToolbarContainerEl?.classList.remove('is-hidden');
     this.topSelectionSectionEl?.classList.remove('is-hidden');
+
+    this.effectsPanel?.sync(selectedEls[0] || null);
+    this.animationPanel?.sync(selectedEls[0] || null);
+    this.positionPanel?.sync(selectedEls[0] || null, this.elements);
 
     const groupFill = this.container.querySelector<HTMLElement>('[data-ref="board-top-group-fill"]');
     const groupStrokeColor = this.container.querySelector<HTMLElement>('[data-ref="board-top-group-stroke-color"]');
@@ -2727,9 +2845,67 @@ export class BoardController {
       if (this.popoverOpacityEl && btnOpacity) this.togglePopover(this.popoverOpacityEl, btnOpacity);
     }, { signal });
 
+    const btnEffects = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-effects"]');
+    btnEffects?.addEventListener('click', () => {
+      this.effectsPanel?.toggle(this.getSelectedElements()[0] || null);
+    }, { signal });
+
+    const btnAnimate = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-animate"]');
+    btnAnimate?.addEventListener('click', () => {
+      this.animationPanel?.toggle(this.getSelectedElements()[0] || null);
+    }, { signal });
+
     const btnPosition = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-position"]');
     btnPosition?.addEventListener('click', () => {
-      if (this.popoverPositionEl && btnPosition) this.togglePopover(this.popoverPositionEl, btnPosition);
+      this.positionPanel?.toggle(this.getSelectedElements()[0] || null, this.elements);
+    }, { signal });
+
+    this.btnSlideDuration = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-slide-duration"]');
+    this.slideDurationTextEl = this.container.querySelector<HTMLElement>('[data-ref="slide-duration-text"]');
+    this.popoverSlideDurationEl = this.container.querySelector<HTMLElement>('[data-ref="popover-slide-duration"]');
+
+    if (this.isPresentation && this.btnSlideDuration) {
+      this.btnSlideDuration.classList.remove('is-hidden');
+      const activePage = this.pages.find((p) => p.id === this.activePageId);
+      const dur = activePage?.duration !== undefined ? activePage.duration : 5;
+      if (this.slideDurationTextEl) this.slideDurationTextEl.textContent = `${dur.toFixed(1)} s`;
+
+      this.btnSlideDuration.addEventListener('click', () => {
+        if (this.popoverSlideDurationEl && this.btnSlideDuration) {
+          this.togglePopover(this.popoverSlideDurationEl, this.btnSlideDuration);
+        }
+      }, { signal });
+    }
+
+    const inputDuration = this.container.querySelector<HTMLInputElement>('[data-ref="input-popover-slide-duration"]');
+    const labelDuration = this.container.querySelector<HTMLElement>('[data-ref="label-popover-slide-duration"]');
+    const btnApplyDurationAll = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-apply-duration-all"]');
+    const durationPresetChips = this.container.querySelectorAll<HTMLButtonElement>('[data-ref="slide-duration-presets"] [data-duration]');
+
+    inputDuration?.addEventListener('input', () => {
+      const val = parseFloat(inputDuration.value) || 5;
+      if (labelDuration) labelDuration.textContent = `${val.toFixed(1)} s`;
+      this.updateActivePageDuration(val);
+      durationPresetChips.forEach((chip) => {
+        chip.classList.toggle('is-active', Math.abs(parseFloat(chip.getAttribute('data-duration') || '5') - val) < 0.1);
+      });
+    }, { signal });
+
+    durationPresetChips.forEach((chip) => {
+      chip.addEventListener('click', () => {
+        const val = parseFloat(chip.getAttribute('data-duration') || '5') || 5;
+        if (inputDuration) inputDuration.value = `${val}`;
+        if (labelDuration) labelDuration.textContent = `${val.toFixed(1)} s`;
+        this.updateActivePageDuration(val);
+        durationPresetChips.forEach((c) => c.classList.remove('is-active'));
+        chip.classList.add('is-active');
+      }, { signal });
+    });
+
+    btnApplyDurationAll?.addEventListener('click', () => {
+      const currentVal = inputDuration ? parseFloat(inputDuration.value) || 5 : 5;
+      this.applyDurationToAllPages(currentVal);
+      this.closeAllPopovers();
     }, { signal });
 
     const btnDuplicate = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-duplicate"]');
@@ -5100,7 +5276,40 @@ export class BoardController {
     this.drawElementOn(this.ctx, el);
   }
 
-  private drawElementOn(ctx: CanvasRenderingContext2D, el: BoardElement): void {
+  private drawElementOn(ctx: CanvasRenderingContext2D, el: BoardElement, animElapsedMs?: number, elementIndex = 0, slideDurationMs = 5000): void {
+    if ((el as any).hidden === true) return;
+
+    ctx.save();
+
+    const hasBox = 'width' in el && 'height' in el && 'x' in el && 'y' in el;
+    const isRotating = el.rotation !== undefined && el.rotation !== 0 && hasBox;
+    if (isRotating) {
+      const cx = (el as any).x + (el as any).width / 2;
+      const cy = (el as any).y + (el as any).height / 2;
+      ctx.translate(cx, cy);
+      ctx.rotate(((el.rotation || 0) * Math.PI) / 180);
+      ctx.translate(-cx, -cy);
+    }
+
+    if (this.previewAnimElementId === el.id && this.previewAnimConfig && this.previewAnimConfig.type !== 'none') {
+      const elapsedMs = performance.now() - this.previewAnimStartTime;
+      const res = applyElementAnimation(ctx, el, this.previewAnimConfig, elapsedMs, 0, 5000);
+      if (!res.isFinished) {
+        this.requestRedraw();
+      } else {
+        this.previewAnimElementId = null;
+      }
+    } else if (animElapsedMs !== undefined && el.animation && el.animation.type !== 'none') {
+      applyElementAnimation(ctx, el, el.animation, animElapsedMs, elementIndex, slideDurationMs);
+    } else if (this.isSlideshowActive && el.animation && el.animation.type !== 'none') {
+      const elapsedMs = performance.now() - this.slideshowSlideStartTime;
+      applyElementAnimation(ctx, el, el.animation, elapsedMs, elementIndex, slideDurationMs);
+    }
+
+    if (el.effect && el.effect.type !== 'none') {
+      applyElementEffect(ctx, el.effect);
+    }
+
     if (el.type === 'stroke') {
       drawStroke(ctx, el);
     } else if (el.type === 'shape') {
@@ -5129,6 +5338,8 @@ export class BoardController {
     } else if (el.type === 'chart') {
       drawChart(ctx, el);
     }
+
+    ctx.restore();
   }
 
   private drawPixelGrid(ctx: CanvasRenderingContext2D, el: BoardPixelGridElement): void {
@@ -5934,9 +6145,110 @@ export class BoardController {
       this.camera.x = 0;
       this.camera.y = 0;
       this.fitPresentationSlide();
+      if (this.slideDurationTextEl) {
+        const dur = targetPage.duration !== undefined ? targetPage.duration : 5.0;
+        this.slideDurationTextEl.textContent = `${dur.toFixed(1)} s`;
+        const inputDuration = this.container.querySelector<HTMLInputElement>('[data-ref="input-popover-slide-duration"]');
+        const labelDuration = this.container.querySelector<HTMLElement>('[data-ref="label-popover-slide-duration"]');
+        if (inputDuration) inputDuration.value = `${dur}`;
+        if (labelDuration) labelDuration.textContent = `${dur.toFixed(1)} s`;
+      }
     }
 
     this.updatePagesUI();
+    this.requestRedraw();
+    this.scheduleAutoSave();
+  }
+
+  private updateActivePageDuration(duration: number): void {
+    const page = this.pages.find((p) => p.id === this.activePageId);
+    if (page) {
+      page.duration = duration;
+      if (this.slideDurationTextEl) {
+        this.slideDurationTextEl.textContent = `${duration.toFixed(1)} s`;
+      }
+      this.pagesTray?.sync(this.pages, this.activePageId);
+      this.scheduleAutoSave();
+    }
+  }
+
+  private applyDurationToAllPages(duration: number): void {
+    for (const page of this.pages) {
+      page.duration = duration;
+    }
+    if (this.slideDurationTextEl) {
+      this.slideDurationTextEl.textContent = `${duration.toFixed(1)} s`;
+    }
+    this.pagesTray?.sync(this.pages, this.activePageId);
+    this.scheduleAutoSave();
+    showToast(`Duración de ${duration.toFixed(1)}s aplicada a todas las diapositivas`);
+  }
+
+  private previewElementAnimation(animation: BoardElementAnimation): void {
+    const selectedEl = this.getSelectedElements()[0];
+    if (!selectedEl) return;
+    this.previewAnimElementId = selectedEl.id;
+    this.previewAnimConfig = { ...animation };
+    this.previewAnimStartTime = performance.now();
+    this.requestRedraw();
+  }
+
+  private alignSelectedToPage(alignType: 'bottom' | 'center' | 'left' | 'middle' | 'right' | 'top'): void {
+    const selectedEls = this.getSelectedElements();
+    if (selectedEls.length === 0) return;
+
+    this.pushHistoryState();
+
+    const slideHalfW = this.slideWidth / 2;
+    const slideHalfH = this.slideHeight / 2;
+
+    for (const el of selectedEls) {
+      if ('width' in el && 'height' in el && 'x' in el && 'y' in el) {
+        if (alignType === 'left') {
+          el.x = this.isPresentation ? -slideHalfW : 0;
+        } else if (alignType === 'right') {
+          el.x = this.isPresentation ? slideHalfW - el.width : el.width;
+        } else if (alignType === 'center') {
+          el.x = this.isPresentation ? -el.width / 2 : 0;
+        } else if (alignType === 'top') {
+          el.y = this.isPresentation ? -slideHalfH : 0;
+        } else if (alignType === 'bottom') {
+          el.y = this.isPresentation ? slideHalfH - el.height : el.height;
+        } else if (alignType === 'middle') {
+          el.y = this.isPresentation ? -el.height / 2 : 0;
+        }
+        this.clampElementToSlide(el);
+        this.collaborationManager.broadcastUpdateElement(el);
+      }
+    }
+
+    this.updateSelectionToolbar();
+    this.requestRedraw();
+    this.scheduleAutoSave();
+  }
+
+  private reorderSelectedStep(step: number): void {
+    if (!this.selectedElementId || this.elements.length <= 1) return;
+    const idx = this.elements.findIndex((e) => e.id === this.selectedElementId);
+    if (idx === -1) return;
+    const targetIdx = Math.max(0, Math.min(this.elements.length - 1, idx + step));
+    if (targetIdx === idx) return;
+    this.pushHistoryState();
+    const [moved] = this.elements.splice(idx, 1);
+    this.elements.splice(targetIdx, 0, moved);
+    this.collaborationManager.broadcastFullUpdate({ elements: this.elements });
+    this.positionPanel?.sync(this.getSelectedElements()[0] || null, this.elements);
+    this.requestRedraw();
+    this.scheduleAutoSave();
+  }
+
+  private reorderElementZIndex(fromIndex: number, toIndex: number): void {
+    if (fromIndex < 0 || fromIndex >= this.elements.length || toIndex < 0 || toIndex >= this.elements.length || fromIndex === toIndex) return;
+    this.pushHistoryState();
+    const [moved] = this.elements.splice(fromIndex, 1);
+    this.elements.splice(toIndex, 0, moved);
+    this.collaborationManager.broadcastFullUpdate({ elements: this.elements });
+    this.positionPanel?.sync(this.getSelectedElements()[0] || null, this.elements);
     this.requestRedraw();
     this.scheduleAutoSave();
   }
@@ -5952,6 +6264,7 @@ export class BoardController {
       background: { color: '#ffffff', dotColor: '#cbd5e1', type: this.isPresentation ? 'solid' : 'dots' },
       camera: { x: 0, y: 0, zoom: 1 },
       createdAt: Date.now(),
+      duration: 5.0,
       elements: [],
       id: `page-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       name: this.isPresentation ? `Diapositiva ${this.pages.length + 1}` : `Página ${this.pages.length + 1}`,
@@ -5983,6 +6296,7 @@ export class BoardController {
       background: { ...sourcePage.background },
       camera: { ...sourcePage.camera },
       createdAt: Date.now(),
+      duration: sourcePage.duration !== undefined ? sourcePage.duration : 5.0,
       elements: dupElements,
       id: `page-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       name: `${sourcePage.name} (copia)`,
@@ -6160,6 +6474,10 @@ export class BoardController {
           <button type="button" class="doc-slideshow__nav-btn" data-ref="btn-slideshow-next" data-tooltip="Siguiente (→)" aria-label="Siguiente diapositiva">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_forward"></use></svg>
           </button>
+          <button type="button" class="doc-slideshow__nav-btn" data-ref="btn-slideshow-play" data-tooltip="Reproducir automáticamente" aria-label="Reproducción automática">
+            <svg class="component-icon icon-play" aria-hidden="true"><use href="/icons.svg#play_arrow"></use></svg>
+            <svg class="component-icon icon-pause is-hidden" aria-hidden="true"><use href="/icons.svg#pause"></use></svg>
+          </button>
         </div>
         <div class="doc-slideshow__bar-right">
           <button type="button" class="doc-slideshow__nav-btn" data-ref="btn-slideshow-fullscreen" data-tooltip="Pantalla completa (F)" aria-label="Pantalla completa">
@@ -6169,6 +6487,9 @@ export class BoardController {
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
           </button>
         </div>
+      </div>
+      <div class="doc-slideshow__progress-track" style="position: absolute; top: 56px; left: 0; right: 0; height: 3px; background: rgba(255, 255, 255, 0.08); z-index: 20;">
+        <div class="doc-slideshow__progress-fill" data-ref="slideshow-progress-fill" style="width: 0%; height: 100%; background: #38bdf8; transition: width 0.05s linear;"></div>
       </div>
       <div class="doc-slideshow__stage" data-ref="slideshow-stage">
         <div class="doc-slideshow__viewport" data-ref="slideshow-viewport">
@@ -6186,10 +6507,22 @@ export class BoardController {
     const stageEl = overlay.querySelector<HTMLElement>('[data-ref="slideshow-stage"]');
     const btnPrev = overlay.querySelector<HTMLElement>('[data-ref="btn-slideshow-prev"]');
     const btnNext = overlay.querySelector<HTMLElement>('[data-ref="btn-slideshow-next"]');
+    const btnPlay = overlay.querySelector<HTMLElement>('[data-ref="btn-slideshow-play"]');
+    const iconPlay = btnPlay?.querySelector('.icon-play');
+    const iconPause = btnPlay?.querySelector('.icon-pause');
+    const progressFillEl = overlay.querySelector<HTMLElement>('[data-ref="slideshow-progress-fill"]');
     const btnFullscreen = overlay.querySelector<HTMLElement>('[data-ref="btn-slideshow-fullscreen"]');
     const btnClose = overlay.querySelector<HTMLElement>('[data-ref="btn-slideshow-close"]');
 
-    const renderSlide = (index: number) => {
+    this.slideshowAutoPlay = false;
+    this.slideshowSlideStartTime = performance.now();
+
+    const updateAutoplayUI = () => {
+      iconPlay?.classList.toggle('is-hidden', this.slideshowAutoPlay);
+      iconPause?.classList.toggle('is-hidden', !this.slideshowAutoPlay);
+    };
+
+    const renderSlide = (index: number, elapsedMs = 0, slideDurationMs = 5000) => {
       if (!slideCanvas) return;
       const page = this.pages[index];
       if (!page) return;
@@ -6208,12 +6541,14 @@ export class BoardController {
       const elements = page.id === this.activePageId ? this.elements : (page.elements || []);
       const sections = elements.filter((e) => e.type === 'section') as BoardSectionElement[];
 
-      for (const el of elements) {
+      for (let i = 0; i < elements.length; i++) {
+        const el = elements[i];
         if (el.type !== 'section') continue;
-        this.drawElementOn(sctx, el);
+        this.drawElementOn(sctx, el, elapsedMs, i, slideDurationMs);
       }
 
-      for (const el of elements) {
+      for (let i = 0; i < elements.length; i++) {
+        const el = elements[i];
         if (el.type === 'section') continue;
         const parentSection = findContainingSection(el, sections, elements);
         if (parentSection) {
@@ -6225,10 +6560,10 @@ export class BoardController {
             sctx.rect(parentSection.x, parentSection.y, parentSection.width, parentSection.height);
           }
           sctx.clip();
-          this.drawElementOn(sctx, el);
+          this.drawElementOn(sctx, el, elapsedMs, i, slideDurationMs);
           sctx.restore();
         } else {
-          this.drawElementOn(sctx, el);
+          this.drawElementOn(sctx, el, elapsedMs, i, slideDurationMs);
         }
       }
 
@@ -6236,6 +6571,44 @@ export class BoardController {
 
       if (counterEl) {
         counterEl.textContent = `${index + 1} / ${this.pages.length}`;
+      }
+    };
+
+    const runSlideshowLoop = () => {
+      if (!this.isSlideshowActive) return;
+
+      const currentPage = this.pages[this.slideshowCurrentIndex];
+      const durationSec = currentPage?.duration !== undefined ? currentPage.duration : 5.0;
+      const durationMs = durationSec * 1000;
+      const now = performance.now();
+      const elapsed = now - this.slideshowSlideStartTime;
+
+      if (this.slideshowAutoPlay) {
+        const progress = Math.min(1, elapsed / durationMs);
+        if (progressFillEl) {
+          progressFillEl.style.width = `${progress * 100}%`;
+        }
+
+        if (elapsed >= durationMs) {
+          if (this.slideshowCurrentIndex < this.pages.length - 1) {
+            this.slideshowCurrentIndex++;
+            this.slideshowSlideStartTime = performance.now();
+          } else {
+            this.slideshowCurrentIndex = 0;
+            this.slideshowSlideStartTime = performance.now();
+          }
+        }
+      }
+
+      renderSlide(this.slideshowCurrentIndex, elapsed, durationMs);
+      this.slideshowProgressRaf = requestAnimationFrame(runSlideshowLoop);
+    };
+
+    const toggleAutoplay = () => {
+      this.slideshowAutoPlay = !this.slideshowAutoPlay;
+      updateAutoplayUI();
+      if (!this.slideshowAutoPlay && progressFillEl) {
+        progressFillEl.style.width = '0%';
       }
     };
 
@@ -6251,8 +6624,8 @@ export class BoardController {
       viewportEl.style.transformOrigin = 'center center';
     };
 
-    renderSlide(this.slideshowCurrentIndex);
     updateScale();
+    this.slideshowProgressRaf = requestAnimationFrame(runSlideshowLoop);
 
     const handleResize = () => updateScale();
     window.addEventListener('resize', handleResize);
@@ -6260,6 +6633,11 @@ export class BoardController {
     const closeSlideshow = () => {
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('keydown', handleKey);
+      if (this.slideshowProgressRaf) {
+        cancelAnimationFrame(this.slideshowProgressRaf);
+        this.slideshowProgressRaf = null;
+      }
+      this.slideshowAutoPlay = false;
       if (document.fullscreenElement) {
         document.exitFullscreen().catch(() => {});
       }
@@ -6272,24 +6650,29 @@ export class BoardController {
     const nextSlide = () => {
       if (this.slideshowCurrentIndex < this.pages.length - 1) {
         this.slideshowCurrentIndex++;
-        renderSlide(this.slideshowCurrentIndex);
+        this.slideshowSlideStartTime = performance.now();
+        if (!this.slideshowAutoPlay && progressFillEl) progressFillEl.style.width = '0%';
       }
     };
 
     const prevSlide = () => {
       if (this.slideshowCurrentIndex > 0) {
         this.slideshowCurrentIndex--;
-        renderSlide(this.slideshowCurrentIndex);
+        this.slideshowSlideStartTime = performance.now();
+        if (!this.slideshowAutoPlay && progressFillEl) progressFillEl.style.width = '0%';
       }
     };
 
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+      if (e.key === 'ArrowRight' || e.key === 'PageDown') {
         e.preventDefault();
         nextSlide();
       } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
         e.preventDefault();
         prevSlide();
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        toggleAutoplay();
       } else if (e.key === 'Escape') {
         e.preventDefault();
         closeSlideshow();
@@ -6306,6 +6689,7 @@ export class BoardController {
     window.addEventListener('keydown', handleKey);
     btnPrev?.addEventListener('click', prevSlide);
     btnNext?.addEventListener('click', nextSlide);
+    btnPlay?.addEventListener('click', toggleAutoplay);
     btnClose?.addEventListener('click', closeSlideshow);
     btnFullscreen?.addEventListener('click', () => {
       if (!document.fullscreenElement) {

@@ -71,16 +71,74 @@ export type MarkerType =
   | 'square'
   | 'square-filled';
 
+export type BoardEffectType =
+  | 'none'
+  | 'shadow'
+  | 'glow'
+  | 'echo'
+  | 'glitch'
+  | 'neon'
+  | 'radioactive'
+  | 'retro'
+  | 'midnight'
+  | 'malibu'
+  | 'chroma'
+  | 'digital'
+  | 'aura'
+  | 'vhs'
+  | 'sunset';
+
+export interface BoardElementEffect {
+  blur?: number;
+  color?: string;
+  direction?: number;
+  intensity?: number;
+  offset?: number;
+  opacity?: number;
+  type: BoardEffectType;
+}
+
+export type BoardAnimationType =
+  | 'none'
+  | 'rise'
+  | 'pan'
+  | 'fade'
+  | 'pop'
+  | 'diagonal'
+  | 'blur'
+  | 'sequence'
+  | 'wipe'
+  | 'curtain'
+  | 'drift'
+  | 'tectonic'
+  | 'roll'
+  | 'neon'
+  | 'scrapbook'
+  | 'stomp';
+
+export interface BoardElementAnimation {
+  duration?: number;
+  speed?: 'fast' | 'medium' | 'slow';
+  trigger?: 'both' | 'enter' | 'exit';
+  type: BoardAnimationType;
+}
+
 export interface BoardPoint {
   x: number;
   y: number;
 }
 
 export interface BoardStrokeElement {
+  animation?: BoardElementAnimation;
+  aspectRatioLocked?: boolean;
   color: string;
+  effect?: BoardElementEffect;
+  hidden?: boolean;
   id: string;
+  isLocked?: boolean;
   opacity: number;
   points: BoardPoint[];
+  rotation?: number;
   size: number;
   strokeStyle?: StrokeStyle;
   tool: 'pen' | 'marker' | 'highlighter';
@@ -88,16 +146,22 @@ export interface BoardStrokeElement {
 }
 
 export interface BoardShapeElement {
+  animation?: BoardElementAnimation;
+  aspectRatioLocked?: boolean;
   borderRadius?: number;
+  effect?: BoardElementEffect;
   fillColor: string;
   fontFamily?: string;
   fontSize?: number;
   fontStyle?: 'italic' | 'normal';
   fontWeight?: number;
   height: number;
+  hidden?: boolean;
   id: string;
+  isLocked?: boolean;
   isMindMapNode?: boolean;
   opacity?: number;
+  rotation?: number;
   shapeType: ShapeType;
   sides?: number;
   strokeColor: string;
@@ -113,14 +177,20 @@ export interface BoardShapeElement {
 }
 
 export interface BoardStickyElement {
+  animation?: BoardElementAnimation;
+  aspectRatioLocked?: boolean;
   color: string;
+  effect?: BoardElementEffect;
   fontFamily?: string;
   fontSize: number;
   fontStyle?: 'italic' | 'normal';
   fontWeight?: number;
   height: number;
+  hidden?: boolean;
   id: string;
+  isLocked?: boolean;
   opacity?: number;
+  rotation?: number;
   text: string;
   textColor: string;
   type: 'sticky';
@@ -130,14 +200,20 @@ export interface BoardStickyElement {
 }
 
 export interface BoardTextElement {
+  animation?: BoardElementAnimation;
+  aspectRatioLocked?: boolean;
   color: string;
+  effect?: BoardElementEffect;
   fontFamily?: string;
   fontSize: number;
   fontStyle?: 'italic' | 'normal';
   fontWeight?: number;
   height: number;
+  hidden?: boolean;
   id: string;
+  isLocked?: boolean;
   opacity?: number;
+  rotation?: number;
   text: string;
   type: 'text';
   width: number;
@@ -163,19 +239,25 @@ export interface PixelFrameData {
 
 export interface BoardPixelGridElement {
   activeFrameId?: string;
+  animation?: BoardElementAnimation;
+  aspectRatioLocked?: boolean;
   backgroundColor: string;
   customFrameRate?: number;
   data: string;
+  effect?: BoardElementEffect;
   frames?: PixelFrameData[];
   gridHeight: number;
   gridWidth: number;
   height: number;
+  hidden?: boolean;
   id: string;
   isAnimated?: boolean;
+  isLocked?: boolean;
   isPlaying?: boolean;
   onionSkinEnabled?: boolean;
   opacity?: number;
   pixelSize: number;
+  rotation?: number;
   showGrid: boolean;
   type: 'pixel-grid';
   width: number;
@@ -185,12 +267,18 @@ export interface BoardPixelGridElement {
 
 export interface BoardImageElement {
   alt?: string;
+  animation?: BoardElementAnimation;
   aspectRatio: number;
+  aspectRatioLocked?: boolean;
+  effect?: BoardElementEffect;
   height: number;
+  hidden?: boolean;
   id: string;
+  isLocked?: boolean;
   opacity?: number;
   originalHeight?: number;
   originalWidth?: number;
+  rotation?: number;
   type: 'image';
   url: string;
   width: number;
@@ -199,15 +287,21 @@ export interface BoardImageElement {
 }
 
 export interface BoardConnectorElement {
+  animation?: BoardElementAnimation;
   arrowEnd?: boolean | MarkerType;
   arrowStart?: boolean | MarkerType;
+  aspectRatioLocked?: boolean;
   color: string;
+  effect?: BoardElementEffect;
   endPoint?: BoardPoint;
   fontSize?: number;
   fromId?: string;
+  hidden?: boolean;
   id: string;
+  isLocked?: boolean;
   label?: string;
   opacity?: number;
+  rotation?: number;
   startPoint?: BoardPoint;
   strokeStyle?: StrokeStyle;
   strokeWidth: number;
@@ -217,14 +311,19 @@ export interface BoardConnectorElement {
 }
 
 export interface BoardSectionElement {
+  animation?: BoardElementAnimation;
+  aspectRatioLocked?: boolean;
   backgroundColor?: string;
   borderColor?: string;
   borderWidth?: number;
+  effect?: BoardElementEffect;
   elementIds?: string[];
   height: number;
+  hidden?: boolean;
   id: string;
   isLocked?: boolean;
   opacity?: number;
+  rotation?: number;
   title: string;
   titleColor?: string;
   type: 'section';
@@ -240,16 +339,22 @@ export interface BoardTableCell {
 }
 
 export interface BoardTableElement {
+  animation?: BoardElementAnimation;
+  aspectRatioLocked?: boolean;
   borderColor?: string;
   borderWidth?: number;
   cols: number;
   colWidths?: number[];
   data: BoardTableCell[][];
+  effect?: BoardElementEffect;
   fontSize?: number;
   headerBackgroundColor?: string;
   height: number;
+  hidden?: boolean;
   id: string;
+  isLocked?: boolean;
   opacity?: number;
+  rotation?: number;
   rowHeights?: number[];
   rows: number;
   type: 'table';
@@ -259,10 +364,16 @@ export interface BoardTableElement {
 }
 
 export interface Board3DElement {
+  animation?: BoardElementAnimation;
+  aspectRatioLocked?: boolean;
+  effect?: BoardElementEffect;
   fillColor: string;
   height: number;
+  hidden?: boolean;
   id: string;
+  isLocked?: boolean;
   opacity?: number;
+  rotation?: number;
   rotationX: number;
   rotationY: number;
   rotationZ: number;
@@ -278,13 +389,18 @@ export interface Board3DElement {
 }
 
 export interface BoardMockupElement {
+  animation?: BoardElementAnimation;
+  aspectRatioLocked?: boolean;
   customUserImage?: string;
+  effect?: BoardElementEffect;
   fitMode?: MockupFitMode;
   height: number;
+  hidden?: boolean;
   id: string;
   imageOffsetX?: number;
   imageOffsetY?: number;
   imageScale?: number;
+  isLocked?: boolean;
   mockupId: string;
   opacity?: number;
   rotation?: number;
@@ -323,6 +439,8 @@ export interface ChartSeriesConfig {
 }
 
 export interface BoardChartElement {
+  animation?: BoardElementAnimation;
+  aspectRatioLocked?: boolean;
   barRadius?: number;
   chartType: ChartType;
   colorBy?: 'category' | 'series' | 'single';
@@ -330,14 +448,18 @@ export interface BoardChartElement {
   dataLabelAlignment?: 'center' | 'end' | 'start';
   dataLabelPosition?: 'auto' | 'inside' | 'outside';
   decimals?: number;
+  effect?: BoardElementEffect;
   headers: string[];
   height: number;
+  hidden?: boolean;
   id: string;
+  isLocked?: boolean;
   numberAbbreviation?: 'kmb' | 'none';
   numberFormatStyle?: 'comma' | 'dot' | 'normal';
   opacity?: number;
   palette?: string[];
   prefix?: string;
+  rotation?: number;
   series: ChartSeriesConfig[];
   showDataLabels?: boolean;
   showGridLines?: boolean;
@@ -417,6 +539,7 @@ export interface BoardPageItem {
     zoom: number;
   };
   createdAt?: number;
+  duration?: number;
   elements: BoardElement[];
   id: string;
   name: string;
