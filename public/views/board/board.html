@@ -287,6 +287,10 @@
             </div>
 
             <div class="design-toolbar-group is-hidden" data-ref="board-top-group-text-props">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="top-btn-font-family" data-tooltip="Tipografía" aria-label="Tipografía">
+                <span class="component-icon">font_download</span>
+                <span data-ref="top-font-family-label">Inter</span>
+              </button>
               <button type="button" class="design-toolbar-btn" data-ref="top-btn-text-color" data-tooltip="Color de texto" aria-label="Color de texto">
                 <span class="top-color-swatch" data-ref="top-text-swatch" style="background-color: #1e293b;"></span>
               </button>
@@ -712,6 +716,13 @@
           </button>
 
           <div class="design-bottom-toolbar" data-ref="board-bottom-toolbar">
+            <div class="design-bottom-toolbar__section" data-ref="board-snapping-section">
+              <div class="design-toolbar-group" data-ref="board-group-snapping">
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--sm is-active" data-ref="btn-toggle-snapping" data-tooltip="Ajuste magnético inteligente (Alt para suspender)" aria-label="Ajuste magnético inteligente">
+                  <span class="component-icon">center_focus_strong</span>
+                </button>
+              </div>
+            </div>
             <div class="design-bottom-toolbar__section design-bottom-toolbar__section--zoom" data-ref="board-zoom-section">
               <div class="design-toolbar-group" data-ref="board-group-zoom">
                 <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-zoom-out" data-tooltip="Alejar (Ctrl -)" aria-label="Alejar">

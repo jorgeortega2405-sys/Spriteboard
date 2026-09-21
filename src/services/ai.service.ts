@@ -981,6 +981,7 @@ Reglas estrictas de generación:
     elements: Array<{
       arrowEnd?: boolean;
       color?: string;
+      fillColor?: string;
       fontSize?: number;
       fromId?: string;
       height?: number;

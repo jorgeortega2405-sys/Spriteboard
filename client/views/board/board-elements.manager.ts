@@ -278,7 +278,7 @@ let measureCanvasCtx: CanvasRenderingContext2D | null = null;
 export function measureTextElementSize(
   text: string,
   fontSize: number,
-  fontWeight = '600',
+  fontWeight: number | string = '600',
   fontFamily = 'sans-serif'
 ): { height: number; width: number } {
   if (typeof document !== 'undefined' && !measureCanvasCtx) {
@@ -291,8 +291,9 @@ export function measureTextElementSize(
   const lineHeight = fontSize * 1.3;
   let maxW = 0;
 
+  const safeFamily = fontFamily ? (fontFamily.includes(',') ? fontFamily : `"${fontFamily.replace(/['"]/g, '')}", sans-serif`) : 'sans-serif';
   if (measureCanvasCtx) {
-    measureCanvasCtx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
+    measureCanvasCtx.font = `${fontWeight} ${fontSize}px ${safeFamily}`;
     for (const line of lines) {
       const lineText = line.length > 0 ? line : ' ';
       const metrics = measureCanvasCtx.measureText(lineText);
@@ -329,7 +330,7 @@ export function resizeElementByHandle(
       const h = worldPos.y - startRect.y;
       const scale = Math.abs(w - startW) > Math.abs(h - startH) ? (w / startW) : (h / startH);
       const newFontSize = Math.max(8, Math.min(300, Math.round(startFontSize * Math.max(0.1, scale))));
-      const newSize = measureTextElementSize(el.text, newFontSize);
+      const newSize = measureTextElementSize(el.text, newFontSize, el.fontWeight || 600, el.fontFamily || 'sans-serif');
       el.fontSize = newFontSize;
       el.width = newSize.width;
       el.height = newSize.height;
@@ -340,7 +341,7 @@ export function resizeElementByHandle(
       const h = worldPos.y - startRect.y;
       const scale = Math.abs(w - startW) > Math.abs(h - startH) ? (w / startW) : (h / startH);
       const newFontSize = Math.max(8, Math.min(300, Math.round(startFontSize * Math.max(0.1, scale))));
-      const newSize = measureTextElementSize(el.text, newFontSize);
+      const newSize = measureTextElementSize(el.text, newFontSize, el.fontWeight || 600, el.fontFamily || 'sans-serif');
       el.fontSize = newFontSize;
       el.width = newSize.width;
       el.height = newSize.height;
@@ -351,7 +352,7 @@ export function resizeElementByHandle(
       const h = startRect.y + startRect.height - worldPos.y;
       const scale = Math.abs(w - startW) > Math.abs(h - startH) ? (w / startW) : (h / startH);
       const newFontSize = Math.max(8, Math.min(300, Math.round(startFontSize * Math.max(0.1, scale))));
-      const newSize = measureTextElementSize(el.text, newFontSize);
+      const newSize = measureTextElementSize(el.text, newFontSize, el.fontWeight || 600, el.fontFamily || 'sans-serif');
       el.fontSize = newFontSize;
       el.width = newSize.width;
       el.height = newSize.height;
@@ -362,7 +363,7 @@ export function resizeElementByHandle(
       const h = startRect.y + startRect.height - worldPos.y;
       const scale = Math.abs(w - startW) > Math.abs(h - startH) ? (w / startW) : (h / startH);
       const newFontSize = Math.max(8, Math.min(300, Math.round(startFontSize * Math.max(0.1, scale))));
-      const newSize = measureTextElementSize(el.text, newFontSize);
+      const newSize = measureTextElementSize(el.text, newFontSize, el.fontWeight || 600, el.fontFamily || 'sans-serif');
       el.fontSize = newFontSize;
       el.width = newSize.width;
       el.height = newSize.height;
@@ -372,7 +373,7 @@ export function resizeElementByHandle(
       const w = worldPos.x - startRect.x;
       const scale = w / startW;
       const newFontSize = Math.max(8, Math.min(300, Math.round(startFontSize * Math.max(0.1, scale))));
-      const newSize = measureTextElementSize(el.text, newFontSize);
+      const newSize = measureTextElementSize(el.text, newFontSize, el.fontWeight || 600, el.fontFamily || 'sans-serif');
       el.fontSize = newFontSize;
       el.width = newSize.width;
       el.height = newSize.height;
@@ -382,7 +383,7 @@ export function resizeElementByHandle(
       const w = startRect.x + startRect.width - worldPos.x;
       const scale = w / startW;
       const newFontSize = Math.max(8, Math.min(300, Math.round(startFontSize * Math.max(0.1, scale))));
-      const newSize = measureTextElementSize(el.text, newFontSize);
+      const newSize = measureTextElementSize(el.text, newFontSize, el.fontWeight || 600, el.fontFamily || 'sans-serif');
       el.fontSize = newFontSize;
       el.width = newSize.width;
       el.height = newSize.height;
@@ -392,7 +393,7 @@ export function resizeElementByHandle(
       const h = worldPos.y - startRect.y;
       const scale = h / startH;
       const newFontSize = Math.max(8, Math.min(300, Math.round(startFontSize * Math.max(0.1, scale))));
-      const newSize = measureTextElementSize(el.text, newFontSize);
+      const newSize = measureTextElementSize(el.text, newFontSize, el.fontWeight || 600, el.fontFamily || 'sans-serif');
       el.fontSize = newFontSize;
       el.width = newSize.width;
       el.height = newSize.height;
@@ -402,7 +403,7 @@ export function resizeElementByHandle(
       const h = startRect.y + startRect.height - worldPos.y;
       const scale = h / startH;
       const newFontSize = Math.max(8, Math.min(300, Math.round(startFontSize * Math.max(0.1, scale))));
-      const newSize = measureTextElementSize(el.text, newFontSize);
+      const newSize = measureTextElementSize(el.text, newFontSize, el.fontWeight || 600, el.fontFamily || 'sans-serif');
       el.fontSize = newFontSize;
       el.width = newSize.width;
       el.height = newSize.height;

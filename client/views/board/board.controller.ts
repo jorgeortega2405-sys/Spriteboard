@@ -5,7 +5,7 @@ import { openCanvasMetricsModal } from '../../components/canvas-metrics-modal.co
 import { CanvasShareDropdownController, setupCanvasShareDropdown } from '../../components/canvas-share-dropdown.component.js';
 import { closeContextMenu, ContextMenuItem, openContextMenu } from '../../components/context-menu.component.js';
 import { InsertPixelGridConfig, openInsertPixelGridModal } from '../../components/insert-pixel-grid-modal.component.js';
-import { isColorsDrawerOpen, openChartInspectorInDrawer, openColorsInDrawer, openMockupsInDrawer, toggleDrawer } from '../../components/layout.component.js';
+import { isColorsDrawerOpen, isFontsDrawerOpen, openChartInspectorInDrawer, openColorsInDrawer, openFontsInDrawer, openMockupsInDrawer, toggleDrawer } from '../../components/layout.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
 import { BOARD_3D_SHAPES } from '../../config/board-3d-shapes.config.js';
 import { BOARD_SHAPES } from '../../config/board-shapes.config.js';
@@ -22,6 +22,8 @@ import { generateShadingRamp, getCollaboratorColor, rgbToHex } from '../../utils
 import { setupDropdown } from '../../utils/dom.util.js';
 import { PixelShape } from '../../utils/pixel-shapes.util.js';
 import { validateAndSanitizeFile } from '../../utils/validators.util.js';
+import { DocFontPickerComponent, FontSelectEvent } from '../doc/doc-font-picker.component.js';
+import { ensureGoogleFontLoaded } from '../doc/doc-fonts.config.js';
 import { DocPage } from '../doc/doc.types.js';
 import { BoardChartsPanelComponent } from './board-charts-panel.component.js';
 import { BoardCollaborationManager } from './board-collaboration.manager.js';
@@ -31,16 +33,20 @@ import { BoardHistoryManager } from './board-history.manager.js';
 import { drawMockupElement } from './board-mockup-renderer.js';
 import { BoardMockupsPanelComponent } from './board-mockups-panel.component.js';
 import { BoardPixelGridManager } from './board-pixel-grid.manager.js';
-import { draw3DElement, draw3DGroundGrid, drawBackground, drawBoardCollaboratorCursors, drawChart, drawCheckerboard, drawConnector, drawImage, drawMarqueeBox, drawMultiSelectionBounds, drawPixelGridLines, drawSection, drawSelectionBox, drawShape, drawSticky, drawStroke, drawTable, drawText, onCustomModelLoaded, preloadCustom3DModels, screenToWorld, worldToScreen } from './board-renderer.js';
+import { draw3DElement, draw3DGroundGrid, drawAlignmentGuides, drawBackground, drawBoardCollaboratorCursors, drawChart, drawCheckerboard, drawConnector, drawImage, drawMarqueeBox, drawMultiSelectionBounds, drawPixelGridLines, drawSection, drawSelectionBox, drawShape, drawSticky, drawStroke, drawTable, drawText, onCustomModelLoaded, preloadCustom3DModels, screenToWorld, worldToScreen } from './board-renderer.js';
+import { AlignmentGuide, calculateDragSnapping, calculateResizeSnapping } from './board-snapping.manager.js';
 import { BackgroundType, Board3DElement, BoardChartElement, BoardCollaboratorState, BoardConnectorElement, BoardElement, BoardImageElement, BoardMockupElement, BoardPixelGridElement, BoardPoint, BoardProject, BoardSectionElement, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTableCell, BoardTableElement, BoardTextElement, BoardTool, ChartDataRow, ChartType, DEFAULT_CHART_PALETTES, DEFAULT_CLASSIC_PALETTE, GAMEBOY_PALETTE, MarkerType, PICO8_PALETTE, PixelSubtool, ResizeHandle, Shape3DType, ShapeType, StrokeStyle } from './board.types.js';
 
 export class BoardController {
   private abortController: AbortController;
   private accessLevel: 'private' | 'public' = 'private';
+  private activeAlignmentGuides: AlignmentGuide[] = [];
   private activeInlineEditor: HTMLTextAreaElement | null = null;
   private activeOpenDropdown: { close: () => void } | null = null;
   private activePopover: HTMLElement | null = null;
   private activeTableInlineEditor: { col: number; row: number; tableId: string; textarea: HTMLTextAreaElement } | null = null;
+  private isSnappingEnabled = true;
+  private selectionStartBBox: { height: number; width: number; x: number; y: number } | null = null;
   private editingElementId: string | null = null;
   private activeVSubtoolbar: '3d' | 'cursors' | 'draw' | 'lines' | 'pixel' | 'shapes' | 'stickies' | null = null;
   private connectorStyle: 'curved' | 'orthogonal' | 'straight' = 'curved';
@@ -155,8 +161,10 @@ export class BoardController {
   private shareDropdownController: CanvasShareDropdownController | null = null;
   private shareWrapperEl: HTMLElement | null = null;
   private showCollaboratorCursors = true;
+  private fontPicker: DocFontPickerComponent | null = null;
   private stickyDefaultColor = '#fef08a';
   private topFillSwatchEl: HTMLElement | null = null;
+  private topFontFamilyLabelEl: HTMLElement | null = null;
   private topFontSizeLabelEl: HTMLElement | null = null;
   private topSelectionSectionEl: HTMLElement | null = null;
   private topStrokeSwatchEl: HTMLElement | null = null;
@@ -243,6 +251,13 @@ export class BoardController {
     });
     this.mockupsPanel.init();
     this.bindEvents();
+    try {
+      const savedSnapping = localStorage.getItem('spriteboard_board_snapping');
+      if (savedSnapping !== null) {
+        this.isSnappingEnabled = savedSnapping === 'true';
+      }
+    } catch {}
+    this.updateSnappingUI();
     this.initColorsUI();
     this.renderPixelPaletteSwatches();
     this.updateUndoRedoUI();
@@ -264,6 +279,10 @@ export class BoardController {
   public destroy(): void {
     if (this.isPreviewingSnapshot) {
       this.exitSnapshotPreview();
+    }
+    if (this.fontPicker) {
+      this.fontPicker.destroy();
+      this.fontPicker = null;
     }
     this.commentsController?.destroy();
     this.commentsController = null;
@@ -1367,6 +1386,7 @@ export class BoardController {
     }
 
     this.closeAllPopovers();
+    this.hideFontsPanel();
     this.colorPanelTarget = target;
     openColorsInDrawer(target);
   }
@@ -1374,6 +1394,85 @@ export class BoardController {
   private hideColorsPanel(): void {
     if (isColorsDrawerOpen()) {
       toggleDrawer(false);
+    }
+  }
+
+  public attachFontsUI(fontsContainer: HTMLElement): void {
+    if (this.fontPicker) {
+      this.fontPicker.destroy();
+    }
+    this.fontPicker = new DocFontPickerComponent(fontsContainer, (event: FontSelectEvent) => {
+      this.applyFontToSelection(event);
+    });
+
+    const selectedEls = this.getSelectedElements();
+    const firstWithFont = selectedEls.find((el) => 'fontFamily' in el && (el as any).fontFamily);
+    const family = firstWithFont && (firstWithFont as any).fontFamily
+      ? (firstWithFont as any).fontFamily.split(',')[0].replace(/['"]/g, '').trim()
+      : 'Inter';
+    const weight = firstWithFont && (firstWithFont as any).fontWeight ? (firstWithFont as any).fontWeight : 600;
+    const style = firstWithFont && (firstWithFont as any).fontStyle ? (firstWithFont as any).fontStyle : 'normal';
+
+    this.fontPicker.init(family);
+    this.fontPicker.setActiveFont(family, weight, style);
+  }
+
+  private toggleFontsPanel(): void {
+    if (isFontsDrawerOpen()) {
+      toggleDrawer(false);
+    } else {
+      this.openFontsPanel();
+    }
+  }
+
+  private openFontsPanel(): void {
+    this.closeAllPopovers();
+    openFontsInDrawer();
+  }
+
+  private hideFontsPanel(): void {
+    if (isFontsDrawerOpen()) {
+      toggleDrawer(false);
+    }
+  }
+
+  private applyFontToSelection(event: FontSelectEvent): void {
+    const selectedEls = this.getSelectedElements();
+    if (selectedEls.length === 0) return;
+
+    const fullFamily = `${event.family}, ${event.fallback}`;
+    ensureGoogleFontLoaded(fullFamily);
+
+    this.pushHistoryState();
+    let hasChanged = false;
+
+    selectedEls.forEach((el) => {
+      if (el.type === 'text' || el.type === 'sticky' || el.type === 'shape') {
+        el.fontFamily = fullFamily;
+        if (event.weight) {
+          el.fontWeight = event.weight;
+        }
+        if (event.style === 'italic' || event.style === 'normal') {
+          el.fontStyle = event.style;
+        }
+        if (el.type === 'text') {
+          const sz = measureTextElementSize(el.text, el.fontSize, el.fontWeight || 600, el.fontFamily);
+          el.width = sz.width;
+          el.height = sz.height;
+        }
+        this.collaborationManager.broadcastUpdateElement(el);
+        hasChanged = true;
+      }
+    });
+
+    if (hasChanged) {
+      this.requestRedraw();
+      this.scheduleAutoSave();
+      this.updateContextualToolbar();
+    }
+
+    if (this.fontPicker) {
+      this.fontPicker.setActiveFont(event.family, event.weight || 600, event.style || 'normal');
     }
   }
 
@@ -1582,6 +1681,26 @@ export class BoardController {
 
     const btnZoomFit = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-zoom-fit"]');
     btnZoomFit?.addEventListener('click', () => this.zoomToFit(), { signal });
+
+    const btnToggleSnapping = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-snapping"]');
+    btnToggleSnapping?.addEventListener('click', () => this.toggleSnapping(), { signal });
+  }
+
+  private toggleSnapping(): void {
+    this.isSnappingEnabled = !this.isSnappingEnabled;
+    try {
+      localStorage.setItem('spriteboard_board_snapping', String(this.isSnappingEnabled));
+    } catch {}
+    this.updateSnappingUI();
+    showToast(this.isSnappingEnabled ? 'Ajuste inteligente activado' : 'Ajuste inteligente desactivado', 'info');
+  }
+
+  private updateSnappingUI(): void {
+    const btn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-snapping"]');
+    if (btn) {
+      btn.classList.toggle('is-active', this.isSnappingEnabled);
+      btn.setAttribute('aria-pressed', String(this.isSnappingEnabled));
+    }
   }
 
   private zoomStep(delta: number): void {
@@ -1829,11 +1948,16 @@ export class BoardController {
         if (showText) {
           const textColor = isText ? el.color : (isSticky ? el.textColor : (isShape ? (el.textColor || '#1e293b') : '#334155'));
           const fontSize = isText ? el.fontSize : (isSticky ? el.fontSize : (isShape ? (el.fontSize || 14) : 12));
+          const rawFamily = (isText || isSticky || isShape) && (el as any).fontFamily ? (el as any).fontFamily : 'Inter';
+          const fontFamilyName = rawFamily.split(',')[0].replace(/['"]/g, '').trim();
           if (this.topTextSwatchEl) {
             this.topTextSwatchEl.style.backgroundColor = textColor;
           }
           if (this.topFontSizeLabelEl) {
             this.topFontSizeLabelEl.textContent = `${fontSize}`;
+          }
+          if (this.topFontFamilyLabelEl) {
+            this.topFontFamilyLabelEl.textContent = fontFamilyName;
           }
         }
       }
@@ -1842,13 +1966,14 @@ export class BoardController {
     } else {
       const hasFillable = selectedEls.some((el) => (el.type === 'shape' && el.shapeType !== 'line' && el.shapeType !== 'arrow') || el.type === 'sticky' || el.type === 'shape-3d');
       const hasStrokeable = selectedEls.some((el) => el.type === 'stroke' || el.type === 'connector' || el.type === 'shape' || el.type === 'shape-3d');
+      const hasTextual = selectedEls.some((el) => el.type === 'text' || el.type === 'sticky' || (el.type === 'shape' && !!el.text));
 
       if (groupFill) groupFill.classList.toggle('is-hidden', !hasFillable);
       if (groupStrokeColor) groupStrokeColor.classList.toggle('is-hidden', !hasStrokeable);
       if (groupStrokeStyle) groupStrokeStyle.classList.toggle('is-hidden', !hasStrokeable);
       if (groupCorners) groupCorners.classList.add('is-hidden');
       if (groupMarkers) groupMarkers.classList.add('is-hidden');
-      if (groupText) groupText.classList.add('is-hidden');
+      if (groupText) groupText.classList.toggle('is-hidden', !hasTextual);
     }
   }
 
@@ -1916,6 +2041,7 @@ export class BoardController {
 
     this.closeAllPopovers();
     this.hideColorsPanel();
+    this.hideFontsPanel();
 
     const rect = anchorBtn.getBoundingClientRect();
     const containerRect = this.container.querySelector<HTMLElement>('[data-ref="board-viewport"]')?.getBoundingClientRect();
@@ -1943,6 +2069,7 @@ export class BoardController {
     this.topStrokeSwatchEl = this.container.querySelector<HTMLElement>('[data-ref="top-stroke-swatch"]');
     this.topTextSwatchEl = this.container.querySelector<HTMLElement>('[data-ref="top-text-swatch"]');
     this.topFontSizeLabelEl = this.container.querySelector<HTMLElement>('[data-ref="top-font-size-label"]');
+    this.topFontFamilyLabelEl = this.container.querySelector<HTMLElement>('[data-ref="top-font-family-label"]');
 
     this.popoverStrokeEl = this.container.querySelector<HTMLElement>('[data-ref="popover-stroke"]');
     this.popoverCornersEl = this.container.querySelector<HTMLElement>('[data-ref="popover-corners"]');
@@ -1951,6 +2078,11 @@ export class BoardController {
     this.popoverMarkerEndEl = this.container.querySelector<HTMLElement>('[data-ref="popover-marker-end"]');
     this.popoverConnStyleEl = this.container.querySelector<HTMLElement>('[data-ref="popover-connector-style"]');
     this.popoverPositionEl = this.container.querySelector<HTMLElement>('[data-ref="popover-position"]');
+
+    const btnFontFamily = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-font-family"]');
+    btnFontFamily?.addEventListener('click', () => {
+      this.toggleFontsPanel();
+    }, { signal });
 
     const btnFill = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-fill"]');
     btnFill?.addEventListener('click', () => this.toggleColorsPanel('fill'), { signal });
@@ -2009,17 +2141,23 @@ export class BoardController {
 
     const btnFontDec = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-font-dec"]');
     btnFontDec?.addEventListener('click', () => {
-      if (!this.selectedElementId) return;
-      const el = this.elements.find((item) => item.id === this.selectedElementId);
-      if (el && 'fontSize' in el && el.fontSize) {
-        this.pushHistoryState();
-        el.fontSize = Math.max(10, el.fontSize - 2);
-        if (el.type === 'text') {
-          const sz = measureTextElementSize(el.text, el.fontSize);
-          el.width = sz.width;
-          el.height = sz.height;
+      const selectedEls = this.getSelectedElements();
+      if (selectedEls.length === 0) return;
+      this.pushHistoryState();
+      let hasChanged = false;
+      selectedEls.forEach((el) => {
+        if ('fontSize' in el && el.fontSize) {
+          el.fontSize = Math.max(10, el.fontSize - 2);
+          if (el.type === 'text') {
+            const sz = measureTextElementSize(el.text, el.fontSize, el.fontWeight || 600, el.fontFamily || 'sans-serif');
+            el.width = sz.width;
+            el.height = sz.height;
+          }
+          this.collaborationManager.broadcastUpdateElement(el);
+          hasChanged = true;
         }
-        this.collaborationManager.broadcastUpdateElement(el);
+      });
+      if (hasChanged) {
         this.requestRedraw();
         this.scheduleAutoSave();
         this.updateContextualToolbar();
@@ -2028,17 +2166,23 @@ export class BoardController {
 
     const btnFontInc = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-font-inc"]');
     btnFontInc?.addEventListener('click', () => {
-      if (!this.selectedElementId) return;
-      const el = this.elements.find((item) => item.id === this.selectedElementId);
-      if (el && 'fontSize' in el && el.fontSize) {
-        this.pushHistoryState();
-        el.fontSize = Math.min(72, el.fontSize + 2);
-        if (el.type === 'text') {
-          const sz = measureTextElementSize(el.text, el.fontSize);
-          el.width = sz.width;
-          el.height = sz.height;
+      const selectedEls = this.getSelectedElements();
+      if (selectedEls.length === 0) return;
+      this.pushHistoryState();
+      let hasChanged = false;
+      selectedEls.forEach((el) => {
+        if ('fontSize' in el && el.fontSize) {
+          el.fontSize = Math.min(72, el.fontSize + 2);
+          if (el.type === 'text') {
+            const sz = measureTextElementSize(el.text, el.fontSize, el.fontWeight || 600, el.fontFamily || 'sans-serif');
+            el.width = sz.width;
+            el.height = sz.height;
+          }
+          this.collaborationManager.broadcastUpdateElement(el);
+          hasChanged = true;
         }
-        this.collaborationManager.broadcastUpdateElement(el);
+      });
+      if (hasChanged) {
         this.requestRedraw();
         this.scheduleAutoSave();
         this.updateContextualToolbar();
@@ -2943,6 +3087,9 @@ export class BoardController {
           }
         }
 
+        const movingEls = this.elements.filter((item) => idsToMove.has(item.id));
+        this.selectionStartBBox = computeElementsBoundingBox(movingEls);
+
         if (hit.type === 'table') {
           const tableHit = this.getTableAtPoint(worldPos);
           if (tableHit) {
@@ -3183,19 +3330,56 @@ export class BoardController {
         this.hasMovedSelection = true;
         const el = this.elements.find((item) => item.id === this.selectedElementId);
         if (el) {
-          resizeElementByHandle(el, this.resizeHandleType, worldPos, this.selectionStartRect, e.shiftKey);
+          let targetWorldPos = worldPos;
+          if (this.isSnappingEnabled && !e.altKey) {
+            const refElements = this.elements.filter((item) => item.id !== el.id);
+            const snapRes = calculateResizeSnapping(
+              this.resizeHandleType,
+              worldPos,
+              refElements,
+              this.elements,
+              this.camera.zoom
+            );
+            targetWorldPos = snapRes.snappedWorldPos;
+            this.activeAlignmentGuides = snapRes.guides;
+          } else {
+            this.activeAlignmentGuides = [];
+          }
+          resizeElementByHandle(el, this.resizeHandleType, targetWorldPos, this.selectionStartRect, e.shiftKey);
           this.setResizeCursor(this.resizeHandleType);
         }
       } else {
-        const dx = worldPos.x - this.selectionDragStartWorld.x;
-        const dy = worldPos.y - this.selectionDragStartWorld.y;
-        if (Math.hypot(dx, dy) > 2 / this.camera.zoom) {
+        const rawDx = worldPos.x - this.selectionDragStartWorld.x;
+        const rawDy = worldPos.y - this.selectionDragStartWorld.y;
+        if (Math.hypot(rawDx, rawDy) > 2 / this.camera.zoom) {
           this.hasMovedSelection = true;
         }
+
+        let effectiveDx = rawDx;
+        let effectiveDy = rawDy;
+
+        if (this.isSnappingEnabled && !e.altKey && this.selectionStartBBox) {
+          const movingIds = new Set(this.selectionStartPositions.keys());
+          const refElements = this.elements.filter((item) => !movingIds.has(item.id));
+          const snapRes = calculateDragSnapping(
+            this.selectionStartBBox,
+            rawDx,
+            rawDy,
+            refElements,
+            this.elements,
+            this.camera.zoom
+          );
+          effectiveDx = snapRes.snappedDx;
+          effectiveDy = snapRes.snappedDy;
+          this.activeAlignmentGuides = snapRes.guides;
+        } else {
+          this.activeAlignmentGuides = [];
+        }
+
         for (const [id, startPos] of this.selectionStartPositions.entries()) {
           const el = this.elements.find((item) => item.id === id);
           if (el) {
-            moveElementByDelta(el, dx, dy, startPos);
+            moveElementByDelta(el, effectiveDx, effectiveDy, startPos);
           }
         }
         if (this.selectedElementIds.length === 1) {
@@ -3363,6 +3547,8 @@ export class BoardController {
     if (this.isInteractingSelection) {
       this.isInteractingSelection = false;
       this.resizeHandleType = null;
+      this.selectionStartBBox = null;
+      this.activeAlignmentGuides = [];
       this.updateCanvasCursor();
 
       if (this.hasMovedSelection && this.selectedElementIds.length === 1) {
@@ -3534,6 +3720,19 @@ export class BoardController {
     textarea.style.boxShadow = 'none';
     textarea.style.outline = 'none';
 
+    if (element.fontFamily) {
+      ensureGoogleFontLoaded(element.fontFamily);
+      textarea.style.fontFamily = `"${element.fontFamily}", sans-serif`;
+    } else {
+      textarea.style.fontFamily = 'sans-serif';
+    }
+    if (element.fontWeight) {
+      textarea.style.fontWeight = String(element.fontWeight);
+    }
+    if (element.fontStyle) {
+      textarea.style.fontStyle = element.fontStyle;
+    }
+
     if (element.type === 'sticky') {
       const pad = 16 * this.camera.zoom;
       textarea.style.left = `${screenPos.x + pad}px`;
@@ -3552,8 +3751,9 @@ export class BoardController {
       textarea.style.color = element.textColor || '#1e293b';
       textarea.style.textAlign = 'center';
     } else {
-      textarea.style.fontWeight = '600';
-      textarea.style.fontFamily = 'sans-serif';
+      if (!element.fontWeight) {
+        textarea.style.fontWeight = '600';
+      }
       textarea.style.lineHeight = '1.3';
       textarea.style.left = `${screenPos.x}px`;
       textarea.style.top = `${screenPos.y}px`;
@@ -3612,7 +3812,7 @@ export class BoardController {
         this.pushHistoryState();
         el.text = text || (el.type === 'sticky' ? 'Nota' : 'Texto');
         if (el.type === 'text') {
-          const sz = measureTextElementSize(el.text, el.fontSize);
+          const sz = measureTextElementSize(el.text, el.fontSize, el.fontWeight || 600, el.fontFamily || 'sans-serif');
           el.width = sz.width;
           el.height = sz.height;
         }
@@ -4045,6 +4245,10 @@ export class BoardController {
         },
         this.camera
       );
+    }
+
+    if (this.activeAlignmentGuides.length > 0) {
+      drawAlignmentGuides(this.ctx, this.activeAlignmentGuides, this.camera);
     }
 
     this.ctx.restore();

@@ -342,11 +342,11 @@ export async function forkCanvasSnapshot(
 
   const created = await createCanvas(userId, {
     access_level: 'private',
+    canvas_type: roleInfo.canvas.canvas_type || 'board',
     data,
     height: roleInfo.canvas.height,
     name: targetName,
     preview_thumbnail: snapshot.preview_thumbnail,
-    type: roleInfo.canvas.type || 'board',
     unit: roleInfo.canvas.unit,
     width: roleInfo.canvas.width,
   });

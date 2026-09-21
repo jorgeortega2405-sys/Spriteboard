@@ -31,7 +31,7 @@ import { openUpgradeModal } from './upgrade-modal.component.js';
 
 let isDrawerOpen = false;
 let isChatOpen = false;
-let activeCanvasTab: 'templates' | 'elements' | 'text' | 'tools' | 'uploads' | 'projects' | 'charts' | 'mockups' | 'colors' | null = null;
+let activeCanvasTab: 'templates' | 'elements' | 'text' | 'tools' | 'uploads' | 'projects' | 'charts' | 'mockups' | 'colors' | 'fonts' | null = null;
 let activeChartInDrawer: BoardChartElement | null = null;
 let activeColorTargetInDrawer: 'stroke' | 'fill' | 'text' = 'stroke';
 let chatSidebarElement: HTMLElement | null = null;
@@ -196,6 +196,8 @@ export function updateCanvasRailActiveState(sidebar: HTMLElement): void {
       ? activeCanvasTab === 'tools'
       : tabKey === 'elements'
       ? isDrawerOpen && (activeCanvasTab === 'elements' || activeCanvasTab === 'charts' || activeCanvasTab === 'mockups')
+      : tabKey === 'text'
+      ? isDrawerOpen && (activeCanvasTab === 'text' || activeCanvasTab === 'fonts')
       : isDrawerOpen && activeCanvasTab === tabKey;
     item?.classList.toggle('is-active', isActive);
     btn?.classList.toggle('is-active', isActive);
@@ -3106,12 +3108,59 @@ function renderColorsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement)
   }
 }
 
+function renderFontsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement): void {
+  const sidebar = drawer.closest<HTMLElement>('[data-ref="sidebar"]') || document.querySelector<HTMLElement>('[data-ref="sidebar"]');
+
+  drawerBody.innerHTML = `
+    <div class="canvas-panel-card" data-ref="canvas-panel-card">
+      <div class="canvas-panel-card__header" data-ref="canvas-panel-header">
+        <div class="canvas-panel-card__title-box" data-ref="canvas-panel-title-box">
+          <svg class="component-icon canvas-panel-card__icon" aria-hidden="true"><use href="/icons.svg#font_download"></use></svg>
+          <span class="canvas-panel-card__title" data-ref="canvas-panel-title">Tipografía</span>
+        </div>
+        <button type="button" class="component-button component-button--h32 component-button--icon-only rail-btn canvas-panel-card__close" data-ref="btn-close-canvas-panel" data-tooltip="Cerrar panel" aria-label="Cerrar panel">
+          <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+        </button>
+      </div>
+      <div class="canvas-panel-card__body doc-font-picker-panel-body" data-ref="board-fonts-drawer-body" style="height: calc(100vh - 120px); overflow-y: auto; padding: 12px 14px;"></div>
+    </div>
+  `;
+
+  const btnClose = drawerBody.querySelector<HTMLElement>('[data-ref="btn-close-canvas-panel"]');
+  btnClose?.addEventListener('click', (e) => {
+    e.preventDefault();
+    toggleDrawer(false);
+  });
+
+  const drawerFooter = drawer.querySelector<HTMLElement>('[data-ref="drawer-footer"]');
+  if (drawerFooter) {
+    drawerFooter.style.display = 'none';
+  }
+
+  if (sidebar) {
+    updateCanvasRailActiveState(sidebar);
+  }
+
+  renderIcons(drawerBody);
+
+  const fontsContainer = drawerBody.querySelector<HTMLElement>('[data-ref="board-fonts-drawer-body"]');
+  const controller = getActiveCanvasController();
+  if (controller && typeof controller.attachFontsUI === 'function' && fontsContainer) {
+    controller.attachFontsUI(fontsContainer);
+  }
+}
+
 function renderCanvasDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement): void {
   const tab = activeCanvasTab || 'templates';
   const sidebar = drawer.closest<HTMLElement>('[data-ref="sidebar"]') || document.querySelector<HTMLElement>('[data-ref="sidebar"]');
 
   if (tab === 'text') {
     renderTextDrawerContent(drawer, drawerBody);
+    return;
+  }
+
+  if (tab === 'fonts') {
+    renderFontsDrawerContent(drawer, drawerBody);
     return;
   }
 
@@ -6060,4 +6109,19 @@ export function getActiveColorTargetInDrawer(): 'stroke' | 'fill' | 'text' {
 
 export function isChartInspectorOpen(): boolean {
   return isDrawerOpen && activeCanvasTab === 'charts';
+}
+
+export function openFontsInDrawer(): void {
+  activeCanvasTab = 'fonts';
+  const sidebar = document.querySelector<HTMLElement>('[data-ref="sidebar"]');
+  if (!isDrawerOpen) {
+    toggleDrawer(true);
+  } else if (sidebar) {
+    void updateDynamicDrawer(sidebar);
+    updateCanvasRailActiveState(sidebar);
+  }
+}
+
+export function isFontsDrawerOpen(): boolean {
+  return isDrawerOpen && activeCanvasTab === 'fonts';
 }

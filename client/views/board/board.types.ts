@@ -90,7 +90,10 @@ export interface BoardStrokeElement {
 export interface BoardShapeElement {
   borderRadius?: number;
   fillColor: string;
+  fontFamily?: string;
   fontSize?: number;
+  fontStyle?: 'italic' | 'normal';
+  fontWeight?: number;
   height: number;
   id: string;
   isMindMapNode?: boolean;
@@ -111,7 +114,10 @@ export interface BoardShapeElement {
 
 export interface BoardStickyElement {
   color: string;
+  fontFamily?: string;
   fontSize: number;
+  fontStyle?: 'italic' | 'normal';
+  fontWeight?: number;
   height: number;
   id: string;
   opacity?: number;
@@ -125,7 +131,10 @@ export interface BoardStickyElement {
 
 export interface BoardTextElement {
   color: string;
+  fontFamily?: string;
   fontSize: number;
+  fontStyle?: 'italic' | 'normal';
+  fontWeight?: number;
   height: number;
   id: string;
   opacity?: number;

@@ -132,8 +132,8 @@ export interface FileValidationOptions {
 }
 
 export type FileValidationResult =
-  | { error: string; valid: false }
-  | { file: File; safeName: string; valid: true };
+  | { error: string; file?: undefined; safeName?: undefined; valid: false }
+  | { error?: undefined; file: File; safeName: string; valid: true };
 
 export function sanitizeFilename(filename: string): string {
   const base = filename.split(/[/\\]/).pop() || 'archivo';

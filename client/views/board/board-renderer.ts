@@ -1,6 +1,8 @@
+import { ensureGoogleFontLoaded } from '../doc/doc-fonts.config.js';
 import { draw3DElement, draw3DGroundGrid, draw3DRotationGizmo, onCustomModelLoaded, preloadCustom3DModels } from './board-3d-renderer.js';
 import { drawChart } from './board-chart-renderer.js';
 import { computeElementsBoundingBox, getConnectorEndpoints, getElementBoundingBox } from './board-elements.manager.js';
+import { AlignmentGuide } from './board-snapping.manager.js';
 import { BackgroundType, Board3DElement, BoardChartElement, BoardCollaboratorState, BoardConnectorElement, BoardElement, BoardImageElement, BoardPixelGridElement, BoardPoint, BoardSectionElement, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTableElement, BoardTextElement, MarkerType, StrokeStyle } from './board.types.js';
 
 export { draw3DElement, draw3DGroundGrid, draw3DRotationGizmo, drawChart, onCustomModelLoaded, preloadCustom3DModels };
@@ -505,7 +507,13 @@ export function drawShape(ctx: CanvasRenderingContext2D, shape: BoardShapeElemen
     ctx.save();
     ctx.fillStyle = shape.textColor || '#1e293b';
     const fs = shape.fontSize || 14;
-    ctx.font = `600 ${fs}px sans-serif`;
+    const shapeFamily = shape.fontFamily ? `"${shape.fontFamily.split(',')[0].replace(/['"]/g, '')}", sans-serif` : 'sans-serif';
+    const shapeWeight = shape.fontWeight || 600;
+    const shapeStyle = shape.fontStyle || 'normal';
+    if (shape.fontFamily) {
+      ensureGoogleFontLoaded(shape.fontFamily);
+    }
+    ctx.font = `${shapeStyle !== 'normal' ? `${shapeStyle} ` : ''}${shapeWeight} ${fs}px ${shapeFamily}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     const pad = Math.min(24, Math.abs(w) * 0.15);
@@ -637,7 +645,13 @@ export function drawSticky(ctx: CanvasRenderingContext2D, sticky: BoardStickyEle
   ctx.save();
   ctx.globalAlpha = sticky.opacity !== undefined ? sticky.opacity : 1;
   ctx.fillStyle = sticky.textColor || '#1e293b';
-  ctx.font = `500 ${sticky.fontSize}px sans-serif`;
+  const stickyFamily = sticky.fontFamily ? `"${sticky.fontFamily.split(',')[0].replace(/['"]/g, '')}", sans-serif` : 'sans-serif';
+  const stickyWeight = sticky.fontWeight || 500;
+  const stickyStyle = sticky.fontStyle || 'normal';
+  if (sticky.fontFamily) {
+    ensureGoogleFontLoaded(sticky.fontFamily);
+  }
+  ctx.font = `${stickyStyle !== 'normal' ? `${stickyStyle} ` : ''}${stickyWeight} ${sticky.fontSize}px ${stickyFamily}`;
   ctx.textBaseline = 'top';
 
   const pad = 16;
@@ -659,7 +673,13 @@ export function drawText(ctx: CanvasRenderingContext2D, textEl: BoardTextElement
   ctx.save();
   ctx.globalAlpha = textEl.opacity !== undefined ? textEl.opacity : 1;
   ctx.fillStyle = textEl.color;
-  ctx.font = `600 ${textEl.fontSize}px sans-serif`;
+  const textFamily = textEl.fontFamily ? `"${textEl.fontFamily.split(',')[0].replace(/['"]/g, '')}", sans-serif` : 'sans-serif';
+  const textWeight = textEl.fontWeight || 600;
+  const textStyle = textEl.fontStyle || 'normal';
+  if (textEl.fontFamily) {
+    ensureGoogleFontLoaded(textEl.fontFamily);
+  }
+  ctx.font = `${textStyle !== 'normal' ? `${textStyle} ` : ''}${textWeight} ${textEl.fontSize}px ${textFamily}`;
   ctx.textBaseline = 'top';
   const lines = textEl.text.split('\n');
   let currY = textEl.y;
@@ -1089,6 +1109,33 @@ export function drawMultiSelectionBounds(
   drawResizePill(ctx, bbox.x + bbox.width / 2 - pillLen / 2, bbox.y + bbox.height - pillThick / 2, pillLen, pillThick, pillRadius);
   drawResizePill(ctx, bbox.x - pillThick / 2, bbox.y + bbox.height / 2 - pillLen / 2, pillThick, pillLen, pillRadius);
   drawResizePill(ctx, bbox.x + bbox.width - pillThick / 2, bbox.y + bbox.height / 2 - pillLen / 2, pillThick, pillLen, pillRadius);
+
+  ctx.restore();
+}
+
+export function drawAlignmentGuides(
+  ctx: CanvasRenderingContext2D,
+  guides: AlignmentGuide[],
+  camera: { zoom: number }
+): void {
+  if (guides.length === 0) return;
+
+  ctx.save();
+  ctx.strokeStyle = '#e024c3';
+  ctx.lineWidth = 1.2 / camera.zoom;
+  ctx.setLineDash([4 / camera.zoom, 3 / camera.zoom]);
+
+  for (const guide of guides) {
+    ctx.beginPath();
+    if (guide.type === 'horizontal') {
+      ctx.moveTo(guide.start, guide.position);
+      ctx.lineTo(guide.end, guide.position);
+    } else {
+      ctx.moveTo(guide.position, guide.start);
+      ctx.lineTo(guide.position, guide.end);
+    }
+    ctx.stroke();
+  }
 
   ctx.restore();
 }
