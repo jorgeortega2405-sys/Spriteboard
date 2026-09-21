@@ -124,3 +124,94 @@ export function validateVerificationCode(code: unknown): ValidationResult {
 
   return { valid: true };
 }
+
+export interface FileValidationOptions {
+  allowedMimes?: string[];
+  allowedTypes?: string[];
+  maxMb?: number;
+}
+
+export type FileValidationResult =
+  | { error: string; valid: false }
+  | { file: File; safeName: string; valid: true };
+
+export function sanitizeFilename(filename: string): string {
+  const base = filename.split(/[/\\]/).pop() || 'archivo';
+  const clean = base
+    .replace(/[\0\x00-\x1f\x7f-\x9f]/g, '')
+    .replace(/[<>:"/\\|?*]/g, '_')
+    .replace(/\.{2,}/g, '.')
+    .trim();
+  return clean.slice(0, 100) || 'archivo';
+}
+
+export function validateAndSanitizeFile(
+  file: unknown,
+  options: FileValidationOptions = {}
+): FileValidationResult {
+  if (!file || !(file instanceof File)) {
+    return { error: 'No se proporcionó un archivo válido.', valid: false };
+  }
+
+  if (file.size <= 0) {
+    return { error: 'El archivo seleccionado está vacío.', valid: false };
+  }
+
+  const maxMb = options.maxMb !== undefined ? options.maxMb : 15;
+  const maxBytes = maxMb * 1024 * 1024;
+  if (file.size > maxBytes) {
+    return {
+      error: `El archivo «${file.name}» supera el límite permitido de ${maxMb} MB.`,
+      valid: false,
+    };
+  }
+
+  const allowedMimes = options.allowedMimes || options.allowedTypes || [
+    'image/png',
+    'image/jpeg',
+    'image/jpg',
+    'image/webp',
+    'image/gif',
+    'image/avif',
+    'image/svg+xml',
+  ];
+
+  if (allowedMimes.length > 0 && !allowedMimes.includes(file.type.toLowerCase())) {
+    return {
+      error: `El formato de «${file.name}» (${file.type || 'desconocido'}) no es compatible.`,
+      valid: false,
+    };
+  }
+
+  const safeName = sanitizeFilename(file.name);
+  const sanitizedFile = safeName !== file.name
+    ? new File([file], safeName, { lastModified: file.lastModified, type: file.type })
+    : file;
+
+  return {
+    file: sanitizedFile,
+    safeName,
+    valid: true,
+  };
+}
+
+export function validateAndSanitizeFiles(
+  files: File[] | FileList,
+  options: FileValidationOptions = {}
+): { error?: string; files: File[]; valid: boolean } {
+  const rawList = Array.from(files);
+  if (rawList.length === 0) {
+    return { error: 'No se seleccionó ningún archivo.', files: [], valid: false };
+  }
+
+  const sanitized: File[] = [];
+  for (const f of rawList) {
+    const res = validateAndSanitizeFile(f, options);
+    if (!res.valid) {
+      return { error: res.error, files: [], valid: false };
+    }
+    sanitized.push(res.file);
+  }
+
+  return { files: sanitized, valid: true };
+}

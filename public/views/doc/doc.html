@@ -785,6 +785,80 @@
           </button>
         </div>
       </div>
+
+      <div class="design-preview-banner is-hidden" data-ref="doc-preview-banner">
+        <div class="design-preview-banner__info">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
+          <span class="design-preview-banner__text">Estás previsualizando una versión histórica (modo lectura)</span>
+        </div>
+        <div class="design-preview-banner__actions">
+          <button type="button" class="component-button component-button--h32 component-button--black" data-ref="btn-doc-preview-restore">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#history"></use></svg>
+            <span>Restaurar esta versión</span>
+          </button>
+          <button type="button" class="component-button component-button--h32 component-button--outline" data-ref="btn-doc-preview-exit">
+            <span>Salir de la vista previa</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="design-colors-panel design-history-panel is-hidden" data-ref="doc-history-drawer">
+        <div class="design-colors-panel__header" data-ref="doc-history-header">
+          <div class="design-colors-panel__title-box">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#history"></use></svg>
+            <span class="design-colors-panel__title" data-ref="doc-history-title">Historial de versiones</span>
+          </div>
+          <div class="design-colors-panel__header-actions" data-ref="doc-history-header-actions">
+            <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-doc-toggle-create-snapshot" data-tooltip="Nueva versión" aria-label="Nueva versión">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+            </button>
+            <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-doc-close-history-drawer" data-tooltip="Cerrar" aria-label="Cerrar historial">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="design-history-create-form is-hidden" data-ref="doc-history-create-form">
+          <div class="design-history-create-box">
+            <span class="design-history-create-box__title">Crear punto de control</span>
+            <label class="field field--sm" data-ref="field-doc-snapshot-name">
+              <input class="field__input" data-ref="input-doc-snapshot-name" type="text" placeholder=" " maxlength="255" autocomplete="off" />
+              <span class="field__label">Nombre del hito (ej. Versión revisada)</span>
+            </label>
+            <label class="field field--sm" data-ref="field-doc-snapshot-description">
+              <textarea class="field__input field__textarea" data-ref="input-doc-snapshot-description" placeholder=" " rows="2"></textarea>
+              <span class="field__label">Nota opcional</span>
+            </label>
+            <div class="design-history-create-box__actions">
+              <button type="button" class="component-button component-button--h32 component-button--black" data-ref="btn-doc-submit-create-snapshot">
+                <span>Guardar versión</span>
+              </button>
+              <button type="button" class="component-button component-button--h32 component-button--outline" data-ref="btn-doc-cancel-create-snapshot">
+                <span>Cancelar</span>
+              </button>
+            </div>
+            <div class="banner banner--danger is-hidden" data-ref="doc-history-create-error"></div>
+          </div>
+        </div>
+
+        <div class="design-colors-panel__tabs" data-ref="doc-history-tabs">
+          <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable is-active" data-ref="btn-doc-history-tab-all" data-tab="all">Todas</button>
+          <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-doc-history-tab-manual" data-tab="manual">Hitos</button>
+        </div>
+
+        <div class="design-colors-panel__body" data-ref="doc-history-snapshots-container">
+          <div class="design-history-loader is-hidden" data-ref="doc-history-drawer-loader">
+            <div class="skeleton" style="height: 96px; border-radius: 12px; width: 100%;"></div>
+            <div class="skeleton" style="height: 96px; border-radius: 12px; width: 100%;"></div>
+            <div class="skeleton" style="height: 96px; border-radius: 12px; width: 100%;"></div>
+          </div>
+          <div class="design-history-empty is-hidden" data-ref="doc-history-drawer-empty">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#history_toggle_off"></use></svg>
+            <span class="design-history-empty-text">No hay versiones registradas aún</span>
+          </div>
+          <div class="design-history-list" data-ref="doc-history-snapshots-list"></div>
+        </div>
+      </div>
     </div>
   </div>
 </div>

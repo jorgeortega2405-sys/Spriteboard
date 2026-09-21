@@ -1,7 +1,7 @@
 import { showToast } from '../../services/toast.service.js';
 import { get3DElementProjectedFaces } from './board-3d-renderer.js';
 import { drawChart } from './board-chart-renderer.js';
-import { computeElementsBoundingBox, findContainingSection } from './board-elements.manager.js';
+import { computeElementsBoundingBox, findContainingSection, getConnectorEndpoints } from './board-elements.manager.js';
 import { getSvgPathBoundingBox } from './board-renderer.js';
 import { BackgroundType, Board3DElement, BoardElement, BoardPixelGridElement, BoardProject, BoardSectionElement } from './board.types.js';
 
@@ -288,13 +288,19 @@ export function exportSvg(
       }
       out += `  </g>\n`;
     } else if (el.type === 'connector') {
-      const p1 = el.startPoint || { x: 0, y: 0 };
-      const p2 = el.endPoint || { x: 100, y: 100 };
+      const ep = getConnectorEndpoints(el, elements);
+      const p1 = ep.from;
+      const p2 = ep.to;
       const op = escAttr(el.opacity !== undefined ? el.opacity : 1);
       const stroke = escAttr(el.color || '#475569');
       const sw = escAttr(el.strokeWidth || 2);
       const dash = el.strokeStyle === 'dashed' ? 'stroke-dasharray="10,6"' : el.strokeStyle === 'dashed-short' ? 'stroke-dasharray="5,5"' : el.strokeStyle === 'dotted' ? 'stroke-dasharray="2,4"' : '';
       out += `  <line x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" ${dash} opacity="${op}" />\n`;
+      if (el.label) {
+        const midX = (p1.x + p2.x) / 2;
+        const midY = (p1.y + p2.y) / 2;
+        out += `  <text x="${midX}" y="${midY - 6}" fill="${stroke}" font-size="12" font-family="sans-serif" text-anchor="middle" opacity="${op}">${escAttr(el.label)}</text>\n`;
+      }
     } else if (el.type === 'sticky') {
       const op = escAttr(el.opacity !== undefined ? el.opacity : 1);
       out += `  <g opacity="${op}">\n`;

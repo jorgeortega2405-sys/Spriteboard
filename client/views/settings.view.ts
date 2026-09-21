@@ -13,7 +13,7 @@ import { BillingDetailsResponse, PaymentMethod, PurchaseRecord, StorageUsageInfo
 import { debounce, removeEmptyState, renderEmptyState, setupDropdown, setupPasswordToggle, withButtonLoading } from '../utils/dom.util.js';
 import { AVAILABLE_LANGUAGES, detectBrowserLanguage, getLanguageName } from '../utils/languages.util.js';
 import { applyAvatarTier } from '../utils/tier.util.js';
-import { validatePassword } from '../utils/validators.util.js';
+import { validateAndSanitizeFile, validatePassword } from '../utils/validators.util.js';
 
 export async function createYourAccountView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/settings/your-account.html');
@@ -388,27 +388,21 @@ export async function createYourAccountView(): Promise<HTMLElement> {
 
     if (avatarErrorBanner) avatarErrorBanner.style.display = 'none';
 
-    const maxSizeBytes = 2 * 1024 * 1024;
-    if (file.size > maxSizeBytes) {
+    const validation = validateAndSanitizeFile(file, {
+      allowedMimes: ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'],
+      maxMb: 2,
+    });
+
+    if (!validation.valid) {
       if (avatarErrorBanner) {
-        avatarErrorBanner.textContent = t('toasts.avatar_size_exceeded');
+        avatarErrorBanner.textContent = validation.error;
         avatarErrorBanner.style.display = 'block';
       }
       target.value = '';
       return;
     }
 
-    const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
-    if (!validTypes.includes(file.type)) {
-      if (avatarErrorBanner) {
-        avatarErrorBanner.textContent = t('toasts.avatar_invalid_format');
-        avatarErrorBanner.style.display = 'block';
-      }
-      target.value = '';
-      return;
-    }
-
-    selectedAvatarFile = file;
+    selectedAvatarFile = validation.file;
     const reader = new FileReader();
     reader.onload = (ev) => {
       if (avatarImg && ev.target?.result) {

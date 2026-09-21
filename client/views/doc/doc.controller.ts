@@ -4,14 +4,16 @@ import { CanvasShareDropdownController, setupCanvasShareDropdown } from '../../c
 import { closeContextMenu, ContextMenuItem, openContextMenu } from '../../components/context-menu.component.js';
 import { openModal } from '../../components/modal.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
-import { currentUser, escapeHtml, getApi, postApi } from '../../services/api.service.js';
+import { currentUser, deleteApi, escapeHtml, getApi, postApi } from '../../services/api.service.js';
 import { getLocalCanvasByUuid, saveLocalCanvas } from '../../services/canvas-storage.service.js';
 import { renderIcons } from '../../services/icon.service.js';
 import { showToast } from '../../services/toast.service.js';
+import { CanvasSnapshotItem } from '../../types/canvas-snapshot.types.js';
 import { CanvasItem } from '../../types/canvas.types.js';
 import { ViewController } from '../../types/common.types.js';
 import { MindMapProject } from '../../types/mindmap.types.js';
 import { initCarouselScroll, setupDropdown } from '../../utils/dom.util.js';
+import { validateAndSanitizeFile } from '../../utils/validators.util.js';
 import { BoardProject } from '../board/board.types.js';
 import { DocCollaborationManager, DocCollaboratorState } from './doc-collaboration.manager.js';
 import { exportDocHtml, exportDocJson, exportDocMarkdown, exportDocPdf, exportDocTxt, exportDocWord, generateDocThumbnail } from './doc-export.service.js';
@@ -43,22 +45,25 @@ const SPECIAL_SYMBOLS = [
   '€', '$', '£', '¥', '₹', '¢', '°', '±', '×', '÷',
   '≠', '≤', '≥', '≈', '∞', '√', '∑', '∏', 'π', 'µ',
   'α', 'β', 'γ', 'δ', 'θ', 'λ', 'σ', 'ω', 'Δ', 'Ω',
-  '←', '→', '↑', '↓', '↔', '⇒', '⇔', '✓', '✗', '★',
-  '½', '⅓', '⅔', '¼', '¾', '⅛', '⅜', '⅝', '⅞', '‰'
+  '→', '←', '↑', '↓', '↔', '⇒', '⇔', '✓', '✗', '★',
 ];
 
 export class DocController implements ViewController {
   private abortController: AbortController = new AbortController();
   private accessLevel: 'private' | 'public' = 'private';
   private activeInspiringQuote: string = INSPIRING_QUOTES[Math.floor(Math.random() * INSPIRING_QUOTES.length)] || INSPIRING_QUOTES[0];
+  private activePreviewSnapshotUuid: string | null = null;
   private activeTable: HTMLTableElement | null = null;
   private activeTableCell: HTMLTableCellElement | null = null;
   private aiDropdownController: CanvasAiDropdownController | null = null;
   private aiWrapperEl: HTMLElement | null = null;
   private alignmentDropdownController: { close: () => void; destroy: () => void } | null = null;
+  private btnCancelCreateSnapshot: HTMLButtonElement | null = null;
   private btnDocCloudStatus: HTMLButtonElement | null = null;
   private btnDocHistory: HTMLButtonElement | null = null;
   private btnDocMetrics: HTMLButtonElement | null = null;
+  private btnSubmitCreateSnapshot: HTMLButtonElement | null = null;
+  private btnToggleCreateSnapshot: HTMLButtonElement | null = null;
   private canvasCreatedAt: string | null = null;
   private canvasServerId: number | null = null;
   private canvasTitle = 'Documento sin título';
@@ -74,14 +79,28 @@ export class DocController implements ViewController {
   private currentTextColor = '#0f172a';
   private docToolsDropdownController: { close: () => void; destroy: () => void } | null = null;
   private fontPicker: DocFontPickerComponent | null = null;
+  private historyCreateErrorEl: HTMLElement | null = null;
+  private historyCreateFormEl: HTMLElement | null = null;
+  private historyDrawerEl: HTMLElement | null = null;
+  private historyDrawerEmptyEl: HTMLElement | null = null;
+  private historyDrawerLoaderEl: HTMLElement | null = null;
+  private historyFilter: 'all' | 'manual' = 'all';
   private historyManager: DocHistoryManager = new DocHistoryManager();
+  private historySnapshotsListEl: HTMLElement | null = null;
   private indentsDropdownController: { close: () => void; destroy: () => void } | null = null;
+  private initialCanvasRecord: CanvasItem | null = null;
+  private inputSnapshotDescription: HTMLTextAreaElement | null = null;
+  private inputSnapshotName: HTMLInputElement | null = null;
   private insertMoreDropdownController: { close: () => void; destroy: () => void } | null = null;
+  private isHistoryDrawerOpen = false;
+  private isPreviewingSnapshot = false;
   private isSaving = false;
   private lastActivePageId: string | null = null;
   private lineSpacingDropdownController: { close: () => void; destroy: () => void } | null = null;
   private moreFormattingDropdownController: { close: () => void; destroy: () => void } | null = null;
   private paginationManager: DocPaginationManager = new DocPaginationManager();
+  private prePreviewProject: DocProject | null = null;
+  private previewBannerEl: HTMLElement | null = null;
   private project: DocProject = {
     pages: [
       {
@@ -109,12 +128,12 @@ export class DocController implements ViewController {
     type: 'doc',
     version: 1,
   };
-  private initialCanvasRecord: CanvasItem | null = null;
   private publicRole: 'editor' | 'viewer' = 'editor';
   private saveDebounceTimer: number | null = null;
   private selectedImageWrapper: HTMLElement | null = null;
   private shareDropdownController: CanvasShareDropdownController | null = null;
   private shareWrapperEl: HTMLElement | null = null;
+  private snapshots: CanvasSnapshotItem[] = [];
   private stylesDropdownController: { close: () => void; destroy: () => void } | null = null;
 
   constructor(container: HTMLElement, canvasUuid: string, initialCanvasRecord?: CanvasItem | null) {
@@ -135,6 +154,18 @@ export class DocController implements ViewController {
     this.btnDocCloudStatus = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-doc-cloud-status"]');
     this.btnDocMetrics = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-doc-metrics"]');
     this.btnDocHistory = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-doc-history"]');
+    this.historyDrawerEl = this.container.querySelector<HTMLElement>('[data-ref="doc-history-drawer"]');
+    this.historyDrawerLoaderEl = this.container.querySelector<HTMLElement>('[data-ref="doc-history-drawer-loader"]');
+    this.historyDrawerEmptyEl = this.container.querySelector<HTMLElement>('[data-ref="doc-history-drawer-empty"]');
+    this.historySnapshotsListEl = this.container.querySelector<HTMLElement>('[data-ref="doc-history-snapshots-list"]');
+    this.historyCreateFormEl = this.container.querySelector<HTMLElement>('[data-ref="doc-history-create-form"]');
+    this.historyCreateErrorEl = this.container.querySelector<HTMLElement>('[data-ref="doc-history-create-error"]');
+    this.inputSnapshotName = this.container.querySelector<HTMLInputElement>('[data-ref="input-doc-snapshot-name"]');
+    this.inputSnapshotDescription = this.container.querySelector<HTMLTextAreaElement>('[data-ref="input-doc-snapshot-description"]');
+    this.btnToggleCreateSnapshot = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-doc-toggle-create-snapshot"]');
+    this.btnSubmitCreateSnapshot = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-doc-submit-create-snapshot"]');
+    this.btnCancelCreateSnapshot = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-doc-cancel-create-snapshot"]');
+    this.previewBannerEl = this.container.querySelector<HTMLElement>('[data-ref="doc-preview-banner"]');
     this.setupCollaboration();
 
     this.historyManager.pushState(this.project);
@@ -453,9 +484,77 @@ export class DocController implements ViewController {
 
     if (this.btnDocHistory) {
       this.btnDocHistory.addEventListener('click', () => {
-        showToast('El historial de versiones para documentos estará disponible próximamente.', 'info');
+        this.toggleHistoryDrawer();
       }, { signal });
     }
+
+    const btnCloseHistoryDrawer = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-doc-close-history-drawer"]');
+    btnCloseHistoryDrawer?.addEventListener('click', () => this.toggleHistoryDrawer(false), { signal });
+
+    this.btnToggleCreateSnapshot?.addEventListener('click', () => {
+      const isHidden = this.historyCreateFormEl?.classList.contains('is-hidden');
+      this.historyCreateFormEl?.classList.toggle('is-hidden', !isHidden);
+      if (isHidden) {
+        this.inputSnapshotName?.focus();
+      }
+    }, { signal });
+
+    this.btnCancelCreateSnapshot?.addEventListener('click', () => {
+      this.historyCreateFormEl?.classList.add('is-hidden');
+      if (this.historyCreateErrorEl) this.historyCreateErrorEl.classList.add('is-hidden');
+    }, { signal });
+
+    this.btnSubmitCreateSnapshot?.addEventListener('click', () => {
+      void this.submitCreateSnapshot();
+    }, { signal });
+
+    const btnHistoryTabAll = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-doc-history-tab-all"]');
+    const btnHistoryTabManual = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-doc-history-tab-manual"]');
+
+    btnHistoryTabAll?.addEventListener('click', () => {
+      this.historyFilter = 'all';
+      btnHistoryTabAll.classList.add('is-active');
+      btnHistoryTabManual?.classList.remove('is-active');
+      this.renderHistorySnapshots();
+    }, { signal });
+
+    btnHistoryTabManual?.addEventListener('click', () => {
+      this.historyFilter = 'manual';
+      btnHistoryTabManual.classList.add('is-active');
+      btnHistoryTabAll?.classList.remove('is-active');
+      this.renderHistorySnapshots();
+    }, { signal });
+
+    const btnPreviewRestore = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-doc-preview-restore"]');
+    btnPreviewRestore?.addEventListener('click', () => {
+      if (this.activePreviewSnapshotUuid) {
+        void this.restoreSnapshot(this.activePreviewSnapshotUuid);
+      }
+    }, { signal });
+
+    const btnPreviewExit = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-doc-preview-exit"]');
+    btnPreviewExit?.addEventListener('click', () => {
+      this.exitSnapshotPreview();
+    }, { signal });
+
+    this.historySnapshotsListEl?.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      const btn = target.closest<HTMLButtonElement>('button[data-action]');
+      if (!btn) return;
+      const action = btn.getAttribute('data-action');
+      const snapUuid = btn.getAttribute('data-snap-uuid');
+      if (!snapUuid) return;
+
+      if (action === 'preview') {
+        void this.previewSnapshot(snapUuid);
+      } else if (action === 'restore') {
+        void this.restoreSnapshot(snapUuid);
+      } else if (action === 'fork') {
+        void this.forkSnapshot(snapUuid);
+      } else if (action === 'delete') {
+        void this.deleteSnapshot(snapUuid);
+      }
+    }, { signal });
 
     const topToolbarContainer = this.container.querySelector<HTMLElement>('[data-ref="doc-top-toolbar-container"]');
     if (topToolbarContainer) {
@@ -1192,6 +1291,12 @@ export class DocController implements ViewController {
       fileInputImg.addEventListener('change', async () => {
         const file = fileInputImg.files?.[0];
         if (!file) return;
+        const validation = validateAndSanitizeFile(file, { maxMb: 10 });
+        if (!validation.valid || !validation.file) {
+          showToast(validation.error || 'Archivo de imagen no válido.', 'error');
+          fileInputImg.value = '';
+          return;
+        }
         const reader = new FileReader();
         reader.onload = (e) => {
           const dataUrl = e.target?.result as string;
@@ -1199,7 +1304,7 @@ export class DocController implements ViewController {
             this.insertImageElement(dataUrl);
           }
         };
-        reader.readAsDataURL(file);
+        reader.readAsDataURL(validation.file);
         fileInputImg.value = '';
       }, { signal });
     }
@@ -1208,6 +1313,12 @@ export class DocController implements ViewController {
       fileInputReplaceImg.addEventListener('change', () => {
         const file = fileInputReplaceImg.files?.[0];
         if (!file || !this.selectedImageWrapper) return;
+        const validation = validateAndSanitizeFile(file, { maxMb: 10 });
+        if (!validation.valid || !validation.file) {
+          showToast(validation.error || 'Archivo de imagen no válido.', 'error');
+          fileInputReplaceImg.value = '';
+          return;
+        }
         const img = this.selectedImageWrapper.querySelector('img');
         if (!img) return;
         const reader = new FileReader();
@@ -1219,7 +1330,7 @@ export class DocController implements ViewController {
             showToast('Imagen reemplazada con éxito', 'success');
           }
         };
-        reader.readAsDataURL(file);
+        reader.readAsDataURL(validation.file);
         fileInputReplaceImg.value = '';
       }, { signal });
     }
@@ -1712,12 +1823,17 @@ export class DocController implements ViewController {
       if (files && files.length > 0) {
         const file = files[0];
         if (file.type.startsWith('image/')) {
+          const validation = validateAndSanitizeFile(file, { maxMb: 10 });
+          if (!validation.valid || !validation.file) {
+            showToast(validation.error || 'Archivo de imagen no válido.', 'error');
+            return;
+          }
           const reader = new FileReader();
           reader.onload = (ev) => {
             const dataUrl = ev.target?.result as string;
             if (dataUrl) this.insertImageElement(dataUrl);
           };
-          reader.readAsDataURL(file);
+          reader.readAsDataURL(validation.file);
         }
       }
     }, { signal });
@@ -2260,12 +2376,17 @@ export class DocController implements ViewController {
               e.preventDefault();
               const blob = items[i].getAsFile();
               if (blob) {
+                const validation = validateAndSanitizeFile(blob, { maxMb: 10 });
+                if (!validation.valid || !validation.file) {
+                  showToast(validation.error || 'Archivo de imagen no válido.', 'error');
+                  return;
+                }
                 const reader = new FileReader();
                 reader.onload = (ev) => {
                   const dataUrl = ev.target?.result as string;
                   if (dataUrl) this.insertImageElement(dataUrl);
                 };
-                reader.readAsDataURL(blob);
+                reader.readAsDataURL(validation.file);
               }
               return;
             }
@@ -2709,6 +2830,12 @@ export class DocController implements ViewController {
         fileInputLogo.onchange = () => {
           const file = fileInputLogo.files?.[0];
           if (!file) return;
+          const validation = validateAndSanitizeFile(file, { maxMb: 5 });
+          if (!validation.valid || !validation.file) {
+            showToast(validation.error || 'Archivo de imagen no válido.', 'error');
+            fileInputLogo.value = '';
+            return;
+          }
           const reader = new FileReader();
           reader.onload = (e) => {
             const dataUrl = e.target?.result as string;
@@ -2719,7 +2846,7 @@ export class DocController implements ViewController {
               showToast('Logo de encabezado actualizado', 'success');
             }
           };
-          reader.readAsDataURL(file);
+          reader.readAsDataURL(validation.file);
           fileInputLogo.value = '';
         };
         fileInputLogo.click();
@@ -3242,6 +3369,317 @@ export class DocController implements ViewController {
       railBtn?.classList.toggle('is-active', shouldShow);
     }
     return shouldShow;
+  }
+
+  private toggleHistoryDrawer(force?: boolean): void {
+    const shouldOpen = force !== undefined ? force : !this.isHistoryDrawerOpen;
+    this.isHistoryDrawerOpen = shouldOpen;
+    this.historyDrawerEl?.classList.toggle('is-hidden', !shouldOpen);
+    this.btnDocHistory?.classList.toggle('is-active', shouldOpen);
+    if (shouldOpen) {
+      void this.loadHistorySnapshots();
+    }
+  }
+
+  private async loadHistorySnapshots(): Promise<void> {
+    if (!this.historySnapshotsListEl) return;
+    this.historyDrawerLoaderEl?.classList.remove('is-hidden');
+    this.historyDrawerEmptyEl?.classList.add('is-hidden');
+    this.historySnapshotsListEl.innerHTML = '';
+
+    try {
+      const res = await getApi(API_ROUTES.canvases.snapshots(this.canvasUuid));
+      if (res.ok) {
+        const data = await res.json();
+        this.snapshots = Array.isArray(data.snapshots) ? data.snapshots : [];
+      } else {
+        this.snapshots = [];
+      }
+    } catch {
+      this.snapshots = [];
+    } finally {
+      this.historyDrawerLoaderEl?.classList.add('is-hidden');
+      this.renderHistorySnapshots();
+    }
+  }
+
+  private renderHistorySnapshots(): void {
+    if (!this.historySnapshotsListEl) return;
+
+    const filtered = this.snapshots.filter((s) => {
+      if (this.historyFilter === 'manual') return s.is_manual;
+      return true;
+    });
+
+    if (filtered.length === 0) {
+      this.historyDrawerEmptyEl?.classList.remove('is-hidden');
+      this.historySnapshotsListEl.innerHTML = '';
+      return;
+    }
+
+    this.historyDrawerEmptyEl?.classList.add('is-hidden');
+
+    const escape = (str: string): string =>
+      str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+
+    const formatDate = (iso: string): string => {
+      try {
+        const d = new Date(iso);
+        const now = new Date();
+        const diffMs = now.getTime() - d.getTime();
+        const diffMins = Math.floor(diffMs / 60000);
+        if (diffMins < 1) return 'Hace un momento';
+        if (diffMins < 60) return `Hace ${diffMins} min`;
+        const diffHours = Math.floor(diffMins / 60);
+        if (diffHours < 24) return `Hace ${diffHours} h`;
+        return d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+      } catch {
+        return iso;
+      }
+    };
+
+    const isOwner = Boolean(
+      (currentUser && this.canvasUserId && this.canvasUserId === currentUser.id) ||
+      (!this.canvasUserId && !this.canvasServerId)
+    );
+
+    this.historySnapshotsListEl.innerHTML = filtered
+      .map((s) => {
+        const isPreviewing = this.activePreviewSnapshotUuid === s.uuid;
+        const cardClass = `design-history-card${isPreviewing ? ' is-active-preview' : ''}`;
+        const badgeClass = s.is_manual ? 'design-history-card__badge--manual' : 'design-history-card__badge--auto';
+        const badgeText = s.is_manual ? 'Hito' : 'Auto';
+        const displayName = s.name ? escape(s.name) : s.is_manual ? 'Hito manual' : 'Guardado automático';
+        const dateText = formatDate(s.created_at);
+
+        const thumbHtml = s.preview_thumbnail
+          ? `<img class="design-history-card__thumb" src="${s.preview_thumbnail}" alt="${displayName}" />`
+          : `<div class="design-history-card__thumb-placeholder"><svg class="component-icon" aria-hidden="true"><use href="/icons.svg#article"></use></svg></div>`;
+
+        const authorHtml = s.user_name
+          ? `<div class="design-history-card__author">
+              ${s.user_avatar ? `<img class="design-history-card__author-avatar" src="${s.user_avatar}" alt="${escape(s.user_name)}" />` : '<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#person"></use></svg>'}
+              <span>${escape(s.user_name)}</span>
+            </div>`
+          : '';
+
+        const descHtml = s.description
+          ? `<p class="design-history-card__desc">${escape(s.description)}</p>`
+          : '';
+
+        const deleteBtnHtml = isOwner
+          ? `<button type="button" class="component-button component-button--h28 component-button--icon-only" data-action="delete" data-snap-uuid="${s.uuid}" data-tooltip="Eliminar versión" aria-label="Eliminar versión">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete_outline"></use></svg>
+            </button>`
+          : '';
+
+        return `
+          <div class="${cardClass}" data-ref="history-card-${s.uuid}">
+            <div class="design-history-card__top">
+              ${thumbHtml}
+              <div class="design-history-card__meta">
+                <div class="design-history-card__header-row">
+                  <span class="design-history-card__name" title="${displayName}">${displayName}</span>
+                  <span class="design-history-card__badge ${badgeClass}">${badgeText}</span>
+                </div>
+                <div class="design-history-card__date">${dateText}</div>
+                ${authorHtml}
+              </div>
+            </div>
+            ${descHtml}
+            <div class="design-history-card__actions">
+              <button type="button" class="component-button component-button--h28 component-button--outline component-button--icon-only" data-action="preview" data-snap-uuid="${s.uuid}" data-tooltip="Previsualizar versión" aria-label="Previsualizar">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
+              </button>
+              <button type="button" class="component-button component-button--h28 component-button--black" data-action="restore" data-snap-uuid="${s.uuid}">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#history"></use></svg>
+                <span>Restaurar</span>
+              </button>
+              <button type="button" class="component-button component-button--h28 component-button--outline component-button--icon-only" data-action="fork" data-snap-uuid="${s.uuid}" data-tooltip="Crear copia como nuevo documento" aria-label="Crear copia">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
+              </button>
+              ${deleteBtnHtml}
+            </div>
+          </div>
+        `;
+      })
+      .join('');
+
+    renderIcons(this.historySnapshotsListEl);
+  }
+
+  private async submitCreateSnapshot(): Promise<void> {
+    if (!currentUser) {
+      showToast('Debes iniciar sesión para guardar versiones.', 'error');
+      return;
+    }
+    const name = this.inputSnapshotName?.value.trim() || 'Hito manual';
+    const description = this.inputSnapshotDescription?.value.trim() || undefined;
+
+    try {
+      this.syncPagesFromDOM();
+      const thumbnail = generateDocThumbnail(this.project);
+
+      const res = await postApi(API_ROUTES.canvases.snapshots(this.canvasUuid), {
+        data: JSON.stringify(this.project),
+        description,
+        is_manual: true,
+        name,
+        preview_thumbnail: thumbnail,
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Error al guardar la versión.');
+      }
+
+      if (this.inputSnapshotName) this.inputSnapshotName.value = '';
+      if (this.inputSnapshotDescription) this.inputSnapshotDescription.value = '';
+      this.historyCreateFormEl?.classList.add('is-hidden');
+      if (this.historyCreateErrorEl) this.historyCreateErrorEl.classList.add('is-hidden');
+
+      showToast('Punto de control guardado correctamente.', 'success');
+      await this.loadHistorySnapshots();
+    } catch (err: any) {
+      if (this.historyCreateErrorEl) {
+        this.historyCreateErrorEl.textContent = err.message || 'Error al crear la versión.';
+        this.historyCreateErrorEl.classList.remove('is-hidden');
+      } else {
+        showToast(err.message || 'Error al crear la versión.', 'error');
+      }
+    }
+  }
+
+  private async previewSnapshot(snapshotUuid: string): Promise<void> {
+    if (this.activePreviewSnapshotUuid === snapshotUuid) {
+      this.exitSnapshotPreview();
+      return;
+    }
+
+    try {
+      const res = await getApi(API_ROUTES.canvases.snapshotById(this.canvasUuid, snapshotUuid));
+      if (!res.ok) {
+        throw new Error('Error al cargar la versión para previsualizar.');
+      }
+      const resData = await res.json();
+      const rawData = resData.data;
+      const project: DocProject = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
+
+      if (!this.isPreviewingSnapshot) {
+        this.syncPagesFromDOM();
+        this.prePreviewProject = JSON.parse(JSON.stringify(this.project));
+      }
+
+      this.isPreviewingSnapshot = true;
+      this.activePreviewSnapshotUuid = snapshotUuid;
+      this.project = project;
+      this.renderDocument();
+      this.previewBannerEl?.classList.remove('is-hidden');
+      this.renderHistorySnapshots();
+      showToast('Estás en modo previsualización (solo lectura).', 'info');
+    } catch {
+      showToast('Error al previsualizar la versión.', 'error');
+    }
+  }
+
+  private exitSnapshotPreview(): void {
+    if (!this.isPreviewingSnapshot) return;
+
+    if (this.prePreviewProject) {
+      this.project = this.prePreviewProject;
+      this.prePreviewProject = null;
+    }
+
+    this.isPreviewingSnapshot = false;
+    this.activePreviewSnapshotUuid = null;
+    this.previewBannerEl?.classList.add('is-hidden');
+    this.renderDocument();
+    this.renderHistorySnapshots();
+    showToast('Has vuelto a tu versión de trabajo activa.', 'info');
+  }
+
+  private async restoreSnapshot(snapshotUuid: string): Promise<void> {
+    if (!currentUser) {
+      showToast('Debes iniciar sesión para restaurar versiones.', 'error');
+      return;
+    }
+
+    try {
+      const res = await postApi(API_ROUTES.canvases.snapshotRestore(this.canvasUuid, snapshotUuid), {});
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Error al restaurar la versión.');
+      }
+
+      const data = await res.json();
+      const restored = typeof data.restoredData === 'string' ? JSON.parse(data.restoredData) : data.restoredData;
+
+      this.prePreviewProject = null;
+      this.isPreviewingSnapshot = false;
+      this.activePreviewSnapshotUuid = null;
+      this.previewBannerEl?.classList.add('is-hidden');
+
+      this.project = restored;
+      this.renderDocument();
+      this.scheduleAutosave();
+
+      showToast('Versión restaurada correctamente. Se creó un respaldo automático previo.', 'success');
+      await this.loadHistorySnapshots();
+    } catch (err: any) {
+      showToast(err.message || 'No se pudo restaurar la versión.', 'error');
+    }
+  }
+
+  private async forkSnapshot(snapshotUuid: string): Promise<void> {
+    if (!currentUser) {
+      showToast('Debes iniciar sesión para duplicar versiones.', 'error');
+      return;
+    }
+
+    try {
+      const res = await postApi(API_ROUTES.canvases.snapshotFork(this.canvasUuid, snapshotUuid), {});
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Error al crear la copia del documento.');
+      }
+
+      const data = await res.json();
+      showToast('Documento creado a partir de la versión seleccionada.', 'success');
+      if (data.canvas?.uuid) {
+        window.location.href = `/doc/${data.canvas.uuid}`;
+      }
+    } catch (err: any) {
+      showToast(err.message || 'No se pudo duplicar la versión.', 'error');
+    }
+  }
+
+  private async deleteSnapshot(snapshotUuid: string): Promise<void> {
+    const isOwner = Boolean(
+      (currentUser && this.canvasUserId && this.canvasUserId === currentUser.id) ||
+      (!this.canvasUserId && !this.canvasServerId)
+    );
+    if (!isOwner) {
+      showToast('Solo el propietario puede eliminar versiones.', 'error');
+      return;
+    }
+
+    try {
+      const res = await deleteApi(API_ROUTES.canvases.snapshotById(this.canvasUuid, snapshotUuid));
+      if (!res.ok) {
+        throw new Error('Error al eliminar la versión.');
+      }
+
+      this.snapshots = this.snapshots.filter((s) => s.uuid !== snapshotUuid);
+      this.renderHistorySnapshots();
+      showToast('Versión eliminada correctamente.', 'success');
+    } catch (err: any) {
+      showToast(err.message || 'No se pudo eliminar la versión.', 'error');
+    }
   }
 }
 

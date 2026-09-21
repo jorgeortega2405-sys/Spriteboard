@@ -7,6 +7,16 @@ type WebSocketHandler = (payload: any) => void;
 
 let ws: WebSocket | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+let reconnectAttempts = 0;
+const INITIAL_RECONNECT_DELAY_MS = 1000;
+const MAX_RECONNECT_DELAY_MS = 30000;
+
+function computeReconnectDelay(): number {
+  const baseDelay = Math.min(MAX_RECONNECT_DELAY_MS, INITIAL_RECONNECT_DELAY_MS * Math.pow(2, reconnectAttempts));
+  const jitter = 0.5 + Math.random();
+  return Math.floor(baseDelay * jitter);
+}
+
 let isIntentionallyClosed = false;
 let currentActiveCanvasRoom: {
   avatarUrl?: string;
@@ -45,6 +55,7 @@ export function initWebSocket(): void {
 
     ws.onopen = () => {
       console.log('[WebSocket] Conexión establecida exitosamente con el servidor.');
+      reconnectAttempts = 0;
       let didSendJoin = false;
       while (pendingMessages.length > 0 && ws?.readyState === WebSocket.OPEN) {
         const msg = pendingMessages.shift();
@@ -184,13 +195,15 @@ export function initWebSocket(): void {
         ws = null;
       }
       if (!isIntentionallyClosed && currentUser) {
-        console.warn(`[WebSocket] Conexión cerrada (código: ${event.code}). Reconectando en 4 segundos...`);
+        const delay = computeReconnectDelay();
+        reconnectAttempts++;
+        console.warn(`[WebSocket] Conexión cerrada (código: ${event.code}). Reintento #${reconnectAttempts} en ${delay}ms...`);
         if (reconnectTimer) clearTimeout(reconnectTimer);
         reconnectTimer = setTimeout(() => {
           if (currentUser) {
             initWebSocket();
           }
-        }, 4000);
+        }, delay);
       } else {
         console.log('[WebSocket] Conexión cerrada.');
       }
@@ -207,6 +220,7 @@ export function initWebSocket(): void {
 
 export function closeWebSocket(): void {
   isIntentionallyClosed = true;
+  reconnectAttempts = 0;
   currentActiveCanvasRoom = null;
   pendingMessages.length = 0;
   if (reconnectTimer) {

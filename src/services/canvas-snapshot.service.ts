@@ -341,13 +341,14 @@ export async function forkCanvasSnapshot(
     : `${roleInfo.canvas.name} - Copia (${snapshot.name || 'Versión'})`;
 
   const created = await createCanvas(userId, {
-    name: targetName,
-    width: roleInfo.canvas.width,
-    height: roleInfo.canvas.height,
-    unit: roleInfo.canvas.unit,
-    data,
-    preview_thumbnail: snapshot.preview_thumbnail,
     access_level: 'private',
+    data,
+    height: roleInfo.canvas.height,
+    name: targetName,
+    preview_thumbnail: snapshot.preview_thumbnail,
+    type: roleInfo.canvas.type || 'board',
+    unit: roleInfo.canvas.unit,
+    width: roleInfo.canvas.width,
   });
 
   return created;

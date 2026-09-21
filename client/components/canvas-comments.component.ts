@@ -6,6 +6,7 @@ import { showToast } from '../services/toast.service.js';
 import { sendCanvasAction } from '../services/websocket.service.js';
 import { CanvasComment, CanvasCommentReply, CreateCommentDto, UpdateCommentDto } from '../types/canvas-comment.types.js';
 import { SearchUserResult } from '../types/canvas.types.js';
+import { validateAndSanitizeFile } from '../utils/validators.util.js';
 
 const AVATAR_COLORS = [
   '#e11d48', '#d97706', '#059669', '#2563eb', '#7c3aed', '#db2777', '#0891b2', '#ea580c'
@@ -1336,8 +1337,12 @@ export class CanvasCommentsController {
   private handleImageUpload(fileInput: HTMLInputElement | null, textarea: HTMLTextAreaElement | null, sendBtn: HTMLButtonElement | null): void {
     if (!fileInput || !fileInput.files || !fileInput.files[0] || !textarea) return;
     const file = fileInput.files[0];
-    if (file.size > 2 * 1024 * 1024) {
-      showToast('La imagen no debe superar los 2MB.', 'error');
+    const validation = validateAndSanitizeFile(file, {
+      allowedMimes: ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif'],
+      maxMb: 2,
+    });
+    if (!validation.valid) {
+      showToast(validation.error || 'La imagen no debe superar los 2MB.', 'error');
       fileInput.value = '';
       return;
     }
@@ -1349,7 +1354,7 @@ export class CanvasCommentsController {
       this.updateSendButtonState(textarea, sendBtn);
       fileInput.value = '';
     };
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(validation.file);
   }
 
   public destroy(): void {

@@ -21,6 +21,7 @@ import { MockupFitMode, MockupTemplate } from '../../types/mockups.types.js';
 import { generateShadingRamp, getCollaboratorColor } from '../../utils/color.util.js';
 import { setupDropdown } from '../../utils/dom.util.js';
 import { PixelShape } from '../../utils/pixel-shapes.util.js';
+import { validateAndSanitizeFile } from '../../utils/validators.util.js';
 import { DocPage } from '../doc/doc.types.js';
 import { BoardChartsPanelComponent } from './board-charts-panel.component.js';
 import { BoardCollaborationManager } from './board-collaboration.manager.js';
@@ -2885,7 +2886,7 @@ export class BoardController {
             this.isInteractingSelection = true;
             this.resizeHandleType = handle;
             this.setResizeCursor(handle);
-            const bbox = getElementBoundingBox(selEl);
+            const bbox = getElementBoundingBox(selEl, this.elements);
             this.selectionStartRect = { ...bbox, fontSize: selEl.type === 'text' ? selEl.fontSize : undefined };
             return;
           }
@@ -2989,7 +2990,7 @@ export class BoardController {
       if (this.selectedElementId) {
         const sel = this.elements.find((item) => item.id === this.selectedElementId);
         if (sel && sel.type === 'pixel-grid') {
-          const bbox = getElementBoundingBox(sel);
+          const bbox = getElementBoundingBox(sel, this.elements);
           if (worldPos.x >= bbox.x && worldPos.x <= bbox.x + bbox.width && worldPos.y >= bbox.y && worldPos.y <= bbox.y + bbox.height) {
             targetGrid = sel;
           }
@@ -3518,7 +3519,7 @@ export class BoardController {
     this.editingElementId = element.id;
     this.requestRedraw();
 
-    const bbox = getElementBoundingBox(element);
+    const bbox = getElementBoundingBox(element, this.elements);
     const screenPos = worldToScreen(bbox.x, bbox.y, this.canvasElement, this.camera);
     const screenW = bbox.width * this.camera.zoom;
     const screenH = bbox.height * this.camera.zoom;
@@ -3641,7 +3642,7 @@ export class BoardController {
       if (el.type === 'stroke') {
         remove = el.points.some((p) => Math.hypot(p.x - x, p.y - y) <= Math.max(threshold, el.size));
       } else {
-        const bbox = getElementBoundingBox(el);
+        const bbox = getElementBoundingBox(el, this.elements);
         remove = x >= bbox.x && x <= bbox.x + bbox.width && y >= bbox.y && y <= bbox.y + bbox.height;
       }
       if (remove) {
@@ -3949,7 +3950,7 @@ export class BoardController {
 
     for (const el of this.elements) {
       if (el.type !== 'section') continue;
-      const bbox = getElementBoundingBox(el);
+      const bbox = getElementBoundingBox(el, this.elements);
       if (
         bbox.x + bbox.width < viewMinX ||
         bbox.x > viewMaxX ||
@@ -3963,7 +3964,7 @@ export class BoardController {
 
     for (const el of this.elements) {
       if (el.type === 'section') continue;
-      const bbox = getElementBoundingBox(el);
+      const bbox = getElementBoundingBox(el, this.elements);
       if (
         bbox.x + bbox.width < viewMinX ||
         bbox.x > viewMaxX ||
@@ -6485,6 +6486,11 @@ export class BoardController {
         if (files && files.length > 0) {
           const file = files[0];
           if (file.type.startsWith('image/')) {
+            const validation = validateAndSanitizeFile(file, { maxMb: 10 });
+            if (!validation.valid || !validation.file) {
+              showToast(validation.error || 'Archivo de imagen no válido.', 'error');
+              return;
+            }
             const reader = new FileReader();
             reader.onload = () => {
               const dataUrl = reader.result as string;
@@ -6531,7 +6537,7 @@ export class BoardController {
               };
               img.src = dataUrl;
             };
-            reader.readAsDataURL(file);
+            reader.readAsDataURL(validation.file);
           }
         }
       },
@@ -6556,6 +6562,12 @@ export class BoardController {
         if (!filePicker.files || filePicker.files.length === 0) return;
         const file = filePicker.files[0];
         if (!this.selectedElementId) return;
+        const validation = validateAndSanitizeFile(file, { maxMb: 10 });
+        if (!validation.valid || !validation.file) {
+          showToast(validation.error || 'Archivo de imagen no válido.', 'error');
+          filePicker.value = '';
+          return;
+        }
         const el = this.elements.find((item) => item.id === this.selectedElementId);
         if (el && el.type === 'mockup') {
           const reader = new FileReader();
@@ -6568,7 +6580,7 @@ export class BoardController {
             this.scheduleAutoSave();
             showToast('Imagen del mockup actualizada', 'success');
           };
-          reader.readAsDataURL(file);
+          reader.readAsDataURL(validation.file);
         }
         filePicker.value = '';
       },

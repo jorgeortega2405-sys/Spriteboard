@@ -2,6 +2,7 @@ import { API_ROUTES } from '../config/api-routes.js';
 import { LinkedAccount, User } from '../types/auth.types.js';
 import { BillingDetailsResponse, PaymentMethod, PurchaseRecord, StorageUsageInfo, SubscriptionPlan } from '../types/subscription.types.js';
 import { DeleteUploadResponse, UploadsResponse, UserUploadItem } from '../types/upload.types.js';
+import { validateAndSanitizeFiles } from '../utils/validators.util.js';
 
 export { API_ROUTES };
 
@@ -505,9 +506,14 @@ export async function getUploadsApi(): Promise<UploadsResponse> {
 }
 
 export async function uploadFilesApi(files: File[]): Promise<UploadsResponse> {
+  const validation = validateAndSanitizeFiles(files, { maxMb: 15 });
+  if (!validation.valid) {
+    return { message: validation.error || 'Archivo no válido.', success: false, uploads: [] };
+  }
+
   try {
     const formData = new FormData();
-    for (const file of files) {
+    for (const file of validation.files) {
       formData.append('files', file);
     }
     const res = await postFormApi(API_ROUTES.uploads.base, formData);

@@ -187,11 +187,10 @@ export function setupCanvasShareDropdown(options: CanvasShareDropdownOptions): C
 
               ${
                 options.exportOptions && options.exportOptions.length > 0
-                  ? `<div class="design-share-section" data-ref="section-share-download" style="margin-top: 12px;">
+                  ? `<div class="design-share-section" data-ref="section-share-download">
                       <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-share-download">
-                        <button type="button" class="component-button component-button--h40 component-button--outline component-button--w-full" data-ref="btn-share-download-trigger">
+                        <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-share-download-trigger" data-tooltip="Descargar" aria-label="Descargar">
                           <span class="component-icon">download</span>
-                          <span>Descargar</span>
                         </button>
                         <div class="dropdown-backdrop" data-ref="dropdown-backdrop-share-download">
                           <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-share-download">

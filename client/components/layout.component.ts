@@ -20,6 +20,7 @@ import { UserUploadItem } from '../types/upload.types.js';
 import { closeAllDropdowns, registerActiveDropdown, unregisterActiveDropdown } from '../utils/dom.util.js';
 import { PIXEL_SHAPES, PixelShape, ShapeCategory } from '../utils/pixel-shapes.util.js';
 import { applyAvatarTier, getFallbackTierColor } from '../utils/tier.util.js';
+import { validateAndSanitizeFiles } from '../utils/validators.util.js';
 import { CHART_CATALOG } from '../views/board/board-charts-panel.component.js';
 import { BoardChartElement, BoardProject, ChartType, Shape3DType, ShapeType } from '../views/board/board.types.js';
 import { DOC_TEMPLATES, getDocTemplateById } from '../views/doc/doc-templates.config.js';
@@ -2355,9 +2356,9 @@ function renderUploadsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement
       showToast('Debes iniciar sesión para subir fotos.', 'warning');
       return;
     }
-    const fileArray = Array.from(files).filter((f) => f.type.startsWith('image/'));
-    if (fileArray.length === 0) {
-      showToast('Por favor selecciona archivos de imagen válidos (PNG, JPEG, WebP, GIF, SVG).', 'warning');
+    const validation = validateAndSanitizeFiles(files, { maxMb: 15 });
+    if (!validation.valid) {
+      showToast(validation.error || 'Por favor selecciona archivos de imagen válidos (PNG, JPEG, WebP, GIF, SVG).', 'warning');
       return;
     }
 
@@ -2365,7 +2366,7 @@ function renderUploadsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement
     isUploading = true;
     showToast('Subiendo archivo(s)...', 'info');
 
-    const res = await uploadFilesApi(fileArray);
+    const res = await uploadFilesApi(validation.files);
     isUploading = false;
 
     if (res.success) {

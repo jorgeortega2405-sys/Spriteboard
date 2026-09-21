@@ -916,17 +916,19 @@ Reglas estrictas de generación:
                 ? rawType
                 : 'sticky';
 
-            if (type === 'connector') {
+            if (type === 'connector' || el.fromId || el.toId || el.from || el.to || el.source || el.target) {
+              const fromId = String(el.fromId || el.from || el.source || el.sourceId || el.startId || el.origin || '');
+              const toId = String(el.toId || el.to || el.target || el.targetId || el.endId || el.destination || '');
               return {
                 arrowEnd: el.arrowEnd !== false,
-                color: el.color || '#64748b',
-                fromId: String(el.fromId || el.from || ''),
+                color: el.color || el.strokeColor || '#64748b',
+                fromId,
                 id,
                 label: el.label ? String(el.label) : undefined,
                 strokeStyle: el.strokeStyle || 'solid',
                 strokeWidth: Number(el.strokeWidth) || 2,
                 style: el.style === 'straight' || el.style === 'orthogonal' ? el.style : 'curved',
-                toId: String(el.toId || el.to || ''),
+                toId,
                 type: 'connector' as const,
               };
             }
