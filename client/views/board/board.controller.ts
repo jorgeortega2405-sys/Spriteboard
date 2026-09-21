@@ -905,12 +905,41 @@ export class BoardController {
     const targetWidth = Math.round(rect.width * dpr);
     const targetHeight = Math.round(rect.height * dpr);
 
-    if (this.canvasElement.width !== targetWidth || this.canvasElement.height !== targetHeight) {
+    const changed = this.canvasElement.width !== targetWidth || this.canvasElement.height !== targetHeight;
+    if (changed) {
       this.canvasElement.width = targetWidth;
       this.canvasElement.height = targetHeight;
+    }
+
+    if (this.isPresentation) {
+      this.fitPresentationSlide();
+    } else if (changed) {
       this.requestRedraw();
     }
   }
+
+  public fitPresentationSlide(): void {
+    if (!this.isPresentation || !this.canvasElement) return;
+    const dpr = window.devicePixelRatio || 1;
+    const w = this.canvasElement.width / dpr || this.canvasElement.clientWidth;
+    const h = this.canvasElement.height / dpr || this.canvasElement.clientHeight;
+    if (w <= 0 || h <= 0) return;
+
+    const paddingX = 48;
+    const paddingY = 36;
+    const availW = Math.max(100, w - paddingX * 2);
+    const availH = Math.max(100, h - paddingY * 2);
+
+    const fitScale = Math.min(availW / this.slideWidth, availH / this.slideHeight);
+    const clampedScale = Math.max(0.15, Math.min(2.5, fitScale));
+
+    this.camera.x = 0;
+    this.camera.y = 0;
+    this.camera.zoom = clampedScale;
+    this.updateZoomUI();
+    this.requestRedraw();
+  }
+
 
   private setupDropdowns(): void {
     const exportWrapper = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-export"]');
@@ -1334,6 +1363,9 @@ export class BoardController {
   }
 
   private setTool(tool: BoardTool): void {
+    if (this.isPresentation && tool === 'hand') {
+      tool = 'select';
+    }
     if (this.isEyedropperActive) {
       this.toggleEyedropper(false);
     }
@@ -1388,7 +1420,7 @@ export class BoardController {
       this.canvasElement.style.cursor = 'none';
     } else if (this.isLaserMode) {
       this.canvasElement.style.cursor = 'crosshair';
-    } else if (this.currentTool === 'hand' || this.isSpacePressed || this.isShiftPressed) {
+    } else if (!this.isPresentation && (this.currentTool === 'hand' || this.isSpacePressed || this.isShiftPressed)) {
       this.canvasElement.style.cursor = 'grab';
     } else if (this.currentTool === 'select') {
       this.canvasElement.style.cursor = 'default';
@@ -2129,6 +2161,16 @@ export class BoardController {
 
   private setZoom(newZoom: number, centerScreenX?: number, centerScreenY?: number): void {
     if (!this.canvasElement) return;
+    if (this.isPresentation) {
+      this.camera.zoom = Math.max(0.2, Math.min(3, newZoom));
+      this.camera.x = 0;
+      this.camera.y = 0;
+      this.updateZoomUI();
+      this.requestRedraw();
+      this.scheduleAutoSave();
+      return;
+    }
+
     const rect = this.canvasElement.getBoundingClientRect();
     const cx = centerScreenX !== undefined ? centerScreenX : rect.width / 2;
     const cy = centerScreenY !== undefined ? centerScreenY : rect.height / 2;
@@ -2153,6 +2195,11 @@ export class BoardController {
   }
 
   private zoomToFit(): void {
+    if (this.isPresentation) {
+      this.fitPresentationSlide();
+      return;
+    }
+
     if (!this.canvasElement || this.elements.length === 0) {
       this.camera = { x: 0, y: 0, zoom: 1 };
       this.updateZoomUI();
@@ -3004,6 +3051,10 @@ export class BoardController {
     this.canvasElement.addEventListener(
       'wheel',
       (e: WheelEvent) => {
+        if (this.isPresentation) {
+          e.preventDefault();
+          return;
+        }
         if (e.ctrlKey || e.metaKey) {
           e.preventDefault();
           const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
@@ -3464,6 +3515,7 @@ export class BoardController {
     }
 
     if (e.button === 1 || this.currentTool === 'hand' || this.isSpacePressed) {
+      if (this.isPresentation) return;
       this.isPanning = true;
       this.didPan = false;
       this.panStartMouse = { x: e.clientX, y: e.clientY };
@@ -3754,6 +3806,10 @@ export class BoardController {
 
   private handlePointerMove(e: PointerEvent): void {
     if (this.isPanning) {
+      if (this.isPresentation) {
+        this.isPanning = false;
+        return;
+      }
       const dx = (e.clientX - this.panStartMouse.x) / this.camera.zoom;
       const dy = (e.clientY - this.panStartMouse.y) / this.camera.zoom;
       this.camera.x = this.panStartCamera.x - dx;
@@ -4431,18 +4487,22 @@ export class BoardController {
         }
 
         if (e.code === 'Space' && !this.isSpacePressed) {
-          this.isSpacePressed = true;
-          if (this.canvasElement && !this.isPanning) {
-            this.canvasElement.classList.add('can-pan');
-            this.canvasElement.style.cursor = 'grab';
+          if (!this.isPresentation) {
+            this.isSpacePressed = true;
+            if (this.canvasElement && !this.isPanning) {
+              this.canvasElement.classList.add('can-pan');
+              this.canvasElement.style.cursor = 'grab';
+            }
           }
         }
 
         if (e.key === 'Shift' && !e.ctrlKey && !e.metaKey && !e.altKey && !this.isShiftPressed) {
-          this.isShiftPressed = true;
-          if (this.canvasElement && !this.isPanning) {
-            this.canvasElement.classList.add('can-pan');
-            this.canvasElement.style.cursor = 'grab';
+          if (!this.isPresentation) {
+            this.isShiftPressed = true;
+            if (this.canvasElement && !this.isPanning) {
+              this.canvasElement.classList.add('can-pan');
+              this.canvasElement.style.cursor = 'grab';
+            }
           }
         }
 
@@ -4500,7 +4560,9 @@ export class BoardController {
 
         const key = e.key.toLowerCase();
         if (key === 'v') this.setTool('select');
-        if (key === 'h') this.setTool('hand');
+        if (key === 'h') {
+          if (!this.isPresentation) this.setTool('hand');
+        }
         if (key === 'p') this.setTool('pen');
         if (key === 'm') this.setTool('marker');
         if (key === 'r') this.setTool('highlighter');
@@ -5868,6 +5930,11 @@ export class BoardController {
     if (!skipBroadcast) {
       this.collaborationManager.broadcastPageChange(this.activePageId);
     }
+    if (this.isPresentation) {
+      this.camera.x = 0;
+      this.camera.y = 0;
+      this.fitPresentationSlide();
+    }
 
     this.updatePagesUI();
     this.requestRedraw();
@@ -6559,6 +6626,13 @@ export class BoardController {
       { signal }
     );
 
+    if (this.isPresentation) {
+      const handBtn = this.container.querySelector<HTMLElement>('[data-ref="vertical-tool-hand"]');
+      if (handBtn) {
+        handBtn.style.display = 'none';
+      }
+    }
+
     const vtoolButtons = this.container.querySelectorAll<HTMLButtonElement>('[data-vtool]');
     vtoolButtons.forEach((btn) => {
       btn.addEventListener(
@@ -6569,6 +6643,7 @@ export class BoardController {
             this.hideAllVSubtoolbars();
             this.setTool('select');
           } else if (vtool === 'hand') {
+            if (this.isPresentation) return;
             this.hideAllVSubtoolbars();
             this.setTool('hand');
           } else if (vtool === 'section') {
