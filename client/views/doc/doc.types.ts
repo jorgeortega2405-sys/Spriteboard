@@ -1,4 +1,4 @@
-export type DocPaperSize = 'a3' | 'a4' | 'a5' | 'digital' | 'legal' | 'letter' | 'presentation_16_9' | 'presentation_4_3' | 'presentation_fhd' | 'tabloid';
+export type DocPaperSize = 'a3' | 'a4' | 'a5' | 'digital' | 'legal' | 'letter' | 'tabloid';
 export type DocOrientation = 'landscape' | 'portrait';
 export type DocLineSpacing = 1.0 | 1.15 | 1.5 | 2.0;
 
@@ -21,18 +21,6 @@ export const DOC_PAPER_DIMENSIONS: Record<string, { landscape: DocPageDimensions
   digital: {
     landscape: { heightMm: 0, heightPx: 0, name: 'Digital (Horizontal)', widthMm: 0, widthPx: 1056 },
     portrait: { heightMm: 0, heightPx: 0, name: 'Digital (Automático)', widthMm: 0, widthPx: 816 },
-  },
-  presentation_16_9: {
-    landscape: { heightMm: 190.5, heightPx: 720, name: '16:9 Panorámica (1280 × 720)', widthMm: 338.7, widthPx: 1280 },
-    portrait: { heightMm: 338.7, heightPx: 1280, name: '9:16 Vertical (720 × 1280)', widthMm: 190.5, widthPx: 720 },
-  },
-  presentation_fhd: {
-    landscape: { heightMm: 285.75, heightPx: 1080, name: '16:9 Full HD (1920 × 1080)', widthMm: 508, widthPx: 1920 },
-    portrait: { heightMm: 508, heightPx: 1920, name: '9:16 Full HD (1080 × 1920)', widthMm: 285.75, widthPx: 1080 },
-  },
-  presentation_4_3: {
-    landscape: { heightMm: 190.5, heightPx: 768, name: '4:3 Clásica (1024 × 768)', widthMm: 254, widthPx: 1024 },
-    portrait: { heightMm: 254, heightPx: 1024, name: '3:4 Vertical (768 × 1024)', widthMm: 190.5, widthPx: 768 },
   },
   a4: {
     landscape: { heightMm: 210, heightPx: 794, name: 'A4 (Horizontal)', widthMm: 297, widthPx: 1123 },
@@ -133,7 +121,7 @@ export interface DocProject {
   };
   pages: DocPage[];
   settings: DocSettings;
-  type: 'doc' | 'presentation';
+  type: 'doc';
   version: number;
 }
 

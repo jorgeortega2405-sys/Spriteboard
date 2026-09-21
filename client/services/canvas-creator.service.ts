@@ -3,6 +3,7 @@ import { getBoardTemplateElements } from '../config/board-templates.data.js';
 import { getCustomDiagramProject } from '../config/diagram-templates.data.js';
 import { CanvasType } from '../types/canvas.types.js';
 import { DiagramSubtype } from '../types/mindmap.types.js';
+import { PRESENTATION_FORMATS } from '../types/presentation.types.js';
 import { convertDiagramToBoardElements } from '../views/board/board-elements.manager.js';
 import { generateDocThumbnail } from '../views/doc/doc-export.service.js';
 import { getDocTemplateById } from '../views/doc/doc-templates.config.js';
@@ -43,16 +44,16 @@ export interface CreateCanvasOptions {
 export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise<void> {
   const isPresentation = options.canvasType === 'presentation';
   const isDoc = options.canvasType === 'doc';
-  const defaultOrientation = isPresentation ? 'landscape' : 'portrait';
-  const defaultPaperSize = isPresentation ? 'presentation_16_9' : 'letter';
-  const paperSize = options.docPaperSize || defaultPaperSize;
-  const orientation = options.docOrientation || defaultOrientation;
+  const paperSize = options.docPaperSize || 'letter';
+  const orientation = options.docOrientation || 'portrait';
 
   const paperPreset = (paperSize && DOC_PAPER_DIMENSIONS[paperSize])
     ? DOC_PAPER_DIMENSIONS[paperSize][orientation]
-    : (isPresentation ? DOC_PAPER_DIMENSIONS.presentation_16_9.landscape : DOC_PAPER_DIMENSIONS.letter.portrait);
-  const width = isPresentation ? (options.width || 1280) : (isDoc ? (options.width || paperPreset.widthPx || 816) : 0);
-  const height = isPresentation ? (options.height || 720) : (isDoc ? (options.height || paperPreset.heightPx || 0) : 0);
+    : DOC_PAPER_DIMENSIONS.letter.portrait;
+
+  const defaultPresFormat = PRESENTATION_FORMATS.presentation_16_9;
+  const width = isPresentation ? (options.width || defaultPresFormat.width) : (isDoc ? (options.width || paperPreset.widthPx || 816) : 0);
+  const height = isPresentation ? (options.height || defaultPresFormat.height) : (isDoc ? (options.height || paperPreset.heightPx || 0) : 0);
 
   const defaultName = isPresentation
     ? 'Presentación sin título'

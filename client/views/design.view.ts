@@ -4,6 +4,7 @@ import { getLocalCanvasByUuid } from '../services/canvas-storage.service.js';
 import { createBoardView } from './board.view.js';
 import { createDocView } from './doc.view.js';
 import { createErrorView } from './error.view.js';
+import { createPresentationView } from './presentation.view.js';
 
 export async function createDesignView(canvasUuid: string): Promise<HTMLElement> {
   let canvasRecord: any = await getLocalCanvasByUuid(canvasUuid);
@@ -42,6 +43,10 @@ export async function createDesignView(canvasUuid: string): Promise<HTMLElement>
 
   if (canvasType === 'doc') {
     return await createDocView(canvasUuid, canvasRecord);
+  }
+
+  if (canvasType === 'presentation') {
+    return await createPresentationView(canvasUuid, canvasRecord);
   }
 
   return await createBoardView(canvasUuid, canvasRecord);

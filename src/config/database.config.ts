@@ -425,7 +425,7 @@ export async function runMigrations(): Promise<void> {
         width INT NOT NULL DEFAULT 1920,
         height INT NOT NULL DEFAULT 1080,
         unit VARCHAR(20) NOT NULL DEFAULT 'px',
-        canvas_type ENUM('board', 'doc') NOT NULL DEFAULT 'board',
+        canvas_type ENUM('board', 'doc', 'presentation') NOT NULL DEFAULT 'board',
         data JSON NULL,
         preview_thumbnail MEDIUMTEXT NULL,
         access_level ENUM('private', 'public') NOT NULL DEFAULT 'private',
@@ -447,13 +447,14 @@ export async function runMigrations(): Promise<void> {
       "SHOW COLUMNS FROM db_canvas.canvases LIKE 'canvas_type'"
     );
     if (canvasTypeCols.length === 0) {
-      await conn.query("ALTER TABLE db_canvas.canvases ADD COLUMN canvas_type ENUM('board', 'doc') NOT NULL DEFAULT 'board' AFTER unit");
+      await conn.query("ALTER TABLE db_canvas.canvases ADD COLUMN canvas_type ENUM('board', 'doc', 'presentation') NOT NULL DEFAULT 'board' AFTER unit");
       logger.db.info('Columna canvas_type añadida a db_canvas.canvases.');
     } else {
       await conn.query("ALTER TABLE db_canvas.canvases MODIFY COLUMN canvas_type VARCHAR(32) NOT NULL DEFAULT 'board'");
+      await conn.query("UPDATE db_canvas.canvases SET canvas_type = 'presentation' WHERE unit = 'presentation'");
       await conn.query("UPDATE db_canvas.canvases SET canvas_type = 'doc' WHERE unit = 'doc'");
-      await conn.query("UPDATE db_canvas.canvases SET canvas_type = 'board' WHERE canvas_type != 'doc'");
-      await conn.query("ALTER TABLE db_canvas.canvases MODIFY COLUMN canvas_type ENUM('board', 'doc') NOT NULL DEFAULT 'board'");
+      await conn.query("UPDATE db_canvas.canvases SET canvas_type = 'board' WHERE canvas_type != 'doc' AND canvas_type != 'presentation'");
+      await conn.query("ALTER TABLE db_canvas.canvases MODIFY COLUMN canvas_type ENUM('board', 'doc', 'presentation') NOT NULL DEFAULT 'board'");
     }
 
     const [accessCols] = await conn.query<mysql.RowDataPacket[]>(

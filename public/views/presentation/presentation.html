@@ -1,13 +1,13 @@
-<div class="layout-content" data-ref="board-view">
-  <div class="component-wrapper component-wrapper--full no-padding view-wrapper" data-ref="board-wrapper">
-    <div class="component-top component-top--gradient" data-ref="board-top">
-      <div class="component-top-left" data-ref="board-top-left">
-        <h1 class="component-top-title" data-ref="board-title">Pizarrón sin título</h1>
+<div class="layout-content" data-ref="presentation-view">
+  <div class="component-wrapper component-wrapper--full no-padding view-wrapper" data-ref="presentation-wrapper">
+    <div class="component-top component-top--gradient" data-ref="presentation-top">
+      <div class="component-top-left" data-ref="presentation-top-left">
+        <h1 class="component-top-title" data-ref="presentation-title">Presentación sin título</h1>
       </div>
 
-      <div class="component-top-right" data-ref="board-top-right">
-        <div class="design-collaborators-bar is-hidden" data-ref="board-collaborators-bar">
-          <div class="design-collaborators-list" data-ref="board-collaborators-list"></div>
+      <div class="component-top-right" data-ref="presentation-top-right">
+        <div class="design-collaborators-bar is-hidden" data-ref="presentation-collaborators-bar">
+          <div class="design-collaborators-list" data-ref="presentation-collaborators-list"></div>
         </div>
 
         <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn canvas-save-status-btn is-saved" data-ref="btn-canvas-cloud-status" data-tooltip="Todos los cambios están guardados en la nube" aria-label="Estado de guardado">
@@ -20,7 +20,7 @@
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#bar_chart"></use></svg>
         </button>
 
-        <div class="design-share-wrapper" data-ref="board-history-wrapper">
+        <div class="design-share-wrapper" data-ref="presentation-history-wrapper">
           <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-canvas-history" data-tooltip="Historial de versiones" aria-label="Historial de versiones">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#history"></use></svg>
           </button>
@@ -30,14 +30,19 @@
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chat_bubble_outline"></use></svg>
         </button>
 
-        <div class="design-share-wrapper" data-ref="board-ai-wrapper">
-          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-board-ai" data-tooltip="Generar con IA" aria-label="Generar con IA">
+        <div class="design-share-wrapper" data-ref="presentation-ai-wrapper">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-presentation-ai" data-tooltip="Generar diapositivas con IA" aria-label="Generar diapositivas con IA">
             <span class="component-icon">auto_awesome</span>
           </button>
         </div>
 
-        <div class="design-share-wrapper" data-ref="board-share-wrapper">
-          <button type="button" class="component-button component-button--h40 view-header__btn design-share-btn" data-ref="btn-share-board" data-tooltip="Compartir pizarrón" aria-label="Compartir pizarrón">
+        <button type="button" class="component-button component-button--h40 view-header__btn" data-ref="btn-presentation-present" data-tooltip="Presentar (F5)" aria-label="Presentar diapositivas">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#slideshow"></use></svg>
+          <span>Presentar</span>
+        </button>
+
+        <div class="design-share-wrapper" data-ref="presentation-share-wrapper">
+          <button type="button" class="component-button component-button--h40 view-header__btn design-share-btn" data-ref="btn-share-presentation" data-tooltip="Compartir presentación" aria-label="Compartir presentación">
             <span class="component-icon">share</span>
             <span class="design-share-btn__text">Compartir</span>
           </button>
@@ -45,33 +50,27 @@
       </div>
     </div>
 
-    <div class="component-bottom component-bottom--canvas" data-ref="board-viewport">
-      <div class="design-vertical-toolbar-container is-hidden" data-ref="board-vertical-toolbar-container">
-        <div class="design-vertical-toolbar-wrapper" data-ref="board-vertical-toolbar-wrapper">
+    <div class="component-bottom component-bottom--canvas" data-ref="presentation-viewport">
+      <div class="design-vertical-toolbar-container is-hidden" data-ref="presentation-vertical-toolbar-container">
+        <div class="design-vertical-toolbar-wrapper" data-ref="presentation-vertical-toolbar-wrapper">
           <button type="button" class="design-toolbar-btn vertical-toolbar-close-btn" data-ref="btn-close-vertical-toolbar" data-tooltip="Cerrar barra" aria-label="Cerrar barra">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
           </button>
 
-          <div class="design-vertical-toolbar" data-ref="board-vertical-toolbar">
+          <div class="design-vertical-toolbar" data-ref="presentation-vertical-toolbar">
             <button type="button" class="design-toolbar-btn is-active" data-ref="vertical-tool-select" data-vtool="select" data-tooltip="Seleccionar (V)" aria-label="Seleccionar">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#near_me"></use></svg>
             </button>
             <button type="button" class="design-toolbar-btn" data-ref="vertical-tool-hand" data-vtool="hand" data-tooltip="Mano / Desplazar (H o Espacio)" aria-label="Mano">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#pan_tool"></use></svg>
             </button>
-            <button type="button" class="design-toolbar-btn" data-ref="vertical-tool-sections" data-vtool="section" data-tooltip="Sección" aria-label="Sección">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#grid_view"></use></svg>
-            </button>
             <button type="button" class="design-toolbar-btn" data-ref="vertical-tool-draw" data-vtool="draw" data-tooltip="Dibujar" aria-label="Dibujar">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#draw"></use></svg>
-            </button>
-            <button type="button" class="design-toolbar-btn" data-ref="vertical-tool-pixel" data-vtool="pixel" data-tooltip="Pixel Art" aria-label="Pixel Art">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#grid_on"></use></svg>
             </button>
             <button type="button" class="design-toolbar-btn" data-ref="vertical-tool-shapes" data-vtool="shapes" data-tooltip="Formas" aria-label="Formas">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#shapes"></use></svg>
             </button>
-            <button type="button" class="design-toolbar-btn" data-ref="vertical-tool-lines" data-vtool="lines" data-tooltip="Líneas" aria-label="Líneas">
+            <button type="button" class="design-toolbar-btn" data-ref="vertical-tool-lines" data-vtool="lines" data-tooltip="Líneas y Conectores" aria-label="Líneas">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#polyline"></use></svg>
             </button>
             <button type="button" class="design-toolbar-btn" data-ref="vertical-tool-stickies" data-vtool="stickies" data-tooltip="Notas adhesivas" aria-label="Notas adhesivas">
@@ -80,7 +79,7 @@
             <button type="button" class="design-toolbar-btn" data-ref="vertical-tool-text" data-vtool="text" data-tooltip="Texto" aria-label="Texto">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#text_fields"></use></svg>
             </button>
-            <button type="button" class="design-toolbar-btn" data-ref="vertical-tool-cursors" data-vtool="cursors" data-tooltip="Cursores y Colaboración (K)" aria-label="Cursores y Colaboración">
+            <button type="button" class="design-toolbar-btn" data-ref="vertical-tool-cursors" data-vtool="cursors" data-tooltip="Cursores y Puntero láser" aria-label="Cursores">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
             </button>
           </div>
@@ -103,51 +102,6 @@
             </button>
             <button type="button" class="design-toolbar-btn" data-ref="vdraw-btn-width" data-tooltip="Grosor de trazo" aria-label="Grosor de trazo">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#line_weight"></use></svg>
-            </button>
-          </div>
-
-          <div class="design-vsubtoolbar is-hidden" data-ref="vsubtoolbar-pixel">
-            <button type="button" class="design-toolbar-btn is-active" data-ref="vpixel-tool-pencil" data-pixel-subtool="pencil" data-tooltip="Lápiz de píxel" aria-label="Lápiz de píxel">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#draw"></use></svg>
-            </button>
-            <button type="button" class="design-toolbar-btn" data-ref="vpixel-tool-eraser" data-pixel-subtool="eraser" data-tooltip="Goma de píxel" aria-label="Goma de píxel">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#ink_eraser"></use></svg>
-            </button>
-            <button type="button" class="design-toolbar-btn" data-ref="vpixel-tool-bucket" data-pixel-subtool="bucket" data-tooltip="Cubeta de relleno" aria-label="Cubeta de relleno">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#format_color_fill"></use></svg>
-            </button>
-            <button type="button" class="design-toolbar-btn" data-ref="vpixel-tool-eyedropper" data-pixel-subtool="eyedropper" data-tooltip="Gotero de color" aria-label="Gotero de color">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#colorize"></use></svg>
-            </button>
-            <button type="button" class="design-toolbar-btn is-active" data-ref="vpixel-btn-toggle-grid" data-tooltip="Alternar cuadrícula" aria-label="Alternar cuadrícula">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#grid_on"></use></svg>
-            </button>
-            <button type="button" class="design-toolbar-btn" data-ref="vpixel-btn-insert-grid" data-tooltip="Insertar cuadrícula" aria-label="Insertar cuadrícula">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add_box"></use></svg>
-            </button>
-            <button type="button" class="design-toolbar-btn" data-ref="vpixel-btn-open-anim" data-tooltip="Capas y Animación" aria-label="Capas y Animación">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#movie"></use></svg>
-            </button>
-            <button type="button" class="design-toolbar-btn" data-ref="vpixel-btn-export-sprite" data-tooltip="Descargar sprite PNG" aria-label="Descargar sprite PNG">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
-            </button>
-          </div>
-
-          <div class="design-vsubsubtoolbar is-hidden" data-ref="vsubsubtoolbar-pixel-size">
-            <button type="button" class="design-toolbar-btn design-toolbar-btn--text is-active" data-ref="vpixel-size-1" data-pixel-brush="1" data-tooltip="1px" aria-label="1px">
-              <span>1px</span>
-            </button>
-            <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="vpixel-size-2" data-pixel-brush="2" data-tooltip="2px" aria-label="2px">
-              <span>2px</span>
-            </button>
-            <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="vpixel-size-3" data-pixel-brush="3" data-tooltip="3px" aria-label="3px">
-              <span>3px</span>
-            </button>
-            <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="vpixel-size-4" data-pixel-brush="4" data-tooltip="4px" aria-label="4px">
-              <span>4px</span>
-            </button>
-            <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="vpixel-size-8" data-pixel-brush="8" data-tooltip="8px" aria-label="8px">
-              <span>8px</span>
             </button>
           </div>
 
@@ -175,12 +129,6 @@
             </button>
             <button type="button" class="design-toolbar-btn" data-ref="vshape-pill" data-shape="pill" data-tooltip="Píldora" aria-label="Píldora">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#schema"></use></svg>
-            </button>
-            <button type="button" class="design-toolbar-btn" data-ref="vshape-document" data-shape="document" data-tooltip="Documento" aria-label="Documento">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#description"></use></svg>
-            </button>
-            <button type="button" class="design-toolbar-btn" data-ref="vshape-cloud" data-shape="cloud" data-tooltip="Nube" aria-label="Nube">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cloud"></use></svg>
             </button>
             <button type="button" class="design-toolbar-btn" data-ref="vshape-star" data-shape="star" data-tooltip="Estrella" aria-label="Estrella">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#star"></use></svg>
@@ -224,57 +172,38 @@
         </div>
       </div>
 
-      <div class="chart-modal-backdrop is-hidden" data-ref="chart-import-modal">
-        <div class="chart-modal-dialog">
-          <div class="chart-modal-header">
-            <span class="chart-modal-title">Importar datos de hoja de cálculo</span>
-            <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-close-chart-import" aria-label="Cerrar">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
-            </button>
-          </div>
-          <div class="chart-modal-body">
-            <span class="chart-modal-hint">Pega datos separados por tabuladores o comas directamente desde Excel, Google Sheets o un archivo CSV.</span>
-            <textarea class="component-textarea chart-import-textarea" data-ref="chart-import-textarea" placeholder="Categoría&#9;Ventas&#9;Gastos&#10;Invierno&#9;60&#9;20&#10;Primavera&#9;45&#9;15&#10;Verano&#9;78&#9;35&#10;Otoño&#9;30&#9;18"></textarea>
-          </div>
-          <div class="chart-modal-footer">
-            <button type="button" class="component-button component-button--h36 component-button--secondary" data-ref="btn-cancel-chart-import">Cancelar</button>
-            <button type="button" class="component-button component-button--h36 component-button--black" data-ref="btn-apply-chart-import">Aplicar datos</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="design-top-toolbar-container is-hidden" data-ref="board-top-toolbar-container">
+      <div class="design-top-toolbar-container is-hidden" data-ref="presentation-top-toolbar-container">
         <button type="button" class="design-toolbar__nav-btn design-toolbar__nav-btn--left is-disabled" data-ref="btn-top-toolbar-scroll-left" data-tooltip="Desplazar a la izquierda" aria-label="Desplazar a la izquierda">
           <span class="component-icon">chevron_left</span>
         </button>
 
-        <div class="design-top-toolbar" data-ref="board-top-toolbar">
-          <div class="design-top-toolbar__section is-hidden" data-ref="board-top-selection-section">
-            <div class="design-toolbar-group" data-ref="board-top-group-fill">
+        <div class="design-top-toolbar" data-ref="presentation-top-toolbar">
+          <div class="design-top-toolbar__section is-hidden" data-ref="presentation-top-selection-section">
+            <div class="design-toolbar-group" data-ref="presentation-top-group-fill">
               <button type="button" class="design-toolbar-btn" data-ref="top-btn-fill" data-tooltip="Color de relleno" aria-label="Color de relleno">
                 <span class="top-color-swatch" data-ref="top-fill-swatch" style="background-color: #000000;"></span>
               </button>
             </div>
 
-            <div class="design-toolbar-group" data-ref="board-top-group-stroke-color">
+            <div class="design-toolbar-group" data-ref="presentation-top-group-stroke-color">
               <button type="button" class="design-toolbar-btn" data-ref="top-btn-stroke-color" data-tooltip="Color de borde o línea" aria-label="Color de borde">
                 <span class="top-color-swatch" data-ref="top-stroke-swatch" style="background-color: #1e293b;"></span>
               </button>
             </div>
 
-            <div class="design-toolbar-group" data-ref="board-top-group-stroke-style">
+            <div class="design-toolbar-group" data-ref="presentation-top-group-stroke-style">
               <button type="button" class="design-toolbar-btn" data-ref="top-btn-stroke-style" data-tooltip="Estilo y grosor del trazo" aria-label="Estilo y grosor del trazo">
                 <span class="component-icon">line_weight</span>
               </button>
             </div>
 
-            <div class="design-toolbar-group" data-ref="board-top-group-corners">
+            <div class="design-toolbar-group" data-ref="presentation-top-group-corners">
               <button type="button" class="design-toolbar-btn" data-ref="top-btn-corners" data-tooltip="Redondear esquinas" aria-label="Redondear esquinas">
                 <span class="component-icon">rounded_corner</span>
               </button>
             </div>
 
-            <div class="design-toolbar-group is-hidden" data-ref="board-top-group-markers">
+            <div class="design-toolbar-group is-hidden" data-ref="presentation-top-group-markers">
               <button type="button" class="design-toolbar-btn" data-ref="top-btn-marker-start" data-tooltip="Extremo inicial" aria-label="Extremo inicial">
                 <span class="component-icon">arrow_back</span>
               </button>
@@ -289,7 +218,7 @@
               </button>
             </div>
 
-            <div class="design-toolbar-group is-hidden" data-ref="board-top-group-text-props">
+            <div class="design-toolbar-group is-hidden" data-ref="presentation-top-group-text-props">
               <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="top-btn-font-family" data-tooltip="Tipografía" aria-label="Tipografía">
                 <span class="component-icon">font_download</span>
                 <span data-ref="top-font-family-label">Inter</span>
@@ -306,24 +235,13 @@
               </button>
             </div>
 
-            <div class="design-toolbar-group is-hidden" data-ref="board-top-group-pixel-props">
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="top-btn-pixel-anim" data-tooltip="Animación y cuadros" aria-label="Animación">
-                <span class="component-icon">animation</span>
-                <span>Animación</span>
-              </button>
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="top-btn-pixel-layers" data-tooltip="Capas de la cuadrícula" aria-label="Capas">
-                <span class="component-icon">layers</span>
-                <span>Capas</span>
-              </button>
-            </div>
-
-            <div class="design-toolbar-group" data-ref="board-top-group-opacity">
+            <div class="design-toolbar-group" data-ref="presentation-top-group-opacity">
               <button type="button" class="design-toolbar-btn" data-ref="top-btn-opacity" data-tooltip="Transparencia" aria-label="Transparencia">
                 <span class="component-icon">opacity</span>
               </button>
             </div>
 
-            <div class="design-toolbar-group" data-ref="board-top-group-canva-actions">
+            <div class="design-toolbar-group" data-ref="presentation-top-group-canva-actions">
               <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="top-btn-effects" data-tooltip="Efectos de estilo y filtros" aria-label="Efectos">
                 <span class="component-icon">auto_fix_high</span>
                 <span>Efectos</span>
@@ -338,9 +256,9 @@
               </button>
             </div>
 
-            <div class="design-toolbar-divider" data-ref="board-top-divider-sel-end"></div>
+            <div class="design-toolbar-divider" data-ref="presentation-top-divider-sel-end"></div>
 
-            <div class="design-toolbar-group" data-ref="board-top-group-actions">
+            <div class="design-toolbar-group" data-ref="presentation-top-group-actions">
               <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="top-btn-duplicate" data-tooltip="Duplicar (Ctrl+D)" aria-label="Duplicar">
                 <span class="component-icon">content_copy</span>
               </button>
@@ -465,7 +383,28 @@
         </div>
       </div>
 
-      <div class="canva-sidebar-drawer is-hidden" data-ref="board-effects-drawer">
+      <div class="board-context-popover is-hidden" data-ref="popover-slide-duration">
+        <div class="board-popover-title">Duración de la diapositiva</div>
+        <div class="board-popover-slider-row">
+          <input class="board-popover-slider" data-ref="input-popover-slide-duration" type="range" min="0.5" max="30" step="0.5" value="5" aria-label="Duración en segundos" />
+          <span class="board-popover-value-box" data-ref="label-popover-slide-duration">5.0 s</span>
+        </div>
+        <div class="canva-duration-presets-row" data-ref="slide-duration-presets">
+          <button type="button" class="canva-duration-chip" data-duration="2.5">2.5s</button>
+          <button type="button" class="canva-duration-chip is-active" data-duration="5.0">5.0s</button>
+          <button type="button" class="canva-duration-chip" data-duration="10.0">10s</button>
+          <button type="button" class="canva-duration-chip" data-duration="15.0">15s</button>
+          <button type="button" class="canva-duration-chip" data-duration="20.0">20s</button>
+        </div>
+        <div class="canva-duration-footer">
+          <button type="button" class="component-button component-button--h32 component-button--secondary component-button--w-full" data-ref="btn-apply-duration-all">
+            <span class="component-icon">done_all</span>
+            <span>Aplicar a todas las diapositivas</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="canva-sidebar-drawer is-hidden" data-ref="presentation-effects-drawer">
         <div class="canva-sidebar-drawer__header">
           <span class="canva-sidebar-drawer__title">Efectos</span>
           <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-close-effects-drawer" aria-label="Cerrar panel de efectos">
@@ -481,7 +420,7 @@
         </div>
       </div>
 
-      <div class="canva-sidebar-drawer is-hidden" data-ref="board-animation-drawer">
+      <div class="canva-sidebar-drawer is-hidden" data-ref="presentation-animation-drawer">
         <div class="canva-sidebar-drawer__header">
           <span class="canva-sidebar-drawer__title">Animaciones</span>
           <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-close-animation-drawer" aria-label="Cerrar panel de animaciones">
@@ -490,12 +429,12 @@
         </div>
         <div class="canva-sidebar-drawer__body">
           <div class="canva-animation-config is-hidden" data-ref="animation-config-container"></div>
-          <div class="canva-drawer-section-title">Animaciones de página y elemento</div>
+          <div class="canva-drawer-section-title">Animaciones de diapositiva y elemento</div>
           <div class="canva-effects-grid" data-ref="animation-presets-grid"></div>
         </div>
       </div>
 
-      <div class="canva-sidebar-drawer is-hidden" data-ref="board-position-drawer">
+      <div class="canva-sidebar-drawer is-hidden" data-ref="presentation-position-drawer">
         <div class="canva-sidebar-drawer__header">
           <span class="canva-sidebar-drawer__title">Posición</span>
           <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-close-position-drawer" aria-label="Cerrar panel de posición">
@@ -511,46 +450,13 @@
           <div class="canva-pos-view is-hidden" data-ref="pos-view-layers"></div>
         </div>
       </div>
-      <canvas class="design-viewport-canvas" data-ref="board-viewport-canvas"></canvas>
 
-      <div class="board-text-editor-container" data-ref="board-text-editor-container"></div>
+      <canvas class="design-viewport-canvas" data-ref="presentation-viewport-canvas"></canvas>
 
-      <div class="board-selection-toolbar is-hidden" data-ref="board-selection-toolbar">
-        <div class="design-toolbar-group" data-ref="board-sel-group-pixels">
-          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm is-hidden" data-ref="btn-sel-edit-pixels" data-tooltip="Pintar píxeles" aria-label="Pintar píxeles">
-            <span class="component-icon">edit</span>
-          </button>
-          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm is-hidden" data-ref="btn-sel-toggle-grid" data-tooltip="Alternar cuadrícula" aria-label="Alternar cuadrícula">
-            <span class="component-icon">grid_on</span>
-          </button>
-          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm is-hidden" data-ref="btn-sel-pixel-anim" data-tooltip="Animación" aria-label="Animación">
-            <span class="component-icon">animation</span>
-          </button>
-          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm is-hidden" data-ref="btn-sel-pixel-layers" data-tooltip="Capas" aria-label="Capas">
-            <span class="component-icon">layers</span>
-          </button>
-          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm is-hidden" data-ref="btn-sel-export-sprite" data-tooltip="Descargar sprite PNG" aria-label="Descargar sprite PNG">
-            <span class="component-icon">download</span>
-          </button>
-        </div>
-        <div class="design-toolbar-group is-hidden" data-ref="board-sel-group-mockups">
-          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-sel-mockup-change-image" data-tooltip="Subir / Cambiar imagen" aria-label="Cambiar imagen">
-            <span class="component-icon">add_photo_alternate</span>
-          </button>
-          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-sel-mockup-fit-mode" data-tooltip="Modo de ajuste (Llenar / Ajustar)" aria-label="Modo de ajuste">
-            <span class="component-icon">aspect_ratio</span>
-          </button>
-          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-sel-mockup-reset-image" data-tooltip="Restablecer imagen por defecto" aria-label="Restablecer imagen">
-            <span class="component-icon">restart_alt</span>
-          </button>
-          <input class="is-hidden" data-ref="input-mockup-file-picker" type="file" accept="image/*" />
-        </div>
-        <div class="design-toolbar-group is-hidden" data-ref="board-sel-group-charts">
-          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-sel-edit-chart" data-tooltip="Editar datos y gráfica" aria-label="Editar gráfica">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#bar_chart"></use></svg>
-          </button>
-        </div>
-        <div class="design-toolbar-group" data-ref="board-sel-group-layer">
+      <div class="board-text-editor-container" data-ref="presentation-text-editor-container"></div>
+
+      <div class="board-selection-toolbar is-hidden" data-ref="presentation-selection-toolbar">
+        <div class="design-toolbar-group" data-ref="presentation-sel-group-layer">
           <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-sel-duplicate" data-tooltip="Duplicar (Ctrl+D)" aria-label="Duplicar">
             <span class="component-icon">content_copy</span>
           </button>
@@ -561,14 +467,14 @@
             <span class="component-icon">flip_to_back</span>
           </button>
         </div>
-        <div class="design-toolbar-group" data-ref="board-sel-group-delete">
+        <div class="design-toolbar-group" data-ref="presentation-sel-group-delete">
           <button type="button" class="design-toolbar-btn design-toolbar-btn--sm board-selection-action-btn--danger" data-ref="btn-sel-delete" data-tooltip="Eliminar (Supr)" aria-label="Eliminar">
             <span class="component-icon">delete_outline</span>
           </button>
         </div>
       </div>
 
-      <div class="design-history-preview-banner is-hidden" data-ref="design-history-preview-banner">
+      <div class="design-history-preview-banner is-hidden" data-ref="presentation-history-preview-banner">
         <div class="design-history-preview-banner__content">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
           <span class="design-history-preview-banner__text" data-ref="preview-banner-text">Modo vista previa</span>
@@ -584,6 +490,8 @@
         </div>
       </div>
 
+      <canvas class="design-viewport-canvas" data-ref="presentation-viewport-canvas"></canvas>
+
       <div class="canvas-comments-layer" data-ref="canvas-comments-layer"></div>
 
       <div class="canvas-comments-panel is-hidden" data-ref="canvas-comments-panel">
@@ -591,12 +499,12 @@
           <div class="canvas-comments-filter-dropdown" data-ref="comments-filter-dropdown">
             <button type="button" class="canvas-comments-filter-btn" data-ref="btn-comments-filter" aria-label="Filtrar comentarios">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
-              <span class="canvas-comments-filter-text" data-ref="comments-filter-text">Página actual</span>
+              <span class="canvas-comments-filter-text" data-ref="comments-filter-text">Diapositiva actual</span>
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
             </button>
             <div class="canvas-comments-filter-menu is-hidden" data-ref="comments-filter-menu">
               <button type="button" class="canvas-comments-filter-item is-active" data-ref="btn-filter-current-page" data-filter="current_page">
-                <span>Página actual</span>
+                <span>Diapositiva actual</span>
               </button>
               <button type="button" class="canvas-comments-filter-item" data-ref="btn-filter-all" data-filter="all">
                 <span>Todos los comentarios</span>
@@ -610,7 +518,7 @@
 
         <div class="canvas-comments-panel__body" data-ref="comments-panel-body">
           <div class="canvas-comments-empty" data-ref="comments-empty-state">
-            <p class="canvas-comments-empty__text" data-ref="comments-empty-text">No hay comentarios en este lienzo.</p>
+            <p class="canvas-comments-empty__text" data-ref="comments-empty-text">No hay comentarios en esta presentación.</p>
           </div>
           <div class="canvas-comments-list is-hidden" data-ref="comments-list"></div>
         </div>
@@ -785,103 +693,26 @@
         </div>
       </div>
 
-      <div class="design-bottom-toolbar-container" data-ref="design-toolbar-container">
-        <div class="design-layers-tray is-hidden" data-ref="design-layers-tray">
-          <div class="design-layers-tray__toolbar" data-ref="layers-tray-toolbar">
-            <div class="design-toolbar-group" data-ref="layers-group-actions">
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-tray-add-layer" data-tooltip="Nueva capa" aria-label="Nueva capa">
-                <span class="component-icon">add</span>
-              </button>
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-tray-layer-up" data-tooltip="Mover arriba" aria-label="Mover arriba">
-                <span class="component-icon">arrow_upward</span>
-              </button>
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-tray-layer-down" data-tooltip="Mover abajo" aria-label="Mover abajo">
-                <span class="component-icon">arrow_downward</span>
-              </button>
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-tray-merge-layer" data-tooltip="Fusionar abajo" aria-label="Fusionar abajo">
-                <span class="component-icon">call_merge</span>
-              </button>
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-tray-delete-layer" data-tooltip="Eliminar capa" aria-label="Eliminar capa">
-                <span class="component-icon">delete_outline</span>
-              </button>
-            </div>
-          </div>
-          <div class="design-layers-tray__cards-wrapper" data-ref="layers-cards-wrapper">
-            <button type="button" class="design-toolbar__nav-btn design-toolbar__nav-btn--left is-disabled" data-ref="btn-layers-tray-scroll-left" data-tooltip="Desplazar a la izquierda" aria-label="Desplazar a la izquierda">
-              <span class="component-icon">chevron_left</span>
-            </button>
-            <div class="design-layers-tray__cards" data-ref="layers-cards-list"></div>
-            <button type="button" class="design-toolbar__nav-btn design-toolbar__nav-btn--right is-disabled" data-ref="btn-layers-tray-scroll-right" data-tooltip="Desplazar a la derecha" aria-label="Desplazar a la derecha">
-              <span class="component-icon">chevron_right</span>
-            </button>
-          </div>
-        </div>
-
-        <div class="design-frames-tray is-hidden" data-ref="design-frames-tray">
-          <div class="design-frames-tray__toolbar" data-ref="frames-toolbar">
-            <div class="design-toolbar-group" data-ref="frames-group-playback">
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-frame-play" data-tooltip="Reproducir animación" aria-label="Reproducir">
-                <span class="component-icon">play_arrow</span>
-              </button>
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-frame-prev" data-tooltip="Cuadro anterior" aria-label="Cuadro anterior">
-                <span class="component-icon">skip_previous</span>
-              </button>
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-frame-next" data-tooltip="Cuadro siguiente" aria-label="Cuadro siguiente">
-                <span class="component-icon">skip_next</span>
-              </button>
-            </div>
-            <div class="design-toolbar-divider" data-ref="frames-divider-1"></div>
-            <div class="design-toolbar-group" data-ref="frames-group-actions">
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-frame-duplicate" data-tooltip="Duplicar cuadro" aria-label="Duplicar cuadro">
-                <span class="component-icon">content_copy</span>
-              </button>
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-frame-delete" data-tooltip="Eliminar cuadro" aria-label="Eliminar cuadro">
-                <span class="component-icon">delete_outline</span>
-              </button>
-            </div>
-            <div class="design-toolbar-divider" data-ref="frames-divider-2"></div>
-            <div class="design-toolbar-group" data-ref="frames-group-settings">
-              <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-frame-fps" data-tooltip="Cambiar FPS" aria-label="Cambiar FPS">
-                <span data-ref="frame-fps-text">8 FPS</span>
-              </button>
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-frame-onion" data-tooltip="Papel cebolla (Onion Skin)" aria-label="Papel cebolla">
-                <span class="component-icon">auto_awesome_motion</span>
-              </button>
-            </div>
-            <div class="design-toolbar-divider" data-ref="frames-divider-3"></div>
-            <div class="design-toolbar-group" data-ref="frames-group-layers-toggle">
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-bottom-layers" data-tooltip="Capas de la cuadrícula" aria-label="Capas">
-                <span class="component-icon">layers</span>
-              </button>
-            </div>
-          </div>
-          <div class="design-frames-tray__cards-wrapper" data-ref="frames-cards-wrapper">
-            <button type="button" class="design-toolbar__nav-btn design-toolbar__nav-btn--left is-disabled" data-ref="btn-frames-tray-scroll-left" data-tooltip="Desplazar a la izquierda" aria-label="Desplazar a la izquierda">
-              <span class="component-icon">chevron_left</span>
-            </button>
-            <div class="design-frames-tray__cards" data-ref="frames-cards-list"></div>
-            <button type="button" class="design-toolbar__nav-btn design-toolbar__nav-btn--right is-disabled" data-ref="btn-frames-tray-scroll-right" data-tooltip="Desplazar a la derecha" aria-label="Desplazar a la derecha">
-              <span class="component-icon">chevron_right</span>
-            </button>
-          </div>
-        </div>
-
+      <div class="design-bottom-toolbar-container" data-ref="presentation-toolbar-container">
         <div class="design-pages-tray is-hidden" data-ref="design-pages-tray">
           <div class="design-pages-tray__toolbar" data-ref="pages-tray-toolbar">
             <div class="design-toolbar-group" data-ref="pages-group-nav">
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-page-prev" data-tooltip="Página anterior" aria-label="Página anterior">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-page-prev" data-tooltip="Diapositiva anterior" aria-label="Diapositiva anterior">
                 <span class="component-icon">skip_previous</span>
               </button>
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-page-next" data-tooltip="Página siguiente" aria-label="Página siguiente">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-page-next" data-tooltip="Diapositiva siguiente" aria-label="Diapositiva siguiente">
                 <span class="component-icon">skip_next</span>
               </button>
             </div>
             <div class="design-toolbar-divider" data-ref="pages-divider-1"></div>
             <div class="design-toolbar-group" data-ref="pages-group-actions">
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-page-duplicate" data-tooltip="Duplicar página" aria-label="Duplicar página">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-page-add" data-tooltip="Nueva diapositiva" aria-label="Nueva diapositiva">
+                <span class="component-icon">add</span>
+              </button>
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-page-duplicate" data-tooltip="Duplicar diapositiva" aria-label="Duplicar diapositiva">
                 <span class="component-icon">content_copy</span>
               </button>
-              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-page-delete" data-tooltip="Eliminar página" aria-label="Eliminar página">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-page-delete" data-tooltip="Eliminar diapositiva" aria-label="Eliminar diapositiva">
                 <span class="component-icon">delete_outline</span>
               </button>
             </div>
@@ -897,39 +728,43 @@
           </div>
         </div>
 
-        <div class="design-bottom-toolbar-wrapper" data-ref="board-toolbar-wrapper">
+        <div class="design-bottom-toolbar-wrapper" data-ref="presentation-toolbar-wrapper">
           <button type="button" class="design-toolbar__nav-btn design-toolbar__nav-btn--left is-disabled" data-ref="btn-bottom-toolbar-scroll-left" data-tooltip="Desplazar a la izquierda" aria-label="Desplazar a la izquierda">
             <span class="component-icon">chevron_left</span>
           </button>
 
-          <div class="design-bottom-toolbar" data-ref="board-bottom-toolbar">
-            <div class="design-bottom-toolbar__section design-bottom-toolbar__section--pages" data-ref="board-pages-section">
-              <div class="design-toolbar-group" data-ref="board-group-pages">
-                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-bottom-pages" data-tooltip="Páginas del pizarrón" aria-label="Páginas">
+          <div class="design-bottom-toolbar" data-ref="presentation-bottom-toolbar">
+            <div class="design-bottom-toolbar__section design-bottom-toolbar__section--pages" data-ref="presentation-pages-section">
+              <div class="design-toolbar-group" data-ref="presentation-group-pages">
+                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-bottom-pages" data-tooltip="Diapositivas" aria-label="Diapositivas">
                   <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_stories"></use></svg>
                   <span class="design-toolbar-badge__text" data-ref="bottom-pages-text">1 / 1</span>
                 </button>
+                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-slide-duration" data-tooltip="Duración de diapositiva" aria-label="Duración de diapositiva">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#timer"></use></svg>
+                  <span class="design-toolbar-badge__text" data-ref="slide-duration-text">5.0 s</span>
+                </button>
               </div>
             </div>
-            <div class="design-bottom-toolbar__section" data-ref="board-snapping-section">
-              <div class="design-toolbar-group" data-ref="board-group-snapping">
-                <button type="button" class="design-toolbar-btn design-toolbar-btn--sm is-active" data-ref="btn-toggle-snapping" data-tooltip="Ajuste magnético inteligente (Alt para suspender)" aria-label="Ajuste magnético inteligente">
+            <div class="design-bottom-toolbar__section" data-ref="presentation-snapping-section">
+              <div class="design-toolbar-group" data-ref="presentation-group-snapping">
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--sm is-active" data-ref="btn-toggle-snapping" data-tooltip="Ajuste magnético inteligente" aria-label="Ajuste magnético inteligente">
                   <span class="component-icon">center_focus_strong</span>
                 </button>
               </div>
             </div>
-            <div class="design-bottom-toolbar__section design-bottom-toolbar__section--zoom" data-ref="board-zoom-section">
-              <div class="design-toolbar-group" data-ref="board-group-zoom">
+            <div class="design-bottom-toolbar__section design-bottom-toolbar__section--zoom" data-ref="presentation-zoom-section">
+              <div class="design-toolbar-group" data-ref="presentation-group-zoom">
                 <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-zoom-out" data-tooltip="Alejar (Ctrl -)" aria-label="Alejar">
                   <span class="component-icon">remove</span>
                 </button>
                 <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-zoom-reset" data-tooltip="Restablecer zoom (100%)" aria-label="Restablecer zoom">
-                  <span class="design-toolbar-badge__text" data-ref="board-zoom-value">100%</span>
+                  <span class="design-toolbar-badge__text" data-ref="presentation-zoom-value">100%</span>
                 </button>
                 <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-zoom-in" data-tooltip="Acercar (Ctrl +)" aria-label="Acercar">
                   <span class="component-icon">add</span>
                 </button>
-                <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-zoom-fit" data-tooltip="Ajustar a contenido" aria-label="Ajustar a contenido">
+                <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-zoom-fit" data-tooltip="Ajustar diapositiva a la pantalla" aria-label="Ajustar diapositiva">
                   <span class="component-icon">fit_screen</span>
                 </button>
               </div>

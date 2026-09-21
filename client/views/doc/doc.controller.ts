@@ -67,7 +67,6 @@ export class DocController implements ViewController {
   private canvasTitle = 'Documento sin título';
   private canvasUserId: number | null = null;
   private canvasUuid: string;
-  private isPresentation = false;
   private collaborationManager: DocCollaborationManager;
   private collaboratorsBarEl: HTMLElement | null = null;
   private collaboratorsListEl: HTMLElement | null = null;
@@ -235,16 +234,7 @@ export class DocController implements ViewController {
       } catch {}
     }
 
-    this.isPresentation = canvasRecord.canvas_type === 'presentation'
-      || canvasRecord.unit === 'presentation'
-      || this.project.type === 'presentation'
-      || Boolean(this.project.settings?.paperSize?.startsWith('presentation_'));
-
-    if (this.isPresentation && (!canvasRecord.name || canvasRecord.name === 'Documento sin título')) {
-      this.canvasTitle = 'Presentación sin título';
-    } else {
-      this.canvasTitle = canvasRecord.name || (this.isPresentation ? 'Presentación sin título' : 'Documento sin título');
-    }
+    this.canvasTitle = canvasRecord.name || 'Documento sin título';
 
     const titleEl = this.container.querySelector<HTMLElement>('[data-ref="doc-title"]');
     if (titleEl) {
@@ -363,19 +353,17 @@ export class DocController implements ViewController {
     if (currentPaperLabel) {
       const sizeName = this.project.settings.paperSize === 'digital'
         ? 'Digital'
-        : (this.project.settings.paperSize === 'presentation_16_9'
-          ? '16:9 Panorámica'
-          : (this.project.settings.paperSize === 'presentation_fhd'
-            ? '16:9 Full HD'
-            : (this.project.settings.paperSize === 'presentation_4_3'
-              ? '4:3 Clásica'
-              : (this.project.settings.paperSize === 'a4'
-                ? 'A4'
-                : (this.project.settings.paperSize === 'a3'
-                  ? 'A3'
-                  : (this.project.settings.paperSize === 'legal'
-                    ? 'Oficio'
-                    : 'Carta'))))));
+        : (this.project.settings.paperSize === 'a4'
+          ? 'A4'
+          : (this.project.settings.paperSize === 'a3'
+            ? 'A3'
+            : (this.project.settings.paperSize === 'legal'
+              ? 'Oficio'
+              : (this.project.settings.paperSize === 'a5'
+                ? 'A5'
+                : (this.project.settings.paperSize === 'tabloid'
+                  ? 'Tabloide'
+                  : 'Carta')))));
       const orientName = this.project.settings.orientation === 'landscape' ? 'Horizontal' : 'Vertical';
       currentPaperLabel.textContent = this.project.settings.paperSize === 'digital' ? 'Digital (Automático)' : `${sizeName} • ${orientName}`;
     }
@@ -430,8 +418,8 @@ export class DocController implements ViewController {
         ${watermarkEl}
         ${isFirstPage ? `<div class="doc-empty-placeholder" data-ref="doc-empty-placeholder" style="top: ${margins.top}px; left: ${margins.left}px; right: ${margins.right}px; display: ${isDocEmpty ? 'block' : 'none'};">${escapeHtml(this.activeInspiringQuote)}</div>` : ''}
         <div class="doc-page__content ${columnsClass}" data-ref="page-content-${page.id}" contenteditable="true" spellcheck="true" style="font-family: ${this.project.settings.fontFamily}; font-size: ${this.project.settings.fontSize}pt; line-height: ${this.project.settings.lineHeight}; ${letterSpacingStyle}">${page.contentHtml || '<p><br></p>'}</div>
-        <div class="doc-page__badge">${this.isPresentation ? 'Diapositiva' : 'Página'} ${index + 1}</div>
-        ${this.project.pages.length > 1 ? `<button type="button" class="doc-page__delete-btn" data-ref="btn-delete-page-${page.id}" data-page-id="${page.id}" data-tooltip="${this.isPresentation ? 'Eliminar diapositiva' : 'Eliminar página'}" aria-label="${this.isPresentation ? 'Eliminar diapositiva' : 'Eliminar página'}"><span class="component-icon">delete</span></button>` : ''}
+        <div class="doc-page__badge">Página ${index + 1}</div>
+        ${this.project.pages.length > 1 ? `<button type="button" class="doc-page__delete-btn" data-ref="btn-delete-page-${page.id}" data-page-id="${page.id}" data-tooltip="Eliminar página" aria-label="Eliminar página"><span class="component-icon">delete</span></button>` : ''}
       `;
 
       pagesContainer.appendChild(pageEl);
@@ -449,7 +437,7 @@ export class DocController implements ViewController {
     if (titleEl) {
       titleEl.addEventListener('click', () => {
         const current = this.canvasTitle;
-        const newTitle = prompt(this.isPresentation ? 'Nombre de la presentación:' : 'Nombre del documento:', current);
+        const newTitle = prompt('Nombre del documento:', current);
         if (newTitle && newTitle.trim() && newTitle !== current) {
           this.canvasTitle = newTitle.trim();
           titleEl.textContent = this.canvasTitle;
@@ -2505,37 +2493,36 @@ export class DocController implements ViewController {
       const dataStr = JSON.stringify(this.project);
       const thumbnail = generateDocThumbnail(this.project);
 
-      const activeCanvasType = this.isPresentation ? 'presentation' : 'doc';
-      const paperSizeKey = this.project.settings.paperSize || (this.isPresentation ? 'presentation_16_9' : 'letter');
-      const orientationKey = this.project.settings.orientation || (this.isPresentation ? 'landscape' : 'portrait');
+      const paperSizeKey = this.project.settings.paperSize || 'letter';
+      const orientationKey = this.project.settings.orientation || 'portrait';
       const paper = (DOC_PAPER_DIMENSIONS[paperSizeKey] && DOC_PAPER_DIMENSIONS[paperSizeKey][orientationKey])
         ? DOC_PAPER_DIMENSIONS[paperSizeKey][orientationKey]
-        : (this.isPresentation ? DOC_PAPER_DIMENSIONS.presentation_16_9.landscape : DOC_PAPER_DIMENSIONS.letter.portrait);
+        : DOC_PAPER_DIMENSIONS.letter.portrait;
 
       await saveLocalCanvas({
-        canvas_type: activeCanvasType,
+        canvas_type: 'doc',
         created_at: this.canvasCreatedAt || new Date().toISOString(),
         data: dataStr,
-        height: paper.heightPx || (this.isPresentation ? 720 : 1056),
+        height: paper.heightPx || 1056,
         is_local: !currentUser,
         name: this.canvasTitle,
         preview_thumbnail: thumbnail,
-        unit: activeCanvasType,
+        unit: 'doc',
         updated_at: new Date().toISOString(),
         uuid: this.canvasUuid,
-        width: paper.widthPx || (this.isPresentation ? 1280 : 816),
+        width: paper.widthPx || 816,
       });
 
       if (currentUser) {
         const res = await postApi(API_ROUTES.canvases.sync, {
-          canvas_type: activeCanvasType,
+          canvas_type: 'doc',
           data: dataStr,
-          height: paper.heightPx || (this.isPresentation ? 720 : 1056),
+          height: paper.heightPx || 1056,
           name: this.canvasTitle,
           preview_thumbnail: thumbnail,
-          unit: activeCanvasType,
+          unit: 'doc',
           uuid: this.canvasUuid,
-          width: paper.widthPx || (this.isPresentation ? 1280 : 816),
+          width: paper.widthPx || 816,
         });
         if (res.ok) {
           this.setSaveStatus('saved');
@@ -2890,19 +2877,18 @@ export class DocController implements ViewController {
             <div class="settings-item__content">
               <div class="settings-item__text">
                 <h3 class="settings-item__title">Tamaño de papel</h3>
-                <p class="settings-item__desc">Dimensiones físicas normalizadas para impresión, diapositivas y vista.</p>
+                <p class="settings-item__desc">Dimensiones físicas normalizadas para impresión y vista.</p>
               </div>
             </div>
             <div class="settings-item__actions">
               <select class="settings-dropdown-wrapper" data-ref="modal-select-paper" style="padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; background: transparent; color: inherit;">
-                <option value="presentation_16_9" ${this.project.settings.paperSize === 'presentation_16_9' ? 'selected' : ''}>16:9 Panorámica (1280 × 720 px - Diapositiva)</option>
-                <option value="presentation_fhd" ${this.project.settings.paperSize === 'presentation_fhd' ? 'selected' : ''}>16:9 Full HD (1920 × 1080 px - Diapositiva)</option>
-                <option value="presentation_4_3" ${this.project.settings.paperSize === 'presentation_4_3' ? 'selected' : ''}>4:3 Clásica (1024 × 768 px - Diapositiva)</option>
                 <option value="digital" ${this.project.settings.paperSize === 'digital' ? 'selected' : ''}>Digital (Tamaño automático)</option>
                 <option value="a4" ${this.project.settings.paperSize === 'a4' ? 'selected' : ''}>A4 (21 × 29.7 cm)</option>
                 <option value="a3" ${this.project.settings.paperSize === 'a3' ? 'selected' : ''}>A3 (29.7 × 42 cm)</option>
                 <option value="letter" ${this.project.settings.paperSize === 'letter' ? 'selected' : ''}>Carta (8.5 × 11 in)</option>
                 <option value="legal" ${this.project.settings.paperSize === 'legal' ? 'selected' : ''}>Oficio (8.5 × 14 in)</option>
+                <option value="a5" ${this.project.settings.paperSize === 'a5' ? 'selected' : ''}>A5 (14.8 × 21 cm)</option>
+                <option value="tabloid" ${this.project.settings.paperSize === 'tabloid' ? 'selected' : ''}>Tabloide (11 × 17 in)</option>
               </select>
             </div>
           </div>
@@ -2966,9 +2952,6 @@ export class DocController implements ViewController {
 
         if (selPaper) {
           this.project.settings.paperSize = selPaper.value as DocPaperSize;
-          if (selPaper.value.startsWith('presentation_')) {
-            this.isPresentation = true;
-          }
         }
         this.project.settings.orientation = isLandscape ? 'landscape' : 'portrait';
         this.project.settings.firstPageDifferent = Boolean(chkDiff?.checked);
@@ -3443,14 +3426,14 @@ export class DocController implements ViewController {
     overlay.className = 'doc-slideshow-overlay';
     overlay.setAttribute('data-ref', 'doc-slideshow-overlay');
 
-    const paperSizeKey = this.project.settings.paperSize || (this.isPresentation ? 'presentation_16_9' : 'letter');
-    const orientationKey = this.project.settings.orientation || (this.isPresentation ? 'landscape' : 'portrait');
+    const paperSizeKey = this.project.settings.paperSize || 'letter';
+    const orientationKey = this.project.settings.orientation || 'portrait';
     const paper = (DOC_PAPER_DIMENSIONS[paperSizeKey] && DOC_PAPER_DIMENSIONS[paperSizeKey][orientationKey])
       ? DOC_PAPER_DIMENSIONS[paperSizeKey][orientationKey]
-      : (this.isPresentation ? DOC_PAPER_DIMENSIONS.presentation_16_9.landscape : DOC_PAPER_DIMENSIONS.letter.portrait);
+      : DOC_PAPER_DIMENSIONS.letter.portrait;
 
-    const slideWidth = paper.widthPx > 0 ? paper.widthPx : 1280;
-    const slideHeight = paper.heightPx > 0 ? paper.heightPx : 720;
+    const slideWidth = paper.widthPx > 0 ? paper.widthPx : 816;
+    const slideHeight = paper.heightPx > 0 ? paper.heightPx : 1056;
     const margins = this.project.settings.margins || { bottom: 48, left: 60, right: 60, top: 48 };
 
     overlay.innerHTML = `

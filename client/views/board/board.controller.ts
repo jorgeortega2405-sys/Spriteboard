@@ -1,4 +1,4 @@
-import { CanvasAiDropdownController, setupBoardAiDropdown, setupPresentationAiDropdown } from '../../components/canvas-ai-dropdown.component.js';
+import { CanvasAiDropdownController, setupBoardAiDropdown } from '../../components/canvas-ai-dropdown.component.js';
 import { CanvasCommentsController } from '../../components/canvas-comments.component.js';
 import { CanvasHistoryDropdownController, setupCanvasHistoryDropdown } from '../../components/canvas-history-dropdown.component.js';
 import { openCanvasMetricsModal } from '../../components/canvas-metrics-modal.component.js';
@@ -83,7 +83,6 @@ export class BoardController {
   private boardBackground: { color: string; dotColor?: string; type: BackgroundType } = { color: '#ffffff', dotColor: '#cbd5e1', type: 'dots' };
   private boardName = 'Pizarrón sin título';
   private broadcastMyCursor = true;
-  private btnBoardPresent: HTMLButtonElement | null = null;
   private camera = { x: 0, y: 0, zoom: 1 };
   private canvasCreatedAt: string | null = null;
   private canvasElement: HTMLCanvasElement | null = null;
@@ -92,11 +91,6 @@ export class BoardController {
   private canvasUserId: number | null = null;
   private canvasUuid: string;
   private collaborationManager: BoardCollaborationManager;
-  private isPresentation = false;
-  private isSlideshowActive = false;
-  private slideHeight = 720;
-  private slideWidth = 1280;
-  private slideshowCurrentIndex = 0;
   private collaboratorsBarEl: HTMLElement | null = null;
   private collaboratorsListEl: HTMLElement | null = null;
   private colorPanelTarget: 'stroke' | 'fill' | 'text' = 'stroke';
@@ -134,15 +128,9 @@ export class BoardController {
   private animationPanel: BoardAnimationPanelComponent | null = null;
   private effectsPanel: BoardEffectsPanelComponent | null = null;
   private positionPanel: BoardPositionPanelComponent | null = null;
-  private btnSlideDuration: HTMLButtonElement | null = null;
-  private slideDurationTextEl: HTMLElement | null = null;
-  private popoverSlideDurationEl: HTMLElement | null = null;
   private previewAnimElementId: string | null = null;
   private previewAnimStartTime = 0;
   private previewAnimConfig: BoardElementAnimation | null = null;
-  private slideshowAutoPlay = false;
-  private slideshowProgressRaf: number | null = null;
-  private slideshowSlideStartTime = 0;
   private didPan = false;
   private isDrawing = false;
   private isEyedropperActive = false;
@@ -234,14 +222,6 @@ export class BoardController {
     this.previewBannerEl = this.container.querySelector<HTMLElement>('[data-ref="design-history-preview-banner"]');
     this.btnPreviewRestore = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-preview-restore"]');
     this.btnPreviewExit = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-preview-exit"]');
-    this.btnBoardPresent = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-board-present"]');
-
-    if (this.isPresentation && this.btnBoardPresent) {
-      this.btnBoardPresent.classList.remove('is-hidden');
-      this.btnBoardPresent.addEventListener('click', () => {
-        this.startSlideshow();
-      }, { signal: this.abortController.signal });
-    }
 
     this.commentsController = new CanvasCommentsController({
       canvasUuid: this.canvasUuid,
@@ -375,7 +355,6 @@ export class BoardController {
             if (updates.y !== undefined && 'y' in el) el.y = updates.y;
             if (updates.rotation !== undefined) el.rotation = updates.rotation;
             if (updates.aspectRatioLocked !== undefined) el.aspectRatioLocked = updates.aspectRatioLocked;
-            this.clampElementToSlide(el);
             this.collaborationManager.broadcastUpdateElement(el);
           }
           this.updateSelectionToolbar();
@@ -405,8 +384,8 @@ export class BoardController {
       onPrevPage: () => this.goToPrevPage(),
       onReorderPages: (from, to) => this.reorderPages(from, to),
       onSelectPage: (id) => this.switchToPage(id),
-    }, this.isPresentation);
-    this.pagesTray.attach(this.container, this.pages, this.activePageId, this.isPresentation);
+    });
+    this.pagesTray.attach(this.container, this.pages, this.activePageId);
     this.bindEvents();
     try {
       const savedSnapping = localStorage.getItem('spriteboard_board_snapping');
@@ -538,11 +517,7 @@ export class BoardController {
       this.currentCanvasItem = canvas;
       this.canvasServerId = canvas.id || this.canvasServerId;
       this.canvasUserId = canvas.user_id || this.canvasUserId;
-      this.isPresentation = canvas.canvas_type === 'presentation' || canvas.unit === 'presentation';
-      this.slideWidth = canvas.width && canvas.width > 0 ? canvas.width : 1280;
-      this.slideHeight = canvas.height && canvas.height > 0 ? canvas.height : 720;
-      const defaultTitle = this.isPresentation ? 'Presentación sin título' : 'Pizarrón sin título';
-      this.boardName = canvas.name || defaultTitle;
+      this.boardName = canvas.name || 'Pizarrón sin título';
       this.canvasCreatedAt = canvas.created_at || null;
 
       if (this.canvasUserId && currentUser) {
@@ -583,12 +558,7 @@ export class BoardController {
       if (canvas.data) {
         try {
           const parsed = typeof canvas.data === 'string' ? JSON.parse(canvas.data) : canvas.data;
-          if (parsed && (parsed.type === 'board' || parsed.type === 'presentation')) {
-            if (parsed.type === 'presentation') {
-              this.isPresentation = true;
-              if (parsed.width) this.slideWidth = parsed.width;
-              if (parsed.height) this.slideHeight = parsed.height;
-            }
+          if (parsed && parsed.type === 'board') {
             const project = parsed as BoardProject;
             if (Array.isArray(project.pages) && project.pages.length > 0) {
               this.pages = project.pages;
@@ -601,7 +571,7 @@ export class BoardController {
               this.boardBackground = activePage.background || {
                 color: '#ffffff',
                 dotColor: '#cbd5e1',
-                type: this.isPresentation ? 'solid' : 'dots',
+                type: 'dots',
               };
               this.camera = activePage.camera
                 ? {
@@ -622,7 +592,7 @@ export class BoardController {
               const defaultBackground = project.background || {
                 color: '#ffffff',
                 dotColor: '#cbd5e1',
-                type: this.isPresentation ? 'solid' : 'dots',
+                type: 'dots',
               };
               const defaultPage: BoardPageItem = {
                 background: defaultBackground,
@@ -630,7 +600,7 @@ export class BoardController {
                 createdAt: Date.now(),
                 elements: defaultElements,
                 id: `page-${Date.now()}-1`,
-                name: this.isPresentation ? 'Diapositiva 1' : 'Página 1',
+                name: 'Página 1',
               };
               this.pages = [defaultPage];
               this.activePageId = defaultPage.id;
@@ -644,12 +614,12 @@ export class BoardController {
 
       if (this.pages.length === 0) {
         const defaultPage: BoardPageItem = {
-          background: { color: '#ffffff', dotColor: '#cbd5e1', type: this.isPresentation ? 'solid' : 'dots' },
+          background: { color: '#ffffff', dotColor: '#cbd5e1', type: 'dots' },
           camera: { x: 0, y: 0, zoom: 1 },
           createdAt: Date.now(),
           elements: [],
           id: `page-${Date.now()}-1`,
-          name: this.isPresentation ? 'Diapositiva 1' : 'Página 1',
+          name: 'Página 1',
         };
         this.pages = [defaultPage];
         this.activePageId = defaultPage.id;
@@ -879,6 +849,56 @@ export class BoardController {
     this.renderCollaboratorsBar();
   }
 
+  private setupDropdowns(): void {
+    const exportWrapper = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-export"]');
+    if (exportWrapper) {
+      this.exportDropdownController = setupDropdown(exportWrapper, {
+        placement: 'bottom-end',
+      });
+    }
+
+    const drawToolsWrapper = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-draw-tools"]');
+    if (drawToolsWrapper) {
+      this.drawToolsDropdownController = setupDropdown(drawToolsWrapper, {
+        placement: 'top-start',
+      });
+    }
+
+    const pixelToolsWrapper = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-pixel-tools"]');
+    if (pixelToolsWrapper) {
+      this.pixelToolsDropdownController = setupDropdown(pixelToolsWrapper, {
+        placement: 'top-start',
+      });
+    }
+  }
+
+  private setupResizeObserver(): void {
+    const parent = this.canvasElement?.parentElement;
+    if (!parent) return;
+    this.resizeObserver = new ResizeObserver(() => {
+      this.handleResize();
+    });
+    this.resizeObserver.observe(parent);
+    window.addEventListener('resize', () => this.handleResize(), { signal: this.abortController.signal });
+  }
+
+  private handleResize(): void {
+    if (!this.canvasElement || !this.canvasElement.parentElement) return;
+    const rect = this.canvasElement.parentElement.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    const targetWidth = Math.round(rect.width * dpr);
+    const targetHeight = Math.round(rect.height * dpr);
+
+    const changed = this.canvasElement.width !== targetWidth || this.canvasElement.height !== targetHeight;
+    if (changed) {
+      this.canvasElement.width = targetWidth;
+      this.canvasElement.height = targetHeight;
+      this.requestRedraw();
+    }
+  }
+
   private handleAccessRevoked(): void {
     if (this.isOwner) return;
     if (this.canvasElement) {
@@ -1022,35 +1042,10 @@ export class BoardController {
       this.canvasElement.height = targetHeight;
     }
 
-    if (this.isPresentation) {
-      this.fitPresentationSlide();
-    } else if (changed) {
+    if (changed) {
       this.requestRedraw();
     }
   }
-
-  public fitPresentationSlide(): void {
-    if (!this.isPresentation || !this.canvasElement) return;
-    const dpr = window.devicePixelRatio || 1;
-    const w = this.canvasElement.width / dpr || this.canvasElement.clientWidth;
-    const h = this.canvasElement.height / dpr || this.canvasElement.clientHeight;
-    if (w <= 0 || h <= 0) return;
-
-    const paddingX = 48;
-    const paddingY = 36;
-    const availW = Math.max(100, w - paddingX * 2);
-    const availH = Math.max(100, h - paddingY * 2);
-
-    const fitScale = Math.min(availW / this.slideWidth, availH / this.slideHeight);
-    const clampedScale = Math.max(0.15, Math.min(2.5, fitScale));
-
-    this.camera.x = 0;
-    this.camera.y = 0;
-    this.camera.zoom = clampedScale;
-    this.updateZoomUI();
-    this.requestRedraw();
-  }
-
 
   private setupDropdowns(): void {
     const exportWrapper = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-export"]');
@@ -1224,27 +1219,14 @@ export class BoardController {
 
     const btnBoardAi = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-board-ai"]');
     if (this.aiWrapperEl && btnBoardAi) {
-      if (this.isPresentation) {
-        this.aiDropdownController = setupPresentationAiDropdown({
-          onSuccess: ({ mode, slides, title }) => {
-            this.insertAiGeneratedPresentation(slides, mode, title);
-          },
-          signal,
-          slideHeight: this.slideHeight,
-          slideWidth: this.slideWidth,
-          trigger: btnBoardAi,
-          wrapper: this.aiWrapperEl,
-        });
-      } else {
-        this.aiDropdownController = setupBoardAiDropdown({
-          onSuccess: ({ elements }) => {
-            this.insertAiGeneratedBoardElements(elements);
-          },
-          signal,
-          trigger: btnBoardAi,
-          wrapper: this.aiWrapperEl,
-        });
-      }
+      this.aiDropdownController = setupBoardAiDropdown({
+        onSuccess: ({ elements }) => {
+          this.insertAiGeneratedBoardElements(elements);
+        },
+        signal,
+        trigger: btnBoardAi,
+        wrapper: this.aiWrapperEl,
+      });
     }
 
     this.bindToolbarTools(signal);
@@ -1362,7 +1344,6 @@ export class BoardController {
     });
 
     for (const el of positionedElements) {
-      this.clampElementToSlide(el);
       this.elements.push(el);
       this.collaborationManager.broadcastAddElement(el);
     }
@@ -1372,82 +1353,6 @@ export class BoardController {
     this.updateSelectionToolbar();
     this.requestRedraw();
     this.scheduleAutoSave();
-  }
-
-  private insertAiGeneratedPresentation(
-    aiSlides: Array<{
-      background?: { color: string; dotColor?: string; type: BackgroundType };
-      elements: BoardElement[];
-      name: string;
-    }>,
-    mode: 'append' | 'replace' = 'replace',
-    presTitle?: string
-  ): void {
-    if (!aiSlides || aiSlides.length === 0) return;
-    this.pushHistoryState();
-
-    const convertedPages: BoardPageItem[] = aiSlides.map((slide, sIdx) => {
-      const pageId = `page-${Date.now()}-${sIdx}-${Math.random().toString(36).slice(2, 6)}`;
-      const idMap = new Map<string, string>();
-      slide.elements.forEach((el, eIdx) => {
-        if (el.id) idMap.set(el.id, `el-ai-${Date.now()}-${sIdx}-${eIdx}-${Math.random().toString(36).slice(2, 7)}`);
-      });
-
-      const positioned = slide.elements.map((el, eIdx) => {
-        const copy = JSON.parse(JSON.stringify(el)) as BoardElement;
-        copy.id = (copy.id && idMap.get(copy.id)) || `el-ai-${Date.now()}-${sIdx}-${eIdx}-${Math.random().toString(36).slice(2, 7)}`;
-        if (copy.type === 'connector') {
-          const conn = copy as any;
-          if (conn.fromId && idMap.has(conn.fromId)) conn.fromId = idMap.get(conn.fromId);
-          if (conn.toId && idMap.has(conn.toId)) conn.toId = idMap.get(conn.toId);
-        }
-        this.clampElementToSlide(copy);
-        return copy;
-      });
-
-      return {
-        background: slide.background || { color: '#ffffff', dotColor: '#cbd5e1', type: 'solid' },
-        camera: { x: 0, y: 0, zoom: 1 },
-        createdAt: Date.now() + sIdx,
-        elements: positioned,
-        id: pageId,
-        name: slide.name || `Diapositiva ${sIdx + 1}`,
-      };
-    });
-
-    if (mode === 'replace') {
-      this.pages = convertedPages;
-      this.activePageId = this.pages[0].id;
-      this.elements = this.pages[0].elements || [];
-      this.boardBackground = this.pages[0].background || { color: '#ffffff', dotColor: '#cbd5e1', type: 'solid' };
-      this.camera = this.pages[0].camera || { x: 0, y: 0, zoom: 1 };
-    } else {
-      this.pages.push(...convertedPages);
-      this.switchToPage(convertedPages[0].id);
-    }
-
-    if (presTitle && (this.boardName === 'Presentación sin título' || this.boardName === 'Pizarrón sin título')) {
-      this.boardName = presTitle;
-      const titleEl = this.container.querySelector<HTMLElement>('[data-ref="board-title"]');
-      if (titleEl) titleEl.textContent = this.boardName;
-      document.title = `${this.boardName} - Spriteboard`;
-    }
-
-    this.selectedElementId = null;
-    this.selectedElementIds = [];
-    this.updateSelectionToolbar();
-    this.history.clear();
-    this.history.pushState(this.elements);
-    this.updateUndoRedoUI();
-    this.updatePagesUI();
-    this.requestRedraw();
-    this.scheduleAutoSave();
-    this.collaborationManager.broadcastFullUpdate({
-      activePageId: this.activePageId,
-      background: this.boardBackground,
-      elements: this.elements,
-      pages: this.pages,
-    });
   }
 
   private bindToolbarTools(signal: AbortSignal): void {
@@ -1474,9 +1379,6 @@ export class BoardController {
   }
 
   private setTool(tool: BoardTool): void {
-    if (this.isPresentation && tool === 'hand') {
-      tool = 'select';
-    }
     if (this.isEyedropperActive) {
       this.toggleEyedropper(false);
     }
@@ -1531,7 +1433,7 @@ export class BoardController {
       this.canvasElement.style.cursor = 'none';
     } else if (this.isLaserMode) {
       this.canvasElement.style.cursor = 'crosshair';
-    } else if (!this.isPresentation && (this.currentTool === 'hand' || this.isSpacePressed || this.isShiftPressed)) {
+    } else if (this.currentTool === 'hand' || this.isSpacePressed || this.isShiftPressed) {
       this.canvasElement.style.cursor = 'grab';
     } else if (this.currentTool === 'select') {
       this.canvasElement.style.cursor = 'default';
@@ -2272,15 +2174,6 @@ export class BoardController {
 
   private setZoom(newZoom: number, centerScreenX?: number, centerScreenY?: number): void {
     if (!this.canvasElement) return;
-    if (this.isPresentation) {
-      this.camera.zoom = Math.max(0.2, Math.min(3, newZoom));
-      this.camera.x = 0;
-      this.camera.y = 0;
-      this.updateZoomUI();
-      this.requestRedraw();
-      this.scheduleAutoSave();
-      return;
-    }
 
     const rect = this.canvasElement.getBoundingClientRect();
     const cx = centerScreenX !== undefined ? centerScreenX : rect.width / 2;
@@ -2306,11 +2199,6 @@ export class BoardController {
   }
 
   private zoomToFit(): void {
-    if (this.isPresentation) {
-      this.fitPresentationSlide();
-      return;
-    }
-
     if (!this.canvasElement || this.elements.length === 0) {
       this.camera = { x: 0, y: 0, zoom: 1 };
       this.updateZoomUI();
@@ -2860,54 +2748,6 @@ export class BoardController {
       this.positionPanel?.toggle(this.getSelectedElements()[0] || null, this.elements);
     }, { signal });
 
-    this.btnSlideDuration = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-slide-duration"]');
-    this.slideDurationTextEl = this.container.querySelector<HTMLElement>('[data-ref="slide-duration-text"]');
-    this.popoverSlideDurationEl = this.container.querySelector<HTMLElement>('[data-ref="popover-slide-duration"]');
-
-    if (this.isPresentation && this.btnSlideDuration) {
-      this.btnSlideDuration.classList.remove('is-hidden');
-      const activePage = this.pages.find((p) => p.id === this.activePageId);
-      const dur = activePage?.duration !== undefined ? activePage.duration : 5;
-      if (this.slideDurationTextEl) this.slideDurationTextEl.textContent = `${dur.toFixed(1)} s`;
-
-      this.btnSlideDuration.addEventListener('click', () => {
-        if (this.popoverSlideDurationEl && this.btnSlideDuration) {
-          this.togglePopover(this.popoverSlideDurationEl, this.btnSlideDuration);
-        }
-      }, { signal });
-    }
-
-    const inputDuration = this.container.querySelector<HTMLInputElement>('[data-ref="input-popover-slide-duration"]');
-    const labelDuration = this.container.querySelector<HTMLElement>('[data-ref="label-popover-slide-duration"]');
-    const btnApplyDurationAll = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-apply-duration-all"]');
-    const durationPresetChips = this.container.querySelectorAll<HTMLButtonElement>('[data-ref="slide-duration-presets"] [data-duration]');
-
-    inputDuration?.addEventListener('input', () => {
-      const val = parseFloat(inputDuration.value) || 5;
-      if (labelDuration) labelDuration.textContent = `${val.toFixed(1)} s`;
-      this.updateActivePageDuration(val);
-      durationPresetChips.forEach((chip) => {
-        chip.classList.toggle('is-active', Math.abs(parseFloat(chip.getAttribute('data-duration') || '5') - val) < 0.1);
-      });
-    }, { signal });
-
-    durationPresetChips.forEach((chip) => {
-      chip.addEventListener('click', () => {
-        const val = parseFloat(chip.getAttribute('data-duration') || '5') || 5;
-        if (inputDuration) inputDuration.value = `${val}`;
-        if (labelDuration) labelDuration.textContent = `${val.toFixed(1)} s`;
-        this.updateActivePageDuration(val);
-        durationPresetChips.forEach((c) => c.classList.remove('is-active'));
-        chip.classList.add('is-active');
-      }, { signal });
-    });
-
-    btnApplyDurationAll?.addEventListener('click', () => {
-      const currentVal = inputDuration ? parseFloat(inputDuration.value) || 5 : 5;
-      this.applyDurationToAllPages(currentVal);
-      this.closeAllPopovers();
-    }, { signal });
-
     const btnDuplicate = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-duplicate"]');
     btnDuplicate?.addEventListener('click', () => this.duplicateSelected(), { signal });
 
@@ -3127,7 +2967,6 @@ export class BoardController {
         this.pixelGrid.deleteState(cloned.id);
       }
 
-      this.clampElementToSlide(cloned);
       this.elements.push(cloned);
       this.collaborationManager.broadcastAddElement(cloned);
       newIds.push(cloned.id);
@@ -3227,10 +3066,6 @@ export class BoardController {
     this.canvasElement.addEventListener(
       'wheel',
       (e: WheelEvent) => {
-        if (this.isPresentation) {
-          e.preventDefault();
-          return;
-        }
         if (e.ctrlKey || e.metaKey) {
           e.preventDefault();
           const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
@@ -3552,7 +3387,6 @@ export class BoardController {
             x: worldPos.x - 80,
             y: worldPos.y - 80,
           };
-          this.clampElementToSlide(stickyEl);
           this.elements.push(stickyEl);
           this.collaborationManager.broadcastAddElement(stickyEl);
           this.selectedElementId = stickyEl.id;
@@ -3583,7 +3417,6 @@ export class BoardController {
             x: worldPos.x,
             y: worldPos.y,
           };
-          this.clampElementToSlide(textEl);
           this.elements.push(textEl);
           this.collaborationManager.broadcastAddElement(textEl);
           this.selectedElementId = textEl.id;
@@ -3612,7 +3445,6 @@ export class BoardController {
             x: worldPos.x - 70,
             y: worldPos.y - 50,
           };
-          this.clampElementToSlide(shapeEl);
           this.elements.push(shapeEl);
           this.collaborationManager.broadcastAddElement(shapeEl);
           this.selectedElementId = shapeEl.id;
@@ -3691,7 +3523,6 @@ export class BoardController {
     }
 
     if (e.button === 1 || this.currentTool === 'hand' || this.isSpacePressed) {
-      if (this.isPresentation) return;
       this.isPanning = true;
       this.didPan = false;
       this.panStartMouse = { x: e.clientX, y: e.clientY };
@@ -3940,7 +3771,6 @@ export class BoardController {
         x: Math.round(worldPos.x - 100),
         y: Math.round(worldPos.y - 90),
       };
-      this.clampElementToSlide(stickyEl);
       this.elements.push(stickyEl);
       this.collaborationManager.broadcastAddElement(stickyEl);
       this.selectedElementId = stickyEl.id;
@@ -3968,7 +3798,6 @@ export class BoardController {
         x: Math.round(worldPos.x),
         y: Math.round(worldPos.y),
       };
-      this.clampElementToSlide(textEl);
       this.elements.push(textEl);
       this.collaborationManager.broadcastAddElement(textEl);
       this.selectedElementId = textEl.id;
@@ -3982,10 +3811,6 @@ export class BoardController {
 
   private handlePointerMove(e: PointerEvent): void {
     if (this.isPanning) {
-      if (this.isPresentation) {
-        this.isPanning = false;
-        return;
-      }
       const dx = (e.clientX - this.panStartMouse.x) / this.camera.zoom;
       const dy = (e.clientY - this.panStartMouse.y) / this.camera.zoom;
       this.camera.x = this.panStartCamera.x - dx;
@@ -4064,20 +3889,7 @@ export class BoardController {
           } else {
             this.activeAlignmentGuides = [];
           }
-          if (this.isPresentation) {
-            const minX = -this.slideWidth / 2;
-            const maxX = this.slideWidth / 2;
-            const minY = -this.slideHeight / 2;
-            const maxY = this.slideHeight / 2;
-            targetWorldPos = {
-              x: Math.max(minX, Math.min(maxX, targetWorldPos.x)),
-              y: Math.max(minY, Math.min(maxY, targetWorldPos.y)),
-            };
-          }
           resizeElementByHandle(el, this.resizeHandleType, targetWorldPos, this.selectionStartRect, e.shiftKey);
-          if (this.isPresentation) {
-            this.clampElementToSlide(el);
-          }
           this.setResizeCursor(this.resizeHandleType);
         }
       } else {
@@ -4106,24 +3918,6 @@ export class BoardController {
           this.activeAlignmentGuides = snapRes.guides;
         } else {
           this.activeAlignmentGuides = [];
-        }
-
-        if (this.isPresentation && this.selectionStartBBox) {
-          const minX = -this.slideWidth / 2;
-          const maxX = this.slideWidth / 2;
-          const minY = -this.slideHeight / 2;
-          const maxY = this.slideHeight / 2;
-
-          if (this.selectionStartBBox.width <= this.slideWidth) {
-            const minDx = minX - this.selectionStartBBox.x;
-            const maxDx = maxX - (this.selectionStartBBox.x + this.selectionStartBBox.width);
-            effectiveDx = Math.max(minDx, Math.min(maxDx, effectiveDx));
-          }
-          if (this.selectionStartBBox.height <= this.slideHeight) {
-            const minDy = minY - this.selectionStartBBox.y;
-            const maxDy = maxY - (this.selectionStartBBox.y + this.selectionStartBBox.height);
-            effectiveDy = Math.max(minDy, Math.min(maxDy, effectiveDy));
-          }
         }
 
         for (const [id, startPos] of this.selectionStartPositions.entries()) {
@@ -4167,17 +3961,7 @@ export class BoardController {
       }
 
       if (this.liveDraftElement) {
-        let drawWorldPos = worldPos;
-        if (this.isPresentation) {
-          const minX = -this.slideWidth / 2;
-          const maxX = this.slideWidth / 2;
-          const minY = -this.slideHeight / 2;
-          const maxY = this.slideHeight / 2;
-          drawWorldPos = {
-            x: Math.max(minX, Math.min(maxX, worldPos.x)),
-            y: Math.max(minY, Math.min(maxY, worldPos.y)),
-          };
-        }
+        const drawWorldPos = worldPos;
         if (this.liveDraftElement.type === 'stroke') {
           const pts = this.liveDraftElement.points;
           const lastPt = pts[pts.length - 1];
@@ -4390,7 +4174,6 @@ export class BoardController {
             return;
           }
         }
-        this.clampElementToSlide(this.liveDraftElement);
         this.elements.push(this.liveDraftElement);
         this.collaborationManager.broadcastAddElement(this.liveDraftElement);
         this.selectedElementId = this.liveDraftElement.id;
@@ -4641,12 +4424,6 @@ export class BoardController {
           return;
         }
 
-        if (e.key === 'F5' && this.isPresentation) {
-          e.preventDefault();
-          this.startSlideshow();
-          return;
-        }
-
         if (e.key === 'Escape') {
           if (this.isEyedropperActive) {
             this.toggleEyedropper(false);
@@ -4663,22 +4440,18 @@ export class BoardController {
         }
 
         if (e.code === 'Space' && !this.isSpacePressed) {
-          if (!this.isPresentation) {
-            this.isSpacePressed = true;
-            if (this.canvasElement && !this.isPanning) {
-              this.canvasElement.classList.add('can-pan');
-              this.canvasElement.style.cursor = 'grab';
-            }
+          this.isSpacePressed = true;
+          if (this.canvasElement && !this.isPanning) {
+            this.canvasElement.classList.add('can-pan');
+            this.canvasElement.style.cursor = 'grab';
           }
         }
 
         if (e.key === 'Shift' && !e.ctrlKey && !e.metaKey && !e.altKey && !this.isShiftPressed) {
-          if (!this.isPresentation) {
-            this.isShiftPressed = true;
-            if (this.canvasElement && !this.isPanning) {
-              this.canvasElement.classList.add('can-pan');
-              this.canvasElement.style.cursor = 'grab';
-            }
+          this.isShiftPressed = true;
+          if (this.canvasElement && !this.isPanning) {
+            this.canvasElement.classList.add('can-pan');
+            this.canvasElement.style.cursor = 'grab';
           }
         }
 
@@ -4736,9 +4509,7 @@ export class BoardController {
 
         const key = e.key.toLowerCase();
         if (key === 'v') this.setTool('select');
-        if (key === 'h') {
-          if (!this.isPresentation) this.setTool('hand');
-        }
+        if (key === 'h') this.setTool('hand');
         if (key === 'p') this.setTool('pen');
         if (key === 'm') this.setTool('marker');
         if (key === 'r') this.setTool('highlighter');
@@ -4833,7 +4604,6 @@ export class BoardController {
       type: 'connector',
     };
     this.pushHistoryState();
-    this.clampElementToSlide(childNode);
     this.elements.push(childNode, connector);
     this.collaborationManager.broadcastAddElement(childNode);
     this.collaborationManager.broadcastAddElement(connector);
@@ -4873,7 +4643,6 @@ export class BoardController {
       y: siblingY,
     };
     this.pushHistoryState();
-    this.clampElementToSlide(siblingNode);
     this.elements.push(siblingNode);
     this.collaborationManager.broadcastAddElement(siblingNode);
     this.selectedElementId = siblingNode.id;
@@ -4882,35 +4651,6 @@ export class BoardController {
     this.requestRedraw();
     this.scheduleAutoSave();
     this.openInlineEditor(siblingNode);
-  }
-
-  private clampElementToSlide(el: BoardElement): void {
-    if (!this.isPresentation) return;
-    const minX = -this.slideWidth / 2;
-    const maxX = this.slideWidth / 2;
-    const minY = -this.slideHeight / 2;
-    const maxY = this.slideHeight / 2;
-
-    if ('width' in el && 'height' in el && 'x' in el && 'y' in el) {
-      el.width = Math.min(this.slideWidth, Math.max(20, el.width));
-      el.height = Math.min(this.slideHeight, Math.max(20, el.height));
-      el.x = Math.max(minX, Math.min(maxX - el.width, el.x));
-      el.y = Math.max(minY, Math.min(maxY - el.height, el.y));
-    } else if (el.type === 'stroke') {
-      for (const p of el.points) {
-        p.x = Math.max(minX, Math.min(maxX, p.x));
-        p.y = Math.max(minY, Math.min(maxY, p.y));
-      }
-    } else if (el.type === 'connector') {
-      if (el.startPoint) {
-        el.startPoint.x = Math.max(minX, Math.min(maxX, el.startPoint.x));
-        el.startPoint.y = Math.max(minY, Math.min(maxY, el.startPoint.y));
-      }
-      if (el.endPoint) {
-        el.endPoint.x = Math.max(minX, Math.min(maxX, el.endPoint.x));
-        el.endPoint.y = Math.max(minY, Math.min(maxY, el.endPoint.y));
-      }
-    }
   }
 
   private requestRedraw(): void {
@@ -4931,46 +4671,20 @@ export class BoardController {
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     this.ctx.clearRect(0, 0, w, h);
 
-    if (this.isPresentation) {
-      this.ctx.fillStyle = '#f1f5f9';
-      this.ctx.fillRect(0, 0, w, h);
-    } else {
-      drawBackground(
-        this.ctx,
-        w,
-        h,
-        this.boardBackground,
-        this.camera,
-        (sx, sy) => screenToWorld(sx, sy, this.canvasElement, this.camera),
-        (wx, wy) => worldToScreen(wx, wy, this.canvasElement, this.camera)
-      );
-    }
+    drawBackground(
+      this.ctx,
+      w,
+      h,
+      this.boardBackground,
+      this.camera,
+      (sx, sy) => screenToWorld(sx, sy, this.canvasElement, this.camera),
+      (wx, wy) => worldToScreen(wx, wy, this.canvasElement, this.camera)
+    );
 
     this.ctx.save();
     this.ctx.translate(w / 2, h / 2);
     this.ctx.scale(this.camera.zoom, this.camera.zoom);
     this.ctx.translate(-this.camera.x, -this.camera.y);
-
-    if (this.isPresentation) {
-      const sx = -this.slideWidth / 2;
-      const sy = -this.slideHeight / 2;
-      const sw = this.slideWidth;
-      const sh = this.slideHeight;
-
-      this.ctx.save();
-      this.ctx.shadowColor = 'rgba(15, 23, 42, 0.16)';
-      this.ctx.shadowBlur = 28;
-      this.ctx.shadowOffsetY = 8;
-      this.ctx.fillStyle = this.boardBackground.color || '#ffffff';
-      this.ctx.fillRect(sx, sy, sw, sh);
-      this.ctx.restore();
-
-      this.ctx.save();
-      this.ctx.strokeStyle = '#cbd5e1';
-      this.ctx.lineWidth = 1;
-      this.ctx.strokeRect(sx, sy, sw, sh);
-      this.ctx.restore();
-    }
 
     const topLeft = screenToWorld(0, 0, this.canvasElement, this.camera);
     const botRight = screenToWorld(w, h, this.canvasElement, this.camera);
@@ -4978,13 +4692,6 @@ export class BoardController {
     const viewMaxX = Math.max(topLeft.x, botRight.x);
     const viewMinY = Math.min(topLeft.y, botRight.y);
     const viewMaxY = Math.max(topLeft.y, botRight.y);
-
-    if (this.isPresentation) {
-      this.ctx.save();
-      this.ctx.beginPath();
-      this.ctx.rect(-this.slideWidth / 2, -this.slideHeight / 2, this.slideWidth, this.slideHeight);
-      this.ctx.clip();
-    }
 
     const sections = this.elements.filter((e) => e.type === 'section') as BoardSectionElement[];
 
@@ -5049,10 +4756,6 @@ export class BoardController {
       } else {
         this.drawElement(this.liveDraftElement);
       }
-    }
-
-    if (this.isPresentation) {
-      this.ctx.restore();
     }
 
     if (this.selectedElementIds.length > 0) {
@@ -5471,7 +5174,6 @@ export class BoardController {
         y: Math.round(centerWorld.y - elHeight / 2),
       };
 
-      this.clampElementToSlide(shapeEl);
       this.elements.push(shapeEl);
       this.collaborationManager.broadcastAddElement(shapeEl);
       this.selectedElementId = shapeEl.id;
@@ -5493,7 +5195,6 @@ export class BoardController {
         x: Math.round(centerWorld.x - 60),
         y: Math.round(centerWorld.y - 60),
       };
-      this.clampElementToSlide(imgEl);
       this.elements.push(imgEl);
       this.collaborationManager.broadcastAddElement(imgEl);
       this.selectedElementId = imgEl.id;
@@ -5543,7 +5244,6 @@ export class BoardController {
       y: Math.round(centerWorld.y - h / 2),
     };
 
-    this.clampElementToSlide(shapeEl);
     this.elements.push(shapeEl);
     this.collaborationManager.broadcastAddElement(shapeEl);
     this.selectedElementId = shapeEl.id;
@@ -5574,7 +5274,6 @@ export class BoardController {
       y: Math.round(centerWorld.y - size / 2),
     };
 
-    this.clampElementToSlide(stickyEl);
     this.elements.push(stickyEl);
     this.collaborationManager.broadcastAddElement(stickyEl);
     this.selectedElementId = stickyEl.id;
@@ -5611,7 +5310,6 @@ export class BoardController {
       y: Math.round(centerWorld.y - sz.height / 2),
     };
 
-    this.clampElementToSlide(textEl);
     this.elements.push(textEl);
     this.collaborationManager.broadcastAddElement(textEl);
     this.selectedElementId = textEl.id;
@@ -5703,7 +5401,6 @@ export class BoardController {
       };
     });
 
-    clonedElements.forEach((el) => this.clampElementToSlide(el));
     this.elements.push(...clonedElements);
     this.pixelGrid.syncPixelGridCanvases(this.elements, () => this.requestRedraw());
     clonedElements.forEach((el) => this.collaborationManager.broadcastAddElement(el));
@@ -5860,7 +5557,6 @@ export class BoardController {
       }
     });
 
-    newElements.forEach((el) => this.clampElementToSlide(el));
     this.elements.push(...newElements);
     this.pixelGrid.syncPixelGridCanvases(this.elements, () => this.requestRedraw());
     newElements.forEach((el) => this.collaborationManager.broadcastAddElement(el));
@@ -5958,7 +5654,6 @@ export class BoardController {
       }
     });
 
-    newElements.forEach((el) => this.clampElementToSlide(el));
     this.elements.push(...newElements);
     this.pixelGrid.syncPixelGridCanvases(this.elements, () => this.requestRedraw());
     newElements.forEach((el) => this.collaborationManager.broadcastAddElement(el));
@@ -5998,7 +5693,6 @@ export class BoardController {
       y: Math.round(centerWorld.y - elementHeight / 2),
     };
 
-    this.clampElementToSlide(gridEl);
     this.elements.push(gridEl);
     this.pixelGrid.syncPixelGridCanvases(this.elements, () => this.requestRedraw());
     this.collaborationManager.broadcastAddElement(gridEl);
@@ -6048,7 +5742,6 @@ export class BoardController {
       y: Math.round(centerWorld.y - targetH / 2),
     };
 
-    this.clampElementToSlide(imageEl);
     this.elements.push(imageEl);
     this.collaborationManager.broadcastAddElement(imageEl);
     this.selectedElementId = imageEl.id;
@@ -6141,47 +5834,10 @@ export class BoardController {
     if (!skipBroadcast) {
       this.collaborationManager.broadcastPageChange(this.activePageId);
     }
-    if (this.isPresentation) {
-      this.camera.x = 0;
-      this.camera.y = 0;
-      this.fitPresentationSlide();
-      if (this.slideDurationTextEl) {
-        const dur = targetPage.duration !== undefined ? targetPage.duration : 5.0;
-        this.slideDurationTextEl.textContent = `${dur.toFixed(1)} s`;
-        const inputDuration = this.container.querySelector<HTMLInputElement>('[data-ref="input-popover-slide-duration"]');
-        const labelDuration = this.container.querySelector<HTMLElement>('[data-ref="label-popover-slide-duration"]');
-        if (inputDuration) inputDuration.value = `${dur}`;
-        if (labelDuration) labelDuration.textContent = `${dur.toFixed(1)} s`;
-      }
-    }
 
     this.updatePagesUI();
     this.requestRedraw();
     this.scheduleAutoSave();
-  }
-
-  private updateActivePageDuration(duration: number): void {
-    const page = this.pages.find((p) => p.id === this.activePageId);
-    if (page) {
-      page.duration = duration;
-      if (this.slideDurationTextEl) {
-        this.slideDurationTextEl.textContent = `${duration.toFixed(1)} s`;
-      }
-      this.pagesTray?.sync(this.pages, this.activePageId);
-      this.scheduleAutoSave();
-    }
-  }
-
-  private applyDurationToAllPages(duration: number): void {
-    for (const page of this.pages) {
-      page.duration = duration;
-    }
-    if (this.slideDurationTextEl) {
-      this.slideDurationTextEl.textContent = `${duration.toFixed(1)} s`;
-    }
-    this.pagesTray?.sync(this.pages, this.activePageId);
-    this.scheduleAutoSave();
-    showToast(`Duración de ${duration.toFixed(1)}s aplicada a todas las diapositivas`);
   }
 
   private previewElementAnimation(animation: BoardElementAnimation): void {
@@ -6199,25 +5855,21 @@ export class BoardController {
 
     this.pushHistoryState();
 
-    const slideHalfW = this.slideWidth / 2;
-    const slideHalfH = this.slideHeight / 2;
-
     for (const el of selectedEls) {
       if ('width' in el && 'height' in el && 'x' in el && 'y' in el) {
         if (alignType === 'left') {
-          el.x = this.isPresentation ? -slideHalfW : 0;
+          el.x = 0;
         } else if (alignType === 'right') {
-          el.x = this.isPresentation ? slideHalfW - el.width : el.width;
+          el.x = -el.width;
         } else if (alignType === 'center') {
-          el.x = this.isPresentation ? -el.width / 2 : 0;
+          el.x = -el.width / 2;
         } else if (alignType === 'top') {
-          el.y = this.isPresentation ? -slideHalfH : 0;
+          el.y = 0;
         } else if (alignType === 'bottom') {
-          el.y = this.isPresentation ? slideHalfH - el.height : el.height;
+          el.y = -el.height;
         } else if (alignType === 'middle') {
-          el.y = this.isPresentation ? -el.height / 2 : 0;
+          el.y = -el.height / 2;
         }
-        this.clampElementToSlide(el);
         this.collaborationManager.broadcastUpdateElement(el);
       }
     }
@@ -6255,30 +5907,27 @@ export class BoardController {
 
   private addPage(): void {
     if (this.pages.length >= MAX_BOARD_PAGES) {
-      const itemNoun = this.isPresentation ? 'diapositivas' : 'páginas';
-      showToast(`Has alcanzado el límite máximo de ${MAX_BOARD_PAGES} ${itemNoun}`, 'warning');
+      showToast(`Has alcanzado el límite máximo de ${MAX_BOARD_PAGES} páginas`, 'warning');
       return;
     }
     this.syncActivePageData();
     const newPage: BoardPageItem = {
-      background: { color: '#ffffff', dotColor: '#cbd5e1', type: this.isPresentation ? 'solid' : 'dots' },
+      background: { color: '#ffffff', dotColor: '#cbd5e1', type: 'dots' },
       camera: { x: 0, y: 0, zoom: 1 },
       createdAt: Date.now(),
-      duration: 5.0,
       elements: [],
       id: `page-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      name: this.isPresentation ? `Diapositiva ${this.pages.length + 1}` : `Página ${this.pages.length + 1}`,
+      name: `Página ${this.pages.length + 1}`,
     };
     this.pages.push(newPage);
     this.switchToPage(newPage.id);
     this.collaborationManager.broadcastPageAdd(newPage);
-    showToast(this.isPresentation ? 'Nueva diapositiva creada' : 'Nueva página creada');
+    showToast('Nueva página creada');
   }
 
   private duplicatePage(pageId?: string): void {
     if (this.pages.length >= MAX_BOARD_PAGES) {
-      const itemNoun = this.isPresentation ? 'diapositivas' : 'páginas';
-      showToast(`Has alcanzado el límite máximo de ${MAX_BOARD_PAGES} ${itemNoun}`, 'warning');
+      showToast(`Has alcanzado el límite máximo de ${MAX_BOARD_PAGES} páginas`, 'warning');
       return;
     }
     this.syncActivePageData();
@@ -6296,7 +5945,6 @@ export class BoardController {
       background: { ...sourcePage.background },
       camera: { ...sourcePage.camera },
       createdAt: Date.now(),
-      duration: sourcePage.duration !== undefined ? sourcePage.duration : 5.0,
       elements: dupElements,
       id: `page-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       name: `${sourcePage.name} (copia)`,
@@ -6304,13 +5952,12 @@ export class BoardController {
     this.pages.splice(targetIndex + 1, 0, newPage);
     this.switchToPage(newPage.id);
     this.collaborationManager.broadcastPageAdd(newPage, targetIndex + 1);
-    showToast(this.isPresentation ? 'Diapositiva duplicada' : 'Página duplicada');
+    showToast('Página duplicada');
   }
 
   private deletePage(pageId?: string): void {
     if (this.pages.length <= 1) {
-      const singleNoun = this.isPresentation ? 'la única diapositiva' : 'la única página del pizarrón';
-      showToast(`No puedes eliminar ${singleNoun}`, 'warning');
+      showToast('No puedes eliminar la única página del pizarrón', 'warning');
       return;
     }
     const targetId = pageId || this.activePageId;
@@ -6325,7 +5972,7 @@ export class BoardController {
       const nextActivePage = this.pages[nextIndex];
       this.activePageId = nextActivePage.id;
       this.elements = nextActivePage.elements || [];
-      this.boardBackground = nextActivePage.background || { color: '#ffffff', dotColor: '#cbd5e1', type: this.isPresentation ? 'solid' : 'dots' };
+      this.boardBackground = nextActivePage.background || { color: '#ffffff', dotColor: '#cbd5e1', type: 'dots' };
       this.camera = nextActivePage.camera || { x: 0, y: 0, zoom: 1 };
       this.selectedElementId = null;
       this.selectedElementIds = [];
@@ -6341,7 +5988,7 @@ export class BoardController {
     this.updatePagesUI();
     this.requestRedraw();
     this.scheduleAutoSave();
-    showToast(this.isPresentation ? 'Diapositiva eliminada' : 'Página eliminada');
+    showToast('Página eliminada');
   }
 
   private reorderPages(fromIndex: number, toIndex: number): void {
@@ -6388,35 +6035,33 @@ export class BoardController {
 
   private async saveImmediate(): Promise<void> {
     this.syncActivePageData();
-    const project: any = {
+    const project: BoardProject = {
       activePageId: this.activePageId,
       background: this.boardBackground,
       camera: this.camera,
       elements: this.elements,
-      height: this.isPresentation ? this.slideHeight : undefined,
       pages: this.pages,
-      type: this.isPresentation ? 'presentation' : 'board',
+      type: 'board',
       version: 1,
-      width: this.isPresentation ? this.slideWidth : undefined,
     };
 
     const thumbnail = generateThumbnail(this.elements, this.boardBackground, (ctx, el) => this.drawElementOn(ctx, el));
     const dataStr = JSON.stringify(project);
 
     const canvasItem: CanvasItem = {
-      canvas_type: this.isPresentation ? 'presentation' : 'board',
+      canvas_type: 'board',
       created_at: this.canvasCreatedAt || new Date().toISOString(),
       data: dataStr,
-      height: this.isPresentation ? this.slideHeight : 0,
+      height: 0,
       id: this.canvasServerId || undefined,
       is_local: !this.canvasServerId,
       name: this.boardName,
       preview_thumbnail: thumbnail,
-      unit: this.isPresentation ? 'presentation' : 'board',
+      unit: 'board',
       updated_at: new Date().toISOString(),
       user_id: this.canvasUserId || (currentUser ? currentUser.id : undefined),
       uuid: this.canvasUuid,
-      width: this.isPresentation ? this.slideWidth : 0,
+      width: 0,
     };
 
     await saveLocalCanvas(canvasItem);
@@ -6425,15 +6070,15 @@ export class BoardController {
       try {
         this.setSaveStatus('saving');
         const res = await postApi(API_ROUTES.canvases.sync, {
-          canvas_type: this.isPresentation ? 'presentation' : 'board',
+          canvas_type: 'board',
           data: dataStr,
-          height: this.isPresentation ? this.slideHeight : 0,
+          height: 0,
           id: this.canvasServerId || undefined,
           name: this.boardName,
           preview_thumbnail: thumbnail,
-          unit: this.isPresentation ? 'presentation' : 'board',
+          unit: 'board',
           uuid: this.canvasUuid,
-          width: this.isPresentation ? this.slideWidth : 0,
+          width: 0,
         });
         if (res.ok) {
           this.setSaveStatus('saved');
@@ -6446,260 +6091,6 @@ export class BoardController {
     } else {
       this.setSaveStatus('saved');
     }
-  }
-
-  public startSlideshow(): void {
-    if (this.isSlideshowActive) return;
-    this.isSlideshowActive = true;
-    this.syncActivePageData();
-    this.slideshowCurrentIndex = this.pages.findIndex((p) => p.id === this.activePageId);
-    if (this.slideshowCurrentIndex === -1) this.slideshowCurrentIndex = 0;
-
-    const overlay = document.createElement('div');
-    overlay.className = 'doc-slideshow-overlay';
-    overlay.setAttribute('data-ref', 'board-slideshow-overlay');
-
-    const totalSlides = this.pages.length;
-
-    overlay.innerHTML = `
-      <div class="doc-slideshow__bar" data-ref="slideshow-bar">
-        <div class="doc-slideshow__bar-left">
-          <span class="doc-slideshow__title">${escapeHtml(this.boardName)}</span>
-        </div>
-        <div class="doc-slideshow__bar-center">
-          <button type="button" class="doc-slideshow__nav-btn" data-ref="btn-slideshow-prev" data-tooltip="Anterior (←)" aria-label="Diapositiva anterior">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
-          </button>
-          <span class="doc-slideshow__counter" data-ref="slideshow-counter">${this.slideshowCurrentIndex + 1} / ${totalSlides}</span>
-          <button type="button" class="doc-slideshow__nav-btn" data-ref="btn-slideshow-next" data-tooltip="Siguiente (→)" aria-label="Siguiente diapositiva">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_forward"></use></svg>
-          </button>
-          <button type="button" class="doc-slideshow__nav-btn" data-ref="btn-slideshow-play" data-tooltip="Reproducir automáticamente" aria-label="Reproducción automática">
-            <svg class="component-icon icon-play" aria-hidden="true"><use href="/icons.svg#play_arrow"></use></svg>
-            <svg class="component-icon icon-pause is-hidden" aria-hidden="true"><use href="/icons.svg#pause"></use></svg>
-          </button>
-        </div>
-        <div class="doc-slideshow__bar-right">
-          <button type="button" class="doc-slideshow__nav-btn" data-ref="btn-slideshow-fullscreen" data-tooltip="Pantalla completa (F)" aria-label="Pantalla completa">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#fullscreen"></use></svg>
-          </button>
-          <button type="button" class="doc-slideshow__nav-btn doc-slideshow__nav-btn--close" data-ref="btn-slideshow-close" data-tooltip="Salir (Esc)" aria-label="Salir de presentación">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
-          </button>
-        </div>
-      </div>
-      <div class="doc-slideshow__progress-track" style="position: absolute; top: 56px; left: 0; right: 0; height: 3px; background: rgba(255, 255, 255, 0.08); z-index: 20;">
-        <div class="doc-slideshow__progress-fill" data-ref="slideshow-progress-fill" style="width: 0%; height: 100%; background: #38bdf8; transition: width 0.05s linear;"></div>
-      </div>
-      <div class="doc-slideshow__stage" data-ref="slideshow-stage">
-        <div class="doc-slideshow__viewport" data-ref="slideshow-viewport">
-          <canvas class="board-slideshow__canvas" data-ref="slideshow-canvas" width="${this.slideWidth}" height="${this.slideHeight}"></canvas>
-        </div>
-      </div>
-    `;
-
-    document.body.appendChild(overlay);
-    document.body.classList.add('slideshow-active');
-
-    const counterEl = overlay.querySelector<HTMLElement>('[data-ref="slideshow-counter"]');
-    const slideCanvas = overlay.querySelector<HTMLCanvasElement>('[data-ref="slideshow-canvas"]');
-    const viewportEl = overlay.querySelector<HTMLElement>('[data-ref="slideshow-viewport"]');
-    const stageEl = overlay.querySelector<HTMLElement>('[data-ref="slideshow-stage"]');
-    const btnPrev = overlay.querySelector<HTMLElement>('[data-ref="btn-slideshow-prev"]');
-    const btnNext = overlay.querySelector<HTMLElement>('[data-ref="btn-slideshow-next"]');
-    const btnPlay = overlay.querySelector<HTMLElement>('[data-ref="btn-slideshow-play"]');
-    const iconPlay = btnPlay?.querySelector('.icon-play');
-    const iconPause = btnPlay?.querySelector('.icon-pause');
-    const progressFillEl = overlay.querySelector<HTMLElement>('[data-ref="slideshow-progress-fill"]');
-    const btnFullscreen = overlay.querySelector<HTMLElement>('[data-ref="btn-slideshow-fullscreen"]');
-    const btnClose = overlay.querySelector<HTMLElement>('[data-ref="btn-slideshow-close"]');
-
-    this.slideshowAutoPlay = false;
-    this.slideshowSlideStartTime = performance.now();
-
-    const updateAutoplayUI = () => {
-      iconPlay?.classList.toggle('is-hidden', this.slideshowAutoPlay);
-      iconPause?.classList.toggle('is-hidden', !this.slideshowAutoPlay);
-    };
-
-    const renderSlide = (index: number, elapsedMs = 0, slideDurationMs = 5000) => {
-      if (!slideCanvas) return;
-      const page = this.pages[index];
-      if (!page) return;
-
-      const sctx = slideCanvas.getContext('2d');
-      if (!sctx) return;
-
-      sctx.clearRect(0, 0, this.slideWidth, this.slideHeight);
-
-      sctx.fillStyle = page.background?.color || '#ffffff';
-      sctx.fillRect(0, 0, this.slideWidth, this.slideHeight);
-
-      sctx.save();
-      sctx.translate(this.slideWidth / 2, this.slideHeight / 2);
-
-      const elements = page.id === this.activePageId ? this.elements : (page.elements || []);
-      const sections = elements.filter((e) => e.type === 'section') as BoardSectionElement[];
-
-      for (let i = 0; i < elements.length; i++) {
-        const el = elements[i];
-        if (el.type !== 'section') continue;
-        this.drawElementOn(sctx, el, elapsedMs, i, slideDurationMs);
-      }
-
-      for (let i = 0; i < elements.length; i++) {
-        const el = elements[i];
-        if (el.type === 'section') continue;
-        const parentSection = findContainingSection(el, sections, elements);
-        if (parentSection) {
-          sctx.save();
-          sctx.beginPath();
-          if (typeof sctx.roundRect === 'function') {
-            sctx.roundRect(parentSection.x, parentSection.y, parentSection.width, parentSection.height, 8);
-          } else {
-            sctx.rect(parentSection.x, parentSection.y, parentSection.width, parentSection.height);
-          }
-          sctx.clip();
-          this.drawElementOn(sctx, el, elapsedMs, i, slideDurationMs);
-          sctx.restore();
-        } else {
-          this.drawElementOn(sctx, el, elapsedMs, i, slideDurationMs);
-        }
-      }
-
-      sctx.restore();
-
-      if (counterEl) {
-        counterEl.textContent = `${index + 1} / ${this.pages.length}`;
-      }
-    };
-
-    const runSlideshowLoop = () => {
-      if (!this.isSlideshowActive) return;
-
-      const currentPage = this.pages[this.slideshowCurrentIndex];
-      const durationSec = currentPage?.duration !== undefined ? currentPage.duration : 5.0;
-      const durationMs = durationSec * 1000;
-      const now = performance.now();
-      const elapsed = now - this.slideshowSlideStartTime;
-
-      if (this.slideshowAutoPlay) {
-        const progress = Math.min(1, elapsed / durationMs);
-        if (progressFillEl) {
-          progressFillEl.style.width = `${progress * 100}%`;
-        }
-
-        if (elapsed >= durationMs) {
-          if (this.slideshowCurrentIndex < this.pages.length - 1) {
-            this.slideshowCurrentIndex++;
-            this.slideshowSlideStartTime = performance.now();
-          } else {
-            this.slideshowCurrentIndex = 0;
-            this.slideshowSlideStartTime = performance.now();
-          }
-        }
-      }
-
-      renderSlide(this.slideshowCurrentIndex, elapsed, durationMs);
-      this.slideshowProgressRaf = requestAnimationFrame(runSlideshowLoop);
-    };
-
-    const toggleAutoplay = () => {
-      this.slideshowAutoPlay = !this.slideshowAutoPlay;
-      updateAutoplayUI();
-      if (!this.slideshowAutoPlay && progressFillEl) {
-        progressFillEl.style.width = '0%';
-      }
-    };
-
-    const updateScale = () => {
-      if (!viewportEl || !stageEl) return;
-      const stageRect = stageEl.getBoundingClientRect();
-      const availW = Math.max(100, stageRect.width - 48);
-      const availH = Math.max(100, stageRect.height - 48);
-      const scaleX = availW / this.slideWidth;
-      const scaleY = availH / this.slideHeight;
-      const fitScale = Math.min(scaleX, scaleY, 1.5);
-      viewportEl.style.transform = `scale(${fitScale})`;
-      viewportEl.style.transformOrigin = 'center center';
-    };
-
-    updateScale();
-    this.slideshowProgressRaf = requestAnimationFrame(runSlideshowLoop);
-
-    const handleResize = () => updateScale();
-    window.addEventListener('resize', handleResize);
-
-    const closeSlideshow = () => {
-      window.removeEventListener('resize', handleResize);
-      window.removeEventListener('keydown', handleKey);
-      if (this.slideshowProgressRaf) {
-        cancelAnimationFrame(this.slideshowProgressRaf);
-        this.slideshowProgressRaf = null;
-      }
-      this.slideshowAutoPlay = false;
-      if (document.fullscreenElement) {
-        document.exitFullscreen().catch(() => {});
-      }
-      overlay.remove();
-      this.isSlideshowActive = false;
-      document.body.classList.remove('slideshow-active');
-      this.requestRedraw();
-    };
-
-    const nextSlide = () => {
-      if (this.slideshowCurrentIndex < this.pages.length - 1) {
-        this.slideshowCurrentIndex++;
-        this.slideshowSlideStartTime = performance.now();
-        if (!this.slideshowAutoPlay && progressFillEl) progressFillEl.style.width = '0%';
-      }
-    };
-
-    const prevSlide = () => {
-      if (this.slideshowCurrentIndex > 0) {
-        this.slideshowCurrentIndex--;
-        this.slideshowSlideStartTime = performance.now();
-        if (!this.slideshowAutoPlay && progressFillEl) progressFillEl.style.width = '0%';
-      }
-    };
-
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowRight' || e.key === 'PageDown') {
-        e.preventDefault();
-        nextSlide();
-      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
-        e.preventDefault();
-        prevSlide();
-      } else if (e.key === ' ') {
-        e.preventDefault();
-        toggleAutoplay();
-      } else if (e.key === 'Escape') {
-        e.preventDefault();
-        closeSlideshow();
-      } else if (e.key === 'f' || e.key === 'F') {
-        e.preventDefault();
-        if (!document.fullscreenElement) {
-          overlay.requestFullscreen().catch(() => {});
-        } else {
-          document.exitFullscreen().catch(() => {});
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKey);
-    btnPrev?.addEventListener('click', prevSlide);
-    btnNext?.addEventListener('click', nextSlide);
-    btnPlay?.addEventListener('click', toggleAutoplay);
-    btnClose?.addEventListener('click', closeSlideshow);
-    btnFullscreen?.addEventListener('click', () => {
-      if (!document.fullscreenElement) {
-        overlay.requestFullscreen().catch(() => {});
-      } else {
-        document.exitFullscreen().catch(() => {});
-      }
-    });
-
-    renderIcons(overlay);
   }
 
   private setSaveStatus(status: 'saved' | 'saving' | 'error', customTooltip?: string): void {
@@ -6988,7 +6379,6 @@ export class BoardController {
       y: Math.round(centerWorld.y - elementHeight / 2),
     };
 
-    this.clampElementToSlide(gridEl);
     this.elements.push(gridEl);
     this.collaborationManager.broadcastAddElement(gridEl);
     this.selectedElementId = gridEl.id;
@@ -7010,13 +6400,6 @@ export class BoardController {
       { signal }
     );
 
-    if (this.isPresentation) {
-      const handBtn = this.container.querySelector<HTMLElement>('[data-ref="vertical-tool-hand"]');
-      if (handBtn) {
-        handBtn.style.display = 'none';
-      }
-    }
-
     const vtoolButtons = this.container.querySelectorAll<HTMLButtonElement>('[data-vtool]');
     vtoolButtons.forEach((btn) => {
       btn.addEventListener(
@@ -7027,7 +6410,6 @@ export class BoardController {
             this.hideAllVSubtoolbars();
             this.setTool('select');
           } else if (vtool === 'hand') {
-            if (this.isPresentation) return;
             this.hideAllVSubtoolbars();
             this.setTool('hand');
           } else if (vtool === 'section') {
@@ -7453,7 +6835,6 @@ export class BoardController {
       y: Math.round(centerWorld.y - h / 2),
     };
 
-    this.clampElementToSlide(shape3dEl);
     this.elements.push(shape3dEl);
     this.collaborationManager.broadcastAddElement(shape3dEl);
     this.selectedElementId = shape3dEl.id;
@@ -7488,7 +6869,6 @@ export class BoardController {
       y: Math.round(centerWorld.y - h / 2),
     };
 
-    this.clampElementToSlide(shapeEl);
     this.elements.push(shapeEl);
     this.collaborationManager.broadcastAddElement(shapeEl);
     this.selectedElementId = shapeEl.id;
@@ -7521,7 +6901,6 @@ export class BoardController {
       y: Math.round(centerWorld.y - height / 2),
     };
 
-    this.clampElementToSlide(sectionEl);
     this.elements.unshift(sectionEl);
     this.collaborationManager.broadcastAddElement(sectionEl);
     this.selectedElementId = sectionEl.id;
@@ -7572,7 +6951,6 @@ export class BoardController {
       y: Math.round(centerWorld.y - height / 2),
     };
 
-    this.clampElementToSlide(tableEl);
     this.elements.push(tableEl);
     this.collaborationManager.broadcastAddElement(tableEl);
     this.selectedElementId = tableEl.id;
@@ -8021,7 +7399,6 @@ export class BoardController {
       y: Math.round((worldPos ? worldPos.y : center.y) - chartH / 2),
     };
 
-    this.clampElementToSlide(chartEl);
     this.elements.push(chartEl);
     this.collaborationManager.broadcastAddElement(chartEl);
     this.selectedElementId = chartEl.id;
@@ -8079,7 +7456,6 @@ export class BoardController {
       y: Math.round((worldPos ? worldPos.y : center.y) - tpl.height / 2),
     };
 
-    this.clampElementToSlide(mockupEl);
     this.elements.push(mockupEl);
     this.collaborationManager.broadcastAddElement(mockupEl);
     this.selectedElementId = mockupEl.id;
@@ -8203,7 +7579,6 @@ export class BoardController {
                   x: Math.round(world.x - w / 2),
                   y: Math.round(world.y - h / 2),
                 };
-                this.clampElementToSlide(imgEl);
                 this.elements.push(imgEl);
                 this.collaborationManager.broadcastAddElement(imgEl);
                 this.selectedElementId = imgEl.id;

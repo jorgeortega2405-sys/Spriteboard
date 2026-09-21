@@ -13,7 +13,7 @@ import { BoardElement, BoardProject } from '../views/board/board.types.js';
 import { exportDocHtml, exportDocJson, exportDocMarkdown, exportDocPdf, exportDocTxt, exportDocWord } from '../views/doc/doc-export.service.js';
 import { DocProject } from '../views/doc/doc.types.js';
 
-export type DownloadCanvasKind = 'board' | 'doc';
+export type DownloadCanvasKind = 'board' | 'doc' | 'presentation';
 
 interface ExportFormatOption {
   icon: string;
@@ -22,6 +22,9 @@ interface ExportFormatOption {
 }
 
 function getCanvasKind(canvas: CanvasItem): DownloadCanvasKind {
+  if (canvas.canvas_type === 'presentation' || canvas.unit === 'presentation') {
+    return 'presentation';
+  }
   if (canvas.canvas_type === 'doc' || canvas.unit === 'doc') {
     return 'doc';
   }
@@ -36,6 +39,13 @@ function getFormatOptionsForKind(kind: DownloadCanvasKind): ExportFormatOption[]
       { icon: 'markdown', id: 'markdown', label: t('download.type_markdown') || 'Documento Markdown (.md)' },
       { icon: 'text_snippet', id: 'txt', label: t('download.type_txt') || 'Texto sin formato (.txt)' },
       { icon: 'code', id: 'html', label: t('download.type_html') || 'Página web (.html)' },
+      { icon: 'data_object', id: 'project-json', label: t('download.type_project_json') || 'Proyecto Spriteboard (.json)' },
+    ];
+  }
+  if (kind === 'presentation') {
+    return [
+      { icon: 'image', id: 'png', label: t('download.type_png') || 'Imagen PNG (.png)' },
+      { icon: 'polyline', id: 'svg', label: t('download.type_svg') || 'Vectorial SVG (.svg)' },
       { icon: 'data_object', id: 'project-json', label: t('download.type_project_json') || 'Proyecto Spriteboard (.json)' },
     ];
   }
@@ -306,7 +316,7 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
         return;
       }
 
-      if (kind === 'board') {
+      if (kind === 'board' || kind === 'presentation') {
         let boardProject: BoardProject | null = null;
         if (fullCanvas.data) {
           try {
