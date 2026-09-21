@@ -66,13 +66,13 @@ export function generateShortCode(): string {
 export async function createCanvas(userId: number, dto: CreateCanvasDto): Promise<Canvas> {
   const uuid = dto.uuid && dto.uuid.trim().length === 36 ? dto.uuid.trim() : crypto.randomUUID();
   const name = dto.name && dto.name.trim() ? dto.name.trim().slice(0, 255) : 'Lienzo sin título';
-  const isDoc = dto.canvas_type === 'doc' || dto.unit === 'doc';
-  const isBoard = !isDoc;
-  const canvasType = isDoc ? 'doc' : 'board';
-  const isInfinite = isBoard;
-  const width = isInfinite ? 0 : Math.max(1, Math.min(16384, Math.floor(Number(dto.width) || 1920)));
-  const height = isInfinite ? 0 : Math.max(1, Math.min(16384, Math.floor(Number(dto.height) || 1080)));
-  const unit = isDoc ? 'doc' : 'board';
+  const isPresentation = dto.canvas_type === 'presentation' || dto.unit === 'presentation';
+  const isDoc = !isPresentation && (dto.canvas_type === 'doc' || dto.unit === 'doc');
+  const canvasType = isPresentation ? 'presentation' : (isDoc ? 'doc' : 'board');
+  const isInfinite = canvasType === 'board';
+  const width = isInfinite ? 0 : Math.max(1, Math.min(16384, Math.floor(Number(dto.width) || (isPresentation ? 1280 : 1920))));
+  const height = isInfinite ? 0 : Math.max(1, Math.min(16384, Math.floor(Number(dto.height) || (isPresentation ? 720 : 1080))));
+  const unit = canvasType;
   const accessLevel = dto.access_level === 'public' ? 'public' : 'private';
   const publicRole = dto.public_role === 'viewer' ? 'viewer' : 'editor';
   const shortCode = generateShortCode();
@@ -317,6 +317,8 @@ export async function getUserCanvasesPaginated(userId: number, options: GetUserC
       conditions.push("(c.canvas_type = 'board' OR c.unit = 'board')");
     } else if (type === 'doc') {
       conditions.push("(c.canvas_type = 'doc' OR c.unit = 'doc')");
+    } else if (type === 'presentation') {
+      conditions.push("(c.canvas_type = 'presentation' OR c.unit = 'presentation')");
     }
 
     if (folderId !== undefined) {
@@ -650,13 +652,13 @@ export async function updateCanvasAccessLevel(
 export async function syncCanvas(userId: number | null, dto: SyncCanvasDto): Promise<Canvas> {
   const uuid = dto.uuid.trim();
   const name = dto.name && dto.name.trim() ? dto.name.trim().slice(0, 255) : 'Lienzo sin título';
-  const isDoc = dto.canvas_type === 'doc' || dto.unit === 'doc';
-  const isBoard = !isDoc;
-  const canvasType = isDoc ? 'doc' : 'board';
-  const isInfinite = isBoard;
-  const width = isInfinite ? 0 : Math.max(1, Math.min(16384, Math.floor(Number(dto.width) || 1920)));
-  const height = isInfinite ? 0 : Math.max(1, Math.min(16384, Math.floor(Number(dto.height) || 1080)));
-  const unit = isDoc ? 'doc' : 'board';
+  const isPresentation = dto.canvas_type === 'presentation' || dto.unit === 'presentation';
+  const isDoc = !isPresentation && (dto.canvas_type === 'doc' || dto.unit === 'doc');
+  const canvasType = isPresentation ? 'presentation' : (isDoc ? 'doc' : 'board');
+  const isInfinite = canvasType === 'board';
+  const width = isInfinite ? 0 : Math.max(1, Math.min(16384, Math.floor(Number(dto.width) || (isPresentation ? 1280 : 1920))));
+  const height = isInfinite ? 0 : Math.max(1, Math.min(16384, Math.floor(Number(dto.height) || (isPresentation ? 720 : 1080))));
+  const unit = canvasType;
   const data = dto.data ? (typeof dto.data === 'string' ? dto.data : JSON.stringify(dto.data)) : null;
   const previewThumbnail = dto.preview_thumbnail !== undefined ? dto.preview_thumbnail : null;
   const accessLevel = dto.access_level;
@@ -1423,7 +1425,7 @@ export async function duplicateCanvas(uuid: string, userId: number): Promise<Can
       ? JSON.stringify({ storage: 'blob', version: 2 })
       : fullData;
 
-    const originalType = original.canvas_type || (original.unit === 'doc' ? 'doc' : 'board');
+    const originalType = original.canvas_type || (original.unit === 'presentation' ? 'presentation' : (original.unit === 'doc' ? 'doc' : 'board'));
     const [result] = await canvasPool.execute<mysql.ResultSetHeader>(
       `INSERT INTO canvases (uuid, user_id, name, width, height, unit, canvas_type, size_bytes, compressed_bytes, access_level, short_code, data, preview_thumbnail)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'private', ?, ?, ?)`,

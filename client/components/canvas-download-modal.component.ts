@@ -22,7 +22,7 @@ interface ExportFormatOption {
 }
 
 function getCanvasKind(canvas: CanvasItem): DownloadCanvasKind {
-  if (canvas.canvas_type === 'doc' || canvas.unit === 'doc') {
+  if (canvas.canvas_type === 'doc' || canvas.unit === 'doc' || canvas.canvas_type === 'presentation' || canvas.unit === 'presentation') {
     return 'doc';
   }
   return 'board';
@@ -53,6 +53,7 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
     activeDownloadModal.close();
   }
 
+  const isPresentation = canvas.canvas_type === 'presentation' || canvas.unit === 'presentation';
   const kind = getCanvasKind(canvas);
   const formatOptions = getFormatOptionsForKind(kind);
   let selectedType = formatOptions[0]?.id || (kind === 'doc' ? 'pdf' : 'png');
@@ -61,7 +62,9 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
   const baseH = canvas.height || 600;
 
   let headerSubtitle = '';
-  if (kind === 'doc') {
+  if (isPresentation) {
+    headerSubtitle = `${escapeHtml(canvas.name)} • Presentación`;
+  } else if (kind === 'doc') {
     headerSubtitle = `${escapeHtml(canvas.name)} • Documento Doc`;
   } else {
     headerSubtitle = `${escapeHtml(canvas.name)} • Pizarrón Infinito`;

@@ -13,7 +13,7 @@ import { bindDragToScroll, CarouselController, initCarouselScroll, removeEmptySt
 
 const BATCH_SIZE = 20;
 
-type TemplateTypeFilter = 'all' | 'board' | 'doc' | 'favorites';
+type TemplateTypeFilter = 'all' | 'board' | 'doc' | 'presentation' | 'favorites';
 
 class TemplatesController {
   private container: HTMLElement;
@@ -251,6 +251,8 @@ class TemplatesController {
       filtered = filtered.filter((item) => item.categoryKey === 'board' || item.canvasType === 'board');
     } else if (this.currentTypeFilter === 'doc') {
       filtered = filtered.filter((item) => item.categoryKey === 'doc' || item.canvasType === 'doc');
+    } else if (this.currentTypeFilter === 'presentation') {
+      filtered = filtered.filter((item) => item.categoryKey === 'presentation' || item.canvasType === 'presentation');
     }
 
     if (this.searchQuery) {

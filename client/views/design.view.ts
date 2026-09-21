@@ -26,11 +26,13 @@ export async function createDesignView(canvasUuid: string): Promise<HTMLElement>
     });
   }
 
-  let canvasType = canvasRecord.canvas_type || (canvasRecord.unit === 'doc' ? 'doc' : 'board');
+  let canvasType = canvasRecord.canvas_type || (canvasRecord.unit === 'presentation' ? 'presentation' : (canvasRecord.unit === 'doc' ? 'doc' : 'board'));
   if (canvasRecord.data) {
     try {
       const parsed = typeof canvasRecord.data === 'string' ? JSON.parse(canvasRecord.data) : canvasRecord.data;
-      if (parsed?.type === 'doc') {
+      if (parsed?.type === 'presentation') {
+        canvasType = 'presentation';
+      } else if (parsed?.type === 'doc') {
         canvasType = 'doc';
       } else if (parsed?.type === 'board') {
         canvasType = 'board';
@@ -38,7 +40,7 @@ export async function createDesignView(canvasUuid: string): Promise<HTMLElement>
     } catch {}
   }
 
-  if (canvasType === 'doc') {
+  if (canvasType === 'doc' || canvasType === 'presentation') {
     return await createDocView(canvasUuid, canvasRecord);
   }
 

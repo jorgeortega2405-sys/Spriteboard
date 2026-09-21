@@ -57,9 +57,11 @@ export function setupCanvasShareDropdown(options: CanvasShareDropdownOptions): C
   let currentAccessLevel: 'private' | 'public' = initialCanvas.access_level || 'private';
   let currentPublicRole: 'viewer' | 'editor' = initialCanvas.public_role || 'editor';
 
-  const shareTitle = initialCanvas.canvas_type === 'doc' || initialCanvas.unit === 'doc'
-    ? 'Compartir documento'
-    : 'Compartir pizarrón';
+  const isPresentation = initialCanvas.canvas_type === 'presentation' || initialCanvas.unit === 'presentation';
+  const isDoc = initialCanvas.canvas_type === 'doc' || initialCanvas.unit === 'doc';
+  const shareTitle = isPresentation
+    ? 'Compartir presentación'
+    : (isDoc ? 'Compartir documento' : 'Compartir pizarrón');
 
   let backdrop = wrapper.querySelector<HTMLElement>('[data-ref="dropdown-backdrop-share"]');
   let menu = wrapper.querySelector<HTMLElement>('[data-ref="dropdown-menu-share"]');

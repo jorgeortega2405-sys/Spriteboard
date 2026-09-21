@@ -35,9 +35,11 @@ export function openCanvasShareModal(canvas: CanvasItem): void {
   let currentAccessLevel: 'private' | 'public' = canvas.access_level || 'private';
   let currentPublicRole: 'viewer' | 'editor' = canvas.public_role || 'editor';
 
-  const shareTitle = canvas.canvas_type === 'doc' || canvas.unit === 'doc'
-    ? 'Compartir documento'
-    : 'Compartir pizarrón';
+  const isPresentation = canvas.canvas_type === 'presentation' || canvas.unit === 'presentation';
+  const isDoc = canvas.canvas_type === 'doc' || canvas.unit === 'doc';
+  const shareTitle = isPresentation
+    ? 'Compartir presentación'
+    : (isDoc ? 'Compartir documento' : 'Compartir pizarrón');
 
   const backdrop = document.createElement('div');
   backdrop.className = 'modal-backdrop';

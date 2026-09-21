@@ -341,6 +341,8 @@ export async function getFolderCanvases(
         conditions.push("(c.canvas_type = 'board' OR c.unit = 'board')");
       } else if (type === 'doc') {
         conditions.push("(c.canvas_type = 'doc' OR c.unit = 'doc')");
+      } else if (type === 'presentation') {
+        conditions.push("(c.canvas_type = 'presentation' OR c.unit = 'presentation')");
       }
 
       if (search) {

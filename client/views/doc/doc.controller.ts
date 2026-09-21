@@ -61,11 +61,13 @@ export class DocController implements ViewController {
   private btnDocCloudStatus: HTMLButtonElement | null = null;
   private btnDocHistory: HTMLButtonElement | null = null;
   private btnDocMetrics: HTMLButtonElement | null = null;
+  private btnDocPresent: HTMLButtonElement | null = null;
   private canvasCreatedAt: string | null = null;
   private canvasServerId: number | null = null;
   private canvasTitle = 'Documento sin título';
   private canvasUserId: number | null = null;
   private canvasUuid: string;
+  private isPresentation = false;
   private collaborationManager: DocCollaborationManager;
   private collaboratorsBarEl: HTMLElement | null = null;
   private collaboratorsListEl: HTMLElement | null = null;
@@ -143,6 +145,7 @@ export class DocController implements ViewController {
     this.btnDocCloudStatus = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-doc-cloud-status"]');
     this.btnDocMetrics = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-doc-metrics"]');
     this.btnDocHistory = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-doc-history"]');
+    this.btnDocPresent = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-doc-present"]');
     this.previewBannerEl = this.container.querySelector<HTMLElement>('[data-ref="doc-preview-banner"]');
     this.setupCollaboration();
 
@@ -214,7 +217,6 @@ export class DocController implements ViewController {
     this.canvasCreatedAt = canvasRecord.created_at || null;
     this.accessLevel = canvasRecord.access_level || 'private';
     this.publicRole = canvasRecord.public_role || 'editor';
-    this.canvasTitle = canvasRecord.name || 'Documento sin título';
 
     const rawData = canvasRecord.data;
     if (rawData) {
@@ -231,6 +233,17 @@ export class DocController implements ViewController {
           };
         }
       } catch {}
+    }
+
+    this.isPresentation = canvasRecord.canvas_type === 'presentation'
+      || canvasRecord.unit === 'presentation'
+      || this.project.type === 'presentation'
+      || Boolean(this.project.settings?.paperSize?.startsWith('presentation_'));
+
+    if (this.isPresentation && (!canvasRecord.name || canvasRecord.name === 'Documento sin título')) {
+      this.canvasTitle = 'Presentación sin título';
+    } else {
+      this.canvasTitle = canvasRecord.name || (this.isPresentation ? 'Presentación sin título' : 'Documento sin título');
     }
 
     const titleEl = this.container.querySelector<HTMLElement>('[data-ref="doc-title"]');
@@ -350,13 +363,19 @@ export class DocController implements ViewController {
     if (currentPaperLabel) {
       const sizeName = this.project.settings.paperSize === 'digital'
         ? 'Digital'
-        : (this.project.settings.paperSize === 'a4'
-          ? 'A4'
-          : (this.project.settings.paperSize === 'a3'
-            ? 'A3'
-            : (this.project.settings.paperSize === 'legal'
-              ? 'Oficio'
-              : 'Carta')));
+        : (this.project.settings.paperSize === 'presentation_16_9'
+          ? '16:9 Panorámica'
+          : (this.project.settings.paperSize === 'presentation_fhd'
+            ? '16:9 Full HD'
+            : (this.project.settings.paperSize === 'presentation_4_3'
+              ? '4:3 Clásica'
+              : (this.project.settings.paperSize === 'a4'
+                ? 'A4'
+                : (this.project.settings.paperSize === 'a3'
+                  ? 'A3'
+                  : (this.project.settings.paperSize === 'legal'
+                    ? 'Oficio'
+                    : 'Carta'))))));
       const orientName = this.project.settings.orientation === 'landscape' ? 'Horizontal' : 'Vertical';
       currentPaperLabel.textContent = this.project.settings.paperSize === 'digital' ? 'Digital (Automático)' : `${sizeName} • ${orientName}`;
     }
@@ -411,8 +430,8 @@ export class DocController implements ViewController {
         ${watermarkEl}
         ${isFirstPage ? `<div class="doc-empty-placeholder" data-ref="doc-empty-placeholder" style="top: ${margins.top}px; left: ${margins.left}px; right: ${margins.right}px; display: ${isDocEmpty ? 'block' : 'none'};">${escapeHtml(this.activeInspiringQuote)}</div>` : ''}
         <div class="doc-page__content ${columnsClass}" data-ref="page-content-${page.id}" contenteditable="true" spellcheck="true" style="font-family: ${this.project.settings.fontFamily}; font-size: ${this.project.settings.fontSize}pt; line-height: ${this.project.settings.lineHeight}; ${letterSpacingStyle}">${page.contentHtml || '<p><br></p>'}</div>
-        <div class="doc-page__badge">Página ${index + 1}</div>
-        ${this.project.pages.length > 1 ? `<button type="button" class="doc-page__delete-btn" data-ref="btn-delete-page-${page.id}" data-page-id="${page.id}" data-tooltip="Eliminar página" aria-label="Eliminar página"><span class="component-icon">delete</span></button>` : ''}
+        <div class="doc-page__badge">${this.isPresentation ? 'Diapositiva' : 'Página'} ${index + 1}</div>
+        ${this.project.pages.length > 1 ? `<button type="button" class="doc-page__delete-btn" data-ref="btn-delete-page-${page.id}" data-page-id="${page.id}" data-tooltip="${this.isPresentation ? 'Eliminar diapositiva' : 'Eliminar página'}" aria-label="${this.isPresentation ? 'Eliminar diapositiva' : 'Eliminar página'}"><span class="component-icon">delete</span></button>` : ''}
       `;
 
       pagesContainer.appendChild(pageEl);
@@ -430,7 +449,7 @@ export class DocController implements ViewController {
     if (titleEl) {
       titleEl.addEventListener('click', () => {
         const current = this.canvasTitle;
-        const newTitle = prompt('Nombre del documento:', current);
+        const newTitle = prompt(this.isPresentation ? 'Nombre de la presentación:' : 'Nombre del documento:', current);
         if (newTitle && newTitle.trim() && newTitle !== current) {
           this.canvasTitle = newTitle.trim();
           titleEl.textContent = this.canvasTitle;
@@ -439,6 +458,19 @@ export class DocController implements ViewController {
         }
       }, { signal });
     }
+
+    if (this.btnDocPresent) {
+      this.btnDocPresent.addEventListener('click', () => {
+        this.startSlideshow();
+      }, { signal });
+    }
+
+    window.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key === 'F5' || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f5')) {
+        e.preventDefault();
+        this.startSlideshow();
+      }
+    }, { signal });
 
     if (this.btnDocCloudStatus) {
       this.btnDocCloudStatus.addEventListener('click', () => {
@@ -2473,30 +2505,37 @@ export class DocController implements ViewController {
       const dataStr = JSON.stringify(this.project);
       const thumbnail = generateDocThumbnail(this.project);
 
+      const activeCanvasType = this.isPresentation ? 'presentation' : 'doc';
+      const paperSizeKey = this.project.settings.paperSize || (this.isPresentation ? 'presentation_16_9' : 'letter');
+      const orientationKey = this.project.settings.orientation || (this.isPresentation ? 'landscape' : 'portrait');
+      const paper = (DOC_PAPER_DIMENSIONS[paperSizeKey] && DOC_PAPER_DIMENSIONS[paperSizeKey][orientationKey])
+        ? DOC_PAPER_DIMENSIONS[paperSizeKey][orientationKey]
+        : (this.isPresentation ? DOC_PAPER_DIMENSIONS.presentation_16_9.landscape : DOC_PAPER_DIMENSIONS.letter.portrait);
+
       await saveLocalCanvas({
-        canvas_type: 'doc',
-        created_at: new Date().toISOString(),
+        canvas_type: activeCanvasType,
+        created_at: this.canvasCreatedAt || new Date().toISOString(),
         data: dataStr,
-        height: 1056,
+        height: paper.heightPx || (this.isPresentation ? 720 : 1056),
         is_local: !currentUser,
         name: this.canvasTitle,
         preview_thumbnail: thumbnail,
-        unit: 'doc',
+        unit: activeCanvasType,
         updated_at: new Date().toISOString(),
         uuid: this.canvasUuid,
-        width: 816,
+        width: paper.widthPx || (this.isPresentation ? 1280 : 816),
       });
 
       if (currentUser) {
         const res = await postApi(API_ROUTES.canvases.sync, {
-          canvas_type: 'doc',
+          canvas_type: activeCanvasType,
           data: dataStr,
-          height: 1056,
+          height: paper.heightPx || (this.isPresentation ? 720 : 1056),
           name: this.canvasTitle,
           preview_thumbnail: thumbnail,
-          unit: 'doc',
+          unit: activeCanvasType,
           uuid: this.canvasUuid,
-          width: 816,
+          width: paper.widthPx || (this.isPresentation ? 1280 : 816),
         });
         if (res.ok) {
           this.setSaveStatus('saved');
@@ -2851,11 +2890,14 @@ export class DocController implements ViewController {
             <div class="settings-item__content">
               <div class="settings-item__text">
                 <h3 class="settings-item__title">Tamaño de papel</h3>
-                <p class="settings-item__desc">Dimensiones físicas normalizadas para impresión y vista.</p>
+                <p class="settings-item__desc">Dimensiones físicas normalizadas para impresión, diapositivas y vista.</p>
               </div>
             </div>
             <div class="settings-item__actions">
               <select class="settings-dropdown-wrapper" data-ref="modal-select-paper" style="padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; background: transparent; color: inherit;">
+                <option value="presentation_16_9" ${this.project.settings.paperSize === 'presentation_16_9' ? 'selected' : ''}>16:9 Panorámica (1280 × 720 px - Diapositiva)</option>
+                <option value="presentation_fhd" ${this.project.settings.paperSize === 'presentation_fhd' ? 'selected' : ''}>16:9 Full HD (1920 × 1080 px - Diapositiva)</option>
+                <option value="presentation_4_3" ${this.project.settings.paperSize === 'presentation_4_3' ? 'selected' : ''}>4:3 Clásica (1024 × 768 px - Diapositiva)</option>
                 <option value="digital" ${this.project.settings.paperSize === 'digital' ? 'selected' : ''}>Digital (Tamaño automático)</option>
                 <option value="a4" ${this.project.settings.paperSize === 'a4' ? 'selected' : ''}>A4 (21 × 29.7 cm)</option>
                 <option value="a3" ${this.project.settings.paperSize === 'a3' ? 'selected' : ''}>A3 (29.7 × 42 cm)</option>
@@ -2924,6 +2966,9 @@ export class DocController implements ViewController {
 
         if (selPaper) {
           this.project.settings.paperSize = selPaper.value as DocPaperSize;
+          if (selPaper.value.startsWith('presentation_')) {
+            this.isPresentation = true;
+          }
         }
         this.project.settings.orientation = isLandscape ? 'landscape' : 'portrait';
         this.project.settings.firstPageDifferent = Boolean(chkDiff?.checked);
@@ -3382,6 +3427,193 @@ export class DocController implements ViewController {
     } catch (err: any) {
       showToast(err.message || 'No se pudo restaurar la versión.', 'error');
     }
+  }
+
+  public startSlideshow(startPageIndex = 0): void {
+    this.syncPagesFromDOM();
+    if (!this.project.pages || this.project.pages.length === 0) {
+      showToast('No hay diapositivas para presentar.', 'info');
+      return;
+    }
+
+    let currentSlide = Math.max(0, Math.min(startPageIndex, this.project.pages.length - 1));
+    const totalSlides = this.project.pages.length;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'doc-slideshow-overlay';
+    overlay.setAttribute('data-ref', 'doc-slideshow-overlay');
+
+    const paperSizeKey = this.project.settings.paperSize || (this.isPresentation ? 'presentation_16_9' : 'letter');
+    const orientationKey = this.project.settings.orientation || (this.isPresentation ? 'landscape' : 'portrait');
+    const paper = (DOC_PAPER_DIMENSIONS[paperSizeKey] && DOC_PAPER_DIMENSIONS[paperSizeKey][orientationKey])
+      ? DOC_PAPER_DIMENSIONS[paperSizeKey][orientationKey]
+      : (this.isPresentation ? DOC_PAPER_DIMENSIONS.presentation_16_9.landscape : DOC_PAPER_DIMENSIONS.letter.portrait);
+
+    const slideWidth = paper.widthPx > 0 ? paper.widthPx : 1280;
+    const slideHeight = paper.heightPx > 0 ? paper.heightPx : 720;
+    const margins = this.project.settings.margins || { bottom: 48, left: 60, right: 60, top: 48 };
+
+    overlay.innerHTML = `
+      <div class="doc-slideshow__bar" data-ref="slideshow-bar">
+        <div class="doc-slideshow__bar-left">
+          <span class="doc-slideshow__title">${escapeHtml(this.canvasTitle)}</span>
+        </div>
+        <div class="doc-slideshow__bar-center">
+          <button type="button" class="doc-slideshow__nav-btn" data-ref="btn-slideshow-prev" data-tooltip="Anterior (←)" aria-label="Diapositiva anterior">
+            <span class="component-icon">arrow_back</span>
+          </button>
+          <span class="doc-slideshow__counter" data-ref="slideshow-counter">1 / ${totalSlides}</span>
+          <button type="button" class="doc-slideshow__nav-btn" data-ref="btn-slideshow-next" data-tooltip="Siguiente (→)" aria-label="Siguiente diapositiva">
+            <span class="component-icon">arrow_forward</span>
+          </button>
+        </div>
+        <div class="doc-slideshow__bar-right">
+          <button type="button" class="doc-slideshow__nav-btn" data-ref="btn-slideshow-fullscreen" data-tooltip="Pantalla completa (F)" aria-label="Pantalla completa">
+            <span class="component-icon">fullscreen</span>
+          </button>
+          <button type="button" class="doc-slideshow__nav-btn doc-slideshow__nav-btn--close" data-ref="btn-slideshow-close" data-tooltip="Salir (Esc)" aria-label="Salir de presentación">
+            <span class="component-icon">close</span>
+          </button>
+        </div>
+      </div>
+      <div class="doc-slideshow__stage" data-ref="slideshow-stage">
+        <div class="doc-slideshow__viewport" data-ref="slideshow-viewport">
+          <div class="doc-slideshow__slide-wrapper doc-page--theme-${this.project.settings.pageColor || 'white'}" data-ref="slideshow-slide-wrapper">
+            <div class="doc-slideshow__slide-content" data-ref="slideshow-slide-content"></div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+    document.body.classList.add('slideshow-active');
+
+    const counterEl = overlay.querySelector<HTMLElement>('[data-ref="slideshow-counter"]');
+    const contentEl = overlay.querySelector<HTMLElement>('[data-ref="slideshow-slide-content"]');
+    const slideWrapper = overlay.querySelector<HTMLElement>('[data-ref="slideshow-slide-wrapper"]');
+    const btnPrev = overlay.querySelector<HTMLElement>('[data-ref="btn-slideshow-prev"]');
+    const btnNext = overlay.querySelector<HTMLElement>('[data-ref="btn-slideshow-next"]');
+    const btnFullscreen = overlay.querySelector<HTMLElement>('[data-ref="btn-slideshow-fullscreen"]');
+    const btnClose = overlay.querySelector<HTMLElement>('[data-ref="btn-slideshow-close"]');
+    const stageEl = overlay.querySelector<HTMLElement>('[data-ref="slideshow-stage"]');
+
+    if (slideWrapper) {
+      slideWrapper.style.width = `${slideWidth}px`;
+      slideWrapper.style.height = `${slideHeight}px`;
+      slideWrapper.style.paddingTop = `${margins.top}px`;
+      slideWrapper.style.paddingRight = `${margins.right}px`;
+      slideWrapper.style.paddingBottom = `${margins.bottom}px`;
+      slideWrapper.style.paddingLeft = `${margins.left}px`;
+      slideWrapper.style.fontFamily = this.project.settings.fontFamily;
+      slideWrapper.style.fontSize = `${this.project.settings.fontSize || 16}pt`;
+      slideWrapper.style.lineHeight = `${this.project.settings.lineHeight || 1.4}`;
+    }
+
+    const fitSlide = () => {
+      if (!slideWrapper) return;
+      const stageW = window.innerWidth;
+      const stageH = window.innerHeight - 56;
+      const scaleX = (stageW - 40) / slideWidth;
+      const scaleY = (stageH - 40) / slideHeight;
+      const scale = Math.min(scaleX, scaleY, 2.0);
+      slideWrapper.style.transform = `scale(${Math.max(0.2, scale)})`;
+    };
+
+    const renderSlide = (index: number) => {
+      currentSlide = Math.max(0, Math.min(index, totalSlides - 1));
+      const page = this.project.pages[currentSlide];
+      if (contentEl && page) {
+        contentEl.innerHTML = page.contentHtml || '';
+      }
+      if (counterEl) {
+        counterEl.textContent = `${currentSlide + 1} / ${totalSlides}`;
+      }
+      if (btnPrev) btnPrev.classList.toggle('is-disabled', currentSlide === 0);
+      if (btnNext) btnNext.classList.toggle('is-disabled', currentSlide === totalSlides - 1);
+    };
+
+    fitSlide();
+    renderSlide(currentSlide);
+    window.addEventListener('resize', fitSlide);
+
+    const nextSlide = () => {
+      if (currentSlide < totalSlides - 1) {
+        renderSlide(currentSlide + 1);
+      }
+    };
+
+    const prevSlide = () => {
+      if (currentSlide > 0) {
+        renderSlide(currentSlide - 1);
+      }
+    };
+
+    btnNext?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      nextSlide();
+    });
+    btnPrev?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      prevSlide();
+    });
+
+    stageEl?.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('a') || target.closest('button')) return;
+      const clickX = e.clientX;
+      if (clickX < window.innerWidth * 0.3) {
+        prevSlide();
+      } else {
+        nextSlide();
+      }
+    });
+
+    btnFullscreen?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!document.fullscreenElement) {
+        overlay.requestFullscreen?.().catch(() => {});
+      } else {
+        document.exitFullscreen?.().catch(() => {});
+      }
+    });
+
+    const closeSlideshow = () => {
+      window.removeEventListener('resize', fitSlide);
+      window.removeEventListener('keydown', handleKey);
+      if (document.fullscreenElement) {
+        document.exitFullscreen?.().catch(() => {});
+      }
+      overlay.remove();
+      document.body.classList.remove('slideshow-active');
+    };
+
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closeSlideshow();
+      } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ' || e.key === 'PageDown' || e.key === 'Enter') {
+        e.preventDefault();
+        nextSlide();
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp' || e.key === 'Backspace' || e.key === 'PageUp') {
+        e.preventDefault();
+        prevSlide();
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        renderSlide(0);
+      } else if (e.key === 'End') {
+        e.preventDefault();
+        renderSlide(totalSlides - 1);
+      } else if (e.key.toLowerCase() === 'f') {
+        if (!document.fullscreenElement) {
+          overlay.requestFullscreen?.().catch(() => {});
+        } else {
+          document.exitFullscreen?.().catch(() => {});
+        }
+      }
+    };
+
+    btnClose?.addEventListener('click', closeSlideshow);
+    window.addEventListener('keydown', handleKey);
   }
 }
 

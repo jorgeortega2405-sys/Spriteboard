@@ -1,4 +1,4 @@
-import { getBoardSvg, getDiagramSvg, getDocSvg, getTemplateVariantSvg } from './create-canvas-graphics.js';
+import { getBoardSvg, getDiagramSvg, getDocSvg, getPresentationSvg, getTemplateVariantSvg } from './create-canvas-graphics.js';
 import { PresetVariant } from '../config/templates.config.js';
 import { createAndOpenCanvas, CreateCanvasOptions } from '../services/canvas-creator.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
@@ -16,7 +16,7 @@ export interface OpenCreateCanvasModalOptions {
   docPaperSize?: DocPaperSize;
   docTemplateId?: string;
   height?: number;
-  initialType?: 'board' | 'diagram' | 'doc';
+  initialType?: 'board' | 'diagram' | 'doc' | 'presentation';
   name?: string;
   teamName?: string | null;
   teamUuid?: string | null;
@@ -35,7 +35,7 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
   const templateName = options?.templateName || null;
   const templateImage = options?.templateImage || null;
   const normalizedInitialType = options?.initialType || 'board';
-  let activeCategory: 'board' | 'diagram' | 'doc' | 'template' = templateVariants ? 'template' : normalizedInitialType;
+  let activeCategory: 'board' | 'diagram' | 'doc' | 'presentation' | 'template' = templateVariants ? 'template' : normalizedInitialType;
   let isCreating = false;
 
   const backdrop = document.createElement('div');
@@ -76,6 +76,10 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
               <button type="button" class="menu-item${activeCategory === 'diagram' ? ' is-active' : ''}" data-ref="tab-category-diagram" data-category="diagram">
                 <span class="material-symbols-rounded menu-item__icon">account_tree</span>
                 <span class="menu-item__text">Diagramas y Esquemas</span>
+              </button>
+              <button type="button" class="menu-item${activeCategory === 'presentation' ? ' is-active' : ''}" data-ref="tab-category-presentation" data-category="presentation">
+                <span class="material-symbols-rounded menu-item__icon">slideshow</span>
+                <span class="menu-item__text">Presentación</span>
               </button>
               <button type="button" class="menu-item${activeCategory === 'doc' ? ' is-active' : ''}" data-ref="tab-category-doc" data-category="doc">
                 <span class="material-symbols-rounded menu-item__icon">description</span>
@@ -162,6 +166,65 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
               </div>
             </div>
 
+            <div class="modal-canvas-panel" data-ref="panel-category-presentation" style="${activeCategory === 'presentation' ? '' : 'display: none;'}">
+              <div class="creation-category-section" data-ref="section-presentation-sizes">
+                <h3 class="creation-category-section__title">Formatos de diapositiva estándar</h3>
+                <div class="creation-cards-grid" data-ref="grid-presentation-cards">
+                  <button type="button" class="creation-card" data-ref="card-pres-16-9" data-type="presentation" data-paper="presentation_16_9" data-orientation="landscape">
+                    <div class="creation-card__thumbnail" data-ref="thumb-pres-16-9">
+                      <div class="creation-card__svg-wrapper" data-ref="svg-pres-16-9">
+                        ${getPresentationSvg('16_9')}
+                      </div>
+                      <span class="creation-card__badge creation-card__badge--popular" data-ref="badge-pres-16-9">Recomendado</span>
+                    </div>
+                    <div class="creation-card__info" data-ref="info-pres-16-9">
+                      <h4 class="creation-card__title" data-ref="title-pres-16-9">16:9 Panorámica</h4>
+                      <p class="creation-card__meta" data-ref="meta-pres-16-9">1280 × 720 px • Estándar para pantallas y proyectores</p>
+                    </div>
+                  </button>
+
+                  <button type="button" class="creation-card" data-ref="card-pres-fhd" data-type="presentation" data-paper="presentation_fhd" data-orientation="landscape">
+                    <div class="creation-card__thumbnail" data-ref="thumb-pres-fhd">
+                      <div class="creation-card__svg-wrapper" data-ref="svg-pres-fhd">
+                        ${getPresentationSvg('fhd')}
+                      </div>
+                      <span class="creation-card__badge" data-ref="badge-pres-fhd">Full HD</span>
+                    </div>
+                    <div class="creation-card__info" data-ref="info-pres-fhd">
+                      <h4 class="creation-card__title" data-ref="title-pres-fhd">16:9 Full HD</h4>
+                      <p class="creation-card__meta" data-ref="meta-pres-fhd">1920 × 1080 px • Alta definición nítida</p>
+                    </div>
+                  </button>
+
+                  <button type="button" class="creation-card" data-ref="card-pres-4-3" data-type="presentation" data-paper="presentation_4_3" data-orientation="landscape">
+                    <div class="creation-card__thumbnail" data-ref="thumb-pres-4-3">
+                      <div class="creation-card__svg-wrapper" data-ref="svg-pres-4-3">
+                        ${getPresentationSvg('4_3')}
+                      </div>
+                      <span class="creation-card__badge" data-ref="badge-pres-4-3">Clásico</span>
+                    </div>
+                    <div class="creation-card__info" data-ref="info-pres-4-3">
+                      <h4 class="creation-card__title" data-ref="title-pres-4-3">4:3 Estándar</h4>
+                      <p class="creation-card__meta" data-ref="meta-pres-4-3">1024 × 768 px • Formato clásico y tablets</p>
+                    </div>
+                  </button>
+
+                  <button type="button" class="creation-card" data-ref="card-pres-mobile" data-type="presentation" data-paper="presentation_16_9" data-orientation="portrait">
+                    <div class="creation-card__thumbnail" data-ref="thumb-pres-mobile">
+                      <div class="creation-card__svg-wrapper" data-ref="svg-pres-mobile">
+                        ${getPresentationSvg('mobile')}
+                      </div>
+                      <span class="creation-card__badge" data-ref="badge-pres-mobile">Móvil</span>
+                    </div>
+                    <div class="creation-card__info" data-ref="info-pres-mobile">
+                      <h4 class="creation-card__title" data-ref="title-pres-mobile">9:16 Vertical</h4>
+                      <p class="creation-card__meta" data-ref="meta-pres-mobile">720 × 1280 px • Historias y diapositivas móviles</p>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </div>
+
             <div class="modal-canvas-panel" data-ref="panel-category-doc" style="${activeCategory === 'doc' ? '' : 'display: none;'}">
               <div class="creation-category-section" data-ref="section-doc-paper-sizes">
                 <h3 class="creation-category-section__title">Formatos de papel estándar</h3>
@@ -245,8 +308,6 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
                   </button>
                 </div>
               </div>
-
-
             </div>
 
             <div class="banner banner--danger" data-ref="create-canvas-error" style="display: none; margin-top: 14px;"></div>
@@ -270,6 +331,7 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
     board: 'Pizarrón Infinito',
     diagram: 'Diagramas y Esquemas',
     doc: 'Documento Doc',
+    presentation: 'Presentación de Diapositivas',
     template: templateName ? `Plantilla: ${templateName}` : 'Plantilla',
   };
 
@@ -279,7 +341,7 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
   const errorBanner = backdrop.querySelector<HTMLElement>('[data-ref="create-canvas-error"]');
   const btnClose = backdrop.querySelector<HTMLElement>('[data-ref="btn-modal-close"]');
 
-  const switchCategory = (category: 'board' | 'diagram' | 'doc' | 'template') => {
+  const switchCategory = (category: 'board' | 'diagram' | 'doc' | 'presentation' | 'template') => {
     activeCategory = category;
     navItems.forEach((item) => {
       item.classList.toggle('is-active', item.getAttribute('data-category') === category);
@@ -308,7 +370,7 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
 
   navItems.forEach((item) => {
     item.addEventListener('click', () => {
-      const cat = item.getAttribute('data-category') as 'board' | 'diagram' | 'doc' | 'template';
+      const cat = item.getAttribute('data-category') as 'board' | 'diagram' | 'doc' | 'presentation' | 'template';
       if (cat) {
         switchCategory(cat);
       }
@@ -390,6 +452,21 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
         name: subtypeInfo?.name ? `${subtypeInfo.name} sin título` : 'Mapa Mental sin título',
         rootIdeaText: subtypeInfo?.name || 'Idea Principal',
         solidColor: '#ffffff',
+      }, card);
+    });
+  });
+
+  const presCards = backdrop.querySelectorAll<HTMLElement>('[data-ref^="card-pres-"]');
+  presCards.forEach((card) => {
+    card.addEventListener('click', () => {
+      const paper = (card.getAttribute('data-paper') as DocPaperSize) || 'presentation_16_9';
+      const orientation = (card.getAttribute('data-orientation') as DocOrientation) || 'landscape';
+      const name = 'Presentación sin título';
+      void handleInstantCreation({
+        canvasType: 'presentation',
+        docOrientation: orientation,
+        docPaperSize: paper,
+        name,
       }, card);
     });
   });

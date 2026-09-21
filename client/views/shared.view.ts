@@ -229,10 +229,11 @@ class SharedController {
       ? `<img class="canvas-card__image image-lazy-fade" src="${escapeHtml(canvas.preview_thumbnail)}" alt="${escapeHtml(canvas.name)}" loading="lazy" decoding="async" onload="this.classList.add('image-loaded')" onerror="this.onerror=null; this.classList.add('image-loaded');" />`
       : `<div class="canvas-card__canvas-placeholder"></div>`;
 
+    const isPresentation = canvas.canvas_type === 'presentation' || canvas.unit === 'presentation';
     const isDoc = canvas.canvas_type === 'doc' || canvas.unit === 'doc';
     const targetUrl = `/design/${canvas.uuid}`;
-    const typeIcon = isDoc ? 'description' : 'draw';
-    const typeLabel = isDoc ? 'Documento' : 'Pizarrón';
+    const typeIcon = isPresentation ? 'slideshow' : (isDoc ? 'description' : 'draw');
+    const typeLabel = isPresentation ? 'Presentación' : (isDoc ? 'Documento' : 'Pizarrón');
     const editedTime = formatEditedTime(canvas.updated_at || canvas.created_at);
 
     card.innerHTML = `

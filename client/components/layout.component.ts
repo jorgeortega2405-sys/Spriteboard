@@ -509,9 +509,10 @@ function createDrawerCanvasRow(canvas: CanvasItem): HTMLElement {
   item.type = 'button';
   item.className = 'drawer-canvas-item';
   item.setAttribute('data-ref', `drawer-canvas-${canvas.uuid}`);
+  const isPresentation = canvas.canvas_type === 'presentation' || canvas.unit === 'presentation';
   const isDoc = canvas.canvas_type === 'doc' || canvas.unit === 'doc';
   const targetUrl = `/design/${canvas.uuid}`;
-  const iconName = isDoc ? 'description' : 'dashboard';
+  const iconName = isPresentation ? 'slideshow' : (isDoc ? 'description' : 'dashboard');
 
   const thumbHtml = canvas.preview_thumbnail
     ? `<img class="drawer-canvas-item__thumb-img" src="${canvas.preview_thumbnail}" alt="" />`
@@ -3679,7 +3680,7 @@ async function handleApplyCanvasProject(
     }
   }
 
-  const sourceType = canvas.canvas_type || (canvas.unit === 'board' ? 'board' : (canvas.unit === 'diagram' ? 'diagram' : (canvas.unit === 'doc' ? 'doc' : 'pixel')));
+  const sourceType = canvas.canvas_type || (canvas.unit === 'board' ? 'board' : (canvas.unit === 'diagram' ? 'diagram' : (canvas.unit === 'doc' ? 'doc' : (canvas.unit === 'presentation' ? 'presentation' : 'pixel'))));
 
   if (targetCanvasType === 'board') {
     if (sourceType === 'board' && projectData && Array.isArray(projectData.elements) && projectData.elements.length > 0) {
@@ -3691,7 +3692,7 @@ async function handleApplyCanvasProject(
       }
     }
 
-    if (sourceType === 'doc' && projectData && Array.isArray(projectData.pages) && projectData.pages.length > 0) {
+    if ((sourceType === 'doc' || sourceType === 'presentation') && projectData && Array.isArray(projectData.pages) && projectData.pages.length > 0) {
       const pagesToInsert: DocPage[] = pageIndex >= 0 && projectData.pages[pageIndex]
         ? [projectData.pages[pageIndex]]
         : projectData.pages;
@@ -3835,12 +3836,14 @@ async function renderProjectsDrawerContent(drawer: HTMLElement, drawerBody: HTML
 
   let projectItems: CanvasItem[] = [];
 
-  const getCanvasTypeKey = (c: CanvasItem): 'board' | 'doc' => {
+  const getCanvasTypeKey = (c: CanvasItem): 'board' | 'doc' | 'presentation' => {
+    if (c.canvas_type === 'presentation' || c.unit === 'presentation') return 'presentation';
     if (c.canvas_type === 'doc' || c.unit === 'doc') return 'doc';
     return 'board';
   };
 
-  const getTypeIcon = (typeKey: 'board' | 'doc'): string => {
+  const getTypeIcon = (typeKey: 'board' | 'doc' | 'presentation'): string => {
+    if (typeKey === 'presentation') return 'slideshow';
     if (typeKey === 'doc') return 'description';
     return 'dashboard';
   };

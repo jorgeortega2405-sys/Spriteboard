@@ -432,3 +432,68 @@ export function getTemplateVariantSvg(w: number, h: number, imgPath?: string | n
     <text x="90" y="82" font-size="11" font-weight="600" fill="#6366f1" text-anchor="middle" font-family="sans-serif">${w} × ${h} px</text>
   </svg>`;
 }
+
+export function getPresentationSvg(format: string): string {
+  switch (format) {
+    case '16_9':
+      return `<svg viewBox="0 0 180 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="14" y="15" width="152" height="80" rx="6" fill="#ffffff" stroke="#6366f1" stroke-width="1.5"/>
+        <rect x="24" y="25" width="36" height="5" rx="2.5" fill="#6366f1"/>
+        <rect x="24" y="35" width="70" height="7" rx="3.5" fill="#1e293b"/>
+        <rect x="24" y="47" width="50" height="4" rx="2" fill="#94a3b8"/>
+        <rect x="24" y="58" width="60" height="26" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+        <rect x="30" y="64" width="40" height="3" rx="1.5" fill="#6366f1"/>
+        <rect x="30" y="71" width="48" height="2.5" rx="1.25" fill="#cbd5e1"/>
+        <rect x="30" y="76" width="35" height="2.5" rx="1.25" fill="#cbd5e1"/>
+        <rect x="92" y="58" width="64" height="26" rx="4" fill="#eef2ff" stroke="#c7d2fe" stroke-width="1"/>
+        <circle cx="106" cy="71" r="6" fill="#6366f1" fill-opacity="0.3"/>
+        <rect x="118" y="66" width="30" height="3" rx="1.5" fill="#4338ca"/>
+        <rect x="118" y="73" width="24" height="2.5" rx="1.25" fill="#818cf8"/>
+      </svg>`;
+    case 'fhd':
+      return `<svg viewBox="0 0 180 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="14" y="15" width="152" height="80" rx="6" fill="#0f172a" stroke="#38bdf8" stroke-width="1.5"/>
+        <rect x="24" y="24" width="30" height="4" rx="2" fill="#38bdf8"/>
+        <rect x="24" y="32" width="75" height="8" rx="4" fill="#f8fafc"/>
+        <rect x="24" y="44" width="55" height="3.5" rx="1.75" fill="#94a3b8"/>
+        <rect x="24" y="54" width="38" height="30" rx="3" fill="#1e293b" stroke="#334155" stroke-width="0.75"/>
+        <rect x="28" y="59" width="20" height="3" rx="1.5" fill="#38bdf8"/>
+        <rect x="28" y="66" width="30" height="2" rx="1" fill="#64748b"/>
+        <rect x="68" y="54" width="38" height="30" rx="3" fill="#1e293b" stroke="#334155" stroke-width="0.75"/>
+        <rect x="72" y="59" width="22" height="3" rx="1.5" fill="#818cf8"/>
+        <rect x="72" y="66" width="30" height="2" rx="1" fill="#64748b"/>
+        <rect x="112" y="54" width="44" height="30" rx="3" fill="#1e293b" stroke="#334155" stroke-width="0.75"/>
+        <circle cx="134" cy="69" r="7" fill="#f43f5e" fill-opacity="0.3" stroke="#f43f5e" stroke-width="1"/>
+      </svg>`;
+    case '4_3':
+      return `<svg viewBox="0 0 180 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="36" y="10" width="108" height="90" rx="6" fill="#ffffff" stroke="#f59e0b" stroke-width="1.5"/>
+        <rect x="48" y="20" width="36" height="5" rx="2.5" fill="#f59e0b"/>
+        <rect x="48" y="30" width="60" height="7" rx="3.5" fill="#1e293b"/>
+        <rect x="48" y="42" width="45" height="4" rx="2" fill="#94a3b8"/>
+        <rect x="48" y="52" width="84" height="38" rx="4" fill="#fffbeb" stroke="#fde68a" stroke-width="1"/>
+        <rect x="56" y="60" width="35" height="3.5" rx="1.75" fill="#b45309"/>
+        <rect x="56" y="68" width="68" height="2.5" rx="1.25" fill="#d97706"/>
+        <rect x="56" y="74" width="55" height="2.5" rx="1.25" fill="#d97706"/>
+      </svg>`;
+    case 'mobile':
+      return `<svg viewBox="0 0 180 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="62" y="6" width="56" height="98" rx="7" fill="#ffffff" stroke="#ec4899" stroke-width="1.5"/>
+        <rect x="70" y="14" width="22" height="4" rx="2" fill="#ec4899"/>
+        <rect x="70" y="22" width="40" height="6" rx="3" fill="#1e293b"/>
+        <rect x="70" y="32" width="30" height="3" rx="1.5" fill="#94a3b8"/>
+        <rect x="70" y="40" width="40" height="32" rx="4" fill="#fdf2f8" stroke="#fbcfe8" stroke-width="1"/>
+        <circle cx="90" cy="56" r="8" fill="#ec4899" fill-opacity="0.3"/>
+        <rect x="70" y="78" width="40" height="18" rx="3" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+        <rect x="74" y="83" width="32" height="2.5" rx="1.25" fill="#cbd5e1"/>
+        <rect x="74" y="88" width="24" height="2.5" rx="1.25" fill="#cbd5e1"/>
+      </svg>`;
+    default:
+      return `<svg viewBox="0 0 180 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="14" y="15" width="152" height="80" rx="6" fill="#ffffff" stroke="#6366f1" stroke-width="1.5"/>
+        <rect x="24" y="25" width="36" height="5" rx="2.5" fill="#6366f1"/>
+        <rect x="24" y="35" width="70" height="7" rx="3.5" fill="#1e293b"/>
+        <rect x="24" y="47" width="50" height="4" rx="2" fill="#94a3b8"/>
+      </svg>`;
+  }
+}
