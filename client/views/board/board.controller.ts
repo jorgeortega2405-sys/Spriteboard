@@ -12,7 +12,7 @@ import { BOARD_SHAPES } from '../../config/board-shapes.config.js';
 import { getBoardTemplateElements } from '../../config/board-templates.data.js';
 import { getMockupTemplateById } from '../../config/mockups.config.js';
 import { DEFAULT_STICKY_COLOR, STICKY_NOTE_PRESETS } from '../../config/sticky-notes.config.js';
-import { currentUser, getApi, postApi } from '../../services/api.service.js';
+import { currentUser, escapeHtml, getApi, postApi } from '../../services/api.service.js';
 import { getLocalCanvasByUuid, removeLocalCanvas, saveLocalCanvas } from '../../services/canvas-storage.service.js';
 import { renderIcons } from '../../services/icon.service.js';
 import { showToast } from '../../services/toast.service.js';
@@ -80,6 +80,7 @@ export class BoardController {
   private boardBackground: { color: string; dotColor?: string; type: BackgroundType } = { color: '#ffffff', dotColor: '#cbd5e1', type: 'dots' };
   private boardName = 'Pizarrón sin título';
   private broadcastMyCursor = true;
+  private btnBoardPresent: HTMLButtonElement | null = null;
   private camera = { x: 0, y: 0, zoom: 1 };
   private canvasCreatedAt: string | null = null;
   private canvasElement: HTMLCanvasElement | null = null;
@@ -88,6 +89,11 @@ export class BoardController {
   private canvasUserId: number | null = null;
   private canvasUuid: string;
   private collaborationManager: BoardCollaborationManager;
+  private isPresentation = false;
+  private isSlideshowActive = false;
+  private slideHeight = 720;
+  private slideWidth = 1280;
+  private slideshowCurrentIndex = 0;
   private collaboratorsBarEl: HTMLElement | null = null;
   private collaboratorsListEl: HTMLElement | null = null;
   private colorPanelTarget: 'stroke' | 'fill' | 'text' = 'stroke';
@@ -213,6 +219,14 @@ export class BoardController {
     this.previewBannerEl = this.container.querySelector<HTMLElement>('[data-ref="design-history-preview-banner"]');
     this.btnPreviewRestore = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-preview-restore"]');
     this.btnPreviewExit = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-preview-exit"]');
+    this.btnBoardPresent = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-board-present"]');
+
+    if (this.isPresentation && this.btnBoardPresent) {
+      this.btnBoardPresent.classList.remove('is-hidden');
+      this.btnBoardPresent.addEventListener('click', () => {
+        this.startSlideshow();
+      }, { signal: this.abortController.signal });
+    }
 
     this.commentsController = new CanvasCommentsController({
       canvasUuid: this.canvasUuid,
@@ -280,8 +294,8 @@ export class BoardController {
       onPrevPage: () => this.goToPrevPage(),
       onReorderPages: (from, to) => this.reorderPages(from, to),
       onSelectPage: (id) => this.switchToPage(id),
-    });
-    this.pagesTray.attach(this.container, this.pages, this.activePageId);
+    }, this.isPresentation);
+    this.pagesTray.attach(this.container, this.pages, this.activePageId, this.isPresentation);
     this.bindEvents();
     try {
       const savedSnapping = localStorage.getItem('spriteboard_board_snapping');
@@ -413,7 +427,11 @@ export class BoardController {
       this.currentCanvasItem = canvas;
       this.canvasServerId = canvas.id || this.canvasServerId;
       this.canvasUserId = canvas.user_id || this.canvasUserId;
-      this.boardName = canvas.name || 'Pizarrón sin título';
+      this.isPresentation = canvas.canvas_type === 'presentation' || canvas.unit === 'presentation';
+      this.slideWidth = canvas.width && canvas.width > 0 ? canvas.width : 1280;
+      this.slideHeight = canvas.height && canvas.height > 0 ? canvas.height : 720;
+      const defaultTitle = this.isPresentation ? 'Presentación sin título' : 'Pizarrón sin título';
+      this.boardName = canvas.name || defaultTitle;
       this.canvasCreatedAt = canvas.created_at || null;
 
       if (this.canvasUserId && currentUser) {
@@ -454,7 +472,12 @@ export class BoardController {
       if (canvas.data) {
         try {
           const parsed = typeof canvas.data === 'string' ? JSON.parse(canvas.data) : canvas.data;
-          if (parsed && parsed.type === 'board') {
+          if (parsed && (parsed.type === 'board' || parsed.type === 'presentation')) {
+            if (parsed.type === 'presentation') {
+              this.isPresentation = true;
+              if (parsed.width) this.slideWidth = parsed.width;
+              if (parsed.height) this.slideHeight = parsed.height;
+            }
             const project = parsed as BoardProject;
             if (Array.isArray(project.pages) && project.pages.length > 0) {
               this.pages = project.pages;
@@ -467,7 +490,7 @@ export class BoardController {
               this.boardBackground = activePage.background || {
                 color: '#ffffff',
                 dotColor: '#cbd5e1',
-                type: 'dots',
+                type: this.isPresentation ? 'solid' : 'dots',
               };
               this.camera = activePage.camera
                 ? {
@@ -488,7 +511,7 @@ export class BoardController {
               const defaultBackground = project.background || {
                 color: '#ffffff',
                 dotColor: '#cbd5e1',
-                type: 'dots',
+                type: this.isPresentation ? 'solid' : 'dots',
               };
               const defaultPage: BoardPageItem = {
                 background: defaultBackground,
@@ -496,7 +519,7 @@ export class BoardController {
                 createdAt: Date.now(),
                 elements: defaultElements,
                 id: `page-${Date.now()}-1`,
-                name: 'Página 1',
+                name: this.isPresentation ? 'Diapositiva 1' : 'Página 1',
               };
               this.pages = [defaultPage];
               this.activePageId = defaultPage.id;
@@ -510,12 +533,12 @@ export class BoardController {
 
       if (this.pages.length === 0) {
         const defaultPage: BoardPageItem = {
-          background: { color: '#ffffff', dotColor: '#cbd5e1', type: 'dots' },
+          background: { color: '#ffffff', dotColor: '#cbd5e1', type: this.isPresentation ? 'solid' : 'dots' },
           camera: { x: 0, y: 0, zoom: 1 },
           createdAt: Date.now(),
           elements: [],
           id: `page-${Date.now()}-1`,
-          name: 'Página 1',
+          name: this.isPresentation ? 'Diapositiva 1' : 'Página 1',
         };
         this.pages = [defaultPage];
         this.activePageId = defaultPage.id;
@@ -4248,6 +4271,12 @@ export class BoardController {
           return;
         }
 
+        if (e.key === 'F5' && this.isPresentation) {
+          e.preventDefault();
+          this.startSlideshow();
+          return;
+        }
+
         if (e.key === 'Escape') {
           if (this.isEyedropperActive) {
             this.toggleEyedropper(false);
@@ -4495,20 +4524,46 @@ export class BoardController {
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     this.ctx.clearRect(0, 0, w, h);
 
-    drawBackground(
-      this.ctx,
-      w,
-      h,
-      this.boardBackground,
-      this.camera,
-      (sx, sy) => screenToWorld(sx, sy, this.canvasElement, this.camera),
-      (wx, wy) => worldToScreen(wx, wy, this.canvasElement, this.camera)
-    );
+    if (this.isPresentation) {
+      this.ctx.fillStyle = '#f1f5f9';
+      this.ctx.fillRect(0, 0, w, h);
+    } else {
+      drawBackground(
+        this.ctx,
+        w,
+        h,
+        this.boardBackground,
+        this.camera,
+        (sx, sy) => screenToWorld(sx, sy, this.canvasElement, this.camera),
+        (wx, wy) => worldToScreen(wx, wy, this.canvasElement, this.camera)
+      );
+    }
 
     this.ctx.save();
     this.ctx.translate(w / 2, h / 2);
     this.ctx.scale(this.camera.zoom, this.camera.zoom);
     this.ctx.translate(-this.camera.x, -this.camera.y);
+
+    if (this.isPresentation) {
+      const sx = -this.slideWidth / 2;
+      const sy = -this.slideHeight / 2;
+      const sw = this.slideWidth;
+      const sh = this.slideHeight;
+
+      this.ctx.save();
+      this.ctx.shadowColor = 'rgba(15, 23, 42, 0.16)';
+      this.ctx.shadowBlur = 28;
+      this.ctx.shadowOffsetY = 8;
+      this.ctx.fillStyle = this.boardBackground.color || '#ffffff';
+      this.ctx.fillRect(sx, sy, sw, sh);
+      this.ctx.restore();
+
+      this.ctx.save();
+      this.ctx.strokeStyle = '#cbd5e1';
+      this.ctx.lineWidth = 1;
+      this.ctx.strokeRect(sx, sy, sw, sh);
+      this.ctx.restore();
+    }
 
     const topLeft = screenToWorld(0, 0, this.canvasElement, this.camera);
     const botRight = screenToWorld(w, h, this.canvasElement, this.camera);
@@ -5631,27 +5686,29 @@ export class BoardController {
 
   private addPage(): void {
     if (this.pages.length >= MAX_BOARD_PAGES) {
-      showToast(`Has alcanzado el límite máximo de ${MAX_BOARD_PAGES} páginas`, 'warning');
+      const itemNoun = this.isPresentation ? 'diapositivas' : 'páginas';
+      showToast(`Has alcanzado el límite máximo de ${MAX_BOARD_PAGES} ${itemNoun}`, 'warning');
       return;
     }
     this.syncActivePageData();
     const newPage: BoardPageItem = {
-      background: { color: '#ffffff', dotColor: '#cbd5e1', type: 'dots' },
+      background: { color: '#ffffff', dotColor: '#cbd5e1', type: this.isPresentation ? 'solid' : 'dots' },
       camera: { x: 0, y: 0, zoom: 1 },
       createdAt: Date.now(),
       elements: [],
       id: `page-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      name: `Página ${this.pages.length + 1}`,
+      name: this.isPresentation ? `Diapositiva ${this.pages.length + 1}` : `Página ${this.pages.length + 1}`,
     };
     this.pages.push(newPage);
     this.switchToPage(newPage.id);
     this.collaborationManager.broadcastPageAdd(newPage);
-    showToast('Nueva página creada');
+    showToast(this.isPresentation ? 'Nueva diapositiva creada' : 'Nueva página creada');
   }
 
   private duplicatePage(pageId?: string): void {
     if (this.pages.length >= MAX_BOARD_PAGES) {
-      showToast(`Has alcanzado el límite máximo de ${MAX_BOARD_PAGES} páginas`, 'warning');
+      const itemNoun = this.isPresentation ? 'diapositivas' : 'páginas';
+      showToast(`Has alcanzado el límite máximo de ${MAX_BOARD_PAGES} ${itemNoun}`, 'warning');
       return;
     }
     this.syncActivePageData();
@@ -5676,12 +5733,13 @@ export class BoardController {
     this.pages.splice(targetIndex + 1, 0, newPage);
     this.switchToPage(newPage.id);
     this.collaborationManager.broadcastPageAdd(newPage, targetIndex + 1);
-    showToast('Página duplicada');
+    showToast(this.isPresentation ? 'Diapositiva duplicada' : 'Página duplicada');
   }
 
   private deletePage(pageId?: string): void {
     if (this.pages.length <= 1) {
-      showToast('No puedes eliminar la única página del pizarrón', 'warning');
+      const singleNoun = this.isPresentation ? 'la única diapositiva' : 'la única página del pizarrón';
+      showToast(`No puedes eliminar ${singleNoun}`, 'warning');
       return;
     }
     const targetId = pageId || this.activePageId;
@@ -5696,7 +5754,7 @@ export class BoardController {
       const nextActivePage = this.pages[nextIndex];
       this.activePageId = nextActivePage.id;
       this.elements = nextActivePage.elements || [];
-      this.boardBackground = nextActivePage.background || { color: '#ffffff', dotColor: '#cbd5e1', type: 'dots' };
+      this.boardBackground = nextActivePage.background || { color: '#ffffff', dotColor: '#cbd5e1', type: this.isPresentation ? 'solid' : 'dots' };
       this.camera = nextActivePage.camera || { x: 0, y: 0, zoom: 1 };
       this.selectedElementId = null;
       this.selectedElementIds = [];
@@ -5712,7 +5770,7 @@ export class BoardController {
     this.updatePagesUI();
     this.requestRedraw();
     this.scheduleAutoSave();
-    showToast('Página eliminada');
+    showToast(this.isPresentation ? 'Diapositiva eliminada' : 'Página eliminada');
   }
 
   private reorderPages(fromIndex: number, toIndex: number): void {
@@ -5759,33 +5817,35 @@ export class BoardController {
 
   private async saveImmediate(): Promise<void> {
     this.syncActivePageData();
-    const project: BoardProject = {
+    const project: any = {
       activePageId: this.activePageId,
       background: this.boardBackground,
       camera: this.camera,
       elements: this.elements,
+      height: this.isPresentation ? this.slideHeight : undefined,
       pages: this.pages,
-      type: 'board',
+      type: this.isPresentation ? 'presentation' : 'board',
       version: 1,
+      width: this.isPresentation ? this.slideWidth : undefined,
     };
 
     const thumbnail = generateThumbnail(this.elements, this.boardBackground, (ctx, el) => this.drawElementOn(ctx, el));
     const dataStr = JSON.stringify(project);
 
     const canvasItem: CanvasItem = {
-      canvas_type: 'board',
+      canvas_type: this.isPresentation ? 'presentation' : 'board',
       created_at: this.canvasCreatedAt || new Date().toISOString(),
       data: dataStr,
-      height: 0,
+      height: this.isPresentation ? this.slideHeight : 0,
       id: this.canvasServerId || undefined,
       is_local: !this.canvasServerId,
       name: this.boardName,
       preview_thumbnail: thumbnail,
-      unit: 'board',
+      unit: this.isPresentation ? 'presentation' : 'board',
       updated_at: new Date().toISOString(),
       user_id: this.canvasUserId || (currentUser ? currentUser.id : undefined),
       uuid: this.canvasUuid,
-      width: 0,
+      width: this.isPresentation ? this.slideWidth : 0,
     };
 
     await saveLocalCanvas(canvasItem);
@@ -5794,15 +5854,15 @@ export class BoardController {
       try {
         this.setSaveStatus('saving');
         const res = await postApi(API_ROUTES.canvases.sync, {
-          canvas_type: 'board',
+          canvas_type: this.isPresentation ? 'presentation' : 'board',
           data: dataStr,
-          height: 0,
+          height: this.isPresentation ? this.slideHeight : 0,
           id: this.canvasServerId || undefined,
           name: this.boardName,
           preview_thumbnail: thumbnail,
-          unit: 'board',
+          unit: this.isPresentation ? 'presentation' : 'board',
           uuid: this.canvasUuid,
-          width: 0,
+          width: this.isPresentation ? this.slideWidth : 0,
         });
         if (res.ok) {
           this.setSaveStatus('saved');
@@ -5815,6 +5875,190 @@ export class BoardController {
     } else {
       this.setSaveStatus('saved');
     }
+  }
+
+  public startSlideshow(): void {
+    if (this.isSlideshowActive) return;
+    this.isSlideshowActive = true;
+    this.syncActivePageData();
+    this.slideshowCurrentIndex = this.pages.findIndex((p) => p.id === this.activePageId);
+    if (this.slideshowCurrentIndex === -1) this.slideshowCurrentIndex = 0;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'doc-slideshow-overlay';
+    overlay.setAttribute('data-ref', 'board-slideshow-overlay');
+
+    const totalSlides = this.pages.length;
+
+    overlay.innerHTML = `
+      <div class="doc-slideshow__bar" data-ref="slideshow-bar">
+        <div class="doc-slideshow__bar-left">
+          <span class="doc-slideshow__title">${escapeHtml(this.boardName)}</span>
+        </div>
+        <div class="doc-slideshow__bar-center">
+          <button type="button" class="doc-slideshow__nav-btn" data-ref="btn-slideshow-prev" data-tooltip="Anterior (←)" aria-label="Diapositiva anterior">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
+          </button>
+          <span class="doc-slideshow__counter" data-ref="slideshow-counter">${this.slideshowCurrentIndex + 1} / ${totalSlides}</span>
+          <button type="button" class="doc-slideshow__nav-btn" data-ref="btn-slideshow-next" data-tooltip="Siguiente (→)" aria-label="Siguiente diapositiva">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_forward"></use></svg>
+          </button>
+        </div>
+        <div class="doc-slideshow__bar-right">
+          <button type="button" class="doc-slideshow__nav-btn" data-ref="btn-slideshow-fullscreen" data-tooltip="Pantalla completa (F)" aria-label="Pantalla completa">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#fullscreen"></use></svg>
+          </button>
+          <button type="button" class="doc-slideshow__nav-btn doc-slideshow__nav-btn--close" data-ref="btn-slideshow-close" data-tooltip="Salir (Esc)" aria-label="Salir de presentación">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+          </button>
+        </div>
+      </div>
+      <div class="doc-slideshow__stage" data-ref="slideshow-stage">
+        <div class="doc-slideshow__viewport" data-ref="slideshow-viewport">
+          <canvas class="board-slideshow__canvas" data-ref="slideshow-canvas" width="${this.slideWidth}" height="${this.slideHeight}"></canvas>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+    document.body.classList.add('slideshow-active');
+
+    const counterEl = overlay.querySelector<HTMLElement>('[data-ref="slideshow-counter"]');
+    const slideCanvas = overlay.querySelector<HTMLCanvasElement>('[data-ref="slideshow-canvas"]');
+    const viewportEl = overlay.querySelector<HTMLElement>('[data-ref="slideshow-viewport"]');
+    const stageEl = overlay.querySelector<HTMLElement>('[data-ref="slideshow-stage"]');
+    const btnPrev = overlay.querySelector<HTMLElement>('[data-ref="btn-slideshow-prev"]');
+    const btnNext = overlay.querySelector<HTMLElement>('[data-ref="btn-slideshow-next"]');
+    const btnFullscreen = overlay.querySelector<HTMLElement>('[data-ref="btn-slideshow-fullscreen"]');
+    const btnClose = overlay.querySelector<HTMLElement>('[data-ref="btn-slideshow-close"]');
+
+    const renderSlide = (index: number) => {
+      if (!slideCanvas) return;
+      const page = this.pages[index];
+      if (!page) return;
+
+      const sctx = slideCanvas.getContext('2d');
+      if (!sctx) return;
+
+      sctx.clearRect(0, 0, this.slideWidth, this.slideHeight);
+
+      sctx.fillStyle = page.background?.color || '#ffffff';
+      sctx.fillRect(0, 0, this.slideWidth, this.slideHeight);
+
+      sctx.save();
+      sctx.translate(this.slideWidth / 2, this.slideHeight / 2);
+
+      const elements = page.id === this.activePageId ? this.elements : (page.elements || []);
+      const sections = elements.filter((e) => e.type === 'section') as BoardSectionElement[];
+
+      for (const el of elements) {
+        if (el.type !== 'section') continue;
+        this.drawElementOn(sctx, el);
+      }
+
+      for (const el of elements) {
+        if (el.type === 'section') continue;
+        const parentSection = findContainingSection(el, sections, elements);
+        if (parentSection) {
+          sctx.save();
+          sctx.beginPath();
+          if (typeof sctx.roundRect === 'function') {
+            sctx.roundRect(parentSection.x, parentSection.y, parentSection.width, parentSection.height, 8);
+          } else {
+            sctx.rect(parentSection.x, parentSection.y, parentSection.width, parentSection.height);
+          }
+          sctx.clip();
+          this.drawElementOn(sctx, el);
+          sctx.restore();
+        } else {
+          this.drawElementOn(sctx, el);
+        }
+      }
+
+      sctx.restore();
+
+      if (counterEl) {
+        counterEl.textContent = `${index + 1} / ${this.pages.length}`;
+      }
+    };
+
+    const updateScale = () => {
+      if (!viewportEl || !stageEl) return;
+      const stageRect = stageEl.getBoundingClientRect();
+      const availW = Math.max(100, stageRect.width - 48);
+      const availH = Math.max(100, stageRect.height - 48);
+      const scaleX = availW / this.slideWidth;
+      const scaleY = availH / this.slideHeight;
+      const fitScale = Math.min(scaleX, scaleY, 1.5);
+      viewportEl.style.transform = `scale(${fitScale})`;
+      viewportEl.style.transformOrigin = 'center center';
+    };
+
+    renderSlide(this.slideshowCurrentIndex);
+    updateScale();
+
+    const handleResize = () => updateScale();
+    window.addEventListener('resize', handleResize);
+
+    const closeSlideshow = () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('keydown', handleKey);
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      }
+      overlay.remove();
+      this.isSlideshowActive = false;
+      document.body.classList.remove('slideshow-active');
+      this.requestRedraw();
+    };
+
+    const nextSlide = () => {
+      if (this.slideshowCurrentIndex < this.pages.length - 1) {
+        this.slideshowCurrentIndex++;
+        renderSlide(this.slideshowCurrentIndex);
+      }
+    };
+
+    const prevSlide = () => {
+      if (this.slideshowCurrentIndex > 0) {
+        this.slideshowCurrentIndex--;
+        renderSlide(this.slideshowCurrentIndex);
+      }
+    };
+
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+        e.preventDefault();
+        nextSlide();
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        e.preventDefault();
+        prevSlide();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        closeSlideshow();
+      } else if (e.key === 'f' || e.key === 'F') {
+        e.preventDefault();
+        if (!document.fullscreenElement) {
+          overlay.requestFullscreen().catch(() => {});
+        } else {
+          document.exitFullscreen().catch(() => {});
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKey);
+    btnPrev?.addEventListener('click', prevSlide);
+    btnNext?.addEventListener('click', nextSlide);
+    btnClose?.addEventListener('click', closeSlideshow);
+    btnFullscreen?.addEventListener('click', () => {
+      if (!document.fullscreenElement) {
+        overlay.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    });
+
+    renderIcons(overlay);
   }
 
   private setSaveStatus(status: 'saved' | 'saving' | 'error', customTooltip?: string): void {

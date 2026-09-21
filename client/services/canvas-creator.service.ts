@@ -42,7 +42,7 @@ export interface CreateCanvasOptions {
 
 export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise<void> {
   const isPresentation = options.canvasType === 'presentation';
-  const isDoc = options.canvasType === 'doc' || isPresentation;
+  const isDoc = options.canvasType === 'doc';
   const defaultOrientation = isPresentation ? 'landscape' : 'portrait';
   const defaultPaperSize = isPresentation ? 'presentation_16_9' : 'letter';
   const paperSize = options.docPaperSize || defaultPaperSize;
@@ -51,8 +51,8 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
   const paperPreset = (paperSize && DOC_PAPER_DIMENSIONS[paperSize])
     ? DOC_PAPER_DIMENSIONS[paperSize][orientation]
     : (isPresentation ? DOC_PAPER_DIMENSIONS.presentation_16_9.landscape : DOC_PAPER_DIMENSIONS.letter.portrait);
-  const width = isDoc ? (options.width || paperPreset.widthPx || (isPresentation ? 1280 : 816)) : 0;
-  const height = isDoc ? (options.height || paperPreset.heightPx || (isPresentation ? 720 : 0)) : 0;
+  const width = isPresentation ? (options.width || 1280) : (isDoc ? (options.width || paperPreset.widthPx || 816) : 0);
+  const height = isPresentation ? (options.height || 720) : (isDoc ? (options.height || paperPreset.heightPx || 0) : 0);
 
   const defaultName = isPresentation
     ? 'Presentación sin título'
@@ -107,37 +107,33 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
   let initialProject: any = null;
 
   if (isPresentation) {
-    const margins = options.docMargins || { bottom: 48, left: 60, right: 60, top: 48 };
-    const dateStr = new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
     initialProject = {
+      activePageId: 'slide-1',
+      background: {
+        color: '#ffffff',
+        dotColor: '#cbd5e1',
+        type: 'solid',
+      },
+      camera: { x: 0, y: 0, zoom: 1 },
+      elements: [],
+      height,
       pages: [
         {
-          contentHtml: `
-            <div style="display: flex; flex-direction: column; justify-content: center; align-items: flex-start; min-height: 520px; padding: 24px 12px;">
-              <div style="display: inline-block; padding: 6px 16px; background: #e0e7ff; color: #4338ca; border-radius: 9999px; font-weight: 700; font-size: 11pt; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 20px;">Presentación</div>
-              <h1 style="font-size: 38pt; font-weight: 800; color: #0f172a; margin: 0 0 16px 0; line-height: 1.15;">Título de la Presentación</h1>
-              <p style="font-size: 16pt; color: #64748b; margin: 0 0 32px 0;">Subtítulo o descripción general de los temas a exponer</p>
-              <div style="font-size: 11pt; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 16px; width: 100%;">Fecha: ${dateStr} • Preparado con Spriteboard</div>
-            </div>
-          `,
-          id: 'page_1',
+          background: {
+            color: '#ffffff',
+            dotColor: '#cbd5e1',
+            type: 'solid',
+          },
+          camera: { x: 0, y: 0, zoom: 1 },
+          createdAt: Date.now(),
+          elements: [],
+          id: 'slide-1',
+          name: 'Diapositiva 1',
         },
       ],
-      settings: {
-        fontFamily: 'Inter, system-ui, sans-serif',
-        fontSize: 16,
-        footerText: '',
-        headerText: '',
-        lineHeight: 1.4,
-        margins,
-        orientation,
-        paperSize,
-        showPageNumbers: false,
-        viewMode: 'paginated',
-        zoom: 1,
-      },
       type: 'presentation',
       version: 1,
+      width,
     };
   } else if (isDoc) {
     const templatePreset = getDocTemplateById(options.docTemplateId);

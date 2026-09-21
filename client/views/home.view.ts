@@ -2521,7 +2521,7 @@ class HomeController {
   }
 
   private async downloadSingleCanvas(canvas: CanvasItem): Promise<void> {
-    const isDoc = canvas.canvas_type === 'doc' || canvas.unit === 'doc' || canvas.canvas_type === 'presentation' || canvas.unit === 'presentation';
+    const isDoc = canvas.canvas_type === 'doc' || canvas.unit === 'doc';
 
     const cleanName = (canvas.name || 'lienzo')
       .trim()

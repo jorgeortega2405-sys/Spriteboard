@@ -21,6 +21,7 @@ export class BoardPagesTrayComponent {
   private carouselController: CarouselController | null = null;
   private containerEl: HTMLElement | null = null;
   private draggedPageId: string | null = null;
+  private isPresentation = false;
   private pageDeleteBtn: HTMLButtonElement | null = null;
   private pageDuplicateBtn: HTMLButtonElement | null = null;
   private pageNextBtn: HTMLButtonElement | null = null;
@@ -30,14 +31,16 @@ export class BoardPagesTrayComponent {
   private pagesCardsWrapper: HTMLElement | null = null;
   private trayEl: HTMLElement | null = null;
 
-  constructor(callbacks: BoardPagesTrayCallbacks) {
+  constructor(callbacks: BoardPagesTrayCallbacks, isPresentation = false) {
     this.callbacks = callbacks;
+    this.isPresentation = isPresentation;
   }
 
-  public attach(containerEl: HTMLElement, pages: BoardPageItem[], activePageId: string): void {
+  public attach(containerEl: HTMLElement, pages: BoardPageItem[], activePageId: string, isPresentation = false): void {
     this.containerEl = containerEl;
     this.pages = pages;
     this.activePageId = activePageId;
+    this.isPresentation = isPresentation;
 
     this.queryDOMElements();
     this.bindEvents();
@@ -160,15 +163,17 @@ export class BoardPagesTrayComponent {
     const totalPages = this.pages.length;
 
     this.pages.forEach((page, index) => {
+      const defaultName = this.isPresentation ? `Diapositiva ${index + 1}` : `Página ${index + 1}`;
+      const prefix = this.isPresentation ? 'Diap.' : 'Pág.';
       const card = document.createElement('div');
       card.className = `design-page-card${page.id === this.activePageId ? ' is-active' : ''}`;
       card.setAttribute('data-ref', `page-card-${page.id}`);
       card.setAttribute('draggable', 'true');
-      card.setAttribute('data-tooltip', page.name || `Página ${index + 1}`);
+      card.setAttribute('data-tooltip', page.name || defaultName);
 
       const numSpan = document.createElement('span');
       numSpan.className = 'design-page-card__num';
-      numSpan.textContent = `Pág. ${index + 1}`;
+      numSpan.textContent = `${prefix} ${index + 1}`;
 
       const subSpan = document.createElement('span');
       subSpan.className = 'design-page-card__sub';
@@ -232,12 +237,14 @@ export class BoardPagesTrayComponent {
     });
 
     const isLimitReached = totalPages >= MAX_BOARD_PAGES;
+    const itemNoun = this.isPresentation ? 'diapositivas' : 'páginas';
+    const singleNoun = this.isPresentation ? 'diapositiva' : 'página';
     const addCard = document.createElement('button');
     addCard.setAttribute('type', 'button');
     addCard.className = `design-page-card--add${isLimitReached ? ' is-disabled' : ''}`;
     addCard.setAttribute('data-ref', 'btn-add-page-card');
-    addCard.setAttribute('data-tooltip', isLimitReached ? `Límite máximo de ${MAX_BOARD_PAGES} páginas` : 'Añadir nueva página');
-    addCard.setAttribute('aria-label', 'Añadir nueva página');
+    addCard.setAttribute('data-tooltip', isLimitReached ? `Límite máximo de ${MAX_BOARD_PAGES} ${itemNoun}` : `Añadir nueva ${singleNoun}`);
+    addCard.setAttribute('aria-label', `Añadir nueva ${singleNoun}`);
 
     const addIcon = document.createElement('span');
     addIcon.className = 'component-icon';

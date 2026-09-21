@@ -22,7 +22,7 @@ interface ExportFormatOption {
 }
 
 function getCanvasKind(canvas: CanvasItem): DownloadCanvasKind {
-  if (canvas.canvas_type === 'doc' || canvas.unit === 'doc' || canvas.canvas_type === 'presentation' || canvas.unit === 'presentation') {
+  if (canvas.canvas_type === 'doc' || canvas.unit === 'doc') {
     return 'doc';
   }
   return 'board';

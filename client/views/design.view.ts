@@ -40,7 +40,7 @@ export async function createDesignView(canvasUuid: string): Promise<HTMLElement>
     } catch {}
   }
 
-  if (canvasType === 'doc' || canvasType === 'presentation') {
+  if (canvasType === 'doc') {
     return await createDocView(canvasUuid, canvasRecord);
   }
 

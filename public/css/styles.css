@@ -5554,6 +5554,13 @@ html.dark-theme .pixel-scale-pill.is-active {
   height: 100%;
 }
 
+.board-slideshow__canvas {
+  display: block;
+  border-radius: 8px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+  background-color: #ffffff;
+}
+
 
 
 
