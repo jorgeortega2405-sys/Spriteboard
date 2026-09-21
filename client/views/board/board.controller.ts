@@ -5,7 +5,7 @@ import { openCanvasMetricsModal } from '../../components/canvas-metrics-modal.co
 import { CanvasShareDropdownController, setupCanvasShareDropdown } from '../../components/canvas-share-dropdown.component.js';
 import { closeContextMenu, ContextMenuItem, openContextMenu } from '../../components/context-menu.component.js';
 import { InsertPixelGridConfig, openInsertPixelGridModal } from '../../components/insert-pixel-grid-modal.component.js';
-import { isColorsDrawerOpen, isFontsDrawerOpen, openChartInspectorInDrawer, openColorsInDrawer, openFontsInDrawer, openMockupsInDrawer, toggleDrawer } from '../../components/layout.component.js';
+import { isColorsDrawerOpen, isFontsDrawerOpen, isPixelAnimationDrawerOpen, openChartInspectorInDrawer, openColorsInDrawer, openFontsInDrawer, openMockupsInDrawer, openPixelAnimationInDrawer, toggleDrawer } from '../../components/layout.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
 import { BOARD_3D_SHAPES } from '../../config/board-3d-shapes.config.js';
 import { BOARD_SHAPES } from '../../config/board-shapes.config.js';
@@ -33,6 +33,8 @@ import { BoardHistoryManager } from './board-history.manager.js';
 import { drawMockupElement } from './board-mockup-renderer.js';
 import { BoardMockupsPanelComponent } from './board-mockups-panel.component.js';
 import { BoardPixelGridManager } from './board-pixel-grid.manager.js';
+import { BoardPixelPanelComponent } from './board-pixel-panel.component.js';
+import { BoardPixelTimelineComponent } from './board-pixel-timeline.component.js';
 import { draw3DElement, draw3DGroundGrid, drawAlignmentGuides, drawBackground, drawBoardCollaboratorCursors, drawChart, drawCheckerboard, drawConnector, drawImage, drawMarqueeBox, drawMultiSelectionBounds, drawPixelGridLines, drawSection, drawSelectionBox, drawShape, drawSticky, drawStroke, drawTable, drawText, onCustomModelLoaded, preloadCustom3DModels, screenToWorld, worldToScreen } from './board-renderer.js';
 import { AlignmentGuide, calculateDragSnapping, calculateResizeSnapping } from './board-snapping.manager.js';
 import { BackgroundType, Board3DElement, BoardChartElement, BoardCollaboratorState, BoardConnectorElement, BoardElement, BoardImageElement, BoardMockupElement, BoardPixelGridElement, BoardPoint, BoardProject, BoardSectionElement, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTableCell, BoardTableElement, BoardTextElement, BoardTool, ChartDataRow, ChartType, DEFAULT_CHART_PALETTES, DEFAULT_CLASSIC_PALETTE, GAMEBOY_PALETTE, MarkerType, PICO8_PALETTE, PixelSubtool, ResizeHandle, Shape3DType, ShapeType, StrokeStyle } from './board.types.js';
@@ -132,6 +134,8 @@ export class BoardController {
   private panStartMouse: BoardPoint = { x: 0, y: 0 };
   private initialCanvasRecord: CanvasItem | null = null;
   private pixelGrid = new BoardPixelGridManager();
+  private pixelPanel: BoardPixelPanelComponent | null = null;
+  private pixelTimeline: BoardPixelTimelineComponent | null = null;
   private popoverConnStyleEl: HTMLElement | null = null;
   private popoverCornersEl: HTMLElement | null = null;
   private popoverMarkerEndEl: HTMLElement | null = null;
@@ -250,6 +254,18 @@ export class BoardController {
       },
     });
     this.mockupsPanel.init();
+    this.pixelTimeline = new BoardPixelTimelineComponent({
+      onChange: () => {
+        const grid = this.getSelectedPixelGrid();
+        if (grid) {
+          this.collaborationManager.broadcastUpdateElement(grid);
+          this.scheduleAutoSave();
+        }
+      },
+      onRedraw: () => {
+        this.requestRedraw();
+      },
+    });
     this.bindEvents();
     try {
       const savedSnapping = localStorage.getItem('spriteboard_board_snapping');
@@ -317,11 +333,9 @@ export class BoardController {
     this.drawToolsDropdownController?.destroy();
     this.pixelToolsDropdownController?.destroy();
     this.resizeObserver?.disconnect();
-    for (const { canvas } of this.pixelGrid.pixelCanvasMap.values()) {
-      canvas.width = 0;
-      canvas.height = 0;
-    }
-    this.pixelGrid.pixelCanvasMap.clear();
+    this.pixelTimeline?.destroy();
+    this.pixelTimeline = null;
+    this.pixelGrid.clearAll();
     if (this.canvasElement) {
       this.canvasElement.width = 0;
       this.canvasElement.height = 0;
@@ -1436,6 +1450,97 @@ export class BoardController {
     }
   }
 
+  public attachPixelAnimationUI(container: HTMLElement): void {
+    if (this.pixelPanel) {
+      this.pixelPanel.destroy();
+    }
+    this.pixelPanel = new BoardPixelPanelComponent({
+      onChange: () => {
+        const grid = this.getSelectedPixelGrid();
+        if (grid) {
+          this.pixelGrid.serializeElementState(grid);
+          this.requestRedraw();
+          this.collaborationManager.broadcastUpdateElement(grid);
+          this.scheduleAutoSave();
+        }
+      },
+    });
+
+    let grid = this.getSelectedPixelGrid();
+    if (!grid) {
+      grid = this.elements.find((el): el is BoardPixelGridElement => el.type === 'pixel-grid') || null;
+      if (grid) {
+        this.selectedElementId = grid.id;
+        this.selectedElementIds = [grid.id];
+        this.updateSelectionToolbar();
+      }
+    }
+
+    if (!grid) {
+      container.innerHTML = `
+        <div class="pixel-panel-container">
+          <div class="pixel-panel-section">
+            <div class="pixel-panel-header">
+              <span class="pixel-panel-title">Capas y Animación</span>
+            </div>
+            <p style="font-size: 12px; color: var(--text-secondary, #64748b); line-height: 1.4; margin: 8px 0;">Selecciona una cuadrícula de píxeles en el lienzo o inserta una nueva para gestionar sus capas y fotogramas.</p>
+            <button type="button" class="component-button component-button--h36 component-button--primary" data-ref="btn-panel-insert-pixel">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add_box"></use></svg>
+              <span>Insertar cuadrícula de píxel</span>
+            </button>
+          </div>
+        </div>
+      `;
+      renderIcons(container);
+      const btnInsert = container.querySelector<HTMLButtonElement>('[data-ref="btn-panel-insert-pixel"]');
+      btnInsert?.addEventListener('click', () => {
+        openInsertPixelGridModal({
+          onInsert: (cfg) => {
+            this.insertPixelGrid(cfg);
+            setTimeout(() => {
+              if (isPixelAnimationDrawerOpen()) {
+                this.attachPixelAnimationUI(container);
+              }
+            }, 50);
+          },
+        });
+      });
+      return;
+    }
+
+    this.pixelPanel.attach(container, grid, this.pixelGrid);
+  }
+
+  private getSelectedPixelGrid(): BoardPixelGridElement | null {
+    const selectedEls = this.getSelectedElements();
+    if (selectedEls.length === 1 && selectedEls[0].type === 'pixel-grid') {
+      return selectedEls[0] as BoardPixelGridElement;
+    }
+    return null;
+  }
+
+  private togglePixelAnimationPanel(): void {
+    if (isPixelAnimationDrawerOpen()) {
+      toggleDrawer(false);
+    } else {
+      this.openPixelAnimationPanel();
+    }
+  }
+
+  private openPixelAnimationPanel(): void {
+    this.closeAllPopovers();
+    this.hideFontsPanel();
+    this.hideColorsPanel();
+    openPixelAnimationInDrawer();
+  }
+
+  private hidePixelAnimationPanel(): void {
+    if (isPixelAnimationDrawerOpen()) {
+      toggleDrawer(false);
+    }
+  }
+
+
   private applyFontToSelection(event: FontSelectEvent): void {
     const selectedEls = this.getSelectedElements();
     if (selectedEls.length === 0) return;
@@ -1803,6 +1908,32 @@ export class BoardController {
       { signal }
     );
 
+    const btnSelPixelAnim = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sel-pixel-anim"]');
+    btnSelPixelAnim?.addEventListener(
+      'click',
+      () => {
+        const grid = this.getSelectedPixelGrid();
+        if (grid) {
+          this.pixelTimeline?.attach(this.container, grid, this.pixelGrid);
+          this.pixelTimeline?.toggleFramesTray();
+        }
+      },
+      { signal }
+    );
+
+    const btnSelPixelLayers = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sel-pixel-layers"]');
+    btnSelPixelLayers?.addEventListener(
+      'click',
+      () => {
+        const grid = this.getSelectedPixelGrid();
+        if (grid) {
+          this.pixelTimeline?.attach(this.container, grid, this.pixelGrid);
+          this.pixelTimeline?.toggleLayersTray();
+        }
+      },
+      { signal }
+    );
+
     const btnDuplicate = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sel-duplicate"]');
     btnDuplicate?.addEventListener('click', () => this.duplicateSelected(), { signal });
 
@@ -1823,6 +1954,7 @@ export class BoardController {
     const selectedEls = this.getSelectedElements();
     if (!toolbar || selectedEls.length === 0 || !this.canvasElement) {
       toolbar?.classList.add('is-hidden');
+      this.pixelTimeline?.hide();
       return;
     }
 
@@ -1833,6 +1965,8 @@ export class BoardController {
 
     const btnEdit = this.container.querySelector<HTMLElement>('[data-ref="btn-sel-edit-pixels"]');
     const btnGrid = this.container.querySelector<HTMLElement>('[data-ref="btn-sel-toggle-grid"]');
+    const btnPixelAnim = this.container.querySelector<HTMLElement>('[data-ref="btn-sel-pixel-anim"]');
+    const btnPixelLayers = this.container.querySelector<HTMLElement>('[data-ref="btn-sel-pixel-layers"]');
     const btnExport = this.container.querySelector<HTMLElement>('[data-ref="btn-sel-export-sprite"]');
     const divider = this.container.querySelector<HTMLElement>('[data-ref="sel-pixel-divider"]');
     const groupMockups = this.container.querySelector<HTMLElement>('[data-ref="board-sel-group-mockups"]');
@@ -1840,10 +1974,23 @@ export class BoardController {
 
     btnEdit?.classList.toggle('is-hidden', !isPixel);
     btnGrid?.classList.toggle('is-hidden', !isPixel);
+    btnPixelAnim?.classList.toggle('is-hidden', !isPixel);
+    btnPixelLayers?.classList.toggle('is-hidden', !isPixel);
     btnExport?.classList.toggle('is-hidden', !isPixel);
     divider?.classList.toggle('is-hidden', !isPixel);
     groupMockups?.classList.toggle('is-hidden', !isMockup);
     groupCharts?.classList.toggle('is-hidden', !isChart);
+
+    if (isPixel) {
+      const pixelGridEl = selectedEls[0] as BoardPixelGridElement;
+      this.pixelTimeline?.attach(this.container, pixelGridEl, this.pixelGrid);
+      this.pixelTimeline?.show();
+      if (this.pixelPanel?.isOpen()) {
+        this.pixelPanel.sync(pixelGridEl);
+      }
+    } else {
+      this.pixelTimeline?.hide();
+    }
 
     if (isChart && this.chartsPanel?.isOpen()) {
       this.chartsPanel.syncChart(selectedEls[0] as BoardChartElement);
@@ -1887,6 +2034,7 @@ export class BoardController {
     const groupCorners = this.container.querySelector<HTMLElement>('[data-ref="board-top-group-corners"]');
     const groupMarkers = this.container.querySelector<HTMLElement>('[data-ref="board-top-group-markers"]');
     const groupText = this.container.querySelector<HTMLElement>('[data-ref="board-top-group-text-props"]');
+    const groupPixelProps = this.container.querySelector<HTMLElement>('[data-ref="board-top-group-pixel-props"]');
 
     if (selectedEls.length === 1) {
       const el = selectedEls[0];
@@ -1896,7 +2044,12 @@ export class BoardController {
       const isSticky = el.type === 'sticky';
       const isText = el.type === 'text';
       const isStroke = el.type === 'stroke';
+      const isPixel = el.type === 'pixel-grid';
       const isLineShape = isShape && (el.shapeType === 'line' || el.shapeType === 'arrow');
+
+      if (groupPixelProps) {
+        groupPixelProps.classList.toggle('is-hidden', !isPixel);
+      }
 
       if (groupFill) {
         const showFill = (isShape && !isLineShape) || isSticky || is3D;
@@ -1968,6 +2121,7 @@ export class BoardController {
       const hasStrokeable = selectedEls.some((el) => el.type === 'stroke' || el.type === 'connector' || el.type === 'shape' || el.type === 'shape-3d');
       const hasTextual = selectedEls.some((el) => el.type === 'text' || el.type === 'sticky' || (el.type === 'shape' && !!el.text));
 
+      if (groupPixelProps) groupPixelProps.classList.add('is-hidden');
       if (groupFill) groupFill.classList.toggle('is-hidden', !hasFillable);
       if (groupStrokeColor) groupStrokeColor.classList.toggle('is-hidden', !hasStrokeable);
       if (groupStrokeStyle) groupStrokeStyle.classList.toggle('is-hidden', !hasStrokeable);
@@ -2082,6 +2236,24 @@ export class BoardController {
     const btnFontFamily = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-font-family"]');
     btnFontFamily?.addEventListener('click', () => {
       this.toggleFontsPanel();
+    }, { signal });
+
+    const btnTopPixelAnim = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-pixel-anim"]');
+    btnTopPixelAnim?.addEventListener('click', () => {
+      const grid = this.getSelectedPixelGrid();
+      if (grid) {
+        this.pixelTimeline?.attach(this.container, grid, this.pixelGrid);
+        this.pixelTimeline?.toggleFramesTray();
+      }
+    }, { signal });
+
+    const btnTopPixelLayers = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-pixel-layers"]');
+    btnTopPixelLayers?.addEventListener('click', () => {
+      const grid = this.getSelectedPixelGrid();
+      if (grid) {
+        this.pixelTimeline?.attach(this.container, grid, this.pixelGrid);
+        this.pixelTimeline?.toggleLayersTray();
+      }
     }, { signal });
 
     const btnFill = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-fill"]');
@@ -2415,7 +2587,7 @@ export class BoardController {
       }
 
       if (cloned.type === 'pixel-grid') {
-        this.pixelGrid.pixelCanvasMap.delete(cloned.id);
+        this.pixelGrid.deleteState(cloned.id);
       }
 
       this.elements.push(cloned);
@@ -2439,12 +2611,7 @@ export class BoardController {
     const deleteSet = new Set(idsToDelete);
 
     for (const id of idsToDelete) {
-      const cached = this.pixelGrid.pixelCanvasMap.get(id);
-      if (cached) {
-        cached.canvas.width = 0;
-        cached.canvas.height = 0;
-        this.pixelGrid.pixelCanvasMap.delete(id);
-      }
+      this.pixelGrid.deleteState(id);
       this.collaborationManager.broadcastDeleteElement(id);
     }
 
@@ -3540,6 +3707,10 @@ export class BoardController {
         this.pixelGrid.finishPixelPainting(el);
         this.collaborationManager.broadcastUpdateElement(el);
         this.scheduleAutoSave();
+        this.pixelTimeline?.sync(el);
+        if (this.pixelPanel?.isOpen()) {
+          this.pixelPanel.sync(el);
+        }
       }
       return;
     }
@@ -3856,12 +4027,7 @@ export class BoardController {
         this.hasErasedInCurrentStroke = true;
       }
       for (const id of toRemoveIds) {
-        const cached = this.pixelGrid.pixelCanvasMap.get(id);
-        if (cached) {
-          cached.canvas.width = 0;
-          cached.canvas.height = 0;
-          this.pixelGrid.pixelCanvasMap.delete(id);
-        }
+        this.pixelGrid.deleteState(id);
         this.collaborationManager.broadcastDeleteElement(id);
       }
       this.selectedElementId = null;
@@ -4476,6 +4642,16 @@ export class BoardController {
       ctx.fillRect(el.x, el.y, el.width, el.height);
     } else if (el.showGrid || (this.currentTool === 'pixel' && this.selectedElementId === el.id)) {
       drawCheckerboard(ctx, el.x, el.y, el.width, el.height);
+    }
+
+    if (el.onionSkinEnabled) {
+      const onionCanvas = this.pixelGrid.getOnionSkinCanvas(el);
+      if (onionCanvas) {
+        ctx.save();
+        ctx.globalAlpha = 0.35;
+        ctx.drawImage(onionCanvas, el.x, el.y, el.width, el.height);
+        ctx.restore();
+      }
     }
 
     ctx.drawImage(canvas, el.x, el.y, el.width, el.height);
@@ -5672,6 +5848,15 @@ export class BoardController {
         openInsertPixelGridModal({
           onInsert: (cfg) => this.insertPixelGrid(cfg),
         });
+      },
+      { signal }
+    );
+
+    const vpixelBtnOpenAnim = this.container.querySelector<HTMLButtonElement>('[data-ref="vpixel-btn-open-anim"]');
+    vpixelBtnOpenAnim?.addEventListener(
+      'click',
+      () => {
+        this.togglePixelAnimationPanel();
       },
       { signal }
     );

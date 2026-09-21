@@ -125,6 +125,9 @@
             <button type="button" class="design-toolbar-btn" data-ref="vpixel-btn-insert-grid" data-tooltip="Insertar cuadrícula" aria-label="Insertar cuadrícula">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add_box"></use></svg>
             </button>
+            <button type="button" class="design-toolbar-btn" data-ref="vpixel-btn-open-anim" data-tooltip="Capas y Animación" aria-label="Capas y Animación">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#movie"></use></svg>
+            </button>
             <button type="button" class="design-toolbar-btn" data-ref="vpixel-btn-export-sprite" data-tooltip="Descargar sprite PNG" aria-label="Descargar sprite PNG">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
             </button>
@@ -303,6 +306,17 @@
               </button>
             </div>
 
+            <div class="design-toolbar-group is-hidden" data-ref="board-top-group-pixel-props">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="top-btn-pixel-anim" data-tooltip="Animación y cuadros" aria-label="Animación">
+                <span class="component-icon">animation</span>
+                <span>Animación</span>
+              </button>
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="top-btn-pixel-layers" data-tooltip="Capas de la cuadrícula" aria-label="Capas">
+                <span class="component-icon">layers</span>
+                <span>Capas</span>
+              </button>
+            </div>
+
             <div class="design-toolbar-group" data-ref="board-top-group-opacity">
               <button type="button" class="design-toolbar-btn" data-ref="top-btn-opacity" data-tooltip="Transparencia" aria-label="Transparencia">
                 <span class="component-icon">opacity</span>
@@ -452,6 +466,12 @@
           </button>
           <button type="button" class="design-toolbar-btn design-toolbar-btn--sm is-hidden" data-ref="btn-sel-toggle-grid" data-tooltip="Alternar cuadrícula" aria-label="Alternar cuadrícula">
             <span class="component-icon">grid_on</span>
+          </button>
+          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm is-hidden" data-ref="btn-sel-pixel-anim" data-tooltip="Animación" aria-label="Animación">
+            <span class="component-icon">animation</span>
+          </button>
+          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm is-hidden" data-ref="btn-sel-pixel-layers" data-tooltip="Capas" aria-label="Capas">
+            <span class="component-icon">layers</span>
           </button>
           <button type="button" class="design-toolbar-btn design-toolbar-btn--sm is-hidden" data-ref="btn-sel-export-sprite" data-tooltip="Descargar sprite PNG" aria-label="Descargar sprite PNG">
             <span class="component-icon">download</span>
@@ -710,6 +730,86 @@
       </div>
 
       <div class="design-bottom-toolbar-container" data-ref="design-toolbar-container">
+        <div class="design-layers-tray is-hidden" data-ref="design-layers-tray">
+          <div class="design-layers-tray__toolbar" data-ref="layers-tray-toolbar">
+            <div class="design-toolbar-group" data-ref="layers-group-actions">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-tray-add-layer" data-tooltip="Nueva capa" aria-label="Nueva capa">
+                <span class="component-icon">add</span>
+              </button>
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-tray-layer-up" data-tooltip="Mover arriba" aria-label="Mover arriba">
+                <span class="component-icon">arrow_upward</span>
+              </button>
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-tray-layer-down" data-tooltip="Mover abajo" aria-label="Mover abajo">
+                <span class="component-icon">arrow_downward</span>
+              </button>
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-tray-merge-layer" data-tooltip="Fusionar abajo" aria-label="Fusionar abajo">
+                <span class="component-icon">call_merge</span>
+              </button>
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-tray-delete-layer" data-tooltip="Eliminar capa" aria-label="Eliminar capa">
+                <span class="component-icon">delete_outline</span>
+              </button>
+            </div>
+          </div>
+          <div class="design-layers-tray__cards-wrapper" data-ref="layers-cards-wrapper">
+            <button type="button" class="design-toolbar__nav-btn design-toolbar__nav-btn--left is-disabled" data-ref="btn-layers-tray-scroll-left" data-tooltip="Desplazar a la izquierda" aria-label="Desplazar a la izquierda">
+              <span class="component-icon">chevron_left</span>
+            </button>
+            <div class="design-layers-tray__cards" data-ref="layers-cards-list"></div>
+            <button type="button" class="design-toolbar__nav-btn design-toolbar__nav-btn--right is-disabled" data-ref="btn-layers-tray-scroll-right" data-tooltip="Desplazar a la derecha" aria-label="Desplazar a la derecha">
+              <span class="component-icon">chevron_right</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="design-frames-tray is-hidden" data-ref="design-frames-tray">
+          <div class="design-frames-tray__toolbar" data-ref="frames-toolbar">
+            <div class="design-toolbar-group" data-ref="frames-group-playback">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-frame-play" data-tooltip="Reproducir animación" aria-label="Reproducir">
+                <span class="component-icon">play_arrow</span>
+              </button>
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-frame-prev" data-tooltip="Cuadro anterior" aria-label="Cuadro anterior">
+                <span class="component-icon">skip_previous</span>
+              </button>
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-frame-next" data-tooltip="Cuadro siguiente" aria-label="Cuadro siguiente">
+                <span class="component-icon">skip_next</span>
+              </button>
+            </div>
+            <div class="design-toolbar-divider" data-ref="frames-divider-1"></div>
+            <div class="design-toolbar-group" data-ref="frames-group-actions">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-frame-duplicate" data-tooltip="Duplicar cuadro" aria-label="Duplicar cuadro">
+                <span class="component-icon">content_copy</span>
+              </button>
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-frame-delete" data-tooltip="Eliminar cuadro" aria-label="Eliminar cuadro">
+                <span class="component-icon">delete_outline</span>
+              </button>
+            </div>
+            <div class="design-toolbar-divider" data-ref="frames-divider-2"></div>
+            <div class="design-toolbar-group" data-ref="frames-group-settings">
+              <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-frame-fps" data-tooltip="Cambiar FPS" aria-label="Cambiar FPS">
+                <span data-ref="frame-fps-text">8 FPS</span>
+              </button>
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-frame-onion" data-tooltip="Papel cebolla (Onion Skin)" aria-label="Papel cebolla">
+                <span class="component-icon">auto_awesome_motion</span>
+              </button>
+            </div>
+            <div class="design-toolbar-divider" data-ref="frames-divider-3"></div>
+            <div class="design-toolbar-group" data-ref="frames-group-layers-toggle">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-bottom-layers" data-tooltip="Capas de la cuadrícula" aria-label="Capas">
+                <span class="component-icon">layers</span>
+              </button>
+            </div>
+          </div>
+          <div class="design-frames-tray__cards-wrapper" data-ref="frames-cards-wrapper">
+            <button type="button" class="design-toolbar__nav-btn design-toolbar__nav-btn--left is-disabled" data-ref="btn-frames-tray-scroll-left" data-tooltip="Desplazar a la izquierda" aria-label="Desplazar a la izquierda">
+              <span class="component-icon">chevron_left</span>
+            </button>
+            <div class="design-frames-tray__cards" data-ref="frames-cards-list"></div>
+            <button type="button" class="design-toolbar__nav-btn design-toolbar__nav-btn--right is-disabled" data-ref="btn-frames-tray-scroll-right" data-tooltip="Desplazar a la derecha" aria-label="Desplazar a la derecha">
+              <span class="component-icon">chevron_right</span>
+            </button>
+          </div>
+        </div>
+
         <div class="design-bottom-toolbar-wrapper" data-ref="board-toolbar-wrapper">
           <button type="button" class="design-toolbar__nav-btn design-toolbar__nav-btn--left is-disabled" data-ref="btn-bottom-toolbar-scroll-left" data-tooltip="Desplazar a la izquierda" aria-label="Desplazar a la izquierda">
             <span class="component-icon">chevron_left</span>

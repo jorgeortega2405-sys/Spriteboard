@@ -26,12 +26,13 @@ import { BoardChartElement, BoardProject, ChartType, Shape3DType, ShapeType } fr
 import { DOC_TEMPLATES, getDocTemplateById } from '../views/doc/doc-templates.config.js';
 import { DocPage, DocProject } from '../views/doc/doc.types.js';
 import { openCreateCanvasModal } from './create-canvas-modal.component.js';
+import { openInsertPixelGridModal } from './insert-pixel-grid-modal.component.js';
 import { openModal } from './modal.component.js';
 import { openUpgradeModal } from './upgrade-modal.component.js';
 
 let isDrawerOpen = false;
 let isChatOpen = false;
-let activeCanvasTab: 'templates' | 'elements' | 'text' | 'tools' | 'uploads' | 'projects' | 'charts' | 'mockups' | 'colors' | 'fonts' | null = null;
+let activeCanvasTab: 'templates' | 'elements' | 'text' | 'tools' | 'uploads' | 'projects' | 'charts' | 'mockups' | 'colors' | 'fonts' | 'pixel-anim' | null = null;
 let activeChartInDrawer: BoardChartElement | null = null;
 let activeColorTargetInDrawer: 'stroke' | 'fill' | 'text' = 'stroke';
 let chatSidebarElement: HTMLElement | null = null;
@@ -1854,19 +1855,74 @@ function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElemen
               </div>
               <span class="element-category-card__label">Elementos 3D</span>
             </button>
+
+            <button type="button" class="element-category-card" data-ref="btn-category-pixel-grid" data-category="pixel-grid">
+              <div class="element-category-card__stack" data-ref="category-stack-pixel-grid">
+                <div class="element-category-card__layer element-category-card__layer--back">
+                  <svg class="element-category-card__svg" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="6" y="6" width="60" height="60" rx="16" fill="url(#cva-grad-pixel-back)" />
+                    <defs>
+                      <linearGradient id="cva-grad-pixel-back" x1="6" y1="6" x2="66" y2="66" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#8b5cf6" />
+                        <stop offset="1" stop-color="#6d28d9" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </div>
+                <div class="element-category-card__layer element-category-card__layer--front">
+                  <svg class="element-category-card__svg" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="6" y="6" width="60" height="60" rx="16" fill="url(#cva-grad-pixel-front)" />
+                    <rect x="6.5" y="6.5" width="59" height="59" rx="15.5" stroke="rgba(255,255,255,0.4)" stroke-width="1" />
+                    <rect x="18" y="18" width="8" height="8" rx="1" fill="#ffffff" />
+                    <rect x="28" y="18" width="8" height="8" rx="1" fill="#c4b5fd" />
+                    <rect x="38" y="18" width="8" height="8" rx="1" fill="#ffffff" />
+                    <rect x="48" y="18" width="8" height="8" rx="1" fill="#a78bfa" />
+                    <rect x="18" y="28" width="8" height="8" rx="1" fill="#c4b5fd" />
+                    <rect x="28" y="28" width="8" height="8" rx="1" fill="#7c3aed" />
+                    <rect x="38" y="28" width="8" height="8" rx="1" fill="#7c3aed" />
+                    <rect x="48" y="28" width="8" height="8" rx="1" fill="#c4b5fd" />
+                    <rect x="18" y="38" width="8" height="8" rx="1" fill="#ffffff" />
+                    <rect x="28" y="38" width="8" height="8" rx="1" fill="#7c3aed" />
+                    <rect x="38" y="38" width="8" height="8" rx="1" fill="#7c3aed" />
+                    <rect x="48" y="38" width="8" height="8" rx="1" fill="#ffffff" />
+                    <rect x="18" y="48" width="8" height="8" rx="1" fill="#a78bfa" />
+                    <rect x="28" y="48" width="8" height="8" rx="1" fill="#c4b5fd" />
+                    <rect x="38" y="48" width="8" height="8" rx="1" fill="#ffffff" />
+                    <rect x="48" y="48" width="8" height="8" rx="1" fill="#c4b5fd" />
+                    <defs>
+                      <linearGradient id="cva-grad-pixel-front" x1="6" y1="6" x2="66" y2="66" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#a855f7" />
+                        <stop offset="0.5" stop-color="#8b5cf6" />
+                        <stop offset="1" stop-color="#6d28d9" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </div>
+              </div>
+              <span class="element-category-card__label">Píxel Art</span>
+            </button>
           </div>
         </div>
       `;
 
       contentContainer.querySelectorAll<HTMLButtonElement>('[data-category]').forEach((btn) => {
         btn.addEventListener('click', () => {
-          const cat = btn.getAttribute('data-category') as 'shapes' | 'stickers' | 'stickies' | 'diagrams' | 'tables' | 'charts' | 'mockups' | '3d';
+          const cat = btn.getAttribute('data-category') as 'shapes' | 'stickers' | 'stickies' | 'diagrams' | 'tables' | 'charts' | 'mockups' | '3d' | 'pixel-grid';
           if (cat === 'charts') {
             openChartInspectorInDrawer();
             return;
           }
           if (cat === 'mockups') {
             openMockupsInDrawer();
+            return;
+          }
+          if (cat === 'pixel-grid') {
+            const controller = getActiveCanvasController();
+            openInsertPixelGridModal({
+              onInsert: (cfg) => {
+                controller?.insertPixelGrid?.(cfg);
+              },
+            });
             return;
           }
           if (cat) {
@@ -3150,6 +3206,48 @@ function renderFontsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement):
   }
 }
 
+function renderPixelAnimationDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement): void {
+  const sidebar = drawer.closest<HTMLElement>('[data-ref="sidebar"]') || document.querySelector<HTMLElement>('[data-ref="sidebar"]');
+
+  drawerBody.innerHTML = `
+    <div class="canvas-panel-card" data-ref="canvas-panel-card">
+      <div class="canvas-panel-card__header" data-ref="canvas-panel-header">
+        <div class="canvas-panel-card__title-box" data-ref="canvas-panel-title-box">
+          <svg class="component-icon canvas-panel-card__icon" aria-hidden="true"><use href="/icons.svg#movie"></use></svg>
+          <span class="canvas-panel-card__title" data-ref="canvas-panel-title">Capas y Animación</span>
+        </div>
+        <button type="button" class="component-button component-button--h32 component-button--icon-only rail-btn canvas-panel-card__close" data-ref="btn-close-canvas-panel" data-tooltip="Cerrar panel" aria-label="Cerrar panel">
+          <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+        </button>
+      </div>
+      <div class="canvas-panel-card__body pixel-anim-panel-body" data-ref="board-pixel-anim-drawer-body" style="height: calc(100vh - 120px); overflow-y: auto; padding: 12px 14px;"></div>
+    </div>
+  `;
+
+  const btnClose = drawerBody.querySelector<HTMLElement>('[data-ref="btn-close-canvas-panel"]');
+  btnClose?.addEventListener('click', (e) => {
+    e.preventDefault();
+    toggleDrawer(false);
+  });
+
+  const drawerFooter = drawer.querySelector<HTMLElement>('[data-ref="drawer-footer"]');
+  if (drawerFooter) {
+    drawerFooter.style.display = 'none';
+  }
+
+  if (sidebar) {
+    updateCanvasRailActiveState(sidebar);
+  }
+
+  renderIcons(drawerBody);
+
+  const container = drawerBody.querySelector<HTMLElement>('[data-ref="board-pixel-anim-drawer-body"]');
+  const controller = getActiveCanvasController();
+  if (controller && typeof controller.attachPixelAnimationUI === 'function' && container) {
+    controller.attachPixelAnimationUI(container);
+  }
+}
+
 function renderCanvasDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement): void {
   const tab = activeCanvasTab || 'templates';
   const sidebar = drawer.closest<HTMLElement>('[data-ref="sidebar"]') || document.querySelector<HTMLElement>('[data-ref="sidebar"]');
@@ -3161,6 +3259,11 @@ function renderCanvasDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement)
 
   if (tab === 'fonts') {
     renderFontsDrawerContent(drawer, drawerBody);
+    return;
+  }
+
+  if (tab === 'pixel-anim') {
+    renderPixelAnimationDrawerContent(drawer, drawerBody);
     return;
   }
 
@@ -6125,3 +6228,19 @@ export function openFontsInDrawer(): void {
 export function isFontsDrawerOpen(): boolean {
   return isDrawerOpen && activeCanvasTab === 'fonts';
 }
+
+export function openPixelAnimationInDrawer(): void {
+  activeCanvasTab = 'pixel-anim';
+  const sidebar = document.querySelector<HTMLElement>('[data-ref="sidebar"]');
+  if (!isDrawerOpen) {
+    toggleDrawer(true);
+  } else if (sidebar) {
+    void updateDynamicDrawer(sidebar);
+    updateCanvasRailActiveState(sidebar);
+  }
+}
+
+export function isPixelAnimationDrawerOpen(): boolean {
+  return isDrawerOpen && activeCanvasTab === 'pixel-anim';
+}
+

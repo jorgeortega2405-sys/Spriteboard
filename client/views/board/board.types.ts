@@ -145,13 +145,35 @@ export interface BoardTextElement {
   y: number;
 }
 
+export interface PixelLayerData {
+  data?: string;
+  id: string;
+  name: string;
+  opacity?: number;
+  visible?: boolean;
+}
+
+export interface PixelFrameData {
+  activeLayerId: string;
+  durationMs?: number;
+  id: string;
+  layers: PixelLayerData[];
+  name: string;
+}
+
 export interface BoardPixelGridElement {
+  activeFrameId?: string;
   backgroundColor: string;
+  customFrameRate?: number;
   data: string;
+  frames?: PixelFrameData[];
   gridHeight: number;
   gridWidth: number;
   height: number;
   id: string;
+  isAnimated?: boolean;
+  isPlaying?: boolean;
+  onionSkinEnabled?: boolean;
   opacity?: number;
   pixelSize: number;
   showGrid: boolean;

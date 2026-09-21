@@ -5515,7 +5515,9 @@ html.dark-theme .component-bottom--canvas {
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 18px;
   display: flex;
+  flex-direction: column;
   align-items: center;
+  gap: 8px;
   box-sizing: border-box;
   pointer-events: auto;
   user-select: none;
@@ -5526,6 +5528,24 @@ html.dark-theme .component-bottom--canvas {
 
 .design-layers-tray.is-hidden {
   display: none !important;
+}
+
+.design-layers-tray__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.design-layers-tray__cards-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  overflow: hidden;
 }
 
 .design-layers-tray__cards {
