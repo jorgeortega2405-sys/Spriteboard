@@ -703,6 +703,9 @@ html.dark-theme .rail-nav-item.is-active .rail-nav-item__label {
 }
 
 .layout-drawer {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 0;
   min-width: 0;
   height: 100%;
@@ -723,6 +726,10 @@ html.dark-theme .rail-nav-item.is-active .rail-nav-item__label {
   padding: 8px 6px 20px 0;
 }
 
+.layout-nav .layout-drawer {
+  left: 100%;
+}
+
 .layout-drawer.is-expanded {
   width: 295px;
   min-width: 295px;
@@ -732,6 +739,10 @@ html.dark-theme .rail-nav-item.is-active .rail-nav-item__label {
   visibility: visible;
   opacity: 1;
   pointer-events: auto;
+}
+
+.layout-drawer.is-hidden {
+  display: none !important;
 }
 
 .layout-drawer__body {

@@ -889,7 +889,7 @@ async function runSuite(): Promise<void> {
     assert.strictEqual(hsl.l, 0.5);
 
     const ramp = generateShadingRamp('#ff0000');
-    assert.strictEqual(ramp.length, 5);
+    assert.strictEqual(ramp.length, 6);
 
     const isDither1 = isDitherPixel(0, 0, 'checker-50');
     const isDither2 = isDitherPixel(1, 0, 'checker-50');

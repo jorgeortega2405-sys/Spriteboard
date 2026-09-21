@@ -731,6 +731,9 @@ html.dark-theme .rail-nav-item.is-active .rail-nav-item__label {
 }
 
 .layout-drawer {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 0;
   min-width: 0;
   height: 100%;
@@ -751,6 +754,10 @@ html.dark-theme .rail-nav-item.is-active .rail-nav-item__label {
   padding: 8px 6px 20px 0;
 }
 
+.layout-nav .layout-drawer {
+  left: 100%;
+}
+
 .layout-drawer.is-expanded {
   width: 365px;
   min-width: 365px;
@@ -760,6 +767,10 @@ html.dark-theme .rail-nav-item.is-active .rail-nav-item__label {
   visibility: visible;
   opacity: 1;
   pointer-events: auto;
+}
+
+.layout-drawer.is-hidden {
+  display: none !important;
 }
 
 .layout-drawer__body {
@@ -4168,7 +4179,8 @@ html.dark-theme .doc-page-picker__card-header {
    ========================================================================== */
 
 .layout-drawer__mockup-body,
-.layout-drawer__chart-body {
+.layout-drawer__chart-body,
+.layout-drawer__colors-body {
   padding: 12px 14px;
   display: flex;
   flex-direction: column;

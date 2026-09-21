@@ -414,6 +414,7 @@
      7. TOKENS SEMÁNTICOS DE APLICACIÓN: TEMA CLARO (LIGHT) POR DEFECTO
      -------------------------------------------------------------------------- */
   --bg-app: #f4f4f5;
+  --bg-card: #ffffff;
   --bg-surface: #ffffff;
   --bg-surface-raised: #ffffff;
   --bg-surface-alt: #ffffff;
@@ -555,6 +556,7 @@ body.dark-theme {
   color-scheme: dark;
 
   --bg-app: #09090b;
+  --bg-card: #18181b;
   --bg-surface: #121215;
   --bg-surface-raised: #18181b;
   --bg-surface-alt: #1f1f23;

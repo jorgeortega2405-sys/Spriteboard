@@ -20,9 +20,11 @@
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#bar_chart"></use></svg>
         </button>
 
-        <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-canvas-history" data-tooltip="Historial de versiones" aria-label="Historial de versiones">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#history"></use></svg>
-        </button>
+        <div class="design-share-wrapper" data-ref="board-history-wrapper">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-canvas-history" data-tooltip="Historial de versiones" aria-label="Historial de versiones">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#history"></use></svg>
+          </button>
+        </div>
 
         <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-canvas-comments" data-tooltip="Comentarios" aria-label="Comentarios">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chat_bubble_outline"></use></svg>
@@ -77,6 +79,9 @@
             </button>
             <button type="button" class="design-toolbar-btn" data-ref="vertical-tool-text" data-vtool="text" data-tooltip="Texto" aria-label="Texto">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#text_fields"></use></svg>
+            </button>
+            <button type="button" class="design-toolbar-btn" data-ref="vertical-tool-cursors" data-vtool="cursors" data-tooltip="Cursores y Colaboración (K)" aria-label="Cursores y Colaboración">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>
             </button>
           </div>
 
@@ -200,6 +205,18 @@
             <button type="button" class="vsubtoolbar-sticky-swatch" data-ref="vsticky-color-purple" data-color="#e9d5ff" style="background-color: #e9d5ff;" data-tooltip="Morado" aria-label="Morado"></button>
             <button type="button" class="vsubtoolbar-sticky-swatch" data-ref="vsticky-color-red" data-color="#fecaca" style="background-color: #fecaca;" data-tooltip="Rojo" aria-label="Rojo"></button>
             <button type="button" class="vsubtoolbar-sticky-swatch" data-ref="vsticky-color-gray" data-color="#f1f5f9" style="background-color: #f1f5f9;" data-tooltip="Gris" aria-label="Gris"></button>
+          </div>
+
+          <div class="design-vsubtoolbar is-hidden" data-ref="vsubtoolbar-cursors">
+            <button type="button" class="design-toolbar-btn is-active" data-ref="vcursor-btn-toggle-others" data-tooltip="Mostrar/Ocultar cursores de colaboradores" aria-label="Mostrar cursores de colaboradores">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
+            </button>
+            <button type="button" class="design-toolbar-btn is-active" data-ref="vcursor-btn-toggle-broadcast" data-tooltip="Transmitir mi cursor a colaboradores" aria-label="Transmitir mi cursor">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#near_me"></use></svg>
+            </button>
+            <button type="button" class="design-toolbar-btn" data-ref="vcursor-btn-laser" data-tooltip="Puntero láser de presentación" aria-label="Puntero láser">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#bolt"></use></svg>
+            </button>
           </div>
         </div>
       </div>
@@ -471,75 +488,6 @@
         </div>
       </div>
 
-      <div class="design-colors-panel is-hidden" data-ref="board-colors-panel">
-        <div class="design-colors-panel__header" data-ref="board-colors-header">
-          <div class="design-colors-panel__title-box">
-            <span class="component-icon">palette</span>
-            <span class="design-colors-panel__title" data-ref="board-colors-title">Color de trazo</span>
-          </div>
-          <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-close-board-colors" data-tooltip="Cerrar" aria-label="Cerrar colores">
-            <span class="component-icon">close</span>
-          </button>
-        </div>
-        <div class="design-colors-panel__body" data-ref="board-colors-body">
-          <div class="design-colors-section" data-ref="custom-colors-section">
-            <div class="design-colors-section__header">
-              <div class="design-colors-section__title-box">
-                <span class="component-icon">palette</span>
-                <span class="design-colors-section__title">Colores personalizados</span>
-              </div>
-              <span class="design-colors-hex" data-ref="board-colors-hex-text">#1E293B</span>
-            </div>
-            <div class="design-colors-custom-row">
-              <div class="design-color-btn-rainbow-wrapper" data-tooltip="Elegir color personalizado">
-                <input class="design-color-active-input" data-ref="input-custom-color" type="color" value="#1e293b" aria-label="Seleccionar color personalizado" />
-                <div class="design-color-btn-rainbow">
-                  <div class="design-color-btn-rainbow__inner">
-                    <span class="component-icon">add</span>
-                  </div>
-                </div>
-              </div>
-              <div class="design-color-active-swatch-wrapper" data-tooltip="Color activo">
-                <span class="design-color-active-swatch" data-ref="board-color-active-swatch" style="background-color: #1e293b;"></span>
-              </div>
-              <div class="design-colors-active-info">
-                <input class="design-colors-text-input" data-ref="input-custom-hex" type="text" value="#1E293B" maxlength="7" placeholder="#000000" aria-label="Código hexadecimal" />
-              </div>
-            </div>
-          </div>
-
-          <div class="design-colors-section" data-ref="colors-ramp-section">
-            <div class="design-colors-section__header">
-              <div class="design-colors-section__title-box">
-                <span class="component-icon">gradient</span>
-                <span class="design-colors-section__title">Rampa de sombreado</span>
-              </div>
-            </div>
-            <div class="design-colors-ramp-grid" data-ref="board-colors-ramp-grid"></div>
-          </div>
-
-          <div class="design-colors-section" data-ref="colors-recent-section">
-            <div class="design-colors-section__header">
-              <div class="design-colors-section__title-box">
-                <span class="component-icon">history</span>
-                <span class="design-colors-section__title">Colores recientes</span>
-              </div>
-            </div>
-            <div class="design-colors-palette-grid" data-ref="board-colors-recent-grid"></div>
-          </div>
-
-          <div class="design-colors-section" data-ref="colors-default-section">
-            <div class="design-colors-section__header">
-              <div class="design-colors-section__title-box">
-                <span class="component-icon">color_lens</span>
-                <span class="design-colors-section__title">Paleta por defecto</span>
-              </div>
-            </div>
-            <div class="design-colors-palette-grid" data-ref="board-palette-grid"></div>
-          </div>
-        </div>
-      </div>
-
       <div class="design-history-preview-banner is-hidden" data-ref="design-history-preview-banner">
         <div class="design-history-preview-banner__content">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
@@ -553,64 +501,6 @@
           <button type="button" class="component-button component-button--h32 component-button--outline" data-ref="btn-preview-exit">
             <span>Salir de la vista previa</span>
           </button>
-        </div>
-      </div>
-
-      <div class="design-colors-panel design-history-panel is-hidden" data-ref="design-history-drawer">
-        <div class="design-colors-panel__header" data-ref="history-header">
-          <div class="design-colors-panel__title-box">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#history"></use></svg>
-            <span class="design-colors-panel__title" data-ref="history-title">Historial de versiones</span>
-          </div>
-          <div class="design-colors-panel__header-actions" data-ref="history-header-actions">
-            <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-toggle-create-snapshot" data-tooltip="Nueva versión" aria-label="Nueva versión">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
-            </button>
-            <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-close-history-drawer" data-tooltip="Cerrar" aria-label="Cerrar historial">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
-            </button>
-          </div>
-        </div>
-
-        <div class="design-history-create-form is-hidden" data-ref="history-create-form">
-          <div class="design-history-create-box">
-            <span class="design-history-create-box__title">Crear punto de control</span>
-            <label class="field field--sm" data-ref="field-snapshot-name">
-              <input class="field__input" data-ref="input-snapshot-name" type="text" placeholder=" " maxlength="255" autocomplete="off" />
-              <span class="field__label">Nombre del hito (ej. Boceto inicial)</span>
-            </label>
-            <label class="field field--sm" data-ref="field-snapshot-description">
-              <textarea class="field__input field__textarea" data-ref="input-snapshot-description" placeholder=" " rows="2"></textarea>
-              <span class="field__label">Nota opcional</span>
-            </label>
-            <div class="design-history-create-box__actions">
-              <button type="button" class="component-button component-button--h32 component-button--black" data-ref="btn-submit-create-snapshot">
-                <span>Guardar versión</span>
-              </button>
-              <button type="button" class="component-button component-button--h32 component-button--outline" data-ref="btn-cancel-create-snapshot">
-                <span>Cancelar</span>
-              </button>
-            </div>
-            <div class="banner banner--danger is-hidden" data-ref="history-create-error"></div>
-          </div>
-        </div>
-
-        <div class="design-colors-panel__tabs" data-ref="history-tabs">
-          <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable is-active" data-ref="btn-history-tab-all" data-tab="all">Todas</button>
-          <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-history-tab-manual" data-tab="manual">Hitos</button>
-        </div>
-
-        <div class="design-colors-panel__body" data-ref="history-snapshots-container">
-          <div class="design-history-loader is-hidden" data-ref="history-drawer-loader">
-            <div class="skeleton" style="height: 96px; border-radius: 12px; width: 100%;"></div>
-            <div class="skeleton" style="height: 96px; border-radius: 12px; width: 100%;"></div>
-            <div class="skeleton" style="height: 96px; border-radius: 12px; width: 100%;"></div>
-          </div>
-          <div class="design-history-empty is-hidden" data-ref="history-drawer-empty">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#history_toggle_off"></use></svg>
-            <span class="design-history-empty-text">No hay versiones registradas aún</span>
-          </div>
-          <div class="design-history-list" data-ref="history-snapshots-list"></div>
         </div>
       </div>
 

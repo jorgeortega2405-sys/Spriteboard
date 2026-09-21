@@ -1,24 +1,24 @@
 import { CanvasAiDropdownController, setupBoardAiDropdown } from '../../components/canvas-ai-dropdown.component.js';
 import { CanvasCommentsController } from '../../components/canvas-comments.component.js';
+import { CanvasHistoryDropdownController, setupCanvasHistoryDropdown } from '../../components/canvas-history-dropdown.component.js';
 import { openCanvasMetricsModal } from '../../components/canvas-metrics-modal.component.js';
 import { CanvasShareDropdownController, setupCanvasShareDropdown } from '../../components/canvas-share-dropdown.component.js';
 import { closeContextMenu, ContextMenuItem, openContextMenu } from '../../components/context-menu.component.js';
 import { InsertPixelGridConfig, openInsertPixelGridModal } from '../../components/insert-pixel-grid-modal.component.js';
-import { openChartInspectorInDrawer, openMockupsInDrawer } from '../../components/layout.component.js';
+import { isColorsDrawerOpen, openChartInspectorInDrawer, openColorsInDrawer, openMockupsInDrawer, toggleDrawer } from '../../components/layout.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
 import { BOARD_3D_SHAPES } from '../../config/board-3d-shapes.config.js';
 import { BOARD_SHAPES } from '../../config/board-shapes.config.js';
 import { getBoardTemplateElements } from '../../config/board-templates.data.js';
 import { getMockupTemplateById } from '../../config/mockups.config.js';
 import { DEFAULT_STICKY_COLOR, STICKY_NOTE_PRESETS } from '../../config/sticky-notes.config.js';
-import { currentUser, deleteApi, getApi, postApi } from '../../services/api.service.js';
+import { currentUser, getApi, postApi } from '../../services/api.service.js';
 import { getLocalCanvasByUuid, removeLocalCanvas, saveLocalCanvas } from '../../services/canvas-storage.service.js';
 import { renderIcons } from '../../services/icon.service.js';
 import { showToast } from '../../services/toast.service.js';
-import { CanvasSnapshotItem } from '../../types/canvas-snapshot.types.js';
 import { CanvasItem } from '../../types/canvas.types.js';
 import { MockupFitMode, MockupTemplate } from '../../types/mockups.types.js';
-import { generateShadingRamp, getCollaboratorColor } from '../../utils/color.util.js';
+import { generateShadingRamp, getCollaboratorColor, rgbToHex } from '../../utils/color.util.js';
 import { setupDropdown } from '../../utils/dom.util.js';
 import { PixelShape } from '../../utils/pixel-shapes.util.js';
 import { validateAndSanitizeFile } from '../../utils/validators.util.js';
@@ -42,43 +42,30 @@ export class BoardController {
   private activePopover: HTMLElement | null = null;
   private activeTableInlineEditor: { col: number; row: number; tableId: string; textarea: HTMLTextAreaElement } | null = null;
   private editingElementId: string | null = null;
-  private activeVSubtoolbar: '3d' | 'draw' | 'lines' | 'pixel' | 'shapes' | 'stickies' | null = null;
+  private activeVSubtoolbar: '3d' | 'cursors' | 'draw' | 'lines' | 'pixel' | 'shapes' | 'stickies' | null = null;
   private connectorStyle: 'curved' | 'orthogonal' | 'straight' = 'curved';
   private aiDropdownController: CanvasAiDropdownController | null = null;
   private aiWrapperEl: HTMLElement | null = null;
   private autoSaveTimer: number | null = null;
   private activePreviewSnapshotUuid: string | null = null;
-  private btnCancelCreateSnapshot: HTMLButtonElement | null = null;
   private btnCanvasComments: HTMLButtonElement | null = null;
   private btnCanvasMetrics: HTMLButtonElement | null = null;
-  private btnCloseHistoryDrawer: HTMLButtonElement | null = null;
+  private btnColorEyedropper: HTMLButtonElement | null = null;
   private btnHistory: HTMLButtonElement | null = null;
-  private btnHistoryTabAll: HTMLButtonElement | null = null;
-  private btnHistoryTabManual: HTMLButtonElement | null = null;
   private btnPreviewExit: HTMLButtonElement | null = null;
   private btnPreviewRestore: HTMLButtonElement | null = null;
   private btnSaveStatus: HTMLButtonElement | null = null;
-  private btnSubmitCreateSnapshot: HTMLButtonElement | null = null;
-  private btnToggleCreateSnapshot: HTMLButtonElement | null = null;
   private commentsController: CanvasCommentsController | null = null;
-  private historyCreateErrorEl: HTMLElement | null = null;
-  private historyCreateFormEl: HTMLElement | null = null;
-  private historyDrawerEl: HTMLElement | null = null;
-  private historyDrawerEmptyEl: HTMLElement | null = null;
-  private historyDrawerLoaderEl: HTMLElement | null = null;
-  private historyFilter: 'all' | 'manual' = 'all';
-  private historySnapshotsListEl: HTMLElement | null = null;
-  private inputSnapshotDescription: HTMLTextAreaElement | null = null;
-  private inputSnapshotName: HTMLInputElement | null = null;
-  private isHistoryDrawerOpen = false;
+  private historyDropdownController: CanvasHistoryDropdownController | null = null;
+  private historyWrapperEl: HTMLElement | null = null;
   private isPreviewingSnapshot = false;
   private prePreviewBackground: { color: string; dotColor?: string; type: BackgroundType } | null = null;
   private prePreviewCamera: { x: number; y: number; zoom: number } | null = null;
   private prePreviewElements: BoardElement[] | null = null;
   private previewBannerEl: HTMLElement | null = null;
-  private snapshots: CanvasSnapshotItem[] = [];
   private boardBackground: { color: string; dotColor?: string; type: BackgroundType } = { color: '#ffffff', dotColor: '#cbd5e1', type: 'dots' };
   private boardName = 'Pizarrón sin título';
+  private broadcastMyCursor = true;
   private camera = { x: 0, y: 0, zoom: 1 };
   private canvasCreatedAt: string | null = null;
   private canvasElement: HTMLCanvasElement | null = null;
@@ -90,9 +77,7 @@ export class BoardController {
   private collaboratorsBarEl: HTMLElement | null = null;
   private collaboratorsListEl: HTMLElement | null = null;
   private colorPanelTarget: 'stroke' | 'fill' | 'text' = 'stroke';
-  private colorsActiveSwatchEl: HTMLElement | null = null;
   private colorsCustomInputEl: HTMLInputElement | null = null;
-  private colorsHexInputEl: HTMLInputElement | null = null;
   private colorsHexTextEl: HTMLElement | null = null;
   private colorsPaletteGridEl: HTMLElement | null = null;
   private colorsPanelEl: HTMLElement | null = null;
@@ -116,6 +101,7 @@ export class BoardController {
   private elements: BoardElement[] = [];
   private exportDropdownController: { close: () => void; destroy: () => void; open: () => void; toggle: () => void; update: () => void } | null = null;
   private pixelToolsDropdownController: { close: () => void; destroy: () => void; open: () => void; toggle: () => void; update: () => void } | null = null;
+  private eyedropperScreenPos: BoardPoint | null = null;
   private hasErasedInCurrentStroke = false;
   private history = new BoardHistoryManager();
   private hoveredPixelGridCell: { gridId: string; px: number; py: number } | null = null;
@@ -124,12 +110,15 @@ export class BoardController {
   private mockupsPanel: BoardMockupsPanelComponent | null = null;
   private didPan = false;
   private isDrawing = false;
+  private isEyedropperActive = false;
   private isInteractingSelection = false;
+  private isLaserMode = false;
   private isLoaded = false;
   private isOwner = true;
   private isPanning = false;
   private isShiftPressed = false;
   private isSpacePressed = false;
+  private laserPoints: Array<{ time: number; x: number; y: number }> = [];
   private lastMousePos: BoardPoint = { x: 0, y: 0 };
   private liveDraftElement: BoardElement | null = null;
   private ownerInfo: { avatarUrl: string | null; id: number | null; subscriptionTier: string; username: string } | null = null;
@@ -165,6 +154,7 @@ export class BoardController {
   private selectionStartRect: { fontSize?: number; height: number; width: number; x: number; y: number } = { height: 0, width: 0, x: 0, y: 0 };
   private shareDropdownController: CanvasShareDropdownController | null = null;
   private shareWrapperEl: HTMLElement | null = null;
+  private showCollaboratorCursors = true;
   private stickyDefaultColor = '#fef08a';
   private topFillSwatchEl: HTMLElement | null = null;
   private topFontSizeLabelEl: HTMLElement | null = null;
@@ -201,20 +191,7 @@ export class BoardController {
     this.btnCanvasMetrics = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-canvas-metrics"]');
     this.btnCanvasComments = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-canvas-comments"]');
     this.btnHistory = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-canvas-history"]');
-    this.historyDrawerEl = this.container.querySelector<HTMLElement>('[data-ref="design-history-drawer"]');
-    this.btnCloseHistoryDrawer = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-close-history-drawer"]');
-    this.btnToggleCreateSnapshot = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-create-snapshot"]');
-    this.historyCreateFormEl = this.container.querySelector<HTMLElement>('[data-ref="history-create-form"]');
-    this.inputSnapshotName = this.container.querySelector<HTMLInputElement>('[data-ref="input-snapshot-name"]');
-    this.inputSnapshotDescription = this.container.querySelector<HTMLTextAreaElement>('[data-ref="input-snapshot-description"]');
-    this.btnSubmitCreateSnapshot = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-submit-create-snapshot"]');
-    this.btnCancelCreateSnapshot = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-cancel-create-snapshot"]');
-    this.historyCreateErrorEl = this.container.querySelector<HTMLElement>('[data-ref="history-create-error"]');
-    this.btnHistoryTabAll = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-history-tab-all"]');
-    this.btnHistoryTabManual = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-history-tab-manual"]');
-    this.historySnapshotsListEl = this.container.querySelector<HTMLElement>('[data-ref="history-snapshots-list"]');
-    this.historyDrawerLoaderEl = this.container.querySelector<HTMLElement>('[data-ref="history-drawer-loader"]');
-    this.historyDrawerEmptyEl = this.container.querySelector<HTMLElement>('[data-ref="history-drawer-empty"]');
+    this.historyWrapperEl = this.container.querySelector<HTMLElement>('[data-ref="board-history-wrapper"]');
     this.previewBannerEl = this.container.querySelector<HTMLElement>('[data-ref="design-history-preview-banner"]');
     this.btnPreviewRestore = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-preview-restore"]');
     this.btnPreviewExit = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-preview-exit"]');
@@ -313,6 +290,8 @@ export class BoardController {
     this.collaborationManager.destroy();
     this.aiDropdownController?.destroy();
     this.aiDropdownController = null;
+    this.historyDropdownController?.destroy();
+    this.historyDropdownController = null;
     this.shareDropdownController?.destroy();
     this.shareDropdownController = null;
     this.exportDropdownController?.destroy();
@@ -746,76 +725,49 @@ export class BoardController {
       }, { signal });
     }
 
-    if (this.btnHistory) {
-      this.btnHistory.addEventListener('click', () => {
-        this.toggleHistoryDrawer();
-      }, { signal });
-    }
-
-    if (this.btnCloseHistoryDrawer) {
-      this.btnCloseHistoryDrawer.addEventListener('click', () => {
-        this.toggleHistoryDrawer(false);
-      }, { signal });
-    }
-
-    if (this.btnToggleCreateSnapshot) {
-      this.btnToggleCreateSnapshot.addEventListener('click', () => {
-        this.historyCreateFormEl?.classList.toggle('is-hidden');
-        if (!this.historyCreateFormEl?.classList.contains('is-hidden')) {
-          this.inputSnapshotName?.focus();
-        }
-      }, { signal });
-    }
-
-    if (this.btnCancelCreateSnapshot) {
-      this.btnCancelCreateSnapshot.addEventListener('click', () => {
-        this.historyCreateFormEl?.classList.add('is-hidden');
-        if (this.historyCreateErrorEl) this.historyCreateErrorEl.classList.add('is-hidden');
-      }, { signal });
-    }
-
-    if (this.btnSubmitCreateSnapshot) {
-      this.btnSubmitCreateSnapshot.addEventListener('click', () => {
-        void this.submitCreateSnapshot();
-      }, { signal });
-    }
-
-    if (this.btnHistoryTabAll) {
-      this.btnHistoryTabAll.addEventListener('click', () => {
-        this.historyFilter = 'all';
-        this.btnHistoryTabAll?.classList.add('is-active');
-        this.btnHistoryTabManual?.classList.remove('is-active');
-        this.renderHistorySnapshots();
-      }, { signal });
-    }
-
-    if (this.btnHistoryTabManual) {
-      this.btnHistoryTabManual.addEventListener('click', () => {
-        this.historyFilter = 'manual';
-        this.btnHistoryTabManual?.classList.add('is-active');
-        this.btnHistoryTabAll?.classList.remove('is-active');
-        this.renderHistorySnapshots();
-      }, { signal });
-    }
-
-    if (this.historySnapshotsListEl) {
-      this.historySnapshotsListEl.addEventListener('click', (e) => {
-        const target = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-action]');
-        if (!target) return;
-        const action = target.getAttribute('data-action');
-        const snapUuid = target.getAttribute('data-snap-uuid');
-        if (!snapUuid) return;
-
-        if (action === 'preview') {
-          void this.previewSnapshot(snapUuid);
-        } else if (action === 'restore') {
-          void this.restoreSnapshot(snapUuid);
-        } else if (action === 'fork') {
-          void this.forkSnapshot(snapUuid);
-        } else if (action === 'delete') {
-          void this.deleteSnapshot(snapUuid);
-        }
-      }, { signal });
+    if (this.historyWrapperEl && this.btnHistory) {
+      this.historyDropdownController = setupCanvasHistoryDropdown({
+        canvasType: 'board',
+        canvasUuid: this.canvasUuid,
+        generateThumbnail: () => generateThumbnail(this.elements, this.boardBackground, (ctx, el) => this.drawElementOn(ctx, el)),
+        getCurrentProjectData: () => ({
+          background: this.boardBackground,
+          camera: this.camera,
+          elements: this.elements,
+          type: 'board',
+          version: 1,
+        }),
+        isOwner: this.isOwner,
+        onExitPreview: () => {
+          this.exitSnapshotPreview();
+        },
+        onPreviewSnapshot: (snapshotUuid, project) => {
+          if (!this.isPreviewingSnapshot) {
+            this.prePreviewElements = JSON.parse(JSON.stringify(this.elements));
+            this.prePreviewCamera = { ...this.camera };
+            this.prePreviewBackground = { ...this.boardBackground };
+          }
+          this.isPreviewingSnapshot = true;
+          this.activePreviewSnapshotUuid = snapshotUuid;
+          this.applyProjectData(project);
+          this.previewBannerEl?.classList.remove('is-hidden');
+          showToast('Estás en modo previsualización (solo lectura).', 'info');
+        },
+        onRestoreSnapshot: (_snapshotUuid, restored) => {
+          this.prePreviewElements = null;
+          this.prePreviewCamera = null;
+          this.prePreviewBackground = null;
+          this.isPreviewingSnapshot = false;
+          this.activePreviewSnapshotUuid = null;
+          this.previewBannerEl?.classList.add('is-hidden');
+          this.applyProjectData(restored);
+          this.scheduleAutoSave();
+          showToast('Versión restaurada correctamente. Se creó un respaldo automático previo.', 'success');
+        },
+        signal,
+        trigger: this.btnHistory,
+        wrapper: this.historyWrapperEl,
+      });
     }
 
     if (this.btnPreviewRestore) {
@@ -1035,6 +987,9 @@ export class BoardController {
   }
 
   private setTool(tool: BoardTool): void {
+    if (this.isEyedropperActive) {
+      this.toggleEyedropper(false);
+    }
     this.drawToolsDropdownController?.close();
     this.pixelToolsDropdownController?.close();
     this.commitInlineEditor();
@@ -1082,7 +1037,11 @@ export class BoardController {
 
   private updateCanvasCursor(): void {
     if (!this.canvasElement) return;
-    if (this.currentTool === 'hand' || this.isSpacePressed || this.isShiftPressed) {
+    if (this.isEyedropperActive) {
+      this.canvasElement.style.cursor = 'none';
+    } else if (this.isLaserMode) {
+      this.canvasElement.style.cursor = 'crosshair';
+    } else if (this.currentTool === 'hand' || this.isSpacePressed || this.isShiftPressed) {
       this.canvasElement.style.cursor = 'grab';
     } else if (this.currentTool === 'select') {
       this.canvasElement.style.cursor = 'default';
@@ -1135,30 +1094,6 @@ export class BoardController {
       (e) => {
         e.stopPropagation();
         this.toggleColorsPanel('stroke');
-      },
-      { signal }
-    );
-
-    const btnCloseColors = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-close-board-colors"]');
-    btnCloseColors?.addEventListener('click', () => this.hideColorsPanel(), { signal });
-
-    this.colorsCustomInputEl?.addEventListener(
-      'input',
-      () => {
-        const color = this.colorsCustomInputEl?.value || '#000000';
-        this.handleColorPicked(color);
-      },
-      { signal }
-    );
-
-    this.colorsHexInputEl?.addEventListener(
-      'input',
-      () => {
-        let hex = this.colorsHexInputEl?.value.trim() || '';
-        if (!hex.startsWith('#') && hex.length > 0) hex = '#' + hex;
-        if (/^#[0-9A-Fa-f]{6}$/.test(hex)) {
-          this.handleColorPicked(hex);
-        }
       },
       { signal }
     );
@@ -1266,20 +1201,71 @@ export class BoardController {
   }
 
   private initColorsUI(): void {
-    this.colorsPanelEl = this.container.querySelector<HTMLElement>('[data-ref="board-colors-panel"]');
-    this.colorsTitleEl = this.container.querySelector<HTMLElement>('[data-ref="board-colors-title"]');
-    this.colorsPaletteGridEl = this.container.querySelector<HTMLElement>('[data-ref="board-palette-grid"]');
-    this.colorsRecentGridEl = this.container.querySelector<HTMLElement>('[data-ref="board-colors-recent-grid"]');
-    this.colorsRampGridEl = this.container.querySelector<HTMLElement>('[data-ref="board-colors-ramp-grid"]');
-    this.colorsHexTextEl = this.container.querySelector<HTMLElement>('[data-ref="board-colors-hex-text"]');
-    this.colorsHexInputEl = this.container.querySelector<HTMLInputElement>('[data-ref="input-custom-hex"]');
-    this.colorsCustomInputEl = this.container.querySelector<HTMLInputElement>('[data-ref="input-custom-color"]');
-    this.colorsActiveSwatchEl = this.container.querySelector<HTMLElement>('[data-ref="board-color-active-swatch"]');
+    this.loadRecentColors();
+  }
+
+  public attachColorsUI(drawerBody: HTMLElement, target?: 'stroke' | 'fill' | 'text'): void {
+    this.colorsPanelEl = drawerBody;
+    this.colorsTitleEl = drawerBody.closest('.layout-drawer')?.querySelector<HTMLElement>('[data-ref="board-colors-title"]') || drawerBody.querySelector<HTMLElement>('[data-ref="board-colors-title"]');
+    this.colorsPaletteGridEl = drawerBody.querySelector<HTMLElement>('[data-ref="board-palette-grid"]');
+    this.colorsRecentGridEl = drawerBody.querySelector<HTMLElement>('[data-ref="board-colors-recent-grid"]');
+    this.colorsRampGridEl = drawerBody.querySelector<HTMLElement>('[data-ref="board-colors-ramp-grid"]');
+    this.colorsHexTextEl = drawerBody.querySelector<HTMLElement>('[data-ref="board-colors-hex-text"]');
+    this.colorsCustomInputEl = drawerBody.querySelector<HTMLInputElement>('[data-ref="input-custom-color"]');
+    this.btnColorEyedropper = drawerBody.querySelector<HTMLButtonElement>('[data-ref="btn-color-eyedropper"]');
+
+    if (target) {
+      this.colorPanelTarget = target;
+    }
+    if (this.colorsTitleEl) {
+      this.colorsTitleEl.textContent = this.colorPanelTarget === 'stroke' ? 'Color de trazo o borde' : (this.colorPanelTarget === 'fill' ? 'Color de relleno' : 'Color de texto');
+    }
+
+    this.btnColorEyedropper?.addEventListener('click', () => {
+      this.toggleEyedropper();
+    });
+
+    this.colorsCustomInputEl?.addEventListener('input', (e) => {
+      const val = (e.target as HTMLInputElement).value;
+      if (val) {
+        this.handleColorPicked(val);
+      }
+    });
+
+    const transparentSwatch = drawerBody.querySelector<HTMLButtonElement>('[data-ref="color-swatch-transparent"]');
+    transparentSwatch?.addEventListener('click', () => {
+      this.handleColorPicked('transparent');
+    });
 
     this.loadRecentColors();
     this.renderDefaultPalette();
     this.renderRecentColors();
-    this.updateColorPanelUI(this.currentColor);
+
+    let currentVal = this.currentColor;
+    if (this.colorPanelTarget === 'fill') currentVal = this.currentFillColor;
+    if (this.colorPanelTarget === 'text' && this.selectedElementId) {
+      const el = this.elements.find((item) => item.id === this.selectedElementId);
+      if (el) {
+        if (el.type === 'text') currentVal = el.color;
+        else if (el.type === 'sticky') currentVal = el.textColor;
+        else if (el.type === 'shape' && el.textColor) currentVal = el.textColor;
+      }
+    }
+    this.updateColorPanelUI(currentVal);
+  }
+
+  private toggleEyedropper(active?: boolean): void {
+    this.isEyedropperActive = active !== undefined ? active : !this.isEyedropperActive;
+    if (this.btnColorEyedropper) {
+      this.btnColorEyedropper.classList.toggle('is-active', this.isEyedropperActive);
+    }
+    this.updateCanvasCursor();
+    if (this.isEyedropperActive) {
+      showToast('Cuentagotas activo: haz clic en cualquier pixel del lienzo para copiar su color');
+    } else {
+      this.eyedropperScreenPos = null;
+    }
+    this.requestRedraw();
   }
 
   private renderDefaultPalette(): void {
@@ -1287,18 +1273,6 @@ export class BoardController {
     this.colorsPaletteGridEl.innerHTML = '';
 
     const currentActiveColor = (this.colorPanelTarget === 'fill' ? this.currentFillColor : this.currentColor).toUpperCase();
-
-    const transparentSwatch = document.createElement('button');
-    transparentSwatch.type = 'button';
-    transparentSwatch.className = `design-color-swatch-btn is-transparent ${currentActiveColor === 'TRANSPARENT' ? 'is-active' : ''}`;
-    transparentSwatch.setAttribute('data-ref', 'color-swatch-transparent');
-    transparentSwatch.setAttribute('data-color', 'transparent');
-    transparentSwatch.setAttribute('data-tooltip', 'Transparente / Sin relleno');
-    transparentSwatch.setAttribute('aria-label', 'Transparente');
-    transparentSwatch.addEventListener('click', () => {
-      this.handleColorPicked('transparent');
-    });
-    this.colorsPaletteGridEl.appendChild(transparentSwatch);
 
     for (const color of DEFAULT_CLASSIC_PALETTE) {
       const swatch = document.createElement('button');
@@ -1328,12 +1302,12 @@ export class BoardController {
     }
 
     const ramp = generateShadingRamp(currentVal);
-    const labels = ['Sombra profunda', 'Sombra', 'Base', 'Brillo', 'Brillo intenso'];
+    const labels = ['Sombra muy profunda', 'Sombra profunda', 'Sombra suave', 'Base', 'Brillo', 'Brillo intenso'];
 
     ramp.forEach((color, idx) => {
       const swatch = document.createElement('button');
       swatch.type = 'button';
-      swatch.className = `design-color-swatch-btn ${idx === 2 ? 'is-base' : ''} ${color.toUpperCase() === currentVal.toUpperCase() ? 'is-active' : ''}`;
+      swatch.className = `design-color-swatch-btn ${idx === 3 ? 'is-base' : ''} ${color.toUpperCase() === currentVal.toUpperCase() ? 'is-active' : ''}`;
       swatch.setAttribute('data-ref', `color-ramp-${idx}`);
       swatch.setAttribute('data-color', color);
       swatch.setAttribute('data-tooltip', `${labels[idx]} (${color})`);
@@ -1387,37 +1361,20 @@ export class BoardController {
   }
 
   private toggleColorsPanel(target: 'stroke' | 'fill' | 'text'): void {
-    if (!this.colorsPanelEl) return;
-    const isHidden = this.colorsPanelEl.classList.contains('is-hidden');
-    if (!isHidden && this.colorPanelTarget === target) {
-      this.colorsPanelEl.classList.add('is-hidden');
+    if (isColorsDrawerOpen() && this.colorPanelTarget === target) {
+      toggleDrawer(false);
       return;
     }
 
     this.closeAllPopovers();
     this.colorPanelTarget = target;
-    if (this.colorsTitleEl) {
-      this.colorsTitleEl.textContent = target === 'stroke' ? 'Color de trazo o borde' : (target === 'fill' ? 'Color de relleno' : 'Color de texto');
-    }
-
-    this.renderDefaultPalette();
-    this.renderRecentColors();
-    let currentVal = this.currentColor;
-    if (target === 'fill') currentVal = this.currentFillColor;
-    if (target === 'text' && this.selectedElementId) {
-      const el = this.elements.find((item) => item.id === this.selectedElementId);
-      if (el) {
-        if (el.type === 'text') currentVal = el.color;
-        else if (el.type === 'sticky') currentVal = el.textColor;
-        else if (el.type === 'shape' && el.textColor) currentVal = el.textColor;
-      }
-    }
-    this.updateColorPanelUI(currentVal);
-    this.colorsPanelEl.classList.remove('is-hidden');
+    openColorsInDrawer(target);
   }
 
   private hideColorsPanel(): void {
-    if (this.colorsPanelEl) this.colorsPanelEl.classList.add('is-hidden');
+    if (isColorsDrawerOpen()) {
+      toggleDrawer(false);
+    }
   }
 
   private updateColorPanelUI(color: string): void {
@@ -1427,19 +1384,9 @@ export class BoardController {
     if (this.colorsHexTextEl) {
       this.colorsHexTextEl.textContent = displayColor;
     }
-    if (this.colorsHexInputEl) {
-      this.colorsHexInputEl.value = normalized === 'transparent' ? '' : normalized;
-    }
     if (this.colorsCustomInputEl) {
       if (normalized !== 'transparent' && /^#[0-9A-Fa-f]{6}$/.test(normalized)) {
         this.colorsCustomInputEl.value = normalized;
-      }
-    }
-    if (this.colorsActiveSwatchEl) {
-      if (normalized === 'transparent') {
-        this.colorsActiveSwatchEl.style.background = 'linear-gradient(45deg, #ef4444 45%, transparent 45%, transparent 55%, #ef4444 55%)';
-      } else {
-        this.colorsActiveSwatchEl.style.background = normalized;
       }
     }
 
@@ -2420,6 +2367,10 @@ export class BoardController {
           this.hoveredPixelGridCell = null;
           this.requestRedraw();
         }
+        if (this.isEyedropperActive && this.eyedropperScreenPos) {
+          this.eyedropperScreenPos = null;
+          this.requestRedraw();
+        }
       },
       { signal }
     );
@@ -2856,6 +2807,33 @@ export class BoardController {
   }
 
   private handlePointerDown(e: PointerEvent): void {
+    if (this.isEyedropperActive) {
+      if (this.canvasElement && this.ctx) {
+        const rect = this.canvasElement.getBoundingClientRect();
+        const screenX = e.clientX - rect.left;
+        const screenY = e.clientY - rect.top;
+        const dpr = window.devicePixelRatio || 1;
+        const sampleX = Math.round(screenX * dpr);
+        const sampleY = Math.round(screenY * dpr);
+        try {
+          const pixel = this.ctx.getImageData(sampleX, sampleY, 1, 1).data;
+          if (pixel) {
+            const [r, g, b, a] = pixel;
+            if (a === 0) {
+              this.handleColorPicked('transparent');
+              showToast('Color transparente seleccionado', 'info');
+            } else {
+              const hex = rgbToHex(r, g, b);
+              this.handleColorPicked(hex);
+              showToast(`Color seleccionado: ${hex}`, 'success');
+            }
+          }
+        } catch {}
+      }
+      this.toggleEyedropper(false);
+      return;
+    }
+
     if (e.button === 1 || this.currentTool === 'hand' || this.isSpacePressed) {
       this.isPanning = true;
       this.didPan = false;
@@ -2876,6 +2854,12 @@ export class BoardController {
     const screenPos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
     const worldPos = screenToWorld(screenPos.x, screenPos.y, this.canvasElement, this.camera);
     this.lastMousePos = worldPos;
+
+    if (this.isLaserMode) {
+      this.laserPoints.push({ time: Date.now(), x: worldPos.x, y: worldPos.y });
+      this.requestRedraw();
+      return;
+    }
 
     if (this.currentTool === 'select') {
       if (this.selectedElementIds.length === 1) {
@@ -3149,8 +3133,22 @@ export class BoardController {
     if (!this.canvasElement) return;
     const rect = this.canvasElement.getBoundingClientRect();
     const screenPos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+
+    if (this.isEyedropperActive) {
+      this.eyedropperScreenPos = { x: screenPos.x, y: screenPos.y };
+      this.requestRedraw();
+      return;
+    }
+
     const worldPos = screenToWorld(screenPos.x, screenPos.y, this.canvasElement, this.camera);
-    this.collaborationManager.sendCursor(worldPos.x, worldPos.y);
+    if (this.broadcastMyCursor) {
+      this.collaborationManager.sendCursor(worldPos.x, worldPos.y);
+    }
+
+    if (this.isLaserMode) {
+      this.laserPoints.push({ time: Date.now(), x: worldPos.x, y: worldPos.y });
+      this.requestRedraw();
+    }
 
     if (this.isRotating3D && this.rotating3DElementId) {
       const el = this.elements.find((item) => item.id === this.rotating3DElementId);
@@ -3683,6 +3681,10 @@ export class BoardController {
         }
 
         if (e.key === 'Escape') {
+          if (this.isEyedropperActive) {
+            this.toggleEyedropper(false);
+            return;
+          }
           this.closeAllPopovers();
           this.hideColorsPanel();
           this.selectedElementId = null;
@@ -3778,6 +3780,7 @@ export class BoardController {
         if (key === 'c') this.setTool('connector');
         if (key === 'n') this.setTool('sticky');
         if (key === 't') this.setTool('text');
+        if (key === 'k') this.toggleVSubtoolbar('cursors');
         if (key === 'x') this.setTool('pixel');
         if (this.currentTool === 'pixel') {
           if (key === 'b') this.setActivePixelSubtool('pencil');
@@ -4046,7 +4049,181 @@ export class BoardController {
 
     this.ctx.restore();
 
-    drawBoardCollaboratorCursors(this.ctx, this.collaborationManager.collaborators, this.camera, this.canvasElement);
+    if (this.showCollaboratorCursors) {
+      drawBoardCollaboratorCursors(this.ctx, this.collaborationManager.collaborators, this.camera, this.canvasElement);
+    }
+
+    if (this.laserPoints.length > 0 && this.canvasElement) {
+      const now = Date.now();
+      this.laserPoints = this.laserPoints.filter((p) => now - p.time < 1200);
+      if (this.laserPoints.length > 0) {
+        this.ctx.save();
+        this.ctx.lineCap = 'round';
+        this.ctx.lineJoin = 'round';
+        for (let i = 1; i < this.laserPoints.length; i++) {
+          const p0 = this.laserPoints[i - 1];
+          const p1 = this.laserPoints[i];
+          const age = now - p1.time;
+          const alpha = Math.max(0, 1 - age / 1200);
+          const s0 = worldToScreen(p0.x, p0.y, this.canvasElement, this.camera);
+          const s1 = worldToScreen(p1.x, p1.y, this.canvasElement, this.camera);
+
+          this.ctx.beginPath();
+          this.ctx.moveTo(s0.x, s0.y);
+          this.ctx.lineTo(s1.x, s1.y);
+          this.ctx.strokeStyle = `rgba(239, 68, 68, ${alpha})`;
+          this.ctx.lineWidth = Math.max(2, 6 * alpha);
+          this.ctx.shadowColor = '#ef4444';
+          this.ctx.shadowBlur = 8 * alpha;
+          this.ctx.stroke();
+        }
+        const lastPt = this.laserPoints[this.laserPoints.length - 1];
+        const lastScreen = worldToScreen(lastPt.x, lastPt.y, this.canvasElement, this.camera);
+        this.ctx.beginPath();
+        this.ctx.arc(lastScreen.x, lastScreen.y, 5, 0, Math.PI * 2);
+        this.ctx.fillStyle = '#ff0055';
+        this.ctx.shadowColor = '#ff0055';
+        this.ctx.shadowBlur = 12;
+        this.ctx.fill();
+        this.ctx.restore();
+
+        requestAnimationFrame(() => this.requestRedraw());
+      }
+    }
+
+    if (this.isEyedropperActive && this.eyedropperScreenPos) {
+      this.drawEyedropperLoupe();
+    }
+  }
+
+  private drawEyedropperLoupe(): void {
+    if (!this.isEyedropperActive || !this.eyedropperScreenPos || !this.ctx || !this.canvasElement) return;
+
+    const ctx = this.ctx;
+    const dpr = window.devicePixelRatio || 1;
+    const cx = this.eyedropperScreenPos.x;
+    const cy = this.eyedropperScreenPos.y;
+
+    const radius = 52;
+    const gridCount = 9;
+    const halfGrid = 4;
+    const cellSize = (radius * 2) / gridCount;
+    const startX = cx - radius;
+    const startY = cy - radius;
+
+    const sampleCenterX = Math.round(cx * dpr);
+    const sampleCenterY = Math.round(cy * dpr);
+    const sampleStartX = sampleCenterX - halfGrid;
+    const sampleStartY = sampleCenterY - halfGrid;
+
+    let centerHex = '#000000';
+    let imageData: ImageData | null = null;
+    try {
+      imageData = ctx.getImageData(sampleStartX, sampleStartY, gridCount, gridCount);
+    } catch {}
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius + 1, 0, Math.PI * 2);
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.35)';
+    ctx.shadowBlur = 12;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 4;
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.clip();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(startX, startY, radius * 2, radius * 2);
+
+    for (let gy = 0; gy < gridCount; gy++) {
+      for (let gx = 0; gx < gridCount; gx++) {
+        const cellX = startX + gx * cellSize;
+        const cellY = startY + gy * cellSize;
+
+        let cellColor = '#ffffff';
+        if (imageData) {
+          const idx = (gy * gridCount + gx) * 4;
+          const r = imageData.data[idx] ?? 255;
+          const g = imageData.data[idx + 1] ?? 255;
+          const b = imageData.data[idx + 2] ?? 255;
+          const a = (imageData.data[idx + 3] ?? 255) / 255;
+          if (gx === halfGrid && gy === halfGrid) {
+            centerHex = a === 0 ? 'transparent' : rgbToHex(r, g, b);
+          }
+          cellColor = `rgba(${r}, ${g}, ${b}, ${a})`;
+        }
+
+        ctx.fillStyle = cellColor;
+        ctx.fillRect(cellX, cellY, cellSize, cellSize);
+      }
+    }
+
+    ctx.strokeStyle = 'rgba(100, 116, 139, 0.45)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let i = 0; i <= gridCount; i++) {
+      const lineX = startX + i * cellSize;
+      ctx.moveTo(lineX, startY);
+      ctx.lineTo(lineX, startY + radius * 2);
+
+      const lineY = startY + i * cellSize;
+      ctx.moveTo(startX, lineY);
+      ctx.lineTo(startX + radius * 2, lineY);
+    }
+    ctx.stroke();
+
+    const centerCellX = startX + halfGrid * cellSize;
+    const centerCellY = startY + halfGrid * cellSize;
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(centerCellX + 0.5, centerCellY + 0.5, cellSize - 1, cellSize - 1);
+
+    ctx.restore();
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.strokeStyle = '#1e293b';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    const badgeText = centerHex === 'transparent' ? 'TRANSPARENTE' : centerHex;
+    ctx.font = 'bold 11px "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace';
+    const textMetrics = ctx.measureText(badgeText);
+    const badgeW = textMetrics.width + 16;
+    const badgeH = 22;
+    const badgeX = cx - badgeW / 2;
+    const badgeY = cy + radius + 10;
+
+    const rect = this.canvasElement.getBoundingClientRect();
+    const finalBadgeY = badgeY + badgeH > rect.height ? cy - radius - 10 - badgeH : badgeY;
+
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
+    ctx.beginPath();
+    if (typeof ctx.roundRect === 'function') {
+      ctx.roundRect(badgeX, finalBadgeY, badgeW, badgeH, 6);
+    } else {
+      ctx.rect(badgeX, finalBadgeY, badgeW, badgeH);
+    }
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'center';
+    ctx.fillText(badgeText, cx, finalBadgeY + badgeH / 2);
+
+    ctx.restore();
   }
 
   private drawElement(el: BoardElement): void {
@@ -4938,223 +5115,6 @@ export class BoardController {
     this.updateZoomUI();
   }
 
-  private toggleHistoryDrawer(force?: boolean): void {
-    const shouldOpen = force !== undefined ? force : !this.isHistoryDrawerOpen;
-    this.isHistoryDrawerOpen = shouldOpen;
-    this.historyDrawerEl?.classList.toggle('is-hidden', !shouldOpen);
-    this.btnHistory?.classList.toggle('is-active', shouldOpen);
-    if (shouldOpen) {
-      void this.loadHistorySnapshots();
-    }
-  }
-
-  private async loadHistorySnapshots(): Promise<void> {
-    if (!this.historySnapshotsListEl) return;
-    this.historyDrawerLoaderEl?.classList.remove('is-hidden');
-    this.historyDrawerEmptyEl?.classList.add('is-hidden');
-    this.historySnapshotsListEl.innerHTML = '';
-
-    try {
-      const res = await getApi(API_ROUTES.canvases.snapshots(this.canvasUuid));
-      if (res.ok) {
-        const data = await res.json();
-        this.snapshots = Array.isArray(data.snapshots) ? data.snapshots : [];
-      } else {
-        this.snapshots = [];
-      }
-    } catch {
-      this.snapshots = [];
-    } finally {
-      this.historyDrawerLoaderEl?.classList.add('is-hidden');
-      this.renderHistorySnapshots();
-    }
-  }
-
-  private renderHistorySnapshots(): void {
-    if (!this.historySnapshotsListEl) return;
-
-    const filtered = this.snapshots.filter((s) => {
-      if (this.historyFilter === 'manual') return s.is_manual;
-      return true;
-    });
-
-    if (filtered.length === 0) {
-      this.historyDrawerEmptyEl?.classList.remove('is-hidden');
-      this.historySnapshotsListEl.innerHTML = '';
-      return;
-    }
-
-    this.historyDrawerEmptyEl?.classList.add('is-hidden');
-
-    const escape = (str: string): string =>
-      str
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-
-    const formatDate = (iso: string): string => {
-      try {
-        const d = new Date(iso);
-        const now = new Date();
-        const diffMs = now.getTime() - d.getTime();
-        const diffMins = Math.floor(diffMs / 60000);
-        if (diffMins < 1) return 'Hace un momento';
-        if (diffMins < 60) return `Hace ${diffMins} min`;
-        const diffHours = Math.floor(diffMins / 60);
-        if (diffHours < 24) return `Hace ${diffHours} h`;
-        return d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-      } catch {
-        return iso;
-      }
-    };
-
-    this.historySnapshotsListEl.innerHTML = filtered
-      .map((s) => {
-        const isPreviewing = this.activePreviewSnapshotUuid === s.uuid;
-        const cardClass = `design-history-card${isPreviewing ? ' is-active-preview' : ''}`;
-        const badgeClass = s.is_manual ? 'design-history-card__badge--manual' : 'design-history-card__badge--auto';
-        const badgeText = s.is_manual ? 'Hito' : 'Auto';
-        const displayName = s.name ? escape(s.name) : s.is_manual ? 'Hito manual' : 'Guardado automático';
-        const dateText = formatDate(s.created_at);
-
-        const thumbHtml = s.preview_thumbnail
-          ? `<img class="design-history-card__thumb" src="${s.preview_thumbnail}" alt="${displayName}" />`
-          : `<div class="design-history-card__thumb-placeholder"><svg class="component-icon" aria-hidden="true"><use href="/icons.svg#image"></use></svg></div>`;
-
-        const authorHtml = s.user_name
-          ? `<div class="design-history-card__author">
-              ${s.user_avatar ? `<img class="design-history-card__author-avatar" src="${s.user_avatar}" alt="${escape(s.user_name)}" />` : '<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#person"></use></svg>'}
-              <span>${escape(s.user_name)}</span>
-            </div>`
-          : '';
-
-        const descHtml = s.description
-          ? `<p class="design-history-card__desc">${escape(s.description)}</p>`
-          : '';
-
-        const deleteBtnHtml = this.isOwner
-          ? `<button type="button" class="component-button component-button--h28 component-button--icon-only" data-action="delete" data-snap-uuid="${s.uuid}" data-tooltip="Eliminar versión" aria-label="Eliminar versión">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete_outline"></use></svg>
-            </button>`
-          : '';
-
-        return `
-          <div class="${cardClass}" data-ref="history-card-${s.uuid}">
-            <div class="design-history-card__top">
-              ${thumbHtml}
-              <div class="design-history-card__meta">
-                <div class="design-history-card__header-row">
-                  <span class="design-history-card__name" title="${displayName}">${displayName}</span>
-                  <span class="design-history-card__badge ${badgeClass}">${badgeText}</span>
-                </div>
-                <div class="design-history-card__date">${dateText}</div>
-                ${authorHtml}
-              </div>
-            </div>
-            ${descHtml}
-            <div class="design-history-card__actions">
-              <button type="button" class="component-button component-button--h28 component-button--outline component-button--icon-only" data-action="preview" data-snap-uuid="${s.uuid}" data-tooltip="Previsualizar versión" aria-label="Previsualizar">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
-              </button>
-              <button type="button" class="component-button component-button--h28 component-button--black" data-action="restore" data-snap-uuid="${s.uuid}">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#history"></use></svg>
-                <span>Restaurar</span>
-              </button>
-              <button type="button" class="component-button component-button--h28 component-button--outline component-button--icon-only" data-action="fork" data-snap-uuid="${s.uuid}" data-tooltip="Crear copia como nuevo lienzo" aria-label="Crear copia">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
-              </button>
-              ${deleteBtnHtml}
-            </div>
-          </div>
-        `;
-      })
-      .join('');
-
-    renderIcons(this.historySnapshotsListEl);
-  }
-
-  private async submitCreateSnapshot(): Promise<void> {
-    if (!currentUser) {
-      showToast('Debes iniciar sesión para guardar versiones.', 'error');
-      return;
-    }
-    const name = this.inputSnapshotName?.value.trim() || 'Hito manual';
-    const description = this.inputSnapshotDescription?.value.trim() || undefined;
-
-    try {
-      const project: BoardProject = {
-        background: this.boardBackground,
-        camera: this.camera,
-        elements: this.elements,
-        type: 'board',
-        version: 1,
-      };
-      const thumbnail = generateThumbnail(this.elements, this.boardBackground, (ctx, el) => this.drawElementOn(ctx, el));
-
-      const res = await postApi(API_ROUTES.canvases.snapshots(this.canvasUuid), {
-        data: JSON.stringify(project),
-        description,
-        is_manual: true,
-        name,
-        preview_thumbnail: thumbnail,
-      });
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || 'Error al guardar la versión.');
-      }
-
-      if (this.inputSnapshotName) this.inputSnapshotName.value = '';
-      if (this.inputSnapshotDescription) this.inputSnapshotDescription.value = '';
-      this.historyCreateFormEl?.classList.add('is-hidden');
-      if (this.historyCreateErrorEl) this.historyCreateErrorEl.classList.add('is-hidden');
-
-      showToast('Punto de control guardado correctamente.', 'success');
-      await this.loadHistorySnapshots();
-    } catch (err: any) {
-      if (this.historyCreateErrorEl) {
-        this.historyCreateErrorEl.textContent = err.message || 'Error al crear la versión.';
-        this.historyCreateErrorEl.classList.remove('is-hidden');
-      } else {
-        showToast(err.message || 'Error al crear la versión.', 'error');
-      }
-    }
-  }
-
-  private async previewSnapshot(snapshotUuid: string): Promise<void> {
-    if (this.activePreviewSnapshotUuid === snapshotUuid) {
-      this.exitSnapshotPreview();
-      return;
-    }
-
-    try {
-      const res = await getApi(API_ROUTES.canvases.snapshotById(this.canvasUuid, snapshotUuid));
-      if (!res.ok) {
-        throw new Error('Error al cargar la versión para previsualizar.');
-      }
-      const resData = await res.json();
-      const rawData = resData.data;
-      const project: BoardProject = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
-
-      if (!this.isPreviewingSnapshot) {
-        this.prePreviewElements = JSON.parse(JSON.stringify(this.elements));
-        this.prePreviewCamera = { ...this.camera };
-        this.prePreviewBackground = { ...this.boardBackground };
-      }
-
-      this.isPreviewingSnapshot = true;
-      this.activePreviewSnapshotUuid = snapshotUuid;
-      this.applyProjectData(project);
-      this.previewBannerEl?.classList.remove('is-hidden');
-      this.renderHistorySnapshots();
-      showToast('Estás en modo previsualización (solo lectura).', 'info');
-    } catch {
-      showToast('Error al previsualizar la versión.', 'error');
-    }
-  }
-
   private exitSnapshotPreview(): void {
     if (!this.isPreviewingSnapshot) return;
 
@@ -5171,7 +5131,6 @@ export class BoardController {
     this.activePreviewSnapshotUuid = null;
     this.previewBannerEl?.classList.add('is-hidden');
     this.requestRedraw();
-    this.renderHistorySnapshots();
     showToast('Has vuelto a tu versión de trabajo activa.', 'info');
   }
 
@@ -5202,52 +5161,9 @@ export class BoardController {
       this.scheduleAutoSave();
 
       showToast('Versión restaurada correctamente. Se creó un respaldo automático previo.', 'success');
-      await this.loadHistorySnapshots();
+      void this.historyDropdownController?.reloadSnapshots();
     } catch (err: any) {
       showToast(err.message || 'No se pudo restaurar la versión.', 'error');
-    }
-  }
-
-  private async forkSnapshot(snapshotUuid: string): Promise<void> {
-    if (!currentUser) {
-      showToast('Debes iniciar sesión para duplicar versiones.', 'error');
-      return;
-    }
-
-    try {
-      const res = await postApi(API_ROUTES.canvases.snapshotFork(this.canvasUuid, snapshotUuid), {});
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || 'Error al crear la copia del lienzo.');
-      }
-
-      const data = await res.json();
-      showToast('Lienzo creado a partir de la versión seleccionada.', 'success');
-      if (data.canvas?.uuid) {
-        window.location.href = `/board/${data.canvas.uuid}`;
-      }
-    } catch (err: any) {
-      showToast(err.message || 'No se pudo duplicar la versión.', 'error');
-    }
-  }
-
-  private async deleteSnapshot(snapshotUuid: string): Promise<void> {
-    if (!this.isOwner) {
-      showToast('Solo el propietario puede eliminar versiones.', 'error');
-      return;
-    }
-
-    try {
-      const res = await deleteApi(API_ROUTES.canvases.snapshotById(this.canvasUuid, snapshotUuid));
-      if (!res.ok) {
-        throw new Error('Error al eliminar la versión.');
-      }
-
-      this.snapshots = this.snapshots.filter((s) => s.uuid !== snapshotUuid);
-      this.renderHistorySnapshots();
-      showToast('Versión eliminada correctamente.', 'success');
-    } catch (err: any) {
-      showToast(err.message || 'No se pudo eliminar la versión.', 'error');
     }
   }
 
@@ -5456,6 +5372,8 @@ export class BoardController {
           } else if (vtool === 'text') {
             this.hideAllVSubtoolbars();
             this.insertTextPreset('body');
+          } else if (vtool === 'cursors') {
+            this.toggleVSubtoolbar('cursors');
           }
           this.updateVerticalToolbarActiveButtons();
         },
@@ -5662,9 +5580,49 @@ export class BoardController {
         { signal }
       );
     });
+
+    const vcursorBtnToggleOthers = this.container.querySelector<HTMLButtonElement>('[data-ref="vcursor-btn-toggle-others"]');
+    vcursorBtnToggleOthers?.addEventListener(
+      'click',
+      () => {
+        this.showCollaboratorCursors = !this.showCollaboratorCursors;
+        vcursorBtnToggleOthers.classList.toggle('is-active', this.showCollaboratorCursors);
+        const iconUse = vcursorBtnToggleOthers.querySelector('use');
+        if (iconUse) {
+          iconUse.setAttribute('href', this.showCollaboratorCursors ? '/icons.svg#visibility' : '/icons.svg#visibility_off');
+        }
+        this.requestRedraw();
+        showToast(this.showCollaboratorCursors ? 'Cursores de colaboradores visibles' : 'Cursores de colaboradores ocultos', 'info');
+      },
+      { signal }
+    );
+
+    const vcursorBtnToggleBroadcast = this.container.querySelector<HTMLButtonElement>('[data-ref="vcursor-btn-toggle-broadcast"]');
+    vcursorBtnToggleBroadcast?.addEventListener(
+      'click',
+      () => {
+        this.broadcastMyCursor = !this.broadcastMyCursor;
+        vcursorBtnToggleBroadcast.classList.toggle('is-active', this.broadcastMyCursor);
+        showToast(this.broadcastMyCursor ? 'Transmisión de mi cursor activada' : 'Transmisión de mi cursor desactivada', 'info');
+      },
+      { signal }
+    );
+
+    const vcursorBtnLaser = this.container.querySelector<HTMLButtonElement>('[data-ref="vcursor-btn-laser"]');
+    vcursorBtnLaser?.addEventListener(
+      'click',
+      () => {
+        this.isLaserMode = !this.isLaserMode;
+        vcursorBtnLaser.classList.toggle('is-active', this.isLaserMode);
+        this.updateCanvasCursor();
+        this.updateVerticalToolbarActiveButtons();
+        showToast(this.isLaserMode ? 'Modo puntero láser activado' : 'Modo puntero láser desactivado', 'info');
+      },
+      { signal }
+    );
   }
 
-  private showVSubtoolbar(sub: '3d' | 'draw' | 'lines' | 'pixel' | 'shapes' | 'stickies'): void {
+  private showVSubtoolbar(sub: '3d' | 'cursors' | 'draw' | 'lines' | 'pixel' | 'shapes' | 'stickies'): void {
     this.activeVSubtoolbar = sub;
     const subDraw = this.container.querySelector<HTMLElement>('[data-ref="vsubtoolbar-draw"]');
     const subPixel = this.container.querySelector<HTMLElement>('[data-ref="vsubtoolbar-pixel"]');
@@ -5672,6 +5630,7 @@ export class BoardController {
     const sub3D = this.container.querySelector<HTMLElement>('[data-ref="vsubtoolbar-3d"]');
     const subLines = this.container.querySelector<HTMLElement>('[data-ref="vsubtoolbar-lines"]');
     const subStickies = this.container.querySelector<HTMLElement>('[data-ref="vsubtoolbar-stickies"]');
+    const subCursors = this.container.querySelector<HTMLElement>('[data-ref="vsubtoolbar-cursors"]');
     const subsubPixelSize = this.container.querySelector<HTMLElement>('[data-ref="vsubsubtoolbar-pixel-size"]');
 
     subDraw?.classList.toggle('is-hidden', sub !== 'draw');
@@ -5680,6 +5639,7 @@ export class BoardController {
     sub3D?.classList.toggle('is-hidden', sub !== '3d');
     subLines?.classList.toggle('is-hidden', sub !== 'lines');
     subStickies?.classList.toggle('is-hidden', sub !== 'stickies');
+    subCursors?.classList.toggle('is-hidden', sub !== 'cursors');
 
     const showPixelSize = sub === 'pixel' && (this.pixelGrid.activePixelSubtool === 'pencil' || this.pixelGrid.activePixelSubtool === 'eraser');
     subsubPixelSize?.classList.toggle('is-hidden', !showPixelSize);
@@ -5695,6 +5655,7 @@ export class BoardController {
     const sub3D = this.container.querySelector<HTMLElement>('[data-ref="vsubtoolbar-3d"]');
     const subLines = this.container.querySelector<HTMLElement>('[data-ref="vsubtoolbar-lines"]');
     const subStickies = this.container.querySelector<HTMLElement>('[data-ref="vsubtoolbar-stickies"]');
+    const subCursors = this.container.querySelector<HTMLElement>('[data-ref="vsubtoolbar-cursors"]');
     const subsubPixelSize = this.container.querySelector<HTMLElement>('[data-ref="vsubsubtoolbar-pixel-size"]');
 
     subDraw?.classList.add('is-hidden');
@@ -5703,12 +5664,13 @@ export class BoardController {
     sub3D?.classList.add('is-hidden');
     subLines?.classList.add('is-hidden');
     subStickies?.classList.add('is-hidden');
+    subCursors?.classList.add('is-hidden');
     subsubPixelSize?.classList.add('is-hidden');
 
     this.updateVerticalToolbarActiveButtons();
   }
 
-  private toggleVSubtoolbar(sub: '3d' | 'draw' | 'lines' | 'pixel' | 'shapes' | 'stickies'): void {
+  private toggleVSubtoolbar(sub: '3d' | 'cursors' | 'draw' | 'lines' | 'pixel' | 'shapes' | 'stickies'): void {
     if (this.activeVSubtoolbar === sub) {
       this.hideAllVSubtoolbars();
     } else {
@@ -5735,6 +5697,8 @@ export class BoardController {
         active = true;
       } else if (vtool === 'stickies' && (this.activeVSubtoolbar === 'stickies' || this.currentTool === 'sticky')) {
         active = true;
+      } else if (vtool === 'cursors' && (this.activeVSubtoolbar === 'cursors' || this.isLaserMode)) {
+        active = true;
       }
       btn.classList.toggle('is-active', active);
     });
@@ -5753,6 +5717,25 @@ export class BoardController {
     pixelBrushBtns.forEach((btn) => {
       btn.classList.toggle('is-active', parseInt(btn.getAttribute('data-pixel-brush') || '1', 10) === this.pixelGrid.activePixelBrushSize);
     });
+
+    const vcursorBtnToggleOthers = this.container.querySelector<HTMLButtonElement>('[data-ref="vcursor-btn-toggle-others"]');
+    if (vcursorBtnToggleOthers) {
+      vcursorBtnToggleOthers.classList.toggle('is-active', this.showCollaboratorCursors);
+      const iconUse = vcursorBtnToggleOthers.querySelector('use');
+      if (iconUse) {
+        iconUse.setAttribute('href', this.showCollaboratorCursors ? '/icons.svg#visibility' : '/icons.svg#visibility_off');
+      }
+    }
+
+    const vcursorBtnToggleBroadcast = this.container.querySelector<HTMLButtonElement>('[data-ref="vcursor-btn-toggle-broadcast"]');
+    if (vcursorBtnToggleBroadcast) {
+      vcursorBtnToggleBroadcast.classList.toggle('is-active', this.broadcastMyCursor);
+    }
+
+    const vcursorBtnLaser = this.container.querySelector<HTMLButtonElement>('[data-ref="vcursor-btn-laser"]');
+    if (vcursorBtnLaser) {
+      vcursorBtnLaser.classList.toggle('is-active', this.isLaserMode);
+    }
   }
 
   public insert3DShape(shape3dType: Shape3DType): void {

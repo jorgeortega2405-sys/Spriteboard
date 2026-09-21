@@ -31,8 +31,9 @@ import { openUpgradeModal } from './upgrade-modal.component.js';
 
 let isDrawerOpen = false;
 let isChatOpen = false;
-let activeCanvasTab: 'templates' | 'elements' | 'text' | 'tools' | 'uploads' | 'projects' | 'charts' | 'mockups' | null = null;
+let activeCanvasTab: 'templates' | 'elements' | 'text' | 'tools' | 'uploads' | 'projects' | 'charts' | 'mockups' | 'colors' | null = null;
 let activeChartInDrawer: BoardChartElement | null = null;
+let activeColorTargetInDrawer: 'stroke' | 'fill' | 'text' = 'stroke';
 let chatSidebarElement: HTMLElement | null = null;
 let chatSidebarInitPromise: Promise<HTMLElement> | null = null;
 
@@ -3008,6 +3009,103 @@ function renderMockupsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement
   renderIcons(drawerBody);
 }
 
+function renderColorsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement): void {
+  const sidebar = drawer.closest<HTMLElement>('[data-ref="sidebar"]') || document.querySelector<HTMLElement>('[data-ref="sidebar"]');
+  const target = activeColorTargetInDrawer;
+  const title = target === 'stroke' ? 'Color de trazo o borde' : (target === 'fill' ? 'Color de relleno' : 'Color de texto');
+
+  drawerBody.innerHTML = `
+    <div class="canvas-panel-card" data-ref="canvas-panel-card">
+      <div class="canvas-panel-card__header" data-ref="board-colors-header">
+        <div class="canvas-panel-card__title-box" data-ref="board-colors-title-box">
+          <svg class="component-icon canvas-panel-card__icon" aria-hidden="true"><use href="/icons.svg#palette"></use></svg>
+          <span class="canvas-panel-card__title" data-ref="board-colors-title">${title}</span>
+        </div>
+        <button type="button" class="component-button component-button--h32 component-button--icon-only rail-btn canvas-panel-card__close" data-ref="btn-close-canvas-panel" data-tooltip="Cerrar panel" aria-label="Cerrar panel">
+          <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+        </button>
+      </div>
+      <div class="canvas-panel-card__body layout-drawer__colors-body" data-ref="board-colors-body">
+        <div class="design-colors-section" data-ref="custom-colors-section">
+          <div class="design-colors-section__header">
+            <div class="design-colors-section__title-box">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#palette"></use></svg>
+              <span class="design-colors-section__title">Colores personalizados</span>
+            </div>
+            <span class="design-colors-hex" data-ref="board-colors-hex-text">#1E293B</span>
+          </div>
+          <div class="design-colors-custom-row">
+            <div class="design-color-btn-rainbow-wrapper" data-tooltip="Elegir color personalizado">
+              <input class="design-color-active-input" data-ref="input-custom-color" type="color" value="#1e293b" aria-label="Seleccionar color personalizado" />
+              <div class="design-color-btn-rainbow">
+                <div class="design-color-btn-rainbow__inner">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+                </div>
+              </div>
+            </div>
+            <button type="button" class="design-color-btn-eyedropper" data-ref="btn-color-eyedropper" data-tooltip="Cuentagotas / Selector de color" aria-label="Selector de color">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#colorize"></use></svg>
+            </button>
+            <button type="button" class="design-color-swatch-btn is-transparent" data-ref="color-swatch-transparent" data-color="transparent" data-tooltip="Transparente / Sin relleno" aria-label="Transparente"></button>
+          </div>
+        </div>
+
+        <div class="design-colors-section" data-ref="colors-ramp-section">
+          <div class="design-colors-section__header">
+            <div class="design-colors-section__title-box">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#gradient"></use></svg>
+              <span class="design-colors-section__title">Rampa de sombreado</span>
+            </div>
+          </div>
+          <div class="design-colors-ramp-grid" data-ref="board-colors-ramp-grid"></div>
+        </div>
+
+        <div class="design-colors-section" data-ref="colors-recent-section">
+          <div class="design-colors-section__header">
+            <div class="design-colors-section__title-box">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#history"></use></svg>
+              <span class="design-colors-section__title">Colores recientes</span>
+            </div>
+          </div>
+          <div class="design-colors-palette-grid" data-ref="board-colors-recent-grid"></div>
+        </div>
+
+        <div class="design-colors-section" data-ref="colors-default-section">
+          <div class="design-colors-section__header">
+            <div class="design-colors-section__title-box">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#color_lens"></use></svg>
+              <span class="design-colors-section__title">Paleta por defecto</span>
+            </div>
+          </div>
+          <div class="design-colors-palette-grid" data-ref="board-palette-grid"></div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const btnClose = drawerBody.querySelector<HTMLElement>('[data-ref="btn-close-canvas-panel"]');
+  btnClose?.addEventListener('click', (e) => {
+    e.preventDefault();
+    toggleDrawer(false);
+  });
+
+  const drawerFooter = drawer.querySelector<HTMLElement>('[data-ref="drawer-footer"]');
+  if (drawerFooter) {
+    drawerFooter.style.display = 'none';
+  }
+
+  if (sidebar) {
+    updateCanvasRailActiveState(sidebar);
+  }
+
+  renderIcons(drawerBody);
+
+  const controller = getActiveCanvasController();
+  if (controller && typeof controller.attachColorsUI === 'function') {
+    controller.attachColorsUI(drawerBody, target);
+  }
+}
+
 function renderCanvasDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement): void {
   const tab = activeCanvasTab || 'templates';
   const sidebar = drawer.closest<HTMLElement>('[data-ref="sidebar"]') || document.querySelector<HTMLElement>('[data-ref="sidebar"]');
@@ -3029,6 +3127,11 @@ function renderCanvasDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement)
 
   if (tab === 'mockups') {
     renderMockupsDrawerContent(drawer, drawerBody);
+    return;
+  }
+
+  if (tab === 'colors') {
+    renderColorsDrawerContent(drawer, drawerBody);
     return;
   }
 
@@ -5933,6 +6036,26 @@ export function openMockupsInDrawer(): void {
     void updateDynamicDrawer(sidebar);
     updateCanvasRailActiveState(sidebar);
   }
+}
+
+export function openColorsInDrawer(target: 'stroke' | 'fill' | 'text' = 'stroke'): void {
+  activeColorTargetInDrawer = target;
+  activeCanvasTab = 'colors';
+  const sidebar = document.querySelector<HTMLElement>('[data-ref="sidebar"]');
+  if (!isDrawerOpen) {
+    toggleDrawer(true);
+  } else if (sidebar) {
+    void updateDynamicDrawer(sidebar);
+    updateCanvasRailActiveState(sidebar);
+  }
+}
+
+export function isColorsDrawerOpen(): boolean {
+  return isDrawerOpen && activeCanvasTab === 'colors';
+}
+
+export function getActiveColorTargetInDrawer(): 'stroke' | 'fill' | 'text' {
+  return activeColorTargetInDrawer;
 }
 
 export function isChartInspectorOpen(): boolean {
