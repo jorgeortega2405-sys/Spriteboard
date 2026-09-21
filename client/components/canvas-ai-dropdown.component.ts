@@ -5,7 +5,7 @@ import { showToast } from '../services/toast.service.js';
 import { DiagramSubtype } from '../types/mindmap.types.js';
 import { setupDropdown, withButtonLoading } from '../utils/dom.util.js';
 import { BoardAiType } from '../views/board/board-ai-modal.component.js';
-import { BoardElement } from '../views/board/board.types.js';
+import { BackgroundType, BoardElement } from '../views/board/board.types.js';
 import { DocAiAction, DocAiTone } from '../views/doc/doc-ai-modal.component.js';
 
 export interface CanvasAiDropdownController {
@@ -14,6 +14,25 @@ export interface CanvasAiDropdownController {
   open: () => void;
   toggle: () => void;
   update: () => void;
+}
+
+export type PresentationAiTone = 'creative' | 'educational' | 'minimal' | 'pitch' | 'professional';
+
+export interface PresentationAiDropdownOptions {
+  onSuccess: (result: {
+    mode: 'append' | 'replace';
+    slides: Array<{
+      background?: { color: string; dotColor?: string; type: BackgroundType };
+      elements: BoardElement[];
+      name: string;
+    }>;
+    title: string;
+  }) => void;
+  signal?: AbortSignal;
+  slideHeight?: number;
+  slideWidth?: number;
+  trigger: HTMLElement;
+  wrapper: HTMLElement;
 }
 
 export interface BoardAiDropdownOptions {
@@ -26,6 +45,7 @@ export interface BoardAiDropdownOptions {
   trigger: HTMLElement;
   wrapper: HTMLElement;
 }
+
 
 export interface DocAiDropdownOptions {
   getContextText?: () => string | null;
@@ -1150,4 +1170,397 @@ export function setupMindMapAiDropdown(options: MindMapAiDropdownOptions): Canva
     update: () => dropdownController.update(),
   };
 }
+
+const PRESENTATION_TONE_MAP: Record<PresentationAiTone, { desc: string; icon: string; text: string }> = {
+  creative: {
+    desc: 'Estilo moderno de alto impacto con acentos cálidos y corales.',
+    icon: 'palette',
+    text: 'Creativo & Innovación',
+  },
+  educational: {
+    desc: 'Presentación didáctica y clara con acentos verdes y esmeralda.',
+    icon: 'school',
+    text: 'Educativo & Taller',
+  },
+  minimal: {
+    desc: 'Diseño minimalista, tipografía limpia y estética monocromática.',
+    icon: 'crop_free',
+    text: 'Minimalista & Elegante',
+  },
+  pitch: {
+    desc: 'Pitch deck de negocios e inversores con acentos índigo y morado.',
+    icon: 'rocket_launch',
+    text: 'Pitch Deck & Negocios',
+  },
+  professional: {
+    desc: 'Diseño corporativo y ejecutivo con contrastes azul y slate.',
+    icon: 'business_center',
+    text: 'Profesional Ejecutivo',
+  },
+};
+
+export function setupPresentationAiDropdown(options: PresentationAiDropdownOptions): CanvasAiDropdownController {
+  const { onSuccess, signal, slideHeight = 720, slideWidth = 1280, trigger, wrapper } = options;
+  let selectedTone: PresentationAiTone = 'professional';
+  let selectedSlideCount = 5;
+  let selectedMode: 'append' | 'replace' = 'replace';
+
+  let backdrop = wrapper.querySelector<HTMLElement>('[data-ref="dropdown-backdrop-presentation-ai"]');
+  let menu = wrapper.querySelector<HTMLElement>('[data-ref="dropdown-menu-presentation-ai"]');
+
+  if (!backdrop || !menu) {
+    const markup = `
+      <div class="dropdown-backdrop" data-ref="dropdown-backdrop-presentation-ai">
+        <div class="menu-panel menu-panel--dropdown menu-panel--w-465 menu-panel--h-auto design-share-menu" data-ref="dropdown-menu-presentation-ai">
+          <div class="menu-panel__drag-zone" data-ref="presentation-ai-drag-zone" aria-hidden="true">
+            <div class="menu-panel__drag-handle"></div>
+          </div>
+          <div class="design-share-stage" data-ref="presentation-ai-stage-main">
+            <div class="design-share-menu__header">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="component-icon">auto_awesome</span>
+                <h2 class="design-share-menu__title">Generador de Presentación con IA</h2>
+              </div>
+            </div>
+            <p class="settings-item__desc" data-ref="presentation-ai-desc" style="margin: -6px 0 0 0; font-size: 13px; line-height: 1.4; color: var(--text-secondary);">
+              Crea una secuencia completa de diapositivas con portada, desarrollo estructurado, métricas y conclusiones con IA.
+            </p>
+            <div class="design-share-menu__content">
+              <div class="design-share-section" data-ref="presentation-ai-section-tone">
+                <span class="design-share-section__label">Estilo y Tono</span>
+                <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-presentation-tone">
+                  <button type="button" class="dropdown-trigger" data-ref="btn-trigger-presentation-tone" aria-label="Estilo y Tono">
+                    <div class="dropdown-trigger__left">
+                      <span class="component-icon dropdown-trigger__icon" data-ref="presentation-tone-selected-icon">business_center</span>
+                      <span class="dropdown-trigger__text" data-ref="presentation-tone-selected-text">Profesional Ejecutivo</span>
+                    </div>
+                    <span class="component-icon dropdown-trigger__chevron">expand_more</span>
+                  </button>
+                  <div class="dropdown-backdrop" data-ref="dropdown-backdrop-presentation-tone">
+                    <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-presentation-tone" style="max-height: 260px; overflow-y: auto;">
+                      <div class="menu-panel__drag-zone" data-ref="presentation-tone-drag-zone" aria-hidden="true">
+                        <div class="menu-panel__drag-handle"></div>
+                      </div>
+                      <div class="menu-panel__list" data-ref="list-presentation-tone">
+                        <button type="button" class="menu-item is-active" data-ref="btn-tone-professional" data-tone="professional">
+                          <span class="component-icon menu-item__icon">business_center</span>
+                          <span class="menu-item__text">Profesional Ejecutivo</span>
+                        </button>
+                        <button type="button" class="menu-item" data-ref="btn-tone-pitch" data-tone="pitch">
+                          <span class="component-icon menu-item__icon">rocket_launch</span>
+                          <span class="menu-item__text">Pitch Deck & Negocios</span>
+                        </button>
+                        <button type="button" class="menu-item" data-ref="btn-tone-educational" data-tone="educational">
+                          <span class="component-icon menu-item__icon">school</span>
+                          <span class="menu-item__text">Educativo & Taller</span>
+                        </button>
+                        <button type="button" class="menu-item" data-ref="btn-tone-creative" data-tone="creative">
+                          <span class="component-icon menu-item__icon">palette</span>
+                          <span class="menu-item__text">Creativo & Innovación</span>
+                        </button>
+                        <button type="button" class="menu-item" data-ref="btn-tone-minimal" data-tone="minimal">
+                          <span class="component-icon menu-item__icon">crop_free</span>
+                          <span class="menu-item__text">Minimalista & Elegante</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="design-share-section" data-ref="presentation-ai-section-options" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div data-ref="col-slide-count">
+                  <span class="design-share-section__label">Diapositivas</span>
+                  <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-presentation-count">
+                    <button type="button" class="dropdown-trigger" data-ref="btn-trigger-presentation-count" aria-label="Cantidad de diapositivas">
+                      <div class="dropdown-trigger__left">
+                        <span class="component-icon dropdown-trigger__icon">filter_5</span>
+                        <span class="dropdown-trigger__text" data-ref="presentation-count-selected-text">5 diapositivas</span>
+                      </div>
+                      <span class="component-icon dropdown-trigger__chevron">expand_more</span>
+                    </button>
+                    <div class="dropdown-backdrop" data-ref="dropdown-backdrop-presentation-count">
+                      <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-presentation-count">
+                        <div class="menu-panel__list" data-ref="list-presentation-count">
+                          <button type="button" class="menu-item" data-ref="btn-count-3" data-count="3">
+                            <span class="component-icon menu-item__icon">filter_3</span>
+                            <span class="menu-item__text">3 diapositivas (Rápida)</span>
+                          </button>
+                          <button type="button" class="menu-item is-active" data-ref="btn-count-5" data-count="5">
+                            <span class="component-icon menu-item__icon">filter_5</span>
+                            <span class="menu-item__text">5 diapositivas (Estándar)</span>
+                          </button>
+                          <button type="button" class="menu-item" data-ref="btn-count-7" data-count="7">
+                            <span class="component-icon menu-item__icon">filter_7</span>
+                            <span class="menu-item__text">7 diapositivas (Detallada)</span>
+                          </button>
+                          <button type="button" class="menu-item" data-ref="btn-count-10" data-count="10">
+                            <span class="component-icon menu-item__icon">filter_9_plus</span>
+                            <span class="menu-item__text">10 diapositivas (Completa)</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div data-ref="col-slide-mode">
+                  <span class="design-share-section__label">Acción de inserción</span>
+                  <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-presentation-mode">
+                    <button type="button" class="dropdown-trigger" data-ref="btn-trigger-presentation-mode" aria-label="Acción de inserción">
+                      <div class="dropdown-trigger__left">
+                        <span class="component-icon dropdown-trigger__icon" data-ref="presentation-mode-selected-icon">autorenew</span>
+                        <span class="dropdown-trigger__text" data-ref="presentation-mode-selected-text">Reemplazar actual</span>
+                      </div>
+                      <span class="component-icon dropdown-trigger__chevron">expand_more</span>
+                    </button>
+                    <div class="dropdown-backdrop" data-ref="dropdown-backdrop-presentation-mode">
+                      <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-presentation-mode">
+                        <div class="menu-panel__list" data-ref="list-presentation-mode">
+                          <button type="button" class="menu-item is-active" data-ref="btn-mode-replace" data-mode="replace">
+                            <span class="component-icon menu-item__icon">autorenew</span>
+                            <span class="menu-item__text">Reemplazar actual</span>
+                          </button>
+                          <button type="button" class="menu-item" data-ref="btn-mode-append" data-mode="append">
+                            <span class="component-icon menu-item__icon">add_to_photos</span>
+                            <span class="menu-item__text">Añadir al final</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="design-share-section" data-ref="presentation-ai-section-prompt">
+                <span class="design-share-section__label">Tema o contenido de la presentación</span>
+                <label class="field" data-ref="field-presentation-ai-prompt" style="display: block;">
+                  <textarea class="field__input" data-ref="input-presentation-ai-prompt" rows="3" placeholder=" " style="min-height: 84px; padding-top: 18px; resize: vertical; line-height: 1.4;"></textarea>
+                  <span class="field__label" data-ref="lbl-presentation-ai-prompt">¿De qué trata tu presentación? (ej. Pitch de SaaS, Clase de IA, Estrategia Q3)...</span>
+                </label>
+              </div>
+
+              <div class="design-share-section" data-ref="presentation-ai-section-actions">
+                <button type="button" class="component-button component-button--h40 component-button--black component-button--w-full" data-ref="btn-presentation-ai-submit">
+                  <span class="component-icon">auto_awesome</span>
+                  <span>Generar Diapositivas con IA</span>
+                </button>
+                <div class="banner banner--danger" data-ref="presentation-ai-error" style="display: none; margin-top: 8px;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const temp = document.createElement('div');
+    temp.innerHTML = markup.trim();
+    backdrop = temp.firstElementChild as HTMLElement;
+    wrapper.appendChild(backdrop);
+    menu = backdrop.querySelector<HTMLElement>('[data-ref="dropdown-menu-presentation-ai"]');
+    renderIcons(backdrop);
+  }
+
+  const dropdownWrapperTone = wrapper.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-presentation-tone"]');
+  const toneSelectedIcon = wrapper.querySelector<HTMLElement>('[data-ref="presentation-tone-selected-icon"]');
+  const toneSelectedText = wrapper.querySelector<HTMLElement>('[data-ref="presentation-tone-selected-text"]');
+  const descEl = wrapper.querySelector<HTMLElement>('[data-ref="presentation-ai-desc"]');
+
+  const dropdownWrapperCount = wrapper.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-presentation-count"]');
+  const countSelectedText = wrapper.querySelector<HTMLElement>('[data-ref="presentation-count-selected-text"]');
+
+  const dropdownWrapperMode = wrapper.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-presentation-mode"]');
+  const modeSelectedIcon = wrapper.querySelector<HTMLElement>('[data-ref="presentation-mode-selected-icon"]');
+  const modeSelectedText = wrapper.querySelector<HTMLElement>('[data-ref="presentation-mode-selected-text"]');
+
+  const inputPrompt = wrapper.querySelector<HTMLTextAreaElement>('[data-ref="input-presentation-ai-prompt"]');
+  const btnSubmit = wrapper.querySelector<HTMLButtonElement>('[data-ref="btn-presentation-ai-submit"]');
+  const errorBanner = wrapper.querySelector<HTMLElement>('[data-ref="presentation-ai-error"]');
+
+  let toneDropdownCtrl: { close: () => void; destroy: () => void } | null = null;
+  if (dropdownWrapperTone) {
+    toneDropdownCtrl = setupDropdown(dropdownWrapperTone, {});
+  }
+
+  let countDropdownCtrl: { close: () => void; destroy: () => void } | null = null;
+  if (dropdownWrapperCount) {
+    countDropdownCtrl = setupDropdown(dropdownWrapperCount, {});
+  }
+
+  let modeDropdownCtrl: { close: () => void; destroy: () => void } | null = null;
+  if (dropdownWrapperMode) {
+    modeDropdownCtrl = setupDropdown(dropdownWrapperMode, {});
+  }
+
+  const updateToneUI = () => {
+    const info = PRESENTATION_TONE_MAP[selectedTone] || PRESENTATION_TONE_MAP.professional;
+    if (toneSelectedIcon) {
+      setIconUse(toneSelectedIcon, info.icon);
+    }
+    if (toneSelectedText) {
+      toneSelectedText.textContent = info.text;
+    }
+    if (descEl) {
+      descEl.textContent = info.desc;
+    }
+    wrapper.querySelectorAll<HTMLElement>('[data-tone]').forEach((b) => {
+      b.classList.toggle('is-active', b.getAttribute('data-tone') === selectedTone);
+    });
+  };
+
+  const updateCountUI = () => {
+    if (countSelectedText) {
+      countSelectedText.textContent = `${selectedSlideCount} diapositivas`;
+    }
+    wrapper.querySelectorAll<HTMLElement>('[data-count]').forEach((b) => {
+      const c = parseInt(b.getAttribute('data-count') || '5', 10);
+      b.classList.toggle('is-active', c === selectedSlideCount);
+    });
+  };
+
+  const updateModeUI = () => {
+    if (modeSelectedIcon) {
+      setIconUse(modeSelectedIcon, selectedMode === 'replace' ? 'autorenew' : 'add_to_photos');
+    }
+    if (modeSelectedText) {
+      modeSelectedText.textContent = selectedMode === 'replace' ? 'Reemplazar actual' : 'Añadir al final';
+    }
+    wrapper.querySelectorAll<HTMLElement>('[data-mode]').forEach((b) => {
+      b.classList.toggle('is-active', b.getAttribute('data-mode') === selectedMode);
+    });
+  };
+
+  wrapper.querySelectorAll<HTMLElement>('[data-tone]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const tone = btn.getAttribute('data-tone') as PresentationAiTone;
+      if (tone) {
+        selectedTone = tone;
+        updateToneUI();
+        toneDropdownCtrl?.close();
+      }
+    });
+  });
+
+  wrapper.querySelectorAll<HTMLElement>('[data-count]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const cnt = parseInt(btn.getAttribute('data-count') || '5', 10);
+      if (cnt) {
+        selectedSlideCount = cnt;
+        updateCountUI();
+        countDropdownCtrl?.close();
+      }
+    });
+  });
+
+  wrapper.querySelectorAll<HTMLElement>('[data-mode]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const m = btn.getAttribute('data-mode') as 'append' | 'replace';
+      if (m) {
+        selectedMode = m;
+        updateModeUI();
+        modeDropdownCtrl?.close();
+      }
+    });
+  });
+
+  const dropdownController = setupDropdown(wrapper, {
+    backdrop,
+    isSelect: false,
+    matchWidth: false,
+    menu,
+    placement: 'bottom-end',
+    trigger,
+  });
+
+  btnSubmit?.addEventListener('click', async () => {
+    if (!inputPrompt) return;
+    const promptText = inputPrompt.value.trim();
+
+    if (!promptText) {
+      if (errorBanner) {
+        errorBanner.textContent = 'Por favor escribe un tema o descripción para tu presentación.';
+        errorBanner.style.display = 'block';
+      }
+      inputPrompt.focus();
+      return;
+    }
+
+    if (errorBanner) {
+      errorBanner.style.display = 'none';
+      errorBanner.textContent = '';
+    }
+
+    await withButtonLoading(btnSubmit, 'Generando...', async () => {
+      try {
+        const res = await postApi(API_ROUTES.ai.presentation, {
+          prompt: promptText,
+          slideCount: selectedSlideCount,
+          slideHeight,
+          slideWidth,
+          tone: selectedTone,
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || 'No se pudo generar la presentación con IA.');
+        }
+
+        const data = await res.json();
+        if (!data.presentation || !Array.isArray(data.presentation.slides) || data.presentation.slides.length === 0) {
+          throw new Error('La respuesta de la IA no contiene diapositivas válidas.');
+        }
+
+        onSuccess({
+          mode: selectedMode,
+          slides: data.presentation.slides,
+          title: data.presentation.title || promptText,
+        });
+
+        dropdownController.close();
+        showToast(`✨ Presentación de ${data.presentation.slides.length} diapositivas generada con éxito`, 'success');
+      } catch (err: any) {
+        if (errorBanner) {
+          errorBanner.textContent = err.message || 'Ha ocurrido un problema al comunicarse con el servicio de IA.';
+          errorBanner.style.display = 'block';
+        }
+      }
+    });
+  });
+
+  trigger.addEventListener('click', () => {
+    if (errorBanner) {
+      errorBanner.style.display = 'none';
+      errorBanner.textContent = '';
+    }
+    setTimeout(() => inputPrompt?.focus(), 50);
+  }, { signal });
+
+  return {
+    close: () => dropdownController.close(),
+    destroy: () => {
+      toneDropdownCtrl?.destroy();
+      countDropdownCtrl?.destroy();
+      modeDropdownCtrl?.destroy();
+      dropdownController.destroy();
+    },
+    open: () => {
+      if (errorBanner) {
+        errorBanner.style.display = 'none';
+        errorBanner.textContent = '';
+      }
+      dropdownController.open();
+      setTimeout(() => inputPrompt?.focus(), 50);
+    },
+    toggle: () => {
+      if (errorBanner) {
+        errorBanner.style.display = 'none';
+        errorBanner.textContent = '';
+      }
+      dropdownController.toggle();
+      setTimeout(() => inputPrompt?.focus(), 50);
+    },
+    update: () => dropdownController.update(),
+  };
+}
+
 

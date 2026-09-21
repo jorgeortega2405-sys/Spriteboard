@@ -15,6 +15,9 @@ aiRouter.post('/doc', requireAuth, aiChatLimiter, AiController.generateDoc);
 aiRouter.post('/ai/doc', requireAuth, aiChatLimiter, AiController.generateDoc);
 aiRouter.post('/board', requireAuth, aiChatLimiter, AiController.generateBoard);
 aiRouter.post('/ai/board', requireAuth, aiChatLimiter, AiController.generateBoard);
+aiRouter.post('/presentation', requireAuth, aiChatLimiter, AiController.generatePresentation);
+aiRouter.post('/ai/presentation', requireAuth, aiChatLimiter, AiController.generatePresentation);
 
 export default aiRouter;
+
 

@@ -303,7 +303,64 @@ export class AiController {
       });
     }
   }
+
+  static async generatePresentation(req: Request, res: Response): Promise<void> {
+    try {
+      const { prompt, slideCount = 5, slideHeight = 720, slideWidth = 1280, targetLanguage = 'es', tone = 'professional' } = req.body;
+
+      if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
+        res.status(400).json({
+          error: 'El tema o descripción de la presentación no puede estar vacío.',
+          success: false,
+        });
+        return;
+      }
+
+      if (prompt.length > 2000) {
+        res.status(400).json({
+          error: 'La descripción excede el límite permitido de caracteres.',
+          success: false,
+        });
+        return;
+      }
+
+      const validTones = ['creative', 'educational', 'minimal', 'pitch', 'professional'];
+      const validTone = (validTones.includes(tone) ? tone : 'professional') as
+        | 'creative'
+        | 'educational'
+        | 'minimal'
+        | 'pitch'
+        | 'professional';
+
+      const validCount = typeof slideCount === 'number' ? Math.max(3, Math.min(10, Math.round(slideCount))) : 5;
+      const validWidth = typeof slideWidth === 'number' && slideWidth > 200 && slideWidth <= 3840 ? Math.round(slideWidth) : 1280;
+      const validHeight = typeof slideHeight === 'number' && slideHeight > 200 && slideHeight <= 2160 ? Math.round(slideHeight) : 720;
+      const cleanLang = typeof targetLanguage === 'string' ? targetLanguage.trim().slice(0, 10) : 'es';
+
+      const result = await AiService.generatePresentation(
+        prompt.trim(),
+        validCount,
+        validTone,
+        cleanLang,
+        validWidth,
+        validHeight
+      );
+
+      res.status(200).json({
+        presentation: result,
+        success: true,
+      });
+    } catch (error) {
+      logger.app.error('AiController: Error al generar presentación con IA', error);
+
+      res.status(500).json({
+        error: 'Ha ocurrido un error inesperado al generar la presentación. Por favor intenta más tarde.',
+        success: false,
+      });
+    }
+  }
 }
 
 export default AiController;
+
 

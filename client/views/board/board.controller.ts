@@ -1,4 +1,4 @@
-import { CanvasAiDropdownController, setupBoardAiDropdown } from '../../components/canvas-ai-dropdown.component.js';
+import { CanvasAiDropdownController, setupBoardAiDropdown, setupPresentationAiDropdown } from '../../components/canvas-ai-dropdown.component.js';
 import { CanvasCommentsController } from '../../components/canvas-comments.component.js';
 import { CanvasHistoryDropdownController, setupCanvasHistoryDropdown } from '../../components/canvas-history-dropdown.component.js';
 import { openCanvasMetricsModal } from '../../components/canvas-metrics-modal.component.js';
@@ -1084,14 +1084,27 @@ export class BoardController {
 
     const btnBoardAi = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-board-ai"]');
     if (this.aiWrapperEl && btnBoardAi) {
-      this.aiDropdownController = setupBoardAiDropdown({
-        onSuccess: ({ elements }) => {
-          this.insertAiGeneratedBoardElements(elements);
-        },
-        signal,
-        trigger: btnBoardAi,
-        wrapper: this.aiWrapperEl,
-      });
+      if (this.isPresentation) {
+        this.aiDropdownController = setupPresentationAiDropdown({
+          onSuccess: ({ mode, slides, title }) => {
+            this.insertAiGeneratedPresentation(slides, mode, title);
+          },
+          signal,
+          slideHeight: this.slideHeight,
+          slideWidth: this.slideWidth,
+          trigger: btnBoardAi,
+          wrapper: this.aiWrapperEl,
+        });
+      } else {
+        this.aiDropdownController = setupBoardAiDropdown({
+          onSuccess: ({ elements }) => {
+            this.insertAiGeneratedBoardElements(elements);
+          },
+          signal,
+          trigger: btnBoardAi,
+          wrapper: this.aiWrapperEl,
+        });
+      }
     }
 
     this.bindToolbarTools(signal);
@@ -1209,6 +1222,7 @@ export class BoardController {
     });
 
     for (const el of positionedElements) {
+      this.clampElementToSlide(el);
       this.elements.push(el);
       this.collaborationManager.broadcastAddElement(el);
     }
@@ -1220,6 +1234,81 @@ export class BoardController {
     this.scheduleAutoSave();
   }
 
+  private insertAiGeneratedPresentation(
+    aiSlides: Array<{
+      background?: { color: string; dotColor?: string; type: BackgroundType };
+      elements: BoardElement[];
+      name: string;
+    }>,
+    mode: 'append' | 'replace' = 'replace',
+    presTitle?: string
+  ): void {
+    if (!aiSlides || aiSlides.length === 0) return;
+    this.pushHistoryState();
+
+    const convertedPages: BoardPageItem[] = aiSlides.map((slide, sIdx) => {
+      const pageId = `page-${Date.now()}-${sIdx}-${Math.random().toString(36).slice(2, 6)}`;
+      const idMap = new Map<string, string>();
+      slide.elements.forEach((el, eIdx) => {
+        if (el.id) idMap.set(el.id, `el-ai-${Date.now()}-${sIdx}-${eIdx}-${Math.random().toString(36).slice(2, 7)}`);
+      });
+
+      const positioned = slide.elements.map((el, eIdx) => {
+        const copy = JSON.parse(JSON.stringify(el)) as BoardElement;
+        copy.id = (copy.id && idMap.get(copy.id)) || `el-ai-${Date.now()}-${sIdx}-${eIdx}-${Math.random().toString(36).slice(2, 7)}`;
+        if (copy.type === 'connector') {
+          const conn = copy as any;
+          if (conn.fromId && idMap.has(conn.fromId)) conn.fromId = idMap.get(conn.fromId);
+          if (conn.toId && idMap.has(conn.toId)) conn.toId = idMap.get(conn.toId);
+        }
+        this.clampElementToSlide(copy);
+        return copy;
+      });
+
+      return {
+        background: slide.background || { color: '#ffffff', dotColor: '#cbd5e1', type: 'solid' },
+        camera: { x: 0, y: 0, zoom: 1 },
+        createdAt: Date.now() + sIdx,
+        elements: positioned,
+        id: pageId,
+        name: slide.name || `Diapositiva ${sIdx + 1}`,
+      };
+    });
+
+    if (mode === 'replace') {
+      this.pages = convertedPages;
+      this.activePageId = this.pages[0].id;
+      this.elements = this.pages[0].elements || [];
+      this.boardBackground = this.pages[0].background || { color: '#ffffff', dotColor: '#cbd5e1', type: 'solid' };
+      this.camera = this.pages[0].camera || { x: 0, y: 0, zoom: 1 };
+    } else {
+      this.pages.push(...convertedPages);
+      this.switchToPage(convertedPages[0].id);
+    }
+
+    if (presTitle && (this.boardName === 'Presentación sin título' || this.boardName === 'Pizarrón sin título')) {
+      this.boardName = presTitle;
+      const titleEl = this.container.querySelector<HTMLElement>('[data-ref="board-title"]');
+      if (titleEl) titleEl.textContent = this.boardName;
+      document.title = `${this.boardName} - Spriteboard`;
+    }
+
+    this.selectedElementId = null;
+    this.selectedElementIds = [];
+    this.updateSelectionToolbar();
+    this.history.clear();
+    this.history.pushState(this.elements);
+    this.updateUndoRedoUI();
+    this.updatePagesUI();
+    this.requestRedraw();
+    this.scheduleAutoSave();
+    this.collaborationManager.broadcastFullUpdate({
+      activePageId: this.activePageId,
+      background: this.boardBackground,
+      elements: this.elements,
+      pages: this.pages,
+    });
+  }
 
   private bindToolbarTools(signal: AbortSignal): void {
     const toolButtons = this.container.querySelectorAll<HTMLButtonElement>('[data-tool]');
@@ -2815,6 +2904,7 @@ export class BoardController {
         this.pixelGrid.deleteState(cloned.id);
       }
 
+      this.clampElementToSlide(cloned);
       this.elements.push(cloned);
       this.collaborationManager.broadcastAddElement(cloned);
       newIds.push(cloned.id);
@@ -3235,6 +3325,7 @@ export class BoardController {
             x: worldPos.x - 80,
             y: worldPos.y - 80,
           };
+          this.clampElementToSlide(stickyEl);
           this.elements.push(stickyEl);
           this.collaborationManager.broadcastAddElement(stickyEl);
           this.selectedElementId = stickyEl.id;
@@ -3265,6 +3356,7 @@ export class BoardController {
             x: worldPos.x,
             y: worldPos.y,
           };
+          this.clampElementToSlide(textEl);
           this.elements.push(textEl);
           this.collaborationManager.broadcastAddElement(textEl);
           this.selectedElementId = textEl.id;
@@ -3293,6 +3385,7 @@ export class BoardController {
             x: worldPos.x - 70,
             y: worldPos.y - 50,
           };
+          this.clampElementToSlide(shapeEl);
           this.elements.push(shapeEl);
           this.collaborationManager.broadcastAddElement(shapeEl);
           this.selectedElementId = shapeEl.id;
@@ -3619,6 +3712,7 @@ export class BoardController {
         x: Math.round(worldPos.x - 100),
         y: Math.round(worldPos.y - 90),
       };
+      this.clampElementToSlide(stickyEl);
       this.elements.push(stickyEl);
       this.collaborationManager.broadcastAddElement(stickyEl);
       this.selectedElementId = stickyEl.id;
@@ -3646,6 +3740,7 @@ export class BoardController {
         x: Math.round(worldPos.x),
         y: Math.round(worldPos.y),
       };
+      this.clampElementToSlide(textEl);
       this.elements.push(textEl);
       this.collaborationManager.broadcastAddElement(textEl);
       this.selectedElementId = textEl.id;
@@ -3737,7 +3832,20 @@ export class BoardController {
           } else {
             this.activeAlignmentGuides = [];
           }
+          if (this.isPresentation) {
+            const minX = -this.slideWidth / 2;
+            const maxX = this.slideWidth / 2;
+            const minY = -this.slideHeight / 2;
+            const maxY = this.slideHeight / 2;
+            targetWorldPos = {
+              x: Math.max(minX, Math.min(maxX, targetWorldPos.x)),
+              y: Math.max(minY, Math.min(maxY, targetWorldPos.y)),
+            };
+          }
           resizeElementByHandle(el, this.resizeHandleType, targetWorldPos, this.selectionStartRect, e.shiftKey);
+          if (this.isPresentation) {
+            this.clampElementToSlide(el);
+          }
           this.setResizeCursor(this.resizeHandleType);
         }
       } else {
@@ -3766,6 +3874,24 @@ export class BoardController {
           this.activeAlignmentGuides = snapRes.guides;
         } else {
           this.activeAlignmentGuides = [];
+        }
+
+        if (this.isPresentation && this.selectionStartBBox) {
+          const minX = -this.slideWidth / 2;
+          const maxX = this.slideWidth / 2;
+          const minY = -this.slideHeight / 2;
+          const maxY = this.slideHeight / 2;
+
+          if (this.selectionStartBBox.width <= this.slideWidth) {
+            const minDx = minX - this.selectionStartBBox.x;
+            const maxDx = maxX - (this.selectionStartBBox.x + this.selectionStartBBox.width);
+            effectiveDx = Math.max(minDx, Math.min(maxDx, effectiveDx));
+          }
+          if (this.selectionStartBBox.height <= this.slideHeight) {
+            const minDy = minY - this.selectionStartBBox.y;
+            const maxDy = maxY - (this.selectionStartBBox.y + this.selectionStartBBox.height);
+            effectiveDy = Math.max(minDy, Math.min(maxDy, effectiveDy));
+          }
         }
 
         for (const [id, startPos] of this.selectionStartPositions.entries()) {
@@ -3809,21 +3935,32 @@ export class BoardController {
       }
 
       if (this.liveDraftElement) {
+        let drawWorldPos = worldPos;
+        if (this.isPresentation) {
+          const minX = -this.slideWidth / 2;
+          const maxX = this.slideWidth / 2;
+          const minY = -this.slideHeight / 2;
+          const maxY = this.slideHeight / 2;
+          drawWorldPos = {
+            x: Math.max(minX, Math.min(maxX, worldPos.x)),
+            y: Math.max(minY, Math.min(maxY, worldPos.y)),
+          };
+        }
         if (this.liveDraftElement.type === 'stroke') {
           const pts = this.liveDraftElement.points;
           const lastPt = pts[pts.length - 1];
           const minDistance = Math.max(1, 1.5 / this.camera.zoom);
-          if (!lastPt || Math.hypot(worldPos.x - lastPt.x, worldPos.y - lastPt.y) >= minDistance) {
-            pts.push(worldPos);
+          if (!lastPt || Math.hypot(drawWorldPos.x - lastPt.x, drawWorldPos.y - lastPt.y) >= minDistance) {
+            pts.push(drawWorldPos);
             this.requestRedraw();
           }
         } else if (this.liveDraftElement.type === 'shape') {
-          this.liveDraftElement.width = worldPos.x - this.liveDraftElement.x;
-          this.liveDraftElement.height = worldPos.y - this.liveDraftElement.y;
+          this.liveDraftElement.width = drawWorldPos.x - this.liveDraftElement.x;
+          this.liveDraftElement.height = drawWorldPos.y - this.liveDraftElement.y;
           this.requestRedraw();
         } else if (this.liveDraftElement.type === 'connector') {
-          this.liveDraftElement.endPoint = worldPos;
-          const hit = hitTestElement(this.elements, worldPos.x, worldPos.y, this.camera.zoom);
+          this.liveDraftElement.endPoint = drawWorldPos;
+          const hit = hitTestElement(this.elements, drawWorldPos.x, drawWorldPos.y, this.camera.zoom);
           this.liveDraftElement.toId = hit && hit.id !== this.liveDraftElement.fromId ? hit.id : undefined;
           this.requestRedraw();
         }
@@ -4021,6 +4158,7 @@ export class BoardController {
             return;
           }
         }
+        this.clampElementToSlide(this.liveDraftElement);
         this.elements.push(this.liveDraftElement);
         this.collaborationManager.broadcastAddElement(this.liveDraftElement);
         this.selectedElementId = this.liveDraftElement.id;
@@ -4457,6 +4595,7 @@ export class BoardController {
       type: 'connector',
     };
     this.pushHistoryState();
+    this.clampElementToSlide(childNode);
     this.elements.push(childNode, connector);
     this.collaborationManager.broadcastAddElement(childNode);
     this.collaborationManager.broadcastAddElement(connector);
@@ -4496,6 +4635,7 @@ export class BoardController {
       y: siblingY,
     };
     this.pushHistoryState();
+    this.clampElementToSlide(siblingNode);
     this.elements.push(siblingNode);
     this.collaborationManager.broadcastAddElement(siblingNode);
     this.selectedElementId = siblingNode.id;
@@ -4504,6 +4644,35 @@ export class BoardController {
     this.requestRedraw();
     this.scheduleAutoSave();
     this.openInlineEditor(siblingNode);
+  }
+
+  private clampElementToSlide(el: BoardElement): void {
+    if (!this.isPresentation) return;
+    const minX = -this.slideWidth / 2;
+    const maxX = this.slideWidth / 2;
+    const minY = -this.slideHeight / 2;
+    const maxY = this.slideHeight / 2;
+
+    if ('width' in el && 'height' in el && 'x' in el && 'y' in el) {
+      el.width = Math.min(this.slideWidth, Math.max(20, el.width));
+      el.height = Math.min(this.slideHeight, Math.max(20, el.height));
+      el.x = Math.max(minX, Math.min(maxX - el.width, el.x));
+      el.y = Math.max(minY, Math.min(maxY - el.height, el.y));
+    } else if (el.type === 'stroke') {
+      for (const p of el.points) {
+        p.x = Math.max(minX, Math.min(maxX, p.x));
+        p.y = Math.max(minY, Math.min(maxY, p.y));
+      }
+    } else if (el.type === 'connector') {
+      if (el.startPoint) {
+        el.startPoint.x = Math.max(minX, Math.min(maxX, el.startPoint.x));
+        el.startPoint.y = Math.max(minY, Math.min(maxY, el.startPoint.y));
+      }
+      if (el.endPoint) {
+        el.endPoint.x = Math.max(minX, Math.min(maxX, el.endPoint.x));
+        el.endPoint.y = Math.max(minY, Math.min(maxY, el.endPoint.y));
+      }
+    }
   }
 
   private requestRedraw(): void {
@@ -4572,6 +4741,13 @@ export class BoardController {
     const viewMinY = Math.min(topLeft.y, botRight.y);
     const viewMaxY = Math.max(topLeft.y, botRight.y);
 
+    if (this.isPresentation) {
+      this.ctx.save();
+      this.ctx.beginPath();
+      this.ctx.rect(-this.slideWidth / 2, -this.slideHeight / 2, this.slideWidth, this.slideHeight);
+      this.ctx.clip();
+    }
+
     const sections = this.elements.filter((e) => e.type === 'section') as BoardSectionElement[];
 
     for (const el of this.elements) {
@@ -4635,6 +4811,10 @@ export class BoardController {
       } else {
         this.drawElement(this.liveDraftElement);
       }
+    }
+
+    if (this.isPresentation) {
+      this.ctx.restore();
     }
 
     if (this.selectedElementIds.length > 0) {
@@ -5018,6 +5198,7 @@ export class BoardController {
         y: Math.round(centerWorld.y - elHeight / 2),
       };
 
+      this.clampElementToSlide(shapeEl);
       this.elements.push(shapeEl);
       this.collaborationManager.broadcastAddElement(shapeEl);
       this.selectedElementId = shapeEl.id;
@@ -5039,6 +5220,7 @@ export class BoardController {
         x: Math.round(centerWorld.x - 60),
         y: Math.round(centerWorld.y - 60),
       };
+      this.clampElementToSlide(imgEl);
       this.elements.push(imgEl);
       this.collaborationManager.broadcastAddElement(imgEl);
       this.selectedElementId = imgEl.id;
@@ -5088,6 +5270,7 @@ export class BoardController {
       y: Math.round(centerWorld.y - h / 2),
     };
 
+    this.clampElementToSlide(shapeEl);
     this.elements.push(shapeEl);
     this.collaborationManager.broadcastAddElement(shapeEl);
     this.selectedElementId = shapeEl.id;
@@ -5118,6 +5301,7 @@ export class BoardController {
       y: Math.round(centerWorld.y - size / 2),
     };
 
+    this.clampElementToSlide(stickyEl);
     this.elements.push(stickyEl);
     this.collaborationManager.broadcastAddElement(stickyEl);
     this.selectedElementId = stickyEl.id;
@@ -5154,6 +5338,7 @@ export class BoardController {
       y: Math.round(centerWorld.y - sz.height / 2),
     };
 
+    this.clampElementToSlide(textEl);
     this.elements.push(textEl);
     this.collaborationManager.broadcastAddElement(textEl);
     this.selectedElementId = textEl.id;
@@ -5245,6 +5430,7 @@ export class BoardController {
       };
     });
 
+    clonedElements.forEach((el) => this.clampElementToSlide(el));
     this.elements.push(...clonedElements);
     this.pixelGrid.syncPixelGridCanvases(this.elements, () => this.requestRedraw());
     clonedElements.forEach((el) => this.collaborationManager.broadcastAddElement(el));
@@ -5401,6 +5587,7 @@ export class BoardController {
       }
     });
 
+    newElements.forEach((el) => this.clampElementToSlide(el));
     this.elements.push(...newElements);
     this.pixelGrid.syncPixelGridCanvases(this.elements, () => this.requestRedraw());
     newElements.forEach((el) => this.collaborationManager.broadcastAddElement(el));
@@ -5498,6 +5685,7 @@ export class BoardController {
       }
     });
 
+    newElements.forEach((el) => this.clampElementToSlide(el));
     this.elements.push(...newElements);
     this.pixelGrid.syncPixelGridCanvases(this.elements, () => this.requestRedraw());
     newElements.forEach((el) => this.collaborationManager.broadcastAddElement(el));
@@ -5537,6 +5725,7 @@ export class BoardController {
       y: Math.round(centerWorld.y - elementHeight / 2),
     };
 
+    this.clampElementToSlide(gridEl);
     this.elements.push(gridEl);
     this.pixelGrid.syncPixelGridCanvases(this.elements, () => this.requestRedraw());
     this.collaborationManager.broadcastAddElement(gridEl);
@@ -5586,6 +5775,7 @@ export class BoardController {
       y: Math.round(centerWorld.y - targetH / 2),
     };
 
+    this.clampElementToSlide(imageEl);
     this.elements.push(imageEl);
     this.collaborationManager.broadcastAddElement(imageEl);
     this.selectedElementId = imageEl.id;
@@ -6347,6 +6537,7 @@ export class BoardController {
       y: Math.round(centerWorld.y - elementHeight / 2),
     };
 
+    this.clampElementToSlide(gridEl);
     this.elements.push(gridEl);
     this.collaborationManager.broadcastAddElement(gridEl);
     this.selectedElementId = gridEl.id;
@@ -6464,7 +6655,7 @@ export class BoardController {
       btn.addEventListener(
         'click',
         () => {
-          const size = parseInt(btn.getAttribute('data-pixel-brush') || '1', 10);
+          const size = parseInt(btn.getAttribute('data-pixel-brush') || '1', 10) === this.pixelGrid.activePixelBrushSize ? this.pixelGrid.activePixelBrushSize : parseInt(btn.getAttribute('data-pixel-brush') || '1', 10);
           this.setPixelBrushSize(size);
         },
         { signal }
@@ -6803,6 +6994,7 @@ export class BoardController {
       y: Math.round(centerWorld.y - h / 2),
     };
 
+    this.clampElementToSlide(shape3dEl);
     this.elements.push(shape3dEl);
     this.collaborationManager.broadcastAddElement(shape3dEl);
     this.selectedElementId = shape3dEl.id;
@@ -6837,6 +7029,7 @@ export class BoardController {
       y: Math.round(centerWorld.y - h / 2),
     };
 
+    this.clampElementToSlide(shapeEl);
     this.elements.push(shapeEl);
     this.collaborationManager.broadcastAddElement(shapeEl);
     this.selectedElementId = shapeEl.id;
@@ -6869,6 +7062,7 @@ export class BoardController {
       y: Math.round(centerWorld.y - height / 2),
     };
 
+    this.clampElementToSlide(sectionEl);
     this.elements.unshift(sectionEl);
     this.collaborationManager.broadcastAddElement(sectionEl);
     this.selectedElementId = sectionEl.id;
@@ -6919,6 +7113,7 @@ export class BoardController {
       y: Math.round(centerWorld.y - height / 2),
     };
 
+    this.clampElementToSlide(tableEl);
     this.elements.push(tableEl);
     this.collaborationManager.broadcastAddElement(tableEl);
     this.selectedElementId = tableEl.id;
@@ -7367,6 +7562,7 @@ export class BoardController {
       y: Math.round((worldPos ? worldPos.y : center.y) - chartH / 2),
     };
 
+    this.clampElementToSlide(chartEl);
     this.elements.push(chartEl);
     this.collaborationManager.broadcastAddElement(chartEl);
     this.selectedElementId = chartEl.id;
@@ -7424,6 +7620,7 @@ export class BoardController {
       y: Math.round((worldPos ? worldPos.y : center.y) - tpl.height / 2),
     };
 
+    this.clampElementToSlide(mockupEl);
     this.elements.push(mockupEl);
     this.collaborationManager.broadcastAddElement(mockupEl);
     this.selectedElementId = mockupEl.id;
@@ -7547,6 +7744,7 @@ export class BoardController {
                   x: Math.round(world.x - w / 2),
                   y: Math.round(world.y - h / 2),
                 };
+                this.clampElementToSlide(imgEl);
                 this.elements.push(imgEl);
                 this.collaborationManager.broadcastAddElement(imgEl);
                 this.selectedElementId = imgEl.id;

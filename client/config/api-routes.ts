@@ -85,6 +85,7 @@ export const API_ROUTES = {
     chatFeedback: '/api/chat/feedback',
     doc: '/api/ai/doc',
     mindmap: '/api/ai/mindmap',
+    presentation: '/api/ai/presentation',
   },
   support: {
     active: '/api/support/active',
