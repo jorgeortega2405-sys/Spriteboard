@@ -329,6 +329,8 @@ body[data-theme="dark"] .login-logo-img {
   color: var(--text-muted);
   position: absolute;
   left: 18px;
+  top: 50%;
+  transform: translateY(-50%);
   pointer-events: none;
 }
 

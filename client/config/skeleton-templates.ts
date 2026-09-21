@@ -473,15 +473,15 @@ export const SKELETON_TEMPLATES: Record<string, string> = {
       ${SKELETON_RAIL_HTML}
       <div class="layout-content skeleton-container" data-ref="skeleton-canvas-view">
         <div class="component-wrapper component-wrapper--full no-padding view-wrapper" data-ref="skeleton-canvas-wrapper">
-          <div class="component-top" data-ref="skeleton-canvas-top">
+          <div class="component-top component-top--gradient" data-ref="skeleton-canvas-top">
             <div class="component-top-left" data-ref="skeleton-canvas-top-left">
               <div class="skeleton skeleton--title" style="width: 180px; height: 26px; margin: 0;"></div>
             </div>
             <div class="component-top-right" data-ref="skeleton-canvas-top-right">
               <div style="display: flex; gap: 8px;">
-                <div class="skeleton" style="width: 40px; height: 40px; border-radius: var(--radius-md);"></div>
-                <div class="skeleton" style="width: 40px; height: 40px; border-radius: var(--radius-md);"></div>
-                <div class="skeleton" style="width: 90px; height: 40px; border-radius: var(--radius-md);"></div>
+                <div class="skeleton" style="width: 40px; height: 40px; border-radius: 12px;"></div>
+                <div class="skeleton" style="width: 40px; height: 40px; border-radius: 12px;"></div>
+                <div class="skeleton" style="width: 90px; height: 40px; border-radius: 12px;"></div>
               </div>
             </div>
           </div>
@@ -496,7 +496,7 @@ export const SKELETON_TEMPLATES: Record<string, string> = {
   'canvas-layout-bottom': `
     <div class="layout-content skeleton-container" data-ref="skeleton-canvas-view">
       <div class="component-wrapper component-wrapper--full no-padding view-wrapper" data-ref="skeleton-canvas-wrapper">
-        <div class="component-top" data-ref="skeleton-canvas-top">
+        <div class="component-top component-top--gradient" data-ref="skeleton-canvas-top">
           <div class="component-top-left" data-ref="skeleton-canvas-top-left">
             <div class="skeleton skeleton--title" style="width: 180px; height: 26px; margin: 0;"></div>
           </div>

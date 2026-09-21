@@ -1,4 +1,5 @@
 import { CanvasAiDropdownController, setupDocAiDropdown } from '../../components/canvas-ai-dropdown.component.js';
+import { openCanvasMetricsModal } from '../../components/canvas-metrics-modal.component.js';
 import { CanvasShareDropdownController, setupCanvasShareDropdown } from '../../components/canvas-share-dropdown.component.js';
 import { closeContextMenu, ContextMenuItem, openContextMenu } from '../../components/context-menu.component.js';
 import { openModal } from '../../components/modal.component.js';
@@ -55,6 +56,9 @@ export class DocController implements ViewController {
   private aiDropdownController: CanvasAiDropdownController | null = null;
   private aiWrapperEl: HTMLElement | null = null;
   private alignmentDropdownController: { close: () => void; destroy: () => void } | null = null;
+  private btnDocCloudStatus: HTMLButtonElement | null = null;
+  private btnDocHistory: HTMLButtonElement | null = null;
+  private btnDocMetrics: HTMLButtonElement | null = null;
   private canvasCreatedAt: string | null = null;
   private canvasServerId: number | null = null;
   private canvasTitle = 'Documento sin título';
@@ -128,6 +132,9 @@ export class DocController implements ViewController {
     this.collaboratorsListEl = this.container.querySelector<HTMLElement>('[data-ref="doc-collaborators-list"]');
     this.aiWrapperEl = this.container.querySelector<HTMLElement>('[data-ref="doc-ai-wrapper"]');
     this.shareWrapperEl = this.container.querySelector<HTMLElement>('[data-ref="doc-share-wrapper"]');
+    this.btnDocCloudStatus = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-doc-cloud-status"]');
+    this.btnDocMetrics = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-doc-metrics"]');
+    this.btnDocHistory = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-doc-history"]');
     this.setupCollaboration();
 
     this.historyManager.pushState(this.project);
@@ -416,6 +423,37 @@ export class DocController implements ViewController {
           document.title = `${this.canvasTitle} - Spriteboard`;
           this.scheduleAutosave();
         }
+      }, { signal });
+    }
+
+    if (this.btnDocCloudStatus) {
+      this.btnDocCloudStatus.addEventListener('click', () => {
+        if (!navigator.onLine) {
+          showToast('Sin conexión a internet. Los cambios están guardados localmente.', 'info');
+          return;
+        }
+        void this.saveNow();
+      }, { signal });
+    }
+
+    const handleOnline = () => {
+      this.scheduleAutosave();
+    };
+    const handleOffline = () => {
+      this.setSaveStatus('error', 'Sin conexión a internet (guardado local)');
+    };
+    window.addEventListener('online', handleOnline, { signal });
+    window.addEventListener('offline', handleOffline, { signal });
+
+    if (this.btnDocMetrics) {
+      this.btnDocMetrics.addEventListener('click', () => {
+        openCanvasMetricsModal(this.canvasUuid, this.canvasTitle);
+      }, { signal });
+    }
+
+    if (this.btnDocHistory) {
+      this.btnDocHistory.addEventListener('click', () => {
+        showToast('El historial de versiones para documentos estará disponible próximamente.', 'info');
       }, { signal });
     }
 
@@ -2333,6 +2371,7 @@ export class DocController implements ViewController {
     if (this.saveDebounceTimer) {
       clearTimeout(this.saveDebounceTimer);
     }
+    this.setSaveStatus('saving');
     this.saveDebounceTimer = window.setTimeout(() => {
       this.saveNow();
     }, 1500);
@@ -2341,6 +2380,7 @@ export class DocController implements ViewController {
   private async saveNow(): Promise<void> {
     if (this.isSaving) return;
     this.isSaving = true;
+    this.setSaveStatus('saving');
 
     try {
       const dataStr = JSON.stringify(this.project);
@@ -2361,7 +2401,7 @@ export class DocController implements ViewController {
       });
 
       if (currentUser) {
-        await postApi(API_ROUTES.canvases.sync, {
+        const res = await postApi(API_ROUTES.canvases.sync, {
           canvas_type: 'doc',
           data: dataStr,
           height: 1056,
@@ -2371,11 +2411,46 @@ export class DocController implements ViewController {
           uuid: this.canvasUuid,
           width: 816,
         });
+        if (res.ok) {
+          this.setSaveStatus('saved');
+        } else {
+          this.setSaveStatus('error');
+        }
+      } else {
+        this.setSaveStatus('saved');
       }
     } catch {
+      this.setSaveStatus('error');
     } finally {
       this.isSaving = false;
     }
+  }
+
+  private setSaveStatus(status: 'saved' | 'saving' | 'error', customTooltip?: string): void {
+    if (!this.btnDocCloudStatus) return;
+    this.btnDocCloudStatus.classList.remove('is-saved', 'is-saving', 'is-error');
+    this.btnDocCloudStatus.classList.add(`is-${status}`);
+
+    const iconSaved = this.btnDocCloudStatus.querySelector('.icon-status-saved');
+    const iconSaving = this.btnDocCloudStatus.querySelector('.icon-status-saving');
+    const iconError = this.btnDocCloudStatus.querySelector('.icon-status-error');
+
+    if (iconSaved) iconSaved.classList.toggle('is-hidden', status !== 'saved');
+    if (iconSaving) iconSaving.classList.toggle('is-hidden', status !== 'saving');
+    if (iconError) iconError.classList.toggle('is-hidden', status !== 'error');
+
+    let tooltip = customTooltip;
+    if (!tooltip) {
+      if (status === 'saved') {
+        tooltip = 'Todos los cambios están guardados en la nube';
+      } else if (status === 'saving') {
+        tooltip = 'Guardando cambios en la nube...';
+      } else {
+        tooltip = navigator.onLine ? 'Error al guardar. Se reintentará automáticamente' : 'Sin conexión a internet (guardado local)';
+      }
+    }
+    this.btnDocCloudStatus.setAttribute('data-tooltip', tooltip);
+    this.btnDocCloudStatus.setAttribute('aria-label', tooltip);
   }
 
   private openWatermarkModal(): void {

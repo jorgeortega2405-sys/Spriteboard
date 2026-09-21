@@ -1764,8 +1764,8 @@ html.dark-theme .component-badge.active:hover {
 }
 
 .team-badge--owner {
-  background-color: rgba(99, 102, 241, 0.12);
-  color: #6366f1;
+  background-color: rgba(37, 99, 235, 0.12);
+  color: var(--color-brand-blue, #2563eb);
 }
 
 .team-badge--admin {
@@ -1776,4 +1776,53 @@ html.dark-theme .component-badge.active:hover {
 .team-badge--member {
   background-color: var(--bg-hover);
   color: var(--text-secondary);
+}
+
+.canvas-save-status-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  color: var(--text-secondary, #64748b);
+}
+
+.canvas-save-status-btn .component-icon {
+  width: 18px;
+  height: 18px;
+  font-size: 18px;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.canvas-save-status-btn.is-saved {
+  color: var(--text-secondary, #64748b);
+}
+
+.canvas-save-status-btn.is-saved:hover {
+  color: var(--text-primary, #0f172a);
+}
+
+.canvas-save-status-btn.is-saving {
+  color: var(--action-primary, #2563eb);
+}
+
+.canvas-save-status-btn.is-saving .icon-status-saving {
+  animation: canvas-save-spin 1s linear infinite;
+}
+
+.canvas-save-status-btn.is-error {
+  color: #ef4444;
+}
+
+.canvas-save-status-btn.is-error:hover {
+  color: #dc2626;
+}
+
+@keyframes canvas-save-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }

@@ -1,5 +1,5 @@
 import { hitTest3DRotationGizmo } from './board-3d-renderer.js';
-import { Board3DElement, BoardConnectorElement, BoardElement, BoardPoint, BoardSectionElement, BoardShapeElement, BoardStrokeElement, ResizeHandle, ShapeType } from './board.types.js';
+import { Board3DElement, BoardConnectorElement, BoardElement, BoardPoint, BoardSectionElement, BoardShapeElement, BoardStrokeElement, BoardTextElement, ResizeHandle, ShapeType } from './board.types.js';
 
 export { hitTest3DRotationGizmo };
 
@@ -273,14 +273,144 @@ export function moveElementByDrag(el: BoardElement, worldPos: BoardPoint, dragOf
   }
 }
 
+let measureCanvasCtx: CanvasRenderingContext2D | null = null;
+
+export function measureTextElementSize(
+  text: string,
+  fontSize: number,
+  fontWeight = '600',
+  fontFamily = 'sans-serif'
+): { height: number; width: number } {
+  if (typeof document !== 'undefined' && !measureCanvasCtx) {
+    const canvas = document.createElement('canvas');
+    measureCanvasCtx = canvas.getContext('2d');
+  }
+
+  const safeText = text || ' ';
+  const lines = safeText.split('\n');
+  const lineHeight = fontSize * 1.3;
+  let maxW = 0;
+
+  if (measureCanvasCtx) {
+    measureCanvasCtx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
+    for (const line of lines) {
+      const lineText = line.length > 0 ? line : ' ';
+      const metrics = measureCanvasCtx.measureText(lineText);
+      if (metrics.width > maxW) {
+        maxW = metrics.width;
+      }
+    }
+  } else {
+    maxW = safeText.length * fontSize * 0.6;
+  }
+
+  const width = Math.max(20, Math.ceil(maxW));
+  const height = Math.max(20, Math.ceil(lines.length * lineHeight));
+
+  return { height, width };
+}
+
 export function resizeElementByHandle(
   el: BoardElement,
   handle: ResizeHandle,
   worldPos: BoardPoint,
-  startRect: { height: number; width: number; x: number; y: number },
+  startRect: { fontSize?: number; height: number; width: number; x: number; y: number },
   lockAspect = false
 ): void {
   if (!('width' in el)) return;
+
+  if (el.type === 'text') {
+    const startFontSize = startRect.fontSize || el.fontSize || 16;
+    const startW = Math.max(1, startRect.width);
+    const startH = Math.max(1, startRect.height);
+
+    if (handle === 'br') {
+      const w = worldPos.x - startRect.x;
+      const h = worldPos.y - startRect.y;
+      const scale = Math.abs(w - startW) > Math.abs(h - startH) ? (w / startW) : (h / startH);
+      const newFontSize = Math.max(8, Math.min(300, Math.round(startFontSize * Math.max(0.1, scale))));
+      const newSize = measureTextElementSize(el.text, newFontSize);
+      el.fontSize = newFontSize;
+      el.width = newSize.width;
+      el.height = newSize.height;
+      el.x = startRect.x;
+      el.y = startRect.y;
+    } else if (handle === 'bl') {
+      const w = startRect.x + startRect.width - worldPos.x;
+      const h = worldPos.y - startRect.y;
+      const scale = Math.abs(w - startW) > Math.abs(h - startH) ? (w / startW) : (h / startH);
+      const newFontSize = Math.max(8, Math.min(300, Math.round(startFontSize * Math.max(0.1, scale))));
+      const newSize = measureTextElementSize(el.text, newFontSize);
+      el.fontSize = newFontSize;
+      el.width = newSize.width;
+      el.height = newSize.height;
+      el.x = startRect.x + startRect.width - newSize.width;
+      el.y = startRect.y;
+    } else if (handle === 'tr') {
+      const w = worldPos.x - startRect.x;
+      const h = startRect.y + startRect.height - worldPos.y;
+      const scale = Math.abs(w - startW) > Math.abs(h - startH) ? (w / startW) : (h / startH);
+      const newFontSize = Math.max(8, Math.min(300, Math.round(startFontSize * Math.max(0.1, scale))));
+      const newSize = measureTextElementSize(el.text, newFontSize);
+      el.fontSize = newFontSize;
+      el.width = newSize.width;
+      el.height = newSize.height;
+      el.x = startRect.x;
+      el.y = startRect.y + startRect.height - newSize.height;
+    } else if (handle === 'tl') {
+      const w = startRect.x + startRect.width - worldPos.x;
+      const h = startRect.y + startRect.height - worldPos.y;
+      const scale = Math.abs(w - startW) > Math.abs(h - startH) ? (w / startW) : (h / startH);
+      const newFontSize = Math.max(8, Math.min(300, Math.round(startFontSize * Math.max(0.1, scale))));
+      const newSize = measureTextElementSize(el.text, newFontSize);
+      el.fontSize = newFontSize;
+      el.width = newSize.width;
+      el.height = newSize.height;
+      el.x = startRect.x + startRect.width - newSize.width;
+      el.y = startRect.y + startRect.height - newSize.height;
+    } else if (handle === 'e') {
+      const w = worldPos.x - startRect.x;
+      const scale = w / startW;
+      const newFontSize = Math.max(8, Math.min(300, Math.round(startFontSize * Math.max(0.1, scale))));
+      const newSize = measureTextElementSize(el.text, newFontSize);
+      el.fontSize = newFontSize;
+      el.width = newSize.width;
+      el.height = newSize.height;
+      el.x = startRect.x;
+      el.y = startRect.y + (startRect.height - newSize.height) / 2;
+    } else if (handle === 'w') {
+      const w = startRect.x + startRect.width - worldPos.x;
+      const scale = w / startW;
+      const newFontSize = Math.max(8, Math.min(300, Math.round(startFontSize * Math.max(0.1, scale))));
+      const newSize = measureTextElementSize(el.text, newFontSize);
+      el.fontSize = newFontSize;
+      el.width = newSize.width;
+      el.height = newSize.height;
+      el.x = startRect.x + startRect.width - newSize.width;
+      el.y = startRect.y + (startRect.height - newSize.height) / 2;
+    } else if (handle === 's') {
+      const h = worldPos.y - startRect.y;
+      const scale = h / startH;
+      const newFontSize = Math.max(8, Math.min(300, Math.round(startFontSize * Math.max(0.1, scale))));
+      const newSize = measureTextElementSize(el.text, newFontSize);
+      el.fontSize = newFontSize;
+      el.width = newSize.width;
+      el.height = newSize.height;
+      el.x = startRect.x + (startRect.width - newSize.width) / 2;
+      el.y = startRect.y;
+    } else if (handle === 'n') {
+      const h = startRect.y + startRect.height - worldPos.y;
+      const scale = h / startH;
+      const newFontSize = Math.max(8, Math.min(300, Math.round(startFontSize * Math.max(0.1, scale))));
+      const newSize = measureTextElementSize(el.text, newFontSize);
+      el.fontSize = newFontSize;
+      el.width = newSize.width;
+      el.height = newSize.height;
+      el.x = startRect.x + (startRect.width - newSize.width) / 2;
+      el.y = startRect.y + startRect.height - newSize.height;
+    }
+    return;
+  }
 
   const preserveAspect = lockAspect || el.type === 'image';
   const aspect = ('aspectRatio' in el && el.aspectRatio) ? el.aspectRatio : (startRect.width / Math.max(1, startRect.height));

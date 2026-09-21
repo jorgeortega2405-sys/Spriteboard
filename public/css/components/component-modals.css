@@ -4545,8 +4545,8 @@ html.dark-theme .canvas-card.is-selected:hover .canvas-card__thumbnail {
   min-height: 0;
   display: flex;
   background-color: var(--bg-surface, #ffffff);
-  border-bottom-left-radius: 15px;
-  border-bottom-right-radius: 15px;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
   contain: layout size paint;
   isolation: isolate;
 }
@@ -8999,10 +8999,11 @@ body[data-theme="dark"] .upgrade-modal__active-indicator {
 }
 
 .design-history-loader {
-  padding: 32px;
+  padding: 8px 0;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
 }
 
 .design-history-loader.is-hidden {
@@ -9032,8 +9033,8 @@ body[data-theme="dark"] .upgrade-modal__active-indicator {
 }
 
 .design-history-card.is-active-preview {
-  border-color: rgba(99, 102, 241, 0.8);
-  background: rgba(99, 102, 241, 0.08);
+  border-color: var(--action-primary, #2563eb);
+  background: rgba(37, 99, 235, 0.08);
 }
 
 .design-history-card__top {
@@ -9213,7 +9214,7 @@ body[data-theme="dark"] .upgrade-modal__active-indicator {
   height: 32px;
   border-radius: 50% 50% 50% 4px;
   border: 2px solid #ffffff;
-  background-color: var(--brand-color, #7c3aed);
+  background-color: var(--color-brand-blue, #2563eb);
   color: #ffffff;
   display: flex;
   align-items: center;
@@ -9236,7 +9237,7 @@ body[data-theme="dark"] .upgrade-modal__active-indicator {
 
 .canvas-comment-pin.is-active {
   transform: translate(-50%, -100%) scale(1.18);
-  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.4), 0 6px 20px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.4), 0 6px 20px rgba(0, 0, 0, 0.35);
   z-index: 25;
 }
 
@@ -10221,6 +10222,13 @@ html.dark-theme .home-wrapper {
   z-index: 20;
   background-color: transparent;
   border-bottom: 1px solid var(--border-color);
+}
+
+.view-body:has(.view-backdrop) > .view-header,
+.view-body:has(.view-backdrop) > .home-floating-top,
+.view-wrapper:has(.view-backdrop) .view-header,
+.view-wrapper:has(.view-backdrop) .home-floating-top {
+  border-bottom: none;
 }
 
 html[data-theme="dark"] .view-header,

@@ -82,8 +82,13 @@ export function openCanvasMetricsModal(canvasUuid: string, canvasName: string): 
           </div>
 
           <div class="modal-create-canvas__body-bottom" data-ref="modal-metrics-body-bottom">
-            <div class="metrics-loading-state" data-ref="metrics-loading-state" style="display: flex; align-items: center; justify-content: center; height: 100%; min-height: 240px; gap: 12px; color: var(--text-secondary);">
-              <span>Cargando estadísticas del lienzo...</span>
+            <div class="metrics-loading-state" data-ref="metrics-loading-state" style="display: flex; flex-direction: column; gap: 16px; width: 100%; padding: 8px 0;">
+              <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+                <div class="skeleton" style="height: 72px; border-radius: 12px;"></div>
+                <div class="skeleton" style="height: 72px; border-radius: 12px;"></div>
+                <div class="skeleton" style="height: 72px; border-radius: 12px;"></div>
+              </div>
+              <div class="skeleton" style="height: 200px; border-radius: 14px; width: 100%;"></div>
             </div>
 
             <div class="metrics-content-container" data-ref="metrics-content" style="display: none; flex-direction: column; gap: 20px; width: 100%;">

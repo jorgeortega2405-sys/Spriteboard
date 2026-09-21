@@ -1,6 +1,6 @@
 <div class="layout-content" data-ref="doc-view">
   <div class="component-wrapper component-wrapper--full no-padding view-wrapper" data-ref="doc-wrapper">
-    <div class="component-top" data-ref="doc-top">
+    <div class="component-top component-top--gradient" data-ref="doc-top">
       <div class="component-top-left" data-ref="doc-top-left">
         <h1 class="component-top-title" data-ref="doc-title">Documento sin título</h1>
       </div>
@@ -10,14 +10,28 @@
           <div class="design-collaborators-list" data-ref="doc-collaborators-list"></div>
         </div>
 
+        <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn canvas-save-status-btn is-saved" data-ref="btn-doc-cloud-status" data-tooltip="Todos los cambios están guardados en la nube" aria-label="Estado de guardado">
+          <svg class="component-icon icon-status-saved" aria-hidden="true"><use href="/icons.svg#cloud_done"></use></svg>
+          <svg class="component-icon icon-status-saving is-hidden" aria-hidden="true"><use href="/icons.svg#sync"></use></svg>
+          <svg class="component-icon icon-status-error is-hidden" aria-hidden="true"><use href="/icons.svg#cloud_off"></use></svg>
+        </button>
+
+        <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-doc-metrics" data-tooltip="Estadísticas" aria-label="Estadísticas">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#bar_chart"></use></svg>
+        </button>
+
+        <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-doc-history" data-tooltip="Historial de versiones" aria-label="Historial de versiones">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#history"></use></svg>
+        </button>
+
         <div class="design-share-wrapper" data-ref="doc-ai-wrapper">
-          <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-doc-magic-ai" data-tooltip="Texto Mágico con IA" aria-label="Texto Mágico con IA">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-doc-magic-ai" data-tooltip="Texto Mágico con IA" aria-label="Texto Mágico con IA">
             <span class="component-icon">auto_awesome</span>
           </button>
         </div>
 
         <div class="design-share-wrapper" data-ref="doc-share-wrapper">
-          <button type="button" class="component-button component-button--h40 component-button--black design-share-btn" data-ref="btn-share-doc" data-tooltip="Compartir documento" aria-label="Compartir documento">
+          <button type="button" class="component-button component-button--h40 view-header__btn design-share-btn" data-ref="btn-share-doc" data-tooltip="Compartir documento" aria-label="Compartir documento">
             <span class="component-icon">share</span>
             <span class="design-share-btn__text">Compartir</span>
           </button>

@@ -1,4 +1,6 @@
 import { CanvasAiDropdownController, setupBoardAiDropdown } from '../../components/canvas-ai-dropdown.component.js';
+import { CanvasCommentsController } from '../../components/canvas-comments.component.js';
+import { openCanvasMetricsModal } from '../../components/canvas-metrics-modal.component.js';
 import { CanvasShareDropdownController, setupCanvasShareDropdown } from '../../components/canvas-share-dropdown.component.js';
 import { closeContextMenu, ContextMenuItem, openContextMenu } from '../../components/context-menu.component.js';
 import { InsertPixelGridConfig, openInsertPixelGridModal } from '../../components/insert-pixel-grid-modal.component.js';
@@ -9,10 +11,11 @@ import { BOARD_SHAPES } from '../../config/board-shapes.config.js';
 import { getBoardTemplateElements } from '../../config/board-templates.data.js';
 import { getMockupTemplateById } from '../../config/mockups.config.js';
 import { DEFAULT_STICKY_COLOR, STICKY_NOTE_PRESETS } from '../../config/sticky-notes.config.js';
-import { currentUser, getApi, postApi } from '../../services/api.service.js';
+import { currentUser, deleteApi, getApi, postApi } from '../../services/api.service.js';
 import { getLocalCanvasByUuid, removeLocalCanvas, saveLocalCanvas } from '../../services/canvas-storage.service.js';
 import { renderIcons } from '../../services/icon.service.js';
 import { showToast } from '../../services/toast.service.js';
+import { CanvasSnapshotItem } from '../../types/canvas-snapshot.types.js';
 import { CanvasItem } from '../../types/canvas.types.js';
 import { MockupFitMode, MockupTemplate } from '../../types/mockups.types.js';
 import { generateShadingRamp, getCollaboratorColor } from '../../utils/color.util.js';
@@ -21,7 +24,7 @@ import { PixelShape } from '../../utils/pixel-shapes.util.js';
 import { DocPage } from '../doc/doc.types.js';
 import { BoardChartsPanelComponent } from './board-charts-panel.component.js';
 import { BoardCollaborationManager } from './board-collaboration.manager.js';
-import { computeElementsBoundingBox, findContainingSection, findElementsByMarqueeBox, getConnectorEndpoints, getElementBoundingBox, hitTest3DRotationGizmo, hitTestElement, hitTestResizeHandle, moveElementByDelta, moveElementByDrag, resizeElementByHandle } from './board-elements.manager.js';
+import { computeElementsBoundingBox, findContainingSection, findElementsByMarqueeBox, getConnectorEndpoints, getElementBoundingBox, hitTest3DRotationGizmo, hitTestElement, hitTestResizeHandle, measureTextElementSize, moveElementByDelta, moveElementByDrag, resizeElementByHandle } from './board-elements.manager.js';
 import { exportJson, exportPng, exportSvg, generateThumbnail } from './board-export.service.js';
 import { BoardHistoryManager } from './board-history.manager.js';
 import { drawMockupElement } from './board-mockup-renderer.js';
@@ -43,6 +46,36 @@ export class BoardController {
   private aiDropdownController: CanvasAiDropdownController | null = null;
   private aiWrapperEl: HTMLElement | null = null;
   private autoSaveTimer: number | null = null;
+  private activePreviewSnapshotUuid: string | null = null;
+  private btnCancelCreateSnapshot: HTMLButtonElement | null = null;
+  private btnCanvasComments: HTMLButtonElement | null = null;
+  private btnCanvasMetrics: HTMLButtonElement | null = null;
+  private btnCloseHistoryDrawer: HTMLButtonElement | null = null;
+  private btnHistory: HTMLButtonElement | null = null;
+  private btnHistoryTabAll: HTMLButtonElement | null = null;
+  private btnHistoryTabManual: HTMLButtonElement | null = null;
+  private btnPreviewExit: HTMLButtonElement | null = null;
+  private btnPreviewRestore: HTMLButtonElement | null = null;
+  private btnSaveStatus: HTMLButtonElement | null = null;
+  private btnSubmitCreateSnapshot: HTMLButtonElement | null = null;
+  private btnToggleCreateSnapshot: HTMLButtonElement | null = null;
+  private commentsController: CanvasCommentsController | null = null;
+  private historyCreateErrorEl: HTMLElement | null = null;
+  private historyCreateFormEl: HTMLElement | null = null;
+  private historyDrawerEl: HTMLElement | null = null;
+  private historyDrawerEmptyEl: HTMLElement | null = null;
+  private historyDrawerLoaderEl: HTMLElement | null = null;
+  private historyFilter: 'all' | 'manual' = 'all';
+  private historySnapshotsListEl: HTMLElement | null = null;
+  private inputSnapshotDescription: HTMLTextAreaElement | null = null;
+  private inputSnapshotName: HTMLInputElement | null = null;
+  private isHistoryDrawerOpen = false;
+  private isPreviewingSnapshot = false;
+  private prePreviewBackground: { color: string; dotColor?: string; type: BackgroundType } | null = null;
+  private prePreviewCamera: { x: number; y: number; zoom: number } | null = null;
+  private prePreviewElements: BoardElement[] | null = null;
+  private previewBannerEl: HTMLElement | null = null;
+  private snapshots: CanvasSnapshotItem[] = [];
   private boardBackground: { color: string; dotColor?: string; type: BackgroundType } = { color: '#ffffff', dotColor: '#cbd5e1', type: 'dots' };
   private boardName = 'Pizarrón sin título';
   private camera = { x: 0, y: 0, zoom: 1 };
@@ -128,7 +161,7 @@ export class BoardController {
   private selectionDragOffset: BoardPoint = { x: 0, y: 0 };
   private selectionDragStartWorld: BoardPoint = { x: 0, y: 0 };
   private selectionStartPositions = new Map<string, { endPoint?: BoardPoint; points?: BoardPoint[]; startPoint?: BoardPoint; x?: number; y?: number }>();
-  private selectionStartRect = { height: 0, width: 0, x: 0, y: 0 };
+  private selectionStartRect: { fontSize?: number; height: number; width: number; x: number; y: number } = { height: 0, width: 0, x: 0, y: 0 };
   private shareDropdownController: CanvasShareDropdownController | null = null;
   private shareWrapperEl: HTMLElement | null = null;
   private stickyDefaultColor = '#fef08a';
@@ -163,6 +196,42 @@ export class BoardController {
     this.collaboratorsListEl = this.container.querySelector<HTMLElement>('[data-ref="board-collaborators-list"]');
     this.aiWrapperEl = this.container.querySelector<HTMLElement>('[data-ref="board-ai-wrapper"]');
     this.shareWrapperEl = this.container.querySelector<HTMLElement>('[data-ref="board-share-wrapper"]');
+    this.btnSaveStatus = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-canvas-cloud-status"]');
+    this.btnCanvasMetrics = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-canvas-metrics"]');
+    this.btnCanvasComments = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-canvas-comments"]');
+    this.btnHistory = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-canvas-history"]');
+    this.historyDrawerEl = this.container.querySelector<HTMLElement>('[data-ref="design-history-drawer"]');
+    this.btnCloseHistoryDrawer = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-close-history-drawer"]');
+    this.btnToggleCreateSnapshot = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-create-snapshot"]');
+    this.historyCreateFormEl = this.container.querySelector<HTMLElement>('[data-ref="history-create-form"]');
+    this.inputSnapshotName = this.container.querySelector<HTMLInputElement>('[data-ref="input-snapshot-name"]');
+    this.inputSnapshotDescription = this.container.querySelector<HTMLTextAreaElement>('[data-ref="input-snapshot-description"]');
+    this.btnSubmitCreateSnapshot = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-submit-create-snapshot"]');
+    this.btnCancelCreateSnapshot = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-cancel-create-snapshot"]');
+    this.historyCreateErrorEl = this.container.querySelector<HTMLElement>('[data-ref="history-create-error"]');
+    this.btnHistoryTabAll = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-history-tab-all"]');
+    this.btnHistoryTabManual = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-history-tab-manual"]');
+    this.historySnapshotsListEl = this.container.querySelector<HTMLElement>('[data-ref="history-snapshots-list"]');
+    this.historyDrawerLoaderEl = this.container.querySelector<HTMLElement>('[data-ref="history-drawer-loader"]');
+    this.historyDrawerEmptyEl = this.container.querySelector<HTMLElement>('[data-ref="history-drawer-empty"]');
+    this.previewBannerEl = this.container.querySelector<HTMLElement>('[data-ref="design-history-preview-banner"]');
+    this.btnPreviewRestore = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-preview-restore"]');
+    this.btnPreviewExit = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-preview-exit"]');
+
+    this.commentsController = new CanvasCommentsController({
+      canvasUuid: this.canvasUuid,
+      container: this.container,
+      getCanvasTransform: () => ({
+        height: this.canvasElement ? this.canvasElement.height : 800,
+        panX: this.camera.x,
+        panY: this.camera.y,
+        width: this.canvasElement ? this.canvasElement.width : 1200,
+        zoom: this.camera.zoom,
+      }),
+      getCurrentFrameIndex: () => 0,
+      onRequestRedraw: () => this.requestRedraw(),
+    });
+    void this.commentsController.init();
     if (this.canvasServerId) {
       this.setupCollaboration();
     }
@@ -215,6 +284,11 @@ export class BoardController {
   }
 
   public destroy(): void {
+    if (this.isPreviewingSnapshot) {
+      this.exitSnapshotPreview();
+    }
+    this.commentsController?.destroy();
+    this.commentsController = null;
     if (this.cleanup3DListener) {
       this.cleanup3DListener();
       this.cleanup3DListener = null;
@@ -645,6 +719,117 @@ export class BoardController {
 
     const btnRedo = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-redo"]');
     btnRedo?.addEventListener('click', () => this.redo(), { signal });
+
+    if (this.btnSaveStatus) {
+      this.btnSaveStatus.addEventListener('click', () => {
+        if (!navigator.onLine) {
+          showToast('Sin conexión a internet. Los cambios están guardados localmente.', 'info');
+          return;
+        }
+        void this.saveImmediate();
+      }, { signal });
+    }
+
+    const handleOnline = () => {
+      this.scheduleAutoSave();
+    };
+    const handleOffline = () => {
+      this.setSaveStatus('error', 'Sin conexión a internet (guardado local)');
+    };
+    window.addEventListener('online', handleOnline, { signal });
+    window.addEventListener('offline', handleOffline, { signal });
+
+    if (this.btnCanvasMetrics) {
+      this.btnCanvasMetrics.addEventListener('click', () => {
+        openCanvasMetricsModal(this.canvasUuid, this.boardName);
+      }, { signal });
+    }
+
+    if (this.btnHistory) {
+      this.btnHistory.addEventListener('click', () => {
+        this.toggleHistoryDrawer();
+      }, { signal });
+    }
+
+    if (this.btnCloseHistoryDrawer) {
+      this.btnCloseHistoryDrawer.addEventListener('click', () => {
+        this.toggleHistoryDrawer(false);
+      }, { signal });
+    }
+
+    if (this.btnToggleCreateSnapshot) {
+      this.btnToggleCreateSnapshot.addEventListener('click', () => {
+        this.historyCreateFormEl?.classList.toggle('is-hidden');
+        if (!this.historyCreateFormEl?.classList.contains('is-hidden')) {
+          this.inputSnapshotName?.focus();
+        }
+      }, { signal });
+    }
+
+    if (this.btnCancelCreateSnapshot) {
+      this.btnCancelCreateSnapshot.addEventListener('click', () => {
+        this.historyCreateFormEl?.classList.add('is-hidden');
+        if (this.historyCreateErrorEl) this.historyCreateErrorEl.classList.add('is-hidden');
+      }, { signal });
+    }
+
+    if (this.btnSubmitCreateSnapshot) {
+      this.btnSubmitCreateSnapshot.addEventListener('click', () => {
+        void this.submitCreateSnapshot();
+      }, { signal });
+    }
+
+    if (this.btnHistoryTabAll) {
+      this.btnHistoryTabAll.addEventListener('click', () => {
+        this.historyFilter = 'all';
+        this.btnHistoryTabAll?.classList.add('is-active');
+        this.btnHistoryTabManual?.classList.remove('is-active');
+        this.renderHistorySnapshots();
+      }, { signal });
+    }
+
+    if (this.btnHistoryTabManual) {
+      this.btnHistoryTabManual.addEventListener('click', () => {
+        this.historyFilter = 'manual';
+        this.btnHistoryTabManual?.classList.add('is-active');
+        this.btnHistoryTabAll?.classList.remove('is-active');
+        this.renderHistorySnapshots();
+      }, { signal });
+    }
+
+    if (this.historySnapshotsListEl) {
+      this.historySnapshotsListEl.addEventListener('click', (e) => {
+        const target = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-action]');
+        if (!target) return;
+        const action = target.getAttribute('data-action');
+        const snapUuid = target.getAttribute('data-snap-uuid');
+        if (!snapUuid) return;
+
+        if (action === 'preview') {
+          void this.previewSnapshot(snapUuid);
+        } else if (action === 'restore') {
+          void this.restoreSnapshot(snapUuid);
+        } else if (action === 'fork') {
+          void this.forkSnapshot(snapUuid);
+        } else if (action === 'delete') {
+          void this.deleteSnapshot(snapUuid);
+        }
+      }, { signal });
+    }
+
+    if (this.btnPreviewRestore) {
+      this.btnPreviewRestore.addEventListener('click', () => {
+        if (this.activePreviewSnapshotUuid) {
+          void this.restoreSnapshot(this.activePreviewSnapshotUuid);
+        }
+      }, { signal });
+    }
+
+    if (this.btnPreviewExit) {
+      this.btnPreviewExit.addEventListener('click', () => {
+        this.exitSnapshotPreview();
+      }, { signal });
+    }
 
     const btnShare = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-share-board"]');
     if (this.shareWrapperEl && btnShare) {
@@ -1837,6 +2022,11 @@ export class BoardController {
       if (el && 'fontSize' in el && el.fontSize) {
         this.pushHistoryState();
         el.fontSize = Math.max(10, el.fontSize - 2);
+        if (el.type === 'text') {
+          const sz = measureTextElementSize(el.text, el.fontSize);
+          el.width = sz.width;
+          el.height = sz.height;
+        }
         this.collaborationManager.broadcastUpdateElement(el);
         this.requestRedraw();
         this.scheduleAutoSave();
@@ -1851,6 +2041,11 @@ export class BoardController {
       if (el && 'fontSize' in el && el.fontSize) {
         this.pushHistoryState();
         el.fontSize = Math.min(72, el.fontSize + 2);
+        if (el.type === 'text') {
+          const sz = measureTextElementSize(el.text, el.fontSize);
+          el.width = sz.width;
+          el.height = sz.height;
+        }
         this.collaborationManager.broadcastUpdateElement(el);
         this.requestRedraw();
         this.scheduleAutoSave();
@@ -2524,14 +2719,17 @@ export class BoardController {
       {
         action: () => {
           this.pushHistoryState();
+          const initialText = 'Texto';
+          const initialFontSize = 20;
+          const sz = measureTextElementSize(initialText, initialFontSize);
           const textEl: BoardTextElement = {
             color: this.currentColor,
-            fontSize: 20,
-            height: 36,
+            fontSize: initialFontSize,
+            height: sz.height,
             id: `text-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-            text: 'Texto',
+            text: initialText,
             type: 'text',
-            width: 120,
+            width: sz.width,
             x: worldPos.x,
             y: worldPos.y,
           };
@@ -2644,7 +2842,7 @@ export class BoardController {
             this.resizeHandleType = handle;
             this.setResizeCursor(handle);
             const bbox = getElementBoundingBox(selEl);
-            this.selectionStartRect = { ...bbox };
+            this.selectionStartRect = { ...bbox, fontSize: selEl.type === 'text' ? selEl.fontSize : undefined };
             return;
           }
           if (selEl.type === 'shape-3d') {
@@ -2866,14 +3064,17 @@ export class BoardController {
 
     if (this.currentTool === 'text') {
       this.pushHistoryState();
+      const initialText = 'Escribe aquí';
+      const initialFontSize = 22;
+      const sz = measureTextElementSize(initialText, initialFontSize);
       const textEl: BoardTextElement = {
         color: this.currentColor,
-        fontSize: 22,
-        height: 40,
+        fontSize: initialFontSize,
+        height: sz.height,
         id: `text-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-        text: 'Escribe aquí',
+        text: initialText,
         type: 'text',
-        width: 160,
+        width: sz.width,
         x: Math.round(worldPos.x),
         y: Math.round(worldPos.y),
       };
@@ -3308,12 +3509,21 @@ export class BoardController {
       textarea.style.color = element.textColor || '#1e293b';
       textarea.style.textAlign = 'center';
     } else {
+      textarea.style.fontWeight = '600';
+      textarea.style.fontFamily = 'sans-serif';
+      textarea.style.lineHeight = '1.3';
       textarea.style.left = `${screenPos.x}px`;
       textarea.style.top = `${screenPos.y}px`;
-      textarea.style.width = `${Math.max(120, screenW)}px`;
-      textarea.style.height = `${Math.max(40, screenH)}px`;
+      textarea.style.width = `${Math.max(screenW, 60)}px`;
+      textarea.style.height = `${Math.max(screenH, scaledFontSize * 1.3)}px`;
       textarea.style.color = element.color || '#1e293b';
       textarea.style.textAlign = 'left';
+      textarea.addEventListener('input', () => {
+        textarea.style.width = 'auto';
+        textarea.style.height = 'auto';
+        textarea.style.width = `${Math.max(screenW, textarea.scrollWidth + 10)}px`;
+        textarea.style.height = `${Math.max(screenH, textarea.scrollHeight)}px`;
+      });
     }
 
     container.appendChild(textarea);
@@ -3358,6 +3568,11 @@ export class BoardController {
       if (el && (el.type === 'sticky' || el.type === 'text')) {
         this.pushHistoryState();
         el.text = text || (el.type === 'sticky' ? 'Nota' : 'Texto');
+        if (el.type === 'text') {
+          const sz = measureTextElementSize(el.text, el.fontSize);
+          el.width = sz.width;
+          el.height = sz.height;
+        }
         this.collaborationManager.broadcastUpdateElement(el);
         this.scheduleAutoSave();
       } else if (el && el.type === 'shape') {
@@ -4061,21 +4276,23 @@ export class BoardController {
     const centerWorld = screenToWorld(screenW / 2, screenH / 2, this.canvasElement, this.camera);
 
     const config = {
-      body: { fontSize: 16, height: 32, text: 'Agregar algo de texto', width: 220 },
-      heading: { fontSize: 36, height: 52, text: 'Agregar un título', width: 340 },
-      subheading: { fontSize: 24, height: 40, text: 'Agregar un subtítulo', width: 260 },
+      body: { fontSize: 16, text: 'Agregar algo de texto' },
+      heading: { fontSize: 36, text: 'Agregar un título' },
+      subheading: { fontSize: 24, text: 'Agregar un subtítulo' },
     }[type];
+
+    const sz = measureTextElementSize(config.text, config.fontSize);
 
     const textEl: BoardTextElement = {
       color: this.currentColor || '#000000',
       fontSize: config.fontSize,
-      height: config.height,
+      height: sz.height,
       id: `text-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       text: config.text,
       type: 'text',
-      width: config.width,
-      x: Math.round(centerWorld.x - config.width / 2),
-      y: Math.round(centerWorld.y - config.height / 2),
+      width: sz.width,
+      x: Math.round(centerWorld.x - sz.width / 2),
+      y: Math.round(centerWorld.y - sz.height / 2),
     };
 
     this.elements.push(textEl);
@@ -4563,6 +4780,7 @@ export class BoardController {
     if (this.autoSaveTimer !== null) {
       clearTimeout(this.autoSaveTimer);
     }
+    this.setSaveStatus('saving');
     this.autoSaveTimer = window.setTimeout(() => {
       this.autoSaveTimer = null;
       void this.saveImmediate();
@@ -4601,7 +4819,8 @@ export class BoardController {
 
     if (currentUser && (this.isOwner || this.role === 'editor' || this.collaborationManager.role === 'editor')) {
       try {
-        await postApi(API_ROUTES.canvases.sync, {
+        this.setSaveStatus('saving');
+        const res = await postApi(API_ROUTES.canvases.sync, {
           canvas_type: 'board',
           data: dataStr,
           height: 0,
@@ -4612,7 +4831,378 @@ export class BoardController {
           uuid: this.canvasUuid,
           width: 0,
         });
-      } catch {}
+        if (res.ok) {
+          this.setSaveStatus('saved');
+        } else {
+          this.setSaveStatus('error');
+        }
+      } catch {
+        this.setSaveStatus('error');
+      }
+    } else {
+      this.setSaveStatus('saved');
+    }
+  }
+
+  private setSaveStatus(status: 'saved' | 'saving' | 'error', customTooltip?: string): void {
+    if (!this.btnSaveStatus) return;
+    this.btnSaveStatus.classList.remove('is-saved', 'is-saving', 'is-error');
+    this.btnSaveStatus.classList.add(`is-${status}`);
+
+    const iconSaved = this.btnSaveStatus.querySelector('.icon-status-saved');
+    const iconSaving = this.btnSaveStatus.querySelector('.icon-status-saving');
+    const iconError = this.btnSaveStatus.querySelector('.icon-status-error');
+
+    if (iconSaved) iconSaved.classList.toggle('is-hidden', status !== 'saved');
+    if (iconSaving) iconSaving.classList.toggle('is-hidden', status !== 'saving');
+    if (iconError) iconError.classList.toggle('is-hidden', status !== 'error');
+
+    let tooltip = customTooltip;
+    if (!tooltip) {
+      if (status === 'saved') {
+        tooltip = 'Todos los cambios están guardados en la nube';
+      } else if (status === 'saving') {
+        tooltip = 'Guardando cambios en la nube...';
+      } else {
+        tooltip = navigator.onLine ? 'Error al guardar. Se reintentará automáticamente' : 'Sin conexión a internet (guardado local)';
+      }
+    }
+    this.btnSaveStatus.setAttribute('data-tooltip', tooltip);
+    this.btnSaveStatus.setAttribute('aria-label', tooltip);
+  }
+
+  private applyProjectData(project: BoardProject): void {
+    if (Array.isArray(project.elements)) {
+      this.elements = project.elements;
+    }
+    if (project.camera) {
+      this.camera = {
+        x: project.camera.x || 0,
+        y: project.camera.y || 0,
+        zoom: Math.max(0.1, Math.min(5, project.camera.zoom || 1)),
+      };
+    }
+    if (project.background && typeof project.background.color === 'string') {
+      this.boardBackground = {
+        color: project.background.color,
+        dotColor: project.background.dotColor,
+        type: project.background.type || 'dots',
+      };
+    }
+    this.requestRedraw();
+    this.updateZoomUI();
+  }
+
+  private toggleHistoryDrawer(force?: boolean): void {
+    const shouldOpen = force !== undefined ? force : !this.isHistoryDrawerOpen;
+    this.isHistoryDrawerOpen = shouldOpen;
+    this.historyDrawerEl?.classList.toggle('is-hidden', !shouldOpen);
+    this.btnHistory?.classList.toggle('is-active', shouldOpen);
+    if (shouldOpen) {
+      void this.loadHistorySnapshots();
+    }
+  }
+
+  private async loadHistorySnapshots(): Promise<void> {
+    if (!this.historySnapshotsListEl) return;
+    this.historyDrawerLoaderEl?.classList.remove('is-hidden');
+    this.historyDrawerEmptyEl?.classList.add('is-hidden');
+    this.historySnapshotsListEl.innerHTML = '';
+
+    try {
+      const res = await getApi(API_ROUTES.canvases.snapshots(this.canvasUuid));
+      if (res.ok) {
+        const data = await res.json();
+        this.snapshots = Array.isArray(data.snapshots) ? data.snapshots : [];
+      } else {
+        this.snapshots = [];
+      }
+    } catch {
+      this.snapshots = [];
+    } finally {
+      this.historyDrawerLoaderEl?.classList.add('is-hidden');
+      this.renderHistorySnapshots();
+    }
+  }
+
+  private renderHistorySnapshots(): void {
+    if (!this.historySnapshotsListEl) return;
+
+    const filtered = this.snapshots.filter((s) => {
+      if (this.historyFilter === 'manual') return s.is_manual;
+      return true;
+    });
+
+    if (filtered.length === 0) {
+      this.historyDrawerEmptyEl?.classList.remove('is-hidden');
+      this.historySnapshotsListEl.innerHTML = '';
+      return;
+    }
+
+    this.historyDrawerEmptyEl?.classList.add('is-hidden');
+
+    const escape = (str: string): string =>
+      str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+
+    const formatDate = (iso: string): string => {
+      try {
+        const d = new Date(iso);
+        const now = new Date();
+        const diffMs = now.getTime() - d.getTime();
+        const diffMins = Math.floor(diffMs / 60000);
+        if (diffMins < 1) return 'Hace un momento';
+        if (diffMins < 60) return `Hace ${diffMins} min`;
+        const diffHours = Math.floor(diffMins / 60);
+        if (diffHours < 24) return `Hace ${diffHours} h`;
+        return d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+      } catch {
+        return iso;
+      }
+    };
+
+    this.historySnapshotsListEl.innerHTML = filtered
+      .map((s) => {
+        const isPreviewing = this.activePreviewSnapshotUuid === s.uuid;
+        const cardClass = `design-history-card${isPreviewing ? ' is-active-preview' : ''}`;
+        const badgeClass = s.is_manual ? 'design-history-card__badge--manual' : 'design-history-card__badge--auto';
+        const badgeText = s.is_manual ? 'Hito' : 'Auto';
+        const displayName = s.name ? escape(s.name) : s.is_manual ? 'Hito manual' : 'Guardado automático';
+        const dateText = formatDate(s.created_at);
+
+        const thumbHtml = s.preview_thumbnail
+          ? `<img class="design-history-card__thumb" src="${s.preview_thumbnail}" alt="${displayName}" />`
+          : `<div class="design-history-card__thumb-placeholder"><svg class="component-icon" aria-hidden="true"><use href="/icons.svg#image"></use></svg></div>`;
+
+        const authorHtml = s.user_name
+          ? `<div class="design-history-card__author">
+              ${s.user_avatar ? `<img class="design-history-card__author-avatar" src="${s.user_avatar}" alt="${escape(s.user_name)}" />` : '<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#person"></use></svg>'}
+              <span>${escape(s.user_name)}</span>
+            </div>`
+          : '';
+
+        const descHtml = s.description
+          ? `<p class="design-history-card__desc">${escape(s.description)}</p>`
+          : '';
+
+        const deleteBtnHtml = this.isOwner
+          ? `<button type="button" class="component-button component-button--h28 component-button--icon-only" data-action="delete" data-snap-uuid="${s.uuid}" data-tooltip="Eliminar versión" aria-label="Eliminar versión">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete_outline"></use></svg>
+            </button>`
+          : '';
+
+        return `
+          <div class="${cardClass}" data-ref="history-card-${s.uuid}">
+            <div class="design-history-card__top">
+              ${thumbHtml}
+              <div class="design-history-card__meta">
+                <div class="design-history-card__header-row">
+                  <span class="design-history-card__name" title="${displayName}">${displayName}</span>
+                  <span class="design-history-card__badge ${badgeClass}">${badgeText}</span>
+                </div>
+                <div class="design-history-card__date">${dateText}</div>
+                ${authorHtml}
+              </div>
+            </div>
+            ${descHtml}
+            <div class="design-history-card__actions">
+              <button type="button" class="component-button component-button--h28 component-button--outline component-button--icon-only" data-action="preview" data-snap-uuid="${s.uuid}" data-tooltip="Previsualizar versión" aria-label="Previsualizar">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
+              </button>
+              <button type="button" class="component-button component-button--h28 component-button--black" data-action="restore" data-snap-uuid="${s.uuid}">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#history"></use></svg>
+                <span>Restaurar</span>
+              </button>
+              <button type="button" class="component-button component-button--h28 component-button--outline component-button--icon-only" data-action="fork" data-snap-uuid="${s.uuid}" data-tooltip="Crear copia como nuevo lienzo" aria-label="Crear copia">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
+              </button>
+              ${deleteBtnHtml}
+            </div>
+          </div>
+        `;
+      })
+      .join('');
+
+    renderIcons(this.historySnapshotsListEl);
+  }
+
+  private async submitCreateSnapshot(): Promise<void> {
+    if (!currentUser) {
+      showToast('Debes iniciar sesión para guardar versiones.', 'error');
+      return;
+    }
+    const name = this.inputSnapshotName?.value.trim() || 'Hito manual';
+    const description = this.inputSnapshotDescription?.value.trim() || undefined;
+
+    try {
+      const project: BoardProject = {
+        background: this.boardBackground,
+        camera: this.camera,
+        elements: this.elements,
+        type: 'board',
+        version: 1,
+      };
+      const thumbnail = generateThumbnail(this.elements, this.boardBackground, (ctx, el) => this.drawElementOn(ctx, el));
+
+      const res = await postApi(API_ROUTES.canvases.snapshots(this.canvasUuid), {
+        data: JSON.stringify(project),
+        description,
+        is_manual: true,
+        name,
+        preview_thumbnail: thumbnail,
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Error al guardar la versión.');
+      }
+
+      if (this.inputSnapshotName) this.inputSnapshotName.value = '';
+      if (this.inputSnapshotDescription) this.inputSnapshotDescription.value = '';
+      this.historyCreateFormEl?.classList.add('is-hidden');
+      if (this.historyCreateErrorEl) this.historyCreateErrorEl.classList.add('is-hidden');
+
+      showToast('Punto de control guardado correctamente.', 'success');
+      await this.loadHistorySnapshots();
+    } catch (err: any) {
+      if (this.historyCreateErrorEl) {
+        this.historyCreateErrorEl.textContent = err.message || 'Error al crear la versión.';
+        this.historyCreateErrorEl.classList.remove('is-hidden');
+      } else {
+        showToast(err.message || 'Error al crear la versión.', 'error');
+      }
+    }
+  }
+
+  private async previewSnapshot(snapshotUuid: string): Promise<void> {
+    if (this.activePreviewSnapshotUuid === snapshotUuid) {
+      this.exitSnapshotPreview();
+      return;
+    }
+
+    try {
+      const res = await getApi(API_ROUTES.canvases.snapshotById(this.canvasUuid, snapshotUuid));
+      if (!res.ok) {
+        throw new Error('Error al cargar la versión para previsualizar.');
+      }
+      const resData = await res.json();
+      const rawData = resData.data;
+      const project: BoardProject = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
+
+      if (!this.isPreviewingSnapshot) {
+        this.prePreviewElements = JSON.parse(JSON.stringify(this.elements));
+        this.prePreviewCamera = { ...this.camera };
+        this.prePreviewBackground = { ...this.boardBackground };
+      }
+
+      this.isPreviewingSnapshot = true;
+      this.activePreviewSnapshotUuid = snapshotUuid;
+      this.applyProjectData(project);
+      this.previewBannerEl?.classList.remove('is-hidden');
+      this.renderHistorySnapshots();
+      showToast('Estás en modo previsualización (solo lectura).', 'info');
+    } catch {
+      showToast('Error al previsualizar la versión.', 'error');
+    }
+  }
+
+  private exitSnapshotPreview(): void {
+    if (!this.isPreviewingSnapshot) return;
+
+    if (this.prePreviewElements) {
+      this.elements = this.prePreviewElements;
+      this.camera = this.prePreviewCamera || this.camera;
+      this.boardBackground = this.prePreviewBackground || this.boardBackground;
+      this.prePreviewElements = null;
+      this.prePreviewCamera = null;
+      this.prePreviewBackground = null;
+    }
+
+    this.isPreviewingSnapshot = false;
+    this.activePreviewSnapshotUuid = null;
+    this.previewBannerEl?.classList.add('is-hidden');
+    this.requestRedraw();
+    this.renderHistorySnapshots();
+    showToast('Has vuelto a tu versión de trabajo activa.', 'info');
+  }
+
+  private async restoreSnapshot(snapshotUuid: string): Promise<void> {
+    if (!currentUser) {
+      showToast('Debes iniciar sesión para restaurar versiones.', 'error');
+      return;
+    }
+
+    try {
+      const res = await postApi(API_ROUTES.canvases.snapshotRestore(this.canvasUuid, snapshotUuid), {});
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Error al restaurar la versión.');
+      }
+
+      const data = await res.json();
+      const restored = typeof data.restoredData === 'string' ? JSON.parse(data.restoredData) : data.restoredData;
+
+      this.prePreviewElements = null;
+      this.prePreviewCamera = null;
+      this.prePreviewBackground = null;
+      this.isPreviewingSnapshot = false;
+      this.activePreviewSnapshotUuid = null;
+      this.previewBannerEl?.classList.add('is-hidden');
+
+      this.applyProjectData(restored);
+      this.scheduleAutoSave();
+
+      showToast('Versión restaurada correctamente. Se creó un respaldo automático previo.', 'success');
+      await this.loadHistorySnapshots();
+    } catch (err: any) {
+      showToast(err.message || 'No se pudo restaurar la versión.', 'error');
+    }
+  }
+
+  private async forkSnapshot(snapshotUuid: string): Promise<void> {
+    if (!currentUser) {
+      showToast('Debes iniciar sesión para duplicar versiones.', 'error');
+      return;
+    }
+
+    try {
+      const res = await postApi(API_ROUTES.canvases.snapshotFork(this.canvasUuid, snapshotUuid), {});
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Error al crear la copia del lienzo.');
+      }
+
+      const data = await res.json();
+      showToast('Lienzo creado a partir de la versión seleccionada.', 'success');
+      if (data.canvas?.uuid) {
+        window.location.href = `/board/${data.canvas.uuid}`;
+      }
+    } catch (err: any) {
+      showToast(err.message || 'No se pudo duplicar la versión.', 'error');
+    }
+  }
+
+  private async deleteSnapshot(snapshotUuid: string): Promise<void> {
+    if (!this.isOwner) {
+      showToast('Solo el propietario puede eliminar versiones.', 'error');
+      return;
+    }
+
+    try {
+      const res = await deleteApi(API_ROUTES.canvases.snapshotById(this.canvasUuid, snapshotUuid));
+      if (!res.ok) {
+        throw new Error('Error al eliminar la versión.');
+      }
+
+      this.snapshots = this.snapshots.filter((s) => s.uuid !== snapshotUuid);
+      this.renderHistorySnapshots();
+      showToast('Versión eliminada correctamente.', 'success');
+    } catch (err: any) {
+      showToast(err.message || 'No se pudo eliminar la versión.', 'error');
     }
   }
 

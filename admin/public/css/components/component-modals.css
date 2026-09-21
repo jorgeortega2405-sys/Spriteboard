@@ -4163,8 +4163,8 @@ html.dark-theme .canvas-card.is-selected:hover .canvas-card__thumbnail {
   min-height: 0;
   display: flex;
   background-color: var(--bg-surface, #ffffff);
-  border-bottom-left-radius: 15px;
-  border-bottom-right-radius: 15px;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
   contain: layout size paint;
   isolation: isolate;
 }

@@ -1362,9 +1362,9 @@ function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElemen
         </button>
       </div>
       <div class="canvas-panel-card__body" data-ref="canvas-panel-body">
-        <div class="canvas-panel-search" data-ref="canvas-panel-search">
-          <svg class="component-icon canvas-panel-search__icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
-          <input class="canvas-panel-search__input" data-ref="canvas-elements-search-input" type="text" placeholder="Buscar elementos..." />
+        <div class="menu-panel__search" data-ref="canvas-elements-search">
+          <svg class="component-icon menu-panel__search-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+          <input class="menu-panel__search-input" data-ref="canvas-elements-search-input" type="text" maxlength="50" autocomplete="off" placeholder="Buscar elementos..." />
         </div>
 
         <div class="elements-drawer-content" data-ref="elements-drawer-content"></div>
@@ -1492,11 +1492,11 @@ function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElemen
     }
 
     if (activeElementsCategory === 'root') {
-      const recents = getRecentElements();
+      const recents = getRecentElements().slice(0, 6);
       const recentsHtml = recents.length > 0 ? `
         <div class="elements-recents-section" data-ref="elements-recents-section" style="margin-bottom: 14px;">
           <span class="elements-categories-heading">Usados recientemente</span>
-          <div class="elements-recents-grid" data-ref="elements-recents-grid" style="display: flex; gap: 8px; overflow-x: auto; padding: 4px 2px 8px 2px;">
+          <div class="elements-grid elements-recents-grid" data-ref="elements-recents-grid">
             ${recents.map((item) => {
               let preview = '';
               if (item.type === 'vector' && item.pathD) {
@@ -1511,7 +1511,7 @@ function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElemen
                 preview = `<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#category"></use></svg>`;
               }
               return `
-                <button type="button" class="element-grid-item" data-ref="btn-recent-item-${item.id}" data-recent-id="${item.id}" data-tooltip="${escapeHtml(item.name)}" aria-label="${escapeHtml(item.name)}" style="flex-shrink: 0; width: 44px; height: 44px; padding: 4px;">
+                <button type="button" class="element-grid-item" data-ref="btn-recent-item-${item.id}" data-recent-id="${item.id}" data-tooltip="${escapeHtml(item.name)}" aria-label="${escapeHtml(item.name)}">
                   ${preview}
                 </button>
               `;
@@ -2220,21 +2220,24 @@ function renderUploadsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement
           </button>
         </div>
       </div>
-      <div class="canvas-panel-card__body canvas-uploads-container" data-ref="canvas-panel-body">
+      <div class="canvas-panel-card__body" data-ref="canvas-panel-body">
         <input class="canvas-upload-file-input" data-ref="canvas-upload-file-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" multiple style="display: none;" />
 
-        <div class="canvas-panel-search" data-ref="canvas-panel-search">
-          <svg class="component-icon canvas-panel-search__icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
-          <input class="canvas-panel-search__input" data-ref="canvas-uploads-search-input" type="text" placeholder="Buscar subidos..." />
+        <div class="menu-panel__search" data-ref="canvas-uploads-search">
+          <svg class="component-icon menu-panel__search-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+          <input class="menu-panel__search-input" data-ref="canvas-uploads-search-input" type="text" maxlength="50" autocomplete="off" placeholder="Buscar subidos..." />
         </div>
 
-        <div class="canvas-panel-uploads-grid" data-ref="canvas-uploads-grid">
-          <div class="canvas-panel-card__empty" style="grid-column: 1 / -1;" data-ref="canvas-uploads-loading">
-            <div class="canvas-panel-card__empty-icon">
-              <svg class="component-icon component-icon--spin" aria-hidden="true"><use href="/icons.svg#progress_activity"></use></svg>
-            </div>
-            <span class="canvas-panel-card__empty-title">Cargando archivos...</span>
-          </div>
+        <div class="elements-grid" data-ref="canvas-uploads-grid">
+          <div class="skeleton" style="aspect-ratio: 1 / 1; border-radius: 8px;"></div>
+          <div class="skeleton" style="aspect-ratio: 1 / 1; border-radius: 8px;"></div>
+          <div class="skeleton" style="aspect-ratio: 1 / 1; border-radius: 8px;"></div>
+          <div class="skeleton" style="aspect-ratio: 1 / 1; border-radius: 8px;"></div>
+          <div class="skeleton" style="aspect-ratio: 1 / 1; border-radius: 8px;"></div>
+          <div class="skeleton" style="aspect-ratio: 1 / 1; border-radius: 8px;"></div>
+          <div class="skeleton" style="aspect-ratio: 1 / 1; border-radius: 8px;"></div>
+          <div class="skeleton" style="aspect-ratio: 1 / 1; border-radius: 8px;"></div>
+          <div class="skeleton" style="aspect-ratio: 1 / 1; border-radius: 8px;"></div>
         </div>
       </div>
     </div>
@@ -2293,19 +2296,17 @@ function renderUploadsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement
     }
 
     grid.innerHTML = filtered.map((item) => `
-      <div class="canvas-card template-card canvas-upload-card" data-ref="canvas-upload-card-${item.uuid}" data-upload-uuid="${item.uuid}" data-tooltip="${escapeHtml(item.original_filename)}">
-        <div class="canvas-card__thumbnail template-card__thumbnail" data-ref="upload-thumb-${item.uuid}">
-          <img class="canvas-card__image image-lazy-fade" data-ref="img-upload-${item.uuid}" src="${escapeHtml(item.url)}" alt="${escapeHtml(item.original_filename)}" loading="lazy" decoding="async" onload="this.classList.add('image-loaded')" onerror="this.classList.add('image-loaded')" />
-          <button type="button" class="canvas-upload-card__delete" data-ref="btn-delete-upload-${item.uuid}" data-delete-uuid="${item.uuid}" data-tooltip="Eliminar imagen" aria-label="Eliminar imagen">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
-          </button>
-        </div>
-      </div>
+      <button type="button" class="element-grid-item" data-ref="btn-upload-item-${item.uuid}" data-upload-uuid="${item.uuid}" data-tooltip="${escapeHtml(item.original_filename)}" aria-label="${escapeHtml(item.original_filename)}">
+        <img class="canvas-upload-img image-lazy-fade" data-ref="img-upload-${item.uuid}" src="${escapeHtml(item.url)}" alt="${escapeHtml(item.original_filename)}" loading="lazy" decoding="async" onload="this.classList.add('image-loaded')" onerror="this.classList.add('image-loaded')" />
+        <button type="button" class="canvas-upload-card__delete" data-ref="btn-delete-upload-${item.uuid}" data-delete-uuid="${item.uuid}" data-tooltip="Eliminar imagen" aria-label="Eliminar imagen">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
+        </button>
+      </button>
     `).join('');
 
     renderIcons(grid);
 
-    grid.querySelectorAll<HTMLElement>('.canvas-upload-card').forEach((card) => {
+    grid.querySelectorAll<HTMLElement>('.element-grid-item').forEach((card) => {
       card.addEventListener('click', (e) => {
         const target = e.target as HTMLElement | null;
         if (target?.closest('[data-delete-uuid]')) return;
@@ -2468,7 +2469,18 @@ function renderTextDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement): 
         </button>
       </div>
       <div class="canvas-panel-card__body" data-ref="canvas-panel-body">
-        <div class="elements-section-title" style="margin-top: 0; padding-top: 0;">Texto predeterminado</div>
+        <div class="text-drawer-actions" data-ref="text-drawer-actions">
+          <button type="button" class="component-button component-button--h40 component-button--primary component-button--w-full" data-ref="btn-add-textbox">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#text_fields"></use></svg>
+            <span>Agregar caja de texto</span>
+          </button>
+          <button type="button" class="component-button component-button--h40 component-button--w-full" data-ref="btn-magic-text">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
+            <span>Texto mágico</span>
+          </button>
+        </div>
+
+        <div class="elements-section-title">Texto predeterminado</div>
         <div class="text-drawer-presets" data-ref="text-drawer-presets">
           <button type="button" class="text-preset-btn text-preset-btn--heading" data-ref="btn-text-preset-heading" data-preset="heading">
             <span class="text-preset-btn__label">Agregar un título</span>
@@ -2488,6 +2500,22 @@ function renderTextDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement): 
   btnClose?.addEventListener('click', (e) => {
     e.preventDefault();
     toggleDrawer(false);
+  });
+
+  const btnAddTextbox = drawerBody.querySelector<HTMLButtonElement>('[data-ref="btn-add-textbox"]');
+  btnAddTextbox?.addEventListener('click', (e) => {
+    e.preventDefault();
+    const vtoolTextBtn = document.querySelector<HTMLButtonElement>('[data-ref="vertical-tool-text"]');
+    if (vtoolTextBtn) {
+      vtoolTextBtn.click();
+    } else {
+      handleApplyTextPreset('body', canvasType);
+    }
+  });
+
+  const btnMagicText = drawerBody.querySelector<HTMLButtonElement>('[data-ref="btn-magic-text"]');
+  btnMagicText?.addEventListener('click', (e) => {
+    e.preventDefault();
   });
 
   const presetBtns = drawerBody.querySelectorAll<HTMLButtonElement>('[data-ref^="btn-text-preset-"]');
@@ -3025,9 +3053,9 @@ function renderCanvasDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement)
           </button>
         </div>
         <div class="canvas-panel-card__body" data-ref="canvas-panel-body">
-          <div class="canvas-panel-search" data-ref="canvas-panel-search">
-            <svg class="component-icon canvas-panel-search__icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
-            <input class="canvas-panel-search__input" data-ref="canvas-templates-search-input" type="text" placeholder="${t('templates.search_placeholder') || 'Buscar plantillas...'}" />
+          <div class="menu-panel__search" data-ref="canvas-templates-search">
+            <svg class="component-icon menu-panel__search-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+            <input class="menu-panel__search-input" data-ref="canvas-templates-search-input" type="text" maxlength="50" autocomplete="off" placeholder="${t('templates.search_placeholder') || 'Buscar plantillas...'}" />
           </div>
           <div class="canvas-panel-templates-grid" data-ref="canvas-templates-list"></div>
         </div>
@@ -3505,8 +3533,6 @@ async function handleApplyCanvasProject(
   }
 }
 
-let activeProjectsFilter: 'all' | 'board' | 'doc' = 'all';
-
 async function renderProjectsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement): Promise<void> {
   const sidebar = drawer.closest<HTMLElement>('[data-ref="sidebar"]') || document.querySelector<HTMLElement>('[data-ref="sidebar"]');
   const targetCanvasType = getActiveCanvasType();
@@ -3523,24 +3549,18 @@ async function renderProjectsDrawerContent(drawer: HTMLElement, drawerBody: HTML
         </button>
       </div>
       <div class="canvas-panel-card__body canvas-projects-container" data-ref="canvas-panel-body">
-        <div class="canvas-panel-tabs" data-ref="canvas-projects-tabs">
-          <button type="button" class="canvas-panel-tab-btn${activeProjectsFilter === 'all' ? ' is-active' : ''}" data-ref="btn-filter-proj-all" data-filter="all">Todos</button>
-          <button type="button" class="canvas-panel-tab-btn${activeProjectsFilter === 'board' ? ' is-active' : ''}" data-ref="btn-filter-proj-board" data-filter="board">Pizarrón</button>
-          <button type="button" class="canvas-panel-tab-btn${activeProjectsFilter === 'doc' ? ' is-active' : ''}" data-ref="btn-filter-proj-doc" data-filter="doc">Documentos</button>
+        <div class="menu-panel__search" data-ref="canvas-projects-search">
+          <svg class="component-icon menu-panel__search-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+          <input class="menu-panel__search-input" data-ref="canvas-projects-search-input" type="text" maxlength="50" autocomplete="off" placeholder="Buscar en tus proyectos..." />
         </div>
 
-        <div class="canvas-panel-search" data-ref="canvas-panel-search">
-          <svg class="component-icon canvas-panel-search__icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
-          <input class="canvas-panel-search__input" data-ref="canvas-projects-search-input" type="text" placeholder="Buscar en tus proyectos..." />
-        </div>
-
-        <div class="canvas-panel-projects-grid" data-ref="canvas-projects-grid">
-          <div class="canvas-panel-card__empty" style="grid-column: 1 / -1;" data-ref="canvas-projects-loading">
-            <div class="canvas-panel-card__empty-icon">
-              <svg class="component-icon component-icon--spin" aria-hidden="true"><use href="/icons.svg#progress_activity"></use></svg>
-            </div>
-            <span class="canvas-panel-card__empty-title">Cargando proyectos...</span>
-          </div>
+        <div class="canvas-panel-templates-grid canvas-panel-projects-grid" data-ref="canvas-projects-grid">
+          <div class="skeleton" style="aspect-ratio: 16 / 10; border-radius: 12px;"></div>
+          <div class="skeleton" style="aspect-ratio: 16 / 10; border-radius: 12px;"></div>
+          <div class="skeleton" style="aspect-ratio: 16 / 10; border-radius: 12px;"></div>
+          <div class="skeleton" style="aspect-ratio: 16 / 10; border-radius: 12px;"></div>
+          <div class="skeleton" style="aspect-ratio: 16 / 10; border-radius: 12px;"></div>
+          <div class="skeleton" style="aspect-ratio: 16 / 10; border-radius: 12px;"></div>
         </div>
       </div>
     </div>
@@ -3554,28 +3574,12 @@ async function renderProjectsDrawerContent(drawer: HTMLElement, drawerBody: HTML
 
   const searchInput = drawerBody.querySelector<HTMLInputElement>('[data-ref="canvas-projects-search-input"]');
   const grid = drawerBody.querySelector<HTMLElement>('[data-ref="canvas-projects-grid"]');
-  const tabs = drawerBody.querySelectorAll<HTMLButtonElement>('[data-ref^="btn-filter-proj-"]');
 
   let projectItems: CanvasItem[] = [];
 
   const getCanvasTypeKey = (c: CanvasItem): 'board' | 'doc' => {
     if (c.canvas_type === 'doc' || c.unit === 'doc') return 'doc';
     return 'board';
-  };
-
-  const getBadgeText = (c: CanvasItem): string => {
-    const typeKey = getCanvasTypeKey(c);
-    if (typeKey === 'doc') {
-      try {
-        if (c.data) {
-          const parsed = typeof c.data === 'string' ? JSON.parse(c.data) : c.data;
-          const count = parsed?.pages?.length || 1;
-          return `Documento • ${count} ${count === 1 ? 'pág' : 'págs'}`;
-        }
-      } catch {}
-      return 'Documento';
-    }
-    return 'Pizarrón';
   };
 
   const getTypeIcon = (typeKey: 'board' | 'doc'): string => {
@@ -3588,10 +3592,6 @@ async function renderProjectsDrawerContent(drawer: HTMLElement, drawerBody: HTML
     const cleanQ = query.trim().toLowerCase();
 
     let filtered = projectItems.filter((c) => !c.deleted_at);
-
-    if (activeProjectsFilter !== 'all') {
-      filtered = filtered.filter((c) => getCanvasTypeKey(c) === activeProjectsFilter);
-    }
 
     if (cleanQ) {
       filtered = filtered.filter((c) => (c.name || '').toLowerCase().includes(cleanQ));
@@ -3623,19 +3623,14 @@ async function renderProjectsDrawerContent(drawer: HTMLElement, drawerBody: HTML
     grid.innerHTML = filtered.map((c) => {
       const typeKey = getCanvasTypeKey(c);
       const iconName = getTypeIcon(typeKey);
-      const badgeText = getBadgeText(c);
       const thumbHtml = c.preview_thumbnail
-        ? `<img class="canvas-panel-project-card__img" src="${c.preview_thumbnail}" alt="" loading="lazy" />`
-        : `<svg class="component-icon canvas-panel-project-card__fallback-icon" aria-hidden="true"><use href="/icons.svg#${iconName}"></use></svg>`;
+        ? `<img class="canvas-card__image image-lazy-fade" data-ref="img-proj-${c.uuid}" src="${c.preview_thumbnail}" alt="${escapeHtml(c.name || '')}" loading="lazy" decoding="async" onload="this.classList.add('image-loaded')" onerror="this.classList.add('image-loaded')" />`
+        : `<svg class="component-icon" aria-hidden="true" style="position: absolute; inset: 0; margin: auto; width: 44px; height: 44px; color: var(--text-tertiary);"><use href="/icons.svg#${iconName}"></use></svg>`;
 
       return `
-        <div class="canvas-panel-project-card" data-ref="canvas-project-card-${c.uuid}" data-project-uuid="${c.uuid}">
-          <div class="canvas-panel-project-card__thumb">
+        <div class="canvas-card template-card" data-ref="canvas-project-card-${c.uuid}" data-project-uuid="${c.uuid}" data-tooltip="${escapeHtml(c.name || 'Diseño sin título')}">
+          <div class="canvas-card__thumbnail template-card__thumbnail" data-ref="project-thumb-${c.uuid}">
             ${thumbHtml}
-            <span class="canvas-panel-project-card__badge">${escapeHtml(badgeText)}</span>
-          </div>
-          <div class="canvas-panel-project-card__info">
-            <span class="canvas-panel-project-card__title" title="${escapeHtml(c.name || 'Diseño sin título')}">${escapeHtml(c.name || 'Diseño sin título')}</span>
           </div>
         </div>
       `;
@@ -3643,7 +3638,7 @@ async function renderProjectsDrawerContent(drawer: HTMLElement, drawerBody: HTML
 
     renderIcons(grid);
 
-    grid.querySelectorAll<HTMLElement>('.canvas-panel-project-card').forEach((card) => {
+    grid.querySelectorAll<HTMLElement>('.template-card').forEach((card) => {
       card.addEventListener('click', async () => {
         const uuid = card.getAttribute('data-project-uuid');
         const found = projectItems.find((p) => p.uuid === uuid);
@@ -3688,17 +3683,6 @@ async function renderProjectsDrawerContent(drawer: HTMLElement, drawerBody: HTML
       });
     });
   };
-
-  tabs.forEach((tabBtn) => {
-    tabBtn.addEventListener('click', () => {
-      const filter = tabBtn.getAttribute('data-filter') as 'all' | 'board' | 'doc';
-      if (filter && activeProjectsFilter !== filter) {
-        activeProjectsFilter = filter;
-        tabs.forEach((b) => b.classList.toggle('is-active', b === tabBtn));
-        renderGrid(searchInput?.value || '');
-      }
-    });
-  });
 
   searchInput?.addEventListener('input', () => {
     renderGrid(searchInput.value);
@@ -4998,8 +4982,13 @@ function setupChatSidebarEvents(sidebarElement: HTMLElement): void {
     }
 
     if (historyList) {
-      historyList.innerHTML = '<div style="padding: 16px; text-align: center; color: var(--text-tertiary); font-size: 12px;">Cargando historial...</div>';
+      historyList.innerHTML = `
+        <div class="skeleton" style="height: 72px; border-radius: 12px; margin-bottom: 8px; width: 100%;"></div>
+        <div class="skeleton" style="height: 72px; border-radius: 12px; margin-bottom: 8px; width: 100%;"></div>
+        <div class="skeleton" style="height: 72px; border-radius: 12px; width: 100%;"></div>
+      `;
       historyList.style.display = 'flex';
+      historyList.style.flexDirection = 'column';
     }
     if (historyEmpty) historyEmpty.style.display = 'none';
 
@@ -5100,7 +5089,13 @@ function setupChatSidebarEvents(sidebarElement: HTMLElement): void {
       ticketDetailBadge.textContent = '...';
     }
     if (ticketDetailMessages) {
-      ticketDetailMessages.innerHTML = '<div style="padding: 16px; text-align: center; color: var(--text-tertiary); font-size: 12px;">Cargando mensajes...</div>';
+      ticketDetailMessages.innerHTML = `
+        <div style="display: flex; flex-direction: column; gap: 10px; width: 100%; padding: 12px 0;">
+          <div class="skeleton" style="height: 48px; border-radius: 12px; width: 70%;"></div>
+          <div class="skeleton" style="height: 56px; border-radius: 12px; width: 80%; align-self: flex-end;"></div>
+          <div class="skeleton" style="height: 40px; border-radius: 12px; width: 60%;"></div>
+        </div>
+      `;
     }
     if (ticketClosedNotice) ticketClosedNotice.style.display = 'none';
 
