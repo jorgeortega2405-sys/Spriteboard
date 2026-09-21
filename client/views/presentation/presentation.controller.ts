@@ -11,7 +11,7 @@ import { setupDropdown, withButtonLoading } from '../../utils/dom.util.js';
 import { computeElementsBoundingBox, getElementBoundingBox, hitTestElement } from '../board/board-elements.manager.js';
 import { drawAlignmentGuides, drawBackground, drawConnector, drawImage, drawMarqueeBox, drawMultiSelectionBounds, drawSection, drawSelectionBox, drawShape, drawSticky, drawStroke, drawTable, drawText, screenToWorld, worldToScreen } from '../board/board-renderer.js';
 import { AlignmentGuide } from '../board/board-snapping.manager.js';
-import { BackgroundType, BoardConnectorElement, BoardElement, BoardPoint, BoardShapeElement, BoardShapeType, BoardStickyElement, BoardStrokeElement, BoardTextElement, ConnectorStyle, MarkerType, StrokeStyle } from '../board/board.types.js';
+import { BackgroundType, BoardConnectorElement, BoardElement, BoardImageElement, BoardPoint, BoardShapeElement, BoardShapeType, BoardStickyElement, BoardStrokeElement, BoardTextElement, ConnectorStyle, MarkerType, StrokeStyle } from '../board/board.types.js';
 
 export class PresentationController {
   private abortController: AbortController | null = null;
@@ -817,6 +817,8 @@ export class PresentationController {
         drawSticky(ctx, el as BoardStickyElement);
       } else if (el.type === 'text') {
         drawText(ctx, el as BoardTextElement);
+      } else if (el.type === 'image') {
+        drawImage(ctx, el as BoardImageElement, () => this.render());
       } else if (el.type === 'connector') {
         drawConnector(ctx, el as BoardConnectorElement, elements);
       } else if (el.type === 'stroke') {
@@ -874,21 +876,36 @@ export class PresentationController {
   public startSlideshow(): void {
     if (!this.slideshowPlayer) {
       this.slideshowPlayer = new SlideshowPlayerComponent({
-        aspectRatio: `${this.slideWidth}/${this.slideHeight}`,
-        autoPlay: true,
-        height: this.slideHeight,
-        onSlideChange: (index) => {
-          if (this.slides[index]) {
-            this.selectSlide(this.slides[index].id);
+        activePageId: this.activeSlideId,
+        drawElementOn: (sctx, el) => {
+          if (el.type === 'shape') {
+            drawShape(sctx, el as BoardShapeElement);
+          } else if (el.type === 'sticky') {
+            drawSticky(sctx, el as BoardStickyElement);
+          } else if (el.type === 'text') {
+            drawText(sctx, el as BoardTextElement);
+          } else if (el.type === 'image') {
+            drawImage(sctx, el as BoardImageElement);
+          } else if (el.type === 'connector') {
+            drawConnector(sctx, el as BoardConnectorElement, this.getActiveSlide().elements);
+          } else if (el.type === 'stroke') {
+            drawStroke(sctx, el as BoardStrokeElement);
+          } else if (el.type === 'section') {
+            drawSection(sctx, el as any);
+          } else if (el.type === 'table') {
+            drawTable(sctx, el as any);
           }
         },
-        slides: this.slides,
-        startSlideIndex: this.getActiveSlideIndex(),
-        width: this.slideWidth,
+        onSlideChange: (pageId) => {
+          this.selectSlide(pageId);
+        },
+        pages: this.slides,
+        slideHeight: this.slideHeight,
+        slideWidth: this.slideWidth,
+        title: this.canvasRecord?.name || 'Presentación',
       });
-    } else {
-      this.slideshowPlayer.open(this.slides, this.getActiveSlideIndex());
     }
+    this.slideshowPlayer.start();
   }
 
   private saveHistoryState(): void {

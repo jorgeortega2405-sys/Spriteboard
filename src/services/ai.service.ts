@@ -4,6 +4,7 @@ import { ASSISTANT_RULES } from '../config/assistant-rules.js';
 import { cassandraClient, isCassandraReady } from '../config/cassandra.config.js';
 import { pool } from '../config/database.config.js';
 import { config } from '../config/env.config.js';
+import { ImageSearchService } from './image-search.service.js';
 import { logger } from './logger.service.js';
 
 export interface ChatMessage {
@@ -1240,7 +1241,9 @@ Reglas estrictas de generación:
     slides: Array<{
       background?: { color: string; dotColor?: string; type: 'blank' | 'dark' | 'dots' | 'solid' };
       elements: Array<{
+        alt?: string;
         arrowEnd?: boolean;
+        aspectRatio?: number;
         color?: string;
         fillColor?: string;
         fontFamily?: string;
@@ -1250,6 +1253,7 @@ Reglas estrictas de generación:
         fromId?: string;
         height?: number;
         id: string;
+        imageQuery?: string;
         isMindMapNode?: boolean;
         label?: string;
         opacity?: number;
@@ -1261,7 +1265,8 @@ Reglas estrictas de generación:
         text?: string;
         textColor?: string;
         toId?: string;
-        type: 'connector' | 'shape' | 'sticky' | 'text';
+        type: 'connector' | 'image' | 'shape' | 'sticky' | 'text';
+        url?: string;
         width?: number;
         x?: number;
         y?: number;
@@ -1289,7 +1294,7 @@ Tu objetivo es generar una baraja completa de diapositivas multipágina (slide d
 
 ### REGLAS DE ESTRUCTURA Y GEOMETRÍA:
 1. El tamaño de cada diapositiva es ${slideWidth} x ${slideHeight} px.
-2. El sistema de coordenadas tiene su origen (0, 0) en el CENTRO EXACTO de la diapositiva.
+2. El sistema de coordenadas tiene su origen (0, 0) en el CENTRO EXACTO de la diapositiva (-${halfW} a +${halfW} en X, -${halfH} a +${halfH} en Y).
 3. Límites estrictos para colocar elementos:
    - x debe estar entre ${minX} y ${maxX} px (ancho no puede desbordar).
    - y debe estar entre ${minY} y ${maxY} px (alto no puede desbordar).
@@ -1299,11 +1304,17 @@ Tu objetivo es generar una baraja completa de diapositivas multipágina (slide d
    - 'shape': { id, type: 'shape', shapeType: 'rect' | 'round-rect' | 'pill' | 'circle', x, y, width, height, fillColor, strokeColor, strokeWidth, text, textColor, fontSize }
    - 'sticky': { id, type: 'sticky', text, x, y, width, height, color, textColor, fontSize }
    - 'connector': { id, type: 'connector', fromId, toId, style: 'straight' | 'curved' | 'orthogonal', color, strokeWidth, arrowEnd: true }
+   - 'image': { id, type: 'image', imageQuery: "descripción fotográfica en inglés para búsqueda (ej. 'modern team meeting office' o 'quantum computing processor' o 'data analytics graphs')", x, y, width, height }
+
+### FOTOGRAFÍAS E IMÁGENES:
+- Incluye al menos 1 o 2 elementos de tipo 'image' en las diapositivas clave (ej. Portada, Contexto, Caso de Uso, Visión o Diapositiva Temática).
+- El campo 'imageQuery' DEBE contener palabras clave fotográficas concisas en INGLÉS para buscar fotos de alta calidad (ej. 'cybersecurity network shield server', 'solar energy panels nature', 'business startup brainstorm', 'artificial intelligence robotics').
+- Diseña la diapositiva equilibrando texto en un lado (ej. izquierda con ancho 500px) y la imagen en el otro lado (ej. derecha con ancho 450px y alto 300px), o como tarjeta ilustrada.
 
 ### SECUENCIA DE DIAPOSITIVAS RECOMENDADA PARA ${safeCount} DIAPOSITIVAS:
-- Diapositiva 1: Portada (Título de alto impacto con tamaño 38-46px, subtítulo 20px, badge/píldora con tema, fondo distinguido).
+- Diapositiva 1: Portada (Título de alto impacto con tamaño 38-46px, subtítulo 20px, badge/píldora con tema, fondo distinguido y fotografía relevante).
 - Diapositiva 2: Contexto / Problema / Agenda (2 a 3 tarjetas o columnas con títulos y descripciones).
-- Diapositivas intermedias: Pilares de Solución, Métricas clave (números grandes y etiquetas), o Proceso paso a paso (3-4 tarjetas conectadas).
+- Diapositivas intermedias: Pilares de Solución, Métricas clave (números grandes y etiquetas), o Proceso paso a paso (3-4 tarjetas conectadas con imágenes ilustrativas).
 - Diapositiva final: Conclusiones, Próximos pasos o Llamado a la Acción (Takeaways destacados y mensaje de cierre).
 
 ### ESTILO VISUAL SEGÚN EL TONO "${tone}":
@@ -1398,10 +1409,11 @@ Devuelve ÚNICAMENTE un objeto JSON válido, sin texto antes ni después, sin ex
 
       const parsed = JSON.parse(cleanJson);
       if (parsed && Array.isArray(parsed.slides) && parsed.slides.length > 0) {
-        const sanitizedSlides = parsed.slides.map((s: any, idx: number) => ({
-          background: s.background || (idx === 0 ? { color: '#0f172a', type: 'solid' } : { color: '#ffffff', type: 'solid' }),
-          elements: Array.isArray(s.elements)
-            ? s.elements.map((el: any) => {
+        const sanitizedSlides = await Promise.all(
+          parsed.slides.map(async (s: any, idx: number) => {
+            const rawElements = Array.isArray(s.elements) ? s.elements : [];
+            const sanitizedElements = await Promise.all(
+              rawElements.map(async (el: any) => {
                 let w = typeof el.width === 'number' ? Math.max(20, Math.min(slideWidth - 60, el.width)) : 300;
                 let h = typeof el.height === 'number' ? Math.max(10, Math.min(slideHeight - 60, el.height)) : 100;
                 let x = typeof el.x === 'number' ? el.x : -halfW + 60;
@@ -1418,6 +1430,23 @@ Devuelve ÚNICAMENTE un objeto JSON válido, sin texto antes ni después, sin ex
                   y = Math.max(-halfH + 30, halfH - 30 - h);
                 }
 
+                if (el.type === 'image' || el.imageQuery) {
+                  const query = el.imageQuery || el.alt || el.query || el.text || prompt;
+                  const imageUrl = await ImageSearchService.searchImage(query);
+                  return {
+                    alt: String(el.alt || query || 'Imagen de presentación'),
+                    aspectRatio: w / h || 16 / 9,
+                    height: h,
+                    id: String(el.id || `img_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`),
+                    imageQuery: query,
+                    type: 'image' as const,
+                    url: imageUrl,
+                    width: w,
+                    x,
+                    y,
+                  };
+                }
+
                 return {
                   ...el,
                   height: h,
@@ -1426,9 +1455,15 @@ Devuelve ÚNICAMENTE un objeto JSON válido, sin texto antes ni después, sin ex
                   y,
                 };
               })
-            : [],
-          name: String(s.name || `Diapositiva ${idx + 1}`),
-        }));
+            );
+
+            return {
+              background: s.background || (idx === 0 ? { color: '#0f172a', type: 'solid' } : { color: '#ffffff', type: 'solid' }),
+              elements: sanitizedElements,
+              name: String(s.name || `Diapositiva ${idx + 1}`),
+            };
+          })
+        );
 
         return {
           slides: sanitizedSlides,

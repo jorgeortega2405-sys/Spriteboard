@@ -32,6 +32,9 @@ export const config = {
     apiKey: process.env.GEMINI_API_KEY || '',
     model: process.env.GEMINI_MODEL || 'gemini-flash-latest',
   },
+  pexels: {
+    apiKey: process.env.PEXELS_API_KEY || '',
+  },
   websocket: {
     host: process.env.WEBSOCKET_HOST || 'websocket',
     port: Number(process.env.WEBSOCKET_PORT) || 3001,
