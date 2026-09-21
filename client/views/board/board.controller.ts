@@ -32,12 +32,13 @@ import { exportJson, exportPng, exportSvg, generateThumbnail } from './board-exp
 import { BoardHistoryManager } from './board-history.manager.js';
 import { drawMockupElement } from './board-mockup-renderer.js';
 import { BoardMockupsPanelComponent } from './board-mockups-panel.component.js';
+import { BoardPagesTrayComponent, MAX_BOARD_PAGES } from './board-pages-tray.component.js';
 import { BoardPixelGridManager } from './board-pixel-grid.manager.js';
 import { BoardPixelPanelComponent } from './board-pixel-panel.component.js';
 import { BoardPixelTimelineComponent } from './board-pixel-timeline.component.js';
 import { draw3DElement, draw3DGroundGrid, drawAlignmentGuides, drawBackground, drawBoardCollaboratorCursors, drawChart, drawCheckerboard, drawConnector, drawImage, drawMarqueeBox, drawMultiSelectionBounds, drawPixelGridLines, drawSection, drawSelectionBox, drawShape, drawSticky, drawStroke, drawTable, drawText, onCustomModelLoaded, preloadCustom3DModels, screenToWorld, worldToScreen } from './board-renderer.js';
 import { AlignmentGuide, calculateDragSnapping, calculateResizeSnapping } from './board-snapping.manager.js';
-import { BackgroundType, Board3DElement, BoardChartElement, BoardCollaboratorState, BoardConnectorElement, BoardElement, BoardImageElement, BoardMockupElement, BoardPixelGridElement, BoardPoint, BoardProject, BoardSectionElement, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTableCell, BoardTableElement, BoardTextElement, BoardTool, ChartDataRow, ChartType, DEFAULT_CHART_PALETTES, DEFAULT_CLASSIC_PALETTE, GAMEBOY_PALETTE, MarkerType, PICO8_PALETTE, PixelSubtool, ResizeHandle, Shape3DType, ShapeType, StrokeStyle } from './board.types.js';
+import { BackgroundType, Board3DElement, BoardChartElement, BoardCollaboratorState, BoardConnectorElement, BoardElement, BoardImageElement, BoardMockupElement, BoardPageItem, BoardPixelGridElement, BoardPoint, BoardProject, BoardSectionElement, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTableCell, BoardTableElement, BoardTextElement, BoardTool, ChartDataRow, ChartType, DEFAULT_CHART_PALETTES, DEFAULT_CLASSIC_PALETTE, GAMEBOY_PALETTE, MarkerType, PICO8_PALETTE, PixelSubtool, ResizeHandle, Shape3DType, ShapeType, StrokeStyle } from './board.types.js';
 
 export class BoardController {
   private abortController: AbortController;
@@ -45,6 +46,7 @@ export class BoardController {
   private activeAlignmentGuides: AlignmentGuide[] = [];
   private activeInlineEditor: HTMLTextAreaElement | null = null;
   private activeOpenDropdown: { close: () => void } | null = null;
+  private activePageId = '';
   private activePopover: HTMLElement | null = null;
   private activeTableInlineEditor: { col: number; row: number; tableId: string; textarea: HTMLTextAreaElement } | null = null;
   private isSnappingEnabled = true;
@@ -56,12 +58,16 @@ export class BoardController {
   private aiWrapperEl: HTMLElement | null = null;
   private autoSaveTimer: number | null = null;
   private activePreviewSnapshotUuid: string | null = null;
+  private bottomPagesTextEl: HTMLElement | null = null;
+  private btnBottomPages: HTMLButtonElement | null = null;
   private btnCanvasComments: HTMLButtonElement | null = null;
   private btnCanvasMetrics: HTMLButtonElement | null = null;
   private btnColorEyedropper: HTMLButtonElement | null = null;
   private btnHistory: HTMLButtonElement | null = null;
   private btnPreviewExit: HTMLButtonElement | null = null;
   private btnPreviewRestore: HTMLButtonElement | null = null;
+  private pages: BoardPageItem[] = [];
+  private pagesTray: BoardPagesTrayComponent | null = null;
   private btnSaveStatus: HTMLButtonElement | null = null;
   private commentsController: CanvasCommentsController | null = null;
   private historyDropdownController: CanvasHistoryDropdownController | null = null;
@@ -266,6 +272,16 @@ export class BoardController {
         this.requestRedraw();
       },
     });
+    this.pagesTray = new BoardPagesTrayComponent({
+      onAddPage: () => this.addPage(),
+      onDeletePage: () => this.deletePage(),
+      onDuplicatePage: () => this.duplicatePage(),
+      onNextPage: () => this.goToNextPage(),
+      onPrevPage: () => this.goToPrevPage(),
+      onReorderPages: (from, to) => this.reorderPages(from, to),
+      onSelectPage: (id) => this.switchToPage(id),
+    });
+    this.pagesTray.attach(this.container, this.pages, this.activePageId);
     this.bindEvents();
     try {
       const savedSnapping = localStorage.getItem('spriteboard_board_snapping');
@@ -277,6 +293,7 @@ export class BoardController {
     this.initColorsUI();
     this.renderPixelPaletteSwatches();
     this.updateUndoRedoUI();
+    this.updatePagesUI();
     this.updateZoomUI();
     this.renderActiveToolsUI();
     this.cleanup3DListener = onCustomModelLoaded(() => {
@@ -335,6 +352,8 @@ export class BoardController {
     this.resizeObserver?.disconnect();
     this.pixelTimeline?.destroy();
     this.pixelTimeline = null;
+    this.pagesTray?.destroy();
+    this.pagesTray = null;
     this.pixelGrid.clearAll();
     if (this.canvasElement) {
       this.canvasElement.width = 0;
@@ -437,27 +456,75 @@ export class BoardController {
           const parsed = typeof canvas.data === 'string' ? JSON.parse(canvas.data) : canvas.data;
           if (parsed && parsed.type === 'board') {
             const project = parsed as BoardProject;
-            if (Array.isArray(project.elements)) {
-              this.elements = project.elements;
-            }
-            if (project.camera) {
-              this.camera = {
-                x: project.camera.x || 0,
-                y: project.camera.y || 0,
-                zoom: Math.max(0.1, Math.min(5, project.camera.zoom || 1)),
-              };
-            }
-            if (project.background) {
-              this.boardBackground = {
+            if (Array.isArray(project.pages) && project.pages.length > 0) {
+              this.pages = project.pages;
+              const targetPageId = project.activePageId && this.pages.some((p) => p.id === project.activePageId)
+                ? project.activePageId
+                : this.pages[0].id;
+              this.activePageId = targetPageId;
+              const activePage = this.pages.find((p) => p.id === this.activePageId) || this.pages[0];
+              this.elements = activePage.elements || [];
+              this.boardBackground = activePage.background || {
                 color: '#ffffff',
                 dotColor: '#cbd5e1',
                 type: 'dots',
               };
+              this.camera = activePage.camera
+                ? {
+                    x: activePage.camera.x || 0,
+                    y: activePage.camera.y || 0,
+                    zoom: Math.max(0.1, Math.min(5, activePage.camera.zoom || 1)),
+                  }
+                : { x: 0, y: 0, zoom: 1 };
+            } else {
+              const defaultElements = Array.isArray(project.elements) ? project.elements : [];
+              const defaultCamera = project.camera
+                ? {
+                    x: project.camera.x || 0,
+                    y: project.camera.y || 0,
+                    zoom: Math.max(0.1, Math.min(5, project.camera.zoom || 1)),
+                  }
+                : { x: 0, y: 0, zoom: 1 };
+              const defaultBackground = project.background || {
+                color: '#ffffff',
+                dotColor: '#cbd5e1',
+                type: 'dots',
+              };
+              const defaultPage: BoardPageItem = {
+                background: defaultBackground,
+                camera: defaultCamera,
+                createdAt: Date.now(),
+                elements: defaultElements,
+                id: `page-${Date.now()}-1`,
+                name: 'Página 1',
+              };
+              this.pages = [defaultPage];
+              this.activePageId = defaultPage.id;
+              this.elements = defaultElements;
+              this.boardBackground = defaultBackground;
+              this.camera = defaultCamera;
             }
           }
         } catch {}
       }
 
+      if (this.pages.length === 0) {
+        const defaultPage: BoardPageItem = {
+          background: { color: '#ffffff', dotColor: '#cbd5e1', type: 'dots' },
+          camera: { x: 0, y: 0, zoom: 1 },
+          createdAt: Date.now(),
+          elements: [],
+          id: `page-${Date.now()}-1`,
+          name: 'Página 1',
+        };
+        this.pages = [defaultPage];
+        this.activePageId = defaultPage.id;
+        this.elements = [];
+        this.boardBackground = defaultPage.background;
+        this.camera = defaultPage.camera;
+      }
+
+      this.collaborationManager.activePageId = this.activePageId;
       this.history.pushState(this.elements);
       return true;
     }
@@ -478,6 +545,7 @@ export class BoardController {
     this.collaborationManager.role = this.role;
     this.collaborationManager.publicRole = this.publicRole;
     this.collaborationManager.accessLevel = this.accessLevel;
+    this.collaborationManager.activePageId = this.activePageId;
 
     this.collaborationManager.init(userId, username, avatarUrl, tier, {
       onAccessChanged: (accessLevel, publicRole) => {
@@ -498,59 +566,179 @@ export class BoardController {
       onCursor: () => {
         this.requestRedraw();
       },
-      onRemoteAddElement: (element) => {
-        const existingIdx = this.elements.findIndex((el) => el.id === element.id);
-        if (existingIdx >= 0) {
-          this.elements[existingIdx] = element;
+      onRemoteAddElement: (element, pageId) => {
+        const targetPageId = pageId || this.activePageId;
+        if (targetPageId === this.activePageId) {
+          const existingIdx = this.elements.findIndex((el) => el.id === element.id);
+          if (existingIdx >= 0) {
+            this.elements[existingIdx] = element;
+          } else {
+            this.elements.push(element);
+          }
+          this.requestRedraw();
         } else {
-          this.elements.push(element);
+          const page = this.pages.find((p) => p.id === targetPageId);
+          if (page) {
+            const existingIdx = (page.elements || []).findIndex((el) => el.id === element.id);
+            if (existingIdx >= 0) {
+              page.elements[existingIdx] = element;
+            } else {
+              page.elements = [...(page.elements || []), element];
+            }
+          }
         }
-        this.requestRedraw();
       },
-      onRemoteClear: () => {
-        this.elements = [];
-        this.selectedElementId = null;
-        this.selectedElementIds = [];
-        this.updateSelectionToolbar();
-        this.requestRedraw();
-      },
-      onRemoteDeleteElement: (elementId) => {
-        this.elements = this.elements.filter((el) => el.id !== elementId);
-        this.selectedElementIds = this.selectedElementIds.filter((id) => id !== elementId);
-        if (this.selectedElementId === elementId) {
-          this.selectedElementId = this.selectedElementIds[0] || null;
+      onRemoteClear: (pageId) => {
+        const targetPageId = pageId || this.activePageId;
+        if (targetPageId === this.activePageId) {
+          this.elements = [];
+          this.selectedElementId = null;
+          this.selectedElementIds = [];
           this.updateSelectionToolbar();
+          this.requestRedraw();
+        } else {
+          const page = this.pages.find((p) => p.id === targetPageId);
+          if (page) {
+            page.elements = [];
+          }
         }
-        this.requestRedraw();
+      },
+      onRemoteDeleteElement: (elementId, pageId) => {
+        const targetPageId = pageId || this.activePageId;
+        if (targetPageId === this.activePageId) {
+          this.elements = this.elements.filter((el) => el.id !== elementId);
+          this.selectedElementIds = this.selectedElementIds.filter((id) => id !== elementId);
+          if (this.selectedElementId === elementId) {
+            this.selectedElementId = this.selectedElementIds[0] || null;
+            this.updateSelectionToolbar();
+          }
+          this.requestRedraw();
+        } else {
+          const page = this.pages.find((p) => p.id === targetPageId);
+          if (page && page.elements) {
+            page.elements = page.elements.filter((el) => el.id !== elementId);
+          }
+        }
       },
       onRemoteFullUpdate: (data) => {
-        if (data.elements && Array.isArray(data.elements)) {
-          this.elements = data.elements;
+        if (Array.isArray(data.pages) && data.pages.length > 0) {
+          this.pages = data.pages;
+          const targetPageId = data.activePageId && this.pages.some((p) => p.id === data.activePageId)
+            ? data.activePageId
+            : this.pages[0].id;
+          this.activePageId = targetPageId;
+          const activePage = this.pages.find((p) => p.id === this.activePageId) || this.pages[0];
+          this.elements = activePage.elements || [];
+          this.boardBackground = activePage.background || { color: '#ffffff', dotColor: '#cbd5e1', type: 'dots' };
+          this.camera = activePage.camera || { x: 0, y: 0, zoom: 1 };
+        } else {
+          if (data.elements && Array.isArray(data.elements)) {
+            this.elements = data.elements;
+          }
+          if (data.background) {
+            this.boardBackground = data.background;
+          }
         }
-        if (data.background) {
-          this.boardBackground = data.background;
+        this.updatePagesUI();
+        this.requestRedraw();
+      },
+      onRemotePageAdd: (page, insertIndex) => {
+        if (this.pages.some((p) => p.id === page.id)) return;
+        if (typeof insertIndex === 'number' && insertIndex >= 0 && insertIndex <= this.pages.length) {
+          this.pages.splice(insertIndex, 0, page);
+        } else {
+          this.pages.push(page);
         }
+        this.updatePagesUI();
+      },
+      onRemotePageDelete: (pageId) => {
+        const idx = this.pages.findIndex((p) => p.id === pageId);
+        if (idx === -1 || this.pages.length <= 1) return;
+        const isDeletingActive = pageId === this.activePageId;
+        this.pages.splice(idx, 1);
+        if (isDeletingActive) {
+          const nextIdx = Math.min(idx, this.pages.length - 1);
+          const nextActivePage = this.pages[nextIdx];
+          this.activePageId = nextActivePage.id;
+          this.elements = nextActivePage.elements || [];
+          this.boardBackground = nextActivePage.background || { color: '#ffffff', dotColor: '#cbd5e1', type: 'dots' };
+          this.camera = nextActivePage.camera || { x: 0, y: 0, zoom: 1 };
+          this.selectedElementId = null;
+          this.selectedElementIds = [];
+          this.updateSelectionToolbar();
+          this.history.clear();
+          this.history.pushState(this.elements);
+          this.updateUndoRedoUI();
+          this.collaborationManager.activePageId = this.activePageId;
+        }
+        this.updatePagesUI();
         this.requestRedraw();
       },
-      onRemoteReorderElements: (elements) => {
-        this.elements = elements;
-        this.requestRedraw();
+      onRemotePageReorder: (pageIds) => {
+        const pageMap = new Map(this.pages.map((p) => [p.id, p]));
+        const newPages: BoardPageItem[] = [];
+        for (const id of pageIds) {
+          const p = pageMap.get(id);
+          if (p) {
+            newPages.push(p);
+            pageMap.delete(id);
+          }
+        }
+        for (const p of pageMap.values()) {
+          newPages.push(p);
+        }
+        this.pages = newPages;
+        this.updatePagesUI();
       },
-      onRemoteUpdateBackground: (background) => {
-        this.boardBackground = background;
-        this.requestRedraw();
-      },
-      onRemoteUpdateElement: (element) => {
-        const existingIdx = this.elements.findIndex((el) => el.id === element.id);
-        if (existingIdx >= 0) {
-          this.elements[existingIdx] = element;
+      onRemoteReorderElements: (elements, pageId) => {
+        const targetPageId = pageId || this.activePageId;
+        if (targetPageId === this.activePageId) {
+          this.elements = elements;
           this.requestRedraw();
+        } else {
+          const page = this.pages.find((p) => p.id === targetPageId);
+          if (page) {
+            page.elements = elements;
+          }
+        }
+      },
+      onRemoteUpdateBackground: (background, pageId) => {
+        const targetPageId = pageId || this.activePageId;
+        if (targetPageId === this.activePageId) {
+          this.boardBackground = background;
+          this.requestRedraw();
+        } else {
+          const page = this.pages.find((p) => p.id === targetPageId);
+          if (page) {
+            page.background = background;
+          }
+        }
+      },
+      onRemoteUpdateElement: (element, pageId) => {
+        const targetPageId = pageId || this.activePageId;
+        if (targetPageId === this.activePageId) {
+          const existingIdx = this.elements.findIndex((el) => el.id === element.id);
+          if (existingIdx >= 0) {
+            this.elements[existingIdx] = element;
+            this.requestRedraw();
+          }
+        } else {
+          const page = this.pages.find((p) => p.id === targetPageId);
+          if (page && page.elements) {
+            const existingIdx = page.elements.findIndex((el) => el.id === element.id);
+            if (existingIdx >= 0) {
+              page.elements[existingIdx] = element;
+            }
+          }
         }
       },
       onRequestFullState: (targetConnId) => {
+        this.syncActivePageData();
         this.collaborationManager.broadcastFullUpdate({
+          activePageId: this.activePageId,
           background: this.boardBackground,
           elements: this.elements,
+          pages: this.pages,
         }, targetConnId);
       },
     });
@@ -727,6 +915,12 @@ export class BoardController {
   private bindEvents(): void {
     const { signal } = this.abortController;
 
+    this.btnBottomPages = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-bottom-pages"]');
+    this.bottomPagesTextEl = this.container.querySelector<HTMLElement>('[data-ref="bottom-pages-text"]');
+    this.btnBottomPages?.addEventListener('click', () => {
+      this.togglePagesTray();
+    }, { signal });
+
     const btnUndo = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-undo"]');
     btnUndo?.addEventListener('click', () => this.undo(), { signal });
 
@@ -763,13 +957,18 @@ export class BoardController {
         canvasType: 'board',
         canvasUuid: this.canvasUuid,
         generateThumbnail: () => generateThumbnail(this.elements, this.boardBackground, (ctx, el) => this.drawElementOn(ctx, el)),
-        getCurrentProjectData: () => ({
-          background: this.boardBackground,
-          camera: this.camera,
-          elements: this.elements,
-          type: 'board',
-          version: 1,
-        }),
+        getCurrentProjectData: () => {
+          this.syncActivePageData();
+          return {
+            activePageId: this.activePageId,
+            background: this.boardBackground,
+            camera: this.camera,
+            elements: this.elements,
+            pages: this.pages,
+            type: 'board',
+            version: 1,
+          };
+        },
         isOwner: this.isOwner,
         onExitPreview: () => {
           this.exitSnapshotPreview();
@@ -842,7 +1041,10 @@ export class BoardController {
           {
             icon: 'data_object',
             label: 'Archivo JSON del proyecto',
-            onClick: () => exportJson(this.elements, this.boardBackground, this.camera, this.boardName),
+            onClick: () => {
+              this.syncActivePageData();
+              exportJson(this.elements, this.boardBackground, this.camera, this.boardName, this.pages, this.activePageId);
+            },
             ref: 'btn-share-export-json',
           },
         ],
@@ -5389,11 +5591,180 @@ export class BoardController {
     }, 500);
   }
 
+  private syncActivePageData(): void {
+    const activePage = this.pages.find((p) => p.id === this.activePageId);
+    if (activePage) {
+      activePage.elements = this.elements;
+      activePage.background = this.boardBackground;
+      activePage.camera = this.camera;
+      activePage.previewThumbnail = generateThumbnail(this.elements, this.boardBackground, (ctx, el) => this.drawElementOn(ctx, el));
+    }
+  }
+
+  private switchToPage(pageId: string, skipBroadcast = false): void {
+    if (pageId === this.activePageId) return;
+    const targetPage = this.pages.find((p) => p.id === pageId);
+    if (!targetPage) return;
+
+    this.syncActivePageData();
+    this.activePageId = targetPage.id;
+    this.elements = targetPage.elements || [];
+    this.boardBackground = targetPage.background || { color: '#ffffff', dotColor: '#cbd5e1', type: 'dots' };
+    this.camera = targetPage.camera || { x: 0, y: 0, zoom: 1 };
+
+    this.selectedElementId = null;
+    this.selectedElementIds = [];
+    this.updateSelectionToolbar();
+    this.history.clear();
+    this.history.pushState(this.elements);
+    this.updateUndoRedoUI();
+
+    this.collaborationManager.activePageId = this.activePageId;
+    if (!skipBroadcast) {
+      this.collaborationManager.broadcastPageChange(this.activePageId);
+    }
+
+    this.updatePagesUI();
+    this.requestRedraw();
+    this.scheduleAutoSave();
+  }
+
+  private addPage(): void {
+    if (this.pages.length >= MAX_BOARD_PAGES) {
+      showToast(`Has alcanzado el límite máximo de ${MAX_BOARD_PAGES} páginas`, 'warning');
+      return;
+    }
+    this.syncActivePageData();
+    const newPage: BoardPageItem = {
+      background: { color: '#ffffff', dotColor: '#cbd5e1', type: 'dots' },
+      camera: { x: 0, y: 0, zoom: 1 },
+      createdAt: Date.now(),
+      elements: [],
+      id: `page-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      name: `Página ${this.pages.length + 1}`,
+    };
+    this.pages.push(newPage);
+    this.switchToPage(newPage.id);
+    this.collaborationManager.broadcastPageAdd(newPage);
+    showToast('Nueva página creada');
+  }
+
+  private duplicatePage(pageId?: string): void {
+    if (this.pages.length >= MAX_BOARD_PAGES) {
+      showToast(`Has alcanzado el límite máximo de ${MAX_BOARD_PAGES} páginas`, 'warning');
+      return;
+    }
+    this.syncActivePageData();
+    const targetId = pageId || this.activePageId;
+    const targetIndex = this.pages.findIndex((p) => p.id === targetId);
+    if (targetIndex === -1) return;
+    const sourcePage = this.pages[targetIndex];
+
+    const dupElements: BoardElement[] = (sourcePage.elements || []).map((el) => ({
+      ...JSON.parse(JSON.stringify(el)),
+      id: `el-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    }));
+
+    const newPage: BoardPageItem = {
+      background: { ...sourcePage.background },
+      camera: { ...sourcePage.camera },
+      createdAt: Date.now(),
+      elements: dupElements,
+      id: `page-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      name: `${sourcePage.name} (copia)`,
+    };
+    this.pages.splice(targetIndex + 1, 0, newPage);
+    this.switchToPage(newPage.id);
+    this.collaborationManager.broadcastPageAdd(newPage, targetIndex + 1);
+    showToast('Página duplicada');
+  }
+
+  private deletePage(pageId?: string): void {
+    if (this.pages.length <= 1) {
+      showToast('No puedes eliminar la única página del pizarrón', 'warning');
+      return;
+    }
+    const targetId = pageId || this.activePageId;
+    const targetIndex = this.pages.findIndex((p) => p.id === targetId);
+    if (targetIndex === -1) return;
+
+    const isDeletingActive = targetId === this.activePageId;
+    this.pages.splice(targetIndex, 1);
+
+    if (isDeletingActive) {
+      const nextIndex = Math.min(targetIndex, this.pages.length - 1);
+      const nextActivePage = this.pages[nextIndex];
+      this.activePageId = nextActivePage.id;
+      this.elements = nextActivePage.elements || [];
+      this.boardBackground = nextActivePage.background || { color: '#ffffff', dotColor: '#cbd5e1', type: 'dots' };
+      this.camera = nextActivePage.camera || { x: 0, y: 0, zoom: 1 };
+      this.selectedElementId = null;
+      this.selectedElementIds = [];
+      this.updateSelectionToolbar();
+      this.history.clear();
+      this.history.pushState(this.elements);
+      this.updateUndoRedoUI();
+      this.collaborationManager.activePageId = this.activePageId;
+      this.collaborationManager.broadcastPageChange(this.activePageId);
+    }
+
+    this.collaborationManager.broadcastPageDelete(targetId);
+    this.updatePagesUI();
+    this.requestRedraw();
+    this.scheduleAutoSave();
+    showToast('Página eliminada');
+  }
+
+  private reorderPages(fromIndex: number, toIndex: number): void {
+    if (fromIndex < 0 || fromIndex >= this.pages.length || toIndex < 0 || toIndex >= this.pages.length || fromIndex === toIndex) return;
+    this.syncActivePageData();
+    const [moved] = this.pages.splice(fromIndex, 1);
+    this.pages.splice(toIndex, 0, moved);
+    this.collaborationManager.broadcastPageReorder(this.pages.map((p) => p.id));
+    this.updatePagesUI();
+    this.scheduleAutoSave();
+  }
+
+  private goToPrevPage(): void {
+    const idx = this.pages.findIndex((p) => p.id === this.activePageId);
+    if (idx > 0) {
+      this.switchToPage(this.pages[idx - 1].id);
+    }
+  }
+
+  private goToNextPage(): void {
+    const idx = this.pages.findIndex((p) => p.id === this.activePageId);
+    if (idx !== -1 && idx < this.pages.length - 1) {
+      this.switchToPage(this.pages[idx + 1].id);
+    }
+  }
+
+  private togglePagesTray(): void {
+    if (this.pixelTimeline?.isVisible()) {
+      this.pixelTimeline.hide();
+    }
+    this.pagesTray?.toggle();
+    this.btnBottomPages?.classList.toggle('is-active', !!this.pagesTray?.isVisible());
+  }
+
+  private updatePagesUI(): void {
+    const activeIndex = this.pages.findIndex((p) => p.id === this.activePageId);
+    const currentNum = activeIndex !== -1 ? activeIndex + 1 : 1;
+    const totalPages = this.pages.length || 1;
+    if (this.bottomPagesTextEl) {
+      this.bottomPagesTextEl.textContent = `${currentNum} / ${totalPages}`;
+    }
+    this.pagesTray?.sync(this.pages, this.activePageId);
+  }
+
   private async saveImmediate(): Promise<void> {
+    this.syncActivePageData();
     const project: BoardProject = {
+      activePageId: this.activePageId,
       background: this.boardBackground,
       camera: this.camera,
       elements: this.elements,
+      pages: this.pages,
       type: 'board',
       version: 1,
     };
@@ -5474,23 +5845,57 @@ export class BoardController {
   }
 
   private applyProjectData(project: BoardProject): void {
-    if (Array.isArray(project.elements)) {
-      this.elements = project.elements;
-    }
-    if (project.camera) {
-      this.camera = {
-        x: project.camera.x || 0,
-        y: project.camera.y || 0,
-        zoom: Math.max(0.1, Math.min(5, project.camera.zoom || 1)),
+    if (Array.isArray(project.pages) && project.pages.length > 0) {
+      this.pages = project.pages;
+      const targetPageId = project.activePageId && this.pages.some((p) => p.id === project.activePageId)
+        ? project.activePageId
+        : this.pages[0].id;
+      this.activePageId = targetPageId;
+      const activePage = this.pages.find((p) => p.id === this.activePageId) || this.pages[0];
+      this.elements = activePage.elements || [];
+      this.boardBackground = activePage.background || {
+        color: '#ffffff',
+        dotColor: '#cbd5e1',
+        type: 'dots',
       };
-    }
-    if (project.background && typeof project.background.color === 'string') {
-      this.boardBackground = {
-        color: project.background.color,
-        dotColor: project.background.dotColor,
-        type: project.background.type || 'dots',
+      this.camera = activePage.camera
+        ? {
+            x: activePage.camera.x || 0,
+            y: activePage.camera.y || 0,
+            zoom: Math.max(0.1, Math.min(5, activePage.camera.zoom || 1)),
+          }
+        : { x: 0, y: 0, zoom: 1 };
+    } else {
+      if (Array.isArray(project.elements)) {
+        this.elements = project.elements;
+      }
+      if (project.camera) {
+        this.camera = {
+          x: project.camera.x || 0,
+          y: project.camera.y || 0,
+          zoom: Math.max(0.1, Math.min(5, project.camera.zoom || 1)),
+        };
+      }
+      if (project.background && typeof project.background.color === 'string') {
+        this.boardBackground = {
+          color: project.background.color,
+          dotColor: project.background.dotColor,
+          type: project.background.type || 'dots',
+        };
+      }
+      const defaultPage: BoardPageItem = {
+        background: this.boardBackground,
+        camera: this.camera,
+        createdAt: Date.now(),
+        elements: this.elements,
+        id: `page-${Date.now()}-1`,
+        name: 'Página 1',
       };
+      this.pages = [defaultPage];
+      this.activePageId = defaultPage.id;
     }
+    this.collaborationManager.activePageId = this.activePageId;
+    this.updatePagesUI();
     this.requestRedraw();
     this.updateZoomUI();
   }

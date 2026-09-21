@@ -405,7 +405,7 @@ export type BoardElement =
   | BoardTableElement
   | BoardChartElement;
 
-export interface BoardProject {
+export interface BoardPageItem {
   background: {
     color: string;
     dotColor?: string;
@@ -416,12 +416,33 @@ export interface BoardProject {
     y: number;
     zoom: number;
   };
+  createdAt?: number;
   elements: BoardElement[];
+  id: string;
+  name: string;
+  previewThumbnail?: string;
+}
+
+export interface BoardProject {
+  activePageId?: string;
+  background?: {
+    color: string;
+    dotColor?: string;
+    type: BackgroundType;
+  };
+  camera?: {
+    x: number;
+    y: number;
+    zoom: number;
+  };
+  elements?: BoardElement[];
+  pages?: BoardPageItem[];
   type: 'board';
   version: 1;
 }
 
 export interface BoardCollaboratorState {
+  activePageId?: string;
   avatarUrl: string | null;
   color: string;
   connId: string;

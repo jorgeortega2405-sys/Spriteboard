@@ -30,9 +30,9 @@ export async function createDesignView(canvasUuid: string): Promise<HTMLElement>
   if (canvasRecord.data) {
     try {
       const parsed = typeof canvasRecord.data === 'string' ? JSON.parse(canvasRecord.data) : canvasRecord.data;
-      if (parsed?.type === 'doc' || (Array.isArray(parsed?.pages) && parsed.pages.length > 0)) {
+      if (parsed?.type === 'doc') {
         canvasType = 'doc';
-      } else {
+      } else if (parsed?.type === 'board') {
         canvasType = 'board';
       }
     } catch {}

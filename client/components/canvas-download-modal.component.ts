@@ -308,7 +308,7 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
         if (fullCanvas.data) {
           try {
             const parsed = typeof fullCanvas.data === 'string' ? JSON.parse(fullCanvas.data) : fullCanvas.data;
-            if (parsed && Array.isArray(parsed.elements)) {
+            if (parsed && (Array.isArray(parsed.elements) || Array.isArray(parsed.pages))) {
               boardProject = parsed as BoardProject;
             }
           } catch {}
@@ -323,6 +323,12 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
           };
         }
 
+        const activePage = Array.isArray(boardProject.pages) && boardProject.pages.length > 0
+          ? (boardProject.pages.find((p) => p.id === boardProject?.activePageId) || boardProject.pages[0])
+          : null;
+        const elements = activePage?.elements || boardProject.elements || [];
+        const background = activePage?.background || boardProject.background || { color: '#ffffff', type: 'dots' };
+
         if (selectedType === 'project-json') {
           const jsonBlob = new Blob([JSON.stringify(boardProject, null, 2)], { type: 'application/json;charset=utf-8' });
           triggerBlobDownload(jsonBlob, `${cleanName}_project.json`);
@@ -332,7 +338,7 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
         }
 
         if (selectedType === 'svg') {
-          exportSvg(boardProject.elements, boardProject.background || { color: '#ffffff', type: 'dots' }, cleanName, (el) => {
+          exportSvg(elements, background, cleanName, (el) => {
             const c = document.createElement('canvas');
             c.width = el.gridWidth;
             c.height = el.gridHeight;
@@ -349,7 +355,6 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
           return;
         }
 
-        const elements = boardProject.elements || [];
         const bbox = computeElementsBoundingBox(elements);
         const pad = 60;
         const exportW = bbox ? Math.ceil(bbox.width + pad * 2) : 1200;
@@ -360,7 +365,7 @@ export function openCanvasDownloadModal(canvas: CanvasItem): void {
         exportCanvas.height = Math.min(8192, exportH);
         const ectx = exportCanvas.getContext('2d');
         if (ectx) {
-          ectx.fillStyle = boardProject.background?.color || '#ffffff';
+          ectx.fillStyle = background.color || '#ffffff';
           ectx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
 
           if (bbox) {

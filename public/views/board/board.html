@@ -810,12 +810,51 @@
           </div>
         </div>
 
+        <div class="design-pages-tray is-hidden" data-ref="design-pages-tray">
+          <div class="design-pages-tray__toolbar" data-ref="pages-tray-toolbar">
+            <div class="design-toolbar-group" data-ref="pages-group-nav">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-page-prev" data-tooltip="Página anterior" aria-label="Página anterior">
+                <span class="component-icon">skip_previous</span>
+              </button>
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-page-next" data-tooltip="Página siguiente" aria-label="Página siguiente">
+                <span class="component-icon">skip_next</span>
+              </button>
+            </div>
+            <div class="design-toolbar-divider" data-ref="pages-divider-1"></div>
+            <div class="design-toolbar-group" data-ref="pages-group-actions">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-page-duplicate" data-tooltip="Duplicar página" aria-label="Duplicar página">
+                <span class="component-icon">content_copy</span>
+              </button>
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--sm" data-ref="btn-page-delete" data-tooltip="Eliminar página" aria-label="Eliminar página">
+                <span class="component-icon">delete_outline</span>
+              </button>
+            </div>
+          </div>
+          <div class="design-pages-tray__cards-wrapper" data-ref="pages-cards-wrapper">
+            <button type="button" class="design-toolbar__nav-btn design-toolbar__nav-btn--left is-disabled" data-ref="btn-pages-tray-scroll-left" data-tooltip="Desplazar a la izquierda" aria-label="Desplazar a la izquierda">
+              <span class="component-icon">chevron_left</span>
+            </button>
+            <div class="design-pages-tray__cards" data-ref="pages-cards-list"></div>
+            <button type="button" class="design-toolbar__nav-btn design-toolbar__nav-btn--right is-disabled" data-ref="btn-pages-tray-scroll-right" data-tooltip="Desplazar a la derecha" aria-label="Desplazar a la derecha">
+              <span class="component-icon">chevron_right</span>
+            </button>
+          </div>
+        </div>
+
         <div class="design-bottom-toolbar-wrapper" data-ref="board-toolbar-wrapper">
           <button type="button" class="design-toolbar__nav-btn design-toolbar__nav-btn--left is-disabled" data-ref="btn-bottom-toolbar-scroll-left" data-tooltip="Desplazar a la izquierda" aria-label="Desplazar a la izquierda">
             <span class="component-icon">chevron_left</span>
           </button>
 
           <div class="design-bottom-toolbar" data-ref="board-bottom-toolbar">
+            <div class="design-bottom-toolbar__section design-bottom-toolbar__section--pages" data-ref="board-pages-section">
+              <div class="design-toolbar-group" data-ref="board-group-pages">
+                <button type="button" class="design-toolbar-badge design-toolbar-badge--clickable" data-ref="btn-bottom-pages" data-tooltip="Páginas del pizarrón" aria-label="Páginas">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_stories"></use></svg>
+                  <span class="design-toolbar-badge__text" data-ref="bottom-pages-text">1 / 1</span>
+                </button>
+              </div>
+            </div>
             <div class="design-bottom-toolbar__section" data-ref="board-snapping-section">
               <div class="design-toolbar-group" data-ref="board-group-snapping">
                 <button type="button" class="design-toolbar-btn design-toolbar-btn--sm is-active" data-ref="btn-toggle-snapping" data-tooltip="Ajuste magnético inteligente (Alt para suspender)" aria-label="Ajuste magnético inteligente">

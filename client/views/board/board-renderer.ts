@@ -1004,10 +1004,12 @@ export function drawBoardCollaboratorCursors(
   ctx: CanvasRenderingContext2D,
   collaborators: Map<string, BoardCollaboratorState>,
   camera: { x: number; y: number; zoom: number },
-  canvas: HTMLCanvasElement | null
+  canvas: HTMLCanvasElement | null,
+  activePageId?: string
 ): void {
   collaborators.forEach((collab) => {
     if (collab.x === undefined || collab.y === undefined) return;
+    if (activePageId && collab.activePageId && collab.activePageId !== activePageId) return;
     const screen = worldToScreen(collab.x, collab.y, canvas, camera);
 
     ctx.save();

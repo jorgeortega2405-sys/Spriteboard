@@ -3,7 +3,7 @@ import { get3DElementProjectedFaces } from './board-3d-renderer.js';
 import { drawChart } from './board-chart-renderer.js';
 import { computeElementsBoundingBox, findContainingSection, getConnectorEndpoints } from './board-elements.manager.js';
 import { getSvgPathBoundingBox } from './board-renderer.js';
-import { BackgroundType, Board3DElement, BoardElement, BoardPixelGridElement, BoardProject, BoardSectionElement } from './board.types.js';
+import { BackgroundType, Board3DElement, BoardElement, BoardPageItem, BoardPixelGridElement, BoardProject, BoardSectionElement } from './board.types.js';
 
 export function generateThumbnail(
   elements: BoardElement[],
@@ -426,12 +426,16 @@ export function exportJson(
   elements: BoardElement[],
   boardBackground: { color: string; dotColor?: string; type: BackgroundType },
   camera: { x: number; y: number; zoom: number },
-  boardName: string
+  boardName: string,
+  pages?: BoardPageItem[],
+  activePageId?: string
 ): void {
   const project: BoardProject = {
+    activePageId,
     background: boardBackground,
     camera,
     elements,
+    pages,
     type: 'board',
     version: 1,
   };

@@ -1,24 +1,28 @@
 import { joinCanvasRoom, leaveCanvasRoom, registerWebSocketHandler, sendCanvasAccessChanged, sendCanvasAction, sendCanvasCursor, sendCanvasFullUpdate } from '../../services/websocket.service.js';
 import { getCollaboratorColor } from '../../utils/color.util.js';
-import { BackgroundType, BoardCollaboratorState, BoardElement } from './board.types.js';
+import { BackgroundType, BoardCollaboratorState, BoardElement, BoardPageItem } from './board.types.js';
 
 export interface BoardCollaborationCallbacks {
   onAccessChanged: (accessLevel: 'private' | 'public', publicRole?: 'editor' | 'viewer') => void;
   onAccessRevoked: () => void;
   onCollaboratorsChanged: () => void;
   onCursor: () => void;
-  onRemoteAddElement: (element: BoardElement) => void;
-  onRemoteClear: () => void;
-  onRemoteDeleteElement: (elementId: string) => void;
-  onRemoteFullUpdate: (data: { background?: { color: string; dotColor?: string; type: BackgroundType }; elements?: BoardElement[] }) => void;
-  onRemoteReorderElements: (elements: BoardElement[]) => void;
-  onRemoteUpdateBackground: (background: { color: string; dotColor?: string; type: BackgroundType }) => void;
-  onRemoteUpdateElement: (element: BoardElement) => void;
+  onRemoteAddElement: (element: BoardElement, pageId?: string) => void;
+  onRemoteClear: (pageId?: string) => void;
+  onRemoteDeleteElement: (elementId: string, pageId?: string) => void;
+  onRemoteFullUpdate: (data: { activePageId?: string; background?: { color: string; dotColor?: string; type: BackgroundType }; elements?: BoardElement[]; pages?: BoardPageItem[] }) => void;
+  onRemotePageAdd: (page: BoardPageItem, insertIndex?: number) => void;
+  onRemotePageDelete: (pageId: string) => void;
+  onRemotePageReorder: (pageIds: string[]) => void;
+  onRemoteReorderElements: (elements: BoardElement[], pageId?: string) => void;
+  onRemoteUpdateBackground: (background: { color: string; dotColor?: string; type: BackgroundType }, pageId?: string) => void;
+  onRemoteUpdateElement: (element: BoardElement, pageId?: string) => void;
   onRequestFullState: (targetConnId: string) => void;
 }
 
 export class BoardCollaborationManager {
   public accessLevel: 'private' | 'public' = 'private';
+  public activePageId = '';
   public canvasUuid: string;
   public collaborators: Map<string, BoardCollaboratorState> = new Map();
   public isOwner = true;
@@ -70,6 +74,7 @@ export class BoardCollaborationManager {
           const uTier = (u.subscriptionTier || u.subscription_tier || 'free') as BoardCollaboratorState['subscriptionTier'];
           if (uUserId && uUserId === userId && uUsername === username) continue;
           this.collaborators.set(uConnId, {
+            activePageId: u.activePageId || u.active_page_id,
             avatarUrl: uAvatar,
             color: uColor,
             connId: uConnId,
@@ -96,6 +101,7 @@ export class BoardCollaborationManager {
       const uTier = (u.subscriptionTier || u.subscription_tier || 'free') as BoardCollaboratorState['subscriptionTier'];
       if (uUserId && uUserId === userId && uUsername === username) return;
       this.collaborators.set(uConnId, {
+        activePageId: u.activePageId || u.active_page_id,
         avatarUrl: uAvatar,
         color: uColor,
         connId: uConnId,
@@ -125,6 +131,7 @@ export class BoardCollaborationManager {
       let collab = this.collaborators.get(connId);
       if (!collab) {
         collab = {
+          activePageId: payload.pageId || payload.activePageId,
           avatarUrl: payload.avatarUrl || payload.avatar_url || null,
           color: payload.color || getCollaboratorColor(payload.userId || connId),
           connId,
@@ -136,6 +143,9 @@ export class BoardCollaborationManager {
         this.collaborators.set(connId, collab);
         callbacks.onCollaboratorsChanged();
       }
+      if (payload.pageId !== undefined) {
+        collab.activePageId = payload.pageId;
+      }
       collab.x = payload.x;
       collab.y = payload.y;
       callbacks.onCursor();
@@ -146,18 +156,41 @@ export class BoardCollaborationManager {
       if (roomUuid !== this.canvasUuid) return;
       const action = payload.action;
       const data = payload.payload || payload.params || {};
-      if (action === 'board_add_element' && data.element) {
-        callbacks.onRemoteAddElement(data.element);
+      const senderConnId = payload.senderConnId;
+
+      if (action === 'board_cursor_page_move') {
+        if (senderConnId && this.collaborators.has(senderConnId)) {
+          const c = this.collaborators.get(senderConnId)!;
+          c.activePageId = data.pageId;
+          c.x = data.x;
+          c.y = data.y;
+          callbacks.onCursor();
+        }
+      } else if (action === 'board_change_page') {
+        if (senderConnId && this.collaborators.has(senderConnId)) {
+          const c = this.collaborators.get(senderConnId)!;
+          c.activePageId = data.pageId;
+          callbacks.onCollaboratorsChanged();
+          callbacks.onCursor();
+        }
+      } else if (action === 'board_page_add' && data.page) {
+        callbacks.onRemotePageAdd(data.page, data.insertIndex);
+      } else if (action === 'board_page_delete' && data.pageId) {
+        callbacks.onRemotePageDelete(data.pageId);
+      } else if (action === 'board_page_reorder' && Array.isArray(data.pageIds)) {
+        callbacks.onRemotePageReorder(data.pageIds);
+      } else if (action === 'board_add_element' && data.element) {
+        callbacks.onRemoteAddElement(data.element, data.pageId);
       } else if (action === 'board_update_element' && data.element) {
-        callbacks.onRemoteUpdateElement(data.element);
+        callbacks.onRemoteUpdateElement(data.element, data.pageId);
       } else if (action === 'board_delete_element' && data.elementId) {
-        callbacks.onRemoteDeleteElement(data.elementId);
+        callbacks.onRemoteDeleteElement(data.elementId, data.pageId);
       } else if (action === 'board_clear') {
-        callbacks.onRemoteClear();
+        callbacks.onRemoteClear(data.pageId);
       } else if (action === 'board_reorder_elements' && Array.isArray(data.elements)) {
-        callbacks.onRemoteReorderElements(data.elements);
+        callbacks.onRemoteReorderElements(data.elements, data.pageId);
       } else if (action === 'board_update_background' && data.background) {
-        callbacks.onRemoteUpdateBackground(data.background);
+        callbacks.onRemoteUpdateBackground(data.background, data.pageId);
       }
     });
 
@@ -205,40 +238,67 @@ export class BoardCollaborationManager {
     if (now - this.lastSentCursorTime > 40) {
       this.lastSentCursorTime = now;
       sendCanvasCursor(this.canvasUuid, worldX, worldY);
+      if (this.activePageId) {
+        sendCanvasAction(this.canvasUuid, 'board_cursor_page_move', {
+          pageId: this.activePageId,
+          x: worldX,
+          y: worldY,
+        });
+      }
     }
   }
 
-  public broadcastAddElement(element: BoardElement): void {
-    if (this.role === 'viewer') return;
-    sendCanvasAction(this.canvasUuid, 'board_add_element', { element });
+  public broadcastPageChange(pageId: string): void {
+    this.activePageId = pageId;
+    sendCanvasAction(this.canvasUuid, 'board_change_page', { pageId });
   }
 
-  public broadcastUpdateElement(element: BoardElement): void {
+  public broadcastPageAdd(page: BoardPageItem, insertIndex?: number): void {
     if (this.role === 'viewer') return;
-    sendCanvasAction(this.canvasUuid, 'board_update_element', { element });
+    sendCanvasAction(this.canvasUuid, 'board_page_add', { insertIndex, page });
   }
 
-  public broadcastDeleteElement(elementId: string): void {
+  public broadcastPageDelete(pageId: string): void {
     if (this.role === 'viewer') return;
-    sendCanvasAction(this.canvasUuid, 'board_delete_element', { elementId });
+    sendCanvasAction(this.canvasUuid, 'board_page_delete', { pageId });
   }
 
-  public broadcastClear(): void {
+  public broadcastPageReorder(pageIds: string[]): void {
     if (this.role === 'viewer') return;
-    sendCanvasAction(this.canvasUuid, 'board_clear', {});
+    sendCanvasAction(this.canvasUuid, 'board_page_reorder', { pageIds });
   }
 
-  public broadcastReorderElements(elements: BoardElement[]): void {
+  public broadcastAddElement(element: BoardElement, pageId?: string): void {
     if (this.role === 'viewer') return;
-    sendCanvasAction(this.canvasUuid, 'board_reorder_elements', { elements });
+    sendCanvasAction(this.canvasUuid, 'board_add_element', { element, pageId: pageId || this.activePageId });
   }
 
-  public broadcastUpdateBackground(background: { color: string; dotColor?: string; type: BackgroundType }): void {
+  public broadcastUpdateElement(element: BoardElement, pageId?: string): void {
     if (this.role === 'viewer') return;
-    sendCanvasAction(this.canvasUuid, 'board_update_background', { background });
+    sendCanvasAction(this.canvasUuid, 'board_update_element', { element, pageId: pageId || this.activePageId });
   }
 
-  public broadcastFullUpdate(data: { background?: { color: string; dotColor?: string; type: BackgroundType }; elements: BoardElement[] }, targetConnId?: string): void {
+  public broadcastDeleteElement(elementId: string, pageId?: string): void {
+    if (this.role === 'viewer') return;
+    sendCanvasAction(this.canvasUuid, 'board_delete_element', { elementId, pageId: pageId || this.activePageId });
+  }
+
+  public broadcastClear(pageId?: string): void {
+    if (this.role === 'viewer') return;
+    sendCanvasAction(this.canvasUuid, 'board_clear', { pageId: pageId || this.activePageId });
+  }
+
+  public broadcastReorderElements(elements: BoardElement[], pageId?: string): void {
+    if (this.role === 'viewer') return;
+    sendCanvasAction(this.canvasUuid, 'board_reorder_elements', { elements, pageId: pageId || this.activePageId });
+  }
+
+  public broadcastUpdateBackground(background: { color: string; dotColor?: string; type: BackgroundType }, pageId?: string): void {
+    if (this.role === 'viewer') return;
+    sendCanvasAction(this.canvasUuid, 'board_update_background', { background, pageId: pageId || this.activePageId });
+  }
+
+  public broadcastFullUpdate(data: { activePageId?: string; background?: { color: string; dotColor?: string; type: BackgroundType }; elements?: BoardElement[]; pages?: BoardPageItem[] }, targetConnId?: string): void {
     sendCanvasFullUpdate(this.canvasUuid, data, targetConnId);
   }
 
