@@ -1,3 +1,7 @@
+import { openCreateCanvasModal } from './create-canvas-modal.component.js';
+import { openInsertPixelGridModal } from './insert-pixel-grid-modal.component.js';
+import { openModal } from './modal.component.js';
+import { openUpgradeModal } from './upgrade-modal.component.js';
 import { navigate, render } from '../app-router.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { BOARD_3D_SHAPES } from '../config/board-3d-shapes.config.js';
@@ -25,10 +29,6 @@ import { CHART_CATALOG } from '../views/board/board-charts-panel.component.js';
 import { BoardChartElement, BoardProject, ChartType, Shape3DType, ShapeType } from '../views/board/board.types.js';
 import { DOC_TEMPLATES, getDocTemplateById } from '../views/doc/doc-templates.config.js';
 import { DocPage, DocProject } from '../views/doc/doc.types.js';
-import { openCreateCanvasModal } from './create-canvas-modal.component.js';
-import { openInsertPixelGridModal } from './insert-pixel-grid-modal.component.js';
-import { openModal } from './modal.component.js';
-import { openUpgradeModal } from './upgrade-modal.component.js';
 
 let isDrawerOpen = false;
 let isChatOpen = false;
@@ -811,10 +811,11 @@ function closeDynamicDrawer(): void {
   }
 }
 
-function getActiveCanvasType(): 'board' | 'doc' {
+function getActiveCanvasType(): 'board' | 'doc' | 'presentation' {
   const content = document.querySelector<HTMLElement>('[data-ref="app"] .layout-content, .layout-content');
   const ref = content?.getAttribute('data-ref');
   if (ref === 'doc-view' || window.location.pathname.startsWith('/doc/')) return 'doc';
+  if (ref === 'presentation-view' || window.location.pathname.startsWith('/presentation/')) return 'presentation';
   return 'board';
 }
 
@@ -823,8 +824,22 @@ function getActiveCanvasController(): any {
   return (content as any)?.__controller || null;
 }
 
-function handleApplyCanvasTemplate(preset: PresetItem, canvasType: 'board' | 'doc'): void {
+function handleApplyCanvasTemplate(preset: PresetItem, canvasType: 'board' | 'doc' | 'presentation'): void {
   const controller = getActiveCanvasController();
+
+  if (canvasType === 'presentation') {
+    if (!controller) {
+      showToast('No se encontró el controlador de la presentación', 'warning');
+      return;
+    }
+    const templateId = preset.boardTemplateId || preset.diagramTemplateId || preset.id;
+    controller.applyTemplate?.(templateId, 'insert');
+    showToast(`Plantilla «${preset.name}» añadida a la presentación`, 'success');
+    if (window.innerWidth <= 768) {
+      toggleDrawer(false);
+    }
+    return;
+  }
 
   if (canvasType === 'doc') {
     const docPreset = getDocTemplateById(preset.docTemplateId || preset.id) || DOC_TEMPLATES.find((p) => p.id === preset.docTemplateId) || DOC_TEMPLATES[0];
@@ -1113,7 +1128,7 @@ const SHAPE_SECTIONS: Array<{ key: string; label: string; prefixes: string[] }> 
   },
 ];
 
-function handleApplyDiagramComponent(item: DiagramComponentItem, canvasType: 'board' | 'doc'): void {
+function handleApplyDiagramComponent(item: DiagramComponentItem, canvasType: 'board' | 'doc' | 'presentation'): void {
   const controller = getActiveCanvasController();
 
   addRecentElement({
@@ -1147,9 +1162,9 @@ function handleApplyDiagramComponent(item: DiagramComponentItem, canvasType: 'bo
     return;
   }
 
-  if (canvasType === 'board') {
+  if (canvasType === 'board' || canvasType === 'presentation') {
     if (!controller) {
-      showToast('No se encontró el controlador del pizarrón', 'warning');
+      showToast('No se encontró el controlador del lienzo', 'warning');
       return;
     }
 
@@ -1164,10 +1179,10 @@ function handleApplyDiagramComponent(item: DiagramComponentItem, canvasType: 'bo
         textColor: item.textColor,
         width: item.width,
       });
-      showToast(`«${item.name}» añadido al pizarrón`, 'success');
+      showToast(`«${item.name}» añadido al lienzo`, 'success');
     } else if (item.type === 'sticky') {
       controller.insertStickyNote?.(item.fillColor || '#fef08a', item.text);
-      showToast(`Nota «${item.name}» añadida al pizarrón`, 'success');
+      showToast(`Nota «${item.name}» añadida al lienzo`, 'success');
     } else if (item.type === 'connector') {
       controller.activateConnectorTool?.(item.connectorStyle);
       showToast(`Herramienta ${item.name} activada: arrastra entre nodos`, 'info');
@@ -1179,7 +1194,7 @@ function handleApplyDiagramComponent(item: DiagramComponentItem, canvasType: 'bo
   }
 }
 
-function handleApplyCanvasElement(shape: PixelShape, canvasType: 'board' | 'doc'): void {
+function handleApplyCanvasElement(shape: PixelShape, canvasType: 'board' | 'doc' | 'presentation'): void {
   const controller = getActiveCanvasController();
 
   addRecentElement({
@@ -1209,14 +1224,14 @@ function handleApplyCanvasElement(shape: PixelShape, canvasType: 'board' | 'doc'
     return;
   }
 
-  if (canvasType === 'board') {
+  if (canvasType === 'board' || canvasType === 'presentation') {
     if (!controller) {
-      showToast('No se encontró el controlador del pizarrón', 'warning');
+      showToast('No se encontró el controlador del lienzo', 'warning');
       return;
     }
 
-    controller.insertShapeOrSticker(shape);
-    showToast(`«${shape.name}» añadido al pizarrón`, 'success');
+    controller.insertShapeOrSticker?.(shape);
+    showToast(`«${shape.name}» añadido al lienzo`, 'success');
     if (window.innerWidth <= 768) {
       toggleDrawer(false);
     }
@@ -1224,7 +1239,7 @@ function handleApplyCanvasElement(shape: PixelShape, canvasType: 'board' | 'doc'
   }
 }
 
-function handleApplyStickyPreset(item: { color: string; id: string; name: string; stroke: string; text?: string; textColor?: string }, canvasType: 'board' | 'doc'): void {
+function handleApplyStickyPreset(item: { color: string; id: string; name: string; stroke: string; text?: string; textColor?: string }, canvasType: 'board' | 'doc' | 'presentation'): void {
   const controller = getActiveCanvasController();
   const noteText = item.text || 'Nota';
 
@@ -1237,9 +1252,9 @@ function handleApplyStickyPreset(item: { color: string; id: string; name: string
     type: 'sticky',
   });
 
-  if (canvasType === 'board' && controller) {
+  if ((canvasType === 'board' || canvasType === 'presentation') && controller) {
     controller.insertStickyNote?.(item.color, noteText);
-    showToast(`Nota «${item.name}» añadida al pizarrón`, 'success');
+    showToast(`Nota «${item.name}» añadida al lienzo`, 'success');
   } else if (canvasType === 'doc' && controller) {
     showToast('Las notas adhesivas están optimizadas para el pizarrón', 'info');
   }
@@ -1249,7 +1264,7 @@ function handleApplyStickyPreset(item: { color: string; id: string; name: string
   }
 }
 
-function handleApplyRecentElement(item: RecentElementItem, canvasType: 'board' | 'doc'): void {
+function handleApplyRecentElement(item: RecentElementItem, canvasType: 'board' | 'doc' | 'presentation'): void {
   if (item.type === 'sticky') {
     handleApplyStickyPreset({
       color: item.fillColor || '#fef08a',
@@ -1299,11 +1314,11 @@ function handleApplyRecentElement(item: RecentElementItem, canvasType: 'board' |
   }
 }
 
-function handleApplyChart(chartType: ChartType, canvasType: 'board' | 'doc'): void {
+function handleApplyChart(chartType: ChartType, canvasType: 'board' | 'doc' | 'presentation'): void {
   const controller = getActiveCanvasController();
-  if (canvasType === 'board' && controller) {
+  if ((canvasType === 'board' || canvasType === 'presentation') && controller) {
     controller.insertChart?.(chartType);
-    showToast('Gráfica añadida al pizarrón', 'success');
+    showToast('Gráfica añadida al lienzo', 'success');
   } else if (canvasType === 'doc' && controller) {
     showToast('Las gráficas interactivas están disponibles en el pizarrón', 'info');
   }
@@ -1312,11 +1327,11 @@ function handleApplyChart(chartType: ChartType, canvasType: 'board' | 'doc'): vo
   }
 }
 
-function handleApplyMockup(tpl: MockupTemplate, canvasType: 'board' | 'doc'): void {
+function handleApplyMockup(tpl: MockupTemplate, canvasType: 'board' | 'doc' | 'presentation'): void {
   const controller = getActiveCanvasController();
-  if (canvasType === 'board' && controller) {
+  if ((canvasType === 'board' || canvasType === 'presentation') && controller) {
     controller.insertMockup?.(tpl);
-    showToast(`Mockup «${tpl.name}» añadido al pizarrón`, 'success');
+    showToast(`Mockup «${tpl.name}» añadido al lienzo`, 'success');
   } else if (canvasType === 'doc' && controller) {
     showToast('Los mockups están disponibles en el pizarrón', 'info');
   }
@@ -1325,11 +1340,11 @@ function handleApplyMockup(tpl: MockupTemplate, canvasType: 'board' | 'doc'): vo
   }
 }
 
-function handleApply3DShape(shapeId: Shape3DType, canvasType: 'board' | 'doc'): void {
+function handleApply3DShape(shapeId: Shape3DType, canvasType: 'board' | 'doc' | 'presentation'): void {
   const controller = getActiveCanvasController();
-  if (canvasType === 'board' && controller) {
+  if ((canvasType === 'board' || canvasType === 'presentation') && controller) {
     controller.insert3DShape?.(shapeId);
-    showToast('Figura 3D añadida al pizarrón', 'success');
+    showToast('Figura 3D añadida al lienzo', 'success');
   } else if (canvasType === 'doc' && controller) {
     showToast('Los elementos 3D están disponibles en el pizarrón', 'info');
   }
@@ -1338,11 +1353,11 @@ function handleApply3DShape(shapeId: Shape3DType, canvasType: 'board' | 'doc'): 
   }
 }
 
-function handleApplyTable(rows: number, cols: number, canvasType: 'board' | 'doc'): void {
+function handleApplyTable(rows: number, cols: number, canvasType: 'board' | 'doc' | 'presentation'): void {
   const controller = getActiveCanvasController();
-  if (canvasType === 'board' && controller) {
+  if ((canvasType === 'board' || canvasType === 'presentation') && controller) {
     controller.insertTable?.(rows, cols);
-    showToast(`Tabla de ${rows}×${cols} añadida al pizarrón`, 'success');
+    showToast(`Tabla de ${rows}×${cols} añadida al lienzo`, 'success');
   } else if (canvasType === 'doc' && controller) {
     controller.insertTable?.(rows, cols);
     showToast(`Tabla de ${rows}×${cols} añadida al documento`, 'success');
@@ -2231,7 +2246,7 @@ function formatBytes(bytes: number): string {
   return `${formatted} ${units[i]}`;
 }
 
-function handleApplyCanvasUpload(item: UserUploadItem, canvasType: 'board' | 'doc'): void {
+function handleApplyCanvasUpload(item: UserUploadItem, canvasType: 'board' | 'doc' | 'presentation'): void {
   const controller = getActiveCanvasController();
 
   if (canvasType === 'doc') {
@@ -2248,14 +2263,14 @@ function handleApplyCanvasUpload(item: UserUploadItem, canvasType: 'board' | 'do
     return;
   }
 
-  if (canvasType === 'board') {
+  if (canvasType === 'board' || canvasType === 'presentation') {
     if (!controller) {
-      showToast('No se encontró el controlador del pizarrón', 'warning');
+      showToast('No se encontró el controlador del lienzo', 'warning');
       return;
     }
 
-    controller.insertImage(item.url, item.width || undefined, item.height || undefined, item.original_filename);
-    showToast(`«${item.original_filename}» añadida al pizarrón`, 'success');
+    controller.insertImage?.(item.url, item.width || undefined, item.height || undefined, item.original_filename);
+    showToast(`«${item.original_filename}» añadida al lienzo`, 'success');
     if (window.innerWidth <= 768) {
       toggleDrawer(false);
     }
@@ -2492,7 +2507,7 @@ function renderUploadsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement
   renderIcons(drawerBody);
 }
 
-function handleApplyTextPreset(type: 'heading' | 'subheading' | 'body', canvasType: 'board' | 'doc'): void {
+function handleApplyTextPreset(type: 'heading' | 'subheading' | 'body', canvasType: 'board' | 'doc' | 'presentation'): void {
   const controller = getActiveCanvasController();
   if (!controller) {
     showToast('No se encontró el controlador del lienzo activo', 'warning');

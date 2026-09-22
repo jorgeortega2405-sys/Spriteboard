@@ -1,14 +1,15 @@
-import { ensureGoogleFontLoaded } from '../doc/doc-fonts.config.js';
 import { draw3DElement, draw3DGroundGrid, draw3DRotationGizmo, onCustomModelLoaded, preloadCustom3DModels } from './board-3d-renderer.js';
 import { drawChart } from './board-chart-renderer.js';
 import { computeElementsBoundingBox, getConnectorEndpoints, getElementBoundingBox } from './board-elements.manager.js';
 import { AlignmentGuide } from './board-snapping.manager.js';
 import { BackgroundType, Board3DElement, BoardChartElement, BoardCollaboratorState, BoardConnectorElement, BoardElement, BoardElementAnimation, BoardElementEffect, BoardImageElement, BoardPixelGridElement, BoardPoint, BoardSectionElement, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTableElement, BoardTextElement, MarkerType, StrokeStyle } from './board.types.js';
+import { ensureGoogleFontLoaded } from '../doc/doc-fonts.config.js';
 
 export { draw3DElement, draw3DGroundGrid, draw3DRotationGizmo, drawChart, onCustomModelLoaded, preloadCustom3DModels };
 
 const imageCache = new Map<string, HTMLImageElement>();
 const imageLoadCallbacks = new Map<string, Array<() => void>>();
+const failedImageUrls = new Set<string>();
 const svgBoundsCache = new Map<string, { height: number; width: number; x: number; y: number }>();
 const svgPath2dCache = new Map<string, Path2D>();
 let helperSvg: SVGSVGElement | null = null;
@@ -50,6 +51,10 @@ export function getSvgPathBoundingBox(d: string): { height: number; width: numbe
 }
 
 export function getCachedImage(url: string, onLoaded?: () => void): HTMLImageElement | null {
+  if (failedImageUrls.has(url)) {
+    return null;
+  }
+
   if (imageCache.has(url)) {
     const img = imageCache.get(url)!;
     if (img.complete && img.naturalWidth > 0) {
@@ -72,7 +77,10 @@ export function getCachedImage(url: string, onLoaded?: () => void): HTMLImageEle
       callbacks.forEach((cb) => cb());
     };
     img.onerror = () => {
+      failedImageUrls.add(url);
+      const callbacks = imageLoadCallbacks.get(url) || [];
       imageLoadCallbacks.delete(url);
+      callbacks.forEach((cb) => cb());
     };
     img.src = url;
     imageCache.set(url, img);
@@ -87,9 +95,25 @@ export function drawImage(
   imageEl: BoardImageElement,
   onImageLoaded?: () => void
 ): void {
+  const isFailed = failedImageUrls.has(imageEl.url);
   const cached = getCachedImage(imageEl.url, onImageLoaded);
   if (cached) {
     ctx.drawImage(cached, imageEl.x, imageEl.y, imageEl.width, imageEl.height);
+  } else if (isFailed) {
+    ctx.save();
+    ctx.fillStyle = '#1e293b';
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 1.5;
+    ctx.fillRect(imageEl.x, imageEl.y, imageEl.width, imageEl.height);
+    ctx.strokeRect(imageEl.x, imageEl.y, imageEl.width, imageEl.height);
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '13px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const rawLabel = imageEl.alt || 'Imagen no disponible';
+    const truncated = rawLabel.length > 32 ? `${rawLabel.slice(0, 29)}...` : rawLabel;
+    ctx.fillText(`🖼️ ${truncated}`, imageEl.x + imageEl.width / 2, imageEl.y + imageEl.height / 2);
+    ctx.restore();
   } else {
     ctx.save();
     ctx.fillStyle = '#f1f5f9';
