@@ -3575,7 +3575,7 @@ function renderDocPageToDataUrl(page: DocPage, title = 'Documento'): Promise<str
 function openDocPageSelectionModal(
   canvas: CanvasItem,
   docProject: DocProject,
-  targetCanvasType: 'board' | 'doc'
+  targetCanvasType: 'board' | 'doc' | 'presentation'
 ): void {
   const pages = docProject.pages || [];
   if (pages.length === 0) {
@@ -3657,7 +3657,7 @@ function openDocPageSelectionModal(
 
 async function handleApplyCanvasProject(
   canvas: CanvasItem,
-  targetCanvasType: 'board' | 'doc',
+  targetCanvasType: 'board' | 'doc' | 'presentation',
   pageIndex = -1,
   loadedProjectData?: any
 ): Promise<void> {

@@ -140,6 +140,7 @@ export class BoardController {
   private isOwner = true;
   private isPanning = false;
   private isShiftPressed = false;
+  private isSlideshowActive = false;
   private isSpacePressed = false;
   private laserPoints: Array<{ time: number; x: number; y: number }> = [];
   private lastMousePos: BoardPoint = { x: 0, y: 0 };
@@ -178,6 +179,7 @@ export class BoardController {
   private selectionStartPositions = new Map<string, { endPoint?: BoardPoint; points?: BoardPoint[]; startPoint?: BoardPoint; x?: number; y?: number }>();
   private selectionStartRect: { fontSize?: number; height: number; width: number; x: number; y: number } = { height: 0, width: 0, x: 0, y: 0 };
   private shareDropdownController: CanvasShareDropdownController | null = null;
+  private slideshowSlideStartTime = 0;
   private shareWrapperEl: HTMLElement | null = null;
   private showCollaboratorCursors = true;
   private fontPicker: DocFontPickerComponent | null = null;
@@ -1014,59 +1016,6 @@ export class BoardController {
 
       avatarBtn.appendChild(img);
       this.collaboratorsListEl.appendChild(avatarBtn);
-    }
-  }
-
-  private setupResizeObserver(): void {
-    const parent = this.canvasElement?.parentElement;
-    if (!parent) return;
-    this.resizeObserver = new ResizeObserver(() => {
-      this.handleResize();
-    });
-    this.resizeObserver.observe(parent);
-    window.addEventListener('resize', () => this.handleResize(), { signal: this.abortController.signal });
-  }
-
-  private handleResize(): void {
-    if (!this.canvasElement || !this.canvasElement.parentElement) return;
-    const rect = this.canvasElement.parentElement.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) return;
-
-    const dpr = window.devicePixelRatio || 1;
-    const targetWidth = Math.round(rect.width * dpr);
-    const targetHeight = Math.round(rect.height * dpr);
-
-    const changed = this.canvasElement.width !== targetWidth || this.canvasElement.height !== targetHeight;
-    if (changed) {
-      this.canvasElement.width = targetWidth;
-      this.canvasElement.height = targetHeight;
-    }
-
-    if (changed) {
-      this.requestRedraw();
-    }
-  }
-
-  private setupDropdowns(): void {
-    const exportWrapper = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-export"]');
-    if (exportWrapper) {
-      this.exportDropdownController = setupDropdown(exportWrapper, {
-        placement: 'bottom-end',
-      });
-    }
-
-    const drawToolsWrapper = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-draw-tools"]');
-    if (drawToolsWrapper) {
-      this.drawToolsDropdownController = setupDropdown(drawToolsWrapper, {
-        placement: 'top-start',
-      });
-    }
-
-    const pixelToolsWrapper = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-pixel-tools"]');
-    if (pixelToolsWrapper) {
-      this.pixelToolsDropdownController = setupDropdown(pixelToolsWrapper, {
-        placement: 'top-start',
-      });
     }
   }
 
@@ -2479,6 +2428,26 @@ export class BoardController {
           if (this.topFontFamilyLabelEl) {
             this.topFontFamilyLabelEl.textContent = fontFamilyName;
           }
+
+          const btnBold = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-bold"]');
+          const btnItalic = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-italic"]');
+          const btnUnderline = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-underline"]');
+          const btnStrikethrough = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-strikethrough"]');
+          const iconTextAlign = this.container.querySelector<HTMLElement>('[data-ref="top-icon-text-align"]');
+
+          const isBold = (el as any).fontWeight === 700 || (el as any).fontWeight === 'bold';
+          const isItalic = (el as any).fontStyle === 'italic';
+          const isUnderline = (el as any).textDecoration === 'underline';
+          const isStrikethrough = (el as any).textDecoration === 'line-through';
+          const currentAlign = (el as any).textAlign || 'left';
+
+          btnBold?.classList.toggle('is-active', isBold);
+          btnItalic?.classList.toggle('is-active', isItalic);
+          btnUnderline?.classList.toggle('is-active', isUnderline);
+          btnStrikethrough?.classList.toggle('is-active', isStrikethrough);
+          if (iconTextAlign) {
+            iconTextAlign.textContent = currentAlign === 'center' ? 'format_align_center' : (currentAlign === 'right' ? 'format_align_right' : 'format_align_left');
+          }
         }
       }
 
@@ -2728,6 +2697,31 @@ export class BoardController {
       }
     }, { signal });
 
+    const btnBold = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-bold"]');
+    btnBold?.addEventListener('click', () => {
+      this.toggleSelectedBold();
+    }, { signal });
+
+    const btnItalic = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-italic"]');
+    btnItalic?.addEventListener('click', () => {
+      this.toggleSelectedItalic();
+    }, { signal });
+
+    const btnUnderline = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-underline"]');
+    btnUnderline?.addEventListener('click', () => {
+      this.toggleSelectedUnderline();
+    }, { signal });
+
+    const btnStrikethrough = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-strikethrough"]');
+    btnStrikethrough?.addEventListener('click', () => {
+      this.toggleSelectedStrikethrough();
+    }, { signal });
+
+    const btnTextAlign = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-text-align"]');
+    btnTextAlign?.addEventListener('click', () => {
+      this.cycleSelectedTextAlign();
+    }, { signal });
+
     const btnOpacity = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-opacity"]');
     btnOpacity?.addEventListener('click', () => {
       if (this.popoverOpacityEl && btnOpacity) this.togglePopover(this.popoverOpacityEl, btnOpacity);
@@ -2939,6 +2933,93 @@ export class BoardController {
         }
       }, { signal });
     });
+  }
+
+  private toggleSelectedBold(): void {
+    const selectedEls = this.getSelectedElements();
+    if (selectedEls.length === 0) return;
+    this.pushHistoryState();
+    const first = selectedEls[0];
+    const currentWeight = first && 'fontWeight' in first ? (first as any).fontWeight : 400;
+    const newWeight = (currentWeight === 700 || currentWeight === 'bold') ? 400 : 700;
+    selectedEls.forEach((el) => {
+      (el as any).fontWeight = newWeight;
+      if (el.type === 'text') {
+        const sz = measureTextElementSize(el.text, el.fontSize, newWeight, el.fontFamily || 'sans-serif');
+        el.width = sz.width;
+        el.height = sz.height;
+      }
+      this.collaborationManager.broadcastUpdateElement(el);
+    });
+    this.requestRedraw();
+    this.scheduleAutoSave();
+    this.updateContextualToolbar();
+  }
+
+  private toggleSelectedItalic(): void {
+    const selectedEls = this.getSelectedElements();
+    if (selectedEls.length === 0) return;
+    this.pushHistoryState();
+    const first = selectedEls[0];
+    const currentStyle = first && 'fontStyle' in first ? (first as any).fontStyle : 'normal';
+    const newStyle = currentStyle === 'italic' ? 'normal' : 'italic';
+    selectedEls.forEach((el) => {
+      (el as any).fontStyle = newStyle;
+      this.collaborationManager.broadcastUpdateElement(el);
+    });
+    this.requestRedraw();
+    this.scheduleAutoSave();
+    this.updateContextualToolbar();
+  }
+
+  private toggleSelectedUnderline(): void {
+    const selectedEls = this.getSelectedElements();
+    if (selectedEls.length === 0) return;
+    this.pushHistoryState();
+    const first = selectedEls[0];
+    const currentDeco = first && 'textDecoration' in first ? (first as any).textDecoration : 'none';
+    const newDeco = currentDeco === 'underline' ? 'none' : 'underline';
+    selectedEls.forEach((el) => {
+      (el as any).textDecoration = newDeco;
+      this.collaborationManager.broadcastUpdateElement(el);
+    });
+    this.requestRedraw();
+    this.scheduleAutoSave();
+    this.updateContextualToolbar();
+  }
+
+  private toggleSelectedStrikethrough(): void {
+    const selectedEls = this.getSelectedElements();
+    if (selectedEls.length === 0) return;
+    this.pushHistoryState();
+    const first = selectedEls[0];
+    const currentDeco = first && 'textDecoration' in first ? (first as any).textDecoration : 'none';
+    const newDeco = currentDeco === 'line-through' ? 'none' : 'line-through';
+    selectedEls.forEach((el) => {
+      (el as any).textDecoration = newDeco;
+      this.collaborationManager.broadcastUpdateElement(el);
+    });
+    this.requestRedraw();
+    this.scheduleAutoSave();
+    this.updateContextualToolbar();
+  }
+
+  private cycleSelectedTextAlign(): void {
+    const selectedEls = this.getSelectedElements();
+    if (selectedEls.length === 0) return;
+    this.pushHistoryState();
+    const first = selectedEls[0];
+    const currentAlign = first && 'textAlign' in first ? (first as any).textAlign : 'left';
+    const alignOrder: Array<'center' | 'left' | 'right'> = ['left', 'center', 'right'];
+    const nextIdx = (alignOrder.indexOf(currentAlign) + 1) % alignOrder.length;
+    const newAlign = alignOrder[nextIdx];
+    selectedEls.forEach((el) => {
+      (el as any).textAlign = newAlign;
+      this.collaborationManager.broadcastUpdateElement(el);
+    });
+    this.requestRedraw();
+    this.scheduleAutoSave();
+    this.updateContextualToolbar();
   }
 
   private duplicateSelected(): void {

@@ -893,4 +893,18 @@ export class BoardChartsPanelComponent {
       }
     }
   }
+
+  public destroy(): void {
+    this.panelEl = null;
+    this.containerEl = null;
+    this.currentChart = null;
+    this.typeDropdownCtrl?.destroy();
+    this.typeDropdownCtrl = null;
+    this.colorByDropdownCtrl?.destroy();
+    this.colorByDropdownCtrl = null;
+    this.numberStyleDropdownCtrl?.destroy();
+    this.numberStyleDropdownCtrl = null;
+    this.abbrevDropdownCtrl?.destroy();
+    this.abbrevDropdownCtrl = null;
+  }
 }

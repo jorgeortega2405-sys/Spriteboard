@@ -3,10 +3,11 @@ import { CanvasCommentsController } from '../../components/canvas-comments.compo
 import { CanvasHistoryDropdownController, setupCanvasHistoryDropdown } from '../../components/canvas-history-dropdown.component.js';
 import { openCanvasMetricsModal } from '../../components/canvas-metrics-modal.component.js';
 import { CanvasShareDropdownController, setupCanvasShareDropdown } from '../../components/canvas-share-dropdown.component.js';
+import { isColorsDrawerOpen, isFontsDrawerOpen, openChartInspectorInDrawer, openColorsInDrawer, openFontsInDrawer, openMockupsInDrawer, toggleDrawer } from '../../components/layout.component.js';
 import { SlideshowPlayerComponent } from '../../components/slideshow-player.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
 import { getBoardTemplateElements } from '../../config/board-templates.data.js';
-import { currentUser, getApi, postApi, putApi } from '../../services/api.service.js';
+import { currentUser, getApi, putApi } from '../../services/api.service.js';
 import { getLocalCanvasByUuid, saveLocalCanvas } from '../../services/canvas-storage.service.js';
 import { t } from '../../services/i18n.service.js';
 import { renderIcons } from '../../services/icon.service.js';
@@ -15,13 +16,21 @@ import { showToast } from '../../services/toast.service.js';
 import { CanvasItem } from '../../types/canvas.types.js';
 import { MockupTemplate } from '../../types/mockups.types.js';
 import { PRESENTATION_FORMATS, PresentationFormatConfig, PresentationProject, PresentationSlideItem } from '../../types/presentation.types.js';
+import { DEFAULT_CLASSIC_PALETTE, generateShadingRamp } from '../../utils/color.util.js';
 import { setupDropdown, withButtonLoading } from '../../utils/dom.util.js';
 import { PixelShape } from '../../utils/pixel-shapes.util.js';
-import { computeElementsBoundingBox, getElementBoundingBox, hitTestElement, hitTestResizeHandle, measureTextElementSize, moveElementByDrag, resizeElementByHandle } from '../board/board-elements.manager.js';
+import { BoardAnimationPanelComponent } from '../board/board-animation-panel.component.js';
+import { BoardChartsPanelComponent } from '../board/board-charts-panel.component.js';
+import { BoardEffectsPanelComponent } from '../board/board-effects-panel.component.js';
+import { computeElementsBoundingBox, getConnectorEndpoints, getElementBoundingBox, hitTestElement, hitTestResizeHandle, measureTextElementSize, moveElementByDrag, resizeElementByHandle } from '../board/board-elements.manager.js';
 import { exportJson, exportPng, exportSvg, generateThumbnail } from '../board/board-export.service.js';
-import { drawAlignmentGuides, drawBackground, drawChart, drawConnector, drawImage, drawMarqueeBox, drawMultiSelectionBounds, drawSection, drawSelectionBox, drawShape, drawSticky, drawStroke, drawTable, drawText, screenToWorld, worldToScreen } from '../board/board-renderer.js';
+import { drawMockupElement } from '../board/board-mockup-renderer.js';
+import { BoardMockupsPanelComponent } from '../board/board-mockups-panel.component.js';
+import { BoardPositionPanelComponent } from '../board/board-position-panel.component.js';
+import { applyElementAnimation, applyElementEffect, draw3DElement, drawAlignmentGuides, drawBackground, drawChart, drawConnector, drawImage, drawMarqueeBox, drawMultiSelectionBounds, drawSection, drawSelectionBox, drawShape, drawSticky, drawStroke, drawTable, drawText, screenToWorld, worldToScreen } from '../board/board-renderer.js';
 import { AlignmentGuide } from '../board/board-snapping.manager.js';
-import { BackgroundType, Board3DElement, BoardChartElement, BoardConnectorElement, BoardElement, BoardElementAnimation, BoardElementEffect, BoardImageElement, BoardMockupElement, BoardPoint, BoardSectionElement, BoardShapeElement, BoardShapeType, BoardStickyElement, BoardStrokeElement, BoardTableCell, BoardTableElement, BoardTextElement, ChartType, ConnectorStyle, MarkerType, ResizeHandle, Shape3DType, ShapeType, StrokeStyle } from '../board/board.types.js';
+import { BackgroundType, Board3DElement, BoardAnimationType, BoardChartElement, BoardConnectorElement, BoardEffectType, BoardElement, BoardElementAnimation, BoardElementEffect, BoardImageElement, BoardMockupElement, BoardPoint, BoardSectionElement, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTableCell, BoardTableElement, BoardTextElement, ChartType, ConnectorStyle, MarkerType, ResizeHandle, Shape3DType, ShapeType, StrokeStyle } from '../board/board.types.js';
+import { DocFontPickerComponent, FontSelectEvent } from '../doc/doc-font-picker.component.js';
 
 export class PresentationController {
   private abortController: AbortController | null = null;
@@ -30,13 +39,25 @@ export class PresentationController {
   private activeSlideId: string = 'slide-1';
   private aiDropdownController: CanvasAiDropdownController | null = null;
   private alignmentGuides: AlignmentGuide[] = [];
+  private animationPanel: BoardAnimationPanelComponent | null = null;
   private autoSaveTimer: number | null = null;
+  private btnColorEyedropper: HTMLButtonElement | null = null;
   private canvas: HTMLCanvasElement | null = null;
   private canvasRecord: any = null;
   private canvasUuid: string;
+  private chartsPanel: BoardChartsPanelComponent | null = null;
+  private colorPanelTarget: 'fill' | 'stroke' | 'text' = 'fill';
+  private colorsCustomInputEl: HTMLInputElement | null = null;
+  private colorsHexTextEl: HTMLElement | null = null;
+  private colorsPaletteGridEl: HTMLElement | null = null;
+  private colorsPanelEl: HTMLElement | null = null;
+  private colorsRampGridEl: HTMLElement | null = null;
+  private colorsRecentGridEl: HTMLElement | null = null;
+  private colorsTitleEl: HTMLElement | null = null;
   private commentsController: CanvasCommentsController | null = null;
   private container: HTMLElement;
   private ctx: CanvasRenderingContext2D | null = null;
+  private currentConnectorStyle: ConnectorStyle = 'curved';
   private currentFillColor: string = '#3b82f6';
   private currentFontFamily: string = 'Inter';
   private currentFontSize: number = 24;
@@ -45,14 +66,17 @@ export class PresentationController {
   private currentStrokeColor: string = '#1e293b';
   private currentStrokeStyle: StrokeStyle = 'solid';
   private currentStrokeWidth: number = 2;
-  private currentTool: 'draw' | 'hand' | 'laser' | 'lines' | 'select' | 'shapes' | 'stickies' | 'text' = 'select';
+  private currentTool: 'cursors' | 'draw' | 'hand' | 'laser' | 'lines' | 'select' | 'shapes' | 'stickies' | 'text' = 'select';
   private dragStartScreen: BoardPoint = { x: 0, y: 0 };
   private dragStartWorld: BoardPoint = { x: 0, y: 0 };
   private drawPoints: BoardPoint[] = [];
   private drawSubtool: 'eraser' | 'highlighter' | 'marker' | 'pen' = 'pen';
+  private effectsPanel: BoardEffectsPanelComponent | null = null;
+  private fontPicker: DocFontPickerComponent | null = null;
   private historyDropdownController: CanvasHistoryDropdownController | null = null;
   private isDragging: boolean = false;
   private isDrawing: boolean = false;
+  private isEyedropperActive: boolean = false;
   private isPanning: boolean = false;
   private isPreviewingSnapshot: boolean = false;
   private isSnappingEnabled: boolean = true;
@@ -60,9 +84,12 @@ export class PresentationController {
   private laserPoint: BoardPoint | null = null;
   private marqueeEnd: BoardPoint | null = null;
   private marqueeStart: BoardPoint | null = null;
+  private mockupsPanel: BoardMockupsPanelComponent | null = null;
   private panOffset: BoardPoint = { x: 0, y: 0 };
+  private positionPanel: BoardPositionPanelComponent | null = null;
   private prePreviewSlides: PresentationSlideItem[] | null = null;
   private previewSnapshotUuid: string | null = null;
+  private recentColors: string[] = ['#ffffff', '#000000', '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
   private resizeStartBBox: { fontSize?: number; height: number; width: number; x: number; y: number } | null = null;
   private selectedElementIds: Set<string> = new Set();
   private shareDropdownController: CanvasShareDropdownController | null = null;
@@ -90,8 +117,10 @@ export class PresentationController {
     if (!this.ctx) return false;
 
     await this.loadPresentationData();
+    this.loadRecentColors();
     this.setupResizeObserver();
     this.setupTopBarComponents();
+    this.setupPanels();
     this.bindEvents();
     this.fitSlide();
     this.render();
@@ -119,6 +148,18 @@ export class PresentationController {
     this.historyDropdownController = null;
     this.shareDropdownController?.destroy();
     this.shareDropdownController = null;
+    this.chartsPanel?.destroy();
+    this.chartsPanel = null;
+    this.mockupsPanel?.destroy();
+    this.mockupsPanel = null;
+    this.effectsPanel?.destroy();
+    this.effectsPanel = null;
+    this.animationPanel?.destroy();
+    this.animationPanel = null;
+    this.positionPanel?.destroy();
+    this.positionPanel = null;
+    this.fontPicker?.destroy();
+    this.fontPicker = null;
     if (this.slideshowPlayer) {
       this.slideshowPlayer.destroy();
       this.slideshowPlayer = null;
@@ -193,6 +234,99 @@ export class PresentationController {
       this.slideDuration = currentSlide.duration;
       this.updateSlideDurationUI();
     }
+  }
+
+  private setupPanels(): void {
+    this.chartsPanel = new BoardChartsPanelComponent(this.container, {
+      onChangeChart: (chart) => {
+        const slide = this.getActiveSlide();
+        const idx = slide.elements.findIndex((e) => e.id === chart.id);
+        if (idx !== -1) {
+          slide.elements[idx] = { ...chart };
+          this.render();
+          this.scheduleAutoSave();
+        }
+      },
+      onClose: () => {},
+      onCreateChart: (type) => {
+        this.insertChart(type);
+      },
+    });
+    this.chartsPanel.init();
+
+    this.mockupsPanel = new BoardMockupsPanelComponent(this.container, {
+      onClose: () => {},
+      onSelectMockup: (tpl) => {
+        this.insertMockup(tpl);
+      },
+    });
+    this.mockupsPanel.init();
+
+    this.effectsPanel = new BoardEffectsPanelComponent(this.container, {
+      onApplyEffect: (effect: BoardElementEffect) => {
+        this.applySelectedEffect(effect);
+      },
+      onClose: () => {
+        this.effectsPanel?.close();
+      },
+    });
+    this.effectsPanel.init();
+
+    this.animationPanel = new BoardAnimationPanelComponent(this.container, {
+      onApplyAnimation: (animation: BoardElementAnimation) => {
+        this.applySelectedAnimation(animation);
+      },
+      onClose: () => {
+        this.animationPanel?.close();
+      },
+      onPreviewAnimation: (animation: BoardElementAnimation) => {
+        this.applySelectedAnimation(animation);
+      },
+    });
+    this.animationPanel.init();
+
+    this.positionPanel = new BoardPositionPanelComponent(this.container, {
+      onAlign: (alignType) => {
+        this.alignSelectedElements(alignType);
+      },
+      onClose: () => {
+        this.positionPanel?.close();
+      },
+      onReorder: (action) => {
+        this.reorderSelectedAction(action);
+      },
+      onReorderLayers: (fromIndex, toIndex) => {
+        this.reorderLayers(fromIndex, toIndex);
+      },
+      onSelectElement: (elementId) => {
+        this.selectedElementIds = new Set([elementId]);
+        this.syncPanels();
+        this.updateSelectionToolbar();
+        this.render();
+      },
+      onToggleLock: (elementId) => {
+        const el = this.getActiveSlide().elements.find((e) => e.id === elementId);
+        if (el) {
+          (el as any).locked = !(el as any).locked;
+          this.syncPanels();
+          this.render();
+          this.scheduleAutoSave();
+        }
+      },
+      onToggleVisibility: (elementId) => {
+        const el = this.getActiveSlide().elements.find((e) => e.id === elementId);
+        if (el) {
+          (el as any).hidden = !(el as any).hidden;
+          this.syncPanels();
+          this.render();
+          this.scheduleAutoSave();
+        }
+      },
+      onUpdateTransform: (updates) => {
+        this.updateSelectedTransform(updates);
+      },
+    });
+    this.positionPanel.init();
   }
 
   private setupTopBarComponents(): void {
@@ -592,6 +726,21 @@ export class PresentationController {
         this.duplicateSelectedElements();
         return;
       }
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'b' || e.key === 'B') && this.selectedElementIds.size > 0 && !this.activeInlineEditor) {
+        e.preventDefault();
+        this.toggleBold();
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'i' || e.key === 'I') && this.selectedElementIds.size > 0 && !this.activeInlineEditor) {
+        e.preventDefault();
+        this.toggleItalic();
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'u' || e.key === 'U') && this.selectedElementIds.size > 0 && !this.activeInlineEditor) {
+        e.preventDefault();
+        this.toggleUnderline();
+        return;
+      }
       if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
         e.preventDefault();
         this.undo();
@@ -603,21 +752,16 @@ export class PresentationController {
     }, { signal });
 
     this.bindToolbarEvents(signal);
+    this.bindVerticalToolbarEvents(signal);
     this.bindCanvasMouseEvents(signal);
     this.bindTrayEvents(signal);
     this.bindDurationEvents(signal);
     this.bindTopPropertiesToolbar(signal);
+    this.bindFloatingToolbarEvents(signal);
+    this.bindPopoversEvents(signal);
   }
 
   private bindToolbarEvents(signal: AbortSignal): void {
-    const toolButtons = this.container.querySelectorAll<HTMLButtonElement>('[data-vtool]');
-    toolButtons.forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const tool = btn.getAttribute('data-vtool') as any;
-        if (tool) this.setTool(tool);
-      }, { signal });
-    });
-
     const btnZoomIn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-zoom-in"]');
     const btnZoomOut = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-zoom-out"]');
     const btnZoomReset = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-zoom-reset"]');
@@ -653,6 +797,115 @@ export class PresentationController {
     }, { signal });
   }
 
+  private bindVerticalToolbarEvents(signal: AbortSignal): void {
+    const toolButtons = this.container.querySelectorAll<HTMLButtonElement>('[data-vtool]');
+    toolButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const tool = btn.getAttribute('data-vtool') as any;
+        if (tool) {
+          this.setTool(tool);
+          this.showVerticalSubtoolbar(tool);
+        }
+      }, { signal });
+    });
+
+    const btnClose = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-close-vertical-toolbar"]');
+    btnClose?.addEventListener('click', () => {
+      this.toggleVerticalToolbar(false);
+    }, { signal });
+
+    const drawSubtools = this.container.querySelectorAll<HTMLButtonElement>('[data-subtool]');
+    drawSubtools.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        drawSubtools.forEach((b) => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        this.drawSubtool = (btn.getAttribute('data-subtool') || 'pen') as any;
+      }, { signal });
+    });
+
+    const btnDrawColor = this.container.querySelector<HTMLButtonElement>('[data-ref="vdraw-btn-color"]');
+    btnDrawColor?.addEventListener('click', () => {
+      this.toggleColorsPanel('stroke');
+    }, { signal });
+
+    const btnDrawWidth = this.container.querySelector<HTMLButtonElement>('[data-ref="vdraw-btn-width"]');
+    btnDrawWidth?.addEventListener('click', () => {
+      this.togglePopover('stroke');
+    }, { signal });
+
+    const shapeButtons = this.container.querySelectorAll<HTMLButtonElement>('[data-shape]');
+    shapeButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        shapeButtons.forEach((b) => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        this.currentShapeType = (btn.getAttribute('data-shape') || 'rect') as ShapeType;
+        if (this.selectedElementIds.size > 0) {
+          this.applySelectedProperty('shapeType', this.currentShapeType);
+        }
+      }, { signal });
+    });
+
+    const lineButtons = this.container.querySelectorAll<HTMLButtonElement>('[data-conn-style]');
+    lineButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        lineButtons.forEach((b) => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        this.currentConnectorStyle = (btn.getAttribute('data-conn-style') || 'curved') as ConnectorStyle;
+        if (this.selectedElementIds.size > 0) {
+          this.applySelectedProperty('connectorStyle', this.currentConnectorStyle);
+        }
+      }, { signal });
+    });
+
+    const stickyButtons = this.container.querySelectorAll<HTMLButtonElement>('[data-ref^="vsticky-color-"]');
+    stickyButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        stickyButtons.forEach((b) => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        const color = btn.getAttribute('data-color') || '#fef08a';
+        if (this.selectedElementIds.size > 0) {
+          this.applySelectedProperty('color', color);
+        } else {
+          this.insertStickyNote(color);
+        }
+      }, { signal });
+    });
+
+    const btnLaser = this.container.querySelector<HTMLButtonElement>('[data-ref="vcursor-btn-laser"]');
+    btnLaser?.addEventListener('click', () => {
+      this.setTool('laser');
+    }, { signal });
+  }
+
+  public toggleVerticalToolbar(show?: boolean): void {
+    const container = this.container.querySelector<HTMLElement>('[data-ref="presentation-vertical-toolbar-container"]');
+    if (!container) return;
+    if (show !== undefined) {
+      container.classList.toggle('is-hidden', !show);
+    } else {
+      container.classList.toggle('is-hidden');
+    }
+  }
+
+  private showVerticalSubtoolbar(tool: string): void {
+    const subtoolbars = this.container.querySelectorAll<HTMLElement>('.design-vsubtoolbar');
+    subtoolbars.forEach((st) => st.classList.add('is-hidden'));
+
+    const targetMap: Record<string, string> = {
+      cursors: 'vsubtoolbar-cursors',
+      draw: 'vsubtoolbar-draw',
+      lines: 'vsubtoolbar-lines',
+      shapes: 'vsubtoolbar-shapes',
+      stickies: 'vsubtoolbar-stickies',
+    };
+
+    const ref = targetMap[tool];
+    if (ref) {
+      const activeSub = this.container.querySelector<HTMLElement>(`[data-ref="${ref}"]`);
+      activeSub?.classList.remove('is-hidden');
+    }
+  }
+
   private bindCanvasMouseEvents(signal: AbortSignal): void {
     if (!this.canvas) return;
 
@@ -668,6 +921,8 @@ export class PresentationController {
       const hit = hitTestElement(elements, wp.x, wp.y, this.zoom);
       if (hit && (hit.type === 'text' || (hit.type === 'shape' && (hit as any).text !== undefined) || hit.type === 'sticky')) {
         this.openInlineTextEditor(hit);
+      } else if (hit && hit.type === 'chart') {
+        this.openChartsPanel(hit as BoardChartElement);
       }
     }, { signal });
 
@@ -677,6 +932,20 @@ export class PresentationController {
       const rect = this.canvas.getBoundingClientRect();
       const sx = e.clientX - rect.left;
       const sy = e.clientY - rect.top;
+
+      if (this.isEyedropperActive && this.ctx) {
+        try {
+          const dpr = window.devicePixelRatio || 1;
+          const pixel = this.ctx.getImageData(sx * dpr, sy * dpr, 1, 1).data;
+          const hex = `#${((1 << 24) + (pixel[0] << 16) + (pixel[1] << 8) + pixel[2]).toString(16).slice(1)}`;
+          this.handleColorPicked(hex);
+        } catch {}
+        this.toggleEyedropper(false);
+        return;
+      }
+
+      this.closeAllPopovers();
+
       const camera = { x: 0, y: 0, zoom: this.zoom };
       const wp = screenToWorld(sx, sy, this.canvas, camera);
 
@@ -752,6 +1021,7 @@ export class PresentationController {
         this.marqueeEnd = wp;
         this.canvas.setPointerCapture(e.pointerId);
       }
+      this.syncPanels();
       this.updateSelectionToolbar();
       this.render();
     }, { signal });
@@ -837,7 +1107,7 @@ export class PresentationController {
       if (hoverHit) {
         this.canvas.style.cursor = 'move';
       } else {
-        this.canvas.style.cursor = 'default';
+        this.canvas.style.cursor = this.isEyedropperActive ? 'crosshair' : 'default';
       }
     }, { signal });
 
@@ -894,6 +1164,7 @@ export class PresentationController {
         });
         this.marqueeStart = null;
         this.marqueeEnd = null;
+        this.syncPanels();
         this.updateSelectionToolbar();
         this.render();
       }
@@ -928,9 +1199,8 @@ export class PresentationController {
 
   private bindDurationEvents(signal: AbortSignal): void {
     const btnDuration = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-slide-duration"]');
-    const popover = this.container.querySelector<HTMLElement>('[data-ref="popover-slide-duration"]');
     btnDuration?.addEventListener('click', () => {
-      popover?.classList.toggle('is-hidden');
+      this.togglePopover('slide-duration');
     }, { signal });
 
     const slider = this.container.querySelector<HTMLInputElement>('[data-ref="input-popover-slide-duration"]');
@@ -958,6 +1228,7 @@ export class PresentationController {
     });
 
     const btnApplyAll = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-apply-duration-all"]');
+    const popover = this.container.querySelector<HTMLElement>('[data-ref="popover-slide-duration"]');
     btnApplyAll?.addEventListener('click', () => {
       this.slides.forEach((s) => { s.duration = this.slideDuration; });
       this.renderSlidesTray();
@@ -980,53 +1251,930 @@ export class PresentationController {
     const btnFontDec = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-font-dec"]');
     btnFontDec?.addEventListener('click', () => this.changeSelectedFontSize(-2), { signal });
 
+    const btnFontFamily = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-font-family"]');
+    btnFontFamily?.addEventListener('click', () => this.toggleFontsPanel(), { signal });
+
+    const btnBold = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-bold"]');
+    btnBold?.addEventListener('click', () => this.toggleBold(), { signal });
+
+    const btnItalic = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-italic"]');
+    btnItalic?.addEventListener('click', () => this.toggleItalic(), { signal });
+
+    const btnUnderline = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-underline"]');
+    btnUnderline?.addEventListener('click', () => this.toggleUnderline(), { signal });
+
+    const btnStrikethrough = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-strikethrough"]');
+    btnStrikethrough?.addEventListener('click', () => this.toggleStrikethrough(), { signal });
+
+    const btnTextAlign = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-text-align"]');
+    btnTextAlign?.addEventListener('click', () => this.cycleTextAlign(), { signal });
+
+    const btnFill = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-fill"]');
+    btnFill?.addEventListener('click', () => this.toggleColorsPanel('fill'), { signal });
+
+    const btnStrokeColor = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-stroke-color"]');
+    btnStrokeColor?.addEventListener('click', () => this.toggleColorsPanel('stroke'), { signal });
+
+    const btnTextColor = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-text-color"]');
+    btnTextColor?.addEventListener('click', () => this.toggleColorsPanel('text'), { signal });
+
+    const btnStrokeStyle = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-stroke-style"]');
+    btnStrokeStyle?.addEventListener('click', () => {
+      if (btnStrokeStyle) this.togglePopover('stroke', btnStrokeStyle);
+    }, { signal });
+
+    const btnCorners = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-corners"]');
+    btnCorners?.addEventListener('click', () => {
+      if (btnCorners) this.togglePopover('corners', btnCorners);
+    }, { signal });
+
+    const btnOpacity = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-opacity"]');
+    btnOpacity?.addEventListener('click', () => {
+      if (btnOpacity) this.togglePopover('opacity', btnOpacity);
+    }, { signal });
+
+    const btnEffects = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-effects"]');
+    btnEffects?.addEventListener('click', () => this.toggleEffectsPanel(), { signal });
+
+    const btnAnimate = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-animate"]');
+    btnAnimate?.addEventListener('click', () => this.toggleAnimationPanel(), { signal });
+
+    const btnPosition = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-position"]');
+    btnPosition?.addEventListener('click', () => this.togglePositionPanel(), { signal });
+
+    const btnMarkerStart = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-marker-start"]');
+    btnMarkerStart?.addEventListener('click', () => {
+      if (btnMarkerStart) this.togglePopover('marker-start', btnMarkerStart);
+    }, { signal });
+
+    const btnMarkerEnd = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-marker-end"]');
+    btnMarkerEnd?.addEventListener('click', () => {
+      if (btnMarkerEnd) this.togglePopover('marker-end', btnMarkerEnd);
+    }, { signal });
+
+    const btnSwapMarkers = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-swap-markers"]');
+    btnSwapMarkers?.addEventListener('click', () => this.swapConnectorMarkers(), { signal });
+
+    const btnConnectorStyle = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-connector-style"]');
+    btnConnectorStyle?.addEventListener('click', () => {
+      if (btnConnectorStyle) this.togglePopover('connector-style', btnConnectorStyle);
+    }, { signal });
+
     const btnPosFront = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-pos-front"]');
     btnPosFront?.addEventListener('click', () => this.reorderSelected(true), { signal });
 
     const btnPosBack = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-pos-back"]');
     btnPosBack?.addEventListener('click', () => this.reorderSelected(false), { signal });
+  }
 
-    const btnFill = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-fill"]');
-    btnFill?.addEventListener('click', () => {
-      const color = prompt('Color de relleno (hex ej. #3b82f6 o transparent):', this.currentFillColor);
-      if (color !== null) {
-        this.currentFillColor = color;
-        this.applySelectedProperty('fillColor', color);
-      }
+  private bindFloatingToolbarEvents(signal: AbortSignal): void {
+    const btnDup = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sel-duplicate"]');
+    btnDup?.addEventListener('click', () => this.duplicateSelectedElements(), { signal });
+
+    const btnFront = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sel-bring-forward"]');
+    btnFront?.addEventListener('click', () => this.reorderSelected(true), { signal });
+
+    const btnBack = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sel-send-backward"]');
+    btnBack?.addEventListener('click', () => this.reorderSelected(false), { signal });
+
+    const btnDel = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sel-delete"]');
+    btnDel?.addEventListener('click', () => this.deleteSelectedElements(), { signal });
+  }
+
+  private bindPopoversEvents(signal: AbortSignal): void {
+    const strokePresets = this.container.querySelectorAll<HTMLButtonElement>('[data-stroke-preset]');
+    strokePresets.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        strokePresets.forEach((b) => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        const preset = btn.getAttribute('data-stroke-preset') || 'solid';
+        if (preset === 'none') {
+          this.currentStrokeWidth = 0;
+          this.applySelectedProperty('strokeWidth', 0);
+        } else {
+          this.currentStrokeStyle = preset as StrokeStyle;
+          if (this.currentStrokeWidth === 0) this.currentStrokeWidth = 2;
+          this.applySelectedProperty('strokeStyle', preset);
+          this.applySelectedProperty('strokeWidth', this.currentStrokeWidth);
+        }
+      }, { signal });
+    });
+
+    const inputStrokeWidth = this.container.querySelector<HTMLInputElement>('[data-ref="input-popover-stroke-width"]');
+    const labelStrokeWidth = this.container.querySelector<HTMLElement>('[data-ref="label-popover-stroke-width"]');
+    inputStrokeWidth?.addEventListener('input', () => {
+      const val = parseInt(inputStrokeWidth.value, 10) || 0;
+      this.currentStrokeWidth = val;
+      if (labelStrokeWidth) labelStrokeWidth.textContent = String(val);
+      this.applySelectedProperty('strokeWidth', val);
     }, { signal });
 
-    const btnStroke = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-stroke-color"]');
-    btnStroke?.addEventListener('click', () => {
-      const color = prompt('Color de trazo / borde (hex ej. #1e293b o transparent):', this.currentStrokeColor);
-      if (color !== null) {
-        this.currentStrokeColor = color;
-        this.applySelectedProperty('strokeColor', color);
-      }
+    const inputCornerRadius = this.container.querySelector<HTMLInputElement>('[data-ref="input-popover-corner-radius"]');
+    const labelCornerRadius = this.container.querySelector<HTMLElement>('[data-ref="label-popover-corner-radius"]');
+    inputCornerRadius?.addEventListener('input', () => {
+      const val = parseInt(inputCornerRadius.value, 10) || 0;
+      if (labelCornerRadius) labelCornerRadius.textContent = String(val);
+      this.applySelectedProperty('borderRadius', val);
+      this.applySelectedProperty('cornerRadius', val);
     }, { signal });
+
+    const inputSides = this.container.querySelector<HTMLInputElement>('[data-ref="input-popover-sides"]');
+    const labelSides = this.container.querySelector<HTMLElement>('[data-ref="label-popover-sides"]');
+    inputSides?.addEventListener('input', () => {
+      const val = parseInt(inputSides.value, 10) || 5;
+      if (labelSides) labelSides.textContent = String(val);
+      this.applySelectedProperty('sides', val);
+    }, { signal });
+
+    const inputOpacity = this.container.querySelector<HTMLInputElement>('[data-ref="input-popover-opacity"]');
+    const labelOpacity = this.container.querySelector<HTMLElement>('[data-ref="label-popover-opacity"]');
+    inputOpacity?.addEventListener('input', () => {
+      const val = parseInt(inputOpacity.value, 10) || 100;
+      this.currentOpacity = val;
+      if (labelOpacity) labelOpacity.textContent = String(val);
+      this.applySelectedProperty('opacity', val / 100);
+    }, { signal });
+
+    const startMarkers = this.container.querySelectorAll<HTMLButtonElement>('[data-ref="grid-marker-start"] [data-marker]');
+    startMarkers.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        startMarkers.forEach((b) => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        const marker = btn.getAttribute('data-marker') as MarkerType;
+        this.applySelectedProperty('startMarker', marker);
+      }, { signal });
+    });
+
+    const endMarkers = this.container.querySelectorAll<HTMLButtonElement>('[data-ref="grid-marker-end"] [data-marker]');
+    endMarkers.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        endMarkers.forEach((b) => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        const marker = btn.getAttribute('data-marker') as MarkerType;
+        this.applySelectedProperty('endMarker', marker);
+      }, { signal });
+    });
+
+    const connPresets = this.container.querySelectorAll<HTMLButtonElement>('[data-ref^="popover-conn-"]');
+    connPresets.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        connPresets.forEach((b) => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        const style = btn.getAttribute('data-conn-style') as ConnectorStyle;
+        if (style) {
+          this.currentConnectorStyle = style;
+          this.applySelectedProperty('connectorStyle', style);
+        }
+      }, { signal });
+    });
+  }
+
+  private closeAllPopovers(): void {
+    const popovers = this.container.querySelectorAll<HTMLElement>('.board-context-popover');
+    popovers.forEach((p) => p.classList.add('is-hidden'));
+  }
+
+  private togglePopover(name: 'connector-style' | 'corners' | 'marker-end' | 'marker-start' | 'opacity' | 'position' | 'slide-duration' | 'stroke', anchorBtn?: HTMLElement): void {
+    const popover = this.container.querySelector<HTMLElement>(`[data-ref="popover-${name}"]`);
+    if (!popover) return;
+    const isHidden = popover.classList.contains('is-hidden');
+    this.closeAllPopovers();
+    if (isHidden) {
+      if (anchorBtn) {
+        const rect = anchorBtn.getBoundingClientRect();
+        const containerRect = this.container.querySelector<HTMLElement>('[data-ref="presentation-viewport"]')?.getBoundingClientRect();
+        if (containerRect) {
+          const left = Math.max(8, Math.min(rect.left - containerRect.left, containerRect.width - 280));
+          popover.style.left = `${left}px`;
+          popover.style.top = `${rect.bottom - containerRect.top + 6}px`;
+        }
+      }
+      popover.classList.remove('is-hidden');
+      this.syncPopoverValues(name);
+    }
+  }
+
+  private syncPopoverValues(name: string): void {
+    const selected = this.getFirstSelectedElement();
+    if (name === 'stroke') {
+      const w = selected && 'strokeWidth' in selected && typeof (selected as any).strokeWidth === 'number' ? (selected as any).strokeWidth : this.currentStrokeWidth;
+      const input = this.container.querySelector<HTMLInputElement>('[data-ref="input-popover-stroke-width"]');
+      const label = this.container.querySelector<HTMLElement>('[data-ref="label-popover-stroke-width"]');
+      if (input) input.value = String(w);
+      if (label) label.textContent = String(w);
+    } else if (name === 'corners') {
+      const r = selected && ('borderRadius' in selected || 'cornerRadius' in selected)
+        ? ((selected as any).borderRadius !== undefined ? (selected as any).borderRadius : (selected as any).cornerRadius || 0)
+        : 0;
+      const input = this.container.querySelector<HTMLInputElement>('[data-ref="input-popover-corner-radius"]');
+      const label = this.container.querySelector<HTMLElement>('[data-ref="label-popover-corner-radius"]');
+      if (input) input.value = String(r);
+      if (label) label.textContent = String(r);
+
+      const sidesContainer = this.container.querySelector<HTMLElement>('[data-ref="popover-sides-container"]');
+      const isPolygonOrStar = selected && selected.type === 'shape' && (selected.shapeType === 'star' || (selected as any).shapeType === 'polygon');
+      if (sidesContainer) {
+        sidesContainer.classList.toggle('is-hidden', !isPolygonOrStar);
+      }
+      if (isPolygonOrStar) {
+        const sides = (selected as any).sides || 5;
+        const inputSides = this.container.querySelector<HTMLInputElement>('[data-ref="input-popover-sides"]');
+        const labelSides = this.container.querySelector<HTMLElement>('[data-ref="label-popover-sides"]');
+        if (inputSides) inputSides.value = String(sides);
+        if (labelSides) labelSides.textContent = String(sides);
+      }
+    } else if (name === 'opacity') {
+      const op = selected && 'opacity' in selected && typeof (selected as any).opacity === 'number' ? Math.round((selected as any).opacity * 100) : 100;
+      const input = this.container.querySelector<HTMLInputElement>('[data-ref="input-popover-opacity"]');
+      const label = this.container.querySelector<HTMLElement>('[data-ref="label-popover-opacity"]');
+      if (input) input.value = String(op);
+      if (label) label.textContent = String(op);
+    } else if (name === 'marker-start') {
+      const startMarker = selected && selected.type === 'connector' ? ((selected as any).startMarker || ((selected as any).arrowStart === true ? 'arrow-filled' : (selected as any).arrowStart || 'none')) : 'none';
+      this.container.querySelectorAll<HTMLButtonElement>('[data-ref="grid-marker-start"] [data-marker]').forEach((btn) => {
+        btn.classList.toggle('is-active', btn.getAttribute('data-marker') === startMarker);
+      });
+    } else if (name === 'marker-end') {
+      const endMarker = selected && selected.type === 'connector' ? ((selected as any).endMarker || ((selected as any).arrowEnd === true ? 'arrow-filled' : (selected as any).arrowEnd || 'none')) : 'none';
+      this.container.querySelectorAll<HTMLButtonElement>('[data-ref="grid-marker-end"] [data-marker]').forEach((btn) => {
+        btn.classList.toggle('is-active', btn.getAttribute('data-marker') === endMarker);
+      });
+    } else if (name === 'connector-style') {
+      const style = selected && selected.type === 'connector' ? ((selected as any).style || (selected as any).connectorStyle || 'curved') : this.currentConnectorStyle;
+      this.container.querySelectorAll<HTMLButtonElement>('[data-ref^="popover-conn-"]').forEach((btn) => {
+        btn.classList.toggle('is-active', btn.getAttribute('data-conn-style') === style);
+      });
+    }
+  }
+
+  private getSelectedElements(): BoardElement[] {
+    if (this.selectedElementIds.size === 0) return [];
+    return this.getActiveSlide().elements.filter((el) => this.selectedElementIds.has(el.id));
+  }
+
+  private toggleBold(): void {
+    const selected = this.getSelectedElements();
+    if (selected.length === 0) return;
+    this.saveHistoryState();
+    const first = selected[0];
+    const currentWeight = first && 'fontWeight' in first ? (first as any).fontWeight : 400;
+    const newWeight = (currentWeight === 700 || currentWeight === 'bold') ? 400 : 700;
+    selected.forEach((el) => {
+      (el as any).fontWeight = newWeight;
+      if (el.type === 'text') {
+        const sz = measureTextElementSize((el as any).text || '', (el as any).fontSize || 20, newWeight, (el as any).fontFamily || 'Inter, sans-serif');
+        (el as any).width = sz.width;
+        (el as any).height = sz.height;
+      }
+    });
+    this.render();
+    this.scheduleAutoSave();
+    this.updateSelectionToolbar();
+  }
+
+  private toggleItalic(): void {
+    const selected = this.getSelectedElements();
+    if (selected.length === 0) return;
+    this.saveHistoryState();
+    const first = selected[0];
+    const currentStyle = first && 'fontStyle' in first ? (first as any).fontStyle : 'normal';
+    const newStyle = currentStyle === 'italic' ? 'normal' : 'italic';
+    selected.forEach((el) => {
+      (el as any).fontStyle = newStyle;
+    });
+    this.render();
+    this.scheduleAutoSave();
+    this.updateSelectionToolbar();
+  }
+
+  private toggleUnderline(): void {
+    const selected = this.getSelectedElements();
+    if (selected.length === 0) return;
+    this.saveHistoryState();
+    const first = selected[0];
+    const currentDeco = first && 'textDecoration' in first ? (first as any).textDecoration : 'none';
+    const newDeco = currentDeco === 'underline' ? 'none' : 'underline';
+    selected.forEach((el) => {
+      (el as any).textDecoration = newDeco;
+    });
+    this.render();
+    this.scheduleAutoSave();
+    this.updateSelectionToolbar();
+  }
+
+  private toggleStrikethrough(): void {
+    const selected = this.getSelectedElements();
+    if (selected.length === 0) return;
+    this.saveHistoryState();
+    const first = selected[0];
+    const currentDeco = first && 'textDecoration' in first ? (first as any).textDecoration : 'none';
+    const newDeco = currentDeco === 'line-through' ? 'none' : 'line-through';
+    selected.forEach((el) => {
+      (el as any).textDecoration = newDeco;
+    });
+    this.render();
+    this.scheduleAutoSave();
+    this.updateSelectionToolbar();
+  }
+
+  private cycleTextAlign(): void {
+    const selected = this.getSelectedElements();
+    if (selected.length === 0) return;
+    this.saveHistoryState();
+    const first = selected[0];
+    const currentAlign = first && 'textAlign' in first ? (first as any).textAlign : 'left';
+    const alignOrder: Array<'center' | 'left' | 'right'> = ['left', 'center', 'right'];
+    const nextIdx = (alignOrder.indexOf(currentAlign) + 1) % alignOrder.length;
+    const newAlign = alignOrder[nextIdx];
+    selected.forEach((el) => {
+      (el as any).textAlign = newAlign;
+    });
+    this.render();
+    this.scheduleAutoSave();
+    this.updateSelectionToolbar();
+  }
+
+  private getFirstSelectedElement(): BoardElement | null {
+    if (this.selectedElementIds.size === 0) return null;
+    const firstId = Array.from(this.selectedElementIds)[0];
+    return this.getActiveSlide().elements.find((el) => el.id === firstId) || null;
+  }
+
+  private toggleEffectsPanel(): void {
+    const firstSelected = this.getFirstSelectedElement();
+    this.animationPanel?.close();
+    this.positionPanel?.close();
+    this.effectsPanel?.toggle(firstSelected);
+  }
+
+  private toggleAnimationPanel(): void {
+    const firstSelected = this.getFirstSelectedElement();
+    this.effectsPanel?.close();
+    this.positionPanel?.close();
+    this.animationPanel?.toggle(firstSelected);
+  }
+
+  private togglePositionPanel(): void {
+    const firstSelected = this.getFirstSelectedElement();
+    this.effectsPanel?.close();
+    this.animationPanel?.close();
+    this.positionPanel?.toggle(firstSelected, this.getActiveSlide().elements);
+  }
+
+  private syncPanels(): void {
+    const firstSelected = this.getFirstSelectedElement();
+    if (this.effectsPanel?.isOpen()) {
+      this.effectsPanel.sync(firstSelected);
+    }
+    if (this.animationPanel?.isOpen()) {
+      this.animationPanel.sync(firstSelected);
+    }
+    if (this.positionPanel?.isOpen()) {
+      this.positionPanel.sync(firstSelected, this.getActiveSlide().elements);
+    }
+  }
+
+  private applySelectedEffect(effect: BoardElementEffect): void {
+    if (this.selectedElementIds.size === 0) return;
+    this.saveHistoryState();
+    const elements = this.getActiveSlide().elements;
+    elements.forEach((el) => {
+      if (this.selectedElementIds.has(el.id)) {
+        el.effect = effect;
+      }
+    });
+    this.render();
+    this.scheduleAutoSave();
+  }
+
+  private applySelectedAnimation(animation: BoardElementAnimation): void {
+    if (this.selectedElementIds.size === 0) return;
+    this.saveHistoryState();
+    const elements = this.getActiveSlide().elements;
+    elements.forEach((el) => {
+      if (this.selectedElementIds.has(el.id)) {
+        el.animation = animation;
+      }
+    });
+    this.render();
+    this.scheduleAutoSave();
+  }
+
+  private alignSelectedElements(alignType: 'bottom' | 'center' | 'left' | 'middle' | 'right' | 'top'): void {
+    if (this.selectedElementIds.size === 0) return;
+    this.saveHistoryState();
+    const elements = this.getActiveSlide().elements;
+    const selected = elements.filter((el) => this.selectedElementIds.has(el.id));
+    if (selected.length === 0) return;
+
+    const bbox = computeElementsBoundingBox(selected);
+    const halfW = this.slideWidth / 2;
+    const halfH = this.slideHeight / 2;
+
+    selected.forEach((el) => {
+      if (!('x' in el) || !('y' in el)) return;
+      const elW = (el as any).width || 0;
+      const elH = (el as any).height || 0;
+
+      if (selected.length === 1) {
+        if (alignType === 'left') (el as any).x = -halfW;
+        else if (alignType === 'center') (el as any).x = -elW / 2;
+        else if (alignType === 'right') (el as any).x = halfW - elW;
+        else if (alignType === 'top') (el as any).y = -halfH;
+        else if (alignType === 'middle') (el as any).y = -elH / 2;
+        else if (alignType === 'bottom') (el as any).y = halfH - elH;
+      } else if (bbox) {
+        if (alignType === 'left') (el as any).x = bbox.x;
+        else if (alignType === 'center') (el as any).x = bbox.x + (bbox.width - elW) / 2;
+        else if (alignType === 'right') (el as any).x = bbox.x + bbox.width - elW;
+        else if (alignType === 'top') (el as any).y = bbox.y;
+        else if (alignType === 'middle') (el as any).y = bbox.y + (bbox.height - elH) / 2;
+        else if (alignType === 'bottom') (el as any).y = bbox.y + bbox.height - elH;
+      }
+      this.clampElementToSlide(el);
+    });
+
+    this.render();
+    this.scheduleAutoSave();
+  }
+
+  private reorderSelectedAction(action: 'back' | 'backward' | 'forward' | 'front'): void {
+    if (this.selectedElementIds.size === 0) return;
+    this.saveHistoryState();
+    const slide = this.getActiveSlide();
+    const selectedIds = Array.from(this.selectedElementIds);
+
+    if (action === 'front') {
+      this.reorderSelected(true);
+      return;
+    }
+    if (action === 'back') {
+      this.reorderSelected(false);
+      return;
+    }
+
+    if (action === 'forward') {
+      for (let i = slide.elements.length - 2; i >= 0; i--) {
+        if (selectedIds.includes(slide.elements[i].id) && !selectedIds.includes(slide.elements[i + 1].id)) {
+          const temp = slide.elements[i];
+          slide.elements[i] = slide.elements[i + 1];
+          slide.elements[i + 1] = temp;
+        }
+      }
+    } else if (action === 'backward') {
+      for (let i = 1; i < slide.elements.length; i++) {
+        if (selectedIds.includes(slide.elements[i].id) && !selectedIds.includes(slide.elements[i - 1].id)) {
+          const temp = slide.elements[i];
+          slide.elements[i] = slide.elements[i - 1];
+          slide.elements[i - 1] = temp;
+        }
+      }
+    }
+
+    this.syncPanels();
+    this.render();
+    this.scheduleAutoSave();
+  }
+
+  private reorderLayers(fromIndex: number, toIndex: number): void {
+    const slide = this.getActiveSlide();
+    if (fromIndex < 0 || fromIndex >= slide.elements.length || toIndex < 0 || toIndex >= slide.elements.length) return;
+    this.saveHistoryState();
+    const [moved] = slide.elements.splice(fromIndex, 1);
+    slide.elements.splice(toIndex, 0, moved);
+    this.syncPanels();
+    this.render();
+    this.scheduleAutoSave();
+  }
+
+  private updateSelectedTransform(updates: { aspectRatioLocked?: boolean; height?: number; rotation?: number; width?: number; x?: number; y?: number }): void {
+    const firstSelected = this.getFirstSelectedElement();
+    if (!firstSelected) return;
+    this.saveHistoryState();
+    Object.assign(firstSelected, updates);
+    this.clampElementToSlide(firstSelected);
+    this.render();
+    this.scheduleAutoSave();
+  }
+
+  private swapConnectorMarkers(): void {
+    const selected = this.getFirstSelectedElement();
+    if (!selected || selected.type !== 'connector') return;
+    this.saveHistoryState();
+    const conn = selected as BoardConnectorElement;
+    const start = conn.arrowStart || 'none';
+    conn.arrowStart = conn.arrowEnd || 'none';
+    conn.arrowEnd = start;
+    this.render();
+    this.scheduleAutoSave();
+  }
+
+  public attachColorsUI(drawerBody: HTMLElement, target?: 'fill' | 'stroke' | 'text'): void {
+    this.colorsPanelEl = drawerBody;
+    this.colorsTitleEl = drawerBody.closest('.layout-drawer')?.querySelector<HTMLElement>('[data-ref="board-colors-title"]') || drawerBody.querySelector<HTMLElement>('[data-ref="board-colors-title"]');
+    this.colorsPaletteGridEl = drawerBody.querySelector<HTMLElement>('[data-ref="board-palette-grid"]');
+    this.colorsRecentGridEl = drawerBody.querySelector<HTMLElement>('[data-ref="board-colors-recent-grid"]');
+    this.colorsRampGridEl = drawerBody.querySelector<HTMLElement>('[data-ref="board-colors-ramp-grid"]');
+    this.colorsHexTextEl = drawerBody.querySelector<HTMLElement>('[data-ref="board-colors-hex-text"]');
+    this.colorsCustomInputEl = drawerBody.querySelector<HTMLInputElement>('[data-ref="input-custom-color"]');
+    this.btnColorEyedropper = drawerBody.querySelector<HTMLButtonElement>('[data-ref="btn-color-eyedropper"]');
+
+    if (target) {
+      this.colorPanelTarget = target;
+    }
+    if (this.colorsTitleEl) {
+      this.colorsTitleEl.textContent = this.colorPanelTarget === 'stroke' ? 'Color de trazo o borde' : (this.colorPanelTarget === 'fill' ? 'Color de relleno' : 'Color de texto');
+    }
+
+    this.btnColorEyedropper?.addEventListener('click', () => {
+      this.toggleEyedropper();
+    });
+
+    this.colorsCustomInputEl?.addEventListener('input', (e) => {
+      const val = (e.target as HTMLInputElement).value;
+      if (val) {
+        this.handleColorPicked(val);
+      }
+    });
+
+    const transparentSwatch = drawerBody.querySelector<HTMLButtonElement>('[data-ref="color-swatch-transparent"]');
+    transparentSwatch?.addEventListener('click', () => {
+      this.handleColorPicked('transparent');
+    });
+
+    this.loadRecentColors();
+    this.renderDefaultPalette();
+    this.renderRecentColors();
+
+    let currentVal = this.currentFillColor;
+    if (this.colorPanelTarget === 'stroke') currentVal = this.currentStrokeColor;
+    const firstSelected = this.getFirstSelectedElement();
+    if (firstSelected) {
+      if (this.colorPanelTarget === 'fill' && 'fillColor' in firstSelected) currentVal = (firstSelected as any).fillColor;
+      else if (this.colorPanelTarget === 'stroke' && 'strokeColor' in firstSelected) currentVal = (firstSelected as any).strokeColor;
+      else if (this.colorPanelTarget === 'text' && ('color' in firstSelected || 'textColor' in firstSelected)) currentVal = (firstSelected as any).color || (firstSelected as any).textColor;
+    }
+    this.updateColorPanelUI(currentVal);
+  }
+
+  public attachFontsUI(fontsContainer: HTMLElement): void {
+    if (this.fontPicker) {
+      this.fontPicker.destroy();
+    }
+    this.fontPicker = new DocFontPickerComponent(fontsContainer, (event: FontSelectEvent) => {
+      this.applyFontToSelection(event);
+    });
+
+    const firstSelected = this.getFirstSelectedElement();
+    const family = firstSelected && 'fontFamily' in firstSelected && (firstSelected as any).fontFamily ? (firstSelected as any).fontFamily.split(',')[0].replace(/['"]/g, '').trim() : 'Inter';
+    const weight = firstSelected && 'fontWeight' in firstSelected ? (firstSelected as any).fontWeight : 600;
+    const style = firstSelected && 'fontStyle' in firstSelected ? (firstSelected as any).fontStyle : 'normal';
+
+    this.fontPicker.init(family);
+    this.fontPicker.setActiveFont(family, weight, style);
+  }
+
+  private applyFontToSelection(event: FontSelectEvent): void {
+    if (this.selectedElementIds.size === 0) return;
+    this.saveHistoryState();
+    const elements = this.getActiveSlide().elements;
+    elements.forEach((el) => {
+      if (this.selectedElementIds.has(el.id)) {
+        if ('fontFamily' in el) (el as any).fontFamily = event.family;
+        if ('fontWeight' in el) (el as any).fontWeight = event.weight;
+        if ('fontStyle' in el) (el as any).fontStyle = event.style;
+        if (el.type === 'text') {
+          const measured = measureTextElementSize((el as any).text, (el as any).fontSize || 20, (el as any).fontWeight || 600, event.family);
+          (el as any).width = measured.width;
+          (el as any).height = measured.height;
+        }
+      }
+    });
+
+    const fontLabel = this.container.querySelector<HTMLElement>('[data-ref="top-font-family-label"]');
+    if (fontLabel) fontLabel.textContent = event.variantName || event.family;
+
+    this.render();
+    this.scheduleAutoSave();
+  }
+
+  public setColor(color: string, saveHistory = true): void {
+    this.currentStrokeColor = color;
+    if (saveHistory) this.saveHistoryState();
+    const elements = this.getActiveSlide().elements;
+    elements.forEach((el) => {
+      if (this.selectedElementIds.has(el.id)) {
+        if ('strokeColor' in el) (el as any).strokeColor = color;
+        if (el.type === 'stroke') (el as any).color = color;
+      }
+    });
+    this.updateSelectionToolbar();
+    this.render();
+    this.scheduleAutoSave();
+  }
+
+  public setFill(color: string, saveHistory = true): void {
+    this.currentFillColor = color;
+    if (saveHistory) this.saveHistoryState();
+    const elements = this.getActiveSlide().elements;
+    elements.forEach((el) => {
+      if (this.selectedElementIds.has(el.id)) {
+        if ('fillColor' in el) (el as any).fillColor = color;
+        if ('color' in el && el.type === 'sticky') (el as any).color = color;
+      }
+    });
+    this.updateSelectionToolbar();
+    this.render();
+    this.scheduleAutoSave();
+  }
+
+  public setTextColor(color: string, saveHistory = true): void {
+    if (saveHistory) this.saveHistoryState();
+    const elements = this.getActiveSlide().elements;
+    elements.forEach((el) => {
+      if (this.selectedElementIds.has(el.id)) {
+        if ('color' in el && el.type === 'text') (el as any).color = color;
+        if ('textColor' in el) (el as any).textColor = color;
+      }
+    });
+    this.updateSelectionToolbar();
+    this.render();
+    this.scheduleAutoSave();
+  }
+
+  public toggleColorsPanel(target: 'fill' | 'stroke' | 'text'): void {
+    if (isColorsDrawerOpen() && this.colorPanelTarget === target) {
+      toggleDrawer(false);
+      return;
+    }
+    this.closeAllPopovers();
+    this.colorPanelTarget = target;
+    openColorsInDrawer(target);
+  }
+
+  public toggleFontsPanel(): void {
+    if (isFontsDrawerOpen()) {
+      toggleDrawer(false);
+    } else {
+      this.closeAllPopovers();
+      openFontsInDrawer();
+    }
+  }
+
+  private handleColorPicked(color: string): void {
+    if (this.colorPanelTarget === 'fill') {
+      this.setFill(color, true);
+    } else if (this.colorPanelTarget === 'text') {
+      this.setTextColor(color, true);
+    } else {
+      this.setColor(color, true);
+    }
+    this.addRecentColor(color);
+    this.updateColorPanelUI(color);
+  }
+
+  private updateColorPanelUI(color: string): void {
+    if (this.colorsHexTextEl) {
+      this.colorsHexTextEl.textContent = color.toUpperCase();
+    }
+    if (this.colorsCustomInputEl && color.startsWith('#')) {
+      this.colorsCustomInputEl.value = color;
+    }
+    this.renderShadingRamps();
+  }
+
+  private renderDefaultPalette(): void {
+    if (!this.colorsPaletteGridEl) return;
+    this.colorsPaletteGridEl.innerHTML = '';
+    const currentActiveColor = (this.colorPanelTarget === 'fill' ? this.currentFillColor : this.currentStrokeColor).toUpperCase();
+
+    for (const color of DEFAULT_CLASSIC_PALETTE) {
+      const swatch = document.createElement('button');
+      swatch.type = 'button';
+      swatch.className = `design-color-swatch-btn ${color.toUpperCase() === currentActiveColor ? 'is-active' : ''}`;
+      swatch.setAttribute('data-ref', `color-swatch-${color.replace('#', '')}`);
+      swatch.setAttribute('data-color', color);
+      swatch.setAttribute('data-tooltip', color);
+      swatch.setAttribute('aria-label', `Color ${color}`);
+      swatch.style.backgroundColor = color;
+
+      swatch.addEventListener('click', () => {
+        this.handleColorPicked(color);
+      });
+
+      this.colorsPaletteGridEl.appendChild(swatch);
+    }
+  }
+
+  private renderShadingRamps(): void {
+    if (!this.colorsRampGridEl) return;
+    this.colorsRampGridEl.innerHTML = '';
+    const currentVal = this.colorPanelTarget === 'fill' ? this.currentFillColor : this.currentStrokeColor;
+    if (currentVal === 'transparent' || !/^#[0-9A-Fa-f]{6}$/.test(currentVal)) {
+      return;
+    }
+
+    const ramp = generateShadingRamp(currentVal);
+    const labels = ['Sombra muy profunda', 'Sombra profunda', 'Sombra suave', 'Base', 'Brillo', 'Brillo intenso'];
+
+    ramp.forEach((color, idx) => {
+      const swatch = document.createElement('button');
+      swatch.type = 'button';
+      swatch.className = `design-color-swatch-btn ${idx === 3 ? 'is-base' : ''} ${color.toUpperCase() === currentVal.toUpperCase() ? 'is-active' : ''}`;
+      swatch.setAttribute('data-ref', `color-ramp-${idx}`);
+      swatch.setAttribute('data-color', color);
+      swatch.setAttribute('data-tooltip', `${labels[idx]} (${color})`);
+      swatch.setAttribute('aria-label', `${labels[idx]} ${color}`);
+      swatch.style.backgroundColor = color;
+
+      swatch.addEventListener('click', () => {
+        this.handleColorPicked(color);
+      });
+
+      this.colorsRampGridEl?.appendChild(swatch);
+    });
+  }
+
+  private renderRecentColors(): void {
+    if (!this.colorsRecentGridEl) return;
+    this.colorsRecentGridEl.innerHTML = '';
+    const currentVal = (this.colorPanelTarget === 'fill' ? this.currentFillColor : this.currentStrokeColor).toUpperCase();
+
+    for (const color of this.recentColors) {
+      const swatch = document.createElement('button');
+      swatch.type = 'button';
+      swatch.className = `design-color-swatch-btn ${color.toUpperCase() === currentVal ? 'is-active' : ''}`;
+      swatch.setAttribute('data-ref', `color-recent-${color.replace('#', '')}`);
+      swatch.setAttribute('data-color', color);
+      swatch.setAttribute('data-tooltip', color);
+      swatch.setAttribute('aria-label', `Color reciente ${color}`);
+      swatch.style.backgroundColor = color;
+
+      swatch.addEventListener('click', () => {
+        this.handleColorPicked(color);
+      });
+
+      this.colorsRecentGridEl.appendChild(swatch);
+    }
+  }
+
+  private addRecentColor(color: string): void {
+    if (!color || color === 'transparent') return;
+    const clean = color.toUpperCase();
+    this.recentColors = [clean, ...this.recentColors.filter((c) => c.toUpperCase() !== clean)].slice(0, 16);
+    this.saveRecentColors();
+    this.renderRecentColors();
+  }
+
+  private loadRecentColors(): void {
+    try {
+      const saved = localStorage.getItem('spriteboard_recent_colors');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          this.recentColors = parsed;
+        }
+      }
+    } catch {}
+  }
+
+  private saveRecentColors(): void {
+    try {
+      localStorage.setItem('spriteboard_recent_colors', JSON.stringify(this.recentColors.slice(0, 16)));
+    } catch {}
+  }
+
+  private toggleEyedropper(active?: boolean): void {
+    this.isEyedropperActive = active !== undefined ? active : !this.isEyedropperActive;
+    if (this.btnColorEyedropper) {
+      this.btnColorEyedropper.classList.toggle('is-active', this.isEyedropperActive);
+    }
+    if (this.canvas) {
+      this.canvas.style.cursor = this.isEyedropperActive ? 'crosshair' : 'default';
+    }
+    if (this.isEyedropperActive) {
+      showToast('Cuentagotas activo: haz clic en cualquier elemento del lienzo para copiar su color', 'info');
+    }
   }
 
   private updateSelectionToolbar(): void {
     const topSelectionSec = this.container.querySelector<HTMLElement>('[data-ref="presentation-top-selection-section"]');
     const topToolbarCont = this.container.querySelector<HTMLElement>('[data-ref="presentation-top-toolbar-container"]');
     const groupText = this.container.querySelector<HTMLElement>('[data-ref="presentation-top-group-text-props"]');
+    const groupFill = this.container.querySelector<HTMLElement>('[data-ref="presentation-top-group-fill"]');
+    const groupStroke = this.container.querySelector<HTMLElement>('[data-ref="presentation-top-group-stroke-color"]');
+    const groupStrokeStyle = this.container.querySelector<HTMLElement>('[data-ref="presentation-top-group-stroke-style"]');
+    const groupCorners = this.container.querySelector<HTMLElement>('[data-ref="presentation-top-group-corners"]');
+    const groupMarkers = this.container.querySelector<HTMLElement>('[data-ref="presentation-top-group-markers"]');
+    const fillSwatch = this.container.querySelector<HTMLElement>('[data-ref="top-fill-swatch"]');
+    const strokeSwatch = this.container.querySelector<HTMLElement>('[data-ref="top-stroke-swatch"]');
+    const textSwatch = this.container.querySelector<HTMLElement>('[data-ref="top-text-swatch"]');
+    const fontSizeLabel = this.container.querySelector<HTMLElement>('[data-ref="top-font-size-label"]');
+    const fontFamilyLabel = this.container.querySelector<HTMLElement>('[data-ref="top-font-family-label"]');
+    const btnBold = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-bold"]');
+    const btnItalic = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-italic"]');
+    const btnUnderline = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-underline"]');
+    const btnStrikethrough = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-strikethrough"]');
+    const iconTextAlign = this.container.querySelector<HTMLElement>('[data-ref="top-icon-text-align"]');
 
     if (this.selectedElementIds.size > 0) {
       topSelectionSec?.classList.remove('is-hidden');
       topToolbarCont?.classList.remove('is-hidden');
 
       const elements = this.getActiveSlide().elements;
-      const hasText = Array.from(this.selectedElementIds).some((id) => {
-        const el = elements.find((e) => e.id === id);
-        return el && (el.type === 'text' || el.type === 'sticky' || (el as any).text !== undefined);
-      });
+      const selected = elements.filter((e) => this.selectedElementIds.has(e.id));
+      const hasText = selected.some((el) => el.type === 'text' || el.type === 'sticky' || (el as any).text !== undefined);
+      const hasConnector = selected.some((el) => el.type === 'connector');
+      const hasShape = selected.some((el) => el.type === 'shape' || el.type === 'sticky' || el.type === 'section');
 
-      if (groupText) {
-        groupText.classList.toggle('is-hidden', !hasText);
+      if (groupText) groupText.classList.toggle('is-hidden', !hasText);
+      if (groupMarkers) groupMarkers.classList.toggle('is-hidden', !hasConnector);
+      if (groupFill) groupFill.classList.toggle('is-hidden', !hasShape && !hasText);
+      if (groupStroke) groupStroke.classList.toggle('is-hidden', hasConnector);
+      if (groupStrokeStyle) groupStrokeStyle.classList.toggle('is-hidden', hasConnector);
+      if (groupCorners) groupCorners.classList.toggle('is-hidden', !hasShape);
+
+      const first = selected[0];
+      if (first) {
+        if (fillSwatch && ('fillColor' in first || 'color' in first)) {
+          fillSwatch.style.backgroundColor = (first as any).fillColor || (first as any).color || this.currentFillColor;
+        }
+        if (strokeSwatch && 'strokeColor' in first) {
+          strokeSwatch.style.backgroundColor = (first as any).strokeColor || this.currentStrokeColor;
+        }
+        if (textSwatch && ('color' in first || 'textColor' in first)) {
+          textSwatch.style.backgroundColor = (first as any).color || (first as any).textColor || '#1e293b';
+        }
+        if (fontSizeLabel && 'fontSize' in first) {
+          fontSizeLabel.textContent = String((first as any).fontSize || 20);
+        }
+        if (fontFamilyLabel && 'fontFamily' in first && (first as any).fontFamily) {
+          fontFamilyLabel.textContent = (first as any).fontFamily.split(',')[0].replace(/['"]/g, '').trim();
+        }
+
+        const isBold = (first as any).fontWeight === 700 || (first as any).fontWeight === 'bold';
+        const isItalic = (first as any).fontStyle === 'italic';
+        const isUnderline = (first as any).textDecoration === 'underline';
+        const isStrikethrough = (first as any).textDecoration === 'line-through';
+        const textAlign = (first as any).textAlign || 'left';
+
+        btnBold?.classList.toggle('is-active', isBold);
+        btnItalic?.classList.toggle('is-active', isItalic);
+        btnUnderline?.classList.toggle('is-active', isUnderline);
+        btnStrikethrough?.classList.toggle('is-active', isStrikethrough);
+
+        if (iconTextAlign) {
+          const alignIconMap: Record<string, string> = {
+            center: 'format_align_center',
+            left: 'format_align_left',
+            right: 'format_align_right',
+          };
+          iconTextAlign.textContent = alignIconMap[textAlign] || 'format_align_left';
+        }
       }
     } else {
       topSelectionSec?.classList.add('is-hidden');
       topToolbarCont?.classList.add('is-hidden');
     }
+
+    this.updateFloatingToolbarPosition();
+  }
+
+  private updateFloatingToolbarPosition(): void {
+    const floatingToolbar = this.container.querySelector<HTMLElement>('[data-ref="presentation-selection-toolbar"]');
+    if (!floatingToolbar || !this.canvas) return;
+
+    if (this.selectedElementIds.size === 0) {
+      floatingToolbar.classList.add('is-hidden');
+      return;
+    }
+
+    const elements = this.getActiveSlide().elements;
+    const selectedEls = elements.filter((el) => this.selectedElementIds.has(el.id));
+    if (selectedEls.length === 0) {
+      floatingToolbar.classList.add('is-hidden');
+      return;
+    }
+
+    const bbox = computeElementsBoundingBox(selectedEls);
+    if (!bbox) {
+      floatingToolbar.classList.add('is-hidden');
+      return;
+    }
+    const camera = { x: 0, y: 0, zoom: this.zoom };
+    const topLeftScreen = worldToScreen(bbox.x, bbox.y, this.canvas, camera);
+    const bottomRightScreen = worldToScreen(bbox.x + bbox.width, bbox.y + bbox.height, this.canvas, camera);
+
+    const toolbarWidth = floatingToolbar.offsetWidth || 180;
+    const toolbarHeight = floatingToolbar.offsetHeight || 40;
+    const centerX = (topLeftScreen.x + bottomRightScreen.x) / 2;
+    const targetTop = topLeftScreen.y - toolbarHeight - 12;
+
+    const finalTop = targetTop < 10 ? bottomRightScreen.y + 12 : targetTop;
+    const finalLeft = Math.max(10, centerX - toolbarWidth / 2);
+
+    floatingToolbar.style.transform = `translate(${finalLeft}px, ${finalTop}px)`;
+    floatingToolbar.classList.remove('is-hidden');
   }
 
   private applySelectedProperty(key: string, value: any): void {
@@ -1036,10 +2184,31 @@ export class PresentationController {
     elements.forEach((el) => {
       if (this.selectedElementIds.has(el.id)) {
         (el as any)[key] = value;
+        if (key === 'borderRadius') {
+          (el as any).cornerRadius = value;
+        }
+        if (key === 'cornerRadius') {
+          (el as any).borderRadius = value;
+        }
+        if (key === 'startMarker' && el.type === 'connector') {
+          (el as any).arrowStart = value === 'none' ? false : value;
+        }
+        if (key === 'endMarker' && el.type === 'connector') {
+          (el as any).arrowEnd = value === 'none' ? false : value;
+        }
+        if (key === 'connectorStyle' && el.type === 'connector') {
+          (el as any).style = value;
+        }
+        if (key === 'fontSize' && el.type === 'text') {
+          const measured = measureTextElementSize((el as any).text || '', value, (el as any).fontWeight || 600, (el as any).fontFamily || 'Inter, sans-serif');
+          (el as any).width = measured.width;
+          (el as any).height = measured.height;
+        }
       }
     });
     this.render();
     this.scheduleAutoSave();
+    this.updateSelectionToolbar();
   }
 
   private changeSelectedFontSize(delta: number): void {
@@ -1058,6 +2227,7 @@ export class PresentationController {
         }
       }
     });
+    this.updateSelectionToolbar();
     this.render();
     this.scheduleAutoSave();
   }
@@ -1085,6 +2255,7 @@ export class PresentationController {
 
     elements.push(...toAdd);
     this.selectedElementIds = newSelected;
+    this.syncPanels();
     this.updateSelectionToolbar();
     this.render();
     this.scheduleAutoSave();
@@ -1097,6 +2268,7 @@ export class PresentationController {
     const slide = this.getActiveSlide();
     slide.elements = slide.elements.filter((el) => !this.selectedElementIds.has(el.id));
     this.selectedElementIds.clear();
+    this.syncPanels();
     this.updateSelectionToolbar();
     this.render();
     this.scheduleAutoSave();
@@ -1124,6 +2296,7 @@ export class PresentationController {
       slide.elements = [...selected, ...others];
     }
 
+    this.syncPanels();
     this.render();
     this.scheduleAutoSave();
   }
@@ -1191,7 +2364,7 @@ export class PresentationController {
     this.render();
   }
 
-  public insertTextPreset(type: 'heading' | 'subheading' | 'body', x?: number, y?: number): void {
+  public insertTextPreset(type: 'body' | 'heading' | 'subheading', x?: number, y?: number): void {
     const defaultConfigs = {
       body: { fontSize: 22, height: 44, text: 'Texto de párrafo', width: 320 },
       heading: { fontSize: 42, height: 60, text: 'Título de la Diapositiva', width: 560 },
@@ -1218,12 +2391,14 @@ export class PresentationController {
     this.saveHistoryState();
     this.getActiveSlide().elements.push(textEl);
     this.selectedElementIds = new Set([textEl.id]);
+    this.syncPanels();
     this.updateSelectionToolbar();
     this.render();
     this.scheduleAutoSave();
   }
 
   public insertShape(shapeType: ShapeType, svgPath?: string, fill?: string, stroke?: string, x?: number, y?: number): void {
+    const isNativeBasic = ['circle', 'cylinder', 'diamond', 'line', 'parallelogram', 'pill', 'rect', 'round-rect', 'star', 'triangle'].includes(shapeType);
     const shapeEl: BoardShapeElement = {
       fillColor: fill || this.currentFillColor || '#3b82f6',
       height: 140,
@@ -1232,7 +2407,7 @@ export class PresentationController {
       shapeType: shapeType || 'rect',
       strokeColor: stroke || this.currentStrokeColor || '#1e293b',
       strokeWidth: 2,
-      svgPath: svgPath,
+      svgPath: isNativeBasic ? undefined : svgPath,
       type: 'shape',
       width: 180,
       x: x !== undefined ? x - 90 : -90,
@@ -1242,6 +2417,7 @@ export class PresentationController {
     this.saveHistoryState();
     this.getActiveSlide().elements.push(shapeEl);
     this.selectedElementIds = new Set([shapeEl.id]);
+    this.syncPanels();
     this.updateSelectionToolbar();
     this.render();
     this.scheduleAutoSave();
@@ -1251,7 +2427,38 @@ export class PresentationController {
     if (shape.type === 'sticker' && shape.file) {
       this.insertImage(`/assets/img/stickers/${shape.file}`, 160, 160, shape.name);
     } else {
-      this.insertShape(shape.shapeType || 'rect', shape.pathD, shape.fillColor, shape.strokeColor);
+      const cleanId = shape.id.replace(/^shape_/, '');
+      const shapeMap: Record<string, ShapeType> = {
+        chamfer_square: 'rect',
+        circle: 'circle',
+        cloud: 'cloud',
+        cylinder: 'cylinder',
+        diamond: 'diamond',
+        document: 'document',
+        flow_database: 'cylinder',
+        flow_decision: 'diamond',
+        flow_document: 'document',
+        flow_input_output: 'parallelogram',
+        flow_process: 'rect',
+        flow_start_end: 'pill',
+        parallelogram: 'parallelogram',
+        pill: 'pill',
+        quarter_circle: 'circle',
+        rounded_rectangle: 'round-rect',
+        semi_circle: 'circle',
+        square: 'rect',
+        star_4_sparkle: 'star',
+        star_5: 'star',
+        star_6: 'star',
+        star_7: 'star',
+        star_8: 'star',
+        triangle_down: 'triangle',
+        triangle_right_angle: 'triangle',
+        triangle_up: 'triangle',
+      };
+      const directShape: ShapeType = shapeMap[cleanId] || ((shape as any).shapeType || 'rect');
+      const isNativeBasic = ['circle', 'cylinder', 'diamond', 'parallelogram', 'pill', 'rect', 'round-rect', 'square', 'rounded_rectangle', 'star', 'triangle'].includes(cleanId) || ['circle', 'cylinder', 'diamond', 'parallelogram', 'pill', 'rect', 'round-rect', 'star', 'triangle'].includes(directShape);
+      this.insertShape(directShape, isNativeBasic ? undefined : shape.pathD, (shape as any).fillColor, (shape as any).strokeColor);
     }
   }
 
@@ -1276,6 +2483,7 @@ export class PresentationController {
     this.saveHistoryState();
     this.getActiveSlide().elements.push(stickyEl);
     this.selectedElementIds = new Set([stickyEl.id]);
+    this.syncPanels();
     this.updateSelectionToolbar();
     this.render();
     this.scheduleAutoSave();
@@ -1286,6 +2494,7 @@ export class PresentationController {
     const imgH = height || 220;
     const imgEl: BoardImageElement = {
       alt: filename || 'Imagen',
+      aspectRatio: imgW / (imgH || 1),
       height: imgH,
       id: `img-${Date.now()}`,
       type: 'image',
@@ -1298,6 +2507,7 @@ export class PresentationController {
     this.saveHistoryState();
     this.getActiveSlide().elements.push(imgEl);
     this.selectedElementIds = new Set([imgEl.id]);
+    this.syncPanels();
     this.updateSelectionToolbar();
     this.render();
     this.scheduleAutoSave();
@@ -1307,8 +2517,8 @@ export class PresentationController {
     const cellW = 120;
     const cellH = 44;
     const tableEl: BoardTableElement = {
-      cells: Array.from({ length: rows }, () => Array.from({ length: cols }, () => ({ text: '' }))),
       cols: cols,
+      data: Array.from({ length: rows }, () => Array.from({ length: cols }, () => ({ text: '' }))),
       height: rows * cellH,
       id: `table-${Date.now()}`,
       rows: rows,
@@ -1321,28 +2531,92 @@ export class PresentationController {
     this.saveHistoryState();
     this.getActiveSlide().elements.push(tableEl);
     this.selectedElementIds = new Set([tableEl.id]);
+    this.syncPanels();
     this.updateSelectionToolbar();
     this.render();
     this.scheduleAutoSave();
   }
 
-  public insertDiagramNode(opts: any): void {
-    this.insertShape(opts.shapeType || 'round-rect', undefined, opts.fillColor, opts.strokeColor);
+  public activateConnectorTool(style?: ConnectorStyle): void {
+    if (style) {
+      this.currentConnectorStyle = style;
+      const badges = this.container.querySelectorAll<HTMLButtonElement>('[data-connector-style]');
+      badges.forEach((b) => {
+        b.classList.toggle('is-active', b.getAttribute('data-connector-style') === style);
+      });
+    }
+    this.setTool('lines');
+  }
+
+  public insertDiagramNode(config: {
+    fillColor?: string;
+    height?: number;
+    isMindMapNode?: boolean;
+    shapeType: ShapeType;
+    strokeColor?: string;
+    strokeWidth?: number;
+    svgPath?: string;
+    text?: string;
+    textColor?: string;
+    width?: number;
+  }): void {
+    const isNativeBasic = ['circle', 'cylinder', 'diamond', 'line', 'parallelogram', 'pill', 'rect', 'round-rect', 'star', 'triangle'].includes(config.shapeType);
+    const w = config.width || (config.shapeType === 'pill' ? 140 : config.shapeType === 'diamond' ? 130 : config.shapeType === 'cylinder' ? 120 : (config.shapeType === 'circle' ? 60 : 140));
+    const h = config.height || (config.shapeType === 'pill' ? 48 : config.shapeType === 'diamond' ? 80 : config.shapeType === 'cylinder' ? 75 : (config.shapeType === 'circle' ? 60 : 60));
+
+    const shapeEl: BoardShapeElement = {
+      fillColor: config.fillColor || '#3b82f6',
+      fontSize: 14,
+      fontWeight: 600,
+      height: h,
+      id: `shape-${Date.now()}`,
+      isMindMapNode: config.isMindMapNode || false,
+      opacity: 1,
+      shapeType: config.shapeType || 'rect',
+      strokeColor: config.strokeColor || 'transparent',
+      strokeWidth: config.strokeWidth !== undefined ? config.strokeWidth : (config.strokeColor && config.strokeColor !== 'transparent' ? 2 : 0),
+      svgPath: isNativeBasic ? undefined : config.svgPath,
+      text: config.text || '',
+      textColor: config.textColor || '#ffffff',
+      type: 'shape',
+      width: w,
+      x: -w / 2,
+      y: -h / 2,
+    };
+    this.clampElementToSlide(shapeEl);
+    this.saveHistoryState();
+    this.getActiveSlide().elements.push(shapeEl);
+    this.selectedElementIds = new Set([shapeEl.id]);
+    this.syncPanels();
+    this.updateSelectionToolbar();
+    this.render();
+    this.scheduleAutoSave();
   }
 
   public insertChart(chartType: ChartType): void {
+    const palette = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
     const chartEl: BoardChartElement = {
-      chartType: chartType || 'bar',
+      barRadius: 8,
+      chartType: chartType || 'bar-vertical',
+      colorBy: chartType === 'pie' || chartType === 'donut' ? 'category' : 'series',
       data: [
-        { label: 'Q1', value: 35 },
-        { label: 'Q2', value: 55 },
-        { label: 'Q3', value: 80 },
-        { label: 'Q4', value: 95 },
+        { color: palette[0], id: 'r1', label: 'Q1', values: [35] },
+        { color: palette[1], id: 'r2', label: 'Q2', values: [55] },
+        { color: palette[2], id: 'r3', label: 'Q3', values: [80] },
+        { color: palette[3], id: 'r4', label: 'Q4', values: [95] },
       ],
+      dataLabelPosition: 'auto',
+      decimals: 0,
+      headers: ['Periodo', 'Valor'],
       height: 240,
       id: `chart-${Date.now()}`,
-      palette: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'],
-      title: 'Métricas de Crecimiento',
+      palette: palette,
+      series: [{ color: palette[0], name: 'Valor' }],
+      showDataLabels: true,
+      showGridLines: true,
+      showLegend: false,
+      showXAxisLabels: true,
+      showYAxisLabels: true,
       type: 'chart',
       width: 360,
       x: -180,
@@ -1352,26 +2626,54 @@ export class PresentationController {
     this.saveHistoryState();
     this.getActiveSlide().elements.push(chartEl);
     this.selectedElementIds = new Set([chartEl.id]);
+    this.syncPanels();
     this.updateSelectionToolbar();
     this.render();
     this.scheduleAutoSave();
+    this.openChartsPanel(chartEl);
+  }
+
+  public getChartsPanel(): BoardChartsPanelComponent | null {
+    return this.chartsPanel;
+  }
+
+  public getMockupsPanel(): BoardMockupsPanelComponent | null {
+    return this.mockupsPanel;
+  }
+
+  public openChartsPanel(chartEl?: BoardChartElement): void {
+    const target = chartEl || this.getSelectedChartElement() || undefined;
+    openChartInspectorInDrawer(target);
+  }
+
+  public openMockupsPanel(): void {
+    openMockupsInDrawer();
+  }
+
+  private getSelectedChartElement(): BoardChartElement | null {
+    const selected = this.getSelectedElements();
+    if (selected.length === 1 && selected[0].type === 'chart') {
+      return selected[0] as BoardChartElement;
+    }
+    return null;
   }
 
   public insertMockup(tpl: MockupTemplate): void {
     const mockEl: BoardMockupElement = {
-      fitMode: 'cover',
-      height: 280,
+      fitMode: tpl.fitModeDefault || 'fill',
+      height: tpl.height || 280,
       id: `mockup-${Date.now()}`,
-      templateId: tpl.id,
+      mockupId: tpl.id,
       type: 'mockup',
-      width: 340,
-      x: -170,
-      y: -140,
+      width: tpl.width || 340,
+      x: -(tpl.width || 340) / 2,
+      y: -(tpl.height || 280) / 2,
     };
     this.clampElementToSlide(mockEl);
     this.saveHistoryState();
     this.getActiveSlide().elements.push(mockEl);
     this.selectedElementIds = new Set([mockEl.id]);
+    this.syncPanels();
     this.updateSelectionToolbar();
     this.render();
     this.scheduleAutoSave();
@@ -1379,11 +2681,16 @@ export class PresentationController {
 
   public insert3DShape(shapeId: Shape3DType): void {
     const shape3d: Board3DElement = {
-      depth: 120,
+      fillColor: this.currentFillColor || '#3b82f6',
       height: 140,
       id: `3d-${Date.now()}`,
-      shape: shapeId,
-      type: '3d',
+      rotationX: -20,
+      rotationY: 30,
+      rotationZ: 0,
+      shape3dType: shapeId,
+      strokeColor: this.currentStrokeColor || '#1e293b',
+      strokeWidth: 2,
+      type: 'shape-3d',
       width: 140,
       x: -70,
       y: -70,
@@ -1392,6 +2699,7 @@ export class PresentationController {
     this.saveHistoryState();
     this.getActiveSlide().elements.push(shape3d);
     this.selectedElementIds = new Set([shape3d.id]);
+    this.syncPanels();
     this.updateSelectionToolbar();
     this.render();
     this.scheduleAutoSave();
@@ -1411,6 +2719,7 @@ export class PresentationController {
       this.getActiveSlide().elements.push(copy);
     });
     this.selectedElementIds.clear();
+    this.syncPanels();
     this.render();
     this.scheduleAutoSave();
   }
@@ -1429,6 +2738,7 @@ export class PresentationController {
     this.slides.push(newSlide);
     this.activeSlideId = newSlide.id;
     this.selectedElementIds.clear();
+    this.syncPanels();
     this.renderSlidesTray();
     this.render();
     this.scheduleAutoSave();
@@ -1452,6 +2762,7 @@ export class PresentationController {
     this.slides.splice(currentIdx + 1, 0, newSlide);
     this.activeSlideId = newSlide.id;
     this.selectedElementIds.clear();
+    this.syncPanels();
     this.renderSlidesTray();
     this.render();
     this.scheduleAutoSave();
@@ -1469,6 +2780,7 @@ export class PresentationController {
     const nextIdx = Math.min(currentIdx, this.slides.length - 1);
     this.activeSlideId = this.slides[nextIdx].id;
     this.selectedElementIds.clear();
+    this.syncPanels();
     this.renderSlidesTray();
     this.render();
     this.scheduleAutoSave();
@@ -1485,6 +2797,7 @@ export class PresentationController {
       this.slideDuration = current.duration;
       this.updateSlideDurationUI();
     }
+    this.syncPanels();
     this.updateSelectionToolbar();
     this.renderSlidesTray();
     this.render();
@@ -1533,6 +2846,14 @@ export class PresentationController {
   }
 
   public drawElementOn(ctx: CanvasRenderingContext2D, el: BoardElement): void {
+    ctx.save();
+    if (el.effect && el.effect.type !== 'none') {
+      applyElementEffect(ctx, el.effect);
+    }
+    if (el.animation && el.animation.type !== 'none') {
+      applyElementAnimation(ctx, el, el.animation, 0, 0, (this.slideDuration || 5.0) * 1000);
+    }
+
     if (el.type === 'shape') {
       drawShape(ctx, el as BoardShapeElement);
     } else if (el.type === 'sticky') {
@@ -1551,7 +2872,13 @@ export class PresentationController {
       drawTable(ctx, el as any);
     } else if (el.type === 'chart') {
       drawChart(ctx, el as any);
+    } else if (el.type === 'shape-3d') {
+      draw3DElement(ctx, el as Board3DElement);
+    } else if (el.type === 'mockup') {
+      drawMockupElement(ctx, el as BoardMockupElement, () => this.render());
     }
+
+    ctx.restore();
   }
 
   public render(): void {
@@ -1603,7 +2930,9 @@ export class PresentationController {
 
     const elements = activeSlide.elements;
     elements.forEach((el) => {
-      this.drawElementOn(ctx, el);
+      if (!(el as any).hidden) {
+        this.drawElementOn(ctx, el);
+      }
     });
 
     if (this.isDrawing && this.drawPoints.length > 1) {
@@ -1637,10 +2966,17 @@ export class PresentationController {
     ctx.restore();
 
     if (this.marqueeStart && this.marqueeEnd) {
-      drawMarqueeBox(ctx, this.marqueeStart, this.marqueeEnd, camera, this.canvas);
+      const box = {
+        height: this.marqueeEnd.y - this.marqueeStart.y,
+        width: this.marqueeEnd.x - this.marqueeStart.x,
+        x: this.marqueeStart.x,
+        y: this.marqueeStart.y,
+      };
+      drawMarqueeBox(ctx, box, camera);
     }
 
     ctx.restore();
+    this.updateFloatingToolbarPosition();
   }
 
   public startSlideshow(): void {
@@ -1674,6 +3010,7 @@ export class PresentationController {
     if (!last) return;
     try {
       this.slides = JSON.parse(last);
+      this.syncPanels();
       this.render();
       this.renderSlidesTray();
       this.scheduleAutoSave();
@@ -1691,6 +3028,7 @@ export class PresentationController {
 
     await saveLocalCanvas({
       canvas_type: 'presentation',
+      created_at: this.canvasRecord?.created_at || new Date().toISOString(),
       data: initialData,
       height: this.slideHeight,
       is_local: !currentUser,

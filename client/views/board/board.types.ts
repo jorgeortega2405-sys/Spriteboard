@@ -59,6 +59,8 @@ export const GAMEBOY_PALETTE: string[] = [
 
 export type StrokeStyle = 'solid' | 'dashed' | 'dashed-short' | 'dotted';
 
+export type ConnectorStyle = 'curved' | 'orthogonal' | 'straight';
+
 export type MarkerType =
   | 'arrow'
   | 'arrow-filled'

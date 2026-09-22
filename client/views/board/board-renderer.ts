@@ -402,9 +402,21 @@ export function drawShape(ctx: CanvasRenderingContext2D, shape: BoardShapeElemen
 
     if (shape.shapeType === 'rect') {
       const r = shape.borderRadius || 0;
-      if (r > 0 && typeof (ctx as any).roundRect === 'function') {
+      if (r > 0) {
         const clampedR = Math.min(r, Math.abs(w) / 2, Math.abs(h) / 2);
-        (ctx as any).roundRect(x, y, w, h, clampedR);
+        if (typeof (ctx as any).roundRect === 'function') {
+          (ctx as any).roundRect(x, y, w, h, clampedR);
+        } else {
+          ctx.moveTo(x + clampedR, y);
+          ctx.lineTo(x + w - clampedR, y);
+          ctx.quadraticCurveTo(x + w, y, x + w, y + clampedR);
+          ctx.lineTo(x + w, y + h - clampedR);
+          ctx.quadraticCurveTo(x + w, y + h, x + w - clampedR, y + h);
+          ctx.lineTo(x + clampedR, y + h);
+          ctx.quadraticCurveTo(x, y + h, x, y + h - clampedR);
+          ctx.lineTo(x, y + clampedR);
+          ctx.quadraticCurveTo(x, y, x + clampedR, y);
+        }
       } else {
         ctx.rect(x, y, w, h);
       }
@@ -414,7 +426,15 @@ export function drawShape(ctx: CanvasRenderingContext2D, shape: BoardShapeElemen
       if (typeof (ctx as any).roundRect === 'function') {
         (ctx as any).roundRect(x, y, w, h, r);
       } else {
-        ctx.rect(x, y, w, h);
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
       }
     } else if (shape.shapeType === 'circle') {
       ctx.ellipse(x + w / 2, y + h / 2, Math.abs(w) / 2, Math.abs(h) / 2, 0, 0, Math.PI * 2);
@@ -538,7 +558,8 @@ export function drawShape(ctx: CanvasRenderingContext2D, shape: BoardShapeElemen
       ensureGoogleFontLoaded(shape.fontFamily);
     }
     ctx.font = `${shapeStyle !== 'normal' ? `${shapeStyle} ` : ''}${shapeWeight} ${fs}px ${shapeFamily}`;
-    ctx.textAlign = 'center';
+    const align = (shape as any).textAlign || 'center';
+    ctx.textAlign = align;
     ctx.textBaseline = 'middle';
     const pad = Math.min(24, Math.abs(w) * 0.15);
     const maxW = Math.max(20, Math.abs(w) - pad * 2);
@@ -546,9 +567,34 @@ export function drawShape(ctx: CanvasRenderingContext2D, shape: BoardShapeElemen
     const lineHeight = fs * 1.3;
     const totalH = lines.length * lineHeight;
     let currY = y + h / 2 - totalH / 2 + lineHeight / 2;
-    const cx = x + w / 2;
+    const cx = align === 'left' ? x + pad : (align === 'right' ? x + w - pad : x + w / 2);
+
     for (const line of lines) {
       ctx.fillText(line, cx, currY);
+      const deco = (shape as any).textDecoration;
+      if (deco && deco !== 'none') {
+        const lineMetrics = ctx.measureText(line);
+        const textW = lineMetrics.width;
+        let startX = cx - textW / 2;
+        if (align === 'left') startX = x + pad;
+        else if (align === 'right') startX = x + w - pad - textW;
+
+        ctx.save();
+        ctx.strokeStyle = shape.textColor || '#1e293b';
+        ctx.lineWidth = Math.max(1, fs / 16);
+        ctx.beginPath();
+        if (deco === 'underline') {
+          const lineY = currY + fs / 2 + 1;
+          ctx.moveTo(startX, lineY);
+          ctx.lineTo(startX + textW, lineY);
+        } else if (deco === 'line-through') {
+          const lineY = currY;
+          ctx.moveTo(startX, lineY);
+          ctx.lineTo(startX + textW, lineY);
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
       currY += lineHeight;
     }
     ctx.restore();
@@ -654,10 +700,22 @@ export function drawSticky(ctx: CanvasRenderingContext2D, sticky: BoardStickyEle
   ctx.shadowOffsetY = 3;
 
   ctx.fillStyle = sticky.color;
-  const r = 8;
+  const r = (sticky as any).borderRadius !== undefined ? (sticky as any).borderRadius : 8;
   ctx.beginPath();
-  if (typeof (ctx as any).roundRect === 'function') {
-    (ctx as any).roundRect(sticky.x, sticky.y, sticky.width, sticky.height, r);
+  if (r > 0) {
+    if (typeof (ctx as any).roundRect === 'function') {
+      (ctx as any).roundRect(sticky.x, sticky.y, sticky.width, sticky.height, r);
+    } else {
+      ctx.moveTo(sticky.x + r, sticky.y);
+      ctx.lineTo(sticky.x + sticky.width - r, sticky.y);
+      ctx.quadraticCurveTo(sticky.x + sticky.width, sticky.y, sticky.x + sticky.width, sticky.y + r);
+      ctx.lineTo(sticky.x + sticky.width, sticky.y + sticky.height - r);
+      ctx.quadraticCurveTo(sticky.x + sticky.width, sticky.y + sticky.height, sticky.x + sticky.width - r, sticky.y + sticky.height);
+      ctx.lineTo(sticky.x + r, sticky.y + sticky.height);
+      ctx.quadraticCurveTo(sticky.x, sticky.y + sticky.height, sticky.x, sticky.y + sticky.height - r);
+      ctx.lineTo(sticky.x, sticky.y + r);
+      ctx.quadraticCurveTo(sticky.x, sticky.y, sticky.x + r, sticky.y);
+    }
   } else {
     ctx.rect(sticky.x, sticky.y, sticky.width, sticky.height);
   }
@@ -676,6 +734,8 @@ export function drawSticky(ctx: CanvasRenderingContext2D, sticky: BoardStickyEle
     ensureGoogleFontLoaded(sticky.fontFamily);
   }
   ctx.font = `${stickyStyle !== 'normal' ? `${stickyStyle} ` : ''}${stickyWeight} ${sticky.fontSize}px ${stickyFamily}`;
+  const align = (sticky as any).textAlign || 'left';
+  ctx.textAlign = align;
   ctx.textBaseline = 'top';
 
   const pad = 16;
@@ -686,7 +746,37 @@ export function drawSticky(ctx: CanvasRenderingContext2D, sticky: BoardStickyEle
 
   for (const line of lines) {
     if (currY + lineHeight > sticky.y + sticky.height - pad) break;
-    ctx.fillText(line, sticky.x + pad, currY);
+    let drawX = sticky.x + pad;
+    if (align === 'center') drawX = sticky.x + sticky.width / 2;
+    else if (align === 'right') drawX = sticky.x + sticky.width - pad;
+
+    ctx.fillText(line, drawX, currY);
+
+    const deco = (sticky as any).textDecoration;
+    if (deco && deco !== 'none') {
+      const lineMetrics = ctx.measureText(line);
+      const textW = lineMetrics.width;
+      let startX = drawX;
+      if (align === 'center') startX = sticky.x + (sticky.width - textW) / 2;
+      else if (align === 'right') startX = sticky.x + sticky.width - pad - textW;
+
+      ctx.save();
+      ctx.strokeStyle = sticky.textColor || '#1e293b';
+      ctx.lineWidth = Math.max(1, sticky.fontSize / 16);
+      ctx.beginPath();
+      if (deco === 'underline') {
+        const lineY = currY + sticky.fontSize + 2;
+        ctx.moveTo(startX, lineY);
+        ctx.lineTo(startX + textW, lineY);
+      } else if (deco === 'line-through') {
+        const lineY = currY + sticky.fontSize * 0.55;
+        ctx.moveTo(startX, lineY);
+        ctx.lineTo(startX + textW, lineY);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
     currY += lineHeight;
   }
   ctx.restore();
@@ -705,11 +795,49 @@ export function drawText(ctx: CanvasRenderingContext2D, textEl: BoardTextElement
   }
   ctx.font = `${textStyle !== 'normal' ? `${textStyle} ` : ''}${textWeight} ${textEl.fontSize}px ${textFamily}`;
   ctx.textBaseline = 'top';
+
+  const align = (textEl as any).textAlign || 'left';
+  ctx.textAlign = align;
+
   const lines = textEl.text.split('\n');
   let currY = textEl.y;
   const lineHeight = textEl.fontSize * 1.3;
+  const elW = textEl.width || 0;
+
   for (const line of lines) {
-    ctx.fillText(line, textEl.x, currY);
+    let drawX = textEl.x;
+    if (align === 'center') {
+      drawX = textEl.x + elW / 2;
+    } else if (align === 'right') {
+      drawX = textEl.x + elW;
+    }
+    ctx.fillText(line, drawX, currY);
+
+    const deco = (textEl as any).textDecoration;
+    if (deco && deco !== 'none') {
+      const lineMetrics = ctx.measureText(line);
+      const textW = lineMetrics.width;
+      let startX = textEl.x;
+      if (align === 'center') startX = textEl.x + (elW - textW) / 2;
+      else if (align === 'right') startX = textEl.x + elW - textW;
+
+      ctx.save();
+      ctx.strokeStyle = textEl.color;
+      ctx.lineWidth = Math.max(1, textEl.fontSize / 16);
+      ctx.beginPath();
+      if (deco === 'underline') {
+        const lineY = currY + textEl.fontSize + 2;
+        ctx.moveTo(startX, lineY);
+        ctx.lineTo(startX + textW, lineY);
+      } else if (deco === 'line-through') {
+        const lineY = currY + textEl.fontSize * 0.55;
+        ctx.moveTo(startX, lineY);
+        ctx.lineTo(startX + textW, lineY);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
     currY += lineHeight;
   }
   ctx.restore();

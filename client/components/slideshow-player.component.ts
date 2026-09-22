@@ -147,13 +147,17 @@ export class SlideshowPlayerComponent {
         const el = elements[i];
         if (el.type === 'section') continue;
 
-        const parentSection = sections.find(
+        const elX = 'x' in el ? (el as any).x : 0;
+        const elY = 'y' in el ? (el as any).y : 0;
+        const elW = 'width' in el ? (el as any).width : 0;
+        const elH = 'height' in el ? (el as any).height : 0;
+        const parentSection = el.type !== 'stroke' ? sections.find(
           (s) =>
-            el.x >= s.x &&
-            el.y >= s.y &&
-            el.x + ('width' in el ? el.width : 0) <= s.x + s.width &&
-            el.y + ('height' in el ? el.height : 0) <= s.y + s.height
-        );
+            elX >= s.x &&
+            elY >= s.y &&
+            elX + elW <= s.x + s.width &&
+            elY + elH <= s.y + s.height
+        ) : undefined;
 
         if (parentSection) {
           sctx.save();
@@ -346,5 +350,9 @@ export class SlideshowPlayerComponent {
     this.overlay = null;
     this.isActive = false;
     document.body.classList.remove('slideshow-active');
+  }
+
+  public destroy(): void {
+    this.close();
   }
 }

@@ -160,7 +160,7 @@ export function exportSvg(
   elements: BoardElement[],
   boardBackground: { color: string; dotColor?: string; type: BackgroundType },
   boardName: string,
-  getPixelGridCanvas: (el: BoardPixelGridElement) => { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D }
+  getPixelGridCanvas?: (el: BoardPixelGridElement) => { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D }
 ): void {
   const bbox = computeElementsBoundingBox(elements);
   if (!bbox) {
@@ -367,10 +367,12 @@ export function exportSvg(
       }
       out += `  </g>\n`;
     } else if (el.type === 'pixel-grid') {
-      const op = escAttr(el.opacity !== undefined ? el.opacity : 1);
-      const { canvas } = getPixelGridCanvas(el);
-      const dataUrl = canvas.toDataURL('image/png');
-      out += `  <image href="${dataUrl}" x="${el.x}" y="${el.y}" width="${el.width}" height="${el.height}" style="image-rendering: pixelated;" opacity="${op}" />\n`;
+      if (getPixelGridCanvas) {
+        const op = escAttr(el.opacity !== undefined ? el.opacity : 1);
+        const { canvas } = getPixelGridCanvas(el);
+        const dataUrl = canvas.toDataURL('image/png');
+        out += `  <image href="${dataUrl}" x="${el.x}" y="${el.y}" width="${el.width}" height="${el.height}" style="image-rendering: pixelated;" opacity="${op}" />\n`;
+      }
     } else if (el.type === 'image') {
       const op = escAttr(el.opacity !== undefined ? el.opacity : 1);
       out += `  <image href="${escAttr(el.url)}" x="${el.x}" y="${el.y}" width="${el.width}" height="${el.height}" preserveAspectRatio="none" opacity="${op}" />\n`;
