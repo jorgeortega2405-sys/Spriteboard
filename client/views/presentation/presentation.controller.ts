@@ -3,6 +3,7 @@ import { CanvasCommentsController } from '../../components/canvas-comments.compo
 import { CanvasHistoryDropdownController, setupCanvasHistoryDropdown } from '../../components/canvas-history-dropdown.component.js';
 import { openCanvasMetricsModal } from '../../components/canvas-metrics-modal.component.js';
 import { CanvasShareDropdownController, setupCanvasShareDropdown } from '../../components/canvas-share-dropdown.component.js';
+import { closeContextMenu, ContextMenuItem, openContextMenu } from '../../components/context-menu.component.js';
 import { isColorsDrawerOpen, isFontsDrawerOpen, openChartInspectorInDrawer, openColorsInDrawer, openFontsInDrawer, openMockupsInDrawer, toggleDrawer } from '../../components/layout.component.js';
 import { SlideshowPlayerComponent } from '../../components/slideshow-player.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
@@ -22,7 +23,7 @@ import { PixelShape } from '../../utils/pixel-shapes.util.js';
 import { BoardAnimationPanelComponent } from '../board/board-animation-panel.component.js';
 import { BoardChartsPanelComponent } from '../board/board-charts-panel.component.js';
 import { BoardEffectsPanelComponent } from '../board/board-effects-panel.component.js';
-import { computeElementsBoundingBox, create3DElement, createChartElement, createConnectorElement, createImageElement, createMockupElement, createSectionElement, createShapeElement, createStickyElement, createTableElement, createTextElement, createTextPresetElement, getConnectorEndpoints, getElementBoundingBox, hitTestElement, hitTestResizeHandle, measureTextElementSize, moveElementByDelta, moveElementByDrag, resizeElementByHandle } from '../board/board-elements.manager.js';
+import { computeElementsBoundingBox, create3DElement, createChartElement, createConnectorElement, createImageElement, createMockupElement, createSectionElement, createShapeElement, createStickyElement, createTableElement, createTextElement, createTextPresetElement, findElementsByMarqueeBox, getConnectorEndpoints, getElementBoundingBox, hitTestElement, hitTestResizeHandle, measureTextElementSize, moveElementByDelta, moveElementByDrag, resizeElementByHandle } from '../board/board-elements.manager.js';
 import { exportJson, exportPng, exportSvg, generateThumbnail } from '../board/board-export.service.js';
 import { drawMockupElement } from '../board/board-mockup-renderer.js';
 import { BoardMockupsPanelComponent } from '../board/board-mockups-panel.component.js';
@@ -96,6 +97,8 @@ export class PresentationController {
   private selectedElementIds: Set<string> = new Set();
   private selectedSlideId: string | null = 'slide-1';
   private selectionStartBBox: { height: number; width: number; x: number; y: number } | null = null;
+  private clipboardElements: BoardElement[] = [];
+  private redoStack: string[] = [];
   private selectionStartPositions: Map<string, any> = new Map();
   private shareDropdownController: CanvasShareDropdownController | null = null;
   private slideDuration: number = 5.0;
@@ -136,6 +139,7 @@ export class PresentationController {
   }
 
   public destroy(): void {
+    closeContextMenu();
     if (this.abortController) {
       this.abortController.abort();
       this.abortController = null;
@@ -799,9 +803,45 @@ export class PresentationController {
         this.toggleUnderline();
         return;
       }
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
-        e.preventDefault();
-        this.undo();
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C') && this.selectedElementIds.size > 0 && !this.activeInlineEditor) {
+        if ((e.target as HTMLElement).tagName !== 'INPUT' && (e.target as HTMLElement).tagName !== 'TEXTAREA') {
+          e.preventDefault();
+          this.copySelectedElements();
+          return;
+        }
+      }
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'x' || e.key === 'X') && this.selectedElementIds.size > 0 && !this.activeInlineEditor) {
+        if ((e.target as HTMLElement).tagName !== 'INPUT' && (e.target as HTMLElement).tagName !== 'TEXTAREA') {
+          e.preventDefault();
+          this.copySelectedElements();
+          this.deleteSelectedElements();
+          return;
+        }
+      }
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V') && !this.activeInlineEditor) {
+        if ((e.target as HTMLElement).tagName !== 'INPUT' && (e.target as HTMLElement).tagName !== 'TEXTAREA') {
+          e.preventDefault();
+          this.pasteElements();
+          return;
+        }
+      }
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z') && !this.activeInlineEditor) {
+        if ((e.target as HTMLElement).tagName !== 'INPUT' && (e.target as HTMLElement).tagName !== 'TEXTAREA') {
+          e.preventDefault();
+          if (e.shiftKey) {
+            this.redo();
+          } else {
+            this.undo();
+          }
+          return;
+        }
+      }
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || e.key === 'Y') && !this.activeInlineEditor) {
+        if ((e.target as HTMLElement).tagName !== 'INPUT' && (e.target as HTMLElement).tagName !== 'TEXTAREA') {
+          e.preventDefault();
+          this.redo();
+          return;
+        }
       }
     }, { signal });
 
@@ -1013,6 +1053,8 @@ export class PresentationController {
 
     this.canvas.addEventListener('pointerdown', (e: PointerEvent) => {
       if (!this.canvas) return;
+      closeContextMenu();
+      if (e.button === 2) return;
       this.commitInlineEditor();
       const rect = this.canvas.getBoundingClientRect();
       const sx = e.clientX - rect.left;
@@ -1513,20 +1555,22 @@ export class PresentationController {
       }
 
       if (this.marqueeStart && this.marqueeEnd) {
-        const x1 = Math.min(this.marqueeStart.x, this.marqueeEnd.x);
-        const y1 = Math.min(this.marqueeStart.y, this.marqueeEnd.y);
-        const x2 = Math.max(this.marqueeStart.x, this.marqueeEnd.x);
-        const y2 = Math.max(this.marqueeStart.y, this.marqueeEnd.y);
+        const box = {
+          height: this.marqueeEnd.y - this.marqueeStart.y,
+          width: this.marqueeEnd.x - this.marqueeStart.x,
+          x: this.marqueeStart.x,
+          y: this.marqueeStart.y,
+        };
         const elements = this.getActiveSlide().elements;
-        this.selectedElementIds.clear();
-        elements.forEach((el) => {
-          const box = getElementBoundingBox(el);
-          if (box.x >= x1 && box.y >= y1 && box.x + box.width <= x2 && box.y + box.height <= y2) {
-            this.selectedElementIds.add(el.id);
+        const found = findElementsByMarqueeBox(elements, box);
+        if (found.length > 0) {
+          if (!e.shiftKey) {
+            this.selectedElementIds.clear();
           }
-        });
-        if (this.selectedElementIds.size > 0) {
+          found.forEach((el) => this.selectedElementIds.add(el.id));
           this.selectedSlideId = null;
+        } else if (!e.shiftKey && (Math.abs(box.width) > 3 || Math.abs(box.height) > 3)) {
+          this.selectedElementIds.clear();
         }
         this.marqueeStart = null;
         this.marqueeEnd = null;
@@ -1557,6 +1601,372 @@ export class PresentationController {
         this.render();
       }
     }, { passive: false, signal });
+
+    this.canvas.addEventListener('contextmenu', (e: MouseEvent) => {
+      e.preventDefault();
+      closeContextMenu();
+      if (!this.canvas) return;
+
+      const rect = this.canvas.getBoundingClientRect();
+      const sx = e.clientX - rect.left;
+      const sy = e.clientY - rect.top;
+      const camera = { x: this.panOffset.x, y: this.panOffset.y, zoom: this.zoom };
+      const wp = screenToWorld(sx, sy, this.canvas, camera);
+
+      const halfW = this.slideWidth / 2;
+      const halfH = this.slideHeight / 2;
+      const slideGap = 80;
+
+      let clickedIdx = -1;
+      for (let i = 0; i < this.slides.length; i++) {
+        const cy = i * (this.slideHeight + slideGap);
+        if (wp.x >= -halfW && wp.x <= halfW && wp.y >= cy - halfH && wp.y <= cy + halfH) {
+          clickedIdx = i;
+          break;
+        }
+      }
+
+      if (clickedIdx === -1) {
+        clickedIdx = this.getActiveSlideIndex();
+      }
+
+      const activeSlide = this.slides[clickedIdx];
+      if (activeSlide && activeSlide.id !== this.activeSlideId) {
+        this.selectSlide(activeSlide.id);
+      }
+
+      const cy = clickedIdx * (this.slideHeight + slideGap);
+      const localWp = { x: wp.x, y: wp.y - cy };
+      const elements = this.slides[clickedIdx]?.elements || [];
+      const hit = hitTestElement(elements, localWp.x, localWp.y, this.zoom);
+
+      if (hit) {
+        if (!this.selectedElementIds.has(hit.id)) {
+          this.selectedElementIds.clear();
+          this.selectedElementIds.add(hit.id);
+          this.selectedSlideId = null;
+          this.syncPanels();
+          this.updateSelectionToolbar();
+          this.render();
+        }
+
+        const items: ContextMenuItem[] = [
+          {
+            action: () => this.reorderSelected(true),
+            icon: 'flip_to_front',
+            label: 'Traer al frente',
+            ref: 'ctx-pres-bring-front',
+          },
+          {
+            action: () => this.reorderSelected(false),
+            icon: 'flip_to_back',
+            label: 'Enviar al fondo',
+            ref: 'ctx-pres-send-back',
+          },
+          {
+            action: () => this.reorderSelectedAction('forward'),
+            icon: 'arrow_upward',
+            label: 'Traer adelante',
+            ref: 'ctx-pres-bring-forward',
+          },
+          {
+            action: () => this.reorderSelectedAction('backward'),
+            icon: 'arrow_downward',
+            label: 'Enviar atrás',
+            ref: 'ctx-pres-send-backward',
+          },
+          { divider: true },
+          {
+            action: () => {
+              this.copySelectedElements();
+              this.deleteSelectedElements();
+            },
+            icon: 'content_cut',
+            label: 'Cortar',
+            ref: 'ctx-pres-cut',
+            shortcut: 'Ctrl+X',
+          },
+          {
+            action: () => this.copySelectedElements(),
+            icon: 'content_copy',
+            label: 'Copiar',
+            ref: 'ctx-pres-copy',
+            shortcut: 'Ctrl+C',
+          },
+          {
+            action: () => this.duplicateSelectedElements(),
+            icon: 'filter_none',
+            label: 'Duplicar',
+            ref: 'ctx-pres-duplicate',
+            shortcut: 'Ctrl+D',
+          },
+        ];
+
+        if (hit.type === 'table') {
+          const table = hit as BoardTableElement;
+          const rows = Math.max(1, table.rows || table.data?.length || 3);
+          const cols = Math.max(1, table.cols || (table.data && table.data[0]?.length) || 3);
+          const colWidths = table.colWidths && table.colWidths.length === cols ? table.colWidths : Array(cols).fill(table.width / cols);
+          const rowHeights = table.rowHeights && table.rowHeights.length === rows ? table.rowHeights : Array(rows).fill(table.height / rows);
+
+          const relX = localWp.x - table.x;
+          let accumX = 0;
+          let c = cols - 1;
+          for (let i = 0; i < cols; i++) {
+            if (relX >= accumX && relX < accumX + colWidths[i]) {
+              c = i;
+              break;
+            }
+            accumX += colWidths[i];
+          }
+
+          const relY = localWp.y - table.y;
+          let accumY = 0;
+          let r = rows - 1;
+          for (let i = 0; i < rows; i++) {
+            if (relY >= accumY && relY < accumY + rowHeights[i]) {
+              r = i;
+              break;
+            }
+            accumY += rowHeights[i];
+          }
+
+          items.push(
+            { divider: true },
+            {
+              action: () => this.deleteTable(table.id),
+              danger: true,
+              icon: 'table_chart',
+              label: 'Eliminar tabla',
+              ref: 'ctx-pres-delete-table',
+            },
+            {
+              action: () => this.deleteTableColumn(table.id, c),
+              icon: 'view_column',
+              label: 'Eliminar columna',
+              ref: 'ctx-pres-delete-col',
+            },
+            {
+              action: () => this.deleteTableRow(table.id, r),
+              icon: 'table_rows',
+              label: 'Eliminar fila',
+              ref: 'ctx-pres-delete-row',
+            },
+            {
+              action: () => this.addTableColumn(table.id, c),
+              icon: 'add',
+              label: 'Agregar columna',
+              ref: 'ctx-pres-add-col',
+            },
+            {
+              action: () => this.addTableRow(table.id, r),
+              icon: 'add',
+              label: 'Agregar fila',
+              ref: 'ctx-pres-add-row',
+            }
+          );
+        } else if (hit.type === 'mockup') {
+          const mockupEl = hit as BoardMockupElement;
+          items.push(
+            { divider: true },
+            {
+              action: () => {
+                const filePicker = this.container.querySelector<HTMLInputElement>('[data-ref="input-mockup-file-picker"]');
+                filePicker?.click();
+              },
+              icon: 'add_photo_alternate',
+              label: 'Subir / Cambiar imagen',
+              ref: 'ctx-pres-mockup-change-img',
+            },
+            {
+              action: () => {
+                this.saveHistoryState();
+                const currentMode = mockupEl.fitMode || 'fill';
+                const nextMode: MockupFitMode = currentMode === 'fill' ? 'fit' : (currentMode === 'fit' ? 'stretch' : 'fill');
+                mockupEl.fitMode = nextMode;
+                this.render();
+                this.scheduleAutoSave();
+                const modeLabels: Record<MockupFitMode, string> = { fill: 'Rellenar (Fill)', fit: 'Ajustar (Fit)', stretch: 'Estirar (Stretch)' };
+                showToast(`Ajuste: ${modeLabels[nextMode]}`);
+              },
+              icon: 'aspect_ratio',
+              label: `Ajuste: ${mockupEl.fitMode === 'fit' ? 'Ajustar' : (mockupEl.fitMode === 'stretch' ? 'Estirar' : 'Rellenar')}`,
+              ref: 'ctx-pres-mockup-fit-mode',
+            },
+            {
+              action: () => {
+                this.saveHistoryState();
+                mockupEl.customUserImage = undefined;
+                this.render();
+                this.scheduleAutoSave();
+                showToast('Imagen restablecida a la predeterminada');
+              },
+              icon: 'restart_alt',
+              label: 'Restablecer imagen por defecto',
+              ref: 'ctx-pres-mockup-reset-img',
+            }
+          );
+        } else if (hit.type === 'chart') {
+          items.push(
+            { divider: true },
+            {
+              action: () => this.openChartsPanel(hit as BoardChartElement),
+              icon: 'bar_chart',
+              label: 'Editar gráfica',
+              ref: 'ctx-pres-edit-chart',
+            }
+          );
+        } else if (hit.type === 'sticky' || hit.type === 'text' || (hit.type === 'shape' && (hit as any).text !== undefined)) {
+          items.push(
+            { divider: true },
+            {
+              action: () => this.openInlineTextEditor(hit),
+              icon: 'edit',
+              label: 'Editar texto',
+              ref: 'ctx-pres-edit-text',
+            }
+          );
+        }
+
+        items.push(
+          { divider: true },
+          {
+            action: () => this.deleteSelectedElements(),
+            danger: true,
+            icon: 'delete',
+            label: 'Eliminar',
+            ref: 'ctx-pres-delete',
+            shortcut: 'Supr',
+          },
+          { divider: true },
+          {
+            action: () => this.undo(),
+            disabled: this.undoStack.length === 0,
+            icon: 'undo',
+            label: 'Deshacer',
+            ref: 'ctx-pres-undo',
+            shortcut: 'Ctrl+Z',
+          },
+          {
+            action: () => this.redo(),
+            disabled: this.redoStack.length === 0,
+            icon: 'redo',
+            label: 'Rehacer',
+            ref: 'ctx-pres-redo',
+            shortcut: 'Ctrl+Y',
+          }
+        );
+
+        openContextMenu({
+          items,
+          x: e.clientX,
+          y: e.clientY,
+        });
+        return;
+      }
+
+      const bgItems: ContextMenuItem[] = [];
+
+      if (this.clipboardElements.length > 0) {
+        bgItems.push(
+          {
+            action: () => this.pasteElements({ x: localWp.x, y: localWp.y }),
+            icon: 'content_paste',
+            label: 'Pegar',
+            ref: 'ctx-pres-paste',
+            shortcut: 'Ctrl+V',
+          },
+          { divider: true }
+        );
+      }
+
+      bgItems.push(
+        {
+          action: () => this.insertTextPreset('body', localWp.x, localWp.y),
+          icon: 'title',
+          label: 'Añadir texto',
+          ref: 'ctx-pres-add-text',
+          shortcut: 'T',
+        },
+        {
+          action: () => this.insertStickyNote(this.currentFillColor || CANVAS_DEFAULTS.STICKY_COLOR, 'Nota', localWp.x, localWp.y),
+          icon: 'sticky_note_2',
+          label: 'Añadir nota adhesiva',
+          ref: 'ctx-pres-add-sticky',
+          shortcut: 'N',
+        },
+        {
+          action: () => this.insertShape(this.currentShapeType || 'rect', undefined, this.currentFillColor, this.currentStrokeColor, localWp.x, localWp.y),
+          icon: 'crop_square',
+          label: 'Añadir figura',
+          ref: 'ctx-pres-add-shape',
+          shortcut: 'R',
+        },
+        { divider: true },
+        {
+          action: () => this.addSlide(),
+          icon: 'add_to_photos',
+          label: 'Nueva diapositiva',
+          ref: 'ctx-pres-add-slide',
+        },
+        {
+          action: () => this.duplicateSlide(),
+          icon: 'content_copy',
+          label: 'Duplicar diapositiva',
+          ref: 'ctx-pres-duplicate-slide',
+        },
+        {
+          action: () => this.deleteSlide(),
+          danger: true,
+          disabled: this.slides.length <= 1,
+          icon: 'delete',
+          label: 'Eliminar diapositiva',
+          ref: 'ctx-pres-delete-slide',
+        },
+        { divider: true },
+        {
+          action: () => {
+            this.zoom = 1;
+            this.updateZoomUI();
+            this.render();
+          },
+          icon: 'zoom_in',
+          label: 'Restablecer zoom (100%)',
+          ref: 'ctx-pres-reset-zoom',
+          shortcut: 'Ctrl+0',
+        },
+        {
+          action: () => this.startSlideshow(),
+          icon: 'play_arrow',
+          label: 'Iniciar presentación',
+          ref: 'ctx-pres-start-slideshow',
+          shortcut: 'F5',
+        },
+        { divider: true },
+        {
+          action: () => this.undo(),
+          disabled: this.undoStack.length === 0,
+          icon: 'undo',
+          label: 'Deshacer',
+          ref: 'ctx-pres-undo',
+          shortcut: 'Ctrl+Z',
+        },
+        {
+          action: () => this.redo(),
+          disabled: this.redoStack.length === 0,
+          icon: 'redo',
+          label: 'Rehacer',
+          ref: 'ctx-pres-redo',
+          shortcut: 'Ctrl+Y',
+        }
+      );
+
+      openContextMenu({
+        items: bgItems,
+        x: e.clientX,
+        y: e.clientY,
+      });
+    }, { signal });
   }
 
   private bindTrayEvents(signal: AbortSignal): void {
@@ -2755,6 +3165,166 @@ export class PresentationController {
     this.scheduleAutoSave();
   }
 
+  private copySelectedElements(): void {
+    if (this.selectedElementIds.size === 0) return;
+    const elements = this.getActiveSlide().elements;
+    this.clipboardElements = elements
+      .filter((el) => this.selectedElementIds.has(el.id))
+      .map((el) => JSON.parse(JSON.stringify(el)));
+    showToast('Elementos copiados', 'info');
+  }
+
+  private pasteElements(targetPos?: { x: number; y: number }): void {
+    if (this.clipboardElements.length === 0) return;
+    this.saveHistoryState();
+    const elements = this.getActiveSlide().elements;
+    const newSelected = new Set<string>();
+
+    const bbox = computeElementsBoundingBox(this.clipboardElements);
+    const offsetX = targetPos ? Math.round(targetPos.x - (bbox.x + bbox.width / 2)) : 24;
+    const offsetY = targetPos ? Math.round(targetPos.y - (bbox.y + bbox.height / 2)) : 24;
+
+    this.clipboardElements.forEach((el) => {
+      const copy = JSON.parse(JSON.stringify(el));
+      copy.id = `${el.type}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      if ('x' in copy && 'y' in copy) {
+        copy.x += offsetX;
+        copy.y += offsetY;
+      }
+      elements.push(copy);
+      newSelected.add(copy.id);
+    });
+
+    this.selectedElementIds = newSelected;
+    this.syncPanels();
+    this.updateSelectionToolbar();
+    this.render();
+    this.scheduleAutoSave();
+    showToast('Elementos pegados', 'success');
+  }
+
+  public deleteTable(tableId: string): void {
+    const slide = this.getActiveSlide();
+    const idx = slide.elements.findIndex((el) => el.id === tableId);
+    if (idx === -1) return;
+    this.saveHistoryState();
+    slide.elements.splice(idx, 1);
+    this.selectedElementIds.delete(tableId);
+    this.updateSelectionToolbar();
+    this.render();
+    this.scheduleAutoSave();
+    showToast('Tabla eliminada', 'info');
+  }
+
+  public deleteTableColumn(tableId: string, colIndex: number): void {
+    const slide = this.getActiveSlide();
+    const table = slide.elements.find((el) => el.id === tableId) as BoardTableElement | undefined;
+    if (!table || !table.data || table.cols <= 1) {
+      this.deleteTable(tableId);
+      return;
+    }
+    this.saveHistoryState();
+    const cols = table.cols;
+    const colWidths = table.colWidths && table.colWidths.length === cols ? [...table.colWidths] : Array(cols).fill(table.width / cols);
+    const removedWidth = colWidths.splice(colIndex, 1)[0] || (table.width / cols);
+
+    for (let r = 0; r < table.data.length; r++) {
+      if (table.data[r] && table.data[r].length > colIndex) {
+        table.data[r].splice(colIndex, 1);
+      }
+    }
+    table.cols -= 1;
+    table.colWidths = colWidths;
+    table.width = Math.max(100, table.width - removedWidth);
+
+    this.render();
+    this.scheduleAutoSave();
+    showToast('Columna eliminada', 'info');
+  }
+
+  public deleteTableRow(tableId: string, rowIndex: number): void {
+    const slide = this.getActiveSlide();
+    const table = slide.elements.find((el) => el.id === tableId) as BoardTableElement | undefined;
+    if (!table || !table.data || table.rows <= 1) {
+      this.deleteTable(tableId);
+      return;
+    }
+    this.saveHistoryState();
+    const rows = table.rows;
+    const rowHeights = table.rowHeights && table.rowHeights.length === rows ? [...table.rowHeights] : Array(rows).fill(table.height / rows);
+    const removedHeight = rowHeights.splice(rowIndex, 1)[0] || (table.height / rows);
+
+    table.data.splice(rowIndex, 1);
+    table.rows -= 1;
+    table.rowHeights = rowHeights;
+    table.height = Math.max(60, table.height - removedHeight);
+
+    this.render();
+    this.scheduleAutoSave();
+    showToast('Fila eliminada', 'info');
+  }
+
+  public addTableColumn(tableId: string, afterColIndex: number): void {
+    const slide = this.getActiveSlide();
+    const table = slide.elements.find((el) => el.id === tableId) as BoardTableElement | undefined;
+    if (!table || !table.data) return;
+    this.saveHistoryState();
+
+    const insertIdx = Math.min(table.cols, afterColIndex + 1);
+    const cols = table.cols;
+    const avgColWidth = table.colWidths && table.colWidths.length === cols ? Math.round(table.width / cols) : 150;
+
+    for (let r = 0; r < table.data.length; r++) {
+      const newCell: BoardTableCell = {
+        backgroundColor: r === 0 ? (table.headerBackgroundColor || '#f8fafc') : '#ffffff',
+        text: r === 0 ? `Encabezado ${insertIdx + 1}` : `Celda ${r},${insertIdx + 1}`,
+        textColor: '#1e293b',
+      };
+      table.data[r].splice(insertIdx, 0, newCell);
+    }
+
+    const colWidths = table.colWidths && table.colWidths.length === cols ? [...table.colWidths] : Array(cols).fill(table.width / cols);
+    colWidths.splice(insertIdx, 0, avgColWidth);
+    table.cols += 1;
+    table.colWidths = colWidths;
+    table.width += avgColWidth;
+
+    this.render();
+    this.scheduleAutoSave();
+    showToast('Columna añadida', 'success');
+  }
+
+  public addTableRow(tableId: string, afterRowIndex: number): void {
+    const slide = this.getActiveSlide();
+    const table = slide.elements.find((el) => el.id === tableId) as BoardTableElement | undefined;
+    if (!table || !table.data) return;
+    this.saveHistoryState();
+
+    const insertIdx = Math.min(table.rows, afterRowIndex + 1);
+    const rows = table.rows;
+    const avgRowHeight = table.rowHeights && table.rowHeights.length === rows ? Math.round(table.height / rows) : 70;
+
+    const newRow: BoardTableCell[] = [];
+    for (let c = 0; c < table.cols; c++) {
+      newRow.push({
+        backgroundColor: '#ffffff',
+        text: `Celda ${insertIdx},${c + 1}`,
+        textColor: '#1e293b',
+      });
+    }
+    table.data.splice(insertIdx, 0, newRow);
+
+    const rowHeights = table.rowHeights && table.rowHeights.length === rows ? [...table.rowHeights] : Array(rows).fill(table.height / rows);
+    rowHeights.splice(insertIdx, 0, avgRowHeight);
+    table.rows += 1;
+    table.rowHeights = rowHeights;
+    table.height += avgRowHeight;
+
+    this.render();
+    this.scheduleAutoSave();
+    showToast('Fila añadida', 'success');
+  }
+
   private openInlineTextEditor(el: BoardElement): void {
     this.commitInlineEditor();
     const container = this.container.querySelector<HTMLElement>('[data-ref="presentation-text-editor-container"]');
@@ -3336,6 +3906,15 @@ export class PresentationController {
         if (this.alignmentGuides.length > 0) {
           drawAlignmentGuides(ctx, this.alignmentGuides, camera);
         }
+        if (this.marqueeStart && this.marqueeEnd) {
+          const box = {
+            height: this.marqueeEnd.y - this.marqueeStart.y,
+            width: this.marqueeEnd.x - this.marqueeStart.x,
+            x: this.marqueeStart.x,
+            y: this.marqueeStart.y,
+          };
+          drawMarqueeBox(ctx, box, camera);
+        }
       }
 
       ctx.restore();
@@ -3346,18 +3925,6 @@ export class PresentationController {
       ctx.beginPath();
       ctx.arc(this.laserPoint.x, this.laserPoint.y, 8, 0, Math.PI * 2);
       ctx.fill();
-    }
-
-    ctx.restore();
-
-    if (this.marqueeStart && this.marqueeEnd) {
-      const box = {
-        height: this.marqueeEnd.y - this.marqueeStart.y,
-        width: this.marqueeEnd.x - this.marqueeStart.x,
-        x: this.marqueeStart.x,
-        y: this.marqueeStart.y,
-      };
-      drawMarqueeBox(ctx, box, camera);
     }
 
     ctx.restore();
@@ -3578,14 +4145,34 @@ export class PresentationController {
     const state = JSON.stringify(this.slides);
     this.undoStack.push(state);
     if (this.undoStack.length > 30) this.undoStack.shift();
+    this.redoStack = [];
   }
 
   private undo(): void {
     if (this.undoStack.length === 0) return;
+    const currentState = JSON.stringify(this.slides);
     const last = this.undoStack.pop();
     if (!last) return;
+    this.redoStack.push(currentState);
+    if (this.redoStack.length > 30) this.redoStack.shift();
     try {
       this.slides = JSON.parse(last);
+      this.syncPanels();
+      this.render();
+      this.renderSlidesTray();
+      this.scheduleAutoSave();
+    } catch {}
+  }
+
+  private redo(): void {
+    if (this.redoStack.length === 0) return;
+    const next = this.redoStack.pop();
+    if (!next) return;
+    const currentState = JSON.stringify(this.slides);
+    this.undoStack.push(currentState);
+    if (this.undoStack.length > 30) this.undoStack.shift();
+    try {
+      this.slides = JSON.parse(next);
       this.syncPanels();
       this.render();
       this.renderSlidesTray();
