@@ -1,7 +1,116 @@
 import { hitTest3DRotationGizmo } from './board-3d-renderer.js';
-import { Board3DElement, BoardConnectorElement, BoardElement, BoardPoint, BoardSectionElement, BoardShapeElement, BoardStrokeElement, BoardTextElement, ResizeHandle, ShapeType } from './board.types.js';
+import { Board3DElement, BoardConnectorElement, BoardElement, BoardPoint, BoardSectionElement, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTextElement, CANVAS_DEFAULTS, ResizeHandle, Shape3DType, ShapeType } from './board.types.js';
 
 export { hitTest3DRotationGizmo };
+
+export function createShapeElement(shapeType: ShapeType, options: {
+  fillColor?: string;
+  height?: number;
+  id?: string;
+  opacity?: number;
+  strokeColor?: string;
+  strokeWidth?: number;
+  svgPath?: string;
+  width?: number;
+  x?: number;
+  y?: number;
+} = {}): BoardShapeElement {
+  const isLineOrArrow = shapeType === 'line' || shapeType === 'arrow';
+  return {
+    fillColor: options.fillColor || (isLineOrArrow ? 'transparent' : CANVAS_DEFAULTS.FILL_COLOR),
+    height: options.height ?? (isLineOrArrow ? 40 : 140),
+    id: options.id || `shape-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    opacity: options.opacity ?? CANVAS_DEFAULTS.OPACITY,
+    shapeType: shapeType || 'rect',
+    strokeColor: options.strokeColor || (isLineOrArrow ? CANVAS_DEFAULTS.LINE_STROKE_COLOR : CANVAS_DEFAULTS.STROKE_COLOR),
+    strokeWidth: options.strokeWidth ?? (isLineOrArrow ? CANVAS_DEFAULTS.LINE_STROKE_WIDTH : CANVAS_DEFAULTS.STROKE_WIDTH),
+    svgPath: options.svgPath,
+    type: 'shape',
+    width: options.width ?? (isLineOrArrow ? 160 : 180),
+    x: options.x ?? -90,
+    y: options.y ?? -70,
+  };
+}
+
+export function createTextElement(text: string, options: {
+  color?: string;
+  fontFamily?: string;
+  fontSize?: number;
+  fontWeight?: number | string;
+  height?: number;
+  id?: string;
+  width?: number;
+  x?: number;
+  y?: number;
+} = {}): BoardTextElement {
+  return {
+    color: options.color || CANVAS_DEFAULTS.TEXT_COLOR,
+    fontFamily: options.fontFamily || CANVAS_DEFAULTS.FONT_FAMILY,
+    fontSize: options.fontSize || CANVAS_DEFAULTS.FONT_SIZE,
+    fontWeight: options.fontWeight || 400,
+    height: options.height ?? 44,
+    id: options.id || `text-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    text: text || 'Texto',
+    type: 'text',
+    width: options.width ?? 320,
+    x: options.x ?? -160,
+    y: options.y ?? -22,
+  };
+}
+
+export function createStickyElement(text = 'Nota', options: {
+  color?: string;
+  fontSize?: number;
+  height?: number;
+  id?: string;
+  textColor?: string;
+  width?: number;
+  x?: number;
+  y?: number;
+} = {}): BoardStickyElement {
+  return {
+    color: options.color || CANVAS_DEFAULTS.STICKY_COLOR,
+    fontSize: options.fontSize || CANVAS_DEFAULTS.STICKY_FONT_SIZE,
+    height: options.height ?? 160,
+    id: options.id || `sticky-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    text,
+    textColor: options.textColor || CANVAS_DEFAULTS.STICKY_TEXT_COLOR,
+    type: 'sticky',
+    width: options.width ?? 160,
+    x: options.x ?? -80,
+    y: options.y ?? -80,
+  };
+}
+
+export function create3DElement(shape3dType: Shape3DType, options: {
+  fillColor?: string;
+  height?: number;
+  id?: string;
+  rotationX?: number;
+  rotationY?: number;
+  rotationZ?: number;
+  strokeColor?: string;
+  strokeWidth?: number;
+  width?: number;
+  x?: number;
+  y?: number;
+} = {}): Board3DElement {
+  return {
+    fillColor: options.fillColor || CANVAS_DEFAULTS.FILL_COLOR,
+    height: options.height ?? 140,
+    id: options.id || `3d-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    rotationX: options.rotationX ?? -20,
+    rotationY: options.rotationY ?? 30,
+    rotationZ: options.rotationZ ?? 0,
+    shape3dType,
+    strokeColor: options.strokeColor || CANVAS_DEFAULTS.STROKE_COLOR,
+    strokeWidth: options.strokeWidth ?? CANVAS_DEFAULTS.STROKE_WIDTH,
+    type: 'shape-3d',
+    width: options.width ?? 140,
+    x: options.x ?? -70,
+    y: options.y ?? -70,
+  };
+}
 
 export function findContainingSection(
   el: BoardElement,

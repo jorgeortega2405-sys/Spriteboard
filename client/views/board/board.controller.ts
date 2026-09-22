@@ -12,6 +12,7 @@ import { BOARD_SHAPES } from '../../config/board-shapes.config.js';
 import { getBoardTemplateElements } from '../../config/board-templates.data.js';
 import { getMockupTemplateById } from '../../config/mockups.config.js';
 import { DEFAULT_STICKY_COLOR, STICKY_NOTE_PRESETS } from '../../config/sticky-notes.config.js';
+import { AlignmentGuide, applyElementAnimation, applyElementEffect, BackgroundType, Board3DElement, BoardAnimationType, BoardChartElement, BoardCollaboratorState, BoardConnectorElement, BoardEffectType, BoardElement, BoardElementAnimation, BoardElementEffect, BoardImageElement, BoardMockupElement, BoardPageItem, BoardPixelGridElement, BoardPoint, BoardProject, BoardSectionElement, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTableCell, BoardTableElement, BoardTextElement, BoardTool, calculateDragSnapping, calculateResizeSnapping, CANVAS_DEFAULTS, CanvasEngine2D, ChartDataRow, ChartType, computeElementsBoundingBox, ConnectorStyle, create3DElement, createShapeElement, createStickyElement, createTextElement, DEFAULT_CHART_PALETTES, DEFAULT_CLASSIC_PALETTE, draw3DElement, draw3DGroundGrid, drawAlignmentGuides, drawBackground, drawBoardCollaboratorCursors, drawChart, drawCheckerboard, drawConnector, drawImage, drawMarqueeBox, drawMockupElement, drawMultiSelectionBounds, drawPixelGridLines, drawSection, drawSelectionBox, drawShape, drawSticky, drawStroke, drawTable, drawText, exportJson, exportPng, exportSvg, findContainingSection, findElementsByMarqueeBox, GAMEBOY_PALETTE, generateThumbnail, getConnectorEndpoints, getElementBoundingBox, hitTest3DRotationGizmo, hitTestElement, hitTestResizeHandle, MarkerType, measureTextElementSize, moveElementByDelta, moveElementByDrag, onCustomModelLoaded, PICO8_PALETTE, PixelSubtool, preloadCustom3DModels, ResizeHandle, resizeElementByHandle, screenToWorld, Shape3DType, ShapeType, StrokeStyle, worldToScreen } from '../../core/canvas-engine.js';
 import { currentUser, escapeHtml, getApi, postApi } from '../../services/api.service.js';
 import { getLocalCanvasByUuid, removeLocalCanvas, saveLocalCanvas } from '../../services/canvas-storage.service.js';
 import { renderIcons } from '../../services/icon.service.js';
@@ -29,19 +30,13 @@ import { BoardAnimationPanelComponent } from './board-animation-panel.component.
 import { BoardChartsPanelComponent } from './board-charts-panel.component.js';
 import { BoardCollaborationManager } from './board-collaboration.manager.js';
 import { BoardEffectsPanelComponent } from './board-effects-panel.component.js';
-import { computeElementsBoundingBox, findContainingSection, findElementsByMarqueeBox, getConnectorEndpoints, getElementBoundingBox, hitTest3DRotationGizmo, hitTestElement, hitTestResizeHandle, measureTextElementSize, moveElementByDelta, moveElementByDrag, resizeElementByHandle } from './board-elements.manager.js';
-import { exportJson, exportPng, exportSvg, generateThumbnail } from './board-export.service.js';
 import { BoardHistoryManager } from './board-history.manager.js';
-import { drawMockupElement } from './board-mockup-renderer.js';
 import { BoardMockupsPanelComponent } from './board-mockups-panel.component.js';
 import { BoardPagesTrayComponent, MAX_BOARD_PAGES } from './board-pages-tray.component.js';
 import { BoardPixelGridManager } from './board-pixel-grid.manager.js';
 import { BoardPixelPanelComponent } from './board-pixel-panel.component.js';
 import { BoardPixelTimelineComponent } from './board-pixel-timeline.component.js';
 import { BoardPositionPanelComponent } from './board-position-panel.component.js';
-import { applyElementAnimation, applyElementEffect, draw3DElement, draw3DGroundGrid, drawAlignmentGuides, drawBackground, drawBoardCollaboratorCursors, drawChart, drawCheckerboard, drawConnector, drawImage, drawMarqueeBox, drawMultiSelectionBounds, drawPixelGridLines, drawSection, drawSelectionBox, drawShape, drawSticky, drawStroke, drawTable, drawText, onCustomModelLoaded, preloadCustom3DModels, screenToWorld, worldToScreen } from './board-renderer.js';
-import { AlignmentGuide, calculateDragSnapping, calculateResizeSnapping } from './board-snapping.manager.js';
-import { BackgroundType, Board3DElement, BoardAnimationType, BoardChartElement, BoardCollaboratorState, BoardConnectorElement, BoardElement, BoardElementAnimation, BoardElementEffect, BoardImageElement, BoardMockupElement, BoardPageItem, BoardPixelGridElement, BoardPoint, BoardProject, BoardSectionElement, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTableCell, BoardTableElement, BoardTextElement, BoardTool, ChartDataRow, ChartType, DEFAULT_CHART_PALETTES, DEFAULT_CLASSIC_PALETTE, GAMEBOY_PALETTE, MarkerType, PICO8_PALETTE, PixelSubtool, ResizeHandle, Shape3DType, ShapeType, StrokeStyle } from './board.types.js';
 
 export class BoardController {
   private abortController: AbortController;
@@ -104,8 +99,8 @@ export class BoardController {
   private container: HTMLElement;
   private ctx: CanvasRenderingContext2D | null = null;
   private currentCanvasItem: CanvasItem | null = null;
-  private currentColor = '#1e293b';
-  private currentFillColor = '#000000';
+  private currentColor = CANVAS_DEFAULTS.TEXT_COLOR;
+  private currentFillColor = CANVAS_DEFAULTS.FILL_COLOR;
   private currentShape: ShapeType = 'rect';
   private currentShape3D: Shape3DType = 'globe';
   private isRotating3D = false;
@@ -3802,18 +3797,15 @@ export class BoardController {
     if (this.currentTool === 'shapes') {
       this.isDrawing = true;
       const isLineOrArrow = this.currentShape === 'line' || this.currentShape === 'arrow';
-      const newShape: BoardShapeElement = {
-        fillColor: isLineOrArrow ? 'transparent' : '#000000',
+      const newShape = createShapeElement(this.currentShape, {
+        fillColor: isLineOrArrow ? 'transparent' : (this.currentFillColor || CANVAS_DEFAULTS.FILL_COLOR),
         height: 1,
-        id: `shape-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-        shapeType: this.currentShape,
-        strokeColor: isLineOrArrow ? this.currentColor : 'transparent',
+        strokeColor: isLineOrArrow ? (this.currentColor || CANVAS_DEFAULTS.LINE_STROKE_COLOR) : CANVAS_DEFAULTS.STROKE_COLOR,
         strokeWidth: isLineOrArrow ? Math.max(2, this.currentStrokeWidth) : 0,
-        type: 'shape',
         width: 1,
         x: worldPos.x,
         y: worldPos.y,
-      };
+      });
       this.liveDraftElement = newShape;
       this.requestRedraw();
       return;
@@ -5241,19 +5233,16 @@ export class BoardController {
       const directShape: ShapeType = shapeMap[cleanId] || (isLineOrArrow ? 'line' : 'rect');
 
       const isNativeBasic = ['circle', 'pill', 'rect', 'round-rect', 'square', 'rounded_rectangle'].includes(cleanId);
-      const shapeEl: BoardShapeElement = {
-        fillColor: isLineOrArrow ? 'transparent' : '#000000',
+      const shapeEl = createShapeElement(directShape, {
+        fillColor: isLineOrArrow ? 'transparent' : (color || this.currentFillColor || CANVAS_DEFAULTS.FILL_COLOR),
         height: elHeight,
-        id: `shape-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-        shapeType: directShape,
-        strokeColor: isLineOrArrow ? (color || this.currentColor || '#000000') : 'transparent',
+        strokeColor: isLineOrArrow ? (color || this.currentColor || CANVAS_DEFAULTS.LINE_STROKE_COLOR) : CANVAS_DEFAULTS.STROKE_COLOR,
         strokeWidth: isLineOrArrow ? 2 : 0,
         svgPath: isNativeBasic ? undefined : (shape.pathD || undefined),
-        type: 'shape',
         width: elWidth,
         x: Math.round(centerWorld.x - elWidth / 2),
         y: Math.round(centerWorld.y - elHeight / 2),
-      };
+      });
 
       this.elements.push(shapeEl);
       this.collaborationManager.broadcastAddElement(shapeEl);
@@ -5342,18 +5331,15 @@ export class BoardController {
     const centerWorld = screenToWorld(screenW / 2, screenH / 2, this.canvasElement, this.camera);
 
     const size = 150;
-    const stickyEl: BoardStickyElement = {
-      color: color || '#fef08a',
+    const stickyEl = createStickyElement(text || 'Nueva nota', {
+      color: color || CANVAS_DEFAULTS.STICKY_COLOR,
       fontSize: 15,
       height: size,
-      id: `sticky_${crypto.randomUUID().slice(0, 8)}`,
-      text: text || 'Nueva nota',
-      textColor: '#1e293b',
-      type: 'sticky',
+      textColor: CANVAS_DEFAULTS.STICKY_TEXT_COLOR,
       width: size,
       x: Math.round(centerWorld.x - size / 2),
       y: Math.round(centerWorld.y - size / 2),
-    };
+    });
 
     this.elements.push(stickyEl);
     this.collaborationManager.broadcastAddElement(stickyEl);
@@ -5379,17 +5365,14 @@ export class BoardController {
 
     const sz = measureTextElementSize(config.text, config.fontSize);
 
-    const textEl: BoardTextElement = {
-      color: this.currentColor || '#000000',
+    const textEl = createTextElement(config.text, {
+      color: this.currentColor || CANVAS_DEFAULTS.TEXT_COLOR,
       fontSize: config.fontSize,
       height: sz.height,
-      id: `text-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      text: config.text,
-      type: 'text',
       width: sz.width,
       x: Math.round(centerWorld.x - sz.width / 2),
       y: Math.round(centerWorld.y - sz.height / 2),
-    };
+    });
 
     this.elements.push(textEl);
     this.collaborationManager.broadcastAddElement(textEl);
@@ -6899,22 +6882,18 @@ export class BoardController {
     const w = shapeConfig?.defaultWidth || 140;
     const h = shapeConfig?.defaultHeight || 140;
 
-    const shape3dEl: Board3DElement = {
-      fillColor: this.currentFillColor || '#000000',
+    const shape3dEl = create3DElement(shape3dType, {
+      fillColor: this.currentFillColor || CANVAS_DEFAULTS.FILL_COLOR,
       height: h,
-      id: `shape3d_${shape3dType}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
       rotationX: shapeConfig?.initialRotX ?? -0.45,
       rotationY: shapeConfig?.initialRotY ?? 0.65,
       rotationZ: shapeConfig?.initialRotZ ?? 0,
-      shading: true,
-      shape3dType,
-      strokeColor: this.currentColor || '#1e293b',
-      strokeWidth: 1.5,
-      type: 'shape-3d',
+      strokeColor: this.currentColor || CANVAS_DEFAULTS.STROKE_COLOR,
+      strokeWidth: this.currentStrokeWidth ?? CANVAS_DEFAULTS.STROKE_WIDTH,
       width: w,
       x: Math.round(centerWorld.x - w / 2),
       y: Math.round(centerWorld.y - h / 2),
-    };
+    });
 
     this.elements.push(shape3dEl);
     this.collaborationManager.broadcastAddElement(shape3dEl);
@@ -6937,18 +6916,15 @@ export class BoardController {
     const w = shapeConfig?.defaultWidth || 140;
     const h = shapeConfig?.defaultHeight || 140;
 
-    const shapeEl: BoardShapeElement = {
-      fillColor: this.currentFillColor || '#000000',
+    const shapeEl = createShapeElement(shapeType, {
+      fillColor: this.currentFillColor || CANVAS_DEFAULTS.FILL_COLOR,
       height: h,
-      id: `shape_${shapeType}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-      shapeType,
-      strokeColor: this.currentColor || 'transparent',
-      strokeWidth: 2,
-      type: 'shape',
+      strokeColor: this.currentColor || CANVAS_DEFAULTS.STROKE_COLOR,
+      strokeWidth: this.currentStrokeWidth ?? CANVAS_DEFAULTS.STROKE_WIDTH,
       width: w,
       x: Math.round(centerWorld.x - w / 2),
       y: Math.round(centerWorld.y - h / 2),
-    };
+    });
 
     this.elements.push(shapeEl);
     this.collaborationManager.broadcastAddElement(shapeEl);

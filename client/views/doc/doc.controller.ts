@@ -5,6 +5,7 @@ import { CanvasShareDropdownController, setupCanvasShareDropdown } from '../../c
 import { closeContextMenu, ContextMenuItem, openContextMenu } from '../../components/context-menu.component.js';
 import { openModal } from '../../components/modal.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
+import { BoardProject } from '../../core/canvas-engine.js';
 import { currentUser, escapeHtml, getApi, postApi } from '../../services/api.service.js';
 import { getLocalCanvasByUuid, saveLocalCanvas } from '../../services/canvas-storage.service.js';
 import { renderIcons } from '../../services/icon.service.js';
@@ -14,7 +15,6 @@ import { ViewController } from '../../types/common.types.js';
 import { MindMapProject } from '../../types/mindmap.types.js';
 import { initCarouselScroll, setupDropdown } from '../../utils/dom.util.js';
 import { validateAndSanitizeFile } from '../../utils/validators.util.js';
-import { BoardProject } from '../board/board.types.js';
 import { DocCollaborationManager, DocCollaboratorState } from './doc-collaboration.manager.js';
 import { exportDocHtml, exportDocJson, exportDocMarkdown, exportDocPdf, exportDocTxt, exportDocWord, generateDocThumbnail } from './doc-export.service.js';
 import { DocFontPickerComponent, FontSelectEvent } from './doc-font-picker.component.js';

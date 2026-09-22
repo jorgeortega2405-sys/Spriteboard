@@ -34,7 +34,7 @@ let isDrawerOpen = false;
 let isChatOpen = false;
 let activeCanvasTab: 'templates' | 'elements' | 'text' | 'tools' | 'uploads' | 'projects' | 'charts' | 'mockups' | 'colors' | 'fonts' | 'pixel-anim' | null = null;
 let activeChartInDrawer: BoardChartElement | null = null;
-let activeColorTargetInDrawer: 'stroke' | 'fill' | 'text' = 'stroke';
+let activeColorTargetInDrawer: 'stroke' | 'fill' | 'text' | 'slide-bg' = 'stroke';
 let chatSidebarElement: HTMLElement | null = null;
 let chatSidebarInitPromise: Promise<HTMLElement> | null = null;
 
@@ -3086,7 +3086,7 @@ function renderMockupsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement
 function renderColorsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement): void {
   const sidebar = drawer.closest<HTMLElement>('[data-ref="sidebar"]') || document.querySelector<HTMLElement>('[data-ref="sidebar"]');
   const target = activeColorTargetInDrawer;
-  const title = target === 'stroke' ? 'Color de trazo o borde' : (target === 'fill' ? 'Color de relleno' : 'Color de texto');
+  const title = target === 'slide-bg' ? 'Color de fondo de diapositiva' : (target === 'stroke' ? 'Color de trazo o borde' : (target === 'fill' ? 'Color de relleno' : 'Color de texto'));
 
   drawerBody.innerHTML = `
     <div class="canvas-panel-card" data-ref="canvas-panel-card">
@@ -6208,7 +6208,7 @@ export function openMockupsInDrawer(): void {
   }
 }
 
-export function openColorsInDrawer(target: 'stroke' | 'fill' | 'text' = 'stroke'): void {
+export function openColorsInDrawer(target: 'stroke' | 'fill' | 'text' | 'slide-bg' = 'stroke'): void {
   activeColorTargetInDrawer = target;
   activeCanvasTab = 'colors';
   const sidebar = document.querySelector<HTMLElement>('[data-ref="sidebar"]');
@@ -6224,7 +6224,7 @@ export function isColorsDrawerOpen(): boolean {
   return isDrawerOpen && activeCanvasTab === 'colors';
 }
 
-export function getActiveColorTargetInDrawer(): 'stroke' | 'fill' | 'text' {
+export function getActiveColorTargetInDrawer(): 'stroke' | 'fill' | 'text' | 'slide-bg' {
   return activeColorTargetInDrawer;
 }
 

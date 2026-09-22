@@ -57,6 +57,23 @@ export const GAMEBOY_PALETTE: string[] = [
   '#0F380F', '#306230', '#8BAC0F', '#9BBC0F',
 ];
 
+export const CANVAS_DEFAULTS = {
+  FILL_COLOR: '#1e293b',
+  FONT_FAMILY: 'Inter',
+  FONT_SIZE: 24,
+  HEADING_FONT_SIZE: 42,
+  LINE_STROKE_COLOR: '#1e293b',
+  LINE_STROKE_WIDTH: 2,
+  OPACITY: 1,
+  STICKY_COLOR: '#fef08a',
+  STICKY_FONT_SIZE: 20,
+  STICKY_TEXT_COLOR: '#1e293b',
+  STROKE_COLOR: 'transparent',
+  STROKE_WIDTH: 0,
+  SUBHEADING_FONT_SIZE: 28,
+  TEXT_COLOR: '#1e293b',
+} as const;
+
 export type StrokeStyle = 'solid' | 'dashed' | 'dashed-short' | 'dotted';
 
 export type ConnectorStyle = 'curved' | 'orthogonal' | 'straight';

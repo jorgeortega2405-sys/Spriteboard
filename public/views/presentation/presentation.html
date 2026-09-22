@@ -178,6 +178,25 @@
         </button>
 
         <div class="design-top-toolbar" data-ref="presentation-top-toolbar">
+          <div class="design-top-toolbar__section" data-ref="presentation-top-slide-section">
+            <div class="design-toolbar-group" data-ref="presentation-top-group-slide-bg">
+              <button type="button" class="design-toolbar-btn" data-ref="top-btn-slide-bg" data-tooltip="Color de fondo de la diapositiva" aria-label="Color de fondo">
+                <span class="top-color-swatch" data-ref="top-slide-bg-swatch" style="background-color: #ffffff;"></span>
+              </button>
+            </div>
+
+            <div class="design-toolbar-group" data-ref="presentation-top-group-slide-actions">
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="top-btn-slide-animate" data-tooltip="Animación de diapositiva" aria-label="Animar diapositiva">
+                <span class="component-icon">motion_photos_on</span>
+                <span>Animar</span>
+              </button>
+              <button type="button" class="design-toolbar-btn design-toolbar-btn--text" data-ref="top-btn-slide-duration-header" data-tooltip="Duración de diapositiva" aria-label="Duración">
+                <span class="component-icon">timer</span>
+                <span data-ref="top-slide-duration-label">5.0s</span>
+              </button>
+            </div>
+          </div>
+
           <div class="design-top-toolbar__section is-hidden" data-ref="presentation-top-selection-section">
             <div class="design-toolbar-group" data-ref="presentation-top-group-fill">
               <button type="button" class="design-toolbar-btn" data-ref="top-btn-fill" data-tooltip="Color de relleno" aria-label="Color de relleno">
@@ -467,6 +486,7 @@
       </div>
 
       <canvas class="design-viewport-canvas" data-ref="presentation-viewport-canvas"></canvas>
+      <div class="presentation-canvas-overlays" data-ref="presentation-canvas-overlays"></div>
 
       <div class="board-text-editor-container" data-ref="presentation-text-editor-container"></div>
 

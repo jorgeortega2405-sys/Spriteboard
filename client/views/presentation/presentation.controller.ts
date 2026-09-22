@@ -22,14 +22,14 @@ import { PixelShape } from '../../utils/pixel-shapes.util.js';
 import { BoardAnimationPanelComponent } from '../board/board-animation-panel.component.js';
 import { BoardChartsPanelComponent } from '../board/board-charts-panel.component.js';
 import { BoardEffectsPanelComponent } from '../board/board-effects-panel.component.js';
-import { computeElementsBoundingBox, getConnectorEndpoints, getElementBoundingBox, hitTestElement, hitTestResizeHandle, measureTextElementSize, moveElementByDrag, resizeElementByHandle } from '../board/board-elements.manager.js';
+import { computeElementsBoundingBox, create3DElement, createShapeElement, createStickyElement, createTextElement, getConnectorEndpoints, getElementBoundingBox, hitTestElement, hitTestResizeHandle, measureTextElementSize, moveElementByDelta, moveElementByDrag, resizeElementByHandle } from '../board/board-elements.manager.js';
 import { exportJson, exportPng, exportSvg, generateThumbnail } from '../board/board-export.service.js';
 import { drawMockupElement } from '../board/board-mockup-renderer.js';
 import { BoardMockupsPanelComponent } from '../board/board-mockups-panel.component.js';
 import { BoardPositionPanelComponent } from '../board/board-position-panel.component.js';
 import { applyElementAnimation, applyElementEffect, draw3DElement, drawAlignmentGuides, drawBackground, drawChart, drawConnector, drawImage, drawMarqueeBox, drawMultiSelectionBounds, drawSection, drawSelectionBox, drawShape, drawSticky, drawStroke, drawTable, drawText, screenToWorld, worldToScreen } from '../board/board-renderer.js';
-import { AlignmentGuide } from '../board/board-snapping.manager.js';
-import { BackgroundType, Board3DElement, BoardAnimationType, BoardChartElement, BoardConnectorElement, BoardEffectType, BoardElement, BoardElementAnimation, BoardElementEffect, BoardImageElement, BoardMockupElement, BoardPoint, BoardSectionElement, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTableCell, BoardTableElement, BoardTextElement, ChartType, ConnectorStyle, MarkerType, ResizeHandle, Shape3DType, ShapeType, StrokeStyle } from '../board/board.types.js';
+import { AlignmentGuide, calculateDragSnapping, calculateResizeSnapping } from '../board/board-snapping.manager.js';
+import { BackgroundType, Board3DElement, BoardAnimationType, BoardChartElement, BoardConnectorElement, BoardEffectType, BoardElement, BoardElementAnimation, BoardElementEffect, BoardImageElement, BoardMockupElement, BoardPoint, BoardSectionElement, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTableCell, BoardTableElement, BoardTextElement, CANVAS_DEFAULTS, ChartType, ConnectorStyle, MarkerType, ResizeHandle, Shape3DType, ShapeType, StrokeStyle } from '../board/board.types.js';
 import { DocFontPickerComponent, FontSelectEvent } from '../doc/doc-font-picker.component.js';
 
 export class PresentationController {
@@ -46,7 +46,7 @@ export class PresentationController {
   private canvasRecord: any = null;
   private canvasUuid: string;
   private chartsPanel: BoardChartsPanelComponent | null = null;
-  private colorPanelTarget: 'fill' | 'stroke' | 'text' = 'fill';
+  private colorPanelTarget: 'fill' | 'slide-bg' | 'stroke' | 'text' = 'fill';
   private colorsCustomInputEl: HTMLInputElement | null = null;
   private colorsHexTextEl: HTMLElement | null = null;
   private colorsPaletteGridEl: HTMLElement | null = null;
@@ -58,21 +58,23 @@ export class PresentationController {
   private container: HTMLElement;
   private ctx: CanvasRenderingContext2D | null = null;
   private currentConnectorStyle: ConnectorStyle = 'curved';
-  private currentFillColor: string = '#3b82f6';
-  private currentFontFamily: string = 'Inter';
-  private currentFontSize: number = 24;
+  private currentFillColor: string = CANVAS_DEFAULTS.FILL_COLOR;
+  private currentFontFamily: string = CANVAS_DEFAULTS.FONT_FAMILY;
+  private currentFontSize: number = CANVAS_DEFAULTS.FONT_SIZE;
   private currentOpacity: number = 100;
   private currentShapeType: ShapeType = 'rect';
-  private currentStrokeColor: string = '#1e293b';
+  private currentStrokeColor: string = CANVAS_DEFAULTS.STROKE_COLOR;
   private currentStrokeStyle: StrokeStyle = 'solid';
-  private currentStrokeWidth: number = 2;
+  private currentStrokeWidth: number = CANVAS_DEFAULTS.STROKE_WIDTH;
   private currentTool: 'cursors' | 'draw' | 'hand' | 'laser' | 'lines' | 'select' | 'shapes' | 'stickies' | 'text' = 'select';
+  private dragStartLocal: BoardPoint = { x: 0, y: 0 };
   private dragStartScreen: BoardPoint = { x: 0, y: 0 };
   private dragStartWorld: BoardPoint = { x: 0, y: 0 };
   private drawPoints: BoardPoint[] = [];
   private drawSubtool: 'eraser' | 'highlighter' | 'marker' | 'pen' = 'pen';
   private effectsPanel: BoardEffectsPanelComponent | null = null;
   private fontPicker: DocFontPickerComponent | null = null;
+  private hasInitialFit: boolean = false;
   private historyDropdownController: CanvasHistoryDropdownController | null = null;
   private isDragging: boolean = false;
   private isDrawing: boolean = false;
@@ -92,6 +94,8 @@ export class PresentationController {
   private recentColors: string[] = ['#ffffff', '#000000', '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
   private resizeStartBBox: { fontSize?: number; height: number; width: number; x: number; y: number } | null = null;
   private selectedElementIds: Set<string> = new Set();
+  private selectionStartBBox: { height: number; width: number; x: number; y: number } | null = null;
+  private selectionStartPositions: Map<string, any> = new Map();
   private shareDropdownController: CanvasShareDropdownController | null = null;
   private slideDuration: number = 5.0;
   private slideFormat: PresentationFormatConfig = PRESENTATION_FORMATS.presentation_16_9;
@@ -578,7 +582,6 @@ export class PresentationController {
         if (elCopy.type === 'image') {
           elCopy.url = elCopy.url || 'https://images.unsplash.com/photo-1557804506-669a67965ba0?auto=format&fit=crop&w=800&q=80';
         }
-        this.clampElementToSlide(elCopy);
         return elCopy;
       }),
       id: `slide-ai-${Date.now()}-${idx}`,
@@ -631,6 +634,21 @@ export class PresentationController {
     return idx >= 0 ? idx : 0;
   }
 
+  private clampPan(): void {
+    const slideGap = 80;
+    const totalHeight = (Math.max(1, this.slides.length) - 1) * (this.slideHeight + slideGap);
+    const padY = this.slideHeight * 0.4;
+    const padX = this.slideWidth * 0.4;
+
+    const minY = -padY;
+    const maxY = totalHeight + padY;
+    const minX = -padX;
+    const maxX = padX;
+
+    this.panOffset.x = Math.max(minX, Math.min(maxX, this.panOffset.x));
+    this.panOffset.y = Math.max(minY, Math.min(maxY, this.panOffset.y));
+  }
+
   private setupResizeObserver(): void {
     const viewport = this.container.querySelector<HTMLElement>('[data-ref="presentation-viewport"]');
     if (!viewport || !this.canvas) return;
@@ -638,6 +656,7 @@ export class PresentationController {
     const resize = () => {
       if (!this.canvas || !viewport) return;
       const rect = viewport.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return;
       const dpr = window.devicePixelRatio || 1;
       this.canvas.width = rect.width * dpr;
       this.canvas.height = rect.height * dpr;
@@ -646,7 +665,12 @@ export class PresentationController {
       if (this.ctx) {
         this.ctx.scale(dpr, dpr);
       }
-      this.render();
+      if (!this.hasInitialFit) {
+        this.hasInitialFit = true;
+        this.fitSlide();
+      } else {
+        this.render();
+      }
     };
 
     const observer = new ResizeObserver(resize);
@@ -662,6 +686,7 @@ export class PresentationController {
     if (!viewport) return;
 
     const rect = viewport.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return;
     const padW = 70;
     const padH = 70;
     const scaleX = (rect.width - padW * 2) / this.slideWidth;
@@ -669,7 +694,10 @@ export class PresentationController {
     const bestZoom = Math.min(scaleX, scaleY, 1.2);
 
     this.zoom = Math.max(0.2, Math.min(2.0, bestZoom));
-    this.panOffset = { x: 0, y: 0 };
+    const activeIdx = this.getActiveSlideIndex();
+    const slideGap = 80;
+    this.panOffset = { x: 0, y: activeIdx * (this.slideHeight + slideGap) };
+    this.clampPan();
     this.updateZoomUI();
     this.render();
   }
@@ -709,6 +737,12 @@ export class PresentationController {
     btnPresent?.addEventListener('click', () => this.startSlideshow(), { signal });
 
     window.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.code === 'Space' && !this.activeInlineEditor && (e.target as HTMLElement).tagName !== 'INPUT' && (e.target as HTMLElement).tagName !== 'TEXTAREA') {
+        if (!this.isSpaceDown) {
+          this.isSpaceDown = true;
+          if (this.canvas) this.canvas.style.cursor = 'grab';
+        }
+      }
       if (e.key === 'F5') {
         e.preventDefault();
         this.startSlideshow();
@@ -744,6 +778,15 @@ export class PresentationController {
       if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
         e.preventDefault();
         this.undo();
+      }
+    }, { signal });
+
+    window.addEventListener('keyup', (e: KeyboardEvent) => {
+      if (e.code === 'Space') {
+        this.isSpaceDown = false;
+        if (this.canvas) {
+          this.canvas.style.cursor = this.currentTool === 'hand' ? 'grab' : 'default';
+        }
       }
     }, { signal });
 
@@ -914,15 +957,33 @@ export class PresentationController {
       const rect = this.canvas.getBoundingClientRect();
       const sx = e.clientX - rect.left;
       const sy = e.clientY - rect.top;
-      const camera = { x: 0, y: 0, zoom: this.zoom };
+      const camera = { x: this.panOffset.x, y: this.panOffset.y, zoom: this.zoom };
       const wp = screenToWorld(sx, sy, this.canvas, camera);
 
-      const elements = this.getActiveSlide().elements;
-      const hit = hitTestElement(elements, wp.x, wp.y, this.zoom);
-      if (hit && (hit.type === 'text' || (hit.type === 'shape' && (hit as any).text !== undefined) || hit.type === 'sticky')) {
-        this.openInlineTextEditor(hit);
-      } else if (hit && hit.type === 'chart') {
-        this.openChartsPanel(hit as BoardChartElement);
+      const halfW = this.slideWidth / 2;
+      const halfH = this.slideHeight / 2;
+      const slideGap = 80;
+
+      let clickedIdx = -1;
+      for (let i = 0; i < this.slides.length; i++) {
+        const cy = i * (this.slideHeight + slideGap);
+        if (wp.x >= -halfW && wp.x <= halfW && wp.y >= cy - halfH && wp.y <= cy + halfH) {
+          clickedIdx = i;
+          break;
+        }
+      }
+
+      if (clickedIdx !== -1) {
+        this.selectSlide(this.slides[clickedIdx].id);
+        const cy = clickedIdx * (this.slideHeight + slideGap);
+        const localWp = { x: wp.x, y: wp.y - cy };
+        const elements = this.slides[clickedIdx].elements;
+        const hit = hitTestElement(elements, localWp.x, localWp.y, this.zoom);
+        if (hit && (hit.type === 'text' || (hit.type === 'shape' && (hit as any).text !== undefined) || hit.type === 'sticky')) {
+          this.openInlineTextEditor(hit);
+        } else if (hit && hit.type === 'chart') {
+          this.openChartsPanel(hit as BoardChartElement);
+        }
       }
     }, { signal });
 
@@ -946,50 +1007,122 @@ export class PresentationController {
 
       this.closeAllPopovers();
 
-      const camera = { x: 0, y: 0, zoom: this.zoom };
+      if (this.currentTool === 'hand' || this.isSpaceDown || e.button === 1) {
+        this.isPanning = true;
+        this.dragStartScreen = { x: sx, y: sy };
+        this.canvas.style.cursor = 'grabbing';
+        this.canvas.setPointerCapture(e.pointerId);
+        return;
+      }
+
+      const camera = { x: this.panOffset.x, y: this.panOffset.y, zoom: this.zoom };
       const wp = screenToWorld(sx, sy, this.canvas, camera);
 
       this.dragStartScreen = { x: sx, y: sy };
       this.dragStartWorld = wp;
 
+      const halfW = this.slideWidth / 2;
+      const halfH = this.slideHeight / 2;
+      const slideGap = 80;
+
+      let clickedSlideIdx = -1;
+      for (let i = 0; i < this.slides.length; i++) {
+        const cy = i * (this.slideHeight + slideGap);
+        if (wp.x >= -halfW && wp.x <= halfW && wp.y >= cy - halfH && wp.y <= cy + halfH) {
+          clickedSlideIdx = i;
+          break;
+        }
+      }
+      if (clickedSlideIdx === -1) {
+        let bestDist = Infinity;
+        for (let i = 0; i < this.slides.length; i++) {
+          const cy = i * (this.slideHeight + slideGap);
+          const dist = Math.abs(wp.y - cy);
+          if (dist < bestDist) {
+            bestDist = dist;
+            clickedSlideIdx = i;
+          }
+        }
+      }
+
       if (this.currentTool === 'draw') {
+        if (clickedSlideIdx !== -1 && this.slides[clickedSlideIdx].id !== this.activeSlideId) {
+          this.activeSlideId = this.slides[clickedSlideIdx].id;
+          this.selectedElementIds.clear();
+          this.renderSlidesTray();
+          this.syncPanels();
+        }
+        const activeIdx = this.getActiveSlideIndex();
+        const activeCy = activeIdx * (this.slideHeight + slideGap);
+        const localWp = { x: wp.x, y: wp.y - activeCy };
         this.isDrawing = true;
-        this.drawPoints = [wp];
+        this.drawPoints = [localWp];
         this.canvas.setPointerCapture(e.pointerId);
         return;
       }
 
       if (this.currentTool === 'laser') {
-        this.laserPoint = wp;
+        const activeIdx = this.getActiveSlideIndex();
+        const activeCy = activeIdx * (this.slideHeight + slideGap);
+        const localWp = { x: wp.x, y: wp.y - activeCy };
+        this.laserPoint = localWp;
         this.render();
         return;
       }
 
       if (this.currentTool === 'shapes') {
-        this.insertShape(this.currentShapeType, undefined, this.currentFillColor, this.currentStrokeColor, wp.x, wp.y);
+        if (clickedSlideIdx !== -1 && this.slides[clickedSlideIdx].id !== this.activeSlideId) {
+          this.activeSlideId = this.slides[clickedSlideIdx].id;
+          this.selectedElementIds.clear();
+          this.renderSlidesTray();
+          this.syncPanels();
+        }
+        const activeIdx = this.getActiveSlideIndex();
+        const activeCy = activeIdx * (this.slideHeight + slideGap);
+        const localWp = { x: wp.x, y: wp.y - activeCy };
+        this.insertShape(this.currentShapeType, undefined, this.currentFillColor, this.currentStrokeColor, localWp.x, localWp.y);
         this.setTool('select');
         return;
       }
 
       if (this.currentTool === 'text') {
-        this.insertTextPreset('body', wp.x, wp.y);
+        if (clickedSlideIdx !== -1 && this.slides[clickedSlideIdx].id !== this.activeSlideId) {
+          this.activeSlideId = this.slides[clickedSlideIdx].id;
+          this.selectedElementIds.clear();
+          this.renderSlidesTray();
+          this.syncPanels();
+        }
+        const activeIdx = this.getActiveSlideIndex();
+        const activeCy = activeIdx * (this.slideHeight + slideGap);
+        const localWp = { x: wp.x, y: wp.y - activeCy };
+        this.insertTextPreset('body', localWp.x, localWp.y);
         this.setTool('select');
         return;
       }
 
       if (this.currentTool === 'stickies') {
-        this.insertStickyNote(this.currentFillColor || '#fef08a', 'Nota', wp.x, wp.y);
+        if (clickedSlideIdx !== -1 && this.slides[clickedSlideIdx].id !== this.activeSlideId) {
+          this.activeSlideId = this.slides[clickedSlideIdx].id;
+          this.selectedElementIds.clear();
+          this.renderSlidesTray();
+          this.syncPanels();
+        }
+        const activeIdx = this.getActiveSlideIndex();
+        const activeCy = activeIdx * (this.slideHeight + slideGap);
+        const localWp = { x: wp.x, y: wp.y - activeCy };
+        this.insertStickyNote(this.currentFillColor || CANVAS_DEFAULTS.STICKY_COLOR, 'Nota', localWp.x, localWp.y);
         this.setTool('select');
         return;
       }
 
-      const elements = this.getActiveSlide().elements;
+      const activeIdx = this.getActiveSlideIndex();
+      const activeCy = activeIdx * (this.slideHeight + slideGap);
 
       if (this.selectedElementIds.size === 1) {
         const singleId = Array.from(this.selectedElementIds)[0];
-        const singleEl = elements.find((el) => el.id === singleId);
+        const singleEl = this.getActiveSlide().elements.find((el) => el.id === singleId);
         if (singleEl) {
-          const handle = hitTestResizeHandle(singleEl, sx, sy, (wx, wy) => worldToScreen(wx, wy, this.canvas, camera));
+          const handle = hitTestResizeHandle(singleEl, sx, sy, (wx, wy) => worldToScreen(wx, wy + activeCy, this.canvas, camera));
           if (handle) {
             this.activeResizeHandle = handle;
             this.resizeStartBBox = {
@@ -999,6 +1132,7 @@ export class PresentationController {
               x: (singleEl as any).x || 0,
               y: (singleEl as any).y || 0,
             };
+            this.alignmentGuides = [];
             this.saveHistoryState();
             this.canvas.setPointerCapture(e.pointerId);
             return;
@@ -1006,21 +1140,87 @@ export class PresentationController {
         }
       }
 
-      const hit = hitTestElement(elements, wp.x, wp.y, this.zoom);
-      if (hit) {
-        if (!this.selectedElementIds.has(hit.id)) {
+      let hitSlideIdx = -1;
+      let hitElement: BoardElement | null = null;
+      for (let i = this.slides.length - 1; i >= 0; i--) {
+        const slide = this.slides[i];
+        const cy = i * (this.slideHeight + slideGap);
+        const sLocalWp = { x: wp.x, y: wp.y - cy };
+        const hit = hitTestElement(slide.elements, sLocalWp.x, sLocalWp.y, this.zoom);
+        if (hit) {
+          hitSlideIdx = i;
+          hitElement = hit;
+          break;
+        }
+      }
+
+      if (hitElement && hitSlideIdx !== -1) {
+        const targetSlide = this.slides[hitSlideIdx];
+        if (targetSlide.id !== this.activeSlideId) {
+          this.activeSlideId = targetSlide.id;
+          if (targetSlide.duration) {
+            this.slideDuration = targetSlide.duration;
+            this.updateSlideDurationUI();
+          }
+          this.selectedElementIds.clear();
+          this.renderSlidesTray();
+          this.syncPanels();
+        }
+
+        const hitCy = hitSlideIdx * (this.slideHeight + slideGap);
+        const hitLocalWp = { x: wp.x, y: wp.y - hitCy };
+
+        if (!this.selectedElementIds.has(hitElement.id)) {
           if (!e.shiftKey) this.selectedElementIds.clear();
-          this.selectedElementIds.add(hit.id);
+          this.selectedElementIds.add(hitElement.id);
         }
         this.isDragging = true;
+        this.dragStartLocal = { x: hitLocalWp.x, y: hitLocalWp.y };
+        this.selectionStartPositions.clear();
+        const selectedEls = targetSlide.elements.filter((el) => this.selectedElementIds.has(el.id));
+        for (const el of selectedEls) {
+          if ('x' in el && 'y' in el) {
+            this.selectionStartPositions.set(el.id, { x: el.x, y: el.y });
+          } else if (el.type === 'stroke') {
+            this.selectionStartPositions.set(el.id, { points: el.points.map((p) => ({ ...p })) });
+          } else if (el.type === 'connector') {
+            this.selectionStartPositions.set(el.id, {
+              endPoint: el.endPoint ? { ...el.endPoint } : undefined,
+              startPoint: el.startPoint ? { ...el.startPoint } : undefined,
+            });
+          }
+        }
+        this.selectionStartBBox = computeElementsBoundingBox(selectedEls);
+        this.alignmentGuides = [];
         this.saveHistoryState();
         this.canvas.setPointerCapture(e.pointerId);
-      } else {
-        if (!e.shiftKey) this.selectedElementIds.clear();
-        this.marqueeStart = wp;
-        this.marqueeEnd = wp;
-        this.canvas.setPointerCapture(e.pointerId);
+        this.syncPanels();
+        this.updateSelectionToolbar();
+        this.render();
+        return;
       }
+
+      if (clickedSlideIdx !== -1 && this.slides[clickedSlideIdx].id !== this.activeSlideId) {
+        this.activeSlideId = this.slides[clickedSlideIdx].id;
+        const currentSlide = this.getActiveSlide();
+        if (currentSlide.duration) {
+          this.slideDuration = currentSlide.duration;
+          this.updateSlideDurationUI();
+        }
+        this.selectedElementIds.clear();
+        this.renderSlidesTray();
+        this.syncPanels();
+      }
+
+      const currentActiveIdx = this.getActiveSlideIndex();
+      const currentActiveCy = currentActiveIdx * (this.slideHeight + slideGap);
+      const currentLocalWp = { x: wp.x, y: wp.y - currentActiveCy };
+
+      if (!e.shiftKey) this.selectedElementIds.clear();
+      this.marqueeStart = currentLocalWp;
+      this.marqueeEnd = currentLocalWp;
+      this.alignmentGuides = [];
+      this.canvas.setPointerCapture(e.pointerId);
       this.syncPanels();
       this.updateSelectionToolbar();
       this.render();
@@ -1031,52 +1231,176 @@ export class PresentationController {
       const rect = this.canvas.getBoundingClientRect();
       const sx = e.clientX - rect.left;
       const sy = e.clientY - rect.top;
-      const camera = { x: 0, y: 0, zoom: this.zoom };
+
+      if (this.isPanning) {
+        const dx = (sx - this.dragStartScreen.x) / this.zoom;
+        const dy = (sy - this.dragStartScreen.y) / this.zoom;
+        this.panOffset.x -= dx;
+        this.panOffset.y -= dy;
+        this.dragStartScreen = { x: sx, y: sy };
+        this.clampPan();
+        this.render();
+        return;
+      }
+
+      const camera = { x: this.panOffset.x, y: this.panOffset.y, zoom: this.zoom };
       const wp = screenToWorld(sx, sy, this.canvas, camera);
+      const slideGap = 80;
+      const activeIdx = this.getActiveSlideIndex();
+      const activeCy = activeIdx * (this.slideHeight + slideGap);
+      const localWp = { x: wp.x, y: wp.y - activeCy };
+      const halfW = this.slideWidth / 2;
+      const halfH = this.slideHeight / 2;
 
       if (this.activeResizeHandle && this.selectedElementIds.size === 1 && this.resizeStartBBox) {
         const singleId = Array.from(this.selectedElementIds)[0];
-        const singleEl = this.getActiveSlide().elements.find((el) => el.id === singleId);
+        const elements = this.getActiveSlide().elements;
+        const singleEl = elements.find((el) => el.id === singleId);
         if (singleEl) {
-          resizeElementByHandle(singleEl, this.activeResizeHandle, wp, this.resizeStartBBox);
-          this.clampElementToSlide(singleEl);
+          let targetWorldPos = localWp;
+          if (this.isSnappingEnabled && !e.altKey) {
+            const slideBoundsEl: BoardSectionElement = {
+              color: 'transparent',
+              height: this.slideHeight,
+              id: '__slide_bounds__',
+              title: '',
+              type: 'section',
+              width: this.slideWidth,
+              x: -halfW,
+              y: -halfH,
+            };
+            const refElements: BoardElement[] = [
+              ...elements.filter((el) => el.id !== singleEl.id),
+              slideBoundsEl,
+            ];
+            const snapRes = calculateResizeSnapping(
+              this.activeResizeHandle,
+              localWp,
+              refElements,
+              [...elements, slideBoundsEl],
+              this.zoom
+            );
+            targetWorldPos = snapRes.snappedWorldPos;
+            this.alignmentGuides = snapRes.guides;
+          } else {
+            this.alignmentGuides = [];
+          }
+
+          resizeElementByHandle(singleEl, this.activeResizeHandle, targetWorldPos, this.resizeStartBBox, e.shiftKey);
           this.render();
           return;
         }
       }
 
       if (this.isDrawing && this.currentTool === 'draw') {
-        this.drawPoints.push(wp);
+        this.drawPoints.push(localWp);
         this.render();
         return;
       }
 
       if (this.currentTool === 'laser') {
-        this.laserPoint = wp;
+        this.laserPoint = localWp;
         this.render();
         return;
       }
 
       if (this.isDragging && this.selectedElementIds.size > 0) {
-        const dx = wp.x - this.dragStartWorld.x;
-        const dy = wp.y - this.dragStartWorld.y;
-        const elements = this.getActiveSlide().elements;
-        elements.forEach((el) => {
-          if (this.selectedElementIds.has(el.id)) {
-            if ('x' in el && 'y' in el) {
-              (el as any).x += dx;
-              (el as any).y += dy;
-              this.clampElementToSlide(el);
-            }
+        const currentSlideIdx = this.getActiveSlideIndex();
+        const currentSlide = this.slides[currentSlideIdx];
+        const elements = currentSlide.elements;
+
+        const rawDx = localWp.x - this.dragStartLocal.x;
+        const rawDy = localWp.y - this.dragStartLocal.y;
+
+        let effectiveDx = rawDx;
+        let effectiveDy = rawDy;
+
+        if (this.isSnappingEnabled && !e.altKey && this.selectionStartBBox) {
+          const slideBoundsEl: BoardSectionElement = {
+            color: 'transparent',
+            height: this.slideHeight,
+            id: '__slide_bounds__',
+            title: '',
+            type: 'section',
+            width: this.slideWidth,
+            x: -halfW,
+            y: -halfH,
+          };
+          const refElements: BoardElement[] = [
+            ...elements.filter((el) => !this.selectedElementIds.has(el.id)),
+            slideBoundsEl,
+          ];
+          const snapRes = calculateDragSnapping(
+            this.selectionStartBBox,
+            rawDx,
+            rawDy,
+            refElements,
+            [...elements, slideBoundsEl],
+            this.zoom
+          );
+          effectiveDx = snapRes.snappedDx;
+          effectiveDy = snapRes.snappedDy;
+          this.alignmentGuides = snapRes.guides;
+        } else {
+          this.alignmentGuides = [];
+        }
+
+        for (const [id, startPos] of this.selectionStartPositions.entries()) {
+          const el = elements.find((item) => item.id === id);
+          if (el) {
+            moveElementByDelta(el, effectiveDx, effectiveDy, startPos);
           }
-        });
-        this.dragStartWorld = wp;
+        }
+
+        if (this.selectionStartBBox) {
+          const currentBBoxCenterWorldY = (this.selectionStartBBox.y + this.selectionStartBBox.height / 2 + effectiveDy) + activeCy;
+          let targetSlideIdx = Math.round(currentBBoxCenterWorldY / (this.slideHeight + slideGap));
+          targetSlideIdx = Math.max(0, Math.min(this.slides.length - 1, targetSlideIdx));
+
+          if (targetSlideIdx !== currentSlideIdx) {
+            const oldCy = currentSlideIdx * (this.slideHeight + slideGap);
+            const newCy = targetSlideIdx * (this.slideHeight + slideGap);
+            const deltaCy = oldCy - newCy;
+
+            const targetSlide = this.slides[targetSlideIdx];
+            const movingElements = currentSlide.elements.filter((el) => this.selectedElementIds.has(el.id));
+            currentSlide.elements = currentSlide.elements.filter((el) => !this.selectedElementIds.has(el.id));
+
+            for (const el of movingElements) {
+              if ('y' in el) {
+                (el as any).y += deltaCy;
+              } else if (el.type === 'stroke') {
+                el.points = el.points.map((p) => ({ x: p.x, y: p.y + deltaCy }));
+              } else if (el.type === 'connector') {
+                if (el.startPoint) el.startPoint.y += deltaCy;
+                if (el.endPoint) el.endPoint.y += deltaCy;
+              }
+              targetSlide.elements.push(el);
+            }
+
+            for (const [, startPos] of this.selectionStartPositions.entries()) {
+              if (startPos.y !== undefined) startPos.y += deltaCy;
+              if (startPos.points) {
+                startPos.points = startPos.points.map((p: BoardPoint) => ({ x: p.x, y: p.y + deltaCy }));
+              }
+              if (startPos.startPoint) startPos.startPoint.y += deltaCy;
+              if (startPos.endPoint) startPos.endPoint.y += deltaCy;
+            }
+
+            this.dragStartLocal.y += deltaCy;
+            this.selectionStartBBox.y += deltaCy;
+            this.activeSlideId = targetSlide.id;
+            this.renderSlidesTray();
+            this.updateSlideDurationUI();
+          }
+        }
+
         this.render();
         return;
       }
 
       if (this.marqueeStart) {
-        this.marqueeEnd = wp;
+        this.marqueeEnd = localWp;
         this.render();
         return;
       }
@@ -1085,7 +1409,7 @@ export class PresentationController {
         const singleId = Array.from(this.selectedElementIds)[0];
         const singleEl = this.getActiveSlide().elements.find((el) => el.id === singleId);
         if (singleEl) {
-          const handle = hitTestResizeHandle(singleEl, sx, sy, (wx, wy) => worldToScreen(wx, wy, this.canvas, camera));
+          const handle = hitTestResizeHandle(singleEl, sx, sy, (wx, wy) => worldToScreen(wx, wy + activeCy, this.canvas, camera));
           if (handle) {
             const cursorMap: Record<ResizeHandle, string> = {
               bl: 'nesw-resize',
@@ -1103,8 +1427,20 @@ export class PresentationController {
         }
       }
 
-      const hoverHit = hitTestElement(this.getActiveSlide().elements, wp.x, wp.y, this.zoom);
-      if (hoverHit) {
+      let hoverHit: BoardElement | null = null;
+      for (let i = this.slides.length - 1; i >= 0; i--) {
+        const cy = i * (this.slideHeight + slideGap);
+        const sLocalWp = { x: wp.x, y: wp.y - cy };
+        const hit = hitTestElement(this.slides[i].elements, sLocalWp.x, sLocalWp.y, this.zoom);
+        if (hit) {
+          hoverHit = hit;
+          break;
+        }
+      }
+
+      if (this.currentTool === 'hand' || this.isSpaceDown) {
+        this.canvas.style.cursor = 'grab';
+      } else if (hoverHit) {
         this.canvas.style.cursor = 'move';
       } else {
         this.canvas.style.cursor = this.isEyedropperActive ? 'crosshair' : 'default';
@@ -1117,6 +1453,16 @@ export class PresentationController {
         this.canvas.releasePointerCapture(e.pointerId);
       } catch {}
 
+      this.alignmentGuides = [];
+      this.selectionStartPositions.clear();
+      this.selectionStartBBox = null;
+
+      if (this.isPanning) {
+        this.isPanning = false;
+        this.canvas.style.cursor = this.currentTool === 'hand' || this.isSpaceDown ? 'grab' : 'default';
+        return;
+      }
+
       if (this.activeResizeHandle) {
         this.activeResizeHandle = null;
         this.resizeStartBBox = null;
@@ -1128,11 +1474,11 @@ export class PresentationController {
       if (this.isDrawing && this.drawPoints.length > 1) {
         this.isDrawing = false;
         const strokeEl: BoardStrokeElement = {
-          color: this.drawSubtool === 'highlighter' ? '#fde047' : this.currentStrokeColor,
+          color: this.drawSubtool === 'highlighter' ? '#fde047' : (this.currentStrokeColor !== 'transparent' ? this.currentStrokeColor : '#1e293b'),
           id: `stroke-${Date.now()}`,
           opacity: this.drawSubtool === 'highlighter' ? 0.5 : 1,
           points: [...this.drawPoints],
-          size: this.drawSubtool === 'highlighter' ? 14 : this.currentStrokeWidth * 2,
+          size: this.drawSubtool === 'highlighter' ? 14 : Math.max(2, this.currentStrokeWidth * 2),
           tool: this.drawSubtool === 'highlighter' ? 'highlighter' : (this.drawSubtool === 'marker' ? 'marker' : 'pen'),
           type: 'stroke',
         };
@@ -1147,6 +1493,7 @@ export class PresentationController {
       if (this.isDragging) {
         this.isDragging = false;
         this.scheduleAutoSave();
+        this.render();
       }
 
       if (this.marqueeStart && this.marqueeEnd) {
@@ -1172,11 +1519,23 @@ export class PresentationController {
 
     this.canvas.addEventListener('wheel', (e: WheelEvent) => {
       e.preventDefault();
-      const zoomDelta = e.deltaY < 0 ? 0.08 : -0.08;
-      this.zoom = Math.max(0.2, Math.min(3, this.zoom + zoomDelta));
-      this.panOffset = { x: 0, y: 0 };
-      this.updateZoomUI();
-      this.render();
+      if (e.ctrlKey || e.metaKey) {
+        const zoomDelta = e.deltaY < 0 ? 0.08 : -0.08;
+        this.zoom = Math.max(0.2, Math.min(3, this.zoom + zoomDelta));
+        this.updateZoomUI();
+        this.render();
+      } else {
+        if (e.shiftKey) {
+          this.panOffset.x += (e.deltaY || e.deltaX) / this.zoom;
+        } else {
+          this.panOffset.y += e.deltaY / this.zoom;
+          if (e.deltaX) {
+            this.panOffset.x += e.deltaX / this.zoom;
+          }
+        }
+        this.clampPan();
+        this.render();
+      }
     }, { passive: false, signal });
   }
 
@@ -1185,6 +1544,22 @@ export class PresentationController {
     const tray = this.container.querySelector<HTMLElement>('[data-ref="design-pages-tray"]');
     btnBottomPages?.addEventListener('click', () => {
       tray?.classList.toggle('is-hidden');
+    }, { signal });
+
+    const btnPagePrev = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-page-prev"]');
+    btnPagePrev?.addEventListener('click', () => {
+      const idx = this.getActiveSlideIndex();
+      if (idx > 0) {
+        this.selectSlide(this.slides[idx - 1].id);
+      }
+    }, { signal });
+
+    const btnPageNext = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-page-next"]');
+    btnPageNext?.addEventListener('click', () => {
+      const idx = this.getActiveSlideIndex();
+      if (idx < this.slides.length - 1) {
+        this.selectSlide(this.slides[idx + 1].id);
+      }
     }, { signal });
 
     const btnPageAdd = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-page-add"]');
@@ -1239,6 +1614,17 @@ export class PresentationController {
   }
 
   private bindTopPropertiesToolbar(signal: AbortSignal): void {
+    const btnSlideBg = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-slide-bg"]');
+    btnSlideBg?.addEventListener('click', () => this.toggleColorsPanel('slide-bg'), { signal });
+
+    const btnSlideAnimate = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-slide-animate"]');
+    btnSlideAnimate?.addEventListener('click', () => this.toggleAnimationPanel(), { signal });
+
+    const btnSlideDurationHeader = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-slide-duration-header"]');
+    btnSlideDurationHeader?.addEventListener('click', () => {
+      if (btnSlideDurationHeader) this.togglePopover('slide-duration', btnSlideDurationHeader);
+    }, { signal });
+
     const btnDup = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-duplicate"]');
     btnDup?.addEventListener('click', () => this.duplicateSelectedElements(), { signal });
 
@@ -1691,7 +2077,6 @@ export class PresentationController {
         else if (alignType === 'middle') (el as any).y = bbox.y + (bbox.height - elH) / 2;
         else if (alignType === 'bottom') (el as any).y = bbox.y + bbox.height - elH;
       }
-      this.clampElementToSlide(el);
     });
 
     this.render();
@@ -1752,7 +2137,6 @@ export class PresentationController {
     if (!firstSelected) return;
     this.saveHistoryState();
     Object.assign(firstSelected, updates);
-    this.clampElementToSlide(firstSelected);
     this.render();
     this.scheduleAutoSave();
   }
@@ -1769,7 +2153,7 @@ export class PresentationController {
     this.scheduleAutoSave();
   }
 
-  public attachColorsUI(drawerBody: HTMLElement, target?: 'fill' | 'stroke' | 'text'): void {
+  public attachColorsUI(drawerBody: HTMLElement, target?: 'fill' | 'slide-bg' | 'stroke' | 'text'): void {
     this.colorsPanelEl = drawerBody;
     this.colorsTitleEl = drawerBody.closest('.layout-drawer')?.querySelector<HTMLElement>('[data-ref="board-colors-title"]') || drawerBody.querySelector<HTMLElement>('[data-ref="board-colors-title"]');
     this.colorsPaletteGridEl = drawerBody.querySelector<HTMLElement>('[data-ref="board-palette-grid"]');
@@ -1783,7 +2167,15 @@ export class PresentationController {
       this.colorPanelTarget = target;
     }
     if (this.colorsTitleEl) {
-      this.colorsTitleEl.textContent = this.colorPanelTarget === 'stroke' ? 'Color de trazo o borde' : (this.colorPanelTarget === 'fill' ? 'Color de relleno' : 'Color de texto');
+      if (this.colorPanelTarget === 'slide-bg') {
+        this.colorsTitleEl.textContent = 'Color de fondo de la diapositiva';
+      } else if (this.colorPanelTarget === 'stroke') {
+        this.colorsTitleEl.textContent = 'Color de trazo o borde';
+      } else if (this.colorPanelTarget === 'text') {
+        this.colorsTitleEl.textContent = 'Color de texto';
+      } else {
+        this.colorsTitleEl.textContent = 'Color de relleno';
+      }
     }
 
     this.btnColorEyedropper?.addEventListener('click', () => {
@@ -1807,9 +2199,13 @@ export class PresentationController {
     this.renderRecentColors();
 
     let currentVal = this.currentFillColor;
-    if (this.colorPanelTarget === 'stroke') currentVal = this.currentStrokeColor;
+    if (this.colorPanelTarget === 'slide-bg') {
+      currentVal = this.getActiveSlide().background?.color || '#ffffff';
+    } else if (this.colorPanelTarget === 'stroke') {
+      currentVal = this.currentStrokeColor;
+    }
     const firstSelected = this.getFirstSelectedElement();
-    if (firstSelected) {
+    if (firstSelected && this.colorPanelTarget !== 'slide-bg') {
       if (this.colorPanelTarget === 'fill' && 'fillColor' in firstSelected) currentVal = (firstSelected as any).fillColor;
       else if (this.colorPanelTarget === 'stroke' && 'strokeColor' in firstSelected) currentVal = (firstSelected as any).strokeColor;
       else if (this.colorPanelTarget === 'text' && ('color' in firstSelected || 'textColor' in firstSelected)) currentVal = (firstSelected as any).color || (firstSelected as any).textColor;
@@ -1888,6 +2284,23 @@ export class PresentationController {
     this.scheduleAutoSave();
   }
 
+  public setSlideBackground(color: string, saveHistory = true): void {
+    if (saveHistory) this.saveHistoryState();
+    const currentSlide = this.getActiveSlide();
+    if (!currentSlide.background) {
+      currentSlide.background = { color, dotColor: '#cbd5e1', type: 'solid' };
+    } else {
+      currentSlide.background.color = color;
+    }
+    const bgSwatch = this.container.querySelector<HTMLElement>('[data-ref="top-slide-bg-swatch"]');
+    if (bgSwatch) {
+      bgSwatch.style.backgroundColor = color;
+    }
+    this.render();
+    this.renderSlidesTray();
+    this.scheduleAutoSave();
+  }
+
   public setTextColor(color: string, saveHistory = true): void {
     if (saveHistory) this.saveHistoryState();
     const elements = this.getActiveSlide().elements;
@@ -1902,7 +2315,7 @@ export class PresentationController {
     this.scheduleAutoSave();
   }
 
-  public toggleColorsPanel(target: 'fill' | 'stroke' | 'text'): void {
+  public toggleColorsPanel(target: 'fill' | 'slide-bg' | 'stroke' | 'text'): void {
     if (isColorsDrawerOpen() && this.colorPanelTarget === target) {
       toggleDrawer(false);
       return;
@@ -1922,7 +2335,9 @@ export class PresentationController {
   }
 
   private handleColorPicked(color: string): void {
-    if (this.colorPanelTarget === 'fill') {
+    if (this.colorPanelTarget === 'slide-bg') {
+      this.setSlideBackground(color, true);
+    } else if (this.colorPanelTarget === 'fill') {
       this.setFill(color, true);
     } else if (this.colorPanelTarget === 'text') {
       this.setTextColor(color, true);
@@ -1946,7 +2361,7 @@ export class PresentationController {
   private renderDefaultPalette(): void {
     if (!this.colorsPaletteGridEl) return;
     this.colorsPaletteGridEl.innerHTML = '';
-    const currentActiveColor = (this.colorPanelTarget === 'fill' ? this.currentFillColor : this.currentStrokeColor).toUpperCase();
+    const currentActiveColor = (this.colorPanelTarget === 'slide-bg' ? (this.getActiveSlide().background?.color || '#ffffff') : (this.colorPanelTarget === 'fill' ? this.currentFillColor : this.currentStrokeColor)).toUpperCase();
 
     for (const color of DEFAULT_CLASSIC_PALETTE) {
       const swatch = document.createElement('button');
@@ -1969,7 +2384,7 @@ export class PresentationController {
   private renderShadingRamps(): void {
     if (!this.colorsRampGridEl) return;
     this.colorsRampGridEl.innerHTML = '';
-    const currentVal = this.colorPanelTarget === 'fill' ? this.currentFillColor : this.currentStrokeColor;
+    const currentVal = this.colorPanelTarget === 'slide-bg' ? (this.getActiveSlide().background?.color || '#ffffff') : (this.colorPanelTarget === 'fill' ? this.currentFillColor : this.currentStrokeColor);
     if (currentVal === 'transparent' || !/^#[0-9A-Fa-f]{6}$/.test(currentVal)) {
       return;
     }
@@ -1998,7 +2413,7 @@ export class PresentationController {
   private renderRecentColors(): void {
     if (!this.colorsRecentGridEl) return;
     this.colorsRecentGridEl.innerHTML = '';
-    const currentVal = (this.colorPanelTarget === 'fill' ? this.currentFillColor : this.currentStrokeColor).toUpperCase();
+    const currentVal = (this.colorPanelTarget === 'slide-bg' ? (this.getActiveSlide().background?.color || '#ffffff') : (this.colorPanelTarget === 'fill' ? this.currentFillColor : this.currentStrokeColor)).toUpperCase();
 
     for (const color of this.recentColors) {
       const swatch = document.createElement('button');
@@ -2058,6 +2473,7 @@ export class PresentationController {
   }
 
   private updateSelectionToolbar(): void {
+    const topSlideSec = this.container.querySelector<HTMLElement>('[data-ref="presentation-top-slide-section"]');
     const topSelectionSec = this.container.querySelector<HTMLElement>('[data-ref="presentation-top-selection-section"]');
     const topToolbarCont = this.container.querySelector<HTMLElement>('[data-ref="presentation-top-toolbar-container"]');
     const groupText = this.container.querySelector<HTMLElement>('[data-ref="presentation-top-group-text-props"]');
@@ -2069,6 +2485,8 @@ export class PresentationController {
     const fillSwatch = this.container.querySelector<HTMLElement>('[data-ref="top-fill-swatch"]');
     const strokeSwatch = this.container.querySelector<HTMLElement>('[data-ref="top-stroke-swatch"]');
     const textSwatch = this.container.querySelector<HTMLElement>('[data-ref="top-text-swatch"]');
+    const slideBgSwatch = this.container.querySelector<HTMLElement>('[data-ref="top-slide-bg-swatch"]');
+    const slideDurationLabel = this.container.querySelector<HTMLElement>('[data-ref="top-slide-duration-label"]');
     const fontSizeLabel = this.container.querySelector<HTMLElement>('[data-ref="top-font-size-label"]');
     const fontFamilyLabel = this.container.querySelector<HTMLElement>('[data-ref="top-font-family-label"]');
     const btnBold = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-bold"]');
@@ -2078,8 +2496,9 @@ export class PresentationController {
     const iconTextAlign = this.container.querySelector<HTMLElement>('[data-ref="top-icon-text-align"]');
 
     if (this.selectedElementIds.size > 0) {
-      topSelectionSec?.classList.remove('is-hidden');
       topToolbarCont?.classList.remove('is-hidden');
+      topSlideSec?.classList.add('is-hidden');
+      topSelectionSec?.classList.remove('is-hidden');
 
       const elements = this.getActiveSlide().elements;
       const selected = elements.filter((e) => this.selectedElementIds.has(e.id));
@@ -2133,8 +2552,17 @@ export class PresentationController {
         }
       }
     } else {
+      topToolbarCont?.classList.remove('is-hidden');
       topSelectionSec?.classList.add('is-hidden');
-      topToolbarCont?.classList.add('is-hidden');
+      topSlideSec?.classList.remove('is-hidden');
+
+      const currentSlide = this.getActiveSlide();
+      if (slideBgSwatch) {
+        slideBgSwatch.style.backgroundColor = currentSlide.background?.color || '#ffffff';
+      }
+      if (slideDurationLabel) {
+        slideDurationLabel.textContent = `${(currentSlide.duration || 5.0).toFixed(1)}s`;
+      }
     }
 
     this.updateFloatingToolbarPosition();
@@ -2161,9 +2589,12 @@ export class PresentationController {
       floatingToolbar.classList.add('is-hidden');
       return;
     }
-    const camera = { x: 0, y: 0, zoom: this.zoom };
-    const topLeftScreen = worldToScreen(bbox.x, bbox.y, this.canvas, camera);
-    const bottomRightScreen = worldToScreen(bbox.x + bbox.width, bbox.y + bbox.height, this.canvas, camera);
+    const slideGap = 80;
+    const activeIdx = this.getActiveSlideIndex();
+    const activeCy = activeIdx * (this.slideHeight + slideGap);
+    const camera = { x: this.panOffset.x, y: this.panOffset.y, zoom: this.zoom };
+    const topLeftScreen = worldToScreen(bbox.x, bbox.y + activeCy, this.canvas, camera);
+    const bottomRightScreen = worldToScreen(bbox.x + bbox.width, bbox.y + bbox.height + activeCy, this.canvas, camera);
 
     const toolbarWidth = floatingToolbar.offsetWidth || 180;
     const toolbarHeight = floatingToolbar.offsetHeight || 40;
@@ -2246,7 +2677,6 @@ export class PresentationController {
         if ('x' in copy && 'y' in copy) {
           copy.x += 24;
           copy.y += 24;
-          this.clampElementToSlide(copy);
         }
         toAdd.push(copy);
         newSelected.add(copy.id);
@@ -2306,8 +2736,11 @@ export class PresentationController {
     const container = this.container.querySelector<HTMLElement>('[data-ref="presentation-text-editor-container"]');
     if (!container || !this.canvas) return;
 
-    const camera = { x: 0, y: 0, zoom: this.zoom };
-    const screenPt = worldToScreen((el as any).x || 0, (el as any).y || 0, this.canvas, camera);
+    const slideGap = 80;
+    const activeIdx = this.getActiveSlideIndex();
+    const activeCy = activeIdx * (this.slideHeight + slideGap);
+    const camera = { x: this.panOffset.x, y: this.panOffset.y, zoom: this.zoom };
+    const screenPt = worldToScreen((el as any).x || 0, ((el as any).y || 0) + activeCy, this.canvas, camera);
     const textarea = document.createElement('textarea');
     textarea.className = 'board-inline-editor';
     textarea.setAttribute('data-ref', 'presentation-inline-textarea');
@@ -2361,6 +2794,9 @@ export class PresentationController {
     this.currentTool = tool;
     const toolButtons = this.container.querySelectorAll<HTMLButtonElement>('[data-vtool]');
     toolButtons.forEach((b) => b.classList.toggle('is-active', b.getAttribute('data-vtool') === tool));
+    if (this.canvas) {
+      this.canvas.style.cursor = tool === 'hand' ? 'grab' : (tool === 'laser' ? 'crosshair' : (tool === 'draw' ? 'crosshair' : 'default'));
+    }
     this.render();
   }
 
@@ -2374,20 +2810,16 @@ export class PresentationController {
     const elX = x !== undefined ? x - cfg.width / 2 : 0 - cfg.width / 2;
     const elY = y !== undefined ? y - cfg.height / 2 : 0 - cfg.height / 2;
 
-    const textEl: BoardTextElement = {
-      color: this.currentStrokeColor || '#1e293b',
-      fontFamily: this.currentFontFamily || 'Inter',
+    const textEl = createTextElement(cfg.text, {
+      color: CANVAS_DEFAULTS.TEXT_COLOR,
+      fontFamily: this.currentFontFamily || CANVAS_DEFAULTS.FONT_FAMILY,
       fontSize: cfg.fontSize,
       fontWeight: type === 'heading' ? 700 : (type === 'subheading' ? 600 : 400),
       height: cfg.height,
-      id: `text-${Date.now()}`,
-      text: cfg.text,
-      type: 'text',
       width: cfg.width,
       x: elX,
       y: elY,
-    };
-    this.clampElementToSlide(textEl);
+    });
     this.saveHistoryState();
     this.getActiveSlide().elements.push(textEl);
     this.selectedElementIds = new Set([textEl.id]);
@@ -2399,21 +2831,16 @@ export class PresentationController {
 
   public insertShape(shapeType: ShapeType, svgPath?: string, fill?: string, stroke?: string, x?: number, y?: number): void {
     const isNativeBasic = ['circle', 'cylinder', 'diamond', 'line', 'parallelogram', 'pill', 'rect', 'round-rect', 'star', 'triangle'].includes(shapeType);
-    const shapeEl: BoardShapeElement = {
-      fillColor: fill || this.currentFillColor || '#3b82f6',
+    const shapeEl = createShapeElement(shapeType, {
+      fillColor: fill || this.currentFillColor,
       height: 140,
-      id: `shape-${Date.now()}`,
-      opacity: 1,
-      shapeType: shapeType || 'rect',
-      strokeColor: stroke || this.currentStrokeColor || '#1e293b',
-      strokeWidth: 2,
+      strokeColor: stroke || this.currentStrokeColor,
+      strokeWidth: stroke ? 2 : this.currentStrokeWidth,
       svgPath: isNativeBasic ? undefined : svgPath,
-      type: 'shape',
       width: 180,
       x: x !== undefined ? x - 90 : -90,
       y: y !== undefined ? y - 70 : -70,
-    };
-    this.clampElementToSlide(shapeEl);
+    });
     this.saveHistoryState();
     this.getActiveSlide().elements.push(shapeEl);
     this.selectedElementIds = new Set([shapeEl.id]);
@@ -2463,23 +2890,19 @@ export class PresentationController {
   }
 
   public insertShapeSvg(pathD: string, name?: string, color?: string): void {
-    this.insertShape('rect', pathD, color || this.currentFillColor, this.currentStrokeColor);
+    this.insertShape('rect', pathD, color || this.currentFillColor, 'transparent');
   }
 
   public insertStickyNote(color?: string, text?: string, x?: number, y?: number): void {
-    const stickyEl: BoardStickyElement = {
-      color: color || '#fef08a',
+    const stickyEl = createStickyElement(text || 'Nota', {
+      color: color || CANVAS_DEFAULTS.STICKY_COLOR,
       fontSize: 20,
       height: 160,
-      id: `sticky-${Date.now()}`,
-      text: text || 'Nota',
-      textColor: '#1e293b',
-      type: 'sticky',
+      textColor: CANVAS_DEFAULTS.STICKY_TEXT_COLOR,
       width: 160,
       x: x !== undefined ? x - 80 : -80,
       y: y !== undefined ? y - 80 : -80,
-    };
-    this.clampElementToSlide(stickyEl);
+    });
     this.saveHistoryState();
     this.getActiveSlide().elements.push(stickyEl);
     this.selectedElementIds = new Set([stickyEl.id]);
@@ -2503,7 +2926,6 @@ export class PresentationController {
       x: -imgW / 2,
       y: -imgH / 2,
     };
-    this.clampElementToSlide(imgEl);
     this.saveHistoryState();
     this.getActiveSlide().elements.push(imgEl);
     this.selectedElementIds = new Set([imgEl.id]);
@@ -2527,7 +2949,6 @@ export class PresentationController {
       x: -(cols * cellW) / 2,
       y: -(rows * cellH) / 2,
     };
-    this.clampElementToSlide(tableEl);
     this.saveHistoryState();
     this.getActiveSlide().elements.push(tableEl);
     this.selectedElementIds = new Set([tableEl.id]);
@@ -2583,7 +3004,6 @@ export class PresentationController {
       x: -w / 2,
       y: -h / 2,
     };
-    this.clampElementToSlide(shapeEl);
     this.saveHistoryState();
     this.getActiveSlide().elements.push(shapeEl);
     this.selectedElementIds = new Set([shapeEl.id]);
@@ -2622,7 +3042,6 @@ export class PresentationController {
       x: -180,
       y: -120,
     };
-    this.clampElementToSlide(chartEl);
     this.saveHistoryState();
     this.getActiveSlide().elements.push(chartEl);
     this.selectedElementIds = new Set([chartEl.id]);
@@ -2669,7 +3088,6 @@ export class PresentationController {
       x: -(tpl.width || 340) / 2,
       y: -(tpl.height || 280) / 2,
     };
-    this.clampElementToSlide(mockEl);
     this.saveHistoryState();
     this.getActiveSlide().elements.push(mockEl);
     this.selectedElementIds = new Set([mockEl.id]);
@@ -2680,22 +3098,15 @@ export class PresentationController {
   }
 
   public insert3DShape(shapeId: Shape3DType): void {
-    const shape3d: Board3DElement = {
-      fillColor: this.currentFillColor || '#3b82f6',
+    const shape3d = create3DElement(shapeId, {
+      fillColor: this.currentFillColor,
       height: 140,
-      id: `3d-${Date.now()}`,
-      rotationX: -20,
-      rotationY: 30,
-      rotationZ: 0,
-      shape3dType: shapeId,
-      strokeColor: this.currentStrokeColor || '#1e293b',
-      strokeWidth: 2,
-      type: 'shape-3d',
+      strokeColor: this.currentStrokeColor,
+      strokeWidth: this.currentStrokeWidth,
       width: 140,
       x: -70,
       y: -70,
-    };
-    this.clampElementToSlide(shape3d);
+    });
     this.saveHistoryState();
     this.getActiveSlide().elements.push(shape3d);
     this.selectedElementIds = new Set([shape3d.id]);
@@ -2715,7 +3126,6 @@ export class PresentationController {
     tplElements.forEach((el) => {
       const copy = JSON.parse(JSON.stringify(el));
       copy.id = `${copy.type || 'el'}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-      this.clampElementToSlide(copy);
       this.getActiveSlide().elements.push(copy);
     });
     this.selectedElementIds.clear();
@@ -2738,7 +3148,13 @@ export class PresentationController {
     this.slides.push(newSlide);
     this.activeSlideId = newSlide.id;
     this.selectedElementIds.clear();
+    const activeIdx = this.getActiveSlideIndex();
+    const slideGap = 80;
+    this.panOffset.x = 0;
+    this.panOffset.y = activeIdx * (this.slideHeight + slideGap);
+    this.clampPan();
     this.syncPanels();
+    this.updateSelectionToolbar();
     this.renderSlidesTray();
     this.render();
     this.scheduleAutoSave();
@@ -2762,7 +3178,13 @@ export class PresentationController {
     this.slides.splice(currentIdx + 1, 0, newSlide);
     this.activeSlideId = newSlide.id;
     this.selectedElementIds.clear();
+    const activeIdx = this.getActiveSlideIndex();
+    const slideGap = 80;
+    this.panOffset.x = 0;
+    this.panOffset.y = activeIdx * (this.slideHeight + slideGap);
+    this.clampPan();
     this.syncPanels();
+    this.updateSelectionToolbar();
     this.renderSlidesTray();
     this.render();
     this.scheduleAutoSave();
@@ -2780,7 +3202,13 @@ export class PresentationController {
     const nextIdx = Math.min(currentIdx, this.slides.length - 1);
     this.activeSlideId = this.slides[nextIdx].id;
     this.selectedElementIds.clear();
+    const activeIdx = this.getActiveSlideIndex();
+    const slideGap = 80;
+    this.panOffset.x = 0;
+    this.panOffset.y = activeIdx * (this.slideHeight + slideGap);
+    this.clampPan();
     this.syncPanels();
+    this.updateSelectionToolbar();
     this.renderSlidesTray();
     this.render();
     this.scheduleAutoSave();
@@ -2797,24 +3225,15 @@ export class PresentationController {
       this.slideDuration = current.duration;
       this.updateSlideDurationUI();
     }
+    const activeIdx = this.getActiveSlideIndex();
+    const slideGap = 80;
+    this.panOffset.x = 0;
+    this.panOffset.y = activeIdx * (this.slideHeight + slideGap);
+    this.clampPan();
     this.syncPanels();
     this.updateSelectionToolbar();
     this.renderSlidesTray();
     this.render();
-  }
-
-  private clampElementToSlide(el: BoardElement): void {
-    const halfW = this.slideWidth / 2;
-    const halfH = this.slideHeight / 2;
-    const elW = (el as any).width || 40;
-    const elH = (el as any).height || 40;
-
-    if ('x' in el && 'y' in el) {
-      if ((el as any).x < -halfW) (el as any).x = -halfW;
-      if ((el as any).x + elW > halfW) (el as any).x = halfW - elW;
-      if ((el as any).y < -halfH) (el as any).y = -halfH;
-      if ((el as any).y + elH > halfH) (el as any).y = halfH - elH;
-    }
   }
 
   private renderSlidesTray(): void {
@@ -2832,13 +3251,14 @@ export class PresentationController {
       const card = document.createElement('div');
       card.className = `canva-page-card${slide.id === this.activeSlideId ? ' is-active' : ''}`;
       card.setAttribute('data-ref', `slide-card-${slide.id}`);
+      const bg = slide.background?.color || '#ffffff';
       card.innerHTML = `
         <div class="canva-page-card__header">
           <span class="canva-page-card__num">${idx + 1}</span>
           <span class="canva-page-card__dur">${(slide.duration || 5.0).toFixed(1)}s</span>
         </div>
-        <div class="canva-page-card__preview" data-ref="slide-preview-${slide.id}"></div>
-        <span class="canva-page-card__title">${slide.name}</span>
+        <div class="canva-page-card__preview" data-ref="slide-preview-${slide.id}" style="background-color: ${bg};"></div>
+        <span class="canva-page-card__title">${this.escapeHtml(slide.name)}</span>
       `;
       card.addEventListener('click', () => this.selectSlide(slide.id));
       cardsList.appendChild(card);
@@ -2896,7 +3316,7 @@ export class PresentationController {
     ctx.fillStyle = isDark ? '#09090b' : '#f8fafc';
     ctx.fillRect(0, 0, w, h);
 
-    const camera = { x: 0, y: 0, zoom: this.zoom };
+    const camera = { x: this.panOffset.x, y: this.panOffset.y, zoom: this.zoom };
     const center = worldToScreen(0, 0, this.canvas, camera);
 
     ctx.save();
@@ -2905,55 +3325,67 @@ export class PresentationController {
 
     const halfW = this.slideWidth / 2;
     const halfH = this.slideHeight / 2;
+    const slideGap = 80;
 
-    const activeSlide = this.getActiveSlide();
-    const slideBg = activeSlide.background?.color || (isDark ? '#18181b' : '#ffffff');
+    this.slides.forEach((slide, idx) => {
+      const cy = idx * (this.slideHeight + slideGap);
+      const slideBg = slide.background?.color || (isDark ? '#18181b' : '#ffffff');
 
-    ctx.shadowColor = isDark ? 'rgba(0, 0, 0, 0.5)' : 'rgba(0, 0, 0, 0.12)';
-    ctx.shadowBlur = 24;
-    ctx.shadowOffsetY = 8;
-    ctx.fillStyle = slideBg;
-    ctx.fillRect(-halfW, -halfH, this.slideWidth, this.slideHeight);
+      ctx.save();
+      ctx.translate(0, cy);
 
-    ctx.shadowColor = 'transparent';
-    ctx.shadowBlur = 0;
-    ctx.shadowOffsetY = 0;
+      ctx.shadowColor = isDark ? 'rgba(0, 0, 0, 0.5)' : 'rgba(0, 0, 0, 0.12)';
+      ctx.shadowBlur = 24;
+      ctx.shadowOffsetY = 8;
+      ctx.fillStyle = slideBg;
+      ctx.fillRect(-halfW, -halfH, this.slideWidth, this.slideHeight);
 
-    ctx.strokeStyle = isDark ? '#27272a' : '#e2e8f0';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(-halfW, -halfH, this.slideWidth, this.slideHeight);
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetY = 0;
 
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(-halfW, -halfH, this.slideWidth, this.slideHeight);
-    ctx.clip();
+      ctx.strokeStyle = slide.id === this.activeSlideId ? (isDark ? '#3b82f6' : '#2563eb') : (isDark ? '#27272a' : '#e2e8f0');
+      ctx.lineWidth = slide.id === this.activeSlideId ? 2 : 1;
+      ctx.strokeRect(-halfW, -halfH, this.slideWidth, this.slideHeight);
 
-    const elements = activeSlide.elements;
-    elements.forEach((el) => {
-      if (!(el as any).hidden) {
-        this.drawElementOn(ctx, el);
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(-halfW, -halfH, this.slideWidth, this.slideHeight);
+      ctx.clip();
+
+      slide.elements.forEach((el) => {
+        if (!(el as any).hidden) {
+          this.drawElementOn(ctx, el);
+        }
+      });
+
+      if (slide.id === this.activeSlideId && this.isDrawing && this.drawPoints.length > 1) {
+        const liveStroke: BoardStrokeElement = {
+          color: this.drawSubtool === 'highlighter' ? '#fde047' : (this.currentStrokeColor !== 'transparent' ? this.currentStrokeColor : '#1e293b'),
+          id: 'draft-stroke',
+          opacity: this.drawSubtool === 'highlighter' ? 0.5 : 1,
+          points: this.drawPoints,
+          size: this.drawSubtool === 'highlighter' ? 14 : Math.max(2, this.currentStrokeWidth * 2),
+          tool: this.drawSubtool === 'highlighter' ? 'highlighter' : 'pen',
+          type: 'stroke',
+        };
+        drawStroke(ctx, liveStroke);
       }
-    });
 
-    if (this.isDrawing && this.drawPoints.length > 1) {
-      const liveStroke: BoardStrokeElement = {
-        color: this.drawSubtool === 'highlighter' ? '#fde047' : this.currentStrokeColor,
-        id: 'draft-stroke',
-        opacity: this.drawSubtool === 'highlighter' ? 0.5 : 1,
-        points: this.drawPoints,
-        size: this.drawSubtool === 'highlighter' ? 14 : this.currentStrokeWidth * 2,
-        tool: this.drawSubtool === 'highlighter' ? 'highlighter' : 'pen',
-        type: 'stroke',
-      };
-      drawStroke(ctx, liveStroke);
-    }
+      ctx.restore();
 
-    ctx.restore();
-
-    elements.forEach((el) => {
-      if (this.selectedElementIds.has(el.id)) {
-        drawSelectionBox(ctx, el, camera, elements);
+      if (slide.id === this.activeSlideId) {
+        slide.elements.forEach((el) => {
+          if (this.selectedElementIds.has(el.id)) {
+            drawSelectionBox(ctx, el, camera, slide.elements);
+          }
+        });
+        if (this.alignmentGuides.length > 0) {
+          drawAlignmentGuides(ctx, this.alignmentGuides, camera);
+        }
       }
+
+      ctx.restore();
     });
 
     if (this.laserPoint && this.currentTool === 'laser') {
@@ -2976,7 +3408,180 @@ export class PresentationController {
     }
 
     ctx.restore();
+    this.renderOverlays();
     this.updateFloatingToolbarPosition();
+  }
+
+  private escapeHtml(str: string): string {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  private renderOverlays(): void {
+    const overlaysContainer = this.container.querySelector<HTMLElement>('[data-ref="presentation-canvas-overlays"]');
+    if (!overlaysContainer || !this.canvas) return;
+
+    const camera = { x: this.panOffset.x, y: this.panOffset.y, zoom: this.zoom };
+    const halfW = this.slideWidth / 2;
+    const halfH = this.slideHeight / 2;
+    const slideGap = 80;
+
+    const activeInput = document.activeElement as HTMLInputElement;
+    const isEditingTitle = activeInput && activeInput.classList.contains('slide-title-input') && overlaysContainer.contains(activeInput);
+
+    if (isEditingTitle) {
+      this.slides.forEach((slide, idx) => {
+        const cy = idx * (this.slideHeight + slideGap);
+        const slideTopPt = worldToScreen(-halfW, cy - halfH, this.canvas, camera);
+        const headerLeft = Math.round(slideTopPt.x);
+        const headerTop = Math.round(slideTopPt.y - 36);
+        const headerWidth = Math.round(this.slideWidth * this.zoom);
+
+        const overlayEl = overlaysContainer.querySelector<HTMLElement>(`[data-ref="slide-overlay-${slide.id}"]`);
+        if (overlayEl) {
+          overlayEl.style.left = `${headerLeft}px`;
+          overlayEl.style.top = `${headerTop}px`;
+          overlayEl.style.width = `${headerWidth}px`;
+        }
+      });
+      return;
+    }
+
+    let html = '';
+    this.slides.forEach((slide, idx) => {
+      const cy = idx * (this.slideHeight + slideGap);
+      const slideTopPt = worldToScreen(-halfW, cy - halfH, this.canvas, camera);
+      const headerLeft = Math.round(slideTopPt.x);
+      const headerTop = Math.round(slideTopPt.y - 36);
+      const headerWidth = Math.round(this.slideWidth * this.zoom);
+
+      html += `
+        <div class="presentation-slide-overlay-header" data-ref="slide-overlay-${slide.id}" style="left: ${headerLeft}px; top: ${headerTop}px; width: ${headerWidth}px;">
+          <div class="header-left">
+            <span class="slide-page-badge">Página ${idx + 1}</span>
+            <span class="slide-page-dash">-</span>
+            <input type="text" class="slide-title-input" data-ref="input-slide-title-${slide.id}" data-slide-id="${slide.id}" value="${this.escapeHtml(slide.name)}" placeholder="Título" aria-label="Nombre de diapositiva" />
+          </div>
+          <div class="header-actions">
+            <button type="button" class="header-action-btn" data-ref="btn-slide-move-up-${slide.id}" data-action="move-up" data-slide-id="${slide.id}" data-tooltip="Mover arriba" aria-label="Mover arriba"${idx === 0 ? ' disabled' : ''}>
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#keyboard_arrow_up"></use></svg>
+            </button>
+            <button type="button" class="header-action-btn" data-ref="btn-slide-move-down-${slide.id}" data-action="move-down" data-slide-id="${slide.id}" data-tooltip="Mover abajo" aria-label="Mover abajo"${idx === this.slides.length - 1 ? ' disabled' : ''}>
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#keyboard_arrow_down"></use></svg>
+            </button>
+            <button type="button" class="header-action-btn${(slide as any).locked ? ' is-active' : ''}" data-ref="btn-slide-lock-${slide.id}" data-action="lock" data-slide-id="${slide.id}" data-tooltip="${(slide as any).locked ? 'Desbloquear diapositiva' : 'Bloquear diapositiva'}" aria-label="Bloquear">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${(slide as any).locked ? 'lock' : 'lock_open'}"></use></svg>
+            </button>
+            <button type="button" class="header-action-btn" data-ref="btn-slide-duplicate-${slide.id}" data-action="duplicate" data-slide-id="${slide.id}" data-tooltip="Duplicar diapositiva" aria-label="Duplicar">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
+            </button>
+            <button type="button" class="header-action-btn" data-ref="btn-slide-delete-${slide.id}" data-action="delete" data-slide-id="${slide.id}" data-tooltip="Eliminar diapositiva" aria-label="Eliminar"${this.slides.length <= 1 ? ' disabled' : ''}>
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
+            </button>
+            <button type="button" class="header-action-btn" data-ref="btn-slide-add-${slide.id}" data-action="add" data-slide-id="${slide.id}" data-tooltip="Agregar diapositiva" aria-label="Agregar">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+            </button>
+          </div>
+        </div>
+      `;
+    });
+
+    overlaysContainer.innerHTML = html;
+    this.bindOverlayEvents(overlaysContainer);
+  }
+
+  private bindOverlayEvents(container: HTMLElement): void {
+    const titleInputs = container.querySelectorAll<HTMLInputElement>('.slide-title-input');
+    titleInputs.forEach((input) => {
+      const slideId = input.getAttribute('data-slide-id');
+      if (!slideId) return;
+
+      input.addEventListener('change', () => {
+        const slide = this.slides.find((s) => s.id === slideId);
+        if (slide) {
+          slide.name = input.value.trim() || 'Sin título';
+          this.renderSlidesTray();
+          this.scheduleAutoSave();
+        }
+      });
+
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          input.blur();
+        }
+      });
+    });
+
+    const actionButtons = container.querySelectorAll<HTMLButtonElement>('.header-action-btn');
+    actionButtons.forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const action = btn.getAttribute('data-action');
+        const slideId = btn.getAttribute('data-slide-id');
+        if (!action || !slideId) return;
+
+        const idx = this.slides.findIndex((s) => s.id === slideId);
+        if (idx === -1) return;
+
+        if (action === 'move-up') {
+          if (idx > 0) {
+            this.saveHistoryState();
+            const temp = this.slides[idx];
+            this.slides[idx] = this.slides[idx - 1];
+            this.slides[idx - 1] = temp;
+            this.activeSlideId = temp.id;
+            this.renderSlidesTray();
+            this.render();
+            this.scheduleAutoSave();
+          }
+        } else if (action === 'move-down') {
+          if (idx < this.slides.length - 1) {
+            this.saveHistoryState();
+            const temp = this.slides[idx];
+            this.slides[idx] = this.slides[idx + 1];
+            this.slides[idx + 1] = temp;
+            this.activeSlideId = temp.id;
+            this.renderSlidesTray();
+            this.render();
+            this.scheduleAutoSave();
+          }
+        } else if (action === 'lock') {
+          const slide = this.slides[idx];
+          (slide as any).locked = !(slide as any).locked;
+          this.render();
+          this.scheduleAutoSave();
+        } else if (action === 'duplicate') {
+          this.activeSlideId = slideId;
+          this.duplicateSlide();
+        } else if (action === 'delete') {
+          this.activeSlideId = slideId;
+          this.deleteSlide();
+        } else if (action === 'add') {
+          const newSlide: PresentationSlideItem = {
+            background: { color: '#ffffff', dotColor: '#cbd5e1', type: 'solid' },
+            camera: { x: 0, y: 0, zoom: 1 },
+            createdAt: Date.now(),
+            duration: this.slideDuration,
+            elements: [],
+            id: `slide-${Date.now()}`,
+            name: `Diapositiva ${this.slides.length + 1}`,
+          };
+          this.saveHistoryState();
+          this.slides.splice(idx + 1, 0, newSlide);
+          this.activeSlideId = newSlide.id;
+          this.selectedElementIds.clear();
+          this.syncPanels();
+          this.renderSlidesTray();
+          this.render();
+          this.scheduleAutoSave();
+          showToast('Nueva diapositiva creada', 'success');
+        }
+      });
+    });
   }
 
   public startSlideshow(): void {
