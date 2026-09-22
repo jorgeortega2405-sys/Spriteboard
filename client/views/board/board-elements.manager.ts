@@ -1,34 +1,88 @@
+import { BOARD_3D_SHAPES } from '../../config/board-3d-shapes.config.js';
+import { BOARD_SHAPES } from '../../config/board-shapes.config.js';
+import { MockupFitMode, MockupTemplate } from '../../types/mockups.types.js';
 import { hitTest3DRotationGizmo } from './board-3d-renderer.js';
-import { Board3DElement, BoardConnectorElement, BoardElement, BoardPoint, BoardSectionElement, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTextElement, CANVAS_DEFAULTS, ResizeHandle, Shape3DType, ShapeType } from './board.types.js';
+import { Board3DElement, BoardChartElement, BoardConnectorElement, BoardElement, BoardImageElement, BoardMockupElement, BoardPoint, BoardSectionElement, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTableCell, BoardTableElement, BoardTextElement, CANVAS_DEFAULTS, ChartDataRow, ChartSeriesConfig, ChartType, ConnectorStyle, DEFAULT_CHART_PALETTES, MarkerType, ResizeHandle, Shape3DType, ShapeType, StrokeStyle } from './board.types.js';
 
 export { hitTest3DRotationGizmo };
 
+export const TEXT_PRESETS = {
+  body: {
+    fontFamily: CANVAS_DEFAULTS.FONT_FAMILY,
+    fontSize: 16,
+    fontWeight: 400,
+    height: 40,
+    text: 'Agregar algo de texto',
+    width: 320,
+  },
+  heading: {
+    fontFamily: CANVAS_DEFAULTS.FONT_FAMILY,
+    fontSize: 36,
+    fontWeight: 700,
+    height: 56,
+    text: 'Agregar un título',
+    width: 480,
+  },
+  subheading: {
+    fontFamily: CANVAS_DEFAULTS.FONT_FAMILY,
+    fontSize: 24,
+    fontWeight: 600,
+    height: 44,
+    text: 'Agregar un subtítulo',
+    width: 380,
+  },
+} as const;
+
 export function createShapeElement(shapeType: ShapeType, options: {
+  borderRadius?: number;
   fillColor?: string;
+  fontFamily?: string;
+  fontSize?: number;
+  fontWeight?: number;
   height?: number;
   id?: string;
+  isMindMapNode?: boolean;
   opacity?: number;
+  rotation?: number;
   strokeColor?: string;
+  strokeStyle?: StrokeStyle;
   strokeWidth?: number;
   svgPath?: string;
+  text?: string;
+  textColor?: string;
   width?: number;
   x?: number;
   y?: number;
 } = {}): BoardShapeElement {
+  const shapeCfg = BOARD_SHAPES.find((s) => s.id === shapeType);
   const isLineOrArrow = shapeType === 'line' || shapeType === 'arrow';
+  const defaultW = shapeCfg?.defaultWidth ?? (isLineOrArrow ? 160 : 140);
+  const defaultH = shapeCfg?.defaultHeight ?? (isLineOrArrow ? 40 : 100);
+  const w = options.width ?? defaultW;
+  const h = options.height ?? defaultH;
+
   return {
+    borderRadius: options.borderRadius,
     fillColor: options.fillColor || (isLineOrArrow ? 'transparent' : CANVAS_DEFAULTS.FILL_COLOR),
-    height: options.height ?? (isLineOrArrow ? 40 : 140),
+    fontFamily: options.fontFamily,
+    fontSize: options.fontSize,
+    fontWeight: options.fontWeight,
+    height: h,
     id: options.id || `shape-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    isMindMapNode: options.isMindMapNode,
     opacity: options.opacity ?? CANVAS_DEFAULTS.OPACITY,
+    rotation: options.rotation,
     shapeType: shapeType || 'rect',
     strokeColor: options.strokeColor || (isLineOrArrow ? CANVAS_DEFAULTS.LINE_STROKE_COLOR : CANVAS_DEFAULTS.STROKE_COLOR),
+    strokeStyle: options.strokeStyle,
     strokeWidth: options.strokeWidth ?? (isLineOrArrow ? CANVAS_DEFAULTS.LINE_STROKE_WIDTH : CANVAS_DEFAULTS.STROKE_WIDTH),
     svgPath: options.svgPath,
+    text: options.text,
+    textColor: options.textColor,
     type: 'shape',
-    width: options.width ?? (isLineOrArrow ? 160 : 180),
-    x: options.x ?? -90,
-    y: options.y ?? -70,
+    width: w,
+    x: options.x ?? -Math.round(w / 2),
+    y: options.y ?? -Math.round(h / 2),
   };
 }
 
@@ -36,49 +90,93 @@ export function createTextElement(text: string, options: {
   color?: string;
   fontFamily?: string;
   fontSize?: number;
+  fontStyle?: 'italic' | 'normal';
   fontWeight?: number | string;
   height?: number;
   id?: string;
+  opacity?: number;
   width?: number;
   x?: number;
   y?: number;
 } = {}): BoardTextElement {
+  const fontSize = options.fontSize || CANVAS_DEFAULTS.FONT_SIZE;
+  const fontFamily = options.fontFamily || CANVAS_DEFAULTS.FONT_FAMILY;
+  const fontWeight = typeof options.fontWeight === 'number' ? options.fontWeight : (options.fontWeight === 'bold' ? 700 : 400);
+  const sz = measureTextElementSize(text || 'Texto', fontSize, fontWeight, fontFamily);
+  const w = options.width ?? sz.width;
+  const h = options.height ?? sz.height;
+
   return {
     color: options.color || CANVAS_DEFAULTS.TEXT_COLOR,
-    fontFamily: options.fontFamily || CANVAS_DEFAULTS.FONT_FAMILY,
-    fontSize: options.fontSize || CANVAS_DEFAULTS.FONT_SIZE,
-    fontWeight: options.fontWeight || 400,
-    height: options.height ?? 44,
+    fontFamily,
+    fontSize,
+    fontStyle: options.fontStyle,
+    fontWeight,
+    height: h,
     id: options.id || `text-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    opacity: options.opacity ?? CANVAS_DEFAULTS.OPACITY,
     text: text || 'Texto',
     type: 'text',
-    width: options.width ?? 320,
-    x: options.x ?? -160,
-    y: options.y ?? -22,
+    width: w,
+    x: options.x ?? -Math.round(w / 2),
+    y: options.y ?? -Math.round(h / 2),
+  };
+}
+
+export function createTextPresetElement(type: 'body' | 'heading' | 'subheading', options: {
+  color?: string;
+  fontFamily?: string;
+  id?: string;
+  x?: number;
+  y?: number;
+} = {}): BoardTextElement {
+  const preset = TEXT_PRESETS[type] || TEXT_PRESETS.body;
+  const fontFamily = options.fontFamily || preset.fontFamily;
+  const sz = measureTextElementSize(preset.text, preset.fontSize, preset.fontWeight, fontFamily);
+  const w = Math.max(preset.width, sz.width);
+  const h = Math.max(preset.height, sz.height);
+
+  return {
+    color: options.color || CANVAS_DEFAULTS.TEXT_COLOR,
+    fontFamily,
+    fontSize: preset.fontSize,
+    fontWeight: preset.fontWeight,
+    height: h,
+    id: options.id || `text-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    text: preset.text,
+    type: 'text',
+    width: w,
+    x: options.x ?? -Math.round(w / 2),
+    y: options.y ?? -Math.round(h / 2),
   };
 }
 
 export function createStickyElement(text = 'Nota', options: {
   color?: string;
+  fontFamily?: string;
   fontSize?: number;
   height?: number;
   id?: string;
+  opacity?: number;
   textColor?: string;
   width?: number;
   x?: number;
   y?: number;
 } = {}): BoardStickyElement {
+  const size = options.width ?? (options.height ?? 160);
   return {
     color: options.color || CANVAS_DEFAULTS.STICKY_COLOR,
+    fontFamily: options.fontFamily || CANVAS_DEFAULTS.FONT_FAMILY,
     fontSize: options.fontSize || CANVAS_DEFAULTS.STICKY_FONT_SIZE,
-    height: options.height ?? 160,
+    height: options.height ?? size,
     id: options.id || `sticky-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    opacity: options.opacity ?? CANVAS_DEFAULTS.OPACITY,
     text,
     textColor: options.textColor || CANVAS_DEFAULTS.STICKY_TEXT_COLOR,
     type: 'sticky',
-    width: options.width ?? 160,
-    x: options.x ?? -80,
-    y: options.y ?? -80,
+    width: options.width ?? size,
+    x: options.x ?? -Math.round(size / 2),
+    y: options.y ?? -Math.round(size / 2),
   };
 }
 
@@ -86,29 +184,306 @@ export function create3DElement(shape3dType: Shape3DType, options: {
   fillColor?: string;
   height?: number;
   id?: string;
+  opacity?: number;
+  rotation?: number;
   rotationX?: number;
   rotationY?: number;
   rotationZ?: number;
+  shading?: boolean;
   strokeColor?: string;
+  strokeStyle?: StrokeStyle;
   strokeWidth?: number;
   width?: number;
   x?: number;
   y?: number;
 } = {}): Board3DElement {
+  const shapeCfg = BOARD_3D_SHAPES.find((s) => s.id === shape3dType);
+  const w = options.width ?? (shapeCfg?.defaultWidth || 140);
+  const h = options.height ?? (shapeCfg?.defaultHeight || 140);
+
   return {
     fillColor: options.fillColor || CANVAS_DEFAULTS.FILL_COLOR,
-    height: options.height ?? 140,
+    height: h,
     id: options.id || `3d-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-    rotationX: options.rotationX ?? -20,
-    rotationY: options.rotationY ?? 30,
-    rotationZ: options.rotationZ ?? 0,
+    opacity: options.opacity ?? CANVAS_DEFAULTS.OPACITY,
+    rotation: options.rotation,
+    rotationX: options.rotationX ?? (shapeCfg?.initialRotX ?? -0.35),
+    rotationY: options.rotationY ?? (shapeCfg?.initialRotY ?? 0.5),
+    rotationZ: options.rotationZ ?? (shapeCfg?.initialRotZ ?? 0),
+    shading: options.shading,
     shape3dType,
     strokeColor: options.strokeColor || CANVAS_DEFAULTS.STROKE_COLOR,
+    strokeStyle: options.strokeStyle,
     strokeWidth: options.strokeWidth ?? CANVAS_DEFAULTS.STROKE_WIDTH,
     type: 'shape-3d',
-    width: options.width ?? 140,
-    x: options.x ?? -70,
-    y: options.y ?? -70,
+    width: w,
+    x: options.x ?? -Math.round(w / 2),
+    y: options.y ?? -Math.round(h / 2),
+  };
+}
+
+export function createTableElement(rows = 3, cols = 3, options: {
+  borderColor?: string;
+  borderWidth?: number;
+  cellHeight?: number;
+  cellWidth?: number;
+  data?: BoardTableCell[][];
+  fontSize?: number;
+  headerBackgroundColor?: string;
+  height?: number;
+  id?: string;
+  opacity?: number;
+  width?: number;
+  x?: number;
+  y?: number;
+} = {}): BoardTableElement {
+  const cellW = options.cellWidth || 120;
+  const cellH = options.cellHeight || 44;
+  const width = options.width ?? cols * cellW;
+  const height = options.height ?? rows * cellH;
+  const colWidths = Array(cols).fill(Math.round(width / cols));
+  const rowHeights = Array(rows).fill(Math.round(height / rows));
+
+  let cells = options.data;
+  if (!cells || cells.length === 0) {
+    cells = [];
+    for (let r = 0; r < rows; r++) {
+      const rowCells: BoardTableCell[] = [];
+      for (let c = 0; c < cols; c++) {
+        rowCells.push({
+          backgroundColor: r === 0 ? (options.headerBackgroundColor || '#f8fafc') : '#ffffff',
+          text: r === 0 ? `Encabezado ${c + 1}` : `Celda ${r},${c + 1}`,
+          textColor: '#1e293b',
+        });
+      }
+      cells.push(rowCells);
+    }
+  }
+
+  return {
+    borderColor: options.borderColor || '#cbd5e1',
+    borderWidth: options.borderWidth ?? 1,
+    colWidths,
+    cols,
+    data: cells,
+    fontSize: options.fontSize || 14,
+    headerBackgroundColor: options.headerBackgroundColor || '#f8fafc',
+    height,
+    id: options.id || `table-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    opacity: options.opacity ?? CANVAS_DEFAULTS.OPACITY,
+    rowHeights,
+    rows,
+    type: 'table',
+    width,
+    x: options.x ?? -Math.round(width / 2),
+    y: options.y ?? -Math.round(height / 2),
+  };
+}
+
+export function createChartElement(chartType: ChartType = 'bar-categorical', options: {
+  barRadius?: number;
+  colorBy?: 'category' | 'series';
+  data?: ChartDataRow[];
+  dataLabelPosition?: 'auto' | 'inside' | 'outside';
+  decimals?: number;
+  headers?: string[];
+  height?: number;
+  id?: string;
+  opacity?: number;
+  palette?: string[];
+  series?: ChartSeriesConfig[];
+  showDataLabels?: boolean;
+  showGridLines?: boolean;
+  showLegend?: boolean;
+  showXAxisLabels?: boolean;
+  showYAxisLabels?: boolean;
+  width?: number;
+  x?: number;
+  y?: number;
+} = {}): BoardChartElement {
+  const defaultPalette = options.palette || [...DEFAULT_CHART_PALETTES.spriteboard.colors];
+  const isGrouped = chartType === 'bar-grouped-vertical' || chartType === 'bar-grouped-horizontal';
+  const isStacked =
+    chartType === 'bar-stacked-vertical' ||
+    chartType === 'bar-stacked-horizontal' ||
+    chartType === 'bar-stacked-100-vertical';
+
+  const defaultSeries = isGrouped || isStacked
+    ? [
+        { color: defaultPalette[0], name: 'Ventas' },
+        { color: defaultPalette[1], name: 'Gastos' },
+      ]
+    : [{ color: defaultPalette[0], name: 'Ventas' }];
+
+  const defaultHeaders = isGrouped || isStacked
+    ? ['Temporada', 'Ventas', 'Gastos']
+    : ['Temporada', 'Ventas'];
+
+  const defaultData: ChartDataRow[] = isGrouped || isStacked
+    ? [
+        { color: defaultPalette[0], id: 'row-1', label: 'Invierno', values: [60, 25] },
+        { color: defaultPalette[1], id: 'row-2', label: 'Primavera', values: [45, 18] },
+        { color: defaultPalette[2], id: 'row-3', label: 'Verano', values: [78, 35] },
+        { color: defaultPalette[3], id: 'row-4', label: 'Otoño', values: [30, 15] },
+      ]
+    : [
+        { color: defaultPalette[0], id: 'row-1', label: 'Invierno', values: [60] },
+        { color: defaultPalette[1], id: 'row-2', label: 'Primavera', values: [45] },
+        { color: defaultPalette[2], id: 'row-3', label: 'Verano', values: [78] },
+        { color: defaultPalette[3], id: 'row-4', label: 'Otoño', values: [30] },
+      ];
+
+  const defaultColorBy =
+    chartType === 'bar-categorical' ||
+    chartType === 'bar-categorical-horizontal' ||
+    chartType === 'pie' ||
+    chartType === 'donut'
+      ? 'category'
+      : 'series';
+
+  const width = options.width ?? 460;
+  const height = options.height ?? 320;
+
+  return {
+    barRadius: options.barRadius ?? 8,
+    chartType,
+    colorBy: options.colorBy || defaultColorBy,
+    data: options.data || defaultData,
+    dataLabelPosition: options.dataLabelPosition || 'auto',
+    decimals: options.decimals ?? 0,
+    headers: options.headers || defaultHeaders,
+    height,
+    id: options.id || `chart-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    opacity: options.opacity ?? CANVAS_DEFAULTS.OPACITY,
+    palette: defaultPalette,
+    series: options.series || defaultSeries,
+    showDataLabels: options.showDataLabels ?? true,
+    showGridLines: options.showGridLines ?? true,
+    showLegend: options.showLegend ?? (isGrouped || isStacked || chartType === 'pie' || chartType === 'donut'),
+    showXAxisLabels: options.showXAxisLabels ?? true,
+    showYAxisLabels: options.showYAxisLabels ?? true,
+    type: 'chart',
+    width,
+    x: options.x ?? -Math.round(width / 2),
+    y: options.y ?? -Math.round(height / 2),
+  };
+}
+
+export function createMockupElement(tpl: MockupTemplate, options: {
+  customUserImage?: string;
+  fitMode?: MockupFitMode;
+  height?: number;
+  id?: string;
+  opacity?: number;
+  width?: number;
+  x?: number;
+  y?: number;
+} = {}): BoardMockupElement {
+  const width = options.width ?? tpl.width;
+  const height = options.height ?? tpl.height;
+
+  return {
+    customUserImage: options.customUserImage,
+    fitMode: options.fitMode || tpl.fitModeDefault || 'fill',
+    height,
+    id: options.id || `mockup-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    mockupId: tpl.id,
+    opacity: options.opacity ?? CANVAS_DEFAULTS.OPACITY,
+    type: 'mockup',
+    width,
+    x: options.x ?? -Math.round(width / 2),
+    y: options.y ?? -Math.round(height / 2),
+  };
+}
+
+export function createSectionElement(title = 'Sección', options: {
+  backgroundColor?: string;
+  borderColor?: string;
+  borderWidth?: number;
+  height?: number;
+  id?: string;
+  opacity?: number;
+  titleColor?: string;
+  width?: number;
+  x?: number;
+  y?: number;
+} = {}): BoardSectionElement {
+  const width = options.width ?? 480;
+  const height = options.height ?? 360;
+
+  return {
+    backgroundColor: options.backgroundColor || '#ffffff',
+    borderColor: options.borderColor || '#cbd5e1',
+    borderWidth: options.borderWidth ?? 2,
+    height,
+    id: options.id || `section-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    opacity: options.opacity ?? CANVAS_DEFAULTS.OPACITY,
+    title: title || 'Sección',
+    titleColor: options.titleColor || '#2563eb',
+    type: 'section',
+    width,
+    x: options.x ?? -Math.round(width / 2),
+    y: options.y ?? -Math.round(height / 2),
+  };
+}
+
+export function createImageElement(url: string, options: {
+  alt?: string;
+  aspectRatio?: number;
+  height?: number;
+  id?: string;
+  opacity?: number;
+  width?: number;
+  x?: number;
+  y?: number;
+} = {}): BoardImageElement {
+  const width = options.width ?? 320;
+  const height = options.height ?? 220;
+
+  return {
+    alt: options.alt || 'Imagen',
+    aspectRatio: options.aspectRatio ?? (width / (height || 1)),
+    height,
+    id: options.id || `img-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    opacity: options.opacity ?? CANVAS_DEFAULTS.OPACITY,
+    type: 'image',
+    url,
+    width,
+    x: options.x ?? -Math.round(width / 2),
+    y: options.y ?? -Math.round(height / 2),
+  };
+}
+
+export function createConnectorElement(startPoint: BoardPoint, endPoint: BoardPoint, options: {
+  arrowEnd?: boolean | MarkerType;
+  arrowStart?: boolean | MarkerType;
+  color?: string;
+  fontSize?: number;
+  fromId?: string;
+  id?: string;
+  label?: string;
+  opacity?: number;
+  strokeStyle?: StrokeStyle;
+  strokeWidth?: number;
+  style?: ConnectorStyle;
+  toId?: string;
+} = {}): BoardConnectorElement {
+  return {
+    arrowEnd: options.arrowEnd ?? true,
+    arrowStart: options.arrowStart ?? false,
+    color: options.color || CANVAS_DEFAULTS.LINE_STROKE_COLOR,
+    endPoint,
+    fontSize: options.fontSize,
+    fromId: options.fromId,
+    id: options.id || `conn-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    label: options.label,
+    opacity: options.opacity ?? CANVAS_DEFAULTS.OPACITY,
+    startPoint,
+    strokeStyle: options.strokeStyle || 'solid',
+    strokeWidth: options.strokeWidth ?? 2,
+    style: options.style || 'curved',
+    toId: options.toId,
+    type: 'connector',
   };
 }
 

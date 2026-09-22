@@ -1,15 +1,16 @@
 import { draw3DElement, draw3DGroundGrid, draw3DRotationGizmo, hitTest3DRotationGizmo, onCustomModelLoaded, preloadCustom3DModels } from '../views/board/board-3d-renderer.js';
 import { drawChart } from '../views/board/board-chart-renderer.js';
-import { computeElementsBoundingBox, convertDiagramToBoardElements, create3DElement, createShapeElement, createStickyElement, createTextElement, distToSegment, findContainingSection, findElementsByMarqueeBox, getConnectorEndpoints, getElementBoundingBox, getNodeAnchorPoint, hitTestElement, hitTestResizeHandle, measureTextElementSize, moveElementByDelta, moveElementByDrag, resizeElementByHandle } from '../views/board/board-elements.manager.js';
+import { computeElementsBoundingBox, convertDiagramToBoardElements, create3DElement, createChartElement, createConnectorElement, createImageElement, createMockupElement, createSectionElement, createShapeElement, createStickyElement, createTableElement, createTextElement, createTextPresetElement, distToSegment, findContainingSection, findElementsByMarqueeBox, getConnectorEndpoints, getElementBoundingBox, getNodeAnchorPoint, hitTestElement, hitTestResizeHandle, measureTextElementSize, moveElementByDelta, moveElementByDrag, resizeElementByHandle, TEXT_PRESETS } from '../views/board/board-elements.manager.js';
 import { exportJson, exportPng, exportSvg, generateThumbnail } from '../views/board/board-export.service.js';
 import { drawMockupElement } from '../views/board/board-mockup-renderer.js';
 import { parseOBJ } from '../views/board/board-obj-loader.js';
 import { applyElementAnimation, applyElementEffect, applyLineDash, drawAlignmentGuides, drawBackground, drawBoardCollaboratorCursors, drawCheckerboard, drawConnector, drawEndpointMarker, drawImage, drawMarqueeBox, drawMultiSelectionBounds, drawPixelGridLines, drawSection, drawSelectionBox, drawShape, drawSticky, drawStroke, drawTable, drawText, getCachedImage, getSvgPathBoundingBox, screenToWorld, worldToScreen, wrapText } from '../views/board/board-renderer.js';
 import { AlignmentGuide, calculateDragSnapping, calculateResizeSnapping, SnapResult } from '../views/board/board-snapping.manager.js';
-import { BackgroundType, Board3DElement, BoardAnimationType, BoardChartElement, BoardCollaboratorState, BoardConnectorElement, BoardEffectType, BoardElement, BoardElementAnimation, BoardElementEffect, BoardImageElement, BoardMockupElement, BoardPageItem, BoardPixelGridElement, BoardPoint, BoardProject, BoardSectionElement, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTableCell, BoardTableElement, BoardTextElement, BoardTool, CANVAS_DEFAULTS, ChartDataRow, ChartType, ConnectorStyle, DEFAULT_CHART_PALETTES, DEFAULT_CLASSIC_PALETTE, GAMEBOY_PALETTE, MarkerType, PICO8_PALETTE, PixelSubtool, ResizeHandle, Shape3DType, ShapeType, StrokeStyle } from '../views/board/board.types.js';
+import { BackgroundType, Board3DElement, BoardAnimationType, BoardChartElement, BoardCollaboratorState, BoardConnectorElement, BoardEffectType, BoardElement, BoardElementAnimation, BoardElementEffect, BoardImageElement, BoardMockupElement, BoardPageItem, BoardPixelGridElement, BoardPoint, BoardProject, BoardSectionElement, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTableCell, BoardTableElement, BoardTextElement, BoardTool, CANVAS_DEFAULTS, ChartDataRow, ChartSeriesConfig, ChartType, ConnectorStyle, DEFAULT_CHART_PALETTES, DEFAULT_CLASSIC_PALETTE, GAMEBOY_PALETTE, MarkerType, PICO8_PALETTE, PixelSubtool, ResizeHandle, Shape3DType, ShapeType, StrokeStyle } from '../views/board/board.types.js';
 
 export {
   CANVAS_DEFAULTS,
+  TEXT_PRESETS,
   applyElementAnimation,
   applyElementEffect,
   applyLineDash,
@@ -18,9 +19,16 @@ export {
   computeElementsBoundingBox,
   convertDiagramToBoardElements,
   create3DElement,
+  createChartElement,
+  createConnectorElement,
+  createImageElement,
+  createMockupElement,
+  createSectionElement,
   createShapeElement,
   createStickyElement,
+  createTableElement,
   createTextElement,
+  createTextPresetElement,
   distToSegment,
   draw3DElement,
   draw3DGroundGrid,
@@ -277,6 +285,50 @@ export class CanvasEngine2D {
       if ((el as any).y < -halfH) (el as any).y = -halfH;
       if ((el as any).y + elH > halfH) (el as any).y = halfH - elH;
     }
+  }
+
+  public static createShapeElement(shapeType: ShapeType, options?: Parameters<typeof createShapeElement>[1]): BoardShapeElement {
+    return createShapeElement(shapeType, options);
+  }
+
+  public static create3DElement(shape3dType: Shape3DType, options?: Parameters<typeof create3DElement>[1]): Board3DElement {
+    return create3DElement(shape3dType, options);
+  }
+
+  public static createStickyElement(text?: string, options?: Parameters<typeof createStickyElement>[1]): BoardStickyElement {
+    return createStickyElement(text, options);
+  }
+
+  public static createTextElement(text: string, options?: Parameters<typeof createTextElement>[1]): BoardTextElement {
+    return createTextElement(text, options);
+  }
+
+  public static createTextPresetElement(type: 'body' | 'heading' | 'subheading', options?: Parameters<typeof createTextPresetElement>[1]): BoardTextElement {
+    return createTextPresetElement(type, options);
+  }
+
+  public static createTableElement(rows?: number, cols?: number, options?: Parameters<typeof createTableElement>[2]): BoardTableElement {
+    return createTableElement(rows, cols, options);
+  }
+
+  public static createChartElement(chartType?: ChartType, options?: Parameters<typeof createChartElement>[1]): BoardChartElement {
+    return createChartElement(chartType, options);
+  }
+
+  public static createMockupElement(tpl: any, options?: Parameters<typeof createMockupElement>[1]): BoardMockupElement {
+    return createMockupElement(tpl, options);
+  }
+
+  public static createSectionElement(title?: string, options?: Parameters<typeof createSectionElement>[1]): BoardSectionElement {
+    return createSectionElement(title, options);
+  }
+
+  public static createImageElement(url: string, options?: Parameters<typeof createImageElement>[1]): BoardImageElement {
+    return createImageElement(url, options);
+  }
+
+  public static createConnectorElement(startPoint: BoardPoint, endPoint: BoardPoint, options?: Parameters<typeof createConnectorElement>[2]): BoardConnectorElement {
+    return createConnectorElement(startPoint, endPoint, options);
   }
 
   public screenToWorld(screenX: number, screenY: number, canvas: HTMLCanvasElement | null, camera: { x: number; y: number; zoom: number }): BoardPoint {

@@ -12,7 +12,7 @@ import { BOARD_SHAPES } from '../../config/board-shapes.config.js';
 import { getBoardTemplateElements } from '../../config/board-templates.data.js';
 import { getMockupTemplateById } from '../../config/mockups.config.js';
 import { DEFAULT_STICKY_COLOR, STICKY_NOTE_PRESETS } from '../../config/sticky-notes.config.js';
-import { AlignmentGuide, applyElementAnimation, applyElementEffect, BackgroundType, Board3DElement, BoardAnimationType, BoardChartElement, BoardCollaboratorState, BoardConnectorElement, BoardEffectType, BoardElement, BoardElementAnimation, BoardElementEffect, BoardImageElement, BoardMockupElement, BoardPageItem, BoardPixelGridElement, BoardPoint, BoardProject, BoardSectionElement, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTableCell, BoardTableElement, BoardTextElement, BoardTool, calculateDragSnapping, calculateResizeSnapping, CANVAS_DEFAULTS, CanvasEngine2D, ChartDataRow, ChartType, computeElementsBoundingBox, ConnectorStyle, create3DElement, createShapeElement, createStickyElement, createTextElement, DEFAULT_CHART_PALETTES, DEFAULT_CLASSIC_PALETTE, draw3DElement, draw3DGroundGrid, drawAlignmentGuides, drawBackground, drawBoardCollaboratorCursors, drawChart, drawCheckerboard, drawConnector, drawImage, drawMarqueeBox, drawMockupElement, drawMultiSelectionBounds, drawPixelGridLines, drawSection, drawSelectionBox, drawShape, drawSticky, drawStroke, drawTable, drawText, exportJson, exportPng, exportSvg, findContainingSection, findElementsByMarqueeBox, GAMEBOY_PALETTE, generateThumbnail, getConnectorEndpoints, getElementBoundingBox, hitTest3DRotationGizmo, hitTestElement, hitTestResizeHandle, MarkerType, measureTextElementSize, moveElementByDelta, moveElementByDrag, onCustomModelLoaded, PICO8_PALETTE, PixelSubtool, preloadCustom3DModels, ResizeHandle, resizeElementByHandle, screenToWorld, Shape3DType, ShapeType, StrokeStyle, worldToScreen } from '../../core/canvas-engine.js';
+import { AlignmentGuide, applyElementAnimation, applyElementEffect, BackgroundType, Board3DElement, BoardAnimationType, BoardChartElement, BoardCollaboratorState, BoardConnectorElement, BoardEffectType, BoardElement, BoardElementAnimation, BoardElementEffect, BoardImageElement, BoardMockupElement, BoardPageItem, BoardPixelGridElement, BoardPoint, BoardProject, BoardSectionElement, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTableCell, BoardTableElement, BoardTextElement, BoardTool, calculateDragSnapping, calculateResizeSnapping, CANVAS_DEFAULTS, CanvasEngine2D, ChartDataRow, ChartType, computeElementsBoundingBox, ConnectorStyle, create3DElement, createChartElement, createConnectorElement, createImageElement, createMockupElement, createSectionElement, createShapeElement, createStickyElement, createTableElement, createTextElement, createTextPresetElement, DEFAULT_CHART_PALETTES, DEFAULT_CLASSIC_PALETTE, draw3DElement, draw3DGroundGrid, drawAlignmentGuides, drawBackground, drawBoardCollaboratorCursors, drawChart, drawCheckerboard, drawConnector, drawImage, drawMarqueeBox, drawMockupElement, drawMultiSelectionBounds, drawPixelGridLines, drawSection, drawSelectionBox, drawShape, drawSticky, drawStroke, drawTable, drawText, exportJson, exportPng, exportSvg, findContainingSection, findElementsByMarqueeBox, GAMEBOY_PALETTE, generateThumbnail, getConnectorEndpoints, getElementBoundingBox, hitTest3DRotationGizmo, hitTestElement, hitTestResizeHandle, MarkerType, measureTextElementSize, moveElementByDelta, moveElementByDrag, onCustomModelLoaded, PICO8_PALETTE, PixelSubtool, preloadCustom3DModels, ResizeHandle, resizeElementByHandle, screenToWorld, Shape3DType, ShapeType, StrokeStyle, TEXT_PRESETS, worldToScreen } from '../../core/canvas-engine.js';
 import { currentUser, escapeHtml, getApi, postApi } from '../../services/api.service.js';
 import { getLocalCanvasByUuid, removeLocalCanvas, saveLocalCanvas } from '../../services/canvas-storage.service.js';
 import { renderIcons } from '../../services/icon.service.js';
@@ -3451,18 +3451,11 @@ export class BoardController {
       {
         action: () => {
           this.pushHistoryState();
-          const stickyEl: BoardStickyElement = {
+          const stickyEl = createStickyElement('Nota', {
             color: this.stickyDefaultColor,
-            fontSize: 16,
-            height: 160,
-            id: `sticky-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-            text: 'Nota',
-            textColor: '#1e293b',
-            type: 'sticky',
-            width: 160,
-            x: worldPos.x - 80,
-            y: worldPos.y - 80,
-          };
+            x: Math.round(worldPos.x - 80),
+            y: Math.round(worldPos.y - 80),
+          });
           this.elements.push(stickyEl);
           this.collaborationManager.broadcastAddElement(stickyEl);
           this.selectedElementId = stickyEl.id;
@@ -3832,18 +3825,13 @@ export class BoardController {
 
     if (this.currentTool === 'sticky') {
       this.pushHistoryState();
-      const stickyEl: BoardStickyElement = {
+      const stickyEl = createStickyElement('Doble clic para escribir...', {
         color: this.stickyDefaultColor,
-        fontSize: 16,
         height: 180,
-        id: `sticky-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-        text: 'Doble clic para escribir...',
-        textColor: '#1e293b',
-        type: 'sticky',
         width: 200,
         x: Math.round(worldPos.x - 100),
         y: Math.round(worldPos.y - 90),
-      };
+      });
       this.elements.push(stickyEl);
       this.collaborationManager.broadcastAddElement(stickyEl);
       this.selectedElementId = stickyEl.id;
@@ -3859,18 +3847,12 @@ export class BoardController {
       this.pushHistoryState();
       const initialText = 'Escribe aquí';
       const initialFontSize = 22;
-      const sz = measureTextElementSize(initialText, initialFontSize);
-      const textEl: BoardTextElement = {
+      const textEl = createTextElement(initialText, {
         color: this.currentColor,
         fontSize: initialFontSize,
-        height: sz.height,
-        id: `text-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-        text: initialText,
-        type: 'text',
-        width: sz.width,
         x: Math.round(worldPos.x),
         y: Math.round(worldPos.y),
-      };
+      });
       this.elements.push(textEl);
       this.collaborationManager.broadcastAddElement(textEl);
       this.selectedElementId = textEl.id;
@@ -5293,26 +5275,22 @@ export class BoardController {
     const screenH = this.canvasElement ? this.canvasElement.height / dpr : 600;
     const centerWorld = screenToWorld(screenW / 2, screenH / 2, this.canvasElement, this.camera);
 
-    const w = config.width || (config.shapeType === 'pill' ? 140 : config.shapeType === 'diamond' ? 130 : config.shapeType === 'cylinder' ? 120 : 140);
-    const h = config.height || (config.shapeType === 'pill' ? 48 : config.shapeType === 'diamond' ? 80 : config.shapeType === 'cylinder' ? 75 : 60);
-
-    const shapeEl: BoardShapeElement = {
+    const isNativeBasic = ['circle', 'cylinder', 'diamond', 'line', 'parallelogram', 'pill', 'rect', 'round-rect', 'star', 'triangle'].includes(config.shapeType);
+    const shapeEl = createShapeElement(config.shapeType || 'rect', {
       fillColor: config.fillColor || '#000000',
       fontSize: 14,
-      height: h,
-      id: `shape_${crypto.randomUUID().slice(0, 8)}`,
+      fontWeight: 600,
+      height: config.height,
       isMindMapNode: config.isMindMapNode || false,
-      shapeType: config.shapeType,
       strokeColor: config.strokeColor || 'transparent',
       strokeWidth: config.strokeWidth !== undefined ? config.strokeWidth : (config.strokeColor && config.strokeColor !== 'transparent' ? 2 : 0),
-      svgPath: config.svgPath,
+      svgPath: isNativeBasic ? undefined : config.svgPath,
       text: config.text || '',
       textColor: config.textColor || '#ffffff',
-      type: 'shape',
-      width: w,
-      x: Math.round(centerWorld.x - w / 2),
-      y: Math.round(centerWorld.y - h / 2),
-    };
+      width: config.width,
+      x: Math.round(centerWorld.x - ((config.width || 140) / 2)),
+      y: Math.round(centerWorld.y - ((config.height || 60) / 2)),
+    });
 
     this.elements.push(shapeEl);
     this.collaborationManager.broadcastAddElement(shapeEl);
@@ -5330,15 +5308,10 @@ export class BoardController {
     const screenH = this.canvasElement ? this.canvasElement.height / dpr : 600;
     const centerWorld = screenToWorld(screenW / 2, screenH / 2, this.canvasElement, this.camera);
 
-    const size = 150;
-    const stickyEl = createStickyElement(text || 'Nueva nota', {
+    const stickyEl = createStickyElement(text || 'Nota', {
       color: color || CANVAS_DEFAULTS.STICKY_COLOR,
-      fontSize: 15,
-      height: size,
-      textColor: CANVAS_DEFAULTS.STICKY_TEXT_COLOR,
-      width: size,
-      x: Math.round(centerWorld.x - size / 2),
-      y: Math.round(centerWorld.y - size / 2),
+      x: Math.round(centerWorld.x - 80),
+      y: Math.round(centerWorld.y - 80),
     });
 
     this.elements.push(stickyEl);
@@ -5357,21 +5330,10 @@ export class BoardController {
     const screenH = this.canvasElement ? this.canvasElement.height / dpr : 600;
     const centerWorld = screenToWorld(screenW / 2, screenH / 2, this.canvasElement, this.camera);
 
-    const config = {
-      body: { fontSize: 16, text: 'Agregar algo de texto' },
-      heading: { fontSize: 36, text: 'Agregar un título' },
-      subheading: { fontSize: 24, text: 'Agregar un subtítulo' },
-    }[type];
-
-    const sz = measureTextElementSize(config.text, config.fontSize);
-
-    const textEl = createTextElement(config.text, {
+    const textEl = createTextPresetElement(type, {
       color: this.currentColor || CANVAS_DEFAULTS.TEXT_COLOR,
-      fontSize: config.fontSize,
-      height: sz.height,
-      width: sz.width,
-      x: Math.round(centerWorld.x - sz.width / 2),
-      y: Math.round(centerWorld.y - sz.height / 2),
+      x: Math.round(centerWorld.x),
+      y: Math.round(centerWorld.y),
     });
 
     this.elements.push(textEl);
@@ -6944,19 +6906,12 @@ export class BoardController {
     const screenH = this.canvasElement ? this.canvasElement.height / dpr : 600;
     const centerWorld = screenToWorld(screenW / 2, screenH / 2, this.canvasElement, this.camera);
 
-    const sectionEl: BoardSectionElement = {
-      backgroundColor: '#ffffff',
-      borderColor: '#cbd5e1',
-      borderWidth: 2,
+    const sectionEl = createSectionElement(title, {
       height,
-      id: `section-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      title: title || 'Sección',
-      titleColor: '#2563eb',
-      type: 'section',
       width,
       x: Math.round(centerWorld.x - width / 2),
       y: Math.round(centerWorld.y - height / 2),
-    };
+    });
 
     this.elements.unshift(sectionEl);
     this.collaborationManager.broadcastAddElement(sectionEl);
@@ -6976,37 +6931,12 @@ export class BoardController {
     const screenH = this.canvasElement ? this.canvasElement.height / dpr : 600;
     const centerWorld = screenToWorld(screenW / 2, screenH / 2, this.canvasElement, this.camera);
 
-    const colWidths = Array(cols).fill(Math.round(width / cols));
-    const rowHeights = Array(rows).fill(Math.round(height / rows));
-
-    const cells: BoardTableCell[][] = [];
-    for (let r = 0; r < rows; r++) {
-      const rowCells: BoardTableCell[] = [];
-      for (let c = 0; c < cols; c++) {
-        rowCells.push({
-          backgroundColor: r === 0 ? '#f8fafc' : '#ffffff',
-          text: r === 0 ? `Encabezado ${c + 1}` : `Celda ${r},${c + 1}`,
-          textColor: '#1e293b',
-        });
-      }
-      cells.push(rowCells);
-    }
-
-    const tableEl: BoardTableElement = {
-      borderColor: '#cbd5e1',
-      borderWidth: 1,
-      colWidths,
-      cols,
-      data: cells,
+    const tableEl = createTableElement(rows, cols, {
       height,
-      id: `table-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      rowHeights,
-      rows,
-      type: 'table',
       width,
       x: Math.round(centerWorld.x - width / 2),
       y: Math.round(centerWorld.y - height / 2),
-    };
+    });
 
     this.elements.push(tableEl);
     this.collaborationManager.broadcastAddElement(tableEl);
@@ -7389,72 +7319,17 @@ export class BoardController {
     const screenW = this.canvasElement ? this.canvasElement.width / dpr : 800;
     const screenH = this.canvasElement ? this.canvasElement.height / dpr : 600;
     const center = screenToWorld(screenW / 2, screenH / 2, this.canvasElement, this.camera);
-
-    const defaultPalette = [...DEFAULT_CHART_PALETTES.spriteboard.colors];
     const chartW = 460;
     const chartH = 320;
+    const posX = Math.round((worldPos ? worldPos.x : center.x) - chartW / 2);
+    const posY = Math.round((worldPos ? worldPos.y : center.y) - chartH / 2);
 
-    const isGrouped = chartType === 'bar-grouped-vertical' || chartType === 'bar-grouped-horizontal';
-    const isStacked =
-      chartType === 'bar-stacked-vertical' ||
-      chartType === 'bar-stacked-horizontal' ||
-      chartType === 'bar-stacked-100-vertical';
-
-    const series = isGrouped || isStacked
-      ? [
-          { color: defaultPalette[0], name: 'Ventas' },
-          { color: defaultPalette[1], name: 'Gastos' },
-        ]
-      : [{ color: defaultPalette[0], name: 'Ventas' }];
-
-    const headers = isGrouped || isStacked
-      ? ['Temporada', 'Ventas', 'Gastos']
-      : ['Temporada', 'Ventas'];
-
-    const data: ChartDataRow[] = isGrouped || isStacked
-      ? [
-          { color: defaultPalette[0], id: 'row-1', label: 'Invierno', values: [60, 25] },
-          { color: defaultPalette[1], id: 'row-2', label: 'Primavera', values: [45, 18] },
-          { color: defaultPalette[2], id: 'row-3', label: 'Verano', values: [78, 35] },
-          { color: defaultPalette[3], id: 'row-4', label: 'Otoño', values: [30, 15] },
-        ]
-      : [
-          { color: defaultPalette[0], id: 'row-1', label: 'Invierno', values: [60] },
-          { color: defaultPalette[1], id: 'row-2', label: 'Primavera', values: [45] },
-          { color: defaultPalette[2], id: 'row-3', label: 'Verano', values: [78] },
-          { color: defaultPalette[3], id: 'row-4', label: 'Otoño', values: [30] },
-        ];
-
-    const chartEl: BoardChartElement = {
-      barRadius: 8,
-      chartType,
-      colorBy:
-        chartType === 'bar-categorical' ||
-        chartType === 'bar-categorical-horizontal' ||
-        chartType === 'pie' ||
-        chartType === 'donut'
-          ? 'category'
-          : 'series',
-      data,
-      dataLabelPosition: 'auto',
-      decimals: 0,
-      headers,
+    const chartEl = createChartElement(chartType, {
       height: chartH,
-      id: `chart-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      numberAbbreviation: 'none',
-      numberFormatStyle: 'normal',
-      palette: defaultPalette,
-      series,
-      showDataLabels: true,
-      showGridLines: true,
-      showLegend: false,
-      showXAxisLabels: true,
-      showYAxisLabels: true,
-      type: 'chart',
       width: chartW,
-      x: Math.round((worldPos ? worldPos.x : center.x) - chartW / 2),
-      y: Math.round((worldPos ? worldPos.y : center.y) - chartH / 2),
-    };
+      x: posX,
+      y: posY,
+    });
 
     this.elements.push(chartEl);
     this.collaborationManager.broadcastAddElement(chartEl);
@@ -7501,17 +7376,13 @@ export class BoardController {
     const screenW = this.canvasElement ? this.canvasElement.width / dpr : 800;
     const screenH = this.canvasElement ? this.canvasElement.height / dpr : 600;
     const center = screenToWorld(screenW / 2, screenH / 2, this.canvasElement, this.camera);
+    const posX = Math.round((worldPos ? worldPos.x : center.x) - tpl.width / 2);
+    const posY = Math.round((worldPos ? worldPos.y : center.y) - tpl.height / 2);
 
-    const mockupEl: BoardMockupElement = {
-      fitMode: tpl.fitModeDefault || 'fill',
-      height: tpl.height,
-      id: `mockup-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      mockupId: tpl.id,
-      type: 'mockup',
-      width: tpl.width,
-      x: Math.round((worldPos ? worldPos.x : center.x) - tpl.width / 2),
-      y: Math.round((worldPos ? worldPos.y : center.y) - tpl.height / 2),
-    };
+    const mockupEl = createMockupElement(tpl, {
+      x: posX,
+      y: posY,
+    });
 
     this.elements.push(mockupEl);
     this.collaborationManager.broadcastAddElement(mockupEl);

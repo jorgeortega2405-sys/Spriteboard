@@ -5,7 +5,7 @@ import { CanvasShareDropdownController, setupCanvasShareDropdown } from '../../c
 import { closeContextMenu, ContextMenuItem, openContextMenu } from '../../components/context-menu.component.js';
 import { openModal } from '../../components/modal.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
-import { BoardProject } from '../../core/canvas-engine.js';
+import { BoardProject, TEXT_PRESETS } from '../../core/canvas-engine.js';
 import { currentUser, escapeHtml, getApi, postApi } from '../../services/api.service.js';
 import { getLocalCanvasByUuid, saveLocalCanvas } from '../../services/canvas-storage.service.js';
 import { renderIcons } from '../../services/icon.service.js';
@@ -1456,9 +1456,9 @@ export class DocController implements ViewController {
 
   public insertTextPreset(type: 'heading' | 'subheading' | 'body'): void {
     const html = {
-      body: '<p>Agregar algo de texto</p>',
-      heading: '<h1>Agregar un título</h1>',
-      subheading: '<h3>Agregar un subtítulo</h3>',
+      body: `<p>${TEXT_PRESETS.body.text}</p>`,
+      heading: `<h1>${TEXT_PRESETS.heading.text}</h1>`,
+      subheading: `<h3>${TEXT_PRESETS.subheading.text}</h3>`,
     }[type];
     this.insertAiGeneratedHtml(html);
     showToast(type === 'heading' ? 'Título añadido' : type === 'subheading' ? 'Subtítulo añadido' : 'Texto añadido', 'success');
