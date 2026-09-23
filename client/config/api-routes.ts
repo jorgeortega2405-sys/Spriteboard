@@ -35,6 +35,10 @@ export const API_ROUTES = {
     byId: (uuid: string) => `/api/folders/${encodeURIComponent(uuid)}`,
     canvases: (uuid: string) => `/api/folders/${encodeURIComponent(uuid)}/canvases`,
   },
+  designerApplications: {
+    apply: '/api/designer-applications',
+    myStatus: '/api/designer-applications/my-status',
+  },
   favorites: {
     base: '/api/favorites',
     byType: (type: string) => `/api/favorites?type=${encodeURIComponent(type)}`,

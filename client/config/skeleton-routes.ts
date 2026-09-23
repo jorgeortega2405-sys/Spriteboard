@@ -8,6 +8,8 @@ export const SKELETON_ROUTES: Record<string, string> = {
   '/': 'cards-layout',
   '/teams': 'grouped-layout',
   '/templates': 'templates-layout',
+  '/apply-designer': 'grouped-layout',
+  '/designer/apply': 'grouped-layout',
   '/search': 'search-layout',
   '/shared': 'cards-layout',
   '/trash': 'trash-layout',

@@ -133,6 +133,13 @@ export const API_ROUTES = {
     sanctions: (id: number | string) => `/api/users/${id}/sanctions`,
     username: (id: number | string) => `/api/users/${id}/username`,
   },
+  designerApplications: {
+    approve: (id: number | string) => `/api/designer-applications/${id}/approve`,
+    base: '/api/designer-applications',
+    byId: (id: number | string) => `/api/designer-applications/${id}`,
+    metrics: '/api/designer-applications/metrics',
+    reject: (id: number | string) => `/api/designer-applications/${id}/reject`,
+  },
   templates: {
     approve: (id: number | string) => `/api/templates/${id}/approve`,
     base: '/api/templates',

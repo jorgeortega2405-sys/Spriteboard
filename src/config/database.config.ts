@@ -1011,7 +1011,32 @@ export async function runMigrations(): Promise<void> {
       logger.db.info('Columna rejection_reason añadida a db_canvas.templates.');
     }
 
-    logger.db.info('Tablas, columnas e índices de identidad, 2FA, suscripciones, compras, GeoIP, db_canvas, templates, equipos, vistas, feedback IA, snapshots, notificaciones y soporte técnico verificadas exitosamente.');
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS designer_applications (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        uuid VARCHAR(36) NOT NULL UNIQUE,
+        user_id INT NOT NULL,
+        full_name VARCHAR(150) NOT NULL,
+        country VARCHAR(100) NOT NULL,
+        specialties JSON NULL,
+        bio TEXT NULL,
+        portfolio_urls JSON NULL,
+        files JSON NULL,
+        status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
+        rejection_reason TEXT NULL,
+        reviewed_by INT NULL,
+        reviewed_at TIMESTAMP NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_designer_app_user (user_id),
+        INDEX idx_designer_app_status (status),
+        INDEX idx_designer_app_created (created_at),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    logger.db.info('Tablas, columnas e índices de identidad, 2FA, suscripciones, compras, GeoIP, db_canvas, templates, equipos, vistas, feedback IA, snapshots, notificaciones, soporte técnico y solicitudes de diseñador verificadas exitosamente.');
   } catch (err) {
     logger.db.warn('Advertencia en migración de base de datos', err);
   } finally {

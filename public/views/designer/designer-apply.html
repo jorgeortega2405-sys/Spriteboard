@@ -1,0 +1,430 @@
+<div class="layout-content" data-ref="designer-apply-view">
+  <div class="component-wrapper component-wrapper--full view-wrapper" data-ref="apply-wrapper">
+    <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="apply-scrollable">
+      <div class="view-body" data-ref="apply-container">
+        
+        <div class="view-backdrop" data-ref="apply-gradient-backdrop"></div>
+
+        <div class="view-header" data-ref="apply-header" style="max-width: 900px; margin: 0 auto; width: 100%; padding: 16px 20px 0; display: flex; align-items: center; justify-content: space-between;">
+          <div class="view-header__left" data-ref="apply-header-left">
+            <button type="button" class="component-button component-button--h36 component-button--outline view-header__btn" data-ref="btn-back-to-templates">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
+              <span>Volver a Plantillas</span>
+            </button>
+          </div>
+          <div class="view-header__right" data-ref="apply-header-right">
+            <div class="designer-badge-tag" data-ref="apply-badge" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 20px; background: rgba(99, 102, 241, 0.12); color: #6366f1; font-size: 12px; font-weight: 700;">
+              <svg class="component-icon" style="font-size: 16px;" aria-hidden="true"><use href="/icons.svg#palette"></use></svg>
+              <span>Programa de Creadores Spriteboard</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="designer-apply-container" data-ref="designer-apply-container">
+
+          <div class="designer-status-card" data-ref="designer-status-card" style="display: none; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 20px; padding: 32px; margin-bottom: 28px; box-shadow: var(--shadow-sm);">
+            <div style="display: flex; align-items: flex-start; gap: 18px;">
+              <div class="status-icon-box" data-ref="status-icon-box" style="width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: rgba(245, 158, 11, 0.12); color: #f59e0b;">
+                <svg class="component-icon" data-ref="status-icon" style="font-size: 28px;" aria-hidden="true"><use href="/icons.svg#schedule"></use></svg>
+              </div>
+              <div style="flex: 1;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+                  <h3 class="status-title" data-ref="status-title" style="margin: 0; font-size: 20px; font-weight: 800;">Estado de tu Solicitud</h3>
+                  <span class="component-badge" data-ref="status-pill">Pendiente</span>
+                </div>
+                <p class="status-message" data-ref="status-message" style="font-size: 14px; color: var(--text-secondary); line-height: 1.5; margin: 0 0 20px;"></p>
+                
+                <div class="status-details-summary" data-ref="status-details-summary" style="background: var(--bg-hover, rgba(125,125,125,0.06)); border-radius: 12px; padding: 16px 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; font-size: 13px; margin-bottom: 20px;">
+                  <div>
+                    <span style="color: var(--text-secondary); display: block; margin-bottom: 2px;">Nombre postulado:</span>
+                    <strong data-ref="status-summary-name">—</strong>
+                  </div>
+                  <div>
+                    <span style="color: var(--text-secondary); display: block; margin-bottom: 2px;">País:</span>
+                    <strong data-ref="status-summary-country">—</strong>
+                  </div>
+                  <div>
+                    <span style="color: var(--text-secondary); display: block; margin-bottom: 2px;">Fecha de envío:</span>
+                    <strong data-ref="status-summary-date">—</strong>
+                  </div>
+                  <div>
+                    <span style="color: var(--text-secondary); display: block; margin-bottom: 2px;">Muestras adjuntas:</span>
+                    <strong data-ref="status-summary-files">—</strong>
+                  </div>
+                </div>
+
+                <div class="rejection-feedback" data-ref="rejection-feedback-box" style="display: none; background: rgba(239, 68, 68, 0.08); border-left: 3px solid #ef4444; border-radius: 6px; padding: 14px 16px; margin-bottom: 20px; font-size: 13px;">
+                  <strong style="color: #ef4444; display: block; margin-bottom: 4px;">Motivo indicado por moderación:</strong>
+                  <span data-ref="rejection-reason-text" style="color: var(--text-primary);"></span>
+                </div>
+
+                <div class="status-actions" data-ref="status-actions" style="display: flex; gap: 12px; flex-wrap: wrap;">
+                  <button type="button" class="component-button component-button--h44 component-button--black" data-ref="btn-reapply" style="display: none;">
+                    <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#refresh"></use></svg>
+                    <span>Enviar una nueva postulación</span>
+                  </button>
+                  <button type="button" class="component-button component-button--h44 component-button--outline" data-ref="btn-status-go-templates">
+                    <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
+                    <span>Explorar galería de plantillas</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="designer-wizard-card" data-ref="designer-wizard-card">
+            
+            <div class="designer-wizard__progress-bar" data-ref="wizard-progress-bar">
+              <div class="designer-wizard__progress-fill" data-ref="wizard-progress-fill" style="width: 25%;"></div>
+            </div>
+
+            <div class="designer-wizard__top" data-ref="wizard-top">
+              <button type="button" class="component-button component-button--h32 component-button--bordered" data-ref="btn-step-back" style="visibility: hidden;">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
+                <span>Atrás</span>
+              </button>
+              <span class="designer-wizard__step-indicator" data-ref="wizard-step-indicator">Paso 1 de 4</span>
+            </div>
+
+            <div class="designer-wizard__content" data-ref="wizard-content">
+
+              <div class="designer-step is-active" data-ref="step-1">
+                <h2 class="designer-step__title">
+                  ¡Hola! Para empezar, dinos <span class="designer-step__title-accent">qué opción te describe mejor</span>
+                </h2>
+                <p class="designer-step__desc">
+                  Recibimos a creadores de todas las categorías, pero enfocamos la búsqueda y selección en lo que más necesite nuestra comunidad creativa.
+                </p>
+
+                <div class="designer-role-options" data-ref="role-options-container">
+                  <div class="designer-role-option is-selected" data-ref="role-option" data-role="designer">
+                    <div class="designer-role-option__radio">
+                      <div class="designer-role-option__dot"></div>
+                    </div>
+                    <div style="flex: 1;">
+                      <h3 class="designer-role-option__title">Diseñador/a de Plantillas</h3>
+                      <p class="designer-role-option__desc">Creo diseños atractivos, como ilustraciones, wireframes, esquemas y plantillas listas para usar en Spriteboard.</p>
+                    </div>
+                  </div>
+
+                  <div class="designer-role-option" data-ref="role-option" data-role="teacher">
+                    <div class="designer-role-option__radio">
+                      <div class="designer-role-option__dot"></div>
+                    </div>
+                    <div style="flex: 1;">
+                      <h3 class="designer-role-option__title">Docente / Educador</h3>
+                      <p class="designer-role-option__desc">Creo material educativo, pizarrones didácticos, guías de estudio y recursos interactivos de aprendizaje.</p>
+                    </div>
+                  </div>
+
+                  <div class="designer-role-option" data-ref="role-option" data-role="business">
+                    <div class="designer-role-option__radio">
+                      <div class="designer-role-option__dot"></div>
+                    </div>
+                    <div style="flex: 1;">
+                      <h3 class="designer-role-option__title">Empresas y Profesionales</h3>
+                      <p class="designer-role-option__desc">Soy especialista en mi área y me apasiona crear plantillas de gran impacto visual para flujos de trabajo profesionales y de negocios.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="designer-wizard__actions" data-ref="step-1-actions">
+                  <button type="button" class="component-button component-button--h50 component-button--black" data-ref="btn-next-step-1" style="min-width: 140px;">
+                    <span>Continuar</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="designer-step" data-ref="step-2">
+                <div class="designer-split-layout">
+                  <div>
+                    <h2 class="designer-step__title">Antes de enviar la solicitud</h2>
+                    <p class="designer-step__desc" style="margin-bottom: 16px;">
+                      Como parte de la solicitud, tendrás la oportunidad de enviar enlaces a tu portafolio en línea o subir muestras de tu trabajo.
+                    </p>
+
+                    <span style="font-size: 13px; font-weight: 700; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 10px;">
+                      Prepara tu portafolio:
+                    </span>
+
+                    <div class="designer-numbered-list">
+                      <div class="designer-numbered-item">
+                        <div class="designer-number-badge">1</div>
+                        <div class="designer-numbered-item__text">
+                          <strong>Selecciona tus mejores creaciones:</strong> Elige entre 5 y 10 trabajos representativos (ilustraciones, diagramas, presentaciones, banners o sprites).
+                        </div>
+                      </div>
+
+                      <div class="designer-numbered-item">
+                        <div class="designer-number-badge">2</div>
+                        <div class="designer-numbered-item__text">
+                          <strong>Prepara enlaces públicos:</strong> Puedes compartir enlaces de Behance, Dribbble, Figma, GitHub, ArtStation, Instagram o tu sitio web.
+                        </div>
+                      </div>
+
+                      <div class="designer-numbered-item">
+                        <div class="designer-number-badge">3</div>
+                        <div class="designer-numbered-item__text">
+                          <strong>O adjunta archivos directos:</strong> En el siguiente paso podrás subir imágenes (PNG, JPG, SVG, GIF) o un empaquetado ZIP.
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="designer-tip-callout">
+                      <svg class="component-icon" style="color: #6366f1; font-size: 16px; vertical-align: -2px; margin-right: 4px;" aria-hidden="true"><use href="/icons.svg#info"></use></svg>
+                      <strong>Evaluamos la calidad, no la cantidad:</strong> Elige trabajos que muestren tu creatividad, variedad y destreza técnica.
+                    </div>
+
+                    <div class="designer-wizard__actions" style="justify-content: flex-start; border-top: none; padding-top: 0; margin-top: 0;">
+                      <button type="button" class="component-button component-button--h50 component-button--black" data-ref="btn-next-step-2" style="min-width: 140px;">
+                        <span>Continuar</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div class="designer-showcase-card">
+                      <div class="designer-showcase-mockup">
+                        <div style="height: 28px; background: var(--bg-hover, rgba(125,125,125,0.1)); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; padding: 0 10px; gap: 6px;">
+                          <span style="width: 8px; height: 8px; border-radius: 50%; background: #ef4444; display: inline-block;"></span>
+                          <span style="width: 8px; height: 8px; border-radius: 50%; background: #f59e0b; display: inline-block;"></span>
+                          <span style="width: 8px; height: 8px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
+                        </div>
+                        <div style="padding: 16px; background: var(--bg-card); display: flex; flex-direction: column; gap: 10px;">
+                          <div style="height: 60px; border-radius: 8px; background: linear-gradient(135deg, #6366f1, #a855f7); display: flex; align-items: center; justify-content: center; color: #ffffff; font-weight: 700; font-size: 13px;">
+                            Spriteboard Creator Hub
+                          </div>
+                          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                            <div style="height: 45px; border-radius: 6px; background: rgba(99,102,241,0.12); border: 1px dashed rgba(99,102,241,0.3); display: flex; align-items: center; justify-content: center; font-size: 11px; color: #6366f1; font-weight: 600;">Plantillas</div>
+                            <div style="height: 45px; border-radius: 6px; background: rgba(168,85,247,0.12); border: 1px dashed rgba(168,85,247,0.3); display: flex; align-items: center; justify-content: center; font-size: 11px; color: #a855f7; font-weight: 600;">Lienzos</div>
+                          </div>
+                        </div>
+                      </div>
+                      <span class="component-badge" style="background: rgba(99, 102, 241, 0.15); color: #6366f1; font-weight: 700; padding: 4px 12px; border-radius: 12px; font-size: 12px; margin-bottom: 6px;">Creadores Oficiales</span>
+                      <p style="font-size: 12.5px; color: var(--text-secondary); margin: 0; line-height: 1.4;">Tus plantillas podrán ser exploradas y utilizadas por miles de usuarios en todo el mundo.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="designer-step" data-ref="step-3">
+                <div class="designer-split-layout">
+                  <div>
+                    <h2 class="designer-step__title">
+                      Nos encanta ayudarte a explorar tu lado creativo. <span class="designer-step__title-accent">¿Qué te gusta crear?</span>
+                    </h2>
+                    <p class="designer-step__desc">
+                      Selecciona tus áreas de especialización favoritas (puedes elegir varias opciones).
+                    </p>
+
+                    <div class="designer-specialties-grid" data-ref="specialties-grid">
+                      <button type="button" class="designer-specialty-chip is-active" data-ref="chip-specialty" data-value="Pizarrones y Diagramas">
+                        <span>Pizarrones y Diagramas</span>
+                      </button>
+                      <button type="button" class="designer-specialty-chip is-active" data-ref="chip-specialty" data-value="Redes sociales">
+                        <span>Redes sociales</span>
+                      </button>
+                      <button type="button" class="designer-specialty-chip" data-ref="chip-specialty" data-value="Presentaciones">
+                        <span>Presentaciones</span>
+                      </button>
+                      <button type="button" class="designer-specialty-chip" data-ref="chip-specialty" data-value="Pixel Art & Sprites">
+                        <span>Pixel Art & Sprites</span>
+                      </button>
+                      <button type="button" class="designer-specialty-chip" data-ref="chip-specialty" data-value="UI/UX & Wireframes">
+                        <span>UI/UX & Wireframes</span>
+                      </button>
+                      <button type="button" class="designer-specialty-chip" data-ref="chip-specialty" data-value="Documentos y Guías">
+                        <span>Documentos y Guías</span>
+                      </button>
+                      <button type="button" class="designer-specialty-chip" data-ref="chip-specialty" data-value="Ilustración digital">
+                        <span>Ilustración digital</span>
+                      </button>
+                      <button type="button" class="designer-specialty-chip" data-ref="chip-specialty" data-value="Impresión y Posters">
+                        <span>Impresión y Posters</span>
+                      </button>
+                      <button type="button" class="designer-specialty-chip" data-ref="chip-specialty" data-value="Iconografía">
+                        <span>Iconografía</span>
+                      </button>
+                      <button type="button" class="designer-specialty-chip" data-ref="chip-specialty" data-value="Gráficas y Vectores">
+                        <span>Gráficas y Vectores</span>
+                      </button>
+                      <button type="button" class="designer-specialty-chip" data-ref="chip-specialty" data-value="Animación">
+                        <span>Animación</span>
+                      </button>
+                      <button type="button" class="designer-specialty-chip" data-ref="chip-specialty" data-value="Fotos y Mockups">
+                        <span>Fotos y Mockups</span>
+                      </button>
+                    </div>
+
+                    <div class="designer-wizard__actions" style="justify-content: flex-start; border-top: none; padding-top: 0; margin-top: 0;">
+                      <button type="button" class="component-button component-button--h50 component-button--black" data-ref="btn-next-step-3" style="min-width: 140px;">
+                        <span>Continuar</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div class="designer-showcase-card" style="height: 100%;">
+                      <div style="width: 64px; height: 64px; border-radius: 20px; background: linear-gradient(135deg, #6366f1, #ec4899); display: flex; align-items: center; justify-content: center; color: #ffffff; margin-bottom: 16px; box-shadow: 0 10px 25px -5px rgba(99,102,241,0.4);">
+                        <svg class="component-icon" style="font-size: 32px;" aria-hidden="true"><use href="/icons.svg#brush"></use></svg>
+                      </div>
+                      <h3 style="margin: 0 0 8px; font-size: 16px; font-weight: 700;">Diseña a tu manera</h3>
+                      <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin: 0;">Personaliza la experiencia y aporta recursos únicos a la galería de la comunidad.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="designer-step" data-ref="step-4">
+                <h2 class="designer-step__title">
+                  Último paso: <span class="designer-step__title-accent">Datos de tu postulación</span>
+                </h2>
+                <p class="designer-step__desc">
+                  Completa tu información personal, incluye enlaces a tu portafolio o sube muestras de tus diseños.
+                </p>
+
+                <form class="designer-apply-form" data-ref="designer-apply-form" style="display: flex; flex-direction: column; gap: 20px;">
+
+                  <div class="apply-section-card" data-ref="section-card-personal" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; padding: 22px; box-shadow: var(--shadow-sm);">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 18px;">
+                      <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(99, 102, 241, 0.12); display: flex; align-items: center; justify-content: center; color: #6366f1;">
+                        <svg class="component-icon" style="font-size: 18px;" aria-hidden="true"><use href="/icons.svg#person"></use></svg>
+                      </div>
+                      <h3 style="margin: 0; font-size: 15px; font-weight: 700;">1. Información Personal</h3>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-bottom: 14px;">
+                      <label class="field" data-ref="field-full-name">
+                        <input class="field__input" data-ref="input-full-name" type="text" placeholder=" " autocomplete="name" required />
+                        <span class="field__label">Nombre completo *</span>
+                      </label>
+
+                      <label class="field field--has-select" data-ref="field-country">
+                        <select class="field__input field__select" data-ref="select-country" required>
+                          <option value="" disabled selected>Selecciona tu país de residencia *</option>
+                          <option value="Argentina">Argentina</option>
+                          <option value="Bolivia">Bolivia</option>
+                          <option value="Brasil">Brasil</option>
+                          <option value="Chile">Chile</option>
+                          <option value="Colombia">Colombia</option>
+                          <option value="Costa Rica">Costa Rica</option>
+                          <option value="Ecuador">Ecuador</option>
+                          <option value="El Salvador">El Salvador</option>
+                          <option value="España">España</option>
+                          <option value="Estados Unidos">Estados Unidos</option>
+                          <option value="Guatemala">Guatemala</option>
+                          <option value="Honduras">Honduras</option>
+                          <option value="México">México</option>
+                          <option value="Nicaragua">Nicaragua</option>
+                          <option value="Panamá">Panamá</option>
+                          <option value="Paraguay">Paraguay</option>
+                          <option value="Perú">Perú</option>
+                          <option value="Puerto Rico">Puerto Rico</option>
+                          <option value="República Dominicana">República Dominicana</option>
+                          <option value="Uruguay">Uruguay</option>
+                          <option value="Venezuela">Venezuela</option>
+                          <option value="Otro">Otro país</option>
+                        </select>
+                        <span class="field__label field__label--always-float">País de residencia *</span>
+                      </label>
+                    </div>
+
+                    <div>
+                      <label class="field field--textarea" data-ref="field-bio">
+                        <textarea class="field__input field__textarea" data-ref="textarea-bio" placeholder=" " rows="3" style="resize: vertical; min-height: 80px;"></textarea>
+                        <span class="field__label">Cuéntanos sobre tu trayectoria y por qué deseas ser creador en Spriteboard (opcional)</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div class="apply-section-card" data-ref="section-card-portfolio" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; padding: 22px; box-shadow: var(--shadow-sm);">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+                      <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(16, 185, 129, 0.12); display: flex; align-items: center; justify-content: center; color: #10b981;">
+                        <svg class="component-icon" style="font-size: 18px;" aria-hidden="true"><use href="/icons.svg#link"></use></svg>
+                      </div>
+                      <div>
+                        <h3 style="margin: 0; font-size: 15px; font-weight: 700;">2. Enlaces a tus Obras y Portafolio</h3>
+                        <span style="font-size: 12px; color: var(--text-secondary);">Behance, Dribbble, ArtStation, Figma, GitHub, Instagram o web personal</span>
+                      </div>
+                    </div>
+
+                    <div class="portfolio-inputs-box" data-ref="portfolio-inputs-box" style="display: flex; gap: 8px; margin-bottom: 12px;">
+                      <label class="field" data-ref="field-portfolio-input" style="flex: 1; margin: 0;">
+                        <input class="field__input" data-ref="input-portfolio-url" type="url" placeholder=" " />
+                        <span class="field__label">https://behance.net/tu-perfil o enlace a obra</span>
+                      </label>
+                      <button type="button" class="component-button component-button--h50 component-button--bordered" data-ref="btn-add-portfolio-link">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+                        <span>Añadir</span>
+                      </button>
+                    </div>
+
+                    <div class="portfolio-links-list" data-ref="portfolio-links-list" style="display: flex; flex-direction: column; gap: 8px;">
+                    </div>
+                  </div>
+
+                  <div class="apply-section-card" data-ref="section-card-files" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; padding: 22px; box-shadow: var(--shadow-sm);">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                      <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(245, 158, 11, 0.12); display: flex; align-items: center; justify-content: center; color: #f59e0b;">
+                          <svg class="component-icon" style="font-size: 18px;" aria-hidden="true"><use href="/icons.svg#perm_media"></use></svg>
+                        </div>
+                        <div>
+                          <h3 style="margin: 0; font-size: 15px; font-weight: 700;">3. Muestras de Trabajo y Archivos</h3>
+                          <span style="font-size: 12px; color: var(--text-secondary);">Sube imágenes individuales de tus creaciones o una carpeta completa</span>
+                        </div>
+                      </div>
+                      <span class="files-counter-badge" data-ref="files-counter-badge" style="font-size: 12px; color: var(--text-secondary);">0 archivos seleccionados</span>
+                    </div>
+
+                    <div class="upload-dropzone" data-ref="upload-dropzone" style="border: 2px dashed var(--border-color); border-radius: 12px; padding: 28px 16px; text-align: center; background: var(--bg-hover, rgba(125,125,125,0.03)); cursor: pointer; transition: all 0.2s ease;">
+                      <input class="sr-only" data-ref="input-files-individual" type="file" multiple accept="image/*,.zip,.pdf,.svg" style="display: none;" />
+                      <input class="sr-only" data-ref="input-files-folder" type="file" webkitdirectory directory multiple style="display: none;" />
+
+                      <div style="width: 44px; height: 44px; border-radius: 50%; background: rgba(125,125,125,0.1); margin: 0 auto 10px; display: flex; align-items: center; justify-content: center;">
+                        <svg class="component-icon" style="font-size: 22px; color: var(--text-secondary);" aria-hidden="true"><use href="/icons.svg#add_photo_alternate"></use></svg>
+                      </div>
+
+                      <p style="font-weight: 600; font-size: 14px; margin: 0 0 4px;">Arrastra tus archivos o fotos aquí</p>
+                      <p style="font-size: 12px; color: var(--text-secondary); margin: 0 0 14px;">PNG, JPG, WEBP, GIF, SVG, ZIP o PDF (hasta 25 MB)</p>
+
+                      <div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
+                        <button type="button" class="component-button component-button--h36 component-button--bordered" data-ref="btn-trigger-files">
+                          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#image"></use></svg>
+                          <span>Seleccionar archivos</span>
+                        </button>
+                        <button type="button" class="component-button component-button--h36 component-button--bordered" data-ref="btn-trigger-folder">
+                          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
+                          <span>Subir una carpeta</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div class="uploaded-files-grid" data-ref="uploaded-files-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(125px, 1fr)); gap: 10px; margin-top: 14px;">
+                    </div>
+                  </div>
+
+                  <div class="apply-actions-box" data-ref="apply-actions-box" style="margin-top: 6px;">
+                    <button type="button" class="component-button component-button--h55 component-button--black component-button--w-full" data-ref="btn-submit-application">
+                      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                      <span data-ref="btn-submit-text">Enviar Postulación de Creador</span>
+                    </button>
+
+                    <div class="banner banner--danger" data-ref="apply-form-error" style="display: none; margin-top: 16px;">
+                      <svg class="component-icon banner__icon" aria-hidden="true"><use href="/icons.svg#warning"></use></svg>
+                      <span class="banner__message" data-ref="apply-form-error-msg"></span>
+                    </div>
+                  </div>
+                </form>
+
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>

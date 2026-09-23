@@ -319,7 +319,7 @@ INSERT INTO server_config (`key`, `value`, `category`, `type`, `description`) VA
 ('max_concurrent_accounts', '5', 'security', 'number', 'Máximo de cuentas simultáneas vinculadas en el selector de cuentas'),
 ('username_min_length', '3', 'users', 'number', 'Longitud mínima para nombres de usuario'),
 ('username_max_length', '30', 'users', 'number', 'Longitud máxima para nombres de usuario'),
-('allowed_email_domains', '["gmail.com","outlook.com","icloud.com","hotmail.com","yahoo.com"]', 'users', 'json', 'Dominios de correo permitidos para registro'),
+('allowed_email_domains', '["gmail.com","outlook.com","icloud.com","hotmail.com","yahoo.com","spriteboard.com"]', 'users', 'json', 'Dominios de correo permitidos para registro'),
 ('enforce_allowed_email_domains', 'true', 'users', 'boolean', 'Restringir registro estrictamente a la lista de dominios permitidos'),
 ('allow_registration', 'true', 'users', 'boolean', 'Habilitar nuevos registros de usuarios en la plataforma'),
 ('allow_google_login', 'true', 'users', 'boolean', 'Permitir autenticación e inicio de sesión con Google'),
@@ -542,22 +542,70 @@ CREATE TABLE IF NOT EXISTS user_uploads (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT INTO users (
-    id, uuid, username, email, password_hash, role, subscription_tier, avatar_url, created_at
+    id, uuid, username, email, password_hash, role, subscription_tier,
+    stripe_customer_id, stripe_subscription_id, subscription_status, subscription_period_end,
+    force_password_change, two_factor_enabled, avatar_url,
+    registration_ip, registration_country_name, registration_isp,
+    created_at
 ) VALUES (
     1,
     '00000000-0000-0000-0000-000000000001',
     'spriteboard',
-    'official@spriteboard.internal',
-    '$2a$10$7EqJtq98hPqEX7fNZaFWoO5L95D9X5u6Fz9d9a4p6u3m7w8y1z0q2',
-    'ADMIN',
+    'official@spriteboard.com',
+    '$2a$10$eCEkNhM7K3Okfk3rwi/jGukfeOJ47OFO.qJM71jxge/sLWPRIWIGy',
+    'SUPER_ADMIN',
     'business',
+    'cus_official_spriteboard',
+    'sub_official_spriteboard',
+    'active',
+    NULL,
+    0,
+    0,
     '/assets/brand/spriteboard-avatar.png',
+    '127.0.0.1',
+    'Spriteboard Infrastructure',
+    'Spriteboard Corp',
     NOW()
-) ON DUPLICATE KEY UPDATE username='spriteboard', role='ADMIN';
+) ON DUPLICATE KEY UPDATE
+    email = VALUES(email),
+    password_hash = VALUES(password_hash),
+    role = VALUES(role),
+    subscription_tier = VALUES(subscription_tier),
+    subscription_status = VALUES(subscription_status),
+    subscription_period_end = VALUES(subscription_period_end);
 
-INSERT INTO user_preferences (user_id, theme, language)
-VALUES (1, 'system', 'en-US')
+INSERT INTO user_preferences (
+    user_id, theme, language, open_links_new_tab, telemetry, reduce_motion, high_contrast, extended_alerts
+) VALUES (
+    1, 'system', 'en-US', TRUE, FALSE, FALSE, FALSE, FALSE
+) ON DUPLICATE KEY UPDATE user_id = user_id;
+
+INSERT INTO user_roles (user_id, role_id)
+SELECT 1, id FROM roles WHERE name IN ('SUPER_ADMIN', 'PLATFORM_ADMIN', 'DESIGNER')
 ON DUPLICATE KEY UPDATE user_id = user_id;
+
+CREATE TABLE IF NOT EXISTS designer_applications (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    uuid VARCHAR(36) NOT NULL UNIQUE,
+    user_id INT NOT NULL,
+    full_name VARCHAR(150) NOT NULL,
+    country VARCHAR(100) NOT NULL,
+    specialties JSON NULL,
+    bio TEXT NULL,
+    portfolio_urls JSON NULL,
+    files JSON NULL,
+    status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
+    rejection_reason TEXT NULL,
+    reviewed_by INT NULL,
+    reviewed_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_designer_app_user (user_id),
+    INDEX idx_designer_app_status (status),
+    INDEX idx_designer_app_created (created_at),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 GRANT ALL PRIVILEGES ON db_identity.* TO 'sprite_user'@'%';
 FLUSH PRIVILEGES;

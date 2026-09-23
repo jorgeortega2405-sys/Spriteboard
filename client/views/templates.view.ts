@@ -1,3 +1,4 @@
+import { navigate } from '../app-router.js';
 import { createSidebar } from '../components/layout.component.js';
 import { openModal } from '../components/modal.component.js';
 import { openTemplatePreviewModal } from '../components/template-preview-modal.component.js';
@@ -62,6 +63,9 @@ class TemplatesController {
   private designerStatusFiltersContainer: HTMLElement | null = null;
   private designerSearchInput: HTMLInputElement | null = null;
   private designerClearSearchBtn: HTMLButtonElement | null = null;
+  private btnApplyDesigner: HTMLButtonElement | null = null;
+  private btnApplyDesignerText: HTMLElement | null = null;
+  private badgeApplyDesignerStatus: HTMLElement | null = null;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -80,10 +84,16 @@ class TemplatesController {
     this.designerStatusFiltersContainer = this.container.querySelector<HTMLElement>('[data-ref="designer-status-filters"]');
     this.designerSearchInput = this.container.querySelector<HTMLInputElement>('[data-ref="designer-search-input"]');
     this.designerClearSearchBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-designer-clear-search"]');
+    this.btnApplyDesigner = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-apply-designer"]');
+    this.btnApplyDesignerText = this.container.querySelector<HTMLElement>('[data-ref="btn-apply-designer-text"]');
+    this.badgeApplyDesignerStatus = this.container.querySelector<HTMLElement>('[data-ref="badge-apply-designer-status"]');
 
     if (this.isDesigner && this.navTabsEl) {
       this.navTabsEl.style.display = 'flex';
       void this.loadDesignerMetrics();
+    } else if (!this.isDesigner && this.btnApplyDesigner) {
+      this.btnApplyDesigner.style.display = 'inline-flex';
+      void this.setupApplyDesignerButton();
     }
 
     this.gridEl = this.container.querySelector<HTMLElement>('[data-ref="templates-grid"]');
@@ -348,6 +358,45 @@ class TemplatesController {
         { signal }
       );
     }
+  }
+
+  private async setupApplyDesignerButton(): Promise<void> {
+    if (!this.btnApplyDesigner) return;
+
+    if (currentUser) {
+      try {
+        const res = await getApi(API_ROUTES.designerApplications.myStatus);
+        if (res.ok) {
+          const data = await res.json();
+          const app = data?.application;
+          if (app && app.status === 'pending') {
+            if (this.badgeApplyDesignerStatus) {
+              this.badgeApplyDesignerStatus.style.display = 'inline-block';
+              this.badgeApplyDesignerStatus.textContent = t('templates.metric_pending');
+            }
+            if (this.btnApplyDesignerText) {
+              this.btnApplyDesignerText.textContent = t('templates.apply_designer_pending');
+            }
+          } else if (app && app.status === 'rejected') {
+            if (this.btnApplyDesignerText) {
+              this.btnApplyDesignerText.textContent = t('templates.apply_designer_rejected');
+            }
+          }
+        }
+      } catch {}
+    }
+
+    this.btnApplyDesigner.addEventListener(
+      'click',
+      () => {
+        if (!currentUser) {
+          navigate('/login');
+          return;
+        }
+        navigate('/apply-designer');
+      },
+      { signal: this.abortController.signal }
+    );
   }
 
   private renderTemplates(): void {

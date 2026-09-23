@@ -171,6 +171,15 @@ export async function render(): Promise<void> {
       }
       const { createTemplatesView } = await import('./views/templates.view.js');
       viewElements = [await createTemplatesView()];
+    } else if (path === '/apply-designer' || path === '/designer/apply') {
+      if (!currentUser) {
+        window.history.replaceState({}, '', '/login');
+        const { createLoginView } = await import('./views/auth.view.js');
+        viewElements = [await createLoginView()];
+      } else {
+        const { createDesignerApplyView } = await import('./views/designer-apply.view.js');
+        viewElements = [await createDesignerApplyView()];
+      }
     } else if (path === '/search') {
       const { createSearchView } = await import('./views/search.view.js');
       viewElements = [await createSearchView()];

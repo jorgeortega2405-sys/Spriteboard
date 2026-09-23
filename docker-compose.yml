@@ -155,6 +155,7 @@ services:
       - ./admin:/app
       - /app/node_modules
       - ./logs:/app/main_logs:ro
+      - ./public/uploads:/app/public/uploads:ro
     command: npm run dev
 
   worker:

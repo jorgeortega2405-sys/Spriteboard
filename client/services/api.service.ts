@@ -177,6 +177,10 @@ export async function getApi(url: string): Promise<Response> {
 }
 
 export async function postApi(url: string, body?: unknown): Promise<Response> {
+  if (body instanceof FormData) {
+    return postFormApi(url, body);
+  }
+
   if (!csrfToken) {
     await fetchCsrfToken();
   }

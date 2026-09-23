@@ -3,7 +3,18 @@
     <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="templates-scrollable">
       <div class="view-body" data-ref="templates-container">
         <div class="view-backdrop" data-ref="templates-gradient-backdrop"></div>
-        <div class="view-header" data-ref="templates-floating-top"></div>
+        <div class="view-header" data-ref="templates-floating-top">
+          <div class="view-header__left" data-ref="templates-floating-left"></div>
+          <div class="view-header__right" data-ref="templates-floating-right">
+            <div class="view-header__actions" data-ref="templates-default-actions">
+              <button type="button" class="component-button component-button--h40 component-button--outline view-header__btn" data-ref="btn-apply-designer" style="display: none;" data-tooltip="Postular como creador oficial de plantillas" aria-label="Aplicar a diseñador">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#palette"></use></svg>
+                <span data-ref="btn-apply-designer-text" data-i18n="templates.apply_designer">Aplicar a diseñador</span>
+                <span class="component-badge" data-ref="badge-apply-designer-status" style="display: none; margin-left: 6px; padding: 2px 7px; font-size: 11px; border-radius: 10px; background: rgba(245, 158, 11, 0.15); color: #f59e0b; font-weight: 600;">En revisión</span>
+              </button>
+            </div>
+          </div>
+        </div>
         <div class="view-hero" data-ref="templates-hero">
           <div class="view-hero__content">
             <h1 class="view-hero__title" data-ref="templates-hero-title" data-i18n="templates.title">Plantillas</h1>

@@ -1,7 +1,7 @@
 import { pool } from '../config/database.config.js';
 import { RoleCategory, UserRole } from '../types/auth.types.js';
 import { logger } from './logger.service.js';
-import type { RowDataPacket } from 'mysql2';
+import type { ResultSetHeader, RowDataPacket } from 'mysql2';
 
 export interface PermissionDefinition {
   description: string;
@@ -305,6 +305,37 @@ export async function userHasRole(userId: number, ...roleNames: UserRole[]): Pro
     return rows.length > 0;
   } catch (error) {
     logger.db.error('Error al verificar roles de usuario desde Admin', { error, roleNames, userId });
+    return false;
+  }
+}
+
+export async function assignUserRole(
+  userId: number,
+  roleName: UserRole,
+  assignedBy?: number
+): Promise<boolean> {
+  try {
+    const role = await getRoleByName(roleName);
+    if (!role) {
+      logger.db.warn('No se puede asignar rol inexistente desde Admin', { roleName, userId });
+      return false;
+    }
+
+    const [result] = await pool.query<ResultSetHeader>(
+      `INSERT INTO user_roles (user_id, role_id, assigned_by) 
+       VALUES (?, ?, ?) 
+       ON DUPLICATE KEY UPDATE assigned_by = VALUES(assigned_by)`,
+      [userId, role.id, assignedBy || null]
+    );
+
+    await pool.query(
+      `UPDATE users SET role = ? WHERE id = ? AND (role = 'USER' OR role IS NULL)`,
+      [roleName, userId]
+    );
+
+    return result.affectedRows > 0;
+  } catch (error) {
+    logger.db.error('Error al asignar rol a usuario desde Admin', { error, roleName, userId });
     return false;
   }
 }

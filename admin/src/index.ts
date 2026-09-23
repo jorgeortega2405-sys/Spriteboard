@@ -59,6 +59,7 @@ app.use(cookieParser());
 
 app.get('/health', getHealth);
 app.use('/uploads', express.static(path.join(process.cwd(), 'public/uploads')));
+app.use('/uploads', express.static(path.resolve(process.cwd(), '..', 'public', 'uploads')));
 app.use('/api', apiRouter);
 
 app.use((err: any, _req: Request, res: Response, next: express.NextFunction) => {

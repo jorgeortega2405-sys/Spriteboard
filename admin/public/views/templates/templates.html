@@ -16,127 +16,258 @@
         </div>
       </div>
 
-      <div class="view-body" data-ref="templates-content-container" style="width: 100%; box-sizing: border-box; padding: 20px 24px 60px;">
-        <div class="dashboard-stats-grid" data-ref="templates-metrics-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; width: 100%;">
-          <div class="dashboard-stat-card" data-ref="metric-pending-templates" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-              <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Pendientes de Revisión</span>
-              <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(245, 158, 11, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(245, 158, 11, 0.25);">
-                <svg class="component-icon" style="width: 18px; height: 18px; color: #f59e0b;" aria-hidden="true"><use href="/icons.svg#schedule"></use></svg>
+      <div class="view-nav-tabs" data-ref="admin-templates-nav-tabs" style="display: flex; gap: 8px; margin: 0 24px 16px;">
+        <button type="button" class="component-button component-button--h36 component-button--black" data-ref="btn-tab-templates">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
+          <span>Catálogo de Plantillas</span>
+        </button>
+        <button type="button" class="component-button component-button--h36 component-button--outline" data-ref="btn-tab-designer-applications">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#palette"></use></svg>
+          <span>Solicitudes de Diseñador</span>
+          <span class="component-badge" data-ref="badge-designer-applications-count" style="display: none; margin-left: 6px; padding: 2px 7px; font-size: 11px; border-radius: 10px; background: rgba(245, 158, 11, 0.2); color: #f59e0b; font-weight: 700;">0</span>
+        </button>
+      </div>
+
+      <div class="view-body" data-ref="templates-content-container" style="width: 100%; box-sizing: border-box; padding: 0 24px 60px;">
+
+        <div class="tab-content-templates" data-ref="tab-content-templates">
+          <div class="dashboard-stats-grid" data-ref="templates-metrics-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; width: 100%;">
+            <div class="dashboard-stat-card" data-ref="metric-pending-templates" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Pendientes de Revisión</span>
+                <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(245, 158, 11, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(245, 158, 11, 0.25);">
+                  <svg class="component-icon" style="width: 18px; height: 18px; color: #f59e0b;" aria-hidden="true"><use href="/icons.svg#schedule"></use></svg>
+                </div>
+              </div>
+              <div>
+                <div class="stat-card-value" data-ref="val-pending-templates" style="font-size: 28px; font-weight: 800; color: #f59e0b; line-height: 1.1; margin-bottom: 6px;">0</div>
+                <span style="font-size: 12px; color: var(--text-secondary);">Requieren aprobación</span>
               </div>
             </div>
-            <div>
-              <div class="stat-card-value" data-ref="val-pending-templates" style="font-size: 28px; font-weight: 800; color: #f59e0b; line-height: 1.1; margin-bottom: 6px;">0</div>
-              <span style="font-size: 12px; color: var(--text-secondary);">Requieren aprobación</span>
+
+            <div class="dashboard-stat-card" data-ref="metric-approved-templates" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Plantillas Aprobadas</span>
+                <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(16, 185, 129, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(16, 185, 129, 0.25);">
+                  <svg class="component-icon" style="width: 18px; height: 18px; color: #10b981;" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+                </div>
+              </div>
+              <div>
+                <div class="stat-card-value" data-ref="val-approved-templates" style="font-size: 28px; font-weight: 800; color: #10b981; line-height: 1.1; margin-bottom: 6px;">0</div>
+                <span style="font-size: 12px; color: var(--text-secondary);">Públicas en la galería</span>
+              </div>
+            </div>
+
+            <div class="dashboard-stat-card" data-ref="metric-rejected-templates" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Rechazadas</span>
+                <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(239, 68, 68, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(239, 68, 68, 0.25);">
+                  <svg class="component-icon" style="width: 18px; height: 18px; color: #ef4444;" aria-hidden="true"><use href="/icons.svg#cancel"></use></svg>
+                </div>
+              </div>
+              <div>
+                <div class="stat-card-value" data-ref="val-rejected-templates" style="font-size: 28px; font-weight: 800; color: #ef4444; line-height: 1.1; margin-bottom: 6px;">0</div>
+                <span style="font-size: 12px; color: var(--text-secondary);">No cumplen pautas</span>
+              </div>
+            </div>
+
+            <div class="dashboard-stat-card" data-ref="metric-total-templates" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Total de Plantillas</span>
+                <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(99, 102, 241, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(99, 102, 241, 0.25);">
+                  <svg class="component-icon" style="width: 18px; height: 18px; color: #6366f1;" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
+                </div>
+              </div>
+              <div>
+                <div class="stat-card-value" data-ref="val-total-templates" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
+                <span style="font-size: 12px; color: var(--text-secondary);">Registradas en BD</span>
+              </div>
             </div>
           </div>
 
-          <div class="dashboard-stat-card" data-ref="metric-approved-templates" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-              <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Plantillas Aprobadas</span>
-              <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(16, 185, 129, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(16, 185, 129, 0.25);">
-                <svg class="component-icon" style="width: 18px; height: 18px; color: #10b981;" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+          <div class="canvas-section" data-ref="templates-controls-section" style="margin-bottom: 20px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;">
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <div class="view-search-pill" data-ref="templates-search-box" style="min-width: 260px;">
+                <svg class="component-icon view-search-pill__icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+                <input class="view-search-pill__input" data-ref="input-search-templates" type="text" placeholder="Buscar por título o descripción..." autocomplete="off" />
+                <button type="button" class="component-button component-button--h32 component-button--icon-only view-search-pill__clear" data-ref="btn-clear-search" style="display: none;" aria-label="Limpiar búsqueda">
+                  <svg class="component-icon" style="font-size: 18px;" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+                </button>
+              </div>
+
+              <div class="component-tags-carousel" data-ref="templates-status-badges" style="display: flex; gap: 6px;">
+                <button type="button" class="component-badge component-badge--interactive is-active" data-ref="badge-status-pending" data-status="pending">
+                  <span>Pendientes</span>
+                </button>
+                <button type="button" class="component-badge component-badge--interactive" data-ref="badge-status-approved" data-status="approved">
+                  <span>Aprobadas</span>
+                </button>
+                <button type="button" class="component-badge component-badge--interactive" data-ref="badge-status-rejected" data-status="rejected">
+                  <span>Rechazadas</span>
+                </button>
+                <button type="button" class="component-badge component-badge--interactive" data-ref="badge-status-all" data-status="all">
+                  <span>Todas</span>
+                </button>
               </div>
             </div>
-            <div>
-              <div class="stat-card-value" data-ref="val-approved-templates" style="font-size: 28px; font-weight: 800; color: #10b981; line-height: 1.1; margin-bottom: 6px;">0</div>
-              <span style="font-size: 12px; color: var(--text-secondary);">Públicas en la galería</span>
+
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <select class="field__input field__select" data-ref="select-filter-type" style="height: 38px; min-width: 160px; padding: 0 12px; border-radius: var(--radius-md); border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary); font-size: 13px;">
+                <option value="all">Todos los lienzos</option>
+                <option value="board">Pizarrón (Board)</option>
+                <option value="presentation">Presentación</option>
+                <option value="doc">Documento (Doc)</option>
+              </select>
             </div>
           </div>
 
-          <div class="dashboard-stat-card" data-ref="metric-rejected-templates" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-              <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Rechazadas</span>
-              <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(239, 68, 68, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(239, 68, 68, 0.25);">
-                <svg class="component-icon" style="width: 18px; height: 18px; color: #ef4444;" aria-hidden="true"><use href="/icons.svg#cancel"></use></svg>
-              </div>
+          <div class="table-container" data-ref="templates-table-container" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); overflow: hidden; box-shadow: var(--shadow-sm);">
+            <div data-ref="templates-table-wrapper" style="overflow-x: auto; width: 100%;">
+              <table class="data-table" data-ref="templates-table" style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px;">
+                <thead>
+                  <tr style="border-bottom: 1px solid var(--border-color); background: var(--bg-surface);">
+                    <th style="padding: 14px 16px; font-weight: 600; color: var(--text-secondary); width: 80px;">Vista</th>
+                    <th style="padding: 14px 16px; font-weight: 600; color: var(--text-secondary);">Plantilla</th>
+                    <th style="padding: 14px 16px; font-weight: 600; color: var(--text-secondary);">Tipo</th>
+                    <th style="padding: 14px 16px; font-weight: 600; color: var(--text-secondary);">Autor</th>
+                    <th style="padding: 14px 16px; font-weight: 600; color: var(--text-secondary);">Estado</th>
+                    <th style="padding: 14px 16px; font-weight: 600; color: var(--text-secondary);">Fecha</th>
+                    <th style="padding: 14px 16px; font-weight: 600; color: var(--text-secondary); text-align: right;">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody data-ref="templates-table-body">
+                  <tr>
+                    <td colspan="7" style="padding: 40px; text-align: center; color: var(--text-secondary);">Cargando plantillas...</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
-            <div>
-              <div class="stat-card-value" data-ref="val-rejected-templates" style="font-size: 28px; font-weight: 800; color: #ef4444; line-height: 1.1; margin-bottom: 6px;">0</div>
-              <span style="font-size: 12px; color: var(--text-secondary);">No cumplen pautas</span>
-            </div>
-          </div>
 
-          <div class="dashboard-stat-card" data-ref="metric-total-templates" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-              <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Total de Plantillas</span>
-              <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(99, 102, 241, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(99, 102, 241, 0.25);">
-                <svg class="component-icon" style="width: 18px; height: 18px; color: #6366f1;" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
+            <div class="table-pagination" data-ref="templates-pagination" style="display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-top: 1px solid var(--border-color); font-size: 13px; color: var(--text-secondary);">
+              <div data-ref="pagination-info">Mostrando plantillas</div>
+              <div style="display: flex; gap: 8px;">
+                <button type="button" class="component-button component-button--h32 component-button--bordered is-disabled" data-ref="btn-prev-page">Anterior</button>
+                <button type="button" class="component-button component-button--h32 component-button--bordered is-disabled" data-ref="btn-next-page">Siguiente</button>
               </div>
-            </div>
-            <div>
-              <div class="stat-card-value" data-ref="val-total-templates" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
-              <span style="font-size: 12px; color: var(--text-secondary);">Registradas en BD</span>
             </div>
           </div>
         </div>
 
-        <div class="canvas-section" data-ref="templates-controls-section" style="margin-bottom: 20px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;">
-          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-            <div class="view-search-pill" data-ref="templates-search-box" style="min-width: 260px;">
-              <svg class="component-icon view-search-pill__icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
-              <input class="view-search-pill__input" data-ref="input-search-templates" type="text" placeholder="Buscar por título o descripción..." autocomplete="off" />
-              <button type="button" class="component-button component-button--h32 component-button--icon-only view-search-pill__clear" data-ref="btn-clear-search" style="display: none;" aria-label="Limpiar búsqueda">
-                <svg class="component-icon" style="font-size: 18px;" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
-              </button>
+        <div class="tab-content-designer-applications" data-ref="tab-content-designer-applications" style="display: none;">
+          <div class="dashboard-stats-grid" data-ref="designer-apps-metrics-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; width: 100%;">
+            <div class="dashboard-stat-card" data-ref="metric-pending-designer-apps" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Pendientes de Revisión</span>
+                <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(245, 158, 11, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(245, 158, 11, 0.25);">
+                  <svg class="component-icon" style="width: 18px; height: 18px; color: #f59e0b;" aria-hidden="true"><use href="/icons.svg#schedule"></use></svg>
+                </div>
+              </div>
+              <div>
+                <div class="stat-card-value" data-ref="val-pending-designer-apps" style="font-size: 28px; font-weight: 800; color: #f59e0b; line-height: 1.1; margin-bottom: 6px;">0</div>
+                <span style="font-size: 12px; color: var(--text-secondary);">Requieren evaluación</span>
+              </div>
             </div>
 
-            <div class="component-tags-carousel" data-ref="templates-status-badges" style="display: flex; gap: 6px;">
-              <button type="button" class="component-badge component-badge--interactive is-active" data-ref="badge-status-pending" data-status="pending">
-                <span>Pendientes</span>
-              </button>
-              <button type="button" class="component-badge component-badge--interactive" data-ref="badge-status-approved" data-status="approved">
-                <span>Aprobadas</span>
-              </button>
-              <button type="button" class="component-badge component-badge--interactive" data-ref="badge-status-rejected" data-status="rejected">
-                <span>Rechazadas</span>
-              </button>
-              <button type="button" class="component-badge component-badge--interactive" data-ref="badge-status-all" data-status="all">
-                <span>Todas</span>
-              </button>
+            <div class="dashboard-stat-card" data-ref="metric-approved-designer-apps" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Diseñadores Aprobados</span>
+                <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(16, 185, 129, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(16, 185, 129, 0.25);">
+                  <svg class="component-icon" style="width: 18px; height: 18px; color: #10b981;" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+                </div>
+              </div>
+              <div>
+                <div class="stat-card-value" data-ref="val-approved-designer-apps" style="font-size: 28px; font-weight: 800; color: #10b981; line-height: 1.1; margin-bottom: 6px;">0</div>
+                <span style="font-size: 12px; color: var(--text-secondary);">Con rol DESIGNER otorgado</span>
+              </div>
+            </div>
+
+            <div class="dashboard-stat-card" data-ref="metric-rejected-designer-apps" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Rechazadas</span>
+                <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(239, 68, 68, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(239, 68, 68, 0.25);">
+                  <svg class="component-icon" style="width: 18px; height: 18px; color: #ef4444;" aria-hidden="true"><use href="/icons.svg#cancel"></use></svg>
+                </div>
+              </div>
+              <div>
+                <div class="stat-card-value" data-ref="val-rejected-designer-apps" style="font-size: 28px; font-weight: 800; color: #ef4444; line-height: 1.1; margin-bottom: 6px;">0</div>
+                <span style="font-size: 12px; color: var(--text-secondary);">Sin rol asignado</span>
+              </div>
+            </div>
+
+            <div class="dashboard-stat-card" data-ref="metric-total-designer-apps" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Total Postulaciones</span>
+                <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(99, 102, 241, 0.12); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(99, 102, 241, 0.25);">
+                  <svg class="component-icon" style="width: 18px; height: 18px; color: #6366f1;" aria-hidden="true"><use href="/icons.svg#palette"></use></svg>
+                </div>
+              </div>
+              <div>
+                <div class="stat-card-value" data-ref="val-total-designer-apps" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
+                <span style="font-size: 12px; color: var(--text-secondary);">Recibidas en plataforma</span>
+              </div>
             </div>
           </div>
 
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <select class="field__input field__select" data-ref="select-filter-type" style="height: 38px; min-width: 160px; padding: 0 12px; border-radius: var(--radius-md); border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary); font-size: 13px;">
-              <option value="all">Todos los lienzos</option>
-              <option value="board">Pizarrón (Board)</option>
-              <option value="presentation">Presentación</option>
-              <option value="doc">Documento (Doc)</option>
-            </select>
+          <div class="canvas-section" data-ref="designer-apps-controls-section" style="margin-bottom: 20px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;">
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <div class="view-search-pill" data-ref="designer-apps-search-box" style="min-width: 280px;">
+                <svg class="component-icon view-search-pill__icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+                <input class="view-search-pill__input" data-ref="input-search-designer-apps" type="text" placeholder="Buscar por nombre, usuario o país..." autocomplete="off" />
+                <button type="button" class="component-button component-button--h32 component-button--icon-only view-search-pill__clear" data-ref="btn-clear-designer-apps-search" style="display: none;" aria-label="Limpiar búsqueda">
+                  <svg class="component-icon" style="font-size: 18px;" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+                </button>
+              </div>
+
+              <div class="component-tags-carousel" data-ref="designer-apps-status-badges" style="display: flex; gap: 6px;">
+                <button type="button" class="component-badge component-badge--interactive is-active" data-ref="badge-app-status-pending" data-status="pending">
+                  <span>Pendientes</span>
+                </button>
+                <button type="button" class="component-badge component-badge--interactive" data-ref="badge-app-status-approved" data-status="approved">
+                  <span>Aprobadas</span>
+                </button>
+                <button type="button" class="component-badge component-badge--interactive" data-ref="badge-app-status-rejected" data-status="rejected">
+                  <span>Rechazadas</span>
+                </button>
+                <button type="button" class="component-badge component-badge--interactive" data-ref="badge-app-status-all" data-status="all">
+                  <span>Todas</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="table-container" data-ref="designer-apps-table-container" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); overflow: hidden; box-shadow: var(--shadow-sm);">
+            <div data-ref="designer-apps-table-wrapper" style="overflow-x: auto; width: 100%;">
+              <table class="data-table" data-ref="designer-apps-table" style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px;">
+                <thead>
+                  <tr style="border-bottom: 1px solid var(--border-color); background: var(--bg-surface);">
+                    <th style="padding: 14px 16px; font-weight: 600; color: var(--text-secondary);">Solicitante</th>
+                    <th style="padding: 14px 16px; font-weight: 600; color: var(--text-secondary);">Nombre Completo</th>
+                    <th style="padding: 14px 16px; font-weight: 600; color: var(--text-secondary);">País</th>
+                    <th style="padding: 14px 16px; font-weight: 600; color: var(--text-secondary);">Obras / Enlaces</th>
+                    <th style="padding: 14px 16px; font-weight: 600; color: var(--text-secondary);">Archivos</th>
+                    <th style="padding: 14px 16px; font-weight: 600; color: var(--text-secondary);">Estado</th>
+                    <th style="padding: 14px 16px; font-weight: 600; color: var(--text-secondary);">Fecha</th>
+                    <th style="padding: 14px 16px; font-weight: 600; color: var(--text-secondary); text-align: right;">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody data-ref="designer-apps-table-body">
+                  <tr>
+                    <td colspan="8" style="padding: 40px; text-align: center; color: var(--text-secondary);">Cargando solicitudes...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="table-pagination" data-ref="designer-apps-pagination" style="display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-top: 1px solid var(--border-color); font-size: 13px; color: var(--text-secondary);">
+              <div data-ref="pagination-designer-apps-info">Mostrando solicitudes</div>
+              <div style="display: flex; gap: 8px;">
+                <button type="button" class="component-button component-button--h32 component-button--bordered is-disabled" data-ref="btn-prev-designer-apps-page">Anterior</button>
+                <button type="button" class="component-button component-button--h32 component-button--bordered is-disabled" data-ref="btn-next-designer-apps-page">Siguiente</button>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div class="table-container" data-ref="templates-table-container" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); overflow: hidden; box-shadow: var(--shadow-sm);">
-          <div data-ref="templates-table-wrapper" style="overflow-x: auto; width: 100%;">
-            <table class="data-table" data-ref="templates-table" style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px;">
-              <thead>
-                <tr style="border-bottom: 1px solid var(--border-color); background: var(--bg-surface);">
-                  <th style="padding: 14px 16px; font-weight: 600; color: var(--text-secondary); width: 80px;">Vista</th>
-                  <th style="padding: 14px 16px; font-weight: 600; color: var(--text-secondary);">Plantilla</th>
-                  <th style="padding: 14px 16px; font-weight: 600; color: var(--text-secondary);">Tipo</th>
-                  <th style="padding: 14px 16px; font-weight: 600; color: var(--text-secondary);">Autor</th>
-                  <th style="padding: 14px 16px; font-weight: 600; color: var(--text-secondary);">Estado</th>
-                  <th style="padding: 14px 16px; font-weight: 600; color: var(--text-secondary);">Fecha</th>
-                  <th style="padding: 14px 16px; font-weight: 600; color: var(--text-secondary); text-align: right;">Acciones</th>
-                </tr>
-              </thead>
-              <tbody data-ref="templates-table-body">
-                <tr>
-                  <td colspan="7" style="padding: 40px; text-align: center; color: var(--text-secondary);">Cargando plantillas...</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <div class="table-pagination" data-ref="templates-pagination" style="display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-top: 1px solid var(--border-color); font-size: 13px; color: var(--text-secondary);">
-            <div data-ref="pagination-info">Mostrando plantillas</div>
-            <div style="display: flex; gap: 8px;">
-              <button type="button" class="component-button component-button--h32 component-button--bordered is-disabled" data-ref="btn-prev-page">Anterior</button>
-              <button type="button" class="component-button component-button--h32 component-button--bordered is-disabled" data-ref="btn-next-page">Siguiente</button>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   </div>
