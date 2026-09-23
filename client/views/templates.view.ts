@@ -1,14 +1,16 @@
 import { createSidebar } from '../components/layout.component.js';
+import { openModal } from '../components/modal.component.js';
 import { openTemplatePreviewModal } from '../components/template-preview-modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { ALL_PRESETS, PresetItem, TEMPLATE_CATEGORIES } from '../config/templates.config.js';
 import { buildAdCardHtml, DEFAULT_AD_FREQUENCY, getAdByIndex, handleAdClick, shouldShowAds } from '../services/ad.service.js';
-import { currentUser, escapeHtml, getApi, postApi } from '../services/api.service.js';
+import { currentUser, deleteApi, escapeHtml, getApi, postApi } from '../services/api.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { SkeletonService } from '../services/skeleton.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
+import { canPublishTemplates } from '../types/auth.types.js';
 import { bindDragToScroll, CarouselController, initCarouselScroll, removeEmptyState, renderEmptyState, setupDropdown, setupLazyImages } from '../utils/dom.util.js';
 
 const BATCH_SIZE = 20;
@@ -44,12 +46,46 @@ class TemplatesController {
   private searchQuery = '';
   private favoritedTemplateIds = new Set<string>();
 
+  private isDesigner = false;
+  private activeTab: 'explore' | 'designer' = 'explore';
+  private designerTemplates: any[] = [];
+  private designerFilterStatus = 'all';
+  private designerSearchQuery = '';
+
+  private navTabsEl: HTMLElement | null = null;
+  private btnTabExplore: HTMLButtonElement | null = null;
+  private btnTabDesigner: HTMLButtonElement | null = null;
+  private badgeDesignerCount: HTMLElement | null = null;
+  private exploreSubhead: HTMLElement | null = null;
+  private designerSection: HTMLElement | null = null;
+  private designerGridEl: HTMLElement | null = null;
+  private designerStatusFiltersContainer: HTMLElement | null = null;
+  private designerSearchInput: HTMLInputElement | null = null;
+  private designerClearSearchBtn: HTMLButtonElement | null = null;
+
   constructor(container: HTMLElement) {
     this.container = container;
     this.abortController = new AbortController();
   }
 
   public async init(): Promise<void> {
+    this.isDesigner = canPublishTemplates(currentUser);
+    this.navTabsEl = this.container.querySelector<HTMLElement>('[data-ref="templates-nav-tabs"]');
+    this.btnTabExplore = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tab-explore"]');
+    this.btnTabDesigner = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tab-designer"]');
+    this.badgeDesignerCount = this.container.querySelector<HTMLElement>('[data-ref="badge-designer-count"]');
+    this.exploreSubhead = this.container.querySelector<HTMLElement>('[data-ref="templates-explore-subhead"]');
+    this.designerSection = this.container.querySelector<HTMLElement>('[data-ref="designer-templates-section"]');
+    this.designerGridEl = this.container.querySelector<HTMLElement>('[data-ref="designer-templates-grid"]');
+    this.designerStatusFiltersContainer = this.container.querySelector<HTMLElement>('[data-ref="designer-status-filters"]');
+    this.designerSearchInput = this.container.querySelector<HTMLInputElement>('[data-ref="designer-search-input"]');
+    this.designerClearSearchBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-designer-clear-search"]');
+
+    if (this.isDesigner && this.navTabsEl) {
+      this.navTabsEl.style.display = 'flex';
+      void this.loadDesignerMetrics();
+    }
+
     this.gridEl = this.container.querySelector<HTMLElement>('[data-ref="templates-grid"]');
     if (this.gridEl) {
       SkeletonService.renderGridCardSkeletons(this.gridEl, 8, 'template');
@@ -106,6 +142,11 @@ class TemplatesController {
     this.initCarousel();
     this.renderTemplates();
     this.bindEvents();
+
+    const isMyTemplatesRoute = window.location.pathname === '/templates/my-templates';
+    if (this.isDesigner && isMyTemplatesRoute) {
+      this.switchTab('designer', false);
+    }
   }
 
   private initCarousel(): void {
@@ -236,6 +277,77 @@ class TemplatesController {
       },
       { signal }
     );
+
+    if (this.isDesigner) {
+      this.btnTabExplore?.addEventListener(
+        'click',
+        () => {
+          this.switchTab('explore');
+        },
+        { signal }
+      );
+
+      this.btnTabDesigner?.addEventListener(
+        'click',
+        () => {
+          this.switchTab('designer');
+        },
+        { signal }
+      );
+
+      this.designerStatusFiltersContainer?.addEventListener(
+        'click',
+        (e) => {
+          const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-status]');
+          if (!btn) return;
+          const status = btn.getAttribute('data-status') || 'all';
+          if (status === this.designerFilterStatus) return;
+          this.designerFilterStatus = status;
+          this.designerStatusFiltersContainer?.querySelectorAll<HTMLButtonElement>('[data-status]').forEach((b) => {
+            b.classList.toggle('is-active', b.getAttribute('data-status') === status);
+          });
+          this.renderDesignerTemplates();
+        },
+        { signal }
+      );
+
+      this.designerSearchInput?.addEventListener(
+        'input',
+        () => {
+          if (!this.designerSearchInput) return;
+          this.designerSearchQuery = this.designerSearchInput.value.trim().toLowerCase();
+          if (this.designerClearSearchBtn) {
+            this.designerClearSearchBtn.style.display = this.designerSearchQuery ? 'inline-flex' : 'none';
+          }
+          this.renderDesignerTemplates();
+        },
+        { signal }
+      );
+
+      this.designerClearSearchBtn?.addEventListener(
+        'click',
+        () => {
+          if (this.designerSearchInput) {
+            this.designerSearchInput.value = '';
+            this.designerSearchQuery = '';
+            if (this.designerClearSearchBtn) {
+              this.designerClearSearchBtn.style.display = 'none';
+            }
+            this.designerSearchInput.focus();
+            this.renderDesignerTemplates();
+          }
+        },
+        { signal }
+      );
+
+      this.designerGridEl?.addEventListener(
+        'click',
+        (e) => {
+          void this.handleDesignerGridClick(e);
+        },
+        { signal }
+      );
+    }
   }
 
   private renderTemplates(): void {
@@ -570,7 +682,315 @@ class TemplatesController {
     }
   }
 
+  private switchTab(tab: 'explore' | 'designer', pushState = true): void {
+    if (!this.isDesigner) return;
+    this.activeTab = tab;
+
+    if (pushState) {
+      const targetUrl = tab === 'designer' ? '/templates/my-templates' : '/templates';
+      window.history.pushState({}, '', targetUrl);
+    }
+
+    if (tab === 'designer') {
+      if (this.btnTabExplore) {
+        this.btnTabExplore.className = 'component-button component-button--h36 component-button--outline';
+      }
+      if (this.btnTabDesigner) {
+        this.btnTabDesigner.className = 'component-button component-button--h36 component-button--black';
+      }
+      if (this.exploreSubhead) {
+        this.exploreSubhead.style.display = 'none';
+      }
+      if (this.templatesSection) {
+        this.templatesSection.style.display = 'none';
+      }
+      if (this.designerSection) {
+        this.designerSection.style.display = 'block';
+      }
+      void this.loadDesignerData();
+    } else {
+      if (this.btnTabExplore) {
+        this.btnTabExplore.className = 'component-button component-button--h36 component-button--black';
+      }
+      if (this.btnTabDesigner) {
+        this.btnTabDesigner.className = 'component-button component-button--h36 component-button--outline';
+      }
+      if (this.exploreSubhead) {
+        this.exploreSubhead.style.display = 'block';
+      }
+      if (this.templatesSection) {
+        this.templatesSection.style.display = 'block';
+      }
+      if (this.designerSection) {
+        this.designerSection.style.display = 'none';
+      }
+      this.carouselController?.updateButtons();
+    }
+  }
+
+  private async loadDesignerMetrics(): Promise<void> {
+    try {
+      const res = await getApi(API_ROUTES.templates.myMetrics);
+      if (!res.ok) return;
+      const data = await res.json();
+      const metrics = data?.metrics || {};
+
+      const totalVal = this.container.querySelector<HTMLElement>('[data-ref="metric-value-total"]');
+      const usesVal = this.container.querySelector<HTMLElement>('[data-ref="metric-value-uses"]');
+      const approvedVal = this.container.querySelector<HTMLElement>('[data-ref="metric-value-approved"]');
+      const pendingVal = this.container.querySelector<HTMLElement>('[data-ref="metric-value-pending"]');
+      const rejectedVal = this.container.querySelector<HTMLElement>('[data-ref="metric-value-rejected"]');
+      const draftVal = this.container.querySelector<HTMLElement>('[data-ref="metric-value-draft"]');
+
+      if (totalVal) totalVal.textContent = String(metrics.totalCount || 0);
+      if (usesVal) usesVal.textContent = String(metrics.totalUses || 0);
+      if (approvedVal) approvedVal.textContent = String(metrics.approvedCount || 0);
+      if (pendingVal) pendingVal.textContent = String(metrics.pendingCount || 0);
+      if (rejectedVal) rejectedVal.textContent = String(metrics.rejectedCount || 0);
+      if (draftVal) draftVal.textContent = String(metrics.draftCount || 0);
+
+      if (this.badgeDesignerCount) {
+        const count = Number(metrics.totalCount || 0);
+        this.badgeDesignerCount.textContent = String(count);
+        this.badgeDesignerCount.style.display = count > 0 ? 'inline-block' : 'none';
+      }
+    } catch {}
+  }
+
+  private async loadDesignerData(): Promise<void> {
+    if (this.designerGridEl) {
+      SkeletonService.renderGridCardSkeletons(this.designerGridEl, 4, 'template');
+    }
+    await Promise.all([
+      this.loadDesignerMetrics(),
+      (async () => {
+        try {
+          const res = await getApi(`${API_ROUTES.templates.myTemplates}?limit=100`);
+          if (res.ok) {
+            const data = await res.json();
+            this.designerTemplates = Array.isArray(data.templates) ? data.templates : [];
+          }
+        } catch {}
+      })(),
+    ]);
+    this.renderDesignerTemplates();
+  }
+
+  private renderDesignerTemplates(): void {
+    if (!this.designerGridEl || !this.designerSection) return;
+
+    let filtered = [...this.designerTemplates];
+
+    if (this.designerFilterStatus !== 'all') {
+      filtered = filtered.filter((item) => item.status === this.designerFilterStatus);
+    }
+
+    if (this.designerSearchQuery) {
+      const q = this.designerSearchQuery;
+      filtered = filtered.filter((item) => {
+        const nameMatch = item.title ? item.title.toLowerCase().includes(q) : false;
+        const descMatch = item.description ? item.description.toLowerCase().includes(q) : false;
+        return nameMatch || descMatch;
+      });
+    }
+
+    if (filtered.length === 0) {
+      this.designerGridEl.innerHTML = '';
+      this.designerGridEl.style.display = 'none';
+      renderEmptyState({
+        container: this.designerSection,
+        dataRef: 'designer-empty-state',
+        desc: t('templates.empty_designer_desc') || 'Diseña en cualquier lienzo, abre el modal de compartir y selecciona "Publicar como plantilla" para compartir tus creaciones.',
+        graphicType: 'canvas',
+        title: t('templates.empty_designer_title') || 'Aún no has publicado plantillas',
+      });
+      return;
+    }
+
+    removeEmptyState(this.designerSection, 'designer-empty-state');
+    this.designerGridEl.style.display = 'grid';
+    this.designerGridEl.innerHTML = filtered.map((item) => this.buildDesignerCardHtml(item)).join('');
+    setupLazyImages(this.designerGridEl);
+    renderIcons(this.designerGridEl);
+  }
+
+  private buildDesignerCardHtml(tItem: any): string {
+    const status = tItem.status;
+    let badgeClass = 'component-badge--neutral';
+    let badgeText = t('templates.status_draft');
+    let badgeIcon = 'lock';
+
+    if (status === 'approved') {
+      badgeClass = 'component-badge--success';
+      badgeText = t('templates.status_approved');
+      badgeIcon = 'check_circle';
+    } else if (status === 'pending') {
+      badgeClass = 'component-badge--warning';
+      badgeText = t('templates.status_pending');
+      badgeIcon = 'schedule';
+    } else if (status === 'rejected') {
+      badgeClass = 'component-badge--danger';
+      badgeText = t('templates.status_rejected');
+      badgeIcon = 'cancel';
+    }
+
+    const isPres = tItem.canvas_type === 'presentation';
+    const isDoc = tItem.canvas_type === 'doc';
+    const typeIcon = isPres ? 'slideshow' : (isDoc ? 'description' : 'dashboard');
+    const typeLabel = isPres ? t('templates.filter_presentation') : (isDoc ? t('templates.filter_doc') : t('templates.filter_board'));
+    const usesCount = Number(tItem.uses_count || 0);
+    const usesRaw = t('templates.uses_count_label') || '{count} usos';
+    const usesText = usesRaw.replace('{count}', String(usesCount));
+
+    const defaultThumb = isPres ? '/assets/templates/presentations/pitch.svg' : (isDoc ? '/assets/templates/docs/proposal.svg' : '/assets/templates/boards/retro.svg');
+    const thumbUrl = tItem.preview_thumbnail || defaultThumb;
+
+    return `
+      <div class="canvas-card template-card designer-card" data-ref="designer-card-${tItem.uuid}" data-template-uuid="${tItem.uuid}" data-template-id="${tItem.id}">
+        <div class="canvas-card__thumbnail template-card__thumbnail" data-ref="designer-card-thumb-${tItem.uuid}">
+          <img class="canvas-card__image image-lazy-fade" data-ref="designer-card-img-${tItem.uuid}" src="${thumbUrl}" alt="${escapeHtml(tItem.title)}" loading="lazy" decoding="async" onload="this.classList.add('image-loaded')" onerror="this.classList.add('image-loaded')" />
+          <div class="canvas-card__badge-overlay" style="position: absolute; top: 10px; left: 10px; z-index: 2;">
+            <span class="component-badge ${badgeClass}" style="gap: 4px; font-weight: 600; font-size: 11px; padding: 4px 8px; backdrop-filter: blur(8px);">
+              <svg class="component-icon" style="font-size: 14px; width: 14px; height: 14px;" aria-hidden="true"><use href="/icons.svg#${badgeIcon}"></use></svg>
+              <span>${badgeText}</span>
+            </span>
+          </div>
+          <div class="canvas-card__actions-wrapper" data-ref="designer-card-actions-${tItem.uuid}">
+            <div class="canvas-card__actions">
+              ${tItem.source_canvas_uuid ? `
+                <a class="canvas-card__action-btn" data-ref="btn-designer-open-canvas-${tItem.uuid}" href="/design/${tItem.source_canvas_uuid}" data-tooltip="${t('templates.btn_open_canvas')}" aria-label="${t('templates.btn_open_canvas')}">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
+                </a>
+              ` : ''}
+              ${status === 'approved' ? `
+                <button type="button" class="canvas-card__action-btn" data-ref="btn-toggle-private-${tItem.uuid}" data-action="toggle-visibility" data-tooltip="${t('templates.btn_make_private')}" aria-label="${t('templates.btn_make_private')}">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#lock"></use></svg>
+                </button>
+              ` : ''}
+              ${status === 'draft' ? `
+                <button type="button" class="canvas-card__action-btn" data-ref="btn-toggle-public-${tItem.uuid}" data-action="toggle-visibility" data-tooltip="${t('templates.btn_make_public')}" aria-label="${t('templates.btn_make_public')}">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
+                </button>
+              ` : ''}
+              ${status === 'rejected' ? `
+                <button type="button" class="canvas-card__action-btn is-active" style="color: var(--color-danger, #ef4444);" data-ref="btn-view-rejection-${tItem.uuid}" data-action="view-rejection" data-reason="${escapeHtml(tItem.rejection_reason || '')}" data-tooltip="${t('templates.btn_view_rejection')}" aria-label="${t('templates.btn_view_rejection')}">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#error"></use></svg>
+                </button>
+              ` : ''}
+              <button type="button" class="canvas-card__action-btn" style="color: var(--color-danger, #ef4444);" data-ref="btn-delete-template-${tItem.uuid}" data-action="delete-template" data-tooltip="${t('templates.btn_delete')}" aria-label="${t('templates.btn_delete')}">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="canvas-card__info" data-ref="designer-card-info-${tItem.uuid}" style="padding: 10px 12px;">
+          <span class="canvas-card__name" data-ref="designer-card-title-${tItem.uuid}" title="${escapeHtml(tItem.title)}" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            ${escapeHtml(tItem.title)}
+          </span>
+          <div class="canvas-card__meta" style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary);">
+            <svg class="component-icon" style="font-size: 14px; width: 14px; height: 14px;" aria-hidden="true"><use href="/icons.svg#${typeIcon}"></use></svg>
+            <span>${typeLabel}</span>
+            <span class="canvas-card__meta-dot">·</span>
+            <svg class="component-icon" style="font-size: 14px; width: 14px; height: 14px;" aria-hidden="true"><use href="/icons.svg#group"></use></svg>
+            <span>${usesText}</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private async handleDesignerGridClick(e: MouseEvent): Promise<void> {
+    const target = e.target as HTMLElement;
+
+    const actionBtn = target.closest<HTMLElement>('[data-action]');
+    if (!actionBtn) return;
+
+    const action = actionBtn.getAttribute('data-action');
+    const card = target.closest<HTMLElement>('[data-template-uuid]');
+    if (!card) return;
+
+    const templateUuid = card.getAttribute('data-template-uuid');
+    if (!templateUuid) return;
+
+    const item = this.designerTemplates.find((t) => t.uuid === templateUuid);
+    if (!item) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (action === 'view-rejection') {
+      const reason = actionBtn.getAttribute('data-reason') || item.rejection_reason || '';
+      openModal({
+        bodyHtml: `
+          <div class="banner banner--danger" data-ref="rejection-reason-box" style="margin-top: 12px; font-size: 13px; line-height: 1.5; padding: 14px 16px; border-radius: 8px;">
+            ${escapeHtml(reason || 'No se especificó un motivo detallado.')}
+          </div>
+        `,
+        confirmClass: 'component-button--black',
+        confirmText: t('modal.close') || 'Cerrar',
+        descriptionKey: 'templates.rejection_modal_desc',
+        showCancel: false,
+        size: 'sm',
+        titleKey: 'templates.rejection_modal_title',
+      });
+      return;
+    }
+
+    if (action === 'toggle-visibility') {
+      try {
+        const res = await postApi(API_ROUTES.templates.toggleVisibility(templateUuid));
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.template) {
+            const idx = this.designerTemplates.findIndex((t) => t.uuid === templateUuid);
+            if (idx !== -1) {
+              this.designerTemplates[idx] = data.template;
+            }
+            const isDraft = data.template.status === 'draft';
+            showToast(isDraft ? t('templates.visibility_updated_private') : t('templates.visibility_updated_public'), 'success');
+            void this.loadDesignerMetrics();
+            this.renderDesignerTemplates();
+          }
+        } else {
+          showToast(t('toasts.generic_error') || 'Error al actualizar visibilidad', 'danger');
+        }
+      } catch {
+        showToast(t('toasts.generic_error') || 'Error al actualizar visibilidad', 'danger');
+      }
+      return;
+    }
+
+    if (action === 'delete-template') {
+      openModal({
+        confirmClass: 'component-button--danger',
+        confirmText: t('templates.btn_delete') || 'Eliminar plantilla',
+        descriptionKey: 'templates.delete_confirm_desc',
+        onConfirm: async () => {
+          try {
+            const res = await deleteApi(API_ROUTES.templates.deleteMyTemplate(templateUuid));
+            if (res.ok) {
+              this.designerTemplates = this.designerTemplates.filter((t) => t.uuid !== templateUuid);
+              showToast(t('templates.delete_success') || 'Plantilla eliminada exitosamente.', 'success');
+              void this.loadDesignerMetrics();
+              this.renderDesignerTemplates();
+            } else {
+              showToast(t('toasts.generic_error') || 'Error al eliminar plantilla', 'danger');
+            }
+          } catch {
+            showToast(t('toasts.generic_error') || 'Error al eliminar plantilla', 'danger');
+          }
+        },
+        size: 'sm',
+        titleKey: 'templates.delete_confirm_title',
+      });
+      return;
+    }
+  }
+
   public destroy(): void {
+    if (this.designerSection) {
+      removeEmptyState(this.designerSection, 'designer-empty-state');
+    }
     if (this.scrollObserver) {
       this.scrollObserver.disconnect();
       this.scrollObserver = null;

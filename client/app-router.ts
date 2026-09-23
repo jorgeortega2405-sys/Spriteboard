@@ -10,6 +10,7 @@ import { renderIcons } from './services/icon.service.js';
 import { SkeletonService } from './services/skeleton.service.js';
 import { trackPageView } from './services/telemetry.service.js';
 import { hideTooltip } from './services/tooltip.service.js';
+import { canPublishTemplates } from './types/auth.types.js';
 import { ViewController } from './types/common.types.js';
 import { closeAllDropdowns } from './utils/dom.util.js';
 
@@ -164,7 +165,10 @@ export async function render(): Promise<void> {
         const { createTeamsView } = await import('./views/teams.view.js');
         viewElements = [await createTeamsView()];
       }
-    } else if (path === '/templates') {
+    } else if (path === '/templates' || path === '/templates/my-templates') {
+      if (path === '/templates/my-templates' && (!currentUser || !canPublishTemplates(currentUser))) {
+        window.history.replaceState({}, '', '/templates');
+      }
       const { createTemplatesView } = await import('./views/templates.view.js');
       viewElements = [await createTemplatesView()];
     } else if (path === '/search') {

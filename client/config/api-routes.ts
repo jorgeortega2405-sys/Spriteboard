@@ -66,7 +66,11 @@ export const API_ROUTES = {
   templates: {
     base: '/api/templates',
     byId: (id: string) => `/api/templates/${encodeURIComponent(id)}`,
+    deleteMyTemplate: (id: number | string) => `/api/templates/my/${encodeURIComponent(String(id))}`,
+    myMetrics: '/api/templates/my/metrics',
+    myTemplates: '/api/templates/my',
     publish: '/api/templates/publish',
+    toggleVisibility: (id: number | string) => `/api/templates/my/${encodeURIComponent(String(id))}/visibility`,
   },
   search: (q: string) => `/api/search?q=${encodeURIComponent(q)}`,
   uploads: {

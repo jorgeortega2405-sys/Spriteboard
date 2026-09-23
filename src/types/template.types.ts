@@ -31,3 +31,12 @@ export interface TemplateRecord {
   user_id: number;
   uses_count: number;
 }
+
+export interface DesignerTemplateMetrics {
+  approvedCount: number;
+  draftCount: number;
+  pendingCount: number;
+  rejectedCount: number;
+  totalCount: number;
+  totalUses: number;
+}

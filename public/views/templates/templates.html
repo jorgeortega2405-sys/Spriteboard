@@ -7,13 +7,27 @@
         <div class="view-hero" data-ref="templates-hero">
           <div class="view-hero__content">
             <h1 class="view-hero__title" data-ref="templates-hero-title" data-i18n="templates.title">Plantillas</h1>
-            <div class="view-search-pill" data-ref="templates-search-box">
-              <svg class="component-icon view-search-pill__icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
-              <input class="view-search-pill__input" data-ref="templates-search-input" type="text" placeholder="Busca en miles de plantillas" autocomplete="off" />
-              <button type="button" class="component-button component-button--h32 component-button--icon-only view-search-pill__clear" data-ref="btn-templates-clear-search" style="display: none;" aria-label="Limpiar búsqueda">
-                <svg class="component-icon" style="font-size: 18px;" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+
+            <div class="view-nav-tabs" data-ref="templates-nav-tabs" style="display: none; justify-content: center; gap: 8px; margin-bottom: 20px;">
+              <button type="button" class="component-button component-button--h36 component-button--black" data-ref="btn-tab-explore">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
+                <span data-i18n="templates.tab_explore">Explorar galería</span>
+              </button>
+              <button type="button" class="component-button component-button--h36 component-button--outline" data-ref="btn-tab-designer">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#palette"></use></svg>
+                <span data-i18n="templates.tab_my_templates">Mis plantillas de diseñador</span>
+                <span class="component-badge" data-ref="badge-designer-count" style="display: none; margin-left: 6px; padding: 2px 7px; font-size: 11px; border-radius: 10px; background: rgba(125,125,125,0.15);">0</span>
               </button>
             </div>
+
+            <div class="templates-explore-subhead" data-ref="templates-explore-subhead">
+              <div class="view-search-pill" data-ref="templates-search-box">
+                <svg class="component-icon view-search-pill__icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+                <input class="view-search-pill__input" data-ref="templates-search-input" type="text" placeholder="Busca en miles de plantillas" autocomplete="off" />
+                <button type="button" class="component-button component-button--h32 component-button--icon-only view-search-pill__clear" data-ref="btn-templates-clear-search" style="display: none;" aria-label="Limpiar búsqueda">
+                  <svg class="component-icon" style="font-size: 18px;" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+                </button>
+              </div>
             <div class="component-tags-carousel-wrapper view-tags-wrapper" data-ref="templates-tags-carousel-wrapper">
               <button type="button" class="component-tag-nav-btn component-tag-nav-left is-disabled" data-ref="btn-tags-scroll-left" data-tooltip="Desplazar categorías a la izquierda" aria-label="Desplazar categorías a la izquierda">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
@@ -27,86 +41,181 @@
             </div>
           </div>
         </div>
+      </div>
 
-        <div class="canvas-section" data-ref="templates-section">
-          <div class="canvas-section__header" data-ref="templates-section-header">
-            <h2 class="canvas-section__title" data-ref="templates-section-title" data-i18n="templates.section_title">Explorar plantillas</h2>
-            <div class="canvas-section__controls home-section-controls" data-ref="templates-section-controls">
-              <div class="canvas-section__dropdown-wrapper home-filter-dropdown-wrapper" data-ref="templates-dropdown-wrapper-type">
-                <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-trigger-filter-type" data-tooltip="Filtrar" aria-label="Filtrar">
-                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
-                </button>
-                <div class="dropdown-backdrop" data-ref="dropdown-backdrop-filter-type">
-                  <div class="menu-panel menu-panel--dropdown menu-panel--w-200 menu-panel--h-auto" data-ref="dropdown-menu-filter-type">
-                    <div class="menu-panel__drag-zone" data-ref="drag-zone-filter-type" aria-hidden="true">
-                      <div class="menu-panel__drag-handle"></div>
-                    </div>
-                    <div class="menu-panel__list">
-                      <button type="button" class="menu-item is-active" data-ref="menu-filter-type-all" data-value="all">
-                        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
-                        <span class="menu-item__text" data-i18n="templates.filter_all">Todas</span>
-                      </button>
-                      <button type="button" class="menu-item" data-ref="menu-filter-type-favorites" data-value="favorites">
-                        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#star"></use></svg>
-                        <span class="menu-item__text" data-i18n="templates.filter_favorites">Favoritas</span>
-                      </button>
-                      <button type="button" class="menu-item" data-ref="menu-filter-type-board" data-value="board">
-                        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#dashboard"></use></svg>
-                        <span class="menu-item__text" data-i18n="templates.filter_board">Pizarrón</span>
-                      </button>
-                      <button type="button" class="menu-item" data-ref="menu-filter-type-doc" data-value="doc">
-                        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#description"></use></svg>
-                        <span class="menu-item__text" data-i18n="templates.filter_doc">Documentos</span>
-                      </button>
-                      <button type="button" class="menu-item" data-ref="menu-filter-type-presentation" data-value="presentation">
-                        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#slideshow"></use></svg>
-                        <span class="menu-item__text" data-i18n="templates.filter_presentation">Presentaciones</span>
-                      </button>
-                    </div>
+      <div class="canvas-section" data-ref="templates-section">
+        <div class="canvas-section__header" data-ref="templates-section-header">
+          <h2 class="canvas-section__title" data-ref="templates-section-title" data-i18n="templates.section_title">Explorar plantillas</h2>
+          <div class="canvas-section__controls home-section-controls" data-ref="templates-section-controls">
+            <div class="canvas-section__dropdown-wrapper home-filter-dropdown-wrapper" data-ref="templates-dropdown-wrapper-type">
+              <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-trigger-filter-type" data-tooltip="Filtrar" aria-label="Filtrar">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
+              </button>
+              <div class="dropdown-backdrop" data-ref="dropdown-backdrop-filter-type">
+                <div class="menu-panel menu-panel--dropdown menu-panel--w-200 menu-panel--h-auto" data-ref="dropdown-menu-filter-type">
+                  <div class="menu-panel__drag-zone" data-ref="drag-zone-filter-type" aria-hidden="true">
+                    <div class="menu-panel__drag-handle"></div>
+                  </div>
+                  <div class="menu-panel__list">
+                    <button type="button" class="menu-item is-active" data-ref="menu-filter-type-all" data-value="all">
+                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
+                      <span class="menu-item__text" data-i18n="templates.filter_all">Todas</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="menu-filter-type-favorites" data-value="favorites">
+                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#star"></use></svg>
+                      <span class="menu-item__text" data-i18n="templates.filter_favorites">Favoritas</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="menu-filter-type-board" data-value="board">
+                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#dashboard"></use></svg>
+                      <span class="menu-item__text" data-i18n="templates.filter_board">Pizarrón</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="menu-filter-type-doc" data-value="doc">
+                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#description"></use></svg>
+                      <span class="menu-item__text" data-i18n="templates.filter_doc">Documentos</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="menu-filter-type-presentation" data-value="presentation">
+                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#slideshow"></use></svg>
+                      <span class="menu-item__text" data-i18n="templates.filter_presentation">Presentaciones</span>
+                    </button>
                   </div>
                 </div>
               </div>
+            </div>
 
-              <div class="canvas-section__dropdown-wrapper home-filter-dropdown-wrapper" data-ref="templates-dropdown-wrapper-sort">
-                <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-trigger-sort" data-tooltip="Ordenar" aria-label="Ordenar">
-                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#swap_vert"></use></svg>
-                </button>
-                <div class="dropdown-backdrop" data-ref="dropdown-backdrop-sort">
-                  <div class="menu-panel menu-panel--dropdown menu-panel--w-220 menu-panel--h-auto" data-ref="dropdown-menu-sort">
-                    <div class="menu-panel__drag-zone" data-ref="drag-zone-sort" aria-hidden="true">
-                      <div class="menu-panel__drag-handle"></div>
-                    </div>
-                    <div class="menu-panel__list">
-                      <button type="button" class="menu-item is-active" data-ref="menu-sort-default" data-value="default">
-                        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
-                        <span class="menu-item__text" data-i18n="templates.sort_recommended">Recomendadas</span>
-                      </button>
-                      <button type="button" class="menu-item" data-ref="menu-sort-alpha-asc" data-value="alpha-asc">
-                        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#sort_by_alpha"></use></svg>
-                        <span class="menu-item__text" data-i18n="templates.sort_alpha_asc">Orden alfabético (A-Z)</span>
-                      </button>
-                      <button type="button" class="menu-item" data-ref="menu-sort-alpha-desc" data-value="alpha-desc">
-                        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#sort_by_alpha"></use></svg>
-                        <span class="menu-item__text" data-i18n="templates.sort_alpha_desc">Orden alfabético (Z-A)</span>
-                      </button>
-                      <button type="button" class="menu-item" data-ref="menu-sort-size-desc" data-value="size-desc">
-                        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#aspect_ratio"></use></svg>
-                        <span class="menu-item__text" data-i18n="templates.sort_size_desc">Mayor tamaño</span>
-                      </button>
-                      <button type="button" class="menu-item" data-ref="menu-sort-size-asc" data-value="size-asc">
-                        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#aspect_ratio"></use></svg>
-                        <span class="menu-item__text" data-i18n="templates.sort_size_asc">Menor tamaño</span>
-                      </button>
-                    </div>
+            <div class="canvas-section__dropdown-wrapper home-filter-dropdown-wrapper" data-ref="templates-dropdown-wrapper-sort">
+              <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-trigger-sort" data-tooltip="Ordenar" aria-label="Ordenar">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#swap_vert"></use></svg>
+              </button>
+              <div class="dropdown-backdrop" data-ref="dropdown-backdrop-sort">
+                <div class="menu-panel menu-panel--dropdown menu-panel--w-220 menu-panel--h-auto" data-ref="dropdown-menu-sort">
+                  <div class="menu-panel__drag-zone" data-ref="drag-zone-sort" aria-hidden="true">
+                    <div class="menu-panel__drag-handle"></div>
+                  </div>
+                  <div class="menu-panel__list">
+                    <button type="button" class="menu-item is-active" data-ref="menu-sort-default" data-value="default">
+                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
+                      <span class="menu-item__text" data-i18n="templates.sort_recommended">Recomendadas</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="menu-sort-alpha-asc" data-value="alpha-asc">
+                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#sort_by_alpha"></use></svg>
+                      <span class="menu-item__text" data-i18n="templates.sort_alpha_asc">Orden alfabético (A-Z)</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="menu-sort-alpha-desc" data-value="alpha-desc">
+                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#sort_by_alpha"></use></svg>
+                      <span class="menu-item__text" data-i18n="templates.sort_alpha_desc">Orden alfabético (Z-A)</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="menu-sort-size-desc" data-value="size-desc">
+                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#aspect_ratio"></use></svg>
+                      <span class="menu-item__text" data-i18n="templates.sort_size_desc">Mayor tamaño</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="menu-sort-size-asc" data-value="size-asc">
+                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#aspect_ratio"></use></svg>
+                      <span class="menu-item__text" data-i18n="templates.sort_size_asc">Menor tamaño</span>
+                    </button>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-
-          <div class="canvas-grid templates-grid" data-ref="templates-grid"></div>
-          <div class="infinite-scroll-sentinel" data-ref="templates-sentinel" style="display: none;"></div>
         </div>
+
+        <div class="canvas-grid templates-grid" data-ref="templates-grid"></div>
+        <div class="infinite-scroll-sentinel" data-ref="templates-sentinel" style="display: none;"></div>
+      </div>
+
+      <div class="canvas-section designer-templates-section" data-ref="designer-templates-section" style="display: none; padding-bottom: 40px;">
+        <div class="metrics-summary-grid" data-ref="designer-metrics-grid" style="margin-bottom: 24px;">
+          <div class="metrics-stat-card" data-ref="designer-stat-total">
+            <div class="metrics-stat-card__icon-box">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
+            </div>
+            <div class="metrics-stat-card__info">
+              <span class="metrics-stat-card__label" data-i18n="templates.metric_total">Plantillas publicadas</span>
+              <span class="metrics-stat-card__value" data-ref="metric-value-total">0</span>
+            </div>
+          </div>
+
+          <div class="metrics-stat-card" data-ref="designer-stat-uses">
+            <div class="metrics-stat-card__icon-box">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#group"></use></svg>
+            </div>
+            <div class="metrics-stat-card__info">
+              <span class="metrics-stat-card__label" data-i18n="templates.metric_uses">Usos totales</span>
+              <span class="metrics-stat-card__value" data-ref="metric-value-uses">0</span>
+            </div>
+          </div>
+
+          <div class="metrics-stat-card" data-ref="designer-stat-approved">
+            <div class="metrics-stat-card__icon-box" style="color: var(--color-success, #10b981);">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+            </div>
+            <div class="metrics-stat-card__info">
+              <span class="metrics-stat-card__label" data-i18n="templates.metric_approved">Aprobadas</span>
+              <span class="metrics-stat-card__value" data-ref="metric-value-approved">0</span>
+            </div>
+          </div>
+
+          <div class="metrics-stat-card" data-ref="designer-stat-pending">
+            <div class="metrics-stat-card__icon-box" style="color: var(--color-warning, #f59e0b);">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#schedule"></use></svg>
+            </div>
+            <div class="metrics-stat-card__info">
+              <span class="metrics-stat-card__label" data-i18n="templates.metric_pending">En revisión</span>
+              <span class="metrics-stat-card__value" data-ref="metric-value-pending">0</span>
+            </div>
+          </div>
+
+          <div class="metrics-stat-card" data-ref="designer-stat-rejected">
+            <div class="metrics-stat-card__icon-box" style="color: var(--color-danger, #ef4444);">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cancel"></use></svg>
+            </div>
+            <div class="metrics-stat-card__info">
+              <span class="metrics-stat-card__label" data-i18n="templates.metric_rejected">Rechazadas</span>
+              <span class="metrics-stat-card__value" data-ref="metric-value-rejected">0</span>
+            </div>
+          </div>
+
+          <div class="metrics-stat-card" data-ref="designer-stat-draft">
+            <div class="metrics-stat-card__icon-box" style="color: var(--text-secondary);">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#lock"></use></svg>
+            </div>
+            <div class="metrics-stat-card__info">
+              <span class="metrics-stat-card__label" data-i18n="templates.metric_draft">Privadas</span>
+              <span class="metrics-stat-card__value" data-ref="metric-value-draft">0</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="canvas-section__header" data-ref="designer-section-header" style="margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+          <div class="component-tags-carousel" data-ref="designer-status-filters" style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button type="button" class="component-badge component-badge--interactive is-active" data-ref="btn-designer-filter-all" data-status="all">
+              <span data-i18n="templates.filter_status_all">Todas</span>
+            </button>
+            <button type="button" class="component-badge component-badge--interactive" data-ref="btn-designer-filter-approved" data-status="approved">
+              <span data-i18n="templates.filter_status_approved">Aprobadas</span>
+            </button>
+            <button type="button" class="component-badge component-badge--interactive" data-ref="btn-designer-filter-pending" data-status="pending">
+              <span data-i18n="templates.filter_status_pending">En revisión</span>
+            </button>
+            <button type="button" class="component-badge component-badge--interactive" data-ref="btn-designer-filter-rejected" data-status="rejected">
+              <span data-i18n="templates.filter_status_rejected">Rechazadas</span>
+            </button>
+            <button type="button" class="component-badge component-badge--interactive" data-ref="btn-designer-filter-draft" data-status="draft">
+              <span data-i18n="templates.filter_status_draft">Privadas</span>
+            </button>
+          </div>
+
+          <div class="view-search-pill" data-ref="designer-search-box" style="max-width: 320px; width: 100%; margin: 0;">
+            <svg class="component-icon view-search-pill__icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+            <input class="view-search-pill__input" data-ref="designer-search-input" type="text" placeholder="Buscar en mis plantillas..." autocomplete="off" />
+            <button type="button" class="component-button component-button--h32 component-button--icon-only view-search-pill__clear" data-ref="btn-designer-clear-search" style="display: none;" aria-label="Limpiar búsqueda">
+              <svg class="component-icon" style="font-size: 18px;" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="canvas-grid templates-grid" data-ref="designer-templates-grid"></div>
+      </div>
       </div>
     </div>
   </div>

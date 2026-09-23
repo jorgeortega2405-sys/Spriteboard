@@ -1,5 +1,5 @@
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
-import { getPublishedTemplates, getTemplateByUuid, publishCanvasAsTemplate } from '../services/template.service.js';
+import { deleteDesignerTemplate, getDesignerTemplateMetrics, getDesignerTemplates, getPublishedTemplates, getTemplateByUuid, publishCanvasAsTemplate, toggleDesignerTemplateVisibility } from '../services/template.service.js';
 import { sendBadRequest, sendCreated, sendForbidden, sendInternalError, sendNotFound, sendSuccess, sendUnauthorized } from '../utils/http.util.js';
 import { Request, Response } from 'express';
 
@@ -104,5 +104,136 @@ export async function getTemplateDetailsHandler(req: Request, res: Response): Pr
     sendSuccess(res, { template });
   } catch (err) {
     sendInternalError(res, 'Error al obtener detalle de plantilla en template controller', err);
+  }
+}
+
+export async function getMyTemplatesHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const user = getCurrentUser(req);
+    if (!user) {
+      sendUnauthorized(res, 'Debes iniciar sesión para consultar tus plantillas.');
+      return;
+    }
+
+    const userRoles: string[] = Array.isArray(user.roles) && user.roles.length > 0
+      ? user.roles
+      : (user.role ? [user.role] : ['USER']);
+
+    const isDesignerOrAdmin = userRoles.includes('DESIGNER') || userRoles.includes('SUPER_ADMIN') || userRoles.includes('PLATFORM_ADMIN');
+    if (!isDesignerOrAdmin) {
+      sendForbidden(res, 'No tienes permisos para acceder al panel de diseñador.');
+      return;
+    }
+
+    const search = typeof req.query.search === 'string' ? req.query.search : undefined;
+    const status = typeof req.query.status === 'string' ? req.query.status : undefined;
+    const type = typeof req.query.type === 'string' ? req.query.type : undefined;
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
+    const offset = Math.max(0, Number(req.query.offset) || 0);
+
+    const data = await getDesignerTemplates(user.id, {
+      limit,
+      offset,
+      search,
+      status,
+      type,
+    });
+
+    sendSuccess(res, data);
+  } catch (err) {
+    sendInternalError(res, 'Error al obtener plantillas de diseñador en template controller', err);
+  }
+}
+
+export async function getMyTemplateMetricsHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const user = getCurrentUser(req);
+    if (!user) {
+      sendUnauthorized(res, 'Debes iniciar sesión para consultar métricas.');
+      return;
+    }
+
+    const userRoles: string[] = Array.isArray(user.roles) && user.roles.length > 0
+      ? user.roles
+      : (user.role ? [user.role] : ['USER']);
+
+    const isDesignerOrAdmin = userRoles.includes('DESIGNER') || userRoles.includes('SUPER_ADMIN') || userRoles.includes('PLATFORM_ADMIN');
+    if (!isDesignerOrAdmin) {
+      sendForbidden(res, 'No tienes permisos para acceder a las métricas de diseñador.');
+      return;
+    }
+
+    const metrics = await getDesignerTemplateMetrics(user.id);
+    sendSuccess(res, { metrics });
+  } catch (err) {
+    sendInternalError(res, 'Error al obtener métricas de diseñador en template controller', err);
+  }
+}
+
+export async function toggleTemplateVisibilityHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const user = getCurrentUser(req);
+    if (!user) {
+      sendUnauthorized(res, 'Debes iniciar sesión.');
+      return;
+    }
+
+    const { id } = req.params;
+    if (!id || typeof id !== 'string' || id.trim().length === 0) {
+      sendBadRequest(res, 'Identificador de plantilla requerido.');
+      return;
+    }
+
+    const userRoles: string[] = Array.isArray(user.roles) && user.roles.length > 0
+      ? user.roles
+      : (user.role ? [user.role] : ['USER']);
+    const isAdmin = userRoles.includes('SUPER_ADMIN') || userRoles.includes('PLATFORM_ADMIN');
+
+    const template = await toggleDesignerTemplateVisibility(user.id, id.trim(), isAdmin);
+    sendSuccess(res, { template });
+  } catch (err: any) {
+    if (err?.message === 'Template not found') {
+      sendNotFound(res, 'Plantilla no encontrada.');
+      return;
+    }
+    if (err?.message === 'Unauthorized') {
+      sendForbidden(res, 'No tienes permisos para modificar esta plantilla.');
+      return;
+    }
+    sendInternalError(res, 'Error al cambiar visibilidad de plantilla en template controller', err);
+  }
+}
+
+export async function deleteMyTemplateHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const user = getCurrentUser(req);
+    if (!user) {
+      sendUnauthorized(res, 'Debes iniciar sesión.');
+      return;
+    }
+
+    const { id } = req.params;
+    if (!id || typeof id !== 'string' || id.trim().length === 0) {
+      sendBadRequest(res, 'Identificador de plantilla requerido.');
+      return;
+    }
+
+    const userRoles: string[] = Array.isArray(user.roles) && user.roles.length > 0
+      ? user.roles
+      : (user.role ? [user.role] : ['USER']);
+    const isAdmin = userRoles.includes('SUPER_ADMIN') || userRoles.includes('PLATFORM_ADMIN');
+
+    await deleteDesignerTemplate(user.id, id.trim(), isAdmin);
+    sendSuccess(res, { message: 'Plantilla eliminada exitosamente.' });
+  } catch (err: any) {
+    if (err?.message === 'Template not found') {
+      sendNotFound(res, 'Plantilla no encontrada.');
+      return;
+    }
+    if (err?.message === 'Unauthorized') {
+      sendForbidden(res, 'No tienes permisos para eliminar esta plantilla.');
+      return;
+    }
+    sendInternalError(res, 'Error al eliminar plantilla en template controller', err);
   }
 }
