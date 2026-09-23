@@ -116,7 +116,7 @@ export class BoardEffectsPanelComponent {
     this.abortController = new AbortController();
     const { signal } = this.abortController;
 
-    const btnClose = this.panelEl?.querySelector<HTMLButtonElement>('[data-ref="btn-close-effects-drawer"]');
+    const btnClose = this.panelEl?.querySelector<HTMLButtonElement>('[data-ref="btn-close-effects-drawer"], [data-ref="btn-close-canvas-panel"]');
     btnClose?.addEventListener('click', () => {
       this.close();
       this.callbacks.onClose();
@@ -132,19 +132,19 @@ export class BoardEffectsPanelComponent {
       for (const item of BASIC_EFFECTS) {
         const btn = document.createElement('button');
         btn.setAttribute('type', 'button');
-        btn.className = `canva-effect-card${this.activeEffect.type === item.id ? ' is-active' : ''}`;
+        btn.className = `board-effect-card canva-effect-card${this.activeEffect.type === item.id ? ' is-active' : ''}`;
         btn.setAttribute('data-ref', `effect-card-${item.id}`);
         btn.setAttribute('data-tooltip', item.description);
 
         const iconWrap = document.createElement('div');
-        iconWrap.className = 'canva-effect-card__preview';
+        iconWrap.className = 'board-effect-card__preview canva-effect-card__preview';
         const iconSpan = document.createElement('span');
         iconSpan.className = 'component-icon';
         iconSpan.textContent = item.icon;
         iconWrap.appendChild(iconSpan);
 
         const label = document.createElement('span');
-        label.className = 'canva-effect-card__label';
+        label.className = 'board-effect-card__label canva-effect-card__label';
         label.textContent = item.name;
 
         btn.appendChild(iconWrap);
@@ -164,19 +164,19 @@ export class BoardEffectsPanelComponent {
       for (const item of ADVANCED_EFFECTS) {
         const btn = document.createElement('button');
         btn.setAttribute('type', 'button');
-        btn.className = `canva-effect-card${this.activeEffect.type === item.id ? ' is-active' : ''}`;
+        btn.className = `board-effect-card canva-effect-card${this.activeEffect.type === item.id ? ' is-active' : ''}`;
         btn.setAttribute('data-ref', `effect-card-${item.id}`);
         btn.setAttribute('data-tooltip', item.description);
 
         const iconWrap = document.createElement('div');
-        iconWrap.className = 'canva-effect-card__preview canva-effect-card__preview--filter';
+        iconWrap.className = 'board-effect-card__preview canva-effect-card__preview board-effect-card__preview--filter canva-effect-card__preview--filter';
         const iconSpan = document.createElement('span');
         iconSpan.className = 'component-icon';
         iconSpan.textContent = item.icon;
         iconWrap.appendChild(iconSpan);
 
         const label = document.createElement('span');
-        label.className = 'canva-effect-card__label';
+        label.className = 'board-effect-card__label canva-effect-card__label';
         label.textContent = item.name;
 
         btn.appendChild(iconWrap);
@@ -248,7 +248,7 @@ export class BoardEffectsPanelComponent {
 
   private updateActivePresetHighlight(): void {
     if (!this.panelEl) return;
-    this.panelEl.querySelectorAll<HTMLButtonElement>('.canva-effect-card').forEach((btn) => {
+    this.panelEl.querySelectorAll<HTMLButtonElement>('.board-effect-card, .canva-effect-card').forEach((btn) => {
       const isCurrent = btn.getAttribute('data-ref') === `effect-card-${this.activeEffect.type}`;
       btn.classList.toggle('is-active', isCurrent);
     });
@@ -269,7 +269,7 @@ export class BoardEffectsPanelComponent {
     subcontrolsContainer.innerHTML = '';
 
     const titleEl = document.createElement('div');
-    titleEl.className = 'canva-drawer-section-title';
+    titleEl.className = 'elements-section-title canva-drawer-section-title';
     titleEl.textContent = 'Ajustes del efecto';
     subcontrolsContainer.appendChild(titleEl);
 
@@ -318,17 +318,17 @@ export class BoardEffectsPanelComponent {
 
   private createSliderControl(parent: HTMLElement, labelText: string, min: number, max: number, value: number, onChange: (val: number) => void): void {
     const row = document.createElement('div');
-    row.className = 'canva-drawer-slider-group';
+    row.className = 'board-drawer-slider-group canva-drawer-slider-group';
 
     const header = document.createElement('div');
-    header.className = 'canva-drawer-slider-header';
+    header.className = 'board-drawer-slider-header canva-drawer-slider-header';
 
     const label = document.createElement('span');
-    label.className = 'canva-drawer-slider-label';
+    label.className = 'board-drawer-slider-label canva-drawer-slider-label';
     label.textContent = labelText;
 
     const valBadge = document.createElement('span');
-    valBadge.className = 'canva-drawer-slider-val';
+    valBadge.className = 'board-drawer-slider-val canva-drawer-slider-val';
     valBadge.textContent = `${value}`;
 
     header.appendChild(label);
@@ -355,26 +355,26 @@ export class BoardEffectsPanelComponent {
 
   private createColorPickerControl(parent: HTMLElement, currentColor: string, onChange: (color: string) => void): void {
     const group = document.createElement('div');
-    group.className = 'canva-drawer-color-group';
+    group.className = 'board-drawer-color-group canva-drawer-color-group';
 
     const label = document.createElement('span');
-    label.className = 'canva-drawer-slider-label';
+    label.className = 'board-drawer-slider-label canva-drawer-slider-label';
     label.textContent = 'Color del efecto';
     group.appendChild(label);
 
     const paletteRow = document.createElement('div');
-    paletteRow.className = 'canva-drawer-swatches-row';
+    paletteRow.className = 'board-drawer-swatches-row canva-drawer-swatches-row';
 
     for (const hex of EFFECT_COLORS) {
       const swatch = document.createElement('button');
       swatch.setAttribute('type', 'button');
-      swatch.className = `canva-color-swatch-btn${currentColor === hex ? ' is-active' : ''}`;
+      swatch.className = `board-color-swatch-btn canva-color-swatch-btn${currentColor === hex ? ' is-active' : ''}`;
       swatch.style.backgroundColor = hex;
       swatch.setAttribute('data-tooltip', hex);
       swatch.setAttribute('aria-label', hex);
 
       swatch.addEventListener('click', () => {
-        paletteRow.querySelectorAll('.canva-color-swatch-btn').forEach((b) => b.classList.remove('is-active'));
+        paletteRow.querySelectorAll('.canva-color-swatch-btn, .board-color-swatch-btn').forEach((b) => b.classList.remove('is-active'));
         swatch.classList.add('is-active');
         onChange(hex);
       });
@@ -383,13 +383,13 @@ export class BoardEffectsPanelComponent {
     }
 
     const nativeInput = document.createElement('input');
-    nativeInput.className = 'canva-color-native-input';
+    nativeInput.className = 'board-color-native-input canva-color-native-input';
     nativeInput.setAttribute('type', 'color');
     nativeInput.setAttribute('value', currentColor.startsWith('#') && currentColor.length === 7 ? currentColor : '#3b82f6');
     nativeInput.setAttribute('aria-label', 'Selector de color personalizado');
 
     nativeInput.addEventListener('input', () => {
-      paletteRow.querySelectorAll('.canva-color-swatch-btn').forEach((b) => b.classList.remove('is-active'));
+      paletteRow.querySelectorAll('.canva-color-swatch-btn, .board-color-swatch-btn').forEach((b) => b.classList.remove('is-active'));
       onChange(nativeInput.value);
     });
 

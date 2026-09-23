@@ -1,6 +1,6 @@
 import { draw3DElement, draw3DGroundGrid, draw3DRotationGizmo, hitTest3DRotationGizmo, onCustomModelLoaded, preloadCustom3DModels } from '../views/board/board-3d-renderer.js';
 import { drawChart } from '../views/board/board-chart-renderer.js';
-import { computeElementsBoundingBox, convertDiagramToBoardElements, create3DElement, createChartElement, createConnectorElement, createImageElement, createMockupElement, createSectionElement, createShapeElement, createStickyElement, createTableElement, createTextElement, createTextPresetElement, distToSegment, findContainingSection, findElementsByMarqueeBox, getConnectorEndpoints, getElementBoundingBox, getNodeAnchorPoint, hitTestElement, hitTestResizeHandle, measureTextElementSize, moveElementByDelta, moveElementByDrag, resizeElementByHandle, TEXT_PRESETS } from '../views/board/board-elements.manager.js';
+import { calculateResizedBoundingBox, computeElementsBoundingBox, convertDiagramToBoardElements, create3DElement, createChartElement, createConnectorElement, createElementResizeSnapshot, createImageElement, createMockupElement, createSectionElement, createShapeElement, createStickyElement, createTableElement, createTextElement, createTextPresetElement, distToSegment, ElementResizeSnapshot, findContainingSection, findElementsByMarqueeBox, getConnectorEndpoints, getElementBoundingBox, getNodeAnchorPoint, hitTestBoundingBoxResizeHandle, hitTestElement, hitTestResizeHandle, measureTextElementSize, moveElementByDelta, moveElementByDrag, resizeElementByHandle, resizeElementsGroup, TEXT_PRESETS } from '../views/board/board-elements.manager.js';
 import { exportJson, exportPng, exportSvg, generateThumbnail } from '../views/board/board-export.service.js';
 import { drawMockupElement } from '../views/board/board-mockup-renderer.js';
 import { parseOBJ } from '../views/board/board-obj-loader.js';
@@ -16,11 +16,13 @@ export {
   applyLineDash,
   calculateDragSnapping,
   calculateResizeSnapping,
+  calculateResizedBoundingBox,
   computeElementsBoundingBox,
   convertDiagramToBoardElements,
   create3DElement,
   createChartElement,
   createConnectorElement,
+  createElementResizeSnapshot,
   createImageElement,
   createMockupElement,
   createSectionElement,
@@ -64,6 +66,7 @@ export {
   getNodeAnchorPoint,
   getSvgPathBoundingBox,
   hitTest3DRotationGizmo,
+  hitTestBoundingBoxResizeHandle,
   hitTestElement,
   hitTestResizeHandle,
   measureTextElementSize,
@@ -73,10 +76,13 @@ export {
   parseOBJ,
   preloadCustom3DModels,
   resizeElementByHandle,
+  resizeElementsGroup,
   screenToWorld,
   worldToScreen,
   wrapText,
 };
+
+export type { ElementResizeSnapshot };
 
 export interface CanvasEngineOptions {
   mode: 'board' | 'doc-embed' | 'presentation';

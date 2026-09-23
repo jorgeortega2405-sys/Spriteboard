@@ -32,7 +32,7 @@ import { DocPage, DocProject } from '../views/doc/doc.types.js';
 
 let isDrawerOpen = false;
 let isChatOpen = false;
-let activeCanvasTab: 'templates' | 'elements' | 'text' | 'tools' | 'uploads' | 'projects' | 'charts' | 'mockups' | 'colors' | 'fonts' | 'pixel-anim' | null = null;
+let activeCanvasTab: 'templates' | 'elements' | 'text' | 'tools' | 'uploads' | 'projects' | 'charts' | 'mockups' | 'colors' | 'fonts' | 'pixel-anim' | 'effects' | 'animate' | 'position' | null = null;
 let activeChartInDrawer: BoardChartElement | null = null;
 let activeColorTargetInDrawer: 'stroke' | 'fill' | 'text' | 'slide-bg' = 'stroke';
 let chatSidebarElement: HTMLElement | null = null;
@@ -832,7 +832,7 @@ function handleApplyCanvasTemplate(preset: PresetItem, canvasType: 'board' | 'do
       showToast('No se encontró el controlador de la presentación', 'warning');
       return;
     }
-    const templateId = preset.boardTemplateId || preset.diagramTemplateId || preset.id;
+    const templateId = preset.boardTemplateId || preset.id;
     controller.applyTemplate?.(templateId, 'insert');
     showToast(`Plantilla «${preset.name}» añadida a la presentación`, 'success');
     if (window.innerWidth <= 768) {
@@ -937,7 +937,7 @@ function handleApplyCanvasTemplate(preset: PresetItem, canvasType: 'board' | 'do
       return;
     }
 
-    const templateId = preset.boardTemplateId || preset.diagramTemplateId || preset.id;
+    const templateId = preset.boardTemplateId || preset.id;
 
     if (typeof controller.isBoardEmpty === 'function' && controller.isBoardEmpty()) {
       controller.applyTemplate(templateId, 'replace');
@@ -3264,9 +3264,177 @@ function renderPixelAnimationDrawerContent(drawer: HTMLElement, drawerBody: HTML
   }
 }
 
+function renderEffectsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement): void {
+  const sidebar = drawer.closest<HTMLElement>('[data-ref="sidebar"]') || document.querySelector<HTMLElement>('[data-ref="sidebar"]');
+
+  drawerBody.innerHTML = `
+    <div class="canvas-panel-card" data-ref="board-effects-drawer">
+      <div class="canvas-panel-card__header" data-ref="board-effects-header">
+        <div class="canvas-panel-card__title-box" data-ref="board-effects-title-box">
+          <svg class="component-icon canvas-panel-card__icon" aria-hidden="true"><use href="/icons.svg#auto_fix_high"></use></svg>
+          <span class="canvas-panel-card__title" data-ref="board-effects-title">Efectos</span>
+        </div>
+        <button type="button" class="component-button component-button--h32 component-button--icon-only rail-btn canvas-panel-card__close" data-ref="btn-close-canvas-panel" data-tooltip="Cerrar panel" aria-label="Cerrar panel">
+          <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+        </button>
+      </div>
+      <div class="canvas-panel-card__body layout-drawer__effects-body" data-ref="board-effects-body">
+        <div class="elements-section-title">Efectos básicos</div>
+        <div class="board-effects-grid canva-effects-grid" data-ref="effects-basic-grid"></div>
+        <div class="board-effects-subcontrols canva-effects-subcontrols is-hidden" data-ref="effects-subcontrols-container"></div>
+        <div class="elements-section-title" style="margin-top: 14px;">Filtros y estilo</div>
+        <div class="board-effects-grid canva-effects-grid" data-ref="effects-advanced-grid"></div>
+      </div>
+    </div>
+  `;
+
+  const btnClose = drawerBody.querySelector<HTMLElement>('[data-ref="btn-close-canvas-panel"]');
+  btnClose?.addEventListener('click', (e) => {
+    e.preventDefault();
+    toggleDrawer(false);
+  });
+
+  const drawerFooter = drawer.querySelector<HTMLElement>('[data-ref="drawer-footer"]');
+  if (drawerFooter) {
+    drawerFooter.style.display = 'none';
+  }
+
+  if (sidebar) {
+    updateCanvasRailActiveState(sidebar);
+  }
+
+  renderIcons(drawerBody);
+
+  const panelEl = drawerBody.querySelector<HTMLElement>('[data-ref="board-effects-drawer"]');
+  const controller = getActiveCanvasController();
+  const effectsPanel = controller?.getEffectsPanel?.();
+  if (panelEl && effectsPanel) {
+    effectsPanel.attach(panelEl);
+    const selected = controller.getSelectedElements?.() || [];
+    effectsPanel.sync(selected[0] || null);
+  }
+}
+
+function renderAnimationDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement): void {
+  const sidebar = drawer.closest<HTMLElement>('[data-ref="sidebar"]') || document.querySelector<HTMLElement>('[data-ref="sidebar"]');
+
+  drawerBody.innerHTML = `
+    <div class="canvas-panel-card" data-ref="board-animation-drawer">
+      <div class="canvas-panel-card__header" data-ref="board-animation-header">
+        <div class="canvas-panel-card__title-box" data-ref="board-animation-title-box">
+          <svg class="component-icon canvas-panel-card__icon" aria-hidden="true"><use href="/icons.svg#animation"></use></svg>
+          <span class="canvas-panel-card__title" data-ref="board-animation-title">Animar</span>
+        </div>
+        <button type="button" class="component-button component-button--h32 component-button--icon-only rail-btn canvas-panel-card__close" data-ref="btn-close-canvas-panel" data-tooltip="Cerrar panel" aria-label="Cerrar panel">
+          <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+        </button>
+      </div>
+      <div class="canvas-panel-card__body layout-drawer__animation-body" data-ref="board-animation-body">
+        <div class="board-animation-config canva-animation-config is-hidden" data-ref="animation-config-container"></div>
+        <div class="elements-section-title">Animaciones del elemento</div>
+        <div class="board-effects-grid canva-effects-grid" data-ref="animation-presets-grid"></div>
+      </div>
+    </div>
+  `;
+
+  const btnClose = drawerBody.querySelector<HTMLElement>('[data-ref="btn-close-canvas-panel"]');
+  btnClose?.addEventListener('click', (e) => {
+    e.preventDefault();
+    toggleDrawer(false);
+  });
+
+  const drawerFooter = drawer.querySelector<HTMLElement>('[data-ref="drawer-footer"]');
+  if (drawerFooter) {
+    drawerFooter.style.display = 'none';
+  }
+
+  if (sidebar) {
+    updateCanvasRailActiveState(sidebar);
+  }
+
+  renderIcons(drawerBody);
+
+  const panelEl = drawerBody.querySelector<HTMLElement>('[data-ref="board-animation-drawer"]');
+  const controller = getActiveCanvasController();
+  const animationPanel = controller?.getAnimationPanel?.();
+  if (panelEl && animationPanel) {
+    animationPanel.attach(panelEl);
+    const selected = controller.getSelectedElements?.() || [];
+    animationPanel.sync(selected[0] || null);
+  }
+}
+
+function renderPositionDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement): void {
+  const sidebar = drawer.closest<HTMLElement>('[data-ref="sidebar"]') || document.querySelector<HTMLElement>('[data-ref="sidebar"]');
+
+  drawerBody.innerHTML = `
+    <div class="canvas-panel-card" data-ref="board-position-drawer">
+      <div class="canvas-panel-card__header" data-ref="board-position-header">
+        <div class="canvas-panel-card__title-box" data-ref="board-position-title-box">
+          <svg class="component-icon canvas-panel-card__icon" aria-hidden="true"><use href="/icons.svg#layers"></use></svg>
+          <span class="canvas-panel-card__title" data-ref="board-position-title">Posición</span>
+        </div>
+        <button type="button" class="component-button component-button--h32 component-button--icon-only rail-btn canvas-panel-card__close" data-ref="btn-close-canvas-panel" data-tooltip="Cerrar panel" aria-label="Cerrar panel">
+          <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+        </button>
+      </div>
+      <div class="board-pos-tabs canva-pos-tabs" data-ref="board-pos-tabs">
+        <button type="button" class="board-pos-tab canva-pos-tab is-active" data-ref="pos-tab-arrange">Organizar</button>
+        <button type="button" class="board-pos-tab canva-pos-tab" data-ref="pos-tab-layers">Capas</button>
+      </div>
+      <div class="canvas-panel-card__body layout-drawer__position-body" data-ref="board-position-body">
+        <div class="board-pos-view canva-pos-view" data-ref="pos-view-arrange"></div>
+        <div class="board-pos-view canva-pos-view is-hidden" data-ref="pos-view-layers"></div>
+      </div>
+    </div>
+  `;
+
+  const btnClose = drawerBody.querySelector<HTMLElement>('[data-ref="btn-close-canvas-panel"]');
+  btnClose?.addEventListener('click', (e) => {
+    e.preventDefault();
+    toggleDrawer(false);
+  });
+
+  const drawerFooter = drawer.querySelector<HTMLElement>('[data-ref="drawer-footer"]');
+  if (drawerFooter) {
+    drawerFooter.style.display = 'none';
+  }
+
+  if (sidebar) {
+    updateCanvasRailActiveState(sidebar);
+  }
+
+  renderIcons(drawerBody);
+
+  const panelEl = drawerBody.querySelector<HTMLElement>('[data-ref="board-position-drawer"]');
+  const controller = getActiveCanvasController();
+  const positionPanel = controller?.getPositionPanel?.();
+  if (panelEl && positionPanel) {
+    positionPanel.attach(panelEl);
+    const selected = controller.getSelectedElements?.() || [];
+    const elements = controller.elements || controller.getElements?.() || [];
+    positionPanel.sync(selected[0] || null, elements);
+  }
+}
+
 function renderCanvasDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement): void {
   const tab = activeCanvasTab || 'templates';
   const sidebar = drawer.closest<HTMLElement>('[data-ref="sidebar"]') || document.querySelector<HTMLElement>('[data-ref="sidebar"]');
+
+  if (tab === 'effects') {
+    renderEffectsDrawerContent(drawer, drawerBody);
+    return;
+  }
+
+  if (tab === 'animate') {
+    renderAnimationDrawerContent(drawer, drawerBody);
+    return;
+  }
+
+  if (tab === 'position') {
+    renderPositionDrawerContent(drawer, drawerBody);
+    return;
+  }
 
   if (tab === 'text') {
     renderTextDrawerContent(drawer, drawerBody);
@@ -6260,5 +6428,50 @@ export function openPixelAnimationInDrawer(): void {
 
 export function isPixelAnimationDrawerOpen(): boolean {
   return isDrawerOpen && activeCanvasTab === 'pixel-anim';
+}
+
+export function openEffectsInDrawer(): void {
+  activeCanvasTab = 'effects';
+  const sidebar = document.querySelector<HTMLElement>('[data-ref="sidebar"]');
+  if (!isDrawerOpen) {
+    toggleDrawer(true);
+  } else if (sidebar) {
+    void updateDynamicDrawer(sidebar);
+    updateCanvasRailActiveState(sidebar);
+  }
+}
+
+export function isEffectsDrawerOpen(): boolean {
+  return isDrawerOpen && activeCanvasTab === 'effects';
+}
+
+export function openAnimationInDrawer(): void {
+  activeCanvasTab = 'animate';
+  const sidebar = document.querySelector<HTMLElement>('[data-ref="sidebar"]');
+  if (!isDrawerOpen) {
+    toggleDrawer(true);
+  } else if (sidebar) {
+    void updateDynamicDrawer(sidebar);
+    updateCanvasRailActiveState(sidebar);
+  }
+}
+
+export function isAnimationDrawerOpen(): boolean {
+  return isDrawerOpen && activeCanvasTab === 'animate';
+}
+
+export function openPositionInDrawer(): void {
+  activeCanvasTab = 'position';
+  const sidebar = document.querySelector<HTMLElement>('[data-ref="sidebar"]');
+  if (!isDrawerOpen) {
+    toggleDrawer(true);
+  } else if (sidebar) {
+    void updateDynamicDrawer(sidebar);
+    updateCanvasRailActiveState(sidebar);
+  }
+}
+
+export function isPositionDrawerOpen(): boolean {
+  return isDrawerOpen && activeCanvasTab === 'position';
 }
 

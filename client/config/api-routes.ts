@@ -63,6 +63,11 @@ export const API_ROUTES = {
     empty: '/api/trash/empty',
     restore: (uuid: string) => `/api/trash/${encodeURIComponent(uuid)}/restore`,
   },
+  templates: {
+    base: '/api/templates',
+    byId: (id: string) => `/api/templates/${encodeURIComponent(id)}`,
+    publish: '/api/templates/publish',
+  },
   search: (q: string) => `/api/search?q=${encodeURIComponent(q)}`,
   uploads: {
     base: '/api/uploads',

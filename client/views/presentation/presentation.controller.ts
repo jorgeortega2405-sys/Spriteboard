@@ -4,7 +4,7 @@ import { CanvasHistoryDropdownController, setupCanvasHistoryDropdown } from '../
 import { openCanvasMetricsModal } from '../../components/canvas-metrics-modal.component.js';
 import { CanvasShareDropdownController, setupCanvasShareDropdown } from '../../components/canvas-share-dropdown.component.js';
 import { closeContextMenu, ContextMenuItem, openContextMenu } from '../../components/context-menu.component.js';
-import { isColorsDrawerOpen, isFontsDrawerOpen, openChartInspectorInDrawer, openColorsInDrawer, openFontsInDrawer, openMockupsInDrawer, toggleDrawer } from '../../components/layout.component.js';
+import { isAnimationDrawerOpen, isColorsDrawerOpen, isEffectsDrawerOpen, isFontsDrawerOpen, isPositionDrawerOpen, openAnimationInDrawer, openChartInspectorInDrawer, openColorsInDrawer, openEffectsInDrawer, openFontsInDrawer, openMockupsInDrawer, openPositionInDrawer, toggleDrawer } from '../../components/layout.component.js';
 import { SlideshowPlayerComponent } from '../../components/slideshow-player.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
 import { getBoardTemplateElements } from '../../config/board-templates.data.js';
@@ -15,7 +15,7 @@ import { renderIcons } from '../../services/icon.service.js';
 import { getEffectiveTheme } from '../../services/theme.service.js';
 import { showToast } from '../../services/toast.service.js';
 import { CanvasItem } from '../../types/canvas.types.js';
-import { MockupTemplate } from '../../types/mockups.types.js';
+import { MockupFitMode, MockupTemplate } from '../../types/mockups.types.js';
 import { PRESENTATION_FORMATS, PresentationFormatConfig, PresentationProject, PresentationSlideItem } from '../../types/presentation.types.js';
 import { DEFAULT_CLASSIC_PALETTE, generateShadingRamp } from '../../utils/color.util.js';
 import { setupDropdown, withButtonLoading } from '../../utils/dom.util.js';
@@ -23,7 +23,7 @@ import { PixelShape } from '../../utils/pixel-shapes.util.js';
 import { BoardAnimationPanelComponent } from '../board/board-animation-panel.component.js';
 import { BoardChartsPanelComponent } from '../board/board-charts-panel.component.js';
 import { BoardEffectsPanelComponent } from '../board/board-effects-panel.component.js';
-import { computeElementsBoundingBox, create3DElement, createChartElement, createConnectorElement, createImageElement, createMockupElement, createSectionElement, createShapeElement, createStickyElement, createTableElement, createTextElement, createTextPresetElement, findElementsByMarqueeBox, getConnectorEndpoints, getElementBoundingBox, hitTestElement, hitTestResizeHandle, measureTextElementSize, moveElementByDelta, moveElementByDrag, resizeElementByHandle } from '../board/board-elements.manager.js';
+import { computeElementsBoundingBox, create3DElement, createChartElement, createConnectorElement, createElementResizeSnapshot, createImageElement, createMockupElement, createSectionElement, createShapeElement, createStickyElement, createTableElement, createTextElement, createTextPresetElement, ElementResizeSnapshot, findElementsByMarqueeBox, getConnectorEndpoints, getElementBoundingBox, hitTestBoundingBoxResizeHandle, hitTestElement, hitTestResizeHandle, measureTextElementSize, moveElementByDelta, moveElementByDrag, resizeElementByHandle, resizeElementsGroup } from '../board/board-elements.manager.js';
 import { exportJson, exportPng, exportSvg, generateThumbnail } from '../board/board-export.service.js';
 import { drawMockupElement } from '../board/board-mockup-renderer.js';
 import { BoardMockupsPanelComponent } from '../board/board-mockups-panel.component.js';
@@ -93,6 +93,7 @@ export class PresentationController {
   private prePreviewSlides: PresentationSlideItem[] | null = null;
   private previewSnapshotUuid: string | null = null;
   private recentColors: string[] = ['#ffffff', '#000000', '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
+  private groupResizeSnapshots: Map<string, ElementResizeSnapshot> = new Map();
   private resizeStartBBox: { fontSize?: number; height: number; width: number; x: number; y: number } | null = null;
   private selectedElementIds: Set<string> = new Set();
   private selectedSlideId: string | null = 'slide-1';
@@ -1184,13 +1185,34 @@ export class PresentationController {
           const handle = hitTestResizeHandle(singleEl, sx, sy, (wx, wy) => worldToScreen(wx, wy + activeCy, this.canvas, camera));
           if (handle) {
             this.activeResizeHandle = handle;
+            const bbox = getElementBoundingBox(singleEl, this.getActiveSlide().elements);
             this.resizeStartBBox = {
               fontSize: (singleEl as any).fontSize || 20,
-              height: (singleEl as any).height || 60,
-              width: (singleEl as any).width || 120,
-              x: (singleEl as any).x || 0,
-              y: (singleEl as any).y || 0,
+              height: bbox.height,
+              width: bbox.width,
+              x: bbox.x,
+              y: bbox.y,
             };
+            this.groupResizeSnapshots.clear();
+            this.groupResizeSnapshots.set(singleEl.id, createElementResizeSnapshot(singleEl));
+            this.alignmentGuides = [];
+            this.saveHistoryState();
+            this.canvas.setPointerCapture(e.pointerId);
+            return;
+          }
+        }
+      } else if (this.selectedElementIds.size > 1) {
+        const selectedEls = this.getActiveSlide().elements.filter((el) => this.selectedElementIds.has(el.id));
+        const groupBBox = computeElementsBoundingBox(selectedEls);
+        if (groupBBox) {
+          const handle = hitTestBoundingBoxResizeHandle(groupBBox, sx, sy, (wx, wy) => worldToScreen(wx, wy + activeCy, this.canvas, camera));
+          if (handle) {
+            this.activeResizeHandle = handle;
+            this.resizeStartBBox = { ...groupBBox };
+            this.groupResizeSnapshots.clear();
+            for (const el of selectedEls) {
+              this.groupResizeSnapshots.set(el.id, createElementResizeSnapshot(el));
+            }
             this.alignmentGuides = [];
             this.saveHistoryState();
             this.canvas.setPointerCapture(e.pointerId);
@@ -1310,44 +1332,56 @@ export class PresentationController {
       const halfW = this.slideWidth / 2;
       const halfH = this.slideHeight / 2;
 
-      if (this.activeResizeHandle && this.selectedElementIds.size === 1 && this.resizeStartBBox) {
-        const singleId = Array.from(this.selectedElementIds)[0];
+      if (this.activeResizeHandle && this.resizeStartBBox && this.selectedElementIds.size > 0) {
         const elements = this.getActiveSlide().elements;
-        const singleEl = elements.find((el) => el.id === singleId);
-        if (singleEl) {
-          let targetWorldPos = localWp;
-          if (this.isSnappingEnabled && !e.altKey) {
-            const slideBoundsEl: BoardSectionElement = {
-              color: 'transparent',
-              height: this.slideHeight,
-              id: '__slide_bounds__',
-              title: '',
-              type: 'section',
-              width: this.slideWidth,
-              x: -halfW,
-              y: -halfH,
-            };
-            const refElements: BoardElement[] = [
-              ...elements.filter((el) => el.id !== singleEl.id),
-              slideBoundsEl,
-            ];
-            const snapRes = calculateResizeSnapping(
-              this.activeResizeHandle,
-              localWp,
-              refElements,
-              [...elements, slideBoundsEl],
-              this.zoom
-            );
-            targetWorldPos = snapRes.snappedWorldPos;
-            this.alignmentGuides = snapRes.guides;
-          } else {
-            this.alignmentGuides = [];
-          }
-
-          resizeElementByHandle(singleEl, this.activeResizeHandle, targetWorldPos, this.resizeStartBBox, e.shiftKey);
-          this.render();
-          return;
+        let targetWorldPos = localWp;
+        if (this.isSnappingEnabled && !e.altKey) {
+          const slideBoundsEl: BoardSectionElement = {
+            backgroundColor: 'transparent',
+            height: this.slideHeight,
+            id: '__slide_bounds__',
+            title: '',
+            type: 'section',
+            width: this.slideWidth,
+            x: -halfW,
+            y: -halfH,
+          };
+          const refElements: BoardElement[] = [
+            ...elements.filter((el) => !this.selectedElementIds.has(el.id)),
+            slideBoundsEl,
+          ];
+          const snapRes = calculateResizeSnapping(
+            this.activeResizeHandle,
+            localWp,
+            refElements,
+            [...elements, slideBoundsEl],
+            this.zoom
+          );
+          targetWorldPos = snapRes.snappedWorldPos;
+          this.alignmentGuides = snapRes.guides;
+        } else {
+          this.alignmentGuides = [];
         }
+
+        if (this.selectedElementIds.size === 1) {
+          const singleId = Array.from(this.selectedElementIds)[0];
+          const singleEl = elements.find((el) => el.id === singleId);
+          if (singleEl) {
+            resizeElementByHandle(singleEl, this.activeResizeHandle, targetWorldPos, this.resizeStartBBox, e.shiftKey);
+          }
+        } else {
+          const selectedEls = elements.filter((el) => this.selectedElementIds.has(el.id));
+          resizeElementsGroup(
+            selectedEls,
+            this.activeResizeHandle,
+            targetWorldPos,
+            this.resizeStartBBox,
+            this.groupResizeSnapshots,
+            e.shiftKey
+          );
+        }
+        this.render();
+        return;
       }
 
       if (this.isDrawing && this.currentTool === 'draw') {
@@ -1375,7 +1409,7 @@ export class PresentationController {
 
         if (this.isSnappingEnabled && !e.altKey && this.selectionStartBBox) {
           const slideBoundsEl: BoardSectionElement = {
-            color: 'transparent',
+            backgroundColor: 'transparent',
             height: this.slideHeight,
             id: '__slide_bounds__',
             title: '',
@@ -1483,6 +1517,26 @@ export class PresentationController {
             return;
           }
         }
+      } else if (this.selectedElementIds.size > 1) {
+        const selectedEls = this.getActiveSlide().elements.filter((el) => this.selectedElementIds.has(el.id));
+        const groupBBox = computeElementsBoundingBox(selectedEls);
+        if (groupBBox) {
+          const handle = hitTestBoundingBoxResizeHandle(groupBBox, sx, sy, (wx, wy) => worldToScreen(wx, wy + activeCy, this.canvas, camera));
+          if (handle) {
+            const cursorMap: Record<ResizeHandle, string> = {
+              bl: 'nesw-resize',
+              br: 'nwse-resize',
+              e: 'ew-resize',
+              n: 'ns-resize',
+              s: 'ns-resize',
+              tl: 'nwse-resize',
+              tr: 'nesw-resize',
+              w: 'ew-resize',
+            };
+            this.canvas.style.cursor = cursorMap[handle] || 'pointer';
+            return;
+          }
+        }
       }
 
       let hoverHit: BoardElement | null = null;
@@ -1524,6 +1578,7 @@ export class PresentationController {
       if (this.activeResizeHandle) {
         this.activeResizeHandle = null;
         this.resizeStartBBox = null;
+        this.groupResizeSnapshots.clear();
         this.scheduleAutoSave();
         this.render();
         return;
@@ -2417,37 +2472,37 @@ export class PresentationController {
   }
 
   private toggleEffectsPanel(): void {
-    const firstSelected = this.getFirstSelectedElement();
-    this.animationPanel?.close();
-    this.positionPanel?.close();
-    this.effectsPanel?.toggle(firstSelected);
+    if (isEffectsDrawerOpen()) {
+      toggleDrawer(false);
+    } else {
+      openEffectsInDrawer();
+    }
   }
 
   private toggleAnimationPanel(): void {
-    const firstSelected = this.getFirstSelectedElement();
-    this.effectsPanel?.close();
-    this.positionPanel?.close();
-    this.animationPanel?.toggle(firstSelected);
+    if (isAnimationDrawerOpen()) {
+      toggleDrawer(false);
+    } else {
+      openAnimationInDrawer();
+    }
   }
 
   private togglePositionPanel(): void {
-    const firstSelected = this.getFirstSelectedElement();
-    this.effectsPanel?.close();
-    this.animationPanel?.close();
-    this.positionPanel?.toggle(firstSelected, this.getActiveSlide().elements);
+    if (isPositionDrawerOpen()) {
+      toggleDrawer(false);
+    } else {
+      openPositionInDrawer();
+    }
   }
 
   private syncPanels(): void {
     const firstSelected = this.getFirstSelectedElement();
-    if (this.effectsPanel?.isOpen()) {
-      this.effectsPanel.sync(firstSelected);
+    if (this.selectedElementIds.size === 0 && (isEffectsDrawerOpen() || isAnimationDrawerOpen())) {
+      toggleDrawer(false);
     }
-    if (this.animationPanel?.isOpen()) {
-      this.animationPanel.sync(firstSelected);
-    }
-    if (this.positionPanel?.isOpen()) {
-      this.positionPanel.sync(firstSelected, this.getActiveSlide().elements);
-    }
+    this.effectsPanel?.sync(firstSelected);
+    this.animationPanel?.sync(firstSelected);
+    this.positionPanel?.sync(firstSelected, this.getActiveSlide().elements);
   }
 
   private applySelectedEffect(effect: BoardElementEffect): void {
@@ -3181,8 +3236,8 @@ export class PresentationController {
     const newSelected = new Set<string>();
 
     const bbox = computeElementsBoundingBox(this.clipboardElements);
-    const offsetX = targetPos ? Math.round(targetPos.x - (bbox.x + bbox.width / 2)) : 24;
-    const offsetY = targetPos ? Math.round(targetPos.y - (bbox.y + bbox.height / 2)) : 24;
+    const offsetX = targetPos && bbox ? Math.round(targetPos.x - (bbox.x + bbox.width / 2)) : 24;
+    const offsetY = targetPos && bbox ? Math.round(targetPos.y - (bbox.y + bbox.height / 2)) : 24;
 
     this.clipboardElements.forEach((el) => {
       const copy = JSON.parse(JSON.stringify(el));
@@ -3582,6 +3637,18 @@ export class PresentationController {
     return this.mockupsPanel;
   }
 
+  public getEffectsPanel(): BoardEffectsPanelComponent | null {
+    return this.effectsPanel;
+  }
+
+  public getAnimationPanel(): BoardAnimationPanelComponent | null {
+    return this.animationPanel;
+  }
+
+  public getPositionPanel(): BoardPositionPanelComponent | null {
+    return this.positionPanel;
+  }
+
   public openChartsPanel(chartEl?: BoardChartElement): void {
     const target = chartEl || this.getSelectedChartElement() || undefined;
     openChartInspectorInDrawer(target);
@@ -3898,11 +3965,16 @@ export class PresentationController {
       ctx.restore();
 
       if (slide.id === this.activeSlideId) {
-        slide.elements.forEach((el) => {
-          if (this.selectedElementIds.has(el.id)) {
+        if (this.selectedElementIds.size === 1) {
+          const singleId = Array.from(this.selectedElementIds)[0];
+          const el = slide.elements.find((item) => item.id === singleId);
+          if (el) {
             drawSelectionBox(ctx, el, camera, slide.elements);
           }
-        });
+        } else if (this.selectedElementIds.size > 1) {
+          const selectedEls = slide.elements.filter((el) => this.selectedElementIds.has(el.id));
+          drawMultiSelectionBounds(ctx, selectedEls, camera);
+        }
         if (this.alignmentGuides.length > 0) {
           drawAlignmentGuides(ctx, this.alignmentGuides, camera);
         }

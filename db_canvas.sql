@@ -131,5 +131,29 @@ CREATE TABLE IF NOT EXISTS canvas_snapshots (
     FOREIGN KEY (canvas_id) REFERENCES canvases(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS templates (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    uuid VARCHAR(36) NOT NULL UNIQUE,
+    canvas_id INT NULL,
+    user_id INT NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    description TEXT NULL,
+    canvas_type ENUM('board', 'presentation', 'doc') NOT NULL DEFAULT 'board',
+    category VARCHAR(50) NOT NULL DEFAULT 'general',
+    tags JSON NULL,
+    canvas_data JSON NULL,
+    preview_thumbnail MEDIUMTEXT NULL,
+    status ENUM('draft', 'pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
+    is_official BOOLEAN NOT NULL DEFAULT FALSE,
+    uses_count INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_templates_status (status),
+    INDEX idx_templates_canvas_type (canvas_type),
+    INDEX idx_templates_user (user_id),
+    INDEX idx_templates_official (is_official),
+    FOREIGN KEY (canvas_id) REFERENCES canvases(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 GRANT ALL PRIVILEGES ON db_canvas.* TO 'sprite_user'@'%';
 FLUSH PRIVILEGES;

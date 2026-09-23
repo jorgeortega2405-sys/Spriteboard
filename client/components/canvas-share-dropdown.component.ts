@@ -1,4 +1,5 @@
 import { openModal } from './modal.component.js';
+import { openPublishTemplateModal } from './publish-template-modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { currentUser, deleteApi, escapeHtml, getApi, patchApi, postApi } from '../services/api.service.js';
 import { getLocalCanvasByUuid, markLocalCanvasAsSynced } from '../services/canvas-storage.service.js';
@@ -185,6 +186,10 @@ export function setupCanvasShareDropdown(options: CanvasShareDropdownOptions): C
                   <span class="component-icon">edit</span>
                   <span>Personaliza tu enlace</span>
                 </button>
+                <button type="button" class="component-button component-button--h40 component-button--outline component-button--w-full" data-ref="btn-share-publish-template">
+                  <span class="component-icon">auto_awesome</span>
+                  <span>Publicar como plantilla</span>
+                </button>
               </div>
 
               ${
@@ -240,6 +245,7 @@ export function setupCanvasShareDropdown(options: CanvasShareDropdownOptions): C
   const btnFocusSearch = wrapper.querySelector<HTMLButtonElement>('[data-ref="btn-share-focus-search"]');
   const btnCopyLink = wrapper.querySelector<HTMLButtonElement>('[data-ref="btn-copy-share-link"]');
   const btnCustomizeLink = wrapper.querySelector<HTMLButtonElement>('[data-ref="btn-customize-share-link"]');
+  const btnPublishTemplate = wrapper.querySelector<HTMLButtonElement>('[data-ref="btn-share-publish-template"]');
 
   const dropdownWrapperAccess = wrapper.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-access-level"]');
   const accessTriggerIcon = wrapper.querySelector<HTMLElement>('[data-ref="access-level-selected-icon"]');
@@ -757,6 +763,11 @@ export function setupCanvasShareDropdown(options: CanvasShareDropdownOptions): C
       size: 'sm',
       title: 'Personaliza tu enlace',
     });
+  });
+
+  btnPublishTemplate?.addEventListener('click', () => {
+    dropdownController?.close();
+    openPublishTemplateModal(getCanvas());
   });
 
   btnSyncCloud?.addEventListener('click', async () => {

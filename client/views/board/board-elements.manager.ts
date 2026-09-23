@@ -699,14 +699,12 @@ export function hitTestElement(elements: BoardElement[], x: number, y: number, z
   return null;
 }
 
-export function hitTestResizeHandle(
-  el: BoardElement,
+export function hitTestBoundingBoxResizeHandle(
+  bbox: { height: number; width: number; x: number; y: number },
   screenX: number,
   screenY: number,
   worldToScreen: (wx: number, wy: number) => BoardPoint
 ): ResizeHandle | null {
-  if (!('width' in el) || el.type === 'pixel-grid') return null;
-  const bbox = getElementBoundingBox(el);
   const cornerRadius = 12;
 
   const tl = worldToScreen(bbox.x, bbox.y);
@@ -734,6 +732,17 @@ export function hitTestResizeHandle(
   if (Math.abs(screenX - rightMid.x) <= 10 && Math.abs(screenY - rightMid.y) <= 16) return 'e';
 
   return null;
+}
+
+export function hitTestResizeHandle(
+  el: BoardElement,
+  screenX: number,
+  screenY: number,
+  worldToScreen: (wx: number, wy: number) => BoardPoint
+): ResizeHandle | null {
+  if (!('width' in el) || el.type === 'pixel-grid') return null;
+  const bbox = getElementBoundingBox(el);
+  return hitTestBoundingBoxResizeHandle(bbox, screenX, screenY, worldToScreen);
 }
 
 export function moveElementByDrag(el: BoardElement, worldPos: BoardPoint, dragOffset: BoardPoint): void {
@@ -986,6 +995,197 @@ export function resizeElementByHandle(
       el.height = Math.max(20, newH);
     }
     el.width = Math.max(20, newW);
+  }
+}
+
+export interface ElementResizeSnapshot {
+  endPoint?: BoardPoint;
+  fontSize?: number;
+  height?: number;
+  id: string;
+  points?: BoardPoint[];
+  startPoint?: BoardPoint;
+  width?: number;
+  x?: number;
+  y?: number;
+}
+
+export function createElementResizeSnapshot(el: BoardElement): ElementResizeSnapshot {
+  const snap: ElementResizeSnapshot = { id: el.id };
+  if ('x' in el && 'y' in el) {
+    snap.x = el.x;
+    snap.y = el.y;
+  }
+  if ('width' in el && 'height' in el) {
+    snap.width = el.width;
+    snap.height = el.height;
+  }
+  if (el.type === 'text') {
+    snap.fontSize = el.fontSize;
+  } else if (el.type === 'stroke') {
+    snap.points = el.points.map((p) => ({ ...p }));
+  } else if (el.type === 'connector' && el.startPoint && el.endPoint) {
+    snap.startPoint = { ...el.startPoint };
+    snap.endPoint = { ...el.endPoint };
+  }
+  return snap;
+}
+
+export function calculateResizedBoundingBox(
+  startRect: { height: number; width: number; x: number; y: number },
+  handle: ResizeHandle,
+  worldPos: BoardPoint,
+  lockAspect = false
+): { height: number; width: number; x: number; y: number } {
+  const aspect = startRect.width / Math.max(1, startRect.height);
+
+  if (handle === 'br') {
+    let w = Math.max(20, worldPos.x - startRect.x);
+    let h = Math.max(20, worldPos.y - startRect.y);
+    if (lockAspect) {
+      if (Math.abs(w - startRect.width) > Math.abs(h - startRect.height)) {
+        h = Math.round(w / aspect);
+      } else {
+        w = Math.round(h * aspect);
+      }
+    }
+    return { height: Math.max(20, h), width: Math.max(20, w), x: startRect.x, y: startRect.y };
+  }
+
+  if (handle === 'bl') {
+    let newW = Math.max(20, startRect.x + startRect.width - worldPos.x);
+    let newH = Math.max(20, worldPos.y - startRect.y);
+    if (lockAspect) {
+      if (Math.abs(newW - startRect.width) > Math.abs(newH - startRect.height)) {
+        newH = Math.round(newW / aspect);
+      } else {
+        newW = Math.round(newH * aspect);
+      }
+    }
+    return { height: Math.max(20, newH), width: Math.max(20, newW), x: startRect.x + startRect.width - newW, y: startRect.y };
+  }
+
+  if (handle === 'tr') {
+    let newW = Math.max(20, worldPos.x - startRect.x);
+    let newH = Math.max(20, startRect.y + startRect.height - worldPos.y);
+    if (lockAspect) {
+      if (Math.abs(newW - startRect.width) > Math.abs(newH - startRect.height)) {
+        newH = Math.round(newW / aspect);
+      } else {
+        newW = Math.round(newH * aspect);
+      }
+    }
+    return { height: Math.max(20, newH), width: Math.max(20, newW), x: startRect.x, y: startRect.y + startRect.height - newH };
+  }
+
+  if (handle === 'tl') {
+    let newW = Math.max(20, startRect.x + startRect.width - worldPos.x);
+    let newH = Math.max(20, startRect.y + startRect.height - worldPos.y);
+    if (lockAspect) {
+      if (Math.abs(newW - startRect.width) > Math.abs(newH - startRect.height)) {
+        newH = Math.round(newW / aspect);
+      } else {
+        newW = Math.round(newH * aspect);
+      }
+    }
+    return { height: Math.max(20, newH), width: Math.max(20, newW), x: startRect.x + startRect.width - newW, y: startRect.y + startRect.height - newH };
+  }
+
+  if (handle === 'n') {
+    let newH = Math.max(20, startRect.y + startRect.height - worldPos.y);
+    let newW = startRect.width;
+    let newX = startRect.x;
+    if (lockAspect) {
+      newW = Math.round(newH * aspect);
+      newX = startRect.x + (startRect.width - newW) / 2;
+    }
+    return { height: Math.max(20, newH), width: Math.max(20, newW), x: newX, y: startRect.y + startRect.height - newH };
+  }
+
+  if (handle === 's') {
+    let newH = Math.max(20, worldPos.y - startRect.y);
+    let newW = startRect.width;
+    let newX = startRect.x;
+    if (lockAspect) {
+      newW = Math.round(newH * aspect);
+      newX = startRect.x + (startRect.width - newW) / 2;
+    }
+    return { height: Math.max(20, newH), width: Math.max(20, newW), x: newX, y: startRect.y };
+  }
+
+  if (handle === 'w') {
+    let newW = Math.max(20, startRect.x + startRect.width - worldPos.x);
+    let newH = startRect.height;
+    let newY = startRect.y;
+    if (lockAspect) {
+      newH = Math.round(newW / aspect);
+      newY = startRect.y + (startRect.height - newH) / 2;
+    }
+    return { height: Math.max(20, newH), width: Math.max(20, newW), x: startRect.x + startRect.width - newW, y: newY };
+  }
+
+  if (handle === 'e') {
+    let newW = Math.max(20, worldPos.x - startRect.x);
+    let newH = startRect.height;
+    let newY = startRect.y;
+    if (lockAspect) {
+      newH = Math.round(newW / aspect);
+      newY = startRect.y + (startRect.height - newH) / 2;
+    }
+    return { height: Math.max(20, newH), width: Math.max(20, newW), x: startRect.x, y: newY };
+  }
+
+  return { ...startRect };
+}
+
+export function resizeElementsGroup(
+  elements: BoardElement[],
+  handle: ResizeHandle,
+  worldPos: BoardPoint,
+  startGroupRect: { height: number; width: number; x: number; y: number },
+  snapshots: Map<string, ElementResizeSnapshot>,
+  lockAspect = false
+): void {
+  if (startGroupRect.width <= 0 || startGroupRect.height <= 0) return;
+
+  const newBox = calculateResizedBoundingBox(startGroupRect, handle, worldPos, lockAspect);
+  const scaleX = newBox.width / startGroupRect.width;
+  const scaleY = newBox.height / startGroupRect.height;
+
+  for (const el of elements) {
+    if (el.isLocked) continue;
+    const snap = snapshots.get(el.id);
+    if (!snap) continue;
+
+    if ('width' in el && 'height' in el && snap.x !== undefined && snap.y !== undefined && snap.width !== undefined && snap.height !== undefined) {
+      const relX = snap.x - startGroupRect.x;
+      const relY = snap.y - startGroupRect.y;
+
+      el.x = Math.round(newBox.x + relX * scaleX);
+      el.y = Math.round(newBox.y + relY * scaleY);
+      el.width = Math.max(10, Math.round(snap.width * scaleX));
+      el.height = Math.max(10, Math.round(snap.height * scaleY));
+
+      if (el.type === 'text' && snap.fontSize) {
+        const fontScale = Math.sqrt(Math.max(0.01, scaleX * scaleY));
+        const newFontSize = Math.max(8, Math.min(300, Math.round(snap.fontSize * fontScale)));
+        el.fontSize = newFontSize;
+      }
+    } else if (el.type === 'stroke' && snap.points) {
+      el.points = snap.points.map((p) => ({
+        x: Math.round(newBox.x + (p.x - startGroupRect.x) * scaleX),
+        y: Math.round(newBox.y + (p.y - startGroupRect.y) * scaleY),
+      }));
+    } else if (el.type === 'connector' && snap.startPoint && snap.endPoint && !el.fromId && !el.toId) {
+      el.startPoint = {
+        x: Math.round(newBox.x + (snap.startPoint.x - startGroupRect.x) * scaleX),
+        y: Math.round(newBox.y + (snap.startPoint.y - startGroupRect.y) * scaleY),
+      };
+      el.endPoint = {
+        x: Math.round(newBox.x + (snap.endPoint.x - startGroupRect.x) * scaleX),
+        y: Math.round(newBox.y + (snap.endPoint.y - startGroupRect.y) * scaleY),
+      };
+    }
   }
 }
 

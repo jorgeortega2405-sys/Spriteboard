@@ -1,22 +1,19 @@
-import { getBoardSvg, getDiagramSvg, getDocSvg, getPresentationSvg, getTemplateVariantSvg } from './create-canvas-graphics.js';
 import { PresetVariant } from '../config/templates.config.js';
 import { createAndOpenCanvas, CreateCanvasOptions } from '../services/canvas-creator.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
-import { DIAGRAM_CATEGORIES, DIAGRAM_SUBTYPES, DiagramCategory, DiagramSubtype } from '../types/mindmap.types.js';
 import { DocOrientation, DocPaperSize } from '../views/doc/doc.types.js';
+import { getBoardSvg, getDocSvg, getPresentationSvg, getTemplateVariantSvg } from './create-canvas-graphics.js';
 
 let activeCreateCanvasModal: { close: () => void } | null = null;
 
 export interface OpenCreateCanvasModalOptions {
   boardTemplateId?: string;
-  diagramSubtype?: DiagramSubtype;
-  diagramTemplateId?: string;
   docOrientation?: DocOrientation;
   docPaperSize?: DocPaperSize;
   docTemplateId?: string;
   height?: number;
-  initialType?: 'board' | 'diagram' | 'doc' | 'presentation';
+  initialType?: 'board' | 'doc' | 'presentation';
   name?: string;
   teamName?: string | null;
   teamUuid?: string | null;
@@ -35,7 +32,7 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
   const templateName = options?.templateName || null;
   const templateImage = options?.templateImage || null;
   const normalizedInitialType = options?.initialType || 'board';
-  let activeCategory: 'board' | 'diagram' | 'doc' | 'presentation' | 'template' = templateVariants ? 'template' : normalizedInitialType;
+  let activeCategory: 'board' | 'doc' | 'presentation' | 'template' = templateVariants ? 'template' : normalizedInitialType;
   let isCreating = false;
 
   const backdrop = document.createElement('div');
@@ -72,10 +69,6 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
               <button type="button" class="menu-item${activeCategory === 'board' ? ' is-active' : ''}" data-ref="tab-category-board" data-category="board">
                 <span class="material-symbols-rounded menu-item__icon">space_dashboard</span>
                 <span class="menu-item__text">Pizarrón Infinito</span>
-              </button>
-              <button type="button" class="menu-item${activeCategory === 'diagram' ? ' is-active' : ''}" data-ref="tab-category-diagram" data-category="diagram">
-                <span class="material-symbols-rounded menu-item__icon">account_tree</span>
-                <span class="menu-item__text">Diagramas y Esquemas</span>
               </button>
               <button type="button" class="menu-item${activeCategory === 'presentation' ? ' is-active' : ''}" data-ref="tab-category-presentation" data-category="presentation">
                 <span class="material-symbols-rounded menu-item__icon">slideshow</span>
@@ -135,34 +128,6 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
                     <p class="creation-card__meta" data-ref="meta-board-dots">Fondo blanco • Cuadrícula de puntos</p>
                   </div>
                 </button>
-              </div>
-            </div>
-
-            <div class="modal-canvas-panel" data-ref="panel-category-diagram" style="${activeCategory === 'diagram' ? '' : 'display: none;'}">
-              <div class="template-variants-pills" data-ref="diagram-category-pills" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; width: 100%;">
-                ${DIAGRAM_CATEGORIES.map((cat) => `
-                  <button type="button" class="template-variant-pill${cat.id === 'all' ? ' is-active' : ''}" data-ref="btn-diag-cat-${cat.id}" data-category="${cat.id}">
-                    <span class="material-symbols-rounded" style="font-size: 16px; margin-right: 4px;">${cat.icon}</span>
-                    <span>${cat.name}</span>
-                  </button>
-                `).join('')}
-              </div>
-
-              <div class="creation-cards-grid" data-ref="grid-diagrams">
-                ${DIAGRAM_SUBTYPES.map((sub) => `
-                  <button type="button" class="creation-card" data-ref="card-diagram-${sub.id}" data-type="diagram" data-subtype="${sub.id}" data-category="${sub.category}">
-                    <div class="creation-card__thumbnail" data-ref="thumb-diag-${sub.id}">
-                      <div class="creation-card__svg-wrapper" data-ref="svg-diag-${sub.id}">
-                        ${getDiagramSvg(sub.id)}
-                      </div>
-                      ${sub.badge ? `<span class="creation-card__badge ${sub.badge === 'Popular' ? 'creation-card__badge--popular' : ''}" data-ref="badge-diag-${sub.id}">${sub.badge}</span>` : ''}
-                    </div>
-                    <div class="creation-card__info" data-ref="info-diag-${sub.id}">
-                      <h4 class="creation-card__title" data-ref="title-diag-${sub.id}">${sub.name}</h4>
-                      <p class="creation-card__meta" data-ref="meta-diag-${sub.id}">${sub.description}</p>
-                    </div>
-                  </button>
-                `).join('')}
               </div>
             </div>
 
@@ -329,7 +294,6 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
 
   const categoryTitles: Record<string, string> = {
     board: 'Pizarrón Infinito',
-    diagram: 'Diagramas y Esquemas',
     doc: 'Documento Doc',
     presentation: 'Presentación de Diapositivas',
     template: templateName ? `Plantilla: ${templateName}` : 'Plantilla',
@@ -341,7 +305,7 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
   const errorBanner = backdrop.querySelector<HTMLElement>('[data-ref="create-canvas-error"]');
   const btnClose = backdrop.querySelector<HTMLElement>('[data-ref="btn-modal-close"]');
 
-  const switchCategory = (category: 'board' | 'diagram' | 'doc' | 'presentation' | 'template') => {
+  const switchCategory = (category: 'board' | 'doc' | 'presentation' | 'template') => {
     activeCategory = category;
     navItems.forEach((item) => {
       item.classList.toggle('is-active', item.getAttribute('data-category') === category);
@@ -370,30 +334,10 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
 
   navItems.forEach((item) => {
     item.addEventListener('click', () => {
-      const cat = item.getAttribute('data-category') as 'board' | 'diagram' | 'doc' | 'presentation' | 'template';
+      const cat = item.getAttribute('data-category') as 'board' | 'doc' | 'presentation' | 'template';
       if (cat) {
         switchCategory(cat);
       }
-    });
-  });
-
-  const categoryPills = backdrop.querySelectorAll<HTMLElement>('[data-ref^="btn-diag-cat-"]');
-  const diagramCards = backdrop.querySelectorAll<HTMLElement>('[data-ref^="card-diagram-"]');
-
-  categoryPills.forEach((pill) => {
-    pill.addEventListener('click', () => {
-      const cat = pill.getAttribute('data-category') as DiagramCategory;
-      categoryPills.forEach((p) => p.classList.remove('is-active'));
-      pill.classList.add('is-active');
-
-      diagramCards.forEach((card) => {
-        const cardCat = card.getAttribute('data-category') as DiagramCategory;
-        if (cat === 'all' || cardCat === cat) {
-          card.style.display = 'flex';
-        } else {
-          card.style.display = 'none';
-        }
-      });
     });
   });
 
@@ -435,22 +379,6 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
         bgType: 'dots',
         canvasType: 'board',
         name: 'Pizarrón sin título',
-        solidColor: '#ffffff',
-      }, card);
-    });
-  });
-
-  diagramCards.forEach((card) => {
-    card.addEventListener('click', () => {
-      const subtype = (card.getAttribute('data-subtype') as DiagramSubtype) || 'mindmap';
-      const subtypeInfo = DIAGRAM_SUBTYPES.find((s) => s.id === subtype);
-      void handleInstantCreation({
-        bgType: 'dots',
-        canvasType: 'board',
-        diagramSubtype: subtype,
-        mindmapLineStyle: 'curved',
-        name: subtypeInfo?.name ? `${subtypeInfo.name} sin título` : 'Mapa Mental sin título',
-        rootIdeaText: subtypeInfo?.name || 'Idea Principal',
         solidColor: '#ffffff',
       }, card);
     });

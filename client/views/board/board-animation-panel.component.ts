@@ -118,7 +118,7 @@ export class BoardAnimationPanelComponent {
     this.abortController = new AbortController();
     const { signal } = this.abortController;
 
-    const btnClose = this.panelEl?.querySelector<HTMLButtonElement>('[data-ref="btn-close-animation-drawer"]');
+    const btnClose = this.panelEl?.querySelector<HTMLButtonElement>('[data-ref="btn-close-animation-drawer"], [data-ref="btn-close-canvas-panel"]');
     btnClose?.addEventListener('click', () => {
       this.close();
       this.callbacks.onClose();
@@ -135,19 +135,19 @@ export class BoardAnimationPanelComponent {
     for (const item of ANIMATION_PRESETS) {
       const btn = document.createElement('button');
       btn.setAttribute('type', 'button');
-      btn.className = `canva-effect-card${this.activeAnimation.type === item.id ? ' is-active' : ''}`;
+      btn.className = `board-effect-card canva-effect-card${this.activeAnimation.type === item.id ? ' is-active' : ''}`;
       btn.setAttribute('data-ref', `anim-card-${item.id}`);
       btn.setAttribute('data-tooltip', item.description);
 
       const iconWrap = document.createElement('div');
-      iconWrap.className = 'canva-effect-card__preview';
+      iconWrap.className = 'board-effect-card__preview canva-effect-card__preview';
       const iconSpan = document.createElement('span');
       iconSpan.className = 'component-icon';
       iconSpan.textContent = item.icon;
       iconWrap.appendChild(iconSpan);
 
       const label = document.createElement('span');
-      label.className = 'canva-effect-card__label';
+      label.className = 'board-effect-card__label canva-effect-card__label';
       label.textContent = item.name;
 
       btn.appendChild(iconWrap);
@@ -186,7 +186,7 @@ export class BoardAnimationPanelComponent {
 
   private updateActivePresetHighlight(): void {
     if (!this.panelEl) return;
-    this.panelEl.querySelectorAll<HTMLButtonElement>('.canva-effect-card').forEach((btn) => {
+    this.panelEl.querySelectorAll<HTMLButtonElement>('.board-effect-card, .canva-effect-card').forEach((btn) => {
       const isCurrent = btn.getAttribute('data-ref') === `anim-card-${this.activeAnimation.type}`;
       btn.classList.toggle('is-active', isCurrent);
     });
@@ -207,20 +207,20 @@ export class BoardAnimationPanelComponent {
     configContainer.innerHTML = '';
 
     const titleEl = document.createElement('div');
-    titleEl.className = 'canva-drawer-section-title';
+    titleEl.className = 'elements-section-title canva-drawer-section-title';
     titleEl.textContent = 'Opciones de animación';
     configContainer.appendChild(titleEl);
 
     const triggerGroup = document.createElement('div');
-    triggerGroup.className = 'canva-drawer-field-group';
+    triggerGroup.className = 'board-drawer-field-group canva-drawer-field-group';
 
     const triggerLabel = document.createElement('span');
-    triggerLabel.className = 'canva-drawer-slider-label';
+    triggerLabel.className = 'board-drawer-slider-label canva-drawer-slider-label';
     triggerLabel.textContent = 'Momento de la animación';
     triggerGroup.appendChild(triggerLabel);
 
     const triggerPills = document.createElement('div');
-    triggerPills.className = 'canva-trigger-pills';
+    triggerPills.className = 'board-trigger-pills canva-trigger-pills';
 
     const triggers: Array<{ id: 'both' | 'enter' | 'exit'; name: string }> = [
       { id: 'enter', name: 'Al entrar' },
@@ -231,11 +231,11 @@ export class BoardAnimationPanelComponent {
     for (const trig of triggers) {
       const pill = document.createElement('button');
       pill.setAttribute('type', 'button');
-      pill.className = `canva-trigger-pill${this.activeAnimation.trigger === trig.id ? ' is-active' : ''}`;
+      pill.className = `board-trigger-pill canva-trigger-pill${this.activeAnimation.trigger === trig.id ? ' is-active' : ''}`;
       pill.textContent = trig.name;
       pill.addEventListener('click', () => {
         this.activeAnimation.trigger = trig.id;
-        triggerPills.querySelectorAll('.canva-trigger-pill').forEach((p) => p.classList.remove('is-active'));
+        triggerPills.querySelectorAll('.board-trigger-pill, .canva-trigger-pill').forEach((p) => p.classList.remove('is-active'));
         pill.classList.add('is-active');
         this.callbacks.onApplyAnimation({ ...this.activeAnimation });
       });
@@ -245,15 +245,15 @@ export class BoardAnimationPanelComponent {
     configContainer.appendChild(triggerGroup);
 
     const speedGroup = document.createElement('div');
-    speedGroup.className = 'canva-drawer-field-group';
+    speedGroup.className = 'board-drawer-field-group canva-drawer-field-group';
 
     const speedLabel = document.createElement('span');
-    speedLabel.className = 'canva-drawer-slider-label';
+    speedLabel.className = 'board-drawer-slider-label canva-drawer-slider-label';
     speedLabel.textContent = 'Velocidad';
     speedGroup.appendChild(speedLabel);
 
     const speedPills = document.createElement('div');
-    speedPills.className = 'canva-trigger-pills';
+    speedPills.className = 'board-trigger-pills canva-trigger-pills';
 
     const speeds: Array<{ id: 'fast' | 'medium' | 'slow'; name: string }> = [
       { id: 'slow', name: 'Lento' },
@@ -264,11 +264,11 @@ export class BoardAnimationPanelComponent {
     for (const spd of speeds) {
       const pill = document.createElement('button');
       pill.setAttribute('type', 'button');
-      pill.className = `canva-trigger-pill${this.activeAnimation.speed === spd.id ? ' is-active' : ''}`;
+      pill.className = `board-trigger-pill canva-trigger-pill${this.activeAnimation.speed === spd.id ? ' is-active' : ''}`;
       pill.textContent = spd.name;
       pill.addEventListener('click', () => {
         this.activeAnimation.speed = spd.id;
-        speedPills.querySelectorAll('.canva-trigger-pill').forEach((p) => p.classList.remove('is-active'));
+        speedPills.querySelectorAll('.board-trigger-pill, .canva-trigger-pill').forEach((p) => p.classList.remove('is-active'));
         pill.classList.add('is-active');
         this.callbacks.onApplyAnimation({ ...this.activeAnimation });
         if (this.callbacks.onPreviewAnimation) {

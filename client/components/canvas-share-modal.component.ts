@@ -1,3 +1,4 @@
+import { openPublishTemplateModal } from './publish-template-modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { currentUser, deleteApi, escapeHtml, getApi, patchApi, postApi } from '../services/api.service.js';
 import { getLocalCanvasByUuid, markLocalCanvasAsSynced } from '../services/canvas-storage.service.js';
@@ -168,6 +169,10 @@ export function openCanvasShareModal(canvas: CanvasItem): void {
                 <span class="material-symbols-rounded">link</span>
                 <span>Copiar el enlace</span>
               </button>
+              <button type="button" class="component-button component-button--h40 component-button--outline component-button--w-full" data-ref="btn-share-publish-template">
+                <span class="material-symbols-rounded">auto_awesome</span>
+                <span>Publicar como plantilla</span>
+              </button>
             </div>
           </div>
         </div>
@@ -196,6 +201,7 @@ export function openCanvasShareModal(canvas: CanvasItem): void {
   const shareMembersList = backdrop.querySelector<HTMLElement>('[data-ref="share-members-list"]');
   const btnFocusSearch = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-share-focus-search"]');
   const btnCopyLink = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-copy-share-link"]');
+  const btnPublishTemplate = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-share-publish-template"]');
 
   const dropdownWrapperAccess = backdrop.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-access-level"]');
   const accessTriggerIcon = backdrop.querySelector<HTMLElement>('[data-ref="access-level-selected-icon"]');
@@ -649,6 +655,11 @@ export function openCanvasShareModal(canvas: CanvasItem): void {
     } catch {
       showToast(t('canvas.copy_link_error') || 'Error al copiar el enlace', 'danger');
     }
+  });
+
+  btnPublishTemplate?.addEventListener('click', () => {
+    closeModal();
+    openPublishTemplateModal(canvas);
   });
 
   btnSyncCloud?.addEventListener('click', async () => {

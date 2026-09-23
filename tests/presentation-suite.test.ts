@@ -397,11 +397,17 @@ async function runPresentationTests(): Promise<void> {
     }
   });
 
-  await test('5.3 Auditoría Data-Ref - Coincidencia de selectores UI en board.html', () => {
-    const boardHtmlPath = path.resolve(process.cwd(), 'public/views/board/board.html');
-    const content = fs.readFileSync(boardHtmlPath, 'utf-8');
+  await test('5.3 Auditoría Data-Ref - Coincidencia de selectores UI en presentation.html y layout.component.ts', () => {
+    const presentationHtmlPath = path.resolve(process.cwd(), 'public/views/presentation/presentation.html');
+    const presentationContent = fs.readFileSync(presentationHtmlPath, 'utf-8');
 
-    const requiredDataRefs = [
+    const layoutComponentPath = path.resolve(process.cwd(), 'client/components/layout.component.ts');
+    const layoutContent = fs.readFileSync(layoutComponentPath, 'utf-8');
+
+    const boardHtmlPath = path.resolve(process.cwd(), 'public/views/board/board.html');
+    const boardContent = fs.readFileSync(boardHtmlPath, 'utf-8');
+
+    const requiredPresentationRefs = [
       'top-btn-effects',
       'top-btn-animate',
       'top-btn-position',
@@ -411,13 +417,30 @@ async function runPresentationTests(): Promise<void> {
       'label-popover-slide-duration',
       'slide-duration-presets',
       'btn-apply-duration-all',
+    ];
+
+    for (const ref of requiredPresentationRefs) {
+      assert.ok(presentationContent.includes(`data-ref="${ref}"`), `Falta el data-ref="${ref}" en presentation.html`);
+    }
+
+    const requiredBoardRefs = [
+      'top-btn-effects',
+      'top-btn-animate',
+      'top-btn-position',
+    ];
+
+    for (const ref of requiredBoardRefs) {
+      assert.ok(boardContent.includes(`data-ref="${ref}"`), `Falta el data-ref="${ref}" en board.html`);
+    }
+
+    const requiredDrawerRefs = [
       'board-effects-drawer',
       'board-animation-drawer',
       'board-position-drawer',
     ];
 
-    for (const ref of requiredDataRefs) {
-      assert.ok(content.includes(`data-ref="${ref}"`), `Falta el data-ref="${ref}" en board.html`);
+    for (const ref of requiredDrawerRefs) {
+      assert.ok(layoutContent.includes(`data-ref="${ref}"`), `Falta el data-ref="${ref}" en layout.component.ts`);
     }
   });
 

@@ -1,6 +1,7 @@
 import { API_ROUTES } from '../config/api-routes.js';
 import { getBoardTemplateElements } from '../config/board-templates.data.js';
 import { getCustomDiagramProject } from '../config/diagram-templates.data.js';
+import { getPresentationTemplateSlides } from '../config/presentation-templates.data.js';
 import { CanvasType } from '../types/canvas.types.js';
 import { DiagramSubtype } from '../types/mindmap.types.js';
 import { PRESENTATION_FORMATS } from '../types/presentation.types.js';
@@ -108,30 +109,33 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
   let initialProject: any = null;
 
   if (isPresentation) {
+    const templateSlides = getPresentationTemplateSlides(options.boardTemplateId);
+    const slides = templateSlides.length > 0 ? templateSlides : [
+      {
+        background: {
+          color: '#ffffff',
+          dotColor: '#cbd5e1',
+          type: 'solid' as const,
+        },
+        camera: { x: 0, y: 0, zoom: 1 },
+        createdAt: Date.now(),
+        elements: [],
+        id: 'slide-1',
+        name: 'Slide 1',
+      },
+    ];
+
     initialProject = {
-      activePageId: 'slide-1',
-      background: {
+      activePageId: slides[0].id,
+      background: slides[0].background || {
         color: '#ffffff',
         dotColor: '#cbd5e1',
         type: 'solid',
       },
       camera: { x: 0, y: 0, zoom: 1 },
-      elements: [],
+      elements: slides[0].elements || [],
       height,
-      pages: [
-        {
-          background: {
-            color: '#ffffff',
-            dotColor: '#cbd5e1',
-            type: 'solid',
-          },
-          camera: { x: 0, y: 0, zoom: 1 },
-          createdAt: Date.now(),
-          elements: [],
-          id: 'slide-1',
-          name: 'Diapositiva 1',
-        },
-      ],
+      pages: slides,
       type: 'presentation',
       version: 1,
       width,

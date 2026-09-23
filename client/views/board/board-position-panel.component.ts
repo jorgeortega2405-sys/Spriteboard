@@ -92,7 +92,7 @@ export class BoardPositionPanelComponent {
     this.abortController = new AbortController();
     const { signal } = this.abortController;
 
-    const btnClose = this.panelEl?.querySelector<HTMLButtonElement>('[data-ref="btn-close-position-drawer"]');
+    const btnClose = this.panelEl?.querySelector<HTMLButtonElement>('[data-ref="btn-close-position-drawer"], [data-ref="btn-close-canvas-panel"]');
     btnClose?.addEventListener('click', () => {
       this.close();
       this.callbacks.onClose();
@@ -141,14 +141,14 @@ export class BoardPositionPanelComponent {
     container.innerHTML = '';
 
     const sectionZ = document.createElement('div');
-    sectionZ.className = 'canva-pos-section';
+    sectionZ.className = 'board-pos-section canva-pos-section';
     const titleZ = document.createElement('div');
-    titleZ.className = 'canva-drawer-section-title';
+    titleZ.className = 'elements-section-title canva-drawer-section-title';
     titleZ.textContent = 'Adelante / Atrás';
     sectionZ.appendChild(titleZ);
 
     const zGrid = document.createElement('div');
-    zGrid.className = 'canva-pos-actions-grid';
+    zGrid.className = 'board-pos-actions-grid canva-pos-actions-grid';
 
     const zActions: Array<{ action: 'back' | 'backward' | 'forward' | 'front'; icon: string; name: string }> = [
       { action: 'forward', icon: 'arrow_upward', name: 'Delante' },
@@ -160,7 +160,7 @@ export class BoardPositionPanelComponent {
     for (const item of zActions) {
       const btn = document.createElement('button');
       btn.setAttribute('type', 'button');
-      btn.className = 'canva-pos-grid-btn';
+      btn.className = 'board-pos-grid-btn canva-pos-grid-btn';
       btn.setAttribute('data-ref', `btn-pos-${item.action}`);
       btn.innerHTML = `<span class="component-icon">${item.icon}</span><span>${item.name}</span>`;
       btn.addEventListener('click', () => {
@@ -172,14 +172,14 @@ export class BoardPositionPanelComponent {
     container.appendChild(sectionZ);
 
     const sectionAlign = document.createElement('div');
-    sectionAlign.className = 'canva-pos-section';
+    sectionAlign.className = 'board-pos-section canva-pos-section';
     const titleAlign = document.createElement('div');
-    titleAlign.className = 'canva-drawer-section-title';
+    titleAlign.className = 'elements-section-title canva-drawer-section-title';
     titleAlign.textContent = 'Alinear a la página';
     sectionAlign.appendChild(titleAlign);
 
     const alignGrid = document.createElement('div');
-    alignGrid.className = 'canva-pos-actions-grid canva-pos-actions-grid--3cols';
+    alignGrid.className = 'board-pos-actions-grid board-pos-actions-grid--3cols canva-pos-actions-grid canva-pos-actions-grid--3cols';
 
     const alignActions: Array<{ align: 'bottom' | 'center' | 'left' | 'middle' | 'right' | 'top'; icon: string; name: string }> = [
       { align: 'top', icon: 'vertical_align_top', name: 'Arriba' },
@@ -193,7 +193,7 @@ export class BoardPositionPanelComponent {
     for (const item of alignActions) {
       const btn = document.createElement('button');
       btn.setAttribute('type', 'button');
-      btn.className = 'canva-pos-grid-btn';
+      btn.className = 'board-pos-grid-btn canva-pos-grid-btn';
       btn.setAttribute('data-ref', `btn-align-${item.align}`);
       btn.innerHTML = `<span class="component-icon">${item.icon}</span><span>${item.name}</span>`;
       btn.addEventListener('click', () => {
@@ -205,9 +205,9 @@ export class BoardPositionPanelComponent {
     container.appendChild(sectionAlign);
 
     const sectionAdv = document.createElement('div');
-    sectionAdv.className = 'canva-pos-section';
+    sectionAdv.className = 'board-pos-section canva-pos-section';
     const titleAdv = document.createElement('div');
-    titleAdv.className = 'canva-drawer-section-title';
+    titleAdv.className = 'elements-section-title canva-drawer-section-title';
     titleAdv.textContent = 'Avanzados';
     sectionAdv.appendChild(titleAdv);
 
@@ -223,7 +223,7 @@ export class BoardPositionPanelComponent {
     const isAspectLocked = el && (el as any).aspectRatioLocked === true;
 
     const dimsRow = document.createElement('div');
-    dimsRow.className = 'canva-pos-dim-row';
+    dimsRow.className = 'board-pos-dim-row canva-pos-dim-row';
 
     const widthCol = this.createNumericField('Ancho px', widthVal, !hasDimensions, (val) => {
       this.callbacks.onUpdateTransform({ width: Math.max(10, val) });
@@ -231,7 +231,7 @@ export class BoardPositionPanelComponent {
 
     const lockBtn = document.createElement('button');
     lockBtn.setAttribute('type', 'button');
-    lockBtn.className = `canva-aspect-lock-btn${isAspectLocked ? ' is-active' : ''}`;
+    lockBtn.className = `board-aspect-lock-btn canva-aspect-lock-btn${isAspectLocked ? ' is-active' : ''}`;
     lockBtn.setAttribute('data-tooltip', isAspectLocked ? 'Bloqueo de proporción activado' : 'Bloquear relación de aspecto');
     lockBtn.innerHTML = `<span class="component-icon">${isAspectLocked ? 'lock' : 'lock_open'}</span>`;
     lockBtn.addEventListener('click', () => {
@@ -250,7 +250,7 @@ export class BoardPositionPanelComponent {
     sectionAdv.appendChild(dimsRow);
 
     const coordsRow = document.createElement('div');
-    coordsRow.className = 'canva-pos-dim-row';
+    coordsRow.className = 'board-pos-dim-row canva-pos-dim-row';
 
     const xCol = this.createNumericField('X px', xVal, !hasCoords, (val) => {
       this.callbacks.onUpdateTransform({ x: val });
@@ -265,7 +265,7 @@ export class BoardPositionPanelComponent {
     sectionAdv.appendChild(coordsRow);
 
     const rotRow = document.createElement('div');
-    rotRow.className = 'canva-pos-dim-row';
+    rotRow.className = 'board-pos-dim-row canva-pos-dim-row';
     const rotCol = this.createNumericField('Rotar °', rotVal, false, (val) => {
       this.callbacks.onUpdateTransform({ rotation: val });
     });
@@ -280,11 +280,11 @@ export class BoardPositionPanelComponent {
     container.innerHTML = '';
 
     const subtabsRow = document.createElement('div');
-    subtabsRow.className = 'canva-layers-subtabs';
+    subtabsRow.className = 'board-layers-subtabs canva-layers-subtabs';
 
     const btnAll = document.createElement('button');
     btnAll.setAttribute('type', 'button');
-    btnAll.className = `canva-layers-subtab${this.layersSubtab === 'all' ? ' is-active' : ''}`;
+    btnAll.className = `board-layers-subtab canva-layers-subtab${this.layersSubtab === 'all' ? ' is-active' : ''}`;
     btnAll.textContent = 'Todas';
     btnAll.addEventListener('click', () => {
       this.layersSubtab = 'all';
@@ -293,7 +293,7 @@ export class BoardPositionPanelComponent {
 
     const btnOverlap = document.createElement('button');
     btnOverlap.setAttribute('type', 'button');
-    btnOverlap.className = `canva-layers-subtab${this.layersSubtab === 'overlap' ? ' is-active' : ''}`;
+    btnOverlap.className = `board-layers-subtab canva-layers-subtab${this.layersSubtab === 'overlap' ? ' is-active' : ''}`;
     btnOverlap.textContent = 'Superposición';
     btnOverlap.addEventListener('click', () => {
       this.layersSubtab = 'overlap';
@@ -305,13 +305,13 @@ export class BoardPositionPanelComponent {
     container.appendChild(subtabsRow);
 
     const listEl = document.createElement('div');
-    listEl.className = 'canva-layers-list';
+    listEl.className = 'board-layers-list canva-layers-list';
 
     const displayElements = [...this.elements].reverse();
 
     if (displayElements.length === 0) {
       const empty = document.createElement('div');
-      empty.className = 'canva-layers-empty';
+      empty.className = 'board-layers-empty canva-layers-empty';
       empty.textContent = 'No hay capas en esta diapositiva';
       listEl.appendChild(empty);
     } else {
@@ -322,31 +322,31 @@ export class BoardPositionPanelComponent {
         const isLocked = (el as any).isLocked === true;
 
         const card = document.createElement('div');
-        card.className = `canva-layer-card${isSelected ? ' is-active' : ''}${isHidden ? ' is-hidden-layer' : ''}`;
+        card.className = `board-layer-card canva-layer-card${isSelected ? ' is-active' : ''}${isHidden ? ' is-hidden-layer' : ''}`;
         card.setAttribute('draggable', 'true');
         card.setAttribute('data-ref', `layer-item-${el.id}`);
 
         const dragHandle = document.createElement('span');
-        dragHandle.className = 'canva-layer-drag-handle component-icon';
+        dragHandle.className = 'board-layer-drag-handle canva-layer-drag-handle component-icon';
         dragHandle.textContent = 'drag_indicator';
         card.appendChild(dragHandle);
 
         const iconSpan = document.createElement('span');
-        iconSpan.className = 'canva-layer-icon component-icon';
+        iconSpan.className = 'board-layer-icon canva-layer-icon component-icon';
         iconSpan.textContent = this.getElementIcon(el);
         card.appendChild(iconSpan);
 
         const label = document.createElement('span');
-        label.className = 'canva-layer-name';
+        label.className = 'board-layer-name canva-layer-name';
         label.textContent = this.getElementLabel(el);
         card.appendChild(label);
 
         const actions = document.createElement('div');
-        actions.className = 'canva-layer-actions';
+        actions.className = 'board-layer-actions canva-layer-actions';
 
         const btnVis = document.createElement('button');
         btnVis.setAttribute('type', 'button');
-        btnVis.className = 'canva-layer-action-btn';
+        btnVis.className = 'board-layer-action-btn canva-layer-action-btn';
         btnVis.setAttribute('data-tooltip', isHidden ? 'Mostrar elemento' : 'Ocultar elemento');
         btnVis.innerHTML = `<span class="component-icon">${isHidden ? 'visibility_off' : 'visibility'}</span>`;
         btnVis.addEventListener('click', (e) => {
@@ -357,7 +357,7 @@ export class BoardPositionPanelComponent {
 
         const btnLock = document.createElement('button');
         btnLock.setAttribute('type', 'button');
-        btnLock.className = 'canva-layer-action-btn';
+        btnLock.className = 'board-layer-action-btn canva-layer-action-btn';
         btnLock.setAttribute('data-tooltip', isLocked ? 'Desbloquear elemento' : 'Bloquear elemento');
         btnLock.innerHTML = `<span class="component-icon">${isLocked ? 'lock' : 'lock_open'}</span>`;
         btnLock.addEventListener('click', (e) => {
@@ -384,7 +384,7 @@ export class BoardPositionPanelComponent {
         card.addEventListener('dragend', () => {
           card.classList.remove('is-dragging');
           this.draggedLayerIndex = null;
-          listEl.querySelectorAll('.canva-layer-card').forEach((c) => c.classList.remove('is-drag-over'));
+          listEl.querySelectorAll('.canva-layer-card, .board-layer-card').forEach((c) => c.classList.remove('is-drag-over'));
         });
 
         card.addEventListener('dragover', (e: DragEvent) => {
@@ -417,14 +417,14 @@ export class BoardPositionPanelComponent {
 
   private createNumericField(labelText: string, val: number, disabled: boolean, onChange: (val: number) => void): HTMLElement {
     const col = document.createElement('div');
-    col.className = 'canva-pos-dim-col';
+    col.className = 'board-pos-dim-col canva-pos-dim-col';
 
     const label = document.createElement('span');
-    label.className = 'canva-pos-dim-label';
+    label.className = 'board-pos-dim-label canva-pos-dim-label';
     label.textContent = labelText;
 
     const input = document.createElement('input');
-    input.className = 'canva-pos-dim-input';
+    input.className = 'board-pos-dim-input canva-pos-dim-input';
     input.setAttribute('type', 'number');
     input.value = `${val}`;
     if (disabled) input.disabled = true;

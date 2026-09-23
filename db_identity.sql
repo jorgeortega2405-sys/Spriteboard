@@ -540,5 +540,23 @@ CREATE TABLE IF NOT EXISTS user_uploads (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+INSERT INTO users (
+    id, uuid, username, email, password_hash, role, subscription_tier, avatar_url, created_at
+) VALUES (
+    1,
+    '00000000-0000-0000-0000-000000000001',
+    'spriteboard',
+    'official@spriteboard.internal',
+    '$2a$10$7EqJtq98hPqEX7fNZaFWoO5L95D9X5u6Fz9d9a4p6u3m7w8y1z0q2',
+    'ADMIN',
+    'business',
+    '/assets/brand/spriteboard-avatar.png',
+    NOW()
+) ON DUPLICATE KEY UPDATE username='spriteboard', role='ADMIN';
+
+INSERT INTO user_preferences (user_id, theme, language)
+VALUES (1, 'system', 'en-US')
+ON DUPLICATE KEY UPDATE user_id = user_id;
+
 GRANT ALL PRIVILEGES ON db_identity.* TO 'sprite_user'@'%';
 FLUSH PRIVILEGES;

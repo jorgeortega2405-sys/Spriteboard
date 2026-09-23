@@ -5,14 +5,14 @@ import { openCanvasMetricsModal } from '../../components/canvas-metrics-modal.co
 import { CanvasShareDropdownController, setupCanvasShareDropdown } from '../../components/canvas-share-dropdown.component.js';
 import { closeContextMenu, ContextMenuItem, openContextMenu } from '../../components/context-menu.component.js';
 import { InsertPixelGridConfig, openInsertPixelGridModal } from '../../components/insert-pixel-grid-modal.component.js';
-import { isColorsDrawerOpen, isFontsDrawerOpen, isPixelAnimationDrawerOpen, openChartInspectorInDrawer, openColorsInDrawer, openFontsInDrawer, openMockupsInDrawer, openPixelAnimationInDrawer, toggleDrawer } from '../../components/layout.component.js';
+import { isAnimationDrawerOpen, isColorsDrawerOpen, isEffectsDrawerOpen, isFontsDrawerOpen, isPixelAnimationDrawerOpen, isPositionDrawerOpen, openAnimationInDrawer, openChartInspectorInDrawer, openColorsInDrawer, openEffectsInDrawer, openFontsInDrawer, openMockupsInDrawer, openPixelAnimationInDrawer, openPositionInDrawer, toggleDrawer } from '../../components/layout.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
 import { BOARD_3D_SHAPES } from '../../config/board-3d-shapes.config.js';
 import { BOARD_SHAPES } from '../../config/board-shapes.config.js';
 import { getBoardTemplateElements } from '../../config/board-templates.data.js';
 import { getMockupTemplateById } from '../../config/mockups.config.js';
 import { DEFAULT_STICKY_COLOR, STICKY_NOTE_PRESETS } from '../../config/sticky-notes.config.js';
-import { AlignmentGuide, applyElementAnimation, applyElementEffect, BackgroundType, Board3DElement, BoardAnimationType, BoardChartElement, BoardCollaboratorState, BoardConnectorElement, BoardEffectType, BoardElement, BoardElementAnimation, BoardElementEffect, BoardImageElement, BoardMockupElement, BoardPageItem, BoardPixelGridElement, BoardPoint, BoardProject, BoardSectionElement, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTableCell, BoardTableElement, BoardTextElement, BoardTool, calculateDragSnapping, calculateResizeSnapping, CANVAS_DEFAULTS, CanvasEngine2D, ChartDataRow, ChartType, computeElementsBoundingBox, ConnectorStyle, create3DElement, createChartElement, createConnectorElement, createImageElement, createMockupElement, createSectionElement, createShapeElement, createStickyElement, createTableElement, createTextElement, createTextPresetElement, DEFAULT_CHART_PALETTES, DEFAULT_CLASSIC_PALETTE, draw3DElement, draw3DGroundGrid, drawAlignmentGuides, drawBackground, drawBoardCollaboratorCursors, drawChart, drawCheckerboard, drawConnector, drawImage, drawMarqueeBox, drawMockupElement, drawMultiSelectionBounds, drawPixelGridLines, drawSection, drawSelectionBox, drawShape, drawSticky, drawStroke, drawTable, drawText, exportJson, exportPng, exportSvg, findContainingSection, findElementsByMarqueeBox, GAMEBOY_PALETTE, generateThumbnail, getConnectorEndpoints, getElementBoundingBox, hitTest3DRotationGizmo, hitTestElement, hitTestResizeHandle, MarkerType, measureTextElementSize, moveElementByDelta, moveElementByDrag, onCustomModelLoaded, PICO8_PALETTE, PixelSubtool, preloadCustom3DModels, ResizeHandle, resizeElementByHandle, screenToWorld, Shape3DType, ShapeType, StrokeStyle, TEXT_PRESETS, worldToScreen } from '../../core/canvas-engine.js';
+import { AlignmentGuide, applyElementAnimation, applyElementEffect, BackgroundType, Board3DElement, BoardAnimationType, BoardChartElement, BoardCollaboratorState, BoardConnectorElement, BoardEffectType, BoardElement, BoardElementAnimation, BoardElementEffect, BoardImageElement, BoardMockupElement, BoardPageItem, BoardPixelGridElement, BoardPoint, BoardProject, BoardSectionElement, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTableCell, BoardTableElement, BoardTextElement, BoardTool, calculateDragSnapping, calculateResizeSnapping, CANVAS_DEFAULTS, CanvasEngine2D, ChartDataRow, ChartType, computeElementsBoundingBox, ConnectorStyle, create3DElement, createChartElement, createConnectorElement, createElementResizeSnapshot, createImageElement, createMockupElement, createSectionElement, createShapeElement, createStickyElement, createTableElement, createTextElement, createTextPresetElement, DEFAULT_CHART_PALETTES, DEFAULT_CLASSIC_PALETTE, draw3DElement, draw3DGroundGrid, drawAlignmentGuides, drawBackground, drawBoardCollaboratorCursors, drawChart, drawCheckerboard, drawConnector, drawImage, drawMarqueeBox, drawMockupElement, drawMultiSelectionBounds, drawPixelGridLines, drawSection, drawSelectionBox, drawShape, drawSticky, drawStroke, drawTable, drawText, ElementResizeSnapshot, exportJson, exportPng, exportSvg, findContainingSection, findElementsByMarqueeBox, GAMEBOY_PALETTE, generateThumbnail, getConnectorEndpoints, getElementBoundingBox, hitTest3DRotationGizmo, hitTestBoundingBoxResizeHandle, hitTestElement, hitTestResizeHandle, MarkerType, measureTextElementSize, moveElementByDelta, moveElementByDrag, onCustomModelLoaded, PICO8_PALETTE, PixelSubtool, preloadCustom3DModels, ResizeHandle, resizeElementByHandle, resizeElementsGroup, screenToWorld, Shape3DType, ShapeType, StrokeStyle, TEXT_PRESETS, worldToScreen } from '../../core/canvas-engine.js';
 import { currentUser, escapeHtml, getApi, postApi } from '../../services/api.service.js';
 import { getLocalCanvasByUuid, removeLocalCanvas, saveLocalCanvas } from '../../services/canvas-storage.service.js';
 import { renderIcons } from '../../services/icon.service.js';
@@ -99,8 +99,8 @@ export class BoardController {
   private container: HTMLElement;
   private ctx: CanvasRenderingContext2D | null = null;
   private currentCanvasItem: CanvasItem | null = null;
-  private currentColor = CANVAS_DEFAULTS.TEXT_COLOR;
-  private currentFillColor = CANVAS_DEFAULTS.FILL_COLOR;
+  private currentColor: string = CANVAS_DEFAULTS.TEXT_COLOR;
+  private currentFillColor: string = CANVAS_DEFAULTS.FILL_COLOR;
   private currentShape: ShapeType = 'rect';
   private currentShape3D: Shape3DType = 'globe';
   private isRotating3D = false;
@@ -171,6 +171,7 @@ export class BoardController {
   private selectedTableCell: { col: number; row: number; tableId: string } | null = null;
   private selectionDragOffset: BoardPoint = { x: 0, y: 0 };
   private selectionDragStartWorld: BoardPoint = { x: 0, y: 0 };
+  private selectionResizeSnapshots = new Map<string, ElementResizeSnapshot>();
   private selectionStartPositions = new Map<string, { endPoint?: BoardPoint; points?: BoardPoint[]; startPoint?: BoardPoint; x?: number; y?: number }>();
   private selectionStartRect: { fontSize?: number; height: number; width: number; x: number; y: number } = { height: 0, width: 0, x: 0, y: 0 };
   private shareDropdownController: CanvasShareDropdownController | null = null;
@@ -2325,9 +2326,12 @@ export class BoardController {
     if (selectedEls.length === 0) {
       this.topToolbarContainerEl?.classList.add('is-hidden');
       this.topSelectionSectionEl?.classList.add('is-hidden');
+      if (isEffectsDrawerOpen() || isAnimationDrawerOpen()) {
+        toggleDrawer(false);
+      }
       this.effectsPanel?.close();
       this.animationPanel?.close();
-      this.positionPanel?.close();
+      this.positionPanel?.sync(null, this.elements);
       this.closeAllPopovers();
       return;
     }
@@ -2724,17 +2728,29 @@ export class BoardController {
 
     const btnEffects = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-effects"]');
     btnEffects?.addEventListener('click', () => {
-      this.effectsPanel?.toggle(this.getSelectedElements()[0] || null);
+      if (isEffectsDrawerOpen()) {
+        toggleDrawer(false);
+      } else {
+        openEffectsInDrawer();
+      }
     }, { signal });
 
     const btnAnimate = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-animate"]');
     btnAnimate?.addEventListener('click', () => {
-      this.animationPanel?.toggle(this.getSelectedElements()[0] || null);
+      if (isAnimationDrawerOpen()) {
+        toggleDrawer(false);
+      } else {
+        openAnimationInDrawer();
+      }
     }, { signal });
 
     const btnPosition = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-position"]');
     btnPosition?.addEventListener('click', () => {
-      this.positionPanel?.toggle(this.getSelectedElements()[0] || null, this.elements);
+      if (isPositionDrawerOpen()) {
+        toggleDrawer(false);
+      } else {
+        openPositionInDrawer();
+      }
     }, { signal });
 
     const btnDuplicate = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-duplicate"]');
@@ -3624,11 +3640,14 @@ export class BoardController {
         if (selEl) {
           const handle = hitTestResizeHandle(selEl, screenPos.x, screenPos.y, (wx, wy) => worldToScreen(wx, wy, this.canvasElement, this.camera));
           if (handle) {
+            this.pushHistoryState();
             this.isInteractingSelection = true;
             this.resizeHandleType = handle;
             this.setResizeCursor(handle);
             const bbox = getElementBoundingBox(selEl, this.elements);
             this.selectionStartRect = { ...bbox, fontSize: selEl.type === 'text' ? selEl.fontSize : undefined };
+            this.selectionResizeSnapshots.clear();
+            this.selectionResizeSnapshots.set(selEl.id, createElementResizeSnapshot(selEl));
             return;
           }
           if (selEl.type === 'shape-3d') {
@@ -3644,6 +3663,24 @@ export class BoardController {
               }
               return;
             }
+          }
+        }
+      } else if (this.selectedElementIds.length > 1) {
+        const selectedEls = this.getSelectedElements();
+        const groupBBox = computeElementsBoundingBox(selectedEls);
+        if (groupBBox) {
+          const handle = hitTestBoundingBoxResizeHandle(groupBBox, screenPos.x, screenPos.y, (wx, wy) => worldToScreen(wx, wy, this.canvasElement, this.camera));
+          if (handle) {
+            this.pushHistoryState();
+            this.isInteractingSelection = true;
+            this.resizeHandleType = handle;
+            this.setResizeCursor(handle);
+            this.selectionStartRect = { ...groupBBox };
+            this.selectionResizeSnapshots.clear();
+            for (const el of selectedEls) {
+              this.selectionResizeSnapshots.set(el.id, createElementResizeSnapshot(el));
+            }
+            return;
           }
         }
       }
@@ -3925,28 +3962,44 @@ export class BoardController {
     }
 
     if (this.isInteractingSelection && this.selectedElementIds.length > 0) {
-      if (this.resizeHandleType && this.selectedElementId) {
+      if (this.resizeHandleType && this.selectionStartRect) {
         this.hasMovedSelection = true;
-        const el = this.elements.find((item) => item.id === this.selectedElementId);
-        if (el) {
-          let targetWorldPos = worldPos;
-          if (this.isSnappingEnabled && !e.altKey) {
-            const refElements = this.elements.filter((item) => item.id !== el.id);
-            const snapRes = calculateResizeSnapping(
-              this.resizeHandleType,
-              worldPos,
-              refElements,
-              this.elements,
-              this.camera.zoom
-            );
-            targetWorldPos = snapRes.snappedWorldPos;
-            this.activeAlignmentGuides = snapRes.guides;
-          } else {
-            this.activeAlignmentGuides = [];
-          }
-          resizeElementByHandle(el, this.resizeHandleType, targetWorldPos, this.selectionStartRect, e.shiftKey);
-          this.setResizeCursor(this.resizeHandleType);
+        let targetWorldPos = worldPos;
+        if (this.isSnappingEnabled && !e.altKey) {
+          const selectedSet = new Set(this.selectedElementIds);
+          const refElements = this.elements.filter((item) => !selectedSet.has(item.id));
+          const snapRes = calculateResizeSnapping(
+            this.resizeHandleType,
+            worldPos,
+            refElements,
+            this.elements,
+            this.camera.zoom
+          );
+          targetWorldPos = snapRes.snappedWorldPos;
+          this.activeAlignmentGuides = snapRes.guides;
+        } else {
+          this.activeAlignmentGuides = [];
         }
+
+        if (this.selectedElementIds.length === 1 && this.selectedElementId) {
+          const el = this.elements.find((item) => item.id === this.selectedElementId);
+          if (el) {
+            resizeElementByHandle(el, this.resizeHandleType, targetWorldPos, this.selectionStartRect, e.shiftKey);
+          }
+        } else if (this.selectedElementIds.length > 1) {
+          const selectedEls = this.getSelectedElements();
+          resizeElementsGroup(
+            selectedEls,
+            this.resizeHandleType,
+            targetWorldPos,
+            this.selectionStartRect,
+            this.selectionResizeSnapshots,
+            e.shiftKey
+          );
+        }
+        this.setResizeCursor(this.resizeHandleType);
+        this.requestRedraw();
+        return;
       } else {
         const rawDx = worldPos.x - this.selectionDragStartWorld.x;
         const rawDy = worldPos.y - this.selectionDragStartWorld.y;
@@ -4082,6 +4135,16 @@ export class BoardController {
             }
           }
         }
+      } else if (this.selectedElementIds.length > 1) {
+        const selectedEls = this.getSelectedElements();
+        const groupBBox = computeElementsBoundingBox(selectedEls);
+        if (groupBBox) {
+          const handle = hitTestBoundingBoxResizeHandle(groupBBox, screenPos.x, screenPos.y, (wx, wy) => worldToScreen(wx, wy, this.canvasElement, this.camera));
+          if (handle) {
+            this.setResizeCursor(handle);
+            return;
+          }
+        }
       }
       this.updateCanvasCursor();
     }
@@ -4151,6 +4214,7 @@ export class BoardController {
     if (this.isInteractingSelection) {
       this.isInteractingSelection = false;
       this.resizeHandleType = null;
+      this.selectionResizeSnapshots.clear();
       this.selectionStartBBox = null;
       this.activeAlignmentGuides = [];
       this.updateCanvasCursor();
@@ -4821,9 +4885,6 @@ export class BoardController {
         }
       } else {
         const selectedEls = this.getSelectedElements();
-        for (const el of selectedEls) {
-          drawSelectionBox(this.ctx, el, this.camera, this.elements);
-        }
         drawMultiSelectionBounds(this.ctx, selectedEls, this.camera);
       }
     } else if (this.selectedElementId) {
@@ -7350,6 +7411,18 @@ export class BoardController {
 
   public getMockupsPanel(): BoardMockupsPanelComponent | null {
     return this.mockupsPanel;
+  }
+
+  public getEffectsPanel(): BoardEffectsPanelComponent | null {
+    return this.effectsPanel;
+  }
+
+  public getAnimationPanel(): BoardAnimationPanelComponent | null {
+    return this.animationPanel;
+  }
+
+  public getPositionPanel(): BoardPositionPanelComponent | null {
+    return this.positionPanel;
   }
 
   public openChartsPanel(chartEl?: BoardChartElement): void {
