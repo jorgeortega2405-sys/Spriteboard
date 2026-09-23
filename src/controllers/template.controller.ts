@@ -1,5 +1,5 @@
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
-import { getPublishedTemplates, publishCanvasAsTemplate } from '../services/template.service.js';
+import { getPublishedTemplates, getTemplateByUuid, publishCanvasAsTemplate } from '../services/template.service.js';
 import { sendBadRequest, sendCreated, sendForbidden, sendInternalError, sendNotFound, sendSuccess, sendUnauthorized } from '../utils/http.util.js';
 import { Request, Response } from 'express';
 
@@ -22,18 +22,37 @@ export async function publishTemplateHandler(req: Request, res: Response): Promi
       return;
     }
 
-    const template = await publishCanvasAsTemplate(user.id, user.role || 'USER', {
-      canvas_uuid: canvas_uuid.trim(),
-      category: category ? String(category).trim() : undefined,
-      description: description ? String(description).trim() : undefined,
-      tags: Array.isArray(tags) ? tags : undefined,
-      title: title.trim(),
-    });
+    const userRoles: string[] = Array.isArray(user.roles) && user.roles.length > 0
+      ? user.roles
+      : (user.role ? [user.role] : ['USER']);
+
+    const canPublish = userRoles.includes('DESIGNER') || userRoles.includes('SUPER_ADMIN') || userRoles.includes('PLATFORM_ADMIN');
+    if (!canPublish) {
+      sendForbidden(res, 'No tienes permisos para publicar plantillas. Esta función está reservada para diseñadores.');
+      return;
+    }
+
+    const template = await publishCanvasAsTemplate(
+      user.id,
+      user.role || 'USER',
+      {
+        canvas_uuid: canvas_uuid.trim(),
+        category: category ? String(category).trim() : undefined,
+        description: description ? String(description).trim() : undefined,
+        tags: Array.isArray(tags) ? tags : undefined,
+        title: title.trim(),
+      },
+      userRoles
+    );
 
     sendCreated(res, { template });
   } catch (err: any) {
     if (err?.message === 'Canvas not found') {
       sendNotFound(res, 'El lienzo especificado no existe.');
+      return;
+    }
+    if (err?.message === 'Unauthorized role to publish template') {
+      sendForbidden(res, 'No tienes permisos para publicar plantillas. Esta función está reservada para diseñadores.');
       return;
     }
     if (err?.message === 'Unauthorized to publish this canvas as template') {
@@ -65,5 +84,25 @@ export async function getTemplatesHandler(req: Request, res: Response): Promise<
     sendSuccess(res, data);
   } catch (err) {
     sendInternalError(res, 'Error al obtener plantillas en template controller', err);
+  }
+}
+
+export async function getTemplateDetailsHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const { id } = req.params;
+    if (!id || typeof id !== 'string' || id.trim().length === 0) {
+      sendBadRequest(res, 'Identificador de plantilla requerido.');
+      return;
+    }
+
+    const template = await getTemplateByUuid(id.trim());
+    if (!template) {
+      sendNotFound(res, 'Plantilla no encontrada.');
+      return;
+    }
+
+    sendSuccess(res, { template });
+  } catch (err) {
+    sendInternalError(res, 'Error al obtener detalle de plantilla en template controller', err);
   }
 }

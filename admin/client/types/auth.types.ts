@@ -41,10 +41,12 @@ export interface AuthSessionResponse {
   user: UserPayload | null;
 }
 
+const NON_ADMIN_ROLES = ['USER', 'DESIGNER'];
+
 export function isUserAdmin(role?: string, roles?: string[]): boolean {
   if (roles && Array.isArray(roles) && roles.length > 0) {
-    return roles.some((r) => r !== 'USER');
+    return roles.some((r) => !NON_ADMIN_ROLES.includes(r));
   }
-  return Boolean(role && role !== 'USER');
+  return Boolean(role && !NON_ADMIN_ROLES.includes(role));
 }
 

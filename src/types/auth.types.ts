@@ -10,6 +10,7 @@ export type UserRole =
   | 'DATA_ANALYST'
   | 'DATA_AUDITOR'
   | 'DATA_ENGINEER'
+  | 'DESIGNER'
   | 'DEVOPS'
   | 'ENGINEER'
   | 'FINANCE_ADMIN'
@@ -75,6 +76,7 @@ export const PLATFORM_ROLES: readonly RoleDefinition[] = [
   { category: 'operations', description: 'Supervisión operacional.', display_name: 'Operations Manager', name: 'OPERATIONS_MANAGER' },
   { category: 'operations', description: 'Workflows, jobs y procesos.', display_name: 'Workflow Admin', name: 'WORKFLOW_ADMIN' },
   { category: 'operations', description: 'Operaciones sensibles sobre sistemas.', display_name: 'System Operator', name: 'SYSTEM_OPERATOR' },
+  { category: 'general', description: 'Diseñador con permisos de publicación de plantillas.', display_name: 'Diseñador', name: 'DESIGNER' },
   { category: 'general', description: 'Usuario estándar de la plataforma.', display_name: 'Usuario', name: 'USER' },
 ] as const;
 

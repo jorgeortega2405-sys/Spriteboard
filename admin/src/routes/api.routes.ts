@@ -16,6 +16,7 @@ import logRoutes from './log.routes.js';
 import roleRoutes from './role.routes.js';
 import settingsRoutes from './settings.routes.js';
 import supportRoutes from './support.routes.js';
+import templateRoutes from './template.routes.js';
 import userRoutes from './user.routes.js';
 import workflowRoutes from './workflow.routes.js';
 
@@ -39,6 +40,7 @@ apiRouter.use('/internal-tickets', internalTicketRoutes);
 apiRouter.use('/logs', logRoutes);
 apiRouter.use('/roles', roleRoutes);
 apiRouter.use('/support', supportRoutes);
+apiRouter.use('/templates', templateRoutes);
 apiRouter.use('/users', userRoutes);
 apiRouter.use('/workflows', workflowRoutes);
 

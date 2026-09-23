@@ -78,6 +78,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
   DATA_ANALYST: ['dashboard:read', 'analytics:read', 'analytics:export'],
   DATA_AUDITOR: ['analytics:read', 'logs:read', 'users:read', 'compliance:read'],
   DATA_ENGINEER: ['analytics:read', 'analytics:export', 'backups:read', 'logs:read', 'workflows:read', 'workflows:manage'],
+  DESIGNER: [],
   DEVOPS: ['dashboard:read', 'internal_tickets:read', 'internal_tickets:create', 'internal_tickets:manage', 'backups:read', 'backups:manage', 'logs:read', 'workflows:read', 'workflows:manage', 'system:read', 'system:manage'],
   ENGINEER: ['internal_tickets:read', 'internal_tickets:create', 'internal_tickets:manage', 'logs:read'],
   FINANCE_ADMIN: ['dashboard:read', 'billing:read', 'billing:export', 'billing:manage', 'ads:read', 'ads:manage', 'users:read', 'system:read', 'hr:salary_view'],

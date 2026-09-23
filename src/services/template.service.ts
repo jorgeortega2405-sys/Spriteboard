@@ -1,13 +1,14 @@
 import crypto from 'crypto';
 import mysql from 'mysql2/promise';
-import { canvasPool } from '../config/database.config.js';
+import { canvasPool, pool } from '../config/database.config.js';
 import { logger } from './logger.service.js';
 import { CreateTemplateDto, TemplateRecord } from '../types/template.types.js';
 
 export async function publishCanvasAsTemplate(
   userId: number,
   role: string,
-  dto: CreateTemplateDto
+  dto: CreateTemplateDto,
+  userRoles?: string[]
 ): Promise<TemplateRecord> {
   const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
     'SELECT id, uuid, user_id, name, canvas_type, unit, data, preview_thumbnail FROM canvases WHERE uuid = ? AND deleted_at IS NULL',
@@ -20,7 +21,13 @@ export async function publishCanvasAsTemplate(
 
   const canvas = rows[0];
   const isOwner = canvas.user_id === userId;
-  const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
+  const allRoles = userRoles && userRoles.length > 0 ? userRoles : [role];
+  const isAdmin = allRoles.some((r) => r === 'ADMIN' || r === 'SUPER_ADMIN' || r === 'PLATFORM_ADMIN');
+  const isDesigner = allRoles.includes('DESIGNER');
+
+  if (!isDesigner && !isAdmin) {
+    throw new Error('Unauthorized role to publish template');
+  }
 
   if (!isOwner && !isAdmin) {
     throw new Error('Unauthorized to publish this canvas as template');
@@ -124,8 +131,60 @@ export async function getPublishedTemplates(options: {
     [...params, Number(limit), Number(offset)]
   );
 
+  const userIds = Array.from(new Set(rows.map((r) => r.user_id).filter(Boolean)));
+  const userMap = new Map<number, { avatar_url: string | null; username: string }>();
+
+  if (userIds.length > 0) {
+    const [userRows] = await pool.query<mysql.RowDataPacket[]>(
+      `SELECT id, username, avatar_url FROM users WHERE id IN (${userIds.map(() => '?').join(',')})`,
+      userIds
+    );
+    for (const u of userRows) {
+      userMap.set(u.id, {
+        avatar_url: u.avatar_url || null,
+        username: u.username || 'Usuario',
+      });
+    }
+  }
+
+  const enrichedTemplates = rows.map((r) => {
+    const u = userMap.get(r.user_id);
+    return {
+      ...r,
+      author_avatar: u?.avatar_url || null,
+      author_username: r.is_official ? 'Spriteboard Oficial' : (u?.username || 'Usuario'),
+    };
+  });
+
   return {
-    templates: rows as TemplateRecord[],
+    templates: enrichedTemplates as TemplateRecord[],
     total,
   };
+}
+
+export async function getTemplateByUuid(uuid: string): Promise<TemplateRecord | null> {
+  const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
+    'SELECT * FROM templates WHERE uuid = ? AND status = "approved" LIMIT 1',
+    [uuid]
+  );
+  if (rows.length === 0) return null;
+  await canvasPool.query('UPDATE templates SET uses_count = uses_count + 1 WHERE uuid = ?', [uuid]);
+  const t = rows[0];
+  let author_username = 'Spriteboard Oficial';
+  let author_avatar: string | null = null;
+  if (!t.is_official && t.user_id) {
+    const [uRows] = await pool.query<mysql.RowDataPacket[]>(
+      'SELECT username, avatar_url FROM users WHERE id = ?',
+      [t.user_id]
+    );
+    if (uRows.length > 0) {
+      author_username = uRows[0].username || 'Usuario';
+      author_avatar = uRows[0].avatar_url || null;
+    }
+  }
+  return {
+    ...t,
+    author_avatar,
+    author_username,
+  } as TemplateRecord;
 }

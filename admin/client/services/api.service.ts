@@ -133,6 +133,14 @@ export const API_ROUTES = {
     sanctions: (id: number | string) => `/api/users/${id}/sanctions`,
     username: (id: number | string) => `/api/users/${id}/username`,
   },
+  templates: {
+    approve: (id: number | string) => `/api/templates/${id}/approve`,
+    base: '/api/templates',
+    byId: (id: number | string) => `/api/templates/${id}`,
+    delete: (id: number | string) => `/api/templates/${id}`,
+    metrics: '/api/templates/metrics',
+    reject: (id: number | string) => `/api/templates/${id}/reject`,
+  },
 };
 
 export let currentUser: UserPayload | null = null;

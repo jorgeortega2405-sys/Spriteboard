@@ -3,6 +3,7 @@ import { API_ROUTES } from '../config/api-routes.js';
 import { currentUser, escapeHtml, postApi } from '../services/api.service.js';
 import { t } from '../services/i18n.service.js';
 import { showToast } from '../services/toast.service.js';
+import { canPublishTemplates } from '../types/auth.types.js';
 import { CanvasItem } from '../types/canvas.types.js';
 
 export interface PublishTemplateModalOptions {
@@ -12,6 +13,11 @@ export interface PublishTemplateModalOptions {
 export function openPublishTemplateModal(canvas: CanvasItem, options?: PublishTemplateModalOptions): void {
   if (!currentUser) {
     showToast(t('templates.login_required_publish') || 'Debes iniciar sesión para publicar una plantilla.', 'error');
+    return;
+  }
+
+  if (!canPublishTemplates(currentUser)) {
+    showToast(t('templates.designer_required') || 'Solo los usuarios con rol de Diseñador pueden publicar plantillas.', 'error');
     return;
   }
 

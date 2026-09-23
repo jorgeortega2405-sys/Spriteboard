@@ -419,7 +419,18 @@
     "copy_link": "Copy link",
     "link_copied": "Template link copied to clipboard.",
     "empty_title": "No templates found",
-    "empty_desc": "Try another search term or select a different category."
+    "empty_desc": "Try another search term or select a different category.",
+    "login_required_publish": "You must log in to publish a template.",
+    "designer_required": "Only users with the Designer role can publish templates.",
+    "publish_title": "Publish as template",
+    "publish_desc": "Share this design in the template gallery so others can use it.",
+    "btn_publish": "Publish template",
+    "modal_field_title": "Template title",
+    "modal_field_desc": "Description (optional)",
+    "modal_field_tags": "Comma-separated tags (e.g. Pitch, Startup, Retrospective)",
+    "error_title_required": "The template title is required.",
+    "publish_success": "Template published successfully!",
+    "publish_error": "Could not publish template."
   },
   "trash": {
     "title": "Papelera de reciclaje",

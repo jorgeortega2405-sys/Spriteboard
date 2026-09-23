@@ -1,5 +1,5 @@
 import { API_ROUTES } from '../config/api-routes.js';
-import { getBoardTemplateElements } from '../config/board-templates.data.js';
+import { getBoardTemplateElements, getBoardTemplatePages } from '../config/board-templates.data.js';
 import { getCustomDiagramProject } from '../config/diagram-templates.data.js';
 import { getPresentationTemplateSlides } from '../config/presentation-templates.data.js';
 import { CanvasType } from '../types/canvas.types.js';
@@ -28,6 +28,7 @@ export interface CreateCanvasOptions {
   effectiveTier?: string | null;
   fps?: number;
   height?: number;
+  initialProject?: any;
   isInfinite?: boolean;
   mindmapLineStyle?: 'curved' | 'orthogonal' | 'straight';
   mindmapTheme?: string;
@@ -106,9 +107,9 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
     }
   }
 
-  let initialProject: any = null;
+  let initialProject: any = options.initialProject || null;
 
-  if (isPresentation) {
+  if (!initialProject && isPresentation) {
     const templateSlides = getPresentationTemplateSlides(options.boardTemplateId);
     const slides = templateSlides.length > 0 ? templateSlides : [
       {
@@ -140,7 +141,7 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
       version: 1,
       width,
     };
-  } else if (isDoc) {
+  } else if (!initialProject && isDoc) {
     const templatePreset = getDocTemplateById(options.docTemplateId);
     const paperSize = options.docPaperSize || templatePreset.settings.paperSize || 'letter';
     const orientation = options.docOrientation || templatePreset.settings.orientation || 'portrait';
@@ -164,7 +165,7 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
       type: 'doc',
       version: 1,
     };
-  } else {
+  } else if (!initialProject) {
     let elements = getBoardTemplateElements(options.boardTemplateId || options.diagramTemplateId);
     if (elements.length === 0 && (options.diagramSubtype || options.diagramTemplateId)) {
       const rootIdea = options.rootIdeaText?.trim() || options.name.trim() || 'Idea Principal';
@@ -197,17 +198,30 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
       elements = [pixelEl, ...elements];
     }
 
-    initialProject = {
-      background: {
-        color: '#ffffff',
-        dotColor: '#cbd5e1',
-        type: 'dots',
-      },
-      camera: { x: 0, y: 0, zoom: 1 },
-      elements,
-      type: 'board',
-      version: 1,
-    };
+    const templatePages = getBoardTemplatePages(options.boardTemplateId);
+    if (templatePages.length > 0) {
+      initialProject = {
+        activePageId: templatePages[0].id,
+        background: templatePages[0].background,
+        camera: templatePages[0].camera,
+        elements: templatePages[0].elements,
+        pages: templatePages,
+        type: 'board',
+        version: 1,
+      };
+    } else {
+      initialProject = {
+        background: {
+          color: '#ffffff',
+          dotColor: '#cbd5e1',
+          type: 'dots',
+        },
+        camera: { x: 0, y: 0, zoom: 1 },
+        elements,
+        type: 'board',
+        version: 1,
+      };
+    }
   }
 
   const initialData = JSON.stringify(initialProject);

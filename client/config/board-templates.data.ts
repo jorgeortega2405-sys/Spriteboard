@@ -1,4 +1,4 @@
-import { BoardElement } from '../views/board/board.types.js';
+import { BoardElement, BoardPageItem } from '../views/board/board.types.js';
 
 export function getBoardTemplateElements(templateId?: string | null): BoardElement[] {
   if (!templateId) return [];
@@ -679,5 +679,346 @@ export function getBoardTemplateElements(templateId?: string | null): BoardEleme
 
     default:
       return [];
+  }
+}
+
+export function getBoardTemplatePages(templateId?: string | null): BoardPageItem[] {
+  if (!templateId) return [];
+  const uid = (prefix: string) => `${prefix}_${Math.random().toString(36).substring(2, 9)}`;
+  const defaultBg = { color: '#ffffff', dotColor: '#cbd5e1', type: 'dots' as const };
+  const defaultCamera = { x: 0, y: 0, zoom: 1 };
+
+  switch (templateId) {
+    case 'tmpl-board-retro': {
+      const page1Elements = getBoardTemplateElements('tmpl-board-retro');
+      const page2Elements: BoardElement[] = [
+        {
+          color: '#0f172a',
+          fontSize: 32,
+          fontWeight: 800,
+          height: 48,
+          id: uid('txt'),
+          text: '💜 Team Kudos & Sentiment Pulse',
+          type: 'text',
+          width: 800,
+          x: 100,
+          y: 40,
+        },
+        {
+          color: '#64748b',
+          fontSize: 16,
+          height: 28,
+          id: uid('txt'),
+          text: 'Recognizing teammates, celebrating victories, and evaluating overall sprint satisfaction.',
+          type: 'text',
+          width: 1000,
+          x: 100,
+          y: 92,
+        },
+        {
+          backgroundColor: '#f8fafc',
+          borderColor: '#8b5cf6',
+          borderWidth: 2,
+          height: 720,
+          id: uid('sec'),
+          title: '🎉 Shoutouts & Appreciation',
+          titleColor: '#6d28d9',
+          type: 'section',
+          width: 500,
+          x: 100,
+          y: 150,
+        },
+        {
+          color: '#f3e8ff',
+          fontSize: 14,
+          height: 120,
+          id: uid('stk'),
+          text: '🌟 Kudos to @alex for unblocking the database migration over the weekend!',
+          textColor: '#581c87',
+          type: 'sticky',
+          width: 440,
+          x: 130,
+          y: 220,
+        },
+        {
+          color: '#fef08a',
+          fontSize: 14,
+          height: 120,
+          id: uid('stk'),
+          text: '⚡ Amazing performance optimization on the WebSocket delta protocol by @jorge!',
+          textColor: '#854d0e',
+          type: 'sticky',
+          width: 440,
+          x: 130,
+          y: 360,
+        },
+        {
+          backgroundColor: '#f8fafc',
+          borderColor: '#06b6d4',
+          borderWidth: 2,
+          height: 720,
+          id: uid('sec'),
+          title: '📊 Sprint Happiness Rating',
+          titleColor: '#0891b2',
+          type: 'section',
+          width: 500,
+          x: 640,
+          y: 150,
+        },
+        {
+          color: '#ecfeff',
+          fontSize: 14,
+          height: 120,
+          id: uid('stk'),
+          text: '😃 Team Morale: 4.8 / 5.0\nHigh energy, great collaboration, and crisp sprint planning.',
+          textColor: '#155e75',
+          type: 'sticky',
+          width: 440,
+          x: 670,
+          y: 220,
+        },
+      ];
+      const page3Elements: BoardElement[] = [
+        {
+          color: '#0f172a',
+          fontSize: 32,
+          fontWeight: 800,
+          height: 48,
+          id: uid('txt'),
+          text: '🎯 Sprint 25 Commitments & Action Plan',
+          type: 'text',
+          width: 800,
+          x: 100,
+          y: 40,
+        },
+        {
+          backgroundColor: '#f8fafc',
+          borderColor: '#3b82f6',
+          borderWidth: 2,
+          height: 720,
+          id: uid('sec'),
+          title: '🚀 High-Priority Initiatives',
+          titleColor: '#1d4ed8',
+          type: 'section',
+          width: 520,
+          x: 100,
+          y: 150,
+        },
+        {
+          color: '#dbeafe',
+          fontSize: 14,
+          height: 110,
+          id: uid('stk'),
+          text: '📌 Implement automated canvas thumbnail caching with Redis TTL.',
+          textColor: '#1e40af',
+          type: 'sticky',
+          width: 460,
+          x: 130,
+          y: 220,
+        },
+        {
+          color: '#dcfce7',
+          fontSize: 14,
+          height: 110,
+          id: uid('stk'),
+          text: '🛡️ Enforce strict zero-console linting check in GitHub Actions workflow.',
+          textColor: '#166534',
+          type: 'sticky',
+          width: 460,
+          x: 130,
+          y: 350,
+        },
+      ];
+
+      return [
+        { background: defaultBg, camera: defaultCamera, createdAt: Date.now(), elements: page1Elements, id: 'page-retro-1', name: '1. Retrospective Columns' },
+        { background: defaultBg, camera: defaultCamera, createdAt: Date.now() + 10, elements: page2Elements, id: 'page-retro-2', name: '2. Kudos & Team Pulse' },
+        { background: defaultBg, camera: defaultCamera, createdAt: Date.now() + 20, elements: page3Elements, id: 'page-retro-3', name: '3. Action Plan & Commitments' },
+      ];
+    }
+
+    case 'tmpl-board-roadmap': {
+      const page1Elements = getBoardTemplateElements('tmpl-board-roadmap');
+      const page2Elements: BoardElement[] = [
+        {
+          color: '#0f172a',
+          fontSize: 32,
+          fontWeight: 800,
+          height: 48,
+          id: uid('txt'),
+          text: '🏗️ Technical Debt & Architectural Epics',
+          type: 'text',
+          width: 800,
+          x: 100,
+          y: 40,
+        },
+        {
+          backgroundColor: '#f8fafc',
+          borderColor: '#f59e0b',
+          borderWidth: 2,
+          height: 720,
+          id: uid('sec'),
+          title: '⚡ Performance Epics',
+          titleColor: '#b45309',
+          type: 'section',
+          width: 500,
+          x: 100,
+          y: 150,
+        },
+        {
+          color: '#fef3c7',
+          fontSize: 14,
+          height: 120,
+          id: uid('stk'),
+          text: '🚀 WebGL hardware-accelerated viewport rendering for 10,000+ elements.',
+          textColor: '#92400e',
+          type: 'sticky',
+          width: 440,
+          x: 130,
+          y: 220,
+        },
+      ];
+      const page3Elements: BoardElement[] = [
+        {
+          color: '#0f172a',
+          fontSize: 32,
+          fontWeight: 800,
+          height: 48,
+          id: uid('txt'),
+          text: '🏁 Release Readiness & KPI Targets',
+          type: 'text',
+          width: 800,
+          x: 100,
+          y: 40,
+        },
+        {
+          backgroundColor: '#f8fafc',
+          borderColor: '#10b981',
+          borderWidth: 2,
+          height: 720,
+          id: uid('sec'),
+          title: '✅ Launch Criteria Checklist',
+          titleColor: '#047857',
+          type: 'section',
+          width: 500,
+          x: 100,
+          y: 150,
+        },
+        {
+          color: '#dcfce7',
+          fontSize: 14,
+          height: 120,
+          id: uid('stk'),
+          text: '🎯 Zero critical Sentry errors for 7 consecutive days in staging environment.',
+          textColor: '#166534',
+          type: 'sticky',
+          width: 440,
+          x: 130,
+          y: 220,
+        },
+      ];
+
+      return [
+        { background: defaultBg, camera: defaultCamera, createdAt: Date.now(), elements: page1Elements, id: 'page-roadmap-1', name: '1. Roadmap Milestones' },
+        { background: defaultBg, camera: defaultCamera, createdAt: Date.now() + 10, elements: page2Elements, id: 'page-roadmap-2', name: '2. Architecture Epics' },
+        { background: defaultBg, camera: defaultCamera, createdAt: Date.now() + 20, elements: page3Elements, id: 'page-roadmap-3', name: '3. Release Readiness' },
+      ];
+    }
+
+    case 'tmpl-board-journey': {
+      const page1Elements = getBoardTemplateElements('tmpl-board-journey');
+      const page2Elements: BoardElement[] = [
+        {
+          color: '#0f172a',
+          fontSize: 32,
+          fontWeight: 800,
+          height: 48,
+          id: uid('txt'),
+          text: '👤 Target Personas & Empathy Mapping',
+          type: 'text',
+          width: 800,
+          x: 100,
+          y: 40,
+        },
+        {
+          backgroundColor: '#f8fafc',
+          borderColor: '#6366f1',
+          borderWidth: 2,
+          height: 720,
+          id: uid('sec'),
+          title: '🧑‍💻 Alex • Lead Systems Architect',
+          titleColor: '#4338ca',
+          type: 'section',
+          width: 500,
+          x: 100,
+          y: 150,
+        },
+        {
+          color: '#e0e7ff',
+          fontSize: 14,
+          height: 120,
+          id: uid('stk'),
+          text: 'Needs fast, non-blocking whiteboards with multi-page export to PDF for RFC review meetings.',
+          textColor: '#3730a3',
+          type: 'sticky',
+          width: 440,
+          x: 130,
+          y: 220,
+        },
+      ];
+      const page3Elements: BoardElement[] = [
+        {
+          color: '#0f172a',
+          fontSize: 32,
+          fontWeight: 800,
+          height: 48,
+          id: uid('txt'),
+          text: '💡 UX Opportunity Backlog & Blueprint',
+          type: 'text',
+          width: 800,
+          x: 100,
+          y: 40,
+        },
+        {
+          backgroundColor: '#f8fafc',
+          borderColor: '#ec4899',
+          borderWidth: 2,
+          height: 720,
+          id: uid('sec'),
+          title: '🌟 Impact vs Effort Matrix',
+          titleColor: '#be185d',
+          type: 'section',
+          width: 500,
+          x: 100,
+          y: 150,
+        },
+        {
+          color: '#fce7f3',
+          fontSize: 14,
+          height: 120,
+          id: uid('stk'),
+          text: 'Quick template cloning: One-click setup reduces initial session friction by 80%.',
+          textColor: '#9d174d',
+          type: 'sticky',
+          width: 440,
+          x: 130,
+          y: 220,
+        },
+      ];
+
+      return [
+        { background: defaultBg, camera: defaultCamera, createdAt: Date.now(), elements: page1Elements, id: 'page-journey-1', name: '1. Customer Journey Map' },
+        { background: defaultBg, camera: defaultCamera, createdAt: Date.now() + 10, elements: page2Elements, id: 'page-journey-2', name: '2. Personas & Empathy' },
+        { background: defaultBg, camera: defaultCamera, createdAt: Date.now() + 20, elements: page3Elements, id: 'page-journey-3', name: '3. UX Blueprint' },
+      ];
+    }
+
+    default: {
+      const els = getBoardTemplateElements(templateId);
+      if (els.length === 0) return [];
+      return [
+        { background: defaultBg, camera: defaultCamera, createdAt: Date.now(), elements: els, id: 'page-default-1', name: 'Página 1' },
+      ];
+    }
   }
 }

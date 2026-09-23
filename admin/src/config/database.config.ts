@@ -14,6 +14,18 @@ export const pool = mysql.createPool({
   waitForConnections: true,
 });
 
+export const canvasPool = mysql.createPool({
+  connectionLimit: 10,
+  database: process.env.DB_CANVAS_NAME || 'db_canvas',
+  host: config.db.host,
+  maxIdle: 10,
+  password: config.db.password,
+  port: config.db.port,
+  queueLimit: 0,
+  user: config.db.user,
+  waitForConnections: true,
+});
+
 export async function checkDbConnection(): Promise<void> {
   try {
     const conn = await pool.getConnection();

@@ -33,6 +33,7 @@ class TemplatesController {
   private scrollableEl: HTMLElement | null = null;
   private sentinelEl: HTMLElement | null = null;
   private scrollObserver: IntersectionObserver | null = null;
+  private availableTemplates: PresetItem[] = [...ALL_PRESETS];
   private currentTemplates: PresetItem[] = [];
   private renderedCount = 0;
   private isRenderingBatch = false;
@@ -54,9 +55,10 @@ class TemplatesController {
       SkeletonService.renderGridCardSkeletons(this.gridEl, 8, 'template');
     }
 
-    if (currentUser) {
-      await this.loadFavoriteTemplates();
-    }
+    await Promise.all([
+      currentUser ? this.loadFavoriteTemplates() : Promise.resolve(),
+      this.loadCommunityTemplates(),
+    ]);
     this.carouselWrapper = this.container.querySelector<HTMLElement>('[data-ref="templates-tags-carousel-wrapper"]');
     this.badgesContainer = this.container.querySelector<HTMLElement>('[data-ref="templates-categories-badges"]');
     this.templatesSection = this.container.querySelector<HTMLElement>('[data-ref="templates-section"]');
@@ -225,7 +227,7 @@ class TemplatesController {
         const presetId = card.getAttribute('data-preset-id');
         if (!presetId) return;
 
-        const preset = ALL_PRESETS.find((p) => p.id === presetId);
+        const preset = this.availableTemplates.find((p) => p.id === presetId);
         if (!preset) return;
 
         openTemplatePreviewModal(preset, {
@@ -239,7 +241,7 @@ class TemplatesController {
   private renderTemplates(): void {
     if (!this.gridEl) return;
 
-    let filtered = [...ALL_PRESETS];
+    let filtered = [...this.availableTemplates];
 
     if (this.activeCategory !== 'all') {
       filtered = filtered.filter((item) => item.categoryKey === this.activeCategory || item.canvasType === this.activeCategory);
@@ -437,6 +439,47 @@ class TemplatesController {
           });
         }
       }
+    } catch {}
+  }
+
+  private async loadCommunityTemplates(): Promise<void> {
+    try {
+      const res = await getApi(API_ROUTES.templates.base);
+      if (!res.ok) return;
+      const data = await res.json();
+      const dbTemplates: any[] = data?.templates || [];
+      const communityPresets: PresetItem[] = dbTemplates.map((t) => {
+        const isPres = t.canvas_type === 'presentation';
+        const isDoc = t.canvas_type === 'doc';
+        let parsedTags: string[] = [];
+        try {
+          if (Array.isArray(t.tags)) {
+            parsedTags = t.tags;
+          } else if (typeof t.tags === 'string') {
+            parsedTags = JSON.parse(t.tags);
+          }
+        } catch {}
+
+        return {
+          aspectType: isPres ? 'wide' : (isDoc ? 'tall' : 'wide'),
+          authorAvatar: t.author_avatar || null,
+          authorName: t.author_username || (t.is_official ? 'Spriteboard Oficial' : 'Comunidad'),
+          canvasType: t.canvas_type || 'board',
+          categoryKey: t.canvas_type || 'board',
+          categoryName: isPres ? 'Presentations' : (isDoc ? 'Documents' : 'Whiteboards'),
+          description: t.description || '',
+          height: isPres ? 1080 : (isDoc ? 1056 : 1080),
+          id: `community-${t.uuid}`,
+          imagePath: t.preview_thumbnail || (isPres ? '/assets/templates/presentations/pitch.svg' : (isDoc ? '/assets/templates/docs/proposal.svg' : '/assets/templates/boards/retro.svg')),
+          isTemplate: true,
+          name: t.title,
+          tags: parsedTags,
+          templateUuid: t.uuid,
+          width: isPres ? 1920 : (isDoc ? 816 : 1920),
+        };
+      });
+
+      this.availableTemplates = [...ALL_PRESETS, ...communityPresets];
     } catch {}
   }
 

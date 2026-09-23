@@ -39,10 +39,21 @@ export function openTemplatePreviewModal(preset: PresetItem, options?: TemplateP
 
         <div class="template-preview-modal__top" data-ref="template-preview-top">
           <div class="template-preview-modal__media" data-ref="template-preview-media">
-            <img class="template-preview-modal__preview-img" data-ref="template-preview-img" src="${currentPreset.imagePath}" alt="${escapeHtml(currentPreset.name)}" />
+            <div class="template-preview-modal__slideshow" data-ref="template-preview-slideshow">
+              <div class="template-preview-modal__slides-track" data-ref="template-preview-slides-track"></div>
+              <div class="template-preview-modal__counter-badge" data-ref="template-preview-counter" style="display: none;"></div>
+              <button type="button" class="template-preview-modal__nav-btn template-preview-modal__nav-btn--prev" data-ref="btn-preview-slide-prev" aria-label="Página anterior" style="display: none;">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+              </button>
+              <button type="button" class="template-preview-modal__nav-btn template-preview-modal__nav-btn--next" data-ref="btn-preview-slide-next" aria-label="Siguiente página" style="display: none;">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+              </button>
+              <div class="template-preview-modal__dots" data-ref="template-preview-dots" style="display: none;"></div>
+            </div>
           </div>
 
           <div class="template-preview-modal__info" data-ref="template-preview-info">
+            <div class="template-preview-modal__author-row" data-ref="template-preview-author"></div>
             <h2 class="template-preview-modal__title" data-ref="template-preview-title">${escapeHtml(currentPreset.name)}</h2>
             <p class="template-preview-modal__meta" data-ref="template-preview-meta"></p>
 
@@ -80,13 +91,207 @@ export function openTemplatePreviewModal(preset: PresetItem, options?: TemplateP
   const card = backdrop.querySelector<HTMLElement>('[data-ref="modal-card-template-preview"]');
   const closeBtn = backdrop.querySelector<HTMLElement>('[data-ref="btn-modal-close"]');
   const dragZone = backdrop.querySelector<HTMLElement>('[data-ref="modal-drag-zone"]');
-  const previewImg = backdrop.querySelector<HTMLImageElement>('[data-ref="template-preview-img"]');
+  const slideshowEl = backdrop.querySelector<HTMLElement>('[data-ref="template-preview-slideshow"]');
+  const mediaTrackEl = backdrop.querySelector<HTMLElement>('[data-ref="template-preview-slides-track"]');
+  const counterEl = backdrop.querySelector<HTMLElement>('[data-ref="template-preview-counter"]');
+  const btnPrevSlide = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-preview-slide-prev"]');
+  const btnNextSlide = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-preview-slide-next"]');
+  const dotsEl = backdrop.querySelector<HTMLElement>('[data-ref="template-preview-dots"]');
+  const authorEl = backdrop.querySelector<HTMLElement>('[data-ref="template-preview-author"]');
   const titleEl = backdrop.querySelector<HTMLElement>('[data-ref="template-preview-title"]');
   const metaEl = backdrop.querySelector<HTMLElement>('[data-ref="template-preview-meta"]');
   const btnUse = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-preview-use-template"]');
   const btnFav = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-preview-fav"]');
   const btnShare = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-preview-share"]');
   const similarGrid = backdrop.querySelector<HTMLElement>('[data-ref="template-preview-similar-grid"]');
+
+  let activeSlideIndex = 0;
+  let slideImages: string[] = [];
+  let slideshowTimer: ReturnType<typeof setInterval> | null = null;
+  let isMediaHovered = false;
+
+  const stopSlideshowTimer = () => {
+    if (slideshowTimer) {
+      clearInterval(slideshowTimer);
+      slideshowTimer = null;
+    }
+  };
+
+  const startSlideshowTimer = () => {
+    stopSlideshowTimer();
+    if (slideImages.length <= 1) return;
+    slideshowTimer = setInterval(() => {
+      if (!isMediaHovered && !isClosing) {
+        goToSlide((activeSlideIndex + 1) % slideImages.length);
+      }
+    }, 3500);
+  };
+
+  const goToSlide = (index: number) => {
+    if (slideImages.length === 0) return;
+    activeSlideIndex = (index + slideImages.length) % slideImages.length;
+
+    const slideElements = mediaTrackEl?.querySelectorAll<HTMLElement>('.template-preview-modal__slide');
+    slideElements?.forEach((slide, idx) => {
+      slide.classList.toggle('is-active', idx === activeSlideIndex);
+    });
+
+    if (counterEl) {
+      if (slideImages.length > 1) {
+        counterEl.textContent = `Página ${activeSlideIndex + 1} de ${slideImages.length}`;
+        counterEl.style.display = 'inline-flex';
+      } else {
+        counterEl.style.display = 'none';
+      }
+    }
+
+    const dotElements = dotsEl?.querySelectorAll<HTMLButtonElement>('.template-preview-modal__dot');
+    dotElements?.forEach((dot, idx) => {
+      dot.classList.toggle('is-active', idx === activeSlideIndex);
+      dot.setAttribute('aria-current', idx === activeSlideIndex ? 'true' : 'false');
+    });
+  };
+
+  const resolvePresetPages = (item: PresetItem): string[] => {
+    if (item.pageImages && item.pageImages.length > 0) {
+      return item.pageImages;
+    }
+    if (item.pages && item.pages.length > 0) {
+      const pageUrls = item.pages.map((p) => p.imagePath).filter(Boolean) as string[];
+      if (pageUrls.length > 0) return pageUrls;
+    }
+    return [item.imagePath];
+  };
+
+  const setupSlideshow = () => {
+    stopSlideshowTimer();
+    slideImages = resolvePresetPages(currentPreset);
+    activeSlideIndex = 0;
+
+    if (!mediaTrackEl) return;
+
+    mediaTrackEl.innerHTML = slideImages.map((src, idx) => `
+      <div class="template-preview-modal__slide${idx === 0 ? ' is-active' : ''}" data-ref="template-preview-slide-${idx}" data-slide-index="${idx}">
+        <img class="template-preview-modal__preview-img" data-ref="template-preview-img-${idx}" src="${src}" alt="${escapeHtml(currentPreset.name)} - Página ${idx + 1}" loading="eager" />
+      </div>
+    `).join('');
+
+    const hasMultiple = slideImages.length > 1;
+
+    if (counterEl) {
+      if (hasMultiple) {
+        counterEl.textContent = `Página 1 de ${slideImages.length}`;
+        counterEl.style.display = 'inline-flex';
+      } else {
+        counterEl.style.display = 'none';
+      }
+    }
+
+    if (btnPrevSlide) {
+      btnPrevSlide.style.display = hasMultiple ? 'inline-flex' : 'none';
+    }
+    if (btnNextSlide) {
+      btnNextSlide.style.display = hasMultiple ? 'inline-flex' : 'none';
+    }
+
+    if (dotsEl) {
+      if (hasMultiple) {
+        dotsEl.innerHTML = slideImages.map((_, idx) => `
+          <button type="button" class="template-preview-modal__dot${idx === 0 ? ' is-active' : ''}" data-ref="btn-preview-dot-${idx}" data-dot-index="${idx}" aria-label="Ir a página ${idx + 1}" aria-current="${idx === 0 ? 'true' : 'false'}"></button>
+        `).join('');
+        dotsEl.style.display = 'flex';
+      } else {
+        dotsEl.innerHTML = '';
+        dotsEl.style.display = 'none';
+      }
+    }
+
+    renderIcons(slideshowEl || backdrop);
+
+    if (hasMultiple) {
+      startSlideshowTimer();
+    }
+  };
+
+  const renderAuthor = () => {
+    if (!authorEl) return;
+    const authorName = currentPreset.authorName || 'Spriteboard Oficial';
+    const isOfficial = !currentPreset.templateUuid || authorName === 'Spriteboard Oficial';
+    const authorAvatar = currentPreset.authorAvatar;
+
+    let avatarHtml = '';
+    if (isOfficial) {
+      avatarHtml = `
+        <div class="template-preview-modal__author-avatar template-preview-modal__author-avatar--official" data-ref="preview-author-avatar-official">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
+        </div>
+      `;
+    } else if (authorAvatar) {
+      avatarHtml = `
+        <img class="template-preview-modal__author-avatar" data-ref="preview-author-avatar-img" src="${escapeHtml(authorAvatar)}" alt="${escapeHtml(authorName)}" />
+      `;
+    } else {
+      const initial = escapeHtml(authorName.charAt(0).toUpperCase() || 'U');
+      avatarHtml = `
+        <div class="template-preview-modal__author-avatar template-preview-modal__author-avatar--initial" data-ref="preview-author-avatar-initial">
+          <span>${initial}</span>
+        </div>
+      `;
+    }
+
+    const badgeHtml = isOfficial
+      ? `<svg class="component-icon template-preview-modal__verified-badge" data-ref="preview-author-verified" data-tooltip="Plantilla verificada de Spriteboard" aria-label="Verificado" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>`
+      : '';
+
+    const labelText = isOfficial
+      ? (t('templates.author_official_label') || 'Oficial de Spriteboard')
+      : (t('templates.author_community_label') || 'Plantilla de la comunidad');
+
+    authorEl.innerHTML = `
+      <div class="template-preview-modal__author-avatar-wrap" data-ref="preview-author-avatar-wrap">
+        ${avatarHtml}
+      </div>
+      <div class="template-preview-modal__author-meta" data-ref="preview-author-meta">
+        <div class="template-preview-modal__author-name-row" data-ref="preview-author-name-row">
+          <span class="template-preview-modal__author-name" data-ref="preview-author-name">${escapeHtml(authorName)}</span>
+          ${badgeHtml}
+        </div>
+        <span class="template-preview-modal__author-role" data-ref="preview-author-role">${labelText}</span>
+      </div>
+    `;
+
+    renderIcons(authorEl);
+  };
+
+  const checkCommunityTemplatePages = async (targetPreset: PresetItem) => {
+    if (!targetPreset.templateUuid) return;
+    try {
+      const res = await getApi(API_ROUTES.templates.byId(targetPreset.templateUuid));
+      if (!res.ok) return;
+      const data = await res.json();
+      const tmpl = data?.template;
+      if (!tmpl) return;
+
+      if (tmpl.author_username && !targetPreset.authorName) {
+        targetPreset.authorName = tmpl.author_username;
+        targetPreset.authorAvatar = tmpl.author_avatar;
+        if (currentPreset.id === targetPreset.id) {
+          renderAuthor();
+        }
+      }
+
+      const canvasData = tmpl.canvas_data;
+      if (canvasData && Array.isArray(canvasData.pages) && canvasData.pages.length > 1) {
+        const pagesWithImages = canvasData.pages
+          .map((p: any) => p.preview || p.thumbnail || p.imagePath || p.previewImage)
+          .filter(Boolean) as string[];
+        if (pagesWithImages.length > 1 && currentPreset.id === targetPreset.id) {
+          currentPreset.pageImages = pagesWithImages;
+          setupSlideshow();
+        }
+      }
+    } catch {}
+  };
 
   const updateFavoriteButtonState = () => {
     if (!btnFav) return;
@@ -112,10 +317,8 @@ export function openTemplatePreviewModal(preset: PresetItem, options?: TemplateP
   };
 
   const renderCurrentPreset = () => {
-    if (previewImg) {
-      previewImg.src = currentPreset.imagePath;
-      previewImg.alt = currentPreset.name;
-    }
+    renderAuthor();
+    setupSlideshow();
     if (titleEl) {
       titleEl.textContent = currentPreset.name;
     }
@@ -125,6 +328,10 @@ export function openTemplatePreviewModal(preset: PresetItem, options?: TemplateP
     }
     updateFavoriteButtonState();
     renderSimilarPresets();
+
+    if (currentPreset.templateUuid && (!currentPreset.pageImages || currentPreset.pageImages.length <= 1)) {
+      void checkCommunityTemplatePages(currentPreset);
+    }
   };
 
   const renderSimilarPresets = () => {
@@ -162,12 +369,23 @@ export function openTemplatePreviewModal(preset: PresetItem, options?: TemplateP
     try {
       modalInstance.close();
       const canvasType = currentPreset.canvasType || (currentPreset.categoryKey === 'presentation' ? 'presentation' : (currentPreset.categoryKey === 'doc' ? 'doc' : 'board'));
+
+      let initialProject = currentPreset.canvasData || null;
+      if (!initialProject && currentPreset.templateUuid) {
+        const res = await getApi(API_ROUTES.templates.byId(currentPreset.templateUuid));
+        if (res.ok) {
+          const data = await res.json();
+          initialProject = data?.template?.canvas_data || null;
+        }
+      }
+
       await createAndOpenCanvas({
         bgType: 'dots',
         boardTemplateId: currentPreset.boardTemplateId,
         canvasType,
         docTemplateId: currentPreset.docTemplateId,
         height: currentPreset.height,
+        initialProject,
         name: currentPreset.name,
         pixelTemplateId: currentPreset.pixelTemplateId,
         rootIdeaText: currentPreset.name,
@@ -252,6 +470,7 @@ export function openTemplatePreviewModal(preset: PresetItem, options?: TemplateP
       if (isClosing) return;
       isClosing = true;
 
+      stopSlideshowTimer();
       backdrop.classList.remove('is-visible');
       document.removeEventListener('keydown', handleKeyDown);
       detachPointerListeners();
@@ -358,6 +577,12 @@ export function openTemplatePreviewModal(preset: PresetItem, options?: TemplateP
     if (e.key === 'Escape') {
       e.preventDefault();
       modalInstance.close();
+    } else if (e.key === 'ArrowLeft' && slideImages.length > 1) {
+      goToSlide(activeSlideIndex - 1);
+      startSlideshowTimer();
+    } else if (e.key === 'ArrowRight' && slideImages.length > 1) {
+      goToSlide(activeSlideIndex + 1);
+      startSlideshowTimer();
     }
   };
 
@@ -385,6 +610,36 @@ export function openTemplatePreviewModal(preset: PresetItem, options?: TemplateP
 
   btnShare?.addEventListener('click', () => {
     void handleShareTemplate();
+  });
+
+  slideshowEl?.addEventListener('mouseenter', () => {
+    isMediaHovered = true;
+  });
+
+  slideshowEl?.addEventListener('mouseleave', () => {
+    isMediaHovered = false;
+  });
+
+  btnPrevSlide?.addEventListener('click', (e: MouseEvent) => {
+    e.stopPropagation();
+    goToSlide(activeSlideIndex - 1);
+    startSlideshowTimer();
+  });
+
+  btnNextSlide?.addEventListener('click', (e: MouseEvent) => {
+    e.stopPropagation();
+    goToSlide(activeSlideIndex + 1);
+    startSlideshowTimer();
+  });
+
+  dotsEl?.addEventListener('click', (e: MouseEvent) => {
+    const target = e.target as HTMLElement;
+    const dotBtn = target.closest<HTMLButtonElement>('[data-dot-index]');
+    if (!dotBtn) return;
+    e.stopPropagation();
+    const idx = parseInt(dotBtn.getAttribute('data-dot-index') || '0', 10);
+    goToSlide(idx);
+    startSlideshowTimer();
   });
 
   const handleToggleSimilarFavorite = async (presetId: string, btn: HTMLButtonElement) => {
@@ -498,6 +753,7 @@ export function openTemplatePreviewModal(preset: PresetItem, options?: TemplateP
     if (!simId) return;
     const nextPreset = ALL_PRESETS.find((p) => p.id === simId);
     if (!nextPreset) return;
+    stopSlideshowTimer();
     currentPreset = nextPreset;
     renderCurrentPreset();
     if (card) {

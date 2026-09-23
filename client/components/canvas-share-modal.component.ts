@@ -5,6 +5,7 @@ import { getLocalCanvasByUuid, markLocalCanvasAsSynced } from '../services/canva
 import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { showToast } from '../services/toast.service.js';
+import { canPublishTemplates } from '../types/auth.types.js';
 import { CanvasItem, CanvasMember, SearchUserResult } from '../types/canvas.types.js';
 import { CanvasTeamItem, Team } from '../types/team.types.js';
 import { setupDropdown } from '../utils/dom.util.js';
@@ -169,10 +170,12 @@ export function openCanvasShareModal(canvas: CanvasItem): void {
                 <span class="material-symbols-rounded">link</span>
                 <span>Copiar el enlace</span>
               </button>
+              ${canPublishTemplates(currentUser) ? `
               <button type="button" class="component-button component-button--h40 component-button--outline component-button--w-full" data-ref="btn-share-publish-template">
                 <span class="material-symbols-rounded">auto_awesome</span>
                 <span>Publicar como plantilla</span>
               </button>
+              ` : ''}
             </div>
           </div>
         </div>

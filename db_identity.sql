@@ -291,6 +291,7 @@ INSERT INTO roles (name, display_name, description, category) VALUES
 ('SYSTEM_OPERATOR', 'System Operator', 'Operaciones sensibles sobre sistemas.', 'operations'),
 ('HR_MANAGER', 'HR Manager', 'Gestión de recursos humanos, contrataciones y compensación.', 'operations'),
 ('HR_RECRUITER', 'HR Recruiter', 'Reclutamiento y altas de personal.', 'operations'),
+('DESIGNER', 'Diseñador', 'Diseñador con permisos de publicación de plantillas.', 'general'),
 ('USER', 'Usuario', 'Usuario estándar de la plataforma.', 'general')
 ON DUPLICATE KEY UPDATE
     display_name = VALUES(display_name),

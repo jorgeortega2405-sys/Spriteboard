@@ -91,6 +91,84 @@ export const DOC_TEMPLATES: DocTemplatePreset[] = [
         `,
         id: 'page_1',
       },
+      {
+        contentHtml: `
+          <h2 style="font-size: 15pt; font-weight: 700; color: #1e293b; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-top: 10px;">3. Architecture &amp; Security Compliance</h2>
+          <p style="line-height: 1.6; color: #334155;">Spriteboard integrates seamlessly into enterprise security perimeters, enforcing zero-trust access control:</p>
+          <ul style="margin: 10px 0; padding-left: 24px; line-height: 1.6; color: #334155;">
+            <li><strong>Identity &amp; Provisioning:</strong> SAML 2.0 and SCIM directory sync via Okta, Azure AD, and Google Workspace.</li>
+            <li><strong>Data Encryption:</strong> AES-256 at rest and TLS 1.3 in transit with dedicated cryptographic key isolation.</li>
+            <li><strong>Audit Trails:</strong> Comprehensive SIEM integration streaming audit events with millisecond precision.</li>
+          </ul>
+
+          <h2 style="font-size: 15pt; font-weight: 700; color: #1e293b; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-top: 24px;">4. Resource &amp; Budget Allocation</h2>
+          <table style="width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 10pt;">
+            <thead>
+              <tr style="background: #f8fafc;">
+                <th style="border: 1px solid #cbd5e1; padding: 10px 14px; text-align: left; font-weight: 700; color: #334155;">Resource Category</th>
+                <th style="border: 1px solid #cbd5e1; padding: 10px 14px; text-align: left; font-weight: 700; color: #334155;">Description</th>
+                <th style="border: 1px solid #cbd5e1; padding: 10px 14px; text-align: center; font-weight: 700; color: #334155;">Allocated Budget</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="border: 1px solid #e2e8f0; padding: 9px 14px; font-weight: 600; color: #1e293b;">Infrastructure</td>
+                <td style="border: 1px solid #e2e8f0; padding: 9px 14px; color: #475569;">Dedicated Redis cluster &amp; WebSocket gateway nodes</td>
+                <td style="border: 1px solid #e2e8f0; padding: 9px 14px; text-align: center; color: #16a34a; font-weight: 600;">$24,000 / yr</td>
+              </tr>
+              <tr style="background: #fcfcfc;">
+                <td style="border: 1px solid #e2e8f0; padding: 9px 14px; font-weight: 600; color: #1e293b;">Training &amp; Adoption</td>
+                <td style="border: 1px solid #e2e8f0; padding: 9px 14px; color: #475569;">Custom squad onboarding webinars and template library setup</td>
+                <td style="border: 1px solid #e2e8f0; padding: 9px 14px; text-align: center; color: #2563eb; font-weight: 600;">$8,500</td>
+              </tr>
+            </tbody>
+          </table>
+        `,
+        id: 'page_2',
+      },
+      {
+        contentHtml: `
+          <h2 style="font-size: 15pt; font-weight: 700; color: #1e293b; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-top: 10px;">5. Financial ROI &amp; Cost Savings</h2>
+          <div style="background: #f0fdf4; border-left: 4px solid #16a34a; padding: 14px 18px; border-radius: 6px; margin-bottom: 20px;">
+            <p style="margin: 0; color: #14532d; font-size: 10.5pt; line-height: 1.55;">
+              Consolidating 4 isolated software tools into a single Spriteboard subscription yields an estimated net annual savings of <strong>$148,000</strong> while improving team velocity by 28%.
+            </p>
+          </div>
+
+          <h2 style="font-size: 15pt; font-weight: 700; color: #1e293b; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-top: 24px;">6. Risk Matrix &amp; Mitigation Strategy</h2>
+          <table style="width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 10pt;">
+            <thead>
+              <tr style="background: #f8fafc;">
+                <th style="border: 1px solid #cbd5e1; padding: 9px 12px; text-align: left; font-weight: 700;">Identified Risk</th>
+                <th style="border: 1px solid #cbd5e1; padding: 9px 12px; text-align: center; font-weight: 700;">Likelihood</th>
+                <th style="border: 1px solid #cbd5e1; padding: 9px 12px; text-align: left; font-weight: 700;">Mitigation Plan</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-weight: 600;">Data migration delays</td>
+                <td style="border: 1px solid #e2e8f0; padding: 8px 12px; text-align: center; color: #d97706;">Low</td>
+                <td style="border: 1px solid #e2e8f0; padding: 8px 12px; color: #475569;">Automated JSON export/import pipelines with pre-validation</td>
+              </tr>
+              <tr style="background: #fcfcfc;">
+                <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-weight: 600;">User change resistance</td>
+                <td style="border: 1px solid #e2e8f0; padding: 8px 12px; text-align: center; color: #2563eb;">Medium</td>
+                <td style="border: 1px solid #e2e8f0; padding: 8px 12px; color: #475569;">Design champions program and weekly office hours</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div style="margin-top: 36px; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fafafa;">
+            <div style="font-weight: 700; color: #0f172a; margin-bottom: 12px;">Stakeholder Sign-Off</div>
+            <div style="display: flex; justify-content: space-between; font-size: 9.5pt; color: #64748b;">
+              <div>VP of Engineering: ___________________</div>
+              <div>Head of Product: ___________________</div>
+              <div>Date: ____________</div>
+            </div>
+          </div>
+        `,
+        id: 'page_3',
+      },
     ],
     name: 'Executive Project Proposal',
     settings: {
@@ -168,6 +246,67 @@ export const DOC_TEMPLATES: DocTemplatePreset[] = [
         `,
         id: 'page_1',
       },
+      {
+        contentHtml: `
+          <h2 style="font-size: 14pt; font-weight: 700; color: #1e293b; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-top: 10px;">3. WebSocket Payload Schema &amp; Delta Framing</h2>
+          <p style="line-height: 1.6; color: #334155;">Client mutations are serialized into compact binary JSON frames over persistent WSS connections:</p>
+          <pre style="background: #1e293b; color: #e2e8f0; padding: 14px 18px; border-radius: 8px; font-size: 9pt; overflow-x: auto; font-family: monospace;">
+{
+  "type": "canvas:op:delta",
+  "canvasId": "c7f201e8-9321-4f7b",
+  "version": 4210,
+  "ops": [
+    { "action": "update", "id": "shp_8a2f", "props": { "x": 420, "y": 180 } },
+    { "action": "create", "id": "txt_9c11", "type": "text", "text": "API Gateway" }
+  ],
+  "timestamp": 1790179200000
+}
+          </pre>
+
+          <h2 style="font-size: 14pt; font-weight: 700; color: #1e293b; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-top: 24px;">4. Concurrency Control &amp; Conflict Resolution</h2>
+          <p style="line-height: 1.6; color: #334155;">Concurrent edits to disjoint elements require zero coordination. Overlapping mutations on identical element attributes resolve via Last-Write-Wins (LWW) backed by monotonic logical sequence clocks.</p>
+        `,
+        id: 'page_2',
+      },
+      {
+        contentHtml: `
+          <h2 style="font-size: 14pt; font-weight: 700; color: #1e293b; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-top: 10px;">5. Benchmark Latency Results &amp; Stress Testing</h2>
+          <table style="width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 9.5pt;">
+            <thead>
+              <tr style="background: #f8fafc;">
+                <th style="border: 1px solid #cbd5e1; padding: 8px 12px; text-align: left; font-weight: 700;">Simulated Load</th>
+                <th style="border: 1px solid #cbd5e1; padding: 8px 12px; text-align: center; font-weight: 700;">P50 Latency</th>
+                <th style="border: 1px solid #cbd5e1; padding: 8px 12px; text-align: center; font-weight: 700;">P99 Latency</th>
+                <th style="border: 1px solid #cbd5e1; padding: 8px 12px; text-align: center; font-weight: 700;">Packet Loss</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-weight: 600;">10 Concurrent Users</td>
+                <td style="border: 1px solid #e2e8f0; padding: 8px 12px; text-align: center; color: #16a34a; font-weight: 600;">4.2 ms</td>
+                <td style="border: 1px solid #e2e8f0; padding: 8px 12px; text-align: center; color: #16a34a; font-weight: 600;">11.8 ms</td>
+                <td style="border: 1px solid #e2e8f0; padding: 8px 12px; text-align: center; color: #16a34a;">0.00%</td>
+              </tr>
+              <tr style="background: #fcfcfc;">
+                <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-weight: 600;">50 Concurrent Users</td>
+                <td style="border: 1px solid #e2e8f0; padding: 8px 12px; text-align: center; color: #16a34a; font-weight: 600;">8.6 ms</td>
+                <td style="border: 1px solid #e2e8f0; padding: 8px 12px; text-align: center; color: #2563eb; font-weight: 600;">22.4 ms</td>
+                <td style="border: 1px solid #e2e8f0; padding: 8px 12px; text-align: center; color: #16a34a;">0.01%</td>
+              </tr>
+              <tr>
+                <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-weight: 600;">100 Concurrent Users</td>
+                <td style="border: 1px solid #e2e8f0; padding: 8px 12px; text-align: center; color: #2563eb; font-weight: 600;">14.1 ms</td>
+                <td style="border: 1px solid #e2e8f0; padding: 8px 12px; text-align: center; color: #d97706; font-weight: 600;">38.7 ms</td>
+                <td style="border: 1px solid #e2e8f0; padding: 8px 12px; text-align: center; color: #16a34a;">0.03%</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <h2 style="font-size: 14pt; font-weight: 700; color: #1e293b; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-top: 24px;">6. Architecture Committee Approval</h2>
+          <p style="line-height: 1.6; color: #334155;">Approved unanimously by the Distributed Systems Technical Review Board for deployment across all production clusters.</p>
+        `,
+        id: 'page_3',
+      },
     ],
     name: 'Technical Architecture RFC',
     settings: {
@@ -241,10 +380,67 @@ export const DOC_TEMPLATES: DocTemplatePreset[] = [
             <li>[x] <strong>Creation Modal:</strong> Remove diagram menu tab and panel from workspace modal.</li>
             <li>[x] <strong>Template Library:</strong> Replace legacy catalog with 9 high-res English templates.</li>
             <li>[x] <strong>Persistence:</strong> Define official account seed and templates table in SQL scripts.</li>
-            <li>[ ] <strong>Verification:</strong> Execute full typecheck and integration suite in Docker container.</li>
+            <li>[x] <strong>Verification:</strong> Execute full typecheck and integration suite in Docker container.</li>
           </ul>
         `,
         id: 'page_1',
+      },
+      {
+        contentHtml: `
+          <h2 style="font-size: 14pt; font-weight: 700; color: #1e293b; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-top: 10px;">3. Sprint Backlog &amp; Story Point Estimates</h2>
+          <table style="width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 9.5pt;">
+            <thead>
+              <tr style="background: #f8fafc;">
+                <th style="border: 1px solid #cbd5e1; padding: 8px 12px; text-align: left; font-weight: 700;">Issue Key</th>
+                <th style="border: 1px solid #cbd5e1; padding: 8px 12px; text-align: left; font-weight: 700;">User Story &amp; Acceptance Criteria</th>
+                <th style="border: 1px solid #cbd5e1; padding: 8px 12px; text-align: center; font-weight: 700;">Points</th>
+                <th style="border: 1px solid #cbd5e1; padding: 8px 12px; text-align: center; font-weight: 700;">Assignee</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-family: monospace; font-weight: 600; color: #4338ca;">SP-301</td>
+                <td style="border: 1px solid #e2e8f0; padding: 8px 12px; color: #1e293b;">Dynamic multi-page preview carousel in template inspection modal</td>
+                <td style="border: 1px solid #e2e8f0; padding: 8px 12px; text-align: center; color: #16a34a; font-weight: 600;">5 pts</td>
+                <td style="border: 1px solid #e2e8f0; padding: 8px 12px; text-align: center;">Frontend Squad</td>
+              </tr>
+              <tr style="background: #fcfcfc;">
+                <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-family: monospace; font-weight: 600; color: #4338ca;">SP-302</td>
+                <td style="border: 1px solid #e2e8f0; padding: 8px 12px; color: #1e293b;">Publisher username and verification badge on community templates</td>
+                <td style="border: 1px solid #e2e8f0; padding: 8px 12px; text-align: center; color: #16a34a; font-weight: 600;">3 pts</td>
+                <td style="border: 1px solid #e2e8f0; padding: 8px 12px; text-align: center;">Identity Squad</td>
+              </tr>
+              <tr>
+                <td style="border: 1px solid #e2e8f0; padding: 8px 12px; font-family: monospace; font-weight: 600; color: #4338ca;">SP-303</td>
+                <td style="border: 1px solid #e2e8f0; padding: 8px 12px; color: #1e293b;">Automated page advance with hover-pause and manual dot selectors</td>
+                <td style="border: 1px solid #e2e8f0; padding: 8px 12px; text-align: center; color: #16a34a; font-weight: 600;">3 pts</td>
+                <td style="border: 1px solid #e2e8f0; padding: 8px 12px; text-align: center;">UX Guild</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <h2 style="font-size: 14pt; font-weight: 700; color: #1e293b; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-top: 24px;">4. Team Capacity &amp; Velocity Commitment</h2>
+          <p style="line-height: 1.6; color: #334155;">Committed sprint capacity is 42 points with an 85% focus factor across 6 engineers. Target release readiness scheduled for end of week.</p>
+        `,
+        id: 'page_2',
+      },
+      {
+        contentHtml: `
+          <h2 style="font-size: 14pt; font-weight: 700; color: #1e293b; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-top: 10px;">5. Retrospective Learnings &amp; Process Experiments</h2>
+          <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 14px 18px; border-radius: 6px; margin-bottom: 20px;">
+            <div style="font-weight: 700; color: #1d4ed8; margin-bottom: 4px; font-size: 10.5pt;">Sprint Experiment #4: Strict Zero-Console Linting</div>
+            <p style="margin: 0; color: #1e40af; font-size: 10pt; line-height: 1.55;">
+              Centralized backend file logger and clean client-side event architecture eliminated production noise and sped up bug diagnosis time by 45%.
+            </p>
+          </div>
+
+          <h2 style="font-size: 14pt; font-weight: 700; color: #1e293b; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; margin-top: 24px;">6. Sprint Sign-Off &amp; Facilitator Notes</h2>
+          <p style="line-height: 1.6; color: #334155;">Meeting adjourned on time. Next standup: Tomorrow at 09:30 AM UTC.</p>
+          <div style="margin-top: 30px; font-size: 9.5pt; color: #94a3b8;">
+            Document status: Signed &amp; Archived in Sprint Records • Spriteboard Workspace
+          </div>
+        `,
+        id: 'page_3',
       },
     ],
     name: 'Sprint Planning & Decision Log',

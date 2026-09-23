@@ -17,6 +17,9 @@ export default defineConfig({
         '**/data/**',
         '**/worker/**',
         '**/websocket/**',
+        '**/admin/**',
+        '**/.gemini/**',
+        '**/.agents/**',
       ],
     },
     proxy: {

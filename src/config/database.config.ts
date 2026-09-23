@@ -990,6 +990,7 @@ export async function runMigrations(): Promise<void> {
         canvas_data JSON NULL,
         preview_thumbnail MEDIUMTEXT NULL,
         status ENUM('draft', 'pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
+        rejection_reason TEXT NULL,
         is_official BOOLEAN NOT NULL DEFAULT FALSE,
         uses_count INT NOT NULL DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -1001,6 +1002,14 @@ export async function runMigrations(): Promise<void> {
         FOREIGN KEY (canvas_id) REFERENCES canvases(id) ON DELETE SET NULL
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
+
+    const [tplCols] = await canvasPool.query<mysql.RowDataPacket[]>(
+      "SHOW COLUMNS FROM db_canvas.templates LIKE 'rejection_reason'"
+    );
+    if (tplCols.length === 0) {
+      await canvasPool.query('ALTER TABLE db_canvas.templates ADD COLUMN rejection_reason TEXT NULL AFTER status');
+      logger.db.info('Columna rejection_reason añadida a db_canvas.templates.');
+    }
 
     logger.db.info('Tablas, columnas e índices de identidad, 2FA, suscripciones, compras, GeoIP, db_canvas, templates, equipos, vistas, feedback IA, snapshots, notificaciones y soporte técnico verificadas exitosamente.');
   } catch (err) {

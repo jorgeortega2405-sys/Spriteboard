@@ -8,6 +8,7 @@ export type UserRole =
   | 'DATA_ANALYST'
   | 'DATA_AUDITOR'
   | 'DATA_ENGINEER'
+  | 'DESIGNER'
   | 'DEVOPS'
   | 'ENGINEER'
   | 'FINANCE_ADMIN'
@@ -88,5 +89,11 @@ export interface TwoFactorLoginState {
   tempToken?: string;
   email?: string;
   timestamp?: number;
+}
+
+export function canPublishTemplates(user?: User | null): boolean {
+  if (!user) return false;
+  const roles = user.roles && user.roles.length > 0 ? user.roles : (user.role ? [user.role] : []);
+  return roles.includes('DESIGNER') || roles.includes('SUPER_ADMIN') || roles.includes('PLATFORM_ADMIN');
 }
 

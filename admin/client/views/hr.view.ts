@@ -1048,6 +1048,7 @@ class HrController implements ViewController {
                 <option value="OPERATIONS_AGENT">Operations Agent (Operaciones)</option>
                 <option value="DATA_ANALYST">Data Analyst (Analítica)</option>
                 <option value="AUDITOR">Auditor (Auditoría y Compliance)</option>
+                <option value="DESIGNER">Designer (Diseñador)</option>
                 <option value="USER">Usuario Estándar</option>
               </select>
               <span class="field__label">Rol en la Plataforma (RBAC) *</span>

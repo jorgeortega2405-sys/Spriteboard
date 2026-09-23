@@ -421,7 +421,18 @@
     "copy_link": "Copiar enlace",
     "link_copied": "Enlace de la plantilla copiado al portapapeles.",
     "empty_title": "No se encontraron plantillas",
-    "empty_desc": "Intenta con otro término de búsqueda o selecciona otra categoría."
+    "empty_desc": "Intenta con otro término de búsqueda o selecciona otra categoría.",
+    "login_required_publish": "Debes iniciar sesión para publicar una plantilla.",
+    "designer_required": "Solo los usuarios con rol de Diseñador pueden publicar plantillas.",
+    "publish_title": "Publicar como plantilla",
+    "publish_desc": "Comparte este diseño en la galería de plantillas para que otros puedan usarlo.",
+    "btn_publish": "Publicar plantilla",
+    "modal_field_title": "Título de la plantilla",
+    "modal_field_desc": "Descripción (opcional)",
+    "modal_field_tags": "Etiquetas separadas por comas (ej. Pitch, Startup, Retrospectiva)",
+    "error_title_required": "El título de la plantilla es obligatorio.",
+    "publish_success": "¡Plantilla publicada exitosamente!",
+    "publish_error": "No se pudo publicar la plantilla."
   },
   "trash": {
     "title": "Papelera de reciclaje",

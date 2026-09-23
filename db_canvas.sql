@@ -144,6 +144,7 @@ CREATE TABLE IF NOT EXISTS templates (
     canvas_data JSON NULL,
     preview_thumbnail MEDIUMTEXT NULL,
     status ENUM('draft', 'pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
+    rejection_reason TEXT NULL,
     is_official BOOLEAN NOT NULL DEFAULT FALSE,
     uses_count INT NOT NULL DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
