@@ -268,6 +268,10 @@ export class DocController implements ViewController {
       },
       onCollaboratorsChanged: () => {
         this.renderCollaboratorsBar();
+        this.renderCollaboratorCursors();
+      },
+      onCursor: () => {
+        this.renderCollaboratorCursors();
       },
       onRemoteFullUpdate: (remoteProject) => {
         if (!remoteProject || !Array.isArray(remoteProject.pages)) return;
@@ -288,6 +292,63 @@ export class DocController implements ViewController {
     });
 
     this.renderCollaboratorsBar();
+  }
+
+  private renderCollaboratorCursors(): void {
+    const pagesContainer = this.container.querySelector<HTMLElement>('[data-ref="doc-pages-container"]');
+    if (!pagesContainer) return;
+
+    let overlay = pagesContainer.querySelector<HTMLElement>('[data-ref="doc-cursor-overlay"]');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.className = 'doc-cursor-overlay';
+      overlay.setAttribute('data-ref', 'doc-cursor-overlay');
+      overlay.style.position = 'absolute';
+      overlay.style.top = '0';
+      overlay.style.left = '0';
+      overlay.style.width = '100%';
+      overlay.style.height = '100%';
+      overlay.style.pointerEvents = 'none';
+      overlay.style.zIndex = '50';
+      pagesContainer.style.position = 'relative';
+      pagesContainer.appendChild(overlay);
+    }
+
+    const activeConns = new Set<string>();
+    this.collaborationManager.collaborators.forEach((collab, connId) => {
+      if (collab.x === undefined || collab.y === undefined) return;
+      activeConns.add(connId);
+
+      let cursorEl = overlay!.querySelector<HTMLElement>(`[data-ref="doc-cursor-${connId}"]`);
+      if (!cursorEl) {
+        cursorEl = document.createElement('div');
+        cursorEl.className = 'doc-collaborator-cursor';
+        cursorEl.setAttribute('data-ref', `doc-cursor-${connId}`);
+        cursorEl.style.position = 'absolute';
+        cursorEl.style.pointerEvents = 'none';
+        cursorEl.style.transition = 'left 0.05s ease-out, top 0.05s ease-out';
+        cursorEl.innerHTML = `
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="${collab.color}" style="display:block; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3));">
+            <path d="M0 0 L0 14 L4 10 L8 14 L10 12 L6 8 L11 8 Z" stroke="#ffffff" stroke-width="1"/>
+          </svg>
+          <span style="display:inline-block; background-color:${collab.color}; color:#ffffff; font-size:11px; font-weight:600; padding:2px 6px; border-radius:4px; margin-left:10px; margin-top:-6px; white-space:nowrap; box-shadow:0 1px 3px rgba(0,0,0,0.2);">
+            ${collab.username || 'Invitado'}
+          </span>
+        `;
+        overlay!.appendChild(cursorEl);
+      }
+
+      cursorEl.style.left = `${collab.x}px`;
+      cursorEl.style.top = `${collab.y}px`;
+    });
+
+    overlay.querySelectorAll('.doc-collaborator-cursor').forEach((el) => {
+      const ref = el.getAttribute('data-ref') || '';
+      const connId = ref.replace('doc-cursor-', '');
+      if (!activeConns.has(connId)) {
+        el.remove();
+      }
+    });
   }
 
   private renderCollaboratorsBar(): void {
@@ -432,6 +493,16 @@ export class DocController implements ViewController {
 
   private bindEvents(): void {
     const signal = this.abortController.signal;
+
+    const pagesContainer = this.container.querySelector<HTMLElement>('[data-ref="doc-pages-container"]');
+    if (pagesContainer) {
+      pagesContainer.addEventListener('pointermove', (e: PointerEvent) => {
+        const rect = pagesContainer.getBoundingClientRect();
+        const x = Math.round(e.clientX - rect.left);
+        const y = Math.round(e.clientY - rect.top);
+        this.collaborationManager.sendCursor(x, y);
+      }, { signal });
+    }
 
     const titleEl = this.container.querySelector<HTMLElement>('[data-ref="doc-title"]');
     if (titleEl) {

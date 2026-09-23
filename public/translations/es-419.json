@@ -46,7 +46,8 @@
     "teams_section": "Equipos",
     "create_team": "Crear equipo",
     "plans_and_pricing": "Planes y precios",
-    "purchase_history": "Historial de compra"
+    "purchase_history": "Historial de compra",
+    "admin_panel": "Panel de administración"
   },
   "topbar": {
     "search_placeholder": "Buscar lienzos, plantillas...",

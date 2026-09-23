@@ -97,3 +97,17 @@ export function canPublishTemplates(user?: User | null): boolean {
   return roles.includes('DESIGNER') || roles.includes('SUPER_ADMIN') || roles.includes('PLATFORM_ADMIN');
 }
 
+const NON_ADMIN_ROLES = ['USER', 'DESIGNER'];
+
+export function isUserAdmin(role?: string, roles?: string[]): boolean {
+  if (roles && Array.isArray(roles) && roles.length > 0) {
+    return roles.some((r) => !NON_ADMIN_ROLES.includes(r));
+  }
+  return Boolean(role && !NON_ADMIN_ROLES.includes(role));
+}
+
+export function canAccessAdmin(user?: User | null): boolean {
+  if (!user) return false;
+  return isUserAdmin(user.role, user.roles);
+}
+

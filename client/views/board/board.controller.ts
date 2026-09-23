@@ -597,7 +597,7 @@ export class BoardController {
                 camera: defaultCamera,
                 createdAt: Date.now(),
                 elements: defaultElements,
-                id: `page-${Date.now()}-1`,
+                id: 'page-1',
                 name: 'Página 1',
               };
               this.pages = [defaultPage];
@@ -616,7 +616,7 @@ export class BoardController {
           camera: { x: 0, y: 0, zoom: 1 },
           createdAt: Date.now(),
           elements: [],
-          id: `page-${Date.now()}-1`,
+          id: 'page-1',
           name: 'Página 1',
         };
         this.pages = [defaultPage];
@@ -670,44 +670,63 @@ export class BoardController {
       },
       onRemoteAddElement: (element, pageId) => {
         const targetPageId = pageId || this.activePageId;
-        if (targetPageId === this.activePageId) {
+        let targetPage = this.pages.find((p) => p.id === targetPageId);
+        if (!targetPage && this.pages.length === 1) {
+          targetPage = this.pages[0];
+        }
+        if (targetPage && targetPage.id === this.activePageId) {
           const existingIdx = this.elements.findIndex((el) => el.id === element.id);
           if (existingIdx >= 0) {
             this.elements[existingIdx] = element;
           } else {
             this.elements.push(element);
           }
+          this.pixelGrid.syncPixelGridCanvases(this.elements, () => this.requestRedraw());
           this.requestRedraw();
-        } else {
-          const page = this.pages.find((p) => p.id === targetPageId);
-          if (page) {
-            const existingIdx = (page.elements || []).findIndex((el) => el.id === element.id);
-            if (existingIdx >= 0) {
-              page.elements[existingIdx] = element;
-            } else {
-              page.elements = [...(page.elements || []), element];
-            }
+        } else if (targetPage) {
+          const existingIdx = (targetPage.elements || []).findIndex((el) => el.id === element.id);
+          if (existingIdx >= 0) {
+            targetPage.elements[existingIdx] = element;
+          } else {
+            targetPage.elements = [...(targetPage.elements || []), element];
           }
+        } else {
+          const existingIdx = this.elements.findIndex((el) => el.id === element.id);
+          if (existingIdx >= 0) {
+            this.elements[existingIdx] = element;
+          } else {
+            this.elements.push(element);
+          }
+          this.pixelGrid.syncPixelGridCanvases(this.elements, () => this.requestRedraw());
+          this.requestRedraw();
         }
       },
       onRemoteClear: (pageId) => {
         const targetPageId = pageId || this.activePageId;
-        if (targetPageId === this.activePageId) {
+        let targetPage = this.pages.find((p) => p.id === targetPageId);
+        if (!targetPage && this.pages.length === 1) {
+          targetPage = this.pages[0];
+        }
+        if (targetPage && targetPage.id === this.activePageId) {
           this.elements = [];
           this.selectedElementId = null;
           this.selectedElementIds = [];
           this.updateSelectionToolbar();
           this.requestRedraw();
+        } else if (targetPage) {
+          targetPage.elements = [];
         } else {
-          const page = this.pages.find((p) => p.id === targetPageId);
-          if (page) {
-            page.elements = [];
-          }
+          this.elements = [];
+          this.requestRedraw();
         }
       },
       onRemoteDeleteElement: (elementId, pageId) => {
         const targetPageId = pageId || this.activePageId;
-        if (targetPageId === this.activePageId) {
+        let targetPage = this.pages.find((p) => p.id === targetPageId);
+        if (!targetPage && this.pages.length === 1) {
+          targetPage = this.pages[0];
+        }
+        if (targetPage && targetPage.id === this.activePageId) {
           this.elements = this.elements.filter((el) => el.id !== elementId);
           this.selectedElementIds = this.selectedElementIds.filter((id) => id !== elementId);
           if (this.selectedElementId === elementId) {
@@ -715,11 +734,11 @@ export class BoardController {
             this.updateSelectionToolbar();
           }
           this.requestRedraw();
+        } else if (targetPage && targetPage.elements) {
+          targetPage.elements = targetPage.elements.filter((el) => el.id !== elementId);
         } else {
-          const page = this.pages.find((p) => p.id === targetPageId);
-          if (page && page.elements) {
-            page.elements = page.elements.filter((el) => el.id !== elementId);
-          }
+          this.elements = this.elements.filter((el) => el.id !== elementId);
+          this.requestRedraw();
         }
       },
       onRemoteFullUpdate: (data) => {
@@ -794,44 +813,65 @@ export class BoardController {
       },
       onRemoteReorderElements: (elements, pageId) => {
         const targetPageId = pageId || this.activePageId;
-        if (targetPageId === this.activePageId) {
+        let targetPage = this.pages.find((p) => p.id === targetPageId);
+        if (!targetPage && this.pages.length === 1) {
+          targetPage = this.pages[0];
+        }
+        if (targetPage && targetPage.id === this.activePageId) {
           this.elements = elements;
           this.requestRedraw();
+        } else if (targetPage) {
+          targetPage.elements = elements;
         } else {
-          const page = this.pages.find((p) => p.id === targetPageId);
-          if (page) {
-            page.elements = elements;
-          }
+          this.elements = elements;
+          this.requestRedraw();
         }
       },
       onRemoteUpdateBackground: (background, pageId) => {
         const targetPageId = pageId || this.activePageId;
-        if (targetPageId === this.activePageId) {
+        let targetPage = this.pages.find((p) => p.id === targetPageId);
+        if (!targetPage && this.pages.length === 1) {
+          targetPage = this.pages[0];
+        }
+        if (targetPage && targetPage.id === this.activePageId) {
           this.boardBackground = background;
           this.requestRedraw();
+        } else if (targetPage) {
+          targetPage.background = background;
         } else {
-          const page = this.pages.find((p) => p.id === targetPageId);
-          if (page) {
-            page.background = background;
-          }
+          this.boardBackground = background;
+          this.requestRedraw();
         }
       },
       onRemoteUpdateElement: (element, pageId) => {
         const targetPageId = pageId || this.activePageId;
-        if (targetPageId === this.activePageId) {
+        let targetPage = this.pages.find((p) => p.id === targetPageId);
+        if (!targetPage && this.pages.length === 1) {
+          targetPage = this.pages[0];
+        }
+        if (targetPage && targetPage.id === this.activePageId) {
           const existingIdx = this.elements.findIndex((el) => el.id === element.id);
           if (existingIdx >= 0) {
             this.elements[existingIdx] = element;
-            this.requestRedraw();
+          } else {
+            this.elements.push(element);
+          }
+          this.requestRedraw();
+        } else if (targetPage) {
+          const existingIdx = (targetPage.elements || []).findIndex((el) => el.id === element.id);
+          if (existingIdx >= 0) {
+            targetPage.elements[existingIdx] = element;
+          } else {
+            targetPage.elements = [...(targetPage.elements || []), element];
           }
         } else {
-          const page = this.pages.find((p) => p.id === targetPageId);
-          if (page && page.elements) {
-            const existingIdx = page.elements.findIndex((el) => el.id === element.id);
-            if (existingIdx >= 0) {
-              page.elements[existingIdx] = element;
-            }
+          const existingIdx = this.elements.findIndex((el) => el.id === element.id);
+          if (existingIdx >= 0) {
+            this.elements[existingIdx] = element;
+          } else {
+            this.elements.push(element);
           }
+          this.requestRedraw();
         }
       },
       onRequestFullState: (targetConnId) => {

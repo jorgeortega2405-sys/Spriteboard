@@ -258,7 +258,7 @@ export function setupDropdown(
   let originalNextSibling: Node | null = null;
 
   const teleportToBody = () => {
-    if (teleportTarget && teleportTarget.parentElement && teleportTarget.parentElement !== document.body) {
+    if (window.innerWidth <= 768 && teleportTarget && teleportTarget.parentElement && teleportTarget.parentElement !== document.body) {
       originalParent = teleportTarget.parentElement;
       originalNextSibling = teleportTarget.nextSibling;
       document.body.appendChild(teleportTarget);
@@ -272,6 +272,8 @@ export function setupDropdown(
       } else {
         originalParent.appendChild(teleportTarget);
       }
+      originalParent = null;
+      originalNextSibling = null;
     }
   };
 
@@ -279,8 +281,9 @@ export function setupDropdown(
     if (popperInstance) {
       popperInstance.destroy();
       popperInstance = null;
-      if (!shouldMatchWidth && menu) {
+      if (menu) {
         menu.style.width = '';
+        menu.style.minWidth = '';
       }
     }
   };
@@ -290,6 +293,7 @@ export function setupDropdown(
       destroyPopper();
       if (!shouldMatchWidth) {
         menu.style.width = '';
+        menu.style.minWidth = '';
       }
       popperInstance = createPopper(trigger, menu, {
         placement: options.placement || defaultPlacement,
@@ -318,13 +322,17 @@ export function setupDropdown(
           {
             effect: ({ state }: any) => {
               if (shouldMatchWidth) {
-                state.elements.popper.style.width = `${state.elements.reference.offsetWidth}px`;
+                const w = `${state.elements.reference.offsetWidth}px`;
+                state.elements.popper.style.width = w;
+                state.elements.popper.style.minWidth = w;
               }
             },
             enabled: shouldMatchWidth,
             fn: ({ state }: any) => {
               if (shouldMatchWidth) {
-                state.styles.popper.width = `${state.rects.reference.width}px`;
+                const w = `${state.rects.reference.width}px`;
+                state.styles.popper.width = w;
+                state.styles.popper.minWidth = w;
               }
             },
             name: 'sameWidth',
@@ -347,9 +355,8 @@ export function setupDropdown(
       wrapper,
     });
 
-    teleportToBody();
-
     if (window.innerWidth <= 768 && backdrop && menu) {
+      teleportToBody();
       destroyPopper();
       backdrop.style.display = 'flex';
       backdrop.style.opacity = '0';

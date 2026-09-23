@@ -17,6 +17,7 @@ import { createIconSvg, renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { closeWebSocket, initWebSocket, registerWebSocketHandler } from '../services/websocket.service.js';
+import { isUserAdmin } from '../types/auth.types.js';
 import { CanvasItem } from '../types/canvas.types.js';
 import { MockupTemplate } from '../types/mockups.types.js';
 import { UserStorageUsage } from '../types/subscription.types.js';
@@ -5157,6 +5158,18 @@ function setupRailUserControls(sidebar: HTMLElement): void {
         }
         navigate('/teams');
       });
+
+      const btnAdmin = avatarContainer.querySelector<HTMLElement>('[data-ref="btn-menu-admin"]');
+      if (btnAdmin) {
+        const hasAdminAccess = isUserAdmin(currentUser?.role, currentUser?.roles);
+        btnAdmin.style.display = hasAdminAccess ? 'flex' : 'none';
+        btnAdmin.addEventListener('click', (e) => {
+          e.preventDefault();
+          closeMenu();
+          const adminUrl = `${window.location.protocol}//${window.location.hostname}:3002`;
+          window.open(adminUrl, '_blank', 'noopener,noreferrer');
+        });
+      }
 
       const btnSettings = avatarContainer.querySelector<HTMLElement>('[data-ref="btn-menu-settings"]');
       btnSettings?.addEventListener('click', (e) => {

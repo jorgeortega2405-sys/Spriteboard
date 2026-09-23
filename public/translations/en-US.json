@@ -44,7 +44,8 @@
     "teams_section": "Teams",
     "create_team": "Create team",
     "plans_and_pricing": "Plans & pricing",
-    "purchase_history": "Purchase history"
+    "purchase_history": "Purchase history",
+    "admin_panel": "Admin panel"
   },
   "topbar": {
     "search_placeholder": "Search canvases, templates...",

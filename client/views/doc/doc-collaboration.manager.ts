@@ -1,4 +1,4 @@
-import { joinCanvasRoom, leaveCanvasRoom, registerWebSocketHandler, sendCanvasAccessChanged, sendCanvasAction, sendCanvasFullUpdate } from '../../services/websocket.service.js';
+﻿import { joinCanvasRoom, leaveCanvasRoom, registerWebSocketHandler, sendCanvasAccessChanged, sendCanvasAction, sendCanvasCursor, sendCanvasFullUpdate } from '../../services/websocket.service.js';
 import { getCollaboratorColor } from '../../utils/color.util.js';
 import { DocProject } from './doc.types.js';
 
@@ -10,12 +10,15 @@ export interface DocCollaboratorState {
   subscriptionTier: 'business' | 'enterprise' | 'free' | 'pro';
   userId: number;
   username: string;
+  x?: number;
+  y?: number;
 }
 
 export interface DocCollaborationCallbacks {
   onAccessChanged: (accessLevel: 'private' | 'public', publicRole?: 'editor' | 'viewer') => void;
   onAccessRevoked: () => void;
   onCollaboratorsChanged: () => void;
+  onCursor: () => void;
   onRemoteDocUpdate: (project: DocProject) => void;
   onRemoteFullUpdate: (project: DocProject) => void;
   onRequestFullState: (targetConnId: string) => void;
@@ -26,6 +29,7 @@ export class DocCollaborationManager {
   public canvasUuid: string;
   public collaborators: Map<string, DocCollaboratorState> = new Map();
   public isOwner = true;
+  public lastSentCursorTime = 0;
   public myCollaboratorColor = '#3b82f6';
   public publicRole: 'editor' | 'viewer' = 'editor';
   public role: 'editor' | 'owner' | 'viewer' = 'owner';
@@ -121,6 +125,29 @@ export class DocCollaborationManager {
       callbacks.onCollaboratorsChanged();
     });
 
+    const unsubCursor = registerWebSocketHandler('CANVAS_CURSOR', (payload: any) => {
+      const roomUuid = typeof payload.canvasUuid === 'object' ? payload.canvasUuid?.canvasUuid : (payload.canvasUuid || payload.canvas_uuid);
+      const connId = payload.connId || payload.conn_id;
+      if (!connId || (roomUuid && roomUuid !== this.canvasUuid)) return;
+      let collab = this.collaborators.get(connId);
+      if (!collab) {
+        collab = {
+          avatarUrl: payload.avatarUrl || payload.avatar_url || null,
+          color: payload.color || getCollaboratorColor(payload.userId || connId),
+          connId,
+          role: (payload.role || 'editor') as 'editor' | 'owner' | 'viewer',
+          subscriptionTier: (payload.subscriptionTier || payload.subscription_tier || 'free') as DocCollaboratorState['subscriptionTier'],
+          userId: payload.userId || 0,
+          username: payload.username || 'Invitado',
+        };
+        this.collaborators.set(connId, collab);
+        callbacks.onCollaboratorsChanged();
+      }
+      collab.x = payload.x;
+      collab.y = payload.y;
+      callbacks.onCursor();
+    });
+
     const unsubAction = registerWebSocketHandler('CANVAS_ACTION', (payload: any) => {
       const roomUuid = typeof payload.canvasUuid === 'object' ? payload.canvasUuid?.canvasUuid : (payload.canvasUuid || payload.canvas_uuid);
       if (roomUuid !== this.canvasUuid) return;
@@ -148,7 +175,34 @@ export class DocCollaborationManager {
       callbacks.onAccessChanged(accessLevel, publicRole);
     });
 
-    this.wsUnsubscribes = [unsubJoinError, unsubPresence, unsubJoined, unsubLeft, unsubAction, unsubFullUpdate, unsubAccess];
+    const unsubRemoved = registerWebSocketHandler('CANVAS_MEMBER_REMOVED', (payload: any) => {
+      const roomUuid = typeof payload.canvasUuid === 'object' ? payload.canvasUuid?.canvasUuid : (payload.canvasUuid || payload.canvas_uuid);
+      if (roomUuid !== this.canvasUuid) return;
+      const targetUserId = payload.targetUserId || payload.target_user_id;
+      if (targetUserId && targetUserId === userId) {
+        callbacks.onAccessRevoked();
+      }
+    });
+
+    this.wsUnsubscribes = [
+      unsubJoinError,
+      unsubPresence,
+      unsubJoined,
+      unsubLeft,
+      unsubCursor,
+      unsubAction,
+      unsubFullUpdate,
+      unsubAccess,
+      unsubRemoved,
+    ];
+  }
+
+  public sendCursor(worldX: number, worldY: number): void {
+    const now = Date.now();
+    if (now - this.lastSentCursorTime > 40) {
+      this.lastSentCursorTime = now;
+      sendCanvasCursor(this.canvasUuid, worldX, worldY);
+    }
   }
 
   public broadcastDocUpdate(project: DocProject): void {

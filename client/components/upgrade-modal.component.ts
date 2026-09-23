@@ -161,12 +161,16 @@ export function openUpgradeModal(initialPlan: PlanTier = 'pro'): { close: () => 
     const normalized = plan;
     tableWrapper.setAttribute('data-plan', normalized);
     const activeTh = backdrop.querySelector<HTMLElement>(`[data-ref="th-plan-${normalized}"]`);
-    if (!activeTh) return;
+    const table = backdrop.querySelector<HTMLElement>('[data-ref="upgrade-comparison-table"]');
+    if (!activeTh || !table) return;
     const wrapperRect = tableWrapper.getBoundingClientRect();
     const thRect = activeTh.getBoundingClientRect();
+    const tableRect = table.getBoundingClientRect();
     if (thRect.width > 0) {
       activeIndicator.style.left = `${thRect.left - wrapperRect.left}px`;
       activeIndicator.style.width = `${thRect.width}px`;
+      activeIndicator.style.top = `${tableRect.top - wrapperRect.top}px`;
+      activeIndicator.style.height = `${tableRect.height}px`;
     }
   };
 

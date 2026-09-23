@@ -483,7 +483,7 @@ html.dark-theme .layout-content:has(.layout-nav) {
   width: 15px;
   height: 15px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
+  background: linear-gradient(135deg, #4338ca 0%, #4f46e5 50%, #6366f1 100%);
   color: #ffffff;
   display: inline-flex;
   align-items: center;
@@ -703,13 +703,11 @@ html.dark-theme .rail-nav-item.is-active .rail-nav-item__label {
 }
 
 .layout-drawer {
-  position: absolute;
-  top: 0;
-  left: 0;
+  position: relative;
   width: 0;
   min-width: 0;
   height: 100%;
-  background-color: transparent;
+  background-color: var(--bg-surface, #ffffff);
   border: none;
   border-radius: 0;
   box-shadow: none;
@@ -726,15 +724,11 @@ html.dark-theme .rail-nav-item.is-active .rail-nav-item__label {
   padding: 8px 6px 20px 0;
 }
 
-.layout-nav .layout-drawer {
-  left: 100%;
-}
-
 .layout-drawer.is-expanded {
   width: 295px;
   min-width: 295px;
   border: none;
-  background-color: transparent;
+  background-color: var(--bg-surface, #ffffff);
   box-shadow: none;
   visibility: visible;
   opacity: 1;
@@ -1046,6 +1040,7 @@ html.dark-theme .rail-nav-item.is-active .rail-nav-item__label {
     height: 100%;
     z-index: 100;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    background-color: var(--bg-surface, #ffffff);
   }
 }
 

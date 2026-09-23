@@ -17,7 +17,7 @@ import { showToast } from '../../services/toast.service.js';
 import { CanvasItem } from '../../types/canvas.types.js';
 import { MockupFitMode, MockupTemplate } from '../../types/mockups.types.js';
 import { PRESENTATION_FORMATS, PresentationFormatConfig, PresentationProject, PresentationSlideItem } from '../../types/presentation.types.js';
-import { DEFAULT_CLASSIC_PALETTE, generateShadingRamp } from '../../utils/color.util.js';
+import { DEFAULT_CLASSIC_PALETTE, generateShadingRamp, getCollaboratorColor } from '../../utils/color.util.js';
 import { setupDropdown, withButtonLoading } from '../../utils/dom.util.js';
 import { PixelShape } from '../../utils/pixel-shapes.util.js';
 import { BoardAnimationPanelComponent } from '../board/board-animation-panel.component.js';
@@ -28,13 +28,15 @@ import { exportJson, exportPng, exportSvg, generateThumbnail } from '../board/bo
 import { drawMockupElement } from '../board/board-mockup-renderer.js';
 import { BoardMockupsPanelComponent } from '../board/board-mockups-panel.component.js';
 import { BoardPositionPanelComponent } from '../board/board-position-panel.component.js';
-import { applyElementAnimation, applyElementEffect, draw3DElement, drawAlignmentGuides, drawBackground, drawChart, drawConnector, drawImage, drawMarqueeBox, drawMultiSelectionBounds, drawSection, drawSelectionBox, drawShape, drawSticky, drawStroke, drawTable, drawText, screenToWorld, worldToScreen } from '../board/board-renderer.js';
+import { applyElementAnimation, applyElementEffect, draw3DElement, drawAlignmentGuides, drawBackground, drawBoardCollaboratorCursors, drawChart, drawConnector, drawImage, drawMarqueeBox, drawMultiSelectionBounds, drawSection, drawSelectionBox, drawShape, drawSticky, drawStroke, drawTable, drawText, screenToWorld, worldToScreen } from '../board/board-renderer.js';
 import { AlignmentGuide, calculateDragSnapping, calculateResizeSnapping } from '../board/board-snapping.manager.js';
-import { BackgroundType, Board3DElement, BoardAnimationType, BoardChartElement, BoardConnectorElement, BoardEffectType, BoardElement, BoardElementAnimation, BoardElementEffect, BoardImageElement, BoardMockupElement, BoardPoint, BoardSectionElement, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTableCell, BoardTableElement, BoardTextElement, CANVAS_DEFAULTS, ChartType, ConnectorStyle, MarkerType, ResizeHandle, Shape3DType, ShapeType, StrokeStyle } from '../board/board.types.js';
+import { BackgroundType, Board3DElement, BoardAnimationType, BoardChartElement, BoardCollaboratorState, BoardConnectorElement, BoardEffectType, BoardElement, BoardElementAnimation, BoardElementEffect, BoardImageElement, BoardMockupElement, BoardPoint, BoardSectionElement, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTableCell, BoardTableElement, BoardTextElement, CANVAS_DEFAULTS, ChartType, ConnectorStyle, MarkerType, ResizeHandle, Shape3DType, ShapeType, StrokeStyle } from '../board/board.types.js';
 import { DocFontPickerComponent, FontSelectEvent } from '../doc/doc-font-picker.component.js';
+import { PresentationCollaborationManager } from './presentation-collaboration.manager.js';
 
 export class PresentationController {
   private abortController: AbortController | null = null;
+  private accessLevel: 'private' | 'public' = 'private';
   private activeInlineEditor: HTMLTextAreaElement | null = null;
   private activeResizeHandle: ResizeHandle | null = null;
   private activeSlideId: string = 'slide-1';
@@ -42,11 +44,17 @@ export class PresentationController {
   private alignmentGuides: AlignmentGuide[] = [];
   private animationPanel: BoardAnimationPanelComponent | null = null;
   private autoSaveTimer: number | null = null;
+  private broadcastMyCursor: boolean = true;
   private btnColorEyedropper: HTMLButtonElement | null = null;
   private canvas: HTMLCanvasElement | null = null;
   private canvasRecord: any = null;
+  private canvasServerId: number | null = null;
+  private canvasUserId: number | null = null;
   private canvasUuid: string;
   private chartsPanel: BoardChartsPanelComponent | null = null;
+  private collaborationManager: PresentationCollaborationManager;
+  private collaboratorsBarEl: HTMLElement | null = null;
+  private collaboratorsListEl: HTMLElement | null = null;
   private colorPanelTarget: 'fill' | 'slide-bg' | 'stroke' | 'text' = 'fill';
   private colorsCustomInputEl: HTMLInputElement | null = null;
   private colorsHexTextEl: HTMLElement | null = null;
@@ -75,11 +83,13 @@ export class PresentationController {
   private drawSubtool: 'eraser' | 'highlighter' | 'marker' | 'pen' = 'pen';
   private effectsPanel: BoardEffectsPanelComponent | null = null;
   private fontPicker: DocFontPickerComponent | null = null;
+  private groupResizeSnapshots: Map<string, ElementResizeSnapshot> = new Map();
   private hasInitialFit: boolean = false;
   private historyDropdownController: CanvasHistoryDropdownController | null = null;
   private isDragging: boolean = false;
   private isDrawing: boolean = false;
   private isEyedropperActive: boolean = false;
+  private isOwner: boolean = true;
   private isPanning: boolean = false;
   private isPreviewingSnapshot: boolean = false;
   private isSnappingEnabled: boolean = true;
@@ -88,20 +98,24 @@ export class PresentationController {
   private marqueeEnd: BoardPoint | null = null;
   private marqueeStart: BoardPoint | null = null;
   private mockupsPanel: BoardMockupsPanelComponent | null = null;
+  private ownerInfo: { avatarUrl: string | null; id: number | null; subscriptionTier: string; username: string } | null = null;
   private panOffset: BoardPoint = { x: 0, y: 0 };
   private positionPanel: BoardPositionPanelComponent | null = null;
   private prePreviewSlides: PresentationSlideItem[] | null = null;
   private previewSnapshotUuid: string | null = null;
+  private publicRole: 'editor' | 'viewer' = 'editor';
   private recentColors: string[] = ['#ffffff', '#000000', '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
-  private groupResizeSnapshots: Map<string, ElementResizeSnapshot> = new Map();
+  private redoStack: string[] = [];
   private resizeStartBBox: { fontSize?: number; height: number; width: number; x: number; y: number } | null = null;
+  private role: 'editor' | 'owner' | 'viewer' = 'owner';
+  private roomToken: string = '';
   private selectedElementIds: Set<string> = new Set();
   private selectedSlideId: string | null = 'slide-1';
   private selectionStartBBox: { height: number; width: number; x: number; y: number } | null = null;
   private clipboardElements: BoardElement[] = [];
-  private redoStack: string[] = [];
   private selectionStartPositions: Map<string, any> = new Map();
   private shareDropdownController: CanvasShareDropdownController | null = null;
+  private showCollaboratorCursors: boolean = true;
   private slideDuration: number = 5.0;
   private slideFormat: PresentationFormatConfig = PRESENTATION_FORMATS.presentation_16_9;
   private slideHeight: number = 720;
@@ -115,6 +129,7 @@ export class PresentationController {
     this.container = container;
     this.canvasUuid = canvasUuid;
     this.canvasRecord = initialRecord || null;
+    this.collaborationManager = new PresentationCollaborationManager(canvasUuid);
   }
 
   public async init(): Promise<boolean> {
@@ -125,15 +140,20 @@ export class PresentationController {
     this.ctx = this.canvas.getContext('2d');
     if (!this.ctx) return false;
 
+    this.collaboratorsBarEl = this.container.querySelector<HTMLElement>('[data-ref="presentation-collaborators-bar"]');
+    this.collaboratorsListEl = this.container.querySelector<HTMLElement>('[data-ref="presentation-collaborators-list"]');
+
     await this.loadPresentationData();
     this.loadRecentColors();
     this.setupResizeObserver();
     this.setupTopBarComponents();
     this.setupPanels();
     this.bindEvents();
+    this.setupCollaboration();
     this.fitSlide();
     this.render();
     this.renderSlidesTray();
+    this.renderCollaboratorsBar();
     this.updateSelectionToolbar();
     renderIcons(this.container);
     return true;
@@ -150,6 +170,7 @@ export class PresentationController {
       this.autoSaveTimer = null;
     }
     this.commitInlineEditor();
+    this.collaborationManager.destroy();
     this.commentsController?.destroy();
     this.commentsController = null;
     this.aiDropdownController?.destroy();
@@ -178,22 +199,73 @@ export class PresentationController {
 
   private async loadPresentationData(): Promise<void> {
     let rawData: any = null;
-    if (this.canvasRecord && this.canvasRecord.data) {
-      rawData = this.canvasRecord.data;
-    } else {
+    let canvas: any = this.canvasRecord || null;
+
+    if (!canvas || !canvas.is_local || canvas.id) {
+      try {
+        const res = await getApi(API_ROUTES.canvases.byId(this.canvasUuid));
+        if (res.ok) {
+          const body = await res.json();
+          if (body && body.canvas) {
+            canvas = body.canvas;
+            this.canvasRecord = canvas;
+            rawData = canvas.data;
+            this.canvasServerId = canvas.id || null;
+            this.canvasUserId = canvas.user_id || null;
+            if (body.role) {
+              this.role = body.role;
+            }
+            if (canvas.public_role) {
+              this.publicRole = canvas.public_role;
+            }
+            if (canvas.access_level) {
+              this.accessLevel = canvas.access_level;
+            }
+            if (body.room_token) {
+              this.roomToken = body.room_token;
+            }
+            if (body.owner) {
+              this.ownerInfo = {
+                avatarUrl: body.owner.avatar_url || null,
+                id: body.owner.id || null,
+                subscriptionTier: body.owner.subscription_tier || 'free',
+                username: body.owner.username || 'Propietario',
+              };
+            }
+          }
+        }
+      } catch {}
+    }
+
+    if (!rawData) {
       const local = await getLocalCanvasByUuid(this.canvasUuid);
       if (local && local.data) {
         rawData = local.data;
-        this.canvasRecord = local;
-      } else if (currentUser) {
-        try {
-          const res = await getApi(API_ROUTES.canvases.byId(this.canvasUuid));
-          if (res.ok) {
-            const body = await res.json();
-            this.canvasRecord = body?.canvas || body;
-            rawData = this.canvasRecord?.data;
+        if (!this.canvasRecord) this.canvasRecord = local;
+      }
+    }
+
+    if (this.canvasServerId && !this.roomToken) {
+      try {
+        const tokenRes = await getApi(API_ROUTES.canvases.token(this.canvasUuid));
+        if (tokenRes.ok) {
+          const tokenData = await tokenRes.json();
+          if (tokenData?.room_token) {
+            this.roomToken = tokenData.room_token;
           }
-        } catch {}
+        }
+      } catch {}
+    }
+
+    if (canvas) {
+      this.canvasServerId = canvas.id || this.canvasServerId;
+      this.canvasUserId = canvas.user_id || this.canvasUserId;
+      if (this.canvasUserId && currentUser) {
+        this.isOwner = currentUser.id === this.canvasUserId;
+      } else if (this.canvasUserId && !currentUser) {
+        this.isOwner = false;
+      } else {
+        this.isOwner = true;
       }
     }
 
@@ -245,6 +317,336 @@ export class PresentationController {
     if (currentSlide?.duration) {
       this.slideDuration = currentSlide.duration;
       this.updateSlideDurationUI();
+    }
+  }
+
+  private setupCollaboration(): void {
+    const userId = currentUser ? currentUser.id : null;
+    const username = currentUser ? currentUser.username : 'Invitado';
+    const avatarUrl = currentUser?.avatar_url || null;
+    const tier = (currentUser?.subscription_tier || 'free') as BoardCollaboratorState['subscriptionTier'];
+
+    this.collaborationManager.roomToken = this.roomToken;
+    this.collaborationManager.isOwner = this.isOwner;
+    this.collaborationManager.role = this.role;
+    this.collaborationManager.publicRole = this.publicRole;
+    this.collaborationManager.accessLevel = this.accessLevel;
+    this.collaborationManager.activeSlideId = this.activeSlideId;
+
+    this.collaborationManager.init(userId, username, avatarUrl, tier, {
+      onAccessChanged: (accessLevel, publicRole) => {
+        this.accessLevel = accessLevel;
+        if (publicRole) this.publicRole = publicRole;
+        if (this.accessLevel === 'private' && !this.isOwner) {
+          showToast('El acceso a esta presentación se ha vuelto privado', 'warning');
+        }
+      },
+      onAccessRevoked: () => {
+        if (!this.canvasServerId || this.isOwner) return;
+        showToast('Se ha revocado el acceso a esta presentación', 'error');
+      },
+      onCollaboratorsChanged: () => {
+        this.renderCollaboratorsBar();
+        this.render();
+      },
+      onCursor: () => {
+        this.render();
+      },
+      onRemoteAddElement: (element, slideId) => {
+        const targetSlideId = slideId || this.activeSlideId;
+        let targetSlide = this.slides.find((s) => s.id === targetSlideId);
+        if (!targetSlide && this.slides.length === 1) {
+          targetSlide = this.slides[0];
+        }
+        if (targetSlide) {
+          const existingIdx = targetSlide.elements.findIndex((el) => el.id === element.id);
+          if (existingIdx >= 0) {
+            targetSlide.elements[existingIdx] = element;
+          } else {
+            targetSlide.elements.push(element);
+          }
+        } else {
+          const active = this.getActiveSlide();
+          const existingIdx = active.elements.findIndex((el) => el.id === element.id);
+          if (existingIdx >= 0) {
+            active.elements[existingIdx] = element;
+          } else {
+            active.elements.push(element);
+          }
+        }
+        this.render();
+        this.renderSlidesTray();
+      },
+      onRemoteClear: (slideId) => {
+        const targetSlideId = slideId || this.activeSlideId;
+        let targetSlide = this.slides.find((s) => s.id === targetSlideId);
+        if (!targetSlide && this.slides.length === 1) {
+          targetSlide = this.slides[0];
+        }
+        if (targetSlide) {
+          targetSlide.elements = [];
+          if (targetSlide.id === this.activeSlideId) {
+            this.selectedElementIds.clear();
+            this.updateSelectionToolbar();
+          }
+        } else {
+          this.getActiveSlide().elements = [];
+          this.selectedElementIds.clear();
+          this.updateSelectionToolbar();
+        }
+        this.render();
+        this.renderSlidesTray();
+      },
+      onRemoteDeleteElement: (elementId, slideId) => {
+        const targetSlideId = slideId || this.activeSlideId;
+        let targetSlide = this.slides.find((s) => s.id === targetSlideId);
+        if (!targetSlide && this.slides.length === 1) {
+          targetSlide = this.slides[0];
+        }
+        if (targetSlide) {
+          targetSlide.elements = targetSlide.elements.filter((el) => el.id !== elementId);
+        } else {
+          const active = this.getActiveSlide();
+          active.elements = active.elements.filter((el) => el.id !== elementId);
+        }
+        this.selectedElementIds.delete(elementId);
+        this.updateSelectionToolbar();
+        this.render();
+        this.renderSlidesTray();
+      },
+      onRemoteFullUpdate: (data) => {
+        if (Array.isArray(data.pages) && data.pages.length > 0) {
+          this.slides = data.pages;
+          const targetSlideId = data.activePageId && this.slides.some((s) => s.id === data.activePageId)
+            ? data.activePageId
+            : this.slides[0].id;
+          this.activeSlideId = targetSlideId;
+          this.selectedSlideId = targetSlideId;
+          if (data.width) this.slideWidth = data.width;
+          if (data.height) this.slideHeight = data.height;
+        } else if (data.elements && Array.isArray(data.elements)) {
+          const active = this.getActiveSlide();
+          active.elements = data.elements;
+          if (data.background) {
+            active.background = data.background;
+          }
+        }
+        this.renderSlidesTray();
+        this.render();
+      },
+      onRemoteReorderElements: (elements, slideId) => {
+        const targetSlideId = slideId || this.activeSlideId;
+        let targetSlide = this.slides.find((s) => s.id === targetSlideId);
+        if (!targetSlide && this.slides.length === 1) {
+          targetSlide = this.slides[0];
+        }
+        if (targetSlide) {
+          targetSlide.elements = elements;
+        } else {
+          this.getActiveSlide().elements = elements;
+        }
+        this.render();
+      },
+      onRemoteSlideAdd: (slide, insertIndex) => {
+        if (this.slides.some((s) => s.id === slide.id)) return;
+        if (typeof insertIndex === 'number' && insertIndex >= 0 && insertIndex <= this.slides.length) {
+          this.slides.splice(insertIndex, 0, slide);
+        } else {
+          this.slides.push(slide);
+        }
+        this.renderSlidesTray();
+        this.render();
+      },
+      onRemoteSlideDelete: (slideId) => {
+        const idx = this.slides.findIndex((s) => s.id === slideId);
+        if (idx === -1 || this.slides.length <= 1) return;
+        const isDeletingActive = slideId === this.activeSlideId;
+        this.slides.splice(idx, 1);
+        if (isDeletingActive) {
+          const nextIdx = Math.min(idx, this.slides.length - 1);
+          this.activeSlideId = this.slides[nextIdx].id;
+          this.selectedSlideId = this.slides[nextIdx].id;
+          this.selectedElementIds.clear();
+          this.collaborationManager.activeSlideId = this.activeSlideId;
+        }
+        this.renderSlidesTray();
+        this.render();
+      },
+      onRemoteSlideDuration: (slideId, duration) => {
+        const slide = this.slides.find((s) => s.id === slideId);
+        if (slide) {
+          slide.duration = duration;
+          if (slide.id === this.activeSlideId) {
+            this.slideDuration = duration;
+            this.updateSlideDurationUI();
+          }
+          this.renderSlidesTray();
+        }
+      },
+      onRemoteSlideReorder: (slideIds) => {
+        const slideMap = new Map(this.slides.map((s) => [s.id, s]));
+        const newSlides: PresentationSlideItem[] = [];
+        for (const id of slideIds) {
+          const s = slideMap.get(id);
+          if (s) {
+            newSlides.push(s);
+            slideMap.delete(id);
+          }
+        }
+        for (const s of slideMap.values()) {
+          newSlides.push(s);
+        }
+        this.slides = newSlides;
+        this.renderSlidesTray();
+        this.render();
+      },
+      onRemoteUpdateBackground: (background, slideId) => {
+        const targetSlideId = slideId || this.activeSlideId;
+        let targetSlide = this.slides.find((s) => s.id === targetSlideId);
+        if (!targetSlide && this.slides.length === 1) {
+          targetSlide = this.slides[0];
+        }
+        if (targetSlide) {
+          targetSlide.background = background;
+        } else {
+          this.getActiveSlide().background = background;
+        }
+        this.render();
+        this.renderSlidesTray();
+      },
+      onRemoteUpdateElement: (element, slideId) => {
+        const targetSlideId = slideId || this.activeSlideId;
+        let targetSlide = this.slides.find((s) => s.id === targetSlideId);
+        if (!targetSlide && this.slides.length === 1) {
+          targetSlide = this.slides[0];
+        }
+        if (targetSlide) {
+          const existingIdx = targetSlide.elements.findIndex((el) => el.id === element.id);
+          if (existingIdx >= 0) {
+            targetSlide.elements[existingIdx] = element;
+          } else {
+            targetSlide.elements.push(element);
+          }
+        } else {
+          const active = this.getActiveSlide();
+          const existingIdx = active.elements.findIndex((el) => el.id === element.id);
+          if (existingIdx >= 0) {
+            active.elements[existingIdx] = element;
+          } else {
+            active.elements.push(element);
+          }
+        }
+        this.render();
+        this.renderSlidesTray();
+      },
+      onRequestFullState: (targetConnId) => {
+        this.collaborationManager.broadcastFullUpdate({
+          activePageId: this.activeSlideId,
+          height: this.slideHeight,
+          pages: this.slides,
+          width: this.slideWidth,
+        }, targetConnId);
+      },
+    });
+  }
+
+  private renderCollaboratorsBar(): void {
+    if (!this.collaboratorsBarEl || !this.collaboratorsListEl) return;
+    this.collaboratorsBarEl.classList.remove('is-hidden');
+    this.collaboratorsListEl.innerHTML = '';
+
+    const stackItems: Array<{
+      avatarUrl: string;
+      isOwner: boolean;
+      tier: string;
+      tooltip: string;
+      username: string;
+    }> = [];
+
+    const ownerData = this.ownerInfo || (this.isOwner && currentUser
+      ? {
+          avatarUrl: currentUser.avatar_url || null,
+          id: currentUser.id,
+          subscriptionTier: currentUser.subscription_tier || 'free',
+          username: currentUser.username,
+        }
+      : {
+          avatarUrl: null,
+          id: null,
+          subscriptionTier: 'free',
+          username: 'Propietario',
+        });
+
+    const isOwnerOnline = this.isOwner || Array.from(this.collaborationManager.collaborators.values()).some(
+      (c) => (c.userId && ownerData.id && c.userId === ownerData.id) || (c.username && c.username === ownerData.username)
+    );
+
+    const ownerAvatar = ownerData.avatarUrl || API_ROUTES.avatar(ownerData.username);
+    const ownerTier = ownerData.subscriptionTier || 'free';
+    const ownerStatusText = isOwnerOnline ? ' • En línea' : '';
+    const ownerRoleText = this.isOwner ? ' (Dueño • Tú)' : ` (Dueño${ownerStatusText})`;
+
+    stackItems.push({
+      avatarUrl: ownerAvatar,
+      isOwner: true,
+      tier: ownerTier,
+      tooltip: `${ownerData.username}${ownerRoleText}`,
+      username: ownerData.username,
+    });
+
+    if (!this.isOwner && currentUser) {
+      const myAvatar = currentUser.avatar_url || API_ROUTES.avatar(currentUser.username);
+      const myTier = currentUser.subscription_tier || 'free';
+      const myRole = this.role === 'viewer' ? 'Lector' : 'Editor';
+      stackItems.push({
+        avatarUrl: myAvatar,
+        isOwner: false,
+        tier: myTier,
+        tooltip: `${currentUser.username} (${myRole} • En línea • Tú)`,
+        username: currentUser.username,
+      });
+    }
+
+    const seenUserIds = new Set<number>();
+    if (currentUser?.id) seenUserIds.add(currentUser.id);
+    if (ownerData.id) seenUserIds.add(ownerData.id);
+
+    this.collaborationManager.collaborators.forEach((collab) => {
+      if (collab.userId && seenUserIds.has(collab.userId)) return;
+      if (collab.userId) seenUserIds.add(collab.userId);
+
+      const avatar = collab.avatarUrl || API_ROUTES.avatar(collab.username);
+      const roleText = collab.role === 'owner' ? 'Dueño' : collab.role === 'viewer' ? 'Lector' : 'Editor';
+      stackItems.push({
+        avatarUrl: avatar,
+        isOwner: collab.role === 'owner',
+        tier: collab.subscriptionTier || 'free',
+        tooltip: `${collab.username} (${roleText} • En línea)`,
+        username: collab.username,
+      });
+    });
+
+    for (const item of stackItems) {
+      const avatarBtn = document.createElement('div');
+      avatarBtn.className = 'design-collaborator-avatar';
+      avatarBtn.setAttribute('data-tooltip', item.tooltip);
+      avatarBtn.setAttribute('aria-label', item.tooltip);
+
+      const img = document.createElement('img');
+      img.src = item.avatarUrl;
+      img.alt = item.username;
+      img.className = 'avatar-preview-img';
+      img.onerror = () => {
+        img.remove();
+        const fallback = document.createElement('div');
+        fallback.className = 'design-collaborator-avatar__fallback';
+        fallback.style.backgroundColor = getCollaboratorColor(item.username);
+        fallback.textContent = (item.username[0] || '?').toUpperCase();
+        avatarBtn.appendChild(fallback);
+      };
+
+      avatarBtn.appendChild(img);
+      this.collaboratorsListEl.appendChild(avatarBtn);
     }
   }
 
@@ -979,6 +1381,25 @@ export class PresentationController {
       }, { signal });
     });
 
+    const vcursorBtnToggleOthers = this.container.querySelector<HTMLButtonElement>('[data-ref="vcursor-btn-toggle-others"]');
+    vcursorBtnToggleOthers?.addEventListener('click', () => {
+      this.showCollaboratorCursors = !this.showCollaboratorCursors;
+      vcursorBtnToggleOthers.classList.toggle('is-active', this.showCollaboratorCursors);
+      const iconUse = vcursorBtnToggleOthers.querySelector('use');
+      if (iconUse) {
+        iconUse.setAttribute('href', this.showCollaboratorCursors ? '/icons.svg#visibility' : '/icons.svg#visibility_off');
+      }
+      this.render();
+      showToast(this.showCollaboratorCursors ? 'Cursores de colaboradores visibles' : 'Cursores de colaboradores ocultos', 'info');
+    }, { signal });
+
+    const vcursorBtnToggleBroadcast = this.container.querySelector<HTMLButtonElement>('[data-ref="vcursor-btn-toggle-broadcast"]');
+    vcursorBtnToggleBroadcast?.addEventListener('click', () => {
+      this.broadcastMyCursor = !this.broadcastMyCursor;
+      vcursorBtnToggleBroadcast.classList.toggle('is-active', this.broadcastMyCursor);
+      showToast(this.broadcastMyCursor ? 'Transmisión de mi cursor activada' : 'Transmisión de mi cursor desactivada', 'info');
+    }, { signal });
+
     const btnLaser = this.container.querySelector<HTMLButtonElement>('[data-ref="vcursor-btn-laser"]');
     btnLaser?.addEventListener('click', () => {
       this.setTool('laser');
@@ -1325,6 +1746,9 @@ export class PresentationController {
 
       const camera = { x: this.panOffset.x, y: this.panOffset.y, zoom: this.zoom };
       const wp = screenToWorld(sx, sy, this.canvas, camera);
+      if (this.broadcastMyCursor) {
+        this.collaborationManager.sendCursor(wp.x, wp.y, this.activeSlideId);
+      }
       const slideGap = 80;
       const activeIdx = this.getActiveSlideIndex();
       const activeCy = activeIdx * (this.slideHeight + slideGap);
@@ -1581,6 +2005,12 @@ export class PresentationController {
         this.groupResizeSnapshots.clear();
         this.scheduleAutoSave();
         this.render();
+        const activeElements = this.getActiveSlide().elements;
+        activeElements.forEach((el) => {
+          if (this.selectedElementIds.has(el.id)) {
+            this.collaborationManager.broadcastUpdateElement(el, this.activeSlideId);
+          }
+        });
         return;
       }
 
@@ -1600,6 +2030,7 @@ export class PresentationController {
         this.drawPoints = [];
         this.render();
         this.scheduleAutoSave();
+        this.collaborationManager.broadcastAddElement(strokeEl, this.activeSlideId);
         return;
       }
 
@@ -1607,6 +2038,12 @@ export class PresentationController {
         this.isDragging = false;
         this.scheduleAutoSave();
         this.render();
+        const activeElements = this.getActiveSlide().elements;
+        activeElements.forEach((el) => {
+          if (this.selectedElementIds.has(el.id)) {
+            this.collaborationManager.broadcastUpdateElement(el, this.activeSlideId);
+          }
+        });
       }
 
       if (this.marqueeStart && this.marqueeEnd) {
@@ -2072,6 +2509,7 @@ export class PresentationController {
       this.updateSlideDurationUI();
       this.renderSlidesTray();
       this.scheduleAutoSave();
+      this.collaborationManager.broadcastSlideDuration(current.id, val);
     }, { signal });
 
     const presetChips = this.container.querySelectorAll<HTMLButtonElement>('[data-ref="slide-duration-presets"] [data-duration]');
@@ -2084,13 +2522,17 @@ export class PresentationController {
         this.updateSlideDurationUI();
         this.renderSlidesTray();
         this.scheduleAutoSave();
+        this.collaborationManager.broadcastSlideDuration(current.id, val);
       }, { signal });
     });
 
     const btnApplyAll = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-apply-duration-all"]');
     const popover = this.container.querySelector<HTMLElement>('[data-ref="popover-slide-duration"]');
     btnApplyAll?.addEventListener('click', () => {
-      this.slides.forEach((s) => { s.duration = this.slideDuration; });
+      this.slides.forEach((s) => {
+        s.duration = this.slideDuration;
+        this.collaborationManager.broadcastSlideDuration(s.id, this.slideDuration);
+      });
       this.renderSlidesTray();
       this.scheduleAutoSave();
       showToast('Duración aplicada a todas las diapositivas', 'success');
@@ -2729,6 +3171,7 @@ export class PresentationController {
           (el as any).width = measured.width;
           (el as any).height = measured.height;
         }
+        this.collaborationManager.broadcastUpdateElement(el, this.activeSlideId);
       }
     });
 
@@ -2747,6 +3190,7 @@ export class PresentationController {
       if (this.selectedElementIds.has(el.id)) {
         if ('strokeColor' in el) (el as any).strokeColor = color;
         if (el.type === 'stroke') (el as any).color = color;
+        this.collaborationManager.broadcastUpdateElement(el, this.activeSlideId);
       }
     });
     this.updateSelectionToolbar();
@@ -2762,6 +3206,7 @@ export class PresentationController {
       if (this.selectedElementIds.has(el.id)) {
         if ('fillColor' in el) (el as any).fillColor = color;
         if ('color' in el && el.type === 'sticky') (el as any).color = color;
+        this.collaborationManager.broadcastUpdateElement(el, this.activeSlideId);
       }
     });
     this.updateSelectionToolbar();
@@ -2784,6 +3229,7 @@ export class PresentationController {
     this.render();
     this.renderSlidesTray();
     this.scheduleAutoSave();
+    this.collaborationManager.broadcastUpdateBackground(currentSlide.background, this.activeSlideId);
   }
 
   public setTextColor(color: string, saveHistory = true): void {
@@ -2793,6 +3239,7 @@ export class PresentationController {
       if (this.selectedElementIds.has(el.id)) {
         if ('color' in el && el.type === 'text') (el as any).color = color;
         if ('textColor' in el) (el as any).textColor = color;
+        this.collaborationManager.broadcastUpdateElement(el, this.activeSlideId);
       }
     });
     this.updateSelectionToolbar();
@@ -3124,6 +3571,7 @@ export class PresentationController {
           (el as any).width = measured.width;
           (el as any).height = measured.height;
         }
+        this.collaborationManager.broadcastUpdateElement(el, this.activeSlideId);
       }
     });
     this.render();
@@ -3144,6 +3592,7 @@ export class PresentationController {
             (el as any).width = measured.width;
             (el as any).height = measured.height;
           }
+          this.collaborationManager.broadcastUpdateElement(el, this.activeSlideId);
         }
       }
     });
@@ -3173,6 +3622,9 @@ export class PresentationController {
     });
 
     elements.push(...toAdd);
+    toAdd.forEach((copy) => {
+      this.collaborationManager.broadcastAddElement(copy, this.activeSlideId);
+    });
     this.selectedElementIds = newSelected;
     this.syncPanels();
     this.updateSelectionToolbar();
@@ -3183,9 +3635,13 @@ export class PresentationController {
 
   private deleteSelectedElements(): void {
     if (this.selectedElementIds.size === 0) return;
+    const deletedIds = Array.from(this.selectedElementIds);
     this.saveHistoryState();
     const slide = this.getActiveSlide();
     slide.elements = slide.elements.filter((el) => !this.selectedElementIds.has(el.id));
+    deletedIds.forEach((id) => {
+      this.collaborationManager.broadcastDeleteElement(id, this.activeSlideId);
+    });
     this.selectedElementIds.clear();
     this.syncPanels();
     this.updateSelectionToolbar();
@@ -3215,6 +3671,7 @@ export class PresentationController {
       slide.elements = [...selected, ...others];
     }
 
+    this.collaborationManager.broadcastReorderElements(slide.elements, this.activeSlideId);
     this.syncPanels();
     this.render();
     this.scheduleAutoSave();
@@ -3234,6 +3691,7 @@ export class PresentationController {
     this.saveHistoryState();
     const elements = this.getActiveSlide().elements;
     const newSelected = new Set<string>();
+    const toAdd: BoardElement[] = [];
 
     const bbox = computeElementsBoundingBox(this.clipboardElements);
     const offsetX = targetPos && bbox ? Math.round(targetPos.x - (bbox.x + bbox.width / 2)) : 24;
@@ -3247,9 +3705,13 @@ export class PresentationController {
         copy.y += offsetY;
       }
       elements.push(copy);
+      toAdd.push(copy);
       newSelected.add(copy.id);
     });
 
+    toAdd.forEach((copy) => {
+      this.collaborationManager.broadcastAddElement(copy, this.activeSlideId);
+    });
     this.selectedElementIds = newSelected;
     this.syncPanels();
     this.updateSelectionToolbar();
@@ -3268,6 +3730,7 @@ export class PresentationController {
     this.updateSelectionToolbar();
     this.render();
     this.scheduleAutoSave();
+    this.collaborationManager.broadcastDeleteElement(tableId, this.activeSlideId);
     showToast('Tabla eliminada', 'info');
   }
 
@@ -3294,6 +3757,7 @@ export class PresentationController {
 
     this.render();
     this.scheduleAutoSave();
+    this.collaborationManager.broadcastUpdateElement(table, this.activeSlideId);
     showToast('Columna eliminada', 'info');
   }
 
@@ -3316,6 +3780,7 @@ export class PresentationController {
 
     this.render();
     this.scheduleAutoSave();
+    this.collaborationManager.broadcastUpdateElement(table, this.activeSlideId);
     showToast('Fila eliminada', 'info');
   }
 
@@ -3346,6 +3811,7 @@ export class PresentationController {
 
     this.render();
     this.scheduleAutoSave();
+    this.collaborationManager.broadcastUpdateElement(table, this.activeSlideId);
     showToast('Columna añadida', 'success');
   }
 
@@ -3377,6 +3843,7 @@ export class PresentationController {
 
     this.render();
     this.scheduleAutoSave();
+    this.collaborationManager.broadcastUpdateElement(table, this.activeSlideId);
     showToast('Fila añadida', 'success');
   }
 
@@ -3432,6 +3899,7 @@ export class PresentationController {
           (singleEl as any).height = measured.height;
         }
         this.scheduleAutoSave();
+        this.collaborationManager.broadcastUpdateElement(singleEl, this.activeSlideId);
       }
     }
     this.activeInlineEditor.remove();
@@ -3463,6 +3931,7 @@ export class PresentationController {
     this.updateSelectionToolbar();
     this.render();
     this.scheduleAutoSave();
+    this.collaborationManager.broadcastAddElement(textEl, this.activeSlideId);
   }
 
   public insertShape(shapeType: ShapeType, svgPath?: string, fill?: string, stroke?: string, x?: number, y?: number): void {
@@ -3482,6 +3951,7 @@ export class PresentationController {
     this.updateSelectionToolbar();
     this.render();
     this.scheduleAutoSave();
+    this.collaborationManager.broadcastAddElement(shapeEl, this.activeSlideId);
   }
 
   public insertShapeOrSticker(shape: PixelShape): void {
@@ -3540,6 +4010,7 @@ export class PresentationController {
     this.updateSelectionToolbar();
     this.render();
     this.scheduleAutoSave();
+    this.collaborationManager.broadcastAddElement(stickyEl, this.activeSlideId);
   }
 
   public insertImage(url: string, width?: number, height?: number, filename?: string): void {
@@ -3555,6 +4026,7 @@ export class PresentationController {
     this.updateSelectionToolbar();
     this.render();
     this.scheduleAutoSave();
+    this.collaborationManager.broadcastAddElement(imgEl, this.activeSlideId);
   }
 
   public insertTable(rows: number, cols: number): void {
@@ -3566,6 +4038,7 @@ export class PresentationController {
     this.updateSelectionToolbar();
     this.render();
     this.scheduleAutoSave();
+    this.collaborationManager.broadcastAddElement(tableEl, this.activeSlideId);
   }
 
   public activateConnectorTool(style?: ConnectorStyle): void {
@@ -3612,6 +4085,7 @@ export class PresentationController {
     this.updateSelectionToolbar();
     this.render();
     this.scheduleAutoSave();
+    this.collaborationManager.broadcastAddElement(shapeEl, this.activeSlideId);
   }
 
   public insertChart(chartType: ChartType): void {
@@ -3627,6 +4101,7 @@ export class PresentationController {
     this.render();
     this.scheduleAutoSave();
     this.openChartsPanel(chartEl);
+    this.collaborationManager.broadcastAddElement(chartEl, this.activeSlideId);
   }
 
   public getChartsPanel(): BoardChartsPanelComponent | null {
@@ -3675,6 +4150,7 @@ export class PresentationController {
     this.updateSelectionToolbar();
     this.render();
     this.scheduleAutoSave();
+    this.collaborationManager.broadcastAddElement(mockEl, this.activeSlideId);
   }
 
   public insert3DShape(shapeId: Shape3DType): void {
@@ -3690,6 +4166,7 @@ export class PresentationController {
     this.updateSelectionToolbar();
     this.render();
     this.scheduleAutoSave();
+    this.collaborationManager.broadcastAddElement(shape3d, this.activeSlideId);
   }
 
   public applyTemplate(templateId: string, mode: 'insert' | 'replace' = 'insert'): void {
@@ -3708,6 +4185,12 @@ export class PresentationController {
     this.syncPanels();
     this.render();
     this.scheduleAutoSave();
+    this.collaborationManager.broadcastFullUpdate({
+      activePageId: this.activeSlideId,
+      height: this.slideHeight,
+      pages: this.slides,
+      width: this.slideWidth,
+    });
   }
 
   public addSlide(): void {
@@ -3735,6 +4218,7 @@ export class PresentationController {
     this.renderSlidesTray();
     this.render();
     this.scheduleAutoSave();
+    this.collaborationManager.broadcastSlideAdd(newSlide);
     showToast('Nueva diapositiva creada', 'success');
   }
 
@@ -3766,6 +4250,7 @@ export class PresentationController {
     this.renderSlidesTray();
     this.render();
     this.scheduleAutoSave();
+    this.collaborationManager.broadcastSlideAdd(newSlide, currentIdx + 1);
     showToast('Diapositiva duplicada', 'success');
   }
 
@@ -3774,6 +4259,7 @@ export class PresentationController {
       showToast('No puedes eliminar la única diapositiva', 'warning');
       return;
     }
+    const deletingSlideId = this.getActiveSlide().id;
     this.saveHistoryState();
     const currentIdx = this.getActiveSlideIndex();
     this.slides.splice(currentIdx, 1);
@@ -3791,6 +4277,7 @@ export class PresentationController {
     this.renderSlidesTray();
     this.render();
     this.scheduleAutoSave();
+    this.collaborationManager.broadcastSlideDelete(deletingSlideId);
     showToast('Diapositiva eliminada', 'success');
   }
 
@@ -3813,6 +4300,7 @@ export class PresentationController {
     this.updateSelectionToolbar();
     this.renderSlidesTray();
     this.render();
+    this.collaborationManager.broadcastSlideChange(id);
   }
 
   public deselectSlide(): void {
@@ -4000,6 +4488,11 @@ export class PresentationController {
     }
 
     ctx.restore();
+
+    if (this.showCollaboratorCursors) {
+      drawBoardCollaboratorCursors(this.ctx, this.collaborationManager.collaborators, camera, this.canvas);
+    }
+
     this.renderOverlays();
     this.updateFloatingToolbarPosition();
   }
