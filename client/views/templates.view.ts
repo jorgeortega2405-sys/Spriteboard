@@ -27,6 +27,7 @@ class TemplatesController {
 
   private typeDropdownController: ReturnType<typeof setupDropdown> | null = null;
   private sortDropdownController: ReturnType<typeof setupDropdown> | null = null;
+  private statusDropdownController: ReturnType<typeof setupDropdown> | null = null;
 
   private badgesContainer: HTMLElement | null = null;
   private gridEl: HTMLElement | null = null;
@@ -54,9 +55,6 @@ class TemplatesController {
   private searchBoxEl: HTMLElement | null = null;
   private designerSection: HTMLElement | null = null;
   private designerGridEl: HTMLElement | null = null;
-  private designerStatusFiltersContainer: HTMLElement | null = null;
-  private designerSearchInput: HTMLInputElement | null = null;
-  private designerClearSearchBtn: HTMLButtonElement | null = null;
   private btnApplyDesigner: HTMLButtonElement | null = null;
   private btnApplyDesignerText: HTMLElement | null = null;
   private badgeApplyDesignerStatus: HTMLElement | null = null;
@@ -71,9 +69,6 @@ class TemplatesController {
     this.searchBoxEl = this.container.querySelector<HTMLElement>('[data-ref="templates-search-box"]');
     this.designerSection = this.container.querySelector<HTMLElement>('[data-ref="designer-templates-section"]');
     this.designerGridEl = this.container.querySelector<HTMLElement>('[data-ref="designer-templates-grid"]');
-    this.designerStatusFiltersContainer = this.container.querySelector<HTMLElement>('[data-ref="designer-status-filters"]');
-    this.designerSearchInput = this.container.querySelector<HTMLInputElement>('[data-ref="designer-search-input"]');
-    this.designerClearSearchBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-designer-clear-search"]');
     this.btnApplyDesigner = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-apply-designer"]');
     this.btnApplyDesignerText = this.container.querySelector<HTMLElement>('[data-ref="btn-apply-designer-text"]');
     this.badgeApplyDesignerStatus = this.container.querySelector<HTMLElement>('[data-ref="badge-apply-designer-status"]');
@@ -86,11 +81,6 @@ class TemplatesController {
     this.gridEl = this.container.querySelector<HTMLElement>('[data-ref="templates-grid"]');
     if (this.gridEl) {
       SkeletonService.renderGridCardSkeletons(this.gridEl, 8, 'template');
-    }
-
-    const isMyTemplatesRoute = window.location.pathname === '/templates/my-templates';
-    if (this.isDesigner && isMyTemplatesRoute) {
-      this.activeCategory = 'my-templates';
     }
 
     await Promise.all([
@@ -140,15 +130,27 @@ class TemplatesController {
       });
     }
 
-    this.renderCategoryBadges();
-    this.initCarousel();
-
-    if (this.activeCategory === 'my-templates' && this.isDesigner) {
-      this.switchToMyTemplates(false);
-    } else {
-      this.renderTemplates();
+    const statusDropdownWrapper = this.container.querySelector<HTMLElement>('[data-ref="designer-dropdown-wrapper-status"]');
+    if (statusDropdownWrapper) {
+      this.statusDropdownController = setupDropdown(statusDropdownWrapper, {
+        matchWidth: false,
+        onSelect: (val: string) => {
+          const next = val || 'all';
+          if (this.designerFilterStatus === next) return;
+          this.designerFilterStatus = next;
+          const statusMenu = this.container.querySelector<HTMLElement>('[data-ref="dropdown-menu-filter-status"]');
+          statusMenu?.querySelectorAll<HTMLButtonElement>('.menu-item').forEach((item) => {
+            item.classList.toggle('is-active', item.getAttribute('data-status') === this.designerFilterStatus);
+          });
+          this.renderDesignerTemplates();
+        },
+        placement: 'bottom-end',
+      });
     }
 
+    this.renderCategoryBadges();
+    this.initCarousel();
+    this.renderTemplates();
     this.bindEvents();
   }
 
@@ -195,7 +197,12 @@ class TemplatesController {
         if (clearBtn) {
           clearBtn.style.display = this.searchQuery ? 'inline-flex' : 'none';
         }
-        this.renderTemplates();
+        if (this.activeCategory === 'my-templates') {
+          this.designerSearchQuery = this.searchQuery;
+          this.renderDesignerTemplates();
+        } else {
+          this.renderTemplates();
+        }
       },
       { signal }
     );
@@ -206,9 +213,14 @@ class TemplatesController {
         if (searchInput) {
           searchInput.value = '';
           this.searchQuery = '';
+          this.designerSearchQuery = '';
           clearBtn.style.display = 'none';
           searchInput.focus();
-          this.renderTemplates();
+          if (this.activeCategory === 'my-templates') {
+            this.renderDesignerTemplates();
+          } else {
+            this.renderTemplates();
+          }
         }
       },
       { signal }
@@ -242,7 +254,7 @@ class TemplatesController {
           if (this.activeCategory !== 'my-templates') {
             this.activeCategory = 'my-templates';
             this.updateBadgeActiveState('my-templates');
-            this.switchToMyTemplates(true);
+            this.switchToMyTemplates();
           }
           return;
         }
@@ -252,7 +264,7 @@ class TemplatesController {
           this.activeCategory = catId;
           this.updateBadgeActiveState(catId);
           if (wasMyTemplates) {
-            this.switchToExplore(true);
+            this.switchToExplore();
           }
           this.renderTemplates();
         }
@@ -303,51 +315,6 @@ class TemplatesController {
     );
 
     if (this.isDesigner) {
-      this.designerStatusFiltersContainer?.addEventListener(
-        'click',
-        (e) => {
-          const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-status]');
-          if (!btn) return;
-          const status = btn.getAttribute('data-status') || 'all';
-          if (status === this.designerFilterStatus) return;
-          this.designerFilterStatus = status;
-          this.designerStatusFiltersContainer?.querySelectorAll<HTMLButtonElement>('[data-status]').forEach((b) => {
-            b.classList.toggle('is-active', b.getAttribute('data-status') === status);
-          });
-          this.renderDesignerTemplates();
-        },
-        { signal }
-      );
-
-      this.designerSearchInput?.addEventListener(
-        'input',
-        () => {
-          if (!this.designerSearchInput) return;
-          this.designerSearchQuery = this.designerSearchInput.value.trim().toLowerCase();
-          if (this.designerClearSearchBtn) {
-            this.designerClearSearchBtn.style.display = this.designerSearchQuery ? 'inline-flex' : 'none';
-          }
-          this.renderDesignerTemplates();
-        },
-        { signal }
-      );
-
-      this.designerClearSearchBtn?.addEventListener(
-        'click',
-        () => {
-          if (this.designerSearchInput) {
-            this.designerSearchInput.value = '';
-            this.designerSearchQuery = '';
-            if (this.designerClearSearchBtn) {
-              this.designerClearSearchBtn.style.display = 'none';
-            }
-            this.designerSearchInput.focus();
-            this.renderDesignerTemplates();
-          }
-        },
-        { signal }
-      );
-
       this.designerGridEl?.addEventListener(
         'click',
         (e) => {
@@ -735,12 +702,10 @@ class TemplatesController {
     });
   }
 
-  private switchToMyTemplates(pushState = true): void {
-    if (pushState) {
-      window.history.pushState({}, '', '/templates/my-templates');
-    }
-    if (this.searchBoxEl) {
-      this.searchBoxEl.style.display = 'none';
+  private switchToMyTemplates(): void {
+    const searchInput = this.container.querySelector<HTMLInputElement>('[data-ref="templates-search-input"]');
+    if (searchInput) {
+      searchInput.placeholder = t('templates.search_my_placeholder') || 'Buscar en mis plantillas...';
     }
     if (this.templatesSection) {
       this.templatesSection.style.display = 'none';
@@ -749,15 +714,14 @@ class TemplatesController {
       this.designerSection.style.display = 'block';
     }
     this.carouselController?.updateButtons();
+    this.designerSearchQuery = this.searchQuery;
     void this.loadDesignerData();
   }
 
-  private switchToExplore(pushState = true): void {
-    if (pushState) {
-      window.history.pushState({}, '', '/templates');
-    }
-    if (this.searchBoxEl) {
-      this.searchBoxEl.style.display = 'flex';
+  private switchToExplore(): void {
+    const searchInput = this.container.querySelector<HTMLInputElement>('[data-ref="templates-search-input"]');
+    if (searchInput) {
+      searchInput.placeholder = t('templates.search_placeholder') || 'Busca en miles de plantillas';
     }
     if (this.templatesSection) {
       this.templatesSection.style.display = 'block';
@@ -768,45 +732,17 @@ class TemplatesController {
     this.carouselController?.updateButtons();
   }
 
-  private async loadDesignerMetrics(): Promise<void> {
-    try {
-      const res = await getApi(API_ROUTES.templates.myMetrics);
-      if (!res.ok) return;
-      const data = await res.json();
-      const metrics = data?.metrics || {};
-
-      const totalVal = this.container.querySelector<HTMLElement>('[data-ref="metric-value-total"]');
-      const usesVal = this.container.querySelector<HTMLElement>('[data-ref="metric-value-uses"]');
-      const approvedVal = this.container.querySelector<HTMLElement>('[data-ref="metric-value-approved"]');
-      const pendingVal = this.container.querySelector<HTMLElement>('[data-ref="metric-value-pending"]');
-      const rejectedVal = this.container.querySelector<HTMLElement>('[data-ref="metric-value-rejected"]');
-      const draftVal = this.container.querySelector<HTMLElement>('[data-ref="metric-value-draft"]');
-
-      if (totalVal) totalVal.textContent = String(metrics.totalCount || 0);
-      if (usesVal) usesVal.textContent = String(metrics.totalUses || 0);
-      if (approvedVal) approvedVal.textContent = String(metrics.approvedCount || 0);
-      if (pendingVal) pendingVal.textContent = String(metrics.pendingCount || 0);
-      if (rejectedVal) rejectedVal.textContent = String(metrics.rejectedCount || 0);
-      if (draftVal) draftVal.textContent = String(metrics.draftCount || 0);
-    } catch {}
-  }
-
   private async loadDesignerData(): Promise<void> {
     if (this.designerGridEl) {
       SkeletonService.renderGridCardSkeletons(this.designerGridEl, 4, 'template');
     }
-    await Promise.all([
-      this.loadDesignerMetrics(),
-      (async () => {
-        try {
-          const res = await getApi(`${API_ROUTES.templates.myTemplates}?limit=100`);
-          if (res.ok) {
-            const data = await res.json();
-            this.designerTemplates = Array.isArray(data.templates) ? data.templates : [];
-          }
-        } catch {}
-      })(),
-    ]);
+    try {
+      const res = await getApi(`${API_ROUTES.templates.myTemplates}?limit=100`);
+      if (res.ok) {
+        const data = await res.json();
+        this.designerTemplates = Array.isArray(data.templates) ? data.templates : [];
+      }
+    } catch {}
     this.renderDesignerTemplates();
   }
 
@@ -982,7 +918,6 @@ class TemplatesController {
             }
             const isDraft = data.template.status === 'draft';
             showToast(isDraft ? t('templates.visibility_updated_private') : t('templates.visibility_updated_public'), 'success');
-            void this.loadDesignerMetrics();
             this.renderDesignerTemplates();
           }
         } else {
@@ -1005,7 +940,6 @@ class TemplatesController {
             if (res.ok) {
               this.designerTemplates = this.designerTemplates.filter((t) => t.uuid !== templateUuid);
               showToast(t('templates.delete_success') || 'Plantilla eliminada exitosamente.', 'success');
-              void this.loadDesignerMetrics();
               this.renderDesignerTemplates();
             } else {
               showToast(t('toasts.generic_error') || 'Error al eliminar plantilla', 'danger');
@@ -1033,6 +967,8 @@ class TemplatesController {
     this.typeDropdownController = null;
     this.sortDropdownController?.destroy();
     this.sortDropdownController = null;
+    this.statusDropdownController?.destroy();
+    this.statusDropdownController = null;
     this.abortController.abort();
     this.carouselController?.destroy();
     this.carouselController = null;

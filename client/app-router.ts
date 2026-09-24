@@ -21,6 +21,9 @@ let activeControllers: ViewController[] = [];
 function normalizePath(rawPath: string): string {
   if (!rawPath || rawPath === '/' || rawPath === '') return '/';
   const clean = rawPath.replace(/\/+$/, '');
+  if (clean === '/templates/my-templates') {
+    return '/templates';
+  }
   if (clean === '/settings') {
     return currentUser ? '/settings/your-account' : '/settings/guest';
   }
