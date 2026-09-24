@@ -95,6 +95,7 @@ export interface UserPayload {
   subscription_tier?: SubscriptionTierId;
   subscription_tier_color?: string;
   two_factor_enabled?: boolean;
+  is_protected?: boolean;
 }
 
 export interface SessionAccount {
@@ -108,6 +109,7 @@ export interface SessionAccount {
   subscription_tier?: SubscriptionTierId;
   subscription_tier_color?: string;
   two_factor_enabled?: boolean;
+  is_protected?: boolean;
   sessionId?: string;
   last_accessed?: number;
 }

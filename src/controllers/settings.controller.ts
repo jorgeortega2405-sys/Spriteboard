@@ -5,7 +5,7 @@ import { deleteAvatar, getPasswordStatus, getUserPreferences, logUserAudit, requ
 import { clearPending2FASetup, generateBackupCodes, generateTotpSecret, getOtpAuthUrl, getPending2FASetup, savePending2FASetup, verifyTotpCode } from '../services/two-factor.service.js';
 import { deleteUserPermanently, disableUser2FA, enableUser2FA, findUserById, getUser2FASecret, verifyAndConsumeBackupCode } from '../services/user.service.js';
 import { consumePasswordChangeAuth } from '../services/verification.service.js';
-import { sanitizeUser, sendBadRequest, sendConflict, sendInternalError, sendSuccess, sendUnauthorized } from '../utils/http.util.js';
+import { sanitizeUser, sendBadRequest, sendConflict, sendForbidden, sendInternalError, sendSuccess, sendUnauthorized } from '../utils/http.util.js';
 import { Request, Response } from 'express';
 
 export async function handleUpdateAvatar(req: Request, res: Response): Promise<void> {
@@ -13,6 +13,11 @@ export async function handleUpdateAvatar(req: Request, res: Response): Promise<v
     const currentUser = getCurrentUser(req);
     if (!currentUser) {
       sendUnauthorized(res, 'Sesión no válida o expirada.');
+      return;
+    }
+
+    if (currentUser.is_protected) {
+      sendForbidden(res, 'Esta cuenta está protegida por el sistema y sus datos no pueden ser modificados.');
       return;
     }
 
@@ -56,6 +61,11 @@ export async function handleDeleteAvatar(req: Request, res: Response): Promise<v
       return;
     }
 
+    if (currentUser.is_protected) {
+      sendForbidden(res, 'Esta cuenta está protegida por el sistema y sus datos no pueden ser modificados.');
+      return;
+    }
+
     const result = await deleteAvatar(
       currentUser.id,
       req.ip,
@@ -87,6 +97,11 @@ export async function handleUpdateUsername(req: Request, res: Response): Promise
     const currentUser = getCurrentUser(req);
     if (!currentUser) {
       sendUnauthorized(res, 'Sesión no válida o expirada.');
+      return;
+    }
+
+    if (currentUser.is_protected) {
+      sendForbidden(res, 'Esta cuenta está protegida por el sistema y sus datos no pueden ser modificados.');
       return;
     }
 
@@ -135,6 +150,11 @@ export async function handleRequestEmailChangeCode(req: Request, res: Response):
       return;
     }
 
+    if (currentUser.is_protected) {
+      sendForbidden(res, 'Esta cuenta está protegida por el sistema y sus datos no pueden ser modificados.');
+      return;
+    }
+
     const result = await requestEmailChangeCode(
       currentUser.id,
       req.ip,
@@ -165,6 +185,11 @@ export async function handleVerifyEmailChangeCode(req: Request, res: Response): 
       return;
     }
 
+    if (currentUser.is_protected) {
+      sendForbidden(res, 'Esta cuenta está protegida por el sistema y sus datos no pueden ser modificados.');
+      return;
+    }
+
     const { code } = req.body;
     if (!code || typeof code !== 'string') {
       sendBadRequest(res, 'El código de verificación es obligatorio.');
@@ -192,6 +217,11 @@ export async function handleUpdateEmail(req: Request, res: Response): Promise<vo
     const currentUser = getCurrentUser(req);
     if (!currentUser) {
       sendUnauthorized(res, 'Sesión no válida o expirada.');
+      return;
+    }
+
+    if (currentUser.is_protected) {
+      sendForbidden(res, 'Esta cuenta está protegida por el sistema y sus datos no pueden ser modificados.');
       return;
     }
 
@@ -312,6 +342,11 @@ export async function handleUpdatePassword(req: Request, res: Response): Promise
       return;
     }
 
+    if (currentUser.is_protected) {
+      sendForbidden(res, 'Esta cuenta está protegida por el sistema y sus datos no pueden ser modificados.');
+      return;
+    }
+
     const { newPassword } = req.body || {};
     const result = await updateUserPasswordFromSettings(
       currentUser.id,
@@ -345,6 +380,11 @@ export async function handleGenerate2FA(req: Request, res: Response): Promise<vo
     const currentUser = getCurrentUser(req);
     if (!currentUser) {
       sendUnauthorized(res, 'Sesión no válida o expirada.');
+      return;
+    }
+
+    if (currentUser.is_protected) {
+      sendForbidden(res, 'Esta cuenta está protegida por el sistema y sus datos no pueden ser modificados.');
       return;
     }
 
@@ -382,6 +422,11 @@ export async function handleEnable2FA(req: Request, res: Response): Promise<void
     const currentUser = getCurrentUser(req);
     if (!currentUser) {
       sendUnauthorized(res, 'Sesión no válida o expirada.');
+      return;
+    }
+
+    if (currentUser.is_protected) {
+      sendForbidden(res, 'Esta cuenta está protegida por el sistema y sus datos no pueden ser modificados.');
       return;
     }
 
@@ -442,6 +487,11 @@ export async function handleDisable2FA(req: Request, res: Response): Promise<voi
     const currentUser = getCurrentUser(req);
     if (!currentUser) {
       sendUnauthorized(res, 'Sesión no válida o expirada.');
+      return;
+    }
+
+    if (currentUser.is_protected) {
+      sendForbidden(res, 'Esta cuenta está protegida por el sistema y sus datos no pueden ser modificados.');
       return;
     }
 
@@ -548,6 +598,11 @@ export async function handleDeleteAccount(req: Request, res: Response): Promise<
       return;
     }
 
+    if (currentUser.is_protected) {
+      sendForbidden(res, 'Esta cuenta está protegida por el sistema y sus datos no pueden ser modificados.');
+      return;
+    }
+
     const userId = currentUser.id;
     const { password } = req.body || {};
 
@@ -610,6 +665,11 @@ export async function handleUnlinkGoogle(req: Request, res: Response): Promise<v
     const currentUser = getCurrentUser(req);
     if (!currentUser) {
       sendUnauthorized(res, 'Sesión no válida o expirada.');
+      return;
+    }
+
+    if (currentUser.is_protected) {
+      sendForbidden(res, 'Esta cuenta está protegida por el sistema y sus datos no pueden ser modificados.');
       return;
     }
 

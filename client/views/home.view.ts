@@ -93,20 +93,14 @@ class HomeController {
   private heroSearchInput: HTMLInputElement | null = null;
   private btnHeroClearSearch: HTMLElement | null = null;
   private homeHero: HTMLElement | null = null;
-  private btnFolderBack: HTMLElement | null = null;
+  private canvasSectionHeader: HTMLElement | null = null;
   private canvasSectionTitle: HTMLElement | null = null;
 
-  private currentFolderUuid: string | null = null;
-  private currentFolder: FolderItem | null = null;
   private folders: FolderItem[] = [];
+  private homeDefaultActions: HTMLElement | null = null;
   private btnCreateFolder: HTMLElement | null = null;
   private btnHomeUpgrade: HTMLElement | null = null;
   private homeTitle: HTMLElement | null = null;
-  private folderTitleContainer: HTMLElement | null = null;
-  private folderTitleName: HTMLElement | null = null;
-  private folderContextActions: HTMLElement | null = null;
-  private btnFolderRename: HTMLElement | null = null;
-  private btnFolderDelete: HTMLElement | null = null;
   private categoriesCarouselWrapper: HTMLElement | null = null;
   private categoriesCarouselController: CarouselController | null = null;
   private cleanupCategoriesDrag: (() => void) | null = null;
@@ -131,9 +125,10 @@ class HomeController {
     this.boundCloseCardDropdowns = this.closeAllDropdowns.bind(this);
   }
 
-  public async init(initialFolderUuid?: string | null): Promise<void> {
+  public async init(): Promise<void> {
     this.gridEl = this.container.querySelector<HTMLElement>('[data-ref="canvas-grid"]');
     this.canvasSection = this.container.querySelector<HTMLElement>('[data-ref="canvas-section"]');
+    this.canvasSectionHeader = this.container.querySelector<HTMLElement>('[data-ref="canvas-section-header"]');
     this.scrollableEl = this.container;
     this.sentinelEl = this.container.querySelector<HTMLElement>('[data-ref="canvas-sentinel"]');
 
@@ -149,9 +144,9 @@ class HomeController {
     this.heroSearchInput = this.container.querySelector<HTMLInputElement>('[data-ref="hero-search-input"]');
     this.btnHeroClearSearch = this.container.querySelector<HTMLElement>('[data-ref="btn-hero-clear-search"]');
     this.homeHero = this.container.querySelector<HTMLElement>('[data-ref="home-hero"]');
-    this.btnFolderBack = this.container.querySelector<HTMLElement>('[data-ref="btn-folder-back"]');
     this.canvasSectionTitle = this.container.querySelector<HTMLElement>('[data-ref="canvas-section-title"]');
 
+    this.homeDefaultActions = this.container.querySelector<HTMLElement>('[data-ref="home-default-actions"]');
     this.btnCreateFolder = this.container.querySelector<HTMLElement>('[data-ref="btn-create-folder"]');
     this.btnHomeUpgrade = this.container.querySelector<HTMLElement>('[data-ref="btn-home-upgrade"]');
 
@@ -165,11 +160,6 @@ class HomeController {
     }
 
     this.homeTitle = this.container.querySelector<HTMLElement>('[data-ref="home-title"]');
-    this.folderTitleContainer = this.container.querySelector<HTMLElement>('[data-ref="folder-title-container"]');
-    this.folderTitleName = this.container.querySelector<HTMLElement>('[data-ref="folder-title-name"]');
-    this.folderContextActions = this.container.querySelector<HTMLElement>('[data-ref="folder-context-actions"]');
-    this.btnFolderRename = this.container.querySelector<HTMLElement>('[data-ref="btn-folder-rename"]');
-    this.btnFolderDelete = this.container.querySelector<HTMLElement>('[data-ref="btn-folder-delete"]');
 
     this.bindEvents();
     this.setupNavDropTargets();
@@ -250,11 +240,7 @@ class HomeController {
       await this.loadFavoriteTemplates();
     }
 
-    if (initialFolderUuid) {
-      await this.openFolder(initialFolderUuid, false);
-    } else {
-      await this.loadAll();
-    }
+    await this.loadAll();
   }
 
   private bindEvents(): void {
@@ -288,14 +274,6 @@ class HomeController {
         } else {
           this.toggleSearchToolbar();
         }
-      },
-      { signal }
-    );
-
-    this.btnFolderBack?.addEventListener(
-      'click',
-      () => {
-        void this.exitFolder();
       },
       { signal }
     );
@@ -397,63 +375,10 @@ class HomeController {
     );
 
 
-    this.btnFolderRename?.addEventListener(
-      'click',
-      () => {
-        if (this.currentFolder) {
-          openRenameFolderModal(this.currentFolder, {
-            onSuccess: (updated) => {
-              this.currentFolder = updated;
-              if (this.folderTitleName) {
-                this.folderTitleName.textContent = updated.name;
-              }
-              const idx = this.folders.findIndex((f) => f.uuid === updated.uuid);
-              if (idx !== -1) {
-                this.folders[idx] = updated;
-              }
-              this.filterFolders();
-              this.renderGrid();
-            },
-          });
-        }
-      },
-      { signal }
-    );
-
-    this.btnFolderDelete?.addEventListener(
-      'click',
-      () => {
-        if (this.currentFolder) {
-          this.confirmDeleteFolder(this.currentFolder);
-        }
-      },
-      { signal }
-    );
-
     window.addEventListener(
       'canvas-created',
       () => {
-        if (this.currentFolderUuid) {
-          void this.openFolder(this.currentFolderUuid, false);
-        } else {
-          void this.loadAll();
-        }
-      },
-      { signal }
-    );
-
-    window.addEventListener(
-      'popstate',
-      () => {
-        const path = window.location.pathname;
-        if (path.startsWith('/folder/')) {
-          const fUuid = path.split('/folder/')[1]?.split('/')[0];
-          if (fUuid && fUuid !== this.currentFolderUuid) {
-            void this.openFolder(fUuid, false);
-          }
-        } else if (this.currentFolderUuid) {
-          void this.exitFolder(false);
-        }
+        void this.loadAll();
       },
       { signal }
     );
@@ -632,6 +557,10 @@ class HomeController {
     this.typeDropdownController = null;
     this.sortDropdownController?.destroy();
     this.sortDropdownController = null;
+    this.folderTypeDropdownController?.destroy();
+    this.folderTypeDropdownController = null;
+    this.folderSortDropdownController?.destroy();
+    this.folderSortDropdownController = null;
     this.templatesTypeDropdownController?.destroy();
     this.templatesTypeDropdownController = null;
     this.templatesSortDropdownController?.destroy();
@@ -713,7 +642,7 @@ class HomeController {
 
   private async onFiltersChanged(): Promise<void> {
     this.filterFolders();
-    if (this.isShowingTemplatesEmptyState || (this.allCanvases.length === 0 && this.folders.length === 0 && !this.currentFolderUuid)) {
+    if (this.isShowingTemplatesEmptyState || (this.allCanvases.length === 0 && this.folders.length === 0)) {
       this.renderTemplates();
     }
     await this.loadCanvases(true);
@@ -721,7 +650,7 @@ class HomeController {
 
   private filterFolders(): void {
     let filteredFolders: FolderItem[] = [];
-    if (!this.currentFolderUuid && this.currentEntityFilter !== 'designs' && this.currentTypeFilter === 'all') {
+    if (this.currentEntityFilter !== 'designs' && this.currentTypeFilter === 'all') {
       filteredFolders = this.folders;
       if (this.searchQuery) {
         filteredFolders = filteredFolders.filter((f) => f.name.toLowerCase().includes(this.searchQuery));
@@ -913,9 +842,7 @@ class HomeController {
         params.set('search', this.searchQuery);
       }
 
-      const endpoint = this.currentFolderUuid
-        ? API_ROUTES.folders.canvases(this.currentFolderUuid)
-        : API_ROUTES.canvases.base;
+      const endpoint = API_ROUTES.canvases.base;
 
       try {
         const res = await getApi(`${endpoint}?${params.toString()}`);
@@ -926,53 +853,34 @@ class HomeController {
           this.currentPage = data.pagination?.page || 1;
           this.totalPages = data.pagination?.totalPages || 1;
           this.hasMore = Boolean(data.pagination?.hasMore);
-          if (this.currentFolderUuid && data.folder) {
-            this.currentFolder = data.folder;
-            if (this.folderTitleName) {
-              this.folderTitleName.textContent = data.folder.name;
-            }
-          }
         } else {
-          if (this.currentFolderUuid && res.status === 404) {
-            showToast(t('canvas.folder_empty_title'), 'info');
-            void this.exitFolder();
-            return;
-          }
           this.currentPage = 1;
           this.totalPages = 1;
           this.hasMore = false;
         }
 
-        if (!this.currentFolderUuid) {
-          const localCanvases = await getAllLocalCanvases();
-          const cloudUuids = new Set(cloudCanvases.map((c) => c.uuid));
-          let unsyncedLocals = localCanvases.filter((c) => {
-            if (!c.is_local || cloudUuids.has(c.uuid) || c.id) return false;
-            if (c.user_id && c.user_id !== currentUserId) return false;
-            if (c.access_level === 'public') return false;
-            return true;
-          });
-          if (this.currentTypeFilter === 'board') {
-            unsyncedLocals = unsyncedLocals.filter((c) => (c.canvas_type === 'board' || c.unit === 'board') && c.canvas_type !== 'doc' && c.unit !== 'doc' && c.canvas_type !== 'presentation' && c.unit !== 'presentation');
-          } else if (this.currentTypeFilter === 'doc') {
-            unsyncedLocals = unsyncedLocals.filter((c) => (c.canvas_type === 'doc' || c.unit === 'doc') && c.canvas_type !== 'presentation' && c.unit !== 'presentation');
-          } else if (this.currentTypeFilter === 'presentation') {
-            unsyncedLocals = unsyncedLocals.filter((c) => c.canvas_type === 'presentation' || c.unit === 'presentation');
-          }
-          if (this.searchQuery) {
-            unsyncedLocals = unsyncedLocals.filter((c) => c.name.toLowerCase().includes(this.searchQuery));
-          }
-          items = [...unsyncedLocals, ...cloudCanvases];
-        } else {
-          items = cloudCanvases;
+        const localCanvases = await getAllLocalCanvases();
+        const cloudUuids = new Set(cloudCanvases.map((c) => c.uuid));
+        let unsyncedLocals = localCanvases.filter((c) => {
+          if (!c.is_local || cloudUuids.has(c.uuid) || c.id) return false;
+          if (c.user_id && c.user_id !== currentUserId) return false;
+          if (c.access_level === 'public') return false;
+          return true;
+        });
+        if (this.currentTypeFilter === 'board') {
+          unsyncedLocals = unsyncedLocals.filter((c) => (c.canvas_type === 'board' || c.unit === 'board') && c.canvas_type !== 'doc' && c.unit !== 'doc' && c.canvas_type !== 'presentation' && c.unit !== 'presentation');
+        } else if (this.currentTypeFilter === 'doc') {
+          unsyncedLocals = unsyncedLocals.filter((c) => (c.canvas_type === 'doc' || c.unit === 'doc') && c.canvas_type !== 'presentation' && c.unit !== 'presentation');
+        } else if (this.currentTypeFilter === 'presentation') {
+          unsyncedLocals = unsyncedLocals.filter((c) => c.canvas_type === 'presentation' || c.unit === 'presentation');
         }
+        if (this.searchQuery) {
+          unsyncedLocals = unsyncedLocals.filter((c) => c.name.toLowerCase().includes(this.searchQuery));
+        }
+        items = [...unsyncedLocals, ...cloudCanvases];
       } catch {
-        if (!this.currentFolderUuid) {
-          const localCanvases = await getAllLocalCanvases();
-          items = localCanvases.filter((c) => (!c.user_id || c.user_id === currentUserId) && c.access_level !== 'public');
-        } else {
-          items = [];
-        }
+        const localCanvases = await getAllLocalCanvases();
+        items = localCanvases.filter((c) => (!c.user_id || c.user_id === currentUserId) && c.access_level !== 'public');
         this.currentPage = 1;
         this.totalPages = 1;
         this.hasMore = false;
@@ -1028,21 +936,7 @@ class HomeController {
       this.gridEl.innerHTML = '';
       this.gridEl.style.display = 'none';
 
-      if (this.currentFolderUuid) {
-        if (this.templatesSection) {
-          this.templatesSection.style.display = 'none';
-        }
-        if (this.canvasSection) {
-          this.canvasSection.style.display = 'block';
-          renderEmptyState({
-            container: this.canvasSection,
-            dataRef: 'canvas-empty-state',
-            desc: t('canvas.folder_empty_desc') || 'Añade o mueve proyectos a esta carpeta para verlos aquí.',
-            graphicType: 'canvas',
-            title: t('canvas.folder_empty_title') || 'Esta carpeta está vacía',
-          });
-        }
-      } else if (isSearchResult && !this.isShowingTemplatesEmptyState) {
+      if (isSearchResult && !this.isShowingTemplatesEmptyState) {
         if (this.templatesSection) {
           this.templatesSection.style.display = 'none';
         }
@@ -1156,9 +1050,7 @@ class HomeController {
           params.set('search', this.searchQuery);
         }
 
-        const endpoint = this.currentFolderUuid
-          ? API_ROUTES.folders.canvases(this.currentFolderUuid)
-          : API_ROUTES.canvases.base;
+        const endpoint = API_ROUTES.canvases.base;
 
         const [res] = await Promise.all([
           getApi(`${endpoint}?${params.toString()}`),
@@ -2002,7 +1894,7 @@ class HomeController {
   }
 
   private async loadFolders(): Promise<void> {
-    if (!currentUser || this.currentFolderUuid) {
+    if (!currentUser) {
       this.folders = [];
       return;
     }
@@ -2140,7 +2032,7 @@ class HomeController {
         return;
       }
       this.closeAllDropdowns();
-      void this.openFolder(folder.uuid);
+      navigate(`/folder/${folder.uuid}`);
     });
 
     card.addEventListener('contextmenu', (e: MouseEvent) => {
@@ -2185,47 +2077,6 @@ class HomeController {
     return card;
   }
 
-  public async openFolder(folderUuid: string, pushState = true): Promise<void> {
-    this.clearSelection();
-    this.currentFolderUuid = folderUuid;
-    this.container.classList.add('is-folder-view');
-    if (pushState) {
-      window.history.pushState({}, '', `/folder/${folderUuid}`);
-    }
-
-    if (this.homeTitle) this.homeTitle.style.display = 'none';
-    if (this.homeHero) this.homeHero.style.display = 'none';
-    if (this.canvasSectionTitle) this.canvasSectionTitle.textContent = t('canvas.folder_content') || 'Contenido de la carpeta';
-    if (this.folderTitleContainer) this.folderTitleContainer.style.display = 'flex';
-    if (this.btnCreateFolder) this.btnCreateFolder.style.display = 'none';
-    if (this.folderContextActions) this.folderContextActions.style.display = 'flex';
-
-    this.currentFolders = [];
-    this.currentPage = 1;
-    this.totalPages = 1;
-    this.hasMore = false;
-    await this.loadCanvases(true);
-  }
-
-  public async exitFolder(pushState = true): Promise<void> {
-    this.clearSelection();
-    this.currentFolderUuid = null;
-    this.currentFolder = null;
-    this.container.classList.remove('is-folder-view');
-    if (pushState) {
-      window.history.pushState({}, '', '/');
-    }
-
-    if (this.homeTitle) this.homeTitle.style.display = '';
-    if (this.homeHero) this.homeHero.style.display = '';
-    if (this.canvasSectionTitle) this.canvasSectionTitle.textContent = t('canvas.recent_canvases') || 'Lienzos recientes';
-    if (this.folderTitleContainer) this.folderTitleContainer.style.display = 'none';
-    if (this.btnCreateFolder) this.btnCreateFolder.style.display = '';
-    if (this.folderContextActions) this.folderContextActions.style.display = 'none';
-
-    await this.loadAll();
-  }
-
   private confirmDeleteFolder(folder: FolderItem): void {
     openModal({
       confirmClass: 'component-button--danger',
@@ -2247,12 +2098,8 @@ class HomeController {
           inst.close();
           showToast(t('canvas.folder_delete_success'), 'success');
           this.folders = this.folders.filter((f) => f.uuid !== folder.uuid);
-          if (this.currentFolderUuid === folder.uuid) {
-            void this.exitFolder();
-          } else {
-            this.filterFolders();
-            this.renderGrid();
-          }
+          this.filterFolders();
+          this.renderGrid();
           return true;
         } catch {
           inst.showError(t('canvas.folder_delete_error'));
@@ -2886,11 +2733,7 @@ class HomeController {
           showToast(t('canvas.selection_delete_success') || 'Lienzos movidos a la papelera', 'success');
           modal.close();
           this.clearSelection();
-          if (this.currentFolderUuid) {
-            await this.openFolder(this.currentFolderUuid, false);
-          } else {
-            await this.loadAll();
-          }
+          await this.loadAll();
         } catch {
           modal.showError(t('canvas.trash_error') || 'Error al eliminar lienzos');
         } finally {
@@ -2901,7 +2744,7 @@ class HomeController {
   }
 }
 
-export async function createHomeView(folderUuid?: string): Promise<HTMLElement> {
+export async function createHomeView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/home/home.html');
   translateElement(container);
 
@@ -2909,7 +2752,7 @@ export async function createHomeView(folderUuid?: string): Promise<HTMLElement> 
   container.prepend(sidebar);
 
   const controller = new HomeController(container);
-  await controller.init(folderUuid);
+  await controller.init();
   (container as any).__controller = controller;
 
   return container;

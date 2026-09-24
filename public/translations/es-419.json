@@ -223,7 +223,10 @@
       "links_new_tab_desc": "Abre tableros externos y recursos compartidos en pestañas independientes.",
       "dialog_confirm_delete_photo": "¿Seguro que deseas eliminar tu foto de perfil y restaurar la predeterminada?",
       "dialog_confirm_disconnect_google": "¿Estás seguro de que deseas desvincular tu cuenta de Google?",
-      "dialog_confirm_username_change": "¿Deseas guardar tu nuevo nombre de usuario?"
+      "dialog_confirm_username_change": "¿Deseas guardar tu nuevo nombre de usuario?",
+      "account_protected_banner_title": "Cuenta oficial protegida",
+      "account_protected_banner_desc": "Esta cuenta es oficial del sistema y sus datos de perfil (foto, nombre de usuario y correo) no pueden ser modificados.",
+      "account_protected_badge": "Protegida"
     },
     "guest": {
       "title": "Configuración de invitado",
@@ -316,7 +319,10 @@
       "google_popup_blocked": "La ventana emergente de Google fue bloqueada. Habilita las ventanas emergentes en tu navegador e intenta de nuevo.",
       "google_verify_failed": "No se pudo completar la verificación con Google.",
       "btn_continue_google": "Continuar con Google",
-      "google_verify_desc": "Se abrirá una ventana para confirmar tu identidad con tu cuenta de Google."
+      "google_verify_desc": "Se abrirá una ventana para confirmar tu identidad con tu cuenta de Google.",
+      "account_protected_banner_title": "Seguridad gestionada por el sistema",
+      "account_protected_banner_desc": "Esta cuenta está protegida por el sistema. El cambio de contraseña, la autenticación en dos pasos y la eliminación de cuenta están bloqueados.",
+      "account_protected_badge": "Protegida"
     },
     "billing": {
       "title": "Facturación y Suscripciones",
@@ -435,7 +441,7 @@
     "publish_success": "¡Plantilla publicada exitosamente!",
     "publish_error": "No se pudo publicar la plantilla.",
     "tab_explore": "Explorar galería",
-    "tab_my_templates": "Mis plantillas de diseñador",
+    "tab_my_templates": "Mis plantillas",
     "apply_designer": "Aplicar a diseñador",
     "apply_designer_pending": "Solicitud en revisión",
     "apply_designer_rejected": "Reenviar solicitud",

@@ -581,6 +581,32 @@ html.dark-theme .component-badge--active .component-icon {
   color: var(--color-success);
 }
 
+.banner--info {
+  background-color: var(--color-surface-card, rgba(0, 0, 0, 0.03));
+  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.08));
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.banner--info .banner__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.banner--info .banner__text strong {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.banner--info .banner__text span {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
 .banner.is-hidden,
 .banner:empty,
 .form-error.is-hidden,

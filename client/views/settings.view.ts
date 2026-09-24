@@ -23,6 +23,12 @@ export async function createYourAccountView(): Promise<HTMLElement> {
 
   if (!currentUser) return container;
 
+  const isProtected = Boolean(currentUser.is_protected);
+  const protectedBanner = container.querySelector<HTMLElement>('[data-ref="protected-account-banner"]');
+  if (isProtected && protectedBanner) {
+    protectedBanner.style.display = 'flex';
+  }
+
   const avatarImg = container.querySelector<HTMLImageElement>('[data-ref="profile-avatar-img"]');
   const avatarPreviewBox = container.querySelector<HTMLElement>('[data-ref="avatar-preview-box"]');
   const fileInput = container.querySelector<HTMLInputElement>('[data-ref="input-avatar-file"]');
@@ -75,6 +81,14 @@ export async function createYourAccountView(): Promise<HTMLElement> {
   };
 
   const updateAvatarButtonsState = (state: 'preview' | 'custom' | 'default') => {
+    if (isProtected) {
+      if (btnUploadAvatar) btnUploadAvatar.style.display = 'none';
+      if (btnChangeAvatar) btnChangeAvatar.style.display = 'none';
+      if (btnDeleteAvatar) btnDeleteAvatar.style.display = 'none';
+      if (btnCancelAvatar) btnCancelAvatar.style.display = 'none';
+      if (btnSaveAvatar) btnSaveAvatar.style.display = 'none';
+      return;
+    }
     if (state === 'preview') {
       if (btnUploadAvatar) btnUploadAvatar.style.display = 'none';
       if (btnChangeAvatar) btnChangeAvatar.style.display = 'none';
@@ -142,6 +156,19 @@ export async function createYourAccountView(): Promise<HTMLElement> {
   if (avatarPreviewBox) {
     const userTier = currentUser.subscription_tier || 'free';
     applyAvatarTier(avatarPreviewBox, userTier, currentUser.subscription_tier_color);
+  }
+
+  if (isProtected) {
+    if (avatarPreviewBox) {
+      avatarPreviewBox.removeAttribute('data-i18n-tooltip');
+      avatarPreviewBox.removeAttribute('data-tooltip');
+      avatarPreviewBox.style.cursor = 'default';
+      const overlay = avatarPreviewBox.querySelector<HTMLElement>('[data-ref="avatar-preview-overlay"]');
+      if (overlay) overlay.style.display = 'none';
+    }
+    if (btnEditUsername) btnEditUsername.style.display = 'none';
+    if (btnEditEmail) btnEditEmail.style.display = 'none';
+    if (googleActionBtn) googleActionBtn.style.display = 'none';
   }
 
   const initialAvatarUrl = hasCustomAvatar()
@@ -362,6 +389,7 @@ export async function createYourAccountView(): Promise<HTMLElement> {
   });
 
   const triggerFileInput = () => {
+    if (isProtected) return;
     if (avatarErrorBanner) avatarErrorBanner.style.display = 'none';
     fileInput?.click();
   };
@@ -795,9 +823,22 @@ export async function createSecurityView(): Promise<HTMLElement> {
   const sidebar = await createSidebar();
   container.prepend(sidebar);
 
+  const isProtected = Boolean(currentUser?.is_protected);
+  const protectedBanner = container.querySelector<HTMLElement>('[data-ref="protected-account-banner"]');
+  if (isProtected && protectedBanner) {
+    protectedBanner.style.display = 'flex';
+  }
+
   const btnChangePassword = container.querySelector<HTMLButtonElement>('[data-ref="btn-change-password"]');
   const btnConfigure2fa = container.querySelector<HTMLButtonElement>('[data-ref="btn-configure-2fa"]');
   const btnLogoutAllDevices = container.querySelector<HTMLButtonElement>('[data-ref="btn-logout-all-devices"]');
+
+  if (isProtected) {
+    if (btnChangePassword) btnChangePassword.style.display = 'none';
+    if (btnConfigure2fa) btnConfigure2fa.style.display = 'none';
+    const dangerGroup = container.querySelector<HTMLElement>('[data-ref="group-danger-zone"]');
+    if (dangerGroup) dangerGroup.style.display = 'none';
+  }
 
   let is2faEnabled = Boolean(currentUser?.two_factor_enabled);
 

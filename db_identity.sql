@@ -34,7 +34,8 @@ CREATE TABLE IF NOT EXISTS users (
     last_login_at TIMESTAMP NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     username_changed_at TIMESTAMP NULL,
-    email_changed_at TIMESTAMP NULL
+    email_changed_at TIMESTAMP NULL,
+    is_protected BOOLEAN NOT NULL DEFAULT FALSE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS user_preferences (
@@ -546,7 +547,7 @@ INSERT INTO users (
     stripe_customer_id, stripe_subscription_id, subscription_status, subscription_period_end,
     force_password_change, two_factor_enabled, avatar_url,
     registration_ip, registration_country_name, registration_isp,
-    created_at
+    created_at, is_protected
 ) VALUES (
     1,
     '00000000-0000-0000-0000-000000000001',
@@ -565,14 +566,16 @@ INSERT INTO users (
     '127.0.0.1',
     'Spriteboard Infrastructure',
     'Spriteboard Corp',
-    NOW()
+    NOW(),
+    TRUE
 ) ON DUPLICATE KEY UPDATE
     email = VALUES(email),
     password_hash = VALUES(password_hash),
     role = VALUES(role),
     subscription_tier = VALUES(subscription_tier),
     subscription_status = VALUES(subscription_status),
-    subscription_period_end = VALUES(subscription_period_end);
+    subscription_period_end = VALUES(subscription_period_end),
+    is_protected = VALUES(is_protected);
 
 INSERT INTO user_preferences (
     user_id, theme, language, open_links_new_tab, telemetry, reduce_motion, high_contrast, extended_alerts

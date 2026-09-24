@@ -747,7 +747,7 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
 
     const user = await findUserByEmail(trimmedEmail);
 
-    if (user) {
+    if (user && !user.is_protected) {
       const resetToken = crypto.randomBytes(32).toString('hex');
       await savePasswordResetToken(user.email, user.id, resetToken, 900);
 
@@ -759,6 +759,12 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
       logger.security.info('Enlace de recuperación de contraseña generado y enviado', {
         userId: user.id,
         email: user.email,
+      });
+    } else if (user && user.is_protected) {
+      logger.security.warn('Solicitud de recuperación de contraseña bloqueada para cuenta protegida por el sistema', {
+        userId: user.id,
+        email: user.email,
+        ip: getClientIp(req),
       });
     } else {
       logger.security.info('Solicitud de recuperación para correo no registrado (protección anti-enumeración)', {
@@ -826,6 +832,15 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
         res,
         tokenResult.error || 'El enlace de recuperación ha expirado o ya ha sido utilizado.'
       );
+      return;
+    }
+
+    const targetUser = await findUserById(tokenResult.userId);
+    if (targetUser && targetUser.is_protected) {
+      logger.security.warn('Intento de restablecer contraseña bloqueado para cuenta protegida por el sistema', {
+        userId: targetUser.id,
+      });
+      sendBadRequest(res, 'Esta cuenta está protegida por el sistema y su contraseña no puede ser restablecida.');
       return;
     }
 

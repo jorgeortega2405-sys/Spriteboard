@@ -244,8 +244,8 @@ export async function render(): Promise<void> {
       viewElements = [await createHomeView()];
     } else if (path.startsWith('/folder/')) {
       const folderUuid = path.split('/folder/')[1]?.split('/')[0] || '';
-      const { createHomeView } = await import('./views/home.view.js');
-      viewElements = [await createHomeView(folderUuid)];
+      const { createFolderView } = await import('./views/folder.view.js');
+      viewElements = [await createFolderView(folderUuid)];
     } else if (
       path === '/design' || path === '/design/' || path.startsWith('/design/') ||
       path === '/board' || path === '/board/' || path.startsWith('/board/') ||

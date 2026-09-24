@@ -221,7 +221,10 @@
       "links_new_tab_desc": "Open external boards and shared resources in separate tabs.",
       "dialog_confirm_delete_photo": "Are you sure you want to delete your profile photo and restore the default?",
       "dialog_confirm_disconnect_google": "Are you sure you want to disconnect your Google account?",
-      "dialog_confirm_username_change": "Do you want to save your new username?"
+      "dialog_confirm_username_change": "Do you want to save your new username?",
+      "account_protected_banner_title": "Protected official account",
+      "account_protected_banner_desc": "This is an official system account. Profile details (photo, username, and email) cannot be modified.",
+      "account_protected_badge": "Protected"
     },
     "guest": {
       "title": "Guest settings",
@@ -314,7 +317,10 @@
       "google_popup_blocked": "La ventana emergente de Google fue bloqueada. Habilita las ventanas emergentes en tu navegador e intenta de nuevo.",
       "google_verify_failed": "No se pudo completar la verificación con Google.",
       "btn_continue_google": "Continue with Google",
-      "google_verify_desc": "Se abrirá una ventana para confirmar tu identidad con tu cuenta de Google."
+      "google_verify_desc": "Se abrirá una ventana para confirmar tu identidad con tu cuenta de Google.",
+      "account_protected_banner_title": "System managed security",
+      "account_protected_banner_desc": "This account is protected by the system. Password change, two-factor authentication, and account deletion are locked.",
+      "account_protected_badge": "Protected"
     },
     "billing": {
       "title": "Facturación y Suscripciones",
@@ -433,7 +439,7 @@
     "publish_success": "Template published successfully!",
     "publish_error": "Could not publish template.",
     "tab_explore": "Explore gallery",
-    "tab_my_templates": "My designer templates",
+    "tab_my_templates": "My templates",
     "apply_designer": "Apply for Designer",
     "apply_designer_pending": "Application in review",
     "apply_designer_rejected": "Reapply",

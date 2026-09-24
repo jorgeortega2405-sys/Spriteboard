@@ -44,6 +44,7 @@ export const TEMPLATE_CATEGORIES: TemplateCategory[] = [
   { defaultName: 'Whiteboards', iconName: 'dashboard', id: 'board', nameKey: 'templates.filter_board' },
   { defaultName: 'Presentations', iconName: 'slideshow', id: 'presentation', nameKey: 'templates.filter_presentation' },
   { defaultName: 'Documents', iconName: 'description', id: 'doc', nameKey: 'templates.filter_doc' },
+  { defaultName: 'My templates', iconName: 'palette', id: 'my-templates', nameKey: 'templates.tab_my_templates' },
 ];
 
 export const ALL_PRESETS: PresetItem[] = [

@@ -45,6 +45,7 @@ export interface User {
   language?: string;
   two_factor_enabled?: boolean;
   google_id?: string | null;
+  is_protected?: boolean;
 }
 
 export interface LinkedAccount extends User {

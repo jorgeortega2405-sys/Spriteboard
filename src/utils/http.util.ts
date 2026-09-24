@@ -16,6 +16,7 @@ export function sanitizeUser(user: any): UserPayload {
     subscription_tier: tier,
     subscription_tier_color: getTierBorderColor(tier),
     two_factor_enabled: Boolean(user.two_factor_enabled),
+    is_protected: Boolean(user.is_protected),
   };
 }
 

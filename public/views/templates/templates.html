@@ -19,18 +19,6 @@
           <div class="view-hero__content">
             <h1 class="view-hero__title" data-ref="templates-hero-title" data-i18n="templates.title">Plantillas</h1>
 
-            <div class="view-nav-tabs" data-ref="templates-nav-tabs" style="display: none; justify-content: center; gap: 8px; margin-bottom: 20px;">
-              <button type="button" class="component-button component-button--h36 component-button--black" data-ref="btn-tab-explore">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
-                <span data-i18n="templates.tab_explore">Explorar galería</span>
-              </button>
-              <button type="button" class="component-button component-button--h36 component-button--outline" data-ref="btn-tab-designer">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#palette"></use></svg>
-                <span data-i18n="templates.tab_my_templates">Mis plantillas de diseñador</span>
-                <span class="component-badge" data-ref="badge-designer-count" style="display: none; margin-left: 6px; padding: 2px 7px; font-size: 11px; border-radius: 10px; background: rgba(125,125,125,0.15);">0</span>
-              </button>
-            </div>
-
             <div class="templates-explore-subhead" data-ref="templates-explore-subhead">
               <div class="view-search-pill" data-ref="templates-search-box">
                 <svg class="component-icon view-search-pill__icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
@@ -39,16 +27,18 @@
                   <svg class="component-icon" style="font-size: 18px;" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
                 </button>
               </div>
-            <div class="component-tags-carousel-wrapper view-tags-wrapper" data-ref="templates-tags-carousel-wrapper">
-              <button type="button" class="component-tag-nav-btn component-tag-nav-left is-disabled" data-ref="btn-tags-scroll-left" data-tooltip="Desplazar categorías a la izquierda" aria-label="Desplazar categorías a la izquierda">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
-              </button>
 
-              <div class="component-tags-carousel" data-ref="templates-categories-badges"></div>
+              <div class="component-tags-carousel-wrapper view-tags-wrapper" data-ref="templates-tags-carousel-wrapper">
+                <button type="button" class="component-tag-nav-btn component-tag-nav-left is-disabled" data-ref="btn-tags-scroll-left" data-tooltip="Desplazar categorías a la izquierda" aria-label="Desplazar categorías a la izquierda">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+                </button>
 
-              <button type="button" class="component-tag-nav-btn component-tag-nav-right is-disabled" data-ref="btn-tags-scroll-right" data-tooltip="Desplazar categorías a la derecha" aria-label="Desplazar categorías a la derecha">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
-              </button>
+                <div class="component-tags-carousel" data-ref="templates-categories-badges"></div>
+
+                <button type="button" class="component-tag-nav-btn component-tag-nav-right is-disabled" data-ref="btn-tags-scroll-right" data-tooltip="Desplazar categorías a la derecha" aria-label="Desplazar categorías a la derecha">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+                </button>
+              </div>
             </div>
           </div>
         </div>

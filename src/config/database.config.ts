@@ -140,6 +140,17 @@ export async function runMigrations(): Promise<void> {
       logger.db.info('Columna role modificada de ENUM a VARCHAR(50) en users.');
     }
 
+    const [protectedCols] = await conn.query<mysql.RowDataPacket[]>(
+      "SHOW COLUMNS FROM users LIKE 'is_protected'"
+    );
+    if (protectedCols.length === 0) {
+      await conn.query('ALTER TABLE users ADD COLUMN is_protected BOOLEAN NOT NULL DEFAULT FALSE AFTER email_changed_at');
+      await conn.query('UPDATE users SET is_protected = TRUE WHERE id = 1 OR username = "spriteboard"');
+      logger.db.info('Columna is_protected añadida a la tabla users y cuenta oficial protegida.');
+    } else {
+      await conn.query('UPDATE users SET is_protected = TRUE WHERE id = 1 OR username = "spriteboard"');
+    }
+
     await conn.query(`
       CREATE TABLE IF NOT EXISTS roles (
         id INT AUTO_INCREMENT PRIMARY KEY,

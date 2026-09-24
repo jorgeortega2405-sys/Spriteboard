@@ -31,6 +31,7 @@ export interface UserRecord extends RowDataPacket {
   two_factor_enabled?: boolean | number;
   two_factor_secret?: string | null;
   two_factor_recovery_codes?: string | null;
+  is_protected?: boolean | number;
   registration_ip?: string | null;
   registration_country_code?: string | null;
   registration_country_name?: string | null;
@@ -50,7 +51,7 @@ export interface UserRecord extends RowDataPacket {
 
 export async function findUserByEmail(email: string): Promise<UserRecord | null> {
   const [rows] = await pool.query<UserRecord[]>(
-    'SELECT id, username, email, password_hash, avatar_url, role, google_id, subscription_tier, two_factor_enabled, two_factor_secret, two_factor_recovery_codes FROM users WHERE email = ? LIMIT 1',
+    'SELECT id, username, email, password_hash, avatar_url, role, google_id, subscription_tier, two_factor_enabled, two_factor_secret, two_factor_recovery_codes, is_protected FROM users WHERE email = ? LIMIT 1',
     [email.toLowerCase().trim()]
   );
   if (rows.length === 0) return null;
@@ -61,7 +62,7 @@ export async function findUserByEmail(email: string): Promise<UserRecord | null>
 
 export async function findUserByUsername(username: string): Promise<UserRecord | null> {
   const [rows] = await pool.query<UserRecord[]>(
-    'SELECT id, username, email, avatar_url, role, google_id, subscription_tier, two_factor_enabled FROM users WHERE username = ? LIMIT 1',
+    'SELECT id, username, email, avatar_url, role, google_id, subscription_tier, two_factor_enabled, is_protected FROM users WHERE username = ? LIMIT 1',
     [username.trim()]
   );
   if (rows.length === 0) return null;
@@ -101,7 +102,7 @@ export async function findUserById(id: number): Promise<UserRecord | null> {
   } catch {}
 
   const [rows] = await pool.query<UserRecord[]>(
-    'SELECT id, username, email, avatar_url, role, google_id, subscription_tier, two_factor_enabled FROM users WHERE id = ? LIMIT 1',
+    'SELECT id, username, email, avatar_url, role, google_id, subscription_tier, two_factor_enabled, is_protected FROM users WHERE id = ? LIMIT 1',
     [id]
   );
   if (rows.length === 0) return null;
@@ -306,6 +307,11 @@ export async function verifyAndConsumeBackupCode(userId: number, code: string): 
 export async function deleteUserPermanently(userId: number): Promise<boolean> {
   const user = await findUserById(userId);
   if (!user) {
+    return false;
+  }
+
+  if (user.is_protected) {
+    logger.security.warn('Intento de eliminación de cuenta protegida por el sistema abortado', { userId });
     return false;
   }
 

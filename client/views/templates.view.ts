@@ -48,16 +48,11 @@ class TemplatesController {
   private favoritedTemplateIds = new Set<string>();
 
   private isDesigner = false;
-  private activeTab: 'explore' | 'designer' = 'explore';
   private designerTemplates: any[] = [];
   private designerFilterStatus = 'all';
   private designerSearchQuery = '';
 
-  private navTabsEl: HTMLElement | null = null;
-  private btnTabExplore: HTMLButtonElement | null = null;
-  private btnTabDesigner: HTMLButtonElement | null = null;
-  private badgeDesignerCount: HTMLElement | null = null;
-  private exploreSubhead: HTMLElement | null = null;
+  private searchBoxEl: HTMLElement | null = null;
   private designerSection: HTMLElement | null = null;
   private designerGridEl: HTMLElement | null = null;
   private designerStatusFiltersContainer: HTMLElement | null = null;
@@ -74,11 +69,7 @@ class TemplatesController {
 
   public async init(): Promise<void> {
     this.isDesigner = canPublishTemplates(currentUser);
-    this.navTabsEl = this.container.querySelector<HTMLElement>('[data-ref="templates-nav-tabs"]');
-    this.btnTabExplore = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tab-explore"]');
-    this.btnTabDesigner = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tab-designer"]');
-    this.badgeDesignerCount = this.container.querySelector<HTMLElement>('[data-ref="badge-designer-count"]');
-    this.exploreSubhead = this.container.querySelector<HTMLElement>('[data-ref="templates-explore-subhead"]');
+    this.searchBoxEl = this.container.querySelector<HTMLElement>('[data-ref="templates-search-box"]');
     this.designerSection = this.container.querySelector<HTMLElement>('[data-ref="designer-templates-section"]');
     this.designerGridEl = this.container.querySelector<HTMLElement>('[data-ref="designer-templates-grid"]');
     this.designerStatusFiltersContainer = this.container.querySelector<HTMLElement>('[data-ref="designer-status-filters"]');
@@ -88,10 +79,7 @@ class TemplatesController {
     this.btnApplyDesignerText = this.container.querySelector<HTMLElement>('[data-ref="btn-apply-designer-text"]');
     this.badgeApplyDesignerStatus = this.container.querySelector<HTMLElement>('[data-ref="badge-apply-designer-status"]');
 
-    if (this.isDesigner && this.navTabsEl) {
-      this.navTabsEl.style.display = 'flex';
-      void this.loadDesignerMetrics();
-    } else if (!this.isDesigner && this.btnApplyDesigner) {
+    if (!this.isDesigner && this.btnApplyDesigner) {
       this.btnApplyDesigner.style.display = 'inline-flex';
       void this.setupApplyDesignerButton();
     }
@@ -99,6 +87,11 @@ class TemplatesController {
     this.gridEl = this.container.querySelector<HTMLElement>('[data-ref="templates-grid"]');
     if (this.gridEl) {
       SkeletonService.renderGridCardSkeletons(this.gridEl, 8, 'template');
+    }
+
+    const isMyTemplatesRoute = window.location.pathname === '/templates/my-templates';
+    if (this.isDesigner && isMyTemplatesRoute) {
+      this.activeCategory = 'my-templates';
     }
 
     await Promise.all([
@@ -150,13 +143,14 @@ class TemplatesController {
 
     this.renderCategoryBadges();
     this.initCarousel();
-    this.renderTemplates();
-    this.bindEvents();
 
-    const isMyTemplatesRoute = window.location.pathname === '/templates/my-templates';
-    if (this.isDesigner && isMyTemplatesRoute) {
-      this.switchTab('designer', false);
+    if (this.activeCategory === 'my-templates' && this.isDesigner) {
+      this.switchToMyTemplates(false);
+    } else {
+      this.renderTemplates();
     }
+
+    this.bindEvents();
   }
 
   private initCarousel(): void {
@@ -235,11 +229,32 @@ class TemplatesController {
         const target = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-category]');
         if (!target) return;
         const catId = target.getAttribute('data-category');
-        if (catId && catId !== this.activeCategory) {
+        if (!catId) return;
+
+        if (catId === 'my-templates') {
+          if (!currentUser) {
+            navigate('/login');
+            return;
+          }
+          if (!this.isDesigner) {
+            navigate('/apply-designer');
+            return;
+          }
+          if (this.activeCategory !== 'my-templates') {
+            this.activeCategory = 'my-templates';
+            this.updateBadgeActiveState('my-templates');
+            this.switchToMyTemplates(true);
+          }
+          return;
+        }
+
+        if (catId !== this.activeCategory) {
+          const wasMyTemplates = this.activeCategory === 'my-templates';
           this.activeCategory = catId;
-          this.badgesContainer?.querySelectorAll<HTMLElement>('.component-badge').forEach((badge) => {
-            badge.classList.toggle('is-active', badge.getAttribute('data-category') === catId);
-          });
+          this.updateBadgeActiveState(catId);
+          if (wasMyTemplates) {
+            this.switchToExplore(true);
+          }
           this.renderTemplates();
         }
       },
@@ -289,22 +304,6 @@ class TemplatesController {
     );
 
     if (this.isDesigner) {
-      this.btnTabExplore?.addEventListener(
-        'click',
-        () => {
-          this.switchTab('explore');
-        },
-        { signal }
-      );
-
-      this.btnTabDesigner?.addEventListener(
-        'click',
-        () => {
-          this.switchTab('designer');
-        },
-        { signal }
-      );
-
       this.designerStatusFiltersContainer?.addEventListener(
         'click',
         (e) => {
@@ -731,50 +730,43 @@ class TemplatesController {
     }
   }
 
-  private switchTab(tab: 'explore' | 'designer', pushState = true): void {
-    if (!this.isDesigner) return;
-    this.activeTab = tab;
+  private updateBadgeActiveState(catId: string): void {
+    this.badgesContainer?.querySelectorAll<HTMLElement>('.component-badge').forEach((badge) => {
+      badge.classList.toggle('is-active', badge.getAttribute('data-category') === catId);
+    });
+  }
 
+  private switchToMyTemplates(pushState = true): void {
     if (pushState) {
-      const targetUrl = tab === 'designer' ? '/templates/my-templates' : '/templates';
-      window.history.pushState({}, '', targetUrl);
+      window.history.pushState({}, '', '/templates/my-templates');
     }
+    if (this.searchBoxEl) {
+      this.searchBoxEl.style.display = 'none';
+    }
+    if (this.templatesSection) {
+      this.templatesSection.style.display = 'none';
+    }
+    if (this.designerSection) {
+      this.designerSection.style.display = 'block';
+    }
+    this.carouselController?.updateButtons();
+    void this.loadDesignerData();
+  }
 
-    if (tab === 'designer') {
-      if (this.btnTabExplore) {
-        this.btnTabExplore.className = 'component-button component-button--h36 component-button--outline';
-      }
-      if (this.btnTabDesigner) {
-        this.btnTabDesigner.className = 'component-button component-button--h36 component-button--black';
-      }
-      if (this.exploreSubhead) {
-        this.exploreSubhead.style.display = 'none';
-      }
-      if (this.templatesSection) {
-        this.templatesSection.style.display = 'none';
-      }
-      if (this.designerSection) {
-        this.designerSection.style.display = 'block';
-      }
-      void this.loadDesignerData();
-    } else {
-      if (this.btnTabExplore) {
-        this.btnTabExplore.className = 'component-button component-button--h36 component-button--black';
-      }
-      if (this.btnTabDesigner) {
-        this.btnTabDesigner.className = 'component-button component-button--h36 component-button--outline';
-      }
-      if (this.exploreSubhead) {
-        this.exploreSubhead.style.display = 'block';
-      }
-      if (this.templatesSection) {
-        this.templatesSection.style.display = 'block';
-      }
-      if (this.designerSection) {
-        this.designerSection.style.display = 'none';
-      }
-      this.carouselController?.updateButtons();
+  private switchToExplore(pushState = true): void {
+    if (pushState) {
+      window.history.pushState({}, '', '/templates');
     }
+    if (this.searchBoxEl) {
+      this.searchBoxEl.style.display = 'flex';
+    }
+    if (this.templatesSection) {
+      this.templatesSection.style.display = 'block';
+    }
+    if (this.designerSection) {
+      this.designerSection.style.display = 'none';
+    }
+    this.carouselController?.updateButtons();
   }
 
   private async loadDesignerMetrics(): Promise<void> {
@@ -797,12 +789,6 @@ class TemplatesController {
       if (pendingVal) pendingVal.textContent = String(metrics.pendingCount || 0);
       if (rejectedVal) rejectedVal.textContent = String(metrics.rejectedCount || 0);
       if (draftVal) draftVal.textContent = String(metrics.draftCount || 0);
-
-      if (this.badgeDesignerCount) {
-        const count = Number(metrics.totalCount || 0);
-        this.badgeDesignerCount.textContent = String(count);
-        this.badgeDesignerCount.style.display = count > 0 ? 'inline-block' : 'none';
-      }
     } catch {}
   }
 

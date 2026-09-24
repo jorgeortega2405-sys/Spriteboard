@@ -272,12 +272,17 @@ export async function updateAvatar(
   }
 
   const [rows] = await pool.query<RowDataPacket[]>(
-    'SELECT id, avatar_url FROM users WHERE id = ? LIMIT 1',
+    'SELECT id, avatar_url, is_protected FROM users WHERE id = ? LIMIT 1',
     [userId]
   );
 
   if (rows.length === 0) {
     return { success: false, error: 'Usuario no encontrado.' };
+  }
+
+  if (rows[0].is_protected) {
+    logger.security.warn('Intento de cambiar avatar bloqueado para cuenta protegida por el sistema', { userId });
+    return { success: false, error: 'Esta cuenta está protegida por el sistema y sus datos no pueden ser modificados.' };
   }
 
   const oldAvatarUrl = rows[0].avatar_url;
@@ -317,12 +322,17 @@ export async function deleteAvatar(
   ua?: string | null
 ): Promise<{ success: boolean; avatar_url: null; error?: string }> {
   const [rows] = await pool.query<RowDataPacket[]>(
-    'SELECT id, username, avatar_url FROM users WHERE id = ? LIMIT 1',
+    'SELECT id, username, avatar_url, is_protected FROM users WHERE id = ? LIMIT 1',
     [userId]
   );
 
   if (rows.length === 0) {
     return { success: false, avatar_url: null, error: 'Usuario no encontrado.' };
+  }
+
+  if (rows[0].is_protected) {
+    logger.security.warn('Intento de eliminar avatar bloqueado para cuenta protegida por el sistema', { userId });
+    return { success: false, avatar_url: null, error: 'Esta cuenta está protegida por el sistema y sus datos no pueden ser modificados.' };
   }
 
   const oldAvatarUrl = rows[0].avatar_url;
@@ -362,12 +372,17 @@ export async function updateUsername(
   const cleanUsername = newUsername.trim();
 
   const [currentUserRows] = await pool.query<RowDataPacket[]>(
-    'SELECT id, username, username_changed_at FROM users WHERE id = ? LIMIT 1',
+    'SELECT id, username, username_changed_at, is_protected FROM users WHERE id = ? LIMIT 1',
     [userId]
   );
 
   if (currentUserRows.length === 0) {
     return { success: false, error: 'Usuario no encontrado.', status: 404 };
+  }
+
+  if (currentUserRows[0].is_protected) {
+    logger.security.warn('Intento de cambiar nombre de usuario bloqueado para cuenta protegida por el sistema', { userId });
+    return { success: false, error: 'Esta cuenta está protegida por el sistema y sus datos no pueden ser modificados.', status: 403 };
   }
 
   const oldUsername = currentUserRows[0].username;
@@ -420,7 +435,7 @@ export async function requestEmailChangeCode(
   _ua?: string | null
 ): Promise<{ success: boolean; alreadyAuthorized?: boolean; error?: string; status?: number }> {
   const [userRows] = await pool.query<RowDataPacket[]>(
-    'SELECT id, username, email, email_changed_at FROM users WHERE id = ? LIMIT 1',
+    'SELECT id, username, email, email_changed_at, is_protected FROM users WHERE id = ? LIMIT 1',
     [userId]
   );
 
@@ -429,6 +444,10 @@ export async function requestEmailChangeCode(
   }
 
   const user = userRows[0];
+  if (user.is_protected) {
+    logger.security.warn('Intento de cambio de correo bloqueado para cuenta protegida por el sistema', { userId });
+    return { success: false, error: 'Esta cuenta está protegida por el sistema y sus datos no pueden ser modificados.', status: 403 };
+  }
   if (!user.email) {
     return { success: false, error: 'La cuenta no tiene un correo electrónico registrado.', status: 400 };
   }
@@ -515,12 +534,17 @@ export async function updateEmail(
   const cleanEmail = newEmail.toLowerCase().trim();
 
   const [currentUserRows] = await pool.query<RowDataPacket[]>(
-    'SELECT id, email, email_changed_at FROM users WHERE id = ? LIMIT 1',
+    'SELECT id, email, email_changed_at, is_protected FROM users WHERE id = ? LIMIT 1',
     [userId]
   );
 
   if (currentUserRows.length === 0) {
     return { success: false, error: 'Usuario no encontrado.', status: 404 };
+  }
+
+  if (currentUserRows[0].is_protected) {
+    logger.security.warn('Intento de actualizar correo bloqueado para cuenta protegida por el sistema', { userId });
+    return { success: false, error: 'Esta cuenta está protegida por el sistema y sus datos no pueden ser modificados.', status: 403 };
   }
 
   const oldEmail = currentUserRows[0].email;
@@ -589,7 +613,7 @@ export async function verifyCurrentPassword(
   }
 
   const [rows] = await pool.query<RowDataPacket[]>(
-    'SELECT id, password_hash, google_id FROM users WHERE id = ? LIMIT 1',
+    'SELECT id, password_hash, google_id, is_protected FROM users WHERE id = ? LIMIT 1',
     [userId]
   );
 
@@ -598,6 +622,11 @@ export async function verifyCurrentPassword(
   }
 
   const user = rows[0];
+
+  if (user.is_protected) {
+    logger.security.warn('Intento de verificar contraseña bloqueado para cuenta protegida por el sistema', { userId });
+    return { success: false, error: 'Esta cuenta está protegida por el sistema y sus datos no pueden ser modificados.', status: 403 };
+  }
 
   if (!user.password_hash) {
     return {
@@ -650,12 +679,17 @@ export async function updateUserPasswordFromSettings(
   }
 
   const [userRows] = await pool.query<RowDataPacket[]>(
-    'SELECT id, password_hash FROM users WHERE id = ? LIMIT 1',
+    'SELECT id, password_hash, is_protected FROM users WHERE id = ? LIMIT 1',
     [userId]
   );
 
   if (userRows.length === 0) {
     return { success: false, error: 'Usuario no encontrado.', status: 404 };
+  }
+
+  if (userRows[0].is_protected) {
+    logger.security.warn('Intento de cambiar contraseña bloqueado para cuenta protegida por el sistema', { userId });
+    return { success: false, error: 'Esta cuenta está protegida por el sistema y sus datos no pueden ser modificados.', status: 403 };
   }
 
   if (userRows[0].password_hash) {
@@ -681,7 +715,7 @@ export async function unlinkGoogleAccount(
   ua?: string | null
 ): Promise<{ success: boolean; error?: string; status?: number }> {
   const [rows] = await pool.query<RowDataPacket[]>(
-    'SELECT id, google_id, password_hash FROM users WHERE id = ? LIMIT 1',
+    'SELECT id, google_id, password_hash, is_protected FROM users WHERE id = ? LIMIT 1',
     [userId]
   );
 
@@ -690,6 +724,11 @@ export async function unlinkGoogleAccount(
   }
 
   const user = rows[0];
+
+  if (user.is_protected) {
+    logger.security.warn('Intento de desvincular Google bloqueado para cuenta protegida por el sistema', { userId });
+    return { success: false, error: 'Esta cuenta está protegida por el sistema y sus datos no pueden ser modificados.', status: 403 };
+  }
 
   if (!user.google_id) {
     return { success: false, error: 'Esta cuenta no tiene una cuenta de Google vinculada.', status: 400 };
