@@ -1525,6 +1525,38 @@ export class DocController implements ViewController {
     this.insertImageElement(dataUrl, '160px', name);
   }
 
+  public insertYouTubeEmbed(videoId: string, title = 'Video de YouTube'): void {
+    const embedUrl = `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1`;
+    const wrapper = document.createElement('div');
+    wrapper.className = 'doc-image-wrapper doc-img-wrap--center doc-img-radius--8 doc-img-shadow--md';
+    wrapper.style.width = '80%';
+    wrapper.style.maxWidth = '640px';
+    wrapper.style.margin = '16px auto';
+    wrapper.innerHTML = `
+      <div style="position: relative; width: 100%; padding-bottom: 56.25%; height: 0; border-radius: 8px; overflow: hidden; background: #000;">
+        <iframe src="${embedUrl}" title="${escapeHtml(title)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;"></iframe>
+      </div>
+    `;
+
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      const range = sel.getRangeAt(0);
+      range.deleteContents();
+      range.insertNode(wrapper);
+      const afterP = document.createElement('p');
+      afterP.innerHTML = '<br>';
+      wrapper.after(afterP);
+    } else {
+      const firstPage = this.container.querySelector('.doc-page__content');
+      firstPage?.appendChild(wrapper);
+    }
+
+    this.initSingleImageWrapper(wrapper);
+    this.selectImageWrapper(wrapper);
+    this.recordChange();
+    showToast('Video de YouTube insertado en el documento', 'success');
+  }
+
   public insertTextPreset(type: 'heading' | 'subheading' | 'body'): void {
     const html = {
       body: `<p>${TEXT_PRESETS.body.text}</p>`,

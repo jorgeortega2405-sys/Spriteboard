@@ -556,10 +556,6 @@ class HomeController {
     this.typeDropdownController = null;
     this.sortDropdownController?.destroy();
     this.sortDropdownController = null;
-    this.folderTypeDropdownController?.destroy();
-    this.folderTypeDropdownController = null;
-    this.folderSortDropdownController?.destroy();
-    this.folderSortDropdownController = null;
     this.templatesTypeDropdownController?.destroy();
     this.templatesTypeDropdownController = null;
     this.templatesSortDropdownController?.destroy();
@@ -1577,11 +1573,7 @@ class HomeController {
       }
       openMoveCanvasModal(canvas, {
         onMoved: () => {
-          if (this.currentFolderUuid) {
-            void this.openFolder(this.currentFolderUuid, false);
-          } else {
-            void this.loadAll();
-          }
+          void this.loadAll();
         },
       });
     });
@@ -2501,11 +2493,7 @@ class HomeController {
     openMoveCanvasModal(selectedCanvases, {
       onMoved: () => {
         this.clearSelection();
-        if (this.currentFolderUuid) {
-          void this.openFolder(this.currentFolderUuid, false);
-        } else {
-          void this.loadAll();
-        }
+        void this.loadAll();
       },
     });
   }
@@ -2519,7 +2507,7 @@ class HomeController {
         'dragenter',
         (e) => {
           e.preventDefault();
-          if (this.currentFolderUuid && this.currentDraggedUuids.length > 0) {
+          if (this.currentDraggedUuids.length > 0) {
             el.classList.add('is-drop-target');
           }
         },
@@ -2530,7 +2518,7 @@ class HomeController {
         'dragover',
         (e) => {
           e.preventDefault();
-          if (this.currentFolderUuid && this.currentDraggedUuids.length > 0 && e.dataTransfer) {
+          if (this.currentDraggedUuids.length > 0 && e.dataTransfer) {
             e.dataTransfer.dropEffect = 'move';
             if (!el.classList.contains('is-drop-target')) {
               el.classList.add('is-drop-target');
@@ -2560,7 +2548,6 @@ class HomeController {
             this.didDrag = false;
           }, 150);
           el.classList.remove('is-drop-target');
-          if (!this.currentFolderUuid) return;
 
           let uuids = this.currentDraggedUuids;
           if (!uuids || uuids.length === 0) {
@@ -2648,12 +2635,7 @@ class HomeController {
       }
 
       this.clearSelection();
-
-      if (this.currentFolderUuid) {
-        await this.openFolder(this.currentFolderUuid, false);
-      } else {
-        await this.loadAll();
-      }
+      await this.loadAll();
     } catch {
       showToast(t('canvas.folder_move_error') || 'Error al mover lienzos', 'danger');
     }

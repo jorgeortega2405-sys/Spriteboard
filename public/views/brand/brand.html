@@ -1,0 +1,440 @@
+<div class="component-wrapper component-wrapper--full view-wrapper brand-wrapper" data-ref="brand-wrapper">
+  <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable brand-scrollable" data-ref="brand-scrollable">
+    <div class="view-body" data-ref="brand-container">
+      <div class="view-backdrop" data-ref="brand-gradient-backdrop"></div>
+
+      <div class="view-header" data-ref="brand-floating-top">
+        <div class="view-header__left" data-ref="brand-floating-left">
+          <div class="brand-kit-picker" data-ref="kit-picker-container" style="display: none;">
+            <button type="button" class="brand-kit-picker__btn" data-ref="btn-trigger-kit-picker">
+              <div style="display: flex; align-items: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                <span class="brand-kit-picker__dot" data-ref="active-kit-dot" style="background-color: #6366f1;"></span>
+                <span data-ref="active-kit-name">Cargando...</span>
+              </div>
+              <svg class="component-icon" aria-hidden="true" style="font-size: 18px; margin-left: 6px;"><use href="/icons.svg#expand_more"></use></svg>
+            </button>
+
+            <div class="dropdown-backdrop" data-ref="kit-picker-dropdown-backdrop">
+              <div class="menu-panel menu-panel--dropdown menu-panel--w-285 menu-panel--h-auto rail-floating-panel" data-ref="kit-picker-menu">
+                <div class="menu-panel__list menu-panel__list--scrollable" data-ref="kit-picker-list" style="max-height: 280px;"></div>
+                <div class="menu-divider"></div>
+                <button type="button" class="menu-item" data-ref="btn-picker-create-kit">
+                  <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+                  <span class="menu-item__text" data-i18n="brand.create_kit">Crear nuevo kit</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="view-header__right" data-ref="brand-floating-right">
+          <div class="view-header__actions" data-ref="brand-default-actions">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-kit-options" data-tooltip="Opciones del kit" aria-label="Opciones del kit">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#more_vert"></use></svg>
+            </button>
+            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-create-kit" data-tooltip="Crear kit de marca" aria-label="Crear kit de marca">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+            </button>
+          </div>
+
+          <div class="dropdown-backdrop" data-ref="kit-options-backdrop">
+            <div class="menu-panel menu-panel--dropdown menu-panel--w-225 menu-panel--h-auto rail-floating-panel" data-ref="kit-options-menu">
+              <button type="button" class="menu-item" data-ref="btn-option-edit-kit">
+                <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
+                <span class="menu-item__text" data-i18n="brand.edit_kit">Editar información</span>
+              </button>
+              <button type="button" class="menu-item" data-ref="btn-option-duplicate-kit">
+                <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
+                <span class="menu-item__text" data-i18n="brand.duplicate_kit">Duplicar kit</span>
+              </button>
+              <button type="button" class="menu-item" data-ref="btn-option-set-default">
+                <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#star"></use></svg>
+                <span class="menu-item__text" data-i18n="brand.set_default">Marcar predeterminado</span>
+              </button>
+              <div class="menu-divider"></div>
+              <button type="button" class="menu-item menu-item--danger" data-ref="btn-option-delete-kit">
+                <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
+                <span class="menu-item__text" data-i18n="brand.delete_kit">Eliminar kit</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="view-hero brand-hero" data-ref="brand-hero">
+        <div class="view-hero__content">
+          <h1 class="view-hero__title" data-ref="brand-hero-title" data-i18n="brand.title">Kits de marca</h1>
+
+          <div class="view-search-pill" data-ref="brand-search-box">
+            <svg class="component-icon view-search-pill__icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+            <input class="view-search-pill__input" data-ref="brand-search-input" data-i18n-placeholder="brand.search_placeholder" type="text" placeholder="Buscar en kit de marca..." autocomplete="off" />
+            <button type="button" class="component-button component-button--h32 component-button--icon-only view-search-pill__clear" data-ref="btn-brand-clear-search" style="display: none;" aria-label="Limpiar búsqueda">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+            </button>
+          </div>
+
+          <div class="component-tags-carousel-wrapper view-tags-wrapper" data-ref="brand-tags-carousel-wrapper">
+            <button type="button" class="component-tag-nav-btn component-tag-nav-left is-disabled" data-ref="btn-tags-scroll-left" data-tooltip="Desplazar categorías a la izquierda" aria-label="Desplazar categorías a la izquierda">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+            </button>
+
+            <div class="component-tags-carousel" data-ref="brand-categories-badges">
+              <button type="button" class="component-badge component-badge--interactive is-active" data-ref="tab-logos" data-tab="logos">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#image"></use></svg>
+                <span data-i18n="brand.tab_logos">Logotipos</span>
+                <span class="brand-nav-tab__count" data-ref="count-logos">0</span>
+              </button>
+              <button type="button" class="component-badge component-badge--interactive" data-ref="tab-colors" data-tab="colors">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#palette"></use></svg>
+                <span data-i18n="brand.tab_colors">Colores y Paletas</span>
+                <span class="brand-nav-tab__count" data-ref="count-colors">0</span>
+              </button>
+              <button type="button" class="component-badge component-badge--interactive" data-ref="tab-fonts" data-tab="fonts">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#text_fields"></use></svg>
+                <span data-i18n="brand.tab_fonts">Tipografías</span>
+                <span class="brand-nav-tab__count" data-ref="count-fonts">5</span>
+              </button>
+              <button type="button" class="component-badge component-badge--interactive" data-ref="tab-photos" data-tab="photos">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#photo_camera"></use></svg>
+                <span data-i18n="brand.tab_photos">Fotografías</span>
+                <span class="brand-nav-tab__count" data-ref="count-photos">0</span>
+              </button>
+              <button type="button" class="component-badge component-badge--interactive" data-ref="tab-elements" data-tab="elements">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#category"></use></svg>
+                <span data-i18n="brand.tab_elements">Elementos Gráficos</span>
+                <span class="brand-nav-tab__count" data-ref="count-elements">0</span>
+              </button>
+              <button type="button" class="component-badge component-badge--interactive" data-ref="tab-charts" data-tab="charts">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#bar_chart"></use></svg>
+                <span data-i18n="brand.tab_charts">Gráficas</span>
+                <span class="brand-nav-tab__count" data-ref="count-charts">0</span>
+              </button>
+              <button type="button" class="component-badge component-badge--interactive" data-ref="tab-templates" data-tab="templates">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#space_dashboard"></use></svg>
+                <span data-i18n="brand.tab_templates">Plantillas</span>
+                <span class="brand-nav-tab__count" data-ref="count-templates">0</span>
+              </button>
+              <button type="button" class="component-badge component-badge--interactive" data-ref="tab-voice" data-tab="voice">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#record_voice_over"></use></svg>
+                <span data-i18n="brand.tab_voice">Voz y Pautas</span>
+              </button>
+            </div>
+
+            <button type="button" class="component-tag-nav-btn component-tag-nav-right is-disabled" data-ref="btn-tags-scroll-right" data-tooltip="Desplazar categorías a la derecha" aria-label="Desplazar categorías a la derecha">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="component-locked-state is-hidden" data-ref="brand-locked-state">
+        <div class="component-locked-state__card" data-ref="brand-locked-card">
+          <div class="component-locked-state__icon-box" data-ref="brand-locked-icon">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#workspace_premium"></use></svg>
+          </div>
+          <span class="component-locked-state__badge" data-ref="brand-locked-badge">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#lock"></use></svg>
+            <span data-i18n="brand.locked_badge">Función Negocios</span>
+          </span>
+          <h2 class="component-locked-state__title" data-ref="brand-locked-title" data-i18n="brand.locked_title">Desbloquea los Kits de Marca</h2>
+          <p class="component-locked-state__desc" data-ref="brand-locked-desc" data-i18n="brand.locked_desc">Centraliza los logotipos, paletas de color, tipografías, fotos, elementos gráficos, estilos de gráficas y plantillas oficiales de tu marca en hasta 500 kits personalizados.</p>
+          <div class="component-locked-state__benefits" data-ref="brand-locked-benefits">
+            <div class="component-locked-state__benefit-item">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+              <span data-i18n="brand.locked_benefit_1">Crea y administra hasta 500 kits de marca para diferentes marcas o clientes</span>
+            </div>
+            <div class="component-locked-state__benefit-item">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+              <span data-i18n="brand.locked_benefit_2">Acceso instantáneo con 1 clic a logos, colores y fuentes desde el editor</span>
+            </div>
+            <div class="component-locked-state__benefit-item">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+              <span data-i18n="brand.locked_benefit_3">Plantillas y gráficas sincronizadas con la identidad corporativa</span>
+            </div>
+          </div>
+          <div class="component-locked-state__actions" data-ref="brand-locked-actions">
+            <button type="button" class="component-button component-button--h40 component-button--black" data-ref="btn-locked-upgrade">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#workspace_premium"></use></svg>
+              <span data-i18n="brand.locked_btn_upgrade">Mejorar a Negocios</span>
+            </button>
+            <button type="button" class="component-button component-button--h40 component-button--outline" data-ref="btn-locked-home" data-i18n="brand.locked_btn_home">Ir al inicio</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="canvas-section brand-content-view" data-ref="brand-content-view">
+        <div class="brand-pane" data-ref="pane-logos">
+          <div class="brand-section-header">
+            <div>
+              <h2 class="brand-section-title" data-i18n="brand.logos_title">Logotipos de la marca</h2>
+              <p class="brand-section-desc" data-i18n="brand.logos_desc">Sube las versiones oficiales de tu logo (principal, secundario, isotipo, versiones claras y oscuras en PNG o SVG).</p>
+            </div>
+            <button type="button" class="component-button component-button--h36 component-button--black" data-ref="btn-trigger-upload-logo">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+              <span data-i18n="brand.btn_add_logo">Subir logotipo</span>
+            </button>
+          </div>
+
+          <div class="brand-upload-dropzone" data-ref="dropzone-logos">
+            <div class="brand-upload-dropzone__icon">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cloud_upload"></use></svg>
+            </div>
+            <span class="brand-upload-dropzone__title" data-i18n="brand.drop_logo_title">Arrastra y suelta tu logotipo aquí</span>
+            <span class="brand-upload-dropzone__desc" data-i18n="brand.drop_logo_desc">Formatos admitidos: PNG transparente, SVG, JPG, WebP hasta 20 MB</span>
+          </div>
+
+          <div class="brand-grid" data-ref="grid-logos"></div>
+        </div>
+
+        <div class="brand-pane is-hidden" data-ref="pane-colors">
+          <div class="brand-section-header">
+            <div>
+              <h2 class="brand-section-title" data-i18n="brand.colors_title">Colores y Paletas</h2>
+              <p class="brand-section-desc" data-i18n="brand.colors_desc">Define los colores primarios, secundarios, acentos y neutros para aplicar instantáneamente a tus diseños.</p>
+            </div>
+            <button type="button" class="component-button component-button--h36 component-button--black" data-ref="btn-trigger-add-color">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+              <span data-i18n="brand.btn_add_color">Agregar color</span>
+            </button>
+          </div>
+
+          <div class="brand-palettes-container" data-ref="container-palettes"></div>
+        </div>
+
+        <div class="brand-pane is-hidden" data-ref="pane-fonts">
+          <div class="brand-section-header">
+            <div>
+              <h2 class="brand-section-title" data-i18n="brand.fonts_title">Tipografías de la marca</h2>
+              <p class="brand-section-desc" data-i18n="brand.fonts_desc">Configura tus fuentes de marca y estilos de texto.</p>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <button type="button" class="component-button component-button--h36 component-button--outline" data-ref="btn-trigger-upload-font">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#upload"></use></svg>
+                <span data-i18n="brand.btn_upload_font">Subir una fuente</span>
+              </button>
+              <button type="button" class="component-button component-button--h36 component-button--black" data-ref="btn-save-fonts">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#save"></use></svg>
+                <span data-i18n="brand.btn_save_fonts">Guardar tipografías</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="brand-custom-fonts-section is-hidden" data-ref="section-custom-fonts">
+            <div class="brand-subsection-header">
+              <span class="brand-subsection-title" data-i18n="brand.uploaded_fonts_title">Fuentes subidas</span>
+              <span class="brand-nav-tab__count" data-ref="count-custom-fonts">0</span>
+            </div>
+            <div class="brand-custom-fonts-grid" data-ref="container-custom-fonts"></div>
+          </div>
+
+          <div class="brand-text-styles-section" data-ref="section-text-styles">
+            <div class="brand-subsection-header">
+              <span class="brand-subsection-title" data-i18n="brand.text_styles_title">Estilos de texto de marca</span>
+            </div>
+            <div class="brand-fonts-container" data-ref="container-fonts"></div>
+          </div>
+        </div>
+
+        <div class="brand-pane is-hidden" data-ref="pane-photos">
+          <div class="brand-section-header">
+            <div>
+              <h2 class="brand-section-title" data-i18n="brand.photos_title">Banco de fotografías de marca</h2>
+              <p class="brand-section-desc" data-i18n="brand.photos_desc">Fotografías corporativas, de productos o de equipo para usar en proyectos de tu equipo.</p>
+            </div>
+            <button type="button" class="component-button component-button--h36 component-button--black" data-ref="btn-trigger-upload-photo">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+              <span data-i18n="brand.btn_add_photo">Subir fotografía</span>
+            </button>
+          </div>
+
+          <div class="brand-upload-dropzone" data-ref="dropzone-photos">
+            <div class="brand-upload-dropzone__icon">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cloud_upload"></use></svg>
+            </div>
+            <span class="brand-upload-dropzone__title" data-i18n="brand.drop_photo_title">Arrastra y suelta tus fotos aquí</span>
+            <span class="brand-upload-dropzone__desc" data-i18n="brand.drop_photo_desc">Formatos admitidos: JPG, PNG, WebP hasta 20 MB</span>
+          </div>
+
+          <div class="brand-grid" data-ref="grid-photos"></div>
+        </div>
+
+        <div class="brand-pane is-hidden" data-ref="pane-elements">
+          <div class="brand-section-header">
+            <div>
+              <h2 class="brand-section-title" data-i18n="brand.elements_title">Elementos Gráficos e Iconos</h2>
+              <p class="brand-section-desc" data-i18n="brand.elements_desc">Iconografía oficial, ilustraciones vectoriales, pegatinas y sellos de tu marca.</p>
+            </div>
+            <button type="button" class="component-button component-button--h36 component-button--black" data-ref="btn-trigger-upload-element">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+              <span data-i18n="brand.btn_add_element">Subir elemento</span>
+            </button>
+          </div>
+
+          <div class="brand-upload-dropzone" data-ref="dropzone-elements">
+            <div class="brand-upload-dropzone__icon">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cloud_upload"></use></svg>
+            </div>
+            <span class="brand-upload-dropzone__title" data-i18n="brand.drop_element_title">Arrastra y suelta tus vectores o iconos aquí</span>
+            <span class="brand-upload-dropzone__desc" data-i18n="brand.drop_element_desc">Formatos admitidos: SVG vector o PNG transparente</span>
+          </div>
+
+          <div class="brand-grid" data-ref="grid-elements"></div>
+        </div>
+
+        <div class="brand-pane is-hidden" data-ref="pane-charts">
+          <div class="brand-section-header">
+            <div>
+              <h2 class="brand-section-title" data-i18n="brand.charts_title">Estilos de Gráficas de Marca</h2>
+              <p class="brand-section-desc" data-i18n="brand.charts_desc">Configura las paletas cromáticas para gráficos estadísticos y temas predeterminados de datos.</p>
+            </div>
+            <button type="button" class="component-button component-button--h36 component-button--black" data-ref="btn-trigger-add-chart">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+              <span data-i18n="brand.btn_add_chart">Nuevo estilo de gráfica</span>
+            </button>
+          </div>
+
+          <div class="brand-grid" data-ref="grid-charts"></div>
+        </div>
+
+        <div class="brand-pane is-hidden" data-ref="pane-templates">
+          <div class="brand-section-header">
+            <div>
+              <h2 class="brand-section-title" data-i18n="brand.templates_title">Plantillas de Marca</h2>
+              <p class="brand-section-desc" data-i18n="brand.templates_desc">Lienzos y documentos oficiales que tu equipo puede reutilizar como punto de partida.</p>
+            </div>
+            <button type="button" class="component-button component-button--h36 component-button--black" data-ref="btn-trigger-add-template">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+              <span data-i18n="brand.btn_add_template">Vincular plantilla</span>
+            </button>
+          </div>
+
+          <div class="brand-grid" data-ref="grid-templates"></div>
+        </div>
+
+        <div class="brand-pane is-hidden" data-ref="pane-voice">
+          <div class="brand-section-header">
+            <div>
+              <h2 class="brand-section-title" data-i18n="brand.voice_title">Voz y Pautas de Marca</h2>
+              <p class="brand-section-desc" data-i18n="brand.voice_desc">Describe el tono de comunicación, valores, eslogan y pautas de estilo corporativo.</p>
+            </div>
+            <button type="button" class="component-button component-button--h36 component-button--black" data-ref="btn-save-voice">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#save"></use></svg>
+              <span data-i18n="brand.btn_save_voice">Guardar pautas</span>
+            </button>
+          </div>
+
+          <div class="brand-voice-box">
+            <label class="field" data-ref="field-brand-voice" style="margin-bottom: 16px;">
+              <textarea class="brand-voice-textarea" data-ref="textarea-brand-voice" placeholder="Escribe aquí el tono de voz, eslogan, personalidad de marca y lineamientos de comunicación..."></textarea>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <input class="brand-hidden-file-input" data-ref="file-input-logo" type="file" accept="image/png,image/svg+xml,image/jpeg,image/webp" style="display: none;" />
+  <input class="brand-hidden-file-input" data-ref="file-input-photo" type="file" accept="image/png,image/jpeg,image/webp,image/jpg" style="display: none;" />
+  <input class="brand-hidden-file-input" data-ref="file-input-element" type="file" accept="image/svg+xml,image/png" style="display: none;" />
+  <input class="brand-hidden-file-input" data-ref="file-input-font" type="file" accept=".ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2" style="display: none;" />
+</div>
+
+<div class="modal-backdrop" data-ref="modal-kit-backdrop">
+  <div class="modal-container" data-ref="modal-kit-container">
+    <button type="button" class="modal-close-btn" data-ref="btn-close-kit-modal" aria-label="Cerrar modal">
+      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+    </button>
+    <div class="modal-card modal-card--w-520" data-ref="modal-kit-card">
+      <div class="modal-card__header">
+        <h2 class="modal-card__title" data-ref="modal-kit-title" data-i18n="brand.modal_create_title">Nuevo kit de marca</h2>
+      </div>
+      <form class="modal-card__body" data-ref="form-kit">
+        <label class="field" data-ref="field-kit-name">
+          <input class="field__input" data-ref="input-kit-name" type="text" placeholder=" " maxlength="100" autocomplete="off" required />
+          <span class="field__label" data-ref="label-kit-name" data-i18n="brand.kit_name_label">Nombre del kit de marca</span>
+        </label>
+        <label class="field" data-ref="field-kit-desc">
+          <input class="field__input" data-ref="input-kit-desc" type="text" placeholder=" " maxlength="255" autocomplete="off" />
+          <span class="field__label" data-ref="label-kit-desc" data-i18n="brand.kit_desc_label">Descripción o eslogan (opcional)</span>
+        </label>
+        <label class="field" data-ref="field-kit-color">
+          <input class="field__input" data-ref="input-kit-color" type="color" value="#6366f1" style="height: 48px; padding: 4px;" />
+          <span class="field__label" data-ref="label-kit-color" data-i18n="brand.kit_color_label">Color identificador del kit</span>
+        </label>
+
+        <div class="modal-card__actions">
+          <button type="button" class="component-button component-button--h40 component-button--outline" data-ref="btn-cancel-kit" data-i18n="modal.cancel">Cancelar</button>
+          <button type="submit" class="component-button component-button--h40 component-button--black" data-ref="btn-submit-kit" data-i18n="brand.btn_save_kit">Guardar kit</button>
+        </div>
+        <div class="banner banner--danger is-hidden" data-ref="banner-kit-error"></div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" data-ref="modal-color-backdrop">
+  <div class="modal-container" data-ref="modal-color-container">
+    <button type="button" class="modal-close-btn" data-ref="btn-close-color-modal" aria-label="Cerrar modal">
+      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+    </button>
+    <div class="modal-card modal-card--w-425" data-ref="modal-color-card">
+      <div class="modal-card__header">
+        <h2 class="modal-card__title" data-ref="modal-color-title" data-i18n="brand.modal_add_color_title">Agregar color a la marca</h2>
+      </div>
+      <form class="modal-card__body" data-ref="form-color">
+        <label class="field" data-ref="field-color-name">
+          <input class="field__input" data-ref="input-color-name" type="text" placeholder=" " maxlength="100" autocomplete="off" required />
+          <span class="field__label" data-ref="label-color-name" data-i18n="brand.color_name_label">Nombre del color (ej. Azul Corporativo)</span>
+        </label>
+        <label class="field" data-ref="field-color-hex">
+          <input class="field__input" data-ref="input-color-hex" type="text" placeholder=" " maxlength="20" autocomplete="off" value="#6366f1" required />
+          <span class="field__label" data-ref="label-color-hex" data-i18n="brand.color_hex_label">Código HEX (ej. #6366f1)</span>
+        </label>
+        <label class="field" data-ref="field-color-palette">
+          <input class="field__input" data-ref="input-color-palette" type="text" placeholder=" " maxlength="100" autocomplete="off" value="Paleta principal" />
+          <span class="field__label" data-ref="label-color-palette" data-i18n="brand.color_palette_label">Nombre de la paleta</span>
+        </label>
+
+        <div class="modal-card__actions">
+          <button type="button" class="component-button component-button--h40 component-button--outline" data-ref="btn-cancel-color" data-i18n="modal.cancel">Cancelar</button>
+          <button type="submit" class="component-button component-button--h40 component-button--black" data-ref="btn-submit-color" data-i18n="brand.btn_save_color">Añadir color</button>
+        </div>
+        <div class="banner banner--danger is-hidden" data-ref="banner-color-error"></div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" data-ref="modal-template-backdrop">
+  <div class="modal-container" data-ref="modal-template-container">
+    <button type="button" class="modal-close-btn" data-ref="btn-close-template-modal" aria-label="Cerrar modal">
+      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+    </button>
+    <div class="modal-card modal-card--w-520" data-ref="modal-template-card">
+      <div class="modal-card__header">
+        <h2 class="modal-card__title" data-ref="modal-template-title" data-i18n="brand.modal_add_template_title">Vincular plantilla de marca</h2>
+      </div>
+      <form class="modal-card__body" data-ref="form-template">
+        <label class="field" data-ref="field-template-name">
+          <input class="field__input" data-ref="input-template-name" type="text" placeholder=" " maxlength="150" autocomplete="off" required />
+          <span class="field__label" data-ref="label-template-name" data-i18n="brand.template_name_label">Nombre de la plantilla</span>
+        </label>
+        <label class="field" data-ref="field-template-desc">
+          <input class="field__input" data-ref="input-template-desc" type="text" placeholder=" " maxlength="255" autocomplete="off" />
+          <span class="field__label" data-ref="label-template-desc" data-i18n="brand.template_desc_label">Descripción de uso</span>
+        </label>
+
+        <div class="field-group" style="margin-top: 12px;">
+          <span class="field__label" style="position: static; transform: none; font-size: 12px; margin-bottom: 6px; display: block;" data-i18n="brand.template_canvas_select">Selecciona uno de tus lienzos existentes</span>
+          <div class="brand-template-canvas-picker" data-ref="template-canvas-picker" style="max-height: 200px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; padding: 6px;"></div>
+        </div>
+
+        <div class="modal-card__actions">
+          <button type="button" class="component-button component-button--h40 component-button--outline" data-ref="btn-cancel-template" data-i18n="modal.cancel">Cancelar</button>
+          <button type="submit" class="component-button component-button--h40 component-button--black" data-ref="btn-submit-template" data-i18n="brand.btn_save_template">Guardar plantilla</button>
+        </div>
+        <div class="banner banner--danger is-hidden" data-ref="banner-template-error"></div>
+      </form>
+    </div>
+  </div>
+</div>

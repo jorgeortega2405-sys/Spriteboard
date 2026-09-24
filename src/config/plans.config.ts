@@ -5,7 +5,8 @@ export type { SubscriptionTierId };
 export type PlanFeatureKey =
   | 'teams'
   | 'live_collaborators_extended'
-  | 'enterprise_sso';
+  | 'enterprise_sso'
+  | 'brand_kits';
 
 export interface PlanLimits {
   storageBytes: number;
@@ -18,6 +19,7 @@ export interface PlanLimits {
   trashRetentionDays: number;
   maxExportScale: number;
   allowedExportTypes: string[];
+  maxBrandKits: number;
 }
 
 export interface PlanBenefitDefinition {
@@ -52,6 +54,7 @@ export const PLAN_TIER_CONFIGS: Record<SubscriptionTierId, PlanBenefitDefinition
       trashRetentionDays: 30,
       maxExportScale: 16,
       allowedExportTypes: ['png-current', 'project-json', 'spritesheet', 'gif', 'spritesheet-atlas'],
+      maxBrandKits: 0,
     },
     features: [],
     borderColor: '#9ca3af',
@@ -75,6 +78,7 @@ export const PLAN_TIER_CONFIGS: Record<SubscriptionTierId, PlanBenefitDefinition
       trashRetentionDays: 30,
       maxExportScale: 16,
       allowedExportTypes: ['png-current', 'project-json', 'spritesheet', 'gif', 'spritesheet-atlas'],
+      maxBrandKits: 0,
     },
     features: [
       'live_collaborators_extended',
@@ -100,11 +104,13 @@ export const PLAN_TIER_CONFIGS: Record<SubscriptionTierId, PlanBenefitDefinition
       trashRetentionDays: 30,
       maxExportScale: 16,
       allowedExportTypes: ['png-current', 'project-json', 'spritesheet', 'gif', 'spritesheet-atlas'],
+      maxBrandKits: 500,
     },
     features: [
       'teams',
       'live_collaborators_extended',
       'enterprise_sso',
+      'brand_kits',
     ],
     borderColor: 'conic-gradient(from 295deg, #8b5cf6 0% 28%, #ec4899 28% 57%, #3b82f6 57% 85%, #6366f1 85% 100%)',
     ringBg: 'rgba(139, 92, 246, 0.18)',
@@ -115,6 +121,7 @@ export const FEATURE_REQUIREMENTS: Record<PlanFeatureKey, { minTier: Subscriptio
   teams: { minTier: 'business', name: 'Gestión de equipos' },
   live_collaborators_extended: { minTier: 'pro', name: 'Colaboración en vivo extendida' },
   enterprise_sso: { minTier: 'business', name: 'Autenticación empresarial (SSO / SCIM)' },
+  brand_kits: { minTier: 'business', name: 'Kits de marca' },
 };
 
 export const TIER_RANK: Record<SubscriptionTierId, number> = {

@@ -1057,7 +1057,138 @@ export async function runMigrations(): Promise<void> {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
-    logger.db.info('Tablas, columnas e índices de identidad, 2FA, suscripciones, compras, GeoIP, db_canvas, templates, equipos, vistas, feedback IA, snapshots, notificaciones, soporte técnico y solicitudes de diseñador verificadas exitosamente.');
+    await canvasPool.query(`
+      CREATE TABLE IF NOT EXISTS brand_kits (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        uuid VARCHAR(36) NOT NULL UNIQUE,
+        user_id INT NOT NULL,
+        team_id INT NULL DEFAULT NULL,
+        name VARCHAR(100) NOT NULL,
+        description VARCHAR(255) NULL,
+        color VARCHAR(20) NOT NULL DEFAULT '#6366f1',
+        icon VARCHAR(50) NULL DEFAULT 'workspace_premium',
+        is_default BOOLEAN NOT NULL DEFAULT FALSE,
+        brand_voice TEXT NULL,
+        brand_guidelines JSON NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_brand_kits_user (user_id),
+        INDEX idx_brand_kits_team (team_id),
+        INDEX idx_brand_kits_uuid (uuid),
+        INDEX idx_brand_kits_user_created (user_id, created_at DESC)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await canvasPool.query(`
+      CREATE TABLE IF NOT EXISTS brand_kit_colors (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        uuid VARCHAR(36) NOT NULL UNIQUE,
+        brand_kit_id INT NOT NULL,
+        palette_name VARCHAR(100) NOT NULL DEFAULT 'Paleta principal',
+        name VARCHAR(100) NOT NULL,
+        hex VARCHAR(20) NOT NULL,
+        color_type ENUM('primary', 'secondary', 'accent', 'neutral', 'background', 'text', 'gradient') NOT NULL DEFAULT 'primary',
+        gradient_data JSON NULL,
+        sort_order INT NOT NULL DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_bkc_kit (brand_kit_id),
+        INDEX idx_bkc_kit_order (brand_kit_id, sort_order ASC),
+        FOREIGN KEY (brand_kit_id) REFERENCES brand_kits(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await canvasPool.query(`
+      CREATE TABLE IF NOT EXISTS brand_kit_fonts (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        uuid VARCHAR(36) NOT NULL UNIQUE,
+        brand_kit_id INT NOT NULL,
+        role VARCHAR(50) NOT NULL,
+        font_family VARCHAR(100) NOT NULL,
+        font_weight VARCHAR(20) NOT NULL DEFAULT '400',
+        font_style VARCHAR(20) NOT NULL DEFAULT 'normal',
+        font_size INT NULL,
+        line_height FLOAT NULL,
+        letter_spacing VARCHAR(20) NULL,
+        font_url VARCHAR(512) NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_brand_font_role (brand_kit_id, role),
+        INDEX idx_bkf_kit (brand_kit_id),
+        FOREIGN KEY (brand_kit_id) REFERENCES brand_kits(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    try {
+      await canvasPool.query("ALTER TABLE brand_kit_fonts MODIFY COLUMN role VARCHAR(50) NOT NULL");
+    } catch {
+      // Ignored if already altered
+    }
+
+    await canvasPool.query(`
+      CREATE TABLE IF NOT EXISTS brand_kit_assets (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        uuid VARCHAR(36) NOT NULL UNIQUE,
+        brand_kit_id INT NOT NULL,
+        asset_type ENUM('logo', 'photo', 'element', 'graphic', 'icon', 'font') NOT NULL,
+        category VARCHAR(50) NOT NULL DEFAULT 'general',
+        name VARCHAR(150) NOT NULL,
+        file_path VARCHAR(512) NOT NULL,
+        preview_url VARCHAR(512) NULL,
+        mime_type VARCHAR(100) NOT NULL DEFAULT 'image/png',
+        size_bytes INT NOT NULL DEFAULT 0,
+        width INT NULL,
+        height INT NULL,
+        tags JSON NULL,
+        sort_order INT NOT NULL DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_bka_kit_type (brand_kit_id, asset_type),
+        INDEX idx_bka_kit_order (brand_kit_id, asset_type, sort_order ASC),
+        FOREIGN KEY (brand_kit_id) REFERENCES brand_kits(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    try {
+      await canvasPool.query("ALTER TABLE brand_kit_assets MODIFY COLUMN asset_type ENUM('logo', 'photo', 'element', 'graphic', 'icon', 'font') NOT NULL");
+    } catch {
+      // Ignored if already altered
+    }
+
+    await canvasPool.query(`
+      CREATE TABLE IF NOT EXISTS brand_kit_charts (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        uuid VARCHAR(36) NOT NULL UNIQUE,
+        brand_kit_id INT NOT NULL,
+        name VARCHAR(100) NOT NULL,
+        chart_type VARCHAR(50) NOT NULL DEFAULT 'bar',
+        palette JSON NOT NULL,
+        config JSON NULL,
+        sample_data JSON NULL,
+        sort_order INT NOT NULL DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_bkc_kit_chart (brand_kit_id),
+        FOREIGN KEY (brand_kit_id) REFERENCES brand_kits(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await canvasPool.query(`
+      CREATE TABLE IF NOT EXISTS brand_kit_templates (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        uuid VARCHAR(36) NOT NULL UNIQUE,
+        brand_kit_id INT NOT NULL,
+        canvas_id INT NULL DEFAULT NULL,
+        name VARCHAR(150) NOT NULL,
+        description TEXT NULL,
+        canvas_type ENUM('board', 'presentation', 'doc') NOT NULL DEFAULT 'board',
+        preview_thumbnail MEDIUMTEXT NULL,
+        canvas_data JSON NULL,
+        sort_order INT NOT NULL DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_bkt_kit (brand_kit_id),
+        FOREIGN KEY (brand_kit_id) REFERENCES brand_kits(id) ON DELETE CASCADE,
+        FOREIGN KEY (canvas_id) REFERENCES canvases(id) ON DELETE SET NULL
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    logger.db.info('Tablas, columnas e índices de identidad, 2FA, suscripciones, compras, GeoIP, db_canvas, templates, equipos, vistas, feedback IA, snapshots, notificaciones, soporte técnico, solicitudes de diseñador y kits de marca verificadas exitosamente.');
   } catch (err) {
     logger.db.warn('Advertencia en migración de base de datos', err);
   } finally {

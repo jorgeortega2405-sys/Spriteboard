@@ -2,7 +2,7 @@ import { BOARD_3D_SHAPES } from '../../config/board-3d-shapes.config.js';
 import { BOARD_SHAPES } from '../../config/board-shapes.config.js';
 import { MockupFitMode, MockupTemplate } from '../../types/mockups.types.js';
 import { hitTest3DRotationGizmo } from './board-3d-renderer.js';
-import { Board3DElement, BoardChartElement, BoardConnectorElement, BoardElement, BoardImageElement, BoardMockupElement, BoardPoint, BoardSectionElement, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTableCell, BoardTableElement, BoardTextElement, CANVAS_DEFAULTS, ChartDataRow, ChartSeriesConfig, ChartType, ConnectorStyle, DEFAULT_CHART_PALETTES, MarkerType, ResizeHandle, Shape3DType, ShapeType, StrokeStyle } from './board.types.js';
+import { Board3DElement, BoardChartElement, BoardConnectorElement, BoardElement, BoardEmbedElement, BoardImageElement, BoardMockupElement, BoardPoint, BoardSectionElement, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTableCell, BoardTableElement, BoardTextElement, CANVAS_DEFAULTS, ChartDataRow, ChartSeriesConfig, ChartType, ConnectorStyle, DEFAULT_CHART_PALETTES, MarkerType, ResizeHandle, Shape3DType, ShapeType, StrokeStyle } from './board.types.js';
 
 export { hitTest3DRotationGizmo };
 
@@ -484,6 +484,43 @@ export function createConnectorElement(startPoint: BoardPoint, endPoint: BoardPo
     style: options.style || 'curved',
     toId: options.toId,
     type: 'connector',
+  };
+}
+
+export function createEmbedElement(options: {
+  autoplay?: boolean;
+  channelTitle?: string;
+  embedType?: 'generic' | 'youtube';
+  height?: number;
+  id?: string;
+  opacity?: number;
+  thumbnailUrl?: string;
+  title?: string;
+  url: string;
+  videoId?: string;
+  width?: number;
+  x?: number;
+  y?: number;
+}): BoardEmbedElement {
+  const width = options.width ?? 480;
+  const height = options.height ?? 270;
+
+  return {
+    aspectRatioLocked: true,
+    autoplay: options.autoplay ?? false,
+    channelTitle: options.channelTitle || '',
+    embedType: options.embedType || 'youtube',
+    height,
+    id: options.id || `embed-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    opacity: options.opacity ?? CANVAS_DEFAULTS.OPACITY,
+    thumbnailUrl: options.thumbnailUrl || (options.videoId ? `https://i.ytimg.com/vi/${options.videoId}/hqdefault.jpg` : ''),
+    title: options.title || 'Video de YouTube',
+    type: 'embed',
+    url: options.url,
+    videoId: options.videoId,
+    width,
+    x: options.x ?? -Math.round(width / 2),
+    y: options.y ?? -Math.round(height / 2),
   };
 }
 

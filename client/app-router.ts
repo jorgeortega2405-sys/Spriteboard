@@ -22,6 +22,9 @@ let activeEarlySkeletonSession: SkeletonSession | null = null;
 function normalizePath(rawPath: string): string {
   if (!rawPath || rawPath === '/' || rawPath === '') return '/';
   const clean = rawPath.replace(/\/+$/, '');
+  if (clean === '/marca') {
+    return '/brand';
+  }
   if (clean === '/templates/my-templates') {
     return '/templates';
   }
@@ -216,6 +219,19 @@ export async function render(): Promise<void> {
         default:
           viewElements = [await createLoginView()];
           break;
+      }
+    } else if (path === '/brand' || path === '/marca') {
+      if (!currentUser) {
+        window.history.replaceState({}, '', '/login');
+        const { createLoginView } = await import('./views/auth.view.js');
+        viewElements = [await createLoginView()];
+      } else if (!hasFeature('brand_kits', currentUser)) {
+        window.history.replaceState({}, '', previousPath || '/');
+        openUpgradeModal('business');
+        return;
+      } else {
+        const { createBrandView } = await import('./views/brand.view.js');
+        viewElements = [await createBrandView()];
       }
     } else if (path === '/teams') {
       if (!currentUser) {

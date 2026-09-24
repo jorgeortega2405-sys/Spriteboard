@@ -1,3 +1,4 @@
+import { createIconSvg } from '../../services/icon.service.js';
 import { addRecentFontId, DOC_FONT_CATEGORIES, DOC_FONTS_CATALOG, DocFontFamily, DocFontVariant, ensureGoogleFontLoaded, findFontByFamily, findFontById, getRecentFontIds, preloadPopularFonts } from './doc-fonts.config.js';
 
 export interface FontSelectEvent {
@@ -63,16 +64,16 @@ export class DocFontPickerComponent {
     this.parentContainer.innerHTML = `
       <div class="doc-font-picker" data-ref="doc-font-picker-panel">
         <div class="doc-font-picker__search-box">
-          <span class="component-icon doc-font-picker__search-icon">search</span>
-          <input type="text" class="doc-font-picker__search-input" data-ref="font-search-input" placeholder="Buscar fuentes (ej. 'Playfair', 'Cursiva')..." autocomplete="off" spellcheck="false" value="${this.escapeHtml(this.searchQuery)}" />
+          <svg class="component-icon doc-font-picker__search-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+          <input class="doc-font-picker__search-input" data-ref="font-search-input" type="text" placeholder="Buscar fuentes (ej. 'Playfair', 'Cursiva')..." autocomplete="off" spellcheck="false" value="${this.escapeHtml(this.searchQuery)}" />
           <button type="button" class="doc-font-picker__search-clear ${this.searchQuery ? 'is-visible' : ''}" data-ref="btn-clear-font-search" aria-label="Limpiar búsqueda">
-            <span class="component-icon">close</span>
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
           </button>
         </div>
 
         <div class="doc-font-picker__chips" data-ref="font-category-chips">
           ${DOC_FONT_CATEGORIES.map((cat) => `
-            <button type="button" class="doc-font-chip ${this.activeCategory === cat.id ? 'is-active' : ''}" data-ref="chip-category-${cat.id}" data-category="${cat.id}">
+            <button type="button" class="component-badge component-badge--sm ${this.activeCategory === cat.id ? 'is-active' : ''}" data-ref="chip-category-${cat.id}" data-category="${cat.id}">
               ${cat.label}
             </button>
           `).join('')}
@@ -110,7 +111,7 @@ export class DocFontPickerComponent {
       if (filteredFonts.length === 0) {
         return `
           <div class="doc-font-picker__empty">
-            <span class="component-icon doc-font-picker__empty-icon">search_off</span>
+            <svg class="component-icon doc-font-picker__empty-icon" aria-hidden="true"><use href="/icons.svg#search_off"></use></svg>
             <p class="doc-font-picker__empty-text">No se encontraron fuentes para "${this.escapeHtml(query || category)}"</p>
           </div>
         `;
@@ -119,7 +120,7 @@ export class DocFontPickerComponent {
       return `
         <div class="doc-font-section">
           <div class="doc-font-section__title">
-            <span class="component-icon doc-font-section__icon">filter_list</span>
+            <svg class="component-icon doc-font-section__icon" aria-hidden="true"><use href="/icons.svg#filter_list"></use></svg>
             Resultados (${filteredFonts.length})
           </div>
           <div class="doc-font-section__items">
@@ -143,7 +144,7 @@ export class DocFontPickerComponent {
       ${recentFonts.length > 0 ? `
         <div class="doc-font-section">
           <div class="doc-font-section__title">
-            <span class="component-icon doc-font-section__icon">history</span>
+            <svg class="component-icon doc-font-section__icon" aria-hidden="true"><use href="/icons.svg#history"></use></svg>
             Usadas recientemente
           </div>
           <div class="doc-font-section__items">
@@ -154,7 +155,7 @@ export class DocFontPickerComponent {
 
       <div class="doc-font-section">
         <div class="doc-font-section__title">
-          <span class="component-icon doc-font-section__icon">auto_awesome</span>
+          <svg class="component-icon doc-font-section__icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
           Fuentes recomendadas
         </div>
         <div class="doc-font-section__items">
@@ -164,7 +165,7 @@ export class DocFontPickerComponent {
 
       <div class="doc-font-section">
         <div class="doc-font-section__title">
-          <span class="component-icon doc-font-section__icon">font_download</span>
+          <svg class="component-icon doc-font-section__icon" aria-hidden="true"><use href="/icons.svg#font_download"></use></svg>
           Todas las fuentes (${allRemainingFonts.length})
         </div>
         <div class="doc-font-section__items">
@@ -186,7 +187,7 @@ export class DocFontPickerComponent {
         <div class="doc-font-family-row ${isActive ? 'is-active' : ''}" data-ref="font-row-${font.id}" data-family="${font.family}" data-fallback="${font.fallback}" data-font-id="${font.id}">
           ${hasMultipleVariants ? `
             <button type="button" class="doc-font-family-row__expand ${isExpanded ? 'is-expanded' : ''}" data-ref="btn-expand-${font.id}" data-font-id="${font.id}" aria-label="Ver variantes de ${font.name}" title="Ver variantes">
-              <span class="component-icon">chevron_right</span>
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
             </button>
           ` : `
             <div class="doc-font-family-row__expand-spacer"></div>
@@ -198,7 +199,7 @@ export class DocFontPickerComponent {
           </button>
 
           ${isActive ? `
-            <span class="component-icon doc-font-family-row__check">check</span>
+            <svg class="component-icon doc-font-family-row__check" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
           ` : ''}
         </div>
 
@@ -210,7 +211,7 @@ export class DocFontPickerComponent {
                 return `
                   <button type="button" class="doc-font-variant-item ${isVariantActive ? 'is-active' : ''}" data-ref="btn-variant-${font.id}-${v.weight}-${v.style}" data-family="${font.family}" data-fallback="${font.fallback}" data-font-id="${font.id}" data-weight="${v.weight}" data-style="${v.style}" data-variant-name="${v.name}">
                     <span class="doc-font-variant-item__name" style="font-family: '${font.family}', ${font.fallback}; font-weight: ${v.weight}; font-style: ${v.style};">${v.name}</span>
-                    ${isVariantActive ? `<span class="component-icon doc-font-variant-item__check">check</span>` : ''}
+                    ${isVariantActive ? `<svg class="component-icon doc-font-variant-item__check" aria-hidden="true"><use href="/icons.svg#check"></use></svg>` : ''}
                   </button>
                 `;
               }).join('')}
@@ -252,12 +253,12 @@ export class DocFontPickerComponent {
     const chipsContainer = this.parentContainer.querySelector<HTMLElement>('[data-ref="font-category-chips"]');
     if (chipsContainer) {
       chipsContainer.addEventListener('click', (e) => {
-        const target = (e.target as HTMLElement).closest<HTMLElement>('.doc-font-chip');
+        const target = (e.target as HTMLElement).closest<HTMLElement>('.component-badge');
         if (!target) return;
         const cat = target.getAttribute('data-category') || 'all';
         this.activeCategory = cat;
 
-        chipsContainer.querySelectorAll('.doc-font-chip').forEach((c) => {
+        chipsContainer.querySelectorAll('.component-badge').forEach((c) => {
           c.classList.toggle('is-active', c.getAttribute('data-category') === cat);
         });
 
@@ -373,10 +374,7 @@ export class DocFontPickerComponent {
 
       const check = row.querySelector('.doc-font-family-row__check');
       if (isActive && !check) {
-        const checkEl = document.createElement('span');
-        checkEl.className = 'component-icon doc-font-family-row__check';
-        checkEl.textContent = 'check';
-        row.appendChild(checkEl);
+        row.insertAdjacentHTML('beforeend', createIconSvg('check', 'doc-font-family-row__check'));
       } else if (!isActive && check) {
         check.remove();
       }
@@ -394,10 +392,7 @@ export class DocFontPickerComponent {
       vBtn.classList.toggle('is-active', isActive);
       const check = vBtn.querySelector('.doc-font-variant-item__check');
       if (isActive && !check) {
-        const checkEl = document.createElement('span');
-        checkEl.className = 'component-icon doc-font-variant-item__check';
-        checkEl.textContent = 'check';
-        vBtn.appendChild(checkEl);
+        vBtn.insertAdjacentHTML('beforeend', createIconSvg('check', 'doc-font-variant-item__check'));
       } else if (!isActive && check) {
         check.remove();
       }
@@ -412,3 +407,4 @@ export class DocFontPickerComponent {
       .replace(/"/g, '&quot;');
   }
 }
+

@@ -475,6 +475,29 @@ export interface BoardChartElement {
   yAxisTitle?: string;
 }
 
+export interface BoardEmbedElement {
+  animation?: BoardElementAnimation;
+  aspectRatioLocked?: boolean;
+  autoplay?: boolean;
+  channelTitle?: string;
+  effect?: BoardElementEffect;
+  embedType: 'youtube' | 'generic';
+  height: number;
+  hidden?: boolean;
+  id: string;
+  isLocked?: boolean;
+  opacity?: number;
+  rotation?: number;
+  thumbnailUrl: string;
+  title: string;
+  type: 'embed';
+  url: string;
+  videoId?: string;
+  width: number;
+  x: number;
+  y: number;
+}
+
 export const DEFAULT_CHART_PALETTES: Record<string, { colors: string[]; id: string; name: string }> = {
   spriteboard: {
     colors: ['#2563eb', '#3b82f6', '#10b981', '#f59e0b', '#06b6d4', '#8b5cf6', '#f43f5e'],
@@ -517,7 +540,8 @@ export type BoardElement =
   | BoardConnectorElement
   | BoardSectionElement
   | BoardTableElement
-  | BoardChartElement;
+  | BoardChartElement
+  | BoardEmbedElement;
 
 export interface BoardPageItem {
   background: {

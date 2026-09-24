@@ -1,12 +1,12 @@
 import { draw3DElement, draw3DGroundGrid, draw3DRotationGizmo, hitTest3DRotationGizmo, onCustomModelLoaded, preloadCustom3DModels } from '../views/board/board-3d-renderer.js';
 import { drawChart } from '../views/board/board-chart-renderer.js';
-import { calculateResizedBoundingBox, computeElementsBoundingBox, convertDiagramToBoardElements, create3DElement, createChartElement, createConnectorElement, createElementResizeSnapshot, createImageElement, createMockupElement, createSectionElement, createShapeElement, createStickyElement, createTableElement, createTextElement, createTextPresetElement, distToSegment, ElementResizeSnapshot, findContainingSection, findElementsByMarqueeBox, getConnectorEndpoints, getElementBoundingBox, getNodeAnchorPoint, hitTestBoundingBoxResizeHandle, hitTestElement, hitTestResizeHandle, measureTextElementSize, moveElementByDelta, moveElementByDrag, resizeElementByHandle, resizeElementsGroup, TEXT_PRESETS } from '../views/board/board-elements.manager.js';
+import { calculateResizedBoundingBox, computeElementsBoundingBox, convertDiagramToBoardElements, create3DElement, createChartElement, createConnectorElement, createEmbedElement, createElementResizeSnapshot, createImageElement, createMockupElement, createSectionElement, createShapeElement, createStickyElement, createTableElement, createTextElement, createTextPresetElement, distToSegment, ElementResizeSnapshot, findContainingSection, findElementsByMarqueeBox, getConnectorEndpoints, getElementBoundingBox, getNodeAnchorPoint, hitTestBoundingBoxResizeHandle, hitTestElement, hitTestResizeHandle, measureTextElementSize, moveElementByDelta, moveElementByDrag, resizeElementByHandle, resizeElementsGroup, TEXT_PRESETS } from '../views/board/board-elements.manager.js';
 import { exportJson, exportPng, exportSvg, generateThumbnail } from '../views/board/board-export.service.js';
 import { drawMockupElement } from '../views/board/board-mockup-renderer.js';
 import { parseOBJ } from '../views/board/board-obj-loader.js';
-import { applyElementAnimation, applyElementEffect, applyLineDash, drawAlignmentGuides, drawBackground, drawBoardCollaboratorCursors, drawCheckerboard, drawConnector, drawEndpointMarker, drawImage, drawMarqueeBox, drawMultiSelectionBounds, drawPixelGridLines, drawSection, drawSelectionBox, drawShape, drawSticky, drawStroke, drawTable, drawText, getCachedImage, getSvgPathBoundingBox, screenToWorld, worldToScreen, wrapText } from '../views/board/board-renderer.js';
-import { AlignmentGuide, calculateDragSnapping, calculateResizeSnapping, SnapResult } from '../views/board/board-snapping.manager.js';
-import { BackgroundType, Board3DElement, BoardAnimationType, BoardChartElement, BoardCollaboratorState, BoardConnectorElement, BoardEffectType, BoardElement, BoardElementAnimation, BoardElementEffect, BoardImageElement, BoardMockupElement, BoardPageItem, BoardPixelGridElement, BoardPoint, BoardProject, BoardSectionElement, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTableCell, BoardTableElement, BoardTextElement, BoardTool, CANVAS_DEFAULTS, ChartDataRow, ChartSeriesConfig, ChartType, ConnectorStyle, DEFAULT_CHART_PALETTES, DEFAULT_CLASSIC_PALETTE, GAMEBOY_PALETTE, MarkerType, PICO8_PALETTE, PixelSubtool, ResizeHandle, Shape3DType, ShapeType, StrokeStyle } from '../views/board/board.types.js';
+import { applyElementAnimation, applyElementEffect, applyLineDash, drawAlignmentGuides, drawBackground, drawBoardCollaboratorCursors, drawCheckerboard, drawConnector, drawEmbedElement, drawEndpointMarker, drawImage, drawMarqueeBox, drawMultiSelectionBounds, drawPixelGridLines, drawSection, drawSelectionBox, drawShape, drawSticky, drawStroke, drawTable, drawText, getCachedImage, getSvgPathBoundingBox, screenToWorld, worldToScreen, wrapText } from '../views/board/board-renderer.js';
+import { AlignmentGuide, calculateDragSnapping, calculateResizeSnapping, DistanceGuide, ResizeSnapResult, SnapResult } from '../views/board/board-snapping.manager.js';
+import { BackgroundType, Board3DElement, BoardAnimationType, BoardChartElement, BoardCollaboratorState, BoardConnectorElement, BoardEffectType, BoardElement, BoardElementAnimation, BoardElementEffect, BoardEmbedElement, BoardImageElement, BoardMockupElement, BoardPageItem, BoardPixelGridElement, BoardPoint, BoardProject, BoardSectionElement, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTableCell, BoardTableElement, BoardTextElement, BoardTool, CANVAS_DEFAULTS, ChartDataRow, ChartSeriesConfig, ChartType, ConnectorStyle, DEFAULT_CHART_PALETTES, DEFAULT_CLASSIC_PALETTE, GAMEBOY_PALETTE, MarkerType, PICO8_PALETTE, PixelSubtool, ResizeHandle, Shape3DType, ShapeType, StrokeStyle } from '../views/board/board.types.js';
 
 export {
   CANVAS_DEFAULTS,
@@ -22,6 +22,7 @@ export {
   create3DElement,
   createChartElement,
   createConnectorElement,
+  createEmbedElement,
   createElementResizeSnapshot,
   createImageElement,
   createMockupElement,
@@ -41,6 +42,7 @@ export {
   drawChart,
   drawCheckerboard,
   drawConnector,
+  drawEmbedElement,
   drawEndpointMarker,
   drawImage,
   drawMarqueeBox,
@@ -82,7 +84,7 @@ export {
   wrapText,
 };
 
-export type { ElementResizeSnapshot };
+export type { DistanceGuide, ElementResizeSnapshot, ResizeSnapResult, SnapResult };
 
 export interface CanvasEngineOptions {
   mode: 'board' | 'doc-embed' | 'presentation';
@@ -158,11 +160,14 @@ export class CanvasEngine2D {
       case 'shape-3d':
         draw3DElement(ctx, el as Board3DElement);
         break;
+      case 'embed':
+        drawEmbedElement(ctx, el as BoardEmbedElement, onImageLoaded);
+        break;
     }
   }
 
-  public static drawAlignmentGuides(ctx: CanvasRenderingContext2D, guides: AlignmentGuide[], camera: { x: number; y: number; zoom: number }): void {
-    drawAlignmentGuides(ctx, guides, camera);
+  public static drawAlignmentGuides(ctx: CanvasRenderingContext2D, guides: AlignmentGuide[], camera: { x: number; y: number; zoom: number }, distanceGuides: DistanceGuide[] = []): void {
+    drawAlignmentGuides(ctx, guides, camera, distanceGuides);
   }
 
   public static draw3DGroundGrid(ctx: CanvasRenderingContext2D, el: Board3DElement, camera: { x: number; y: number; zoom: number }): void {
@@ -337,6 +342,10 @@ export class CanvasEngine2D {
     return createConnectorElement(startPoint, endPoint, options);
   }
 
+  public static createEmbedElement(options: Parameters<typeof createEmbedElement>[0]): BoardEmbedElement {
+    return createEmbedElement(options);
+  }
+
   public screenToWorld(screenX: number, screenY: number, canvas: HTMLCanvasElement | null, camera: { x: number; y: number; zoom: number }): BoardPoint {
     return CanvasEngine2D.screenToWorld(screenX, screenY, canvas, camera);
   }
@@ -353,8 +362,8 @@ export class CanvasEngine2D {
     CanvasEngine2D.drawElement(ctx, el, allElements, onImageLoaded, isEditing);
   }
 
-  public drawAlignmentGuides(ctx: CanvasRenderingContext2D, guides: AlignmentGuide[], camera: { x: number; y: number; zoom: number }): void {
-    CanvasEngine2D.drawAlignmentGuides(ctx, guides, camera);
+  public drawAlignmentGuides(ctx: CanvasRenderingContext2D, guides: AlignmentGuide[], camera: { x: number; y: number; zoom: number }, distanceGuides: DistanceGuide[] = []): void {
+    CanvasEngine2D.drawAlignmentGuides(ctx, guides, camera, distanceGuides);
   }
 
   public draw3DGroundGrid(ctx: CanvasRenderingContext2D, el: Board3DElement, camera: { x: number; y: number; zoom: number }): void {
@@ -454,6 +463,7 @@ export type {
   BoardElement,
   BoardElementAnimation,
   BoardElementEffect,
+  BoardEmbedElement,
   BoardImageElement,
   BoardMockupElement,
   BoardPageItem,

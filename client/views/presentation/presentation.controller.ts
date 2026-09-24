@@ -14,6 +14,7 @@ import { t } from '../../services/i18n.service.js';
 import { renderIcons } from '../../services/icon.service.js';
 import { getEffectiveTheme } from '../../services/theme.service.js';
 import { showToast } from '../../services/toast.service.js';
+import { openYouTubePlayerModal } from '../../services/youtube.service.js';
 import { CanvasItem } from '../../types/canvas.types.js';
 import { MockupFitMode, MockupTemplate } from '../../types/mockups.types.js';
 import { PRESENTATION_FORMATS, PresentationFormatConfig, PresentationProject, PresentationSlideItem } from '../../types/presentation.types.js';
@@ -23,14 +24,14 @@ import { PixelShape } from '../../utils/pixel-shapes.util.js';
 import { BoardAnimationPanelComponent } from '../board/board-animation-panel.component.js';
 import { BoardChartsPanelComponent } from '../board/board-charts-panel.component.js';
 import { BoardEffectsPanelComponent } from '../board/board-effects-panel.component.js';
-import { computeElementsBoundingBox, create3DElement, createChartElement, createConnectorElement, createElementResizeSnapshot, createImageElement, createMockupElement, createSectionElement, createShapeElement, createStickyElement, createTableElement, createTextElement, createTextPresetElement, ElementResizeSnapshot, findElementsByMarqueeBox, getConnectorEndpoints, getElementBoundingBox, hitTestBoundingBoxResizeHandle, hitTestElement, hitTestResizeHandle, measureTextElementSize, moveElementByDelta, moveElementByDrag, resizeElementByHandle, resizeElementsGroup } from '../board/board-elements.manager.js';
+import { computeElementsBoundingBox, create3DElement, createChartElement, createConnectorElement, createEmbedElement, createElementResizeSnapshot, createImageElement, createMockupElement, createSectionElement, createShapeElement, createStickyElement, createTableElement, createTextElement, createTextPresetElement, ElementResizeSnapshot, findElementsByMarqueeBox, getConnectorEndpoints, getElementBoundingBox, hitTestBoundingBoxResizeHandle, hitTestElement, hitTestResizeHandle, measureTextElementSize, moveElementByDelta, moveElementByDrag, resizeElementByHandle, resizeElementsGroup } from '../board/board-elements.manager.js';
 import { exportJson, exportPng, exportSvg, generateThumbnail } from '../board/board-export.service.js';
 import { drawMockupElement } from '../board/board-mockup-renderer.js';
 import { BoardMockupsPanelComponent } from '../board/board-mockups-panel.component.js';
 import { BoardPositionPanelComponent } from '../board/board-position-panel.component.js';
-import { applyElementAnimation, applyElementEffect, draw3DElement, drawAlignmentGuides, drawBackground, drawBoardCollaboratorCursors, drawChart, drawConnector, drawImage, drawMarqueeBox, drawMultiSelectionBounds, drawSection, drawSelectionBox, drawShape, drawSticky, drawStroke, drawTable, drawText, screenToWorld, worldToScreen } from '../board/board-renderer.js';
-import { AlignmentGuide, calculateDragSnapping, calculateResizeSnapping } from '../board/board-snapping.manager.js';
-import { BackgroundType, Board3DElement, BoardAnimationType, BoardChartElement, BoardCollaboratorState, BoardConnectorElement, BoardEffectType, BoardElement, BoardElementAnimation, BoardElementEffect, BoardImageElement, BoardMockupElement, BoardPoint, BoardSectionElement, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTableCell, BoardTableElement, BoardTextElement, CANVAS_DEFAULTS, ChartType, ConnectorStyle, MarkerType, ResizeHandle, Shape3DType, ShapeType, StrokeStyle } from '../board/board.types.js';
+import { applyElementAnimation, applyElementEffect, draw3DElement, drawAlignmentGuides, drawBackground, drawBoardCollaboratorCursors, drawChart, drawConnector, drawEmbedElement, drawImage, drawMarqueeBox, drawMultiSelectionBounds, drawSection, drawSelectionBox, drawShape, drawSticky, drawStroke, drawTable, drawText, screenToWorld, worldToScreen } from '../board/board-renderer.js';
+import { AlignmentGuide, calculateDragSnapping, calculateResizeSnapping, DistanceGuide } from '../board/board-snapping.manager.js';
+import { BackgroundType, Board3DElement, BoardAnimationType, BoardChartElement, BoardCollaboratorState, BoardConnectorElement, BoardEffectType, BoardElement, BoardElementAnimation, BoardElementEffect, BoardEmbedElement, BoardImageElement, BoardMockupElement, BoardPoint, BoardSectionElement, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTableCell, BoardTableElement, BoardTextElement, CANVAS_DEFAULTS, ChartType, ConnectorStyle, MarkerType, ResizeHandle, Shape3DType, ShapeType, StrokeStyle } from '../board/board.types.js';
 import { DocFontPickerComponent, FontSelectEvent } from '../doc/doc-font-picker.component.js';
 import { PresentationCollaborationManager } from './presentation-collaboration.manager.js';
 
@@ -42,6 +43,7 @@ export class PresentationController {
   private activeSlideId: string = 'slide-1';
   private aiDropdownController: CanvasAiDropdownController | null = null;
   private alignmentGuides: AlignmentGuide[] = [];
+  private distanceGuides: DistanceGuide[] = [];
   private animationPanel: BoardAnimationPanelComponent | null = null;
   private autoSaveTimer: number | null = null;
   private broadcastMyCursor: boolean = true;
@@ -95,6 +97,9 @@ export class PresentationController {
   private isSnappingEnabled: boolean = true;
   private isSpaceDown: boolean = false;
   private laserPoint: BoardPoint | null = null;
+  private lastPointerDownElementId: string | null = null;
+  private lastPointerDownPos: BoardPoint = { x: 0, y: 0 };
+  private lastPointerDownTime = 0;
   private marqueeEnd: BoardPoint | null = null;
   private marqueeStart: BoardPoint | null = null;
   private mockupsPanel: BoardMockupsPanelComponent | null = null;
@@ -1406,14 +1411,24 @@ export class PresentationController {
     }, { signal });
   }
 
-  public toggleVerticalToolbar(show?: boolean): void {
+  public toggleVerticalToolbar(show?: boolean): boolean {
     const container = this.container.querySelector<HTMLElement>('[data-ref="presentation-vertical-toolbar-container"]');
-    if (!container) return;
-    if (show !== undefined) {
-      container.classList.toggle('is-hidden', !show);
-    } else {
-      container.classList.toggle('is-hidden');
+    if (!container) return false;
+    const isCurrentlyHidden = container.classList.contains('is-hidden');
+    const shouldShow = typeof show === 'boolean' ? show : isCurrentlyHidden;
+    container.classList.toggle('is-hidden', !shouldShow);
+    if (!shouldShow) {
+      const subtoolbars = this.container.querySelectorAll<HTMLElement>('.design-vsubtoolbar');
+      subtoolbars.forEach((st) => st.classList.add('is-hidden'));
     }
+    const sidebar = document.querySelector<HTMLElement>('[data-ref="sidebar"]');
+    if (sidebar) {
+      const railItem = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-canvas-tools"]');
+      const railBtn = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-canvas-tools"]');
+      railItem?.classList.toggle('is-active', shouldShow);
+      railBtn?.classList.toggle('is-active', shouldShow);
+    }
+    return shouldShow;
   }
 
   private showVerticalSubtoolbar(tool: string): void {
@@ -1469,6 +1484,11 @@ export class PresentationController {
           this.openInlineTextEditor(hit);
         } else if (hit && hit.type === 'chart') {
           this.openChartsPanel(hit as BoardChartElement);
+        } else if (hit && hit.type === 'embed') {
+          const embed = hit as BoardEmbedElement;
+          if (embed.embedType === 'youtube' && embed.videoId) {
+            openYouTubePlayerModal(embed.videoId, embed.title);
+          }
         }
       }
     }, { signal });
@@ -1668,6 +1688,33 @@ export class PresentationController {
         const hitCy = hitSlideIdx * (this.slideHeight + slideGap);
         const hitLocalWp = { x: wp.x, y: wp.y - hitCy };
 
+        const now = Date.now();
+        const isDoubleClick =
+          this.lastPointerDownElementId === hitElement.id &&
+          now - this.lastPointerDownTime < 400 &&
+          Math.hypot(e.clientX - this.lastPointerDownPos.x, e.clientY - this.lastPointerDownPos.y) < 22;
+
+        this.lastPointerDownTime = now;
+        this.lastPointerDownPos = { x: e.clientX, y: e.clientY };
+        this.lastPointerDownElementId = hitElement.id;
+
+        if (isDoubleClick) {
+          this.isDragging = false;
+          if (hitElement.type === 'embed') {
+            const embed = hitElement as BoardEmbedElement;
+            if (embed.embedType === 'youtube' && embed.videoId) {
+              openYouTubePlayerModal(embed.videoId, embed.title);
+            }
+            return;
+          } else if (hitElement.type === 'chart') {
+            this.openChartsPanel(hitElement as BoardChartElement);
+            return;
+          } else if (hitElement.type === 'text' || (hitElement.type === 'shape' && (hitElement as any).text !== undefined) || hitElement.type === 'sticky') {
+            this.openInlineTextEditor(hitElement);
+            return;
+          }
+        }
+
         if (!this.selectedElementIds.has(hitElement.id)) {
           if (!e.shiftKey) this.selectedElementIds.clear();
           this.selectedElementIds.add(hitElement.id);
@@ -1783,8 +1830,10 @@ export class PresentationController {
           );
           targetWorldPos = snapRes.snappedWorldPos;
           this.alignmentGuides = snapRes.guides;
+          this.distanceGuides = snapRes.distanceGuides;
         } else {
           this.alignmentGuides = [];
+          this.distanceGuides = [];
         }
 
         if (this.selectedElementIds.size === 1) {
@@ -1857,8 +1906,10 @@ export class PresentationController {
           effectiveDx = snapRes.snappedDx;
           effectiveDy = snapRes.snappedDy;
           this.alignmentGuides = snapRes.guides;
+          this.distanceGuides = snapRes.distanceGuides;
         } else {
           this.alignmentGuides = [];
+          this.distanceGuides = [];
         }
 
         for (const [id, startPos] of this.selectionStartPositions.entries()) {
@@ -1990,6 +2041,7 @@ export class PresentationController {
       } catch {}
 
       this.alignmentGuides = [];
+      this.distanceGuides = [];
       this.selectionStartPositions.clear();
       this.selectionStartBBox = null;
 
@@ -2652,6 +2704,23 @@ export class PresentationController {
 
     const btnDel = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sel-delete"]');
     btnDel?.addEventListener('click', () => this.deleteSelectedElements(), { signal });
+
+    const btnPlayEmbed = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sel-play-embed"]');
+    btnPlayEmbed?.addEventListener(
+      'click',
+      () => {
+        const elements = this.getActiveSlide().elements;
+        const selectedEls = elements.filter((el) => this.selectedElementIds.has(el.id));
+        if (selectedEls.length === 1 && selectedEls[0].type === 'embed') {
+          const embed = selectedEls[0] as BoardEmbedElement;
+          const videoId = embed.videoId;
+          if (embed.embedType === 'youtube' && videoId) {
+            openYouTubePlayerModal(videoId, embed.title);
+          }
+        }
+      },
+      { signal }
+    );
   }
 
   private bindPopoversEvents(signal: AbortSignal): void {
@@ -3520,6 +3589,10 @@ export class PresentationController {
       return;
     }
 
+    const groupEmbeds = this.container.querySelector<HTMLElement>('[data-ref="presentation-sel-group-embeds"]');
+    const isEmbed = selectedEls.length === 1 && selectedEls[0].type === 'embed';
+    groupEmbeds?.classList.toggle('is-hidden', !isEmbed);
+
     const bbox = computeElementsBoundingBox(selectedEls);
     if (!bbox) {
       floatingToolbar.classList.add('is-hidden');
@@ -4029,6 +4102,28 @@ export class PresentationController {
     this.collaborationManager.broadcastAddElement(imgEl, this.activeSlideId);
   }
 
+  public insertYouTube(video: { channelTitle: string; id: string; thumbnailUrl: string; title: string; url: string }): void {
+    const embedEl = createEmbedElement({
+      channelTitle: video.channelTitle,
+      embedType: 'youtube',
+      height: 270,
+      thumbnailUrl: video.thumbnailUrl,
+      title: video.title,
+      url: video.url,
+      videoId: video.id,
+      width: 480,
+    });
+    this.saveHistoryState();
+    this.getActiveSlide().elements.push(embedEl);
+    this.selectedElementIds = new Set([embedEl.id]);
+    this.syncPanels();
+    this.updateSelectionToolbar();
+    this.render();
+    this.scheduleAutoSave();
+    this.collaborationManager.broadcastAddElement(embedEl, this.activeSlideId);
+    showToast(`Video "${video.title}" agregado a la diapositiva`, 'success');
+  }
+
   public insertTable(rows: number, cols: number): void {
     const tableEl = createTableElement(rows, cols);
     this.saveHistoryState();
@@ -4373,6 +4468,8 @@ export class PresentationController {
       draw3DElement(ctx, el as Board3DElement);
     } else if (el.type === 'mockup') {
       drawMockupElement(ctx, el as BoardMockupElement, () => this.render());
+    } else if (el.type === 'embed') {
+      drawEmbedElement(ctx, el as BoardEmbedElement, () => this.render());
     }
 
     ctx.restore();
@@ -4463,8 +4560,8 @@ export class PresentationController {
           const selectedEls = slide.elements.filter((el) => this.selectedElementIds.has(el.id));
           drawMultiSelectionBounds(ctx, selectedEls, camera);
         }
-        if (this.alignmentGuides.length > 0) {
-          drawAlignmentGuides(ctx, this.alignmentGuides, camera);
+        if (this.alignmentGuides.length > 0 || this.distanceGuides.length > 0) {
+          drawAlignmentGuides(ctx, this.alignmentGuides, camera, this.distanceGuides);
         }
         if (this.marqueeStart && this.marqueeEnd) {
           const box = {

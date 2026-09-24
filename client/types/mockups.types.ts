@@ -1,6 +1,30 @@
 export type MockupType = 'perspective_quad' | 'cylindrical_curve' | 'flat_mask';
 
-export type MockupCategory = 'smartphones' | 'computers' | 'apparel' | 'print' | 'home' | 'frames';
+export type MockupSectionGroup = 'frames' | 'grids' | 'mockups';
+
+export type FrameCategory =
+  | 'basic_shapes'
+  | 'film_photo'
+  | 'devices'
+  | 'paper'
+  | 'flowers'
+  | 'blob'
+  | 'retro'
+  | 'letters'
+  | 'numbers';
+
+export type GridCategory = 'collages';
+
+export type MockupGeneralCategory =
+  | 'frames'
+  | 'smartphones'
+  | 'apparel'
+  | 'computers'
+  | 'home'
+  | 'packaging'
+  | 'tablets_tv';
+
+export type MockupCategory = FrameCategory | GridCategory | MockupGeneralCategory | 'print';
 
 export type MockupFitMode = 'fill' | 'fit' | 'stretch';
 
@@ -23,6 +47,14 @@ export interface MockupAssets {
   shadowOpacity?: number;
 }
 
+export interface MockupGridSlot {
+  height: number;
+  roundedRadius?: number;
+  width: number;
+  x: number;
+  y: number;
+}
+
 export interface MockupTemplate {
   aspectRatio: number;
   assets?: MockupAssets;
@@ -31,9 +63,12 @@ export interface MockupTemplate {
   defaultPlaceholder: string;
   description: string;
   fitModeDefault?: MockupFitMode;
+  gridSlots?: MockupGridSlot[];
+  group?: MockupSectionGroup;
   height: number;
   id: string;
   isPopular?: boolean;
+  maskPathD?: string;
   name: string;
   overlayColor?: string;
   printableBounds?: {

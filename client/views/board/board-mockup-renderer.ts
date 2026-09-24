@@ -27,7 +27,11 @@ export function drawMockupElement(
   ctx.translate(el.x, el.y);
   ctx.scale(scaleX, scaleY);
 
-  if (tpl.type === 'flat_mask' && tpl.printableBounds) {
+  if (tpl.gridSlots && tpl.gridSlots.length > 0) {
+    drawGridSlotsMockup(ctx, tpl, el, userImg);
+  } else if (tpl.maskPathD) {
+    drawPathMaskMockup(ctx, tpl, el, userImg);
+  } else if (tpl.type === 'flat_mask' && tpl.printableBounds) {
     drawFlatMaskMockup(ctx, tpl, el, userImg);
   } else if (tpl.type === 'perspective_quad' && tpl.quadCorners) {
     drawPerspectiveQuadMockup(ctx, tpl, el, userImg);
@@ -39,6 +43,66 @@ export function drawMockupElement(
     drawDropzoneHighlight(ctx, tpl, camera?.zoom || 1);
   }
 
+  ctx.restore();
+}
+
+function drawGridSlotsMockup(
+  ctx: CanvasRenderingContext2D,
+  tpl: any,
+  el: BoardMockupElement,
+  userImg: HTMLImageElement | null
+): void {
+  ctx.save();
+  ctx.fillStyle = '#ffffff';
+  ctx.strokeStyle = '#e2e8f0';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.roundRect(0, 0, tpl.width, tpl.height, 12);
+  ctx.fill();
+  ctx.stroke();
+
+  if (tpl.gridSlots) {
+    for (const slot of tpl.gridSlots) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.roundRect(slot.x, slot.y, slot.width, slot.height, slot.roundedRadius || 6);
+      ctx.clip();
+      if (userImg) {
+        drawFittedImageIntoRect(ctx, userImg, slot.x, slot.y, slot.width, slot.height, el.fitMode || 'fill');
+      }
+      ctx.restore();
+
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(slot.x, slot.y, slot.width, slot.height, slot.roundedRadius || 6);
+      ctx.stroke();
+    }
+  }
+
+  ctx.restore();
+}
+
+function drawPathMaskMockup(
+  ctx: CanvasRenderingContext2D,
+  tpl: any,
+  el: BoardMockupElement,
+  userImg: HTMLImageElement | null
+): void {
+  const path = new Path2D(tpl.maskPathD);
+  const b = tpl.printableBounds || { height: tpl.height, width: tpl.width, x: 0, y: 0 };
+
+  ctx.save();
+  ctx.save();
+  ctx.clip(path);
+  if (userImg) {
+    drawFittedImageIntoRect(ctx, userImg, b.x, b.y, b.width, b.height, el.fitMode || 'fill');
+  }
+  ctx.restore();
+
+  ctx.strokeStyle = '#38bdf8';
+  ctx.lineWidth = 3;
+  ctx.stroke(path);
   ctx.restore();
 }
 
@@ -148,6 +212,92 @@ function drawFlatMaskMockup(
     ctx.restore();
 
     drawTShirtShadows(ctx, tpl.width, tpl.height);
+    ctx.restore();
+    return;
+  }
+
+  if (tpl.id === 'mockup-frame-gallery') {
+    ctx.save();
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.16)';
+    ctx.shadowBlur = 24;
+    ctx.shadowOffsetY = 12;
+
+    ctx.fillStyle = '#0f172a';
+    ctx.beginPath();
+    ctx.roundRect(0, 0, tpl.width, tpl.height, 4);
+    ctx.fill();
+
+    ctx.shadowColor = 'transparent';
+    ctx.fillStyle = '#f8fafc';
+    ctx.beginPath();
+    ctx.roundRect(25, 20, tpl.width - 50, tpl.height - 40, 2);
+    ctx.fill();
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(b.x, b.y, b.width, b.height);
+    ctx.clip();
+    if (userImg) {
+      drawFittedImageIntoRect(ctx, userImg, b.x, b.y, b.width, b.height, el.fitMode || 'fill');
+    }
+    ctx.restore();
+
+    ctx.restore();
+    return;
+  }
+
+  if (tpl.id === 'mockup-frame-wood') {
+    ctx.save();
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.15)';
+    ctx.shadowBlur = 20;
+    ctx.shadowOffsetY = 10;
+
+    ctx.fillStyle = '#b45309';
+    ctx.strokeStyle = '#78350f';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.roundRect(0, 0, tpl.width, tpl.height, 6);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.shadowColor = 'transparent';
+    ctx.fillStyle = '#fef3c7';
+    ctx.beginPath();
+    ctx.roundRect(30, 30, tpl.width - 60, tpl.height - 60, 2);
+    ctx.fill();
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(b.x, b.y, b.width, b.height);
+    ctx.clip();
+    if (userImg) {
+      drawFittedImageIntoRect(ctx, userImg, b.x, b.y, b.width, b.height, el.fitMode || 'fill');
+    }
+    ctx.restore();
+
+    ctx.restore();
+    return;
+  }
+
+  if (tpl.category === 'tablets_tv') {
+    ctx.save();
+    ctx.fillStyle = '#0f172a';
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.roundRect(0, 0, tpl.width, tpl.height, radius || 8);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(b.x, b.y, b.width, b.height, Math.max(0, radius - 4));
+    ctx.clip();
+    if (userImg) {
+      drawFittedImageIntoRect(ctx, userImg, b.x, b.y, b.width, b.height, el.fitMode || 'fill');
+    }
+    ctx.restore();
+
     ctx.restore();
     return;
   }

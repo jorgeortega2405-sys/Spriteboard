@@ -1,6 +1,7 @@
 import aiRoutes from './ai.routes.js';
 import authRoutes from './auth.routes.js';
 import avatarRoutes from './avatar.routes.js';
+import brandRoutes from './brand.routes.js';
 import canvasRoutes from './canvas.routes.js';
 import configRoutes from './config.routes.js';
 import designerApplicationRoutes from './designer-application.routes.js';
@@ -28,6 +29,7 @@ apiRouter.use('/scim/v2', scimRoutes);
 apiRouter.use('/', configRoutes);
 apiRouter.use('/', authRoutes);
 apiRouter.use('/', avatarRoutes);
+apiRouter.use('/', brandRoutes);
 apiRouter.use('/', canvasRoutes);
 apiRouter.use('/', designerApplicationRoutes);
 apiRouter.use('/', enterpriseRoutes);

@@ -1,24 +1,29 @@
 import { navigate, render } from '../app-router.js';
 import { API_ROUTES } from '../config/api-routes.js';
+import { APP_CATEGORIES, SPRITEBOARD_APPS, getAppById, getAppsByCategory, searchApps } from '../config/apps.config.js';
 import { BOARD_3D_SHAPES } from '../config/board-3d-shapes.config.js';
 import { DIAGRAM_COMPONENTS, DiagramComponentItem } from '../config/diagram-components.data.js';
-import { MOCKUP_TEMPLATES } from '../config/mockups.config.js';
+import { ALL_MOCKUP_ITEMS, FRAME_CATEGORIES, FRAME_TEMPLATES, GRID_CATEGORIES, GRID_TEMPLATES, MOCKUP_GENERAL_CATEGORIES, MOCKUP_TEMPLATES } from '../config/mockups.config.js';
 import { hasFeature, protectRoute } from '../config/plans.config.js';
 import { STICKY_NOTE_PRESETS } from '../config/sticky-notes.config.js';
 import { ALL_PRESETS, PresetItem } from '../config/templates.config.js';
 import { currentUser, deleteApi, deleteUploadApi, escapeHtml, getApi, getUploadsApi, linkedAccounts, logoutAllApi, logoutApi, patchApi, postApi, switchAccountApi, uploadFilesApi } from '../services/api.service.js';
+import { getBrandKitDetailApi, getBrandKitsApi } from '../services/brand.service.js';
 import { getAllLocalCanvases, getLocalCanvasByUuid } from '../services/canvas-storage.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { createIconSvg, renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { closeWebSocket, initWebSocket, registerWebSocketHandler } from '../services/websocket.service.js';
+import { openYouTubePlayerModal, searchYouTubeVideos } from '../services/youtube.service.js';
+import { AppCategory, SpriteboardApp } from '../types/apps.types.js';
 import { isUserAdmin } from '../types/auth.types.js';
+import { BrandKit, BrandKitAsset, BrandKitDetail } from '../types/brand.types.js';
 import { CanvasItem } from '../types/canvas.types.js';
-import { MockupTemplate } from '../types/mockups.types.js';
+import { FrameCategory, GridCategory, MockupGeneralCategory, MockupTemplate } from '../types/mockups.types.js';
 import { UserStorageUsage } from '../types/subscription.types.js';
 import { UserUploadItem } from '../types/upload.types.js';
-import { closeAllDropdowns, registerActiveDropdown, unregisterActiveDropdown } from '../utils/dom.util.js';
+import { closeAllDropdowns, registerActiveDropdown, setupDropdown, unregisterActiveDropdown } from '../utils/dom.util.js';
 import { PIXEL_SHAPES, PixelShape, ShapeCategory } from '../utils/pixel-shapes.util.js';
 import { applyAvatarTier, getFallbackTierColor } from '../utils/tier.util.js';
 import { validateAndSanitizeFiles } from '../utils/validators.util.js';
@@ -30,10 +35,13 @@ import { openCreateCanvasModal } from './create-canvas-modal.component.js';
 import { openInsertPixelGridModal } from './insert-pixel-grid-modal.component.js';
 import { openModal } from './modal.component.js';
 import { openUpgradeModal } from './upgrade-modal.component.js';
+import QRCodeStyling from 'qr-code-styling';
 
 let isDrawerOpen = false;
 let isChatOpen = false;
-let activeCanvasTab: 'templates' | 'elements' | 'text' | 'tools' | 'uploads' | 'projects' | 'charts' | 'mockups' | 'colors' | 'fonts' | 'pixel-anim' | 'effects' | 'animate' | 'position' | null = null;
+let activeCanvasTab: 'templates' | 'brand' | 'elements' | 'text' | 'tools' | 'uploads' | 'apps' | 'projects' | 'charts' | 'mockups' | 'colors' | 'fonts' | 'pixel-anim' | 'effects' | 'animate' | 'position' | null = null;
+let activeAppId: string | null = null;
+let activeAppCategory: AppCategory = 'all';
 let activeChartInDrawer: BoardChartElement | null = null;
 let activeColorTargetInDrawer: 'stroke' | 'fill' | 'text' | 'slide-bg' = 'stroke';
 let chatSidebarElement: HTMLElement | null = null;
@@ -185,12 +193,13 @@ export function isCanvasRoute(pathname: string): boolean {
   return (
     pathname.startsWith('/design') ||
     pathname.startsWith('/board') ||
-    pathname.startsWith('/doc')
+    pathname.startsWith('/doc') ||
+    pathname.startsWith('/presentation')
   );
 }
 
 export function updateCanvasRailActiveState(sidebar: HTMLElement): void {
-  const tabs = ['templates', 'elements', 'text', 'tools', 'uploads', 'projects'] as const;
+  const tabs = ['templates', 'brand', 'elements', 'text', 'tools', 'uploads', 'apps', 'projects'] as const;
   tabs.forEach((tabKey) => {
     const item = sidebar.querySelector<HTMLElement>(`[data-ref="rail-item-canvas-${tabKey}"]`);
     const btn = sidebar.querySelector<HTMLElement>(`[data-ref="btn-rail-canvas-${tabKey}"]`);
@@ -219,6 +228,7 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
 
   const isHome = path === '/' || path === '' || path.startsWith('/folder/');
   const isTemplates = path === '/templates';
+  const isBrand = path === '/brand' || path === '/marca';
   const isShared = path === '/shared';
   const isTeams = path === '/teams';
 
@@ -231,9 +241,11 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
 
   updateItem('rail-item-home', 'btn-rail-home', isHome);
   updateItem('rail-item-templates', 'btn-rail-templates', isTemplates);
+  updateItem('rail-item-brand', 'btn-rail-brand', isBrand);
   updateItem('rail-item-shared', 'btn-rail-shared', isShared);
   updateItem('rail-item-teams', 'btn-rail-teams', isTeams);
 
+  const itemBrand = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-brand"]');
   const itemShared = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-shared"]');
   const itemTeams = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-teams"]');
   const notificationsContainer = sidebar.querySelector<HTMLElement>('[data-ref="notifications-container"]');
@@ -241,6 +253,7 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   const btnSettings = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-settings"]');
 
   if (!currentUser) {
+    if (itemBrand) itemBrand.style.display = 'none';
     if (itemShared) itemShared.style.display = 'none';
     if (itemTeams) itemTeams.style.display = 'none';
     if (notificationsContainer) notificationsContainer.style.display = 'none';
@@ -250,6 +263,7 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
       btnSettings.classList.toggle('is-active', path.startsWith('/settings'));
     }
   } else {
+    if (itemBrand) itemBrand.style.display = '';
     if (itemShared) itemShared.style.display = '';
     if (itemTeams) itemTeams.style.display = '';
     if (notificationsContainer) notificationsContainer.style.display = '';
@@ -410,15 +424,28 @@ function setupRailNavigation(sidebar: HTMLElement): void {
   const isHome = currentPath === '/' || currentPath === '' || currentPath.startsWith('/folder/');
   bindNav('rail-item-home', 'btn-rail-home', '/', isHome);
   bindNav('rail-item-templates', 'btn-rail-templates', '/templates', currentPath === '/templates');
+  bindNav('rail-item-brand', 'btn-rail-brand', '/brand', currentPath === '/brand' || currentPath === '/marca');
   bindNav('rail-item-shared', 'btn-rail-shared', '/shared', currentPath === '/shared');
   bindNav('rail-item-teams', 'btn-rail-teams', '/teams', currentPath === '/teams');
 
   if (!currentUser) {
+    const itemBrand = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-brand"]');
     const itemShared = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-shared"]');
     const itemTeams = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-teams"]');
+    if (itemBrand) itemBrand.style.display = 'none';
     if (itemShared) itemShared.style.display = 'none';
     if (itemTeams) itemTeams.style.display = 'none';
   }
+
+  const updateRailBrandBadge = () => {
+    const railBrandBadge = sidebar.querySelector<HTMLElement>('[data-ref="rail-brand-badge"]');
+    if (railBrandBadge) {
+      const hasBrandAccess = hasFeature('brand_kits', currentUser);
+      railBrandBadge.classList.toggle('is-hidden', hasBrandAccess);
+    }
+  };
+  updateRailBrandBadge();
+  window.addEventListener('subscription-updated', updateRailBrandBadge);
 
   const updateRailTeamsBadge = () => {
     const railTeamsBadge = sidebar.querySelector<HTMLElement>('[data-ref="rail-teams-badge"]');
@@ -458,12 +485,14 @@ function setupRailNavigation(sidebar: HTMLElement): void {
     }
   });
 
-  const canvasItems: Array<{ tab: 'templates' | 'elements' | 'text' | 'tools' | 'uploads' | 'projects'; btnRef: string; itemRef: string }> = [
+  const canvasItems: Array<{ tab: 'templates' | 'brand' | 'elements' | 'text' | 'tools' | 'uploads' | 'apps' | 'projects'; btnRef: string; itemRef: string }> = [
     { btnRef: 'btn-rail-canvas-templates', itemRef: 'rail-item-canvas-templates', tab: 'templates' },
+    { btnRef: 'btn-rail-canvas-brand', itemRef: 'rail-item-canvas-brand', tab: 'brand' },
     { btnRef: 'btn-rail-canvas-elements', itemRef: 'rail-item-canvas-elements', tab: 'elements' },
     { btnRef: 'btn-rail-canvas-text', itemRef: 'rail-item-canvas-text', tab: 'text' },
     { btnRef: 'btn-rail-canvas-tools', itemRef: 'rail-item-canvas-tools', tab: 'tools' },
     { btnRef: 'btn-rail-canvas-uploads', itemRef: 'rail-item-canvas-uploads', tab: 'uploads' },
+    { btnRef: 'btn-rail-canvas-apps', itemRef: 'rail-item-canvas-apps', tab: 'apps' },
     { btnRef: 'btn-rail-canvas-projects', itemRef: 'rail-item-canvas-projects', tab: 'projects' },
   ];
 
@@ -814,7 +843,8 @@ function closeDynamicDrawer(): void {
 
 function getActiveCanvasType(): 'board' | 'doc' | 'presentation' {
   const content = document.querySelector<HTMLElement>('[data-ref="app"] .layout-content, .layout-content');
-  const ref = content?.getAttribute('data-ref');
+  const viewEl = content?.querySelector<HTMLElement>('[data-ref="board-view"], [data-ref="doc-view"], [data-ref="presentation-view"], [data-ref="design-view"], .view-wrapper');
+  const ref = viewEl?.getAttribute('data-ref') || content?.getAttribute('data-ref');
   if (ref === 'doc-view' || window.location.pathname.startsWith('/doc/')) return 'doc';
   if (ref === 'presentation-view' || window.location.pathname.startsWith('/presentation/')) return 'presentation';
   return 'board';
@@ -822,7 +852,15 @@ function getActiveCanvasType(): 'board' | 'doc' | 'presentation' {
 
 function getActiveCanvasController(): any {
   const content = document.querySelector<HTMLElement>('[data-ref="app"] .layout-content, .layout-content');
-  return (content as any)?.__controller || null;
+  if (!content) return null;
+  if ((content as any).__controller) return (content as any).__controller;
+  for (let i = 0; i < content.children.length; i++) {
+    const child = content.children[i] as any;
+    if (child?.__controller) return child.__controller;
+  }
+  const viewEl = content.querySelector<HTMLElement>('[data-ref="board-view"], [data-ref="doc-view"], [data-ref="presentation-view"], [data-ref="design-view"], .view-wrapper');
+  if (viewEl && (viewEl as any).__controller) return (viewEl as any).__controller;
+  return null;
 }
 
 function handleApplyCanvasTemplate(preset: PresetItem, canvasType: 'board' | 'doc' | 'presentation'): void {
@@ -1004,7 +1042,9 @@ function handleApplyCanvasTemplate(preset: PresetItem, canvasType: 'board' | 'do
   }
 }
 
-let activeElementsCategory: 'root' | 'shapes' | 'stickers' | 'stickies' | 'diagrams' | 'tables' | 'charts' | 'mockups' | '3d' = 'root';
+let activeElementsCategory: 'root' | 'shapes' | 'stickers' | 'stickies' | 'diagrams' | 'tables' | 'charts' | 'frames' | 'grids' | 'mockups' | '3d' = 'root';
+let activeFramesFilter: FrameCategory | 'all' = 'all';
+let activeMockupsFilter: MockupGeneralCategory | 'all' = 'all';
 
 interface TablePresetItem {
   cols: number;
@@ -1412,7 +1452,7 @@ function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElemen
       const matchingShapes = PIXEL_SHAPES.filter((s) => s.name.toLowerCase().includes(cleanQ) || s.id.toLowerCase().includes(cleanQ));
       const matchingCharts = CHART_CATALOG.filter((c) => c.name.toLowerCase().includes(cleanQ) || c.description.toLowerCase().includes(cleanQ) || 'gráficas'.includes(cleanQ) || 'graficas'.includes(cleanQ) || 'charts'.includes(cleanQ));
       const matching3D = BOARD_3D_SHAPES.filter((s) => s.name.toLowerCase().includes(cleanQ) || s.id.toLowerCase().includes(cleanQ) || '3d'.includes(cleanQ));
-      const matchingMockups = MOCKUP_TEMPLATES.filter((m) => m.name.toLowerCase().includes(cleanQ) || m.description.toLowerCase().includes(cleanQ) || 'mockup'.includes(cleanQ) || 'maqueta'.includes(cleanQ));
+      const matchingMockups = ALL_MOCKUP_ITEMS.filter((m) => m.name.toLowerCase().includes(cleanQ) || m.description.toLowerCase().includes(cleanQ) || 'mockup'.includes(cleanQ) || 'maqueta'.includes(cleanQ) || 'marco'.includes(cleanQ) || 'cuadricula'.includes(cleanQ) || 'collage'.includes(cleanQ));
       const matchingTables = (cleanQ.includes('tabl') || cleanQ.includes('table') || cleanQ.includes('cuad')) ? TABLE_PRESETS : [];
 
       if (matchingDiagrams.length === 0 && matchingShapes.length === 0 && matchingCharts.length === 0 && matching3D.length === 0 && matchingMockups.length === 0 && matchingTables.length === 0) {
@@ -1800,6 +1840,77 @@ function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElemen
               <span class="element-category-card__label">Gráficas</span>
             </button>
 
+            <button type="button" class="element-category-card" data-ref="btn-category-frames" data-category="frames">
+              <div class="element-category-card__stack" data-ref="category-stack-frames">
+                <div class="element-category-card__layer element-category-card__layer--back">
+                  <svg class="element-category-card__svg" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="6" y="6" width="60" height="60" rx="16" fill="url(#cva-grad-frames-back)" />
+                    <rect x="18" y="18" width="36" height="36" rx="8" stroke="#ffffff" stroke-width="2" stroke-dasharray="4 4" opacity="0.4" />
+                    <defs>
+                      <linearGradient id="cva-grad-frames-back" x1="6" y1="6" x2="66" y2="66" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#0284c7" />
+                        <stop offset="1" stop-color="#0369a1" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </div>
+                <div class="element-category-card__layer element-category-card__layer--front">
+                  <svg class="element-category-card__svg" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="6" y="6" width="60" height="60" rx="16" fill="url(#cva-grad-frames-front)" />
+                    <rect x="6.5" y="6.5" width="59" height="59" rx="15.5" stroke="rgba(255,255,255,0.4)" stroke-width="1" />
+                    <rect x="16" y="16" width="40" height="40" rx="8" fill="#ffffff" fill-opacity="0.9" />
+                    <rect x="20" y="20" width="32" height="32" rx="4" fill="#38bdf8" />
+                    <circle cx="28" cy="28" r="3" fill="#fef08a" />
+                    <path d="M20 44 Q28 34 36 38 Q44 42 52 32 L52 52 L20 52 Z" fill="#679c16" />
+                    <defs>
+                      <linearGradient id="cva-grad-frames-front" x1="6" y1="6" x2="66" y2="66" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#38bdf8" />
+                        <stop offset="0.5" stop-color="#0284c7" />
+                        <stop offset="1" stop-color="#0369a1" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </div>
+              </div>
+              <span class="element-category-card__label">Marcos</span>
+            </button>
+
+            <button type="button" class="element-category-card" data-ref="btn-category-grids" data-category="grids">
+              <div class="element-category-card__stack" data-ref="category-stack-grids">
+                <div class="element-category-card__layer element-category-card__layer--back">
+                  <svg class="element-category-card__svg" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="6" y="6" width="60" height="60" rx="16" fill="url(#cva-grad-grids-back)" />
+                    <rect x="18" y="18" width="16" height="36" rx="4" fill="#ffffff" opacity="0.25" />
+                    <rect x="38" y="18" width="16" height="36" rx="4" fill="#ffffff" opacity="0.25" />
+                    <defs>
+                      <linearGradient id="cva-grad-grids-back" x1="6" y1="6" x2="66" y2="66" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#6366f1" />
+                        <stop offset="1" stop-color="#4338ca" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </div>
+                <div class="element-category-card__layer element-category-card__layer--front">
+                  <svg class="element-category-card__svg" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="6" y="6" width="60" height="60" rx="16" fill="url(#cva-grad-grids-front)" />
+                    <rect x="6.5" y="6.5" width="59" height="59" rx="15.5" stroke="rgba(255,255,255,0.4)" stroke-width="1" />
+                    <rect x="16" y="16" width="18" height="18" rx="4" fill="#ffffff" fill-opacity="0.9" />
+                    <rect x="38" y="16" width="18" height="18" rx="4" fill="#c7d2fe" />
+                    <rect x="16" y="38" width="18" height="18" rx="4" fill="#a5b4fc" />
+                    <rect x="38" y="38" width="18" height="18" rx="4" fill="#ffffff" fill-opacity="0.9" />
+                    <defs>
+                      <linearGradient id="cva-grad-grids-front" x1="6" y1="6" x2="66" y2="66" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#818cf8" />
+                        <stop offset="0.5" stop-color="#6366f1" />
+                        <stop offset="1" stop-color="#4f46e5" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </div>
+              </div>
+              <span class="element-category-card__label">Cuadrícula</span>
+            </button>
+
             <button type="button" class="element-category-card" data-ref="btn-category-mockups" data-category="mockups">
               <div class="element-category-card__stack" data-ref="category-stack-mockups">
                 <div class="element-category-card__layer element-category-card__layer--back">
@@ -1924,13 +2035,9 @@ function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElemen
 
       contentContainer.querySelectorAll<HTMLButtonElement>('[data-category]').forEach((btn) => {
         btn.addEventListener('click', () => {
-          const cat = btn.getAttribute('data-category') as 'shapes' | 'stickers' | 'stickies' | 'diagrams' | 'tables' | 'charts' | 'mockups' | '3d' | 'pixel-grid';
+          const cat = btn.getAttribute('data-category') as 'shapes' | 'stickers' | 'stickies' | 'diagrams' | 'tables' | 'charts' | 'frames' | 'grids' | 'mockups' | '3d' | 'pixel-grid';
           if (cat === 'charts') {
             openChartInspectorInDrawer();
-            return;
-          }
-          if (cat === 'mockups') {
-            openMockupsInDrawer();
             return;
           }
           if (cat === 'pixel-grid') {
@@ -1960,6 +2067,8 @@ function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElemen
     if (activeElementsCategory === 'diagrams') backTitle = 'Diagramas';
     if (activeElementsCategory === 'tables') backTitle = 'Tablas';
     if (activeElementsCategory === 'charts') backTitle = 'Gráficas';
+    if (activeElementsCategory === 'frames') backTitle = 'Marcos';
+    if (activeElementsCategory === 'grids') backTitle = 'Cuadrícula';
     if (activeElementsCategory === 'mockups') backTitle = 'Mockups';
     if (activeElementsCategory === '3d') backTitle = 'Elementos 3D';
 
@@ -2082,6 +2191,53 @@ function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElemen
           <span class="element-grid-item__label">${escapeHtml(item.name)}</span>
         </button>
       `).join('');
+    } else if (activeElementsCategory === 'frames') {
+      html += `
+        <div class="mockup-category-tabs" style="grid-column: 1 / -1; margin-bottom: 6px;">
+          <button type="button" class="mockup-category-pill ${activeFramesFilter === 'all' ? 'is-active' : ''}" data-ref="frame-cat-pill-all" data-frame-cat="all">Todos</button>
+          ${FRAME_CATEGORIES.map((c) => `
+            <button type="button" class="mockup-category-pill ${activeFramesFilter === c.id ? 'is-active' : ''}" data-ref="frame-cat-pill-${c.id}" data-frame-cat="${c.id}">${escapeHtml(c.name)}</button>
+          `).join('')}
+        </div>
+        <div class="elements-section-title">Marcos disponibles</div>
+      `;
+      let filteredFrames = FRAME_TEMPLATES;
+      if (activeFramesFilter !== 'all') {
+        filteredFrames = filteredFrames.filter((f) => f.category === activeFramesFilter);
+      }
+      if (cleanQ) {
+        filteredFrames = filteredFrames.filter((f) => f.name.toLowerCase().includes(cleanQ) || f.description.toLowerCase().includes(cleanQ));
+      }
+      if (filteredFrames.length === 0) {
+        html += '<div class="mockup-empty-state">No se encontraron marcos.</div>';
+      } else {
+        html += filteredFrames.map((tpl) => `
+          <button type="button" class="element-grid-item element-grid-item--diagram" data-ref="btn-mockup-item-${tpl.id}" data-mockup-id="${tpl.id}" data-tooltip="${escapeHtml(tpl.description || tpl.name)}" aria-label="${escapeHtml(tpl.name)}">
+            <div style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; overflow: hidden; pointer-events: none;">
+              ${tpl.thumbnailSvg}
+            </div>
+            <span class="element-grid-item__label">${escapeHtml(tpl.name)}</span>
+          </button>
+        `).join('');
+      }
+    } else if (activeElementsCategory === 'grids') {
+      html += '<div class="elements-section-title">Distribuciones y collages</div>';
+      let filteredGrids = GRID_TEMPLATES;
+      if (cleanQ) {
+        filteredGrids = filteredGrids.filter((g) => g.name.toLowerCase().includes(cleanQ) || g.description.toLowerCase().includes(cleanQ));
+      }
+      if (filteredGrids.length === 0) {
+        html += '<div class="mockup-empty-state">No se encontraron cuadrículas.</div>';
+      } else {
+        html += filteredGrids.map((tpl) => `
+          <button type="button" class="element-grid-item element-grid-item--diagram" data-ref="btn-mockup-item-${tpl.id}" data-mockup-id="${tpl.id}" data-tooltip="${escapeHtml(tpl.description || tpl.name)}" aria-label="${escapeHtml(tpl.name)}">
+            <div style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; overflow: hidden; pointer-events: none;">
+              ${tpl.thumbnailSvg}
+            </div>
+            <span class="element-grid-item__label">${escapeHtml(tpl.name)}</span>
+          </button>
+        `).join('');
+      }
     } else if (activeElementsCategory === 'mockups') {
       html += `
         <div style="grid-column: 1 / -1; margin-bottom: 4px;">
@@ -2090,16 +2246,33 @@ function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElemen
             <span>Explorar catálogo de mockups</span>
           </button>
         </div>
+        <div class="mockup-category-tabs" style="grid-column: 1 / -1; margin-bottom: 6px;">
+          <button type="button" class="mockup-category-pill ${activeMockupsFilter === 'all' ? 'is-active' : ''}" data-ref="mockup-cat-pill-all" data-mockup-general-cat="all">Todos</button>
+          ${MOCKUP_GENERAL_CATEGORIES.map((c) => `
+            <button type="button" class="mockup-category-pill ${activeMockupsFilter === c.id ? 'is-active' : ''}" data-ref="mockup-cat-pill-${c.id}" data-mockup-general-cat="${c.id}">${escapeHtml(c.name)}</button>
+          `).join('')}
+        </div>
         <div class="elements-section-title">Maquetas disponibles</div>
       `;
-      html += MOCKUP_TEMPLATES.map((tpl) => `
-        <button type="button" class="element-grid-item element-grid-item--diagram" data-ref="btn-mockup-item-${tpl.id}" data-mockup-id="${tpl.id}" data-tooltip="${escapeHtml(tpl.description || tpl.name)}" aria-label="${escapeHtml(tpl.name)}">
-          <div style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; overflow: hidden; pointer-events: none;">
-            ${tpl.thumbnailSvg}
-          </div>
-          <span class="element-grid-item__label">${escapeHtml(tpl.name)}</span>
-        </button>
-      `).join('');
+      let filteredMockups = MOCKUP_TEMPLATES;
+      if (activeMockupsFilter !== 'all') {
+        filteredMockups = filteredMockups.filter((m) => m.category === activeMockupsFilter);
+      }
+      if (cleanQ) {
+        filteredMockups = filteredMockups.filter((m) => m.name.toLowerCase().includes(cleanQ) || m.description.toLowerCase().includes(cleanQ));
+      }
+      if (filteredMockups.length === 0) {
+        html += '<div class="mockup-empty-state">No se encontraron mockups.</div>';
+      } else {
+        html += filteredMockups.map((tpl) => `
+          <button type="button" class="element-grid-item element-grid-item--diagram" data-ref="btn-mockup-item-${tpl.id}" data-mockup-id="${tpl.id}" data-tooltip="${escapeHtml(tpl.description || tpl.name)}" aria-label="${escapeHtml(tpl.name)}">
+            <div style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; overflow: hidden; pointer-events: none;">
+              ${tpl.thumbnailSvg}
+            </div>
+            <span class="element-grid-item__label">${escapeHtml(tpl.name)}</span>
+          </button>
+        `).join('');
+      }
     } else if (activeElementsCategory === '3d') {
       html += '<div class="elements-section-title">Modelos e Ilustraciones 3D</div>';
       html += BOARD_3D_SHAPES.map((shape) => `
@@ -2126,6 +2299,20 @@ function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElemen
   };
 
   const bindItemClicks = (container: HTMLElement) => {
+    container.querySelectorAll<HTMLButtonElement>('[data-frame-cat]').forEach((pill) => {
+      pill.addEventListener('click', () => {
+        activeFramesFilter = pill.getAttribute('data-frame-cat') as FrameCategory | 'all';
+        renderContent(searchInput?.value || '');
+      });
+    });
+
+    container.querySelectorAll<HTMLButtonElement>('[data-mockup-general-cat]').forEach((pill) => {
+      pill.addEventListener('click', () => {
+        activeMockupsFilter = pill.getAttribute('data-mockup-general-cat') as MockupGeneralCategory | 'all';
+        renderContent(searchInput?.value || '');
+      });
+    });
+
     container.querySelectorAll<HTMLButtonElement>('[data-element-id]').forEach((itemBtn) => {
       itemBtn.addEventListener('click', () => {
         const elId = itemBtn.getAttribute('data-element-id');
@@ -2188,7 +2375,7 @@ function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElemen
     container.querySelectorAll<HTMLButtonElement>('[data-mockup-id]').forEach((itemBtn) => {
       itemBtn.addEventListener('click', () => {
         const mockupId = itemBtn.getAttribute('data-mockup-id');
-        const tpl = MOCKUP_TEMPLATES.find((m) => m.id === mockupId);
+        const tpl = ALL_MOCKUP_ITEMS.find((m) => m.id === mockupId);
         if (tpl) {
           handleApplyMockup(tpl, canvasType);
         }
@@ -2442,17 +2629,45 @@ function renderUploadsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement
     isUploading = true;
     showToast('Subiendo archivo(s)...', 'info');
 
-    const res = await uploadFilesApi(validation.files);
-    isUploading = false;
+    const railUploadBtns = document.querySelectorAll<HTMLElement>('[data-ref="btn-rail-canvas-uploads"]');
+    railUploadBtns.forEach((b) => b.classList.add('is-uploading'));
+    if (btnUploadTrigger) {
+      btnUploadTrigger.disabled = true;
+    }
 
-    if (res.success) {
-      showToast(res.message || 'Archivos subidos correctamente.', 'success');
-      if (res.uploads && res.uploads.length > 0) {
-        uploads = [...res.uploads, ...uploads];
+    if (grid && uploads.length > 0) {
+      const placeholder = document.createElement('div');
+      placeholder.className = 'element-grid-item';
+      placeholder.setAttribute('data-ref', 'upload-item-placeholder');
+      placeholder.innerHTML = `
+        <div class="skeleton" style="width: 100%; height: 100%; border-radius: 6px; display: flex; align-items: center; justify-content: center;">
+          <svg class="component-icon" style="width: 18px; height: 18px; animation: railBtnUploadSpin 0.75s linear infinite; color: var(--accent-pink);" aria-hidden="true"><use href="/icons.svg#sync"></use></svg>
+        </div>
+      `;
+      grid.prepend(placeholder);
+    }
+
+    try {
+      const res = await uploadFilesApi(validation.files);
+      if (res.success) {
+        showToast(res.message || 'Archivos subidos correctamente.', 'success');
+        if (res.uploads && res.uploads.length > 0) {
+          uploads = [...res.uploads, ...uploads];
+        }
+        renderGrid(searchInput?.value || '');
+      } else {
+        showToast(res.message || 'Error al subir los archivos.', 'danger');
+        renderGrid(searchInput?.value || '');
       }
+    } catch {
+      showToast('Error al subir los archivos.', 'danger');
       renderGrid(searchInput?.value || '');
-    } else {
-      showToast(res.message || 'Error al subir los archivos.', 'danger');
+    } finally {
+      isUploading = false;
+      railUploadBtns.forEach((b) => b.classList.remove('is-uploading'));
+      if (btnUploadTrigger) {
+        btnUploadTrigger.disabled = false;
+      }
     }
   };
 
@@ -2505,6 +2720,599 @@ function renderUploadsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement
     updateCanvasRailActiveState(sidebar);
   }
 
+  renderIcons(drawerBody);
+}
+
+function renderYouTubeAppContent(drawer: HTMLElement, drawerBody: HTMLElement): void {
+  const sidebar = drawer.closest<HTMLElement>('[data-ref="sidebar"]') || document.querySelector<HTMLElement>('[data-ref="sidebar"]');
+
+  drawerBody.innerHTML = `
+    <div class="canvas-panel-card" data-ref="canvas-panel-card">
+      <div class="canvas-panel-card__header" data-ref="canvas-panel-header">
+        <div class="canvas-panel-card__title-box" data-ref="canvas-panel-title-box">
+          <svg class="canvas-panel-card__icon" viewBox="0 0 24 24" aria-hidden="true" style="fill: #ef4444;"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+          <span class="canvas-panel-card__title" data-ref="canvas-panel-title">YouTube</span>
+        </div>
+        <button type="button" class="component-button component-button--h32 component-button--icon-only rail-btn canvas-panel-card__close" data-ref="btn-close-canvas-panel" data-tooltip="Cerrar panel" aria-label="Cerrar panel">
+          <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+        </button>
+      </div>
+      <div class="canvas-panel-card__body youtube-drawer-body" data-ref="canvas-panel-body">
+        <button type="button" class="elements-back-btn" data-ref="btn-apps-back" style="margin-bottom: 12px;">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
+          <span>Volver a Apps</span>
+        </button>
+
+        <div class="menu-panel__search" data-ref="youtube-search-wrapper">
+          <svg class="component-icon menu-panel__search-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+          <input class="menu-panel__search-input" data-ref="youtube-search-input" type="text" maxlength="80" autocomplete="off" placeholder="Buscar en YouTube..." />
+        </div>
+
+        <div class="youtube-chips-row" data-ref="youtube-chips">
+          <button type="button" class="mockup-category-pill" data-ref="chip-yt-spriteboard" data-query="Spriteboard">Spriteboard</button>
+          <button type="button" class="mockup-category-pill" data-ref="chip-yt-tutorial" data-query="Diseño tutorial">Tutorial</button>
+          <button type="button" class="mockup-category-pill" data-ref="chip-yt-music" data-query="Musica lofi">Música</button>
+          <button type="button" class="mockup-category-pill" data-ref="chip-yt-pixel" data-query="Pixel art speedpaint">Pixel Art</button>
+          <button type="button" class="mockup-category-pill" data-ref="chip-yt-animation" data-query="2D Animation">Animación</button>
+        </div>
+
+        <div class="youtube-results-container" data-ref="youtube-results-container">
+          <div class="youtube-initial-state" data-ref="youtube-initial-state">
+            <div class="youtube-initial-icon" data-ref="youtube-initial-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true" style="width: 44px; height: 44px; fill: #ef4444;"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+            </div>
+            <span class="youtube-initial-title" data-ref="youtube-initial-title">Busca videos en YouTube</span>
+            <span class="youtube-initial-desc" data-ref="youtube-initial-desc">Escribe en el buscador o pulsa una sugerencia para encontrar e insertar videos en tu lienzo.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const btnBack = drawerBody.querySelector<HTMLButtonElement>('[data-ref="btn-apps-back"]');
+  btnBack?.addEventListener('click', () => {
+    activeAppId = null;
+    renderAppsDrawerContent(drawer, drawerBody);
+  });
+
+  const btnClose = drawerBody.querySelector<HTMLElement>('[data-ref="btn-close-canvas-panel"]');
+  btnClose?.addEventListener('click', (e) => {
+    e.preventDefault();
+    toggleDrawer(false);
+  });
+
+  const searchInput = drawerBody.querySelector<HTMLInputElement>('[data-ref="youtube-search-input"]');
+  const resultsContainer = drawerBody.querySelector<HTMLElement>('[data-ref="youtube-results-container"]');
+
+  let debounceTimer: number | null = null;
+
+  const performSearch = async (query: string) => {
+    if (!resultsContainer) return;
+    const cleanQ = query.trim();
+    if (!cleanQ) {
+      resultsContainer.innerHTML = `
+        <div class="youtube-initial-state" data-ref="youtube-initial-state">
+          <div class="youtube-initial-icon" data-ref="youtube-initial-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true" style="width: 44px; height: 44px; fill: #ef4444;"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+          </div>
+          <span class="youtube-initial-title" data-ref="youtube-initial-title">Busca videos en YouTube</span>
+          <span class="youtube-initial-desc" data-ref="youtube-initial-desc">Escribe en el buscador o pulsa una sugerencia para encontrar e insertar videos en tu lienzo.</span>
+        </div>
+      `;
+      return;
+    }
+
+    resultsContainer.innerHTML = `
+      <div class="youtube-loading-state" data-ref="youtube-loading-state">
+        <div class="component-spinner" style="width: 28px; height: 28px; border-width: 3px; border-color: #ef4444; border-top-color: transparent;"></div>
+        <span style="font-size: 13px; color: var(--text-secondary);">Buscando en YouTube...</span>
+      </div>
+    `;
+
+    const videos = await searchYouTubeVideos(cleanQ);
+
+    if (videos.length === 0) {
+      resultsContainer.innerHTML = `
+        <div class="mockup-empty-state" data-ref="youtube-empty">
+          No se encontraron videos para «${escapeHtml(cleanQ)}». Intenta con otra búsqueda.
+        </div>
+      `;
+      return;
+    }
+
+    resultsContainer.innerHTML = `
+      <div class="youtube-results-grid" data-ref="youtube-results-grid">
+        ${videos.map((v) => `
+          <div class="youtube-video-card" data-ref="youtube-video-card-${v.id}" data-video-id="${v.id}">
+            <div class="youtube-video-card__thumb-box" data-ref="youtube-thumb-box-${v.id}">
+              <img class="youtube-video-card__img" data-ref="youtube-img-${v.id}" src="${v.thumbnailUrl}" alt="${escapeHtml(v.title)}" loading="lazy" />
+              <div class="youtube-video-card__overlay" data-ref="youtube-overlay-${v.id}">
+                <button type="button" class="youtube-video-card__play-btn" data-ref="btn-preview-yt-${v.id}" data-tooltip="Previsualizar video" aria-label="Previsualizar">
+                  <svg viewBox="0 0 24 24" aria-hidden="true" style="width: 20px; height: 20px; fill: #ffffff;"><path d="M8 5v14l11-7z"/></svg>
+                </button>
+              </div>
+            </div>
+            <div class="youtube-video-card__info" data-ref="youtube-info-${v.id}">
+              <span class="youtube-video-card__title" data-ref="youtube-title-${v.id}" title="${escapeHtml(v.title)}">${escapeHtml(v.title)}</span>
+              <span class="youtube-video-card__channel" data-ref="youtube-channel-${v.id}">${escapeHtml(v.channelTitle)}</span>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+
+    resultsContainer.querySelectorAll<HTMLElement>('.youtube-video-card').forEach((card) => {
+      const vidId = card.getAttribute('data-video-id');
+      const item = videos.find((v) => v.id === vidId);
+      if (!item) return;
+
+      const previewBtn = card.querySelector<HTMLButtonElement>(`[data-ref="btn-preview-yt-${item.id}"]`);
+      previewBtn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openYouTubePlayerModal(item.id, item.title);
+      });
+
+      card.addEventListener('click', () => {
+        const canvasType = getActiveCanvasType();
+        const controller = getActiveCanvasController();
+
+        if (canvasType === 'doc') {
+          if (!controller) {
+            showToast('No se encontró el controlador del documento', 'warning');
+            return;
+          }
+          if (typeof controller.insertYouTubeEmbed === 'function') {
+            controller.insertYouTubeEmbed(item.id, item.title);
+          } else {
+            showToast('No se pudo insertar el video en el documento', 'warning');
+          }
+        } else if (canvasType === 'presentation') {
+          if (!controller) {
+            showToast('No se encontró el controlador de la presentación', 'warning');
+            return;
+          }
+          if (typeof controller.insertYouTube === 'function') {
+            controller.insertYouTube(item);
+          }
+        } else {
+          if (!controller) {
+            showToast('No se encontró el controlador del lienzo', 'warning');
+            return;
+          }
+          if (typeof controller.insertYouTube === 'function') {
+            controller.insertYouTube(item);
+          }
+        }
+
+        if (window.innerWidth <= 768) {
+          toggleDrawer(false);
+        }
+      });
+    });
+
+    renderIcons(resultsContainer);
+  };
+
+  searchInput?.addEventListener('input', () => {
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = window.setTimeout(() => {
+      void performSearch(searchInput.value);
+    }, 450);
+  });
+
+  drawerBody.querySelectorAll<HTMLButtonElement>('[data-query]').forEach((chip) => {
+    chip.addEventListener('click', () => {
+      const q = chip.getAttribute('data-query');
+      if (q && searchInput) {
+        searchInput.value = q;
+        void performSearch(q);
+      }
+    });
+  });
+
+  if (sidebar) {
+    updateCanvasRailActiveState(sidebar);
+  }
+  renderIcons(drawerBody);
+}
+
+function renderAppsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement): void {
+  const sidebar = drawer.closest<HTMLElement>('[data-ref="sidebar"]') || document.querySelector<HTMLElement>('[data-ref="sidebar"]');
+
+  if (activeAppId === 'youtube') {
+    renderYouTubeAppContent(drawer, drawerBody);
+    return;
+  }
+
+  if (activeAppId === 'qr-code') {
+    drawerBody.innerHTML = `
+      <div class="canvas-panel-card" data-ref="canvas-panel-card">
+        <div class="canvas-panel-card__header" data-ref="canvas-panel-header">
+          <div class="canvas-panel-card__title-box" data-ref="canvas-panel-title-box">
+            <svg class="component-icon canvas-panel-card__icon" aria-hidden="true"><use href="/icons.svg#qr_code"></use></svg>
+            <span class="canvas-panel-card__title" data-ref="canvas-panel-title">Código QR</span>
+          </div>
+          <button type="button" class="component-button component-button--h32 component-button--icon-only rail-btn canvas-panel-card__close" data-ref="btn-close-canvas-panel" data-tooltip="Cerrar panel" aria-label="Cerrar panel">
+            <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+          </button>
+        </div>
+        <div class="canvas-panel-card__body qr-drawer-body" data-ref="canvas-panel-body">
+          <button type="button" class="elements-back-btn" data-ref="btn-apps-back" style="margin-bottom: 12px;">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
+            <span>Volver a Apps</span>
+          </button>
+
+          <div class="qr-preview-wrapper" data-ref="qr-preview-wrapper">
+            <div class="qr-preview-card" data-ref="qr-preview-card">
+              <div class="qr-preview-box" data-ref="qr-preview-box"></div>
+            </div>
+          </div>
+
+          <div class="qr-drawer-section" data-ref="qr-section-url">
+            <label class="field" data-ref="field-qr-url">
+              <input class="field__input" data-ref="qr-input-url" type="text" placeholder=" " value="https://spriteboard.com" autocomplete="off" />
+              <span class="field__label">URL o contenido</span>
+            </label>
+          </div>
+
+          <div class="qr-drawer-section" data-ref="qr-section-fg-color">
+            <div class="qr-drawer-section__header">
+              <span class="qr-drawer-section__title">Color del código</span>
+              <span class="qr-drawer-section__hex" data-ref="qr-fg-hex-label">#000000</span>
+            </div>
+            <div class="qr-color-controls">
+              <div class="design-color-btn-rainbow-wrapper" data-tooltip="Elegir color personalizado">
+                <input class="design-color-active-input" data-ref="input-qr-fg-color" type="color" value="#000000" aria-label="Color del código QR" />
+                <div class="design-color-btn-rainbow">
+                  <div class="design-color-btn-rainbow__inner">
+                    <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+                  </div>
+                </div>
+              </div>
+              <div class="qr-swatches-grid" data-ref="qr-fg-swatches">
+                <button type="button" class="qr-swatch-btn is-active" data-ref="qr-fg-swatch-000000" data-color="#000000" style="background-color: #000000;" data-tooltip="Negro" aria-label="Negro"></button>
+                <button type="button" class="qr-swatch-btn" data-ref="qr-fg-swatch-1e293b" data-color="#1e293b" style="background-color: #1e293b;" data-tooltip="Pizarra" aria-label="Pizarra"></button>
+                <button type="button" class="qr-swatch-btn" data-ref="qr-fg-swatch-2563eb" data-color="#2563eb" style="background-color: #2563eb;" data-tooltip="Azul" aria-label="Azul"></button>
+                <button type="button" class="qr-swatch-btn" data-ref="qr-fg-swatch-7c3aed" data-color="#7c3aed" style="background-color: #7c3aed;" data-tooltip="Violeta" aria-label="Violeta"></button>
+                <button type="button" class="qr-swatch-btn" data-ref="qr-fg-swatch-db2777" data-color="#db2777" style="background-color: #db2777;" data-tooltip="Rosa" aria-label="Rosa"></button>
+                <button type="button" class="qr-swatch-btn" data-ref="qr-fg-swatch-059669" data-color="#059669" style="background-color: #059669;" data-tooltip="Esmeralda" aria-label="Esmeralda"></button>
+                <button type="button" class="qr-swatch-btn" data-ref="qr-fg-swatch-ea580c" data-color="#ea580c" style="background-color: #ea580c;" data-tooltip="Naranja" aria-label="Naranja"></button>
+              </div>
+            </div>
+          </div>
+
+          <div class="qr-drawer-section" data-ref="qr-section-bg-color">
+            <div class="qr-drawer-section__header">
+              <span class="qr-drawer-section__title">Color de fondo</span>
+              <span class="qr-drawer-section__hex" data-ref="qr-bg-hex-label">#FFFFFF</span>
+            </div>
+            <div class="qr-color-controls">
+              <div class="design-color-btn-rainbow-wrapper" data-tooltip="Elegir color personalizado">
+                <input class="design-color-active-input" data-ref="input-qr-bg-color" type="color" value="#ffffff" aria-label="Color de fondo" />
+                <div class="design-color-btn-rainbow">
+                  <div class="design-color-btn-rainbow__inner">
+                    <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+                  </div>
+                </div>
+              </div>
+              <div class="qr-swatches-grid" data-ref="qr-bg-swatches">
+                <button type="button" class="qr-swatch-btn is-active" data-ref="qr-bg-swatch-ffffff" data-color="#ffffff" style="background-color: #ffffff;" data-tooltip="Blanco" aria-label="Blanco"></button>
+                <button type="button" class="qr-swatch-btn qr-swatch-btn--transparent" data-ref="qr-bg-swatch-transparent" data-color="transparent" data-tooltip="Transparente" aria-label="Transparente"></button>
+                <button type="button" class="qr-swatch-btn" data-ref="qr-bg-swatch-000000" data-color="#000000" style="background-color: #000000;" data-tooltip="Negro" aria-label="Negro"></button>
+                <button type="button" class="qr-swatch-btn" data-ref="qr-bg-swatch-f8fafc" data-color="#f8fafc" style="background-color: #f8fafc;" data-tooltip="Gris claro" aria-label="Gris claro"></button>
+                <button type="button" class="qr-swatch-btn" data-ref="qr-bg-swatch-fef3c7" data-color="#fef3c7" style="background-color: #fef3c7;" data-tooltip="Crema" aria-label="Crema"></button>
+                <button type="button" class="qr-swatch-btn" data-ref="qr-bg-swatch-eff6ff" data-color="#eff6ff" style="background-color: #eff6ff;" data-tooltip="Azul pastel" aria-label="Azul pastel"></button>
+                <button type="button" class="qr-swatch-btn" data-ref="qr-bg-swatch-fdf2f8" data-color="#fdf2f8" style="background-color: #fdf2f8;" data-tooltip="Rosa pastel" aria-label="Rosa pastel"></button>
+              </div>
+            </div>
+          </div>
+
+          <div class="qr-drawer-section" data-ref="qr-section-margin">
+            <div class="qr-drawer-section__header">
+              <span class="qr-drawer-section__title">Margen</span>
+              <span class="qr-drawer-section__value" data-ref="qr-margin-val-label">10px</span>
+            </div>
+            <div class="qr-slider-row">
+              <input class="qr-range-slider" data-ref="slider-qr-margin" type="range" min="0" max="40" step="2" value="10" aria-label="Margen del código QR" />
+            </div>
+          </div>
+
+          <div class="qr-drawer-actions" data-ref="qr-drawer-actions">
+            <button type="button" class="component-button component-button--h44 component-button--black component-button--w-full" data-ref="btn-insert-qr">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+              <span>Agregar al diseño</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const btnBack = drawerBody.querySelector<HTMLButtonElement>('[data-ref="btn-apps-back"]');
+    btnBack?.addEventListener('click', () => {
+      activeAppId = null;
+      renderAppsDrawerContent(drawer, drawerBody);
+    });
+
+    const btnClose = drawerBody.querySelector<HTMLElement>('[data-ref="btn-close-canvas-panel"]');
+    btnClose?.addEventListener('click', (e) => {
+      e.preventDefault();
+      toggleDrawer(false);
+    });
+
+    const previewBox = drawerBody.querySelector<HTMLElement>('[data-ref="qr-preview-box"]');
+    const inputUrl = drawerBody.querySelector<HTMLInputElement>('[data-ref="qr-input-url"]');
+    const inputFgColor = drawerBody.querySelector<HTMLInputElement>('[data-ref="input-qr-fg-color"]');
+    const inputBgColor = drawerBody.querySelector<HTMLInputElement>('[data-ref="input-qr-bg-color"]');
+    const fgHexLabel = drawerBody.querySelector<HTMLElement>('[data-ref="qr-fg-hex-label"]');
+    const bgHexLabel = drawerBody.querySelector<HTMLElement>('[data-ref="qr-bg-hex-label"]');
+    const sliderMargin = drawerBody.querySelector<HTMLInputElement>('[data-ref="slider-qr-margin"]');
+    const marginValLabel = drawerBody.querySelector<HTMLElement>('[data-ref="qr-margin-val-label"]');
+    const btnInsert = drawerBody.querySelector<HTMLButtonElement>('[data-ref="btn-insert-qr"]');
+    const fgSwatches = drawerBody.querySelectorAll<HTMLButtonElement>('[data-ref="qr-fg-swatches"] .qr-swatch-btn');
+    const bgSwatches = drawerBody.querySelectorAll<HTMLButtonElement>('[data-ref="qr-bg-swatches"] .qr-swatch-btn');
+
+    let currentUrl = 'https://spriteboard.com';
+    let currentFg = '#000000';
+    let currentBg = '#ffffff';
+    let currentMargin = 10;
+
+    const qrInstance = new QRCodeStyling({
+      width: 200,
+      height: 200,
+      data: currentUrl,
+      margin: currentMargin,
+      qrOptions: { errorCorrectionLevel: 'Q' },
+      dotsOptions: { color: currentFg, type: 'square' },
+      cornersSquareOptions: { color: currentFg, type: 'square' },
+      cornersDotOptions: { color: currentFg, type: 'square' },
+      backgroundOptions: { color: currentBg === 'transparent' ? '#00000000' : currentBg },
+    });
+
+    if (previewBox) {
+      previewBox.innerHTML = '';
+      qrInstance.append(previewBox);
+    }
+
+    const updatePreview = () => {
+      qrInstance.update({
+        data: currentUrl.trim() || 'https://spriteboard.com',
+        margin: currentMargin,
+        dotsOptions: { color: currentFg, type: 'square' },
+        cornersSquareOptions: { color: currentFg, type: 'square' },
+        cornersDotOptions: { color: currentFg, type: 'square' },
+        backgroundOptions: { color: currentBg === 'transparent' ? '#00000000' : currentBg },
+      });
+    };
+
+    inputUrl?.addEventListener('input', () => {
+      currentUrl = inputUrl.value;
+      updatePreview();
+    });
+
+    const setFgColor = (color: string) => {
+      currentFg = color;
+      if (inputFgColor) inputFgColor.value = color;
+      if (fgHexLabel) fgHexLabel.textContent = color.toUpperCase();
+      fgSwatches.forEach((s) => s.classList.toggle('is-active', s.getAttribute('data-color')?.toLowerCase() === color.toLowerCase()));
+      updatePreview();
+    };
+
+    const setBgColor = (color: string) => {
+      currentBg = color;
+      if (inputBgColor && color !== 'transparent') inputBgColor.value = color;
+      if (bgHexLabel) bgHexLabel.textContent = color === 'transparent' ? 'TRANSPARENTE' : color.toUpperCase();
+      bgSwatches.forEach((s) => s.classList.toggle('is-active', s.getAttribute('data-color')?.toLowerCase() === color.toLowerCase()));
+      updatePreview();
+    };
+
+    inputFgColor?.addEventListener('input', () => {
+      setFgColor(inputFgColor.value);
+    });
+
+    inputBgColor?.addEventListener('input', () => {
+      setBgColor(inputBgColor.value);
+    });
+
+    fgSwatches.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const color = btn.getAttribute('data-color');
+        if (color) setFgColor(color);
+      });
+    });
+
+    bgSwatches.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const color = btn.getAttribute('data-color');
+        if (color) setBgColor(color);
+      });
+    });
+
+    sliderMargin?.addEventListener('input', () => {
+      currentMargin = parseInt(sliderMargin.value, 10) || 0;
+      if (marginValLabel) marginValLabel.textContent = `${currentMargin}px`;
+      updatePreview();
+    });
+
+    btnInsert?.addEventListener('click', async () => {
+      try {
+        btnInsert.disabled = true;
+
+        const exportQr = new QRCodeStyling({
+          width: 600,
+          height: 600,
+          data: currentUrl.trim() || 'https://spriteboard.com',
+          margin: currentMargin * 2,
+          qrOptions: { errorCorrectionLevel: 'Q' },
+          dotsOptions: { color: currentFg, type: 'square' },
+          cornersSquareOptions: { color: currentFg, type: 'square' },
+          cornersDotOptions: { color: currentFg, type: 'square' },
+          backgroundOptions: { color: currentBg === 'transparent' ? '#00000000' : currentBg },
+        });
+
+        const blob = (await exportQr.getRawData('png')) as Blob | null;
+        if (!blob) {
+          showToast('Error al generar el código QR', 'danger');
+          return;
+        }
+
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+
+        const canvasType = getActiveCanvasType();
+        const controller = getActiveCanvasController();
+
+        if (canvasType === 'doc') {
+          if (!controller) {
+            showToast('No se encontró el controlador del documento', 'warning');
+            return;
+          }
+          controller.insertImage(dataUrl, 'Código QR', '220px');
+        } else {
+          if (!controller) {
+            showToast('No se encontró el controlador del lienzo', 'warning');
+            return;
+          }
+          controller.insertImage?.(dataUrl, 260, 260, 'Código QR');
+        }
+
+        showToast('Código QR agregado al diseño', 'success');
+        if (window.innerWidth <= 768) {
+          toggleDrawer(false);
+        }
+      } catch {
+        showToast('Error al generar el código QR', 'danger');
+      } finally {
+        btnInsert.disabled = false;
+      }
+    });
+
+    if (sidebar) {
+      updateCanvasRailActiveState(sidebar);
+    }
+    renderIcons(drawerBody);
+    return;
+  }
+
+  drawerBody.innerHTML = `
+    <div class="canvas-panel-card" data-ref="canvas-panel-card">
+      <div class="canvas-panel-card__header" data-ref="canvas-panel-header">
+        <div class="canvas-panel-card__title-box" data-ref="canvas-panel-title-box">
+          <svg class="component-icon canvas-panel-card__icon" aria-hidden="true"><use href="/icons.svg#apps"></use></svg>
+          <span class="canvas-panel-card__title" data-ref="canvas-panel-title">Apps</span>
+        </div>
+        <button type="button" class="component-button component-button--h32 component-button--icon-only rail-btn canvas-panel-card__close" data-ref="btn-close-canvas-panel" data-tooltip="Cerrar panel" aria-label="Cerrar panel">
+          <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+        </button>
+      </div>
+      <div class="canvas-panel-card__body apps-drawer-body" data-ref="canvas-panel-body">
+        <div class="menu-panel__search" data-ref="canvas-apps-search">
+          <svg class="component-icon menu-panel__search-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+          <input class="menu-panel__search-input" data-ref="canvas-apps-search-input" type="text" maxlength="50" autocomplete="off" placeholder="Buscar aplicaciones..." />
+        </div>
+
+        <div class="mockup-category-tabs" data-ref="apps-category-tabs" style="margin-bottom: 10px;">
+          ${APP_CATEGORIES.map((cat) => `
+            <button type="button" class="mockup-category-pill ${activeAppCategory === cat.id ? 'is-active' : ''}" data-ref="app-cat-pill-${cat.id}" data-app-cat="${cat.id}">
+              ${escapeHtml(cat.name)}
+            </button>
+          `).join('')}
+        </div>
+
+        <div class="elements-section-title" data-ref="apps-section-title">Aplicaciones e integraciones</div>
+        <div class="apps-grid" data-ref="apps-grid"></div>
+      </div>
+    </div>
+  `;
+
+  const btnClose = drawerBody.querySelector<HTMLElement>('[data-ref="btn-close-canvas-panel"]');
+  btnClose?.addEventListener('click', (e) => {
+    e.preventDefault();
+    toggleDrawer(false);
+  });
+
+  const searchInput = drawerBody.querySelector<HTMLInputElement>('[data-ref="canvas-apps-search-input"]');
+  const appsGrid = drawerBody.querySelector<HTMLElement>('[data-ref="apps-grid"]');
+
+  const renderAppsList = (query = '') => {
+    if (!appsGrid) return;
+    const filtered = searchApps(query, activeAppCategory);
+
+    if (filtered.length === 0) {
+      appsGrid.innerHTML = `
+        <div class="mockup-empty-state" data-ref="apps-empty">
+          No se encontraron aplicaciones que coincidan con la búsqueda.
+        </div>
+      `;
+      return;
+    }
+
+    appsGrid.innerHTML = filtered.map((app) => `
+      <button type="button" class="app-card" data-ref="btn-app-card-${app.id}" data-app-id="${app.id}" data-tooltip="${escapeHtml(app.description)}" aria-label="${escapeHtml(app.name)}">
+        <div class="app-card__thumb" data-ref="app-card-thumb-${app.id}">
+          ${app.iconSvg || `<svg class="component-icon" aria-hidden="true" style="width: 36px; height: 36px;"><use href="/icons.svg#${app.icon}"></use></svg>`}
+          ${app.badge ? `<span class="app-card__badge app-card__badge--${app.status}" data-ref="app-badge-${app.id}">${escapeHtml(app.badge)}</span>` : ''}
+        </div>
+        <div class="app-card__info" data-ref="app-card-info-${app.id}">
+          <span class="app-card__title" data-ref="app-card-title-${app.id}">${escapeHtml(app.name)}</span>
+          <span class="app-card__author" data-ref="app-card-author-${app.id}">${escapeHtml(app.author)}</span>
+          <span class="app-card__desc" data-ref="app-card-desc-${app.id}">${escapeHtml(app.description)}</span>
+        </div>
+      </button>
+    `).join('');
+
+    appsGrid.querySelectorAll<HTMLButtonElement>('[data-app-id]').forEach((card) => {
+      card.addEventListener('click', () => {
+        const appId = card.getAttribute('data-app-id');
+        const found = getAppById(appId || '');
+        if (!found) return;
+
+        if (found.id === 'qr-code') {
+          activeAppId = 'qr-code';
+          renderAppsDrawerContent(drawer, drawerBody);
+          return;
+        }
+
+        if (found.id === 'youtube') {
+          activeAppId = 'youtube';
+          renderAppsDrawerContent(drawer, drawerBody);
+          return;
+        }
+
+        if (found.status === 'coming_soon') {
+          showToast(`La integración con ${found.name} estará disponible próximamente`, 'info');
+        }
+      });
+    });
+
+    renderIcons(appsGrid);
+  };
+
+  searchInput?.addEventListener('input', () => {
+    renderAppsList(searchInput.value);
+  });
+
+  drawerBody.querySelectorAll<HTMLButtonElement>('[data-app-cat]').forEach((pill) => {
+    pill.addEventListener('click', () => {
+      const cat = pill.getAttribute('data-app-cat') as AppCategory;
+      if (cat) {
+        activeAppCategory = cat;
+        drawerBody.querySelectorAll<HTMLButtonElement>('[data-app-cat]').forEach((p) => {
+          p.classList.toggle('is-active', p.getAttribute('data-app-cat') === cat);
+        });
+        renderAppsList(searchInput?.value || '');
+      }
+    });
+  });
+
+  renderAppsList(searchInput?.value || '');
+
+  if (sidebar) {
+    updateCanvasRailActiveState(sidebar);
+  }
   renderIcons(drawerBody);
 }
 
@@ -3418,9 +4226,506 @@ function renderPositionDrawerContent(drawer: HTMLElement, drawerBody: HTMLElemen
   }
 }
 
+async function renderBrandDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement): Promise<void> {
+  const sidebar = drawer.closest<HTMLElement>('[data-ref="sidebar"]') || document.querySelector<HTMLElement>('[data-ref="sidebar"]');
+  const canvasType = getActiveCanvasType();
+
+  if (!currentUser || !hasFeature('brand_kits', currentUser)) {
+    drawerBody.innerHTML = `
+      <div class="canvas-panel-card" data-ref="canvas-panel-card">
+        <div class="canvas-panel-card__header" data-ref="canvas-panel-header">
+          <div class="canvas-panel-card__title-box" data-ref="canvas-panel-title-box">
+            <svg class="component-icon canvas-panel-card__icon" aria-hidden="true"><use href="/icons.svg#palette"></use></svg>
+            <span class="canvas-panel-card__title" data-ref="canvas-panel-title">${t('brand.title') || 'Kits de marca'}</span>
+          </div>
+          <button type="button" class="component-button component-button--h32 component-button--icon-only rail-btn canvas-panel-card__close" data-ref="btn-close-canvas-panel" data-tooltip="Cerrar panel" aria-label="Cerrar panel">
+            <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+          </button>
+        </div>
+        <div class="canvas-panel-card__body" data-ref="canvas-panel-body">
+          <div class="canvas-panel-card__empty" data-ref="brand-drawer-locked">
+            <div class="brand-locked-badge" style="display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 50%; background: var(--bg-hover); margin-bottom: 12px; color: var(--color-primary, #6366f1);">
+              <svg class="component-icon" style="width: 24px; height: 24px;" aria-hidden="true"><use href="/icons.svg#workspace_premium"></use></svg>
+            </div>
+            <span class="canvas-panel-card__empty-title" style="font-size: 15px; font-weight: 600; margin-bottom: 6px;">${t('brand.business_exclusive_title') || 'Exclusivo para Business'}</span>
+            <p class="canvas-panel-card__empty-desc" style="margin-bottom: 16px;">${t('brand.drawer_locked_desc') || 'Gestiona hasta 500 kits de marca con paletas, logos, tipografías y recursos directamente en tu lienzo.'}</p>
+            <button type="button" class="component-button component-button--h40 component-button--black component-button--w-full" data-ref="btn-drawer-upgrade-brand">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#workspace_premium"></use></svg>
+              <span>${t('plans.upgrade_to_business') || 'Actualizar a Business'}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const btnClose = drawerBody.querySelector<HTMLElement>('[data-ref="btn-close-canvas-panel"]');
+    btnClose?.addEventListener('click', (e) => {
+      e.preventDefault();
+      toggleDrawer(false);
+    });
+
+    const btnUpgrade = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-upgrade-brand"]');
+    btnUpgrade?.addEventListener('click', (e) => {
+      e.preventDefault();
+      openUpgradeModal('business');
+    });
+
+    const drawerFooter = drawer.querySelector<HTMLElement>('[data-ref="drawer-footer"]');
+    if (drawerFooter) {
+      drawerFooter.style.display = 'none';
+    }
+    if (sidebar) {
+      updateCanvasRailActiveState(sidebar);
+    }
+    renderIcons(drawerBody);
+    return;
+  }
+
+  drawerBody.innerHTML = `
+    <div class="canvas-panel-card" data-ref="canvas-panel-card">
+      <div class="canvas-panel-card__header" data-ref="canvas-panel-header">
+        <div class="canvas-panel-card__title-box" data-ref="canvas-panel-title-box">
+          <svg class="component-icon canvas-panel-card__icon" aria-hidden="true"><use href="/icons.svg#palette"></use></svg>
+          <span class="canvas-panel-card__title" data-ref="canvas-panel-title">${t('brand.title') || 'Kit de marca'}</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 4px;">
+          <button type="button" class="component-button component-button--h32 component-button--icon-only rail-btn" data-ref="btn-drawer-open-brand-page" data-tooltip="${t('brand.drawer_manage') || 'Administrar kits de marca'}" aria-label="${t('brand.drawer_manage') || 'Administrar kits de marca'}">
+            <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#open_in_new"></use></svg>
+          </button>
+          <button type="button" class="component-button component-button--h32 component-button--icon-only rail-btn canvas-panel-card__close" data-ref="btn-close-canvas-panel" data-tooltip="Cerrar panel" aria-label="Cerrar panel">
+            <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+          </button>
+        </div>
+      </div>
+      <div class="canvas-panel-card__body brand-drawer-body" data-ref="canvas-panel-body">
+        <div class="brand-drawer-loading" data-ref="brand-drawer-loading">
+          <div class="skeleton" style="height: 38px; border-radius: 8px; margin-bottom: 12px;"></div>
+          <div class="skeleton" style="height: 100px; border-radius: 8px; margin-bottom: 12px;"></div>
+          <div class="skeleton" style="height: 100px; border-radius: 8px;"></div>
+        </div>
+        <div class="brand-drawer-content" data-ref="brand-drawer-content" style="display: none;"></div>
+      </div>
+    </div>
+  `;
+
+  const btnClose = drawerBody.querySelector<HTMLElement>('[data-ref="btn-close-canvas-panel"]');
+  btnClose?.addEventListener('click', (e) => {
+    e.preventDefault();
+    toggleDrawer(false);
+  });
+
+  const btnOpenPage = drawerBody.querySelector<HTMLElement>('[data-ref="btn-drawer-open-brand-page"]');
+  btnOpenPage?.addEventListener('click', (e) => {
+    e.preventDefault();
+    toggleDrawer(false);
+    navigate('/brand');
+  });
+
+  const drawerFooter = drawer.querySelector<HTMLElement>('[data-ref="drawer-footer"]');
+  if (drawerFooter) {
+    drawerFooter.style.display = 'none';
+  }
+  if (sidebar) {
+    updateCanvasRailActiveState(sidebar);
+  }
+  renderIcons(drawerBody);
+
+  const loadingEl = drawerBody.querySelector<HTMLElement>('[data-ref="brand-drawer-loading"]');
+  const contentEl = drawerBody.querySelector<HTMLElement>('[data-ref="brand-drawer-content"]');
+
+  const res = await getBrandKitsApi();
+  const kits = res.kits || [];
+
+  if (!loadingEl || !contentEl) return;
+  loadingEl.style.display = 'none';
+  contentEl.style.display = 'block';
+
+  if (kits.length === 0) {
+    contentEl.innerHTML = `
+      <div class="canvas-panel-card__empty" data-ref="brand-drawer-empty">
+        <div class="canvas-panel-card__empty-icon">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#palette"></use></svg>
+        </div>
+        <span class="canvas-panel-card__empty-title">${t('brand.drawer_empty_title') || 'No hay kits de marca'}</span>
+        <p class="canvas-panel-card__empty-desc">${t('brand.drawer_empty_desc') || 'Crea tu primer kit de marca para organizar tus logos, paletas y recursos.'}</p>
+        <button type="button" class="component-button component-button--h36 component-button--black component-button--w-full" data-ref="btn-drawer-create-first-kit" style="margin-top: 12px;">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+          <span>${t('brand.create_kit') || 'Crear kit de marca'}</span>
+        </button>
+      </div>
+    `;
+    const btnCreateKit = contentEl.querySelector<HTMLElement>('[data-ref="btn-drawer-create-first-kit"]');
+    btnCreateKit?.addEventListener('click', () => {
+      toggleDrawer(false);
+      navigate('/brand');
+    });
+    renderIcons(contentEl);
+    return;
+  }
+
+  let activeKitUuid = kits.find((k) => k.is_default)?.uuid || kits[0].uuid;
+
+  const roleLabels: Record<string, string> = {
+    body: 'Cuerpo',
+    body_secondary: 'Texto secundario',
+    caption: 'Pie de página',
+    heading_secondary: 'Subtítulo secundario',
+    subtitle: 'Subtítulo',
+    title: 'Título',
+  };
+
+  const renderActiveKitDetail = async (uuid: string) => {
+    const activeKit = kits.find((k) => k.uuid === uuid) || kits[0];
+
+    contentEl.innerHTML = `
+      <div class="settings-dropdown-wrapper settings-dropdown-wrapper--full" data-ref="dropdown-wrapper-brand-kit" style="margin-bottom: 12px;">
+        <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="trigger-brand-kit">
+          <div class="dropdown-trigger__left">
+            <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#${activeKit.is_default ? 'star' : 'palette'}"></use></svg>
+            <span class="dropdown-trigger__text" data-ref="text-brand-kit">${escapeHtml(activeKit.name)}</span>
+          </div>
+          <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+        </button>
+        <div class="dropdown-backdrop" data-ref="backdrop-brand-kit">
+          <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="menu-brand-kit">
+            <div class="menu-panel__drag-zone" aria-hidden="true">
+              <div class="menu-panel__drag-handle"></div>
+            </div>
+            <div class="menu-panel__list" data-ref="list-brand-kits">
+              ${kits.map((k) => `
+                <button type="button" class="menu-item${k.uuid === uuid ? ' is-active' : ''}" data-ref="opt-brand-kit-${k.uuid}" data-value="${k.uuid}">
+                  <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#${k.is_default ? 'star' : 'palette'}"></use></svg>
+                  <span class="menu-item__text">${escapeHtml(k.name)}</span>
+                  ${k.is_default ? '<span class="menu-item__shortcut">Predeterminado</span>' : ''}
+                </button>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="brand-drawer-kit-loading">
+        <div class="skeleton" style="height: 80px; border-radius: 8px; margin-bottom: 10px;"></div>
+        <div class="skeleton" style="height: 80px; border-radius: 8px;"></div>
+      </div>
+    `;
+
+    const dropdownWrapper = contentEl.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-brand-kit"]');
+    if (dropdownWrapper) {
+      setupDropdown(dropdownWrapper, {
+        onSelect: (val) => {
+          if (val && val !== activeKitUuid) {
+            activeKitUuid = val;
+            void renderActiveKitDetail(activeKitUuid);
+          }
+        },
+      });
+    }
+
+    const detailRes = await getBrandKitDetailApi(uuid);
+    const kit = detailRes.kit;
+    if (!kit) {
+      contentEl.innerHTML = `<p class="canvas-panel-card__empty-desc">Error al cargar kit de marca.</p>`;
+      return;
+    }
+
+    let html = `
+      <div class="settings-dropdown-wrapper settings-dropdown-wrapper--full" data-ref="dropdown-wrapper-brand-kit" style="margin-bottom: 12px;">
+        <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="trigger-brand-kit">
+          <div class="dropdown-trigger__left">
+            <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#${activeKit.is_default ? 'star' : 'palette'}"></use></svg>
+            <span class="dropdown-trigger__text" data-ref="text-brand-kit">${escapeHtml(activeKit.name)}</span>
+          </div>
+          <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+        </button>
+        <div class="dropdown-backdrop" data-ref="backdrop-brand-kit">
+          <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="menu-brand-kit">
+            <div class="menu-panel__drag-zone" aria-hidden="true">
+              <div class="menu-panel__drag-handle"></div>
+            </div>
+            <div class="menu-panel__list" data-ref="list-brand-kits">
+              ${kits.map((k) => `
+                <button type="button" class="menu-item${k.uuid === uuid ? ' is-active' : ''}" data-ref="opt-brand-kit-${k.uuid}" data-value="${k.uuid}">
+                  <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#${k.is_default ? 'star' : 'palette'}"></use></svg>
+                  <span class="menu-item__text">${escapeHtml(k.name)}</span>
+                  ${k.is_default ? '<span class="menu-item__shortcut">Predeterminado</span>' : ''}
+                </button>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="brand-drawer-sections" data-ref="brand-drawer-sections">
+    `;
+
+    let hasAnyItems = false;
+
+    if (kit.colors && kit.colors.length > 0) {
+      hasAnyItems = true;
+      html += `
+        <div class="elements-section-title">
+          <span>${t('brand.tab_colors') || 'Colores'}</span>
+          <span style="font-size: 11px; opacity: 0.6; font-weight: normal; margin-left: auto;">${kit.colors.length}</span>
+        </div>
+        <div class="brand-drawer-swatches-grid" data-ref="brand-drawer-colors-grid">
+          ${kit.colors.map((c) => {
+            const hexVal = c.hex || c.hex_value || '#6366f1';
+            return `
+              <button type="button" class="brand-drawer-swatch-btn" data-ref="brand-swatch-${c.id}" data-color-hex="${hexVal}" data-color-name="${escapeHtml(c.name)}" data-tooltip="${escapeHtml(c.name)} (${hexVal})" aria-label="${escapeHtml(c.name)}" style="background-color: ${hexVal};"></button>
+            `;
+          }).join('')}
+        </div>
+      `;
+    }
+
+    if (kit.fonts && kit.fonts.length > 0) {
+      hasAnyItems = true;
+      html += `
+        <div class="elements-section-title">
+          <span>${t('brand.tab_fonts') || 'Tipografía'}</span>
+          <span style="font-size: 11px; opacity: 0.6; font-weight: normal; margin-left: auto;">${kit.fonts.length}</span>
+        </div>
+        <div class="brand-drawer-fonts-list" style="display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px;">
+          ${kit.fonts.map((f) => {
+            const roleLabel = roleLabels[f.role] || f.role;
+            return `
+              <button type="button" class="menu-item menu-item--bordered brand-drawer-font-item" data-ref="brand-font-btn-${f.role}" data-font-family="${escapeHtml(f.font_family)}" data-font-weight="${f.font_weight}" data-font-size="${f.font_size || 16}" data-font-role="${f.role}">
+                <div style="display: flex; flex-direction: column; gap: 2px; overflow: hidden; min-width: 0; text-align: left;">
+                  <span style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-tertiary);">${escapeHtml(roleLabel)}</span>
+                  <span class="brand-drawer-font-preview" style="font-size: 13px; font-family: '${escapeHtml(f.font_family)}', sans-serif; font-weight: ${f.font_weight};">${escapeHtml(f.font_family)}</span>
+                </div>
+                <span class="menu-item__shortcut" style="margin-left: 8px;">${f.font_size || 16}px</span>
+              </button>
+            `;
+          }).join('')}
+        </div>
+      `;
+    }
+
+    if (kit.logos && kit.logos.length > 0) {
+      hasAnyItems = true;
+      html += `
+        <div class="elements-section-title">
+          <span>${t('brand.tab_logos') || 'Logos'}</span>
+          <span style="font-size: 11px; opacity: 0.6; font-weight: normal; margin-left: auto;">${kit.logos.length}</span>
+        </div>
+        <div class="elements-grid" data-ref="canvas-brand-logos-grid">
+          ${kit.logos.map((l) => {
+            const url = l.url || l.file_url || '';
+            return `
+              <button type="button" class="element-grid-item" data-ref="brand-logo-btn-${l.id}" data-asset-url="${url}" data-asset-name="${escapeHtml(l.name)}" data-asset-w="${l.width || 200}" data-asset-h="${l.height || 200}" data-tooltip="${escapeHtml(l.name)}" aria-label="${escapeHtml(l.name)}">
+                <img class="canvas-upload-img image-lazy-fade image-loaded" data-ref="img-brand-logo-${l.id}" src="${url}" alt="${escapeHtml(l.name)}" loading="lazy" decoding="async" onload="this.classList.add('image-loaded')" onerror="this.classList.add('image-loaded')" />
+              </button>
+            `;
+          }).join('')}
+        </div>
+      `;
+    }
+
+    if (kit.photos && kit.photos.length > 0) {
+      hasAnyItems = true;
+      html += `
+        <div class="elements-section-title">
+          <span>${t('brand.tab_photos') || 'Fotos'}</span>
+          <span style="font-size: 11px; opacity: 0.6; font-weight: normal; margin-left: auto;">${kit.photos.length}</span>
+        </div>
+        <div class="elements-grid" data-ref="canvas-brand-photos-grid">
+          ${kit.photos.map((p) => {
+            const url = p.url || p.file_url || '';
+            return `
+              <button type="button" class="element-grid-item" data-ref="brand-photo-btn-${p.id}" data-asset-url="${url}" data-asset-name="${escapeHtml(p.name)}" data-asset-w="${p.width || 300}" data-asset-h="${p.height || 200}" data-tooltip="${escapeHtml(p.name)}" aria-label="${escapeHtml(p.name)}">
+                <img class="canvas-upload-img image-lazy-fade image-loaded" data-ref="img-brand-photo-${p.id}" src="${url}" alt="${escapeHtml(p.name)}" loading="lazy" decoding="async" onload="this.classList.add('image-loaded')" onerror="this.classList.add('image-loaded')" />
+              </button>
+            `;
+          }).join('')}
+        </div>
+      `;
+    }
+
+    const brandGraphics = kit.elements || kit.graphics || [];
+    if (brandGraphics.length > 0) {
+      hasAnyItems = true;
+      html += `
+        <div class="elements-section-title">
+          <span>${t('brand.tab_graphics') || 'Elementos'}</span>
+          <span style="font-size: 11px; opacity: 0.6; font-weight: normal; margin-left: auto;">${brandGraphics.length}</span>
+        </div>
+        <div class="elements-grid" data-ref="canvas-brand-graphics-grid">
+          ${brandGraphics.map((g: BrandKitAsset) => {
+            const url = g.url || g.file_url || '';
+            return `
+              <button type="button" class="element-grid-item" data-ref="brand-graphic-btn-${g.id}" data-asset-url="${url}" data-asset-name="${escapeHtml(g.name)}" data-asset-w="${g.width || 200}" data-asset-h="${g.height || 200}" data-tooltip="${escapeHtml(g.name)}" aria-label="${escapeHtml(g.name)}">
+                <img class="canvas-upload-img image-lazy-fade image-loaded" data-ref="img-brand-graphic-${g.id}" src="${url}" alt="${escapeHtml(g.name)}" loading="lazy" decoding="async" onload="this.classList.add('image-loaded')" onerror="this.classList.add('image-loaded')" />
+              </button>
+            `;
+          }).join('')}
+        </div>
+      `;
+    }
+
+    if (kit.charts && kit.charts.length > 0) {
+      hasAnyItems = true;
+      html += `
+        <div class="elements-section-title">
+          <span>${t('brand.tab_charts') || 'Gráficas'}</span>
+          <span style="font-size: 11px; opacity: 0.6; font-weight: normal; margin-left: auto;">${kit.charts.length}</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px;">
+          ${kit.charts.map((c) => `
+            <button type="button" class="menu-item menu-item--bordered" data-ref="brand-chart-btn-${c.id}" data-chart-type="${c.chart_type}">
+              <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#bar_chart"></use></svg>
+              <span class="menu-item__text">${escapeHtml(c.name)}</span>
+            </button>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    if (kit.templates && kit.templates.length > 0) {
+      hasAnyItems = true;
+      html += `
+        <div class="elements-section-title">
+          <span>${t('brand.tab_templates') || 'Plantillas'}</span>
+          <span style="font-size: 11px; opacity: 0.6; font-weight: normal; margin-left: auto;">${kit.templates.length}</span>
+        </div>
+        <div class="elements-grid" data-ref="canvas-brand-templates-grid">
+          ${kit.templates.map((tItem) => {
+            const tplUuid = tItem.template_canvas_uuid || tItem.canvas_uuid || tItem.uuid || '';
+            return `
+              <button type="button" class="element-grid-item" data-ref="brand-template-btn-${tItem.id}" data-template-uuid="${tplUuid}" data-tooltip="${escapeHtml(tItem.name)}" aria-label="${escapeHtml(tItem.name)}">
+                ${tItem.preview_thumbnail ? `<img class="canvas-upload-img image-lazy-fade image-loaded" src="${tItem.preview_thumbnail}" alt="${escapeHtml(tItem.name)}" loading="lazy" decoding="async" onload="this.classList.add('image-loaded')" onerror="this.classList.add('image-loaded')" />` : `<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#space_dashboard"></use></svg>`}
+              </button>
+            `;
+          }).join('')}
+        </div>
+      `;
+    }
+
+    if (!hasAnyItems) {
+      html += `
+        <div class="canvas-panel-card__empty" data-ref="brand-kit-empty" style="padding: 20px 8px;">
+          <span class="canvas-panel-card__empty-title">Kit sin elementos</span>
+          <p class="canvas-panel-card__empty-desc">Personaliza este kit agregando colores, logos, tipografías y recursos.</p>
+        </div>
+      `;
+    }
+
+    html += `
+        <div style="padding-top: 12px; border-top: 1px solid var(--border-color); margin-top: 8px; display: flex; flex-direction: column; gap: 4px;">
+          <button type="button" class="menu-item" data-ref="btn-drawer-manage-kit">
+            <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
+            <span class="menu-item__text">${t('brand.drawer_manage') || 'Administrar kit de marca'}</span>
+          </button>
+        </div>
+      </div>
+    `;
+
+    contentEl.innerHTML = html;
+
+    const newDropdownWrapper = contentEl.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-brand-kit"]');
+    if (newDropdownWrapper) {
+      setupDropdown(newDropdownWrapper, {
+        onSelect: (val) => {
+          if (val && val !== activeKitUuid) {
+            activeKitUuid = val;
+            void renderActiveKitDetail(activeKitUuid);
+          }
+        },
+      });
+    }
+
+    const btnManage = contentEl.querySelector<HTMLElement>('[data-ref="btn-drawer-manage-kit"]');
+    btnManage?.addEventListener('click', () => {
+      toggleDrawer(false);
+      navigate('/brand');
+    });
+
+    contentEl.querySelectorAll<HTMLButtonElement>('[data-color-hex]').forEach((swatch) => {
+      swatch.addEventListener('click', () => {
+        const hex = swatch.getAttribute('data-color-hex') || '';
+        if (!hex) return;
+        try {
+          navigator.clipboard.writeText(hex);
+          showToast(`Color ${hex} copiado al portapapeles`, 'success');
+        } catch {}
+
+        const controller = getActiveCanvasController();
+        if (controller && typeof controller.applyFillColor === 'function') {
+          controller.applyFillColor(hex);
+        } else if (controller && typeof controller.setColor === 'function') {
+          controller.setColor(hex);
+        }
+      });
+    });
+
+    contentEl.querySelectorAll<HTMLButtonElement>('[data-font-family]').forEach((fontBtn) => {
+      fontBtn.addEventListener('click', () => {
+        const fontFamily = fontBtn.getAttribute('data-font-family') || 'sans-serif';
+        const fontWeight = parseInt(fontBtn.getAttribute('data-font-weight') || '400', 10);
+        const fontSize = parseInt(fontBtn.getAttribute('data-font-size') || '16', 10);
+        const role = fontBtn.getAttribute('data-font-role') || 'body';
+
+        const controller = getActiveCanvasController();
+        const activeCanvas = getActiveCanvasType();
+
+        if (activeCanvas === 'board' || activeCanvas === 'presentation') {
+          if (typeof controller?.insertTextPreset === 'function') {
+            controller.insertTextPreset({ fontFamily, fontSize, fontWeight, role });
+          } else if (typeof controller?.insertText === 'function') {
+            controller.insertText(role === 'title' ? 'Título de marca' : (role === 'subtitle' ? 'Subtítulo de marca' : 'Texto de párrafo'), fontFamily);
+          }
+          showToast(`Texto con «${fontFamily}» añadido al lienzo`, 'success');
+        } else if (activeCanvas === 'doc') {
+          controller?.insertText?.(fontFamily);
+          showToast(`Texto insertado en el documento`, 'success');
+        }
+        if (window.innerWidth <= 768) toggleDrawer(false);
+      });
+    });
+
+    contentEl.querySelectorAll<HTMLButtonElement>('[data-asset-url]').forEach((assetBtn) => {
+      assetBtn.addEventListener('click', () => {
+        const url = assetBtn.getAttribute('data-asset-url') || '';
+        const name = assetBtn.getAttribute('data-asset-name') || 'Recurso de marca';
+        const w = parseInt(assetBtn.getAttribute('data-asset-w') || '200', 10);
+        const h = parseInt(assetBtn.getAttribute('data-asset-h') || '200', 10);
+
+        const controller = getActiveCanvasController();
+        const activeCanvas = getActiveCanvasType();
+
+        if (activeCanvas === 'board' || activeCanvas === 'presentation') {
+          controller?.insertImage?.(url, w, h, name);
+          showToast(`«${name}» añadido al lienzo`, 'success');
+        } else if (activeCanvas === 'doc') {
+          controller?.insertImage?.(url, name);
+          showToast(`«${name}» insertado en el documento`, 'success');
+        }
+        if (window.innerWidth <= 768) toggleDrawer(false);
+      });
+    });
+
+    contentEl.querySelectorAll<HTMLButtonElement>('[data-chart-type]').forEach((chartBtn) => {
+      chartBtn.addEventListener('click', () => {
+        const chartType = chartBtn.getAttribute('data-chart-type') as ChartType;
+        if (chartType) {
+          handleApplyChart(chartType, canvasType);
+        }
+      });
+    });
+
+    renderIcons(contentEl);
+  };
+
+  await renderActiveKitDetail(activeKitUuid);
+}
+
 function renderCanvasDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement): void {
   const tab = activeCanvasTab || 'templates';
   const sidebar = drawer.closest<HTMLElement>('[data-ref="sidebar"]') || document.querySelector<HTMLElement>('[data-ref="sidebar"]');
+
+  if (tab === 'brand') {
+    void renderBrandDrawerContent(drawer, drawerBody);
+    return;
+  }
 
   if (tab === 'effects') {
     renderEffectsDrawerContent(drawer, drawerBody);
@@ -3474,6 +4779,11 @@ function renderCanvasDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement)
 
   if (tab === 'uploads') {
     renderUploadsDrawerContent(drawer, drawerBody);
+    return;
+  }
+
+  if (tab === 'apps') {
+    renderAppsDrawerContent(drawer, drawerBody);
     return;
   }
 
@@ -3575,6 +4885,11 @@ function renderCanvasDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement)
   }
 
   const tabMeta: Record<string, { desc: string; icon: string; title: string }> = {
+    brand: {
+      desc: 'Gestiona logos, colores, tipografías y recursos de tus kits de marca.',
+      icon: 'palette',
+      title: t('brand.title') || 'Kit de marca',
+    },
     elements: {
       desc: 'Agrega figuras, iconos, gráficos y componentes a tu lienzo.',
       icon: 'category',
@@ -6569,5 +7884,37 @@ export function openPositionInDrawer(): void {
 
 export function isPositionDrawerOpen(): boolean {
   return isDrawerOpen && activeCanvasTab === 'position';
+}
+
+export function openAppsInDrawer(appId?: string): void {
+  activeCanvasTab = 'apps';
+  activeAppId = appId || null;
+  const sidebar = document.querySelector<HTMLElement>('[data-ref="sidebar"]');
+  if (!isDrawerOpen) {
+    toggleDrawer(true);
+  } else if (sidebar) {
+    void updateDynamicDrawer(sidebar);
+    updateCanvasRailActiveState(sidebar);
+  }
+}
+
+export function isAppsDrawerOpen(): boolean {
+  return isDrawerOpen && activeCanvasTab === 'apps';
+}
+
+export function openQrInDrawer(): void {
+  openAppsInDrawer('qr-code');
+}
+
+export function isQrDrawerOpen(): boolean {
+  return isDrawerOpen && activeCanvasTab === 'apps' && activeAppId === 'qr-code';
+}
+
+export function openYouTubeInDrawer(): void {
+  openAppsInDrawer('youtube');
+}
+
+export function isYouTubeDrawerOpen(): boolean {
+  return isDrawerOpen && activeCanvasTab === 'apps' && activeAppId === 'youtube';
 }
 
