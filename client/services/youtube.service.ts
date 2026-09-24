@@ -66,7 +66,9 @@ export async function searchYouTubeVideos(query: string, maxResults = 16): Promi
 }
 
 export function getYouTubeEmbedUrl(videoId: string, autoplay = true): string {
-  return `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=${autoplay ? 1 : 0}&rel=0&modestbranding=1`;
+  const origin = typeof window !== 'undefined' && window.location?.origin ? encodeURIComponent(window.location.origin) : '';
+  const originParam = origin ? `&origin=${origin}` : '';
+  return `https://www.youtube.com/embed/${videoId}?autoplay=${autoplay ? 1 : 0}&rel=0&modestbranding=1&enablejsapi=1${originParam}`;
 }
 
 export function openYouTubePlayerModal(videoId: string, title = 'Video de YouTube'): void {
@@ -98,6 +100,7 @@ export function openYouTubePlayerModal(videoId: string, title = 'Video de YouTub
             title="${escapeHtml(title)}"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             allowfullscreen
+            referrerpolicy="strict-origin-when-cross-origin"
             style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;"
           ></iframe>
         </div>

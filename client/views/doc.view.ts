@@ -10,7 +10,7 @@ export async function createDocView(canvasUuid: string, initialRecord?: any): Pr
   try {
     loaded = await Promise.race([
       controller.init(),
-      new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 10000)),
+      new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 20000)),
     ]);
   } catch {
     loaded = false;

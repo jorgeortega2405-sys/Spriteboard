@@ -330,9 +330,10 @@ export async function render(): Promise<void> {
     } else if (
       path === '/design' || path === '/design/' || path.startsWith('/design/') ||
       path === '/board' || path === '/board/' || path.startsWith('/board/') ||
-      path === '/doc' || path === '/doc/' || path.startsWith('/doc/')
+      path === '/doc' || path === '/doc/' || path.startsWith('/doc/') ||
+      path === '/presentation' || path === '/presentation/' || path.startsWith('/presentation/')
     ) {
-      const match = path.match(/^\/(?:design|board|doc)(?:\/([a-zA-Z0-9_-]+))?/);
+      const match = path.match(/^\/(?:design|board|doc|presentation)(?:\/([a-zA-Z0-9_-]+))?/);
       const canvasUuid = match?.[1] || '';
       if (!canvasUuid) {
         window.history.replaceState({}, '', '/');

@@ -1,6 +1,6 @@
 import { API_ROUTES } from '../config/api-routes.js';
 import { getApi } from '../services/api.service.js';
-import { getLocalCanvasByUuid } from '../services/canvas-storage.service.js';
+import { getLocalCanvasByUuid, saveLocalCanvas } from '../services/canvas-storage.service.js';
 import { createBoardView } from './board.view.js';
 import { createDocView } from './doc.view.js';
 import { createErrorView } from './error.view.js';
@@ -9,12 +9,20 @@ import { createPresentationView } from './presentation.view.js';
 export async function createDesignView(canvasUuid: string): Promise<HTMLElement> {
   let canvasRecord: any = await getLocalCanvasByUuid(canvasUuid);
 
-  if (!canvasRecord) {
+  if (!canvasRecord || !canvasRecord.data || canvasRecord.id) {
     try {
       const res = await getApi(API_ROUTES.canvases.byId(canvasUuid));
       if (res.ok) {
         const body = await res.json();
-        canvasRecord = body?.canvas || body;
+        const serverCanvas = body?.canvas || body;
+        if (serverCanvas && serverCanvas.data) {
+          canvasRecord = serverCanvas;
+          void saveLocalCanvas({
+            ...serverCanvas,
+            data: serverCanvas.data,
+            is_local: false,
+          });
+        }
       }
     } catch {}
   }

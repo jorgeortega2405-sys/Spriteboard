@@ -14,7 +14,7 @@ import { t } from '../../services/i18n.service.js';
 import { renderIcons } from '../../services/icon.service.js';
 import { getEffectiveTheme } from '../../services/theme.service.js';
 import { showToast } from '../../services/toast.service.js';
-import { openYouTubePlayerModal } from '../../services/youtube.service.js';
+import { getYouTubeEmbedUrl, openYouTubePlayerModal } from '../../services/youtube.service.js';
 import { CanvasItem } from '../../types/canvas.types.js';
 import { MockupFitMode, MockupTemplate } from '../../types/mockups.types.js';
 import { PRESENTATION_FORMATS, PresentationFormatConfig, PresentationProject, PresentationSlideItem } from '../../types/presentation.types.js';
@@ -47,6 +47,8 @@ export class PresentationController {
   private animationPanel: BoardAnimationPanelComponent | null = null;
   private autoSaveTimer: number | null = null;
   private broadcastMyCursor: boolean = true;
+  private activeInlineVideoEl: HTMLElement | null = null;
+  private activeInlineVideoId: string | null = null;
   private btnColorEyedropper: HTMLButtonElement | null = null;
   private canvas: HTMLCanvasElement | null = null;
   private canvasRecord: any = null;
@@ -175,6 +177,7 @@ export class PresentationController {
       this.autoSaveTimer = null;
     }
     this.commitInlineEditor();
+    this.closeInlineVideo();
     this.collaborationManager.destroy();
     this.commentsController?.destroy();
     this.commentsController = null;
@@ -206,7 +209,7 @@ export class PresentationController {
     let rawData: any = null;
     let canvas: any = this.canvasRecord || null;
 
-    if (!canvas || !canvas.is_local || canvas.id) {
+    if (!canvas || !canvas.is_local || canvas.id || !canvas.data) {
       try {
         const res = await getApi(API_ROUTES.canvases.byId(this.canvasUuid));
         if (res.ok) {
@@ -236,6 +239,13 @@ export class PresentationController {
                 subscriptionTier: body.owner.subscription_tier || 'free',
                 username: body.owner.username || 'Propietario',
               };
+            }
+            if (canvas.data) {
+              void saveLocalCanvas({
+                ...canvas,
+                data: canvas.data,
+                is_local: false,
+              });
             }
           }
         }
@@ -1487,7 +1497,7 @@ export class PresentationController {
         } else if (hit && hit.type === 'embed') {
           const embed = hit as BoardEmbedElement;
           if (embed.embedType === 'youtube' && embed.videoId) {
-            openYouTubePlayerModal(embed.videoId, embed.title);
+            this.playEmbedInline(embed);
           }
         }
       }
@@ -1703,7 +1713,7 @@ export class PresentationController {
           if (hitElement.type === 'embed') {
             const embed = hitElement as BoardEmbedElement;
             if (embed.embedType === 'youtube' && embed.videoId) {
-              openYouTubePlayerModal(embed.videoId, embed.title);
+              this.playEmbedInline(embed);
             }
             return;
           } else if (hitElement.type === 'chart') {
@@ -2715,7 +2725,7 @@ export class PresentationController {
           const embed = selectedEls[0] as BoardEmbedElement;
           const videoId = embed.videoId;
           if (embed.embedType === 'youtube' && videoId) {
-            openYouTubePlayerModal(videoId, embed.title);
+            this.playEmbedInline(embed);
           }
         }
       },
@@ -4592,6 +4602,7 @@ export class PresentationController {
 
     this.renderOverlays();
     this.updateFloatingToolbarPosition();
+    this.syncInlineVideoPosition();
   }
 
   private escapeHtml(str: string): string {
@@ -4875,6 +4886,116 @@ export class PresentationController {
           width: this.slideWidth,
         });
       } catch {}
+    }
+  }
+
+  public playEmbedInline(embed: BoardEmbedElement): void {
+    if (this.activeInlineVideoId === embed.id && this.activeInlineVideoEl) {
+      return;
+    }
+    this.closeInlineVideo();
+
+    if (!embed.videoId || embed.embedType !== 'youtube') {
+      return;
+    }
+
+    const viewport = this.container.querySelector<HTMLElement>('[data-ref="presentation-viewport"]');
+    if (!viewport || !this.canvas) return;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'canvas-inline-video-overlay';
+    overlay.setAttribute('data-ref', 'canvas-inline-video-overlay');
+    overlay.style.position = 'absolute';
+    overlay.style.zIndex = '90';
+    overlay.style.borderRadius = '12px';
+    overlay.style.overflow = 'hidden';
+    overlay.style.boxShadow = '0 12px 32px rgba(0, 0, 0, 0.5)';
+    overlay.style.background = '#000000';
+    overlay.style.pointerEvents = 'auto';
+    overlay.style.border = '2px solid #3b82f6';
+
+    const embedUrl = getYouTubeEmbedUrl(embed.videoId, true);
+
+    overlay.innerHTML = `
+      <div style="position: absolute; top: 8px; right: 8px; z-index: 10; display: flex; align-items: center; gap: 6px;">
+        <button type="button" class="component-button component-button--icon-only" data-ref="btn-inline-video-maximize" style="width: 28px; height: 28px; min-width: 28px; border-radius: 6px; background: rgba(0, 0, 0, 0.75); color: #fff; border: 1px solid rgba(255, 255, 255, 0.2); cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);" data-tooltip="Abrir en modal" aria-label="Abrir en modal">
+          <svg class="component-icon" aria-hidden="true" style="width: 16px; height: 16px;"><use href="/icons.svg#open_in_full"></use></svg>
+        </button>
+        <button type="button" class="component-button component-button--icon-only" data-ref="btn-inline-video-close" style="width: 28px; height: 28px; min-width: 28px; border-radius: 6px; background: rgba(0, 0, 0, 0.75); color: #fff; border: 1px solid rgba(255, 255, 255, 0.2); cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);" data-tooltip="Cerrar reproductor" aria-label="Cerrar reproductor">
+          <svg class="component-icon" aria-hidden="true" style="width: 16px; height: 16px;"><use href="/icons.svg#close"></use></svg>
+        </button>
+      </div>
+      <iframe
+        src="${embedUrl}"
+        title="${escapeHtml(embed.title || 'Video de YouTube')}"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allowfullscreen
+        referrerpolicy="strict-origin-when-cross-origin"
+        style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;"
+      ></iframe>
+    `;
+
+    const btnClose = overlay.querySelector<HTMLButtonElement>('[data-ref="btn-inline-video-close"]');
+    btnClose?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.closeInlineVideo();
+    });
+
+    const btnMaximize = overlay.querySelector<HTMLButtonElement>('[data-ref="btn-inline-video-maximize"]');
+    btnMaximize?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.closeInlineVideo();
+      openYouTubePlayerModal(embed.videoId!, embed.title);
+    });
+
+    viewport.appendChild(overlay);
+    this.activeInlineVideoEl = overlay;
+    this.activeInlineVideoId = embed.id;
+    this.syncInlineVideoPosition();
+    renderIcons(overlay);
+  }
+
+  public closeInlineVideo(): void {
+    if (this.activeInlineVideoEl) {
+      this.activeInlineVideoEl.remove();
+      this.activeInlineVideoEl = null;
+    }
+    this.activeInlineVideoId = null;
+  }
+
+  public syncInlineVideoPosition(): void {
+    if (!this.activeInlineVideoEl || !this.activeInlineVideoId || !this.canvas) {
+      return;
+    }
+
+    const slide = this.slides[this.activeSlideIndex];
+    if (!slide) {
+      this.closeInlineVideo();
+      return;
+    }
+
+    const embed = slide.elements.find((el) => el.id === this.activeInlineVideoId) as BoardEmbedElement | undefined;
+    if (!embed || embed.type !== 'embed') {
+      this.closeInlineVideo();
+      return;
+    }
+
+    const slideGap = 80;
+    const cy = this.activeSlideIndex * (this.slideHeight + slideGap);
+    const camera = { x: this.panOffset.x, y: this.panOffset.y, zoom: this.zoom };
+    const screenPos = worldToScreen(embed.x, embed.y + cy, this.canvas, camera);
+    const screenWidth = Math.round(embed.width * this.zoom);
+    const screenHeight = Math.round(embed.height * this.zoom);
+
+    this.activeInlineVideoEl.style.left = `${Math.round(screenPos.x)}px`;
+    this.activeInlineVideoEl.style.top = `${Math.round(screenPos.y)}px`;
+    this.activeInlineVideoEl.style.width = `${screenWidth}px`;
+    this.activeInlineVideoEl.style.height = `${screenHeight}px`;
+    if (embed.rotation) {
+      this.activeInlineVideoEl.style.transform = `rotate(${embed.rotation}deg)`;
+      this.activeInlineVideoEl.style.transformOrigin = 'center center';
+    } else {
+      this.activeInlineVideoEl.style.transform = '';
     }
   }
 }

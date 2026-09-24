@@ -10,7 +10,7 @@ export async function createPresentationView(canvasUuid: string, initialRecord?:
   try {
     loaded = await Promise.race([
       controller.init(),
-      new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 10000)),
+      new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 20000)),
     ]);
   } catch {
     loaded = false;

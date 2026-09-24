@@ -17,7 +17,7 @@ import { currentUser, escapeHtml, getApi, postApi } from '../../services/api.ser
 import { getLocalCanvasByUuid, removeLocalCanvas, saveLocalCanvas } from '../../services/canvas-storage.service.js';
 import { renderIcons } from '../../services/icon.service.js';
 import { showToast } from '../../services/toast.service.js';
-import { openYouTubePlayerModal } from '../../services/youtube.service.js';
+import { getYouTubeEmbedUrl, openYouTubePlayerModal } from '../../services/youtube.service.js';
 import { CanvasItem } from '../../types/canvas.types.js';
 import { MockupFitMode, MockupTemplate } from '../../types/mockups.types.js';
 import { generateShadingRamp, getCollaboratorColor, rgbToHex } from '../../utils/color.util.js';
@@ -47,6 +47,8 @@ export class BoardController {
   private activeInlineEditor: HTMLTextAreaElement | null = null;
   private activeOpenDropdown: { close: () => void } | null = null;
   private activePageId = '';
+  private activeInlineVideoEl: HTMLElement | null = null;
+  private activeInlineVideoId: string | null = null;
   private activePopover: HTMLElement | null = null;
   private activeTableInlineEditor: { col: number; row: number; tableId: string; textarea: HTMLTextAreaElement } | null = null;
   private isSnappingEnabled = true;
@@ -439,6 +441,7 @@ export class BoardController {
       this.autoSaveTimer = null;
     }
     this.commitInlineEditor();
+    this.closeInlineVideo();
     closeContextMenu();
     if (this.isLoaded && this.isOwner) {
       void this.saveImmediate();
@@ -472,7 +475,7 @@ export class BoardController {
   private async loadBoardData(): Promise<boolean> {
     let canvas: CanvasItem | null = this.initialCanvasRecord || (await getLocalCanvasByUuid(this.canvasUuid));
 
-    if (!canvas || !canvas.is_local || canvas.id) {
+    if (!canvas || !canvas.is_local || canvas.id || !canvas.data) {
       try {
         const res = await getApi(API_ROUTES.canvases.byId(this.canvasUuid));
         if (res.ok) {
@@ -490,18 +493,35 @@ export class BoardController {
             if (data.room_token) {
               this.roomToken = data.room_token;
             }
+            if (data.canvas.data) {
+              void saveLocalCanvas({
+                ...data.canvas,
+                data: data.canvas.data,
+                is_local: false,
+              });
+            }
           }
-        } else if (res.status === 404 && canvas?.id) {
-          await removeLocalCanvas(this.canvasUuid);
-          return false;
         } else if (res.status === 401 || res.status === 403) {
-          return false;
+          if (!canvas || !canvas.data) {
+            return false;
+          }
         }
       } catch {
-        if (!canvas || canvas.id) {
+        if (!canvas || !canvas.data) {
           return false;
         }
       }
+    }
+
+    if (!canvas || !canvas.data) {
+      const local = await getLocalCanvasByUuid(this.canvasUuid);
+      if (local && local.data) {
+        canvas = local;
+      }
+    }
+
+    if (!canvas) {
+      return false;
     }
 
     if (this.canvasServerId && !this.roomToken) {
@@ -2305,7 +2325,7 @@ export class BoardController {
           const embed = selectedEls[0] as BoardEmbedElement;
           const videoId = embed.videoId;
           if (embed.embedType === 'youtube' && videoId) {
-            openYouTubePlayerModal(videoId, embed.title);
+            this.playEmbedInline(embed);
           }
         }
       },
@@ -3484,10 +3504,16 @@ export class BoardController {
         if (embed.embedType === 'youtube' && videoId) {
           items.push(
             {
-              action: () => openYouTubePlayerModal(videoId, embed.title),
+              action: () => this.playEmbedInline(embed),
               icon: 'play_arrow',
-              label: 'Reproducir video',
+              label: 'Reproducir en lienzo',
               ref: 'ctx-board-play-embed',
+            },
+            {
+              action: () => openYouTubePlayerModal(videoId, embed.title),
+              icon: 'open_in_full',
+              label: 'Reproducir en modal',
+              ref: 'ctx-board-play-modal-embed',
             },
             { divider: true }
           );
@@ -4436,7 +4462,7 @@ export class BoardController {
       this.updateSelectionToolbar();
       const embed = hit as BoardEmbedElement;
       if (embed.embedType === 'youtube' && embed.videoId) {
-        openYouTubePlayerModal(embed.videoId, embed.title);
+        this.playEmbedInline(embed);
       }
       return;
     }
@@ -5076,6 +5102,8 @@ export class BoardController {
     if (this.isEyedropperActive && this.eyedropperScreenPos) {
       this.drawEyedropperLoupe();
     }
+
+    this.syncInlineVideoPosition();
   }
 
   private drawEyedropperLoupe(): void {
@@ -7835,5 +7863,106 @@ export class BoardController {
       },
       { signal }
     );
+  }
+
+  public playEmbedInline(embed: BoardEmbedElement): void {
+    if (this.activeInlineVideoId === embed.id && this.activeInlineVideoEl) {
+      return;
+    }
+    this.closeInlineVideo();
+
+    if (!embed.videoId || embed.embedType !== 'youtube') {
+      return;
+    }
+
+    const viewport = this.container.querySelector<HTMLElement>('[data-ref="board-viewport"]');
+    if (!viewport || !this.canvasElement) return;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'canvas-inline-video-overlay';
+    overlay.setAttribute('data-ref', 'canvas-inline-video-overlay');
+    overlay.style.position = 'absolute';
+    overlay.style.zIndex = '90';
+    overlay.style.borderRadius = '12px';
+    overlay.style.overflow = 'hidden';
+    overlay.style.boxShadow = '0 12px 32px rgba(0, 0, 0, 0.5)';
+    overlay.style.background = '#000000';
+    overlay.style.pointerEvents = 'auto';
+    overlay.style.border = '2px solid #3b82f6';
+
+    const embedUrl = getYouTubeEmbedUrl(embed.videoId, true);
+
+    overlay.innerHTML = `
+      <div style="position: absolute; top: 8px; right: 8px; z-index: 10; display: flex; align-items: center; gap: 6px;">
+        <button type="button" class="component-button component-button--icon-only" data-ref="btn-inline-video-maximize" style="width: 28px; height: 28px; min-width: 28px; border-radius: 6px; background: rgba(0, 0, 0, 0.75); color: #fff; border: 1px solid rgba(255, 255, 255, 0.2); cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);" data-tooltip="Abrir en modal" aria-label="Abrir en modal">
+          <svg class="component-icon" aria-hidden="true" style="width: 16px; height: 16px;"><use href="/icons.svg#open_in_full"></use></svg>
+        </button>
+        <button type="button" class="component-button component-button--icon-only" data-ref="btn-inline-video-close" style="width: 28px; height: 28px; min-width: 28px; border-radius: 6px; background: rgba(0, 0, 0, 0.75); color: #fff; border: 1px solid rgba(255, 255, 255, 0.2); cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);" data-tooltip="Cerrar reproductor" aria-label="Cerrar reproductor">
+          <svg class="component-icon" aria-hidden="true" style="width: 16px; height: 16px;"><use href="/icons.svg#close"></use></svg>
+        </button>
+      </div>
+      <iframe
+        src="${embedUrl}"
+        title="${escapeHtml(embed.title || 'Video de YouTube')}"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allowfullscreen
+        referrerpolicy="strict-origin-when-cross-origin"
+        style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;"
+      ></iframe>
+    `;
+
+    const btnClose = overlay.querySelector<HTMLButtonElement>('[data-ref="btn-inline-video-close"]');
+    btnClose?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.closeInlineVideo();
+    });
+
+    const btnMaximize = overlay.querySelector<HTMLButtonElement>('[data-ref="btn-inline-video-maximize"]');
+    btnMaximize?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.closeInlineVideo();
+      openYouTubePlayerModal(embed.videoId!, embed.title);
+    });
+
+    viewport.appendChild(overlay);
+    this.activeInlineVideoEl = overlay;
+    this.activeInlineVideoId = embed.id;
+    this.syncInlineVideoPosition();
+    renderIcons(overlay);
+  }
+
+  public closeInlineVideo(): void {
+    if (this.activeInlineVideoEl) {
+      this.activeInlineVideoEl.remove();
+      this.activeInlineVideoEl = null;
+    }
+    this.activeInlineVideoId = null;
+  }
+
+  public syncInlineVideoPosition(): void {
+    if (!this.activeInlineVideoEl || !this.activeInlineVideoId || !this.canvasElement) {
+      return;
+    }
+
+    const embed = this.elements.find((el) => el.id === this.activeInlineVideoId) as BoardEmbedElement | undefined;
+    if (!embed || embed.type !== 'embed') {
+      this.closeInlineVideo();
+      return;
+    }
+
+    const screenPos = worldToScreen(embed.x, embed.y, this.canvasElement, this.camera);
+    const screenWidth = Math.round(embed.width * this.camera.zoom);
+    const screenHeight = Math.round(embed.height * this.camera.zoom);
+
+    this.activeInlineVideoEl.style.left = `${Math.round(screenPos.x)}px`;
+    this.activeInlineVideoEl.style.top = `${Math.round(screenPos.y)}px`;
+    this.activeInlineVideoEl.style.width = `${screenWidth}px`;
+    this.activeInlineVideoEl.style.height = `${screenHeight}px`;
+    if (embed.rotation) {
+      this.activeInlineVideoEl.style.transform = `rotate(${embed.rotation}deg)`;
+      this.activeInlineVideoEl.style.transformOrigin = 'center center';
+    } else {
+      this.activeInlineVideoEl.style.transform = '';
+    }
   }
 }

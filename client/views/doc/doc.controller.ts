@@ -192,20 +192,30 @@ export class DocController implements ViewController {
   private async loadCanvasData(): Promise<boolean> {
     let canvasRecord: any = this.initialCanvasRecord || (await getLocalCanvasByUuid(this.canvasUuid));
 
-    if (!canvasRecord || !canvasRecord.is_local || canvasRecord.id) {
+    if (!canvasRecord || !canvasRecord.is_local || canvasRecord.id || !canvasRecord.data) {
       try {
         const res = await getApi(API_ROUTES.canvases.byId(this.canvasUuid));
         if (res.ok) {
           const body = await res.json();
           if (body?.canvas) {
             canvasRecord = body.canvas;
+            if (canvasRecord.data) {
+              void saveLocalCanvas({
+                ...canvasRecord,
+                data: canvasRecord.data,
+                is_local: false,
+              });
+            }
           }
         }
       } catch {}
     }
 
-    if (!canvasRecord) {
-      canvasRecord = await getLocalCanvasByUuid(this.canvasUuid);
+    if (!canvasRecord || !canvasRecord.data) {
+      const local = await getLocalCanvasByUuid(this.canvasUuid);
+      if (local && local.data) {
+        canvasRecord = local;
+      }
     }
 
     if (!canvasRecord) return false;
