@@ -1,7 +1,7 @@
 import { escapeHtml } from './api.service.js';
 import { showToast } from './toast.service.js';
 
-export const GOOGLE_DRIVE_API_KEY = 'AIzaSyCCiGzBMk3HTKozEDevKYJgYH5t04oRH44';
+export const GOOGLE_DRIVE_API_KEY = 'AIzaSyBFsBn3Hi6CLH904UXGgOHP-rXORvs1-Us';
 export const GOOGLE_DRIVE_CLIENT_ID = '899980904040-n9foado9rou3etjr8d5ouikpa1ivaml2.apps.googleusercontent.com';
 export const GOOGLE_DRIVE_SCOPES = 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 

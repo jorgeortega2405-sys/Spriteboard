@@ -11,6 +11,8 @@ import { currentUser, deleteApi, deleteUploadApi, escapeHtml, getApi, getUploads
 import { getBrandKitDetailApi, getBrandKitsApi } from '../services/brand.service.js';
 import { getAllLocalCanvases, getLocalCanvasByUuid } from '../services/canvas-storage.service.js';
 import { GoogleDriveFile, connectGoogleDrive, disconnectGoogleDrive, fetchGoogleDriveFileBlob, formatFileSize, getGoogleDriveUser, isGoogleDriveConnected, listGoogleDriveFiles, openGooglePicker, uploadCanvasExportToDrive } from '../services/google-drive.service.js';
+import { MAP_PRESET_LOCATIONS, MapStyleOption, MapTypeOption, buildStaticMapUrl, fetchMapImageBlob, getGoogleMapsExternalUrl } from '../services/google-maps.service.js';
+import { GooglePhotoAlbum, GooglePhotoItem, connectGooglePhotos, disconnectGooglePhotos, fetchPhotoBlob, getGooglePhotosUser, isGooglePhotosConnected, listGooglePhotos, listGooglePhotosAlbums, openGooglePhotosPicker } from '../services/google-photos.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { createIconSvg, renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
@@ -3394,8 +3396,621 @@ function renderGoogleDriveAppContent(drawer: HTMLElement, drawerBody: HTMLElemen
   renderIcons(drawerBody);
 }
 
+let photosActiveTab: 'albums' | 'recent' = 'recent';
+let photosActiveAlbumId: string | null = null;
+let photosActiveAlbumTitle: string | null = null;
+
+async function handleInsertPhoto(photo: GooglePhotoItem): Promise<void> {
+  const canvasType = getActiveCanvasType();
+  const controller = getActiveCanvasController();
+
+  if (!controller) {
+    showToast('No se encontró el controlador del lienzo activo', 'warning');
+    return;
+  }
+
+  showToast(`Cargando foto «${photo.filename}»...`, 'info');
+  try {
+    const result = await fetchPhotoBlob(photo.baseUrl);
+    if (canvasType === 'doc') {
+      controller.insertImage(result.dataUrl, photo.filename, '60%');
+    } else {
+      controller.insertImage?.(result.dataUrl, photo.width || undefined, photo.height || undefined, photo.filename);
+    }
+    showToast(`«${photo.filename}» añadida al diseño`, 'success');
+    if (window.innerWidth <= 768) {
+      toggleDrawer(false);
+    }
+  } catch {
+    showToast('Error al descargar la foto desde Google Fotos', 'danger');
+  }
+}
+
+function renderGooglePhotosAppContent(drawer: HTMLElement, drawerBody: HTMLElement): void {
+  const sidebar = drawer.closest<HTMLElement>('[data-ref="sidebar"]') || document.querySelector<HTMLElement>('[data-ref="sidebar"]');
+
+  if (!isGooglePhotosConnected()) {
+    drawerBody.innerHTML = `
+      <div class="canvas-panel-card" data-ref="canvas-panel-card">
+        <div class="canvas-panel-card__header" data-ref="canvas-panel-header">
+          <div class="canvas-panel-card__title-box" data-ref="canvas-panel-title-box">
+            <svg class="canvas-panel-card__icon" viewBox="0 0 64 64" fill="none" aria-hidden="true" style="width: 22px; height: 22px;"><rect width="64" height="64" rx="14" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/><path d="M32 14C32 14 32 24 32 24H22C22 18.48 26.48 14 32 14Z" fill="#ea4335"/><path d="M50 32C50 32 40 32 40 32V22C45.52 22 50 26.48 50 32Z" fill="#fbbc05"/><path d="M32 50C32 50 32 40 32 40H42C42 45.52 37.52 50 32 50Z" fill="#34a853"/><path d="M14 32C14 32 24 32 24 32V42C18.48 42 14 37.52 14 32Z" fill="#4285f4"/></svg>
+            <span class="canvas-panel-card__title" data-ref="canvas-panel-title">Google Fotos</span>
+          </div>
+          <button type="button" class="component-button component-button--h32 component-button--icon-only rail-btn canvas-panel-card__close" data-ref="btn-close-canvas-panel" data-tooltip="Cerrar panel" aria-label="Cerrar panel">
+            <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+          </button>
+        </div>
+        <div class="canvas-panel-card__body photos-drawer-body" data-ref="canvas-panel-body">
+          <button type="button" class="elements-back-btn" data-ref="btn-apps-back" style="margin-bottom: 12px;">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
+            <span>Volver a Apps</span>
+          </button>
+
+          <div class="drive-connect-card" data-ref="photos-connect-card">
+            <div class="drive-connect-icon" data-ref="photos-connect-icon">
+              <svg viewBox="0 0 64 64" fill="none" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/><path d="M32 14C32 14 32 24 32 24H22C22 18.48 26.48 14 32 14Z" fill="#ea4335"/><path d="M50 32C50 32 40 32 40 32V22C45.52 22 50 26.48 50 32Z" fill="#fbbc05"/><path d="M32 50C32 50 32 40 32 40H42C42 45.52 37.52 50 32 50Z" fill="#34a853"/><path d="M14 32C14 32 24 32 24 32V42C18.48 42 14 37.52 14 32Z" fill="#4285f4"/></svg>
+            </div>
+            <span class="drive-connect-title" data-ref="photos-connect-title">Conecta con Google Fotos</span>
+            <span class="drive-connect-desc" data-ref="photos-connect-desc">Accede a tus fotografías, ilustraciones y álbumes personales para agregarlos directamente a tu diseño.</span>
+
+            <div class="drive-connect-features" data-ref="photos-connect-features">
+              <div class="drive-connect-feature-item" data-ref="photos-feat-1">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                <span>Accede a tus fotos y álbumes de Google</span>
+              </div>
+              <div class="drive-connect-feature-item" data-ref="photos-feat-2">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                <span>Inserta imágenes en alta calidad en un solo clic</span>
+              </div>
+              <div class="drive-connect-feature-item" data-ref="photos-feat-3">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                <span>Selección rápida con Google Photos Picker</span>
+              </div>
+            </div>
+
+            <button type="button" class="component-button component-button--h44 component-button--black component-button--w-full" data-ref="btn-connect-google-photos">
+              <svg class="component-icon" aria-hidden="true" style="width: 20px; height: 20px;"><use href="/icons.svg#photo_library"></use></svg>
+              <span>Conectar con Google Fotos</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const btnBack = drawerBody.querySelector<HTMLButtonElement>('[data-ref="btn-apps-back"]');
+    btnBack?.addEventListener('click', () => {
+      activeAppId = null;
+      renderAppsDrawerContent(drawer, drawerBody);
+    });
+
+    const btnClose = drawerBody.querySelector<HTMLElement>('[data-ref="btn-close-canvas-panel"]');
+    btnClose?.addEventListener('click', (e) => {
+      e.preventDefault();
+      toggleDrawer(false);
+    });
+
+    const btnConnect = drawerBody.querySelector<HTMLButtonElement>('[data-ref="btn-connect-google-photos"]');
+    btnConnect?.addEventListener('click', async () => {
+      if (!btnConnect) return;
+      btnConnect.disabled = true;
+      btnConnect.innerHTML = `
+        <div class="component-spinner" style="width: 18px; height: 18px; border-width: 2px;"></div>
+        <span>Conectando con Google...</span>
+      `;
+      const res = await connectGooglePhotos();
+      if (res.success) {
+        showToast('Google Fotos conectado exitosamente', 'success');
+        photosActiveTab = 'recent';
+        photosActiveAlbumId = null;
+        renderGooglePhotosAppContent(drawer, drawerBody);
+      } else {
+        btnConnect.disabled = false;
+        btnConnect.innerHTML = `
+          <svg class="component-icon" aria-hidden="true" style="width: 20px; height: 20px;"><use href="/icons.svg#photo_library"></use></svg>
+          <span>Conectar con Google Fotos</span>
+        `;
+        renderIcons(btnConnect);
+        if (res.error) {
+          showToast(res.error, 'warning');
+        }
+      }
+    });
+
+    if (sidebar) {
+      updateCanvasRailActiveState(sidebar);
+    }
+    renderIcons(drawerBody);
+    return;
+  }
+
+  const user = getGooglePhotosUser();
+
+  drawerBody.innerHTML = `
+    <div class="canvas-panel-card" data-ref="canvas-panel-card">
+      <div class="canvas-panel-card__header" data-ref="canvas-panel-header">
+        <div class="canvas-panel-card__title-box" data-ref="canvas-panel-title-box">
+          <svg class="canvas-panel-card__icon" viewBox="0 0 64 64" fill="none" aria-hidden="true" style="width: 22px; height: 22px;"><rect width="64" height="64" rx="14" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/><path d="M32 14C32 14 32 24 32 24H22C22 18.48 26.48 14 32 14Z" fill="#ea4335"/><path d="M50 32C50 32 40 32 40 32V22C45.52 22 50 26.48 50 32Z" fill="#fbbc05"/><path d="M32 50C32 50 32 40 32 40H42C42 45.52 37.52 50 32 50Z" fill="#34a853"/><path d="M14 32C14 32 24 32 24 32V42C18.48 42 14 37.52 14 32Z" fill="#4285f4"/></svg>
+          <span class="canvas-panel-card__title" data-ref="canvas-panel-title">Google Fotos</span>
+        </div>
+        <button type="button" class="component-button component-button--h32 component-button--icon-only rail-btn canvas-panel-card__close" data-ref="btn-close-canvas-panel" data-tooltip="Cerrar panel" aria-label="Cerrar panel">
+          <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+        </button>
+      </div>
+      <div class="canvas-panel-card__body photos-drawer-body" data-ref="canvas-panel-body">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <button type="button" class="elements-back-btn" data-ref="btn-apps-back" style="margin-bottom: 0;">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
+            <span>Volver a Apps</span>
+          </button>
+          <button type="button" class="component-button component-button--h28 component-button--ghost" data-ref="btn-disconnect-photos" data-tooltip="Desconectar cuenta" aria-label="Desconectar">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#logout"></use></svg>
+            <span style="font-size: 11px;">Desconectar</span>
+          </button>
+        </div>
+
+        <div class="drive-user-bar" data-ref="photos-user-bar">
+          <div class="drive-user-profile" data-ref="photos-user-profile">
+            ${user?.photoLink ? `<img class="drive-user-avatar" data-ref="photos-user-avatar-img" src="${user.photoLink}" alt="Avatar" />` : `<div class="drive-user-avatar" data-ref="photos-user-avatar-initial" style="background: #ea4335;">${escapeHtml((user?.displayName || 'P').charAt(0).toUpperCase())}</div>`}
+            <div class="drive-user-details" data-ref="photos-user-details">
+              <span class="drive-user-name" data-ref="photos-user-name">${escapeHtml(user?.displayName || 'Cuenta de Google')}</span>
+              <span class="drive-user-email" data-ref="photos-user-email">${escapeHtml(user?.emailAddress || 'Conectado')}</span>
+            </div>
+          </div>
+        </div>
+
+        <button type="button" class="component-button component-button--h32 component-button--subtle component-button--w-full" data-ref="btn-open-photos-picker" data-tooltip="Abrir selector modal oficial de Google Fotos" aria-label="Selector de Fotos">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#open_in_new"></use></svg>
+          <span style="font-size: 11px;">Abrir Google Photos Picker</span>
+        </button>
+
+        <div class="mockup-category-tabs" data-ref="photos-tabs" style="margin-bottom: 2px;">
+          <button type="button" class="mockup-category-pill ${photosActiveTab === 'recent' ? 'is-active' : ''}" data-ref="photos-tab-recent" data-photos-tab="recent">Fotos recientes</button>
+          <button type="button" class="mockup-category-pill ${photosActiveTab === 'albums' ? 'is-active' : ''}" data-ref="photos-tab-albums" data-photos-tab="albums">Álbumes</button>
+        </div>
+
+        ${photosActiveAlbumId ? `
+          <div style="display: flex; align-items: center; gap: 6px; padding: 4px 0;">
+            <button type="button" class="elements-back-btn" data-ref="btn-back-to-albums" style="margin-bottom: 0; padding: 2px 6px; font-size: 11px;">
+              <svg class="component-icon" aria-hidden="true" style="width: 14px; height: 14px;"><use href="/icons.svg#arrow_back"></use></svg>
+              <span>Todos los álbumes</span>
+            </button>
+            <span style="font-size: 11.5px; font-weight: 600; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(photosActiveAlbumTitle || '')}</span>
+          </div>
+        ` : ''}
+
+        <div class="photos-results-container" data-ref="photos-results-container"></div>
+      </div>
+    </div>
+  `;
+
+  const btnBack = drawerBody.querySelector<HTMLButtonElement>('[data-ref="btn-apps-back"]');
+  btnBack?.addEventListener('click', () => {
+    activeAppId = null;
+    renderAppsDrawerContent(drawer, drawerBody);
+  });
+
+  const btnClose = drawerBody.querySelector<HTMLElement>('[data-ref="btn-close-canvas-panel"]');
+  btnClose?.addEventListener('click', (e) => {
+    e.preventDefault();
+    toggleDrawer(false);
+  });
+
+  const btnDisconnect = drawerBody.querySelector<HTMLButtonElement>('[data-ref="btn-disconnect-photos"]');
+  btnDisconnect?.addEventListener('click', () => {
+    disconnectGooglePhotos();
+    showToast('Cuenta de Google Fotos desconectada', 'info');
+    renderGooglePhotosAppContent(drawer, drawerBody);
+  });
+
+  const btnBackToAlbums = drawerBody.querySelector<HTMLButtonElement>('[data-ref="btn-back-to-albums"]');
+  btnBackToAlbums?.addEventListener('click', () => {
+    photosActiveAlbumId = null;
+    photosActiveAlbumTitle = null;
+    renderGooglePhotosAppContent(drawer, drawerBody);
+  });
+
+  const resultsContainer = drawerBody.querySelector<HTMLElement>('[data-ref="photos-results-container"]');
+
+  const loadAndRenderPhotos = async () => {
+    if (!resultsContainer) return;
+    resultsContainer.innerHTML = `
+      <div class="drive-loading-state" data-ref="photos-loading-state">
+        <div class="component-spinner" style="width: 28px; height: 28px; border-width: 3px; border-color: #ea4335; border-top-color: transparent;"></div>
+        <span style="font-size: 13px; color: var(--text-secondary);">Cargando fotos...</span>
+      </div>
+    `;
+
+    try {
+      if (photosActiveTab === 'albums' && !photosActiveAlbumId) {
+        const resp = await listGooglePhotosAlbums(30);
+        if (resp.albums.length === 0) {
+          resultsContainer.innerHTML = `
+            <div class="drive-empty-state" data-ref="photos-empty">
+              <svg class="component-icon" aria-hidden="true" style="width: 38px; height: 38px; opacity: 0.4;"><use href="/icons.svg#photo_library"></use></svg>
+              <span>No se encontraron álbumes en tu cuenta</span>
+            </div>
+          `;
+          renderIcons(resultsContainer);
+          return;
+        }
+
+        resultsContainer.innerHTML = `
+          <div class="photos-grid" data-ref="photos-albums-grid">
+            ${resp.albums.map((alb) => `
+              <div class="photos-album-card" data-ref="album-${alb.id}" data-album-id="${alb.id}" data-album-title="${escapeHtml(alb.title)}">
+                <div class="photos-album-card__cover" data-ref="album-cover-${alb.id}">
+                  ${alb.coverPhotoBaseUrl ? `<img src="${alb.coverPhotoBaseUrl}" alt="${escapeHtml(alb.title)}" loading="lazy" />` : `<svg class="component-icon" aria-hidden="true" style="width: 32px; height: 32px; opacity: 0.5;"><use href="/icons.svg#photo_library"></use></svg>`}
+                </div>
+                <div class="photos-album-card__info" data-ref="album-info-${alb.id}">
+                  <span class="photos-album-card__title" data-ref="album-title-${alb.id}">${escapeHtml(alb.title)}</span>
+                  ${alb.mediaItemsCount !== undefined ? `<span class="photos-album-card__count" data-ref="album-count-${alb.id}">${alb.mediaItemsCount} elementos</span>` : ''}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+
+        resultsContainer.querySelectorAll<HTMLElement>('.photos-album-card').forEach((card) => {
+          card.addEventListener('click', () => {
+            const albId = card.getAttribute('data-album-id');
+            const albTitle = card.getAttribute('data-album-title');
+            if (albId) {
+              photosActiveAlbumId = albId;
+              photosActiveAlbumTitle = albTitle || 'Álbum';
+              renderGooglePhotosAppContent(drawer, drawerBody);
+            }
+          });
+        });
+
+        renderIcons(resultsContainer);
+        return;
+      }
+
+      const resp = await listGooglePhotos({
+        albumId: photosActiveAlbumId || undefined,
+        pageSize: 40,
+      });
+
+      if (resp.mediaItems.length === 0) {
+        resultsContainer.innerHTML = `
+          <div class="drive-empty-state" data-ref="photos-empty">
+            <svg class="component-icon" aria-hidden="true" style="width: 38px; height: 38px; opacity: 0.4;"><use href="/icons.svg#image"></use></svg>
+            <span>No se encontraron fotos en esta sección</span>
+          </div>
+        `;
+        renderIcons(resultsContainer);
+        return;
+      }
+
+      resultsContainer.innerHTML = `
+        <div class="photos-grid" data-ref="photos-grid">
+          ${resp.mediaItems.map((item) => `
+            <div class="photos-card" data-ref="photo-${item.id}" data-photo-id="${item.id}">
+              <div class="photos-card__thumb-box" data-ref="photo-thumb-box-${item.id}">
+                <img class="photos-card__img" data-ref="photo-img-${item.id}" src="${item.thumbnailUrl}" alt="${escapeHtml(item.filename)}" loading="lazy" />
+                <div class="photos-card__overlay" data-ref="photo-overlay-${item.id}">
+                  <button type="button" class="photos-card__insert-btn" data-ref="btn-insert-photo-${item.id}">Insertar</button>
+                </div>
+              </div>
+              <div class="photos-card__info" data-ref="photo-info-${item.id}">
+                <span class="photos-card__name" data-ref="photo-name-${item.id}" title="${escapeHtml(item.filename)}">${escapeHtml(item.filename)}</span>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+
+      resultsContainer.querySelectorAll<HTMLElement>('.photos-card').forEach((card) => {
+        const pid = card.getAttribute('data-photo-id');
+        const photo = resp.mediaItems.find((p) => p.id === pid);
+        if (!photo) return;
+        card.addEventListener('click', () => {
+          void handleInsertPhoto(photo);
+        });
+      });
+
+      renderIcons(resultsContainer);
+    } catch (err: any) {
+      const isScopeErr = String(err?.message || '').toLowerCase().includes('permiso') || String(err?.message || '').toLowerCase().includes('scope');
+      resultsContainer.innerHTML = `
+        <div class="drive-empty-state" data-ref="photos-error" style="color: var(--text-secondary); text-align: center; padding: 20px 12px;">
+          <svg class="component-icon" aria-hidden="true" style="width: 34px; height: 34px; color: #ef4444; margin-bottom: 6px;"><use href="/icons.svg#error"></use></svg>
+          <div style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px;">
+            ${isScopeErr ? 'Permisos insuficientes' : 'Error al cargar fotos'}
+          </div>
+          <span style="font-size: 11.5px; color: var(--text-tertiary); line-height: 1.45; margin-bottom: 12px; display: block;">
+            ${escapeHtml(err?.message || 'Error al conectar con Google Fotos')}
+          </span>
+          <div style="display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 230px; margin: 0 auto;">
+            <button type="button" class="component-button component-button--h32 component-button--black component-button--w-full" data-ref="btn-reconnect-photos">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#refresh"></use></svg>
+              <span>Reconectar y autorizar</span>
+            </button>
+            <button type="button" class="component-button component-button--h32 component-button--subtle component-button--w-full" data-ref="btn-picker-from-error">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#open_in_new"></use></svg>
+              <span>Abrir Google Photos Picker</span>
+            </button>
+          </div>
+        </div>
+      `;
+
+      const btnReconnect = resultsContainer.querySelector<HTMLButtonElement>('[data-ref="btn-reconnect-photos"]');
+      btnReconnect?.addEventListener('click', async () => {
+        disconnectGooglePhotos();
+        const res = await connectGooglePhotos();
+        if (res.success) {
+          renderGooglePhotosAppContent(drawer, drawerBody);
+        } else if (res.error) {
+          showToast(res.error, 'warning');
+        }
+      });
+
+      const btnPickerFromError = resultsContainer.querySelector<HTMLButtonElement>('[data-ref="btn-picker-from-error"]');
+      btnPickerFromError?.addEventListener('click', async () => {
+        await openGooglePhotosPicker((picked) => {
+          void handleInsertPhoto(picked);
+        });
+      });
+
+      renderIcons(resultsContainer);
+    }
+  };
+
+  drawerBody.querySelectorAll<HTMLButtonElement>('[data-photos-tab]').forEach((tabBtn) => {
+    tabBtn.addEventListener('click', () => {
+      const tab = tabBtn.getAttribute('data-photos-tab') as any;
+      if (tab) {
+        photosActiveTab = tab;
+        photosActiveAlbumId = null;
+        photosActiveAlbumTitle = null;
+        drawerBody.querySelectorAll<HTMLButtonElement>('[data-photos-tab]').forEach((b) => {
+          b.classList.toggle('is-active', b.getAttribute('data-photos-tab') === tab);
+        });
+        void loadAndRenderPhotos();
+      }
+    });
+  });
+
+  const btnPicker = drawerBody.querySelector<HTMLButtonElement>('[data-ref="btn-open-photos-picker"]');
+  btnPicker?.addEventListener('click', async () => {
+    await openGooglePhotosPicker((picked) => {
+      void handleInsertPhoto(picked);
+    });
+  });
+
+  void loadAndRenderPhotos();
+
+  if (sidebar) {
+    updateCanvasRailActiveState(sidebar);
+  }
+  renderIcons(drawerBody);
+}
+
+let mapsAddress = 'Madrid, España';
+let mapsZoom = 14;
+let mapsType: MapTypeOption = 'roadmap';
+let mapsStyle: MapStyleOption = 'standard';
+let mapsShowMarker = true;
+
+function renderGoogleMapsAppContent(drawer: HTMLElement, drawerBody: HTMLElement): void {
+  const sidebar = drawer.closest<HTMLElement>('[data-ref="sidebar"]') || document.querySelector<HTMLElement>('[data-ref="sidebar"]');
+
+  drawerBody.innerHTML = `
+    <div class="canvas-panel-card" data-ref="canvas-panel-card">
+      <div class="canvas-panel-card__header" data-ref="canvas-panel-header">
+        <div class="canvas-panel-card__title-box" data-ref="canvas-panel-title-box">
+          <svg class="canvas-panel-card__icon" viewBox="0 0 64 64" fill="none" aria-hidden="true" style="width: 22px; height: 22px;"><rect width="64" height="64" rx="14" fill="#10b981"/><path d="M32 14C23.7 14 17 20.7 17 29C17 39.5 32 50 32 50C32 50 47 39.5 47 29C47 20.7 40.3 14 32 14ZM32 35C28.7 35 26 32.3 26 29C26 25.7 28.7 23 32 23C35.3 23 38 25.7 38 29C38 32.3 35.3 35 32 35Z" fill="#ffffff"/></svg>
+          <span class="canvas-panel-card__title" data-ref="canvas-panel-title">Google Maps</span>
+        </div>
+        <button type="button" class="component-button component-button--h32 component-button--icon-only rail-btn canvas-panel-card__close" data-ref="btn-close-canvas-panel" data-tooltip="Cerrar panel" aria-label="Cerrar panel">
+          <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+        </button>
+      </div>
+      <div class="canvas-panel-card__body maps-drawer-body" data-ref="canvas-panel-body">
+        <button type="button" class="elements-back-btn" data-ref="btn-apps-back" style="margin-bottom: 2px;">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
+          <span>Volver a Apps</span>
+        </button>
+
+        <div class="menu-panel__search" data-ref="maps-search-wrapper">
+          <svg class="component-icon menu-panel__search-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+          <input class="menu-panel__search-input" data-ref="maps-search-input" type="text" maxlength="120" autocomplete="off" placeholder="Buscar dirección o ciudad..." value="${escapeHtml(mapsAddress)}" />
+        </div>
+
+        <div class="maps-chips-row" data-ref="maps-presets-row">
+          ${MAP_PRESET_LOCATIONS.map((loc) => `
+            <button type="button" class="mockup-category-pill" data-ref="chip-map-${loc.name}" data-map-loc="${escapeHtml(loc.address)}">
+              ${escapeHtml(loc.name)}
+            </button>
+          `).join('')}
+        </div>
+
+        <div class="maps-preview-card" data-ref="maps-preview-card">
+          <div class="maps-preview-box" data-ref="maps-preview-box">
+            <img class="maps-preview-img" data-ref="maps-preview-img" src="${buildStaticMapUrl({ address: mapsAddress, mapType: mapsType, showMarker: mapsShowMarker, styleTheme: mapsStyle, zoom: mapsZoom })}" alt="Vista previa del mapa" />
+          </div>
+        </div>
+
+        <div class="maps-controls-section" data-ref="maps-controls-style">
+          <span class="maps-controls-label" data-ref="label-maps-style">Estilo de mapa</span>
+          <div class="maps-style-grid" data-ref="maps-style-grid">
+            <button type="button" class="maps-style-btn ${mapsType === 'roadmap' && mapsStyle === 'standard' ? 'is-active' : ''}" data-ref="btn-map-roadmap" data-map-type="roadmap" data-map-style="standard">Estándar</button>
+            <button type="button" class="maps-style-btn ${mapsType === 'satellite' ? 'is-active' : ''}" data-ref="btn-map-satellite" data-map-type="satellite" data-map-style="standard">Satélite</button>
+            <button type="button" class="maps-style-btn ${mapsType === 'hybrid' ? 'is-active' : ''}" data-ref="btn-map-hybrid" data-map-type="hybrid" data-map-style="standard">Híbrido</button>
+            <button type="button" class="maps-style-btn ${mapsStyle === 'dark' ? 'is-active' : ''}" data-ref="btn-map-dark" data-map-type="roadmap" data-map-style="dark">Oscuro</button>
+          </div>
+        </div>
+
+        <div class="maps-controls-section" data-ref="maps-controls-zoom">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <span class="maps-controls-label" data-ref="label-maps-zoom">Zoom</span>
+            <span style="font-size: 11px; color: var(--text-tertiary);" data-ref="label-maps-zoom-val">${mapsZoom}</span>
+          </div>
+          <input class="qr-range-slider" data-ref="slider-maps-zoom" type="range" min="3" max="18" step="1" value="${mapsZoom}" aria-label="Nivel de zoom del mapa" />
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 2px 0;">
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--text-secondary); cursor: pointer;" data-ref="label-marker-toggle">
+            <input data-ref="check-maps-marker" type="checkbox" ${mapsShowMarker ? 'checked' : ''} />
+            <span>Marcador de ubicación</span>
+          </label>
+          <a class="link" data-ref="link-open-gmaps" href="${getGoogleMapsExternalUrl(mapsAddress)}" target="_blank" rel="noopener noreferrer" style="font-size: 11px; display: flex; align-items: center; gap: 4px;">
+            <span>Abrir Maps</span>
+            <svg class="component-icon" aria-hidden="true" style="width: 12px; height: 12px;"><use href="/icons.svg#open_in_new"></use></svg>
+          </a>
+        </div>
+
+        <button type="button" class="component-button component-button--h44 component-button--black component-button--w-full" data-ref="btn-insert-map-canvas">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+          <span>Insertar mapa en el diseño</span>
+        </button>
+      </div>
+    </div>
+  `;
+
+  const btnBack = drawerBody.querySelector<HTMLButtonElement>('[data-ref="btn-apps-back"]');
+  btnBack?.addEventListener('click', () => {
+    activeAppId = null;
+    renderAppsDrawerContent(drawer, drawerBody);
+  });
+
+  const btnClose = drawerBody.querySelector<HTMLElement>('[data-ref="btn-close-canvas-panel"]');
+  btnClose?.addEventListener('click', (e) => {
+    e.preventDefault();
+    toggleDrawer(false);
+  });
+
+  const searchInput = drawerBody.querySelector<HTMLInputElement>('[data-ref="maps-search-input"]');
+  const previewImg = drawerBody.querySelector<HTMLImageElement>('[data-ref="maps-preview-img"]');
+  const zoomSlider = drawerBody.querySelector<HTMLInputElement>('[data-ref="slider-maps-zoom"]');
+  const zoomValLabel = drawerBody.querySelector<HTMLElement>('[data-ref="label-maps-zoom-val"]');
+  const markerCheck = drawerBody.querySelector<HTMLInputElement>('[data-ref="check-maps-marker"]');
+  const linkOpen = drawerBody.querySelector<HTMLAnchorElement>('[data-ref="link-open-gmaps"]');
+  const btnInsert = drawerBody.querySelector<HTMLButtonElement>('[data-ref="btn-insert-map-canvas"]');
+
+  const updateMapPreview = () => {
+    const url = buildStaticMapUrl({
+      address: mapsAddress,
+      mapType: mapsType,
+      showMarker: mapsShowMarker,
+      styleTheme: mapsStyle,
+      zoom: mapsZoom,
+    });
+    if (previewImg) previewImg.src = url;
+    if (linkOpen) linkOpen.href = getGoogleMapsExternalUrl(mapsAddress);
+    if (zoomValLabel) zoomValLabel.textContent = String(mapsZoom);
+  };
+
+  let debounceTimer: number | null = null;
+  searchInput?.addEventListener('input', () => {
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = window.setTimeout(() => {
+      const q = searchInput.value.trim();
+      if (q) {
+        mapsAddress = q;
+        updateMapPreview();
+      }
+    }, 500);
+  });
+
+  drawerBody.querySelectorAll<HTMLButtonElement>('[data-map-loc]').forEach((chip) => {
+    chip.addEventListener('click', () => {
+      const loc = chip.getAttribute('data-map-loc');
+      if (loc && searchInput) {
+        mapsAddress = loc;
+        searchInput.value = loc;
+        updateMapPreview();
+      }
+    });
+  });
+
+  drawerBody.querySelectorAll<HTMLButtonElement>('[data-map-type]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const mType = btn.getAttribute('data-map-type') as MapTypeOption;
+      const mStyle = btn.getAttribute('data-map-style') as MapStyleOption;
+      if (mType) {
+        mapsType = mType;
+        mapsStyle = mStyle || 'standard';
+        drawerBody.querySelectorAll<HTMLButtonElement>('[data-map-type]').forEach((b) => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        updateMapPreview();
+      }
+    });
+  });
+
+  zoomSlider?.addEventListener('input', () => {
+    mapsZoom = Number(zoomSlider.value);
+    updateMapPreview();
+  });
+
+  markerCheck?.addEventListener('change', () => {
+    mapsShowMarker = markerCheck.checked;
+    updateMapPreview();
+  });
+
+  btnInsert?.addEventListener('click', async () => {
+    const controller = getActiveCanvasController();
+    const canvasType = getActiveCanvasType();
+    if (!controller) {
+      showToast('No se encontró el controlador del lienzo activo', 'warning');
+      return;
+    }
+
+    const mapUrl = buildStaticMapUrl({
+      address: mapsAddress,
+      height: 480,
+      mapType: mapsType,
+      showMarker: mapsShowMarker,
+      styleTheme: mapsStyle,
+      width: 640,
+      zoom: mapsZoom,
+    });
+
+    showToast(`Generando mapa de «${mapsAddress}»...`, 'info');
+
+    try {
+      const res = await fetchMapImageBlob(mapUrl);
+      if (canvasType === 'doc') {
+        controller.insertImage(res.dataUrl, `Mapa: ${mapsAddress}`, '75%');
+      } else {
+        controller.insertImage?.(res.dataUrl, 640, 480, `Mapa: ${mapsAddress}`);
+      }
+      showToast(`Mapa de «${mapsAddress}» insertado en el lienzo`, 'success');
+      if (window.innerWidth <= 768) {
+        toggleDrawer(false);
+      }
+    } catch {
+      if (canvasType === 'doc') {
+        controller.insertImage(mapUrl, `Mapa: ${mapsAddress}`, '75%');
+      } else {
+        controller.insertImage?.(mapUrl, 640, 480, `Mapa: ${mapsAddress}`);
+      }
+      showToast(`Mapa de «${mapsAddress}» insertado`, 'success');
+      if (window.innerWidth <= 768) {
+        toggleDrawer(false);
+      }
+    }
+  });
+
+  if (sidebar) {
+    updateCanvasRailActiveState(sidebar);
+  }
+  renderIcons(drawerBody);
+}
+
 function renderAppsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement): void {
   const sidebar = drawer.closest<HTMLElement>('[data-ref="sidebar"]') || document.querySelector<HTMLElement>('[data-ref="sidebar"]');
+
+  if (activeAppId === 'google-photos') {
+    renderGooglePhotosAppContent(drawer, drawerBody);
+    return;
+  }
+
+  if (activeAppId === 'google-maps') {
+    renderGoogleMapsAppContent(drawer, drawerBody);
+    return;
+  }
 
   if (activeAppId === 'google-drive') {
     renderGoogleDriveAppContent(drawer, drawerBody);
@@ -3755,6 +4370,18 @@ function renderAppsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement): 
 
         if (found.id === 'google-drive') {
           activeAppId = 'google-drive';
+          renderAppsDrawerContent(drawer, drawerBody);
+          return;
+        }
+
+        if (found.id === 'google-photos') {
+          activeAppId = 'google-photos';
+          renderAppsDrawerContent(drawer, drawerBody);
+          return;
+        }
+
+        if (found.id === 'google-maps') {
+          activeAppId = 'google-maps';
           renderAppsDrawerContent(drawer, drawerBody);
           return;
         }
