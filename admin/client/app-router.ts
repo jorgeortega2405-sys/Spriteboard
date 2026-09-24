@@ -4,17 +4,29 @@ import { currentUser } from './services/api.service.js';
 import { renderIcons } from './services/icon.service.js';
 import { SkeletonService } from './services/skeleton.service.js';
 import { hideTooltip } from './services/tooltip.service.js';
-import { ViewController } from './types/common.types.js';
+import { SkeletonSession, ViewController } from './types/common.types.js';
 import { closeAllDropdowns } from './utils/dom.util.js';
 import { canAccessRoute, getDefaultLandingRoute } from './utils/permission.util.js';
 
 let isInitialPageLoad = true;
 let currentNavigation = 0;
 let activeControllers: ViewController[] = [];
+let activeEarlySkeletonSession: SkeletonSession | null = null;
 
 function normalizePath(rawPath: string): string {
   if (!rawPath || rawPath === '/' || rawPath === '') return '/';
   return rawPath.replace(/\/+$/, '');
+}
+
+export function showEarlySkeleton(): void {
+  const appRoot = document.querySelector<HTMLElement>('[data-ref="app"]');
+  if (!appRoot) return;
+
+  const path = normalizePath(window.location.pathname);
+  activeEarlySkeletonSession = SkeletonService.showSkeleton(path, appRoot, {
+    minDuration: 180,
+    onlyBottom: false,
+  });
 }
 
 export function navigate(url: string, replace = false): void {
@@ -65,10 +77,15 @@ export async function render(): Promise<void> {
     updateSidebarActiveState(existingSidebar, path);
   }
 
-  const skeletonSession = SkeletonService.showSkeleton(path, appRoot, {
-    minDuration: 180,
-    onlyBottom: isIntraAppNavigation,
-  });
+  let skeletonSession = activeEarlySkeletonSession;
+  activeEarlySkeletonSession = null;
+
+  if (!skeletonSession) {
+    skeletonSession = SkeletonService.showSkeleton(path, appRoot, {
+      minDuration: 180,
+      onlyBottom: isIntraAppNavigation,
+    });
+  }
 
   let viewElement: HTMLElement | null = null;
 

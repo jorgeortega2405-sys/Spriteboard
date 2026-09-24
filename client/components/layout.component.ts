@@ -5300,9 +5300,46 @@ export async function createSidebar(): Promise<HTMLElement> {
   return sidebarInitPromise;
 }
 
+export function mountSidebarSkeleton(layoutContent: HTMLElement): HTMLElement | null {
+  const existing = layoutContent.querySelector<HTMLElement>('[data-ref="sidebar"], [data-ref="sidebar-skeleton"], .layout-nav');
+  if (existing) return existing;
+
+  const sidebarSkeleton = document.createElement('div');
+  sidebarSkeleton.className = 'layout-nav';
+  sidebarSkeleton.setAttribute('data-ref', 'sidebar-skeleton');
+  sidebarSkeleton.style.pointerEvents = 'none';
+  sidebarSkeleton.innerHTML = `
+    <div class="layout-rail" data-ref="layout-rail">
+      <div class="layout-rail__top" data-ref="rail-top">
+        <div class="rail-top-default" data-ref="rail-top-default">
+          <div class="skeleton" style="width: 40px; height: 40px; border-radius: 12px;"></div>
+          <div class="skeleton" style="width: 40px; height: 40px; border-radius: 12px;"></div>
+        </div>
+      </div>
+      <hr class="rail-divider" data-ref="rail-divider" />
+      <div class="layout-rail__center" data-ref="rail-center">
+        <div class="rail-center-default" data-ref="rail-center-default">
+          <div class="skeleton" style="width: 40px; height: 40px; border-radius: 12px;"></div>
+          <div class="skeleton" style="width: 40px; height: 40px; border-radius: 12px;"></div>
+          <div class="skeleton" style="width: 40px; height: 40px; border-radius: 12px;"></div>
+          <div class="skeleton" style="width: 40px; height: 40px; border-radius: 12px;"></div>
+        </div>
+      </div>
+      <div class="layout-rail__bottom" data-ref="rail-bottom">
+        <div class="skeleton skeleton--circle" style="width: 36px; height: 36px;"></div>
+      </div>
+    </div>
+  `;
+  layoutContent.prepend(sidebarSkeleton);
+  return sidebarSkeleton;
+}
+
 export async function ensureSidebarMounted(layoutContent: HTMLElement): Promise<HTMLElement> {
   const sidebar = await createSidebar();
-  if (sidebar.parentElement !== layoutContent) {
+  const skeletonSidebar = layoutContent.querySelector<HTMLElement>('[data-ref="sidebar-skeleton"]');
+  if (skeletonSidebar) {
+    skeletonSidebar.replaceWith(sidebar);
+  } else if (sidebar.parentElement !== layoutContent) {
     layoutContent.prepend(sidebar);
   }
   return sidebar;

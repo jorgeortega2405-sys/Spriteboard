@@ -1,5 +1,5 @@
 import { closeContextMenu } from './components/context-menu.component.js';
-import { attachChatSidebarToView, ensureSidebarMounted, getIsSidebarOpen, hasDesignatedMenuItems, isCanvasRoute, toggleDrawer, toggleSidebar, updateDynamicDrawer, updateSidebarActiveState } from './components/layout.component.js';
+import { attachChatSidebarToView, ensureSidebarMounted, getIsSidebarOpen, hasDesignatedMenuItems, isCanvasRoute, mountSidebarSkeleton, toggleDrawer, toggleSidebar, updateDynamicDrawer, updateSidebarActiveState } from './components/layout.component.js';
 import { closeAllModals } from './components/modal.component.js';
 import { openUpgradeModal } from './components/upgrade-modal.component.js';
 import { API_ROUTES } from './config/api-routes.js';
@@ -10,13 +10,14 @@ import { SkeletonService } from './services/skeleton.service.js';
 import { trackPageView } from './services/telemetry.service.js';
 import { hideTooltip } from './services/tooltip.service.js';
 import { canPublishTemplates } from './types/auth.types.js';
-import { ViewController } from './types/common.types.js';
+import { SkeletonSession, ViewController } from './types/common.types.js';
 import { closeAllDropdowns } from './utils/dom.util.js';
 
 let isInitialPageLoad = true;
 let currentNavigation = 0;
 let previousPath = '';
 let activeControllers: ViewController[] = [];
+let activeEarlySkeletonSession: SkeletonSession | null = null;
 
 function normalizePath(rawPath: string): string {
   if (!rawPath || rawPath === '/' || rawPath === '') return '/';
@@ -46,6 +47,38 @@ function normalizePath(rawPath: string): string {
     return '/help/billing';
   }
   return clean;
+}
+
+export function showEarlySkeleton(): void {
+  const appRoot = document.querySelector<HTMLElement>('[data-ref="app"]');
+  if (!appRoot) return;
+
+  const path = window.location.pathname;
+  let layoutContent = appRoot.querySelector<HTMLElement>('.layout-content');
+  if (!layoutContent) {
+    layoutContent = document.createElement('div');
+    layoutContent.className = 'layout-content';
+    layoutContent.setAttribute('data-ref', 'app-layout');
+    appRoot.appendChild(layoutContent);
+  }
+
+  const isAuthView =
+    path.startsWith('/login') ||
+    path.startsWith('/register') ||
+    path === '/forgot-password' ||
+    path === '/reset-password';
+
+  if (isAuthView) {
+    layoutContent.classList.add('is-auth-mode');
+  } else {
+    layoutContent.classList.remove('is-auth-mode');
+    mountSidebarSkeleton(layoutContent);
+  }
+
+  activeEarlySkeletonSession = SkeletonService.showSkeleton(path, layoutContent, {
+    minDuration: 180,
+    onlyBottom: false,
+  });
 }
 
 export function navigate(url: string, replace = false): void {
@@ -130,6 +163,10 @@ export async function render(): Promise<void> {
     layoutContent.classList.remove('is-auth-mode');
     updateSidebarActiveState(currentSidebar, path);
   } else {
+    const skeletonSidebar = layoutContent.querySelector<HTMLElement>('[data-ref="sidebar-skeleton"]');
+    if (skeletonSidebar) {
+      skeletonSidebar.remove();
+    }
     currentSidebar = layoutContent.querySelector<HTMLElement>('[data-ref="sidebar"], .layout-nav');
     if (currentSidebar) {
       currentSidebar.style.display = 'none';
@@ -141,10 +178,15 @@ export async function render(): Promise<void> {
     toggleSidebar(false);
   }
 
-  const skeletonSession = SkeletonService.showSkeleton(path, layoutContent, {
-    minDuration: 180,
-    onlyBottom: !isInitialPageLoad && !isAuthView,
-  });
+  let skeletonSession = activeEarlySkeletonSession;
+  activeEarlySkeletonSession = null;
+
+  if (!skeletonSession) {
+    skeletonSession = SkeletonService.showSkeleton(path, layoutContent, {
+      minDuration: 180,
+      onlyBottom: !isInitialPageLoad && !isAuthView,
+    });
+  }
 
   let viewElements: HTMLElement[] = [];
 

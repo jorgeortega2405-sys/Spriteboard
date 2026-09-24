@@ -1,4 +1,4 @@
-import { navigate, render } from './app-router.js';
+import { navigate, render, showEarlySkeleton } from './app-router.js';
 import { checkAuthSession, currentUser, fetchAppConfig, fetchCsrfToken, verifySubscriptionSessionApi } from './services/api.service.js';
 import { initCookieBanner } from './services/bottom-banner.service.js';
 import { initI18n } from './services/i18n.service.js';
@@ -134,6 +134,7 @@ function initLinkInterception(): void {
 
 async function init(): Promise<void> {
   initTheme();
+  showEarlySkeleton();
   initTooltips();
   initScrollShadow();
   initLinkInterception();
