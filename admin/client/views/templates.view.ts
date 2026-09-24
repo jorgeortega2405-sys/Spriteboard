@@ -394,7 +394,12 @@ export class TemplatesViewController implements ViewController {
             <div style="display: flex; flex-direction: column; gap: 2px;">
               <span style="font-weight: 600; color: var(--text-primary); font-size: 13px;">${escapeHtml(tmpl.title)}</span>
               ${tmpl.description ? `<span style="font-size: 11px; color: var(--text-secondary); max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(tmpl.description)}</span>` : ''}
-              ${tmpl.is_official ? `<span style="font-size: 10px; font-weight: 700; color: #6366f1;">OFICIAL SPRITEBOARD</span>` : ''}
+              <div style="display: flex; align-items: center; gap: 6px; margin-top: 2px;">
+                ${tmpl.is_official ? `<span style="font-size: 10px; font-weight: 700; color: #6366f1;">OFICIAL SPRITEBOARD</span>` : ''}
+                ${tmpl.is_premium
+                  ? `<span style="font-size: 10px; font-weight: 700; color: #f59e0b; display: inline-flex; align-items: center; gap: 2px;"><svg class="component-icon" style="font-size: 12px; width: 12px; height: 12px;" aria-hidden="true"><use href="/icons.svg#workspace_premium"></use></svg> PREMIUM</span>`
+                  : `<span style="font-size: 10px; font-weight: 600; color: var(--text-secondary);">LIBRE</span>`}
+              </div>
             </div>
           </td>
           <td style="padding: 12px 16px;">

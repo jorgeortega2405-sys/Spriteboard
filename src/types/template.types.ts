@@ -5,6 +5,7 @@ export interface CreateTemplateDto {
   canvas_uuid: string;
   category?: string;
   description?: string;
+  is_premium?: boolean;
   tags?: string[];
   title: string;
 }
@@ -19,6 +20,7 @@ export interface TemplateRecord {
   description: string | null;
   id: string;
   is_official: boolean;
+  is_premium: boolean;
   preview_thumbnail: string | null;
   rating_average: number;
   rating_count: number;

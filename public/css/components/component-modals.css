@@ -11725,6 +11725,109 @@ html.dark-theme .templates-hero .component-badge {
   height: 110px;
 }
 
+.template-card__badge-overlay {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.template-card__premium-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  background: rgba(15, 15, 15, 0.82);
+  color: #fbbf24;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.template-card__premium-badge .component-icon {
+  width: 13px;
+  height: 13px;
+  font-size: 13px;
+  color: #fbbf24;
+}
+
+.template-preview-modal__btn-use--upgrade {
+  background: linear-gradient(135deg, #18181b 0%, #27272a 100%);
+  border: 1px solid rgba(251, 191, 36, 0.45);
+  color: #ffffff;
+  box-shadow: 0 2px 10px rgba(251, 191, 36, 0.15);
+}
+
+.template-preview-modal__btn-use--upgrade:hover {
+  background: linear-gradient(135deg, #27272a 0%, #3f3f46 100%);
+  border-color: rgba(251, 191, 36, 0.7);
+  box-shadow: 0 4px 14px rgba(251, 191, 36, 0.25);
+}
+
+.template-pricing-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+}
+
+.template-pricing-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+  width: 100%;
+}
+
+.template-pricing-card:hover {
+  background-color: var(--bg-hover, rgba(0, 0, 0, 0.04));
+  border-color: var(--border-hover, var(--border-color));
+}
+
+.template-pricing-card.is-selected {
+  border-color: var(--sl-color-primary, #6366f1);
+  background-color: rgba(99, 102, 241, 0.08);
+  box-shadow: 0 0 0 1px var(--sl-color-primary, #6366f1);
+}
+
+.template-pricing-card__header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.template-pricing-card__header .component-icon {
+  width: 16px;
+  height: 16px;
+  font-size: 16px;
+}
+
+.template-pricing-card__title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.template-pricing-card__sub {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
 @media (max-width: 860px) {
   .modal-card--template-preview {
     padding: 16px;

@@ -19,6 +19,7 @@ export interface PresetItem {
   height: number;
   id: string;
   imagePath: string;
+  isPremium?: boolean;
   isTemplate: boolean;
   masterPath?: string;
   name: string;
@@ -78,6 +79,7 @@ export const ALL_PRESETS: PresetItem[] = [
     height: 1080,
     id: 'tmpl-board-roadmap',
     imagePath: '/assets/templates/boards/roadmap.svg',
+    isPremium: true,
     isTemplate: true,
     name: 'Product Roadmap & Milestones',
     pageImages: [
@@ -139,6 +141,7 @@ export const ALL_PRESETS: PresetItem[] = [
     height: 720,
     id: 'tmpl-pres-qbr',
     imagePath: '/assets/templates/presentations/qbr.svg',
+    isPremium: true,
     isTemplate: true,
     name: 'Quarterly Business Review (QBR)',
     pageImages: [
@@ -160,6 +163,7 @@ export const ALL_PRESETS: PresetItem[] = [
     height: 720,
     id: 'tmpl-pres-launch',
     imagePath: '/assets/templates/presentations/launch.svg',
+    isPremium: true,
     isTemplate: true,
     name: 'Product Feature Launch',
     pageImages: [
@@ -201,6 +205,7 @@ export const ALL_PRESETS: PresetItem[] = [
     height: 1056,
     id: 'tmpl-doc-rfc',
     imagePath: '/assets/templates/docs/rfc.svg',
+    isPremium: true,
     isTemplate: true,
     name: 'Technical Architecture RFC',
     pageImages: [

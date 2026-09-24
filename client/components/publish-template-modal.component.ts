@@ -28,7 +28,7 @@ export function openPublishTemplateModal(canvas: CanvasItem, options?: PublishTe
 
   const bodyHtml = `
     <div class="publish-template-form" data-ref="publish-template-form">
-      <div class="field-group" data-ref="group-template-type" style="margin-bottom: var(--sl-spacing-md);">
+      <div class="field-group" data-ref="group-template-title" style="margin-bottom: var(--sl-spacing-md);">
         <label class="field" data-ref="label-template-title">
           <input class="field__input" data-ref="input-template-title" type="text" value="${escapeHtml(canvas.name)}" placeholder=" " autocomplete="off" maxlength="150" />
           <span class="field__label">${t('templates.modal_field_title') || 'Título de la plantilla'}</span>
@@ -40,6 +40,31 @@ export function openPublishTemplateModal(canvas: CanvasItem, options?: PublishTe
           <textarea class="field__input field__textarea" data-ref="input-template-desc" placeholder=" " rows="3" maxlength="500"></textarea>
           <span class="field__label">${t('templates.modal_field_desc') || 'Descripción (opcional)'}</span>
         </label>
+      </div>
+
+      <div class="field-group" data-ref="group-template-pricing" style="margin-bottom: var(--sl-spacing-md);">
+        <span class="field-group__heading" data-ref="heading-template-pricing" style="display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px;">
+          ${t('templates.pricing_type_label') || 'Tipo de acceso'}
+        </span>
+        <div class="template-pricing-options" data-ref="template-pricing-options">
+          <button type="button" class="template-pricing-card is-selected" data-ref="btn-tier-free" data-tier="free">
+            <div class="template-pricing-card__header">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#public"></use></svg>
+              <span class="template-pricing-card__title">${t('templates.tier_free') || 'Libre'}</span>
+            </div>
+            <span class="template-pricing-card__sub">${t('templates.tier_free_tag') || 'Gratis para todos'}</span>
+          </button>
+          <button type="button" class="template-pricing-card" data-ref="btn-tier-premium" data-tier="premium">
+            <div class="template-pricing-card__header">
+              <svg class="component-icon" style="color: #f59e0b;" aria-hidden="true"><use href="/icons.svg#workspace_premium"></use></svg>
+              <span class="template-pricing-card__title">${t('templates.tier_premium') || 'Premium'}</span>
+            </div>
+            <span class="template-pricing-card__sub">${t('templates.tier_premium_tag') || 'Exclusivo Pro / Monetizable'}</span>
+          </button>
+        </div>
+        <div class="banner banner--info template-pricing-notice" data-ref="template-pricing-notice" style="margin-top: 10px; font-size: 12px; line-height: 1.45; padding: 10px 12px; border-radius: 6px;">
+          ${t('templates.notice_free') || 'Esta plantilla estará disponible de forma gratuita para todos los usuarios de Spriteboard.'}
+        </div>
       </div>
 
       <div class="field-group" data-ref="group-template-meta" style="margin-bottom: var(--sl-spacing-md);">
@@ -60,7 +85,9 @@ export function openPublishTemplateModal(canvas: CanvasItem, options?: PublishTe
     </div>
   `;
 
-  openModal({
+  let isPremium = false;
+
+  const modalInstance = openModal({
     bodyHtml,
     cancelText: t('modal.cancel') || 'Cancelar',
     confirmClass: 'component-button--black',
@@ -95,6 +122,7 @@ export function openPublishTemplateModal(canvas: CanvasItem, options?: PublishTe
           canvas_uuid: canvas.uuid,
           category: canvasType,
           description: descInput?.value.trim() || undefined,
+          is_premium: isPremium,
           tags,
           title,
         });
@@ -115,5 +143,29 @@ export function openPublishTemplateModal(canvas: CanvasItem, options?: PublishTe
         inst.setConfirmLoading(false);
       }
     },
+  });
+
+  const card = modalInstance.card || modalInstance.backdrop;
+  const btnTierFree = card.querySelector<HTMLButtonElement>('[data-ref="btn-tier-free"]');
+  const btnTierPremium = card.querySelector<HTMLButtonElement>('[data-ref="btn-tier-premium"]');
+  const noticeEl = card.querySelector<HTMLElement>('[data-ref="template-pricing-notice"]');
+
+  const updateTierSelection = (premium: boolean) => {
+    isPremium = premium;
+    btnTierFree?.classList.toggle('is-selected', !premium);
+    btnTierPremium?.classList.toggle('is-selected', premium);
+    if (noticeEl) {
+      noticeEl.textContent = premium
+        ? (t('templates.notice_premium') || 'Las plantillas premium son exclusivas para usuarios con planes Pro y Negocios, y son elegibles para el programa de monetización de diseñadores.')
+        : (t('templates.notice_free') || 'Esta plantilla estará disponible de forma gratuita para todos los usuarios de Spriteboard.');
+    }
+  };
+
+  btnTierFree?.addEventListener('click', () => {
+    updateTierSelection(false);
+  });
+
+  btnTierPremium?.addEventListener('click', () => {
+    updateTierSelection(true);
   });
 }

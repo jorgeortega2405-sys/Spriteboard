@@ -1003,6 +1003,7 @@ export async function runMigrations(): Promise<void> {
         status ENUM('draft', 'pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
         rejection_reason TEXT NULL,
         is_official BOOLEAN NOT NULL DEFAULT FALSE,
+        is_premium BOOLEAN NOT NULL DEFAULT FALSE,
         uses_count INT NOT NULL DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -1010,6 +1011,7 @@ export async function runMigrations(): Promise<void> {
         INDEX idx_templates_canvas_type (canvas_type),
         INDEX idx_templates_user (user_id),
         INDEX idx_templates_official (is_official),
+        INDEX idx_templates_premium (is_premium),
         FOREIGN KEY (canvas_id) REFERENCES canvases(id) ON DELETE SET NULL
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
@@ -1020,6 +1022,14 @@ export async function runMigrations(): Promise<void> {
     if (tplCols.length === 0) {
       await canvasPool.query('ALTER TABLE db_canvas.templates ADD COLUMN rejection_reason TEXT NULL AFTER status');
       logger.db.info('Columna rejection_reason añadida a db_canvas.templates.');
+    }
+
+    const [premCols] = await canvasPool.query<mysql.RowDataPacket[]>(
+      "SHOW COLUMNS FROM db_canvas.templates LIKE 'is_premium'"
+    );
+    if (premCols.length === 0) {
+      await canvasPool.query('ALTER TABLE db_canvas.templates ADD COLUMN is_premium BOOLEAN NOT NULL DEFAULT FALSE AFTER is_official');
+      logger.db.info('Columna is_premium añadida a db_canvas.templates.');
     }
 
     await conn.query(`

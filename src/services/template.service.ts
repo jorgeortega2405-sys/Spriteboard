@@ -45,12 +45,13 @@ export async function publishCanvasAsTemplate(
   const canvasDataJson = canvas.data ? (typeof canvas.data === 'string' ? canvas.data : JSON.stringify(canvas.data)) : null;
   const previewThumbnail = canvas.preview_thumbnail || null;
   const isOfficial = userId === 1;
+  const isPremium = Boolean(dto.is_premium);
   const status = isAdmin || isOfficial ? 'approved' : 'pending';
 
   await canvasPool.execute(
     `INSERT INTO templates (
-      uuid, canvas_id, user_id, title, description, canvas_type, category, tags, canvas_data, preview_thumbnail, status, is_official
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      uuid, canvas_id, user_id, title, description, canvas_type, category, tags, canvas_data, preview_thumbnail, status, is_official, is_premium
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       templateUuid,
       canvas.id,
@@ -64,6 +65,7 @@ export async function publishCanvasAsTemplate(
       previewThumbnail,
       status,
       isOfficial ? 1 : 0,
+      isPremium ? 1 : 0,
     ]
   );
 
@@ -124,7 +126,7 @@ export async function getPublishedTemplates(options: {
   const total = Number(countRows[0]?.total || 0);
 
   const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
-    `SELECT id, uuid, canvas_id, user_id, title, description, canvas_type, category, tags, preview_thumbnail, status, is_official, uses_count, created_at, updated_at
+    `SELECT id, uuid, canvas_id, user_id, title, description, canvas_type, category, tags, preview_thumbnail, status, is_official, is_premium, uses_count, created_at, updated_at
      FROM templates ${whereClause}
      ORDER BY is_official DESC, uses_count DESC, created_at DESC
      LIMIT ? OFFSET ?`,
@@ -251,7 +253,7 @@ export async function getDesignerTemplates(
   const total = Number(countRows[0]?.total || 0);
 
   const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
-    `SELECT t.id, t.uuid, t.canvas_id, t.user_id, t.title, t.description, t.canvas_type, t.category, t.tags, t.preview_thumbnail, t.status, t.is_official, t.rejection_reason, t.uses_count, t.created_at, t.updated_at, c.uuid as source_canvas_uuid
+    `SELECT t.id, t.uuid, t.canvas_id, t.user_id, t.title, t.description, t.canvas_type, t.category, t.tags, t.preview_thumbnail, t.status, t.is_official, t.is_premium, t.rejection_reason, t.uses_count, t.created_at, t.updated_at, c.uuid as source_canvas_uuid
      FROM templates t
      LEFT JOIN canvases c ON t.canvas_id = c.id
      ${whereClause}

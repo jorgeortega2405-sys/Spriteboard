@@ -146,6 +146,7 @@ CREATE TABLE IF NOT EXISTS templates (
     status ENUM('draft', 'pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
     rejection_reason TEXT NULL,
     is_official BOOLEAN NOT NULL DEFAULT FALSE,
+    is_premium BOOLEAN NOT NULL DEFAULT FALSE,
     uses_count INT NOT NULL DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -153,6 +154,7 @@ CREATE TABLE IF NOT EXISTS templates (
     INDEX idx_templates_canvas_type (canvas_type),
     INDEX idx_templates_user (user_id),
     INDEX idx_templates_official (is_official),
+    INDEX idx_templates_premium (is_premium),
     FOREIGN KEY (canvas_id) REFERENCES canvases(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

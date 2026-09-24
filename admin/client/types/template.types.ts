@@ -13,6 +13,7 @@ export interface AdminTemplateItem {
   description: string | null;
   id: number;
   is_official: boolean;
+  is_premium: boolean;
   preview_thumbnail: string | null;
   rejection_reason: string | null;
   status: TemplateStatus;

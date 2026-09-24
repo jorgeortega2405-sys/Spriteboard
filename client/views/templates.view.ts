@@ -2,6 +2,7 @@ import { navigate } from '../app-router.js';
 import { openModal } from '../components/modal.component.js';
 import { openTemplatePreviewModal } from '../components/template-preview-modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
+import { hasTier } from '../config/plans.config.js';
 import { ALL_PRESETS, PresetItem, TEMPLATE_CATEGORIES } from '../config/templates.config.js';
 import { buildAdCardHtml, DEFAULT_AD_FREQUENCY, getAdByIndex, handleAdClick, shouldShowAds } from '../services/ad.service.js';
 import { currentUser, deleteApi, escapeHtml, getApi, postApi } from '../services/api.service.js';
@@ -529,6 +530,17 @@ class TemplatesController {
     const isFavorite = this.favoritedTemplateIds.has(item.id);
     const previewContent = `<img class="canvas-card__image image-lazy-fade" data-ref="template-card-img-${item.id}" src="${item.imagePath}" alt="${escapeHtml(item.name)}" loading="lazy" decoding="async" onload="this.classList.add('image-loaded')" onerror="this.classList.add('image-loaded')" />`;
 
+    const premiumBadgeHtml = item.isPremium
+      ? `
+          <div class="template-card__badge-overlay" data-ref="template-card-premium-badge-${item.id}">
+            <span class="template-card__premium-badge" data-tooltip="${t('templates.badge_premium') || 'Plantilla Premium'}">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#workspace_premium"></use></svg>
+              <span>PRO</span>
+            </span>
+          </div>
+        `
+      : '';
+
     const actionsHtml = currentUser
       ? `
           <div class="canvas-card__actions-wrapper" data-ref="card-actions-wrapper-${item.id}">
@@ -545,6 +557,7 @@ class TemplatesController {
       <div class="canvas-card template-card" data-ref="template-card-${item.id}" data-preset-id="${item.id}">
         <div class="canvas-card__thumbnail template-card__thumbnail" data-ref="template-card-thumb-${item.id}">
           ${previewContent}
+          ${premiumBadgeHtml}
           ${actionsHtml}
         </div>
       </div>
@@ -597,6 +610,7 @@ class TemplatesController {
           height: isPres ? 1080 : (isDoc ? 1056 : 1080),
           id: `community-${t.uuid}`,
           imagePath: t.preview_thumbnail || (isPres ? '/assets/templates/presentations/pitch.svg' : (isDoc ? '/assets/templates/docs/proposal.svg' : '/assets/templates/boards/retro.svg')),
+          isPremium: Boolean(t.is_premium),
           isTemplate: true,
           name: t.title,
           tags: parsedTags,
@@ -812,6 +826,11 @@ class TemplatesController {
     const usesRaw = t('templates.uses_count_label') || '{count} usos';
     const usesText = usesRaw.replace('{count}', String(usesCount));
 
+    const isPremium = Boolean(tItem.is_premium);
+    const pricingBadgeClass = isPremium ? 'component-badge--warning' : 'component-badge--neutral';
+    const pricingBadgeText = isPremium ? (t('templates.tier_premium') || 'Premium') : (t('templates.tier_free') || 'Libre');
+    const pricingBadgeIcon = isPremium ? 'workspace_premium' : 'public';
+
     const defaultThumb = isPres ? '/assets/templates/presentations/pitch.svg' : (isDoc ? '/assets/templates/docs/proposal.svg' : '/assets/templates/boards/retro.svg');
     const thumbUrl = tItem.preview_thumbnail || defaultThumb;
 
@@ -819,10 +838,14 @@ class TemplatesController {
       <div class="canvas-card template-card designer-card" data-ref="designer-card-${tItem.uuid}" data-template-uuid="${tItem.uuid}" data-template-id="${tItem.id}">
         <div class="canvas-card__thumbnail template-card__thumbnail" data-ref="designer-card-thumb-${tItem.uuid}">
           <img class="canvas-card__image image-lazy-fade" data-ref="designer-card-img-${tItem.uuid}" src="${thumbUrl}" alt="${escapeHtml(tItem.title)}" loading="lazy" decoding="async" onload="this.classList.add('image-loaded')" onerror="this.classList.add('image-loaded')" />
-          <div class="canvas-card__badge-overlay" style="position: absolute; top: 10px; left: 10px; z-index: 2;">
+          <div class="canvas-card__badge-overlay" style="position: absolute; top: 10px; left: 10px; z-index: 2; display: flex; gap: 6px;">
             <span class="component-badge ${badgeClass}" style="gap: 4px; font-weight: 600; font-size: 11px; padding: 4px 8px; backdrop-filter: blur(8px);">
               <svg class="component-icon" style="font-size: 14px; width: 14px; height: 14px;" aria-hidden="true"><use href="/icons.svg#${badgeIcon}"></use></svg>
               <span>${badgeText}</span>
+            </span>
+            <span class="component-badge ${pricingBadgeClass}" style="gap: 4px; font-weight: 600; font-size: 11px; padding: 4px 8px; backdrop-filter: blur(8px);">
+              <svg class="component-icon" style="font-size: 14px; width: 14px; height: 14px;" aria-hidden="true"><use href="/icons.svg#${pricingBadgeIcon}"></use></svg>
+              <span>${pricingBadgeText}</span>
             </span>
           </div>
           <div class="canvas-card__actions-wrapper" data-ref="designer-card-actions-${tItem.uuid}">

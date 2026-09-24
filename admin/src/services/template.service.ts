@@ -57,7 +57,7 @@ export async function listAdminTemplates(options: {
 
   const offset = Math.max(0, (page - 1) * limit);
   const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
-    `SELECT t.id, t.uuid, t.canvas_id, t.user_id, t.title, t.description, t.canvas_type, t.category, t.tags, t.preview_thumbnail, t.status, t.is_official, t.rejection_reason, t.uses_count, t.created_at, t.updated_at
+    `SELECT t.id, t.uuid, t.canvas_id, t.user_id, t.title, t.description, t.canvas_type, t.category, t.tags, t.preview_thumbnail, t.status, t.is_official, t.is_premium, t.rejection_reason, t.uses_count, t.created_at, t.updated_at
      FROM templates t
      ${whereClause}
      ORDER BY CASE WHEN t.status = 'pending' THEN 0 ELSE 1 END, t.created_at DESC

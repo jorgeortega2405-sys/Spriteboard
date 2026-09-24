@@ -11,7 +11,7 @@ export async function publishTemplateHandler(req: Request, res: Response): Promi
       return;
     }
 
-    const { canvas_uuid, category, description, tags, title } = req.body;
+    const { canvas_uuid, category, description, is_premium, tags, title } = req.body;
     if (!canvas_uuid || typeof canvas_uuid !== 'string' || canvas_uuid.trim().length === 0) {
       sendBadRequest(res, 'Identificador de lienzo requerido.');
       return;
@@ -39,6 +39,7 @@ export async function publishTemplateHandler(req: Request, res: Response): Promi
         canvas_uuid: canvas_uuid.trim(),
         category: category ? String(category).trim() : undefined,
         description: description ? String(description).trim() : undefined,
+        is_premium: Boolean(is_premium),
         tags: Array.isArray(tags) ? tags : undefined,
         title: title.trim(),
       },

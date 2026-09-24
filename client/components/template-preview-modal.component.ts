@@ -1,4 +1,6 @@
+import { openUpgradeModal } from './upgrade-modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
+import { hasTier } from '../config/plans.config.js';
 import { ALL_PRESETS, PresetItem, TEMPLATE_CATEGORIES } from '../config/templates.config.js';
 import { currentUser, escapeHtml, getApi, postApi } from '../services/api.service.js';
 import { createAndOpenCanvas } from '../services/canvas-creator.service.js';
@@ -272,6 +274,34 @@ export function openTemplatePreviewModal(preset: PresetItem, options?: TemplateP
       const tmpl = data?.template;
       if (!tmpl) return;
 
+      if (tmpl.is_premium !== undefined) {
+        targetPreset.isPremium = Boolean(tmpl.is_premium);
+        if (currentPreset.id === targetPreset.id) {
+          if (titleEl) {
+            const premiumBadge = targetPreset.isPremium
+              ? `<span class="component-badge component-badge--warning" style="gap: 4px; font-weight: 700; font-size: 11px; padding: 2px 7px; vertical-align: middle; margin-left: 8px; display: inline-flex; align-items: center;"><svg class="component-icon" style="font-size: 13px; width: 13px; height: 13px; color: #f59e0b;" aria-hidden="true"><use href="/icons.svg#workspace_premium"></use></svg>PRO</span>`
+              : '';
+            titleEl.innerHTML = `${escapeHtml(targetPreset.name)}${premiumBadge}`;
+            renderIcons(titleEl);
+          }
+          const isPro = hasTier('pro', currentUser);
+          const requiresUpgrade = Boolean(targetPreset.isPremium) && !isPro;
+          if (btnUse) {
+            if (requiresUpgrade) {
+              btnUse.classList.add('template-preview-modal__btn-use--upgrade');
+              btnUse.innerHTML = `
+                <svg class="component-icon" style="color: #fbbf24; margin-right: 6px; width: 18px; height: 18px; font-size: 18px;" aria-hidden="true"><use href="/icons.svg#workspace_premium"></use></svg>
+                <span>${t('templates.btn_upgrade_to_use') || 'Sube de categoría'}</span>
+              `;
+            } else {
+              btnUse.classList.remove('template-preview-modal__btn-use--upgrade');
+              btnUse.textContent = t('templates.customize_template') || 'Personalizar la plantilla';
+            }
+            renderIcons(btnUse);
+          }
+        }
+      }
+
       if (tmpl.author_username && !targetPreset.authorName) {
         targetPreset.authorName = tmpl.author_username;
         targetPreset.authorAvatar = tmpl.author_avatar;
@@ -319,12 +349,32 @@ export function openTemplatePreviewModal(preset: PresetItem, options?: TemplateP
   const renderCurrentPreset = () => {
     renderAuthor();
     setupSlideshow();
+    const isPro = hasTier('pro', currentUser);
+    const requiresUpgrade = Boolean(currentPreset.isPremium) && !isPro;
+
     if (titleEl) {
-      titleEl.textContent = currentPreset.name;
+      const premiumBadge = currentPreset.isPremium
+        ? `<span class="component-badge component-badge--warning" style="gap: 4px; font-weight: 700; font-size: 11px; padding: 2px 7px; vertical-align: middle; margin-left: 8px; display: inline-flex; align-items: center;"><svg class="component-icon" style="font-size: 13px; width: 13px; height: 13px; color: #f59e0b;" aria-hidden="true"><use href="/icons.svg#workspace_premium"></use></svg>PRO</span>`
+        : '';
+      titleEl.innerHTML = `${escapeHtml(currentPreset.name)}${premiumBadge}`;
+      renderIcons(titleEl);
     }
     if (metaEl) {
       const catLabel = getCategoryLabel(currentPreset);
       metaEl.textContent = `${catLabel} • ${currentPreset.width} × ${currentPreset.height} px`;
+    }
+    if (btnUse) {
+      if (requiresUpgrade) {
+        btnUse.classList.add('template-preview-modal__btn-use--upgrade');
+        btnUse.innerHTML = `
+          <svg class="component-icon" style="color: #fbbf24; margin-right: 6px; width: 18px; height: 18px; font-size: 18px;" aria-hidden="true"><use href="/icons.svg#workspace_premium"></use></svg>
+          <span>${t('templates.btn_upgrade_to_use') || 'Sube de categoría'}</span>
+        `;
+      } else {
+        btnUse.classList.remove('template-preview-modal__btn-use--upgrade');
+        btnUse.textContent = t('templates.customize_template') || 'Personalizar la plantilla';
+      }
+      renderIcons(btnUse);
     }
     updateFavoriteButtonState();
     renderSimilarPresets();
@@ -345,10 +395,22 @@ export function openTemplatePreviewModal(preset: PresetItem, options?: TemplateP
 
     similarGrid.innerHTML = displayed.map((item) => {
       const isFav = cachedFavoriteTemplateIds.has(item.id);
+      const premiumBadgeHtml = item.isPremium
+        ? `
+            <div class="template-card__badge-overlay">
+              <span class="template-card__premium-badge" data-tooltip="${t('templates.badge_premium') || 'Plantilla Premium'}">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#workspace_premium"></use></svg>
+                <span>PRO</span>
+              </span>
+            </div>
+          `
+        : '';
+
       return `
         <div class="canvas-card template-card template-card--sm" data-ref="similar-card-${item.id}" data-similar-id="${item.id}" data-tooltip="${escapeHtml(item.name)}">
           <div class="canvas-card__thumbnail template-card__thumbnail" data-ref="similar-thumb-${item.id}">
             <img class="canvas-card__image image-lazy-fade" data-ref="similar-img-${item.id}" src="${item.imagePath}" alt="${escapeHtml(item.name)}" loading="lazy" decoding="async" onload="this.classList.add('image-loaded')" onerror="this.classList.add('image-loaded')" />
+            ${premiumBadgeHtml}
             <div class="canvas-card__actions-wrapper" data-ref="similar-actions-wrapper-${item.id}">
               <div class="canvas-card__actions" data-ref="similar-actions-${item.id}">
                 <button type="button" class="canvas-card__action-btn${isFav ? ' is-active' : ''}" data-ref="btn-similar-bookmark-${item.id}" data-similar-bookmark="${item.id}" data-tooltip="${isFav ? (t('canvas.bookmark_remove') || 'Quitar de favoritas') : (t('canvas.bookmark_save') || 'Guardar en favoritas')}" aria-label="${isFav ? (t('canvas.bookmark_remove') || 'Quitar de favoritas') : (t('canvas.bookmark_save') || 'Guardar en favoritas')}">
@@ -601,6 +663,15 @@ export function openTemplatePreviewModal(preset: PresetItem, options?: TemplateP
   });
 
   btnUse?.addEventListener('click', () => {
+    const isPro = hasTier('pro', currentUser);
+    const requiresUpgrade = Boolean(currentPreset.isPremium) && !isPro;
+
+    if (requiresUpgrade) {
+      modalInstance.close();
+      openUpgradeModal('pro');
+      return;
+    }
+
     void handleUseCurrentTemplate();
   });
 
