@@ -4927,7 +4927,7 @@ export class PresentationController {
       </div>
       <iframe
         src="${embedUrl}"
-        title="${escapeHtml(embed.title || 'Video de YouTube')}"
+        title="${this.escapeHtml(embed.title || 'Video de YouTube')}"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
         allowfullscreen
         referrerpolicy="strict-origin-when-cross-origin"
@@ -4968,7 +4968,8 @@ export class PresentationController {
       return;
     }
 
-    const slide = this.slides[this.activeSlideIndex];
+    const slideIdx = this.getActiveSlideIndex();
+    const slide = this.slides[slideIdx];
     if (!slide) {
       this.closeInlineVideo();
       return;
@@ -4981,7 +4982,7 @@ export class PresentationController {
     }
 
     const slideGap = 80;
-    const cy = this.activeSlideIndex * (this.slideHeight + slideGap);
+    const cy = slideIdx * (this.slideHeight + slideGap);
     const camera = { x: this.panOffset.x, y: this.panOffset.y, zoom: this.zoom };
     const screenPos = worldToScreen(embed.x, embed.y + cy, this.canvas, camera);
     const screenWidth = Math.round(embed.width * this.zoom);
