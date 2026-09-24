@@ -47,12 +47,12 @@ app.use((_req: Request, res: Response, next: express.NextFunction) => {
   res.setHeader('X-XSS-Protection', '1; mode=block');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
   res.setHeader(
     'Content-Security-Policy',
     config.nodeEnv === 'production'
-      ? "default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' ws: wss: https://api.stripe.com https://generativelanguage.googleapis.com https://www.googleapis.com; frame-src 'self' https://js.stripe.com https://www.youtube.com https://www.youtube-nocookie.com https://youtube.com; object-src 'none';"
-      : "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' ws: wss: http: https:; frame-src 'self' https://js.stripe.com https://www.youtube.com https://www.youtube-nocookie.com https://youtube.com; object-src 'none';"
+      ? "default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com https://accounts.google.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' ws: wss: https://api.stripe.com https://generativelanguage.googleapis.com https://www.googleapis.com https://accounts.google.com https://content.googleapis.com; frame-src 'self' https://js.stripe.com https://www.youtube.com https://www.youtube-nocookie.com https://youtube.com https://accounts.google.com https://docs.google.com https://drive.google.com; object-src 'none';"
+      : "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://accounts.google.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' ws: wss: http: https: https://api.stripe.com https://generativelanguage.googleapis.com https://www.googleapis.com https://accounts.google.com https://content.googleapis.com; frame-src 'self' https://js.stripe.com https://www.youtube.com https://www.youtube-nocookie.com https://youtube.com https://accounts.google.com https://docs.google.com https://drive.google.com; object-src 'none';"
   );
   if (config.nodeEnv === 'production') {
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');

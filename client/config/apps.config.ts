@@ -39,7 +39,7 @@ export const SPRITEBOARD_APPS: SpriteboardApp[] = [
   },
   {
     author: 'Google LLC',
-    badge: 'PRONTO',
+    badge: 'ACTIVA',
     bannerColor: '#0ea5e9',
     category: 'productivity',
     description: 'Importa tus fotos, documentos e ilustraciones desde Google Drive a tu espacio de trabajo.',
@@ -49,7 +49,7 @@ export const SPRITEBOARD_APPS: SpriteboardApp[] = [
     isInternal: false,
     isPopular: true,
     name: 'Google Drive',
-    status: 'coming_soon',
+    status: 'active',
   },
   {
     author: 'Unsplash Inc.',
