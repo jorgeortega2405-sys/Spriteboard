@@ -1,12 +1,9 @@
-import { createSidebar } from '../components/layout.component.js';
 import { loadTemplate } from '../services/template.service.js';
 import { createErrorView } from './error.view.js';
 import { PresentationController } from './presentation/presentation.controller.js';
 
 export async function createPresentationView(canvasUuid: string, initialRecord?: any): Promise<HTMLElement> {
   const container = await loadTemplate('/views/presentation/presentation.html');
-  const sidebar = await createSidebar();
-  container.prepend(sidebar);
 
   const controller = new PresentationController(container, canvasUuid, initialRecord);
   let loaded = false;

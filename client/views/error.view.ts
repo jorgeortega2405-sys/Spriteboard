@@ -1,5 +1,4 @@
 import { navigate } from '../app-router.js';
-import { createSidebar } from '../components/layout.component.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
@@ -20,11 +19,6 @@ export async function createErrorView({
   title?: string;
 } = {}): Promise<HTMLElement> {
   const container = await loadTemplate('/views/error/error.html');
-
-  if (showSidebar) {
-    const sidebar = await createSidebar();
-    container.prepend(sidebar);
-  }
 
   translateElement(container);
   renderIcons(container);

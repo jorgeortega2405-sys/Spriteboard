@@ -1,12 +1,9 @@
-import { createSidebar } from '../components/layout.component.js';
 import { loadTemplate } from '../services/template.service.js';
 import { BoardController } from './board/board.controller.js';
 import { createErrorView } from './error.view.js';
 
 export async function createBoardView(canvasUuid: string, initialRecord?: any): Promise<HTMLElement> {
   const container = await loadTemplate('/views/board/board.html');
-  const sidebar = await createSidebar();
-  container.prepend(sidebar);
 
   const controller = new BoardController(container, canvasUuid, initialRecord);
   let loaded = false;

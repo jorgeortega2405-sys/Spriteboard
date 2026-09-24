@@ -1,12 +1,11 @@
 import { closeContextMenu } from './components/context-menu.component.js';
-import { attachChatSidebarToView, getIsSidebarOpen, hasDesignatedMenuItems, isCanvasRoute, toggleDrawer, toggleSidebar, updateDynamicDrawer, updateSidebarActiveState } from './components/layout.component.js';
+import { attachChatSidebarToView, ensureSidebarMounted, getIsSidebarOpen, hasDesignatedMenuItems, isCanvasRoute, toggleDrawer, toggleSidebar, updateDynamicDrawer, updateSidebarActiveState } from './components/layout.component.js';
 import { closeAllModals } from './components/modal.component.js';
 import { openUpgradeModal } from './components/upgrade-modal.component.js';
 import { API_ROUTES } from './config/api-routes.js';
 import { hasFeature, protectRoute } from './config/plans.config.js';
 import { hasPersistentTopBar } from './config/skeleton-routes.js';
 import { currentUser, getApi } from './services/api.service.js';
-import { renderIcons } from './services/icon.service.js';
 import { SkeletonService } from './services/skeleton.service.js';
 import { trackPageView } from './services/telemetry.service.js';
 import { hideTooltip } from './services/tooltip.service.js';
@@ -107,20 +106,41 @@ export async function render(): Promise<void> {
 
   const navId = ++currentNavigation;
 
-  const existingSidebar = appRoot.querySelector<HTMLElement>('[data-ref="sidebar"], .layout-nav');
-  const isIntraAppNavigation = !isInitialPageLoad && Boolean(existingSidebar) && hasPersistentTopBar(path);
+  let layoutContent = appRoot.querySelector<HTMLElement>('.layout-content');
+  if (!layoutContent) {
+    layoutContent = document.createElement('div');
+    layoutContent.className = 'layout-content';
+    layoutContent.setAttribute('data-ref', 'app-layout');
+    appRoot.appendChild(layoutContent);
+  }
 
-  if (existingSidebar) {
-    updateSidebarActiveState(existingSidebar, path);
+  const isAuthView =
+    path.startsWith('/login') ||
+    path.startsWith('/register') ||
+    path === '/forgot-password' ||
+    path === '/reset-password';
+
+  let currentSidebar: HTMLElement | null = null;
+  if (!isAuthView) {
+    currentSidebar = await ensureSidebarMounted(layoutContent);
+    currentSidebar.style.display = '';
+    layoutContent.classList.remove('is-auth-mode');
+    updateSidebarActiveState(currentSidebar, path);
+  } else {
+    currentSidebar = layoutContent.querySelector<HTMLElement>('[data-ref="sidebar"], .layout-nav');
+    if (currentSidebar) {
+      currentSidebar.style.display = 'none';
+    }
+    layoutContent.classList.add('is-auth-mode');
   }
 
   if (window.innerWidth <= 768) {
     toggleSidebar(false);
   }
 
-  const skeletonSession = SkeletonService.showSkeleton(path, appRoot, {
+  const skeletonSession = SkeletonService.showSkeleton(path, layoutContent, {
     minDuration: 180,
-    onlyBottom: isIntraAppNavigation,
+    onlyBottom: !isInitialPageLoad && !isAuthView,
   });
 
   let viewElements: HTMLElement[] = [];
@@ -336,16 +356,11 @@ export async function render(): Promise<void> {
     }
   }
 
-  renderIcons(appRoot);
   isInitialPageLoad = false;
 
-  const activeContent = appRoot.querySelector<HTMLElement>('.layout-content');
-  if (activeContent) {
-    attachChatSidebarToView(activeContent);
-  }
+  attachChatSidebarToView(layoutContent);
 
-  const currentSidebar = appRoot.querySelector<HTMLElement>('[data-ref="sidebar"], .layout-nav');
-  if (currentSidebar) {
+  if (currentSidebar && !isAuthView) {
     updateSidebarActiveState(currentSidebar, path);
     if (hasDesignatedMenuItems(path)) {
       if (window.innerWidth > 768) {

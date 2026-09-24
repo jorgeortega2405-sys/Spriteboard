@@ -1,7 +1,6 @@
 import { navigate } from '../app-router.js';
 import { openCreateCanvasModal } from '../components/create-canvas-modal.component.js';
 import { openEnterpriseSsoModal } from '../components/enterprise-sso-modal.component.js';
-import { createSidebar } from '../components/layout.component.js';
 import { openModal } from '../components/modal.component.js';
 import { openUpgradeModal } from '../components/upgrade-modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
@@ -850,9 +849,6 @@ class TeamsController {
 export async function createTeamsView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/teams/teams.html');
   translateElement(container);
-
-  const sidebar = await createSidebar();
-  container.prepend(sidebar);
 
   const controller = new TeamsController(container);
   await controller.init();

@@ -78,37 +78,39 @@ export class SkeletonService {
 
   static showSkeleton(
     pathname: string,
-    container: HTMLElement | null,
+    layoutContent: HTMLElement | null,
     options: { onlyBottom?: boolean; minDuration?: number } | number = {}
   ): SkeletonSession {
-    if (!container) {
+    if (!layoutContent) {
       return {
         finish: async () => {},
       };
     }
 
     const config = typeof options === 'number' ? { minDuration: options } : options;
-    const { onlyBottom = false, minDuration = 280 } = config;
-
+    const { onlyBottom = false, minDuration = 180 } = config;
     const startTime = performance.now();
-    const existingContent = container.querySelector<HTMLElement>('.layout-content');
-    const existingSidebar = existingContent?.querySelector<HTMLElement>('[data-ref="sidebar"], .layout-nav') ||
-      container.querySelector<HTMLElement>('[data-ref="sidebar"], .layout-nav') ||
-      document.querySelector<HTMLElement>('[data-ref="sidebar"], .layout-nav');
-    const existingWrapper = existingContent?.querySelector<HTMLElement>('.component-wrapper, .view-wrapper, .home-wrapper');
-    const isSoftNavigation = onlyBottom && Boolean(existingSidebar && existingWrapper && existingContent);
 
-    const skeletonElement = this.createSkeleton(pathname, { onlyBottom: isSoftNavigation });
-    let skeletonWrapper: HTMLElement | null = null;
+    const existingWrapper = layoutContent.querySelector<HTMLElement>(
+      '.component-wrapper, .view-wrapper, .home-wrapper, .login-container, .skeleton-container'
+    );
 
-    if (isSoftNavigation && existingWrapper) {
-      skeletonWrapper = skeletonElement.querySelector<HTMLElement>('.component-wrapper, .view-wrapper, .home-wrapper, .layout-body') || skeletonElement;
-      if (!skeletonWrapper.classList.contains('view-wrapper')) {
-        skeletonWrapper.classList.add('view-wrapper');
+    const skeletonElement = this.createSkeleton(pathname, { onlyBottom });
+    let activeSkeletonView: HTMLElement = skeletonElement;
+
+    if (skeletonElement.classList.contains('layout-content')) {
+      const inner = skeletonElement.querySelector<HTMLElement>(
+        '.component-wrapper, .view-wrapper, .home-wrapper, .login-container'
+      );
+      if (inner) {
+        activeSkeletonView = inner;
       }
-      existingWrapper.replaceWith(skeletonWrapper);
+    }
+
+    if (existingWrapper && existingWrapper.parentElement === layoutContent) {
+      existingWrapper.replaceWith(activeSkeletonView);
     } else {
-      container.replaceChildren(skeletonElement);
+      layoutContent.appendChild(activeSkeletonView);
     }
 
     return {
@@ -123,20 +125,24 @@ export class SkeletonService {
 
         if (isActiveCheck && !isActiveCheck()) return;
 
-        if (isSoftNavigation && existingSidebar) {
-          const newContentView =
-            newElements.find((el) => el.classList?.contains('layout-content')) ||
-            newElements[0];
+        const newViewElement =
+          newElements.find(
+            (el) => !el.classList.contains('layout-nav') && !el.classList.contains('layout-content')
+          ) || newElements[0];
 
-          if (newContentView) {
-            const newSidebar = newContentView.querySelector<HTMLElement>('[data-ref="sidebar"], .layout-nav');
-            if (newSidebar && existingSidebar) {
-              newSidebar.replaceWith(existingSidebar);
+        if (newViewElement) {
+          if (activeSkeletonView.parentElement === layoutContent) {
+            activeSkeletonView.replaceWith(newViewElement);
+          } else {
+            const currentWrapper = layoutContent.querySelector<HTMLElement>(
+              '.component-wrapper, .view-wrapper, .home-wrapper, .login-container, .skeleton-container'
+            );
+            if (currentWrapper && currentWrapper.parentElement === layoutContent) {
+              currentWrapper.replaceWith(newViewElement);
+            } else {
+              layoutContent.appendChild(newViewElement);
             }
           }
-          container.replaceChildren(...newElements);
-        } else {
-          container.replaceChildren(...newElements);
         }
       },
     };

@@ -4,7 +4,6 @@ import { openCanvasDownloadModal } from '../components/canvas-download-modal.com
 import { openCanvasShareModal } from '../components/canvas-share-modal.component.js';
 import { openCreateCanvasModal } from '../components/create-canvas-modal.component.js';
 import { openCreateFolderModal, openRenameFolderModal } from '../components/folder-modal.component.js';
-import { createSidebar } from '../components/layout.component.js';
 import { openModal } from '../components/modal.component.js';
 import { openMoveCanvasModal } from '../components/move-canvas-modal.component.js';
 import { openTemplatePreviewModal } from '../components/template-preview-modal.component.js';
@@ -2747,9 +2746,6 @@ class HomeController {
 export async function createHomeView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/home/home.html');
   translateElement(container);
-
-  const sidebar = await createSidebar();
-  container.prepend(sidebar);
 
   const controller = new HomeController(container);
   await controller.init();

@@ -16,7 +16,13 @@ export function getEffectiveTheme(setting = currentThemeSetting): 'dark' | 'ligh
 }
 
 export function getTheme(): string {
-  return currentThemeSetting;
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved && ['system', 'light', 'dark'].includes(saved)) {
+      return saved;
+    }
+  } catch {}
+  return currentThemeSetting || 'system';
 }
 
 function applyThemeToDom(themeSetting: string): void {
@@ -74,22 +80,22 @@ export function applyAccessibilityPreferences(prefs: { high_contrast?: boolean; 
 
 export function initTheme(initialPrefs: { theme?: string; high_contrast?: boolean; reduce_motion?: boolean } | null = null): void {
   let savedTheme = 'system';
-  if (initialPrefs && initialPrefs.theme) {
-    savedTheme = initialPrefs.theme;
-  } else {
-    try {
-      savedTheme = localStorage.getItem(STORAGE_KEY) || 'system';
-    } catch {
-      savedTheme = 'system';
+  try {
+    const local = localStorage.getItem(STORAGE_KEY);
+    if (local && ['system', 'light', 'dark'].includes(local)) {
+      savedTheme = local;
+    } else if (initialPrefs && initialPrefs.theme && ['system', 'light', 'dark'].includes(initialPrefs.theme)) {
+      savedTheme = initialPrefs.theme;
+      try {
+        localStorage.setItem(STORAGE_KEY, savedTheme);
+      } catch {}
     }
+  } catch {
+    savedTheme = (initialPrefs && initialPrefs.theme) || 'system';
   }
 
   currentThemeSetting = savedTheme;
   applyThemeToDom(savedTheme);
-
-  try {
-    localStorage.removeItem('sprite_theme_palette_index');
-  } catch {}
 
   if (initialPrefs) {
     applyAccessibilityPreferences(initialPrefs);

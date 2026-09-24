@@ -51,7 +51,7 @@ function initScrollShadow(): void {
   const routeObserver = new MutationObserver(() => {
     setupLayoutScrollSync();
   });
-  routeObserver.observe(appRoot, { childList: true });
+  routeObserver.observe(appRoot, { childList: true, subtree: true });
 
   document.addEventListener(
     'scroll',

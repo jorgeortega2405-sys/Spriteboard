@@ -1,5 +1,4 @@
 import { navigate } from '../app-router.js';
-import { createSidebar } from '../components/layout.component.js';
 import { openTemplatePreviewModal } from '../components/template-preview-modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { ALL_PRESETS, PresetItem } from '../config/templates.config.js';
@@ -416,10 +415,6 @@ export class SearchController {
 export async function createSearchView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/search/search.html');
   translateElement(container);
-
-  const sidebar = await createSidebar();
-  container.prepend(sidebar);
-
   renderIcons(container);
 
   const controller = new SearchController(container);

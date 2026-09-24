@@ -1,4 +1,3 @@
-import { createSidebar } from '../components/layout.component.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { loadTemplate } from '../services/template.service.js';
 
@@ -56,9 +55,6 @@ const HELP_SECTIONS_DATA: Record<string, HelpSectionInfo> = {
 
 export async function createHelpView(sectionKey = 'terms'): Promise<HTMLElement> {
   const container = await loadTemplate('/views/help/help-section.html');
-
-  const sidebar = await createSidebar();
-  container.prepend(sidebar);
 
   const sectionData = HELP_SECTIONS_DATA[sectionKey] || HELP_SECTIONS_DATA.terms;
   const titleEl = container.querySelector<HTMLElement>('[data-ref="help-title"]');

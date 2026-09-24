@@ -1,5 +1,4 @@
 import { navigate } from '../app-router.js';
-import { createSidebar } from '../components/layout.component.js';
 import { openModal } from '../components/modal.component.js';
 import { openTemplatePreviewModal } from '../components/template-preview-modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
@@ -1054,10 +1053,6 @@ export async function createTemplatesView(): Promise<HTMLElement> {
 
   const container = await loadTemplate('/views/templates/templates.html');
   translateElement(container);
-
-  const sidebar = await createSidebar();
-  container.prepend(sidebar);
-
   renderIcons(container);
 
   activeTemplatesController = new TemplatesController(container);

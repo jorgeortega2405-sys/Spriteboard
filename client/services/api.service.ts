@@ -67,15 +67,18 @@ export function setCurrentUser(user: User | null): void {
       linkedAccounts[idx] = { ...linkedAccounts[idx], ...user };
     }
   }
+  window.dispatchEvent(new CustomEvent('auth-changed', { detail: { user } }));
 }
 
 export function setLinkedAccounts(accounts: LinkedAccount[]): void {
   linkedAccounts = Array.isArray(accounts) ? accounts : [];
+  window.dispatchEvent(new CustomEvent('auth-changed', { detail: { user: currentUser } }));
 }
 
 export function clearUserState(): void {
   currentUser = null;
   linkedAccounts = [];
+  window.dispatchEvent(new CustomEvent('auth-changed', { detail: { user: null } }));
 }
 
 export function escapeHtml(str: unknown): string {

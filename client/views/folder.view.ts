@@ -3,7 +3,6 @@ import { navigate } from '../app-router.js';
 import { openCanvasDownloadModal } from '../components/canvas-download-modal.component.js';
 import { openCanvasShareModal } from '../components/canvas-share-modal.component.js';
 import { openRenameFolderModal } from '../components/folder-modal.component.js';
-import { createSidebar } from '../components/layout.component.js';
 import { openModal } from '../components/modal.component.js';
 import { openMoveCanvasModal } from '../components/move-canvas-modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
@@ -1508,9 +1507,6 @@ class FolderController {
 export async function createFolderView(folderUuid: string): Promise<HTMLElement> {
   const container = await loadTemplate('/views/folder/folder.html');
   translateElement(container);
-
-  const sidebar = await createSidebar();
-  container.prepend(sidebar);
 
   const controller = new FolderController(container, folderUuid);
   await controller.init();

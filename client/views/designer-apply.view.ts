@@ -1,5 +1,4 @@
 import { navigate } from '../app-router.js';
-import { createSidebar } from '../components/layout.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { currentUser, escapeHtml, getApi, postFormApi } from '../services/api.service.js';
 import { renderIcons } from '../services/icon.service.js';
@@ -567,8 +566,6 @@ export class DesignerApplyController {
 
 export async function createDesignerApplyView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/designer/designer-apply.html');
-  const sidebar = await createSidebar();
-  container.prepend(sidebar);
   renderIcons(container);
 
   const controller = new DesignerApplyController(container);

@@ -1,4 +1,3 @@
-import { createSidebar } from '../components/layout.component.js';
 import { openModal } from '../components/modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { currentUser, deleteApi, escapeHtml, getApi, postApi } from '../services/api.service.js';
@@ -715,9 +714,6 @@ class TrashController {
 export async function createTrashView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/home/trash.html');
   translateElement(container);
-
-  const sidebar = await createSidebar();
-  container.prepend(sidebar);
 
   const controller = new TrashController(container);
   await controller.init();

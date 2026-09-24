@@ -1,5 +1,4 @@
 import { navigate } from '../app-router.js';
-import { createSidebar } from '../components/layout.component.js';
 import { checkAuthSession, createSubscriptionCheckoutApi, currentUser, escapeHtml, getSubscriptionsApi, verifySubscriptionSessionApi } from '../services/api.service.js';
 import { t } from '../services/i18n.service.js';
 import { loadTemplate } from '../services/template.service.js';
@@ -37,9 +36,6 @@ export async function createUpgradeView(): Promise<HTMLElement> {
     );
     window.history.replaceState({}, '', '/upgrade');
   }
-
-  const sidebar = await createSidebar();
-  container.prepend(sidebar);
 
   const grid = container.querySelector<HTMLElement>('[data-ref="pricing-grid"]');
   const billingTogglePill = container.querySelector<HTMLElement>('[data-ref="billing-toggle-pill"]');

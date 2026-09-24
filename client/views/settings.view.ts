@@ -1,11 +1,10 @@
 import { navigate, render } from '../app-router.js';
-import { createSidebar } from '../components/layout.component.js';
 import { open2FAModal, openModal } from '../components/modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { appConfig, cancelSubscriptionImmediateApi, checkAuthSession, clearUserState, createSetupIntentApi, currentUser, deleteApi, deletePaymentMethodApi, escapeHtml, getApi, getBillingDetailsApi, getPaymentMethodsApi, getPurchaseHistoryApi, getStorageUsageApi, logoutAllApi, postApi, postFormApi, setCurrentUser, setDefaultPaymentMethodApi, setLinkedAccounts, updateAutoRenewalApi } from '../services/api.service.js';
 import { getCurrentLanguage, setLanguage, t, translateElement } from '../services/i18n.service.js';
 import { loadTemplate } from '../services/template.service.js';
-import { applyAccessibilityPreferences, initTheme, setTheme } from '../services/theme.service.js';
+import { applyAccessibilityPreferences, getTheme, initTheme, setTheme } from '../services/theme.service.js';
 import { setToastPreferences, showToast } from '../services/toast.service.js';
 import { closeWebSocket } from '../services/websocket.service.js';
 import { ModalInstance } from '../types/common.types.js';
@@ -17,9 +16,6 @@ import { validateAndSanitizeFile, validatePassword } from '../utils/validators.u
 
 export async function createYourAccountView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/settings/your-account.html');
-
-  const sidebar = await createSidebar();
-  container.prepend(sidebar);
 
   if (!currentUser) return container;
 
@@ -820,9 +816,6 @@ export async function createYourAccountView(): Promise<HTMLElement> {
 export async function createSecurityView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/settings/security.html');
 
-  const sidebar = await createSidebar();
-  container.prepend(sidebar);
-
   const isProtected = Boolean(currentUser?.is_protected);
   const protectedBanner = container.querySelector<HTMLElement>('[data-ref="protected-account-banner"]');
   if (isProtected && protectedBanner) {
@@ -1518,9 +1511,6 @@ export async function createBillingView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/settings/billing.html');
   translateElement(container);
 
-  const sidebar = await createSidebar();
-  container.prepend(sidebar);
-
   const accordionHeaderSub = container.querySelector<HTMLElement>(
     '[data-ref="accordion-header-subscription"]'
   );
@@ -2176,9 +2166,6 @@ export async function createPurchasesView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/settings/purchases.html');
   translateElement(container);
 
-  const sidebar = await createSidebar();
-  container.prepend(sidebar);
-
   const tbody = container.querySelector<HTMLElement>('[data-ref="purchases-tbody"]');
   const tableEl = container.querySelector<HTMLElement>('[data-ref="purchases-table"]');
   const tableWrapper = container.querySelector<HTMLElement>('[data-ref="purchases-table-wrapper"]');
@@ -2395,9 +2382,6 @@ export async function createPurchasesView(): Promise<HTMLElement> {
 export async function createAccessibilityView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/settings/accessibility.html');
 
-  const sidebar = await createSidebar();
-  container.prepend(sidebar);
-
   const themeDropdown = container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-theme"]');
   const themeSelectedText = container.querySelector<HTMLElement>('[data-ref="theme-selected-text"]');
   const themeSelectedIcon = container.querySelector<HTMLElement>('[data-ref="theme-selected-icon"]');
@@ -2411,11 +2395,11 @@ export async function createAccessibilityView(): Promise<HTMLElement> {
   const getThemeLabel = (theme: string) => {
     switch (theme) {
       case 'light':
-        return t('settings.accessibility.theme_light');
+        return t('settings.accessibility.theme_light') || 'Claro';
       case 'dark':
-        return t('settings.accessibility.theme_dark');
+        return t('settings.accessibility.theme_dark') || 'Oscuro';
       default:
-        return t('settings.accessibility.theme_system');
+        return t('settings.accessibility.theme_system') || 'Automático (del sistema)';
     }
   };
 
@@ -2425,9 +2409,28 @@ export async function createAccessibilityView(): Promise<HTMLElement> {
     dark: 'dark_mode',
   };
 
-  if (themeSelectedText) {
-    themeSelectedText.textContent = getThemeLabel('system');
-  }
+  const updateThemeUi = (theme: string) => {
+    const validTheme = ['system', 'light', 'dark'].includes(theme) ? theme : 'system';
+    if (themeSelectedText) {
+      themeSelectedText.textContent = getThemeLabel(validTheme);
+    }
+    if (themeSelectedIcon && themeIcons[validTheme]) {
+      themeSelectedIcon.textContent = themeIcons[validTheme];
+    }
+    if (themeDropdown) {
+      const activeItem = themeDropdown.querySelector<HTMLElement>(
+        `[data-theme-value="${validTheme}"], [data-theme="${validTheme}"]`
+      );
+      if (activeItem) {
+        themeDropdown
+          .querySelectorAll('.menu-item')
+          .forEach((i) => i.classList.remove('is-active'));
+        activeItem.classList.add('is-active');
+      }
+    }
+  };
+
+  updateThemeUi(getTheme());
 
   try {
     const prefRes = await getApi(API_ROUTES.settings.preferences);
@@ -2438,25 +2441,13 @@ export async function createAccessibilityView(): Promise<HTMLElement> {
       if (prefs) {
         setToastPreferences(prefs);
         applyAccessibilityPreferences(prefs);
-        initTheme(prefs);
 
-        if (prefs.theme && themeIcons[prefs.theme]) {
-          if (themeSelectedText)
-            themeSelectedText.textContent = getThemeLabel(prefs.theme);
-          if (themeSelectedIcon)
-            themeSelectedIcon.textContent = themeIcons[prefs.theme];
-
-          if (themeDropdown) {
-            const activeItem = themeDropdown.querySelector<HTMLElement>(
-              `[data-theme-value="${prefs.theme}"], [data-theme="${prefs.theme}"]`
-            );
-            if (activeItem) {
-              themeDropdown
-                .querySelectorAll('.menu-item')
-                .forEach((i) => i.classList.remove('is-active'));
-              activeItem.classList.add('is-active');
-            }
-          }
+        const currentLocal = localStorage.getItem('sprite_theme');
+        if (!currentLocal && prefs.theme && ['system', 'light', 'dark'].includes(prefs.theme)) {
+          await setTheme(prefs.theme, false);
+          updateThemeUi(prefs.theme);
+        } else {
+          updateThemeUi(getTheme());
         }
 
         if (toggleReduceMotion)
@@ -2473,11 +2464,9 @@ export async function createAccessibilityView(): Promise<HTMLElement> {
     setupDropdown(themeDropdown, {
       onSelect: async (theme: string) => {
         try {
-          if (themeSelectedText) themeSelectedText.textContent = getThemeLabel(theme);
-          if (themeSelectedIcon && themeIcons[theme])
-            themeSelectedIcon.textContent = themeIcons[theme];
+          updateThemeUi(theme);
           await setTheme(theme, true);
-          showToast(t('toasts.theme_updated'), 'success');
+          showToast(t('toasts.theme_updated') || 'Tema actualizado', 'success');
         } catch (_) {}
       },
     });
@@ -2527,9 +2516,6 @@ export async function createAccessibilityView(): Promise<HTMLElement> {
 
 export async function createGuestSettingsView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/settings/guest.html');
-
-  const sidebar = await createSidebar();
-  container.prepend(sidebar);
 
   const langDropdown = container.querySelector<HTMLElement>(
     '[data-ref="dropdown-wrapper-guest-language"]'

@@ -1,7 +1,3 @@
-import { openCreateCanvasModal } from './create-canvas-modal.component.js';
-import { openInsertPixelGridModal } from './insert-pixel-grid-modal.component.js';
-import { openModal } from './modal.component.js';
-import { openUpgradeModal } from './upgrade-modal.component.js';
 import { navigate, render } from '../app-router.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { BOARD_3D_SHAPES } from '../config/board-3d-shapes.config.js';
@@ -30,6 +26,10 @@ import { CHART_CATALOG } from '../views/board/board-charts-panel.component.js';
 import { BoardChartElement, BoardProject, ChartType, Shape3DType, ShapeType } from '../views/board/board.types.js';
 import { DOC_TEMPLATES, getDocTemplateById } from '../views/doc/doc-templates.config.js';
 import { DocPage, DocProject } from '../views/doc/doc.types.js';
+import { openCreateCanvasModal } from './create-canvas-modal.component.js';
+import { openInsertPixelGridModal } from './insert-pixel-grid-modal.component.js';
+import { openModal } from './modal.component.js';
+import { openUpgradeModal } from './upgrade-modal.component.js';
 
 let isDrawerOpen = false;
 let isChatOpen = false;
@@ -96,13 +96,13 @@ function updateDrawerFooter(drawer: HTMLElement, currentPath: string): void {
     if (currentUser) {
       drawerFooter.style.display = 'flex';
       drawerFooter.innerHTML = `
-        <button type="button" class="drawer-footer-item${currentPath === '/settings/billing' ? ' is-active' : ''}" data-ref="btn-nav-settings-billing" data-tooltip="${t('nav.billing') || 'Facturación'}" aria-label="${t('nav.billing') || 'Facturación'}">
-          <svg class="component-icon drawer-footer-item__icon" aria-hidden="true"><use href="/icons.svg#credit_card"></use></svg>
-          <span class="drawer-footer-item__text" data-i18n="nav.billing">${t('nav.billing') || 'Facturación'}</span>
+        <button type="button" class="menu-item${currentPath === '/settings/billing' ? ' is-active' : ''}" data-ref="btn-nav-settings-billing" data-tooltip="${t('nav.billing') || 'Facturación'}" aria-label="${t('nav.billing') || 'Facturación'}">
+          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#credit_card"></use></svg>
+          <span class="menu-item__text" data-i18n="nav.billing">${t('nav.billing') || 'Facturación'}</span>
         </button>
-        <button type="button" class="drawer-footer-item${currentPath === '/settings/purchases' ? ' is-active' : ''}" data-ref="btn-nav-settings-purchases" data-tooltip="${t('nav.purchases') || 'Compras'}" aria-label="${t('nav.purchases') || 'Compras'}">
-          <svg class="component-icon drawer-footer-item__icon" aria-hidden="true"><use href="/icons.svg#receipt_long"></use></svg>
-          <span class="drawer-footer-item__text" data-i18n="nav.purchases">${t('nav.purchases') || 'Compras'}</span>
+        <button type="button" class="menu-item${currentPath === '/settings/purchases' ? ' is-active' : ''}" data-ref="btn-nav-settings-purchases" data-tooltip="${t('nav.purchases') || 'Compras'}" aria-label="${t('nav.purchases') || 'Compras'}">
+          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#receipt_long"></use></svg>
+          <span class="menu-item__text" data-i18n="nav.purchases">${t('nav.purchases') || 'Compras'}</span>
         </button>
       `;
       const btnBilling = drawerFooter.querySelector<HTMLElement>('[data-ref="btn-nav-settings-billing"]');
@@ -4767,7 +4767,8 @@ function setupRailUserControls(sidebar: HTMLElement): void {
         currentUser.avatar_url ||
         API_ROUTES.avatar(currentUser.username);
 
-      if (avatarImg) {
+      if (avatarImg && avatarImg.getAttribute('data-loaded-src') !== avatarUrl) {
+        avatarImg.setAttribute('data-loaded-src', avatarUrl);
         avatarImg.classList.add('image-lazy-fade');
         avatarImg.classList.remove('image-loaded');
         avatarImg.src = avatarUrl;
@@ -4785,7 +4786,8 @@ function setupRailUserControls(sidebar: HTMLElement): void {
         }
       }
 
-      if (activeAvatar) {
+      if (activeAvatar && activeAvatar.getAttribute('data-loaded-src') !== avatarUrl) {
+        activeAvatar.setAttribute('data-loaded-src', avatarUrl);
         activeAvatar.classList.add('image-lazy-fade');
         activeAvatar.classList.remove('image-loaded');
         activeAvatar.src = avatarUrl;
@@ -5256,19 +5258,63 @@ function setupRailUserControls(sidebar: HTMLElement): void {
   }
 }
 
+let sidebarInstance: HTMLElement | null = null;
+let sidebarInitPromise: Promise<HTMLElement> | null = null;
+
+export function getSidebarElement(): HTMLElement | null {
+  return sidebarInstance;
+}
+
+export function resetSidebar(): void {
+  if (sidebarInstance) {
+    sidebarInstance.remove();
+    sidebarInstance = null;
+    sidebarInitPromise = null;
+  }
+}
+
 export async function createSidebar(): Promise<HTMLElement> {
-  document.querySelector('[data-ref="btn-help-chat"]')?.remove();
-  const sidebar = await loadTemplate('/views/components/sidebar.html');
-  translateElement(sidebar);
+  if (sidebarInstance) {
+    updateSidebarActiveState(sidebarInstance, window.location.pathname);
+    return sidebarInstance;
+  }
+  if (sidebarInitPromise) {
+    return sidebarInitPromise;
+  }
 
-  setupRailNavigation(sidebar);
-  setupDrawerContent(sidebar);
-  setupRailUserControls(sidebar);
-  updateSidebarActiveState(sidebar, window.location.pathname);
+  sidebarInitPromise = (async () => {
+    document.querySelector('[data-ref="btn-help-chat"]')?.remove();
+    const sidebar = await loadTemplate('/views/components/sidebar.html');
+    translateElement(sidebar);
 
-  renderIcons(sidebar);
+    setupRailNavigation(sidebar);
+    setupDrawerContent(sidebar);
+    setupRailUserControls(sidebar);
+    updateSidebarActiveState(sidebar, window.location.pathname);
+
+    renderIcons(sidebar);
+    sidebarInstance = sidebar;
+    return sidebar;
+  })();
+
+  return sidebarInitPromise;
+}
+
+export async function ensureSidebarMounted(layoutContent: HTMLElement): Promise<HTMLElement> {
+  const sidebar = await createSidebar();
+  if (sidebar.parentElement !== layoutContent) {
+    layoutContent.prepend(sidebar);
+  }
   return sidebar;
 }
+
+window.addEventListener('auth-changed', () => {
+  resetSidebar();
+  const layoutContent = document.querySelector<HTMLElement>('.layout-content');
+  if (layoutContent) {
+    void ensureSidebarMounted(layoutContent);
+  }
+});
 
 function setupChatSidebarEvents(sidebarElement: HTMLElement): void {
   const conversationHistory: Array<{ role: string; text: string }> = [];

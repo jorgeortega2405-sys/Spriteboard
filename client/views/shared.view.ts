@@ -1,7 +1,6 @@
 import { createPopper, Instance as PopperInstance } from '@popperjs/core';
 import { navigate } from '../app-router.js';
 import { openCanvasDownloadModal } from '../components/canvas-download-modal.component.js';
-import { createSidebar } from '../components/layout.component.js';
 import { openModal } from '../components/modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { currentUser, deleteApi, escapeHtml, getApi, postApi } from '../services/api.service.js';
@@ -476,9 +475,6 @@ class SharedController {
 export async function createSharedView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/home/shared.html');
   translateElement(container);
-
-  const sidebar = await createSidebar();
-  container.prepend(sidebar);
 
   const controller = new SharedController(container);
   await controller.init();
