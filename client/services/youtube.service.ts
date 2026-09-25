@@ -2,7 +2,7 @@ import { escapeHtml } from './api.service.js';
 import { renderIcons } from './icon.service.js';
 import { showToast } from './toast.service.js';
 
-export const YOUTUBE_API_KEY = 'AIzaSyBO-93FVTgkW4mUKE03-_zsjerzoX0GXTA';
+export const YOUTUBE_API_KEY = (import.meta as any).env?.VITE_GOOGLE_API_KEY || (import.meta as any).env?.VITE_YOUTUBE_API_KEY || 'AIzaSyBFsBn3Hi6CLH904UXGgOHP-rXORvs1-Us';
 
 export interface YouTubeVideoItem {
   channelTitle: string;

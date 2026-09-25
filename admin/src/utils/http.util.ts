@@ -2,6 +2,17 @@ import { logger } from '../services/logger.service.js';
 import { UserPayload } from '../types/auth.types.js';
 import { Response } from 'express';
 
+const TIER_BORDER_COLORS: Record<string, string> = {
+  business: 'conic-gradient(from 295deg, #8b5cf6 0% 28%, #ec4899 28% 57%, #3b82f6 57% 85%, #6366f1 85% 100%)',
+  free: '#9ca3af',
+  pro: '#3b82f6',
+};
+
+export function getTierBorderColor(tier?: string): string {
+  const normalized = (tier || 'free').toLowerCase();
+  return TIER_BORDER_COLORS[normalized] || TIER_BORDER_COLORS.free;
+}
+
 export function sanitizeUser(user: any): UserPayload {
   const tier = user.subscription_tier || 'free';
   return {
@@ -13,7 +24,7 @@ export function sanitizeUser(user: any): UserPayload {
     role: user.role || 'USER',
     roles: Array.isArray(user.roles) ? user.roles : (user.role ? [user.role] : ['USER']),
     subscription_tier: tier,
-    subscription_tier_color: undefined,
+    subscription_tier_color: getTierBorderColor(tier),
     two_factor_enabled: Boolean(user.two_factor_enabled),
     username: user.username,
   };

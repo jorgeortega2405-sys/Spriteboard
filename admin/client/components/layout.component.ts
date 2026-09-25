@@ -4,6 +4,7 @@ import { createIconSvg, renderIcons } from '../services/icon.service.js';
 import { showToast } from '../services/toast.service.js';
 import { closeAllDropdowns, escapeHtml, registerActiveDropdown, unregisterActiveDropdown } from '../utils/dom.util.js';
 import { ALL_NAV_MODULES, getAllowedNavModulesGrouped } from '../utils/permission.util.js';
+import { applyAvatarTier, getFallbackTierColor } from '../utils/tier.util.js';
 import { getIsAiAssistantOpen, toggleAiAssistantDrawer, updateSuggestions } from './ai-assistant-drawer.component.js';
 import { openCreateInternalTicketModal } from './internal-ticket-modal.component.js';
 
@@ -345,6 +346,7 @@ export async function createSidebar(): Promise<HTMLElement> {
     const accountSwitcherList = avatarContainer.querySelector<HTMLElement>('[data-ref="account-switcher-list"]');
 
     const activeAvatar = avatarContainer.querySelector<HTMLImageElement>('[data-ref="active-account-avatar"]');
+    const activeAvatarBox = avatarContainer.querySelector<HTMLElement>('[data-ref="active-account-avatar-box"]');
     const activeName = avatarContainer.querySelector<HTMLElement>('[data-ref="active-account-name"]');
     const activeEmail = avatarContainer.querySelector<HTMLElement>('[data-ref="active-account-email"]');
 
@@ -361,6 +363,26 @@ export async function createSidebar(): Promise<HTMLElement> {
 
     if (activeName) activeName.textContent = currentUser.username;
     if (activeEmail) activeEmail.textContent = currentUser.email;
+
+    const userTier = currentUser.subscription_tier || 'free';
+    const updateAvatarTier = (tier: string) => {
+      const tVal = tier || (currentUser ? currentUser.subscription_tier : 'free') || 'free';
+      const color = currentUser?.subscription_tier_color;
+      if (btnAvatar) {
+        applyAvatarTier(btnAvatar, tVal, color);
+      }
+      if (activeAvatarBox) {
+        applyAvatarTier(activeAvatarBox, tVal, color);
+      }
+    };
+    updateAvatarTier(userTier);
+
+    const handleSubscriptionUpdated = (e: any) => {
+      const tier = e.detail?.subscription_tier || currentUser?.subscription_tier || 'free';
+      updateAvatarTier(tier);
+      renderAccountList();
+    };
+    window.addEventListener('subscription-updated', handleSubscriptionUpdated);
 
     const showPanel = (panelName: string) => {
       if (panelName === 'switcher') {
@@ -387,9 +409,11 @@ export async function createSidebar(): Promise<HTMLElement> {
         item.setAttribute('data-ref', `account-item-${acc.id}`);
 
         const accAvatar = acc.avatar_url || `/api/avatar?name=${encodeURIComponent(acc.username)}`;
+        const accTier = acc.subscription_tier || 'free';
+        const accColor = acc.subscription_tier_color || getFallbackTierColor(accTier);
 
         item.innerHTML = `
-          <div class="account-item__avatar" data-ref="account-avatar-${acc.id}">
+          <div class="account-item__avatar" data-ref="account-avatar-${acc.id}" data-tier="${accTier}" style="--avatar-tier-bg: ${accColor};">
             <img class="avatar-img image-lazy-fade" data-ref="avatar-img-${acc.id}" src="${accAvatar}" alt="${escapeHtml(acc.username)}" referrerpolicy="no-referrer" />
           </div>
           <div class="account-item__info" data-ref="account-info-${acc.id}">

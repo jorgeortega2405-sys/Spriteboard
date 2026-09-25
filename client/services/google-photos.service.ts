@@ -1,8 +1,8 @@
 import { escapeHtml } from './api.service.js';
 import { showToast } from './toast.service.js';
 
-export const GOOGLE_PHOTOS_API_KEY = 'AIzaSyBFsBn3Hi6CLH904UXGgOHP-rXORvs1-Us';
-export const GOOGLE_PHOTOS_CLIENT_ID = '899980904040-n9foado9rou3etjr8d5ouikpa1ivaml2.apps.googleusercontent.com';
+export const GOOGLE_PHOTOS_API_KEY = (import.meta as any).env?.VITE_GOOGLE_API_KEY || (import.meta as any).env?.VITE_GOOGLE_PHOTOS_API_KEY || 'AIzaSyBFsBn3Hi6CLH904UXGgOHP-rXORvs1-Us';
+export const GOOGLE_PHOTOS_CLIENT_ID = (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID || '899980904040-n9foado9rou3etjr8d5ouikpa1ivaml2.apps.googleusercontent.com';
 export const GOOGLE_PHOTOS_SCOPES = 'https://www.googleapis.com/auth/photoslibrary.readonly https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
 
 const STORAGE_KEY_TOKEN = 'sb_gphotos_token';

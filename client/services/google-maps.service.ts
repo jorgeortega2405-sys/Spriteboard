@@ -1,4 +1,4 @@
-export const GOOGLE_MAPS_API_KEY = 'AIzaSyBFsBn3Hi6CLH904UXGgOHP-rXORvs1-Us';
+export const GOOGLE_MAPS_API_KEY = (import.meta as any).env?.VITE_GOOGLE_API_KEY || (import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyBFsBn3Hi6CLH904UXGgOHP-rXORvs1-Us';
 
 export type MapTypeOption = 'hybrid' | 'roadmap' | 'satellite' | 'terrain';
 export type MapStyleOption = 'dark' | 'retro' | 'silver' | 'standard';

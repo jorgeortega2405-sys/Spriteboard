@@ -20,76 +20,85 @@
 }
 
 /* Modificadores de Ancho */
-.menu-panel--w-180 {
-  width: 180px;
-  min-width: 180px;
-  max-width: 180px;
+.menu-panel--w-180,
+.settings-dropdown-wrapper .menu-panel--dropdown.menu-panel--w-180 {
+  width: 180px !important;
+  min-width: 180px !important;
+  max-width: 180px !important;
 }
 
-.menu-panel--w-200 {
-  width: 200px;
-  min-width: 200px;
-  max-width: 200px;
+.menu-panel--w-200,
+.settings-dropdown-wrapper .menu-panel--dropdown.menu-panel--w-200 {
+  width: 200px !important;
+  min-width: 200px !important;
+  max-width: 200px !important;
 }
 
-.menu-panel--w-220 {
-  width: 220px;
-  min-width: 220px;
-  max-width: 220px;
+.menu-panel--w-220,
+.settings-dropdown-wrapper .menu-panel--dropdown.menu-panel--w-220 {
+  width: 220px !important;
+  min-width: 220px !important;
+  max-width: 220px !important;
 }
 
-.menu-panel--w-240 {
-  width: 240px;
-  min-width: 240px;
-  max-width: 240px;
+.menu-panel--w-240,
+.settings-dropdown-wrapper .menu-panel--dropdown.menu-panel--w-240 {
+  width: 240px !important;
+  min-width: 240px !important;
+  max-width: 240px !important;
 }
 
-.menu-panel--w-285 {
-  width: 285px;
-  min-width: 285px;
-  max-width: 285px;
+.menu-panel--w-285,
+.settings-dropdown-wrapper .menu-panel--dropdown.menu-panel--w-285 {
+  width: 285px !important;
+  min-width: 285px !important;
+  max-width: 285px !important;
 }
 
-.menu-panel--w-265 {
-  width: 265px;
-  min-width: 265px;
-  max-width: 265px;
+.menu-panel--w-265,
+.settings-dropdown-wrapper .menu-panel--dropdown.menu-panel--w-265 {
+  width: 265px !important;
+  min-width: 265px !important;
+  max-width: 265px !important;
 }
 
 .menu-panel--w-325,
-.avatar-menu {
-  width: 325px;
-  min-width: 325px;
-  max-width: 325px;
+.avatar-menu,
+.settings-dropdown-wrapper .menu-panel--dropdown.menu-panel--w-325 {
+  width: 325px !important;
+  min-width: 325px !important;
+  max-width: 325px !important;
 }
 
-.menu-panel--w-425 {
-  width: 425px;
-  min-width: 425px;
-  max-width: 425px;
+.menu-panel--w-425,
+.settings-dropdown-wrapper .menu-panel--dropdown.menu-panel--w-425 {
+  width: 425px !important;
+  min-width: 425px !important;
+  max-width: 425px !important;
 }
 
 @media (max-width: 489px) {
-  .menu-panel--w-425 {
-    width: calc(100vw - 24px);
-    min-width: calc(100vw - 24px);
-    max-width: calc(100vw - 24px);
+  .menu-panel--w-425,
+  .settings-dropdown-wrapper .menu-panel--dropdown.menu-panel--w-425 {
+    width: calc(100vw - 24px) !important;
+    min-width: calc(100vw - 24px) !important;
+    max-width: calc(100vw - 24px) !important;
   }
 }
 
 .menu-panel--w-465,
 .settings-dropdown-wrapper .menu-panel--dropdown.menu-panel--w-465 {
-  width: 465px;
-  min-width: 465px;
-  max-width: 465px;
+  width: 465px !important;
+  min-width: 465px !important;
+  max-width: 465px !important;
 }
 
 @media (max-width: 489px) {
   .menu-panel--w-465,
   .settings-dropdown-wrapper .menu-panel--dropdown.menu-panel--w-465 {
-    width: calc(100vw - 24px);
-    min-width: calc(100vw - 24px);
-    max-width: calc(100vw - 24px);
+    width: calc(100vw - 24px) !important;
+    min-width: calc(100vw - 24px) !important;
+    max-width: calc(100vw - 24px) !important;
   }
 }
 

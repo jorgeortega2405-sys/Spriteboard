@@ -1,6 +1,6 @@
 import { navigate, render, showEarlySkeleton } from './app-router.js';
 import { checkAuthSession, currentUser, fetchAppConfig, fetchCsrfToken } from './services/api.service.js';
-import { initI18n } from './services/i18n.service.js';
+import { getCurrentLanguage, initI18n, setLanguage } from './services/i18n.service.js';
 import { renderIcons } from './services/icon.service.js';
 import { initTheme } from './services/theme.service.js';
 import { initTooltips } from './services/tooltip.service.js';
@@ -137,11 +137,13 @@ async function init(): Promise<void> {
   initScrollShadow();
   initLinkInterception();
 
-  await Promise.all([fetchCsrfToken(), checkAuthSession(), fetchAppConfig()]);
+  await Promise.all([fetchCsrfToken(), checkAuthSession(), fetchAppConfig(), initI18n()]);
+  if (currentUser?.language && currentUser.language !== getCurrentLanguage()) {
+    await setLanguage(currentUser.language);
+  }
   if (currentUser) {
     initWebSocket();
   }
-  await initI18n();
   await render();
   renderIcons();
 }

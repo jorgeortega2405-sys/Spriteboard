@@ -60,6 +60,12 @@ app.use(cookieParser());
 app.get('/health', getHealth);
 app.use('/uploads', express.static(path.join(process.cwd(), 'public/uploads')));
 app.use('/uploads', express.static(path.resolve(process.cwd(), '..', 'public', 'uploads')));
+app.use(
+  express.static(path.join(process.cwd(), 'public'), {
+    maxAge: config.nodeEnv === 'production' ? '1d' : 0,
+    index: false,
+  })
+);
 app.use('/api', apiRouter);
 
 app.use((err: any, _req: Request, res: Response, next: express.NextFunction) => {
@@ -88,6 +94,7 @@ async function setupClient(server: http.Server) {
             '**/dist/**',
             '**/logs/**',
             '**/.git/**',
+            '**/public/**',
           ],
           interval: 2000,
           usePolling: true,

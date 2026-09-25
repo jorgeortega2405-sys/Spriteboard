@@ -263,9 +263,6 @@ body[data-theme="dark"] .login-logo-img {
     top: calc(100% + 6px);
     left: 0;
     right: auto;
-    width: 100%;
-    min-width: 100%;
-    max-width: 100%;
     background-color: var(--bg-surface);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-lg);
@@ -277,6 +274,13 @@ body[data-theme="dark"] .login-logo-img {
     box-sizing: border-box;
     box-shadow: var(--shadow-dropdown);
     z-index: 100;
+  }
+
+  .settings-dropdown-wrapper .menu-panel--dropdown.menu-panel--w-full,
+  .settings-dropdown-wrapper .menu-panel--dropdown:not([class*="menu-panel--w-"]) {
+    width: 100%;
+    min-width: 100%;
+    max-width: 100%;
   }
 
   .settings-dropdown-wrapper .menu-panel--dropdown.is-open {

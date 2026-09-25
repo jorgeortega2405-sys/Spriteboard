@@ -34,7 +34,7 @@
 
             <!-- Filter Tabs -->
             <div class="support-search-container__filters-wrap" data-ref="support-filter-wrap">
-              <div class="component-tags-carousel-wrapper view-tags-wrapper" data-ref="support-tags-carousel-wrapper">
+              <div class="component-tags-carousel-wrapper" data-ref="support-tags-carousel-wrapper">
                 <button type="button" class="component-tag-nav-btn component-tag-nav-left is-disabled" data-ref="btn-tags-scroll-left" data-tooltip="Desplazar a la izquierda" aria-label="Desplazar a la izquierda">
                   <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
                 </button>
@@ -115,7 +115,7 @@
                 </button>
 
                 <div class="settings-dropdown-wrapper" data-ref="ticket-actions-dropdown-wrapper" style="display: none; position: relative;">
-                  <button type="button" class="component-button component-button--h36 component-button--icon-only home-floating-btn" data-ref="btn-ticket-more" data-tooltip="Opciones del caso" aria-label="Opciones del caso">
+                  <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-ticket-more" data-tooltip="Opciones del caso" aria-label="Opciones del caso">
                     <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#more_vert"></use></svg>
                   </button>
 
@@ -160,20 +160,6 @@
 
             <!-- Chat Message Composer -->
             <div class="support-composer" data-ref="support-composer" style="padding: 10px 16px 14px 16px; background-color: var(--bg-surface); border-top: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 8px;">
-              
-              <!-- Quick Response Chips -->
-              <div class="support-quick-chips" data-ref="support-quick-chips" style="display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px;">
-                <button type="button" class="component-badge component-badge--sm component-badge--interactive quick-chip" data-ref="chip-greeting" data-text="¡Hola! Un gusto saludarte. ¿Cómo puedo ayudarte con tu cuenta de Spriteboard hoy?">
-                  <span>👋 Saludo inicial</span>
-                </button>
-                <button type="button" class="component-badge component-badge--sm component-badge--interactive quick-chip" data-ref="chip-investigating" data-text="Permíteme unos instantes mientras reviso los detalles técnicos en el sistema...">
-                  <span>🔍 Revisando caso</span>
-                </button>
-                <button type="button" class="component-badge component-badge--sm component-badge--interactive quick-chip" data-ref="chip-solved" data-text="Hemos solucionado la incidencia. Por favor recarga tu página o verifica si todo está funcionando como esperas.">
-                  <span>✅ Solucionado</span>
-                </button>
-              </div>
-
               <!-- Chat Pill Input -->
               <div class="chat-pill-input" data-ref="chat-input-box">
                 <textarea class="chat-pill-input__field" data-ref="input-agent-message" placeholder="Escribe una respuesta para el usuario..." rows="1" maxlength="2000"></textarea>
