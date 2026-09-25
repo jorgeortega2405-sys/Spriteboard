@@ -1,6 +1,6 @@
 import { CanvasAiDropdownController, setupPresentationAiDropdown } from '../../components/canvas-ai-dropdown.component.js';
 import { CanvasCommentsController } from '../../components/canvas-comments.component.js';
-import { CanvasHistoryDropdownController, setupCanvasHistoryDropdown } from '../../components/canvas-history-dropdown.component.js';
+import { CanvasFileMenuController, setupCanvasFileMenu } from '../../components/canvas-file-menu.component.js';
 import { openCanvasMetricsModal } from '../../components/canvas-metrics-modal.component.js';
 import { CanvasShareDropdownController, setupCanvasShareDropdown } from '../../components/canvas-share-dropdown.component.js';
 import { closeContextMenu, ContextMenuItem, openContextMenu } from '../../components/context-menu.component.js';
@@ -8,7 +8,7 @@ import { isAnimationDrawerOpen, isColorsDrawerOpen, isEffectsDrawerOpen, isFonts
 import { SlideshowPlayerComponent } from '../../components/slideshow-player.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
 import { getBoardTemplateElements } from '../../config/board-templates.data.js';
-import { currentUser, getApi, putApi } from '../../services/api.service.js';
+import { currentUser, getApi, postApi, putApi } from '../../services/api.service.js';
 import { getLocalCanvasByUuid, saveLocalCanvas } from '../../services/canvas-storage.service.js';
 import { t } from '../../services/i18n.service.js';
 import { renderIcons } from '../../services/icon.service.js';
@@ -46,6 +46,7 @@ export class PresentationController {
   private distanceGuides: DistanceGuide[] = [];
   private animationPanel: BoardAnimationPanelComponent | null = null;
   private autoSaveTimer: number | null = null;
+  private lastAutoSnapshotTime: number = 0;
   private broadcastMyCursor: boolean = true;
   private activeInlineVideoEl: HTMLElement | null = null;
   private activeInlineVideoId: string | null = null;
@@ -89,7 +90,7 @@ export class PresentationController {
   private fontPicker: DocFontPickerComponent | null = null;
   private groupResizeSnapshots: Map<string, ElementResizeSnapshot> = new Map();
   private hasInitialFit: boolean = false;
-  private historyDropdownController: CanvasHistoryDropdownController | null = null;
+  private fileMenuController: CanvasFileMenuController | null = null;
   private isDragging: boolean = false;
   private isDrawing: boolean = false;
   private isEyedropperActive: boolean = false;
@@ -183,8 +184,8 @@ export class PresentationController {
     this.commentsController = null;
     this.aiDropdownController?.destroy();
     this.aiDropdownController = null;
-    this.historyDropdownController?.destroy();
-    this.historyDropdownController = null;
+    this.fileMenuController?.destroy();
+    this.fileMenuController = null;
     this.shareDropdownController?.destroy();
     this.shareDropdownController = null;
     this.chartsPanel?.destroy();
@@ -761,31 +762,29 @@ export class PresentationController {
   private setupTopBarComponents(): void {
     const signal = this.abortController?.signal;
 
-    const btnCloudStatus = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-canvas-cloud-status"]');
-    btnCloudStatus?.addEventListener('click', () => {
-      showToast('Todos los cambios se sincronizan automáticamente', 'info');
-    }, { signal });
-
     const btnMetrics = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-canvas-metrics"]');
     btnMetrics?.addEventListener('click', () => {
       openCanvasMetricsModal(this.canvasUuid, this.canvasRecord?.name || 'Presentación');
     }, { signal });
 
-    const btnHistory = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-canvas-history"]');
-    const historyWrapper = this.container.querySelector<HTMLElement>('[data-ref="presentation-history-wrapper"]');
-    if (btnHistory && historyWrapper) {
-      this.historyDropdownController = setupCanvasHistoryDropdown({
-        canvasType: 'board',
+    const btnFileMenu = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-presentation-file-menu"]');
+    const fileMenuWrapper = this.container.querySelector<HTMLElement>('[data-ref="presentation-file-menu-wrapper"]');
+    if (btnFileMenu && fileMenuWrapper) {
+      this.fileMenuController = setupCanvasFileMenu({
+        canvasTitle: this.canvasRecord?.name || 'Presentación',
+        canvasType: 'presentation',
         canvasUuid: this.canvasUuid,
+        folderUuid: this.canvasRecord?.folder_uuid || null,
         generateThumbnail: () => generateThumbnail(this.getActiveSlide().elements, this.getActiveSlide().background || { color: '#ffffff', type: 'solid' }, (sctx, el) => this.drawElementOn(sctx, el)),
         getCurrentProjectData: () => this.getProjectData(),
+        isFavorite: Boolean(this.canvasRecord?.is_favorite),
         isOwner: true,
         onExitPreview: () => this.exitSnapshotPreview(),
         onPreviewSnapshot: (uuid, data) => this.previewSnapshot(uuid, data),
         onRestoreSnapshot: (_uuid, data) => this.restoreSnapshot(data),
         signal,
-        trigger: btnHistory,
-        wrapper: historyWrapper,
+        trigger: btnFileMenu,
+        wrapper: fileMenuWrapper,
       });
     }
 
@@ -4885,6 +4884,17 @@ export class PresentationController {
           unit: 'presentation',
           width: this.slideWidth,
         });
+        const now = Date.now();
+        if (now - this.lastAutoSnapshotTime > 5 * 60 * 1000) {
+          this.lastAutoSnapshotTime = now;
+          const thumb = generateThumbnail(this.getActiveSlide().elements, this.getActiveSlide().background || { color: '#ffffff', type: 'solid' }, (sctx, el) => this.drawElementOn(sctx, el));
+          void postApi(API_ROUTES.canvases.snapshots(this.canvasUuid), {
+            data: initialData,
+            is_manual: false,
+            name: 'Guardado automático',
+            preview_thumbnail: thumb,
+          });
+        }
       } catch {}
     }
   }

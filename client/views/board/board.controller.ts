@@ -1,6 +1,6 @@
 import { CanvasAiDropdownController, setupBoardAiDropdown } from '../../components/canvas-ai-dropdown.component.js';
 import { CanvasCommentsController } from '../../components/canvas-comments.component.js';
-import { CanvasHistoryDropdownController, setupCanvasHistoryDropdown } from '../../components/canvas-history-dropdown.component.js';
+import { CanvasFileMenuController, setupCanvasFileMenu } from '../../components/canvas-file-menu.component.js';
 import { openCanvasMetricsModal } from '../../components/canvas-metrics-modal.component.js';
 import { CanvasShareDropdownController, setupCanvasShareDropdown } from '../../components/canvas-share-dropdown.component.js';
 import { closeContextMenu, ContextMenuItem, openContextMenu } from '../../components/context-menu.component.js';
@@ -59,21 +59,22 @@ export class BoardController {
   private aiDropdownController: CanvasAiDropdownController | null = null;
   private aiWrapperEl: HTMLElement | null = null;
   private autoSaveTimer: number | null = null;
+  private lastAutoSnapshotTime = 0;
   private activePreviewSnapshotUuid: string | null = null;
   private bottomPagesTextEl: HTMLElement | null = null;
   private btnBottomPages: HTMLButtonElement | null = null;
   private btnCanvasComments: HTMLButtonElement | null = null;
   private btnCanvasMetrics: HTMLButtonElement | null = null;
   private btnColorEyedropper: HTMLButtonElement | null = null;
-  private btnHistory: HTMLButtonElement | null = null;
+  private btnFileMenu: HTMLButtonElement | null = null;
   private btnPreviewExit: HTMLButtonElement | null = null;
   private btnPreviewRestore: HTMLButtonElement | null = null;
   private pages: BoardPageItem[] = [];
   private pagesTray: BoardPagesTrayComponent | null = null;
   private btnSaveStatus: HTMLButtonElement | null = null;
   private commentsController: CanvasCommentsController | null = null;
-  private historyDropdownController: CanvasHistoryDropdownController | null = null;
-  private historyWrapperEl: HTMLElement | null = null;
+  private fileMenuController: CanvasFileMenuController | null = null;
+  private fileMenuWrapperEl: HTMLElement | null = null;
   private isPreviewingSnapshot = false;
   private prePreviewBackground: { color: string; dotColor?: string; type: BackgroundType } | null = null;
   private prePreviewCamera: { x: number; y: number; zoom: number } | null = null;
@@ -222,8 +223,8 @@ export class BoardController {
     this.btnSaveStatus = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-canvas-cloud-status"]');
     this.btnCanvasMetrics = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-canvas-metrics"]');
     this.btnCanvasComments = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-canvas-comments"]');
-    this.btnHistory = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-canvas-history"]');
-    this.historyWrapperEl = this.container.querySelector<HTMLElement>('[data-ref="board-history-wrapper"]');
+    this.btnFileMenu = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-board-file-menu"]');
+    this.fileMenuWrapperEl = this.container.querySelector<HTMLElement>('[data-ref="board-file-menu-wrapper"]');
     this.previewBannerEl = this.container.querySelector<HTMLElement>('[data-ref="design-history-preview-banner"]');
     this.btnPreviewRestore = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-preview-restore"]');
     this.btnPreviewExit = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-preview-exit"]');
@@ -452,8 +453,8 @@ export class BoardController {
     this.collaborationManager.destroy();
     this.aiDropdownController?.destroy();
     this.aiDropdownController = null;
-    this.historyDropdownController?.destroy();
-    this.historyDropdownController = null;
+    this.fileMenuController?.destroy();
+    this.fileMenuController = null;
     this.shareDropdownController?.destroy();
     this.shareDropdownController = null;
     this.exportDropdownController?.destroy();
@@ -1095,16 +1096,6 @@ export class BoardController {
     const btnRedo = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-redo"]');
     btnRedo?.addEventListener('click', () => this.redo(), { signal });
 
-    if (this.btnSaveStatus) {
-      this.btnSaveStatus.addEventListener('click', () => {
-        if (!navigator.onLine) {
-          showToast('Sin conexión a internet. Los cambios están guardados localmente.', 'info');
-          return;
-        }
-        void this.saveImmediate();
-      }, { signal });
-    }
-
     const handleOnline = () => {
       this.scheduleAutoSave();
     };
@@ -1120,10 +1111,12 @@ export class BoardController {
       }, { signal });
     }
 
-    if (this.historyWrapperEl && this.btnHistory) {
-      this.historyDropdownController = setupCanvasHistoryDropdown({
+    if (this.btnFileMenu && this.fileMenuWrapperEl) {
+      this.fileMenuController = setupCanvasFileMenu({
+        canvasTitle: this.boardName,
         canvasType: 'board',
         canvasUuid: this.canvasUuid,
+        folderUuid: this.currentCanvasItem?.folder_uuid || null,
         generateThumbnail: () => generateThumbnail(this.elements, this.boardBackground, (ctx, el) => this.drawElementOn(ctx, el)),
         getCurrentProjectData: () => {
           this.syncActivePageData();
@@ -1137,6 +1130,7 @@ export class BoardController {
             version: 1,
           };
         },
+        isFavorite: Boolean(this.currentCanvasItem?.is_favorite),
         isOwner: this.isOwner,
         onExitPreview: () => {
           this.exitSnapshotPreview();
@@ -1165,8 +1159,8 @@ export class BoardController {
           showToast('Versión restaurada correctamente. Se creó un respaldo automático previo.', 'success');
         },
         signal,
-        trigger: this.btnHistory,
-        wrapper: this.historyWrapperEl,
+        trigger: this.btnFileMenu,
+        wrapper: this.fileMenuWrapperEl,
       });
     }
 
@@ -6317,6 +6311,16 @@ export class BoardController {
         });
         if (res.ok) {
           this.setSaveStatus('saved');
+          const now = Date.now();
+          if (now - this.lastAutoSnapshotTime > 5 * 60 * 1000) {
+            this.lastAutoSnapshotTime = now;
+            void postApi(API_ROUTES.canvases.snapshots(this.canvasUuid), {
+              data: dataStr,
+              is_manual: false,
+              name: 'Guardado automático',
+              preview_thumbnail: thumbnail,
+            });
+          }
         } else {
           this.setSaveStatus('error');
         }
@@ -6457,7 +6461,6 @@ export class BoardController {
       this.scheduleAutoSave();
 
       showToast('Versión restaurada correctamente. Se creó un respaldo automático previo.', 'success');
-      void this.historyDropdownController?.reloadSnapshots();
     } catch (err: any) {
       showToast(err.message || 'No se pudo restaurar la versión.', 'error');
     }

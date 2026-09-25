@@ -1,5 +1,5 @@
 import { CanvasAiDropdownController, setupDocAiDropdown } from '../../components/canvas-ai-dropdown.component.js';
-import { CanvasHistoryDropdownController, setupCanvasHistoryDropdown } from '../../components/canvas-history-dropdown.component.js';
+import { CanvasFileMenuController, setupCanvasFileMenu } from '../../components/canvas-file-menu.component.js';
 import { openCanvasMetricsModal } from '../../components/canvas-metrics-modal.component.js';
 import { CanvasShareDropdownController, setupCanvasShareDropdown } from '../../components/canvas-share-dropdown.component.js';
 import { closeContextMenu, ContextMenuItem, openContextMenu } from '../../components/context-menu.component.js';
@@ -59,7 +59,7 @@ export class DocController implements ViewController {
   private aiWrapperEl: HTMLElement | null = null;
   private alignmentDropdownController: { close: () => void; destroy: () => void } | null = null;
   private btnDocCloudStatus: HTMLButtonElement | null = null;
-  private btnDocHistory: HTMLButtonElement | null = null;
+  private btnDocFileMenu: HTMLButtonElement | null = null;
   private btnDocMetrics: HTMLButtonElement | null = null;
   private btnDocPresent: HTMLButtonElement | null = null;
   private canvasCreatedAt: string | null = null;
@@ -76,10 +76,10 @@ export class DocController implements ViewController {
   private currentHighlightColor = '#fef08a';
   private currentTextColor = '#0f172a';
   private docToolsDropdownController: { close: () => void; destroy: () => void } | null = null;
+  private fileMenuController: CanvasFileMenuController | null = null;
+  private fileMenuWrapperEl: HTMLElement | null = null;
   private fontPicker: DocFontPickerComponent | null = null;
-  private historyDropdownController: CanvasHistoryDropdownController | null = null;
   private historyManager: DocHistoryManager = new DocHistoryManager();
-  private historyWrapperEl: HTMLElement | null = null;
   private indentsDropdownController: { close: () => void; destroy: () => void } | null = null;
   private initialCanvasRecord: CanvasItem | null = null;
   private insertMoreDropdownController: { close: () => void; destroy: () => void } | null = null;
@@ -120,6 +120,7 @@ export class DocController implements ViewController {
   };
   private publicRole: 'editor' | 'viewer' = 'editor';
   private saveDebounceTimer: number | null = null;
+  private lastAutoSnapshotTime = 0;
   private selectedImageWrapper: HTMLElement | null = null;
   private shareDropdownController: CanvasShareDropdownController | null = null;
   private shareWrapperEl: HTMLElement | null = null;
@@ -140,10 +141,10 @@ export class DocController implements ViewController {
     this.collaboratorsListEl = this.container.querySelector<HTMLElement>('[data-ref="doc-collaborators-list"]');
     this.aiWrapperEl = this.container.querySelector<HTMLElement>('[data-ref="doc-ai-wrapper"]');
     this.shareWrapperEl = this.container.querySelector<HTMLElement>('[data-ref="doc-share-wrapper"]');
-    this.historyWrapperEl = this.container.querySelector<HTMLElement>('[data-ref="doc-history-wrapper"]');
+    this.fileMenuWrapperEl = this.container.querySelector<HTMLElement>('[data-ref="doc-file-menu-wrapper"]');
     this.btnDocCloudStatus = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-doc-cloud-status"]');
     this.btnDocMetrics = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-doc-metrics"]');
-    this.btnDocHistory = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-doc-history"]');
+    this.btnDocFileMenu = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-doc-file-menu"]');
     this.btnDocPresent = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-doc-present"]');
     this.previewBannerEl = this.container.querySelector<HTMLElement>('[data-ref="doc-preview-banner"]');
     this.setupCollaboration();
@@ -168,8 +169,8 @@ export class DocController implements ViewController {
     this.collaborationManager.destroy();
     this.aiDropdownController?.destroy();
     this.aiDropdownController = null;
-    this.historyDropdownController?.destroy();
-    this.historyDropdownController = null;
+    this.fileMenuController?.destroy();
+    this.fileMenuController = null;
     this.shareDropdownController?.destroy();
     this.shareDropdownController = null;
     this.abortController.abort();
@@ -541,16 +542,6 @@ export class DocController implements ViewController {
       }
     }, { signal });
 
-    if (this.btnDocCloudStatus) {
-      this.btnDocCloudStatus.addEventListener('click', () => {
-        if (!navigator.onLine) {
-          showToast('Sin conexión a internet. Los cambios están guardados localmente.', 'info');
-          return;
-        }
-        void this.saveNow();
-      }, { signal });
-    }
-
     const handleOnline = () => {
       this.scheduleAutosave();
     };
@@ -566,19 +557,22 @@ export class DocController implements ViewController {
       }, { signal });
     }
 
-    if (this.historyWrapperEl && this.btnDocHistory) {
+    if (this.btnDocFileMenu && this.fileMenuWrapperEl) {
       const isOwner = Boolean(
         (currentUser && this.canvasUserId && this.canvasUserId === currentUser.id) ||
         (!this.canvasUserId && !this.canvasServerId)
       );
-      this.historyDropdownController = setupCanvasHistoryDropdown({
+      this.fileMenuController = setupCanvasFileMenu({
+        canvasTitle: this.canvasTitle,
         canvasType: 'doc',
         canvasUuid: this.canvasUuid,
+        folderUuid: this.currentCanvasItem?.folder_uuid || null,
         generateThumbnail: () => generateDocThumbnail(this.project),
         getCurrentProjectData: () => {
           this.syncPagesFromDOM();
           return this.project;
         },
+        isFavorite: Boolean(this.currentCanvasItem?.is_favorite),
         isOwner,
         onExitPreview: () => {
           this.exitSnapshotPreview();
@@ -606,8 +600,8 @@ export class DocController implements ViewController {
           showToast('Versión restaurada correctamente. Se creó un respaldo automático previo.', 'success');
         },
         signal,
-        trigger: this.btnDocHistory,
-        wrapper: this.historyWrapperEl,
+        trigger: this.btnDocFileMenu,
+        wrapper: this.fileMenuWrapperEl,
       });
     }
 
@@ -2639,6 +2633,16 @@ export class DocController implements ViewController {
         });
         if (res.ok) {
           this.setSaveStatus('saved');
+          const now = Date.now();
+          if (now - this.lastAutoSnapshotTime > 5 * 60 * 1000) {
+            this.lastAutoSnapshotTime = now;
+            void postApi(API_ROUTES.canvases.snapshots(this.canvasUuid), {
+              data: dataStr,
+              is_manual: false,
+              name: 'Guardado automático',
+              preview_thumbnail: thumbnail,
+            });
+          }
         } else {
           this.setSaveStatus('error');
         }
@@ -3519,7 +3523,6 @@ export class DocController implements ViewController {
       this.scheduleAutosave();
 
       showToast('Versión restaurada correctamente. Se creó un respaldo automático previo.', 'success');
-      void this.historyDropdownController?.reloadSnapshots();
     } catch (err: any) {
       showToast(err.message || 'No se pudo restaurar la versión.', 'error');
     }
