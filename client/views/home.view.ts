@@ -797,9 +797,8 @@ class HomeController {
       SkeletonService.renderGridCardSkeletons(this.gridEl, 8, 'canvas');
     }
 
-    await this.loadFolders();
+    await Promise.all([this.loadFolders(), this.loadCanvases(false)]);
     this.filterFolders();
-    await this.loadCanvases(false);
   }
 
   private async loadCanvases(showInitialSkeletons = true): Promise<void> {

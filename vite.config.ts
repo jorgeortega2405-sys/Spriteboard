@@ -18,6 +18,7 @@ export default defineConfig({
         '**/worker/**',
         '**/websocket/**',
         '**/admin/**',
+        '**/public/**',
         '**/.gemini/**',
         '**/.agents/**',
       ],

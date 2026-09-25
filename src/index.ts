@@ -77,6 +77,12 @@ app.use(telemetryMiddleware);
 app.get('/health', getHealth);
 app.use('/api', apiRouter);
 app.use(uploadRouter);
+app.use(
+  express.static(path.join(process.cwd(), 'public'), {
+    maxAge: config.nodeEnv === 'production' ? '1d' : 0,
+    index: false,
+  })
+);
 
 app.get('/:slug', async (req: Request, res: Response, next: express.NextFunction) => {
   const { slug } = req.params;
@@ -124,6 +130,7 @@ async function setupClient(server: http.Server) {
             '**/worker/**',
             '**/websocket/**',
             '**/admin/**',
+            '**/public/**',
             '**/.gemini/**',
             '**/.agents/**',
           ],

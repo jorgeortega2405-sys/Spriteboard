@@ -4,7 +4,6 @@ import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { showToast } from '../services/toast.service.js';
 import { ModalInstance, ModalOptions } from '../types/common.types.js';
-import QRCodeStyling from 'qr-code-styling';
 
 let activeModals: any[] = [];
 let active2FAModal: any = null;
@@ -718,32 +717,33 @@ export async function open2FAModal(options: { onClose?: () => void; onSuccess?: 
       secretValueEl.textContent = secret;
     }
 
-    if (qrContainer && qrUri && QRCodeStyling) {
+    if (qrContainer && qrUri) {
       qrContainer.innerHTML = '';
-      const qrCode = new QRCodeStyling({
-        width: 200,
-        height: 200,
-        type: 'svg',
-        data: qrUri,
-        margin: 2,
-        dotsOptions: {
-          type: 'rounded',
-          color: '#000000',
-        },
-        cornersSquareOptions: {
-          type: 'extra-rounded',
-          color: '#000000',
-        },
-        cornersDotOptions: {
-          type: 'dot',
-          color: '#000000',
-        },
-        backgroundOptions: {
-          color: '#ffffff',
-        },
+      void import('qr-code-styling').then(({ default: QRCodeStyling }) => {
+        const qrCode = new QRCodeStyling({
+          width: 200,
+          height: 200,
+          type: 'svg',
+          data: qrUri,
+          margin: 2,
+          dotsOptions: {
+            type: 'rounded',
+            color: '#000000',
+          },
+          cornersSquareOptions: {
+            type: 'extra-rounded',
+            color: '#000000',
+          },
+          cornersDotOptions: {
+            type: 'dot',
+            color: '#000000',
+          },
+          backgroundOptions: {
+            color: '#ffffff',
+          },
+        });
+        qrCode.append(qrContainer);
       });
-
-      qrCode.append(qrContainer);
     }
 
     codeInput?.focus();

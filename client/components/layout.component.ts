@@ -38,7 +38,6 @@ import { openCreateCanvasModal } from './create-canvas-modal.component.js';
 import { openInsertPixelGridModal } from './insert-pixel-grid-modal.component.js';
 import { openModal } from './modal.component.js';
 import { openUpgradeModal } from './upgrade-modal.component.js';
-import QRCodeStyling from 'qr-code-styling';
 
 let isDrawerOpen = false;
 let isChatOpen = false;
@@ -4023,7 +4022,8 @@ function renderAppsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement): 
   }
 
   if (activeAppId === 'qr-code') {
-    drawerBody.innerHTML = `
+    void import('qr-code-styling').then(({ default: QRCodeStyling }) => {
+      drawerBody.innerHTML = `
       <div class="canvas-panel-card" data-ref="canvas-panel-card">
         <div class="canvas-panel-card__header" data-ref="canvas-panel-header">
           <div class="canvas-panel-card__title-box" data-ref="canvas-panel-title-box">
@@ -4292,8 +4292,9 @@ function renderAppsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement): 
       updateCanvasRailActiveState(sidebar);
     }
     renderIcons(drawerBody);
-    return;
-  }
+  });
+  return;
+}
 
   drawerBody.innerHTML = `
     <div class="canvas-panel-card" data-ref="canvas-panel-card">
