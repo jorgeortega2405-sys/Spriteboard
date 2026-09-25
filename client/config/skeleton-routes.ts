@@ -8,6 +8,7 @@ export const SKELETON_ROUTES: Record<string, string> = {
   '/': 'cards-layout',
   '/teams': 'grouped-layout',
   '/templates': 'templates-layout',
+  '/designer': 'templates-layout',
   '/your-apps': 'templates-layout',
   '/apply-designer': 'grouped-layout',
   '/designer/apply': 'grouped-layout',
@@ -44,6 +45,8 @@ export function getSkeletonForUrl(pathname: string, onlyBottom = false): string 
     template = 'centered-form';
   } else if (pathname.startsWith('/design') || pathname.startsWith('/board') || pathname.startsWith('/doc')) {
     template = 'canvas-layout';
+  } else if (pathname.startsWith('/p/')) {
+    template = 'grouped-layout';
   } else if (SKELETON_ROUTES[pathname]) {
     template = SKELETON_ROUTES[pathname];
   }
@@ -76,11 +79,14 @@ export function hasPersistentTopBar(pathname: string): boolean {
     pathname === '/search' ||
     pathname === '/shared' ||
     pathname === '/templates' ||
+    pathname === '/designer' ||
+    pathname.startsWith('/designer') ||
     pathname === '/your-apps' ||
     pathname === '/teams' ||
     pathname.startsWith('/teams') ||
     pathname === '/trash' ||
     pathname === '/upgrade' ||
+    pathname.startsWith('/p/') ||
     pathname.startsWith('/folder') ||
     pathname.startsWith('/settings') ||
     pathname.startsWith('/help') ||

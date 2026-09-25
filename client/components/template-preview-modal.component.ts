@@ -1,4 +1,4 @@
-import { openUpgradeModal } from './upgrade-modal.component.js';
+import { navigate } from '../app-router.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { hasTier } from '../config/plans.config.js';
 import { ALL_PRESETS, PresetItem, TEMPLATE_CATEGORIES } from '../config/templates.config.js';
@@ -8,6 +8,7 @@ import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { showToast } from '../services/toast.service.js';
 import { setupLazyImages } from '../utils/dom.util.js';
+import { openUpgradeModal } from './upgrade-modal.component.js';
 
 let activeTemplatePreviewModal: { close: () => void } | null = null;
 const cachedFavoriteTemplateIds = new Set<string>();
@@ -246,8 +247,13 @@ export function openTemplatePreviewModal(preset: PresetItem, options?: TemplateP
       : '';
 
     const labelText = isOfficial
-      ? (t('templates.author_official_label') || 'Oficial de Spriteboard')
+      ? (t('templates.author_official_label') || 'Plantilla oficial de Spriteboard')
       : (t('templates.author_community_label') || 'Plantilla de la comunidad');
+
+    authorEl.classList.add('is-clickable');
+    authorEl.setAttribute('data-tooltip', isOfficial ? (t('profile.view_official_profile') || 'Ver perfil oficial de Spriteboard') : (t('profile.view_creator_profile') || 'Ver perfil del creador'));
+
+    const arrowHtml = `<svg class="component-icon template-preview-modal__author-arrow" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>`;
 
     authorEl.innerHTML = `
       <div class="template-preview-modal__author-avatar-wrap" data-ref="preview-author-avatar-wrap">
@@ -260,6 +266,7 @@ export function openTemplatePreviewModal(preset: PresetItem, options?: TemplateP
         </div>
         <span class="template-preview-modal__author-role" data-ref="preview-author-role">${labelText}</span>
       </div>
+      ${arrowHtml}
     `;
 
     renderIcons(authorEl);
@@ -681,6 +688,14 @@ export function openTemplatePreviewModal(preset: PresetItem, options?: TemplateP
 
   btnShare?.addEventListener('click', () => {
     void handleShareTemplate();
+  });
+
+  authorEl?.addEventListener('click', () => {
+    const authorName = currentPreset.authorName;
+    const isOfficial = !currentPreset.templateUuid || authorName === 'Spriteboard Oficial';
+    const targetSlug = isOfficial ? 'spriteboard' : (authorName || 'spriteboard');
+    modalInstance.close();
+    navigate(`/p/${encodeURIComponent(targetSlug)}`);
   });
 
   slideshowEl?.addEventListener('mouseenter', () => {

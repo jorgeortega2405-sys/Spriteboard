@@ -216,3 +216,14 @@ export async function sanitizeAvatar(inputBuffer: Buffer): Promise<SanitizedImag
     maxPixels: 8 * 1024 * 1024,
   });
 }
+
+export async function sanitizeBanner(inputBuffer: Buffer): Promise<SanitizedImageResult> {
+  return sanitizeImage(inputBuffer, {
+    maxWidth: 1920,
+    maxHeight: 600,
+    fit: 'cover',
+    format: 'webp',
+    quality: 85,
+    maxPixels: 16 * 1024 * 1024,
+  });
+}

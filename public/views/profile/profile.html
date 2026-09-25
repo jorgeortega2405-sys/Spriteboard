@@ -1,0 +1,143 @@
+<div class="component-wrapper component-wrapper--full view-wrapper" data-ref="profile-wrapper">
+  <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="profile-scrollable">
+    <div class="view-body profile-view-body" data-ref="profile-container">
+      
+      <div class="profile-banner-wrapper" data-ref="profile-banner-wrapper">
+        <div class="profile-banner-container" data-ref="profile-banner-container">
+          <img class="profile-banner-img image-lazy-fade" data-ref="profile-banner-img" src="" alt="Portada" style="display: none;" />
+          <div class="profile-banner-fallback" data-ref="profile-banner-fallback"></div>
+          <div class="profile-banner-overlay" data-ref="profile-banner-overlay"></div>
+          
+          <button type="button" class="component-button component-button--h36 component-button--outline profile-banner-upload-btn" data-ref="btn-upload-banner" style="display: none;" data-tooltip="Cambiar foto de portada" aria-label="Cambiar foto de portada">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#photo_camera"></use></svg>
+            <span data-i18n="profile.change_banner">Cambiar portada</span>
+          </button>
+          <input class="sr-only" data-ref="input-banner-file" type="file" accept="image/png,image/jpeg,image/webp,image/gif" style="display: none;" />
+        </div>
+      </div>
+
+      <div class="profile-header-container" data-ref="profile-header-container">
+        <div class="profile-header-card" data-ref="profile-header-card">
+          <div class="profile-header-card__top">
+            <div class="profile-avatar-wrap" data-ref="profile-avatar-wrap">
+              <img class="profile-avatar-img image-lazy-fade" data-ref="profile-avatar-img" src="" alt="Avatar" />
+              <div class="profile-avatar-fallback" data-ref="profile-avatar-fallback" style="display: none;"></div>
+            </div>
+
+            <div class="profile-header-actions" data-ref="profile-header-actions">
+              <button type="button" class="component-button component-button--h40 component-button--black profile-action-btn" data-ref="btn-follow-user" style="display: none;">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#person_add"></use></svg>
+                <span data-ref="btn-follow-text" data-i18n="profile.follow">Seguir</span>
+              </button>
+
+              <button type="button" class="component-button component-button--h40 component-button--outline profile-action-btn" data-ref="btn-edit-profile" style="display: none;">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
+                <span data-i18n="profile.edit_profile">Editar perfil</span>
+              </button>
+
+              <button type="button" class="component-button component-button--h40 component-button--bordered profile-action-btn" data-ref="btn-share-profile" data-tooltip="Compartir enlace de perfil" aria-label="Compartir perfil">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#share"></use></svg>
+                <span data-i18n="profile.share">Compartir</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="profile-info-block" data-ref="profile-info-block">
+            <div class="profile-name-row" data-ref="profile-name-row">
+              <h1 class="profile-display-name" data-ref="profile-display-name"></h1>
+              <span class="component-badge component-badge--primary profile-badge-designer" data-ref="badge-designer" style="display: none;">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#palette"></use></svg>
+                <span>Diseñador</span>
+              </span>
+            </div>
+
+            <div class="profile-handle-row" data-ref="profile-handle-row">
+              <span class="component-badge component-badge--neutral" data-ref="badge-username">
+                <svg class="component-icon" style="font-size: 14px; width: 14px; height: 14px;" aria-hidden="true"><use href="/icons.svg#alternate_email"></use></svg>
+                <span data-ref="profile-username">@usuario</span>
+              </span>
+              <span class="component-badge component-badge--neutral" data-ref="badge-followers">
+                <svg class="component-icon" style="font-size: 14px; width: 14px; height: 14px;" aria-hidden="true"><use href="/icons.svg#group"></use></svg>
+                <span data-ref="profile-followers-count">0 seguidores</span>
+              </span>
+              <span class="component-badge component-badge--neutral" data-ref="badge-templates">
+                <svg class="component-icon" style="font-size: 14px; width: 14px; height: 14px;" aria-hidden="true"><use href="/icons.svg#space_dashboard"></use></svg>
+                <span data-ref="profile-templates-count">0 plantillas</span>
+              </span>
+            </div>
+
+            <p class="profile-bio-snippet" data-ref="profile-bio-snippet" style="display: none;"></p>
+          </div>
+        </div>
+
+        <div class="component-tags-carousel-wrapper view-tags-wrapper profile-tags-wrapper" data-ref="profile-tags-wrapper" style="margin-top: 16px; margin-bottom: 24px;">
+          <div class="component-tags-carousel" data-ref="profile-tabs-row">
+            <button type="button" class="component-badge component-badge--interactive is-active" data-ref="tab-btn-content" data-tab="content">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
+              <span data-i18n="profile.tab_content">Contenido</span>
+            </button>
+            <button type="button" class="component-badge component-badge--interactive" data-ref="tab-btn-info" data-tab="info">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#info"></use></svg>
+              <span data-i18n="profile.tab_info">Información</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="profile-tab-pane profile-tab-pane--content" data-ref="tab-pane-content">
+          <div class="canvas-section" data-ref="profile-templates-section" style="padding: 0;">
+            <div class="canvas-section__header" data-ref="profile-templates-header">
+              <h2 class="canvas-section__title" data-ref="profile-templates-title" data-i18n="profile.templates_title">Plantillas publicadas</h2>
+            </div>
+
+            <div class="canvas-grid templates-grid profile-templates-grid" data-ref="profile-templates-grid"></div>
+            <div class="profile-templates-empty" data-ref="profile-templates-empty" style="display: none;"></div>
+          </div>
+        </div>
+
+        <div class="profile-tab-pane profile-tab-pane--info" data-ref="tab-pane-info" style="display: none;">
+          <div class="profile-info-grid" data-ref="profile-info-grid">
+            <div class="profile-info-card" data-ref="profile-card-about">
+              <h3 class="profile-info-card__title" data-i18n="profile.about_title">Acerca de</h3>
+              <p class="profile-info-card__bio" data-ref="profile-info-bio">Sin descripción disponible.</p>
+              
+              <div class="profile-info-card__meta-list" data-ref="profile-meta-list">
+                <div class="profile-info-meta-item" data-ref="profile-meta-joined">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#calendar_today"></use></svg>
+                  <span data-ref="profile-meta-joined-text">Miembro desde recién</span>
+                </div>
+                <div class="profile-info-meta-item" data-ref="profile-meta-country" style="display: none;">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#public"></use></svg>
+                  <span data-ref="profile-meta-country-text"></span>
+                </div>
+                <div class="profile-info-meta-item" data-ref="profile-meta-website" style="display: none;">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#link"></use></svg>
+                  <a class="link" data-ref="profile-meta-website-link" href="" target="_blank" rel="noopener noreferrer"></a>
+                </div>
+              </div>
+            </div>
+
+            <div class="profile-info-card" data-ref="profile-card-stats">
+              <h3 class="profile-info-card__title" data-i18n="profile.stats_title">Estadísticas</h3>
+              <div class="profile-stats-grid">
+                <div class="profile-stat-box" data-ref="stat-box-templates">
+                  <span class="profile-stat-box__value" data-ref="stat-value-templates">0</span>
+                  <span class="profile-stat-box__label" data-i18n="profile.stat_templates">Plantillas</span>
+                </div>
+                <div class="profile-stat-box" data-ref="stat-box-followers">
+                  <span class="profile-stat-box__value" data-ref="stat-value-followers">0</span>
+                  <span class="profile-stat-box__label" data-i18n="profile.stat_followers">Seguidores</span>
+                </div>
+                <div class="profile-stat-box" data-ref="stat-box-following">
+                  <span class="profile-stat-box__value" data-ref="stat-value-following">0</span>
+                  <span class="profile-stat-box__label" data-i18n="profile.stat_following">Siguiendo</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+</div>

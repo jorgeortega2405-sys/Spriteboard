@@ -98,6 +98,10 @@ export const API_ROUTES = {
     byUuid: (uuid: string) => `/api/uploads/${encodeURIComponent(uuid)}`,
   },
   users: {
+    banner: '/api/users/banner',
+    follow: (username: string) => `/api/users/p/${encodeURIComponent(username)}/follow`,
+    profile: (username: string) => `/api/users/p/${encodeURIComponent(username)}`,
+    profileTemplates: (username: string) => `/api/users/p/${encodeURIComponent(username)}/templates`,
     search: (q: string) => `/api/users/search?q=${encodeURIComponent(q)}`,
   },
   notifications: {

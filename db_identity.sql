@@ -9,6 +9,10 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash VARCHAR(255) NULL,
     google_id VARCHAR(255) NULL UNIQUE,
     avatar_url VARCHAR(512) NULL,
+    banner_url VARCHAR(512) NULL,
+    bio TEXT NULL,
+    country VARCHAR(100) NULL,
+    website_url VARCHAR(255) NULL,
     role VARCHAR(50) NOT NULL DEFAULT 'USER',
     subscription_tier VARCHAR(20) NOT NULL DEFAULT 'free', -- 'free', 'pro', 'business'
     stripe_customer_id VARCHAR(255) NULL,
@@ -608,6 +612,18 @@ CREATE TABLE IF NOT EXISTS designer_applications (
     INDEX idx_designer_app_created (created_at),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS user_follows (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    follower_id INT NOT NULL,
+    following_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_user_follow (follower_id, following_id),
+    INDEX idx_user_follows_follower (follower_id),
+    INDEX idx_user_follows_following (following_id),
+    FOREIGN KEY (follower_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (following_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 GRANT ALL PRIVILEGES ON db_identity.* TO 'sprite_user'@'%';

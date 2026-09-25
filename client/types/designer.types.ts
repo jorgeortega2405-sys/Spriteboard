@@ -30,3 +30,12 @@ export interface DesignerStatusResponse {
   is_designer: boolean;
   ok: boolean;
 }
+
+export interface DesignerMetrics {
+  approvedCount: number;
+  draftCount: number;
+  pendingCount: number;
+  rejectedCount: number;
+  totalCount: number;
+  totalUses: number;
+}

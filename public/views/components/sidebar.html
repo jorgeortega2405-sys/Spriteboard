@@ -38,6 +38,12 @@
           </button>
           <span class="rail-nav-item__label" data-i18n="nav.templates">Plantillas</span>
         </div>
+        <div class="rail-nav-item" data-ref="rail-item-designer" style="display: none;">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only rail-btn" data-ref="btn-rail-designer" data-tooltip="Diseñador" aria-label="Diseñador">
+            <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#palette"></use></svg>
+          </button>
+          <span class="rail-nav-item__label" data-i18n="nav.designer">Diseñador</span>
+        </div>
         <div class="rail-nav-item" data-ref="rail-item-brand">
           <button type="button" class="component-button component-button--h40 component-button--icon-only rail-btn rail-btn--has-badge" data-ref="btn-rail-brand" data-tooltip="Marca" aria-label="Marca">
             <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#workspace_premium"></use></svg>
@@ -46,12 +52,6 @@
             </span>
           </button>
           <span class="rail-nav-item__label" data-i18n="nav.brand">Marca</span>
-        </div>
-        <div class="rail-nav-item" data-ref="rail-item-your-apps">
-          <button type="button" class="component-button component-button--h40 component-button--icon-only rail-btn" data-ref="btn-rail-your-apps" data-tooltip="Apps" aria-label="Apps">
-            <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#apps"></use></svg>
-          </button>
-          <span class="rail-nav-item__label" data-i18n="nav.apps">Apps</span>
         </div>
         <div class="rail-nav-item" data-ref="rail-item-shared">
           <button type="button" class="component-button component-button--h40 component-button--icon-only rail-btn" data-ref="btn-rail-shared" data-tooltip="Compartidos" aria-label="Compartidos">
@@ -67,6 +67,27 @@
             </span>
           </button>
           <span class="rail-nav-item__label" data-i18n="nav.teams">Tus equipos</span>
+        </div>
+        <div class="rail-nav-item rail-item-container" data-ref="rail-item-more">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only rail-btn" data-ref="btn-rail-more" data-tooltip="Más" aria-label="Más">
+            <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#more_vert"></use></svg>
+          </button>
+          <span class="rail-nav-item__label" data-i18n="nav.more">Más</span>
+
+          <div class="more-dropdown-backdrop" data-ref="more-menu-backdrop">
+            <div class="menu-panel menu-panel--dropdown menu-panel--w-260 menu-panel--h-auto more-panel rail-floating-panel" data-ref="more-menu">
+              <div class="menu-panel__list" data-ref="panel-more-options">
+                <button type="button" class="menu-item" data-ref="btn-more-apps">
+                  <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#apps"></use></svg>
+                  <span class="menu-item__text" data-i18n="nav.apps">Apps</span>
+                </button>
+                <button type="button" class="menu-item" data-ref="btn-more-apply-designer">
+                  <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#palette"></use></svg>
+                  <span class="menu-item__text" data-ref="btn-more-apply-designer-text" data-i18n="nav.creator_program">Programa de diseñadores</span>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 

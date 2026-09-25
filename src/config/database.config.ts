@@ -1220,7 +1220,53 @@ export async function runMigrations(): Promise<void> {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
-    logger.db.info('Tablas, columnas e índices de identidad, 2FA, suscripciones, compras, GeoIP, db_canvas, templates, equipos, vistas, feedback IA, cuotas IA, snapshots, notificaciones, soporte técnico, solicitudes de diseñador y kits de marca verificadas exitosamente.');
+    const [userBannerCols] = await conn.query<mysql.RowDataPacket[]>(
+      "SHOW COLUMNS FROM db_identity.users LIKE 'banner_url'"
+    );
+    if (userBannerCols.length === 0) {
+      await conn.query('ALTER TABLE db_identity.users ADD COLUMN banner_url VARCHAR(512) NULL AFTER avatar_url');
+      logger.db.info('Columna banner_url añadida a db_identity.users.');
+    }
+
+    const [userBioCols] = await conn.query<mysql.RowDataPacket[]>(
+      "SHOW COLUMNS FROM db_identity.users LIKE 'bio'"
+    );
+    if (userBioCols.length === 0) {
+      await conn.query('ALTER TABLE db_identity.users ADD COLUMN bio TEXT NULL AFTER banner_url');
+      logger.db.info('Columna bio añadida a db_identity.users.');
+    }
+
+    const [userCountryCols] = await conn.query<mysql.RowDataPacket[]>(
+      "SHOW COLUMNS FROM db_identity.users LIKE 'country'"
+    );
+    if (userCountryCols.length === 0) {
+      await conn.query('ALTER TABLE db_identity.users ADD COLUMN country VARCHAR(100) NULL AFTER bio');
+      logger.db.info('Columna country añadida a db_identity.users.');
+    }
+
+    const [userWebsiteCols] = await conn.query<mysql.RowDataPacket[]>(
+      "SHOW COLUMNS FROM db_identity.users LIKE 'website_url'"
+    );
+    if (userWebsiteCols.length === 0) {
+      await conn.query('ALTER TABLE db_identity.users ADD COLUMN website_url VARCHAR(255) NULL AFTER country');
+      logger.db.info('Columna website_url añadida a db_identity.users.');
+    }
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS user_follows (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        follower_id INT NOT NULL,
+        following_id INT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_user_follow (follower_id, following_id),
+        INDEX idx_user_follows_follower (follower_id),
+        INDEX idx_user_follows_following (following_id),
+        FOREIGN KEY (follower_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (following_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    logger.db.info('Tablas, columnas e índices de identidad, 2FA, suscripciones, compras, GeoIP, db_canvas, templates, equipos, vistas, feedback IA, cuotas IA, snapshots, notificaciones, soporte técnico, solicitudes de diseñador, kits de marca y seguidores verificadas exitosamente.');
   } catch (err) {
     logger.db.warn('Advertencia en migración de base de datos', err);
   } finally {

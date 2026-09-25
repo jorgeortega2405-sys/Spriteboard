@@ -20,7 +20,7 @@ import { showToast } from '../services/toast.service.js';
 import { closeWebSocket, initWebSocket, registerWebSocketHandler } from '../services/websocket.service.js';
 import { openYouTubePlayerModal, searchYouTubeVideos } from '../services/youtube.service.js';
 import { AppCategory, SpriteboardApp } from '../types/apps.types.js';
-import { isUserAdmin } from '../types/auth.types.js';
+import { canPublishTemplates, isUserAdmin } from '../types/auth.types.js';
 import { BrandKit, BrandKitAsset, BrandKitDetail } from '../types/brand.types.js';
 import { CanvasItem } from '../types/canvas.types.js';
 import { FrameCategory, GridCategory, MockupGeneralCategory, MockupTemplate } from '../types/mockups.types.js';
@@ -230,10 +230,11 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
 
   const isHome = path === '/' || path === '' || path.startsWith('/folder/');
   const isTemplates = path === '/templates';
+  const isDesigner = path === '/designer' || path.startsWith('/designer');
   const isBrand = path === '/brand' || path === '/marca';
-  const isYourApps = path === '/your-apps';
   const isShared = path === '/shared';
   const isTeams = path === '/teams';
+  const isMore = path === '/your-apps' || path === '/apply-designer' || path === '/designer/apply';
 
   const updateItem = (itemRef: string, btnRef: string, isActive: boolean) => {
     const item = sidebar.querySelector<HTMLElement>(`[data-ref="${itemRef}"]`);
@@ -244,10 +245,17 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
 
   updateItem('rail-item-home', 'btn-rail-home', isHome);
   updateItem('rail-item-templates', 'btn-rail-templates', isTemplates);
+  updateItem('rail-item-designer', 'btn-rail-designer', isDesigner);
   updateItem('rail-item-brand', 'btn-rail-brand', isBrand);
-  updateItem('rail-item-your-apps', 'btn-rail-your-apps', isYourApps);
   updateItem('rail-item-shared', 'btn-rail-shared', isShared);
   updateItem('rail-item-teams', 'btn-rail-teams', isTeams);
+  updateItem('rail-item-more', 'btn-rail-more', isMore);
+
+  const itemDesigner = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-designer"]');
+  const isDesignerUser = canPublishTemplates(currentUser);
+  if (itemDesigner) {
+    itemDesigner.style.display = isDesignerUser ? '' : 'none';
+  }
 
   const itemBrand = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-brand"]');
   const itemShared = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-shared"]');
@@ -428,10 +436,78 @@ function setupRailNavigation(sidebar: HTMLElement): void {
   const isHome = currentPath === '/' || currentPath === '' || currentPath.startsWith('/folder/');
   bindNav('rail-item-home', 'btn-rail-home', '/', isHome);
   bindNav('rail-item-templates', 'btn-rail-templates', '/templates', currentPath === '/templates');
+  bindNav('rail-item-designer', 'btn-rail-designer', '/designer', currentPath === '/designer' || currentPath.startsWith('/designer'));
   bindNav('rail-item-brand', 'btn-rail-brand', '/brand', currentPath === '/brand' || currentPath === '/marca');
-  bindNav('rail-item-your-apps', 'btn-rail-your-apps', '/your-apps', currentPath === '/your-apps');
   bindNav('rail-item-shared', 'btn-rail-shared', '/shared', currentPath === '/shared');
   bindNav('rail-item-teams', 'btn-rail-teams', '/teams', currentPath === '/teams');
+
+  const moreContainer = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-more"]');
+  const btnMore = moreContainer?.querySelector<HTMLElement>('[data-ref="btn-rail-more"]');
+  const moreBackdrop = moreContainer?.querySelector<HTMLElement>('[data-ref="more-menu-backdrop"]');
+  const moreMenu = moreContainer?.querySelector<HTMLElement>('[data-ref="more-menu"]');
+  const btnMoreApps = moreContainer?.querySelector<HTMLElement>('[data-ref="btn-more-apps"]');
+  const btnMoreApply = moreContainer?.querySelector<HTMLElement>('[data-ref="btn-more-apply-designer"]');
+
+  if (moreContainer && btnMore && moreMenu) {
+    let isMoreOpen = false;
+
+    const openMoreMenu = () => {
+      isMoreOpen = true;
+      btnMore.classList.add('is-active');
+      moreMenu.classList.add('is-open');
+      if (moreBackdrop) moreBackdrop.classList.add('is-visible');
+    };
+
+    const closeMoreMenu = () => {
+      isMoreOpen = false;
+      btnMore.classList.remove('is-active');
+      moreMenu.classList.remove('is-open');
+      if (moreBackdrop) moreBackdrop.classList.remove('is-visible');
+    };
+
+    btnMore.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (isMoreOpen) {
+        closeMoreMenu();
+      } else {
+        openMoreMenu();
+      }
+    });
+
+    btnMoreApps?.addEventListener('click', (e) => {
+      e.preventDefault();
+      closeMoreMenu();
+      navigate('/your-apps');
+    });
+
+    btnMoreApply?.addEventListener('click', (e) => {
+      e.preventDefault();
+      closeMoreMenu();
+      if (canPublishTemplates(currentUser)) {
+        navigate('/designer');
+      } else {
+        navigate('/apply-designer');
+      }
+    });
+
+    moreBackdrop?.addEventListener('click', (e) => {
+      if (e.target === moreBackdrop) {
+        closeMoreMenu();
+      }
+    });
+
+    document.addEventListener('click', (e) => {
+      if (isMoreOpen && !moreContainer.contains(e.target as Node)) {
+        closeMoreMenu();
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && isMoreOpen) {
+        closeMoreMenu();
+      }
+    });
+  }
 
   if (!currentUser) {
     const itemBrand = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-brand"]');

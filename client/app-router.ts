@@ -26,7 +26,7 @@ function normalizePath(rawPath: string): string {
     return '/brand';
   }
   if (clean === '/templates/my-templates') {
-    return '/templates';
+    return '/designer';
   }
   if (clean === '/settings') {
     return currentUser ? '/settings/your-account' : '/settings/guest';
@@ -252,6 +252,19 @@ export async function render(): Promise<void> {
       }
       const { createTemplatesView } = await import('./views/templates.view.js');
       viewElements = [await createTemplatesView()];
+    } else if (path === '/designer' || (path.startsWith('/designer') && path !== '/designer/apply')) {
+      if (!currentUser) {
+        window.history.replaceState({}, '', '/login');
+        const { createLoginView } = await import('./views/auth.view.js');
+        viewElements = [await createLoginView()];
+      } else if (!canPublishTemplates(currentUser)) {
+        window.history.replaceState({}, '', '/apply-designer');
+        const { createDesignerApplyView } = await import('./views/designer-apply.view.js');
+        viewElements = [await createDesignerApplyView()];
+      } else {
+        const { createDesignerView } = await import('./views/designer.view.js');
+        viewElements = [await createDesignerView()];
+      }
     } else if (path === '/apply-designer' || path === '/designer/apply') {
       if (!currentUser) {
         window.history.replaceState({}, '', '/login');
@@ -348,6 +361,16 @@ export async function render(): Promise<void> {
         }
         const { createDesignView } = await import('./views/design.view.js');
         viewElements = [await createDesignView(canvasUuid)];
+      }
+    } else if (path.startsWith('/p/')) {
+      const username = path.substring(3).split('/')[0].trim();
+      if (!username) {
+        window.history.replaceState({}, '', '/templates');
+        const { createTemplatesView } = await import('./views/templates.view.js');
+        viewElements = [await createTemplatesView()];
+      } else {
+        const { createProfileView } = await import('./views/profile.view.js');
+        viewElements = [await createProfileView(username)];
       }
     } else if (path.startsWith('/s/') || path.startsWith('/share/') || /^\/[a-zA-Z0-9_-]{3,50}$/.test(path)) {
       const slug = path.startsWith('/s/')

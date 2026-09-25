@@ -9,6 +9,7 @@ export interface PresetItem {
   aspectType: 'compact' | 'large' | 'square' | 'standard' | 'tall' | 'wide';
   authorAvatar?: string | null;
   authorName?: string;
+  authorUsername?: string;
   boardTemplateId?: string;
   canvasData?: any;
   canvasType?: 'board' | 'doc' | 'presentation';

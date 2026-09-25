@@ -54,12 +54,13 @@ export function openPublishTemplateModal(canvas: CanvasItem, options?: PublishTe
             </div>
             <span class="template-pricing-card__sub">${t('templates.tier_free_tag') || 'Gratis para todos'}</span>
           </button>
-          <button type="button" class="template-pricing-card" data-ref="btn-tier-premium" data-tier="premium">
+          <button type="button" class="template-pricing-card is-disabled" data-ref="btn-tier-premium" data-tier="premium" data-tooltip="${t('templates.tier_premium_locked_tooltip') || 'La publicación de plantillas Pro estará disponible próximamente.'}" aria-label="${t('templates.tier_premium_locked_tooltip') || 'La publicación de plantillas Pro estará disponible próximamente.'}" disabled>
             <div class="template-pricing-card__header">
               <svg class="component-icon" style="color: #f59e0b;" aria-hidden="true"><use href="/icons.svg#workspace_premium"></use></svg>
               <span class="template-pricing-card__title">${t('templates.tier_premium') || 'Premium'}</span>
+              <span class="component-badge component-badge--neutral" style="margin-left: auto; font-size: 10px; padding: 1px 6px; font-weight: 600;">${t('templates.tier_premium_tag') || 'Próximamente'}</span>
             </div>
-            <span class="template-pricing-card__sub">${t('templates.tier_premium_tag') || 'Exclusivo Pro / Monetizable'}</span>
+            <span class="template-pricing-card__sub">${t('templates.tier_premium_locked_sub') || 'Exclusivo Pro (Próximamente)'}</span>
           </button>
         </div>
         <div class="banner banner--info template-pricing-notice" data-ref="template-pricing-notice" style="margin-top: 10px; font-size: 12px; line-height: 1.45; padding: 10px 12px; border-radius: 6px;">
@@ -122,7 +123,7 @@ export function openPublishTemplateModal(canvas: CanvasItem, options?: PublishTe
           canvas_uuid: canvas.uuid,
           category: canvasType,
           description: descInput?.value.trim() || undefined,
-          is_premium: isPremium,
+          is_premium: false,
           tags,
           title,
         });
@@ -150,22 +151,16 @@ export function openPublishTemplateModal(canvas: CanvasItem, options?: PublishTe
   const btnTierPremium = card.querySelector<HTMLButtonElement>('[data-ref="btn-tier-premium"]');
   const noticeEl = card.querySelector<HTMLElement>('[data-ref="template-pricing-notice"]');
 
-  const updateTierSelection = (premium: boolean) => {
-    isPremium = premium;
-    btnTierFree?.classList.toggle('is-selected', !premium);
-    btnTierPremium?.classList.toggle('is-selected', premium);
-    if (noticeEl) {
-      noticeEl.textContent = premium
-        ? (t('templates.notice_premium') || 'Las plantillas premium son exclusivas para usuarios con planes Pro y Negocios, y son elegibles para el programa de monetización de diseñadores.')
-        : (t('templates.notice_free') || 'Esta plantilla estará disponible de forma gratuita para todos los usuarios de Spriteboard.');
-    }
-  };
-
   btnTierFree?.addEventListener('click', () => {
-    updateTierSelection(false);
+    isPremium = false;
+    btnTierFree.classList.add('is-selected');
+    if (noticeEl) {
+      noticeEl.textContent = t('templates.notice_free') || 'Esta plantilla estará disponible de forma gratuita para todos los usuarios de Spriteboard.';
+    }
   });
 
-  btnTierPremium?.addEventListener('click', () => {
-    updateTierSelection(true);
+  btnTierPremium?.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
   });
 }
