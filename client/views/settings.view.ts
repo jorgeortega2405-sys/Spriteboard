@@ -1,14 +1,14 @@
 import { navigate, render } from '../app-router.js';
 import { open2FAModal, openModal } from '../components/modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
-import { appConfig, cancelSubscriptionImmediateApi, checkAuthSession, clearUserState, createSetupIntentApi, currentUser, deleteApi, deletePaymentMethodApi, escapeHtml, getApi, getBillingDetailsApi, getPaymentMethodsApi, getPurchaseHistoryApi, getStorageUsageApi, logoutAllApi, postApi, postFormApi, setCurrentUser, setDefaultPaymentMethodApi, setLinkedAccounts, updateAutoRenewalApi } from '../services/api.service.js';
+import { appConfig, cancelSubscriptionImmediateApi, checkAuthSession, clearUserState, createSetupIntentApi, currentUser, deleteApi, deletePaymentMethodApi, escapeHtml, getAiQuotaApi, getApi, getBillingDetailsApi, getPaymentMethodsApi, getPurchaseHistoryApi, getStorageUsageApi, logoutAllApi, postApi, postFormApi, setCurrentUser, setDefaultPaymentMethodApi, setLinkedAccounts, updateAutoRenewalApi } from '../services/api.service.js';
 import { getCurrentLanguage, setLanguage, t, translateElement } from '../services/i18n.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { applyAccessibilityPreferences, getTheme, initTheme, setTheme } from '../services/theme.service.js';
 import { setToastPreferences, showToast } from '../services/toast.service.js';
 import { closeWebSocket } from '../services/websocket.service.js';
 import { ModalInstance } from '../types/common.types.js';
-import { BillingDetailsResponse, PaymentMethod, PurchaseRecord, StorageUsageInfo } from '../types/subscription.types.js';
+import { AiBreakdownInfo, AiQuotaInfo, BillingDetailsResponse, PaymentMethod, PurchaseRecord, StorageUsageInfo } from '../types/subscription.types.js';
 import { debounce, removeEmptyState, renderEmptyState, setupDropdown, setupPasswordToggle, withButtonLoading } from '../utils/dom.util.js';
 import { AVAILABLE_LANGUAGES, detectBrowserLanguage, getLanguageName } from '../utils/languages.util.js';
 import { applyAvatarTier } from '../utils/tier.util.js';
@@ -1538,6 +1538,15 @@ export async function createBillingView(): Promise<HTMLElement> {
     groupStorage?.classList.toggle('is-active');
   });
 
+  const accordionHeaderAi = container.querySelector<HTMLElement>(
+    '[data-ref="accordion-header-ai-quota"]'
+  );
+  const groupAi = container.querySelector<HTMLElement>('[data-ref="group-ai-quota"]');
+  accordionHeaderAi?.addEventListener('click', (e) => {
+    e.preventDefault();
+    groupAi?.classList.toggle('is-active');
+  });
+
   const renderSubscriptionPlan = (info: BillingDetailsResponse) => {
     const planNameEl = container.querySelector<HTMLElement>('[data-ref="current-plan-name"]');
     const planStatusBadge = container.querySelector<HTMLElement>(
@@ -1807,6 +1816,168 @@ export async function createBillingView(): Promise<HTMLElement> {
     }
   };
 
+  let aiCountdownInterval: number | null = null;
+
+  const formatCountdown = (totalSeconds: number): string => {
+    if (totalSeconds <= 0) return '00s';
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    if (hours > 0) {
+      return `${hours}h ${String(minutes).padStart(2, '0')}m ${String(seconds).padStart(2, '0')}s`;
+    }
+    if (minutes > 0) {
+      return `${minutes}m ${String(seconds).padStart(2, '0')}s`;
+    }
+    return `${seconds}s`;
+  };
+
+  const renderAiQuota = (aiQuota?: AiQuotaInfo, breakdown?: AiBreakdownInfo) => {
+    if (!aiQuota) return;
+
+    if (aiCountdownInterval) {
+      clearInterval(aiCountdownInterval);
+      aiCountdownInterval = null;
+    }
+
+    const usedLabel = container.querySelector<HTMLElement>('[data-ref="ai-quota-used-label"]');
+    const limitLabel = container.querySelector<HTMLElement>('[data-ref="ai-quota-limit-label"]');
+    const percentBadge = container.querySelector<HTMLElement>('[data-ref="ai-quota-percent-badge"]');
+    const meterFill = container.querySelector<HTMLElement>('[data-ref="ai-quota-meter-fill"]');
+    const meterTrack = container.querySelector<HTMLElement>('[data-ref="ai-quota-meter-track"]');
+    const remainingText = container.querySelector<HTMLElement>('[data-ref="ai-quota-remaining-text"]');
+    const resetTimerBadge = container.querySelector<HTMLElement>('[data-ref="ai-quota-reset-timer"]');
+    const resetTimerText = container.querySelector<HTMLElement>('[data-ref="ai-quota-reset-timer-text"]');
+    const cycleText = container.querySelector<HTMLElement>('[data-ref="ai-quota-cycle-text"]');
+
+    if (usedLabel) usedLabel.textContent = aiQuota.tokensUsedFormatted || '0';
+    if (limitLabel) limitLabel.textContent = `${aiQuota.tokensLimitFormatted || '0'} tokens`;
+
+    if (percentBadge) {
+      percentBadge.textContent = `${aiQuota.percentage}% en uso`;
+      if (aiQuota.isOverLimit) {
+        percentBadge.className = 'component-badge component-badge--sm component-badge--danger';
+      } else if (aiQuota.percentage >= 80) {
+        percentBadge.className = 'component-badge component-badge--sm component-badge--warning';
+      } else {
+        percentBadge.className = 'component-badge component-badge--sm';
+      }
+    }
+
+    if (meterFill) {
+      meterFill.style.width = `${Math.min(100, Math.max(aiQuota.percentage, aiQuota.tokensUsed > 0 ? 0.5 : 0))}%`;
+      meterFill.classList.remove('storage-meter__fill--warning', 'storage-meter__fill--danger');
+      if (aiQuota.isOverLimit) {
+        meterFill.classList.add('storage-meter__fill--danger');
+      } else if (aiQuota.percentage >= 80) {
+        meterFill.classList.add('storage-meter__fill--warning');
+      }
+    }
+
+    if (meterTrack) {
+      meterTrack.setAttribute('aria-valuenow', String(aiQuota.percentage));
+    }
+
+    if (remainingText) {
+      if (aiQuota.isOverLimit) {
+        remainingText.textContent = t('settings.billing.ai_quota_over_limit') || 'Límite alcanzado en el ciclo actual. Se restablecerá al reiniciar.';
+      } else {
+        remainingText.textContent = t('settings.billing.ai_quota_remaining', { amount: aiQuota.tokensRemainingFormatted }) || `Te quedan ${aiQuota.tokensRemainingFormatted} tokens en este ciclo`;
+      }
+    }
+
+    let remainingSecs = Math.max(0, aiQuota.secondsRemaining || 0);
+
+    const updateTimerDisplay = () => {
+      if (!resetTimerText) return;
+      if (remainingSecs > 0) {
+        resetTimerText.textContent = t('settings.billing.ai_quota_reset_in', { time: formatCountdown(remainingSecs) }) || `Reinicio en ${formatCountdown(remainingSecs)}`;
+        if (resetTimerBadge) {
+          resetTimerBadge.className = aiQuota.isOverLimit
+            ? 'component-badge component-badge--sm component-badge--warning'
+            : 'component-badge component-badge--sm component-badge--info';
+        }
+      } else {
+        resetTimerText.textContent = t('settings.billing.ai_quota_cycle_inactive') || 'Ciclo inactivo (comienza al generar)';
+        if (resetTimerBadge) {
+          resetTimerBadge.className = 'component-badge component-badge--sm';
+        }
+      }
+    };
+
+    updateTimerDisplay();
+
+    if (remainingSecs > 0) {
+      aiCountdownInterval = window.setInterval(() => {
+        if (!container.isConnected) {
+          if (aiCountdownInterval) {
+            clearInterval(aiCountdownInterval);
+            aiCountdownInterval = null;
+          }
+          return;
+        }
+        remainingSecs -= 1;
+        if (remainingSecs <= 0) {
+          if (aiCountdownInterval) {
+            clearInterval(aiCountdownInterval);
+            aiCountdownInterval = null;
+          }
+          remainingSecs = 0;
+          updateTimerDisplay();
+          loadBillingData();
+        } else {
+          updateTimerDisplay();
+        }
+      }, 1000);
+    }
+
+    if (cycleText) {
+      if (aiQuota.cycleResetAt && remainingSecs > 0) {
+        try {
+          const resetDate = new Date(aiQuota.cycleResetAt);
+          const timeStr = resetDate.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+          cycleText.textContent = t('settings.billing.ai_quota_cycle_resets_at', { time: timeStr }) || `Ciclo finaliza: ${timeStr}`;
+        } catch {
+          cycleText.textContent = t('settings.billing.ai_quota_window_note') || 'Ventana de 12 horas';
+        }
+      } else {
+        cycleText.textContent = t('settings.billing.ai_quota_window_note') || 'Ventana de 12 horas';
+      }
+    }
+
+    const mindmapsTokensEl = container.querySelector<HTMLElement>('[data-ref="ai-mindmaps-tokens"]');
+    const mindmapsCountEl = container.querySelector<HTMLElement>('[data-ref="ai-mindmaps-count"]');
+    if (mindmapsTokensEl) mindmapsTokensEl.textContent = `${breakdown?.mindmap.formatted || '0'} tokens`;
+    if (mindmapsCountEl) {
+      const count = breakdown?.mindmap.count || 0;
+      mindmapsCountEl.textContent = `${count} ${count === 1 ? 'generación' : 'generaciones'}`;
+    }
+
+    const docsTokensEl = container.querySelector<HTMLElement>('[data-ref="ai-docs-tokens"]');
+    const docsCountEl = container.querySelector<HTMLElement>('[data-ref="ai-docs-count"]');
+    if (docsTokensEl) docsTokensEl.textContent = `${breakdown?.doc.formatted || '0'} tokens`;
+    if (docsCountEl) {
+      const count = breakdown?.doc.count || 0;
+      docsCountEl.textContent = `${count} ${count === 1 ? 'generación' : 'generaciones'}`;
+    }
+
+    const boardsTokensEl = container.querySelector<HTMLElement>('[data-ref="ai-boards-tokens"]');
+    const boardsCountEl = container.querySelector<HTMLElement>('[data-ref="ai-boards-count"]');
+    if (boardsTokensEl) boardsTokensEl.textContent = `${breakdown?.board.formatted || '0'} tokens`;
+    if (boardsCountEl) {
+      const count = breakdown?.board.count || 0;
+      boardsCountEl.textContent = `${count} ${count === 1 ? 'generación' : 'generaciones'}`;
+    }
+
+    const presentationsTokensEl = container.querySelector<HTMLElement>('[data-ref="ai-presentations-tokens"]');
+    const presentationsCountEl = container.querySelector<HTMLElement>('[data-ref="ai-presentations-count"]');
+    if (presentationsTokensEl) presentationsTokensEl.textContent = `${breakdown?.presentation.formatted || '0'} tokens`;
+    if (presentationsCountEl) {
+      const count = breakdown?.presentation.count || 0;
+      presentationsCountEl.textContent = `${count} ${count === 1 ? 'generación' : 'generaciones'}`;
+    }
+  };
+
   const loadBillingData = async () => {
     try {
       const res = await getBillingDetailsApi();
@@ -1820,18 +1991,32 @@ export async function createBillingView(): Promise<HTMLElement> {
             renderStorageUsage(storageRes.storage);
           }
         }
+        if (res.aiQuota) {
+          renderAiQuota(res.aiQuota, res.aiBreakdown);
+        } else {
+          const aiRes = await getAiQuotaApi();
+          if (aiRes.success && aiRes.aiQuota) {
+            renderAiQuota(aiRes.aiQuota, aiRes.aiBreakdown);
+          }
+        }
       } else {
         renderSubscriptionPlan({ success: false, hasSubscription: false });
-        const storageRes = await getStorageUsageApi();
+        const [storageRes, aiRes] = await Promise.all([getStorageUsageApi(), getAiQuotaApi()]);
         if (storageRes.success && storageRes.storage) {
           renderStorageUsage(storageRes.storage);
+        }
+        if (aiRes.success && aiRes.aiQuota) {
+          renderAiQuota(aiRes.aiQuota, aiRes.aiBreakdown);
         }
       }
     } catch {
       renderSubscriptionPlan({ success: false, hasSubscription: false });
-      const storageRes = await getStorageUsageApi();
+      const [storageRes, aiRes] = await Promise.all([getStorageUsageApi(), getAiQuotaApi()]);
       if (storageRes.success && storageRes.storage) {
         renderStorageUsage(storageRes.storage);
+      }
+      if (aiRes.success && aiRes.aiQuota) {
+        renderAiQuota(aiRes.aiQuota, aiRes.aiBreakdown);
       }
     }
   };

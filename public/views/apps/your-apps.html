@@ -1,0 +1,127 @@
+﻿<div class="component-wrapper component-wrapper--full view-wrapper" data-ref="your-apps-wrapper">
+  <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="your-apps-scrollable">
+    <div class="view-body" data-ref="your-apps-container">
+      <div class="view-backdrop" data-ref="your-apps-gradient-backdrop"></div>
+      
+      <div class="view-header" data-ref="your-apps-floating-top">
+        <div class="view-header__left" data-ref="your-apps-floating-left"></div>
+        <div class="view-header__right" data-ref="your-apps-floating-right">
+          <div class="view-header__actions" data-ref="your-apps-default-actions"></div>
+        </div>
+      </div>
+
+      <div class="view-hero" data-ref="your-apps-hero">
+        <div class="view-hero__content">
+          <h1 class="view-hero__title" data-ref="your-apps-hero-title" data-i18n="your_apps.title">Apps</h1>
+          <p class="view-hero__subtitle" data-ref="your-apps-hero-subtitle" data-i18n="your_apps.subtitle" style="font-size: 14px; color: var(--text-secondary); margin-top: 4px; margin-bottom: 16px;">Explora y conecta aplicaciones e integraciones para potenciar tus diseños</p>
+
+          <div class="templates-explore-subhead" data-ref="your-apps-explore-subhead">
+            <div class="view-search-pill" data-ref="your-apps-search-box">
+              <svg class="component-icon view-search-pill__icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+              <input class="view-search-pill__input" data-ref="your-apps-search-input" data-i18n-placeholder="your_apps.search_placeholder" type="text" placeholder="Buscar aplicaciones e integraciones..." autocomplete="off" />
+              <button type="button" class="component-button component-button--h32 component-button--icon-only view-search-pill__clear" data-ref="btn-apps-clear-search" style="display: none;" aria-label="Limpiar búsqueda">
+                <svg class="component-icon" style="font-size: 18px;" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+              </button>
+            </div>
+
+            <div class="component-tags-carousel-wrapper view-tags-wrapper" data-ref="your-apps-tags-carousel-wrapper">
+              <div class="component-tags-carousel" data-ref="your-apps-categories-badges"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="canvas-section apps-collections-section" data-ref="apps-collections-section">
+      <div class="canvas-section__header" data-ref="apps-collections-header">
+        <div>
+          <h2 class="canvas-section__title" data-ref="apps-collections-title" data-i18n="your_apps.collections_title">Colecciones</h2>
+          <p class="canvas-section__desc" data-ref="apps-collections-subtitle" data-i18n="your_apps.collections_subtitle" style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">Apps que trabajan en conjunto para que puedas afrontar cualquier trabajo de diseño</p>
+        </div>
+      </div>
+      <div class="apps-collections-grid" data-ref="apps-collections-grid">
+        <div class="apps-collection-card apps-collection-card--purple" data-ref="card-collection-spriteboard" data-cat="internal">
+          <div class="apps-collection-card__visual">
+            <div class="apps-collection-card__icon-badge">
+              <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 32px; height: 32px;">
+                <rect width="40" height="40" rx="10" fill="#ffffff" fill-opacity="0.2"/>
+                <path d="M12 12H18V18H12V12Z" fill="#ffffff"/>
+                <path d="M22 12H28V18H22V12Z" fill="#ffffff"/>
+                <path d="M12 22H18V28H12V22Z" fill="#ffffff"/>
+                <path d="M22 22H28V28H22V22Z" fill="#ffffff"/>
+              </svg>
+            </div>
+            <div class="apps-collection-card__mini-preview">
+              <span class="apps-collection-card__tag">Spriteboard</span>
+            </div>
+          </div>
+          <div class="apps-collection-card__body">
+            <h3 class="apps-collection-card__title">Creada por Spriteboard</h3>
+            <p class="apps-collection-card__desc">Apps diseñadas para impulsar tu productividad creativa, desde los datos hasta el diseño.</p>
+            <div class="apps-collection-card__footer">
+              <div class="apps-collection-card__icons">
+                <span class="apps-collection-card__app-icon" data-tooltip="Código QR">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#qr_code"></use></svg>
+                </span>
+                <span class="apps-collection-card__app-icon" data-tooltip="YouTube">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#smart_display"></use></svg>
+                </span>
+                <span class="apps-collection-card__more-badge">y más</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="apps-collection-card apps-collection-card--emerald" data-ref="card-collection-google" data-cat="productivity">
+          <div class="apps-collection-card__visual">
+            <div class="apps-collection-card__icon-badge">
+              <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 32px; height: 32px;">
+                <rect width="40" height="40" rx="10" fill="#ffffff" fill-opacity="0.2"/>
+                <path d="M20 10L12 24H28L20 10Z" fill="#ffffff"/>
+                <circle cx="20" cy="22" r="3" fill="#047857"/>
+              </svg>
+            </div>
+            <div class="apps-collection-card__mini-preview">
+              <span class="apps-collection-card__tag">Google & Media</span>
+            </div>
+          </div>
+          <div class="apps-collection-card__body">
+            <h3 class="apps-collection-card__title">Productividad y Multimedia</h3>
+            <p class="apps-collection-card__desc">Vincula herramientas de trabajo en equipo, almacenamiento en la nube, fotos y mapas.</p>
+            <div class="apps-collection-card__footer">
+              <div class="apps-collection-card__icons">
+                <span class="apps-collection-card__app-icon" data-tooltip="Google Drive">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add_to_drive"></use></svg>
+                </span>
+                <span class="apps-collection-card__app-icon" data-tooltip="Google Fotos">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#photo_library"></use></svg>
+                </span>
+                <span class="apps-collection-card__app-icon" data-tooltip="Google Maps">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#location_on"></use></svg>
+                </span>
+                <span class="apps-collection-card__more-badge">y más</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="canvas-section" data-ref="your-apps-section">
+      <div class="canvas-section__header" data-ref="your-apps-section-header">
+        <div>
+          <h2 class="canvas-section__title" data-ref="your-apps-section-title" data-i18n="your_apps.featured_title">Nuevas y destacadas</h2>
+          <p class="canvas-section__desc" data-ref="your-apps-section-desc" data-i18n="your_apps.featured_subtitle" style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">Descubre los lanzamientos más recientes y populares</p>
+        </div>
+      </div>
+
+      <div class="your-apps-grid" data-ref="your-apps-grid"></div>
+
+      <div class="mockup-empty-state is-hidden" data-ref="your-apps-empty" style="padding: 48px 20px; text-align: center;">
+        <svg class="component-icon" style="width: 48px; height: 48px; opacity: 0.4; margin-bottom: 12px;" aria-hidden="true"><use href="/icons.svg#search_off"></use></svg>
+        <h3 style="font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px;" data-i18n="your_apps.empty_title">No se encontraron aplicaciones</h3>
+        <p style="font-size: 13px; color: var(--text-secondary);" data-i18n="your_apps.empty_desc">Intenta buscar con otros términos o selecciona otra categoría.</p>
+      </div>
+    </div>
+  </div>
+</div>

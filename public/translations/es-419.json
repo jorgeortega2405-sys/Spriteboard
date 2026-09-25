@@ -384,7 +384,20 @@
       "storage_canvases_title": "Lienzos activos",
       "storage_snapshots_title": "Versiones y snapshots",
       "storage_trash_title": "Papelera de reciclaje",
-      "storage_uploads_title": "Archivos multimedia"
+      "storage_uploads_title": "Archivos multimedia",
+      "ai_quota_accordion_title": "Cuota de Inteligencia Artificial (IA)",
+      "ai_quota_accordion_desc": "Uso justo de modelos de generación con reinicio automático cada 12 horas.",
+      "ai_quota_over_limit": "Límite alcanzado en el ciclo actual. Se restablecerá al reiniciar.",
+      "ai_quota_remaining": "Te quedan {amount} tokens en este ciclo",
+      "ai_quota_reset_in": "Reinicio en {time}",
+      "ai_quota_cycle_inactive": "Ciclo inactivo (comienza al generar)",
+      "ai_quota_cycle_resets_at": "Ciclo finaliza: {time}",
+      "ai_quota_window_note": "Ventana de 12 horas",
+      "ai_quota_chat_unlimited_notice": "El asistente conversacional (Chatbot IA) es de uso ilimitado y está excluido del límite de tokens.",
+      "ai_mindmaps_title": "Mapas mentales",
+      "ai_docs_title": "Documentos IA",
+      "ai_boards_title": "Lienzo y elementos",
+      "ai_presentations_title": "Presentaciones"
     },
     "purchases": {
       "title": "Historial de Compras",
@@ -1078,5 +1091,16 @@
     "btn_upload_font": "Subir una fuente",
     "uploaded_fonts_title": "Fuentes subidas",
     "text_styles_title": "Estilos de texto de marca"
+  },
+  "your_apps": {
+    "title": "Apps",
+    "subtitle": "Explora y conecta aplicaciones e integraciones para potenciar tus diseños",
+    "collections_title": "Colecciones",
+    "collections_subtitle": "Apps que trabajan en conjunto para que puedas afrontar cualquier trabajo de diseño",
+    "featured_title": "Nuevas y destacadas",
+    "featured_subtitle": "Descubre los lanzamientos más recientes y populares",
+    "search_placeholder": "Buscar aplicaciones e integraciones...",
+    "empty_title": "No se encontraron aplicaciones",
+    "empty_desc": "Intenta buscar con otros términos o selecciona otra categoría."
   }
 }

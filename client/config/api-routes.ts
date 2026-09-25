@@ -115,6 +115,7 @@ export const API_ROUTES = {
     doc: '/api/ai/doc',
     mindmap: '/api/ai/mindmap',
     presentation: '/api/ai/presentation',
+    quota: '/api/ai/quota',
   },
   support: {
     active: '/api/support/active',

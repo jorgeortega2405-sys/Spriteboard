@@ -273,6 +273,9 @@ export async function render(): Promise<void> {
         const { createSharedView } = await import('./views/shared.view.js');
         viewElements = [await createSharedView()];
       }
+    } else if (path === '/your-apps') {
+      const { createYourAppsView } = await import('./views/your-apps.view.js');
+      viewElements = [await createYourAppsView()];
     } else if (path === '/trash') {
       const { createTrashView } = await import('./views/trash.view.js');
       viewElements = [await createTrashView()];

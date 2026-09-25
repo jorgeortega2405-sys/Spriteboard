@@ -1,4 +1,5 @@
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
+import { AiQuotaService } from '../services/ai-quota.service.js';
 import { AiService, ChatMessage } from '../services/ai.service.js';
 import { logger } from '../services/logger.service.js';
 import { Request, Response } from 'express';
@@ -149,6 +150,20 @@ export class AiController {
         return;
       }
 
+      const currentUser = getCurrentUser(req);
+      if (currentUser) {
+        const quotaCheck = await AiQuotaService.checkQuotaAvailable(currentUser.id, currentUser.subscription_tier || 'free');
+        if (!quotaCheck.allowed) {
+          res.status(429).json({
+            code: 'QUOTA_EXCEEDED',
+            error: quotaCheck.reason,
+            quota: quotaCheck.quota,
+            success: false,
+          });
+          return;
+        }
+      }
+
       const validMode = (mode === 'expand' || mode === 'checklist') ? mode : 'full';
       const validDiagramTypes = ['conceptmap', 'decisiontree', 'fishbone', 'flowchart', 'kanban', 'matrix', 'mindmap', 'orgchart', 'timeline'];
       const validDiagramType = (validDiagramTypes.includes(diagramType) ? diagramType : 'mindmap') as
@@ -165,8 +180,22 @@ export class AiController {
 
       const result = await AiService.generateMindMap(prompt.trim(), validMode, cleanContext, validDiagramType);
 
+      let updatedQuota = null;
+      if (currentUser && result.usage) {
+        updatedQuota = await AiQuotaService.recordConsumption(
+          currentUser.id,
+          currentUser.subscription_tier || 'free',
+          'mindmap',
+          result.usage.promptTokens,
+          result.usage.completionTokens,
+          result.usage.totalTokens,
+          result.usage.model
+        );
+      }
+
       res.status(200).json({
         mindmap: result,
+        quota: updatedQuota,
         success: true,
       });
     } catch (error) {
@@ -199,6 +228,20 @@ export class AiController {
         return;
       }
 
+      const currentUser = getCurrentUser(req);
+      if (currentUser) {
+        const quotaCheck = await AiQuotaService.checkQuotaAvailable(currentUser.id, currentUser.subscription_tier || 'free');
+        if (!quotaCheck.allowed) {
+          res.status(429).json({
+            code: 'QUOTA_EXCEEDED',
+            error: quotaCheck.reason,
+            quota: quotaCheck.quota,
+            success: false,
+          });
+          return;
+        }
+      }
+
       const validActions = ['generate', 'continue', 'summarize', 'improve', 'fix_grammar', 'change_tone', 'translate'];
       const validAction = (validActions.includes(action) ? action : 'generate') as
         | 'change_tone'
@@ -222,8 +265,22 @@ export class AiController {
         cleanContext
       );
 
+      let updatedQuota = null;
+      if (currentUser && result.usage) {
+        updatedQuota = await AiQuotaService.recordConsumption(
+          currentUser.id,
+          currentUser.subscription_tier || 'free',
+          'doc',
+          result.usage.promptTokens,
+          result.usage.completionTokens,
+          result.usage.totalTokens,
+          result.usage.model
+        );
+      }
+
       res.status(200).json({
         doc: result,
+        quota: updatedQuota,
         success: true,
       });
     } catch (error) {
@@ -254,6 +311,20 @@ export class AiController {
           success: false,
         });
         return;
+      }
+
+      const currentUser = getCurrentUser(req);
+      if (currentUser) {
+        const quotaCheck = await AiQuotaService.checkQuotaAvailable(currentUser.id, currentUser.subscription_tier || 'free');
+        if (!quotaCheck.allowed) {
+          res.status(429).json({
+            code: 'QUOTA_EXCEEDED',
+            error: quotaCheck.reason,
+            quota: quotaCheck.quota,
+            success: false,
+          });
+          return;
+        }
       }
 
       const validBoardTypes = [
@@ -290,8 +361,22 @@ export class AiController {
 
       const result = await AiService.generateBoardElements(prompt.trim(), validBoardType, validCount);
 
+      let updatedQuota = null;
+      if (currentUser && result.usage) {
+        updatedQuota = await AiQuotaService.recordConsumption(
+          currentUser.id,
+          currentUser.subscription_tier || 'free',
+          'board',
+          result.usage.promptTokens,
+          result.usage.completionTokens,
+          result.usage.totalTokens,
+          result.usage.model
+        );
+      }
+
       res.status(200).json({
         board: result,
+        quota: updatedQuota,
         success: true,
       });
     } catch (error) {
@@ -324,6 +409,20 @@ export class AiController {
         return;
       }
 
+      const currentUser = getCurrentUser(req);
+      if (currentUser) {
+        const quotaCheck = await AiQuotaService.checkQuotaAvailable(currentUser.id, currentUser.subscription_tier || 'free');
+        if (!quotaCheck.allowed) {
+          res.status(429).json({
+            code: 'QUOTA_EXCEEDED',
+            error: quotaCheck.reason,
+            quota: quotaCheck.quota,
+            success: false,
+          });
+          return;
+        }
+      }
+
       const validTones = ['creative', 'educational', 'minimal', 'pitch', 'professional'];
       const validTone = (validTones.includes(tone) ? tone : 'professional') as
         | 'creative'
@@ -346,8 +445,22 @@ export class AiController {
         validHeight
       );
 
+      let updatedQuota = null;
+      if (currentUser && result.usage) {
+        updatedQuota = await AiQuotaService.recordConsumption(
+          currentUser.id,
+          currentUser.subscription_tier || 'free',
+          'presentation',
+          result.usage.promptTokens,
+          result.usage.completionTokens,
+          result.usage.totalTokens,
+          result.usage.model
+        );
+      }
+
       res.status(200).json({
         presentation: result,
+        quota: updatedQuota,
         success: true,
       });
     } catch (error) {
@@ -355,6 +468,35 @@ export class AiController {
 
       res.status(500).json({
         error: 'Ha ocurrido un error inesperado al generar la presentación. Por favor intenta más tarde.',
+        success: false,
+      });
+    }
+  }
+
+  static async getQuota(req: Request, res: Response): Promise<void> {
+    try {
+      const currentUser = getCurrentUser(req);
+      if (!currentUser) {
+        res.status(401).json({
+          error: 'Debes iniciar sesión para consultar tu cuota de IA.',
+          success: false,
+        });
+        return;
+      }
+
+      const quota = await AiQuotaService.getUserQuota(currentUser.id, currentUser.subscription_tier || 'free');
+      const breakdown = await AiQuotaService.getBreakdown(currentUser.id);
+
+      res.status(200).json({
+        breakdown,
+        quota,
+        success: true,
+      });
+    } catch (error) {
+      logger.app.error('AiController: Error al obtener cuota de IA del usuario', error);
+
+      res.status(500).json({
+        error: 'Ha ocurrido un error inesperado al consultar la cuota de IA.',
         success: false,
       });
     }

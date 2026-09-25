@@ -14,6 +14,7 @@ import { getEffectiveTierForCanvas, getEffectiveTiersForCanvases, getTierLimits,
 
 export const RESERVED_SLUGS = new Set([
   'api',
+  'apps',
   'assets',
   'board',
   'client',
@@ -56,6 +57,7 @@ export const RESERVED_SLUGS = new Set([
   'uploads',
   'views',
   'ws',
+  'your-apps',
 ]);
 
 export function generateShortCode(): string {

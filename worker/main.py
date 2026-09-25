@@ -4,7 +4,7 @@ import sys
 import time
 from typing import List
 from config import config
-from tasks import BackupScheduleJob, BaseJob, TelemetryJob, TrashCleanupJob
+from tasks import AiQuotaJob, BackupScheduleJob, BaseJob, TelemetryJob, TrashCleanupJob
 
 # Configuración de Logging Unificado y Seguro
 logging.basicConfig(
@@ -99,5 +99,8 @@ if __name__ == "__main__":
 
     # 3. Copias de seguridad automáticas y periódicas
     daemon.register(BackupScheduleJob())
+
+    # 4. Sincronización y reinicio de cuotas de IA (cada 60 segundos)
+    daemon.register(AiQuotaJob())
 
     daemon.run()

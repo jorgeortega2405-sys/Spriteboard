@@ -381,10 +381,23 @@
       "tier_business_badge": "Business Plan (500 GB)",
       "storage_over_limit": "Has alcanzado el límite de almacenamiento de tu plan.",
       "storage_remaining_label": "Te quedan {amount} de espacio disponible",
-      "storage_canvases_title": "Lienzos activos",
-      "storage_snapshots_title": "Versiones y snapshots",
-      "storage_trash_title": "Papelera de reciclaje",
-      "storage_uploads_title": "Archivos multimedia"
+      "storage_canvases_title": "Active canvases",
+      "storage_snapshots_title": "Versions & snapshots",
+      "storage_trash_title": "Recycle bin",
+      "storage_uploads_title": "Media files",
+      "ai_quota_accordion_title": "Artificial Intelligence (AI) Quota",
+      "ai_quota_accordion_desc": "Fair use generation model quota with automatic 12-hour cycle resets.",
+      "ai_quota_over_limit": "Cycle limit reached. Quota will reset when the timer expires.",
+      "ai_quota_remaining": "{amount} tokens remaining in this cycle",
+      "ai_quota_reset_in": "Reset in {time}",
+      "ai_quota_cycle_inactive": "Inactive cycle (starts on first generation)",
+      "ai_quota_cycle_resets_at": "Cycle ends: {time}",
+      "ai_quota_window_note": "12-hour sliding window",
+      "ai_quota_chat_unlimited_notice": "The conversational assistant (AI Chatbot) is unlimited and excluded from token quota limits.",
+      "ai_mindmaps_title": "Mind Maps",
+      "ai_docs_title": "AI Documents",
+      "ai_boards_title": "Canvas & Elements",
+      "ai_presentations_title": "Presentations"
     },
     "purchases": {
       "title": "Historial de Compras",
@@ -1074,5 +1087,16 @@
     "drop_photo_desc": "Supported formats: JPG, PNG, WebP up to 20 MB",
     "drop_element_title": "Drag and drop your vectors or icons here",
     "drop_element_desc": "Supported formats: SVG vector or transparent PNG"
+  },
+  "your_apps": {
+    "title": "Apps",
+    "subtitle": "Explore and connect apps and integrations to boost your creative workflow",
+    "collections_title": "Collections",
+    "collections_subtitle": "Apps that work together so you can tackle any design challenge",
+    "featured_title": "New and featured",
+    "featured_subtitle": "Discover the most recent and popular apps and tools",
+    "search_placeholder": "Search apps and integrations...",
+    "empty_title": "No apps found",
+    "empty_desc": "Try searching with different terms or selecting another category."
   }
 }

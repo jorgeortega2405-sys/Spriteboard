@@ -231,6 +231,7 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   const isHome = path === '/' || path === '' || path.startsWith('/folder/');
   const isTemplates = path === '/templates';
   const isBrand = path === '/brand' || path === '/marca';
+  const isYourApps = path === '/your-apps';
   const isShared = path === '/shared';
   const isTeams = path === '/teams';
 
@@ -244,6 +245,7 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   updateItem('rail-item-home', 'btn-rail-home', isHome);
   updateItem('rail-item-templates', 'btn-rail-templates', isTemplates);
   updateItem('rail-item-brand', 'btn-rail-brand', isBrand);
+  updateItem('rail-item-your-apps', 'btn-rail-your-apps', isYourApps);
   updateItem('rail-item-shared', 'btn-rail-shared', isShared);
   updateItem('rail-item-teams', 'btn-rail-teams', isTeams);
 
@@ -427,6 +429,7 @@ function setupRailNavigation(sidebar: HTMLElement): void {
   bindNav('rail-item-home', 'btn-rail-home', '/', isHome);
   bindNav('rail-item-templates', 'btn-rail-templates', '/templates', currentPath === '/templates');
   bindNav('rail-item-brand', 'btn-rail-brand', '/brand', currentPath === '/brand' || currentPath === '/marca');
+  bindNav('rail-item-your-apps', 'btn-rail-your-apps', '/your-apps', currentPath === '/your-apps');
   bindNav('rail-item-shared', 'btn-rail-shared', '/shared', currentPath === '/shared');
   bindNav('rail-item-teams', 'btn-rail-teams', '/teams', currentPath === '/teams');
 

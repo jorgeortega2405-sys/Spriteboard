@@ -180,11 +180,120 @@
               </div>
             </div>
 
+      <!-- 3. Acordeón de Cuota de Inteligencia Artificial (IA) -->
+      <div class="settings-group settings-group--accordion is-active" data-ref="group-ai-quota">
+        <div class="settings-accordion-header" data-ref="accordion-header-ai-quota">
+          <div class="settings-item__content" data-ref="accordion-ai-content">
+            <div class="settings-item__icon-box" data-ref="accordion-ai-icon-box">
+              <span class="material-symbols-rounded">auto_awesome</span>
+            </div>
+            <div class="settings-item__text" data-ref="accordion-ai-text">
+              <h2 class="settings-item__title" data-ref="accordion-ai-title" data-i18n="settings.billing.ai_quota_accordion_title">Cuota de Inteligencia Artificial (IA)</h2>
+              <p class="settings-item__desc" data-ref="accordion-ai-desc" data-i18n="settings.billing.ai_quota_accordion_desc">Uso justo de modelos de generación con reinicio automático cada 12 horas.</p>
+            </div>
+          </div>
+          <div class="settings-item__actions" data-ref="accordion-ai-actions">
+            <span class="material-symbols-rounded settings-accordion-icon" data-ref="accordion-ai-icon">expand_more</span>
+          </div>
+        </div>
+
+        <div class="settings-accordion-body" data-ref="accordion-body-ai-quota">
+          <div class="settings-accordion-content" data-ref="accordion-content-ai-quota">
+            <!-- Barra de progreso general y resumen de cuota IA -->
+            <div class="settings-item settings-item--stacked" data-ref="item-ai-quota-meter">
+              <div class="storage-meter" data-ref="ai-quota-meter-box">
+                <div class="storage-meter__header" data-ref="ai-quota-meter-header">
+                  <div class="storage-meter__info" data-ref="ai-quota-meter-info">
+                    <span class="storage-meter__used" data-ref="ai-quota-used-label">0</span>
+                    <span class="storage-meter__separator" data-ref="ai-quota-separator">/</span>
+                    <span class="storage-meter__limit" data-ref="ai-quota-limit-label">50,000 tokens</span>
+                    <span class="component-badge component-badge--sm" data-ref="ai-quota-percent-badge">0% en uso</span>
+                  </div>
+                  <div class="storage-meter__actions" data-ref="ai-quota-meter-actions">
+                    <span class="component-badge component-badge--sm component-badge--info" data-ref="ai-quota-reset-timer" style="display: inline-flex; align-items: center; gap: 4px;">
+                      <span class="material-symbols-rounded" style="font-size: 14px;">timer</span>
+                      <span data-ref="ai-quota-reset-timer-text">Ciclo inactivo</span>
+                    </span>
+                  </div>
+                </div>
+
+                <div class="storage-meter__track" data-ref="ai-quota-meter-track" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                  <div class="storage-meter__fill" data-ref="ai-quota-meter-fill" style="width: 0%;"></div>
+                </div>
+
+                <div class="storage-meter__footer" data-ref="ai-quota-meter-footer">
+                  <span class="storage-meter__remaining-text" data-ref="ai-quota-remaining-text">Calculando cuota disponible...</span>
+                  <span class="storage-meter__cycle-text" data-ref="ai-quota-cycle-text" style="font-size: 12px; color: var(--text-muted);">Ventana de 12 horas</span>
+                </div>
+              </div>
+            </div>
+
+            <hr class="settings-divider" />
+
+            <!-- Desglose de consumo detallado de IA -->
+            <div class="storage-breakdown" data-ref="ai-quota-breakdown-grid">
+              <!-- Mindmaps -->
+              <div class="storage-breakdown-card" data-ref="card-ai-mindmaps">
+                <div class="storage-breakdown-card__icon-box" data-ref="card-ai-mindmaps-icon-box">
+                  <span class="material-symbols-rounded">account_tree</span>
+                </div>
+                <div class="storage-breakdown-card__body" data-ref="card-ai-mindmaps-body">
+                  <span class="storage-breakdown-card__title" data-i18n="settings.billing.ai_mindmaps_title">Mapas mentales</span>
+                  <span class="storage-breakdown-card__size" data-ref="ai-mindmaps-tokens">0 tokens</span>
+                  <span class="storage-breakdown-card__count" data-ref="ai-mindmaps-count">0 generaciones</span>
+                </div>
+              </div>
+
+              <!-- Docs -->
+              <div class="storage-breakdown-card" data-ref="card-ai-docs">
+                <div class="storage-breakdown-card__icon-box" data-ref="card-ai-docs-icon-box">
+                  <span class="material-symbols-rounded">description</span>
+                </div>
+                <div class="storage-breakdown-card__body" data-ref="card-ai-docs-body">
+                  <span class="storage-breakdown-card__title" data-i18n="settings.billing.ai_docs_title">Documentos IA</span>
+                  <span class="storage-breakdown-card__size" data-ref="ai-docs-tokens">0 tokens</span>
+                  <span class="storage-breakdown-card__count" data-ref="ai-docs-count">0 generaciones</span>
+                </div>
+              </div>
+
+              <!-- Boards -->
+              <div class="storage-breakdown-card" data-ref="card-ai-boards">
+                <div class="storage-breakdown-card__icon-box" data-ref="card-ai-boards-icon-box">
+                  <span class="material-symbols-rounded">gesture</span>
+                </div>
+                <div class="storage-breakdown-card__body" data-ref="card-ai-boards-body">
+                  <span class="storage-breakdown-card__title" data-i18n="settings.billing.ai_boards_title">Lienzo y elementos</span>
+                  <span class="storage-breakdown-card__size" data-ref="ai-boards-tokens">0 tokens</span>
+                  <span class="storage-breakdown-card__count" data-ref="ai-boards-count">0 generaciones</span>
+                </div>
+              </div>
+
+              <!-- Presentations -->
+              <div class="storage-breakdown-card" data-ref="card-ai-presentations">
+                <div class="storage-breakdown-card__icon-box" data-ref="card-ai-presentations-icon-box">
+                  <span class="material-symbols-rounded">slideshow</span>
+                </div>
+                <div class="storage-breakdown-card__body" data-ref="card-ai-presentations-body">
+                  <span class="storage-breakdown-card__title" data-i18n="settings.billing.ai_presentations_title">Presentaciones</span>
+                  <span class="storage-breakdown-card__size" data-ref="ai-presentations-tokens">0 tokens</span>
+                  <span class="storage-breakdown-card__count" data-ref="ai-presentations-count">0 generaciones</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Nota de Chatbot Ilimitado -->
+            <div class="settings-item" data-ref="ai-quota-chat-note" style="padding: 12px 24px; background-color: var(--bg-hover); border-top: 1px solid var(--border-color);">
+              <div class="settings-item__content" data-ref="ai-quota-chat-note-content" style="display: flex; align-items: center; gap: 8px;">
+                <span class="material-symbols-rounded" data-ref="ai-quota-chat-note-icon" style="font-size: 18px; color: var(--text-secondary);">info</span>
+                <p class="settings-item__desc" data-ref="ai-quota-chat-note-text" style="margin: 0; font-size: 13px;" data-i18n="settings.billing.ai_quota_chat_unlimited_notice">El asistente conversacional (Chatbot IA) es de uso ilimitado y está excluido del límite de tokens.</p>
+              </div>
+            </div>
+
           </div>
         </div>
       </div>
 
-      <!-- 3. Acordeón de Métodos de Pago -->
+      <!-- 4. Acordeón de Métodos de Pago -->
       <div class="settings-group settings-group--accordion is-active" data-ref="group-payment-methods">
         <div class="settings-accordion-header" data-ref="accordion-header-payment-methods">
           <div class="settings-item__content" data-ref="accordion-pm-content">

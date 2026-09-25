@@ -1188,7 +1188,39 @@ export async function runMigrations(): Promise<void> {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
-    logger.db.info('Tablas, columnas e índices de identidad, 2FA, suscripciones, compras, GeoIP, db_canvas, templates, equipos, vistas, feedback IA, snapshots, notificaciones, soporte técnico, solicitudes de diseñador y kits de marca verificadas exitosamente.');
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS user_ai_quotas (
+        user_id INT PRIMARY KEY,
+        tokens_used INT NOT NULL DEFAULT 0,
+        tokens_limit INT NOT NULL DEFAULT 50000,
+        cycle_started_at TIMESTAMP NULL DEFAULT NULL,
+        cycle_reset_at TIMESTAMP NULL DEFAULT NULL,
+        last_generation_at TIMESTAMP NULL DEFAULT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_ai_quota_reset (cycle_reset_at),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS ai_generation_logs (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        feature_type VARCHAR(50) NOT NULL,
+        prompt_tokens INT NOT NULL DEFAULT 0,
+        completion_tokens INT NOT NULL DEFAULT 0,
+        total_tokens INT NOT NULL DEFAULT 0,
+        model_name VARCHAR(100) NOT NULL DEFAULT 'gemini-flash-lite-latest',
+        status VARCHAR(20) NOT NULL DEFAULT 'success',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_ai_gen_user_created (user_id, created_at DESC),
+        INDEX idx_ai_gen_created (created_at DESC),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    logger.db.info('Tablas, columnas e índices de identidad, 2FA, suscripciones, compras, GeoIP, db_canvas, templates, equipos, vistas, feedback IA, cuotas IA, snapshots, notificaciones, soporte técnico, solicitudes de diseñador y kits de marca verificadas exitosamente.');
   } catch (err) {
     logger.db.warn('Advertencia en migración de base de datos', err);
   } finally {

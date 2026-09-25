@@ -13,12 +13,19 @@ export interface SpriteboardApp {
   badge?: string;
   bannerColor?: string;
   category: AppCategory;
+  categoryLabel?: string;
   description: string;
+  developer?: string;
   icon: string;
   iconSvg?: string;
   id: string;
   isInternal: boolean;
   isPopular?: boolean;
+  longDescription?: string;
   name: string;
+  permissions?: string[];
+  previewMockup?: string;
   status: AppStatus;
+  supportEmail?: string;
+  tagline?: string;
 }

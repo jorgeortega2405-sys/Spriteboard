@@ -20,6 +20,8 @@ export interface PlanLimits {
   maxExportScale: number;
   allowedExportTypes: string[];
   maxBrandKits: number;
+  maxAiTokensPerCycle: number;
+  maxAiTokensFormatted: string;
 }
 
 export interface PlanBenefitDefinition {
@@ -55,6 +57,8 @@ export const PLAN_TIER_CONFIGS: Record<SubscriptionTierId, PlanBenefitDefinition
       maxExportScale: 16,
       allowedExportTypes: ['png-current', 'project-json', 'spritesheet', 'gif', 'spritesheet-atlas'],
       maxBrandKits: 0,
+      maxAiTokensPerCycle: 50000,
+      maxAiTokensFormatted: '50,000 tokens',
     },
     features: [],
     borderColor: '#9ca3af',
@@ -79,6 +83,8 @@ export const PLAN_TIER_CONFIGS: Record<SubscriptionTierId, PlanBenefitDefinition
       maxExportScale: 16,
       allowedExportTypes: ['png-current', 'project-json', 'spritesheet', 'gif', 'spritesheet-atlas'],
       maxBrandKits: 0,
+      maxAiTokensPerCycle: 300000,
+      maxAiTokensFormatted: '300,000 tokens',
     },
     features: [
       'live_collaborators_extended',
@@ -105,6 +111,8 @@ export const PLAN_TIER_CONFIGS: Record<SubscriptionTierId, PlanBenefitDefinition
       maxExportScale: 16,
       allowedExportTypes: ['png-current', 'project-json', 'spritesheet', 'gif', 'spritesheet-atlas'],
       maxBrandKits: 500,
+      maxAiTokensPerCycle: 1500000,
+      maxAiTokensFormatted: '1,500,000 tokens',
     },
     features: [
       'teams',

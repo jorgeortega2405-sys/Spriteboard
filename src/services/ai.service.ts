@@ -12,6 +12,13 @@ export interface ChatMessage {
   text: string;
 }
 
+export interface AiUsageMetadata {
+  completionTokens: number;
+  model: string;
+  promptTokens: number;
+  totalTokens: number;
+}
+
 export interface UserContext {
   email?: string;
   id?: number;
@@ -184,7 +191,7 @@ export class AiService {
     mode: 'checklist' | 'expand' | 'full' = 'full',
     contextNodeText?: string,
     diagramType: 'conceptmap' | 'decisiontree' | 'fishbone' | 'flowchart' | 'kanban' | 'matrix' | 'mindmap' | 'orgchart' | 'timeline' = 'mindmap'
-  ): Promise<{ nodes: Array<{ color?: string; icon?: string; id: string; isTask?: boolean; linkingPhrase?: string; parentId: string | null; shape?: string; text: string }>; rootText: string; title: string }> {
+  ): Promise<{ nodes: Array<{ color?: string; icon?: string; id: string; isTask?: boolean; linkingPhrase?: string; parentId: string | null; shape?: string; text: string }>; rootText: string; title: string; usage?: AiUsageMetadata }> {
     const apiKey = config.gemini.apiKey;
     const isKanban = diagramType === 'kanban';
     const isConceptMap = diagramType === 'conceptmap';
@@ -341,6 +348,10 @@ ${mode === 'expand' ? `- Expande detalladamente el concepto, columna o paso exis
       const parsed = JSON.parse(cleanJson);
       if (parsed && Array.isArray(parsed.nodes) && parsed.nodes.length > 0) {
         const defaultPalette = ['#6366f1', '#3b82f6', '#0ea5e9', '#06b6d4', '#14b8a6', '#10b981', '#84cc16', '#eab308', '#f59e0b', '#f97316', '#ef4444', '#ec4899', '#d946ef', '#a855f7', '#8b5cf6', '#64748b'];
+        const promptTokens = Number(data?.usageMetadata?.promptTokenCount) || Math.ceil(userMessage.length / 4);
+        const completionTokens = Number(data?.usageMetadata?.candidatesTokenCount) || Math.ceil(rawText.length / 4);
+        const totalTokens = Number(data?.usageMetadata?.totalTokenCount) || (promptTokens + completionTokens);
+
         return {
           nodes: parsed.nodes.map((n: any, idx: number) => ({
             color: n.color || defaultPalette[idx % defaultPalette.length],
@@ -354,6 +365,12 @@ ${mode === 'expand' ? `- Expande detalladamente el concepto, columna o paso exis
           })),
           rootText: parsed.rootText || prompt,
           title: parsed.title || prompt,
+          usage: {
+            completionTokens,
+            model: modelName,
+            promptTokens,
+            totalTokens,
+          },
         };
       }
 
@@ -369,7 +386,7 @@ ${mode === 'expand' ? `- Expande detalladamente el concepto, columna o paso exis
     mode: 'checklist' | 'expand' | 'full' = 'full',
     contextNodeText?: string,
     diagramType: 'conceptmap' | 'decisiontree' | 'fishbone' | 'flowchart' | 'kanban' | 'matrix' | 'mindmap' | 'orgchart' | 'timeline' = 'mindmap'
-  ): { nodes: Array<{ color?: string; icon?: string; id: string; isTask?: boolean; linkingPhrase?: string; parentId: string | null; shape?: string; text: string }>; rootText: string; title: string } {
+  ): { nodes: Array<{ color?: string; icon?: string; id: string; isTask?: boolean; linkingPhrase?: string; parentId: string | null; shape?: string; text: string }>; rootText: string; title: string; usage?: AiUsageMetadata } {
     const isTaskMode = mode === 'checklist';
     const isKanban = diagramType === 'kanban';
     const isConcept = diagramType === 'conceptmap';
@@ -572,7 +589,7 @@ ${mode === 'expand' ? `- Expande detalladamente el concepto, columna o paso exis
     tone?: 'casual' | 'concise' | 'creative' | 'formal' | 'inspiring' | 'professional',
     targetLanguage = 'es',
     contextText?: string
-  ): Promise<{ html: string; text: string }> {
+  ): Promise<{ html: string; text: string; usage?: AiUsageMetadata }> {
     const apiKey = config.gemini.apiKey;
     if (!apiKey) {
       logger.app.warn('AiService: GEMINI_API_KEY no configurada para Doc. Usando generador inteligente local.');
@@ -660,10 +677,19 @@ Reglas obligatorias:
       cleanHtml = cleanHtml.trim();
 
       const plainText = cleanHtml.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+      const promptTokens = Number(data?.usageMetadata?.promptTokenCount) || Math.ceil(prompt.length / 4);
+      const completionTokens = Number(data?.usageMetadata?.candidatesTokenCount) || Math.ceil(rawText.length / 4);
+      const totalTokens = Number(data?.usageMetadata?.totalTokenCount) || (promptTokens + completionTokens);
 
       return {
         html: cleanHtml,
         text: plainText,
+        usage: {
+          completionTokens,
+          model: modelName,
+          promptTokens,
+          totalTokens,
+        },
       };
     } catch (err) {
       logger.app.error('AiService: Error al procesar generación doc con IA', err);
@@ -677,7 +703,7 @@ Reglas obligatorias:
     tone?: 'casual' | 'concise' | 'creative' | 'formal' | 'inspiring' | 'professional',
     _targetLanguage = 'es',
     contextText?: string
-  ): { html: string; text: string } {
+  ): { html: string; text: string; usage?: AiUsageMetadata } {
     const baseText = contextText || prompt;
     const title = prompt.trim() || 'Documento Generado';
 
@@ -742,6 +768,7 @@ Reglas obligatorias:
       y?: number;
     }>;
     title: string;
+    usage?: AiUsageMetadata;
   }> {
     const apiKey = config.gemini.apiKey;
     if (!apiKey) {
@@ -952,6 +979,12 @@ Reglas estrictas de generación:
             };
           }),
           title: parsed.title || prompt,
+          usage: {
+            completionTokens: Number(data?.usageMetadata?.candidatesTokenCount) || Math.ceil(rawText.length / 4),
+            model: modelName,
+            promptTokens: Number(data?.usageMetadata?.promptTokenCount) || Math.ceil(prompt.length / 4),
+            totalTokens: Number(data?.usageMetadata?.totalTokenCount) || ((Number(data?.usageMetadata?.promptTokenCount) || Math.ceil(prompt.length / 4)) + (Number(data?.usageMetadata?.candidatesTokenCount) || Math.ceil(rawText.length / 4))),
+          },
         };
       }
 
@@ -1003,6 +1036,7 @@ Reglas estrictas de generación:
       y?: number;
     }>;
     title: string;
+    usage?: AiUsageMetadata;
   } {
     const title = prompt.trim() || 'Esquema Generado';
     const now = Date.now();
@@ -1274,6 +1308,7 @@ Reglas estrictas de generación:
       name: string;
     }>;
     title: string;
+    usage?: AiUsageMetadata;
   }> {
     const apiKey = config.gemini.apiKey;
     if (!apiKey) {
@@ -1468,6 +1503,12 @@ Devuelve ÚNICAMENTE un objeto JSON válido, sin texto antes ni después, sin ex
         return {
           slides: sanitizedSlides,
           title: String(parsed.title || prompt.trim()),
+          usage: {
+            completionTokens: Number(data?.usageMetadata?.candidatesTokenCount) || Math.ceil(rawText.length / 4),
+            model: modelName,
+            promptTokens: Number(data?.usageMetadata?.promptTokenCount) || Math.ceil(prompt.length / 4),
+            totalTokens: Number(data?.usageMetadata?.totalTokenCount) || ((Number(data?.usageMetadata?.promptTokenCount) || Math.ceil(prompt.length / 4)) + (Number(data?.usageMetadata?.candidatesTokenCount) || Math.ceil(rawText.length / 4))),
+          },
         };
       }
 
@@ -1517,6 +1558,7 @@ Devuelve ÚNICAMENTE un objeto JSON válido, sin texto antes ni después, sin ex
       name: string;
     }>;
     title: string;
+    usage?: AiUsageMetadata;
   } {
     const title = prompt.trim() || 'Presentación Estratégica';
     const now = Date.now();

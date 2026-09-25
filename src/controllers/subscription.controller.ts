@@ -1,5 +1,6 @@
 import { config } from '../config/env.config.js';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
+import { AiQuotaService } from '../services/ai-quota.service.js';
 import { updateActiveAccountInSession } from '../services/auth.service.js';
 import { logger } from '../services/logger.service.js';
 import { purchaseService } from '../services/purchase.service.js';
@@ -138,7 +139,9 @@ export async function getBillingDetails(req: Request, res: Response): Promise<vo
     const details = await stripeService.getSubscriptionDetails(user.id);
     const storage = await getUserStorageUsage(user.id);
     const limits = getTierLimits(user.subscription_tier);
-    sendSuccess(res, { success: true, ...details, storage, limits });
+    const aiQuota = await AiQuotaService.getUserQuota(user.id, user.subscription_tier);
+    const aiBreakdown = await AiQuotaService.getBreakdown(user.id);
+    sendSuccess(res, { success: true, ...details, aiBreakdown, aiQuota, limits, storage });
   } catch (error) {
     sendInternalError(res, 'Error al obtener detalles de facturación', error, 'Ha ocurrido un error inesperado al consultar los detalles de facturación.');
   }

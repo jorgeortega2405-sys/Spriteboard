@@ -17,6 +17,8 @@ aiRouter.post('/board', requireAuth, aiChatLimiter, AiController.generateBoard);
 aiRouter.post('/ai/board', requireAuth, aiChatLimiter, AiController.generateBoard);
 aiRouter.post('/presentation', requireAuth, aiChatLimiter, AiController.generatePresentation);
 aiRouter.post('/ai/presentation', requireAuth, aiChatLimiter, AiController.generatePresentation);
+aiRouter.get('/quota', requireAuth, AiController.getQuota);
+aiRouter.get('/ai/quota', requireAuth, AiController.getQuota);
 
 export default aiRouter;
 

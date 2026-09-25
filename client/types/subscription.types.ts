@@ -63,6 +63,39 @@ export interface StorageUsageInfo {
 
 export type UserStorageUsage = StorageUsageInfo;
 
+export interface AiBreakdownItem {
+  tokens: number;
+  formatted: string;
+  count: number;
+}
+
+export interface AiBreakdownInfo {
+  mindmap: AiBreakdownItem;
+  doc: AiBreakdownItem;
+  board: AiBreakdownItem;
+  presentation: AiBreakdownItem;
+  totalTokens: number;
+  totalGenerations: number;
+}
+
+export interface AiQuotaInfo {
+  tier: string;
+  tierName: string;
+  tokensUsed: number;
+  tokensLimit: number;
+  tokensUsedFormatted: string;
+  tokensLimitFormatted: string;
+  tokensRemaining: number;
+  tokensRemainingFormatted: string;
+  percentage: number;
+  isOverLimit: boolean;
+  cycleStartedAt: string | null;
+  cycleResetAt: string | null;
+  secondsRemaining: number;
+  timeRemainingFormatted: string;
+  lastGenerationAt: string | null;
+}
+
 export interface BillingDetailsResponse {
   success: boolean;
   tier?: string;
@@ -75,6 +108,9 @@ export interface BillingDetailsResponse {
   currency?: string;
   subscription_id?: string | null;
   storage?: StorageUsageInfo;
+  aiQuota?: AiQuotaInfo;
+  aiBreakdown?: AiBreakdownInfo;
+  limits?: any;
   error?: string;
 }
 
