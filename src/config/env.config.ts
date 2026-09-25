@@ -59,6 +59,10 @@ export const config = {
     s3ForcePathStyle: process.env.AWS_S3_FORCE_PATH_STYLE === 'true',
     s3PublicUrl: process.env.AWS_S3_PUBLIC_URL || '',
   },
+  photoroom: {
+    apiKey: process.env.PHOTOROOM_API_KEY || 'sandbox_sk_pr_default_745f71ad9846834f110efd4b34e5ae323b14ff43',
+    endpoint: process.env.PHOTOROOM_ENDPOINT || 'https://sdk.photoroom.com/v1/segment',
+  },
 };
 
 

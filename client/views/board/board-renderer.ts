@@ -1707,5 +1707,82 @@ export function drawEmbedElement(
   ctx.restore();
 }
 
+export function drawAiProcessingOverlay(
+  ctx: CanvasRenderingContext2D,
+  el: BoardElement,
+  camera: { zoom: number },
+  label: string = 'Eliminando fondo'
+): void {
+  const bbox = getElementBoundingBox(el);
+  const now = Date.now();
+  const t = (Math.sin(now / 280) + 1) / 2;
+  const scanY = bbox.y + t * bbox.height;
+
+  ctx.save();
+
+  ctx.save();
+  ctx.strokeStyle = '#38bdf8';
+  ctx.shadowColor = 'rgba(56, 189, 248, 0.85)';
+  ctx.shadowBlur = 12 / camera.zoom;
+  ctx.lineWidth = 2.5 / camera.zoom;
+  ctx.strokeRect(bbox.x, bbox.y, bbox.width, bbox.height);
+  ctx.restore();
+
+  const beamHeight = Math.min(60 / camera.zoom, bbox.height * 0.45);
+  const grad = ctx.createLinearGradient(bbox.x, scanY - beamHeight, bbox.x, scanY + beamHeight);
+  grad.addColorStop(0, 'rgba(56, 189, 248, 0)');
+  grad.addColorStop(0.5, 'rgba(139, 92, 246, 0.35)');
+  grad.addColorStop(1, 'rgba(56, 189, 248, 0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(
+    bbox.x,
+    Math.max(bbox.y, scanY - beamHeight),
+    bbox.width,
+    Math.min(bbox.y + bbox.height, scanY + beamHeight) - Math.max(bbox.y, scanY - beamHeight)
+  );
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(bbox.x, scanY);
+  ctx.lineTo(bbox.x + bbox.width, scanY);
+  ctx.strokeStyle = '#38bdf8';
+  ctx.shadowColor = '#818cf8';
+  ctx.shadowBlur = 10 / camera.zoom;
+  ctx.lineWidth = 2.5 / camera.zoom;
+  ctx.stroke();
+  ctx.restore();
+
+  const pillW = Math.min(190 / camera.zoom, Math.max(120 / camera.zoom, bbox.width * 0.85));
+  const pillH = Math.min(36 / camera.zoom, Math.max(24 / camera.zoom, bbox.height * 0.35));
+  const pillX = bbox.x + (bbox.width - pillW) / 2;
+  const pillY = bbox.y + (bbox.height - pillH) / 2;
+  const radius = pillH / 2;
+
+  ctx.save();
+  ctx.beginPath();
+  if (typeof (ctx as any).roundRect === 'function') {
+    (ctx as any).roundRect(pillX, pillY, pillW, pillH, radius);
+  } else {
+    ctx.rect(pillX, pillY, pillW, pillH);
+  }
+  ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+  ctx.fill();
+  ctx.strokeStyle = '#38bdf8';
+  ctx.lineWidth = 1.5 / camera.zoom;
+  ctx.shadowColor = 'rgba(56, 189, 248, 0.6)';
+  ctx.shadowBlur = 8 / camera.zoom;
+  ctx.stroke();
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = `600 ${Math.max(10, Math.min(14, 13 / camera.zoom))}px Inter, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const dots = '.'.repeat((Math.floor(now / 350) % 3) + 1);
+  ctx.fillText(`✨ ${label}${dots}`, pillX + pillW / 2, pillY + pillH / 2);
+  ctx.restore();
+
+  ctx.restore();
+}
+
 
 

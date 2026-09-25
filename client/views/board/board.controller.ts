@@ -7,22 +7,24 @@ import { CanvasShareDropdownController, setupCanvasShareDropdown } from '../../c
 import { closeContextMenu, ContextMenuItem, openContextMenu } from '../../components/context-menu.component.js';
 import { InsertPixelGridConfig, openInsertPixelGridModal } from '../../components/insert-pixel-grid-modal.component.js';
 import { isAnimationDrawerOpen, isColorsDrawerOpen, isEffectsDrawerOpen, isFontsDrawerOpen, isPixelAnimationDrawerOpen, isPositionDrawerOpen, openAnimationInDrawer, openChartInspectorInDrawer, openColorsInDrawer, openEffectsInDrawer, openFontsInDrawer, openMockupsInDrawer, openPixelAnimationInDrawer, openPositionInDrawer, toggleDrawer } from '../../components/layout.component.js';
+import { openUpgradeModal } from '../../components/upgrade-modal.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
 import { BOARD_3D_SHAPES } from '../../config/board-3d-shapes.config.js';
 import { BOARD_SHAPES } from '../../config/board-shapes.config.js';
 import { getBoardTemplateElements } from '../../config/board-templates.data.js';
 import { getMockupTemplateById } from '../../config/mockups.config.js';
 import { DEFAULT_STICKY_COLOR, STICKY_NOTE_PRESETS } from '../../config/sticky-notes.config.js';
-import { AlignmentGuide, applyElementAnimation, applyElementEffect, BackgroundType, Board3DElement, BoardAnimationType, BoardChartElement, BoardCollaboratorState, BoardConnectorElement, BoardEffectType, BoardElement, BoardElementAnimation, BoardElementEffect, BoardEmbedElement, BoardImageElement, BoardMockupElement, BoardPageItem, BoardPixelGridElement, BoardPoint, BoardProject, BoardSectionElement, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTableCell, BoardTableElement, BoardTextElement, BoardTool, calculateDragSnapping, calculateResizeSnapping, CANVAS_DEFAULTS, CanvasEngine2D, ChartDataRow, ChartType, computeElementsBoundingBox, ConnectorStyle, create3DElement, createChartElement, createConnectorElement, createEmbedElement, createElementResizeSnapshot, createImageElement, createMockupElement, createSectionElement, createShapeElement, createStickyElement, createTableElement, createTextElement, createTextPresetElement, DEFAULT_CHART_PALETTES, DEFAULT_CLASSIC_PALETTE, DistanceGuide, draw3DElement, draw3DGroundGrid, drawAlignmentGuides, drawBackground, drawBoardCollaboratorCursors, drawChart, drawCheckerboard, drawConnector, drawEmbedElement, drawImage, drawMarqueeBox, drawMockupElement, drawMultiSelectionBounds, drawPixelGridLines, drawSection, drawSelectionBox, drawShape, drawSticky, drawStroke, drawTable, drawText, ElementResizeSnapshot, exportJson, exportPng, exportSvg, findContainingSection, findElementsByMarqueeBox, GAMEBOY_PALETTE, generateThumbnail, getConnectorEndpoints, getElementBoundingBox, hitTest3DRotationGizmo, hitTestBoundingBoxResizeHandle, hitTestElement, hitTestResizeHandle, MarkerType, measureTextElementSize, moveElementByDelta, moveElementByDrag, onCustomModelLoaded, PICO8_PALETTE, PixelSubtool, preloadCustom3DModels, ResizeHandle, resizeElementByHandle, resizeElementsGroup, screenToWorld, Shape3DType, ShapeType, StrokeStyle, TEXT_PRESETS, worldToScreen } from '../../core/canvas-engine.js';
+import { AlignmentGuide, applyElementAnimation, applyElementEffect, BackgroundType, Board3DElement, BoardAnimationType, BoardChartElement, BoardCollaboratorState, BoardConnectorElement, BoardEffectType, BoardElement, BoardElementAnimation, BoardElementEffect, BoardEmbedElement, BoardImageElement, BoardMockupElement, BoardPageItem, BoardPixelGridElement, BoardPoint, BoardProject, BoardSectionElement, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTableCell, BoardTableElement, BoardTextElement, BoardTool, calculateDragSnapping, calculateResizeSnapping, CANVAS_DEFAULTS, CanvasEngine2D, ChartDataRow, ChartType, computeElementsBoundingBox, ConnectorStyle, create3DElement, createChartElement, createConnectorElement, createEmbedElement, createElementResizeSnapshot, createImageElement, createMockupElement, createSectionElement, createShapeElement, createStickyElement, createTableElement, createTextElement, createTextPresetElement, DEFAULT_CHART_PALETTES, DEFAULT_CLASSIC_PALETTE, DistanceGuide, draw3DElement, draw3DGroundGrid, drawAiProcessingOverlay, drawAlignmentGuides, drawBackground, drawBoardCollaboratorCursors, drawChart, drawCheckerboard, drawConnector, drawEmbedElement, drawImage, drawMarqueeBox, drawMockupElement, drawMultiSelectionBounds, drawPixelGridLines, drawSection, drawSelectionBox, drawShape, drawSticky, drawStroke, drawTable, drawText, ElementResizeSnapshot, exportJson, exportPng, exportSvg, findContainingSection, findElementsByMarqueeBox, GAMEBOY_PALETTE, generateThumbnail, getConnectorEndpoints, getElementBoundingBox, hitTest3DRotationGizmo, hitTestBoundingBoxResizeHandle, hitTestElement, hitTestResizeHandle, MarkerType, measureTextElementSize, moveElementByDelta, moveElementByDrag, onCustomModelLoaded, PICO8_PALETTE, PixelSubtool, preloadCustom3DModels, ResizeHandle, resizeElementByHandle, resizeElementsGroup, screenToWorld, Shape3DType, ShapeType, StrokeStyle, TEXT_PRESETS, worldToScreen } from '../../core/canvas-engine.js';
 import { currentUser, escapeHtml, getApi, postApi } from '../../services/api.service.js';
 import { getLocalCanvasByUuid, removeLocalCanvas, saveLocalCanvas } from '../../services/canvas-storage.service.js';
 import { renderIcons } from '../../services/icon.service.js';
+import { removeImageBackground } from '../../services/image-ai.service.js';
 import { showToast } from '../../services/toast.service.js';
 import { getYouTubeEmbedUrl, openYouTubePlayerModal } from '../../services/youtube.service.js';
 import { CanvasItem } from '../../types/canvas.types.js';
 import { MockupFitMode, MockupTemplate } from '../../types/mockups.types.js';
 import { generateShadingRamp, getCollaboratorColor, rgbToHex } from '../../utils/color.util.js';
-import { setupDropdown } from '../../utils/dom.util.js';
+import { setupDropdown, withButtonLoading } from '../../utils/dom.util.js';
 import { PixelShape } from '../../utils/pixel-shapes.util.js';
 import { validateAndSanitizeFile } from '../../utils/validators.util.js';
 import { DocFontPickerComponent, FontSelectEvent } from '../doc/doc-font-picker.component.js';
@@ -55,6 +57,7 @@ export class BoardController {
   private isSnappingEnabled = true;
   private selectionStartBBox: { height: number; width: number; x: number; y: number } | null = null;
   private editingElementId: string | null = null;
+  private processingBgRemovalId: string | null = null;
   private activeVSubtoolbar: '3d' | 'cursors' | 'draw' | 'lines' | 'pixel' | 'shapes' | 'stickies' | null = null;
   private connectorStyle: 'curved' | 'orthogonal' | 'straight' = 'curved';
   private aiDropdownController: CanvasAiDropdownController | null = null;
@@ -2437,6 +2440,7 @@ export class BoardController {
     const groupMarkers = this.container.querySelector<HTMLElement>('[data-ref="board-top-group-markers"]');
     const groupText = this.container.querySelector<HTMLElement>('[data-ref="board-top-group-text-props"]');
     const groupPixelProps = this.container.querySelector<HTMLElement>('[data-ref="board-top-group-pixel-props"]');
+    const groupImage = this.container.querySelector<HTMLElement>('[data-ref="board-top-group-image"]');
 
     if (selectedEls.length === 1) {
       const el = selectedEls[0];
@@ -2447,7 +2451,12 @@ export class BoardController {
       const isText = el.type === 'text';
       const isStroke = el.type === 'stroke';
       const isPixel = el.type === 'pixel-grid';
+      const isImage = el.type === 'image';
       const isLineShape = isShape && (el.shapeType === 'line' || el.shapeType === 'arrow');
+
+      if (groupImage) {
+        groupImage.classList.toggle('is-hidden', !isImage);
+      }
 
       if (groupPixelProps) {
         groupPixelProps.classList.toggle('is-hidden', !isPixel);
@@ -2543,6 +2552,7 @@ export class BoardController {
       const hasStrokeable = selectedEls.some((el) => el.type === 'stroke' || el.type === 'connector' || el.type === 'shape' || el.type === 'shape-3d');
       const hasTextual = selectedEls.some((el) => el.type === 'text' || el.type === 'sticky' || (el.type === 'shape' && !!el.text));
 
+      if (groupImage) groupImage.classList.add('is-hidden');
       if (groupPixelProps) groupPixelProps.classList.add('is-hidden');
       if (groupFill) groupFill.classList.toggle('is-hidden', !hasFillable);
       if (groupStrokeColor) groupStrokeColor.classList.toggle('is-hidden', !hasStrokeable);
@@ -2845,6 +2855,59 @@ export class BoardController {
 
     const btnDelete = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-delete"]');
     btnDelete?.addEventListener('click', () => this.deleteSelected(), { signal });
+
+    const btnRemoveBg = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-remove-bg"]');
+    if (btnRemoveBg) {
+      btnRemoveBg.addEventListener('click', async () => {
+        const userTier = (currentUser?.subscription_tier || 'free').toLowerCase();
+        const isProOrBusiness = ['pro', 'business', 'ultra', 'plus', 'enterprise'].includes(userTier);
+        if (!isProOrBusiness) {
+          openUpgradeModal('pro');
+          showToast('La eliminación de fondo con IA está disponible para planes Pro y Negocios', 'info');
+          return;
+        }
+
+        const selectedEls = this.getSelectedElements();
+        if (selectedEls.length !== 1 || selectedEls[0].type !== 'image') {
+          showToast('Selecciona una imagen para eliminar su fondo', 'info');
+          return;
+        }
+        const imageEl = selectedEls[0] as BoardImageElement;
+        if (!imageEl.url) {
+          showToast('La imagen seleccionada no tiene una fuente válida', 'warning');
+          return;
+        }
+
+        await withButtonLoading(btnRemoveBg, async () => {
+          showToast('Eliminando fondo con IA...', 'info');
+          this.processingBgRemovalId = imageEl.id;
+          const animTimer = window.setInterval(() => {
+            this.requestRedraw();
+          }, 1000 / 60);
+
+          try {
+            const result = await removeImageBackground(imageEl.url);
+            if (result.success && result.url) {
+              this.pushHistoryState();
+              imageEl.url = result.url;
+              this.collaborationManager.broadcastUpdateElement(imageEl);
+              this.requestRedraw();
+              this.scheduleAutoSave();
+              showToast('Fondo eliminado exitosamente', 'success');
+            } else {
+              if ((result as any).upgradeRequired) {
+                openUpgradeModal('pro');
+              }
+              showToast(result.error || 'No se pudo eliminar el fondo de la imagen', 'error');
+            }
+          } finally {
+            window.clearInterval(animTimer);
+            this.processingBgRemovalId = null;
+            this.requestRedraw();
+          }
+        });
+      }, { signal });
+    }
 
     const btnPosFront = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-pos-front"]');
     btnPosFront?.addEventListener('click', () => {
@@ -5056,6 +5119,13 @@ export class BoardController {
 
     if (this.activeAlignmentGuides.length > 0 || this.activeDistanceGuides.length > 0) {
       drawAlignmentGuides(this.ctx, this.activeAlignmentGuides, this.camera, this.activeDistanceGuides);
+    }
+
+    if (this.processingBgRemovalId) {
+      const processingEl = this.elements.find((item) => item.id === this.processingBgRemovalId);
+      if (processingEl) {
+        drawAiProcessingOverlay(this.ctx, processingEl, this.camera, 'Eliminando fondo');
+      }
     }
 
     this.ctx.restore();

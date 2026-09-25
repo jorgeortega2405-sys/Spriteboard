@@ -7,12 +7,14 @@ import { CanvasShareDropdownController, setupCanvasShareDropdown } from '../../c
 import { closeContextMenu, ContextMenuItem, openContextMenu } from '../../components/context-menu.component.js';
 import { isAnimationDrawerOpen, isColorsDrawerOpen, isEffectsDrawerOpen, isFontsDrawerOpen, isPositionDrawerOpen, openAnimationInDrawer, openChartInspectorInDrawer, openColorsInDrawer, openEffectsInDrawer, openFontsInDrawer, openMockupsInDrawer, openPositionInDrawer, toggleDrawer } from '../../components/layout.component.js';
 import { SlideshowPlayerComponent } from '../../components/slideshow-player.component.js';
+import { openUpgradeModal } from '../../components/upgrade-modal.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
 import { getBoardTemplateElements } from '../../config/board-templates.data.js';
 import { currentUser, getApi, postApi, putApi } from '../../services/api.service.js';
 import { getLocalCanvasByUuid, saveLocalCanvas } from '../../services/canvas-storage.service.js';
 import { t } from '../../services/i18n.service.js';
 import { renderIcons } from '../../services/icon.service.js';
+import { removeImageBackground } from '../../services/image-ai.service.js';
 import { getEffectiveTheme } from '../../services/theme.service.js';
 import { showToast } from '../../services/toast.service.js';
 import { getYouTubeEmbedUrl, openYouTubePlayerModal } from '../../services/youtube.service.js';
@@ -30,7 +32,7 @@ import { exportJson, exportPng, exportSvg, generateThumbnail } from '../board/bo
 import { drawMockupElement } from '../board/board-mockup-renderer.js';
 import { BoardMockupsPanelComponent } from '../board/board-mockups-panel.component.js';
 import { BoardPositionPanelComponent } from '../board/board-position-panel.component.js';
-import { applyElementAnimation, applyElementEffect, draw3DElement, drawAlignmentGuides, drawBackground, drawBoardCollaboratorCursors, drawChart, drawConnector, drawEmbedElement, drawImage, drawMarqueeBox, drawMultiSelectionBounds, drawSection, drawSelectionBox, drawShape, drawSticky, drawStroke, drawTable, drawText, screenToWorld, worldToScreen } from '../board/board-renderer.js';
+import { applyElementAnimation, applyElementEffect, draw3DElement, drawAiProcessingOverlay, drawAlignmentGuides, drawBackground, drawBoardCollaboratorCursors, drawChart, drawConnector, drawEmbedElement, drawImage, drawMarqueeBox, drawMultiSelectionBounds, drawSection, drawSelectionBox, drawShape, drawSticky, drawStroke, drawTable, drawText, screenToWorld, worldToScreen } from '../board/board-renderer.js';
 import { AlignmentGuide, calculateDragSnapping, calculateResizeSnapping, DistanceGuide } from '../board/board-snapping.manager.js';
 import { BackgroundType, Board3DElement, BoardAnimationType, BoardChartElement, BoardCollaboratorState, BoardConnectorElement, BoardEffectType, BoardElement, BoardElementAnimation, BoardElementEffect, BoardEmbedElement, BoardImageElement, BoardMockupElement, BoardPoint, BoardSectionElement, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTableCell, BoardTableElement, BoardTextElement, CANVAS_DEFAULTS, ChartType, ConnectorStyle, MarkerType, ResizeHandle, Shape3DType, ShapeType, StrokeStyle } from '../board/board.types.js';
 import { DocFontPickerComponent, FontSelectEvent } from '../doc/doc-font-picker.component.js';
@@ -42,6 +44,7 @@ export class PresentationController {
   private activeInlineEditor: HTMLTextAreaElement | null = null;
   private activeResizeHandle: ResizeHandle | null = null;
   private activeSlideId: string = 'slide-1';
+  private processingBgRemovalId: string | null = null;
   private aiDropdownController: CanvasAiDropdownController | null = null;
   private alignmentGuides: AlignmentGuide[] = [];
   private distanceGuides: DistanceGuide[] = [];
@@ -2628,6 +2631,60 @@ export class PresentationController {
     const btnDel = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-delete"]');
     btnDel?.addEventListener('click', () => this.deleteSelectedElements(), { signal });
 
+    const btnRemoveBg = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-remove-bg"]');
+    if (btnRemoveBg) {
+      btnRemoveBg.addEventListener('click', async () => {
+        const userTier = (currentUser?.subscription_tier || 'free').toLowerCase();
+        const isProOrBusiness = ['pro', 'business', 'ultra', 'plus', 'enterprise'].includes(userTier);
+        if (!isProOrBusiness) {
+          openUpgradeModal('pro');
+          showToast('La eliminación de fondo con IA está disponible para planes Pro y Negocios', 'info');
+          return;
+        }
+
+        const elements = this.getActiveSlide().elements;
+        const selected = elements.filter((e) => this.selectedElementIds.has(e.id));
+        if (selected.length !== 1 || selected[0].type !== 'image') {
+          showToast('Selecciona una imagen para eliminar su fondo', 'info');
+          return;
+        }
+        const imageEl = selected[0] as BoardImageElement;
+        if (!imageEl.url) {
+          showToast('La imagen seleccionada no tiene una fuente válida', 'warning');
+          return;
+        }
+
+        await withButtonLoading(btnRemoveBg, async () => {
+          showToast('Eliminando fondo con IA...', 'info');
+          this.processingBgRemovalId = imageEl.id;
+          const animTimer = window.setInterval(() => {
+            this.render();
+          }, 1000 / 60);
+
+          try {
+            const result = await removeImageBackground(imageEl.url);
+            if (result.success && result.url) {
+              this.saveHistoryState();
+              imageEl.url = result.url;
+              this.collaborationManager.broadcastUpdateElement(imageEl, this.activeSlideId);
+              this.render();
+              this.scheduleAutoSave();
+              showToast('Fondo eliminado exitosamente', 'success');
+            } else {
+              if ((result as any).upgradeRequired) {
+                openUpgradeModal('pro');
+              }
+              showToast(result.error || 'No se pudo eliminar el fondo de la imagen', 'error');
+            }
+          } finally {
+            window.clearInterval(animTimer);
+            this.processingBgRemovalId = null;
+            this.render();
+          }
+        });
+      }, { signal });
+    }
+
     const btnFontInc = this.container.querySelector<HTMLButtonElement>('[data-ref="top-btn-font-inc"]');
     btnFontInc?.addEventListener('click', () => this.changeSelectedFontSize(2), { signal });
 
@@ -3501,6 +3558,7 @@ export class PresentationController {
     const groupStrokeStyle = this.container.querySelector<HTMLElement>('[data-ref="presentation-top-group-stroke-style"]');
     const groupCorners = this.container.querySelector<HTMLElement>('[data-ref="presentation-top-group-corners"]');
     const groupMarkers = this.container.querySelector<HTMLElement>('[data-ref="presentation-top-group-markers"]');
+    const groupImage = this.container.querySelector<HTMLElement>('[data-ref="presentation-top-group-image"]');
     const fillSwatch = this.container.querySelector<HTMLElement>('[data-ref="top-fill-swatch"]');
     const strokeSwatch = this.container.querySelector<HTMLElement>('[data-ref="top-stroke-swatch"]');
     const textSwatch = this.container.querySelector<HTMLElement>('[data-ref="top-text-swatch"]');
@@ -3521,10 +3579,12 @@ export class PresentationController {
 
       const elements = this.getActiveSlide().elements;
       const selected = elements.filter((e) => this.selectedElementIds.has(e.id));
+      const isSingleImage = selected.length === 1 && selected[0].type === 'image';
       const hasText = selected.some((el) => el.type === 'text' || el.type === 'sticky' || (el as any).text !== undefined);
       const hasConnector = selected.some((el) => el.type === 'connector');
       const hasShape = selected.some((el) => el.type === 'shape' || el.type === 'sticky' || el.type === 'section');
 
+      if (groupImage) groupImage.classList.toggle('is-hidden', !isSingleImage);
       if (groupText) groupText.classList.toggle('is-hidden', !hasText);
       if (groupMarkers) groupMarkers.classList.toggle('is-hidden', !hasConnector);
       if (groupFill) groupFill.classList.toggle('is-hidden', !hasShape && !hasText);
@@ -3571,6 +3631,7 @@ export class PresentationController {
         }
       }
     } else if (this.selectedSlideId !== null) {
+      if (groupImage) groupImage.classList.add('is-hidden');
       topToolbarCont?.classList.remove('is-hidden');
       topSelectionSec?.classList.add('is-hidden');
       topSlideSec?.classList.remove('is-hidden');
@@ -3583,6 +3644,7 @@ export class PresentationController {
         slideDurationLabel.textContent = `${(currentSlide.duration || 5.0).toFixed(1)}s`;
       }
     } else {
+      if (groupImage) groupImage.classList.add('is-hidden');
       topToolbarCont?.classList.add('is-hidden');
       topSelectionSec?.classList.add('is-hidden');
       topSlideSec?.classList.add('is-hidden');
@@ -4682,6 +4744,12 @@ export class PresentationController {
         }
         if (this.alignmentGuides.length > 0 || this.distanceGuides.length > 0) {
           drawAlignmentGuides(ctx, this.alignmentGuides, camera, this.distanceGuides);
+        }
+        if (this.processingBgRemovalId) {
+          const processingEl = slide.elements.find((item) => item.id === this.processingBgRemovalId);
+          if (processingEl) {
+            drawAiProcessingOverlay(ctx, processingEl, camera, 'Eliminando fondo');
+          }
         }
         if (this.marqueeStart && this.marqueeEnd) {
           const box = {

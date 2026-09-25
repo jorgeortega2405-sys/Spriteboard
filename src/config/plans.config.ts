@@ -6,7 +6,8 @@ export type PlanFeatureKey =
   | 'teams'
   | 'live_collaborators_extended'
   | 'enterprise_sso'
-  | 'brand_kits';
+  | 'brand_kits'
+  | 'ai_bg_removal';
 
 export interface PlanLimits {
   storageBytes: number;
@@ -88,6 +89,7 @@ export const PLAN_TIER_CONFIGS: Record<SubscriptionTierId, PlanBenefitDefinition
     },
     features: [
       'live_collaborators_extended',
+      'ai_bg_removal',
     ],
     borderColor: '#3b82f6',
     ringBg: 'rgba(59, 130, 246, 0.15)',
@@ -119,6 +121,7 @@ export const PLAN_TIER_CONFIGS: Record<SubscriptionTierId, PlanBenefitDefinition
       'live_collaborators_extended',
       'enterprise_sso',
       'brand_kits',
+      'ai_bg_removal',
     ],
     borderColor: 'conic-gradient(from 295deg, #8b5cf6 0% 28%, #ec4899 28% 57%, #3b82f6 57% 85%, #6366f1 85% 100%)',
     ringBg: 'rgba(139, 92, 246, 0.18)',
@@ -130,6 +133,7 @@ export const FEATURE_REQUIREMENTS: Record<PlanFeatureKey, { minTier: Subscriptio
   live_collaborators_extended: { minTier: 'pro', name: 'Colaboración en vivo extendida' },
   enterprise_sso: { minTier: 'business', name: 'Autenticación empresarial (SSO / SCIM)' },
   brand_kits: { minTier: 'business', name: 'Kits de marca' },
+  ai_bg_removal: { minTier: 'pro', name: 'Eliminación de fondo con IA' },
 };
 
 export const TIER_RANK: Record<SubscriptionTierId, number> = {

@@ -1,6 +1,7 @@
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import { AiQuotaService } from '../services/ai-quota.service.js';
 import { AiService, ChatMessage } from '../services/ai.service.js';
+import { removeBackgroundWithPhotoroom } from '../services/image-ai.service.js';
 import { logger } from '../services/logger.service.js';
 import { Request, Response } from 'express';
 
@@ -497,6 +498,49 @@ export class AiController {
 
       res.status(500).json({
         error: 'Ha ocurrido un error inesperado al consultar la cuota de IA.',
+        success: false,
+      });
+    }
+  }
+
+  static async removeBackground(req: Request, res: Response): Promise<void> {
+    try {
+      const currentUser = getCurrentUser(req);
+      const { imageBase64, imageUrl } = req.body || {};
+      const file = req.file;
+
+      if (!imageBase64 && !imageUrl && !file) {
+        res.status(400).json({
+          error: 'No se ha proporcionado ninguna imagen para procesar.',
+          success: false,
+        });
+        return;
+      }
+
+      const result = await removeBackgroundWithPhotoroom({
+        file,
+        imageBase64,
+        imageUrl,
+        userId: currentUser?.id || null,
+      });
+
+      if (!result.success || !result.url) {
+        res.status(400).json({
+          error: result.error || 'No se pudo eliminar el fondo de la imagen.',
+          success: false,
+        });
+        return;
+      }
+
+      res.status(200).json({
+        mimeType: result.mimeType || 'image/png',
+        success: true,
+        url: result.url,
+      });
+    } catch (error) {
+      logger.app.error('AiController: Error inesperado al eliminar fondo', error);
+      res.status(500).json({
+        error: 'Ha ocurrido un error inesperado al procesar la imagen. Por favor intenta más tarde.',
         success: false,
       });
     }

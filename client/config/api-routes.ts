@@ -116,6 +116,7 @@ export const API_ROUTES = {
     mindmap: '/api/ai/mindmap',
     presentation: '/api/ai/presentation',
     quota: '/api/ai/quota',
+    removeBackground: '/api/ai/remove-background',
   },
   support: {
     active: '/api/support/active',

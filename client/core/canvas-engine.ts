@@ -4,7 +4,7 @@ import { calculateResizedBoundingBox, computeElementsBoundingBox, convertDiagram
 import { exportJson, exportPng, exportSvg, generateThumbnail } from '../views/board/board-export.service.js';
 import { drawMockupElement } from '../views/board/board-mockup-renderer.js';
 import { parseOBJ } from '../views/board/board-obj-loader.js';
-import { applyElementAnimation, applyElementEffect, applyLineDash, drawAlignmentGuides, drawBackground, drawBoardCollaboratorCursors, drawCheckerboard, drawConnector, drawEmbedElement, drawEndpointMarker, drawImage, drawMarqueeBox, drawMultiSelectionBounds, drawPixelGridLines, drawSection, drawSelectionBox, drawShape, drawSticky, drawStroke, drawTable, drawText, getCachedImage, getSvgPathBoundingBox, screenToWorld, worldToScreen, wrapText } from '../views/board/board-renderer.js';
+import { applyElementAnimation, applyElementEffect, applyLineDash, drawAiProcessingOverlay, drawAlignmentGuides, drawBackground, drawBoardCollaboratorCursors, drawCheckerboard, drawConnector, drawEmbedElement, drawEndpointMarker, drawImage, drawMarqueeBox, drawMultiSelectionBounds, drawPixelGridLines, drawSection, drawSelectionBox, drawShape, drawSticky, drawStroke, drawTable, drawText, getCachedImage, getSvgPathBoundingBox, screenToWorld, worldToScreen, wrapText } from '../views/board/board-renderer.js';
 import { AlignmentGuide, calculateDragSnapping, calculateResizeSnapping, DistanceGuide, ResizeSnapResult, SnapResult } from '../views/board/board-snapping.manager.js';
 import { BackgroundType, Board3DElement, BoardAnimationType, BoardChartElement, BoardCollaboratorState, BoardConnectorElement, BoardEffectType, BoardElement, BoardElementAnimation, BoardElementEffect, BoardEmbedElement, BoardImageElement, BoardMockupElement, BoardPageItem, BoardPixelGridElement, BoardPoint, BoardProject, BoardSectionElement, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTableCell, BoardTableElement, BoardTextElement, BoardTool, CANVAS_DEFAULTS, ChartDataRow, ChartSeriesConfig, ChartType, ConnectorStyle, DEFAULT_CHART_PALETTES, DEFAULT_CLASSIC_PALETTE, GAMEBOY_PALETTE, MarkerType, PICO8_PALETTE, PixelSubtool, ResizeHandle, Shape3DType, ShapeType, StrokeStyle } from '../views/board/board.types.js';
 
@@ -36,6 +36,7 @@ export {
   draw3DElement,
   draw3DGroundGrid,
   draw3DRotationGizmo,
+  drawAiProcessingOverlay,
   drawAlignmentGuides,
   drawBackground,
   drawBoardCollaboratorCursors,

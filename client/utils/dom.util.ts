@@ -87,27 +87,45 @@ export function createBannerManager(
 
 export async function withButtonLoading(
   button: HTMLElement | HTMLButtonElement | null,
-  loadingText: string,
-  asyncCallback: () => Promise<void>
+  loadingTextOrCallback: string | (() => Promise<void>),
+  asyncCallback?: () => Promise<void>
 ): Promise<void> {
+  let callback: () => Promise<void>;
+  let loadingText: string | null = null;
+
+  if (typeof loadingTextOrCallback === 'function') {
+    callback = loadingTextOrCallback;
+  } else {
+    loadingText = loadingTextOrCallback;
+    callback = asyncCallback || (async () => {});
+  }
+
   if (!button) {
-    await asyncCallback();
+    await callback();
     return;
   }
 
-  const originalText = button.textContent || '';
+  const originalHtml = button.innerHTML;
   if ('disabled' in button) {
     (button as HTMLButtonElement).disabled = true;
   }
-  button.textContent = loadingText;
+  if (loadingText !== null) {
+    button.textContent = loadingText;
+  } else {
+    button.classList.add('is-loading');
+  }
 
   try {
-    await asyncCallback();
+    await callback();
   } finally {
     if ('disabled' in button) {
       (button as HTMLButtonElement).disabled = false;
     }
-    button.textContent = originalText;
+    if (loadingText !== null) {
+      button.innerHTML = originalHtml;
+    } else {
+      button.classList.remove('is-loading');
+    }
   }
 }
 

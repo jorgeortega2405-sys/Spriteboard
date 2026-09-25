@@ -5,16 +5,18 @@ import { openCanvasMetricsModal } from '../../components/canvas-metrics-modal.co
 import { CanvasShareDropdownController, setupCanvasShareDropdown } from '../../components/canvas-share-dropdown.component.js';
 import { closeContextMenu, ContextMenuItem, openContextMenu } from '../../components/context-menu.component.js';
 import { openModal } from '../../components/modal.component.js';
+import { openUpgradeModal } from '../../components/upgrade-modal.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
 import { BoardProject, TEXT_PRESETS } from '../../core/canvas-engine.js';
 import { currentUser, escapeHtml, getApi, postApi } from '../../services/api.service.js';
 import { getLocalCanvasByUuid, saveLocalCanvas } from '../../services/canvas-storage.service.js';
 import { renderIcons } from '../../services/icon.service.js';
+import { removeImageBackground } from '../../services/image-ai.service.js';
 import { showToast } from '../../services/toast.service.js';
 import { CanvasItem } from '../../types/canvas.types.js';
 import { ViewController } from '../../types/common.types.js';
 import { MindMapProject } from '../../types/mindmap.types.js';
-import { initCarouselScroll, setupDropdown } from '../../utils/dom.util.js';
+import { initCarouselScroll, setupDropdown, withButtonLoading } from '../../utils/dom.util.js';
 import { validateAndSanitizeFile } from '../../utils/validators.util.js';
 import { DocCollaborationManager, DocCollaboratorState } from './doc-collaboration.manager.js';
 import { exportDocHtml, exportDocJson, exportDocMarkdown, exportDocPdf, exportDocTxt, exportDocWord, generateDocThumbnail } from './doc-export.service.js';
@@ -1811,6 +1813,48 @@ export class DocController implements ViewController {
       }
       this.recordChange();
     }, { signal });
+
+    const btnImgRemoveBg = this.container.querySelector<HTMLButtonElement>('[data-ref="img-btn-remove-bg"]');
+    if (btnImgRemoveBg) {
+      btnImgRemoveBg.addEventListener('click', async () => {
+        const userTier = (currentUser?.subscription_tier || 'free').toLowerCase();
+        const isProOrBusiness = ['pro', 'business', 'ultra', 'plus', 'enterprise'].includes(userTier);
+        if (!isProOrBusiness) {
+          openUpgradeModal('pro');
+          showToast('La eliminación de fondo con IA está disponible para planes Pro y Negocios', 'info');
+          return;
+        }
+
+        if (!this.selectedImageWrapper) return;
+        const img = this.selectedImageWrapper.querySelector<HTMLImageElement>('img');
+        if (!img || !img.src) {
+          showToast('No se encontró una imagen válida para procesar', 'warning');
+          return;
+        }
+
+        const currentWrapper = this.selectedImageWrapper;
+        currentWrapper.classList.add('is-processing-bg-removal');
+
+        await withButtonLoading(btnImgRemoveBg, async () => {
+          showToast('Eliminando fondo con IA...', 'info');
+          try {
+            const result = await removeImageBackground(img.src);
+            if (result.success && result.url) {
+              img.src = result.url;
+              this.recordChange();
+              showToast('Fondo eliminado exitosamente', 'success');
+            } else {
+              if ((result as any).upgradeRequired) {
+                openUpgradeModal('pro');
+              }
+              showToast(result.error || 'No se pudo eliminar el fondo de la imagen', 'error');
+            }
+          } finally {
+            currentWrapper.classList.remove('is-processing-bg-removal');
+          }
+        });
+      }, { signal });
+    }
 
     const btnImgReplace = this.container.querySelector<HTMLElement>('[data-ref="img-btn-replace"]');
     const fileInputReplace = this.container.querySelector<HTMLInputElement>('[data-ref="input-file-replace-img"]');
