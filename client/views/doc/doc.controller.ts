@@ -1,5 +1,6 @@
 import { CanvasAiDropdownController, setupDocAiDropdown } from '../../components/canvas-ai-dropdown.component.js';
-import { CanvasFileMenuController, setupCanvasFileMenu } from '../../components/canvas-file-menu.component.js';
+import { CanvasFileMenuController, CanvasPageViewMode, setupCanvasFileMenu } from '../../components/canvas-file-menu.component.js';
+import { CanvasGridViewModalController, openCanvasGridView } from '../../components/canvas-grid-view.component.js';
 import { openCanvasMetricsModal } from '../../components/canvas-metrics-modal.component.js';
 import { CanvasShareDropdownController, setupCanvasShareDropdown } from '../../components/canvas-share-dropdown.component.js';
 import { closeContextMenu, ContextMenuItem, openContextMenu } from '../../components/context-menu.component.js';
@@ -52,6 +53,7 @@ export class DocController implements ViewController {
   private abortController: AbortController = new AbortController();
   private accessLevel: 'private' | 'public' = 'private';
   private activeInspiringQuote: string = INSPIRING_QUOTES[Math.floor(Math.random() * INSPIRING_QUOTES.length)] || INSPIRING_QUOTES[0];
+  private activeDocPageIndex = 0;
   private activePreviewSnapshotUuid: string | null = null;
   private activeTable: HTMLTableElement | null = null;
   private activeTableCell: HTMLTableCellElement | null = null;
@@ -75,10 +77,12 @@ export class DocController implements ViewController {
   private currentCanvasItem: CanvasItem | null = null;
   private currentHighlightColor = '#fef08a';
   private currentTextColor = '#0f172a';
+  private docPagesTrayEl: HTMLElement | null = null;
   private docToolsDropdownController: { close: () => void; destroy: () => void } | null = null;
   private fileMenuController: CanvasFileMenuController | null = null;
   private fileMenuWrapperEl: HTMLElement | null = null;
   private fontPicker: DocFontPickerComponent | null = null;
+  private gridViewModal: CanvasGridViewModalController | null = null;
   private historyManager: DocHistoryManager = new DocHistoryManager();
   private indentsDropdownController: { close: () => void; destroy: () => void } | null = null;
   private initialCanvasRecord: CanvasItem | null = null;
@@ -86,8 +90,10 @@ export class DocController implements ViewController {
   private isPreviewingSnapshot = false;
   private isSaving = false;
   private lastActivePageId: string | null = null;
+  private lastWheelSwitchTime = 0;
   private lineSpacingDropdownController: { close: () => void; destroy: () => void } | null = null;
   private moreFormattingDropdownController: { close: () => void; destroy: () => void } | null = null;
+  private pageViewMode: CanvasPageViewMode = 'scroll';
   private paginationManager: DocPaginationManager = new DocPaginationManager();
   private prePreviewProject: DocProject | null = null;
   private previewBannerEl: HTMLElement | null = null;
@@ -151,6 +157,8 @@ export class DocController implements ViewController {
 
     this.historyManager.pushState(this.project);
     ensureGoogleFontLoaded(this.project.settings.fontFamily);
+    this.initDocPagesTray();
+    this.initDocPageViewMode();
     this.renderDocument();
     this.bindEvents();
     this.initSidePanelsUI();
@@ -171,8 +179,12 @@ export class DocController implements ViewController {
     this.aiDropdownController = null;
     this.fileMenuController?.destroy();
     this.fileMenuController = null;
+    this.gridViewModal?.destroy();
+    this.gridViewModal = null;
     this.shareDropdownController?.destroy();
     this.shareDropdownController = null;
+    this.docPagesTrayEl?.remove();
+    this.docPagesTrayEl = null;
     this.abortController.abort();
     this.alignmentDropdownController?.destroy();
     this.docToolsDropdownController?.destroy();
@@ -499,6 +511,10 @@ export class DocController implements ViewController {
 
     this.bindPageEvents();
     this.initExistingImages();
+    if (this.pageViewMode === 'single-page') {
+      this.applySinglePageView();
+    }
+    this.updateDocThumbnailsTray();
     renderIcons(pagesContainer);
   }
 
@@ -566,6 +582,7 @@ export class DocController implements ViewController {
         canvasTitle: this.canvasTitle,
         canvasType: 'doc',
         canvasUuid: this.canvasUuid,
+        currentPageViewMode: this.pageViewMode,
         folderUuid: this.currentCanvasItem?.folder_uuid || null,
         generateThumbnail: () => generateDocThumbnail(this.project),
         getCurrentProjectData: () => {
@@ -574,6 +591,9 @@ export class DocController implements ViewController {
         },
         isFavorite: Boolean(this.currentCanvasItem?.is_favorite),
         isOwner,
+        onChangePageViewMode: (mode) => {
+          this.setPageViewMode(mode);
+        },
         onExitPreview: () => {
           this.exitSnapshotPreview();
         },
@@ -2526,6 +2546,272 @@ export class DocController implements ViewController {
         clone.querySelectorAll('.doc-image-wrapper').forEach((w) => w.classList.remove('is-selected'));
         page.contentHtml = clone.innerHTML;
       }
+    });
+  }
+
+  private setPageViewMode(mode: CanvasPageViewMode): void {
+    this.pageViewMode = mode;
+    this.fileMenuController?.setPageViewMode(mode);
+    const viewport = this.container.querySelector<HTMLElement>('[data-ref="doc-viewport"]');
+
+    if (mode === 'scroll') {
+      viewport?.classList.remove('is-single-page');
+      this.container.querySelectorAll<HTMLElement>('.doc-page').forEach((el) => {
+        el.classList.remove('is-page-hidden');
+      });
+      this.hideDocPagesTray();
+      this.scrollToPage(this.activeDocPageIndex);
+    } else if (mode === 'single-page') {
+      viewport?.classList.add('is-single-page');
+      this.applySinglePageView();
+      this.hideDocPagesTray();
+    } else if (mode === 'thumbnails') {
+      viewport?.classList.remove('is-single-page');
+      this.container.querySelectorAll<HTMLElement>('.doc-page').forEach((el) => {
+        el.classList.remove('is-page-hidden');
+      });
+      this.toggleDocPagesTray();
+    } else if (mode === 'grid') {
+      this.openDocGridView();
+    }
+  }
+
+  private initDocPageViewMode(): void {
+    const viewport = this.container.querySelector<HTMLElement>('[data-ref="doc-viewport"]');
+    if (!viewport) return;
+
+    viewport.addEventListener('wheel', (e: WheelEvent) => {
+      if (this.pageViewMode !== 'single-page') return;
+      if (Math.abs(e.deltaY) < 25) return;
+
+      const now = Date.now();
+      if (now - this.lastWheelSwitchTime < 350) return;
+
+      if (e.deltaY > 0) {
+        if (this.activeDocPageIndex < this.project.pages.length - 1) {
+          this.lastWheelSwitchTime = now;
+          this.activeDocPageIndex++;
+          this.applySinglePageView();
+        }
+      } else {
+        if (this.activeDocPageIndex > 0) {
+          this.lastWheelSwitchTime = now;
+          this.activeDocPageIndex--;
+          this.applySinglePageView();
+        }
+      }
+    }, { passive: true, signal: this.abortController.signal });
+  }
+
+  private applySinglePageView(): void {
+    const viewport = this.container.querySelector<HTMLElement>('[data-ref="doc-viewport"]');
+    if (this.pageViewMode === 'single-page') {
+      viewport?.classList.add('is-single-page');
+    }
+    const pages = this.project.pages;
+    if (this.activeDocPageIndex < 0) this.activeDocPageIndex = 0;
+    if (this.activeDocPageIndex >= pages.length) this.activeDocPageIndex = pages.length - 1;
+
+    const activePage = pages[this.activeDocPageIndex];
+    this.container.querySelectorAll<HTMLElement>('.doc-page').forEach((pageEl) => {
+      const pageId = pageEl.getAttribute('data-page-id');
+      if (pageId === activePage?.id) {
+        pageEl.classList.remove('is-page-hidden');
+      } else {
+        pageEl.classList.add('is-page-hidden');
+      }
+    });
+
+    if (viewport) {
+      viewport.scrollTop = 0;
+    }
+    this.updateDocThumbnailsTray();
+    this.updateStats();
+  }
+
+  private scrollToPage(pageIndex: number): void {
+    if (pageIndex < 0 || pageIndex >= this.project.pages.length) return;
+    this.activeDocPageIndex = pageIndex;
+    if (this.pageViewMode === 'single-page') {
+      this.applySinglePageView();
+      return;
+    }
+    const page = this.project.pages[pageIndex];
+    if (page) {
+      const pageEl = this.container.querySelector<HTMLElement>(`[data-ref="doc-page-${page.id}"]`);
+      pageEl?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    this.updateDocThumbnailsTray();
+  }
+
+  private openDocGridView(): void {
+    this.syncPagesFromDOM();
+    const gridPages = this.project.pages.map((p, idx) => ({
+      contentHtml: p.contentHtml,
+      id: p.id,
+      index: idx,
+      name: `Página ${idx + 1}`,
+    }));
+
+    this.gridViewModal?.destroy();
+    this.gridViewModal = openCanvasGridView({
+      activePageIndex: this.activeDocPageIndex,
+      canvasType: 'doc',
+      onAddPage: () => {
+        this.addNewDocPage();
+        this.refreshGridView();
+      },
+      onClose: (selectedPageIndex) => {
+        if (typeof selectedPageIndex === 'number') {
+          this.scrollToPage(selectedPageIndex);
+        }
+      },
+      onDeletePages: (indices) => {
+        this.deleteDocPages(indices);
+        this.refreshGridView();
+      },
+      onDuplicatePages: (indices) => {
+        this.duplicateDocPages(indices);
+        this.refreshGridView();
+      },
+      onSelectPage: (idx) => {
+        this.activeDocPageIndex = idx;
+      },
+      pages: gridPages,
+      signal: this.abortController.signal,
+    });
+    this.gridViewModal.open();
+  }
+
+  private refreshGridView(): void {
+    this.syncPagesFromDOM();
+    const gridPages = this.project.pages.map((p, idx) => ({
+      contentHtml: p.contentHtml,
+      id: p.id,
+      index: idx,
+      name: `Página ${idx + 1}`,
+    }));
+    this.gridViewModal?.setPages(gridPages, this.activeDocPageIndex);
+  }
+
+  private addNewDocPage(afterIndex?: number): void {
+    const targetIdx = afterIndex ?? this.activeDocPageIndex;
+    const newPage = this.paginationManager.addPage(this.project, targetIdx);
+    this.activeDocPageIndex = this.project.pages.findIndex((p) => p.id === newPage.id);
+    this.renderDocument();
+    this.recordChange();
+    this.updateDocThumbnailsTray();
+    if (this.pageViewMode === 'single-page') {
+      this.applySinglePageView();
+    }
+    showToast('Nueva página añadida', 'success');
+  }
+
+  private duplicateDocPages(indices: number[]): void {
+    const sorted = [...indices].sort((a, b) => b - a);
+    for (const idx of sorted) {
+      const original = this.project.pages[idx];
+      if (original) {
+        const copy: DocPage = {
+          contentHtml: original.contentHtml,
+          id: `page_${crypto.randomUUID().slice(0, 8)}`,
+        };
+        this.project.pages.splice(idx + 1, 0, copy);
+      }
+    }
+    this.renderDocument();
+    this.recordChange();
+    this.updateDocThumbnailsTray();
+    if (this.pageViewMode === 'single-page') {
+      this.applySinglePageView();
+    }
+    showToast('Páginas duplicadas', 'success');
+  }
+
+  private deleteDocPages(indices: number[]): void {
+    if (this.project.pages.length <= indices.length) {
+      showToast('No puedes eliminar todas las páginas del documento', 'info');
+      return;
+    }
+    const set = new Set(indices);
+    this.project.pages = this.project.pages.filter((_, idx) => !set.has(idx));
+    if (this.project.pages.length === 0) {
+      this.paginationManager.addPage(this.project);
+    }
+    this.activeDocPageIndex = Math.min(this.activeDocPageIndex, this.project.pages.length - 1);
+    this.renderDocument();
+    this.recordChange();
+    this.updateDocThumbnailsTray();
+    if (this.pageViewMode === 'single-page') {
+      this.applySinglePageView();
+    }
+    showToast('Páginas eliminadas', 'success');
+  }
+
+  private initDocPagesTray(): void {
+    let tray = this.container.querySelector<HTMLElement>('[data-ref="doc-pages-tray"]');
+    if (!tray) {
+      tray = document.createElement('div');
+      tray.className = 'doc-pages-tray is-hidden';
+      tray.setAttribute('data-ref', 'doc-pages-tray');
+      const viewportWrapper = this.container.querySelector<HTMLElement>('[data-ref="doc-viewport-wrapper"]') || this.container;
+      viewportWrapper.appendChild(tray);
+    }
+    this.docPagesTrayEl = tray;
+    this.updateDocThumbnailsTray();
+  }
+
+  private toggleDocPagesTray(): void {
+    if (!this.docPagesTrayEl) {
+      this.initDocPagesTray();
+    }
+    this.docPagesTrayEl?.classList.toggle('is-hidden');
+    if (!this.docPagesTrayEl?.classList.contains('is-hidden')) {
+      this.updateDocThumbnailsTray();
+    }
+  }
+
+  private hideDocPagesTray(): void {
+    this.docPagesTrayEl?.classList.add('is-hidden');
+  }
+
+  private updateDocThumbnailsTray(): void {
+    if (!this.docPagesTrayEl) return;
+    const pages = this.project.pages;
+    this.docPagesTrayEl.innerHTML = `
+      <div class="doc-pages-tray__cards" data-ref="doc-pages-tray-cards">
+        ${pages.map((p, idx) => {
+          const isActive = idx === this.activeDocPageIndex;
+          const temp = document.createElement('div');
+          temp.innerHTML = p.contentHtml || '';
+          const previewText = (temp.textContent || temp.innerText || '').trim().slice(0, 100);
+          return `
+            <div class="doc-page-thumb-card${isActive ? ' is-active' : ''}" data-ref="doc-thumb-${p.id}" data-index="${idx}">
+              <div class="doc-page-thumb-card__preview">${escapeHtml(previewText || 'Página ' + (idx + 1))}</div>
+              <span class="doc-page-thumb-card__badge">${idx + 1}</span>
+            </div>
+          `;
+        }).join('')}
+        <div class="doc-page-thumb-card doc-page-thumb-card--add" data-ref="doc-thumb-add" data-tooltip="Añadir página">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+        </div>
+      </div>
+    `;
+    renderIcons(this.docPagesTrayEl);
+
+    this.docPagesTrayEl.querySelectorAll<HTMLElement>('.doc-page-thumb-card:not(.doc-page-thumb-card--add)').forEach((card) => {
+      const idxStr = card.getAttribute('data-index');
+      if (idxStr !== null) {
+        const idx = parseInt(idxStr, 10);
+        card.addEventListener('click', () => {
+          this.scrollToPage(idx);
+        });
+      }
+    });
+
+    const addCard = this.docPagesTrayEl.querySelector<HTMLElement>('[data-ref="doc-thumb-add"]');
+    addCard?.addEventListener('click', () => {
+      this.addNewDocPage();
     });
   }
 

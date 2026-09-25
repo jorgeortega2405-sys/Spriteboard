@@ -1,6 +1,7 @@
 import { CanvasAiDropdownController, setupPresentationAiDropdown } from '../../components/canvas-ai-dropdown.component.js';
 import { CanvasCommentsController } from '../../components/canvas-comments.component.js';
-import { CanvasFileMenuController, setupCanvasFileMenu } from '../../components/canvas-file-menu.component.js';
+import { CanvasFileMenuController, CanvasPageViewMode, setupCanvasFileMenu } from '../../components/canvas-file-menu.component.js';
+import { CanvasGridViewModalController, openCanvasGridView } from '../../components/canvas-grid-view.component.js';
 import { openCanvasMetricsModal } from '../../components/canvas-metrics-modal.component.js';
 import { CanvasShareDropdownController, setupCanvasShareDropdown } from '../../components/canvas-share-dropdown.component.js';
 import { closeContextMenu, ContextMenuItem, openContextMenu } from '../../components/context-menu.component.js';
@@ -88,9 +89,11 @@ export class PresentationController {
   private drawSubtool: 'eraser' | 'highlighter' | 'marker' | 'pen' = 'pen';
   private effectsPanel: BoardEffectsPanelComponent | null = null;
   private fontPicker: DocFontPickerComponent | null = null;
+  private gridViewModal: CanvasGridViewModalController | null = null;
   private groupResizeSnapshots: Map<string, ElementResizeSnapshot> = new Map();
   private hasInitialFit: boolean = false;
   private fileMenuController: CanvasFileMenuController | null = null;
+  private pageViewMode: CanvasPageViewMode = 'scroll';
   private isDragging: boolean = false;
   private isDrawing: boolean = false;
   private isEyedropperActive: boolean = false;
@@ -186,6 +189,8 @@ export class PresentationController {
     this.aiDropdownController = null;
     this.fileMenuController?.destroy();
     this.fileMenuController = null;
+    this.gridViewModal?.destroy();
+    this.gridViewModal = null;
     this.shareDropdownController?.destroy();
     this.shareDropdownController = null;
     this.chartsPanel?.destroy();
@@ -774,11 +779,15 @@ export class PresentationController {
         canvasTitle: this.canvasRecord?.name || 'Presentación',
         canvasType: 'presentation',
         canvasUuid: this.canvasUuid,
+        currentPageViewMode: this.pageViewMode,
         folderUuid: this.canvasRecord?.folder_uuid || null,
         generateThumbnail: () => generateThumbnail(this.getActiveSlide().elements, this.getActiveSlide().background || { color: '#ffffff', type: 'solid' }, (sctx, el) => this.drawElementOn(sctx, el)),
         getCurrentProjectData: () => this.getProjectData(),
         isFavorite: Boolean(this.canvasRecord?.is_favorite),
         isOwner: true,
+        onChangePageViewMode: (mode) => {
+          this.setPageViewMode(mode);
+        },
         onExitPreview: () => this.exitSnapshotPreview(),
         onPreviewSnapshot: (uuid, data) => this.previewSnapshot(uuid, data),
         onRestoreSnapshot: (_uuid, data) => this.restoreSnapshot(data),
@@ -4444,6 +4453,108 @@ export class PresentationController {
       card.addEventListener('click', () => this.selectSlide(slide.id));
       cardsList.appendChild(card);
     });
+  }
+
+  private setPageViewMode(mode: CanvasPageViewMode): void {
+    this.pageViewMode = mode;
+    this.fileMenuController?.setPageViewMode(mode);
+    const tray = this.container.querySelector<HTMLElement>('[data-ref="design-pages-tray"]');
+
+    if (mode === 'scroll') {
+      tray?.classList.add('is-hidden');
+    } else if (mode === 'single-page') {
+      tray?.classList.add('is-hidden');
+      this.selectSlide(this.activeSlideId);
+    } else if (mode === 'thumbnails') {
+      tray?.classList.remove('is-hidden');
+      this.renderSlidesTray();
+    } else if (mode === 'grid') {
+      this.openPresentationGridView();
+    }
+  }
+
+  private openPresentationGridView(): void {
+    const gridPages = this.slides.map((s, idx) => ({
+      elements: s.elements,
+      id: s.id,
+      index: idx,
+      name: s.name || `Diapositiva ${idx + 1}`,
+      thumbnailUrl: generateThumbnail(s.elements, s.background || { color: '#ffffff', type: 'solid' }, (sctx, el) => this.drawElementOn(sctx, el)),
+    }));
+
+    this.gridViewModal?.destroy();
+    this.gridViewModal = openCanvasGridView({
+      activePageIndex: this.getActiveSlideIndex(),
+      canvasType: 'presentation',
+      onAddPage: () => {
+        this.addSlide();
+        this.refreshPresentationGridView();
+      },
+      onClose: (selectedPageIndex) => {
+        if (typeof selectedPageIndex === 'number' && this.slides[selectedPageIndex]) {
+          this.selectSlide(this.slides[selectedPageIndex].id);
+        }
+      },
+      onDeletePages: (indices) => {
+        if (this.slides.length <= indices.length) {
+          showToast('No puedes eliminar todas las diapositivas', 'warning');
+          return;
+        }
+        const set = new Set(indices);
+        this.saveHistoryState();
+        this.slides = this.slides.filter((_, idx) => !set.has(idx));
+        this.activeSlideId = this.slides[0].id;
+        this.selectedSlideId = this.slides[0].id;
+        this.renderSlidesTray();
+        this.render();
+        this.scheduleAutoSave();
+        this.refreshPresentationGridView();
+        showToast('Diapositivas eliminadas', 'success');
+      },
+      onDuplicatePages: (indices) => {
+        this.saveHistoryState();
+        const sorted = [...indices].sort((a, b) => b - a);
+        for (const idx of sorted) {
+          const slide = this.slides[idx];
+          if (slide) {
+            const newSlide: PresentationSlideItem = {
+              background: slide.background ? { ...slide.background } : { color: '#ffffff', type: 'solid' },
+              camera: { x: 0, y: 0, zoom: 1 },
+              createdAt: Date.now(),
+              duration: slide.duration || this.slideDuration,
+              elements: JSON.parse(JSON.stringify(slide.elements)),
+              id: `slide-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+              name: `${slide.name} (Copia)`,
+            };
+            this.slides.splice(idx + 1, 0, newSlide);
+          }
+        }
+        this.renderSlidesTray();
+        this.render();
+        this.scheduleAutoSave();
+        this.refreshPresentationGridView();
+        showToast('Diapositivas duplicadas', 'success');
+      },
+      onSelectPage: (idx) => {
+        if (this.slides[idx]) {
+          this.selectSlide(this.slides[idx].id);
+        }
+      },
+      pages: gridPages,
+      signal: this.abortController?.signal,
+    });
+    this.gridViewModal.open();
+  }
+
+  private refreshPresentationGridView(): void {
+    const gridPages = this.slides.map((s, idx) => ({
+      elements: s.elements,
+      id: s.id,
+      index: idx,
+      name: s.name || `Diapositiva ${idx + 1}`,
+      thumbnailUrl: generateThumbnail(s.elements, s.background || { color: '#ffffff', type: 'solid' }, (sctx, el) => this.drawElementOn(sctx, el)),
+    }));
+    this.gridViewModal?.setPages(gridPages, this.getActiveSlideIndex());
   }
 
   public drawElementOn(ctx: CanvasRenderingContext2D, el: BoardElement): void {

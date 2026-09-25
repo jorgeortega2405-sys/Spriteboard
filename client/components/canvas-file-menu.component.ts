@@ -11,15 +11,19 @@ import { openCreateCanvasModal } from './create-canvas-modal.component.js';
 import { openModal } from './modal.component.js';
 import { openMoveCanvasModal } from './move-canvas-modal.component.js';
 
+export type CanvasPageViewMode = 'single-page' | 'thumbnails' | 'scroll' | 'grid';
+
 export interface CanvasFileMenuOptions {
   canvasTitle?: string;
   canvasType: 'board' | 'doc' | 'presentation';
   canvasUuid: string;
+  currentPageViewMode?: CanvasPageViewMode;
   folderUuid?: string | null;
   generateThumbnail?: () => string | Promise<string>;
   getCurrentProjectData?: () => any;
   isFavorite?: boolean;
   isOwner?: boolean;
+  onChangePageViewMode?: (mode: CanvasPageViewMode) => void;
   onExitPreview?: () => void;
   onMoved?: () => void;
   onPreviewSnapshot?: (snapshotUuid: string, projectData: any) => void;
@@ -35,16 +39,18 @@ export interface CanvasFileMenuController {
   open: () => void;
   openHistory: () => void;
   setFavorite: (isFav: boolean) => void;
+  setPageViewMode: (mode: CanvasPageViewMode) => void;
   setTitle: (title: string) => void;
   toggle: () => void;
   update: () => void;
 }
 
 export function setupCanvasFileMenu(options: CanvasFileMenuOptions): CanvasFileMenuController {
-  const { canvasType, canvasUuid, folderUuid, generateThumbnail, getCurrentProjectData, isOwner, onExitPreview, onMoved, onPreviewSnapshot, onRestoreSnapshot, signal, trigger, wrapper } = options;
+  const { canvasType, canvasUuid, folderUuid, generateThumbnail, getCurrentProjectData, isOwner, onChangePageViewMode, onExitPreview, onMoved, onPreviewSnapshot, onRestoreSnapshot, signal, trigger, wrapper } = options;
 
   let currentTitle = options.canvasTitle || (canvasType === 'doc' ? 'Documento sin título' : canvasType === 'presentation' ? 'Presentación sin título' : 'Pizarrón sin título');
   let isFavoriteState = Boolean(options.isFavorite);
+  let pageViewModeState: CanvasPageViewMode = options.currentPageViewMode || 'scroll';
 
   let backdrop = wrapper.querySelector<HTMLElement>('[data-ref="dropdown-backdrop-file-menu"]');
   let menu = wrapper.querySelector<HTMLElement>('[data-ref="dropdown-menu-file-menu"]');
@@ -72,10 +78,41 @@ export function setupCanvasFileMenu(options: CanvasFileMenuOptions): CanvasFileM
               <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
               <span class="menu-item__text">Crear una copia</span>
             </button>
-            <button type="button" class="menu-item" data-action="page-view" data-ref="menu-item-page-view">
-              <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
-              <span class="menu-item__text">Visualización de la página</span>
-            </button>
+
+            <div class="menu-item-submenu-wrapper" data-ref="submenu-wrapper-page-view">
+              <button type="button" class="menu-item menu-item--has-submenu" data-action="toggle-page-view-submenu" data-ref="menu-item-page-view">
+                <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
+                <span class="menu-item__text">Visualización de la página</span>
+                <svg class="component-icon menu-item__chevron" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+              </button>
+              <div class="dropdown-backdrop is-hidden" data-ref="dropdown-backdrop-page-view">
+                <div class="menu-panel menu-panel--dropdown menu-panel--w-220 menu-panel--h-auto canvas-file-submenu" data-ref="dropdown-menu-page-view">
+                  <div class="menu-panel__list" data-ref="submenu-list-page-view">
+                    <button type="button" class="menu-item" data-action="view-single-page" data-ref="menu-item-view-single-page">
+                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#crop_square"></use></svg>
+                      <span class="menu-item__text">Una sola página</span>
+                      <svg class="component-icon menu-item__check is-hidden" data-ref="check-view-single-page" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                    </button>
+                    <button type="button" class="menu-item" data-action="view-thumbnails" data-ref="menu-item-view-thumbnails">
+                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#auto_awesome_motion"></use></svg>
+                      <span class="menu-item__text">Miniaturas</span>
+                      <svg class="component-icon menu-item__check is-hidden" data-ref="check-view-thumbnails" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                    </button>
+                    <button type="button" class="menu-item" data-action="view-scroll" data-ref="menu-item-view-scroll">
+                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#swap_vert"></use></svg>
+                      <span class="menu-item__text">Desplazar</span>
+                      <svg class="component-icon menu-item__check is-hidden" data-ref="check-view-scroll" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                    </button>
+                    <button type="button" class="menu-item" data-action="view-grid" data-ref="menu-item-view-grid">
+                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#space_dashboard"></use></svg>
+                      <span class="menu-item__text">Cuadrícula</span>
+                      <svg class="component-icon menu-item__check is-hidden" data-ref="check-view-grid" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <button type="button" class="menu-item" data-action="rulers-guides" data-ref="menu-item-rulers-guides">
               <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#straighten"></use></svg>
               <span class="menu-item__text">Reglas y guías</span>
@@ -132,7 +169,21 @@ export function setupCanvasFileMenu(options: CanvasFileMenuOptions): CanvasFileM
     }
   };
 
+  const updatePageViewUI = () => {
+    if (!menu) return;
+    const checkSingle = menu.querySelector<HTMLElement>('[data-ref="check-view-single-page"]');
+    const checkThumb = menu.querySelector<HTMLElement>('[data-ref="check-view-thumbnails"]');
+    const checkScroll = menu.querySelector<HTMLElement>('[data-ref="check-view-scroll"]');
+    const checkGrid = menu.querySelector<HTMLElement>('[data-ref="check-view-grid"]');
+
+    checkSingle?.classList.toggle('is-hidden', pageViewModeState !== 'single-page');
+    checkThumb?.classList.toggle('is-hidden', pageViewModeState !== 'thumbnails');
+    checkScroll?.classList.toggle('is-hidden', pageViewModeState !== 'scroll');
+    checkGrid?.classList.toggle('is-hidden', pageViewModeState !== 'grid');
+  };
+
   updateFavoriteUI();
+  updatePageViewUI();
 
   const historyModalController: CanvasHistoryModalController = openCanvasHistoryModal({
     canvasTitle: currentTitle,
@@ -156,6 +207,10 @@ export function setupCanvasFileMenu(options: CanvasFileMenuOptions): CanvasFileM
       setFavorite: (val: boolean) => {
         isFavoriteState = val;
       },
+      setPageViewMode: (mode: CanvasPageViewMode) => {
+        pageViewModeState = mode;
+        updatePageViewUI();
+      },
       setTitle: (tVal: string) => {
         currentTitle = tVal;
       },
@@ -172,6 +227,23 @@ export function setupCanvasFileMenu(options: CanvasFileMenuOptions): CanvasFileM
     trigger,
   });
 
+  const submenuWrapper = menu.querySelector<HTMLElement>('[data-ref="submenu-wrapper-page-view"]');
+  const submenuTrigger = menu.querySelector<HTMLElement>('[data-ref="menu-item-page-view"]');
+  const submenuBackdrop = menu.querySelector<HTMLElement>('[data-ref="dropdown-backdrop-page-view"]');
+  const submenuMenu = menu.querySelector<HTMLElement>('[data-ref="dropdown-menu-page-view"]');
+
+  const submenuDropdown = setupDropdown(submenuWrapper, {
+    backdrop: submenuBackdrop,
+    menu: submenuMenu,
+    offset: [0, 4],
+    placement: 'right-start',
+    trigger: submenuTrigger,
+  });
+
+  submenuTrigger?.addEventListener('mouseenter', () => {
+    submenuDropdown.open();
+  });
+
   renderIcons(menu);
 
   menu.addEventListener('click', async (e) => {
@@ -179,6 +251,50 @@ export function setupCanvasFileMenu(options: CanvasFileMenuOptions): CanvasFileM
     if (!item) return;
     const action = item.getAttribute('data-action');
 
+    if (action === 'toggle-page-view-submenu') {
+      submenuDropdown.toggle();
+      return;
+    }
+
+    if (action === 'view-single-page') {
+      pageViewModeState = 'single-page';
+      updatePageViewUI();
+      submenuDropdown.close();
+      dropdown.close();
+      if (onChangePageViewMode) {
+        onChangePageViewMode('single-page');
+      }
+      return;
+    } else if (action === 'view-thumbnails') {
+      pageViewModeState = 'thumbnails';
+      updatePageViewUI();
+      submenuDropdown.close();
+      dropdown.close();
+      if (onChangePageViewMode) {
+        onChangePageViewMode('thumbnails');
+      }
+      return;
+    } else if (action === 'view-scroll') {
+      pageViewModeState = 'scroll';
+      updatePageViewUI();
+      submenuDropdown.close();
+      dropdown.close();
+      if (onChangePageViewMode) {
+        onChangePageViewMode('scroll');
+      }
+      return;
+    } else if (action === 'view-grid') {
+      pageViewModeState = 'grid';
+      updatePageViewUI();
+      submenuDropdown.close();
+      dropdown.close();
+      if (onChangePageViewMode) {
+        onChangePageViewMode('grid');
+      }
+      return;
+    }
+
+    submenuDropdown.close();
     dropdown.close();
 
     if (action === 'new-design') {
@@ -300,14 +416,19 @@ export function setupCanvasFileMenu(options: CanvasFileMenuOptions): CanvasFileM
 
   if (signal) {
     signal.addEventListener('abort', () => {
+      submenuDropdown.destroy();
       dropdown.destroy();
       historyModalController.destroy();
     });
   }
 
   return {
-    close: dropdown.close,
+    close: () => {
+      submenuDropdown.close();
+      dropdown.close();
+    },
     destroy: () => {
+      submenuDropdown.destroy();
       dropdown.destroy();
       historyModalController.destroy();
     },
@@ -317,10 +438,18 @@ export function setupCanvasFileMenu(options: CanvasFileMenuOptions): CanvasFileM
       isFavoriteState = val;
       updateFavoriteUI();
     },
+    setPageViewMode: (mode: CanvasPageViewMode) => {
+      pageViewModeState = mode;
+      updatePageViewUI();
+    },
     setTitle: (tVal: string) => {
       currentTitle = tVal;
     },
     toggle: dropdown.toggle,
-    update: dropdown.update,
+    update: () => {
+      dropdown.update();
+      submenuDropdown.update();
+    },
   };
 }
+

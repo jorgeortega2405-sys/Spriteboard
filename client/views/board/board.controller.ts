@@ -1,6 +1,7 @@
 import { CanvasAiDropdownController, setupBoardAiDropdown } from '../../components/canvas-ai-dropdown.component.js';
 import { CanvasCommentsController } from '../../components/canvas-comments.component.js';
-import { CanvasFileMenuController, setupCanvasFileMenu } from '../../components/canvas-file-menu.component.js';
+import { CanvasFileMenuController, CanvasPageViewMode, setupCanvasFileMenu } from '../../components/canvas-file-menu.component.js';
+import { CanvasGridViewModalController, openCanvasGridView } from '../../components/canvas-grid-view.component.js';
 import { openCanvasMetricsModal } from '../../components/canvas-metrics-modal.component.js';
 import { CanvasShareDropdownController, setupCanvasShareDropdown } from '../../components/canvas-share-dropdown.component.js';
 import { closeContextMenu, ContextMenuItem, openContextMenu } from '../../components/context-menu.component.js';
@@ -75,6 +76,8 @@ export class BoardController {
   private commentsController: CanvasCommentsController | null = null;
   private fileMenuController: CanvasFileMenuController | null = null;
   private fileMenuWrapperEl: HTMLElement | null = null;
+  private gridViewModal: CanvasGridViewModalController | null = null;
+  private pageViewMode: CanvasPageViewMode = 'scroll';
   private isPreviewingSnapshot = false;
   private prePreviewBackground: { color: string; dotColor?: string; type: BackgroundType } | null = null;
   private prePreviewCamera: { x: number; y: number; zoom: number } | null = null;
@@ -455,6 +458,8 @@ export class BoardController {
     this.aiDropdownController = null;
     this.fileMenuController?.destroy();
     this.fileMenuController = null;
+    this.gridViewModal?.destroy();
+    this.gridViewModal = null;
     this.shareDropdownController?.destroy();
     this.shareDropdownController = null;
     this.exportDropdownController?.destroy();
@@ -1116,6 +1121,7 @@ export class BoardController {
         canvasTitle: this.boardName,
         canvasType: 'board',
         canvasUuid: this.canvasUuid,
+        currentPageViewMode: this.pageViewMode,
         folderUuid: this.currentCanvasItem?.folder_uuid || null,
         generateThumbnail: () => generateThumbnail(this.elements, this.boardBackground, (ctx, el) => this.drawElementOn(ctx, el)),
         getCurrentProjectData: () => {
@@ -1132,6 +1138,9 @@ export class BoardController {
         },
         isFavorite: Boolean(this.currentCanvasItem?.is_favorite),
         isOwner: this.isOwner,
+        onChangePageViewMode: (mode) => {
+          this.setPageViewMode(mode);
+        },
         onExitPreview: () => {
           this.exitSnapshotPreview();
         },
@@ -6260,6 +6269,110 @@ export class BoardController {
       this.bottomPagesTextEl.textContent = `${currentNum} / ${totalPages}`;
     }
     this.pagesTray?.sync(this.pages, this.activePageId);
+  }
+
+  private setPageViewMode(mode: CanvasPageViewMode): void {
+    this.pageViewMode = mode;
+    this.fileMenuController?.setPageViewMode(mode);
+
+    if (mode === 'scroll') {
+      // Default board view
+    } else if (mode === 'single-page') {
+      this.zoomToFit();
+    } else if (mode === 'thumbnails') {
+      if (this.pagesTray) {
+        this.pagesTray.toggle();
+        this.btnBottomPages?.classList.toggle('is-active', !!this.pagesTray.isVisible());
+      }
+    } else if (mode === 'grid') {
+      this.openBoardGridView();
+    }
+  }
+
+  private openBoardGridView(): void {
+    this.syncActivePageData();
+    const gridPages = this.pages.map((p, idx) => ({
+      elements: p.elements,
+      id: p.id,
+      index: idx,
+      name: p.name || `Página ${idx + 1}`,
+      thumbnailUrl: generateThumbnail(p.elements, p.background || this.boardBackground, (ctx, el) => this.drawElementOn(ctx, el)),
+    }));
+
+    this.gridViewModal?.destroy();
+    this.gridViewModal = openCanvasGridView({
+      activePageIndex: this.pages.findIndex((p) => p.id === this.activePageId),
+      canvasType: 'board',
+      onAddPage: () => {
+        this.addPage();
+        this.refreshBoardGridView();
+      },
+      onClose: (selectedPageIndex) => {
+        if (typeof selectedPageIndex === 'number' && this.pages[selectedPageIndex]) {
+          this.switchToPage(this.pages[selectedPageIndex].id);
+        }
+      },
+      onDeletePages: (indices) => {
+        if (this.pages.length <= indices.length) {
+          showToast('No puedes eliminar todas las páginas del pizarrón', 'warning');
+          return;
+        }
+        const set = new Set(indices);
+        this.history.pushState(this.elements);
+        this.pages = this.pages.filter((_, idx) => !set.has(idx));
+        this.activePageId = this.pages[0].id;
+        this.elements = this.pages[0].elements || [];
+        this.boardBackground = this.pages[0].background || { color: '#ffffff', dotColor: '#cbd5e1', type: 'dots' };
+        this.camera = this.pages[0].camera || { x: 0, y: 0, zoom: 1 };
+        this.pagesTray?.sync(this.pages, this.activePageId);
+        this.requestRedraw();
+        this.scheduleAutoSave();
+        this.refreshBoardGridView();
+        showToast('Páginas eliminadas', 'success');
+      },
+      onDuplicatePages: (indices) => {
+        this.history.pushState(this.elements);
+        const sorted = [...indices].sort((a, b) => b - a);
+        for (const idx of sorted) {
+          const p = this.pages[idx];
+          if (p) {
+            const copy: BoardPageItem = {
+              background: p.background ? { ...p.background } : { color: '#ffffff', dotColor: '#cbd5e1', type: 'dots' },
+              camera: { ...p.camera },
+              createdAt: Date.now(),
+              elements: JSON.parse(JSON.stringify(p.elements)),
+              id: `page-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+              name: `${p.name} (copia)`,
+            };
+            this.pages.splice(idx + 1, 0, copy);
+          }
+        }
+        this.pagesTray?.sync(this.pages, this.activePageId);
+        this.scheduleAutoSave();
+        this.refreshBoardGridView();
+        showToast('Páginas duplicadas', 'success');
+      },
+      onSelectPage: (idx) => {
+        if (this.pages[idx]) {
+          this.switchToPage(this.pages[idx].id);
+        }
+      },
+      pages: gridPages,
+      signal: this.abortController.signal,
+    });
+    this.gridViewModal.open();
+  }
+
+  private refreshBoardGridView(): void {
+    this.syncActivePageData();
+    const gridPages = this.pages.map((p, idx) => ({
+      elements: p.elements,
+      id: p.id,
+      index: idx,
+      name: p.name || `Página ${idx + 1}`,
+      thumbnailUrl: generateThumbnail(p.elements, p.background || this.boardBackground, (ctx, el) => this.drawElementOn(ctx, el)),
+    }));
+    this.gridViewModal?.setPages(gridPages, this.pages.findIndex((p) => p.id === this.activePageId));
   }
 
   private async saveImmediate(): Promise<void> {
