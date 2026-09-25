@@ -350,11 +350,24 @@ export async function requestDesignerPayoutTransfer(userId: number): Promise<{
     apiVersion: '2025-02-24.acacia' as any,
   });
 
+  const platformAccount = await stripe.accounts.retrieve();
+  const platformCurrency = (platformAccount.default_currency || 'usd').toLowerCase();
+
+  let transferAmount = transferCents;
+  let transferCurrency = 'usd';
+
+  if (platformCurrency !== 'usd') {
+    const fxRate = platformCurrency === 'mxn' ? 20.0 : 1.0;
+    transferAmount = Math.round(transferCents * fxRate);
+    transferCurrency = platformCurrency;
+  }
+
   const transfer = await stripe.transfers.create({
-    amount: transferCents,
-    currency: 'usd',
+    amount: transferAmount,
+    currency: transferCurrency,
     destination: summary.stripe_account_id,
     metadata: {
+      amountUsd: String(summary.available_balance_usd),
       userId: String(userId),
     },
   });
