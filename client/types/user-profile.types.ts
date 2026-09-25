@@ -4,6 +4,8 @@ export interface PublicUserProfile {
   bio: string | null;
   country: string | null;
   created_at: string;
+  designer_handle: string | null;
+  designer_onboarded?: boolean;
   followers_count: number;
   following_count: number;
   id: number;

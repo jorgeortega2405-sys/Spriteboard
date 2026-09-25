@@ -81,6 +81,10 @@
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#category"></use></svg>
                 <span data-i18n="designer.tab_elements">Mis elementos</span>
               </button>
+              <button type="button" class="component-badge component-badge--interactive" data-ref="tab-btn-earnings" data-tab="earnings">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#payments"></use></svg>
+                <span data-i18n="designer.tab_earnings">Ganancias y Pagos</span>
+              </button>
             </div>
           </div>
         </div>
@@ -178,6 +182,154 @@
           <p class="designer-placeholder-card__desc" data-i18n="designer.elements_coming_soon_desc">
             Estamos construyendo el espacio para que diseñadores y creadores puedan subir vectores, stickers, ilustraciones, fuentes y paquetes de iconos para toda la comunidad.
           </p>
+        </div>
+      </div>
+
+      <div class="canvas-section designer-tab-section" data-ref="designer-section-earnings" style="display: none; padding-bottom: 48px;">
+        <div class="canvas-section__header" data-ref="earnings-section-header" style="margin-bottom: 24px;">
+          <div>
+            <h2 class="canvas-section__title" data-ref="earnings-section-title" data-i18n="designer.pool_title">Creator Royalty Pool</h2>
+            <p class="designer-hero__subtitle" data-ref="earnings-section-subtitle" data-i18n="designer.pool_subtitle" style="font-size: 13px; color: var(--text-secondary); margin: 4px 0 0 0; line-height: 1.4;">
+              El 25% de todas las suscripciones PRO mensuales se distribuye proporcionalmente entre los diseñadores según el uso de sus plantillas.
+            </p>
+          </div>
+        </div>
+
+        <div class="designer-pool-grid" data-ref="designer-pool-grid">
+          <div class="designer-pool-card" data-ref="pool-card-total">
+            <div class="designer-pool-card__header">
+              <div class="designer-pool-card__icon designer-pool-card__icon--pool">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#savings"></use></svg>
+              </div>
+              <span class="component-badge component-badge--primary" style="font-size: 11px; font-weight: 600;">25% PRO</span>
+            </div>
+            <span class="designer-pool-card__value" data-ref="pool-val-total">$0.00 USD</span>
+            <span class="designer-pool-card__label" data-i18n="designer.pool_current_month">Fondo del mes en curso</span>
+          </div>
+
+          <div class="designer-pool-card" data-ref="pool-card-uses">
+            <div class="designer-pool-card__header">
+              <div class="designer-pool-card__icon designer-pool-card__icon--uses">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#workspace_premium"></use></svg>
+              </div>
+            </div>
+            <span class="designer-pool-card__value" data-ref="pool-val-uses">0</span>
+            <span class="designer-pool-card__label" data-i18n="designer.pool_your_pro_uses">Tus usos PRO este mes</span>
+          </div>
+
+          <div class="designer-pool-card" data-ref="pool-card-share">
+            <div class="designer-pool-card__header">
+              <div class="designer-pool-card__icon designer-pool-card__icon--share">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#pie_chart"></use></svg>
+              </div>
+            </div>
+            <span class="designer-pool-card__value" data-ref="pool-val-share">0.00%</span>
+            <span class="designer-pool-card__label" data-i18n="designer.pool_your_share">Tu participación del fondo</span>
+          </div>
+
+          <div class="designer-pool-card" data-ref="pool-card-estimated">
+            <div class="designer-pool-card__header">
+              <div class="designer-pool-card__icon designer-pool-card__icon--estimated">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#trending_up"></use></svg>
+              </div>
+              <span class="component-badge component-badge--warning" style="font-size: 11px; font-weight: 600;">Estimado</span>
+            </div>
+            <span class="designer-pool-card__value" data-ref="pool-val-estimated">$0.00 USD</span>
+            <span class="designer-pool-card__label" data-i18n="designer.pool_estimated_earnings">Ganancia estimada este mes</span>
+          </div>
+
+          <div class="designer-pool-card" data-ref="pool-card-balance">
+            <div class="designer-pool-card__header">
+              <div class="designer-pool-card__icon designer-pool-card__icon--balance">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#account_balance_wallet"></use></svg>
+              </div>
+              <span class="component-badge component-badge--success" style="font-size: 11px; font-weight: 600;">Disponible</span>
+            </div>
+            <span class="designer-pool-card__value" data-ref="pool-val-balance">$0.00 USD</span>
+            <span class="designer-pool-card__label" data-i18n="designer.pool_available_balance">Saldo disponible para retirar</span>
+          </div>
+
+          <div class="designer-pool-card" data-ref="pool-card-withdrawn">
+            <div class="designer-pool-card__header">
+              <div class="designer-pool-card__icon designer-pool-card__icon--withdrawn">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+              </div>
+            </div>
+            <span class="designer-pool-card__value" data-ref="pool-val-withdrawn">$0.00 USD</span>
+            <span class="designer-pool-card__label" data-i18n="designer.pool_total_withdrawn">Total transferido a la fecha</span>
+          </div>
+        </div>
+
+        <div class="designer-stripe-card" data-ref="designer-stripe-card" style="margin-top: 24px;">
+          <div class="designer-stripe-card__left">
+            <div class="designer-stripe-card__icon-box">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#credit_card"></use></svg>
+            </div>
+            <div class="designer-stripe-card__content">
+              <div class="designer-stripe-card__title-row">
+                <h3 class="designer-stripe-card__title" data-i18n="designer.stripe_title">Pagos directos con Stripe Connect Express</h3>
+                <span class="component-badge component-badge--neutral" data-ref="stripe-status-badge">
+                  <svg class="component-icon" style="font-size: 14px; width: 14px; height: 14px;" aria-hidden="true"><use href="/icons.svg#sync"></use></svg>
+                  <span data-ref="stripe-status-text">Verificando...</span>
+                </span>
+              </div>
+              <p class="designer-stripe-card__desc" data-ref="stripe-status-desc" data-i18n="designer.stripe_not_connected_desc">
+                Vincula tu cuenta bancaria o tarjeta con Stripe Connect Express para poder retirar tus ganancias acumuladas en USD.
+              </p>
+            </div>
+          </div>
+          <div class="designer-stripe-card__right">
+            <button type="button" class="component-button component-button--h44 component-button--black" data-ref="btn-stripe-connect-action">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#link"></use></svg>
+              <span data-ref="btn-stripe-connect-text" data-i18n="designer.btn_connect_stripe">Vincular con Stripe Connect</span>
+            </button>
+            <button type="button" class="component-button component-button--h44 component-button--primary" data-ref="btn-stripe-withdraw-action" style="display: none;">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#payments"></use></svg>
+              <span data-i18n="designer.btn_withdraw_funds">Retirar fondos a Stripe</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="designer-explainer-card" data-ref="designer-explainer-card" style="margin-top: 24px;">
+          <h4 class="designer-explainer-card__title" data-i18n="designer.how_pool_works_title">¿Cómo funciona el modelo de pagos?</h4>
+          <div class="designer-explainer-card__grid">
+            <div class="designer-explainer-item">
+              <div class="designer-explainer-item__num">1</div>
+              <p class="designer-explainer-item__text" data-i18n="designer.how_pool_works_1">Sostenible y sin riesgo: El fondo está garantizado por el 25% de los ingresos de suscripciones PRO del mes.</p>
+            </div>
+            <div class="designer-explainer-item">
+              <div class="designer-explainer-item__num">2</div>
+              <p class="designer-explainer-item__text" data-i18n="designer.how_pool_works_2">Meritocrático: Mientras más valor aporten tus plantillas PRO a los usuarios, mayor es tu porcentaje del fondo común.</p>
+            </div>
+            <div class="designer-explainer-item">
+              <div class="designer-explainer-item__num">3</div>
+              <p class="designer-explainer-item__text" data-i18n="designer.how_pool_works_3">100% en Dólares (USD): Retira tus fondos a cualquier banco o tarjeta de débito compatible con Stripe en tu país.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="designer-history-section" data-ref="designer-history-section" style="margin-top: 32px;">
+          <h3 class="canvas-section__title" data-i18n="designer.pool_history_title" style="font-size: 16px; margin-bottom: 12px;">Historial de liquidaciones mensuales</h3>
+          <div class="designer-history-table-wrapper" data-ref="designer-history-table-wrapper">
+            <table class="component-table" data-ref="designer-history-table">
+              <thead>
+                <tr>
+                  <th data-i18n="designer.pool_history_period">Periodo</th>
+                  <th data-i18n="designer.pool_history_uses">Usos PRO</th>
+                  <th data-i18n="designer.pool_history_share">Participación</th>
+                  <th class="text-right" data-i18n="designer.pool_history_amount">Total liquidado (USD)</th>
+                  <th data-i18n="designer.pool_history_status">Estado</th>
+                </tr>
+              </thead>
+              <tbody data-ref="designer-history-tbody">
+                <tr>
+                  <td colspan="5" class="designer-history-empty-cell" data-ref="designer-history-empty" style="text-align: center; color: var(--text-secondary); padding: 24px;" data-i18n="designer.pool_history_empty">
+                    Aún no tienes liquidaciones de meses anteriores registradas.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

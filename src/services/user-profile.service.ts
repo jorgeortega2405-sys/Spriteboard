@@ -213,17 +213,17 @@ export async function getUserPublicProfile(
   username: string,
   currentUserId?: number
 ): Promise<PublicUserProfile | null> {
-  const cleanUsername = username.trim().toLowerCase();
+  const cleanUsername = username.trim().replace(/^@+/, '').toLowerCase();
   if (!cleanUsername) return null;
 
   const isSpriteboardOfficial = cleanUsername === 'spriteboard' || cleanUsername === 'spriteboard-oficial' || cleanUsername === 'spriteboard oficial';
 
   const [userRows] = await pool.query<RowDataPacket[]>(
-    `SELECT id, uuid, username, avatar_url, banner_url, bio, country, website_url, role, subscription_tier, created_at 
+    `SELECT id, uuid, username, designer_handle, designer_onboarded, avatar_url, banner_url, bio, country, website_url, role, subscription_tier, created_at 
      FROM users 
-     WHERE LOWER(username) = LOWER(?) 
+     WHERE LOWER(username) = LOWER(?) OR LOWER(designer_handle) = LOWER(?) 
      LIMIT 1`,
-    [cleanUsername]
+    [cleanUsername, cleanUsername]
   );
 
   if (userRows.length === 0) {
@@ -234,6 +234,8 @@ export async function getUserPublicProfile(
         bio: 'Plantillas y recursos oficiales diseñados por el equipo de Spriteboard para ayudarte a crear presentaciones, documentos y lienzos profesionales.',
         country: 'Global',
         created_at: '2024-01-01T00:00:00.000Z',
+        designer_handle: 'spriteboard',
+        designer_onboarded: true,
         followers_count: 3280,
         following_count: 0,
         id: -1,
@@ -308,6 +310,8 @@ export async function getUserPublicProfile(
     bio: u.bio || null,
     country: u.country || null,
     created_at: u.created_at ? new Date(u.created_at).toISOString() : new Date().toISOString(),
+    designer_handle: u.designer_handle || null,
+    designer_onboarded: Boolean(u.designer_onboarded),
     followers_count: followersCount,
     following_count: followingCount,
     id: targetUserId,
@@ -383,9 +387,10 @@ export async function toggleFollowUser(
   followerId: number,
   targetUsername: string
 ): Promise<ToggleFollowResult> {
+  const cleanTarget = targetUsername.trim().replace(/^@+/, '').toLowerCase();
   const [targetRows] = await pool.query<RowDataPacket[]>(
-    'SELECT id, username FROM users WHERE LOWER(username) = LOWER(?) LIMIT 1',
-    [targetUsername.trim().toLowerCase()]
+    'SELECT id, username FROM users WHERE LOWER(username) = LOWER(?) OR LOWER(designer_handle) = LOWER(?) LIMIT 1',
+    [cleanTarget, cleanTarget]
   );
 
   if (targetRows.length === 0) {

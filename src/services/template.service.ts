@@ -1,8 +1,9 @@
 import crypto from 'crypto';
 import mysql from 'mysql2/promise';
 import { canvasPool, pool } from '../config/database.config.js';
-import { logger } from './logger.service.js';
 import { CreateTemplateDto, DesignerTemplateMetrics, TemplateRecord } from '../types/template.types.js';
+import { trackProTemplateUsage } from './creator-pool.service.js';
+import { logger } from './logger.service.js';
 
 export async function publishCanvasAsTemplate(
   userId: number,
@@ -172,6 +173,9 @@ export async function getTemplateByUuid(uuid: string): Promise<TemplateRecord | 
   if (rows.length === 0) return null;
   await canvasPool.query('UPDATE templates SET uses_count = uses_count + 1 WHERE uuid = ?', [uuid]);
   const t = rows[0];
+  if (t.is_premium && !t.is_official && t.user_id) {
+    void trackProTemplateUsage(Number(t.id), Number(t.user_id));
+  }
   let author_username = 'Spriteboard Oficial';
   let author_avatar: string | null = null;
   if (!t.is_official && t.user_id) {

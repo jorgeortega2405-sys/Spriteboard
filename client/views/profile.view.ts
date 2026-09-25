@@ -238,7 +238,8 @@ class ProfileController {
       this.displayNameEl.textContent = this.profile.username;
     }
     if (this.usernameEl) {
-      this.usernameEl.textContent = `@${this.profile.username}`;
+      const handleDisplay = this.profile.designer_handle || this.profile.username;
+      this.usernameEl.textContent = `@${handleDisplay}`;
     }
 
     if (this.badgeDesigner) {

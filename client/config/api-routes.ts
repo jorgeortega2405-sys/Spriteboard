@@ -51,6 +51,15 @@ export const API_ROUTES = {
     byId: (uuid: string) => `/api/folders/${encodeURIComponent(uuid)}`,
     canvases: (uuid: string) => `/api/folders/${encodeURIComponent(uuid)}/canvases`,
   },
+  designer: {
+    checkHandle: (handle: string) => `/api/designer/check-handle?handle=${encodeURIComponent(handle)}`,
+    onboard: '/api/designer/onboard',
+    onboardingStatus: '/api/designer/onboarding-status',
+    poolSummary: '/api/designer/pool/summary',
+    requestPayout: '/api/designer/payouts/request',
+    stripeConnectLink: '/api/designer/stripe-connect/link',
+    stripeConnectStatus: '/api/designer/stripe-connect/status',
+  },
   designerApplications: {
     apply: '/api/designer-applications',
     myStatus: '/api/designer-applications/my-status',

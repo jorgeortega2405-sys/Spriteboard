@@ -1252,6 +1252,116 @@ export async function runMigrations(): Promise<void> {
       logger.db.info('Columna website_url añadida a db_identity.users.');
     }
 
+    const [designerHandleCols] = await conn.query<mysql.RowDataPacket[]>(
+      "SHOW COLUMNS FROM db_identity.users LIKE 'designer_handle'"
+    );
+    if (designerHandleCols.length === 0) {
+      await conn.query('ALTER TABLE db_identity.users ADD COLUMN designer_handle VARCHAR(50) NULL UNIQUE AFTER username');
+      logger.db.info('Columna designer_handle añadida a db_identity.users.');
+    }
+
+    const [designerOnboardedCols] = await conn.query<mysql.RowDataPacket[]>(
+      "SHOW COLUMNS FROM db_identity.users LIKE 'designer_onboarded'"
+    );
+    if (designerOnboardedCols.length === 0) {
+      await conn.query('ALTER TABLE db_identity.users ADD COLUMN designer_onboarded BOOLEAN NOT NULL DEFAULT FALSE AFTER role');
+      logger.db.info('Columna designer_onboarded añadida a db_identity.users.');
+    }
+
+    const [designerOnboardedAtCols] = await conn.query<mysql.RowDataPacket[]>(
+      "SHOW COLUMNS FROM db_identity.users LIKE 'designer_onboarded_at'"
+    );
+    if (designerOnboardedAtCols.length === 0) {
+      await conn.query('ALTER TABLE db_identity.users ADD COLUMN designer_onboarded_at TIMESTAMP NULL AFTER designer_onboarded');
+      logger.db.info('Columna designer_onboarded_at añadida a db_identity.users.');
+    }
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS designer_payout_profiles (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL UNIQUE,
+        payout_type ENUM('stripe_connect', 'direct_debit_card', 'bank_transfer', 'paypal_email') NOT NULL DEFAULT 'stripe_connect',
+        payout_country VARCHAR(10) NOT NULL DEFAULT 'US',
+        payout_currency VARCHAR(10) NOT NULL DEFAULT 'USD',
+        payout_email VARCHAR(255) NULL,
+        stripe_account_id VARCHAR(255) NULL,
+        payouts_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+        details_submitted BOOLEAN NOT NULL DEFAULT FALSE,
+        available_balance_cents INT NOT NULL DEFAULT 0,
+        total_withdrawn_cents INT NOT NULL DEFAULT 0,
+        payout_card_last4 VARCHAR(4) NULL,
+        payout_card_brand VARCHAR(50) NULL,
+        payout_card_token VARCHAR(255) NULL,
+        is_verified BOOLEAN NOT NULL DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_designer_payout_user (user_id),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    const [poolBalanceCols] = await conn.query<mysql.RowDataPacket[]>(
+      "SHOW COLUMNS FROM db_identity.designer_payout_profiles LIKE 'available_balance_cents'"
+    );
+    if (poolBalanceCols.length === 0) {
+      await conn.query('ALTER TABLE db_identity.designer_payout_profiles ADD COLUMN available_balance_cents INT NOT NULL DEFAULT 0 AFTER stripe_account_id');
+      await conn.query('ALTER TABLE db_identity.designer_payout_profiles ADD COLUMN total_withdrawn_cents INT NOT NULL DEFAULT 0 AFTER available_balance_cents');
+      await conn.query('ALTER TABLE db_identity.designer_payout_profiles ADD COLUMN payouts_enabled BOOLEAN NOT NULL DEFAULT FALSE AFTER total_withdrawn_cents');
+      await conn.query('ALTER TABLE db_identity.designer_payout_profiles ADD COLUMN details_submitted BOOLEAN NOT NULL DEFAULT FALSE AFTER payouts_enabled');
+      logger.db.info('Columnas de balance y estado de Stripe añadidas a designer_payout_profiles.');
+    }
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS creator_pool_cycles (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        period_key VARCHAR(7) NOT NULL UNIQUE,
+        total_subscription_revenue_cents INT NOT NULL DEFAULT 0,
+        pool_percentage DECIMAL(5,2) NOT NULL DEFAULT 25.00,
+        pool_amount_cents INT NOT NULL DEFAULT 0,
+        total_pro_uses INT NOT NULL DEFAULT 0,
+        status ENUM('active', 'calculated', 'distributed') NOT NULL DEFAULT 'active',
+        distributed_at TIMESTAMP NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_pool_cycle_period (period_key)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS creator_pool_shares (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        cycle_id INT NOT NULL,
+        designer_id INT NOT NULL,
+        period_key VARCHAR(7) NOT NULL,
+        pro_uses INT NOT NULL DEFAULT 0,
+        share_percentage DECIMAL(6,4) NOT NULL DEFAULT 0.0000,
+        earned_amount_cents INT NOT NULL DEFAULT 0,
+        currency VARCHAR(10) NOT NULL DEFAULT 'USD',
+        status ENUM('estimated', 'distributed', 'paid_out') NOT NULL DEFAULT 'estimated',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_cycle_designer (cycle_id, designer_id),
+        INDEX idx_pool_share_designer (designer_id),
+        FOREIGN KEY (cycle_id) REFERENCES creator_pool_cycles(id) ON DELETE CASCADE,
+        FOREIGN KEY (designer_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS designer_payout_transfers (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        designer_id INT NOT NULL,
+        amount_cents INT NOT NULL,
+        currency VARCHAR(10) NOT NULL DEFAULT 'USD',
+        stripe_transfer_id VARCHAR(255) NULL,
+        status ENUM('pending', 'completed', 'failed') NOT NULL DEFAULT 'pending',
+        failure_reason TEXT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_payout_transfers_designer (designer_id),
+        FOREIGN KEY (designer_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
     await conn.query(`
       CREATE TABLE IF NOT EXISTS user_follows (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -1266,7 +1376,7 @@ export async function runMigrations(): Promise<void> {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
-    logger.db.info('Tablas, columnas e índices de identidad, 2FA, suscripciones, compras, GeoIP, db_canvas, templates, equipos, vistas, feedback IA, cuotas IA, snapshots, notificaciones, soporte técnico, solicitudes de diseñador, kits de marca y seguidores verificadas exitosamente.');
+    logger.db.info('Tablas, columnas e índices de identidad, 2FA, suscripciones, compras, GeoIP, db_canvas, templates, equipos, vistas, feedback IA, cuotas IA, snapshots, notificaciones, soporte técnico, solicitudes de diseñador, kits de marca, diseñadores y seguidores verificadas exitosamente.');
   } catch (err) {
     logger.db.warn('Advertencia en migración de base de datos', err);
   } finally {

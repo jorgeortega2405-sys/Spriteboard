@@ -89,6 +89,8 @@ export interface UserPayload {
   username: string;
   email: string;
   avatar_url?: string | null;
+  designer_handle?: string | null;
+  designer_onboarded?: boolean;
   role?: UserRole;
   roles?: UserRole[];
   google_id?: string | null;
@@ -103,6 +105,8 @@ export interface SessionAccount {
   username: string;
   email: string;
   avatar_url?: string | null;
+  designer_handle?: string | null;
+  designer_onboarded?: boolean;
   role?: UserRole;
   roles?: UserRole[];
   google_id?: string | null;

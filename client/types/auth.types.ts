@@ -38,6 +38,8 @@ export interface User {
   username: string;
   email: string;
   avatar_url?: string | null;
+  designer_handle?: string | null;
+  designer_onboarded?: boolean;
   role?: UserRole;
   roles?: UserRole[];
   subscription_tier?: 'free' | 'pro' | 'business';

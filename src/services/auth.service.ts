@@ -47,6 +47,8 @@ export function createSessionToken(user: UserPayload): string {
         username: user.username,
         email: user.email,
         avatar_url: user.avatar_url ?? null,
+        designer_handle: user.designer_handle ?? null,
+        designer_onboarded: Boolean(user.designer_onboarded),
         role: user.role || 'USER',
         roles: user.roles || (user.role ? [user.role] : ['USER']),
         google_id: user.google_id ?? null,

@@ -1,4 +1,5 @@
 import { navigate } from '../app-router.js';
+import { openDesignerOnboardingModal } from '../components/designer-onboarding-modal.component.js';
 import { openModal } from '../components/modal.component.js';
 import { openTemplatePreviewModal } from '../components/template-preview-modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
@@ -9,8 +10,8 @@ import { SkeletonService } from '../services/skeleton.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { canPublishTemplates } from '../types/auth.types.js';
-import { DesignerMetrics } from '../types/designer.types.js';
-import { debounce, removeEmptyState, renderEmptyState, setupDropdown, setupLazyImages } from '../utils/dom.util.js';
+import { CreatorPoolSummary, DesignerMetrics } from '../types/designer.types.js';
+import { debounce, removeEmptyState, renderEmptyState, setupDropdown, setupLazyImages, withButtonLoading } from '../utils/dom.util.js';
 
 class DesignerController {
   private container: HTMLElement;
@@ -18,7 +19,8 @@ class DesignerController {
 
   private templates: any[] = [];
   private metrics: DesignerMetrics | null = null;
-  private activeTab: 'templates' | 'elements' = 'templates';
+  private poolSummary: CreatorPoolSummary | null = null;
+  private activeTab: 'templates' | 'elements' | 'earnings' = 'templates';
   private filterStatus = 'all';
   private sortOption = 'recent';
   private searchQuery = '';
@@ -33,13 +35,30 @@ class DesignerController {
 
   private tabBtnTemplates: HTMLElement | null = null;
   private tabBtnElements: HTMLElement | null = null;
+  private tabBtnEarnings: HTMLElement | null = null;
   private sectionTemplates: HTMLElement | null = null;
   private sectionElements: HTMLElement | null = null;
+  private sectionEarnings: HTMLElement | null = null;
 
   private metricValPublished: HTMLElement | null = null;
   private metricValUses: HTMLElement | null = null;
   private metricValPending: HTMLElement | null = null;
   private metricValDrafts: HTMLElement | null = null;
+
+  private poolValTotal: HTMLElement | null = null;
+  private poolValUses: HTMLElement | null = null;
+  private poolValShare: HTMLElement | null = null;
+  private poolValEstimated: HTMLElement | null = null;
+  private poolValBalance: HTMLElement | null = null;
+  private poolValWithdrawn: HTMLElement | null = null;
+
+  private stripeStatusBadge: HTMLElement | null = null;
+  private stripeStatusText: HTMLElement | null = null;
+  private stripeStatusDesc: HTMLElement | null = null;
+  private btnStripeConnectAction: HTMLButtonElement | null = null;
+  private btnStripeConnectText: HTMLElement | null = null;
+  private btnStripeWithdrawAction: HTMLButtonElement | null = null;
+  private designerHistoryTbody: HTMLElement | null = null;
 
   private btnPublicProfile: HTMLButtonElement | null = null;
 
@@ -56,13 +75,30 @@ class DesignerController {
 
     this.tabBtnTemplates = this.container.querySelector<HTMLElement>('[data-ref="tab-btn-templates"]');
     this.tabBtnElements = this.container.querySelector<HTMLElement>('[data-ref="tab-btn-elements"]');
+    this.tabBtnEarnings = this.container.querySelector<HTMLElement>('[data-ref="tab-btn-earnings"]');
     this.sectionTemplates = this.container.querySelector<HTMLElement>('[data-ref="designer-section-templates"]');
     this.sectionElements = this.container.querySelector<HTMLElement>('[data-ref="designer-section-elements"]');
+    this.sectionEarnings = this.container.querySelector<HTMLElement>('[data-ref="designer-section-earnings"]');
 
     this.metricValPublished = this.container.querySelector<HTMLElement>('[data-ref="metric-val-published"]');
     this.metricValUses = this.container.querySelector<HTMLElement>('[data-ref="metric-val-uses"]');
     this.metricValPending = this.container.querySelector<HTMLElement>('[data-ref="metric-val-pending"]');
     this.metricValDrafts = this.container.querySelector<HTMLElement>('[data-ref="metric-val-drafts"]');
+
+    this.poolValTotal = this.container.querySelector<HTMLElement>('[data-ref="pool-val-total"]');
+    this.poolValUses = this.container.querySelector<HTMLElement>('[data-ref="pool-val-uses"]');
+    this.poolValShare = this.container.querySelector<HTMLElement>('[data-ref="pool-val-share"]');
+    this.poolValEstimated = this.container.querySelector<HTMLElement>('[data-ref="pool-val-estimated"]');
+    this.poolValBalance = this.container.querySelector<HTMLElement>('[data-ref="pool-val-balance"]');
+    this.poolValWithdrawn = this.container.querySelector<HTMLElement>('[data-ref="pool-val-withdrawn"]');
+
+    this.stripeStatusBadge = this.container.querySelector<HTMLElement>('[data-ref="stripe-status-badge"]');
+    this.stripeStatusText = this.container.querySelector<HTMLElement>('[data-ref="stripe-status-text"]');
+    this.stripeStatusDesc = this.container.querySelector<HTMLElement>('[data-ref="stripe-status-desc"]');
+    this.btnStripeConnectAction = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-stripe-connect-action"]');
+    this.btnStripeConnectText = this.container.querySelector<HTMLElement>('[data-ref="btn-stripe-connect-text"]');
+    this.btnStripeWithdrawAction = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-stripe-withdraw-action"]');
+    this.designerHistoryTbody = this.container.querySelector<HTMLElement>('[data-ref="designer-history-tbody"]');
 
     this.btnPublicProfile = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-designer-public-profile"]');
 
@@ -95,9 +131,50 @@ class DesignerController {
     this.bindEvents();
 
     await Promise.all([
+      this.checkOnboardingStatus(),
+      this.syncStripeUrlParams(),
       this.loadMetrics(),
       this.loadTemplates(),
+      this.loadPoolSummary(),
     ]);
+  }
+
+  private async syncStripeUrlParams(): Promise<void> {
+    const params = new URLSearchParams(window.location.search);
+    const stripeParam = params.get('stripe_connect');
+    if (stripeParam) {
+      window.history.replaceState({}, document.title, '/designer');
+      this.switchTab('earnings');
+      try {
+        const res = await getApi(API_ROUTES.designer.stripeConnectStatus);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.details_submitted) {
+            showToast('Cuenta de Stripe configurada y vinculada exitosamente.', 'success');
+          } else {
+            showToast('Proceso de verificación en Stripe pendiente o incompleto.', 'warning');
+          }
+        }
+      } catch {}
+    }
+  }
+
+  private async checkOnboardingStatus(): Promise<void> {
+    try {
+      const res = await getApi(API_ROUTES.designer.onboardingStatus);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.is_designer && !data.designer_onboarded) {
+          openDesignerOnboardingModal({
+            onSuccess: () => {
+              void this.loadMetrics();
+              void this.loadTemplates();
+              void this.loadPoolSummary();
+            },
+          });
+        }
+      }
+    } catch {}
   }
 
   private bindEvents(): void {
@@ -105,8 +182,9 @@ class DesignerController {
 
     if (this.btnPublicProfile) {
       this.btnPublicProfile.addEventListener('click', () => {
-        if (currentUser?.username) {
-          navigate(`/p/${currentUser.username}`);
+        const handle = currentUser?.designer_handle || currentUser?.username;
+        if (handle) {
+          navigate(`/p/${handle}`);
         } else {
           navigate('/p/spriteboard');
         }
@@ -122,6 +200,12 @@ class DesignerController {
     if (this.tabBtnElements) {
       this.tabBtnElements.addEventListener('click', () => {
         this.switchTab('elements');
+      }, { signal });
+    }
+
+    if (this.tabBtnEarnings) {
+      this.tabBtnEarnings.addEventListener('click', () => {
+        this.switchTab('earnings');
       }, { signal });
     }
 
@@ -154,9 +238,21 @@ class DesignerController {
         void this.handleGridClick(e);
       }, { signal });
     }
+
+    if (this.btnStripeConnectAction) {
+      this.btnStripeConnectAction.addEventListener('click', () => {
+        void this.handleStripeConnect();
+      }, { signal });
+    }
+
+    if (this.btnStripeWithdrawAction) {
+      this.btnStripeWithdrawAction.addEventListener('click', () => {
+        this.handleStripeWithdraw();
+      }, { signal });
+    }
   }
 
-  private switchTab(tab: 'templates' | 'elements'): void {
+  private switchTab(tab: 'templates' | 'elements' | 'earnings'): void {
     this.activeTab = tab;
 
     if (this.tabBtnTemplates) {
@@ -165,12 +261,22 @@ class DesignerController {
     if (this.tabBtnElements) {
       this.tabBtnElements.classList.toggle('is-active', tab === 'elements');
     }
+    if (this.tabBtnEarnings) {
+      this.tabBtnEarnings.classList.toggle('is-active', tab === 'earnings');
+    }
 
     if (this.sectionTemplates) {
       this.sectionTemplates.style.display = tab === 'templates' ? '' : 'none';
     }
     if (this.sectionElements) {
       this.sectionElements.style.display = tab === 'elements' ? '' : 'none';
+    }
+    if (this.sectionEarnings) {
+      this.sectionEarnings.style.display = tab === 'earnings' ? '' : 'none';
+    }
+
+    if (tab === 'earnings' && !this.poolSummary) {
+      void this.loadPoolSummary();
     }
   }
 
@@ -213,6 +319,164 @@ class DesignerController {
     }
   }
 
+  private async loadPoolSummary(): Promise<void> {
+    try {
+      const res = await getApi(API_ROUTES.designer.poolSummary);
+      if (res.ok) {
+        this.poolSummary = await res.json();
+        this.updatePoolUI();
+      }
+    } catch {}
+  }
+
+  private updatePoolUI(): void {
+    if (!this.poolSummary) return;
+
+    const s = this.poolSummary;
+
+    if (this.poolValTotal) {
+      this.poolValTotal.textContent = `$${s.pool_amount_usd.toFixed(2)} USD`;
+    }
+    if (this.poolValUses) {
+      this.poolValUses.textContent = `${s.designer_pro_uses} usos`;
+    }
+    if (this.poolValShare) {
+      this.poolValShare.textContent = `${s.designer_share_pct.toFixed(2)}%`;
+    }
+    if (this.poolValEstimated) {
+      this.poolValEstimated.textContent = `$${s.designer_estimated_usd.toFixed(2)} USD`;
+    }
+    if (this.poolValBalance) {
+      this.poolValBalance.textContent = `$${s.available_balance_usd.toFixed(2)} USD`;
+    }
+    if (this.poolValWithdrawn) {
+      this.poolValWithdrawn.textContent = `$${s.total_withdrawn_usd.toFixed(2)} USD`;
+    }
+
+    if (this.stripeStatusBadge && this.stripeStatusText && this.stripeStatusDesc) {
+      const isConnected = s.stripe_connected && s.payouts_enabled;
+
+      if (isConnected) {
+        this.stripeStatusBadge.className = 'component-badge component-badge--success';
+        this.stripeStatusBadge.innerHTML = `
+          <svg class="component-icon" style="font-size: 14px; width: 14px; height: 14px;" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+          <span>${t('designer.stripe_connected_badge') || 'Stripe Vinculado'}</span>
+        `;
+        this.stripeStatusDesc.textContent = t('designer.stripe_connected_desc') || 'Tu cuenta de Stripe está configurada y lista para recibir transferencias directas a tu tarjeta o banco en USD.';
+
+        if (this.btnStripeConnectText) {
+          this.btnStripeConnectText.textContent = 'Actualizar cuenta Stripe';
+        }
+        if (this.btnStripeConnectAction) {
+          this.btnStripeConnectAction.className = 'component-button component-button--h44 component-button--outline';
+        }
+
+        if (this.btnStripeWithdrawAction) {
+          this.btnStripeWithdrawAction.style.display = 'inline-flex';
+          this.btnStripeWithdrawAction.disabled = s.available_balance_usd < 100.0;
+          this.btnStripeWithdrawAction.setAttribute('data-tooltip', s.available_balance_usd < 100.0 ? (t('designer.pool_min_payout_notice') || 'Mínimo para retirar: $100.00 USD') : 'Transferir fondos');
+        }
+      } else {
+        this.stripeStatusBadge.className = 'component-badge component-badge--warning';
+        this.stripeStatusBadge.innerHTML = `
+          <svg class="component-icon" style="font-size: 14px; width: 14px; height: 14px;" aria-hidden="true"><use href="/icons.svg#warning"></use></svg>
+          <span>${t('designer.stripe_not_connected_badge') || 'Stripe No Vinculado'}</span>
+        `;
+        this.stripeStatusDesc.textContent = t('designer.stripe_not_connected_desc') || 'Vincula tu cuenta bancaria o tarjeta con Stripe Connect Express para poder retirar tus ganancias acumuladas en USD.';
+
+        if (this.btnStripeConnectText) {
+          this.btnStripeConnectText.textContent = t('designer.btn_connect_stripe') || 'Vincular con Stripe Connect';
+        }
+        if (this.btnStripeConnectAction) {
+          this.btnStripeConnectAction.className = 'component-button component-button--h44 component-button--black';
+        }
+
+        if (this.btnStripeWithdrawAction) {
+          this.btnStripeWithdrawAction.style.display = 'none';
+        }
+      }
+    }
+
+    if (this.designerHistoryTbody) {
+      if (s.recent_shares && s.recent_shares.length > 0) {
+        this.designerHistoryTbody.innerHTML = s.recent_shares.map((item) => `
+          <tr>
+            <td style="font-weight: 600;">${escapeHtml(item.period_key)}</td>
+            <td>${item.pro_uses} usos</td>
+            <td>${item.share_pct.toFixed(2)}%</td>
+            <td class="text-right" style="font-weight: 700; color: var(--color-success, #10b981);">$${item.earned_usd.toFixed(2)} USD</td>
+            <td>
+              <span class="component-badge ${item.status === 'paid' ? 'component-badge--success' : 'component-badge--warning'}" style="font-size: 11px;">
+                ${escapeHtml(item.status === 'paid' ? 'Liquidado' : 'Estimado')}
+              </span>
+            </td>
+          </tr>
+        `).join('');
+      } else {
+        this.designerHistoryTbody.innerHTML = `
+          <tr>
+            <td colspan="5" class="designer-history-empty-cell" data-ref="designer-history-empty" style="text-align: center; color: var(--text-secondary); padding: 24px;">
+              ${t('designer.pool_history_empty') || 'Aún no tienes liquidaciones de meses anteriores registradas.'}
+            </td>
+          </tr>
+        `;
+      }
+    }
+
+    if (this.container) {
+      renderIcons(this.container);
+    }
+  }
+
+  private async handleStripeConnect(): Promise<void> {
+    if (!this.btnStripeConnectAction) return;
+
+    await withButtonLoading(this.btnStripeConnectAction, async () => {
+      try {
+        const res = await postApi(API_ROUTES.designer.stripeConnectLink, {});
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data && data.url) {
+          window.location.href = data.url;
+        } else {
+          showToast(data?.error || 'No se pudo generar el enlace de conexión con Stripe.', 'danger');
+        }
+      } catch {
+        showToast('Error de conexión con Stripe.', 'danger');
+      }
+    });
+  }
+
+  private handleStripeWithdraw(): void {
+    if (!this.poolSummary || this.poolSummary.available_balance_usd < 100.0) {
+      showToast(t('designer.pool_min_payout_notice') || 'El saldo mínimo para retirar es de $100.00 USD.', 'warning');
+      return;
+    }
+
+    const amountStr = this.poolSummary.available_balance_usd.toFixed(2);
+    const desc = (t('designer.withdraw_confirm_desc') || 'Se transferirán ${amount} USD directamente a tu cuenta de Stripe Connect vinculada.').replace('${amount}', amountStr);
+
+    openModal({
+      confirmClass: 'component-button--success',
+      confirmText: t('designer.btn_withdraw_funds') || 'Retirar fondos',
+      descriptionKey: 'designer.withdraw_confirm_desc',
+      onConfirm: async () => {
+        try {
+          const res = await postApi(API_ROUTES.designer.requestPayout, {});
+          if (res.ok) {
+            showToast(t('designer.withdraw_success') || 'Transferencia solicitada exitosamente. Los fondos se reflejarán en tu cuenta.', 'success');
+            void this.loadPoolSummary();
+          } else {
+            showToast('Error al procesar el retiro.', 'danger');
+          }
+        } catch {
+          showToast('Error de conexión al procesar el retiro.', 'danger');
+        }
+      },
+      size: 'sm',
+      titleKey: 'designer.withdraw_confirm_title',
+    });
+  }
+
   private async loadTemplates(): Promise<void> {
     try {
       const res = await getApi(API_ROUTES.templates.myTemplates);
@@ -233,15 +497,15 @@ class DesignerController {
     let result = [...this.templates];
 
     if (this.filterStatus !== 'all') {
-      result = result.filter((t) => t.status === this.filterStatus);
+      result = result.filter((tItem) => tItem.status === this.filterStatus);
     }
 
     if (this.searchQuery.length > 0) {
       const q = this.searchQuery;
-      result = result.filter((t) => {
-        const title = (t.title || '').toLowerCase();
-        const desc = (t.description || '').toLowerCase();
-        const cat = (t.category || '').toLowerCase();
+      result = result.filter((tItem) => {
+        const title = (tItem.title || '').toLowerCase();
+        const desc = (tItem.description || '').toLowerCase();
+        const cat = (tItem.category || '').toLowerCase();
         return title.includes(q) || desc.includes(q) || cat.includes(q);
       });
     }
@@ -394,7 +658,7 @@ class DesignerController {
     const templateUuid = card.getAttribute('data-template-uuid');
     if (!templateUuid) return;
 
-    const item = this.templates.find((t) => t.uuid === templateUuid);
+    const item = this.templates.find((tItem) => tItem.uuid === templateUuid);
     if (!item) return;
 
     if (actionBtn) {
@@ -426,7 +690,7 @@ class DesignerController {
           if (res.ok) {
             const data = await res.json();
             if (data && data.template) {
-              const idx = this.templates.findIndex((t) => t.uuid === templateUuid);
+              const idx = this.templates.findIndex((tItem) => tItem.uuid === templateUuid);
               if (idx !== -1) {
                 this.templates[idx] = data.template;
               }
@@ -453,7 +717,7 @@ class DesignerController {
             try {
               const res = await deleteApi(API_ROUTES.templates.deleteMyTemplate(templateUuid));
               if (res.ok) {
-                this.templates = this.templates.filter((t) => t.uuid !== templateUuid);
+                this.templates = this.templates.filter((tItem) => tItem.uuid !== templateUuid);
                 showToast(t('designer.delete_success') || 'Plantilla eliminada exitosamente.', 'success');
                 void this.loadMetrics();
                 this.renderTemplates();
@@ -527,3 +791,4 @@ export async function createDesignerView(): Promise<HTMLElement> {
 
   return container;
 }
+
