@@ -144,12 +144,14 @@ export function setupCanvasFileMenu(options: CanvasFileMenuOptions): CanvasFileM
               <span class="menu-item__text">Encuentra y reemplaza texto</span>
             </button>
 
+            ${isOwner === false ? '' : `
             <div class="menu-divider"></div>
 
             <button type="button" class="menu-item menu-item--danger" data-action="trash" data-ref="menu-item-trash">
               <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#delete_outline"></use></svg>
               <span class="menu-item__text">Mover a la papelera</span>
             </button>
+            `}
           </div>
         </div>
       </div>
@@ -157,6 +159,15 @@ export function setupCanvasFileMenu(options: CanvasFileMenuOptions): CanvasFileM
     wrapper.insertAdjacentHTML('beforeend', markup);
     backdrop = wrapper.querySelector<HTMLElement>('[data-ref="dropdown-backdrop-file-menu"]');
     menu = wrapper.querySelector<HTMLElement>('[data-ref="dropdown-menu-file-menu"]');
+  }
+
+  if (isOwner === false && menu) {
+    const trashBtn = menu.querySelector<HTMLElement>('[data-action="trash"]');
+    const trashDivider = trashBtn?.previousElementSibling;
+    if (trashDivider && trashDivider.classList.contains('menu-divider')) {
+      trashDivider.classList.add('is-hidden');
+    }
+    trashBtn?.classList.add('is-hidden');
   }
 
   const updateFavoriteUI = () => {
@@ -374,6 +385,10 @@ export function setupCanvasFileMenu(options: CanvasFileMenuOptions): CanvasFileM
     } else if (action === 'history') {
       historyModalController.open();
     } else if (action === 'trash') {
+      if (isOwner === false) {
+        showToast(t('canvas.trash_only_owner') || 'Solo el propietario puede mover este diseño a la papelera', 'error');
+        return;
+      }
       openModal({
         confirmClass: 'component-button--danger',
         confirmText: t('canvas.menu_move_to_trash') || 'Mover a la papelera',

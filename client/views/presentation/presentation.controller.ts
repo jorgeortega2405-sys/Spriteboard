@@ -11,18 +11,21 @@ import { openUpgradeModal } from '../../components/upgrade-modal.component.js';
 import { API_ROUTES } from '../../config/api-routes.js';
 import { getBoardTemplateElements } from '../../config/board-templates.data.js';
 import { currentUser, getApi, postApi, putApi } from '../../services/api.service.js';
+import { CanvasClipboardData, copyCanvasElements, getCanvasClipboardData, hasCanvasClipboardElements, preparePastedCanvasElements } from '../../services/canvas-clipboard.service.js';
 import { getLocalCanvasByUuid, saveLocalCanvas } from '../../services/canvas-storage.service.js';
 import { t } from '../../services/i18n.service.js';
 import { renderIcons } from '../../services/icon.service.js';
 import { removeImageBackground } from '../../services/image-ai.service.js';
 import { getEffectiveTheme } from '../../services/theme.service.js';
 import { showToast } from '../../services/toast.service.js';
+import { closeWebSocket } from '../../services/websocket.service.js';
 import { getYouTubeEmbedUrl, openYouTubePlayerModal } from '../../services/youtube.service.js';
 import { CanvasItem } from '../../types/canvas.types.js';
 import { MockupFitMode, MockupTemplate } from '../../types/mockups.types.js';
 import { PRESENTATION_FORMATS, PresentationFormatConfig, PresentationProject, PresentationSlideItem } from '../../types/presentation.types.js';
 import { DEFAULT_CLASSIC_PALETTE, generateShadingRamp, getCollaboratorColor } from '../../utils/color.util.js';
 import { setupDropdown, withButtonLoading } from '../../utils/dom.util.js';
+import { getGuestIdentity } from '../../utils/guest.util.js';
 import { PixelShape } from '../../utils/pixel-shapes.util.js';
 import { BoardAnimationPanelComponent } from '../board/board-animation-panel.component.js';
 import { BoardChartsPanelComponent } from '../board/board-charts-panel.component.js';
@@ -126,7 +129,7 @@ export class PresentationController {
   private selectedElementIds: Set<string> = new Set();
   private selectedSlideId: string | null = 'slide-1';
   private selectionStartBBox: { height: number; width: number; x: number; y: number } | null = null;
-  private clipboardElements: BoardElement[] = [];
+  private consecutivePasteCount = 0;
   private selectionStartPositions: Map<string, any> = new Map();
   private shareDropdownController: CanvasShareDropdownController | null = null;
   private showCollaboratorCursors: boolean = true;
@@ -211,6 +214,9 @@ export class PresentationController {
     if (this.slideshowPlayer) {
       this.slideshowPlayer.destroy();
       this.slideshowPlayer = null;
+    }
+    if (!currentUser) {
+      closeWebSocket();
     }
   }
 
@@ -345,9 +351,10 @@ export class PresentationController {
   }
 
   private setupCollaboration(): void {
-    const userId = currentUser ? currentUser.id : null;
-    const username = currentUser ? currentUser.username : 'Invitado';
-    const avatarUrl = currentUser?.avatar_url || null;
+    const guest = !currentUser ? getGuestIdentity() : null;
+    const userId = currentUser ? currentUser.id : guest?.id;
+    const username = currentUser ? currentUser.username : (guest?.username || 'Invitado');
+    const avatarUrl = currentUser?.avatar_url || guest?.avatarUrl || null;
     const tier = (currentUser?.subscription_tier || 'free') as BoardCollaboratorState['subscriptionTier'];
 
     this.collaborationManager.roomToken = this.roomToken;
@@ -787,7 +794,7 @@ export class PresentationController {
         generateThumbnail: () => generateThumbnail(this.getActiveSlide().elements, this.getActiveSlide().background || { color: '#ffffff', type: 'solid' }, (sctx, el) => this.drawElementOn(sctx, el)),
         getCurrentProjectData: () => this.getProjectData(),
         isFavorite: Boolean(this.canvasRecord?.is_favorite),
-        isOwner: true,
+        isOwner: this.isOwner,
         onChangePageViewMode: (mode) => {
           this.setPageViewMode(mode);
         },
@@ -800,6 +807,7 @@ export class PresentationController {
       });
     }
 
+    const btnComments = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-canvas-comments"]');
     this.commentsController = new CanvasCommentsController({
       canvasUuid: this.canvasUuid,
       container: this.container,
@@ -828,6 +836,16 @@ export class PresentationController {
         trigger: btnAi,
         wrapper: aiWrapper,
       });
+    }
+
+    if (!currentUser) {
+      btnMetrics?.classList.add('is-hidden');
+      btnFileMenu?.classList.add('is-hidden');
+      fileMenuWrapper?.classList.add('is-hidden');
+      aiWrapper?.classList.add('is-hidden');
+      btnComments?.classList.add('is-hidden');
+    } else if (!this.isOwner) {
+      btnMetrics?.classList.add('is-hidden');
     }
 
     const btnShare = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-share-presentation"]');
@@ -1242,8 +1260,7 @@ export class PresentationController {
       if ((e.ctrlKey || e.metaKey) && (e.key === 'x' || e.key === 'X') && this.selectedElementIds.size > 0 && !this.activeInlineEditor) {
         if ((e.target as HTMLElement).tagName !== 'INPUT' && (e.target as HTMLElement).tagName !== 'TEXTAREA') {
           e.preventDefault();
-          this.copySelectedElements();
-          this.deleteSelectedElements();
+          this.cutSelectedElements();
           return;
         }
       }
@@ -2267,6 +2284,16 @@ export class PresentationController {
           },
         ];
 
+        if (hasCanvasClipboardElements()) {
+          items.push({
+            action: () => this.pasteElements({ x: localWp.x, y: localWp.y }),
+            icon: 'content_paste',
+            label: 'Pegar',
+            ref: 'ctx-pres-paste',
+            shortcut: 'Ctrl+V',
+          });
+        }
+
         if (hit.type === 'table') {
           const table = hit as BoardTableElement;
           const rows = Math.max(1, table.rows || table.data?.length || 3);
@@ -2432,7 +2459,7 @@ export class PresentationController {
 
       const bgItems: ContextMenuItem[] = [];
 
-      if (this.clipboardElements.length > 0) {
+      if (hasCanvasClipboardElements()) {
         bgItems.push(
           {
             action: () => this.pasteElements({ x: localWp.x, y: localWp.y }),
@@ -3754,38 +3781,6 @@ export class PresentationController {
     this.scheduleAutoSave();
   }
 
-  private duplicateSelectedElements(): void {
-    if (this.selectedElementIds.size === 0) return;
-    this.saveHistoryState();
-    const elements = this.getActiveSlide().elements;
-    const newSelected = new Set<string>();
-    const toAdd: BoardElement[] = [];
-
-    elements.forEach((el) => {
-      if (this.selectedElementIds.has(el.id)) {
-        const copy = JSON.parse(JSON.stringify(el));
-        copy.id = `${el.type}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-        if ('x' in copy && 'y' in copy) {
-          copy.x += 24;
-          copy.y += 24;
-        }
-        toAdd.push(copy);
-        newSelected.add(copy.id);
-      }
-    });
-
-    elements.push(...toAdd);
-    toAdd.forEach((copy) => {
-      this.collaborationManager.broadcastAddElement(copy, this.activeSlideId);
-    });
-    this.selectedElementIds = newSelected;
-    this.syncPanels();
-    this.updateSelectionToolbar();
-    this.render();
-    this.scheduleAutoSave();
-    showToast('Elementos duplicados', 'success');
-  }
-
   private deleteSelectedElements(): void {
     if (this.selectedElementIds.size === 0) return;
     const deletedIds = Array.from(this.selectedElementIds);
@@ -3830,47 +3825,92 @@ export class PresentationController {
     this.scheduleAutoSave();
   }
 
-  private copySelectedElements(): void {
+  private duplicateSelectedElements(): void {
     if (this.selectedElementIds.size === 0) return;
     const elements = this.getActiveSlide().elements;
-    this.clipboardElements = elements
-      .filter((el) => this.selectedElementIds.has(el.id))
-      .map((el) => JSON.parse(JSON.stringify(el)));
-    showToast('Elementos copiados', 'info');
-  }
+    const toDuplicate = elements.filter((el) => this.selectedElementIds.has(el.id));
+    if (toDuplicate.length === 0) return;
 
-  private pasteElements(targetPos?: { x: number; y: number }): void {
-    if (this.clipboardElements.length === 0) return;
     this.saveHistoryState();
-    const elements = this.getActiveSlide().elements;
-    const newSelected = new Set<string>();
-    const toAdd: BoardElement[] = [];
-
-    const bbox = computeElementsBoundingBox(this.clipboardElements);
-    const offsetX = targetPos && bbox ? Math.round(targetPos.x - (bbox.x + bbox.width / 2)) : 24;
-    const offsetY = targetPos && bbox ? Math.round(targetPos.y - (bbox.y + bbox.height / 2)) : 24;
-
-    this.clipboardElements.forEach((el) => {
-      const copy = JSON.parse(JSON.stringify(el));
-      copy.id = `${el.type}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-      if ('x' in copy && 'y' in copy) {
-        copy.x += offsetX;
-        copy.y += offsetY;
-      }
-      elements.push(copy);
-      toAdd.push(copy);
-      newSelected.add(copy.id);
-    });
-
-    toAdd.forEach((copy) => {
+    const bounds = computeElementsBoundingBox(toDuplicate) || { height: 0, width: 0, x: 0, y: 0 };
+    const clipData: CanvasClipboardData = {
+      bounds,
+      elements: toDuplicate,
+      source: 'presentation',
+      timestamp: Date.now(),
+      version: 1,
+    };
+    const target = {
+      x: bounds.x + bounds.width / 2 + 24,
+      y: bounds.y + bounds.height / 2 + 24,
+    };
+    const { elements: newElements, newIds } = preparePastedCanvasElements(clipData, target);
+    elements.push(...newElements);
+    newElements.forEach((copy) => {
       this.collaborationManager.broadcastAddElement(copy, this.activeSlideId);
     });
-    this.selectedElementIds = newSelected;
+    this.selectedElementIds = new Set(newIds);
     this.syncPanels();
     this.updateSelectionToolbar();
     this.render();
     this.scheduleAutoSave();
-    showToast('Elementos pegados', 'success');
+    showToast(newIds.length > 1 ? `${newIds.length} elementos duplicados` : 'Elemento duplicado');
+  }
+
+  private copySelectedElements(): void {
+    if (this.selectedElementIds.size === 0) return;
+    const elements = this.getActiveSlide().elements;
+    const toCopy = elements.filter((el) => this.selectedElementIds.has(el.id));
+    if (toCopy.length === 0) return;
+    copyCanvasElements(toCopy, 'presentation', elements);
+    this.consecutivePasteCount = 0;
+    showToast(toCopy.length > 1 ? `${toCopy.length} elementos copiados` : 'Elemento copiado', 'info');
+  }
+
+  private cutSelectedElements(): void {
+    if (this.selectedElementIds.size === 0) return;
+    const elements = this.getActiveSlide().elements;
+    const toCut = elements.filter((el) => this.selectedElementIds.has(el.id));
+    if (toCut.length === 0) return;
+    copyCanvasElements(toCut, 'presentation', elements);
+    this.consecutivePasteCount = 0;
+    this.deleteSelectedElements();
+    showToast(toCut.length > 1 ? `${toCut.length} elementos cortados` : 'Elemento cortado', 'info');
+  }
+
+  private pasteElements(targetPos?: { x: number; y: number }): void {
+    const clipboardData = getCanvasClipboardData();
+    if (!clipboardData || !clipboardData.elements || clipboardData.elements.length === 0) return;
+
+    this.saveHistoryState();
+    let target = targetPos;
+    if (!target) {
+      this.consecutivePasteCount = (this.consecutivePasteCount || 0) + 1;
+      const offset = 24 * this.consecutivePasteCount;
+      target = {
+        x: clipboardData.bounds.x + offset + clipboardData.bounds.width / 2,
+        y: clipboardData.bounds.y + offset + clipboardData.bounds.height / 2,
+      };
+      const fmt = this.slideFormat;
+      if (target.x < 0 || target.x > fmt.width || target.y < 0 || target.y > fmt.height) {
+        target = { x: Math.round(fmt.width / 2), y: Math.round(fmt.height / 2) };
+      }
+    } else {
+      this.consecutivePasteCount = 0;
+    }
+
+    const { elements: newElements, newIds } = preparePastedCanvasElements(clipboardData, target);
+    const elements = this.getActiveSlide().elements;
+    elements.push(...newElements);
+    newElements.forEach((copy) => {
+      this.collaborationManager.broadcastAddElement(copy, this.activeSlideId);
+    });
+    this.selectedElementIds = new Set(newIds);
+    this.syncPanels();
+    this.updateSelectionToolbar();
+    this.render();
+    this.scheduleAutoSave();
+    showToast(newIds.length > 1 ? `${newIds.length} elementos pegados` : 'Elemento pegado', 'success');
   }
 
   public deleteTable(tableId: string): void {

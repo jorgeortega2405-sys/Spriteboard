@@ -16,15 +16,18 @@ import { getMockupTemplateById } from '../../config/mockups.config.js';
 import { DEFAULT_STICKY_COLOR, STICKY_NOTE_PRESETS } from '../../config/sticky-notes.config.js';
 import { AlignmentGuide, applyElementAnimation, applyElementEffect, BackgroundType, Board3DElement, BoardAnimationType, BoardChartElement, BoardCollaboratorState, BoardConnectorElement, BoardEffectType, BoardElement, BoardElementAnimation, BoardElementEffect, BoardEmbedElement, BoardImageElement, BoardMockupElement, BoardPageItem, BoardPixelGridElement, BoardPoint, BoardProject, BoardSectionElement, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTableCell, BoardTableElement, BoardTextElement, BoardTool, calculateDragSnapping, calculateResizeSnapping, CANVAS_DEFAULTS, CanvasEngine2D, ChartDataRow, ChartType, computeElementsBoundingBox, ConnectorStyle, create3DElement, createChartElement, createConnectorElement, createEmbedElement, createElementResizeSnapshot, createImageElement, createMockupElement, createSectionElement, createShapeElement, createStickyElement, createTableElement, createTextElement, createTextPresetElement, DEFAULT_CHART_PALETTES, DEFAULT_CLASSIC_PALETTE, DistanceGuide, draw3DElement, draw3DGroundGrid, drawAiProcessingOverlay, drawAlignmentGuides, drawBackground, drawBoardCollaboratorCursors, drawChart, drawCheckerboard, drawConnector, drawEmbedElement, drawImage, drawMarqueeBox, drawMockupElement, drawMultiSelectionBounds, drawPixelGridLines, drawSection, drawSelectionBox, drawShape, drawSticky, drawStroke, drawTable, drawText, ElementResizeSnapshot, exportJson, exportPng, exportSvg, findContainingSection, findElementsByMarqueeBox, GAMEBOY_PALETTE, generateThumbnail, getConnectorEndpoints, getElementBoundingBox, hitTest3DRotationGizmo, hitTestBoundingBoxResizeHandle, hitTestElement, hitTestResizeHandle, MarkerType, measureTextElementSize, moveElementByDelta, moveElementByDrag, onCustomModelLoaded, PICO8_PALETTE, PixelSubtool, preloadCustom3DModels, ResizeHandle, resizeElementByHandle, resizeElementsGroup, screenToWorld, Shape3DType, ShapeType, StrokeStyle, TEXT_PRESETS, worldToScreen } from '../../core/canvas-engine.js';
 import { currentUser, escapeHtml, getApi, postApi } from '../../services/api.service.js';
+import { CanvasClipboardData, copyCanvasElements, getCanvasClipboardData, hasCanvasClipboardElements, preparePastedCanvasElements } from '../../services/canvas-clipboard.service.js';
 import { getLocalCanvasByUuid, removeLocalCanvas, saveLocalCanvas } from '../../services/canvas-storage.service.js';
 import { renderIcons } from '../../services/icon.service.js';
 import { removeImageBackground } from '../../services/image-ai.service.js';
 import { showToast } from '../../services/toast.service.js';
+import { closeWebSocket } from '../../services/websocket.service.js';
 import { getYouTubeEmbedUrl, openYouTubePlayerModal } from '../../services/youtube.service.js';
 import { CanvasItem } from '../../types/canvas.types.js';
 import { MockupFitMode, MockupTemplate } from '../../types/mockups.types.js';
 import { generateShadingRamp, getCollaboratorColor, rgbToHex } from '../../utils/color.util.js';
 import { setupDropdown, withButtonLoading } from '../../utils/dom.util.js';
+import { getGuestIdentity } from '../../utils/guest.util.js';
 import { PixelShape } from '../../utils/pixel-shapes.util.js';
 import { validateAndSanitizeFile } from '../../utils/validators.util.js';
 import { DocFontPickerComponent, FontSelectEvent } from '../doc/doc-font-picker.component.js';
@@ -137,12 +140,14 @@ export class BoardController {
   private previewAnimElementId: string | null = null;
   private previewAnimStartTime = 0;
   private previewAnimConfig: BoardElementAnimation | null = null;
+  private consecutivePasteCount = 0;
   private didPan = false;
   private isDrawing = false;
   private isEyedropperActive = false;
   private isInteractingSelection = false;
   private isLaserMode = false;
   private isLoaded = false;
+  private isMouseOverCanvas = false;
   private isOwner = true;
   private isPanning = false;
   private isShiftPressed = false;
@@ -234,6 +239,16 @@ export class BoardController {
     this.previewBannerEl = this.container.querySelector<HTMLElement>('[data-ref="design-history-preview-banner"]');
     this.btnPreviewRestore = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-preview-restore"]');
     this.btnPreviewExit = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-preview-exit"]');
+
+    if (!currentUser) {
+      this.btnCanvasMetrics?.classList.add('is-hidden');
+      this.btnFileMenu?.classList.add('is-hidden');
+      this.fileMenuWrapperEl?.classList.add('is-hidden');
+      this.aiWrapperEl?.classList.add('is-hidden');
+      this.btnCanvasComments?.classList.add('is-hidden');
+    } else if (!this.isOwner) {
+      this.btnCanvasMetrics?.classList.add('is-hidden');
+    }
 
     this.commentsController = new CanvasCommentsController({
       canvasUuid: this.canvasUuid,
@@ -479,6 +494,9 @@ export class BoardController {
       this.canvasElement.height = 0;
     }
     this.abortController.abort();
+    if (!currentUser) {
+      closeWebSocket();
+    }
   }
 
   private async loadBoardData(): Promise<boolean> {
@@ -669,11 +687,12 @@ export class BoardController {
   }
 
   private setupCollaboration(): void {
-    if (!this.canvasServerId || !currentUser) return;
+    if (!this.canvasServerId) return;
 
-    const userId = currentUser ? currentUser.id : null;
-    const username = currentUser ? currentUser.username : 'Invitado';
-    const avatarUrl = currentUser?.avatar_url || null;
+    const guest = !currentUser ? getGuestIdentity() : null;
+    const userId = currentUser ? currentUser.id : guest?.id;
+    const username = currentUser ? currentUser.username : (guest?.username || 'Invitado');
+    const avatarUrl = currentUser?.avatar_url || guest?.avatarUrl || null;
     const tier = (currentUser?.subscription_tier || 'free') as BoardCollaboratorState['subscriptionTier'];
 
     this.collaborationManager.roomToken = this.roomToken;
@@ -3183,35 +3202,114 @@ export class BoardController {
     this.updateContextualToolbar();
   }
 
+  private copySelectedElements(): void {
+    const idsToCopy = this.selectedElementIds.length > 0 ? [...this.selectedElementIds] : (this.selectedElementId ? [this.selectedElementId] : []);
+    if (idsToCopy.length === 0) return;
+    const copySet = new Set(idsToCopy);
+    const toCopy = this.elements.filter((el) => copySet.has(el.id));
+    if (toCopy.length === 0) return;
+    copyCanvasElements(toCopy, 'board', this.elements);
+    this.consecutivePasteCount = 0;
+    showToast(toCopy.length > 1 ? `${toCopy.length} elementos copiados` : 'Elemento copiado', 'info');
+  }
+
+  private cutSelectedElements(): void {
+    const idsToCut = this.selectedElementIds.length > 0 ? [...this.selectedElementIds] : (this.selectedElementId ? [this.selectedElementId] : []);
+    if (idsToCut.length === 0) return;
+    const copySet = new Set(idsToCut);
+    const toCut = this.elements.filter((el) => copySet.has(el.id));
+    if (toCut.length === 0) return;
+    copyCanvasElements(toCut, 'board', this.elements);
+    this.consecutivePasteCount = 0;
+    this.deleteSelected();
+    showToast(toCut.length > 1 ? `${toCut.length} elementos cortados` : 'Elemento cortado', 'info');
+  }
+
+  private pasteElements(targetPos?: { x: number; y: number }): void {
+    const clipboardData = getCanvasClipboardData();
+    if (!clipboardData || !clipboardData.elements || clipboardData.elements.length === 0) return;
+
+    this.pushHistoryState();
+
+    let target: { x: number; y: number } | undefined = targetPos;
+    if (!target) {
+      this.consecutivePasteCount = (this.consecutivePasteCount || 0) + 1;
+      const offset = 24 * this.consecutivePasteCount;
+
+      const viewW = this.canvasElement ? this.canvasElement.clientWidth / this.camera.zoom : 1200;
+      const viewH = this.canvasElement ? this.canvasElement.clientHeight / this.camera.zoom : 800;
+      const viewLeft = this.camera.x;
+      const viewTop = this.camera.y;
+      const viewRight = viewLeft + viewW;
+      const viewBottom = viewTop + viewH;
+      const viewCenterX = viewLeft + viewW / 2;
+      const viewCenterY = viewTop + viewH / 2;
+
+      const bounds = clipboardData.bounds;
+      const isOriginalVisible =
+        bounds.x + bounds.width >= viewLeft &&
+        bounds.x <= viewRight &&
+        bounds.y + bounds.height >= viewTop &&
+        bounds.y <= viewBottom;
+
+      if (this.isMouseOverCanvas && this.lastMousePos && (this.lastMousePos.x !== 0 || this.lastMousePos.y !== 0)) {
+        target = { x: this.lastMousePos.x, y: this.lastMousePos.y };
+      } else if (isOriginalVisible) {
+        target = {
+          x: bounds.x + offset + bounds.width / 2,
+          y: bounds.y + offset + bounds.height / 2,
+        };
+      } else {
+        target = { x: Math.round(viewCenterX), y: Math.round(viewCenterY) };
+      }
+    } else {
+      this.consecutivePasteCount = 0;
+    }
+
+    const { elements: newElements, newIds } = preparePastedCanvasElements(clipboardData, target);
+    for (const el of newElements) {
+      if (el.type === 'pixel-grid') {
+        this.pixelGrid.deleteState(el.id);
+      }
+      this.elements.push(el);
+      this.collaborationManager.broadcastAddElement(el);
+    }
+
+    this.selectedElementIds = newIds;
+    this.selectedElementId = newIds[0] || null;
+    this.updateSelectionToolbar();
+    this.requestRedraw();
+    this.scheduleAutoSave();
+    showToast(newIds.length > 1 ? `${newIds.length} elementos pegados` : 'Elemento pegado', 'success');
+  }
+
   private duplicateSelected(): void {
     const idsToDuplicate = this.selectedElementIds.length > 0 ? [...this.selectedElementIds] : (this.selectedElementId ? [this.selectedElementId] : []);
     if (idsToDuplicate.length === 0) return;
+    const dupSet = new Set(idsToDuplicate);
+    const toDuplicate = this.elements.filter((el) => dupSet.has(el.id));
+    if (toDuplicate.length === 0) return;
 
     this.pushHistoryState();
-    const newIds: string[] = [];
-    for (const id of idsToDuplicate) {
-      const el = this.elements.find((item) => item.id === id);
-      if (!el) continue;
-
-      const cloned = JSON.parse(JSON.stringify(el)) as BoardElement;
-      cloned.id = `el-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-      if ('x' in cloned) {
-        cloned.x += 24;
-        cloned.y += 24;
-      } else if (cloned.type === 'stroke') {
-        cloned.points = cloned.points.map((pt) => ({ x: pt.x + 24, y: pt.y + 24 }));
-      } else if (cloned.type === 'connector') {
-        if (cloned.startPoint) cloned.startPoint = { x: cloned.startPoint.x + 24, y: cloned.startPoint.y + 24 };
-        if (cloned.endPoint) cloned.endPoint = { x: cloned.endPoint.x + 24, y: cloned.endPoint.y + 24 };
+    const bounds = computeElementsBoundingBox(toDuplicate) || { height: 0, width: 0, x: 0, y: 0 };
+    const clipData: CanvasClipboardData = {
+      bounds,
+      elements: toDuplicate,
+      source: 'board',
+      timestamp: Date.now(),
+      version: 1,
+    };
+    const target = {
+      x: bounds.x + bounds.width / 2 + 24,
+      y: bounds.y + bounds.height / 2 + 24,
+    };
+    const { elements: newElements, newIds } = preparePastedCanvasElements(clipData, target);
+    for (const el of newElements) {
+      if (el.type === 'pixel-grid') {
+        this.pixelGrid.deleteState(el.id);
       }
-
-      if (cloned.type === 'pixel-grid') {
-        this.pixelGrid.deleteState(cloned.id);
-      }
-
-      this.elements.push(cloned);
-      this.collaborationManager.broadcastAddElement(cloned);
-      newIds.push(cloned.id);
+      this.elements.push(el);
+      this.collaborationManager.broadcastAddElement(el);
     }
 
     this.selectedElementIds = newIds;
@@ -3368,12 +3466,40 @@ export class BoardController {
 
       const items: ContextMenuItem[] = [
         {
+          action: () => this.cutSelectedElements(),
+          icon: 'content_cut',
+          label: 'Cortar',
+          ref: 'ctx-board-cut',
+          shortcut: 'Ctrl+X',
+        },
+        {
+          action: () => this.copySelectedElements(),
+          icon: 'content_copy',
+          label: 'Copiar',
+          ref: 'ctx-board-copy',
+          shortcut: 'Ctrl+C',
+        },
+        {
           action: () => this.duplicateSelected(),
           icon: 'filter_none',
           label: 'Duplicar',
           ref: 'ctx-board-duplicate',
           shortcut: 'Ctrl+D',
         },
+      ];
+
+      if (hasCanvasClipboardElements()) {
+        items.push({
+          action: () => this.pasteElements(worldPos),
+          icon: 'content_paste',
+          label: 'Pegar',
+          ref: 'ctx-board-paste',
+          shortcut: 'Ctrl+V',
+        });
+      }
+
+      items.push(
+        { divider: true },
         {
           action: () => this.reorderSelected(true),
           icon: 'flip_to_front',
@@ -3385,8 +3511,8 @@ export class BoardController {
           icon: 'flip_to_back',
           label: 'Enviar al fondo',
           ref: 'ctx-board-send-backward',
-        },
-      ];
+        }
+      );
 
       if (hit.type === 'pixel-grid') {
         items.push({
@@ -3635,7 +3761,22 @@ export class BoardController {
       return;
     }
 
-    const items: ContextMenuItem[] = [
+    const items: ContextMenuItem[] = [];
+
+    if (hasCanvasClipboardElements()) {
+      items.push(
+        {
+          action: () => this.pasteElements(worldPos),
+          icon: 'content_paste',
+          label: 'Pegar',
+          ref: 'ctx-board-paste',
+          shortcut: 'Ctrl+V',
+        },
+        { divider: true }
+      );
+    }
+
+    items.push(
       {
         action: () => {
           this.pushHistoryState();
@@ -3741,8 +3882,8 @@ export class BoardController {
         label: 'Rehacer',
         ref: 'ctx-board-redo',
         shortcut: 'Ctrl+Y',
-      },
-    ];
+      }
+    );
 
     openContextMenu({
       items,
@@ -4113,6 +4254,8 @@ export class BoardController {
     }
 
     const worldPos = screenToWorld(screenPos.x, screenPos.y, this.canvasElement, this.camera);
+    this.isMouseOverCanvas = true;
+    this.lastMousePos = worldPos;
     if (this.broadcastMyCursor) {
       this.collaborationManager.sendCursor(worldPos.x, worldPos.y);
     }
@@ -4749,7 +4892,11 @@ export class BoardController {
     window.addEventListener(
       'keydown',
       (e: KeyboardEvent) => {
-        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || (e.target as HTMLElement)?.isContentEditable) {
+          return;
+        }
+
+        if (this.activeInlineEditor) {
           return;
         }
 
@@ -4800,6 +4947,28 @@ export class BoardController {
           return;
         }
 
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
+          if (this.selectedElementIds.length > 0 || this.selectedElementId) {
+            e.preventDefault();
+            this.copySelectedElements();
+            return;
+          }
+        }
+
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'x') {
+          if (this.selectedElementIds.length > 0 || this.selectedElementId) {
+            e.preventDefault();
+            this.cutSelectedElements();
+            return;
+          }
+        }
+
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
+          e.preventDefault();
+          this.pasteElements();
+          return;
+        }
+
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') {
           e.preventDefault();
           this.duplicateSelected();
@@ -4836,29 +5005,31 @@ export class BoardController {
           }
         }
 
-        const key = e.key.toLowerCase();
-        if (key === 'v') this.setTool('select');
-        if (key === 'h') this.setTool('hand');
-        if (key === 'p') this.setTool('pen');
-        if (key === 'm') this.setTool('marker');
-        if (key === 'r') this.setTool('highlighter');
-        if (key === 'e') {
-          if (this.currentTool === 'pixel') {
-            this.setActivePixelSubtool('eraser');
-          } else {
-            this.setTool('eraser');
+        if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+          const key = e.key.toLowerCase();
+          if (key === 'v') this.setTool('select');
+          if (key === 'h') this.setTool('hand');
+          if (key === 'p') this.setTool('pen');
+          if (key === 'm') this.setTool('marker');
+          if (key === 'r') this.setTool('highlighter');
+          if (key === 'e') {
+            if (this.currentTool === 'pixel') {
+              this.setActivePixelSubtool('eraser');
+            } else {
+              this.setTool('eraser');
+            }
           }
-        }
-        if (key === 's') this.setTool('shapes');
-        if (key === 'c') this.setTool('connector');
-        if (key === 'n') this.setTool('sticky');
-        if (key === 't') this.setTool('text');
-        if (key === 'k') this.toggleVSubtoolbar('cursors');
-        if (key === 'x') this.setTool('pixel');
-        if (this.currentTool === 'pixel') {
-          if (key === 'b') this.setActivePixelSubtool('pencil');
-          if (key === 'g') this.setActivePixelSubtool('bucket');
-          if (key === 'i') this.setActivePixelSubtool('eyedropper');
+          if (key === 's') this.setTool('shapes');
+          if (key === 'c') this.setTool('connector');
+          if (key === 'n') this.setTool('sticky');
+          if (key === 't') this.setTool('text');
+          if (key === 'k') this.toggleVSubtoolbar('cursors');
+          if (key === 'x') this.setTool('pixel');
+          if (this.currentTool === 'pixel') {
+            if (key === 'b') this.setActivePixelSubtool('pencil');
+            if (key === 'g') this.setActivePixelSubtool('bucket');
+            if (key === 'i') this.setActivePixelSubtool('eyedropper');
+          }
         }
       },
       { signal }

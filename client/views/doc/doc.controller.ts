@@ -13,10 +13,12 @@ import { getLocalCanvasByUuid, saveLocalCanvas } from '../../services/canvas-sto
 import { renderIcons } from '../../services/icon.service.js';
 import { removeImageBackground } from '../../services/image-ai.service.js';
 import { showToast } from '../../services/toast.service.js';
+import { closeWebSocket } from '../../services/websocket.service.js';
 import { CanvasItem } from '../../types/canvas.types.js';
 import { ViewController } from '../../types/common.types.js';
 import { MindMapProject } from '../../types/mindmap.types.js';
 import { initCarouselScroll, setupDropdown, withButtonLoading } from '../../utils/dom.util.js';
+import { getGuestIdentity } from '../../utils/guest.util.js';
 import { validateAndSanitizeFile } from '../../utils/validators.util.js';
 import { DocCollaborationManager, DocCollaboratorState } from './doc-collaboration.manager.js';
 import { exportDocHtml, exportDocJson, exportDocMarkdown, exportDocPdf, exportDocTxt, exportDocWord, generateDocThumbnail } from './doc-export.service.js';
@@ -89,6 +91,7 @@ export class DocController implements ViewController {
   private indentsDropdownController: { close: () => void; destroy: () => void } | null = null;
   private initialCanvasRecord: CanvasItem | null = null;
   private insertMoreDropdownController: { close: () => void; destroy: () => void } | null = null;
+  private isOwner = true;
   private isPreviewingSnapshot = false;
   private isSaving = false;
   private lastActivePageId: string | null = null;
@@ -155,6 +158,16 @@ export class DocController implements ViewController {
     this.btnDocFileMenu = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-doc-file-menu"]');
     this.btnDocPresent = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-doc-present"]');
     this.previewBannerEl = this.container.querySelector<HTMLElement>('[data-ref="doc-preview-banner"]');
+
+    if (!currentUser) {
+      this.btnDocMetrics?.classList.add('is-hidden');
+      this.btnDocFileMenu?.classList.add('is-hidden');
+      this.fileMenuWrapperEl?.classList.add('is-hidden');
+      this.aiWrapperEl?.classList.add('is-hidden');
+    } else if (!this.isOwner) {
+      this.btnDocMetrics?.classList.add('is-hidden');
+    }
+
     this.setupCollaboration();
 
     this.historyManager.pushState(this.project);
@@ -202,6 +215,9 @@ export class DocController implements ViewController {
     if (this.saveDebounceTimer) {
       clearTimeout(this.saveDebounceTimer);
     }
+    if (!currentUser) {
+      closeWebSocket();
+    }
   }
 
   private async loadCanvasData(): Promise<boolean> {
@@ -239,6 +255,15 @@ export class DocController implements ViewController {
     this.canvasServerId = canvasRecord.id || null;
     this.canvasUserId = canvasRecord.user_id || null;
     this.canvasCreatedAt = canvasRecord.created_at || null;
+
+    if (this.canvasUserId && currentUser) {
+      this.isOwner = currentUser.id === this.canvasUserId;
+    } else if (this.canvasUserId && !currentUser) {
+      this.isOwner = false;
+    } else {
+      this.isOwner = !this.canvasServerId;
+    }
+
     this.accessLevel = canvasRecord.access_level || 'private';
     this.publicRole = canvasRecord.public_role || 'editor';
 
@@ -271,15 +296,13 @@ export class DocController implements ViewController {
   }
 
   private setupCollaboration(): void {
-    const userId = currentUser ? currentUser.id : null;
-    const username = currentUser ? currentUser.username : 'Invitado';
-    const avatarUrl = currentUser?.avatar_url || null;
+    const guest = !currentUser ? getGuestIdentity() : null;
+    const userId = currentUser ? currentUser.id : guest?.id;
+    const username = currentUser ? currentUser.username : (guest?.username || 'Invitado');
+    const avatarUrl = currentUser?.avatar_url || guest?.avatarUrl || null;
     const tier = (currentUser?.subscription_tier || 'free') as DocCollaboratorState['subscriptionTier'];
 
-    this.collaborationManager.isOwner = Boolean(
-      (currentUser && this.canvasUserId && this.canvasUserId === currentUser.id) ||
-      (!this.canvasUserId && !this.canvasServerId)
-    );
+    this.collaborationManager.isOwner = this.isOwner;
     this.collaborationManager.accessLevel = this.accessLevel;
     this.collaborationManager.publicRole = this.publicRole;
 
@@ -576,10 +599,6 @@ export class DocController implements ViewController {
     }
 
     if (this.btnDocFileMenu && this.fileMenuWrapperEl) {
-      const isOwner = Boolean(
-        (currentUser && this.canvasUserId && this.canvasUserId === currentUser.id) ||
-        (!this.canvasUserId && !this.canvasServerId)
-      );
       this.fileMenuController = setupCanvasFileMenu({
         canvasTitle: this.canvasTitle,
         canvasType: 'doc',
@@ -592,7 +611,7 @@ export class DocController implements ViewController {
           return this.project;
         },
         isFavorite: Boolean(this.currentCanvasItem?.is_favorite),
-        isOwner,
+        isOwner: this.isOwner,
         onChangePageViewMode: (mode) => {
           this.setPageViewMode(mode);
         },

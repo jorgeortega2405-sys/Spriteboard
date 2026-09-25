@@ -1,5 +1,3 @@
-import { openModal } from './modal.component.js';
-import { openPublishTemplateModal } from './publish-template-modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { currentUser, deleteApi, escapeHtml, getApi, patchApi, postApi } from '../services/api.service.js';
 import { getLocalCanvasByUuid, markLocalCanvasAsSynced } from '../services/canvas-storage.service.js';
@@ -10,6 +8,9 @@ import { canPublishTemplates } from '../types/auth.types.js';
 import { CanvasItem, CanvasMember, SearchUserResult } from '../types/canvas.types.js';
 import { CanvasTeamItem, Team } from '../types/team.types.js';
 import { setupDropdown } from '../utils/dom.util.js';
+import { openGuestAuthInvitationModal } from './guest-auth-modal.component.js';
+import { openModal } from './modal.component.js';
+import { openPublishTemplateModal } from './publish-template-modal.component.js';
 
 export interface CanvasShareExportOption {
   icon: string;
@@ -48,6 +49,25 @@ function setIconUse(el: HTMLElement | null, iconName: string): void {
 
 export function setupCanvasShareDropdown(options: CanvasShareDropdownOptions): CanvasShareDropdownController {
   const { getCanvas, onAccessChanged, signal, trigger, wrapper } = options;
+
+  if (!currentUser) {
+    const handleGuestClick = (e: MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      openGuestAuthInvitationModal(getCanvas());
+    };
+    trigger.addEventListener('click', handleGuestClick, { signal });
+    return {
+      close: () => {},
+      destroy: () => {
+        trigger.removeEventListener('click', handleGuestClick);
+      },
+      open: () => openGuestAuthInvitationModal(getCanvas()),
+      toggle: () => openGuestAuthInvitationModal(getCanvas()),
+      update: () => {},
+    };
+  }
+
   const initialCanvas = getCanvas();
   const isLoggedIn = Boolean(currentUser);
   const isOwner = Boolean(currentUser && initialCanvas.user_id && initialCanvas.user_id === currentUser.id) || (!initialCanvas.user_id && !initialCanvas.id);

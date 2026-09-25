@@ -1,4 +1,3 @@
-import { openPublishTemplateModal } from './publish-template-modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { currentUser, deleteApi, escapeHtml, getApi, patchApi, postApi } from '../services/api.service.js';
 import { getLocalCanvasByUuid, markLocalCanvasAsSynced } from '../services/canvas-storage.service.js';
@@ -9,6 +8,8 @@ import { canPublishTemplates } from '../types/auth.types.js';
 import { CanvasItem, CanvasMember, SearchUserResult } from '../types/canvas.types.js';
 import { CanvasTeamItem, Team } from '../types/team.types.js';
 import { setupDropdown } from '../utils/dom.util.js';
+import { openGuestAuthInvitationModal } from './guest-auth-modal.component.js';
+import { openPublishTemplateModal } from './publish-template-modal.component.js';
 
 function setIconUse(el: HTMLElement | null, iconName: string): void {
   if (!el) return;
@@ -24,6 +25,11 @@ function setIconUse(el: HTMLElement | null, iconName: string): void {
 let activeShareModal: { close: () => void } | null = null;
 
 export function openCanvasShareModal(canvas: CanvasItem): void {
+  if (!currentUser) {
+    openGuestAuthInvitationModal(canvas);
+    return;
+  }
+
   if (activeShareModal) {
     activeShareModal.close();
   }

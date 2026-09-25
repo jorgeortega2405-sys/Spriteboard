@@ -180,29 +180,24 @@ async function startServer() {
         const cookies = parseCookieHeader(cookieHeader);
         const token = cookies[COOKIE_NAME];
 
-        if (!token) {
-          logger.security.warn('Conexión WebSocket rechazada: No se proporcionó cookie de sesión.');
-          clientSocket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
-          clientSocket.destroy();
-          return;
-        }
+        if (token) {
+          const session = verifyMultiAccountToken(token);
+          if (!session) {
+            logger.security.warn('Conexión WebSocket rechazada: Token de sesión inválido o expirado.');
+            clientSocket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+            clientSocket.destroy();
+            return;
+          }
 
-        const session = verifyMultiAccountToken(token);
-        if (!session) {
-          logger.security.warn('Conexión WebSocket rechazada: Token de sesión inválido o expirado.');
-          clientSocket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
-          clientSocket.destroy();
-          return;
-        }
-
-        const activeAccount = session.accounts.find((a) => a.id === session.activeId);
-        const sid = activeAccount?.sessionId || session.sessionId;
-        const revoked = await isSessionRevoked(session.activeId, session.iat, sid);
-        if (revoked) {
-          logger.security.warn('Conexión WebSocket rechazada: Sesión revocada o inactiva.');
-          clientSocket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
-          clientSocket.destroy();
-          return;
+          const activeAccount = session.accounts.find((a) => a.id === session.activeId);
+          const sid = activeAccount?.sessionId || session.sessionId;
+          const revoked = await isSessionRevoked(session.activeId, session.iat, sid);
+          if (revoked) {
+            logger.security.warn('Conexión WebSocket rechazada: Sesión revocada o inactiva.');
+            clientSocket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+            clientSocket.destroy();
+            return;
+          }
         }
 
         clientSocket.pause();

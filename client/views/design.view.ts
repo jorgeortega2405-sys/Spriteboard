@@ -16,7 +16,11 @@ export async function createDesignView(canvasUuid: string): Promise<HTMLElement>
         const body = await res.json();
         const serverCanvas = body?.canvas || body;
         if (serverCanvas && serverCanvas.data) {
-          canvasRecord = serverCanvas;
+          canvasRecord = {
+            ...serverCanvas,
+            role: body?.role || serverCanvas.role,
+            room_token: body?.room_token || serverCanvas.room_token,
+          };
           void saveLocalCanvas({
             ...serverCanvas,
             data: serverCanvas.data,

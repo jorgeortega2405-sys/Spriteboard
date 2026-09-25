@@ -684,16 +684,13 @@ export async function syncCanvas(userId: number | null, dto: SyncCanvasDto): Pro
       if (row.deleted_at !== null) {
         throw new Error('El lienzo ha sido enviado a la papelera.');
       }
-      if (userId === null) {
-        throw new Error('Debes iniciar sesión para sincronizar cambios en este lienzo.');
-      }
-      const isOwner = row.user_id === userId;
+      const isOwner = userId !== null && row.user_id === userId;
       let isEditor = isOwner;
 
       if (!isOwner) {
         if (row.access_level === 'public' && row.public_role !== 'viewer') {
           isEditor = true;
-        } else {
+        } else if (userId !== null) {
           const [memberRows] = await canvasPool.query<mysql.RowDataPacket[]>(
             "SELECT id FROM canvas_members WHERE canvas_id = ? AND user_id = ? AND role = 'editor' LIMIT 1",
             [row.id, userId]
@@ -713,6 +710,9 @@ export async function syncCanvas(userId: number | null, dto: SyncCanvasDto): Pro
       }
 
       if (!isEditor) {
+        if (userId === null) {
+          throw new Error('Debes iniciar sesión para sincronizar cambios en este lienzo.');
+        }
         throw new Error('No tienes permisos de edición para sincronizar este lienzo.');
       }
 
