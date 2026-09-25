@@ -20,7 +20,7 @@
         <div class="profile-header-card" data-ref="profile-header-card">
           <div class="profile-header-card__top">
             <div class="profile-avatar-wrap" data-ref="profile-avatar-wrap">
-              <img class="profile-avatar-img image-lazy-fade" data-ref="profile-avatar-img" src="" alt="Avatar" />
+              <img class="profile-avatar-img image-lazy-fade" data-ref="profile-avatar-img" src="" alt="Avatar" onload="this.classList.add('image-loaded')" onerror="this.classList.add('image-loaded')" />
               <div class="profile-avatar-fallback" data-ref="profile-avatar-fallback" style="display: none;"></div>
             </div>
 

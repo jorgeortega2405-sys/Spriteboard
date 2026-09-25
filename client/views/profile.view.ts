@@ -9,6 +9,7 @@ import { SkeletonService } from '../services/skeleton.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { PublicUserProfile } from '../types/user-profile.types.js';
+import { generateThemedBannerSvg } from '../utils/banner.util.js';
 import { removeEmptyState, renderEmptyState, setupLazyImages } from '../utils/dom.util.js';
 
 class ProfileController {
@@ -198,7 +199,10 @@ class ProfileController {
       if (this.bannerFallback) this.bannerFallback.style.display = 'none';
     } else {
       if (this.bannerImg) this.bannerImg.style.display = 'none';
-      if (this.bannerFallback) this.bannerFallback.style.display = 'block';
+      if (this.bannerFallback) {
+        this.bannerFallback.innerHTML = generateThemedBannerSvg(this.profile.username);
+        this.bannerFallback.style.display = 'block';
+      }
     }
 
     if (this.profile.is_me && this.btnUploadBanner) {
@@ -207,21 +211,27 @@ class ProfileController {
 
     const isOfficialAccount = this.profile.id === -1 || this.profile.username === 'Spriteboard Oficial' || this.profile.username.toLowerCase() === 'spriteboard';
 
-    if (this.profile.avatar_url && this.avatarImg) {
-      this.avatarImg.src = this.profile.avatar_url;
+    const avatarSrc = this.profile.avatar_url || API_ROUTES.avatar(this.profile.username);
+    if (this.avatarImg) {
+      this.avatarImg.src = avatarSrc;
+      this.avatarImg.alt = escapeHtml(this.profile.username);
       this.avatarImg.style.display = 'block';
-      if (this.avatarFallback) this.avatarFallback.style.display = 'none';
-    } else if (this.avatarFallback) {
-      if (isOfficialAccount) {
-        this.avatarFallback.className = 'profile-avatar-fallback profile-avatar-fallback--official';
-        this.avatarFallback.innerHTML = '<svg class="component-icon" style="color: #fbbf24; width: 44px; height: 44px;" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>';
-      } else {
-        const initial = escapeHtml(this.profile.username.charAt(0).toUpperCase() || 'U');
-        this.avatarFallback.className = 'profile-avatar-fallback';
-        this.avatarFallback.textContent = initial;
+      this.avatarImg.onload = () => {
+        this.avatarImg?.classList.add('image-loaded');
+      };
+      this.avatarImg.onerror = () => {
+        if (this.avatarImg) {
+          this.avatarImg.onerror = null;
+          this.avatarImg.src = API_ROUTES.avatar(this.profile?.username || 'User');
+          this.avatarImg.classList.add('image-loaded');
+        }
+      };
+      if (this.avatarImg.complete && this.avatarImg.naturalWidth > 0) {
+        this.avatarImg.classList.add('image-loaded');
       }
-      this.avatarFallback.style.display = 'flex';
-      if (this.avatarImg) this.avatarImg.style.display = 'none';
+    }
+    if (this.avatarFallback) {
+      this.avatarFallback.style.display = 'none';
     }
 
     if (this.displayNameEl) {
