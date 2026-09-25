@@ -18,6 +18,7 @@ import { AlignmentGuide, applyElementAnimation, applyElementEffect, BackgroundTy
 import { currentUser, escapeHtml, getApi, postApi } from '../../services/api.service.js';
 import { CanvasClipboardData, copyCanvasElements, getCanvasClipboardData, hasCanvasClipboardElements, preparePastedCanvasElements } from '../../services/canvas-clipboard.service.js';
 import { getLocalCanvasByUuid, removeLocalCanvas, saveLocalCanvas } from '../../services/canvas-storage.service.js';
+import { CanvasViewTracker, startCanvasViewTracking } from '../../services/canvas-view-tracker.service.js';
 import { renderIcons } from '../../services/icon.service.js';
 import { removeImageBackground } from '../../services/image-ai.service.js';
 import { showToast } from '../../services/toast.service.js';
@@ -207,6 +208,7 @@ export class BoardController {
   private topTextSwatchEl: HTMLElement | null = null;
   private topToggleColorsBtn: HTMLButtonElement | null = null;
   private topToolbarContainerEl: HTMLElement | null = null;
+  private viewTracker: CanvasViewTracker | null = null;
 
   constructor(container: HTMLElement, canvasUuid: string, initialCanvasRecord?: CanvasItem | null) {
     this.container = container;
@@ -432,6 +434,7 @@ export class BoardController {
     });
     preloadCustom3DModels(BOARD_3D_SHAPES.map((s) => s.id));
     renderIcons(this.container);
+    this.viewTracker = startCanvasViewTracking(this.canvasUuid);
     this.isLoaded = true;
     this.requestRedraw();
     requestAnimationFrame(() => {
@@ -441,6 +444,8 @@ export class BoardController {
   }
 
   public destroy(): void {
+    this.viewTracker?.stop();
+    this.viewTracker = null;
     if (this.isPreviewingSnapshot) {
       this.exitSnapshotPreview();
     }

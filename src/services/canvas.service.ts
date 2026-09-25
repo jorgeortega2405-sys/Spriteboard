@@ -1539,15 +1539,6 @@ export async function recordCanvasView(
   userAgent: string | null
 ): Promise<void> {
   try {
-    const throttleKey = `canvas:viewed:${uuid}:${sessionId}`;
-    try {
-      const alreadyViewed = await redis.get(throttleKey);
-      if (alreadyViewed) {
-        return;
-      }
-      await redis.setex(throttleKey, 3600, '1');
-    } catch {}
-
     const [canvasRows] = await canvasPool.query<mysql.RowDataPacket[]>(
       'SELECT id FROM canvases WHERE uuid = ? AND deleted_at IS NULL LIMIT 1',
       [uuid]
@@ -1571,6 +1562,13 @@ export async function recordCanvasView(
         [canvasId, userId, sessionId, ipAddress ? ipAddress.slice(0, 45) : null, userAgent ? userAgent.slice(0, 255) : null]
       );
     }
+
+    try {
+      const keys = await redis.keys(`canvas:metrics:${uuid}:*`);
+      if (keys.length > 0) {
+        await redis.del(...keys);
+      }
+    } catch {}
   } catch (err) {
     logger.db.error(`Error al registrar vista de lienzo ${uuid}`, err);
   }
@@ -1584,20 +1582,13 @@ export async function updateCanvasViewHeartbeat(
   try {
     const safeDuration = Math.max(0, Math.min(86400, Math.floor(durationSeconds || 0)));
     const key = `heartbeat:${uuid}:${sessionId}`;
-    const dbThrottleKey = `heartbeat:db:${uuid}:${sessionId}`;
 
     try {
       const lastUpdate = await redis.get(key);
       if (lastUpdate && Number(lastUpdate) >= safeDuration) {
         return;
       }
-      await redis.setex(key, 60, String(safeDuration));
-
-      const lastDbUpdate = await redis.get(dbThrottleKey);
-      if (lastDbUpdate && safeDuration - Number(lastDbUpdate) < 30) {
-        return;
-      }
-      await redis.setex(dbThrottleKey, 120, String(safeDuration));
+      await redis.setex(key, 10, String(safeDuration));
     } catch {}
 
     await canvasPool.execute(
@@ -1607,6 +1598,13 @@ export async function updateCanvasViewHeartbeat(
        WHERE c.uuid = ? AND cv.session_id = ?`,
       [safeDuration, uuid, sessionId]
     );
+
+    try {
+      const keys = await redis.keys(`canvas:metrics:${uuid}:*`);
+      if (keys.length > 0) {
+        await redis.del(...keys);
+      }
+    } catch {}
   } catch (err) {
     logger.db.error(`Error al actualizar latido de duración de lienzo ${uuid}`, err);
   }

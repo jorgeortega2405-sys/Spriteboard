@@ -13,6 +13,7 @@ import { getBoardTemplateElements } from '../../config/board-templates.data.js';
 import { currentUser, getApi, postApi, putApi } from '../../services/api.service.js';
 import { CanvasClipboardData, copyCanvasElements, getCanvasClipboardData, hasCanvasClipboardElements, preparePastedCanvasElements } from '../../services/canvas-clipboard.service.js';
 import { getLocalCanvasByUuid, saveLocalCanvas } from '../../services/canvas-storage.service.js';
+import { CanvasViewTracker, startCanvasViewTracking } from '../../services/canvas-view-tracker.service.js';
 import { t } from '../../services/i18n.service.js';
 import { renderIcons } from '../../services/icon.service.js';
 import { removeImageBackground } from '../../services/image-ai.service.js';
@@ -140,6 +141,7 @@ export class PresentationController {
   private slideshowPlayer: SlideshowPlayerComponent | null = null;
   private slideWidth: number = 1280;
   private undoStack: string[] = [];
+  private viewTracker: CanvasViewTracker | null = null;
   private zoom: number = 1;
 
   constructor(container: HTMLElement, canvasUuid: string, initialRecord?: any) {
@@ -173,10 +175,13 @@ export class PresentationController {
     this.renderCollaboratorsBar();
     this.updateSelectionToolbar();
     renderIcons(this.container);
+    this.viewTracker = startCanvasViewTracking(this.canvasUuid);
     return true;
   }
 
   public destroy(): void {
+    this.viewTracker?.stop();
+    this.viewTracker = null;
     closeContextMenu();
     if (this.abortController) {
       this.abortController.abort();

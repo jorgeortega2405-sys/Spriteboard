@@ -10,6 +10,7 @@ import { API_ROUTES } from '../../config/api-routes.js';
 import { BoardProject, TEXT_PRESETS } from '../../core/canvas-engine.js';
 import { currentUser, escapeHtml, getApi, postApi } from '../../services/api.service.js';
 import { getLocalCanvasByUuid, saveLocalCanvas } from '../../services/canvas-storage.service.js';
+import { CanvasViewTracker, startCanvasViewTracking } from '../../services/canvas-view-tracker.service.js';
 import { renderIcons } from '../../services/icon.service.js';
 import { removeImageBackground } from '../../services/image-ai.service.js';
 import { showToast } from '../../services/toast.service.js';
@@ -136,6 +137,7 @@ export class DocController implements ViewController {
   private shareDropdownController: CanvasShareDropdownController | null = null;
   private shareWrapperEl: HTMLElement | null = null;
   private stylesDropdownController: { close: () => void; destroy: () => void } | null = null;
+  private viewTracker: CanvasViewTracker | null = null;
 
   constructor(container: HTMLElement, canvasUuid: string, initialCanvasRecord?: CanvasItem | null) {
     this.container = container;
@@ -181,10 +183,13 @@ export class DocController implements ViewController {
     this.updateUndoRedoButtonsState();
     this.updateZoomUI();
     renderIcons(this.container);
+    this.viewTracker = startCanvasViewTracking(this.canvasUuid);
     return true;
   }
 
   public destroy(): void {
+    this.viewTracker?.stop();
+    this.viewTracker = null;
     if (this.isPreviewingSnapshot) {
       this.exitSnapshotPreview();
     }
