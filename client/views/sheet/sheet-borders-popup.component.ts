@@ -24,7 +24,7 @@ export interface SheetBordersPopupOptions {
 
 const PRESET_BORDER_COLORS = [
   '#000000', '#1e293b', '#475569', '#64748b', '#94a3b8', '#cbd5e1', '#ffffff',
-  '#ef4444', '#f97316', '#f59e0b', '#10b981', '#06b6d4', '#3b82f6', '#7c3aed', '#ec4899'
+  '#ef4444', '#f97316', '#f59e0b', '#10b981', '#06b6d4', '#3b82f6', '#2563eb', '#ec4899'
 ];
 
 export class SheetBordersPopupComponent {

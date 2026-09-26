@@ -247,6 +247,64 @@ export class SheetGridManager {
     }
   }
 
+  public async copySelectionToClipboard(): Promise<void> {
+    const r = this.selection.range;
+    const lines: string[] = [];
+    for (let row = r.startRow; row <= r.endRow; row++) {
+      const rowVals: string[] = [];
+      for (let col = r.startCol; col <= r.endCol; col++) {
+        const k = coordToCellKey(row, col);
+        const cell = this.sheetData.cells[k];
+        const val = cell ? (cell.computed !== undefined && cell.computed !== null ? String(cell.computed) : cell.raw || '') : '';
+        rowVals.push(val);
+      }
+      lines.push(rowVals.join('\t'));
+    }
+    const tsv = lines.join('\r\n');
+    try {
+      await navigator.clipboard.writeText(tsv);
+    } catch {}
+  }
+
+  public async pasteFromClipboard(): Promise<void> {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (!text) return;
+      const lines = text.split(/\r?\n/);
+      if (lines.length === 0) return;
+
+      const startRow = this.selection.activeRow;
+      const startCol = this.selection.activeCol;
+
+      let maxR = startRow;
+      let maxC = startCol;
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (i === lines.length - 1 && !line) continue;
+        const r = startRow + i;
+        const cols = line.split('\t');
+        for (let j = 0; j < cols.length; j++) {
+          const c = startCol + j;
+          const raw = cols[j];
+          this.callbacks.onCellChange(r, c, raw);
+          this.renderCell(r, c);
+          if (c > maxC) maxC = c;
+        }
+        if (r > maxR) maxR = r;
+      }
+
+      this.selection.range = {
+        endCol: Math.min(this.sheetData.colCount - 1, maxC),
+        endRow: Math.min(this.sheetData.rowCount - 1, maxR),
+        startCol,
+        startRow,
+      };
+      this.updateSelectionDom();
+      this.notifySelectionChange();
+    } catch {}
+  }
+
   public expandRows(count: number = 500): void {
     if (count <= 0) return;
     this.sheetData.rowCount += count;
@@ -737,7 +795,16 @@ export class SheetGridManager {
           this.moveSelection(0, e.shiftKey ? -1 : 1);
           break;
         default:
-          if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+          if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
+            e.preventDefault();
+            this.selectAll();
+          } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
+            e.preventDefault();
+            void this.copySelectionToClipboard();
+          } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
+            e.preventDefault();
+            void this.pasteFromClipboard();
+          } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
             this.startEditing(e.key);
           }
           break;

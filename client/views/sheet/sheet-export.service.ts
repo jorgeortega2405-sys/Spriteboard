@@ -156,7 +156,7 @@ export function generateSheetThumbnail(project: SheetProject): string {
     }
   }
 
-  ctx.strokeStyle = '#7c3aed';
+  ctx.strokeStyle = '#2563eb';
   ctx.lineWidth = 1.5;
   ctx.strokeRect(28, 24, colW, rowH);
 

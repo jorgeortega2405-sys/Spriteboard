@@ -24,6 +24,7 @@ export class SheetElementsManager {
   private elements: BoardElement[] = [];
   private isDraggingElement: boolean = false;
   private isResizing: boolean = false;
+  private resizeObserver: ResizeObserver | null = null;
   private selectedElementId: string | null = null;
 
   constructor(containerEl: HTMLElement, elements: BoardElement[], callbacks: SheetElementsCallbacks) {
@@ -35,11 +36,25 @@ export class SheetElementsManager {
   public init(): void {
     this.createCanvasOverlay();
     this.bindEvents();
+    this.resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        if (width > 0 && height > 0) {
+          this.resizeOverlay(width, height);
+        }
+      }
+    });
+    this.resizeObserver.observe(this.containerEl);
+    if (this.containerEl.clientWidth > 0 && this.containerEl.clientHeight > 0) {
+      this.resizeOverlay(this.containerEl.clientWidth, this.containerEl.clientHeight);
+    }
     this.render();
   }
 
   public destroy(): void {
     this.abortController.abort();
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = null;
     if (this.canvasEl && this.canvasEl.parentNode) {
       this.canvasEl.parentNode.removeChild(this.canvasEl);
     }
@@ -63,6 +78,9 @@ export class SheetElementsManager {
 
   public setTool(tool: SheetTool): void {
     this.activeTool = tool;
+    if (this.canvasEl) {
+      this.canvasEl.style.pointerEvents = tool === 'select' ? 'none' : 'auto';
+    }
     if (tool !== 'select') {
       this.selectedElementId = null;
       this.callbacks.onSelectElement(null);
@@ -85,7 +103,7 @@ export class SheetElementsManager {
 
   public addShape(shapeType: ShapeType, x: number = 200, y: number = 200): BoardShapeElement {
     const el = createShapeElement(shapeType, {
-      fillColor: '#7c3aed',
+      fillColor: '#2563eb',
       height: 120,
       width: 160,
       x,
@@ -228,6 +246,23 @@ export class SheetElementsManager {
   private bindEvents(): void {
     if (!this.canvasEl) return;
     const { signal } = this.abortController;
+
+    this.containerEl.addEventListener('pointermove', (e) => {
+      if (this.activeTool !== 'select' || !this.canvasEl) return;
+      const pt = this.getMousePos(e);
+      let shouldEnablePointer = false;
+      const selected = this.getSelectedElement();
+      if (selected) {
+        const bbox = getElementBoundingBox(selected, this.elements);
+        const handle = hitTestBoundingBoxResizeHandle(bbox, pt.x, pt.y, (wx, wy) => ({ x: wx, y: wy }));
+        if (handle) shouldEnablePointer = true;
+      }
+      if (!shouldEnablePointer) {
+        const hit = hitTestElement(this.elements, pt.x, pt.y, 1);
+        if (hit) shouldEnablePointer = true;
+      }
+      this.canvasEl.style.pointerEvents = (shouldEnablePointer || this.isDraggingElement || this.isResizing) ? 'auto' : 'none';
+    }, { signal });
 
     this.canvasEl.addEventListener('pointerdown', (e) => {
       const pt = this.getMousePos(e);

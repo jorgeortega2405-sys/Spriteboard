@@ -9,6 +9,7 @@ import { renderIcons } from '../../services/icon.service.js';
 import { showToast } from '../../services/toast.service.js';
 import { CanvasItem } from '../../types/canvas.types.js';
 import { ViewController } from '../../types/common.types.js';
+import { CarouselController, initCarouselScroll, setupDropdown } from '../../utils/dom.util.js';
 import { ShapeType } from '../board/board.types.js';
 import { SheetBordersPopupComponent } from './sheet-borders-popup.component.js';
 import { SheetElementsManager } from './sheet-elements.manager.js';
@@ -18,20 +19,30 @@ import { SheetGridManager } from './sheet-grid.manager.js';
 import { SheetHistoryManager } from './sheet-history.manager.js';
 import { SheetCellData, SheetData, SheetProject, SheetSelection, SheetTool } from './sheet.types.js';
 
+const SHEET_COLOR_PALETTE = [
+  '#000000', '#1e293b', '#475569', '#64748b', '#94a3b8', '#cbd5e1', '#f1f5f9', '#ffffff',
+  '#ef4444', '#f97316', '#f59e0b', '#10b981', '#06b6d4', '#2563eb', '#6366f1', '#ec4899',
+  '#fee2e2', '#ffedd5', '#fef3c7', '#d1fae5', '#cffafe', '#dbeafe', '#e0e7ff', '#fce7f3'
+];
+
 export class SheetController implements ViewController {
   private abortController: AbortController = new AbortController();
   private activeTool: SheetTool = 'select';
+  private bgColorDropdownController: { close: () => void; destroy: () => void } | null = null;
   private bordersPopup: SheetBordersPopupComponent | null = null;
   private canvasRecord: any = null;
   private canvasUuid: string;
   private container: HTMLElement;
   private elementsManager: SheetElementsManager | null = null;
   private fileMenuController: CanvasFileMenuController | null = null;
+  private fontDropdownController: { close: () => void; destroy: () => void } | null = null;
   private gridManager: SheetGridManager | null = null;
   private historyManager: SheetHistoryManager = new SheetHistoryManager();
   private project: SheetProject;
   private saveTimeout: number | null = null;
   private shareDropdownController: CanvasShareDropdownController | null = null;
+  private textColorDropdownController: { close: () => void; destroy: () => void } | null = null;
+  private topToolbarCarousel: CarouselController | null = null;
   private viewTracker: CanvasViewTracker | null = null;
 
   constructor(container: HTMLElement, canvasUuid: string, initialRecord?: any) {
@@ -91,8 +102,11 @@ export class SheetController implements ViewController {
     this.setupBordersPopup();
     this.setupTopBarComponents();
     this.setupToolbarEvents();
+    this.setupColorPalettes();
     this.setupFormulaBarEvents();
     this.setupVerticalToolbarEvents();
+    this.setupTabsEvents();
+    this.setupKeyboardShortcuts();
 
     this.historyManager.pushState(this.cloneProject());
     this.viewTracker = startCanvasViewTracking(this.canvasUuid);
@@ -113,6 +127,10 @@ export class SheetController implements ViewController {
     this.elementsManager?.destroy();
     this.fileMenuController?.destroy();
     this.shareDropdownController?.destroy();
+    this.fontDropdownController?.destroy();
+    this.textColorDropdownController?.destroy();
+    this.bgColorDropdownController?.destroy();
+    this.topToolbarCarousel?.destroy();
   }
 
   private getActiveSheet(): SheetData {
@@ -195,29 +213,85 @@ export class SheetController implements ViewController {
   private setupToolbarEvents(): void {
     const { signal } = this.abortController;
 
+    const topToolbarContainer = this.container.querySelector<HTMLElement>('[data-ref="sheet-top-toolbar-container"]');
+    if (topToolbarContainer) {
+      this.topToolbarCarousel = initCarouselScroll(topToolbarContainer, {
+        carouselSelector: '[data-ref="sheet-top-toolbar"]',
+        leftBtnSelector: '[data-ref="btn-top-toolbar-scroll-left"]',
+        rightBtnSelector: '[data-ref="btn-top-toolbar-scroll-right"]',
+        step: 220,
+      });
+    }
+
     const btnUndo = this.container.querySelector<HTMLElement>('[data-ref="btn-sheet-undo"]');
     const btnRedo = this.container.querySelector<HTMLElement>('[data-ref="btn-sheet-redo"]');
 
     btnUndo?.addEventListener('click', () => {
-      const prev = this.historyManager.undo();
-      if (prev) {
-        this.project = prev;
-        const activeSheet = this.getActiveSheet();
-        this.gridManager?.updateSheetData(activeSheet);
-        this.elementsManager?.setElements(this.project.elements);
-        this.queueAutoSave();
-      }
+      this.handleUndo();
     }, { signal });
 
     btnRedo?.addEventListener('click', () => {
-      const next = this.historyManager.redo();
-      if (next) {
-        this.project = next;
-        const activeSheet = this.getActiveSheet();
-        this.gridManager?.updateSheetData(activeSheet);
-        this.elementsManager?.setElements(this.project.elements);
-        this.queueAutoSave();
-      }
+      this.handleRedo();
+    }, { signal });
+
+    const fontWrapper = this.container.querySelector<HTMLElement>('[data-ref="sheet-font-family-wrapper"]');
+    if (fontWrapper) {
+      this.fontDropdownController = setupDropdown(fontWrapper, {
+        onSelect: (val, item) => {
+          const font = item?.getAttribute('data-font') || val;
+          if (font) {
+            const fontLabel = this.container.querySelector<HTMLElement>('[data-ref="font-family-label"]');
+            if (fontLabel) fontLabel.textContent = font;
+            const fontItems = this.container.querySelectorAll<HTMLElement>('[data-font]');
+            fontItems.forEach((f) => f.classList.toggle('is-active', f.getAttribute('data-font') === font));
+            this.gridManager?.applyFormattingToSelection((cell) => {
+              cell.fontFamily = font;
+            });
+            this.recordState();
+          }
+        },
+      });
+    }
+
+    const btnFontSizeDec = this.container.querySelector<HTMLElement>('[data-ref="btn-font-size-decrease"]');
+    btnFontSizeDec?.addEventListener('click', () => {
+      let newSize = 12;
+      this.gridManager?.applyFormattingToSelection((cell) => {
+        const cur = cell.fontSize || 12;
+        newSize = Math.max(6, cur - 1);
+        cell.fontSize = newSize;
+      });
+      const label = this.container.querySelector<HTMLElement>('[data-ref="font-size-label"]');
+      if (label) label.textContent = String(newSize);
+      this.recordState();
+    }, { signal });
+
+    const btnFontSizeInc = this.container.querySelector<HTMLElement>('[data-ref="btn-font-size-increase"]');
+    btnFontSizeInc?.addEventListener('click', () => {
+      let newSize = 12;
+      this.gridManager?.applyFormattingToSelection((cell) => {
+        const cur = cell.fontSize || 12;
+        newSize = Math.min(96, cur + 1);
+        cell.fontSize = newSize;
+      });
+      const label = this.container.querySelector<HTMLElement>('[data-ref="font-size-label"]');
+      if (label) label.textContent = String(newSize);
+      this.recordState();
+    }, { signal });
+
+    const btnFontSizeBadge = this.container.querySelector<HTMLElement>('[data-ref="btn-font-size-badge"]');
+    btnFontSizeBadge?.addEventListener('click', () => {
+      const SIZES = [10, 11, 12, 14, 16, 18, 24, 32];
+      let nextSize = 12;
+      this.gridManager?.applyFormattingToSelection((cell) => {
+        const cur = cell.fontSize || 12;
+        const idx = SIZES.indexOf(cur);
+        nextSize = idx >= 0 && idx < SIZES.length - 1 ? SIZES[idx + 1] : SIZES[0];
+        cell.fontSize = nextSize;
+      });
+      const label = this.container.querySelector<HTMLElement>('[data-ref="font-size-label"]');
+      if (label) label.textContent = String(nextSize);
+      this.recordState();
     }, { signal });
 
     const btnBold = this.container.querySelector<HTMLElement>('[data-ref="btn-format-bold"]');
@@ -318,6 +392,74 @@ export class SheetController implements ViewController {
     }, { signal });
   }
 
+  private setupColorPalettes(): void {
+    const { signal } = this.abortController;
+
+    const textColorsGrid = this.container.querySelector<HTMLElement>('[data-ref="grid-text-colors"]');
+    if (textColorsGrid) {
+      textColorsGrid.innerHTML = '';
+      SHEET_COLOR_PALETTE.forEach((color) => {
+        const swatch = document.createElement('button');
+        swatch.type = 'button';
+        swatch.className = 'sheet-color-swatch-item';
+        swatch.setAttribute('data-ref', `color-swatch-text-${color.replace('#', '')}`);
+        swatch.style.backgroundColor = color;
+        swatch.setAttribute('data-color', color);
+        swatch.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.gridManager?.applyFormattingToSelection((cell) => {
+            cell.textColor = color;
+          });
+          const dot = this.container.querySelector<HTMLElement>('[data-ref="text-color-dot"]');
+          if (dot) dot.style.backgroundColor = color;
+          this.textColorDropdownController?.close();
+          this.recordState();
+        }, { signal });
+        textColorsGrid.appendChild(swatch);
+      });
+    }
+
+    const bgColorsGrid = this.container.querySelector<HTMLElement>('[data-ref="grid-bg-colors"]');
+    if (bgColorsGrid) {
+      bgColorsGrid.innerHTML = '';
+      const bgPalette = ['transparent', ...SHEET_COLOR_PALETTE];
+      bgPalette.forEach((color) => {
+        const swatch = document.createElement('button');
+        swatch.type = 'button';
+        swatch.className = 'sheet-color-swatch-item';
+        swatch.setAttribute('data-ref', `color-swatch-bg-${color.replace('#', '')}`);
+        swatch.style.backgroundColor = color === 'transparent' ? 'transparent' : color;
+        if (color === 'transparent') {
+          swatch.style.backgroundImage = 'linear-gradient(45deg, #cbd5e1 25%, transparent 25%), linear-gradient(-45deg, #cbd5e1 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #cbd5e1 75%), linear-gradient(-45deg, transparent 75%, #cbd5e1 75%)';
+          swatch.style.backgroundSize = '6px 6px';
+          swatch.style.backgroundPosition = '0 0, 0 3px, 3px -3px, -3px 0px';
+        }
+        swatch.setAttribute('data-color', color);
+        swatch.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.gridManager?.applyFormattingToSelection((cell) => {
+            cell.backgroundColor = color === 'transparent' ? undefined : color;
+          });
+          const dot = this.container.querySelector<HTMLElement>('[data-ref="bg-color-dot"]');
+          if (dot) dot.style.backgroundColor = color === 'transparent' ? 'transparent' : color;
+          this.bgColorDropdownController?.close();
+          this.recordState();
+        }, { signal });
+        bgColorsGrid.appendChild(swatch);
+      });
+    }
+
+    const textColorWrapper = this.container.querySelector<HTMLElement>('[data-ref="sheet-text-color-wrapper"]');
+    if (textColorWrapper) {
+      this.textColorDropdownController = setupDropdown(textColorWrapper, {});
+    }
+
+    const bgColorWrapper = this.container.querySelector<HTMLElement>('[data-ref="sheet-bg-color-wrapper"]');
+    if (bgColorWrapper) {
+      this.bgColorDropdownController = setupDropdown(bgColorWrapper, {});
+    }
+  }
+
   private setupFormulaBarEvents(): void {
     const { signal } = this.abortController;
     const formulaInput = this.container.querySelector<HTMLInputElement>('[data-ref="sheet-formula-input"]');
@@ -370,6 +512,12 @@ export class SheetController implements ViewController {
     const vtoolBtns = this.container.querySelectorAll<HTMLButtonElement>('[data-vtool]');
     const shapesDrawer = this.container.querySelector<HTMLElement>('[data-ref="sheet-shapes-drawer"]');
     const closeShapesBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-close-shapes-drawer"]');
+    const closeVToolbarBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-close-vertical-toolbar"]');
+    const vtoolbarContainer = this.container.querySelector<HTMLElement>('[data-ref="sheet-vertical-toolbar-container"]');
+
+    closeVToolbarBtn?.addEventListener('click', () => {
+      vtoolbarContainer?.classList.toggle('is-hidden');
+    }, { signal });
 
     vtoolBtns.forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -392,8 +540,14 @@ export class SheetController implements ViewController {
         } else if (tool === 'sticky') {
           this.elementsManager?.addSticky('Nueva nota', '#fef08a', 200, 150);
           this.recordState();
+        } else if (tool === 'connector') {
+          this.elementsManager?.addConnector({ x: 200, y: 200 }, { x: 350, y: 200 });
+          this.recordState();
         } else if (tool === 'charts') {
           this.elementsManager?.addChart('bar-vertical', 200, 150);
+          this.recordState();
+        } else if (tool === 'mockups') {
+          this.elementsManager?.addMockup('browser', 200, 150);
           this.recordState();
         } else if (tool === 'image') {
           this.triggerImageUpload();
@@ -415,6 +569,206 @@ export class SheetController implements ViewController {
           this.recordState();
         }
       }, { signal });
+    });
+  }
+
+  private setupTabsEvents(): void {
+    const addBtn = this.container.querySelector<HTMLElement>('[data-ref="btn-add-sheet"]');
+    addBtn?.addEventListener('click', () => {
+      this.addNewSheet();
+    }, { signal: this.abortController.signal });
+
+    this.renderSheetTabs();
+  }
+
+  private setupKeyboardShortcuts(): void {
+    const { signal } = this.abortController;
+
+    window.addEventListener('keydown', (e: KeyboardEvent) => {
+      const isInput = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
+      const isCmdOrCtrl = e.ctrlKey || e.metaKey;
+
+      if (isCmdOrCtrl && e.key.toLowerCase() === 'z') {
+        if (!isInput) {
+          e.preventDefault();
+          if (e.shiftKey) {
+            this.handleRedo();
+          } else {
+            this.handleUndo();
+          }
+        }
+        return;
+      }
+
+      if (isCmdOrCtrl && e.key.toLowerCase() === 'y') {
+        if (!isInput) {
+          e.preventDefault();
+          this.handleRedo();
+        }
+        return;
+      }
+
+      if (isCmdOrCtrl && e.key.toLowerCase() === 'b') {
+        if (!isInput) {
+          e.preventDefault();
+          this.gridManager?.applyFormattingToSelection((cell) => {
+            cell.bold = !cell.bold;
+          });
+          this.recordState();
+        }
+        return;
+      }
+
+      if (isCmdOrCtrl && e.key.toLowerCase() === 'i') {
+        if (!isInput) {
+          e.preventDefault();
+          this.gridManager?.applyFormattingToSelection((cell) => {
+            cell.italic = !cell.italic;
+          });
+          this.recordState();
+        }
+        return;
+      }
+
+      if (isCmdOrCtrl && e.key.toLowerCase() === 'u') {
+        if (!isInput) {
+          e.preventDefault();
+          this.gridManager?.applyFormattingToSelection((cell) => {
+            cell.underline = !cell.underline;
+          });
+          this.recordState();
+        }
+        return;
+      }
+
+      if ((e.key === 'Delete' || e.key === 'Backspace') && !isInput) {
+        if (this.elementsManager?.getSelectedElement()) {
+          e.preventDefault();
+          this.elementsManager.deleteSelectedElement();
+          this.recordState();
+        }
+      }
+    }, { signal });
+  }
+
+  private handleUndo(): void {
+    const prev = this.historyManager.undo();
+    if (prev) {
+      this.project = prev;
+      const activeSheet = this.getActiveSheet();
+      evaluateAllCells(activeSheet.cells);
+      this.gridManager?.updateSheetData(activeSheet);
+      this.elementsManager?.setElements(this.project.elements);
+      this.renderSheetTabs();
+      this.queueAutoSave();
+    }
+  }
+
+  private handleRedo(): void {
+    const next = this.historyManager.redo();
+    if (next) {
+      this.project = next;
+      const activeSheet = this.getActiveSheet();
+      evaluateAllCells(activeSheet.cells);
+      this.gridManager?.updateSheetData(activeSheet);
+      this.elementsManager?.setElements(this.project.elements);
+      this.renderSheetTabs();
+      this.queueAutoSave();
+    }
+  }
+
+  private addNewSheet(): void {
+    const newId = `sheet-${Date.now()}`;
+    const newSheet: SheetData = {
+      cells: {},
+      colCount: 26,
+      columns: {},
+      id: newId,
+      name: `Hoja ${this.project.sheets.length + 1}`,
+      rowCount: 1000,
+      rows: {},
+      showGridLines: true,
+    };
+    this.project.sheets.push(newSheet);
+    this.switchSheet(newId);
+  }
+
+  private switchSheet(sheetId: string): void {
+    if (this.project.activeSheetId === sheetId) return;
+    this.project.activeSheetId = sheetId;
+    const activeSheet = this.getActiveSheet();
+    evaluateAllCells(activeSheet.cells);
+    this.gridManager?.updateSheetData(activeSheet);
+    this.bordersPopup?.destroy();
+    this.setupBordersPopup();
+    this.renderSheetTabs();
+    this.recordState();
+  }
+
+  private deleteSheet(sheetId: string): void {
+    if (this.project.sheets.length <= 1) return;
+    const index = this.project.sheets.findIndex((s) => s.id === sheetId);
+    if (index === -1) return;
+
+    this.project.sheets.splice(index, 1);
+    if (this.project.activeSheetId === sheetId) {
+      const nextIndex = Math.min(index, this.project.sheets.length - 1);
+      this.project.activeSheetId = this.project.sheets[nextIndex].id;
+      const activeSheet = this.getActiveSheet();
+      evaluateAllCells(activeSheet.cells);
+      this.gridManager?.updateSheetData(activeSheet);
+    }
+    this.renderSheetTabs();
+    this.recordState();
+  }
+
+  private renderSheetTabs(): void {
+    const tabsContainer = this.container.querySelector<HTMLElement>('[data-ref="sheet-tabs"]');
+    if (!tabsContainer) return;
+
+    const addBtn = tabsContainer.querySelector<HTMLElement>('[data-ref="btn-add-sheet"]');
+    tabsContainer.querySelectorAll<HTMLElement>('.sheet-tab').forEach((tab) => tab.remove());
+
+    const { signal } = this.abortController;
+
+    this.project.sheets.forEach((sheet) => {
+      const tabBtn = document.createElement('button');
+      tabBtn.type = 'button';
+      tabBtn.className = `sheet-tab ${sheet.id === this.project.activeSheetId ? 'is-active' : ''}`;
+      tabBtn.setAttribute('data-ref', `sheet-tab-${sheet.id}`);
+      tabBtn.setAttribute('data-sheet-id', sheet.id);
+      tabBtn.textContent = sheet.name;
+
+      tabBtn.addEventListener('click', () => {
+        this.switchSheet(sheet.id);
+      }, { signal });
+
+      tabBtn.addEventListener('dblclick', (e) => {
+        e.stopPropagation();
+        const newName = window.prompt('Nombre de la hoja:', sheet.name);
+        if (newName && newName.trim() && newName.trim() !== sheet.name) {
+          sheet.name = newName.trim();
+          this.renderSheetTabs();
+          this.recordState();
+        }
+      }, { signal });
+
+      tabBtn.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        if (this.project.sheets.length <= 1) {
+          showToast('No se puede eliminar la única hoja', 'warning');
+          return;
+        }
+        if (window.confirm(`¿Eliminar la hoja "${sheet.name}"?`)) {
+          this.deleteSheet(sheet.id);
+        }
+      }, { signal });
+
+      if (addBtn) {
+        tabsContainer.insertBefore(tabBtn, addBtn);
+      } else {
+        tabsContainer.appendChild(tabBtn);
+      }
     });
   }
 
@@ -481,6 +835,53 @@ export class SheetController implements ViewController {
 
     if (formulaInput && document.activeElement !== formulaInput) {
       formulaInput.value = activeCellData?.raw || '';
+    }
+
+    const btnBold = this.container.querySelector<HTMLElement>('[data-ref="btn-format-bold"]');
+    const btnItalic = this.container.querySelector<HTMLElement>('[data-ref="btn-format-italic"]');
+    const btnUnderline = this.container.querySelector<HTMLElement>('[data-ref="btn-format-underline"]');
+    const btnStrike = this.container.querySelector<HTMLElement>('[data-ref="btn-format-strikethrough"]');
+    const btnWrap = this.container.querySelector<HTMLElement>('[data-ref="btn-wrap-text"]');
+    const btnCurrency = this.container.querySelector<HTMLElement>('[data-ref="btn-format-currency"]');
+    const btnPercentage = this.container.querySelector<HTMLElement>('[data-ref="btn-format-percentage"]');
+
+    btnBold?.classList.toggle('is-active', Boolean(activeCellData?.bold));
+    btnItalic?.classList.toggle('is-active', Boolean(activeCellData?.italic));
+    btnUnderline?.classList.toggle('is-active', Boolean(activeCellData?.underline));
+    btnStrike?.classList.toggle('is-active', Boolean(activeCellData?.strikethrough));
+    btnWrap?.classList.toggle('is-active', Boolean(activeCellData?.wrapText));
+    btnCurrency?.classList.toggle('is-active', activeCellData?.format === 'currency');
+    btnPercentage?.classList.toggle('is-active', activeCellData?.format === 'percentage');
+
+    const alignBtns = this.container.querySelectorAll<HTMLElement>('[data-align]');
+    alignBtns.forEach((btn) => {
+      const align = btn.getAttribute('data-align');
+      btn.classList.toggle('is-active', activeCellData?.align === align);
+    });
+
+    const fontLabel = this.container.querySelector<HTMLElement>('[data-ref="font-family-label"]');
+    if (fontLabel) {
+      fontLabel.textContent = activeCellData?.fontFamily || 'Inter';
+    }
+
+    const fontItems = this.container.querySelectorAll<HTMLElement>('[data-font]');
+    fontItems.forEach((item) => {
+      item.classList.toggle('is-active', item.getAttribute('data-font') === (activeCellData?.fontFamily || 'Inter'));
+    });
+
+    const fontSizeLabel = this.container.querySelector<HTMLElement>('[data-ref="font-size-label"]');
+    if (fontSizeLabel) {
+      fontSizeLabel.textContent = String(activeCellData?.fontSize || 12);
+    }
+
+    const textColorDot = this.container.querySelector<HTMLElement>('[data-ref="text-color-dot"]');
+    if (textColorDot) {
+      textColorDot.style.backgroundColor = activeCellData?.textColor || '#1e293b';
+    }
+
+    const bgColorDot = this.container.querySelector<HTMLElement>('[data-ref="bg-color-dot"]');
+    if (bgColorDot) {
+      bgColorDot.style.backgroundColor = activeCellData?.backgroundColor || 'transparent';
     }
 
     this.updateStatsSummary(selection);
