@@ -3142,18 +3142,18 @@ html.dark-theme .component-card-button--downgrade {
 }
 
 .modal-card--create-canvas {
-  width: 980px;
-  max-width: calc(100vw - 48px);
-  height: 640px;
-  min-height: 520px;
-  max-height: calc(100vh - 48px);
+  width: 1120px;
+  max-width: calc(100vw - 40px);
+  height: 720px;
+  min-height: 560px;
+  max-height: calc(100vh - 40px);
   padding: 0 !important;
   gap: 0 !important;
   display: grid;
-  grid-template-columns: 260px 1fr;
+  grid-template-columns: 270px 1fr;
   overflow: hidden;
   border-radius: 24px;
-  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.28);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.32);
   background-color: var(--bg-surface);
 }
 
@@ -3163,6 +3163,28 @@ html.dark-theme .component-card-button--downgrade {
   gap: 16px;
   width: 100%;
   max-width: 620px;
+}
+
+.modal-upload-dropzone.is-dragover {
+  border-color: var(--action-primary, #6366f1) !important;
+  background-color: rgba(99, 102, 241, 0.08) !important;
+}
+
+.modal-upload-thumb-card {
+  width: 90px;
+  height: 90px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+  position: relative;
+  background-color: var(--bg-surface-elevated);
+}
+
+.modal-upload-thumb-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .modal-create-canvas__sidebar {

@@ -1,7 +1,9 @@
 import { PresetVariant } from '../config/templates.config.js';
+import { uploadFilesApi } from '../services/api.service.js';
 import { createAndOpenCanvas, CreateCanvasOptions } from '../services/canvas-creator.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
+import { showToast } from '../services/toast.service.js';
 import { DocOrientation, DocPaperSize } from '../views/doc/doc.types.js';
 import { getBoardSvg, getDocSvg, getPresentationSvg, getSheetSvg, getSocialSvg, getTemplateVariantSvg } from './create-canvas-graphics.js';
 
@@ -13,7 +15,7 @@ export interface OpenCreateCanvasModalOptions {
   docPaperSize?: DocPaperSize;
   docTemplateId?: string;
   height?: number;
-  initialType?: 'board' | 'doc' | 'presentation' | 'sheet' | 'social';
+  initialType?: 'board' | 'custom-size' | 'doc' | 'presentation' | 'sheet' | 'social' | 'upload';
   name?: string;
   teamName?: string | null;
   teamUuid?: string | null;
@@ -32,7 +34,7 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
   const templateName = options?.templateName || null;
   const templateImage = options?.templateImage || null;
   const normalizedInitialType = options?.initialType || 'board';
-  let activeCategory: 'board' | 'doc' | 'presentation' | 'sheet' | 'social' | 'template' = templateVariants ? 'template' : normalizedInitialType;
+  let activeCategory: 'board' | 'custom-size' | 'doc' | 'presentation' | 'sheet' | 'social' | 'template' | 'upload' = templateVariants ? 'template' : normalizedInitialType;
   let isCreating = false;
 
   const backdrop = document.createElement('div');
@@ -66,6 +68,10 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
                 <span class="menu-item__text">Plantilla</span>
               </button>
               ` : ''}
+              <button type="button" class="menu-item${activeCategory === 'custom-size' ? ' is-active' : ''}" data-ref="tab-category-custom-size" data-category="custom-size">
+                <span class="material-symbols-rounded menu-item__icon">aspect_ratio</span>
+                <span class="menu-item__text">Elegir tamaño</span>
+              </button>
               <button type="button" class="menu-item${activeCategory === 'board' ? ' is-active' : ''}" data-ref="tab-category-board" data-category="board">
                 <span class="material-symbols-rounded menu-item__icon">space_dashboard</span>
                 <span class="menu-item__text">Pizarrón Infinito</span>
@@ -85,6 +91,10 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
               <button type="button" class="menu-item${activeCategory === 'doc' ? ' is-active' : ''}" data-ref="tab-category-doc" data-category="doc">
                 <span class="material-symbols-rounded menu-item__icon">description</span>
                 <span class="menu-item__text">Documento Doc</span>
+              </button>
+              <button type="button" class="menu-item${activeCategory === 'upload' ? ' is-active' : ''}" data-ref="tab-category-upload" data-category="upload">
+                <span class="material-symbols-rounded menu-item__icon">cloud_upload</span>
+                <span class="menu-item__text">Subir</span>
               </button>
             </div>
           </div>
@@ -121,6 +131,60 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
               </div>
             </div>
             ` : ''}
+
+            <div class="modal-canvas-panel" data-ref="panel-category-custom-size" style="${activeCategory === 'custom-size' ? '' : 'display: none;'}">
+              <div class="custom-size-container" data-ref="custom-size-container" style="max-width: 560px;">
+                <h3 class="creation-category-section__title" style="margin-bottom: 8px;">Crea un lienzo con dimensiones a tu medida</h3>
+                <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 24px;">Especifica el ancho y alto deseados para tu espacio de trabajo en formato libre.</p>
+
+                <div class="custom-size-form-grid" style="display: grid; grid-template-columns: 1fr 1fr 120px; gap: 16px; align-items: flex-end; margin-bottom: 24px;">
+                  <label class="field" data-ref="field-custom-w">
+                    <span class="field__label">Ancho</span>
+                    <input class="field__input" data-ref="input-custom-w" type="number" min="10" max="10000" step="any" value="1920" placeholder="1920" />
+                  </label>
+
+                  <label class="field" data-ref="field-custom-h">
+                    <span class="field__label">Alto</span>
+                    <input class="field__input" data-ref="input-custom-h" type="number" min="10" max="10000" step="any" value="1080" placeholder="1080" />
+                  </label>
+
+                  <label class="field" data-ref="field-custom-unit">
+                    <span class="field__label">Unidad</span>
+                    <select class="field__input field__select" data-ref="select-custom-unit" style="height: 48px; cursor: pointer;">
+                      <option value="px" selected>px</option>
+                      <option value="in">in</option>
+                      <option value="mm">mm</option>
+                      <option value="cm">cm</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div class="custom-size-actions" style="display: flex; gap: 12px; align-items: center;">
+                  <button type="button" class="component-button component-button--h48 component-button--primary" data-ref="btn-submit-custom-size" style="padding: 0 28px;">
+                    <span class="material-symbols-rounded" style="font-size: 20px; margin-right: 6px;">add</span>
+                    <span>Crear nuevo diseño</span>
+                  </button>
+                </div>
+
+                <div class="custom-size-presets-row" style="margin-top: 36px;">
+                  <h4 style="font-size: 13px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px;">Tamaños sugeridos</h4>
+                  <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button type="button" class="component-badge component-badge--interactive" data-ref="preset-size-square" data-w="1080" data-h="1080" data-unit="px">
+                      <span class="component-badge__text">Cuadrado (1080 × 1080 px)</span>
+                    </button>
+                    <button type="button" class="component-badge component-badge--interactive" data-ref="preset-size-fhd" data-w="1920" data-h="1080" data-unit="px">
+                      <span class="component-badge__text">Full HD (1920 × 1080 px)</span>
+                    </button>
+                    <button type="button" class="component-badge component-badge--interactive" data-ref="preset-size-story" data-w="1080" data-h="1920" data-unit="px">
+                      <span class="component-badge__text">Historia / Vertical (1080 × 1920 px)</span>
+                    </button>
+                    <button type="button" class="component-badge component-badge--interactive" data-ref="preset-size-a4" data-w="21" data-h="29.7" data-unit="cm">
+                      <span class="component-badge__text">A4 (21 × 29.7 cm)</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
 
             <div class="modal-canvas-panel" data-ref="panel-category-board" style="${activeCategory === 'board' ? '' : 'display: none;'}">
               <div class="creation-cards-grid" data-ref="grid-boards">
@@ -326,6 +390,32 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
               </div>
             </div>
 
+            <div class="modal-canvas-panel" data-ref="panel-category-upload" style="${activeCategory === 'upload' ? '' : 'display: none;'}">
+              <div class="modal-upload-container" data-ref="modal-upload-container" style="max-width: 580px;">
+                <h3 class="creation-category-section__title" style="margin-bottom: 8px;">Sube tus imágenes y fotos</h3>
+                <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 24px;">Sube archivos de imagen (PNG, JPG, SVG, WebP) a tu biblioteca multimedia para utilizarlos en tus diseños.</p>
+
+                <input class="modal-upload-file-input" data-ref="modal-upload-file-input" type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp,image/gif" multiple style="display: none;" />
+
+                <div class="modal-upload-dropzone" data-ref="modal-upload-dropzone" style="border: 2px dashed var(--border-color); border-radius: 16px; padding: 44px 24px; text-align: center; background-color: var(--bg-surface-elevated, rgba(125,125,125,0.03)); transition: border-color var(--sl-transition-fast), background-color var(--sl-transition-fast); cursor: pointer;">
+                  <div style="width: 56px; height: 56px; border-radius: 50%; background-color: var(--bg-surface); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto; color: var(--action-primary, #6366f1);">
+                    <svg class="component-icon" style="width: 28px; height: 28px;" aria-hidden="true"><use href="/icons.svg#cloud_upload"></use></svg>
+                  </div>
+                  <h4 style="font-size: 15px; font-weight: 600; margin-bottom: 6px; color: var(--text-primary);">Arrastra y suelta tus archivos aquí</h4>
+                  <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 20px;">o haz clic en el botón para explorar desde tu dispositivo</p>
+                  <button type="button" class="component-button component-button--h44 component-button--primary" data-ref="btn-trigger-file-upload">
+                    <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cloud_upload"></use></svg>
+                    <span>Subir archivos</span>
+                  </button>
+                </div>
+
+                <div class="modal-upload-status" data-ref="modal-upload-status" style="margin-top: 20px; display: none;">
+                  <div class="modal-upload-progress-text" data-ref="modal-upload-progress-text" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px;">Subiendo archivos...</div>
+                  <div class="modal-upload-files-preview" data-ref="modal-upload-files-preview" style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px;"></div>
+                </div>
+              </div>
+            </div>
+
             <div class="banner banner--danger" data-ref="create-canvas-error" style="display: none; margin-top: 14px;"></div>
           </div>
         </div>
@@ -345,11 +435,13 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
 
   const categoryTitles: Record<string, string> = {
     board: 'Pizarrón Infinito',
+    'custom-size': 'Elegir tamaño',
     doc: 'Documento Doc',
     presentation: 'Presentación de Diapositivas',
     sheet: 'Hoja de Cálculo',
     social: 'Redes Sociales',
     template: templateName ? `Plantilla: ${templateName}` : 'Plantilla',
+    upload: 'Subir archivos',
   };
 
   const navItems = backdrop.querySelectorAll<HTMLElement>('[data-category]');
@@ -358,7 +450,7 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
   const errorBanner = backdrop.querySelector<HTMLElement>('[data-ref="create-canvas-error"]');
   const btnClose = backdrop.querySelector<HTMLElement>('[data-ref="btn-modal-close"]');
 
-  const switchCategory = (category: 'board' | 'doc' | 'presentation' | 'sheet' | 'social' | 'template') => {
+  const switchCategory = (category: 'board' | 'custom-size' | 'doc' | 'presentation' | 'sheet' | 'social' | 'template' | 'upload') => {
     activeCategory = category;
     navItems.forEach((item) => {
       item.classList.toggle('is-active', item.getAttribute('data-category') === category);
@@ -387,7 +479,7 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
 
   navItems.forEach((item) => {
     item.addEventListener('click', () => {
-      const cat = item.getAttribute('data-category') as 'board' | 'doc' | 'presentation' | 'sheet' | 'social' | 'template';
+      const cat = item.getAttribute('data-category') as 'board' | 'custom-size' | 'doc' | 'presentation' | 'sheet' | 'social' | 'template' | 'upload';
       if (cat) {
         switchCategory(cat);
       }
@@ -543,6 +635,120 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
         width: w,
       }, card);
     });
+  });
+
+  const convertToPixels = (val: number, unit: string): number => {
+    if (unit === 'in') return Math.round(val * 96);
+    if (unit === 'cm') return Math.round((val / 2.54) * 96);
+    if (unit === 'mm') return Math.round((val / 25.4) * 96);
+    return Math.round(val);
+  };
+
+  const inputCustomW = backdrop.querySelector<HTMLInputElement>('[data-ref="input-custom-w"]');
+  const inputCustomH = backdrop.querySelector<HTMLInputElement>('[data-ref="input-custom-h"]');
+  const selectCustomUnit = backdrop.querySelector<HTMLSelectElement>('[data-ref="select-custom-unit"]');
+  const btnSubmitCustom = backdrop.querySelector<HTMLElement>('[data-ref="btn-submit-custom-size"]');
+
+  btnSubmitCustom?.addEventListener('click', () => {
+    const rawW = parseFloat(inputCustomW?.value || '1920') || 1920;
+    const rawH = parseFloat(inputCustomH?.value || '1080') || 1080;
+    const unit = selectCustomUnit?.value || 'px';
+    const finalW = Math.max(10, Math.min(10000, convertToPixels(rawW, unit)));
+    const finalH = Math.max(10, Math.min(10000, convertToPixels(rawH, unit)));
+    void handleInstantCreation({
+      canvasType: 'social',
+      height: finalH,
+      name: `Diseño ${rawW}×${rawH} ${unit}`,
+      width: finalW,
+    }, btnSubmitCustom);
+  });
+
+  const presetSizeBadges = backdrop.querySelectorAll<HTMLElement>('[data-ref^="preset-size-"]');
+  presetSizeBadges.forEach((badge) => {
+    badge.addEventListener('click', () => {
+      const w = badge.getAttribute('data-w');
+      const h = badge.getAttribute('data-h');
+      const unit = badge.getAttribute('data-unit') || 'px';
+      if (inputCustomW && w) inputCustomW.value = w;
+      if (inputCustomH && h) inputCustomH.value = h;
+      if (selectCustomUnit && unit) selectCustomUnit.value = unit;
+    });
+  });
+
+  const uploadDropzone = backdrop.querySelector<HTMLElement>('[data-ref="modal-upload-dropzone"]');
+  const uploadFileInput = backdrop.querySelector<HTMLInputElement>('[data-ref="modal-upload-file-input"]');
+  const btnTriggerUpload = backdrop.querySelector<HTMLElement>('[data-ref="btn-trigger-file-upload"]');
+  const uploadStatus = backdrop.querySelector<HTMLElement>('[data-ref="modal-upload-status"]');
+  const uploadProgressText = backdrop.querySelector<HTMLElement>('[data-ref="modal-upload-progress-text"]');
+  const uploadPreviewContainer = backdrop.querySelector<HTMLElement>('[data-ref="modal-upload-files-preview"]');
+
+  const handleUploadFiles = async (files: File[]) => {
+    if (!files || files.length === 0) return;
+    if (uploadStatus) uploadStatus.style.display = 'block';
+    if (uploadProgressText) uploadProgressText.textContent = `Subiendo ${files.length} archivo(s)...`;
+
+    try {
+      const res = await uploadFilesApi(files);
+      if (res.success && res.uploads) {
+        if (uploadProgressText) {
+          uploadProgressText.textContent = `¡${res.uploads.length} archivo(s) subido(s) con éxito!`;
+        }
+        showToast('Archivos subidos con éxito', 'success');
+        if (uploadPreviewContainer) {
+          uploadPreviewContainer.innerHTML = res.uploads.map((up) => `
+            <div class="modal-upload-thumb-card" title="${up.original_filename}">
+              <img src="${up.url}" alt="${up.original_filename}" />
+            </div>
+          `).join('');
+        }
+      } else {
+        if (uploadProgressText) {
+          uploadProgressText.textContent = res.message || 'Error al subir los archivos.';
+        }
+        showToast(res.message || 'Error al subir los archivos', 'danger');
+      }
+    } catch {
+      if (uploadProgressText) {
+        uploadProgressText.textContent = 'Error de conexión al subir los archivos.';
+      }
+      showToast('Error de conexión al subir los archivos', 'danger');
+    }
+  };
+
+  btnTriggerUpload?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    uploadFileInput?.click();
+  });
+
+  uploadDropzone?.addEventListener('click', () => {
+    uploadFileInput?.click();
+  });
+
+  uploadDropzone?.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    uploadDropzone.classList.add('is-dragover');
+  });
+
+  uploadDropzone?.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    uploadDropzone.classList.remove('is-dragover');
+  });
+
+  uploadDropzone?.addEventListener('drop', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    uploadDropzone.classList.remove('is-dragover');
+    if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
+      void handleUploadFiles(Array.from(e.dataTransfer.files));
+    }
+  });
+
+  uploadFileInput?.addEventListener('change', () => {
+    if (uploadFileInput && uploadFileInput.files && uploadFileInput.files.length > 0) {
+      void handleUploadFiles(Array.from(uploadFileInput.files));
+    }
   });
 
   const handleKeyDown = (e: KeyboardEvent) => {

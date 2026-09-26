@@ -328,16 +328,17 @@ class HomeController {
       );
     };
 
-    bindCreationBadge('cat-badge-all', () => {
-      openCreateCanvasModal();
+    bindCreationBadge('cat-badge-templates', () => {
+      navigate('/templates');
     });
-    bindCreationBadge('cat-badge-board', () => {
+    bindCreationBadge('cat-badge-presentation', () => {
       void createAndOpenCanvas({
-        bgType: 'dots',
-        canvasType: 'board',
-        name: 'Pizarrón sin título',
-        solidColor: '#ffffff',
+        canvasType: 'presentation',
+        name: 'Presentación sin título',
       });
+    });
+    bindCreationBadge('cat-badge-social', () => {
+      openCreateCanvasModal({ initialType: 'social' });
     });
     bindCreationBadge('cat-badge-doc', () => {
       void createAndOpenCanvas({
@@ -347,10 +348,12 @@ class HomeController {
         name: 'Documento sin título',
       });
     });
-    bindCreationBadge('cat-badge-presentation', () => {
+    bindCreationBadge('cat-badge-board', () => {
       void createAndOpenCanvas({
-        canvasType: 'presentation',
-        name: 'Presentación sin título',
+        bgType: 'dots',
+        canvasType: 'board',
+        name: 'Pizarrón sin título',
+        solidColor: '#ffffff',
       });
     });
     bindCreationBadge('cat-badge-sheet', () => {
@@ -359,8 +362,15 @@ class HomeController {
         name: 'Hoja de cálculo sin título',
       });
     });
-    bindCreationBadge('cat-badge-social', () => {
-      openCreateCanvasModal({ initialType: 'social' });
+    bindCreationBadge('cat-badge-photos', () => {});
+    bindCreationBadge('cat-badge-custom', () => {
+      openCreateCanvasModal({ initialType: 'custom-size' });
+    });
+    bindCreationBadge('cat-badge-upload', () => {
+      openCreateCanvasModal({ initialType: 'upload' });
+    });
+    bindCreationBadge('cat-badge-more', () => {
+      openCreateCanvasModal({ initialType: 'board' });
     });
 
     this.categoriesCarouselWrapper = this.container.querySelector<HTMLElement>('[data-ref="home-categories-carousel-wrapper"]');
