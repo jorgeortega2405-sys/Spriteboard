@@ -265,3 +265,28 @@ export { SettingsController };
 1. **Uso Exclusivo de `modal.component.js`**:
    - Nunca modifiques manualmente estilos de visualización del DOM (ej. `modal.style.display = 'block'`).
    - Utiliza siempre `openModal(...)`, `open2FAModal(...)` o `closeModal(...)` provistos por `modal.component.js`.
+
+---
+
+## 16. Control de Acceso Basado en Permisos (PBAC) - Cero Autorización por Roles o Tiers
+
+1. **Prohibición Total de Chequeos Directos de Roles (`role === '...'`)**:
+   - **NUNCA** utilices el rol de un usuario (`user.role === 'ADMIN'`, `roles.includes('DESIGNER')`, `requireRole(...)`) para autorizar o restringir accesos a funcionalidades, rutas, botones o servicios.
+   - Los roles (`SUPER_ADMIN`, `DESIGNER`, `SUPPORT_L1`, etc.) actúan **exclusivamente como agrupadores o paquetes de permisos** en la base de datos (`role_permissions`).
+   - Todo acceso o capacidad debe verificarse a través de permisos específicos utilizando `hasPermission(userPermissions, 'modulo:accion')` o middlewares como `requirePermission('modulo:accion')`.
+
+2. **Prohibición Total de Chequeos Directos de Suscripción (`subscription_tier === '...'`)**:
+   - **NUNCA** restrinjas el acceso a funciones premium comparando directamente la cadena o tipo de suscripción (`tier === 'pro'`, `tier === 'business'`).
+   - El acceso a cualquier funcionalidad de suscripción (equipos, kits de marca, herramientas IA, SSO institucional, etc.) se concede **únicamente si el permiso activo de dicha funcionalidad está presente** en los permisos efectivos del usuario (`subscription:feature:*`), verificado mediante `hasSubscriptionFeature(userPermissions, feature)` o `requireFeature(feature)`.
+
+3. **Resolución de Permisos Efectivos**:
+   - Todo usuario autenticado cuenta con un array de permisos efectivos (`user.permissions`) resuelto en tiempo de ejecución por `getUserEffectivePermissions` (que combina los permisos de sus roles asignados con los permisos activos derivados de su suscripción vigente).
+
+---
+
+## 17. Esquemas y Persistencia: CERO DDL / Migraciones Inline en Código
+
+1. **Scripts SQL de Arranque como Única Fuente de la Verdad**:
+   - **NUNCA** coloques sentencias DDL (`CREATE TABLE`, `ALTER TABLE`, `CREATE INDEX`, etc.) dentro de archivos TypeScript/JavaScript (`database.config.ts`, servicios o controladores).
+   - Toda creación de tablas, columnas, índices y datos iniciales de catálogo debe residir **estrictamente en los archivos SQL de arranque** (`db_identity.sql` y `db_canvas.sql`).
+   - La configuración de base de datos (`database.config.ts`) debe dedicarse única y exclusivamente a la inicialización y administración de los pools de conexión y comprobaciones de estado.

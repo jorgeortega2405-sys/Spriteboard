@@ -54,6 +54,7 @@ export interface User {
   two_factor_enabled?: boolean;
   google_id?: string | null;
   is_protected?: boolean;
+  permissions?: string[];
 }
 
 export interface LinkedAccount extends User {
@@ -102,6 +103,11 @@ export interface TwoFactorLoginState {
 
 export function canPublishTemplates(user?: User | null): boolean {
   if (!user) return false;
+  if (Array.isArray(user.permissions) && user.permissions.length > 0) {
+    return user.permissions.includes('*') ||
+           user.permissions.includes('templates:publish') ||
+           user.permissions.includes('designer:dashboard');
+  }
   const roles = user.roles && user.roles.length > 0 ? user.roles : (user.role ? [user.role] : []);
   return roles.includes('DESIGNER') || roles.includes('SUPER_ADMIN') || roles.includes('PLATFORM_ADMIN');
 }
@@ -117,6 +123,11 @@ export function isUserAdmin(role?: string, roles?: string[]): boolean {
 
 export function canAccessAdmin(user?: User | null): boolean {
   if (!user) return false;
+  if (Array.isArray(user.permissions) && user.permissions.length > 0) {
+    return user.permissions.includes('*') ||
+           user.permissions.includes('dashboard:read') ||
+           user.permissions.some((p) => !p.startsWith('subscription:feature:') && !p.startsWith('templates:') && !p.startsWith('designer:'));
+  }
   return isUserAdmin(user.role, user.roles);
 }
 

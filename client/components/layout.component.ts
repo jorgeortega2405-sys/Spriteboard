@@ -20,7 +20,7 @@ import { showToast } from '../services/toast.service.js';
 import { closeWebSocket, initWebSocket, registerWebSocketHandler } from '../services/websocket.service.js';
 import { openYouTubePlayerModal, searchYouTubeVideos } from '../services/youtube.service.js';
 import { AppCategory, SpriteboardApp } from '../types/apps.types.js';
-import { canPublishTemplates, isUserAdmin } from '../types/auth.types.js';
+import { canAccessAdmin, canPublishTemplates } from '../types/auth.types.js';
 import { BrandKit, BrandKitAsset, BrandKitDetail } from '../types/brand.types.js';
 import { CanvasItem } from '../types/canvas.types.js';
 import { FrameCategory, GridCategory, MockupGeneralCategory, MockupTemplate } from '../types/mockups.types.js';
@@ -7733,7 +7733,7 @@ function setupRailUserControls(sidebar: HTMLElement): void {
 
       const btnAdmin = avatarContainer.querySelector<HTMLElement>('[data-ref="btn-menu-admin"]');
       if (btnAdmin) {
-        const hasAdminAccess = isUserAdmin(currentUser?.role, currentUser?.roles);
+        const hasAdminAccess = canAccessAdmin(currentUser);
         btnAdmin.style.display = hasAdminAccess ? 'flex' : 'none';
         btnAdmin.addEventListener('click', (e) => {
           e.preventDefault();

@@ -145,5 +145,25 @@ import { debounce, setupDropdown, withButtonLoading } from '../utils/dom.util.js
      - Métodos Privados / Auxiliares (`_loadData`, `_render`).
    - **Exportaciones Limpias**: Al final del archivo.
 
+---
+
+## 10. Control de Acceso Estricto Basado en Permisos (PBAC)
+
+1. **CERO Autorización por Roles Directos**:
+   - **NUNCA** utilices el rol de un usuario (`user.role === '...'`, `roles.includes('...')`, `requireRole(...)`) para controlar acceso a rutas, servicios o lógica de negocio.
+   - Los roles existen únicamente como contenedores o agrupadores de permisos en la base de datos (`role_permissions`). Toda verificación de acceso debe realizarse a través de permisos específicos (`hasPermission`, `requirePermission`, `hasAllPermissions`).
+
+2. **CERO Autorización por Nombres de Suscripción Directos**:
+   - **NUNCA** concedas o restrinjas funciones comparando cadenas de planes o suscripciones (`subscription_tier === '...'`).
+   - El acceso a funciones premium (equipos, kits de marca, herramientas IA, SSO corporativo, etc.) se rige **exclusivamente por los permisos activos** conferidos por la suscripción (`subscription:feature:*`), verificados mediante `hasSubscriptionFeature` o el middleware `requireFeature`.
+
+---
+
+## 11. Esquemas de Base de Datos y Scripts de Arranque (CERO DDL Inline)
+
+1. **Scripts SQL como Única Autoridad**:
+   - Toda creación o modificación de tablas, columnas e índices debe residir exclusivamente en los scripts de arranque `db_identity.sql` y `db_canvas.sql`.
+   - Queda estrictamente prohibido colocar sentencias DDL (`CREATE TABLE`, `ALTER TABLE`) o migraciones automáticas inline dentro de `src/config/database.config.ts` o servicios backend.
+
 Para consultar la especificación completa y exhaustiva, revisa [docs/AI_INSTRUCTIONS.md](file:///f:/Spriteboard/docs/AI_INSTRUCTIONS.md).
 
