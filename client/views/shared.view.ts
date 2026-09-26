@@ -230,9 +230,10 @@ class SharedController {
 
     const isPresentation = canvas.canvas_type === 'presentation' || canvas.unit === 'presentation';
     const isDoc = canvas.canvas_type === 'doc' || canvas.unit === 'doc';
+    const isSheet = canvas.canvas_type === 'sheet' || canvas.unit === 'sheet';
     const targetUrl = `/design/${canvas.uuid}`;
-    const typeIcon = isPresentation ? 'slideshow' : (isDoc ? 'description' : 'draw');
-    const typeLabel = isPresentation ? 'Presentación' : (isDoc ? 'Documento' : 'Pizarrón');
+    const typeIcon = isPresentation ? 'slideshow' : (isDoc ? 'description' : (isSheet ? 'table_chart' : 'draw'));
+    const typeLabel = isPresentation ? 'Presentación' : (isDoc ? 'Documento' : (isSheet ? 'Hoja de Cálculo' : 'Pizarrón'));
     const editedTime = formatEditedTime(canvas.updated_at || canvas.created_at);
 
     card.innerHTML = `

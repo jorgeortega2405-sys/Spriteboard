@@ -1,0 +1,218 @@
+<div class="component-wrapper component-wrapper--full no-padding view-wrapper" data-ref="sheet-wrapper">
+  <div class="component-top component-top--gradient" data-ref="sheet-top">
+    <div class="component-top-left" data-ref="sheet-top-left">
+      <h1 class="component-top-title" data-ref="sheet-title" contenteditable="true" spellcheck="false">Hoja de cálculo sin título</h1>
+    </div>
+
+    <div class="component-top-right" data-ref="sheet-top-right">
+      <div class="design-collaborators-bar is-hidden" data-ref="sheet-collaborators-bar">
+        <div class="design-collaborators-list" data-ref="sheet-collaborators-list"></div>
+      </div>
+
+      <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn canvas-save-status-btn is-saved" data-ref="btn-canvas-cloud-status" data-tooltip="Todos los cambios están guardados en la nube" aria-label="Estado de guardado">
+        <svg class="component-icon icon-status-saved" aria-hidden="true"><use href="/icons.svg#cloud_done"></use></svg>
+        <svg class="component-icon icon-status-saving is-hidden" aria-hidden="true"><use href="/icons.svg#sync"></use></svg>
+        <svg class="component-icon icon-status-error is-hidden" aria-hidden="true"><use href="/icons.svg#cloud_off"></use></svg>
+      </button>
+
+      <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-canvas-metrics" data-tooltip="Estadísticas" aria-label="Estadísticas">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#bar_chart"></use></svg>
+      </button>
+
+      <div class="design-share-wrapper" data-ref="sheet-file-menu-wrapper">
+        <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-sheet-file-menu" data-tooltip="Archivo y opciones" aria-label="Archivo y opciones">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#folder"></use></svg>
+        </button>
+      </div>
+
+      <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-canvas-comments" data-tooltip="Comentarios" aria-label="Comentarios">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chat_bubble_outline"></use></svg>
+      </button>
+
+      <div class="design-share-wrapper" data-ref="sheet-share-wrapper">
+        <button type="button" class="component-button component-button--h40 view-header__btn design-share-btn" data-ref="btn-share-sheet" data-tooltip="Compartir hoja" aria-label="Compartir hoja">
+          <span class="component-icon">share</span>
+          <span class="design-share-btn__text">Compartir</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="sheet-toolbar" data-ref="sheet-toolbar">
+    <div class="sheet-toolbar__group" data-ref="sheet-toolbar-history">
+      <button type="button" class="sheet-tool-btn" data-ref="btn-sheet-undo" data-tooltip="Deshacer (Ctrl+Z)" aria-label="Deshacer">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#undo"></use></svg>
+      </button>
+      <button type="button" class="sheet-tool-btn" data-ref="btn-sheet-redo" data-tooltip="Rehacer (Ctrl+Y)" aria-label="Rehacer">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#redo"></use></svg>
+      </button>
+    </div>
+
+    <div class="sheet-toolbar__divider"></div>
+
+    <div class="sheet-toolbar__group" data-ref="sheet-toolbar-font">
+      <button type="button" class="sheet-font-family-btn" data-ref="btn-font-family" data-tooltip="Fuente" aria-label="Fuente">
+        <span class="sheet-font-family-label" data-ref="font-family-label">Inter</span>
+        <svg class="component-icon sheet-chevron-icon" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+      </button>
+
+      <div class="sheet-font-size-control" data-ref="sheet-font-size-control">
+        <button type="button" class="sheet-size-step-btn" data-ref="btn-font-size-decrease" data-tooltip="Reducir tamaño" aria-label="Reducir tamaño">-</button>
+        <input class="sheet-size-input" data-ref="input-font-size" type="text" value="12" aria-label="Tamaño de fuente" />
+        <button type="button" class="sheet-size-step-btn" data-ref="btn-font-size-increase" data-tooltip="Aumentar tamaño" aria-label="Aumentar tamaño">+</button>
+      </div>
+    </div>
+
+    <div class="sheet-toolbar__divider"></div>
+
+    <div class="sheet-toolbar__group" data-ref="sheet-toolbar-format">
+      <button type="button" class="sheet-tool-btn" data-ref="btn-format-bold" data-tooltip="Negrita (Ctrl+B)" aria-label="Negrita">
+        <span class="sheet-tool-text-icon font-weight-bold">B</span>
+      </button>
+      <button type="button" class="sheet-tool-btn" data-ref="btn-format-italic" data-tooltip="Cursiva (Ctrl+I)" aria-label="Cursiva">
+        <span class="sheet-tool-text-icon font-style-italic">I</span>
+      </button>
+      <button type="button" class="sheet-tool-btn" data-ref="btn-format-underline" data-tooltip="Subrayado (Ctrl+U)" aria-label="Subrayado">
+        <span class="sheet-tool-text-icon font-style-underline">U</span>
+      </button>
+      <button type="button" class="sheet-tool-btn" data-ref="btn-format-strikethrough" data-tooltip="Tachado" aria-label="Tachado">
+        <span class="sheet-tool-text-icon font-style-strike">S</span>
+      </button>
+
+      <button type="button" class="sheet-tool-btn sheet-color-picker-trigger" data-ref="btn-format-text-color" data-tooltip="Color de texto" aria-label="Color de texto">
+        <span class="sheet-tool-text-icon">A</span>
+        <span class="sheet-color-bar" data-ref="text-color-bar" style="background-color: #1e293b;"></span>
+      </button>
+
+      <button type="button" class="sheet-tool-btn sheet-color-picker-trigger" data-ref="btn-format-bg-color" data-tooltip="Color de relleno de celda" aria-label="Color de relleno de celda">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#format_color_fill"></use></svg>
+        <span class="sheet-color-bar" data-ref="bg-color-bar" style="background-color: transparent;"></span>
+      </button>
+
+      <button type="button" class="sheet-tool-btn" data-ref="btn-sheet-borders" data-tooltip="Bordes" aria-label="Bordes">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#border_all"></use></svg>
+      </button>
+    </div>
+
+    <div class="sheet-toolbar__divider"></div>
+
+    <div class="sheet-toolbar__group" data-ref="sheet-toolbar-align">
+      <button type="button" class="sheet-tool-btn" data-ref="btn-align-left" data-align="left" data-tooltip="Alinear a la izquierda" aria-label="Alinear a la izquierda">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#format_align_left"></use></svg>
+      </button>
+      <button type="button" class="sheet-tool-btn" data-ref="btn-align-center" data-align="center" data-tooltip="Centrar horizontalmente" aria-label="Centrar horizontalmente">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#format_align_center"></use></svg>
+      </button>
+      <button type="button" class="sheet-tool-btn" data-ref="btn-align-right" data-align="right" data-tooltip="Alinear a la derecha" aria-label="Alinear a la derecha">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#format_align_right"></use></svg>
+      </button>
+      <button type="button" class="sheet-tool-btn" data-ref="btn-wrap-text" data-tooltip="Ajustar texto en celda" aria-label="Ajustar texto en celda">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#wrap_text"></use></svg>
+      </button>
+    </div>
+
+    <div class="sheet-toolbar__divider"></div>
+
+    <div class="sheet-toolbar__group" data-ref="sheet-toolbar-numbers">
+      <button type="button" class="sheet-tool-btn" data-ref="btn-format-currency" data-tooltip="Formato moneda ($)" aria-label="Formato moneda">$</button>
+      <button type="button" class="sheet-tool-btn" data-ref="btn-format-percentage" data-tooltip="Formato porcentaje (%)" aria-label="Formato porcentaje">%</button>
+      <button type="button" class="sheet-tool-btn" data-ref="btn-decimals-decrease" data-tooltip="Reducir decimales" aria-label="Reducir decimales">.0</button>
+      <button type="button" class="sheet-tool-btn" data-ref="btn-decimals-increase" data-tooltip="Aumentar decimales" aria-label="Aumentar decimales">.00</button>
+    </div>
+
+    <div class="sheet-toolbar__divider"></div>
+
+    <div class="sheet-toolbar__group" data-ref="sheet-toolbar-export">
+      <button type="button" class="sheet-tool-btn" data-ref="btn-export-csv" data-tooltip="Descargar como CSV" aria-label="Descargar como CSV">
+        <span class="sheet-badge-btn-text">CSV</span>
+      </button>
+      <button type="button" class="sheet-tool-btn" data-ref="btn-export-excel" data-tooltip="Descargar para Excel (.xls)" aria-label="Descargar para Excel">
+        <span class="sheet-badge-btn-text">XLS</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="sheet-formula-bar" data-ref="sheet-formula-bar">
+    <div class="sheet-formula-bar__namebox" data-ref="sheet-cell-namebox">A1</div>
+    <div class="sheet-formula-bar__fx" data-ref="sheet-formula-fx" aria-hidden="true">f(x)</div>
+    <div class="sheet-formula-bar__input-wrapper" data-ref="sheet-formula-input-wrapper">
+      <input class="sheet-formula-input" data-ref="sheet-formula-input" type="text" placeholder="Para insertar una fórmula, escribe =" spellcheck="false" autocomplete="off" />
+    </div>
+  </div>
+
+  <div class="sheet-workspace" data-ref="sheet-workspace">
+    <div class="sheet-vertical-toolbar" data-ref="sheet-vertical-toolbar">
+      <button type="button" class="sheet-vtool-btn is-active" data-ref="vtool-select" data-vtool="select" data-tooltip="Seleccionar (V)" aria-label="Seleccionar">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#near_me"></use></svg>
+      </button>
+      <button type="button" class="sheet-vtool-btn" data-ref="vtool-shapes" data-vtool="shapes" data-tooltip="Formas 2D" aria-label="Formas 2D">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#shapes"></use></svg>
+      </button>
+      <button type="button" class="sheet-vtool-btn" data-ref="vtool-draw" data-vtool="draw" data-tooltip="Dibujar / Pluma" aria-label="Dibujar">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#draw"></use></svg>
+      </button>
+      <button type="button" class="sheet-vtool-btn" data-ref="vtool-text" data-vtool="text" data-tooltip="Texto flotante" aria-label="Texto flotante">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#text_fields"></use></svg>
+      </button>
+      <button type="button" class="sheet-vtool-btn" data-ref="vtool-sticky" data-vtool="sticky" data-tooltip="Nota adhesiva" aria-label="Nota adhesiva">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#sticky_note_2"></use></svg>
+      </button>
+      <button type="button" class="sheet-vtool-btn" data-ref="vtool-lines" data-vtool="connector" data-tooltip="Líneas y conectores" aria-label="Líneas y conectores">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#polyline"></use></svg>
+      </button>
+      <button type="button" class="sheet-vtool-btn" data-ref="vtool-image" data-vtool="image" data-tooltip="Subir imagen" aria-label="Subir imagen">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#image"></use></svg>
+      </button>
+      <button type="button" class="sheet-vtool-btn" data-ref="vtool-mockups" data-vtool="mockups" data-tooltip="Marcos y mockups" aria-label="Marcos y mockups">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#crop_portrait"></use></svg>
+      </button>
+      <button type="button" class="sheet-vtool-btn" data-ref="vtool-charts" data-vtool="charts" data-tooltip="Insertar gráfico estadístico" aria-label="Insertar gráfico">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#bar_chart"></use></svg>
+      </button>
+    </div>
+
+    <div class="sheet-subdrawer is-hidden" data-ref="sheet-shapes-drawer">
+      <div class="sheet-subdrawer__header" data-ref="sheet-shapes-header">
+        <span class="sheet-subdrawer__title">Formas 2D</span>
+        <button type="button" class="sheet-subdrawer__close" data-ref="btn-close-shapes-drawer" aria-label="Cerrar">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+        </button>
+      </div>
+      <div class="sheet-subdrawer__grid" data-ref="sheet-shapes-grid">
+        <button type="button" class="sheet-shape-btn" data-shape="rect" data-ref="btn-shape-rect" data-tooltip="Rectángulo" aria-label="Rectángulo">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#crop_square"></use></svg>
+        </button>
+        <button type="button" class="sheet-shape-btn" data-shape="round-rect" data-ref="btn-shape-round-rect" data-tooltip="Rectángulo redondeado" aria-label="Rectángulo redondeado">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#rounded_corner"></use></svg>
+        </button>
+        <button type="button" class="sheet-shape-btn" data-shape="circle" data-ref="btn-shape-circle" data-tooltip="Círculo" aria-label="Círculo">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#circle"></use></svg>
+        </button>
+        <button type="button" class="sheet-shape-btn" data-shape="triangle" data-ref="btn-shape-triangle" data-tooltip="Triángulo" aria-label="Triángulo">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#change_history"></use></svg>
+        </button>
+        <button type="button" class="sheet-shape-btn" data-shape="star" data-ref="btn-shape-star" data-tooltip="Estrella" aria-label="Estrella">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#star"></use></svg>
+        </button>
+        <button type="button" class="sheet-shape-btn" data-shape="diamond" data-ref="btn-shape-diamond" data-tooltip="Rombo" aria-label="Rombo">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#square"></use></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="sheet-grid-container" data-ref="sheet-grid-container"></div>
+  </div>
+
+  <div class="sheet-status-bar" data-ref="sheet-status-bar">
+    <div class="sheet-tabs" data-ref="sheet-tabs">
+      <button type="button" class="sheet-tab is-active" data-ref="sheet-tab-default">Hoja 1</button>
+      <button type="button" class="sheet-tab-add" data-ref="btn-add-sheet" data-tooltip="Añadir hoja" aria-label="Añadir hoja">+</button>
+    </div>
+
+    <div class="sheet-summary-stats" data-ref="sheet-summary-stats">
+      <span class="sheet-stat-item" data-ref="stat-count">Recuento: 1</span>
+      <span class="sheet-stat-item" data-ref="stat-sum">Suma: 0</span>
+      <span class="sheet-stat-item" data-ref="stat-avg">Promedio: 0</span>
+    </div>
+  </div>
+</div>

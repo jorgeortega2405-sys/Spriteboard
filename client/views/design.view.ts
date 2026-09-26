@@ -5,6 +5,7 @@ import { createBoardView } from './board.view.js';
 import { createDocView } from './doc.view.js';
 import { createErrorView } from './error.view.js';
 import { createPresentationView } from './presentation.view.js';
+import { createSheetView } from './sheet.view.js';
 import { createSocialView } from './social.view.js';
 
 export async function createDesignView(canvasUuid: string): Promise<HTMLElement> {
@@ -40,7 +41,7 @@ export async function createDesignView(canvasUuid: string): Promise<HTMLElement>
     });
   }
 
-  let canvasType = canvasRecord.canvas_type || (canvasRecord.unit === 'presentation' ? 'presentation' : (canvasRecord.unit === 'social' ? 'social' : (canvasRecord.unit === 'doc' ? 'doc' : 'board')));
+  let canvasType = canvasRecord.canvas_type || (canvasRecord.unit === 'presentation' ? 'presentation' : (canvasRecord.unit === 'social' ? 'social' : (canvasRecord.unit === 'doc' ? 'doc' : (canvasRecord.unit === 'sheet' ? 'sheet' : 'board'))));
   if (canvasRecord.data) {
     try {
       const parsed = typeof canvasRecord.data === 'string' ? JSON.parse(canvasRecord.data) : canvasRecord.data;
@@ -50,6 +51,8 @@ export async function createDesignView(canvasUuid: string): Promise<HTMLElement>
         canvasType = 'social';
       } else if (parsed?.type === 'doc') {
         canvasType = 'doc';
+      } else if (parsed?.type === 'sheet') {
+        canvasType = 'sheet';
       } else if (parsed?.type === 'board') {
         canvasType = 'board';
       }
@@ -66,6 +69,10 @@ export async function createDesignView(canvasUuid: string): Promise<HTMLElement>
 
   if (canvasType === 'social') {
     return await createSocialView(canvasUuid, canvasRecord);
+  }
+
+  if (canvasType === 'sheet') {
+    return await createSheetView(canvasUuid, canvasRecord);
   }
 
   return await createBoardView(canvasUuid, canvasRecord);

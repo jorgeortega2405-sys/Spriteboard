@@ -9,6 +9,7 @@ import { convertDiagramToBoardElements } from '../views/board/board-elements.man
 import { generateDocThumbnail } from '../views/doc/doc-export.service.js';
 import { getDocTemplateById } from '../views/doc/doc-templates.config.js';
 import { DOC_PAPER_DIMENSIONS, DocMargins, DocOrientation, DocPaperSize } from '../views/doc/doc.types.js';
+import { generateSheetThumbnail } from '../views/sheet/sheet-export.service.js';
 import { currentUser, postApi } from './api.service.js';
 import { saveLocalCanvas } from './canvas-storage.service.js';
 import { t } from './i18n.service.js';
@@ -46,6 +47,7 @@ export interface CreateCanvasOptions {
 export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise<void> {
   const isPresentation = options.canvasType === 'presentation';
   const isDoc = options.canvasType === 'doc';
+  const isSheet = options.canvasType === 'sheet';
   const isSocial = options.canvasType === 'social';
   const paperSize = options.docPaperSize || 'letter';
   const orientation = options.docOrientation || 'portrait';
@@ -55,12 +57,12 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
     : DOC_PAPER_DIMENSIONS.letter.portrait;
 
   const defaultPresFormat = PRESENTATION_FORMATS.presentation_16_9;
-  const width = isPresentation ? (options.width || defaultPresFormat.width) : (isSocial ? (options.width || 940) : (isDoc ? (options.width || paperPreset.widthPx || 816) : 0));
-  const height = isPresentation ? (options.height || defaultPresFormat.height) : (isSocial ? (options.height || 788) : (isDoc ? (options.height || paperPreset.heightPx || 0) : 0));
+  const width = isPresentation ? (options.width || defaultPresFormat.width) : (isSocial ? (options.width || 940) : (isDoc ? (options.width || paperPreset.widthPx || 816) : (isSheet ? (options.width || 1920) : 0)));
+  const height = isPresentation ? (options.height || defaultPresFormat.height) : (isSocial ? (options.height || 788) : (isDoc ? (options.height || paperPreset.heightPx || 0) : (isSheet ? (options.height || 1080) : 0)));
 
   const defaultName = isPresentation
     ? 'Presentación sin título'
-    : (isSocial ? 'Diseño para redes sin título' : (options.canvasType === 'doc' ? 'Documento sin título' : 'Pizarrón sin título'));
+    : (isSocial ? 'Diseño para redes sin título' : (isDoc ? 'Documento sin título' : (isSheet ? 'Hoja de cálculo sin título' : 'Pizarrón sin título')));
   const name = options.name.trim() || defaultName;
   const solidColor = options.solidColor || '#ffffff';
 
@@ -193,6 +195,24 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
       type: 'doc',
       version: 1,
     };
+  } else if (!initialProject && isSheet) {
+    const defaultSheet = {
+      cells: {},
+      colCount: 26,
+      columns: {},
+      id: 'sheet-1',
+      name: 'Hoja 1',
+      rowCount: 1000,
+      rows: {},
+      showGridLines: true,
+    };
+    initialProject = {
+      activeSheetId: defaultSheet.id,
+      elements: [],
+      sheets: [defaultSheet],
+      type: 'sheet',
+      version: 1,
+    };
   } else if (!initialProject) {
     let elements = getBoardTemplateElements(options.boardTemplateId || options.diagramTemplateId);
     if (elements.length === 0 && (options.diagramSubtype || options.diagramTemplateId)) {
@@ -257,6 +277,8 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
   let previewThumbnail: string | null = null;
   if (isDoc) {
     previewThumbnail = generateDocThumbnail(initialProject);
+  } else if (isSheet) {
+    previewThumbnail = generateSheetThumbnail(initialProject);
   } else {
     const thumbW = 320;
     const thumbH = 180;
@@ -321,8 +343,8 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
     }
   }
 
-  const unit: CanvasType = isPresentation ? 'presentation' : (isSocial ? 'social' : (options.canvasType === 'doc' ? 'doc' : 'board'));
-  const canvasType: CanvasType = isPresentation ? 'presentation' : (isSocial ? 'social' : (options.canvasType === 'doc' ? 'doc' : 'board'));
+  const unit: CanvasType = isPresentation ? 'presentation' : (isSocial ? 'social' : (isDoc ? 'doc' : (isSheet ? 'sheet' : 'board')));
+  const canvasType: CanvasType = isPresentation ? 'presentation' : (isSocial ? 'social' : (isDoc ? 'doc' : (isSheet ? 'sheet' : 'board')));
   const targetRoute = `/design/`;
 
   if (currentUser) {

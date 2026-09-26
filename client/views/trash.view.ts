@@ -495,8 +495,9 @@ class TrashController {
 
     const isPresentation = canvas.canvas_type === 'presentation' || canvas.unit === 'presentation';
     const isDoc = canvas.canvas_type === 'doc' || canvas.unit === 'doc';
-    const typeIcon = isPresentation ? 'slideshow' : (isDoc ? 'description' : 'draw');
-    const typeLabel = isPresentation ? 'Presentación' : (isDoc ? 'Documento' : 'Pizarrón');
+    const isSheet = canvas.canvas_type === 'sheet' || canvas.unit === 'sheet';
+    const typeIcon = isPresentation ? 'slideshow' : (isDoc ? 'description' : (isSheet ? 'table_chart' : 'draw'));
+    const typeLabel = isPresentation ? 'Presentación' : (isDoc ? 'Documento' : (isSheet ? 'Hoja de Cálculo' : 'Pizarrón'));
 
     card.innerHTML = `
       <div class="canvas-card__thumbnail" data-ref="card-thumbnail">

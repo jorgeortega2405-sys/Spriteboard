@@ -637,9 +637,10 @@ class ProfileController {
   private buildTemplateCardHtml(tItem: any): string {
     const isPres = tItem.canvas_type === 'presentation';
     const isDoc = tItem.canvas_type === 'doc';
+    const isSheet = tItem.canvas_type === 'sheet';
     const defaultThumb = isPres
       ? '/assets/templates/presentations/pitch.svg'
-      : (isDoc ? '/assets/templates/docs/proposal.svg' : '/assets/templates/boards/retro.svg');
+      : (isDoc ? '/assets/templates/docs/proposal.svg' : (isSheet ? '/assets/templates/sheets/blank.svg' : '/assets/templates/boards/retro.svg'));
     const thumbUrl = tItem.preview_thumbnail || defaultThumb;
 
     const isPremium = Boolean(tItem.is_premium);

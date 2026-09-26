@@ -3,7 +3,7 @@ import { createAndOpenCanvas, CreateCanvasOptions } from '../services/canvas-cre
 import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { DocOrientation, DocPaperSize } from '../views/doc/doc.types.js';
-import { getBoardSvg, getDocSvg, getPresentationSvg, getSocialSvg, getTemplateVariantSvg } from './create-canvas-graphics.js';
+import { getBoardSvg, getDocSvg, getPresentationSvg, getSheetSvg, getSocialSvg, getTemplateVariantSvg } from './create-canvas-graphics.js';
 
 let activeCreateCanvasModal: { close: () => void } | null = null;
 
@@ -13,7 +13,7 @@ export interface OpenCreateCanvasModalOptions {
   docPaperSize?: DocPaperSize;
   docTemplateId?: string;
   height?: number;
-  initialType?: 'board' | 'doc' | 'presentation' | 'social';
+  initialType?: 'board' | 'doc' | 'presentation' | 'sheet' | 'social';
   name?: string;
   teamName?: string | null;
   teamUuid?: string | null;
@@ -32,7 +32,7 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
   const templateName = options?.templateName || null;
   const templateImage = options?.templateImage || null;
   const normalizedInitialType = options?.initialType || 'board';
-  let activeCategory: 'board' | 'doc' | 'presentation' | 'social' | 'template' = templateVariants ? 'template' : normalizedInitialType;
+  let activeCategory: 'board' | 'doc' | 'presentation' | 'sheet' | 'social' | 'template' = templateVariants ? 'template' : normalizedInitialType;
   let isCreating = false;
 
   const backdrop = document.createElement('div');
@@ -69,6 +69,10 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
               <button type="button" class="menu-item${activeCategory === 'board' ? ' is-active' : ''}" data-ref="tab-category-board" data-category="board">
                 <span class="material-symbols-rounded menu-item__icon">space_dashboard</span>
                 <span class="menu-item__text">Pizarrón Infinito</span>
+              </button>
+              <button type="button" class="menu-item${activeCategory === 'sheet' ? ' is-active' : ''}" data-ref="tab-category-sheet" data-category="sheet">
+                <span class="material-symbols-rounded menu-item__icon">table_chart</span>
+                <span class="menu-item__text">Hoja de Cálculo</span>
               </button>
               <button type="button" class="menu-item${activeCategory === 'presentation' ? ' is-active' : ''}" data-ref="tab-category-presentation" data-category="presentation">
                 <span class="material-symbols-rounded menu-item__icon">slideshow</span>
@@ -130,6 +134,23 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
                   <div class="creation-card__info" data-ref="info-board-dots">
                     <h4 class="creation-card__title" data-ref="title-board-dots">Pizarrón Infinito</h4>
                     <p class="creation-card__meta" data-ref="meta-board-dots">Fondo blanco • Cuadrícula de puntos</p>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            <div class="modal-canvas-panel" data-ref="panel-category-sheet" style="${activeCategory === 'sheet' ? '' : 'display: none;'}">
+              <div class="creation-cards-grid" data-ref="grid-sheets">
+                <button type="button" class="creation-card" data-ref="card-sheet-blank" data-type="sheet">
+                  <div class="creation-card__thumbnail" data-ref="thumb-sheet-blank">
+                    <div class="creation-card__svg-wrapper" data-ref="svg-sheet-blank">
+                      ${getSheetSvg()}
+                    </div>
+                    <span class="creation-card__badge creation-card__badge--popular" data-ref="badge-sheet-blank">Estándar</span>
+                  </div>
+                  <div class="creation-card__info" data-ref="info-sheet-blank">
+                    <h4 class="creation-card__title" data-ref="title-sheet-blank">Hoja de cálculo en blanco</h4>
+                    <p class="creation-card__meta" data-ref="meta-sheet-blank">Grid de celdas • Fórmulas y gráficos</p>
                   </div>
                 </button>
               </div>
@@ -368,6 +389,7 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
     board: 'Pizarrón Infinito',
     doc: 'Documento Doc',
     presentation: 'Presentación de Diapositivas',
+    sheet: 'Hoja de Cálculo',
     social: 'Redes Sociales',
     template: templateName ? `Plantilla: ${templateName}` : 'Plantilla',
   };
@@ -378,7 +400,7 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
   const errorBanner = backdrop.querySelector<HTMLElement>('[data-ref="create-canvas-error"]');
   const btnClose = backdrop.querySelector<HTMLElement>('[data-ref="btn-modal-close"]');
 
-  const switchCategory = (category: 'board' | 'doc' | 'presentation' | 'social' | 'template') => {
+  const switchCategory = (category: 'board' | 'doc' | 'presentation' | 'sheet' | 'social' | 'template') => {
     activeCategory = category;
     navItems.forEach((item) => {
       item.classList.toggle('is-active', item.getAttribute('data-category') === category);
@@ -407,7 +429,7 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
 
   navItems.forEach((item) => {
     item.addEventListener('click', () => {
-      const cat = item.getAttribute('data-category') as 'board' | 'doc' | 'presentation' | 'social' | 'template';
+      const cat = item.getAttribute('data-category') as 'board' | 'doc' | 'presentation' | 'sheet' | 'social' | 'template';
       if (cat) {
         switchCategory(cat);
       }
@@ -453,6 +475,16 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
         canvasType: 'board',
         name: 'Pizarrón sin título',
         solidColor: '#ffffff',
+      }, card);
+    });
+  });
+
+  const sheetCards = backdrop.querySelectorAll<HTMLElement>('[data-ref^="card-sheet-"]');
+  sheetCards.forEach((card) => {
+    card.addEventListener('click', () => {
+      void handleInstantCreation({
+        canvasType: 'sheet',
+        name: 'Hoja de cálculo sin título',
       }, card);
     });
   });

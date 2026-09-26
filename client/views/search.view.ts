@@ -191,9 +191,10 @@ export class SearchController {
 
       const isPresentation = (canvas as any).canvas_type === 'presentation' || (canvas as any).unit === 'presentation';
       const isDoc = (canvas as any).canvas_type === 'doc' || (canvas as any).unit === 'doc';
+      const isSheet = (canvas as any).canvas_type === 'sheet' || (canvas as any).unit === 'sheet';
       const targetUrl = `/design/${canvas.uuid}`;
-      const typeLabel = isPresentation ? 'Presentación' : (isDoc ? 'Documento' : 'Pizarra Infinita');
-      const typeIcon = isPresentation ? 'slideshow' : (isDoc ? 'description' : 'draw');
+      const typeLabel = isPresentation ? 'Presentación' : (isDoc ? 'Documento' : (isSheet ? 'Hoja de Cálculo' : 'Pizarra Infinita'));
+      const typeIcon = isPresentation ? 'slideshow' : (isDoc ? 'description' : (isSheet ? 'table_chart' : 'draw'));
 
       const thumbnailHtml = canvas.preview_thumbnail
         ? `<img class="canvas-card__image image-lazy-fade" src="${escapeHtml(canvas.preview_thumbnail)}" alt="${escapeHtml(canvas.name)}" loading="lazy" decoding="async" onload="this.classList.add('image-loaded')" onerror="this.onerror=null; this.classList.add('image-loaded');" />`

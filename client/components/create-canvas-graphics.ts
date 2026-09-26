@@ -534,3 +534,35 @@ export function getSocialSvg(format: string): string {
   }
 }
 
+export function getSheetSvg(): string {
+  return `<svg viewBox="0 0 180 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="15" y="10" width="150" height="90" rx="6" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+    <rect x="16" y="11" width="148" height="16" rx="5 5 0 0" fill="#f8fafc"/>
+    <rect x="22" y="15" width="18" height="8" rx="2" fill="#e2e8f0"/>
+    <text x="46" y="22" font-family="sans-serif" font-size="7" font-weight="bold" font-style="italic" fill="#7c3aed">f(x)</text>
+    <rect x="60" y="15" width="98" height="8" rx="2" fill="#ffffff" stroke="#e2e8f0" stroke-width="0.75"/>
+    <rect x="16" y="27" width="148" height="12" fill="#f1f5f9"/>
+    <rect x="16" y="27" width="20" height="72" fill="#f8fafc"/>
+    <line x1="16" y1="27" x2="164" y2="27" stroke="#cbd5e1" stroke-width="1"/>
+    <line x1="16" y1="39" x2="164" y2="39" stroke="#cbd5e1" stroke-width="1"/>
+    <line x1="16" y1="54" x2="164" y2="54" stroke="#e2e8f0" stroke-width="0.75"/>
+    <line x1="16" y1="69" x2="164" y2="69" stroke="#e2e8f0" stroke-width="0.75"/>
+    <line x1="16" y1="84" x2="164" y2="84" stroke="#e2e8f0" stroke-width="0.75"/>
+    <line x1="36" y1="27" x2="36" y2="99" stroke="#cbd5e1" stroke-width="1"/>
+    <line x1="68" y1="27" x2="68" y2="99" stroke="#e2e8f0" stroke-width="0.75"/>
+    <line x1="100" y1="27" x2="100" y2="99" stroke="#e2e8f0" stroke-width="0.75"/>
+    <line x1="132" y1="27" x2="132" y2="99" stroke="#e2e8f0" stroke-width="0.75"/>
+    <rect x="36" y="27" width="32" height="12" fill="#ede9fe"/>
+    <rect x="16" y="39" width="20" height="15" fill="#ede9fe"/>
+    <rect x="36" y="39" width="32" height="15" fill="#faf5ff" stroke="#7c3aed" stroke-width="1.5"/>
+    <rect x="66" y="52" width="3" height="3" fill="#7c3aed"/>
+    <rect x="74" y="44" width="18" height="4" rx="2" fill="#cbd5e1"/>
+    <rect x="106" y="44" width="20" height="4" rx="2" fill="#cbd5e1"/>
+    <rect x="42" y="60" width="20" height="4" rx="2" fill="#cbd5e1"/>
+    <rect x="74" y="60" width="15" height="4" rx="2" fill="#cbd5e1"/>
+    <rect x="106" y="60" width="22" height="4" rx="2" fill="#cbd5e1"/>
+    <rect x="42" y="74" width="18" height="4" rx="2" fill="#7c3aed" fill-opacity="0.3"/>
+  </svg>`;
+}
+
+
