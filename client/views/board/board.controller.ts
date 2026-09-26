@@ -7785,6 +7785,57 @@ export class BoardController {
     showToast(`Mockup "${tpl.name}" insertado`);
   }
 
+  public insertVideo(video: { duration?: number; height?: number; thumbnailUrl?: string; title?: string; url: string; width?: number }, worldPos?: BoardPoint): void {
+    this.pushHistoryState();
+
+    const dpr = window.devicePixelRatio || 1;
+    const screenW = this.canvasElement ? this.canvasElement.width / dpr : 800;
+    const screenH = this.canvasElement ? this.canvasElement.height / dpr : 600;
+    const center = screenToWorld(screenW / 2, screenH / 2, this.canvasElement, this.camera);
+
+    const initialW = video.width || 480;
+    const initialH = video.height || 270;
+    const aspect = initialW / Math.max(1, initialH);
+
+    const maxInitDim = 480;
+    let targetW = initialW;
+    let targetH = initialH;
+    if (targetW > maxInitDim || targetH > maxInitDim) {
+      if (targetW >= targetH) {
+        targetW = maxInitDim;
+        targetH = Math.round(targetW / aspect);
+      } else {
+        targetH = maxInitDim;
+        targetW = Math.round(targetH * aspect);
+      }
+    }
+
+    const posX = Math.round((worldPos ? worldPos.x : center.x) - targetW / 2);
+    const posY = Math.round((worldPos ? worldPos.y : center.y) - targetH / 2);
+
+    const embedEl = createEmbedElement({
+      channelTitle: 'Video subido',
+      embedType: 'video',
+      height: targetH,
+      thumbnailUrl: video.thumbnailUrl || '',
+      title: video.title || 'Video',
+      url: video.url,
+      width: targetW,
+      x: posX,
+      y: posY,
+    });
+
+    this.elements.push(embedEl);
+    this.collaborationManager.broadcastAddElement(embedEl);
+    this.selectedElementId = embedEl.id;
+    this.selectedElementIds = [embedEl.id];
+    this.setTool('select');
+    this.updateSelectionToolbar();
+    this.requestRedraw();
+    this.scheduleAutoSave();
+    showToast(`Video «${video.title || 'Video'}» agregado al lienzo`, 'success');
+  }
+
   public insertYouTube(video: { channelTitle: string; id: string; thumbnailUrl: string; title: string; url: string }, worldPos?: BoardPoint): void {
     this.pushHistoryState();
 
@@ -8041,7 +8092,7 @@ export class BoardController {
     }
     this.closeInlineVideo();
 
-    if (!embed.videoId || embed.embedType !== 'youtube') {
+    if (!embed.url) {
       return;
     }
 
@@ -8060,26 +8111,45 @@ export class BoardController {
     overlay.style.pointerEvents = 'auto';
     overlay.style.border = '2px solid #3b82f6';
 
-    const embedUrl = getYouTubeEmbedUrl(embed.videoId, true);
+    const isYouTube = embed.embedType === 'youtube' && embed.videoId;
 
-    overlay.innerHTML = `
-      <div style="position: absolute; top: 8px; right: 8px; z-index: 10; display: flex; align-items: center; gap: 6px;">
-        <button type="button" class="component-button component-button--icon-only" data-ref="btn-inline-video-maximize" style="width: 28px; height: 28px; min-width: 28px; border-radius: 6px; background: rgba(0, 0, 0, 0.75); color: #fff; border: 1px solid rgba(255, 255, 255, 0.2); cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);" data-tooltip="Abrir en modal" aria-label="Abrir en modal">
-          <svg class="component-icon" aria-hidden="true" style="width: 16px; height: 16px;"><use href="/icons.svg#open_in_full"></use></svg>
-        </button>
-        <button type="button" class="component-button component-button--icon-only" data-ref="btn-inline-video-close" style="width: 28px; height: 28px; min-width: 28px; border-radius: 6px; background: rgba(0, 0, 0, 0.75); color: #fff; border: 1px solid rgba(255, 255, 255, 0.2); cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);" data-tooltip="Cerrar reproductor" aria-label="Cerrar reproductor">
-          <svg class="component-icon" aria-hidden="true" style="width: 16px; height: 16px;"><use href="/icons.svg#close"></use></svg>
-        </button>
-      </div>
-      <iframe
-        src="${embedUrl}"
-        title="${escapeHtml(embed.title || 'Video de YouTube')}"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-        allowfullscreen
-        referrerpolicy="strict-origin-when-cross-origin"
-        style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;"
-      ></iframe>
-    `;
+    if (isYouTube) {
+      const embedUrl = getYouTubeEmbedUrl(embed.videoId!, true);
+      overlay.innerHTML = `
+        <div style="position: absolute; top: 8px; right: 8px; z-index: 10; display: flex; align-items: center; gap: 6px;">
+          <button type="button" class="component-button component-button--icon-only" data-ref="btn-inline-video-maximize" style="width: 28px; height: 28px; min-width: 28px; border-radius: 6px; background: rgba(0, 0, 0, 0.75); color: #fff; border: 1px solid rgba(255, 255, 255, 0.2); cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);" data-tooltip="Abrir en modal" aria-label="Abrir en modal">
+            <svg class="component-icon" aria-hidden="true" style="width: 16px; height: 16px;"><use href="/icons.svg#open_in_full"></use></svg>
+          </button>
+          <button type="button" class="component-button component-button--icon-only" data-ref="btn-inline-video-close" style="width: 28px; height: 28px; min-width: 28px; border-radius: 6px; background: rgba(0, 0, 0, 0.75); color: #fff; border: 1px solid rgba(255, 255, 255, 0.2); cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);" data-tooltip="Cerrar reproductor" aria-label="Cerrar reproductor">
+            <svg class="component-icon" aria-hidden="true" style="width: 16px; height: 16px;"><use href="/icons.svg#close"></use></svg>
+          </button>
+        </div>
+        <iframe
+          src="${embedUrl}"
+          title="${escapeHtml(embed.title || 'Video de YouTube')}"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowfullscreen
+          referrerpolicy="strict-origin-when-cross-origin"
+          style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;"
+        ></iframe>
+      `;
+    } else {
+      overlay.innerHTML = `
+        <div style="position: absolute; top: 8px; right: 8px; z-index: 10; display: flex; align-items: center; gap: 6px;">
+          <button type="button" class="component-button component-button--icon-only" data-ref="btn-inline-video-close" style="width: 28px; height: 28px; min-width: 28px; border-radius: 6px; background: rgba(0, 0, 0, 0.75); color: #fff; border: 1px solid rgba(255, 255, 255, 0.2); cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);" data-tooltip="Cerrar reproductor" aria-label="Cerrar reproductor">
+            <svg class="component-icon" aria-hidden="true" style="width: 16px; height: 16px;"><use href="/icons.svg#close"></use></svg>
+          </button>
+        </div>
+        <video
+          src="${escapeHtml(embed.url)}"
+          poster="${escapeHtml(embed.thumbnailUrl || '')}"
+          controls
+          autoplay
+          playsinline
+          style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; background: #000;"
+        ></video>
+      `;
+    }
 
     const btnClose = overlay.querySelector<HTMLButtonElement>('[data-ref="btn-inline-video-close"]');
     btnClose?.addEventListener('click', (e) => {
@@ -8091,7 +8161,9 @@ export class BoardController {
     btnMaximize?.addEventListener('click', (e) => {
       e.stopPropagation();
       this.closeInlineVideo();
-      openYouTubePlayerModal(embed.videoId!, embed.title);
+      if (embed.videoId) {
+        openYouTubePlayerModal(embed.videoId, embed.title);
+      }
     });
 
     viewport.appendChild(overlay);

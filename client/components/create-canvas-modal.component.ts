@@ -1,5 +1,5 @@
 import { PresetVariant } from '../config/templates.config.js';
-import { uploadFilesApi } from '../services/api.service.js';
+import { escapeHtml, uploadFilesApi } from '../services/api.service.js';
 import { createAndOpenCanvas, CreateCanvasOptions } from '../services/canvas-creator.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
@@ -392,7 +392,7 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
 
             <div class="modal-canvas-panel" data-ref="panel-category-upload" style="${activeCategory === 'upload' ? '' : 'display: none;'}">
               <div class="modal-upload-container" data-ref="modal-upload-container">
-                <input class="modal-upload-file-input" data-ref="modal-upload-file-input" type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp,image/gif" multiple style="display: none;" />
+                <input class="modal-upload-file-input" data-ref="modal-upload-file-input" type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp,image/gif,image/avif,video/mp4,video/webm,video/quicktime,video/x-m4v,video/ogg" multiple style="display: none;" />
 
                 <div class="modal-upload-dropzone" data-ref="modal-upload-dropzone">
                   <div class="modal-upload-dropzone__icon-box">
@@ -693,8 +693,8 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
         showToast('Archivos subidos con éxito', 'success');
         if (uploadPreviewContainer) {
           uploadPreviewContainer.innerHTML = res.uploads.map((up) => `
-            <div class="modal-upload-thumb-card" title="${up.original_filename}">
-              <img src="${up.url}" alt="${up.original_filename}" />
+            <div class="modal-upload-thumb-card" title="${escapeHtml(up.original_filename)}">
+              <img src="${escapeHtml(up.thumbnail_url || up.url)}" alt="${escapeHtml(up.original_filename)}" />
             </div>
           `).join('');
         }

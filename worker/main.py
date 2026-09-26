@@ -4,7 +4,7 @@ import sys
 import time
 from typing import List
 from config import config
-from tasks import AiQuotaJob, BackupScheduleJob, BaseJob, TelemetryJob, TrashCleanupJob
+from tasks import AiQuotaJob, BackupScheduleJob, BaseJob, TelemetryJob, TrashCleanupJob, VideoProcessingJob
 
 # Configuración de Logging Unificado y Seguro
 logging.basicConfig(
@@ -102,5 +102,8 @@ if __name__ == "__main__":
 
     # 4. Sincronización y reinicio de cuotas de IA (cada 60 segundos)
     daemon.register(AiQuotaJob())
+
+    # 5. Procesamiento y optimización asíncrona de videos en cola
+    daemon.register(VideoProcessingJob())
 
     daemon.run()

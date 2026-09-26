@@ -1586,6 +1586,37 @@ export class DocController implements ViewController {
     this.insertImageElement(dataUrl, '160px', name);
   }
 
+  public insertVideo(src: string, title = 'Video', poster = ''): void {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'doc-image-wrapper doc-img-wrap--center doc-img-radius--8 doc-img-shadow--md';
+    wrapper.style.width = '80%';
+    wrapper.style.maxWidth = '640px';
+    wrapper.style.margin = '16px auto';
+    wrapper.innerHTML = `
+      <div style="position: relative; width: 100%; border-radius: 8px; overflow: hidden; background: #000;">
+        <video src="${escapeHtml(src)}" poster="${escapeHtml(poster)}" controls playsinline style="width: 100%; height: auto; display: block; border-radius: 8px;"></video>
+      </div>
+    `;
+
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      const range = sel.getRangeAt(0);
+      range.deleteContents();
+      range.insertNode(wrapper);
+      const afterP = document.createElement('p');
+      afterP.innerHTML = '<br>';
+      wrapper.after(afterP);
+    } else {
+      const firstPage = this.container.querySelector('.doc-page__content');
+      firstPage?.appendChild(wrapper);
+    }
+
+    this.initSingleImageWrapper(wrapper);
+    this.selectImageWrapper(wrapper);
+    this.recordChange();
+    showToast(`Video «${title}» insertado en el documento`, 'success');
+  }
+
   public insertYouTubeEmbed(videoId: string, title = 'Video de YouTube'): void {
     const embedUrl = `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1`;
     const wrapper = document.createElement('div');

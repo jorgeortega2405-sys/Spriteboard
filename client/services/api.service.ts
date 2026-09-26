@@ -508,9 +508,10 @@ export async function getPurchaseHistoryApi(): Promise<{ success: boolean; purch
   }
 }
 
-export async function getUploadsApi(): Promise<UploadsResponse> {
+export async function getUploadsApi(type: 'all' | 'image' | 'video' = 'all'): Promise<UploadsResponse> {
   try {
-    const res = await getApi(API_ROUTES.uploads.base);
+    const url = type && type !== 'all' ? `${API_ROUTES.uploads.base}?type=${encodeURIComponent(type)}` : API_ROUTES.uploads.base;
+    const res = await getApi(url);
     const data = await res.json();
     return {
       storage: data.storage,
@@ -523,7 +524,7 @@ export async function getUploadsApi(): Promise<UploadsResponse> {
 }
 
 export async function uploadFilesApi(files: File[]): Promise<UploadsResponse> {
-  const validation = validateAndSanitizeFiles(files, { maxMb: 15 });
+  const validation = validateAndSanitizeFiles(files, { maxMb: 1024 });
   if (!validation.valid) {
     return { message: validation.error || 'Archivo no válido.', success: false, uploads: [] };
   }

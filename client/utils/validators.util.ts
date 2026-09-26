@@ -125,6 +125,44 @@ export function validateVerificationCode(code: unknown): ValidationResult {
   return { valid: true };
 }
 
+export const DEFAULT_ALLOWED_MEDIA_MIMES = [
+  'image/png',
+  'image/jpeg',
+  'image/jpg',
+  'image/webp',
+  'image/gif',
+  'image/avif',
+  'image/svg+xml',
+  'video/mp4',
+  'video/webm',
+  'video/quicktime',
+  'video/x-m4v',
+  'video/x-matroska',
+  'video/ogg',
+];
+
+export function isVideoMime(mime?: string): boolean {
+  if (!mime) return false;
+  const clean = mime.toLowerCase().split(';')[0].trim();
+  return clean.startsWith('video/') || ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-m4v', 'video/x-matroska', 'video/ogg'].includes(clean);
+}
+
+export function isImageMime(mime?: string): boolean {
+  if (!mime) return false;
+  const clean = mime.toLowerCase().split(';')[0].trim();
+  return clean.startsWith('image/');
+}
+
+export function formatVideoDuration(seconds?: number | null): string {
+  if (seconds === null || seconds === undefined || isNaN(seconds) || seconds < 0) {
+    return '0:00';
+  }
+  const total = Math.round(seconds);
+  const mins = Math.floor(total / 60);
+  const secs = total % 60;
+  return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+}
+
 export interface FileValidationOptions {
   allowedMimes?: string[];
   allowedTypes?: string[];
@@ -157,7 +195,7 @@ export function validateAndSanitizeFile(
     return { error: 'El archivo seleccionado está vacío.', valid: false };
   }
 
-  const maxMb = options.maxMb !== undefined ? options.maxMb : 15;
+  const maxMb = options.maxMb !== undefined ? options.maxMb : 1024;
   const maxBytes = maxMb * 1024 * 1024;
   if (file.size > maxBytes) {
     return {
@@ -166,19 +204,11 @@ export function validateAndSanitizeFile(
     };
   }
 
-  const allowedMimes = options.allowedMimes || options.allowedTypes || [
-    'image/png',
-    'image/jpeg',
-    'image/jpg',
-    'image/webp',
-    'image/gif',
-    'image/avif',
-    'image/svg+xml',
-  ];
+  const allowedMimes = options.allowedMimes || options.allowedTypes || DEFAULT_ALLOWED_MEDIA_MIMES;
 
   if (allowedMimes.length > 0 && !allowedMimes.includes(file.type.toLowerCase())) {
     return {
-      error: `El formato de «${file.name}» (${file.type || 'desconocido'}) no es compatible.`,
+      error: `El formato de «${file.name}» (${file.type || 'desconocido'}) no es compatible. Usa PNG, JPG, WEBP, GIF, AVIF, SVG, MP4, WebM o MOV.`,
       valid: false,
     };
   }

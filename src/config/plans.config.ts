@@ -10,112 +10,111 @@ export type PlanFeatureKey =
   | 'ai_bg_removal';
 
 export interface PlanLimits {
+  allowedExportTypes: string[];
+  allowedImageFormats: string[];
+  allowedVideoFormats: string[];
+  maxAiTokensFormatted: string;
+  maxAiTokensPerCycle: number;
+  maxBatchUploadCount: number;
+  maxBrandKits: number;
+  maxCanvasDimension: number;
+  maxExportScale: number;
+  maxImageSizeBytes: number;
+  maxLayers: number;
+  maxLiveCollaborators: number;
+  maxTeamMembers: number;
+  maxTeams: number;
+  maxVideoDurationSeconds: number;
+  maxVideoSizeBytes: number;
   storageBytes: number;
   storageFormatted: string;
-  maxCanvasDimension: number;
-  maxLiveCollaborators: number;
-  maxTeams: number;
-  maxTeamMembers: number;
-  maxLayers: number;
   trashRetentionDays: number;
-  maxExportScale: number;
-  allowedExportTypes: string[];
-  maxBrandKits: number;
-  maxAiTokensPerCycle: number;
-  maxAiTokensFormatted: string;
 }
 
 export interface PlanBenefitDefinition {
+  borderColor: string;
+  currency: string;
+  features: PlanFeatureKey[];
   id: SubscriptionTierId;
+  limits: PlanLimits;
   name: string;
-  tagline: string;
   priceMonthly: number;
   priceYearly: number;
-  currency: string;
-  limits: PlanLimits;
-  features: PlanFeatureKey[];
-  borderColor: string;
   ringBg: string;
+  tagline: string;
 }
 
 export const PLAN_TIER_CONFIGS: Record<SubscriptionTierId, PlanBenefitDefinition> = {
   free: {
-    id: 'free',
-    name: 'Spriteboard Gratis',
-    tagline: 'Ideal para iniciar en el pixel art y proyectos personales',
-    priceMonthly: 0,
-    priceYearly: 0,
+    borderColor: '#9ca3af',
     currency: 'USD',
+    features: [],
+    id: 'free',
     limits: {
+      allowedExportTypes: ['png-current', 'project-json', 'spritesheet', 'gif', 'spritesheet-atlas'],
+      allowedImageFormats: ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif', 'image/avif', 'image/svg+xml'],
+      allowedVideoFormats: ['video/mp4', 'video/webm'],
+      maxAiTokensFormatted: '50,000 tokens',
+      maxAiTokensPerCycle: 50000,
+      maxBatchUploadCount: 10,
+      maxBrandKits: 0,
+      maxCanvasDimension: 16384,
+      maxExportScale: 16,
+      maxImageSizeBytes: 15 * 1024 * 1024,
+      maxLayers: 25,
+      maxLiveCollaborators: 3,
+      maxTeamMembers: 0,
+      maxTeams: 0,
+      maxVideoDurationSeconds: 60,
+      maxVideoSizeBytes: 50 * 1024 * 1024,
       storageBytes: 5 * 1024 * 1024 * 1024,
       storageFormatted: '5 GB',
-      maxCanvasDimension: 16384,
-      maxLiveCollaborators: 3,
-      maxTeams: 0,
-      maxTeamMembers: 0,
-      maxLayers: 25,
       trashRetentionDays: 30,
-      maxExportScale: 16,
-      allowedExportTypes: ['png-current', 'project-json', 'spritesheet', 'gif', 'spritesheet-atlas'],
-      maxBrandKits: 0,
-      maxAiTokensPerCycle: 50000,
-      maxAiTokensFormatted: '50,000 tokens',
     },
-    features: [],
-    borderColor: '#9ca3af',
+    name: 'Spriteboard Gratis',
+    priceMonthly: 0,
+    priceYearly: 0,
     ringBg: 'rgba(156, 163, 175, 0.1)',
+    tagline: 'Ideal para iniciar en el pixel art y proyectos personales',
   },
   pro: {
-    id: 'pro',
-    name: 'Spriteboard Pro',
-    tagline: 'Para profesionales y creadores exigentes',
-    priceMonthly: 9.99,
-    priceYearly: 95.9,
+    borderColor: '#3b82f6',
     currency: 'USD',
-    limits: {
-      storageBytes: 100 * 1024 * 1024 * 1024,
-      storageFormatted: '100 GB',
-      maxCanvasDimension: 16384,
-      maxLiveCollaborators: 6,
-      maxTeams: 0,
-      maxTeamMembers: 0,
-      maxLayers: 25,
-      trashRetentionDays: 30,
-      maxExportScale: 16,
-      allowedExportTypes: ['png-current', 'project-json', 'spritesheet', 'gif', 'spritesheet-atlas'],
-      maxBrandKits: 0,
-      maxAiTokensPerCycle: 300000,
-      maxAiTokensFormatted: '300,000 tokens',
-    },
     features: [
       'live_collaborators_extended',
       'ai_bg_removal',
     ],
-    borderColor: '#3b82f6',
+    id: 'pro',
+    limits: {
+      allowedExportTypes: ['png-current', 'project-json', 'spritesheet', 'gif', 'spritesheet-atlas'],
+      allowedImageFormats: ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif', 'image/avif', 'image/svg+xml'],
+      allowedVideoFormats: ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-m4v'],
+      maxAiTokensFormatted: '300,000 tokens',
+      maxAiTokensPerCycle: 300000,
+      maxBatchUploadCount: 25,
+      maxBrandKits: 0,
+      maxCanvasDimension: 16384,
+      maxExportScale: 16,
+      maxImageSizeBytes: 50 * 1024 * 1024,
+      maxLayers: 25,
+      maxLiveCollaborators: 6,
+      maxTeamMembers: 0,
+      maxTeams: 0,
+      maxVideoDurationSeconds: 300,
+      maxVideoSizeBytes: 250 * 1024 * 1024,
+      storageBytes: 100 * 1024 * 1024 * 1024,
+      storageFormatted: '100 GB',
+      trashRetentionDays: 30,
+    },
+    name: 'Spriteboard Pro',
+    priceMonthly: 9.99,
+    priceYearly: 95.9,
     ringBg: 'rgba(59, 130, 246, 0.15)',
+    tagline: 'Para profesionales y creadores exigentes',
   },
   business: {
-    id: 'business',
-    name: 'Spriteboard Negocios',
-    tagline: 'Máxima potencia, colaboración y equipos centralizados',
-    priceMonthly: 19.99,
-    priceYearly: 191.9,
+    borderColor: 'conic-gradient(from 295deg, #8b5cf6 0% 28%, #ec4899 28% 57%, #3b82f6 57% 85%, #6366f1 85% 100%)',
     currency: 'USD',
-    limits: {
-      storageBytes: 500 * 1024 * 1024 * 1024,
-      storageFormatted: '500 GB',
-      maxCanvasDimension: 16384,
-      maxLiveCollaborators: 50,
-      maxTeams: 999999,
-      maxTeamMembers: 999999,
-      maxLayers: 25,
-      trashRetentionDays: 30,
-      maxExportScale: 16,
-      allowedExportTypes: ['png-current', 'project-json', 'spritesheet', 'gif', 'spritesheet-atlas'],
-      maxBrandKits: 500,
-      maxAiTokensPerCycle: 1500000,
-      maxAiTokensFormatted: '1,500,000 tokens',
-    },
     features: [
       'teams',
       'live_collaborators_extended',
@@ -123,8 +122,33 @@ export const PLAN_TIER_CONFIGS: Record<SubscriptionTierId, PlanBenefitDefinition
       'brand_kits',
       'ai_bg_removal',
     ],
-    borderColor: 'conic-gradient(from 295deg, #8b5cf6 0% 28%, #ec4899 28% 57%, #3b82f6 57% 85%, #6366f1 85% 100%)',
+    id: 'business',
+    limits: {
+      allowedExportTypes: ['png-current', 'project-json', 'spritesheet', 'gif', 'spritesheet-atlas'],
+      allowedImageFormats: ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif', 'image/avif', 'image/svg+xml'],
+      allowedVideoFormats: ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-m4v', 'video/x-matroska', 'video/ogg'],
+      maxAiTokensFormatted: '1,500,000 tokens',
+      maxAiTokensPerCycle: 1500000,
+      maxBatchUploadCount: 50,
+      maxBrandKits: 500,
+      maxCanvasDimension: 16384,
+      maxExportScale: 16,
+      maxImageSizeBytes: 100 * 1024 * 1024,
+      maxLayers: 25,
+      maxLiveCollaborators: 50,
+      maxTeamMembers: 999999,
+      maxTeams: 999999,
+      maxVideoDurationSeconds: 1800,
+      maxVideoSizeBytes: 1024 * 1024 * 1024,
+      storageBytes: 500 * 1024 * 1024 * 1024,
+      storageFormatted: '500 GB',
+      trashRetentionDays: 30,
+    },
+    name: 'Spriteboard Negocios',
+    priceMonthly: 19.99,
+    priceYearly: 191.9,
     ringBg: 'rgba(139, 92, 246, 0.18)',
+    tagline: 'Máxima potencia, colaboración y equipos centralizados',
   },
 };
 

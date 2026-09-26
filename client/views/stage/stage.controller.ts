@@ -4250,6 +4250,27 @@ export class StageCanvasController {
     this.collaborationManager.broadcastAddElement(imgEl, this.activeSlideId);
   }
 
+  public insertVideo(video: { duration?: number; height?: number; thumbnailUrl?: string; title?: string; url: string; width?: number }): void {
+    const embedEl = createEmbedElement({
+      channelTitle: 'Video subido',
+      embedType: 'video',
+      height: video.height || 270,
+      thumbnailUrl: video.thumbnailUrl || '',
+      title: video.title || 'Video',
+      url: video.url,
+      width: video.width || 480,
+    });
+    this.saveHistoryState();
+    this.getActiveSlide().elements.push(embedEl);
+    this.selectedElementIds = new Set([embedEl.id]);
+    this.syncPanels();
+    this.updateSelectionToolbar();
+    this.render();
+    this.scheduleAutoSave();
+    this.collaborationManager.broadcastAddElement(embedEl, this.activeSlideId);
+    showToast(`Video «${video.title || 'Video'}» agregado a la diapositiva`, 'success');
+  }
+
   public insertYouTube(video: { channelTitle: string; id: string; thumbnailUrl: string; title: string; url: string }): void {
     const embedEl = createEmbedElement({
       channelTitle: video.channelTitle,

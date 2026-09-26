@@ -12,11 +12,14 @@ export async function listUploadsHandler(req: Request, res: Response): Promise<v
       return;
     }
 
-    const uploads = await getUserUploads(user.id);
+    const typeQuery = (req.query.type as string)?.toLowerCase();
+    const mediaType: 'all' | 'image' | 'video' = typeQuery === 'image' || typeQuery === 'video' ? typeQuery : 'all';
+
+    const uploads = await getUserUploads(user.id, mediaType);
     const storage = await getUserStorageUsage(user.id);
     sendSuccess(res, { storage, uploads });
   } catch (err) {
-    sendInternalError(res, 'Error al listar fotos del usuario en upload controller', err, 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.');
+    sendInternalError(res, 'Error al listar archivos del usuario en upload controller', err, 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.');
   }
 }
 
@@ -43,7 +46,7 @@ export async function uploadFilesHandler(req: Request, res: Response): Promise<v
     }
 
     if (files.length === 0) {
-      sendBadRequest(res, 'Debes seleccionar al menos un archivo de imagen válido.');
+      sendBadRequest(res, 'Debes seleccionar al menos un archivo válido (imagen o video).');
       return;
     }
 
@@ -57,7 +60,7 @@ export async function uploadFilesHandler(req: Request, res: Response): Promise<v
       );
 
       if (!result.success || !result.upload) {
-        sendBadRequest(res, result.error || 'No se pudo procesar la imagen seleccionada.');
+        sendBadRequest(res, result.error || 'No se pudo procesar el archivo seleccionado.');
         return;
       }
 
@@ -66,12 +69,12 @@ export async function uploadFilesHandler(req: Request, res: Response): Promise<v
 
     const storage = await getUserStorageUsage(user.id);
     sendCreated(res, {
-      message: savedUploads.length === 1 ? 'Imagen subida exitosamente.' : 'Imágenes subidas exitosamente.',
+      message: savedUploads.length === 1 ? 'Archivo subido exitosamente.' : 'Archivos subidos exitosamente.',
       storage,
       uploads: savedUploads,
     });
   } catch (err) {
-    sendInternalError(res, 'Error al subir fotos en upload controller', err, 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.');
+    sendInternalError(res, 'Error al subir archivos en upload controller', err, 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.');
   }
 }
 
@@ -103,10 +106,10 @@ export async function deleteUploadHandler(req: Request, res: Response): Promise<
 
     const storage = await getUserStorageUsage(user.id);
     sendSuccess(res, {
-      message: 'Imagen eliminada exitosamente.',
+      message: 'Archivo eliminado exitosamente.',
       storage,
     });
   } catch (err) {
-    sendInternalError(res, 'Error al eliminar foto en upload controller', err, 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.');
+    sendInternalError(res, 'Error al eliminar archivo en upload controller', err, 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.');
   }
 }

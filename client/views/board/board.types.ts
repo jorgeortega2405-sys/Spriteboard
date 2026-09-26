@@ -481,7 +481,7 @@ export interface BoardEmbedElement {
   autoplay?: boolean;
   channelTitle?: string;
   effect?: BoardElementEffect;
-  embedType: 'youtube' | 'generic';
+  embedType: 'generic' | 'video' | 'youtube';
   height: number;
   hidden?: boolean;
   id: string;

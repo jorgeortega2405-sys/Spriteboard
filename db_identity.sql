@@ -686,8 +686,11 @@ CREATE TABLE IF NOT EXISTS user_uploads (
     user_id INT NOT NULL,
     original_filename VARCHAR(255) NOT NULL,
     file_path VARCHAR(512) NOT NULL,
+    thumbnail_path VARCHAR(512) NULL,
+    media_type ENUM('image', 'video') NOT NULL DEFAULT 'image',
     mime_type VARCHAR(100) NOT NULL,
-    size_bytes INT NOT NULL,
+    size_bytes BIGINT NOT NULL,
+    duration_seconds DECIMAL(8,2) NULL,
     width INT NULL,
     height INT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -695,6 +698,7 @@ CREATE TABLE IF NOT EXISTS user_uploads (
     INDEX idx_user_uploads_user (user_id),
     INDEX idx_user_uploads_uuid (uuid),
     INDEX idx_user_uploads_user_created (user_id, created_at DESC),
+    INDEX idx_user_uploads_media_type (user_id, media_type, created_at DESC),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

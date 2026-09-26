@@ -491,7 +491,7 @@ export function createConnectorElement(startPoint: BoardPoint, endPoint: BoardPo
 export function createEmbedElement(options: {
   autoplay?: boolean;
   channelTitle?: string;
-  embedType?: 'generic' | 'youtube';
+  embedType?: 'generic' | 'video' | 'youtube';
   height?: number;
   id?: string;
   opacity?: number;
@@ -515,7 +515,7 @@ export function createEmbedElement(options: {
     id: options.id || `embed-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     opacity: options.opacity ?? CANVAS_DEFAULTS.OPACITY,
     thumbnailUrl: options.thumbnailUrl || (options.videoId ? `https://i.ytimg.com/vi/${options.videoId}/hqdefault.jpg` : ''),
-    title: options.title || 'Video de YouTube',
+    title: options.title || (options.embedType === 'video' ? 'Video subido' : 'Video de YouTube'),
     type: 'embed',
     url: options.url,
     videoId: options.videoId,

@@ -29,7 +29,7 @@ import { UserUploadItem } from '../types/upload.types.js';
 import { closeAllDropdowns, registerActiveDropdown, setupDropdown, unregisterActiveDropdown } from '../utils/dom.util.js';
 import { PIXEL_SHAPES, PixelShape, ShapeCategory } from '../utils/pixel-shapes.util.js';
 import { applyAvatarTier, getFallbackTierColor } from '../utils/tier.util.js';
-import { validateAndSanitizeFiles } from '../utils/validators.util.js';
+import { formatVideoDuration, validateAndSanitizeFiles } from '../utils/validators.util.js';
 import { CHART_CATALOG } from '../views/board/board-charts-panel.component.js';
 import { BoardChartElement, BoardProject, ChartType, Shape3DType, ShapeType } from '../views/board/board.types.js';
 import { DOC_TEMPLATES, getDocTemplateById } from '../views/doc/doc-templates.config.js';
@@ -1130,6 +1130,43 @@ function formatBytes(bytes: number): string {
 function handleApplyCanvasUpload(item: UserUploadItem, canvasType: 'board' | 'doc' | 'presentation'): void {
   const controller = getActiveCanvasController();
 
+  if (item.media_type === 'video') {
+    if (canvasType === 'doc') {
+      if (!controller) {
+        showToast('No se encontró el controlador del documento', 'warning');
+        return;
+      }
+
+      controller.insertVideo?.(item.url, item.original_filename, item.thumbnail_url || '');
+      showToast(`Video «${item.original_filename}» insertado en el documento`, 'success');
+      if (window.innerWidth <= 768) {
+        toggleDrawer(false);
+      }
+      return;
+    }
+
+    if (canvasType === 'board' || canvasType === 'presentation') {
+      if (!controller) {
+        showToast('No se encontró el controlador del lienzo', 'warning');
+        return;
+      }
+
+      controller.insertVideo?.({
+        duration: item.duration_seconds || undefined,
+        height: item.height || undefined,
+        thumbnailUrl: item.thumbnail_url || '',
+        title: item.original_filename,
+        url: item.url,
+        width: item.width || undefined,
+      });
+      if (window.innerWidth <= 768) {
+        toggleDrawer(false);
+      }
+      return;
+    }
+    return;
+  }
+
   if (canvasType === 'doc') {
     if (!controller) {
       showToast('No se encontró el controlador del documento', 'warning');
@@ -1171,7 +1208,7 @@ function renderUploadsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement
           <span class="canvas-panel-card__title" data-ref="canvas-panel-title">${t('nav.uploads') || 'Subidos'}</span>
         </div>
         <div style="display: flex; align-items: center; gap: 4px;">
-          <button type="button" class="component-button component-button--h32 component-button--icon-only rail-btn" data-ref="btn-upload-file-trigger" data-tooltip="Subir imagen" aria-label="Subir imagen">
+          <button type="button" class="component-button component-button--h32 component-button--icon-only rail-btn" data-ref="btn-upload-file-trigger" data-tooltip="Subir fotos o videos" aria-label="Subir fotos o videos">
             <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
           </button>
           <button type="button" class="component-button component-button--h32 component-button--icon-only rail-btn canvas-panel-card__close" data-ref="btn-close-canvas-panel" data-tooltip="Cerrar panel" aria-label="Cerrar panel">
@@ -1179,18 +1216,20 @@ function renderUploadsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement
           </button>
         </div>
       </div>
+      <div class="canvas-uploads-filter-bar" data-ref="canvas-uploads-tabs" style="display: flex; gap: 4px; padding: 4px 12px 8px 12px; border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.08));">
+        <button type="button" class="component-button component-button--h28 component-button--ghost is-active" data-ref="tab-filter-all" data-tab-filter="all" style="font-size: 12px; padding: 0 10px; border-radius: 6px;">Todos</button>
+        <button type="button" class="component-button component-button--h28 component-button--ghost" data-ref="tab-filter-images" data-tab-filter="image" style="font-size: 12px; padding: 0 10px; border-radius: 6px;">Imágenes</button>
+        <button type="button" class="component-button component-button--h28 component-button--ghost" data-ref="tab-filter-videos" data-tab-filter="video" style="font-size: 12px; padding: 0 10px; border-radius: 6px;">Videos</button>
+      </div>
       <div class="canvas-panel-card__body" data-ref="canvas-panel-body">
-        <input class="canvas-upload-file-input" data-ref="canvas-upload-file-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" multiple style="display: none;" />
+        <input class="canvas-upload-file-input" data-ref="canvas-upload-file-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/avif,image/svg+xml,video/mp4,video/webm,video/quicktime,video/x-m4v,video/ogg" multiple style="display: none;" />
 
         <div class="menu-panel__search" data-ref="canvas-uploads-search">
           <svg class="component-icon menu-panel__search-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
-          <input class="menu-panel__search-input" data-ref="canvas-uploads-search-input" type="text" maxlength="50" autocomplete="off" placeholder="Buscar subidos..." />
+          <input class="menu-panel__search-input" data-ref="canvas-uploads-search-input" type="text" maxlength="50" autocomplete="off" placeholder="Buscar fotos y videos..." />
         </div>
 
         <div class="elements-grid" data-ref="canvas-uploads-grid">
-          <div class="skeleton" style="aspect-ratio: 1 / 1; border-radius: 8px;"></div>
-          <div class="skeleton" style="aspect-ratio: 1 / 1; border-radius: 8px;"></div>
-          <div class="skeleton" style="aspect-ratio: 1 / 1; border-radius: 8px;"></div>
           <div class="skeleton" style="aspect-ratio: 1 / 1; border-radius: 8px;"></div>
           <div class="skeleton" style="aspect-ratio: 1 / 1; border-radius: 8px;"></div>
           <div class="skeleton" style="aspect-ratio: 1 / 1; border-radius: 8px;"></div>
@@ -1212,16 +1251,26 @@ function renderUploadsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement
   const fileInput = drawerBody.querySelector<HTMLInputElement>('[data-ref="canvas-upload-file-input"]');
   const searchInput = drawerBody.querySelector<HTMLInputElement>('[data-ref="canvas-uploads-search-input"]');
   const grid = drawerBody.querySelector<HTMLElement>('[data-ref="canvas-uploads-grid"]');
+  const tabFilterBtns = drawerBody.querySelectorAll<HTMLButtonElement>('[data-tab-filter]');
 
   let uploads: UserUploadItem[] = [];
+  let currentFilter: 'all' | 'image' | 'video' = 'all';
   let isUploading = false;
 
   const renderGrid = (query = '') => {
     if (!grid) return;
     const cleanQ = query.trim().toLowerCase();
-    const filtered = cleanQ
-      ? uploads.filter((u) => u.original_filename.toLowerCase().includes(cleanQ))
-      : uploads;
+
+    let filtered = uploads;
+    if (currentFilter === 'image') {
+      filtered = filtered.filter((u) => u.media_type === 'image');
+    } else if (currentFilter === 'video') {
+      filtered = filtered.filter((u) => u.media_type === 'video');
+    }
+
+    if (cleanQ) {
+      filtered = filtered.filter((u) => u.original_filename.toLowerCase().includes(cleanQ));
+    }
 
     if (filtered.length === 0) {
       if (uploads.length === 0) {
@@ -1231,10 +1280,10 @@ function renderUploadsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cloud_upload"></use></svg>
             </div>
             <span class="canvas-panel-card__empty-title">Aún no tienes archivos subidos</span>
-            <p class="canvas-panel-card__empty-desc">Sube fotos o imágenes para colocarlas en tus lienzos.</p>
+            <p class="canvas-panel-card__empty-desc">Sube fotos o videos para colocarlos e interactuar en tus lienzos.</p>
             <button type="button" class="component-button component-button--h36 component-button--black" data-ref="btn-upload-empty-trigger" style="margin-top: 8px;">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
-              <span>Subir imagen</span>
+              <span>Subir fotos y videos</span>
             </button>
           </div>
         `;
@@ -1246,7 +1295,7 @@ function renderUploadsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement
         grid.innerHTML = `
           <div class="canvas-panel-card__empty" style="grid-column: 1 / -1;" data-ref="canvas-uploads-no-results">
             <span class="canvas-panel-card__empty-title">Sin resultados</span>
-            <p class="canvas-panel-card__empty-desc">No se encontraron archivos que coincidan con «${escapeHtml(query)}»</p>
+            <p class="canvas-panel-card__empty-desc">No se encontraron archivos en «${currentFilter === 'video' ? 'Videos' : currentFilter === 'image' ? 'Imágenes' : 'Todos'}» que coincidan con «${escapeHtml(query)}»</p>
           </div>
         `;
       }
@@ -1254,14 +1303,25 @@ function renderUploadsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement
       return;
     }
 
-    grid.innerHTML = filtered.map((item) => `
-      <button type="button" class="element-grid-item" data-ref="btn-upload-item-${item.uuid}" data-upload-uuid="${item.uuid}" data-tooltip="${escapeHtml(item.original_filename)}" aria-label="${escapeHtml(item.original_filename)}">
-        <img class="canvas-upload-img image-lazy-fade" data-ref="img-upload-${item.uuid}" src="${escapeHtml(item.url)}" alt="${escapeHtml(item.original_filename)}" loading="lazy" decoding="async" onload="this.classList.add('image-loaded')" onerror="this.classList.add('image-loaded')" />
-        <button type="button" class="canvas-upload-card__delete" data-ref="btn-delete-upload-${item.uuid}" data-delete-uuid="${item.uuid}" data-tooltip="Eliminar imagen" aria-label="Eliminar imagen">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
+    grid.innerHTML = filtered.map((item) => {
+      const isVideo = item.media_type === 'video';
+      const previewSrc = isVideo ? (item.thumbnail_url || item.url) : item.url;
+      const durationBadge = isVideo && item.duration_seconds
+        ? `<div class="canvas-upload-badge canvas-upload-badge--video" style="position: absolute; bottom: 6px; right: 6px; display: flex; align-items: center; gap: 3px; background: rgba(0,0,0,0.75); color: #ffffff; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 600; pointer-events: none; backdrop-filter: blur(4px);"><svg class="component-icon" style="width: 12px; height: 12px;" aria-hidden="true"><use href="/icons.svg#play_arrow"></use></svg><span>${formatVideoDuration(item.duration_seconds)}</span></div>`
+        : isVideo
+        ? `<div class="canvas-upload-badge canvas-upload-badge--video" style="position: absolute; bottom: 6px; right: 6px; display: flex; align-items: center; gap: 3px; background: rgba(0,0,0,0.75); color: #ffffff; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 600; pointer-events: none; backdrop-filter: blur(4px);"><svg class="component-icon" style="width: 12px; height: 12px;" aria-hidden="true"><use href="/icons.svg#movie"></use></svg></div>`
+        : '';
+
+      return `
+        <button type="button" class="element-grid-item" data-ref="btn-upload-item-${item.uuid}" data-upload-uuid="${item.uuid}" data-tooltip="${escapeHtml(item.original_filename)}" aria-label="${escapeHtml(item.original_filename)}" style="position: relative;">
+          <img class="canvas-upload-img image-lazy-fade" data-ref="img-upload-${item.uuid}" src="${escapeHtml(previewSrc)}" alt="${escapeHtml(item.original_filename)}" loading="lazy" decoding="async" onload="this.classList.add('image-loaded')" onerror="this.classList.add('image-loaded')" />
+          ${durationBadge}
+          <button type="button" class="canvas-upload-card__delete" data-ref="btn-delete-upload-${item.uuid}" data-delete-uuid="${item.uuid}" data-tooltip="Eliminar ${isVideo ? 'video' : 'imagen'}" aria-label="Eliminar ${isVideo ? 'video' : 'imagen'}">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
+          </button>
         </button>
-      </button>
-    `).join('');
+      `;
+    }).join('');
 
     renderIcons(grid);
 
@@ -1291,7 +1351,7 @@ function renderUploadsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement
           description: `¿Estás seguro de que deseas eliminar «${found.original_filename}»? Esta acción liberará espacio de tu cuenta.`,
           showCancel: true,
           showConfirm: true,
-          title: 'Eliminar archivo subido',
+          title: `Eliminar ${found.media_type === 'video' ? 'video' : 'imagen'}`,
           onConfirm: async () => {
             const res = await deleteUploadApi(found.uuid);
             if (res.success) {
@@ -1307,14 +1367,23 @@ function renderUploadsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement
     });
   };
 
+  tabFilterBtns.forEach((tabBtn) => {
+    tabBtn.addEventListener('click', () => {
+      tabFilterBtns.forEach((b) => b.classList.remove('is-active'));
+      tabBtn.classList.add('is-active');
+      currentFilter = (tabBtn.getAttribute('data-tab-filter') as 'all' | 'image' | 'video') || 'all';
+      renderGrid(searchInput?.value || '');
+    });
+  });
+
   const handleFiles = async (files: FileList | File[]) => {
     if (!currentUser) {
-      showToast('Debes iniciar sesión para subir fotos.', 'warning');
+      showToast('Debes iniciar sesión para subir fotos y videos.', 'warning');
       return;
     }
-    const validation = validateAndSanitizeFiles(files, { maxMb: 15 });
+    const validation = validateAndSanitizeFiles(files, { maxMb: 1024 });
     if (!validation.valid) {
-      showToast(validation.error || 'Por favor selecciona archivos de imagen válidos (PNG, JPEG, WebP, GIF, SVG).', 'warning');
+      showToast(validation.error || 'Por favor selecciona archivos compatibles (PNG, JPG, WEBP, GIF, SVG, MP4, WebM, MOV).', 'warning');
       return;
     }
 

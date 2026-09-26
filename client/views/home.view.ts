@@ -2761,13 +2761,6 @@ class HomeController {
       },
     });
   }
-
-  public destroy(): void {
-    this.abortController.abort();
-    this.cleanupCategoriesDrag?.();
-    this.scrollObserver?.disconnect();
-    this.templatesScrollObserver?.disconnect();
-  }
 }
 
 export async function createHomeView(): Promise<HTMLElement> {
