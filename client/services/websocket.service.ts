@@ -491,4 +491,21 @@ export function sendCanvasMemberRemoved(canvasUuid: string, targetUserId: number
   });
 }
 
+export function sendCanvasElementLock(canvasUuid: string, elementId: string): void {
+  sendWebSocketMessage({
+    canvasUuid,
+    elementId,
+    type: 'ELEMENT_LOCK',
+  });
+}
+
+export function sendCanvasElementUnlock(canvasUuid: string, elementId: string): void {
+  sendWebSocketMessage({
+    canvasUuid,
+    elementId,
+    type: 'ELEMENT_UNLOCK',
+  });
+}
+
+
 

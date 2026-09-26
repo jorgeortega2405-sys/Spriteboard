@@ -1202,6 +1202,61 @@ export function drawBoardCollaboratorCursors(
   });
 }
 
+export function drawBoardCollaboratorLocks(
+  ctx: CanvasRenderingContext2D,
+  elements: BoardElement[],
+  elementLocks: Map<string, { color: string; username: string; userId?: number }>,
+  camera: { zoom: number },
+  myUserId?: number | null
+): void {
+  if (elementLocks.size === 0) return;
+
+  const elementsMap = new Map<string, BoardElement>();
+  for (const el of elements) {
+    elementsMap.set(el.id, el);
+  }
+
+  elementLocks.forEach((lock, elementId) => {
+    if (myUserId && lock.userId === myUserId) return;
+    const el = elementsMap.get(elementId);
+    if (!el) return;
+
+    const bbox = getElementBoundingBox(el);
+    if (!bbox) return;
+
+    ctx.save();
+    ctx.strokeStyle = lock.color || '#f59e0b';
+    ctx.lineWidth = 2 / camera.zoom;
+    ctx.setLineDash([4 / camera.zoom, 4 / camera.zoom]);
+    ctx.strokeRect(bbox.x - 2 / camera.zoom, bbox.y - 2 / camera.zoom, bbox.width + 4 / camera.zoom, bbox.height + 4 / camera.zoom);
+
+    const name = lock.username || 'Colaborador';
+    const fontSize = Math.max(10, Math.min(14, 11 / camera.zoom));
+    ctx.font = `bold ${fontSize}px system-ui, -apple-system, sans-serif`;
+    const textW = ctx.measureText(name).width;
+    const badgeW = textW + 12 / camera.zoom;
+    const badgeH = 18 / camera.zoom;
+    const badgeX = bbox.x - 2 / camera.zoom;
+    const badgeY = bbox.y - 2 / camera.zoom - badgeH - 2 / camera.zoom;
+
+    ctx.fillStyle = lock.color || '#f59e0b';
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    if (typeof ctx.roundRect === 'function') {
+      ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 4 / camera.zoom);
+    } else {
+      ctx.rect(badgeX, badgeY, badgeW, badgeH);
+    }
+    ctx.fill();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(name, badgeX + 6 / camera.zoom, badgeY + badgeH / 2);
+
+    ctx.restore();
+  });
+}
+
 export function drawMarqueeBox(
   ctx: CanvasRenderingContext2D,
   box: { height: number; width: number; x: number; y: number },

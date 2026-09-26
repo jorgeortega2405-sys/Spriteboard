@@ -1,12 +1,22 @@
-import { joinCanvasRoom, leaveCanvasRoom, registerWebSocketHandler, sendCanvasAccessChanged, sendCanvasAction, sendCanvasCursor, sendCanvasFullUpdate } from '../../services/websocket.service.js';
+import { joinCanvasRoom, leaveCanvasRoom, registerWebSocketHandler, sendCanvasAccessChanged, sendCanvasAction, sendCanvasCursor, sendCanvasElementLock, sendCanvasElementUnlock, sendCanvasFullUpdate } from '../../services/websocket.service.js';
 import { getCollaboratorColor } from '../../utils/color.util.js';
 import { BackgroundType, BoardCollaboratorState, BoardElement, BoardPageItem } from './board.types.js';
+
+export interface LockedElementInfo {
+  color: string;
+  connId: string;
+  lockedAt: number;
+  userId: number;
+  username: string;
+}
 
 export interface BoardCollaborationCallbacks {
   onAccessChanged: (accessLevel: 'private' | 'public', publicRole?: 'editor' | 'viewer') => void;
   onAccessRevoked: () => void;
   onCollaboratorsChanged: () => void;
   onCursor: () => void;
+  onElementLocked?: (elementId: string, info: LockedElementInfo) => void;
+  onElementUnlocked?: (elementId: string) => void;
   onRemoteAddElement: (element: BoardElement, pageId?: string) => void;
   onRemoteClear: (pageId?: string) => void;
   onRemoteDeleteElement: (elementId: string, pageId?: string) => void;
@@ -25,12 +35,14 @@ export class BoardCollaborationManager {
   public activePageId = '';
   public canvasUuid: string;
   public collaborators: Map<string, BoardCollaboratorState> = new Map();
+  public elementLocks: Map<string, LockedElementInfo> = new Map();
   public isOwner = true;
   public lastSentCursorTime = 0;
   public myCollaboratorColor = '#00E5FF';
   public publicRole: 'editor' | 'viewer' = 'editor';
   public role: 'editor' | 'owner' | 'viewer' = 'owner';
   public roomToken = '';
+  private myUserId: number | null = null;
   private wsUnsubscribes: Array<() => void> = [];
 
   constructor(canvasUuid: string) {
@@ -45,6 +57,7 @@ export class BoardCollaborationManager {
     callbacks: BoardCollaborationCallbacks
   ): void {
     this.cleanup();
+    this.myUserId = userId || null;
     this.myCollaboratorColor = getCollaboratorColor(userId ? userId : Math.random().toString());
 
     joinCanvasRoom(this.canvasUuid, userId || undefined, username, this.myCollaboratorColor, this.roomToken, avatarUrl || undefined, tier);
@@ -85,7 +98,21 @@ export class BoardCollaborationManager {
           });
         }
       }
+      this.elementLocks.clear();
+      if (Array.isArray(payload.elementLocks)) {
+        for (const l of payload.elementLocks) {
+          if (!l.elementId) continue;
+          this.elementLocks.set(l.elementId, {
+            color: l.color || getCollaboratorColor(l.userId || l.connId),
+            connId: l.connId || '',
+            lockedAt: l.lockedAt || Date.now(),
+            userId: l.userId || 0,
+            username: l.username || 'Colaborador',
+          });
+        }
+      }
       callbacks.onCollaboratorsChanged();
+      callbacks.onCursor();
     });
 
     const unsubJoined = registerWebSocketHandler('USER_JOINED', (payload: any) => {
@@ -121,7 +148,38 @@ export class BoardCollaborationManager {
       const connId = payload.connId || payload.conn_id;
       if (roomUuid !== this.canvasUuid || !connId) return;
       this.collaborators.delete(connId);
+      for (const [elId, lock] of this.elementLocks.entries()) {
+        if (lock.connId === connId) {
+          this.elementLocks.delete(elId);
+          callbacks.onElementUnlocked?.(elId);
+        }
+      }
       callbacks.onCollaboratorsChanged();
+      callbacks.onCursor();
+    });
+
+    const unsubLocked = registerWebSocketHandler('ELEMENT_LOCKED', (payload: any) => {
+      const roomUuid = typeof payload.canvasUuid === 'object' ? payload.canvasUuid?.canvasUuid : (payload.canvasUuid || payload.canvas_uuid);
+      if (roomUuid !== this.canvasUuid || !payload.elementId || !payload.user) return;
+      const u = payload.user;
+      const info: LockedElementInfo = {
+        color: u.color || getCollaboratorColor(u.userId || u.connId),
+        connId: u.connId || u.conn_id || '',
+        lockedAt: u.lockedAt || Date.now(),
+        userId: u.userId || 0,
+        username: u.username || 'Colaborador',
+      };
+      this.elementLocks.set(payload.elementId, info);
+      callbacks.onElementLocked?.(payload.elementId, info);
+      callbacks.onCursor();
+    });
+
+    const unsubUnlocked = registerWebSocketHandler('ELEMENT_UNLOCKED', (payload: any) => {
+      const roomUuid = typeof payload.canvasUuid === 'object' ? payload.canvasUuid?.canvasUuid : (payload.canvasUuid || payload.canvas_uuid);
+      if (roomUuid !== this.canvasUuid || !payload.elementId) return;
+      this.elementLocks.delete(payload.elementId);
+      callbacks.onElementUnlocked?.(payload.elementId);
+      callbacks.onCursor();
     });
 
     const unsubCursor = registerWebSocketHandler('CANVAS_CURSOR', (payload: any) => {
@@ -225,6 +283,8 @@ export class BoardCollaborationManager {
       unsubPresence,
       unsubJoined,
       unsubLeft,
+      unsubLocked,
+      unsubUnlocked,
       unsubCursor,
       unsubAction,
       unsubFullUpdate,
@@ -306,12 +366,33 @@ export class BoardCollaborationManager {
     sendCanvasAccessChanged(this.canvasUuid, accessLevel, publicRole);
   }
 
+  public lockElement(elementId: string): void {
+    if (this.role === 'viewer') return;
+    sendCanvasElementLock(this.canvasUuid, elementId);
+  }
+
+  public unlockElement(elementId: string): void {
+    sendCanvasElementUnlock(this.canvasUuid, elementId);
+  }
+
+  public isElementLockedByOther(elementId: string): boolean {
+    const lock = this.elementLocks.get(elementId);
+    if (!lock) return false;
+    if (this.myUserId && lock.userId === this.myUserId) return false;
+    return true;
+  }
+
+  public getLockOwner(elementId: string): LockedElementInfo | null {
+    return this.elementLocks.get(elementId) || null;
+  }
+
   public cleanup(): void {
     for (const unsub of this.wsUnsubscribes) {
       unsub();
     }
     this.wsUnsubscribes = [];
     this.collaborators.clear();
+    this.elementLocks.clear();
   }
 
   public destroy(): void {

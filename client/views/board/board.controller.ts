@@ -14,7 +14,7 @@ import { BOARD_SHAPES } from '../../config/board-shapes.config.js';
 import { getBoardTemplateElements } from '../../config/board-templates.data.js';
 import { getMockupTemplateById } from '../../config/mockups.config.js';
 import { DEFAULT_STICKY_COLOR, STICKY_NOTE_PRESETS } from '../../config/sticky-notes.config.js';
-import { AlignmentGuide, applyElementAnimation, applyElementEffect, BackgroundType, Board3DElement, BoardAnimationType, BoardChartElement, BoardCollaboratorState, BoardConnectorElement, BoardEffectType, BoardElement, BoardElementAnimation, BoardElementEffect, BoardEmbedElement, BoardImageElement, BoardMockupElement, BoardPageItem, BoardPixelGridElement, BoardPoint, BoardProject, BoardSectionElement, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTableCell, BoardTableElement, BoardTextElement, BoardTool, calculateDragSnapping, calculateResizeSnapping, CANVAS_DEFAULTS, CanvasEngine2D, ChartDataRow, ChartType, computeElementsBoundingBox, ConnectorStyle, create3DElement, createChartElement, createConnectorElement, createEmbedElement, createElementResizeSnapshot, createImageElement, createMockupElement, createSectionElement, createShapeElement, createStickyElement, createTableElement, createTextElement, createTextPresetElement, DEFAULT_CHART_PALETTES, DEFAULT_CLASSIC_PALETTE, DistanceGuide, draw3DElement, draw3DGroundGrid, drawAiProcessingOverlay, drawAlignmentGuides, drawBackground, drawBoardCollaboratorCursors, drawChart, drawCheckerboard, drawConnector, drawEmbedElement, drawImage, drawMarqueeBox, drawMockupElement, drawMultiSelectionBounds, drawPixelGridLines, drawSection, drawSelectionBox, drawShape, drawSticky, drawStroke, drawTable, drawText, ElementResizeSnapshot, exportJson, exportPng, exportSvg, findContainingSection, findElementsByMarqueeBox, GAMEBOY_PALETTE, generateThumbnail, getConnectorEndpoints, getElementBoundingBox, hitTest3DRotationGizmo, hitTestBoundingBoxResizeHandle, hitTestElement, hitTestResizeHandle, MarkerType, measureTextElementSize, moveElementByDelta, moveElementByDrag, onCustomModelLoaded, PICO8_PALETTE, PixelSubtool, preloadCustom3DModels, ResizeHandle, resizeElementByHandle, resizeElementsGroup, screenToWorld, Shape3DType, ShapeType, StrokeStyle, TEXT_PRESETS, worldToScreen } from '../../core/canvas-engine.js';
+import { AlignmentGuide, applyElementAnimation, applyElementEffect, BackgroundType, Board3DElement, BoardAnimationType, BoardChartElement, BoardCollaboratorState, BoardConnectorElement, BoardEffectType, BoardElement, BoardElementAnimation, BoardElementEffect, BoardEmbedElement, BoardImageElement, BoardMockupElement, BoardPageItem, BoardPixelGridElement, BoardPoint, BoardProject, BoardSectionElement, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTableCell, BoardTableElement, BoardTextElement, BoardTool, calculateDragSnapping, calculateResizeSnapping, CANVAS_DEFAULTS, CanvasEngine2D, ChartDataRow, ChartType, computeElementsBoundingBox, ConnectorStyle, create3DElement, createChartElement, createConnectorElement, createEmbedElement, createElementResizeSnapshot, createImageElement, createMockupElement, createSectionElement, createShapeElement, createStickyElement, createTableElement, createTextElement, createTextPresetElement, DEFAULT_CHART_PALETTES, DEFAULT_CLASSIC_PALETTE, DistanceGuide, draw3DElement, draw3DGroundGrid, drawAiProcessingOverlay, drawAlignmentGuides, drawBackground, drawBoardCollaboratorCursors, drawBoardCollaboratorLocks, drawChart, drawCheckerboard, drawConnector, drawEmbedElement, drawImage, drawMarqueeBox, drawMockupElement, drawMultiSelectionBounds, drawPixelGridLines, drawSection, drawSelectionBox, drawShape, drawSticky, drawStroke, drawTable, drawText, ElementResizeSnapshot, exportJson, exportPng, exportSvg, findContainingSection, findElementsByMarqueeBox, GAMEBOY_PALETTE, generateThumbnail, getConnectorEndpoints, getElementBoundingBox, hitTest3DRotationGizmo, hitTestBoundingBoxResizeHandle, hitTestElement, hitTestResizeHandle, MarkerType, measureTextElementSize, moveElementByDelta, moveElementByDrag, onCustomModelLoaded, PICO8_PALETTE, PixelSubtool, preloadCustom3DModels, ResizeHandle, resizeElementByHandle, resizeElementsGroup, screenToWorld, Shape3DType, ShapeType, StrokeStyle, TEXT_PRESETS, worldToScreen } from '../../core/canvas-engine.js';
 import { currentUser, escapeHtml, getApi, postApi } from '../../services/api.service.js';
 import { CanvasClipboardData, copyCanvasElements, getCanvasClipboardData, hasCanvasClipboardElements, preparePastedCanvasElements } from '../../services/canvas-clipboard.service.js';
 import { getLocalCanvasByUuid, removeLocalCanvas, saveLocalCanvas } from '../../services/canvas-storage.service.js';
@@ -724,6 +724,19 @@ export class BoardController {
         this.requestRedraw();
       },
       onCursor: () => {
+        this.requestRedraw();
+      },
+      onElementLocked: (elementId, info) => {
+        if (this.selectedElementId === elementId || this.selectedElementIds.includes(elementId)) {
+          if (info.userId !== this.canvasUserId) {
+            this.selectedElementId = null;
+            this.selectedElementIds = [];
+            this.updateSelectionToolbar();
+          }
+        }
+        this.requestRedraw();
+      },
+      onElementUnlocked: () => {
         this.requestRedraw();
       },
       onRemoteAddElement: (element, pageId) => {
@@ -3956,9 +3969,15 @@ export class BoardController {
       if (this.selectedElementIds.length === 1) {
         const selEl = this.elements.find((item) => item.id === this.selectedElementIds[0]);
         if (selEl) {
+          if (this.collaborationManager.isElementLockedByOther(selEl.id)) {
+            const lockOwner = this.collaborationManager.getLockOwner(selEl.id);
+            showToast(`Elemento en edición por ${lockOwner?.username || 'otro usuario'}`, 'info');
+            return;
+          }
           const handle = hitTestResizeHandle(selEl, screenPos.x, screenPos.y, (wx, wy) => worldToScreen(wx, wy, this.canvasElement, this.camera));
           if (handle) {
             this.pushHistoryState();
+            this.collaborationManager.lockElement(selEl.id);
             this.isInteractingSelection = true;
             this.resizeHandleType = handle;
             this.setResizeCursor(handle);
@@ -3972,6 +3991,7 @@ export class BoardController {
             const onGizmo = hitTest3DRotationGizmo(selEl, screenPos.x, screenPos.y, (wx, wy) => worldToScreen(wx, wy, this.canvasElement, this.camera));
             if (onGizmo || e.altKey) {
               this.pushHistoryState();
+              this.collaborationManager.lockElement(selEl.id);
               this.isRotating3D = true;
               this.rotating3DElementId = selEl.id;
               this.rotate3DStartMouse = { x: e.clientX, y: e.clientY };
@@ -3987,9 +4007,19 @@ export class BoardController {
         const selectedEls = this.getSelectedElements();
         const groupBBox = computeElementsBoundingBox(selectedEls);
         if (groupBBox) {
+          for (const el of selectedEls) {
+            if (this.collaborationManager.isElementLockedByOther(el.id)) {
+              const lockOwner = this.collaborationManager.getLockOwner(el.id);
+              showToast(`Elemento en edición por ${lockOwner?.username || 'otro usuario'}`, 'info');
+              return;
+            }
+          }
           const handle = hitTestBoundingBoxResizeHandle(groupBBox, screenPos.x, screenPos.y, (wx, wy) => worldToScreen(wx, wy, this.canvasElement, this.camera));
           if (handle) {
             this.pushHistoryState();
+            for (const el of selectedEls) {
+              this.collaborationManager.lockElement(el.id);
+            }
             this.isInteractingSelection = true;
             this.resizeHandleType = handle;
             this.setResizeCursor(handle);
@@ -4016,25 +4046,42 @@ export class BoardController {
       this.lastPointerDownElementId = hit ? hit.id : null;
 
       if (hit && isDoubleClick) {
+        if (this.collaborationManager.isElementLockedByOther(hit.id)) {
+          const lockOwner = this.collaborationManager.getLockOwner(hit.id);
+          showToast(`Elemento en edición por ${lockOwner?.username || 'otro usuario'}`, 'info');
+          return;
+        }
         this.isInteractingSelection = false;
         this.executeElementDoubleClick(hit, worldPos);
         return;
       }
 
       if (hit) {
+        if (this.collaborationManager.isElementLockedByOther(hit.id)) {
+          const lockOwner = this.collaborationManager.getLockOwner(hit.id);
+          showToast(`Elemento en edición por ${lockOwner?.username || 'otro usuario'}`, 'info');
+          return;
+        }
+
         this.lastClickedHitId = hit.id;
         this.hasMovedSelection = false;
         if (e.shiftKey) {
           if (this.selectedElementIds.includes(hit.id)) {
             this.selectedElementIds = this.selectedElementIds.filter((id) => id !== hit.id);
+            this.collaborationManager.unlockElement(hit.id);
           } else {
             this.selectedElementIds.push(hit.id);
+            this.collaborationManager.lockElement(hit.id);
           }
           this.selectedElementId = this.selectedElementIds[0] || null;
         } else {
           if (!this.selectedElementIds.includes(hit.id)) {
+            for (const oldId of this.selectedElementIds) {
+              this.collaborationManager.unlockElement(oldId);
+            }
             this.selectedElementIds = [hit.id];
             this.selectedElementId = hit.id;
+            this.collaborationManager.lockElement(hit.id);
           }
         }
 
@@ -4046,6 +4093,7 @@ export class BoardController {
         const sections = this.elements.filter((item) => item.type === 'section') as BoardSectionElement[];
         const idsToMove = new Set<string>(this.selectedElementIds);
         for (const id of this.selectedElementIds) {
+          this.collaborationManager.lockElement(id);
           const el = this.elements.find((item) => item.id === id);
           if (el && el.type === 'section') {
             for (const other of this.elements) {
@@ -4606,6 +4654,12 @@ export class BoardController {
         }
         this.scheduleAutoSave();
       }
+      for (const id of this.selectedElementIds) {
+        this.collaborationManager.unlockElement(id);
+      }
+      if (this.selectedElementId) {
+        this.collaborationManager.unlockElement(this.selectedElementId);
+      }
       this.lastClickedHitId = null;
       this.hasMovedSelection = false;
       this.selectionStartPositions.clear();
@@ -4722,11 +4776,17 @@ export class BoardController {
   }
 
   private openInlineEditor(element: BoardShapeElement | BoardStickyElement | BoardTextElement): void {
+    if (this.collaborationManager.isElementLockedByOther(element.id)) {
+      const lockOwner = this.collaborationManager.getLockOwner(element.id);
+      showToast(`Elemento en edición por ${lockOwner?.username || 'otro usuario'}`, 'info');
+      return;
+    }
     this.commitInlineEditor();
     const container = this.container.querySelector<HTMLElement>('[data-ref="board-text-editor-container"]');
     if (!container || !this.canvasElement) return;
 
     this.editingElementId = element.id;
+    this.collaborationManager.lockElement(element.id);
     this.requestRedraw();
 
     const bbox = getElementBoundingBox(element, this.elements);
@@ -4850,6 +4910,9 @@ export class BoardController {
         this.collaborationManager.broadcastUpdateElement(el);
         this.scheduleAutoSave();
       }
+    }
+    if (this.editingElementId) {
+      this.collaborationManager.unlockElement(this.editingElementId);
     }
     this.activeInlineEditor.remove();
     this.activeInlineEditor = null;
@@ -5295,6 +5358,10 @@ export class BoardController {
 
     if (this.activeAlignmentGuides.length > 0 || this.activeDistanceGuides.length > 0) {
       drawAlignmentGuides(this.ctx, this.activeAlignmentGuides, this.camera, this.activeDistanceGuides);
+    }
+
+    if (this.collaborationManager.elementLocks.size > 0) {
+      drawBoardCollaboratorLocks(this.ctx, this.elements, this.collaborationManager.elementLocks, this.camera, this.canvasUserId);
     }
 
     if (this.processingBgRemovalId) {

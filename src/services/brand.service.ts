@@ -1,9 +1,10 @@
 import { canvasPool, pool } from '../config/database.config.js';
 import { getTierLimits, hasFeatureAccess } from '../config/plans.config.js';
-import { logger } from './logger.service.js';
 import { sanitizeImage } from './image-sanitizer.service.js';
+import { logger } from './logger.service.js';
 import { deleteObject, getPublicUrl, putObject } from './s3.service.js';
 import { checkUserStorageQuota, invalidateUserStorageCache } from './storage.service.js';
+import { sanitizeSvg } from './svg-sanitizer.service.js';
 import { AddBrandChartDto, AddBrandColorDto, AddBrandTemplateDto, BrandAssetType, BrandColorType, BrandFontRole, BrandKit, BrandKitAsset, BrandKitChart, BrandKitColor, BrandKitDetail, BrandKitFont, BrandKitTemplate, CreateBrandKitDto, SetBrandFontDto, UpdateBrandKitDto } from '../types/brand.types.js';
 import crypto from 'crypto';
 import fs from 'fs';
@@ -667,7 +668,18 @@ export async function saveBrandAsset(
     else if (extension === 'otf') finalMime = 'font/otf';
     else if (extension === 'eot') finalMime = 'application/vnd.ms-fontobject';
     else finalMime = 'application/octet-stream';
-  } else if (!isSvg) {
+  } else if (isSvg) {
+    try {
+      const sanitized = sanitizeSvg(buffer);
+      finalBuffer = sanitized.buffer;
+      finalMime = sanitized.mimeType;
+      finalWidth = sanitized.width;
+      finalHeight = sanitized.height;
+      extension = sanitized.extension;
+    } catch (err: any) {
+      throw new Error('El archivo SVG no es válido, está corrupto o contiene contenido no autorizado.');
+    }
+  } else {
     try {
       const sanitized = await sanitizeImage(buffer, {
         format: 'original',

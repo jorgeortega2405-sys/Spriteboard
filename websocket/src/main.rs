@@ -63,10 +63,20 @@ struct RedisCanvasEnvelope {
     payload: String,
 }
 
+#[derive(Clone, Serialize, Deserialize, Debug)]
+struct ElementLockInfo {
+    conn_id: String,
+    user_id: i64,
+    username: String,
+    color: String,
+    locked_at: u64,
+}
+
 #[derive(Clone)]
 struct AppState {
     clients: Arc<RwLock<HashMap<i64, HashMap<String, ClientSender>>>>,
     canvas_rooms: Arc<RwLock<HashMap<String, RoomParticipants>>>,
+    canvas_locks: Arc<RwLock<HashMap<String, HashMap<String, ElementLockInfo>>>>,
     session_secret: Arc<String>,
     instance_id: Arc<String>,
     redis_cmd_tx: mpsc::Sender<RedisOutboundCmd>,
@@ -117,7 +127,60 @@ impl AppState {
             if room.is_empty() {
                 drop(room);
                 rooms.remove(canvas_uuid);
+                let mut locks = self.canvas_locks.write().await;
+                locks.remove(canvas_uuid);
             }
+        }
+    }
+
+    async fn lock_element(&self, canvas_uuid: &str, element_id: &str, lock: ElementLockInfo) -> Result<ElementLockInfo, ElementLockInfo> {
+        let mut all_locks = self.canvas_locks.write().await;
+        let room_locks = all_locks.entry(canvas_uuid.to_string()).or_insert_with(HashMap::new);
+        if let Some(existing) = room_locks.get(element_id) {
+            if existing.conn_id != lock.conn_id {
+                return Err(existing.clone());
+            }
+        }
+        room_locks.insert(element_id.to_string(), lock.clone());
+        Ok(lock)
+    }
+
+    async fn unlock_element(&self, canvas_uuid: &str, element_id: &str, conn_id: &str) -> bool {
+        let mut all_locks = self.canvas_locks.write().await;
+        if let Some(room_locks) = all_locks.get_mut(canvas_uuid) {
+            if let Some(existing) = room_locks.get(element_id) {
+                if existing.conn_id == conn_id {
+                    room_locks.remove(element_id);
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
+    async fn unlock_all_by_conn(&self, canvas_uuid: &str, conn_id: &str) -> Vec<String> {
+        let mut unlocked = Vec::new();
+        let mut all_locks = self.canvas_locks.write().await;
+        if let Some(room_locks) = all_locks.get_mut(canvas_uuid) {
+            let to_remove: Vec<String> = room_locks
+                .iter()
+                .filter(|(_, l)| l.conn_id == conn_id)
+                .map(|(id, _)| id.clone())
+                .collect();
+            for id in to_remove {
+                room_locks.remove(&id);
+                unlocked.push(id);
+            }
+        }
+        unlocked
+    }
+
+    async fn get_active_locks(&self, canvas_uuid: &str) -> Vec<(String, ElementLockInfo)> {
+        let all_locks = self.canvas_locks.read().await;
+        if let Some(room_locks) = all_locks.get(canvas_uuid) {
+            room_locks.iter().map(|(id, l)| (id.clone(), l.clone())).collect()
+        } else {
+            Vec::new()
         }
     }
 }
@@ -538,11 +601,28 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
 
                                         let presence_users: Vec<ParticipantInfo> = presence_map.into_values().collect();
 
+                                        let active_locks_list: Vec<serde_json::Value> = state
+                                            .get_active_locks(canvas_uuid)
+                                            .await
+                                            .into_iter()
+                                            .map(|(el_id, lock_info)| {
+                                                serde_json::json!({
+                                                    "elementId": el_id,
+                                                    "connId": lock_info.conn_id,
+                                                    "userId": lock_info.user_id,
+                                                    "username": lock_info.username,
+                                                    "color": lock_info.color,
+                                                    "lockedAt": lock_info.locked_at
+                                                })
+                                            })
+                                            .collect();
+
                                         let presence_msg = serde_json::json!({
                                             "type": "ROOM_PRESENCE",
                                             "canvasUuid": canvas_uuid,
                                             "users": presence_users,
-                                            "yourRole": role
+                                            "yourRole": role,
+                                            "elementLocks": active_locks_list
                                         }).to_string();
 
                                         let _ = tx.try_send(Message::Text(presence_msg));
@@ -589,8 +669,20 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
                                     }
                                     "LEAVE_CANVAS" => {
                                         joined_rooms.remove(canvas_uuid);
+                                        let unlocked_elements = state.unlock_all_by_conn(canvas_uuid, &conn_id).await;
                                         if let Some(room_arc) = state.get_room(canvas_uuid).await {
                                             let mut room = room_arc.write().await;
+                                            for el_id in unlocked_elements {
+                                                let unlock_msg = serde_json::json!({
+                                                    "type": "ELEMENT_UNLOCKED",
+                                                    "canvasUuid": canvas_uuid,
+                                                    "elementId": el_id
+                                                }).to_string();
+                                                for peer in room.values() {
+                                                    let _ = peer.tx.try_send(Message::Text(unlock_msg.clone()));
+                                                }
+                                                state.publish_canvas_event(canvas_uuid, &conn_id, unlock_msg, false);
+                                            }
                                             if let Some(p) = room.remove(&conn_id) {
                                                 let user_left_msg = serde_json::json!({
                                                     "type": "USER_LEFT",
@@ -613,6 +705,97 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
                                             }
                                         }
                                         state.cleanup_empty_room(canvas_uuid).await;
+                                    }
+                                    "ELEMENT_LOCK" => {
+                                        let element_id = val.get("elementId")
+                                            .or_else(|| val.get("element_id"))
+                                            .and_then(|e| e.as_str())
+                                            .unwrap_or("");
+
+                                        if !element_id.is_empty() {
+                                            if let Some(room_arc) = state.get_room(canvas_uuid).await {
+                                                let room = room_arc.read().await;
+                                                if let Some(sender_p) = room.get(&conn_id) {
+                                                    if sender_p.role != "viewer" {
+                                                        let now_ms = SystemTime::now()
+                                                            .duration_since(UNIX_EPOCH)
+                                                            .unwrap_or_default()
+                                                            .as_millis() as u64;
+
+                                                        let lock_info = ElementLockInfo {
+                                                            conn_id: conn_id.clone(),
+                                                            user_id: sender_p.user_id,
+                                                            username: sender_p.username.clone(),
+                                                            color: sender_p.color.clone(),
+                                                            locked_at: now_ms,
+                                                        };
+
+                                                        match state.lock_element(canvas_uuid, element_id, lock_info.clone()).await {
+                                                            Ok(_) => {
+                                                                let lock_msg = serde_json::json!({
+                                                                    "type": "ELEMENT_LOCKED",
+                                                                    "canvasUuid": canvas_uuid,
+                                                                    "elementId": element_id,
+                                                                    "user": {
+                                                                        "connId": conn_id.clone(),
+                                                                        "userId": sender_p.user_id,
+                                                                        "username": sender_p.username,
+                                                                        "color": sender_p.color,
+                                                                        "lockedAt": now_ms
+                                                                    }
+                                                                }).to_string();
+
+                                                                for peer in room.values() {
+                                                                    let _ = peer.tx.try_send(Message::Text(lock_msg.clone()));
+                                                                }
+                                                                drop(room);
+                                                                state.publish_canvas_event(canvas_uuid, &conn_id, lock_msg, false);
+                                                            }
+                                                            Err(existing) => {
+                                                                let denied_msg = serde_json::json!({
+                                                                    "type": "ELEMENT_LOCK_DENIED",
+                                                                    "canvasUuid": canvas_uuid,
+                                                                    "elementId": element_id,
+                                                                    "lockedBy": {
+                                                                        "connId": existing.conn_id,
+                                                                        "userId": existing.user_id,
+                                                                        "username": existing.username,
+                                                                        "color": existing.color,
+                                                                        "lockedAt": existing.locked_at
+                                                                    }
+                                                                }).to_string();
+                                                                let _ = tx.try_send(Message::Text(denied_msg));
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    "ELEMENT_UNLOCK" => {
+                                        let element_id = val.get("elementId")
+                                            .or_else(|| val.get("element_id"))
+                                            .and_then(|e| e.as_str())
+                                            .unwrap_or("");
+
+                                        if !element_id.is_empty() {
+                                            if state.unlock_element(canvas_uuid, element_id, &conn_id).await {
+                                                if let Some(room_arc) = state.get_room(canvas_uuid).await {
+                                                    let room = room_arc.read().await;
+                                                    let unlock_msg = serde_json::json!({
+                                                        "type": "ELEMENT_UNLOCKED",
+                                                        "canvasUuid": canvas_uuid,
+                                                        "elementId": element_id
+                                                    }).to_string();
+
+                                                    for peer in room.values() {
+                                                        let _ = peer.tx.try_send(Message::Text(unlock_msg.clone()));
+                                                    }
+                                                    drop(room);
+                                                    state.publish_canvas_event(canvas_uuid, &conn_id, unlock_msg, false);
+                                                }
+                                            }
+                                        }
                                     }
                                     "CANVAS_CURSOR" => {
                                         if let Some(room_arc) = state.get_room(canvas_uuid).await {
@@ -833,8 +1016,20 @@ async fn handle_socket(mut socket: WebSocket, user: AuthenticatedUser, state: Ap
     }
 
     for room_id in joined_rooms {
+        let unlocked_elements = state.unlock_all_by_conn(&room_id, &conn_id).await;
         if let Some(room_arc) = state.get_room(&room_id).await {
             let mut room = room_arc.write().await;
+            for el_id in unlocked_elements {
+                let unlock_msg = serde_json::json!({
+                    "type": "ELEMENT_UNLOCKED",
+                    "canvasUuid": room_id,
+                    "elementId": el_id
+                }).to_string();
+                for peer in room.values() {
+                    let _ = peer.tx.try_send(Message::Text(unlock_msg.clone()));
+                }
+                state.publish_canvas_event(&room_id, &conn_id, unlock_msg, false);
+            }
             if let Some(p) = room.remove(&conn_id) {
                 let user_left_msg = serde_json::json!({
                     "type": "USER_LEFT",
@@ -1123,6 +1318,7 @@ async fn main() {
     let state = AppState {
         clients: Arc::new(RwLock::new(HashMap::new())),
         canvas_rooms: Arc::new(RwLock::new(HashMap::new())),
+        canvas_locks: Arc::new(RwLock::new(HashMap::new())),
         session_secret: Arc::new(session_secret),
         instance_id: Arc::new(instance_id),
         redis_cmd_tx,
