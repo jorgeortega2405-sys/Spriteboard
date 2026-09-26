@@ -132,6 +132,8 @@ export class DocController implements ViewController {
   };
   private publicRole: 'editor' | 'viewer' = 'editor';
   private saveDebounceTimer: number | null = null;
+  private statsDebounceTimer: number | null = null;
+  private typingDebounceTimer: number | null = null;
   private lastAutoSnapshotTime = 0;
   private selectedImageWrapper: HTMLElement | null = null;
   private shareDropdownController: CanvasShareDropdownController | null = null;
@@ -219,6 +221,12 @@ export class DocController implements ViewController {
     }
     if (this.saveDebounceTimer) {
       clearTimeout(this.saveDebounceTimer);
+    }
+    if (this.statsDebounceTimer) {
+      clearTimeout(this.statsDebounceTimer);
+    }
+    if (this.typingDebounceTimer) {
+      clearTimeout(this.typingDebounceTimer);
     }
     if (!currentUser) {
       closeWebSocket();
@@ -2541,8 +2549,7 @@ export class DocController implements ViewController {
       }, { signal });
 
       contentEl.addEventListener('input', () => {
-        this.updateEmptyPlaceholder();
-        this.recordChange();
+        this.handlePageInput(contentEl);
       }, { signal });
 
       contentEl.addEventListener('keyup', () => {
@@ -2593,6 +2600,43 @@ export class DocController implements ViewController {
         }
       }, { signal });
     });
+  }
+
+  private handlePageInput(contentEl: HTMLElement): void {
+    const pageEl = contentEl.closest('[data-page-id]');
+    const pageId = pageEl?.getAttribute('data-page-id');
+    if (pageId) {
+      this.lastActivePageId = pageId;
+      this.syncSinglePageFromDOM(pageId, contentEl);
+    }
+    this.updateEmptyPlaceholder();
+
+    if (this.statsDebounceTimer) {
+      clearTimeout(this.statsDebounceTimer);
+    }
+    this.statsDebounceTimer = window.setTimeout(() => {
+      this.updateStats();
+    }, 250);
+
+    if (this.typingDebounceTimer) {
+      clearTimeout(this.typingDebounceTimer);
+    }
+    this.typingDebounceTimer = window.setTimeout(() => {
+      this.historyManager.pushState(this.project);
+      this.updateUndoRedoButtonsState();
+      this.collaborationManager.broadcastDocUpdate(this.project);
+    }, 400);
+
+    this.scheduleAutosave();
+  }
+
+  private syncSinglePageFromDOM(pageId: string, contentEl: HTMLElement): void {
+    const targetPage = this.project.pages.find((p) => p.id === pageId);
+    if (!targetPage) return;
+    const clone = contentEl.cloneNode(true) as HTMLElement;
+    clone.querySelectorAll('.doc-image-handle').forEach((h) => h.remove());
+    clone.querySelectorAll('.doc-image-wrapper').forEach((w) => w.classList.remove('is-selected'));
+    targetPage.contentHtml = clone.innerHTML;
   }
 
   private recordChange(): void {

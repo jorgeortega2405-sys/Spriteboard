@@ -2,6 +2,7 @@ import { BOARD_3D_SHAPES } from '../../config/board-3d-shapes.config.js';
 import { BOARD_SHAPES } from '../../config/board-shapes.config.js';
 import { MockupFitMode, MockupTemplate } from '../../types/mockups.types.js';
 import { hitTest3DRotationGizmo } from './board-3d-renderer.js';
+import { BoardSpatialIndex } from './board-spatial-index.js';
 import { Board3DElement, BoardChartElement, BoardConnectorElement, BoardElement, BoardEmbedElement, BoardImageElement, BoardMockupElement, BoardPoint, BoardSectionElement, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTableCell, BoardTableElement, BoardTextElement, CANVAS_DEFAULTS, ChartDataRow, ChartSeriesConfig, ChartType, ConnectorStyle, DEFAULT_CHART_PALETTES, MarkerType, ResizeHandle, Shape3DType, ShapeType, StrokeStyle } from './board.types.js';
 
 export { hitTest3DRotationGizmo };
@@ -680,9 +681,10 @@ export function computeElementsBoundingBox(elements: BoardElement[]): { height: 
   };
 }
 
-export function hitTestElement(elements: BoardElement[], x: number, y: number, zoom: number): BoardElement | null {
-  for (let i = elements.length - 1; i >= 0; i--) {
-    const el = elements[i];
+export function hitTestElement(elements: BoardElement[], x: number, y: number, zoom: number, spatialIndex?: BoardSpatialIndex): BoardElement | null {
+  const pool = spatialIndex ? spatialIndex.queryPoint(x, y, 20 / zoom) : elements;
+  for (let i = pool.length - 1; i >= 0; i--) {
+    const el = pool[i];
     if (el.type === 'stroke') {
       const threshold = (el.size + 10) / zoom;
       if (el.points.some((p) => Math.hypot(p.x - x, p.y - y) <= threshold)) {
@@ -727,7 +729,7 @@ export function hitTestElement(elements: BoardElement[], x: number, y: number, z
         if (Math.abs(x - midX) <= 40 && Math.abs(y - midY) <= 18) return el;
       }
     } else {
-      const bbox = getElementBoundingBox(el, elements);
+      const bbox = spatialIndex ? spatialIndex.getBoundingBox(el, elements) : getElementBoundingBox(el, elements);
       if (x >= bbox.x && x <= bbox.x + bbox.width && y >= bbox.y && y <= bbox.y + bbox.height) {
         return el;
       }
@@ -1329,7 +1331,8 @@ export function convertDiagramToBoardElements(diagram: { connections?: any[]; no
 
 export function findElementsByMarqueeBox(
   elements: BoardElement[],
-  box: { height: number; width: number; x: number; y: number }
+  box: { height: number; width: number; x: number; y: number },
+  spatialIndex?: BoardSpatialIndex
 ): BoardElement[] {
   const normBox = {
     height: Math.abs(box.height),
@@ -1340,8 +1343,10 @@ export function findElementsByMarqueeBox(
 
   if (normBox.width < 2 && normBox.height < 2) return [];
 
-  return elements.filter((el) => {
-    const bbox = getElementBoundingBox(el, elements);
+  const candidates = spatialIndex ? spatialIndex.queryRect(normBox) : elements;
+
+  return candidates.filter((el) => {
+    const bbox = spatialIndex ? spatialIndex.getBoundingBox(el, elements) : getElementBoundingBox(el, elements);
     return (
       bbox.x < normBox.x + normBox.width &&
       bbox.x + bbox.width > normBox.x &&

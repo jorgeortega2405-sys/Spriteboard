@@ -5,10 +5,15 @@ import { exportJson, exportPng, exportSvg, generateThumbnail } from '../views/bo
 import { drawMockupElement } from '../views/board/board-mockup-renderer.js';
 import { parseOBJ } from '../views/board/board-obj-loader.js';
 import { applyElementAnimation, applyElementEffect, applyLineDash, drawAiProcessingOverlay, drawAlignmentGuides, drawBackground, drawBoardCollaboratorCursors, drawBoardCollaboratorLocks, drawCheckerboard, drawConnector, drawEmbedElement, drawEndpointMarker, drawImage, drawMarqueeBox, drawMultiSelectionBounds, drawPixelGridLines, drawSection, drawSelectionBox, drawShape, drawSticky, drawStroke, drawTable, drawText, getCachedImage, getSvgPathBoundingBox, screenToWorld, worldToScreen, wrapText } from '../views/board/board-renderer.js';
+import { BoardRenderCache, boardRenderCache } from '../views/board/board-render-cache.js';
 import { AlignmentGuide, calculateDragSnapping, calculateResizeSnapping, DistanceGuide, ResizeSnapResult, SnapResult } from '../views/board/board-snapping.manager.js';
+import { BoardSpatialIndex } from '../views/board/board-spatial-index.js';
 import { BackgroundType, Board3DElement, BoardAnimationType, BoardChartElement, BoardCollaboratorState, BoardConnectorElement, BoardEffectType, BoardElement, BoardElementAnimation, BoardElementEffect, BoardEmbedElement, BoardImageElement, BoardMockupElement, BoardPageItem, BoardPixelGridElement, BoardPoint, BoardProject, BoardSectionElement, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTableCell, BoardTableElement, BoardTextElement, BoardTool, CANVAS_DEFAULTS, ChartDataRow, ChartSeriesConfig, ChartType, ConnectorStyle, DEFAULT_CHART_PALETTES, DEFAULT_CLASSIC_PALETTE, GAMEBOY_PALETTE, MarkerType, PICO8_PALETTE, PixelSubtool, ResizeHandle, Shape3DType, ShapeType, StrokeStyle } from '../views/board/board.types.js';
 
 export {
+  BoardRenderCache,
+  BoardSpatialIndex,
+  boardRenderCache,
   CANVAS_DEFAULTS,
   TEXT_PRESETS,
   applyElementAnimation,
@@ -153,15 +158,42 @@ export class CanvasEngine2D {
       case 'section':
         drawSection(ctx, el as BoardSectionElement);
         break;
-      case 'chart':
-        drawChart(ctx, el as BoardChartElement);
+      case 'chart': {
+        const chartEl = el as BoardChartElement;
+        const cached = boardRenderCache.getChartCanvas(chartEl, (offCtx) => {
+          drawChart(offCtx, { ...chartEl, x: 0, y: 0 });
+        });
+        if (cached) {
+          ctx.drawImage(cached, chartEl.x, chartEl.y, chartEl.width, chartEl.height);
+        } else {
+          drawChart(ctx, chartEl);
+        }
         break;
-      case 'mockup':
-        drawMockupElement(ctx, el as BoardMockupElement, onImageLoaded);
+      }
+      case 'mockup': {
+        const mockupEl = el as BoardMockupElement;
+        const cached = boardRenderCache.getMockupCanvas(mockupEl, (offCtx) => {
+          drawMockupElement(offCtx, { ...mockupEl, x: 0, y: 0 }, onImageLoaded);
+        });
+        if (cached) {
+          ctx.drawImage(cached, mockupEl.x, mockupEl.y, mockupEl.width, mockupEl.height);
+        } else {
+          drawMockupElement(ctx, mockupEl, onImageLoaded);
+        }
         break;
-      case 'shape-3d':
-        draw3DElement(ctx, el as Board3DElement);
+      }
+      case 'shape-3d': {
+        const shape3dEl = el as Board3DElement;
+        const cached = boardRenderCache.get3DCanvas(shape3dEl, (offCtx) => {
+          draw3DElement(offCtx, { ...shape3dEl, x: 0, y: 0 });
+        });
+        if (cached) {
+          ctx.drawImage(cached, shape3dEl.x, shape3dEl.y, shape3dEl.width, shape3dEl.height);
+        } else {
+          draw3DElement(ctx, shape3dEl);
+        }
         break;
+      }
       case 'embed':
         drawEmbedElement(ctx, el as BoardEmbedElement, onImageLoaded);
         break;
@@ -192,8 +224,8 @@ export class CanvasEngine2D {
     drawMarqueeBox(ctx, box, camera);
   }
 
-  public static hitTestElement(elements: BoardElement[], x: number, y: number, zoom: number): BoardElement | null {
-    return hitTestElement(elements, x, y, zoom);
+  public static hitTestElement(elements: BoardElement[], x: number, y: number, zoom: number, spatialIndex?: BoardSpatialIndex): BoardElement | null {
+    return hitTestElement(elements, x, y, zoom, spatialIndex);
   }
 
   public static hitTestResizeHandle(el: BoardElement, sx: number, sy: number, worldToScreenFn: (wx: number, wy: number) => BoardPoint): ResizeHandle | null {
@@ -388,8 +420,8 @@ export class CanvasEngine2D {
     CanvasEngine2D.drawMarqueeBox(ctx, box, camera);
   }
 
-  public hitTestElement(elements: BoardElement[], x: number, y: number, zoom: number): BoardElement | null {
-    return CanvasEngine2D.hitTestElement(elements, x, y, zoom);
+  public hitTestElement(elements: BoardElement[], x: number, y: number, zoom: number, spatialIndex?: BoardSpatialIndex): BoardElement | null {
+    return CanvasEngine2D.hitTestElement(elements, x, y, zoom, spatialIndex);
   }
 
   public hitTestResizeHandle(el: BoardElement, sx: number, sy: number, worldToScreenFn: (wx: number, wy: number) => BoardPoint): ResizeHandle | null {
