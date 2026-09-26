@@ -1,5 +1,6 @@
 import { pool } from '../config/database.config.js';
 import { logger } from './logger.service.js';
+import { getUserEffectivePermissions, hasPermission } from './permission.service.js';
 import crypto from 'crypto';
 import fs from 'fs';
 import mysql from 'mysql2/promise';
@@ -81,14 +82,8 @@ export async function createDesignerApplication(
   },
   uploadedFiles: Express.Multer.File[] = []
 ): Promise<DesignerApplicationRecord> {
-  const [userRoles] = await pool.query<mysql.RowDataPacket[]>(
-    `SELECT r.name FROM user_roles ur INNER JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = ? AND r.name = 'DESIGNER'
-     UNION
-     SELECT role FROM users WHERE id = ? AND role = 'DESIGNER'`,
-    [userId, userId]
-  );
-
-  if (userRoles.length > 0) {
+  const userPermissions = await getUserEffectivePermissions(userId);
+  if (hasPermission(userPermissions, 'designer:dashboard') || hasPermission(userPermissions, 'templates:publish')) {
     throw new Error('USER_ALREADY_DESIGNER');
   }
 

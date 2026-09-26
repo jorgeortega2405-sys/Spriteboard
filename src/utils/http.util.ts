@@ -20,6 +20,7 @@ export function sanitizeUser(user: any): UserPayload {
     is_protected: Boolean(user.is_protected),
     role: user.role || 'USER',
     roles: Array.isArray(user.roles) ? user.roles : (user.role ? [user.role] : ['USER']),
+    permissions: Array.isArray(user.permissions) ? user.permissions : [],
     social_links: typeof user.social_links === 'string' ? JSON.parse(user.social_links) : (user.social_links || null),
     subscription_tier: tier,
     subscription_tier_color: getTierBorderColor(tier),

@@ -13,7 +13,12 @@ CREATE TABLE IF NOT EXISTS users (
     bio TEXT NULL,
     country VARCHAR(100) NULL,
     website_url VARCHAR(255) NULL,
+    social_links JSON NULL,
+    designer_handle VARCHAR(50) NULL UNIQUE,
+    designer_handle_changed_at TIMESTAMP NULL,
     role VARCHAR(50) NOT NULL DEFAULT 'USER',
+    designer_onboarded BOOLEAN NOT NULL DEFAULT FALSE,
+    designer_onboarded_at TIMESTAMP NULL,
     subscription_tier VARCHAR(20) NOT NULL DEFAULT 'free', -- 'free', 'pro', 'business'
     stripe_customer_id VARCHAR(255) NULL,
     stripe_subscription_id VARCHAR(255) NULL,
@@ -303,6 +308,135 @@ ON DUPLICATE KEY UPDATE
     description = VALUES(description),
     category = VALUES(category);
 
+INSERT INTO permissions (name, display_name, description, module) VALUES
+('dashboard:read', 'Ver Dashboard', 'Acceso al panel principal y métricas globales', 'dashboard'),
+('analytics:read', 'Ver Analítica', 'Consultar métricas de uso y rendimiento', 'analytics'),
+('analytics:export', 'Exportar Analítica', 'Descargar datos y reportes de analítica', 'analytics'),
+('telemetry:read', 'Ver Telemetría', 'Consultar telemetría y salud de sistemas', 'telemetry'),
+('users:read', 'Ver Usuarios', 'Consultar listado y perfiles de usuarios', 'users'),
+('users:manage', 'Gestionar Usuarios', 'Modificar cuentas, correos, nombres y preferencias', 'users'),
+('users:sanctions', 'Sancionar Usuarios', 'Aplicar y revocar bloqueos, mutes y advertencias', 'users'),
+('roles:read', 'Ver Roles', 'Consultar catálogo de roles y permisos', 'roles'),
+('roles:manage', 'Gestionar Roles', 'Configurar permisos y matriz RBAC', 'roles'),
+('support:read', 'Ver Soporte', 'Consultar tickets de soporte de usuarios', 'support'),
+('support:reply', 'Responder Soporte', 'Enviar respuestas a tickets de soporte', 'support'),
+('support:manage', 'Gestionar Soporte', 'Asignar, reabrir, transferir y cerrar tickets', 'support'),
+('internal_tickets:read', 'Ver Mesa Interna', 'Ver tickets internos y solicitudes IT', 'internal_tickets'),
+('internal_tickets:create', 'Crear Ticket Interno', 'Crear solicitudes e incidencias internas', 'internal_tickets'),
+('internal_tickets:manage', 'Gestionar Mesa Interna', 'Asignar, resolver y gestionar tickets internos', 'internal_tickets'),
+('backups:read', 'Ver Backups', 'Listar copias de seguridad de la base de datos', 'backups'),
+('backups:manage', 'Gestionar Backups', 'Crear, descargar y restaurar copias de seguridad', 'backups'),
+('logs:read', 'Ver Registros', 'Consultar logs del sistema (app, bd, seguridad)', 'logs'),
+('system:read', 'Ver Sistema', 'Consultar estado del servidor y configuración', 'system'),
+('system:manage', 'Gestionar Sistema', 'Modificar configuración y modo de mantenimiento', 'system'),
+('billing:read', 'Ver Facturación', 'Consultar pagos, transacciones y balances', 'billing'),
+('billing:export', 'Exportar Facturación', 'Exportar reportes contables y financieros', 'billing'),
+('billing:refund', 'Emitir Reembolsos', 'Procesar devoluciones y cancelaciones', 'billing'),
+('billing:manage', 'Gestionar Facturación', 'Configurar pasarelas y planes de suscripción', 'billing'),
+('compliance:read', 'Ver Privacidad', 'Consultar solicitudes ARCO y retención de datos', 'compliance'),
+('compliance:manage', 'Gestionar Privacidad', 'Procesar bajas de datos y auditorías GDPR', 'compliance'),
+('workflows:read', 'Ver Flujos', 'Consultar estado de tareas y automatizaciones', 'workflows'),
+('workflows:manage', 'Gestionar Flujos', 'Ejecutar y configurar tareas programadas', 'workflows'),
+('hr:read', 'Ver RRHH', 'Consultar listado y expedientes de colaboradores', 'hr'),
+('hr:manage', 'Gestionar RRHH', 'Modificar expedientes y estados de colaboradores', 'hr'),
+('hr:hire', 'Contratar Personal', 'Dar de alta y contratar nuevos colaboradores', 'hr'),
+('hr:contracts', 'Gestionar Contratos', 'Subir, visualizar y descargar contratos y NDAs', 'hr'),
+('hr:salary_view', 'Ver Salarios', 'Consultar datos de salarios y compensación', 'hr'),
+('ads:read', 'Ver Anuncios', 'Consultar campañas publicitarias y métricas', 'ads'),
+('ads:manage', 'Gestionar Anuncios', 'Crear, editar y pausar campañas publicitarias', 'ads'),
+('templates:read', 'Ver Plantillas', 'Consultar catálogo de plantillas públicas', 'templates'),
+('templates:create', 'Crear Plantillas', 'Crear borradores de plantillas', 'templates'),
+('templates:publish', 'Publicar Plantillas', 'Publicar plantillas en la galería comunitaria', 'templates'),
+('templates:official_publish', 'Publicar Plantillas Oficiales', 'Publicar plantillas con insignia oficial', 'templates'),
+('templates:manage_all', 'Administrar Todas las Plantillas', 'Aprobar, rechazar o eliminar cualquier plantilla', 'templates'),
+('designer:dashboard', 'Panel de Diseñador', 'Acceso al portal y métricas de diseñador', 'designer'),
+('designer:onboard', 'Onboarding Diseñador', 'Completar perfil e identidad de diseñador', 'designer'),
+('designer:payouts', 'Cobros de Diseñador', 'Gestionar métodos de cobro y retiros de creador', 'designer'),
+('tenants:manage', 'Gestionar Organizaciones', 'Configurar tenants corporativos e institucionales', 'enterprise'),
+('sso:manage', 'Gestionar SSO', 'Configurar parámetros de inicio de sesión SAML/SSO', 'enterprise'),
+('scim:manage', 'Gestionar SCIM', 'Generar y revocar credenciales de aprovisionamiento SCIM', 'enterprise'),
+('subscription:feature:teams', 'Función: Equipos', 'Permiso para crear y gestionar equipos de trabajo', 'subscription'),
+('subscription:feature:live_collaborators_extended', 'Función: Colaboración Extendida', 'Permiso para colaboración con más de 3 usuarios en vivo', 'subscription'),
+('subscription:feature:enterprise_sso', 'Función: SSO Empresarial', 'Permiso para configurar integración SAML/SCIM', 'subscription'),
+('subscription:feature:brand_kits', 'Función: Kits de Marca', 'Permiso para crear y gestionar paletas y kits de marca', 'subscription'),
+('subscription:feature:ai_bg_removal', 'Función: IA Eliminación de Fondo', 'Permiso para utilizar recorte inteligente de imágenes', 'subscription')
+ON DUPLICATE KEY UPDATE
+    display_name = VALUES(display_name),
+    description = VALUES(description),
+    module = VALUES(module);
+
+INSERT IGNORE INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
+WHERE r.name IN ('SUPER_ADMIN', 'PLATFORM_ADMIN');
+
+INSERT IGNORE INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
+WHERE r.name = 'DESIGNER'
+  AND p.name IN (
+    'templates:read', 'templates:create', 'templates:publish',
+    'designer:dashboard', 'designer:onboard', 'designer:payouts'
+  );
+
+INSERT IGNORE INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
+WHERE r.name = 'USER'
+  AND p.name IN ('templates:read');
+
+INSERT IGNORE INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
+WHERE r.name = 'SUPPORT_L1'
+  AND p.name IN ('support:read', 'support:reply', 'users:read', 'internal_tickets:create');
+
+INSERT IGNORE INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
+WHERE r.name = 'SUPPORT_L2'
+  AND p.name IN ('support:read', 'support:reply', 'support:manage', 'users:read', 'users:sanctions', 'internal_tickets:read', 'internal_tickets:create');
+
+INSERT IGNORE INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
+WHERE r.name = 'SUPPORT_L3'
+  AND p.name IN ('support:read', 'support:reply', 'support:manage', 'users:read', 'users:manage', 'users:sanctions', 'internal_tickets:read', 'internal_tickets:create', 'internal_tickets:manage', 'logs:read');
+
+INSERT IGNORE INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
+WHERE r.name = 'SUPPORT_MANAGER'
+  AND p.name IN ('dashboard:read', 'support:read', 'support:reply', 'support:manage', 'users:read', 'internal_tickets:read', 'internal_tickets:create', 'internal_tickets:manage', 'analytics:read');
+
+INSERT IGNORE INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
+WHERE r.name = 'DEVOPS'
+  AND p.name IN ('dashboard:read', 'internal_tickets:read', 'internal_tickets:create', 'internal_tickets:manage', 'backups:read', 'backups:manage', 'logs:read', 'workflows:read', 'workflows:manage', 'system:read', 'system:manage', 'telemetry:read');
+
+INSERT IGNORE INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
+WHERE r.name = 'SRE'
+  AND p.name IN ('dashboard:read', 'internal_tickets:read', 'internal_tickets:create', 'internal_tickets:manage', 'logs:read', 'backups:read', 'workflows:read', 'workflows:manage', 'system:read', 'system:manage', 'telemetry:read');
+
+INSERT IGNORE INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
+WHERE r.name = 'ENGINEER'
+  AND p.name IN ('internal_tickets:read', 'internal_tickets:create', 'internal_tickets:manage', 'logs:read');
+
+INSERT IGNORE INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
+WHERE r.name = 'SENIOR_ENGINEER'
+  AND p.name IN ('internal_tickets:read', 'internal_tickets:create', 'internal_tickets:manage', 'logs:read', 'backups:read', 'workflows:read', 'telemetry:read');
+
+INSERT IGNORE INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
+WHERE r.name = 'READ_ONLY_ADMIN'
+  AND p.name IN ('dashboard:read', 'users:read', 'internal_tickets:read', 'logs:read', 'backups:read', 'system:read', 'telemetry:read');
+
+INSERT IGNORE INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
+WHERE r.name = 'IAM_ADMIN'
+  AND p.name IN ('dashboard:read', 'users:read', 'users:manage', 'roles:read', 'roles:manage', 'logs:read', 'tenants:manage', 'sso:manage', 'scim:manage');
+
+INSERT IGNORE INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
+WHERE r.name = 'SECURITY_ADMIN'
+  AND p.name IN ('dashboard:read', 'users:read', 'users:manage', 'users:sanctions', 'roles:read', 'roles:manage', 'logs:read', 'system:read', 'system:manage', 'internal_tickets:create', 'tenants:manage', 'sso:manage', 'scim:manage');
+
 CREATE TABLE IF NOT EXISTS server_config (
     `key` VARCHAR(100) PRIMARY KEY,
     `value` TEXT NOT NULL,
@@ -360,6 +494,9 @@ CREATE TABLE IF NOT EXISTS support_tickets (
     escalation_level ENUM('SUPPORT_L1', 'SUPPORT_L2', 'SUPPORT_L3', 'SUPPORT_MANAGER') NOT NULL DEFAULT 'SUPPORT_L1',
     escalation_note TEXT NULL,
     metadata JSON NULL,
+    rating INT NULL,
+    rating_comment TEXT NULL,
+    rated_at TIMESTAMP NULL DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     closed_at TIMESTAMP NULL DEFAULT NULL,
@@ -624,6 +761,101 @@ CREATE TABLE IF NOT EXISTS user_follows (
     INDEX idx_user_follows_following (following_id),
     FOREIGN KEY (follower_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (following_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS user_ai_quotas (
+    user_id INT PRIMARY KEY,
+    tokens_used INT NOT NULL DEFAULT 0,
+    tokens_limit INT NOT NULL DEFAULT 50000,
+    cycle_started_at TIMESTAMP NULL DEFAULT NULL,
+    cycle_reset_at TIMESTAMP NULL DEFAULT NULL,
+    last_generation_at TIMESTAMP NULL DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_ai_quota_reset (cycle_reset_at),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS ai_generation_logs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    feature_type VARCHAR(50) NOT NULL,
+    prompt_tokens INT NOT NULL DEFAULT 0,
+    completion_tokens INT NOT NULL DEFAULT 0,
+    total_tokens INT NOT NULL DEFAULT 0,
+    model_name VARCHAR(100) NOT NULL DEFAULT 'gemini-flash-lite-latest',
+    status VARCHAR(20) NOT NULL DEFAULT 'success',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_ai_gen_user_created (user_id, created_at DESC),
+    INDEX idx_ai_gen_created (created_at DESC),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS designer_payout_profiles (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL UNIQUE,
+    payout_type ENUM('stripe_connect', 'direct_debit_card', 'bank_transfer', 'paypal_email') NOT NULL DEFAULT 'stripe_connect',
+    payout_country VARCHAR(10) NOT NULL DEFAULT 'US',
+    payout_currency VARCHAR(10) NOT NULL DEFAULT 'USD',
+    payout_email VARCHAR(255) NULL,
+    stripe_account_id VARCHAR(255) NULL,
+    payouts_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    details_submitted BOOLEAN NOT NULL DEFAULT FALSE,
+    available_balance_cents INT NOT NULL DEFAULT 0,
+    total_withdrawn_cents INT NOT NULL DEFAULT 0,
+    payout_card_last4 VARCHAR(4) NULL,
+    payout_card_brand VARCHAR(50) NULL,
+    payout_card_token VARCHAR(255) NULL,
+    is_verified BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_designer_payout_user (user_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS creator_pool_cycles (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    period_key VARCHAR(7) NOT NULL UNIQUE,
+    total_subscription_revenue_cents INT NOT NULL DEFAULT 0,
+    pool_percentage DECIMAL(5,2) NOT NULL DEFAULT 25.00,
+    pool_amount_cents INT NOT NULL DEFAULT 0,
+    total_pro_uses INT NOT NULL DEFAULT 0,
+    status ENUM('active', 'calculated', 'distributed') NOT NULL DEFAULT 'active',
+    distributed_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_pool_cycle_period (period_key)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS creator_pool_shares (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    cycle_id INT NOT NULL,
+    designer_id INT NOT NULL,
+    period_key VARCHAR(7) NOT NULL,
+    pro_uses INT NOT NULL DEFAULT 0,
+    share_percentage DECIMAL(6,4) NOT NULL DEFAULT 0.0000,
+    earned_amount_cents INT NOT NULL DEFAULT 0,
+    currency VARCHAR(10) NOT NULL DEFAULT 'USD',
+    status ENUM('estimated', 'distributed', 'paid_out') NOT NULL DEFAULT 'estimated',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_cycle_designer (cycle_id, designer_id),
+    INDEX idx_pool_share_designer (designer_id),
+    FOREIGN KEY (cycle_id) REFERENCES creator_pool_cycles(id) ON DELETE CASCADE,
+    FOREIGN KEY (designer_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS designer_payout_transfers (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    designer_id INT NOT NULL,
+    amount_cents INT NOT NULL,
+    currency VARCHAR(10) NOT NULL DEFAULT 'USD',
+    stripe_transfer_id VARCHAR(255) NULL,
+    status ENUM('pending', 'completed', 'failed') NOT NULL DEFAULT 'pending',
+    failure_reason TEXT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_payout_transfers_designer (designer_id),
+    FOREIGN KEY (designer_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 GRANT ALL PRIVILEGES ON db_identity.* TO 'sprite_user'@'%';

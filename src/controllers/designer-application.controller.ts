@@ -1,5 +1,6 @@
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import { createDesignerApplication, getLatestUserApplication } from '../services/designer-application.service.js';
+import { hasPermission } from '../services/permission.service.js';
 import { sendBadRequest, sendConflict, sendCreated, sendForbidden, sendInternalError, sendSuccess, sendUnauthorized } from '../utils/http.util.js';
 import { Request, Response } from 'express';
 
@@ -12,7 +13,8 @@ export async function getMyApplicationStatusHandler(req: Request, res: Response)
     }
 
     const application = await getLatestUserApplication(user.id);
-    const isDesigner = (Array.isArray(user.roles) && user.roles.includes('DESIGNER')) || user.role === 'DESIGNER';
+    const userPermissions = user.permissions || [];
+    const isDesigner = hasPermission(userPermissions, 'designer:dashboard') || hasPermission(userPermissions, 'templates:publish');
 
     sendSuccess(res, { application, is_designer: isDesigner });
   } catch (err) {
@@ -25,6 +27,13 @@ export async function submitDesignerApplicationHandler(req: Request, res: Respon
     const user = getCurrentUser(req);
     if (!user) {
       sendUnauthorized(res);
+      return;
+    }
+
+    const userPermissions = user.permissions || [];
+    const isDesigner = hasPermission(userPermissions, 'designer:dashboard') || hasPermission(userPermissions, 'templates:publish');
+    if (isDesigner) {
+      sendForbidden(res, 'Tu cuenta ya cuenta con el rol de Diseñador.');
       return;
     }
 

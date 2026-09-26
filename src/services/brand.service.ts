@@ -1,11 +1,12 @@
 import { canvasPool, pool } from '../config/database.config.js';
-import { getTierLimits, hasFeatureAccess } from '../config/plans.config.js';
+import { getTierLimits } from '../config/plans.config.js';
+import { AddBrandChartDto, AddBrandColorDto, AddBrandTemplateDto, BrandAssetType, BrandColorType, BrandFontRole, BrandKit, BrandKitAsset, BrandKitChart, BrandKitColor, BrandKitDetail, BrandKitFont, BrandKitTemplate, CreateBrandKitDto, SetBrandFontDto, UpdateBrandKitDto } from '../types/brand.types.js';
 import { sanitizeImage } from './image-sanitizer.service.js';
 import { logger } from './logger.service.js';
+import { getUserEffectivePermissions, hasPermission, hasSubscriptionFeature } from './permission.service.js';
 import { deleteObject, getPublicUrl, putObject } from './s3.service.js';
 import { checkUserStorageQuota, invalidateUserStorageCache } from './storage.service.js';
 import { sanitizeSvg } from './svg-sanitizer.service.js';
-import { AddBrandChartDto, AddBrandColorDto, AddBrandTemplateDto, BrandAssetType, BrandColorType, BrandFontRole, BrandKit, BrandKitAsset, BrandKitChart, BrandKitColor, BrandKitDetail, BrandKitFont, BrandKitTemplate, CreateBrandKitDto, SetBrandFontDto, UpdateBrandKitDto } from '../types/brand.types.js';
 import crypto from 'crypto';
 import fs from 'fs';
 import mysql from 'mysql2/promise';
@@ -196,8 +197,9 @@ export async function createBrandKit(userId: number, dto: CreateBrandKitDto): Pr
     [userId]
   );
   const userTier = uRows[0]?.subscription_tier || 'free';
+  const userPermissions = await getUserEffectivePermissions(userId);
 
-  if (!hasFeatureAccess(userTier, 'brand_kits')) {
+  if (!hasSubscriptionFeature(userPermissions, 'brand_kits') && !hasPermission(userPermissions, 'templates:manage_all')) {
     throw new Error('La creación de kits de marca es exclusiva del plan Spriteboard Negocios.');
   }
 

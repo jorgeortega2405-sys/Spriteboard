@@ -2,6 +2,7 @@ import { pool } from '../config/database.config.js';
 import { redis } from '../config/redis.config.js';
 import { DesignerOnboardPayload, DesignerOnboardingStatusResponse, DesignerPayoutProfile } from '../types/designer.types.js';
 import { logger } from './logger.service.js';
+import { getUserEffectivePermissions, hasPermission } from './permission.service.js';
 import mysql, { RowDataPacket } from 'mysql2/promise';
 
 const RESERVED_HANDLES = new Set([
@@ -63,19 +64,8 @@ export async function getDesignerOnboardingStatus(userId: number): Promise<Desig
   }
 
   const u = userRows[0];
-
-  const [roleRows] = await pool.query<RowDataPacket[]>(
-    `SELECT r.name 
-     FROM user_roles ur 
-     INNER JOIN roles r ON ur.role_id = r.id 
-     WHERE ur.user_id = ? 
-     UNION 
-     SELECT role AS name FROM users WHERE id = ? AND role IS NOT NULL`,
-    [userId, userId]
-  );
-
-  const roles = roleRows.map((r) => String(r.name));
-  const isDesigner = roles.includes('DESIGNER') || roles.includes('SUPER_ADMIN') || roles.includes('PLATFORM_ADMIN');
+  const userPermissions = await getUserEffectivePermissions(userId);
+  const isDesigner = hasPermission(userPermissions, 'designer:onboard') || hasPermission(userPermissions, 'designer:dashboard') || hasPermission(userPermissions, 'templates:publish');
 
   let payoutProfile: DesignerPayoutProfile | null = null;
   const [payoutRows] = await pool.query<RowDataPacket[]>(

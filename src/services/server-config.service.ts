@@ -164,18 +164,6 @@ function parseValue(value: string, type: 'boolean' | 'json' | 'number' | 'string
 
 export async function ensureServerConfigTable(): Promise<void> {
   try {
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS server_config (
-        \`key\` VARCHAR(100) PRIMARY KEY,
-        \`value\` TEXT NOT NULL,
-        \`category\` VARCHAR(50) NOT NULL DEFAULT 'general',
-        \`type\` ENUM('string', 'number', 'boolean', 'json') NOT NULL DEFAULT 'string',
-        \`description\` VARCHAR(255) NULL,
-        \`updated_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        INDEX idx_server_config_category (category)
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-    `);
-
     for (const item of DEFAULT_SERVER_CONFIG_ITEMS) {
       await pool.query(
         `INSERT INTO server_config (\`key\`, \`value\`, \`category\`, \`type\`, \`description\`)

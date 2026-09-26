@@ -1,15 +1,17 @@
-import crypto from 'crypto';
-import mysql from 'mysql2/promise';
 import { canvasPool, pool } from '../config/database.config.js';
 import { CreateTemplateDto, DesignerTemplateMetrics, TemplateRecord } from '../types/template.types.js';
 import { trackProTemplateUsage } from './creator-pool.service.js';
 import { logger } from './logger.service.js';
+import { hasPermission } from './permission.service.js';
+import crypto from 'crypto';
+import mysql from 'mysql2/promise';
 
 export async function publishCanvasAsTemplate(
   userId: number,
   role: string,
   dto: CreateTemplateDto,
-  userRoles?: string[]
+  userRoles?: string[],
+  userPermissions?: string[]
 ): Promise<TemplateRecord> {
   const [rows] = await canvasPool.query<mysql.RowDataPacket[]>(
     'SELECT id, uuid, user_id, name, canvas_type, unit, data, preview_thumbnail FROM canvases WHERE uuid = ? AND deleted_at IS NULL',
@@ -22,15 +24,15 @@ export async function publishCanvasAsTemplate(
 
   const canvas = rows[0];
   const isOwner = canvas.user_id === userId;
-  const allRoles = userRoles && userRoles.length > 0 ? userRoles : [role];
-  const isAdmin = allRoles.some((r) => r === 'ADMIN' || r === 'SUPER_ADMIN' || r === 'PLATFORM_ADMIN');
-  const isDesigner = allRoles.includes('DESIGNER');
+  const canPublish = hasPermission(userPermissions, 'templates:publish');
+  const canManageAll = hasPermission(userPermissions, 'templates:manage_all');
+  const canPublishOfficial = hasPermission(userPermissions, 'templates:official_publish');
 
-  if (!isDesigner && !isAdmin) {
+  if (!canPublish && !canManageAll) {
     throw new Error('Unauthorized role to publish template');
   }
 
-  if (!isOwner && !isAdmin) {
+  if (!isOwner && !canManageAll) {
     throw new Error('Unauthorized to publish this canvas as template');
   }
 
@@ -45,9 +47,9 @@ export async function publishCanvasAsTemplate(
     : JSON.stringify([]);
   const canvasDataJson = canvas.data ? (typeof canvas.data === 'string' ? canvas.data : JSON.stringify(canvas.data)) : null;
   const previewThumbnail = canvas.preview_thumbnail || null;
-  const isOfficial = userId === 1;
+  const isOfficial = canPublishOfficial;
   const isPremium = Boolean(dto.is_premium);
-  const status = isAdmin || isOfficial ? 'approved' : 'pending';
+  const status = canManageAll || isOfficial ? 'approved' : 'pending';
 
   await canvasPool.execute(
     `INSERT INTO templates (
@@ -275,7 +277,7 @@ export async function getDesignerTemplates(
 export async function toggleDesignerTemplateVisibility(
   userId: number,
   templateIdOrUuid: string,
-  isAdmin = false
+  canManageAll = false
 ): Promise<TemplateRecord> {
   const isNumeric = /^\d+$/.test(templateIdOrUuid);
   const condition = isNumeric ? 'id = ?' : 'uuid = ?';
@@ -290,7 +292,7 @@ export async function toggleDesignerTemplateVisibility(
   }
 
   const tpl = rows[0];
-  if (!isAdmin && tpl.user_id !== userId) {
+  if (!canManageAll && tpl.user_id !== userId) {
     throw new Error('Unauthorized');
   }
 
@@ -318,7 +320,7 @@ export async function toggleDesignerTemplateVisibility(
 export async function deleteDesignerTemplate(
   userId: number,
   templateIdOrUuid: string,
-  isAdmin = false
+  canManageAll = false
 ): Promise<boolean> {
   const isNumeric = /^\d+$/.test(templateIdOrUuid);
   const condition = isNumeric ? 'id = ?' : 'uuid = ?';
@@ -333,7 +335,7 @@ export async function deleteDesignerTemplate(
   }
 
   const tpl = rows[0];
-  if (!isAdmin && tpl.user_id !== userId) {
+  if (!canManageAll && tpl.user_id !== userId) {
     throw new Error('Unauthorized');
   }
 

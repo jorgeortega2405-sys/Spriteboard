@@ -1,4 +1,5 @@
 import { clearSessionCookie, COOKIE_NAME, getMultiAccountSession, isSessionRevoked, verifySessionToken } from '../services/auth.service.js';
+import { getUserEffectivePermissions, hasAllPermissions, hasAnyPermission } from '../services/permission.service.js';
 import { SessionAccount, UserPayload, UserRole } from '../types/auth.types.js';
 import { NextFunction, Request, Response } from 'express';
 
@@ -39,9 +40,75 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     }
   }
 
+  if (!user.permissions || user.permissions.length === 0) {
+    user.permissions = await getUserEffectivePermissions(
+      user.id,
+      user.role,
+      user.roles,
+      user.subscription_tier,
+      (user as any).subscription_status
+    );
+  }
+
   (req as any).user = user;
   res.locals.user = user;
   next();
+}
+
+export function requirePermission(...neededPerms: string[]) {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const user = getCurrentUser(req);
+    if (!user) {
+      res.status(401).json({ error: 'No autorizado. Inicia sesión.' });
+      return;
+    }
+
+    if (!user.permissions || user.permissions.length === 0) {
+      user.permissions = await getUserEffectivePermissions(
+        user.id,
+        user.role,
+        user.roles,
+        user.subscription_tier,
+        (user as any).subscription_status
+      );
+    }
+
+    const isAllowed = hasAnyPermission(user.permissions, neededPerms);
+    if (!isAllowed) {
+      res.status(403).json({ error: 'Acceso denegado. Permisos insuficientes para esta acción.' });
+      return;
+    }
+
+    next();
+  };
+}
+
+export function requireAllPermissions(...neededPerms: string[]) {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const user = getCurrentUser(req);
+    if (!user) {
+      res.status(401).json({ error: 'No autorizado. Inicia sesión.' });
+      return;
+    }
+
+    if (!user.permissions || user.permissions.length === 0) {
+      user.permissions = await getUserEffectivePermissions(
+        user.id,
+        user.role,
+        user.roles,
+        user.subscription_tier,
+        (user as any).subscription_status
+      );
+    }
+
+    const isAllowed = hasAllPermissions(user.permissions, neededPerms);
+    if (!isAllowed) {
+      res.status(403).json({ error: 'Acceso denegado. Permisos insuficientes para esta acción.' });
+      return;
+    }
+
+    next();
+  };
 }
 
 export function requireRole(...allowedRoles: UserRole[]) {

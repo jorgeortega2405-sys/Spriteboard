@@ -84,6 +84,13 @@ export const USER_ROLES = PLATFORM_ROLES.map((r) => r.name) as readonly UserRole
 
 export const DEFAULT_USER_ROLE: UserRole = 'USER';
 
+export interface PermissionDefinition {
+  description: string;
+  display_name: string;
+  module: string;
+  name: string;
+}
+
 export interface UserPayload {
   id: number;
   username: string;
@@ -99,6 +106,7 @@ export interface UserPayload {
   designer_onboarded?: boolean;
   role?: UserRole;
   roles?: UserRole[];
+  permissions?: string[];
   google_id?: string | null;
   subscription_tier?: SubscriptionTierId;
   subscription_tier_color?: string;
@@ -121,6 +129,7 @@ export interface SessionAccount {
   designer_onboarded?: boolean;
   role?: UserRole;
   roles?: UserRole[];
+  permissions?: string[];
   google_id?: string | null;
   subscription_tier?: SubscriptionTierId;
   subscription_tier_color?: string;

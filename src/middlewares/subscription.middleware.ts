@@ -1,5 +1,6 @@
 import { pool } from '../config/database.config.js';
-import { getFeatureRequiredTier, hasFeatureAccess, normalizeTierKey, type PlanFeatureKey } from '../config/plans.config.js';
+import { getFeatureRequiredTier, type PlanFeatureKey } from '../config/plans.config.js';
+import { getUserEffectivePermissions, hasSubscriptionFeature } from '../services/permission.service.js';
 import { getCurrentUser } from './auth.middleware.js';
 import type { NextFunction, Request, Response } from 'express';
 import mysql from 'mysql2/promise';
@@ -12,8 +13,17 @@ export function requireFeature(feature: PlanFeatureKey) {
       return;
     }
 
-    const userTier = normalizeTierKey(user.subscription_tier);
-    if (hasFeatureAccess(userTier, feature)) {
+    if (!user.permissions || user.permissions.length === 0) {
+      user.permissions = await getUserEffectivePermissions(
+        user.id,
+        user.role,
+        user.roles,
+        user.subscription_tier,
+        (user as any).subscription_status
+      );
+    }
+
+    if (hasSubscriptionFeature(user.permissions, feature)) {
       next();
       return;
     }
@@ -33,7 +43,7 @@ export function requireFeature(feature: PlanFeatureKey) {
 
     const requiredTier = getFeatureRequiredTier(feature);
     res.status(403).json({
-      error: 'Esta función requiere un plan superior.',
+      error: 'Esta función requiere un plan superior o permiso activo de suscripción.',
       requiredTier,
       upgradeRequired: true,
     });

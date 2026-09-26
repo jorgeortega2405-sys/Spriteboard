@@ -1,4 +1,5 @@
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
+import { hasPermission } from '../services/permission.service.js';
 import { deleteDesignerTemplate, getDesignerTemplateMetrics, getDesignerTemplates, getPublishedTemplates, getTemplateByUuid, publishCanvasAsTemplate, toggleDesignerTemplateVisibility } from '../services/template.service.js';
 import { sendBadRequest, sendCreated, sendForbidden, sendInternalError, sendNotFound, sendSuccess, sendUnauthorized } from '../utils/http.util.js';
 import { Request, Response } from 'express';
@@ -25,8 +26,9 @@ export async function publishTemplateHandler(req: Request, res: Response): Promi
     const userRoles: string[] = Array.isArray(user.roles) && user.roles.length > 0
       ? user.roles
       : (user.role ? [user.role] : ['USER']);
+    const userPermissions: string[] = Array.isArray(user.permissions) ? user.permissions : [];
 
-    const canPublish = userRoles.includes('DESIGNER') || userRoles.includes('SUPER_ADMIN') || userRoles.includes('PLATFORM_ADMIN');
+    const canPublish = hasPermission(userPermissions, 'templates:publish') || hasPermission(userPermissions, 'templates:manage_all');
     if (!canPublish) {
       sendForbidden(res, 'No tienes permisos para publicar plantillas. Esta función está reservada para diseñadores.');
       return;
@@ -43,7 +45,8 @@ export async function publishTemplateHandler(req: Request, res: Response): Promi
         tags: Array.isArray(tags) ? tags : undefined,
         title: title.trim(),
       },
-      userRoles
+      userRoles,
+      userPermissions
     );
 
     sendCreated(res, { template });
@@ -116,12 +119,9 @@ export async function getMyTemplatesHandler(req: Request, res: Response): Promis
       return;
     }
 
-    const userRoles: string[] = Array.isArray(user.roles) && user.roles.length > 0
-      ? user.roles
-      : (user.role ? [user.role] : ['USER']);
-
-    const isDesignerOrAdmin = userRoles.includes('DESIGNER') || userRoles.includes('SUPER_ADMIN') || userRoles.includes('PLATFORM_ADMIN');
-    if (!isDesignerOrAdmin) {
+    const userPermissions: string[] = Array.isArray(user.permissions) ? user.permissions : [];
+    const canAccess = hasPermission(userPermissions, 'designer:dashboard') || hasPermission(userPermissions, 'templates:publish') || hasPermission(userPermissions, 'templates:manage_all');
+    if (!canAccess) {
       sendForbidden(res, 'No tienes permisos para acceder al panel de diseñador.');
       return;
     }
@@ -154,12 +154,9 @@ export async function getMyTemplateMetricsHandler(req: Request, res: Response): 
       return;
     }
 
-    const userRoles: string[] = Array.isArray(user.roles) && user.roles.length > 0
-      ? user.roles
-      : (user.role ? [user.role] : ['USER']);
-
-    const isDesignerOrAdmin = userRoles.includes('DESIGNER') || userRoles.includes('SUPER_ADMIN') || userRoles.includes('PLATFORM_ADMIN');
-    if (!isDesignerOrAdmin) {
+    const userPermissions: string[] = Array.isArray(user.permissions) ? user.permissions : [];
+    const canAccess = hasPermission(userPermissions, 'designer:dashboard') || hasPermission(userPermissions, 'templates:publish') || hasPermission(userPermissions, 'templates:manage_all');
+    if (!canAccess) {
       sendForbidden(res, 'No tienes permisos para acceder a las métricas de diseñador.');
       return;
     }
@@ -185,12 +182,10 @@ export async function toggleTemplateVisibilityHandler(req: Request, res: Respons
       return;
     }
 
-    const userRoles: string[] = Array.isArray(user.roles) && user.roles.length > 0
-      ? user.roles
-      : (user.role ? [user.role] : ['USER']);
-    const isAdmin = userRoles.includes('SUPER_ADMIN') || userRoles.includes('PLATFORM_ADMIN');
+    const userPermissions: string[] = Array.isArray(user.permissions) ? user.permissions : [];
+    const canManageAll = hasPermission(userPermissions, 'templates:manage_all');
 
-    const template = await toggleDesignerTemplateVisibility(user.id, id.trim(), isAdmin);
+    const template = await toggleDesignerTemplateVisibility(user.id, id.trim(), canManageAll);
     sendSuccess(res, { template });
   } catch (err: any) {
     if (err?.message === 'Template not found') {
@@ -219,12 +214,10 @@ export async function deleteMyTemplateHandler(req: Request, res: Response): Prom
       return;
     }
 
-    const userRoles: string[] = Array.isArray(user.roles) && user.roles.length > 0
-      ? user.roles
-      : (user.role ? [user.role] : ['USER']);
-    const isAdmin = userRoles.includes('SUPER_ADMIN') || userRoles.includes('PLATFORM_ADMIN');
+    const userPermissions: string[] = Array.isArray(user.permissions) ? user.permissions : [];
+    const canManageAll = hasPermission(userPermissions, 'templates:manage_all');
 
-    await deleteDesignerTemplate(user.id, id.trim(), isAdmin);
+    await deleteDesignerTemplate(user.id, id.trim(), canManageAll);
     sendSuccess(res, { message: 'Plantilla eliminada exitosamente.' });
   } catch (err: any) {
     if (err?.message === 'Template not found') {
