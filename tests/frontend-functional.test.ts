@@ -78,6 +78,14 @@ class SimpleElement {
     this.children = [];
   }
 
+  get firstElementChild(): SimpleElement | null {
+    return this.children.length > 0 ? this.children[0] : null;
+  }
+
+  get lastElementChild(): SimpleElement | null {
+    return this.children.length > 0 ? this.children[this.children.length - 1] : null;
+  }
+
   get innerHTML(): string {
     return '';
   }
@@ -125,6 +133,12 @@ class SimpleElement {
       child.parentNode = null;
     }
     return child;
+  }
+
+  public remove(): void {
+    if (this.parentNode) {
+      this.parentNode.removeChild(this);
+    }
   }
 
   public replaceWith(...nodes: (SimpleElement | string)[]): void {
@@ -366,7 +380,7 @@ async function runFrontendFunctionalTests(): Promise<void> {
       passedCount++;
       process.stdout.write(`  \x1b[32m[PASS]\x1b[0m ${title}\n`);
     } catch (err: any) {
-      process.stderr.write(`  \x1b[31m[FAIL]\x1b[0m ${title}\n    ${err?.message || err}\n`);
+      process.stderr.write(`  \x1b[31m[FAIL]\x1b[0m ${title}\n    ${err?.stack || err?.message || err}\n`);
       throw err;
     }
   }
