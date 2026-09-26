@@ -238,7 +238,7 @@ class DashboardController implements ViewController {
               borderWidth: 1,
               bodyColor: tooltipText,
               callbacks: {
-                label: (ctx) => {
+                label: (ctx: any) => {
                   const val = Number(ctx.raw || 0);
                   const pct = totalTiers > 0 ? ((val / totalTiers) * 100).toFixed(1) : '0';
                   return ` ${ctx.label}: ${formatNumber(val)} (${pct}%)`;

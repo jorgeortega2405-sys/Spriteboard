@@ -157,61 +157,19 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
             </div>
 
             <div class="modal-canvas-panel" data-ref="panel-category-presentation" style="${activeCategory === 'presentation' ? '' : 'display: none;'}">
-              <div class="creation-category-section" data-ref="section-presentation-sizes">
-                <h3 class="creation-category-section__title">Formatos de diapositiva estándar</h3>
-                <div class="creation-cards-grid" data-ref="grid-presentation-cards">
-                  <button type="button" class="creation-card" data-ref="card-pres-16-9" data-type="presentation" data-paper="presentation_16_9" data-orientation="landscape">
-                    <div class="creation-card__thumbnail" data-ref="thumb-pres-16-9">
-                      <div class="creation-card__svg-wrapper" data-ref="svg-pres-16-9">
-                        ${getPresentationSvg('16_9')}
-                      </div>
-                      <span class="creation-card__badge creation-card__badge--popular" data-ref="badge-pres-16-9">Recomendado</span>
+              <div class="creation-cards-grid" data-ref="grid-presentation-cards">
+                <button type="button" class="creation-card" data-ref="card-pres-16-9" data-type="presentation" data-paper="presentation_16_9" data-orientation="landscape">
+                  <div class="creation-card__thumbnail" data-ref="thumb-pres-16-9">
+                    <div class="creation-card__svg-wrapper" data-ref="svg-pres-16-9">
+                      ${getPresentationSvg('16_9')}
                     </div>
-                    <div class="creation-card__info" data-ref="info-pres-16-9">
-                      <h4 class="creation-card__title" data-ref="title-pres-16-9">16:9 Panorámica</h4>
-                      <p class="creation-card__meta" data-ref="meta-pres-16-9">1280 × 720 px • Estándar para pantallas y proyectores</p>
-                    </div>
-                  </button>
-
-                  <button type="button" class="creation-card" data-ref="card-pres-fhd" data-type="presentation" data-paper="presentation_fhd" data-orientation="landscape">
-                    <div class="creation-card__thumbnail" data-ref="thumb-pres-fhd">
-                      <div class="creation-card__svg-wrapper" data-ref="svg-pres-fhd">
-                        ${getPresentationSvg('fhd')}
-                      </div>
-                      <span class="creation-card__badge" data-ref="badge-pres-fhd">Full HD</span>
-                    </div>
-                    <div class="creation-card__info" data-ref="info-pres-fhd">
-                      <h4 class="creation-card__title" data-ref="title-pres-fhd">16:9 Full HD</h4>
-                      <p class="creation-card__meta" data-ref="meta-pres-fhd">1920 × 1080 px • Alta definición nítida</p>
-                    </div>
-                  </button>
-
-                  <button type="button" class="creation-card" data-ref="card-pres-4-3" data-type="presentation" data-paper="presentation_4_3" data-orientation="landscape">
-                    <div class="creation-card__thumbnail" data-ref="thumb-pres-4-3">
-                      <div class="creation-card__svg-wrapper" data-ref="svg-pres-4-3">
-                        ${getPresentationSvg('4_3')}
-                      </div>
-                      <span class="creation-card__badge" data-ref="badge-pres-4-3">Clásico</span>
-                    </div>
-                    <div class="creation-card__info" data-ref="info-pres-4-3">
-                      <h4 class="creation-card__title" data-ref="title-pres-4-3">4:3 Estándar</h4>
-                      <p class="creation-card__meta" data-ref="meta-pres-4-3">1024 × 768 px • Formato clásico y tablets</p>
-                    </div>
-                  </button>
-
-                  <button type="button" class="creation-card" data-ref="card-pres-mobile" data-type="presentation" data-paper="presentation_16_9" data-orientation="portrait">
-                    <div class="creation-card__thumbnail" data-ref="thumb-pres-mobile">
-                      <div class="creation-card__svg-wrapper" data-ref="svg-pres-mobile">
-                        ${getPresentationSvg('mobile')}
-                      </div>
-                      <span class="creation-card__badge" data-ref="badge-pres-mobile">Móvil</span>
-                    </div>
-                    <div class="creation-card__info" data-ref="info-pres-mobile">
-                      <h4 class="creation-card__title" data-ref="title-pres-mobile">9:16 Vertical</h4>
-                      <p class="creation-card__meta" data-ref="meta-pres-mobile">720 × 1280 px • Historias y diapositivas móviles</p>
-                    </div>
-                  </button>
-                </div>
+                    <span class="creation-card__badge creation-card__badge--popular" data-ref="badge-pres-16-9">Estándar</span>
+                  </div>
+                  <div class="creation-card__info" data-ref="info-pres-16-9">
+                    <h4 class="creation-card__title" data-ref="title-pres-16-9">Presentación 16:9</h4>
+                    <p class="creation-card__meta" data-ref="meta-pres-16-9">1920 × 1080 px • Panorámica estándar</p>
+                  </div>
+                </button>
               </div>
             </div>
 
@@ -492,13 +450,9 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
   const presCards = backdrop.querySelectorAll<HTMLElement>('[data-ref^="card-pres-"]');
   presCards.forEach((card) => {
     card.addEventListener('click', () => {
-      const paper = (card.getAttribute('data-paper') as DocPaperSize) || 'presentation_16_9';
-      const orientation = (card.getAttribute('data-orientation') as DocOrientation) || 'landscape';
       const name = 'Presentación sin título';
       void handleInstantCreation({
         canvasType: 'presentation',
-        docOrientation: orientation,
-        docPaperSize: paper,
         name,
       }, card);
     });

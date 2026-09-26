@@ -975,7 +975,7 @@ export class AnalyticsViewController implements ViewController {
             borderWidth: 1,
             bodyColor: theme.tooltipText,
             callbacks: {
-              label: (ctx) => {
+              label: (ctx: any) => {
                 const val = Number(ctx.raw || 0);
                 const pct = total > 0 ? ((val / total) * 100).toFixed(1) : '0';
                 return ` ${ctx.label}: ${formatNumber(val)} (${pct}%)`;
@@ -1040,7 +1040,7 @@ export class AnalyticsViewController implements ViewController {
             borderWidth: 1,
             bodyColor: theme.tooltipText,
             callbacks: {
-              label: (ctx) => {
+              label: (ctx: any) => {
                 const val = Number(ctx.raw || 0);
                 const pct = total > 0 ? ((val / total) * 100).toFixed(1) : '0';
                 return ` ${ctx.label}: ${formatNumber(val)} (${pct}%)`;
@@ -1163,7 +1163,7 @@ export class AnalyticsViewController implements ViewController {
             borderWidth: 1,
             bodyColor: theme.tooltipText,
             callbacks: {
-              label: (ctx) => {
+              label: (ctx: any) => {
                 const val = Number(ctx.raw || 0);
                 const pct = total > 0 ? ((val / total) * 100).toFixed(1) : '0';
                 return ` ${ctx.label}: ${formatNumber(val)} (${pct}%)`;
@@ -1229,7 +1229,7 @@ export class AnalyticsViewController implements ViewController {
             borderWidth: 1,
             bodyColor: theme.tooltipText,
             callbacks: {
-              label: (ctx) => {
+              label: (ctx: any) => {
                 const val = Number(ctx.raw || 0);
                 const pct = total > 0 ? ((val / total) * 100).toFixed(1) : '0';
                 return ` ${ctx.label}: ${formatNumber(val)} (${pct}%)`;
@@ -1322,7 +1322,7 @@ export class AnalyticsViewController implements ViewController {
             beginAtZero: true,
             grid: { color: theme.gridColor },
             ticks: {
-              callback: (val) => `${val} MB`,
+              callback: (val: any) => `${val} MB`,
               color: theme.textColor,
               font: { size: 11 },
             },
@@ -1441,7 +1441,7 @@ export class AnalyticsViewController implements ViewController {
             borderWidth: 1,
             bodyColor: theme.tooltipText,
             callbacks: {
-              label: (ctx) => {
+              label: (ctx: any) => {
                 const val = Number(ctx.raw || 0);
                 const pct = total > 0 ? ((val / total) * 100).toFixed(1) : '0';
                 return ` ${ctx.label}: ${formatNumber(val)} (${pct}%)`;
@@ -1507,7 +1507,7 @@ export class AnalyticsViewController implements ViewController {
             borderWidth: 1,
             bodyColor: theme.tooltipText,
             callbacks: {
-              label: (ctx) => {
+              label: (ctx: any) => {
                 const val = Number(ctx.raw || 0);
                 return ` ${ctx.label}: ${formatCurrency(val)}`;
               },
@@ -1572,7 +1572,7 @@ export class AnalyticsViewController implements ViewController {
             borderWidth: 1,
             bodyColor: theme.tooltipText,
             callbacks: {
-              label: (ctx) => {
+              label: (ctx: any) => {
                 const val = Number(ctx.raw || 0);
                 return ` ${ctx.label}: ${formatCurrency(val)}`;
               },
@@ -1636,7 +1636,7 @@ export class AnalyticsViewController implements ViewController {
             borderWidth: 1,
             bodyColor: theme.tooltipText,
             callbacks: {
-              label: (ctx) => {
+              label: (ctx: any) => {
                 const val = Number(ctx.raw || 0);
                 const pct = total > 0 ? ((val / total) * 100).toFixed(1) : '0';
                 return ` ${ctx.label}: ${formatNumber(val)} (${pct}%)`;

@@ -317,30 +317,51 @@ class HomeController {
       { signal }
     );
 
-    const categoriesRow = this.container.querySelector<HTMLElement>('[data-ref="home-categories-row"]');
-    const setActiveBadge = (ref: string) => {
-      categoriesRow?.querySelectorAll('.component-badge').forEach((b) => b.classList.remove('is-active'));
-      this.container.querySelector<HTMLElement>(`[data-ref="${ref}"]`)?.classList.add('is-active');
-    };
-
-    const bindCat = (ref: string, filterType: 'all' | 'board' | 'doc' | 'presentation') => {
+    const bindCreationBadge = (ref: string, action: () => void) => {
       this.container.querySelector<HTMLElement>(`[data-ref="${ref}"]`)?.addEventListener(
         'click',
         (e) => {
           e.preventDefault();
-          if (this.currentTypeFilter === filterType) return;
-          this.currentTypeFilter = filterType;
-          setActiveBadge(ref);
-          void this.onFiltersChanged();
+          action();
         },
         { signal }
       );
     };
 
-    bindCat('cat-badge-all', 'all');
-    bindCat('cat-badge-board', 'board');
-    bindCat('cat-badge-doc', 'doc');
-    bindCat('cat-badge-presentation', 'presentation');
+    bindCreationBadge('cat-badge-all', () => {
+      openCreateCanvasModal();
+    });
+    bindCreationBadge('cat-badge-board', () => {
+      void createAndOpenCanvas({
+        bgType: 'dots',
+        canvasType: 'board',
+        name: 'Pizarrón sin título',
+        solidColor: '#ffffff',
+      });
+    });
+    bindCreationBadge('cat-badge-doc', () => {
+      void createAndOpenCanvas({
+        canvasType: 'doc',
+        docOrientation: 'portrait',
+        docPaperSize: 'letter',
+        name: 'Documento sin título',
+      });
+    });
+    bindCreationBadge('cat-badge-presentation', () => {
+      void createAndOpenCanvas({
+        canvasType: 'presentation',
+        name: 'Presentación sin título',
+      });
+    });
+    bindCreationBadge('cat-badge-sheet', () => {
+      void createAndOpenCanvas({
+        canvasType: 'sheet',
+        name: 'Hoja de cálculo sin título',
+      });
+    });
+    bindCreationBadge('cat-badge-social', () => {
+      openCreateCanvasModal({ initialType: 'social' });
+    });
 
     this.categoriesCarouselWrapper = this.container.querySelector<HTMLElement>('[data-ref="home-categories-carousel-wrapper"]');
     if (this.categoriesCarouselWrapper) {

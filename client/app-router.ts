@@ -56,7 +56,7 @@ export function showEarlySkeleton(): void {
   const appRoot = document.querySelector<HTMLElement>('[data-ref="app"]');
   if (!appRoot) return;
 
-  const path = window.location.pathname;
+  const path = normalizePath(window.location.pathname);
   let layoutContent = appRoot.querySelector<HTMLElement>('.layout-content');
   if (!layoutContent) {
     layoutContent = document.createElement('div');
@@ -119,7 +119,10 @@ export async function render(): Promise<void> {
   const appRoot = document.querySelector<HTMLElement>('[data-ref="app"]');
   if (!appRoot) return;
 
-  const path = window.location.pathname;
+  const path = normalizePath(window.location.pathname);
+  if (window.location.pathname !== path) {
+    window.history.replaceState({}, '', path);
+  }
 
   const wasCanvas = isCanvasRoute(previousPath);
   const isNowCanvas = isCanvasRoute(path);

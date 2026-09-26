@@ -220,7 +220,7 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path: string): vo
 
   const railCenter = sidebar.querySelector<HTMLElement>('[data-ref="rail-center"]');
   if (railCenter) {
-    if (!isDrawerOpen && activeModule && !isSettings) {
+    if (!isDrawerOpen && activeModule && !isSettings && activeModule.id !== 'dashboard') {
       railCenter.innerHTML = `
         <button type="button" class="component-button component-button--h40 component-button--icon-only rail-btn is-active" data-ref="btn-rail-active-module" data-tooltip="${escapeHtml(activeModule.label)}" aria-label="${escapeHtml(activeModule.label)}">
           <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#${activeModule.icon}"></use></svg>
@@ -264,11 +264,31 @@ document.addEventListener('click', (e: MouseEvent) => {
   }
 });
 
-export async function createSidebar(): Promise<HTMLElement> {
-  const sidebar = await loadTemplate('/views/components/sidebar.html');
-  const currentPath = window.location.pathname;
+let sidebarInstance: HTMLElement | null = null;
+let sidebarInitPromise: Promise<HTMLElement> | null = null;
 
-  updateSidebarActiveState(sidebar, currentPath);
+export function resetSidebar(): void {
+  if (sidebarInstance) {
+    sidebarInstance.remove();
+    sidebarInstance = null;
+    sidebarInitPromise = null;
+  }
+}
+
+export async function createSidebar(): Promise<HTMLElement> {
+  if (sidebarInstance) {
+    updateSidebarActiveState(sidebarInstance, window.location.pathname);
+    return sidebarInstance;
+  }
+  if (sidebarInitPromise) {
+    return sidebarInitPromise;
+  }
+
+  sidebarInitPromise = (async () => {
+    const sidebar = await loadTemplate('/views/components/sidebar.html');
+    const currentPath = window.location.pathname;
+
+    updateSidebarActiveState(sidebar, currentPath);
 
   const btnToggleDrawer = sidebar.querySelector<HTMLElement>('[data-ref="btn-toggle-drawer"]');
   btnToggleDrawer?.addEventListener('click', (e: Event) => {
@@ -695,6 +715,10 @@ export async function createSidebar(): Promise<HTMLElement> {
   }
 
   renderIcons(sidebar);
+  sidebarInstance = sidebar;
   return sidebar;
+})();
+
+return sidebarInitPromise;
 }
 
