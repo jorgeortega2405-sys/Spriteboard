@@ -43,7 +43,16 @@ export function getSkeletonForUrl(pathname: string, onlyBottom = false): string 
     pathname.startsWith('/login')
   ) {
     template = 'centered-form';
-  } else if (pathname.startsWith('/design') || pathname.startsWith('/board') || pathname.startsWith('/doc')) {
+  } else if (
+    pathname === '/design' ||
+    pathname.startsWith('/design/') ||
+    pathname === '/board' ||
+    pathname.startsWith('/board/') ||
+    pathname === '/doc' ||
+    pathname.startsWith('/doc/') ||
+    pathname === '/presentation' ||
+    pathname.startsWith('/presentation/')
+  ) {
     template = 'canvas-layout';
   } else if (pathname.startsWith('/p/')) {
     template = 'grouped-layout';
@@ -90,9 +99,14 @@ export function hasPersistentTopBar(pathname: string): boolean {
     pathname.startsWith('/folder') ||
     pathname.startsWith('/settings') ||
     pathname.startsWith('/help') ||
-    pathname.startsWith('/design') ||
-    pathname.startsWith('/board') ||
-    pathname.startsWith('/doc')
+    pathname === '/design' ||
+    pathname.startsWith('/design/') ||
+    pathname === '/board' ||
+    pathname.startsWith('/board/') ||
+    pathname === '/doc' ||
+    pathname.startsWith('/doc/') ||
+    pathname === '/presentation' ||
+    pathname.startsWith('/presentation/')
   ) {
     return true;
   }

@@ -265,6 +265,10 @@ class DesignerController {
       this.tabBtnEarnings.classList.toggle('is-active', tab === 'earnings');
     }
 
+    if (this.searchBoxEl) {
+      this.searchBoxEl.style.display = tab === 'templates' ? '' : 'none';
+    }
+
     if (this.sectionTemplates) {
       this.sectionTemplates.style.display = tab === 'templates' ? '' : 'none';
     }

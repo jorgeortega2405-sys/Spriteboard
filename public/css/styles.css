@@ -7743,24 +7743,21 @@ html.dark-theme .profile-avatar-wrap {
 
 @media (min-width: 769px) {
   .more-panel.rail-floating-panel {
-    position: fixed !important;
-    left: 74px !important;
-    top: 240px !important;
-    bottom: auto !important;
-    right: auto !important;
-    z-index: 150 !important;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18) !important;
+    position: fixed;
+    left: 74px;
+    z-index: 150;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
   }
 }
 
 @media (max-width: 768px) {
   .more-panel.rail-floating-panel {
-    position: absolute !important;
-    left: 10px !important;
-    bottom: 60px !important;
-    top: auto !important;
-    right: auto !important;
-    z-index: 150 !important;
+    position: absolute;
+    left: 10px;
+    bottom: 60px;
+    top: auto;
+    right: auto;
+    z-index: 150;
   }
 }
 
@@ -7768,12 +7765,13 @@ html.dark-theme .profile-avatar-wrap {
   padding-bottom: 24px;
 }
 
-.designer-metrics-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
-  margin-top: 16px;
-  width: 100%;
+.designer-metrics-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  margin: 14px 0 20px;
 }
 
 .designer-metric-card {
