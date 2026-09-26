@@ -41,6 +41,7 @@ import { AlignmentGuide, calculateDragSnapping, calculateResizeSnapping, Distanc
 import { BackgroundType, Board3DElement, BoardAnimationType, BoardChartElement, BoardCollaboratorState, BoardConnectorElement, BoardEffectType, BoardElement, BoardElementAnimation, BoardElementEffect, BoardEmbedElement, BoardImageElement, BoardMockupElement, BoardPoint, BoardSectionElement, BoardShapeElement, BoardStickyElement, BoardStrokeElement, BoardTableCell, BoardTableElement, BoardTextElement, CANVAS_DEFAULTS, ChartType, ConnectorStyle, MarkerType, ResizeHandle, Shape3DType, ShapeType, StrokeStyle } from '../board/board.types.js';
 import { DocFontPickerComponent, FontSelectEvent } from '../doc/doc-font-picker.component.js';
 import { StageCollaborationManager } from './stage-collaboration.manager.js';
+import { StageSlidesManager } from './stage-slides.manager.js';
 
 export class StageCanvasController {
   private abortController: AbortController | null = null;
@@ -66,6 +67,7 @@ export class StageCanvasController {
   private canvasUuid: string;
   private chartsPanel: BoardChartsPanelComponent | null = null;
   private collaborationManager: StageCollaborationManager;
+  private slidesManager!: StageSlidesManager;
   private collaboratorsBarEl: HTMLElement | null = null;
   private collaboratorsListEl: HTMLElement | null = null;
   private colorPanelTarget: 'fill' | 'slide-bg' | 'stroke' | 'text' = 'fill';
@@ -174,6 +176,7 @@ export class StageCanvasController {
     this.setupTopBarComponents();
     this.setupPanels();
     this.bindEvents();
+    this.slidesManager = new StageSlidesManager(this as any);
     this.setupCollaboration();
     this.fitSlide();
     this.render();
@@ -4434,257 +4437,42 @@ export class StageCanvasController {
   }
 
   public addSlide(): void {
-    const newSlide: PresentationSlideItem = {
-      background: { color: '#ffffff', dotColor: '#cbd5e1', type: 'solid' },
-      camera: { x: 0, y: 0, zoom: 1 },
-      createdAt: Date.now(),
-      duration: this.slideDuration,
-      elements: [],
-      id: `slide-${Date.now()}`,
-      name: this.canvasType === 'social' ? `Página ${this.slides.length + 1}` : `Diapositiva ${this.slides.length + 1}`,
-    };
-    this.saveHistoryState();
-    this.slides.push(newSlide);
-    this.activeSlideId = newSlide.id;
-    this.selectedSlideId = newSlide.id;
-    this.selectedElementIds.clear();
-    const activeIdx = this.getActiveSlideIndex();
-    const slideGap = 80;
-    this.panOffset.x = 0;
-    this.panOffset.y = activeIdx * (this.slideHeight + slideGap);
-    this.clampPan();
-    this.syncPanels();
-    this.updateSelectionToolbar();
-    this.renderSlidesTray();
-    this.render();
-    this.scheduleAutoSave();
-    this.collaborationManager.broadcastSlideAdd(newSlide);
-    showToast(this.canvasType === 'social' ? 'Nueva página creada' : 'Nueva diapositiva creada', 'success');
+    this.slidesManager.addSlide();
   }
 
   public duplicateSlide(): void {
-    const current = this.getActiveSlide();
-    const clonedElements = JSON.parse(JSON.stringify(current.elements));
-    const newSlide: PresentationSlideItem = {
-      background: current.background ? { ...current.background } : { color: '#ffffff', type: 'solid' },
-      camera: { x: 0, y: 0, zoom: 1 },
-      createdAt: Date.now(),
-      duration: current.duration || this.slideDuration,
-      elements: clonedElements,
-      id: `slide-${Date.now()}`,
-      name: `${current.name} (Copia)`,
-    };
-    this.saveHistoryState();
-    const currentIdx = this.getActiveSlideIndex();
-    this.slides.splice(currentIdx + 1, 0, newSlide);
-    this.activeSlideId = newSlide.id;
-    this.selectedSlideId = newSlide.id;
-    this.selectedElementIds.clear();
-    const activeIdx = this.getActiveSlideIndex();
-    const slideGap = 80;
-    this.panOffset.x = 0;
-    this.panOffset.y = activeIdx * (this.slideHeight + slideGap);
-    this.clampPan();
-    this.syncPanels();
-    this.updateSelectionToolbar();
-    this.renderSlidesTray();
-    this.render();
-    this.scheduleAutoSave();
-    this.collaborationManager.broadcastSlideAdd(newSlide, currentIdx + 1);
-    showToast('Diapositiva duplicada', 'success');
+    this.slidesManager.duplicateSlide();
   }
 
   public deleteSlide(): void {
-    if (this.slides.length <= 1) {
-      showToast('No puedes eliminar la única diapositiva', 'warning');
-      return;
-    }
-    const deletingSlideId = this.getActiveSlide().id;
-    this.saveHistoryState();
-    const currentIdx = this.getActiveSlideIndex();
-    this.slides.splice(currentIdx, 1);
-    const nextIdx = Math.min(currentIdx, this.slides.length - 1);
-    this.activeSlideId = this.slides[nextIdx].id;
-    this.selectedSlideId = this.slides[nextIdx].id;
-    this.selectedElementIds.clear();
-    const activeIdx = this.getActiveSlideIndex();
-    const slideGap = 80;
-    this.panOffset.x = 0;
-    this.panOffset.y = activeIdx * (this.slideHeight + slideGap);
-    this.clampPan();
-    this.syncPanels();
-    this.updateSelectionToolbar();
-    this.renderSlidesTray();
-    this.render();
-    this.scheduleAutoSave();
-    this.collaborationManager.broadcastSlideDelete(deletingSlideId);
-    showToast('Diapositiva eliminada', 'success');
+    this.slidesManager.deleteSlide();
   }
 
   public selectSlide(id: string): void {
-    this.commitInlineEditor();
-    this.activeSlideId = id;
-    this.selectedSlideId = id;
-    this.selectedElementIds.clear();
-    const current = this.getActiveSlide();
-    if (current.duration) {
-      this.slideDuration = current.duration;
-      this.updateSlideDurationUI();
-    }
-    const activeIdx = this.getActiveSlideIndex();
-    const slideGap = 80;
-    this.panOffset.x = 0;
-    this.panOffset.y = activeIdx * (this.slideHeight + slideGap);
-    this.clampPan();
-    this.syncPanels();
-    this.updateSelectionToolbar();
-    this.renderSlidesTray();
-    this.render();
-    this.collaborationManager.broadcastSlideChange(id);
+    this.slidesManager.selectSlide(id);
   }
 
   public deselectSlide(): void {
-    this.commitInlineEditor();
-    this.selectedSlideId = null;
-    this.selectedElementIds.clear();
-    this.syncPanels();
-    this.updateSelectionToolbar();
-    this.renderSlidesTray();
-    this.render();
+    this.slidesManager.deselectSlide();
   }
 
   private renderSlidesTray(): void {
-    const pagesText = this.container.querySelector<HTMLElement>('[data-ref="bottom-pages-text"]');
-    const activeIdx = this.getActiveSlideIndex();
-    if (pagesText) {
-      pagesText.textContent = `${activeIdx + 1} / ${this.slides.length}`;
-    }
-
-    const cardsList = this.container.querySelector<HTMLElement>('[data-ref="pages-cards-list"]');
-    if (!cardsList) return;
-
-    cardsList.innerHTML = '';
-    this.slides.forEach((slide, idx) => {
-      const card = document.createElement('div');
-      card.className = `canva-page-card${slide.id === this.selectedSlideId ? ' is-active' : ''}`;
-      card.setAttribute('data-ref', `slide-card-${slide.id}`);
-      const bg = slide.background?.color || '#ffffff';
-      card.innerHTML = `
-        <div class="canva-page-card__header">
-          <span class="canva-page-card__num">${idx + 1}</span>
-          <span class="canva-page-card__dur">${(slide.duration || 5.0).toFixed(1)}s</span>
-        </div>
-        <div class="canva-page-card__preview" data-ref="slide-preview-${slide.id}" style="background-color: ${bg};"></div>
-        <span class="canva-page-card__title">${this.escapeHtml(slide.name)}</span>
-      `;
-      card.addEventListener('click', () => this.selectSlide(slide.id));
-      cardsList.appendChild(card);
-    });
+    this.slidesManager.renderSlidesTray();
   }
 
   private setPageViewMode(mode: CanvasPageViewMode): void {
-    this.pageViewMode = mode;
-    this.fileMenuController?.setPageViewMode(mode);
-    const tray = this.container.querySelector<HTMLElement>('[data-ref="design-pages-tray"]');
-
-    if (mode === 'scroll') {
-      tray?.classList.add('is-hidden');
-    } else if (mode === 'single-page') {
-      tray?.classList.add('is-hidden');
-      this.selectSlide(this.activeSlideId);
-    } else if (mode === 'thumbnails') {
-      tray?.classList.remove('is-hidden');
-      this.renderSlidesTray();
-    } else if (mode === 'grid') {
-      this.openPresentationGridView();
-    }
+    this.slidesManager.setPageViewMode(mode);
   }
 
   private openPresentationGridView(): void {
-    const gridPages = this.slides.map((s, idx) => ({
-      elements: s.elements,
-      id: s.id,
-      index: idx,
-      name: s.name || `Diapositiva ${idx + 1}`,
-      thumbnailUrl: generateThumbnail(s.elements, s.background || { color: '#ffffff', type: 'solid' }, (sctx, el) => this.drawElementOn(sctx, el)),
-    }));
-
-    this.gridViewModal?.destroy();
-    this.gridViewModal = openCanvasGridView({
-      activePageIndex: this.getActiveSlideIndex(),
-      canvasType: 'presentation',
-      onAddPage: () => {
-        this.addSlide();
-        this.refreshPresentationGridView();
-      },
-      onClose: (selectedPageIndex) => {
-        if (typeof selectedPageIndex === 'number' && this.slides[selectedPageIndex]) {
-          this.selectSlide(this.slides[selectedPageIndex].id);
-        }
-      },
-      onDeletePages: (indices) => {
-        if (this.slides.length <= indices.length) {
-          showToast('No puedes eliminar todas las diapositivas', 'warning');
-          return;
-        }
-        const set = new Set(indices);
-        this.saveHistoryState();
-        this.slides = this.slides.filter((_, idx) => !set.has(idx));
-        this.activeSlideId = this.slides[0].id;
-        this.selectedSlideId = this.slides[0].id;
-        this.renderSlidesTray();
-        this.render();
-        this.scheduleAutoSave();
-        this.refreshPresentationGridView();
-        showToast('Diapositivas eliminadas', 'success');
-      },
-      onDuplicatePages: (indices) => {
-        this.saveHistoryState();
-        const sorted = [...indices].sort((a, b) => b - a);
-        for (const idx of sorted) {
-          const slide = this.slides[idx];
-          if (slide) {
-            const newSlide: PresentationSlideItem = {
-              background: slide.background ? { ...slide.background } : { color: '#ffffff', type: 'solid' },
-              camera: { x: 0, y: 0, zoom: 1 },
-              createdAt: Date.now(),
-              duration: slide.duration || this.slideDuration,
-              elements: JSON.parse(JSON.stringify(slide.elements)),
-              id: `slide-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-              name: `${slide.name} (Copia)`,
-            };
-            this.slides.splice(idx + 1, 0, newSlide);
-          }
-        }
-        this.renderSlidesTray();
-        this.render();
-        this.scheduleAutoSave();
-        this.refreshPresentationGridView();
-        showToast('Diapositivas duplicadas', 'success');
-      },
-      onSelectPage: (idx) => {
-        if (this.slides[idx]) {
-          this.selectSlide(this.slides[idx].id);
-        }
-      },
-      pages: gridPages,
-      signal: this.abortController?.signal,
-    });
-    this.gridViewModal.open();
+    this.slidesManager.openPresentationGridView();
   }
 
   private refreshPresentationGridView(): void {
-    const gridPages = this.slides.map((s, idx) => ({
-      elements: s.elements,
-      id: s.id,
-      index: idx,
-      name: s.name || `Diapositiva ${idx + 1}`,
-      thumbnailUrl: generateThumbnail(s.elements, s.background || { color: '#ffffff', type: 'solid' }, (sctx, el) => this.drawElementOn(sctx, el)),
-    }));
-    this.gridViewModal?.setPages(gridPages, this.getActiveSlideIndex());
+    this.slidesManager.refreshPresentationGridView();
   }
 
-  public drawElementOn(ctx: CanvasRenderingContext2D, el: BoardElement): void {
+    public drawElementOn(ctx: CanvasRenderingContext2D, el: BoardElement): void {
     ctx.save();
     if (el.effect && el.effect.type !== 'none') {
       applyElementEffect(ctx, el.effect);

@@ -1,0 +1,1397 @@
+import { ALL_MOCKUP_ITEMS, FRAME_CATEGORIES, FRAME_TEMPLATES, GRID_TEMPLATES, MOCKUP_GENERAL_CATEGORIES, MOCKUP_TEMPLATES } from '../../config/mockups.config.js';
+import { BOARD_3D_SHAPES } from '../../config/board-3d-shapes.config.js';
+import { CHART_CATALOG } from '../../views/board/board-charts-panel.component.js';
+import { ChartType, Shape3DType, ShapeType } from '../../views/board/board.types.js';
+import { DIAGRAM_COMPONENTS, DiagramComponentItem } from '../../config/diagram-components.data.js';
+import { escapeHtml } from '../../services/api.service.js';
+import { FrameCategory, MockupGeneralCategory, MockupTemplate } from '../../types/mockups.types.js';
+import { getActiveCanvasController, getActiveCanvasType, openChartInspectorInDrawer, toggleDrawer, updateCanvasRailActiveState } from '../layout.component.js';
+import { openInsertPixelGridModal } from '../insert-pixel-grid-modal.component.js';
+import { PIXEL_SHAPES, PixelShape, ShapeCategory } from '../../utils/pixel-shapes.util.js';
+import { renderIcons } from '../../services/icon.service.js';
+import { showToast } from '../../services/toast.service.js';
+import { STICKY_NOTE_PRESETS } from '../../config/sticky-notes.config.js';
+import { t } from '../../services/i18n.service.js';
+
+let activeElementsCategory: 'root' | 'shapes' | 'stickers' | 'stickies' | 'diagrams' | 'tables' | 'charts' | 'frames' | 'grids' | 'mockups' | '3d' = 'root';
+let activeFramesFilter: FrameCategory | 'all' = 'all';
+let activeMockupsFilter: MockupGeneralCategory | 'all' = 'all';
+
+interface TablePresetItem {
+  cols: number;
+  description: string;
+  id: string;
+  name: string;
+  rows: number;
+}
+
+const TABLE_PRESETS: TablePresetItem[] = [
+  { cols: 3, description: 'Tabla clásica de 3 filas por 3 columnas', id: 'table_3x3', name: 'Tabla 3 × 3', rows: 3 },
+  { cols: 4, description: 'Tabla mediana de 4 filas por 4 columnas', id: 'table_4x4', name: 'Tabla 4 × 4', rows: 4 },
+  { cols: 3, description: 'Tabla vertical de 5 filas por 3 columnas', id: 'table_5x3', name: 'Tabla 5 × 3', rows: 5 },
+  { cols: 4, description: 'Tabla horizontal de 2 filas por 4 columnas', id: 'table_2x4', name: 'Tabla 2 × 4', rows: 2 },
+  { cols: 6, description: 'Cuadrícula amplia de 6 filas por 6 columnas', id: 'table_6x6', name: 'Tabla 6 × 6', rows: 6 },
+];
+
+interface RecentElementItem {
+  category?: ShapeCategory;
+  diagramCategory?: string;
+  file?: string;
+  fillColor?: string;
+  id: string;
+  name: string;
+  pathD?: string;
+  previewSvg?: string;
+  shapeType?: ShapeType;
+  strokeColor?: string;
+  text?: string;
+  textColor?: string;
+  type: 'vector' | 'sticker' | 'diagram' | 'sticky';
+}
+
+function getRecentElements(): RecentElementItem[] {
+  try {
+    const raw = localStorage.getItem('spriteboard_recent_elements');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch {}
+  return [];
+}
+
+function addRecentElement(item: RecentElementItem): void {
+  try {
+    const current = getRecentElements().filter((r) => r.id !== item.id);
+    current.unshift(item);
+    localStorage.setItem('spriteboard_recent_elements', JSON.stringify(current.slice(0, 16)));
+  } catch {}
+}
+
+const SHAPE_SECTIONS: Array<{ key: string; label: string; prefixes: string[] }> = [
+  {
+    key: 'basic',
+    label: 'Formas básicas',
+    prefixes: [
+      'square', 'rounded_rectangle', 'chamfer_square', 'circle', 'semi_circle',
+      'quarter_circle', 'quadrant_ring', 'semi_ring', 'diamond', 'triangle_up',
+      'triangle_down', 'triangle_right_angle', 'trapezoid_up', 'trapezoid_down',
+      'parallelogram_left', 'parallelogram_right'
+    ],
+  },
+  {
+    key: 'polygons',
+    label: 'Polígonos',
+    prefixes: ['pentagon', 'hexagon_flat', 'hexagon_pointy', 'heptagon', 'octagon', 'decagon'],
+  },
+  {
+    key: 'stars',
+    label: 'Estrellas y Destellos',
+    prefixes: [
+      'star_4_sparkle', 'star_5', 'star_6', 'star_7', 'star_8', 'sparkle_8',
+      'sparkle_12', 'sunburst_16', 'burst_10', 'burst_12', 'burst_16', 'burst_20', 'burst_24', 'seal_scallop_32'
+    ],
+  },
+  {
+    key: 'arrows',
+    label: 'Flechas y Líneas',
+    prefixes: [
+      'arrow_right', 'arrow_left', 'arrow_up', 'arrow_down', 'arrow_double_horizontal',
+      'arrow_double_vertical', 'arrow_pointed_double', 'arrow_pointed_left', 'arrow_ribbon',
+      'chevron_right', 'wave_multi_ribbon', 'wave_s_curve'
+    ],
+  },
+  {
+    key: 'callouts',
+    label: 'Llamadas y Nubes',
+    prefixes: [
+      'callout_rectangular', 'callout_rounded_rect', 'callout_oval', 'callout_cloud',
+      'callout_curved_tail', 'cloud_fluffy_soft', 'cloud_flat_base_multi', 'cloud_flat_base_triple',
+      'cloud_round_dome', 'cloud_puffy_full'
+    ],
+  },
+  {
+    key: 'banners',
+    label: 'Banners y Cintas',
+    prefixes: [
+      'banner_horizontal_ribbon', 'banner_rounded_notch', 'banner_rounded_point',
+      'banner_vertical_notch', 'banner_vertical_point'
+    ],
+  },
+  {
+    key: 'flow',
+    label: 'Símbolos de Flujo',
+    prefixes: [
+      'flow_process', 'flow_decision', 'flow_data', 'flow_document', 'flow_terminator',
+      'flow_preparation', 'flow_delay', 'flow_manual', 'flow_merge', 'flow_offpage', 'flow_shield'
+    ],
+  },
+  {
+    key: 'symbols',
+    label: 'Símbolos y Naturaleza',
+    prefixes: [
+      'heart_classic', 'heart_rounded', 'heart_narrow', 'heart_wide', 'heart_playful',
+      'cross', 'leaf_curved', 'clover_4_leaves', 'flower_4_petals_cross', 'flower_6_petals_center_hole',
+      'flower_6_petals_drop', 'flower_8_petals_round', 'flower_8_petals_sharp', 'shield_u', 'ticket',
+      'arch', 'barrel', 'gear_12_teeth_large_hole', 'gear_12_teeth_pointed', 'gear_12_teeth_small_hole',
+      'gear_14_teeth_pointed', 'gear_16_teeth_large_hole', 'gear_16_teeth_pointed', 'tear_curved_flame',
+      'tear_narrow', 'tear_straight', 'tear_tilted', 'tear_wide'
+    ],
+  },
+];
+
+function handleApplyDiagramComponent(item: DiagramComponentItem, canvasType: 'board' | 'doc' | 'presentation'): void {
+  const controller = getActiveCanvasController();
+
+  addRecentElement({
+    diagramCategory: item.category,
+    fillColor: item.fillColor,
+    id: item.id,
+    name: item.name,
+    previewSvg: item.previewSvg,
+    shapeType: item.shapeType,
+    strokeColor: item.strokeColor,
+    text: item.text,
+    textColor: item.textColor,
+    type: 'diagram',
+  });
+
+  if (canvasType === 'doc') {
+    if (!controller) {
+      showToast('No se encontró el controlador del documento', 'warning');
+      return;
+    }
+
+    if (item.type === 'shape' && item.shapeType) {
+      controller.insertShapeSvg?.(item.previewSvg, item.name, item.strokeColor || '#1e293b');
+      showToast(`«${item.name}» insertado en el documento`, 'success');
+    } else {
+      showToast(`Elemento de diagrama «${item.name}» optimizado para Pizarrón`, 'info');
+    }
+    if (window.innerWidth <= 768) {
+      toggleDrawer(false);
+    }
+    return;
+  }
+
+  if (canvasType === 'board' || canvasType === 'presentation') {
+    if (!controller) {
+      showToast('No se encontró el controlador del lienzo', 'warning');
+      return;
+    }
+
+    if (item.type === 'shape' && item.shapeType) {
+      controller.insertDiagramNode?.({
+        fillColor: item.fillColor,
+        height: item.height,
+        isMindMapNode: item.isMindMapNode,
+        shapeType: item.shapeType,
+        strokeColor: item.strokeColor,
+        text: item.text,
+        textColor: item.textColor,
+        width: item.width,
+      });
+      showToast(`«${item.name}» añadido al lienzo`, 'success');
+    } else if (item.type === 'sticky') {
+      controller.insertStickyNote?.(item.fillColor || '#fef08a', item.text);
+      showToast(`Nota «${item.name}» añadida al lienzo`, 'success');
+    } else if (item.type === 'connector') {
+      controller.activateConnectorTool?.(item.connectorStyle);
+      showToast(`Herramienta ${item.name} activada: arrastra entre nodos`, 'info');
+    }
+
+    if (window.innerWidth <= 768) {
+      toggleDrawer(false);
+    }
+  }
+}
+
+function handleApplyCanvasElement(shape: PixelShape, canvasType: 'board' | 'doc' | 'presentation'): void {
+  const controller = getActiveCanvasController();
+
+  addRecentElement({
+    category: shape.category,
+    file: shape.file,
+    id: shape.id,
+    name: shape.name,
+    pathD: shape.pathD,
+    type: shape.type,
+  });
+
+  if (canvasType === 'doc') {
+    if (!controller) {
+      showToast('No se encontró el controlador del documento', 'warning');
+      return;
+    }
+
+    if (shape.type === 'vector' && shape.pathD) {
+      controller.insertShapeSvg(shape.pathD, shape.name, '#1e293b');
+    } else if (shape.type === 'sticker' && shape.file) {
+      controller.insertImage(`/assets/img/stickers/${shape.file}`, shape.name);
+    }
+    showToast(`«${shape.name}» insertado en el documento`, 'success');
+    if (window.innerWidth <= 768) {
+      toggleDrawer(false);
+    }
+    return;
+  }
+
+  if (canvasType === 'board' || canvasType === 'presentation') {
+    if (!controller) {
+      showToast('No se encontró el controlador del lienzo', 'warning');
+      return;
+    }
+
+    controller.insertShapeOrSticker?.(shape);
+    showToast(`«${shape.name}» añadido al lienzo`, 'success');
+    if (window.innerWidth <= 768) {
+      toggleDrawer(false);
+    }
+    return;
+  }
+}
+
+function handleApplyStickyPreset(item: { color: string; id: string; name: string; stroke: string; text?: string; textColor?: string }, canvasType: 'board' | 'doc' | 'presentation'): void {
+  const controller = getActiveCanvasController();
+  const noteText = item.text || 'Nota';
+
+  addRecentElement({
+    fillColor: item.color,
+    id: item.id,
+    name: item.name,
+    strokeColor: item.stroke,
+    text: noteText,
+    type: 'sticky',
+  });
+
+  if ((canvasType === 'board' || canvasType === 'presentation') && controller) {
+    controller.insertStickyNote?.(item.color, noteText);
+    showToast(`Nota «${item.name}» añadida al lienzo`, 'success');
+  } else if (canvasType === 'doc' && controller) {
+    showToast('Las notas adhesivas están optimizadas para el pizarrón', 'info');
+  }
+
+  if (window.innerWidth <= 768) {
+    toggleDrawer(false);
+  }
+}
+
+function handleApplyRecentElement(item: RecentElementItem, canvasType: 'board' | 'doc' | 'presentation'): void {
+  if (item.type === 'sticky') {
+    handleApplyStickyPreset({
+      color: item.fillColor || '#fef08a',
+      id: item.id,
+      name: item.name,
+      stroke: item.strokeColor || '#fde047',
+      text: item.text || 'Nota',
+    }, canvasType);
+    return;
+  }
+  if (item.type === 'diagram') {
+    const diag = DIAGRAM_COMPONENTS.find((d) => d.id === item.id);
+    if (diag) {
+      handleApplyDiagramComponent(diag, canvasType);
+    } else {
+      handleApplyDiagramComponent({
+        category: (item.diagramCategory as any) || 'flowchart',
+        categoryLabel: 'Diagramas',
+        description: item.name,
+        fillColor: item.fillColor,
+        id: item.id,
+        name: item.name,
+        previewSvg: item.previewSvg || '',
+        shapeType: item.shapeType,
+        strokeColor: item.strokeColor,
+        text: item.text,
+        textColor: item.textColor,
+        type: 'shape',
+      }, canvasType);
+    }
+    return;
+  }
+  const shape = PIXEL_SHAPES.find((s) => s.id === item.id);
+  if (shape) {
+    handleApplyCanvasElement(shape, canvasType);
+  } else {
+    handleApplyCanvasElement({
+      category: item.category || 'shapes',
+      file: item.file,
+      height: 60,
+      id: item.id,
+      name: item.name,
+      pathD: item.pathD,
+      type: item.type as 'vector' | 'sticker',
+      width: 60,
+    }, canvasType);
+  }
+}
+
+export function handleApplyChart(chartType: ChartType, canvasType: 'board' | 'doc' | 'presentation'): void {
+  const controller = getActiveCanvasController();
+  if ((canvasType === 'board' || canvasType === 'presentation') && controller) {
+    controller.insertChart?.(chartType);
+    showToast('Gráfica añadida al lienzo', 'success');
+  } else if (canvasType === 'doc' && controller) {
+    showToast('Las gráficas interactivas están disponibles en el pizarrón', 'info');
+  }
+  if (window.innerWidth <= 768) {
+    toggleDrawer(false);
+  }
+}
+
+function handleApplyMockup(tpl: MockupTemplate, canvasType: 'board' | 'doc' | 'presentation'): void {
+  const controller = getActiveCanvasController();
+  if ((canvasType === 'board' || canvasType === 'presentation') && controller) {
+    controller.insertMockup?.(tpl);
+    showToast(`Mockup «${tpl.name}» añadido al lienzo`, 'success');
+  } else if (canvasType === 'doc' && controller) {
+    showToast('Los mockups están disponibles en el pizarrón', 'info');
+  }
+  if (window.innerWidth <= 768) {
+    toggleDrawer(false);
+  }
+}
+
+function handleApply3DShape(shapeId: Shape3DType, canvasType: 'board' | 'doc' | 'presentation'): void {
+  const controller = getActiveCanvasController();
+  if ((canvasType === 'board' || canvasType === 'presentation') && controller) {
+    controller.insert3DShape?.(shapeId);
+    showToast('Figura 3D añadida al lienzo', 'success');
+  } else if (canvasType === 'doc' && controller) {
+    showToast('Los elementos 3D están disponibles en el pizarrón', 'info');
+  }
+  if (window.innerWidth <= 768) {
+    toggleDrawer(false);
+  }
+}
+
+function handleApplyTable(rows: number, cols: number, canvasType: 'board' | 'doc' | 'presentation'): void {
+  const controller = getActiveCanvasController();
+  if ((canvasType === 'board' || canvasType === 'presentation') && controller) {
+    controller.insertTable?.(rows, cols);
+    showToast(`Tabla de ${rows}×${cols} añadida al lienzo`, 'success');
+  } else if (canvasType === 'doc' && controller) {
+    controller.insertTable?.(rows, cols);
+    showToast(`Tabla de ${rows}×${cols} añadida al documento`, 'success');
+  }
+  if (window.innerWidth <= 768) {
+    toggleDrawer(false);
+  }
+}
+
+export function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement): void {
+  const sidebar = drawer.closest<HTMLElement>('[data-ref="sidebar"]') || document.querySelector<HTMLElement>('[data-ref="sidebar"]');
+  const canvasType = getActiveCanvasType();
+
+  drawerBody.innerHTML = `
+    <div class="canvas-panel-card" data-ref="canvas-panel-card">
+      <div class="canvas-panel-card__header" data-ref="canvas-panel-header">
+        <div class="canvas-panel-card__title-box" data-ref="canvas-panel-title-box">
+          <svg class="component-icon canvas-panel-card__icon" aria-hidden="true"><use href="/icons.svg#category"></use></svg>
+          <span class="canvas-panel-card__title" data-ref="canvas-panel-title">${t('nav.elements') || 'Elementos'}</span>
+        </div>
+        <button type="button" class="component-button component-button--h32 component-button--icon-only rail-btn canvas-panel-card__close" data-ref="btn-close-canvas-panel" data-tooltip="Cerrar panel" aria-label="Cerrar panel">
+          <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+        </button>
+      </div>
+      <div class="canvas-panel-card__body" data-ref="canvas-panel-body">
+        <div class="menu-panel__search" data-ref="canvas-elements-search">
+          <svg class="component-icon menu-panel__search-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+          <input class="menu-panel__search-input" data-ref="canvas-elements-search-input" type="text" maxlength="50" autocomplete="off" placeholder="Buscar elementos..." />
+        </div>
+
+        <div class="elements-drawer-content" data-ref="elements-drawer-content"></div>
+      </div>
+    </div>
+  `;
+
+  const btnClose = drawerBody.querySelector<HTMLElement>('[data-ref="btn-close-canvas-panel"]');
+  btnClose?.addEventListener('click', (e) => {
+    e.preventDefault();
+    toggleDrawer(false);
+  });
+
+  const searchInput = drawerBody.querySelector<HTMLInputElement>('[data-ref="canvas-elements-search-input"]');
+  const contentContainer = drawerBody.querySelector<HTMLElement>('[data-ref="elements-drawer-content"]');
+
+  const renderContent = (query = '') => {
+    if (!contentContainer) return;
+    const cleanQ = query.trim().toLowerCase();
+
+    if (cleanQ) {
+      const matchingDiagrams = DIAGRAM_COMPONENTS.filter((d) => d.name.toLowerCase().includes(cleanQ) || d.description.toLowerCase().includes(cleanQ) || d.categoryLabel.toLowerCase().includes(cleanQ));
+      const matchingShapes = PIXEL_SHAPES.filter((s) => s.name.toLowerCase().includes(cleanQ) || s.id.toLowerCase().includes(cleanQ));
+      const matchingCharts = CHART_CATALOG.filter((c) => c.name.toLowerCase().includes(cleanQ) || c.description.toLowerCase().includes(cleanQ) || 'gráficas'.includes(cleanQ) || 'graficas'.includes(cleanQ) || 'charts'.includes(cleanQ));
+      const matching3D = BOARD_3D_SHAPES.filter((s) => s.name.toLowerCase().includes(cleanQ) || s.id.toLowerCase().includes(cleanQ) || '3d'.includes(cleanQ));
+      const matchingMockups = ALL_MOCKUP_ITEMS.filter((m) => m.name.toLowerCase().includes(cleanQ) || m.description.toLowerCase().includes(cleanQ) || 'mockup'.includes(cleanQ) || 'maqueta'.includes(cleanQ) || 'marco'.includes(cleanQ) || 'cuadricula'.includes(cleanQ) || 'collage'.includes(cleanQ));
+      const matchingTables = (cleanQ.includes('tabl') || cleanQ.includes('table') || cleanQ.includes('cuad')) ? TABLE_PRESETS : [];
+
+      if (matchingDiagrams.length === 0 && matchingShapes.length === 0 && matchingCharts.length === 0 && matching3D.length === 0 && matchingMockups.length === 0 && matchingTables.length === 0) {
+        contentContainer.innerHTML = `
+          <div class="canvas-panel-card__empty" data-ref="elements-empty">
+            <span class="canvas-panel-card__empty-title">Sin resultados</span>
+            <p class="canvas-panel-card__empty-desc">No se encontraron elementos para «${escapeHtml(query)}»</p>
+          </div>
+        `;
+        return;
+      }
+
+      let html = '<div class="elements-grid" data-ref="elements-grid">';
+
+      if (matchingCharts.length > 0) {
+        html += '<div class="elements-section-title">Gráficas</div>';
+        html += matchingCharts.map((item) => `
+          <button type="button" class="element-grid-item element-grid-item--diagram" data-ref="btn-chart-item-${item.type}" data-chart-type="${item.type}" data-tooltip="${escapeHtml(item.description)}" aria-label="${escapeHtml(item.name)}">
+            <div style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+              ${item.iconSvg}
+            </div>
+            <span class="element-grid-item__label">${escapeHtml(item.name)}</span>
+          </button>
+        `).join('');
+      }
+
+      if (matching3D.length > 0) {
+        html += '<div class="elements-section-title">Elementos 3D</div>';
+        html += matching3D.map((shape) => `
+          <button type="button" class="element-grid-item element-grid-item--diagram" data-ref="btn-3d-item-${shape.id}" data-shape3d-id="${shape.id}" data-tooltip="${escapeHtml(shape.name)}" aria-label="${escapeHtml(shape.name)}">
+            <div style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: rgba(99, 102, 241, 0.08); border-radius: 8px; color: #6366f1; pointer-events: none;">
+              <svg class="component-icon" aria-hidden="true" style="width: 22px; height: 22px;"><use href="/icons.svg#${shape.icon}"></use></svg>
+            </div>
+            <span class="element-grid-item__label">${escapeHtml(shape.name)}</span>
+          </button>
+        `).join('');
+      }
+
+      if (matchingTables.length > 0) {
+        html += '<div class="elements-section-title">Tablas</div>';
+        html += matchingTables.map((item) => `
+          <button type="button" class="element-grid-item element-grid-item--diagram" data-ref="btn-table-item-${item.id}" data-table-rows="${item.rows}" data-table-cols="${item.cols}" data-tooltip="${escapeHtml(item.description)}" aria-label="${escapeHtml(item.name)}">
+            <svg viewBox="0 0 48 48" aria-hidden="true" style="width: 32px; height: 32px;">
+              <rect x="6" y="8" width="36" height="32" rx="4" fill="none" stroke="#0284c7" stroke-width="2" />
+              <rect x="6" y="8" width="36" height="10" rx="4" fill="#38bdf8" fill-opacity="0.3" stroke="#0284c7" stroke-width="1.5" />
+              <line x1="6" y1="28" x2="42" y2="28" stroke="#cbd5e1" stroke-width="1.5" />
+              <line x1="18" y1="8" x2="18" y2="40" stroke="#cbd5e1" stroke-width="1.5" />
+              <line x1="30" y1="8" x2="30" y2="40" stroke="#cbd5e1" stroke-width="1.5" />
+            </svg>
+            <span class="element-grid-item__label">${escapeHtml(item.name)}</span>
+          </button>
+        `).join('');
+      }
+
+      if (matchingMockups.length > 0) {
+        html += '<div class="elements-section-title">Mockups</div>';
+        html += matchingMockups.map((tpl) => `
+          <button type="button" class="element-grid-item element-grid-item--diagram" data-ref="btn-mockup-item-${tpl.id}" data-mockup-id="${tpl.id}" data-tooltip="${escapeHtml(tpl.description || tpl.name)}" aria-label="${escapeHtml(tpl.name)}">
+            <div style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; overflow: hidden; pointer-events: none;">
+              ${tpl.thumbnailSvg}
+            </div>
+            <span class="element-grid-item__label">${escapeHtml(tpl.name)}</span>
+          </button>
+        `).join('');
+      }
+
+      if (matchingDiagrams.length > 0) {
+        html += '<div class="elements-section-title">Diagramas</div>';
+        html += matchingDiagrams.map((item) => `
+          <button type="button" class="element-grid-item element-grid-item--diagram" data-ref="btn-diagram-item-${item.id}" data-diagram-id="${item.id}" data-tooltip="${escapeHtml(item.description || item.name)}" aria-label="${escapeHtml(item.name)}">
+            <svg viewBox="0 0 48 48" aria-hidden="true">${item.previewSvg}</svg>
+            <span class="element-grid-item__label">${escapeHtml(item.name)}</span>
+          </button>
+        `).join('');
+      }
+
+      if (matchingShapes.length > 0) {
+        html += '<div class="elements-section-title">Figuras y Formas</div>';
+        html += matchingShapes.map((item) => {
+          let previewHtml = '';
+          if (item.type === 'vector' && item.pathD) {
+            previewHtml = `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="${item.pathD}" fill="currentColor" /></svg>`;
+          } else if (item.type === 'sticker' && item.file) {
+            previewHtml = `<img src="/assets/img/stickers/${item.file}" alt="${escapeHtml(item.name)}" loading="lazy" />`;
+          }
+          return `
+            <button type="button" class="element-grid-item" data-ref="btn-element-item-${item.id}" data-element-id="${item.id}" data-tooltip="${escapeHtml(item.name)}" aria-label="${escapeHtml(item.name)}">
+              ${previewHtml}
+            </button>
+          `;
+        }).join('');
+      }
+
+      html += '</div>';
+      contentContainer.innerHTML = html;
+      bindItemClicks(contentContainer);
+      renderIcons(contentContainer);
+      return;
+    }
+
+    if (activeElementsCategory === 'root') {
+      const recents = getRecentElements().slice(0, 6);
+      const recentsHtml = recents.length > 0 ? `
+        <div class="elements-recents-section" data-ref="elements-recents-section" style="margin-bottom: 14px;">
+          <span class="elements-categories-heading">Usados recientemente</span>
+          <div class="elements-grid elements-recents-grid" data-ref="elements-recents-grid">
+            ${recents.map((item) => {
+              let preview = '';
+              if (item.type === 'vector' && item.pathD) {
+                preview = `<svg viewBox="0 0 48 48" aria-hidden="true" style="width: 24px; height: 24px;"><path d="${item.pathD}" fill="currentColor" /></svg>`;
+              } else if (item.type === 'sticker' && item.file) {
+                preview = `<img src="/assets/img/stickers/${item.file}" alt="${escapeHtml(item.name)}" loading="lazy" style="width: 26px; height: 26px; object-fit: contain;" />`;
+              } else if (item.type === 'diagram' && item.previewSvg) {
+                preview = `<svg viewBox="0 0 48 48" aria-hidden="true" style="width: 24px; height: 24px;">${item.previewSvg}</svg>`;
+              } else if (item.type === 'sticky') {
+                preview = `<div style="background-color: ${item.fillColor || '#fef08a'}; border: 1.5px solid ${item.strokeColor || '#fde047'}; border-radius: 4px; width: 24px; height: 24px;"></div>`;
+              } else {
+                preview = `<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#category"></use></svg>`;
+              }
+              return `
+                <button type="button" class="element-grid-item" data-ref="btn-recent-item-${item.id}" data-recent-id="${item.id}" data-tooltip="${escapeHtml(item.name)}" aria-label="${escapeHtml(item.name)}">
+                  ${preview}
+                </button>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      ` : '';
+
+      contentContainer.innerHTML = `
+        <div class="elements-categories-menu" data-ref="elements-categories-menu">
+          ${recentsHtml}
+          <span class="elements-categories-heading">Explora las categorías</span>
+          <div class="elements-categories-grid" data-ref="elements-categories-grid">
+            <button type="button" class="element-category-card" data-ref="btn-category-stickies" data-category="stickies">
+              <div class="element-category-card__stack" data-ref="category-stack-stickies">
+                <div class="element-category-card__layer element-category-card__layer--back element-category-card__layer--stickies-back">
+                  <svg class="element-category-card__svg" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="6" y="6" width="60" height="60" rx="16" fill="url(#cva-grad-sticky-back)" />
+                    <path d="M46 50L66 50L66 30Z" fill="#047857" opacity="0.35" />
+                    <path d="M46 50L66 30L46 30Z" fill="#34d399" />
+                    <defs>
+                      <linearGradient id="cva-grad-sticky-back" x1="6" y1="6" x2="66" y2="66" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#34d399" />
+                        <stop offset="0.5" stop-color="#10b981" />
+                        <stop offset="1" stop-color="#059669" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </div>
+                <div class="element-category-card__layer element-category-card__layer--front element-category-card__layer--stickies-front">
+                  <svg class="element-category-card__svg" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="6" y="6" width="60" height="60" rx="16" fill="url(#cva-grad-sticky-front)" />
+                    <rect x="6.5" y="6.5" width="59" height="59" rx="15.5" stroke="rgba(255,255,255,0.4)" stroke-width="1" />
+                    <path d="M18 18H54C55.1 18 56 18.9 56 20V42L44 54H20C18.9 54 18 53.1 18 52V18Z" fill="#FFFBEB" />
+                    <rect x="23" y="24" width="22" height="3" rx="1.5" fill="#FBBF24" />
+                    <rect x="23" y="30" width="26" height="3" rx="1.5" fill="#FDE68A" />
+                    <rect x="23" y="36" width="16" height="3" rx="1.5" fill="#FDE68A" />
+                    <path d="M44 42L56 42L44 54Z" fill="#B45309" opacity="0.25" />
+                    <path d="M44 42L56 42C54 46 50 52 44 54L44 42Z" fill="url(#cva-grad-sticky-fold)" />
+                    <defs>
+                      <linearGradient id="cva-grad-sticky-front" x1="6" y1="6" x2="66" y2="66" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#FEF08A" />
+                        <stop offset="0.3" stop-color="#FDE047" />
+                        <stop offset="1" stop-color="#F59E0B" />
+                      </linearGradient>
+                      <linearGradient id="cva-grad-sticky-fold" x1="44" y1="42" x2="56" y2="54" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#FB7185" />
+                        <stop offset="1" stop-color="#E11D48" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </div>
+              </div>
+              <span class="element-category-card__label">Notas adhesivas</span>
+            </button>
+
+            <button type="button" class="element-category-card" data-ref="btn-category-shapes" data-category="shapes">
+              <div class="element-category-card__stack" data-ref="category-stack-shapes">
+                <div class="element-category-card__layer element-category-card__layer--back element-category-card__layer--shapes-back">
+                  <svg class="element-category-card__svg" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="6" y="6" width="60" height="60" rx="16" fill="url(#cva-grad-shapes-back)" />
+                    <path d="M48 14L50.5 19.5L56 20.5L52 24.5L53 30L48 27L43 30L44 24.5L40 20.5L45.5 19.5Z" fill="#F97316" />
+                    <line x1="36" y1="46" x2="58" y2="46" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" />
+                    <circle cx="58" cy="46" r="4.5" fill="#FFFFFF" />
+                    <defs>
+                      <linearGradient id="cva-grad-shapes-back" x1="6" y1="6" x2="66" y2="66" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#2DD4BF" />
+                        <stop offset="0.5" stop-color="#06B6D4" />
+                        <stop offset="1" stop-color="#0284C7" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </div>
+                <div class="element-category-card__layer element-category-card__layer--front element-category-card__layer--shapes-front">
+                  <svg class="element-category-card__svg" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="6" y="6" width="60" height="60" rx="16" fill="url(#cva-grad-shapes-front)" />
+                    <rect x="6.5" y="6.5" width="59" height="59" rx="15.5" stroke="rgba(255,255,255,0.4)" stroke-width="1" />
+                    <path d="M26 20L35 25L32 36H18L15 25L26 20Z" fill="rgba(255,255,255,0.78)" />
+                    <path d="M48 24C49 22.5 51 22.5 52 24L59 36C60 37.5 59 39.5 57 39.5H43C41 39.5 40 37.5 41 36L48 24Z" fill="url(#cva-grad-pink-triangle)" />
+                    <g fill="#0F172A" opacity="0.85">
+                      <circle cx="20" cy="48" r="2.2" />
+                      <circle cx="26" cy="48" r="2.2" />
+                      <circle cx="32" cy="48" r="2.2" />
+                      <circle cx="38" cy="48" r="2.2" />
+                      <circle cx="44" cy="48" r="2.2" />
+                      <circle cx="50" cy="48" r="2.2" />
+                    </g>
+                    <defs>
+                      <linearGradient id="cva-grad-shapes-front" x1="6" y1="6" x2="66" y2="66" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#22D3EE" />
+                        <stop offset="0.4" stop-color="#06B6D4" />
+                        <stop offset="1" stop-color="#0284C7" />
+                      </linearGradient>
+                      <linearGradient id="cva-grad-pink-triangle" x1="41" y1="23" x2="59" y2="39" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#F472B6" />
+                        <stop offset="1" stop-color="#EC4899" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </div>
+              </div>
+              <span class="element-category-card__label">Formas</span>
+            </button>
+
+            <button type="button" class="element-category-card" data-ref="btn-category-stickers" data-category="stickers">
+              <div class="element-category-card__stack" data-ref="category-stack-stickers">
+                <div class="element-category-card__layer element-category-card__layer--back element-category-card__layer--stickers-back">
+                  <svg class="element-category-card__svg" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="6" y="6" width="60" height="60" rx="16" fill="url(#cva-grad-stickers-back)" />
+                    <path d="M48 14L49.8 19.2L55 21L49.8 22.8L48 28L46.2 22.8L41 21L46.2 19.2Z" fill="#FFFFFF" />
+                    <path d="M56 32L57.2 35.5L60.5 36.5L57.2 37.5L56 41L54.8 37.5L51.5 36.5L54.8 35.5Z" fill="#FEF08A" />
+                    <defs>
+                      <linearGradient id="cva-grad-stickers-back" x1="6" y1="6" x2="66" y2="66" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#FDE047" />
+                        <stop offset="0.5" stop-color="#FBBF24" />
+                        <stop offset="1" stop-color="#F59E0B" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </div>
+                <div class="element-category-card__layer element-category-card__layer--front element-category-card__layer--stickers-front">
+                  <svg class="element-category-card__svg" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="6" y="6" width="60" height="60" rx="16" fill="url(#cva-grad-stickers-front)" />
+                    <rect x="6.5" y="6.5" width="59" height="59" rx="15.5" stroke="rgba(255,255,255,0.4)" stroke-width="1" />
+                    <path d="M22 47C26 43 32 45 36 49C29 53 23 51 22 47Z" fill="#10B981" />
+                    <path d="M50 47C46 43 40 45 36 49C43 53 49 51 50 47Z" fill="#10B981" />
+                    <circle cx="36" cy="33" r="14" fill="#FBBF24" />
+                    <path d="M36 17L38.5 22.5L44.5 21L43.5 27L49 28.5L45.5 33L49 37.5L43.5 39L44.5 45L38.5 43.5L36 49L33.5 43.5L27.5 45L28.5 39L23 37.5L26.5 33L23 28.5L28.5 27L27.5 21L33.5 22.5Z" fill="url(#cva-grad-sunflower-petals)" />
+                    <circle cx="36" cy="33" r="7.5" fill="url(#cva-grad-sunflower-center)" />
+                    <circle cx="36" cy="33" r="5.5" fill="#78350F" opacity="0.6" />
+                    <defs>
+                      <linearGradient id="cva-grad-stickers-front" x1="6" y1="6" x2="66" y2="66" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#FB923C" />
+                        <stop offset="0.4" stop-color="#F97316" />
+                        <stop offset="1" stop-color="#EF4444" />
+                      </linearGradient>
+                      <linearGradient id="cva-grad-sunflower-petals" x1="23" y1="17" x2="49" y2="49" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#FEF08A" />
+                        <stop offset="0.5" stop-color="#FDE047" />
+                        <stop offset="1" stop-color="#F59E0B" />
+                      </linearGradient>
+                      <linearGradient id="cva-grad-sunflower-center" x1="30" y1="27" x2="42" y2="39" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#92400E" />
+                        <stop offset="1" stop-color="#451A03" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </div>
+              </div>
+              <span class="element-category-card__label">Figuras</span>
+            </button>
+
+            <button type="button" class="element-category-card" data-ref="btn-category-diagrams" data-category="diagrams">
+              <div class="element-category-card__stack" data-ref="category-stack-diagrams">
+                <div class="element-category-card__layer element-category-card__layer--back element-category-card__layer--diagrams-back">
+                  <svg class="element-category-card__svg" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="6" y="6" width="60" height="60" rx="16" fill="url(#cva-grad-diagrams-back)" />
+                    <path d="M42 20H52C54 20 55 21 55 23V32" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" />
+                    <rect x="48" y="32" width="14" height="10" rx="4" fill="#FFFFFF" />
+                    <defs>
+                      <linearGradient id="cva-grad-diagrams-back" x1="6" y1="6" x2="66" y2="66" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#E879F9" />
+                        <stop offset="0.5" stop-color="#C084FC" />
+                        <stop offset="1" stop-color="#9333EA" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </div>
+                <div class="element-category-card__layer element-category-card__layer--front element-category-card__layer--diagrams-front">
+                  <svg class="element-category-card__svg" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="6" y="6" width="60" height="60" rx="16" fill="url(#cva-grad-diagrams-front)" />
+                    <rect x="6.5" y="6.5" width="59" height="59" rx="15.5" stroke="rgba(255,255,255,0.4)" stroke-width="1" />
+                    <path d="M36 26V35M36 35H25V42M36 35H47V42" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+                    <rect x="27" y="17" width="18" height="11" rx="5.5" fill="#FFFFFF" />
+                    <rect x="30" y="21" width="12" height="3" rx="1.5" fill="#4F46E5" />
+                    <rect x="17" y="42" width="16" height="12" rx="4" fill="#C7D2FE" />
+                    <rect x="20" y="46" width="10" height="2.5" rx="1.2" fill="#3730A3" />
+                    <rect x="39" y="42" width="16" height="12" rx="4" fill="#A5F3FC" />
+                    <rect x="42" y="46" width="10" height="2.5" rx="1.2" fill="#0E7490" />
+                    <defs>
+                      <linearGradient id="cva-grad-diagrams-front" x1="6" y1="6" x2="66" y2="66" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#818CF8" />
+                        <stop offset="0.4" stop-color="#6366F1" />
+                        <stop offset="1" stop-color="#4F46E5" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </div>
+              </div>
+              <span class="element-category-card__label">Diagramas</span>
+            </button>
+
+            <button type="button" class="element-category-card" data-ref="btn-category-tables" data-category="tables">
+              <div class="element-category-card__stack" data-ref="category-stack-tables">
+                <div class="element-category-card__layer element-category-card__layer--back">
+                  <svg class="element-category-card__svg" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="6" y="6" width="60" height="60" rx="16" fill="url(#cva-grad-tables-back)" />
+                    <rect x="18" y="18" width="36" height="36" rx="4" stroke="#ffffff" stroke-width="2" stroke-opacity="0.5" />
+                    <defs>
+                      <linearGradient id="cva-grad-tables-back" x1="6" y1="6" x2="66" y2="66" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#0284c7" />
+                        <stop offset="1" stop-color="#0369a1" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </div>
+                <div class="element-category-card__layer element-category-card__layer--front">
+                  <svg class="element-category-card__svg" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="6" y="6" width="60" height="60" rx="16" fill="url(#cva-grad-tables-front)" />
+                    <rect x="6.5" y="6.5" width="59" height="59" rx="15.5" stroke="rgba(255,255,255,0.4)" stroke-width="1" />
+                    <rect x="16" y="16" width="40" height="40" rx="6" fill="#ffffff" fill-opacity="0.9" />
+                    <rect x="16" y="16" width="40" height="12" rx="6" fill="#38bdf8" />
+                    <line x1="16" y1="28" x2="56" y2="28" stroke="#0284c7" stroke-width="1" />
+                    <line x1="16" y1="42" x2="56" y2="42" stroke="#e2e8f0" stroke-width="1.5" />
+                    <line x1="29" y1="16" x2="29" y2="56" stroke="#e2e8f0" stroke-width="1.5" />
+                    <line x1="43" y1="16" x2="43" y2="56" stroke="#e2e8f0" stroke-width="1.5" />
+                    <defs>
+                      <linearGradient id="cva-grad-tables-front" x1="6" y1="6" x2="66" y2="66" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#38bdf8" />
+                        <stop offset="0.5" stop-color="#0284c7" />
+                        <stop offset="1" stop-color="#0369a1" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </div>
+              </div>
+              <span class="element-category-card__label">Tablas</span>
+            </button>
+
+            <button type="button" class="element-category-card" data-ref="btn-category-charts" data-category="charts">
+              <div class="element-category-card__stack" data-ref="category-stack-charts">
+                <div class="element-category-card__layer element-category-card__layer--back">
+                  <svg class="element-category-card__svg" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="6" y="6" width="60" height="60" rx="16" fill="url(#cva-grad-charts-back)" />
+                    <path d="M18 48L32 34L44 42L56 22" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.4" />
+                    <defs>
+                      <linearGradient id="cva-grad-charts-back" x1="6" y1="6" x2="66" y2="66" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#8b5cf6" />
+                        <stop offset="1" stop-color="#6d28d9" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </div>
+                <div class="element-category-card__layer element-category-card__layer--front">
+                  <svg class="element-category-card__svg" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="6" y="6" width="60" height="60" rx="16" fill="url(#cva-grad-charts-front)" />
+                    <rect x="6.5" y="6.5" width="59" height="59" rx="15.5" stroke="rgba(255,255,255,0.4)" stroke-width="1" />
+                    <rect x="18" y="36" width="7" height="18" rx="3.5" fill="#ffffff" />
+                    <rect x="29" y="24" width="7" height="30" rx="3.5" fill="#facc15" />
+                    <rect x="40" y="30" width="7" height="24" rx="3.5" fill="#38bdf8" />
+                    <rect x="51" y="18" width="7" height="36" rx="3.5" fill="#4ade80" />
+                    <path d="M18 32L29 20L40 26L54 14" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+                    <circle cx="54" cy="14" r="3" fill="#ffffff" />
+                    <defs>
+                      <linearGradient id="cva-grad-charts-front" x1="6" y1="6" x2="66" y2="66" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#a855f7" />
+                        <stop offset="0.5" stop-color="#8b5cf6" />
+                        <stop offset="1" stop-color="#7c3aed" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </div>
+              </div>
+              <span class="element-category-card__label">Gráficas</span>
+            </button>
+
+            <button type="button" class="element-category-card" data-ref="btn-category-frames" data-category="frames">
+              <div class="element-category-card__stack" data-ref="category-stack-frames">
+                <div class="element-category-card__layer element-category-card__layer--back">
+                  <svg class="element-category-card__svg" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="6" y="6" width="60" height="60" rx="16" fill="url(#cva-grad-frames-back)" />
+                    <rect x="18" y="18" width="36" height="36" rx="8" stroke="#ffffff" stroke-width="2" stroke-dasharray="4 4" opacity="0.4" />
+                    <defs>
+                      <linearGradient id="cva-grad-frames-back" x1="6" y1="6" x2="66" y2="66" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#0284c7" />
+                        <stop offset="1" stop-color="#0369a1" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </div>
+                <div class="element-category-card__layer element-category-card__layer--front">
+                  <svg class="element-category-card__svg" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="6" y="6" width="60" height="60" rx="16" fill="url(#cva-grad-frames-front)" />
+                    <rect x="6.5" y="6.5" width="59" height="59" rx="15.5" stroke="rgba(255,255,255,0.4)" stroke-width="1" />
+                    <rect x="16" y="16" width="40" height="40" rx="8" fill="#ffffff" fill-opacity="0.9" />
+                    <rect x="20" y="20" width="32" height="32" rx="4" fill="#38bdf8" />
+                    <circle cx="28" cy="28" r="3" fill="#fef08a" />
+                    <path d="M20 44 Q28 34 36 38 Q44 42 52 32 L52 52 L20 52 Z" fill="#679c16" />
+                    <defs>
+                      <linearGradient id="cva-grad-frames-front" x1="6" y1="6" x2="66" y2="66" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#38bdf8" />
+                        <stop offset="0.5" stop-color="#0284c7" />
+                        <stop offset="1" stop-color="#0369a1" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </div>
+              </div>
+              <span class="element-category-card__label">Marcos</span>
+            </button>
+
+            <button type="button" class="element-category-card" data-ref="btn-category-grids" data-category="grids">
+              <div class="element-category-card__stack" data-ref="category-stack-grids">
+                <div class="element-category-card__layer element-category-card__layer--back">
+                  <svg class="element-category-card__svg" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="6" y="6" width="60" height="60" rx="16" fill="url(#cva-grad-grids-back)" />
+                    <rect x="18" y="18" width="16" height="36" rx="4" fill="#ffffff" opacity="0.25" />
+                    <rect x="38" y="18" width="16" height="36" rx="4" fill="#ffffff" opacity="0.25" />
+                    <defs>
+                      <linearGradient id="cva-grad-grids-back" x1="6" y1="6" x2="66" y2="66" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#6366f1" />
+                        <stop offset="1" stop-color="#4338ca" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </div>
+                <div class="element-category-card__layer element-category-card__layer--front">
+                  <svg class="element-category-card__svg" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="6" y="6" width="60" height="60" rx="16" fill="url(#cva-grad-grids-front)" />
+                    <rect x="6.5" y="6.5" width="59" height="59" rx="15.5" stroke="rgba(255,255,255,0.4)" stroke-width="1" />
+                    <rect x="16" y="16" width="18" height="18" rx="4" fill="#ffffff" fill-opacity="0.9" />
+                    <rect x="38" y="16" width="18" height="18" rx="4" fill="#c7d2fe" />
+                    <rect x="16" y="38" width="18" height="18" rx="4" fill="#a5b4fc" />
+                    <rect x="38" y="38" width="18" height="18" rx="4" fill="#ffffff" fill-opacity="0.9" />
+                    <defs>
+                      <linearGradient id="cva-grad-grids-front" x1="6" y1="6" x2="66" y2="66" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#818cf8" />
+                        <stop offset="0.5" stop-color="#6366f1" />
+                        <stop offset="1" stop-color="#4f46e5" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </div>
+              </div>
+              <span class="element-category-card__label">Cuadrícula</span>
+            </button>
+
+            <button type="button" class="element-category-card" data-ref="btn-category-mockups" data-category="mockups">
+              <div class="element-category-card__stack" data-ref="category-stack-mockups">
+                <div class="element-category-card__layer element-category-card__layer--back">
+                  <svg class="element-category-card__svg" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="6" y="6" width="60" height="60" rx="16" fill="url(#cva-grad-mockups-back)" />
+                    <rect x="16" y="24" width="40" height="26" rx="4" fill="#ffffff" opacity="0.3" />
+                    <defs>
+                      <linearGradient id="cva-grad-mockups-back" x1="6" y1="6" x2="66" y2="66" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#ec4899" />
+                        <stop offset="1" stop-color="#be185d" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </div>
+                <div class="element-category-card__layer element-category-card__layer--front">
+                  <svg class="element-category-card__svg" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="6" y="6" width="60" height="60" rx="16" fill="url(#cva-grad-mockups-front)" />
+                    <rect x="6.5" y="6.5" width="59" height="59" rx="15.5" stroke="rgba(255,255,255,0.4)" stroke-width="1" />
+                    <rect x="15" y="22" width="34" height="22" rx="3" fill="#ffffff" fill-opacity="0.85" />
+                    <rect x="18" y="25" width="28" height="16" rx="1" fill="#38bdf8" />
+                    <path d="M12 44H52C53.1 44 54 44.9 54 46V47H10V46C10 44.9 10.9 44 12 44Z" fill="#e2e8f0" />
+                    <rect x="42" y="26" width="16" height="28" rx="4" fill="#1e293b" />
+                    <rect x="43.5" y="28" width="13" height="24" rx="2.5" fill="#fb7185" />
+                    <circle cx="50" cy="50" r="1" fill="#ffffff" />
+                    <defs>
+                      <linearGradient id="cva-grad-mockups-front" x1="6" y1="6" x2="66" y2="66" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#f43f5e" />
+                        <stop offset="0.5" stop-color="#e11d48" />
+                        <stop offset="1" stop-color="#be123c" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </div>
+              </div>
+              <span class="element-category-card__label">Mockups</span>
+            </button>
+
+            <button type="button" class="element-category-card" data-ref="btn-category-3d" data-category="3d">
+              <div class="element-category-card__stack" data-ref="category-stack-3d">
+                <div class="element-category-card__layer element-category-card__layer--back">
+                  <svg class="element-category-card__svg" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="6" y="6" width="60" height="60" rx="16" fill="url(#cva-grad-3d-back)" />
+                    <circle cx="36" cy="36" r="18" stroke="#ffffff" stroke-width="2" stroke-dasharray="4 4" opacity="0.35" />
+                    <defs>
+                      <linearGradient id="cva-grad-3d-back" x1="6" y1="6" x2="66" y2="66" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#14b8a6" />
+                        <stop offset="1" stop-color="#0f766e" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </div>
+                <div class="element-category-card__layer element-category-card__layer--front">
+                  <svg class="element-category-card__svg" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="6" y="6" width="60" height="60" rx="16" fill="url(#cva-grad-3d-front)" />
+                    <rect x="6.5" y="6.5" width="59" height="59" rx="15.5" stroke="rgba(255,255,255,0.4)" stroke-width="1" />
+                    <g transform="translate(36, 36)">
+                      <path d="M0 -18L16 -9L0 0L-16 -9Z" fill="#a7f3d0" />
+                      <path d="M-16 -9L0 0V18L-16 9Z" fill="#34d399" />
+                      <path d="M0 0L16 -9V9L0 18Z" fill="#059669" />
+                    </g>
+                    <defs>
+                      <linearGradient id="cva-grad-3d-front" x1="6" y1="6" x2="66" y2="66" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#10b981" />
+                        <stop offset="0.5" stop-color="#059669" />
+                        <stop offset="1" stop-color="#047857" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </div>
+              </div>
+              <span class="element-category-card__label">Elementos 3D</span>
+            </button>
+
+            <button type="button" class="element-category-card" data-ref="btn-category-pixel-grid" data-category="pixel-grid">
+              <div class="element-category-card__stack" data-ref="category-stack-pixel-grid">
+                <div class="element-category-card__layer element-category-card__layer--back">
+                  <svg class="element-category-card__svg" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="6" y="6" width="60" height="60" rx="16" fill="url(#cva-grad-pixel-back)" />
+                    <defs>
+                      <linearGradient id="cva-grad-pixel-back" x1="6" y1="6" x2="66" y2="66" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#8b5cf6" />
+                        <stop offset="1" stop-color="#6d28d9" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </div>
+                <div class="element-category-card__layer element-category-card__layer--front">
+                  <svg class="element-category-card__svg" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="6" y="6" width="60" height="60" rx="16" fill="url(#cva-grad-pixel-front)" />
+                    <rect x="6.5" y="6.5" width="59" height="59" rx="15.5" stroke="rgba(255,255,255,0.4)" stroke-width="1" />
+                    <rect x="18" y="18" width="8" height="8" rx="1" fill="#ffffff" />
+                    <rect x="28" y="18" width="8" height="8" rx="1" fill="#c4b5fd" />
+                    <rect x="38" y="18" width="8" height="8" rx="1" fill="#ffffff" />
+                    <rect x="48" y="18" width="8" height="8" rx="1" fill="#a78bfa" />
+                    <rect x="18" y="28" width="8" height="8" rx="1" fill="#c4b5fd" />
+                    <rect x="28" y="28" width="8" height="8" rx="1" fill="#7c3aed" />
+                    <rect x="38" y="28" width="8" height="8" rx="1" fill="#7c3aed" />
+                    <rect x="48" y="28" width="8" height="8" rx="1" fill="#c4b5fd" />
+                    <rect x="18" y="38" width="8" height="8" rx="1" fill="#ffffff" />
+                    <rect x="28" y="38" width="8" height="8" rx="1" fill="#7c3aed" />
+                    <rect x="38" y="38" width="8" height="8" rx="1" fill="#7c3aed" />
+                    <rect x="48" y="38" width="8" height="8" rx="1" fill="#ffffff" />
+                    <rect x="18" y="48" width="8" height="8" rx="1" fill="#a78bfa" />
+                    <rect x="28" y="48" width="8" height="8" rx="1" fill="#c4b5fd" />
+                    <rect x="38" y="48" width="8" height="8" rx="1" fill="#ffffff" />
+                    <rect x="48" y="48" width="8" height="8" rx="1" fill="#c4b5fd" />
+                    <defs>
+                      <linearGradient id="cva-grad-pixel-front" x1="6" y1="6" x2="66" y2="66" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#a855f7" />
+                        <stop offset="0.5" stop-color="#8b5cf6" />
+                        <stop offset="1" stop-color="#6d28d9" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </div>
+              </div>
+              <span class="element-category-card__label">Píxel Art</span>
+            </button>
+          </div>
+        </div>
+      `;
+
+      contentContainer.querySelectorAll<HTMLButtonElement>('[data-category]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const cat = btn.getAttribute('data-category') as 'shapes' | 'stickers' | 'stickies' | 'diagrams' | 'tables' | 'charts' | 'frames' | 'grids' | 'mockups' | '3d' | 'pixel-grid';
+          if (cat === 'charts') {
+            openChartInspectorInDrawer();
+            return;
+          }
+          if (cat === 'pixel-grid') {
+            const controller = getActiveCanvasController();
+            openInsertPixelGridModal({
+              onInsert: (cfg) => {
+                controller?.insertPixelGrid?.(cfg);
+              },
+            });
+            return;
+          }
+          if (cat) {
+            activeElementsCategory = cat;
+            renderContent('');
+          }
+        });
+      });
+
+      bindItemClicks(contentContainer);
+      renderIcons(contentContainer);
+      return;
+    }
+
+    let backTitle = 'Formas';
+    if (activeElementsCategory === 'stickers') backTitle = 'Figuras';
+    if (activeElementsCategory === 'stickies') backTitle = 'Notas adhesivas';
+    if (activeElementsCategory === 'diagrams') backTitle = 'Diagramas';
+    if (activeElementsCategory === 'tables') backTitle = 'Tablas';
+    if (activeElementsCategory === 'charts') backTitle = 'Gráficas';
+    if (activeElementsCategory === 'frames') backTitle = 'Marcos';
+    if (activeElementsCategory === 'grids') backTitle = 'Cuadrícula';
+    if (activeElementsCategory === 'mockups') backTitle = 'Mockups';
+    if (activeElementsCategory === '3d') backTitle = 'Elementos 3D';
+
+    let html = `
+      <button type="button" class="elements-back-btn" data-ref="btn-elements-back">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
+        <span>Volver a categorías (${escapeHtml(backTitle)})</span>
+      </button>
+      <div class="elements-grid" data-ref="elements-grid">
+    `;
+
+    if (activeElementsCategory === 'shapes') {
+      const vectorShapes = PIXEL_SHAPES.filter((s) => s.category === 'shapes' && s.type === 'vector');
+      const assignedShapeIds = new Set<string>();
+
+      SHAPE_SECTIONS.forEach((sec) => {
+        const matching = vectorShapes.filter((s) => {
+          const rawKey = s.id.replace(/^shape_/, '');
+          return sec.prefixes.includes(rawKey) || sec.prefixes.some((p) => rawKey.startsWith(p));
+        });
+
+        if (matching.length > 0) {
+          matching.forEach((s) => assignedShapeIds.add(s.id));
+          html += `<div class="elements-section-title">${escapeHtml(sec.label)}</div>`;
+          html += matching.map((item) => `
+            <button type="button" class="element-grid-item" data-ref="btn-element-item-${item.id}" data-element-id="${item.id}" data-tooltip="${escapeHtml(item.name)}" aria-label="${escapeHtml(item.name)}">
+              <svg viewBox="0 0 48 48" aria-hidden="true"><path d="${item.pathD || ''}" fill="currentColor" /></svg>
+            </button>
+          `).join('');
+        }
+      });
+
+      const remainingShapes = vectorShapes.filter((s) => !assignedShapeIds.has(s.id));
+      if (remainingShapes.length > 0) {
+        html += '<div class="elements-section-title">Otras formas</div>';
+        html += remainingShapes.map((item) => `
+          <button type="button" class="element-grid-item" data-ref="btn-element-item-${item.id}" data-element-id="${item.id}" data-tooltip="${escapeHtml(item.name)}" aria-label="${escapeHtml(item.name)}">
+            <svg viewBox="0 0 48 48" aria-hidden="true"><path d="${item.pathD || ''}" fill="currentColor" /></svg>
+          </button>
+        `).join('');
+      }
+    } else if (activeElementsCategory === 'stickers') {
+      const stickers = PIXEL_SHAPES.filter((s) => s.type === 'sticker');
+      html += stickers.map((item) => `
+        <button type="button" class="element-grid-item" data-ref="btn-element-item-${item.id}" data-element-id="${item.id}" data-tooltip="${escapeHtml(item.name)}" aria-label="${escapeHtml(item.name)}">
+          <img src="/assets/img/stickers/${item.file}" alt="${escapeHtml(item.name)}" loading="lazy" />
+        </button>
+      `).join('');
+    } else if (activeElementsCategory === 'stickies') {
+      html += STICKY_NOTE_PRESETS.map((item) => `
+        <button type="button" class="element-grid-item element-grid-item--diagram" data-ref="btn-sticky-item-${item.id}" data-sticky-id="${item.id}" data-tooltip="${escapeHtml(item.name)}" aria-label="${escapeHtml(item.name)}">
+          <div style="background-color: ${item.color}; border: 1.5px solid ${item.stroke}; border-radius: 6px; width: 34px; height: 34px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center;">
+            <span style="font-size: 9px; font-weight: 700; color: #1e293b;">Aa</span>
+          </div>
+          <span class="element-grid-item__label">${escapeHtml(item.name)}</span>
+        </button>
+      `).join('');
+    } else if (activeElementsCategory === 'diagrams') {
+      const categories: Array<{ key: string; label: string }> = [
+        { key: 'flowchart', label: 'Diagramas de Flujo' },
+        { key: 'mindmap', label: 'Mapas Mentales & Conceptuales' },
+        { key: 'cloud_data', label: 'Arquitectura Cloud & Infra' },
+        { key: 'structure', label: 'Estructura & Organización' },
+        { key: 'connectors', label: 'Conectores & Flechas' },
+        { key: 'stickies', label: 'Notas Adhesivas' },
+      ];
+
+      categories.forEach((cat) => {
+        const catItems = DIAGRAM_COMPONENTS.filter((item) => item.category === cat.key);
+        if (catItems.length === 0) return;
+        html += `<div class="elements-section-title">${escapeHtml(cat.label)}</div>`;
+        html += catItems.map((item) => `
+          <button type="button" class="element-grid-item element-grid-item--diagram" data-ref="btn-diagram-item-${item.id}" data-diagram-id="${item.id}" data-tooltip="${escapeHtml(item.description || item.name)}" aria-label="${escapeHtml(item.name)}">
+            <svg viewBox="0 0 48 48" aria-hidden="true">${item.previewSvg}</svg>
+            <span class="element-grid-item__label">${escapeHtml(item.name)}</span>
+          </button>
+        `).join('');
+      });
+    } else if (activeElementsCategory === 'tables') {
+      html += '<div class="elements-section-title">Tablas predeterminadas</div>';
+      html += TABLE_PRESETS.map((item) => `
+        <button type="button" class="element-grid-item element-grid-item--diagram" data-ref="btn-table-item-${item.id}" data-table-rows="${item.rows}" data-table-cols="${item.cols}" data-tooltip="${escapeHtml(item.description)}" aria-label="${escapeHtml(item.name)}">
+          <svg viewBox="0 0 48 48" aria-hidden="true" style="width: 32px; height: 32px;">
+            <rect x="6" y="8" width="36" height="32" rx="4" fill="none" stroke="#0284c7" stroke-width="2" />
+            <rect x="6" y="8" width="36" height="10" rx="4" fill="#38bdf8" fill-opacity="0.3" stroke="#0284c7" stroke-width="1.5" />
+            <line x1="6" y1="28" x2="42" y2="28" stroke="#cbd5e1" stroke-width="1.5" />
+            <line x1="18" y1="8" x2="18" y2="40" stroke="#cbd5e1" stroke-width="1.5" />
+            <line x1="30" y1="8" x2="30" y2="40" stroke="#cbd5e1" stroke-width="1.5" />
+          </svg>
+          <span class="element-grid-item__label">${escapeHtml(item.name)}</span>
+        </button>
+      `).join('');
+
+      html += `
+        <div class="elements-section-title" style="margin-top: 16px;">Tabla personalizada</div>
+        <div style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 8px; padding: 4px 2px;">
+          <div style="display: flex; gap: 8px;">
+            <label class="field" style="flex: 1;">
+              <span class="field__label">Filas</span>
+              <input class="field__input" data-ref="input-custom-table-rows" type="number" min="1" max="15" value="3" />
+            </label>
+            <label class="field" style="flex: 1;">
+              <span class="field__label">Columnas</span>
+              <input class="field__input" data-ref="input-custom-table-cols" type="number" min="1" max="10" value="3" />
+            </label>
+          </div>
+          <button type="button" class="component-button component-button--h36 component-button--black component-button--w-full" data-ref="btn-insert-custom-table">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+            <span>Insertar tabla</span>
+          </button>
+        </div>
+      `;
+    } else if (activeElementsCategory === 'charts') {
+      html += '<div class="elements-section-title">Tipos de gráficas</div>';
+      html += CHART_CATALOG.map((item) => `
+        <button type="button" class="element-grid-item element-grid-item--diagram" data-ref="btn-chart-item-${item.type}" data-chart-type="${item.type}" data-tooltip="${escapeHtml(item.description)}" aria-label="${escapeHtml(item.name)}">
+          <div style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+            ${item.iconSvg}
+          </div>
+          <span class="element-grid-item__label">${escapeHtml(item.name)}</span>
+        </button>
+      `).join('');
+    } else if (activeElementsCategory === 'frames') {
+      html += `
+        <div class="mockup-category-tabs" style="grid-column: 1 / -1; margin-bottom: 6px;">
+          <button type="button" class="mockup-category-pill ${activeFramesFilter === 'all' ? 'is-active' : ''}" data-ref="frame-cat-pill-all" data-frame-cat="all">Todos</button>
+          ${FRAME_CATEGORIES.map((c) => `
+            <button type="button" class="mockup-category-pill ${activeFramesFilter === c.id ? 'is-active' : ''}" data-ref="frame-cat-pill-${c.id}" data-frame-cat="${c.id}">${escapeHtml(c.name)}</button>
+          `).join('')}
+        </div>
+        <div class="elements-section-title">Marcos disponibles</div>
+      `;
+      let filteredFrames = FRAME_TEMPLATES;
+      if (activeFramesFilter !== 'all') {
+        filteredFrames = filteredFrames.filter((f) => f.category === activeFramesFilter);
+      }
+      if (cleanQ) {
+        filteredFrames = filteredFrames.filter((f) => f.name.toLowerCase().includes(cleanQ) || f.description.toLowerCase().includes(cleanQ));
+      }
+      if (filteredFrames.length === 0) {
+        html += '<div class="mockup-empty-state">No se encontraron marcos.</div>';
+      } else {
+        html += filteredFrames.map((tpl) => `
+          <button type="button" class="element-grid-item element-grid-item--diagram" data-ref="btn-mockup-item-${tpl.id}" data-mockup-id="${tpl.id}" data-tooltip="${escapeHtml(tpl.description || tpl.name)}" aria-label="${escapeHtml(tpl.name)}">
+            <div style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; overflow: hidden; pointer-events: none;">
+              ${tpl.thumbnailSvg}
+            </div>
+            <span class="element-grid-item__label">${escapeHtml(tpl.name)}</span>
+          </button>
+        `).join('');
+      }
+    } else if (activeElementsCategory === 'grids') {
+      html += '<div class="elements-section-title">Distribuciones y collages</div>';
+      let filteredGrids = GRID_TEMPLATES;
+      if (cleanQ) {
+        filteredGrids = filteredGrids.filter((g) => g.name.toLowerCase().includes(cleanQ) || g.description.toLowerCase().includes(cleanQ));
+      }
+      if (filteredGrids.length === 0) {
+        html += '<div class="mockup-empty-state">No se encontraron cuadrículas.</div>';
+      } else {
+        html += filteredGrids.map((tpl) => `
+          <button type="button" class="element-grid-item element-grid-item--diagram" data-ref="btn-mockup-item-${tpl.id}" data-mockup-id="${tpl.id}" data-tooltip="${escapeHtml(tpl.description || tpl.name)}" aria-label="${escapeHtml(tpl.name)}">
+            <div style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; overflow: hidden; pointer-events: none;">
+              ${tpl.thumbnailSvg}
+            </div>
+            <span class="element-grid-item__label">${escapeHtml(tpl.name)}</span>
+          </button>
+        `).join('');
+      }
+    } else if (activeElementsCategory === 'mockups') {
+      html += `
+        <div style="grid-column: 1 / -1; margin-bottom: 4px;">
+          <button type="button" class="component-button component-button--h36 component-button--secondary component-button--w-full" data-ref="btn-elements-open-mockups-panel">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#devices"></use></svg>
+            <span>Explorar catálogo de mockups</span>
+          </button>
+        </div>
+        <div class="mockup-category-tabs" style="grid-column: 1 / -1; margin-bottom: 6px;">
+          <button type="button" class="mockup-category-pill ${activeMockupsFilter === 'all' ? 'is-active' : ''}" data-ref="mockup-cat-pill-all" data-mockup-general-cat="all">Todos</button>
+          ${MOCKUP_GENERAL_CATEGORIES.map((c) => `
+            <button type="button" class="mockup-category-pill ${activeMockupsFilter === c.id ? 'is-active' : ''}" data-ref="mockup-cat-pill-${c.id}" data-mockup-general-cat="${c.id}">${escapeHtml(c.name)}</button>
+          `).join('')}
+        </div>
+        <div class="elements-section-title">Maquetas disponibles</div>
+      `;
+      let filteredMockups = MOCKUP_TEMPLATES;
+      if (activeMockupsFilter !== 'all') {
+        filteredMockups = filteredMockups.filter((m) => m.category === activeMockupsFilter);
+      }
+      if (cleanQ) {
+        filteredMockups = filteredMockups.filter((m) => m.name.toLowerCase().includes(cleanQ) || m.description.toLowerCase().includes(cleanQ));
+      }
+      if (filteredMockups.length === 0) {
+        html += '<div class="mockup-empty-state">No se encontraron mockups.</div>';
+      } else {
+        html += filteredMockups.map((tpl) => `
+          <button type="button" class="element-grid-item element-grid-item--diagram" data-ref="btn-mockup-item-${tpl.id}" data-mockup-id="${tpl.id}" data-tooltip="${escapeHtml(tpl.description || tpl.name)}" aria-label="${escapeHtml(tpl.name)}">
+            <div style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; overflow: hidden; pointer-events: none;">
+              ${tpl.thumbnailSvg}
+            </div>
+            <span class="element-grid-item__label">${escapeHtml(tpl.name)}</span>
+          </button>
+        `).join('');
+      }
+    } else if (activeElementsCategory === '3d') {
+      html += '<div class="elements-section-title">Modelos e Ilustraciones 3D</div>';
+      html += BOARD_3D_SHAPES.map((shape) => `
+        <button type="button" class="element-grid-item element-grid-item--diagram" data-ref="btn-3d-item-${shape.id}" data-shape3d-id="${shape.id}" data-tooltip="${escapeHtml(shape.name)}" aria-label="${escapeHtml(shape.name)}">
+          <div style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: rgba(99, 102, 241, 0.08); border-radius: 8px; color: #6366f1; pointer-events: none;">
+            <svg class="component-icon" aria-hidden="true" style="width: 22px; height: 22px;"><use href="/icons.svg#${shape.icon}"></use></svg>
+          </div>
+          <span class="element-grid-item__label">${escapeHtml(shape.name)}</span>
+        </button>
+      `).join('');
+    }
+
+    html += '</div>';
+    contentContainer.innerHTML = html;
+
+    const btnBack = contentContainer.querySelector<HTMLButtonElement>('[data-ref="btn-elements-back"]');
+    btnBack?.addEventListener('click', () => {
+      activeElementsCategory = 'root';
+      renderContent('');
+    });
+
+    bindItemClicks(contentContainer);
+    renderIcons(contentContainer);
+  };
+
+  const bindItemClicks = (container: HTMLElement) => {
+    container.querySelectorAll<HTMLButtonElement>('[data-frame-cat]').forEach((pill) => {
+      pill.addEventListener('click', () => {
+        activeFramesFilter = pill.getAttribute('data-frame-cat') as FrameCategory | 'all';
+        renderContent(searchInput?.value || '');
+      });
+    });
+
+    container.querySelectorAll<HTMLButtonElement>('[data-mockup-general-cat]').forEach((pill) => {
+      pill.addEventListener('click', () => {
+        activeMockupsFilter = pill.getAttribute('data-mockup-general-cat') as MockupGeneralCategory | 'all';
+        renderContent(searchInput?.value || '');
+      });
+    });
+
+    container.querySelectorAll<HTMLButtonElement>('[data-element-id]').forEach((itemBtn) => {
+      itemBtn.addEventListener('click', () => {
+        const elId = itemBtn.getAttribute('data-element-id');
+        const found = PIXEL_SHAPES.find((s) => s.id === elId);
+        if (found) {
+          handleApplyCanvasElement(found, canvasType);
+        }
+      });
+    });
+
+    container.querySelectorAll<HTMLButtonElement>('[data-diagram-id]').forEach((itemBtn) => {
+      itemBtn.addEventListener('click', () => {
+        const diagId = itemBtn.getAttribute('data-diagram-id');
+        const found = DIAGRAM_COMPONENTS.find((d) => d.id === diagId);
+        if (found) {
+          handleApplyDiagramComponent(found, canvasType);
+        }
+      });
+    });
+
+    container.querySelectorAll<HTMLButtonElement>('[data-sticky-id]').forEach((itemBtn) => {
+      itemBtn.addEventListener('click', () => {
+        const stkId = itemBtn.getAttribute('data-sticky-id');
+        const found = STICKY_NOTE_PRESETS.find((s) => s.id === stkId);
+        if (found) {
+          handleApplyStickyPreset(found, canvasType);
+        }
+      });
+    });
+
+    container.querySelectorAll<HTMLButtonElement>('[data-recent-id]').forEach((itemBtn) => {
+      itemBtn.addEventListener('click', () => {
+        const recId = itemBtn.getAttribute('data-recent-id');
+        const recents = getRecentElements();
+        const found = recents.find((r) => r.id === recId);
+        if (found) {
+          handleApplyRecentElement(found, canvasType);
+        }
+      });
+    });
+
+    container.querySelectorAll<HTMLButtonElement>('[data-chart-type]').forEach((itemBtn) => {
+      itemBtn.addEventListener('click', () => {
+        const chartType = itemBtn.getAttribute('data-chart-type') as ChartType;
+        if (chartType) {
+          handleApplyChart(chartType, canvasType);
+        }
+      });
+    });
+
+    container.querySelectorAll<HTMLButtonElement>('[data-shape3d-id]').forEach((itemBtn) => {
+      itemBtn.addEventListener('click', () => {
+        const shapeId = itemBtn.getAttribute('data-shape3d-id') as Shape3DType;
+        if (shapeId) {
+          handleApply3DShape(shapeId, canvasType);
+        }
+      });
+    });
+
+    container.querySelectorAll<HTMLButtonElement>('[data-mockup-id]').forEach((itemBtn) => {
+      itemBtn.addEventListener('click', () => {
+        const mockupId = itemBtn.getAttribute('data-mockup-id');
+        const tpl = ALL_MOCKUP_ITEMS.find((m) => m.id === mockupId);
+        if (tpl) {
+          handleApplyMockup(tpl, canvasType);
+        }
+      });
+    });
+
+    container.querySelectorAll<HTMLButtonElement>('[data-table-rows]').forEach((itemBtn) => {
+      itemBtn.addEventListener('click', () => {
+        const rows = parseInt(itemBtn.getAttribute('data-table-rows') || '3', 10);
+        const cols = parseInt(itemBtn.getAttribute('data-table-cols') || '3', 10);
+        handleApplyTable(rows, cols, canvasType);
+      });
+    });
+
+    const btnCustomTable = container.querySelector<HTMLButtonElement>('[data-ref="btn-insert-custom-table"]');
+    btnCustomTable?.addEventListener('click', () => {
+      const inputRows = container.querySelector<HTMLInputElement>('[data-ref="input-custom-table-rows"]');
+      const inputCols = container.querySelector<HTMLInputElement>('[data-ref="input-custom-table-cols"]');
+      const rows = Math.min(15, Math.max(1, parseInt(inputRows?.value || '3', 10) || 3));
+      const cols = Math.min(10, Math.max(1, parseInt(inputCols?.value || '3', 10) || 3));
+      handleApplyTable(rows, cols, canvasType);
+    });
+
+    const btnOpenMockups = container.querySelector<HTMLButtonElement>('[data-ref="btn-elements-open-mockups-panel"]');
+    btnOpenMockups?.addEventListener('click', () => {
+      const controller = getActiveCanvasController();
+      controller?.openMockupsPanel?.();
+    });
+  };
+
+  searchInput?.addEventListener('input', () => {
+    renderContent(searchInput.value);
+  });
+
+  renderContent();
+
+  const drawerFooter = drawer.querySelector<HTMLElement>('[data-ref="drawer-footer"]');
+  if (drawerFooter) {
+    drawerFooter.style.display = 'none';
+  }
+
+  if (sidebar) {
+    updateCanvasRailActiveState(sidebar);
+  }
+
+  renderIcons(drawerBody);
+}
+

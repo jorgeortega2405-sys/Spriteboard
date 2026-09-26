@@ -45,6 +45,7 @@ import { BoardPixelGridManager } from './board-pixel-grid.manager.js';
 import { BoardPixelPanelComponent } from './board-pixel-panel.component.js';
 import { BoardPixelTimelineComponent } from './board-pixel-timeline.component.js';
 import { BoardPositionPanelComponent } from './board-position-panel.component.js';
+import { BoardTableManager } from './board-table.manager.js';
 
 export class BoardController {
   private abortController: AbortController;
@@ -127,6 +128,7 @@ export class BoardController {
   private drawToolsDropdownController: { close: () => void; destroy: () => void; open: () => void; toggle: () => void; update: () => void } | null = null;
   private elements: BoardElement[] = [];
   private spatialIndex: BoardSpatialIndex = new BoardSpatialIndex();
+  private tableManager!: BoardTableManager;
   private spatialIndexDirty = true;
   private exportDropdownController: { close: () => void; destroy: () => void; open: () => void; toggle: () => void; update: () => void } | null = null;
   private pixelToolsDropdownController: { close: () => void; destroy: () => void; open: () => void; toggle: () => void; update: () => void } | null = null;
@@ -417,6 +419,7 @@ export class BoardController {
       onSelectPage: (id) => this.switchToPage(id),
     });
     this.pagesTray.attach(this.container, this.pages, this.activePageId);
+    this.tableManager = new BoardTableManager(this as any);
     this.bindEvents();
     try {
       const savedSnapping = localStorage.getItem('spriteboard_board_snapping');
@@ -7621,372 +7624,51 @@ export class BoardController {
   }
 
   public insertTable(rows = 3, cols = 3, width = 450, height = 210): void {
-    this.pushHistoryState();
-    const dpr = window.devicePixelRatio || 1;
-    const screenW = this.canvasElement ? this.canvasElement.width / dpr : 800;
-    const screenH = this.canvasElement ? this.canvasElement.height / dpr : 600;
-    const centerWorld = screenToWorld(screenW / 2, screenH / 2, this.canvasElement, this.camera);
-
-    const tableEl = createTableElement(rows, cols, {
-      height,
-      width,
-      x: Math.round(centerWorld.x - width / 2),
-      y: Math.round(centerWorld.y - height / 2),
-    });
-
-    this.elements.push(tableEl);
-    this.collaborationManager.broadcastAddElement(tableEl);
-    this.selectedElementId = tableEl.id;
-    this.selectedElementIds = [tableEl.id];
-    this.selectedTableCell = { col: 0, row: 0, tableId: tableEl.id };
-    this.setTool('select');
-    this.updateSelectionToolbar();
-    this.requestRedraw();
-    this.scheduleAutoSave();
-    showToast('Tabla 3×3 añadida', 'success');
+    this.tableManager.insertTable(rows, cols, width, height);
   }
 
   private getTableAtPoint(worldPos: BoardPoint): { col: number; row: number; table: BoardTableElement } | null {
-    for (let i = this.elements.length - 1; i >= 0; i--) {
-      const el = this.elements[i];
-      if (el.type === 'table') {
-        if (worldPos.x >= el.x && worldPos.x <= el.x + el.width && worldPos.y >= el.y && worldPos.y <= el.y + el.height) {
-          const rows = Math.max(1, el.rows || el.data?.length || 3);
-          const cols = Math.max(1, el.cols || (el.data && el.data[0]?.length) || 3);
-          const colWidths = el.colWidths && el.colWidths.length === cols ? el.colWidths : Array(cols).fill(el.width / cols);
-          const rowHeights = el.rowHeights && el.rowHeights.length === rows ? el.rowHeights : Array(rows).fill(el.height / rows);
-
-          const relX = worldPos.x - el.x;
-          let accumX = 0;
-          let clickedCol = cols - 1;
-          for (let c = 0; c < cols; c++) {
-            if (relX >= accumX && relX < accumX + colWidths[c]) {
-              clickedCol = c;
-              break;
-            }
-            accumX += colWidths[c];
-          }
-
-          const relY = worldPos.y - el.y;
-          let accumY = 0;
-          let clickedRow = rows - 1;
-          for (let r = 0; r < rows; r++) {
-            if (relY >= accumY && relY < accumY + rowHeights[r]) {
-              clickedRow = r;
-              break;
-            }
-            accumY += rowHeights[r];
-          }
-
-          return { col: clickedCol, row: clickedRow, table: el };
-        }
-      }
-    }
-    return null;
+    return this.tableManager.getTableAtPoint(worldPos);
   }
 
-  private openTableCellInlineEditor(table: BoardTableElement, row: number, col: number): void {
-    this.commitInlineEditor();
-    const container = this.container.querySelector<HTMLElement>('[data-ref="board-text-editor-container"]');
-    if (!container || !this.canvasElement) return;
-
-    const rows = Math.max(1, table.rows || table.data?.length || 3);
-    const cols = Math.max(1, table.cols || (table.data && table.data[0]?.length) || 3);
-    const colWidths = table.colWidths && table.colWidths.length === cols ? table.colWidths : Array(cols).fill(table.width / cols);
-    const rowHeights = table.rowHeights && table.rowHeights.length === rows ? table.rowHeights : Array(rows).fill(table.height / rows);
-
-    let cellX = table.x;
-    for (let c = 0; c < col; c++) {
-      cellX += colWidths[c];
-    }
-    let cellY = table.y;
-    for (let r = 0; r < row; r++) {
-      cellY += rowHeights[r];
-    }
-    const cellW = colWidths[col];
-    const cellH = rowHeights[row];
-
-    const screenPos = worldToScreen(cellX, cellY, this.canvasElement, this.camera);
-    const screenW = cellW * this.camera.zoom;
-    const screenH = cellH * this.camera.zoom;
-
-    const cell = table.data && table.data[row] && table.data[row][col];
-    const cellText = typeof cell === 'string' ? cell : (cell?.text || '');
-
-    const textarea = document.createElement('textarea');
-    textarea.className = 'board-inline-textarea board-inline-textarea--table-cell';
-    textarea.value = cellText;
-    textarea.style.left = `${screenPos.x}px`;
-    textarea.style.top = `${screenPos.y}px`;
-    textarea.style.width = `${Math.max(60, screenW)}px`;
-    textarea.style.height = `${Math.max(30, screenH)}px`;
-    const fsize = table.fontSize || 13;
-    textarea.style.fontSize = `${Math.max(11, fsize * this.camera.zoom)}px`;
-    textarea.style.backgroundColor = (cell && cell.backgroundColor && cell.backgroundColor !== 'transparent') ? cell.backgroundColor : (row === 0 ? (table.headerBackgroundColor || '#f8fafc') : '#ffffff');
-    textarea.style.color = (cell && cell.textColor) ? cell.textColor : (row === 0 ? '#0f172a' : '#334155');
-    textarea.style.padding = '6px 8px';
-
-    container.appendChild(textarea);
-    textarea.focus();
-    textarea.select();
-    this.activeInlineEditor = textarea;
-    this.activeTableInlineEditor = { col, row, tableId: table.id, textarea };
-
-    textarea.addEventListener('blur', () => {
-      this.commitInlineEditor();
-    });
-
-    textarea.addEventListener('keydown', (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        this.commitInlineEditor();
-      } else if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        this.commitInlineEditor();
-      }
-    });
+  private openTableCellInlineEditor(table: BoardTableElement, rowIndex: number, colIndex: number): void {
+    this.tableManager.openTableCellInlineEditor(table, rowIndex, colIndex);
   }
 
   public deleteTable(tableId: string): void {
-    const idx = this.elements.findIndex((el) => el.id === tableId);
-    if (idx === -1) return;
-    this.pushHistoryState();
-    const [deleted] = this.elements.splice(idx, 1);
-    this.collaborationManager.broadcastDeleteElement(deleted.id);
-    if (this.selectedElementId === tableId) {
-      this.selectedElementId = null;
-      this.selectedElementIds = [];
-      this.selectedTableCell = null;
-    }
-    this.updateSelectionToolbar();
-    this.requestRedraw();
-    this.scheduleAutoSave();
-    showToast('Tabla eliminada', 'info');
+    this.tableManager.deleteTable(tableId);
   }
 
   public deleteTableColumn(tableId: string, colIndex: number): void {
-    const table = this.elements.find((el) => el.id === tableId) as BoardTableElement | undefined;
-    if (!table || !table.data || table.cols <= 1) {
-      this.deleteTable(tableId);
-      return;
-    }
-    this.pushHistoryState();
-    const cols = table.cols;
-    const colWidths = table.colWidths && table.colWidths.length === cols ? [...table.colWidths] : Array(cols).fill(table.width / cols);
-    const removedWidth = colWidths.splice(colIndex, 1)[0] || (table.width / cols);
-
-    for (let r = 0; r < table.data.length; r++) {
-      if (table.data[r] && table.data[r].length > colIndex) {
-        table.data[r].splice(colIndex, 1);
-      }
-    }
-    table.cols -= 1;
-    table.colWidths = colWidths;
-    table.width = Math.max(100, table.width - removedWidth);
-
-    if (this.selectedTableCell && this.selectedTableCell.tableId === tableId) {
-      this.selectedTableCell.col = Math.min(table.cols - 1, Math.max(0, colIndex === table.cols ? colIndex - 1 : colIndex));
-    }
-
-    this.collaborationManager.broadcastUpdateElement(table);
-    this.updateSelectionToolbar();
-    this.requestRedraw();
-    this.scheduleAutoSave();
-    showToast('Columna eliminada', 'info');
+    this.tableManager.deleteTableColumn(tableId, colIndex);
   }
 
   public deleteTableRow(tableId: string, rowIndex: number): void {
-    const table = this.elements.find((el) => el.id === tableId) as BoardTableElement | undefined;
-    if (!table || !table.data || table.rows <= 1) {
-      this.deleteTable(tableId);
-      return;
-    }
-    this.pushHistoryState();
-    const rows = table.rows;
-    const rowHeights = table.rowHeights && table.rowHeights.length === rows ? [...table.rowHeights] : Array(rows).fill(table.height / rows);
-    const removedHeight = rowHeights.splice(rowIndex, 1)[0] || (table.height / rows);
-
-    table.data.splice(rowIndex, 1);
-    table.rows -= 1;
-    table.rowHeights = rowHeights;
-    table.height = Math.max(60, table.height - removedHeight);
-
-    if (this.selectedTableCell && this.selectedTableCell.tableId === tableId) {
-      this.selectedTableCell.row = Math.min(table.rows - 1, Math.max(0, rowIndex === table.rows ? rowIndex - 1 : rowIndex));
-    }
-
-    this.collaborationManager.broadcastUpdateElement(table);
-    this.updateSelectionToolbar();
-    this.requestRedraw();
-    this.scheduleAutoSave();
-    showToast('Fila eliminada', 'info');
+    this.tableManager.deleteTableRow(tableId, rowIndex);
   }
 
   public addTableColumn(tableId: string, afterColIndex: number): void {
-    const table = this.elements.find((el) => el.id === tableId) as BoardTableElement | undefined;
-    if (!table || !table.data) return;
-    this.pushHistoryState();
-
-    const insertIdx = Math.min(table.cols, afterColIndex + 1);
-    const cols = table.cols;
-    const avgColWidth = table.colWidths && table.colWidths.length === cols ? Math.round(table.width / cols) : 150;
-
-    for (let r = 0; r < table.data.length; r++) {
-      const newCell: BoardTableCell = {
-        backgroundColor: r === 0 ? (table.headerBackgroundColor || '#f8fafc') : '#ffffff',
-        text: r === 0 ? `Encabezado ${insertIdx + 1}` : `Celda ${r},${insertIdx + 1}`,
-        textColor: '#1e293b',
-      };
-      table.data[r].splice(insertIdx, 0, newCell);
-    }
-
-    const colWidths = table.colWidths && table.colWidths.length === cols ? [...table.colWidths] : Array(cols).fill(table.width / cols);
-    colWidths.splice(insertIdx, 0, avgColWidth);
-    table.cols += 1;
-    table.colWidths = colWidths;
-    table.width += avgColWidth;
-
-    this.selectedTableCell = { col: insertIdx, row: this.selectedTableCell?.row || 0, tableId };
-    this.collaborationManager.broadcastUpdateElement(table);
-    this.updateSelectionToolbar();
-    this.requestRedraw();
-    this.scheduleAutoSave();
-    showToast('Columna añadida', 'success');
+    this.tableManager.addTableColumn(tableId, afterColIndex);
   }
 
   public addTableRow(tableId: string, afterRowIndex: number): void {
-    const table = this.elements.find((el) => el.id === tableId) as BoardTableElement | undefined;
-    if (!table || !table.data) return;
-    this.pushHistoryState();
-
-    const insertIdx = Math.min(table.rows, afterRowIndex + 1);
-    const rows = table.rows;
-    const avgRowHeight = table.rowHeights && table.rowHeights.length === rows ? Math.round(table.height / rows) : 70;
-
-    const newRow: BoardTableCell[] = [];
-    for (let c = 0; c < table.cols; c++) {
-      newRow.push({
-        backgroundColor: '#ffffff',
-        text: `Celda ${insertIdx},${c + 1}`,
-        textColor: '#1e293b',
-      });
-    }
-    table.data.splice(insertIdx, 0, newRow);
-
-    const rowHeights = table.rowHeights && table.rowHeights.length === rows ? [...table.rowHeights] : Array(rows).fill(table.height / rows);
-    rowHeights.splice(insertIdx, 0, avgRowHeight);
-    table.rows += 1;
-    table.rowHeights = rowHeights;
-    table.height += avgRowHeight;
-
-    this.selectedTableCell = { col: this.selectedTableCell?.col || 0, row: insertIdx, tableId };
-    this.collaborationManager.broadcastUpdateElement(table);
-    this.updateSelectionToolbar();
-    this.requestRedraw();
-    this.scheduleAutoSave();
-    showToast('Fila añadida', 'success');
+    this.tableManager.addTableRow(tableId, afterRowIndex);
   }
 
-  public moveTableRow(tableId: string, fromRow: number, toRow: number): void {
-    const table = this.elements.find((el) => el.id === tableId) as BoardTableElement | undefined;
-    if (!table || !table.data || fromRow < 0 || fromRow >= table.rows || toRow < 0 || toRow >= table.rows || fromRow === toRow) return;
-    this.pushHistoryState();
-
-    const [movedRow] = table.data.splice(fromRow, 1);
-    table.data.splice(toRow, 0, movedRow);
-
-    if (table.rowHeights && table.rowHeights.length === table.rows) {
-      const [movedH] = table.rowHeights.splice(fromRow, 1);
-      table.rowHeights.splice(toRow, 0, movedH);
-    }
-
-    if (this.selectedTableCell && this.selectedTableCell.tableId === tableId) {
-      this.selectedTableCell.row = toRow;
-    }
-
-    this.collaborationManager.broadcastUpdateElement(table);
-    this.requestRedraw();
-    this.scheduleAutoSave();
+  public moveTableRow(tableId: string, fromIndex: number, toIndex: number): void {
+    this.tableManager.moveTableRow(tableId, fromIndex, toIndex);
   }
 
-  public moveTableColumn(tableId: string, fromCol: number, toCol: number): void {
-    const table = this.elements.find((el) => el.id === tableId) as BoardTableElement | undefined;
-    if (!table || !table.data || fromCol < 0 || fromCol >= table.cols || toCol < 0 || toCol >= table.cols || fromCol === toCol) return;
-    this.pushHistoryState();
-
-    for (let r = 0; r < table.data.length; r++) {
-      if (table.data[r] && table.data[r].length === table.cols) {
-        const [movedCell] = table.data[r].splice(fromCol, 1);
-        table.data[r].splice(toCol, 0, movedCell);
-      }
-    }
-
-    if (table.colWidths && table.colWidths.length === table.cols) {
-      const [movedW] = table.colWidths.splice(fromCol, 1);
-      table.colWidths.splice(toCol, 0, movedW);
-    }
-
-    if (this.selectedTableCell && this.selectedTableCell.tableId === tableId) {
-      this.selectedTableCell.col = toCol;
-    }
-
-    this.collaborationManager.broadcastUpdateElement(table);
-    this.requestRedraw();
-    this.scheduleAutoSave();
+  public moveTableColumn(tableId: string, fromIndex: number, toIndex: number): void {
+    this.tableManager.moveTableColumn(tableId, fromIndex, toIndex);
   }
 
   public fitTableRowToContent(tableId: string, rowIndex: number): void {
-    const table = this.elements.find((el) => el.id === tableId) as BoardTableElement | undefined;
-    if (!table || !table.data || !table.data[rowIndex]) return;
-    this.pushHistoryState();
-
-    const row = table.data[rowIndex];
-    let maxLines = 1;
-    for (const cell of row) {
-      const txt = typeof cell === 'string' ? cell : (cell?.text || '');
-      const lines = txt.split('\n').length;
-      if (lines > maxLines) maxLines = lines;
-    }
-    const fontSize = table.fontSize || 13;
-    const targetHeight = Math.max(40, maxLines * (fontSize * 1.5) + 24);
-
-    const rows = table.rows;
-    const rowHeights = table.rowHeights && table.rowHeights.length === rows ? [...table.rowHeights] : Array(rows).fill(table.height / rows);
-    const diff = targetHeight - rowHeights[rowIndex];
-    rowHeights[rowIndex] = targetHeight;
-    table.rowHeights = rowHeights;
-    table.height = Math.max(60, table.height + diff);
-
-    this.collaborationManager.broadcastUpdateElement(table);
-    this.requestRedraw();
-    this.scheduleAutoSave();
-    showToast('Tamaño de fila ajustado', 'success');
+    this.tableManager.fitTableRowToContent(tableId, rowIndex);
   }
 
   public fitTableColumnToContent(tableId: string, colIndex: number): void {
-    const table = this.elements.find((el) => el.id === tableId) as BoardTableElement | undefined;
-    if (!table || !table.data) return;
-    this.pushHistoryState();
-
-    let maxLen = 4;
-    for (let r = 0; r < table.data.length; r++) {
-      const cell = table.data[r] && table.data[r][colIndex];
-      const txt = typeof cell === 'string' ? cell : (cell?.text || '');
-      if (txt.length > maxLen) maxLen = txt.length;
-    }
-    const fontSize = table.fontSize || 13;
-    const targetWidth = Math.max(80, maxLen * (fontSize * 0.65) + 32);
-
-    const cols = table.cols;
-    const colWidths = table.colWidths && table.colWidths.length === cols ? [...table.colWidths] : Array(cols).fill(table.width / cols);
-    const diff = targetWidth - colWidths[colIndex];
-    colWidths[colIndex] = targetWidth;
-    table.colWidths = colWidths;
-    table.width = Math.max(100, table.width + diff);
-
-    this.collaborationManager.broadcastUpdateElement(table);
-    this.requestRedraw();
-    this.scheduleAutoSave();
-    showToast('Tamaño de columna ajustado', 'success');
+    this.tableManager.fitTableColumnToContent(tableId, colIndex);
   }
 
   public toggleVerticalToolbar(forceState?: boolean): boolean {
