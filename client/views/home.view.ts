@@ -376,6 +376,13 @@ class HomeController {
 
     this.categoriesCarouselWrapper = this.container.querySelector<HTMLElement>('[data-ref="home-categories-carousel-wrapper"]');
     if (this.categoriesCarouselWrapper) {
+      this.categoriesCarouselController = initCarouselScroll(this.categoriesCarouselWrapper, {
+        step: 180,
+      });
+      const carouselEl = this.categoriesCarouselWrapper.querySelector<HTMLElement>('.component-tags-carousel');
+      if (carouselEl) {
+        this.cleanupCategoriesDrag = bindDragToScroll(carouselEl);
+      }
       renderIcons(this.categoriesCarouselWrapper);
     }
 
@@ -2753,6 +2760,13 @@ class HomeController {
         }
       },
     });
+  }
+
+  public destroy(): void {
+    this.abortController.abort();
+    this.cleanupCategoriesDrag?.();
+    this.scrollObserver?.disconnect();
+    this.templatesScrollObserver?.disconnect();
   }
 }
 

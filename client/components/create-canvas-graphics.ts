@@ -624,32 +624,44 @@ export const CANVAS_ICONS: Record<string, CanvasIconDef> = {
   upload: {
     fill: '#0EA5E9',
     viewBox: '0 0 32 32',
-    whiteGlyph: '<path fill="#ffffff" d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>',
-    coloredGlyph: '<path fill="#0EA5E9" d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>',
+    whiteGlyph: '<g transform="translate(4, 4)"><path fill="#ffffff" fill-rule="evenodd" d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></g>',
+    coloredGlyph: '<g transform="translate(4, 4)"><path fill="#0EA5E9" fill-rule="evenodd" d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></g>',
+  },
+  more: {
+    fill: '#64748B',
+    viewBox: '0 0 32 32',
+    whiteGlyph: '<circle cx="7" cy="16" r="2.5" fill="#ffffff"/><circle cx="16" cy="16" r="2.5" fill="#ffffff"/><circle cx="25" cy="16" r="2.5" fill="#ffffff"/>',
+    coloredGlyph: '<circle cx="7" cy="16" r="2.5" fill="#64748B"/><circle cx="16" cy="16" r="2.5" fill="#64748B"/><circle cx="25" cy="16" r="2.5" fill="#64748B"/>',
   },
 };
 
 export function resolveCanvasIconDef(typeOrCategory?: string, unit?: string): CanvasIconDef {
-  const normalized = (typeOrCategory || unit || 'board').toLowerCase();
+  const normalized = (typeOrCategory || unit || 'board').toLowerCase().trim();
   if (normalized === 'templates' || normalized === 'template') return CANVAS_ICONS.template;
-  if (normalized === 'custom' || normalized === 'custom-size') return CANVAS_ICONS['custom-size'];
+  if (normalized === 'custom' || normalized === 'custom-size' || normalized === 'custom_size') return CANVAS_ICONS['custom-size'];
   if (normalized === 'photos' || normalized === 'photo') return CANVAS_ICONS.photos;
-  if (normalized === 'upload') return CANVAS_ICONS.upload;
-  if (normalized === 'presentation') return CANVAS_ICONS.presentation;
-  if (normalized === 'doc') return CANVAS_ICONS.doc;
-  if (normalized === 'sheet') return CANVAS_ICONS.sheet;
-  if (normalized === 'social') return CANVAS_ICONS.social;
+  if (normalized === 'upload' || normalized === 'uploads') return CANVAS_ICONS.upload;
+  if (normalized === 'presentation' || normalized === 'presentations') return CANVAS_ICONS.presentation;
+  if (normalized === 'doc' || normalized === 'docs' || normalized === 'document') return CANVAS_ICONS.doc;
+  if (normalized === 'sheet' || normalized === 'sheets' || normalized === 'spreadsheet') return CANVAS_ICONS.sheet;
+  if (normalized === 'social' || normalized === 'socials') return CANVAS_ICONS.social;
+  if (normalized === 'more') return CANVAS_ICONS.more;
   return CANVAS_ICONS.board;
+}
+
+export function getCategoryBadgeIconSvg(category: string, className = 'component-badge__icon'): string {
+  const def = resolveCanvasIconDef(category);
+  return `<svg class="${className}" viewBox="${def.viewBox}" aria-hidden="true">${def.coloredGlyph}</svg>`;
 }
 
 export function getCategoryMenuSvg(category: string, className = 'menu-item__icon menu-item__icon--colored'): string {
   const def = resolveCanvasIconDef(category);
-  return `<svg class="${className}" viewBox="0 0 32 32" aria-hidden="true">${def.coloredGlyph}</svg>`;
+  return `<svg class="${className}" viewBox="${def.viewBox}" aria-hidden="true">${def.coloredGlyph}</svg>`;
 }
 
 export function getCanvasTypeIconSvg(canvasType?: string, unit?: string, className = 'canvas-card__meta-icon canvas-card__meta-icon--colored'): string {
   const def = resolveCanvasIconDef(canvasType, unit);
-  return `<svg class="${className}" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="16" fill="${def.fill}"/><g transform="translate(16, 16) scale(0.58) translate(-16, -16)">${def.whiteGlyph}</g></svg>`;
+  return `<svg class="${className}" viewBox="${def.viewBox}" aria-hidden="true"><circle cx="16" cy="16" r="16" fill="${def.fill}"/><g transform="translate(16, 16) scale(0.58) translate(-16, -16)">${def.whiteGlyph}</g></svg>`;
 }
 
 
