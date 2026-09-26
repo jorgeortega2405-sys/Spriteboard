@@ -1,3 +1,5 @@
+import crypto from 'crypto';
+import { Request, Response } from 'express';
 import { pool } from '../config/database.config.js';
 import { config } from '../config/env.config.js';
 import { getCurrentUser, getLinkedAccounts } from '../middlewares/auth.middleware.js';
@@ -7,14 +9,13 @@ import { geoIpService } from '../services/geoip.service.js';
 import { getGoogleAuthUrl, getGoogleLinkAuthUrl, getGoogleVerifyAuthUrl, processGoogleAuthCallback, processGoogleLinkCallback, STATE_COOKIE_NAME } from '../services/google.service.js';
 import { logger } from '../services/logger.service.js';
 import { sendPasswordResetEmail, sendVerificationCodeEmail } from '../services/mail.service.js';
+import { getUserEffectivePermissions, hasPermission } from '../services/permission.service.js';
 import { getServerConfig } from '../services/server-config.service.js';
 import { consumePending2FALogin, getPending2FALogin, savePending2FALogin, verifyTotpCode } from '../services/two-factor.service.js';
 import { createUser, findUserByEmail, findUserById, findUserDuplicates, getUser2FASecret, updateUserGoogleId, updateUserLastLoginGeo, updateUserPassword, verifyAndConsumeBackupCode } from '../services/user.service.js';
 import { consumePasswordResetToken, generateSixDigitCode, getPendingRegistration, savePasswordChangeAuth, savePasswordResetToken, savePendingRegistration, verifyAndConsumeCode, verifyPasswordResetToken } from '../services/verification.service.js';
 import { sanitizeUser, sendBadRequest, sendConflict, sendCreated, sendInternalError, sendSuccess, sendUnauthorized } from '../utils/http.util.js';
 import { validateEmail, validatePassword, validateUsername, validateVerificationCode } from '../utils/validators.util.js';
-import crypto from 'crypto';
-import { Request, Response } from 'express';
 
 export async function validateStage1(req: Request, res: Response): Promise<void> {
   try {
@@ -747,7 +748,13 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
 
     const user = await findUserByEmail(trimmedEmail);
 
-    if (user && !user.is_protected) {
+    let canReset = false;
+    if (user) {
+      const permissions = await getUserEffectivePermissions(user.id);
+      canReset = hasPermission(permissions, 'account:edit_security') && !user.roles?.includes('SYSTEM_ACCOUNT');
+    }
+
+    if (user && canReset) {
       const resetToken = crypto.randomBytes(32).toString('hex');
       await savePasswordResetToken(user.email, user.id, resetToken, 900);
 
@@ -760,8 +767,8 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
         userId: user.id,
         email: user.email,
       });
-    } else if (user && user.is_protected) {
-      logger.security.warn('Solicitud de recuperación de contraseña bloqueada para cuenta protegida por el sistema', {
+    } else if (user && !canReset) {
+      logger.security.warn('Solicitud de recuperación de contraseña bloqueada para cuenta protegida por el sistema o sin permisos', {
         userId: user.id,
         email: user.email,
         ip: getClientIp(req),
@@ -836,8 +843,14 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
     }
 
     const targetUser = await findUserById(tokenResult.userId);
-    if (targetUser && targetUser.is_protected) {
-      logger.security.warn('Intento de restablecer contraseña bloqueado para cuenta protegida por el sistema', {
+    let targetCanReset = false;
+    if (targetUser) {
+      const targetPermissions = await getUserEffectivePermissions(targetUser.id);
+      targetCanReset = hasPermission(targetPermissions, 'account:edit_security') && !targetUser.roles?.includes('SYSTEM_ACCOUNT');
+    }
+
+    if (targetUser && !targetCanReset) {
+      logger.security.warn('Intento de restablecer contraseña bloqueado para cuenta protegida por el sistema o sin permisos', {
         userId: targetUser.id,
       });
       sendBadRequest(res, 'Esta cuenta está protegida por el sistema y su contraseña no puede ser restablecida.');

@@ -31,6 +31,7 @@ export type UserRole =
   | 'SUPPORT_L2'
   | 'SUPPORT_L3'
   | 'SUPPORT_MANAGER'
+  | 'SYSTEM_ACCOUNT'
   | 'SYSTEM_OPERATOR'
   | 'USER'
   | 'WORKFLOW_ADMIN';
@@ -47,6 +48,7 @@ export interface RoleDefinition {
 export const PLATFORM_ROLES: readonly RoleDefinition[] = [
   { category: 'platform', description: 'Acceso excepcional a toda la plataforma.', display_name: 'Super Admin', name: 'SUPER_ADMIN' },
   { category: 'platform', description: 'Administración general de la plataforma.', display_name: 'Platform Admin', name: 'PLATFORM_ADMIN' },
+  { category: 'platform', description: 'Cuenta institucional o de sistema inmutable.', display_name: 'Cuenta del Sistema', name: 'SYSTEM_ACCOUNT' },
   { category: 'platform', description: 'IAM, MFA, SSO, sesiones, políticas de seguridad.', display_name: 'Security Admin', name: 'SECURITY_ADMIN' },
   { category: 'platform', description: 'Usuarios, grupos, roles, permisos y provisioning.', display_name: 'IAM Admin', name: 'IAM_ADMIN' },
   { category: 'platform', description: 'Compliance, retención, controles regulatorios.', display_name: 'Compliance Admin', name: 'COMPLIANCE_ADMIN' },
@@ -87,7 +89,6 @@ export interface UserPayload {
   email: string;
   google_id?: string | null;
   id: number;
-  is_protected?: boolean;
   language?: string;
   permissions?: string[];
   role?: UserRole;

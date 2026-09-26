@@ -1,7 +1,7 @@
+import { Response } from 'express';
 import { logger } from '../services/logger.service.js';
 import { getTierBorderColor } from '../services/subscription.service.js';
 import { UserPayload } from '../types/auth.types.js';
-import { Response } from 'express';
 
 export function sanitizeUser(user: any): UserPayload {
   const tier = user.subscription_tier || 'free';
@@ -17,7 +17,6 @@ export function sanitizeUser(user: any): UserPayload {
     designer_handle_changed_at: user.designer_handle_changed_at ? new Date(user.designer_handle_changed_at).toISOString() : null,
     designer_onboarded: Boolean(user.designer_onboarded),
     google_id: user.google_id || null,
-    is_protected: Boolean(user.is_protected),
     role: user.role || 'USER',
     roles: Array.isArray(user.roles) ? user.roles : (user.role ? [user.role] : ['USER']),
     permissions: Array.isArray(user.permissions) ? user.permissions : [],

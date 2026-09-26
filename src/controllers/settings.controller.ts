@@ -1,12 +1,13 @@
+import { Request, Response } from 'express';
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import { addAccountToSession, removeAccountFromSession, updateActiveAccountInSession } from '../services/auth.service.js';
 import { logger } from '../services/logger.service.js';
+import { hasPermission } from '../services/permission.service.js';
 import { deleteAvatar, getPasswordStatus, getProfileDetails, getUserPreferences, logUserAudit, requestEmailChangeCode, unlinkGoogleAccount, updateAvatar, updateDesignerHandle, updateEmail, updatePublicProfileDetails, updateUsername, updateUserPasswordFromSettings, updateUserPreferences, verifyCurrentPassword, verifyEmailChange } from '../services/settings.service.js';
 import { clearPending2FASetup, generateBackupCodes, generateTotpSecret, getOtpAuthUrl, getPending2FASetup, savePending2FASetup, verifyTotpCode } from '../services/two-factor.service.js';
 import { deleteUserPermanently, disableUser2FA, enableUser2FA, findUserById, getUser2FASecret, verifyAndConsumeBackupCode } from '../services/user.service.js';
 import { consumePasswordChangeAuth } from '../services/verification.service.js';
 import { sanitizeUser, sendBadRequest, sendConflict, sendForbidden, sendInternalError, sendSuccess, sendUnauthorized } from '../utils/http.util.js';
-import { Request, Response } from 'express';
 
 export async function handleUpdateAvatar(req: Request, res: Response): Promise<void> {
   try {
@@ -16,8 +17,8 @@ export async function handleUpdateAvatar(req: Request, res: Response): Promise<v
       return;
     }
 
-    if (currentUser.is_protected) {
-      sendForbidden(res, 'Esta cuenta está protegida por el sistema y sus datos no pueden ser modificados.');
+    if (!hasPermission(currentUser.permissions, 'account:edit_profile')) {
+      sendForbidden(res, 'Esta cuenta no tiene permisos para modificar su información de perfil.');
       return;
     }
 
@@ -61,8 +62,8 @@ export async function handleDeleteAvatar(req: Request, res: Response): Promise<v
       return;
     }
 
-    if (currentUser.is_protected) {
-      sendForbidden(res, 'Esta cuenta está protegida por el sistema y sus datos no pueden ser modificados.');
+    if (!hasPermission(currentUser.permissions, 'account:edit_profile')) {
+      sendForbidden(res, 'Esta cuenta no tiene permisos para modificar su información de perfil.');
       return;
     }
 
@@ -100,8 +101,8 @@ export async function handleUpdateUsername(req: Request, res: Response): Promise
       return;
     }
 
-    if (currentUser.is_protected) {
-      sendForbidden(res, 'Esta cuenta está protegida por el sistema y sus datos no pueden ser modificados.');
+    if (!hasPermission(currentUser.permissions, 'account:edit_identifiers')) {
+      sendForbidden(res, 'Esta cuenta no tiene permisos para modificar sus identificadores.');
       return;
     }
 
@@ -150,8 +151,8 @@ export async function handleRequestEmailChangeCode(req: Request, res: Response):
       return;
     }
 
-    if (currentUser.is_protected) {
-      sendForbidden(res, 'Esta cuenta está protegida por el sistema y sus datos no pueden ser modificados.');
+    if (!hasPermission(currentUser.permissions, 'account:edit_security')) {
+      sendForbidden(res, 'Esta cuenta no tiene permisos para modificar su información de seguridad.');
       return;
     }
 
@@ -185,8 +186,8 @@ export async function handleVerifyEmailChangeCode(req: Request, res: Response): 
       return;
     }
 
-    if (currentUser.is_protected) {
-      sendForbidden(res, 'Esta cuenta está protegida por el sistema y sus datos no pueden ser modificados.');
+    if (!hasPermission(currentUser.permissions, 'account:edit_security')) {
+      sendForbidden(res, 'Esta cuenta no tiene permisos para modificar su información de seguridad.');
       return;
     }
 
@@ -220,8 +221,8 @@ export async function handleUpdateEmail(req: Request, res: Response): Promise<vo
       return;
     }
 
-    if (currentUser.is_protected) {
-      sendForbidden(res, 'Esta cuenta está protegida por el sistema y sus datos no pueden ser modificados.');
+    if (!hasPermission(currentUser.permissions, 'account:edit_security')) {
+      sendForbidden(res, 'Esta cuenta no tiene permisos para modificar su información de seguridad.');
       return;
     }
 
@@ -342,8 +343,8 @@ export async function handleUpdatePassword(req: Request, res: Response): Promise
       return;
     }
 
-    if (currentUser.is_protected) {
-      sendForbidden(res, 'Esta cuenta está protegida por el sistema y sus datos no pueden ser modificados.');
+    if (!hasPermission(currentUser.permissions, 'account:edit_security')) {
+      sendForbidden(res, 'Esta cuenta no tiene permisos para modificar su información de seguridad.');
       return;
     }
 
@@ -383,8 +384,8 @@ export async function handleGenerate2FA(req: Request, res: Response): Promise<vo
       return;
     }
 
-    if (currentUser.is_protected) {
-      sendForbidden(res, 'Esta cuenta está protegida por el sistema y sus datos no pueden ser modificados.');
+    if (!hasPermission(currentUser.permissions, 'account:edit_security')) {
+      sendForbidden(res, 'Esta cuenta no tiene permisos para modificar su configuración de seguridad.');
       return;
     }
 
@@ -425,8 +426,8 @@ export async function handleEnable2FA(req: Request, res: Response): Promise<void
       return;
     }
 
-    if (currentUser.is_protected) {
-      sendForbidden(res, 'Esta cuenta está protegida por el sistema y sus datos no pueden ser modificados.');
+    if (!hasPermission(currentUser.permissions, 'account:edit_security')) {
+      sendForbidden(res, 'Esta cuenta no tiene permisos para modificar su configuración de seguridad.');
       return;
     }
 
@@ -490,8 +491,8 @@ export async function handleDisable2FA(req: Request, res: Response): Promise<voi
       return;
     }
 
-    if (currentUser.is_protected) {
-      sendForbidden(res, 'Esta cuenta está protegida por el sistema y sus datos no pueden ser modificados.');
+    if (!hasPermission(currentUser.permissions, 'account:edit_security')) {
+      sendForbidden(res, 'Esta cuenta no tiene permisos para modificar su configuración de seguridad.');
       return;
     }
 
@@ -598,8 +599,8 @@ export async function handleDeleteAccount(req: Request, res: Response): Promise<
       return;
     }
 
-    if (currentUser.is_protected) {
-      sendForbidden(res, 'Esta cuenta está protegida por el sistema y sus datos no pueden ser modificados.');
+    if (!hasPermission(currentUser.permissions, 'account:delete')) {
+      sendForbidden(res, 'Esta cuenta no tiene permisos para ser eliminada.');
       return;
     }
 
@@ -668,8 +669,8 @@ export async function handleUnlinkGoogle(req: Request, res: Response): Promise<v
       return;
     }
 
-    if (currentUser.is_protected) {
-      sendForbidden(res, 'Esta cuenta está protegida por el sistema y sus datos no pueden ser modificados.');
+    if (!hasPermission(currentUser.permissions, 'account:edit_security')) {
+      sendForbidden(res, 'Esta cuenta no tiene permisos para modificar su información de seguridad.');
       return;
     }
 
@@ -731,8 +732,8 @@ export async function handleUpdateDesignerHandle(req: Request, res: Response): P
       return;
     }
 
-    if (currentUser.is_protected) {
-      sendForbidden(res, 'Esta cuenta está protegida por el sistema y sus datos no pueden ser modificados.');
+    if (!hasPermission(currentUser.permissions, 'account:edit_identifiers')) {
+      sendForbidden(res, 'Esta cuenta no tiene permisos para modificar sus identificadores.');
       return;
     }
 
@@ -786,8 +787,8 @@ export async function handleUpdatePublicProfile(req: Request, res: Response): Pr
       return;
     }
 
-    if (currentUser.is_protected) {
-      sendForbidden(res, 'Esta cuenta está protegida por el sistema y sus datos no pueden ser modificados.');
+    if (!hasPermission(currentUser.permissions, 'account:edit_profile')) {
+      sendForbidden(res, 'Esta cuenta no tiene permisos para modificar su información de perfil.');
       return;
     }
 

@@ -20,32 +20,37 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
   DATA_ANALYST: ['dashboard:read', 'analytics:read', 'analytics:export'],
   DATA_AUDITOR: ['analytics:read', 'logs:read', 'users:read', 'compliance:read'],
   DATA_ENGINEER: ['analytics:read', 'analytics:export', 'backups:read', 'logs:read', 'workflows:read', 'workflows:manage'],
-  DESIGNER: ['templates:read', 'templates:create', 'templates:publish', 'designer:dashboard', 'designer:onboard', 'designer:payouts'],
-  DEVOPS: ['dashboard:read', 'internal_tickets:read', 'internal_tickets:create', 'internal_tickets:manage', 'backups:read', 'backups:manage', 'logs:read', 'workflows:read', 'workflows:manage', 'system:read', 'system:manage', 'telemetry:read'],
-  ENGINEER: ['internal_tickets:read', 'internal_tickets:create', 'internal_tickets:manage', 'logs:read'],
-  FINANCE_ADMIN: ['dashboard:read', 'billing:read', 'billing:export', 'billing:manage', 'ads:read', 'ads:manage', 'users:read', 'system:read', 'hr:salary_view'],
-  HR_MANAGER: ['dashboard:read', 'hr:read', 'hr:manage', 'hr:hire', 'hr:contracts', 'hr:salary_view', 'users:read', 'internal_tickets:create'],
-  HR_RECRUITER: ['dashboard:read', 'hr:read', 'hr:hire', 'hr:contracts', 'users:read', 'internal_tickets:create'],
-  IAM_ADMIN: ['dashboard:read', 'users:read', 'users:manage', 'roles:read', 'roles:manage', 'logs:read', 'tenants:manage', 'sso:manage', 'scim:manage'],
-  INCIDENT_MANAGER: ['dashboard:read', 'internal_tickets:read', 'internal_tickets:create', 'internal_tickets:manage', 'support:read', 'logs:read', 'system:read'],
-  OPERATIONS_AGENT: ['ads:read', 'ads:manage', 'support:read', 'support:reply', 'internal_tickets:read', 'internal_tickets:create'],
-  OPERATIONS_MANAGER: ['dashboard:read', 'ads:read', 'ads:manage', 'users:read', 'support:read', 'support:manage', 'internal_tickets:read', 'internal_tickets:create', 'internal_tickets:manage', 'workflows:read', 'hr:read'],
+  DESIGNER: [
+    'templates:read', 'templates:create', 'templates:publish',
+    'designer:dashboard', 'designer:onboard', 'designer:payouts',
+    'account:edit_identifiers', 'account:edit_security', 'account:edit_profile', 'account:delete',
+  ],
+  DEVOPS: ['dashboard:read', 'internal_tickets:read', 'internal_tickets:create', 'internal_tickets:manage', 'backups:read', 'backups:manage', 'logs:read', 'workflows:read', 'workflows:manage', 'system:read', 'system:manage', 'telemetry:read', 'account:edit_identifiers', 'account:edit_security', 'account:edit_profile', 'account:delete'],
+  ENGINEER: ['internal_tickets:read', 'internal_tickets:create', 'internal_tickets:manage', 'logs:read', 'account:edit_identifiers', 'account:edit_security', 'account:edit_profile', 'account:delete'],
+  FINANCE_ADMIN: ['dashboard:read', 'billing:read', 'billing:export', 'billing:manage', 'ads:read', 'ads:manage', 'users:read', 'system:read', 'hr:salary_view', 'account:edit_identifiers', 'account:edit_security', 'account:edit_profile', 'account:delete'],
+  HR_MANAGER: ['dashboard:read', 'hr:read', 'hr:manage', 'hr:hire', 'hr:contracts', 'hr:salary_view', 'users:read', 'internal_tickets:create', 'account:edit_identifiers', 'account:edit_security', 'account:edit_profile', 'account:delete'],
+  HR_RECRUITER: ['dashboard:read', 'hr:read', 'hr:hire', 'hr:contracts', 'users:read', 'internal_tickets:create', 'account:edit_identifiers', 'account:edit_security', 'account:edit_profile', 'account:delete'],
+  IAM_ADMIN: ['dashboard:read', 'users:read', 'users:manage', 'roles:read', 'roles:manage', 'logs:read', 'tenants:manage', 'sso:manage', 'scim:manage', 'account:edit_identifiers', 'account:edit_security', 'account:edit_profile', 'account:delete'],
+  INCIDENT_MANAGER: ['dashboard:read', 'internal_tickets:read', 'internal_tickets:create', 'internal_tickets:manage', 'support:read', 'logs:read', 'system:read', 'account:edit_identifiers', 'account:edit_security', 'account:edit_profile', 'account:delete'],
+  OPERATIONS_AGENT: ['ads:read', 'ads:manage', 'support:read', 'support:reply', 'internal_tickets:read', 'internal_tickets:create', 'account:edit_identifiers', 'account:edit_security', 'account:edit_profile', 'account:delete'],
+  OPERATIONS_MANAGER: ['dashboard:read', 'ads:read', 'ads:manage', 'users:read', 'support:read', 'support:manage', 'internal_tickets:read', 'internal_tickets:create', 'internal_tickets:manage', 'workflows:read', 'hr:read', 'account:edit_identifiers', 'account:edit_security', 'account:edit_profile', 'account:delete'],
   PLATFORM_ADMIN: ['*'],
-  PRIVACY_ADMIN: ['users:read', 'compliance:read', 'compliance:manage', 'logs:read'],
-  READ_ONLY_ADMIN: ['dashboard:read', 'users:read', 'internal_tickets:read', 'logs:read', 'backups:read', 'system:read', 'telemetry:read'],
-  REFUNDS_ADMIN: ['billing:read', 'billing:refund', 'users:read', 'support:read'],
-  RELEASE_MANAGER: ['dashboard:read', 'internal_tickets:read', 'internal_tickets:create', 'internal_tickets:manage', 'workflows:read', 'workflows:manage', 'system:read', 'system:manage', 'logs:read'],
-  SECURITY_ADMIN: ['dashboard:read', 'users:read', 'users:manage', 'users:sanctions', 'roles:read', 'roles:manage', 'logs:read', 'system:read', 'system:manage', 'internal_tickets:create', 'tenants:manage', 'sso:manage', 'scim:manage'],
-  SENIOR_ENGINEER: ['internal_tickets:read', 'internal_tickets:create', 'internal_tickets:manage', 'logs:read', 'backups:read', 'workflows:read', 'telemetry:read'],
-  SRE: ['dashboard:read', 'internal_tickets:read', 'internal_tickets:create', 'internal_tickets:manage', 'logs:read', 'backups:read', 'workflows:read', 'workflows:manage', 'system:read', 'system:manage', 'telemetry:read'],
+  PRIVACY_ADMIN: ['users:read', 'compliance:read', 'compliance:manage', 'logs:read', 'account:edit_identifiers', 'account:edit_security', 'account:edit_profile', 'account:delete'],
+  READ_ONLY_ADMIN: ['dashboard:read', 'users:read', 'internal_tickets:read', 'logs:read', 'backups:read', 'system:read', 'telemetry:read', 'account:edit_identifiers', 'account:edit_security', 'account:edit_profile', 'account:delete'],
+  REFUNDS_ADMIN: ['billing:read', 'billing:refund', 'users:read', 'support:read', 'account:edit_identifiers', 'account:edit_security', 'account:edit_profile', 'account:delete'],
+  RELEASE_MANAGER: ['dashboard:read', 'internal_tickets:read', 'internal_tickets:create', 'internal_tickets:manage', 'workflows:read', 'workflows:manage', 'system:read', 'system:manage', 'logs:read', 'account:edit_identifiers', 'account:edit_security', 'account:edit_profile', 'account:delete'],
+  SECURITY_ADMIN: ['dashboard:read', 'users:read', 'users:manage', 'users:sanctions', 'roles:read', 'roles:manage', 'logs:read', 'system:read', 'system:manage', 'internal_tickets:create', 'tenants:manage', 'sso:manage', 'scim:manage', 'account:edit_identifiers', 'account:edit_security', 'account:edit_profile', 'account:delete'],
+  SENIOR_ENGINEER: ['internal_tickets:read', 'internal_tickets:create', 'internal_tickets:manage', 'logs:read', 'backups:read', 'workflows:read', 'telemetry:read', 'account:edit_identifiers', 'account:edit_security', 'account:edit_profile', 'account:delete'],
+  SRE: ['dashboard:read', 'internal_tickets:read', 'internal_tickets:create', 'internal_tickets:manage', 'logs:read', 'backups:read', 'workflows:read', 'workflows:manage', 'system:read', 'system:manage', 'telemetry:read', 'account:edit_identifiers', 'account:edit_security', 'account:edit_profile', 'account:delete'],
   SUPER_ADMIN: ['*'],
-  SUPPORT_L1: ['support:read', 'support:reply', 'users:read', 'internal_tickets:create'],
-  SUPPORT_L2: ['support:read', 'support:reply', 'support:manage', 'users:read', 'users:sanctions', 'internal_tickets:read', 'internal_tickets:create'],
-  SUPPORT_L3: ['support:read', 'support:reply', 'support:manage', 'users:read', 'users:manage', 'users:sanctions', 'internal_tickets:read', 'internal_tickets:create', 'internal_tickets:manage', 'logs:read'],
-  SUPPORT_MANAGER: ['dashboard:read', 'support:read', 'support:reply', 'support:manage', 'users:read', 'internal_tickets:read', 'internal_tickets:create', 'internal_tickets:manage', 'analytics:read'],
-  SYSTEM_OPERATOR: ['system:read', 'system:manage', 'backups:read', 'backups:manage', 'logs:read', 'workflows:read', 'workflows:manage', 'internal_tickets:read', 'internal_tickets:create'],
-  USER: ['templates:read'],
-  WORKFLOW_ADMIN: ['workflows:read', 'workflows:manage', 'logs:read', 'system:read'],
+  SUPPORT_L1: ['support:read', 'support:reply', 'users:read', 'internal_tickets:create', 'account:edit_identifiers', 'account:edit_security', 'account:edit_profile', 'account:delete'],
+  SUPPORT_L2: ['support:read', 'support:reply', 'support:manage', 'users:read', 'users:sanctions', 'internal_tickets:read', 'internal_tickets:create', 'account:edit_identifiers', 'account:edit_security', 'account:edit_profile', 'account:delete'],
+  SUPPORT_L3: ['support:read', 'support:reply', 'support:manage', 'users:read', 'users:manage', 'users:sanctions', 'internal_tickets:read', 'internal_tickets:create', 'internal_tickets:manage', 'logs:read', 'account:edit_identifiers', 'account:edit_security', 'account:edit_profile', 'account:delete'],
+  SUPPORT_MANAGER: ['dashboard:read', 'support:read', 'support:reply', 'support:manage', 'users:read', 'internal_tickets:read', 'internal_tickets:create', 'internal_tickets:manage', 'analytics:read', 'account:edit_identifiers', 'account:edit_security', 'account:edit_profile', 'account:delete'],
+  SYSTEM_ACCOUNT: ['templates:read', 'templates:official_publish', 'system:reserved_handle_claim', 'dashboard:read'],
+  SYSTEM_OPERATOR: ['system:read', 'system:manage', 'backups:read', 'backups:manage', 'logs:read', 'workflows:read', 'workflows:manage', 'internal_tickets:read', 'internal_tickets:create', 'account:edit_identifiers', 'account:edit_security', 'account:edit_profile', 'account:delete'],
+  USER: ['templates:read', 'account:edit_identifiers', 'account:edit_security', 'account:edit_profile', 'account:delete'],
+  WORKFLOW_ADMIN: ['workflows:read', 'workflows:manage', 'logs:read', 'system:read', 'account:edit_identifiers', 'account:edit_security', 'account:edit_profile', 'account:delete'],
 };
 
 export function getSubscriptionActivePermissions(tier?: string, status?: string): string[] {
@@ -81,6 +86,10 @@ export async function getUserEffectivePermissions(
     activeRoles.push(role);
   }
 
+  if (activeRoles.includes('SYSTEM_ACCOUNT')) {
+    return ['templates:read', 'templates:official_publish', 'system:reserved_handle_claim', 'dashboard:read'];
+  }
+
   if (activeRoles.includes('SUPER_ADMIN') || activeRoles.includes('PLATFORM_ADMIN')) {
     return ['*'];
   }
@@ -101,6 +110,10 @@ export async function getUserEffectivePermissions(
         if (!activeRoles.includes(roleName)) {
           activeRoles.push(roleName);
         }
+      }
+
+      if (activeRoles.includes('SYSTEM_ACCOUNT')) {
+        return ['templates:read', 'templates:official_publish', 'system:reserved_handle_claim', 'dashboard:read'];
       }
 
       if (activeRoles.includes('SUPER_ADMIN') || activeRoles.includes('PLATFORM_ADMIN')) {

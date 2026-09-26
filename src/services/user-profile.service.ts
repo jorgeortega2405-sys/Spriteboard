@@ -6,6 +6,7 @@ import { redis } from '../config/redis.config.js';
 import { PublicUserProfile, ToggleFollowResult, UserTemplatesResponse } from '../types/user-profile.types.js';
 import { sanitizeBanner } from './image-sanitizer.service.js';
 import { logger } from './logger.service.js';
+import { getUserEffectivePermissions, hasPermission } from './permission.service.js';
 import { deleteObject, getPublicUrl, putObject } from './s3.service.js';
 import { logUserAudit } from './settings.service.js';
 
@@ -488,7 +489,7 @@ export async function updateUserBanner(
   }
 
   const [rows] = await pool.query<RowDataPacket[]>(
-    'SELECT id, banner_url, is_protected FROM users WHERE id = ? LIMIT 1',
+    'SELECT id, banner_url FROM users WHERE id = ? LIMIT 1',
     [userId]
   );
 
@@ -496,8 +497,9 @@ export async function updateUserBanner(
     return { error: 'Usuario no encontrado.', success: false };
   }
 
-  if (rows[0].is_protected) {
-    return { error: 'Esta cuenta está protegida por el sistema y sus datos no pueden ser modificados.', success: false };
+  const permissions = await getUserEffectivePermissions(userId);
+  if (!hasPermission(permissions, 'account:edit_profile')) {
+    return { error: 'Esta cuenta no tiene permisos para modificar su información de perfil.', success: false };
   }
 
   const oldBannerUrl = rows[0].banner_url;
@@ -539,7 +541,7 @@ export async function deleteUserBanner(
   ua?: string | null
 ): Promise<{ error?: string; success: boolean }> {
   const [rows] = await pool.query<RowDataPacket[]>(
-    'SELECT id, banner_url, is_protected FROM users WHERE id = ? LIMIT 1',
+    'SELECT id, banner_url FROM users WHERE id = ? LIMIT 1',
     [userId]
   );
 
@@ -547,8 +549,9 @@ export async function deleteUserBanner(
     return { error: 'Usuario no encontrado.', success: false };
   }
 
-  if (rows[0].is_protected) {
-    return { error: 'Esta cuenta está protegida por el sistema y sus datos no pueden ser modificados.', success: false };
+  const delPermissions = await getUserEffectivePermissions(userId);
+  if (!hasPermission(delPermissions, 'account:edit_profile')) {
+    return { error: 'Esta cuenta no tiene permisos para modificar su información de perfil.', success: false };
   }
 
   const oldBannerUrl = rows[0].banner_url;

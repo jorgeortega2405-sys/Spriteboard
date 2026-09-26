@@ -43,8 +43,7 @@ CREATE TABLE IF NOT EXISTS users (
     last_login_at TIMESTAMP NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     username_changed_at TIMESTAMP NULL,
-    email_changed_at TIMESTAMP NULL,
-    is_protected BOOLEAN NOT NULL DEFAULT FALSE
+    email_changed_at TIMESTAMP NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS user_preferences (
@@ -302,6 +301,7 @@ INSERT INTO roles (name, display_name, description, category) VALUES
 ('HR_MANAGER', 'HR Manager', 'Gestión de recursos humanos, contrataciones y compensación.', 'operations'),
 ('HR_RECRUITER', 'HR Recruiter', 'Reclutamiento y altas de personal.', 'operations'),
 ('DESIGNER', 'Diseñador', 'Diseñador con permisos de publicación de plantillas.', 'general'),
+('SYSTEM_ACCOUNT', 'Cuenta del Sistema', 'Cuenta institucional o de sistema inmutable.', 'platform'),
 ('USER', 'Usuario', 'Usuario estándar de la plataforma.', 'general')
 ON DUPLICATE KEY UPDATE
     display_name = VALUES(display_name),
@@ -355,6 +355,11 @@ INSERT INTO permissions (name, display_name, description, module) VALUES
 ('tenants:manage', 'Gestionar Organizaciones', 'Configurar tenants corporativos e institucionales', 'enterprise'),
 ('sso:manage', 'Gestionar SSO', 'Configurar parámetros de inicio de sesión SAML/SSO', 'enterprise'),
 ('scim:manage', 'Gestionar SCIM', 'Generar y revocar credenciales de aprovisionamiento SCIM', 'enterprise'),
+('account:edit_identifiers', 'Modificar Identificadores de Cuenta', 'Permiso para cambiar username, email y designer handle', 'account'),
+('account:edit_security', 'Modificar Seguridad de Cuenta', 'Permiso para cambiar contraseñas, 2FA y conexiones OAuth', 'account'),
+('account:edit_profile', 'Modificar Perfil de Cuenta', 'Permiso para cambiar avatar, portada y biografía', 'account'),
+('account:delete', 'Eliminar Cuenta Propia', 'Permiso para solicitar la baja o eliminación de la cuenta', 'account'),
+('system:reserved_handle_claim', 'Reclamar Handles Reservados', 'Permiso para reclamar identificadores reservados de plataforma', 'system'),
 ('subscription:feature:teams', 'Función: Equipos', 'Permiso para crear y gestionar equipos de trabajo', 'subscription'),
 ('subscription:feature:live_collaborators_extended', 'Función: Colaboración Extendida', 'Permiso para colaboración con más de 3 usuarios en vivo', 'subscription'),
 ('subscription:feature:enterprise_sso', 'Función: SSO Empresarial', 'Permiso para configurar integración SAML/SCIM', 'subscription'),
@@ -371,16 +376,26 @@ WHERE r.name IN ('SUPER_ADMIN', 'PLATFORM_ADMIN');
 
 INSERT IGNORE INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
+WHERE r.name = 'SYSTEM_ACCOUNT'
+  AND p.name IN (
+    'templates:read', 'templates:official_publish', 'system:reserved_handle_claim'
+  );
+
+INSERT IGNORE INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
 WHERE r.name = 'DESIGNER'
   AND p.name IN (
     'templates:read', 'templates:create', 'templates:publish',
-    'designer:dashboard', 'designer:onboard', 'designer:payouts'
+    'designer:dashboard', 'designer:onboard', 'designer:payouts',
+    'account:edit_identifiers', 'account:edit_security', 'account:edit_profile', 'account:delete'
   );
 
 INSERT IGNORE INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
 WHERE r.name = 'USER'
-  AND p.name IN ('templates:read');
+  AND p.name IN (
+    'templates:read', 'account:edit_identifiers', 'account:edit_security', 'account:edit_profile', 'account:delete'
+  );
 
 INSERT IGNORE INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
@@ -688,14 +703,14 @@ INSERT INTO users (
     stripe_customer_id, stripe_subscription_id, subscription_status, subscription_period_end,
     force_password_change, two_factor_enabled, avatar_url,
     registration_ip, registration_country_name, registration_isp,
-    created_at, is_protected
+    created_at
 ) VALUES (
     1,
     '00000000-0000-0000-0000-000000000001',
     'spriteboard',
     'official@spriteboard.com',
     '$2a$10$eCEkNhM7K3Okfk3rwi/jGukfeOJ47OFO.qJM71jxge/sLWPRIWIGy',
-    'SUPER_ADMIN',
+    'SYSTEM_ACCOUNT',
     'business',
     'cus_official_spriteboard',
     'sub_official_spriteboard',
@@ -707,16 +722,14 @@ INSERT INTO users (
     '127.0.0.1',
     'Spriteboard Infrastructure',
     'Spriteboard Corp',
-    NOW(),
-    TRUE
+    NOW()
 ) ON DUPLICATE KEY UPDATE
     email = VALUES(email),
     password_hash = VALUES(password_hash),
     role = VALUES(role),
     subscription_tier = VALUES(subscription_tier),
     subscription_status = VALUES(subscription_status),
-    subscription_period_end = VALUES(subscription_period_end),
-    is_protected = VALUES(is_protected);
+    subscription_period_end = VALUES(subscription_period_end);
 
 INSERT INTO user_preferences (
     user_id, theme, language, open_links_new_tab, telemetry, reduce_motion, high_contrast, extended_alerts
@@ -725,7 +738,7 @@ INSERT INTO user_preferences (
 ) ON DUPLICATE KEY UPDATE user_id = user_id;
 
 INSERT INTO user_roles (user_id, role_id)
-SELECT 1, id FROM roles WHERE name IN ('SUPER_ADMIN', 'PLATFORM_ADMIN', 'DESIGNER')
+SELECT 1, id FROM roles WHERE name IN ('SYSTEM_ACCOUNT', 'SUPER_ADMIN', 'PLATFORM_ADMIN', 'DESIGNER')
 ON DUPLICATE KEY UPDATE user_id = user_id;
 
 CREATE TABLE IF NOT EXISTS designer_applications (

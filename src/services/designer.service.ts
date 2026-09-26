@@ -1,9 +1,9 @@
+import mysql, { RowDataPacket } from 'mysql2/promise';
 import { pool } from '../config/database.config.js';
 import { redis } from '../config/redis.config.js';
 import { DesignerOnboardPayload, DesignerOnboardingStatusResponse, DesignerPayoutProfile } from '../types/designer.types.js';
 import { logger } from './logger.service.js';
 import { getUserEffectivePermissions, hasPermission } from './permission.service.js';
-import mysql, { RowDataPacket } from 'mysql2/promise';
 
 const RESERVED_HANDLES = new Set([
   'admin',
@@ -103,7 +103,8 @@ export async function getDesignerOnboardingStatus(userId: number): Promise<Desig
 
 export async function checkDesignerHandleAvailability(
   rawHandle: string,
-  currentUserId?: number
+  currentUserId?: number,
+  userPermissions?: string[]
 ): Promise<{ available: boolean; cleanHandle: string; reason?: string }> {
   const clean = sanitizeHandle(rawHandle);
 
@@ -119,7 +120,7 @@ export async function checkDesignerHandleAvailability(
     return { available: false, cleanHandle: clean, reason: 'Solo se permiten letras minúsculas, números y guiones bajos.' };
   }
 
-  if (RESERVED_HANDLES.has(clean) && !(currentUserId === 1 && clean === 'spriteboard')) {
+  if (RESERVED_HANDLES.has(clean) && !hasPermission(userPermissions, 'system:reserved_handle_claim')) {
     return { available: false, cleanHandle: clean, reason: 'Este identificador está reservado por el sistema.' };
   }
 
@@ -155,7 +156,8 @@ export async function completeDesignerOnboarding(
     throw new Error('USER_NOT_DESIGNER');
   }
 
-  const check = await checkDesignerHandleAvailability(payload.handle, userId);
+  const userPermissions = await getUserEffectivePermissions(userId);
+  const check = await checkDesignerHandleAvailability(payload.handle, userId, userPermissions);
   if (!check.available) {
     throw new Error(check.reason || 'HANDLE_UNAVAILABLE');
   }

@@ -29,6 +29,7 @@ export type UserRole =
   | 'SUPPORT_L2'
   | 'SUPPORT_L3'
   | 'SUPPORT_MANAGER'
+  | 'SYSTEM_ACCOUNT'
   | 'SYSTEM_OPERATOR'
   | 'USER'
   | 'WORKFLOW_ADMIN';
@@ -53,7 +54,6 @@ export interface User {
   language?: string;
   two_factor_enabled?: boolean;
   google_id?: string | null;
-  is_protected?: boolean;
   permissions?: string[];
 }
 
@@ -112,7 +112,7 @@ export function canPublishTemplates(user?: User | null): boolean {
   return roles.includes('DESIGNER') || roles.includes('SUPER_ADMIN') || roles.includes('PLATFORM_ADMIN');
 }
 
-const NON_ADMIN_ROLES = ['USER', 'DESIGNER'];
+const NON_ADMIN_ROLES = ['USER', 'DESIGNER', 'SYSTEM_ACCOUNT'];
 
 export function isUserAdmin(role?: string, roles?: string[]): boolean {
   if (roles && Array.isArray(roles) && roles.length > 0) {

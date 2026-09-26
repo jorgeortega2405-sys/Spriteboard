@@ -1,7 +1,7 @@
+import { Request, Response } from 'express';
 import { createStripeConnectAccountLink, getDesignerPoolSummary, requestDesignerPayoutTransfer, syncStripeAccountStatus } from '../services/creator-pool.service.js';
 import { checkDesignerHandleAvailability, completeDesignerOnboarding, getDesignerOnboardingStatus } from '../services/designer.service.js';
 import { logger } from '../services/logger.service.js';
-import { Request, Response } from 'express';
 
 export async function getDesignerOnboardingStatusHandler(req: Request, res: Response): Promise<void> {
   try {
@@ -22,9 +22,11 @@ export async function getDesignerOnboardingStatusHandler(req: Request, res: Resp
 export async function checkDesignerHandleHandler(req: Request, res: Response): Promise<void> {
   try {
     const rawHandle = String(req.query.handle || '');
-    const currentUserId = (req as any).user?.id;
+    const currentUser = (req as any).user;
+    const currentUserId = currentUser?.id;
+    const userPermissions = currentUser?.permissions;
 
-    const result = await checkDesignerHandleAvailability(rawHandle, currentUserId);
+    const result = await checkDesignerHandleAvailability(rawHandle, currentUserId, userPermissions);
     res.json(result);
   } catch (error: any) {
     logger.app.error('Error al verificar disponibilidad de identificador', error);

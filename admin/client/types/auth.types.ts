@@ -3,7 +3,6 @@ export interface UserPayload {
   email: string;
   google_id?: string | null;
   id: number;
-  is_protected?: boolean;
   language?: string;
   permissions?: string[];
   role?: string;
@@ -20,7 +19,6 @@ export interface SessionAccount {
   email: string;
   google_id?: string | null;
   id: number;
-  is_protected?: boolean;
   language?: string;
   last_accessed?: number;
   permissions?: string[];

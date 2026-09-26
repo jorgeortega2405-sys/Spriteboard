@@ -19,7 +19,7 @@ export async function createYourAccountView(): Promise<HTMLElement> {
 
   if (!currentUser) return container;
 
-  const isProtected = Boolean(currentUser.is_protected);
+  const isProtected = currentUser.roles?.includes('SYSTEM_ACCOUNT') || (Array.isArray(currentUser.permissions) && !currentUser.permissions.includes('*') && !currentUser.permissions.includes('account:edit_identifiers'));
   const protectedBanner = container.querySelector<HTMLElement>('[data-ref="protected-account-banner"]');
   if (isProtected && protectedBanner) {
     protectedBanner.style.display = 'flex';
@@ -816,7 +816,7 @@ export async function createYourAccountView(): Promise<HTMLElement> {
 export async function createSecurityView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/settings/security.html');
 
-  const isProtected = Boolean(currentUser?.is_protected);
+  const isProtected = currentUser?.roles?.includes('SYSTEM_ACCOUNT') || (Array.isArray(currentUser?.permissions) && !currentUser.permissions.includes('*') && !currentUser.permissions.includes('account:edit_security'));
   const protectedBanner = container.querySelector<HTMLElement>('[data-ref="protected-account-banner"]');
   if (isProtected && protectedBanner) {
     protectedBanner.style.display = 'flex';
@@ -1058,7 +1058,7 @@ export async function createPublicProfileSettingsView(): Promise<HTMLElement> {
 
   if (!currentUser) return container;
 
-  const isProtected = Boolean(currentUser.is_protected);
+  const isProtected = currentUser.roles?.includes('SYSTEM_ACCOUNT') || (Array.isArray(currentUser.permissions) && !currentUser.permissions.includes('*') && !currentUser.permissions.includes('account:edit_profile'));
   const protectedBanner = container.querySelector<HTMLElement>('[data-ref="protected-account-banner"]');
   if (isProtected && protectedBanner) {
     protectedBanner.style.display = 'flex';

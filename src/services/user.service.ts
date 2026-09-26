@@ -1,3 +1,7 @@
+import fs from 'fs';
+import type { ResultSetHeader, RowDataPacket } from 'mysql2';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { canvasPool, pool } from '../config/database.config.js';
 import { redis } from '../config/redis.config.js';
 import { UserPayload, UserRole } from '../types/auth.types.js';
@@ -5,14 +9,11 @@ import { SubscriptionTierId } from '../types/subscription.types.js';
 import { revokeAllUserSessions } from './auth.service.js';
 import { deleteCanvasBlob } from './canvas-storage-blob.service.js';
 import { logger } from './logger.service.js';
+import { getUserEffectivePermissions, hasPermission } from './permission.service.js';
 import { assignUserRole, getUserRoles, setUserRoles } from './role.service.js';
 import { deleteObject } from './s3.service.js';
 import { stripeService } from './stripe.service.js';
 import { hashBackupCode } from './two-factor.service.js';
-import fs from 'fs';
-import type { ResultSetHeader, RowDataPacket } from 'mysql2';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -31,7 +32,6 @@ export interface UserRecord extends RowDataPacket {
   two_factor_enabled?: boolean | number;
   two_factor_secret?: string | null;
   two_factor_recovery_codes?: string | null;
-  is_protected?: boolean | number;
   registration_ip?: string | null;
   registration_country_code?: string | null;
   registration_country_name?: string | null;
@@ -51,7 +51,7 @@ export interface UserRecord extends RowDataPacket {
 
 export async function findUserByEmail(email: string): Promise<UserRecord | null> {
   const [rows] = await pool.query<UserRecord[]>(
-    'SELECT id, username, email, password_hash, avatar_url, role, google_id, subscription_tier, two_factor_enabled, two_factor_secret, two_factor_recovery_codes, is_protected FROM users WHERE email = ? LIMIT 1',
+    'SELECT id, username, email, password_hash, avatar_url, role, google_id, subscription_tier, two_factor_enabled, two_factor_secret, two_factor_recovery_codes FROM users WHERE email = ? LIMIT 1',
     [email.toLowerCase().trim()]
   );
   if (rows.length === 0) return null;
@@ -62,7 +62,7 @@ export async function findUserByEmail(email: string): Promise<UserRecord | null>
 
 export async function findUserByUsername(username: string): Promise<UserRecord | null> {
   const [rows] = await pool.query<UserRecord[]>(
-    'SELECT id, username, email, avatar_url, role, google_id, subscription_tier, two_factor_enabled, is_protected FROM users WHERE username = ? LIMIT 1',
+    'SELECT id, username, email, avatar_url, role, google_id, subscription_tier, two_factor_enabled FROM users WHERE username = ? LIMIT 1',
     [username.trim()]
   );
   if (rows.length === 0) return null;
@@ -102,7 +102,7 @@ export async function findUserById(id: number): Promise<UserRecord | null> {
   } catch {}
 
   const [rows] = await pool.query<UserRecord[]>(
-    'SELECT id, username, email, avatar_url, role, google_id, subscription_tier, two_factor_enabled, is_protected FROM users WHERE id = ? LIMIT 1',
+    'SELECT id, username, email, avatar_url, role, google_id, subscription_tier, two_factor_enabled FROM users WHERE id = ? LIMIT 1',
     [id]
   );
   if (rows.length === 0) return null;
@@ -310,8 +310,9 @@ export async function deleteUserPermanently(userId: number): Promise<boolean> {
     return false;
   }
 
-  if (user.is_protected) {
-    logger.security.warn('Intento de eliminación de cuenta protegida por el sistema abortado', { userId });
+  const permissions = await getUserEffectivePermissions(userId);
+  if (!hasPermission(permissions, 'account:delete') || user.roles?.includes('SYSTEM_ACCOUNT') || user.role === 'SYSTEM_ACCOUNT') {
+    logger.security.warn('Intento de eliminación de cuenta bloqueado para cuenta del sistema o por falta de permisos', { userId });
     return false;
   }
 
