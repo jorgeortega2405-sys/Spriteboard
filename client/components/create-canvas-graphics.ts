@@ -565,4 +565,91 @@ export function getSheetSvg(): string {
   </svg>`;
 }
 
+export interface CanvasIconDef {
+  fill: string;
+  viewBox: string;
+  whiteGlyph: string;
+  coloredGlyph: string;
+}
+
+export const CANVAS_ICONS: Record<string, CanvasIconDef> = {
+  board: {
+    fill: '#00C48C',
+    viewBox: '0 0 32 32',
+    whiteGlyph: '<path fill="#ffffff" fill-rule="evenodd" d="M4 6a3 3 0 0 1 3-3h18a3 3 0 0 1 3 3v14a3 3 0 0 1-3 3h-1.5v1.5a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1V23H7a3 3 0 0 1-3-3V6Zm3-1a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1H7Zm1.5 3a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1v3.5a1 1 0 0 1-1 1h-3.5a1 1 0 0 1-1-1V8Zm7.5 0a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1v3.5a1 1 0 0 1-1 1H17a1 1 0 0 1-1-1V8Zm-6 7.5a1 1 0 0 1 1-1h10.5a1 1 0 1 1 0 2H11a1 1 0 0 1-1-1Zm-1.5 8h13v.5H8.5V23.5Zm-1 2.5l-1.8 3.2a1 1 0 1 1-1.74-.98L5.3 25h18.4l1.34 3.22a1 1 0 1 1-1.84.76L21.5 26h-14Z"/>',
+    coloredGlyph: '<path fill="#00C48C" fill-rule="evenodd" d="M4 6a3 3 0 0 1 3-3h18a3 3 0 0 1 3 3v14a3 3 0 0 1-3 3h-1.5v1.5a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1V23H7a3 3 0 0 1-3-3V6Zm3-1a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1H7Zm1.5 3a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1v3.5a1 1 0 0 1-1 1h-3.5a1 1 0 0 1-1-1V8Zm7.5 0a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1v3.5a1 1 0 0 1-1 1H17a1 1 0 0 1-1-1V8Zm-6 7.5a1 1 0 0 1 1-1h10.5a1 1 0 1 1 0 2H11a1 1 0 0 1-1-1Zm-1.5 8h13v.5H8.5V23.5Zm-1 2.5l-1.8 3.2a1 1 0 1 1-1.74-.98L5.3 25h18.4l1.34 3.22a1 1 0 1 1-1.84.76L21.5 26h-14Z"/>',
+  },
+  sheet: {
+    fill: '#138EFF',
+    viewBox: '0 0 32 32',
+    whiteGlyph: '<path fill="#ffffff" fill-rule="evenodd" d="M4 7a4 4 0 0 1 4-4h16a4 4 0 0 1 4 4v18a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V7Zm4-1.5a1.5 1.5 0 0 0-1.5 1.5v4.5H14V5.5H8Zm7.5 0V11.5H24V7a1.5 1.5 0 0 0-1.5-1.5h-7Zm8.5 7.5H15.5V18H24v-5Zm0 6.5H15.5v5.5H22.5A1.5 1.5 0 0 0 24 23.5V19.5Zm-10 5.5V19.5H6.5v4A1.5 1.5 0 0 0 8 25h6Zm-7.5-7H14V13H6.5v5Z"/>',
+    coloredGlyph: '<path fill="#138EFF" fill-rule="evenodd" d="M4 7a4 4 0 0 1 4-4h16a4 4 0 0 1 4 4v18a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V7Zm4-1.5a1.5 1.5 0 0 0-1.5 1.5v4.5H14V5.5H8Zm7.5 0V11.5H24V7a1.5 1.5 0 0 0-1.5-1.5h-7Zm8.5 7.5H15.5V18H24v-5Zm0 6.5H15.5v5.5H22.5A1.5 1.5 0 0 0 24 23.5V19.5Zm-10 5.5V19.5H6.5v4A1.5 1.5 0 0 0 8 25h6Zm-7.5-7H14V13H6.5v5Z"/>',
+  },
+  presentation: {
+    fill: '#FF6105',
+    viewBox: '0 0 32 32',
+    whiteGlyph: '<path fill="#ffffff" fill-rule="evenodd" d="M4 7a4 4 0 0 1 4-4h16a4 4 0 0 1 4 4v13a4 4 0 0 1-4 4h-5.4l2.2 4.4a1.2 1.2 0 1 1-2.14 1.08L16.2 25h-.4l-2.46 4.48a1.2 1.2 0 1 1-2.14-1.08L13.4 24H8a4 4 0 0 1-4-4V7Zm12 2a5 5 0 0 0-5 5h5V9Zm-1.8 6.5H9.2a5 5 0 0 0 5 5v-5Zm1.8 5a5 5 0 0 0 5-5H16v5Zm5-6.5a5 5 0 0 0-3.5-4.78V13.5H21Z"/>',
+    coloredGlyph: '<path fill="#FF6105" fill-rule="evenodd" d="M4 7a4 4 0 0 1 4-4h16a4 4 0 0 1 4 4v13a4 4 0 0 1-4 4h-5.4l2.2 4.4a1.2 1.2 0 1 1-2.14 1.08L16.2 25h-.4l-2.46 4.48a1.2 1.2 0 1 1-2.14-1.08L13.4 24H8a4 4 0 0 1-4-4V7Zm12 2a5 5 0 0 0-5 5h5V9Zm-1.8 6.5H9.2a5 5 0 0 0 5 5v-5Zm1.8 5a5 5 0 0 0 5-5H16v5Zm5-6.5a5 5 0 0 0-3.5-4.78V13.5H21Z"/>',
+  },
+  social: {
+    fill: '#FF3B4B',
+    viewBox: '0 0 32 32',
+    whiteGlyph: '<path fill="#ffffff" fill-rule="evenodd" d="M5 13.5C5 7.7 9.9 3 16 3s11 4.7 11 10.5c0 5.2-4 9.6-9.4 10.3l-3.8 3.8a1.2 1.2 0 0 1-2-.85V23.4C7.8 21.7 5 17.9 5 13.5Zm11-4.2c-1.3-1.6-3.8-1.5-5 0-1.1 1.3-.9 3.2.3 4.5l4.7 4.5 4.7-4.5c1.2-1.3 1.4-3.2.3-4.5-1.2-1.5-3.7-1.6-5 0Z"/>',
+    coloredGlyph: '<path fill="#FF3B4B" fill-rule="evenodd" d="M5 13.5C5 7.7 9.9 3 16 3s11 4.7 11 10.5c0 5.2-4 9.6-9.4 10.3l-3.8 3.8a1.2 1.2 0 0 1-2-.85V23.4C7.8 21.7 5 17.9 5 13.5Zm11-4.2c-1.3-1.6-3.8-1.5-5 0-1.1 1.3-.9 3.2.3 4.5l4.7 4.5 4.7-4.5c1.2-1.3 1.4-3.2.3-4.5-1.2-1.5-3.7-1.6-5 0Z"/>',
+  },
+  doc: {
+    fill: '#13A3B5',
+    viewBox: '0 0 32 32',
+    whiteGlyph: '<path fill="#ffffff" fill-rule="evenodd" d="M6 6a4 4 0 0 1 4-4h8.5a1.5 1.5 0 0 1 1.06.44l5.5 5.5A1.5 1.5 0 0 1 25.5 9V26a4 4 0 0 1-4 4H10a4 4 0 0 1-4-4V6Zm4-1.5a1.5 1.5 0 0 0-1.5 1.5v20a1.5 1.5 0 0 0 1.5 1.5h11.5a1.5 1.5 0 0 0 1.5-1.5V10.5h-4a2.5 2.5 0 0 1-2.5-2.5v-4H10Zm8 0v3.5a.5.5 0 0 0 .5.5H22l-4-4ZM11 14a1.25 1.25 0 0 1 1.25-1.25h9.5a1.25 1.25 0 1 1 0 2.5h-9.5A1.25 1.25 0 0 1 11 14Zm0 4.5a1.25 1.25 0 0 1 1.25-1.25h9.5a1.25 1.25 0 1 1 0 2.5h-9.5A1.25 1.25 0 0 1 11 18.5Zm0 4.5a1.25 1.25 0 0 1 1.25-1.25h6a1.25 1.25 0 1 1 0 2.5h-6A1.25 1.25 0 0 1 11 23Z"/>',
+    coloredGlyph: '<path fill="#13A3B5" fill-rule="evenodd" d="M6 6a4 4 0 0 1 4-4h8.5a1.5 1.5 0 0 1 1.06.44l5.5 5.5A1.5 1.5 0 0 1 25.5 9V26a4 4 0 0 1-4 4H10a4 4 0 0 1-4-4V6Zm4-1.5a1.5 1.5 0 0 0-1.5 1.5v20a1.5 1.5 0 0 0 1.5 1.5h11.5a1.5 1.5 0 0 0 1.5-1.5V10.5h-4a2.5 2.5 0 0 1-2.5-2.5v-4H10Zm8 0v3.5a.5.5 0 0 0 .5.5H22l-4-4ZM11 14a1.25 1.25 0 0 1 1.25-1.25h9.5a1.25 1.25 0 1 1 0 2.5h-9.5A1.25 1.25 0 0 1 11 14Zm0 4.5a1.25 1.25 0 0 1 1.25-1.25h9.5a1.25 1.25 0 1 1 0 2.5h-9.5A1.25 1.25 0 0 1 11 18.5Zm0 4.5a1.25 1.25 0 0 1 1.25-1.25h6a1.25 1.25 0 1 1 0 2.5h-6A1.25 1.25 0 0 1 11 23Z"/>',
+  },
+  template: {
+    fill: '#7C3AED',
+    viewBox: '0 0 32 32',
+    whiteGlyph: '<path fill="#ffffff" fill-rule="evenodd" d="M4 8a4 4 0 0 1 4-4h16a4 4 0 0 1 4 4v16a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V8Zm4-1.5a1.5 1.5 0 0 0-1.5 1.5v4.5a1.5 1.5 0 0 0 1.5 1.5h16a1.5 1.5 0 0 0 1.5-1.5V8a1.5 1.5 0 0 0-1.5-1.5H8Zm0 10a1.5 1.5 0 0 0-1.5 1.5v4.5a1.5 1.5 0 0 0 1.5 1.5h6a1.5 1.5 0 0 0 1.5-1.5V18a1.5 1.5 0 0 0-1.5-1.5H8Zm10 0a1.5 1.5 0 0 0-1.5 1.5v4.5a1.5 1.5 0 0 0 1.5 1.5h6a1.5 1.5 0 0 0 1.5-1.5V18a1.5 1.5 0 0 0-1.5-1.5h-6Z"/>',
+    coloredGlyph: '<path fill="#7C3AED" fill-rule="evenodd" d="M4 8a4 4 0 0 1 4-4h16a4 4 0 0 1 4 4v16a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V8Zm4-1.5a1.5 1.5 0 0 0-1.5 1.5v4.5a1.5 1.5 0 0 0 1.5 1.5h16a1.5 1.5 0 0 0 1.5-1.5V8a1.5 1.5 0 0 0-1.5-1.5H8Zm0 10a1.5 1.5 0 0 0-1.5 1.5v4.5a1.5 1.5 0 0 0 1.5 1.5h6a1.5 1.5 0 0 0 1.5-1.5V18a1.5 1.5 0 0 0-1.5-1.5H8Zm10 0a1.5 1.5 0 0 0-1.5 1.5v4.5a1.5 1.5 0 0 0 1.5 1.5h6a1.5 1.5 0 0 0 1.5-1.5V18a1.5 1.5 0 0 0-1.5-1.5h-6Z"/>',
+  },
+  photos: {
+    fill: '#A855F7',
+    viewBox: '0 0 32 32',
+    whiteGlyph: '<path fill="#ffffff" fill-rule="evenodd" d="M4 8a4 4 0 0 1 4-4h16a4 4 0 0 1 4 4v16a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V8Zm4-1.5a1.5 1.5 0 0 0-1.5 1.5v16a1.5 1.5 0 0 0 1.5 1.5h16a1.5 1.5 0 0 0 1.5-1.5V8a1.5 1.5 0 0 0-1.5-1.5H8Zm3 4a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5Zm-2.7 13.2 5.2-6.5a1.5 1.5 0 0 1 2.34 0l2.36 2.95 2.8-3.73a1.5 1.5 0 0 1 2.4 0l4.3 5.74a1.2 1.2 0 0 1-.96 1.94H9.26a1.2 1.2 0 0 1-.96-1.9Z"/>',
+    coloredGlyph: '<path fill="#A855F7" fill-rule="evenodd" d="M4 8a4 4 0 0 1 4-4h16a4 4 0 0 1 4 4v16a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V8Zm4-1.5a1.5 1.5 0 0 0-1.5 1.5v16a1.5 1.5 0 0 0 1.5 1.5h16a1.5 1.5 0 0 0 1.5-1.5V8a1.5 1.5 0 0 0-1.5-1.5H8Zm3 4a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5Zm-2.7 13.2 5.2-6.5a1.5 1.5 0 0 1 2.34 0l2.36 2.95 2.8-3.73a1.5 1.5 0 0 1 2.4 0l4.3 5.74a1.2 1.2 0 0 1-.96 1.94H9.26a1.2 1.2 0 0 1-.96-1.9Z"/>',
+  },
+  'custom-size': {
+    fill: '#8B5CF6',
+    viewBox: '0 0 32 32',
+    whiteGlyph: '<path fill="#ffffff" fill-rule="evenodd" d="M5 9a4 4 0 0 1 4-4h14a4 4 0 0 1 4 4v14a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4V9Zm4-1.5a1.5 1.5 0 0 0-1.5 1.5v3.5a1 1 0 1 0 2 0v-2h2a1 1 0 1 0 0-2H9Zm14 0h-2a1 1 0 1 0 0 2h2v2a1 1 0 1 0 2 0V9a1.5 1.5 0 0 0-1.5-1.5ZM7.5 23a1.5 1.5 0 0 0 1.5 1.5h2a1 1 0 1 0 0-2H9v-2a1 1 0 1 0-2 0V23Zm17 0v-2a1 1 0 1 0-2 0v2h-2a1 1 0 1 0 0 2h2a1.5 1.5 0 0 0 1.5-1.5Z"/>',
+    coloredGlyph: '<path fill="#8B5CF6" fill-rule="evenodd" d="M5 9a4 4 0 0 1 4-4h14a4 4 0 0 1 4 4v14a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4V9Zm4-1.5a1.5 1.5 0 0 0-1.5 1.5v3.5a1 1 0 1 0 2 0v-2h2a1 1 0 1 0 0-2H9Zm14 0h-2a1 1 0 1 0 0 2h2v2a1 1 0 1 0 2 0V9a1.5 1.5 0 0 0-1.5-1.5ZM7.5 23a1.5 1.5 0 0 0 1.5 1.5h2a1 1 0 1 0 0-2H9v-2a1 1 0 1 0-2 0V23Zm17 0v-2a1 1 0 1 0-2 0v2h-2a1 1 0 1 0 0 2h2a1.5 1.5 0 0 0 1.5-1.5Z"/>',
+  },
+  upload: {
+    fill: '#0EA5E9',
+    viewBox: '0 0 32 32',
+    whiteGlyph: '<path fill="#ffffff" d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>',
+    coloredGlyph: '<path fill="#0EA5E9" d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>',
+  },
+};
+
+export function resolveCanvasIconDef(typeOrCategory?: string, unit?: string): CanvasIconDef {
+  const normalized = (typeOrCategory || unit || 'board').toLowerCase();
+  if (normalized === 'templates' || normalized === 'template') return CANVAS_ICONS.template;
+  if (normalized === 'custom' || normalized === 'custom-size') return CANVAS_ICONS['custom-size'];
+  if (normalized === 'photos' || normalized === 'photo') return CANVAS_ICONS.photos;
+  if (normalized === 'upload') return CANVAS_ICONS.upload;
+  if (normalized === 'presentation') return CANVAS_ICONS.presentation;
+  if (normalized === 'doc') return CANVAS_ICONS.doc;
+  if (normalized === 'sheet') return CANVAS_ICONS.sheet;
+  if (normalized === 'social') return CANVAS_ICONS.social;
+  return CANVAS_ICONS.board;
+}
+
+export function getCategoryMenuSvg(category: string, className = 'menu-item__icon menu-item__icon--colored'): string {
+  const def = resolveCanvasIconDef(category);
+  return `<svg class="${className}" viewBox="0 0 32 32" aria-hidden="true">${def.coloredGlyph}</svg>`;
+}
+
+export function getCanvasTypeIconSvg(canvasType?: string, unit?: string, className = 'canvas-card__meta-icon canvas-card__meta-icon--colored'): string {
+  const def = resolveCanvasIconDef(canvasType, unit);
+  return `<svg class="${className}" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="16" fill="${def.fill}"/><g transform="translate(16, 16) scale(0.58) translate(-16, -16)">${def.whiteGlyph}</g></svg>`;
+}
+
 

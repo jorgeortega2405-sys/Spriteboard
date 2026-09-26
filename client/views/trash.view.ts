@@ -1,3 +1,4 @@
+import { getCanvasTypeIconSvg } from '../components/create-canvas-graphics.js';
 import { openModal } from '../components/modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { currentUser, deleteApi, escapeHtml, getApi, postApi } from '../services/api.service.js';
@@ -524,7 +525,7 @@ class TrashController {
           ${escapeHtml(canvas.name)}
         </span>
         <div class="canvas-card__meta" data-ref="canvas-meta">
-          <span class="material-symbols-rounded canvas-card__meta-icon">${typeIcon}</span>
+          ${getCanvasTypeIconSvg(canvas.canvas_type, canvas.unit)}
           <span>${typeLabel}</span>
           <span class="canvas-card__meta-dot">·</span>
           <span>${escapeHtml(remainingDays)}</span>

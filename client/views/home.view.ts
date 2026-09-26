@@ -2,6 +2,7 @@ import { createPopper, Instance as PopperInstance, VirtualElement } from '@poppe
 import { navigate } from '../app-router.js';
 import { openCanvasDownloadModal } from '../components/canvas-download-modal.component.js';
 import { openCanvasShareModal } from '../components/canvas-share-modal.component.js';
+import { getCanvasTypeIconSvg } from '../components/create-canvas-graphics.js';
 import { openCreateCanvasModal } from '../components/create-canvas-modal.component.js';
 import { openCreateFolderModal, openRenameFolderModal } from '../components/folder-modal.component.js';
 import { openModal } from '../components/modal.component.js';
@@ -1471,7 +1472,7 @@ class HomeController {
     const isPresentation = canvas.canvas_type === 'presentation' || canvas.unit === 'presentation';
     const isDoc = canvas.canvas_type === 'doc' || canvas.unit === 'doc';
     const targetUrl = `/design/${canvas.uuid}`;
-    const typeIcon = isPresentation ? 'slideshow' : (isDoc ? 'description' : 'draw');
+    const typeIconSvg = getCanvasTypeIconSvg(canvas.canvas_type, canvas.unit);
     const editedTime = formatEditedTime(canvas.updated_at || canvas.created_at);
 
     const badgeText = isLocal ? t('canvas.status_local') : t('canvas.status_cloud');
@@ -1565,7 +1566,7 @@ class HomeController {
           ${escapeHtml(canvas.name)}
         </span>
         <div class="canvas-card__meta" data-ref="canvas-meta">
-          <span class="material-symbols-rounded canvas-card__meta-icon">${typeIcon}</span>
+          ${typeIconSvg}
           <span>Editado ${editedTime}</span>
           ${isLocal ? `<span class="canvas-card__meta-dot">·</span><span class="canvas-card__meta-badge" data-ref="badge-status-text">${badgeText}</span>` : ''}
         </div>
@@ -1986,7 +1987,7 @@ class HomeController {
           ${escapeHtml(folder.name)}
         </span>
         <div class="canvas-card__meta">
-          <span class="material-symbols-rounded canvas-card__meta-icon">folder</span>
+          <svg class="canvas-card__meta-icon" viewBox="0 0 24 24" fill="#F59E0B" aria-hidden="true"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
           <span>Carpeta</span>
           ${folder.items_count !== undefined ? `<span class="canvas-card__meta-dot">·</span><span>${folder.items_count} ${folder.items_count === 1 ? 'elemento' : 'elementos'}</span>` : ''}
         </div>

@@ -403,7 +403,6 @@ function setupRailNavigation(sidebar: HTMLElement): void {
 
   const moreContainer = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-more"]');
   const btnMore = moreContainer?.querySelector<HTMLElement>('[data-ref="btn-rail-more"]');
-  const moreBackdrop = moreContainer?.querySelector<HTMLElement>('[data-ref="more-menu-backdrop"]');
   const moreMenu = moreContainer?.querySelector<HTMLElement>('[data-ref="more-menu"]');
   const btnMoreApps = moreContainer?.querySelector<HTMLElement>('[data-ref="btn-more-apps"]');
   const btnMoreApply = moreContainer?.querySelector<HTMLElement>('[data-ref="btn-more-apply-designer"]');
@@ -442,7 +441,6 @@ function setupRailNavigation(sidebar: HTMLElement): void {
         close: closeMoreMenu,
         wrapper: moreMenu,
       });
-      if (moreBackdrop) moreBackdrop.classList.add('is-visible');
     };
 
     const closeMoreMenu = () => {
@@ -451,7 +449,6 @@ function setupRailNavigation(sidebar: HTMLElement): void {
       btnMore.classList.remove('is-active');
       moreMenu.classList.remove('is-open');
       unregisterActiveDropdown(moreMenu);
-      if (moreBackdrop) moreBackdrop.classList.remove('is-visible');
     };
 
     const toggleMoreMenu = (e: Event) => {
@@ -483,12 +480,6 @@ function setupRailNavigation(sidebar: HTMLElement): void {
         navigate('/designer');
       } else {
         navigate('/apply-designer');
-      }
-    });
-
-    moreBackdrop?.addEventListener('click', (e) => {
-      if (e.target === moreBackdrop) {
-        closeMoreMenu();
       }
     });
 

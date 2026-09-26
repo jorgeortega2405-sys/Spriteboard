@@ -2,6 +2,7 @@ import { createPopper, Instance as PopperInstance, VirtualElement } from '@poppe
 import { navigate } from '../app-router.js';
 import { openCanvasDownloadModal } from '../components/canvas-download-modal.component.js';
 import { openCanvasShareModal } from '../components/canvas-share-modal.component.js';
+import { getCanvasTypeIconSvg } from '../components/create-canvas-graphics.js';
 import { openRenameFolderModal } from '../components/folder-modal.component.js';
 import { openModal } from '../components/modal.component.js';
 import { openMoveCanvasModal } from '../components/move-canvas-modal.component.js';
@@ -439,7 +440,7 @@ class FolderController {
     const isPresentation = canvas.canvas_type === 'presentation' || canvas.unit === 'presentation';
     const isDoc = canvas.canvas_type === 'doc' || canvas.unit === 'doc';
     const targetUrl = `/design/${canvas.uuid}`;
-    const typeIcon = isPresentation ? 'slideshow' : (isDoc ? 'description' : 'draw');
+    const typeIconSvg = getCanvasTypeIconSvg(canvas.canvas_type, canvas.unit);
     const editedTime = formatEditedTime(canvas.updated_at || canvas.created_at);
 
     const badgeText = isLocal ? t('canvas.status_local') : t('canvas.status_cloud');
@@ -533,7 +534,7 @@ class FolderController {
           ${escapeHtml(canvas.name)}
         </span>
         <div class="canvas-card__meta" data-ref="canvas-meta">
-          <span class="material-symbols-rounded canvas-card__meta-icon">${typeIcon}</span>
+          ${typeIconSvg}
           <span>Editado ${editedTime}</span>
           ${isLocal ? `<span class="canvas-card__meta-dot">·</span><span class="canvas-card__meta-badge" data-ref="badge-status-text">${badgeText}</span>` : ''}
         </div>

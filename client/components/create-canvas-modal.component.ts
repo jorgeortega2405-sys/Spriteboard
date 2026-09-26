@@ -5,7 +5,7 @@ import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { showToast } from '../services/toast.service.js';
 import { DocOrientation, DocPaperSize } from '../views/doc/doc.types.js';
-import { getBoardSvg, getDocSvg, getPresentationSvg, getSheetSvg, getSocialSvg, getTemplateVariantSvg } from './create-canvas-graphics.js';
+import { getBoardSvg, getCategoryMenuSvg, getDocSvg, getPresentationSvg, getSheetSvg, getSocialSvg, getTemplateVariantSvg } from './create-canvas-graphics.js';
 
 let activeCreateCanvasModal: { close: () => void } | null = null;
 
@@ -64,36 +64,36 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
             <div class="menu-panel__list" data-ref="modal-nav-list">
               ${templateVariants ? `
               <button type="button" class="menu-item is-active" data-ref="tab-category-template" data-category="template">
-                <span class="material-symbols-rounded menu-item__icon">style</span>
+                ${getCategoryMenuSvg('template')}
                 <span class="menu-item__text">Plantilla</span>
               </button>
               ` : ''}
-              <button type="button" class="menu-item${activeCategory === 'custom-size' ? ' is-active' : ''}" data-ref="tab-category-custom-size" data-category="custom-size">
-                <span class="material-symbols-rounded menu-item__icon">aspect_ratio</span>
-                <span class="menu-item__text">Elegir tamaño</span>
-              </button>
               <button type="button" class="menu-item${activeCategory === 'board' ? ' is-active' : ''}" data-ref="tab-category-board" data-category="board">
-                <span class="material-symbols-rounded menu-item__icon">space_dashboard</span>
+                ${getCategoryMenuSvg('board')}
                 <span class="menu-item__text">Pizarrón Infinito</span>
               </button>
               <button type="button" class="menu-item${activeCategory === 'sheet' ? ' is-active' : ''}" data-ref="tab-category-sheet" data-category="sheet">
-                <span class="material-symbols-rounded menu-item__icon">table_chart</span>
+                ${getCategoryMenuSvg('sheet')}
                 <span class="menu-item__text">Hoja de Cálculo</span>
               </button>
               <button type="button" class="menu-item${activeCategory === 'presentation' ? ' is-active' : ''}" data-ref="tab-category-presentation" data-category="presentation">
-                <span class="material-symbols-rounded menu-item__icon">slideshow</span>
+                ${getCategoryMenuSvg('presentation')}
                 <span class="menu-item__text">Presentación</span>
               </button>
               <button type="button" class="menu-item${activeCategory === 'social' ? ' is-active' : ''}" data-ref="tab-category-social" data-category="social">
-                <span class="material-symbols-rounded menu-item__icon">share</span>
+                ${getCategoryMenuSvg('social')}
                 <span class="menu-item__text">Redes Sociales</span>
               </button>
               <button type="button" class="menu-item${activeCategory === 'doc' ? ' is-active' : ''}" data-ref="tab-category-doc" data-category="doc">
-                <span class="material-symbols-rounded menu-item__icon">description</span>
+                ${getCategoryMenuSvg('doc')}
                 <span class="menu-item__text">Documento Doc</span>
               </button>
+              <button type="button" class="menu-item${activeCategory === 'custom-size' ? ' is-active' : ''}" data-ref="tab-category-custom-size" data-category="custom-size">
+                ${getCategoryMenuSvg('custom-size')}
+                <span class="menu-item__text">Elegir tamaño</span>
+              </button>
               <button type="button" class="menu-item${activeCategory === 'upload' ? ' is-active' : ''}" data-ref="tab-category-upload" data-category="upload">
-                <span class="material-symbols-rounded menu-item__icon">cloud_upload</span>
+                ${getCategoryMenuSvg('upload')}
                 <span class="menu-item__text">Subir</span>
               </button>
             </div>
@@ -391,25 +391,22 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
             </div>
 
             <div class="modal-canvas-panel" data-ref="panel-category-upload" style="${activeCategory === 'upload' ? '' : 'display: none;'}">
-              <div class="modal-upload-container" data-ref="modal-upload-container" style="max-width: 580px;">
-                <h3 class="creation-category-section__title" style="margin-bottom: 8px;">Sube tus imágenes y fotos</h3>
-                <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 24px;">Sube archivos de imagen (PNG, JPG, SVG, WebP) a tu biblioteca multimedia para utilizarlos en tus diseños.</p>
-
+              <div class="modal-upload-container" data-ref="modal-upload-container">
                 <input class="modal-upload-file-input" data-ref="modal-upload-file-input" type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp,image/gif" multiple style="display: none;" />
 
-                <div class="modal-upload-dropzone" data-ref="modal-upload-dropzone" style="border: 2px dashed var(--border-color); border-radius: 16px; padding: 44px 24px; text-align: center; background-color: var(--bg-surface-elevated, rgba(125,125,125,0.03)); transition: border-color var(--sl-transition-fast), background-color var(--sl-transition-fast); cursor: pointer;">
-                  <div style="width: 56px; height: 56px; border-radius: 50%; background-color: var(--bg-surface); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto; color: var(--action-primary, #6366f1);">
-                    <svg class="component-icon" style="width: 28px; height: 28px;" aria-hidden="true"><use href="/icons.svg#cloud_upload"></use></svg>
+                <div class="modal-upload-dropzone" data-ref="modal-upload-dropzone">
+                  <div class="modal-upload-dropzone__icon-box">
+                    <svg class="component-icon" style="width: 32px; height: 32px;" aria-hidden="true"><use href="/icons.svg#cloud_upload"></use></svg>
                   </div>
-                  <h4 style="font-size: 15px; font-weight: 600; margin-bottom: 6px; color: var(--text-primary);">Arrastra y suelta tus archivos aquí</h4>
-                  <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 20px;">o haz clic en el botón para explorar desde tu dispositivo</p>
+                  <h4 class="modal-upload-dropzone__title">Arrastra y suelta tus archivos aquí</h4>
+                  <p class="modal-upload-dropzone__subtitle">o haz clic en el botón para explorar desde tu dispositivo</p>
                   <button type="button" class="component-button component-button--h44 component-button--primary" data-ref="btn-trigger-file-upload">
                     <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cloud_upload"></use></svg>
                     <span>Subir archivos</span>
                   </button>
                 </div>
 
-                <div class="modal-upload-status" data-ref="modal-upload-status" style="margin-top: 20px; display: none;">
+                <div class="modal-upload-status" data-ref="modal-upload-status" style="margin-top: 16px; display: none;">
                   <div class="modal-upload-progress-text" data-ref="modal-upload-progress-text" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px;">Subiendo archivos...</div>
                   <div class="modal-upload-files-preview" data-ref="modal-upload-files-preview" style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px;"></div>
                 </div>
@@ -462,7 +459,7 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
 
     const activePanel = backdrop.querySelector<HTMLElement>(`[data-ref="panel-category-${category}"]`);
     if (activePanel) {
-      activePanel.style.display = 'block';
+      activePanel.style.display = 'flex';
     }
 
     if (bodyTitle && categoryTitles[category]) {

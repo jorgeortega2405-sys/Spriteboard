@@ -7713,24 +7713,14 @@ html.dark-theme .profile-avatar-wrap {
   position: relative;
 }
 
-.more-dropdown-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 140;
-  display: none;
-  background: transparent;
-}
-
-.more-dropdown-backdrop.is-visible {
-  display: block;
-}
-
 .more-panel {
   display: none;
   opacity: 0;
   transform: scale(0.96) translateX(-4px);
   transition: opacity 0.15s ease, transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
   pointer-events: none;
+  z-index: 150;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
 }
 
 .more-panel.is-open {
@@ -7738,26 +7728,15 @@ html.dark-theme .profile-avatar-wrap {
   opacity: 1;
   transform: scale(1) translateX(0);
   pointer-events: auto;
-  z-index: 150;
-}
-
-@media (min-width: 769px) {
-  .more-panel.rail-floating-panel {
-    position: fixed;
-    left: 74px;
-    z-index: 150;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
-  }
 }
 
 @media (max-width: 768px) {
-  .more-panel.rail-floating-panel {
-    position: absolute;
+  .more-panel {
+    position: fixed;
     left: 10px;
     bottom: 60px;
     top: auto;
     right: auto;
-    z-index: 150;
   }
 }
 

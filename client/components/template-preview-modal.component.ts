@@ -56,7 +56,6 @@ export function openTemplatePreviewModal(preset: PresetItem, options?: TemplateP
           </div>
 
           <div class="template-preview-modal__info" data-ref="template-preview-info">
-            <div class="template-preview-modal__author-row" data-ref="template-preview-author"></div>
             <h2 class="template-preview-modal__title" data-ref="template-preview-title">${escapeHtml(currentPreset.name)}</h2>
             <p class="template-preview-modal__meta" data-ref="template-preview-meta"></p>
 
@@ -100,7 +99,6 @@ export function openTemplatePreviewModal(preset: PresetItem, options?: TemplateP
   const btnPrevSlide = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-preview-slide-prev"]');
   const btnNextSlide = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-preview-slide-next"]');
   const dotsEl = backdrop.querySelector<HTMLElement>('[data-ref="template-preview-dots"]');
-  const authorEl = backdrop.querySelector<HTMLElement>('[data-ref="template-preview-author"]');
   const titleEl = backdrop.querySelector<HTMLElement>('[data-ref="template-preview-title"]');
   const metaEl = backdrop.querySelector<HTMLElement>('[data-ref="template-preview-meta"]');
   const btnUse = backdrop.querySelector<HTMLButtonElement>('[data-ref="btn-preview-use-template"]');
@@ -216,62 +214,6 @@ export function openTemplatePreviewModal(preset: PresetItem, options?: TemplateP
     }
   };
 
-  const renderAuthor = () => {
-    if (!authorEl) return;
-    const authorName = currentPreset.authorName || 'Spriteboard Oficial';
-    const isOfficial = !currentPreset.templateUuid || authorName === 'Spriteboard Oficial';
-    const authorAvatar = currentPreset.authorAvatar;
-
-    let avatarHtml = '';
-    if (isOfficial) {
-      avatarHtml = `
-        <div class="template-preview-modal__author-avatar template-preview-modal__author-avatar--official" data-ref="preview-author-avatar-official">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
-        </div>
-      `;
-    } else if (authorAvatar) {
-      avatarHtml = `
-        <img class="template-preview-modal__author-avatar" data-ref="preview-author-avatar-img" src="${escapeHtml(authorAvatar)}" alt="${escapeHtml(authorName)}" />
-      `;
-    } else {
-      const initial = escapeHtml(authorName.charAt(0).toUpperCase() || 'U');
-      avatarHtml = `
-        <div class="template-preview-modal__author-avatar template-preview-modal__author-avatar--initial" data-ref="preview-author-avatar-initial">
-          <span>${initial}</span>
-        </div>
-      `;
-    }
-
-    const badgeHtml = isOfficial
-      ? `<svg class="component-icon template-preview-modal__verified-badge" data-ref="preview-author-verified" data-tooltip="Plantilla verificada de Spriteboard" aria-label="Verificado" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>`
-      : '';
-
-    const labelText = isOfficial
-      ? (t('templates.author_official_label') || 'Plantilla oficial de Spriteboard')
-      : (t('templates.author_community_label') || 'Plantilla de la comunidad');
-
-    authorEl.classList.add('is-clickable');
-    authorEl.setAttribute('data-tooltip', isOfficial ? (t('profile.view_official_profile') || 'Ver perfil oficial de Spriteboard') : (t('profile.view_creator_profile') || 'Ver perfil del creador'));
-
-    const arrowHtml = `<svg class="component-icon template-preview-modal__author-arrow" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>`;
-
-    authorEl.innerHTML = `
-      <div class="template-preview-modal__author-avatar-wrap" data-ref="preview-author-avatar-wrap">
-        ${avatarHtml}
-      </div>
-      <div class="template-preview-modal__author-meta" data-ref="preview-author-meta">
-        <div class="template-preview-modal__author-name-row" data-ref="preview-author-name-row">
-          <span class="template-preview-modal__author-name" data-ref="preview-author-name">${escapeHtml(authorName)}</span>
-          ${badgeHtml}
-        </div>
-        <span class="template-preview-modal__author-role" data-ref="preview-author-role">${labelText}</span>
-      </div>
-      ${arrowHtml}
-    `;
-
-    renderIcons(authorEl);
-  };
-
   const checkCommunityTemplatePages = async (targetPreset: PresetItem) => {
     if (!targetPreset.templateUuid) return;
     try {
@@ -286,7 +228,7 @@ export function openTemplatePreviewModal(preset: PresetItem, options?: TemplateP
         if (currentPreset.id === targetPreset.id) {
           if (titleEl) {
             const premiumBadge = targetPreset.isPremium
-              ? `<span class="component-badge component-badge--warning" style="gap: 4px; font-weight: 700; font-size: 11px; padding: 2px 7px; vertical-align: middle; margin-left: 8px; display: inline-flex; align-items: center;"><svg class="component-icon" style="font-size: 13px; width: 13px; height: 13px; color: #f59e0b;" aria-hidden="true"><use href="/icons.svg#workspace_premium"></use></svg>PRO</span>`
+              ? `<span class="template-card__premium-badge" style="vertical-align: middle; margin-left: 8px; display: inline-flex;"><svg class="component-icon" aria-hidden="true"><use href="/icons.svg#workspace_premium"></use></svg><span>PRO</span></span>`
               : '';
             titleEl.innerHTML = `${escapeHtml(targetPreset.name)}${premiumBadge}`;
             renderIcons(titleEl);
@@ -297,7 +239,7 @@ export function openTemplatePreviewModal(preset: PresetItem, options?: TemplateP
             if (requiresUpgrade) {
               btnUse.classList.add('template-preview-modal__btn-use--upgrade');
               btnUse.innerHTML = `
-                <svg class="component-icon" style="color: #fbbf24; margin-right: 6px; width: 18px; height: 18px; font-size: 18px;" aria-hidden="true"><use href="/icons.svg#workspace_premium"></use></svg>
+                <svg class="component-icon" style="color: #ffffff; margin-right: 6px; width: 18px; height: 18px; font-size: 18px;" aria-hidden="true"><use href="/icons.svg#workspace_premium"></use></svg>
                 <span>${t('templates.btn_upgrade_to_use') || 'Sube de categoría'}</span>
               `;
             } else {
@@ -312,8 +254,10 @@ export function openTemplatePreviewModal(preset: PresetItem, options?: TemplateP
       if (tmpl.author_username && !targetPreset.authorName) {
         targetPreset.authorName = tmpl.author_username;
         targetPreset.authorAvatar = tmpl.author_avatar;
-        if (currentPreset.id === targetPreset.id) {
-          renderAuthor();
+        if (currentPreset.id === targetPreset.id && metaEl) {
+          const catLabel = getCategoryLabel(currentPreset);
+          const authorName = currentPreset.authorName || 'Spriteboard Oficial';
+          metaEl.textContent = `${catLabel} • ${currentPreset.width} × ${currentPreset.height} px • Diseñado por ${authorName}`;
         }
       }
 
@@ -354,21 +298,21 @@ export function openTemplatePreviewModal(preset: PresetItem, options?: TemplateP
   };
 
   const renderCurrentPreset = () => {
-    renderAuthor();
     setupSlideshow();
     const isPro = hasTier('pro', currentUser);
     const requiresUpgrade = Boolean(currentPreset.isPremium) && !isPro;
 
     if (titleEl) {
       const premiumBadge = currentPreset.isPremium
-        ? `<span class="component-badge component-badge--warning" style="gap: 4px; font-weight: 700; font-size: 11px; padding: 2px 7px; vertical-align: middle; margin-left: 8px; display: inline-flex; align-items: center;"><svg class="component-icon" style="font-size: 13px; width: 13px; height: 13px; color: #f59e0b;" aria-hidden="true"><use href="/icons.svg#workspace_premium"></use></svg>PRO</span>`
+        ? `<span class="template-card__premium-badge" style="vertical-align: middle; margin-left: 8px; display: inline-flex;"><svg class="component-icon" aria-hidden="true"><use href="/icons.svg#workspace_premium"></use></svg><span>PRO</span></span>`
         : '';
       titleEl.innerHTML = `${escapeHtml(currentPreset.name)}${premiumBadge}`;
       renderIcons(titleEl);
     }
     if (metaEl) {
       const catLabel = getCategoryLabel(currentPreset);
-      metaEl.textContent = `${catLabel} • ${currentPreset.width} × ${currentPreset.height} px`;
+      const authorName = currentPreset.authorName || 'Spriteboard Oficial';
+      metaEl.textContent = `${catLabel} • ${currentPreset.width} × ${currentPreset.height} px • Diseñado por ${authorName}`;
     }
     if (btnUse) {
       if (requiresUpgrade) {
@@ -688,14 +632,6 @@ export function openTemplatePreviewModal(preset: PresetItem, options?: TemplateP
 
   btnShare?.addEventListener('click', () => {
     void handleShareTemplate();
-  });
-
-  authorEl?.addEventListener('click', () => {
-    const authorName = currentPreset.authorName;
-    const isOfficial = !currentPreset.templateUuid || authorName === 'Spriteboard Oficial';
-    const targetSlug = isOfficial ? 'spriteboard' : (authorName || 'spriteboard');
-    modalInstance.close();
-    navigate(`/p/${encodeURIComponent(targetSlug)}`);
   });
 
   slideshowEl?.addEventListener('mouseenter', () => {
