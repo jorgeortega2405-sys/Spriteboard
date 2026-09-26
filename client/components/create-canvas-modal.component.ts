@@ -3,7 +3,7 @@ import { createAndOpenCanvas, CreateCanvasOptions } from '../services/canvas-cre
 import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { DocOrientation, DocPaperSize } from '../views/doc/doc.types.js';
-import { getBoardSvg, getDocSvg, getPresentationSvg, getTemplateVariantSvg } from './create-canvas-graphics.js';
+import { getBoardSvg, getDocSvg, getPresentationSvg, getSocialSvg, getTemplateVariantSvg } from './create-canvas-graphics.js';
 
 let activeCreateCanvasModal: { close: () => void } | null = null;
 
@@ -13,7 +13,7 @@ export interface OpenCreateCanvasModalOptions {
   docPaperSize?: DocPaperSize;
   docTemplateId?: string;
   height?: number;
-  initialType?: 'board' | 'doc' | 'presentation';
+  initialType?: 'board' | 'doc' | 'presentation' | 'social';
   name?: string;
   teamName?: string | null;
   teamUuid?: string | null;
@@ -32,7 +32,7 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
   const templateName = options?.templateName || null;
   const templateImage = options?.templateImage || null;
   const normalizedInitialType = options?.initialType || 'board';
-  let activeCategory: 'board' | 'doc' | 'presentation' | 'template' = templateVariants ? 'template' : normalizedInitialType;
+  let activeCategory: 'board' | 'doc' | 'presentation' | 'social' | 'template' = templateVariants ? 'template' : normalizedInitialType;
   let isCreating = false;
 
   const backdrop = document.createElement('div');
@@ -73,6 +73,10 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
               <button type="button" class="menu-item${activeCategory === 'presentation' ? ' is-active' : ''}" data-ref="tab-category-presentation" data-category="presentation">
                 <span class="material-symbols-rounded menu-item__icon">slideshow</span>
                 <span class="menu-item__text">Presentación</span>
+              </button>
+              <button type="button" class="menu-item${activeCategory === 'social' ? ' is-active' : ''}" data-ref="tab-category-social" data-category="social">
+                <span class="material-symbols-rounded menu-item__icon">share</span>
+                <span class="menu-item__text">Redes Sociales</span>
               </button>
               <button type="button" class="menu-item${activeCategory === 'doc' ? ' is-active' : ''}" data-ref="tab-category-doc" data-category="doc">
                 <span class="material-symbols-rounded menu-item__icon">description</span>
@@ -275,6 +279,74 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
               </div>
             </div>
 
+            <div class="modal-canvas-panel" data-ref="panel-category-social" style="${activeCategory === 'social' ? '' : 'display: none;'}">
+              <div class="creation-category-section" data-ref="section-social-platforms">
+                <div class="component-tags-carousel" data-ref="social-platforms-carousel" style="margin-bottom: 20px; overflow-x: auto; padding-bottom: 4px; display: flex; gap: 8px;">
+                  <button type="button" class="component-badge component-badge--interactive is-active" data-ref="badge-platform-facebook" data-platform="facebook">
+                    <span class="component-badge__text">Facebook</span>
+                  </button>
+                  <button type="button" class="component-badge component-badge--interactive" data-ref="badge-platform-instagram" data-platform="instagram">
+                    <span class="component-badge__text">Instagram</span>
+                  </button>
+                  <button type="button" class="component-badge component-badge--interactive" data-ref="badge-platform-linkedin" data-platform="linkedin">
+                    <span class="component-badge__text">LinkedIn</span>
+                  </button>
+                  <button type="button" class="component-badge component-badge--interactive" data-ref="badge-platform-pinterest" data-platform="pinterest">
+                    <span class="component-badge__text">Pinterest</span>
+                  </button>
+                  <button type="button" class="component-badge component-badge--interactive" data-ref="badge-platform-tiktok" data-platform="tiktok">
+                    <span class="component-badge__text">TikTok</span>
+                  </button>
+                  <button type="button" class="component-badge component-badge--interactive" data-ref="badge-platform-x" data-platform="x">
+                    <span class="component-badge__text">X (Twitter)</span>
+                  </button>
+                  <button type="button" class="component-badge component-badge--interactive" data-ref="badge-platform-whatsapp" data-platform="whatsapp">
+                    <span class="component-badge__text">WhatsApp</span>
+                  </button>
+                  <button type="button" class="component-badge component-badge--interactive" data-ref="badge-platform-youtube" data-platform="youtube">
+                    <span class="component-badge__text">YouTube</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="creation-category-section" data-ref="platform-content-facebook">
+                <h3 class="creation-category-section__title">Formatos para Facebook</h3>
+                <div class="creation-cards-grid" data-ref="grid-social-facebook">
+                  <button type="button" class="creation-card" data-ref="card-social-fb-post" data-type="social" data-w="940" data-h="788" data-format="facebook_post">
+                    <div class="creation-card__thumbnail" data-ref="thumb-social-fb-post">
+                      <div class="creation-card__svg-wrapper" data-ref="svg-social-fb-post">
+                        ${getSocialSvg('facebook_post')}
+                      </div>
+                      <span class="creation-card__badge creation-card__badge--popular" data-ref="badge-social-fb-post">Popular</span>
+                    </div>
+                    <div class="creation-card__info" data-ref="info-social-fb-post">
+                      <h4 class="creation-card__title" data-ref="title-social-fb-post">Post para Facebook</h4>
+                      <p class="creation-card__meta" data-ref="meta-social-fb-post">940 × 788 px • Formato estándar para publicaciones</p>
+                    </div>
+                  </button>
+
+                  <button type="button" class="creation-card" data-ref="card-social-fb-cover" data-type="social" data-w="851" data-h="315" data-format="facebook_cover">
+                    <div class="creation-card__thumbnail" data-ref="thumb-social-fb-cover">
+                      <div class="creation-card__svg-wrapper" data-ref="svg-social-fb-cover">
+                        ${getSocialSvg('facebook_cover')}
+                      </div>
+                      <span class="creation-card__badge" data-ref="badge-social-fb-cover">Horizontal</span>
+                    </div>
+                    <div class="creation-card__info" data-ref="info-social-fb-cover">
+                      <h4 class="creation-card__title" data-ref="title-social-fb-cover">Portada para Facebook</h4>
+                      <p class="creation-card__meta" data-ref="meta-social-fb-cover">851 × 315 px • Portada horizontal para páginas y perfiles</p>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              <div class="creation-category-section" data-ref="platform-content-other" style="display: none;">
+                <div class="empty-state" data-ref="empty-state-platform" style="padding: 48px 16px; text-align: center;">
+                  <p class="empty-state__description" data-ref="empty-state-platform-text" style="color: var(--text-secondary); font-size: 14px;">Formatos disponibles próximamente.</p>
+                </div>
+              </div>
+            </div>
+
             <div class="banner banner--danger" data-ref="create-canvas-error" style="display: none; margin-top: 14px;"></div>
           </div>
         </div>
@@ -296,6 +368,7 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
     board: 'Pizarrón Infinito',
     doc: 'Documento Doc',
     presentation: 'Presentación de Diapositivas',
+    social: 'Redes Sociales',
     template: templateName ? `Plantilla: ${templateName}` : 'Plantilla',
   };
 
@@ -305,7 +378,7 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
   const errorBanner = backdrop.querySelector<HTMLElement>('[data-ref="create-canvas-error"]');
   const btnClose = backdrop.querySelector<HTMLElement>('[data-ref="btn-modal-close"]');
 
-  const switchCategory = (category: 'board' | 'doc' | 'presentation' | 'template') => {
+  const switchCategory = (category: 'board' | 'doc' | 'presentation' | 'social' | 'template') => {
     activeCategory = category;
     navItems.forEach((item) => {
       item.classList.toggle('is-active', item.getAttribute('data-category') === category);
@@ -334,7 +407,7 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
 
   navItems.forEach((item) => {
     item.addEventListener('click', () => {
-      const cat = item.getAttribute('data-category') as 'board' | 'doc' | 'presentation' | 'template';
+      const cat = item.getAttribute('data-category') as 'board' | 'doc' | 'presentation' | 'social' | 'template';
       if (cat) {
         switchCategory(cat);
       }
@@ -411,6 +484,59 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
         docPaperSize: paper,
         docTemplateId: templateId,
         name,
+      }, card);
+    });
+  });
+
+  const platformBadges = backdrop.querySelectorAll<HTMLElement>('[data-platform]');
+  const fbContent = backdrop.querySelector<HTMLElement>('[data-ref="platform-content-facebook"]');
+  const otherContent = backdrop.querySelector<HTMLElement>('[data-ref="platform-content-other"]');
+  const otherText = backdrop.querySelector<HTMLElement>('[data-ref="empty-state-platform-text"]');
+
+  const platformNames: Record<string, string> = {
+    facebook: 'Facebook',
+    instagram: 'Instagram',
+    linkedin: 'LinkedIn',
+    pinterest: 'Pinterest',
+    tiktok: 'TikTok',
+    whatsapp: 'WhatsApp',
+    x: 'X (Twitter)',
+    youtube: 'YouTube',
+  };
+
+  platformBadges.forEach((badge) => {
+    badge.addEventListener('click', () => {
+      const platform = badge.getAttribute('data-platform') || 'facebook';
+      platformBadges.forEach((b) => b.classList.remove('is-active'));
+      badge.classList.add('is-active');
+
+      if (platform === 'facebook') {
+        if (fbContent) fbContent.style.display = 'block';
+        if (otherContent) otherContent.style.display = 'none';
+      } else {
+        if (fbContent) fbContent.style.display = 'none';
+        if (otherContent) {
+          otherContent.style.display = 'block';
+          if (otherText) {
+            otherText.textContent = `Formatos para ${platformNames[platform] || platform} disponibles próximamente.`;
+          }
+        }
+      }
+    });
+  });
+
+  const socialCards = backdrop.querySelectorAll<HTMLElement>('[data-ref^="card-social-"]');
+  socialCards.forEach((card) => {
+    card.addEventListener('click', () => {
+      const w = parseInt(card.getAttribute('data-w') || '940', 10);
+      const h = parseInt(card.getAttribute('data-h') || '788', 10);
+      const format = card.getAttribute('data-format') || 'facebook_post';
+      const name = format === 'facebook_cover' ? 'Portada de Facebook sin título' : 'Post para Facebook sin título';
+      void handleInstantCreation({
+        canvasType: 'social',
+        height: h,
+        name,
+        width: w,
       }, card);
     });
   });

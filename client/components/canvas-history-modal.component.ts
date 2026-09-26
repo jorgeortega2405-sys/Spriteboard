@@ -3,10 +3,11 @@ import { currentUser, deleteApi, escapeHtml, getApi, postApi } from '../services
 import { renderIcons } from '../services/icon.service.js';
 import { showToast } from '../services/toast.service.js';
 import { CanvasSnapshotItem } from '../types/canvas-snapshot.types.js';
+import { CanvasType } from '../types/canvas.types.js';
 
 export interface CanvasHistoryModalOptions {
   canvasTitle?: string;
-  canvasType?: 'board' | 'doc' | 'presentation';
+  canvasType?: CanvasType;
   canvasUuid: string;
   generateThumbnail?: () => string | Promise<string>;
   getCurrentProjectData?: () => any;

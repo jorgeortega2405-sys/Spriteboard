@@ -471,6 +471,66 @@ async function runPresentationTests(): Promise<void> {
     }
   });
 
+  await test('6.1 Formatos de Redes Sociales - Verificación de dimensiones predefinidas', async () => {
+    const { SOCIAL_FORMATS } = await import('../client/types/presentation.types.js');
+    assert.strictEqual(SOCIAL_FORMATS.facebook_post.width, 940);
+    assert.strictEqual(SOCIAL_FORMATS.facebook_post.height, 788);
+    assert.strictEqual(SOCIAL_FORMATS.facebook_cover.width, 851);
+    assert.strictEqual(SOCIAL_FORMATS.facebook_cover.height, 315);
+  });
+
+  await test('6.2 Modal de Creación - Badges de plataformas y tarjetas predefinidas', () => {
+    const modalPath = path.resolve(process.cwd(), 'client/components/create-canvas-modal.component.ts');
+    const modalContent = fs.readFileSync(modalPath, 'utf-8');
+
+    const expectedBadges = [
+      'badge-platform-facebook',
+      'badge-platform-instagram',
+      'badge-platform-linkedin',
+      'badge-platform-pinterest',
+      'badge-platform-tiktok',
+      'badge-platform-x',
+      'badge-platform-whatsapp',
+      'badge-platform-youtube',
+    ];
+
+    for (const badgeRef of expectedBadges) {
+      assert.ok(modalContent.includes(`data-ref="${badgeRef}"`), `Falta badge data-ref="${badgeRef}" en modal de creación`);
+    }
+
+    assert.ok(modalContent.includes('data-ref="card-social-fb-post"'), 'Falta data-ref="card-social-fb-post"');
+    assert.ok(modalContent.includes('data-ref="card-social-fb-cover"'), 'Falta data-ref="card-social-fb-cover"');
+    assert.ok(modalContent.includes('data-ref="panel-category-social"'), 'Falta data-ref="panel-category-social"');
+
+    const idMatches = modalContent.match(/\bid\s*=\s*["'][^"']+["']/g);
+    assert.strictEqual(idMatches, null, `Se encontraron atributos id en modal: ${JSON.stringify(idMatches)}`);
+  });
+
+  await test('6.3 Auditoría Código Redes Sociales - CERO console.log en archivos creados/modificados', () => {
+    const filesToCheck = [
+      'client/views/social.view.ts',
+      'client/views/presentation/presentation.controller.ts',
+      'client/components/create-canvas-modal.component.ts',
+      'client/services/canvas-creator.service.ts',
+      'client/components/create-canvas-graphics.ts',
+      'src/controllers/canvas.controller.ts',
+      'src/services/canvas.service.ts',
+    ];
+
+    for (const relPath of filesToCheck) {
+      const fullPath = path.resolve(process.cwd(), relPath);
+      if (fs.existsSync(fullPath)) {
+        const fileContent = fs.readFileSync(fullPath, 'utf-8');
+        const consoleMatches = fileContent.match(/console\.(log|warn|error|info|debug)\(/g);
+        assert.strictEqual(
+          consoleMatches,
+          null,
+          `Se encontraron llamadas a console.* en ${relPath}: ${JSON.stringify(consoleMatches)}`
+        );
+      }
+    }
+  });
+
   process.stdout.write(`\n\x1b[32;1m✓ Todas las ${passedCount}/${totalCount} pruebas ejecutadas exitosamente sin errores.\x1b[0m\n\n`);
 }
 

@@ -34,7 +34,32 @@ export interface PresentationProject {
   elements?: BoardElement[];
   height: number;
   pages: PresentationSlideItem[];
-  type: 'presentation';
+  type: 'presentation' | 'social';
   version: number;
   width: number;
 }
+
+export type SocialFormatKey = 'facebook_cover' | 'facebook_post';
+
+export interface SocialFormatConfig {
+  aspectRatio: string;
+  height: number;
+  label: string;
+  name: string;
+  platform: 'facebook' | 'instagram' | 'linkedin' | 'pinterest' | 'tiktok' | 'whatsapp' | 'x' | 'youtube';
+  width: number;
+}
+
+export const SOCIAL_FORMATS: Record<SocialFormatKey, SocialFormatConfig> = {
+  facebook_cover: { aspectRatio: '851:315', height: 315, label: '851 × 315 px', name: 'Portada para Facebook', platform: 'facebook', width: 851 },
+  facebook_post: { aspectRatio: '940:788', height: 788, label: '940 × 788 px', name: 'Post para Facebook', platform: 'facebook', width: 940 },
+};
+
+export interface StageCanvasOptions {
+  canPresent?: boolean;
+  canvasType?: 'presentation' | 'social';
+  defaultHeight?: number;
+  defaultWidth?: number;
+  pageLabel?: string;
+}
+

@@ -23,7 +23,7 @@ import { closeWebSocket } from '../../services/websocket.service.js';
 import { getYouTubeEmbedUrl, openYouTubePlayerModal } from '../../services/youtube.service.js';
 import { CanvasItem } from '../../types/canvas.types.js';
 import { MockupFitMode, MockupTemplate } from '../../types/mockups.types.js';
-import { PRESENTATION_FORMATS, PresentationFormatConfig, PresentationProject, PresentationSlideItem } from '../../types/presentation.types.js';
+import { PRESENTATION_FORMATS, PresentationFormatConfig, PresentationProject, PresentationSlideItem, StageCanvasOptions } from '../../types/presentation.types.js';
 import { DEFAULT_CLASSIC_PALETTE, generateShadingRamp, getCollaboratorColor } from '../../utils/color.util.js';
 import { setupDropdown, withButtonLoading } from '../../utils/dom.util.js';
 import { getGuestIdentity } from '../../utils/guest.util.js';
@@ -140,14 +140,20 @@ export class PresentationController {
   private slides: PresentationSlideItem[] = [];
   private slideshowPlayer: SlideshowPlayerComponent | null = null;
   private slideWidth: number = 1280;
+  private canPresent: boolean = true;
+  private canvasType: 'presentation' | 'social' = 'presentation';
+  private stageOptions: StageCanvasOptions = {};
   private undoStack: string[] = [];
   private viewTracker: CanvasViewTracker | null = null;
   private zoom: number = 1;
 
-  constructor(container: HTMLElement, canvasUuid: string, initialRecord?: any) {
+  constructor(container: HTMLElement, canvasUuid: string, initialRecord?: any, options?: StageCanvasOptions) {
     this.container = container;
     this.canvasUuid = canvasUuid;
     this.canvasRecord = initialRecord || null;
+    this.stageOptions = options || {};
+    this.canPresent = options?.canPresent ?? (this.canvasRecord?.canvas_type !== 'social' && this.canvasRecord?.unit !== 'social');
+    this.canvasType = options?.canvasType || (this.canvasRecord?.canvas_type === 'social' || this.canvasRecord?.unit === 'social' ? 'social' : 'presentation');
     this.collaborationManager = new PresentationCollaborationManager(canvasUuid);
   }
 
@@ -318,13 +324,13 @@ export class PresentationController {
         createdAt: p.createdAt || Date.now(),
         duration: p.duration || 5.0,
         elements: Array.isArray(p.elements) ? p.elements : [],
-        id: p.id || `slide-${idx + 1}`,
-        name: p.name || `Diapositiva ${idx + 1}`,
+        id: p.id || (this.canvasType === 'social' ? `page-${idx + 1}` : `slide-${idx + 1}`),
+        name: p.name || (this.canvasType === 'social' ? `Página ${idx + 1}` : `Diapositiva ${idx + 1}`),
       }));
       this.activeSlideId = project.activePageId || this.slides[0].id;
       this.selectedSlideId = this.activeSlideId;
-      this.slideWidth = project.width || 1280;
-      this.slideHeight = project.height || 720;
+      this.slideWidth = project.width || (canvas?.width || (this.canvasType === 'social' ? 940 : 1280));
+      this.slideHeight = project.height || (canvas?.height || (this.canvasType === 'social' ? 788 : 720));
     } else {
       this.slides = [
         {
@@ -333,19 +339,19 @@ export class PresentationController {
           createdAt: Date.now(),
           duration: 5.0,
           elements: [],
-          id: 'slide-1',
-          name: 'Diapositiva 1',
+          id: this.canvasType === 'social' ? 'page-1' : 'slide-1',
+          name: this.canvasType === 'social' ? 'Página 1' : 'Diapositiva 1',
         },
       ];
-      this.activeSlideId = 'slide-1';
-      this.selectedSlideId = 'slide-1';
-      this.slideWidth = 1280;
-      this.slideHeight = 720;
+      this.activeSlideId = this.slides[0].id;
+      this.selectedSlideId = this.slides[0].id;
+      this.slideWidth = canvas?.width || (this.canvasType === 'social' ? 940 : 1280);
+      this.slideHeight = canvas?.height || (this.canvasType === 'social' ? 788 : 720);
     }
 
     const titleEl = this.container.querySelector<HTMLElement>('[data-ref="presentation-title"]');
-    if (titleEl && this.canvasRecord?.name) {
-      titleEl.textContent = this.canvasRecord.name;
+    if (titleEl) {
+      titleEl.textContent = this.canvasRecord?.name || (this.canvasType === 'social' ? 'Diseño para redes sin título' : 'Presentación sin título');
     }
 
     const currentSlide = this.getActiveSlide();
@@ -792,7 +798,7 @@ export class PresentationController {
     if (btnFileMenu && fileMenuWrapper) {
       this.fileMenuController = setupCanvasFileMenu({
         canvasTitle: this.canvasRecord?.name || 'Presentación',
-        canvasType: 'presentation',
+        canvasType: this.canvasType,
         canvasUuid: this.canvasUuid,
         currentPageViewMode: this.pageViewMode,
         folderUuid: this.canvasRecord?.folder_uuid || null,
@@ -841,6 +847,16 @@ export class PresentationController {
         trigger: btnAi,
         wrapper: aiWrapper,
       });
+    }
+
+    if (!this.canPresent) {
+      const btnPresent = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-presentation-present"]');
+      if (btnPresent) btnPresent.style.display = 'none';
+      if (aiWrapper) aiWrapper.style.display = 'none';
+      const slideDurationHeader = this.container.querySelector<HTMLElement>('[data-ref="top-btn-slide-duration-header"]');
+      const slideDurationBottom = this.container.querySelector<HTMLElement>('[data-ref="btn-slide-duration"]');
+      if (slideDurationHeader) slideDurationHeader.style.display = 'none';
+      if (slideDurationBottom) slideDurationBottom.style.display = 'none';
     }
 
     if (!currentUser) {
@@ -1197,7 +1213,9 @@ export class PresentationController {
     if (!signal) return;
 
     const btnPresent = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-presentation-present"]');
-    btnPresent?.addEventListener('click', () => this.startSlideshow(), { signal });
+    if (this.canPresent) {
+      btnPresent?.addEventListener('click', () => this.startSlideshow(), { signal });
+    }
 
     window.addEventListener('keydown', (e: KeyboardEvent) => {
       if (e.code === 'Space' && !this.activeInlineEditor && (e.target as HTMLElement).tagName !== 'INPUT' && (e.target as HTMLElement).tagName !== 'TEXTAREA') {
@@ -1207,8 +1225,10 @@ export class PresentationController {
         }
       }
       if (e.key === 'F5') {
-        e.preventDefault();
-        this.startSlideshow();
+        if (this.canPresent) {
+          e.preventDefault();
+          this.startSlideshow();
+        }
         return;
       }
       if (e.key === 'Escape' && !this.activeInlineEditor && (e.target as HTMLElement).tagName !== 'INPUT' && (e.target as HTMLElement).tagName !== 'TEXTAREA') {
@@ -2532,13 +2552,13 @@ export class PresentationController {
           ref: 'ctx-pres-reset-zoom',
           shortcut: 'Ctrl+0',
         },
-        {
+        ...(this.canPresent ? [{
           action: () => this.startSlideshow(),
           icon: 'play_arrow',
           label: 'Iniciar presentación',
           ref: 'ctx-pres-start-slideshow',
           shortcut: 'F5',
-        },
+        }] : []),
         { divider: true },
         {
           action: () => this.undo(),
@@ -4421,7 +4441,7 @@ export class PresentationController {
       duration: this.slideDuration,
       elements: [],
       id: `slide-${Date.now()}`,
-      name: `Diapositiva ${this.slides.length + 1}`,
+      name: this.canvasType === 'social' ? `Página ${this.slides.length + 1}` : `Diapositiva ${this.slides.length + 1}`,
     };
     this.saveHistoryState();
     this.slides.push(newSlide);
@@ -4439,7 +4459,7 @@ export class PresentationController {
     this.render();
     this.scheduleAutoSave();
     this.collaborationManager.broadcastSlideAdd(newSlide);
-    showToast('Nueva diapositiva creada', 'success');
+    showToast(this.canvasType === 'social' ? 'Nueva página creada' : 'Nueva diapositiva creada', 'success');
   }
 
   public duplicateSlide(): void {
@@ -5001,7 +5021,7 @@ export class PresentationController {
             duration: this.slideDuration,
             elements: [],
             id: `slide-${Date.now()}`,
-            name: `Diapositiva ${this.slides.length + 1}`,
+            name: this.canvasType === 'social' ? `Página ${this.slides.length + 1}` : `Diapositiva ${this.slides.length + 1}`,
           };
           this.saveHistoryState();
           this.slides.splice(idx + 1, 0, newSlide);
@@ -5012,7 +5032,7 @@ export class PresentationController {
           this.renderSlidesTray();
           this.render();
           this.scheduleAutoSave();
-          showToast('Nueva diapositiva creada', 'success');
+          showToast(this.canvasType === 'social' ? 'Nueva página creada' : 'Nueva diapositiva creada', 'success');
         }
       });
     });
@@ -5234,3 +5254,6 @@ export class PresentationController {
     }
   }
 }
+
+export const StageCanvasController = PresentationController;
+

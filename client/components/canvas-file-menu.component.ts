@@ -5,6 +5,7 @@ import { softDeleteLocalCanvas } from '../services/canvas-storage.service.js';
 import { t } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { showToast } from '../services/toast.service.js';
+import { CanvasType } from '../types/canvas.types.js';
 import { setupDropdown } from '../utils/dom.util.js';
 import { CanvasHistoryModalController, openCanvasHistoryModal } from './canvas-history-modal.component.js';
 import { openCreateCanvasModal } from './create-canvas-modal.component.js';
@@ -15,7 +16,7 @@ export type CanvasPageViewMode = 'single-page' | 'thumbnails' | 'scroll' | 'grid
 
 export interface CanvasFileMenuOptions {
   canvasTitle?: string;
-  canvasType: 'board' | 'doc' | 'presentation';
+  canvasType: CanvasType;
   canvasUuid: string;
   currentPageViewMode?: CanvasPageViewMode;
   folderUuid?: string | null;
@@ -48,7 +49,7 @@ export interface CanvasFileMenuController {
 export function setupCanvasFileMenu(options: CanvasFileMenuOptions): CanvasFileMenuController {
   const { canvasType, canvasUuid, folderUuid, generateThumbnail, getCurrentProjectData, isOwner, onChangePageViewMode, onExitPreview, onMoved, onPreviewSnapshot, onRestoreSnapshot, signal, trigger, wrapper } = options;
 
-  let currentTitle = options.canvasTitle || (canvasType === 'doc' ? 'Documento sin título' : canvasType === 'presentation' ? 'Presentación sin título' : 'Pizarrón sin título');
+  let currentTitle = options.canvasTitle || (canvasType === 'doc' ? 'Documento sin título' : canvasType === 'presentation' ? 'Presentación sin título' : canvasType === 'social' ? 'Diseño para redes sin título' : 'Pizarrón sin título');
   let isFavoriteState = Boolean(options.isFavorite);
   let pageViewModeState: CanvasPageViewMode = options.currentPageViewMode || 'scroll';
 

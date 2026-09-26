@@ -61,10 +61,11 @@ export async function createCanvasHandler(req: Request, res: Response): Promise<
     const { access_level, canvas_type, data, height, name, preview_thumbnail, public_role, unit, width } = req.body;
     const isPresentation = canvas_type === 'presentation' || unit === 'presentation';
     const isDoc = !isPresentation && (canvas_type === 'doc' || unit === 'doc');
-    const finalCanvasType = isPresentation ? 'presentation' : (isDoc ? 'doc' : 'board');
+    const isSocial = !isPresentation && !isDoc && (canvas_type === 'social' || unit === 'social');
+    const finalCanvasType = isPresentation ? 'presentation' : (isDoc ? 'doc' : (isSocial ? 'social' : 'board'));
     const isInfinite = finalCanvasType === 'board' || unit === 'infinite';
-    const numWidth = isInfinite ? 0 : Math.max(1, Math.min(16384, Math.floor(Number(width) || (isPresentation ? 1280 : 1920))));
-    const numHeight = isInfinite ? 0 : Math.max(1, Math.min(16384, Math.floor(Number(height) || (isPresentation ? 720 : 1080))));
+    const numWidth = isInfinite ? 0 : Math.max(1, Math.min(16384, Math.floor(Number(width) || (isPresentation ? 1280 : (isSocial ? 940 : 1920)))));
+    const numHeight = isInfinite ? 0 : Math.max(1, Math.min(16384, Math.floor(Number(height) || (isPresentation ? 720 : (isSocial ? 788 : 1080)))));
 
     if (!isInfinite && (isNaN(numWidth) || numWidth <= 0 || isNaN(numHeight) || numHeight <= 0)) {
       sendBadRequest(res, 'Las dimensiones del lienzo deben ser valores numéricos positivos.');
@@ -107,10 +108,11 @@ export async function syncCanvasHandler(req: Request, res: Response): Promise<vo
 
     const isPresentation = canvas_type === 'presentation' || unit === 'presentation';
     const isDoc = !isPresentation && (canvas_type === 'doc' || unit === 'doc');
-    const finalCanvasType = isPresentation ? 'presentation' : (isDoc ? 'doc' : 'board');
+    const isSocial = !isPresentation && !isDoc && (canvas_type === 'social' || unit === 'social');
+    const finalCanvasType = isPresentation ? 'presentation' : (isDoc ? 'doc' : (isSocial ? 'social' : 'board'));
     const isInfinite = finalCanvasType === 'board' || unit === 'infinite';
-    const numWidth = isInfinite ? 0 : Math.max(1, Math.min(16384, Math.floor(Number(width) || (isPresentation ? 1280 : 1920))));
-    const numHeight = isInfinite ? 0 : Math.max(1, Math.min(16384, Math.floor(Number(height) || (isPresentation ? 720 : 1080))));
+    const numWidth = isInfinite ? 0 : Math.max(1, Math.min(16384, Math.floor(Number(width) || (isPresentation ? 1280 : (isSocial ? 940 : 1920)))));
+    const numHeight = isInfinite ? 0 : Math.max(1, Math.min(16384, Math.floor(Number(height) || (isPresentation ? 720 : (isSocial ? 788 : 1080)))));
 
     const canvas = await syncCanvas(user ? user.id : null, {
       access_level: access_level === 'public' ? 'public' : access_level === 'private' ? 'private' : undefined,

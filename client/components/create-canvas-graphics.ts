@@ -497,3 +497,40 @@ export function getPresentationSvg(format: string): string {
       </svg>`;
   }
 }
+
+export function getSocialSvg(format: string): string {
+  switch (format) {
+    case 'facebook_post':
+      return `<svg viewBox="0 0 180 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="36" y="8" width="108" height="94" rx="6" fill="#ffffff" stroke="#1877f2" stroke-width="1.5"/>
+        <circle cx="50" cy="22" r="6" fill="#1877f2"/>
+        <rect x="62" y="18" width="45" height="4" rx="2" fill="#1e293b"/>
+        <rect x="62" y="24" width="28" height="3" rx="1.5" fill="#94a3b8"/>
+        <rect x="44" y="34" width="92" height="48" rx="4" fill="#eff6ff" stroke="#bfdbfe" stroke-width="0.75"/>
+        <circle cx="90" cy="54" r="10" fill="#1877f2" fill-opacity="0.25"/>
+        <path d="M86 54 L90 58 L96 50" stroke="#1877f2" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <line x1="44" y1="88" x2="136" y2="88" stroke="#e2e8f0" stroke-width="1"/>
+        <circle cx="54" cy="94" r="3" fill="#1877f2"/>
+        <circle cx="68" cy="94" r="3" fill="#64748b"/>
+        <circle cx="82" cy="94" r="3" fill="#64748b"/>
+      </svg>`;
+    case 'facebook_cover':
+      return `<svg viewBox="0 0 180 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="15" y="32" width="150" height="56" rx="6" fill="#ffffff" stroke="#1877f2" stroke-width="1.5"/>
+        <rect x="16" y="33" width="148" height="54" rx="5" fill="#f0f7ff"/>
+        <circle cx="42" cy="60" r="14" fill="#ffffff" stroke="#1877f2" stroke-width="1.5"/>
+        <circle cx="42" cy="60" r="8" fill="#1877f2" fill-opacity="0.3"/>
+        <rect x="64" y="52" width="55" height="6" rx="3" fill="#1e293b"/>
+        <rect x="64" y="62" width="38" height="4" rx="2" fill="#94a3b8"/>
+        <rect x="126" y="54" width="28" height="12" rx="3" fill="#1877f2"/>
+      </svg>`;
+    default:
+      return `<svg viewBox="0 0 180 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="36" y="10" width="108" height="90" rx="6" fill="#ffffff" stroke="#1877f2" stroke-width="1.5"/>
+        <circle cx="50" cy="24" r="6" fill="#1877f2"/>
+        <rect x="62" y="20" width="50" height="4" rx="2" fill="#1e293b"/>
+        <rect x="44" y="36" width="92" height="48" rx="4" fill="#eff6ff" stroke="#bfdbfe" stroke-width="0.75"/>
+      </svg>`;
+  }
+}
+

@@ -1,5 +1,5 @@
 export type TemplateStatus = 'approved' | 'draft' | 'pending' | 'rejected';
-export type TemplateType = 'board' | 'doc' | 'presentation';
+export type TemplateType = 'board' | 'doc' | 'presentation' | 'social';
 
 export interface CreateTemplateDto {
   canvas_uuid: string;

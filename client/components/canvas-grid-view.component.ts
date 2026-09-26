@@ -1,5 +1,6 @@
 import { renderIcons } from '../services/icon.service.js';
 import { showToast } from '../services/toast.service.js';
+import { CanvasType } from '../types/canvas.types.js';
 
 export interface CanvasGridViewPageItem {
   contentHtml?: string;
@@ -13,7 +14,7 @@ export interface CanvasGridViewPageItem {
 
 export interface CanvasGridViewOptions {
   activePageIndex: number;
-  canvasType: 'board' | 'doc' | 'presentation';
+  canvasType: CanvasType;
   onAddPage: () => void | Promise<void>;
   onClose: (selectedPageIndex?: number) => void;
   onDeletePages: (pageIndices: number[]) => void | Promise<void>;

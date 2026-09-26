@@ -46,6 +46,7 @@ export interface CreateCanvasOptions {
 export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise<void> {
   const isPresentation = options.canvasType === 'presentation';
   const isDoc = options.canvasType === 'doc';
+  const isSocial = options.canvasType === 'social';
   const paperSize = options.docPaperSize || 'letter';
   const orientation = options.docOrientation || 'portrait';
 
@@ -54,12 +55,12 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
     : DOC_PAPER_DIMENSIONS.letter.portrait;
 
   const defaultPresFormat = PRESENTATION_FORMATS.presentation_16_9;
-  const width = isPresentation ? (options.width || defaultPresFormat.width) : (isDoc ? (options.width || paperPreset.widthPx || 816) : 0);
-  const height = isPresentation ? (options.height || defaultPresFormat.height) : (isDoc ? (options.height || paperPreset.heightPx || 0) : 0);
+  const width = isPresentation ? (options.width || defaultPresFormat.width) : (isSocial ? (options.width || 940) : (isDoc ? (options.width || paperPreset.widthPx || 816) : 0));
+  const height = isPresentation ? (options.height || defaultPresFormat.height) : (isSocial ? (options.height || 788) : (isDoc ? (options.height || paperPreset.heightPx || 0) : 0));
 
   const defaultName = isPresentation
     ? 'Presentación sin título'
-    : (options.canvasType === 'doc' ? 'Documento sin título' : 'Pizarrón sin título');
+    : (isSocial ? 'Diseño para redes sin título' : (options.canvasType === 'doc' ? 'Documento sin título' : 'Pizarrón sin título'));
   const name = options.name.trim() || defaultName;
   const solidColor = options.solidColor || '#ffffff';
 
@@ -109,7 +110,34 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
 
   let initialProject: any = options.initialProject || null;
 
-  if (!initialProject && isPresentation) {
+  if (!initialProject && isSocial) {
+    const pages = [
+      {
+        background: {
+          color: '#ffffff',
+          dotColor: '#cbd5e1',
+          type: 'solid' as const,
+        },
+        camera: { x: 0, y: 0, zoom: 1 },
+        createdAt: Date.now(),
+        elements: [],
+        id: 'page-1',
+        name: 'Página 1',
+      },
+    ];
+
+    initialProject = {
+      activePageId: pages[0].id,
+      background: pages[0].background,
+      camera: { x: 0, y: 0, zoom: 1 },
+      elements: [],
+      height,
+      pages,
+      type: 'social',
+      version: 1,
+      width,
+    };
+  } else if (!initialProject && isPresentation) {
     const templateSlides = getPresentationTemplateSlides(options.boardTemplateId);
     const slides = templateSlides.length > 0 ? templateSlides : [
       {
@@ -293,8 +321,8 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
     }
   }
 
-  const unit: CanvasType = isPresentation ? 'presentation' : (options.canvasType === 'doc' ? 'doc' : 'board');
-  const canvasType: CanvasType = isPresentation ? 'presentation' : (options.canvasType === 'doc' ? 'doc' : 'board');
+  const unit: CanvasType = isPresentation ? 'presentation' : (isSocial ? 'social' : (options.canvasType === 'doc' ? 'doc' : 'board'));
+  const canvasType: CanvasType = isPresentation ? 'presentation' : (isSocial ? 'social' : (options.canvasType === 'doc' ? 'doc' : 'board'));
   const targetRoute = `/design/`;
 
   if (currentUser) {
