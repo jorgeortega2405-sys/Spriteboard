@@ -1,11 +1,16 @@
 import { loadTemplate } from '../services/template.service.js';
 import { createErrorView } from './error.view.js';
-import { PresentationController } from './presentation/presentation.controller.js';
+import { StageCanvasController } from './stage/stage.controller.js';
 
 export async function createPresentationView(canvasUuid: string, initialRecord?: any): Promise<HTMLElement> {
-  const container = await loadTemplate('/views/presentation/presentation.html');
+  const container = await loadTemplate('/views/stage/stage.html');
 
-  const controller = new PresentationController(container, canvasUuid, initialRecord);
+  const controller = new StageCanvasController(container, canvasUuid, initialRecord, {
+    canPresent: true,
+    canvasType: 'presentation',
+    pageLabel: 'Lámina',
+  });
+
   let loaded = false;
   try {
     loaded = await Promise.race([

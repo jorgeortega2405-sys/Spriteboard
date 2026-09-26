@@ -423,6 +423,12 @@ async function runPresentationTests(): Promise<void> {
       assert.ok(presentationContent.includes(`data-ref="${ref}"`), `Falta el data-ref="${ref}" en presentation.html`);
     }
 
+    const stageHtmlPath = path.resolve(process.cwd(), 'public/views/stage/stage.html');
+    const stageContent = fs.readFileSync(stageHtmlPath, 'utf-8');
+    for (const ref of requiredPresentationRefs) {
+      assert.ok(stageContent.includes(`data-ref="${ref}"`), `Falta el data-ref="${ref}" en stage.html`);
+    }
+
     const requiredBoardRefs = [
       'top-btn-effects',
       'top-btn-animate',
@@ -508,6 +514,10 @@ async function runPresentationTests(): Promise<void> {
 
   await test('6.3 Auditoría Código Redes Sociales - CERO console.log en archivos creados/modificados', () => {
     const filesToCheck = [
+      'client/types/stage.types.ts',
+      'client/views/stage/stage.controller.ts',
+      'client/views/stage/stage-collaboration.manager.ts',
+      'client/views/presentation.view.ts',
       'client/views/social.view.ts',
       'client/views/presentation/presentation.controller.ts',
       'client/components/create-canvas-modal.component.ts',
