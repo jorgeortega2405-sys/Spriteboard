@@ -219,7 +219,7 @@ export async function getUserPublicProfile(
   const isSpriteboardOfficial = cleanUsername === 'spriteboard' || cleanUsername === 'spriteboard-oficial' || cleanUsername === 'spriteboard oficial';
 
   const [userRows] = await pool.query<RowDataPacket[]>(
-    `SELECT id, uuid, username, designer_handle, designer_onboarded, avatar_url, banner_url, bio, country, website_url, role, subscription_tier, created_at 
+    `SELECT id, uuid, username, designer_handle, designer_handle_changed_at, designer_onboarded, avatar_url, banner_url, bio, country, website_url, social_links, role, subscription_tier, created_at 
      FROM users 
      WHERE LOWER(username) = LOWER(?) OR LOWER(designer_handle) = LOWER(?) 
      LIMIT 1`,
@@ -235,6 +235,7 @@ export async function getUserPublicProfile(
         country: 'Global',
         created_at: '2024-01-01T00:00:00.000Z',
         designer_handle: 'spriteboard',
+        designer_handle_changed_at: null,
         designer_onboarded: true,
         followers_count: 3280,
         following_count: 0,
@@ -244,6 +245,15 @@ export async function getUserPublicProfile(
         is_me: false,
         role: 'ADMIN',
         roles: ['ADMIN', 'DESIGNER'],
+        social_links: {
+          facebook: 'https://facebook.com/spriteboard',
+          instagram: 'spriteboard',
+          pinterest: 'spriteboard',
+          tiktok: 'spriteboard',
+          website: 'https://spriteboard.com',
+          x: 'spriteboard',
+          youtube: 'spriteboard',
+        },
         subscription_tier: 'enterprise',
         templates_count: OFFICIAL_SYSTEM_TEMPLATES.length,
         username: 'Spriteboard Oficial',
@@ -304,6 +314,11 @@ export async function getUserPublicProfile(
 
   const isMe = Boolean(currentUserId && currentUserId === targetUserId);
 
+  let parsedSocialLinks: Record<string, string> | null = null;
+  if (u.social_links) {
+    parsedSocialLinks = typeof u.social_links === 'string' ? JSON.parse(u.social_links) : u.social_links;
+  }
+
   return {
     avatar_url: u.avatar_url || null,
     banner_url: u.banner_url || null,
@@ -311,6 +326,7 @@ export async function getUserPublicProfile(
     country: u.country || null,
     created_at: u.created_at ? new Date(u.created_at).toISOString() : new Date().toISOString(),
     designer_handle: u.designer_handle || null,
+    designer_handle_changed_at: u.designer_handle_changed_at ? new Date(u.designer_handle_changed_at).toISOString() : null,
     designer_onboarded: Boolean(u.designer_onboarded),
     followers_count: followersCount,
     following_count: followingCount,
@@ -320,6 +336,7 @@ export async function getUserPublicProfile(
     is_me: isMe,
     role: u.role || 'USER',
     roles,
+    social_links: parsedSocialLinks,
     subscription_tier: u.subscription_tier || 'free',
     templates_count: templatesCount,
     username: String(u.username),

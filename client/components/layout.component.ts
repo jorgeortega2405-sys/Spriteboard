@@ -503,12 +503,19 @@ function setupRailNavigation(sidebar: HTMLElement): void {
       if (moreBackdrop) moreBackdrop.classList.remove('is-visible');
     };
 
-    btnMore.addEventListener('click', (e) => {
+    const toggleMoreMenu = (e: Event) => {
       e.stopPropagation();
       if (isMoreOpen) {
         closeMoreMenu();
       } else {
         openMoreMenu();
+      }
+    };
+
+    btnMore.addEventListener('click', toggleMoreMenu);
+    moreContainer.addEventListener('click', (e) => {
+      if (e.target !== btnMore && !btnMore.contains(e.target as Node) && !moreMenu.contains(e.target as Node)) {
+        toggleMoreMenu(e);
       }
     });
 
@@ -6768,6 +6775,10 @@ async function populateDrawerContent(drawer: HTMLElement): Promise<void> {
           <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#person"></use></svg>
           <span class="menu-item__text" data-i18n="nav.your_account">Tu cuenta</span>
         </button>
+        <button type="button" class="menu-item" data-ref="btn-nav-settings-profile">
+          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#public"></use></svg>
+          <span class="menu-item__text" data-i18n="nav.public_profile">Perfil público</span>
+        </button>
         <button type="button" class="menu-item" data-ref="btn-nav-settings-security">
           <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#lock"></use></svg>
           <span class="menu-item__text" data-i18n="nav.security">Seguridad</span>
@@ -6780,11 +6791,14 @@ async function populateDrawerContent(drawer: HTMLElement): Promise<void> {
       translateElement(drawerBody);
 
       const btnAccount = drawerBody.querySelector<HTMLElement>('[data-ref="btn-nav-settings-account"]');
+      const btnProfile = drawerBody.querySelector<HTMLElement>('[data-ref="btn-nav-settings-profile"]');
       const btnSecurity = drawerBody.querySelector<HTMLElement>('[data-ref="btn-nav-settings-security"]');
       const btnAccessibility = drawerBody.querySelector<HTMLElement>('[data-ref="btn-nav-settings-accessibility"]');
 
       if (currentPath === '/settings' || currentPath === '/settings/your-account') {
         btnAccount?.classList.add('is-active');
+      } else if (currentPath === '/settings/profile' || currentPath === '/settings/public-profile') {
+        btnProfile?.classList.add('is-active');
       } else if (currentPath === '/settings/security' || currentPath === '/settings/login-and-security') {
         btnSecurity?.classList.add('is-active');
       } else if (currentPath === '/settings/accessibility') {
@@ -6792,6 +6806,7 @@ async function populateDrawerContent(drawer: HTMLElement): Promise<void> {
       }
 
       bindNavLink(btnAccount, '/settings/your-account');
+      bindNavLink(btnProfile, '/settings/profile');
       bindNavLink(btnSecurity, '/settings/security');
       bindNavLink(btnAccessibility, '/settings/accessibility');
     } else {

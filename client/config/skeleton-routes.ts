@@ -18,6 +18,8 @@ export const SKELETON_ROUTES: Record<string, string> = {
   '/upgrade': 'grouped-layout',
   '/settings': 'grouped-layout',
   '/settings/your-account': 'grouped-layout',
+  '/settings/profile': 'grouped-layout',
+  '/settings/public-profile': 'grouped-layout',
   '/settings/security': 'grouped-layout',
   '/settings/login-and-security': 'grouped-layout',
   '/settings/billing': 'grouped-layout',

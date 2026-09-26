@@ -1,0 +1,160 @@
+<div class="component-wrapper component-wrapper--full home-wrapper view-wrapper" data-ref="settings-wrapper">
+  <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="settings-scrollable">
+    <div class="settings-layout" data-ref="settings-layout">
+      <div class="settings-header" data-ref="settings-header">
+        <h1 class="settings-title" data-ref="settings-title" data-i18n="settings.profile.title"></h1>
+        <p class="settings-subtitle" data-ref="settings-subtitle" data-i18n="settings.profile.subtitle"></p>
+      </div>
+
+      <!-- Banner de cuenta protegida -->
+      <div class="banner banner--info" data-ref="protected-account-banner" style="display: none; margin-bottom: 24px;">
+        <span class="material-symbols-rounded">shield</span>
+        <div class="banner__text">
+          <strong data-i18n="settings.profile.account_protected_banner_title"></strong>
+          <span data-i18n="settings.profile.account_protected_banner_desc"></span>
+        </div>
+      </div>
+
+      <!-- Grupo 1: Identificador (@handle) -->
+      <div class="settings-group" data-ref="group-handle">
+        <div class="settings-item" data-ref="item-handle">
+          <div class="settings-item__content" data-ref="item-handle-content">
+            <div class="settings-item__text" data-ref="item-handle-text">
+              <div class="settings-item__title-row" data-ref="handle-title-row">
+                <h2 class="settings-item__title" data-ref="item-handle-title" data-i18n="settings.profile.handle_title"></h2>
+                <span class="component-badge component-badge--neutral settings-badge-cooldown" data-ref="handle-cooldown-badge" data-i18n="settings.profile.handle_cooldown_badge"></span>
+                <span class="component-badge component-badge--warning settings-badge-cooldown" data-ref="handle-cooldown-warning" style="display: none;">
+                  <svg class="component-icon" style="font-size: 14px; width: 14px; height: 14px;" aria-hidden="true"><use href="/icons.svg#schedule"></use></svg>
+                  <span data-ref="handle-cooldown-text"></span>
+                </span>
+              </div>
+              <p class="settings-item__desc" data-ref="item-handle-desc" data-i18n="settings.profile.handle_desc"></p>
+              <div class="settings-item__view-box" data-ref="handle-view-box">
+                <span class="settings-item__value" data-ref="display-handle">-</span>
+              </div>
+              <div class="settings-edit-row" data-ref="handle-edit-row" style="display: none;">
+                <div class="settings-input-handle-wrap">
+                  <span class="settings-input-handle-prefix">@</span>
+                  <input class="field__input field__input--simple settings-input-handle-field" data-ref="input-handle" data-i18n-placeholder="settings.profile.handle_placeholder" type="text" maxlength="30" autocomplete="off" />
+                </div>
+                <div class="settings-item__actions">
+                  <button type="button" class="component-button component-button--h34" data-ref="btn-cancel-handle" data-i18n="settings.profile.btn_cancel"></button>
+                  <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-save-handle" data-i18n="settings.profile.btn_save"></button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="settings-item__actions" data-ref="handle-view-actions">
+            <button type="button" class="component-button component-button--h34" data-ref="btn-edit-handle" data-i18n="settings.profile.btn_edit"></button>
+          </div>
+        </div>
+        <div class="banner banner--danger" data-ref="handle-error" style="display: none; margin: 0 24px 16px 24px;"></div>
+      </div>
+
+      <!-- Grupo 2: Biografía, Sitio web y Redes sociales -->
+      <div class="settings-group" data-ref="group-public-details">
+        <!-- Item: Biografía -->
+        <div class="settings-item settings-item--stacked" data-ref="item-bio">
+          <div class="settings-item__content" data-ref="item-bio-content">
+            <div class="settings-item__text" data-ref="item-bio-text">
+              <h2 class="settings-item__title" data-ref="item-bio-title" data-i18n="settings.profile.bio_title"></h2>
+              <p class="settings-item__desc" data-ref="item-bio-desc" data-i18n="settings.profile.bio_desc"></p>
+              <div class="settings-bio-wrap" data-ref="settings-bio-wrap">
+                <textarea class="field__input field__textarea settings-bio-textarea" data-ref="input-bio" data-i18n-placeholder="settings.profile.bio_placeholder" maxlength="500" rows="3"></textarea>
+                <div class="settings-char-counter" data-ref="bio-char-counter">0 / 500</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <hr class="settings-divider" />
+
+        <!-- Item: Sitio web -->
+        <div class="settings-item settings-item--stacked" data-ref="item-website">
+          <div class="settings-item__content" data-ref="item-website-content">
+            <div class="settings-item__text" data-ref="item-website-text">
+              <h2 class="settings-item__title" data-ref="item-website-title" data-i18n="settings.profile.website_title"></h2>
+              <p class="settings-item__desc" data-ref="item-website-desc" data-i18n="settings.profile.website_desc"></p>
+              <div class="settings-website-wrap" data-ref="settings-website-wrap">
+                <input class="field__input field__input--simple" data-ref="input-website" data-i18n-placeholder="settings.profile.website_placeholder" type="url" maxlength="255" autocomplete="url" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <hr class="settings-divider" />
+
+        <!-- Item: Redes sociales -->
+        <div class="settings-item settings-item--stacked" data-ref="item-social-links">
+          <div class="settings-item__content" data-ref="item-social-links-content">
+            <div class="settings-item__text" data-ref="item-social-links-text">
+              <h2 class="settings-item__title" data-ref="item-social-links-title" data-i18n="settings.profile.social_links_title"></h2>
+              <p class="settings-item__desc" data-ref="item-social-links-desc" data-i18n="settings.profile.social_links_desc"></p>
+              
+              <div class="settings-socials-grid" data-ref="settings-socials-grid">
+                <!-- Instagram -->
+                <div class="settings-social-field-wrap" data-ref="wrap-social-instagram">
+                  <div class="settings-social-prefix-badge">
+                    <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#instagram"></use></svg>
+                    <span>instagram.com/</span>
+                  </div>
+                  <input class="field__input field__input--simple settings-social-input" data-ref="input-social-instagram" data-i18n-placeholder="settings.profile.social_instagram_placeholder" type="text" maxlength="100" autocomplete="off" />
+                </div>
+
+                <!-- TikTok -->
+                <div class="settings-social-field-wrap" data-ref="wrap-social-tiktok">
+                  <div class="settings-social-prefix-badge">
+                    <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tiktok"></use></svg>
+                    <span>tiktok.com/@</span>
+                  </div>
+                  <input class="field__input field__input--simple settings-social-input" data-ref="input-social-tiktok" data-i18n-placeholder="settings.profile.social_tiktok_placeholder" type="text" maxlength="100" autocomplete="off" />
+                </div>
+
+                <!-- X (Twitter) -->
+                <div class="settings-social-field-wrap" data-ref="wrap-social-x">
+                  <div class="settings-social-prefix-badge">
+                    <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#brand_x"></use></svg>
+                    <span>x.com/</span>
+                  </div>
+                  <input class="field__input field__input--simple settings-social-input" data-ref="input-social-x" data-i18n-placeholder="settings.profile.social_x_placeholder" type="text" maxlength="100" autocomplete="off" />
+                </div>
+
+                <!-- YouTube -->
+                <div class="settings-social-field-wrap" data-ref="wrap-social-youtube">
+                  <div class="settings-social-prefix-badge">
+                    <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#youtube"></use></svg>
+                    <span>youtube.com/</span>
+                  </div>
+                  <input class="field__input field__input--simple settings-social-input" data-ref="input-social-youtube" data-i18n-placeholder="settings.profile.social_youtube_placeholder" type="text" maxlength="100" autocomplete="off" />
+                </div>
+
+                <!-- Pinterest -->
+                <div class="settings-social-field-wrap" data-ref="wrap-social-pinterest">
+                  <div class="settings-social-prefix-badge">
+                    <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#pinterest"></use></svg>
+                    <span>pinterest.com/</span>
+                  </div>
+                  <input class="field__input field__input--simple settings-social-input" data-ref="input-social-pinterest" data-i18n-placeholder="settings.profile.social_pinterest_placeholder" type="text" maxlength="100" autocomplete="off" />
+                </div>
+
+                <!-- Facebook -->
+                <div class="settings-social-field-wrap" data-ref="wrap-social-facebook">
+                  <div class="settings-social-prefix-badge">
+                    <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#facebook"></use></svg>
+                    <span>facebook.com/</span>
+                  </div>
+                  <input class="field__input field__input--simple settings-social-input" data-ref="input-social-facebook" data-i18n-placeholder="settings.profile.social_facebook_placeholder" type="text" maxlength="100" autocomplete="off" />
+                </div>
+              </div>
+
+              <div class="settings-public-profile-actions" data-ref="public-profile-actions">
+                <button type="button" class="component-button component-button--h36 component-button--black" data-ref="btn-save-public-profile" data-i18n="settings.profile.btn_save_public_profile"></button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="banner banner--danger" data-ref="public-profile-error" style="display: none; margin: 0 24px 16px 24px;"></div>
+      </div>
+    </div>
+  </div>
+</div>

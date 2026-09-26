@@ -59,6 +59,10 @@ class ProfileController {
   private statFollowersValEl: HTMLElement | null = null;
   private statFollowingValEl: HTMLElement | null = null;
 
+  private socialsRowEl: HTMLElement | null = null;
+  private metaSocialsEl: HTMLElement | null = null;
+  private infoSocialsListEl: HTMLElement | null = null;
+
   constructor(container: HTMLElement, username: string) {
     this.container = container;
     this.username = username;
@@ -118,6 +122,10 @@ class ProfileController {
     this.statTemplatesValEl = this.container.querySelector<HTMLElement>('[data-ref="stat-value-templates"]');
     this.statFollowersValEl = this.container.querySelector<HTMLElement>('[data-ref="stat-value-followers"]');
     this.statFollowingValEl = this.container.querySelector<HTMLElement>('[data-ref="stat-value-following"]');
+
+    this.socialsRowEl = this.container.querySelector<HTMLElement>('[data-ref="profile-socials-row"]');
+    this.metaSocialsEl = this.container.querySelector<HTMLElement>('[data-ref="profile-meta-socials"]');
+    this.infoSocialsListEl = this.container.querySelector<HTMLElement>('[data-ref="profile-info-socials-list"]');
   }
 
   private bindEvents(): void {
@@ -140,7 +148,7 @@ class ProfileController {
     }, { signal });
 
     this.btnEditProfile?.addEventListener('click', () => {
-      navigate('/settings/your-account');
+      navigate('/settings/profile');
     }, { signal });
 
     this.btnUploadBanner?.addEventListener('click', () => {
@@ -315,7 +323,126 @@ class ProfileController {
       this.statFollowingValEl.textContent = String(this.profile.following_count);
     }
 
+    this.renderSocialLinks();
+
     renderIcons(this.container);
+  }
+
+  private renderSocialLinks(): void {
+    if (!this.profile) return;
+    const socials = this.profile.social_links || {};
+    const website = this.profile.website_url;
+
+    interface SocialPlatformDef {
+      getDisplay: (val: string) => string;
+      getUrl: (val: string) => string;
+      icon: string;
+      key: string;
+      label: string;
+    }
+
+    const platforms: SocialPlatformDef[] = [
+      {
+        getDisplay: (v) => `@${v.replace(/^@/, '')}`,
+        getUrl: (v) => `https://instagram.com/${v.replace(/^@/, '')}`,
+        icon: 'instagram',
+        key: 'instagram',
+        label: t('profile.social_instagram') || 'Instagram',
+      },
+      {
+        getDisplay: (v) => `@${v.replace(/^@/, '')}`,
+        getUrl: (v) => `https://tiktok.com/@${v.replace(/^@/, '')}`,
+        icon: 'tiktok',
+        key: 'tiktok',
+        label: t('profile.social_tiktok') || 'TikTok',
+      },
+      {
+        getDisplay: (v) => `@${v.replace(/^@/, '')}`,
+        getUrl: (v) => `https://x.com/${v.replace(/^@/, '')}`,
+        icon: 'brand_x',
+        key: 'x',
+        label: t('profile.social_x') || 'X',
+      },
+      {
+        getDisplay: (v) => v.replace(/^https?:\/\/(www\.)?youtube\.com\//, ''),
+        getUrl: (v) => (v.startsWith('http') ? v : (v.startsWith('@') || v.startsWith('UC') ? `https://youtube.com/${v}` : `https://youtube.com/@${v}`)),
+        icon: 'youtube',
+        key: 'youtube',
+        label: t('profile.social_youtube') || 'YouTube',
+      },
+      {
+        getDisplay: (v) => v.replace(/^@/, ''),
+        getUrl: (v) => (v.startsWith('http') ? v : `https://pinterest.com/${v.replace(/^@/, '')}`),
+        icon: 'pinterest',
+        key: 'pinterest',
+        label: t('profile.social_pinterest') || 'Pinterest',
+      },
+      {
+        getDisplay: (v) => v.replace(/^https?:\/\/(www\.)?facebook\.com\//, ''),
+        getUrl: (v) => (v.startsWith('http') ? v : `https://facebook.com/${v}`),
+        icon: 'facebook',
+        key: 'facebook',
+        label: t('profile.social_facebook') || 'Facebook',
+      },
+    ];
+
+    const activeSocials: Array<{ display: string; icon: string; key: string; label: string; url: string }> = [];
+
+    for (const p of platforms) {
+      const val = socials[p.key];
+      if (val && typeof val === 'string' && val.trim()) {
+        activeSocials.push({
+          display: p.getDisplay(val.trim()),
+          icon: p.icon,
+          key: p.key,
+          label: p.label,
+          url: p.getUrl(val.trim()),
+        });
+      }
+    }
+
+    if (website && typeof website === 'string' && website.trim()) {
+      const cleanWeb = website.trim().startsWith('http') ? website.trim() : `https://${website.trim()}`;
+      activeSocials.push({
+        display: cleanWeb.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, ''),
+        icon: 'link',
+        key: 'website',
+        label: t('profile.social_website') || 'Sitio Web',
+        url: cleanWeb,
+      });
+    }
+
+    if (this.socialsRowEl) {
+      if (activeSocials.length > 0) {
+        this.socialsRowEl.innerHTML = activeSocials.map((s) => `
+          <a class="component-button component-button--h36 component-button--bordered profile-social-btn" data-ref="social-btn-${s.key}" href="${escapeHtml(s.url)}" target="_blank" rel="noopener noreferrer" data-tooltip="${escapeHtml(s.label)}: ${escapeHtml(s.display)}" aria-label="${escapeHtml(s.label)}">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${s.icon}"></use></svg>
+          </a>
+        `).join('');
+        this.socialsRowEl.style.display = 'flex';
+      } else {
+        this.socialsRowEl.innerHTML = '';
+        this.socialsRowEl.style.display = 'none';
+      }
+    }
+
+    if (this.metaSocialsEl && this.infoSocialsListEl) {
+      const onlyNetworks = activeSocials.filter((s) => s.key !== 'website');
+      if (onlyNetworks.length > 0) {
+        this.infoSocialsListEl.innerHTML = onlyNetworks.map((s) => `
+          <a class="profile-info-social-link" data-ref="info-social-${s.key}" href="${escapeHtml(s.url)}" target="_blank" rel="noopener noreferrer">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${s.icon}"></use></svg>
+            <span class="profile-info-social-link__name">${escapeHtml(s.label)}</span>
+            <span class="profile-info-social-link__handle">${escapeHtml(s.display)}</span>
+            <svg class="component-icon profile-info-social-link__external" aria-hidden="true"><use href="/icons.svg#arrow_forward"></use></svg>
+          </a>
+        `).join('');
+        this.metaSocialsEl.style.display = 'block';
+      } else {
+        this.infoSocialsListEl.innerHTML = '';
+        this.metaSocialsEl.style.display = 'none';
+      }
+    }
   }
 
   private updateFollowersCountUi(): void {

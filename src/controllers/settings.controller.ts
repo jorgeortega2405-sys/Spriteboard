@@ -1,7 +1,7 @@
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import { addAccountToSession, removeAccountFromSession, updateActiveAccountInSession } from '../services/auth.service.js';
 import { logger } from '../services/logger.service.js';
-import { deleteAvatar, getPasswordStatus, getUserPreferences, logUserAudit, requestEmailChangeCode, unlinkGoogleAccount, updateAvatar, updateEmail, updateUsername, updateUserPasswordFromSettings, updateUserPreferences, verifyCurrentPassword, verifyEmailChange } from '../services/settings.service.js';
+import { deleteAvatar, getPasswordStatus, getProfileDetails, getUserPreferences, logUserAudit, requestEmailChangeCode, unlinkGoogleAccount, updateAvatar, updateDesignerHandle, updateEmail, updatePublicProfileDetails, updateUsername, updateUserPasswordFromSettings, updateUserPreferences, verifyCurrentPassword, verifyEmailChange } from '../services/settings.service.js';
 import { clearPending2FASetup, generateBackupCodes, generateTotpSecret, getOtpAuthUrl, getPending2FASetup, savePending2FASetup, verifyTotpCode } from '../services/two-factor.service.js';
 import { deleteUserPermanently, disableUser2FA, enableUser2FA, findUserById, getUser2FASecret, verifyAndConsumeBackupCode } from '../services/user.service.js';
 import { consumePasswordChangeAuth } from '../services/verification.service.js';
@@ -700,6 +700,122 @@ export async function handleUnlinkGoogle(req: Request, res: Response): Promise<v
       error,
       'No se pudo desvincular la cuenta de Google. Inténtalo de nuevo.'
     );
+  }
+}
+
+export async function handleGetProfileDetails(req: Request, res: Response): Promise<void> {
+  try {
+    const currentUser = getCurrentUser(req);
+    if (!currentUser) {
+      sendUnauthorized(res, 'Sesión no válida o expirada.');
+      return;
+    }
+
+    const details = await getProfileDetails(currentUser.id);
+    if (!details) {
+      sendBadRequest(res, 'Perfil no encontrado.');
+      return;
+    }
+
+    sendSuccess(res, { details });
+  } catch (error) {
+    sendInternalError(res, 'Error al obtener detalles del perfil', error);
+  }
+}
+
+export async function handleUpdateDesignerHandle(req: Request, res: Response): Promise<void> {
+  try {
+    const currentUser = getCurrentUser(req);
+    if (!currentUser) {
+      sendUnauthorized(res, 'Sesión no válida o expirada.');
+      return;
+    }
+
+    if (currentUser.is_protected) {
+      sendForbidden(res, 'Esta cuenta está protegida por el sistema y sus datos no pueden ser modificados.');
+      return;
+    }
+
+    const { handle } = req.body;
+    if (!handle || typeof handle !== 'string') {
+      sendBadRequest(res, 'El identificador es requerido.');
+      return;
+    }
+
+    const result = await updateDesignerHandle(
+      currentUser.id,
+      handle,
+      req.ip,
+      req.headers['user-agent'] as string
+    );
+
+    if (!result.success) {
+      if (result.status === 409) {
+        sendConflict(res, result.error || 'El identificador ya está en uso.');
+        return;
+      }
+      if (result.status === 429) {
+        res.status(429).json({ error: result.error });
+        return;
+      }
+      sendBadRequest(res, result.error || 'Error al actualizar el identificador.');
+      return;
+    }
+
+    const updatedUser = await findUserById(currentUser.id);
+    if (updatedUser) {
+      updateActiveAccountInSession(res, req, sanitizeUser(updatedUser));
+    }
+
+    sendSuccess(res, {
+      designer_handle: result.designer_handle,
+      designer_handle_changed_at: result.designer_handle_changed_at,
+      message: 'Identificador actualizado exitosamente.',
+      user: updatedUser ? sanitizeUser(updatedUser) : null,
+    });
+  } catch (error) {
+    sendInternalError(res, 'Error al actualizar identificador', error);
+  }
+}
+
+export async function handleUpdatePublicProfile(req: Request, res: Response): Promise<void> {
+  try {
+    const currentUser = getCurrentUser(req);
+    if (!currentUser) {
+      sendUnauthorized(res, 'Sesión no válida o expirada.');
+      return;
+    }
+
+    if (currentUser.is_protected) {
+      sendForbidden(res, 'Esta cuenta está protegida por el sistema y sus datos no pueden ser modificados.');
+      return;
+    }
+
+    const { bio, country, website_url, social_links } = req.body;
+
+    const result = await updatePublicProfileDetails(
+      currentUser.id,
+      { bio, country, website_url, social_links },
+      req.ip,
+      req.headers['user-agent'] as string
+    );
+
+    if (!result.success) {
+      sendBadRequest(res, result.error || 'Error al actualizar el perfil público.');
+      return;
+    }
+
+    const updatedUser = await findUserById(currentUser.id);
+    if (updatedUser) {
+      updateActiveAccountInSession(res, req, sanitizeUser(updatedUser));
+    }
+
+    sendSuccess(res, {
+      message: 'Perfil público actualizado exitosamente.',
+      user: updatedUser ? sanitizeUser(updatedUser) : null,
+    });
+  } catch (error) {
+    sendInternalError(res, 'Error al actualizar perfil público', error);
   }
 }
 

@@ -1,4 +1,4 @@
-import { handleDeleteAccount, handleDeleteAvatar, handleDisable2FA, handleEnable2FA, handleGenerate2FA, handleGet2FAStatus, handleGetPasswordStatus, handleGetPreferences, handleRequestEmailChangeCode, handleUnlinkGoogle, handleUpdateAvatar, handleUpdateEmail, handleUpdatePassword, handleUpdatePreferences, handleUpdateUsername, handleVerifyCurrentPassword, handleVerifyEmailChangeCode } from '../controllers/settings.controller.js';
+import { handleDeleteAccount, handleDeleteAvatar, handleDisable2FA, handleEnable2FA, handleGenerate2FA, handleGet2FAStatus, handleGetPasswordStatus, handleGetPreferences, handleGetProfileDetails, handleRequestEmailChangeCode, handleUnlinkGoogle, handleUpdateAvatar, handleUpdateDesignerHandle, handleUpdateEmail, handleUpdatePassword, handleUpdatePreferences, handleUpdatePublicProfile, handleUpdateUsername, handleVerifyCurrentPassword, handleVerifyEmailChangeCode } from '../controllers/settings.controller.js';
 import { requireAuth } from '../middlewares/auth.middleware.js';
 import { avatarLimiter, emailCodeLimiter, preferencesLimiter, twoFactorGenerateLimiter, twoFactorVerifyLimiter, updatePasswordLimiter, updateUsernameLimiter, verifyEmailCodeLimiter, verifyPasswordLimiter } from '../middlewares/rate-limit.middleware.js';
 import { NextFunction, Request, Response, Router } from 'express';
@@ -40,6 +40,10 @@ function uploadAvatarMiddleware(req: Request, res: Response, next: NextFunction)
 }
 
 router.use('/settings', requireAuth);
+
+router.get('/settings/profile-details', handleGetProfileDetails);
+router.post('/settings/public-profile', preferencesLimiter, handleUpdatePublicProfile);
+router.post('/settings/handle', updateUsernameLimiter, handleUpdateDesignerHandle);
 
 router.post('/settings/avatar', avatarLimiter, uploadAvatarMiddleware, handleUpdateAvatar);
 router.delete('/settings/avatar', avatarLimiter, handleDeleteAvatar);

@@ -1252,12 +1252,28 @@ export async function runMigrations(): Promise<void> {
       logger.db.info('Columna website_url añadida a db_identity.users.');
     }
 
+    const [userSocialLinksCols] = await conn.query<mysql.RowDataPacket[]>(
+      "SHOW COLUMNS FROM db_identity.users LIKE 'social_links'"
+    );
+    if (userSocialLinksCols.length === 0) {
+      await conn.query('ALTER TABLE db_identity.users ADD COLUMN social_links JSON NULL AFTER website_url');
+      logger.db.info('Columna social_links añadida a db_identity.users.');
+    }
+
     const [designerHandleCols] = await conn.query<mysql.RowDataPacket[]>(
       "SHOW COLUMNS FROM db_identity.users LIKE 'designer_handle'"
     );
     if (designerHandleCols.length === 0) {
       await conn.query('ALTER TABLE db_identity.users ADD COLUMN designer_handle VARCHAR(50) NULL UNIQUE AFTER username');
       logger.db.info('Columna designer_handle añadida a db_identity.users.');
+    }
+
+    const [designerHandleChangedAtCols] = await conn.query<mysql.RowDataPacket[]>(
+      "SHOW COLUMNS FROM db_identity.users LIKE 'designer_handle_changed_at'"
+    );
+    if (designerHandleChangedAtCols.length === 0) {
+      await conn.query('ALTER TABLE db_identity.users ADD COLUMN designer_handle_changed_at TIMESTAMP NULL AFTER designer_handle');
+      logger.db.info('Columna designer_handle_changed_at añadida a db_identity.users.');
     }
 
     const [designerOnboardedCols] = await conn.query<mysql.RowDataPacket[]>(

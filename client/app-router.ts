@@ -296,7 +296,7 @@ export async function render(): Promise<void> {
       const { createUpgradeView } = await import('./views/upgrade.view.js');
       viewElements = [await createUpgradeView()];
     } else if (path.startsWith('/settings')) {
-      const { createAccessibilityView, createBillingView, createGuestSettingsView, createPurchasesView, createSecurityView, createYourAccountView } = await import('./views/settings.view.js');
+      const { createAccessibilityView, createBillingView, createGuestSettingsView, createPublicProfileSettingsView, createPurchasesView, createSecurityView, createYourAccountView } = await import('./views/settings.view.js');
       if (!currentUser) {
         if (path !== '/settings/guest') {
           window.history.replaceState({}, '', '/settings/guest');
@@ -308,6 +308,10 @@ export async function render(): Promise<void> {
         }
         const subPath = path === '/settings' || path === '/settings/guest' ? '/settings/your-account' : path;
         switch (subPath) {
+          case '/settings/profile':
+          case '/settings/public-profile':
+            viewElements = [await createPublicProfileSettingsView()];
+            break;
           case '/settings/security':
           case '/settings/login-and-security':
             viewElements = [await createSecurityView()];

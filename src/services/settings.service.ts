@@ -52,6 +52,7 @@ const DEFAULT_PREFERENCES: UserPreferences = {
 
 export const USERNAME_CHANGE_COOLDOWN_MS = 12 * 24 * 60 * 60 * 1000;
 export const EMAIL_CHANGE_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
+export const DESIGNER_HANDLE_CHANGE_COOLDOWN_MS = 90 * 24 * 60 * 60 * 1000;
 
 export function formatRemainingTime(msRemaining: number): string {
   if (msRemaining <= 0) return 'unos segundos';
@@ -747,6 +748,232 @@ export async function unlinkGoogleAccount(
 
   await logUserAudit(userId, 'unlink_google', oldGoogleId, null, ip, ua);
   logger.security.info('Cuenta de Google desvinculada exitosamente', { userId });
+
+  return { success: true };
+}
+
+export interface PublicProfileUpdateData {
+  bio?: string | null;
+  country?: string | null;
+  website_url?: string | null;
+  social_links?: Record<string, string> | null;
+}
+
+export async function getProfileDetails(
+  userId: number
+): Promise<{
+  bio: string | null;
+  country: string | null;
+  designer_handle: string | null;
+  designer_handle_changed_at: string | null;
+  handle_can_change: boolean;
+  handle_cooldown_formatted: string | null;
+  handle_cooldown_remaining_ms: number;
+  handle_next_change_date: string | null;
+  is_protected: boolean;
+  social_links: Record<string, string> | null;
+  username: string;
+  website_url: string | null;
+} | null> {
+  const [rows] = await pool.query<RowDataPacket[]>(
+    'SELECT id, username, designer_handle, designer_handle_changed_at, bio, country, website_url, social_links, is_protected FROM users WHERE id = ? LIMIT 1',
+    [userId]
+  );
+  if (rows.length === 0) return null;
+  const u = rows[0];
+
+  let canChangeHandle = true;
+  let remainingMs = 0;
+  let cooldownFormatted: string | null = null;
+  let nextChangeDate: string | null = null;
+
+  if (u.designer_handle_changed_at) {
+    const lastChanged = new Date(u.designer_handle_changed_at).getTime();
+    const elapsed = Date.now() - lastChanged;
+    if (elapsed < DESIGNER_HANDLE_CHANGE_COOLDOWN_MS) {
+      canChangeHandle = false;
+      remainingMs = DESIGNER_HANDLE_CHANGE_COOLDOWN_MS - elapsed;
+      cooldownFormatted = formatRemainingTime(remainingMs);
+      nextChangeDate = new Date(lastChanged + DESIGNER_HANDLE_CHANGE_COOLDOWN_MS).toISOString();
+    }
+  }
+
+  let socialLinks: Record<string, string> | null = null;
+  if (u.social_links) {
+    try {
+      socialLinks = typeof u.social_links === 'string' ? JSON.parse(u.social_links) : u.social_links;
+    } catch {}
+  }
+
+  return {
+    bio: u.bio || null,
+    country: u.country || null,
+    designer_handle: u.designer_handle || null,
+    designer_handle_changed_at: u.designer_handle_changed_at ? new Date(u.designer_handle_changed_at).toISOString() : null,
+    handle_can_change: canChangeHandle,
+    handle_cooldown_formatted: cooldownFormatted,
+    handle_cooldown_remaining_ms: remainingMs,
+    handle_next_change_date: nextChangeDate,
+    is_protected: Boolean(u.is_protected),
+    social_links: socialLinks,
+    username: String(u.username),
+    website_url: u.website_url || null,
+  };
+}
+
+export async function updateDesignerHandle(
+  userId: number,
+  newHandle: string,
+  ip?: string | null,
+  ua?: string | null
+): Promise<{ designer_handle?: string; designer_handle_changed_at?: string; error?: string; status?: number; success: boolean }> {
+  const [currentUserRows] = await pool.query<RowDataPacket[]>(
+    'SELECT id, username, designer_handle, designer_handle_changed_at, is_protected FROM users WHERE id = ? LIMIT 1',
+    [userId]
+  );
+
+  if (currentUserRows.length === 0) {
+    return { error: 'Usuario no encontrado.', status: 404, success: false };
+  }
+
+  const user = currentUserRows[0];
+  if (user.is_protected) {
+    logger.security.warn('Intento de cambiar identificador bloqueado para cuenta protegida por el sistema', { userId });
+    return { error: 'Esta cuenta está protegida por el sistema y sus datos no pueden ser modificados.', status: 403, success: false };
+  }
+
+  const cleanHandle = newHandle.trim().replace(/^@+/, '');
+  if (!cleanHandle) {
+    return { error: 'El identificador no puede estar vacío.', status: 400, success: false };
+  }
+
+  const handleRegex = /^[a-zA-Z0-9_]{3,30}$/;
+  if (!handleRegex.test(cleanHandle)) {
+    return {
+      error: 'El identificador debe contener entre 3 y 30 caracteres (solo letras, números y guiones bajos).',
+      status: 400,
+      success: false,
+    };
+  }
+
+  const currentHandle = user.designer_handle ? String(user.designer_handle).trim().replace(/^@+/, '') : '';
+  if (currentHandle.toLowerCase() === cleanHandle.toLowerCase()) {
+    return { designer_handle: cleanHandle, success: true };
+  }
+
+  if (user.designer_handle_changed_at) {
+    const lastChanged = new Date(user.designer_handle_changed_at).getTime();
+    const elapsed = Date.now() - lastChanged;
+    if (elapsed < DESIGNER_HANDLE_CHANGE_COOLDOWN_MS) {
+      const remainingMs = DESIGNER_HANDLE_CHANGE_COOLDOWN_MS - elapsed;
+      const timeFormatted = formatRemainingTime(remainingMs);
+      return {
+        error: `Solo puedes cambiar tu identificador una vez cada 3 meses (90 días). Podrás cambiarlo nuevamente en ${timeFormatted}.`,
+        status: 429,
+        success: false,
+      };
+    }
+  }
+
+  const [existingRows] = await pool.query<RowDataPacket[]>(
+    'SELECT id FROM users WHERE (LOWER(username) = LOWER(?) OR LOWER(designer_handle) = LOWER(?)) AND id != ? LIMIT 1',
+    [cleanHandle, cleanHandle, userId]
+  );
+
+  if (existingRows.length > 0) {
+    return { error: 'El identificador ya está en uso por otro usuario.', status: 409, success: false };
+  }
+
+  await pool.query(
+    'UPDATE users SET designer_handle = ?, designer_handle_changed_at = NOW() WHERE id = ?',
+    [cleanHandle, userId]
+  );
+
+  try {
+    await redis.del(`user:profile:${userId}`);
+  } catch {}
+
+  await logUserAudit(userId, 'update_designer_handle', currentHandle || null, cleanHandle, ip, ua);
+  logger.security.info('Identificador de diseñador actualizado', { cleanHandle, oldHandle: currentHandle, userId });
+
+  return {
+    designer_handle: cleanHandle,
+    designer_handle_changed_at: new Date().toISOString(),
+    success: true,
+  };
+}
+
+export async function updatePublicProfileDetails(
+  userId: number,
+  details: PublicProfileUpdateData,
+  ip?: string | null,
+  ua?: string | null
+): Promise<{ error?: string; status?: number; success: boolean }> {
+  const [currentUserRows] = await pool.query<RowDataPacket[]>(
+    'SELECT id, is_protected FROM users WHERE id = ? LIMIT 1',
+    [userId]
+  );
+
+  if (currentUserRows.length === 0) {
+    return { error: 'Usuario no encontrado.', status: 404, success: false };
+  }
+
+  if (currentUserRows[0].is_protected) {
+    logger.security.warn('Intento de actualizar perfil bloqueado para cuenta protegida por el sistema', { userId });
+    return { error: 'Esta cuenta está protegida por el sistema y sus datos no pueden ser modificados.', status: 403, success: false };
+  }
+
+  let cleanBio: string | null = null;
+  if (details.bio !== undefined && details.bio !== null) {
+    cleanBio = details.bio.trim().substring(0, 500);
+    if (cleanBio === '') cleanBio = null;
+  }
+
+  let cleanCountry: string | null = null;
+  if (details.country !== undefined && details.country !== null) {
+    cleanCountry = details.country.trim().substring(0, 100);
+    if (cleanCountry === '') cleanCountry = null;
+  }
+
+  let cleanWebsite: string | null = null;
+  if (details.website_url !== undefined && details.website_url !== null) {
+    let rawWeb = details.website_url.trim();
+    if (rawWeb) {
+      if (!/^https?:\/\//i.test(rawWeb)) {
+        rawWeb = `https://${rawWeb}`;
+      }
+      cleanWebsite = rawWeb.substring(0, 255);
+    }
+  }
+
+  let cleanSocialLinks: Record<string, string> | null = null;
+  if (details.social_links && typeof details.social_links === 'object') {
+    const allowedKeys = ['instagram', 'tiktok', 'pinterest', 'youtube', 'facebook', 'x'];
+    const sanitizedObj: Record<string, string> = {};
+    for (const key of allowedKeys) {
+      const val = details.social_links[key];
+      if (typeof val === 'string' && val.trim()) {
+        sanitizedObj[key] = val.trim().replace(/^@+/, '').substring(0, 150);
+      }
+    }
+    if (Object.keys(sanitizedObj).length > 0) {
+      cleanSocialLinks = sanitizedObj;
+    }
+  }
+
+  const socialLinksJson = cleanSocialLinks ? JSON.stringify(cleanSocialLinks) : null;
+
+  await pool.query(
+    'UPDATE users SET bio = ?, country = ?, website_url = ?, social_links = ? WHERE id = ?',
+    [cleanBio, cleanCountry, cleanWebsite, socialLinksJson, userId]
+  );
+
+  try {
+    await redis.del(`user:profile:${userId}`);
+  } catch {}
+
+  await logUserAudit(userId, 'update_public_profile', null, null, ip, ua);
+  logger.app.info('Perfil público actualizado exitosamente', { userId });
 
   return { success: true };
 }

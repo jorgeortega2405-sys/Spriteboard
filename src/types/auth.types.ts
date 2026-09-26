@@ -89,7 +89,13 @@ export interface UserPayload {
   username: string;
   email: string;
   avatar_url?: string | null;
+  banner_url?: string | null;
+  bio?: string | null;
+  country?: string | null;
+  website_url?: string | null;
+  social_links?: Record<string, string> | null;
   designer_handle?: string | null;
+  designer_handle_changed_at?: string | null;
   designer_onboarded?: boolean;
   role?: UserRole;
   roles?: UserRole[];
@@ -105,7 +111,13 @@ export interface SessionAccount {
   username: string;
   email: string;
   avatar_url?: string | null;
+  banner_url?: string | null;
+  bio?: string | null;
+  country?: string | null;
+  website_url?: string | null;
+  social_links?: Record<string, string> | null;
   designer_handle?: string | null;
+  designer_handle_changed_at?: string | null;
   designer_onboarded?: boolean;
   role?: UserRole;
   roles?: UserRole[];

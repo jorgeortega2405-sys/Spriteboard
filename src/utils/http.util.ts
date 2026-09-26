@@ -10,15 +10,21 @@ export function sanitizeUser(user: any): UserPayload {
     username: user.username,
     email: user.email,
     avatar_url: user.avatar_url || null,
+    banner_url: user.banner_url || null,
+    bio: user.bio || null,
+    country: user.country || null,
     designer_handle: user.designer_handle || null,
+    designer_handle_changed_at: user.designer_handle_changed_at ? new Date(user.designer_handle_changed_at).toISOString() : null,
     designer_onboarded: Boolean(user.designer_onboarded),
+    google_id: user.google_id || null,
+    is_protected: Boolean(user.is_protected),
     role: user.role || 'USER',
     roles: Array.isArray(user.roles) ? user.roles : (user.role ? [user.role] : ['USER']),
-    google_id: user.google_id || null,
+    social_links: typeof user.social_links === 'string' ? JSON.parse(user.social_links) : (user.social_links || null),
     subscription_tier: tier,
     subscription_tier_color: getTierBorderColor(tier),
     two_factor_enabled: Boolean(user.two_factor_enabled),
-    is_protected: Boolean(user.is_protected),
+    website_url: user.website_url || null,
   };
 }
 

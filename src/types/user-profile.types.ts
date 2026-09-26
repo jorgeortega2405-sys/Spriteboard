@@ -5,6 +5,7 @@ export interface PublicUserProfile {
   country: string | null;
   created_at: string;
   designer_handle: string | null;
+  designer_handle_changed_at?: string | null;
   designer_onboarded?: boolean;
   followers_count: number;
   following_count: number;
@@ -14,6 +15,7 @@ export interface PublicUserProfile {
   is_me: boolean;
   role: string;
   roles: string[];
+  social_links?: Record<string, string> | null;
   subscription_tier: string;
   templates_count: number;
   username: string;
