@@ -86,7 +86,7 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
               </button>
               <button type="button" class="menu-item${activeCategory === 'video' ? ' is-active' : ''}" data-ref="tab-category-video" data-category="video">
                 ${getCategoryMenuSvg('video')}
-                <span class="menu-item__text">Editor de Video</span>
+                <span class="menu-item__text">Video</span>
               </button>
               <button type="button" class="menu-item${activeCategory === 'doc' ? ' is-active' : ''}" data-ref="tab-category-doc" data-category="doc">
                 ${getCategoryMenuSvg('doc')}
@@ -551,7 +551,7 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
     social: 'Redes Sociales',
     template: templateName ? `Plantilla: ${templateName}` : 'Plantilla',
     upload: 'Subir archivos',
-    video: 'Editor de Video',
+    video: 'Video',
   };
 
   const navItems = backdrop.querySelectorAll<HTMLElement>('[data-category]');

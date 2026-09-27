@@ -177,9 +177,11 @@ export class VideoController {
     const titleEl = this._container.querySelector<HTMLElement>('[data-ref="video-title"]');
     if (titleEl) {
       titleEl.textContent = this._project.name;
+      document.title = `${this._project.name} - Spriteboard`;
       titleEl.addEventListener('blur', () => {
         const newName = titleEl.textContent?.trim() || 'Video sin título';
         titleEl.textContent = newName;
+        document.title = `${newName} - Spriteboard`;
         if (this._project.name !== newName) {
           this._project.name = newName;
           this.scheduleAutoSave();
