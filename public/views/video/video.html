@@ -188,6 +188,11 @@
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
             <span>Fundido</span>
           </button>
+
+          <button type="button" class="component-button component-button--h32 video-tool-btn" data-ref="btn-tl-subtitles" data-tooltip="Generar Subtítulos con IA" aria-label="Subtítulos con IA">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#closed_caption"></use></svg>
+            <span>Subtítulos IA</span>
+          </button>
         </div>
 
         <div class="timeline-toolbar-right">
@@ -401,6 +406,60 @@
           </label>
 
           <button type="button" class="component-button component-button--h40 component-button--primary component-button--w-full" data-ref="btn-apply-audio-fade">Guardar Fundidos</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop video-modal-backdrop" data-ref="modal-subtitles-backdrop" style="display: none;">
+    <div class="modal-container" data-ref="modal-subtitles-container" style="max-width: 440px;">
+      <button type="button" class="modal-close-btn" data-ref="btn-close-subtitles-modal" aria-label="Cerrar modal">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+      </button>
+
+      <div class="modal-card" data-ref="modal-card-subtitles">
+        <div class="modal-card__header">
+          <h2 class="modal-card__title">Subtítulos Automáticos con IA</h2>
+          <p class="modal-card__subtitle">Transcribe y sincroniza la voz del video automáticamente con Gemini IA</p>
+        </div>
+
+        <div class="modal-card__body" style="display: flex; flex-direction: column; gap: 14px;">
+          <label class="field" data-ref="field-subtitles-source">
+            <span class="field__label">Clip de Origen</span>
+            <select class="field__input field__select" data-ref="select-subtitles-source"></select>
+          </label>
+
+          <label class="field" data-ref="field-subtitles-lang">
+            <span class="field__label">Idioma del Audio</span>
+            <select class="field__input field__select" data-ref="select-subtitles-lang">
+              <option value="auto" selected>Detección Automática</option>
+              <option value="es">Español</option>
+              <option value="en">Inglés</option>
+              <option value="pt">Portugués</option>
+              <option value="fr">Francés</option>
+              <option value="de">Alemán</option>
+              <option value="it">Italiano</option>
+            </select>
+          </label>
+
+          <label class="field" data-ref="field-subtitles-style">
+            <span class="field__label">Estilo Visual</span>
+            <select class="field__input field__select" data-ref="select-subtitles-style">
+              <option value="standard" selected>Blanco con Sombra (Clásico)</option>
+              <option value="yellow">Amarillo Destacado (TikTok / Reels)</option>
+              <option value="boxed">Caja Oscura Translúcida</option>
+            </select>
+          </label>
+
+          <button type="button" class="component-button component-button--h40 component-button--primary component-button--w-full" data-ref="btn-generate-subtitles">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#closed_caption"></use></svg>
+            <span data-ref="btn-generate-subtitles-text">Generar Subtítulos</span>
+          </button>
+
+          <div class="banner banner--danger" data-ref="banner-subtitles-error" style="display: none;">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#error"></use></svg>
+            <span data-ref="subtitles-error-text">No se pudo generar subtítulos.</span>
+          </div>
         </div>
       </div>
     </div>

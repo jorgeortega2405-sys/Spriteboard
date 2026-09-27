@@ -1,3 +1,4 @@
+import { generateVideoSubtitlesApi } from '../../services/api.service.js';
 import { showToast } from '../../services/toast.service.js';
 import { VideoClip, VideoProject, VideoTrack } from './video.types.js';
 
@@ -39,6 +40,7 @@ export class VideoTimelineManager {
     const btnFilters = this._container.querySelector<HTMLElement>('[data-ref="btn-tl-filters"]');
     const btnTransitions = this._container.querySelector<HTMLElement>('[data-ref="btn-tl-transitions"]');
     const btnAudioFade = this._container.querySelector<HTMLElement>('[data-ref="btn-tl-audio-fade"]');
+    const btnSubtitles = this._container.querySelector<HTMLElement>('[data-ref="btn-tl-subtitles"]');
     const inputZoom = this._container.querySelector<HTMLInputElement>('[data-ref="input-tl-zoom"]');
     const btnZoomIn = this._container.querySelector<HTMLElement>('[data-ref="btn-tl-zoom-in"]');
     const btnZoomOut = this._container.querySelector<HTMLElement>('[data-ref="btn-tl-zoom-out"]');
@@ -57,6 +59,7 @@ export class VideoTimelineManager {
     btnFilters?.addEventListener('click', () => this.openFiltersModal(), { signal });
     btnTransitions?.addEventListener('click', () => this.openTransitionsModal(), { signal });
     btnAudioFade?.addEventListener('click', () => this.openAudioFadeModal(), { signal });
+    btnSubtitles?.addEventListener('click', () => this.openSubtitlesModal(), { signal });
 
     inputZoom?.addEventListener('input', () => {
       this._pixelsPerSecond = parseInt(inputZoom.value, 10) || 50;
@@ -836,6 +839,53 @@ export class VideoTimelineManager {
     requestAnimationFrame(() => backdrop.classList.add('is-visible'));
   }
 
+  private openSubtitlesModal(): void {
+    const project = this._getProject();
+    const eligibleClips: { clip: VideoClip; trackName: string }[] = [];
+
+    for (const track of project.tracks) {
+      for (const clip of track.clips) {
+        if ((clip.mediaType === 'video' || clip.mediaType === 'audio') && clip.assetUrl) {
+          eligibleClips.push({ clip, trackName: track.name });
+        }
+      }
+    }
+
+    if (eligibleClips.length === 0) {
+      showToast('No hay clips de video o audio en el proyecto para generar subtítulos.', 'info');
+      return;
+    }
+
+    const backdrop = this._container.querySelector<HTMLElement>('[data-ref="modal-subtitles-backdrop"]');
+    const selectSource = this._container.querySelector<HTMLSelectElement>('[data-ref="select-subtitles-source"]');
+    const errorBanner = this._container.querySelector<HTMLElement>('[data-ref="banner-subtitles-error"]');
+
+    if (errorBanner) errorBanner.style.display = 'none';
+
+    if (selectSource) {
+      selectSource.innerHTML = '';
+      const selectedClip = this.getSelectedClip();
+
+      for (const item of eligibleClips) {
+        const opt = document.createElement('option');
+        opt.value = item.clip.id;
+        const startFormatted = `${Math.floor(item.clip.startTime / 60)}:${Math.floor(item.clip.startTime % 60).toString().padStart(2, '0')}`;
+        const endFormatted = `${Math.floor((item.clip.startTime + item.clip.duration) / 60)}:${Math.floor((item.clip.startTime + item.clip.duration) % 60).toString().padStart(2, '0')}`;
+        opt.textContent = `${item.clip.name} (${item.trackName}) [${startFormatted} - ${endFormatted}]`;
+
+        if (selectedClip && selectedClip.id === item.clip.id) {
+          opt.selected = true;
+        }
+        selectSource.appendChild(opt);
+      }
+    }
+
+    if (backdrop) {
+      backdrop.style.display = 'flex';
+      requestAnimationFrame(() => backdrop.classList.add('is-visible'));
+    }
+  }
+
   private bindModals(signal: AbortSignal): void {
     const filtersBackdrop = this._container.querySelector<HTMLElement>('[data-ref="modal-filters-backdrop"]');
     const btnCloseFilters = this._container.querySelector<HTMLElement>('[data-ref="btn-close-filters-modal"]');
@@ -972,7 +1022,7 @@ export class VideoTimelineManager {
       if (e.target === fadeBackdrop) closeFade();
     }, { signal });
 
-    btnApplyFade?.addEventListener('click', () => {
+      btnApplyFade?.addEventListener('click', () => {
       const clip = this.getSelectedClip();
       if (clip && inFadeIn && inFadeOut) {
         clip.audioFadeIn = parseFloat(inFadeIn.value) || 0;
@@ -981,6 +1031,139 @@ export class VideoTimelineManager {
         this._onProjectChanged();
       }
       closeFade();
+    }, { signal });
+
+    const subBackdrop = this._container.querySelector<HTMLElement>('[data-ref="modal-subtitles-backdrop"]');
+    const btnCloseSub = this._container.querySelector<HTMLElement>('[data-ref="btn-close-subtitles-modal"]');
+    const btnGenSub = this._container.querySelector<HTMLElement>('[data-ref="btn-generate-subtitles"]');
+    const btnGenSubText = this._container.querySelector<HTMLElement>('[data-ref="btn-generate-subtitles-text"]');
+    const selectSource = this._container.querySelector<HTMLSelectElement>('[data-ref="select-subtitles-source"]');
+    const selectLang = this._container.querySelector<HTMLSelectElement>('[data-ref="select-subtitles-lang"]');
+    const selectStyle = this._container.querySelector<HTMLSelectElement>('[data-ref="select-subtitles-style"]');
+    const errorBanner = this._container.querySelector<HTMLElement>('[data-ref="banner-subtitles-error"]');
+    const errorText = this._container.querySelector<HTMLElement>('[data-ref="subtitles-error-text"]');
+
+    const closeSub = () => {
+      if (subBackdrop) {
+        subBackdrop.classList.remove('is-visible');
+        subBackdrop.style.display = 'none';
+      }
+    };
+
+    btnCloseSub?.addEventListener('click', closeSub, { signal });
+    subBackdrop?.addEventListener('click', (e) => {
+      if (e.target === subBackdrop) closeSub();
+    }, { signal });
+
+    btnGenSub?.addEventListener('click', async () => {
+      const project = this._getProject();
+      const clipId = selectSource?.value;
+      let targetClip: VideoClip | null = null;
+
+      for (const track of project.tracks) {
+        const found = track.clips.find((c) => c.id === clipId);
+        if (found) {
+          targetClip = found;
+          break;
+        }
+      }
+
+      if (!targetClip || !targetClip.assetUrl) {
+        if (errorBanner && errorText) {
+          errorText.textContent = 'Selecciona un clip válido con audio para transcribir.';
+          errorBanner.style.display = 'flex';
+        }
+        return;
+      }
+
+      if (btnGenSub) (btnGenSub as HTMLButtonElement).disabled = true;
+      if (btnGenSubText) btnGenSubText.textContent = 'Transcribiendo con Gemini IA...';
+      if (errorBanner) errorBanner.style.display = 'none';
+
+      try {
+        const language = selectLang?.value || 'auto';
+        const style = selectStyle?.value || 'standard';
+
+        const result = await generateVideoSubtitlesApi(targetClip.assetUrl, {
+          language,
+          offsetSeconds: targetClip.startTime,
+        });
+
+        if (!result.success || !result.subtitles) {
+          if (errorBanner && errorText) {
+            errorText.textContent = result.error || 'No se pudieron generar los subtítulos. Intenta nuevamente.';
+            errorBanner.style.display = 'flex';
+          }
+          return;
+        }
+
+        if (result.subtitles.length === 0) {
+          showToast('No se detectó voz ni diálogo inteligible en el audio del clip seleccionado.', 'info');
+          closeSub();
+          return;
+        }
+
+        let subtitleTrack = project.tracks.find((t) => t.name === 'Subtítulos IA' && t.type === 'overlay');
+        if (!subtitleTrack) {
+          subtitleTrack = {
+            clips: [],
+            id: `track_${Date.now()}_subtitles`,
+            name: 'Subtítulos IA',
+            type: 'overlay',
+          };
+          project.tracks.push(subtitleTrack);
+        }
+
+        const baseColor = style === 'yellow' ? '#fde047' : '#ffffff';
+        const bgColor = style === 'boxed' ? 'rgba(0, 0, 0, 0.75)' : undefined;
+        const fontSize = 42;
+
+        for (let i = 0; i < result.subtitles.length; i++) {
+          const item = result.subtitles[i];
+          const dur = Math.max(0.4, item.end - item.start);
+
+          const subClip: VideoClip = {
+            duration: dur,
+            id: `sub_${Date.now()}_${i}_${Math.random().toString(36).slice(2, 6)}`,
+            mediaType: 'text',
+            name: item.text.slice(0, 20),
+            sourceDuration: dur,
+            startTime: item.start,
+            textConfig: {
+              backgroundColor: bgColor,
+              color: baseColor,
+              fontFamily: 'Inter, system-ui, sans-serif',
+              fontSize,
+              fontWeight: '700',
+              text: item.text,
+              textAlign: 'center',
+            },
+            transform: {
+              x: project.width ? project.width / 2 : 960,
+              y: project.height ? Math.round(project.height * 0.85) : 920,
+            },
+            trimEnd: dur,
+            trimStart: 0,
+            volume: 1,
+          };
+
+          subtitleTrack.clips.push(subClip);
+        }
+
+        this.recomputeProjectDuration();
+        this.render();
+        this._onProjectChanged();
+        closeSub();
+        showToast(`Se generaron ${result.subtitles.length} subtítulos con IA exitosamente.`, 'success');
+      } catch {
+        if (errorBanner && errorText) {
+          errorText.textContent = 'Ocurrió un error inesperado al procesar los subtítulos.';
+          errorBanner.style.display = 'flex';
+        }
+      } finally {
+        if (btnGenSub) (btnGenSub as HTMLButtonElement).disabled = false;
+        if (btnGenSubText) btnGenSubText.textContent = 'Generar Subtítulos';
+      }
     }, { signal });
   }
 

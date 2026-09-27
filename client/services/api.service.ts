@@ -560,3 +560,35 @@ export async function deleteUploadApi(uuid: string): Promise<DeleteUploadRespons
     return { message: 'Error de conexión al eliminar el archivo.', success: false };
   }
 }
+
+export interface GenerateSubtitlesResponse {
+  durationSeconds?: number;
+  error?: string;
+  language?: string;
+  subtitles?: { end: number; start: number; text: string }[];
+  success: boolean;
+}
+
+export async function generateVideoSubtitlesApi(
+  mediaUrl: string,
+  options: { language?: string; offsetSeconds?: number } = {}
+): Promise<GenerateSubtitlesResponse> {
+  try {
+    const res = await postApi(API_ROUTES.video.generateSubtitles, {
+      language: options.language || 'auto',
+      mediaUrl,
+      offsetSeconds: options.offsetSeconds || 0,
+    });
+    const data = await res.json();
+    return {
+      durationSeconds: data.durationSeconds,
+      error: data.error,
+      language: data.language,
+      subtitles: data.subtitles || [],
+      success: res.ok,
+    };
+  } catch {
+    return { error: 'Error de conexión al generar subtítulos con IA.', success: false };
+  }
+}
+

@@ -1,5 +1,6 @@
 import { getCurrentUser } from '../middlewares/auth.middleware.js';
 import { createVideoExportJob, getRenderJob } from '../services/video-renderer.service.js';
+import { generateVideoSubtitles } from '../services/video-subtitles.service.js';
 import { sendBadRequest, sendCreated, sendInternalError, sendNotFound, sendSuccess } from '../utils/http.util.js';
 import { Request, Response } from 'express';
 import fs from 'fs';
@@ -67,5 +68,25 @@ export async function downloadExportedVideoHandler(req: Request, res: Response):
     res.download(fullPath, job.outputFilename);
   } catch (err) {
     sendInternalError(res, 'Error al descargar video', err, 'Error al descargar el archivo.');
+  }
+}
+
+export async function generateSubtitlesHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const { language, mediaUrl, offsetSeconds } = req.body;
+
+    if (!mediaUrl || typeof mediaUrl !== 'string') {
+      sendBadRequest(res, 'URL o ruta del archivo de audio/video requerida.');
+      return;
+    }
+
+    const result = await generateVideoSubtitles(mediaUrl, {
+      language: typeof language === 'string' ? language : 'auto',
+      offsetSeconds: typeof offsetSeconds === 'number' ? offsetSeconds : 0,
+    });
+
+    sendSuccess(res, result);
+  } catch (err) {
+    sendInternalError(res, 'Error al generar subtítulos con IA', err, 'No se pudieron generar los subtítulos con IA. Intenta nuevamente.');
   }
 }

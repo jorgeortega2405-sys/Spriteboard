@@ -202,6 +202,7 @@ export const API_ROUTES = {
   video: {
     download: (jobId: string) => `/api/video/export/download/${encodeURIComponent(jobId)}`,
     export: '/api/video/export',
+    generateSubtitles: '/api/video/subtitles/generate',
     status: (jobId: string) => `/api/video/export/status/${encodeURIComponent(jobId)}`,
   },
 } as const;

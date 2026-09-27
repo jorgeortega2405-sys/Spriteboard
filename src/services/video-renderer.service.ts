@@ -120,6 +120,7 @@ async function processRenderJob(
 
   const videoClips: any[] = [];
   const audioClips: any[] = [];
+  const textClips: any[] = [];
 
   if (Array.isArray(project.tracks)) {
     for (const track of project.tracks) {
@@ -135,6 +136,8 @@ async function processRenderJob(
             if (localPath) {
               audioClips.push({ ...clip, isTrackMuted: track.muted, localPath });
             }
+          } else if (clip.mediaType === 'text' && clip.textConfig?.text) {
+            textClips.push(clip);
           }
         }
       }
@@ -240,6 +243,27 @@ async function processRenderJob(
       filterComplex.push(`[${inIdx}:a]${aFilterParts.join(',')}[${aLabel}]`);
       audioLabels.push(`[${aLabel}]`);
     }
+  }
+
+  for (let k = 0; k < textClips.length; k++) {
+    const tClip = textClips[k];
+    const textStr = (tClip.textConfig.text || '')
+      .replace(/\\/g, '\\\\')
+      .replace(/'/g, "\\'")
+      .replace(/:/g, '\\:')
+      .replace(/%/g, '\\%');
+    if (!textStr) continue;
+
+    const fontSize = Math.max(16, Math.min(120, tClip.textConfig.fontSize || 40));
+    const fontColor = (tClip.textConfig.color || '#ffffff').replace('#', '0x');
+    const tStart = Math.max(0, tClip.startTime || 0);
+    const tEnd = tStart + Math.max(0.1, tClip.duration || 2);
+    const nextBase = `tbase${k + 1}`;
+
+    const drawTextFilter = `drawtext=text='${textStr}':fontsize=${fontSize}:fontcolor=${fontColor}:x=(w-text_w)/2:y=(h-text_h)*0.85:shadowcolor=black:shadowx=2:shadowy=2:enable='between(t,${tStart},${tEnd})'`;
+
+    filterComplex.push(`[${currentBase}]${drawTextFilter}[${nextBase}]`);
+    currentBase = nextBase;
   }
 
   for (let j = 0; j < audioClips.length; j++) {
