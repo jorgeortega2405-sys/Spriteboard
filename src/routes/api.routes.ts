@@ -20,6 +20,7 @@ import telemetryRoutes from './telemetry.routes.js';
 import templateRoutes from './template.routes.js';
 import userProfileRoutes from './user-profile.routes.js';
 import userUploadRoutes from './user-upload.routes.js';
+import videoRoutes from './video.routes.js';
 import { validateCsrf } from '../middlewares/csrf.middleware.js';
 import { Router } from 'express';
 
@@ -49,6 +50,7 @@ apiRouter.use('/', aiRoutes);
 apiRouter.use('/', subscriptionRoutes);
 apiRouter.use('/', userProfileRoutes);
 apiRouter.use('/', userUploadRoutes);
+apiRouter.use('/', videoRoutes);
 
 export default apiRouter;
 

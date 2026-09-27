@@ -49,6 +49,7 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
   const isDoc = options.canvasType === 'doc';
   const isSheet = options.canvasType === 'sheet';
   const isSocial = options.canvasType === 'social';
+  const isVideo = options.canvasType === 'video';
   const paperSize = options.docPaperSize || 'letter';
   const orientation = options.docOrientation || 'portrait';
 
@@ -57,12 +58,14 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
     : DOC_PAPER_DIMENSIONS.letter.portrait;
 
   const defaultPresFormat = PRESENTATION_FORMATS.presentation_16_9;
-  const width = isPresentation ? (options.width || defaultPresFormat.width) : (isSocial ? (options.width || 940) : (isDoc ? (options.width || paperPreset.widthPx || 816) : (isSheet ? (options.width || 1920) : 0)));
-  const height = isPresentation ? (options.height || defaultPresFormat.height) : (isSocial ? (options.height || 788) : (isDoc ? (options.height || paperPreset.heightPx || 0) : (isSheet ? (options.height || 1080) : 0)));
+  const width = isVideo ? (options.width || 1920) : (isPresentation ? (options.width || defaultPresFormat.width) : (isSocial ? (options.width || 940) : (isDoc ? (options.width || paperPreset.widthPx || 816) : (isSheet ? (options.width || 1920) : 0))));
+  const height = isVideo ? (options.height || 1080) : (isPresentation ? (options.height || defaultPresFormat.height) : (isSocial ? (options.height || 788) : (isDoc ? (options.height || paperPreset.heightPx || 0) : (isSheet ? (options.height || 1080) : 0))));
 
-  const defaultName = isPresentation
-    ? 'Presentación sin título'
-    : (isSocial ? 'Diseño para redes sin título' : (isDoc ? 'Documento sin título' : (isSheet ? 'Hoja de cálculo sin título' : 'Pizarrón sin título')));
+  const defaultName = isVideo
+    ? 'Video sin título'
+    : (isPresentation
+      ? 'Presentación sin título'
+      : (isSocial ? 'Diseño para redes sin título' : (isDoc ? 'Documento sin título' : (isSheet ? 'Hoja de cálculo sin título' : 'Pizarrón sin título'))));
   const name = options.name.trim() || defaultName;
   const solidColor = options.solidColor || '#ffffff';
 
@@ -213,6 +216,38 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
       type: 'sheet',
       version: 1,
     };
+  } else if (!initialProject && isVideo) {
+    const defaultTracks = [
+      {
+        clips: [],
+        id: 'track-v1',
+        name: 'Pista de Video 1',
+        type: 'video' as const,
+      },
+      {
+        clips: [],
+        id: 'track-a1',
+        name: 'Pista de Audio 1',
+        type: 'audio' as const,
+      },
+    ];
+
+    initialProject = {
+      background: {
+        color: '#000000',
+        type: 'solid',
+      },
+      currentTime: 0,
+      duration: 30,
+      fps: 30,
+      height,
+      name,
+      tracks: defaultTracks,
+      type: 'video',
+      version: 1,
+      width,
+      zoom: 1,
+    };
   } else if (!initialProject) {
     let elements = getBoardTemplateElements(options.boardTemplateId || options.diagramTemplateId);
     if (elements.length === 0 && (options.diagramSubtype || options.diagramTemplateId)) {
@@ -279,6 +314,29 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
     previewThumbnail = generateDocThumbnail(initialProject);
   } else if (isSheet) {
     previewThumbnail = generateSheetThumbnail(initialProject);
+  } else if (isVideo) {
+    const thumbCanvas = document.createElement('canvas');
+    thumbCanvas.width = 320;
+    thumbCanvas.height = 180;
+    const thumbCtx = thumbCanvas.getContext('2d');
+    if (thumbCtx) {
+      thumbCtx.fillStyle = '#0f172a';
+      thumbCtx.fillRect(0, 0, 320, 180);
+      thumbCtx.fillStyle = 'rgba(244, 63, 94, 0.2)';
+      thumbCtx.beginPath();
+      thumbCtx.arc(160, 90, 32, 0, Math.PI * 2);
+      thumbCtx.fill();
+      thumbCtx.fillStyle = '#f43f5e';
+      thumbCtx.beginPath();
+      thumbCtx.moveTo(150, 75);
+      thumbCtx.lineTo(176, 90);
+      thumbCtx.lineTo(150, 105);
+      thumbCtx.closePath();
+      thumbCtx.fill();
+      try {
+        previewThumbnail = thumbCanvas.toDataURL('image/png');
+      } catch {}
+    }
   } else {
     const thumbW = 320;
     const thumbH = 180;
@@ -343,8 +401,8 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
     }
   }
 
-  const unit: CanvasType = isPresentation ? 'presentation' : (isSocial ? 'social' : (isDoc ? 'doc' : (isSheet ? 'sheet' : 'board')));
-  const canvasType: CanvasType = isPresentation ? 'presentation' : (isSocial ? 'social' : (isDoc ? 'doc' : (isSheet ? 'sheet' : 'board')));
+  const unit: CanvasType = isVideo ? 'video' : (isPresentation ? 'presentation' : (isSocial ? 'social' : (isDoc ? 'doc' : (isSheet ? 'sheet' : 'board'))));
+  const canvasType: CanvasType = isVideo ? 'video' : (isPresentation ? 'presentation' : (isSocial ? 'social' : (isDoc ? 'doc' : (isSheet ? 'sheet' : 'board'))));
   const targetRoute = `/design/`;
 
   if (currentUser) {

@@ -1,0 +1,408 @@
+<div class="component-wrapper component-wrapper--full no-padding view-wrapper video-editor-wrapper" data-ref="video-wrapper">
+  <div class="component-top component-top--gradient video-top-bar" data-ref="video-top-bar">
+    <div class="component-top-left" data-ref="video-top-left">
+      <h1 class="component-top-title" data-ref="video-title" contenteditable="true" spellcheck="false">Video sin título</h1>
+    </div>
+
+    <div class="component-top-right" data-ref="video-top-right">
+      <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn canvas-save-status-btn is-saved" data-ref="btn-canvas-cloud-status" data-tooltip="Todos los cambios están guardados en la nube" aria-label="Estado de guardado">
+        <svg class="component-icon icon-status-saved" aria-hidden="true"><use href="/icons.svg#cloud_done"></use></svg>
+        <svg class="component-icon icon-status-saving is-hidden" aria-hidden="true"><use href="/icons.svg#sync"></use></svg>
+        <svg class="component-icon icon-status-error is-hidden" aria-hidden="true"><use href="/icons.svg#cloud_off"></use></svg>
+      </button>
+
+      <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-video-undo" data-tooltip="Deshacer (Ctrl+Z)" aria-label="Deshacer">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#undo"></use></svg>
+      </button>
+
+      <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-video-redo" data-tooltip="Rehacer (Ctrl+Y)" aria-label="Rehacer">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#redo"></use></svg>
+      </button>
+
+      <div class="design-share-wrapper" data-ref="video-settings-wrapper">
+        <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn dropdown-trigger" data-ref="btn-video-settings" data-tooltip="Ajustes del lienzo" aria-label="Ajustes del lienzo">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
+        </button>
+
+        <div class="dropdown-backdrop" data-ref="video-settings-backdrop" style="display: none;">
+          <div class="menu-panel menu-panel--dropdown video-settings-menu" data-ref="video-settings-menu" style="min-width: 290px; padding: 14px; gap: 12px; display: flex; flex-direction: column;">
+            <div class="video-settings-header" style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 8px; border-bottom: 1px solid var(--border-color);">
+              <span style="font-size: 13px; font-weight: 700; color: var(--text-primary);">Ajustes del Video</span>
+            </div>
+
+            <div class="video-settings-body" style="display: flex; flex-direction: column; gap: 12px;">
+              <div class="video-aspect-section" style="display: flex; flex-direction: column; gap: 6px;">
+                <span style="font-size: 11px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase;">Proporción</span>
+                <div class="video-aspect-presets" data-ref="video-aspect-presets" style="display: flex; flex-wrap: wrap; gap: 6px;">
+                  <button type="button" class="component-badge component-badge--interactive is-active" data-ref="btn-aspect-16-9" data-aspect="16:9" data-w="1920" data-h="1080">
+                    <span class="component-badge__text">16:9 (1080p)</span>
+                  </button>
+                  <button type="button" class="component-badge component-badge--interactive" data-ref="btn-aspect-9-16" data-aspect="9:16" data-w="1080" data-h="1920">
+                    <span class="component-badge__text">9:16 (Vertical)</span>
+                  </button>
+                  <button type="button" class="component-badge component-badge--interactive" data-ref="btn-aspect-1-1" data-aspect="1:1" data-w="1080" data-h="1080">
+                    <span class="component-badge__text">1:1 (Cuadrado)</span>
+                  </button>
+                </div>
+              </div>
+
+              <label class="field field--sm" data-ref="field-video-fps">
+                <span class="field__label">Fotogramas por segundo (FPS)</span>
+                <select class="field__input field__select" data-ref="select-video-fps">
+                  <option value="30" selected>30 FPS (Estándar)</option>
+                  <option value="60">60 FPS (Fluido)</option>
+                  <option value="24">24 FPS (Cinemático)</option>
+                </select>
+              </label>
+
+              <label class="field field--sm" data-ref="field-video-bg-color">
+                <span class="field__label">Color de Fondo</span>
+                <input class="field__input" data-ref="input-video-bg-color" type="color" value="#000000" />
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button type="button" class="component-button component-button--h40 component-button--primary video-export-btn" data-ref="btn-video-export" data-tooltip="Exportar Video MP4" aria-label="Exportar Video">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
+        <span>Exportar</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="video-workspace" data-ref="video-workspace">
+    <div class="video-workspace-top" data-ref="video-workspace-top">
+      <aside class="video-sidebar" data-ref="video-sidebar">
+        <div class="video-sidebar-panel" data-ref="video-sidebar-panel">
+          <input class="video-hidden-file-input" data-ref="input-video-upload-file" type="file" accept="video/mp4,video/webm,video/quicktime,video/x-m4v,video/ogg,image/png,image/jpeg,image/webp,image/gif,audio/mp3,audio/wav,audio/ogg,audio/mpeg" multiple style="display: none;" />
+
+          <div class="video-upload-dropzone" data-ref="video-upload-dropzone">
+            <svg class="component-icon video-dropzone-icon" aria-hidden="true"><use href="/icons.svg#cloud_upload"></use></svg>
+            <p class="video-dropzone-text">Arrastra o haz clic para subir videos o fotos</p>
+          </div>
+
+          <div class="video-uploads-filter-pills" data-ref="video-uploads-filter-pills">
+            <button type="button" class="component-badge component-badge--interactive is-active" data-ref="btn-filter-uploads-all" data-type="all">Todos</button>
+            <button type="button" class="component-badge component-badge--interactive" data-ref="btn-filter-uploads-video" data-type="video">Videos</button>
+            <button type="button" class="component-badge component-badge--interactive" data-ref="btn-filter-uploads-image" data-type="image">Fotos</button>
+            <button type="button" class="component-badge component-badge--interactive" data-ref="btn-filter-uploads-audio" data-type="audio">Audios</button>
+          </div>
+
+          <div class="video-uploads-grid" data-ref="video-uploads-grid"></div>
+        </div>
+      </aside>
+
+      <main class="video-preview-pane" data-ref="video-preview-pane">
+        <div class="video-viewport-wrapper" data-ref="video-viewport-wrapper">
+          <div class="video-canvas-container" data-ref="video-canvas-container">
+            <canvas class="video-preview-canvas" data-ref="video-preview-canvas" width="1920" height="1080"></canvas>
+            <div class="video-media-pool" data-ref="video-media-pool" style="position: absolute; width: 0; height: 0; opacity: 0; pointer-events: none; overflow: hidden;" aria-hidden="true"></div>
+          </div>
+        </div>
+
+        <div class="video-preview-transport" data-ref="video-preview-transport">
+          <div class="video-transport-left">
+            <button type="button" class="component-button component-button--h36 component-button--icon-only" data-ref="btn-transport-step-back" data-tooltip="Retroceder 1s" aria-label="Retroceder 1s">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#replay_10"></use></svg>
+            </button>
+            <button type="button" class="component-button component-button--h40 component-button--icon-only component-button--primary" data-ref="btn-transport-play-pause" data-tooltip="Reproducir / Pausa (Espacio)" aria-label="Reproducir">
+              <svg class="component-icon icon-play" aria-hidden="true"><use href="/icons.svg#play_arrow"></use></svg>
+              <svg class="component-icon icon-pause is-hidden" aria-hidden="true"><use href="/icons.svg#pause"></use></svg>
+            </button>
+            <button type="button" class="component-button component-button--h36 component-button--icon-only" data-ref="btn-transport-step-forward" data-tooltip="Avanzar 1s" aria-label="Avanzar 1s">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#forward_10"></use></svg>
+            </button>
+
+            <div class="video-timecode-badge" data-ref="video-timecode-badge">
+              <span class="timecode-current" data-ref="timecode-current">00:00.00</span>
+              <span class="timecode-divider">/</span>
+              <span class="timecode-duration" data-ref="timecode-duration">00:30.00</span>
+            </div>
+          </div>
+
+          <div class="video-transport-right">
+            <div class="video-volume-control" data-ref="video-volume-control">
+              <button type="button" class="component-button component-button--h36 component-button--icon-only" data-ref="btn-transport-mute" data-tooltip="Silenciar" aria-label="Silenciar">
+                <svg class="component-icon icon-vol-on" aria-hidden="true"><use href="/icons.svg#volume_up"></use></svg>
+                <svg class="component-icon icon-vol-off is-hidden" aria-hidden="true"><use href="/icons.svg#volume_off"></use></svg>
+              </button>
+              <input class="video-volume-slider" data-ref="input-transport-volume" type="range" min="0" max="1" step="0.05" value="1" aria-label="Volumen" />
+            </div>
+
+            <button type="button" class="component-button component-button--h36 component-button--icon-only" data-ref="btn-transport-fullscreen" data-tooltip="Pantalla Completa" aria-label="Pantalla Completa">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#fullscreen"></use></svg>
+            </button>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <div class="video-workspace-bottom" data-ref="video-workspace-bottom">
+      <div class="video-timeline-toolbar" data-ref="video-timeline-toolbar">
+        <div class="timeline-toolbar-left">
+          <button type="button" class="component-button component-button--h32 component-button--icon-only" data-ref="btn-tl-play-pause" data-tooltip="Reproducir (Espacio)" aria-label="Reproducir">
+            <svg class="component-icon icon-play" aria-hidden="true"><use href="/icons.svg#play_arrow"></use></svg>
+            <svg class="component-icon icon-pause is-hidden" aria-hidden="true"><use href="/icons.svg#pause"></use></svg>
+          </button>
+
+          <div class="timeline-toolbar-divider" aria-hidden="true"></div>
+
+          <button type="button" class="component-button component-button--h32 video-tool-btn" data-ref="btn-tl-split" data-tooltip="Cortar / Dividir en cabezal (S)" aria-label="Cortar clip">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_cut"></use></svg>
+            <span>Cortar</span>
+          </button>
+
+          <button type="button" class="component-button component-button--h32 video-tool-btn" data-ref="btn-tl-delete" data-tooltip="Eliminar clip seleccionado (Supr)" aria-label="Eliminar clip">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
+            <span>Eliminar</span>
+          </button>
+
+          <button type="button" class="component-button component-button--h32 video-tool-btn" data-ref="btn-tl-duplicate" data-tooltip="Duplicar clip (Ctrl+D)" aria-label="Duplicar clip">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
+            <span>Duplicar</span>
+          </button>
+
+          <button type="button" class="component-button component-button--h32 video-tool-btn" data-ref="btn-tl-add-track" data-tooltip="Añadir nueva pista" aria-label="Añadir pista">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+            <span>Pista</span>
+          </button>
+
+          <div class="timeline-toolbar-divider" aria-hidden="true"></div>
+
+          <button type="button" class="component-button component-button--h32 component-button--icon-only is-active" data-ref="btn-tl-snap" data-tooltip="Ajuste magnético inteligente (N)" aria-label="Ajuste magnético">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
+          </button>
+
+          <button type="button" class="component-button component-button--h32 video-tool-btn" data-ref="btn-tl-filters" data-tooltip="Filtros y Ajustes de Color" aria-label="Filtros">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#palette"></use></svg>
+            <span>Filtros</span>
+          </button>
+
+          <button type="button" class="component-button component-button--h32 video-tool-btn" data-ref="btn-tl-transitions" data-tooltip="Transición entre clips" aria-label="Transición">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#flare"></use></svg>
+            <span>Transición</span>
+          </button>
+
+          <button type="button" class="component-button component-button--h32 video-tool-btn" data-ref="btn-tl-audio-fade" data-tooltip="Fundido de audio (Fade In/Out)" aria-label="Fundido de audio">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
+            <span>Fundido</span>
+          </button>
+        </div>
+
+        <div class="timeline-toolbar-right">
+          <button type="button" class="component-button component-button--h32 component-button--icon-only" data-ref="btn-tl-zoom-out" data-tooltip="Reducir zoom" aria-label="Reducir zoom">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#zoom_out"></use></svg>
+          </button>
+          <input class="timeline-zoom-slider" data-ref="input-tl-zoom" type="range" min="10" max="200" step="5" value="50" aria-label="Zoom de línea de tiempo" />
+          <button type="button" class="component-button component-button--h32 component-button--icon-only" data-ref="btn-tl-zoom-in" data-tooltip="Aumentar zoom" aria-label="Aumentar zoom">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#zoom_in"></use></svg>
+          </button>
+          <button type="button" class="component-button component-button--h32 component-button--icon-only" data-ref="btn-tl-fit" data-tooltip="Ajustar escala al contenido" aria-label="Ajustar al contenido">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#fit_screen"></use></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="video-timeline-viewport" data-ref="video-timeline-viewport">
+        <div class="video-timeline-headers" data-ref="video-timeline-headers">
+          <div class="timeline-ruler-corner" data-ref="timeline-ruler-corner">
+            <span class="timeline-corner-label">Pistas</span>
+          </div>
+          <div class="timeline-header-list" data-ref="timeline-header-list"></div>
+        </div>
+
+        <div class="video-timeline-tracks-area" data-ref="video-timeline-tracks-area">
+          <div class="video-timeline-ruler-wrapper" data-ref="video-timeline-ruler-wrapper">
+            <canvas class="video-timeline-ruler-canvas" data-ref="video-timeline-ruler-canvas" height="30"></canvas>
+          </div>
+
+          <div class="video-timeline-lanes-container" data-ref="video-timeline-lanes-container">
+            <div class="video-playhead-line" data-ref="video-playhead-line">
+              <div class="video-playhead-handle" data-ref="video-playhead-handle"></div>
+            </div>
+            <div class="video-timeline-lanes-list" data-ref="video-timeline-lanes-list"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop video-export-modal-backdrop" data-ref="modal-export-backdrop" style="display: none;">
+    <div class="modal-container" data-ref="modal-export-container">
+      <button type="button" class="modal-close-btn" data-ref="btn-close-export-modal" aria-label="Cerrar modal">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+      </button>
+
+      <div class="modal-card video-export-card" data-ref="modal-card-export">
+        <div class="modal-card__header">
+          <h2 class="modal-card__title">Exportar Video MP4</h2>
+          <p class="modal-card__subtitle">Renderizado en alta calidad impulsado por FFmpeg en el servidor</p>
+        </div>
+
+        <div class="modal-card__body">
+          <div class="video-export-options-view" data-ref="export-options-view">
+            <label class="field" data-ref="field-export-quality">
+              <span class="field__label">Calidad de Renderizado</span>
+              <select class="field__input field__select" data-ref="select-export-quality">
+                <option value="high" selected>Alta Calidad (1080p / Bitrate Óptimo)</option>
+                <option value="medium">Calidad Media (720p / Rápido)</option>
+                <option value="low">Borrador Rápido (480p / Ligero)</option>
+              </select>
+            </label>
+
+            <label class="field" data-ref="field-export-fps">
+              <span class="field__label">Fotogramas por Segundo</span>
+              <select class="field__input field__select" data-ref="select-export-fps">
+                <option value="30" selected>30 FPS</option>
+                <option value="60">60 FPS</option>
+              </select>
+            </label>
+
+            <div class="video-export-actions">
+              <button type="button" class="component-button component-button--h48 component-button--primary component-button--w-full" data-ref="btn-start-render">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
+                <span>Comenzar Renderizado</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="video-export-progress-view" data-ref="export-progress-view" style="display: none;">
+            <div class="video-render-spinner-box">
+              <svg class="component-icon video-render-spinner" aria-hidden="true"><use href="/icons.svg#sync"></use></svg>
+            </div>
+            <h3 class="video-progress-status-text" data-ref="video-progress-status-text">Procesando y concatenando clips...</h3>
+            <div class="video-progress-bar-bg">
+              <div class="video-progress-bar-fill" data-ref="video-progress-bar-fill" style="width: 0%;"></div>
+            </div>
+            <div class="video-progress-percent" data-ref="video-progress-percent">0%</div>
+
+            <div class="video-download-success-box" data-ref="video-download-success-box" style="display: none;">
+              <svg class="component-icon icon-success" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+              <p class="video-success-msg">¡Tu video se ha renderizado exitosamente!</p>
+              <a class="component-button component-button--h48 component-button--primary component-button--w-full" data-ref="btn-download-video-file" href="#" download>
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
+                <span>Descargar Video MP4</span>
+              </a>
+            </div>
+          </div>
+
+          <div class="banner banner--danger" data-ref="video-export-error" style="display: none; margin-top: 14px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop video-modal-backdrop" data-ref="modal-filters-backdrop" style="display: none;">
+    <div class="modal-container" data-ref="modal-filters-container" style="max-width: 440px;">
+      <button type="button" class="modal-close-btn" data-ref="btn-close-filters-modal" aria-label="Cerrar modal">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+      </button>
+
+      <div class="modal-card" data-ref="modal-card-filters">
+        <div class="modal-card__header">
+          <h2 class="modal-card__title">Filtros y Ajustes de Color</h2>
+          <p class="modal-card__subtitle">Aplica efectos visuales y gradación de color al clip seleccionado</p>
+        </div>
+
+        <div class="modal-card__body" style="display: flex; flex-direction: column; gap: 14px;">
+          <div class="video-filter-presets-section" style="display: flex; flex-direction: column; gap: 6px;">
+            <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary);">Efectos Preestablecidos</span>
+            <div class="video-filter-presets-grid" data-ref="video-filter-presets" style="display: flex; flex-wrap: wrap; gap: 6px;">
+              <button type="button" class="component-badge component-badge--interactive is-active" data-ref="btn-filter-preset-none" data-preset="none">Normal</button>
+              <button type="button" class="component-badge component-badge--interactive" data-ref="btn-filter-preset-cinema" data-preset="cinema">Cine</button>
+              <button type="button" class="component-badge component-badge--interactive" data-ref="btn-filter-preset-retro" data-preset="retro">Retro</button>
+              <button type="button" class="component-badge component-badge--interactive" data-ref="btn-filter-preset-grayscale" data-preset="grayscale">B&W</button>
+              <button type="button" class="component-badge component-badge--interactive" data-ref="btn-filter-preset-warm" data-preset="warm">Cálido</button>
+              <button type="button" class="component-badge component-badge--interactive" data-ref="btn-filter-preset-cool" data-preset="cool">Frío</button>
+            </div>
+          </div>
+
+          <label class="field field--sm" data-ref="field-filter-brightness">
+            <span class="field__label">Brillo: <span data-ref="val-filter-brightness">100%</span></span>
+            <input class="field__input" data-ref="input-filter-brightness" type="range" min="0.5" max="1.5" step="0.05" value="1" />
+          </label>
+
+          <label class="field field--sm" data-ref="field-filter-contrast">
+            <span class="field__label">Contraste: <span data-ref="val-filter-contrast">100%</span></span>
+            <input class="field__input" data-ref="input-filter-contrast" type="range" min="0.5" max="1.5" step="0.05" value="1" />
+          </label>
+
+          <label class="field field--sm" data-ref="field-filter-saturate">
+            <span class="field__label">Saturación: <span data-ref="val-filter-saturate">100%</span></span>
+            <input class="field__input" data-ref="input-filter-saturate" type="range" min="0" max="2" step="0.05" value="1" />
+          </label>
+
+          <div style="display: flex; gap: 8px; margin-top: 6px;">
+            <button type="button" class="component-button component-button--h40 component-button--w-full" data-ref="btn-reset-filters">Restablecer</button>
+            <button type="button" class="component-button component-button--h40 component-button--primary component-button--w-full" data-ref="btn-apply-filters">Aplicar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop video-modal-backdrop" data-ref="modal-transitions-backdrop" style="display: none;">
+    <div class="modal-container" data-ref="modal-transitions-container" style="max-width: 400px;">
+      <button type="button" class="modal-close-btn" data-ref="btn-close-transitions-modal" aria-label="Cerrar modal">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+      </button>
+
+      <div class="modal-card" data-ref="modal-card-transitions">
+        <div class="modal-card__header">
+          <h2 class="modal-card__title">Transición de Entrada</h2>
+          <p class="modal-card__subtitle">Efecto visual al entrar el clip en la reproducción</p>
+        </div>
+
+        <div class="modal-card__body" style="display: flex; flex-direction: column; gap: 14px;">
+          <label class="field" data-ref="field-transition-type">
+            <span class="field__label">Tipo de Transición</span>
+            <select class="field__input field__select" data-ref="select-transition-type">
+              <option value="none" selected>Ninguna</option>
+              <option value="crossfade">Disolución Cruzada (Crossfade)</option>
+              <option value="fade_black">Fundido a Negro (Fade Black)</option>
+              <option value="slide_left">Deslizar a la Izquierda (Slide)</option>
+              <option value="wipe_left">Barrido a la Izquierda (Wipe)</option>
+            </select>
+          </label>
+
+          <label class="field" data-ref="field-transition-duration">
+            <span class="field__label">Duración: <span data-ref="val-transition-duration">1.0s</span></span>
+            <input class="field__input" data-ref="input-transition-duration" type="range" min="0.3" max="2.5" step="0.1" value="1.0" />
+          </label>
+
+          <button type="button" class="component-button component-button--h40 component-button--primary component-button--w-full" data-ref="btn-apply-transition">Guardar Transición</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop video-modal-backdrop" data-ref="modal-audio-fade-backdrop" style="display: none;">
+    <div class="modal-container" data-ref="modal-audio-fade-container" style="max-width: 400px;">
+      <button type="button" class="modal-close-btn" data-ref="btn-close-audio-fade-modal" aria-label="Cerrar modal">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+      </button>
+
+      <div class="modal-card" data-ref="modal-card-audio-fade">
+        <div class="modal-card__header">
+          <h2 class="modal-card__title">Fundidos de Audio</h2>
+          <p class="modal-card__subtitle">Atenuación suave de entrada (Fade In) y salida (Fade Out)</p>
+        </div>
+
+        <div class="modal-card__body" style="display: flex; flex-direction: column; gap: 14px;">
+          <label class="field" data-ref="field-audio-fade-in">
+            <span class="field__label">Aparición (Fade In): <span data-ref="val-audio-fade-in">0.0s</span></span>
+            <input class="field__input" data-ref="input-audio-fade-in" type="range" min="0" max="5" step="0.2" value="0" />
+          </label>
+
+          <label class="field" data-ref="field-audio-fade-out">
+            <span class="field__label">Desvanecimiento (Fade Out): <span data-ref="val-audio-fade-out">0.0s</span></span>
+            <input class="field__input" data-ref="input-audio-fade-out" type="range" min="0" max="5" step="0.2" value="0" />
+          </label>
+
+          <button type="button" class="component-button component-button--h40 component-button--primary component-button--w-full" data-ref="btn-apply-audio-fade">Guardar Fundidos</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

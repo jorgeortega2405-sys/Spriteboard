@@ -199,6 +199,11 @@ export const API_ROUTES = {
     stats: '/api/telemetry/stats',
     vitals: '/api/telemetry/vitals',
   },
+  video: {
+    download: (jobId: string) => `/api/video/export/download/${encodeURIComponent(jobId)}`,
+    export: '/api/video/export',
+    status: (jobId: string) => `/api/video/export/status/${encodeURIComponent(jobId)}`,
+  },
 } as const;
 
 export default API_ROUTES;

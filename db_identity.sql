@@ -687,7 +687,7 @@ CREATE TABLE IF NOT EXISTS user_uploads (
     original_filename VARCHAR(255) NOT NULL,
     file_path VARCHAR(512) NOT NULL,
     thumbnail_path VARCHAR(512) NULL,
-    media_type ENUM('image', 'video') NOT NULL DEFAULT 'image',
+    media_type ENUM('image', 'video', 'audio') NOT NULL DEFAULT 'image',
     mime_type VARCHAR(100) NOT NULL,
     size_bytes BIGINT NOT NULL,
     duration_seconds DECIMAL(8,2) NULL,

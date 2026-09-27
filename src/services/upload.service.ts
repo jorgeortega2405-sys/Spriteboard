@@ -5,7 +5,7 @@ import { sanitizeImage } from './image-sanitizer.service.js';
 import { logger } from './logger.service.js';
 import { deleteObject, getPublicUrl, putObject } from './s3.service.js';
 import { checkUserStorageQuota, formatStorageBytes, invalidateUserStorageCache } from './storage.service.js';
-import { detectMediaKind, processVideo } from './video-processor.service.js';
+import { detectMediaKind, processAudio, processVideo } from './video-processor.service.js';
 import crypto from 'crypto';
 import fs from 'fs';
 import mysql from 'mysql2/promise';
@@ -16,7 +16,7 @@ export interface UserUploadRecord {
   duration_seconds: number | null;
   height: number | null;
   id: number;
-  media_type: 'image' | 'video';
+  media_type: 'audio' | 'image' | 'video';
   mime_type: string;
   original_filename: string;
   size_bytes: number;
@@ -41,11 +41,11 @@ async function safeUnlink(filePath: string): Promise<void> {
   } catch {}
 }
 
-export async function getUserUploads(userId: number, mediaType: 'all' | 'image' | 'video' = 'all'): Promise<UserUploadRecord[]> {
+export async function getUserUploads(userId: number, mediaType: 'all' | 'audio' | 'image' | 'video' = 'all'): Promise<UserUploadRecord[]> {
   let query = 'SELECT id, uuid, user_id, original_filename, file_path, thumbnail_path, media_type, mime_type, size_bytes, duration_seconds, width, height, created_at FROM user_uploads WHERE user_id = ?';
   const params: any[] = [userId];
 
-  if (mediaType === 'image' || mediaType === 'video') {
+  if (mediaType === 'image' || mediaType === 'video' || mediaType === 'audio') {
     query += ' AND media_type = ?';
     params.push(mediaType);
   }
@@ -59,7 +59,7 @@ export async function getUserUploads(userId: number, mediaType: 'all' | 'image' 
     duration_seconds: row.duration_seconds !== null && row.duration_seconds !== undefined ? Number(row.duration_seconds) : null,
     height: row.height !== null ? Number(row.height) : null,
     id: Number(row.id),
-    media_type: (row.media_type === 'video' ? 'video' : 'image') as 'image' | 'video',
+    media_type: (row.media_type === 'video' ? 'video' : (row.media_type === 'audio' ? 'audio' : 'image')) as 'audio' | 'image' | 'video',
     mime_type: String(row.mime_type),
     original_filename: String(row.original_filename),
     size_bytes: Number(row.size_bytes),
@@ -233,6 +233,101 @@ export async function saveUserUpload(
       user_id: userId,
       uuid: fileUuid,
       width: videoProcessed.width || null,
+    };
+
+    return { success: true, upload: uploadRecord };
+  }
+
+  if (mediaKind === 'audio') {
+    if (buffer.length > limits.maxVideoSizeBytes) {
+      return {
+        error: `El archivo de audio supera el límite de tamaño permitido (${formatStorageBytes(limits.maxVideoSizeBytes)}).`,
+        success: false,
+      };
+    }
+
+    let audioProcessed;
+    try {
+      audioProcessed = await processAudio(buffer, safeOriginalName, file.mimetype);
+    } catch (err: any) {
+      logger.security.warn('Rechazo o fallo al procesar audio subido por usuario', {
+        error: err?.message,
+        userId,
+      });
+      return {
+        error: 'El archivo de audio no es compatible o está dañado. Formatos permitidos: MP3, WAV, OGG, M4A, AAC, FLAC.',
+        success: false,
+      };
+    }
+
+    const postQuota = await checkUserStorageQuota(userId, audioProcessed.size + audioProcessed.thumbnailBuffer.length);
+    if (!postQuota.allowed) {
+      return {
+        error: `Has superado el límite de almacenamiento de tu plan (${postQuota.limitFormatted}). Libera espacio o actualiza tu suscripción.`,
+        success: false,
+      };
+    }
+
+    const audioExt = path.extname(safeOriginalName).replace('.', '') || 'mp3';
+    const audioFileName = `upload_aud_${userId}_${Date.now()}_${crypto.randomBytes(4).toString('hex')}.${audioExt}`;
+    const thumbFileName = `thumb_${audioFileName.replace(/\.[^.]+$/, '')}.${audioProcessed.thumbnailExtension}`;
+
+    const s3AudioKey = `uploads/media/${audioFileName}`;
+    const s3ThumbKey = `uploads/media/${thumbFileName}`;
+
+    const localAudioPath = path.join(UPLOADS_DIR, audioFileName);
+    const localThumbPath = path.join(UPLOADS_DIR, thumbFileName);
+
+    try {
+      await fs.promises.writeFile(localAudioPath, buffer);
+      await fs.promises.writeFile(localThumbPath, audioProcessed.thumbnailBuffer);
+    } catch (err) {
+      logger.app.error('Error al guardar audio en disco local', err);
+    }
+
+    try {
+      await putObject(s3AudioKey, buffer, audioProcessed.mimeType);
+      await putObject(s3ThumbKey, audioProcessed.thumbnailBuffer, audioProcessed.thumbnailMimeType);
+    } catch (err) {
+      logger.app.error('Error al guardar audio en S3', err);
+    }
+
+    const publicAudioUrl = getPublicUrl(s3AudioKey);
+    const publicThumbUrl = getPublicUrl(s3ThumbKey);
+
+    const [insertRes] = await pool.query<mysql.ResultSetHeader>(
+      'INSERT INTO user_uploads (uuid, user_id, original_filename, file_path, thumbnail_path, media_type, mime_type, size_bytes, duration_seconds, width, height) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [
+        fileUuid,
+        userId,
+        safeOriginalName,
+        publicAudioUrl,
+        publicThumbUrl,
+        'audio',
+        audioProcessed.mimeType,
+        audioProcessed.size,
+        audioProcessed.duration ? Number(audioProcessed.duration.toFixed(2)) : null,
+        null,
+        null,
+      ]
+    );
+
+    await invalidateUserStorageCache(userId);
+
+    const uploadRecord: UserUploadRecord = {
+      created_at: new Date().toISOString(),
+      duration_seconds: audioProcessed.duration ? Number(audioProcessed.duration.toFixed(2)) : null,
+      height: null,
+      id: insertRes.insertId,
+      media_type: 'audio',
+      mime_type: audioProcessed.mimeType,
+      original_filename: safeOriginalName,
+      size_bytes: audioProcessed.size,
+      thumbnail_url: publicThumbUrl,
+      url: publicAudioUrl,
+      user_id: userId,
+      uuid: fileUuid,
+      width: null,
     };
 
     return { success: true, upload: uploadRecord };

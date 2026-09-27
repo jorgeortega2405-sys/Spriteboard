@@ -5,7 +5,7 @@ import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { showToast } from '../services/toast.service.js';
 import { DocOrientation, DocPaperSize } from '../views/doc/doc.types.js';
-import { getBoardSvg, getCategoryMenuSvg, getDocSvg, getPresentationSvg, getSheetSvg, getSocialSvg, getTemplateVariantSvg } from './create-canvas-graphics.js';
+import { getBoardSvg, getCategoryMenuSvg, getDocSvg, getPresentationSvg, getSheetSvg, getSocialSvg, getTemplateVariantSvg, getVideoSvg } from './create-canvas-graphics.js';
 
 let activeCreateCanvasModal: { close: () => void } | null = null;
 
@@ -15,7 +15,7 @@ export interface OpenCreateCanvasModalOptions {
   docPaperSize?: DocPaperSize;
   docTemplateId?: string;
   height?: number;
-  initialType?: 'board' | 'custom-size' | 'doc' | 'presentation' | 'sheet' | 'social' | 'upload';
+  initialType?: 'board' | 'custom-size' | 'doc' | 'presentation' | 'sheet' | 'social' | 'upload' | 'video';
   name?: string;
   teamName?: string | null;
   teamUuid?: string | null;
@@ -34,7 +34,7 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
   const templateName = options?.templateName || null;
   const templateImage = options?.templateImage || null;
   const normalizedInitialType = options?.initialType || 'board';
-  let activeCategory: 'board' | 'custom-size' | 'doc' | 'presentation' | 'sheet' | 'social' | 'template' | 'upload' = templateVariants ? 'template' : normalizedInitialType;
+  let activeCategory: 'board' | 'custom-size' | 'doc' | 'presentation' | 'sheet' | 'social' | 'template' | 'upload' | 'video' = templateVariants ? 'template' : normalizedInitialType;
   let isCreating = false;
 
   const backdrop = document.createElement('div');
@@ -83,6 +83,10 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
               <button type="button" class="menu-item${activeCategory === 'social' ? ' is-active' : ''}" data-ref="tab-category-social" data-category="social">
                 ${getCategoryMenuSvg('social')}
                 <span class="menu-item__text">Redes Sociales</span>
+              </button>
+              <button type="button" class="menu-item${activeCategory === 'video' ? ' is-active' : ''}" data-ref="tab-category-video" data-category="video">
+                ${getCategoryMenuSvg('video')}
+                <span class="menu-item__text">Editor de Video</span>
               </button>
               <button type="button" class="menu-item${activeCategory === 'doc' ? ' is-active' : ''}" data-ref="tab-category-doc" data-category="doc">
                 ${getCategoryMenuSvg('doc')}
@@ -232,6 +236,49 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
                   <div class="creation-card__info" data-ref="info-pres-16-9">
                     <h4 class="creation-card__title" data-ref="title-pres-16-9">Presentación 16:9</h4>
                     <p class="creation-card__meta" data-ref="meta-pres-16-9">1920 × 1080 px • Panorámica estándar</p>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            <div class="modal-canvas-panel" data-ref="panel-category-video" style="${activeCategory === 'video' ? '' : 'display: none;'}">
+              <div class="creation-cards-grid" data-ref="grid-videos">
+                <button type="button" class="creation-card" data-ref="card-video-16-9" data-type="video" data-w="1920" data-h="1080" data-format="16_9">
+                  <div class="creation-card__thumbnail" data-ref="thumb-video-16-9">
+                    <div class="creation-card__svg-wrapper" data-ref="svg-video-16-9">
+                      ${getVideoSvg('16_9')}
+                    </div>
+                    <span class="creation-card__badge creation-card__badge--popular" data-ref="badge-video-16-9">16:9 Estándar</span>
+                  </div>
+                  <div class="creation-card__info" data-ref="info-video-16-9">
+                    <h4 class="creation-card__title" data-ref="title-video-16-9">Video 16:9 (Full HD)</h4>
+                    <p class="creation-card__meta" data-ref="meta-video-16-9">1920 × 1080 px • YouTube y horizontal</p>
+                  </div>
+                </button>
+
+                <button type="button" class="creation-card" data-ref="card-video-9-16" data-type="video" data-w="1080" data-h="1920" data-format="9_16">
+                  <div class="creation-card__thumbnail" data-ref="thumb-video-9-16">
+                    <div class="creation-card__svg-wrapper" data-ref="svg-video-9-16">
+                      ${getVideoSvg('9_16')}
+                    </div>
+                    <span class="creation-card__badge" data-ref="badge-video-9-16">9:16 Vertical</span>
+                  </div>
+                  <div class="creation-card__info" data-ref="info-video-9-16">
+                    <h4 class="creation-card__title" data-ref="title-video-9-16">Video 9:16 (Vertical)</h4>
+                    <p class="creation-card__meta" data-ref="meta-video-9-16">1080 × 1920 px • Reels, TikTok y Shorts</p>
+                  </div>
+                </button>
+
+                <button type="button" class="creation-card" data-ref="card-video-1-1" data-type="video" data-w="1080" data-h="1080" data-format="1_1">
+                  <div class="creation-card__thumbnail" data-ref="thumb-video-1-1">
+                    <div class="creation-card__svg-wrapper" data-ref="svg-video-1-1">
+                      ${getVideoSvg('1_1')}
+                    </div>
+                    <span class="creation-card__badge" data-ref="badge-video-1-1">1:1 Cuadrado</span>
+                  </div>
+                  <div class="creation-card__info" data-ref="info-video-1-1">
+                    <h4 class="creation-card__title" data-ref="title-video-1-1">Video 1:1 (Cuadrado)</h4>
+                    <p class="creation-card__meta" data-ref="meta-video-1-1">1080 × 1080 px • Posts e Instagram</p>
                   </div>
                 </button>
               </div>
@@ -439,6 +486,7 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
     social: 'Redes Sociales',
     template: templateName ? `Plantilla: ${templateName}` : 'Plantilla',
     upload: 'Subir archivos',
+    video: 'Editor de Video',
   };
 
   const navItems = backdrop.querySelectorAll<HTMLElement>('[data-category]');
@@ -447,7 +495,7 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
   const errorBanner = backdrop.querySelector<HTMLElement>('[data-ref="create-canvas-error"]');
   const btnClose = backdrop.querySelector<HTMLElement>('[data-ref="btn-modal-close"]');
 
-  const switchCategory = (category: 'board' | 'custom-size' | 'doc' | 'presentation' | 'sheet' | 'social' | 'template' | 'upload') => {
+  const switchCategory = (category: 'board' | 'custom-size' | 'doc' | 'presentation' | 'sheet' | 'social' | 'template' | 'upload' | 'video') => {
     activeCategory = category;
     navItems.forEach((item) => {
       item.classList.toggle('is-active', item.getAttribute('data-category') === category);
@@ -476,7 +524,7 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
 
   navItems.forEach((item) => {
     item.addEventListener('click', () => {
-      const cat = item.getAttribute('data-category') as 'board' | 'custom-size' | 'doc' | 'presentation' | 'sheet' | 'social' | 'template' | 'upload';
+      const cat = item.getAttribute('data-category') as 'board' | 'custom-size' | 'doc' | 'presentation' | 'sheet' | 'social' | 'template' | 'upload' | 'video';
       if (cat) {
         switchCategory(cat);
       }
@@ -559,6 +607,22 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
         docPaperSize: paper,
         docTemplateId: templateId,
         name,
+      }, card);
+    });
+  });
+
+  const videoCards = backdrop.querySelectorAll<HTMLElement>('[data-ref^="card-video-"]');
+  videoCards.forEach((card) => {
+    card.addEventListener('click', () => {
+      const w = parseInt(card.getAttribute('data-w') || '1920', 10);
+      const h = parseInt(card.getAttribute('data-h') || '1080', 10);
+      const format = card.getAttribute('data-format') || '16_9';
+      const name = format === '9_16' ? 'Video Vertical sin título' : (format === '1_1' ? 'Video Cuadrado sin título' : 'Video sin título');
+      void handleInstantCreation({
+        canvasType: 'video',
+        height: h,
+        name,
+        width: w,
       }, card);
     });
   });

@@ -38,16 +38,40 @@ const ALLOWED_VIDEO_MIMES = new Set([
   'video/ogg',
 ]);
 
+const ALLOWED_AUDIO_MIMES = new Set([
+  'audio/aac',
+  'audio/flac',
+  'audio/m4a',
+  'audio/mp3',
+  'audio/mp4',
+  'audio/mpeg',
+  'audio/ogg',
+  'audio/wav',
+  'audio/wave',
+  'audio/webm',
+  'audio/x-m4a',
+  'audio/x-pn-wav',
+  'audio/x-wav',
+]);
+
 export function isVideoMime(mimeType: string): boolean {
   if (!mimeType) return false;
   const clean = mimeType.toLowerCase().split(';')[0].trim();
   return ALLOWED_VIDEO_MIMES.has(clean);
 }
 
-export function detectMediaKind(mimeType: string, filename = ''): 'image' | 'video' {
+export function isAudioMime(mimeType: string): boolean {
+  if (!mimeType) return false;
+  const clean = mimeType.toLowerCase().split(';')[0].trim();
+  return ALLOWED_AUDIO_MIMES.has(clean);
+}
+
+export function detectMediaKind(mimeType: string, filename = ''): 'audio' | 'image' | 'video' {
   if (isVideoMime(mimeType)) return 'video';
+  if (isAudioMime(mimeType)) return 'audio';
   const ext = path.extname(filename).toLowerCase();
   if (['.mp4', '.webm', '.mov', '.m4v', '.mkv', '.ogv'].includes(ext)) return 'video';
+  if (['.mp3', '.wav', '.ogg', '.m4a', '.aac', '.flac'].includes(ext)) return 'audio';
   return 'image';
 }
 
@@ -177,6 +201,68 @@ export async function processVideo(
       thumbnailExtension: 'webp',
       thumbnailMimeType: 'image/webp',
       width: metadata.width || 1280,
+    };
+  } finally {
+    try {
+      await fs.promises.unlink(tempFile);
+    } catch {}
+  }
+}
+
+export function generateAudioThumbnail(label = 'Audio'): Promise<Buffer> {
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">
+      <defs>
+        <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#18181b"/>
+          <stop offset="100%" stop-color="#09090b"/>
+        </linearGradient>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#grad)"/>
+      <circle cx="320" cy="160" r="48" fill="rgba(99, 102, 241, 0.2)"/>
+      <path d="M312 135 v42 a14 14 0 1 1 -8 -12.6 v-35.4 l28 -6 v30 a14 14 0 1 1 -8 -12.6 v-23.4 z" fill="#818cf8"/>
+      <path d="M220 250 h12 v20 h-12 z M240 240 h12 v30 h-12 z M260 230 h12 v40 h-12 z M280 220 h12 v50 h-12 z M300 210 h12 v60 h-12 z M320 205 h12 v65 h-12 z M340 215 h12 v55 h-12 z M360 225 h12 v45 h-12 z M380 235 h12 v35 h-12 z M400 245 h12 v25 h-12 z" fill="#6366f1" opacity="0.6"/>
+      <text x="320" y="315" fill="#a1a1aa" font-family="sans-serif" font-size="16" font-weight="600" text-anchor="middle">${label.slice(0, 40)}</text>
+    </svg>
+  `;
+  return sharp(Buffer.from(svg)).webp({ quality: 85 }).toBuffer();
+}
+
+export async function processAudio(
+  audioBuffer: Buffer,
+  originalFilename: string,
+  declaredMimeType: string
+): Promise<VideoProcessingResult> {
+  const tempDir = path.join(os.tmpdir(), 'spriteboard-audio-tmp');
+  await fs.promises.mkdir(tempDir, { recursive: true });
+
+  const rawExt = path.extname(originalFilename).toLowerCase() || '.mp3';
+  const tempFile = path.join(tempDir, `aud_${Date.now()}_${crypto.randomBytes(6).toString('hex')}${rawExt}`);
+
+  try {
+    await fs.promises.writeFile(tempFile, audioBuffer);
+
+    let metadata: VideoMetadata = { duration: 0, format: 'mp3', height: 0, width: 0 };
+    try {
+      metadata = await runFfprobe(tempFile);
+    } catch (probeErr: any) {
+      logger.app.warn('Ffprobe no pudo inspeccionar audio, usando valores de respaldo', {
+        error: probeErr?.message,
+        filename: originalFilename,
+      });
+    }
+
+    const thumbnailBuffer = await generateAudioThumbnail(originalFilename);
+
+    return {
+      duration: metadata.duration,
+      height: 0,
+      mimeType: declaredMimeType || 'audio/mpeg',
+      size: audioBuffer.length,
+      thumbnailBuffer,
+      thumbnailExtension: 'webp',
+      thumbnailMimeType: 'image/webp',
+      width: 0,
     };
   } finally {
     try {

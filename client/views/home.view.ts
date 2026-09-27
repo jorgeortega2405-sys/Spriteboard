@@ -364,6 +364,9 @@ class HomeController {
       });
     });
     bindCreationBadge('cat-badge-photos', () => {});
+    bindCreationBadge('cat-badge-videos', () => {
+      openCreateCanvasModal({ initialType: 'video' });
+    });
     bindCreationBadge('cat-badge-custom', () => {
       openCreateCanvasModal({ initialType: 'custom-size' });
     });

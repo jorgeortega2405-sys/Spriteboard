@@ -35,7 +35,30 @@ router.get('/uploads/*', async (req: Request, res: Response): Promise<void> => {
       res.setHeader('X-Content-Type-Options', 'nosniff');
       res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'");
       res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-      res.setHeader('Content-Length', s3Obj.buffer.length);
+      res.setHeader('Accept-Ranges', 'bytes');
+
+      const rangeHeader = req.headers.range;
+      const totalLength = s3Obj.buffer.length;
+
+      if (rangeHeader && rangeHeader.startsWith('bytes=')) {
+        const parts = rangeHeader.replace(/bytes=/, '').split('-');
+        const start = parseInt(parts[0], 10) || 0;
+        const end = parts[1] ? parseInt(parts[1], 10) : totalLength - 1;
+
+        if (start >= totalLength || end >= totalLength || start > end) {
+          res.status(416).setHeader('Content-Range', `bytes */${totalLength}`).end();
+          return;
+        }
+
+        const chunksize = (end - start) + 1;
+        res.status(206);
+        res.setHeader('Content-Range', `bytes ${start}-${end}/${totalLength}`);
+        res.setHeader('Content-Length', chunksize);
+        res.end(s3Obj.buffer.subarray(start, end + 1));
+        return;
+      }
+
+      res.setHeader('Content-Length', totalLength);
       res.end(s3Obj.buffer);
       return;
     }
@@ -44,7 +67,8 @@ router.get('/uploads/*', async (req: Request, res: Response): Promise<void> => {
   if (fs.existsSync(safePath) && fs.statSync(safePath).isFile()) {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'");
-    res.sendFile(safePath);
+    res.setHeader('Accept-Ranges', 'bytes');
+    res.sendFile(safePath, { acceptRanges: true });
     return;
   }
 

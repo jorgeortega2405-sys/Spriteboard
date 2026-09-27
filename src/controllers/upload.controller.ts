@@ -13,7 +13,7 @@ export async function listUploadsHandler(req: Request, res: Response): Promise<v
     }
 
     const typeQuery = (req.query.type as string)?.toLowerCase();
-    const mediaType: 'all' | 'image' | 'video' = typeQuery === 'image' || typeQuery === 'video' ? typeQuery : 'all';
+    const mediaType: 'all' | 'audio' | 'image' | 'video' = typeQuery === 'image' || typeQuery === 'video' || typeQuery === 'audio' ? typeQuery : 'all';
 
     const uploads = await getUserUploads(user.id, mediaType);
     const storage = await getUserStorageUsage(user.id);

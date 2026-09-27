@@ -7,6 +7,7 @@ import { createErrorView } from './error.view.js';
 import { createPresentationView } from './presentation.view.js';
 import { createSheetView } from './sheet.view.js';
 import { createSocialView } from './social.view.js';
+import { createVideoView } from './video.view.js';
 
 export async function createDesignView(canvasUuid: string): Promise<HTMLElement> {
   let canvasRecord: any = await getLocalCanvasByUuid(canvasUuid);
@@ -41,11 +42,13 @@ export async function createDesignView(canvasUuid: string): Promise<HTMLElement>
     });
   }
 
-  let canvasType = canvasRecord.canvas_type || (canvasRecord.unit === 'presentation' ? 'presentation' : (canvasRecord.unit === 'social' ? 'social' : (canvasRecord.unit === 'doc' ? 'doc' : (canvasRecord.unit === 'sheet' ? 'sheet' : 'board'))));
+  let canvasType = canvasRecord.canvas_type || (canvasRecord.unit === 'video' ? 'video' : (canvasRecord.unit === 'presentation' ? 'presentation' : (canvasRecord.unit === 'social' ? 'social' : (canvasRecord.unit === 'doc' ? 'doc' : (canvasRecord.unit === 'sheet' ? 'sheet' : 'board')))));
   if (canvasRecord.data) {
     try {
       const parsed = typeof canvasRecord.data === 'string' ? JSON.parse(canvasRecord.data) : canvasRecord.data;
-      if (parsed?.type === 'presentation') {
+      if (parsed?.type === 'video') {
+        canvasType = 'video';
+      } else if (parsed?.type === 'presentation') {
         canvasType = 'presentation';
       } else if (parsed?.type === 'social') {
         canvasType = 'social';
@@ -57,6 +60,10 @@ export async function createDesignView(canvasUuid: string): Promise<HTMLElement>
         canvasType = 'board';
       }
     } catch {}
+  }
+
+  if (canvasType === 'video') {
+    return await createVideoView(canvasUuid, canvasRecord);
   }
 
   if (canvasType === 'doc') {

@@ -627,6 +627,12 @@ export const CANVAS_ICONS: Record<string, CanvasIconDef> = {
     whiteGlyph: '<g transform="translate(4, 4)"><path fill="#ffffff" fill-rule="evenodd" d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></g>',
     coloredGlyph: '<g transform="translate(4, 4)"><path fill="#0EA5E9" fill-rule="evenodd" d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></g>',
   },
+  video: {
+    fill: '#E11D48',
+    viewBox: '0 0 32 32',
+    whiteGlyph: '<path fill="#ffffff" fill-rule="evenodd" d="M4 7a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v2.2l4.4-2.64A1.5 1.5 0 0 1 29 7.85v16.3a1.5 1.5 0 0 1-2.6 1.01L22 22.8V25a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V7Zm3-1a1 1 0 0 0-1 1v18a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1H7Zm17 5.28v9.44l3 1.8V10.48l-3 1.8ZM11 11a1 1 0 0 1 1.55-.83l5 3.5a1 1 0 0 1 0 1.66l-5 3.5A1 1 0 0 1 11 18v-7Z"/>',
+    coloredGlyph: '<path fill="#E11D48" fill-rule="evenodd" d="M4 7a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v2.2l4.4-2.64A1.5 1.5 0 0 1 29 7.85v16.3a1.5 1.5 0 0 1-2.6 1.01L22 22.8V25a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V7Zm3-1a1 1 0 0 0-1 1v18a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1H7Zm17 5.28v9.44l3 1.8V10.48l-3 1.8ZM11 11a1 1 0 0 1 1.55-.83l5 3.5a1 1 0 0 1 0 1.66l-5 3.5A1 1 0 0 1 11 18v-7Z"/>',
+  },
   more: {
     fill: '#64748B',
     viewBox: '0 0 32 32',
@@ -634,6 +640,34 @@ export const CANVAS_ICONS: Record<string, CanvasIconDef> = {
     coloredGlyph: '<circle cx="7" cy="16" r="2.5" fill="#64748B"/><circle cx="16" cy="16" r="2.5" fill="#64748B"/><circle cx="25" cy="16" r="2.5" fill="#64748B"/>',
   },
 };
+
+export function getVideoSvg(format = '16_9'): string {
+  if (format === '9_16') {
+    return `<svg viewBox="0 0 180 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="62" y="8" width="56" height="94" rx="6" fill="#1e1b4b" stroke="#4338ca" stroke-width="1.5"/>
+      <rect x="68" y="16" width="44" height="60" rx="3" fill="#312e81"/>
+      <polygon points="86,38 86,54 100,46" fill="#f43f5e"/>
+      <rect x="68" y="82" width="28" height="4" rx="2" fill="#e2e8f0"/>
+      <circle cx="106" cy="84" r="3" fill="#f43f5e"/>
+    </svg>`;
+  }
+  if (format === '1_1') {
+    return `<svg viewBox="0 0 180 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="48" y="13" width="84" height="84" rx="6" fill="#1e1b4b" stroke="#4338ca" stroke-width="1.5"/>
+      <rect x="56" y="21" width="68" height="52" rx="3" fill="#312e81"/>
+      <polygon points="86,39 86,55 100,47" fill="#f43f5e"/>
+      <rect x="56" y="81" width="40" height="4" rx="2" fill="#e2e8f0"/>
+      <circle cx="114" cy="83" r="3" fill="#f43f5e"/>
+    </svg>`;
+  }
+  return `<svg viewBox="0 0 180 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="20" y="16" width="140" height="78" rx="6" fill="#1e1b4b" stroke="#4338ca" stroke-width="1.5"/>
+    <rect x="28" y="24" width="124" height="48" rx="3" fill="#312e81"/>
+    <polygon points="85,38 85,58 103,48" fill="#f43f5e"/>
+    <rect x="28" y="78" width="50" height="4" rx="2" fill="#e2e8f0"/>
+    <circle cx="144" cy="80" r="3" fill="#f43f5e"/>
+  </svg>`;
+}
 
 export function resolveCanvasIconDef(typeOrCategory?: string, unit?: string): CanvasIconDef {
   const normalized = (typeOrCategory || unit || 'board').toLowerCase().trim();
@@ -645,6 +679,7 @@ export function resolveCanvasIconDef(typeOrCategory?: string, unit?: string): Ca
   if (normalized === 'doc' || normalized === 'docs' || normalized === 'document') return CANVAS_ICONS.doc;
   if (normalized === 'sheet' || normalized === 'sheets' || normalized === 'spreadsheet') return CANVAS_ICONS.sheet;
   if (normalized === 'social' || normalized === 'socials') return CANVAS_ICONS.social;
+  if (normalized === 'video' || normalized === 'videos') return CANVAS_ICONS.video;
   if (normalized === 'more') return CANVAS_ICONS.more;
   return CANVAS_ICONS.board;
 }

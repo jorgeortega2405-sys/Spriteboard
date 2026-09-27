@@ -4,6 +4,9 @@ FROM node:20-alpine
 # Establecer directorio de trabajo en el contenedor
 WORKDIR /app
 
+# Instalar ffmpeg para renderizado y procesamiento multimedia
+RUN apk add --no-cache ffmpeg
+
 # Copiar manifiestos de dependencias
 COPY package*.json ./
 

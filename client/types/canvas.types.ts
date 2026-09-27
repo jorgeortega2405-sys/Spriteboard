@@ -1,4 +1,4 @@
-export type CanvasType = 'board' | 'doc' | 'presentation' | 'sheet' | 'social';
+export type CanvasType = 'board' | 'doc' | 'presentation' | 'sheet' | 'social' | 'video';
 
 export interface CanvasItem {
   id?: number;
