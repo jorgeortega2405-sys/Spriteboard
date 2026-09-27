@@ -53,12 +53,35 @@ export const API_ROUTES = {
   },
   designer: {
     checkHandle: (handle: string) => `/api/designer/check-handle?handle=${encodeURIComponent(handle)}`,
+    deleteElement: (uuid: string) => `/api/designer/elements/${encodeURIComponent(uuid)}`,
+    elements: '/api/designer/elements',
+    elementsMetrics: '/api/designer/elements/metrics',
     onboard: '/api/designer/onboard',
     onboardingStatus: '/api/designer/onboarding-status',
     poolSummary: '/api/designer/pool/summary',
     requestPayout: '/api/designer/payouts/request',
     stripeConnectLink: '/api/designer/stripe-connect/link',
     stripeConnectStatus: '/api/designer/stripe-connect/status',
+    updateElement: (uuid: string) => `/api/designer/elements/${encodeURIComponent(uuid)}`,
+    uploadElement: '/api/designer/elements',
+  },
+  elements: {
+    base: '/api/elements',
+    byId: (uuid: string) => `/api/elements/${encodeURIComponent(uuid)}`,
+    categories: '/api/elements/categories',
+    search: (params: { category?: string; is_premium?: boolean; limit?: number; offset?: number; q?: string; sort?: string; type?: string }) => {
+      const qParams = new URLSearchParams();
+      if (params.q) qParams.set('q', params.q);
+      if (params.type && params.type !== 'all') qParams.set('type', params.type);
+      if (params.category && params.category !== 'all') qParams.set('category', params.category);
+      if (params.sort) qParams.set('sort', params.sort);
+      if (params.is_premium !== undefined) qParams.set('is_premium', String(params.is_premium));
+      if (params.limit) qParams.set('limit', String(params.limit));
+      if (params.offset) qParams.set('offset', String(params.offset));
+      const str = qParams.toString();
+      return str ? `/api/elements?${str}` : '/api/elements';
+    },
+    use: (uuid: string) => `/api/elements/${encodeURIComponent(uuid)}/use`,
   },
   designerApplications: {
     apply: '/api/designer-applications',

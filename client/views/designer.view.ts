@@ -2,6 +2,7 @@ import { navigate } from '../app-router.js';
 import { openDesignerOnboardingModal } from '../components/designer-onboarding-modal.component.js';
 import { openModal } from '../components/modal.component.js';
 import { openTemplatePreviewModal } from '../components/template-preview-modal.component.js';
+import { openUploadElementModal } from '../components/upload-element-modal.component.js';
 import { API_ROUTES } from '../config/api-routes.js';
 import { currentUser, deleteApi, escapeHtml, getApi, postApi } from '../services/api.service.js';
 import { t, translateElement } from '../services/i18n.service.js';
@@ -9,8 +10,9 @@ import { renderIcons } from '../services/icon.service.js';
 import { SkeletonService } from '../services/skeleton.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
-import { canPublishTemplates } from '../types/auth.types.js';
+import { canPublishElements, canPublishTemplates } from '../types/auth.types.js';
 import { CreatorPoolSummary, DesignerMetrics } from '../types/designer.types.js';
+import { ElementItem } from '../types/element.types.js';
 import { debounce, removeEmptyState, renderEmptyState, setupDropdown, setupLazyImages, withButtonLoading } from '../utils/dom.util.js';
 
 class DesignerController {
@@ -18,17 +20,23 @@ class DesignerController {
   private abortController: AbortController;
 
   private templates: any[] = [];
+  private elements: ElementItem[] = [];
   private metrics: DesignerMetrics | null = null;
   private poolSummary: CreatorPoolSummary | null = null;
   private activeTab: 'templates' | 'elements' | 'earnings' = 'templates';
   private filterStatus = 'all';
   private sortOption = 'recent';
+  private elementsFilterStatus = 'all';
+  private elementsSortOption = 'recent';
   private searchQuery = '';
 
   private statusDropdownController: ReturnType<typeof setupDropdown> | null = null;
   private sortDropdownController: ReturnType<typeof setupDropdown> | null = null;
+  private elementsStatusDropdownController: ReturnType<typeof setupDropdown> | null = null;
+  private elementsSortDropdownController: ReturnType<typeof setupDropdown> | null = null;
 
   private gridEl: HTMLElement | null = null;
+  private elementsGridEl: HTMLElement | null = null;
   private searchBoxEl: HTMLElement | null = null;
   private searchInputEl: HTMLInputElement | null = null;
   private btnClearSearchEl: HTMLButtonElement | null = null;
@@ -39,6 +47,7 @@ class DesignerController {
   private sectionTemplates: HTMLElement | null = null;
   private sectionElements: HTMLElement | null = null;
   private sectionEarnings: HTMLElement | null = null;
+  private btnUploadElement: HTMLButtonElement | null = null;
 
   private metricValPublished: HTMLElement | null = null;
   private metricValUses: HTMLElement | null = null;
@@ -69,6 +78,7 @@ class DesignerController {
 
   public async init(): Promise<void> {
     this.gridEl = this.container.querySelector<HTMLElement>('[data-ref="designer-templates-grid"]');
+    this.elementsGridEl = this.container.querySelector<HTMLElement>('[data-ref="designer-elements-grid"]');
     this.searchBoxEl = this.container.querySelector<HTMLElement>('[data-ref="designer-search-box"]');
     this.searchInputEl = this.container.querySelector<HTMLInputElement>('[data-ref="designer-search-input"]');
     this.btnClearSearchEl = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-designer-clear-search"]');
@@ -79,6 +89,7 @@ class DesignerController {
     this.sectionTemplates = this.container.querySelector<HTMLElement>('[data-ref="designer-section-templates"]');
     this.sectionElements = this.container.querySelector<HTMLElement>('[data-ref="designer-section-elements"]');
     this.sectionEarnings = this.container.querySelector<HTMLElement>('[data-ref="designer-section-earnings"]');
+    this.btnUploadElement = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-designer-upload-element"]');
 
     this.metricValPublished = this.container.querySelector<HTMLElement>('[data-ref="metric-val-published"]');
     this.metricValUses = this.container.querySelector<HTMLElement>('[data-ref="metric-val-uses"]');
@@ -124,8 +135,34 @@ class DesignerController {
       });
     }
 
+    const elemStatusDropdownWrapper = this.container.querySelector<HTMLElement>('[data-ref="elements-dropdown-wrapper-status"]');
+    if (elemStatusDropdownWrapper) {
+      this.elementsStatusDropdownController = setupDropdown(elemStatusDropdownWrapper, {
+        onSelect: (item) => {
+          const status = item.getAttribute('data-status') || 'all';
+          this.elementsFilterStatus = status;
+          this.renderElements();
+        },
+      });
+    }
+
+    const elemSortDropdownWrapper = this.container.querySelector<HTMLElement>('[data-ref="elements-dropdown-wrapper-sort"]');
+    if (elemSortDropdownWrapper) {
+      this.elementsSortDropdownController = setupDropdown(elemSortDropdownWrapper, {
+        onSelect: (item) => {
+          const sort = item.getAttribute('data-sort') || 'recent';
+          this.elementsSortOption = sort;
+          this.renderElements();
+        },
+      });
+    }
+
     if (this.gridEl) {
       SkeletonService.renderGridCardSkeletons(this.gridEl, 8, 'template');
+    }
+
+    if (this.elementsGridEl) {
+      SkeletonService.renderGridCardSkeletons(this.elementsGridEl, 8, 'template');
     }
 
     this.bindEvents();
@@ -135,6 +172,7 @@ class DesignerController {
       this.syncStripeUrlParams(),
       this.loadMetrics(),
       this.loadTemplates(),
+      this.loadElements(),
       this.loadPoolSummary(),
     ]);
   }
@@ -169,6 +207,7 @@ class DesignerController {
             onSuccess: () => {
               void this.loadMetrics();
               void this.loadTemplates();
+              void this.loadElements();
               void this.loadPoolSummary();
             },
           });
@@ -215,7 +254,11 @@ class DesignerController {
         if (this.btnClearSearchEl) {
           this.btnClearSearchEl.style.display = this.searchQuery.length > 0 ? 'inline-flex' : 'none';
         }
-        this.renderTemplates();
+        if (this.activeTab === 'templates') {
+          this.renderTemplates();
+        } else if (this.activeTab === 'elements') {
+          this.renderElements();
+        }
       }, 200);
 
       this.searchInputEl.addEventListener('input', onSearchDebounced, { signal });
@@ -228,14 +271,34 @@ class DesignerController {
           this.searchQuery = '';
           this.btnClearSearchEl!.style.display = 'none';
           this.searchInputEl.focus();
-          this.renderTemplates();
+          if (this.activeTab === 'templates') {
+            this.renderTemplates();
+          } else if (this.activeTab === 'elements') {
+            this.renderElements();
+          }
         }
+      }, { signal });
+    }
+
+    if (this.btnUploadElement) {
+      this.btnUploadElement.addEventListener('click', () => {
+        openUploadElementModal({
+          onSuccess: () => {
+            void this.loadElements();
+          },
+        });
       }, { signal });
     }
 
     if (this.gridEl) {
       this.gridEl.addEventListener('click', (e) => {
         void this.handleGridClick(e);
+      }, { signal });
+    }
+
+    if (this.elementsGridEl) {
+      this.elementsGridEl.addEventListener('click', (e) => {
+        void this.handleElementsGridClick(e);
       }, { signal });
     }
 
@@ -266,7 +329,10 @@ class DesignerController {
     }
 
     if (this.searchBoxEl) {
-      this.searchBoxEl.style.display = tab === 'templates' ? '' : 'none';
+      this.searchBoxEl.style.display = tab === 'earnings' ? 'none' : '';
+      if (this.searchInputEl) {
+        this.searchInputEl.placeholder = tab === 'elements' ? 'Buscar en mis elementos...' : (t('designer.search_placeholder') || 'Buscar en mis plantillas...');
+      }
     }
 
     if (this.sectionTemplates) {
@@ -277,6 +343,10 @@ class DesignerController {
     }
     if (this.sectionEarnings) {
       this.sectionEarnings.style.display = tab === 'earnings' ? '' : 'none';
+    }
+
+    if (tab === 'elements' && this.elements.length === 0) {
+      void this.loadElements();
     }
 
     if (tab === 'earnings' && !this.poolSummary) {
@@ -456,9 +526,6 @@ class DesignerController {
       return;
     }
 
-    const amountStr = this.poolSummary.available_balance_usd.toFixed(2);
-    const desc = (t('designer.withdraw_confirm_desc') || 'Se transferirán ${amount} USD directamente a tu cuenta de Stripe Connect vinculada.').replace('${amount}', amountStr);
-
     openModal({
       confirmClass: 'component-button--success',
       confirmText: t('designer.btn_withdraw_funds') || 'Retirar fondos',
@@ -504,7 +571,7 @@ class DesignerController {
       result = result.filter((tItem) => tItem.status === this.filterStatus);
     }
 
-    if (this.searchQuery.length > 0) {
+    if (this.searchQuery.length > 0 && this.activeTab === 'templates') {
       const q = this.searchQuery;
       result = result.filter((tItem) => {
         const title = (tItem.title || '').toLowerCase();
@@ -765,14 +832,239 @@ class DesignerController {
     }
   }
 
+  private async loadElements(): Promise<void> {
+    try {
+      const res = await getApi(API_ROUTES.designer.elements);
+      if (res.ok) {
+        const data = await res.json();
+        this.elements = Array.isArray(data?.elements) ? data.elements : [];
+      } else {
+        this.elements = [];
+      }
+    } catch {
+      this.elements = [];
+    }
+
+    this.renderElements();
+  }
+
+  private getFilteredAndSortedElements(): ElementItem[] {
+    let result = [...this.elements];
+
+    if (this.elementsFilterStatus !== 'all') {
+      result = result.filter((eItem) => eItem.status === this.elementsFilterStatus);
+    }
+
+    if (this.searchQuery.length > 0 && this.activeTab === 'elements') {
+      const q = this.searchQuery;
+      result = result.filter((eItem) => {
+        const title = (eItem.title || '').toLowerCase();
+        const cat = (eItem.category || '').toLowerCase();
+        const tags = Array.isArray(eItem.tags) ? eItem.tags.join(' ').toLowerCase() : '';
+        return title.includes(q) || cat.includes(q) || tags.includes(q);
+      });
+    }
+
+    if (this.elementsSortOption === 'uses') {
+      result.sort((a, b) => Number(b.uses_count || 0) - Number(a.uses_count || 0));
+    } else if (this.elementsSortOption === 'alpha') {
+      result.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+    } else {
+      result.sort((a, b) => {
+        const dateA = new Date(a.created_at || 0).getTime();
+        const dateB = new Date(b.created_at || 0).getTime();
+        return dateB - dateA;
+      });
+    }
+
+    return result;
+  }
+
+  private renderElements(): void {
+    if (!this.elementsGridEl || !this.sectionElements) return;
+
+    removeEmptyState(this.sectionElements, 'designer-elements-empty-state');
+    this.elementsGridEl.innerHTML = '';
+
+    const list = this.getFilteredAndSortedElements();
+
+    if (list.length === 0) {
+      this.elementsGridEl.style.display = 'none';
+      const isFiltered = this.elementsFilterStatus !== 'all' || (this.searchQuery.length > 0 && this.activeTab === 'elements');
+      renderEmptyState({
+        container: this.sectionElements,
+        dataRef: 'designer-elements-empty-state',
+        desc: isFiltered ? 'No se encontraron elementos con el filtro aplicado.' : 'Aún no has subido elementos gráficos. ¡Sube tu primer icono, gráfico o sticker para la comunidad!',
+        graphicType: isFiltered ? 'search' : 'canvas',
+        title: isFiltered ? 'Sin resultados' : 'No tienes elementos creados',
+      });
+      return;
+    }
+
+    this.elementsGridEl.style.display = '';
+    const html = list.map((item) => this.buildDesignerElementCardHtml(item)).join('');
+    this.elementsGridEl.innerHTML = html;
+
+    renderIcons(this.elementsGridEl);
+    setupLazyImages(this.elementsGridEl);
+  }
+
+  private buildDesignerElementCardHtml(item: ElementItem): string {
+    const status = item.status;
+    let badgeClass = 'component-badge--neutral';
+    let badgeText = 'Borrador';
+    let badgeIcon = 'lock';
+
+    if (status === 'approved') {
+      badgeClass = 'component-badge--success';
+      badgeText = 'Aprobado';
+      badgeIcon = 'check_circle';
+    } else if (status === 'pending') {
+      badgeClass = 'component-badge--warning';
+      badgeText = 'En revisión';
+      badgeIcon = 'schedule';
+    } else if (status === 'rejected') {
+      badgeClass = 'component-badge--danger';
+      badgeText = 'Rechazado';
+      badgeIcon = 'cancel';
+    }
+
+    const isPremium = Boolean(item.is_premium);
+    const pricingBadgeClass = isPremium ? 'component-badge--warning' : 'component-badge--neutral';
+    const pricingBadgeText = isPremium ? 'Pro' : 'Libre';
+    const pricingBadgeIcon = isPremium ? 'workspace_premium' : 'public';
+
+    const usesCount = Number(item.uses_count || 0);
+    const usesText = `${usesCount} usos`;
+    const typeLabel = item.element_type === 'icon' ? 'Icono' : (item.element_type === 'sticker' ? 'Sticker' : (item.element_type === 'photo' ? 'Foto' : (item.element_type === 'illustration' ? 'Ilustración' : 'Gráfico')));
+    const previewSrc = item.thumbnail_url || item.file_url;
+
+    return `
+      <div class="canvas-card template-card designer-card designer-element-card" data-ref="designer-elem-card-${item.uuid}" data-element-uuid="${item.uuid}" data-element-id="${item.id}">
+        <div class="canvas-card__thumbnail template-card__thumbnail" data-ref="designer-elem-card-thumb-${item.uuid}" style="background: var(--bg-surface-secondary, rgba(0,0,0,0.03)); display: flex; align-items: center; justify-content: center; min-height: 150px; position: relative;">
+          ${item.svg_content ? `
+            <div class="designer-elem-svg-preview" data-ref="designer-elem-svg-${item.uuid}" style="width: 72px; height: 72px; display: flex; align-items: center; justify-content: center; color: var(--text-primary);">
+              ${item.svg_content}
+            </div>
+          ` : `
+            <img class="canvas-card__image image-lazy-fade" data-ref="designer-elem-card-img-${item.uuid}" src="${previewSrc}" alt="${escapeHtml(item.title)}" loading="lazy" decoding="async" style="max-height: 80%; max-width: 80%; object-fit: contain;" onload="this.classList.add('image-loaded')" onerror="this.classList.add('image-loaded')" />
+          `}
+          <div class="canvas-card__badge-overlay" style="position: absolute; top: 10px; left: 10px; z-index: 2; display: flex; gap: 6px;">
+            <span class="component-badge ${badgeClass}" style="gap: 4px; font-weight: 600; font-size: 11px; padding: 4px 8px; backdrop-filter: blur(8px);">
+              <svg class="component-icon" style="font-size: 14px; width: 14px; height: 14px;" aria-hidden="true"><use href="/icons.svg#${badgeIcon}"></use></svg>
+              <span>${badgeText}</span>
+            </span>
+            <span class="component-badge ${pricingBadgeClass}" style="gap: 4px; font-weight: 600; font-size: 11px; padding: 4px 8px; backdrop-filter: blur(8px);">
+              <svg class="component-icon" style="font-size: 14px; width: 14px; height: 14px;" aria-hidden="true"><use href="/icons.svg#${pricingBadgeIcon}"></use></svg>
+              <span>${pricingBadgeText}</span>
+            </span>
+          </div>
+          <div class="canvas-card__actions-wrapper" data-ref="designer-elem-card-actions-${item.uuid}">
+            <div class="canvas-card__actions">
+              ${status === 'rejected' ? `
+                <button type="button" class="canvas-card__action-btn is-active" style="color: var(--color-danger, #ef4444);" data-ref="btn-elem-view-rejection-${item.uuid}" data-action="view-rejection" data-reason="${escapeHtml(item.rejection_reason || '')}" data-tooltip="Ver motivo de rechazo" aria-label="Ver motivo de rechazo">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#error"></use></svg>
+                </button>
+              ` : ''}
+              <button type="button" class="canvas-card__action-btn" style="color: var(--color-danger, #ef4444);" data-ref="btn-delete-element-${item.uuid}" data-action="delete-element" data-tooltip="Eliminar elemento" aria-label="Eliminar elemento">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="canvas-card__info" data-ref="designer-elem-card-info-${item.uuid}" style="padding: 10px 12px;">
+          <span class="canvas-card__name" data-ref="designer-elem-card-title-${item.uuid}" title="${escapeHtml(item.title)}" style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            ${escapeHtml(item.title)}
+          </span>
+          <div class="canvas-card__meta" style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary);">
+            <svg class="component-icon" style="font-size: 14px; width: 14px; height: 14px;" aria-hidden="true"><use href="/icons.svg#category"></use></svg>
+            <span>${typeLabel}</span>
+            <span class="canvas-card__meta-dot">·</span>
+            <svg class="component-icon" style="font-size: 14px; width: 14px; height: 14px;" aria-hidden="true"><use href="/icons.svg#group"></use></svg>
+            <span>${usesText}</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private async handleElementsGridClick(e: MouseEvent): Promise<void> {
+    const target = e.target as HTMLElement;
+    const actionBtn = target.closest<HTMLElement>('[data-action]');
+    const card = target.closest<HTMLElement>('[data-element-uuid]');
+    if (!card) return;
+
+    const elementUuid = card.getAttribute('data-element-uuid');
+    if (!elementUuid) return;
+
+    const item = this.elements.find((eItem) => eItem.uuid === elementUuid);
+    if (!item) return;
+
+    if (actionBtn) {
+      const action = actionBtn.getAttribute('data-action');
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (action === 'view-rejection') {
+        const reason = actionBtn.getAttribute('data-reason') || item.rejection_reason || '';
+        openModal({
+          bodyHtml: `
+            <div class="banner banner--danger" data-ref="rejection-reason-box" style="margin-top: 12px; font-size: 13px; line-height: 1.5; padding: 14px 16px; border-radius: 8px;">
+              ${escapeHtml(reason || 'No se especificó un motivo detallado.')}
+            </div>
+          `,
+          confirmClass: 'component-button--black',
+          confirmText: t('modal.close') || 'Cerrar',
+          descriptionKey: 'templates.rejection_modal_desc',
+          showCancel: false,
+          size: 'sm',
+          titleKey: 'designer.view_rejection_title',
+        });
+        return;
+      }
+
+      if (action === 'delete-element') {
+        openModal({
+          confirmClass: 'component-button--danger',
+          confirmText: 'Eliminar elemento',
+          description: `¿Estás seguro de que deseas eliminar permanentemente el elemento "${item.title}"? Esta acción no se puede deshacer.`,
+          onConfirm: async () => {
+            try {
+              const res = await deleteApi(API_ROUTES.designer.deleteElement(elementUuid));
+              if (res.ok) {
+                this.elements = this.elements.filter((eItem) => eItem.uuid !== elementUuid);
+                showToast('Elemento eliminado exitosamente.', 'success');
+                this.renderElements();
+              } else {
+                showToast('Error al eliminar elemento.', 'danger');
+              }
+            } catch {
+              showToast('Error al eliminar elemento.', 'danger');
+            }
+          },
+          size: 'sm',
+          title: 'Eliminar elemento',
+        });
+        return;
+      }
+    }
+  }
+
   public destroy(): void {
     if (this.sectionTemplates) {
       removeEmptyState(this.sectionTemplates, 'designer-empty-state');
+    }
+    if (this.sectionElements) {
+      removeEmptyState(this.sectionElements, 'designer-elements-empty-state');
     }
     this.statusDropdownController?.destroy();
     this.statusDropdownController = null;
     this.sortDropdownController?.destroy();
     this.sortDropdownController = null;
+    this.elementsStatusDropdownController?.destroy();
+    this.elementsStatusDropdownController = null;
+    this.elementsSortDropdownController?.destroy();
+    this.elementsSortDropdownController = null;
     this.abortController.abort();
   }
 }

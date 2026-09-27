@@ -5840,6 +5840,74 @@ export class BoardController {
     }
   }
 
+  public insertElementFromLibrary(item: {
+    element_type?: string;
+    file_url?: string;
+    height?: number;
+    svg_content?: string | null;
+    title?: string;
+    uuid?: string;
+    width?: number;
+  }): void {
+    this.pushHistoryState();
+
+    const dpr = window.devicePixelRatio || 1;
+    const screenW = this.canvasElement ? this.canvasElement.width / dpr : 800;
+    const screenH = this.canvasElement ? this.canvasElement.height / dpr : 600;
+    const centerWorld = screenToWorld(screenW / 2, screenH / 2, this.canvasElement, this.camera);
+
+    const elWidth = item.width || 180;
+    const elHeight = item.height || 180;
+
+    let newEl: BoardElement;
+
+    if (item.svg_content && (item.element_type === 'icon' || item.element_type === 'graphic')) {
+      const pathMatch = item.svg_content.match(/<path[^>]*\bd=["']([^"']+)["']/i);
+      if (pathMatch && pathMatch[1]) {
+        newEl = createShapeElement('rect', {
+          fillColor: this.currentFillColor || CANVAS_DEFAULTS.FILL_COLOR,
+          height: elHeight,
+          strokeColor: this.currentColor || CANVAS_DEFAULTS.STROKE_COLOR,
+          strokeWidth: 2,
+          svgPath: pathMatch[1],
+          width: elWidth,
+          x: Math.round(centerWorld.x - elWidth / 2),
+          y: Math.round(centerWorld.y - elHeight / 2),
+        });
+      } else {
+        const url = item.file_url || `data:image/svg+xml;utf8,${encodeURIComponent(item.svg_content)}`;
+        newEl = createImageElement(url, {
+          alt: item.title || 'Elemento',
+          height: elHeight,
+          width: elWidth,
+          x: Math.round(centerWorld.x - elWidth / 2),
+          y: Math.round(centerWorld.y - elHeight / 2),
+        });
+      }
+    } else {
+      const url = item.file_url || '';
+      newEl = createImageElement(url, {
+        alt: item.title || 'Elemento',
+        height: elHeight,
+        width: elWidth,
+        x: Math.round(centerWorld.x - elWidth / 2),
+        y: Math.round(centerWorld.y - elHeight / 2),
+      });
+    }
+
+    this.elements.push(newEl);
+    this.collaborationManager.broadcastAddElement(newEl);
+    this.selectedElementId = newEl.id;
+    this.selectedElementIds = [newEl.id];
+    this.updateSelectionToolbar();
+    this.requestRedraw();
+    this.scheduleAutoSave();
+
+    if (item.uuid) {
+      postApi(API_ROUTES.elements.use(item.uuid), {}).catch(() => {});
+    }
+  }
+
   public insertDiagramNode(config: {
     fillColor?: string;
     height?: number;

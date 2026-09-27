@@ -1,9 +1,11 @@
 import { ALL_MOCKUP_ITEMS, FRAME_CATEGORIES, FRAME_TEMPLATES, GRID_TEMPLATES, MOCKUP_GENERAL_CATEGORIES, MOCKUP_TEMPLATES } from '../../config/mockups.config.js';
+import { API_ROUTES } from '../../config/api-routes.js';
 import { BOARD_3D_SHAPES } from '../../config/board-3d-shapes.config.js';
 import { CHART_CATALOG } from '../../views/board/board-charts-panel.component.js';
 import { ChartType, Shape3DType, ShapeType } from '../../views/board/board.types.js';
 import { DIAGRAM_COMPONENTS, DiagramComponentItem } from '../../config/diagram-components.data.js';
-import { escapeHtml } from '../../services/api.service.js';
+import { ElementItem } from '../../types/element.types.js';
+import { escapeHtml, getApi } from '../../services/api.service.js';
 import { FrameCategory, MockupGeneralCategory, MockupTemplate } from '../../types/mockups.types.js';
 import { getActiveCanvasController, getActiveCanvasType, openChartInspectorInDrawer, toggleDrawer, updateCanvasRailActiveState } from '../layout.component.js';
 import { openInsertPixelGridModal } from '../insert-pixel-grid-modal.component.js';
@@ -277,6 +279,43 @@ function handleApplyCanvasElement(shape: PixelShape, canvasType: 'board' | 'doc'
   }
 }
 
+function handleApplyLibraryElement(item: ElementItem, canvasType: 'board' | 'doc' | 'presentation' | 'video'): void {
+  const controller = getActiveCanvasController();
+  if (!controller) {
+    showToast('No se encontró el controlador del lienzo activo', 'warning');
+    return;
+  }
+
+  addRecentElement({
+    file: item.file_url,
+    id: item.uuid,
+    name: item.title,
+    previewSvg: item.svg_content || undefined,
+    type: item.svg_content ? 'vector' : 'sticker',
+  });
+
+  if (controller.insertElementFromLibrary) {
+    controller.insertElementFromLibrary(item);
+  } else if (controller.insertShapeOrSticker && item.svg_content) {
+    controller.insertShapeOrSticker({
+      category: 'shapes',
+      height: item.height || 180,
+      id: item.uuid,
+      name: item.title,
+      pathD: item.svg_content,
+      type: 'vector',
+      width: item.width || 180,
+    });
+  } else if (controller.insertImage) {
+    controller.insertImage(item.file_url, item.title);
+  }
+
+  showToast(`«${item.title}» añadido al lienzo`, 'success');
+  if (window.innerWidth <= 768) {
+    toggleDrawer(false);
+  }
+}
+
 function handleApplyStickyPreset(item: { color: string; id: string; name: string; stroke: string; text?: string; textColor?: string }, canvasType: 'board' | 'doc' | 'presentation' | 'video'): void {
   const controller = getActiveCanvasController();
   const noteText = item.text || 'Nota';
@@ -423,6 +462,8 @@ function handleApplyTable(rows: number, cols: number, canvasType: 'board' | 'doc
 export function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement): void {
   const sidebar = drawer.closest<HTMLElement>('[data-ref="sidebar"]') || document.querySelector<HTMLElement>('[data-ref="sidebar"]');
   const canvasType = getActiveCanvasType();
+  let currentLibraryElements: ElementItem[] = [];
+  let searchDebounceTimer: any = null;
 
   drawerBody.innerHTML = `
     <div class="canvas-panel-card" data-ref="canvas-panel-card">
@@ -436,9 +477,20 @@ export function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTM
         </button>
       </div>
       <div class="canvas-panel-card__body" data-ref="canvas-panel-body">
-        <div class="menu-panel__search" data-ref="canvas-elements-search">
+        <div class="menu-panel__search" data-ref="canvas-elements-search" style="margin-bottom: 8px;">
           <svg class="component-icon menu-panel__search-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
-          <input class="menu-panel__search-input" data-ref="canvas-elements-search-input" type="text" maxlength="50" autocomplete="off" placeholder="Buscar elementos..." />
+          <input class="menu-panel__search-input" data-ref="canvas-elements-search-input" type="text" maxlength="50" autocomplete="off" placeholder="Buscar foco, casa, estrella, formas..." />
+        </div>
+
+        <div class="elements-quick-tags-row" data-ref="elements-quick-tags-row" style="display: flex; gap: 6px; overflow-x: auto; padding: 0 0 10px 0; scrollbar-width: none;">
+          <button type="button" class="component-badge component-badge--neutral component-badge--interactive" data-ref="quick-search-foco" data-quick-search="foco" style="cursor: pointer; font-size: 11px; white-space: nowrap; padding: 4px 9px;">💡 Foco</button>
+          <button type="button" class="component-badge component-badge--neutral component-badge--interactive" data-ref="quick-search-casa" data-quick-search="casa" style="cursor: pointer; font-size: 11px; white-space: nowrap; padding: 4px 9px;">🏠 Casa</button>
+          <button type="button" class="component-badge component-badge--neutral component-badge--interactive" data-ref="quick-search-estrella" data-quick-search="estrella" style="cursor: pointer; font-size: 11px; white-space: nowrap; padding: 4px 9px;">⭐ Estrella</button>
+          <button type="button" class="component-badge component-badge--neutral component-badge--interactive" data-ref="quick-search-cohete" data-quick-search="cohete" style="cursor: pointer; font-size: 11px; white-space: nowrap; padding: 4px 9px;">🚀 Cohete</button>
+          <button type="button" class="component-badge component-badge--neutral component-badge--interactive" data-ref="quick-search-flecha" data-quick-search="flecha" style="cursor: pointer; font-size: 11px; white-space: nowrap; padding: 4px 9px;">➡️ Flecha</button>
+          <button type="button" class="component-badge component-badge--neutral component-badge--interactive" data-ref="quick-search-grafico" data-quick-search="grafico" style="cursor: pointer; font-size: 11px; white-space: nowrap; padding: 4px 9px;">📊 Gráfico</button>
+          <button type="button" class="component-badge component-badge--neutral component-badge--interactive" data-ref="quick-search-laptop" data-quick-search="computadora" style="cursor: pointer; font-size: 11px; white-space: nowrap; padding: 4px 9px;">💻 Laptop</button>
+          <button type="button" class="component-badge component-badge--neutral component-badge--interactive" data-ref="quick-search-fuego" data-quick-search="fuego" style="cursor: pointer; font-size: 11px; white-space: nowrap; padding: 4px 9px;">🔥 Fuego</button>
         </div>
 
         <div class="elements-drawer-content" data-ref="elements-drawer-content"></div>
@@ -455,7 +507,18 @@ export function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTM
   const searchInput = drawerBody.querySelector<HTMLInputElement>('[data-ref="canvas-elements-search-input"]');
   const contentContainer = drawerBody.querySelector<HTMLElement>('[data-ref="elements-drawer-content"]');
 
-  const renderContent = (query = '') => {
+  const fetchApiElements = async (query: string): Promise<ElementItem[]> => {
+    try {
+      const res = await getApi(API_ROUTES.elements.search({ limit: 40, q: query }));
+      if (res.ok) {
+        const body = await res.json();
+        return body?.elements || [];
+      }
+    } catch {}
+    return [];
+  };
+
+  const renderContent = async (query = '') => {
     if (!contentContainer) return;
     const cleanQ = query.trim().toLowerCase();
 
@@ -467,7 +530,10 @@ export function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTM
       const matchingMockups = ALL_MOCKUP_ITEMS.filter((m) => m.name.toLowerCase().includes(cleanQ) || m.description.toLowerCase().includes(cleanQ) || 'mockup'.includes(cleanQ) || 'maqueta'.includes(cleanQ) || 'marco'.includes(cleanQ) || 'cuadricula'.includes(cleanQ) || 'collage'.includes(cleanQ));
       const matchingTables = (cleanQ.includes('tabl') || cleanQ.includes('table') || cleanQ.includes('cuad')) ? TABLE_PRESETS : [];
 
-      if (matchingDiagrams.length === 0 && matchingShapes.length === 0 && matchingCharts.length === 0 && matching3D.length === 0 && matchingMockups.length === 0 && matchingTables.length === 0) {
+      const apiElements = await fetchApiElements(cleanQ);
+      currentLibraryElements = apiElements;
+
+      if (matchingDiagrams.length === 0 && matchingShapes.length === 0 && matchingCharts.length === 0 && matching3D.length === 0 && matchingMockups.length === 0 && matchingTables.length === 0 && apiElements.length === 0) {
         contentContainer.innerHTML = `
           <div class="canvas-panel-card__empty" data-ref="elements-empty">
             <span class="canvas-panel-card__empty-title">Sin resultados</span>
@@ -478,6 +544,27 @@ export function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTM
       }
 
       let html = '<div class="elements-grid" data-ref="elements-grid">';
+
+      if (apiElements.length > 0) {
+        html += '<div class="elements-section-title">Gráficos e Iconos comunitarios</div>';
+        html += apiElements.map((elem) => {
+          let preview = '';
+          if (elem.svg_content) {
+            preview = `<div style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; color: var(--text-primary);">${elem.svg_content}</div>`;
+          } else if (elem.file_url) {
+            preview = `<img src="${escapeHtml(elem.file_url)}" alt="${escapeHtml(elem.title)}" style="max-width: 34px; max-height: 34px; object-fit: contain;" loading="lazy" />`;
+          } else {
+            preview = `<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#category"></use></svg>`;
+          }
+          return `
+            <button type="button" class="element-grid-item" data-ref="btn-library-item-${elem.uuid}" data-library-uuid="${elem.uuid}" data-tooltip="${escapeHtml(elem.title)} (${elem.is_official ? 'Oficial' : escapeHtml(elem.designer_name || 'Diseñador')})" aria-label="${escapeHtml(elem.title)}" style="position: relative;">
+              ${elem.is_premium ? '<span class="component-badge component-badge--warning" style="position: absolute; top: 3px; right: 3px; font-size: 8px; padding: 1px 4px; font-weight: 700; border-radius: 4px; line-height: 1;">PRO</span>' : ''}
+              ${preview}
+              <span class="element-grid-item__label" style="margin-top: 4px; font-size: 10px; max-width: 58px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(elem.title)}</span>
+            </button>
+          `;
+        }).join('');
+      }
 
       if (matchingCharts.length > 0) {
         html += '<div class="elements-section-title">Gráficas</div>';
@@ -1416,10 +1503,35 @@ export function renderElementsDrawerContent(drawer: HTMLElement, drawerBody: HTM
       const controller = getActiveCanvasController();
       controller?.openMockupsPanel?.();
     });
+
+    container.querySelectorAll<HTMLButtonElement>('[data-library-uuid]').forEach((itemBtn) => {
+      itemBtn.addEventListener('click', () => {
+        const uuid = itemBtn.getAttribute('data-library-uuid');
+        const found = currentLibraryElements.find((e) => e.uuid === uuid);
+        if (found) {
+          handleApplyLibraryElement(found, canvasType);
+        }
+      });
+    });
   };
 
+  drawerBody.querySelectorAll<HTMLButtonElement>('[data-quick-search]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const tag = btn.getAttribute('data-quick-search') || '';
+      if (searchInput) {
+        searchInput.value = tag;
+      }
+      renderContent(tag);
+    });
+  });
+
   searchInput?.addEventListener('input', () => {
-    renderContent(searchInput.value);
+    if (searchDebounceTimer) {
+      clearTimeout(searchDebounceTimer);
+    }
+    searchDebounceTimer = setTimeout(() => {
+      renderContent(searchInput.value);
+    }, 200);
   });
 
   renderContent();

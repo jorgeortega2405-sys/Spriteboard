@@ -22,6 +22,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
   DATA_ENGINEER: ['analytics:read', 'analytics:export', 'backups:read', 'logs:read', 'workflows:read', 'workflows:manage'],
   DESIGNER: [
     'templates:read', 'templates:create', 'templates:publish',
+    'elements:read', 'elements:create', 'elements:publish',
     'designer:dashboard', 'designer:onboard', 'designer:payouts',
     'account:edit_identifiers', 'account:edit_security', 'account:edit_profile', 'account:delete',
   ],
@@ -47,9 +48,9 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
   SUPPORT_L2: ['support:read', 'support:reply', 'support:manage', 'users:read', 'users:sanctions', 'internal_tickets:read', 'internal_tickets:create', 'account:edit_identifiers', 'account:edit_security', 'account:edit_profile', 'account:delete'],
   SUPPORT_L3: ['support:read', 'support:reply', 'support:manage', 'users:read', 'users:manage', 'users:sanctions', 'internal_tickets:read', 'internal_tickets:create', 'internal_tickets:manage', 'logs:read', 'account:edit_identifiers', 'account:edit_security', 'account:edit_profile', 'account:delete'],
   SUPPORT_MANAGER: ['dashboard:read', 'support:read', 'support:reply', 'support:manage', 'users:read', 'internal_tickets:read', 'internal_tickets:create', 'internal_tickets:manage', 'analytics:read', 'account:edit_identifiers', 'account:edit_security', 'account:edit_profile', 'account:delete'],
-  SYSTEM_ACCOUNT: ['templates:read', 'templates:official_publish', 'system:reserved_handle_claim', 'dashboard:read'],
+  SYSTEM_ACCOUNT: ['templates:read', 'templates:official_publish', 'elements:read', 'elements:official_publish', 'system:reserved_handle_claim', 'dashboard:read'],
   SYSTEM_OPERATOR: ['system:read', 'system:manage', 'backups:read', 'backups:manage', 'logs:read', 'workflows:read', 'workflows:manage', 'internal_tickets:read', 'internal_tickets:create', 'account:edit_identifiers', 'account:edit_security', 'account:edit_profile', 'account:delete'],
-  USER: ['templates:read', 'account:edit_identifiers', 'account:edit_security', 'account:edit_profile', 'account:delete'],
+  USER: ['templates:read', 'elements:read', 'account:edit_identifiers', 'account:edit_security', 'account:edit_profile', 'account:delete'],
   WORKFLOW_ADMIN: ['workflows:read', 'workflows:manage', 'logs:read', 'system:read', 'account:edit_identifiers', 'account:edit_security', 'account:edit_profile', 'account:delete'],
 };
 
@@ -87,7 +88,7 @@ export async function getUserEffectivePermissions(
   }
 
   if (activeRoles.includes('SYSTEM_ACCOUNT')) {
-    return ['templates:read', 'templates:official_publish', 'system:reserved_handle_claim', 'dashboard:read'];
+    return ['templates:read', 'templates:official_publish', 'elements:read', 'elements:official_publish', 'system:reserved_handle_claim', 'dashboard:read'];
   }
 
   if (activeRoles.includes('SUPER_ADMIN') || activeRoles.includes('PLATFORM_ADMIN')) {
@@ -113,7 +114,7 @@ export async function getUserEffectivePermissions(
       }
 
       if (activeRoles.includes('SYSTEM_ACCOUNT')) {
-        return ['templates:read', 'templates:official_publish', 'system:reserved_handle_claim', 'dashboard:read'];
+        return ['templates:read', 'templates:official_publish', 'elements:read', 'elements:official_publish', 'system:reserved_handle_claim', 'dashboard:read'];
       }
 
       if (activeRoles.includes('SUPER_ADMIN') || activeRoles.includes('PLATFORM_ADMIN')) {

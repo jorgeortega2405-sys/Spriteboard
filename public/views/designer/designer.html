@@ -148,18 +148,74 @@
       <div class="canvas-section designer-tab-section" data-ref="designer-section-elements" style="display: none; padding-bottom: 48px;">
         <div class="canvas-section__header" data-ref="elements-section-header">
           <h2 class="canvas-section__title" data-ref="elements-section-title" data-i18n="designer.elements_title">Mis elementos gráficos</h2>
+
+          <div class="canvas-section__controls home-section-controls" data-ref="elements-section-controls">
+            <button type="button" class="component-button component-button--h40 component-button--black" data-ref="btn-designer-upload-element" style="gap: 6px;">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+              <span>Subir elemento</span>
+            </button>
+
+            <div class="canvas-section__dropdown-wrapper home-filter-dropdown-wrapper" data-ref="elements-dropdown-wrapper-status">
+              <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-elements-filter-status" data-tooltip="Filtrar por estado" aria-label="Filtrar por estado">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
+              </button>
+              <div class="dropdown-backdrop" data-ref="dropdown-backdrop-elements-status">
+                <div class="menu-panel menu-panel--dropdown menu-panel--w-200 menu-panel--h-auto" data-ref="dropdown-menu-elements-status">
+                  <div class="menu-panel__drag-zone" data-ref="drag-zone-elements-status" aria-hidden="true">
+                    <div class="menu-panel__drag-handle"></div>
+                  </div>
+                  <div class="menu-panel__list">
+                    <button type="button" class="menu-item is-active" data-ref="menu-elem-filter-all" data-status="all">
+                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#auto_awesome"></use></svg>
+                      <span class="menu-item__text">Todos</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="menu-elem-filter-approved" data-status="approved">
+                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+                      <span class="menu-item__text">Aprobados</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="menu-elem-filter-pending" data-status="pending">
+                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#schedule"></use></svg>
+                      <span class="menu-item__text">En revisión</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="menu-elem-filter-rejected" data-status="rejected">
+                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#cancel"></use></svg>
+                      <span class="menu-item__text">Rechazados</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="canvas-section__dropdown-wrapper home-filter-dropdown-wrapper" data-ref="elements-dropdown-wrapper-sort">
+              <button type="button" class="component-button component-button--h40 component-button--icon-only" data-ref="btn-elements-trigger-sort" data-tooltip="Ordenar" aria-label="Ordenar">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#swap_vert"></use></svg>
+              </button>
+              <div class="dropdown-backdrop" data-ref="dropdown-backdrop-elements-sort">
+                <div class="menu-panel menu-panel--dropdown menu-panel--w-220 menu-panel--h-auto" data-ref="dropdown-menu-elements-sort">
+                  <div class="menu-panel__drag-zone" data-ref="drag-zone-elements-sort" aria-hidden="true">
+                    <div class="menu-panel__drag-handle"></div>
+                  </div>
+                  <div class="menu-panel__list">
+                    <button type="button" class="menu-item is-active" data-ref="menu-elem-sort-recent" data-sort="recent">
+                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#schedule"></use></svg>
+                      <span class="menu-item__text">Más recientes</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="menu-elem-sort-uses" data-sort="uses">
+                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#group"></use></svg>
+                      <span class="menu-item__text">Más usados</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="menu-elem-sort-alpha" data-sort="alpha">
+                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#sort_by_alpha"></use></svg>
+                      <span class="menu-item__text">Alfabético (A-Z)</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div class="designer-placeholder-card" data-ref="elements-placeholder-card">
-          <div class="designer-placeholder-card__icon-box">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#category"></use></svg>
-          </div>
-          <span class="component-badge component-badge--primary" style="margin-bottom: 12px; font-weight: 600;" data-i18n="designer.elements_coming_soon_badge">Próximamente</span>
-          <h3 class="designer-placeholder-card__title" data-i18n="designer.elements_coming_soon_title">Elementos para creadores próximamente</h3>
-          <p class="designer-placeholder-card__desc" data-i18n="designer.elements_coming_soon_desc">
-            Estamos construyendo el espacio para que diseñadores y creadores puedan subir vectores, stickers, ilustraciones, fuentes y paquetes de iconos para toda la comunidad.
-          </p>
-        </div>
+        <div class="canvas-grid templates-grid" data-ref="designer-elements-grid"></div>
       </div>
 
       <div class="canvas-section designer-tab-section" data-ref="designer-section-earnings" style="display: none; padding-bottom: 48px;">

@@ -349,6 +349,11 @@ INSERT INTO permissions (name, display_name, description, module) VALUES
 ('templates:publish', 'Publicar Plantillas', 'Publicar plantillas en la galería comunitaria', 'templates'),
 ('templates:official_publish', 'Publicar Plantillas Oficiales', 'Publicar plantillas con insignia oficial', 'templates'),
 ('templates:manage_all', 'Administrar Todas las Plantillas', 'Aprobar, rechazar o eliminar cualquier plantilla', 'templates'),
+('elements:read', 'Ver Elementos', 'Consultar catálogo y buscar elementos gráficos e iconos', 'elements'),
+('elements:create', 'Crear Elementos', 'Crear borradores y subir elementos gráficos', 'elements'),
+('elements:publish', 'Publicar Elementos', 'Publicar elementos gráficos en la galería comunitaria', 'elements'),
+('elements:official_publish', 'Publicar Elementos Oficiales', 'Publicar elementos gráficos con insignia oficial', 'elements'),
+('elements:manage_all', 'Administrar Todos los Elementos', 'Aprobar, rechazar o eliminar cualquier elemento gráfico', 'elements'),
 ('designer:dashboard', 'Panel de Diseñador', 'Acceso al portal y métricas de diseñador', 'designer'),
 ('designer:onboard', 'Onboarding Diseñador', 'Completar perfil e identidad de diseñador', 'designer'),
 ('designer:payouts', 'Cobros de Diseñador', 'Gestionar métodos de cobro y retiros de creador', 'designer'),
@@ -378,7 +383,7 @@ INSERT IGNORE INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
 WHERE r.name = 'SYSTEM_ACCOUNT'
   AND p.name IN (
-    'templates:read', 'templates:official_publish', 'system:reserved_handle_claim'
+    'templates:read', 'templates:official_publish', 'elements:read', 'elements:official_publish', 'system:reserved_handle_claim'
   );
 
 INSERT IGNORE INTO role_permissions (role_id, permission_id)
@@ -386,6 +391,7 @@ SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
 WHERE r.name = 'DESIGNER'
   AND p.name IN (
     'templates:read', 'templates:create', 'templates:publish',
+    'elements:read', 'elements:create', 'elements:publish',
     'designer:dashboard', 'designer:onboard', 'designer:payouts',
     'account:edit_identifiers', 'account:edit_security', 'account:edit_profile', 'account:delete'
   );
@@ -394,7 +400,7 @@ INSERT IGNORE INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
 WHERE r.name = 'USER'
   AND p.name IN (
-    'templates:read', 'account:edit_identifiers', 'account:edit_security', 'account:edit_profile', 'account:delete'
+    'templates:read', 'elements:read', 'account:edit_identifiers', 'account:edit_security', 'account:edit_profile', 'account:delete'
   );
 
 INSERT IGNORE INTO role_permissions (role_id, permission_id)

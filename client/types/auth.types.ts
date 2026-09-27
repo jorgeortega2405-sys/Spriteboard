@@ -112,6 +112,18 @@ export function canPublishTemplates(user?: User | null): boolean {
   return roles.includes('DESIGNER') || roles.includes('SUPER_ADMIN') || roles.includes('PLATFORM_ADMIN');
 }
 
+export function canPublishElements(user?: User | null): boolean {
+  if (!user) return false;
+  if (Array.isArray(user.permissions) && user.permissions.length > 0) {
+    return user.permissions.includes('*') ||
+           user.permissions.includes('elements:publish') ||
+           user.permissions.includes('elements:create') ||
+           user.permissions.includes('designer:dashboard');
+  }
+  const roles = user.roles && user.roles.length > 0 ? user.roles : (user.role ? [user.role] : []);
+  return roles.includes('DESIGNER') || roles.includes('SUPER_ADMIN') || roles.includes('PLATFORM_ADMIN');
+}
+
 const NON_ADMIN_ROLES = ['USER', 'DESIGNER', 'SYSTEM_ACCOUNT'];
 
 export function isUserAdmin(role?: string, roles?: string[]): boolean {
