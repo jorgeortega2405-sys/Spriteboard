@@ -336,6 +336,15 @@ export class VideoPreviewManager {
       this._canvas.height = project.height;
     }
 
+    const aspectStr = `${project.width} / ${project.height}`;
+    if (this._canvas.style.aspectRatio !== aspectStr) {
+      this._canvas.style.aspectRatio = aspectStr;
+    }
+    const container = this._canvas.parentElement;
+    if (container && container.style.aspectRatio !== aspectStr) {
+      container.style.aspectRatio = aspectStr;
+    }
+
     const width = this._canvas.width;
     const height = this._canvas.height;
 
@@ -407,12 +416,12 @@ export class VideoPreviewManager {
           }
           if (vid !== masterMedia) {
             const drift = vid.currentTime - clampedLocalTime;
-            if (Math.abs(drift) > 1.2) {
+            if (Math.abs(drift) > 0.8) {
               this.safeSeekElement(vid, clampedLocalTime, clip.id);
               vid.playbackRate = 1.0;
-            } else if (drift > 0.08) {
+            } else if (drift > 0.06) {
               vid.playbackRate = 0.95;
-            } else if (drift < -0.08) {
+            } else if (drift < -0.06) {
               vid.playbackRate = 1.05;
             } else {
               vid.playbackRate = 1.0;
@@ -425,11 +434,25 @@ export class VideoPreviewManager {
             vid.pause();
           }
           vid.playbackRate = 1.0;
+          const drift = Math.abs(vid.currentTime - clampedLocalTime);
+          if (drift > 0.04 || vid.readyState < 2) {
+            this.safeSeekElement(vid, clampedLocalTime, clip.id);
+          }
         }
 
-        if (enterpriseFrame) {
+        const isEnterpriseFrameValid = enterpriseFrame && typeof (enterpriseFrame as any).format === 'string' && (enterpriseFrame as any).format !== null;
+        if (isEnterpriseFrameValid) {
           this.drawFittedMedia(enterpriseFrame, canvasW, canvasH, clip, clampedLocalTime);
-        } else if (vid.videoWidth > 0 || vid.readyState >= 1) {
+        } else if (vid.videoWidth > 0 && vid.readyState >= 2) {
+          this.drawFittedMedia(vid, canvasW, canvasH, clip, clampedLocalTime);
+        } else if (clip.thumbnailUrl) {
+          const thumbImg = this.getImageElement(clip.thumbnailUrl);
+          if (thumbImg && thumbImg.complete && thumbImg.naturalWidth > 0) {
+            this.drawFittedMedia(thumbImg, canvasW, canvasH, clip, clampedLocalTime);
+          } else if (vid.videoWidth > 0) {
+            this.drawFittedMedia(vid, canvasW, canvasH, clip, clampedLocalTime);
+          }
+        } else if (vid.videoWidth > 0) {
           this.drawFittedMedia(vid, canvasW, canvasH, clip, clampedLocalTime);
         }
       }
@@ -494,6 +517,7 @@ export class VideoPreviewManager {
     let mediaW = 1920;
     let mediaH = 1080;
     if (typeof VideoFrame !== 'undefined' && media instanceof VideoFrame) {
+      if (!media.format) return;
       mediaW = media.displayWidth || media.codedWidth || 1920;
       mediaH = media.displayHeight || media.codedHeight || 1080;
     } else if (media instanceof HTMLVideoElement) {
@@ -561,7 +585,18 @@ export class VideoPreviewManager {
     }
 
     this._ctx.globalAlpha = (clip.transform?.opacity ?? 1) * transAlpha;
-    this._ctx.drawImage(media, dx + transOffsetX, dy, drawW, drawH);
+    try {
+      this._ctx.drawImage(media, dx + transOffsetX, dy, drawW, drawH);
+    } catch {
+      if (clip.thumbnailUrl) {
+        const fallbackImg = this.getImageElement(clip.thumbnailUrl);
+        if (fallbackImg && fallbackImg.complete && fallbackImg.naturalWidth > 0) {
+          try {
+            this._ctx.drawImage(fallbackImg, dx + transOffsetX, dy, drawW, drawH);
+          } catch {}
+        }
+      }
+    }
     this._ctx.restore();
   }
 
@@ -621,7 +656,7 @@ export class VideoPreviewManager {
       : Math.max(0, targetTime);
 
     const diff = Math.abs(el.currentTime - clamped);
-    if (diff < 0.04) {
+    if (diff < 0.04 && el.readyState >= 2) {
       (el as any).__pendingSeekTime = null;
       return;
     }
@@ -638,10 +673,11 @@ export class VideoPreviewManager {
     try {
       custom.__pendingSeekTime = null;
       custom.__seekTimestamp = now;
+      const seekTime = (clamped === 0 && el.readyState < 2) ? 0.001 : clamped;
       if (isScrubbing && typeof (el as any).fastSeek === 'function') {
-        (el as any).fastSeek(clamped);
+        (el as any).fastSeek(seekTime);
       } else {
-        el.currentTime = clamped;
+        el.currentTime = seekTime;
       }
     } catch {
       try {
@@ -665,22 +701,26 @@ export class VideoPreviewManager {
       this._activeBufferingClips.add(clipId);
       this.showBuffering('Preparando reproducción...', 300);
       this._isBufferingWait = true;
-      const onReady = () => {
-        el.removeEventListener('canplay', onReady);
-        el.removeEventListener('loadeddata', onReady);
-        el.removeEventListener('canplaythrough', onReady);
-        if (this._isPlaying) {
-          this._activeBufferingClips.delete(clipId);
-          if (this._activeBufferingClips.size === 0) {
-            this.hideBuffering();
+      if (!custom.__hasPendingReadyHandler) {
+        custom.__hasPendingReadyHandler = true;
+        const onReady = () => {
+          custom.__hasPendingReadyHandler = false;
+          el.removeEventListener('canplay', onReady);
+          el.removeEventListener('loadeddata', onReady);
+          el.removeEventListener('canplaythrough', onReady);
+          if (this._isPlaying) {
+            this._activeBufferingClips.delete(clipId);
+            if (this._activeBufferingClips.size === 0) {
+              this.hideBuffering();
+            }
+            this._isBufferingWait = false;
+            this.safePlayMedia(el, clipId);
           }
-          this._isBufferingWait = false;
-          this.safePlayMedia(el, clipId);
-        }
-      };
-      el.addEventListener('canplay', onReady, { once: true });
-      el.addEventListener('loadeddata', onReady, { once: true });
-      el.addEventListener('canplaythrough', onReady, { once: true });
+        };
+        el.addEventListener('canplay', onReady, { once: true });
+        el.addEventListener('loadeddata', onReady, { once: true });
+        el.addEventListener('canplaythrough', onReady, { once: true });
+      }
       return;
     }
 
@@ -771,7 +811,9 @@ export class VideoPreviewManager {
     }
     vid.preload = 'auto';
     vid.playsInline = true;
-    vid.muted = this._isMuted;
+    vid.muted = true;
+    vid.style.width = '320px';
+    vid.style.height = '180px';
     vid.src = url;
     vid.addEventListener('waiting', () => {
       if (this._isPlaying && this.isClipActive(clipId)) {
@@ -801,6 +843,16 @@ export class VideoPreviewManager {
     });
     vid.addEventListener('loadedmetadata', () => {
       this.logDebug('Media', `[${clipId}] Video loadedmetadata: duration=${vid.duration.toFixed(3)}s, size=${vid.videoWidth}x${vid.videoHeight}`);
+      const custom = vid as any;
+      if (custom.__pendingSeekTime !== null && custom.__pendingSeekTime !== undefined) {
+        const nextTime = custom.__pendingSeekTime;
+        custom.__pendingSeekTime = null;
+        this.safeSeekElement(vid, nextTime, clipId);
+      } else if (vid.readyState < 2 && vid.currentTime === 0) {
+        try {
+          vid.currentTime = 0.001;
+        } catch {}
+      }
       this.renderFrame();
     });
     vid.addEventListener('loadeddata', () => {
@@ -1153,6 +1205,12 @@ export class VideoPreviewManager {
       if (vid && vid.videoWidth > 0) {
         mediaW = vid.videoWidth;
         mediaH = vid.videoHeight;
+      } else if (clip.thumbnailUrl) {
+        const thumb = this._mediaPool.get(clip.thumbnailUrl) as HTMLImageElement | undefined;
+        if (thumb && thumb.naturalWidth > 0) {
+          mediaW = thumb.naturalWidth;
+          mediaH = thumb.naturalHeight;
+        }
       }
     } else if (clip.mediaType === 'image' && clip.assetUrl) {
       const img = this._mediaPool.get(clip.assetUrl) as HTMLImageElement | undefined;
@@ -1399,6 +1457,48 @@ export class VideoPreviewManager {
             const ratio = newH / this._dragState.initialClipH;
             clip.textConfig.fontSize = Math.max(14, Math.min(240, Math.round(this._dragState.initialFontSize * ratio)));
             clip.transform!.y = Math.round(newY + newH / 2);
+          } else if (!e.shiftKey) {
+            const aspect = (this._dragState.initialClipW > 0 && this._dragState.initialClipH > 0)
+              ? (this._dragState.initialClipW / this._dragState.initialClipH)
+              : 1;
+
+            if (h === 'se' || h === 'sw' || h === 'ne' || h === 'nw') {
+              const deltaW = h.includes('e') ? dx : -dx;
+              const deltaH = h.includes('s') ? dy : -dy;
+              const scaleW = (this._dragState.initialClipW + deltaW) / this._dragState.initialClipW;
+              const scaleH = (this._dragState.initialClipH + deltaH) / this._dragState.initialClipH;
+              const scale = Math.max(0.05, Math.abs(deltaW) >= Math.abs(deltaH) ? scaleW : scaleH);
+
+              newW = Math.max(40, Math.round(this._dragState.initialClipW * scale));
+              newH = Math.max(30, Math.round(newW / aspect));
+
+              newX = h.includes('w')
+                ? Math.round(this._dragState.initialClipX + (this._dragState.initialClipW - newW))
+                : this._dragState.initialClipX;
+
+              newY = h.includes('n')
+                ? Math.round(this._dragState.initialClipY + (this._dragState.initialClipH - newH))
+                : this._dragState.initialClipY;
+            } else if (h === 'e' || h === 'w') {
+              newW = Math.max(40, Math.round(h === 'e' ? this._dragState.initialClipW + dx : this._dragState.initialClipW - dx));
+              newH = Math.max(30, Math.round(newW / aspect));
+              newY = Math.round(this._dragState.initialClipY + (this._dragState.initialClipH - newH) / 2);
+              newX = h === 'w'
+                ? Math.round(this._dragState.initialClipX + (this._dragState.initialClipW - newW))
+                : this._dragState.initialClipX;
+            } else {
+              newH = Math.max(30, Math.round(h === 's' ? this._dragState.initialClipH + dy : this._dragState.initialClipH - dy));
+              newW = Math.max(40, Math.round(newH * aspect));
+              newX = Math.round(this._dragState.initialClipX + (this._dragState.initialClipW - newW) / 2);
+              newY = h === 'n'
+                ? Math.round(this._dragState.initialClipY + (this._dragState.initialClipH - newH))
+                : this._dragState.initialClipY;
+            }
+
+            clip.transform!.width = Math.round(newW);
+            clip.transform!.height = Math.round(newH);
+            clip.transform!.x = Math.round(newX);
+            clip.transform!.y = Math.round(newY);
           } else {
             clip.transform!.width = Math.round(newW);
             clip.transform!.height = Math.round(newH);

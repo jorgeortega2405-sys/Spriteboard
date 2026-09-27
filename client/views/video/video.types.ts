@@ -77,6 +77,16 @@ export interface VideoBackground {
   type: 'solid' | 'transparent';
 }
 
+export interface VideoFormatPreset {
+  aspect: string;
+  category: 'horizontal' | 'square' | 'vertical';
+  description: string;
+  height: number;
+  id: string;
+  name: string;
+  width: number;
+}
+
 export interface VideoProject {
   background: VideoBackground;
   currentTime?: number;
@@ -84,6 +94,7 @@ export interface VideoProject {
   fps: number;
   height: number;
   name: string;
+  presetId?: string;
   tracks: VideoTrack[];
   type: 'video';
   version: number;

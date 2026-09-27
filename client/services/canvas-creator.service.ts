@@ -242,6 +242,7 @@ export async function createAndOpenCanvas(options: CreateCanvasOptions): Promise
       fps: 30,
       height,
       name,
+      presetId: options.initialProject?.presetId,
       tracks: defaultTracks,
       type: 'video',
       version: 1,

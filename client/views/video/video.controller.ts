@@ -14,7 +14,93 @@ import { VideoExportService } from './video-export.service.js';
 import { VideoHistoryManager } from './video-history.manager.js';
 import { VideoPreviewManager } from './video-preview.manager.js';
 import { VideoTimelineManager } from './video-timeline.manager.js';
-import { VideoClip, VideoProject } from './video.types.js';
+import { VideoClip, VideoFormatPreset, VideoProject } from './video.types.js';
+
+export const VIDEO_FORMAT_PRESETS: VideoFormatPreset[] = [
+  {
+    aspect: '16:9',
+    category: 'horizontal',
+    description: '1920 × 1080 px • 16:9',
+    height: 1080,
+    id: 'youtube',
+    name: 'Video de YouTube',
+    width: 1920,
+  },
+  {
+    aspect: '16:9',
+    category: 'horizontal',
+    description: '1920 × 1080 px • 16:9',
+    height: 1080,
+    id: 'horizontal',
+    name: 'Video horizontal',
+    width: 1920,
+  },
+  {
+    aspect: '9:16',
+    category: 'vertical',
+    description: '1080 × 1920 px • 9:16',
+    height: 1920,
+    id: 'mobile',
+    name: 'Video para dispositivos móviles',
+    width: 1080,
+  },
+  {
+    aspect: '9:16',
+    category: 'vertical',
+    description: '1080 × 1920 px • 9:16',
+    height: 1920,
+    id: 'tiktok',
+    name: 'Video para TikTok',
+    width: 1080,
+  },
+  {
+    aspect: '9:16',
+    category: 'vertical',
+    description: '1080 × 1920 px • 9:16',
+    height: 1920,
+    id: 'youtube-shorts',
+    name: 'Corto para YouTube',
+    width: 1080,
+  },
+  {
+    aspect: '1:1',
+    category: 'square',
+    description: '1080 × 1080 px • 1:1',
+    height: 1080,
+    id: 'facebook',
+    name: 'Video para Facebook',
+    width: 1080,
+  },
+  {
+    aspect: '9:16',
+    category: 'vertical',
+    description: '1080 × 1920 px • 9:16',
+    height: 1920,
+    id: 'instagram-reels',
+    name: 'Reel de Instagram',
+    width: 1080,
+  },
+  {
+    aspect: '1:1',
+    category: 'square',
+    description: '800 × 800 px • 1:1',
+    height: 800,
+    id: 'square-800',
+    name: 'Video cuadrado',
+    width: 800,
+  },
+];
+
+export function resolveVideoPreset(project: { height?: number; presetId?: string; width?: number }): VideoFormatPreset {
+  if (project.presetId) {
+    const found = VIDEO_FORMAT_PRESETS.find((p) => p.id === project.presetId);
+    if (found) return found;
+  }
+  const w = project.width || 1920;
+  const h = project.height || 1080;
+  const match = VIDEO_FORMAT_PRESETS.find((p) => p.width === w && p.height === h);
+  return match || VIDEO_FORMAT_PRESETS[0];
+}
 
 export class VideoController {
   private _container: HTMLElement;
@@ -80,6 +166,10 @@ export class VideoController {
       this._project.name = this._canvasRecord.name || 'Video sin título';
       this._project.width = this._canvasRecord.width || 1920;
       this._project.height = this._canvasRecord.height || 1080;
+    }
+
+    if (!this._project.presetId) {
+      this._project.presetId = resolveVideoPreset(this._project).id;
     }
 
     (this._container as any).__currentVideoProject = this._project;
@@ -222,19 +312,40 @@ export class VideoController {
       }
     }, { signal });
 
-    const aspectBtns = this._container.querySelectorAll<HTMLElement>('[data-ref^="btn-aspect-"]');
-    aspectBtns.forEach((btn) => {
+    const btnTopbarFormat = this._container.querySelector<HTMLElement>('[data-ref="btn-topbar-format"]');
+    btnTopbarFormat?.addEventListener('click', () => {
+      this._settingsDropdownCtrl?.toggle();
+    }, { signal });
+
+    const formatBtns = this._container.querySelectorAll<HTMLElement>('[data-ref^="btn-format-"], [data-ref^="btn-aspect-"]');
+    formatBtns.forEach((btn) => {
       btn.addEventListener('click', () => {
+        const formatId = btn.getAttribute('data-format-id') || '';
         const w = parseInt(btn.getAttribute('data-w') || '1920', 10);
         const h = parseInt(btn.getAttribute('data-h') || '1080', 10);
-        this._project.width = w;
-        this._project.height = h;
-        this.updateAspectPresetButtons();
-        this._previewManager?.renderFrame();
-        this._historyManager.pushState(this._project);
-        this.scheduleAutoSave();
+        this.selectFormat(formatId, w, h);
       }, { signal });
     });
+  }
+
+  public selectFormat(formatId: string, customWidth?: number, customHeight?: number): void {
+    const preset = VIDEO_FORMAT_PRESETS.find((p) => p.id === formatId) ||
+      VIDEO_FORMAT_PRESETS.find((p) => p.width === customWidth && p.height === customHeight) ||
+      VIDEO_FORMAT_PRESETS[0];
+
+    const targetW = customWidth || preset.width;
+    const targetH = customHeight || preset.height;
+
+    this._project.width = targetW;
+    this._project.height = targetH;
+    this._project.presetId = preset.id;
+
+    (this._container as any).__currentVideoProject = this._project;
+    this.updateAspectPresetButtons();
+    this._previewManager?.renderFrame();
+    this._historyManager.pushState(this._project);
+    this.scheduleAutoSave();
+    showToast(`${preset.name} (${targetW} × ${targetH} px)`, 'info');
   }
 
   public handleUndo(): void {
@@ -656,12 +767,30 @@ export class VideoController {
   }
 
   private updateAspectPresetButtons(): void {
-    const aspectBtns = this._container.querySelectorAll<HTMLElement>('[data-ref^="btn-aspect-"]');
-    aspectBtns.forEach((btn) => {
-      const w = parseInt(btn.getAttribute('data-w') || '1920', 10);
-      const h = parseInt(btn.getAttribute('data-h') || '1080', 10);
-      btn.classList.toggle('is-active', this._project.width === w && this._project.height === h);
+    const activePreset = resolveVideoPreset(this._project);
+
+    const formatBtns = this._container.querySelectorAll<HTMLElement>('[data-ref^="btn-format-"], [data-ref^="btn-aspect-"]');
+    formatBtns.forEach((btn) => {
+      const formatId = btn.getAttribute('data-format-id');
+      const w = parseInt(btn.getAttribute('data-w') || '0', 10);
+      const h = parseInt(btn.getAttribute('data-h') || '0', 10);
+
+      const isActive = formatId
+        ? formatId === activePreset.id
+        : (this._project.width === w && this._project.height === h);
+
+      btn.classList.toggle('is-active', isActive);
     });
+
+    const topbarLabel = this._container.querySelector<HTMLElement>('[data-ref="topbar-format-label"]');
+    if (topbarLabel) {
+      topbarLabel.textContent = `${activePreset.name} (${activePreset.width} × ${activePreset.height})`;
+    }
+
+    const settingsLabel = this._container.querySelector<HTMLElement>('[data-ref="settings-current-format-label"]');
+    if (settingsLabel) {
+      settingsLabel.textContent = `${activePreset.width} × ${activePreset.height} px`;
+    }
   }
 
   private scheduleAutoSave(): void {

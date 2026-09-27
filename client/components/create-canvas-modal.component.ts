@@ -243,42 +243,107 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
 
             <div class="modal-canvas-panel" data-ref="panel-category-video" style="${activeCategory === 'video' ? '' : 'display: none;'}">
               <div class="creation-cards-grid" data-ref="grid-videos">
-                <button type="button" class="creation-card" data-ref="card-video-16-9" data-type="video" data-w="1920" data-h="1080" data-format="16_9">
-                  <div class="creation-card__thumbnail" data-ref="thumb-video-16-9">
-                    <div class="creation-card__svg-wrapper" data-ref="svg-video-16-9">
+                <button type="button" class="creation-card" data-ref="card-video-youtube" data-type="video" data-preset-id="youtube" data-w="1920" data-h="1080" data-format="16_9">
+                  <div class="creation-card__thumbnail" data-ref="thumb-video-youtube">
+                    <div class="creation-card__svg-wrapper" data-ref="svg-video-youtube">
                       ${getVideoSvg('16_9')}
                     </div>
-                    <span class="creation-card__badge creation-card__badge--popular" data-ref="badge-video-16-9">16:9 Estándar</span>
+                    <span class="creation-card__badge creation-card__badge--popular" data-ref="badge-video-youtube">16:9 Estándar</span>
                   </div>
-                  <div class="creation-card__info" data-ref="info-video-16-9">
-                    <h4 class="creation-card__title" data-ref="title-video-16-9">Video 16:9 (Full HD)</h4>
-                    <p class="creation-card__meta" data-ref="meta-video-16-9">1920 × 1080 px • YouTube y horizontal</p>
+                  <div class="creation-card__info" data-ref="info-video-youtube">
+                    <h4 class="creation-card__title" data-ref="title-video-youtube">Video de YouTube</h4>
+                    <p class="creation-card__meta" data-ref="meta-video-youtube">1920 × 1080 px • YouTube horizontal</p>
                   </div>
                 </button>
 
-                <button type="button" class="creation-card" data-ref="card-video-9-16" data-type="video" data-w="1080" data-h="1920" data-format="9_16">
-                  <div class="creation-card__thumbnail" data-ref="thumb-video-9-16">
-                    <div class="creation-card__svg-wrapper" data-ref="svg-video-9-16">
+                <button type="button" class="creation-card" data-ref="card-video-horizontal" data-type="video" data-preset-id="horizontal" data-w="1920" data-h="1080" data-format="16_9">
+                  <div class="creation-card__thumbnail" data-ref="thumb-video-horizontal">
+                    <div class="creation-card__svg-wrapper" data-ref="svg-video-horizontal">
+                      ${getVideoSvg('16_9')}
+                    </div>
+                    <span class="creation-card__badge" data-ref="badge-video-horizontal">16:9 Panorámico</span>
+                  </div>
+                  <div class="creation-card__info" data-ref="info-video-horizontal">
+                    <h4 class="creation-card__title" data-ref="title-video-horizontal">Video horizontal</h4>
+                    <p class="creation-card__meta" data-ref="meta-video-horizontal">1920 × 1080 px • Pantallas estándar</p>
+                  </div>
+                </button>
+
+                <button type="button" class="creation-card" data-ref="card-video-mobile" data-type="video" data-preset-id="mobile" data-w="1080" data-h="1920" data-format="9_16">
+                  <div class="creation-card__thumbnail" data-ref="thumb-video-mobile">
+                    <div class="creation-card__svg-wrapper" data-ref="svg-video-mobile">
                       ${getVideoSvg('9_16')}
                     </div>
-                    <span class="creation-card__badge" data-ref="badge-video-9-16">9:16 Vertical</span>
+                    <span class="creation-card__badge" data-ref="badge-video-mobile">9:16 Vertical</span>
                   </div>
-                  <div class="creation-card__info" data-ref="info-video-9-16">
-                    <h4 class="creation-card__title" data-ref="title-video-9-16">Video 9:16 (Vertical)</h4>
-                    <p class="creation-card__meta" data-ref="meta-video-9-16">1080 × 1920 px • Reels, TikTok y Shorts</p>
+                  <div class="creation-card__info" data-ref="info-video-mobile">
+                    <h4 class="creation-card__title" data-ref="title-video-mobile">Video para dispositivos móviles</h4>
+                    <p class="creation-card__meta" data-ref="meta-video-mobile">1080 × 1920 px • Móviles y pantallas verticales</p>
                   </div>
                 </button>
 
-                <button type="button" class="creation-card" data-ref="card-video-1-1" data-type="video" data-w="1080" data-h="1080" data-format="1_1">
-                  <div class="creation-card__thumbnail" data-ref="thumb-video-1-1">
-                    <div class="creation-card__svg-wrapper" data-ref="svg-video-1-1">
+                <button type="button" class="creation-card" data-ref="card-video-tiktok" data-type="video" data-preset-id="tiktok" data-w="1080" data-h="1920" data-format="9_16">
+                  <div class="creation-card__thumbnail" data-ref="thumb-video-tiktok">
+                    <div class="creation-card__svg-wrapper" data-ref="svg-video-tiktok">
+                      ${getVideoSvg('9_16')}
+                    </div>
+                    <span class="creation-card__badge creation-card__badge--popular" data-ref="badge-video-tiktok">Popular</span>
+                  </div>
+                  <div class="creation-card__info" data-ref="info-video-tiktok">
+                    <h4 class="creation-card__title" data-ref="title-video-tiktok">Video para TikTok</h4>
+                    <p class="creation-card__meta" data-ref="meta-video-tiktok">1080 × 1920 px • TikTok Feed</p>
+                  </div>
+                </button>
+
+                <button type="button" class="creation-card" data-ref="card-video-youtube-shorts" data-type="video" data-preset-id="youtube-shorts" data-w="1080" data-h="1920" data-format="9_16">
+                  <div class="creation-card__thumbnail" data-ref="thumb-video-youtube-shorts">
+                    <div class="creation-card__svg-wrapper" data-ref="svg-video-youtube-shorts">
+                      ${getVideoSvg('9_16')}
+                    </div>
+                    <span class="creation-card__badge" data-ref="badge-video-youtube-shorts">Shorts</span>
+                  </div>
+                  <div class="creation-card__info" data-ref="info-video-youtube-shorts">
+                    <h4 class="creation-card__title" data-ref="title-video-youtube-shorts">Corto para YouTube</h4>
+                    <p class="creation-card__meta" data-ref="meta-video-youtube-shorts">1080 × 1920 px • YouTube Shorts</p>
+                  </div>
+                </button>
+
+                <button type="button" class="creation-card" data-ref="card-video-facebook" data-type="video" data-preset-id="facebook" data-w="1080" data-h="1080" data-format="1_1">
+                  <div class="creation-card__thumbnail" data-ref="thumb-video-facebook">
+                    <div class="creation-card__svg-wrapper" data-ref="svg-video-facebook">
                       ${getVideoSvg('1_1')}
                     </div>
-                    <span class="creation-card__badge" data-ref="badge-video-1-1">1:1 Cuadrado</span>
+                    <span class="creation-card__badge" data-ref="badge-video-facebook">1:1 HD</span>
                   </div>
-                  <div class="creation-card__info" data-ref="info-video-1-1">
-                    <h4 class="creation-card__title" data-ref="title-video-1-1">Video 1:1 (Cuadrado)</h4>
-                    <p class="creation-card__meta" data-ref="meta-video-1-1">1080 × 1080 px • Posts e Instagram</p>
+                  <div class="creation-card__info" data-ref="info-video-facebook">
+                    <h4 class="creation-card__title" data-ref="title-video-facebook">Video para Facebook</h4>
+                    <p class="creation-card__meta" data-ref="meta-video-facebook">1080 × 1080 px • Feed y publicaciones</p>
+                  </div>
+                </button>
+
+                <button type="button" class="creation-card" data-ref="card-video-instagram-reels" data-type="video" data-preset-id="instagram-reels" data-w="1080" data-h="1920" data-format="9_16">
+                  <div class="creation-card__thumbnail" data-ref="thumb-video-instagram-reels">
+                    <div class="creation-card__svg-wrapper" data-ref="svg-video-instagram-reels">
+                      ${getVideoSvg('9_16')}
+                    </div>
+                    <span class="creation-card__badge" data-ref="badge-video-instagram-reels">Reels</span>
+                  </div>
+                  <div class="creation-card__info" data-ref="info-video-instagram-reels">
+                    <h4 class="creation-card__title" data-ref="title-video-instagram-reels">Reel de Instagram</h4>
+                    <p class="creation-card__meta" data-ref="meta-video-instagram-reels">1080 × 1920 px • Instagram Reels</p>
+                  </div>
+                </button>
+
+                <button type="button" class="creation-card" data-ref="card-video-square-800" data-type="video" data-preset-id="square-800" data-w="800" data-h="800" data-format="1_1">
+                  <div class="creation-card__thumbnail" data-ref="thumb-video-square-800">
+                    <div class="creation-card__svg-wrapper" data-ref="svg-video-square-800">
+                      ${getVideoSvg('1_1')}
+                    </div>
+                    <span class="creation-card__badge" data-ref="badge-video-square-800">800×800 px</span>
+                  </div>
+                  <div class="creation-card__info" data-ref="info-video-square-800">
+                    <h4 class="creation-card__title" data-ref="title-video-square-800">Video cuadrado</h4>
+                    <p class="creation-card__meta" data-ref="meta-video-square-800">800 × 800 px • Formato ligero</p>
                   </div>
                 </button>
               </div>
@@ -616,11 +681,13 @@ export function openCreateCanvasModal(options?: OpenCreateCanvasModalOptions): v
     card.addEventListener('click', () => {
       const w = parseInt(card.getAttribute('data-w') || '1920', 10);
       const h = parseInt(card.getAttribute('data-h') || '1080', 10);
-      const format = card.getAttribute('data-format') || '16_9';
-      const name = format === '9_16' ? 'Video Vertical sin título' : (format === '1_1' ? 'Video Cuadrado sin título' : 'Video sin título');
+      const presetId = card.getAttribute('data-preset-id') || undefined;
+      const title = card.querySelector('.creation-card__title')?.textContent?.trim() || 'Video';
+      const name = `${title} sin título`;
       void handleInstantCreation({
         canvasType: 'video',
         height: h,
+        initialProject: presetId ? { height: h, presetId, width: w } : undefined,
         name,
         width: w,
       }, card);
