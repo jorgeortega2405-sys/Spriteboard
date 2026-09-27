@@ -30,6 +30,7 @@ import { generateShadingRamp, getCollaboratorColor, rgbToHex } from '../../utils
 import { setupDropdown, withButtonLoading } from '../../utils/dom.util.js';
 import { getGuestIdentity } from '../../utils/guest.util.js';
 import { PixelShape } from '../../utils/pixel-shapes.util.js';
+import { applyAvatarTier } from '../../utils/tier.util.js';
 import { validateAndSanitizeFile } from '../../utils/validators.util.js';
 import { DocFontPickerComponent, FontSelectEvent } from '../doc/doc-font-picker.component.js';
 import { ensureGoogleFontLoaded } from '../doc/doc-fonts.config.js';
@@ -1052,23 +1053,35 @@ export class BoardController {
       avatarUrl: string;
       isOwner: boolean;
       tier: string;
+      tierColor?: string;
       tooltip: string;
       username: string;
     }> = [];
 
-    const ownerData = this.ownerInfo || (this.isOwner && currentUser
+    const isCurrentUserOwner = Boolean(this.isOwner && currentUser);
+    const ownerData = isCurrentUserOwner
       ? {
-          avatarUrl: currentUser.avatar_url || null,
-          id: currentUser.id,
-          subscriptionTier: currentUser.subscription_tier || 'free',
-          username: currentUser.username,
+          avatarUrl: currentUser?.avatar_url || this.ownerInfo?.avatarUrl || null,
+          id: currentUser?.id ?? null,
+          subscriptionTier: currentUser?.subscription_tier || this.ownerInfo?.subscriptionTier || 'free',
+          subscriptionTierColor: currentUser?.subscription_tier_color,
+          username: currentUser?.username || this.ownerInfo?.username || 'Propietario',
+        }
+      : this.ownerInfo
+      ? {
+          avatarUrl: this.ownerInfo.avatarUrl || null,
+          id: this.ownerInfo.id || null,
+          subscriptionTier: this.ownerInfo.subscriptionTier || 'free',
+          subscriptionTierColor: undefined,
+          username: this.ownerInfo.username || 'Propietario',
         }
       : {
           avatarUrl: null,
           id: null,
           subscriptionTier: 'free',
+          subscriptionTierColor: undefined,
           username: 'Propietario',
-        });
+        };
 
     const isOwnerOnline = this.isOwner || Array.from(this.collaborationManager.collaborators.values()).some(
       (c) => (c.userId && ownerData.id && c.userId === ownerData.id) || (c.username && c.username === ownerData.username)
@@ -1083,6 +1096,7 @@ export class BoardController {
       avatarUrl: ownerAvatar,
       isOwner: true,
       tier: ownerTier,
+      tierColor: ownerData.subscriptionTierColor,
       tooltip: `${ownerData.username}${ownerRoleText}`,
       username: ownerData.username,
     });
@@ -1095,6 +1109,7 @@ export class BoardController {
         avatarUrl: myAvatar,
         isOwner: false,
         tier: myTier,
+        tierColor: currentUser.subscription_tier_color,
         tooltip: `${currentUser.username} (${myRole} • En línea • Tú)`,
         username: currentUser.username,
       });
@@ -1114,6 +1129,7 @@ export class BoardController {
         avatarUrl: avatar,
         isOwner: collab.role === 'owner',
         tier: collab.subscriptionTier || 'free',
+        tierColor: undefined,
         tooltip: `${collab.username} (${roleText} • En línea)`,
         username: collab.username,
       });
@@ -1124,11 +1140,13 @@ export class BoardController {
       avatarBtn.className = 'design-collaborator-avatar';
       avatarBtn.setAttribute('data-tooltip', item.tooltip);
       avatarBtn.setAttribute('aria-label', item.tooltip);
+      applyAvatarTier(avatarBtn, item.tier, item.tierColor);
 
       const img = document.createElement('img');
       img.src = item.avatarUrl;
       img.alt = item.username;
       img.className = 'avatar-preview-img';
+      img.referrerPolicy = 'no-referrer';
       img.onerror = () => {
         img.remove();
         const fallback = document.createElement('div');

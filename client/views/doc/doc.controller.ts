@@ -18,8 +18,10 @@ import { closeWebSocket } from '../../services/websocket.service.js';
 import { CanvasItem } from '../../types/canvas.types.js';
 import { ViewController } from '../../types/common.types.js';
 import { MindMapProject } from '../../types/mindmap.types.js';
+import { getCollaboratorColor } from '../../utils/color.util.js';
 import { initCarouselScroll, setupDropdown, withButtonLoading } from '../../utils/dom.util.js';
 import { getGuestIdentity } from '../../utils/guest.util.js';
+import { applyAvatarTier } from '../../utils/tier.util.js';
 import { validateAndSanitizeFile } from '../../utils/validators.util.js';
 import { DocCollaborationManager, DocCollaboratorState } from './doc-collaboration.manager.js';
 import { exportDocHtml, exportDocJson, exportDocMarkdown, exportDocPdf, exportDocTxt, exportDocWord, generateDocThumbnail } from './doc-export.service.js';
@@ -100,6 +102,7 @@ export class DocController implements ViewController {
   private lastWheelSwitchTime = 0;
   private lineSpacingDropdownController: { close: () => void; destroy: () => void } | null = null;
   private moreFormattingDropdownController: { close: () => void; destroy: () => void } | null = null;
+  private ownerInfo: { avatarUrl: string | null; id: number | null; subscriptionTier: string; username: string } | null = null;
   private pageViewMode: CanvasPageViewMode = 'scroll';
   private modalsManager!: DocModalsManager;
   private paginationManager: DocPaginationManager = new DocPaginationManager();
@@ -283,6 +286,23 @@ export class DocController implements ViewController {
     this.accessLevel = canvasRecord.access_level || 'private';
     this.publicRole = canvasRecord.public_role || 'editor';
 
+    const rawOwner = (canvasRecord as any).owner;
+    if (rawOwner) {
+      this.ownerInfo = {
+        avatarUrl: rawOwner.avatar_url || null,
+        id: rawOwner.id || null,
+        subscriptionTier: rawOwner.subscription_tier || 'free',
+        username: rawOwner.username || 'Propietario',
+      };
+    } else if (canvasRecord.owner_name || canvasRecord.user_id) {
+      this.ownerInfo = {
+        avatarUrl: canvasRecord.owner_avatar || null,
+        id: canvasRecord.user_id || null,
+        subscriptionTier: (canvasRecord.owner_tier as any) || 'free',
+        username: canvasRecord.owner_name || 'Propietario',
+      };
+    }
+
     const rawData = canvasRecord.data;
     if (rawData) {
       try {
@@ -417,31 +437,119 @@ export class DocController implements ViewController {
 
   private renderCollaboratorsBar(): void {
     if (!this.collaboratorsBarEl || !this.collaboratorsListEl) return;
+    this.collaboratorsBarEl.classList.remove('is-hidden');
     this.collaboratorsListEl.innerHTML = '';
 
-    const count = this.collaborationManager.collaborators.size;
-    if (count === 0) {
-      this.collaboratorsBarEl.classList.add('is-hidden');
-      return;
+    const stackItems: Array<{
+      avatarUrl: string;
+      isOwner: boolean;
+      tier: string;
+      tierColor?: string;
+      tooltip: string;
+      username: string;
+    }> = [];
+
+    const isCurrentUserOwner = Boolean(this.isOwner && currentUser);
+    const ownerData = isCurrentUserOwner
+      ? {
+          avatarUrl: currentUser?.avatar_url || this.ownerInfo?.avatarUrl || null,
+          id: currentUser?.id ?? null,
+          subscriptionTier: currentUser?.subscription_tier || this.ownerInfo?.subscriptionTier || 'free',
+          subscriptionTierColor: currentUser?.subscription_tier_color,
+          username: currentUser?.username || this.ownerInfo?.username || 'Propietario',
+        }
+      : this.ownerInfo
+      ? {
+          avatarUrl: this.ownerInfo.avatarUrl || null,
+          id: this.ownerInfo.id || null,
+          subscriptionTier: this.ownerInfo.subscriptionTier || 'free',
+          subscriptionTierColor: undefined,
+          username: this.ownerInfo.username || 'Propietario',
+        }
+      : {
+          avatarUrl: null,
+          id: null,
+          subscriptionTier: 'free',
+          subscriptionTierColor: undefined,
+          username: 'Propietario',
+        };
+
+    const isOwnerOnline = this.isOwner || Array.from(this.collaborationManager.collaborators.values()).some(
+      (c) => (c.userId && ownerData.id && c.userId === ownerData.id) || (c.username && c.username === ownerData.username)
+    );
+
+    const ownerAvatar = ownerData.avatarUrl || API_ROUTES.avatar(ownerData.username);
+    const ownerTier = ownerData.subscriptionTier || 'free';
+    const ownerStatusText = isOwnerOnline ? ' • En línea' : '';
+    const ownerRoleText = this.isOwner ? ' (Dueño • Tú)' : ` (Dueño${ownerStatusText})`;
+
+    stackItems.push({
+      avatarUrl: ownerAvatar,
+      isOwner: true,
+      tier: ownerTier,
+      tierColor: ownerData.subscriptionTierColor,
+      tooltip: `${ownerData.username}${ownerRoleText}`,
+      username: ownerData.username,
+    });
+
+    if (!this.isOwner && currentUser) {
+      const myAvatar = currentUser.avatar_url || API_ROUTES.avatar(currentUser.username);
+      const myTier = currentUser.subscription_tier || 'free';
+      const myRole = this.role === 'viewer' ? 'Lector' : 'Editor';
+      stackItems.push({
+        avatarUrl: myAvatar,
+        isOwner: false,
+        tier: myTier,
+        tierColor: currentUser.subscription_tier_color,
+        tooltip: `${currentUser.username} (${myRole} • En línea • Tú)`,
+        username: currentUser.username,
+      });
     }
 
-    this.collaboratorsBarEl.classList.remove('is-hidden');
-    this.collaborationManager.collaborators.forEach((collab) => {
-      const chip = document.createElement('div');
-      chip.className = 'design-collaborator-chip';
-      chip.setAttribute('data-ref', `collaborator-${collab.connId}`);
-      chip.setAttribute('data-tooltip', collab.username || 'Invitado');
-      chip.setAttribute('aria-label', collab.username || 'Invitado');
-      chip.style.borderColor = collab.color;
+    const seenUserIds = new Set<number>();
+    if (currentUser?.id) seenUserIds.add(currentUser.id);
+    if (ownerData.id) seenUserIds.add(ownerData.id);
 
-      if (collab.avatarUrl) {
-        chip.style.backgroundImage = `url(${collab.avatarUrl})`;
-      } else {
-        chip.textContent = (collab.username || 'U').slice(0, 2).toUpperCase();
-        chip.style.backgroundColor = collab.color;
-      }
-      this.collaboratorsListEl?.appendChild(chip);
+    this.collaborationManager.collaborators.forEach((collab) => {
+      if (collab.userId && seenUserIds.has(collab.userId)) return;
+      if (collab.userId) seenUserIds.add(collab.userId);
+
+      const avatar = collab.avatarUrl || API_ROUTES.avatar(collab.username);
+      const roleText = collab.role === 'owner' ? 'Dueño' : collab.role === 'viewer' ? 'Lector' : 'Editor';
+      stackItems.push({
+        avatarUrl: avatar,
+        isOwner: collab.role === 'owner',
+        tier: collab.subscriptionTier || 'free',
+        tierColor: undefined,
+        tooltip: `${collab.username} (${roleText} • En línea)`,
+        username: collab.username,
+      });
     });
+
+    for (const item of stackItems) {
+      const avatarBtn = document.createElement('div');
+      avatarBtn.className = 'design-collaborator-avatar';
+      avatarBtn.setAttribute('data-tooltip', item.tooltip);
+      avatarBtn.setAttribute('aria-label', item.tooltip);
+      applyAvatarTier(avatarBtn, item.tier, item.tierColor);
+
+      const img = document.createElement('img');
+      img.src = item.avatarUrl;
+      img.alt = item.username;
+      img.className = 'avatar-preview-img';
+      img.referrerPolicy = 'no-referrer';
+      img.onerror = () => {
+        img.remove();
+        const fallback = document.createElement('div');
+        fallback.className = 'design-collaborator-avatar__fallback';
+        fallback.style.backgroundColor = getCollaboratorColor(item.username);
+        fallback.textContent = (item.username[0] || '?').toUpperCase();
+        avatarBtn.appendChild(fallback);
+      };
+
+      avatarBtn.appendChild(img);
+      this.collaboratorsListEl.appendChild(avatarBtn);
+    }
   }
 
   private renderDocument(): void {
