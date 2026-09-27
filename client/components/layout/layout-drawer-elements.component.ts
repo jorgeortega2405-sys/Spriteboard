@@ -140,7 +140,7 @@ const SHAPE_SECTIONS: Array<{ key: string; label: string; prefixes: string[] }> 
   },
 ];
 
-function handleApplyDiagramComponent(item: DiagramComponentItem, canvasType: 'board' | 'doc' | 'presentation'): void {
+function handleApplyDiagramComponent(item: DiagramComponentItem, canvasType: 'board' | 'doc' | 'presentation' | 'video'): void {
   const controller = getActiveCanvasController();
 
   addRecentElement({
@@ -155,6 +155,19 @@ function handleApplyDiagramComponent(item: DiagramComponentItem, canvasType: 'bo
     textColor: item.textColor,
     type: 'diagram',
   });
+
+  if (canvasType === 'video') {
+    if (!controller) {
+      showToast('No se encontró el controlador del video', 'warning');
+      return;
+    }
+    controller.insertDiagramComponent?.(item);
+    showToast(`«${item.name}» añadido al video`, 'success');
+    if (window.innerWidth <= 768) {
+      toggleDrawer(false);
+    }
+    return;
+  }
 
   if (canvasType === 'doc') {
     if (!controller) {
@@ -206,7 +219,7 @@ function handleApplyDiagramComponent(item: DiagramComponentItem, canvasType: 'bo
   }
 }
 
-function handleApplyCanvasElement(shape: PixelShape, canvasType: 'board' | 'doc' | 'presentation'): void {
+function handleApplyCanvasElement(shape: PixelShape, canvasType: 'board' | 'doc' | 'presentation' | 'video'): void {
   const controller = getActiveCanvasController();
 
   addRecentElement({
@@ -217,6 +230,19 @@ function handleApplyCanvasElement(shape: PixelShape, canvasType: 'board' | 'doc'
     pathD: shape.pathD,
     type: shape.type,
   });
+
+  if (canvasType === 'video') {
+    if (!controller) {
+      showToast('No se encontró el controlador del video', 'warning');
+      return;
+    }
+    controller.insertShapeOrSticker?.(shape);
+    showToast(`«${shape.name}» añadido al video`, 'success');
+    if (window.innerWidth <= 768) {
+      toggleDrawer(false);
+    }
+    return;
+  }
 
   if (canvasType === 'doc') {
     if (!controller) {
@@ -251,7 +277,7 @@ function handleApplyCanvasElement(shape: PixelShape, canvasType: 'board' | 'doc'
   }
 }
 
-function handleApplyStickyPreset(item: { color: string; id: string; name: string; stroke: string; text?: string; textColor?: string }, canvasType: 'board' | 'doc' | 'presentation'): void {
+function handleApplyStickyPreset(item: { color: string; id: string; name: string; stroke: string; text?: string; textColor?: string }, canvasType: 'board' | 'doc' | 'presentation' | 'video'): void {
   const controller = getActiveCanvasController();
   const noteText = item.text || 'Nota';
 
@@ -264,7 +290,10 @@ function handleApplyStickyPreset(item: { color: string; id: string; name: string
     type: 'sticky',
   });
 
-  if ((canvasType === 'board' || canvasType === 'presentation') && controller) {
+  if (canvasType === 'video' && controller) {
+    controller.insertStickyPreset?.(item.color, noteText);
+    showToast(`Nota «${item.name}» añadida al video`, 'success');
+  } else if ((canvasType === 'board' || canvasType === 'presentation') && controller) {
     controller.insertStickyNote?.(item.color, noteText);
     showToast(`Nota «${item.name}» añadida al lienzo`, 'success');
   } else if (canvasType === 'doc' && controller) {
@@ -276,7 +305,7 @@ function handleApplyStickyPreset(item: { color: string; id: string; name: string
   }
 }
 
-function handleApplyRecentElement(item: RecentElementItem, canvasType: 'board' | 'doc' | 'presentation'): void {
+function handleApplyRecentElement(item: RecentElementItem, canvasType: 'board' | 'doc' | 'presentation' | 'video'): void {
   if (item.type === 'sticky') {
     handleApplyStickyPreset({
       color: item.fillColor || '#fef08a',
@@ -326,9 +355,12 @@ function handleApplyRecentElement(item: RecentElementItem, canvasType: 'board' |
   }
 }
 
-export function handleApplyChart(chartType: ChartType, canvasType: 'board' | 'doc' | 'presentation'): void {
+export function handleApplyChart(chartType: ChartType, canvasType: 'board' | 'doc' | 'presentation' | 'video'): void {
   const controller = getActiveCanvasController();
-  if ((canvasType === 'board' || canvasType === 'presentation') && controller) {
+  if (canvasType === 'video' && controller) {
+    controller.insertChart?.(chartType);
+    showToast('Gráfica añadida al video', 'success');
+  } else if ((canvasType === 'board' || canvasType === 'presentation') && controller) {
     controller.insertChart?.(chartType);
     showToast('Gráfica añadida al lienzo', 'success');
   } else if (canvasType === 'doc' && controller) {
@@ -339,9 +371,12 @@ export function handleApplyChart(chartType: ChartType, canvasType: 'board' | 'do
   }
 }
 
-function handleApplyMockup(tpl: MockupTemplate, canvasType: 'board' | 'doc' | 'presentation'): void {
+function handleApplyMockup(tpl: MockupTemplate, canvasType: 'board' | 'doc' | 'presentation' | 'video'): void {
   const controller = getActiveCanvasController();
-  if ((canvasType === 'board' || canvasType === 'presentation') && controller) {
+  if (canvasType === 'video' && controller) {
+    controller.insertMockup?.(tpl);
+    showToast(`Mockup «${tpl.name}» añadido al video`, 'success');
+  } else if ((canvasType === 'board' || canvasType === 'presentation') && controller) {
     controller.insertMockup?.(tpl);
     showToast(`Mockup «${tpl.name}» añadido al lienzo`, 'success');
   } else if (canvasType === 'doc' && controller) {
@@ -352,9 +387,12 @@ function handleApplyMockup(tpl: MockupTemplate, canvasType: 'board' | 'doc' | 'p
   }
 }
 
-function handleApply3DShape(shapeId: Shape3DType, canvasType: 'board' | 'doc' | 'presentation'): void {
+function handleApply3DShape(shapeId: Shape3DType, canvasType: 'board' | 'doc' | 'presentation' | 'video'): void {
   const controller = getActiveCanvasController();
-  if ((canvasType === 'board' || canvasType === 'presentation') && controller) {
+  if (canvasType === 'video' && controller) {
+    controller.insert3DShape?.(shapeId);
+    showToast('Figura 3D añadida al video', 'success');
+  } else if ((canvasType === 'board' || canvasType === 'presentation') && controller) {
     controller.insert3DShape?.(shapeId);
     showToast('Figura 3D añadida al lienzo', 'success');
   } else if (canvasType === 'doc' && controller) {
@@ -365,9 +403,12 @@ function handleApply3DShape(shapeId: Shape3DType, canvasType: 'board' | 'doc' | 
   }
 }
 
-function handleApplyTable(rows: number, cols: number, canvasType: 'board' | 'doc' | 'presentation'): void {
+function handleApplyTable(rows: number, cols: number, canvasType: 'board' | 'doc' | 'presentation' | 'video'): void {
   const controller = getActiveCanvasController();
-  if ((canvasType === 'board' || canvasType === 'presentation') && controller) {
+  if (canvasType === 'video' && controller) {
+    controller.insertTable?.(rows, cols);
+    showToast(`Tabla de ${rows}×${cols} añadida al video`, 'success');
+  } else if ((canvasType === 'board' || canvasType === 'presentation') && controller) {
     controller.insertTable?.(rows, cols);
     showToast(`Tabla de ${rows}×${cols} añadida al lienzo`, 'success');
   } else if (canvasType === 'doc' && controller) {

@@ -93,6 +93,11 @@
   border-right: 1px solid var(--border-color);
   background-color: var(--bg-surface);
   overflow: hidden;
+  transition: width var(--sl-transition-normal, 0.2s ease);
+}
+
+.video-sidebar.is-collapsed {
+  display: none;
 }
 
 .video-sidebar-panel {

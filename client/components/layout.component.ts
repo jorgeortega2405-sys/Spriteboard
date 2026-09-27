@@ -915,10 +915,11 @@ function closeDynamicDrawer(): void {
   }
 }
 
-export function getActiveCanvasType(): 'board' | 'doc' | 'presentation' {
+export function getActiveCanvasType(): 'board' | 'doc' | 'presentation' | 'video' {
   const content = document.querySelector<HTMLElement>('[data-ref="app"] .layout-content, .layout-content');
-  const viewEl = content?.querySelector<HTMLElement>('[data-ref="board-view"], [data-ref="doc-view"], [data-ref="presentation-view"], [data-ref="design-view"], .view-wrapper');
+  const viewEl = content?.querySelector<HTMLElement>('[data-ref="board-view"], [data-ref="doc-view"], [data-ref="presentation-view"], [data-ref="design-view"], [data-ref="video-wrapper"], .video-editor-wrapper, .view-wrapper');
   const ref = viewEl?.getAttribute('data-ref') || content?.getAttribute('data-ref');
+  if (ref === 'video-wrapper' || viewEl?.classList.contains('video-editor-wrapper') || content?.querySelector('[data-ref="video-wrapper"]') || content?.querySelector('.video-editor-wrapper')) return 'video';
   if (ref === 'doc-view' || window.location.pathname.startsWith('/doc/')) return 'doc';
   if (ref === 'presentation-view' || window.location.pathname.startsWith('/presentation/')) return 'presentation';
   return 'board';
@@ -932,13 +933,21 @@ export function getActiveCanvasController(): any {
     const child = content.children[i] as any;
     if (child?.__controller) return child.__controller;
   }
-  const viewEl = content.querySelector<HTMLElement>('[data-ref="board-view"], [data-ref="doc-view"], [data-ref="presentation-view"], [data-ref="design-view"], .view-wrapper');
+  const viewEl = content.querySelector<HTMLElement>('[data-ref="board-view"], [data-ref="doc-view"], [data-ref="presentation-view"], [data-ref="design-view"], [data-ref="video-wrapper"], .video-editor-wrapper, .view-wrapper');
   if (viewEl && (viewEl as any).__controller) return (viewEl as any).__controller;
   return null;
 }
 
-function handleApplyCanvasTemplate(preset: PresetItem, canvasType: 'board' | 'doc' | 'presentation'): void {
+function handleApplyCanvasTemplate(preset: PresetItem, canvasType: 'board' | 'doc' | 'presentation' | 'video'): void {
   const controller = getActiveCanvasController();
+
+  if (canvasType === 'video') {
+    showToast('Las plantillas de video se configuran al crear un nuevo video', 'info');
+    if (window.innerWidth <= 768) {
+      toggleDrawer(false);
+    }
+    return;
+  }
 
   if (canvasType === 'presentation') {
     if (!controller) {
@@ -1127,8 +1136,46 @@ function formatBytes(bytes: number): string {
   return `${formatted} ${units[i]}`;
 }
 
-function handleApplyCanvasUpload(item: UserUploadItem, canvasType: 'board' | 'doc' | 'presentation'): void {
+function handleApplyCanvasUpload(item: UserUploadItem, canvasType: 'board' | 'doc' | 'presentation' | 'video'): void {
   const controller = getActiveCanvasController();
+
+  if (canvasType === 'video') {
+    if (!controller) {
+      showToast('No se encontró el controlador del video', 'warning');
+      return;
+    }
+
+    if (item.media_type === 'video') {
+      controller.insertVideo?.({
+        duration: item.duration_seconds || 5,
+        height: item.height || undefined,
+        thumbnailUrl: item.thumbnail_url || '',
+        title: item.original_filename,
+        url: item.url,
+        width: item.width || undefined,
+      });
+      showToast(`Video «${item.original_filename}» añadido al proyecto`, 'success');
+    } else if (item.mime_type && item.mime_type.startsWith('audio/')) {
+      controller.insertAudio?.({
+        duration: item.duration_seconds || 10,
+        title: item.original_filename,
+        url: item.url,
+      });
+      showToast(`Audio «${item.original_filename}» añadido a la pista de audio`, 'success');
+    } else {
+      controller.insertImage?.({
+        height: item.height || undefined,
+        title: item.original_filename,
+        url: item.url,
+        width: item.width || undefined,
+      });
+      showToast(`Imagen «${item.original_filename}» añadida al video`, 'success');
+    }
+    if (window.innerWidth <= 768) {
+      toggleDrawer(false);
+    }
+    return;
+  }
 
   if (item.media_type === 'video') {
     if (canvasType === 'doc') {
@@ -1486,7 +1533,7 @@ function renderUploadsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement
 }
 
 // Apps drawer extracted to layout-drawer-apps.component.ts
-function handleApplyTextPreset(type: 'heading' | 'subheading' | 'body', canvasType: 'board' | 'doc' | 'presentation'): void {
+function handleApplyTextPreset(type: 'heading' | 'subheading' | 'body', canvasType: 'board' | 'doc' | 'presentation' | 'video'): void {
   const controller = getActiveCanvasController();
   if (!controller) {
     showToast('No se encontró el controlador del lienzo activo', 'warning');
@@ -3229,7 +3276,7 @@ function renderDocPageToDataUrl(page: DocPage, title = 'Documento'): Promise<str
 function openDocPageSelectionModal(
   canvas: CanvasItem,
   docProject: DocProject,
-  targetCanvasType: 'board' | 'doc' | 'presentation'
+  targetCanvasType: 'board' | 'doc' | 'presentation' | 'video'
 ): void {
   const pages = docProject.pages || [];
   if (pages.length === 0) {
@@ -3311,13 +3358,19 @@ function openDocPageSelectionModal(
 
 async function handleApplyCanvasProject(
   canvas: CanvasItem,
-  targetCanvasType: 'board' | 'doc' | 'presentation',
+  targetCanvasType: 'board' | 'doc' | 'presentation' | 'video',
   pageIndex = -1,
   loadedProjectData?: any
 ): Promise<void> {
   const controller = getActiveCanvasController();
   if (!controller) {
     showToast('No se encontró el controlador del lienzo activo', 'warning');
+    return;
+  }
+
+  if (targetCanvasType === 'video') {
+    showToast('Los elementos de proyectos se agregan desde el panel de subidos o herramientas', 'info');
+    if (window.innerWidth <= 768) toggleDrawer(false);
     return;
   }
 

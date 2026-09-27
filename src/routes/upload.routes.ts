@@ -1,11 +1,27 @@
-import { getObject } from '../services/s3.service.js';
 import { Request, Response, Router } from 'express';
 import fs from 'fs';
 import path from 'path';
+import { getObject } from '../services/s3.service.js';
 
 const router = Router();
 
+function setMediaCorsHeaders(res: Response): void {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Range, If-Range, If-None-Match, Cache-Control, Accept');
+  res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Content-Length, Accept-Ranges, ETag');
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+}
+
+router.options('/uploads/*', (_req: Request, res: Response): void => {
+  setMediaCorsHeaders(res);
+  res.setHeader('Access-Control-Max-Age', '86400');
+  res.status(204).end();
+});
+
 router.get('/uploads/*', async (req: Request, res: Response): Promise<void> => {
+  setMediaCorsHeaders(res);
+
   const rawSubpath = req.params[0] || '';
   const uploadsDir = path.resolve(process.cwd(), 'public', 'uploads');
   const safePath = path.resolve(uploadsDir, rawSubpath);
@@ -28,12 +44,14 @@ router.get('/uploads/*', async (req: Request, res: Response): Promise<void> => {
 
       if (s3Obj.contentType) {
         res.setHeader('Content-Type', s3Obj.contentType);
+        if (s3Obj.contentType.includes('image/svg+xml')) {
+          res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox");
+        }
       }
       if (s3Obj.etag) {
         res.setHeader('ETag', s3Obj.etag);
       }
       res.setHeader('X-Content-Type-Options', 'nosniff');
-      res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'");
       res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
       res.setHeader('Accept-Ranges', 'bytes');
 
@@ -65,9 +83,12 @@ router.get('/uploads/*', async (req: Request, res: Response): Promise<void> => {
   } catch {}
 
   if (fs.existsSync(safePath) && fs.statSync(safePath).isFile()) {
+    if (safePath.endsWith('.svg')) {
+      res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox");
+    }
     res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'");
     res.setHeader('Accept-Ranges', 'bytes');
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
     res.sendFile(safePath, { acceptRanges: true });
     return;
   }

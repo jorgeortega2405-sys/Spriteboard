@@ -1,9 +1,9 @@
-import { logger } from './logger.service.js';
-import { spawn } from 'child_process';
 import crypto from 'crypto';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import { spawn } from 'child_process';
+import { logger } from './logger.service.js';
 
 export interface RenderJob {
   createdAt: number;
@@ -53,12 +53,46 @@ export function getRenderJob(jobId: string): RenderJob | undefined {
   return renderJobs.get(jobId);
 }
 
-function resolveLocalPath(assetUrl?: string): string | null {
+function resolveLocalPath(assetUrl?: string, tempFiles: string[] = []): string | null {
   if (!assetUrl) return null;
+
+  if (assetUrl.startsWith('data:image/')) {
+    try {
+      const match = assetUrl.match(/^data:image\/([a-zA-Z0-9+.-]+);(base64|utf8)?,?(.*)$/s);
+      if (match) {
+        const rawType = match[1];
+        const encoding = match[2];
+        const dataPart = match[3];
+        const isSvg = rawType.includes('svg');
+        const ext = isSvg ? 'svg' : (rawType.includes('png') ? 'png' : 'jpg');
+        const tmpFile = path.join(os.tmpdir(), `spriteboard_overlay_${Date.now()}_${crypto.randomBytes(4).toString('hex')}.${ext}`);
+
+        if (encoding === 'base64') {
+          fs.writeFileSync(tmpFile, Buffer.from(dataPart, 'base64'));
+        } else {
+          fs.writeFileSync(tmpFile, decodeURIComponent(dataPart), 'utf8');
+        }
+        tempFiles.push(tmpFile);
+        return tmpFile;
+      }
+    } catch (err: any) {
+      logger.app.error('Error al decodificar data URL en exportación de video', { error: err?.message });
+      return null;
+    }
+  }
+
   const cleanUrl = assetUrl.split('?')[0];
 
   if (cleanUrl.includes('/uploads/')) {
     const relativePart = cleanUrl.substring(cleanUrl.indexOf('/uploads/'));
+    const fullPath = path.resolve(process.cwd(), 'public', relativePart.replace(/^\//, ''));
+    if (fs.existsSync(fullPath)) {
+      return fullPath;
+    }
+  }
+
+  if (cleanUrl.includes('/assets/')) {
+    const relativePart = cleanUrl.substring(cleanUrl.indexOf('/assets/'));
     const fullPath = path.resolve(process.cwd(), 'public', relativePart.replace(/^\//, ''));
     if (fs.existsSync(fullPath)) {
       return fullPath;
@@ -118,6 +152,15 @@ async function processRenderJob(
   const duration = Math.max(1, Math.min(3600, project.duration || 30));
   const bgColor = (project.background?.color || '#000000').replace('#', '0x');
 
+  const tempFilesToClean: string[] = [];
+  const cleanupTemps = () => {
+    tempFilesToClean.forEach((f) => {
+      try {
+        if (fs.existsSync(f)) fs.unlinkSync(f);
+      } catch {}
+    });
+  };
+
   const videoClips: any[] = [];
   const audioClips: any[] = [];
   const textClips: any[] = [];
@@ -127,7 +170,7 @@ async function processRenderJob(
       if (track.hidden) continue;
       if (Array.isArray(track.clips)) {
         for (const clip of track.clips) {
-          const localPath = resolveLocalPath(clip.assetUrl);
+          const localPath = resolveLocalPath(clip.assetUrl, tempFilesToClean);
           if (clip.mediaType === 'video' || clip.mediaType === 'image') {
             if (localPath) {
               videoClips.push({ ...clip, isTrackMuted: track.muted, localPath });
@@ -177,7 +220,20 @@ async function processRenderJob(
       vFilterParts.push(`trim=duration=${clipDur},setpts=PTS-STARTPTS`);
     }
 
-    vFilterParts.push(`scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:color=${bgColor},setsar=1`);
+    const hasCustomTransform = Boolean(clip.transform?.width && clip.transform?.height && clip.transform?.x !== undefined && clip.transform?.y !== undefined);
+    const overlayX = hasCustomTransform ? Math.max(0, Math.round(clip.transform.x)) : 0;
+    const overlayY = hasCustomTransform ? Math.max(0, Math.round(clip.transform.y)) : 0;
+    const overlayW = hasCustomTransform ? Math.max(16, Math.round(clip.transform.width)) : width;
+    const overlayH = hasCustomTransform ? Math.max(16, Math.round(clip.transform.height)) : height;
+
+    if (hasCustomTransform) {
+      vFilterParts.push(`scale=${overlayW}:${overlayH}:force_original_aspect_ratio=decrease,setsar=1`);
+      if (clip.transform?.opacity !== undefined && clip.transform.opacity < 1) {
+        vFilterParts.push(`format=rgba,colorchannelmixer=aa=${clip.transform.opacity}`);
+      }
+    } else {
+      vFilterParts.push(`scale=${width}:${height}:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:color=${bgColor},setsar=1`);
+    }
 
     if (clip.filters) {
       const f = clip.filters;
@@ -217,7 +273,7 @@ async function processRenderJob(
     const nextBase = `base${i + 1}`;
 
     filterComplex.push(`[${inIdx}:v]${vFilterParts.join(',')}[${vLabel}]`);
-    filterComplex.push(`[${currentBase}][${vLabel}]overlay=x=0:y=0:enable='between(t,${startTime},${endTime})'[${nextBase}]`);
+    filterComplex.push(`[${currentBase}][${vLabel}]overlay=x=${overlayX}:y=${overlayY}:enable='between(t,${startTime},${endTime})'[${nextBase}]`);
     currentBase = nextBase;
 
     if (!isImage && !clip.isTrackMuted && !clip.muted) {
@@ -372,5 +428,7 @@ async function processRenderJob(
       error: err?.message,
       jobId,
     });
+  } finally {
+    cleanupTemps();
   }
 }

@@ -5,14 +5,20 @@ import { VideoClip, VideoProject, VideoTrack } from './video.types.js';
 export interface VideoTimelineManagerOptions {
   container: HTMLElement;
   getProject: () => VideoProject;
+  onClipSelected?: (clipId: string | null) => void;
   onProjectChanged: () => void;
+  onScrubEnd?: () => void;
+  onScrubStart?: () => void;
   onSeek: (time: number) => void;
 }
 
 export class VideoTimelineManager {
   private _container: HTMLElement;
   private _getProject: () => VideoProject;
+  private _onClipSelected?: (clipId: string | null) => void;
   private _onProjectChanged: () => void;
+  private _onScrubEnd?: () => void;
+  private _onScrubStart?: () => void;
   private _onSeek: (time: number) => void;
 
   private _pixelsPerSecond = 50;
@@ -21,10 +27,22 @@ export class VideoTimelineManager {
   private _isSnappingEnabled = true;
   private _abortController: AbortController | null = null;
 
+  private logDebug(category: string, message: string, data?: unknown): void {
+    const tag = `[Spriteboard:Timeline:${category}]`;
+    if (data !== undefined) {
+      console.log(`%c${tag}%c ${message}`, 'color: #c084fc; font-weight: bold;', 'color: inherit;', data);
+    } else {
+      console.log(`%c${tag}%c ${message}`, 'color: #c084fc; font-weight: bold;', 'color: inherit;');
+    }
+  }
+
   constructor(options: VideoTimelineManagerOptions) {
     this._container = options.container;
     this._getProject = options.getProject;
+    this._onClipSelected = options.onClipSelected;
     this._onProjectChanged = options.onProjectChanged;
+    this._onScrubEnd = options.onScrubEnd;
+    this._onScrubStart = options.onScrubStart;
     this._onSeek = options.onSeek;
   }
 
@@ -495,42 +513,76 @@ export class VideoTimelineManager {
     const playheadHandle = this._container.querySelector<HTMLElement>('[data-ref="video-playhead-handle"]');
     const lanesArea = this._container.querySelector<HTMLElement>('[data-ref="video-timeline-lanes-container"]');
 
-    const handleSeek = (clientX: number) => {
+    let scrubRafId: number | null = null;
+    let pendingScrubTime: number | null = null;
+
+    const getTimeFromClientX = (clientX: number): number => {
       const scrollable = this._container.querySelector<HTMLElement>('[data-ref="video-timeline-tracks-area"]');
-      if (!scrollable) return;
+      if (!scrollable) return 0;
       const rect = scrollable.getBoundingClientRect();
       const scrollLeft = scrollable.scrollLeft || 0;
       const x = clientX - rect.left + scrollLeft;
-      const time = Math.max(0, x / this._pixelsPerSecond);
-      this._onSeek(time);
+      const project = this._getProject();
+      return Math.max(0, Math.min(x / this._pixelsPerSecond, project.duration));
+    };
+
+    const startScrubbing = (initialClientX: number) => {
+      this._onScrubStart?.();
+      const initialTime = getTimeFromClientX(initialClientX);
+      this.logDebug('Scrub', `Scrub started at clientX=${initialClientX} -> initialTime=${initialTime.toFixed(3)}s`);
+      this.setPlayheadPosition(initialTime);
+      this._onSeek(initialTime);
+
+      const onMove = (me: MouseEvent) => {
+        const time = getTimeFromClientX(me.clientX);
+        this.setPlayheadPosition(time);
+        pendingScrubTime = time;
+
+        if (scrubRafId === null) {
+          scrubRafId = requestAnimationFrame(() => {
+            scrubRafId = null;
+            if (pendingScrubTime !== null) {
+              this.logDebug('Scrub', `Scrub RAF seek to ${pendingScrubTime.toFixed(3)}s`);
+              this._onSeek(pendingScrubTime);
+              pendingScrubTime = null;
+            }
+          });
+        }
+      };
+
+      const onUp = (me: MouseEvent) => {
+        window.removeEventListener('mousemove', onMove);
+        window.removeEventListener('mouseup', onUp);
+        if (scrubRafId !== null) {
+          cancelAnimationFrame(scrubRafId);
+          scrubRafId = null;
+        }
+        const finalTime = getTimeFromClientX(me.clientX);
+        this.logDebug('Scrub', `Scrub finished -> finalTime=${finalTime.toFixed(3)}s`);
+        this.setPlayheadPosition(finalTime);
+        this._onSeek(finalTime);
+        this._onScrubEnd?.();
+      };
+
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
     };
 
     ruler?.addEventListener('mousedown', (e) => {
-      handleSeek(e.clientX);
-      const onMove = (me: MouseEvent) => handleSeek(me.clientX);
-      const onUp = () => {
-        window.removeEventListener('mousemove', onMove);
-        window.removeEventListener('mouseup', onUp);
-      };
-      window.addEventListener('mousemove', onMove);
-      window.addEventListener('mouseup', onUp);
+      startScrubbing(e.clientX);
     }, { signal });
 
     playheadHandle?.addEventListener('mousedown', (e) => {
       e.stopPropagation();
-      const onMove = (me: MouseEvent) => handleSeek(me.clientX);
-      const onUp = () => {
-        window.removeEventListener('mousemove', onMove);
-        window.removeEventListener('mouseup', onUp);
-      };
-      window.addEventListener('mousemove', onMove);
-      window.addEventListener('mouseup', onUp);
+      startScrubbing(e.clientX);
     }, { signal });
 
     lanesArea?.addEventListener('click', (e) => {
       if ((e.target as HTMLElement).closest('.video-clip-item')) return;
       this.selectClip('');
-      handleSeek(e.clientX);
+      const time = getTimeFromClientX(e.clientX);
+      this.setPlayheadPosition(time);
+      this._onSeek(time);
     }, { signal });
   }
 
@@ -551,12 +603,15 @@ export class VideoTimelineManager {
     }, { signal });
   }
 
-  public selectClip(clipId: string): void {
-    this._selectedClipId = clipId;
+  public selectClip(clipId: string, emit = true): void {
+    this._selectedClipId = clipId || null;
     const allClipEls = this._container.querySelectorAll<HTMLElement>('.video-clip-item');
     allClipEls.forEach((el) => {
       el.classList.toggle('is-selected', el.getAttribute('data-clip-id') === clipId);
     });
+    if (emit) {
+      this._onClipSelected?.(this._selectedClipId);
+    }
   }
 
   public addClipToTrack(trackId: string, clipData: Partial<VideoClip>): void {
@@ -589,6 +644,7 @@ export class VideoTimelineManager {
     this._selectedClipId = newClip.id;
     this.recomputeProjectDuration();
     this.render();
+    this._onClipSelected?.(newClip.id);
     this._onProjectChanged();
   }
 

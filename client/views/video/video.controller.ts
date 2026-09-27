@@ -1,9 +1,15 @@
 import { API_ROUTES } from '../../config/api-routes.js';
+import { BOARD_3D_SHAPES } from '../../config/board-3d-shapes.config.js';
+import { DiagramComponentItem } from '../../config/diagram-components.data.js';
 import { currentUser, patchApi } from '../../services/api.service.js';
 import { getLocalCanvasByUuid, saveLocalCanvas } from '../../services/canvas-storage.service.js';
 import { renderIcons } from '../../services/icon.service.js';
+import { MockupTemplate } from '../../types/mockups.types.js';
 import { setupDropdown } from '../../utils/dom.util.js';
+import { PixelShape } from '../../utils/pixel-shapes.util.js';
+import { ChartType, Shape3DType } from '../board/board.types.js';
 import { VideoAssetsManager } from './video-assets.manager.js';
+import { generateChartSvg } from './video-charts.util.js';
 import { VideoExportService } from './video-export.service.js';
 import { VideoHistoryManager } from './video-history.manager.js';
 import { VideoPreviewManager } from './video-preview.manager.js';
@@ -135,6 +141,14 @@ export class VideoController {
       canvasElement: canvasEl,
       container: this._container,
       getProject: () => this._project,
+      onClipSelect: (clipId) => {
+        this._timelineManager?.selectClip(clipId || '', false);
+      },
+      onClipTransformChange: () => {},
+      onClipTransformEnd: () => {
+        this._historyManager.pushState(this._project);
+        this.scheduleAutoSave();
+      },
       onTimeUpdate: (currentTime) => {
         this._project.currentTime = currentTime;
         this._timelineManager?.setPlayheadPosition(currentTime);
@@ -146,10 +160,16 @@ export class VideoController {
     this._timelineManager = new VideoTimelineManager({
       container: this._container,
       getProject: () => this._project,
+      onClipSelected: (clipId) => {
+        this._previewManager?.selectClip(clipId, false);
+      },
       onProjectChanged: () => {
         this._historyManager.pushState(this._project);
         this._previewManager?.renderFrame();
         this.scheduleAutoSave();
+      },
+      onScrubStart: () => {
+        this._previewManager?.pause();
       },
       onSeek: (time) => {
         this._previewManager?.seekTo(time);
@@ -179,6 +199,13 @@ export class VideoController {
     const btnExport = this._container.querySelector<HTMLElement>('[data-ref="btn-video-export"]');
     const btnUndo = this._container.querySelector<HTMLElement>('[data-ref="btn-video-undo"]');
     const btnRedo = this._container.querySelector<HTMLElement>('[data-ref="btn-video-redo"]');
+    const btnToggleSidebar = this._container.querySelector<HTMLElement>('[data-ref="btn-toggle-video-sidebar"]');
+    const sidebar = this._container.querySelector<HTMLElement>('[data-ref="video-sidebar"]');
+
+    btnToggleSidebar?.addEventListener('click', () => {
+      sidebar?.classList.toggle('is-collapsed');
+      btnToggleSidebar.classList.toggle('is-active', !sidebar?.classList.contains('is-collapsed'));
+    }, { signal });
 
     btnExport?.addEventListener('click', () => {
       this._exportService?.open();
@@ -244,11 +271,11 @@ export class VideoController {
     }
   }
 
-  private handleAddClip(clipData: Partial<VideoClip>): void {
+  public handleAddClip(clipData: Partial<VideoClip>): void {
     let targetTrackType = 'video';
     if (clipData.mediaType === 'audio') {
       targetTrackType = 'audio';
-    } else if (clipData.mediaType === 'text') {
+    } else if (clipData.mediaType === 'text' || (clipData.mediaType === 'image' && clipData.transform)) {
       targetTrackType = 'overlay';
     }
 
@@ -265,6 +292,374 @@ export class VideoController {
     }
 
     this._timelineManager?.addClipToTrack(track.id, clipData);
+  }
+
+  public insertTextPreset(type: 'heading' | 'subheading' | 'body'): void {
+    const playhead = this._project.currentTime || 0;
+    const dur = 4;
+    const textCfg = {
+      body: {
+        color: '#ffffff',
+        fontFamily: 'Inter, system-ui, sans-serif',
+        fontSize: 36,
+        fontWeight: '500',
+        text: 'Añadir texto...',
+        textAlign: 'center' as const,
+        y: this._project.height * 0.75,
+      },
+      heading: {
+        color: '#ffffff',
+        fontFamily: 'Inter, system-ui, sans-serif',
+        fontSize: 64,
+        fontWeight: '800',
+        text: 'Título del Video',
+        textAlign: 'center' as const,
+        y: this._project.height * 0.35,
+      },
+      subheading: {
+        color: '#ffffff',
+        fontFamily: 'Inter, system-ui, sans-serif',
+        fontSize: 44,
+        fontWeight: '600',
+        text: 'Subtítulo del Video',
+        textAlign: 'center' as const,
+        y: this._project.height * 0.5,
+      },
+    }[type];
+
+    this.handleAddClip({
+      duration: dur,
+      mediaType: 'text',
+      name: type === 'heading' ? 'Título' : (type === 'subheading' ? 'Subtítulo' : 'Texto'),
+      sourceDuration: dur,
+      startTime: playhead,
+      textConfig: {
+        color: textCfg.color,
+        fontFamily: textCfg.fontFamily,
+        fontSize: textCfg.fontSize,
+        fontWeight: textCfg.fontWeight,
+        text: textCfg.text,
+        textAlign: textCfg.textAlign,
+      },
+      transform: {
+        opacity: 1,
+        x: this._project.width / 2,
+        y: textCfg.y,
+      },
+      trimEnd: dur,
+      trimStart: 0,
+      volume: 0,
+    });
+  }
+
+  public insertShapeOrSticker(shape: PixelShape): void {
+    let assetUrl = '';
+    const size = Math.min(360, Math.round(this._project.width * 0.25));
+
+    if (shape.type === 'vector' && shape.pathD) {
+      const isArrowOrLine = shape.id.includes('arrow') || shape.id.includes('line') || shape.id.includes('chevron');
+      const isHeart = shape.id.includes('heart');
+      const isStarOrBurst = shape.id.includes('star') || shape.id.includes('sparkle') || shape.id.includes('burst');
+      const isNature = shape.id.includes('leaf') || shape.id.includes('clover') || shape.id.includes('flower');
+      const isCallout = shape.id.includes('callout') || shape.id.includes('cloud');
+
+      let fill = '#ffffff';
+      let stroke = '#1e293b';
+      let strokeWidth = 2;
+
+      if (isHeart) {
+        fill = '#f43f5e';
+        stroke = '#e11d48';
+      } else if (isStarOrBurst) {
+        fill = '#f59e0b';
+        stroke = '#d97706';
+      } else if (isNature) {
+        fill = '#10b981';
+        stroke = '#059669';
+      } else if (isArrowOrLine) {
+        fill = '#3b82f6';
+        stroke = '#2563eb';
+      } else if (isCallout) {
+        fill = '#ffffff';
+        stroke = '#6366f1';
+      } else {
+        fill = '#ffffff';
+        stroke = '#334155';
+        strokeWidth = 2;
+      }
+
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52" width="${size}" height="${size}"><defs><filter id="shape-shadow" x="-20%" y="-20%" width="150%" height="150%"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="rgba(0,0,0,0.35)"/></filter></defs><g transform="translate(2, 2)" filter="url(#shape-shadow)"><path d="${shape.pathD}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linejoin="round" stroke-linecap="round"/></g></svg>`;
+      assetUrl = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+    } else if (shape.type === 'sticker' && shape.file) {
+      assetUrl = `/assets/img/stickers/${shape.file}`;
+    } else if (shape.url) {
+      assetUrl = shape.url;
+    }
+
+    if (!assetUrl) return;
+
+    const playhead = this._project.currentTime || 0;
+    const dur = 4;
+
+    this.handleAddClip({
+      assetUrl,
+      duration: dur,
+      mediaType: 'image',
+      name: shape.name || 'Forma',
+      sourceDuration: dur,
+      startTime: playhead,
+      transform: {
+        height: size,
+        opacity: 1,
+        width: size,
+        x: Math.round((this._project.width - size) / 2),
+        y: Math.round((this._project.height - size) / 2),
+      },
+      trimEnd: dur,
+      trimStart: 0,
+    });
+  }
+
+  public insertChart(chartType: ChartType): void {
+    const svgStr = generateChartSvg(chartType);
+    const assetUrl = `data:image/svg+xml;utf8,${encodeURIComponent(svgStr)}`;
+    const playhead = this._project.currentTime || 0;
+    const dur = 5;
+    const chartW = Math.min(580, Math.round(this._project.width * 0.45));
+    const chartH = Math.round(chartW * (340 / 580));
+
+    this.handleAddClip({
+      assetUrl,
+      duration: dur,
+      mediaType: 'image',
+      name: `Gráfica (${chartType})`,
+      sourceDuration: dur,
+      startTime: playhead,
+      transform: {
+        height: chartH,
+        opacity: 1,
+        width: chartW,
+        x: Math.round((this._project.width - chartW) / 2),
+        y: Math.round((this._project.height - chartH) / 2),
+      },
+      trimEnd: dur,
+      trimStart: 0,
+    });
+  }
+
+  public insertDiagramComponent(item: DiagramComponentItem): void {
+    const targetW = Math.min(380, Math.round(this._project.width * 0.28));
+    const aspect = (item.width && item.height) ? (item.width / item.height) : (48 / 48);
+    const targetH = Math.round(targetW / aspect);
+    let assetUrl = '';
+
+    if (item.previewSvg) {
+      let cleanInner = item.previewSvg;
+      let vb = '0 0 48 48';
+      const vbMatch = item.previewSvg.match(/viewBox=["']([^"']+)["']/i);
+      if (vbMatch) {
+        vb = vbMatch[1];
+      }
+      if (cleanInner.includes('<svg')) {
+        cleanInner = cleanInner.replace(/<svg[^>]*>/i, '').replace(/<\/svg>/i, '');
+      }
+
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}" width="${targetW}" height="${targetH}"><defs><filter id="diag-shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="rgba(0,0,0,0.3)"/></filter></defs><g filter="url(#diag-shadow)">${cleanInner}</g></svg>`;
+      assetUrl = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+    } else {
+      const fill = item.fillColor || '#eff6ff';
+      const stroke = item.strokeColor || '#3b82f6';
+      const textCol = item.textColor || '#1e40af';
+      const label = item.text || item.name || 'Paso';
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 80" width="${targetW}" height="${targetH}"><rect x="3" y="3" width="194" height="74" rx="10" fill="${fill}" stroke="${stroke}" stroke-width="2.5"/><text x="100" y="46" fill="${textCol}" font-size="16" font-family="Inter, system-ui, sans-serif" text-anchor="middle" font-weight="600">${label}</text></svg>`;
+      assetUrl = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+    }
+
+    const playhead = this._project.currentTime || 0;
+    const dur = 4;
+
+    this.handleAddClip({
+      assetUrl,
+      duration: dur,
+      mediaType: 'image',
+      name: item.name || 'Diagrama',
+      sourceDuration: dur,
+      startTime: playhead,
+      transform: {
+        height: targetH,
+        opacity: 1,
+        width: targetW,
+        x: Math.round((this._project.width - targetW) / 2),
+        y: Math.round((this._project.height - targetH) / 2),
+      },
+      trimEnd: dur,
+      trimStart: 0,
+    });
+  }
+
+  public insertStickyPreset(color: string, text: string): void {
+    const width = 300;
+    const height = 240;
+    const svgStr = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 240" width="300" height="240"><defs><filter id="sticky-shadow" x="-10%" y="-10%" width="130%" height="130%"><feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="rgba(0,0,0,0.3)"/></filter></defs><g filter="url(#sticky-shadow)"><path d="M 12 12 H 288 V 196 L 248 236 H 12 Z" fill="${color || '#fef08a'}" rx="8"/><path d="M 248 196 L 288 196 L 248 236 Z" fill="rgba(0,0,0,0.12)"/><path d="M 248 196 L 248 236 L 288 196 Z" fill="rgba(255,255,255,0.3)"/><text x="32" y="64" fill="#1e293b" font-size="22" font-family="Inter, system-ui, sans-serif" font-weight="600">${text || 'Nota'}</text></g></svg>`;
+    const assetUrl = `data:image/svg+xml;utf8,${encodeURIComponent(svgStr)}`;
+    const playhead = this._project.currentTime || 0;
+    const dur = 4;
+
+    this.handleAddClip({
+      assetUrl,
+      duration: dur,
+      mediaType: 'image',
+      name: text || 'Nota adhesiva',
+      sourceDuration: dur,
+      startTime: playhead,
+      transform: {
+        height,
+        opacity: 1,
+        width,
+        x: Math.round((this._project.width - width) / 2),
+        y: Math.round((this._project.height - height) / 2),
+      },
+      trimEnd: dur,
+      trimStart: 0,
+    });
+  }
+
+  public insertTable(rows: number, cols: number): void {
+    const width = 500;
+    const height = 280;
+    const cellW = Math.round((width - 40) / cols);
+    const cellH = Math.round((height - 70) / rows);
+
+    let cellsSvg = '';
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const x = 20 + c * cellW;
+        const y = 50 + r * cellH;
+        const isHeader = r === 0;
+        cellsSvg += `<rect x="${x}" y="${y}" width="${cellW}" height="${cellH}" fill="${isHeader ? '#334155' : '#1e293b'}" stroke="#475569" stroke-width="1"/><text x="${x + cellW / 2}" y="${y + cellH / 2 + 5}" fill="${isHeader ? '#f8fafc' : '#cbd5e1'}" font-size="12" font-family="Inter, system-ui, sans-serif" text-anchor="middle">${isHeader ? `Col ${c + 1}` : `Dato`}</text>`;
+      }
+    }
+
+    const svgStr = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}"><rect width="${width}" height="${height}" rx="12" fill="#0f172a" fill-opacity="0.95" stroke="#334155" stroke-width="2"/><text x="20" y="32" fill="#f8fafc" font-size="15" font-weight="700" font-family="Inter, system-ui, sans-serif">Tabla (${rows}×${cols})</text>${cellsSvg}</svg>`;
+    const assetUrl = `data:image/svg+xml;utf8,${encodeURIComponent(svgStr)}`;
+    const playhead = this._project.currentTime || 0;
+    const dur = 4;
+
+    this.handleAddClip({
+      assetUrl,
+      duration: dur,
+      mediaType: 'image',
+      name: `Tabla ${rows}×${cols}`,
+      sourceDuration: dur,
+      startTime: playhead,
+      transform: {
+        height,
+        opacity: 1,
+        width,
+        x: Math.round((this._project.width - width) / 2),
+        y: Math.round((this._project.height - height) / 2),
+      },
+      trimEnd: dur,
+      trimStart: 0,
+    });
+  }
+
+  public insert3DShape(shapeId: Shape3DType): void {
+    const size = Math.min(300, Math.round(this._project.width * 0.22));
+    const shapeCfg = BOARD_3D_SHAPES.find((s) => s.id === shapeId);
+    const label = shapeCfg?.name || `3D ${shapeId}`;
+
+    const svgStr = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="${size}" height="${size}"><defs><linearGradient id="g-top-${shapeId}" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#818cf8"/><stop offset="100%" stop-color="#6366f1"/></linearGradient><linearGradient id="g-left-${shapeId}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#4f46e5"/><stop offset="100%" stop-color="#3730a3"/></linearGradient><linearGradient id="g-right-${shapeId}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#4338ca"/><stop offset="100%" stop-color="#312e81"/></linearGradient><filter id="d3-shadow-${shapeId}" x="-20%" y="-20%" width="150%" height="150%"><feDropShadow dx="0" dy="5" stdDeviation="5" flood-color="rgba(0,0,0,0.4)"/></filter></defs><g filter="url(#d3-shadow-${shapeId})"><polygon points="100,25 165,62 100,100 35,62" fill="url(#g-top-${shapeId})"/><polygon points="35,62 100,100 100,165 35,127" fill="url(#g-left-${shapeId})"/><polygon points="100,100 165,62 165,127 100,165" fill="url(#g-right-${shapeId})"/><circle cx="100" cy="62" r="16" fill="#ffffff" fill-opacity="0.85"/><text x="100" y="188" fill="#f8fafc" font-size="12" font-weight="700" font-family="Inter, system-ui, sans-serif" text-anchor="middle">${label}</text></g></svg>`;
+    const assetUrl = `data:image/svg+xml;utf8,${encodeURIComponent(svgStr)}`;
+    const playhead = this._project.currentTime || 0;
+    const dur = 4;
+
+    this.handleAddClip({
+      assetUrl,
+      duration: dur,
+      mediaType: 'image',
+      name: `3D ${shapeId}`,
+      sourceDuration: dur,
+      startTime: playhead,
+      transform: {
+        height: size,
+        opacity: 1,
+        width: size,
+        x: Math.round((this._project.width - size) / 2),
+        y: Math.round((this._project.height - size) / 2),
+      },
+      trimEnd: dur,
+      trimStart: 0,
+    });
+  }
+
+  public insertMockup(tpl: MockupTemplate): void {
+    const size = Math.min(380, Math.round(this._project.width * 0.3));
+    const svgStr = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200" width="${size}" height="${Math.round(size * 0.67)}"><rect width="300" height="200" rx="12" fill="#1e293b" stroke="#475569" stroke-width="2"/><text x="150" y="105" fill="#f8fafc" font-size="16" font-family="Inter, system-ui, sans-serif" text-anchor="middle" font-weight="600">${tpl.name || 'Mockup'}</text></svg>`;
+    const assetUrl = `data:image/svg+xml;utf8,${encodeURIComponent(svgStr)}`;
+    const playhead = this._project.currentTime || 0;
+    const dur = 4;
+
+    this.handleAddClip({
+      assetUrl,
+      duration: dur,
+      mediaType: 'image',
+      name: tpl.name || 'Mockup',
+      sourceDuration: dur,
+      startTime: playhead,
+      transform: {
+        height: Math.round(size * 0.67),
+        opacity: 1,
+        width: size,
+        x: Math.round((this._project.width - size) / 2),
+        y: Math.round((this._project.height - Math.round(size * 0.67)) / 2),
+      },
+      trimEnd: dur,
+      trimStart: 0,
+    });
+  }
+
+  public insertVideo(data: { duration?: number; height?: number; thumbnailUrl?: string; title: string; url: string; width?: number }): void {
+    const dur = Math.max(1, data.duration || 5);
+    this.handleAddClip({
+      assetUrl: data.url,
+      duration: dur,
+      mediaType: 'video',
+      name: data.title || 'Video',
+      sourceDuration: dur,
+      startTime: this._project.currentTime || 0,
+      thumbnailUrl: data.thumbnailUrl,
+      trimEnd: dur,
+      trimStart: 0,
+    });
+  }
+
+  public insertImage(data: { height?: number; title: string; url: string; width?: number }): void {
+    const dur = 4;
+    this.handleAddClip({
+      assetUrl: data.url,
+      duration: dur,
+      mediaType: 'image',
+      name: data.title || 'Foto',
+      sourceDuration: dur,
+      startTime: this._project.currentTime || 0,
+      trimEnd: dur,
+      trimStart: 0,
+    });
+  }
+
+  public insertAudio(data: { duration?: number; title: string; url: string }): void {
+    const dur = Math.max(1, data.duration || 10);
+    this.handleAddClip({
+      assetUrl: data.url,
+      duration: dur,
+      mediaType: 'audio',
+      name: data.title || 'Audio',
+      sourceDuration: dur,
+      startTime: this._project.currentTime || 0,
+      trimEnd: dur,
+      trimStart: 0,
+    });
   }
 
   private updateAspectPresetButtons(): void {
