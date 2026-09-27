@@ -26,15 +26,9 @@ export class VideoTimelineManager {
   private _selectedTrackId: string | null = null;
   private _isSnappingEnabled = true;
   private _abortController: AbortController | null = null;
+  private _playheadElement: HTMLElement | null = null;
 
-  private logDebug(category: string, message: string, data?: unknown): void {
-    const tag = `[Spriteboard:Timeline:${category}]`;
-    if (data !== undefined) {
-      console.log(`%c${tag}%c ${message}`, 'color: #c084fc; font-weight: bold;', 'color: inherit;', data);
-    } else {
-      console.log(`%c${tag}%c ${message}`, 'color: #c084fc; font-weight: bold;', 'color: inherit;');
-    }
-  }
+  private logDebug(_category: string, _message: string, _data?: unknown): void {}
 
   constructor(options: VideoTimelineManagerOptions) {
     this._container = options.container;
@@ -49,6 +43,7 @@ export class VideoTimelineManager {
   public init(): void {
     this._abortController = new AbortController();
     const signal = this._abortController.signal;
+    this._playheadElement = this._container.querySelector<HTMLElement>('[data-ref="video-playhead-line"]');
 
     const btnSplit = this._container.querySelector<HTMLElement>('[data-ref="btn-tl-split"]');
     const btnDelete = this._container.querySelector<HTMLElement>('[data-ref="btn-tl-delete"]');
@@ -137,10 +132,12 @@ export class VideoTimelineManager {
   }
 
   public setPlayheadPosition(time: number): void {
-    const playhead = this._container.querySelector<HTMLElement>('[data-ref="video-playhead-line"]');
-    if (playhead) {
+    if (!this._playheadElement) {
+      this._playheadElement = this._container.querySelector<HTMLElement>('[data-ref="video-playhead-line"]');
+    }
+    if (this._playheadElement) {
       const leftPx = time * this._pixelsPerSecond;
-      playhead.style.transform = `translateX(${leftPx}px)`;
+      this._playheadElement.style.transform = `translateX(${leftPx}px)`;
     }
   }
 
@@ -1255,5 +1252,6 @@ export class VideoTimelineManager {
       this._abortController.abort();
       this._abortController = null;
     }
+    this._playheadElement = null;
   }
 }

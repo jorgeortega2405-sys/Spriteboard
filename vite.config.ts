@@ -41,6 +41,7 @@ export default defineConfig({
   build: {
     outDir: 'dist/client',
     emptyOutDir: true,
+    copyPublicDir: false,
     cssCodeSplit: true,
     chunkSizeWarningLimit: 600,
     rollupOptions: {
@@ -52,6 +53,12 @@ export default defineConfig({
           const normalized = id.replace(/\\/g, '/');
           if (normalized.includes('node_modules')) {
             return 'vendor';
+          }
+          if (normalized.includes('/client/views/video') || normalized.includes('/views/video.view')) {
+            return 'domain-video';
+          }
+          if (normalized.includes('/client/views/sheet') || normalized.includes('/views/sheet.view')) {
+            return 'domain-sheet';
           }
           if (normalized.includes('/client/views/settings') || normalized.includes('/views/settings.view')) {
             return 'domain-settings';

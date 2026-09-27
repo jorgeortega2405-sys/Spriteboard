@@ -49,15 +49,12 @@ export class VideoPreviewManager {
   } | null = null;
   private _tickCount = 0;
   private _seekingSince = 0;
+  private _curTimecodeEl: HTMLElement | null = null;
+  private _durTimecodeEl: HTMLElement | null = null;
+  private _lastFormattedCurrentTime = '';
+  private _lastFormattedDuration = '';
 
-  private logDebug(category: string, message: string, data?: unknown): void {
-    const tag = `[Spriteboard:Video:${category}]`;
-    if (data !== undefined) {
-      console.log(`%c${tag}%c ${message}`, 'color: #38bdf8; font-weight: bold;', 'color: inherit;', data);
-    } else {
-      console.log(`%c${tag}%c ${message}`, 'color: #38bdf8; font-weight: bold;', 'color: inherit;');
-    }
-  }
+  private logDebug(_category: string, _message: string, _data?: unknown): void {}
 
   constructor(options: VideoPreviewManagerOptions) {
     this._container = options.container;
@@ -103,6 +100,8 @@ export class VideoPreviewManager {
     btnFullscreen?.addEventListener('click', () => this.toggleFullscreen(), { signal });
 
     this.bindCanvasPointerEvents(signal);
+    this._curTimecodeEl = this._container.querySelector<HTMLElement>('[data-ref="timecode-current"]');
+    this._durTimecodeEl = this._container.querySelector<HTMLElement>('[data-ref="timecode-duration"]');
     this.renderFrame();
   }
 
@@ -113,8 +112,14 @@ export class VideoPreviewManager {
     this._pendingFrameRequests.set(clipId, timeSeconds);
     this._playbackEngine.getFrameForClip(clipId, url, timeSeconds).then((frame) => {
       if (frame) {
+        const prevFrame = this._latestEnterpriseFrames.get(clipId);
+        if (prevFrame && prevFrame !== frame) {
+          try { prevFrame.close(); } catch {}
+        }
         this._latestEnterpriseFrames.set(clipId, frame);
-        this.renderFrame();
+        if (!this._isPlaying) {
+          this.renderFrame();
+        }
       }
     }).catch(() => {});
   }
@@ -883,11 +888,24 @@ export class VideoPreviewManager {
 
   public updateTimecodeDisplay(): void {
     const project = this._getProject();
-    const curEl = this._container.querySelector<HTMLElement>('[data-ref="timecode-current"]');
-    const durEl = this._container.querySelector<HTMLElement>('[data-ref="timecode-duration"]');
+    if (!this._curTimecodeEl) {
+      this._curTimecodeEl = this._container.querySelector<HTMLElement>('[data-ref="timecode-current"]');
+    }
+    if (!this._durTimecodeEl) {
+      this._durTimecodeEl = this._container.querySelector<HTMLElement>('[data-ref="timecode-duration"]');
+    }
 
-    if (curEl) curEl.textContent = this.formatTime(this._currentTime);
-    if (durEl) durEl.textContent = this.formatTime(project.duration);
+    const curFormatted = this.formatTime(this._currentTime);
+    if (this._curTimecodeEl && this._lastFormattedCurrentTime !== curFormatted) {
+      this._curTimecodeEl.textContent = curFormatted;
+      this._lastFormattedCurrentTime = curFormatted;
+    }
+
+    const durFormatted = this.formatTime(project.duration);
+    if (this._durTimecodeEl && this._lastFormattedDuration !== durFormatted) {
+      this._durTimecodeEl.textContent = durFormatted;
+      this._lastFormattedDuration = durFormatted;
+    }
   }
 
   private formatTime(seconds: number): string {
@@ -1426,7 +1444,12 @@ export class VideoPreviewManager {
     });
     this._mediaPool.clear();
     this._playbackEngine.destroy();
+    this._latestEnterpriseFrames.forEach((frame) => {
+      try { frame.close(); } catch {}
+    });
     this._latestEnterpriseFrames.clear();
     this._pendingFrameRequests.clear();
+    this._curTimecodeEl = null;
+    this._durTimecodeEl = null;
   }
 }

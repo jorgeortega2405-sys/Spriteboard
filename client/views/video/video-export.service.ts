@@ -14,12 +14,14 @@ export class VideoExportService {
   }
 
   public init(): void {
+    this._abortController = new AbortController();
+    const signal = this._abortController.signal;
     this._backdrop = this._container.querySelector<HTMLElement>('[data-ref="modal-export-backdrop"]');
     const btnClose = this._container.querySelector<HTMLElement>('[data-ref="btn-close-export-modal"]');
     const btnStart = this._container.querySelector<HTMLElement>('[data-ref="btn-start-render"]');
 
-    btnClose?.addEventListener('click', () => this.close());
-    btnStart?.addEventListener('click', () => void this.startExport());
+    btnClose?.addEventListener('click', () => this.close(), { signal });
+    btnStart?.addEventListener('click', () => void this.startExport(), { signal });
   }
 
   public open(): void {
@@ -172,6 +174,10 @@ export class VideoExportService {
   }
 
   public destroy(): void {
+    if (this._abortController) {
+      this._abortController.abort();
+      this._abortController = null;
+    }
     if (this._pollInterval) {
       clearInterval(this._pollInterval);
       this._pollInterval = null;

@@ -1,13 +1,6 @@
 import { API_ROUTES } from '../config/api-routes.js';
 import { getApi } from '../services/api.service.js';
 import { getLocalCanvasByUuid, saveLocalCanvas } from '../services/canvas-storage.service.js';
-import { createBoardView } from './board.view.js';
-import { createDocView } from './doc.view.js';
-import { createErrorView } from './error.view.js';
-import { createPresentationView } from './presentation.view.js';
-import { createSheetView } from './sheet.view.js';
-import { createSocialView } from './social.view.js';
-import { createVideoView } from './video.view.js';
 
 export async function createDesignView(canvasUuid: string): Promise<HTMLElement> {
   let canvasRecord: any = await getLocalCanvasByUuid(canvasUuid);
@@ -35,6 +28,7 @@ export async function createDesignView(canvasUuid: string): Promise<HTMLElement>
   }
 
   if (!canvasRecord) {
+    const { createErrorView } = await import('./error.view.js');
     return await createErrorView({
       code: '404',
       description: 'El lienzo solicitado no existe, ha sido eliminado o no tienes permisos para acceder.',
@@ -63,25 +57,31 @@ export async function createDesignView(canvasUuid: string): Promise<HTMLElement>
   }
 
   if (canvasType === 'video') {
+    const { createVideoView } = await import('./video.view.js');
     return await createVideoView(canvasUuid, canvasRecord);
   }
 
   if (canvasType === 'doc') {
+    const { createDocView } = await import('./doc.view.js');
     return await createDocView(canvasUuid, canvasRecord);
   }
 
   if (canvasType === 'presentation') {
+    const { createPresentationView } = await import('./presentation.view.js');
     return await createPresentationView(canvasUuid, canvasRecord);
   }
 
   if (canvasType === 'social') {
+    const { createSocialView } = await import('./social.view.js');
     return await createSocialView(canvasUuid, canvasRecord);
   }
 
   if (canvasType === 'sheet') {
+    const { createSheetView } = await import('./sheet.view.js');
     return await createSheetView(canvasUuid, canvasRecord);
   }
 
+  const { createBoardView } = await import('./board.view.js');
   return await createBoardView(canvasUuid, canvasRecord);
 }
 

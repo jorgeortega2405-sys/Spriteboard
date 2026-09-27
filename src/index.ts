@@ -142,7 +142,18 @@ async function setupClient(server: http.Server) {
     app.use(vite.middlewares);
   } else {
     const clientDist = path.join(process.cwd(), 'dist/client');
-    app.use(express.static(clientDist));
+    app.use(
+      express.static(clientDist, {
+        immutable: true,
+        index: false,
+        maxAge: '1y',
+        setHeaders: (res, filePath) => {
+          if (filePath.endsWith('.html')) {
+            res.setHeader('Cache-Control', 'no-cache');
+          }
+        },
+      })
+    );
     app.get('*', (_req: Request, res: Response) => {
       res.sendFile(path.join(clientDist, 'index.html'));
     });

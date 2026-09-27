@@ -1533,10 +1533,6 @@ html.dark-theme .component-badge--active .component-icon {
   filter: brightness(1.15);
 }
 
-.component-button--avatar:active {
-  transform: scale(0.97);
-}
-
 .component-top-left--full {
   flex: 1;
   min-width: 0;

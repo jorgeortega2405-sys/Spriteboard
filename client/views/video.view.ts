@@ -1,5 +1,4 @@
 import { loadTemplate } from '../services/template.service.js';
-import { createErrorView } from './error.view.js';
 import { VideoController } from './video/video.controller.js';
 
 export async function createVideoView(canvasUuid: string, initialRecord?: any): Promise<HTMLElement> {
@@ -18,6 +17,7 @@ export async function createVideoView(canvasUuid: string, initialRecord?: any): 
 
   if (!loaded) {
     controller.destroy();
+    const { createErrorView } = await import('./error.view.js');
     return await createErrorView({
       code: '404',
       description: 'El video solicitado no existe o no tienes permisos para acceder.',

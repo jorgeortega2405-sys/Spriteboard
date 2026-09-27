@@ -167,7 +167,7 @@ export class VideoAssetsManager {
           e.dataTransfer.setData('application/json', JSON.stringify(clipData));
           e.dataTransfer.effectAllowed = 'copy';
         }
-      });
+      }, { signal: this._abortController?.signal });
 
       const addBtn = itemEl.querySelector<HTMLElement>('[data-ref^="btn-add-upload-"]');
       addBtn?.addEventListener('click', (e) => {
@@ -188,7 +188,7 @@ export class VideoAssetsManager {
           trimEnd: dur,
           trimStart: 0,
         });
-      });
+      }, { signal: this._abortController?.signal });
     });
   }
 

@@ -7,7 +7,6 @@ export class WebCodecsVideoDecoder {
   private _frameCache: VideoFrameCache;
   private _decoder: VideoDecoder | null = null;
   private _lastDecodedIndex = -1;
-  private _pendingFrames: Map<number, VideoFrame> = new Map();
   private _isConfigured = false;
   private _isDecoding = false;
 
@@ -90,10 +89,6 @@ export class WebCodecsVideoDecoder {
       } catch {}
       this._decoder = null;
     }
-    this._pendingFrames.forEach((f) => {
-      try { f.close(); } catch {}
-    });
-    this._pendingFrames.clear();
     this._frameCache.clear();
     this._isConfigured = false;
   }
@@ -104,7 +99,6 @@ export class WebCodecsVideoDecoder {
     if (target) {
       const key = `${this._track.trackId}:${target.sampleIndex}`;
       this._frameCache.set(key, frame);
-      this._pendingFrames.set(target.sampleIndex, frame);
     } else {
       frame.close();
     }
