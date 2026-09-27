@@ -5,6 +5,7 @@ import { sanitizeImage } from './image-sanitizer.service.js';
 import { logger } from './logger.service.js';
 import { deleteObject, getPublicUrl, putObject } from './s3.service.js';
 import { checkUserStorageQuota, formatStorageBytes, invalidateUserStorageCache } from './storage.service.js';
+import { VideoOptimizerService } from './video-optimizer.service.js';
 import { detectMediaKind, processAudio, processVideo } from './video-processor.service.js';
 import crypto from 'crypto';
 import fs from 'fs';
@@ -170,15 +171,20 @@ export async function saveUserUpload(
     const localVideoPath = path.join(UPLOADS_DIR, videoFileName);
     const localThumbPath = path.join(UPLOADS_DIR, thumbFileName);
 
+    let finalBuffer = buffer;
     try {
       await fs.promises.writeFile(localVideoPath, buffer);
       await fs.promises.writeFile(localThumbPath, videoProcessed.thumbnailBuffer);
+      const optimized = await VideoOptimizerService.makeFastStart(localVideoPath);
+      if (optimized) {
+        finalBuffer = await fs.promises.readFile(localVideoPath);
+      }
     } catch (err) {
       logger.app.error('Error al guardar video en disco local', err);
     }
 
     try {
-      await putObject(s3VideoKey, buffer, videoProcessed.mimeType);
+      await putObject(s3VideoKey, finalBuffer, videoProcessed.mimeType);
       await putObject(s3ThumbKey, videoProcessed.thumbnailBuffer, videoProcessed.thumbnailMimeType);
     } catch (err) {
       logger.app.error('Error al guardar video en S3', err);

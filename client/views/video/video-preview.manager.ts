@@ -1,3 +1,4 @@
+import { VideoPlaybackEngine } from './engine/video-playback-engine.js';
 import { VideoClip, VideoProject, VideoTransform } from './video.types.js';
 
 export type VideoResizeHandle = 'e' | 'n' | 'ne' | 'nw' | 's' | 'se' | 'sw' | 'w';
@@ -31,6 +32,9 @@ export class VideoPreviewManager {
   private _isMuted = false;
   private _abortController: AbortController | null = null;
   private _selectedClipId: string | null = null;
+  private _playbackEngine: VideoPlaybackEngine = new VideoPlaybackEngine();
+  private _latestEnterpriseFrames: Map<string, VideoFrame> = new Map();
+  private _pendingFrameRequests: Map<string, number> = new Map();
   private _dragState: {
     clip: VideoClip;
     handle?: VideoResizeHandle;
@@ -69,6 +73,7 @@ export class VideoPreviewManager {
   public init(): void {
     this._abortController = new AbortController();
     const signal = this._abortController.signal;
+    this._playbackEngine.init();
 
     const btnPlayPause = this._container.querySelector<HTMLElement>('[data-ref="btn-transport-play-pause"]');
     const btnTlPlayPause = this._container.querySelector<HTMLElement>('[data-ref="btn-tl-play-pause"]');
@@ -83,10 +88,15 @@ export class VideoPreviewManager {
     btnStepBack?.addEventListener('click', () => this.seekBy(-1), { signal });
     btnStepFwd?.addEventListener('click', () => this.seekBy(1), { signal });
 
-    btnMute?.addEventListener('click', () => this.toggleMute(), { signal });
+    btnMute?.addEventListener('click', () => {
+      this.toggleMute();
+      this._playbackEngine.audioEngine.setMuted(this._isMuted);
+    }, { signal });
     inputVolume?.addEventListener('input', () => {
       this._volume = parseFloat(inputVolume.value) || 0;
       this._isMuted = this._volume === 0;
+      this._playbackEngine.audioEngine.setMasterVolume(this._volume);
+      this._playbackEngine.audioEngine.setMuted(this._isMuted);
       this.updateVolumeIcons();
     }, { signal });
 
@@ -94,6 +104,19 @@ export class VideoPreviewManager {
 
     this.bindCanvasPointerEvents(signal);
     this.renderFrame();
+  }
+
+  private requestEnterpriseFrame(clipId: string, url: string, timeSeconds: number): void {
+    if (this._pendingFrameRequests.get(clipId) === timeSeconds) {
+      return;
+    }
+    this._pendingFrameRequests.set(clipId, timeSeconds);
+    this._playbackEngine.getFrameForClip(clipId, url, timeSeconds).then((frame) => {
+      if (frame) {
+        this._latestEnterpriseFrames.set(clipId, frame);
+        this.renderFrame();
+      }
+    }).catch(() => {});
   }
 
   public selectClip(clipId: string | null, emit = false): void {
@@ -325,6 +348,11 @@ export class VideoPreviewManager {
 
     if (clip.mediaType === 'video' && clip.assetUrl) {
       const vid = this.getVideoElement(clip.id, clip.assetUrl);
+      const enterpriseFrame = this._latestEnterpriseFrames.get(clip.id);
+      if (this._playbackEngine.isWebCodecsSupported) {
+        this.requestEnterpriseFrame(clip.id, clip.assetUrl, localTime);
+      }
+
       if (vid) {
         if (!isTrackMuted && !clip.muted) {
           vid.volume = Math.max(0, Math.min(1, this._volume * (clip.volume ?? 1) * fadeGain));
@@ -363,7 +391,9 @@ export class VideoPreviewManager {
           vid.playbackRate = 1.0;
         }
 
-        if (vid.videoWidth > 0 || vid.readyState >= 1) {
+        if (enterpriseFrame) {
+          this.drawFittedMedia(enterpriseFrame, canvasW, canvasH, clip, clampedLocalTime);
+        } else if (vid.videoWidth > 0 || vid.readyState >= 1) {
           this.drawFittedMedia(vid, canvasW, canvasH, clip, clampedLocalTime);
         }
       }
@@ -418,15 +448,25 @@ export class VideoPreviewManager {
   }
 
   private drawFittedMedia(
-    media: HTMLVideoElement | HTMLImageElement,
+    media: HTMLVideoElement | HTMLImageElement | VideoFrame,
     canvasW: number,
     canvasH: number,
     clip: VideoClip,
     localTime: number
   ): void {
     if (!this._ctx) return;
-    const mediaW = (media as HTMLVideoElement).videoWidth || (media as HTMLImageElement).naturalWidth || 1920;
-    const mediaH = (media as HTMLVideoElement).videoHeight || (media as HTMLImageElement).naturalHeight || 1080;
+    let mediaW = 1920;
+    let mediaH = 1080;
+    if (typeof VideoFrame !== 'undefined' && media instanceof VideoFrame) {
+      mediaW = media.displayWidth || media.codedWidth || 1920;
+      mediaH = media.displayHeight || media.codedHeight || 1080;
+    } else if (media instanceof HTMLVideoElement) {
+      mediaW = media.videoWidth || 1920;
+      mediaH = media.videoHeight || 1080;
+    } else if (media instanceof HTMLImageElement) {
+      mediaW = media.naturalWidth || 1920;
+      mediaH = media.naturalHeight || 1080;
+    }
 
     const hasCustomTransform = Boolean(clip.transform?.width && clip.transform?.height && clip.transform?.x !== undefined && clip.transform?.y !== undefined);
     const scale = Math.min(canvasW / mediaW, canvasH / mediaH);
@@ -673,7 +713,7 @@ export class VideoPreviewManager {
     if (this.isExternalUrl(url)) {
       vid.crossOrigin = 'anonymous';
     }
-    vid.preload = 'auto';
+    vid.preload = 'metadata';
     vid.playsInline = true;
     vid.muted = this._isMuted;
     vid.src = url;
@@ -762,7 +802,7 @@ export class VideoPreviewManager {
     if (this.isExternalUrl(url)) {
       aud.crossOrigin = 'anonymous';
     }
-    aud.preload = 'auto';
+    aud.preload = 'metadata';
     aud.muted = this._isMuted;
     aud.src = url;
     aud.addEventListener('loadedmetadata', () => {
@@ -1385,5 +1425,8 @@ export class VideoPreviewManager {
       if (el.parentNode) el.parentNode.removeChild(el);
     });
     this._mediaPool.clear();
+    this._playbackEngine.destroy();
+    this._latestEnterpriseFrames.clear();
+    this._pendingFrameRequests.clear();
   }
 }
