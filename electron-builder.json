@@ -12,6 +12,12 @@
   "extraMetadata": {
     "main": "dist/desktop/main.js"
   },
+  "protocols": [
+    {
+      "name": "Spriteboard",
+      "schemes": ["spriteboard"]
+    }
+  ],
   "win": {
     "target": [
       {

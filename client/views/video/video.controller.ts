@@ -1,14 +1,14 @@
 import { API_ROUTES } from '../../config/api-routes.js';
 import { BOARD_3D_SHAPES } from '../../config/board-3d-shapes.config.js';
 import { DiagramComponentItem } from '../../config/diagram-components.data.js';
-import { currentUser, patchApi } from '../../services/api.service.js';
+import { currentUser, patchApi, uploadFilesApi } from '../../services/api.service.js';
 import { getLocalCanvasByUuid, saveLocalCanvas } from '../../services/canvas-storage.service.js';
 import { renderIcons } from '../../services/icon.service.js';
+import { showToast } from '../../services/toast.service.js';
 import { MockupTemplate } from '../../types/mockups.types.js';
 import { setupDropdown } from '../../utils/dom.util.js';
 import { PixelShape } from '../../utils/pixel-shapes.util.js';
 import { ChartType, Shape3DType } from '../board/board.types.js';
-import { VideoAssetsManager } from './video-assets.manager.js';
 import { generateChartSvg } from './video-charts.util.js';
 import { VideoExportService } from './video-export.service.js';
 import { VideoHistoryManager } from './video-history.manager.js';
@@ -25,7 +25,6 @@ export class VideoController {
 
   private _previewManager: VideoPreviewManager | null = null;
   private _timelineManager: VideoTimelineManager | null = null;
-  private _assetsManager: VideoAssetsManager | null = null;
   private _historyManager: VideoHistoryManager = new VideoHistoryManager();
   private _exportService: VideoExportService | null = null;
   private _settingsDropdownCtrl: ReturnType<typeof setupDropdown> | null = null;
@@ -175,19 +174,13 @@ export class VideoController {
       onScrubStart: () => {
         this._previewManager?.pause();
       },
-      onSeek: (time) => {
-        this._previewManager?.seekTo(time);
+      onSeek: (time, isScrubbing) => {
+        this._previewManager?.seekTo(time, isScrubbing);
       },
     });
     this._timelineManager.init();
 
-    this._assetsManager = new VideoAssetsManager({
-      container: this._container,
-      onAddClip: (clipData) => {
-        this.handleAddClip(clipData);
-      },
-    });
-    this._assetsManager.init();
+    this.bindPreviewDragAndDrop(signal);
 
     this._exportService = new VideoExportService(this._container);
     this._exportService.init();
@@ -203,13 +196,6 @@ export class VideoController {
     const btnExport = this._container.querySelector<HTMLElement>('[data-ref="btn-video-export"]');
     const btnUndo = this._container.querySelector<HTMLElement>('[data-ref="btn-video-undo"]');
     const btnRedo = this._container.querySelector<HTMLElement>('[data-ref="btn-video-redo"]');
-    const btnToggleSidebar = this._container.querySelector<HTMLElement>('[data-ref="btn-toggle-video-sidebar"]');
-    const sidebar = this._container.querySelector<HTMLElement>('[data-ref="video-sidebar"]');
-
-    btnToggleSidebar?.addEventListener('click', () => {
-      sidebar?.classList.toggle('is-collapsed');
-      btnToggleSidebar.classList.toggle('is-active', !sidebar?.classList.contains('is-collapsed'));
-    }, { signal });
 
     btnExport?.addEventListener('click', () => {
       this._exportService?.open();
@@ -746,6 +732,130 @@ export class VideoController {
     }
   }
 
+  private bindPreviewDragAndDrop(signal: AbortSignal): void {
+    const viewport = this._container.querySelector<HTMLElement>('[data-ref="video-viewport-wrapper"]');
+    const overlay = this._container.querySelector<HTMLElement>('[data-ref="video-drop-overlay"]');
+    if (!viewport) return;
+
+    let dragDepth = 0;
+
+    viewport.addEventListener('dragenter', (e) => {
+      e.preventDefault();
+      dragDepth++;
+      if (e.dataTransfer) {
+        e.dataTransfer.dropEffect = 'copy';
+      }
+      overlay?.classList.remove('is-hidden');
+      viewport.classList.add('is-drag-over');
+    }, { signal });
+
+    viewport.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      if (e.dataTransfer) {
+        e.dataTransfer.dropEffect = 'copy';
+      }
+    }, { signal });
+
+    viewport.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      dragDepth--;
+      if (dragDepth <= 0) {
+        dragDepth = 0;
+        overlay?.classList.add('is-hidden');
+        viewport.classList.remove('is-drag-over');
+      }
+    }, { signal });
+
+    viewport.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dragDepth = 0;
+      overlay?.classList.add('is-hidden');
+      viewport.classList.remove('is-drag-over');
+
+      const rawJson = e.dataTransfer?.getData('application/json');
+      if (rawJson) {
+        try {
+          const clipData = JSON.parse(rawJson);
+          if (clipData && (clipData.assetUrl || clipData.url)) {
+            const isVid = clipData.mediaType === 'video' || clipData.type === 'video';
+            const isAud = clipData.mediaType === 'audio' || clipData.type === 'audio';
+            const mediaType = isVid ? 'video' : (isAud ? 'audio' : 'image');
+            const dur = Math.max(1, clipData.duration || (isVid ? 5 : (isAud ? 10 : 4)));
+
+            this.handleAddClip({
+              assetUrl: clipData.assetUrl || clipData.url,
+              duration: dur,
+              mediaType,
+              name: clipData.name || clipData.title || (isVid ? 'Video' : (isAud ? 'Audio' : 'Foto')),
+              sourceDuration: clipData.sourceDuration || dur,
+              startTime: this._project.currentTime || 0,
+              thumbnailUrl: clipData.thumbnailUrl || (isVid ? (clipData.assetUrl || clipData.url) : ''),
+              trimEnd: dur,
+              trimStart: 0,
+            });
+            this._previewManager?.renderFrame();
+            this._historyManager.pushState(this._project);
+            this.scheduleAutoSave();
+            showToast(`Elemento «${clipData.name || (isVid ? 'Video' : 'Clip')}» añadido al proyecto`, 'success');
+            return;
+          }
+        } catch {}
+      }
+
+      const plainUrl = e.dataTransfer?.getData('text/plain') || e.dataTransfer?.getData('text/uri-list');
+      if (plainUrl && (plainUrl.startsWith('http://') || plainUrl.startsWith('https://') || plainUrl.startsWith('/'))) {
+        this.insertVideo({
+          title: 'Video',
+          url: plainUrl,
+        });
+        showToast('Video añadido al proyecto', 'success');
+        return;
+      }
+
+      if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
+        void this.handleDirectFileUpload(Array.from(e.dataTransfer.files));
+      }
+    }, { signal });
+  }
+
+  private async handleDirectFileUpload(files: File[]): Promise<void> {
+    if (!currentUser) {
+      showToast('Inicia sesión para subir archivos al proyecto.', 'warning');
+      return;
+    }
+    showToast('Subiendo archivo al proyecto...', 'info');
+    try {
+      const res = await uploadFilesApi(files);
+      if (res.success && res.uploads && res.uploads.length > 0) {
+        res.uploads.forEach((item: any) => {
+          const isVid = item.media_type === 'video';
+          const isAud = item.media_type === 'audio' || (item.mime_type && item.mime_type.startsWith('audio/'));
+          const mediaType = isVid ? 'video' : (isAud ? 'audio' : 'image');
+          const dur = Math.max(1, item.duration_seconds || (isVid ? 5 : (isAud ? 10 : 4)));
+          this.handleAddClip({
+            assetUrl: item.url,
+            duration: dur,
+            mediaType,
+            name: item.original_filename || 'Clip',
+            sourceDuration: dur,
+            startTime: this._project.currentTime || 0,
+            thumbnailUrl: item.thumbnail_url || (isVid ? item.url : ''),
+            trimEnd: dur,
+            trimStart: 0,
+          });
+        });
+        this._previewManager?.renderFrame();
+        this._historyManager.pushState(this._project);
+        this.scheduleAutoSave();
+        showToast('Archivos subidos y añadidos al video con éxito.', 'success');
+      } else {
+        showToast(res.message || 'Error al subir los archivos.', 'danger');
+      }
+    } catch {
+      showToast('Error de red al subir los archivos.', 'danger');
+    }
+  }
+
   public destroy(): void {
     if (this._autoSaveTimer) {
       clearTimeout(this._autoSaveTimer);
@@ -759,7 +869,6 @@ export class VideoController {
     this._settingsDropdownCtrl = null;
     this._previewManager?.destroy();
     this._timelineManager?.destroy();
-    this._assetsManager?.destroy();
     this._exportService?.destroy();
   }
 }

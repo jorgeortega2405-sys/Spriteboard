@@ -86,6 +86,9 @@ export default defineConfig({
           if (normalized.includes('/client/views/help') || normalized.includes('/views/help.view')) {
             return 'domain-help';
           }
+          if (normalized.includes('/client/views/download') || normalized.includes('/views/download.view')) {
+            return 'domain-download';
+          }
         },
       },
     },

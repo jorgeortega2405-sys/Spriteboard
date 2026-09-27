@@ -9,7 +9,7 @@ export interface VideoTimelineManagerOptions {
   onProjectChanged: () => void;
   onScrubEnd?: () => void;
   onScrubStart?: () => void;
-  onSeek: (time: number) => void;
+  onSeek: (time: number, isScrubbing?: boolean) => void;
 }
 
 export class VideoTimelineManager {
@@ -19,7 +19,7 @@ export class VideoTimelineManager {
   private _onProjectChanged: () => void;
   private _onScrubEnd?: () => void;
   private _onScrubStart?: () => void;
-  private _onSeek: (time: number) => void;
+  private _onSeek: (time: number, isScrubbing?: boolean) => void;
 
   private _pixelsPerSecond = 50;
   private _selectedClipId: string | null = null;
@@ -355,6 +355,42 @@ export class VideoTimelineManager {
         } catch {}
       });
     });
+
+    const lanesContainer = this._container.querySelector<HTMLElement>('[data-ref="video-timeline-lanes-container"]');
+    lanesContainer?.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      if (e.dataTransfer) {
+        e.dataTransfer.dropEffect = 'copy';
+      }
+    });
+
+    lanesContainer?.addEventListener('drop', (e) => {
+      if ((e.target as HTMLElement).closest('.video-track-lane')) return;
+      e.preventDefault();
+      const raw = e.dataTransfer?.getData('application/json');
+      if (!raw) return;
+
+      try {
+        const clipData = JSON.parse(raw) as Partial<VideoClip>;
+        const rect = lanesContainer.getBoundingClientRect();
+        const dropX = e.clientX - rect.left + (lanesList.parentElement?.scrollLeft || 0);
+        const rawStartTime = Math.max(0, dropX / this._pixelsPerSecond);
+        const startTime = this.snapTime(rawStartTime, undefined, clipData.duration || 5);
+
+        const project = this._getProject();
+        const targetTrackType = clipData.mediaType === 'audio' ? 'audio' : 'video';
+        let targetTrack = project.tracks.find((t) => t.type === targetTrackType);
+        if (!targetTrack && project.tracks.length > 0) {
+          targetTrack = project.tracks[0];
+        }
+        if (targetTrack) {
+          this.addClipToTrack(targetTrack.id, {
+            ...clipData,
+            startTime,
+          });
+        }
+      } catch {}
+    });
   }
 
   private bindClipEvents(lanesList: HTMLElement): void {
@@ -534,7 +570,7 @@ export class VideoTimelineManager {
       const initialTime = getTimeFromClientX(initialClientX);
       this.logDebug('Scrub', `Scrub started at clientX=${initialClientX} -> initialTime=${initialTime.toFixed(3)}s`);
       this.setPlayheadPosition(initialTime);
-      this._onSeek(initialTime);
+      this._onSeek(initialTime, true);
 
       const onMove = (me: MouseEvent) => {
         const time = getTimeFromClientX(me.clientX);
@@ -546,7 +582,7 @@ export class VideoTimelineManager {
             scrubRafId = null;
             if (pendingScrubTime !== null) {
               this.logDebug('Scrub', `Scrub RAF seek to ${pendingScrubTime.toFixed(3)}s`);
-              this._onSeek(pendingScrubTime);
+              this._onSeek(pendingScrubTime, true);
               pendingScrubTime = null;
             }
           });
@@ -563,7 +599,7 @@ export class VideoTimelineManager {
         const finalTime = getTimeFromClientX(me.clientX);
         this.logDebug('Scrub', `Scrub finished -> finalTime=${finalTime.toFixed(3)}s`);
         this.setPlayheadPosition(finalTime);
-        this._onSeek(finalTime);
+        this._onSeek(finalTime, false);
         this._onScrubEnd?.();
       };
 
@@ -585,7 +621,7 @@ export class VideoTimelineManager {
       this.selectClip('');
       const time = getTimeFromClientX(e.clientX);
       this.setPlayheadPosition(time);
-      this._onSeek(time);
+      this._onSeek(time, false);
     }, { signal });
   }
 

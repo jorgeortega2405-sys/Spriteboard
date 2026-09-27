@@ -1360,7 +1360,7 @@ function renderUploadsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement
         : '';
 
       return `
-        <button type="button" class="element-grid-item" data-ref="btn-upload-item-${item.uuid}" data-upload-uuid="${item.uuid}" data-tooltip="${escapeHtml(item.original_filename)}" aria-label="${escapeHtml(item.original_filename)}" style="position: relative;">
+        <button type="button" class="element-grid-item" data-ref="btn-upload-item-${item.uuid}" data-upload-uuid="${item.uuid}" draggable="true" data-tooltip="${escapeHtml(item.original_filename)}" aria-label="${escapeHtml(item.original_filename)}" style="position: relative; cursor: grab;">
           <img class="canvas-upload-img image-lazy-fade" data-ref="img-upload-${item.uuid}" src="${escapeHtml(previewSrc)}" alt="${escapeHtml(item.original_filename)}" loading="lazy" decoding="async" onload="this.classList.add('image-loaded')" onerror="this.classList.add('image-loaded')" />
           ${durationBadge}
           <button type="button" class="canvas-upload-card__delete" data-ref="btn-delete-upload-${item.uuid}" data-delete-uuid="${item.uuid}" data-tooltip="Eliminar ${isVideo ? 'video' : 'imagen'}" aria-label="Eliminar ${isVideo ? 'video' : 'imagen'}">
@@ -1373,6 +1373,35 @@ function renderUploadsDrawerContent(drawer: HTMLElement, drawerBody: HTMLElement
     renderIcons(grid);
 
     grid.querySelectorAll<HTMLElement>('.element-grid-item').forEach((card) => {
+      card.addEventListener('dragstart', (e) => {
+        const uuid = card.getAttribute('data-upload-uuid');
+        const found = uploads.find((u) => u.uuid === uuid);
+        if (!found) return;
+
+        const isVid = found.media_type === 'video';
+        const isAud = (found as any).media_type === 'audio' || Boolean(found.mime_type && found.mime_type.startsWith('audio/'));
+        const mediaType = isVid ? 'video' : (isAud ? 'audio' : 'image');
+        const dur = Math.max(1, found.duration_seconds || (isVid ? 5 : (isAud ? 10 : 4)));
+
+        const clipData = {
+          assetUrl: found.url,
+          duration: dur,
+          mediaType,
+          name: found.original_filename || (isVid ? 'Video' : (isAud ? 'Audio' : 'Foto')),
+          sourceDuration: dur,
+          thumbnailUrl: found.thumbnail_url || (isVid ? found.url : ''),
+          trimEnd: dur,
+          trimStart: 0,
+        };
+
+        if (e.dataTransfer) {
+          e.dataTransfer.setData('application/json', JSON.stringify(clipData));
+          e.dataTransfer.setData('text/plain', found.url);
+          e.dataTransfer.setData('text/uri-list', found.url);
+          e.dataTransfer.effectAllowed = 'copy';
+        }
+      });
+
       card.addEventListener('click', (e) => {
         const target = e.target as HTMLElement | null;
         if (target?.closest('[data-delete-uuid]')) return;
@@ -4717,6 +4746,40 @@ function setupRailUserControls(sidebar: HTMLElement): void {
           const adminUrl = `${window.location.protocol}//${window.location.hostname}:3002`;
           window.open(adminUrl, '_blank', 'noopener,noreferrer');
         });
+      }
+
+      const btnOpenDesktop = avatarContainer.querySelector<HTMLElement>('[data-ref="btn-menu-open-desktop"]');
+      if (btnOpenDesktop) {
+        const isAlreadyInDesktop = Boolean((window as any).spriteDesktop?.isDesktop);
+        if (isAlreadyInDesktop) {
+          btnOpenDesktop.style.display = 'none';
+        } else {
+          btnOpenDesktop.addEventListener('click', (e) => {
+            e.preventDefault();
+            closeMenu();
+            const currentRoute = window.location.pathname + window.location.search;
+            const customProtocolUrl = `spriteboard://open?path=${encodeURIComponent(currentRoute)}`;
+
+            let didBlur = false;
+            const onBlurHandler = () => {
+              didBlur = true;
+            };
+            window.addEventListener('blur', onBlurHandler, { once: true });
+
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.src = customProtocolUrl;
+            document.body.appendChild(iframe);
+
+            setTimeout(() => {
+              iframe.remove();
+              window.removeEventListener('blur', onBlurHandler);
+              if (!didBlur) {
+                navigate('/download');
+              }
+            }, 1200);
+          });
+        }
       }
 
       const btnSettings = avatarContainer.querySelector<HTMLElement>('[data-ref="btn-menu-settings"]');

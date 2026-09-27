@@ -46,11 +46,10 @@ export class VideoPlaybackEngine {
 
         const demuxer = new MP4Demuxer(url);
         const fileInfo = await demuxer.parse();
-        if (fileInfo.videoTracks.length === 0) {
+        const videoTrack = fileInfo.videoTracks[0];
+        if (!videoTrack || videoTrack.samples.length === 0) {
           return null;
         }
-
-        const videoTrack = fileInfo.videoTracks[0];
         const decoder = new WebCodecsVideoDecoder(demuxer, videoTrack, this._sharedFrameCache);
         const success = await decoder.init();
         if (!success) {

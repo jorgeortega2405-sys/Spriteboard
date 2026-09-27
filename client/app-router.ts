@@ -343,6 +343,20 @@ export async function render(): Promise<void> {
       else if (path === '/help/billing' || path === '/legal/billing') tab = 'billing';
       else if (path === '/help/support' || path === '/help/feedback' || path === '/help/contact') tab = 'support';
       viewElements = [await createHelpView(tab)];
+    } else if (path === '/download' || path === '/download/' || path.startsWith('/download/')) {
+      const { createDownloadView, detectClientOs } = await import('./views/download.view.js');
+      let targetOs: 'windows' | 'mac' | 'chromebook' = 'windows';
+      if (path === '/download' || path === '/download/') {
+        targetOs = detectClientOs();
+        window.history.replaceState({}, '', `/download/${targetOs}`);
+      } else if (path === '/download/mac') {
+        targetOs = 'mac';
+      } else if (path === '/download/chromebook') {
+        targetOs = 'chromebook';
+      } else {
+        targetOs = 'windows';
+      }
+      viewElements = [await createDownloadView(targetOs)];
     } else if (path === '/' || path === '') {
       const { createHomeView } = await import('./views/home.view.js');
       viewElements = [await createHomeView()];

@@ -33,6 +33,10 @@ export const SKELETON_ROUTES: Record<string, string> = {
   '/help/legal-notice': 'grouped-layout',
   '/help/billing': 'grouped-layout',
   '/help/support': 'grouped-layout',
+  '/download': 'grouped-layout',
+  '/download/windows': 'grouped-layout',
+  '/download/mac': 'grouped-layout',
+  '/download/chromebook': 'grouped-layout',
 };
 
 export function getSkeletonForUrl(pathname: string, onlyBottom = false): string {

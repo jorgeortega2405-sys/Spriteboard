@@ -59,6 +59,8 @@ export class VideoPreviewManager {
   private _bufferingTextEl: HTMLElement | null = null;
   private _isBuffering = false;
   private _isBufferingWait = false;
+  private _bufferingDebounceTimer: any = null;
+  private _unsupportedEnterpriseClips: Set<string> = new Set();
   private _activeBufferingClips: Set<string> = new Set();
 
   private logDebug(_category: string, _message: string, _data?: unknown): void {}
@@ -117,6 +119,9 @@ export class VideoPreviewManager {
   }
 
   private requestEnterpriseFrame(clipId: string, url: string, timeSeconds: number): void {
+    if (this._isPlaying || this._unsupportedEnterpriseClips.has(clipId)) {
+      return;
+    }
     if (this._pendingFrameRequests.get(clipId) === timeSeconds) {
       return;
     }
@@ -131,8 +136,12 @@ export class VideoPreviewManager {
         if (!this._isPlaying) {
           this.renderFrame();
         }
+      } else {
+        this._unsupportedEnterpriseClips.add(clipId);
       }
-    }).catch(() => {});
+    }).catch(() => {
+      this._unsupportedEnterpriseClips.add(clipId);
+    });
   }
 
   public selectClip(clipId: string | null, emit = false): void {
@@ -211,7 +220,7 @@ export class VideoPreviewManager {
     }
   }
 
-  public seekTo(time: number): void {
+  public seekTo(time: number, isScrubbing = false): void {
     const project = this._getProject();
     const prevTime = this._currentTime;
     this._currentTime = Math.max(0, Math.min(time, project.duration));
@@ -228,13 +237,13 @@ export class VideoPreviewManager {
           const localTime = this._currentTime - clipStart + clip.trimStart;
           if (clip.mediaType === 'video' && clip.assetUrl) {
             const vid = this.getVideoElement(clip.id, clip.assetUrl);
-            this.safeSeekElement(vid, localTime, clip.id);
+            this.safeSeekElement(vid, localTime, clip.id, isScrubbing);
             if (this._isPlaying && vid.paused) {
               this.safePlayMedia(vid, clip.id);
             }
           } else if (clip.mediaType === 'audio' && clip.assetUrl) {
             const aud = this.getAudioElement(clip.id, clip.assetUrl);
-            this.safeSeekElement(aud, localTime, clip.id);
+            this.safeSeekElement(aud, localTime, clip.id, isScrubbing);
             if (this._isPlaying && aud.paused) {
               this.safePlayMedia(aud, clip.id);
             }
@@ -245,7 +254,9 @@ export class VideoPreviewManager {
       }
     }
 
-    this.prewarmProjectMedia();
+    if (!isScrubbing) {
+      this.prewarmProjectMedia();
+    }
     this.renderFrame();
   }
 
@@ -256,16 +267,26 @@ export class VideoPreviewManager {
 
   private tick = (): void => {
     if (!this._isPlaying) return;
+    const project = this._getProject();
+    const { clip: masterClip, media: masterMedia } = this.getActiveMasterMedia(project);
+
     if (this._isBufferingWait) {
-      this._animationFrameId = requestAnimationFrame(this.tick);
-      return;
+      if (masterMedia && masterMedia.readyState >= 2 && !masterMedia.seeking) {
+        this._isBufferingWait = false;
+        this._activeBufferingClips.clear();
+        this.hideBuffering();
+        if (masterMedia.paused && this._isPlaying) {
+          try { masterMedia.play(); } catch {}
+        }
+      } else {
+        this._animationFrameId = requestAnimationFrame(this.tick);
+        return;
+      }
     }
+
     const now = performance.now();
     const elapsed = Math.min((now - this._lastFrameTimestamp) / 1000, 0.1);
     this._lastFrameTimestamp = now;
-
-    const project = this._getProject();
-    const { clip: masterClip, media: masterMedia } = this.getActiveMasterMedia(project);
 
     this._tickCount++;
 
@@ -594,46 +615,38 @@ export class VideoPreviewManager {
     return { clip: candidateClip, media: candidateMedia };
   }
 
-  private safeSeekElement(el: HTMLMediaElement, targetTime: number, clipId = ''): void {
+  private safeSeekElement(el: HTMLMediaElement, targetTime: number, clipId = '', isScrubbing = false): void {
     const clamped = Number.isFinite(el.duration) && el.duration > 0
       ? Math.max(0, Math.min(targetTime, el.duration - 0.05))
       : Math.max(0, targetTime);
 
     const diff = Math.abs(el.currentTime - clamped);
-    if (diff < 0.05) {
+    if (diff < 0.04) {
       (el as any).__pendingSeekTime = null;
       return;
     }
 
-    if (diff > 0.3 && el.readyState < 3 && this.isClipActive(clipId)) {
-      this._activeBufferingClips.add(clipId);
-      this.showBuffering('Buscando fotograma...');
-    }
-
     const custom = el as any;
     const now = performance.now();
-    const isSeekingStuck = el.seeking && custom.__seekTimestamp && (now - custom.__seekTimestamp > 350);
+    const isSeekingStuck = el.seeking && custom.__seekTimestamp && (now - custom.__seekTimestamp > 4000);
 
     if (el.seeking && !isSeekingStuck) {
-      if (custom.__pendingSeekTime !== null && Math.abs(custom.__pendingSeekTime - clamped) < 0.05) {
-        return;
-      }
-      this.logDebug('Seek', `[${clipId || 'media'}] Hardware decoder busy (seeking=true). Queueing pending seek to ${clamped.toFixed(3)}s`);
       custom.__pendingSeekTime = clamped;
       return;
-    }
-
-    if (isSeekingStuck) {
-      this.logDebug('Seek', `[${clipId || 'media'}] Seeking was stalled (>350ms). Overriding seek to ${clamped.toFixed(3)}s`);
     }
 
     try {
       custom.__pendingSeekTime = null;
       custom.__seekTimestamp = now;
-      this.logDebug('Seek', `[${clipId || 'media'}] Hardware seek to ${clamped.toFixed(3)}s (current=${el.currentTime.toFixed(3)}s, diff=${diff.toFixed(3)}s)`);
-      el.currentTime = clamped;
-    } catch (err) {
-      this.logDebug('Seek', `[${clipId || 'media'}] Seek threw error`, err);
+      if (isScrubbing && typeof (el as any).fastSeek === 'function') {
+        (el as any).fastSeek(clamped);
+      } else {
+        el.currentTime = clamped;
+      }
+    } catch {
+      try {
+        el.currentTime = clamped;
+      } catch {}
     }
   }
 
@@ -650,9 +663,12 @@ export class VideoPreviewManager {
 
     if (el.readyState < 2) {
       this._activeBufferingClips.add(clipId);
-      this.showBuffering('Preparando reproducción...');
+      this.showBuffering('Preparando reproducción...', 300);
       this._isBufferingWait = true;
-      el.addEventListener('canplay', () => {
+      const onReady = () => {
+        el.removeEventListener('canplay', onReady);
+        el.removeEventListener('loadeddata', onReady);
+        el.removeEventListener('canplaythrough', onReady);
         if (this._isPlaying) {
           this._activeBufferingClips.delete(clipId);
           if (this._activeBufferingClips.size === 0) {
@@ -661,7 +677,10 @@ export class VideoPreviewManager {
           this._isBufferingWait = false;
           this.safePlayMedia(el, clipId);
         }
-      }, { once: true });
+      };
+      el.addEventListener('canplay', onReady, { once: true });
+      el.addEventListener('loadeddata', onReady, { once: true });
+      el.addEventListener('canplaythrough', onReady, { once: true });
       return;
     }
 
@@ -755,18 +774,9 @@ export class VideoPreviewManager {
     vid.muted = this._isMuted;
     vid.src = url;
     vid.addEventListener('waiting', () => {
-      this._activeBufferingClips.add(clipId);
-      if (this.isClipActive(clipId)) {
-        this.showBuffering('Amortiguando video...');
-        if (this._isPlaying) {
-          this._isBufferingWait = true;
-        }
-      }
-    });
-    vid.addEventListener('stalled', () => {
-      if (this._isPlaying && this.isClipActive(clipId) && vid.readyState < 3) {
+      if (this._isPlaying && this.isClipActive(clipId)) {
         this._activeBufferingClips.add(clipId);
-        this.showBuffering('Cargando buffer de red...');
+        this.showBuffering('Amortiguando video...', 250);
         this._isBufferingWait = true;
       }
     });
@@ -774,6 +784,16 @@ export class VideoPreviewManager {
       this._activeBufferingClips.delete(clipId);
       if (this._activeBufferingClips.size === 0) {
         this.hideBuffering();
+      }
+      this._isBufferingWait = false;
+    });
+    vid.addEventListener('timeupdate', () => {
+      if (this._isBufferingWait && vid.readyState >= 2) {
+        this._isBufferingWait = false;
+        this._activeBufferingClips.delete(clipId);
+        if (this._activeBufferingClips.size === 0) {
+          this.hideBuffering();
+        }
       }
     });
     vid.addEventListener('progress', () => {
@@ -1506,23 +1526,33 @@ export class VideoPreviewManager {
     }, { signal });
   }
 
-  private showBuffering(text = 'Cargando video...'): void {
-    if (!this._bufferingOverlay) {
-      this._bufferingOverlay = this._container.querySelector<HTMLElement>('[data-ref="video-buffering-overlay"]');
-    }
-    if (!this._bufferingTextEl) {
-      this._bufferingTextEl = this._container.querySelector<HTMLElement>('[data-ref="video-buffering-text"]');
-    }
-    if (this._bufferingTextEl) {
-      this._bufferingTextEl.textContent = text;
-    }
-    if (this._bufferingOverlay) {
-      this._bufferingOverlay.classList.remove('is-hidden');
-    }
+  private showBuffering(text = 'Cargando video...', delayMs = 250): void {
     this._isBuffering = true;
+    if (this._bufferingDebounceTimer) {
+      clearTimeout(this._bufferingDebounceTimer);
+    }
+    this._bufferingDebounceTimer = setTimeout(() => {
+      if (!this._isBuffering) return;
+      if (!this._bufferingOverlay) {
+        this._bufferingOverlay = this._container.querySelector<HTMLElement>('[data-ref="video-buffering-overlay"]');
+      }
+      if (!this._bufferingTextEl) {
+        this._bufferingTextEl = this._container.querySelector<HTMLElement>('[data-ref="video-buffering-text"]');
+      }
+      if (this._bufferingTextEl) {
+        this._bufferingTextEl.textContent = text;
+      }
+      if (this._bufferingOverlay) {
+        this._bufferingOverlay.classList.remove('is-hidden');
+      }
+    }, delayMs);
   }
 
   private hideBuffering(): void {
+    if (this._bufferingDebounceTimer) {
+      clearTimeout(this._bufferingDebounceTimer);
+      this._bufferingDebounceTimer = null;
+    }
     if (!this._bufferingOverlay) {
       this._bufferingOverlay = this._container.querySelector<HTMLElement>('[data-ref="video-buffering-overlay"]');
     }
@@ -1588,16 +1618,17 @@ export class VideoPreviewManager {
     mediaClips.sort((a, b) => a.distance - b.distance);
 
     const candidates = mediaClips.slice(0, 4);
-    for (const { clip } of candidates) {
+    for (const { clip, distance } of candidates) {
+      const targetPreload = distance === 0 ? 'auto' : 'metadata';
       if (clip.mediaType === 'video' && clip.assetUrl) {
         const vid = this.getVideoElement(clip.id, clip.assetUrl);
-        if (vid.preload !== 'auto') {
-          vid.preload = 'auto';
+        if (vid.preload !== targetPreload) {
+          vid.preload = targetPreload;
         }
       } else if (clip.mediaType === 'audio' && clip.assetUrl) {
         const aud = this.getAudioElement(clip.id, clip.assetUrl);
-        if (aud.preload !== 'auto') {
-          aud.preload = 'auto';
+        if (aud.preload !== targetPreload) {
+          aud.preload = targetPreload;
         }
       }
     }
@@ -1605,6 +1636,10 @@ export class VideoPreviewManager {
 
   public destroy(): void {
     this.pause();
+    if (this._bufferingDebounceTimer) {
+      clearTimeout(this._bufferingDebounceTimer);
+      this._bufferingDebounceTimer = null;
+    }
     if (this._abortController) {
       this._abortController.abort();
       this._abortController = null;
@@ -1620,6 +1655,7 @@ export class VideoPreviewManager {
     });
     this._latestEnterpriseFrames.clear();
     this._pendingFrameRequests.clear();
+    this._unsupportedEnterpriseClips.clear();
     this._curTimecodeEl = null;
     this._durTimecodeEl = null;
     this._bufferingOverlay = null;

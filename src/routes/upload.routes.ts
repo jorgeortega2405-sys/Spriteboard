@@ -1,7 +1,7 @@
 import { Request, Response, Router } from 'express';
 import fs from 'fs';
 import path from 'path';
-import { getObject } from '../services/s3.service.js';
+import { getObjectStream, headObject } from '../services/s3.service.js';
 
 const router = Router();
 
@@ -19,6 +19,55 @@ router.options('/uploads/*', (_req: Request, res: Response): void => {
   res.status(204).end();
 });
 
+router.head('/uploads/*', async (req: Request, res: Response): Promise<void> => {
+  setMediaCorsHeaders(res);
+
+  const rawSubpath = req.params[0] || '';
+  const uploadsDir = path.resolve(process.cwd(), 'public', 'uploads');
+  const safePath = path.resolve(uploadsDir, rawSubpath);
+
+  if (!safePath.startsWith(uploadsDir + path.sep)) {
+    res.status(403).end();
+    return;
+  }
+
+  if (fs.existsSync(safePath) && fs.statSync(safePath).isFile()) {
+    if (safePath.endsWith('.svg')) {
+      res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox");
+    }
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Accept-Ranges', 'bytes');
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    res.sendFile(safePath, { acceptRanges: true });
+    return;
+  }
+
+  const relativeSubpath = path.relative(uploadsDir, safePath).replace(/\\/g, '/');
+  const s3Key = `uploads/${relativeSubpath}`;
+
+  try {
+    const s3Meta = await headObject(s3Key);
+    if (s3Meta) {
+      if (s3Meta.contentType) {
+        res.setHeader('Content-Type', s3Meta.contentType);
+      }
+      if (s3Meta.etag) {
+        res.setHeader('ETag', s3Meta.etag);
+      }
+      if (s3Meta.contentLength !== undefined) {
+        res.setHeader('Content-Length', s3Meta.contentLength);
+      }
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('Accept-Ranges', 'bytes');
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      res.status(200).end();
+      return;
+    }
+  } catch {}
+
+  res.status(404).end();
+});
+
 router.get('/uploads/*', async (req: Request, res: Response): Promise<void> => {
   setMediaCorsHeaders(res);
 
@@ -31,57 +80,6 @@ router.get('/uploads/*', async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
-  const relativeSubpath = path.relative(uploadsDir, safePath).replace(/\\/g, '/');
-  const s3Key = `uploads/${relativeSubpath}`;
-
-  try {
-    const s3Obj = await getObject(s3Key);
-    if (s3Obj && s3Obj.buffer) {
-      if (s3Obj.etag && req.headers['if-none-match'] === s3Obj.etag) {
-        res.status(304).end();
-        return;
-      }
-
-      if (s3Obj.contentType) {
-        res.setHeader('Content-Type', s3Obj.contentType);
-        if (s3Obj.contentType.includes('image/svg+xml')) {
-          res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox");
-        }
-      }
-      if (s3Obj.etag) {
-        res.setHeader('ETag', s3Obj.etag);
-      }
-      res.setHeader('X-Content-Type-Options', 'nosniff');
-      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-      res.setHeader('Accept-Ranges', 'bytes');
-
-      const rangeHeader = req.headers.range;
-      const totalLength = s3Obj.buffer.length;
-
-      if (rangeHeader && rangeHeader.startsWith('bytes=')) {
-        const parts = rangeHeader.replace(/bytes=/, '').split('-');
-        const start = parseInt(parts[0], 10) || 0;
-        const end = parts[1] ? parseInt(parts[1], 10) : totalLength - 1;
-
-        if (start >= totalLength || end >= totalLength || start > end) {
-          res.status(416).setHeader('Content-Range', `bytes */${totalLength}`).end();
-          return;
-        }
-
-        const chunksize = (end - start) + 1;
-        res.status(206);
-        res.setHeader('Content-Range', `bytes ${start}-${end}/${totalLength}`);
-        res.setHeader('Content-Length', chunksize);
-        res.end(s3Obj.buffer.subarray(start, end + 1));
-        return;
-      }
-
-      res.setHeader('Content-Length', totalLength);
-      res.end(s3Obj.buffer);
-      return;
-    }
-  } catch {}
-
   if (fs.existsSync(safePath) && fs.statSync(safePath).isFile()) {
     if (safePath.endsWith('.svg')) {
       res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox");
@@ -92,6 +90,46 @@ router.get('/uploads/*', async (req: Request, res: Response): Promise<void> => {
     res.sendFile(safePath, { acceptRanges: true });
     return;
   }
+
+  const relativeSubpath = path.relative(uploadsDir, safePath).replace(/\\/g, '/');
+  const s3Key = `uploads/${relativeSubpath}`;
+
+  try {
+    const s3Stream = await getObjectStream(s3Key, req.headers.range);
+    if (s3Stream) {
+      if (s3Stream.etag && req.headers['if-none-match'] === s3Stream.etag) {
+        res.status(304).end();
+        return;
+      }
+
+      if (s3Stream.contentType) {
+        res.setHeader('Content-Type', s3Stream.contentType);
+        if (s3Stream.contentType.includes('image/svg+xml')) {
+          res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox");
+        }
+      }
+      if (s3Stream.etag) {
+        res.setHeader('ETag', s3Stream.etag);
+      }
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      res.setHeader('Accept-Ranges', 'bytes');
+
+      if (s3Stream.contentRange) {
+        res.status(206);
+        res.setHeader('Content-Range', s3Stream.contentRange);
+      } else {
+        res.status(200);
+      }
+
+      if (s3Stream.contentLength !== undefined) {
+        res.setHeader('Content-Length', s3Stream.contentLength);
+      }
+
+      s3Stream.stream.pipe(res);
+      return;
+    }
+  } catch {}
 
   res.status(404).json({ error: 'Archivo no encontrado.' });
 });

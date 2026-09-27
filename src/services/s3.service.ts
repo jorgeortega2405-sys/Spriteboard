@@ -90,6 +90,47 @@ export async function getObject(
   }
 }
 
+export async function getObjectStream(
+  key: string,
+  range?: string
+): Promise<{
+  contentLength?: number;
+  contentRange?: string;
+  contentType?: string;
+  etag?: string;
+  stream: Readable;
+} | null> {
+  const normalizedKey = key.replace(/^\/+/, '');
+  try {
+    const response = await s3Client.send(
+      new GetObjectCommand({
+        Bucket: AWS_S3_BUCKET,
+        Key: normalizedKey,
+        Range: range,
+      })
+    );
+
+    if (!response.Body) {
+      return null;
+    }
+
+    return {
+      contentLength: response.ContentLength,
+      contentRange: response.ContentRange,
+      contentType: response.ContentType,
+      etag: response.ETag,
+      stream: response.Body as Readable,
+    };
+  } catch (err: any) {
+    const statusCode = err?.$metadata?.httpStatusCode;
+    if (statusCode === 404 || statusCode === 416 || err.name === 'NoSuchKey' || err.name === 'NotFound') {
+      return null;
+    }
+    logger.db.error(`Error al obtener stream de objeto S3 '${normalizedKey}'`, err);
+    return null;
+  }
+}
+
 export async function headObject(
   key: string
 ): Promise<{ contentLength?: number; contentType?: string; etag?: string } | null> {

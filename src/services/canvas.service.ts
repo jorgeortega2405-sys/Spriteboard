@@ -23,6 +23,7 @@ export const RESERVED_SLUGS = new Set([
   'diagram',
   'dist',
   'doc',
+  'download',
   'education',
   'favicon.ico',
   'favicon.svg',

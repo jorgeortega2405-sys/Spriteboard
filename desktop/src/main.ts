@@ -8,16 +8,36 @@ const __dirname = path.dirname(__filename);
 
 let mainWindow: BrowserWindow | null = null;
 
+if (process.defaultApp) {
+  if (process.argv.length >= 2) {
+    app.setAsDefaultProtocolClient('spriteboard', process.execPath, [path.resolve(process.argv[1])]);
+  }
+} else {
+  app.setAsDefaultProtocolClient('spriteboard');
+}
+
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
   app.quit();
 } else {
-  app.on('second-instance', () => {
+  app.on('second-instance', (_event, commandLine) => {
     if (mainWindow) {
       if (mainWindow.isMinimized()) {
         mainWindow.restore();
       }
       mainWindow.focus();
+
+      const deepLink = commandLine.find((arg) => arg.startsWith('spriteboard://'));
+      if (deepLink) {
+        try {
+          const urlObj = new URL(deepLink);
+          const relativePath = urlObj.searchParams.get('path');
+          if (relativePath) {
+            const targetUrl = new URL(relativePath, getAppTargetUrl()).toString();
+            mainWindow.loadURL(targetUrl);
+          }
+        } catch {}
+      }
     }
   });
 
